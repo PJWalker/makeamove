@@ -1197,6 +1197,34 @@
     pointer-events: none;
     box-shadow: 0 8px 24px -6px oklch(0% 0 0 / 0.55);
   }
+  .drag-tab {
+    animation: tab-pop 160ms var(--ease) both;
+  }
+  @keyframes tab-pop {
+    from {
+      scale: 0.5;
+      opacity: 0;
+    }
+  }
+  /* The window gives way to the tab, and returns when the pointer leaves the sidebar. */
+  .floating-window {
+    transition:
+      opacity 160ms var(--ease),
+      scale 160ms var(--ease);
+  }
+  .floating-window[data-as-tab='true'] {
+    opacity: 0;
+    scale: 0.92;
+    pointer-events: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .drag-tab {
+      animation: none;
+    }
+    .floating-window {
+      transition: none;
+    }
+  }
   .reorder-line {
     position: fixed;
     z-index: 1000;

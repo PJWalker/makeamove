@@ -80,8 +80,8 @@ function Window({ win, campaign }: { win: FloatingWindow; campaign: Campaign }) 
         height: win.h,
         zIndex: win.z,
         viewTransitionName: `panel-${win.id}`,
-        visibility: asTab ? 'hidden' : undefined,
       }}
+      data-as-tab={asTab !== null}
       aria-label={label}
       onPointerDown={() => raiseWindow(win.id)}
     >
