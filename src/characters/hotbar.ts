@@ -72,3 +72,11 @@ export function editHotbar(campaign: Campaign, edit: (slots: string[]) => string
 
 export const isPinned = (campaign: Campaign, id: string) =>
   hotbarSlots(campaign, selectedCharacterId(campaign)).includes(id)
+
+/** Put a slot at a position among the other slots (counted with it lifted out). */
+export function placeAt(slots: string[], id: string, index: number): string[] {
+  if (!slots.includes(id)) return slots
+  const rest = slots.filter((s) => s !== id)
+  rest.splice(index, 0, id)
+  return rest
+}

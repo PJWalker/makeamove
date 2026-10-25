@@ -9,7 +9,7 @@ import { systemActions } from '../../actions/system'
 import { Campaign, createCampaign } from '../../store/campaign'
 import { device } from '../../store/device'
 import { addItem, getCharacter, makeMove, newCharacter, selectedCharacterId, setField, systemOf, updateItem } from '../api'
-import { defaultHotbar, editHotbar, hotbarSlots, moveTo, pin, shift, unpin, MAX_SLOTS } from '../hotbar'
+import { defaultHotbar, editHotbar, hotbarSlots, moveTo, pin, placeAt, shift, unpin, MAX_SLOTS } from '../hotbar'
 
 async function setUp() {
   device.value = { id: 'gm', name: 'Gwen' }
@@ -73,6 +73,8 @@ describe('hotbar editing', () => {
   it('moves a slot to a drop position', () => {
     expect(moveTo(['a', 'b', 'c'], 'a', 3)).toEqual(['b', 'c', 'a'])
     expect(moveTo(['a', 'b', 'c'], 'c', 0)).toEqual(['c', 'a', 'b'])
+    expect(placeAt(['a', 'b', 'c'], 'a', 2)).toEqual(['b', 'c', 'a'])
+    expect(placeAt(['a', 'b', 'c'], 'c', 1)).toEqual(['a', 'c', 'b'])
     expect(moveTo(['a', 'b', 'c'], 'a', 1)).toEqual(['a', 'b', 'c'])
   })
 

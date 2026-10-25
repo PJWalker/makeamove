@@ -1,5 +1,7 @@
 import type { ComponentType } from 'preact'
 import { useEffect } from 'preact/hooks'
+import { signal } from '@preact/signals'
+import { startReorder } from '../ui/reorder'
 import { activeTool, pen, PEN_WIDTHS, setPen, type ToolId } from '../scene/tools'
 import { Button } from '../ui/Button'
 import {
@@ -36,8 +38,49 @@ export const TOOLS: {
   { id: 'fog', label: 'Fog of war', key: 'F', Icon: IconFog, gmOnly: true, arrives: 'M5' },
 ]
 
+const ORDER_KEY = 'mam:tool-order'
+
+/** The player's own tool order, kept per device. */
+const toolOrder = signal<ToolId[]>(
+  (() => {
+    try {
+      return JSON.parse(localStorage.getItem(ORDER_KEY) ?? '[]')
+    } catch {
+      return []
+    }
+  })(),
+)
+
+/** Tools in the player's order; any not mentioned keep their default place after the others. */
+function inOrder(tools: typeof TOOLS, order: ToolId[]) {
+  const rank = (id: ToolId) => (order.includes(id) ? order.indexOf(id) : order.length + TOOLS.findIndex((t) => t.id === id))
+  return [...tools].sort((a, b) => rank(a.id) - rank(b.id))
+}
+
 export function Toolbar({ isGm }: { isGm: boolean }) {
-  const tools = TOOLS.filter((t) => !t.gmOnly || isGm)
+  const tools = inOrder(TOOLS.filter((t) => !t.gmOnly || isGm), toolOrder.value)
+
+  function dragTool(id: ToolId, e: PointerEvent) {
+    const bar = (e.currentTarget as HTMLElement).closest<HTMLElement>('.toolbar')!
+    startReorder({
+      event: e,
+      axis: 'x',
+      container: bar,
+      items: () => [...bar.querySelectorAll<HTMLElement>('[data-tool]')],
+      onDrop: (index) => {
+        const ids = tools.map((t) => t.id).filter((t) => t !== id)
+        ids.splice(index, 0, id)
+        // Hidden (GM-only) tools keep their place among the rest.
+        const hidden = TOOLS.map((t) => t.id).filter((t) => !ids.includes(t))
+        toolOrder.value = [...ids, ...hidden]
+        try {
+          localStorage.setItem(ORDER_KEY, JSON.stringify(toolOrder.value))
+        } catch {
+          // The order just won't persist.
+        }
+      },
+    })
+  }
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -59,6 +102,8 @@ export function Toolbar({ isGm }: { isGm: boolean }) {
             label={arrives ? `${label} arrives in ${arrives}` : `${label} (${key})`}
             pressed={activeTool.value === id}
             disabled={!!arrives}
+            data-tool={id}
+            onPointerDown={(e: PointerEvent) => dragTool(id, e)}
             onClick={() => (activeTool.value = id)}
           >
             <Icon size={22} />

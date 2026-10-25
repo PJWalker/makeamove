@@ -1,12 +1,13 @@
 import { useSignal } from '@preact/signals'
 import { useEffect, useRef } from 'preact/hooks'
 import { selectedCharacterId } from '../characters/api'
-import { editHotbar, hotbarSlots, moveTo, shift, unpin } from '../characters/hotbar'
+import { editHotbar, hotbarSlots, placeAt, shift, unpin } from '../characters/hotbar'
 import { buildIndex } from '../actions/registry'
 import { noteRecent } from '../actions/recent'
 import type { Campaign } from '../store/campaign'
 import { useY } from '../store/useY'
 import { isTyping } from '../ui/keys'
+import { startReorder } from '../ui/reorder'
 
 /**
  * Pinned actions for the selected character, docked at the bottom centre.
@@ -16,8 +17,6 @@ import { isTyping } from '../ui/keys'
 export function Hotbar({ campaign }: { campaign: Campaign }) {
   const charId = useY(campaign.members, () => selectedCharacterId(campaign))
   const dragging = useSignal<string | null>(null)
-  // Where the dragged slot would land: the target slot and which side of it.
-  const drop = useSignal<{ id: string; side: 'before' | 'after' } | null>(null)
   const barRef = useRef<HTMLDivElement>(null)
   // Rebuilt on any change to characters or members so labels and availability stay current.
   const tick = useSignal(0)
@@ -59,8 +58,19 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
   const edit = (fn: (s: string[]) => string[]) => editHotbar(campaign, fn)
   const endDrag = () => {
     dragging.value = null
-    drop.value = null
   }
+  const dragSlot = (id: string, e: PointerEvent) =>
+    startReorder({
+      event: e,
+      axis: 'x',
+      container: barRef.current,
+      items: () => [...barRef.current!.querySelectorAll<HTMLElement>('.hotbar-slot')],
+      onLift: () => (dragging.value = id),
+      onEnd: endDrag,
+      onDrop: (index) => edit((s) => placeAt(s, id, index)),
+      // Let go off the bar to unpin.
+      outside: { when: 'release', run: () => edit((s) => unpin(s, id)) },
+    })
 
   return (
     <div class="hotbar-wrap">
@@ -70,22 +80,6 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
         role="toolbar"
         aria-label="Hotbar"
         data-dragging={dragging.value !== null}
-        onDragOver={(e) => {
-          if (dragging.value) e.preventDefault()
-        }}
-        onDrop={(e) => {
-          e.preventDefault()
-          const id = dragging.value
-          const d = drop.value
-          if (id && d) {
-            const at = slots.indexOf(d.id) + (d.side === 'after' ? 1 : 0)
-            edit((s) => moveTo(s, id, at))
-          } else if (id) {
-            // Dropped on the bar but not on a slot: to the end.
-            edit((s) => moveTo(s, id, s.length))
-          }
-          endDrag()
-        }}
       >
         {slots.map((id, i) => {
           const a = index.get(id)
@@ -97,29 +91,7 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
               class="hotbar-slot"
               data-unavailable={off}
               data-dragging={dragging.value === id}
-              data-drop={drop.value?.id === id && dragging.value !== id ? drop.value.side : undefined}
-              draggable
-              onDragStart={(e) => {
-                dragging.value = id
-                e.dataTransfer!.effectAllowed = 'move'
-                e.dataTransfer!.setData('text/plain', a.title)
-              }}
-              onDragOver={(e) => {
-                if (!dragging.value) return
-                e.preventDefault()
-                const r = e.currentTarget.getBoundingClientRect()
-                const side = e.clientX < r.left + r.width / 2 ? 'before' : 'after'
-                if (drop.value?.id !== id || drop.value.side !== side) drop.value = { id, side }
-              }}
-              onDragEnd={(e) => {
-                // Released off the bar (not cancelled with Escape): unpin.
-                const r = barRef.current?.getBoundingClientRect()
-                const cancelled = e.clientX === 0 && e.clientY === 0
-                const outside =
-                  r && (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom)
-                if (dragging.value && !cancelled && outside) edit((s) => unpin(s, id))
-                endDrag()
-              }}
+              onPointerDown={(e) => dragSlot(id, e)}
             >
               <div
                 role="button"

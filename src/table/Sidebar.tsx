@@ -5,6 +5,7 @@ import type { Campaign } from '../store/campaign'
 import { Button } from '../ui/Button'
 import { menuTrigger } from '../ui/menuTrigger'
 import { trackPointer } from '../ui/pointer'
+import { startReorder } from '../ui/reorder'
 import { withTransition } from '../ui/transition'
 import { ContextMenu, type MenuItem } from './ContextMenu'
 import {
@@ -61,7 +62,7 @@ export function Sidebar({ side, campaign }: { side: Side; campaign: Campaign }) 
         <SidebarResizeHandle side={side} />
         {active && (
           <div class="sidebar-panel" style={{ viewTransitionName: `panel-${active}` }}>
-            <header class="panel-header docked-header" {...withPull((e) => pullOut(active, e, true), (x, y) => (menu.value = { x, y, items: tabMenu(active, side) }))}
+            <header class="panel-header docked-header" {...withPull((e) => pullOut(active, e), (x, y) => (menu.value = { x, y, items: tabMenu(active, side) }))}
             >
               <h2 class="panel-title" tabIndex={-1}>
                 {PANELS[active].label}
@@ -102,36 +103,20 @@ function tabMenu(id: PanelId, side: Side): MenuItem[] {
 }
 
 /**
- * Start watching a press on a tab or docked panel title. Once the pointer
- * travels past a small threshold, a title pops its panel out into a floating
- * window that follows the pointer. A tab does the same only when it leaves its
- * tab strip; while it stays inside, it reorders the tabs instead. A release
- * before the threshold is an ordinary click.
+ * Start watching a press on a docked panel's title. Once the pointer travels
+ * past a small threshold, the panel pops out into a floating window that
+ * follows the pointer; a release before that is an ordinary click.
  */
-function pullOut(id: PanelId, e: PointerEvent, fromHeader: boolean, onPulled?: () => void) {
+function pullOut(id: PanelId, e: PointerEvent) {
   if (e.button !== 0) return
   const startX = e.clientX
   const startY = e.clientY
-  const rail = fromHeader ? null : (e.currentTarget as HTMLElement).closest('.sidebar-rail')
-  // Keep the grab point where it was in the docked title, if that's what was grabbed.
-  const header = fromHeader ? (e.currentTarget as HTMLElement).getBoundingClientRect() : null
-  const grabX = header ? Math.min(startX - header.left, 300) : 120
-  const grabY = header ? startY - header.top : 18
-  let dragging = false
+  // Keep the grab point where it was in the docked title.
+  const header = (e.currentTarget as HTMLElement).getBoundingClientRect()
+  const grabX = Math.min(startX - header.left, 300)
+  const grabY = startY - header.top
   const move = (ev: PointerEvent) => {
-    if (!dragging && Math.hypot(ev.clientX - startX, ev.clientY - startY) < DRAG_THRESHOLD) return
-    if (!dragging) onPulled?.()
-    dragging = true
-    if (rail && stillOnStrip(rail, ev)) {
-      const centres = [...rail.querySelectorAll<HTMLElement>('.rail-tab')]
-        .filter((t) => t.dataset.panel !== id)
-        .map((t) => {
-          const r = t.getBoundingClientRect()
-          return r.top + r.height / 2
-        })
-      reorderPanel(id, centres.filter((c) => c < ev.clientY).length)
-      return
-    }
+    if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < DRAG_THRESHOLD) return
     cleanup()
     detachPanel(id, ev.clientX - grabX, ev.clientY - grabY)
     startWindowDrag(id, ev, grabX, grabY)
@@ -146,11 +131,27 @@ function pullOut(id: PanelId, e: PointerEvent, fromHeader: boolean, onPulled?: (
   window.addEventListener('pointercancel', cleanup)
 }
 
-/** Whether the pointer is still close enough to the tab strip for a drag to mean reordering. */
-function stillOnStrip(rail: Element, e: PointerEvent) {
-  const r = rail.getBoundingClientRect()
-  const slack = 24
-  return e.clientX > r.left - slack && e.clientX < r.right + slack && e.clientY > r.top - slack && e.clientY < r.bottom + slack
+/**
+ * A tab is picked up at once: dragging along the strip reorders it, and
+ * dragging away from the strip floats the panel in a window.
+ */
+function dragTab(id: PanelId, e: PointerEvent) {
+  const tab = e.currentTarget as HTMLElement
+  const rail = tab.closest<HTMLElement>('.sidebar-rail')!
+  startReorder({
+    event: e,
+    axis: 'y',
+    container: rail,
+    items: () => [...rail.querySelectorAll<HTMLElement>('.rail-tab')],
+    onDrop: (index) => reorderPanel(id, index),
+    outside: {
+      when: 'move',
+      run: (ev) => {
+        detachPanel(id, ev.clientX - 120, ev.clientY - 18)
+        startWindowDrag(id, ev, 120, 18)
+      },
+    },
+  })
 }
 
 /** Drag (or arrow-key) the sidebar's inner edge to change its width. */
@@ -203,11 +204,9 @@ function switchTo(id: PanelId, side: Side) {
 /** A tab that selects its panel on click, or pulls it out into a window when dragged. */
 function RailTab({ id, side, selected, onMenu }: { id: PanelId; side: Side; selected: boolean; onMenu: (x: number, y: number) => void }) {
   const { label, Icon } = PANELS[id]
-  const dragged = useSignal(false)
 
   function onPointerDown(e: PointerEvent) {
-    dragged.value = false
-    pullOut(id, e, false, () => (dragged.value = true))
+    dragTab(id, e)
   }
 
   return (
@@ -220,9 +219,7 @@ function RailTab({ id, side, selected, onMenu }: { id: PanelId; side: Side; sele
       aria-selected={selected}
       pressed={selected}
       data-unread={id === 'chat' && unreadCount.value > 0 ? Math.min(unreadCount.value, 99) : undefined}
-      onClick={() => {
-        if (!dragged.value) switchTo(id, side)
-      }}
+      onClick={() => switchTo(id, side)}
       {...withPull(onPointerDown, onMenu)}
     >
       <Icon size={22} />

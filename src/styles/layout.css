@@ -1127,11 +1127,12 @@
       right 200ms var(--ease);
   }
   .hotbar {
+    --bevel: 40px;
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     gap: var(--space-1);
-    padding: var(--space-1);
+    padding: var(--space-3) 36px var(--space-2);
     pointer-events: auto;
   }
   .hotbar-slot {
@@ -1170,22 +1171,26 @@
   .hotbar-slot[data-dragging='true'] {
     opacity: 0.35;
   }
-  /* A bar line where the dragged slot will land. */
-  .hotbar-slot[data-drop='before']::before,
-  .hotbar-slot[data-drop='after']::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 3px;
-    background: var(--accent);
+  /* A picked-up tab, tool or slot follows the pointer; a white line marks where it will land. */
+  .reorder-lifted {
+    position: relative;
+    z-index: 50;
+    scale: 1.15;
+    opacity: 0.9;
+    pointer-events: none;
+    cursor: grabbing;
+  }
+  .reorder-line {
+    position: fixed;
+    z-index: 1000;
+    background: #fff;
     border-radius: 2px;
+    pointer-events: none;
   }
-  .hotbar-slot[data-drop='before']::before {
-    left: -3px;
-  }
-  .hotbar-slot[data-drop='after']::after {
-    right: -3px;
+  .is-reordering,
+  .is-reordering * {
+    cursor: grabbing !important;
+    user-select: none;
   }
   .hotbar[data-dragging='true'] {
     outline: 2px dashed var(--text-muted);
