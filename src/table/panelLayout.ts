@@ -1,4 +1,5 @@
 import { computed, effect, signal } from '@preact/signals'
+import { dropLine, indexAmong } from '../ui/reorder'
 import { withTransition } from '../ui/transition'
 import { nextZ, noteZ } from '../ui/windows'
 import {
@@ -173,21 +174,34 @@ function sideAt(x: number, y: number): Side | null {
   return null
 }
 
+/** The tabs of a side as elements, and where among them a pointer at this height would drop. */
+function tabsOf(side: Side) {
+  return [...document.querySelectorAll<HTMLElement>(`.sidebar[data-side="${side}"] .rail-tab`)]
+}
+
 export function startWindowDrag(id: PanelId, e: PointerEvent, grabX: number, grabY: number) {
   raiseWindow(id)
   windowDragging.value = true
+  const marker = dropLine('y')
   const move = (ev: PointerEvent) => {
     const x = Math.min(Math.max(ev.clientX - grabX, -200), innerWidth - 80)
     const y = Math.min(Math.max(ev.clientY - grabY, 0), innerHeight - 40)
     updateWindow(id, { x, y })
-    dockTarget.value = sideAt(ev.clientX, ev.clientY)
+    const side = sideAt(ev.clientX, ev.clientY)
+    dockTarget.value = side
+    if (side) marker.show(tabsOf(side), indexAmong(tabsOf(side), 'y', ev))
+    else marker.hide()
   }
   const up = (ev: PointerEvent) => {
     window.removeEventListener('pointermove', move)
     window.removeEventListener('pointerup', up)
     window.removeEventListener('pointercancel', up)
     const side = sideAt(ev.clientX, ev.clientY)
-    if (side) withTransition(() => dockPanel(id, side))
+    marker.hide()
+    if (side) {
+      const index = indexAmong(tabsOf(side), 'y', ev)
+      withTransition(() => dockPanel(id, side, index))
+    }
     dockTarget.value = null
     windowDragging.value = false
   }

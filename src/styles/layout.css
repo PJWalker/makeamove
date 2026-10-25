@@ -1196,10 +1196,6 @@
     cursor: grabbing !important;
     user-select: none;
   }
-  .hotbar[data-dragging='true'] {
-    outline: 2px dashed var(--text-muted);
-    outline-offset: 2px;
-  }
   .hotbar-hint {
     flex: none;
     margin: 0;

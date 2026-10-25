@@ -85,13 +85,13 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
         data-dragging={dragging.value !== null}
         onWheel={(e) => {
           // A mouse wheel scrolls the bar sideways.
-          if (e.deltaY && !e.deltaX) e.currentTarget.scrollLeft += e.deltaY
+          if (e.deltaY && !e.deltaX) e.currentTarget.scrollLeft += e.deltaY;
         }}
       >
         {slots.map((id, i) => {
-          const a = index.get(id)
-          if (!a) return null
-          const off = a.available !== true
+          const a = index.get(id);
+          if (!a) return null;
+          const off = a.available !== true;
           return (
             <div
               key={id}
@@ -105,18 +105,23 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
                 tabIndex={0}
                 class="hotbar-btn btn btn-ghost bevel"
                 aria-disabled={off}
-                title={off ? `${a.title}: ${a.available}` : (a.detail ?? a.title)}
+                title={
+                  off ? `${a.title}: ${a.available}` : (a.detail ?? a.title)
+                }
                 onClick={() => run(id)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault()
-                    run(id)
-                  } else if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
-                    e.preventDefault()
-                    edit((s) => shift(s, id, e.key === 'ArrowLeft' ? -1 : 1))
-                  } else if (e.key === 'Delete' || e.key === 'Backspace') {
-                    e.preventDefault()
-                    edit((s) => unpin(s, id))
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    run(id);
+                  } else if (
+                    e.altKey &&
+                    (e.key === "ArrowLeft" || e.key === "ArrowRight")
+                  ) {
+                    e.preventDefault();
+                    edit((s) => shift(s, id, e.key === "ArrowLeft" ? -1 : 1));
+                  } else if (e.key === "Delete" || e.key === "Backspace") {
+                    e.preventDefault();
+                    edit((s) => unpin(s, id));
                   }
                 }}
               >
@@ -124,7 +129,7 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
                 <span>{a.title}</span>
               </div>
             </div>
-          )
+          );
         })}
         <Button
           variant="icon"
@@ -134,8 +139,7 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
         >
           <IconSearch size={22} />
         </Button>
-        {dragging.value && <p class="hotbar-hint">Drop off the bar to remove</p>}
       </div>
     </div>
-  )
+  );
 }
