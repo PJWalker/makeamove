@@ -689,11 +689,6 @@
     color: var(--text-faint);
     font-size: var(--text-xs);
   }
-  /* Message bodies line up under the author's name. */
-  .chat-text,
-  .roll-card {
-    margin-left: 32px;
-  }
   .chat-text {
     font-size: var(--text-md);
     line-height: 1.45;
