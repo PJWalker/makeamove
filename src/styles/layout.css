@@ -1180,13 +1180,46 @@
     background: var(--surface-raised, var(--surface));
     color: var(--text);
     border: 1px solid #fff2;
-    box-shadow: 0 6px 16px -4px oklch(0% 0 0 / 0.55);
-    font-size: var(--text-xs);
+    font-size: 1rem;
     line-height: 1.4;
     pointer-events: none;
     overflow: visible;
     opacity: 0;
     transition: opacity 100ms var(--ease);
+  }
+  /* The speech arrow: a rotated square pointing at the target. */
+  .tooltip::before {
+    content: '';
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: inherit;
+    border: inherit;
+    transform: translate(-50%, -50%) rotate(45deg);
+  }
+  .tooltip[data-dir='down']::before {
+    left: var(--arrow);
+    top: 0;
+    border-right: 0;
+    border-bottom: 0;
+  }
+  .tooltip[data-dir='up']::before {
+    left: var(--arrow);
+    top: 100%;
+    border-left: 0;
+    border-top: 0;
+  }
+  .tooltip[data-dir='right']::before {
+    top: var(--arrow);
+    left: 0;
+    border-right: 0;
+    border-top: 0;
+  }
+  .tooltip[data-dir='left']::before {
+    top: var(--arrow);
+    left: 100%;
+    border-left: 0;
+    border-bottom: 0;
   }
   .tooltip:popover-open {
     opacity: 1;

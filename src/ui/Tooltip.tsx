@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'preact/hooks'
 import { useSignal } from '@preact/signals'
 
 const DELAY = 150
-const GAP = 8
+const GAP = 10
 
 /**
  * One tooltip for the whole app. It watches the pointer and keyboard focus
@@ -99,9 +99,13 @@ export function Tooltip() {
       const clamp = (v: number, size: number, max: number) => Math.min(Math.max(v, 4), max - size - 4)
       if (t.dir === 'left' || t.dir === 'right') {
         el.style.left = `${t.dir === 'right' ? t.x : t.x - w}px`
-        el.style.top = `${clamp(t.y - h / 2, h, innerHeight)}px`
+        const top = clamp(t.y - h / 2, h, innerHeight)
+        el.style.top = `${top}px`
+        el.style.setProperty('--arrow', `${t.y - top}px`)
       } else {
-        el.style.left = `${clamp(t.x - w / 2, w, innerWidth)}px`
+        const left = clamp(t.x - w / 2, w, innerWidth)
+        el.style.left = `${left}px`
+        el.style.setProperty('--arrow', `${t.x - left}px`)
         el.style.top = `${t.dir === 'down' ? t.y : t.y - h}px`
       }
     } else if (el.matches(':popover-open')) {
@@ -110,7 +114,7 @@ export function Tooltip() {
   }, [t])
 
   return (
-    <div ref={ref} class="tooltip" popover="manual" role="tooltip">
+    <div ref={ref} class="tooltip" data-dir={t?.dir} popover="manual" role="tooltip">
       {t?.text}
     </div>
   )
