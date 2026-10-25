@@ -35,7 +35,7 @@ import {
 import { isTyping, MOD } from '../ui/keys'
 import { Segmented } from '../ui/Segmented'
 import { Dialog } from './CampaignDialogs'
-import { activeMapColour, canvasColour, sceneSettingsOpen, seenMapColours } from './canvasState'
+import { activeMapColour, canvasColour, canvasCommands, sceneSettingsOpen, seenMapColours } from './canvasState'
 import { ContextMenu, type MenuItem } from './ContextMenu'
 
 /**
@@ -89,7 +89,11 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
     const colour = ctl?.mapColour.value ?? null
     activeMapColour.value = colour
     if (ctl) seenMapColours.value = { ...seenMapColours.peek(), [ctl.sceneId]: colour }
+    canvasCommands.value = ctl
+      ? { fit: () => ctl.fit(), undo: () => ctl.scene.undo.undo(), redo: () => ctl.scene.undo.redo() }
+      : null
   })
+  useEffect(() => () => void (canvasCommands.value = null), [])
 
   // Keyboard shortcuts, unless a field or dialog has the keyboard.
   useEffect(() => {

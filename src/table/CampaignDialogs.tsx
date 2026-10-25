@@ -169,6 +169,7 @@ const SHORTCUTS: [string, string][] = [
   ['Arrows', 'Nudge (⇧ for a whole cell)'],
   ['Alt + drag', 'Move a token off the grid'],
   ['Ctrl/⌘ + \\', 'Hide or show all panels'],
+  ['Ctrl/⌘ + K', 'Search moves, tools, scenes and commands'],
 ]
 
 export function HelpDialog({ dialogRef }: { dialogRef: RefObject<HTMLDialogElement> }) {

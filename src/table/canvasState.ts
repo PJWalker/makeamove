@@ -23,3 +23,17 @@ export const seenMapColours = signal<Record<string, string | null>>({})
 export function canvasColour(scene: SceneView, mapColour: string | null): string {
   return scene.canvasColour ?? (mapColour ? backdropColour(mapColour) : DEFAULT_CANVAS_COLOUR)
 }
+
+/** Ctrl/Cmd + \ hides all chrome. */
+export const chromeHidden = signal(false)
+
+/** What the command palette can ask of the open scene's canvas. */
+export interface CanvasCommands {
+  fit(): void
+  undo(): void
+  redo(): void
+}
+export const canvasCommands = signal<CanvasCommands | null>(null)
+
+/** Ask the scene menu to open one of its dialogs (from the command palette). */
+export const dialogRequest = signal<'player' | 'settings' | 'help' | null>(null)

@@ -1,7 +1,7 @@
 import { elementAt, watchHoldRelease } from "../ui/holdRelease";
 import { setMorphOrigin } from "../ui/morph";
 import { openPopup } from "../ui/popup";
-import { useSignal } from "@preact/signals";
+import { useSignal, useSignalEffect } from "@preact/signals";
 import { useEffect, useRef } from "preact/hooks";
 import { goToCampaign } from "../router";
 import type { Campaign, SceneView } from "../store/campaign";
@@ -17,7 +17,7 @@ import {
   IconMembers,
   IconSettings,
 } from "../ui/icons";
-import { canvasColour, sceneSettingsOpen, seenMapColours } from "./canvasState";
+import { canvasColour, dialogRequest, sceneSettingsOpen, seenMapColours } from "./canvasState";
 import { HelpDialog, PlayerDialog, SettingsDialog } from "./CampaignDialogs";
 
 /**
@@ -49,6 +49,15 @@ export function SceneBar({
   function setExpanded(next: boolean) {
     expanded.value = next;
   }
+
+  // The command palette can open these dialogs too.
+  useSignalEffect(() => {
+    const want = dialogRequest.value;
+    if (!want) return;
+    dialogRequest.value = null;
+    const dialog = { player: playerRef, settings: settingsRef, help: helpRef }[want].current;
+    if (want !== "settings" || isGm) openPopup(dialog);
+  });
 
   // Collapse on Escape or a press anywhere outside the bar.
   useEffect(() => {

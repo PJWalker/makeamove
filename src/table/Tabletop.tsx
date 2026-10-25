@@ -1,4 +1,3 @@
-import { useSignal } from '@preact/signals'
 import { lazy, Suspense } from 'preact/compat'
 import { useEffect } from 'preact/hooks'
 import { sceneHueFromHex } from '../lib/colour'
@@ -8,7 +7,8 @@ import { FloatingWindows } from './FloatingWindows'
 import { windowLayer } from '../ui/windows'
 import { SceneBar } from './SceneBar'
 import { Sidebar } from './Sidebar'
-import { activeMapColour, canvasColour } from './canvasState'
+import { activeMapColour, canvasColour, chromeHidden } from './canvasState'
+import { Palette } from './Palette'
 import { Toolbar } from './Toolbar'
 
 // PixiJS is big; load it only once someone opens a table.
@@ -18,7 +18,6 @@ export function Tabletop({ campaign }: { campaign: Campaign }) {
   const scenes = useY(campaign.scenes, () => campaign.sceneViews())
   const activeId = useY(campaign.members, () => campaign.activeSceneId())
   const scene = scenes.find((s) => s.id === activeId) ?? scenes[0]
-  const chromeHidden = useSignal(false)
 
   const mapColour = activeMapColour.value
   const colour = scene ? canvasColour(scene, mapColour) : null
@@ -61,6 +60,7 @@ export function Tabletop({ campaign }: { campaign: Campaign }) {
       <Toolbar isGm={campaign.isGm()} />
       <Sidebar campaign={campaign} />
       <FloatingWindows campaign={campaign} />
+      <Palette campaign={campaign} />
     </div>
   )
 }

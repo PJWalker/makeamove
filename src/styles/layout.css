@@ -1457,4 +1457,95 @@
     text-align: center;
     white-space: nowrap;
   }
+
+  /* Command palette (Ctrl/Cmd + K) */
+  .palette {
+    position: fixed;
+    top: max(48px, 14vh);
+    left: 50%;
+    translate: -50% 0;
+    width: min(560px, 100vw - 2 * var(--space-4));
+    display: flex;
+    flex-direction: column;
+    color: var(--text);
+    animation: palette-in 280ms var(--ease) both;
+  }
+  @keyframes palette-in {
+    from {
+      opacity: 0;
+      translate: -50% 8px;
+    }
+  }
+  .palette-input {
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--border, rgb(255 255 255 / 0.12));
+    color: inherit;
+    font: inherit;
+    font-size: var(--text-md, 1rem);
+    outline: none;
+  }
+  .palette-list {
+    list-style: none;
+    margin: 0;
+    padding: var(--space-1);
+    max-height: min(420px, 55vh);
+    overflow-y: auto;
+  }
+  .palette-list li {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    cursor: pointer;
+  }
+  .palette-list li[data-active='true'] {
+    background: color-mix(in oklch, var(--accent) 30%, transparent);
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+  .palette-list li[data-unavailable='true'] {
+    opacity: 0.5;
+    cursor: default;
+  }
+  .palette-icon {
+    display: grid;
+    place-items: center;
+    width: 20px;
+    flex: none;
+    color: var(--text-muted);
+  }
+  .palette-text {
+    display: grid;
+    min-width: 0;
+    flex: 1;
+  }
+  .palette-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .palette-detail {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+  .palette-list li.palette-empty {
+    color: var(--text-muted);
+    cursor: default;
+  }
+  .palette-foot {
+    display: flex;
+    gap: var(--space-4);
+    margin: 0;
+    padding: var(--space-2) var(--space-4);
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .palette {
+      animation: none;
+    }
+  }
 }

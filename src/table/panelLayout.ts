@@ -98,6 +98,12 @@ export function setSidebarOpen(open: boolean) {
   layout.value = { ...layout.value, open }
 }
 
+/** Bring a panel into view without ever hiding it, unlike clicking its tab. */
+export function showPanel(id: PanelId) {
+  if (isFloating(id)) raiseWindow(id)
+  else layout.value = { ...layout.value, active: id, open: true }
+}
+
 export function detachPanel(id: PanelId, x: number, y: number, w = 340, h = 440) {
   const l = layout.value
   if (isFloating(id)) return

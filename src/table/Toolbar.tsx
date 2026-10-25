@@ -16,7 +16,7 @@ import {
 } from '../ui/icons'
 import { isTyping } from '../ui/keys'
 
-const TOOLS: {
+export const TOOLS: {
   id: ToolId
   label: string
   key: string
