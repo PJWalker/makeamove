@@ -89,6 +89,13 @@ export interface TagDef {
   text: string
 }
 
+/** A field on an NPC's sheet. The system decides what NPCs have. */
+export interface NpcFieldDef {
+  id: string
+  label: string
+  type: 'text' | 'number' | 'longtext'
+}
+
 /** A figure a system shows on a character's token. */
 export interface TokenStat {
   id: string
@@ -117,6 +124,8 @@ export interface GameSystem {
   tags: TagDef[]
   /** Debilities: each gives -1 to its stat's rolls. */
   debilities: { id: string; name: string; stat: string }[]
+  /** What an NPC's sheet records, besides name, HP and notes. */
+  npcFields: NpcFieldDef[]
   /** What a token tied to this character shows, in order (the system decides). */
   tokenStats(c: CharacterView, d: Derived): TokenStat[]
   /** Credit for the rules text. */

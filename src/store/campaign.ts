@@ -88,6 +88,8 @@ export class Campaign {
   readonly scenes: Y.Map<Y.Map<any>>
   /** id -> character (see characters/store.ts). */
   readonly characters: Y.Map<Y.Map<any>>
+  /** id -> folder that characters can be filed in. */
+  readonly characterFolders: Y.Map<{ name: string }>
   private persistence: IndexeddbPersistence
   private destroyed = false
   private cleanups: (() => void)[] = []
@@ -112,6 +114,7 @@ export class Campaign {
     this.revoked = this.doc.getMap('revoked')
     this.scenes = this.doc.getMap('scenes')
     this.characters = this.doc.getMap('characters')
+    this.characterFolders = this.doc.getMap('characterFolders')
     this.persistence = new IndexeddbPersistence(dbName(id), this.doc)
     this.chat = new ChatLog(this.doc, id, device.value.id)
   }

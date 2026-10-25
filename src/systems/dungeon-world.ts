@@ -354,6 +354,13 @@ export const dungeonWorld: GameSystem = {
     { id: 'confused', name: 'Confused', stat: 'wis' },
     { id: 'scarred', name: 'Scarred', stat: 'cha' },
   ],
+  npcFields: [
+    { id: 'damage', label: 'Damage', type: 'text' },
+    { id: 'armor', label: 'Armor', type: 'number' },
+    { id: 'tags', label: 'Tags', type: 'text' },
+    { id: 'instinct', label: 'Instinct', type: 'text' },
+    { id: 'moves', label: 'Moves', type: 'longtext' },
+  ],
   tokenStats: (c, d) => [
     {
       id: 'hp',

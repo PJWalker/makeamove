@@ -31,8 +31,18 @@ export interface ItemInstance {
   order: string
 }
 
+/** A player character has a class and a full sheet; an NPC has the fields its system lists. */
+export type CharacterKind = 'pc' | 'npc'
+
 export interface CharacterView {
   id: string
+  kind: CharacterKind
+  /** The folder it's filed in, if any (see Campaign.characterFolders). */
+  folder?: string
+  /** An NPC's maximum HP; player characters work theirs out. */
+  maxHp: number
+  /** An NPC's system-defined fields, by id. */
+  fields: Record<string, string | number>
   name: string
   /** Device id of the player who owns it. */
   owner: string
@@ -61,12 +71,15 @@ export interface CharacterView {
   tokenColour?: string
 }
 
+/** Hit points a new NPC starts with. */
+const NPC_HP = 6
+
 export type CharacterMap = Y.Map<any>
 
 export function createCharacter(
   characters: Y.Map<CharacterMap>,
   system: GameSystem,
-  init: { name: string; classId: string; owner: string; scores?: Record<string, number> },
+  init: { name: string; classId: string; owner: string; scores?: Record<string, number>; kind?: CharacterKind; folder?: string },
 ): string {
   const id = newId()
   const cls = system.classes.find((c) => c.id === init.classId) ?? system.classes[0]
@@ -75,7 +88,13 @@ export function createCharacter(
     characters.set(id, m)
     m.set('name', init.name)
     m.set('owner', init.owner)
-    m.set('classId', cls.id)
+    if (init.kind === 'npc') {
+      m.set('kind', 'npc')
+      m.set('maxHp', NPC_HP)
+    } else {
+      m.set('classId', cls.id)
+    }
+    if (init.folder) m.set('folder', init.folder)
     m.set('level', 1)
     m.set('xp', 0)
     m.set('coin', 0)
@@ -85,7 +104,7 @@ export function createCharacter(
     for (const s of system.stats) m.set(`score:${s.id}`, init.scores?.[s.id] ?? 10)
     m.set('inventory', new Y.Map())
     // Start at full health.
-    m.set('hp', cls.baseHp + (init.scores?.con ?? 10))
+    m.set('hp', init.kind === 'npc' ? NPC_HP : cls.baseHp + (init.scores?.con ?? 10))
   })
   return id
 }
@@ -95,8 +114,14 @@ export function characterView(id: string, m: CharacterMap, system: GameSystem): 
   for (const s of system.stats) scores[s.id] = m.get(`score:${s.id}`) ?? 10
   const inv = m.get('inventory') as Y.Map<ItemInstance> | undefined
   const inventory = inv ? [...inv.values()].sort((a, b) => (a.order < b.order ? -1 : a.order > b.order ? 1 : 0)) : []
+  const fields: Record<string, string | number> = {}
+  for (const f of system.npcFields) fields[f.id] = m.get(`npc:${f.id}`) ?? (f.type === 'number' ? 0 : '')
   return {
     id,
+    kind: m.get('kind') === 'npc' ? 'npc' : 'pc',
+    folder: m.get('folder'),
+    maxHp: m.get('maxHp') ?? NPC_HP,
+    fields,
     name: m.get('name') ?? 'Unnamed',
     owner: m.get('owner') ?? '',
     classId: m.get('classId') ?? system.classes[0].id,
@@ -149,7 +174,7 @@ export function derive(c: CharacterView, system: GameSystem): Derived {
     .map((i) => ({ name: i.name, effects: i.effects }))
   const resolved = resolveEffects(
     {
-      maxHp: cls.baseHp + (c.scores.con ?? 10) + c.hpBonus,
+      maxHp: c.kind === 'npc' ? c.maxHp : cls.baseHp + (c.scores.con ?? 10) + c.hpBonus,
       armor: 0,
       damage: cls.damage,
       damageBonus: 0,
@@ -174,6 +199,7 @@ export function derive(c: CharacterView, system: GameSystem): Derived {
 
 /** Moves the character has: their class's, plus any granted by items. */
 export function movesFor(c: CharacterView, system: GameSystem, d: Derived) {
+  if (c.kind === 'npc') return []
   const granted = new Set(d.resolved.moves)
   return system.moves.filter((m) => m.category !== 'class' || m.classId === c.classId || granted.has(m.id))
 }

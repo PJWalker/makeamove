@@ -8,7 +8,7 @@ import * as Y from 'yjs'
 import { systemActions } from '../../actions/system'
 import { Campaign, createCampaign } from '../../store/campaign'
 import { device } from '../../store/device'
-import { addItem, getCharacter, makeMove, newCharacter, selectedCharacterId, setField, systemOf, updateItem } from '../api'
+import { addItem, createFolder, deleteFolder, getCharacter, listFolders, makeMove, moveToFolder, newCharacter, newNpc, renameFolder, tokenStatsByCharacter, selectedCharacterId, setField, systemOf, updateItem } from '../api'
 import { defaultHotbar, editHotbar, hotbarSlots, moveTo, pin, placeAt, insertAt, shift, unpin, MAX_SLOTS } from '../hotbar'
 
 async function setUp() {
@@ -84,6 +84,41 @@ describe('hotbar editing', () => {
     const c = await setUp()
     expect(editHotbar(c, (s) => pin(s, 'cmd:fit'))).toBe(true)
     expect(hotbarSlots(c, undefined)).toContain('cmd:fit')
+    c.destroy()
+  })
+})
+
+describe('NPCs and folders', () => {
+  it('creates an NPC with its own HP, no moves, and a token HP bar', async () => {
+    const c = await setUp()
+    const id = newNpc(c, 'Goblin')
+    const npc = getCharacter(c, id)!
+    expect(npc).toMatchObject({ kind: 'npc', name: 'Goblin', hp: 6, maxHp: 6 })
+    expect(Object.keys(npc.fields)).toEqual(systemOf(c).npcFields.map((f) => f.id))
+    setField(c, id, 'maxHp', 12)
+    expect(tokenStatsByCharacter(c).get(id)![0]).toMatchObject({ id: 'hp', value: 6, max: 12 })
+    c.destroy()
+  })
+
+  it('does not auto-select an NPC as the only character a player owns', async () => {
+    const c = await setUp()
+    newNpc(c, 'Goblin')
+    c.members.get('gm')!.delete('character')
+    expect(selectedCharacterId(c)).toBeUndefined()
+    c.destroy()
+  })
+
+  it('files characters in folders, and deleting a folder returns them to the top', async () => {
+    const c = await setUp()
+    const a = newCharacter(c, 'Ayla', 'fighter')
+    const folder = createFolder(c, 'Party')
+    renameFolder(c, folder, 'The Party')
+    expect(listFolders(c)).toEqual([{ id: folder, name: 'The Party' }])
+    moveToFolder(c, a, folder)
+    expect(getCharacter(c, a)!.folder).toBe(folder)
+    deleteFolder(c, folder)
+    expect(getCharacter(c, a)!.folder).toBeUndefined()
+    expect(listFolders(c)).toEqual([])
     c.destroy()
   })
 })

@@ -1390,6 +1390,119 @@
     font-size: var(--text-xs);
   }
 
+  /* Characters: a list (with folders) beside the sheet */
+  .chars {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    container-type: inline-size;
+  }
+  .chars-grid {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(130px, 34%) 1fr;
+  }
+  .chars-list {
+    min-height: 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #fff1;
+  }
+  .chars-actions {
+    display: flex;
+    gap: var(--space-1);
+    padding: var(--space-2);
+  }
+  .chars-tree {
+    padding: var(--space-1) var(--space-2) var(--space-2);
+  }
+  .chars-sheet {
+    min-width: 0;
+  }
+  .chars-rows {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1px;
+  }
+  .chars-folder .chars-rows {
+    padding-left: var(--space-3);
+  }
+  .chars-row,
+  .chars-folder-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    inline-size: 100%;
+    padding: var(--space-1) var(--space-2);
+    background: none;
+    border: 0;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    touch-action: none;
+  }
+  .chars-row:hover,
+  .chars-folder-head:hover {
+    background: var(--surface-raised);
+  }
+  .chars-row[data-selected='true'] {
+    background: var(--surface-raised);
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
+  .chars-row .avatar {
+    width: 22px;
+    height: 22px;
+    font-size: var(--text-xs);
+    flex: none;
+  }
+  .chars-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .chars-tag {
+    padding: 0 4px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-muted);
+    box-shadow: inset 0 0 0 1px #fff3;
+  }
+  .chars-folder {
+    margin-bottom: var(--space-1);
+  }
+  .chars-folder[data-open='false'] .chars-folder-head {
+    opacity: 0.8;
+  }
+  .chars-folder-input {
+    inline-size: 100%;
+  }
+  .chars-tree[data-dropping='true'],
+  .chars-folder[data-dropping='true'] {
+    outline: 2px dashed var(--text-muted);
+    outline-offset: -2px;
+  }
+  .chars-empty {
+    padding: var(--space-2);
+  }
+  /* Too narrow for two panes: the list sits above the sheet. */
+  @container (max-width: 380px) {
+    .chars-grid {
+      grid-template-columns: 1fr;
+      grid-template-rows: minmax(0, 36%) minmax(0, 1fr);
+    }
+    .chars-list {
+      border-right: 0;
+      border-bottom: 1px solid #fff1;
+    }
+  }
+
   /* Character sheet */
   .sheet-panel,
   .sheet {

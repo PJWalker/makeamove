@@ -5,6 +5,9 @@ import { performMove, planMove } from '../moves'
 
 const char = (over: Partial<CharacterView> = {}): CharacterView => ({
   id: 'c1',
+  kind: 'pc',
+  maxHp: 6,
+  fields: {},
   name: 'Ayla',
   owner: 'me',
   classId: 'fighter',

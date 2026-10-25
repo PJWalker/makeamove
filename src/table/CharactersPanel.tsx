@@ -3,8 +3,15 @@ import { useEffect, useRef } from 'preact/hooks'
 import {
   bump,
   canEdit,
+  createFolder,
+  deleteFolder,
   listCharacters,
+  listFolders,
+  moveToFolder,
   newCharacter,
+  newNpc,
+  renameFolder,
+  type FolderView,
   selectCharacter,
   selectedCharacterId,
   setField,
@@ -18,60 +25,245 @@ import type { Campaign } from '../store/campaign'
 import { device } from '../store/device'
 import { useY } from '../store/useY'
 import type { GameSystem, MoveDef } from '../systems/types'
+import { Avatar } from '../ui/Avatar'
 import { Button } from '../ui/Button'
 import { BlobImage } from '../ui/BlobImage'
 import { colourOf } from '../scene/presence'
 import { TOKEN_STYLES } from '../scene/types'
 import { menuTrigger } from '../ui/menuTrigger'
 import { openPopup } from '../ui/popup'
-import { IconImage, IconRename, IconDelete } from '../ui/icons'
+import { IconDelete, IconFolder, IconImage, IconRename } from '../ui/icons'
 import { Segmented } from '../ui/Segmented'
 import { Dialog } from './CampaignDialogs'
 import { ContextMenu, type MenuItem } from './ContextMenu'
+import { dragToFolder } from './folderDrag'
 import { dragToken } from './tokenDrag'
 
 export function CharactersPanel({ campaign }: { campaign: Campaign }) {
   const system = systemOf(campaign)
   const characters = useY(campaign.characters, () => listCharacters(campaign))
+  const folders = useY(campaign.characterFolders, () => listFolders(campaign))
   const selectedId = useY(campaign.members, () => selectedCharacterId(campaign))
+  const isGm = useY(campaign.members, () => campaign.isGm())
   const creating = useSignal(false)
   const selected = characters.find((c) => c.id === selectedId)
 
   return (
-    <div class="panel-scroll sheet-panel">
-      <div class="sheet-picker">
-        <select
-          class="input bevel"
-          aria-label="Character"
-          value={selectedId ?? ''}
-          onChange={(e) => selectCharacter(campaign, e.currentTarget.value || undefined)}
-        >
-          <option value="">{characters.length ? 'Choose a character…' : 'No characters yet'}</option>
-          {characters.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name} ({system.classes.find((k) => k.id === c.classId)?.name ?? c.classId})
-            </option>
-          ))}
-        </select>
-        <Button size="sm" onClick={() => (creating.value = !creating.value)}>
-          New
-        </Button>
+    <div class="chars">
+      <div class="chars-grid">
+      <CharacterList
+        campaign={campaign}
+        system={system}
+        characters={characters}
+        folders={folders}
+        selectedId={selectedId}
+        onNew={() => (creating.value = true)}
+        onPick={(id) => {
+          creating.value = false
+          selectCharacter(campaign, id)
+        }}
+      />
+      <div class="chars-sheet panel-scroll sheet-panel">
+        {creating.value ? (
+          <NewCharacter campaign={campaign} system={system} folders={folders} isGm={isGm} onDone={() => (creating.value = false)} />
+        ) : selected ? (
+          selected.kind === 'npc' ? (
+            <NpcSheet key={selected.id} campaign={campaign} system={system} c={selected} />
+          ) : (
+            <Sheet key={selected.id} campaign={campaign} system={system} c={selected} />
+          )
+        ) : (
+          <p class="empty">Create a character, or pick one to see its sheet.</p>
+        )}
       </div>
-      {creating.value && <NewCharacter campaign={campaign} system={system} onDone={() => (creating.value = false)} />}
-      {selected ? (
-        <Sheet campaign={campaign} system={system} c={selected} />
-      ) : (
-        !creating.value && <p class="empty">Create a character, or pick one to see its sheet.</p>
-      )}
+      </div>
     </div>
   )
 }
 
-function NewCharacter({ campaign, system, onDone }: { campaign: Campaign; system: GameSystem; onDone: () => void }) {
+/** The left pane: characters, filed in folders. Drag a character onto a folder to file it. */
+function CharacterList({
+  campaign,
+  system,
+  characters,
+  folders,
+  selectedId,
+  onNew,
+  onPick,
+}: {
+  campaign: Campaign
+  system: GameSystem
+  characters: CharacterView[]
+  folders: FolderView[]
+  selectedId: string | undefined
+  onNew: () => void
+  onPick: (id: string) => void
+}) {
+  // Folders the user has folded away (this device only).
+  const folded = useSignal<Set<string>>(new Set())
+  // A folder being named: its id, or 'new'.
+  const naming = useSignal<string | null>(null)
+  const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(null)
+  const known = new Set(folders.map((f) => f.id))
+  const inFolder = (id: string) => characters.filter((c) => c.folder === id)
+  const loose = characters.filter((c) => !c.folder || !known.has(c.folder))
+
+  const toggle = (id: string) => {
+    const next = new Set(folded.value)
+    if (!next.delete(id)) next.add(id)
+    folded.value = next
+  }
+
+  const row = (c: CharacterView) => {
+    const mine = canEdit(campaign, c)
+    const trigger = menuTrigger((x, y) => {
+      const items: MenuItem[] = []
+      if (mine) {
+        for (const f of folders) {
+          if (f.id !== c.folder) items.push({ label: `Move to ${f.name}`, Icon: IconFolder, onSelect: () => moveToFolder(campaign, c.id, f.id) })
+        }
+        if (c.folder && known.has(c.folder)) items.push({ label: 'Remove from folder', onSelect: () => moveToFolder(campaign, c.id, undefined) })
+      }
+      if (items.length) menu.value = { x, y, items }
+    })
+    return (
+      <li key={c.id}>
+        <button
+          type="button"
+          class="chars-row"
+          data-selected={c.id === selectedId}
+          data-kind={c.kind}
+          title={c.kind === 'npc' ? `${c.name} (NPC)` : `${c.name} (${system.classes.find((k) => k.id === c.classId)?.name ?? c.classId})`}
+          onClick={() => onPick(c.id)}
+          onPointerDown={(e) => {
+            trigger.onPointerDown(e)
+            if (mine) dragToFolder(e, (folder) => moveToFolder(campaign, c.id, folder))
+          }}
+          onContextMenu={trigger.onContextMenu}
+        >
+          <Avatar id={c.id} name={c.name} />
+          <span class="chars-name">{c.name}</span>
+          {c.kind === 'npc' && <span class="chars-tag">NPC</span>}
+        </button>
+      </li>
+    )
+  }
+
+  const folderMenu = (f: FolderView) =>
+    menuTrigger((x, y) => {
+      menu.value = {
+        x,
+        y,
+        items: [
+          { label: 'Rename folder', Icon: IconRename, onSelect: () => (naming.value = f.id) },
+          { label: 'Delete folder', Icon: IconDelete, danger: true, onSelect: () => deleteFolder(campaign, f.id) },
+        ],
+      }
+    })
+
+  return (
+    <nav class="chars-list" aria-label="Characters">
+      <div class="chars-actions">
+        <Button size="sm" onClick={onNew}>
+          New
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => (naming.value = 'new')}>
+          New folder
+        </Button>
+      </div>
+      <div class="chars-tree panel-scroll" data-folder-drop="">
+        {naming.value === 'new' && (
+          <FolderName
+            onDone={(name) => {
+              if (name) createFolder(campaign, name)
+              naming.value = null
+            }}
+          />
+        )}
+        {folders.map((f) => {
+          const kids = inFolder(f.id)
+          const open = !folded.value.has(f.id)
+          const trigger = folderMenu(f)
+          return (
+            <section key={f.id} class="chars-folder" data-folder-drop={f.id} data-open={open}>
+              {naming.value === f.id ? (
+                <FolderName
+                  initial={f.name}
+                  onDone={(name) => {
+                    if (name) renameFolder(campaign, f.id, name)
+                    naming.value = null
+                  }}
+                />
+              ) : (
+                <button
+                  type="button"
+                  class="chars-folder-head"
+                  aria-expanded={open}
+                  onClick={() => toggle(f.id)}
+                  onPointerDown={trigger.onPointerDown}
+                  onContextMenu={trigger.onContextMenu}
+                >
+                  <IconFolder size={16} />
+                  <span class="chars-name">{f.name}</span>
+                  <span class="muted">{kids.length}</span>
+                </button>
+              )}
+              {open && <ul class="chars-rows">{kids.map(row)}</ul>}
+            </section>
+          )
+        })}
+        <ul class="chars-rows">{loose.map(row)}</ul>
+        {!characters.length && !folders.length && <p class="muted chars-empty">No characters yet.</p>}
+      </div>
+      {menu.value && <ContextMenu {...menu.value} onClose={() => (menu.value = null)} />}
+    </nav>
+  )
+}
+
+function FolderName({ initial = '', onDone }: { initial?: string; onDone: (name: string | null) => void }) {
+  return (
+    <input
+      class="input bevel chars-folder-input"
+      aria-label="Folder name"
+      placeholder="Folder name"
+      value={initial}
+      autoFocus
+      onFocus={(e) => e.currentTarget.select()}
+      onBlur={(e) => onDone(e.currentTarget.value.trim() || null)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') e.currentTarget.blur()
+        if (e.key === 'Escape') {
+          e.currentTarget.value = ''
+          e.currentTarget.blur()
+        }
+      }}
+    />
+  )
+}
+
+function NewCharacter({
+  campaign,
+  system,
+  folders,
+  isGm,
+  onDone,
+}: {
+  campaign: Campaign
+  system: GameSystem
+  folders: FolderView[]
+  isGm: boolean
+  onDone: () => void
+}) {
+  const kind = useSignal<'pc' | 'npc'>('pc')
   const name = useSignal('')
   const classId = useSignal(system.classes[0].id)
+  const folder = useSignal('')
   const submit = () => {
-    newCharacter(campaign, name.value, classId.value)
+    if (kind.value === 'npc') newNpc(campaign, name.value, folder.value || undefined)
+    else {
+      const id = newCharacter(campaign, name.value, classId.value)
+      if (folder.value) moveToFolder(campaign, id, folder.value)
+    }
     onDone()
   }
   const cls = system.classes.find((k) => k.id === classId.value)
@@ -83,21 +275,52 @@ function NewCharacter({ campaign, system, onDone }: { campaign: Campaign; system
         submit()
       }}
     >
+      {isGm && (
+        <div class="field">
+          Type
+          <Segmented
+            label="Character type"
+            value={kind.value}
+            options={[
+              { id: 'pc', label: 'Player character' },
+              { id: 'npc', label: 'NPC' },
+            ]}
+            onChange={(v) => (kind.value = v)}
+          />
+        </div>
+      )}
       <label class="field">
         Name
         <input class="input bevel" value={name.value} onInput={(e) => (name.value = e.currentTarget.value)} autofocus />
       </label>
-      <label class="field">
-        Class
-        <select class="input bevel" value={classId.value} onChange={(e) => (classId.value = e.currentTarget.value)}>
-          {system.classes.map((k) => (
-            <option key={k.id} value={k.id}>
-              {k.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      {cls && <p class="muted">{cls.blurb}</p>}
+      {kind.value === 'pc' && (
+        <>
+          <label class="field">
+            Class
+            <select class="input bevel" value={classId.value} onChange={(e) => (classId.value = e.currentTarget.value)}>
+              {system.classes.map((k) => (
+                <option key={k.id} value={k.id}>
+                  {k.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {cls && <p class="muted">{cls.blurb}</p>}
+        </>
+      )}
+      {folders.length > 0 && (
+        <label class="field">
+          Folder
+          <select class="input bevel" value={folder.value} onChange={(e) => (folder.value = e.currentTarget.value)}>
+            <option value="">None</option>
+            {folders.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <div class="sheet-row">
         <Button variant="primary" size="sm" type="submit">
           Create
@@ -107,6 +330,70 @@ function NewCharacter({ campaign, system, onDone }: { campaign: Campaign; system
         </Button>
       </div>
     </form>
+  )
+}
+
+/** A non-player character: HP and the fields the game system lists for NPCs. */
+function NpcSheet({ campaign, system, c }: { campaign: Campaign; system: GameSystem; c: CharacterView }) {
+  const editable = canEdit(campaign, c)
+  const set = (key: string, value: unknown) => setField(campaign, c.id, key, value)
+  return (
+    <div class="sheet">
+      <TokenChip campaign={campaign} c={c} editable={editable} />
+      <header class="sheet-head">
+        <input
+          class="input bevel sheet-name"
+          aria-label="Name"
+          value={c.name}
+          disabled={!editable}
+          onChange={(e) => e.currentTarget.value.trim() && set('name', e.currentTarget.value.trim())}
+        />
+        <span class="muted">NPC</span>
+      </header>
+      <div class="sheet-vitals">
+        <Counter label="HP" value={c.hp} max={c.maxHp} disabled={!editable} onChange={(by) => bump(campaign, c.id, 'hp', by, c.maxHp)} />
+        <label class="counter">
+          <span class="eyebrow">Max HP</span>
+          <input
+            class="input bevel stat-score"
+            type="number"
+            min={1}
+            value={c.maxHp}
+            disabled={!editable}
+            onChange={(e) => {
+              const n = Math.floor(Number(e.currentTarget.value))
+              if (n >= 1) set('maxHp', n)
+            }}
+          />
+        </label>
+      </div>
+      {system.npcFields.map((f) => (
+        <label key={f.id} class="field">
+          {f.label}
+          {f.type === 'longtext' ? (
+            <textarea
+              class="input bevel"
+              rows={4}
+              value={String(c.fields[f.id])}
+              disabled={!editable}
+              onChange={(e) => set(`npc:${f.id}`, e.currentTarget.value)}
+            />
+          ) : (
+            <input
+              class="input bevel"
+              type={f.type === 'number' ? 'number' : 'text'}
+              value={c.fields[f.id]}
+              disabled={!editable}
+              onChange={(e) => set(`npc:${f.id}`, f.type === 'number' ? Number(e.currentTarget.value) || 0 : e.currentTarget.value)}
+            />
+          )}
+        </label>
+      ))}
+      <label class="field">
+        Notes
+        <textarea class="input bevel" rows={4} value={c.notes} disabled={!editable} onChange={(e) => set('notes', e.currentTarget.value)} />
+      </label>
+    </div>
   )
 }
 

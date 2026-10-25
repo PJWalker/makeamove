@@ -2,6 +2,7 @@ import { signal } from '@preact/signals'
 import { generateKeyBetween } from 'fractional-indexing'
 import type * as Y from 'yjs'
 import { importImage } from '../scene/images'
+import { newId } from '../lib/ids'
 import { postRoll, myName } from '../chat/send'
 import type { MoveSuggestion } from '../chat/types'
 import type { Campaign } from '../store/campaign'
@@ -43,7 +44,7 @@ export function getCharacter(campaign: Campaign, id: string | undefined): Charac
 export function selectedCharacterId(campaign: Campaign): string | undefined {
   const chosen: string | undefined = campaign.members.get(device.value.id)?.get('character')
   if (chosen && campaign.characters.has(chosen)) return chosen
-  const mine = listCharacters(campaign).filter((c) => c.owner === device.value.id)
+  const mine = listCharacters(campaign).filter((c) => c.kind === 'pc' && c.owner === device.value.id)
   return mine.length === 1 ? mine[0].id : undefined
 }
 
@@ -62,6 +63,57 @@ export function newCharacter(campaign: Campaign, name: string, classId: string) 
   })
   selectCharacter(campaign, id)
   return id
+}
+
+/** A non-player character, with the folder it starts in. */
+export function newNpc(campaign: Campaign, name: string, folder?: string) {
+  const id = createCharacter(campaign.characters, systemOf(campaign), {
+    name: name.trim() || 'Unnamed NPC',
+    classId: '',
+    owner: device.value.id,
+    kind: 'npc',
+    folder,
+  })
+  selectCharacter(campaign, id)
+  return id
+}
+
+/* Folders */
+
+export interface FolderView {
+  id: string
+  name: string
+}
+
+export function listFolders(campaign: Campaign): FolderView[] {
+  return [...campaign.characterFolders.entries()]
+    .map(([id, f]) => ({ id, name: f.name }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+}
+
+export function createFolder(campaign: Campaign, name: string) {
+  const id = newId()
+  campaign.characterFolders.set(id, { name: name.trim() || 'New folder' })
+  return id
+}
+
+export function renameFolder(campaign: Campaign, id: string, name: string) {
+  if (campaign.characterFolders.has(id) && name.trim()) campaign.characterFolders.set(id, { name: name.trim() })
+}
+
+/** Deleting a folder files its characters back at the top. */
+export function deleteFolder(campaign: Campaign, id: string) {
+  campaign.doc.transact(() => {
+    for (const m of campaign.characters.values()) if (m.get('folder') === id) m.delete('folder')
+    campaign.characterFolders.delete(id)
+  })
+}
+
+export function moveToFolder(campaign: Campaign, characterId: string, folderId: string | undefined) {
+  const m = campaign.characters.get(characterId)
+  if (!m) return
+  if (folderId) m.set('folder', folderId)
+  else m.delete('folder')
 }
 
 export function canEdit(campaign: Campaign, c: CharacterView) {

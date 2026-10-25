@@ -13,7 +13,7 @@ import type { Point } from '../scene/grid'
 import { importImage } from '../scene/images'
 import { isPlainToken, TOKEN_STYLES, type BlobRef, type TokenStyle } from '../scene/types'
 import { DEFAULT_CANVAS_COLOUR, type Campaign } from '../store/campaign'
-import { listCharacters, tokenStatsByCharacter } from '../characters/api'
+import { listCharacters, selectCharacter, tokenStatsByCharacter } from '../characters/api'
 import { useY } from '../store/useY'
 import { BlobImage } from '../ui/BlobImage'
 import { Button } from '../ui/Button'
@@ -38,6 +38,7 @@ import {
 import { isTyping, MOD } from '../ui/keys'
 import { Segmented } from '../ui/Segmented'
 import { Dialog } from './CampaignDialogs'
+import { showPanel } from './panelLayout'
 import { activeMapColour, canvasColour, canvasCommands, sceneSettingsOpen, seenMapColours, tokenDrop } from './canvasState'
 import { ContextMenu, type MenuItem } from './ContextMenu'
 
@@ -55,6 +56,24 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
   const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(null)
   const tokenOptions = useSignal<string | null>(null)
   const dropping = useSignal(false)
+
+  // Selecting a character's token goes to that character's sheet.
+  useEffect(() => {
+    const ctl = controller.value
+    if (!ctl) return
+    let last = ''
+    let first = true
+    return ctl.selection.subscribe((sel) => {
+      const el = sel.length === 1 ? ctl.element(sel[0]) : null
+      const id = el?.type === 'token' ? el.characterId : undefined
+      const fresh = id && sel[0] !== last && !first && campaign.characters.has(id)
+      last = sel[0] ?? ''
+      first = false
+      if (!fresh) return
+      selectCharacter(campaign, id)
+      showPanel('characters')
+    })
+  }, [controller.value])
 
   useEffect(() => {
     renderer.init(hostRef.current!).then(() => (ready.value = true))

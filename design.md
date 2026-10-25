@@ -8,6 +8,7 @@ We are building a local-first, peer-to-peer virtual tabletop (**Make a Move**) t
 
 - Infinite-canvas scenes with maps, tokens and freehand drawing, editable by everyone at once.
 - Character sheets, moves, inventories, and items whose effects change stats or grant moves.
+- Characters come as PCs (class, moves) and GM-made NPCs (HP and system-defined fields). They live in a two-pane panel with shared folders, and selecting a character's token opens its sheet.
 - 3D dice, with every roll and triggered move posted to a shared chat log.
 - Session and world-building notes, with GM-only pages.
 - A game-system plugin API, proven by Dungeon World & D&D5e system plugins.

@@ -46,7 +46,7 @@ export function systemActions(campaign: Campaign): Action[] {
       group: 'character',
       title: c.name,
       source: 'Characters',
-      detail: system.classes.find((k) => k.id === c.classId)?.name,
+      detail: c.kind === 'npc' ? 'NPC' : system.classes.find((k) => k.id === c.classId)?.name,
       available: true,
       run: () => {
         selectCharacter(campaign, c.id)
