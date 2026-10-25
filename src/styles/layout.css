@@ -1198,31 +1198,44 @@
     box-shadow: 0 8px 24px -6px oklch(0% 0 0 / 0.55);
   }
   .drag-tab {
-    animation: tab-pop 160ms var(--ease) both;
+    animation: tab-appear 100ms 100ms var(--ease) both;
   }
-  @keyframes tab-pop {
+  @keyframes tab-appear {
     from {
-      scale: 0.5;
       opacity: 0;
     }
   }
-  /* The window gives way to the tab, and returns when the pointer leaves the sidebar. */
+  /*
+   * Over a sidebar, the window shrinks into the tab's box (--to-tab, set from
+   * the pointer) and dissolves as the tab icon appears; leaving reverses it.
+   */
   .floating-window {
-    transition:
-      opacity 160ms var(--ease),
-      scale 160ms var(--ease);
+    transform-origin: 0 0;
   }
-  .floating-window[data-as-tab='true'] {
-    opacity: 0;
-    scale: 0.92;
+  .floating-window[data-morph='in'] {
+    animation: window-to-tab 200ms var(--ease) both;
     pointer-events: none;
   }
+  .floating-window[data-morph='out'] {
+    animation: window-to-tab 200ms var(--ease) reverse both;
+    pointer-events: none;
+  }
+  @keyframes window-to-tab {
+    60% {
+      opacity: 0.6;
+    }
+    to {
+      transform: var(--to-tab);
+      opacity: 0;
+    }
+  }
   @media (prefers-reduced-motion: reduce) {
-    .drag-tab {
+    .drag-tab,
+    .floating-window[data-morph] {
       animation: none;
     }
-    .floating-window {
-      transition: none;
+    .floating-window[data-morph='in'] {
+      opacity: 0;
     }
   }
   .reorder-line {

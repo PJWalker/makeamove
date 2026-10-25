@@ -5,6 +5,7 @@ import { trackPointer } from '../ui/pointer'
 import { withTransition } from '../ui/transition'
 import { windowLayer } from '../ui/windows'
 import { createPortal } from 'preact/compat'
+import { useRef } from 'preact/hooks'
 import { dockPanel, dockTarget, floatingWindows, windowPointer, raiseWindow, startWindowDrag, updateWindow, type FloatingWindow } from './panelLayout'
 import { PanelContent, PANELS } from './panels'
 import { RESIZE_DIRS, resizeRect, type ResizeDir } from './resizeRect'
@@ -15,6 +16,9 @@ function dockAndFocus(id: FloatingWindow['id']) {
     document.querySelector<HTMLElement>('.sidebar-panel .panel-title')?.focus(),
   )
 }
+
+/** Size of the tab a window morphs into. */
+const TAB = 44
 
 const CURSORS: Record<ResizeDir, string> = {
   n: 'ns-resize',
@@ -59,15 +63,20 @@ function Window({ win, campaign }: { win: FloatingWindow; campaign: Campaign }) 
     startWindowDrag(win.id, e, e.clientX - win.x, e.clientY - win.y)
   }
 
-  // Over a sidebar, the window turns into the tab it would become.
+  // Over a sidebar the window morphs into the tab it would become, and back out again.
   const pointer = windowPointer.value
   const asTab = dockTarget.value !== null && pointer?.id === win.id ? pointer : null
+  const was = useRef(false)
+  const morph = asTab ? 'in' : was.current && pointer?.id === win.id ? 'out' : undefined
+  was.current = asTab !== null
   const { Icon } = PANELS[win.id]
+  const to = pointer ?? { x: win.x, y: win.y }
+  const toTab = `translate(${to.x - TAB / 2 - win.x}px, ${to.y - TAB / 2 - win.y}px) scale(${TAB / win.w}, ${TAB / win.h})`
 
   return (
     <>
     {asTab && (
-      <div class="drag-tab panel bevel" style={{ left: asTab.x - 22, top: asTab.y - 22 }} aria-hidden="true">
+      <div class="drag-tab panel bevel" style={{ left: asTab.x - TAB / 2, top: asTab.y - TAB / 2 }} aria-hidden="true">
         <Icon size={22} />
       </div>
     )}
@@ -80,8 +89,9 @@ function Window({ win, campaign }: { win: FloatingWindow; campaign: Campaign }) 
         height: win.h,
         zIndex: win.z,
         viewTransitionName: `panel-${win.id}`,
+        '--to-tab': toTab,
       }}
-      data-as-tab={asTab !== null}
+      data-morph={morph}
       aria-label={label}
       onPointerDown={() => raiseWindow(win.id)}
     >
