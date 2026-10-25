@@ -17,11 +17,18 @@ export function Tooltip() {
   useEffect(() => {
     let timer = 0
     let current: Element | null = null
+    let lastShown = 0
 
     const hide = () => {
       clearTimeout(timer)
       current = null
+      if (tip.value) lastShown = performance.now()
       tip.value = null
+    }
+    // A press, key or scroll ends the "already browsing" state too.
+    const dismiss = () => {
+      hide()
+      lastShown = 0
     }
 
     function textOf(el: Element) {
@@ -56,7 +63,9 @@ export function Tooltip() {
       hide()
       if (!el || !textOf(el)) return
       current = el
-      timer = window.setTimeout(() => show(el), delay)
+      const browsing = performance.now() - lastShown < 200
+      if (browsing) show(el)
+      else timer = window.setTimeout(() => show(el), delay)
     }
 
     const onOver = (e: PointerEvent) => e.pointerType !== 'touch' && consider(e.target, DELAY)
@@ -72,18 +81,18 @@ export function Tooltip() {
     document.addEventListener('focusin', onFocus)
     document.addEventListener('focusout', hide)
     // A press, a key or a scroll dismisses it.
-    document.addEventListener('pointerdown', hide, true)
-    document.addEventListener('keydown', hide, true)
-    document.addEventListener('scroll', hide, true)
+    document.addEventListener('pointerdown', dismiss, true)
+    document.addEventListener('keydown', dismiss, true)
+    document.addEventListener('scroll', dismiss, true)
     return () => {
       hide()
       document.removeEventListener('pointerover', onOver)
       document.removeEventListener('pointerout', onOut)
       document.removeEventListener('focusin', onFocus)
       document.removeEventListener('focusout', hide)
-      document.removeEventListener('pointerdown', hide, true)
-      document.removeEventListener('keydown', hide, true)
-      document.removeEventListener('scroll', hide, true)
+      document.removeEventListener('pointerdown', dismiss, true)
+      document.removeEventListener('keydown', dismiss, true)
+      document.removeEventListener('scroll', dismiss, true)
     }
   }, [])
 
