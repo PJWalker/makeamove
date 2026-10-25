@@ -1542,7 +1542,7 @@
   }
   @container (min-width: 381px) {
     .chars-grid[data-hidden='true'] {
-      grid-template-columns: 0 0 1fr;
+      grid-template-columns: 1fr;
     }
     .chars-grid[data-hidden='true'] .chars-list,
     .chars-grid[data-hidden='true'] .chars-split {
