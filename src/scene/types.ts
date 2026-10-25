@@ -61,6 +61,8 @@ export interface TokenElement extends Base {
   colour: string
   /** Missing on tokens from before styles existed, which are discs. */
   style?: TokenStyle
+  /** The character this token stands for; the system decides which of its stats show. */
+  characterId?: string
 }
 
 /** A token is only drawn plain if it has an image to show. */

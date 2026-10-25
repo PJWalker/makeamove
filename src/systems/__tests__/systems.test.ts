@@ -76,3 +76,11 @@ describe('Dungeon World data', () => {
     expect(dw.classes).toHaveLength(8)
   })
 })
+
+describe('tokenStats', () => {
+  it('shows HP as a bar that changes colour as it drops', () => {
+    const stats = (hp: number) => dw.tokenStats({ hp } as never, { maxHp: 16 } as never)[0]
+    expect(stats(16)).toMatchObject({ id: 'hp', value: 16, max: 16 })
+    expect(new Set([stats(16).colour, stats(8).colour, stats(4).colour]).size).toBe(3)
+  })
+})

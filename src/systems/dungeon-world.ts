@@ -354,6 +354,15 @@ export const dungeonWorld: GameSystem = {
     { id: 'confused', name: 'Confused', stat: 'wis' },
     { id: 'scarred', name: 'Scarred', stat: 'cha' },
   ],
+  tokenStats: (c, d) => [
+    {
+      id: 'hp',
+      label: 'HP',
+      value: c.hp,
+      max: d.maxHp,
+      colour: c.hp <= d.maxHp / 4 ? '#d04a3a' : c.hp <= d.maxHp / 2 ? '#d49a32' : '#4aa35a',
+    },
+  ],
   attribution:
     'Condensed from the Dungeon World SRD by Sage LaCroix and Adam Koebel, used under CC BY 3.0. Check the SRD for exact wording.',
 }

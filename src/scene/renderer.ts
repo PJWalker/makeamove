@@ -4,6 +4,7 @@ import { corners } from './geometry'
 import { type Grid, DEFAULT_GRID, type Point, hexCellsIn, hexCentre, hexCorners, squareLines } from './grid'
 import { forgetBitmaps, loadBitmap, onBlobFetcher } from "./images";
 import { PING_MS, TRAIL_MS, type PresenceMark } from "./presence";
+import type { TokenStat } from '../systems/types'
 import { strokeOutline, hasRealPressure } from './stroke'
 import { isPlainToken, LAYERS, type Layer, type SceneElement, type Transform } from './types'
 
@@ -90,12 +91,12 @@ function textureFor(hash: string): Promise<Texture | null> {
   return p
 }
 
-function contentKey(el: SceneElement): string {
+function contentKey(el: SceneElement, stats?: TokenStat[]): string {
   switch (el.type) {
     case 'map':
       return `map:${el.image.hash}`
     case 'token':
-      return `token:${el.image?.hash ?? ''}:${el.name}:${el.colour}:${isPlainToken(el) ? 'plain' : 'disc'}`
+      return `token:${el.image?.hash ?? ''}:${el.name}:${el.colour}:${isPlainToken(el) ? 'plain' : 'disc'}:${(stats ?? []).map((s) => `${s.id}=${s.value}/${s.max}/${s.colour}`).join()}`
     case 'drawing':
       return `drawing:${el.points.length}:${el.points[0]}:${el.points[1]}:${el.colour}:${el.width}:${el.bw}:${el.bh}`
   }
@@ -124,6 +125,8 @@ export class SceneRenderer {
   private marks: PresenceMark[] = [];
   private cursors = new Map<string, CursorMove>();
   private views = new Map<string, View>();
+  /** What each linked character's token shows, by character id. */
+  private tokenStats = new Map<string, TokenStat[]>();
   private elements: SceneElement[] = [];
   private order = "";
   private frame = 0;
@@ -293,6 +296,11 @@ export class SceneRenderer {
 
   // Elements
 
+  setTokenStats(stats: Map<string, TokenStat[]>) {
+    this.tokenStats = stats;
+    this.invalidate("elements");
+  }
+
   private hiddenSync() {
     for (const [id, view] of this.views)
       view.root.visible = !this.hidden.has(id);
@@ -302,7 +310,7 @@ export class SceneRenderer {
     const seen = new Set<string>();
     for (const el of this.elements) {
       seen.add(el.id);
-      const key = contentKey(el);
+      const key = contentKey(el, el.type === 'token' && el.characterId ? this.tokenStats.get(el.characterId) : undefined);
       let view = this.views.get(el.id);
       if (view && view.key !== key) {
         view.root.destroy({ children: true });
@@ -449,6 +457,45 @@ export class SceneRenderer {
         }
         root.addChild(body);
 
+        // Stat bars, drawn 100 wide and scaled with the token; they sit under it.
+        const BAR_H = 14;
+        const stats = (el.characterId && this.tokenStats.get(el.characterId)) || [];
+        const bars = new Container();
+        stats.forEach((s, i) => {
+          const frac = s.max > 0 ? Math.min(1, Math.max(0, s.value / s.max)) : 0;
+          const bar = new Container();
+          bar.y = i * (BAR_H + 3);
+          bar.addChild(
+            new Graphics()
+              .roundRect(-50, 0, 100, BAR_H, 4)
+              .fill({ color: INK, alpha: 0.85 }),
+          );
+          if (frac > 0)
+            bar.addChild(
+              new Graphics()
+                .roundRect(-48, 2, 96 * frac, BAR_H - 4, 3)
+                .fill({ color: s.colour }),
+            );
+          bar.addChild(
+            new Text({
+              text: `${s.value}/${s.max}`,
+              style: {
+                fontFamily: "Cabin, sans-serif",
+                fontSize: 11,
+                fontWeight: "700",
+                fill: 0xffffff,
+              },
+              anchor: 0.5,
+              x: 0,
+              y: BAR_H / 2,
+              resolution: 3,
+            }),
+          );
+          bars.addChild(bar);
+        });
+        if (stats.length) root.addChild(bars);
+        const barsH = stats.length * (BAR_H + 3);
+
         let label: Text | null = null;
         if (el.name.trim()) {
           label = new Text({
@@ -474,7 +521,12 @@ export class SceneRenderer {
             body.scale.set(t.w / 100, t.h / 100);
             if (label) {
               label.scale.set(Math.max(0.35, t.w / 160));
-              label.position.set(0, t.h / 2 + 2);
+              label.position.set(0, t.h / 2 + 2 + barsH * Math.max(0.5, (t.w * 0.9) / 100));
+            }
+            if (stats.length) {
+              const k = Math.max(0.5, (t.w * 0.9) / 100);
+              bars.scale.set(k);
+              bars.position.set(0, t.h / 2 + 2);
             }
           },
         };

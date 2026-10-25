@@ -4,6 +4,8 @@
  * storage; a system only describes the rules (see design, "Plugin system").
  */
 
+import type { CharacterView, Derived } from '../characters/store'
+
 export interface StatDef {
   id: string
   name: string
@@ -87,6 +89,17 @@ export interface TagDef {
   text: string
 }
 
+/** A figure a system shows on a character's token. */
+export interface TokenStat {
+  id: string
+  label: string
+  /** Drawn as a bar of value out of max. */
+  value: number
+  max: number
+  /** CSS colour of the filled part. */
+  colour: string
+}
+
 export interface GameSystem {
   id: string
   name: string
@@ -104,6 +117,8 @@ export interface GameSystem {
   tags: TagDef[]
   /** Debilities: each gives -1 to its stat's rolls. */
   debilities: { id: string; name: string; stat: string }[]
+  /** What a token tied to this character shows, in order (the system decides). */
+  tokenStats(c: CharacterView, d: Derived): TokenStat[]
   /** Credit for the rules text. */
   attribution: string
 }

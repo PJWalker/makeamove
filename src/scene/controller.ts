@@ -834,7 +834,7 @@ export class SceneController {
   }
 
   /** Change a token's name, style and colour as one undo step. */
-  updateToken(id: string, patch: Partial<Pick<TokenElement, 'name' | 'style' | 'colour'>>) {
+  updateToken(id: string, patch: Partial<Pick<TokenElement, 'name' | 'style' | 'colour' | 'characterId'>>) {
     this.scene.update([[id, patch]])
   }
 

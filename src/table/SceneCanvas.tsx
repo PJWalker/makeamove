@@ -12,6 +12,7 @@ import { SceneDoc } from '../scene/sceneDoc'
 import type { Point } from '../scene/grid'
 import { isPlainToken, TOKEN_STYLES, type TokenStyle } from '../scene/types'
 import { DEFAULT_CANVAS_COLOUR, type Campaign } from '../store/campaign'
+import { listCharacters, tokenStatsByCharacter } from '../characters/api'
 import { useY } from '../store/useY'
 import { Button } from '../ui/Button'
 import {
@@ -57,6 +58,15 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
     renderer.init(hostRef.current!).then(() => (ready.value = true))
     return () => renderer.destroy()
   }, [])
+
+  // Keep linked tokens' stats current as characters change.
+  useEffect(() => {
+    if (!ready.value) return
+    const push = () => renderer.setTokenStats(tokenStatsByCharacter(campaign))
+    push()
+    campaign.characters.observeDeep(push)
+    return () => campaign.characters.unobserveDeep(push)
+  }, [ready.value, campaign])
 
   // Open the scene's subdocument and drive it, swapping on scene change.
   useEffect(() => {
@@ -256,7 +266,7 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
       {menu.value && <ContextMenu {...menu.value} onClose={closeMenu} />}
       {controller.value && (
         <>
-          <TokenOptionsDialog controller={controller.value} id={tokenOptions.value} onClose={() => (tokenOptions.value = null)} />
+          <TokenOptionsDialog campaign={campaign} controller={controller.value} id={tokenOptions.value} onClose={() => (tokenOptions.value = null)} />
           <SceneSettingsDialog campaign={campaign} sceneId={sceneId!} scene={controller.value.scene} />
         </>
       )}
@@ -266,10 +276,12 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
 
 /** Name, style and colour of a token, applied together as one undo step. */
 function TokenOptionsDialog({
+  campaign,
   controller,
   id,
   onClose,
 }: {
+  campaign: Campaign
   controller: SceneController
   id: string | null
   onClose: () => void
@@ -280,12 +292,15 @@ function TokenOptionsDialog({
   const name = useSignal('')
   const style = useSignal<TokenStyle>('disc')
   const colour = useSignal('#000000')
+  const characterId = useSignal('')
+  const characters = useY(campaign.characters, () => listCharacters(campaign))
 
   useEffect(() => {
     if (!token) return
     name.value = token.name
     style.value = isPlainToken(token) ? 'plain' : 'disc'
     colour.value = token.colour
+    characterId.value = token.characterId ?? ''
     openPopup(ref.current)
   }, [id])
 
@@ -301,7 +316,12 @@ function TokenOptionsDialog({
         method="dialog"
         class="dialog-form"
         onSubmit={() => {
-          if (id) controller.updateToken(id, { name: name.value.trim(), style: style.value, colour: colour.value })
+          if (id) controller.updateToken(id, {
+              name: name.value.trim(),
+              style: style.value,
+              colour: colour.value,
+              characterId: characterId.value || undefined,
+            })
         }}
       >
         <label class="field">
@@ -313,6 +333,27 @@ function TokenOptionsDialog({
             autoFocus
             autoComplete="off"
           />
+        </label>
+        <label class="field">
+          Character
+          <select
+            class="input bevel"
+            value={characterId.value}
+            onChange={(e) => {
+              characterId.value = e.currentTarget.value
+              // Linking an unnamed token names it after the character.
+              const c = characters.find((k) => k.id === characterId.value)
+              if (c && !name.value.trim()) name.value = c.name
+            }}
+          >
+            <option value="">None</option>
+            {characters.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <span class="muted">The game system decides which of its stats show on the token.</span>
         </label>
         <div class="field">
           Style

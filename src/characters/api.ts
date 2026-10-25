@@ -27,6 +27,12 @@ export function listCharacters(campaign: Campaign): CharacterView[] {
     .sort((a, b) => a.name.localeCompare(b.name))
 }
 
+/** What each character's token shows, as the campaign's system defines it. */
+export function tokenStatsByCharacter(campaign: Campaign) {
+  const system = systemOf(campaign)
+  return new Map(listCharacters(campaign).map((c) => [c.id, system.tokenStats(c, derive(c, system))]))
+}
+
 export function getCharacter(campaign: Campaign, id: string | undefined): CharacterView | undefined {
   const m = id ? campaign.characters.get(id) : undefined
   return m && id ? characterView(id, m, systemOf(campaign)) : undefined
