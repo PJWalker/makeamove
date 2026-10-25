@@ -79,7 +79,7 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
   useEffect(() => {
     const onDown = (e: PointerEvent) => {
       const t = e.target as Element
-      if (!rootRef.current?.contains(t) && !t.closest?.('.context-menu')) paletteOpen.value = false
+      if (!rootRef.current?.contains(t) && !t.closest?.('.context-menu, .hotbar-palette')) paletteOpen.value = false
     }
     document.addEventListener('pointerdown', onDown, true)
     return () => document.removeEventListener('pointerdown', onDown, true)
