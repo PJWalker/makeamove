@@ -200,7 +200,8 @@ export function HelpDialog({ dialogRef }: { dialogRef: RefObject<HTMLDialogEleme
         <h3 class="help-heading">Panels</h3>
         <p class="muted">
           Drag a sidebar tab, or a docked panel’s title, out onto the map to open it in its own window. Drag the
-          window back onto the sidebar, or use its dock button, to put it back.
+          window onto the left or right sidebar to dock it there, or use its dock button to put it back. Right-click a tab to
+          move it to the other sidebar.
         </p>
       </section>
       <section class="help-section">

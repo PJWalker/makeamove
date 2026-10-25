@@ -7,6 +7,7 @@ import { FloatingWindows } from './FloatingWindows'
 import { windowLayer } from '../ui/windows'
 import { SceneBar } from './SceneBar'
 import { Sidebar } from './Sidebar'
+import { dockInsets } from './panelLayout'
 import { activeMapColour, canvasColour, chromeHidden } from './canvasState'
 import { Hotbar } from './Hotbar'
 import { MoveDialog } from './MoveDialog'
@@ -47,6 +48,13 @@ export function Tabletop({ campaign }: { campaign: Campaign }) {
     <div
       class="table"
       data-chrome={chromeHidden.value ? 'hidden' : 'shown'}
+      // How much each side's docked chrome covers, for the bars that sit between them.
+      style={{
+        '--inset-l': `${dockInsets.value.left.body}px`,
+        '--inset-r': `${dockInsets.value.right.body}px`,
+        '--dock-l': `${dockInsets.value.left.total}px`,
+        '--dock-r': `${dockInsets.value.right.total}px`,
+      }}
       // Pulled-out panels and pop-ups render into this layer (ui/windows.ts).
       ref={(el) => {
         if (el && el.lastChild !== windowLayer) el.appendChild(windowLayer)
@@ -60,7 +68,8 @@ export function Tabletop({ campaign }: { campaign: Campaign }) {
 
       <SceneBar campaign={campaign} scenes={scenes} activeId={scene?.id ?? null} activeColour={colour} />
       <Toolbar isGm={campaign.isGm()} />
-      <Sidebar campaign={campaign} />
+      <Sidebar side="left" campaign={campaign} />
+      <Sidebar side="right" campaign={campaign} />
       <FloatingWindows campaign={campaign} />
       <Hotbar campaign={campaign} />
       <Palette campaign={campaign} />

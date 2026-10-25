@@ -51,7 +51,7 @@ export function Toolbar({ isGm }: { isGm: boolean }) {
 
   return (
     <>
-      <nav class="toolbar panel bevel strip dock-left chrome" aria-label="Canvas tools">
+      <nav class="toolbar panel bevel strip across dock-top chrome" aria-label="Canvas tools">
         {tools.map(({ id, label, key, Icon, arrives }) => (
           <Button
             key={id}

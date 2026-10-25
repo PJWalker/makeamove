@@ -20,7 +20,7 @@ import { Button } from '../ui/Button'
 import { ContextMenu, type MenuItem } from './ContextMenu'
 import { menuTrigger } from '../ui/menuTrigger'
 import { IconDelete, IconDice, IconExpand } from '../ui/icons'
-import { isFloating, sidebarOpen, activePanel } from './panelLayout'
+import { panelVisible } from './panelLayout'
 
 /*
  * The chat panel: who's here, the log of chat and rolls, the message box
@@ -68,7 +68,7 @@ function ChatLogView({ campaign, notes }: { campaign: Campaign; notes: { id: num
   }, [messages.length, notes.length])
 
   // In view means read.
-  const visible = useComputed(() => isFloating('chat') || (sidebarOpen.value && activePanel.value === 'chat'))
+  const visible = useComputed(() => panelVisible('chat'))
   useSignalEffect(() => {
     void campaign.chat.messages.value
     if (visible.value && document.hasFocus()) markRead()

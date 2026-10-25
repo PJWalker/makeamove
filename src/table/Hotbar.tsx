@@ -7,7 +7,6 @@ import { noteRecent } from '../actions/recent'
 import type { Campaign } from '../store/campaign'
 import { useY } from '../store/useY'
 import { isTyping } from '../ui/keys'
-import { sidebarOpen, sidebarWidth } from './panelLayout'
 
 /**
  * Pinned actions for the selected character, docked at the bottom centre.
@@ -58,14 +57,13 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
   })
 
   const edit = (fn: (s: string[]) => string[]) => editHotbar(campaign, fn)
-  const inset = (sidebarOpen.value ? sidebarWidth.value : 0) + 56
   const endDrag = () => {
     dragging.value = null
     drop.value = null
   }
 
   return (
-    <div class="hotbar-wrap" style={{ right: `${inset}px` }}>
+    <div class="hotbar-wrap">
       <div
         ref={barRef}
         class="hotbar panel bevel chrome"

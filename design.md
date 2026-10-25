@@ -309,8 +309,8 @@ The canvas fills the window; all chrome floats over it as translucent dark panel
 **Layout**
 
 - _Top left, docked:_ scene bar showing the campaign name and the current scene. Clicking the scene name grows the bar in place into the scene list, with a footer for Campaign settings, Help and Back to campaigns (and inviting players, from M2).
-- _Left edge, docked:_ canvas tool strip — select, pan, draw, shapes, text, measure, ping, and fog for the GM — with single-key shortcuts.
-- _Right edge, docked:_ sidebar with vertical tabs (Chat, Characters, Items, Notes, Members). The body slides in from past the window edge, pushing the tab strip ahead of it, and its inner edge can be dragged to resize it.
+- _Top edge, docked:_ canvas tool strip — select, pan, draw, shapes, text, measure, ping, and fog for the GM — with single-key shortcuts. It centres itself in the space between the sidebars.
+- _Left and right edges, docked:_ two sidebars with vertical tabs. By default Characters and Items are on the left and Chat, Notes and Members on the right. Each body slides in from past the window edge, pushing the tab strip ahead of it, and its inner edge can be dragged to resize it. Any tab can move to the other side (drag it onto that sidebar, or right-click it) or float in a window; a side with no tabs disappears until a window is dragged.
 - _Chat panel:_ member avatars and connection status under the title; dice tray above the message field.
 - _Customisability:_ any panel can be dragged out into a floating window, resized from any edge, and docked back. Character sheets, item cards and note pages open the same way.
 - _Command palette (planned for M4, before the hotbar):_ Ctrl/Cmd + K opens a search over moves, items, tools, commands and compendium or campaign entries. See Command palette and action index.
@@ -424,6 +424,7 @@ Decisions made while building M0 to M4, newest first. Earlier answers are record
 | Panels stay solid; no hover fade                                                                            | The fade made panels harder to read                                                                                  |
 | No hairline borders anywhere                                                                                | Tone and spacing separate regions                                                                                    |
 | Drag a tab or docked title out to float a panel; drop it on the sidebar to dock                             | Direct manipulation; no pop-out button                                                                               |
+| Two sidebars (left: characters, right: chat) with vertical tabs; tools on the top edge; tabs move between sides or float | Character sheet beside the map and chat opposite; tools out of the way of both                                  |
 | Right sidebar with vertical tabs, sliding in from the edge; dice tray inside Chat                           | Tabs read as one column with the content                                                                             |
 | Edge-docked elements sit flush; icon strips end in full diagonals                                           | Chrome reads as part of the window frame                                                                             |
 | Cabin and Fraunces, no small caps                                                                           | Your preference                                                                                                      |

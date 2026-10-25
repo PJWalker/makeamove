@@ -67,6 +67,15 @@
     padding-block: calc(var(--strip-w) - 4px);
   }
 
+  /* The same strip laid out along a window edge, for the tools on top. */
+  .bevel.strip.across {
+    grid-auto-flow: column;
+    width: auto;
+    height: var(--strip-w);
+    padding-block: 0;
+    padding-inline: calc(var(--strip-w) - 4px);
+  }
+
   /* Buttons */
   .btn {
     --bevel: var(--bevel-sm);

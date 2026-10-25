@@ -122,11 +122,12 @@ export class SceneController {
       const rect = (sel: string) => document.querySelector(sel)?.getBoundingClientRect()
       const tools = rect('.toolbar')
       const bar = rect('.scene-bar')
-      const rail = rect('.sidebar-rail')
+      const leftRail = rect('.sidebar[data-side="left"] .sidebar-rail')
+      const rightRail = rect('.sidebar[data-side="right"] .sidebar-rail')
       return {
-        left: tools ? Math.max(0, tools.right - host.left) : 0,
-        right: rail ? Math.max(0, host.right - rail.left) : 0,
-        top: bar ? Math.max(0, bar.bottom - host.top) : 0,
+        left: leftRail ? Math.max(0, leftRail.right - host.left) : 0,
+        right: rightRail ? Math.max(0, host.right - rightRail.left) : 0,
+        top: Math.max(0, (bar?.bottom ?? 0) - host.top, (tools?.bottom ?? 0) - host.top),
       }
     }
     if (this.presence) {
