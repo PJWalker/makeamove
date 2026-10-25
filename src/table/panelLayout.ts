@@ -163,6 +163,8 @@ function whole<T extends Record<string, number | undefined>>(geometry: T): T {
 export const dockTarget = signal<Side | null>(null)
 /** True while a window is being dragged, so empty sides can show as drop zones. */
 export const windowDragging = signal(false)
+/** Panels just pulled out of a tab, whose window should grow out of the tab icon. */
+export const spawnedFromTab = new Set<PanelId>()
 /** The window being dragged and where its pointer is, so it can shrink to a tab over a sidebar. */
 export const windowPointer = signal<{ id: PanelId; x: number; y: number } | null>(null)
 

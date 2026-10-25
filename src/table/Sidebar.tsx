@@ -19,6 +19,7 @@ import {
   setSideWidth,
   SIDEBAR_MIN_W,
   sidebarMaxWidth,
+  spawnedFromTab,
   startWindowDrag,
   windowDragging,
   type PanelId,
@@ -147,6 +148,7 @@ function dragTab(id: PanelId, e: PointerEvent) {
     outside: {
       when: 'move',
       run: (ev) => {
+        spawnedFromTab.add(id)
         detachPanel(id, ev.clientX - 120, ev.clientY - 18)
         startWindowDrag(id, ev, 120, 18)
       },

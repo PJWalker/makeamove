@@ -6,7 +6,7 @@ import { withTransition } from '../ui/transition'
 import { windowLayer } from '../ui/windows'
 import { createPortal } from 'preact/compat'
 import { useRef } from 'preact/hooks'
-import { dockPanel, dockTarget, floatingWindows, windowPointer, raiseWindow, startWindowDrag, updateWindow, type FloatingWindow } from './panelLayout'
+import { dockPanel, dockTarget, floatingWindows, windowPointer, spawnedFromTab, raiseWindow, startWindowDrag, updateWindow, type FloatingWindow } from './panelLayout'
 import { PanelContent, PANELS } from './panels'
 import { RESIZE_DIRS, resizeRect, type ResizeDir } from './resizeRect'
 
@@ -67,7 +67,10 @@ function Window({ win, campaign }: { win: FloatingWindow; campaign: Campaign }) 
   const pointer = windowPointer.value
   const asTab = dockTarget.value !== null && pointer?.id === win.id ? pointer : null
   const was = useRef(false)
-  const morph = asTab ? 'in' : was.current && pointer?.id === win.id ? 'out' : undefined
+  // A window pulled out of a tab grows from the tab icon on its first render.
+  const fresh = useRef(spawnedFromTab.delete(win.id))
+  const morph = asTab ? 'in' : (was.current || fresh.current) && pointer?.id === win.id ? 'out' : undefined
+  fresh.current = false
   was.current = asTab !== null
   const { Icon } = PANELS[win.id]
   const to = pointer ?? { x: win.x, y: win.y }
