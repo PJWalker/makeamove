@@ -1796,8 +1796,9 @@
     gap: var(--space-2);
   }
   .move-row {
-    display: flex;
-    gap: var(--space-2);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0 var(--space-2);
     align-items: center;
   }
   .move-pick {
@@ -1836,17 +1837,28 @@
     color: var(--text-faint);
     box-shadow: inset 0 0 0 1px #fff3;
   }
+  /* Opens by animating its row's height from 0 to its content. */
   .move-detail {
-    padding: var(--space-2) var(--space-3);
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-rows: 0fr;
+    overflow: hidden;
+    padding-inline: var(--space-3);
     background: var(--surface-raised);
-    box-shadow: inset 0 0 0 1px #fff1;
+    transition: grid-template-rows 140ms var(--ease);
   }
-  .move-detail .move-text {
-    margin: 0;
+  .move-detail > * {
+    min-height: 0;
+    overflow: hidden;
   }
-  .move-detail-name {
-    margin: 0 0 var(--space-1);
-    font-size: var(--text-sm);
+  .move-row[data-open='true'] .move-detail {
+    grid-template-rows: 1fr;
+    padding-block: var(--space-2);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .move-detail {
+      transition: none;
+    }
   }
   .move-text {
     margin: 0 0 var(--space-2);

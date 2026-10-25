@@ -710,15 +710,14 @@ function rollTag(system: GameSystem, m: MoveDef) {
 }
 
 /**
- * Moves as a filterable list: one row each, with the rules for the chosen move
- * shown once below the list rather than folded into every row.
+ * Moves as a filterable list: one row each. Choosing a row opens its rules
+ * right beneath it, and only one is open at a time.
  */
 function MoveList({ system, moves, onMake }: { system: GameSystem; moves: MoveDef[]; onMake: (m: MoveDef) => void }) {
   const categories = (['class', 'basic', 'special'] as const).filter((k) => moves.some((m) => m.category === k))
   const filter = useSignal<MoveFilter>(categories.includes('class') ? 'class' : 'all')
   const openId = useSignal<string | null>(null)
   const shown = filter.value === 'all' ? moves : moves.filter((m) => m.category === filter.value)
-  const open = shown.find((m) => m.id === openId.value)
   return (
     <div class="moves">
       {categories.length > 1 && (
@@ -746,16 +745,13 @@ function MoveList({ system, moves, onMake }: { system: GameSystem; moves: MoveDe
               <Button size="sm" onClick={() => onMake(m)}>
                 {m.roll ? 'Roll' : 'Post'}
               </Button>
+              <div class="move-detail" role="region" aria-label={m.name} inert={m.id !== openId.value}>
+                <p class="move-text">{m.text}</p>
+              </div>
             </li>
           )
         })}
       </ul>
-      {open && (
-        <div class="move-detail" role="region" aria-label={open.name}>
-          <h4 class="move-detail-name">{open.name}</h4>
-          <p class="move-text">{open.text}</p>
-        </div>
-      )}
     </div>
   )
 }
