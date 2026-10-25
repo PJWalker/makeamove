@@ -1,4 +1,4 @@
-import { useSignal } from '@preact/signals'
+import { signal, useSignal } from '@preact/signals'
 import { useEffect, useRef } from 'preact/hooks'
 import { withTransition } from '../ui/transition'
 import {
@@ -41,6 +41,36 @@ import { dragToFolder } from './folderDrag'
 import { tokenDrop } from './canvasState'
 import { dragToken } from './tokenDrag'
 
+// The list pane's width and whether it is tucked away (wide layout only).
+const LIST_KEY = 'makeamove.charsList'
+const saved = (() => {
+  try {
+    return JSON.parse(localStorage.getItem(LIST_KEY) ?? '{}') as { w?: number; hidden?: boolean }
+  } catch {
+    return {}
+  }
+})()
+const listWidth = signal(saved.w ?? 200)
+const listHidden = signal(saved.hidden ?? false)
+const saveList = () => localStorage.setItem(LIST_KEY, JSON.stringify({ w: listWidth.value, hidden: listHidden.value }))
+
+function dragSplit(e: PointerEvent) {
+  if (e.button !== 0) return
+  const split = e.currentTarget as HTMLElement
+  const grid = split.parentElement!
+  split.setPointerCapture(e.pointerId)
+  const left = grid.getBoundingClientRect().left
+  const max = () => grid.clientWidth - 160
+  const move = (ev: PointerEvent) => (listWidth.value = Math.round(Math.max(100, Math.min(max(), ev.clientX - left))))
+  const up = () => {
+    split.removeEventListener('pointermove', move)
+    split.removeEventListener('pointerup', up)
+    saveList()
+  }
+  split.addEventListener('pointermove', move)
+  split.addEventListener('pointerup', up)
+}
+
 export function CharactersPanel({ campaign }: { campaign: Campaign }) {
   const system = systemOf(campaign)
   const characters = useY(campaign.characters, () => listCharacters(campaign))
@@ -65,7 +95,12 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
 
   return (
     <div class="chars">
-      <div class="chars-grid" data-level={level.value}>
+      <div
+        class="chars-grid"
+        data-level={level.value}
+        data-hidden={listHidden.value}
+        style={{ '--list-w': `${listWidth.value}px` }}
+      >
       <CharacterList
         campaign={campaign}
         system={system}
@@ -82,9 +117,33 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
           selectCharacter(campaign, id)
         }}
       />
+      <div
+        class="chars-split"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize character list"
+        onPointerDown={dragSplit}
+        onDblClick={() => {
+          listWidth.value = 200
+          saveList()
+        }}
+      />
       <div class="chars-detail">
       <div class="chars-back">
-        <button type="button" class="chars-back-btn" aria-label="Characters" onClick={() => go('list')}>
+        <button
+          type="button"
+          class="chars-back-btn chars-toggle"
+          aria-label={listHidden.value ? 'Show character list' : 'Hide character list'}
+          title={listHidden.value ? 'Show character list' : 'Hide character list'}
+          aria-pressed={!listHidden.value}
+          onClick={() => {
+            listHidden.value = !listHidden.value
+            saveList()
+          }}
+        >
+          <IconFolder />
+        </button>
+        <button type="button" class="chars-back-btn chars-back-only" aria-label="Characters" onClick={() => go('list')}>
           <IconBack />
         </button>
         <span class="chars-title">{creating.value ? 'New character' : (selected?.name ?? 'Characters')}</span>

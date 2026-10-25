@@ -1401,7 +1401,7 @@
     flex: 1;
     min-height: 0;
     display: grid;
-    grid-template-columns: minmax(130px, 34%) 1fr;
+    grid-template-columns: var(--list-w, 200px) 6px 1fr;
   }
   .chars-list {
     min-height: 0;
@@ -1501,7 +1501,53 @@
     flex: 1;
   }
   .chars-back {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-2);
+    border-bottom: 1px solid #fff1;
+  }
+  .chars-back-btn {
+    display: grid;
+    place-items: center;
+    padding: var(--space-1);
+    background: none;
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+    font-size: 1.25rem;
+  }
+  .chars-back-btn[aria-pressed='false'] {
+    opacity: 0.6;
+  }
+  .chars-back-only {
     display: none;
+  }
+  .chars-title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+  }
+  .chars-split {
+    cursor: col-resize;
+    touch-action: none;
+    background: transparent;
+  }
+  .chars-split:hover,
+  .chars-split:active {
+    background: #fff2;
+  }
+  @container (min-width: 381px) {
+    .chars-grid[data-hidden='true'] {
+      grid-template-columns: 0 0 1fr;
+    }
+    .chars-grid[data-hidden='true'] .chars-list,
+    .chars-grid[data-hidden='true'] .chars-split {
+      display: none;
+    }
   }
   /* Too narrow for two panes: show one level at a time, like a navigation stack. */
   @container (max-width: 380px) {
@@ -1520,30 +1566,12 @@
     .chars-grid[data-level='list'] .chars-list {
       view-transition-name: chars-pane;
     }
-    .chars-back {
-      display: flex;
-      align-items: center;
-      gap: var(--space-2);
-      padding: var(--space-1) var(--space-2);
-      border-bottom: 1px solid #fff1;
+    .chars-split,
+    .chars-toggle {
+      display: none;
     }
-    .chars-back-btn {
+    .chars-back-only {
       display: grid;
-      place-items: center;
-      padding: var(--space-1);
-      background: none;
-      border: 0;
-      color: inherit;
-      cursor: pointer;
-      font-size: 1.25rem;
-    }
-    .chars-title {
-      flex: 1;
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      font-weight: 600;
     }
   }
 
