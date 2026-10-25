@@ -1,5 +1,6 @@
 import { signal } from '@preact/signals'
 import { useEffect } from 'preact/hooks'
+import { startChatNotifications } from './chat/notify'
 import { Lobby } from './lobby/Lobby'
 import { goToCampaign, routeCampaignId } from './router'
 import { activeCampaign, type Campaign, closeCampaign, deleteLocalCampaign, openCampaign } from './store/campaign'
@@ -10,6 +11,8 @@ const openError = signal<string | null>(null)
 
 export function App() {
   const id = routeCampaignId.value
+
+  useEffect(() => startChatNotifications(), [])
 
   useEffect(() => {
     if (!id) {
