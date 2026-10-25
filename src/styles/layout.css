@@ -1217,7 +1217,10 @@
     pointer-events: none;
   }
   .floating-window[data-morph='out'] {
-    animation: window-to-tab 200ms var(--ease) reverse both;
+    animation: tab-to-window 200ms var(--ease) both;
+  }
+  .floating-window[data-morph='hidden'] {
+    opacity: 0;
     pointer-events: none;
   }
   @keyframes window-to-tab {
@@ -1227,6 +1230,16 @@
     to {
       transform: var(--to-tab);
       opacity: 0;
+    }
+  }
+  /* Its own keyframes: reversing the same animation in place doesn't restart it. */
+  @keyframes tab-to-window {
+    from {
+      transform: var(--to-tab);
+      opacity: 0;
+    }
+    40% {
+      opacity: 0.6;
     }
   }
   @media (prefers-reduced-motion: reduce) {

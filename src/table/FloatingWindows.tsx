@@ -66,12 +66,14 @@ function Window({ win, campaign }: { win: FloatingWindow; campaign: Campaign }) 
   // Over a sidebar the window morphs into the tab it would become, and back out again.
   const pointer = windowPointer.value
   const asTab = dockTarget.value !== null && pointer?.id === win.id ? pointer : null
-  const was = useRef(false)
-  // A window pulled out of a tab grows from the tab icon on its first render.
-  const fresh = useRef(spawnedFromTab.delete(win.id))
-  const morph = asTab ? 'in' : (was.current || fresh.current) && pointer?.id === win.id ? 'out' : undefined
-  fresh.current = false
-  was.current = asTab !== null
+  // The phase sticks until the next change, so re-rendering on pointer moves doesn't cut an animation short.
+  // A window pulled out of a tab starts as the tab ('hidden') and grows from it when it leaves the sidebar.
+  const phase = useRef<'in' | 'out' | 'hidden' | undefined>(spawnedFromTab.delete(win.id) ? 'hidden' : undefined)
+  if (pointer?.id !== win.id) {
+    if (phase.current !== 'hidden') phase.current = undefined
+  } else if (asTab) phase.current = phase.current === 'hidden' ? 'hidden' : 'in'
+  else if (phase.current) phase.current = 'out'
+  const morph = phase.current
   const { Icon } = PANELS[win.id]
   const to = pointer ?? { x: win.x, y: win.y }
   const toTab = `translate(${to.x - TAB / 2 - win.x}px, ${to.y - TAB / 2 - win.y}px) scale(${TAB / win.w}, ${TAB / win.h})`
