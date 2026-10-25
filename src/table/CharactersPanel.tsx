@@ -1,5 +1,6 @@
 import { useSignal } from '@preact/signals'
 import { useEffect, useRef } from 'preact/hooks'
+import { withTransition } from '../ui/transition'
 import {
   bump,
   canEdit,
@@ -49,9 +50,15 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
   const selected = characters.find((c) => c.id === selectedId)
   // In a narrow panel only one level shows at a time: the list or the sheet.
   const level = useSignal<'list' | 'sheet'>(selectedId ? 'sheet' : 'list')
+  const go = (to: 'list' | 'sheet') => {
+    if (level.value === to) return
+    void withTransition(() => {
+      level.value = to
+    }, { rootClass: to === 'sheet' ? 'vt-chars-fwd' : 'vt-chars-back' })
+  }
   const seen = useRef(selectedId)
   useEffect(() => {
-    if (seen.current !== selectedId && selectedId) level.value = 'sheet'
+    if (seen.current !== selectedId && selectedId) go('sheet')
     seen.current = selectedId
   }, [selectedId])
 
@@ -66,17 +73,17 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
         selectedId={selectedId}
         onNew={() => {
           creating.value = true
-          level.value = 'sheet'
+          go('sheet')
         }}
         onPick={(id) => {
           creating.value = false
-          level.value = 'sheet'
+          go('sheet')
           selectCharacter(campaign, id)
         }}
       />
       <div class="chars-detail">
       <div class="chars-back">
-        <button type="button" class="chars-back-btn" aria-label="Characters" onClick={() => (level.value = 'list')}>
+        <button type="button" class="chars-back-btn" aria-label="Characters" onClick={() => go('list')}>
           <IconBack />
         </button>
         <span class="chars-title">{creating.value ? 'New character' : (selected?.name ?? 'Characters')}</span>

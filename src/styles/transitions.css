@@ -184,3 +184,44 @@
     animation: none !important;
   }
 }
+
+/* Characters panel (narrow): the levels slide like a navigation stack. */
+::view-transition-group(chars-pane) {
+  animation-duration: 140ms;
+}
+.vt-chars-fwd::view-transition-old(chars-pane) {
+  animation: vt-chars-out-left 140ms ease-in both;
+}
+.vt-chars-fwd::view-transition-new(chars-pane) {
+  animation: vt-chars-in-right 140ms var(--ease) both;
+}
+.vt-chars-back::view-transition-old(chars-pane) {
+  animation: vt-chars-out-right 140ms ease-in both;
+}
+.vt-chars-back::view-transition-new(chars-pane) {
+  animation: vt-chars-in-left 140ms var(--ease) both;
+}
+@keyframes vt-chars-out-left {
+  to {
+    opacity: 0;
+    translate: -30% 0;
+  }
+}
+@keyframes vt-chars-out-right {
+  to {
+    opacity: 0;
+    translate: 30% 0;
+  }
+}
+@keyframes vt-chars-in-right {
+  from {
+    opacity: 0;
+    translate: 30% 0;
+  }
+}
+@keyframes vt-chars-in-left {
+  from {
+    opacity: 0;
+    translate: -30% 0;
+  }
+}

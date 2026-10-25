@@ -1515,18 +1515,10 @@
     .chars-list {
       border-right: 0;
     }
-    /* Each level slides in from the side it lives on. */
-    .chars-grid[data-level='sheet'] .chars-detail {
-      animation: chars-in-right 200ms ease-out;
-    }
+    /* Only one level shows, so they can share a transition name. */
+    .chars-grid[data-level='sheet'] .chars-detail,
     .chars-grid[data-level='list'] .chars-list {
-      animation: chars-in-left 200ms ease-out;
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .chars-grid .chars-detail,
-      .chars-grid .chars-list {
-        animation: none;
-      }
+      view-transition-name: chars-pane;
     }
     .chars-back {
       display: flex;
@@ -1552,19 +1544,6 @@
       text-overflow: ellipsis;
       white-space: nowrap;
       font-weight: 600;
-    }
-  }
-
-  @keyframes chars-in-right {
-    from {
-      transform: translateX(40%);
-      opacity: 0;
-    }
-  }
-  @keyframes chars-in-left {
-    from {
-      transform: translateX(-40%);
-      opacity: 0;
     }
   }
 
