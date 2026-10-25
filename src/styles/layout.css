@@ -319,102 +319,12 @@
     font-size: var(--text-xs);
   }
 
-  /*
-   * Scene bar: docked into the top-left corner; grows in place to show the
-   * menu. This animates the live elements with CSS (not a view transition) so
-   * the menu stays hoverable and clickable while it opens. The panel's
-   * overflow: clip keeps the contents inside the bevelled box throughout.
-   */
-  .scene-bar {
-    position: absolute;
-    top: 0;
-    left: var(--inset-l, 0px);
-    z-index: 5;
+  /* Scenes panel: the scene list and campaign actions */
+  .scene-panel {
     display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    max-height: 100vh;
-    width: fit-content;
-    interpolate-size: allow-keywords;
-    transition:
-      width 280ms var(--ease),
-      left 200ms var(--ease);
-  }
-  /* An open scene menu is a menu: it sits above floating windows (z 10). */
-  .scene-bar[data-expanded='true'] {
-    z-index: 20;
-  }
-  .scene-bar[data-expanded='true'] {
-    width: var(--scene-menu-w);
-  }
-  .scene-bar,
-  .scene-bar-body {
-    --scene-menu-w: min(340px, 100vw);
-  }
-  .scene-bar-head {
-    display: grid;
-    justify-items: start;
-    padding: var(--space-2) var(--space-5) var(--space-3) var(--space-4);
-  }
-  .scene-switch {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: 0;
-    background: none;
-    border: 0;
-    color: var(--text);
-    cursor: pointer;
-  }
-  .scene-switch:hover {
-    color: var(--accent);
-  }
-  .scene-switch-chevron {
-    transition: rotate 200ms var(--ease);
-  }
-  .scene-switch[aria-expanded='true'] .scene-switch-chevron {
-    rotate: 180deg;
-  }
-  .scene-title {
-    font-size: var(--text-lg);
-    line-height: 1.2;
-  }
-  /* Opens by animating its row from 0fr to 1fr; never widens the closed bar. */
-  .scene-bar-drawer {
-    display: grid;
-    grid-template-rows: 0fr;
-    contain: inline-size;
-    transition: grid-template-rows 280ms var(--ease);
-  }
-  .scene-bar[data-expanded='true'] .scene-bar-drawer {
-    grid-template-rows: 1fr;
-  }
-  /*
-   * Laid out at full size even while the drawer is smaller, so nothing reflows
-   * or squashes: the opening drawer reveals it top-down instead.
-   */
-  .scene-bar-body {
-    display: block;
-    width: var(--scene-menu-w);
-    min-height: 0;
-    overflow: clip;
-    opacity: 0;
-    translate: 0 -6px;
-    transition:
-      opacity 200ms var(--ease),
-      translate 280ms var(--ease);
-  }
-  .scene-bar[data-expanded='true'] .scene-bar-body {
-    opacity: 1;
-    translate: 0 0;
-  }
-  .scene-bar-scenes {
-    display: grid;
+    align-content: start;
     grid-template-columns: minmax(0, 1fr);
     gap: var(--space-2);
-    min-height: 0;
-    max-height: 60vh;
-    overflow-y: auto;
-    padding: 0 var(--space-3) var(--space-3);
   }
   .scene-list {
     display: grid;
@@ -436,25 +346,9 @@
   .scene-item[data-active='true'] :is(.scene-name-input, .scene-name-button) {
     color: var(--accent);
   }
-  .scene-swatch {
-    --bevel: 4px;
-    flex: none;
-    width: 22px;
-    height: 22px;
-    padding: 0;
-    border: 0;
-    background: none;
-    cursor: pointer;
-  }
-  .scene-swatch::-webkit-color-swatch-wrapper {
-    padding: 0;
-  }
-  .scene-swatch::-webkit-color-swatch {
-    border: 0;
-  }
   .scene-name-input,
   /* Actions in the scene menu (View, Delete, New scene) are menu text too. */
-  .scene-bar-scenes .btn {
+  .scene-panel .btn {
     font-size: var(--text-menu);
   }
   .scene-name-button {
@@ -1222,9 +1116,9 @@
   /* Hotbar */
   .hotbar-wrap {
     position: absolute;
-    left: calc(var(--dock-l, 0px) + var(--space-3));
-    right: calc(var(--dock-r, 0px) + var(--space-3));
-    bottom: var(--space-3);
+    left: var(--dock-l, 0px);
+    right: var(--dock-r, 0px);
+    bottom: 0;
     display: flex;
     justify-content: center;
     pointer-events: none;

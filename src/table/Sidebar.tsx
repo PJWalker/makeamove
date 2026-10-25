@@ -1,6 +1,6 @@
 import { unreadCount } from '../chat/unread'
 import { useSignal } from '@preact/signals'
-import { IconDrag, IconSidebarHide, IconSidebarShow } from '../ui/icons'
+import { IconDrag } from '../ui/icons'
 import type { Campaign } from '../store/campaign'
 import { Button } from '../ui/Button'
 import { menuTrigger } from '../ui/menuTrigger'
@@ -14,7 +14,7 @@ import {
   layout,
   otherSide,
   selectPanel,
-  setSideOpen,
+  reorderPanel,
   setSideWidth,
   SIDEBAR_MIN_W,
   sidebarMaxWidth,
@@ -55,16 +55,6 @@ export function Sidebar({ side, campaign }: { side: Side; campaign: Campaign }) 
         {s.panels.map((id) => (
           <RailTab key={id} id={id} side={side} selected={open && active === id} onMenu={(x, y) => (menu.value = { x, y, items: tabMenu(id, side) })} />
         ))}
-        {!empty && <span class="rail-divider" aria-hidden="true" />}
-        {!empty && (
-          <Button
-            variant="icon"
-            label={open ? 'Hide sidebar' : 'Show sidebar'}
-            onClick={() => withTransition(() => setSideOpen(side, !open))}
-          >
-            {(open ? side === 'right' : side === 'left') ? <IconSidebarHide size={22} /> : <IconSidebarShow size={22} />}
-          </Button>
-        )}
       </div>
 
       <section class={`sidebar-body panel dock-${side === 'left' ? 'left' : 'right'} dock-top dock-bottom`} role="tabpanel" inert={!open}>
@@ -113,30 +103,54 @@ function tabMenu(id: PanelId, side: Side): MenuItem[] {
 
 /**
  * Start watching a press on a tab or docked panel title. Once the pointer
- * travels past a small threshold, the panel pops out into a floating window
- * that follows the pointer; a release before that is an ordinary click.
+ * travels past a small threshold, a title pops its panel out into a floating
+ * window that follows the pointer. A tab does the same only when it leaves its
+ * tab strip; while it stays inside, it reorders the tabs instead. A release
+ * before the threshold is an ordinary click.
  */
 function pullOut(id: PanelId, e: PointerEvent, fromHeader: boolean, onPulled?: () => void) {
   if (e.button !== 0) return
   const startX = e.clientX
   const startY = e.clientY
+  const rail = fromHeader ? null : (e.currentTarget as HTMLElement).closest('.sidebar-rail')
   // Keep the grab point where it was in the docked title, if that's what was grabbed.
   const header = fromHeader ? (e.currentTarget as HTMLElement).getBoundingClientRect() : null
   const grabX = header ? Math.min(startX - header.left, 300) : 120
   const grabY = header ? startY - header.top : 18
+  let dragging = false
   const move = (ev: PointerEvent) => {
-    if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < DRAG_THRESHOLD) return
+    if (!dragging && Math.hypot(ev.clientX - startX, ev.clientY - startY) < DRAG_THRESHOLD) return
+    if (!dragging) onPulled?.()
+    dragging = true
+    if (rail && stillOnStrip(rail, ev)) {
+      const centres = [...rail.querySelectorAll<HTMLElement>('.rail-tab')]
+        .filter((t) => t.dataset.panel !== id)
+        .map((t) => {
+          const r = t.getBoundingClientRect()
+          return r.top + r.height / 2
+        })
+      reorderPanel(id, centres.filter((c) => c < ev.clientY).length)
+      return
+    }
     cleanup()
-    onPulled?.()
     detachPanel(id, ev.clientX - grabX, ev.clientY - grabY)
     startWindowDrag(id, ev, grabX, grabY)
   }
   const cleanup = () => {
     window.removeEventListener('pointermove', move)
     window.removeEventListener('pointerup', cleanup)
+    window.removeEventListener('pointercancel', cleanup)
   }
   window.addEventListener('pointermove', move)
   window.addEventListener('pointerup', cleanup)
+  window.addEventListener('pointercancel', cleanup)
+}
+
+/** Whether the pointer is still close enough to the tab strip for a drag to mean reordering. */
+function stillOnStrip(rail: Element, e: PointerEvent) {
+  const r = rail.getBoundingClientRect()
+  const slack = 24
+  return e.clientX > r.left - slack && e.clientX < r.right + slack && e.clientY > r.top - slack && e.clientY < r.bottom + slack
 }
 
 /** Drag (or arrow-key) the sidebar's inner edge to change its width. */
@@ -146,7 +160,7 @@ function SidebarResizeHandle({ side }: { side: Side }) {
   function onPointerDown(e: PointerEvent) {
     if (e.button !== 0) return
     e.preventDefault()
-    const stop = trackPointer('ew-resize', (ev) => setSideWidth(side, side === 'left' ? ev.clientX - 48 : innerWidth - ev.clientX))
+    const stop = trackPointer('ew-resize', (ev) => setSideWidth(side, side === 'left' ? ev.clientX : innerWidth - ev.clientX))
     window.addEventListener('pointerup', stop, { once: true })
   }
 
@@ -201,6 +215,7 @@ function RailTab({ id, side, selected, onMenu }: { id: PanelId; side: Side; sele
       variant="icon"
       role="tab"
       class="rail-tab"
+      data-panel={id}
       label={label + (id === 'chat' && unreadCount.value ? `, ${unreadCount.value} unread` : '')}
       aria-selected={selected}
       pressed={selected}

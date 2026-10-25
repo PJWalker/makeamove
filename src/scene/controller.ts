@@ -121,13 +121,12 @@ export class SceneController {
       if (this.host.closest('.table')?.getAttribute('data-chrome') === 'hidden') return { left: 0, right: 0, top: 0 }
       const rect = (sel: string) => document.querySelector(sel)?.getBoundingClientRect()
       const tools = rect('.toolbar')
-      const bar = rect('.scene-bar')
       const leftRail = rect('.sidebar[data-side="left"] .sidebar-rail')
       const rightRail = rect('.sidebar[data-side="right"] .sidebar-rail')
       return {
         left: leftRail ? Math.max(0, leftRail.right - host.left) : 0,
         right: rightRail ? Math.max(0, host.right - rightRail.left) : 0,
-        top: Math.max(0, (bar?.bottom ?? 0) - host.top, (tools?.bottom ?? 0) - host.top),
+        top: tools ? Math.max(0, tools.bottom - host.top) : 0,
       }
     }
     if (this.presence) {

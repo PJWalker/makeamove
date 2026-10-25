@@ -5,7 +5,7 @@ import type { Campaign } from '../store/campaign'
 import { useY } from '../store/useY'
 import { FloatingWindows } from './FloatingWindows'
 import { windowLayer } from '../ui/windows'
-import { SceneBar } from './SceneBar'
+import { CampaignDialogHost } from './ScenePanel'
 import { Sidebar } from './Sidebar'
 import { dockInsets } from './panelLayout'
 import { activeMapColour, canvasColour, chromeHidden } from './canvasState'
@@ -50,8 +50,6 @@ export function Tabletop({ campaign }: { campaign: Campaign }) {
       data-chrome={chromeHidden.value ? 'hidden' : 'shown'}
       // How much each side's docked chrome covers, for the bars that sit between them.
       style={{
-        '--inset-l': `${dockInsets.value.left.body}px`,
-        '--inset-r': `${dockInsets.value.right.body}px`,
         '--dock-l': `${dockInsets.value.left.total}px`,
         '--dock-r': `${dockInsets.value.right.total}px`,
       }}
@@ -66,7 +64,7 @@ export function Tabletop({ campaign }: { campaign: Campaign }) {
         </Suspense>
       </div>
 
-      <SceneBar campaign={campaign} scenes={scenes} activeId={scene?.id ?? null} activeColour={colour} />
+      <CampaignDialogHost campaign={campaign} />
       <Toolbar isGm={campaign.isGm()} />
       <Sidebar side="left" campaign={campaign} />
       <Sidebar side="right" campaign={campaign} />

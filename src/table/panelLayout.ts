@@ -8,6 +8,7 @@ import {
   dock,
   locate,
   normalise,
+  reorder,
   otherSide,
   selectTab,
   setOpen,
@@ -71,10 +72,23 @@ export const dockInsets = computed(() => {
   return { left: of('left'), right: of('right') }
 })
 
+/** Dragging a sidebar narrower than this shuts it. */
+const SNAP_SHUT_W = 180
+
+/** Resize a side; pulling it very narrow snaps it shut, and widening it again reopens it. */
 export function setSideWidth(side: Side, width: number) {
-  const w = Math.round(Math.min(Math.max(width, SIDEBAR_MIN_W), sidebarMaxWidth()))
   const l = layout.value
-  if (w !== l[side].width) layout.value = { ...l, [side]: { ...l[side], width: w } }
+  const s = l[side]
+  if (width < SNAP_SHUT_W) {
+    if (s.open) layout.value = { ...l, [side]: { ...s, open: false } }
+    return
+  }
+  const w = Math.round(Math.min(Math.max(width, SIDEBAR_MIN_W), sidebarMaxWidth()))
+  if (w !== s.width || !s.open) layout.value = { ...l, [side]: { ...s, width: w, open: true } }
+}
+
+export function reorderPanel(id: PanelId, index: number) {
+  layout.value = reorder(layout.value, id, index)
 }
 
 export function isFloating(id: PanelId) {

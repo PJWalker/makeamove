@@ -7,6 +7,7 @@ import {
   IconMembers,
   IconNotes,
   IconRemoveMember,
+  IconMap,
 } from '../ui/icons'
 import type { ComponentType } from 'preact'
 import type { Campaign, MemberView } from '../store/campaign'
@@ -18,8 +19,10 @@ import type { PanelId } from './panelLayout'
 import { ChatPanel } from './ChatPanel'
 import { CharactersPanel } from './CharactersPanel'
 import { ItemsPanel } from './ItemsPanel'
+import { ScenePanel } from './ScenePanel'
 
 export const PANELS: Record<PanelId, { label: string; Icon: ComponentType<any> }> = {
+  scene: { label: 'Scenes', Icon: IconMap },
   chat: { label: 'Chat', Icon: IconChat },
   characters: { label: 'Characters', Icon: IconCharacters },
   items: { label: 'Items', Icon: IconItems },
@@ -33,6 +36,7 @@ const COMING: Partial<Record<PanelId, string>> = {
 
 /** The body of a panel; the same component renders docked or floating. */
 export function PanelContent({ id, campaign }: { id: PanelId; campaign: Campaign }) {
+  if (id === 'scene') return <ScenePanel campaign={campaign} />
   if (id === 'chat') return <Chat campaign={campaign} />
   if (id === 'characters') return <CharactersPanel campaign={campaign} />
   if (id === 'items') return <ItemsPanel campaign={campaign} />

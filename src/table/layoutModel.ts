@@ -8,10 +8,10 @@
  * came from, so "dock" puts it back.
  */
 
-export type PanelId = 'chat' | 'characters' | 'items' | 'notes' | 'members'
+export type PanelId = 'scene' | 'chat' | 'characters' | 'items' | 'notes' | 'members'
 export type Side = 'left' | 'right'
 
-export const PANEL_ORDER: PanelId[] = ['chat', 'characters', 'items', 'notes', 'members']
+export const PANEL_ORDER: PanelId[] = ['scene', 'chat', 'characters', 'items', 'notes', 'members']
 
 export interface FloatingWindow {
   id: PanelId
@@ -42,6 +42,7 @@ export interface Layout {
 export const SIDEBAR_DEFAULT_W = 340
 
 const DEFAULT_SIDE: Record<PanelId, Side> = {
+  scene: 'left',
   chat: 'right',
   notes: 'right',
   members: 'right',
@@ -53,7 +54,7 @@ export const sideOfDefault = (id: PanelId): Side => DEFAULT_SIDE[id]
 
 export function defaultLayout(narrow: boolean): Layout {
   return {
-    left: { active: 'characters', open: !narrow, width: SIDEBAR_DEFAULT_W, panels: ['characters', 'items'] },
+    left: { active: 'characters', open: !narrow, width: SIDEBAR_DEFAULT_W, panels: ['scene', 'characters', 'items'] },
     right: { active: 'chat', open: !narrow, width: SIDEBAR_DEFAULT_W, panels: ['chat', 'notes', 'members'] },
     floating: [],
     home: {},
@@ -165,3 +166,12 @@ export function dock(l: Layout, id: PanelId, side: Side = l.home[id] ?? DEFAULT_
 
 /** Where a panel is, for the "Move to…" menu. */
 export const otherSide = (side: Side): Side => (side === 'left' ? 'right' : 'left')
+
+/** Move a docked tab to a place in its own sidebar, without changing what is showing. */
+export function reorder(l: Layout, id: PanelId, index: number): Layout {
+  const side = locate(l, id)
+  if (side === 'floating') return l
+  const panels = l[side].panels.filter((p) => p !== id)
+  panels.splice(Math.min(Math.max(index, 0), panels.length), 0, id)
+  return { ...l, [side]: { ...l[side], panels } }
+}
