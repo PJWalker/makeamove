@@ -1,0 +1,121 @@
+/*
+ * View transitions. Only named elements animate; everything else updates in
+ * place and stays interactive underneath the transition overlay.
+ */
+:root {
+  view-transition-name: none;
+}
+
+::view-transition {
+  pointer-events: none;
+}
+
+::view-transition-group(*) {
+  animation-duration: 280ms;
+  animation-timing-function: var(--ease);
+}
+
+/* Fill the morphing box so differently shaped snapshots don't letterbox. */
+::view-transition-old(*),
+::view-transition-new(*) {
+  height: 100%;
+}
+
+/* Things that appear or disappear (rather than move) fade and drift. */
+::view-transition-new(*):only-child {
+  animation: vt-enter 280ms var(--ease) both;
+}
+::view-transition-old(*):only-child {
+  animation: vt-exit 160ms ease-in both;
+}
+
+@keyframes vt-enter {
+  from {
+    opacity: 0;
+    translate: 0 -6px;
+  }
+}
+@keyframes vt-exit {
+  to {
+    opacity: 0;
+  }
+}
+
+/*
+ * The scene bar clips its header and menu while it grows or shrinks, cut to
+ * the same bottom-right bevel as the bar itself.
+ */
+::view-transition-group-children(scene-bar) {
+  overflow: clip;
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% calc(100% - var(--bevel-lg)),
+    calc(100% - var(--bevel-lg)) 100%,
+    0 100%
+  );
+}
+/* Without nested groups nothing clips, so hold the menu back until the box has grown. */
+@supports not (view-transition-group: contain) {
+  ::view-transition-new(scene-bar-body):only-child {
+    animation-delay: 160ms;
+  }
+}
+
+/*
+ * Switching sidebar tabs: old and new content slide together in the direction
+ * the tabs are stacked, so the panels read as a vertical column like the tabs.
+ */
+.vt-tab-next::view-transition-old(.sidebar-panel):only-child {
+  animation: vt-slide-out-up 240ms var(--ease) both;
+}
+.vt-tab-next::view-transition-new(.sidebar-panel):only-child {
+  animation: vt-slide-in-up 240ms var(--ease) both;
+}
+.vt-tab-prev::view-transition-old(.sidebar-panel):only-child {
+  animation: vt-slide-out-down 240ms var(--ease) both;
+}
+.vt-tab-prev::view-transition-new(.sidebar-panel):only-child {
+  animation: vt-slide-in-down 240ms var(--ease) both;
+}
+@keyframes vt-slide-out-up {
+  to {
+    opacity: 0;
+    translate: 0 -32px;
+  }
+}
+@keyframes vt-slide-in-up {
+  from {
+    opacity: 0;
+    translate: 0 32px;
+  }
+}
+@keyframes vt-slide-out-down {
+  to {
+    opacity: 0;
+    translate: 0 32px;
+  }
+}
+@keyframes vt-slide-in-down {
+  from {
+    opacity: 0;
+    translate: 0 -32px;
+  }
+}
+
+/* Whole-page swaps (lobby ↔ tabletop) simply cross-fade. */
+.vt-page .lobby,
+.vt-page .table {
+  view-transition-name: page;
+}
+::view-transition-group(page) {
+  animation-duration: 220ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
