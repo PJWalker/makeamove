@@ -16,6 +16,8 @@ import { Avatar } from '../ui/Avatar'
 import { Button } from '../ui/Button'
 import type { PanelId } from './panelLayout'
 import { ChatPanel } from './ChatPanel'
+import { CharactersPanel } from './CharactersPanel'
+import { ItemsPanel } from './ItemsPanel'
 
 export const PANELS: Record<PanelId, { label: string; Icon: ComponentType<any> }> = {
   chat: { label: 'Chat', Icon: IconChat },
@@ -26,14 +28,14 @@ export const PANELS: Record<PanelId, { label: string; Icon: ComponentType<any> }
 }
 
 const COMING: Partial<Record<PanelId, string>> = {
-  characters: 'Dungeon World character sheets arrive in M4.',
-  items: 'Items, tags and the compendium arrive in M4.',
   notes: 'Session and world notes arrive in M5.',
 }
 
 /** The body of a panel; the same component renders docked or floating. */
 export function PanelContent({ id, campaign }: { id: PanelId; campaign: Campaign }) {
   if (id === 'chat') return <Chat campaign={campaign} />
+  if (id === 'characters') return <CharactersPanel campaign={campaign} />
+  if (id === 'items') return <ItemsPanel campaign={campaign} />
   if (id === 'members') return <MemberList campaign={campaign} />
   const { Icon } = PANELS[id]
   return (

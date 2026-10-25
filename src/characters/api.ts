@@ -1,12 +1,22 @@
 import { signal } from '@preact/signals'
+import { generateKeyBetween } from 'fractional-indexing'
+import type * as Y from 'yjs'
 import { postRoll, myName } from '../chat/send'
 import type { MoveSuggestion } from '../chat/types'
 import type { Campaign } from '../store/campaign'
 import { device } from '../store/device'
 import { getSystem } from '../systems'
-import type { MoveDef } from '../systems/types'
+import type { ItemDef, MoveDef } from '../systems/types'
 import { performMove, needsChoice, type MoveChoice } from './moves'
-import { characterView, derive, canEditCharacter, createCharacter, type CharacterView } from './store'
+import {
+  characterView,
+  derive,
+  canEditCharacter,
+  createCharacter,
+  instanceOf,
+  type CharacterView,
+  type ItemInstance,
+} from './store'
 
 export const systemOf = (campaign: Campaign) => getSystem(campaign.meta.get('system'))
 
@@ -98,4 +108,30 @@ export function makeMove(campaign: Campaign, characterId: string, move: MoveDef,
 export function applySuggestion(campaign: Campaign, characterId: string, s: MoveSuggestion) {
   if (s.kind === 'xp') bump(campaign, characterId, 'xp', 1)
   else if (s.formula) postRoll(campaign, s.formula, 'public', 'Damage')
+}
+
+/* Inventory */
+
+
+function inventoryOf(campaign: Campaign, characterId: string): Y.Map<ItemInstance> | undefined {
+  return campaign.characters.get(characterId)?.get('inventory')
+}
+
+export function addItem(campaign: Campaign, characterId: string, def: ItemDef) {
+  const inv = inventoryOf(campaign, characterId)
+  if (!inv) return
+  const last = [...inv.values()].map((i) => i.order).sort().at(-1) ?? null
+  const item = instanceOf(def, generateKeyBetween(last, null))
+  inv.set(item.id, item)
+}
+
+/** Items are replaced whole, so edit a copy: concurrent edits to one item keep the last writer's. */
+export function updateItem(campaign: Campaign, characterId: string, itemId: string, patch: Partial<ItemInstance>) {
+  const inv = inventoryOf(campaign, characterId)
+  const item = inv?.get(itemId)
+  if (inv && item) inv.set(itemId, { ...item, ...patch })
+}
+
+export function removeItem(campaign: Campaign, characterId: string, itemId: string) {
+  inventoryOf(campaign, characterId)?.delete(itemId)
 }
