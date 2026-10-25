@@ -11,7 +11,7 @@ const GAP = 10
  * the element has one. It lives in the top layer, so it sits above dialogs.
  */
 export function Tooltip() {
-  const tip = useSignal<{ text: string; x: number; y: number; dir: 'down' | 'up' | 'left' | 'right' } | null>(null)
+  const tip = useSignal<{ text: string; x: number; y: number; dir: 'down' | 'up' | 'left' | 'right'; instant?: boolean } | null>(null)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -40,7 +40,7 @@ export function Tooltip() {
       return el.getAttribute('data-tip')
     }
 
-    function show(el: Element) {
+    function show(el: Element, instant = false) {
       const text = el.getAttribute('data-tip')
       if (!text || !el.isConnected) return
       const r = el.getBoundingClientRect()
@@ -50,10 +50,10 @@ export function Tooltip() {
       const cy = r.top + r.height / 2
       if (el.closest('.sidebar-rail')) {
         const dir = cx < innerWidth / 2 ? 'right' : 'left'
-        tip.value = { text, x: dir === 'right' ? r.right + GAP : r.left - GAP, y: cy, dir }
+        tip.value = { text, x: dir === 'right' ? r.right + GAP : r.left - GAP, y: cy, dir, instant }
       } else {
         const dir = cy < innerHeight / 2 ? 'down' : 'up'
-        tip.value = { text, x: cx, y: dir === 'down' ? r.bottom + GAP : r.top - GAP, dir }
+        tip.value = { text, x: cx, y: dir === 'down' ? r.bottom + GAP : r.top - GAP, dir, instant }
       }
     }
 
@@ -64,7 +64,7 @@ export function Tooltip() {
       if (!el || !textOf(el)) return
       current = el
       const browsing = performance.now() - lastShown < 200
-      if (browsing) show(el)
+      if (browsing) show(el, true)
       else timer = window.setTimeout(() => show(el), delay)
     }
 
@@ -123,7 +123,7 @@ export function Tooltip() {
   }, [t])
 
   return (
-    <div ref={ref} class="tooltip" data-dir={t?.dir} popover="manual" role="tooltip">
+    <div ref={ref} class="tooltip" data-dir={t?.dir} data-instant={t?.instant || undefined} popover="manual" role="tooltip">
       {t?.text}
     </div>
   )
