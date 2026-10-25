@@ -80,6 +80,10 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
         role="toolbar"
         aria-label="Hotbar"
         data-dragging={dragging.value !== null}
+        onWheel={(e) => {
+          // A mouse wheel scrolls the bar sideways.
+          if (e.deltaY && !e.deltaX) e.currentTarget.scrollLeft += e.deltaY
+        }}
       >
         {slots.map((id, i) => {
           const a = index.get(id)

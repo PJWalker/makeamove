@@ -1129,13 +1129,17 @@
   .hotbar {
     --bevel: 40px;
     display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
+    max-width: 100%;
     gap: var(--space-1);
     padding: var(--space-3) 36px var(--space-2);
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
     pointer-events: auto;
   }
   .hotbar-slot {
+    flex: none;
     display: grid;
     justify-items: center;
     gap: 2px;
@@ -1197,6 +1201,7 @@
     outline-offset: 2px;
   }
   .hotbar-hint {
+    flex: none;
     margin: 0;
     align-self: center;
     padding: 0 var(--space-2);
