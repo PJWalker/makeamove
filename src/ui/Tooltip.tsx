@@ -11,7 +11,7 @@ const GAP = 8
  * the element has one. It lives in the top layer, so it sits above dialogs.
  */
 export function Tooltip() {
-  const tip = useSignal<{ text: string; x: number; y: number; below: boolean } | null>(null)
+  const tip = useSignal<{ text: string; x: number; y: number; dir: 'down' | 'up' | 'left' | 'right' } | null>(null)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -37,9 +37,17 @@ export function Tooltip() {
       const text = el.getAttribute('data-tip')
       if (!text || !el.isConnected) return
       const r = el.getBoundingClientRect()
-      // Below by default; above for things in the bottom half, like the hotbar.
-      const below = r.top + r.height / 2 < innerHeight / 2
-      tip.value = { text, x: r.left + r.width / 2, y: below ? r.bottom + GAP : r.top - GAP, below }
+      // Centred on the item and pointing toward the middle of the screen: sideways for
+      // sidebar tabs, down from the top edge, up from the bottom.
+      const cx = r.left + r.width / 2
+      const cy = r.top + r.height / 2
+      if (el.closest('.sidebar-rail')) {
+        const dir = cx < innerWidth / 2 ? 'right' : 'left'
+        tip.value = { text, x: dir === 'right' ? r.right + GAP : r.left - GAP, y: cy, dir }
+      } else {
+        const dir = cy < innerHeight / 2 ? 'down' : 'up'
+        tip.value = { text, x: cx, y: dir === 'down' ? r.bottom + GAP : r.top - GAP, dir }
+      }
     }
 
     function consider(target: EventTarget | null, delay: number) {
@@ -87,10 +95,15 @@ export function Tooltip() {
     if (t) {
       if (!el.matches(':popover-open')) el.showPopover()
       const w = el.offsetWidth
-      const left = Math.min(Math.max(t.x - w / 2, 4), innerWidth - w - 4)
-      el.style.left = `${left}px`
-      el.style.top = `${t.y}px`
-      el.style.translate = t.below ? '0 0' : '0 -100%'
+      const h = el.offsetHeight
+      const clamp = (v: number, size: number, max: number) => Math.min(Math.max(v, 4), max - size - 4)
+      if (t.dir === 'left' || t.dir === 'right') {
+        el.style.left = `${t.dir === 'right' ? t.x : t.x - w}px`
+        el.style.top = `${clamp(t.y - h / 2, h, innerHeight)}px`
+      } else {
+        el.style.left = `${clamp(t.x - w / 2, w, innerWidth)}px`
+        el.style.top = `${t.dir === 'down' ? t.y : t.y - h}px`
+      }
     } else if (el.matches(':popover-open')) {
       el.hidePopover()
     }
