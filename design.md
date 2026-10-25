@@ -372,6 +372,8 @@ Each milestone ends with a short review with you before the next begins. M2 come
 
 **Added to M4:** the action hotbar — an edge-docked bar at the bottom centre, filled with the selected character's moves (from the game-system plugin), usable items, and global actions like ping, measure and roll, all taken from the action index. Players drag actions in and out and reorder them; each player's bar is stored per character with that player's member data, so it follows them between devices. The canvas tool strip stays for drawing tools; ping and measure may move onto the hotbar once it exists.
 
+**M4 status:** built, not yet tried in a browser. _As built:_ the action index and palette (Ctrl/Cmd+K; `>` `/` `@` `#` prefixes; Alt+Enter pins; Shift+Enter shows an entry), the Dungeon World system as data (`src/systems/`: basic and special moves, class moves for the eight classic classes (partial), 19 items, tags, debilities) with a pure effect resolver (set, add, multiply, min/max within priority bands, with the source of each change), characters in the root doc (`src/characters/`: stats and modifiers, HP, XP and level-up, armour, damage, load, coin, debilities, forward and ongoing, bonds, notes, inventory with equipped state and uses), the Characters and Items panels (with a compendium), a move dialog for stat or bond choices, move cards in chat (roll breakdown, band, outcome text, Mark XP and Roll damage buttons) and the hotbar (bottom centre; default is the character's moves, gear with uses, ping and measure; keys 1 to 9; per character, kept in the player's member entry). Not yet: custom items and moves, tags that change rolls, the plugin loader (one built-in system), and verified rules text.
+
 ## Open questions
 
 Each question has a proposed default; the first four are the ones that change the architecture.
@@ -391,10 +393,14 @@ Each question has a proposed default; the first four are the ones that change th
 
 ## Decision log
 
-Decisions made while building M0 to M3, newest first. Earlier answers are recorded in Open questions.
+Decisions made while building M0 to M4, newest first. Earlier answers are recorded in Open questions.
 
 | Decision                                                                                                    | Why                                                                                                                  |
 | ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Characters live in a root-doc `characters` Y.Map, not a subdoc each                                         | A campaign has a handful of characters; one doc keeps sync and persistence simple. Revisit if sheets grow large    |
+| Move suggestions (XP, damage) are buttons on the card, never applied automatically                          | The GM stays in charge of fiction and consequences                                                                   |
+| Hotbar edits use left/right/remove buttons rather than drag                                                 | Keyboard-accessible, and simple; drag can come later                                                                 |
+| Dungeon World text is abridged from memory and must be checked against the SRD                              | The data is in one file (`src/systems/dungeon-world.ts`) so it is easy to correct; credit is in the system's attribution |
 | Move 3D dice to M5; M3 shows rolls as 2D cards                                                              | dice-box can't land on a predetermined result, which shared rolls need; picking a replacement can wait for M5      |
 | Chat lives in 500-message chunk subdocuments, ordered by a hybrid logical clock                             | Long campaigns stay fast to open, and peers agree on order even when their clocks disagree                         |
 | No blind rolls; whispers are hidden from the GM                                                             | If a player shouldn't see a result, the GM can roll it; “hidden from others” includes the GM                        |

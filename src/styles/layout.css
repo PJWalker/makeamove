@@ -1203,6 +1203,57 @@
     text-align: center;
   }
 
+  /* Hotbar */
+  .hotbar-wrap {
+    position: absolute;
+    left: 56px;
+    bottom: var(--space-3);
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+    transition: right 200ms var(--ease);
+  }
+  .hotbar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-1);
+    padding: var(--space-1);
+    pointer-events: auto;
+  }
+  .hotbar-slot {
+    display: grid;
+    justify-items: center;
+    gap: 2px;
+  }
+  .hotbar-slot[data-unavailable='true'] {
+    opacity: 0.5;
+  }
+  .hotbar-btn {
+    --bevel: var(--bevel-sm);
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-height: 34px;
+    padding: 0 var(--space-2);
+    background: var(--surface-raised);
+    color: var(--text);
+    border: 0;
+    cursor: pointer;
+    font-size: var(--text-sm);
+    white-space: nowrap;
+  }
+  .hotbar-btn:hover:not(:disabled) {
+    background: var(--surface-raised-hover, var(--surface-sunken-hover));
+  }
+  .hotbar-btn kbd {
+    font-size: var(--text-xs);
+    opacity: 0.7;
+  }
+  .hotbar-edit {
+    display: flex;
+  }
+
   /* Character sheet */
   .sheet-panel,
   .sheet {

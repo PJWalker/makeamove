@@ -4,6 +4,7 @@ import { noteRecent, recentActions } from '../actions/recent'
 import { buildIndex } from '../actions/registry'
 import { rank } from '../actions/search'
 import type { Action } from '../actions/types'
+import { editHotbar, pin } from '../characters/hotbar'
 import type { Campaign } from '../store/campaign'
 import { nextZ } from '../ui/windows'
 
@@ -13,7 +14,8 @@ const HINTS = [
   ['>', 'commands'],
   ['/', 'moves'],
   ['@', 'characters'],
-  ['#', 'notes'],
+  ['#', 'notes, items'],
+  ['Alt+Enter', 'pin to hotbar'],
 ]
 
 export function Palette({ campaign }: { campaign: Campaign }) {
@@ -87,6 +89,10 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
       e.preventDefault()
       const n = results.length
       if (n) cursor.value = (active + (e.key === 'ArrowDown' ? 1 : -1) + n) % n
+    } else if (e.key === 'Enter' && e.altKey) {
+      e.preventDefault()
+      const a = results[active]
+      if (a && editHotbar(campaign, (slots) => pin(slots, a.id))) paletteOpen.value = false
     } else if (e.key === 'Enter') {
       e.preventDefault()
       choose(results[active], e.shiftKey)

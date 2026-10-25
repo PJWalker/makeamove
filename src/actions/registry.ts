@@ -1,5 +1,6 @@
 import type { Campaign } from '../store/campaign'
 import { coreActions } from './core'
+import { systemActions } from './system'
 import type { Action } from './types'
 
 /*
@@ -9,7 +10,7 @@ import type { Action } from './types'
 
 export type ActionProvider = (campaign: Campaign) => Action[]
 
-const providers: ActionProvider[] = [coreActions]
+const providers: ActionProvider[] = [coreActions, systemActions]
 
 export function registerProvider(p: ActionProvider) {
   if (!providers.includes(p)) providers.push(p)

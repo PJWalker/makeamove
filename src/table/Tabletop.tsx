@@ -8,6 +8,7 @@ import { windowLayer } from '../ui/windows'
 import { SceneBar } from './SceneBar'
 import { Sidebar } from './Sidebar'
 import { activeMapColour, canvasColour, chromeHidden } from './canvasState'
+import { Hotbar } from './Hotbar'
 import { MoveDialog } from './MoveDialog'
 import { Palette } from './Palette'
 import { Toolbar } from './Toolbar'
@@ -61,6 +62,7 @@ export function Tabletop({ campaign }: { campaign: Campaign }) {
       <Toolbar isGm={campaign.isGm()} />
       <Sidebar campaign={campaign} />
       <FloatingWindows campaign={campaign} />
+      <Hotbar campaign={campaign} />
       <Palette campaign={campaign} />
       <MoveDialog campaign={campaign} />
     </div>

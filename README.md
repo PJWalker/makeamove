@@ -45,4 +45,4 @@ Right-click for everything else. In dev builds the scene controller is on `windo
 
 ## Status
 
-M0 (foundations) is done. M1 (scenes and canvas) is complete. M2 (peer-to-peer play: invite links, sync, presence, image transfer) is built and awaiting review; the real-network path needs a manual two-browser check.
+M0 (foundations) is done. M1 (scenes and canvas) is complete. M2 (peer-to-peer play: invite links, sync, presence, image transfer) is built and awaiting review; the real-network path needs a manual two-browser check. M3 (dice and chat) is complete. M4 (command palette, hotbar, Dungeon World characters, moves and items) is built but has not been tried in a browser yet.
