@@ -518,7 +518,14 @@ function Counter({
   disabled: boolean
 }) {
   return (
-    <div class="counter" role="group" aria-label={label}>
+    <div
+      class="counter"
+      role="group"
+      aria-label={label}
+      data-label={label}
+      data-fill={max !== undefined}
+      style={max !== undefined ? { '--fill': `${Math.max(0, Math.min(1, max > 0 ? value / max : 0)) * 100}%` } : undefined}
+    >
       <span class="eyebrow">{label}</span>
       <div class="counter-row">
         <Button variant="secondary" class="counter-btn" label={`Decrease ${label}`} disabled={disabled} onClick={() => onChange(-1)}>

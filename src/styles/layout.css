@@ -1666,6 +1666,31 @@
     justify-content: space-between;
     gap: var(--space-1);
   }
+  /* Counters with a maximum fill up from the bottom like a gauge. */
+  .counter[data-fill='true'] {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    --gauge: var(--accent);
+  }
+  .counter[data-label='HP'] {
+    --gauge: oklch(60% 0.17 25);
+  }
+  .counter[data-fill='true']::before {
+    content: '';
+    position: absolute;
+    inset: auto 0 0 0;
+    z-index: -1;
+    height: var(--fill);
+    background: color-mix(in oklch, var(--gauge) 38%, transparent);
+    box-shadow: 0 -1px 0 color-mix(in oklch, var(--gauge) 70%, transparent);
+    transition: height 300ms var(--ease);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .counter[data-fill='true']::before {
+      transition: none;
+    }
+  }
   .counter-btn {
     flex: none;
     width: 30px;
