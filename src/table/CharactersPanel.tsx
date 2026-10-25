@@ -679,11 +679,7 @@ function Sheet({ campaign, system, c }: { campaign: Campaign; system: GameSystem
 
       <section class="sheet-section" aria-label="Moves">
         <h3 class="sheet-heading">Moves</h3>
-        <ul class="move-list">
-          {moves.map((m) => (
-            <MoveRow key={m.id} move={m} onMake={() => make(m)} />
-          ))}
-        </ul>
+        <MoveList system={system} moves={moves} onMake={make} />
       </section>
 
       <section class="sheet-section" aria-label="Bonds and notes">
@@ -702,21 +698,65 @@ function Sheet({ campaign, system, c }: { campaign: Campaign; system: GameSystem
   )
 }
 
-function MoveRow({ move, onMake }: { move: MoveDef; onMake: () => void }) {
-  const ref = useRef<HTMLDetailsElement>(null)
+type MoveFilter = 'all' | MoveDef['category']
+const FILTER_LABEL: Record<MoveFilter, string> = { all: 'All', class: 'Class', basic: 'Basic', special: 'Special' }
+
+/** What a move rolls, as a short tag for its row. */
+function rollTag(system: GameSystem, m: MoveDef) {
+  if (!m.roll) return null
+  if (m.roll.stat === 'choose') return 'any'
+  if (m.roll.stat === 'bond') return 'bond'
+  return system.stats.find((s) => s.id === m.roll!.stat)?.abbr ?? m.roll.stat
+}
+
+/**
+ * Moves as a filterable list: one row each, with the rules for the chosen move
+ * shown once below the list rather than folded into every row.
+ */
+function MoveList({ system, moves, onMake }: { system: GameSystem; moves: MoveDef[]; onMake: (m: MoveDef) => void }) {
+  const categories = (['class', 'basic', 'special'] as const).filter((k) => moves.some((m) => m.category === k))
+  const filter = useSignal<MoveFilter>(categories.includes('class') ? 'class' : 'all')
+  const openId = useSignal<string | null>(null)
+  const shown = filter.value === 'all' ? moves : moves.filter((m) => m.category === filter.value)
+  const open = shown.find((m) => m.id === openId.value)
   return (
-    <li class="move-row">
-      <details ref={ref}>
-        <summary>
-          <span class="move-name">{move.name}</span>
-          <span class="muted move-cat">{move.category === 'class' ? '' : move.category}</span>
-        </summary>
-        <p class="move-text">{move.text}</p>
-      </details>
-      <Button size="sm" onClick={onMake}>
-        {move.roll ? 'Roll' : 'Post'}
-      </Button>
-    </li>
+    <div class="moves">
+      {categories.length > 1 && (
+        <Segmented
+          label="Move type"
+          value={filter.value}
+          options={(['all', ...categories] as MoveFilter[]).map((k) => ({ id: k, label: FILTER_LABEL[k] }))}
+          onChange={(k) => (filter.value = k)}
+        />
+      )}
+      <ul class="move-list">
+        {shown.map((m) => {
+          const tag = rollTag(system, m)
+          return (
+            <li key={m.id} class="move-row" data-open={m.id === openId.value}>
+              <button
+                type="button"
+                class="move-pick"
+                aria-expanded={m.id === openId.value}
+                onClick={() => (openId.value = m.id === openId.value ? null : m.id)}
+              >
+                <span class="move-name">{m.name}</span>
+                {tag && <span class="move-tag">{tag}</span>}
+              </button>
+              <Button size="sm" onClick={() => onMake(m)}>
+                {m.roll ? 'Roll' : 'Post'}
+              </Button>
+            </li>
+          )
+        })}
+      </ul>
+      {open && (
+        <div class="move-detail" role="region" aria-label={open.name}>
+          <h4 class="move-detail-name">{open.name}</h4>
+          <p class="move-text">{open.text}</p>
+        </div>
+      )}
+    </div>
   )
 }
 
