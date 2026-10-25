@@ -73,6 +73,15 @@ export function editHotbar(campaign: Campaign, edit: (slots: string[]) => string
 export const isPinned = (campaign: Campaign, id: string) =>
   hotbarSlots(campaign, selectedCharacterId(campaign)).includes(id)
 
+/** Pin an action at a position, or move it there if it is already pinned. */
+export function insertAt(slots: string[], id: string, index: number): string[] {
+  if (slots.includes(id)) return placeAt(slots, id, index)
+  if (slots.length >= MAX_SLOTS) return slots
+  const next = [...slots]
+  next.splice(index, 0, id)
+  return next
+}
+
 /** Put a slot at a position among the other slots (counted with it lifted out). */
 export function placeAt(slots: string[], id: string, index: number): string[] {
   if (!slots.includes(id)) return slots

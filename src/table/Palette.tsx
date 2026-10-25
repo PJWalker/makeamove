@@ -4,8 +4,9 @@ import { noteRecent, recentActions } from '../actions/recent'
 import { buildIndex } from '../actions/registry'
 import { rank } from '../actions/search'
 import type { Action } from '../actions/types'
-import { editHotbar, isPinned, pin, unpin } from '../characters/hotbar'
+import { editHotbar, insertAt, isPinned, pin, unpin } from '../characters/hotbar'
 import { IconAdd } from '../ui/icons'
+import { dragToHotbar } from './hotbarDrop'
 import { menuTrigger } from '../ui/menuTrigger'
 import { ContextMenu, type MenuItem } from './ContextMenu'
 import type { Campaign } from '../store/campaign'
@@ -60,6 +61,31 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
     const pinned = isPinned(campaign, a.id)
     if (editHotbar(campaign, (slots) => (pinned ? unpin(slots, a.id) : pin(slots, a.id)))) {
       note.value = pinned ? `Removed ${a.title} from the hotbar` : `Added ${a.title} to the hotbar`
+    }
+  }
+
+  /** Right-click for a menu; press and drag to pin the action onto the hotbar. */
+  function rowTriggers(a: Action, i: number) {
+    const trigger = menuTrigger((x, y) => {
+      cursor.value = i
+      const pinned = isPinned(campaign, a.id)
+      menu.value = {
+        x,
+        y,
+        items: [
+          { label: pinned ? 'Remove from hotbar' : 'Add to hotbar', Icon: IconAdd, shortcut: 'Alt+Enter', onSelect: () => togglePin(a) },
+          ...(a.available === true ? [{ label: 'Run', onSelect: () => choose(a) }] : []),
+        ],
+      }
+    })
+    return {
+      onContextMenu: trigger.onContextMenu,
+      onPointerDown(e: PointerEvent) {
+        trigger.onPointerDown(e)
+        dragToHotbar(e, (index) => {
+          if (editHotbar(campaign, (slots) => insertAt(slots, a.id, index))) note.value = `Added ${a.title} to the hotbar`
+        })
+      },
     }
   }
 
@@ -149,18 +175,7 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
               data-unavailable={off}
               onPointerMove={() => cursor.value !== i && (cursor.value = i)}
               onClick={() => choose(a)}
-              {...menuTrigger((x, y) => {
-                cursor.value = i
-                const pinned = isPinned(campaign, a.id)
-                menu.value = {
-                  x,
-                  y,
-                  items: [
-                    { label: pinned ? 'Remove from hotbar' : 'Add to hotbar', Icon: IconAdd, shortcut: 'Alt+Enter', onSelect: () => togglePin(a) },
-                    ...(a.available === true ? [{ label: 'Run', onSelect: () => choose(a) }] : []),
-                  ],
-                }
-              })}
+              {...rowTriggers(a, i)}
             >
               <span class="palette-icon">{a.icon && <a.icon size={18} />}</span>
               <span class="palette-text">

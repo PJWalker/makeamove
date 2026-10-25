@@ -1184,6 +1184,20 @@
     pointer-events: none;
     cursor: grabbing;
   }
+  /* A copy of a palette row, carried to the hotbar. */
+  .drag-ghost {
+    position: fixed;
+    z-index: 1000;
+    margin: 0;
+    background: var(--surface-raised);
+    opacity: 0.9;
+    pointer-events: none;
+    box-shadow: 0 8px 24px -6px oklch(0% 0 0 / 0.55);
+  }
+  .hotbar[data-dropping='true'] {
+    outline: 2px dashed var(--text-muted);
+    outline-offset: 2px;
+  }
   .reorder-line {
     position: fixed;
     z-index: 1000;

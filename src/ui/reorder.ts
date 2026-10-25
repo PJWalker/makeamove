@@ -35,7 +35,6 @@ export function startReorder(o: ReorderOptions) {
   const startX = down.clientX
   const startY = down.clientY
   let lifted = false
-  let line: HTMLElement | null = null
 
   const others = () => o.items().filter((i) => i !== el)
   const inside = (e: PointerEvent) => {
@@ -43,51 +42,12 @@ export function startReorder(o: ReorderOptions) {
     return e.clientX > r.left - SLACK && e.clientX < r.right + SLACK && e.clientY > r.top - SLACK && e.clientY < r.bottom + SLACK
   }
 
-  function slot(e: PointerEvent) {
-    const p = axis === 'x' ? e.clientX : e.clientY
-    return others().filter((i) => {
-      const r = i.getBoundingClientRect()
-      return (axis === 'x' ? r.left + r.width / 2 : r.top + r.height / 2) < p
-    }).length
-  }
-
-  function showLine(index: number) {
-    const rest = others()
-    if (!rest.length) return line?.remove()
-    const rects = rest.map((i) => i.getBoundingClientRect())
-    const at = (i: number) => {
-      const lo = (r: DOMRect) => (axis === 'x' ? r.left : r.top)
-      const hi = (r: DOMRect) => (axis === 'x' ? r.right : r.bottom)
-      if (i === 0) return lo(rects[0]) - 2
-      if (i === rects.length) return hi(rects[i - 1]) + 2
-      return (hi(rects[i - 1]) + lo(rects[i])) / 2
-    }
-    const left = Math.min(...rects.map((r) => r.left))
-    const right = Math.max(...rects.map((r) => r.right))
-    const top = Math.min(...rects.map((r) => r.top))
-    const bottom = Math.max(...rects.map((r) => r.bottom))
-    if (!line) {
-      line = document.createElement('div')
-      line.className = 'reorder-line'
-      document.body.appendChild(line)
-    }
-    const s = line.style
-    if (axis === 'x') {
-      s.left = `${at(index) - 1.5}px`
-      s.top = `${top - 2}px`
-      s.width = '3px'
-      s.height = `${bottom - top + 4}px`
-    } else {
-      s.top = `${at(index) - 1.5}px`
-      s.left = `${left - 2}px`
-      s.height = '3px'
-      s.width = `${right - left + 4}px`
-    }
-  }
+  const marker = dropLine(axis)
+  const slot = (e: PointerEvent) => indexAmong(others(), axis, e)
+  const showLine = (index: number) => marker.show(others(), index)
 
   function put() {
-    line?.remove()
-    line = null
+    marker.hide()
     el.classList.remove('reorder-lifted')
     el.style.translate = ''
   }
@@ -119,8 +79,7 @@ export function startReorder(o: ReorderOptions) {
     if (inside(e)) {
       showLine(slot(e))
     } else {
-      line?.remove()
-      line = null
+      marker.hide()
       if (o.outside?.when === 'move') {
         finish()
         o.outside.run(e)
@@ -143,4 +102,53 @@ export function startReorder(o: ReorderOptions) {
   window.addEventListener('pointermove', move)
   window.addEventListener('pointerup', up)
   window.addEventListener('pointercancel', cancel)
+}
+
+/** Where among `items` (in order) a pointer would drop: the count of items whose centre it has passed. */
+export function indexAmong(items: HTMLElement[], axis: 'x' | 'y', e: PointerEvent) {
+  const p = axis === 'x' ? e.clientX : e.clientY
+  return items.filter((i) => {
+    const r = i.getBoundingClientRect()
+    return (axis === 'x' ? r.left + r.width / 2 : r.top + r.height / 2) < p
+  }).length
+}
+
+/** The 3px white line that marks a drop position between `items`. */
+export function dropLine(axis: 'x' | 'y') {
+  let line: HTMLElement | null = null
+  return {
+    show(items: HTMLElement[], index: number) {
+      if (!items.length) return this.hide()
+      const rects = items.map((i) => i.getBoundingClientRect())
+      const lo = (r: DOMRect) => (axis === 'x' ? r.left : r.top)
+      const hi = (r: DOMRect) => (axis === 'x' ? r.right : r.bottom)
+      const at =
+        index === 0 ? lo(rects[0]) - 2 : index === rects.length ? hi(rects[index - 1]) + 2 : (hi(rects[index - 1]) + lo(rects[index])) / 2
+      const left = Math.min(...rects.map((r) => r.left))
+      const right = Math.max(...rects.map((r) => r.right))
+      const top = Math.min(...rects.map((r) => r.top))
+      const bottom = Math.max(...rects.map((r) => r.bottom))
+      if (!line) {
+        line = document.createElement('div')
+        line.className = 'reorder-line'
+        document.body.appendChild(line)
+      }
+      const s = line.style
+      if (axis === 'x') {
+        s.left = `${at - 1.5}px`
+        s.top = `${top - 2}px`
+        s.width = '3px'
+        s.height = `${bottom - top + 4}px`
+      } else {
+        s.top = `${at - 1.5}px`
+        s.left = `${left - 2}px`
+        s.height = '3px'
+        s.width = `${right - left + 4}px`
+      }
+    },
+    hide() {
+      line?.remove()
+      line = null
+    },
+  }
 }

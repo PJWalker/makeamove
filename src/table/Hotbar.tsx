@@ -134,11 +134,7 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
         >
           <IconSearch size={18} />
         </button>
-        {dragging.value ? (
-          <p class="hotbar-hint">Drop off the bar to remove</p>
-        ) : (
-          !slots.length && <p class="hotbar-hint">Alt+Enter in the palette pins here</p>
-        )}
+        {dragging.value && <p class="hotbar-hint">Drop off the bar to remove</p>}
       </div>
     </div>
   )
