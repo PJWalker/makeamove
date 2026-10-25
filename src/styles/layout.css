@@ -1126,12 +1126,9 @@
       left 200ms var(--ease),
       right 200ms var(--ease);
   }
+  /* The strip look (components.css) is shared with the toolbar; this adds scrolling. */
   .hotbar {
-    --bevel: 40px;
-    display: flex;
     max-width: 100%;
-    gap: var(--space-1);
-    padding: var(--space-3) 36px var(--space-2);
     overflow-x: auto;
     overflow-y: hidden;
     overscroll-behavior-x: contain;
@@ -1148,22 +1145,11 @@
     opacity: 0.5;
   }
   .hotbar-btn {
-    --bevel: var(--bevel-sm);
-    display: flex;
-    align-items: center;
     gap: var(--space-1);
-    min-height: 34px;
-    padding: 0 var(--space-2);
-    background: var(--surface-raised);
-    color: var(--text);
-    border: 0;
+    padding: 0 var(--space-3);
     cursor: grab;
-    font-size: var(--text-sm);
     white-space: nowrap;
     user-select: none;
-  }
-  .hotbar-btn[aria-disabled='false']:hover {
-    background: var(--surface-raised-hover, var(--surface-sunken-hover));
   }
   .hotbar-btn kbd {
     font-size: var(--text-xs);
@@ -1213,23 +1199,6 @@
   .hotbar[data-dragging='true'] {
     outline: 2px dashed var(--text-muted);
     outline-offset: 2px;
-  }
-  .hotbar-palette {
-    --bevel: var(--bevel-sm);
-    flex: none;
-    align-self: start;
-    display: grid;
-    place-items: center;
-    width: 34px;
-    min-height: 34px;
-    padding: 0;
-    background: var(--surface-raised);
-    color: var(--text);
-    border: 0;
-    cursor: pointer;
-  }
-  .hotbar-palette:hover {
-    background: var(--surface-raised-hover, var(--surface-sunken-hover));
   }
   .hotbar-hint {
     flex: none;

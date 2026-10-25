@@ -6,6 +6,7 @@ import { buildIndex } from '../actions/registry'
 import { noteRecent } from '../actions/recent'
 import type { Campaign } from '../store/campaign'
 import { useY } from '../store/useY'
+import { Button } from '../ui/Button'
 import { IconSearch } from '../ui/icons'
 import { paletteOpen } from './Palette'
 import { isTyping } from '../ui/keys'
@@ -78,7 +79,7 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
     <div class="hotbar-wrap">
       <div
         ref={barRef}
-        class="hotbar panel bevel dock-bottom chrome"
+        class="hotbar panel bevel strip across dock-bottom chrome"
         role="toolbar"
         aria-label="Hotbar"
         data-dragging={dragging.value !== null}
@@ -102,7 +103,7 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
               <div
                 role="button"
                 tabIndex={0}
-                class="hotbar-btn bevel"
+                class="hotbar-btn btn btn-ghost bevel"
                 aria-disabled={off}
                 title={off ? `${a.title}: ${a.available}` : (a.detail ?? a.title)}
                 onClick={() => run(id)}
@@ -125,15 +126,14 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
             </div>
           )
         })}
-        <button
-          type="button"
-          class="hotbar-palette bevel"
-          aria-label="Open command palette"
-          title="Command palette (Ctrl/Cmd+K)"
+        <Button
+          variant="icon"
+          class="hotbar-palette"
+          label="Command palette (Ctrl/Cmd+K)"
           onClick={() => (paletteOpen.value = !paletteOpen.value)}
         >
-          <IconSearch size={18} />
-        </button>
+          <IconSearch size={22} />
+        </Button>
         {dragging.value && <p class="hotbar-hint">Drop off the bar to remove</p>}
       </div>
     </div>
