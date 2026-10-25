@@ -102,8 +102,8 @@ function Window({ win, campaign }: { win: FloatingWindow; campaign: Campaign }) 
       onPointerDown={() => raiseWindow(win.id)}
     >
       <header class="panel-header window-header" onPointerDown={onHeaderPointerDown}>
-        <h2 class="panel-title">{label}</h2>
         {win.id === 'characters' && <CharacterListToggle />}
+        <h2 class="panel-title">{label}</h2>
         <Button variant="icon" label="Dock in the sidebar" onClick={() => dockAndFocus(win.id)}>
           <IconDock size={16} />
         </Button>

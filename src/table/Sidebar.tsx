@@ -68,10 +68,10 @@ export function Sidebar({ side, campaign }: { side: Side; campaign: Campaign }) 
           <div class="sidebar-panel" style={{ viewTransitionName: `panel-${active}` }}>
             <header class="panel-header docked-header" {...withPull((e) => pullOut(active, e), (x, y) => (menu.value = { x, y, items: tabMenu(active, side) }))}
             >
+              {active === 'characters' && <CharacterListToggle />}
               <h2 class="panel-title" tabIndex={-1}>
                 {PANELS[active].label}
               </h2>
-              {active === 'characters' && <CharacterListToggle />}
               <IconDrag size={16} class="drag-hint" aria-hidden="true" />
             </header>
             <PanelContent id={active} campaign={campaign} />

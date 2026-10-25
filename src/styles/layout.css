@@ -1517,8 +1517,11 @@
     cursor: pointer;
     font-size: 1.25rem;
   }
-  .chars-toggle {
+  .chars-toggle + .panel-title {
     margin-right: auto;
+  }
+  .chars-toggle {
+    margin-left: calc(var(--space-1) * -1);
     display: grid;
     place-items: center;
     padding: var(--space-1);
