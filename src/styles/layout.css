@@ -1170,6 +1170,33 @@
     pointer-events: none;
     cursor: grabbing;
   }
+  /* The app-wide tooltip (ui/Tooltip.tsx). */
+  .tooltip {
+    position: fixed;
+    inset: auto;
+    margin: 0;
+    max-width: 260px;
+    padding: var(--space-1) var(--space-3);
+    background: var(--surface-raised, var(--surface));
+    color: var(--text);
+    border: 1px solid #fff2;
+    box-shadow: 0 6px 16px -4px oklch(0% 0 0 / 0.55);
+    font-size: var(--text-xs);
+    line-height: 1.4;
+    pointer-events: none;
+    overflow: visible;
+    opacity: 0;
+    transition: opacity 100ms var(--ease);
+  }
+  .tooltip:popover-open {
+    opacity: 1;
+  }
+  @starting-style {
+    .tooltip:popover-open {
+      opacity: 0;
+    }
+  }
+
   /* A copy of a palette row, carried to the hotbar. */
   .drag-ghost {
     position: fixed;

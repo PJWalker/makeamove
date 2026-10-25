@@ -3,6 +3,7 @@ import { useEffect } from 'preact/hooks'
 import { Lobby } from './lobby/Lobby'
 import { goToCampaign, routeCampaignId } from './router'
 import { activeCampaign, type Campaign, closeCampaign, deleteLocalCampaign, openCampaign } from './store/campaign'
+import { Tooltip } from './ui/Tooltip'
 import { Tabletop } from './table/Tabletop'
 
 const openError = signal<string | null>(null)
@@ -22,6 +23,15 @@ export function App() {
     })
   }, [id])
 
+  return (
+    <>
+      <Screen id={id} />
+      <Tooltip />
+    </>
+  )
+}
+
+function Screen({ id }: { id: string | null }) {
   const campaign = activeCampaign.value
   if (id && campaign?.id === id) {
     if (campaign.removed.value) return <Removed campaign={campaign} />
