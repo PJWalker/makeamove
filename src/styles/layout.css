@@ -1184,6 +1184,19 @@
     outline: 2px dashed var(--text-muted);
     outline-offset: 2px;
   }
+  /* A window over a sidebar, shrunk to the tab it would become. */
+  .drag-tab {
+    --bevel: 24px;
+    position: fixed;
+    z-index: 1000;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    color: oklch(100% 0 0);
+    pointer-events: none;
+    box-shadow: 0 8px 24px -6px oklch(0% 0 0 / 0.55);
+  }
   .reorder-line {
     position: fixed;
     z-index: 1000;

@@ -163,6 +163,8 @@ function whole<T extends Record<string, number | undefined>>(geometry: T): T {
 export const dockTarget = signal<Side | null>(null)
 /** True while a window is being dragged, so empty sides can show as drop zones. */
 export const windowDragging = signal(false)
+/** The window being dragged and where its pointer is, so it can shrink to a tab over a sidebar. */
+export const windowPointer = signal<{ id: PanelId; x: number; y: number } | null>(null)
 
 function sideAt(x: number, y: number): Side | null {
   for (const side of SIDES) {
@@ -189,6 +191,7 @@ export function startWindowDrag(id: PanelId, e: PointerEvent, grabX: number, gra
     updateWindow(id, { x, y })
     const side = sideAt(ev.clientX, ev.clientY)
     dockTarget.value = side
+    windowPointer.value = { id, x: ev.clientX, y: ev.clientY }
     if (side) marker.show(tabsOf(side), indexAmong(tabsOf(side), 'y', ev))
     else marker.hide()
   }
@@ -204,6 +207,7 @@ export function startWindowDrag(id: PanelId, e: PointerEvent, grabX: number, gra
     }
     dockTarget.value = null
     windowDragging.value = false
+    windowPointer.value = null
   }
   window.addEventListener('pointermove', move)
   window.addEventListener('pointerup', up)

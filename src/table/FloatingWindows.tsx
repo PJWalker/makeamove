@@ -5,7 +5,7 @@ import { trackPointer } from '../ui/pointer'
 import { withTransition } from '../ui/transition'
 import { windowLayer } from '../ui/windows'
 import { createPortal } from 'preact/compat'
-import { dockPanel, floatingWindows, raiseWindow, startWindowDrag, updateWindow, type FloatingWindow } from './panelLayout'
+import { dockPanel, dockTarget, floatingWindows, windowPointer, raiseWindow, startWindowDrag, updateWindow, type FloatingWindow } from './panelLayout'
 import { PanelContent, PANELS } from './panels'
 import { RESIZE_DIRS, resizeRect, type ResizeDir } from './resizeRect'
 
@@ -59,7 +59,18 @@ function Window({ win, campaign }: { win: FloatingWindow; campaign: Campaign }) 
     startWindowDrag(win.id, e, e.clientX - win.x, e.clientY - win.y)
   }
 
+  // Over a sidebar, the window turns into the tab it would become.
+  const pointer = windowPointer.value
+  const asTab = dockTarget.value !== null && pointer?.id === win.id ? pointer : null
+  const { Icon } = PANELS[win.id]
+
   return (
+    <>
+    {asTab && (
+      <div class="drag-tab panel bevel" style={{ left: asTab.x - 22, top: asTab.y - 22 }} aria-hidden="true">
+        <Icon size={22} />
+      </div>
+    )}
     <section
       class="floating-window window panel bevel chrome"
       style={{
@@ -69,6 +80,7 @@ function Window({ win, campaign }: { win: FloatingWindow; campaign: Campaign }) 
         height: win.h,
         zIndex: win.z,
         viewTransitionName: `panel-${win.id}`,
+        visibility: asTab ? 'hidden' : undefined,
       }}
       aria-label={label}
       onPointerDown={() => raiseWindow(win.id)}
@@ -85,5 +97,6 @@ function Window({ win, campaign }: { win: FloatingWindow; campaign: Campaign }) 
         <span key={dir} class="win-resize" data-dir={dir} aria-hidden="true" onPointerDown={(e) => onResizePointerDown(e, dir)} />
       ))}
     </section>
+    </>
   )
 }
