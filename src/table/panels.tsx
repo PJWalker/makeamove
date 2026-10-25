@@ -53,11 +53,11 @@ export function PanelContent({ id, campaign }: { id: PanelId; campaign: Campaign
 }
 
 function Chat({ campaign }: { campaign: Campaign }) {
-  return <ChatPanel campaign={campaign} presence={<ChatPresence campaign={campaign} />} />
+  return <ChatPanel campaign={campaign} />
 }
 
 /** Who's at the table, and who's online right now. */
-function ChatPresence({ campaign }: { campaign: Campaign }) {
+function Presence({ campaign }: { campaign: Campaign }) {
   const members = useY(campaign.members, () => campaign.memberViews())
   const me = device.value.id
   const online = campaign.online.value
@@ -86,6 +86,7 @@ function MemberList({ campaign }: { campaign: Campaign }) {
   const isGm = useY(campaign.members, () => campaign.isGm())
   return (
     <div class="panel-scroll">
+      <Presence campaign={campaign} />
       <ul class="member-list">
         {members.map((m) => (
           <MemberRow key={m.id} campaign={campaign} m={m} canRemove={isGm && m.id !== device.value.id && m.role !== 'gm'} />

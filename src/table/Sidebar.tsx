@@ -2,6 +2,8 @@ import { unreadCount } from '../chat/unread'
 import { useSignal } from '@preact/signals'
 import { IconDrag } from '../ui/icons'
 import type { Campaign } from '../store/campaign'
+import { device } from '../store/device'
+import { useY } from '../store/useY'
 import { Button } from '../ui/Button'
 import { menuTrigger } from '../ui/menuTrigger'
 import { trackPointer } from '../ui/pointer'
@@ -55,7 +57,7 @@ export function Sidebar({ side, campaign }: { side: Side; campaign: Campaign }) 
     >
       <div class={`sidebar-rail panel bevel strip ${outer}`} role="tablist" aria-orientation="vertical">
         {s.panels.map((id) => (
-          <RailTab key={id} id={id} side={side} selected={open && active === id} onMenu={(x, y) => (menu.value = { x, y, items: tabMenu(id, side) })} />
+          <RailTab key={id} campaign={campaign} id={id} side={side} selected={open && active === id} onMenu={(x, y) => (menu.value = { x, y, items: tabMenu(id, side) })} />
         ))}
       </div>
 
@@ -203,9 +205,17 @@ function switchTo(id: PanelId, side: Side) {
   withTransition(() => selectPanel(id), { rootClass: replacing ? direction : undefined })
 }
 
+/** How many members are online, counting this device. */
+function useOnlineCount(campaign: Campaign) {
+  const me = device.value.id
+  const online = campaign.online.value
+  return useY(campaign.members, () => campaign.memberViews()).filter((m) => m.id === me || online.has(m.id)).length
+}
+
 /** A tab that selects its panel on click, or pulls it out into a window when dragged. */
-function RailTab({ id, side, selected, onMenu }: { id: PanelId; side: Side; selected: boolean; onMenu: (x: number, y: number) => void }) {
+function RailTab({ campaign, id, side, selected, onMenu }: { campaign: Campaign; id: PanelId; side: Side; selected: boolean; onMenu: (x: number, y: number) => void }) {
   const { label, Icon } = PANELS[id]
+  const onlineCount = useOnlineCount(campaign)
 
   function onPointerDown(e: PointerEvent) {
     dragTab(id, e)
@@ -217,10 +227,11 @@ function RailTab({ id, side, selected, onMenu }: { id: PanelId; side: Side; sele
       role="tab"
       class="rail-tab"
       data-panel={id}
-      label={label + (id === 'chat' && unreadCount.value ? `, ${unreadCount.value} unread` : '')}
+      label={label + (id === 'chat' && unreadCount.value ? `, ${unreadCount.value} unread` : '') + (id === 'members' ? `, ${onlineCount} online` : '')}
       aria-selected={selected}
       pressed={selected}
       data-unread={id === 'chat' && unreadCount.value > 0 ? Math.min(unreadCount.value, 99) : undefined}
+      data-online={id === 'members' ? onlineCount : undefined}
       onClick={() => switchTo(id, side)}
       {...withPull(onPointerDown, onMenu)}
     >

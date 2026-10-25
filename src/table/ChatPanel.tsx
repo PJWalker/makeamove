@@ -35,14 +35,13 @@ const GROUP_MS = 5 * 60 * 1000
 
 const time = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' })
 
-export function ChatPanel({ campaign, presence }: { campaign: Campaign; presence: preact.ComponentChildren }) {
+export function ChatPanel({ campaign }: { campaign: Campaign }) {
   /** Replies only this device sees: /help, and errors. */
   const notes = useSignal<{ id: number; text: string; error?: boolean }[]>([])
   const note = (text: string, error = false) => (notes.value = [...notes.value, { id: Date.now(), text, error }])
 
   return (
     <div class="chat">
-      {presence}
       <ChatLogView campaign={campaign} notes={notes.value} />
       <Composer campaign={campaign} onNote={note} />
     </div>
