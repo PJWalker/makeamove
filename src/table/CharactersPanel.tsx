@@ -33,7 +33,7 @@ import { colourOf } from '../scene/presence'
 import { TOKEN_STYLES } from '../scene/types'
 import { menuTrigger } from '../ui/menuTrigger'
 import { openPopup } from '../ui/popup'
-import { IconBack, IconDelete, IconFolder, IconListHide, IconListShow, IconImage, IconRename } from '../ui/icons'
+import { IconAdd, IconBack, IconDelete, IconFolder, IconListHide, IconListShow, IconRemove, IconImage, IconRename } from '../ui/icons'
 import { Segmented } from '../ui/Segmented'
 import { Dialog } from './CampaignDialogs'
 import { ContextMenu, type MenuItem } from './ContextMenu'
@@ -521,15 +521,15 @@ function Counter({
     <div class="counter" role="group" aria-label={label}>
       <span class="eyebrow">{label}</span>
       <div class="counter-row">
-        <Button variant="icon" size="sm" label={`Decrease ${label}`} disabled={disabled} onClick={() => onChange(-1)}>
-          −
+        <Button variant="icon" className="counter-btn" label={`Decrease ${label}`} disabled={disabled} onClick={() => onChange(-1)}>
+          <IconRemove size={18} />
         </Button>
         <output class="counter-value">
           {value}
           {max !== undefined && <span class="muted">/{max}</span>}
         </output>
-        <Button variant="icon" size="sm" label={`Increase ${label}`} disabled={disabled} onClick={() => onChange(1)}>
-          +
+        <Button variant="icon" className="counter-btn" label={`Increase ${label}`} disabled={disabled} onClick={() => onChange(1)}>
+          <IconAdd size={18} />
         </Button>
       </div>
     </div>

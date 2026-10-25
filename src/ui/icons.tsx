@@ -56,6 +56,7 @@ import MsPanelClose from '~icons/material-symbols/right-panel-close-rounded'
 import MsPanelOpen from '~icons/material-symbols/right-panel-open-rounded'
 import MsPersonAdd from '~icons/material-symbols/person-add-rounded'
 import MsPersonRemove from '~icons/material-symbols/person-remove-rounded'
+import MsRemove from '~icons/material-symbols/remove-rounded'
 import MsRedo from "~icons/material-symbols/redo-rounded";
 import MsTitle from '~icons/material-symbols/title-rounded'
 import MsUndo from "~icons/material-symbols/undo-rounded";
@@ -119,6 +120,7 @@ export const IconHelp = icon(GiHelp)
 export const IconLeave = icon(GiExitDoor)
 export const IconDelete = icon(GiTrashCan)
 export const IconAdd = icon(MsAdd)
+export const IconRemove = icon(MsRemove)
 export const IconSearch = icon(MsSearch)
 export const IconClose = icon(MsClose)
 export const IconExpand = icon(MsExpandMore)
