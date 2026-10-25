@@ -521,14 +521,14 @@ function Counter({
     <div class="counter" role="group" aria-label={label}>
       <span class="eyebrow">{label}</span>
       <div class="counter-row">
-        <Button variant="icon" className="counter-btn" label={`Decrease ${label}`} disabled={disabled} onClick={() => onChange(-1)}>
+        <Button variant="secondary" class="counter-btn" label={`Decrease ${label}`} disabled={disabled} onClick={() => onChange(-1)}>
           <IconRemove size={18} />
         </Button>
         <output class="counter-value">
           {value}
           {max !== undefined && <span class="muted">/{max}</span>}
         </output>
-        <Button variant="icon" className="counter-btn" label={`Increase ${label}`} disabled={disabled} onClick={() => onChange(1)}>
+        <Button variant="secondary" class="counter-btn" label={`Increase ${label}`} disabled={disabled} onClick={() => onChange(1)}>
           <IconAdd size={18} />
         </Button>
       </div>

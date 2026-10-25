@@ -1668,8 +1668,9 @@
   }
   .counter-btn {
     flex: none;
-    width: 28px;
-    min-height: 28px;
+    width: 30px;
+    min-height: 30px;
+    padding: 0;
   }
   .counter-value {
     min-width: 0;
