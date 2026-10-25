@@ -86,6 +86,8 @@ export class Campaign {
   /** deviceId -> { name, at, by } for each player the GM removed. */
   readonly revoked: Y.Map<{ name: string; at: number; by: string }>
   readonly scenes: Y.Map<Y.Map<any>>
+  /** id -> character (see characters/store.ts). */
+  readonly characters: Y.Map<Y.Map<any>>
   private persistence: IndexeddbPersistence
   private destroyed = false
   private cleanups: (() => void)[] = []
@@ -109,6 +111,7 @@ export class Campaign {
     this.members = this.doc.getMap('members')
     this.revoked = this.doc.getMap('revoked')
     this.scenes = this.doc.getMap('scenes')
+    this.characters = this.doc.getMap('characters')
     this.persistence = new IndexeddbPersistence(dbName(id), this.doc)
     this.chat = new ChatLog(this.doc, id, device.value.id)
   }

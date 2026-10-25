@@ -4,11 +4,12 @@ import { useCallback, useEffect, useLayoutEffect, useRef } from 'preact/hooks'
 import { COMMANDS, parseCommand, suggest } from '../chat/commands'
 import { tokenize } from '../chat/markdown'
 import { postRoll, runCommand } from '../chat/send'
-import type { ChatMessage, RollMessage, RollVisibility, TextMessage } from '../chat/types'
+import type { ChatMessage, MoveMessage, RollMessage, RollVisibility, TextMessage } from '../chat/types'
 import { canDelete, visibilityOf } from '../chat/types'
 import { splitSessions } from '../chat/sessions'
 import { markRead } from '../chat/unread'
-import { NotationError } from '../dice/notation'
+import { NotationError, type Roll } from '../dice/notation'
+import { applySuggestion, canEdit, getCharacter } from '../characters/api'
 import { poolFormula } from '../dice/pool'
 import { stampTime } from '../lib/hlc'
 import type { Campaign } from '../store/campaign'
@@ -102,6 +103,7 @@ function ChatLogView({ campaign, notes }: { campaign: Campaign; notes: { id: num
       return (
         <Message
           key={m.id}
+          campaign={campaign}
           m={m}
           header={header}
           fresh={!initial.current!.has(m.id)}
@@ -181,6 +183,7 @@ function ChatLogView({ campaign, notes }: { campaign: Campaign; notes: { id: num
 }
 
 function Message({
+  campaign,
   m,
   header,
   fresh,
@@ -189,6 +192,7 @@ function Message({
   menu,
   goTo,
 }: {
+  campaign: Campaign
   m: ChatMessage
   header: boolean
   fresh: boolean
@@ -230,7 +234,13 @@ function Message({
           </time>
         </header>
       )}
-      {m.kind === 'roll' ? <RollCard m={m} masked={masked} /> : <TextBody m={m} mine={mine} />}
+      {m.kind === 'roll' ? (
+        <RollCard m={m} masked={masked} />
+      ) : m.kind === 'move' ? (
+        <MoveCard campaign={campaign} m={m} />
+      ) : (
+        <TextBody m={m} mine={mine} />
+      )}
     </article>
   )
 }
@@ -301,38 +311,7 @@ function RollCard({ m, masked }: { m: RollMessage; masked: boolean }) {
         {m.visibility !== 'public' && <span class="roll-visibility">{VISIBILITY_LABEL[m.visibility]}</span>}
       </div>
       <div class="roll-body">
-        <div class="roll-terms">
-          {r.terms.map((t, i) => (
-            <span key={i} class="roll-term">
-              {(i > 0 || t.sign < 0) && <span class="roll-op">{t.sign < 0 ? '−' : '+'}</span>}
-              {t.kind === 'flat' ? (
-                <span class="roll-flat">
-                  {t.value}
-                  {t.label && <span class="roll-label">{t.label}</span>}
-                </span>
-              ) : (
-                <>
-                  {t.dice.map((d, j) => (
-                    <span
-                      key={j}
-                      class="die"
-                      data-sides={[4, 6, 8, 10, 12, 20].includes(d.sides) ? d.sides : 'n'}
-                      data-kept={d.kept}
-                      data-max={d.value === d.sides && d.sides > 1}
-                      data-min={d.value === 1}
-                      data-exploded={d.exploded}
-                      style={{ '--i': j }}
-                      title={`d${d.sides}${d.exploded ? ', exploded' : ''}${d.kept ? '' : ', dropped'}`}
-                    >
-                      {d.value}
-                    </span>
-                  ))}
-                  {t.label && <span class="roll-label">{t.label}</span>}
-                </>
-              )}
-            </span>
-          ))}
-        </div>
+        <RollTerms roll={r} />
         <span class="roll-total">{r.total}</span>
       </div>
     </div>
@@ -542,3 +521,75 @@ function Composer({ campaign, onNote }: { campaign: Campaign; onNote: (text: str
     </div>
   )
 }
+
+function RollTerms({ roll }: { roll: Roll }) {
+  return (
+    <div class="roll-terms">
+      {roll.terms.map((t, i) => (
+        <span key={i} class="roll-term">
+          {(i > 0 || t.sign < 0) && <span class="roll-op">{t.sign < 0 ? '−' : '+'}</span>}
+          {t.kind === 'flat' ? (
+            <span class="roll-flat">
+              {t.value}
+              {t.label && <span class="roll-label">{t.label}</span>}
+            </span>
+          ) : (
+            <>
+              {t.dice.map((d, j) => (
+                <span
+                  key={j}
+                  class="die"
+                  data-sides={[4, 6, 8, 10, 12, 20].includes(d.sides) ? d.sides : 'n'}
+                  data-kept={d.kept}
+                  data-max={d.value === d.sides && d.sides > 1}
+                  data-min={d.value === 1}
+                  data-exploded={d.exploded}
+                  style={{ '--i': j }}
+                  title={`d${d.sides}${d.exploded ? ', exploded' : ''}${d.kept ? '' : ', dropped'}`}
+                >
+                  {d.value}
+                </span>
+              ))}
+              {t.label && <span class="roll-label">{t.label}</span>}
+            </>
+          )}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+/** A move: its name, the roll behind it, the outcome, and follow-up buttons. */
+function MoveCard({ campaign, m }: { campaign: Campaign; m: MoveMessage }) {
+  const canAct = useY(campaign.characters, () => {
+    const c = getCharacter(campaign, m.characterId)
+    return !!c && canEdit(campaign, c)
+  })
+  return (
+    <div class="roll-card move-card" data-band={m.band ?? 'none'}>
+      <div class="roll-head">
+        <span class="roll-formula">{m.moveName}</span>
+        <span class="roll-comment">{m.characterName}</span>
+      </div>
+      {m.roll && (
+        <div class="roll-body">
+          <RollTerms roll={m.roll} />
+          <span class="roll-total">{m.roll.total}</span>
+        </div>
+      )}
+      {m.band && <div class="move-band">{BAND_LABEL[m.band]}</div>}
+      <p class="move-outcome">{m.outcome}</p>
+      {canAct && m.suggestions.length > 0 && (
+        <div class="move-suggest">
+          {m.suggestions.map((s, i) => (
+            <Button key={i} size="sm" variant="ghost" onClick={() => applySuggestion(campaign, m.characterId, s)}>
+              {s.kind === 'xp' ? 'Mark XP' : `Roll damage (${s.formula})`}
+            </Button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+const BAND_LABEL = { strong: 'Full success', weak: 'Partial success', miss: 'Miss' } as const

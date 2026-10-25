@@ -909,6 +909,29 @@
   .roll-card[data-masked='true'] {
     background: var(--surface-sunken);
   }
+  .move-band {
+    font-weight: 700;
+    font-size: var(--text-sm);
+  }
+  .move-card[data-band='strong'] .move-band {
+    color: var(--success, oklch(78% 0.14 150));
+  }
+  .move-card[data-band='weak'] .move-band {
+    color: oklch(82% 0.13 85);
+  }
+  .move-card[data-band='miss'] .move-band {
+    color: var(--danger);
+  }
+  .move-outcome {
+    margin: 0;
+    font-size: var(--text-sm);
+    white-space: pre-wrap;
+  }
+  .move-suggest {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+  }
   .roll-secret {
     color: var(--text-muted);
     font-style: italic;

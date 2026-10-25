@@ -52,7 +52,7 @@ const PREFIXES: Record<string, Narrow> = {
 }
 
 export function splitPrefix(input: string): { narrow: Narrow | null; query: string } {
-  const narrow = PREFIXES[input[0]] ?? null
+  const narrow: Narrow | null = (PREFIXES as Partial<Record<string, Narrow>>)[input[0]] ?? null
   return { narrow, query: narrow ? input.slice(1) : input }
 }
 

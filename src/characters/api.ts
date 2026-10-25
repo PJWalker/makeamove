@@ -1,0 +1,101 @@
+import { signal } from '@preact/signals'
+import { postRoll, myName } from '../chat/send'
+import type { MoveSuggestion } from '../chat/types'
+import type { Campaign } from '../store/campaign'
+import { device } from '../store/device'
+import { getSystem } from '../systems'
+import type { MoveDef } from '../systems/types'
+import { performMove, needsChoice, type MoveChoice } from './moves'
+import { characterView, derive, canEditCharacter, createCharacter, type CharacterView } from './store'
+
+export const systemOf = (campaign: Campaign) => getSystem(campaign.meta.get('system'))
+
+export function listCharacters(campaign: Campaign): CharacterView[] {
+  const system = systemOf(campaign)
+  return [...campaign.characters.entries()]
+    .map(([id, m]) => characterView(id, m, system))
+    .sort((a, b) => a.name.localeCompare(b.name))
+}
+
+export function getCharacter(campaign: Campaign, id: string | undefined): CharacterView | undefined {
+  const m = id ? campaign.characters.get(id) : undefined
+  return m && id ? characterView(id, m, systemOf(campaign)) : undefined
+}
+
+/** The character this device is playing: their choice, else the only one they own. */
+export function selectedCharacterId(campaign: Campaign): string | undefined {
+  const chosen: string | undefined = campaign.members.get(device.value.id)?.get('character')
+  if (chosen && campaign.characters.has(chosen)) return chosen
+  const mine = listCharacters(campaign).filter((c) => c.owner === device.value.id)
+  return mine.length === 1 ? mine[0].id : undefined
+}
+
+export function selectCharacter(campaign: Campaign, id: string | undefined) {
+  const m = campaign.members.get(device.value.id)
+  if (!m) return
+  if (id) m.set('character', id)
+  else m.delete('character')
+}
+
+export function newCharacter(campaign: Campaign, name: string, classId: string) {
+  const id = createCharacter(campaign.characters, systemOf(campaign), {
+    name: name.trim() || 'Unnamed',
+    classId,
+    owner: device.value.id,
+  })
+  selectCharacter(campaign, id)
+  return id
+}
+
+export function canEdit(campaign: Campaign, c: CharacterView) {
+  return canEditCharacter(c, device.value.id, campaign.isGm())
+}
+
+export function setField(campaign: Campaign, id: string, key: string, value: unknown) {
+  campaign.characters.get(id)?.set(key, value)
+}
+
+/** Add to a numeric field, never below zero. */
+export function bump(campaign: Campaign, id: string, key: string, by: number, max?: number) {
+  const m = campaign.characters.get(id)
+  if (!m) return
+  const next = Math.max(0, (m.get(key) ?? 0) + by)
+  m.set(key, max === undefined ? next : Math.min(next, max))
+}
+
+/** Set by Characters/Palette to ask for a stat or bond before a move rolls. */
+export const moveRequest = signal<{ moveId: string; characterId: string } | null>(null)
+
+/** Make a move as a character: ask for input if it needs any, otherwise roll and post. */
+export function startMove(campaign: Campaign, characterId: string, move: MoveDef) {
+  if (needsChoice(move)) moveRequest.value = { moveId: move.id, characterId }
+  else void makeMove(campaign, characterId, move)
+}
+
+export function makeMove(campaign: Campaign, characterId: string, move: MoveDef, choice: MoveChoice = {}) {
+  const system = systemOf(campaign)
+  const c = getCharacter(campaign, characterId)
+  if (!c) return
+  const d = derive(c, system)
+  const result = performMove(system, move, c, d, choice)
+  // A roll spends +forward; text-only moves leave it for the next roll.
+  if (result.roll && c.forward) setField(campaign, c.id, 'forward', 0)
+  return campaign.chat.post(
+    {
+      kind: 'move',
+      moveId: move.id,
+      moveName: move.name,
+      trigger: move.trigger,
+      characterId: c.id,
+      characterName: c.name,
+      ...result,
+    },
+    { id: device.value.id, name: myName(campaign) },
+  )
+}
+
+/** Carry out a suggestion button from a move card. */
+export function applySuggestion(campaign: Campaign, characterId: string, s: MoveSuggestion) {
+  if (s.kind === 'xp') bump(campaign, characterId, 'xp', 1)
+  else if (s.formula) postRoll(campaign, s.formula, 'public', 'Damage')
+}

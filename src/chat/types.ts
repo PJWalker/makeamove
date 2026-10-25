@@ -52,7 +52,29 @@ export interface SystemMessage extends Base {
   sceneId?: string
 }
 
-export type ChatMessage = TextMessage | RollMessage | SystemMessage
+/** A follow-up button on a move card. Never applied automatically. */
+export interface MoveSuggestion {
+  kind: 'xp' | 'damage'
+  /** For damage: the formula to roll, e.g. "d10+1". */
+  formula?: string
+}
+
+/** A move being made, with its roll (if it has one) and the outcome text. */
+export interface MoveMessage extends Base {
+  kind: 'move'
+  moveId: string
+  moveName: string
+  trigger: string
+  characterId: string
+  characterName: string
+  roll?: Roll
+  band?: 'strong' | 'weak' | 'miss'
+  /** The outcome for the band, or the move's text when it doesn't roll. */
+  outcome: string
+  suggestions: MoveSuggestion[]
+}
+
+export type ChatMessage = TextMessage | RollMessage | SystemMessage | MoveMessage
 
 /** What someone sees of a message: all of it, a placeholder, or nothing. */
 export type Visibility = 'full' | 'masked' | 'hidden'
