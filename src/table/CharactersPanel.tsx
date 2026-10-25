@@ -151,7 +151,13 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
       />
       <div class="chars-detail">
       <div class="chars-back">
-        <button type="button" class="chars-back-btn chars-back-only" aria-label="Characters" onClick={() => go('list')}>
+        <button type="button" class="chars-back-btn chars-back-only" aria-label="Characters" onClick={() => {
+            go('list')
+            if (listHidden.value) {
+              listHidden.value = false
+              saveList()
+            }
+          }}>
           <IconBack />
         </button>
         <span class="chars-title">{creating.value ? 'New character' : (selected?.name ?? 'Characters')}</span>
