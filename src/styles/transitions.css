@@ -188,6 +188,8 @@
 /* Characters panel (narrow): the levels slide like a navigation stack. */
 ::view-transition-group(chars-pane) {
   animation-duration: 140ms;
+  /* The snapshots slide inside the group, so clipping it keeps them in the panel. */
+  overflow: clip;
 }
 .vt-chars-fwd::view-transition-old(chars-pane) {
   animation: vt-chars-out-left 140ms ease-in both;
