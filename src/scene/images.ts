@@ -41,6 +41,11 @@ export function onBlobFetcher(fn: () => void) {
   return () => fetcherListeners.delete(fn)
 }
 
+/** A stored image's bytes, from this device or else from peers; null if neither has it. */
+export async function loadBlob(hash: string): Promise<Blob | null> {
+  return (await getBlob(hash)) ?? (await fetchFromPeers?.(hash)) ?? null
+}
+
 const bitmaps = new Map<string, Promise<ImageBitmap | null>>()
 
 /** Decode a stored image once and share it; null if this device lacks it. */

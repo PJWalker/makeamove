@@ -1,4 +1,5 @@
 import * as Y from 'yjs'
+import type { BlobRef } from '../scene/types'
 import { newId } from '../lib/ids'
 import { resolveEffects, type EffectSource, type Resolved } from '../systems/effects'
 import type { ClassDef, Effect, EffectActive, GameSystem, ItemDef } from '../systems/types'
@@ -53,6 +54,8 @@ export interface CharacterView {
   /** +N ongoing, until the GM says it ends. */
   ongoing: number
   inventory: ItemInstance[]
+  /** The character's picture, in the blob store. */
+  portrait?: BlobRef
 }
 
 export type CharacterMap = Y.Map<any>
@@ -108,6 +111,7 @@ export function characterView(id: string, m: CharacterMap, system: GameSystem): 
     forward: m.get('forward') ?? 0,
     ongoing: m.get('ongoing') ?? 0,
     inventory,
+    portrait: m.get('portrait'),
   }
 }
 

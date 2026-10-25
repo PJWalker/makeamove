@@ -1,6 +1,7 @@
 import { signal } from '@preact/signals'
 import { generateKeyBetween } from 'fractional-indexing'
 import type * as Y from 'yjs'
+import { importImage } from '../scene/images'
 import { postRoll, myName } from '../chat/send'
 import type { MoveSuggestion } from '../chat/types'
 import type { Campaign } from '../store/campaign'
@@ -65,6 +66,12 @@ export function newCharacter(campaign: Campaign, name: string, classId: string) 
 
 export function canEdit(campaign: Campaign, c: CharacterView) {
   return canEditCharacter(c, device.value.id, campaign.isGm())
+}
+
+/** Store an image file as the character's portrait. */
+export async function setPortrait(campaign: Campaign, id: string, file: Blob) {
+  const image = await importImage(file)
+  setField(campaign, id, 'portrait', image)
 }
 
 export function setField(campaign: Campaign, id: string, key: string, value: unknown) {

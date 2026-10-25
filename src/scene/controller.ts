@@ -834,7 +834,7 @@ export class SceneController {
   }
 
   /** Change a token's name, style and colour as one undo step. */
-  updateToken(id: string, patch: Partial<Pick<TokenElement, 'name' | 'style' | 'colour' | 'characterId'>>) {
+  updateToken(id: string, patch: Partial<Pick<TokenElement, 'name' | 'style' | 'colour' | 'characterId' | 'image'>>) {
     this.scene.update([[id, patch]])
   }
 
@@ -868,6 +868,28 @@ export class SceneController {
       colour: memberColour(),
       style: this.defaults().tokenStyle,
       ...p,
+      w: size,
+      h: size,
+      rot: 0,
+    })
+    activeTool.value = 'select'
+    this.selection.value = [id]
+    return id
+  }
+
+  /** A token standing for a character, at a world point. */
+  addCharacterToken(at: Point, spec: { characterId: string; name: string; image?: BlobRef }) {
+    const grid = this.renderer.grid
+    const size = grid.type === 'none' ? 70 : grid.size
+    const [id] = this.scene.add({
+      type: 'token',
+      layer: 'token',
+      name: spec.name,
+      characterId: spec.characterId,
+      image: spec.image,
+      colour: memberColour(),
+      style: spec.image ? this.defaults().tokenStyle : 'disc',
+      ...snapPoint(grid, at),
       w: size,
       h: size,
       rot: 0,

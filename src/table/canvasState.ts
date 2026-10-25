@@ -1,4 +1,5 @@
 import { signal } from '@preact/signals'
+import type { BlobRef } from '../scene/types'
 import { backdropColour } from '../lib/colour'
 import { DEFAULT_CANVAS_COLOUR, type SceneView } from '../store/campaign'
 
@@ -23,6 +24,19 @@ export const seenMapColours = signal<Record<string, string | null>>({})
 export function canvasColour(scene: SceneView, mapColour: string | null): string {
   return scene.canvasColour ?? (mapColour ? backdropColour(mapColour) : DEFAULT_CANVAS_COLOUR)
 }
+
+/** What a character's token needs when it's dropped on the map. */
+export interface TokenSpec {
+  characterId: string
+  name: string
+  image?: BlobRef
+}
+
+/**
+ * Set by the open scene canvas: puts a token at a screen point and returns
+ * whether the point was over the map.
+ */
+export const tokenDrop = signal<((x: number, y: number, spec: TokenSpec) => boolean) | null>(null)
 
 /** Ctrl/Cmd + \ hides all chrome. */
 export const chromeHidden = signal(false)

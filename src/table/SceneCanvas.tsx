@@ -10,10 +10,12 @@ import { SceneRenderer } from '../scene/renderer'
 import { activeTool } from '../scene/tools'
 import { SceneDoc } from '../scene/sceneDoc'
 import type { Point } from '../scene/grid'
-import { isPlainToken, TOKEN_STYLES, type TokenStyle } from '../scene/types'
+import { importImage } from '../scene/images'
+import { isPlainToken, TOKEN_STYLES, type BlobRef, type TokenStyle } from '../scene/types'
 import { DEFAULT_CANVAS_COLOUR, type Campaign } from '../store/campaign'
 import { listCharacters, tokenStatsByCharacter } from '../characters/api'
 import { useY } from '../store/useY'
+import { BlobImage } from '../ui/BlobImage'
 import { Button } from '../ui/Button'
 import {
   IconAdd,
@@ -36,7 +38,7 @@ import {
 import { isTyping, MOD } from '../ui/keys'
 import { Segmented } from '../ui/Segmented'
 import { Dialog } from './CampaignDialogs'
-import { activeMapColour, canvasColour, canvasCommands, sceneSettingsOpen, seenMapColours } from './canvasState'
+import { activeMapColour, canvasColour, canvasCommands, sceneSettingsOpen, seenMapColours, tokenDrop } from './canvasState'
 import { ContextMenu, type MenuItem } from './ContextMenu'
 
 /**
@@ -82,6 +84,10 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
       ctl = new SceneController(s, renderer, hostRef.current!, sceneId, () => campaign.defaults(), campaign.presence)
       ctl.start()
       controller.value = ctl
+      tokenDrop.value = (x, y, spec) => {
+        ctl!.addCharacterToken(ctl!.toWorld(x, y), spec)
+        return true
+      }
       // Handy for poking at the scene from the console while developing.
       if (import.meta.env.DEV) Object.assign(window, { mamScene: ctl })
     })
@@ -89,6 +95,7 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
       cancelled = true
       ctl?.stop()
       controller.value = null
+      tokenDrop.value = null
       renderer.setElements([])
       scene?.destroy()
     }
@@ -293,7 +300,10 @@ function TokenOptionsDialog({
   const style = useSignal<TokenStyle>('disc')
   const colour = useSignal('#000000')
   const characterId = useSignal('')
+  const image = useSignal<BlobRef | undefined>(undefined)
+  const fileRef = useRef<HTMLInputElement>(null)
   const characters = useY(campaign.characters, () => listCharacters(campaign))
+  const linked = characters.find((k) => k.id === characterId.value)
 
   useEffect(() => {
     if (!token) return
@@ -301,6 +311,7 @@ function TokenOptionsDialog({
     style.value = isPlainToken(token) ? 'plain' : 'disc'
     colour.value = token.colour
     characterId.value = token.characterId ?? ''
+    image.value = token.image
     openPopup(ref.current)
   }, [id])
 
@@ -318,9 +329,10 @@ function TokenOptionsDialog({
         onSubmit={() => {
           if (id) controller.updateToken(id, {
               name: name.value.trim(),
-              style: style.value,
+              style: style.value === 'plain' && !image.value ? 'disc' : style.value,
               colour: colour.value,
               characterId: characterId.value || undefined,
+              image: image.value,
             })
         }}
       >
@@ -356,14 +368,46 @@ function TokenOptionsDialog({
           <span class="muted">The game system decides which of its stats show on the token.</span>
         </label>
         <div class="field">
+          Image
+          <span class="token-image-row">
+            <span class="token-image-preview">
+              <BlobImage image={image.value} fallback={<span class="muted">None</span>} />
+            </span>
+            <Button size="sm" onClick={() => fileRef.current?.click()}>
+              {image.value ? 'Change…' : 'Choose…'}
+            </Button>
+            {linked?.portrait && linked.portrait.hash !== image.value?.hash && (
+              <Button size="sm" onClick={() => (image.value = linked.portrait)}>
+                Use portrait
+              </Button>
+            )}
+            {image.value && (
+              <Button size="sm" variant="ghost" onClick={() => (image.value = undefined)}>
+                Remove
+              </Button>
+            )}
+          </span>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={async (e) => {
+              const file = e.currentTarget.files?.[0]
+              e.currentTarget.value = ''
+              if (file) image.value = await importImage(file).catch(() => image.value)
+            }}
+          />
+        </div>
+        <div class="field">
           Style
           <Segmented
             label="Token style"
             value={style.value}
             options={TOKEN_STYLES.map((s) => ({
               ...s,
-              disabled: s.id === 'plain' && !token?.image,
-              title: s.id === 'plain' && !token?.image ? 'Needs an image' : undefined,
+              disabled: s.id === 'plain' && !image.value,
+              title: s.id === 'plain' && !image.value ? 'Needs an image' : undefined,
             }))}
             onChange={(v) => (style.value = v)}
           />

@@ -8,6 +8,7 @@ import {
   selectCharacter,
   selectedCharacterId,
   setField,
+  setPortrait,
   startMove,
   systemOf,
 } from '../characters/api'
@@ -18,6 +19,8 @@ import { device } from '../store/device'
 import { useY } from '../store/useY'
 import type { GameSystem, MoveDef } from '../systems/types'
 import { Button } from '../ui/Button'
+import { BlobImage } from '../ui/BlobImage'
+import { dragToken } from './tokenDrag'
 
 export function CharactersPanel({ campaign }: { campaign: Campaign }) {
   const system = systemOf(campaign)
@@ -149,6 +152,8 @@ function Sheet({ campaign, system, c }: { campaign: Campaign; system: GameSystem
 
   return (
     <div class="sheet">
+      <Portrait campaign={campaign} c={c} editable={editable} />
+
       <header class="sheet-head">
         <input
           class="input bevel sheet-name"
@@ -305,5 +310,50 @@ function MoveRow({ move, onMake }: { move: MoveDef; onMake: () => void }) {
         {move.roll ? 'Roll' : 'Post'}
       </Button>
     </li>
+  )
+}
+
+/** The portrait, and a stand-in token to drag onto the map. */
+function Portrait({ campaign, c, editable }: { campaign: Campaign; c: CharacterView; editable: boolean }) {
+  const fileRef = useRef<HTMLInputElement>(null)
+  const initial = (c.name.trim()[0] ?? '?').toUpperCase()
+  return (
+    <div class="sheet-portrait">
+      <button
+        type="button"
+        class="portrait bevel"
+        title={editable ? 'Choose a portrait' : c.name}
+        disabled={!editable}
+        onClick={() => fileRef.current?.click()}
+      >
+        <BlobImage image={c.portrait} alt={`${c.name}'s portrait`} fallback={<span class="portrait-initial">{initial}</span>} />
+      </button>
+      <div class="portrait-side">
+        <div
+          class="token-chip"
+          title="Drag onto the map to place a token"
+          onPointerDown={(e) => dragToken(e, { characterId: c.id, name: c.name, image: c.portrait })}
+        >
+          <BlobImage image={c.portrait} fallback={<span class="portrait-initial">{initial}</span>} />
+        </div>
+        <span class="muted">Drag onto the map</span>
+        {editable && c.portrait && (
+          <Button size="sm" variant="ghost" onClick={() => setField(campaign, c.id, 'portrait', undefined)}>
+            Remove portrait
+          </Button>
+        )}
+      </div>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={(e) => {
+          const file = e.currentTarget.files?.[0]
+          e.currentTarget.value = ''
+          if (file) void setPortrait(campaign, c.id, file)
+        }}
+      />
+    </div>
   )
 }
