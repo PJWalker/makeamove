@@ -4,7 +4,10 @@ import { noteRecent, recentActions } from '../actions/recent'
 import { buildIndex } from '../actions/registry'
 import { rank } from '../actions/search'
 import type { Action } from '../actions/types'
-import { editHotbar, pin } from '../characters/hotbar'
+import { editHotbar, isPinned, pin, unpin } from '../characters/hotbar'
+import { IconAdd } from '../ui/icons'
+import { menuTrigger } from '../ui/menuTrigger'
+import { ContextMenu, type MenuItem } from './ContextMenu'
 import type { Campaign } from '../store/campaign'
 import { nextZ } from '../ui/windows'
 
@@ -16,6 +19,7 @@ const HINTS = [
   ['@', 'characters'],
   ['#', 'notes, items'],
   ['Alt+Enter', 'pin to hotbar'],
+  ['Right-click', 'more'],
 ]
 
 export function Palette({ campaign }: { campaign: Campaign }) {
@@ -49,6 +53,15 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
   const active = Math.min(cursor.value, Math.max(0, results.length - 1))
   const returnTo = useRef<Element | null>(document.activeElement)
   const z = useMemo(() => nextZ(), [])
+  const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(null)
+  const note = useSignal('')
+
+  function togglePin(a: Action) {
+    const pinned = isPinned(campaign, a.id)
+    if (editHotbar(campaign, (slots) => (pinned ? unpin(slots, a.id) : pin(slots, a.id)))) {
+      note.value = pinned ? `Removed ${a.title} from the hotbar` : `Added ${a.title} to the hotbar`
+    }
+  }
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -65,7 +78,8 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
   // A press outside closes it.
   useEffect(() => {
     const onDown = (e: PointerEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) paletteOpen.value = false
+      const t = e.target as Element
+      if (!rootRef.current?.contains(t) && !t.closest?.('.context-menu')) paletteOpen.value = false
     }
     document.addEventListener('pointerdown', onDown, true)
     return () => document.removeEventListener('pointerdown', onDown, true)
@@ -82,6 +96,7 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
   }
 
   function onKeyDown(e: KeyboardEvent) {
+    if (e.key === 'Escape' && menu.value) return
     if (e.key === 'Escape') {
       e.preventDefault()
       paletteOpen.value = false
@@ -92,7 +107,7 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
     } else if (e.key === 'Enter' && e.altKey) {
       e.preventDefault()
       const a = results[active]
-      if (a && editHotbar(campaign, (slots) => pin(slots, a.id))) paletteOpen.value = false
+      if (a) togglePin(a)
     } else if (e.key === 'Enter') {
       e.preventDefault()
       choose(results[active], e.shiftKey)
@@ -134,6 +149,18 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
               data-unavailable={off}
               onPointerMove={() => cursor.value !== i && (cursor.value = i)}
               onClick={() => choose(a)}
+              {...menuTrigger((x, y) => {
+                cursor.value = i
+                const pinned = isPinned(campaign, a.id)
+                menu.value = {
+                  x,
+                  y,
+                  items: [
+                    { label: pinned ? 'Remove from hotbar' : 'Add to hotbar', Icon: IconAdd, shortcut: 'Alt+Enter', onSelect: () => togglePin(a) },
+                    ...(a.available === true ? [{ label: 'Run', onSelect: () => choose(a) }] : []),
+                  ],
+                }
+              })}
             >
               <span class="palette-icon">{a.icon && <a.icon size={18} />}</span>
               <span class="palette-text">
@@ -150,6 +177,10 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
           </li>
         )}
       </ul>
+      {menu.value && <ContextMenu {...menu.value} onClose={() => (menu.value = null)} />}
+      <p class="palette-note" role="status">
+        {note.value}
+      </p>
       <p class="palette-foot">
         {HINTS.map(([k, what]) => (
           <span key={k}>

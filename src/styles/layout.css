@@ -1239,19 +1239,51 @@
     background: var(--surface-raised);
     color: var(--text);
     border: 0;
-    cursor: pointer;
+    cursor: grab;
     font-size: var(--text-sm);
     white-space: nowrap;
+    user-select: none;
   }
-  .hotbar-btn:hover:not(:disabled) {
+  .hotbar-btn[aria-disabled='false']:hover {
     background: var(--surface-raised-hover, var(--surface-sunken-hover));
   }
   .hotbar-btn kbd {
     font-size: var(--text-xs);
     opacity: 0.7;
   }
-  .hotbar-edit {
-    display: flex;
+  .hotbar-slot {
+    position: relative;
+  }
+  .hotbar-slot[data-dragging='true'] {
+    opacity: 0.35;
+  }
+  /* A bar line where the dragged slot will land. */
+  .hotbar-slot[data-drop='before']::before,
+  .hotbar-slot[data-drop='after']::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+  .hotbar-slot[data-drop='before']::before {
+    left: -3px;
+  }
+  .hotbar-slot[data-drop='after']::after {
+    right: -3px;
+  }
+  .hotbar[data-dragging='true'] {
+    outline: 2px dashed var(--text-muted);
+    outline-offset: 2px;
+  }
+  .hotbar-hint {
+    margin: 0;
+    align-self: center;
+    padding: 0 var(--space-2);
+    color: var(--text-muted);
+    font-size: var(--text-xs);
   }
 
   /* Character sheet */
@@ -1789,6 +1821,15 @@
   .palette-list li.palette-empty {
     color: var(--text-muted);
     cursor: default;
+  }
+  .palette-note {
+    margin: 0;
+    padding: var(--space-1) var(--space-4);
+    color: var(--accent);
+    font-size: var(--text-xs);
+  }
+  .palette-note:empty {
+    display: none;
   }
   .palette-foot {
     display: flex;

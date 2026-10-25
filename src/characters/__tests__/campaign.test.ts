@@ -9,7 +9,7 @@ import { systemActions } from '../../actions/system'
 import { Campaign, createCampaign } from '../../store/campaign'
 import { device } from '../../store/device'
 import { addItem, getCharacter, makeMove, newCharacter, selectedCharacterId, setField, systemOf, updateItem } from '../api'
-import { defaultHotbar, hotbarSlots, pin, shift, unpin, MAX_SLOTS } from '../hotbar'
+import { defaultHotbar, editHotbar, hotbarSlots, moveTo, pin, shift, unpin, MAX_SLOTS } from '../hotbar'
 
 async function setUp() {
   device.value = { id: 'gm', name: 'Gwen' }
@@ -68,5 +68,18 @@ describe('hotbar editing', () => {
     expect(unpin(['a', 'b'], 'a')).toEqual(['b'])
     expect(shift(['a', 'b', 'c'], 'b', -1)).toEqual(['b', 'a', 'c'])
     expect(shift(['a', 'b'], 'a', -1)).toEqual(['a', 'b'])
+  })
+
+  it('moves a slot to a drop position', () => {
+    expect(moveTo(['a', 'b', 'c'], 'a', 3)).toEqual(['b', 'c', 'a'])
+    expect(moveTo(['a', 'b', 'c'], 'c', 0)).toEqual(['c', 'a', 'b'])
+    expect(moveTo(['a', 'b', 'c'], 'a', 1)).toEqual(['a', 'b', 'c'])
+  })
+
+  it('pins with no character selected', async () => {
+    const c = await setUp()
+    expect(editHotbar(c, (s) => pin(s, 'cmd:fit'))).toBe(true)
+    expect(hotbarSlots(c, undefined)).toContain('cmd:fit')
+    c.destroy()
   })
 })

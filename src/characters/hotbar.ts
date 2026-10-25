@@ -11,7 +11,8 @@ import { getCharacter, selectedCharacterId, systemOf } from './api'
 
 export const MAX_SLOTS = 12
 
-const key = (characterId: string) => `hotbar:${characterId}`
+/** Without a character there is one shared bar, so pinning always works. */
+const key = (characterId?: string) => `hotbar:${characterId ?? 'global'}`
 
 /** Pin to the end; already-pinned ids stay where they are. */
 export function pin(slots: string[], id: string): string[] {
@@ -44,19 +45,30 @@ export function defaultHotbar(campaign: Campaign, characterId: string): string[]
 }
 
 export function hotbarSlots(campaign: Campaign, characterId: string | undefined): string[] {
-  if (!characterId) return ['tool:ping', 'tool:ruler']
   const saved: string[] | undefined = campaign.members.get(device.value.id)?.get(key(characterId))
-  return saved ?? defaultHotbar(campaign, characterId)
+  return saved ?? (characterId ? defaultHotbar(campaign, characterId) : ['tool:ping', 'tool:ruler'])
 }
 
-export function setHotbar(campaign: Campaign, characterId: string, slots: string[]) {
+export function setHotbar(campaign: Campaign, characterId: string | undefined, slots: string[]) {
   campaign.members.get(device.value.id)?.set(key(characterId), slots)
 }
 
-/** Edit the selected character's hotbar. Returns false when there is none. */
+/** Move a slot to a position (as counted before it was lifted out). */
+export function moveTo(slots: string[], id: string, index: number): string[] {
+  const from = slots.indexOf(id)
+  if (from < 0) return slots
+  const rest = slots.filter((s) => s !== id)
+  rest.splice(index > from ? index - 1 : index, 0, id)
+  return rest
+}
+
+/** Edit the selected character's hotbar (or the shared one with no character). */
 export function editHotbar(campaign: Campaign, edit: (slots: string[]) => string[]): boolean {
   const id = selectedCharacterId(campaign)
-  if (!id) return false
+  if (!campaign.members.get(device.value.id)) return false
   setHotbar(campaign, id, edit(hotbarSlots(campaign, id)))
   return true
 }
+
+export const isPinned = (campaign: Campaign, id: string) =>
+  hotbarSlots(campaign, selectedCharacterId(campaign)).includes(id)
