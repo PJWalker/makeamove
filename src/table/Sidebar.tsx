@@ -1,4 +1,5 @@
 import { unreadCount } from '../chat/unread'
+import { CharacterListToggle } from './CharactersPanel'
 import { useSignal } from '@preact/signals'
 import { IconDrag } from '../ui/icons'
 import type { Campaign } from '../store/campaign'
@@ -70,6 +71,7 @@ export function Sidebar({ side, campaign }: { side: Side; campaign: Campaign }) 
               <h2 class="panel-title" tabIndex={-1}>
                 {PANELS[active].label}
               </h2>
+              {active === 'characters' && <CharacterListToggle />}
               <IconDrag size={16} class="drag-hint" aria-hidden="true" />
             </header>
             <PanelContent id={active} campaign={campaign} />

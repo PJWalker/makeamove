@@ -1,4 +1,5 @@
 import { IconDock } from '../ui/icons'
+import { CharacterListToggle } from './CharactersPanel'
 import type { Campaign } from '../store/campaign'
 import { Button } from '../ui/Button'
 import { trackPointer } from '../ui/pointer'
@@ -102,6 +103,7 @@ function Window({ win, campaign }: { win: FloatingWindow; campaign: Campaign }) 
     >
       <header class="panel-header window-header" onPointerDown={onHeaderPointerDown}>
         <h2 class="panel-title">{label}</h2>
+        {win.id === 'characters' && <CharacterListToggle />}
         <Button variant="icon" label="Dock in the sidebar" onClick={() => dockAndFocus(win.id)}>
           <IconDock size={16} />
         </Button>

@@ -1517,7 +1517,17 @@
     cursor: pointer;
     font-size: 1.25rem;
   }
-  .chars-back-btn[aria-pressed='false'] {
+  .chars-toggle {
+    margin-right: auto;
+    display: grid;
+    place-items: center;
+    padding: var(--space-1);
+    background: none;
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+  }
+  .chars-toggle[aria-pressed='false'] {
     opacity: 0.6;
   }
   .chars-back-only {
@@ -1566,8 +1576,7 @@
     .chars-grid[data-level='list'] .chars-list {
       view-transition-name: chars-pane;
     }
-    .chars-split,
-    .chars-toggle {
+    .chars-split {
       display: none;
     }
     .chars-back-only {

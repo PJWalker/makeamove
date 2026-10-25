@@ -33,7 +33,7 @@ import { colourOf } from '../scene/presence'
 import { TOKEN_STYLES } from '../scene/types'
 import { menuTrigger } from '../ui/menuTrigger'
 import { openPopup } from '../ui/popup'
-import { IconBack, IconDelete, IconFolder, IconImage, IconRename } from '../ui/icons'
+import { IconBack, IconDelete, IconFolder, IconListHide, IconListShow, IconImage, IconRename } from '../ui/icons'
 import { Segmented } from '../ui/Segmented'
 import { Dialog } from './CampaignDialogs'
 import { ContextMenu, type MenuItem } from './ContextMenu'
@@ -52,6 +52,27 @@ const saved = (() => {
 })()
 const listWidth = signal(saved.w ?? 200)
 const listHidden = signal(saved.hidden ?? false)
+export function CharacterListToggle() {
+  const hidden = listHidden.value
+  const label = hidden ? 'Show character list' : 'Hide character list'
+  return (
+    <button
+      type="button"
+      class="chars-toggle"
+      aria-label={label}
+      title={label}
+      aria-pressed={!hidden}
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={() => {
+        listHidden.value = !hidden
+        saveList()
+      }}
+    >
+      {hidden ? <IconListShow size={16} /> : <IconListHide size={16} />}
+    </button>
+  )
+}
+
 const saveList = () => localStorage.setItem(LIST_KEY, JSON.stringify({ w: listWidth.value, hidden: listHidden.value }))
 
 function dragSplit(e: PointerEvent) {
@@ -130,19 +151,6 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
       />
       <div class="chars-detail">
       <div class="chars-back">
-        <button
-          type="button"
-          class="chars-back-btn chars-toggle"
-          aria-label={listHidden.value ? 'Show character list' : 'Hide character list'}
-          title={listHidden.value ? 'Show character list' : 'Hide character list'}
-          aria-pressed={!listHidden.value}
-          onClick={() => {
-            listHidden.value = !listHidden.value
-            saveList()
-          }}
-        >
-          <IconFolder />
-        </button>
         <button type="button" class="chars-back-btn chars-back-only" aria-label="Characters" onClick={() => go('list')}>
           <IconBack />
         </button>

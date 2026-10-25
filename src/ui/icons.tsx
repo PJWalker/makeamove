@@ -50,6 +50,8 @@ import MsImage from "~icons/material-symbols/image-rounded";
 import MsInkEraser from "~icons/material-symbols/ink-eraser-rounded";
 import MsLayers from "~icons/material-symbols/layers-rounded";
 import MsLink from '~icons/material-symbols/link-rounded'
+import MsLeftPanelClose from '~icons/material-symbols/left-panel-close-rounded'
+import MsLeftPanelOpen from '~icons/material-symbols/left-panel-open-rounded'
 import MsPanelClose from '~icons/material-symbols/right-panel-close-rounded'
 import MsPanelOpen from '~icons/material-symbols/right-panel-open-rounded'
 import MsPersonAdd from '~icons/material-symbols/person-add-rounded'
@@ -123,5 +125,7 @@ export const IconExpand = icon(MsExpandMore)
 export const IconLink = icon(MsLink)
 export const IconDrag = icon(MsDragIndicator)
 export const IconDock = icon(MsDockToRight)
+export const IconListHide = icon(MsLeftPanelClose)
+export const IconListShow = icon(MsLeftPanelOpen)
 export const IconSidebarHide = icon(MsPanelClose)
 export const IconSidebarShow = icon(MsPanelOpen)
