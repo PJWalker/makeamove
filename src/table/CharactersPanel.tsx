@@ -32,7 +32,7 @@ import { colourOf } from '../scene/presence'
 import { TOKEN_STYLES } from '../scene/types'
 import { menuTrigger } from '../ui/menuTrigger'
 import { openPopup } from '../ui/popup'
-import { IconDelete, IconFolder, IconImage, IconRename } from '../ui/icons'
+import { IconBack, IconDelete, IconFolder, IconImage, IconRename } from '../ui/icons'
 import { Segmented } from '../ui/Segmented'
 import { Dialog } from './CampaignDialogs'
 import { ContextMenu, type MenuItem } from './ContextMenu'
@@ -47,22 +47,40 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
   const isGm = useY(campaign.members, () => campaign.isGm())
   const creating = useSignal(false)
   const selected = characters.find((c) => c.id === selectedId)
+  // In a narrow panel only one level shows at a time: the list or the sheet.
+  const level = useSignal<'list' | 'sheet'>(selectedId ? 'sheet' : 'list')
+  const seen = useRef(selectedId)
+  useEffect(() => {
+    if (seen.current !== selectedId && selectedId) level.value = 'sheet'
+    seen.current = selectedId
+  }, [selectedId])
 
   return (
     <div class="chars">
-      <div class="chars-grid">
+      <div class="chars-grid" data-level={level.value}>
       <CharacterList
         campaign={campaign}
         system={system}
         characters={characters}
         folders={folders}
         selectedId={selectedId}
-        onNew={() => (creating.value = true)}
+        onNew={() => {
+          creating.value = true
+          level.value = 'sheet'
+        }}
         onPick={(id) => {
           creating.value = false
+          level.value = 'sheet'
           selectCharacter(campaign, id)
         }}
       />
+      <div class="chars-detail">
+      <div class="chars-back">
+        <button type="button" class="chars-back-btn" aria-label="Characters" onClick={() => (level.value = 'list')}>
+          <IconBack />
+        </button>
+        <span class="chars-title">{creating.value ? 'New character' : (selected?.name ?? 'Characters')}</span>
+      </div>
       <div class="chars-sheet panel-scroll sheet-panel">
         {creating.value ? (
           <NewCharacter campaign={campaign} system={system} folders={folders} isGm={isGm} onDone={() => (creating.value = false)} />
@@ -75,6 +93,7 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
         ) : (
           <p class="empty">Create a character, or pick one to see its sheet.</p>
         )}
+      </div>
       </div>
       </div>
     </div>

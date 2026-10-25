@@ -44,6 +44,7 @@ import MsFitScreen from "~icons/material-symbols/fit-screen-rounded";
 import MsFlipToBack from "~icons/material-symbols/flip-to-back-rounded";
 import MsFlipToFront from "~icons/material-symbols/flip-to-front-rounded";
 import MsGridOn from "~icons/material-symbols/grid-on-rounded";
+import MsChevronLeft from '~icons/material-symbols/chevron-left-rounded'
 import MsFolder from '~icons/material-symbols/folder-rounded'
 import MsImage from "~icons/material-symbols/image-rounded";
 import MsInkEraser from "~icons/material-symbols/ink-eraser-rounded";
@@ -83,6 +84,7 @@ export const IconMap = icon(GiTreasureMap)
 export const IconLock = icon(GiPadlock)
 export const IconUnlock = icon(GiPadlockOpen)
 export const IconImage = icon(MsImage)
+export const IconBack = icon(MsChevronLeft)
 export const IconFolder = icon(MsFolder)
 export const IconGrid = icon(MsGridOn)
 export const IconLayers = icon(MsLayers)
