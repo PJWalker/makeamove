@@ -12,14 +12,28 @@
 
   /* Lobby */
   .lobby {
+    position: relative;
     height: 100%;
     overflow-y: auto;
     background:
       radial-gradient(circle at 50% 0%, oklch(28% 0.05 var(--scene-hue) / 0.6), transparent 60%),
-      radial-gradient(var(--canvas-dot) 1px, transparent 1.5px) 0 0 / 24px 24px,
       var(--canvas-bg);
   }
+  /* A quiet field of fantasy icons behind the lobby; see IconBackdrop. */
+  .icon-backdrop {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .backdrop-icon {
+    position: absolute;
+    display: grid;
+    translate: -50% -50%;
+    color: oklch(31% 0.035 var(--scene-hue));
+  }
   .lobby-inner {
+    position: relative;
     display: grid;
     gap: var(--space-4);
     width: min(640px, 100% - 2 * var(--space-4));
@@ -67,7 +81,7 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     gap: var(--space-3);
     margin-top: var(--space-2);
   }

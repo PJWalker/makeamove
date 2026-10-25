@@ -63,7 +63,6 @@ export function Sidebar({ campaign }: { campaign: Campaign }) {
           <div class="sidebar-panel" style={{ viewTransitionName: `panel-${active}` }}>
             <header
               class="panel-header docked-header"
-              title="Drag out to open in a floating window"
               onPointerDown={(e) => pullOut(active, e, true)}
             >
               <h2 class="panel-title" tabIndex={-1}>
@@ -167,7 +166,7 @@ function RailTab({ id, selected, floating }: { id: PanelId; selected: boolean; f
       variant="icon"
       role="tab"
       class="rail-tab"
-      label={floating ? `${label} (floating — click to bring forward)` : `${label} — drag out to float`}
+      label={floating ? `${label} (floating)` : label}
       aria-selected={selected}
       pressed={selected}
       data-floating={floating}

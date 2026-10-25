@@ -1,3 +1,5 @@
+import type { ComponentType } from 'preact'
+import { useEffect, useState } from 'preact/hooks'
 import { useSignal } from '@preact/signals'
 import { IconAdd, IconCampaign, IconDelete, IconLink } from '../ui/icons'
 import { goToCampaign } from '../router'
@@ -21,10 +23,10 @@ export function Lobby({ error }: { error: string | null }) {
 
   return (
     <main class="lobby">
+      <LazyBackdrop />
       <div class="lobby-inner">
         <header class="lobby-header">
           <h1>Make a Move</h1>
-          <p>A peer-to-peer tabletop. Everything is stored on this device and syncs with your table when you meet.</p>
         </header>
 
         {error && (
@@ -40,7 +42,7 @@ export function Lobby({ error }: { error: string | null }) {
           {!registryReady.value ? null : list.length === 0 ? (
             <div class="empty">
               <IconCampaign size={28} />
-              No campaigns yet. Start one below.
+              No campaigns yet
             </div>
           ) : (
             <ul class="campaign-list">
@@ -54,10 +56,7 @@ export function Lobby({ error }: { error: string | null }) {
         <NewCampaignForm />
 
         <section class="panel bevel lobby-section lobby-join">
-          <div>
-            <h2 class="eyebrow">Join a campaign</h2>
-            <p class="muted">Open an invite link from your GM. Invites arrive with peer-to-peer play in M2.</p>
-          </div>
+          <h2 class="eyebrow">Join a campaign</h2>
           <Button variant="secondary" disabled label="Available in M2">
             <IconLink size={16} /> Paste invite
           </Button>
@@ -65,6 +64,15 @@ export function Lobby({ error }: { error: string | null }) {
       </div>
     </main>
   )
+}
+
+/** The icon backdrop is decorative and fairly heavy, so it loads after the lobby. */
+function LazyBackdrop() {
+  const [Backdrop, setBackdrop] = useState<ComponentType | null>(null)
+  useEffect(() => {
+    import('./IconBackdrop').then((m) => setBackdrop(() => m.IconBackdrop))
+  }, [])
+  return Backdrop ? <Backdrop /> : null
 }
 
 function CampaignRow({ c }: { c: CampaignSummary }) {
@@ -133,14 +141,13 @@ function NewCampaignForm() {
             class="input bevel"
             value={yourName.value}
             onInput={(e) => (yourName.value = e.currentTarget.value)}
-            placeholder="How the table knows you"
+            placeholder="Robin"
             autocomplete="nickname"
             required
           />
         </label>
       </div>
       <div class="form-actions">
-        <span class="muted">You'll be the GM. Game system: Dungeon World.</span>
         <button type="submit" class="btn btn-primary bevel" disabled={busy.value}>
           <IconAdd size={16} /> Create campaign
         </button>
