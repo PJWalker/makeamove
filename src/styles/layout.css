@@ -1515,6 +1515,19 @@
     .chars-list {
       border-right: 0;
     }
+    /* Each level slides in from the side it lives on. */
+    .chars-grid[data-level='sheet'] .chars-detail {
+      animation: chars-in-right 200ms ease-out;
+    }
+    .chars-grid[data-level='list'] .chars-list {
+      animation: chars-in-left 200ms ease-out;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .chars-grid .chars-detail,
+      .chars-grid .chars-list {
+        animation: none;
+      }
+    }
     .chars-back {
       display: flex;
       align-items: center;
@@ -1542,6 +1555,19 @@
     }
   }
 
+  @keyframes chars-in-right {
+    from {
+      transform: translateX(40%);
+      opacity: 0;
+    }
+  }
+  @keyframes chars-in-left {
+    from {
+      transform: translateX(-40%);
+      opacity: 0;
+    }
+  }
+
   /* Character sheet */
   .sheet-panel,
   .sheet {
@@ -1565,6 +1591,13 @@
     gap: var(--space-2);
   }
   .sheet-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+  .sheet-title {
+    flex: 1;
+    min-width: 0;
     display: grid;
     gap: var(--space-1);
   }

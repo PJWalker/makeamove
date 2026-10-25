@@ -358,8 +358,9 @@ function NpcSheet({ campaign, system, c }: { campaign: Campaign; system: GameSys
   const set = (key: string, value: unknown) => setField(campaign, c.id, key, value)
   return (
     <div class="sheet">
-      <TokenChip campaign={campaign} c={c} editable={editable} />
       <header class="sheet-head">
+        <TokenChip campaign={campaign} c={c} editable={editable} />
+        <div class="sheet-title">
         <input
           class="input bevel sheet-name"
           aria-label="Name"
@@ -368,6 +369,7 @@ function NpcSheet({ campaign, system, c }: { campaign: Campaign; system: GameSys
           onChange={(e) => e.currentTarget.value.trim() && set('name', e.currentTarget.value.trim())}
         />
         <span class="muted">NPC</span>
+        </div>
       </header>
       <div class="sheet-vitals">
         <Counter label="HP" value={c.hp} max={c.maxHp} disabled={!editable} onChange={(by) => bump(campaign, c.id, 'hp', by, c.maxHp)} />
@@ -466,9 +468,9 @@ function Sheet({ campaign, system, c }: { campaign: Campaign; system: GameSystem
 
   return (
     <div class="sheet">
-      <TokenChip campaign={campaign} c={c} editable={editable} />
-
       <header class="sheet-head">
+        <TokenChip campaign={campaign} c={c} editable={editable} />
+        <div class="sheet-title">
         <input
           class="input bevel sheet-name"
           aria-label="Name"
@@ -479,6 +481,7 @@ function Sheet({ campaign, system, c }: { campaign: Campaign; system: GameSystem
         <span class="muted">
           {d.cls.name}, level {c.level}
         </span>
+        </div>
       </header>
 
       <div class="sheet-vitals">
@@ -664,7 +667,6 @@ function TokenChip({ campaign, c, editable }: { campaign: Campaign; c: Character
       >
         <BlobImage image={c.portrait} fallback={<span class="portrait-initial">{initial}</span>} />
       </div>
-      <span class="muted">Drag onto the map</span>
       <input
         ref={fileRef}
         type="file"
