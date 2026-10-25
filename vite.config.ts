@@ -10,18 +10,24 @@ export default defineConfig({
     Icons({ compiler: 'jsx', jsx: 'preact', scale: 1 }),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon.svg'],
+      // The glob below already precaches every icon; don't list them twice.
+      includeManifestIcons: false,
       manifest: {
         name: 'Make a Move',
         short_name: 'Make a Move',
-        description: 'A peer-to-peer virtual tabletop.',
+        description: 'A virtual tabletop.',
         theme_color: '#14161c',
         background_color: '#14161c',
         display: 'standalone',
-        icons: [{ src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }],
+        icons: [
+          { src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+          { src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: 'icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,woff2}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/,
