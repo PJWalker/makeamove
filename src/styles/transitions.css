@@ -82,13 +82,99 @@
   }
 }
 
-/* Whole-page swaps (lobby ↔ tabletop) simply cross-fade. */
-.vt-page .lobby,
-.vt-page .table {
+/*
+ * Lobby ↔ tabletop: the table zooms out of the campaign's row in the list
+ * (700 ms, easeInOutExpo) and shrinks back onto it on the way out (500 ms,
+ * ease-out; router.ts animates that). The lobby swells and fades around the
+ * row going in, and settles back from slightly enlarged coming out, scaling
+ * around the row (--zoom-origin, set by router.ts).
+ */
+.vt-zoom .lobby {
   view-transition-name: page;
 }
-::view-transition-group(page) {
-  animation-duration: 220ms;
+.vt-zoom .table {
+  view-transition-name: campaign-zoom;
+}
+/* The table's own named parts (sidebar, panels) ride along inside it. */
+.vt-zoom .table * {
+  view-transition-name: none !important;
+}
+::view-transition-old(page),
+::view-transition-new(page) {
+  transform-origin: var(--zoom-origin, 50% 50%);
+}
+.vt-zoom-in::view-transition-old(page) {
+  animation: vt-lobby-dive 700ms cubic-bezier(0.99,-0.21,0,0.97) both;
+}
+.vt-zoom-out::view-transition-new(page) {
+  animation: vt-lobby-settle 500ms cubic-bezier(0.19, 1, 0.22, 1) both;
+}
+@keyframes vt-lobby-dive {
+  to {
+    scale: 1.08;
+    opacity: 0;
+  }
+}
+@keyframes vt-lobby-settle {
+  from {
+    scale: 1.08;
+    opacity: 0;
+  }
+}
+::view-transition-group(campaign-zoom) {
+  /* Above the lobby, which is captured after it when leaving. */
+  z-index: 1;
+  animation-duration: 700ms;
+  animation-timing-function: cubic-bezier(0.87, 0, 0.13, 1);
+  overflow: clip;
+}
+/* Both snapshots fill the moving box, cropped rather than squashed. */
+::view-transition-old(campaign-zoom),
+::view-transition-new(campaign-zoom) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/*
+ * Entering, the table cross-fades in over the row as it starts to grow. The
+ * pair blends additively, so the row must fade out in step.
+ */
+.vt-zoom-in::view-transition-old(campaign-zoom) {
+  animation: vt-exit 200ms ease-out both;
+}
+.vt-zoom-in::view-transition-new(campaign-zoom) {
+  animation: vt-fade-in 200ms ease-out both;
+}
+/*
+ * Leaving, the table's snapshot has no partner in the lobby, so shrink it onto
+ * the row (--zoom-x/y/w/h, set by router.ts) and fade it out as it lands, or
+ * straight away if the row is gone.
+ */
+.vt-zoom-out::view-transition-group(campaign-zoom) {
+  animation: vt-table-shrink 500ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.vt-zoom-out::view-transition-old(campaign-zoom) {
+  animation: vt-exit 250ms ease-in both;
+}
+.vt-zoom-out.vt-zoom-landing::view-transition-old(campaign-zoom) {
+  animation: vt-exit 150ms ease-in 350ms both;
+}
+@keyframes vt-table-shrink {
+  from {
+    transform: none;
+    width: 100vw;
+    height: 100vh;
+  }
+  to {
+    transform: translate(var(--zoom-x, 0px), var(--zoom-y, 0px));
+    width: var(--zoom-w, 100vw);
+    height: var(--zoom-h, 100vh);
+  }
+}
+@keyframes vt-fade-in {
+  from {
+    opacity: 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

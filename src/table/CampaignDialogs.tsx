@@ -3,19 +3,24 @@ import type { ComponentChildren, RefObject } from 'preact'
 import type { Campaign } from '../store/campaign'
 import { device, setDeviceName } from '../store/device'
 import { useY } from '../store/useY'
+import { GRID_TYPES } from '../scene/grid'
+import { TOKEN_STYLES } from '../scene/types'
 import { Button } from '../ui/Button'
+import { Segmented } from '../ui/Segmented'
 
-function Dialog({
+export function Dialog({
   dialogRef,
   title,
+  onClose,
   children,
 }: {
   dialogRef: RefObject<HTMLDialogElement>
   title: string
+  onClose?: () => void
   children: ComponentChildren
 }) {
   return (
-    <dialog ref={dialogRef} class="dialog panel bevel" closedby="any" aria-label={title}>
+    <dialog ref={dialogRef} class="dialog panel bevel" closedby="any" aria-label={title} onClose={onClose}>
       <header class="panel-header">
         <h2 class="panel-title">{title}</h2>
         <Button variant="icon" label="Close" onClick={() => dialogRef.current?.close()}>
@@ -37,6 +42,7 @@ export function SettingsDialog({
   const name = useY(campaign.meta, () => campaign.name)
   const myName = useY(campaign.members, () => campaign.members.get(device.value.id)?.get('name') ?? '')
   const isGm = campaign.isGm()
+  const defaults = useY(campaign.meta, () => campaign.defaults())
 
   return (
     <Dialog dialogRef={dialogRef} title="Campaign settings">
@@ -69,7 +75,27 @@ export function SettingsDialog({
         Game system
         <span class="dialog-value">Dungeon World</span>
       </div>
-      {!isGm && <p class="muted">Only the GM can rename the campaign.</p>}
+      <div class="field">
+        New tokens
+        <Segmented
+          label="Default token style"
+          value={defaults.tokenStyle}
+          options={TOKEN_STYLES}
+          disabled={!isGm}
+          onChange={(tokenStyle) => campaign.setDefaults({ tokenStyle })}
+        />
+      </div>
+      <div class="field">
+        Grid for new scenes
+        <Segmented
+          label="Default grid"
+          value={defaults.gridType}
+          options={GRID_TYPES}
+          disabled={!isGm}
+          onChange={(gridType) => campaign.setDefaults({ gridType })}
+        />
+      </div>
+      {!isGm && <p class="muted">Only the GM can rename the campaign or change its defaults.</p>}
     </Dialog>
   )
 }
@@ -82,7 +108,17 @@ const SHORTCUTS: [string, string][] = [
   ['T', 'Text'],
   ['M', 'Measure'],
   ['G', 'Ping'],
-  ['F', 'Fog of war (GM)'],
+  ['E', 'Erase drawings'],
+  ['Space + drag', 'Pan the map'],
+  ['Scroll / pinch', 'Zoom (trackpads: two fingers pan)'],
+  ['⇧1', 'Fit the scene'],
+  ['⇧0', 'Zoom to 100%'],
+  ['Ctrl/⌘ + Z', 'Undo your last change'],
+  ['Ctrl/⌘ + ⇧Z', 'Redo'],
+  ['Ctrl/⌘ + D', 'Duplicate'],
+  ['Delete', 'Delete the selection'],
+  ['Arrows', 'Nudge (⇧ for a whole cell)'],
+  ['Alt + drag', 'Move a token off the grid'],
   ['Ctrl/⌘ + \\', 'Hide or show all panels'],
 ]
 
@@ -101,6 +137,14 @@ export function HelpDialog({ dialogRef }: { dialogRef: RefObject<HTMLDialogEleme
             </div>
           ))}
         </dl>
+      </section>
+      <section class="help-section">
+        <h3 class="help-heading">Maps and tokens</h3>
+        <p class="muted">
+          Drop or paste images onto the canvas. Small, square images become tokens; anything bigger is placed as a
+          map. Double-click a token to rename or restyle it; right-click anything to lock it, restack it or swap it between map and token. Undo only ever
+          reverts your own changes.
+        </p>
       </section>
       <section class="help-section">
         <h3 class="help-heading">Panels</h3>

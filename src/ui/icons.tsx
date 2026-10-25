@@ -19,41 +19,75 @@ import GiHelp from '~icons/game-icons/help'
 import GiKnapsack from '~icons/game-icons/knapsack'
 import GiMeasureTape from '~icons/game-icons/measure-tape'
 import GiOpenBook from '~icons/game-icons/open-book'
+import GiPadlock from "~icons/game-icons/padlock";
+import GiPadlockOpen from "~icons/game-icons/padlock-open";
+import GiPawn from "~icons/game-icons/pawn";
 import GiQuillInk from '~icons/game-icons/quill-ink'
 import GiRollingDices from '~icons/game-icons/rolling-dices'
 import GiTalk from '~icons/game-icons/talk'
 import GiThreeFriends from '~icons/game-icons/three-friends'
 import GiTrashCan from '~icons/game-icons/trash-can'
+import GiTreasureMap from "~icons/game-icons/treasure-map";
 import GiVisoredHelm from '~icons/game-icons/visored-helm'
 
 // Material Symbols Rounded (filled)
 import MsAdd from '~icons/material-symbols/add-rounded'
 import MsCategory from '~icons/material-symbols/category-rounded'
 import MsClose from '~icons/material-symbols/close-rounded'
+import MsContentCopy from "~icons/material-symbols/content-copy-rounded";
 import MsDockToRight from '~icons/material-symbols/dock-to-right-rounded'
 import MsDragIndicator from '~icons/material-symbols/drag-indicator-rounded'
+import MsEdit from "~icons/material-symbols/edit-rounded";
 import MsExpandMore from '~icons/material-symbols/expand-more-rounded'
+import MsFitScreen from "~icons/material-symbols/fit-screen-rounded";
+import MsFlipToBack from "~icons/material-symbols/flip-to-back-rounded";
+import MsFlipToFront from "~icons/material-symbols/flip-to-front-rounded";
+import MsGridOn from "~icons/material-symbols/grid-on-rounded";
+import MsImage from "~icons/material-symbols/image-rounded";
+import MsInkEraser from "~icons/material-symbols/ink-eraser-rounded";
+import MsLayers from "~icons/material-symbols/layers-rounded";
 import MsLink from '~icons/material-symbols/link-rounded'
 import MsPanelClose from '~icons/material-symbols/right-panel-close-rounded'
 import MsPanelOpen from '~icons/material-symbols/right-panel-open-rounded'
+import MsRedo from "~icons/material-symbols/redo-rounded";
 import MsTitle from '~icons/material-symbols/title-rounded'
+import MsUndo from "~icons/material-symbols/undo-rounded";
 
 export type IconProps = Omit<JSX.SVGAttributes<SVGSVGElement>, 'size'> & { size?: number }
 export type Icon = ComponentType<IconProps>
 
 function icon(Svg: ComponentType<JSX.SVGAttributes<SVGSVGElement>>): Icon {
-  return ({ size = 18, ...rest }) => <Svg width={size} height={size} aria-hidden="true" {...rest} />
+  return ({ size = 22, ...rest }) => (
+    <Svg width={size} height={size} aria-hidden="true" {...rest} />
+  );
 }
 
 // Canvas tools
 export const IconSelect = icon(GiArrowCursor)
 export const IconPan = icon(GiHand)
 export const IconDraw = icon(GiQuillInk)
+export const IconEraser = icon(MsInkEraser);
 export const IconShapes = icon(MsCategory)
 export const IconText = icon(MsTitle)
 export const IconMeasure = icon(GiMeasureTape)
 export const IconPing = icon(GiBullseye)
 export const IconFog = icon(GiFog)
+
+// Scene elements and canvas actions
+export const IconToken = icon(GiPawn)
+export const IconMap = icon(GiTreasureMap)
+export const IconLock = icon(GiPadlock)
+export const IconUnlock = icon(GiPadlockOpen)
+export const IconImage = icon(MsImage)
+export const IconGrid = icon(MsGridOn)
+export const IconLayers = icon(MsLayers)
+export const IconToFront = icon(MsFlipToFront)
+export const IconToBack = icon(MsFlipToBack)
+export const IconDuplicate = icon(MsContentCopy)
+export const IconRename = icon(MsEdit)
+export const IconFit = icon(MsFitScreen)
+export const IconUndo = icon(MsUndo)
+export const IconRedo = icon(MsRedo)
 
 // Sidebar panels
 export const IconChat = icon(GiTalk)

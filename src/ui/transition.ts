@@ -13,7 +13,7 @@ const nextRender = () => new Promise<void>((resolve) => setTimeout(resolve, 0))
  */
 export async function withTransition(
   update: () => void | Promise<void>,
-  { rootClass }: { rootClass?: string } = {},
+  { rootClass }: { rootClass?: string | string[] } = {},
 ): Promise<void> {
   if (!document.startViewTransition || reducedMotion.matches) {
     await update()
@@ -23,15 +23,15 @@ export async function withTransition(
   // A class on <html> for the transition's lifetime lets CSS name extra
   // elements just for this kind of transition.
   const root = document.documentElement
-  if (rootClass) root.classList.add(rootClass)
+  const classes = rootClass ? [rootClass].flat() : []
+  root.classList.add(...classes)
   const t = document.startViewTransition(async () => {
     await update()
     await nextRender()
   })
   // A newer transition skips this one; that's expected, not an error.
-  t.ready.catch(() => {})
   await t.finished.catch(() => {})
-  if (rootClass) root.classList.remove(rootClass)
+  root.classList.remove(...classes)
 }
 
 /** Resolve once `check` passes, or after `timeout` ms, whichever is first. */

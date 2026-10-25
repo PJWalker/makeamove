@@ -138,21 +138,188 @@
     opacity: 0;
     pointer-events: none;
   }
+  /* The scene colour shows through the transparent PixiJS canvas. */
   .canvas {
     position: absolute;
     inset: 0;
-    display: grid;
-    place-items: center;
-    background:
-      radial-gradient(color-mix(in oklch, var(--scene-colour, var(--canvas-bg)), white 14%) 1px, transparent 1.5px)
-        0 0 / 28px 28px,
-      var(--scene-colour, var(--canvas-bg));
+    background: var(--scene-colour, var(--canvas-bg));
     transition: background-color 600ms var(--ease);
   }
-  .canvas-hint {
-    color: oklch(100% 0 0 / 0.35);
-    font-size: var(--text-sm);
+  .scene-canvas {
+    position: absolute;
+    inset: 0;
+    touch-action: none;
     user-select: none;
+    -webkit-user-select: none;
+  }
+  .scene-canvas canvas {
+    display: block;
+  }
+  /* Dropping files: wash the canvas in gold rather than outlining it. */
+  .scene-canvas[data-drop='true']::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--accent-soft);
+    pointer-events: none;
+  }
+
+  /* Pen settings, beside the tool strip */
+  .pen-options {
+    --bevel: var(--bevel-md);
+    position: absolute;
+    top: 50%;
+    left: calc(48px + var(--space-2)); /* past the tool strip */
+    translate: 0 -50%;
+    display: grid;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-2);
+    justify-items: center;
+  }
+  .pen-widths {
+    display: grid;
+    gap: var(--space-1);
+  }
+  /* The native colour picker, shown as a round swatch. */
+  .pen-colour {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    cursor: pointer;
+  }
+  .pen-colour::-webkit-color-swatch-wrapper {
+    padding: 0;
+  }
+  .pen-colour::-webkit-color-swatch {
+    border: 0;
+    border-radius: 50%;
+  }
+  .pen-colour::-moz-color-swatch {
+    border: 0;
+    border-radius: 50%;
+  }
+  .pen-colour:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px var(--surface-solid),
+      0 0 0 4px var(--accent);
+  }
+  .pen-width {
+    --bevel: var(--bevel-sm);
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+  .pen-width span {
+    border-radius: 50%;
+  }
+  .pen-width:hover {
+    background: var(--surface-raised);
+  }
+  .pen-width[aria-checked='true'] {
+    background: var(--accent-soft);
+  }
+  .pen-layer {
+    --bevel: var(--bevel-sm);
+    width: 56px;
+    padding: var(--space-1);
+    border: 0;
+    background: var(--surface-sunken);
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    line-height: 1.2;
+    cursor: pointer;
+  }
+  .pen-layer:hover {
+    color: var(--text);
+  }
+  .pen-layer[aria-pressed='true'] {
+    background: var(--accent-soft);
+    color: var(--text);
+  }
+
+  /* Right-click menu */
+  .context-menu {
+    --bevel: var(--bevel-md);
+    position: fixed;
+    z-index: 50;
+    display: grid;
+    min-width: 220px;
+    padding: var(--space-1);
+    background: var(--surface-solid);
+  }
+  .context-divider {
+    height: var(--space-2);
+  }
+  .context-menu .menu-item {
+    min-height: 30px;
+    font-size: 1rem;
+  }
+  .context-menu[data-closing='true'] {
+    pointer-events: none;
+    animation: menu-fade-out 100ms ease-out both;
+  }
+  /* The chosen item blinks once, then the rest of the menu fades around it. */
+  .context-menu[data-closing='true']:has([data-chosen='true']) {
+    animation-delay: 150ms;
+  }
+  .context-menu .menu-item[data-chosen='true'] {
+    animation: menu-item-blink 100ms both;
+  }
+  @keyframes menu-fade-out {
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes menu-item-blink {
+    0%,
+    99% {
+      background: transparent;
+      color: var(--text)-muted;
+    }
+    100% {
+      background: color-mix(in oklch, var(--accent) 40%, transparent);
+      color: var(--text);
+    }
+  }
+  .context-menu .menu-item:hover:not(:disabled),
+  .context-menu .menu-item:focus:not(:disabled) {
+    outline: none;
+    background: color-mix(in oklch, var(--accent) 40%, transparent);
+    color: var(--text);
+  }
+  .menu-item:disabled {
+    color: var(--text-faint);
+    opacity: 0.6;
+    cursor: default;
+  }
+  .menu-item:disabled:hover {
+    background: transparent;
+    color: var(--text-faint);
+  }
+  .menu-item[data-danger='true']:not(:disabled) {
+    color: var(--danger);
+  }
+  .menu-icon-space {
+    width: 16px;
+  }
+  .menu-label {
+    flex: 1;
+  }
+  .menu-shortcut {
+    padding: 0;
+    background: none;
+    color: var(--text-faint);
+    font-family: var(--font-ui);
+    font-size: var(--text-xs);
   }
 
   /*
@@ -669,6 +836,109 @@
     display: grid;
     gap: var(--space-4);
     padding: var(--space-3) var(--space-4) var(--space-5);
+  }
+  .dialog-form {
+    display: grid;
+    gap: var(--space-4);
+  }
+  .dialog fieldset {
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .dialog legend {
+    padding: 0;
+    margin-bottom: var(--space-1);
+  }
+  .field-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-3);
+  }
+  .field-row .input {
+    min-width: 0;
+  }
+  .input:disabled {
+    opacity: 0.5;
+  }
+  .segmented {
+    --bevel: var(--bevel-sm);
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    gap: 2px;
+    padding: 2px;
+    background: var(--surface-sunken);
+  }
+  .segment {
+    --bevel: var(--bevel-sm);
+    min-height: 30px;
+    border: 0;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    cursor: pointer;
+  }
+  .segment:hover:not(:disabled) {
+    color: var(--text);
+  }
+  .segment[aria-checked='true'] {
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-weight: 600;
+  }
+  .colour-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+  .colour-row .segmented {
+    flex: 1;
+  }
+  .colour-input {
+    --bevel: var(--bevel-sm);
+    width: 48px;
+    height: 34px;
+    padding: 4px;
+    border: 0;
+    background: var(--surface-sunken);
+    cursor: pointer;
+  }
+  .colour-input::-webkit-color-swatch-wrapper {
+    padding: 0;
+  }
+  .colour-input::-webkit-color-swatch {
+    border: 0;
+  }
+  .colour-input::-moz-color-swatch {
+    border: 0;
+  }
+  .colour-input:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+  .colour-field[data-disabled='true'] {
+    color: var(--text-faint);
+  }
+  .colour-hex {
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .segment:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+  .check {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+    color: var(--text);
+  }
+  .check input {
+    accent-color: var(--accent);
+    width: 16px;
+    height: 16px;
   }
   .dialog-value {
     color: var(--text);

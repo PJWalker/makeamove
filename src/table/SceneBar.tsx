@@ -4,10 +4,9 @@ import { goToCampaign } from '../router'
 import type { Campaign, SceneView } from '../store/campaign'
 import { useY } from '../store/useY'
 import { Button } from '../ui/Button'
-import { IconAdd, IconDelete, IconExpand, IconHelp, IconLeave, IconSettings } from '../ui/icons'
+import { IconAdd, IconDelete, IconExpand, IconGrid, IconHelp, IconLeave, IconSettings } from '../ui/icons'
+import { canvasColour, sceneSettingsOpen, seenMapColours } from './canvasState'
 import { HelpDialog, SettingsDialog } from './CampaignDialogs'
-
-const SCENE_SWATCHES = ['#2b3a55', '#3d5a3a', '#5a3a2b', '#4a2b55', '#2b5555', '#55502b']
 
 /**
  * The scene bar in the top-left corner. Clicking the scene name grows the bar
@@ -17,10 +16,13 @@ export function SceneBar({
   campaign,
   scenes,
   activeId,
+  activeColour,
 }: {
   campaign: Campaign
   scenes: SceneView[]
   activeId: string | null
+  /** The active scene's canvas colour as shown, which may come from its map. */
+  activeColour: string | null
 }) {
   const active = scenes.find((s) => s.id === activeId)
   const isGm = campaign.isGm()
@@ -59,9 +61,11 @@ export function SceneBar({
     dialog?.showModal()
   }
 
+  /** Map colours are only known for scenes opened this session. */
+  const swatch = (s: SceneView) => (s.id === activeId && activeColour) || canvasColour(s, seenMapColours.value[s.id] ?? null)
+
   function addScene() {
-    const colour = SCENE_SWATCHES[scenes.length % SCENE_SWATCHES.length]
-    const id = campaign.addScene(`Scene ${scenes.length + 1}`, colour)
+    const id = campaign.addScene(`Scene ${scenes.length + 1}`)
     campaign.setActiveScene(id)
   }
 
@@ -82,7 +86,7 @@ export function SceneBar({
           onClick={() => setExpanded(!expanded.value)}
         >
           <h1 class="scene-title">{active?.name ?? 'No scenes'}</h1>
-          <IconExpand size={18} class="scene-switch-chevron" />
+          <IconExpand size={22} class="scene-switch-chevron" />
         </button>
       </div>
 
@@ -98,12 +102,13 @@ export function SceneBar({
                     <input
                       type="color"
                       class="scene-swatch bevel"
-                      value={s.colour}
-                      aria-label={`Colour of ${s.name}`}
-                      onInput={(e) => campaign.updateScene(s.id, { colour: e.currentTarget.value })}
+                      value={swatch(s)}
+                      aria-label={`Canvas colour of ${s.name}`}
+                      title={s.canvasColour ? undefined : 'Auto, from the map. Pick a colour to override it.'}
+                      onInput={(e) => campaign.updateScene(s.id, { canvasColour: e.currentTarget.value })}
                     />
                   ) : (
-                    <span class="scene-swatch bevel" style={{ background: s.colour }} />
+                    <span class="scene-swatch bevel" style={{ background: swatch(s) }} />
                   )}
                   {isGm ? (
                     <input
@@ -145,6 +150,18 @@ export function SceneBar({
           </div>
 
           <div class="menu-section" role="group" aria-label={campaignName}>
+            {active && (
+              <button
+                type="button"
+                class="menu-item bevel"
+                onClick={() => {
+                  expanded.value = false
+                  sceneSettingsOpen.value = true
+                }}
+              >
+                <IconGrid size={16} /> Scene settings
+              </button>
+            )}
             <button type="button" class="menu-item bevel" onClick={() => openDialog(settingsRef.current)}>
               <IconSettings size={16} /> Campaign settings
             </button>

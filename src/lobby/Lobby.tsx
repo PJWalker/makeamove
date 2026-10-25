@@ -18,8 +18,25 @@ function ago(ts: number): string {
   return relative.format(Math.round(hours / 24), 'day')
 }
 
+/**
+ * The order the list was last shown in. Opening a campaign makes it the most
+ * recent, but re-sorting while you're away would move its row, so the zoom
+ * back to the list would land somewhere else. The order stays put until the
+ * page reloads; new campaigns go on top.
+ */
+let shownOrder: string[] | null = null
+
+function stableOrder(list: CampaignSummary[]): CampaignSummary[] {
+  if (shownOrder) {
+    const rank = new Map(shownOrder.map((id, i) => [id, i]))
+    list = [...list].sort((a, b) => (rank.get(a.id) ?? -1) - (rank.get(b.id) ?? -1))
+  }
+  shownOrder = list.map((c) => c.id)
+  return list
+}
+
 export function Lobby({ error }: { error: string | null }) {
-  const list = campaigns.value
+  const list = stableOrder(campaigns.value)
 
   return (
     <main class="lobby">
@@ -80,7 +97,7 @@ function CampaignRow({ c }: { c: CampaignSummary }) {
 
   return (
     <li class="campaign-row">
-      <button type="button" class="campaign-open bevel" onClick={() => goToCampaign(c.id)}>
+      <button type="button" class="campaign-open bevel" data-campaign-id={c.id} onClick={() => goToCampaign(c.id)}>
         <span class="campaign-name">{c.name}</span>
         <span class="campaign-meta">
           {c.role === 'gm' ? 'GM' : 'Player'} · Dungeon World · opened {ago(c.lastOpenedAt)}

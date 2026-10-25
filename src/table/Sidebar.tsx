@@ -53,7 +53,7 @@ export function Sidebar({ campaign }: { campaign: Campaign }) {
           label={open ? 'Hide sidebar' : 'Show sidebar'}
           onClick={() => withTransition(() => setSidebarOpen(!open))}
         >
-          {open ? <IconSidebarHide size={18} /> : <IconSidebarShow size={18} />}
+          {open ? <IconSidebarHide size={22} /> : <IconSidebarShow size={22} />}
         </Button>
       </div>
 
@@ -175,7 +175,7 @@ function RailTab({ id, selected, floating }: { id: PanelId; selected: boolean; f
         if (!dragged.value) switchTo(id)
       }}
     >
-      <Icon size={18} />
+      <Icon size={22} />
     </Button>
   )
 }

@@ -5,16 +5,23 @@ import { IndexeddbPersistence } from 'y-indexeddb'
 import { newId, newSecret } from '../lib/ids'
 import { device } from './device'
 import { forgetCampaign, renameCampaignEntry, touchCampaign, upsertCampaign } from './registry'
+import type { GridType } from '../scene/grid'
+import { sceneDbName } from '../scene/sceneDoc'
+import type { TokenStyle } from '../scene/types'
 
 /*
  * Campaign root document layout (see design doc, "Data model"):
  *
- *   meta     Y.Map   name, systemId, systemVersion, roomKey, createdAt, createdBy
+ *   meta     Y.Map   name, systemId, systemVersion, roomKey, createdAt, createdBy,
+ *                    defaultTokenStyle, defaultGridType
  *   members  Y.Map   deviceId -> Y.Map { name, role, joinedAt, activeSceneId }
- *   scenes   Y.Map   sceneId  -> Y.Map { name, colour, order, visibility }
+ *   scenes   Y.Map   sceneId  -> Y.Map { name, canvasColour, order, visibility, doc }
  *
- * Scene contents (maps, tokens, drawings) arrive in M1 as per-scene subdocs;
- * the root only holds the scene index.
+ * Each scene's contents (maps, tokens, drawings) live in its `doc`, a Yjs
+ * subdocument that is loaded only while the scene is open (see SceneDoc).
+ * Without a canvasColour the canvas takes a darkened version of the main
+ * map's colour ("auto"). The UI is always tinted from the map when there is
+ * one, and from the canvas colour otherwise.
  */
 
 export type Role = 'gm' | 'player' | 'observer'
@@ -30,15 +37,23 @@ export interface MemberView {
 export interface SceneView {
   id: string
   name: string
-  colour: string
+  /** A chosen canvas colour, or null for auto (from the map). */
+  canvasColour: string | null
   order: string
   visibility: Visibility
 }
 
 const DEFAULT_SYSTEM = { id: 'dungeon-world', version: '0.1.0' }
-const DEFAULT_SCENE_COLOUR = '#2b3a55'
+/** Canvas colour for an auto scene with no map yet. */
+export const DEFAULT_CANVAS_COLOUR = '#2b3a55'
+
+export interface CampaignDefaults {
+  tokenStyle: TokenStyle
+  gridType: GridType
+}
 
 const dbName = (id: string) => `mam:campaign:${id}`
+const sceneGuid = (campaignId: string, sceneId: string) => `${campaignId}/${sceneId}`
 
 export class Campaign {
   readonly id: string
@@ -77,6 +92,21 @@ export class Campaign {
     renameCampaignEntry(this.id, name)
   }
 
+  /** What the GM has chosen for new tokens and scenes. */
+  defaults(): CampaignDefaults {
+    return {
+      tokenStyle: this.meta.get('defaultTokenStyle') ?? 'disc',
+      gridType: this.meta.get('defaultGridType') ?? 'square',
+    }
+  }
+
+  setDefaults(patch: Partial<CampaignDefaults>) {
+    this.doc.transact(() => {
+      if (patch.tokenStyle) this.meta.set('defaultTokenStyle', patch.tokenStyle)
+      if (patch.gridType) this.meta.set('defaultGridType', patch.gridType)
+    })
+  }
+
   isGm(deviceId = device.value.id): boolean {
     return this.members.get(deviceId)?.get('role') === 'gm'
   }
@@ -113,36 +143,56 @@ export class Campaign {
       .map(([id, s]) => ({
         id,
         name: s.get('name') ?? 'Untitled scene',
-        colour: s.get('colour') ?? DEFAULT_SCENE_COLOUR,
+        canvasColour: s.get('canvasColour') ?? null,
         order: s.get('order') ?? 'a0',
         visibility: s.get('visibility') ?? 'everyone',
       }))
       .sort((a, b) => (a.order < b.order ? -1 : a.order > b.order ? 1 : 0))
   }
 
-  addScene(name: string, colour = DEFAULT_SCENE_COLOUR): string {
+  addScene(name: string): string {
     const id = newId()
     const views = this.sceneViews()
     const last = views.length ? views[views.length - 1].order : null
     const s = new Y.Map<any>()
     s.set('name', name)
-    s.set('colour', colour)
     s.set('order', generateKeyBetween(last, null))
     s.set('visibility', 'everyone')
+    s.set('doc', new Y.Doc({ guid: sceneGuid(this.id, id) }))
     this.scenes.set(id, s)
     return id
+  }
+
+  /** The scene's subdocument (not yet loaded). Scenes from M0 get one now. */
+  sceneSubdoc(id: string): Y.Doc | null {
+    const s = this.scenes.get(id)
+    if (!s) return null
+    let doc = s.get('doc')
+    if (!(doc instanceof Y.Doc)) {
+      // The guid is derived from the ids, so two peers doing this at once
+      // still end up pointing at the same document.
+      doc = new Y.Doc({ guid: sceneGuid(this.id, id) })
+      s.set('doc', doc)
+    }
+    return doc
   }
 
   updateScene(id: string, patch: Partial<Omit<SceneView, 'id'>>) {
     const s = this.scenes.get(id)
     if (!s) return
     this.doc.transact(() => {
-      for (const [k, v] of Object.entries(patch)) s.set(k, v)
+      for (const [k, v] of Object.entries(patch)) {
+        if (v === null) s.delete(k)
+        else s.set(k, v)
+      }
     })
   }
 
   removeScene(id: string) {
     this.scenes.delete(id)
+    // Drop this device's copy of the contents. Peers that still have the
+    // scene keep theirs.
+    indexedDB.deleteDatabase(sceneDbName(sceneGuid(this.id, id)))
   }
 
   activeSceneId(): string | null {
@@ -209,8 +259,11 @@ export function closeCampaign() {
 /** Remove a campaign from this device only. Peers keep their copies. */
 export async function deleteLocalCampaign(id: string) {
   if (activeCampaign.value?.id === id) closeCampaign()
-  const p = new IndexeddbPersistence(dbName(id), new Y.Doc())
+  const doc = new Y.Doc()
+  const p = new IndexeddbPersistence(dbName(id), doc)
   await p.whenSynced
+  for (const sceneId of doc.getMap('scenes').keys()) indexedDB.deleteDatabase(sceneDbName(sceneGuid(id, sceneId)))
   await p.clearData()
+  doc.destroy()
   forgetCampaign(id)
 }

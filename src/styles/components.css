@@ -128,7 +128,7 @@
     padding: 0;
     color: var(--text-muted);
   }
-  .btn-icon:hover:not(:disabled) {
+  .btn-icon:hover:not(:disabled,[aria-pressed='true']) {
     background: var(--surface-raised);
     color: var(--text);
   }
