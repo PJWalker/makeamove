@@ -570,12 +570,14 @@ function Sheet({ campaign, system, c }: { campaign: Campaign; system: GameSystem
         </div>
       </header>
 
-      <div class="sheet-vitals">
-        <Counter label="HP" value={c.hp} max={d.maxHp} disabled={!editable} onChange={(by) => bump(campaign, c.id, 'hp', by, d.maxHp)} />
-        <Counter label="XP" value={c.xp} max={d.xpNeeded} disabled={!editable} onChange={(by) => bump(campaign, c.id, 'xp', by)} />
-        <Counter label="Level" value={c.level} disabled={!editable} onChange={(by) => bump(campaign, c.id, 'level', by)} />
-        <Counter label="Coin" value={c.coin} disabled={!editable} onChange={(by) => bump(campaign, c.id, 'coin', by)} />
-      </div>
+      <section class="sheet-section" aria-label="Vitals">
+        <div class="sheet-vitals">
+          <Counter label="HP" value={c.hp} max={d.maxHp} disabled={!editable} onChange={(by) => bump(campaign, c.id, 'hp', by, d.maxHp)} />
+          <Counter label="XP" value={c.xp} max={d.xpNeeded} disabled={!editable} onChange={(by) => bump(campaign, c.id, 'xp', by)} />
+          <Counter label="Level" value={c.level} disabled={!editable} onChange={(by) => bump(campaign, c.id, 'level', by)} />
+          <Counter label="Coin" value={c.coin} disabled={!editable} onChange={(by) => bump(campaign, c.id, 'coin', by)} />
+        </div>
+      </section>
 
       {editable && c.xp >= d.xpNeeded && (
         <div class="sheet-levelup">
@@ -592,7 +594,7 @@ function Sheet({ campaign, system, c }: { campaign: Campaign; system: GameSystem
         </div>
       )}
 
-      <dl class="sheet-derived">
+      <dl class="sheet-derived" aria-label="Combat">
         <div title={d.resolved.why.armor?.join('\n')}>
           <dt>Armor</dt>
           <dd>{d.armor}</dd>
@@ -612,44 +614,45 @@ function Sheet({ campaign, system, c }: { campaign: Campaign; system: GameSystem
         </div>
       </dl>
 
-      <section aria-label="Stats">
-        <h3 class="eyebrow">Stats</h3>
+      <section class="sheet-section" aria-label="Stats">
+        <h3 class="sheet-heading">Stats <span class="muted">· click a modifier to roll</span></h3>
         <ul class="sheet-stats">
           {system.stats.map((s) => {
             const deb = system.debilities.find((x) => x.stat === s.id)
             const hit = deb && c.debilities.includes(deb.id)
             return (
               <li key={s.id} data-debilitated={!!hit}>
-                <span class="stat-abbr">{s.abbr}</span>
-                <input
-                  class="input bevel stat-score"
-                  type="number"
-                  min={1}
-                  max={20}
-                  aria-label={`${s.name} score`}
-                  value={c.scores[s.id]}
-                  disabled={!editable}
-                  onChange={(e) => {
-                    const n = Number(e.currentTarget.value)
-                    if (n >= 1 && n <= 20) set(`score:${s.id}`, n)
-                  }}
-                />
+                <span class="stat-abbr" title={s.name}>
+                  {s.abbr}
+                </span>
                 <button
                   type="button"
                   class="stat-mod bevel"
                   title={`Roll +${s.name}`}
+                  aria-label={`Roll +${s.name}`}
                   onClick={() => rollStat(s.id, s.abbr)}
                 >
                   {signedStr(d.mods[s.id] + (hit ? -1 : 0))}
                 </button>
+                <label class="stat-score-label">
+                  <span class="muted">Score</span>
+                  <input
+                    class="input bevel stat-score"
+                    type="number"
+                    min={1}
+                    max={20}
+                    aria-label={`${s.name} score`}
+                    value={c.scores[s.id]}
+                    disabled={!editable}
+                    onChange={(e) => {
+                      const n = Number(e.currentTarget.value)
+                      if (n >= 1 && n <= 20) set(`score:${s.id}`, n)
+                    }}
+                  />
+                </label>
                 {deb && (
                   <label class="stat-deb">
-                    <input
-                      type="checkbox"
-                      checked={!!hit}
-                      disabled={!editable}
-                      onChange={() => toggleDebility(deb.id)}
-                    />
+                    <input type="checkbox" checked={!!hit} disabled={!editable} onChange={() => toggleDebility(deb.id)} />
                     {deb.name}
                   </label>
                 )}
@@ -659,13 +662,16 @@ function Sheet({ campaign, system, c }: { campaign: Campaign; system: GameSystem
         </ul>
       </section>
 
+      <section class="sheet-section" aria-label="Situation">
+        <h3 class="sheet-heading">Situation</h3>
       <div class="sheet-vitals">
         <Counter label="Forward" value={c.forward} disabled={!editable} onChange={(by) => set('forward', c.forward + by)} />
         <Counter label="Ongoing" value={c.ongoing} disabled={!editable} onChange={(by) => set('ongoing', c.ongoing + by)} />
       </div>
+      </section>
 
-      <section aria-label="Moves">
-        <h3 class="eyebrow">Moves</h3>
+      <section class="sheet-section" aria-label="Moves">
+        <h3 class="sheet-heading">Moves</h3>
         <ul class="move-list">
           {moves.map((m) => (
             <MoveRow key={m.id} move={m} onMake={() => make(m)} />
@@ -673,26 +679,17 @@ function Sheet({ campaign, system, c }: { campaign: Campaign; system: GameSystem
         </ul>
       </section>
 
-      <label class="field">
-        Bonds
-        <textarea
-          class="input bevel"
-          rows={3}
-          value={c.bonds}
-          disabled={!editable}
-          onChange={(e) => set('bonds', e.currentTarget.value)}
-        />
-      </label>
-      <label class="field">
-        Notes
-        <textarea
-          class="input bevel"
-          rows={3}
-          value={c.notes}
-          disabled={!editable}
-          onChange={(e) => set('notes', e.currentTarget.value)}
-        />
-      </label>
+      <section class="sheet-section" aria-label="Bonds and notes">
+        <h3 class="sheet-heading">Bonds &amp; notes</h3>
+        <label class="field">
+          Bonds
+          <textarea class="input bevel" rows={3} value={c.bonds} disabled={!editable} onChange={(e) => set('bonds', e.currentTarget.value)} />
+        </label>
+        <label class="field">
+          Notes
+          <textarea class="input bevel" rows={3} value={c.notes} disabled={!editable} onChange={(e) => set('notes', e.currentTarget.value)} />
+        </label>
+      </section>
       <p class="muted sheet-owner">{c.owner === device.value.id ? 'Yours' : editable ? 'Editing as GM' : 'View only'}</p>
     </div>
   )
