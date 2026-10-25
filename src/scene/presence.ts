@@ -116,11 +116,11 @@ export class Presence {
   }
 
   /** Add a point to the laser trail; the first one replaces the ping ripple. */
-  trailTo(p: Point) {
+  trailTo(...points: Point[]) {
     const now = performance.now()
-    if (!this.localTrail.length) this.localPing = null
-    this.localTrail.push({ ...p, t: now })
-    this.publishTrail(now, !this.localTrail.length ? undefined : { ping: null })
+    this.localPing = null
+    for (const p of points) this.localTrail.push({ ...p, t: now })
+    this.publishTrail(now, { ping: null })
   }
 
   /** Send the final trail so peers can finish fading it. */

@@ -570,7 +570,7 @@ export class SceneController {
           g.active = true
           this.presence?.trailTo(g.start)
         }
-        for (const ev of e.getCoalescedEvents?.() ?? [e]) this.presence?.trailTo(this.toWorld(ev.clientX, ev.clientY))
+        this.presence?.trailTo(...(e.getCoalescedEvents?.() ?? [e]).map((ev) => this.toWorld(ev.clientX, ev.clientY)))
         break
 
       case 'ruler':
