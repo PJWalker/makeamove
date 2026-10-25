@@ -492,6 +492,15 @@
     gap: var(--space-2);
     padding: var(--space-3) var(--space-2) var(--space-1) var(--space-4);
   }
+  .panel-header {
+    container: panel-head / inline-size;
+  }
+  /* Same breakpoint as the Characters panel's one-level layout, where the toggle does nothing. */
+  @container panel-head (max-width: 380px) {
+    .chars-toggle {
+      display: none;
+    }
+  }
   .panel-title {
     font-size: var(--text-lg);
     line-height: 1.2;
