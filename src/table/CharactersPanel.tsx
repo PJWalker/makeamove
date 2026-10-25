@@ -38,6 +38,7 @@ import { Segmented } from '../ui/Segmented'
 import { Dialog } from './CampaignDialogs'
 import { ContextMenu, type MenuItem } from './ContextMenu'
 import { dragToFolder } from './folderDrag'
+import { tokenDrop } from './canvasState'
 import { dragToken } from './tokenDrag'
 
 export function CharactersPanel({ campaign }: { campaign: Campaign }) {
@@ -163,7 +164,12 @@ function CharacterList({
           onClick={() => onPick(c.id)}
           onPointerDown={(e) => {
             trigger.onPointerDown(e)
-            if (mine) dragToFolder(e, (folder) => moveToFolder(campaign, c.id, folder))
+            dragToFolder(
+              e,
+              mine ? (folder) => moveToFolder(campaign, c.id, folder) : null,
+              (x, y) =>
+                tokenDrop.value?.(x, y, { characterId: c.id, name: c.name, image: c.portrait, style: c.tokenStyle, colour: c.tokenColour }),
+            )
           }}
           onContextMenu={trigger.onContextMenu}
         >

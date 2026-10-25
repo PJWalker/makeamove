@@ -4,9 +4,14 @@ const THRESHOLD = 5
  * Drag a character row into a folder. A copy follows the pointer and the
  * folder under it (any element with `data-folder-drop`, "" meaning the top
  * level) is marked; releasing there calls `onDrop` with its id. A press that
- * never travels stays an ordinary click.
+ * never travels stays an ordinary click. Releasing over the scene canvas
+ * calls `onMap` instead.
  */
-export function dragToFolder(e: PointerEvent, onDrop: (folderId: string | undefined) => void) {
+export function dragToFolder(
+  e: PointerEvent,
+  onDrop: ((folderId: string | undefined) => void) | null,
+  onMap?: (x: number, y: number) => void,
+) {
   if (e.button !== 0) return
   const row = e.currentTarget as HTMLElement
   const startX = e.clientX
@@ -36,7 +41,7 @@ export function dragToFolder(e: PointerEvent, onDrop: (folderId: string | undefi
     }
     ghost.style.left = `${ev.clientX - (startX - grab.left)}px`
     ghost.style.top = `${ev.clientY - (startY - grab.top)}px`
-    mark(under(ev))
+    mark(onDrop ? under(ev) : null)
   }
 
   function end(ev: PointerEvent, commit: boolean) {
@@ -51,8 +56,13 @@ export function dragToFolder(e: PointerEvent, onDrop: (folderId: string | undefi
     const swallow = (c: Event) => c.stopPropagation()
     window.addEventListener('click', swallow, { capture: true, once: true })
     setTimeout(() => window.removeEventListener('click', swallow, { capture: true }), 0)
+    if (!commit) return
+    if (onMap && document.elementFromPoint(ev.clientX, ev.clientY)?.closest('.scene-canvas')) {
+      onMap(ev.clientX, ev.clientY)
+      return
+    }
     const drop = under(ev)
-    if (commit && drop) onDrop(drop.dataset.folderDrop || undefined)
+    if (onDrop && drop) onDrop(drop.dataset.folderDrop || undefined)
   }
   const up = (ev: PointerEvent) => end(ev, true)
   const cancel = (ev: PointerEvent) => end(ev, false)
