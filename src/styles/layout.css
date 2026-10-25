@@ -116,7 +116,6 @@
 
   /* Tabletop */
   .table {
-    --sidebar-w: min(340px, 100vw - 48px);
     position: fixed;
     inset: 0;
     overflow: hidden;
@@ -142,7 +141,12 @@
     user-select: none;
   }
 
-  /* Scene bar: docked into the top-left corner; grows in place to show the menu */
+  /*
+   * Scene bar: docked into the top-left corner; grows in place to show the
+   * menu. This animates the live elements with CSS (not a view transition) so
+   * the menu stays hoverable and clickable while it opens. The panel's
+   * overflow: clip keeps the contents inside the bevelled box throughout.
+   */
   .scene-bar {
     position: absolute;
     top: 0;
@@ -151,20 +155,21 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     max-height: 100vh;
-    view-transition-name: scene-bar;
-    /* Its header and menu animate inside it, clipped to its growing box. */
-    view-transition-group: contain;
+    width: fit-content;
+    interpolate-size: allow-keywords;
+    transition: width 280ms var(--ease);
   }
   .scene-bar[data-expanded='true'] {
-    width: min(340px, 100vw);
+    width: var(--scene-menu-w);
+  }
+  .scene-bar,
+  .scene-bar-body {
+    --scene-menu-w: min(340px, 100vw);
   }
   .scene-bar-head {
     display: grid;
     justify-items: start;
-    /* Same width in both states, so its snapshot moves without stretching. */
-    width: fit-content;
     padding: var(--space-2) var(--space-5) var(--space-3) var(--space-4);
-    view-transition-name: scene-bar-head;
   }
   .scene-switch {
     display: flex;
@@ -189,11 +194,34 @@
     font-size: var(--text-lg);
     line-height: 1.2;
   }
-  .scene-bar-body {
+  /* Opens by animating its row from 0fr to 1fr; never widens the closed bar. */
+  .scene-bar-drawer {
     display: grid;
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 0fr;
+    contain: inline-size;
+    transition: grid-template-rows 280ms var(--ease);
+  }
+  .scene-bar[data-expanded='true'] .scene-bar-drawer {
+    grid-template-rows: 1fr;
+  }
+  /*
+   * Laid out at full size even while the drawer is smaller, so nothing reflows
+   * or squashes: the opening drawer reveals it top-down instead.
+   */
+  .scene-bar-body {
+    display: block;
+    width: var(--scene-menu-w);
     min-height: 0;
-    view-transition-name: scene-bar-body;
+    overflow: clip;
+    opacity: 0;
+    translate: 0 -6px;
+    transition:
+      opacity 200ms var(--ease),
+      translate 280ms var(--ease);
+  }
+  .scene-bar[data-expanded='true'] .scene-bar-body {
+    opacity: 1;
+    translate: 0 0;
   }
   .scene-bar-scenes {
     display: grid;
@@ -315,6 +343,7 @@
     bottom: 0;
     display: flex;
     align-items: center;
+    --sidebar-w: min(var(--sidebar-user-w, 340px), 100vw - 48px);
     translate: var(--sidebar-w) 0;
     transition: opacity 200ms var(--ease);
     /* Slides in and out by view transition, not a CSS transition. */
@@ -407,18 +436,81 @@
   .docked-header:hover .drag-hint {
     opacity: 1;
   }
-  /* Resize grip: a short stroke parallel to the bottom-right bevel. */
-  .resize-grip {
+  /*
+   * Resize zones are invisible strips along the edges that change the cursor
+   * on hover; corners take the diagonal cursors.
+   */
+  .sidebar-resize {
     position: absolute;
-    right: 0;
-    bottom: 0;
-    width: 22px;
-    height: 22px;
-    cursor: nwse-resize;
+    inset: 0 auto 0 0;
+    z-index: 2;
+    width: 8px;
+    cursor: ew-resize;
     touch-action: none;
   }
-  .resize-grip::after {
-    content: '';
+  .sidebar-resize:focus-visible {
+    outline: none;
+    box-shadow: inset 2px 0 0 var(--accent);
+  }
+  .win-resize {
+    position: absolute;
+    z-index: 2;
+    touch-action: none;
+  }
+  .win-resize[data-dir='n'],
+  .win-resize[data-dir='s'] {
+    inset-inline: 14px;
+    height: 6px;
+    cursor: ns-resize;
+  }
+  .win-resize[data-dir='e'],
+  .win-resize[data-dir='w'] {
+    inset-block: 14px;
+    width: 6px;
+    cursor: ew-resize;
+  }
+  .win-resize[data-dir='n'] {
+    top: 0;
+  }
+  .win-resize[data-dir='s'] {
+    bottom: 0;
+  }
+  .win-resize[data-dir='e'] {
+    right: 0;
+  }
+  .win-resize[data-dir='w'] {
+    left: 0;
+  }
+  .win-resize:is([data-dir='ne'], [data-dir='nw'], [data-dir='se'], [data-dir='sw']) {
+    width: 18px;
+    height: 18px;
+  }
+  .win-resize[data-dir='nw'] {
+    top: 0;
+    left: 0;
+    cursor: nwse-resize;
+  }
+  .win-resize[data-dir='se'] {
+    right: 0;
+    bottom: 0;
+    cursor: nwse-resize;
+  }
+  .win-resize[data-dir='ne'] {
+    top: 0;
+    right: 0;
+    cursor: nesw-resize;
+  }
+  .win-resize[data-dir='sw'] {
+    bottom: 0;
+    left: 0;
+    cursor: nesw-resize;
+  }
+
+  /*
+   * The one visible hint: a short stroke along the bottom-right bevel. It's
+   * decoration only; the invisible 'se' zone on top of it takes the drag.
+   */
+  .resize-grip {
     position: absolute;
     right: 5px;
     bottom: 9px;
@@ -426,6 +518,14 @@
     height: 1.5px;
     background: var(--text-faint);
     rotate: -45deg;
+    pointer-events: none;
+  }
+
+  /* While a resize drag runs, keep its cursor everywhere and stop text selection. */
+  .is-dragging,
+  .is-dragging * {
+    cursor: var(--drag-cursor) !important;
+    user-select: none;
   }
 
   .chat {

@@ -5,7 +5,6 @@ import type { Campaign, SceneView } from '../store/campaign'
 import { useY } from '../store/useY'
 import { Button } from '../ui/Button'
 import { IconAdd, IconDelete, IconExpand, IconHelp, IconLeave, IconSettings } from '../ui/icons'
-import { withTransition } from '../ui/transition'
 import { HelpDialog, SettingsDialog } from './CampaignDialogs'
 
 const SCENE_SWATCHES = ['#2b3a55', '#3d5a3a', '#5a3a2b', '#4a2b55', '#2b5555', '#55502b']
@@ -33,7 +32,7 @@ export function SceneBar({
   const helpRef = useRef<HTMLDialogElement>(null)
 
   function setExpanded(next: boolean) {
-    if (expanded.value !== next) withTransition(() => void (expanded.value = next))
+    expanded.value = next
   }
 
   // Collapse on Escape or a press anywhere outside the bar.
@@ -62,10 +61,8 @@ export function SceneBar({
 
   function addScene() {
     const colour = SCENE_SWATCHES[scenes.length % SCENE_SWATCHES.length]
-    withTransition(() => {
-      const id = campaign.addScene(`Scene ${scenes.length + 1}`, colour)
-      campaign.setActiveScene(id)
-    })
+    const id = campaign.addScene(`Scene ${scenes.length + 1}`, colour)
+    campaign.setActiveScene(id)
   }
 
   return (
@@ -89,8 +86,9 @@ export function SceneBar({
         </button>
       </div>
 
-      {expanded.value && (
-        <div id="scene-menu" class="scene-bar-body">
+      {/* Always rendered so it can animate closed; inert while closed. */}
+      <div class="scene-bar-drawer">
+        <div id="scene-menu" class="scene-bar-body" inert={!expanded.value}>
           <div class="scene-bar-scenes">
             <div class="eyebrow">Scenes</div>
             <ul class="scene-list">
@@ -131,7 +129,7 @@ export function SceneBar({
                     <Button
                       variant="icon"
                       label={`Delete ${s.name}`}
-                      onClick={() => withTransition(() => campaign.removeScene(s.id))}
+                      onClick={() => campaign.removeScene(s.id)}
                     >
                       <IconDelete size={16} />
                     </Button>
@@ -158,7 +156,7 @@ export function SceneBar({
             </button>
           </div>
         </div>
-      )}
+      </div>
 
       <SettingsDialog campaign={campaign} dialogRef={settingsRef} />
       <HelpDialog dialogRef={helpRef} />

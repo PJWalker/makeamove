@@ -2,6 +2,7 @@ import { useSignal } from '@preact/signals'
 import { IconDrag, IconSidebarHide, IconSidebarShow } from '../ui/icons'
 import type { Campaign } from '../store/campaign'
 import { Button } from '../ui/Button'
+import { trackPointer } from '../ui/pointer'
 import { withTransition } from '../ui/transition'
 import {
   activePanel,
@@ -9,6 +10,10 @@ import {
   dockTargetActive,
   floatingWindows,
   isFloating,
+  setSidebarWidth,
+  SIDEBAR_MIN_W,
+  sidebarMaxWidth,
+  sidebarWidth,
   PANEL_ORDER,
   selectPanel,
   setSidebarOpen,
@@ -33,6 +38,7 @@ export function Sidebar({ campaign }: { campaign: Campaign }) {
   return (
     <aside
       class="sidebar chrome"
+      style={{ '--sidebar-user-w': `${sidebarWidth.value}px` }}
       data-open={open}
       data-drop={dockTargetActive.value}
       aria-label="Sidebar"
@@ -52,6 +58,7 @@ export function Sidebar({ campaign }: { campaign: Campaign }) {
       </div>
 
       <section class="sidebar-body panel dock-right dock-top dock-bottom" role="tabpanel" inert={!open}>
+        <SidebarResizeHandle />
         {dockedActive && (
           <div class="sidebar-panel" style={{ viewTransitionName: `panel-${active}` }}>
             <header
@@ -98,6 +105,39 @@ function pullOut(id: PanelId, e: PointerEvent, fromHeader: boolean, onPulled?: (
   }
   window.addEventListener('pointermove', move)
   window.addEventListener('pointerup', cleanup)
+}
+
+/** Drag (or arrow-key) the sidebar's inner edge to change its width. */
+function SidebarResizeHandle() {
+  function onPointerDown(e: PointerEvent) {
+    if (e.button !== 0) return
+    e.preventDefault()
+    const stop = trackPointer('ew-resize', (ev) => setSidebarWidth(innerWidth - ev.clientX))
+    window.addEventListener('pointerup', stop, { once: true })
+  }
+
+  function onKeyDown(e: KeyboardEvent) {
+    const step = e.shiftKey ? 64 : 16
+    if (e.key === 'ArrowLeft') setSidebarWidth(sidebarWidth.value + step)
+    else if (e.key === 'ArrowRight') setSidebarWidth(sidebarWidth.value - step)
+    else return
+    e.preventDefault()
+  }
+
+  return (
+    <div
+      class="sidebar-resize"
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Resize sidebar"
+      aria-valuemin={SIDEBAR_MIN_W}
+      aria-valuemax={sidebarMaxWidth()}
+      aria-valuenow={sidebarWidth.value}
+      tabIndex={0}
+      onPointerDown={onPointerDown}
+      onKeyDown={onKeyDown}
+    />
+  )
 }
 
 /**

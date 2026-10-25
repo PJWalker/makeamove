@@ -42,27 +42,6 @@
 }
 
 /*
- * The scene bar clips its header and menu while it grows or shrinks, cut to
- * the same bottom-right bevel as the bar itself.
- */
-::view-transition-group-children(scene-bar) {
-  overflow: clip;
-  clip-path: polygon(
-    0 0,
-    100% 0,
-    100% calc(100% - var(--bevel-lg)),
-    calc(100% - var(--bevel-lg)) 100%,
-    0 100%
-  );
-}
-/* Without nested groups nothing clips, so hold the menu back until the box has grown. */
-@supports not (view-transition-group: contain) {
-  ::view-transition-new(scene-bar-body):only-child {
-    animation-delay: 160ms;
-  }
-}
-
-/*
  * Switching sidebar tabs: old and new content slide together in the direction
  * the tabs are stacked, so the panels read as a vertical column like the tabs.
  */

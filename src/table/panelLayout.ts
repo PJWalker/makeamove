@@ -20,8 +20,14 @@ export interface FloatingWindow {
 interface Layout {
   active: PanelId
   open: boolean
+  /** Width of the sidebar body in CSS pixels. */
+  width: number
   floating: FloatingWindow[]
 }
+
+export const SIDEBAR_MIN_W = 280
+export const SIDEBAR_DEFAULT_W = 340
+export const sidebarMaxWidth = () => Math.max(SIDEBAR_MIN_W, Math.min(720, innerWidth - 160))
 
 const KEY = 'mam:panel-layout'
 const narrow = matchMedia('(max-width: 600px)').matches
@@ -29,11 +35,19 @@ const narrow = matchMedia('(max-width: 600px)').matches
 function load(): Layout {
   try {
     const saved = localStorage.getItem(KEY)
-    if (saved) return { ...JSON.parse(saved), open: narrow ? false : JSON.parse(saved).open }
+    if (saved) {
+      const l = JSON.parse(saved) as Partial<Layout>
+      return {
+        active: l.active ?? 'chat',
+        open: narrow ? false : (l.open ?? true),
+        width: l.width ?? SIDEBAR_DEFAULT_W,
+        floating: (l.floating ?? []).map((w) => ({ ...w, ...whole({ x: w.x, y: w.y, w: w.w, h: w.h }) })),
+      }
+    }
   } catch {
     // Fall back to the default layout.
   }
-  return { active: 'chat', open: !narrow, floating: [] }
+  return { active: 'chat', open: !narrow, width: SIDEBAR_DEFAULT_W, floating: [] }
 }
 
 export const layout = signal<Layout>(load())
@@ -47,6 +61,12 @@ effect(() => {
 })
 
 export const sidebarOpen = computed(() => layout.value.open)
+export const sidebarWidth = computed(() => layout.value.width)
+
+export function setSidebarWidth(width: number) {
+  const w = Math.round(Math.min(Math.max(width, SIDEBAR_MIN_W), sidebarMaxWidth()))
+  if (w !== layout.value.width) layout.value = { ...layout.value, width: w }
+}
 export const activePanel = computed(() => layout.value.active)
 export const floatingWindows = computed(() => layout.value.floating)
 
@@ -76,19 +96,19 @@ export function setSidebarOpen(open: boolean) {
 export function detachPanel(id: PanelId, x: number, y: number, w = 340, h = 440) {
   const l = layout.value
   if (isFloating(id)) return
-  const floating = [...l.floating, { id, x, y, w, h, z: topZ() }]
+  const floating = [...l.floating, { id, ...whole({ x, y, w, h }), z: topZ() }]
   let { active, open } = l
   if (active === id) {
     const docked = PANEL_ORDER.find((p) => p !== id && !floating.some((f) => f.id === p))
     if (docked) active = docked
     else open = false
   }
-  layout.value = { active, open, floating }
+  layout.value = { ...l, active, open, floating }
 }
 
 export function dockPanel(id: PanelId) {
   const l = layout.value
-  layout.value = { active: id, open: true, floating: l.floating.filter((w) => w.id !== id) }
+  layout.value = { ...l, active: id, open: true, floating: l.floating.filter((w) => w.id !== id) }
 }
 
 export function raiseWindow(id: PanelId) {
@@ -98,7 +118,18 @@ export function raiseWindow(id: PanelId) {
 
 export function updateWindow(id: PanelId, patch: Partial<Omit<FloatingWindow, 'id'>>) {
   const l = layout.value
-  layout.value = { ...l, floating: l.floating.map((w) => (w.id === id ? { ...w, ...patch } : w)) }
+  const clean = whole(patch)
+  layout.value = { ...l, floating: l.floating.map((w) => (w.id === id ? { ...w, ...clean } : w)) }
+}
+
+/**
+ * Window geometry is always stored as whole pixels. Pointer coordinates can be
+ * fractional (zoom, high-DPI), and fractional boxes render with blurry edges.
+ */
+function whole<T extends Record<string, number | undefined>>(geometry: T): T {
+  const out = { ...geometry }
+  for (const k in out) if (typeof out[k] === 'number') out[k] = Math.round(out[k] as number) as T[typeof k]
+  return out
 }
 
 export const PANEL_ORDER: PanelId[] = ['chat', 'characters', 'items', 'notes', 'members']

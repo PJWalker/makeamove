@@ -1,9 +1,11 @@
 import { IconDock } from '../ui/icons'
 import type { Campaign } from '../store/campaign'
 import { Button } from '../ui/Button'
+import { trackPointer } from '../ui/pointer'
 import { withTransition } from '../ui/transition'
 import { dockPanel, floatingWindows, raiseWindow, startWindowDrag, updateWindow, type FloatingWindow } from './panelLayout'
 import { PanelContent, PANELS } from './panels'
+import { RESIZE_DIRS, resizeRect, type ResizeDir } from './resizeRect'
 
 /** Dock a window from its button, then put keyboard focus on the docked panel. */
 function dockAndFocus(id: FloatingWindow['id']) {
@@ -12,8 +14,16 @@ function dockAndFocus(id: FloatingWindow['id']) {
   )
 }
 
-const MIN_W = 260
-const MIN_H = 200
+const CURSORS: Record<ResizeDir, string> = {
+  n: 'ns-resize',
+  s: 'ns-resize',
+  e: 'ew-resize',
+  w: 'ew-resize',
+  ne: 'nesw-resize',
+  sw: 'nesw-resize',
+  nw: 'nwse-resize',
+  se: 'nwse-resize',
+}
 
 export function FloatingWindows({ campaign }: { campaign: Campaign }) {
   return (
@@ -28,23 +38,16 @@ export function FloatingWindows({ campaign }: { campaign: Campaign }) {
 function Window({ win, campaign }: { win: FloatingWindow; campaign: Campaign }) {
   const { label } = PANELS[win.id]
 
-  function onGripPointerDown(e: PointerEvent) {
+  function onResizePointerDown(e: PointerEvent, dir: ResizeDir) {
     if (e.button !== 0) return
     e.preventDefault()
-    const { w, h } = win
-    const startX = e.clientX
-    const startY = e.clientY
-    const move = (ev: PointerEvent) =>
-      updateWindow(win.id, {
-        w: Math.max(MIN_W, Math.round(w + ev.clientX - startX)),
-        h: Math.max(MIN_H, Math.round(h + ev.clientY - startY)),
-      })
-    const up = () => {
-      window.removeEventListener('pointermove', move)
-      window.removeEventListener('pointerup', up)
-    }
-    window.addEventListener('pointermove', move)
-    window.addEventListener('pointerup', up)
+    e.stopPropagation()
+    raiseWindow(win.id)
+    const start = { x: win.x, y: win.y, w: win.w, h: win.h }
+    const stop = trackPointer(CURSORS[dir], (ev) => {
+      updateWindow(win.id, resizeRect(start, dir, ev.clientX - e.clientX, ev.clientY - e.clientY))
+    })
+    window.addEventListener('pointerup', stop, { once: true })
   }
 
   function onHeaderPointerDown(e: PointerEvent) {
@@ -74,7 +77,10 @@ function Window({ win, campaign }: { win: FloatingWindow; campaign: Campaign }) 
         </Button>
       </header>
       <PanelContent id={win.id} campaign={campaign} />
-      <span class="resize-grip" aria-hidden="true" onPointerDown={onGripPointerDown} />
+      <span class="resize-grip" aria-hidden="true" />
+      {RESIZE_DIRS.map((dir) => (
+        <span key={dir} class="win-resize" data-dir={dir} aria-hidden="true" onPointerDown={(e) => onResizePointerDown(e, dir)} />
+      ))}
     </section>
   )
 }

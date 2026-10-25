@@ -148,6 +148,12 @@
     background: var(--surface);
     backdrop-filter: blur(var(--blur)) saturate(1.2);
     border: 0;
+    /*
+     * Clip children to the bevelled shape, so tinted bands at an edge (the
+     * dice tray, the menu footer) don't square off its corners. Not
+     * `contain: paint`, which would also trap position: fixed descendants.
+     */
+    overflow: clip;
     transition: opacity 200ms var(--ease);
   }
 
