@@ -5,6 +5,7 @@ import { sceneHueFromHex } from '../lib/colour'
 import type { Campaign } from '../store/campaign'
 import { useY } from '../store/useY'
 import { FloatingWindows } from './FloatingWindows'
+import { windowLayer } from '../ui/windows'
 import { SceneBar } from './SceneBar'
 import { Sidebar } from './Sidebar'
 import { activeMapColour, canvasColour } from './canvasState'
@@ -42,7 +43,14 @@ export function Tabletop({ campaign }: { campaign: Campaign }) {
   }, [])
 
   return (
-    <div class="table" data-chrome={chromeHidden.value ? 'hidden' : 'shown'}>
+    <div
+      class="table"
+      data-chrome={chromeHidden.value ? 'hidden' : 'shown'}
+      // Pulled-out panels and pop-ups render into this layer (ui/windows.ts).
+      ref={(el) => {
+        if (el && el.lastChild !== windowLayer) el.appendChild(windowLayer)
+      }}
+    >
       <div class="canvas" style={{ '--scene-colour': colour }} aria-label={scene ? `Scene: ${scene.name}` : 'No scene'}>
         <Suspense fallback={null}>
           <SceneCanvas campaign={campaign} sceneId={scene?.id ?? null} />

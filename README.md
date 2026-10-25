@@ -45,4 +45,4 @@ Right-click for everything else. In dev builds the scene controller is on `windo
 
 ## Status
 
-M0 (foundations) is done. M1 (scenes and canvas) is complete; next is M2, peer-to-peer play.
+M0 (foundations) is done. M1 (scenes and canvas) is complete. M2 (peer-to-peer play: invite links, sync, presence, image transfer) is built and awaiting review; the real-network path needs a manual two-browser check.

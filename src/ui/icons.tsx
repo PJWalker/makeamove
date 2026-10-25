@@ -49,6 +49,8 @@ import MsLayers from "~icons/material-symbols/layers-rounded";
 import MsLink from '~icons/material-symbols/link-rounded'
 import MsPanelClose from '~icons/material-symbols/right-panel-close-rounded'
 import MsPanelOpen from '~icons/material-symbols/right-panel-open-rounded'
+import MsPersonAdd from '~icons/material-symbols/person-add-rounded'
+import MsPersonRemove from '~icons/material-symbols/person-remove-rounded'
 import MsRedo from "~icons/material-symbols/redo-rounded";
 import MsTitle from '~icons/material-symbols/title-rounded'
 import MsUndo from "~icons/material-symbols/undo-rounded";
@@ -99,6 +101,10 @@ export const IconMembers = icon(GiThreeFriends)
 // Game actions
 export const IconDice = icon(GiRollingDices)
 export const IconCampaign = icon(GiCrossedSwords)
+
+// Members
+export const IconRemoveMember = icon(MsPersonRemove)
+export const IconAllowBack = icon(MsPersonAdd)
 
 // Interface
 export const IconSettings = icon(GiCog)

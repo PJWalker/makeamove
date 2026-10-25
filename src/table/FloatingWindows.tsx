@@ -3,6 +3,8 @@ import type { Campaign } from '../store/campaign'
 import { Button } from '../ui/Button'
 import { trackPointer } from '../ui/pointer'
 import { withTransition } from '../ui/transition'
+import { windowLayer } from '../ui/windows'
+import { createPortal } from 'preact/compat'
 import { dockPanel, floatingWindows, raiseWindow, startWindowDrag, updateWindow, type FloatingWindow } from './panelLayout'
 import { PanelContent, PANELS } from './panels'
 import { RESIZE_DIRS, resizeRect, type ResizeDir } from './resizeRect'
@@ -26,12 +28,13 @@ const CURSORS: Record<ResizeDir, string> = {
 }
 
 export function FloatingWindows({ campaign }: { campaign: Campaign }) {
-  return (
+  return createPortal(
     <>
       {floatingWindows.value.map((w) => (
         <Window key={w.id} win={w} campaign={campaign} />
       ))}
-    </>
+    </>,
+    windowLayer,
   )
 }
 
@@ -58,19 +61,19 @@ function Window({ win, campaign }: { win: FloatingWindow; campaign: Campaign }) 
 
   return (
     <section
-      class="floating-window panel bevel chrome"
+      class="floating-window window panel bevel chrome"
       style={{
         left: win.x,
         top: win.y,
         width: win.w,
         height: win.h,
-        zIndex: 10 + win.z,
+        zIndex: win.z,
         viewTransitionName: `panel-${win.id}`,
       }}
       aria-label={label}
       onPointerDown={() => raiseWindow(win.id)}
     >
-      <header class="panel-header floating-header" onPointerDown={onHeaderPointerDown}>
+      <header class="panel-header window-header" onPointerDown={onHeaderPointerDown}>
         <h2 class="panel-title">{label}</h2>
         <Button variant="icon" label="Dock in the sidebar" onClick={() => dockAndFocus(win.id)}>
           <IconDock size={16} />

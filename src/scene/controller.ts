@@ -1,7 +1,7 @@
 import { effect, signal, untracked } from '@preact/signals'
-import { oklabToHex } from '../lib/colour'
 import type { CampaignDefaults } from '../store/campaign'
 import { device } from '../store/device'
+import { colourOf, type Presence } from './presence'
 import { type Camera, clampZoom, fitCamera, toWorld, zoomAt } from './camera'
 import { CORNER_SIGNS, type Corner, bounds, contains, corners, fromLocal, hits, resizeFromCorner, rotationTowards } from './geometry'
 import { type Point, snapPoint, snapSize } from './grid'
@@ -22,6 +22,8 @@ type Gesture =
   | { kind: 'marquee'; start: Point; base: string[]; pick: string | null; moved: boolean }
   | { kind: 'draw'; points: number[]; layer: Layer; colour: string; width: number }
   | { kind: 'erase'; erased: Set<string> }
+  | { kind: 'ruler' }
+  | { kind: 'trail'; start: Point; active: boolean }
 
 /** Screen px the pointer must travel before a press becomes a drag. */
 const DRAG_THRESHOLD = 3
@@ -29,12 +31,7 @@ const DRAG_THRESHOLD = 3
 const RESIZE_CURSORS = ['nwse-resize', 'nesw-resize', 'nwse-resize', 'nesw-resize']
 
 /** This member's token colour, from their device id. */
-function memberColour(): string {
-  let hash = 0
-  for (const ch of device.value.id) hash = (hash * 31 + ch.charCodeAt(0)) | 0
-  const h = ((Math.abs(hash) % 360) * Math.PI) / 180
-  return oklabToHex({ L: 0.7, a: 0.13 * Math.cos(h), b: 0.13 * Math.sin(h) })
-}
+const memberColour = () => colourOf(device.value)
 
 const cameraKey = (sceneId: string) => `mam:camera:${sceneId}`
 
@@ -66,6 +63,9 @@ export class SceneController {
   readonly sceneId: string
   /** The campaign's current defaults for new things. */
   readonly defaults: () => CampaignDefaults
+  private presence: Presence | null
+  private lastCursor = 0
+  private ruler: Point | null = null
 
   constructor(
     scene: SceneDoc,
@@ -73,7 +73,9 @@ export class SceneController {
     host: HTMLElement,
     sceneId: string,
     defaults: () => CampaignDefaults,
+    presence: Presence | null = null,
   ) {
+    this.presence = presence
     this.scene = scene
     this.renderer = renderer
     this.host = host
@@ -114,6 +116,30 @@ export class SceneController {
         })
       }),
     )
+    this.renderer.insets = () => {
+      const host = this.host.getBoundingClientRect()
+      if (this.host.closest('.table')?.getAttribute('data-chrome') === 'hidden') return { left: 0, right: 0, top: 0 }
+      const rect = (sel: string) => document.querySelector(sel)?.getBoundingClientRect()
+      const tools = rect('.toolbar')
+      const bar = rect('.scene-bar')
+      const rail = rect('.sidebar-rail')
+      return {
+        left: tools ? Math.max(0, tools.right - host.left) : 0,
+        right: rail ? Math.max(0, host.right - rail.left) : 0,
+        top: bar ? Math.max(0, bar.bottom - host.top) : 0,
+      }
+    }
+    if (this.presence) {
+      const presence = this.presence
+      const show = () => this.renderer.setPresence(presence.marks(this.sceneId, device.value.id, device.value.name, colourOf(device.value)))
+      presence.setScene(this.sceneId)
+      this.disposers.push(presence.subscribe(show), () => presence.setScene(null), () => this.renderer.setPresence([]))
+      this.disposers.push(effect(() => {
+        void device.value
+        untracked(show)
+      }))
+      show()
+    }
     regrid()
     this.refresh()
     this.restoreCamera()
@@ -133,6 +159,7 @@ export class SceneController {
     listen('pointerup', (e) => this.onPointerUp(e))
     listen('pointercancel', (e) => this.onPointerUp(e, true))
     listen('pointerleave', () => {
+      this.presence?.setCursor(null)
       this.hover = null
       this.updateOverlay()
     })
@@ -214,7 +241,7 @@ export class SceneController {
         ? 'grabbing'
         : this.spaceHeld || tool === 'pan'
           ? 'grab'
-          : tool === 'draw'
+          : tool === 'draw' || tool === 'ruler' || tool === 'ping'
             ? 'crosshair'
             : tool === 'erase'
               ? 'none'
@@ -395,6 +422,17 @@ export class SceneController {
         this.gesture = { kind: 'erase', erased: new Set() }
         this.eraseAt(world)
         break
+
+      case 'ping':
+        this.presence?.ping(world)
+        this.gesture = { kind: 'trail', start: world, active: false }
+        break
+
+      case 'ruler':
+        this.ruler = world
+        this.gesture = { kind: 'ruler' }
+        this.presence?.setRuler({ a: world, b: world })
+        break
     }
     this.updateCursor()
     this.updateOverlay()
@@ -406,6 +444,13 @@ export class SceneController {
     if (this.pointers.has(e.pointerId)) this.pointers.set(e.pointerId, screen)
     this.hover = world
     const g = this.gesture
+
+    // Share the cursor at about 20 Hz.
+    const now = performance.now()
+    if (this.presence && now - this.lastCursor > 50) {
+      this.lastCursor = now
+      this.presence.setCursor(world)
+    }
 
     if (!g) {
       if (activeTool.value === 'select' && !this.spaceHeld) {
@@ -519,6 +564,19 @@ export class SceneController {
         break
       }
 
+      case 'trail':
+        if (!g.active) {
+          if (Math.hypot(world.x - g.start.x, world.y - g.start.y) * this.renderer.camera.zoom < DRAG_THRESHOLD) break
+          g.active = true
+          this.presence?.trailTo(g.start)
+        }
+        for (const ev of e.getCoalescedEvents?.() ?? [e]) this.presence?.trailTo(this.toWorld(ev.clientX, ev.clientY))
+        break
+
+      case 'ruler':
+        if (this.ruler) this.presence?.setRuler({ a: this.ruler, b: world })
+        break
+
       case 'draw':
         for (const ev of e.getCoalescedEvents?.() ?? [e]) this.addStrokePoint(ev, this.toWorld(ev.clientX, ev.clientY))
         this.updateOverlay()
@@ -570,6 +628,15 @@ export class SceneController {
         this.renderer.draft = null
         break
 
+      case 'ruler':
+        this.ruler = null
+        this.presence?.setRuler(null)
+        break
+
+      case 'trail':
+        this.presence?.endTrail()
+        break
+
       case 'erase':
         if (g.erased.size) this.scene.remove(g.erased)
         this.renderer.hidden.clear()
@@ -592,6 +659,11 @@ export class SceneController {
   /** Drop an in-progress gesture without changing the scene. */
   cancelGesture() {
     if (!this.gesture) return
+    if (this.gesture.kind === 'trail') this.presence?.endTrail()
+    if (this.gesture.kind === 'ruler') {
+      this.ruler = null
+      this.presence?.setRuler(null)
+    }
     this.gesture = null
     this.renderer.previews.clear()
     this.renderer.hidden.clear()

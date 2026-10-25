@@ -2,8 +2,9 @@ import type { ComponentType } from 'preact'
 import { useEffect, useState } from 'preact/hooks'
 import { useSignal } from '@preact/signals'
 import { IconAdd, IconCampaign, IconDelete, IconLink } from '../ui/icons'
-import { goToCampaign } from '../router'
-import { createCampaign, deleteLocalCampaign } from '../store/campaign'
+import { goToCampaign, pendingInvite } from '../router'
+import { parseInvite } from '../sync/invite'
+import { createCampaign, deleteLocalCampaign, joinCampaign } from '../store/campaign'
 import { device, setDeviceName } from '../store/device'
 import { campaigns, registryReady, type CampaignSummary } from '../store/registry'
 import { Button } from '../ui/Button'
@@ -72,12 +73,7 @@ export function Lobby({ error }: { error: string | null }) {
 
         <NewCampaignForm />
 
-        <section class="panel bevel lobby-section lobby-join">
-          <h2 class="eyebrow">Join a campaign</h2>
-          <Button variant="secondary" disabled label="Available in M2">
-            <IconLink size={16} /> Paste invite
-          </Button>
-        </section>
+        <JoinForm />
       </div>
     </main>
   )
@@ -167,6 +163,62 @@ function NewCampaignForm() {
       <div class="form-actions">
         <button type="submit" class="btn btn-primary bevel" disabled={busy.value}>
           <IconAdd size={16} /> Create campaign
+        </button>
+      </div>
+    </form>
+  )
+}
+
+function JoinForm() {
+  const link = useSignal('')
+  const yourName = useSignal(device.value.name)
+  const invite = pendingInvite.value ?? parseInvite(link.value)
+  const bad = link.value.trim() !== '' && !invite
+
+  function submit(e: Event) {
+    e.preventDefault()
+    if (!invite || !yourName.value.trim()) return
+    setDeviceName(yourName.value.trim())
+    const id = joinCampaign(invite)
+    pendingInvite.value = null
+    link.value = ''
+    goToCampaign(id)
+  }
+
+  return (
+    <form class="panel bevel lobby-section lobby-join" onSubmit={submit} aria-labelledby="join-campaign">
+      <h2 id="join-campaign" class="eyebrow">
+        Join a campaign
+      </h2>
+      <div class="form-row">
+        {pendingInvite.value ? (
+          <p class="field">You've been invited to a campaign.</p>
+        ) : (
+          <label class="field">
+            Invite link
+            <input
+              class="input bevel"
+              value={link.value}
+              onInput={(e) => (link.value = e.currentTarget.value)}
+              placeholder="Paste an invite link"
+              aria-invalid={bad}
+            />
+          </label>
+        )}
+        <label class="field">
+          Your name
+          <input
+            class="input bevel"
+            value={yourName.value}
+            onInput={(e) => (yourName.value = e.currentTarget.value)}
+            placeholder="Robin"
+            autocomplete="nickname"
+          />
+        </label>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-secondary bevel" disabled={!invite || !yourName.value.trim()}>
+          <IconLink size={16} /> Join
         </button>
       </div>
     </form>

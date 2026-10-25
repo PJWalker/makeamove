@@ -11,6 +11,8 @@ export interface CampaignSummary {
   name: string
   systemId: string
   role: 'gm' | 'player'
+  /** Secret from the invite link; the key to this campaign's room. */
+  roomKey?: string
   createdAt: number
   lastOpenedAt: number
 }
@@ -35,6 +37,8 @@ persistence.whenSynced.then(() => {
 export function upsertCampaign(summary: CampaignSummary) {
   list.set(summary.id, summary)
 }
+
+export const summaryOf = (id: string): CampaignSummary | undefined => list.get(id)
 
 export function touchCampaign(id: string) {
   const existing = list.get(id)

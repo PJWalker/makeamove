@@ -1,3 +1,7 @@
+import { menuTrigger } from '../ui/menuTrigger'
+import { bounds } from '../scene/geometry'
+import { setMorphOrigin } from '../ui/morph'
+import { openPopup } from '../ui/popup'
 import { useSignal, useSignalEffect } from '@preact/signals'
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import { SceneController } from '../scene/controller'
@@ -65,7 +69,7 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
     SceneDoc.open(subdoc, campaign.defaults().gridType).then((s) => {
       scene = s
       if (cancelled) return s.destroy()
-      ctl = new SceneController(s, renderer, hostRef.current!, sceneId, () => campaign.defaults())
+      ctl = new SceneController(s, renderer, hostRef.current!, sceneId, () => campaign.defaults(), campaign.presence)
       ctl.start()
       controller.value = ctl
       // Handy for poking at the scene from the console while developing.
@@ -89,7 +93,8 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
 
   // Keyboard shortcuts, unless a field or dialog has the keyboard.
   useEffect(() => {
-    const blocked = (e: KeyboardEvent) => isTyping(e.target) || !!document.querySelector('dialog[open]')
+    // Pop-ups are non-modal: only keys aimed inside one stay with it.
+    const blocked = (e: KeyboardEvent) => isTyping(e.target) || !!(e.target as Element).closest?.('dialog')
     const onDown = (e: KeyboardEvent) => {
       if (e.defaultPrevented || blocked(e)) return
       // Space only pans when nothing focusable would otherwise take it.
@@ -119,17 +124,19 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
 
   const closeMenu = useCallback(() => (menu.value = null), [])
 
-  function onContextMenu(e: MouseEvent) {
-    e.preventDefault()
+  /** Open the right-click menu for whatever is at a client point. */
+  function openMenuAt(x: number, y: number) {
     const ctl = controller.value
     if (!ctl) return
     ctl.cancelGesture()
-    const at = ctl.toWorld(e.clientX, e.clientY)
+    const at = ctl.toWorld(x, y)
     const hit = ctl.hitTest(at, true)
     if (hit && !ctl.selection.value.includes(hit.id)) ctl.selection.value = [hit.id]
     if (!hit) ctl.selection.value = []
-    menu.value = { x: e.clientX, y: e.clientY, items: hit ? selectionMenu(ctl) : canvasMenu(ctl, at) }
+    menu.value = { x, y, items: hit ? selectionMenu(ctl) : canvasMenu(ctl, at) }
   }
+  // Opens on the right-button press on every platform (see ui/menuTrigger.ts).
+  const menuOpener = menuTrigger(openMenuAt)
 
   function selectionMenu(ctl: SceneController): MenuItem[] {
     const sel = ctl.selected()
@@ -190,7 +197,15 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
     const ctl = controller.value
     if (!ctl || activeTool.value !== 'select') return
     const hit = ctl.hitTest(ctl.toWorld(e.clientX, e.clientY))
-    if (hit?.type === 'token') tokenOptions.value = hit.id
+    if (hit?.type !== 'token') return
+    // Grow the options out of the token itself.
+    const b = bounds([hit])!
+    const cam = ctl.renderer.camera
+    const host = hostRef.current!.getBoundingClientRect()
+    setMorphOrigin(
+      new DOMRect(host.left + b.x * cam.zoom + cam.x, host.top + b.y * cam.zoom + cam.y, b.w * cam.zoom, b.h * cam.zoom),
+    )
+    tokenOptions.value = hit.id
   }
 
   function onDragOver(e: DragEvent) {
@@ -214,7 +229,8 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
         ref={hostRef}
         class="scene-canvas"
         data-drop={dropping.value}
-        onContextMenu={onContextMenu}
+        onPointerDown={menuOpener.onPointerDown}
+        onContextMenu={menuOpener.onContextMenu}
         onDblClick={onDoubleClick}
         onDragOver={onDragOver}
         onDragLeave={() => (dropping.value = false)}
@@ -266,8 +282,14 @@ function TokenOptionsDialog({
     name.value = token.name
     style.value = isPlainToken(token) ? 'plain' : 'disc'
     colour.value = token.colour
-    ref.current?.showModal()
+    openPopup(ref.current)
   }, [id])
+
+  // The table stays usable while this is open, so the token may be deleted.
+  const exists = useY(controller.scene.elements, () => !!id && controller.scene.get(id)?.type === 'token')
+  useEffect(() => {
+    if (id && !exists) ref.current?.close()
+  }, [id, exists])
 
   return (
     <Dialog dialogRef={ref} title="Token options" onClose={onClose}>
@@ -333,7 +355,7 @@ function SceneSettingsDialog({ campaign, sceneId, scene }: { campaign: Campaign;
   const auto = !view?.canvasColour
 
   useSignalEffect(() => {
-    if (sceneSettingsOpen.value) ref.current?.showModal()
+    if (sceneSettingsOpen.value) openPopup(ref.current)
   })
 
   const num = (v: string, fallback: number) => (Number.isFinite(parseFloat(v)) ? parseFloat(v) : fallback)

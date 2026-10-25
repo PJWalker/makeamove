@@ -1,12 +1,18 @@
 import { IconClose } from '../ui/icons'
 import type { ComponentChildren, RefObject } from 'preact'
 import type { Campaign } from '../store/campaign'
-import { device, setDeviceName } from '../store/device'
+import { colourOf } from '../scene/presence'
+import { device, setDeviceColour, setDeviceName } from '../store/device'
 import { useY } from '../store/useY'
 import { GRID_TYPES } from '../scene/grid'
 import { TOKEN_STYLES } from '../scene/types'
 import { Button } from '../ui/Button'
 import { Segmented } from '../ui/Segmented'
+import { inviteUrl } from '../sync/invite'
+import { useSignal } from '@preact/signals'
+import { createPortal } from 'preact/compat'
+import { dragPopup, raisePopup } from '../ui/popup'
+import { windowLayer } from '../ui/windows'
 
 export function Dialog({
   dialogRef,
@@ -19,16 +25,72 @@ export function Dialog({
   onClose?: () => void
   children: ComponentChildren
 }) {
-  return (
-    <dialog ref={dialogRef} class="dialog panel bevel" closedby="any" aria-label={title} onClose={onClose}>
-      <header class="panel-header">
+  // Rendered in the window layer with the other windows: a non-modal dialog
+  // would otherwise be clipped by the panel that opened it (the scene bar
+  // clips its contents).
+  return createPortal(
+    <dialog
+      ref={dialogRef}
+      class="dialog window panel bevel chrome"
+      closedby="none"
+      aria-label={title}
+      onClose={onClose}
+      onPointerDown={(e) => raisePopup(e.currentTarget)}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape' && !e.defaultPrevented) {
+          e.preventDefault()
+          e.currentTarget.close()
+        }
+      }}
+    >
+      <header class="panel-header window-header" onPointerDown={(e) => dragPopup(dialogRef.current!, e)}>
         <h2 class="panel-title">{title}</h2>
         <Button variant="icon" label="Close" onClick={() => dialogRef.current?.close()}>
           <IconClose size={16} />
         </Button>
       </header>
       <div class="dialog-body">{children}</div>
-    </dialog>
+    </dialog>,
+    windowLayer,
+  )
+}
+
+export function PlayerDialog({
+  campaign,
+  dialogRef,
+}: {
+  campaign: Campaign
+  dialogRef: RefObject<HTMLDialogElement>
+}) {
+  const myName = useY(campaign.members, () => campaign.members.get(device.value.id)?.get('name') ?? '')
+  const colour = colourOf(device.value)
+  return (
+    <Dialog dialogRef={dialogRef} title="Player settings">
+      <label class="field">
+        Your name
+        <input
+          class="input bevel"
+          value={myName}
+          onChange={(e) => {
+            const v = e.currentTarget.value.trim()
+            if (!v) return
+            setDeviceName(v)
+            campaign.ensureMember(v)
+          }}
+        />
+      </label>
+      <label class="field">
+        Your colour
+        <input
+          type="color"
+          class="input bevel"
+          value={colour}
+          onInput={(e) => setDeviceColour(e.currentTarget.value)}
+          aria-label="Your colour"
+        />
+      </label>
+      <p class="muted">Your colour marks your cursor and pings, and is used for tokens you create.</p>
+    </Dialog>
   )
 }
 
@@ -40,7 +102,6 @@ export function SettingsDialog({
   dialogRef: RefObject<HTMLDialogElement>
 }) {
   const name = useY(campaign.meta, () => campaign.name)
-  const myName = useY(campaign.members, () => campaign.members.get(device.value.id)?.get('name') ?? '')
   const isGm = campaign.isGm()
   const defaults = useY(campaign.meta, () => campaign.defaults())
 
@@ -55,19 +116,6 @@ export function SettingsDialog({
           onChange={(e) => {
             const v = e.currentTarget.value.trim()
             if (v) campaign.rename(v)
-          }}
-        />
-      </label>
-      <label class="field">
-        Your name at this table
-        <input
-          class="input bevel"
-          value={myName}
-          onChange={(e) => {
-            const v = e.currentTarget.value.trim()
-            if (!v) return
-            setDeviceName(v)
-            campaign.ensureMember(v)
           }}
         />
       </label>
@@ -95,6 +143,7 @@ export function SettingsDialog({
           onChange={(gridType) => campaign.setDefaults({ gridType })}
         />
       </div>
+      <InviteField campaign={campaign} />
       {!isGm && <p class="muted">Only the GM can rename the campaign or change its defaults.</p>}
     </Dialog>
   )
@@ -168,5 +217,31 @@ export function HelpDialog({ dialogRef }: { dialogRef: RefObject<HTMLDialogEleme
         </p>
       </section>
     </Dialog>
+  )
+}
+
+function InviteField({ campaign }: { campaign: Campaign }) {
+  const copied = useSignal(false)
+  const roomKey = useY(campaign.meta, () => campaign.meta.get('roomKey') as string | undefined)
+  if (!roomKey) return null
+  const url = inviteUrl({ campaignId: campaign.id, roomKey })
+  return (
+    <div class="field">
+      Invite link
+      <div class="form-row">
+        <input class="input bevel" readOnly value={url} onFocus={(e) => e.currentTarget.select()} />
+        <Button
+          variant="secondary"
+          onClick={async () => {
+            await navigator.clipboard.writeText(url)
+            copied.value = true
+            setTimeout(() => (copied.value = false), 1500)
+          }}
+        >
+          {copied.value ? 'Copied' : 'Copy'}
+        </Button>
+      </div>
+      <span class="muted">Anyone with this link can join. Keep it private.</span>
+    </div>
   )
 }

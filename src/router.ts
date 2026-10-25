@@ -1,4 +1,5 @@
 import { signal } from '@preact/signals'
+import { parseInvite, type Invite } from './sync/invite'
 import { until, withTransition } from './ui/transition'
 
 /** Hash routes: `#/` is the lobby, `#/c/<campaignId>` is a campaign. */
@@ -9,9 +10,21 @@ function campaignIdFromHash(): string | null {
 
 export const routeCampaignId = signal<string | null>(campaignIdFromHash())
 
-window.addEventListener('hashchange', () => {
+/** An invite link that was opened, waiting for the player to confirm their name. */
+export const pendingInvite = signal<Invite | null>(null)
+
+/** Take an invite out of the address bar so the secret doesn't stay in the URL. */
+function readHash() {
+  const invite = parseInvite(location.hash)
+  if (invite) {
+    pendingInvite.value = invite
+    history.replaceState(null, '', location.pathname + location.search + '#/')
+  }
   routeCampaignId.value = campaignIdFromHash()
-})
+}
+
+readHash()
+window.addEventListener('hashchange', readHash)
 
 /** The campaign's row in the lobby list, if it's on the page. */
 const rowOf = (id: string) =>

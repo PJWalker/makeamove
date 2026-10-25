@@ -8,6 +8,8 @@ import { newId } from '../lib/ids'
 export interface Device {
   id: string
   name: string
+  /** Chosen colour for cursors, pings and new tokens; derived from the id if unset. */
+  colour?: string
 }
 
 const KEY = 'mam:device'
@@ -36,5 +38,10 @@ export const device = signal<Device>(load())
 
 export function setDeviceName(name: string) {
   device.value = { ...device.value, name }
+  save(device.value)
+}
+
+export function setDeviceColour(colour: string) {
+  device.value = { ...device.value, colour }
   save(device.value)
 }

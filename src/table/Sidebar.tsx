@@ -1,3 +1,4 @@
+import { unreadCount } from '../chat/unread'
 import { useSignal } from '@preact/signals'
 import { IconDrag, IconSidebarHide, IconSidebarShow } from '../ui/icons'
 import type { Campaign } from '../store/campaign'
@@ -166,10 +167,14 @@ function RailTab({ id, selected, floating }: { id: PanelId; selected: boolean; f
       variant="icon"
       role="tab"
       class="rail-tab"
-      label={floating ? `${label} (floating)` : label}
+      label={
+        (floating ? `${label} (floating)` : label) +
+        (id === 'chat' && unreadCount.value ? `, ${unreadCount.value} unread` : '')
+      }
       aria-selected={selected}
       pressed={selected}
       data-floating={floating}
+      data-unread={id === 'chat' && unreadCount.value > 0 ? Math.min(unreadCount.value, 99) : undefined}
       onPointerDown={onPointerDown}
       onClick={() => {
         if (!dragged.value) switchTo(id)

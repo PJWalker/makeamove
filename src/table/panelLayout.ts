@@ -1,5 +1,6 @@
 import { computed, effect, signal } from '@preact/signals'
 import { withTransition } from '../ui/transition'
+import { nextZ, noteZ } from '../ui/windows'
 
 /*
  * Where each sidebar panel lives: docked in the sidebar or floating in its own
@@ -60,6 +61,9 @@ effect(() => {
   }
 })
 
+// Saved windows keep their order; anything opened later goes above them.
+for (const w of layout.value.floating) noteZ(w.z)
+
 export const sidebarOpen = computed(() => layout.value.open)
 export const sidebarWidth = computed(() => layout.value.width)
 
@@ -74,8 +78,9 @@ export function isFloating(id: PanelId) {
   return layout.value.floating.some((w) => w.id === id)
 }
 
+/** Windows share one stacking order with pop-ups (ui/windows.ts). */
 function topZ() {
-  return Math.max(0, ...layout.value.floating.map((w) => w.z)) + 1
+  return nextZ()
 }
 
 export function selectPanel(id: PanelId) {

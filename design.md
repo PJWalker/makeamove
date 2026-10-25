@@ -4,10 +4,10 @@
 
 We are building a local-first, peer-to-peer virtual tabletop (**Make a Move**) that runs in the browser as an installable PWA. Every participant holds a full copy of the campaign, works offline, and merges edits with peers when connected. Game rules live in plugins; Dungeon World is the first, but we should consider the possibility of D&D 5.5E, Daggerheart, and other systems.
 
-**Goals for the prototype**
+## Goals for the prototype
 
 - Infinite-canvas scenes with maps, tokens and freehand drawing, editable by everyone at once.
-- Character sheets, moves, inventories and items whose effects change stats or grant moves.
+- Character sheets, moves, inventories, and items whose effects change stats or grant moves.
 - 3D dice, with every roll and triggered move posted to a shared chat log.
 - Session and world-building notes, with GM-only pages.
 - A game-system plugin API, proven by Dungeon World & D&D5e system plugins.
@@ -22,7 +22,7 @@ We are building a local-first, peer-to-peer virtual tabletop (**Make a Move**) t
 **Guiding principles**
 
 1. _Local-first:_ the local database is the source of truth; the network only syncs.
-4. _Prefer boring, well-maintained libraries_ over bespoke infrastructure.
+2. _Prefer boring, well-maintained libraries_ over bespoke infrastructure.
 
 ## Architecture
 
@@ -61,7 +61,7 @@ Added in M0: `unplugin-icons` with local Iconify data (Game-icons, Material Symb
 - Signalling and all peer traffic are encrypted with that room key, so public relays see only ciphertext.
 - Each device generates a keypair on first launch. The GM's public key is recorded in the campaign root as owner; GM-only actions are checked against it in the UI layer.
 
-_M0 status:_ each device currently has a random id stored in localStorage. The WebCrypto keypair, invite links and room-key encryption arrive with sync in M2.
+_M2 status:_ invite links and the room key are in. Devices still use a random id stored in localStorage; the WebCrypto keypair and owner-key check are deferred, since GM-only rules are only enforced in the UI for now and nothing yet depends on a verified identity.
 
 **Assets**
 
@@ -166,11 +166,13 @@ The roller decides the result locally with a cryptographic RNG, writes it to the
 
 - **Notation:** a small parser for standard notation — `2d6+2`, `d8+d4`, `4d6kh3`, `2d20kl1` (disadvantage), `d6!` (exploding), `b` / `w` for advantage-style “best of”. Plugins can register extra syntax.
 - **Roll record:** `{formula, dice:[{sides, value, kept}], modifiers:[{label, value}], total, rollerKey, hlc}`. Each modifier keeps its label so the card can read “2d6 (4+5) + STR 2 + Ring 1 = 12”.
-- **3D rendering:** @3d-dice/dice-box in a transparent full-screen overlay, lazy-loaded on the first roll (its physics WASM is \~1 MB). Its “predetermined results” mode lets the remote animation match the roll. Per-user dice colour/theme.
+- **3D rendering (moved to M5):** a transparent full-screen overlay, lazy-loaded on the first roll, where every peer's dice land on the recorded faces. Per-user dice colour/theme. Note: @3d-dice/dice-box has no predetermined-results mode (it only rolls with live physics); only its older three.js fork, @3d-dice/dice-box-threejs (last updated 2022), can force results. M5 picks between that fork and our own physics-free animation.
 - **Fallback:** a 2D tumble animation when WebGL is unavailable, or when the user turns 3D off for speed.
-- **Visibility:** public, GM-only (“blind”), or self + GM. Secret rolls show as “GM rolled…” to others.
-- **Quick dice bar:** d4, d6, d8, d10, d12, d20, plus a free-form box; clicking a stat or move on a sheet rolls the right formula.
+- **Visibility:** public, or secret (the roller and the GM; a GM's secret roll is the GM's alone). Others see “Name rolled in secret.” There are no blind rolls: if a player shouldn't see a result, the GM rolls it.
+- **Quick dice bar:** d4, d6, d8, d10, d12, d20, plus a free-form box; clicking a stat or move on a sheet rolls the right formula. Clicks gather into a pool for a moment before rolling as one entry (double-click the d20 for 2d20); right-click a die to take one back out.
 - **Honesty is social, not cryptographic.** A determined player could fake a roll in devtools. That fits the “needn’t be robust” brief; commit-reveal rolling could come later.
+
+_As built in M3:_ `src/dice/notation.ts` parses and rolls `2d6+2`, `d8+d4`, `4d6kh3` (also `k3`, `b3`), `2d20kl1` (also `w1`), `4d6dl1` / `dh`, `d6!` (capped at 20 extra dice), `d%`, and `[labels]` on any term, with unbiased `crypto.getRandomValues` dice. Rolls show in the chat as cards: formula and note, one chip per die shaped like that die (dropped dice faded, maximums in citrine, ones in garnet), and the total; a roll that arrives live tumbles in, die by die (off under reduced motion). Until 3D dice land, that card is the 2D fallback. Plugin syntax is not in yet.
 
 ## Chat and move log
 
@@ -178,9 +180,13 @@ The right-hand sidebar is one chronological stream of chat, rolls and move cards
 
 - **Message kinds:** text (markdown-lite), roll card, move card (move name, trigger, roll breakdown, outcome band highlighted, outcome text, follow-up buttons), system (“Kira joined”, “Scene changed to The Bog”), whisper (to named members; hidden in UI from others).
 - **Speaking as:** a picker for “myself” or one of my characters; the GM can speak as any NPC.
-- **Slash commands:** `/r 2d6+1`, `/w name text`, `/move defy-danger dex`, `/gm` for a GM-only roll. Plugins register more.
-- **Session markers:** the GM can start/end a session; the log groups by session and can export one as markdown into the notes.
+- **Slash commands:** `/r 2d6+1`, `/w name text`, `/move defy-danger dex`, `/sr` for a secret roll. Plugins register more.
+- **Scene changes:** when the GM settles on a scene (stays 1.5 s, so passing through scenes or renaming one doesn't post), the log gets “Scene changed to The Bog”, with a “Go there” button for anyone on a different scene. Players aren't moved; that waits for the GM's “pull everyone” control. The last announced scene is kept in the campaign, so a reload doesn't repeat it, and a new campaign's first scene isn't announced.
+- **Session markers:** the GM can start/end a session; the log groups by session and can export one as markdown into the notes. Earlier sessions fold into a band (“Session 2 · 34 messages”) until the reader opens them; the current session is always open.
+- **Deleting:** players can delete their own messages, and the GM anyone's (including system notices and session markers). Deleting removes the message from the shared log for everyone; like other GM rules this is enforced in the UI only. Right-click a message (or long-press on touch) for a menu with “Delete message”. Swipe-to-delete was tried and dropped: browsers can't tell when fingers leave a trackpad, so a swipe there can't wait for the lift the way it should.
 - **Unread state** and a collapsible, translucent sidebar so the map stays visible.
+
+_As built in M3:_ the log is a `chat` Y.Array of chunk subdocuments on the campaign root, 500 messages each, each persisted in its own IndexedDB database and synced by the M2 session as soon as it loads; the newest two load on open and “Load earlier messages” pulls in older ones. Messages are immutable plain objects stamped with a hybrid logical clock (`src/lib/hlc.ts`), so peers agree on order even with skewed clocks. Commands: `/r` (public), `/sr` (secret: you and the GM), `/w name` or `/w gm`, `/me`, `/session start|end` (GM; numbered in the campaign), `/help`, and `//` to send text starting with a slash; typing `/` lists them. Text supports **bold**, *italic*, `code` and links, rendered as elements, never HTML. The quick dice bar has a Public / Secret toggle; its clicks gather into a pool that rolls as one entry 1 s after the last change (each button shows its count, right-click takes one back out, and a "roll now" button fills as the moment approaches). Whispers are hidden from everyone but sender and recipients, including the GM. Unread messages from others show as a count on the Chat tab. A player's first join posts “Name joined”. Not yet: speaking as a character (needs characters, M4), move cards (M4), exporting a session to notes (M5).
 
 ## Notes
 
@@ -310,6 +316,7 @@ The canvas fills the window; all chrome floats over it as translucent dark panel
 - _Command palette (planned for M4, before the hotbar):_ Ctrl/Cmd + K opens a search over moves, items, tools, commands and compendium or campaign entries. See Command palette and action index.
 - _Bottom centre (planned for M4):_ an editable action hotbar — the selected character's moves and item actions, plus global actions like ping, measure and roll — that each player can add to, remove from and reorder. It pulls from the same action index as the command palette. See Milestones.
 - _Campaign list:_ a lobby over a non-overlapping scatter of Game-icons that slowly swap.
+- _Menus:_ one shared right-click component (canvas, chat), plus the scene menu. Menu text is 1rem. Every menu works as on macOS, on every platform: menus open on the press (right button for context menus, left for the scene menu), and holding, moving to an item and releasing chooses it, while releasing elsewhere closes the menu; a quick click leaves it open. Right-click menus open on the press even on Windows, where browsers would otherwise wait for the release; the keyboard menu key and touch long-press still open them. In the scene menu, releasing on a scene switches to it, and scene deletes (which have no confirmation) are never chosen by a release. An open scene menu sits above floating windows.
 
 **Colour system (OKLCH, all derived from one scene hue `h`)**
 
@@ -355,6 +362,12 @@ Each milestone ends with a short review with you before the next begins. M2 come
 
 **M1 status:** complete as of Oct 25, reviewed and accepted. Scenes are now Yjs subdocuments with an infinite PixiJS canvas (WebGPU where available): pan, zoom to cursor, pinch; square and hex grids with snapping; maps and tokens imported by drop, paste or file picker into an OPFS blob store; select (click, or drag a marquee around whole elements), move, resize and rotate, with a group frame to rotate a multi-selection; freehand pen and eraser; a right-click menu for lock, restack, layer and map ↔ token; and per-user undo. Pure logic (grid, camera, geometry, strokes, colour, `resizeRect`) has 40 Vitest unit tests (including the select tool's marquee and group rotation). Not in M1: shapes and text tools (moved to a later milestone), the ruler and pings (M2, they are presence), and caching finished drawings to textures (not needed yet).
 
+**M2 status:** built, awaiting review. The campaign root and each scene subdocument sync over a transport-agnostic Yjs session (`src/sync/session.ts`) with a Trystero WebRTC adapter; the session is tested over an in-memory network, so the real-relay path is the part to check by hand with two browsers. `#join=<id>.<key>` invite links (copy from Campaign settings) open a join card in the lobby; a joined campaign waits on a screen until the first peer sends it, then adds the player as a member. Cursors, pings and the ruler are awareness-only. Images a device lacks are requested from peers by hash, chunked, and verified by SHA-256 before being kept. The member list shows who is online. Deferred: the device keypair, and relays other than Trystero's defaults. 50 unit tests.
+
+**M3 status:** complete as of Oct 26; tested in two browsers. Dice notation and rolling, the chunked chat log with HLC ordering, slash commands, whispers, secret rolls, session markers with earlier sessions folded, scene-change notices, deleting messages, roll cards, the quick dice bar with pooling, unread counts, and press-drag-release menus (see Dice, Chat and move log, and UI). 94 unit tests, including two peers syncing the log over the in-memory network. 3D dice moved to M5.
+
+**Added to M5:** 3D dice (see Dice), moved out of M3.
+
 **Added to M4:** the command palette and its action index, built first. Ctrl/Cmd + K searches moves, items, tools, commands and campaign entries, and the index it reads from is what the hotbar is then made from, so the two stay consistent. See Command palette and action index.
 
 **Added to M4:** the action hotbar — an edge-docked bar at the bottom centre, filled with the selected character's moves (from the game-system plugin), usable items, and global actions like ping, measure and roll, all taken from the action index. Players drag actions in and out and reorder them; each player's bar is stored per character with that player's member data, so it follows them between devices. The canvas tool strip stays for drawing tools; ping and measure may move onto the hotbar once it exists.
@@ -374,14 +387,18 @@ Each question has a proposed default; the first four are the ones that change th
 - [ ] **Name:** makeamove
 - [ ] **Where the code lives:** \~/makeamove
 
-* [x] **Layout: the original list or the M0 build?** _Decided (Oct 25): keep the M0 layout; the editable action hotbar is planned for M4._
+- [x] **Layout: the original list or the M0 build?** _Decided (Oct 25): keep the M0 layout; the editable action hotbar is planned for M4._
 
 ## Decision log
 
-Decisions made while building M0 and M1, newest first. Earlier answers are recorded in Open questions.
+Decisions made while building M0 to M3, newest first. Earlier answers are recorded in Open questions.
 
 | Decision                                                                                                    | Why                                                                                                                  |
 | ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Move 3D dice to M5; M3 shows rolls as 2D cards                                                              | dice-box can't land on a predetermined result, which shared rolls need; picking a replacement can wait for M5      |
+| Chat lives in 500-message chunk subdocuments, ordered by a hybrid logical clock                             | Long campaigns stay fast to open, and peers agree on order even when their clocks disagree                         |
+| No blind rolls; whispers are hidden from the GM                                                             | If a player shouldn't see a result, the GM can roll it; “hidden from others” includes the GM                        |
+| Quick dice pool for 1 s before rolling                                                                      | Several dice from the bar (2d20, d20 + d6) become one roll and one chat entry                                       |
 | Build the command palette before the hotbar, on one shared action index                                     | Both need a searchable list of moves, items and tools; the hotbar becomes pinned index ids instead of a second list |
 | Render the canvas on demand; commit drags on release                                                        | An idle table uses no GPU; each drag is one undo step and, from M2, one update for peers                             |
 | Token portraits use texture fills, not masks; the world is a render group                                   | Per-token stencil masks slow down in the hundreds, and the camera becomes one GPU transform (from the PixiJS skills) |

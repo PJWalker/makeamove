@@ -2,7 +2,7 @@ import { signal } from '@preact/signals'
 import { useEffect } from 'preact/hooks'
 import { Lobby } from './lobby/Lobby'
 import { goToCampaign, routeCampaignId } from './router'
-import { activeCampaign, closeCampaign, openCampaign } from './store/campaign'
+import { activeCampaign, type Campaign, closeCampaign, deleteLocalCampaign, openCampaign } from './store/campaign'
 import { Tabletop } from './table/Tabletop'
 
 const openError = signal<string | null>(null)
@@ -23,7 +23,48 @@ export function App() {
   }, [id])
 
   const campaign = activeCampaign.value
-  if (id && campaign?.id === id) return <Tabletop campaign={campaign} />
+  if (id && campaign?.id === id) {
+    if (campaign.removed.value) return <Removed campaign={campaign} />
+    return campaign.ready.value ? <Tabletop campaign={campaign} /> : <Waiting campaign={campaign} />
+  }
   if (id) return <div class="loading">Opening campaign…</div>
   return <Lobby error={openError.value} />
+}
+
+/** Shown to a player the GM removed; their device has left the room. */
+function Removed({ campaign }: { campaign: Campaign }) {
+  return (
+    <main class="loading waiting">
+      <p>The GM removed you from {campaign.name}.</p>
+      <p class="muted">If they let you back in, open their invite link again to rejoin.</p>
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary bevel" onClick={() => goToCampaign(null)}>
+          Back to the lobby
+        </button>
+        <button
+          type="button"
+          class="btn btn-danger bevel"
+          onClick={async () => {
+            await deleteLocalCampaign(campaign.id)
+            goToCampaign(null)
+          }}
+        >
+          Delete from this device
+        </button>
+      </div>
+    </main>
+  )
+}
+
+/** A joined campaign is empty until the first peer sends it over. */
+function Waiting({ campaign }: { campaign: Campaign }) {
+  return (
+    <main class="loading waiting">
+      <p>Waiting for someone from this campaign to come online…</p>
+      <p class="muted">{campaign.peerCount.value} connected</p>
+      <button type="button" class="btn btn-secondary bevel" onClick={() => goToCampaign(null)}>
+        Back to the lobby
+      </button>
+    </main>
+  )
 }

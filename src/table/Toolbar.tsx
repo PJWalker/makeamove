@@ -31,8 +31,8 @@ const TOOLS: {
   { id: 'erase', label: 'Erase', key: 'E', Icon: IconEraser },
   { id: 'shape', label: 'Shapes', key: 'R', Icon: IconShapes, arrives: 'a later milestone' },
   { id: 'text', label: 'Text', key: 'T', Icon: IconText, arrives: 'a later milestone' },
-  { id: 'ruler', label: 'Measure', key: 'M', Icon: IconMeasure, arrives: 'M2' },
-  { id: 'ping', label: 'Ping', key: 'G', Icon: IconPing, arrives: 'M2' },
+  { id: 'ruler', label: 'Measure', key: 'M', Icon: IconMeasure },
+  { id: 'ping', label: 'Ping', key: 'G', Icon: IconPing },
   { id: 'fog', label: 'Fog of war', key: 'F', Icon: IconFog, gmOnly: true, arrives: 'M5' },
 ]
 
@@ -41,7 +41,7 @@ export function Toolbar({ isGm }: { isGm: boolean }) {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target) || document.querySelector('dialog[open]')) return
+      if (e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target) || (e.target as Element).closest?.('dialog')) return
       const tool = tools.find((t) => t.key === e.key.toUpperCase() && !t.arrives)
       if (tool) activeTool.value = tool.id
     }

@@ -1,4 +1,7 @@
+import { setMorphOrigin } from '../ui/morph'
+import { elementAt, watchHoldRelease } from '../ui/holdRelease'
 import type { ComponentType } from 'preact'
+import { createPortal } from 'preact/compat'
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks'
 import type { IconProps } from '../ui/icons'
 
@@ -19,7 +22,12 @@ export type MenuItem =
  * Escape close); Escape, a click elsewhere or scrolling closes it. Closing
  * plays a fade first (the chosen item blinks while the rest fades), and
  * `onClose` fires once it ends.
+ *
+ * Press and hold works as on macOS: hold the right button, move to an item
+ * and let go to choose it; let go anywhere else to close the menu. A quick
+ * right-click (released at once, without moving) leaves the menu open.
  */
+
 export function ContextMenu({ x, y, items, onClose }: { x: number; y: number; items: MenuItem[]; onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null)
   // Index of the chosen item, or -1 when dismissed; null while open.
@@ -38,6 +46,17 @@ export function ContextMenu({ x, y, items, onClose }: { x: number; y: number; it
   // A new right-click reuses this instance; show the new menu. Not keyed on
   // `items`, which is rebuilt on every parent render (e.g. after onSelect).
   useLayoutEffect(() => setClosing(null), [x, y])
+
+  // Press, hold and release: the release chooses (or closes).
+  useEffect(
+    () =>
+      watchHoldRelease(x, y, 2, (e) => {
+        const item = elementAt(e)?.closest<HTMLButtonElement>('.menu-item:not(:disabled)')
+        if (item && ref.current?.contains(item)) item.click()
+        else dismissRef.current()
+      }),
+    [x, y],
+  )
 
   useLayoutEffect(() => {
     const el = ref.current
@@ -92,7 +111,8 @@ export function ContextMenu({ x, y, items, onClose }: { x: number; y: number; it
     }
   }, [])
 
-  return (
+  // On <body>, above any open pop-ups.
+  return createPortal(
     <div
       ref={ref}
       class="context-menu panel bevel"
@@ -117,7 +137,9 @@ export function ContextMenu({ x, y, items, onClose }: { x: number; y: number; it
             data-chosen={closing === i}
             onPointerMove={(e) => e.currentTarget.focus({ preventScroll: true })}
             disabled={item.disabled}
-            onClick={() => {
+            onClick={(e) => {
+              // Anything this item opens grows out of it.
+              setMorphOrigin(e.currentTarget)
               dismiss(i)
               item.onSelect()
             }}
@@ -128,6 +150,7 @@ export function ContextMenu({ x, y, items, onClose }: { x: number; y: number; it
           </button>
         ),
       )}
-    </div>
+    </div>,
+    document.body,
   )
 }

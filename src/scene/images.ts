@@ -23,14 +23,36 @@ export async function importImage(file: Blob): Promise<BlobRef> {
   return { hash, mime: encoded.type, width, height }
 }
 
+type BlobFetcher = (hash: string) => Promise<Blob | null>
+let fetchFromPeers: BlobFetcher | null = null
+
+/** Set (or clear) how to get images this device lacks, e.g. from other players. */
+export function setBlobFetcher(fn: BlobFetcher | null, onlyIfCurrent?: BlobFetcher) {
+  if (onlyIfCurrent && fetchFromPeers !== onlyIfCurrent) return
+  fetchFromPeers = fn
+  if (fn) for (const l of fetcherListeners) l()
+}
+
+const fetcherListeners = new Set<() => void>()
+
+/** Be told when peers become available to fetch from, so missing images can retry. */
+export function onBlobFetcher(fn: () => void) {
+  fetcherListeners.add(fn)
+  return () => fetcherListeners.delete(fn)
+}
+
 const bitmaps = new Map<string, Promise<ImageBitmap | null>>()
 
 /** Decode a stored image once and share it; null if this device lacks it. */
 export function loadBitmap(hash: string): Promise<ImageBitmap | null> {
   let p = bitmaps.get(hash)
   if (!p) {
-    p = getBlob(hash).then((blob) => (blob ? createImageBitmap(blob) : null))
+    p = getBlob(hash)
+      .then((blob) => blob ?? fetchFromPeers?.(hash) ?? null)
+      .then((blob) => (blob ? createImageBitmap(blob) : null))
     bitmaps.set(hash, p)
+    // A miss isn't final: a peer may have it later.
+    p.then((b) => b || bitmaps.delete(hash))
   }
   return p
 }
