@@ -31,6 +31,7 @@ import GiTreasureMap from "~icons/game-icons/treasure-map";
 import GiVisoredHelm from '~icons/game-icons/visored-helm'
 
 // Material Symbols Rounded (filled)
+import MsSearch from '~icons/material-symbols/search-rounded'
 import MsAdd from '~icons/material-symbols/add-rounded'
 import MsCategory from '~icons/material-symbols/category-rounded'
 import MsClose from '~icons/material-symbols/close-rounded'
@@ -112,6 +113,7 @@ export const IconHelp = icon(GiHelp)
 export const IconLeave = icon(GiExitDoor)
 export const IconDelete = icon(GiTrashCan)
 export const IconAdd = icon(MsAdd)
+export const IconSearch = icon(MsSearch)
 export const IconClose = icon(MsClose)
 export const IconExpand = icon(MsExpandMore)
 export const IconLink = icon(MsLink)

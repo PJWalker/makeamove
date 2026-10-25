@@ -6,6 +6,8 @@ import { buildIndex } from '../actions/registry'
 import { noteRecent } from '../actions/recent'
 import type { Campaign } from '../store/campaign'
 import { useY } from '../store/useY'
+import { IconSearch } from '../ui/icons'
+import { paletteOpen } from './Palette'
 import { isTyping } from '../ui/keys'
 import { startReorder } from '../ui/reorder'
 
@@ -123,6 +125,15 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
             </div>
           )
         })}
+        <button
+          type="button"
+          class="hotbar-palette bevel"
+          aria-label="Open command palette"
+          title="Command palette (Ctrl/Cmd+K)"
+          onClick={() => (paletteOpen.value = !paletteOpen.value)}
+        >
+          <IconSearch size={18} />
+        </button>
         {dragging.value ? (
           <p class="hotbar-hint">Drop off the bar to remove</p>
         ) : (

@@ -1200,6 +1200,23 @@
     outline: 2px dashed var(--text-muted);
     outline-offset: 2px;
   }
+  .hotbar-palette {
+    --bevel: var(--bevel-sm);
+    flex: none;
+    align-self: start;
+    display: grid;
+    place-items: center;
+    width: 34px;
+    min-height: 34px;
+    padding: 0;
+    background: var(--surface-raised);
+    color: var(--text);
+    border: 0;
+    cursor: pointer;
+  }
+  .hotbar-palette:hover {
+    background: var(--surface-raised-hover, var(--surface-sunken-hover));
+  }
   .hotbar-hint {
     flex: none;
     margin: 0;
