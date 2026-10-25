@@ -10,7 +10,7 @@ import { HANDLE_SIZE, type SceneRenderer, rotateHandlePosition } from './rendere
 import type { SceneDoc } from './sceneDoc'
 import { finishStroke, STRIDE } from './stroke'
 import { activeTool, ERASER_RADIUS, pen } from './tools'
-import { LAYERS, type BlobRef, type Layer, type NewElement, type SceneElement, type TokenElement, type Transform } from './types'
+import { LAYERS, type BlobRef, type Layer, type NewElement, type SceneElement, type TokenElement, type TokenStyle, type Transform } from './types'
 
 type Gesture =
   | { kind: 'pan'; start: Point; cam: Camera }
@@ -878,7 +878,7 @@ export class SceneController {
   }
 
   /** A token standing for a character, at a world point. */
-  addCharacterToken(at: Point, spec: { characterId: string; name: string; image?: BlobRef }) {
+  addCharacterToken(at: Point, spec: { characterId: string; name: string; image?: BlobRef; style?: TokenStyle; colour?: string }) {
     const grid = this.renderer.grid
     const size = grid.type === 'none' ? 70 : grid.size
     const [id] = this.scene.add({
@@ -887,8 +887,8 @@ export class SceneController {
       name: spec.name,
       characterId: spec.characterId,
       image: spec.image,
-      colour: memberColour(),
-      style: spec.image ? this.defaults().tokenStyle : 'disc',
+      colour: spec.colour ?? memberColour(),
+      style: spec.style ?? (spec.image ? this.defaults().tokenStyle : 'disc'),
       ...snapPoint(grid, at),
       w: size,
       h: size,

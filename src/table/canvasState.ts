@@ -1,5 +1,5 @@
 import { signal } from '@preact/signals'
-import type { BlobRef } from '../scene/types'
+import type { BlobRef, TokenStyle } from '../scene/types'
 import { backdropColour } from '../lib/colour'
 import { DEFAULT_CANVAS_COLOUR, type SceneView } from '../store/campaign'
 
@@ -30,6 +30,8 @@ export interface TokenSpec {
   characterId: string
   name: string
   image?: BlobRef
+  style?: TokenStyle
+  colour?: string
 }
 
 /**

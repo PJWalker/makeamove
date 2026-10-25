@@ -1,5 +1,5 @@
 import { useSignal } from '@preact/signals'
-import { useRef } from 'preact/hooks'
+import { useEffect, useRef } from 'preact/hooks'
 import {
   bump,
   canEdit,
@@ -20,6 +20,14 @@ import { useY } from '../store/useY'
 import type { GameSystem, MoveDef } from '../systems/types'
 import { Button } from '../ui/Button'
 import { BlobImage } from '../ui/BlobImage'
+import { colourOf } from '../scene/presence'
+import { TOKEN_STYLES } from '../scene/types'
+import { menuTrigger } from '../ui/menuTrigger'
+import { openPopup } from '../ui/popup'
+import { IconImage, IconRename, IconDelete } from '../ui/icons'
+import { Segmented } from '../ui/Segmented'
+import { Dialog } from './CampaignDialogs'
+import { ContextMenu, type MenuItem } from './ContextMenu'
 import { dragToken } from './tokenDrag'
 
 export function CharactersPanel({ campaign }: { campaign: Campaign }) {
@@ -152,7 +160,7 @@ function Sheet({ campaign, system, c }: { campaign: Campaign; system: GameSystem
 
   return (
     <div class="sheet">
-      <Portrait campaign={campaign} c={c} editable={editable} />
+      <TokenChip campaign={campaign} c={c} editable={editable} />
 
       <header class="sheet-head">
         <input
@@ -313,36 +321,44 @@ function MoveRow({ move, onMake }: { move: MoveDef; onMake: () => void }) {
   )
 }
 
-/** The portrait, and a stand-in token to drag onto the map. */
-function Portrait({ campaign, c, editable }: { campaign: Campaign; c: CharacterView; editable: boolean }) {
+/** The character's stand-in token: drag it onto the map, click it to change its image. */
+function TokenChip({ campaign, c, editable }: { campaign: Campaign; c: CharacterView; editable: boolean }) {
   const fileRef = useRef<HTMLInputElement>(null)
+  const menu = useSignal<{ x: number; y: number } | null>(null)
+  const settings = useSignal(false)
   const initial = (c.name.trim()[0] ?? '?').toUpperCase()
+  const pick = () => fileRef.current?.click()
+  const trigger = menuTrigger((x, y) => (menu.value = { x, y }))
+  const items: MenuItem[] = [
+    ...(editable
+      ? [
+          { label: c.portrait ? 'Change image…' : 'Choose image…', Icon: IconImage, onSelect: pick },
+          ...(c.portrait ? [{ label: 'Remove image', Icon: IconDelete, onSelect: () => setField(campaign, c.id, 'portrait', undefined) }] : []),
+          'divider' as const,
+          { label: 'Token settings…', Icon: IconRename, onSelect: () => (settings.value = true) },
+        ]
+      : []),
+  ]
   return (
     <div class="sheet-portrait">
-      <button
-        type="button"
-        class="portrait bevel"
-        title={editable ? 'Choose a portrait' : c.name}
-        disabled={!editable}
-        onClick={() => fileRef.current?.click()}
+      <div
+        class="token-chip"
+        role="button"
+        tabIndex={0}
+        title={editable ? 'Click to change the image; drag onto the map to place a token' : 'Drag onto the map to place a token'}
+        data-style={c.tokenStyle ?? 'disc'}
+        style={{ '--token-colour': c.tokenColour ?? '' }}
+        onPointerDown={(e) => {
+          trigger.onPointerDown(e)
+          dragToken(e, { characterId: c.id, name: c.name, image: c.portrait, style: c.tokenStyle, colour: c.tokenColour })
+        }}
+        onContextMenu={trigger.onContextMenu}
+        onClick={() => editable && pick()}
+        onKeyDown={(e) => editable && (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), pick())}
       >
-        <BlobImage image={c.portrait} alt={`${c.name}'s portrait`} fallback={<span class="portrait-initial">{initial}</span>} />
-      </button>
-      <div class="portrait-side">
-        <div
-          class="token-chip"
-          title="Drag onto the map to place a token"
-          onPointerDown={(e) => dragToken(e, { characterId: c.id, name: c.name, image: c.portrait })}
-        >
-          <BlobImage image={c.portrait} fallback={<span class="portrait-initial">{initial}</span>} />
-        </div>
-        <span class="muted">Drag onto the map</span>
-        {editable && c.portrait && (
-          <Button size="sm" variant="ghost" onClick={() => setField(campaign, c.id, 'portrait', undefined)}>
-            Remove portrait
-          </Button>
-        )}
+        <BlobImage image={c.portrait} fallback={<span class="portrait-initial">{initial}</span>} />
       </div>
+      <span class="muted">Drag onto the map</span>
       <input
         ref={fileRef}
         type="file"
@@ -354,6 +370,47 @@ function Portrait({ campaign, c, editable }: { campaign: Campaign; c: CharacterV
           if (file) void setPortrait(campaign, c.id, file)
         }}
       />
+      {menu.value && items.length > 0 && <ContextMenu {...menu.value} items={items} onClose={() => (menu.value = null)} />}
+      {settings.value && <TokenSettings campaign={campaign} c={c} onClose={() => (settings.value = false)} />}
     </div>
+  )
+}
+
+/** How this character's token looks when placed on a map. */
+function TokenSettings({ campaign, c, onClose }: { campaign: Campaign; c: CharacterView; onClose: () => void }) {
+  const ref = useRef<HTMLDialogElement>(null)
+  const style = c.tokenStyle ?? 'disc'
+  const colour = c.tokenColour ?? colourOf(device.value)
+  useEffect(() => openPopup(ref.current), [])
+  return (
+    <Dialog dialogRef={ref} title="Token settings" onClose={onClose}>
+      <div class="field">
+        Style
+        <Segmented
+          label="Token style"
+          value={style}
+          options={TOKEN_STYLES.map((s) => ({
+            ...s,
+            disabled: s.id === 'plain' && !c.portrait,
+            title: s.id === 'plain' && !c.portrait ? 'Needs an image' : undefined,
+          }))}
+          onChange={(v) => setField(campaign, c.id, 'tokenStyle', v)}
+        />
+      </div>
+      <label class="field colour-field" data-disabled={style === 'plain'}>
+        Background and border
+        <span class="colour-row">
+          <input
+            type="color"
+            class="colour-input bevel"
+            value={colour}
+            disabled={style === 'plain'}
+            onInput={(e) => setField(campaign, c.id, 'tokenColour', e.currentTarget.value)}
+          />
+          <span class="colour-hex">{colour}</span>
+        </span>
+      </label>
+      <p class="muted">Applies to tokens placed from now on. Change a token already on the map from its own options.</p>
+    </Dialog>
   )
 }

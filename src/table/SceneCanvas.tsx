@@ -303,7 +303,6 @@ function TokenOptionsDialog({
   const image = useSignal<BlobRef | undefined>(undefined)
   const fileRef = useRef<HTMLInputElement>(null)
   const characters = useY(campaign.characters, () => listCharacters(campaign))
-  const linked = characters.find((k) => k.id === characterId.value)
 
   useEffect(() => {
     if (!token) return
@@ -376,11 +375,6 @@ function TokenOptionsDialog({
             <Button size="sm" onClick={() => fileRef.current?.click()}>
               {image.value ? 'Change…' : 'Choose…'}
             </Button>
-            {linked?.portrait && linked.portrait.hash !== image.value?.hash && (
-              <Button size="sm" onClick={() => (image.value = linked.portrait)}>
-                Use portrait
-              </Button>
-            )}
             {image.value && (
               <Button size="sm" variant="ghost" onClick={() => (image.value = undefined)}>
                 Remove

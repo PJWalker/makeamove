@@ -1254,20 +1254,6 @@
     gap: var(--space-3);
     align-items: center;
   }
-  .portrait {
-    inline-size: 96px;
-    block-size: 96px;
-    flex: none;
-    padding: 0;
-    overflow: hidden;
-    display: grid;
-    place-items: center;
-    cursor: pointer;
-  }
-  .portrait:disabled {
-    cursor: default;
-  }
-  .portrait img,
   .token-chip img,
   .token-image-preview img {
     inline-size: 100%;
@@ -1279,22 +1265,25 @@
     font-size: 2rem;
     font-weight: 600;
   }
-  .portrait-side {
-    display: grid;
-    gap: var(--space-1);
-    justify-items: start;
-  }
   .token-chip,
   .token-image-preview {
-    inline-size: 48px;
-    block-size: 48px;
+    inline-size: 64px;
+    block-size: 64px;
     border-radius: 50%;
     overflow: hidden;
     display: grid;
     place-items: center;
     background: var(--surface-raised);
-    border: 2px solid var(--text-muted);
+    border: 3px solid var(--token-colour, var(--text-muted));
     flex: none;
+  }
+  .token-chip[data-style='plain'] {
+    border: 0;
+    border-radius: 0;
+    background: none;
+  }
+  .token-chip[data-style='plain'] img {
+    object-fit: contain;
   }
   .token-chip {
     cursor: grab;

@@ -1,5 +1,5 @@
 import * as Y from 'yjs'
-import type { BlobRef } from '../scene/types'
+import type { BlobRef, TokenStyle } from '../scene/types'
 import { newId } from '../lib/ids'
 import { resolveEffects, type EffectSource, type Resolved } from '../systems/effects'
 import type { ClassDef, Effect, EffectActive, GameSystem, ItemDef } from '../systems/types'
@@ -56,6 +56,9 @@ export interface CharacterView {
   inventory: ItemInstance[]
   /** The character's picture, in the blob store. */
   portrait?: BlobRef
+  /** How its token is drawn when placed on a map. */
+  tokenStyle?: TokenStyle
+  tokenColour?: string
 }
 
 export type CharacterMap = Y.Map<any>
@@ -112,6 +115,8 @@ export function characterView(id: string, m: CharacterMap, system: GameSystem): 
     ongoing: m.get('ongoing') ?? 0,
     inventory,
     portrait: m.get('portrait'),
+    tokenStyle: m.get('tokenStyle'),
+    tokenColour: m.get('tokenColour'),
   }
 }
 
