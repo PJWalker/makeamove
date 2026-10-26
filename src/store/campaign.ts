@@ -13,6 +13,7 @@ import { setBlobFetcher } from '../scene/images'
 import { getBlob, putBlob } from './blobs'
 import type { GridType } from '../scene/grid'
 import { sceneDbName } from '../scene/sceneDoc'
+import { noteDbName, noteGuid } from '../notes/noteDoc'
 import { ChatLog, deleteChatData } from '../chat/chatLog'
 import type { TokenStyle } from '../scene/types'
 
@@ -23,6 +24,8 @@ import type { TokenStyle } from '../scene/types'
  *                    defaultTokenStyle, defaultGridType
  *   members  Y.Map   deviceId -> Y.Map { name, role, joinedAt, activeSceneId }
  *   scenes   Y.Map   sceneId  -> Y.Map { name, canvasColour, order, visibility, doc }
+ *   notes    Y.Map   noteId   -> Y.Map { title, folder, order, links, updatedAt, updatedBy, doc }
+ *   noteFolders Y.Map folderId -> { name, order }
  *
  * Each scene's contents (maps, tokens, drawings) live in its `doc`, a Yjs
  * subdocument that is loaded only while the scene is open (see SceneDoc).
@@ -90,6 +93,10 @@ export class Campaign {
   readonly characters: Y.Map<Y.Map<any>>
   /** id -> folder that characters can be filed in. */
   readonly characterFolders: Y.Map<{ name: string }>
+  /** id -> note page; its text is in a subdocument (see notes/noteDoc.ts). */
+  readonly notes: Y.Map<Y.Map<any>>
+  /** id -> folder that notes are filed in. */
+  readonly noteFolders: Y.Map<{ name: string; order: string }>
   private persistence: IndexeddbPersistence
   private destroyed = false
   private cleanups: (() => void)[] = []
@@ -115,6 +122,8 @@ export class Campaign {
     this.scenes = this.doc.getMap('scenes')
     this.characters = this.doc.getMap('characters')
     this.characterFolders = this.doc.getMap('characterFolders')
+    this.notes = this.doc.getMap('notes')
+    this.noteFolders = this.doc.getMap('noteFolders')
     this.persistence = new IndexeddbPersistence(dbName(id), this.doc)
     this.chat = new ChatLog(this.doc, id, device.value.id)
   }
@@ -500,6 +509,7 @@ export async function deleteLocalCampaign(id: string) {
   const p = new IndexeddbPersistence(dbName(id), doc)
   await p.whenSynced
   for (const sceneId of doc.getMap('scenes').keys()) indexedDB.deleteDatabase(sceneDbName(sceneGuid(id, sceneId)))
+  for (const noteId of doc.getMap('notes').keys()) indexedDB.deleteDatabase(noteDbName(noteGuid(id, noteId)))
   deleteChatData(doc)
   await p.clearData()
   doc.destroy()

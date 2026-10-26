@@ -17,8 +17,9 @@ import { Avatar } from '../ui/Avatar'
 import { Button } from '../ui/Button'
 import type { PanelId } from './panelLayout'
 import { ChatPanel } from './ChatPanel'
-import { CharactersPanel } from './CharactersPanel'
+import { CharactersPanel, charactersLayout } from './CharactersPanel'
 import { LibrariesPanel } from './LibrariesPanel'
+import { NotesPanel, notesLayout } from './NotesPanel'
 import { ScenePanel } from './ScenePanel'
 
 export const PANELS: Record<PanelId, { label: string; Icon: ComponentType<any> }> = {
@@ -30,26 +31,21 @@ export const PANELS: Record<PanelId, { label: string; Icon: ComponentType<any> }
   members: { label: 'Members', Icon: IconMembers },
 }
 
-const COMING: Partial<Record<PanelId, string>> = {
-  notes: 'Session and world notes arrive in M5.',
-}
-
 /** The body of a panel; the same component renders docked or floating. */
 export function PanelContent({ id, campaign }: { id: PanelId; campaign: Campaign }) {
   if (id === 'scene') return <ScenePanel campaign={campaign} />
   if (id === 'chat') return <Chat campaign={campaign} />
   if (id === 'characters') return <CharactersPanel campaign={campaign} />
   if (id === 'libraries') return <LibrariesPanel campaign={campaign} />
-  if (id === 'members') return <MemberList campaign={campaign} />
-  const { Icon } = PANELS[id]
-  return (
-    <div class="panel-scroll">
-      <div class="empty">
-        <Icon size={28} />
-        {COMING[id]}
-      </div>
-    </div>
-  )
+  if (id === 'notes') return <NotesPanel campaign={campaign} />
+  return <MemberList campaign={campaign} />
+}
+
+/** Panels that are a list and a detail have a layout switch in their title bar. */
+export function PaneToggle({ id }: { id: PanelId }) {
+  if (id === 'characters') return <charactersLayout.Toggle />
+  if (id === 'notes') return <notesLayout.Toggle />
+  return null
 }
 
 function Chat({ campaign }: { campaign: Campaign }) {

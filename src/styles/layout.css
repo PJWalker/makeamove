@@ -1402,25 +1402,33 @@
   }
 
   /* Characters: a list (with folders) beside the sheet */
-  .chars {
+  /* A list and a detail, side by side or taking turns (ui/TwoPane.tsx). */
+  .panes-root {
     flex: 1;
     min-height: 0;
     display: flex;
     container-type: inline-size;
   }
-  .chars-grid {
+  .panes {
     flex: 1;
     min-height: 0;
     display: grid;
     grid-template-columns: var(--list-w, 200px) 6px 1fr;
   }
-  .chars-list {
+  .panes-list {
     min-height: 0;
     min-width: 0;
     display: flex;
     flex-direction: column;
-    /* Set apart from the sheet by tone, not a line. */
+    /* Set apart from the detail by tone, not a line. */
     background: oklch(from var(--surface-sunken) l c h / 0.35);
+  }
+  .chars-list,
+  .notes-list {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
   }
   /* Character rows drag (into folders, onto the map), so touch doesn't scroll them. */
   .chars-tree .list-pick,
@@ -1449,7 +1457,7 @@
   .chars-empty {
     padding: var(--space-2);
   }
-  .chars-detail {
+  .panes-detail {
     min-width: 0;
     min-height: 0;
     display: flex;
@@ -1458,14 +1466,14 @@
   .chars-sheet {
     flex: 1;
   }
-  .chars-back {
+  .panes-back {
     display: none;
     align-items: center;
     gap: var(--space-2);
     padding: var(--space-1) var(--space-2);
-    border-bottom: 1px solid #fff1;
+    background: oklch(from var(--surface-sunken) l c h / 0.35);
   }
-  .chars-back-btn {
+  .panes-back-btn {
     display: grid;
     place-items: center;
     padding: var(--space-1);
@@ -1475,10 +1483,10 @@
     cursor: pointer;
     font-size: 1.25rem;
   }
-  .chars-toggle + .panel-title {
+  .pane-toggle + .panel-title {
     margin-right: auto;
   }
-  .chars-toggle {
+  .pane-toggle {
     margin-left: calc(var(--space-1) * -1);
     display: grid;
     place-items: center;
@@ -1488,16 +1496,16 @@
     color: inherit;
     cursor: pointer;
   }
-  .chars-toggle:hover:not(:disabled) {
+  .pane-toggle:hover:not(:disabled) {
     color: var(--accent);
   }
   /* Too narrow for two columns: still there, but it can't switch. */
-  .chars-toggle:disabled {
+  .pane-toggle:disabled {
     opacity: 0.4;
     cursor: default;
   }
 
-  .chars-title {
+  .panes-title {
     flex: 1;
     min-width: 0;
     overflow: hidden;
@@ -1505,37 +1513,170 @@
     white-space: nowrap;
     font-weight: 600;
   }
-  .chars-split {
+  /* Notes: a list of pages and the open page (NotesPanel.tsx). */
+  .note-page {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .note-scroll {
+    flex: 1;
+    display: grid;
+    align-content: start;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4) var(--space-5);
+  }
+  .note-title {
+    width: 100%;
+    padding: 0;
+    background: none;
+    border: 0;
+    color: var(--text);
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+  .note-title:focus-visible {
+    outline: none;
+  }
+  .note-title::placeholder {
+    color: var(--text-faint);
+  }
+  .note-editor[data-loading] {
+    min-height: 6em;
+    opacity: 0.5;
+  }
+  .note-body {
+    min-height: 12em;
+    outline: none;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+  }
+  .note-body > * + * {
+    margin-top: 0.6em;
+  }
+  .note-body :is(p, ul, ol, blockquote, pre, h1, h2, h3) {
+    margin-block: 0;
+  }
+  .note-body :is(h1, h2, h3) {
+    font-family: var(--font-display);
+    line-height: 1.25;
+  }
+  .note-body h1 {
+    font-size: 1.35rem;
+  }
+  .note-body h2 {
+    font-size: 1.2rem;
+  }
+  .note-body h3 {
+    font-size: 1.05rem;
+  }
+  .note-body :is(ul, ol) {
+    padding-left: 1.4em;
+  }
+  .note-body blockquote {
+    padding-left: var(--space-3);
+    box-shadow: inset 3px 0 0 var(--accent-soft);
+    color: var(--text-muted);
+  }
+  .note-body code {
+    padding: 0 3px;
+    background: var(--surface-sunken);
+    font-size: 0.9em;
+  }
+  .note-body pre {
+    padding: var(--space-2) var(--space-3);
+    background: var(--surface-sunken);
+    overflow-x: auto;
+  }
+  .note-body pre code {
+    padding: 0;
+    background: none;
+  }
+  .note-body hr {
+    height: 2px;
+    border: 0;
+    background: var(--surface-sunken);
+  }
+  .note-body p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    color: var(--text-faint);
+    pointer-events: none;
+  }
+  /* A link to a note, character, scene, item or move. */
+  .note-link {
+    --bevel: 3px;
+    padding: 0 4px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .note-link:hover {
+    background: color-mix(in oklch, var(--accent) 30%, transparent);
+  }
+  .note-link[data-missing] {
+    background: var(--surface-sunken);
+    color: var(--text-faint);
+    text-decoration: line-through;
+    cursor: default;
+  }
+  /* The list after typing [[ */
+  .note-suggest {
+    max-width: min(360px, calc(100vw - 16px));
+  }
+  .note-suggest .menu-item[data-active] {
+    background: color-mix(in oklch, var(--accent) 40%, transparent);
+    color: var(--text);
+  }
+  .note-suggest-empty {
+    margin: 0;
+    padding: var(--space-1) var(--space-2);
+  }
+  .note-backlinks {
+    display: grid;
+    gap: var(--space-1);
+    padding-top: var(--space-3);
+  }
+  .note-backlinks .eyebrow {
+    margin: 0;
+  }
+  .panes-split {
     cursor: col-resize;
     touch-action: none;
     background: transparent;
   }
-  .chars-split:hover,
-  .chars-split:active {
+  .panes-split:hover,
+  .panes-split:active {
     background: #fff2;
   }
   /*
-   * One at a time: a navigation stack, the list or the sheet (CharactersPanel
+   * One at a time: a navigation stack, the list or the detail (TwoPane
    * chooses this when asked, or when the panel is too narrow for two).
    */
-  .chars-grid[data-layout='stack'] {
+  .panes[data-layout='stack'] {
     grid-template-columns: 1fr;
   }
-  .chars-grid[data-layout='stack'][data-level='list'] .chars-detail,
-  .chars-grid[data-layout='stack'][data-level='sheet'] .chars-list,
-  .chars-grid[data-layout='stack'] .chars-split {
+  .panes[data-layout='stack'][data-level='list'] .panes-detail,
+  .panes[data-layout='stack'][data-level='detail'] .panes-list,
+  .panes[data-layout='stack'] .panes-split {
     display: none;
   }
-  .chars-grid[data-layout='stack'] .chars-list {
-    border-right: 0;
+  .panes[data-layout='stack'] .panes-list {
+    background: none;
   }
-  .chars-grid[data-layout='stack'] .chars-back {
+  .panes[data-layout='stack'] .panes-back {
     display: flex;
   }
-  /* Only one level shows, so they can share a transition name. */
-  .chars-grid[data-layout='stack'][data-level='sheet'] .chars-detail,
-  .chars-grid[data-layout='stack'][data-level='list'] .chars-list {
-    view-transition-name: chars-pane;
+  /* Only one level shows, so they share the panel's own transition name. */
+  .panes[data-layout='stack'][data-level='detail'] .panes-detail,
+  .panes[data-layout='stack'][data-level='list'] .panes-list {
+    view-transition-name: var(--pane-vt);
+    view-transition-class: pane;
   }
 
   /* Character sheet */

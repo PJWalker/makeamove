@@ -1,6 +1,5 @@
-import { computed, signal, useSignal } from '@preact/signals'
+import { useSignal } from '@preact/signals'
 import { useEffect, useLayoutEffect, useRef } from 'preact/hooks'
-import { withTransition } from '../ui/transition'
 import {
   bump,
   canEdit,
@@ -34,11 +33,13 @@ import { colourOf } from '../scene/presence'
 import { TOKEN_STYLES } from '../scene/types'
 import { menuTrigger } from '../ui/menuTrigger'
 import { openPopup } from '../ui/popup'
-import { IconAdd, IconBack, IconDelete, IconFolder, IconLayoutSingle, IconLayoutSplit, IconRemove, IconImage, IconRename } from '../ui/icons'
+import { IconAdd, IconDelete, IconFolder, IconRemove, IconImage, IconRename } from '../ui/icons'
 import { Segmented } from '../ui/Segmented'
 import { Dialog } from './CampaignDialogs'
 import { EntryRow, EntryWindow, rollTag, useEntryWindows } from './EntryWindow'
 import { Inventory } from './Inventory'
+import { FolderName } from '../ui/FolderName'
+import { createPaneLayout, TwoPane, usePaneLevel } from '../ui/TwoPane'
 import { List, ListGroup, ListRow, Tag } from '../ui/List'
 import { entryIcon } from '../ui/entryIcons'
 import { ContextMenu, type MenuItem } from './ContextMenu'
@@ -56,69 +57,8 @@ import { dragToken } from './tokenDrag'
 export type CharsLayout = 'split' | 'stack'
 
 /** Narrower than this, the panel can only show one at a time. */
-const SPLIT_MIN_W = 381
-
-const LIST_KEY = 'makeamove.charsList'
-const saved = (() => {
-  try {
-    return JSON.parse(localStorage.getItem(LIST_KEY) ?? '{}') as { w?: number; layout?: CharsLayout }
-  } catch {
-    return {}
-  }
-})()
-const listWidth = signal(saved.w ?? 200)
-/** What the user chose. */
-const chosenLayout = signal<CharsLayout>(saved.layout ?? 'split')
-/** Whether the panel is too narrow for two columns (measured by the panel). */
-const tooNarrow = signal(false)
-/** What actually shows. */
-const layout = computed<CharsLayout>(() => (tooNarrow.value ? 'stack' : chosenLayout.value))
-
-const saveList = () => localStorage.setItem(LIST_KEY, JSON.stringify({ w: listWidth.value, layout: chosenLayout.value }))
-
-/** The layout switch in the panel's title bar. */
-export function CharacterListToggle() {
-  const split = layout.value === 'split'
-  const label = tooNarrow.value
-    ? 'One at a time (widen the panel to see the list and sheet side by side)'
-    : split
-      ? 'Side by side: click to show one at a time'
-      : 'One at a time: click to show the list and sheet side by side'
-  return (
-    <button
-      type="button"
-      class="chars-toggle"
-      aria-label={label}
-      title={label}
-      aria-pressed={split}
-      disabled={tooNarrow.value}
-      onPointerDown={(e) => e.stopPropagation()}
-      onClick={() => {
-        chosenLayout.value = split ? 'stack' : 'split'
-        saveList()
-      }}
-    >
-      {split ? <IconLayoutSplit size={16} /> : <IconLayoutSingle size={16} />}
-    </button>
-  )
-}
-
-function dragSplit(e: PointerEvent) {
-  if (e.button !== 0) return
-  const split = e.currentTarget as HTMLElement
-  const grid = split.parentElement!
-  split.setPointerCapture(e.pointerId)
-  const left = grid.getBoundingClientRect().left
-  const max = () => grid.clientWidth - 160
-  const move = (ev: PointerEvent) => (listWidth.value = Math.round(Math.max(100, Math.min(max(), ev.clientX - left))))
-  const up = () => {
-    split.removeEventListener('pointermove', move)
-    split.removeEventListener('pointerup', up)
-    saveList()
-  }
-  split.addEventListener('pointermove', move)
-  split.addEventListener('pointerup', up)
-}
+/** Side by side or one at a time (ui/TwoPane.tsx); kept under the key it always had. */
+export const charactersLayout = createPaneLayout('charsList', { list: 'list', detail: 'sheet' })
 
 export function CharactersPanel({ campaign }: { campaign: Campaign }) {
   const system = systemOf(campaign)
@@ -129,92 +69,57 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
   const creating = useSignal(false)
   const selected = characters.find((c) => c.id === selectedId)
   // One at a time: which level shows, the list or the sheet.
-  const level = useSignal<'list' | 'sheet'>(selectedId ? 'sheet' : 'list')
-  const rootRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const el = rootRef.current
-    if (!el) return
-    const ro = new ResizeObserver(() => (tooNarrow.value = el.clientWidth < SPLIT_MIN_W))
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
-  const go = (to: 'list' | 'sheet') => {
-    if (level.value === to) return
-    // Side by side, both levels show; only the stack slides between them.
-    if (layout.peek() !== 'stack') {
-      level.value = to
-      return
-    }
-    void withTransition(() => {
-      level.value = to
-    }, { rootClass: to === 'sheet' ? 'vt-chars-fwd' : 'vt-chars-back' })
-  }
+  const { level, go } = usePaneLevel(charactersLayout, selectedId ? 'detail' : 'list')
   const seen = useRef(selectedId)
   useEffect(() => {
     // The open character was deleted: back to the list, not on to another sheet.
     if (seen.current && seen.current !== selectedId && !campaign.characters.has(seen.current)) go('list')
-    else if (seen.current !== selectedId && selectedId) go('sheet')
+    else if (seen.current !== selectedId && selectedId) go('detail')
     seen.current = selectedId
   }, [selectedId])
 
   return (
-    <div class="chars" ref={rootRef}>
-      <div
-        class="chars-grid"
-        data-layout={layout.value}
-        data-level={level.value}
-        style={{ '--list-w': `${listWidth.value}px` }}
-      >
-      <CharacterList
-        campaign={campaign}
-        system={system}
-        characters={characters}
-        folders={folders}
-        selectedId={selectedId}
-        onNew={() => {
-          creating.value = true
-          go('sheet')
-        }}
-        onPick={(id) => {
-          creating.value = false
-          go('sheet')
-          selectCharacter(campaign, id)
-        }}
-      />
-      <div
-        class="chars-split"
-        role="separator"
-        aria-orientation="vertical"
-        aria-label="Resize character list"
-        onPointerDown={dragSplit}
-        onDblClick={() => {
-          listWidth.value = 200
-          saveList()
-        }}
-      />
-      <div class="chars-detail">
-      <div class="chars-back">
-        <button type="button" class="chars-back-btn chars-back-only" aria-label="Back to the character list" onClick={() => go('list')}>
-          <IconBack />
-        </button>
-        <span class="chars-title">{creating.value ? 'New character' : (selected?.name ?? 'Characters')}</span>
-      </div>
-      <div class="chars-sheet panel-scroll sheet-panel">
-        {creating.value ? (
-          <NewCharacter campaign={campaign} system={system} folders={folders} isGm={isGm} onDone={() => (creating.value = false)} />
-        ) : selected ? (
-          selected.kind === 'npc' ? (
-            <NpcSheet key={selected.id} campaign={campaign} system={system} c={selected} />
+    <TwoPane
+      layout={charactersLayout}
+      level={level.value}
+      title={creating.value ? 'New character' : (selected?.name ?? 'Characters')}
+      backLabel="Back to the character list"
+      onBack={() => go('list')}
+      resizeLabel="Resize character list"
+      list={
+        <CharacterList
+          campaign={campaign}
+          system={system}
+          characters={characters}
+          folders={folders}
+          selectedId={selectedId}
+          onNew={() => {
+            creating.value = true
+            go('detail')
+          }}
+          onPick={(id) => {
+            creating.value = false
+            go('detail')
+            selectCharacter(campaign, id)
+          }}
+        />
+      }
+      detail={
+        <div class="chars-sheet panel-scroll sheet-panel">
+          {creating.value ? (
+            <NewCharacter campaign={campaign} system={system} folders={folders} isGm={isGm} onDone={() => (creating.value = false)} />
+          ) : selected ? (
+            selected.kind === 'npc' ? (
+              <NpcSheet key={selected.id} campaign={campaign} system={system} c={selected} />
+            ) : (
+              <Sheet key={selected.id} campaign={campaign} system={system} c={selected} />
+            )
           ) : (
-            <Sheet key={selected.id} campaign={campaign} system={system} c={selected} />
-          )
-        ) : (
-          <p class="empty">Create a character, or pick one to see its sheet.</p>
-        )}
-      </div>
-      </div>
-      </div>
-    </div>
+            <p class="empty">Create a character, or pick one to see its sheet.</p>
+          )}
+        </div>
+      }
+    />
   )
 }
 
@@ -368,26 +273,6 @@ function CharacterList({
   )
 }
 
-function FolderName({ initial = '', onDone }: { initial?: string; onDone: (name: string | null) => void }) {
-  return (
-    <input
-      class="input bevel chars-folder-input"
-      aria-label="Folder name"
-      placeholder="Folder name"
-      value={initial}
-      autoFocus
-      onFocus={(e) => e.currentTarget.select()}
-      onBlur={(e) => onDone(e.currentTarget.value.trim() || null)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') e.currentTarget.blur()
-        if (e.key === 'Escape') {
-          e.currentTarget.value = ''
-          e.currentTarget.blur()
-        }
-      }}
-    />
-  )
-}
 
 function NewCharacter({
   campaign,

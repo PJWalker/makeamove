@@ -1,5 +1,4 @@
 import { IconDock } from '../ui/icons'
-import { CharacterListToggle } from './CharactersPanel'
 import type { Campaign } from '../store/campaign'
 import { Button } from '../ui/Button'
 import { trackPointer } from '../ui/pointer'
@@ -8,7 +7,7 @@ import { windowLayer } from '../ui/windows'
 import { createPortal } from 'preact/compat'
 import { useRef } from 'preact/hooks'
 import { dockPanel, dockTarget, floatingWindows, windowPointer, spawnedFromTab, raiseWindow, startWindowDrag, updateWindow, type FloatingWindow } from './panelLayout'
-import { PanelContent, PANELS } from './panels'
+import { PanelContent, PANELS, PaneToggle } from './panels'
 import { RESIZE_CURSORS, RESIZE_DIRS, resizeRect, type ResizeDir } from './resizeRect'
 
 /** Dock a window from its button, then put keyboard focus on the docked panel. */
@@ -92,7 +91,7 @@ function Window({ win, campaign }: { win: FloatingWindow; campaign: Campaign }) 
       onPointerDown={() => raiseWindow(win.id)}
     >
       <header class="panel-header window-header" onPointerDown={onHeaderPointerDown}>
-        {win.id === 'characters' && <CharacterListToggle />}
+        <PaneToggle id={win.id} />
         <h2 class="panel-title">{label}</h2>
         <Button variant="icon" label="Dock in the sidebar" onClick={() => dockAndFocus(win.id)}>
           <IconDock size={16} />

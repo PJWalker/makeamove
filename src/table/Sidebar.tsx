@@ -1,5 +1,4 @@
 import { unreadCount } from '../chat/unread'
-import { CharacterListToggle } from './CharactersPanel'
 import { useSignal } from '@preact/signals'
 import { IconDrag } from '../ui/icons'
 import type { Campaign } from '../store/campaign'
@@ -28,7 +27,7 @@ import {
   type PanelId,
   type Side,
 } from './panelLayout'
-import { PanelContent, PANELS } from './panels'
+import { PanelContent, PANELS, PaneToggle } from './panels'
 
 const DRAG_THRESHOLD = 10
 
@@ -68,7 +67,7 @@ export function Sidebar({ side, campaign }: { side: Side; campaign: Campaign }) 
           <div class="sidebar-panel" style={{ viewTransitionName: `panel-${active}` }}>
             <header class="panel-header docked-header" {...withPull((e) => pullOut(active, e), (x, y) => (menu.value = { x, y, items: tabMenu(active, side) }))}
             >
-              {active === 'characters' && <CharacterListToggle />}
+              <PaneToggle id={active} />
               <h2 class="panel-title" tabIndex={-1}>
                 {PANELS[active].label}
               </h2>

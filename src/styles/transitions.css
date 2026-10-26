@@ -185,22 +185,22 @@
   }
 }
 
-/* Characters panel (narrow): the levels slide like a navigation stack. */
-::view-transition-group(chars-pane) {
+/* A list and detail taking turns (ui/TwoPane.tsx): the levels slide like a navigation stack. */
+::view-transition-group(.pane) {
   animation-duration: 140ms;
   /* The snapshots slide inside the group, so clipping it keeps them in the panel. */
   overflow: clip;
 }
-.vt-chars-fwd::view-transition-old(chars-pane) {
+.vt-pane-fwd::view-transition-old(.pane) {
   animation: vt-chars-out-left 140ms ease-in both;
 }
-.vt-chars-fwd::view-transition-new(chars-pane) {
+.vt-pane-fwd::view-transition-new(.pane) {
   animation: vt-chars-in-right 140ms var(--ease) both;
 }
-.vt-chars-back::view-transition-old(chars-pane) {
+.vt-pane-back::view-transition-old(.pane) {
   animation: vt-chars-out-right 140ms ease-in both;
 }
-.vt-chars-back::view-transition-new(chars-pane) {
+.vt-pane-back::view-transition-new(.pane) {
   animation: vt-chars-in-left 140ms var(--ease) both;
 }
 @keyframes vt-chars-out-left {
