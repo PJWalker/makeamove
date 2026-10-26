@@ -1437,6 +1437,7 @@
   }
   .chars-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: var(--space-1);
     padding: var(--space-2);
   }
@@ -1526,6 +1527,21 @@
     align-content: start;
     gap: var(--space-3);
     padding: var(--space-3) var(--space-4) var(--space-5);
+  }
+  /* On a GM-only page: who can see it, and the way to show everyone. */
+  .note-secret {
+    --bevel: var(--bevel-sm);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0;
+    padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: var(--text-sm);
+  }
+  .note-secret span {
+    flex: 1;
   }
   .note-title {
     width: 100%;
@@ -1672,9 +1688,12 @@
   .panes[data-layout='stack'] .panes-back {
     display: flex;
   }
-  /* Only one level shows, so they share the panel's own transition name. */
-  .panes[data-layout='stack'][data-level='detail'] .panes-detail,
-  .panes[data-layout='stack'][data-level='list'] .panes-list {
+  /*
+   * Only one level shows, so they share the panel's own transition name;
+   * only while this panel is the one sliding, so others stay still.
+   */
+  .panes[data-sliding][data-layout='stack'][data-level='detail'] .panes-detail,
+  .panes[data-sliding][data-layout='stack'][data-level='list'] .panes-list {
     view-transition-name: var(--pane-vt);
     view-transition-class: pane;
   }

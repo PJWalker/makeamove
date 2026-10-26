@@ -14,6 +14,8 @@ export interface LinkTarget {
   detail: string
   /** An icon name for items and moves (ui/entryIcons.tsx). */
   icon?: string
+  /** A GM-only page. */
+  gmOnly?: boolean
 }
 
 const KIND_DETAIL: Record<LinkKind, string> = { note: 'Note', character: 'Character', scene: 'Scene', item: 'Item', move: 'Move' }
@@ -24,7 +26,7 @@ export function linkTargets(campaign: Campaign, query: string, exceptNote?: stri
   const all: LinkTarget[] = [
     ...listNotes(campaign)
       .filter((n) => n.id !== exceptNote)
-      .map((n) => ({ kind: 'note' as const, id: n.id, label: n.title, detail: KIND_DETAIL.note })),
+      .map((n) => ({ kind: 'note' as const, id: n.id, label: n.title, detail: n.gmOnly ? 'GM page' : KIND_DETAIL.note, gmOnly: n.gmOnly })),
     ...listCharacters(campaign).map((c) => ({ kind: 'character' as const, id: c.id, label: c.name, detail: c.kind === 'npc' ? 'NPC' : KIND_DETAIL.character })),
     ...campaign.sceneViews().map((s) => ({ kind: 'scene' as const, id: s.id, label: s.name, detail: KIND_DETAIL.scene })),
     ...system.items.map((i) => ({ kind: 'item' as const, id: i.id, label: i.name, detail: KIND_DETAIL.item, icon: i.icon })),

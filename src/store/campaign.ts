@@ -14,6 +14,7 @@ import { getBlob, putBlob } from './blobs'
 import type { GridType } from '../scene/grid'
 import { sceneDbName } from '../scene/sceneDoc'
 import { noteDbName, noteGuid } from '../notes/noteDoc'
+import { Vault, vaultDbName, vaultNoteGuid } from '../notes/vault'
 import { ChatLog, deleteChatData } from '../chat/chatLog'
 import type { TokenStyle } from '../scene/types'
 
@@ -97,6 +98,8 @@ export class Campaign {
   readonly notes: Y.Map<Y.Map<any>>
   /** id -> folder that notes are filed in. */
   readonly noteFolders: Y.Map<{ name: string; order: string }>
+  /** GM-only pages, on GM devices only (see notes/vault.ts). */
+  readonly vault = signal<Vault | null>(null)
   private persistence: IndexeddbPersistence
   private destroyed = false
   private cleanups: (() => void)[] = []
@@ -136,6 +139,7 @@ export class Campaign {
     await c.persistence.whenSynced
     c.watchMeta()
     await c.chat.start()
+    if (c.isGm()) c.vault.value = await Vault.open(id)
     return c
   }
 
@@ -220,6 +224,7 @@ export class Campaign {
     })
     this.cleanups.push(stopIdentity)
     refresh()
+    void this.vault.value?.connect()
   }
 
   /** The connection to peers, for presence and blob transfer. */
@@ -238,6 +243,7 @@ export class Campaign {
     this.blobs = null
     this.session?.destroy()
     this.session = null
+    this.vault.value?.disconnect()
     this.peerCount.value = 0
     this.online.value = new Set([device.value.id])
   }
@@ -247,6 +253,7 @@ export class Campaign {
     clearTimeout(this.sceneNoticeTimer)
     this.disconnect()
     this.chat.destroy()
+    this.vault.value?.destroy()
     this.persistence.destroy()
     this.doc.destroy()
   }
@@ -502,6 +509,16 @@ export function closeCampaign() {
   activeCampaign.value = null
 }
 
+/** Drop this device's GM vault for a campaign, and its pages' text. */
+async function deleteVault(id: string) {
+  const doc = new Y.Doc()
+  const p = new IndexeddbPersistence(vaultDbName(id), doc)
+  await p.whenSynced
+  for (const noteId of doc.getMap('notes').keys()) indexedDB.deleteDatabase(noteDbName(vaultNoteGuid(id, noteId)))
+  await p.clearData()
+  doc.destroy()
+}
+
 /** Remove a campaign from this device only. Peers keep their copies. */
 export async function deleteLocalCampaign(id: string) {
   if (activeCampaign.value?.id === id) closeCampaign()
@@ -510,6 +527,7 @@ export async function deleteLocalCampaign(id: string) {
   await p.whenSynced
   for (const sceneId of doc.getMap('scenes').keys()) indexedDB.deleteDatabase(sceneDbName(sceneGuid(id, sceneId)))
   for (const noteId of doc.getMap('notes').keys()) indexedDB.deleteDatabase(noteDbName(noteGuid(id, noteId)))
+  await deleteVault(id)
   deleteChatData(doc)
   await p.clearData()
   doc.destroy()

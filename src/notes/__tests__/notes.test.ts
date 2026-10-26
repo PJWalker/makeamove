@@ -15,9 +15,13 @@ import {
   moveNote,
   noteSubdoc,
   renameNote,
+  revealNote,
   touchNote,
 } from '../api'
+import { NoteDoc } from '../noteDoc'
+import * as Y from 'yjs'
 import { linksIn, parseLink } from '../links'
+import { makeSessionPage, sessionPageId } from '../sessions'
 
 async function setUp() {
   device.value = { id: 'gm', name: 'Gwen' }
@@ -72,6 +76,70 @@ describe('notes', () => {
     deleteNoteFolder(c, f)
     expect(getNote(c, n)?.folder).toBeUndefined()
     c.destroy()
+  })
+})
+
+describe('session pages', () => {
+  it('makes one page per session, in Sessions, with the recap headings', async () => {
+    const c = await setUp()
+    ensureNoteFolders(c)
+    const id = await makeSessionPage(c, 3)
+    expect(await makeSessionPage(c, 3)).toBe(id)
+    expect(sessionPageId(c, 3)).toBe(id)
+    expect(getNote(c, id)).toMatchObject({ title: 'Session 3', folder: 'sessions', gmOnly: false })
+    const page = await NoteDoc.open(noteSubdoc(c, id)!)
+    const text = page.body.toString()
+    expect(text).toContain('<heading level="2">Recap</heading>')
+    expect(text).toContain('Loose threads')
+    page.destroy()
+    c.destroy()
+  })
+})
+
+describe('the GM vault', () => {
+  it('keeps GM-only pages out of the campaign', async () => {
+    const c = await setUp()
+    expect(c.vault.value).not.toBeNull()
+    const secret = createNote(c, { title: 'The Duke is a lich', folder: 'world', gmOnly: true })
+    expect(c.notes.has(secret)).toBe(false)
+    expect(c.vault.value!.notes.has(secret)).toBe(true)
+    expect(getNote(c, secret)).toMatchObject({ title: 'The Duke is a lich', folder: 'world', gmOnly: true })
+    expect(listNotes(c).find((n) => n.id === secret)?.gmOnly).toBe(true)
+    // The vault's own key, never written to the shared campaign.
+    expect(c.vault.value!.key).toMatch(/.{20,}/)
+    expect(JSON.stringify(c.doc.toJSON())).not.toContain(c.vault.value!.key)
+    c.destroy()
+  })
+
+  it('reveals a page with its text, under the same id', async () => {
+    const c = await setUp()
+    const id = createNote(c, { title: 'Prophecy', gmOnly: true })
+    const page = await NoteDoc.open(noteSubdoc(c, id)!)
+    page.doc.transact(() => {
+      const p = new Y.XmlElement('paragraph')
+      p.insert(0, [new Y.XmlText('The tower falls at midwinter.')])
+      page.body.insert(0, [p])
+    })
+    page.destroy()
+
+    await revealNote(c, id)
+    expect(c.vault.value!.notes.has(id)).toBe(false)
+    expect(getNote(c, id)).toMatchObject({ title: 'Prophecy', gmOnly: false })
+    const shown = await NoteDoc.open(noteSubdoc(c, id)!)
+    expect(shown.body.toString()).toContain('The tower falls at midwinter.')
+    shown.destroy()
+    c.destroy()
+  })
+
+  it('is only opened on GM devices', async () => {
+    const c = await setUp()
+    const id = c.id
+    c.destroy()
+    device.value = { id: 'pat', name: 'Pat' }
+    const asPlayer = await Campaign.open(id)
+    expect(asPlayer.vault.value).toBeNull()
+    expect(() => createNote(asPlayer, { gmOnly: true })).toThrow()
+    asPlayer.destroy()
   })
 })
 

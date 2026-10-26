@@ -171,7 +171,7 @@ The roller decides the result locally with a cryptographic RNG, writes it to the
 
 - **Notation:** a small parser for standard notation — `2d6+2`, `d8+d4`, `4d6kh3`, `2d20kl1` (disadvantage), `d6!` (exploding), `b` / `w` for advantage-style “best of”. Plugins can register extra syntax.
 - **Roll record:** `{formula, dice:[{sides, value, kept}], modifiers:[{label, value}], total, rollerKey, hlc}`. Each modifier keeps its label so the card can read “2d6 (4+5) + STR 2 + Ring 1 = 12”.
-- **3D rendering (moved to M5):** a transparent full-screen overlay, lazy-loaded on the first roll, where every peer's dice land on the recorded faces. Per-user dice colour/theme. Note: @3d-dice/dice-box has no predetermined-results mode (it only rolls with live physics); only its older three.js fork, @3d-dice/dice-box-threejs (last updated 2022), can force results. M5 picks between that fork and our own physics-free animation.
+- **3D rendering (moved to M6):** a transparent full-screen overlay, lazy-loaded on the first roll, where every peer's dice land on the recorded faces. Per-user dice colour/theme. Note: @3d-dice/dice-box has no predetermined-results mode (it only rolls with live physics); only its older three.js fork, @3d-dice/dice-box-threejs (last updated 2022), can force results. M6 picks between that fork and our own physics-free animation.
 - **Fallback:** a 2D tumble animation when WebGL is unavailable, or when the user turns 3D off for speed.
 - **Visibility:** public, or secret (the roller and the GM; a GM's secret roll is the GM's alone). Others see “Name rolled in secret.” There are no blind rolls: if a player shouldn't see a result, the GM rolls it.
 - **Quick dice bar:** d4, d6, d8, d10, d12, d20, plus a free-form box; clicking a stat or move on a sheet rolls the right formula. Clicks gather into a pool for a moment before rolling as one entry (double-click the d20 for 2d20); right-click a die to take one back out.
@@ -191,15 +191,15 @@ The right-hand sidebar is one chronological stream of chat, rolls and move cards
 - **Deleting:** players can delete their own messages, and the GM anyone's (including system notices and session markers). Deleting removes the message from the shared log for everyone; like other GM rules this is enforced in the UI only. Right-click a message (or long-press on touch) for a menu with “Delete message”. Swipe-to-delete was tried and dropped: browsers can't tell when fingers leave a trackpad, so a swipe there can't wait for the lift the way it should.
 - **Unread state** and a collapsible, translucent sidebar so the map stays visible.
 
-_As built in M3:_ the log is a `chat` Y.Array of chunk subdocuments on the campaign root, 500 messages each, each persisted in its own IndexedDB database and synced by the M2 session as soon as it loads; the newest two load on open and “Load earlier messages” pulls in older ones. Messages are immutable plain objects stamped with a hybrid logical clock (`src/lib/hlc.ts`), so peers agree on order even with skewed clocks. Commands: `/r` (public), `/sr` (secret: you and the GM), `/w name` or `/w gm`, `/me`, `/session start|end` (GM; numbered in the campaign), `/help`, and `//` to send text starting with a slash; typing `/` lists them. Text supports **bold**, *italic*, `code` and links, rendered as elements, never HTML. The quick dice bar has a Public / Secret toggle; its clicks gather into a pool that rolls as one entry 1 s after the last change (each button shows its count, right-click takes one back out, and a "roll now" button fills as the moment approaches). Whispers are hidden from everyone but sender and recipients, including the GM. Unread messages from others show as a count on the Chat tab. A player's first join posts “Name joined”. Not yet: speaking as a character (needs characters, M4), move cards (M4), exporting a session to notes (M5).
+_As built in M3:_ the log is a `chat` Y.Array of chunk subdocuments on the campaign root, 500 messages each, each persisted in its own IndexedDB database and synced by the M2 session as soon as it loads; the newest two load on open and “Load earlier messages” pulls in older ones. Messages are immutable plain objects stamped with a hybrid logical clock (`src/lib/hlc.ts`), so peers agree on order even with skewed clocks. Commands: `/r` (public), `/sr` (secret: you and the GM), `/w name` or `/w gm`, `/me`, `/session start|end` (GM; numbered in the campaign), `/help`, and `//` to send text starting with a slash; typing `/` lists them. Text supports **bold**, *italic*, `code` and links, rendered as elements, never HTML. The quick dice bar has a Public / Secret toggle; its clicks gather into a pool that rolls as one entry 1 s after the last change (each button shows its count, right-click takes one back out, and a "roll now" button fills as the moment approaches). Whispers are hidden from everyone but sender and recipients, including the GM. Unread messages from others show as a count on the Chat tab. A player's first join posts “Name joined”. Not yet: speaking as a character (needs characters, M4), move cards (M4), exporting a session to notes (M6).
 
 ## Notes
 
-Notes are a folder tree of collaborative rich-text pages (TipTap over Yjs) with live cursors, wiki-style `[[links]]` and backlinks. _As built so far:_ see M5 status under Milestones.
+Notes are a folder tree of collaborative rich-text pages (TipTap over Yjs) with live cursors, wiki-style `[[links]]` and backlinks. _As built so far:_ see M6 status under Milestones.
 
 - **Two default folders:** _Sessions_ (one page per session, auto-created from session markers, with a recap template) and _World_ (places, factions, NPCs, lore).
 - **Embeds:** link chips to characters, scenes, items and moves; images from the blob store; a note can be pinned to a scene location as a marker.
-- **GM-only pages** live in the GM vault doc, so they never reach players’ devices. Revealing a page copies it into the shared root.
+- **GM-only pages** live in the GM vault doc, so they never reach players’ devices. Revealing a page copies it into the shared root. _(Built; see M6 status.)_
 - **Per-paragraph secrets:** a “GM only” block style inside a shared page, hidden in the UI from players (casual secrecy only).
 - **Dungeon World hooks:** the plugin adds templates for Fronts, Dangers (with grim portents as tickable checkboxes) and Steadings.
 
@@ -281,6 +281,71 @@ The first plugin covers the core book: six stats with modifiers, the basic and s
 - Monster stat blocks (HP, armor, damage, tags, instinct, moves) as NPC tokens with an HP ring.
 - A GM-moves reference panel (hard and soft moves) and a “make a move” chat card.
 
+## D&D 5.5e plugin and a general rules engine (M5)
+
+The second system is D&D 5th edition as revised in 2024 ("5.5e"), built from the System Reference Document 5.2 (CC BY 4.0, so its text can ship with attribution, like Dungeon World's). It is the test of the plugin API: anything 5.5e needs that Dungeon World also has, or that any tactical system would need, goes into the core; anything that is only 5.5e's arithmetic stays in the plugin. The aim is that a third system (Daggerheart, Pathfinder) needs data and formulas, not core changes.
+
+**Where things stand.** The core was built around Dungeon World and assumes it in places: the character record has `bonds`, `debilities`, `forward`, `ongoing`, `coin`, `alignment` and `race` as core fields; `derive()` hard-codes class HP, damage die and load; every move is "base roll + stat → strong / weak / miss" (`characters/moves.ts`); move cards and their follow-ups (Mark XP, Roll damage) are Dungeon World's; the sheet is hand-written for Dungeon World; the ruler measures cells or pixels; and nothing knows about a target, a range, turn order, a condition or a rest.
+
+### Core changes
+
+1. **Systems as modules with a schema.** A registry of systems (built-in first; loading from a URL or file stays in M6) and a `defineSystem()` that checks a system's shape. A system declares its character data schema with defaults and its own migrations (see Plugin system).
+2. **A generic character record.** The core keeps only what every system has: name, owner, kind (player character or NPC), folder, portrait and token style, notes, inventory, conditions, resources, and a level. Everything else (ability scores, bonds, debilities, death saves, spell slots, proficiencies, hit dice) lives in a `data` map the system owns and the core never interprets. Dungeon World's fields move into its own `data`.
+3. **Derived values from the system.** `derive()` becomes a system function from the character and its active effects to named values (AC, max HP, attack bonus, spell save DC, initiative, load, carrying capacity, passive Perception), each with its explanation from the effect resolver, which stays in the core.
+4. **Resources and rests.** Counters with a maximum that reset on a named event: HP and temporary HP, hit dice, spell slots by level, pact slots, class resources (Rage, Ki, Channel Divinity), item charges and "uses". Resets are tags (short rest, long rest, dawn, turn, round), and the core offers Short Rest and Long Rest commands that the system wires up. Dungeon World's item uses and HP become resources too.
+5. **Actions, not moves.** One action model for both systems: name, source (class, item, spell, feature), activation cost (action, bonus action, reaction, free, none), range, targeting (below), resource cost (a spell slot of some level, uses, ammunition), and a list of steps. Steps are generic: roll a formula, roll against a target number (attack vs AC, check vs DC), ask targets to save, roll damage with types, apply or offer effects. A Dungeon World move becomes one step ("roll 2d6 + stat, map the total to a band") with its band texts; the system supplies the band function as now.
+6. **Targets and targeting.** Each player can mark tokens as targets (shown as a ring in their colour and shared through presence, like cursors). An action with a targeting spec ("one creature within 60 ft", "up to three creatures", "self", "a 20 ft sphere") asks for targets when it is used, checks range on the scene, and resolves per target: one attack roll per target against that target's AC, one save per target against the caster's DC.
+7. **Distance and scene units.** A scene gets units per grid cell (5 ft by default) and a diagonal rule: 5.5e's default counts every diagonal as one square (Chebyshev); the alternating 5 / 10 ft rule and true distance are options. The ruler shows feet, range checks measure between token edges, and tokens get size categories (Tiny to Gargantuan → cells). Hex grids count hexes.
+8. **Areas of effect.** Templates as scene elements (cone, line, cube, sphere / emanation, cylinder), placed when an action needs one, listing the tokens they cover so the action can target them.
+9. **Rolls.** Advantage and disadvantage as a roll option (the notation already has `2d20kh1`), critical hits that double damage dice, damage types, and roll requests: a card that asks a target's owner to roll a save or check, with a button only they (or the GM) can press. The GM applies damage from the card (with resistance, vulnerability and immunity offered by the system); nothing is automatic, as with Dungeon World's suggestions.
+10. **Conditions with durations.** Conditions on characters and tokens (pips on the token), each with a duration: rounds, until the end or start of someone's turn, until removed, or concentration (dropped when the caster takes damage and fails, or casts another concentration spell; the core tracks it, the system supplies the check). Systems define their conditions and the effects each applies. Dungeon World's debilities can become conditions.
+11. **Combat and initiative.** A turn tracker: who's in the fight, initiative order (the system supplies the roll and tie-breaks), rounds, whose turn it is, and per-turn resets (reaction, movement, "once per turn" features). Systems without initiative, like Dungeon World, hide it.
+12. **NPCs and monsters from the Libraries.** A stat block is a library entry; placing one on the map makes a token with its own HP and conditions, unlinked from any character record, so a pack of goblins needs no sheets. A token can be promoted to a full NPC when it matters.
+13. **Declarative sheets.** The sheet is built from the system's layout of sections and field widgets (ability block, counter, gauge, resource track, action list, inventory, text, choice list), so most systems need no UI code; a system can still supply a component for an unusual section. Dungeon World's hand-written sheet becomes its layout.
+14. **Character creation and levelling.** A guided flow driven by system data: class, species, background, ability scores (standard array, point buy or rolled), and the choices each level grants. Dungeon World's class picker becomes a short version of the same flow.
+15. **Bigger libraries.** Spells, feats, species, backgrounds, classes with subclasses and level tables, monsters and magic items: hundreds of entries, so collections load lazily and search uses an index. Library entries can carry actions, so a spell or a weapon on the sheet is the same thing as in the Libraries.
+
+### Kept in the 5.5e plugin
+
+- The SRD 5.2 data: classes, subclasses and their level tables; species; backgrounds; feats; spells; weapons with their mastery properties; armour; adventuring gear; magic items; monsters; conditions; the rules glossary.
+- The formulas: ability modifiers, proficiency bonus by level, AC from armour category, Dexterity cap and shield, attack and damage bonuses, spell save DC and attack bonus, initiative, passive scores, carrying capacity, hit points by class and level, multiclass spell slots, exhaustion (−2 per level to d20 tests in 2024).
+- Spellcasting rules (prepared spells, slots, pact magic, rituals, cantrip scaling), Heroic Inspiration, death saving throws, and the sheet layout.
+- Which conditions exist and what each does; damage types; creature sizes; the default diagonal rule.
+
+### From Dungeon World: made generic, or kept
+
+| Now in Dungeon World                          | Becomes                                                                   |
+| --------------------------------------------- | ------------------------------------------------------------------------- |
+| Stats and `modifier()`                        | Generic abilities; each system's own modifier rule                        |
+| Moves, move list, move cards                  | Actions with steps; one card renderer for any step results                |
+| `band()` and strong / weak / miss texts       | Kept: Dungeon World's result function and texts                           |
+| Suggestions (Mark XP, Roll damage)            | Generic follow-up buttons that a system defines per action or result      |
+| Forward and ongoing                           | Generic roll modifiers: one-shot or lasting (5.5e: Bless, Guidance)       |
+| Debilities                                    | Conditions, defined by Dungeon World                                      |
+| Item uses, HP                                 | Resources                                                                 |
+| Load and weight                               | A derived value and an item field any system may use                      |
+| Classes with HP, damage die, load             | Generic classes with features by level; numbers in each system's data    |
+| NPC fields                                    | Stat blocks                                                               |
+| Bonds, alignment, race, coin, XP rule         | Kept: Dungeon World's character data                                      |
+| Fronts, Dangers, Steadings                    | Kept: Dungeon World note templates (M6)                                   |
+
+### Order of work
+
+1. Port Dungeon World onto the general core with no change in behaviour: system registry and schema, the generic character record, system `derive()`, resources, actions with steps, roll modifiers and conditions. Existing tests keep passing; new ones cover the port.
+2. Scenes: units, diagonal rules, token sizes, the ruler in feet, range checks, and targets.
+3. Actions end to end: targeting, attack and save steps, roll requests, damage with types, the new cards.
+4. Combat: the turn tracker, durations, concentration, per-turn resets, rests.
+5. The 5.5e plugin: data, formulas, sheet layout, character creation and levelling.
+6. Monsters and areas of effect: stat blocks, unlinked tokens, templates.
+
+### Open questions for M5
+
+- [ ] **Content:** SRD 5.2 only (free to ship), with homebrew forms for anything else? _Default: yes._
+- [ ] **Automation:** attacks and saves resolve against targets automatically, but damage and conditions are applied by the GM from the card? _Default: yes, as with Dungeon World._
+- [ ] **Movement:** track movement per turn and opportunity attacks, or leave them to the table? _Default: leave them, for now._
+- [ ] **Multiclassing** in the first version? _Default: later._
+- [ ] **Diagonals:** default to 5.5e's one-square diagonals, with the GM able to switch per scene? _Default: yes._
+
 ## Command palette and action index
 
 A keyboard-first palette for finding and doing things without hunting through panels. Ctrl/Cmd + K opens a centred popover with one search field; typing filters a ranked list, Up/Down move, Enter runs the top choice, Escape closes. It is built **before the hotbar** in M4, because both read from the same **action index**.
@@ -360,9 +425,9 @@ The hue transitions over 600 ms when the scene changes (`@property`-registered c
 
 ## Milestones
 
-We build in six milestones, each ending in something you can open and try; after M4 a group can play a full Dungeon World session.
+We build in seven milestones, each ending in something you can open and try; after M4 a group can play a full Dungeon World session. M5 (added Oct 27) generalises the rules engine and adds D&D 5.5e as a second system; notes and polish move to M6.
 
-&#91;embedded content: build plan · six milestones\]
+&#91;embedded content: build plan · six milestones (out of date: before M5 was added)\]
 
 Each milestone ends with a short review with you before the next begins. M2 comes early on purpose: sync touches everything, so we prove it before building rules on top.
 
@@ -372,9 +437,9 @@ Each milestone ends with a short review with you before the next begins. M2 come
 
 **M2 status:** built, awaiting review. The campaign root and each scene subdocument sync over a transport-agnostic Yjs session (`src/sync/session.ts`) with a Trystero WebRTC adapter; the session is tested over an in-memory network, so the real-relay path is the part to check by hand with two browsers. `#join=<id>.<key>` invite links (copy from Campaign settings) open a join card in the lobby; a joined campaign waits on a screen until the first peer sends it, then adds the player as a member. Cursors, pings and the ruler are awareness-only. Images a device lacks are requested from peers by hash, chunked, and verified by SHA-256 before being kept. The member list shows who is online. Deferred: the device keypair, and relays other than Trystero's defaults. 50 unit tests.
 
-**M3 status:** complete as of Oct 26; tested in two browsers. Dice notation and rolling, the chunked chat log with HLC ordering, slash commands, whispers, secret rolls, session markers with earlier sessions folded, scene-change notices, deleting messages, roll cards, the quick dice bar with pooling, unread counts, and press-drag-release menus (see Dice, Chat and move log, and UI). 94 unit tests, including two peers syncing the log over the in-memory network. 3D dice moved to M5.
+**M3 status:** complete as of Oct 26; tested in two browsers. Dice notation and rolling, the chunked chat log with HLC ordering, slash commands, whispers, secret rolls, session markers with earlier sessions folded, scene-change notices, deleting messages, roll cards, the quick dice bar with pooling, unread counts, and press-drag-release menus (see Dice, Chat and move log, and UI). 94 unit tests, including two peers syncing the log over the in-memory network. 3D dice moved to M6.
 
-**Added to M5:** 3D dice (see Dice), moved out of M3.
+**Added to M6:** 3D dice (see Dice), moved out of M3.
 
 **Added to M4:** the command palette and its action index, built first. Ctrl/Cmd + K searches moves, items, tools, commands and campaign entries, and the index it reads from is what the hotbar is then made from, so the two stay consistent. See Command palette and action index.
 
@@ -382,7 +447,11 @@ Each milestone ends with a short review with you before the next begins. M2 come
 
 **M4 status:** complete as of Oct 26, played through in the browser; after review it gained an inventory section on every sheet, the Libraries tab (system and plugin collections, with icons and drag onto characters) in place of the Items panel, one list design, and the campaign menu. _As built:_ the action index and palette (Ctrl/Cmd+K; `>` `/` `@` `#` prefixes; Alt+Enter pins; Shift+Enter shows an entry), the Dungeon World system as data (`src/systems/`: basic and special moves, class moves for the eight classic classes (partial), 19 items, tags, debilities) with a pure effect resolver (set, add, multiply, min/max within priority bands, with the source of each change), characters in the root doc (`src/characters/`: stats and modifiers, HP, XP and level-up, armour, damage, load, coin, debilities, forward and ongoing, bonds, notes, inventory with equipped state and uses), the Characters and Items panels (with a compendium), a move dialog for stat or bond choices, move cards in chat (roll breakdown, band, outcome text, Mark XP and Roll damage buttons) and the hotbar (bottom centre; default is the character's moves, gear with uses, ping and measure; keys 1 to 9; per character, kept in the player's member entry). Not yet: custom items and moves, tags that change rolls, the plugin loader (one built-in system), and verified rules text.
 
-**M5 status:** in progress. _Notes, first part (Oct 26):_ the Notes tab lists pages in folders (Sessions and World to start, under fixed ids so peers never make two; more can be added, renamed and deleted, and pages dragged between them). Each page's text is a Yjs subdocument edited with TipTap (`@tiptap/*` 3.32, bound with `@tiptap/y-tiptap`), saved in its own IndexedDB database and synced like a scene; undo comes from Yjs history, so it only takes back your own edits. Typing `[[` offers notes, characters, scenes, items and moves, and inserts a link chip that shows its target's current name (struck through if the target is gone); clicking it opens the page or sheet, switches to the scene, or finds the item or move in the Libraries. Each page records its outgoing links in the campaign index, so a page lists the pages that link to it ("Linked from") without loading them. Not yet: live carets (the map cursors already use the awareness `cursor` field), the GM vault for GM-only pages, per-paragraph secrets, session pages made from session markers, Dungeon World Fronts, fog of war, export/import and 3D dice.
+**M5 status:** planned (Oct 27): a general rules engine and the D&D 5.5e plugin; see D&D 5.5e plugin and a general rules engine.
+
+**M6 status:** notes and polish: notes with a GM vault, per-paragraph secrets, Dungeon World Fronts, fog of war, campaign export and import, 3D dice, and loading systems from a URL or file. Started early as M5 and moved here when M5 became D&D. _Notes, first part (Oct 26):_ the Notes tab lists pages in folders (Sessions and World to start, under fixed ids so peers never make two; more can be added, renamed and deleted, and pages dragged between them). Each page's text is a Yjs subdocument edited with TipTap (`@tiptap/*` 3.32, bound with `@tiptap/y-tiptap`), saved in its own IndexedDB database and synced like a scene; undo comes from Yjs history, so it only takes back your own edits. Typing `[[` offers notes, characters, scenes, items and moves, and inserts a link chip that shows its target's current name (struck through if the target is gone); clicking it opens the page or sheet, switches to the scene, or finds the item or move in the Libraries. Each page records its outgoing links in the campaign index, so a page lists the pages that link to it ("Linked from") without loading them. The Characters and Notes panels share one two-column layout (`ui/TwoPane.tsx`).
+
+_GM vault and session pages (Oct 27):_ GM-only pages live in the GM vault, a Yjs document of its own (`src/notes/vault.ts`) stored only on GM devices and synced over a separate Trystero room whose key is kept in the vault itself, never in the campaign, so players' devices never receive it. They share the campaign's folders and show with a secret-book icon and a GM tag; the GM makes them with New GM page (or from a folder's menu). "Reveal to players…" copies a page's entry and text into the campaign under the same id, so links keep working, then drops the vault copy; it can't be hidden again. A link to a GM-only page placed in a shared page stores no title, and players see it as "Unavailable". `/session start` makes a "Session N" page in Sessions with Recap, Highlights and Loose threads headings. Only the campaign's creator is a GM so far, so the vault's room has nobody else to sync with until GMs can be added. Not yet: live carets (the map cursors already use the awareness `cursor` field), per-paragraph secrets, exporting a session's log into its page, Dungeon World Fronts, fog of war, export/import and 3D dice.
 
 ## Open questions
 
@@ -411,7 +480,7 @@ Decisions made while building M0 to M4, newest first. Earlier answers are record
 | Move suggestions (XP, damage) are buttons on the card, never applied automatically                          | The GM stays in charge of fiction and consequences                                                                   |
 | Hotbar: drag to reorder, drag off to remove (Alt+arrows, Delete by keyboard)                                               | Keyboard-accessible, and simple; drag can come later                                                                 |
 | Dungeon World text is abridged from memory and must be checked against the SRD                              | The data is in one file (`src/systems/dungeon-world.ts`) so it is easy to correct; credit is in the system's attribution |
-| Move 3D dice to M5; M3 shows rolls as 2D cards                                                              | dice-box can't land on a predetermined result, which shared rolls need; picking a replacement can wait for M5      |
+| Move 3D dice to M6; M3 shows rolls as 2D cards                                                              | dice-box can't land on a predetermined result, which shared rolls need; picking a replacement can wait for M6      |
 | Chat lives in 500-message chunk subdocuments, ordered by a hybrid logical clock                             | Long campaigns stay fast to open, and peers agree on order even when their clocks disagree                         |
 | No blind rolls; whispers are hidden from the GM                                                             | If a player shouldn't see a result, the GM can roll it; “hidden from others” includes the GM                        |
 | Quick dice pool for 1 s before rolling                                                                      | Several dice from the bar (2d20, d20 + d6) become one roll and one chat entry                                       |
@@ -429,6 +498,7 @@ Decisions made while building M0 to M4, newest first. Earlier answers are record
 | Panels clip their children with `overflow: clip`, not `contain: paint`                                      | Keeps bevelled corners without trapping `position: fixed` children                                                   |
 | View transitions for docking, tab switches (directional slides), sidebar and page swaps                     | Shows where things go; tab slides mirror the tab order                                                               |
 | Icons: Game-icons first, Material Symbols Rounded (filled) as fallback, bundled                             | Weighty, on-theme, works offline                                                                                     |
+| A new M5 for D&D 5.5e and a general rules engine; notes and polish move to M6                           | A second system tests the plugin API; tactical rules (targets, range, turns) are best designed in before more polish |
 | Campaign actions live in a menu at the start of the tool strip, not the Scenes tab                           | They're about the campaign, not scenes, and stay reachable whichever tabs are open                                   |
 | Presence avatars move into Chat; avatars are circles                                                        | Keeps the top edge clear                                                                                             |
 | Panels stay solid; no hover fade                                                                            | The fade made panels harder to read                                                                                  |

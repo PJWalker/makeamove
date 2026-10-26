@@ -23,6 +23,7 @@ import GiPadlock from "~icons/game-icons/padlock";
 import GiPadlockOpen from "~icons/game-icons/padlock-open";
 import GiPawn from "~icons/game-icons/pawn";
 import GiQuillInk from '~icons/game-icons/quill-ink'
+import GiSecretBook from '~icons/game-icons/secret-book'
 import GiRollingDices from '~icons/game-icons/rolling-dices'
 import GiTalk from '~icons/game-icons/talk'
 import GiThreeFriends from '~icons/game-icons/three-friends'
@@ -36,6 +37,7 @@ import MsAdd from '~icons/material-symbols/add-rounded'
 import MsCategory from '~icons/material-symbols/category-rounded'
 import MsClose from '~icons/material-symbols/close-rounded'
 import MsMenu from '~icons/material-symbols/menu-rounded'
+import MsVisibility from '~icons/material-symbols/visibility-rounded'
 import MsContentCopy from "~icons/material-symbols/content-copy-rounded";
 import MsDockToRight from '~icons/material-symbols/dock-to-right-rounded'
 import MsDragIndicator from '~icons/material-symbols/drag-indicator-rounded'
@@ -105,6 +107,9 @@ export const IconChat = icon(GiTalk)
 export const IconCharacters = icon(GiVisoredHelm)
 export const IconLibraries = icon(GiBookshelf)
 export const IconNotes = icon(GiOpenBook)
+/** A GM-only page. */
+export const IconSecret = icon(GiSecretBook)
+export const IconReveal = icon(MsVisibility)
 export const IconMembers = icon(GiThreeFriends)
 
 // Game actions

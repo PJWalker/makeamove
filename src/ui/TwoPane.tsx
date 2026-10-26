@@ -28,6 +28,8 @@ export interface PaneLayout {
   /** What actually shows. */
   mode: { readonly value: PaneLayoutMode; peek(): PaneLayoutMode }
   save(): void
+  /** The panel's two-pane element, while it's on screen. */
+  el: HTMLElement | null
   /** The layout switch for the panel's title bar. */
   Toggle: () => JSX.Element
 }
@@ -83,7 +85,7 @@ export function createPaneLayout(key: string, names: { list: string; detail: str
     )
   }
 
-  return { key, listWidth, chosen, tooNarrow, mode, save, Toggle }
+  return { key, listWidth, chosen, tooNarrow, mode, save, Toggle, el: null }
 }
 
 /**
@@ -98,9 +100,14 @@ export function usePaneLevel(layout: PaneLayout, initial: PaneLevel) {
       level.value = to
       return
     }
+    // Only this panel slides: it alone is named for the transition.
+    const el = layout.el
+    if (el) el.dataset.sliding = 'true'
     void withTransition(() => {
       level.value = to
-    }, { rootClass: to === 'detail' ? 'vt-pane-fwd' : 'vt-pane-back' })
+    }, { rootClass: to === 'detail' ? 'vt-pane-fwd' : 'vt-pane-back' }).finally(() => {
+      if (el) delete el.dataset.sliding
+    })
   }
   return { level, go }
 }
@@ -157,6 +164,9 @@ export function TwoPane({
     <div class="panes-root" ref={rootRef}>
       <div
         class="panes"
+        ref={(el) => {
+          layout.el = el
+        }}
         data-layout={layout.mode.value}
         data-level={level}
         // Its own transition name, so two panels can slide at once.

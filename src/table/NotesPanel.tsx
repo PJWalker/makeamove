@@ -1,4 +1,4 @@
-import { useSignal } from '@preact/signals'
+import { signal, useSignal } from '@preact/signals'
 import { useEffect, useLayoutEffect, useRef } from 'preact/hooks'
 import {
   backlinks,
@@ -13,6 +13,7 @@ import {
   moveNote,
   renameNote,
   renameNoteFolder,
+  revealNote,
   type NoteFolderView,
   type NoteView,
 } from '../notes/api'
@@ -20,7 +21,8 @@ import { noteOpened, openNote, openNoteId } from '../notes/targets'
 import type { Campaign } from '../store/campaign'
 import { useY } from '../store/useY'
 import { Button } from '../ui/Button'
-import { IconDelete, IconFolder, IconNotes, IconRename } from '../ui/icons'
+import { IconDelete, IconFolder, IconNotes, IconRename, IconReveal, IconSecret } from '../ui/icons'
+import { morphOpen } from '../ui/morph'
 import { FolderName } from '../ui/FolderName'
 import { createPaneLayout, TwoPane, usePaneLevel } from '../ui/TwoPane'
 import { List, ListGroup, ListRow } from '../ui/List'
@@ -49,6 +51,9 @@ export const notesLayout = createPaneLayout('notesList', { list: 'list', detail:
  * together. The list and the open page sit side by side, or take turns.
  */
 export function NotesPanel({ campaign }: { campaign: Campaign }) {
+  // GM-only pages, on a GM device; watched too, so the list keeps up with them.
+  const vault = campaign.vault.value
+  useY(vault?.notes, () => null)
   const notes = useY(campaign.notes, () => listNotes(campaign))
   const folders = useY(campaign.noteFolders, () => listNoteFolders(campaign))
   // After useY, so it is already watching when the folders appear.
@@ -73,6 +78,7 @@ export function NotesPanel({ campaign }: { campaign: Campaign }) {
   }, [openId, open])
 
   const folder = folders.find((f) => f.id === open?.folder)
+  const revealingNote = revealing.value ? notes.find((n) => n.id === revealing.value) : undefined
   return (
     <TwoPane
       layout={notesLayout}
@@ -82,7 +88,12 @@ export function NotesPanel({ campaign }: { campaign: Campaign }) {
       onBack={() => go('list')}
       resizeLabel="Resize the notes list"
       list={<NoteList campaign={campaign} notes={notes} folders={folders} openId={openId} />}
-      detail={open ? <NotePage campaign={campaign} note={open} notes={notes} /> : <p class="empty">Pick a page, or make a new one.</p>}
+      detail={
+        <>
+          {open ? <NotePage campaign={campaign} note={open} notes={notes} /> : <p class="empty">Pick a page, or make a new one.</p>}
+          {revealingNote && <RevealPage campaign={campaign} note={revealingNote} onClose={() => (revealing.value = null)} />}
+        </>
+      }
     />
   )
 }
@@ -110,7 +121,8 @@ function NoteList({
     if (!next.delete(id)) next.add(id)
     folded.value = next
   }
-  const newPage = (folder?: string) => openNote(createNote(campaign, { folder }))
+  const isGm = !!campaign.vault.value
+  const newPage = (folder?: string, gmOnly = false) => openNote(createNote(campaign, { folder, gmOnly }))
 
   const row = (n: NoteView) => {
     const trigger = menuTrigger((x, y) => {
@@ -119,14 +131,16 @@ function NoteList({
         .map((f) => ({ label: `Move to ${f.name}`, Icon: IconFolder, onSelect: () => moveNote(campaign, n.id, f.id) }))
       if (n.folder && known.has(n.folder)) items.push({ label: 'Remove from folder', onSelect: () => moveNote(campaign, n.id, undefined) })
       if (items.length) items.push('divider')
+      if (n.gmOnly) items.push({ label: 'Reveal to players…', Icon: IconReveal, onSelect: () => (revealing.value = n.id) })
       items.push({ label: 'Delete page…', Icon: IconDelete, danger: true, onSelect: () => (deleting.value = n.id) })
       menu.value = { x, y, items }
     })
     return (
       <ListRow
         key={n.id}
-        lead={<IconNotes size={18} />}
+        lead={n.gmOnly ? <IconSecret size={18} /> : <IconNotes size={18} />}
         name={n.title}
+        tag={n.gmOnly ? 'GM' : null}
         meta={ago(n.updatedAt)}
         selected={n.id === openId}
         onPick={() => openNote(n.id)}
@@ -148,6 +162,7 @@ function NoteList({
         y,
         items: [
           { label: 'New page here', Icon: IconNotes, onSelect: () => newPage(f.id) },
+          ...(isGm ? [{ label: 'New GM page here', Icon: IconSecret, onSelect: () => newPage(f.id, true) }] : []),
           { label: 'Rename folder', Icon: IconRename, onSelect: () => (naming.value = f.id) },
           { label: 'Delete folder', Icon: IconDelete, danger: true, onSelect: () => deleteNoteFolder(campaign, f.id) },
         ],
@@ -162,6 +177,11 @@ function NoteList({
         <Button size="sm" onClick={() => newPage()}>
           New page
         </Button>
+        {isGm && (
+          <Button size="sm" variant="ghost" title="Only you can see it, until you reveal it" onClick={() => newPage(undefined, true)}>
+            New GM page
+          </Button>
+        )}
         <Button size="sm" variant="ghost" onClick={() => (naming.value = 'new')}>
           New folder
         </Button>
@@ -223,6 +243,15 @@ function NotePage({ campaign, note, notes }: { campaign: Campaign; note: NoteVie
   return (
     <article class="note-page" aria-label={note.title}>
       <div class="panel-scroll note-scroll">
+        {note.gmOnly && (
+          <p class="note-secret bevel">
+            <IconSecret size={16} />
+            <span>Only you can see this page.</span>
+            <Button size="sm" variant="ghost" onClick={(e: MouseEvent) => morphOpen(e.currentTarget as Element, () => (revealing.value = note.id))}>
+              Reveal to players…
+            </Button>
+          </p>
+        )}
         <input
           ref={titleRef}
           class="note-title"
@@ -251,6 +280,36 @@ function NotePage({ campaign, note, notes }: { campaign: Campaign; note: NoteVie
         )}
       </div>
     </article>
+  )
+}
+
+/** A page waiting for the GM to confirm revealing it. */
+const revealing = signal<string | null>(null)
+
+/** Asks before revealing a GM-only page: players keep it once they have it. */
+function RevealPage({ campaign, note, onClose }: { campaign: Campaign; note: NoteView; onClose: () => void }) {
+  const ref = useRef<HTMLDialogElement>(null)
+  useLayoutEffect(() => openPopup(ref.current), [])
+  return (
+    <Dialog dialogRef={ref} title="Reveal page" onClose={onClose}>
+      <p>
+        Show <strong>{note.title}</strong> to everyone? Players get their own copy, so it can't be hidden again.
+      </p>
+      <div class="form-actions">
+        <Button variant="ghost" onClick={() => ref.current?.close()}>
+          Cancel
+        </Button>
+        <Button
+          variant="primary"
+          onClick={() => {
+            void revealNote(campaign, note.id)
+            ref.current?.close()
+          }}
+        >
+          Reveal
+        </Button>
+      </div>
+    </Dialog>
   )
 }
 

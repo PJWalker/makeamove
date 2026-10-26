@@ -7,7 +7,7 @@ import type { SuggestionKeyDownProps, SuggestionProps } from '@tiptap/suggestion
 import { ySyncPluginKey } from '@tiptap/y-tiptap'
 import { render } from 'preact'
 import { useEffect, useRef, useState } from 'preact/hooks'
-import { noteSubdoc, touchNote, type LinkKind } from '../notes/api'
+import { getNote, noteSubdoc, touchNote, type LinkKind } from '../notes/api'
 import { NoteDoc } from '../notes/noteDoc'
 import { LINK_NODE, linksIn } from '../notes/links'
 import { followLink, linkLabel, linkTargets, type LinkTarget } from '../notes/targets'
@@ -52,9 +52,9 @@ function linkExtension(campaign: Campaign, noteId: string) {
           'data-id': id,
           'data-label': label,
           'data-missing': current === null ? 'true' : undefined,
-          'data-tip': current === null ? 'This no longer exists' : undefined,
+          'data-tip': current === null ? 'Not available' : undefined,
         }),
-        current ?? label ?? id,
+        current ?? (label || 'Unavailable'),
       ]
     },
     renderText: ({ node }) => `[[${node.attrs.label ?? node.attrs.id}]]`,
@@ -65,11 +65,13 @@ function linkExtension(campaign: Campaign, noteId: string) {
       items: ({ query }) => linkTargets(campaign, query, noteId),
       command: ({ editor, range, props }) => {
         const t = props as unknown as LinkTarget
+        // A shared page mustn't carry a GM-only page's title where players could read it.
+        const label = t.gmOnly && !getNote(campaign, noteId)?.gmOnly ? '' : t.label
         editor
           .chain()
           .focus()
           .insertContentAt(range, [
-            { type: LINK_NODE, attrs: { kind: t.kind, id: t.id, label: t.label } },
+            { type: LINK_NODE, attrs: { kind: t.kind, id: t.id, label } },
             { type: 'text', text: ' ' },
           ])
           .run()

@@ -1,4 +1,5 @@
 import { roll } from '../dice/notation'
+import { makeSessionPage } from '../notes/sessions'
 import type { Campaign } from '../store/campaign'
 import { device } from '../store/device'
 import type { Command } from './commands'
@@ -53,6 +54,8 @@ export function runCommand(campaign: Campaign, cmd: Command): boolean {
         },
         author,
       )
+      // Its page in the Sessions folder, ready for notes.
+      if (cmd.action === 'start') void makeSessionPage(campaign, session)
       return true
     }
     default:
