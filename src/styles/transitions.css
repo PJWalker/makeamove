@@ -227,3 +227,44 @@
     translate: -30% 0;
   }
 }
+
+/*
+ * A pop-up growing out of what opened it (morph.ts): the menu item or
+ * tooltip and the dialog share one box that moves and resizes between them.
+ * Both snapshots keep their own proportions, pinned to the top left and
+ * cropped by the box, so the dialog unrolls from its title rather than
+ * squashing; the source fades out as the dialog fades in. The crop would cut
+ * off the window's shadow, so the box casts it instead, fading in as it grows.
+ */
+::view-transition-group(popup-morph) {
+  z-index: 10;
+  animation-duration: 240ms;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+::view-transition-image-pair(popup-morph) {
+  overflow: clip;
+  box-shadow: var(--window-shadow);
+  animation: vt-shadow-in 240ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+/* Cast in the window's bevelled shape, where the browser can draw one. */
+@supports (corner-shape: bevel) {
+  ::view-transition-image-pair(popup-morph) {
+    border-radius: var(--bevel-lg);
+    corner-shape: bevel;
+  }
+}
+::view-transition-old(popup-morph),
+::view-transition-new(popup-morph) {
+  height: auto;
+}
+::view-transition-old(popup-morph) {
+  animation: vt-exit 110ms ease-in both;
+}
+::view-transition-new(popup-morph) {
+  animation: vt-fade-in 140ms ease-out both;
+}
+@keyframes vt-shadow-in {
+  from {
+    box-shadow: 0 0 0 transparent;
+  }
+}

@@ -1,0 +1,128 @@
+import { useSignal } from '@preact/signals'
+import type { ComponentChildren } from 'preact'
+import { useLayoutEffect, useRef } from 'preact/hooks'
+import type { GameSystem, MoveDef } from '../systems/types'
+import { morphOpen } from '../ui/morph'
+import { openPopup, raisePopup } from '../ui/popup'
+import type { Icon } from '../ui/icons'
+import { hideTooltip } from '../ui/Tooltip'
+import { ListRow } from '../ui/List'
+import { Dialog } from './CampaignDialogs'
+
+/*
+ * Rows that show their rules in a tooltip beside them and, when clicked,
+ * turn that tooltip into a window of its own: moves on a sheet, items in an
+ * inventory, entries in the Libraries. One window per entry; clicking the
+ * row again brings it forward.
+ */
+
+/** What a move rolls, as a short tag for its row. */
+export function rollTag(system: GameSystem, m: MoveDef) {
+  if (!m.roll) return null
+  if (m.roll.stat === 'choose') return 'any'
+  if (m.roll.stat === 'bond') return 'bond'
+  return system.stats.find((s) => s.id === m.roll!.stat)?.abbr ?? m.roll.stat
+}
+
+/** Which entries have windows open, and how to open one from its row. */
+export function useEntryWindows() {
+  const open = useSignal<string[]>([])
+  return {
+    keys: open.value,
+    /** Open the window for `key`, morphing it out of the row's tooltip (or the row). */
+    show(key: string, row: Element) {
+      const already = document.querySelector<HTMLElement>(`dialog[data-entry="${CSS.escape(key)}"]`)
+      if (already) return raisePopup(already)
+      const tip = document.querySelector('.tooltip:popover-open')
+      morphOpen(tip ?? row, () => {
+        hideTooltip()
+        open.value = [...open.value, key]
+      })
+    },
+    close(key: string) {
+      open.value = open.value.filter((k) => k !== key)
+    },
+  }
+}
+
+/** An entry's rules in a window of its own. */
+export function EntryWindow({
+  entryKey,
+  title,
+  text,
+  tags,
+  onClose,
+  children,
+}: {
+  entryKey: string
+  title: string
+  text: string
+  tags?: string[]
+  onClose: () => void
+  /** The actions along the bottom. */
+  children?: ComponentChildren
+}) {
+  const ref = useRef<HTMLDialogElement>(null)
+  useLayoutEffect(() => {
+    const dialog = ref.current
+    if (!dialog) return
+    dialog.dataset.entry = entryKey
+    openPopup(dialog)
+  }, [])
+  return (
+    <Dialog dialogRef={ref} title={title} onClose={onClose}>
+      <p class="move-text move-window-text">{text}</p>
+      {tags && tags.length > 0 && <p class="muted item-tags">{tags.join(', ')}</p>}
+      {children && <div class="form-actions">{children}</div>}
+    </Dialog>
+  )
+}
+
+/**
+ * One entry as a list row: its text as a tooltip beside it, and the name
+ * opening its window.
+ */
+export function EntryRow({
+  name,
+  Icon,
+  tag,
+  meta,
+  tip,
+  onOpen,
+  onPointerDown,
+  dim,
+  children,
+}: {
+  name: string
+  Icon?: Icon
+  tag?: string | null
+  meta?: string
+  tip: string
+  onOpen: (row: Element) => void
+  /** For rows that can be dragged somewhere. */
+  onPointerDown?: (e: PointerEvent) => void
+  /** Shown faded, such as an item that's unequipped. */
+  dim?: boolean
+  children?: ComponentChildren
+}) {
+  return (
+    <ListRow
+      lead={Icon && <Icon size={18} />}
+      name={name}
+      tag={tag}
+      meta={meta}
+      dim={dim}
+      onPick={(e) => onOpen(e.currentTarget.closest('li')!)}
+      row={{
+        'data-draggable': onPointerDown ? true : undefined,
+        'data-tip': tip,
+        'data-tip-long': true,
+        'data-tip-side': true,
+        'data-tip-opens': true,
+        onPointerDown,
+      }}
+    >
+      {children}
+    </ListRow>
+  )
+}

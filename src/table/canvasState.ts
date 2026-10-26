@@ -51,5 +51,5 @@ export interface CanvasCommands {
 }
 export const canvasCommands = signal<CanvasCommands | null>(null)
 
-/** Ask the scene menu to open one of its dialogs (from the command palette). */
+/** Open one of the campaign's dialogs (from the campaign menu or the command palette). */
 export const dialogRequest = signal<'player' | 'settings' | 'help' | null>(null)

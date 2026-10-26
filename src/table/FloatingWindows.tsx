@@ -9,7 +9,7 @@ import { createPortal } from 'preact/compat'
 import { useRef } from 'preact/hooks'
 import { dockPanel, dockTarget, floatingWindows, windowPointer, spawnedFromTab, raiseWindow, startWindowDrag, updateWindow, type FloatingWindow } from './panelLayout'
 import { PanelContent, PANELS } from './panels'
-import { RESIZE_DIRS, resizeRect, type ResizeDir } from './resizeRect'
+import { RESIZE_CURSORS, RESIZE_DIRS, resizeRect, type ResizeDir } from './resizeRect'
 
 /** Dock a window from its button, then put keyboard focus on the docked panel. */
 function dockAndFocus(id: FloatingWindow['id']) {
@@ -21,16 +21,6 @@ function dockAndFocus(id: FloatingWindow['id']) {
 /** Size of the tab a window morphs into. */
 const TAB = 44
 
-const CURSORS: Record<ResizeDir, string> = {
-  n: 'ns-resize',
-  s: 'ns-resize',
-  e: 'ew-resize',
-  w: 'ew-resize',
-  ne: 'nesw-resize',
-  sw: 'nesw-resize',
-  nw: 'nwse-resize',
-  se: 'nwse-resize',
-}
 
 export function FloatingWindows({ campaign }: { campaign: Campaign }) {
   return createPortal(
@@ -52,7 +42,7 @@ function Window({ win, campaign }: { win: FloatingWindow; campaign: Campaign }) 
     e.stopPropagation()
     raiseWindow(win.id)
     const start = { x: win.x, y: win.y, w: win.w, h: win.h }
-    const stop = trackPointer(CURSORS[dir], (ev) => {
+    const stop = trackPointer(RESIZE_CURSORS[dir], (ev) => {
       updateWindow(win.id, resizeRect(start, dir, ev.clientX - e.clientX, ev.clientY - e.clientY))
     })
     window.addEventListener('pointerup', stop, { once: true })

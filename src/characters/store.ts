@@ -14,7 +14,7 @@ import type { ClassDef, Effect, EffectActive, GameSystem, ItemDef } from '../sys
 
 export interface ItemInstance {
   id: string
-  /** The compendium entry this came from, if any. */
+  /** The library entry this came from, if any. */
   defId?: string
   name: string
   description: string
@@ -25,6 +25,8 @@ export interface ItemInstance {
   usesLeft?: number
   equippable?: boolean
   equipped: boolean
+  /** The icon it was given, by name (see ui/entryIcons.tsx). */
+  icon?: string
   effects: Effect[]
   active: EffectActive
   /** Fractional position, so reordering never conflicts. */
@@ -215,6 +217,7 @@ export function instanceOf(def: ItemDef, order: string): ItemInstance {
     ...(def.uses ? { uses: def.uses, usesLeft: def.uses } : {}),
     equippable: !!def.equippable,
     equipped: false,
+    ...(def.icon ? { icon: def.icon } : {}),
     effects: def.effects ?? [],
     active: def.active ?? 'carried',
     order,

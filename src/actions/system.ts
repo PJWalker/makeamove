@@ -11,10 +11,11 @@ import {
 } from '../characters/api'
 import { derive, movesFor } from '../characters/store'
 import type { Campaign } from '../store/campaign'
+import { browseLibrary } from '../table/libraryView'
 import { showPanel } from '../table/panelLayout'
 import type { Action } from './types'
 
-/** Moves, characters, gear and the compendium: what the game system adds. */
+/** Moves, characters, gear and the libraries: what the game system adds. */
 export function systemActions(campaign: Campaign): Action[] {
   const system = systemOf(campaign)
   const out: Action[] = []
@@ -85,16 +86,16 @@ export function systemActions(campaign: Campaign): Action[] {
 
   for (const i of system.items) {
     out.push({
-      id: `compendium:${i.id}`,
+      id: `library:${i.id}`,
       kind: 'entry',
-      group: 'compendium',
+      group: 'library',
       title: i.name,
       tags: i.tags,
-      source: 'Compendium',
-      detail: me ? `Add to ${me.name}’s gear. Shift+Enter shows the entry.` : i.description,
+      source: system.name,
+      detail: me ? `Add to ${me.name}’s inventory. Shift+Enter shows it in the Libraries.` : i.description,
       available: reason,
       run: () => me && addItem(campaign, me.id, i),
-      open: () => showPanel('items'),
+      open: () => browseLibrary('item'),
     })
   }
 

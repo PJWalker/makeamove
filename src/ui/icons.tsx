@@ -16,7 +16,7 @@ import GiExitDoor from '~icons/game-icons/exit-door'
 import GiFog from '~icons/game-icons/fog'
 import GiHand from '~icons/game-icons/hand'
 import GiHelp from '~icons/game-icons/help'
-import GiKnapsack from '~icons/game-icons/knapsack'
+import GiBookshelf from '~icons/game-icons/bookshelf'
 import GiMeasureTape from '~icons/game-icons/measure-tape'
 import GiOpenBook from '~icons/game-icons/open-book'
 import GiPadlock from "~icons/game-icons/padlock";
@@ -35,6 +35,7 @@ import MsSearch from '~icons/material-symbols/search-rounded'
 import MsAdd from '~icons/material-symbols/add-rounded'
 import MsCategory from '~icons/material-symbols/category-rounded'
 import MsClose from '~icons/material-symbols/close-rounded'
+import MsMenu from '~icons/material-symbols/menu-rounded'
 import MsContentCopy from "~icons/material-symbols/content-copy-rounded";
 import MsDockToRight from '~icons/material-symbols/dock-to-right-rounded'
 import MsDragIndicator from '~icons/material-symbols/drag-indicator-rounded'
@@ -50,8 +51,8 @@ import MsImage from "~icons/material-symbols/image-rounded";
 import MsInkEraser from "~icons/material-symbols/ink-eraser-rounded";
 import MsLayers from "~icons/material-symbols/layers-rounded";
 import MsLink from '~icons/material-symbols/link-rounded'
-import MsLeftPanelClose from '~icons/material-symbols/left-panel-close-rounded'
-import MsLeftPanelOpen from '~icons/material-symbols/left-panel-open-rounded'
+import MsRectangle from '~icons/material-symbols/rectangle-rounded'
+import MsVerticalSplit from '~icons/material-symbols/vertical-split-rounded'
 import MsPanelClose from '~icons/material-symbols/right-panel-close-rounded'
 import MsPanelOpen from '~icons/material-symbols/right-panel-open-rounded'
 import MsPersonAdd from '~icons/material-symbols/person-add-rounded'
@@ -64,7 +65,7 @@ import MsUndo from "~icons/material-symbols/undo-rounded";
 export type IconProps = Omit<JSX.SVGAttributes<SVGSVGElement>, 'size'> & { size?: number }
 export type Icon = ComponentType<IconProps>
 
-function icon(Svg: ComponentType<JSX.SVGAttributes<SVGSVGElement>>): Icon {
+export function icon(Svg: ComponentType<JSX.SVGAttributes<SVGSVGElement>>): Icon {
   return ({ size = 22, ...rest }) => (
     <Svg width={size} height={size} aria-hidden="true" {...rest} />
   );
@@ -102,7 +103,7 @@ export const IconRedo = icon(MsRedo)
 // Sidebar panels
 export const IconChat = icon(GiTalk)
 export const IconCharacters = icon(GiVisoredHelm)
-export const IconItems = icon(GiKnapsack)
+export const IconLibraries = icon(GiBookshelf)
 export const IconNotes = icon(GiOpenBook)
 export const IconMembers = icon(GiThreeFriends)
 
@@ -123,11 +124,13 @@ export const IconAdd = icon(MsAdd)
 export const IconRemove = icon(MsRemove)
 export const IconSearch = icon(MsSearch)
 export const IconClose = icon(MsClose)
+export const IconMenu = icon(MsMenu)
 export const IconExpand = icon(MsExpandMore)
 export const IconLink = icon(MsLink)
 export const IconDrag = icon(MsDragIndicator)
 export const IconDock = icon(MsDockToRight)
-export const IconListHide = icon(MsLeftPanelClose)
-export const IconListShow = icon(MsLeftPanelOpen)
+/** Two panes side by side, and one pane at a time. */
+export const IconLayoutSplit = icon(MsVerticalSplit)
+export const IconLayoutSingle = icon(MsRectangle)
 export const IconSidebarHide = icon(MsPanelClose)
 export const IconSidebarShow = icon(MsPanelOpen)

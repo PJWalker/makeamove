@@ -8,7 +8,7 @@ import * as Y from 'yjs'
 import { systemActions } from '../../actions/system'
 import { Campaign, createCampaign } from '../../store/campaign'
 import { device } from '../../store/device'
-import { addItem, createFolder, deleteFolder, getCharacter, listFolders, makeMove, moveToFolder, newCharacter, newNpc, renameFolder, tokenStatsByCharacter, selectedCharacterId, setField, systemOf, updateItem } from '../api'
+import { addItem, createFolder, deleteCharacter, deleteFolder, getCharacter, listFolders, makeMove, moveToFolder, newCharacter, newNpc, renameFolder, tokenStatsByCharacter, selectedCharacterId, setField, systemOf, updateItem } from '../api'
 import { defaultHotbar, editHotbar, hotbarSlots, moveTo, pin, placeAt, insertAt, shift, unpin, MAX_SLOTS } from '../hotbar'
 
 async function setUp() {
@@ -22,6 +22,17 @@ async function setUp() {
 }
 
 describe('characters in a campaign', () => {
+  it('deletes a character and clears anyone playing it', async () => {
+    const c = await setUp()
+    const id = newCharacter(c, 'Ayla', 'fighter')
+    c.members.get('pat')!.set('character', id)
+    deleteCharacter(c, id)
+    expect(getCharacter(c, id)).toBeUndefined()
+    expect(c.members.get('gm')!.get('character')).toBeUndefined()
+    expect(c.members.get('pat')!.get('character')).toBeUndefined()
+    c.destroy()
+  })
+
   it('creates a character at full HP and selects it', async () => {
     const c = await setUp()
     const id = newCharacter(c, 'Ayla', 'fighter')

@@ -9,7 +9,7 @@ import type { Icon } from '../ui/icons'
 export type ActionKind = 'move' | 'item' | 'tool' | 'command' | 'entry' | 'setting'
 
 /** What an `entry` is, so prefixes (@ for characters, # for notes) can narrow. */
-export type EntryGroup = 'character' | 'scene' | 'note' | 'compendium'
+export type EntryGroup = 'character' | 'scene' | 'note' | 'library'
 
 export interface Action {
   /** Stable, for example `move:hack-and-slash` or `tool:ping`. The hotbar stores these. */

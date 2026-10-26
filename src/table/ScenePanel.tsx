@@ -1,11 +1,10 @@
 import { useSignalEffect } from '@preact/signals'
 import { useRef } from 'preact/hooks'
-import { goToCampaign } from '../router'
 import type { Campaign } from '../store/campaign'
 import { useY } from '../store/useY'
 import { Button } from '../ui/Button'
-import { IconAdd, IconDelete, IconGrid, IconHelp, IconLeave, IconMembers, IconSettings } from '../ui/icons'
-import { setMorphOrigin } from '../ui/morph'
+import { IconAdd, IconDelete, IconGrid } from '../ui/icons'
+import { morphOpen } from '../ui/morph'
 import { openPopup } from '../ui/popup'
 import { dialogRequest, sceneSettingsOpen } from './canvasState'
 import { HelpDialog, PlayerDialog, SettingsDialog } from './CampaignDialogs'
@@ -36,7 +35,7 @@ export function CampaignDialogHost({ campaign }: { campaign: Campaign }) {
   )
 }
 
-/** The scene list and campaign actions. */
+/** The scene list, and the active scene's settings. (Campaign actions are in the tool strip's menu.) */
 export function ScenePanel({ campaign }: { campaign: Campaign }) {
   const scenes = useY(campaign.scenes, () => campaign.sceneViews())
   const activeId = useY(campaign.members, () => campaign.activeSceneId()) ?? scenes[0]?.id ?? null
@@ -47,12 +46,6 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
   function addScene() {
     const id = campaign.addScene(`Scene ${scenes.length + 1}`)
     campaign.setActiveScene(id)
-  }
-
-  /** Open a dialog from a menu item, growing it out of that item. */
-  const open = (want: 'player' | 'settings' | 'help') => (e: MouseEvent) => {
-    setMorphOrigin(e.currentTarget as Element)
-    dialogRequest.value = want
   }
 
   return (
@@ -88,34 +81,17 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
         </Button>
       )}
 
-      <div class="menu-section" role="group" aria-label={campaignName}>
-        {isGm && active && (
+      {isGm && active && (
+        <div class="menu-section" role="group" aria-label={active.name}>
           <button
             type="button"
             class="menu-item bevel"
-            onClick={(e) => {
-              setMorphOrigin(e.currentTarget)
-              sceneSettingsOpen.value = true
-            }}
+            onClick={(e) => morphOpen(e.currentTarget, () => (sceneSettingsOpen.value = true))}
           >
             <IconGrid size={16} /> Scene settings
           </button>
-        )}
-        <button type="button" class="menu-item bevel" onClick={open('player')}>
-          <IconMembers size={16} /> Player settings
-        </button>
-        {isGm && (
-          <button type="button" class="menu-item bevel" onClick={open('settings')}>
-            <IconSettings size={16} /> Campaign settings
-          </button>
-        )}
-        <button type="button" class="menu-item bevel" onClick={open('help')}>
-          <IconHelp size={16} /> Help and shortcuts
-        </button>
-        <button type="button" class="menu-item bevel" onClick={() => goToCampaign(null)}>
-          <IconLeave size={16} /> Back to campaigns
-        </button>
-      </div>
+        </div>
+      )}
     </div>
   )
 }

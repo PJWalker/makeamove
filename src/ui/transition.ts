@@ -1,5 +1,14 @@
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)')
 
+let running = 0
+
+/**
+ * Whether a view transition is under way. Starting one moves hit testing to
+ * the root, which fires pointerout/over without the pointer moving; hover
+ * effects should ignore those.
+ */
+export const inTransition = () => running > 0
+
 /** Let Preact flush the renders queued by a state change. */
 const nextRender = () => new Promise<void>((resolve) => setTimeout(resolve, 0))
 
@@ -25,13 +34,18 @@ export async function withTransition(
   const root = document.documentElement
   const classes = rootClass ? [rootClass].flat() : []
   root.classList.add(...classes)
-  const t = document.startViewTransition(async () => {
-    await update()
-    await nextRender()
-  })
-  // A newer transition skips this one; that's expected, not an error.
-  await t.finished.catch(() => {})
-  root.classList.remove(...classes)
+  running++
+  try {
+    const t = document.startViewTransition(async () => {
+      await update()
+      await nextRender()
+    })
+    // A newer transition skips this one; that's expected, not an error.
+    await t.finished.catch(() => {})
+  } finally {
+    running--
+    root.classList.remove(...classes)
+  }
 }
 
 /** Resolve once `check` passes, or after `timeout` ms, whichever is first. */

@@ -55,6 +55,8 @@ export interface ClassDef {
   load: number
   /** What the class is, in a line. */
   blurb: string
+  /** An icon from the core vocabulary (ui/entryIcons.tsx), by name. */
+  icon?: string
 }
 
 export type EffectOp = 'add' | 'set' | 'multiply' | 'min' | 'max'
@@ -81,6 +83,8 @@ export interface ItemDef {
   active?: EffectActive
   /** True for things you can wear or wield, so the sheet shows an Equipped toggle. */
   equippable?: boolean
+  /** An icon from the core vocabulary (ui/entryIcons.tsx), by name. */
+  icon?: string
 }
 
 export interface TagDef {

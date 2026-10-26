@@ -1,12 +1,14 @@
-import { growFromOrigin, hasFreshOrigin } from './morph'
+import { claimMorph, growFromOrigin, hasFreshOrigin, originPoint, releaseMorph } from './morph'
 import { nextZ } from './windows'
+import { RESIZE_CURSORS, resizeRect, type ResizeDir } from '../table/resizeRect'
 import { trackPointer } from './pointer'
 
 /*
  * Pop-up panels: non-modal <dialog>s that float above the table, open
- * without a backdrop, and can be dragged by their title bar. They keep
- * where they were left between openings; the first time, they open centred.
- * Each one grows out of whatever opened it (see morph.ts).
+ * without a backdrop, and can be dragged by their title bar. Each one opens
+ * where it came from, growing out of whatever opened it (see morph.ts), so
+ * it doesn't jump somewhere else on screen. Without an origin, a pop-up
+ * opens where it was last left, or else centred.
  */
 
 /** How much of a pop-up must stay on screen, so it can always be dragged back. */
@@ -21,6 +23,13 @@ function place(el: HTMLElement, x: number, y: number) {
   el.style.top = `${whole(Math.min(innerHeight - 40, Math.max(0, y)))}px`
 }
 
+/** Place a pop-up that is just opening wholly on screen, as near (x, y) as fits. */
+function placeWithin(el: HTMLElement, x: number, y: number) {
+  const margin = 8
+  el.style.left = `${whole(Math.max(margin, Math.min(x, innerWidth - el.offsetWidth - margin)))}px`
+  el.style.top = `${whole(Math.max(margin, Math.min(y, innerHeight - el.offsetHeight - margin)))}px`
+}
+
 /** Bring a pop-up in front of every other window. */
 export function raisePopup(dialog: HTMLElement) {
   dialog.style.zIndex = String(nextZ())
@@ -30,12 +39,20 @@ export function raisePopup(dialog: HTMLElement) {
 export function openPopup(dialog: HTMLDialogElement | null | undefined) {
   if (!dialog) return
   raisePopup(dialog)
-  if (dialog.open) return
+  if (dialog.open) {
+    releaseMorph()
+    return
+  }
+  const at = originPoint()
+  const viewMorph = claimMorph(dialog)
   // Mark it before showing, so its own fade-in doesn't start underneath.
   if (hasFreshOrigin()) dialog.dataset.morph = 'true'
   dialog.show()
   const r = dialog.getBoundingClientRect()
-  if (!dialog.style.left) {
+  if (at) {
+    // Open over the thing that spawned it.
+    placeWithin(dialog, at.x, at.y)
+  } else if (!dialog.style.left) {
     // Centred, stepping down and right past any pop-up already there.
     let x = (innerWidth - r.width) / 2
     let y = Math.max(48, (innerHeight - r.height) / 3)
@@ -50,7 +67,34 @@ export function openPopup(dialog: HTMLDialogElement | null | undefined) {
   } else {
     place(dialog, r.left, r.top)
   }
-  growFromOrigin(dialog)
+  // A view transition animates it; otherwise grow it here.
+  if (!viewMorph) growFromOrigin(dialog)
+}
+
+/**
+ * Resize a pop-up from an edge or corner, like a floating window; call from
+ * a resize zone's pointerdown. Once sized by hand, a pop-up keeps that size
+ * (its body scrolls) instead of fitting its content.
+ */
+export function resizePopup(dialog: HTMLElement, e: PointerEvent, dir: ResizeDir) {
+  if (e.button !== 0) return
+  e.preventDefault()
+  e.stopPropagation()
+  raisePopup(dialog)
+  // Layout size, not getBoundingClientRect: that would include the grow
+  // animation's scale if the pop-up is still opening.
+  const start = { x: dialog.offsetLeft, y: dialog.offsetTop, w: dialog.offsetWidth, h: dialog.offsetHeight }
+  dialog.dataset.sized = 'true'
+  const stop = trackPointer(RESIZE_CURSORS[dir], (ev) => {
+    const next = resizeRect(start, dir, ev.clientX - e.clientX, ev.clientY - e.clientY)
+    Object.assign(dialog.style, {
+      left: `${next.x}px`,
+      top: `${next.y}px`,
+      width: `${next.w}px`,
+      height: `${next.h}px`,
+    })
+  })
+  window.addEventListener('pointerup', stop, { once: true })
 }
 
 /** Drag a pop-up by its title bar; call from the bar's pointerdown. */

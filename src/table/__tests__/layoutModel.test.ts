@@ -8,7 +8,8 @@ const everywhere = (l: ReturnType<typeof defaultLayout>) =>
 describe('panel layout', () => {
   it('starts with characters on the left and chat on the right', () => {
     const l = defaultLayout(false)
-    expect(l.left.panels).toEqual(['scene', 'characters', 'items'])
+    expect(l.left.panels).toEqual(['scene', 'characters'])
+    expect(l.right.panels).toEqual(['chat', 'libraries', 'notes', 'members'])
     expect(l.right.active).toBe('chat')
   })
 
@@ -27,8 +28,8 @@ describe('panel layout', () => {
     let l = defaultLayout(false)
     l = detach(l, 'characters', win)
     expect(locate(l, 'characters')).toBe('floating')
-    expect(l.left).toMatchObject({ active: 'scene', panels: ['scene', 'items'] })
-    l = detach(detach(l, 'scene', win), 'items', win)
+    expect(l.left).toMatchObject({ active: 'scene', panels: ['scene'] })
+    l = detach(l, 'scene', win)
     expect(l.left).toMatchObject({ active: null, open: false, panels: [] })
     expect(everywhere(l)).toEqual([...PANEL_ORDER].sort())
   })
@@ -38,7 +39,7 @@ describe('panel layout', () => {
     expect(dock(l, 'chat').right.panels).toContain('chat')
     l = dock(l, 'chat', 'left')
     expect(l.left).toMatchObject({ active: 'chat', open: true })
-    expect(l.left.panels).toEqual(['scene', 'characters', 'items', 'chat'])
+    expect(l.left.panels).toEqual(['scene', 'characters', 'chat'])
     expect(l.floating).toEqual([])
     expect(l.home.chat).toBe('left')
     expect(everywhere(l)).toEqual([...PANEL_ORDER].sort());
@@ -47,31 +48,32 @@ describe('panel layout', () => {
   it('moves a docked tab between sides and repairs the side it left', () => {
     let l = dock(defaultLayout(false), 'characters', 'right', 0)
     expect(l.right.panels[0]).toBe('characters')
-    expect(l.left).toMatchObject({ active: 'scene', panels: ['scene', 'items'] })
+    expect(l.left).toMatchObject({ active: 'scene', panels: ['scene'] })
     l = setOpen(l, 'left', false)
     expect(l.left.open).toBe(false)
   })
 
   it('repairs saved data', () => {
     const l = normalise(
-      { right: { active: 'bogus', open: true, width: 400, panels: ['chat', 'chat', 'nope'] }, floating: [{ id: 'items', ...win }] },
+      { right: { active: 'bogus', open: true, width: 400, panels: ['chat', 'chat', 'nope'] }, floating: [{ id: 'libraries', ...win }] },
       false,
     )
     expect(everywhere(l)).toEqual([...PANEL_ORDER].sort())
     expect(l.right).toMatchObject({ active: 'chat', width: 400 })
-    expect(locate(l, 'items')).toBe('floating')
+    expect(locate(l, 'libraries')).toBe('floating')
     expect(normalise(null, true).right.open).toBe(false)
   })
 
   it('reorders tabs within a side without changing the open tab', () => {
-    const l = reorder(defaultLayout(false), 'items', 0)
-    expect(l.left.panels).toEqual(['items', 'scene', 'characters'])
-    expect(l.left.active).toBe('characters')
-    expect(reorder(l, 'items', 99).left.panels).toEqual(['scene', 'characters', 'items'])
+    const l = reorder(defaultLayout(false), 'members', 0)
+    expect(l.right.panels).toEqual(['members', 'chat', 'libraries', 'notes'])
+    expect(l.right.active).toBe('chat')
+    expect(reorder(l, 'members', 99).right.panels).toEqual(['chat', 'libraries', 'notes', 'members'])
   })
 
   it('puts a panel missing from saved data back on its default side', () => {
-    const l = normalise({ left: { panels: ['characters', 'items'] }, right: { panels: ['chat', 'notes', 'members'] } }, false)
-    expect(l.left.panels).toEqual(['characters', 'items', 'scene'])
+    const l = normalise({ left: { panels: ['characters'] }, right: { panels: ['chat', 'notes', 'members'] } }, false)
+    expect(l.left.panels).toEqual(['characters', 'scene'])
+    expect(l.right.panels).toEqual(['chat', 'notes', 'members', 'libraries'])
   })
 })

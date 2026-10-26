@@ -2,7 +2,7 @@ import { menuTrigger } from '../ui/menuTrigger'
 import { bounds } from '../scene/geometry'
 import { setMorphOrigin } from '../ui/morph'
 import { openPopup } from '../ui/popup'
-import { useSignal, useSignalEffect } from '@preact/signals'
+import { type Signal, useSignal, useSignalEffect } from '@preact/signals'
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import { SceneController } from '../scene/controller'
 import { DEFAULT_GRID, GRID_TYPES, MIN_GRID_SIZE } from '../scene/grid'
@@ -13,7 +13,8 @@ import type { Point } from '../scene/grid'
 import { importImage } from '../scene/images'
 import { isPlainToken, TOKEN_STYLES, type BlobRef, type TokenStyle } from '../scene/types'
 import { DEFAULT_CANVAS_COLOUR, type Campaign } from '../store/campaign'
-import { listCharacters, selectCharacter, tokenStatsByCharacter } from '../characters/api'
+import { listCharacters, selectCharacter, systemOf, tokenStatsByCharacter } from '../characters/api'
+import { NpcSheet, Sheet } from './CharactersPanel'
 import { useY } from '../store/useY'
 import { BlobImage } from '../ui/BlobImage'
 import { Button } from '../ui/Button'
@@ -36,6 +37,7 @@ import {
   IconUnlock,
 } from '../ui/icons'
 import { isTyping, MOD } from '../ui/keys'
+import { PopupTabs } from '../ui/PopupTabs'
 import { Segmented } from '../ui/Segmented'
 import { Dialog } from './CampaignDialogs'
 import { showPanel } from './panelLayout'
@@ -55,6 +57,8 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
   const controller = useSignal<SceneController | null>(null)
   const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(null)
   const tokenOptions = useSignal<string | null>(null)
+  /** Which tab the token pop-up opens on. */
+  const tokenTab = useSignal<'character' | 'token'>('token')
   const dropping = useSignal(false)
 
   // Selecting a character's token goes to that character's sheet.
@@ -185,7 +189,10 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
     const allLocked = sel.every((el) => el.locked)
     const items: MenuItem[] = []
     if (one?.type === 'token') {
-      items.push({ label: 'Token options…', Icon: IconRename, onSelect: () => (tokenOptions.value = one.id) })
+      items.push({ label: 'Token options…', Icon: IconRename, onSelect: () => {
+        tokenTab.value = 'token'
+        tokenOptions.value = one.id
+      } })
     }
     if (one?.type === 'map') items.push({ label: 'Use as token', Icon: IconToken, onSelect: () => ctl.convert(one.id, 'token') })
     if (one?.type === 'token' && one.image) {
@@ -245,6 +252,8 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
     setMorphOrigin(
       new DOMRect(host.left + b.x * cam.zoom + cam.x, host.top + b.y * cam.zoom + cam.y, b.w * cam.zoom, b.h * cam.zoom),
     )
+    // A token with a character opens on its sheet.
+    tokenTab.value = hit.characterId ? 'character' : 'token'
     tokenOptions.value = hit.id
   }
 
@@ -292,7 +301,7 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
       {menu.value && <ContextMenu {...menu.value} onClose={closeMenu} />}
       {controller.value && (
         <>
-          <TokenOptionsDialog campaign={campaign} controller={controller.value} id={tokenOptions.value} onClose={() => (tokenOptions.value = null)} />
+          <TokenOptionsDialog campaign={campaign} controller={controller.value} id={tokenOptions.value} tab={tokenTab} onClose={() => (tokenOptions.value = null)} />
           <SceneSettingsDialog campaign={campaign} sceneId={sceneId!} scene={controller.value.scene} />
         </>
       )}
@@ -305,11 +314,13 @@ function TokenOptionsDialog({
   campaign,
   controller,
   id,
+  tab,
   onClose,
 }: {
   campaign: Campaign
   controller: SceneController
   id: string | null
+  tab: Signal<'character' | 'token'>
   onClose: () => void
 }) {
   const ref = useRef<HTMLDialogElement>(null)
@@ -322,6 +333,8 @@ function TokenOptionsDialog({
   const image = useSignal<BlobRef | undefined>(undefined)
   const fileRef = useRef<HTMLInputElement>(null)
   const characters = useY(campaign.characters, () => listCharacters(campaign))
+  // The character this token stands for, as saved (not the unsaved choice below).
+  const linked = token?.characterId ? characters.find((c) => c.id === token.characterId) : undefined
 
   useEffect(() => {
     if (!token) return
@@ -340,8 +353,28 @@ function TokenOptionsDialog({
   }, [id, exists])
 
   return (
-    <Dialog dialogRef={ref} title="Token options" onClose={onClose}>
+    <Dialog dialogRef={ref} title={linked ? linked.name : 'Token options'} onClose={onClose}>
+      {linked && (
+        <PopupTabs
+          tabs={[
+            { id: 'character', label: 'Character' },
+            { id: 'token', label: 'Token' },
+          ]}
+          value={tab.value}
+          onChange={(t) => (tab.value = t)}
+        />
+      )}
+      {linked && tab.value === 'character' && (
+        <div class="popup-sheet sheet-panel">
+          {linked.kind === 'npc' ? (
+            <NpcSheet key={linked.id} campaign={campaign} system={systemOf(campaign)} c={linked} />
+          ) : (
+            <Sheet key={linked.id} campaign={campaign} system={systemOf(campaign)} c={linked} />
+          )}
+        </div>
+      )}
       <form
+        hidden={!!linked && tab.value === 'character'}
         method="dialog"
         class="dialog-form"
         onSubmit={() => {

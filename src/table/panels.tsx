@@ -3,7 +3,7 @@ import {
   IconAllowBack,
   IconCharacters,
   IconChat,
-  IconItems,
+  IconLibraries,
   IconMembers,
   IconNotes,
   IconRemoveMember,
@@ -18,14 +18,14 @@ import { Button } from '../ui/Button'
 import type { PanelId } from './panelLayout'
 import { ChatPanel } from './ChatPanel'
 import { CharactersPanel } from './CharactersPanel'
-import { ItemsPanel } from './ItemsPanel'
+import { LibrariesPanel } from './LibrariesPanel'
 import { ScenePanel } from './ScenePanel'
 
 export const PANELS: Record<PanelId, { label: string; Icon: ComponentType<any> }> = {
   scene: { label: 'Scenes', Icon: IconMap },
   chat: { label: 'Chat', Icon: IconChat },
   characters: { label: 'Characters', Icon: IconCharacters },
-  items: { label: 'Items', Icon: IconItems },
+  libraries: { label: 'Libraries', Icon: IconLibraries },
   notes: { label: 'Notes', Icon: IconNotes },
   members: { label: 'Members', Icon: IconMembers },
 }
@@ -39,7 +39,7 @@ export function PanelContent({ id, campaign }: { id: PanelId; campaign: Campaign
   if (id === 'scene') return <ScenePanel campaign={campaign} />
   if (id === 'chat') return <Chat campaign={campaign} />
   if (id === 'characters') return <CharactersPanel campaign={campaign} />
-  if (id === 'items') return <ItemsPanel campaign={campaign} />
+  if (id === 'libraries') return <LibrariesPanel campaign={campaign} />
   if (id === 'members') return <MemberList campaign={campaign} />
   const { Icon } = PANELS[id]
   return (

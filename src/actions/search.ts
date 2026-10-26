@@ -48,7 +48,7 @@ const PREFIXES: Record<string, Narrow> = {
   '>': (a) => a.kind === 'command' || a.kind === 'tool' || a.kind === 'setting',
   '/': (a) => a.kind === 'move',
   '@': (a) => a.group === 'character',
-  '#': (a) => a.group === 'note' || a.group === 'compendium',
+  '#': (a) => a.group === 'note' || a.group === 'library',
 }
 
 export function splitPrefix(input: string): { narrow: Narrow | null; query: string } {

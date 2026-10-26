@@ -11,7 +11,8 @@ import { Segmented } from '../ui/Segmented'
 import { inviteUrl } from '../sync/invite'
 import { useSignal } from '@preact/signals'
 import { createPortal } from 'preact/compat'
-import { dragPopup, raisePopup } from '../ui/popup'
+import { dragPopup, raisePopup, resizePopup } from '../ui/popup'
+import { RESIZE_DIRS } from './resizeRect'
 import { windowLayer } from '../ui/windows'
 
 export function Dialog({
@@ -50,6 +51,16 @@ export function Dialog({
         </Button>
       </header>
       <div class="dialog-body">{children}</div>
+      <span class="resize-grip" aria-hidden="true" />
+      {RESIZE_DIRS.map((dir) => (
+        <span
+          key={dir}
+          class="win-resize"
+          data-dir={dir}
+          aria-hidden="true"
+          onPointerDown={(e) => resizePopup(dialogRef.current!, e, dir)}
+        />
+      ))}
     </dialog>,
     windowLayer,
   )

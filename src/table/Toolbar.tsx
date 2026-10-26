@@ -1,6 +1,7 @@
 import type { ComponentType } from 'preact'
 import { useEffect } from 'preact/hooks'
-import { signal } from '@preact/signals'
+import { signal, useSignal } from '@preact/signals'
+import { goToCampaign } from '../router'
 import { startReorder } from '../ui/reorder'
 import { activeTool, pen, PEN_WIDTHS, setPen, type ToolId } from '../scene/tools'
 import { Button } from '../ui/Button'
@@ -8,7 +9,12 @@ import {
   IconDraw,
   IconEraser,
   IconFog,
+  IconHelp,
+  IconLeave,
   IconMeasure,
+  IconMembers,
+  IconMenu,
+  IconSettings,
   IconPan,
   IconPing,
   IconSelect,
@@ -17,6 +23,8 @@ import {
   type IconProps,
 } from '../ui/icons'
 import { isTyping } from '../ui/keys'
+import { dialogRequest } from './canvasState'
+import { ContextMenu, type MenuItem } from './ContextMenu'
 
 export const TOOLS: {
   id: ToolId
@@ -95,6 +103,7 @@ export function Toolbar({ isGm }: { isGm: boolean }) {
   return (
     <>
       <nav class="toolbar panel bevel strip across dock-top chrome" aria-label="Canvas tools">
+        <CampaignMenu isGm={isGm} />
         {tools.map(({ id, label, key, Icon, arrives }) => (
           <Button
             key={id}
@@ -111,6 +120,55 @@ export function Toolbar({ isGm }: { isGm: boolean }) {
         ))}
       </nav>
       {activeTool.value === 'draw' && <PenOptions />}
+    </>
+  )
+}
+
+/**
+ * The campaign menu, at the start of the tool strip: settings, help and the
+ * way back to the campaign list. Opens on the press, like every menu, so
+ * press, move to an item and release chooses it.
+ */
+function CampaignMenu({ isGm }: { isGm: boolean }) {
+  const menu = useSignal<{ x: number; y: number; press?: { x: number; y: number } } | null>(null)
+  const items: MenuItem[] = [
+    { label: 'Player settings…', Icon: IconMembers, onSelect: () => (dialogRequest.value = 'player') },
+    ...(isGm ? [{ label: 'Campaign settings…', Icon: IconSettings, onSelect: () => (dialogRequest.value = 'settings') }] : []),
+    { label: 'Help and shortcuts…', Icon: IconHelp, onSelect: () => (dialogRequest.value = 'help') },
+    'divider',
+    { label: 'Back to campaigns', Icon: IconLeave, onSelect: () => goToCampaign(null) },
+  ]
+  const openBelow = (el: HTMLElement, press?: { x: number; y: number }) => {
+    const r = el.getBoundingClientRect()
+    menu.value = { x: r.left, y: r.bottom + 6, press }
+  }
+  return (
+    <>
+      <Button
+        variant="icon"
+        label="Campaign menu"
+        class="toolbar-menu"
+        pressed={!!menu.value}
+        aria-haspopup="menu"
+        aria-expanded={!!menu.value}
+        onPointerDown={(e: PointerEvent) => {
+          if (e.button !== 0) return
+          if (menu.value) {
+            menu.value = null
+            return
+          }
+          openBelow(e.currentTarget as HTMLElement, { x: e.clientX, y: e.clientY })
+        }}
+        // From the keyboard: Enter or Space.
+        onClick={(e: MouseEvent) => {
+          if (e.detail === 0 && !menu.value) openBelow(e.currentTarget as HTMLElement)
+        }}
+      >
+        <IconMenu size={22} />
+      </Button>
+      {menu.value && (
+        <ContextMenu {...menu.value} items={items} button={0} label="Campaign menu" onClose={() => (menu.value = null)} />
+      )}
     </>
   )
 }

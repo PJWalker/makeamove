@@ -319,7 +319,7 @@
     font-size: var(--text-xs);
   }
 
-  /* Scenes panel: the scene list and campaign actions */
+  /* Scenes panel: the scene list and the active scene's settings */
   .scene-panel {
     display: grid;
     align-content: start;
@@ -492,15 +492,6 @@
     gap: var(--space-2);
     padding: var(--space-3) var(--space-2) var(--space-1) var(--space-4);
   }
-  .panel-header {
-    container: panel-head / inline-size;
-  }
-  /* Same breakpoint as the Characters panel's one-level layout, where the toggle does nothing. */
-  @container panel-head (max-width: 380px) {
-    .panel-header .chars-toggle {
-      display: none;
-    }
-  }
   .panel-title {
     font-size: var(--text-lg);
     line-height: 1.2;
@@ -530,7 +521,7 @@
     background: var(--surface);
     border: 1px solid #fff1;
     background-clip: padding-box;
-    box-shadow: 0 12px 32px -8px oklch(0% 0 0 / 0.55);
+    box-shadow: var(--window-shadow);
   }
   .floating-window {
     position: absolute;
@@ -1233,6 +1224,13 @@
     border-left: 0;
     border-bottom: 0;
   }
+  /* Longer text, such as a move's rules. */
+  .tooltip[data-long] {
+    max-width: min(380px, calc(100vw - 16px));
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-sm);
+    white-space: pre-line;
+  }
   .tooltip[data-instant] {
     transition: none;
   }
@@ -1378,6 +1376,10 @@
       opacity: 0;
     }
   }
+  /* The campaign menu stands a little apart from the tools after it. */
+  .toolbar .toolbar-menu {
+    margin-right: var(--space-2);
+  }
   .reorder-line {
     position: fixed;
     z-index: 1000;
@@ -1417,7 +1419,13 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
-    border-right: 1px solid #fff1;
+    /* Set apart from the sheet by tone, not a line. */
+    background: oklch(from var(--surface-sunken) l c h / 0.35);
+  }
+  /* Character rows drag (into folders, onto the map), so touch doesn't scroll them. */
+  .chars-tree .list-pick,
+  .chars-tree .list-group-head {
+    touch-action: none;
   }
   .chars-actions {
     display: flex;
@@ -1430,70 +1438,11 @@
   .chars-sheet {
     min-width: 0;
   }
-  .chars-rows {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: grid;
-    gap: 1px;
-  }
-  .chars-folder .chars-rows {
-    padding-left: var(--space-3);
-  }
-  .chars-row,
-  .chars-folder-head {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    inline-size: 100%;
-    padding: var(--space-1) var(--space-2);
-    background: none;
-    border: 0;
-    color: inherit;
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-    touch-action: none;
-  }
-  .chars-row:hover,
-  .chars-folder-head:hover {
-    background: var(--surface-raised);
-  }
-  .chars-row[data-selected='true'] {
-    background: var(--surface-raised);
-    box-shadow: inset 3px 0 0 var(--accent);
-  }
-  .chars-row .avatar {
-    width: 22px;
-    height: 22px;
-    font-size: var(--text-xs);
-    flex: none;
-  }
-  .chars-name {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .chars-tag {
-    padding: 0 4px;
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--text-muted);
-    box-shadow: inset 0 0 0 1px #fff3;
-  }
-  .chars-folder {
-    margin-bottom: var(--space-1);
-  }
-  .chars-folder[data-open='false'] .chars-folder-head {
-    opacity: 0.8;
-  }
   .chars-folder-input {
     inline-size: 100%;
   }
   .chars-tree[data-dropping='true'],
-  .chars-folder[data-dropping='true'] {
+  .chars-tree .list-group[data-dropping='true'] {
     outline: 2px dashed var(--text-muted);
     outline-offset: -2px;
   }
@@ -1539,8 +1488,13 @@
     color: inherit;
     cursor: pointer;
   }
-  .chars-toggle[aria-pressed='false'] {
-    opacity: 0.6;
+  .chars-toggle:hover:not(:disabled) {
+    color: var(--accent);
+  }
+  /* Too narrow for two columns: still there, but it can't switch. */
+  .chars-toggle:disabled {
+    opacity: 0.4;
+    cursor: default;
   }
 
   .chars-title {
@@ -1560,41 +1514,28 @@
   .chars-split:active {
     background: #fff2;
   }
-  @container (min-width: 381px) {
-    .chars-grid[data-hidden='true'] {
-      grid-template-columns: 1fr;
-    }
-    .chars-grid[data-hidden='true'] .chars-back {
-      display: flex;
-    }
-    .chars-grid[data-hidden='true'] .chars-list,
-    .chars-grid[data-hidden='true'] .chars-split {
-      display: none;
-    }
+  /*
+   * One at a time: a navigation stack, the list or the sheet (CharactersPanel
+   * chooses this when asked, or when the panel is too narrow for two).
+   */
+  .chars-grid[data-layout='stack'] {
+    grid-template-columns: 1fr;
   }
-  /* Too narrow for two panes: show one level at a time, like a navigation stack. */
-  @container (max-width: 380px) {
-    .chars-grid {
-      grid-template-columns: 1fr;
-    }
-    .chars-grid[data-level='list'] .chars-detail,
-    .chars-grid[data-level='sheet'] .chars-list {
-      display: none;
-    }
-    .chars-list {
-      border-right: 0;
-    }
-    /* Only one level shows, so they can share a transition name. */
-    .chars-grid[data-level='sheet'] .chars-detail,
-    .chars-grid[data-level='list'] .chars-list {
-      view-transition-name: chars-pane;
-    }
-    .chars-split {
-      display: none;
-    }
-    .chars-back {
-      display: flex;
-    }
+  .chars-grid[data-layout='stack'][data-level='list'] .chars-detail,
+  .chars-grid[data-layout='stack'][data-level='sheet'] .chars-list,
+  .chars-grid[data-layout='stack'] .chars-split {
+    display: none;
+  }
+  .chars-grid[data-layout='stack'] .chars-list {
+    border-right: 0;
+  }
+  .chars-grid[data-layout='stack'] .chars-back {
+    display: flex;
+  }
+  /* Only one level shows, so they can share a transition name. */
+  .chars-grid[data-layout='stack'][data-level='sheet'] .chars-detail,
+  .chars-grid[data-layout='stack'][data-level='list'] .chars-list {
+    view-transition-name: chars-pane;
   }
 
   /* Character sheet */
@@ -1604,16 +1545,11 @@
     gap: var(--space-3);
     align-content: start;
   }
-  .sheet-picker,
   .sheet-row,
   .sheet-levelup {
     display: flex;
     gap: var(--space-2);
     align-items: center;
-  }
-  .sheet-picker .input {
-    flex: 1;
-    min-width: 0;
   }
   .sheet-new {
     display: grid;
@@ -1726,8 +1662,7 @@
   .sheet-derived [data-over='true'] dd {
     color: var(--danger);
   }
-  .sheet-stats,
-  .move-list {
+  .sheet-stats {
     list-style: none;
     margin: 0;
     padding: 0;
@@ -1795,70 +1730,9 @@
     display: grid;
     gap: var(--space-2);
   }
-  .move-row {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 0 var(--space-2);
-    align-items: center;
-  }
-  .move-pick {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-1) var(--space-2);
-    background: none;
-    border: 0;
-    color: inherit;
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-  }
-  .move-pick:hover,
-  .move-row[data-open='true'] .move-pick {
-    background: var(--surface-raised);
-  }
-  .move-row[data-open='true'] .move-pick {
-    box-shadow: inset 3px 0 0 var(--accent);
-  }
-  .move-name {
-    font-weight: 600;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .move-tag {
-    flex: none;
-    padding: 0 4px;
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    color: var(--text-faint);
-    box-shadow: inset 0 0 0 1px #fff3;
-  }
-  /* Opens by animating its row's height from 0 to its content. */
-  .move-detail {
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-rows: 0fr;
-    overflow: hidden;
-    padding-inline: var(--space-3);
-    background: var(--surface-raised);
-    transition: grid-template-rows 140ms var(--ease);
-  }
-  .move-detail > * {
-    min-height: 0;
-    overflow: hidden;
-  }
-  .move-row[data-open='true'] .move-detail {
-    grid-template-rows: 1fr;
-    padding-block: var(--space-2);
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .move-detail {
-      transition: none;
-    }
+  .dialog .move-window-text {
+    margin: 0;
+    max-width: 52ch;
   }
   .move-text {
     margin: 0 0 var(--space-2);
@@ -1881,41 +1755,78 @@
     font-size: var(--text-sm);
   }
 
-  .item-list {
-    list-style: none;
+  .item-tags {
     margin: 0;
-    padding: 0;
-    display: grid;
-    gap: var(--space-1);
+    font-size: var(--text-xs);
   }
-  .item-row {
+  .item-ghost {
     display: flex;
+    align-items: center;
     gap: var(--space-2);
-    align-items: start;
-    justify-content: space-between;
+    padding: var(--space-1) var(--space-3);
+    border: 0;
+    color: var(--text);
+    font: inherit;
+    font-weight: 600;
+    white-space: nowrap;
+    pointer-events: none;
+    box-shadow: var(--window-shadow);
+    cursor: grabbing;
   }
-  .item-row details {
-    flex: 1;
-    min-width: 0;
-  }
-  .item-row summary {
-    cursor: pointer;
-    padding: var(--space-1) 0;
-  }
-  .item-row[data-equipped='true'] .move-name {
+  .item-ghost .list-lead {
     color: var(--accent);
   }
-  .item-meta {
-    margin-left: var(--space-2);
+  /* Where an item will land: a character's inventory, or their row in the list. */
+  .inventory[data-dropping='true'],
+  .list-pick[data-dropping='true'] {
+    outline: 2px dashed var(--text-muted);
+    outline-offset: 2px;
+  }
+  .list-pick[data-dropping='true'] {
+    outline-offset: -2px;
+  }
+  .inventory[data-dropped='true'],
+  .list-pick[data-dropped='true'] {
+    animation: item-landed 600ms var(--ease);
+  }
+  @keyframes item-landed {
+    from {
+      background-color: var(--accent-soft);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .inventory[data-dropped='true'],
+    .list-pick[data-dropped='true'] {
+      animation: none;
+    }
+  }
+  .sheet-heading [data-over='true'] {
+    color: var(--danger);
+  }
+  .inventory-find {
+    justify-self: start;
+  }
+
+  /* Libraries */
+  .libraries {
+    display: grid;
+    align-content: start;
+    gap: var(--space-4);
+  }
+  .libraries-tools {
+    display: grid;
+    gap: var(--space-2);
+  }
+  .libraries-target {
+    margin: 0;
     font-size: var(--text-xs);
   }
-  .item-tags {
-    margin: 0 0 var(--space-2);
-    font-size: var(--text-xs);
+  .library-source {
+    display: grid;
+    gap: var(--space-2);
   }
-  .item-actions {
-    display: flex;
-    gap: var(--space-1);
+  .library-source .eyebrow {
+    margin: 0;
   }
   .sheet-attribution {
     font-size: var(--text-xs);
@@ -1962,7 +1873,7 @@
 
 
 
-  /* Campaign actions at the foot of the expanded scene bar */
+  /* Actions under the scene list (Scene settings) */
   .menu-section {
     display: grid;
     gap: 2px;
@@ -2014,20 +1925,37 @@
     display: flex;
   }
   .dialog .dialog-body {
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
   }
-  /* Pop-ups fade with CSS rather than a view transition. */
+  /* Sized by hand (ui/popup.ts): keep that size rather than fit the content. */
+  .dialog[data-sized='true'] {
+    max-width: none;
+    max-height: none;
+  }
+  /*
+   * Pop-ups fade with CSS rather than a view transition. They open with a
+   * fade and rise, and close by receding: shrinking slightly about their
+   * centre as they fade, as if sinking back into the table.
+   */
   .dialog {
     opacity: 0;
-    translate: 0 8px;
+    scale: 0.96;
+    transform-origin: 50% 50%;
     transition:
-      opacity 180ms var(--ease),
-      translate 180ms var(--ease),
+      opacity 180ms ease-in,
+      scale 180ms ease-in,
       display 180ms allow-discrete;
   }
   .dialog[open] {
     opacity: 1;
     translate: 0 0;
+    scale: 1;
+    transition:
+      opacity 180ms var(--ease),
+      translate 180ms var(--ease),
+      display 180ms allow-discrete;
   }
   @starting-style {
     .dialog[open] {
@@ -2036,7 +1964,7 @@
     }
   }
   /* Growing out of a menu item (ui/morph.ts) replaces the fade and rise. */
-  .dialog[data-morph='true'] {
+  .dialog[open][data-morph='true'] {
     opacity: 1;
     translate: 0 0;
   }
@@ -2048,6 +1976,8 @@
   }
   .dialog-body {
     display: grid;
+    /* Rows keep their own height when a pop-up is sized taller than its content. */
+    align-content: start;
     gap: var(--space-4);
     padding: var(--space-3) var(--space-4) var(--space-5);
   }
@@ -2297,5 +2227,155 @@
     .palette {
       animation: none;
     }
+  }
+}
+
+@layer layout {
+  /*
+   * Tabs in a pop-up (the token pop-up: Character, Token). Trapezoids: the top
+   * corners are cut as deep as the tab is tall, so each side is one diagonal,
+   * like the ends of the tool strip. Neighbours overlap so their diagonals
+   * nest; the chosen tab sits on top, open to the content like a folder tab.
+   */
+  /*
+   * The band under the title runs edge to edge, out through the dialog
+   * body's padding, and fades in from the title area above.
+   */
+  .popup-tabs {
+    --tab-h: 34px;
+    /* How far neighbouring tabs tuck under each other. */
+    --tab-tuck: calc(var(--tab-h) - var(--space-2));
+    --tab-rule: 2px;
+    position: relative;
+    display: flex;
+    margin: calc(var(--space-3) * -1) calc(var(--space-4) * -1) 0;
+    padding: var(--space-4) var(--space-4) 0;
+  }
+  /*
+   * The band and the gold rule under the tabs, both with a gap cut where the
+   * chosen tab opens into the content (PopupTabs sets --tab-l and --tab-r).
+   */
+  .popup-tabs::before,
+  .popup-tabs::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .popup-tabs::before {
+    background: linear-gradient(to bottom, transparent, var(--surface-sunken));
+    clip-path: polygon(
+      0 0,
+      100% 0,
+      100% 100%,
+      var(--tab-r, 100%) 100%,
+      calc(var(--tab-r, 100%) - var(--tab-h)) calc(100% - var(--tab-h)),
+      calc(var(--tab-l, 100%) + var(--tab-h)) calc(100% - var(--tab-h)),
+      var(--tab-l, 100%) 100%,
+      0 100%
+    );
+  }
+  .popup-tabs::after {
+    top: auto;
+    height: var(--tab-rule);
+    /*
+     * The rule runs on under the foot of the tab's outline, so the corner
+     * where they meet is filled rather than notched.
+     */
+    --overlap: var(--tab-rule);
+    background: linear-gradient(
+      to right,
+      var(--accent) calc(var(--tab-l, 100%) + var(--overlap)),
+      transparent calc(var(--tab-l, 100%) + var(--overlap)) calc(var(--tab-r, 100%) - var(--overlap)),
+      var(--accent) calc(var(--tab-r, 100%) - var(--overlap))
+    );
+  }
+  .popup-tab {
+    --bevel: 0px;
+    --bevel-tl: var(--tab-h);
+    --bevel-tr: var(--tab-h);
+    position: relative;
+    height: var(--tab-h);
+    padding: 0 calc(var(--tab-h) + var(--space-1));
+    border: 0;
+    background: var(--surface-raised);
+    color: var(--text-muted);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      background-color 140ms var(--ease),
+      color 140ms var(--ease);
+  }
+  .popup-tab + .popup-tab {
+    margin-left: calc(var(--tab-tuck) * -1);
+  }
+  .popup-tab:hover:not([aria-selected='true']) {
+    background: var(--surface-sunken-hover);
+    color: var(--text);
+  }
+  /* The chosen tab is open to the content below, outlined in gold on three sides. */
+  .popup-tab[aria-selected='true'] {
+    z-index: 1;
+    background: transparent;
+    color: var(--accent);
+  }
+  .popup-tab[aria-selected='true']::before {
+    /* Inside a 45° bevel, a rule this thick runs about 1.41× as wide. */
+    --inner: calc(var(--tab-rule) * 1.4142);
+    --inner-top: calc(var(--tab-h) + var(--tab-rule) * 0.4142);
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--accent);
+    clip-path: polygon(
+      0 100%,
+      var(--tab-h) 0,
+      calc(100% - var(--tab-h)) 0,
+      100% 100%,
+      calc(100% - var(--inner)) 100%,
+      calc(100% - var(--inner-top)) var(--tab-rule),
+      var(--inner-top) var(--tab-rule),
+      var(--inner) 100%
+    );
+  }
+  /*
+   * The chosen tab is see-through, so its neighbours stop at its edge
+   * instead of showing through where they tuck under it.
+   */
+  .popup-tab:has(+ [aria-selected='true']) {
+    clip-path: polygon(
+      0 100%,
+      var(--tab-h) 0,
+      calc(100% - var(--tab-h)) 0,
+      calc(100% - var(--tab-tuck) / 2) calc(100% - var(--tab-tuck) / 2),
+      calc(100% - var(--tab-tuck)) 100%
+    );
+  }
+  [aria-selected='true'] + .popup-tab {
+    clip-path: polygon(
+      var(--tab-tuck) 100%,
+      calc(var(--tab-tuck) / 2) calc(100% - var(--tab-tuck) / 2),
+      var(--tab-h) 0,
+      calc(100% - var(--tab-h)) 0,
+      100% 100%
+    );
+  }
+  .popup-tab:focus-visible {
+    outline: none;
+    color: var(--text);
+    text-decoration: underline;
+  }
+  .popup-tab[aria-selected='true']:focus-visible {
+    color: var(--accent);
+  }
+  /* Hidden panes stay hidden, whatever display their own styles set. */
+  .dialog [hidden] {
+    display: none !important;
+  }
+  .popup-sheet {
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0 var(--space-4) var(--space-4);
   }
 }

@@ -1,4 +1,4 @@
-import { setMorphOrigin } from '../ui/morph'
+import { morphOpen, setMorphOrigin } from '../ui/morph'
 import { elementAt, watchHoldRelease } from '../ui/holdRelease'
 import type { ComponentType } from 'preact'
 import { createPortal } from 'preact/compat'
@@ -23,12 +23,33 @@ export type MenuItem =
  * plays a fade first (the chosen item blinks while the rest fades), and
  * `onClose` fires once it ends.
  *
+ * An item whose label ends in "…" opens a pop-up, as on macOS; the menu
+ * closes at once and the pop-up morphs out of the item (morph.ts).
+ *
  * Press and hold works as on macOS: hold the right button, move to an item
  * and let go to choose it; let go anywhere else to close the menu. A quick
  * right-click (released at once, without moving) leaves the menu open.
  */
 
-export function ContextMenu({ x, y, items, onClose }: { x: number; y: number; items: MenuItem[]; onClose: () => void }) {
+export function ContextMenu({
+  x,
+  y,
+  items,
+  onClose,
+  button = 2,
+  press,
+  label,
+}: {
+  x: number
+  y: number
+  items: MenuItem[]
+  onClose: () => void
+  /** The button whose release chooses an item: 2 for right-click menus, 0 for a menu button. */
+  button?: number
+  /** Where the opening press was, when the menu opens somewhere else (below a menu button). */
+  press?: { x: number; y: number }
+  label?: string
+}) {
   const ref = useRef<HTMLDivElement>(null)
   // Index of the chosen item, or -1 when dismissed; null while open.
   const [closing, setClosing] = useState<number | null>(null)
@@ -50,7 +71,7 @@ export function ContextMenu({ x, y, items, onClose }: { x: number; y: number; it
   // Press, hold and release: the release chooses (or closes).
   useEffect(
     () =>
-      watchHoldRelease(x, y, 2, (e) => {
+      watchHoldRelease(press?.x ?? x, press?.y ?? y, button, (e) => {
         const item = elementAt(e)?.closest<HTMLButtonElement>('.menu-item:not(:disabled)')
         if (item && ref.current?.contains(item)) item.click()
         else dismissRef.current()
@@ -117,6 +138,7 @@ export function ContextMenu({ x, y, items, onClose }: { x: number; y: number; it
       ref={ref}
       class="context-menu panel bevel"
       role="menu"
+      aria-label={label}
       style={{ left: x, top: y }}
       data-closing={closing !== null}
       onAnimationEnd={(e) => {
@@ -138,7 +160,17 @@ export function ContextMenu({ x, y, items, onClose }: { x: number; y: number; it
             onPointerMove={(e) => e.currentTarget.focus({ preventScroll: true })}
             disabled={item.disabled}
             onClick={(e) => {
-              // Anything this item opens grows out of it.
+              // An item ending in "…" opens a pop-up, which morphs out of the
+              // item while the menu goes at once.
+              if (item.label.endsWith('…') && !closingRef.current) {
+                closingRef.current = true
+                morphOpen(e.currentTarget, () => {
+                  onClose()
+                  item.onSelect()
+                })
+                return
+              }
+              // Anything else it opens still grows out of it.
               setMorphOrigin(e.currentTarget)
               dismiss(i)
               item.onSelect()

@@ -109,6 +109,14 @@ export function deleteFolder(campaign: Campaign, id: string) {
   })
 }
 
+/** Delete a character, and stop anyone playing it from pointing at it. */
+export function deleteCharacter(campaign: Campaign, id: string) {
+  campaign.doc.transact(() => {
+    for (const m of campaign.members.values()) if (m.get('character') === id) m.delete('character')
+    campaign.characters.delete(id)
+  })
+}
+
 export function moveToFolder(campaign: Campaign, characterId: string, folderId: string | undefined) {
   const m = campaign.characters.get(characterId)
   if (!m) return

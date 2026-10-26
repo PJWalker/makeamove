@@ -1,5 +1,5 @@
-import { signal, useSignal } from '@preact/signals'
-import { useEffect, useRef } from 'preact/hooks'
+import { computed, signal, useSignal } from '@preact/signals'
+import { useEffect, useLayoutEffect, useRef } from 'preact/hooks'
 import { withTransition } from '../ui/transition'
 import {
   bump,
@@ -9,6 +9,7 @@ import {
   listCharacters,
   listFolders,
   moveToFolder,
+  deleteCharacter,
   newCharacter,
   newNpc,
   renameFolder,
@@ -33,47 +34,74 @@ import { colourOf } from '../scene/presence'
 import { TOKEN_STYLES } from '../scene/types'
 import { menuTrigger } from '../ui/menuTrigger'
 import { openPopup } from '../ui/popup'
-import { IconAdd, IconBack, IconDelete, IconFolder, IconListHide, IconListShow, IconRemove, IconImage, IconRename } from '../ui/icons'
+import { IconAdd, IconBack, IconDelete, IconFolder, IconLayoutSingle, IconLayoutSplit, IconRemove, IconImage, IconRename } from '../ui/icons'
 import { Segmented } from '../ui/Segmented'
 import { Dialog } from './CampaignDialogs'
+import { EntryRow, EntryWindow, rollTag, useEntryWindows } from './EntryWindow'
+import { Inventory } from './Inventory'
+import { List, ListGroup, ListRow, Tag } from '../ui/List'
+import { entryIcon } from '../ui/entryIcons'
 import { ContextMenu, type MenuItem } from './ContextMenu'
 import { dragToFolder } from './folderDrag'
 import { tokenDrop } from './canvasState'
 import { dragToken } from './tokenDrag'
 
-// The list pane's width and whether it is tucked away (wide layout only).
+/*
+ * Layout. There is one choice, kept per device: the list and the sheet side
+ * by side, or one at a time (a navigation stack: pick a character to open
+ * its sheet, go back to return to the list). When the panel is too narrow
+ * for two columns it shows one at a time, whatever the choice; the toggle
+ * stays put and says why it can't switch.
+ */
+export type CharsLayout = 'split' | 'stack'
+
+/** Narrower than this, the panel can only show one at a time. */
+const SPLIT_MIN_W = 381
+
 const LIST_KEY = 'makeamove.charsList'
 const saved = (() => {
   try {
-    return JSON.parse(localStorage.getItem(LIST_KEY) ?? '{}') as { w?: number; hidden?: boolean }
+    return JSON.parse(localStorage.getItem(LIST_KEY) ?? '{}') as { w?: number; layout?: CharsLayout }
   } catch {
     return {}
   }
 })()
 const listWidth = signal(saved.w ?? 200)
-const listHidden = signal(saved.hidden ?? false)
+/** What the user chose. */
+const chosenLayout = signal<CharsLayout>(saved.layout ?? 'split')
+/** Whether the panel is too narrow for two columns (measured by the panel). */
+const tooNarrow = signal(false)
+/** What actually shows. */
+const layout = computed<CharsLayout>(() => (tooNarrow.value ? 'stack' : chosenLayout.value))
+
+const saveList = () => localStorage.setItem(LIST_KEY, JSON.stringify({ w: listWidth.value, layout: chosenLayout.value }))
+
+/** The layout switch in the panel's title bar. */
 export function CharacterListToggle() {
-  const hidden = listHidden.value
-  const label = hidden ? 'Show character list' : 'Hide character list'
+  const split = layout.value === 'split'
+  const label = tooNarrow.value
+    ? 'One at a time (widen the panel to see the list and sheet side by side)'
+    : split
+      ? 'Side by side: click to show one at a time'
+      : 'One at a time: click to show the list and sheet side by side'
   return (
     <button
       type="button"
       class="chars-toggle"
       aria-label={label}
       title={label}
-      aria-pressed={!hidden}
+      aria-pressed={split}
+      disabled={tooNarrow.value}
       onPointerDown={(e) => e.stopPropagation()}
       onClick={() => {
-        listHidden.value = !hidden
+        chosenLayout.value = split ? 'stack' : 'split'
         saveList()
       }}
     >
-      {hidden ? <IconListShow size={16} /> : <IconListHide size={16} />}
+      {split ? <IconLayoutSplit size={16} /> : <IconLayoutSingle size={16} />}
     </button>
   )
 }
-
-const saveList = () => localStorage.setItem(LIST_KEY, JSON.stringify({ w: listWidth.value, hidden: listHidden.value }))
 
 function dragSplit(e: PointerEvent) {
   if (e.button !== 0) return
@@ -100,26 +128,41 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
   const isGm = useY(campaign.members, () => campaign.isGm())
   const creating = useSignal(false)
   const selected = characters.find((c) => c.id === selectedId)
-  // In a narrow panel only one level shows at a time: the list or the sheet.
+  // One at a time: which level shows, the list or the sheet.
   const level = useSignal<'list' | 'sheet'>(selectedId ? 'sheet' : 'list')
+  const rootRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = rootRef.current
+    if (!el) return
+    const ro = new ResizeObserver(() => (tooNarrow.value = el.clientWidth < SPLIT_MIN_W))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
   const go = (to: 'list' | 'sheet') => {
     if (level.value === to) return
+    // Side by side, both levels show; only the stack slides between them.
+    if (layout.peek() !== 'stack') {
+      level.value = to
+      return
+    }
     void withTransition(() => {
       level.value = to
     }, { rootClass: to === 'sheet' ? 'vt-chars-fwd' : 'vt-chars-back' })
   }
   const seen = useRef(selectedId)
   useEffect(() => {
-    if (seen.current !== selectedId && selectedId) go('sheet')
+    // The open character was deleted: back to the list, not on to another sheet.
+    if (seen.current && seen.current !== selectedId && !campaign.characters.has(seen.current)) go('list')
+    else if (seen.current !== selectedId && selectedId) go('sheet')
     seen.current = selectedId
   }, [selectedId])
 
   return (
-    <div class="chars">
+    <div class="chars" ref={rootRef}>
       <div
         class="chars-grid"
+        data-layout={layout.value}
         data-level={level.value}
-        data-hidden={listHidden.value}
         style={{ '--list-w': `${listWidth.value}px` }}
       >
       <CharacterList
@@ -151,13 +194,7 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
       />
       <div class="chars-detail">
       <div class="chars-back">
-        <button type="button" class="chars-back-btn chars-back-only" aria-label="Characters" onClick={() => {
-            go('list')
-            if (listHidden.value) {
-              listHidden.value = false
-              saveList()
-            }
-          }}>
+        <button type="button" class="chars-back-btn chars-back-only" aria-label="Back to the character list" onClick={() => go('list')}>
           <IconBack />
         </button>
         <span class="chars-title">{creating.value ? 'New character' : (selected?.name ?? 'Characters')}</span>
@@ -204,6 +241,8 @@ function CharacterList({
   // A folder being named: its id, or 'new'.
   const naming = useSignal<string | null>(null)
   const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(null)
+  // A character waiting for its deletion to be confirmed.
+  const deleting = useSignal<string | null>(null)
   const known = new Set(folders.map((f) => f.id))
   const inFolder = (id: string) => characters.filter((c) => c.folder === id)
   const loose = characters.filter((c) => !c.folder || !known.has(c.folder))
@@ -223,19 +262,27 @@ function CharacterList({
           if (f.id !== c.folder) items.push({ label: `Move to ${f.name}`, Icon: IconFolder, onSelect: () => moveToFolder(campaign, c.id, f.id) })
         }
         if (c.folder && known.has(c.folder)) items.push({ label: 'Remove from folder', onSelect: () => moveToFolder(campaign, c.id, undefined) })
+        if (items.length) items.push('divider')
+        items.push({ label: 'Delete character…', Icon: IconDelete, danger: true, onSelect: () => (deleting.value = c.id) })
       }
       if (items.length) menu.value = { x, y, items }
     })
     return (
-      <li key={c.id}>
-        <button
-          type="button"
-          class="chars-row"
-          data-selected={c.id === selectedId}
-          data-kind={c.kind}
-          title={c.kind === 'npc' ? `${c.name} (NPC)` : `${c.name} (${system.classes.find((k) => k.id === c.classId)?.name ?? c.classId})`}
-          onClick={() => onPick(c.id)}
-          onPointerDown={(e) => {
+      <ListRow
+        key={c.id}
+        lead={<Avatar id={c.id} name={c.name} />}
+        name={c.name}
+        tag={c.kind === 'npc' ? 'NPC' : null}
+        selected={c.id === selectedId}
+        onPick={() => onPick(c.id)}
+        row={{
+          'data-tip': c.kind === 'npc' ? `${c.name} (NPC)` : `${c.name} (${system.classes.find((k) => k.id === c.classId)?.name ?? c.classId})`,
+          'data-tip-side': true,
+        }}
+        pick={{
+          'data-kind': c.kind,
+          'data-item-drop': mine ? c.id : undefined,
+          onPointerDown: (e) => {
             trigger.onPointerDown(e)
             dragToFolder(
               e,
@@ -243,14 +290,10 @@ function CharacterList({
               (x, y) =>
                 tokenDrop.value?.(x, y, { characterId: c.id, name: c.name, image: c.portrait, style: c.tokenStyle, colour: c.tokenColour }),
             )
-          }}
-          onContextMenu={trigger.onContextMenu}
-        >
-          <Avatar id={c.id} name={c.name} />
-          <span class="chars-name">{c.name}</span>
-          {c.kind === 'npc' && <span class="chars-tag">NPC</span>}
-        </button>
-      </li>
+          },
+          onContextMenu: trigger.onContextMenu,
+        }}
+      />
     )
   }
 
@@ -266,8 +309,10 @@ function CharacterList({
       }
     })
 
+  const doomed = deleting.value ? characters.find((c) => c.id === deleting.value) : undefined
   return (
     <nav class="chars-list" aria-label="Characters">
+      {doomed && <DeleteCharacter campaign={campaign} c={doomed} onClose={() => (deleting.value = null)} />}
       <div class="chars-actions">
         <Button size="sm" onClick={onNew}>
           New
@@ -290,34 +335,32 @@ function CharacterList({
           const open = !folded.value.has(f.id)
           const trigger = folderMenu(f)
           return (
-            <section key={f.id} class="chars-folder" data-folder-drop={f.id} data-open={open}>
-              {naming.value === f.id ? (
-                <FolderName
-                  initial={f.name}
-                  onDone={(name) => {
-                    if (name) renameFolder(campaign, f.id, name)
-                    naming.value = null
-                  }}
-                />
-              ) : (
-                <button
-                  type="button"
-                  class="chars-folder-head"
-                  aria-expanded={open}
-                  onClick={() => toggle(f.id)}
-                  onPointerDown={trigger.onPointerDown}
-                  onContextMenu={trigger.onContextMenu}
-                >
-                  <IconFolder size={16} />
-                  <span class="chars-name">{f.name}</span>
-                  <span class="muted">{kids.length}</span>
-                </button>
-              )}
-              {open && <ul class="chars-rows">{kids.map(row)}</ul>}
-            </section>
+            <ListGroup
+              key={f.id}
+              label={f.name}
+              lead={<IconFolder size={16} />}
+              count={kids.length}
+              open={open}
+              onToggle={() => toggle(f.id)}
+              head={{ onPointerDown: trigger.onPointerDown, onContextMenu: trigger.onContextMenu }}
+              group={{ 'data-folder-drop': f.id }}
+              replaceHead={
+                naming.value === f.id ? (
+                  <FolderName
+                    initial={f.name}
+                    onDone={(name) => {
+                      if (name) renameFolder(campaign, f.id, name)
+                      naming.value = null
+                    }}
+                  />
+                ) : undefined
+              }
+            >
+              <List>{kids.map(row)}</List>
+            </ListGroup>
           )
         })}
-        <ul class="chars-rows">{loose.map(row)}</ul>
+        <List>{loose.map(row)}</List>
         {!characters.length && !folders.length && <p class="muted chars-empty">No characters yet.</p>}
       </div>
       {menu.value && <ContextMenu {...menu.value} onClose={() => (menu.value = null)} />}
@@ -439,7 +482,7 @@ function NewCharacter({
 }
 
 /** A non-player character: HP and the fields the game system lists for NPCs. */
-function NpcSheet({ campaign, system, c }: { campaign: Campaign; system: GameSystem; c: CharacterView }) {
+export function NpcSheet({ campaign, system, c }: { campaign: Campaign; system: GameSystem; c: CharacterView }) {
   const editable = canEdit(campaign, c)
   const set = (key: string, value: unknown) => setField(campaign, c.id, key, value)
   return (
@@ -496,6 +539,7 @@ function NpcSheet({ campaign, system, c }: { campaign: Campaign; system: GameSys
           )}
         </label>
       ))}
+      <Inventory campaign={campaign} c={c} editable={editable} />
       <label class="field">
         Notes
         <textarea class="input bevel" rows={4} value={c.notes} disabled={!editable} onChange={(e) => set('notes', e.currentTarget.value)} />
@@ -545,7 +589,7 @@ function Counter({
 
 const signedStr = (n: number) => (n < 0 ? `−${-n}` : `+${n}`)
 
-function Sheet({ campaign, system, c }: { campaign: Campaign; system: GameSystem; c: CharacterView }) {
+export function Sheet({ campaign, system, c }: { campaign: Campaign; system: GameSystem; c: CharacterView }) {
   const d = derive(c, system)
   const editable = canEdit(campaign, c)
   const set = (key: string, value: unknown) => setField(campaign, c.id, key, value)
@@ -682,6 +726,8 @@ function Sheet({ campaign, system, c }: { campaign: Campaign; system: GameSystem
         <MoveList system={system} moves={moves} onMake={make} />
       </section>
 
+      <Inventory campaign={campaign} c={c} d={d} editable={editable} />
+
       <section class="sheet-section" aria-label="Bonds and notes">
         <h3 class="sheet-heading">Bonds &amp; notes</h3>
         <label class="field">
@@ -701,23 +747,18 @@ function Sheet({ campaign, system, c }: { campaign: Campaign; system: GameSystem
 type MoveFilter = 'all' | MoveDef['category']
 const FILTER_LABEL: Record<MoveFilter, string> = { all: 'All', class: 'Class', basic: 'Basic', special: 'Special' }
 
-/** What a move rolls, as a short tag for its row. */
-function rollTag(system: GameSystem, m: MoveDef) {
-  if (!m.roll) return null
-  if (m.roll.stat === 'choose') return 'any'
-  if (m.roll.stat === 'bond') return 'bond'
-  return system.stats.find((s) => s.id === m.roll!.stat)?.abbr ?? m.roll.stat
-}
-
 /**
- * Moves as a filterable list: one row each. Choosing a row opens its rules
- * right beneath it, and only one is open at a time.
+ * Moves as a filterable list: one row each, with the move's rules in a
+ * tooltip beside the row. Clicking a move turns its tooltip into a window
+ * that stays open, to read and make the move from.
  */
 function MoveList({ system, moves, onMake }: { system: GameSystem; moves: MoveDef[]; onMake: (m: MoveDef) => void }) {
   const categories = (['class', 'basic', 'special'] as const).filter((k) => moves.some((m) => m.category === k))
   const filter = useSignal<MoveFilter>(categories.includes('class') ? 'class' : 'all')
-  const openId = useSignal<string | null>(null)
+  const windows = useEntryWindows()
   const shown = filter.value === 'all' ? moves : moves.filter((m) => m.category === filter.value)
+  const verb = (m: MoveDef) => (m.roll ? 'Roll' : 'Post')
+
   return (
     <div class="moves">
       {categories.length > 1 && (
@@ -728,30 +769,35 @@ function MoveList({ system, moves, onMake }: { system: GameSystem; moves: MoveDe
           onChange={(k) => (filter.value = k)}
         />
       )}
-      <ul class="move-list">
-        {shown.map((m) => {
-          const tag = rollTag(system, m)
-          return (
-            <li key={m.id} class="move-row" data-open={m.id === openId.value}>
-              <button
-                type="button"
-                class="move-pick"
-                aria-expanded={m.id === openId.value}
-                onClick={() => (openId.value = m.id === openId.value ? null : m.id)}
-              >
-                <span class="move-name">{m.name}</span>
-                {tag && <span class="move-tag">{tag}</span>}
-              </button>
-              <Button size="sm" onClick={() => onMake(m)}>
-                {m.roll ? 'Roll' : 'Post'}
-              </Button>
-              <div class="move-detail" role="region" aria-label={m.name} inert={m.id !== openId.value}>
-                <p class="move-text">{m.text}</p>
-              </div>
-            </li>
-          )
-        })}
-      </ul>
+      <List>
+        {shown.map((m) => (
+          <EntryRow
+            key={m.id}
+            name={m.name}
+            Icon={entryIcon('move', m.category === 'class' ? 'class-move' : undefined)}
+            tag={rollTag(system, m)}
+            tip={m.text}
+            onOpen={(row) => windows.show(`move:${m.id}`, row)}
+          >
+            <Button size="sm" onClick={() => onMake(m)}>
+              {verb(m)}
+            </Button>
+          </EntryRow>
+        ))}
+      </List>
+      {windows.keys.map((key) => {
+        const m = moves.find((k) => `move:${k.id}` === key)
+        if (!m) return null
+        const tag = rollTag(system, m)
+        return (
+          <EntryWindow key={key} entryKey={key} title={m.name} text={m.text} onClose={() => windows.close(key)}>
+            {tag && <Tag>{tag}</Tag>}
+            <Button variant="primary" onClick={() => onMake(m)}>
+              {verb(m)}
+            </Button>
+          </EntryWindow>
+        )
+      })}
     </div>
   )
 }
@@ -811,11 +857,39 @@ function TokenChip({ campaign, c, editable }: { campaign: Campaign; c: Character
 }
 
 /** How this character's token looks when placed on a map. */
+/** Asks before deleting a character: it can't be undone. */
+function DeleteCharacter({ campaign, c, onClose }: { campaign: Campaign; c: CharacterView; onClose: () => void }) {
+  const ref = useRef<HTMLDialogElement>(null)
+  useLayoutEffect(() => openPopup(ref.current), [])
+  return (
+    <Dialog dialogRef={ref} title="Delete character" onClose={onClose}>
+      <p>
+        Delete <strong>{c.name}</strong>? Their sheet is gone for everyone, and tokens on the map stop being linked to
+        them. This can't be undone.
+      </p>
+      <div class="form-actions">
+        <Button variant="ghost" onClick={() => ref.current?.close()}>
+          Cancel
+        </Button>
+        <Button
+          variant="danger"
+          onClick={() => {
+            deleteCharacter(campaign, c.id)
+            ref.current?.close()
+          }}
+        >
+          Delete
+        </Button>
+      </div>
+    </Dialog>
+  )
+}
+
 function TokenSettings({ campaign, c, onClose }: { campaign: Campaign; c: CharacterView; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null)
   const style = c.tokenStyle ?? 'disc'
   const colour = c.tokenColour ?? colourOf(device.value)
-  useEffect(() => openPopup(ref.current), [])
+  useLayoutEffect(() => openPopup(ref.current), [])
   return (
     <Dialog dialogRef={ref} title="Token settings" onClose={onClose}>
       <div class="field">
