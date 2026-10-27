@@ -156,7 +156,7 @@ function suggestionList() {
           })}
         </>
       ) : (
-        <p class="muted note-suggest-empty">Nothing by that name</p>
+        <p class="empty-inline note-suggest-empty">Nothing by that name</p>
       ),
       host,
     )

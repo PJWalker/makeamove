@@ -261,6 +261,12 @@
   .empty svg {
     color: var(--text-faint);
   }
+  /* The same message inside a list or menu, where a centred block is too much. */
+  .empty-inline {
+    padding: var(--space-2);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+  }
 
   /*
    * Lists (ui/List.tsx): characters, the Libraries, a sheet's moves and

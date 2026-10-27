@@ -243,7 +243,7 @@ function CharacterList({
           )
         })}
         <List>{loose.map(row)}</List>
-        {!characters.length && !folders.length && <p class="muted chars-empty">No characters yet.</p>}
+        {!characters.length && !folders.length && <p class="empty-inline">No characters yet.</p>}
       </div>
       {menu.value && <ContextMenu {...menu.value} onClose={() => (menu.value = null)} />}
     </nav>

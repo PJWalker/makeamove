@@ -225,7 +225,7 @@ function NoteList({
           )
         })}
         <List>{loose.map(row)}</List>
-        {!notes.length && <p class="muted chars-empty">No pages yet.</p>}
+        {!notes.length && <p class="empty-inline">No pages yet.</p>}
       </div>
       {menu.value && <ContextMenu {...menu.value} onClose={() => (menu.value = null)} />}
     </nav>

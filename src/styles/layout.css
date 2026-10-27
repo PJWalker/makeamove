@@ -1572,9 +1572,6 @@
     outline: 2px dashed var(--text-muted);
     outline-offset: -2px;
   }
-  .chars-empty {
-    padding: var(--space-2);
-  }
   .panes-detail {
     min-width: 0;
     min-height: 0;
@@ -1788,8 +1785,7 @@
     color: var(--text);
   }
   .note-suggest-empty {
-    margin: 0;
-    padding: var(--space-1) var(--space-2);
+    padding-block: var(--space-1);
   }
   .note-backlinks {
     display: grid;

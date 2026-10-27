@@ -161,9 +161,9 @@ function NewCampaignForm() {
         </label>
       </div>
       <div class="form-actions">
-        <button type="submit" class="btn btn-primary bevel" disabled={busy.value}>
+        <Button type="submit" variant="primary" disabled={busy.value}>
           <IconAdd size={16} /> Create campaign
-        </button>
+        </Button>
       </div>
     </form>
   )
@@ -217,9 +217,9 @@ function JoinForm() {
         </label>
       </div>
       <div class="form-actions">
-        <button type="submit" class="btn btn-secondary bevel" disabled={!invite || !yourName.value.trim()}>
+        <Button type="submit" disabled={!invite || !yourName.value.trim()}>
           <IconLink size={16} /> Join
-        </button>
+        </Button>
       </div>
     </form>
   )

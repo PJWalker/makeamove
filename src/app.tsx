@@ -4,6 +4,7 @@ import { startChatNotifications } from './chat/notify'
 import { Lobby } from './lobby/Lobby'
 import { goToCampaign, routeCampaignId } from './router'
 import { activeCampaign, type Campaign, closeCampaign, deleteLocalCampaign, openCampaign } from './store/campaign'
+import { Button } from './ui/Button'
 import { Tooltip } from './ui/Tooltip'
 import { Tabletop } from './table/Tabletop'
 
@@ -51,19 +52,16 @@ function Removed({ campaign }: { campaign: Campaign }) {
       <p>The GM removed you from {campaign.name}.</p>
       <p class="muted">If they let you back in, open their invite link again to rejoin.</p>
       <div class="form-actions">
-        <button type="button" class="btn btn-secondary bevel" onClick={() => goToCampaign(null)}>
-          Back to the lobby
-        </button>
-        <button
-          type="button"
-          class="btn btn-danger bevel"
+        <Button onClick={() => goToCampaign(null)}>Back to the lobby</Button>
+        <Button
+          variant="danger"
           onClick={async () => {
             await deleteLocalCampaign(campaign.id)
             goToCampaign(null)
           }}
         >
           Delete from this device
-        </button>
+        </Button>
       </div>
     </main>
   )
@@ -75,9 +73,7 @@ function Waiting({ campaign }: { campaign: Campaign }) {
     <main class="loading waiting">
       <p>Waiting for someone from this campaign to come online…</p>
       <p class="muted">{campaign.peerCount.value} connected</p>
-      <button type="button" class="btn btn-secondary bevel" onClick={() => goToCampaign(null)}>
-        Back to the lobby
-      </button>
+      <Button onClick={() => goToCampaign(null)}>Back to the lobby</Button>
     </main>
   )
 }
