@@ -359,6 +359,8 @@ function TokenOptionsDialog({
   const characterId = useSignal('')
   const image = useSignal<BlobRef | undefined>(undefined)
   const size = useSignal('')
+  const showName = useSignal(true)
+  const showBars = useSignal(true)
   const fileRef = useRef<HTMLInputElement>(null)
   const system = systemOf(campaign)
   const grid = controller.renderer.grid
@@ -373,6 +375,8 @@ function TokenOptionsDialog({
     colour.value = token.colour
     characterId.value = token.characterId ?? ''
     image.value = token.image
+    showName.value = !token.hideName
+    showBars.value = !token.hideBars
     // The first size as wide as the token, or none if it's been resized by hand.
     const cells = Math.max(token.w, token.h) / grid.size
     size.value = system.sizes.find((z) => Math.abs(z.cells - cells) < 0.01)?.id ?? ''
@@ -413,6 +417,8 @@ function TokenOptionsDialog({
               colour: colour.value,
               characterId: characterId.value || undefined,
               image: image.value,
+              hideName: showName.value ? undefined : true,
+              hideBars: showBars.value ? undefined : true,
             }, system.sizes.find((z) => z.id === size.value)?.cells)
         }}
       >
@@ -485,6 +491,22 @@ function TokenOptionsDialog({
             ))}
           </select>
         </label>
+        <div class="field">
+          Show
+          <label class="check">
+            <input type="checkbox" checked={showName.value} onChange={(e) => (showName.value = e.currentTarget.checked)} />
+            Name under the token
+          </label>
+          <label class="check" data-disabled={!characterId.value || undefined}>
+            <input
+              type="checkbox"
+              checked={showBars.value}
+              disabled={!characterId.value}
+              onChange={(e) => (showBars.value = e.currentTarget.checked)}
+            />
+            Health bar
+          </label>
+        </div>
         <div class="field">
           Style
           <Segmented

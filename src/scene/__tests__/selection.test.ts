@@ -25,6 +25,7 @@ function setup(els: any[]) {
     setElements: () => {},
     setCamera: () => {},
     setGrid: () => {},
+    setHoverToken: () => {},
   }
   const scene: any = {
     views: () => els,

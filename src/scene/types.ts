@@ -63,6 +63,10 @@ export interface TokenElement extends Base {
   style?: TokenStyle
   /** The character this token stands for; the system decides which of its stats show. */
   characterId?: string
+  /** Hide its name under it. */
+  hideName?: boolean
+  /** Hide the bars its character's system shows (HP). */
+  hideBars?: boolean
 }
 
 /** A token is only drawn plain if it has an image to show. */

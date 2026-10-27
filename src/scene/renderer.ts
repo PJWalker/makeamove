@@ -13,6 +13,12 @@ import { isPlainToken, LAYERS, type Layer, type SceneElement, type Transform } f
 const ACCENT = 0xf0bb3b
 const INK = 0x14161c
 
+/** Token names never get smaller or bigger than this on screen, in px. */
+const NAME_MIN = 11;
+const NAME_MAX = 15;
+/** Tokens smaller than this on screen, in px, only show their name on hover. */
+const NAME_TOKEN_MIN = 24;
+
 /** Screen px between a selection's top edge and its rotate handle. */
 export const ROTATE_HANDLE_GAP = 28
 export const HANDLE_SIZE = 10
@@ -99,7 +105,7 @@ function contentKey(el: SceneElement, stats?: TokenStat[]): string {
     case 'map':
       return `map:${el.image.hash}`
     case 'token':
-      return `token:${el.image?.hash ?? ''}:${el.name}:${el.colour}:${isPlainToken(el) ? 'plain' : 'disc'}:${(stats ?? []).map((s) => `${s.id}=${s.value}/${s.max}/${s.colour}`).join()}`
+      return `token:${el.image?.hash ?? ''}:${el.name}:${el.colour}:${isPlainToken(el) ? 'plain' : 'disc'}:${el.hideBars ? 'nobars' : (stats ?? []).map((s) => `${s.id}=${s.value}/${s.max}/${s.colour}`).join()}`
     case 'drawing':
       return `drawing:${el.points.length}:${el.points[0]}:${el.points[1]}:${el.colour}:${el.width}:${el.bw}:${el.bh}`
   }
@@ -125,6 +131,13 @@ export class SceneRenderer {
   private presenceG = new Graphics();
   private labels = new Container();
   private labelPool = new Map<string, Text>();
+  /** Token names, drawn in screen space so they stay readable at any zoom. */
+  private names = new Container();
+  private namePool = new Map<string, Text>();
+  /** How far below its centre each token's name sits, in world px (under its bars). */
+  private nameOffsets = new Map<string, (t: Transform) => number>();
+  /** The token under the pointer, whose name always shows. */
+  private hoverToken: string | null = null;
   private marks: PresenceMark[] = [];
   private cursors = new Map<string, CursorMove>();
   private views = new Map<string, View>();
@@ -189,6 +202,7 @@ export class SceneRenderer {
     );
     this.app.stage.addChild(
       this.world,
+      this.names,
       this.overlay,
       this.presenceG,
       this.labels,
@@ -287,6 +301,7 @@ export class SceneRenderer {
       this.drawDraft();
       this.drawOverlay();
     }
+    this.drawNames();
     const animating = this.drawPresence();
     this.dirty = {
       elements: false,
@@ -332,6 +347,7 @@ export class SceneRenderer {
       if (!seen.has(id)) {
         view.root.destroy({ children: true });
         this.views.delete(id);
+        this.nameOffsets.delete(id);
       }
     }
     // Restack only when the order (or a layer) actually changed.
@@ -463,7 +479,7 @@ export class SceneRenderer {
 
         // Stat bars, drawn 100 wide and scaled with the token; they sit under it.
         const BAR_H = 14;
-        const stats = (el.characterId && this.tokenStats.get(el.characterId)) || [];
+        const stats = (!el.hideBars && el.characterId && this.tokenStats.get(el.characterId)) || [];
         const bars = new Container();
         stats.forEach((s, i) => {
           const frac = s.max > 0 ? Math.min(1, Math.max(0, s.value / s.max)) : 0;
@@ -500,22 +516,8 @@ export class SceneRenderer {
         if (stats.length) root.addChild(bars);
         const barsH = stats.length * (BAR_H + 3);
 
-        let label: Text | null = null;
-        if (el.name.trim()) {
-          label = new Text({
-            text: el.name.trim(),
-            style: {
-              fontFamily: "Cabin, sans-serif",
-              fontSize: 28,
-              fontWeight: "600",
-              fill: 0xffffff,
-              stroke: { color: INK, width: 6, join: "round" },
-            },
-            anchor: { x: 0.5, y: 0 },
-            resolution: 2,
-          });
-          root.addChild(label);
-        }
+        const barScale = (t: Transform) => Math.max(0.5, (t.w * 0.9) / 100);
+        this.nameOffsets.set(el.id, (t) => t.h / 2 + 2 + barsH * barScale(t));
         return {
           root,
           key,
@@ -523,13 +525,8 @@ export class SceneRenderer {
             root.position.set(t.x, t.y);
             body.rotation = t.rot;
             body.scale.set(t.w / 100, t.h / 100);
-            if (label) {
-              label.scale.set(Math.max(0.35, t.w / 160));
-              label.position.set(0, t.h / 2 + 2 + barsH * Math.max(0.5, (t.w * 0.9) / 100));
-            }
             if (stats.length) {
-              const k = Math.max(0.5, (t.w * 0.9) / 100);
-              bars.scale.set(k);
+              bars.scale.set(barScale(t));
               bars.position.set(0, t.h / 2 + 2);
             }
           },
@@ -700,6 +697,78 @@ export class SceneRenderer {
           );
         }
       }
+    }
+  }
+
+  setHoverToken(id: string | null) {
+    if (id === this.hoverToken) return;
+    this.hoverToken = id;
+    this.invalidate("overlay");
+  }
+
+  /**
+   * Token names, upright under each token at a readable size: they follow
+   * the zoom, but only between NAME_MIN and NAME_MAX px. Where names would
+   * overlap, or a token is too small on screen to label, they're left out,
+   * and only the token under the pointer shows its name.
+   */
+  private drawNames() {
+    const cam = this.camera;
+    const used = new Set<string>();
+    const boxes: { id: string; x: number; y: number; w: number; h: number; t: Text }[] = [];
+    for (const el of this.elements) {
+      if (el.type !== "token" || el.hideName || !el.name.trim() || this.hidden.has(el.id)) continue;
+      const t = this.previews.get(el.id) ?? el;
+      const size = Math.min(NAME_MAX, Math.max(NAME_MIN, t.w * cam.zoom * 0.2));
+      let text = this.namePool.get(el.id);
+      if (!text) {
+        text = new Text({
+          text: "",
+          style: {
+            fontFamily: "Cabin, sans-serif",
+            fontSize: NAME_MAX,
+            fontWeight: "600",
+            fill: 0xffffff,
+            stroke: { color: INK, width: 4, join: "round" },
+          },
+          anchor: { x: 0.5, y: 0 },
+          resolution: 2,
+        });
+        this.namePool.set(el.id, text);
+        this.names.addChild(text);
+      }
+      const name = el.name.trim();
+      if (text.text !== name) text.text = name;
+      text.scale.set(size / NAME_MAX);
+      const below = this.nameOffsets.get(el.id)?.(t) ?? t.h / 2;
+      const p = toScreen(cam, { x: t.x, y: t.y + below });
+      text.position.set(Math.round(p.x), Math.round(p.y));
+      used.add(el.id);
+      // Too small on screen to tell apart: only on hover.
+      const crowded = t.w * cam.zoom < NAME_TOKEN_MIN;
+      const w = text.width;
+      const h = text.height;
+      text.visible = !crowded || el.id === this.hoverToken;
+      if (!crowded) boxes.push({ id: el.id, x: p.x - w / 2, y: p.y, w, h, t: text });
+    }
+    // Names that would overlap each other show only on hover.
+    for (let i = 0; i < boxes.length; i++) {
+      const a = boxes[i];
+      for (let j = i + 1; j < boxes.length; j++) {
+        const b = boxes[j];
+        if (a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h) {
+          a.t.visible = a.id === this.hoverToken;
+          b.t.visible = b.id === this.hoverToken;
+        }
+      }
+    }
+    // The hovered name sits above the rest.
+    const hovered = this.hoverToken && this.namePool.get(this.hoverToken);
+    if (hovered && hovered.parent) this.names.setChildIndex(hovered, this.names.children.length - 1);
+    for (const [id, text] of this.namePool) {
+      if (used.has(id)) continue;
+      text.destroy();
+      this.namePool.delete(id);
     }
   }
 

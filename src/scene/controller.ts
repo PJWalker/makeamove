@@ -173,6 +173,7 @@ export class SceneController {
     listen('pointerleave', () => {
       this.presence?.setCursor(null)
       this.hover = null
+      this.renderer.setHoverToken(null)
       this.updateOverlay()
     })
     listen('wheel', (e) => this.onWheel(e), { passive: false })
@@ -504,6 +505,8 @@ export class SceneController {
     if (this.pointers.has(e.pointerId)) this.pointers.set(e.pointerId, screen)
     this.hover = world
     const g = this.gesture
+    const under = this.hitTest(world, true)
+    this.renderer.setHoverToken(under?.type === 'token' ? under.id : null)
 
     // Share the cursor at about 20 Hz.
     const now = performance.now()
@@ -897,7 +900,11 @@ export class SceneController {
    * Change a token's name, style and colour as one undo step; with `cells`,
    * also make it that many cells across, snapped to the grid.
    */
-  updateToken(id: string, patch: Partial<Pick<TokenElement, 'name' | 'style' | 'colour' | 'characterId' | 'image'>>, cells?: number) {
+  updateToken(
+    id: string,
+    patch: Partial<Pick<TokenElement, 'name' | 'style' | 'colour' | 'characterId' | 'image' | 'hideName' | 'hideBars'>>,
+    cells?: number,
+  ) {
     const el = this.byId.get(id)
     const grid = this.renderer.grid
     const size = cells && el ? cells * grid.size : 0
