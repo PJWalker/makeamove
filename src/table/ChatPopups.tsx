@@ -21,7 +21,8 @@ import { showPanel } from './panelLayout'
  * in the table's bottom-right corner instead.
  *
  * A popup leaves on its own after a few seconds; the stack waits while the
- * pointer is on it. Clicking the front one, anywhere but its buttons and
+ * pointer is on it, and while the page is hidden, so popups that arrive in a
+ * background tab are still there to read on coming back. Clicking the front one, anywhere but its buttons and
  * links, opens the chat; its × sends the whole stack away. Any of that counts
  * as reading the chat, which clears the Chat tab's unread badge.
  */
@@ -52,6 +53,12 @@ export function ChatPopups({ campaign }: { campaign: Campaign }) {
   // Looked up live, so a deleted message takes its popup with it.
   const shown = chatPopups.value.map((id) => messages.find((m) => m.id === id)).filter((m) => !!m)
   const held = useSignal(false)
+  const hidden = useSignal(document.visibilityState === 'hidden')
+  useEffect(() => {
+    const onVisibility = () => (hidden.value = document.visibilityState === 'hidden')
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  }, [])
   const leavingAll = useSignal(false)
   const ref = useRef<HTMLDivElement>(null)
   const stack = useRef<HTMLDivElement>(null)
@@ -129,7 +136,7 @@ export function ChatPopups({ campaign }: { campaign: Campaign }) {
             campaign={campaign}
             m={m}
             depth={shown.length - 1 - i}
-            held={held.value}
+            held={held.value || hidden.value}
             leaving={leavingAll.value}
             stack={stack}
             place={place}

@@ -9,15 +9,16 @@ import { plainText } from './markdown'
 import { visibilityOf, type ChatMessage } from './types'
 
 /*
- * Notifications for chat that arrives while it isn't in view: the tab is in
- * the background, the window is unfocused, or the Chat panel is closed. These
- * are local notifications, raised by this page when a message arrives. There
- * is no server to push from, so they work while the app is open, not after
- * it's closed.
+ * Chat that arrives while the Chat panel isn't showing pops up over the
+ * table (table/ChatPopups.tsx), whether or not the window has focus. When
+ * the page is known not to be visible (a background tab, a minimised
+ * window), other people's messages also raise a system notification; the
+ * popup waits for the page to show again. A visible window that merely lacks
+ * focus gets no notification: the popup is on screen.
  *
- * While the page itself is in front but the Chat panel isn't showing, the
- * message pops up over the table instead (table/ChatPopups.tsx), so there's
- * no system notification for something already on screen.
+ * These are local notifications, raised by this page when a message
+ * arrives. There is no server to push from, so they work while the app is
+ * open, not after it's closed.
  */
 
 /** The title and body to show for a message, or null if it isn't worth a notification. */
@@ -40,7 +41,17 @@ export function describe(m: ChatMessage, nameOf?: (kind: LinkKind, id: string) =
   }
 }
 
-const pageInView = () => !document.hidden && document.hasFocus()
+/**
+ * How a new message reaches someone not reading the chat: a popup whenever
+ * the Chat panel isn't showing, and a system notification too when the page
+ * is hidden and the message is someone else's.
+ */
+export function delivery(o: { chatShowing: boolean; pageHidden: boolean; mine: boolean; canNotify: boolean }): { popup: boolean; notify: boolean } {
+  return { popup: !o.chatShowing, notify: o.pageHidden && !o.mine && o.canNotify }
+}
+
+/** Only a page the browser reports hidden counts as out of sight; an unfocused window may still be on screen. */
+const pageHidden = () => document.visibilityState === 'hidden'
 
 /** The most popups shown at once; older ones give way. */
 const MAX_POPUPS = 3
@@ -94,10 +105,17 @@ export function startChatNotifications() {
       // History loaded at start-up, or synced from before this page opened, isn't news.
       if (stampTime(m.hlc) < started) continue
       told.add(m.id)
-      if (m.kind === 'system' || visibilityOf(m, me, isGm) !== 'full' || panelVisible('chat')) continue
+      if (m.kind === 'system' || visibilityOf(m, me, isGm) !== 'full') continue
       // My own messages pop up too (a move from the hotbar should show its result), but never notify.
-      if (pageInView()) popUp(m.id)
-      else if (m.author !== me && canNotify && Notification.permission === 'granted') {
+      // An open Chat panel in a hidden page isn't being read either, so that notifies.
+      const how = delivery({
+        chatShowing: panelVisible('chat'),
+        pageHidden: pageHidden(),
+        mine: m.author === me,
+        canNotify: canNotify && Notification.permission === 'granted',
+      })
+      if (how.popup) popUp(m.id)
+      if (how.notify) {
         const text = describe(m, (kind, id) => linkLabel(c, kind, id))
         if (text) void show(text.title, text.body, m.id).catch(() => {})
       }
