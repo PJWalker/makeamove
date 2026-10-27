@@ -1,5 +1,6 @@
 import { signal } from '@preact/signals'
 import type { BlobRef, TokenStyle } from '../scene/types'
+import type { AreaSpec } from '../systems/types'
 import { backdropColour } from '../lib/colour'
 import { DEFAULT_CANVAS_COLOUR, type SceneView } from '../store/campaign'
 
@@ -33,6 +34,14 @@ export const targetPick = signal<{ max?: number; actor?: string } | null>(null)
 
 /** The targets chosen on the open scene, with distances from the actor's token in scene units. */
 export const chosenTargets = signal<{ id: string; name: string; characterId?: string; distance: number | null }[]>([])
+
+/**
+ * An action's area of effect to place on the open scene (5.5e's cones and
+ * spheres), in scene units; the canvas places it and targets what it
+ * covers, then sets `placedArea` to the new shape's id.
+ */
+export const areaRequest = signal<{ area: AreaSpec; actor?: string; n: number } | null>(null)
+export const placedArea = signal<string | null>(null)
 
 /** Formats a distance in the open scene's units; set by the scene canvas. */
 export const sceneDistance = signal<(d: number) => string>((d) => `${d}`)

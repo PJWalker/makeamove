@@ -114,7 +114,7 @@ export interface SpeciesAction {
 }
 
 export const SPECIES_ACTIONS: SpeciesAction[] = [
-  { id: 'breath-weapon', species: 'dragonborn', name: 'Breath Weapon', trigger: 'Replaces one attack · 15-foot cone or 30-foot line', text: 'Each creature in the area makes a Dexterity saving throw (DC 8 + Constitution modifier + Proficiency Bonus), taking 1d10 damage of your ancestry’s type on a failure, or half on a success. 2d10 at level 5, 3d10 at 11, 4d10 at 17. Proficiency Bonus times per Long Rest.', save: 'dex', target: { prompt: 'Target each creature in the area', min: 1 } },
+  { id: 'breath-weapon', species: 'dragonborn', name: 'Breath Weapon', trigger: 'Replaces one attack · 15-foot cone or 30-foot line', text: 'Each creature in the area makes a Dexterity saving throw (DC 8 + Constitution modifier + Proficiency Bonus), taking 1d10 damage of your ancestry’s type on a failure, or half on a success. 2d10 at level 5, 3d10 at 11, 4d10 at 17. Proficiency Bonus times per Long Rest.', save: 'dex', target: { prompt: 'Target each creature in the area', min: 1, area: { shape: 'cone', size: 15 } } },
   { id: 'adrenaline-rush', species: 'orc', name: 'Adrenaline Rush', trigger: 'Bonus Action', text: 'Take the Dash action and gain Temporary Hit Points equal to your Proficiency Bonus. Proficiency Bonus times per Short or Long Rest.' },
   { id: 'stonecunning', species: 'dwarf', name: 'Stonecunning', trigger: 'Bonus Action, on or touching stone', text: 'Gain Tremorsense with a range of 60 feet for 10 minutes. Proficiency Bonus times per Long Rest.' },
   { id: 'luck', species: 'halfling', name: 'Luck', trigger: 'When you roll a 1 on a d20 Test', text: 'Reroll the die, and use the new roll.' },

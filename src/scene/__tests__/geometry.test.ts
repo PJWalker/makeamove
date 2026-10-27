@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bounds, corners, hits, resizeFromCorner, rotationTowards, toLocal } from '../geometry'
+import { bounds, corners, hits, resizeFromCorner, rotationTowards, shapeCovers, toLocal, tokensCovered } from '../geometry'
 import { finishStroke } from '../stroke'
 import type { DrawingElement, MapElement, TokenElement } from '../types'
 
@@ -72,5 +72,32 @@ describe('resizing and rotating', () => {
     expect(rotationTowards(map, { x: 100, y: 0 })).toBeCloseTo(0)
     expect(rotationTowards(map, { x: 200, y: 50 })).toBeCloseTo(Math.PI / 2)
     expect(rotationTowards(map, { x: 200, y: 45 }, 15)).toBeCloseTo(Math.PI / 2)
+  })
+})
+
+describe('areas', () => {
+  const tok = (id: string, x: number, y: number) => ({ id, x, y, w: 50, h: 50, rot: 0 })
+
+  it('covers tokens in a sphere, including ones only partly inside', () => {
+    const sphere = { shape: 'circle' as const, x: 0, y: 0, w: 200, h: 200, rot: 0 }
+    expect(tokensCovered(sphere, [tok('in', 50, 0), tok('edge', 115, 0), tok('out', 200, 0)])).toEqual(['in', 'edge'])
+  })
+
+  it('covers a cone’s widening wedge from its origin', () => {
+    // 150 long, opening to the right from x = -75, as wide as it is long.
+    const cone = { shape: 'cone' as const, x: 0, y: 0, w: 150, h: 150, rot: 0 }
+    expect(shapeCovers(cone, { x: -70, y: 0 })).toBe(true)
+    expect(shapeCovers(cone, { x: -60, y: 50 })).toBe(false)
+    expect(shapeCovers(cone, { x: 70, y: 70 })).toBe(true)
+    // Turned to point down.
+    const down = { ...cone, rot: Math.PI / 2 }
+    expect(shapeCovers(down, { x: 0, y: 70 })).toBe(true)
+    expect(shapeCovers(down, { x: 70, y: 0 })).toBe(false)
+  })
+
+  it('hits a shape inside or on its outline', () => {
+    const shape = { id: 's', type: 'shape' as const, shape: 'rect' as const, colour: '#fff', width: 4, x: 0, y: 0, w: 100, h: 40, rot: 0, layer: 'over' as const, z: 'a', locked: false, createdBy: 'me' }
+    expect(hits(shape, { x: 51, y: 0 })).toBe(true)
+    expect(hits(shape, { x: 60, y: 0 })).toBe(false)
   })
 })

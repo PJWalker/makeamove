@@ -49,6 +49,8 @@ import {
   canvasColour,
   canvasCommands,
   chosenTargets,
+  areaRequest,
+  placedArea,
   sceneDistance,
   sceneSettingsOpen,
   seenMapColours,
@@ -199,6 +201,57 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
     chosenTargets.value = untracked(() => ctl.targetDetails())
     sceneDistance.value = (d) => formatDistance(grid, d)
   })
+
+  // An action's area: place it, then target the tokens it covers (not the actor's, for areas that start from them).
+  useSignalEffect(() => {
+    const ctl = controller.value
+    const req = areaRequest.value
+    if (!ctl) return
+    untracked(() => {
+      if (!req) return ctl.placeArea(null)
+      const grid = ctl.renderer.grid
+      const px = (units: number) => (units / (grid.unit || 1)) * grid.size
+      const { area } = req
+      const shape = area.shape === 'cube' ? 'rect' : area.shape === 'cone' ? 'cone' : area.shape === 'line' ? 'line' : 'circle'
+      const fromActor = area.shape === 'cone' || area.shape === 'line' || area.shape === 'emanation'
+      ctl.placeArea({
+        shape,
+        length: px(area.size),
+        width: px(area.width ?? grid.unit),
+        onPlaced: (placed) => {
+          if (areaRequest.peek() === req) areaRequest.value = null
+          if (!placed) return
+          // A new area replaces the last one placed for this action.
+          const before = placedArea.peek()
+          if (before) ctl.scene.remove([before])
+          placedArea.value = placed.id
+          const actorTokens = new Set(
+            ctl.allElements().filter((el) => el.type === 'token' && req.actor && el.characterId === req.actor).map((el) => el.id),
+          )
+          const covered = placed.covered.filter((id) => !(fromActor && actorTokens.has(id)))
+          ctl.setTargets(targetPick.peek()?.max ? covered.slice(0, targetPick.peek()!.max) : covered)
+        },
+      })
+    })
+  })
+  // Asking for targets again starts without an area.
+  useSignalEffect(() => {
+    if (!targetPick.value) placedArea.value = null
+  })
+
+  // Text: typed in a box where it goes on the map.
+  const textEdit = useSignal<{ at: Point; screen: Point; id?: string; text?: string } | null>(null)
+  useEffect(() => {
+    const ctl = controller.value
+    if (!ctl) return
+    ctl.onTextRequest = (req) => (textEdit.value = req)
+    return () => void (ctl.onTextRequest = null)
+  }, [controller.value])
+  const commitText = (value: string) => {
+    const req = textEdit.value
+    textEdit.value = null
+    if (req) controller.value?.putText(req.at, value, req.id)
+  }
 
   // Keyboard shortcuts, unless a field or dialog has the keyboard.
   useEffect(() => {
@@ -377,6 +430,22 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
         }}
       />
       {menu.value && <ContextMenu {...menu.value} onClose={closeMenu} />}
+      {textEdit.value && (
+        <input
+          key={`${textEdit.value.screen.x},${textEdit.value.screen.y}`}
+          class="input bevel scene-text-input"
+          style={{ left: `${textEdit.value.screen.x}px`, top: `${textEdit.value.screen.y}px` }}
+          aria-label="Text"
+          defaultValue={textEdit.value.text ?? ''}
+          ref={(el) => void (el && requestAnimationFrame(() => el.focus()))}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') commitText(e.currentTarget.value)
+            else if (e.key === 'Escape') textEdit.value = null
+            e.stopPropagation()
+          }}
+          onBlur={(e) => textEdit.value && commitText(e.currentTarget.value)}
+        />
+      )}
       {controller.value && (
         <>
           <TokenOptionsDialog campaign={campaign} controller={controller.value} id={tokenOptions.value} tab={tokenTab} onClose={() => (tokenOptions.value = null)} />

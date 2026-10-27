@@ -3,15 +3,25 @@ import type { CampaignDefaults } from '../store/campaign'
 import { device } from '../store/device'
 import { colourOf, type Presence } from './presence'
 import { type Camera, clampZoom, fitCamera, toWorld, zoomAt } from './camera'
-import { CORNER_SIGNS, type Corner, bounds, contains, corners, fromLocal, hits, resizeFromCorner, rotationTowards } from './geometry'
+import { CORNER_SIGNS, type Corner, bounds, contains, corners, fromLocal, hits, resizeFromCorner, rotationTowards, tokensCovered } from './geometry'
 import { type Point, snapPoint, snapSize } from './grid'
 import { importImage, imageColour } from './images'
-import { tokenDistance } from './measure'
+import { formatDistance, tokenDistance } from './measure'
 import { HANDLE_SIZE, type SceneRenderer, rotateHandlePosition } from './renderer'
 import type { SceneDoc } from './sceneDoc'
 import { finishStroke, STRIDE } from './stroke'
-import { activeTool, ERASER_RADIUS, pen } from './tools'
-import { LAYERS, type BlobRef, type Layer, type NewElement, type SceneElement, type TokenElement, type TokenStyle, type Transform } from './types'
+import { activeTool, ERASER_RADIUS, pen, SHAPE_WIDTH, shapeTool, TEMPLATE_STYLE } from './tools'
+import { LAYERS, type BlobRef, type Layer, type NewElement, type SceneElement, type TokenElement, type ShapeKind, type TokenStyle, type Transform } from './types'
+
+/** An action's area waiting to be placed: its shape and size in world px, and who to tell. */
+export interface Placement {
+  shape: ShapeKind
+  /** A radius, a side, or a length. */
+  length: number
+  /** A line's width. */
+  width: number
+  onPlaced: (placed: { id: string; covered: string[] } | null) => void
+}
 
 type Gesture =
   | { kind: 'pan'; start: Point; cam: Camera }
@@ -25,6 +35,7 @@ type Gesture =
   | { kind: 'erase'; erased: Set<string> }
   | { kind: 'ruler' }
   | { kind: 'trail'; start: Point; active: boolean }
+  | { kind: 'shape'; start: Point; shape: ShapeKind; fixed: Placement | null }
 
 /** Screen px the pointer must travel before a press becomes a drag. */
 const DRAG_THRESHOLD = 3
@@ -60,7 +71,17 @@ export class SceneController {
   /** Bumps whenever the scene's elements change. */
   readonly revision = signal(0)
 
+  /** An area to place for an action: the next drag on the map puts it down (see placeArea). */
+  readonly placing = signal<Placement | null>(null)
+
+  /** Asks the canvas for text to put on the map, or to change: set by SceneCanvas. */
+  onTextRequest: ((req: { at: Point; screen: Point; id?: string; text?: string }) => void) | null = null
+
   private elements: SceneElement[] = []
+  /** The scene's elements as they are now, bottom to top. */
+  allElements(): readonly SceneElement[] {
+    return this.elements
+  }
   private byId = new Map<string, SceneElement>()
   private gesture: Gesture | null = null
   private pointers = new Map<number, Point>()
@@ -306,8 +327,10 @@ export class SceneController {
         ? 'grabbing'
         : this.spaceHeld || tool === 'pan'
           ? 'grab'
-          : tool === 'draw' || tool === 'ruler' || tool === 'ping' || (tool === 'select' && this.targetMode.value)
+          : this.placing.value || tool === 'draw' || tool === 'shape' || tool === 'ruler' || tool === 'ping' || (tool === 'select' && this.targetMode.value)
             ? 'crosshair'
+            : tool === 'text'
+              ? 'text'
             : tool === 'erase'
               ? 'none'
               : 'default')
@@ -430,7 +453,24 @@ export class SceneController {
     }
     if (this.pointers.size > 2) return
 
+    // Placing an action's area: the press is its origin (or centre), the drag aims it.
+    const placing = this.placing.value
+    if (placing && e.button === 0 && !this.spaceHeld) {
+      this.gesture = { kind: 'shape', start: this.snapShapePoint(world, placing.shape, e), shape: placing.shape, fixed: placing }
+      this.showShapeDraft(world, e)
+      this.updateCursor()
+      return
+    }
+
     const tool = e.button === 1 || this.spaceHeld ? 'pan' : activeTool.value
+    // Double-clicking text changes it.
+    if (tool === 'select' && e.detail === 2) {
+      const under = this.hitTest(world)
+      if (under?.type === 'text') {
+        this.onTextRequest?.({ at: { x: under.x, y: under.y }, screen, id: under.id, text: under.text })
+        return
+      }
+    }
     switch (tool) {
       case 'pan':
         this.gesture = { kind: 'pan', start: screen, cam: this.renderer.camera }
@@ -502,9 +542,105 @@ export class SceneController {
         this.gesture = { kind: 'ruler' }
         this.presence?.setRuler({ a: world, b: world })
         break
+
+      case 'shape': {
+        const shape = shapeTool.value
+        this.gesture = { kind: 'shape', start: this.snapShapePoint(world, shape, e), shape, fixed: null }
+        this.showShapeDraft(world, e)
+        break
+      }
+
+      case 'text':
+        this.onTextRequest?.({ at: world, screen })
+        break
     }
     this.updateCursor()
     this.updateOverlay()
+  }
+
+  /** Where a shape starts: a grid corner for squares, a cell centre or corner for the rest (Alt places freely). */
+  private snapShapePoint(p: Point, shape: ShapeKind, e: PointerEvent): Point {
+    const grid = this.renderer.grid
+    if (grid.type !== 'square' || e.altKey) return p
+    const half = grid.size / 2
+    const step = shape === 'rect' ? grid.size : half
+    return {
+      x: grid.offsetX + Math.round((p.x - grid.offsetX) / step) * step,
+      y: grid.offsetY + Math.round((p.y - grid.offsetY) / step) * step,
+    }
+  }
+
+  /**
+   * The shape a drag from `start` to `p` makes: a square corner to corner, a
+   * circle from its centre, a line or cone from its origin. Lengths round to
+   * whole grid steps; a placed area has its size fixed and only aims.
+   */
+  private shapeFrom(g: Extract<Gesture, { kind: 'shape' }>, p: Point, e: { shiftKey: boolean; altKey: boolean }): Transform & { label: string } {
+    const grid = this.renderer.grid
+    const step = grid.type === 'none' || e.altKey ? 0 : grid.size
+    const round = (n: number) => (step ? Math.max(step, Math.round(n / step) * step) : n)
+    const units = (n: number) => formatDistance(grid, (n / grid.size) * grid.unit)
+    const s = g.start
+    const dx = p.x - s.x
+    const dy = p.y - s.y
+    const fixed = g.fixed
+    if (g.shape === 'circle') {
+      const r = fixed ? fixed.length : round(Math.hypot(dx, dy))
+      return { x: s.x, y: s.y, w: 2 * r, h: 2 * r, rot: 0, label: `${units(r)} radius` }
+    }
+    if (g.shape === 'rect') {
+      if (fixed) return { x: s.x, y: s.y, w: fixed.length, h: fixed.length, rot: 0, label: units(fixed.length) }
+      let w = round(Math.abs(dx))
+      let h = round(Math.abs(dy))
+      if (e.shiftKey) w = h = Math.max(w, h)
+      return { x: s.x + (Math.sign(dx) * w) / 2, y: s.y + (Math.sign(dy) * h) / 2, w, h, rot: 0, label: `${units(w)} × ${units(h)}` }
+    }
+    // Lines and cones run from the start towards the pointer.
+    const angle = Math.hypot(dx, dy) > 0 ? Math.atan2(dy, dx) : 0
+    const rot = e.shiftKey ? Math.round(angle / (Math.PI / 4)) * (Math.PI / 4) : angle
+    const len = fixed ? fixed.length : round(Math.hypot(dx, dy))
+    const thick = g.shape === 'cone' ? len : fixed ? fixed.width : grid.size
+    return { x: s.x + (Math.cos(rot) * len) / 2, y: s.y + (Math.sin(rot) * len) / 2, w: len, h: thick, rot, label: units(len) }
+  }
+
+  private showShapeDraft(p: Point, e: { shiftKey: boolean; altKey: boolean }) {
+    const g = this.gesture
+    if (g?.kind !== 'shape') return
+    const { label, ...t } = this.shapeFrom(g, p, e)
+    const { colour, width, layer } = g.fixed ? TEMPLATE_STYLE : { ...pen.value, width: SHAPE_WIDTH }
+    this.renderer.draft = { kind: 'shape', shape: g.shape, t, colour, width, layer, label }
+    this.renderer.invalidate('overlay', 'presence')
+  }
+
+  /**
+   * Ask for an action's area to be placed: the next press puts it down and
+   * a drag aims it. Calls back with the new shape and the tokens it covers;
+   * null if cancelled.
+   */
+  placeArea(p: Placement | null) {
+    this.placing.value?.onPlaced(null)
+    this.placing.value = p
+    this.updateCursor()
+  }
+
+  /** Put text on the map, or change existing text, measured at the size it's drawn. */
+  putText(at: Point, text: string, id?: string) {
+    const clean = text.trim()
+    const old = id ? this.byId.get(id) : undefined
+    if (old && old.type !== 'text') return
+    if (!clean) {
+      if (old) this.scene.remove([old.id])
+      return
+    }
+    const size = old?.size ?? Math.round(this.renderer.grid.size * 0.5)
+    const colour = old?.colour ?? pen.value.colour
+    const m = this.renderer.measureText(clean, colour, size)
+    if (old) {
+      const k = old.w / old.bw
+      this.scene.update([[old.id, { text: clean, bw: m.w, bh: m.h, w: m.w * k, h: m.h * k }]])
+    } else {
+      this.scene.add({ type: 'text', layer: pen.value.layer, text: clean, colour, size, x: at.x, y: at.y, w: m.w, h: m.h, bw: m.w, bh: m.h, rot: 0 })
+    }
   }
 
   private onPointerMove(e: PointerEvent) {
@@ -653,6 +789,10 @@ export class SceneController {
         this.updateOverlay()
         break
 
+      case 'shape':
+        this.showShapeDraft(world, e)
+        break
+
       case 'erase':
         for (const ev of e.getCoalescedEvents?.() ?? [e]) this.eraseAt(this.toWorld(ev.clientX, ev.clientY))
         this.updateOverlay()
@@ -713,6 +853,31 @@ export class SceneController {
         this.renderer.hidden.clear()
         this.renderer.invalidate('elements')
         break
+
+      case 'shape': {
+        this.renderer.draft = null
+        this.renderer.invalidate('overlay', 'presence')
+        const world = this.toWorld(e.clientX, e.clientY)
+        const { label: _label, ...t } = this.shapeFrom(g, world, e)
+        if (!g.fixed && (t.w < 4 || t.h < 4)) break
+        const style = g.fixed ? TEMPLATE_STYLE : { ...pen.value, width: SHAPE_WIDTH }
+        const [id] = this.scene.add({
+          type: 'shape',
+          shape: g.shape,
+          colour: style.colour,
+          width: style.width,
+          layer: style.layer,
+          ...t,
+          ...(g.fixed ? { template: true } : {}),
+        })
+        if (g.fixed) {
+          const fixed = g.fixed
+          this.placing.value = null
+          const tokens = this.elements.filter((el) => el.type === 'token')
+          fixed.onPlaced({ id, covered: tokensCovered({ ...t, shape: g.shape }, tokens) })
+        }
+        break
+      }
     }
     this.updateCursor()
     this.updateOverlay()

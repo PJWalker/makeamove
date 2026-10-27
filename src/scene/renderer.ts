@@ -1,13 +1,13 @@
-import { Application, Container, CullerPlugin, extensions, Graphics, ImageSource, Matrix, Sprite, Text, Texture } from 'pixi.js'
+import { Application, CanvasTextMetrics, Container, CullerPlugin, extensions, Graphics, ImageSource, Matrix, Sprite, Text, TextStyle, Texture } from 'pixi.js'
 import { type Camera, type Rect, toScreen, visibleWorld } from './camera'
-import { corners } from './geometry'
+import { corners, fromLocal as fromLocalPoint, shapeOutline } from './geometry'
 import { type Grid, DEFAULT_GRID, type Point, hexCellsIn, hexCentre, hexCorners, squareLines } from './grid'
 import { formatDistance, measure, tokenDistance } from './measure'
 import { forgetBitmaps, loadBitmap, onBlobFetcher } from "./images";
 import { PING_MS, TRAIL_MS, type PresenceMark } from "./presence";
 import type { TokenStat } from '../systems/types'
 import { strokeOutline, hasRealPressure } from './stroke'
-import { isPlainToken, LAYERS, type Layer, type SceneElement, type Transform } from './types'
+import { isPlainToken, LAYERS, type Layer, type SceneElement, type ShapeKind, type Transform } from './types'
 
 /** The UI accent, oklch(82% 0.15 85), as sRGB for the canvas. */
 const ACCENT = 0xf0bb3b
@@ -47,12 +47,10 @@ const BAR_TEXT_MIN_W = 44;
 export const ROTATE_HANDLE_GAP = 28
 export const HANDLE_SIZE = 10
 
-export interface Draft {
-  points: number[]
-  colour: string
-  width: number
-  layer: Layer
-}
+/** What's being drawn, before it's added: a pen stroke, or a shape being dragged out (with its size to show). */
+export type Draft =
+  | { kind?: 'stroke'; points: number[]; colour: string; width: number; layer: Layer }
+  | { kind: 'shape'; shape: ShapeKind; t: Transform; colour: string; width: number; layer: Layer; label?: string }
 
 export interface OverlayState {
   selected: SceneElement[]
@@ -135,8 +133,28 @@ function contentKey(el: SceneElement): string {
       return `token:${el.image?.hash ?? ''}:${el.name}:${el.colour}:${isPlainToken(el) ? 'plain' : 'disc'}`
     case 'drawing':
       return `drawing:${el.points.length}:${el.points[0]}:${el.points[1]}:${el.colour}:${el.width}:${el.bw}:${el.bh}`
+    case 'shape':
+      return `shape:${el.shape}:${el.colour}:${el.width}`
+    case 'text':
+      return `text:${el.text}:${el.colour}:${el.size}:${el.bw}:${el.bh}`
   }
 }
+
+/** A shape's outline and tinted inside, drawn in its own frame at its size. */
+export function drawShape(g: Graphics, shape: ShapeKind, w: number, h: number, colour: string, width: number) {
+  const pts = shapeOutline(shape, w, h).flatMap((p) => [p.x, p.y])
+  g.clear().poly(pts).fill({ color: colour, alpha: 0.22 }).stroke({ color: colour, width, join: 'round' })
+}
+
+/** Text on the map: a light outline keeps it readable over any map. */
+export const textStyle = (colour: string, size: number) => ({
+  fontFamily: 'Cabin, sans-serif',
+  fontSize: size,
+  fontWeight: '700' as const,
+  fill: colour,
+  stroke: { color: INK, width: Math.max(2, size / 8), join: 'round' as const },
+  align: 'center' as const,
+})
 
 /**
  * Draws a scene with PixiJS. It renders on demand rather than every frame:
@@ -365,6 +383,12 @@ export class SceneRenderer {
     if (animating) this.invalidate("presence");
   }
 
+  /** The size text takes when drawn on the map, in world px. */
+  measureText(text: string, colour: string, size: number): { w: number; h: number } {
+    const m = CanvasTextMetrics.measureText(text, new TextStyle(textStyle(colour, size)));
+    return { w: Math.ceil(m.width), h: Math.ceil(m.height) };
+  }
+
   // Elements
 
   /** What marks each token: a pip per condition, and a ring on the one whose turn it is. */
@@ -572,6 +596,40 @@ export class SceneRenderer {
           },
         };
       }
+
+      case "shape": {
+        // Redrawn at its size, so the outline keeps its width when resized.
+        const g = new Graphics();
+        root.addChild(g);
+        let size = "";
+        return {
+          root,
+          key,
+          apply: (t) => {
+            root.position.set(t.x, t.y);
+            root.rotation = t.rot;
+            const next = `${t.w}x${t.h}`;
+            if (next !== size) {
+              size = next;
+              drawShape(g, el.shape, t.w, t.h, el.colour, el.width);
+            }
+          },
+        };
+      }
+
+      case "text": {
+        const text = new Text({ text: el.text, style: textStyle(el.colour, el.size), anchor: 0.5, resolution: 2 });
+        root.addChild(text);
+        return {
+          root,
+          key,
+          apply: (t) => {
+            root.position.set(t.x, t.y);
+            root.rotation = t.rot;
+            text.scale.set(t.w / el.bw, t.h / el.bh);
+          },
+        };
+      }
     }
   }
 
@@ -646,6 +704,14 @@ export class SceneRenderer {
       return;
     }
     if (g.parent !== this.layers[d.layer]) this.layers[d.layer].addChild(g);
+    if (d.kind === "shape") {
+      drawShape(g, d.shape, d.t.w, d.t.h, d.colour, d.width / this.camera.zoom);
+      g.position.set(d.t.x, d.t.y);
+      g.rotation = d.t.rot;
+      return;
+    }
+    g.position.set(0, 0);
+    g.rotation = 0;
     g.poly(strokeOutline(d.points, d.width, hasRealPressure(d.points))).fill({
       color: d.colour,
     });
@@ -907,6 +973,14 @@ export class SceneRenderer {
     let insets: ReturnType<SceneRenderer["insets"]> | undefined;
 
     this.drawTargets(g, used);
+
+    // A shape being dragged out shows its size by the pointer's end.
+    const d = this.draft;
+    if (d?.kind === "shape" && d.label) {
+      const end = fromLocalPoint(d.t, { x: d.t.w / 2, y: 0 });
+      const at = toScreen(cam, d.shape === "circle" ? { x: d.t.x, y: d.t.y } : end);
+      this.label("draft", d.label, at.x + 10, at.y - 18, "#ffffff", used);
+    }
 
     for (const m of this.marks) {
       if (m.cursor) {

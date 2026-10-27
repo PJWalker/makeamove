@@ -1,6 +1,6 @@
 import type { CharacterView } from '../../characters/store'
 import { resolveEffects, type EffectSource } from '../effects'
-import type { ActionDef, CheckStep, DamageTypeDef, Derived, FollowUpDef, GameSystem, ResourceDef, SaveStep, TargetSpec } from '../types'
+import type { ActionDef, AreaSpec, CheckStep, DamageTypeDef, Derived, FollowUpDef, GameSystem, ResourceDef, SaveStep, TargetSpec } from '../types'
 import {
   ABILITIES,
   ACTIONS,
@@ -210,7 +210,7 @@ const spellRoll = (s: Spell, crit: boolean): FollowUpDef => {
 const SPELL_ROLLS: FollowUpDef[] = SPELLS.flatMap((s) => (!s.roll ? [] : s.attack ? [spellRoll(s, false), spellRoll(s, true)] : [spellRoll(s, false)]))
 
 /** Spells with a save and no single target hit everyone in an area. */
-const AREA: TargetSpec = { prompt: 'Target each creature in the area', min: 1 }
+const inArea = (area?: AreaSpec): TargetSpec => ({ prompt: 'Target each creature in the area', min: 1, ...(area ? { area } : {}) })
 
 const saveStep = (s: Spell): SaveStep => ({
   kind: 'save',
@@ -227,7 +227,7 @@ const SPELL_ACTIONS: ActionDef[] = SPELLS.map((s) => ({
   trigger: `${s.level ? `Level ${s.level}` : 'Cantrip'} · ${s.trigger}`,
   text: s.text,
   tags: [s.level ? `level ${s.level}` : 'cantrip'],
-  ...(s.target ? { target: s.target } : s.save ? { target: AREA } : {}),
+  ...(s.target ? { target: s.target } : s.save || s.area ? { target: inArea(s.area) } : {}),
   ...(s.trigger.includes('Concentration') ? { concentration: true } : {}),
   steps: s.attack
     ? [

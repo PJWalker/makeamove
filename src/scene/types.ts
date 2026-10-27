@@ -11,7 +11,7 @@
 export const LAYERS = ['map', 'under', 'token', 'over'] as const
 export type Layer = (typeof LAYERS)[number]
 
-export type ElementType = 'map' | 'token' | 'drawing'
+export type ElementType = 'map' | 'token' | 'drawing' | 'shape' | 'text'
 
 /** An image in the blob store; the CRDT holds only this reference. */
 export interface BlobRef {
@@ -83,7 +83,35 @@ export interface DrawingElement extends Base {
   bh: number
 }
 
-export type SceneElement = MapElement | TokenElement | DrawingElement
+/**
+ * A shape's outline in its own frame, w × h about its centre: a rectangle,
+ * an ellipse, a line along its length (w) as thick as h, or a cone opening
+ * from the middle of its left edge to its right edge.
+ */
+export type ShapeKind = 'rect' | 'circle' | 'line' | 'cone'
+
+export interface ShapeElement extends Base {
+  type: 'shape'
+  shape: ShapeKind
+  colour: string
+  /** Outline width; the inside is tinted with the colour. */
+  width: number
+  /** Set when placed as an action's area of effect: who placed it, for clearing. */
+  template?: boolean
+}
+
+export interface TextElement extends Base {
+  type: 'text'
+  text: string
+  colour: string
+  /** Font size at w × h; resizing scales it. */
+  size: number
+  /** The size w × h the text was laid out at. */
+  bw: number
+  bh: number
+}
+
+export type SceneElement = MapElement | TokenElement | DrawingElement | ShapeElement | TextElement
 
 /** What callers supply when adding an element; the store fills in the rest. */
 export type NewElement = DistributiveOmit<SceneElement, 'id' | 'z' | 'createdBy' | 'locked'> & { locked?: boolean }
@@ -91,3 +119,10 @@ export type NewElement = DistributiveOmit<SceneElement, 'id' | 'z' | 'createdBy'
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never
 
 export const layerOf = (type: ElementType): Layer => (type === 'map' ? 'map' : type === 'token' ? 'token' : 'over')
+
+export const SHAPES: { id: ShapeKind; label: string }[] = [
+  { id: 'rect', label: 'Square' },
+  { id: 'circle', label: 'Circle' },
+  { id: 'line', label: 'Line' },
+  { id: 'cone', label: 'Cone' },
+]

@@ -136,6 +136,18 @@ export interface TargetSpec {
   max?: number
   /** How far away a target may be, in scene units. */
   range?: Range
+  /** An area placed on the scene; the tokens it covers become the targets. */
+  area?: AreaSpec
+}
+
+/**
+ * An area of effect, in scene units: a sphere or emanation by its radius, a
+ * cube by its side, a cone or line by its length (and a line's width).
+ */
+export interface AreaSpec {
+  shape: 'sphere' | 'emanation' | 'cube' | 'cone' | 'line'
+  size: number
+  width?: number
 }
 
 /** Parts of an action, done in order. */

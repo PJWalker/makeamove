@@ -11,7 +11,8 @@ import { Button } from '../ui/Button'
 import { IconClose } from '../ui/icons'
 import { lastPressed } from '../ui/pressed'
 import { Segmented } from '../ui/Segmented'
-import { chosenTargets, sceneDistance, targetPick } from './canvasState'
+import { areaRequest, chosenTargets, placedArea, sceneDistance, targetPick } from './canvasState'
+import type { AreaSpec } from '../systems/types'
 import type { MoveTarget } from '../chat/types'
 
 /*
@@ -39,6 +40,7 @@ type Request = { kind: 'target' | 'ask'; moveId: string; characterId: string }
 const cancel = () => {
   targetRequest.value = null
   moveRequest.value = null
+  areaRequest.value = null
 }
 
 /** The anchor's box, if it's still on screen. */
@@ -223,9 +225,17 @@ function TargetStep({ campaign, characterId, moveId }: { campaign: Campaign; cha
     }))
     startMove(campaign, characterId, move, picked)
   }
+  const area = spec.area
+  const placing = !!areaRequest.value
+  const placeArea = () => (areaRequest.value = placing ? null : { area: area!, actor: characterId, n: Date.now() })
   return (
     <div class="move-form">
       <p class="roll-prompt-text">{spec.prompt}</p>
+      {area && (
+        <Button size="sm" variant={placedArea.value ? 'ghost' : 'secondary'} pressed={placing} onClick={placeArea}>
+          {placing ? 'Click the map to place it' : placedArea.value ? 'Place the area again' : `Place the ${areaName(area)}`}
+        </Button>
+      )}
       {targets.length ? (
         <span class="roll-prompt-targets">
           {targets.map((t) => {
@@ -240,7 +250,7 @@ function TargetStep({ campaign, characterId, moveId }: { campaign: Campaign; cha
           })}
         </span>
       ) : (
-        <span class="muted">Click a token on the map: {wanted}.</span>
+        <span class="muted">{area ? 'Place the area, or click' : 'Click'} a token on the map: {wanted}.</span>
       )}
       <Button variant="primary" disabled={!ready || blocked} onClick={go}>
         {blocked ? 'Out of range' : move.name}
@@ -248,6 +258,9 @@ function TargetStep({ campaign, characterId, moveId }: { campaign: Campaign; cha
     </div>
   )
 }
+
+/** An area as the button names it: "20 ft sphere". */
+const areaName = (a: AreaSpec) => `${sceneDistance.value(a.size)} ${a.shape}`
 
 /** A formula without its labels, as the Roll button reads: 1d20+2[Prof] → 1d20+2. */
 const bare = (formula: string) => formula.replace(/\[[^\]]*\]/g, '')

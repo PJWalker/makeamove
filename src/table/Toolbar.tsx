@@ -3,7 +3,8 @@ import { useEffect } from 'preact/hooks'
 import { signal, useSignal } from '@preact/signals'
 import { goToCampaign } from '../router'
 import { startReorder } from '../ui/reorder'
-import { activeTool, pen, PEN_WIDTHS, setPen, type ToolId } from '../scene/tools'
+import { activeTool, pen, PEN_WIDTHS, setPen, setShapeTool, shapeTool, type ToolId } from '../scene/tools'
+import { SHAPES, type ShapeKind } from '../scene/types'
 import { Button } from '../ui/Button'
 import {
   IconDraw,
@@ -40,11 +41,11 @@ export const TOOLS: {
   { id: 'pan', label: 'Pan', key: 'H', Icon: IconPan },
   { id: 'draw', label: 'Draw', key: 'P', Icon: IconDraw },
   { id: 'erase', label: 'Erase', key: 'E', Icon: IconEraser },
-  { id: 'shape', label: 'Shapes', key: 'R', Icon: IconShapes, arrives: 'a later milestone' },
-  { id: 'text', label: 'Text', key: 'X', Icon: IconText, arrives: 'a later milestone' },
+  { id: 'shape', label: 'Shapes', key: 'R', Icon: IconShapes },
+  { id: 'text', label: 'Text', key: 'X', Icon: IconText },
   { id: 'ruler', label: 'Measure', key: 'M', Icon: IconMeasure },
   { id: 'ping', label: 'Ping', key: 'G', Icon: IconPing },
-  { id: 'fog', label: 'Fog of war', key: 'F', Icon: IconFog, gmOnly: true, arrives: 'M6' },
+  { id: 'fog', label: 'Fog of war', key: 'F', Icon: IconFog, gmOnly: true, arrives: 'M12' },
 ]
 
 const ORDER_KEY = 'mam:tool-order'
@@ -120,7 +121,7 @@ export function Toolbar({ isGm }: { isGm: boolean }) {
           </Button>
         ))}
       </nav>
-      {activeTool.value === 'draw' && <PenOptions />}
+      {(activeTool.value === 'draw' || activeTool.value === 'shape' || activeTool.value === 'text') && <PenOptions tool={activeTool.value} />}
     </>
   )
 }
@@ -183,11 +184,29 @@ function CampaignMenu() {
   )
 }
 
-/** Colour, width and layer for the pen, beside the tool strip. */
-function PenOptions() {
+/** Colour, width and layer for the pen (and the shape for the Shapes tool), beside the tool strip. */
+function PenOptions({ tool }: { tool: ToolId }) {
   const { colour, width, layer } = pen.value
   return (
     <div class="pen-options panel bevel" role="group" aria-label="Pen">
+      {tool === 'shape' && (
+        <div class="pen-widths" role="radiogroup" aria-label="Shape">
+          {SHAPES.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              role="radio"
+              class="pen-width pen-shape bevel"
+              aria-checked={shapeTool.value === s.id}
+              aria-label={s.label}
+              title={s.label}
+              onClick={() => setShapeTool(s.id)}
+            >
+              <ShapeGlyph shape={s.id} colour={colour} />
+            </button>
+          ))}
+        </div>
+      )}
       <input
         type="color"
         class="pen-colour"
@@ -196,7 +215,7 @@ function PenOptions() {
         title="Pen colour"
         onInput={(e) => setPen({ colour: e.currentTarget.value })}
       />
-      <div class="pen-widths" role="radiogroup" aria-label="Width">
+      {tool === 'draw' && <div class="pen-widths" role="radiogroup" aria-label="Width">
         {PEN_WIDTHS.map((w, i) => (
           <button
             key={w}
@@ -211,16 +230,29 @@ function PenOptions() {
             <span style={{ width: `${w + 2}px`, height: `${w + 2}px`, background: colour }} />
           </button>
         ))}
-      </div>
+      </div>}
       <button
         type="button"
         class="pen-layer bevel"
         aria-pressed={layer === 'under'}
-        title="Draw under tokens, for terrain and spell areas"
+        title="Under or over tokens"
         onClick={() => setPen({ layer: layer === 'under' ? 'over' : 'under' })}
       >
         {layer === 'under' ? 'Under tokens' : 'Over tokens'}
       </button>
     </div>
+  )
+}
+
+/** A small picture of a shape for its button. */
+function ShapeGlyph({ shape, colour }: { shape: ShapeKind; colour: string }) {
+  const common = { fill: colour, 'fill-opacity': 0.3, stroke: colour, 'stroke-width': 2 }
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+      {shape === 'rect' && <rect x="3" y="3" width="12" height="12" {...common} />}
+      {shape === 'circle' && <circle cx="9" cy="9" r="6.5" {...common} />}
+      {shape === 'line' && <rect x="1" y="7" width="16" height="4" {...common} />}
+      {shape === 'cone' && <polygon points="2,9 16,2 16,16" {...common} />}
+    </svg>
   )
 }

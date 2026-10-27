@@ -1,5 +1,5 @@
 import { signal } from '@preact/signals'
-import type { Layer } from './types'
+import type { Layer, ShapeKind } from './types'
 
 export type ToolId = 'select' | 'pan' | 'draw' | 'erase' | 'shape' | 'text' | 'ruler' | 'ping' | 'fog'
 
@@ -41,3 +41,29 @@ export function setPen(patch: Partial<PenSettings>) {
 
 /** Eraser radius in screen px. */
 export const ERASER_RADIUS = 14
+
+/** The shape the Shapes tool draws, remembered per device. */
+const SHAPE_KEY = 'mam:shape'
+function loadShape(): ShapeKind {
+  try {
+    const v = localStorage.getItem(SHAPE_KEY)
+    return v === 'circle' || v === 'line' || v === 'cone' ? v : 'rect'
+  } catch {
+    return 'rect'
+  }
+}
+export const shapeTool = signal<ShapeKind>(loadShape())
+export function setShapeTool(shape: ShapeKind) {
+  shapeTool.value = shape
+  try {
+    localStorage.setItem(SHAPE_KEY, shape)
+  } catch {
+    // Just won't persist.
+  }
+}
+
+/** Outline width of drawn shapes, in world px. */
+export const SHAPE_WIDTH = 3
+
+/** How an action's area of effect is drawn: the accent, under tokens so they stay clear. */
+export const TEMPLATE_STYLE = { colour: '#f0c23b', width: 3, layer: 'under' as Layer }

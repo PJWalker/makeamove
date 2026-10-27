@@ -3247,3 +3247,13 @@
     flex: none;
   }
 }
+
+/* Text typed onto the map */
+@layer layout {
+  .scene-text-input {
+    position: fixed;
+    z-index: 30;
+    width: 16em;
+    translate: -50% -50%;
+  }
+}

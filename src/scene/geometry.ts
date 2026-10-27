@@ -1,7 +1,7 @@
 import type { Rect } from './camera'
 import type { Point } from './grid'
 import { distanceToStroke } from './stroke'
-import { isPlainToken, type SceneElement, type Transform } from './types'
+import { isPlainToken, type SceneElement, type ShapeKind, type Transform } from './types'
 
 /** p in the element's own frame: origin at its centre, unrotated, unscaled. */
 export function toLocal(t: Transform, p: Point): Point {
@@ -54,6 +54,74 @@ export const intersects = (a: Rect, b: Rect) =>
 export const contains = (outer: Rect, inner: Rect) =>
   outer.x <= inner.x && outer.y <= inner.y && inner.x + inner.w <= outer.x + outer.w && inner.y + inner.h <= outer.y + outer.h
 
+/** A shape's outline in its own frame (see ShapeKind), as points around it. */
+export function shapeOutline(shape: ShapeKind, w: number, h: number): Point[] {
+  const hw = w / 2
+  const hh = h / 2
+  switch (shape) {
+    case 'rect':
+    case 'line':
+      return [
+        { x: -hw, y: -hh },
+        { x: hw, y: -hh },
+        { x: hw, y: hh },
+        { x: -hw, y: hh },
+      ]
+    case 'cone':
+      return [
+        { x: -hw, y: 0 },
+        { x: hw, y: -hh },
+        { x: hw, y: hh },
+      ]
+    case 'circle': {
+      const n = 48
+      return Array.from({ length: n }, (_, i) => ({ x: hw * Math.cos((i / n) * Math.PI * 2), y: hh * Math.sin((i / n) * Math.PI * 2) }))
+    }
+  }
+}
+
+/** Whether p is inside a polygon (even-odd). */
+export function insidePolygon(poly: Point[], p: Point): boolean {
+  let inside = false
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const a = poly[i]
+    const b = poly[j]
+    if (a.y > p.y !== b.y > p.y && p.x < ((b.x - a.x) * (p.y - a.y)) / (b.y - a.y) + a.x) inside = !inside
+  }
+  return inside
+}
+
+/** Whether world point p is inside a shape, grown by `margin` world px (a circle's or a cone's edge counts as in). */
+export function shapeCovers(el: Transform & { shape: ShapeKind }, p: Point, margin = 0): boolean {
+  const l = toLocal(el, p)
+  if (el.shape === 'circle') {
+    const rx = el.w / 2 + margin
+    const ry = el.h / 2 + margin
+    return (l.x * l.x) / (rx * rx) + (l.y * l.y) / (ry * ry) <= 1
+  }
+  if (el.shape === 'cone') {
+    // Within its length, and within the widening wedge.
+    const t = (l.x + el.w / 2) / el.w
+    return t >= -margin / el.w && t <= 1 + margin / el.w && Math.abs(l.y) <= (el.h / 2) * Math.max(0, t) + margin
+  }
+  return Math.abs(l.x) <= el.w / 2 + margin && Math.abs(l.y) <= el.h / 2 + margin
+}
+
+/**
+ * The tokens an area covers: those with their centre in it, or any of their
+ * edge within it (a token half in a cone is caught).
+ */
+export function tokensCovered(area: Transform & { shape: ShapeKind }, tokens: (Transform & { id: string })[]): string[] {
+  return tokens
+    .filter((t) => {
+      const r = Math.min(t.w, t.h) / 2
+      // The centre, and eight points just inside the token's edge.
+      const samples = [{ x: t.x, y: t.y }, ...Array.from({ length: 8 }, (_, i) => ({ x: t.x + r * 0.8 * Math.cos((i * Math.PI) / 4), y: t.y + r * 0.8 * Math.sin((i * Math.PI) / 4) }))]
+      return samples.some((p) => shapeCovers(area, p))
+    })
+    .map((t) => t.id)
+}
+
 /** Whether world point p touches the element, within `tolerance` world px. */
 export function hits(el: SceneElement, p: Point, tolerance = 0): boolean {
   const l = toLocal(el, p)
@@ -73,6 +141,10 @@ export function hits(el: SceneElement, p: Point, tolerance = 0): boolean {
       const d = distanceToStroke(el.points, l.x / sx, l.y / sy) * scale
       return d <= (el.width / 2) * scale + tolerance
     }
+    case 'shape':
+      return shapeCovers(el, p, tolerance + el.width / 2)
+    case 'text':
+      return Math.abs(l.x) <= hw + tolerance && Math.abs(l.y) <= hh + tolerance
   }
 }
 
