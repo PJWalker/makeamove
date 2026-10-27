@@ -1312,10 +1312,6 @@
     white-space: nowrap;
     user-select: none;
   }
-  .hotbar-btn kbd {
-    font-size: var(--text-xs);
-    opacity: 0.7;
-  }
   .hotbar-slot {
     position: relative;
   }
@@ -2546,6 +2542,22 @@
     color: var(--text-muted);
     cursor: default;
   }
+  /* The icons a hotbar slot can show (ActionDialogs). */
+  .icon-choices {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+    gap: var(--space-1);
+    max-width: 360px;
+  }
+  .icon-choice {
+    --bevel: var(--bevel-sm);
+    aspect-ratio: 1;
+    padding: 0;
+    justify-content: center;
+  }
+  .icon-choice[aria-selected='true'] {
+    box-shadow: inset 0 0 0 2px var(--accent);
+  }
   .palette-note {
     margin: 0;
     padding: var(--space-1) var(--space-4);
@@ -2554,14 +2566,6 @@
   }
   .palette-note:empty {
     display: none;
-  }
-  .palette-foot {
-    display: flex;
-    gap: var(--space-4);
-    margin: 0;
-    padding: var(--space-2) var(--space-4);
-    color: var(--text-muted);
-    font-size: var(--text-xs);
   }
   @media (prefers-reduced-motion: reduce) {
     .palette {

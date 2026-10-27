@@ -53,6 +53,7 @@ import MsGridOn from "~icons/material-symbols/grid-on-rounded";
 import MsChevronLeft from '~icons/material-symbols/chevron-left-rounded'
 import MsFolder from '~icons/material-symbols/folder-rounded'
 import MsImage from "~icons/material-symbols/image-rounded";
+import MsKeyboard from '~icons/material-symbols/keyboard-rounded'
 import MsInkEraser from "~icons/material-symbols/ink-eraser-rounded";
 import MsLayers from "~icons/material-symbols/layers-rounded";
 import MsLink from '~icons/material-symbols/link-rounded'
@@ -107,6 +108,7 @@ export const IconToFront = icon(MsFlipToFront)
 export const IconToBack = icon(MsFlipToBack)
 export const IconDuplicate = icon(MsContentCopy)
 export const IconRename = icon(MsEdit)
+export const IconShortcut = icon(MsKeyboard)
 export const IconFit = icon(MsFitScreen)
 export const IconUndo = icon(MsUndo)
 export const IconRedo = icon(MsRedo)

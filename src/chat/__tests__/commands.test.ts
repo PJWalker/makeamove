@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseCommand, splitFormula, suggest } from '../commands'
+import { diceFormula, parseCommand, splitFormula, suggest } from '../commands'
 import { entityToken, tokenize } from '../markdown'
 
 const members = [
@@ -12,6 +12,15 @@ describe('commands', () => {
   it('sends plain text, and // escapes a slash', () => {
     expect(parseCommand(' hello ', members, false)).toEqual({ kind: 'text', text: 'hello' })
     expect(parseCommand('//shrug', members, false)).toEqual({ kind: 'text', text: '/shrug' })
+  })
+  it('rolls a bare formula without /r, but leaves ordinary text alone', () => {
+    expect(parseCommand(' 2d6+1 ', members, false)).toEqual({ kind: 'roll', formula: '2d6+1', visibility: 'public' })
+    expect(parseCommand('4d6kh3 + 1d8[STR]', members, false)).toMatchObject({ kind: 'roll', formula: '4d6kh3 + 1d8[STR]' })
+    for (const text of ['3', '2 + 2', 'd20 time', 'dd', 'D&D tonight?', 'roll 2d6']) {
+      expect(parseCommand(text, members, false)).toEqual({ kind: 'text', text })
+    }
+    expect(diceFormula('d%')).toBe('d%')
+    expect(diceFormula('5')).toBeNull()
   })
   it('rolls with a comment, and picks visibility from the command', () => {
     expect(parseCommand('/r 2d6 + 1 hack and slash', members, false)).toEqual({

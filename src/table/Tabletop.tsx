@@ -10,6 +10,7 @@ import { CampaignDialogHost } from './ScenePanel'
 import { Sidebar } from './Sidebar'
 import { dockInsets, windowDragging } from './panelLayout'
 import { activeMapColour, autohide, canvasColour, setAutohide } from './canvasState'
+import { ActionDialogs } from './ActionDialogs'
 import { Hotbar } from './Hotbar'
 import { TargetBar } from './TargetBar'
 import { LinkPopups } from './LinkPopups'
@@ -81,6 +82,7 @@ export function Tabletop({ campaign }: { campaign: Campaign }) {
       <MoveDialog campaign={campaign} />
       <TargetBar campaign={campaign} />
       <LinkPopups campaign={campaign} />
+      <ActionDialogs campaign={campaign} />
     </div>
   )
 }

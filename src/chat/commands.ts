@@ -3,7 +3,8 @@ import type { RollVisibility } from './types'
 
 /*
  * What the chat box understands. Plain text is a message; a leading slash is
- * a command. `//text` sends text that starts with a slash.
+ * a command. `//text` sends text that starts with a slash. A message that is
+ * nothing but a dice formula, like `2d6+1`, rolls it.
  */
 
 export interface MemberRef {
@@ -66,6 +67,17 @@ export function splitFormula(rest: string): { formula: string; comment?: string 
   return { error: firstError || 'Those dice don’t make sense.' }
 }
 
+/** The text as a formula, if all of it is one with at least one die in it ("3" alone stays a message). */
+export function diceFormula(text: string): string | null {
+  const formula = text.trim()
+  if (!formula || !/d/i.test(formula)) return null
+  try {
+    return parse(formula).some((t) => t.kind === 'dice') ? formula : null
+  } catch {
+    return null
+  }
+}
+
 /** Whoever `rest` starts with: the longest matching member name, or "gm". */
 function whisperTarget(rest: string, members: MemberRef[]): { to: MemberRef[]; text: string } | null {
   const lower = rest.toLowerCase()
@@ -85,7 +97,10 @@ function whisperTarget(rest: string, members: MemberRef[]): { to: MemberRef[]; t
 
 export function parseCommand(input: string, members: MemberRef[], isGm: boolean): Command {
   const text = input.trim()
-  if (!text.startsWith('/')) return { kind: 'text', text }
+  if (!text.startsWith('/')) {
+    const formula = diceFormula(text)
+    return formula ? { kind: 'roll', formula, visibility: 'public' } : { kind: 'text', text }
+  }
   if (text.startsWith('//')) return { kind: 'text', text: text.slice(1) }
 
   const m = /^\/(\S+)\s*([\s\S]*)$/.exec(text)!

@@ -19,9 +19,21 @@ import {
 import { MOD } from '../ui/keys'
 import type { Action } from './types'
 
-const DICE = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd%', '2d6', '2d20kh1', '2d20kl1']
+/** Rolling one formula, for everyone to see. The palette offers one for any formula typed in it, to run or drag onto the hotbar. */
+export function rollAction(campaign: Campaign, formula: string): Action {
+  return {
+    id: `roll:${formula}`,
+    kind: 'command',
+    title: `Roll ${formula}`,
+    aliases: [formula, 'dice'],
+    source: 'Core',
+    icon: IconDice,
+    available: true,
+    run: () => postRoll(campaign, formula, 'public'),
+  }
+}
 
-/** Tools, commands, settings, panels, scenes and dice: what every campaign has. */
+/** Tools, commands, settings, panels and scenes: what every campaign has. */
 export function coreActions(campaign: Campaign): Action[] {
   const isGm = campaign.isGm()
   const out: Action[] = []
@@ -140,19 +152,6 @@ export function coreActions(campaign: Campaign): Action[] {
       icon: IconMap,
       available: true,
       run: () => campaign.setActiveScene(s.id),
-    })
-  }
-
-  for (const f of DICE) {
-    out.push({
-      id: `roll:${f}`,
-      kind: 'command',
-      title: `Roll ${f}`,
-      aliases: [f, 'dice'],
-      source: 'Core',
-      icon: IconDice,
-      available: true,
-      run: () => postRoll(campaign, f, 'public'),
     })
   }
 

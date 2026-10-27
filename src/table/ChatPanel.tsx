@@ -360,8 +360,9 @@ function Composer({ campaign, onNote }: { campaign: Campaign; onNote: (text: str
       const lines = COMMANDS.filter((c) => isGm || !c.gmOnly).map((c) => `${c.usage}  ${c.help}`)
       onNote(['Commands:', ...lines, 'Formulas: 2d6+1, 4d6kh3, 2d20kl1, d6!, 1d8+2[STR]'].join('\n'))
     } else {
-      // A roll typed with /r uses its own visibility; quick dice use the toggle.
-      runCommand(campaign, cmd)
+      // A roll typed with /r or /sr uses its own visibility; quick dice and a bare formula use the toggle.
+      const bare = cmd.kind === 'roll' && !typed.trim().startsWith('/')
+      runCommand(campaign, bare ? { ...cmd, visibility: visibility.value } : cmd)
     }
     last.current = typed
     input.current?.set('')
@@ -486,7 +487,7 @@ function Composer({ campaign, onNote }: { campaign: Campaign; onNote: (text: str
         <ChatInput
           campaign={campaign}
           handle={input}
-          placeholder="Message, @ to link, or /r 2d6+1"
+          placeholder="Message, @ to link, or roll 2d6+1"
           label="Message"
           invalid={!!error.value}
           onChange={(t) => {
