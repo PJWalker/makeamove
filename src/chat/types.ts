@@ -40,6 +40,8 @@ export interface RollMessage extends Base {
   roll: Roll
   comment?: string
   visibility: RollVisibility
+  /** Damage or healing for these targets, which the GM can apply from the card. */
+  damage?: { type: string; targets: MoveTarget[] }
 }
 
 export interface SystemMessage extends Base {
@@ -60,20 +62,40 @@ export interface MoveSuggestion {
   label: string
   /** Add to one of the character's data fields. */
   bump?: { field: string; by: number }
-  /** Roll a formula and post it. */
-  roll?: { formula: string; comment: string }
+  /** Roll a formula and post it; with `damage`, as damage of that type (or healing) for `targets`. */
+  roll?: { formula: string; comment: string; damage?: string; targets?: MoveTarget[] }
 }
 
-/** A move being made, with its roll (if it has one) and the outcome text. */
 /** A token a move was aimed at, as it was when the move was made. */
 export interface MoveTarget {
   /** The token's id on its scene. */
   id: string
   name: string
+  /** The character the token stands for, if it's linked to one. */
+  characterId?: string
   /** Its distance from the actor's token, formatted ("20 ft"), if both were on the scene. */
   distance?: string
+  /** At long range: rolled with the system's long-range mode. */
+  long?: boolean
+  /** For a check against targets: the value it had to reach ("AC 13"), the roll and how it went. */
+  against?: number
+  roll?: Roll
+  result?: string
+  hit?: boolean
 }
 
+/** A roll each target is asked to make: a saving throw against the actor's DC. */
+export interface SaveRequest {
+  /** The action each target rolls. */
+  action: string
+  /** Its name: "Dexterity Save". */
+  name: string
+  dc: number
+  success: string
+  failure: string
+}
+
+/** A move being made, with its roll (or a roll per target), and the outcome text. */
 export interface MoveMessage extends Base {
   kind: 'move'
   moveId: string
@@ -88,6 +110,8 @@ export interface MoveMessage extends Base {
   /** The outcome for the result, or the move's text when it doesn't roll. */
   outcome: string
   suggestions: MoveSuggestion[]
+  /** Asks every target to roll; answers are kept in the campaign's message state. */
+  save?: SaveRequest
 }
 
 export type ChatMessage = TextMessage | RollMessage | SystemMessage | MoveMessage

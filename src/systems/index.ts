@@ -36,6 +36,10 @@ export function checkSystem(s: GameSystem): string[] {
     if (!categories.has(a.category)) problems.push(`${a.name}: no action category “${a.category}”.`)
     if (a.classId && !classes.has(a.classId)) problems.push(`${a.name}: no class “${a.classId}”.`)
     for (const step of a.steps) {
+      if (step.kind === 'save') {
+        if (!s.actions.some((x) => x.id === step.action)) problems.push(`${a.name}: no action “${step.action}” to save with.`)
+        continue
+      }
       if (step.stat && !stats.has(step.stat)) problems.push(`${a.name}: no stat “${step.stat}”.`)
       for (const r of s.results) if (!(r.id in step.outcomes)) problems.push(`${a.name}: no outcome for “${r.label}”.`)
       for (const ids of Object.values(step.followUps ?? {}))

@@ -12,6 +12,7 @@ import { IconClose } from '../ui/icons'
 import { lastPressed } from '../ui/pressed'
 import { Segmented } from '../ui/Segmented'
 import { chosenTargets, sceneDistance, targetPick } from './canvasState'
+import type { MoveTarget } from '../chat/types'
 
 /*
  * What a move asks before it rolls, in a speech bubble beside the button that
@@ -209,9 +210,17 @@ function TargetStep({ campaign, characterId, moveId }: { campaign: Campaign; cha
   const ready = targets.length >= spec.min
   const fmt = sceneDistance.value
   const wanted = spec.max === 1 ? 'one target' : spec.max ? `up to ${spec.max} targets` : 'any number of targets'
+  const reach = (d: number | null) => (spec.range && d !== null ? inRange(d, spec.range) : 'normal')
+  const blocked = targets.some((t) => reach(t.distance) === 'out')
   const go = () => {
-    if (!ready) return
-    const picked = targets.map((t) => ({ id: t.id, name: t.name, ...(t.distance !== null ? { distance: fmt(t.distance) } : {}) }))
+    if (!ready || blocked) return
+    const picked: MoveTarget[] = targets.map((t) => ({
+      id: t.id,
+      name: t.name,
+      ...(t.characterId ? { characterId: t.characterId } : {}),
+      ...(t.distance !== null ? { distance: fmt(t.distance) } : {}),
+      ...(reach(t.distance) === 'long' ? { long: true } : {}),
+    }))
     startMove(campaign, characterId, move, picked)
   }
   return (
@@ -220,9 +229,10 @@ function TargetStep({ campaign, characterId, moveId }: { campaign: Campaign; cha
       {targets.length ? (
         <span class="roll-prompt-targets">
           {targets.map((t) => {
-            const out = spec.range && t.distance !== null && inRange(t.distance, spec.range) === 'out'
+            const r = reach(t.distance)
+            const out = r === 'out'
             return (
-              <span key={t.id} class="target-chip" data-out={out || undefined} title={out ? 'Out of range' : undefined}>
+              <span key={t.id} class="target-chip" data-out={out || undefined} title={out ? 'Out of range' : r === 'long' ? 'Long range' : undefined}>
                 {t.name}
                 {t.distance !== null && <span class="muted"> {fmt(t.distance)}</span>}
               </span>
@@ -232,8 +242,8 @@ function TargetStep({ campaign, characterId, moveId }: { campaign: Campaign; cha
       ) : (
         <span class="muted">Click a token on the map: {wanted}.</span>
       )}
-      <Button variant="primary" disabled={!ready} onClick={go}>
-        {move.name}
+      <Button variant="primary" disabled={!ready || blocked} onClick={go}>
+        {blocked ? 'Out of range' : move.name}
       </Button>
     </div>
   )

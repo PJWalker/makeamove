@@ -28,6 +28,7 @@ import type { TokenStyle } from '../scene/types'
  *   scenes   Y.Map   sceneId  -> Y.Map { name, canvasColour, order, visibility, doc }
  *   notes    Y.Map   noteId   -> Y.Map { title, folder, order, links, updatedAt, updatedBy, doc }
  *   noteFolders Y.Map folderId -> { name, order }
+ *   messageState Y.Map `messageId/field` -> what changes about a chat message (chat/messageState.ts)
  *
  * Each scene's contents (maps, tokens, drawings) live in its `doc`, a Yjs
  * subdocument that is loaded only while the scene is open (see SceneDoc).
@@ -100,6 +101,8 @@ export class Campaign {
   readonly notes: Y.Map<Y.Map<any>>
   /** id -> folder that notes are filed in. */
   readonly noteFolders: Y.Map<{ name: string; order: string }>
+  /** Roll-request answers, applied damage, edits and pins, by message (see chat/messageState.ts). */
+  readonly messageState: Y.Map<any>
   /** GM-only pages, on GM devices only (see notes/vault.ts). */
   readonly vault = signal<Vault | null>(null)
   private persistence: IndexeddbPersistence
@@ -129,6 +132,7 @@ export class Campaign {
     this.characterFolders = this.doc.getMap('characterFolders')
     this.notes = this.doc.getMap('notes')
     this.noteFolders = this.doc.getMap('noteFolders')
+    this.messageState = this.doc.getMap('messageState')
     this.persistence = new IndexeddbPersistence(dbName(id), this.doc)
     this.chat = new ChatLog(this.doc, id, device.value.id)
   }

@@ -266,13 +266,20 @@ export class SceneController {
   }
 
   /** The chosen targets, with each one's distance from the actor's token (null without one). */
-  targetDetails(): { id: string; name: string; distance: number | null }[] {
+  targetDetails(): { id: string; name: string; characterId?: string; distance: number | null }[] {
     const fromId = this.rangeFrom()
     const from = fromId ? this.byId.get(fromId) : undefined
     return this.targets.value.flatMap((id) => {
       const el = this.byId.get(id)
       if (el?.type !== 'token') return []
-      return [{ id, name: el.name || 'Unnamed token', distance: from ? tokenDistance(this.renderer.grid, from, el) : null }]
+      return [
+        {
+          id,
+          name: el.name || 'Unnamed token',
+          ...(el.characterId ? { characterId: el.characterId } : {}),
+          distance: from ? tokenDistance(this.renderer.grid, from, el) : null,
+        },
+      ]
     })
   }
 

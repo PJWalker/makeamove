@@ -4,13 +4,15 @@ import * as Y from 'yjs'
 import { importImage } from '../scene/images'
 import { newId } from '../lib/ids'
 import { postRoll, myName } from '../chat/send'
-import type { MoveSuggestion, MoveTarget } from '../chat/types'
+import type { MoveSuggestion, MoveTarget, SaveRequest } from '../chat/types'
+import { appliedField, getState, saveField, setState, type SaveAnswer } from '../chat/messageState'
+import { describe, roll } from '../dice/notation'
 import type { Campaign } from '../store/campaign'
 import { device } from '../store/device'
 import { getSystem } from '../systems'
 import type { ActionDef, DataValue, ItemDef, ResetEvent, TokenStat } from '../systems/types'
 import type { TemplateSettings } from './templates'
-import { asksFirst, performMove, type MoveChoice } from './moves'
+import { asksFirst, performMove, planMove, type MoveChoice } from './moves'
 import {
   characterView,
   derive,
@@ -319,7 +321,11 @@ export function makeMove(campaign: Campaign, characterId: string, move: ActionDe
   const c = getCharacter(campaign, characterId)
   if (!c) return
   const d = derive(c, system)
-  const { spent, ...result } = performMove(system, move, c, d, choice)
+  const valueAt = (t: MoveTarget, key: string) => {
+    const tc = getCharacter(campaign, t.characterId)
+    return tc ? derive(tc, system).values[key] : undefined
+  }
+  const { spent, ...result } = performMove(system, move, c, d, choice, undefined, { targets, valueAt })
   // A roll uses up modifiers that last for one roll; text-only moves leave them.
   for (const id of spent) setModifier(campaign, c.id, id, 0)
   return campaign.chat.post(
@@ -330,8 +336,8 @@ export function makeMove(campaign: Campaign, characterId: string, move: ActionDe
       trigger: move.trigger,
       characterId: c.id,
       characterName: c.name,
-      ...(targets?.length ? { targets } : {}),
       ...result,
+      ...(result.targets?.length ? { targets: result.targets } : {}),
     },
     { id: device.value.id, name: myName(campaign) },
   )
@@ -340,7 +346,60 @@ export function makeMove(campaign: Campaign, characterId: string, move: ActionDe
 /** Carry out a suggestion button from a move card. */
 export function applySuggestion(campaign: Campaign, characterId: string, s: MoveSuggestion) {
   if (s.bump) bumpData(campaign, characterId, s.bump.field, s.bump.by)
-  else if (s.roll) postRoll(campaign, s.roll.formula, 'public', s.roll.comment)
+  else if (s.roll) {
+    const { formula, comment, damage, targets } = s.roll
+    postRoll(campaign, formula, 'public', comment, damage && targets?.length ? { type: damage, targets } : undefined)
+  }
+}
+
+/** Whether this device may answer a roll request for a target: its owner, or the GM. Unlinked tokens are the GM's. */
+export function canAnswer(campaign: Campaign, t: MoveTarget): boolean {
+  if (campaign.isGm()) return true
+  const c = getCharacter(campaign, t.characterId)
+  return !!c && canEdit(campaign, c)
+}
+
+/**
+ * Answer a move card's roll request for one target: roll the requested
+ * action as the target's character (or the bare base roll for an unlinked
+ * token), and record the total against the DC on the card.
+ */
+export function answerSave(campaign: Campaign, messageId: string, t: MoveTarget, save: SaveRequest, mode?: string) {
+  const system = systemOf(campaign)
+  const action = system.actions.find((a) => a.id === save.action)
+  const c = getCharacter(campaign, t.characterId)
+  const formula =
+    c && action ? planMove(system, action, c, derive(c, system), { mode }).formula : (system.rollModes?.find((m) => m.id === mode)?.roll ?? system.baseRoll)
+  const r = roll(formula)
+  const answer: SaveAnswer = { total: r.total, detail: describe(r), success: r.total >= save.dc, by: device.value.id }
+  setState(campaign.messageState, messageId, saveField(t.id), answer)
+}
+
+/**
+ * Apply damage (or healing) from a card to a target's character: temporary
+ * HP soak damage first, then hit points, never below zero or above the
+ * maximum. Recorded on the card, so it shows what was done.
+ */
+export function applyDamage(campaign: Campaign, messageId: string, t: MoveTarget, amount: number, healing: boolean) {
+  const system = systemOf(campaign)
+  const c = getCharacter(campaign, t.characterId)
+  if (!c) return
+  const max = derive(c, system).values[system.resources.find((r) => r.id === 'hp')?.max ?? 'maxHp']
+  campaign.doc.transact(() => {
+    if (healing) bumpResource(campaign, c.id, 'hp', amount, max)
+    else {
+      let left = amount
+      if (system.tempHp) {
+        const temp = Number(c.data[system.tempHp] ?? 0)
+        const soaked = Math.min(temp, left)
+        if (soaked) setData(campaign, c.id, system.tempHp, temp - soaked)
+        left -= soaked
+      }
+      if (left) bumpResource(campaign, c.id, 'hp', -left)
+    }
+    const before = getState<number>(campaign.messageState, messageId, appliedField(t.id)) ?? 0
+    setState(campaign.messageState, messageId, appliedField(t.id), before + (healing ? amount : -amount))
+  })
 }
 
 /* Inventory */

@@ -102,4 +102,60 @@ describe('D&D 5.5e', () => {
     expect(planMove(dnd, dnd.actions.find((a) => a.id === 'check-str')!, c, d).formula).toBe('1d20-4[Exhaustion]')
     expect(d.values.speed).toBe(20)
   })
+
+  describe('actions against targets', () => {
+    const attack = dnd.actions.find((a) => a.id === 'melee-attack')!
+    const targets = [
+      { id: 't1', name: 'Goblin', characterId: 'g1' },
+      { id: 't2', name: 'Orc', characterId: 'g2', long: true },
+    ]
+    const ac: Record<string, number> = { g1: 13, g2: 30 }
+    const valueAt = (t: { characterId?: string }, key: string) => (key === 'ac' ? ac[t.characterId!] : undefined)
+
+    it('rolls once per target and reads each against its AC', () => {
+      const { view } = character('fighter', { str: 16 })
+      const c = view()
+      // Goblin: 12 + 3 + 2 = 17 hits AC 13. Orc at long range: disadvantage, 15 and 12 keep 12, 17 misses AC 30.
+      const r = performMove(dnd, attack, c, derive(c, dnd), {}, (() => {
+        const vals = [12, 15, 12]
+        let i = 0
+        return () => vals[i++]
+      })(), { targets, valueAt })
+      expect(r.roll).toBeUndefined()
+      expect(r.targets!.map((t) => [t.roll!.total, t.against, t.hit])).toEqual([
+        [17, 13, true],
+        [17, 30, false],
+      ])
+      expect(r.targets![1].roll!.formula.startsWith('2d20kl1')).toBe(true)
+      // Damage is offered for the target that was hit.
+      expect(r.suggestions[0].roll!.targets!.map((t) => t.id)).toEqual(['t1'])
+      expect(r.suggestions[0].roll!.damage).toBe('damage')
+    })
+
+    it('hits on a natural 20 and misses on a natural 1, whatever the AC', () => {
+      const { view } = character('fighter', { str: 16 })
+      const c = view()
+      const r = performMove(dnd, attack, c, derive(c, dnd), { mode: 'advantage' }, (() => {
+        const vals = [20, 1, 1, 1]
+        let i = 0
+        return () => vals[i++]
+      })(), { targets, valueAt })
+      // Advantage cancels the Orc's long-range disadvantage.
+      expect(r.targets![1].roll!.formula.startsWith('1d20')).toBe(true)
+      expect(r.targets!.map((t) => [t.result, t.hit])).toEqual([
+        ['crit', true],
+        ['fumble', false],
+      ])
+      expect(r.suggestions[0].label).toMatch(/critical/)
+    })
+
+    it('asks each target of a save spell to roll against the caster’s DC', () => {
+      const { view } = character('wizard', { int: 16 }, 5)
+      const c = view()
+      const fireball = dnd.actions.find((a) => a.id === 'fireball')!
+      const r = performMove(dnd, fireball, c, derive(c, dnd), {}, undefined, { targets })
+      expect(r.save).toMatchObject({ action: 'save-dex', name: 'Dexterity Save', dc: 14 })
+      expect(r.suggestions[0].roll).toMatchObject({ damage: 'fire', targets: [{ id: 't1' }, { id: 't2' }] })
+    })
+  })
 })

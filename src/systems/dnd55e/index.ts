@@ -1,6 +1,6 @@
 import type { CharacterView } from '../../characters/store'
 import { resolveEffects, type EffectSource } from '../effects'
-import type { ActionDef, CheckStep, Derived, FollowUpDef, GameSystem, ResourceDef } from '../types'
+import type { ActionDef, CheckStep, DamageTypeDef, Derived, FollowUpDef, GameSystem, ResourceDef, SaveStep, TargetSpec } from '../types'
 import {
   ABILITIES,
   ACTIONS,
@@ -154,7 +154,7 @@ const ATTACKS: ActionDef[] = [
     trigger: 'Attack action, with a melee weapon or an Unarmed Strike',
     text: 'Roll 1d20 + your Strength modifier + your Proficiency Bonus against the target’s AC. On a hit, roll the weapon’s damage plus your Strength modifier; an Unarmed Strike deals 1 + your Strength modifier.',
     target: { prompt: 'Target the creature you’re attacking', min: 1, max: 1 },
-    steps: [check({ stat: 'str', add: [{ value: 'prof', label: 'Prof' }], followUps: { crit: ['crit-str'], rolled: ['damage-str'] } }, ATTACK_OUTCOMES)],
+    steps: [check({ stat: 'str', add: [{ value: 'prof', label: 'Prof' }], against: 'ac', followUps: { crit: ['crit-str'], rolled: ['damage-str'] } }, ATTACK_OUTCOMES)],
   },
   {
     id: 'finesse-attack',
@@ -163,7 +163,7 @@ const ATTACKS: ActionDef[] = [
     trigger: 'Attack action, with a Finesse or ranged weapon',
     text: 'Roll 1d20 + your Dexterity modifier + your Proficiency Bonus against the target’s AC. On a hit, roll the weapon’s damage plus your Dexterity modifier. Attacking at long range, or with a ranged weapon while an enemy is within 5 feet, has Disadvantage.',
     target: { prompt: 'Target the creature you’re attacking', min: 1, max: 1 },
-    steps: [check({ stat: 'dex', add: [{ value: 'prof', label: 'Prof' }], followUps: { crit: ['crit-dex'], rolled: ['damage-dex'] } }, ATTACK_OUTCOMES)],
+    steps: [check({ stat: 'dex', add: [{ value: 'prof', label: 'Prof' }], against: 'ac', followUps: { crit: ['crit-dex'], rolled: ['damage-dex'] } }, ATTACK_OUTCOMES)],
   },
 ]
 
@@ -196,6 +196,7 @@ const spellRoll = (s: Spell, crit: boolean): FollowUpDef => {
   return {
     id: `spell-${s.id}${crit ? '-crit' : ''}`,
     kind: 'roll',
+    damage: r.label === 'healing' ? 'healing' : (r.type ?? 'damage'),
     label: crit ? 'Roll critical damage' : r.label === 'healing' ? 'Roll healing' : 'Roll damage',
     comment: s.name,
     formula: (c, d) => {
@@ -207,6 +208,17 @@ const spellRoll = (s: Spell, crit: boolean): FollowUpDef => {
 
 const SPELL_ROLLS: FollowUpDef[] = SPELLS.flatMap((s) => (!s.roll ? [] : s.attack ? [spellRoll(s, false), spellRoll(s, true)] : [spellRoll(s, false)]))
 
+/** Spells with a save and no single target hit everyone in an area. */
+const AREA: TargetSpec = { prompt: 'Target each creature in the area', min: 1 }
+
+const saveStep = (s: Spell): SaveStep => ({
+  kind: 'save',
+  action: `save-${s.save}`,
+  dc: 'spellDc',
+  success: s.roll ? 'Half damage, or none for a cantrip.' : 'No effect.',
+  failure: s.roll ? 'Full damage, and any other effect.' : 'The spell takes effect.',
+})
+
 const SPELL_ACTIONS: ActionDef[] = SPELLS.map((s) => ({
   id: s.id,
   name: s.name,
@@ -214,18 +226,21 @@ const SPELL_ACTIONS: ActionDef[] = SPELLS.map((s) => ({
   trigger: `${s.level ? `Level ${s.level}` : 'Cantrip'} · ${s.trigger}`,
   text: s.text,
   tags: [s.level ? `level ${s.level}` : 'cantrip'],
-  ...(s.target ? { target: s.target } : {}),
+  ...(s.target ? { target: s.target } : s.save ? { target: AREA } : {}),
   steps: s.attack
     ? [
         check(
           {
             add: [{ value: 'spellAttack', label: 'Spell attack' }],
+            against: 'ac',
             ...(s.roll ? { followUps: { crit: [`spell-${s.id}-crit`], rolled: [`spell-${s.id}`] } } : {}),
           },
           ATTACK_OUTCOMES,
         ),
       ]
-    : [],
+    : s.save
+      ? [saveStep(s)]
+      : [],
   ...(!s.attack && s.roll ? { followUps: [`spell-${s.id}`] } : {}),
 }))
 
@@ -238,13 +253,22 @@ function weaponDamage(d: Derived, ability: Ability, crit: boolean): string {
 }
 
 const WEAPON_ROLLS: FollowUpDef[] = (['str', 'dex'] as const).flatMap((a): FollowUpDef[] => [
-  { id: `damage-${a}`, kind: 'roll', label: 'Roll damage', comment: 'Damage', formula: (_c, d) => weaponDamage(d, a, false) },
-  { id: `crit-${a}`, kind: 'roll', label: 'Roll critical damage', comment: 'Critical damage', formula: (_c, d) => weaponDamage(d, a, true) },
+  { id: `damage-${a}`, kind: 'roll', label: 'Roll damage', comment: 'Damage', damage: 'damage', formula: (_c, d) => weaponDamage(d, a, false) },
+  { id: `crit-${a}`, kind: 'roll', label: 'Roll critical damage', comment: 'Critical damage', damage: 'damage', formula: (_c, d) => weaponDamage(d, a, true) },
 ])
 
 const ACTIONS_ALL: ActionDef[] = [...ATTACKS, ...SPELL_ACTIONS, ...FEATURE_ACTIONS, ...BASIC, ...COMBAT, ...SAVES, ...SKILL_CHECKS, ...ABILITY_CHECKS]
 
 /* Resources: hit points, Hit Dice, spell slots and class pools. Those a character doesn't have have a maximum of 0. */
+
+const DAMAGE_TYPES: DamageTypeDef[] = [
+  ...['Acid', 'Bludgeoning', 'Cold', 'Fire', 'Force', 'Lightning', 'Necrotic', 'Piercing', 'Poison', 'Psychic', 'Radiant', 'Slashing', 'Thunder'].map((name) => ({
+    id: name.toLowerCase(),
+    name,
+  })),
+  { id: 'damage', name: 'Damage' },
+  { id: 'healing', name: 'Healing' },
+]
 
 const SLOT_LEVELS = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 const ORDINAL = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th']
@@ -280,6 +304,11 @@ export const dnd55e: GameSystem = {
   ],
   results,
   result: (_total, natural) => (natural[0] === 20 ? 'crit' : natural[0] === 1 ? 'fumble' : 'rolled'),
+  // A natural 20 always hits and a natural 1 always misses.
+  hits: (total, natural, ac) => natural[0] === 20 || (natural[0] !== 1 && total >= ac),
+  longRange: { mode: 'disadvantage', cancels: 'advantage' },
+  damageTypes: DAMAGE_TYPES,
+  tempHp: 'tempHp',
   actions: ACTIONS_ALL,
   actionCategories: [
     { id: 'attack', label: 'Attacks' },

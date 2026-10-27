@@ -67,11 +67,11 @@ export function CopyBanner({ campaign, c }: { campaign: Campaign; c: CharacterVi
   return (
     <div class="copy-banner">
       <span>
-        A copy of <strong>{template?.name ?? 'a deleted template'}</strong>. What you change here applies to this token alone.
+        Derived From <strong>{template?.name ?? 'a deleted template'}</strong>.
       </span>
       {template && canEdit(campaign, c) && (
         <Button size="sm" variant="ghost" onClick={() => resetCopy(campaign, c.id)}>
-          Reset to {template.name}
+          Reset
         </Button>
       )}
     </div>

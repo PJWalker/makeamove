@@ -32,7 +32,7 @@ export function canvasColour(scene: SceneView, mapColour: string | null): string
 export const targetPick = signal<{ max?: number; actor?: string } | null>(null)
 
 /** The targets chosen on the open scene, with distances from the actor's token in scene units. */
-export const chosenTargets = signal<{ id: string; name: string; distance: number | null }[]>([])
+export const chosenTargets = signal<{ id: string; name: string; characterId?: string; distance: number | null }[]>([])
 
 /** Formats a distance in the open scene's units; set by the scene canvas. */
 export const sceneDistance = signal<(d: number) => string>((d) => `${d}`)

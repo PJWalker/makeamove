@@ -3,7 +3,7 @@ import { makeSessionPage } from '../notes/sessions'
 import type { Campaign } from '../store/campaign'
 import { device } from '../store/device'
 import type { Command } from './commands'
-import type { RollVisibility } from './types'
+import type { RollMessage, RollVisibility } from './types'
 
 /** This device's name in the campaign, as other players see it. */
 export function myName(campaign: Campaign): string {
@@ -13,9 +13,9 @@ export function myName(campaign: Campaign): string {
 const me = (campaign: Campaign) => ({ id: device.value.id, name: myName(campaign) })
 
 /** Roll a formula and post the result. Throws NotationError for bad formulas. */
-export function postRoll(campaign: Campaign, formula: string, visibility: RollVisibility, comment?: string) {
+export function postRoll(campaign: Campaign, formula: string, visibility: RollVisibility, comment?: string, damage?: RollMessage['damage']) {
   const r = roll(formula)
-  return campaign.chat.post({ kind: 'roll', roll: r, visibility, ...(comment ? { comment } : {}) }, me(campaign))
+  return campaign.chat.post({ kind: 'roll', roll: r, visibility, ...(comment ? { comment } : {}), ...(damage ? { damage } : {}) }, me(campaign))
 }
 
 /**

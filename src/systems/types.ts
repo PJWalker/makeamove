@@ -95,10 +95,32 @@ export interface CheckStep {
   ask?: Ask
   /** Derived values added after the stat, each with its label: proficiency, a spell attack bonus. Zero adds nothing. */
   add?: { value: string; label: string }[]
+  /**
+   * A value each target's character has that the total must reach ("ac"):
+   * the check is then rolled once per target and read as a hit or a miss
+   * (see GameSystem.hits).
+   */
+  against?: string
   /** What each result means, by result id. */
   outcomes: Record<string, string>
-  /** Follow-up buttons offered for each result, by follow-up id. */
+  /** Follow-up buttons offered for each result, by follow-up id. On a check against targets, those of the best result that hit. */
   followUps?: Record<string, string[]>
+}
+
+/**
+ * Ask each target to roll one of their own actions (a saving throw) against
+ * a number the actor has (their spell save DC). The card carries a roll
+ * request per target, which only that target's owner or the GM can answer.
+ */
+export interface SaveStep {
+  kind: 'save'
+  /** The action each target rolls: "save-dex". */
+  action: string
+  /** The actor's derived value it's rolled against: "spellDc". */
+  dc: string
+  /** What happens on a success and on a failure. */
+  success: string
+  failure: string
 }
 
 /**
@@ -116,8 +138,8 @@ export interface TargetSpec {
   range?: Range
 }
 
-/** Parts of an action, done in order. More kinds arrive with targeting (M5 step 3). */
-export type ActionStep = CheckStep
+/** Parts of an action, done in order. */
+export type ActionStep = CheckStep | SaveStep
 
 /** Something a character can do: a move, an attack, a spell, a feature. */
 export interface ActionDef {
@@ -153,7 +175,15 @@ export type FollowUpDef =
   /** Add to one of the character's data fields: "Mark XP". */
   | { id: string; kind: 'bump'; label: string; field: string; by: number }
   /** Roll a formula worked out from the character: "Roll damage". */
-  | { id: string; kind: 'roll'; label: string; comment: string; formula: (c: CharacterView, d: Derived) => string }
+  | {
+      id: string
+      kind: 'roll'
+      label: string
+      comment: string
+      formula: (c: CharacterView, d: Derived) => string
+      /** A damage type, or 'healing': the roll then offers to apply itself to the action's targets. */
+      damage?: string
+    }
 
 export interface ClassDef {
   id: string
@@ -236,6 +266,12 @@ export interface TokenStat {
   colour: string
 }
 
+/** A kind of damage, which a creature may resist (half), be vulnerable to (double) or be immune to. */
+export interface DamageTypeDef {
+  id: string
+  name: string
+}
+
 /** A character's effective numbers, worked out by the system. */
 export interface Derived {
   /** Named values (max HP, armour, load…), after every active effect. */
@@ -261,6 +297,14 @@ export interface GameSystem {
   results: ResultDef[]
   /** Which result a check gets, from its total and the kept dice of its base roll. */
   result(total: number, natural: number[]): string
+  /** Whether a check against a target's value hits; by default, when the total reaches it. */
+  hits?(total: number, natural: number[], target: number): boolean
+  /** The roll mode forced at long range (disadvantage); a chosen opposite mode cancels it to a normal roll. */
+  longRange?: { mode: string; cancels: string }
+  /** Damage types, for follow-ups that roll damage. */
+  damageTypes?: DamageTypeDef[]
+  /** A data field that soaks damage before hit points do: temporary HP. */
+  tempHp?: string
   actions: ActionDef[]
   actionCategories: ActionCategory[]
   followUps: FollowUpDef[]

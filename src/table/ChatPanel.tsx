@@ -9,6 +9,7 @@ import type { ChatMessage, MoveMessage, RollMessage, RollVisibility, TextMessage
 import { canDelete, visibilityOf } from '../chat/types'
 import { logRows, type LogRow } from '../chat/sessions'
 import { markRead } from '../chat/unread'
+import { clearState } from '../chat/messageState'
 import { NotationError, type Roll } from '../dice/notation'
 import { applySuggestion, canEdit, getCharacter, systemOf } from '../characters/api'
 import { poolFormula } from '../dice/pool'
@@ -25,6 +26,7 @@ import { ChatInput, type ChatInputHandle } from './ChatInput'
 import { entityToken } from '../chat/markdown'
 import { registerLinkDrop } from './entityDrag'
 import { LinkChip } from './LinkChip'
+import { DamageTargets, SaveRequests, TargetRolls } from './CardParts'
 import { panelVisible } from './panelLayout'
 
 /*
@@ -93,6 +95,14 @@ export function ChatPanel({ campaign }: { campaign: Campaign }) {
   )
 }
 
+/** Delete a message and whatever was recorded about it. */
+function removeMessage(campaign: Campaign, id: string) {
+  campaign.doc.transact(() => {
+    campaign.chat.remove(id)
+    clearState(campaign.messageState, id)
+  })
+}
+
 function ChatLogView({ campaign, notes }: { campaign: Campaign; notes: { id: number; text: string; error?: boolean }[] }) {
   const ref = useRef<HTMLDivElement>(null)
   const list = useRef<HTMLDivElement>(null)
@@ -125,7 +135,7 @@ function ChatLogView({ campaign, notes }: { campaign: Campaign; notes: { id: num
   const closeMenu = useCallback(() => (menu.value = null), [])
   const openMenu = useCallback(
     (x: number, y: number, id: string) => {
-      menu.value = { x, y, items: [{ label: 'Delete message', Icon: IconDelete, danger: true, onSelect: () => campaign.chat.remove(id) }] }
+      menu.value = { x, y, items: [{ label: 'Delete message', Icon: IconDelete, danger: true, onSelect: () => removeMessage(campaign, id) }] }
     },
     [campaign],
   )
@@ -389,7 +399,7 @@ const Message = memo(function Message({ campaign, m, header, fresh, masked, mine
         </header>
       )}
       {m.kind === 'roll' ? (
-        <RollCard m={m} masked={masked} />
+        <RollCard campaign={campaign} m={m} masked={masked} />
       ) : m.kind === 'move' ? (
         <MoveCard campaign={campaign} m={m} canAct={canAct} />
       ) : (
@@ -447,7 +457,7 @@ const VISIBILITY_LABEL: Record<RollVisibility, string> = {
   private: 'Secret: you and the GM',
 }
 
-function RollCard({ m, masked }: { m: RollMessage; masked: boolean }) {
+function RollCard({ campaign, m, masked }: { campaign: Campaign; m: RollMessage; masked: boolean }) {
   if (masked) {
     return (
       <div class="roll-card" data-masked="true">
@@ -469,6 +479,7 @@ function RollCard({ m, masked }: { m: RollMessage; masked: boolean }) {
         <RollTerms roll={r} />
         <span class="roll-total">{r.total}</span>
       </div>
+      {m.damage && <DamageTargets campaign={campaign} m={m} />}
     </div>
   )
 }
@@ -705,7 +716,9 @@ function MoveCard({ campaign, m, canAct }: { campaign: Campaign; m: MoveMessage;
         <span class="roll-formula">{m.moveName}</span>
         <span class="roll-comment">{m.characterName}</span>
       </div>
-      {m.targets && (
+      {m.targets?.some((t) => t.roll) ? (
+        <TargetRolls campaign={campaign} m={m} />
+      ) : m.targets && !m.save && (
         <p class="move-targets">
           <span class="muted">Targeting</span>{' '}
           {m.targets.map((t, i) => (
@@ -725,6 +738,7 @@ function MoveCard({ campaign, m, canAct }: { campaign: Campaign; m: MoveMessage;
       )}
       {label && <div class="move-band">{label}</div>}
       <p class="move-outcome">{m.outcome}</p>
+      {m.save && <SaveRequests campaign={campaign} m={m} />}
       {canAct && m.suggestions.length > 0 && (
         <div class="move-suggest">
           {m.suggestions.map((s, i) => (

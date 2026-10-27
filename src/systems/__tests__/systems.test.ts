@@ -70,6 +70,7 @@ describe('Dungeon World data', () => {
     expect(new Set(ids).size).toBe(ids.length)
     for (const m of dw.actions)
       for (const step of m.steps) {
+        if (step.kind !== 'check') continue
         for (const r of dw.results) expect(step.outcomes[r.id], `${m.id} ${r.id}`).toBeDefined()
         if (step.stat) expect(dw.stats.some((s) => s.id === step.stat), m.id).toBe(true)
         for (const ids of Object.values(step.followUps ?? {}))

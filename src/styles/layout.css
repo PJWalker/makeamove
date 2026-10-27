@@ -1393,6 +1393,60 @@
     font-size: var(--text-sm);
   }
 
+  /* Per-target results on cards: attacks against AC, save requests, damage to apply */
+  .card-targets {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--text-sm);
+  }
+  .card-target {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 26px;
+    padding-inline: var(--space-1);
+    &:nth-child(even) {
+      background: var(--surface-sunken);
+    }
+  }
+  .card-target-roll {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+  }
+  .card-target-verdict {
+    font-weight: 700;
+    [data-hit='true'] > & {
+      color: var(--success);
+    }
+    [data-hit='false'] > & {
+      color: var(--text-muted);
+    }
+  }
+  .card-target-actions {
+    display: flex;
+    gap: var(--space-1);
+    grid-column: span 2;
+    justify-self: end;
+  }
+  .card-save,
+  .card-damage {
+    display: grid;
+    gap: var(--space-1);
+  }
+  .card-save-head {
+    margin: 0;
+    font-weight: 700;
+    font-size: var(--text-sm);
+  }
+  .card-save-outcomes {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+  }
+
   /* The strip look (components.css) is shared with the toolbar; this adds scrolling. */
   .hotbar {
     max-width: 100%;
