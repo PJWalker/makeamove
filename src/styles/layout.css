@@ -1129,6 +1129,70 @@
       left 200ms var(--ease),
       right 200ms var(--ease);
   }
+  /* A move waiting for targets: a bar risen above the hotbar. */
+  .target-bar-wrap {
+    position: absolute;
+    left: var(--dock-l, 0px);
+    right: var(--dock-r, 0px);
+    bottom: calc(48px + var(--space-3));
+    display: flex;
+    justify-content: center;
+    padding-inline: var(--space-3);
+    pointer-events: none;
+  }
+  .target-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    max-width: 100%;
+    padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4);
+    background: linear-gradient(90deg, color-mix(in oklch, var(--accent) 16%, transparent), transparent 40%), var(--surface-raised);
+    pointer-events: auto;
+    animation: target-bar-rise 160ms var(--ease) both;
+  }
+  .target-bar-icon {
+    flex: none;
+    color: var(--accent);
+  }
+  .target-bar-text {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+  .target-bar-prompt {
+    font-size: var(--text-menu);
+  }
+  .target-bar-chosen {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+  }
+  .target-chip {
+    padding: 0 var(--space-2);
+    font-size: var(--text-sm);
+    color: var(--accent);
+    background: color-mix(in oklch, var(--accent) 14%, transparent);
+    &[data-out] {
+      color: var(--danger);
+      background: color-mix(in oklch, var(--danger) 14%, transparent);
+    }
+  }
+  .target-bar-actions {
+    display: flex;
+    flex: none;
+    gap: var(--space-2);
+  }
+  @keyframes target-bar-rise {
+    from {
+      opacity: 0;
+      translate: 0 12px;
+    }
+  }
+  .move-targets {
+    margin: 0;
+    font-size: var(--text-sm);
+  }
+
   /* The strip look (components.css) is shared with the toolbar; this adds scrolling. */
   .hotbar {
     max-width: 100%;

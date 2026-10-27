@@ -2,7 +2,7 @@ import { menuTrigger } from '../ui/menuTrigger'
 import { bounds } from '../scene/geometry'
 import { setMorphOrigin } from '../ui/morph'
 import { openPopup } from '../ui/popup'
-import { type Signal, useSignal, useSignalEffect } from '@preact/signals'
+import { type Signal, untracked, useSignal, useSignalEffect } from '@preact/signals'
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import { SceneController } from '../scene/controller'
 import { DEFAULT_GRID, DIAGONAL_RULES, GRID_TYPES, MIN_GRID_SIZE } from '../scene/grid'
@@ -15,7 +15,6 @@ import { isPlainToken, TOKEN_STYLES, type BlobRef, type TokenStyle } from '../sc
 import { DEFAULT_CANVAS_COLOUR, type Campaign } from '../store/campaign'
 import { listCharacters, selectCharacter, systemOf, tokenStatsByCharacter } from '../characters/api'
 import { CharacterSheet } from './sheets'
-import { device } from '../store/device'
 import { useY } from '../store/useY'
 import { BlobImage } from '../ui/BlobImage'
 import { Button } from '../ui/Button'
@@ -31,7 +30,6 @@ import {
   IconMap,
   IconRedo,
   IconRename,
-  IconTarget,
   IconToBack,
   IconToFront,
   IconToken,
@@ -43,7 +41,18 @@ import { PopupTabs } from '../ui/PopupTabs'
 import { Segmented } from '../ui/Segmented'
 import { Dialog } from './CampaignDialogs'
 import { showPanel } from './panelLayout'
-import { activeMapColour, canvasColour, canvasCommands, sceneSettingsOpen, seenMapColours, tokenDrop } from './canvasState'
+import {
+  activeMapColour,
+  canvasColour,
+  canvasCommands,
+  chosenTargets,
+  sceneDistance,
+  sceneSettingsOpen,
+  seenMapColours,
+  targetPick,
+  tokenDrop,
+} from './canvasState'
+import { formatDistance } from '../scene/measure'
 import { ContextMenu, type MenuItem } from './ContextMenu'
 
 /**
@@ -107,7 +116,6 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
       scene = s
       if (cancelled) return s.destroy()
       ctl = new SceneController(s, renderer, hostRef.current!, sceneId, () => campaign.defaults(), campaign.presence)
-      ctl.ownCharacters = () => listCharacters(campaign).filter((c) => c.owner === device.value.id).map((c) => c.id)
       ctl.start()
       controller.value = ctl
       tokenDrop.value = (x, y, spec) => {
@@ -137,6 +145,22 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
       : null
   })
   useEffect(() => () => void (canvasCommands.value = null), [])
+
+  // Targeting for an action: hand the request to the scene, and its choices back.
+  useSignalEffect(() => {
+    const ctl = controller.value
+    const pick = targetPick.value
+    untracked(() => ctl?.setTargetMode(pick))
+  })
+  useSignalEffect(() => {
+    const ctl = controller.value
+    if (!ctl) return void (chosenTargets.value = [])
+    void ctl.targets.value
+    void ctl.revision.value
+    const grid = ctl.renderer.grid
+    chosenTargets.value = untracked(() => ctl.targetDetails())
+    sceneDistance.value = (d) => formatDistance(grid, d)
+  })
 
   // Keyboard shortcuts, unless a field or dialog has the keyboard.
   useEffect(() => {
@@ -196,17 +220,6 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
         tokenTab.value = 'token'
         tokenOptions.value = one.id
       } })
-    }
-    const tokens = sel.filter((el) => el.type === 'token').map((el) => el.id)
-    if (tokens.length) {
-      const all = tokens.every((id) => ctl.targets.value.includes(id))
-      items.push({
-        label: all ? 'Stop targeting' : 'Target',
-        Icon: IconTarget,
-        shortcut: 'T',
-        onSelect: () =>
-          ctl.setTargets(all ? ctl.targets.value.filter((id) => !tokens.includes(id)) : [...new Set([...ctl.targets.value, ...tokens])]),
-      })
     }
     if (one?.type === 'map') items.push({ label: 'Use as token', Icon: IconToken, onSelect: () => ctl.convert(one.id, 'token') })
     if (one?.type === 'token' && one.image) {

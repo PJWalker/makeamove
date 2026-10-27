@@ -8,6 +8,7 @@
 
 import type { CharacterView } from '../characters/store'
 import type { DiagonalRule } from '../scene/grid'
+import type { Range } from '../scene/measure'
 import type { EffectSource, Resolved } from './effects'
 
 export interface StatDef {
@@ -88,6 +89,21 @@ export interface CheckStep {
   followUps?: Record<string, string[]>
 }
 
+/**
+ * What an action is aimed at. Using it asks the player to pick tokens on the
+ * scene first.
+ */
+export interface TargetSpec {
+  /** What to target, as an instruction: "Target the enemy you're attacking". */
+  prompt: string
+  /** How many must be chosen, at least. */
+  min: number
+  /** How many can be chosen; no limit if missing. */
+  max?: number
+  /** How far away a target may be, in scene units. */
+  range?: Range
+}
+
 /** Parts of an action, done in order. More kinds arrive with targeting (M5 step 3). */
 export type ActionStep = CheckStep
 
@@ -103,6 +119,8 @@ export interface ActionDef {
   trigger: string
   /** The full rules text. */
   text: string
+  /** What it's aimed at, if it asks for targets. */
+  target?: TargetSpec
   /** What it does when it's used. With no steps it is just read out. */
   steps: ActionStep[]
   tags?: string[]

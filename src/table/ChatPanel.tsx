@@ -570,6 +570,18 @@ function MoveCard({ campaign, m }: { campaign: Campaign; m: MoveMessage }) {
         <span class="roll-formula">{m.moveName}</span>
         <span class="roll-comment">{m.characterName}</span>
       </div>
+      {m.targets && (
+        <p class="move-targets">
+          <span class="muted">Targeting</span>{' '}
+          {m.targets.map((t, i) => (
+            <span key={t.id}>
+              {i > 0 && ', '}
+              {t.name}
+              {t.distance && <span class="muted"> ({t.distance})</span>}
+            </span>
+          ))}
+        </p>
+      )}
       {m.roll && (
         <div class="roll-body">
           <RollTerms roll={m.roll} />

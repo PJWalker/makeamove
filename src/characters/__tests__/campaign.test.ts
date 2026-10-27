@@ -8,7 +8,7 @@ import * as Y from 'yjs'
 import { systemActions } from '../../actions/system'
 import { Campaign, createCampaign } from '../../store/campaign'
 import { device } from '../../store/device'
-import { addItem, createFolder, deleteCharacter, deleteFolder, getCharacter, listFolders, makeMove, moveToFolder, newCharacter, newNpc, renameFolder, tokenStatsByCharacter, selectedCharacterId, setData, setModifier, systemOf, updateItem } from '../api'
+import { addItem, createFolder, deleteCharacter, deleteFolder, getCharacter, listFolders, makeMove, moveRequest, moveToFolder, newCharacter, newNpc, renameFolder, tokenStatsByCharacter, selectedCharacterId, setData, setModifier, startMove, systemOf, targetRequest, updateItem } from '../api'
 import { defaultHotbar, editHotbar, hotbarSlots, moveTo, pin, placeAt, insertAt, shift, unpin, MAX_SLOTS } from '../hotbar'
 
 async function setUp() {
@@ -51,6 +51,25 @@ describe('characters in a campaign', () => {
     const msg = await makeMove(c, id, sys.actions.find((m) => m.id === 'hack-and-slash')!)
     expect(msg).toMatchObject({ kind: 'move', moveId: 'hack-and-slash', characterName: 'Ayla' })
     expect(getCharacter(c, id)!.modifiers.forward).toBe(0)
+    c.destroy()
+  })
+
+  it('asks for targets before a move aimed at someone, then posts them on the card', async () => {
+    const c = await setUp()
+    const id = newCharacter(c, 'Ayla', 'fighter')
+    const hack = systemOf(c).actions.find((m) => m.id === 'hack-and-slash')!
+    startMove(c, id, hack)
+    expect(targetRequest.value).toEqual({ moveId: 'hack-and-slash', characterId: id })
+    expect(moveRequest.value).toBeNull()
+    targetRequest.value = null
+    const goblin = { id: 'tok1', name: 'Goblin', distance: '5 ft' }
+    const msg = await makeMove(c, id, hack, {}, [goblin])
+    expect(msg).toMatchObject({ kind: 'move', targets: [goblin] })
+    // Aid asks for a target, then for the bond.
+    const aid = systemOf(c).actions.find((m) => m.id === 'aid-or-interfere')!
+    startMove(c, id, aid, [goblin])
+    expect(moveRequest.value).toEqual({ moveId: 'aid-or-interfere', characterId: id, targets: [goblin] })
+    moveRequest.value = null
     c.destroy()
   })
 

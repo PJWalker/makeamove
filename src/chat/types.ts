@@ -65,6 +65,15 @@ export interface MoveSuggestion {
 }
 
 /** A move being made, with its roll (if it has one) and the outcome text. */
+/** A token a move was aimed at, as it was when the move was made. */
+export interface MoveTarget {
+  /** The token's id on its scene. */
+  id: string
+  name: string
+  /** Its distance from the actor's token, formatted ("20 ft"), if both were on the scene. */
+  distance?: string
+}
+
 export interface MoveMessage extends Base {
   kind: 'move'
   moveId: string
@@ -72,6 +81,7 @@ export interface MoveMessage extends Base {
   trigger: string
   characterId: string
   characterName: string
+  targets?: MoveTarget[]
   roll?: Roll
   /** The check's result, by the system's id for it ("strong"). */
   result?: string

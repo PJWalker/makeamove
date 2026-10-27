@@ -4,7 +4,7 @@ import * as Y from 'yjs'
 import { importImage } from '../scene/images'
 import { newId } from '../lib/ids'
 import { postRoll, myName } from '../chat/send'
-import type { MoveSuggestion } from '../chat/types'
+import type { MoveSuggestion, MoveTarget } from '../chat/types'
 import type { Campaign } from '../store/campaign'
 import { device } from '../store/device'
 import { getSystem } from '../systems'
@@ -203,15 +203,25 @@ export function setNpcField(campaign: Campaign, id: string, field: string, value
 }
 
 /** Set by Characters/Palette to ask for a stat or bond before a move rolls. */
-export const moveRequest = signal<{ moveId: string; characterId: string } | null>(null)
+export const moveRequest = signal<{ moveId: string; characterId: string; targets?: MoveTarget[] } | null>(null)
+
+/** A move waiting for its targets to be picked on the scene (see table/TargetBar.tsx). */
+export const targetRequest = signal<{ moveId: string; characterId: string } | null>(null)
 
 /** Make a move as a character: ask for input if it needs any, otherwise roll and post. */
-export function startMove(campaign: Campaign, characterId: string, move: ActionDef) {
-  if (needsChoice(move)) moveRequest.value = { moveId: move.id, characterId }
-  else void makeMove(campaign, characterId, move)
+/**
+ * Use a move: first ask for targets if it's aimed at someone, then for any
+ * stat or number it needs, then roll.
+ */
+export function startMove(campaign: Campaign, characterId: string, move: ActionDef, targets?: MoveTarget[]) {
+  if (move.target && !targets) {
+    moveRequest.value = null
+    targetRequest.value = { moveId: move.id, characterId }
+  } else if (needsChoice(move)) moveRequest.value = { moveId: move.id, characterId, targets }
+  else void makeMove(campaign, characterId, move, {}, targets)
 }
 
-export function makeMove(campaign: Campaign, characterId: string, move: ActionDef, choice: MoveChoice = {}) {
+export function makeMove(campaign: Campaign, characterId: string, move: ActionDef, choice: MoveChoice = {}, targets?: MoveTarget[]) {
   const system = systemOf(campaign)
   const c = getCharacter(campaign, characterId)
   if (!c) return
@@ -227,6 +237,7 @@ export function makeMove(campaign: Campaign, characterId: string, move: ActionDe
       trigger: move.trigger,
       characterId: c.id,
       characterName: c.name,
+      ...(targets?.length ? { targets } : {}),
       ...result,
     },
     { id: device.value.id, name: myName(campaign) },

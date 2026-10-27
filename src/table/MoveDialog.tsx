@@ -35,7 +35,7 @@ export function MoveDialog({ campaign }: { campaign: Campaign }) {
 
   const go = () => {
     if (!ready) return
-    void makeMove(campaign, c.id, move, choice)
+    void makeMove(campaign, c.id, move, choice, req?.targets)
     moveRequest.value = null
   }
 

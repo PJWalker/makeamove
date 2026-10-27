@@ -25,6 +25,18 @@ export function canvasColour(scene: SceneView, mapColour: string | null): string
   return scene.canvasColour ?? (mapColour ? backdropColour(mapColour) : DEFAULT_CANVAS_COLOUR)
 }
 
+/**
+ * While an action asks for targets: how many it takes at most, and the acting
+ * character. The open scene canvas lets clicks on tokens target them.
+ */
+export const targetPick = signal<{ max?: number; actor?: string } | null>(null)
+
+/** The targets chosen on the open scene, with distances from the actor's token in scene units. */
+export const chosenTargets = signal<{ id: string; name: string; distance: number | null }[]>([])
+
+/** Formats a distance in the open scene's units; set by the scene canvas. */
+export const sceneDistance = signal<(d: number) => string>((d) => `${d}`)
+
 /** What a character's token needs when it's dropped on the map. */
 export interface TokenSpec {
   characterId: string

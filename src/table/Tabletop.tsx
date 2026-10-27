@@ -10,6 +10,7 @@ import { Sidebar } from './Sidebar'
 import { dockInsets } from './panelLayout'
 import { activeMapColour, canvasColour, chromeHidden } from './canvasState'
 import { Hotbar } from './Hotbar'
+import { TargetBar } from './TargetBar'
 import { MoveDialog } from './MoveDialog'
 import { Palette } from './Palette'
 import { Toolbar } from './Toolbar'
@@ -72,6 +73,7 @@ export function Tabletop({ campaign }: { campaign: Campaign }) {
       <Hotbar campaign={campaign} />
       <Palette campaign={campaign} />
       <MoveDialog campaign={campaign} />
+      <TargetBar campaign={campaign} />
     </div>
   )
 }

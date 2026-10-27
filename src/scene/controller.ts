@@ -6,6 +6,7 @@ import { type Camera, clampZoom, fitCamera, toWorld, zoomAt } from './camera'
 import { CORNER_SIGNS, type Corner, bounds, contains, corners, fromLocal, hits, resizeFromCorner, rotationTowards } from './geometry'
 import { type Point, snapPoint, snapSize } from './grid'
 import { importImage, imageColour } from './images'
+import { tokenDistance } from './measure'
 import { HANDLE_SIZE, type SceneRenderer, rotateHandlePosition } from './renderer'
 import type { SceneDoc } from './sceneDoc'
 import { finishStroke, STRIDE } from './stroke'
@@ -47,13 +48,17 @@ export class SceneController {
   readonly mapColour = signal<string | null>(null)
   readonly canUndo = signal(false)
   readonly canRedo = signal(false)
-  /** Tokens this device has targeted, shared with peers through presence. */
-  readonly targets = signal<string[]>([])
   /**
-   * Characters this device plays, for measuring to targets from their token
-   * when no token is selected. Set by the table.
+   * While an action asks for targets: clicking a token targets it (or stops
+   * targeting it) instead of selecting it. `max` caps how many; past it the
+   * oldest target drops off. `actor` is the acting character, whose token
+   * distances are measured from.
    */
-  ownCharacters: () => string[] = () => []
+  readonly targetMode = signal<{ max?: number; actor?: string } | null>(null)
+  /** Tokens chosen while targeting, shared with peers through presence. */
+  readonly targets = signal<string[]>([])
+  /** Bumps whenever the scene's elements change. */
+  readonly revision = signal(0)
 
   private elements: SceneElement[] = []
   private byId = new Map<string, SceneElement>()
@@ -185,6 +190,7 @@ export class SceneController {
   // State
 
   private refresh() {
+    this.revision.value++
     this.elements = this.scene.views()
     this.byId = new Map(this.elements.map((e) => [e.id, e]))
     this.renderer.setElements(this.elements)
@@ -242,22 +248,38 @@ export class SceneController {
     this.renderer.invalidate('overlay')
   }
 
-  /**
-   * The token distances to targets are measured from: the selected token, or
-   * else the first token of a character this device plays.
-   */
+  /** The token distances to targets are measured from: the acting character's first token. */
   rangeFrom(): string | null {
-    const sel = this.selected()
-    if (sel.length === 1 && sel[0].type === 'token') return sel[0].id
-    const own = new Set(this.ownCharacters())
-    const mine = this.elements.find((el) => el.type === 'token' && !!el.characterId && own.has(el.characterId))
-    return mine?.id ?? null
+    const actor = this.targetMode.value?.actor
+    if (!actor) return null
+    return this.elements.find((el) => el.type === 'token' && el.characterId === actor)?.id ?? null
   }
 
   /** Target a token, or stop targeting it. */
   toggleTarget(id: string) {
     const t = this.targets.value
-    this.setTargets(t.includes(id) ? t.filter((x) => x !== id) : [...t, id])
+    const max = this.targetMode.value?.max
+    const next = t.includes(id) ? t.filter((x) => x !== id) : [...t, id]
+    this.setTargets(max !== undefined ? next.slice(-max) : next)
+  }
+
+  /** The chosen targets, with each one's distance from the actor's token (null without one). */
+  targetDetails(): { id: string; name: string; distance: number | null }[] {
+    const fromId = this.rangeFrom()
+    const from = fromId ? this.byId.get(fromId) : undefined
+    return this.targets.value.flatMap((id) => {
+      const el = this.byId.get(id)
+      if (el?.type !== 'token') return []
+      return [{ id, name: el.name || 'Unnamed token', distance: from ? tokenDistance(this.renderer.grid, from, el) : null }]
+    })
+  }
+
+  /** Start or stop asking for targets; stopping clears them. */
+  setTargetMode(mode: { max?: number; actor?: string } | null) {
+    this.targetMode.value = mode
+    if (!mode) this.setTargets([])
+    this.updateOverlay()
+    this.updateCursor()
   }
 
   setTargets(ids: string[]) {
@@ -275,7 +297,7 @@ export class SceneController {
         ? 'grabbing'
         : this.spaceHeld || tool === 'pan'
           ? 'grab'
-          : tool === 'draw' || tool === 'ruler' || tool === 'ping'
+          : tool === 'draw' || tool === 'ruler' || tool === 'ping' || (tool === 'select' && this.targetMode.value)
             ? 'crosshair'
             : tool === 'erase'
               ? 'none'
@@ -420,6 +442,10 @@ export class SceneController {
           break
         }
         const under = this.hitTest(world)
+        if (this.targetMode.value && under?.type === 'token') {
+          this.toggleTarget(under.id)
+          break
+        }
         // An unselected map is usually just the backdrop: dragging over it
         // draws a marquee, and a click selects it. Select it to move it.
         const hit = under && (under.type !== 'map' || this.selection.value.includes(under.id)) ? under : null
@@ -804,14 +830,6 @@ export class SceneController {
         const sel = this.selected().filter((el) => !el.locked)
         if (!sel.length) return false
         this.scene.update(sel.map((el) => [el.id, { x: el.x + dx, y: el.y + dy }]))
-        return true
-      }
-      case 't':
-      case 'T': {
-        // Target the token under the pointer; over empty ground, clear every target.
-        const hit = this.hover && this.hitTest(this.hover, true)
-        if (hit?.type === 'token') this.toggleTarget(hit.id)
-        else this.setTargets([])
         return true
       }
       case '=':
