@@ -1,5 +1,5 @@
 import { signal } from '@preact/signals'
-import { addItem, canEdit, getCharacter, selectedCharacterId, startMove, systemOf } from '../characters/api'
+import { addItem, baseSystemOf, canEdit, getCharacter, selectedCharacterId, startMove, systemOf } from '../characters/api'
 import { KIND_LABEL, librariesFor, searchEntries, type EntryKind, type LibraryEntry } from '../library'
 import type { Campaign } from '../store/campaign'
 import { useY } from '../store/useY'
@@ -18,12 +18,13 @@ const folded = signal<Set<string>>(new Set())
 
 /**
  * The Libraries: everything the game system and plugins contribute (items,
- * moves, classes, tags), grouped by where it comes from. Items can be added
+ * moves, classes, tags), grouped by where it comes from. Gear can be added
  * to the selected character, and moves made by them.
  */
 export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
   const system = systemOf(campaign)
-  const sources = librariesFor(system)
+  // The Libraries are the system's own; homebrew is in the Items panel.
+  const sources = librariesFor(baseSystemOf(campaign))
   const meId = useY(campaign.members, () => selectedCharacterId(campaign))
   const me = useY(campaign.characters, () => getCharacter(campaign, meId))
   const canAct = !!me && canEdit(campaign, me)

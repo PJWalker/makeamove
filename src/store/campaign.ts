@@ -29,6 +29,7 @@ import type { TokenStyle } from '../scene/types'
  *   notes    Y.Map   noteId   -> Y.Map { title, folder, order, links, updatedAt, updatedBy, doc }
  *   noteFolders Y.Map folderId -> { name, order }
  *   combat, combatants  Y.Map  the turn tracker (combat/combat.ts)
+ *   homebrew Y.Map   id -> gear or move made at the table (homebrew/homebrew.ts)
  *   messageState Y.Map `messageId/field` -> what changes about a chat message (chat/messageState.ts)
  *
  * Each scene's contents (maps, tokens, drawings) live in its `doc`, a Yjs
@@ -107,6 +108,8 @@ export class Campaign {
   /** The turn tracker: round and whose turn, and who's in the fight (see combat/combat.ts). */
   readonly combat: Y.Map<any>
   readonly combatants: Y.Map<any>
+  /** Gear and moves made at the table (see homebrew/homebrew.ts). */
+  readonly homebrew: Y.Map<any>
   /** GM-only pages, on GM devices only (see notes/vault.ts). */
   readonly vault = signal<Vault | null>(null)
   private persistence: IndexeddbPersistence
@@ -139,6 +142,7 @@ export class Campaign {
     this.messageState = this.doc.getMap('messageState')
     this.combat = this.doc.getMap('combat')
     this.combatants = this.doc.getMap('combatants')
+    this.homebrew = this.doc.getMap('homebrew')
     this.persistence = new IndexeddbPersistence(dbName(id), this.doc)
     this.chat = new ChatLog(this.doc, id, device.value.id)
   }

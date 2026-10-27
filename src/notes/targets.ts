@@ -18,7 +18,7 @@ export interface LinkTarget {
   gmOnly?: boolean
 }
 
-const KIND_DETAIL: Record<LinkKind, string> = { note: 'Note', character: 'Character', scene: 'Scene', item: 'Item', move: 'Move' }
+const KIND_DETAIL: Record<LinkKind, string> = { note: 'Note', character: 'Character', scene: 'Scene', item: 'Gear', move: 'Move' }
 
 /** Link targets matching a query: notes, characters, scenes, then the system's items and moves. */
 export function linkTargets(campaign: Campaign, query: string, exceptNote?: string, limit = 8): LinkTarget[] {

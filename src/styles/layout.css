@@ -3222,3 +3222,28 @@
     min-height: 1.5em;
   }
 }
+
+/* Items: homebrew gear and moves */
+@layer layout {
+  .items-panel {
+    display: grid;
+    align-content: start;
+    gap: var(--space-2);
+  }
+  .items-new {
+    padding: var(--space-2) var(--space-3) 0;
+  }
+  .homebrew-form {
+    padding: 0 var(--space-3) var(--space-3);
+  }
+  .homebrew-effect {
+    flex-wrap: nowrap;
+    .input {
+      min-width: 0;
+    }
+  }
+  .homebrew-num {
+    width: 5em;
+    flex: none;
+  }
+}

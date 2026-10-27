@@ -4,6 +4,7 @@ import {
   IconCharacters,
   IconChat,
   IconCombat,
+  IconItems,
   IconLibraries,
   IconMembers,
   IconNotes,
@@ -23,6 +24,7 @@ import { LibrariesPanel } from './LibrariesPanel'
 import { NotesPanel, notesLayout } from './NotesPanel'
 import { ScenePanel } from './ScenePanel'
 import { CombatPanel } from './CombatPanel'
+import { ItemsPanel } from './ItemsPanel'
 
 export const PANELS: Record<PanelId, { label: string; Icon: ComponentType<any> }> = {
   scene: { label: 'Scenes', Icon: IconMap },
@@ -30,6 +32,7 @@ export const PANELS: Record<PanelId, { label: string; Icon: ComponentType<any> }
   characters: { label: 'Characters', Icon: IconCharacters },
   combat: { label: 'Combat', Icon: IconCombat },
   libraries: { label: 'Libraries', Icon: IconLibraries },
+  items: { label: 'Items', Icon: IconItems },
   notes: { label: 'Notes', Icon: IconNotes },
   members: { label: 'Members', Icon: IconMembers },
 }
@@ -42,6 +45,7 @@ export function PanelContent({ id, campaign }: { id: PanelId; campaign: Campaign
   if (id === 'libraries') return <LibrariesPanel campaign={campaign} />
   if (id === 'notes') return <NotesPanel campaign={campaign} />
   if (id === 'combat') return <CombatPanel campaign={campaign} />
+  if (id === 'items') return <ItemsPanel campaign={campaign} />
   return <MemberList campaign={campaign} />
 }
 

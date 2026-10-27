@@ -9,10 +9,10 @@
  * "dock" puts it back.
  */
 
-export type PanelId = 'scene' | 'chat' | 'characters' | 'combat' | 'libraries' | 'notes' | 'members'
+export type PanelId = 'scene' | 'chat' | 'characters' | 'combat' | 'libraries' | 'items' | 'notes' | 'members'
 export type Side = 'left' | 'right'
 
-export const PANEL_ORDER: PanelId[] = ['scene', 'chat', 'characters', 'combat', 'libraries', 'notes', 'members']
+export const PANEL_ORDER: PanelId[] = ['scene', 'chat', 'characters', 'combat', 'libraries', 'items', 'notes', 'members']
 
 export interface FloatingWindow {
   id: PanelId
@@ -52,6 +52,7 @@ const DEFAULT_SIDE: Record<PanelId, Side> = {
   characters: 'left',
   combat: 'left',
   libraries: 'right',
+  items: 'right',
 }
 
 export const sideOfDefault = (id: PanelId): Side => DEFAULT_SIDE[id]
@@ -59,7 +60,7 @@ export const sideOfDefault = (id: PanelId): Side => DEFAULT_SIDE[id]
 export function defaultLayout(narrow: boolean): Layout {
   return {
     left: { active: 'characters', open: !narrow, width: SIDEBAR_DEFAULT_W, panels: ['scene', 'characters', 'combat'] },
-    right: { active: 'chat', open: !narrow, width: SIDEBAR_DEFAULT_W, panels: ['chat', 'libraries', 'notes', 'members'] },
+    right: { active: 'chat', open: !narrow, width: SIDEBAR_DEFAULT_W, panels: ['chat', 'libraries', 'items', 'notes', 'members'] },
     floating: [],
     closed: [],
     home: {},

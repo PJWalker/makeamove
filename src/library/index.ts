@@ -46,7 +46,7 @@ export interface LibrarySource {
   attribution?: string
 }
 
-export const KIND_LABEL: Record<EntryKind, string> = { item: 'Items', move: 'Moves', class: 'Classes', option: 'Options', tag: 'Tags' }
+export const KIND_LABEL: Record<EntryKind, string> = { item: 'Gear', move: 'Moves', class: 'Classes', option: 'Options', tag: 'Tags' }
 
 
 export const itemEntry = (i: ItemDef): LibraryEntry => ({ kind: 'item', id: i.id, name: i.name, text: i.description, tags: i.tags, icon: i.icon, item: i })

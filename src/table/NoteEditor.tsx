@@ -40,7 +40,7 @@ export function NoteEditor({ campaign, noteId }: { campaign: Campaign; noteId: s
         ...(gmOnly ? {} : { secrets: { vault: campaign.isGm() ? (campaign.vault.value?.doc ?? null) : null } }),
         campaign,
         fragment: n.body,
-        placeholder: 'Write here. Type @ to link a note, character, scene, item or move.',
+        placeholder: 'Write here. Type @ to link a note, character, scene, gear or move.',
         label: 'Note text',
         noteId,
         shared: !getNote(campaign, noteId)?.gmOnly,

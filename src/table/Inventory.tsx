@@ -62,7 +62,7 @@ export function Inventory({
         )}
       </h3>
       {c.inventory.length === 0 ? (
-        <p class="empty-inline">Nothing carried yet.{editable && ' Drag items here from the Libraries.'}</p>
+        <p class="empty-inline">Nothing carried yet.{editable && ' Drag gear here from the Libraries.'}</p>
       ) : (
         <List>
           {c.inventory.map((i) => (

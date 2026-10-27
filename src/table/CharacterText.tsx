@@ -20,7 +20,7 @@ export function CharacterText({
   field,
   label,
   editable,
-  placeholder = 'Type @ to link a note, character, item or move.',
+  placeholder = 'Type @ to link a note, character, gear or move.',
 }: {
   campaign: Campaign
   c: CharacterView
