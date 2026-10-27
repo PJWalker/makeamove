@@ -16,8 +16,15 @@ const INK = 0x14161c
 /** Token names never get smaller or bigger than this on screen, in px. */
 const NAME_MIN = 11;
 const NAME_MAX = 15;
-/** Tokens smaller than this on screen, in px, only show their name on hover. */
+/** Tokens smaller than this on screen, in px, only show their name and bars on hover. */
 const NAME_TOKEN_MIN = 24;
+/** Stat bars under tokens: their width on screen follows the token's, within these, in px. */
+const BAR_MIN_W = 36;
+const BAR_MAX_W = 84;
+const BAR_H = 11;
+const BAR_GAP = 2;
+/** Bars narrower than this leave out their numbers. */
+const BAR_TEXT_MIN_W = 44;
 
 /** Screen px between a selection's top edge and its rotate handle. */
 export const ROTATE_HANDLE_GAP = 28
@@ -100,12 +107,12 @@ function textureFor(hash: string): Promise<Texture | null> {
   return p
 }
 
-function contentKey(el: SceneElement, stats?: TokenStat[]): string {
+function contentKey(el: SceneElement): string {
   switch (el.type) {
     case 'map':
       return `map:${el.image.hash}`
     case 'token':
-      return `token:${el.image?.hash ?? ''}:${el.name}:${el.colour}:${isPlainToken(el) ? 'plain' : 'disc'}:${el.hideBars ? 'nobars' : (stats ?? []).map((s) => `${s.id}=${s.value}/${s.max}/${s.colour}`).join()}`
+      return `token:${el.image?.hash ?? ''}:${el.name}:${el.colour}:${isPlainToken(el) ? 'plain' : 'disc'}`
     case 'drawing':
       return `drawing:${el.points.length}:${el.points[0]}:${el.points[1]}:${el.colour}:${el.width}:${el.bw}:${el.bh}`
   }
@@ -134,8 +141,10 @@ export class SceneRenderer {
   /** Token names, drawn in screen space so they stay readable at any zoom. */
   private names = new Container();
   private namePool = new Map<string, Text>();
-  /** How far below its centre each token's name sits, in world px (under its bars). */
-  private nameOffsets = new Map<string, (t: Transform) => number>();
+  /** Tokens' stat bars, also in screen space, with their values. */
+  private barsG = new Graphics();
+  private barText = new Container();
+  private barTextPool = new Map<string, Text>();
   /** The token under the pointer, whose name always shows. */
   private hoverToken: string | null = null;
   private marks: PresenceMark[] = [];
@@ -202,6 +211,8 @@ export class SceneRenderer {
     );
     this.app.stage.addChild(
       this.world,
+      this.barsG,
+      this.barText,
       this.names,
       this.overlay,
       this.presenceG,
@@ -301,7 +312,7 @@ export class SceneRenderer {
       this.drawDraft();
       this.drawOverlay();
     }
-    this.drawNames();
+    this.drawTokenLabels();
     const animating = this.drawPresence();
     this.dirty = {
       elements: false,
@@ -317,7 +328,7 @@ export class SceneRenderer {
 
   setTokenStats(stats: Map<string, TokenStat[]>) {
     this.tokenStats = stats;
-    this.invalidate("elements");
+    this.invalidate("overlay");
   }
 
   private hiddenSync() {
@@ -329,7 +340,7 @@ export class SceneRenderer {
     const seen = new Set<string>();
     for (const el of this.elements) {
       seen.add(el.id);
-      const key = contentKey(el, el.type === 'token' && el.characterId ? this.tokenStats.get(el.characterId) : undefined);
+      const key = contentKey(el);
       let view = this.views.get(el.id);
       if (view && view.key !== key) {
         view.root.destroy({ children: true });
@@ -347,7 +358,6 @@ export class SceneRenderer {
       if (!seen.has(id)) {
         view.root.destroy({ children: true });
         this.views.delete(id);
-        this.nameOffsets.delete(id);
       }
     }
     // Restack only when the order (or a layer) actually changed.
@@ -477,47 +487,6 @@ export class SceneRenderer {
         }
         root.addChild(body);
 
-        // Stat bars, drawn 100 wide and scaled with the token; they sit under it.
-        const BAR_H = 14;
-        const stats = (!el.hideBars && el.characterId && this.tokenStats.get(el.characterId)) || [];
-        const bars = new Container();
-        stats.forEach((s, i) => {
-          const frac = s.max > 0 ? Math.min(1, Math.max(0, s.value / s.max)) : 0;
-          const bar = new Container();
-          bar.y = i * (BAR_H + 3);
-          bar.addChild(
-            new Graphics()
-              .roundRect(-50, 0, 100, BAR_H, 4)
-              .fill({ color: INK, alpha: 0.85 }),
-          );
-          if (frac > 0)
-            bar.addChild(
-              new Graphics()
-                .roundRect(-48, 2, 96 * frac, BAR_H - 4, 3)
-                .fill({ color: s.colour }),
-            );
-          bar.addChild(
-            new Text({
-              text: `${s.value}/${s.max}`,
-              style: {
-                fontFamily: "Cabin, sans-serif",
-                fontSize: 11,
-                fontWeight: "700",
-                fill: 0xffffff,
-              },
-              anchor: 0.5,
-              x: 0,
-              y: BAR_H / 2,
-              resolution: 3,
-            }),
-          );
-          bars.addChild(bar);
-        });
-        if (stats.length) root.addChild(bars);
-        const barsH = stats.length * (BAR_H + 3);
-
-        const barScale = (t: Transform) => Math.max(0.5, (t.w * 0.9) / 100);
-        this.nameOffsets.set(el.id, (t) => t.h / 2 + 2 + barsH * barScale(t));
         return {
           root,
           key,
@@ -525,10 +494,6 @@ export class SceneRenderer {
             root.position.set(t.x, t.y);
             body.rotation = t.rot;
             body.scale.set(t.w / 100, t.h / 100);
-            if (stats.length) {
-              bars.scale.set(barScale(t));
-              bars.position.set(0, t.h / 2 + 2);
-            }
           },
         };
       }
@@ -707,68 +672,128 @@ export class SceneRenderer {
   }
 
   /**
-   * Token names, upright under each token at a readable size: they follow
-   * the zoom, but only between NAME_MIN and NAME_MAX px. Where names would
-   * overlap, or a token is too small on screen to label, they're left out,
-   * and only the token under the pointer shows its name.
+   * What sits under each token, in screen space so it stays readable at any
+   * zoom: its system's stat bars (HP), then its name. Both follow the zoom,
+   * but only within set sizes. Where they'd collide with another token's, or
+   * a token is too small on screen to label, they're left out, and only the
+   * token under the pointer shows them.
    */
-  private drawNames() {
+  private drawTokenLabels() {
     const cam = this.camera;
-    const used = new Set<string>();
-    const boxes: { id: string; x: number; y: number; w: number; h: number; t: Text }[] = [];
+    const g = this.barsG.clear();
+    const usedNames = new Set<string>();
+    const usedValues = new Set<string>();
+    type Box = { id: string; x: number; y: number; w: number; h: number };
+    const overlaps = (a: Box, b: Box) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+    const plans: { id: string; t: Transform; stats: TokenStat[]; bars: Box | null; name: (Box & { text: Text }) | null; small: boolean }[] = [];
+
     for (const el of this.elements) {
-      if (el.type !== "token" || el.hideName || !el.name.trim() || this.hidden.has(el.id)) continue;
+      if (el.type !== "token" || this.hidden.has(el.id)) continue;
       const t = this.previews.get(el.id) ?? el;
-      const size = Math.min(NAME_MAX, Math.max(NAME_MIN, t.w * cam.zoom * 0.2));
-      let text = this.namePool.get(el.id);
-      if (!text) {
-        text = new Text({
-          text: "",
-          style: {
-            fontFamily: "Cabin, sans-serif",
-            fontSize: NAME_MAX,
-            fontWeight: "600",
-            fill: 0xffffff,
-            stroke: { color: INK, width: 4, join: "round" },
-          },
-          anchor: { x: 0.5, y: 0 },
-          resolution: 2,
-        });
-        this.namePool.set(el.id, text);
-        this.names.addChild(text);
+      const screenW = t.w * cam.zoom;
+      const stats = (!el.hideBars && el.characterId && this.tokenStats.get(el.characterId)) || [];
+      const foot = toScreen(cam, { x: t.x, y: t.y + t.h / 2 });
+      let y = foot.y + 3;
+      let bars: Box | null = null;
+      if (stats.length) {
+        const w = Math.round(Math.min(BAR_MAX_W, Math.max(BAR_MIN_W, screenW * 0.9)));
+        const h = stats.length * (BAR_H + BAR_GAP) - BAR_GAP;
+        bars = { id: el.id, x: Math.round(foot.x - w / 2), y: Math.round(y), w, h };
+        y += h + 2;
       }
-      const name = el.name.trim();
-      if (text.text !== name) text.text = name;
-      text.scale.set(size / NAME_MAX);
-      const below = this.nameOffsets.get(el.id)?.(t) ?? t.h / 2;
-      const p = toScreen(cam, { x: t.x, y: t.y + below });
-      text.position.set(Math.round(p.x), Math.round(p.y));
-      used.add(el.id);
-      // Too small on screen to tell apart: only on hover.
-      const crowded = t.w * cam.zoom < NAME_TOKEN_MIN;
-      const w = text.width;
-      const h = text.height;
-      text.visible = !crowded || el.id === this.hoverToken;
-      if (!crowded) boxes.push({ id: el.id, x: p.x - w / 2, y: p.y, w, h, t: text });
-    }
-    // Names that would overlap each other show only on hover.
-    for (let i = 0; i < boxes.length; i++) {
-      const a = boxes[i];
-      for (let j = i + 1; j < boxes.length; j++) {
-        const b = boxes[j];
-        if (a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h) {
-          a.t.visible = a.id === this.hoverToken;
-          b.t.visible = b.id === this.hoverToken;
+      let name: (Box & { text: Text }) | null = null;
+      const label = el.hideName ? "" : el.name.trim();
+      if (label) {
+        let text = this.namePool.get(el.id);
+        if (!text) {
+          text = new Text({
+            text: "",
+            style: {
+              fontFamily: "Cabin, sans-serif",
+              fontSize: NAME_MAX,
+              fontWeight: "600",
+              fill: 0xffffff,
+              stroke: { color: INK, width: 4, join: "round" },
+            },
+            anchor: { x: 0.5, y: 0 },
+            resolution: 2,
+          });
+          this.namePool.set(el.id, text);
+          this.names.addChild(text);
         }
+        if (text.text !== label) text.text = label;
+        text.scale.set(Math.min(NAME_MAX, Math.max(NAME_MIN, screenW * 0.2)) / NAME_MAX);
+        text.position.set(Math.round(foot.x), Math.round(y));
+        usedNames.add(el.id);
+        name = { id: el.id, x: foot.x - text.width / 2, y, w: text.width, h: text.height, text };
       }
+      plans.push({ id: el.id, t, stats, bars, name, small: screenW < NAME_TOKEN_MIN });
     }
-    // The hovered name sits above the rest.
-    const hovered = this.hoverToken && this.namePool.get(this.hoverToken);
+
+    // Decide what shows: bars give way only to other bars; names give way to both.
+    const hover = this.hoverToken;
+    const showBars = new Set<string>();
+    const showName = new Set<string>();
+    const shown = plans.filter((p) => !p.small);
+    for (const p of shown) {
+      if (p.bars && !shown.some((q) => q !== p && q.bars && overlaps(p.bars!, q.bars))) showBars.add(p.id);
+    }
+    for (const p of shown) {
+      if (!p.name) continue;
+      const clash = shown.some(
+        (q) => q !== p && ((q.name && overlaps(p.name!, q.name)) || (q.bars && showBars.has(q.id) && overlaps(p.name!, q.bars))),
+      );
+      if (!clash) showName.add(p.id);
+    }
+    if (hover) {
+      showBars.add(hover);
+      showName.add(hover);
+    }
+
+    // Draw, the hovered token's last so it sits on top.
+    const ordered = [...plans.filter((p) => p.id !== hover), ...plans.filter((p) => p.id === hover)];
+    for (const p of ordered) {
+      if (p.name) p.name.text.visible = showName.has(p.id);
+      if (!p.bars || !showBars.has(p.id)) continue;
+      const { x, w } = p.bars;
+      p.stats.forEach((s, i) => {
+        const y = p.bars!.y + i * (BAR_H + BAR_GAP);
+        const frac = s.max > 0 ? Math.min(1, Math.max(0, s.value / s.max)) : 0;
+        g.roundRect(x, y, w, BAR_H, 3).fill({ color: INK, alpha: 0.85 });
+        if (frac > 0) g.roundRect(x + 1.5, y + 1.5, (w - 3) * frac, BAR_H - 3, 2).fill({ color: s.colour });
+        // The value, when the bar is wide enough to read it.
+        if (w < BAR_TEXT_MIN_W) return;
+        const key = `${p.id}:${s.id}`;
+        let text = this.barTextPool.get(key);
+        if (!text) {
+          text = new Text({
+            text: "",
+            style: { fontFamily: "Cabin, sans-serif", fontSize: 10, fontWeight: "700", fill: 0xffffff },
+            anchor: 0.5,
+            resolution: 2,
+          });
+          this.barTextPool.set(key, text);
+          this.barText.addChild(text);
+        }
+        const value = `${s.value}/${s.max}`;
+        if (text.text !== value) text.text = value;
+        text.position.set(Math.round(x + w / 2), Math.round(y + BAR_H / 2));
+        usedValues.add(key);
+        if (p.id === hover) this.barText.setChildIndex(text, this.barText.children.length - 1);
+      });
+    }
+
+    const hovered = hover && this.namePool.get(hover);
     if (hovered && hovered.parent) this.names.setChildIndex(hovered, this.names.children.length - 1);
     for (const [id, text] of this.namePool) {
-      if (used.has(id)) continue;
+      if (usedNames.has(id)) continue;
       text.destroy();
       this.namePool.delete(id);
+    }
+    for (const [key, text] of this.barTextPool) {
+      if (usedValues.has(key)) continue;
+      text.destroy();
+      this.barTextPool.delete(key);
     }
   }
 
