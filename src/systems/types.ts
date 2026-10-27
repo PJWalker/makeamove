@@ -207,6 +207,7 @@ export interface SceneDefaults {
 export interface NpcFieldDef {
   id: string
   label: string
+  /** 'longtext' is rich text, kept apart from the other fields (see table/CharacterText.tsx). */
   type: 'text' | 'number' | 'longtext'
 }
 

@@ -1698,6 +1698,18 @@
     color: var(--text-faint);
     pointer-events: none;
   }
+  /* Rich text on a character sheet: a text box's look, growing with what's written. */
+  .rich-field {
+    height: auto;
+    padding: var(--space-2) var(--space-3);
+    cursor: text;
+  }
+  .rich-field .note-body {
+    min-height: 3.2em;
+  }
+  .rich-field[data-disabled] {
+    cursor: default;
+  }
   /* A link to a note, character, scene, item or move. */
   .note-link {
     --bevel: 3px;
@@ -1717,7 +1729,7 @@
     text-decoration: line-through;
     cursor: default;
   }
-  /* The list after typing [[ */
+  /* The list after typing @ */
   .note-suggest {
     max-width: min(360px, calc(100vw - 16px));
   }

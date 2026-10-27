@@ -5,7 +5,7 @@ import { libraryView } from '../table/libraryView'
 import { showPanel } from '../table/panelLayout'
 import { listNotes, type LinkKind } from './api'
 
-/** Something a note can link to, as offered after typing `[[`. */
+/** Something a note can link to, as offered after typing `@`. */
 export interface LinkTarget {
   kind: LinkKind
   id: string

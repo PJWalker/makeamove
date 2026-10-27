@@ -11,9 +11,10 @@ import type { ActionDef, DataValue, Derived, Effect, EffectActive, GameSystem, I
  * system's, in maps of its own so two players editing different fields
  * never overwrite each other:
  *
- *   name, owner, kind, folder, classId, level, notes, portrait,
+ *   name, owner, kind, folder, classId, level, portrait,
  *   tokenStyle, tokenColour, template, base     plain fields
  *   learned     array  action ids learned beyond the system's
+ *   text:*      Y.XmlFragment  rich text: notes, bonds, an NPC's long fields
  *   scores      Y.Map  stat id -> score
  *   data        Y.Map  the system's own fields (characterData)
  *   resources   Y.Map  resource id -> current value (HP, spell slots…)
@@ -77,7 +78,6 @@ export interface CharacterView {
   modifiers: Record<string, number>
   /** An NPC's system-defined fields, by id. */
   fields: Record<string, string | number>
-  notes: string
   inventory: ItemInstance[]
   /** The character's picture, in the blob store. */
   portrait?: BlobRef
@@ -168,7 +168,6 @@ export function characterView(id: string, m: CharacterMap, system: GameSystem, b
     conditions: (get('conditions') as string[] | undefined) ?? [],
     modifiers: merged<number>('modifiers'),
     fields,
-    notes: get('notes') ?? '',
     inventory,
     portrait: get('portrait'),
     tokenStyle: get('tokenStyle'),

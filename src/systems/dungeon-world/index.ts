@@ -474,7 +474,6 @@ export const dungeonWorld: GameSystem = {
     { id: 'alignment', default: '' },
     { id: 'xp', default: 0, for: 'pc' },
     { id: 'coin', default: 0, for: 'pc' },
-    { id: 'bonds', default: '', for: 'pc' },
     /** Added to the computed maximum HP, for the odd homebrew change. */
     { id: 'hpBonus', default: 0, for: 'pc' },
     /** An NPC's maximum HP, set by hand. */

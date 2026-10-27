@@ -15,6 +15,7 @@ import { actionsFor, derive, statBonus, type CharacterView } from '../../charact
 import { postRoll } from '../../chat/send'
 import type { Campaign } from '../../store/campaign'
 import { device } from '../../store/device'
+import { CharacterText } from '../../table/CharacterText'
 import { Inventory } from '../../table/Inventory'
 import { Counter, MoveList, signedStr, TokenChip } from '../../table/sheetParts'
 import { Button } from '../../ui/Button'
@@ -190,20 +191,8 @@ export function DungeonWorldSheet({ campaign, system, c }: { campaign: Campaign;
 
       <section class="sheet-section" aria-label="Bonds and notes">
         <h3 class="sheet-heading">Bonds &amp; notes</h3>
-        <label class="field">
-          Bonds
-          <textarea
-            class="input bevel"
-            rows={3}
-            value={String(c.data.bonds ?? '')}
-            disabled={!editable}
-            onChange={(e) => setData(campaign, c.id, 'bonds', e.currentTarget.value)}
-          />
-        </label>
-        <label class="field">
-          Notes
-          <textarea class="input bevel" rows={3} value={c.notes} disabled={!editable} onChange={(e) => set('notes', e.currentTarget.value)} />
-        </label>
+        <CharacterText campaign={campaign} c={c} field="bonds" label="Bonds" editable={editable} placeholder="Type @ to name the character you share a bond with." />
+        <CharacterText campaign={campaign} c={c} field="notes" label="Notes" editable={editable} />
       </section>
       <p class="muted sheet-owner">{c.owner === device.value.id ? 'Yours' : editable ? 'Editing as GM' : 'View only'}</p>
     </div>
@@ -253,18 +242,12 @@ export function DungeonWorldNpcSheet({ campaign, system, c }: { campaign: Campai
           />
         </label>
       </div>
-      {system.npcFields.map((f) => (
-        <label key={f.id} class="field">
-          {f.label}
-          {f.type === 'longtext' ? (
-            <textarea
-              class="input bevel"
-              rows={4}
-              value={String(c.fields[f.id])}
-              disabled={!editable}
-              onChange={(e) => setNpcField(campaign, c.id, f.id, e.currentTarget.value)}
-            />
-          ) : (
+      {system.npcFields.map((f) =>
+        f.type === 'longtext' ? (
+          <CharacterText key={f.id} campaign={campaign} c={c} field={`field:${f.id}`} label={f.label} editable={editable} />
+        ) : (
+          <label key={f.id} class="field">
+            {f.label}
             <input
               class="input bevel"
               type={f.type === 'number' ? 'number' : 'text'}
@@ -274,14 +257,11 @@ export function DungeonWorldNpcSheet({ campaign, system, c }: { campaign: Campai
                 setNpcField(campaign, c.id, f.id, f.type === 'number' ? Number(e.currentTarget.value) || 0 : e.currentTarget.value)
               }
             />
-          )}
-        </label>
-      ))}
+          </label>
+        ),
+      )}
       <Inventory campaign={campaign} c={c} editable={editable} />
-      <label class="field">
-        Notes
-        <textarea class="input bevel" rows={4} value={c.notes} disabled={!editable} onChange={(e) => set('notes', e.currentTarget.value)} />
-      </label>
+      <CharacterText campaign={campaign} c={c} field="notes" label="Notes" editable={editable} />
     </div>
   )
 }
