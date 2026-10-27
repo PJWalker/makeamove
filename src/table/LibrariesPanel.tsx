@@ -10,6 +10,7 @@ import { List, ListGroup, Tag } from '../ui/List'
 import { EntryRow, EntryWindow, rollTag, useEntryWindows } from './EntryWindow'
 import { dragEntity, entity } from './entityDrag'
 import { libraryView as view, type KindFilter } from './libraryView'
+import { linkProxy } from './LinkChip'
 import { makeVerb } from './sheetParts'
 
 /** Collections folded away, by "source/collection" (this device only). */
@@ -152,7 +153,15 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
         const e = found[1]
         const tag = tagOf(e)
         return (
-          <EntryWindow key={key} entryKey={key} title={e.name} text={e.text} tags={e.tags} onClose={() => windows.close(key)}>
+          <EntryWindow
+            key={key}
+            entryKey={key}
+            title={e.name}
+            text={e.text}
+            tags={e.tags}
+            onClose={() => windows.close(key)}
+            proxy={e.kind === 'item' || e.kind === 'move' ? linkProxy(campaign, e.kind, e.id, e.name, e.icon) : undefined}
+          >
             {tag && <Tag>{tag}</Tag>}
             {metaOf(e) && <span class="muted">{metaOf(e)}</span>}
             {actions(e, true)}

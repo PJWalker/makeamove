@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseCommand, splitFormula, suggest } from '../commands'
-import { tokenize } from '../markdown'
+import { entityToken, tokenize } from '../markdown'
 
 const members = [
   { id: 'g', name: 'Gwen', role: 'gm' },
@@ -74,5 +74,14 @@ describe('markdown-lite', () => {
   it('leaves snake_case and unsafe links alone', () => {
     expect(tokenize('my_var_name')).toEqual([{ type: 'text', text: 'my_var_name' }])
     expect(tokenize('[x](javascript:alert(1))')).toEqual([{ type: 'text', text: '[x](javascript:alert(1))' }])
+  })
+  it('reads links to things in the campaign', () => {
+    const text = `Take ${entityToken('item', 'healing-potion')} to ${entityToken('character', 'c1', 'the chief')}`
+    expect(tokenize(text)).toEqual([
+      { type: 'text', text: 'Take ' },
+      { type: 'entity', kind: 'item', id: 'healing-potion', text: '' },
+      { type: 'text', text: ' to ' },
+      { type: 'entity', kind: 'character', id: 'c1', text: 'the chief' },
+    ])
   })
 })

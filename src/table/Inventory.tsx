@@ -7,6 +7,7 @@ import { entryIcon } from '../ui/entryIcons'
 import { IconClose } from '../ui/icons'
 import { List } from '../ui/List'
 import { EntryRow, EntryWindow, useEntryWindows } from './EntryWindow'
+import { linkProxy } from './LinkChip'
 import { browseLibrary } from './libraryView'
 
 const metaOf = (i: ItemInstance) =>
@@ -91,7 +92,16 @@ export function Inventory({
         const i = c.inventory.find((k) => `item:${k.id}` === key)
         if (!i) return null
         return (
-          <EntryWindow key={key} entryKey={key} title={i.name} text={i.description} tags={i.tags} onClose={() => windows.close(key)}>
+          <EntryWindow
+            key={key}
+            entryKey={key}
+            title={i.name}
+            text={i.description}
+            tags={i.tags}
+            onClose={() => windows.close(key)}
+            // Gear from the Libraries stands for its entry there.
+            proxy={i.defId ? linkProxy(campaign, 'item', i.defId, i.name, i.icon) : undefined}
+          >
             {metaOf(i) && <span class="muted">{metaOf(i)}</span>}
             {actions(i)}
           </EntryWindow>

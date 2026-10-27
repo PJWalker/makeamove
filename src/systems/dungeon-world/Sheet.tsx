@@ -179,6 +179,7 @@ export function DungeonWorldSheet({ campaign, system, c }: { campaign: Campaign;
       <section class="sheet-section" aria-label="Moves" data-move-drop={editable ? c.id : undefined}>
         <h3 class="sheet-heading">Moves</h3>
         <MoveList
+          campaign={campaign}
           system={system}
           moves={moves}
           onMake={make}

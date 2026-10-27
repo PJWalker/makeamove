@@ -1,5 +1,5 @@
 import { signal } from '@preact/signals'
-import { listCharacters, selectCharacter, systemOf } from '../characters/api'
+import { getCharacter, listCharacters, selectCharacter, systemOf } from '../characters/api'
 import type { Campaign } from '../store/campaign'
 import { libraryView } from '../table/libraryView'
 import { showPanel } from '../table/panelLayout'
@@ -47,7 +47,7 @@ export function linkLabel(campaign: Campaign, kind: LinkKind, id: string): strin
     case 'note':
       return listNotes(campaign).find((n) => n.id === id)?.title ?? null
     case 'character':
-      return listCharacters(campaign).find((c) => c.id === id)?.name ?? null
+      return getCharacter(campaign, id)?.name ?? null
     case 'scene':
       return campaign.sceneViews().find((s) => s.id === id)?.name ?? null
     case 'item':
@@ -66,7 +66,7 @@ export function linkTip(campaign: Campaign, kind: LinkKind, id: string): string 
       return n ? `${n.title}\n${n.gmOnly ? 'GM page' : 'Note'}` : null
     }
     case 'character': {
-      const c = listCharacters(campaign).find((x) => x.id === id)
+      const c = getCharacter(campaign, id)
       if (!c) return null
       const what = c.kind === 'npc' ? (c.template ? 'NPC template' : 'NPC') : (system.classes.find((k) => k.id === c.classId)?.name ?? 'Character')
       return `${c.name}\n${what}, level ${c.level}`

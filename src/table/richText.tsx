@@ -44,14 +44,15 @@ export interface RichTextOptions {
 }
 
 const KIND_ICON: Partial<Record<LinkKind, Icon>> = { note: IconNotes, character: IconCharacters, scene: IconMap }
-const iconFor = (t: { kind: LinkKind; icon?: string }) => KIND_ICON[t.kind] ?? entryIcon(t.kind === 'item' ? 'item' : 'move', t.icon)
+/** A link target's icon: notes, characters and scenes by kind; gear and moves by their own icon. */
+export const linkIcon = (t: { kind: LinkKind; icon?: string }) => KIND_ICON[t.kind] ?? entryIcon(t.kind === 'item' ? 'item' : 'move', t.icon)
 
 /**
  * A link to a note, character, scene, item or move: an inline chip, typed
  * by starting a word with `@`. It stores its target's kind and id (and the
  * name it had, as a fallback); it shows the target's current name.
  */
-function linkExtension(campaign: Campaign, o: Pick<RichTextOptions, 'noteId' | 'shared'>) {
+export function linkExtension(campaign: Campaign, o: Pick<RichTextOptions, 'noteId' | 'shared'>) {
   return Mention.extend({
     name: LINK_NODE,
     addAttributes() {
@@ -135,7 +136,7 @@ function suggestionList() {
       items.length ? (
         <>
           {items.map((t, i) => {
-            const Icon = iconFor(t)
+            const Icon = linkIcon(t)
             return (
               <button
                 key={`${t.kind}:${t.id}`}

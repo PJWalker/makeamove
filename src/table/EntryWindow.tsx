@@ -8,7 +8,7 @@ import { openPopup, raisePopup } from '../ui/popup'
 import type { Icon } from '../ui/icons'
 import { hideTooltip } from '../ui/Tooltip'
 import { ListRow } from '../ui/List'
-import { Dialog } from './CampaignDialogs'
+import { Dialog, type WindowProxy } from './CampaignDialogs'
 
 /*
  * Rows that show their rules in a tooltip beside them and, when clicked,
@@ -54,6 +54,7 @@ export function EntryWindow({
   text,
   tags,
   onClose,
+  proxy,
   children,
 }: {
   entryKey: string
@@ -61,6 +62,8 @@ export function EntryWindow({
   text: string
   tags?: string[]
   onClose: () => void
+  /** The entry as a draggable icon in the title bar. */
+  proxy?: WindowProxy
   /** The actions along the bottom. */
   children?: ComponentChildren
 }) {
@@ -72,7 +75,7 @@ export function EntryWindow({
     openPopup(dialog)
   }, [])
   return (
-    <Dialog dialogRef={ref} title={title} onClose={onClose}>
+    <Dialog dialogRef={ref} title={title} onClose={onClose} proxy={proxy}>
       <p class="move-text move-window-text">{text}</p>
       {tags && tags.length > 0 && <p class="muted item-tags">{tags.join(', ')}</p>}
       {children && <div class="form-actions">{children}</div>}

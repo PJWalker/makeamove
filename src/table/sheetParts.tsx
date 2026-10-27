@@ -19,6 +19,7 @@ import { Segmented } from '../ui/Segmented'
 import { Dialog } from './CampaignDialogs'
 import { ContextMenu, type MenuItem } from './ContextMenu'
 import { EntryRow, EntryWindow, rollTag, useEntryWindows } from './EntryWindow'
+import { linkProxy } from './LinkChip'
 import { dragToken } from './tokenDrag'
 
 /*
@@ -76,12 +77,14 @@ export const signedStr = (n: number) => (n < 0 ? `−${-n}` : `+${n}`)
  * that stays open, to read and make the move from.
  */
 export function MoveList({
+  campaign,
   system,
   moves,
   onMake,
   learned = [],
   onForget,
 }: {
+  campaign: Campaign
   system: GameSystem
   moves: ActionDef[]
   onMake: (m: ActionDef) => void
@@ -124,7 +127,14 @@ export function MoveList({
         if (!m) return null
         const tag = rollTag(system, m)
         return (
-          <EntryWindow key={key} entryKey={key} title={m.name} text={m.text} onClose={() => windows.close(key)}>
+          <EntryWindow
+            key={key}
+            entryKey={key}
+            title={m.name}
+            text={m.text}
+            onClose={() => windows.close(key)}
+            proxy={linkProxy(campaign, 'move', m.id, m.name, m.category === 'class' ? 'class-move' : undefined)}
+          >
             {tag && <Tag>{tag}</Tag>}
             {onForget && learned.includes(m.id) && (
               <Button

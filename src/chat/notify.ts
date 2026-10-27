@@ -3,6 +3,9 @@ import { stampTime } from '../lib/hlc'
 import { activeCampaign } from '../store/campaign'
 import { device } from '../store/device'
 import { panelVisible } from '../table/panelLayout'
+import type { LinkKind } from '../notes/api'
+import { linkLabel } from '../notes/targets'
+import { plainText } from './markdown'
 import { visibilityOf, type ChatMessage } from './types'
 
 /*
@@ -14,10 +17,12 @@ import { visibilityOf, type ChatMessage } from './types'
  */
 
 /** The title and body to show for a message, or null if it isn't worth a notification. */
-export function describe(m: ChatMessage): { title: string; body: string } | null {
+export function describe(m: ChatMessage, nameOf?: (kind: LinkKind, id: string) => string | null): { title: string; body: string } | null {
   switch (m.kind) {
-    case 'text':
-      return { title: m.to ? `${m.name} (whisper)` : m.name, body: m.emote ? `${m.name} ${m.text}` : m.text }
+    case 'text': {
+      const text = plainText(m.text, nameOf)
+      return { title: m.to ? `${m.name} (whisper)` : m.name, body: m.emote ? `${m.name} ${text}` : text }
+    }
     case 'roll':
       return { title: m.name, body: `${m.comment ? `${m.comment}: ` : ''}${m.roll.formula} = ${m.roll.total}` }
     case 'move':
@@ -68,7 +73,7 @@ export function startChatNotifications() {
       if (stampTime(m.hlc) < started) continue
       told.add(m.id)
       if (m.author === me || visibilityOf(m, me, isGm) !== 'full' || Notification.permission !== 'granted' || inView()) continue
-      const text = describe(m)
+      const text = describe(m, (kind, id) => linkLabel(c, kind, id))
       if (text) void show(text.title, text.body, m.id).catch(() => {})
     }
   })

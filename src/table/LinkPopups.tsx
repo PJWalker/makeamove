@@ -14,6 +14,7 @@ import { EntryWindow, rollTag } from './EntryWindow'
 import { closeLink, linkKey, linkMenu, linkRename, openLinks, type LinkRef } from './linkState'
 import { NoteEditor } from './NoteEditor'
 import { CharacterSheet } from './sheets'
+import { linkProxy } from './LinkChip'
 import { makeVerb } from './sheetParts'
 
 /*
@@ -35,7 +36,7 @@ export function LinkPopups({ campaign }: { campaign: Campaign }) {
 }
 
 /** A pop-up for one link, marked so clicking the link again brings it forward. */
-function LinkDialog({ link, title, children }: { link: LinkRef; title: string; children: ComponentChildren }) {
+function LinkDialog({ campaign, link, title, children }: { campaign: Campaign; link: LinkRef; title: string; children: ComponentChildren }) {
   const ref = useRef<HTMLDialogElement>(null)
   useLayoutEffect(() => {
     if (!ref.current) return
@@ -43,7 +44,7 @@ function LinkDialog({ link, title, children }: { link: LinkRef; title: string; c
     openPopup(ref.current)
   }, [])
   return (
-    <Dialog dialogRef={ref} title={title} onClose={() => closeLink(link)}>
+    <Dialog dialogRef={ref} title={title} onClose={() => closeLink(link)} proxy={linkProxy(campaign, link.kind, link.id, title)}>
       {children}
     </Dialog>
   )
@@ -65,7 +66,14 @@ function LinkPopup({ campaign, link }: { campaign: Campaign; link: LinkRef }) {
       const item = system.items.find((i) => i.id === link.id)
       if (!item) return null
       return (
-        <EntryWindow entryKey={entryKey} title={item.name} text={item.description} tags={item.tags} onClose={close}>
+        <EntryWindow
+          entryKey={entryKey}
+          title={item.name}
+          text={item.description}
+          tags={item.tags}
+          onClose={close}
+          proxy={linkProxy(campaign, 'item', item.id, item.name, item.icon)}
+        >
           <Button variant="primary" disabled={!canAct} onClick={() => me && addItem(campaign, me.id, item)}>
             {me ? `Give to ${me.name}` : 'Choose a character first'}
           </Button>
@@ -78,7 +86,14 @@ function LinkPopup({ campaign, link }: { campaign: Campaign; link: LinkRef }) {
       const { label, Icon } = makeVerb(move)
       const tag = rollTag(system, move)
       return (
-        <EntryWindow entryKey={entryKey} title={move.name} text={move.text} tags={tag ? [tag] : undefined} onClose={close}>
+        <EntryWindow
+          entryKey={entryKey}
+          title={move.name}
+          text={move.text}
+          tags={tag ? [tag] : undefined}
+          onClose={close}
+          proxy={linkProxy(campaign, 'move', move.id, move.name, move.category === 'class' ? 'class-move' : undefined)}
+        >
           <Button variant="primary" disabled={!canAct} onClick={() => me && startMove(campaign, me.id, move)}>
             <Icon size={18} /> {label}
             {me ? ` as ${me.name}` : ''}
@@ -88,7 +103,7 @@ function LinkPopup({ campaign, link }: { campaign: Campaign; link: LinkRef }) {
     }
     case 'character':
       return character ? (
-        <LinkDialog link={link} title={character.name}>
+        <LinkDialog campaign={campaign} link={link} title={character.name}>
           <div class="popup-sheet sheet-panel">
             <CharacterSheet campaign={campaign} system={system} c={character} />
           </div>
@@ -96,7 +111,7 @@ function LinkPopup({ campaign, link }: { campaign: Campaign; link: LinkRef }) {
       ) : null
     case 'scene':
       return scene ? (
-        <LinkDialog link={link} title={scene.name}>
+        <LinkDialog campaign={campaign} link={link} title={scene.name}>
           <p class="muted">A scene in this campaign.</p>
           <div class="form-actions">
             <Button variant="primary" onClick={() => followLink(campaign, 'scene', scene.id)}>
@@ -107,7 +122,7 @@ function LinkPopup({ campaign, link }: { campaign: Campaign; link: LinkRef }) {
       ) : null
     case 'note':
       return note ? (
-        <LinkDialog link={link} title={note.title || 'Untitled'}>
+        <LinkDialog campaign={campaign} link={link} title={note.title || 'Untitled'}>
           <div class="link-note">
             <NoteEditor campaign={campaign} noteId={note.id} />
           </div>

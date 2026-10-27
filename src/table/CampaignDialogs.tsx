@@ -13,17 +13,31 @@ import { useSignal } from '@preact/signals'
 import { createPortal } from 'preact/compat'
 import { dragPopup, raisePopup, resizePopup } from '../ui/popup'
 import { RESIZE_DIRS } from './resizeRect'
+import { dragEntity, type DragEntity } from './entityDrag'
+import type { Icon } from '../ui/icons'
+
+/** The icon in a window's title bar that stands for what it shows. */
+export interface WindowProxy {
+  Icon: Icon
+  entity: DragEntity
+}
 import { windowLayer } from '../ui/windows'
 
 export function Dialog({
   dialogRef,
   title,
   onClose,
+  proxy,
   children,
 }: {
   dialogRef: RefObject<HTMLDialogElement>
   title: string
   onClose?: () => void
+  /**
+   * What the window shows, as an icon in its title bar that drags like a
+   * link: onto a character, the hotbar, a note or the chat.
+   */
+  proxy?: WindowProxy
   children: ComponentChildren
 }) {
   // Rendered in the window layer with the other windows: a non-modal dialog
@@ -45,6 +59,19 @@ export function Dialog({
       }}
     >
       <header class="panel-header window-header" onPointerDown={(e) => dragPopup(dialogRef.current!, e)}>
+        {proxy && (
+          <span
+            class="window-proxy"
+            data-tip="Drag to link it, or onto a character or the hotbar"
+            onPointerDown={(e) => {
+              // Not a drag of the window itself.
+              e.stopPropagation()
+              dragEntity(e, proxy.entity, e.currentTarget.nextElementSibling as HTMLElement)
+            }}
+          >
+            <proxy.Icon size={16} />
+          </span>
+        )}
         <h2 class="panel-title">{title}</h2>
         <Button variant="icon" label="Close" onClick={() => dialogRef.current?.close()}>
           <IconClose size={16} />

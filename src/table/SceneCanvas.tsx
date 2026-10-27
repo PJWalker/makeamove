@@ -54,6 +54,7 @@ import {
   tokenDrop,
 } from './canvasState'
 import { formatDistance } from '../scene/measure'
+import { linkProxy } from './LinkChip'
 import { ContextMenu, type MenuItem } from './ContextMenu'
 
 /**
@@ -424,7 +425,12 @@ function TokenOptionsDialog({
   }, [id, exists])
 
   return (
-    <Dialog dialogRef={ref} title={linked ? linked.name : 'Token options'} onClose={onClose}>
+    <Dialog
+      dialogRef={ref}
+      title={linked ? linked.name : 'Token options'}
+      onClose={onClose}
+      proxy={linked ? linkProxy(campaign, 'character', linked.id, linked.name) : undefined}
+    >
       {linked && (
         <PopupTabs
           tabs={[

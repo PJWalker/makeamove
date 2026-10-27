@@ -1,21 +1,11 @@
-import { IconDock } from '../ui/icons'
 import type { Campaign } from '../store/campaign'
-import { Button } from '../ui/Button'
 import { trackPointer } from '../ui/pointer'
-import { withTransition } from '../ui/transition'
 import { windowLayer } from '../ui/windows'
 import { createPortal } from 'preact/compat'
 import { useRef } from 'preact/hooks'
-import { dockPanel, dockTarget, floatingWindows, windowPointer, spawnedFromTab, raiseWindow, startWindowDrag, updateWindow, type FloatingWindow } from './panelLayout'
+import { dockTarget, floatingWindows, windowPointer, spawnedFromTab, raiseWindow, startWindowDrag, updateWindow, type FloatingWindow } from './panelLayout'
 import { PanelContent, PANELS, PaneToggle } from './panels'
 import { RESIZE_CURSORS, RESIZE_DIRS, resizeRect, type ResizeDir } from './resizeRect'
-
-/** Dock a window from its button, then put keyboard focus on the docked panel. */
-function dockAndFocus(id: FloatingWindow['id']) {
-  withTransition(() => dockPanel(id)).then(() =>
-    document.querySelector<HTMLElement>('.sidebar-panel .panel-title')?.focus(),
-  )
-}
 
 /** Size of the tab a window morphs into. */
 const TAB = 44
@@ -93,9 +83,6 @@ function Window({ win, campaign }: { win: FloatingWindow; campaign: Campaign }) 
       <header class="panel-header window-header" onPointerDown={onHeaderPointerDown}>
         <PaneToggle id={win.id} />
         <h2 class="panel-title">{label}</h2>
-        <Button variant="icon" label="Dock in the sidebar" onClick={() => dockAndFocus(win.id)}>
-          <IconDock size={16} />
-        </Button>
       </header>
       <PanelContent id={win.id} campaign={campaign} />
       <span class="resize-grip" aria-hidden="true" />

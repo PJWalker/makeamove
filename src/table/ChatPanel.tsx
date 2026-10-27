@@ -20,6 +20,10 @@ import { Button } from '../ui/Button'
 import { ContextMenu, type MenuItem } from './ContextMenu'
 import { menuTrigger } from '../ui/menuTrigger'
 import { IconDelete, IconDice, IconExpand } from '../ui/icons'
+import { ChatInput, type ChatInputHandle } from './ChatInput'
+import { entityToken } from '../chat/markdown'
+import { registerLinkDrop } from './entityDrag'
+import { LinkChip } from './LinkChip'
 import { panelVisible } from './panelLayout'
 
 /*
@@ -39,9 +43,16 @@ export function ChatPanel({ campaign }: { campaign: Campaign }) {
   /** Replies only this device sees: /help, and errors. */
   const notes = useSignal<{ id: number; text: string; error?: boolean }[]>([])
   const note = (text: string, error = false) => (notes.value = [...notes.value, { id: Date.now(), text, error }])
+  const ref = useRef<HTMLDivElement>(null)
+
+  // Something dragged onto the chat is sent as a link (into the message box, it joins the message instead).
+  useEffect(() => {
+    if (!ref.current) return
+    return registerLinkDrop(ref.current, (link) => runCommand(campaign, { kind: 'text', text: entityToken(link.kind, link.id) }))
+  }, [campaign])
 
   return (
-    <div class="chat">
+    <div class="chat" ref={ref}>
       <ChatLogView campaign={campaign} notes={notes.value} />
       <Composer campaign={campaign} onNote={note} />
     </div>
@@ -238,27 +249,28 @@ function Message({
       ) : m.kind === 'move' ? (
         <MoveCard campaign={campaign} m={m} />
       ) : (
-        <TextBody m={m} mine={mine} />
+        <TextBody campaign={campaign} m={m} mine={mine} />
       )}
     </article>
   )
 }
 
-function TextBody({ m, mine }: { m: TextMessage; mine: boolean }) {
+function TextBody({ campaign, m, mine }: { campaign: Campaign; m: TextMessage; mine: boolean }) {
   return (
     <div class="chat-text" data-emote={m.emote}>
       {m.to && <span class="chat-whisper-tag">{mine ? `Whisper to ${m.toNames?.join(', ')}` : 'Whispered to you'}</span>}
       {m.emote && <span class="chat-emote-name">{m.name} </span>}
-      <Rich text={m.text} />
+      <Rich campaign={campaign} text={m.text} />
     </div>
   )
 }
 
 /** Markdown-lite, rendered as elements (never HTML). */
-function Rich({ text }: { text: string }) {
+function Rich({ campaign, text }: { campaign: Campaign; text: string }) {
   return (
     <>
       {tokenize(text).map((s, i) => {
+        if (s.type === 'entity') return <LinkChip key={i} campaign={campaign} kind={s.kind} id={s.id} text={s.text} />
         const content = s.text.split('\n').map((line, j) => (
           <Fragment key={j}>
             {j > 0 && <br />}
@@ -331,23 +343,15 @@ function Composer({ campaign, onNote }: { campaign: Campaign; onNote: (text: str
   const error = useSignal<string | null>(null)
   const visibility = useSignal<RollVisibility>('public')
   const last = useRef('')
-  const inputRef = useRef<HTMLTextAreaElement>(null)
+  const input = useRef<ChatInputHandle | null>(null)
   const isGm = useY(campaign.members, () => campaign.isGm())
   const members = useY(campaign.members, () => campaign.memberViews())
   const hints = suggest(text.value, isGm)
 
-  // Grow with the text, up to a few lines.
-  useLayoutEffect(() => {
-    const el = inputRef.current
-    if (!el) return
-    el.style.height = 'auto'
-    el.style.height = `${Math.min(el.scrollHeight, 120)}px`
-  }, [text.value])
-
   function send() {
-    const input = text.value
-    if (!input.trim()) return
-    const cmd = parseCommand(input, members, isGm)
+    const typed = text.value
+    if (!typed.trim()) return
+    const cmd = parseCommand(typed, members, isGm)
     if (cmd.kind === 'error') {
       error.value = cmd.message
       return
@@ -359,8 +363,8 @@ function Composer({ campaign, onNote }: { campaign: Campaign; onNote: (text: str
       // A roll typed with /r uses its own visibility; quick dice use the toggle.
       runCommand(campaign, cmd)
     }
-    last.current = input
-    text.value = ''
+    last.current = typed
+    input.current?.set('')
     error.value = null
   }
 
@@ -463,10 +467,7 @@ function Composer({ campaign, onNote }: { campaign: Campaign; onNote: (text: str
               <button
                 type="button"
                 class="chat-hint"
-                onClick={() => {
-                  text.value = `/${h.names[0]} `
-                  inputRef.current?.focus()
-                }}
+                onClick={() => input.current?.set(`/${h.names[0]} `)}
               >
                 <code>{h.usage}</code>
                 <span>{h.help}</span>
@@ -482,30 +483,21 @@ function Composer({ campaign, onNote }: { campaign: Campaign; onNote: (text: str
           send()
         }}
       >
-        <textarea
-          ref={inputRef}
-          class="input bevel chat-input"
-          rows={1}
-          value={text.value}
-          placeholder="Message, or /r 2d6+1"
-          aria-label="Message"
-          aria-invalid={!!error.value}
-          onInput={(e) => {
-            text.value = e.currentTarget.value
+        <ChatInput
+          campaign={campaign}
+          handle={input}
+          placeholder="Message, @ to link, or /r 2d6+1"
+          label="Message"
+          invalid={!!error.value}
+          onChange={(t) => {
+            text.value = t
             error.value = null
           }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
-              e.preventDefault()
-              send()
-            } else if (e.key === 'ArrowUp' && !text.value && last.current) {
-              e.preventDefault()
-              text.value = last.current
-            } else if (e.key === 'Escape' && text.value) {
-              e.stopPropagation()
-              text.value = ''
-              error.value = null
-            }
+          onEnter={send}
+          onUp={() => last.current && input.current?.set(last.current)}
+          onEscape={() => {
+            input.current?.set('')
+            error.value = null
           }}
         />
         <Button variant="primary" size="sm" type="submit" label="Send" disabled={!text.value.trim()}>
