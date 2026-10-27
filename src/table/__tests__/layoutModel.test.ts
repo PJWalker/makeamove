@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { PANEL_ORDER, defaultLayout, detach, dock, locate, normalise, reorder, selectTab, setOpen, showTab } from '../layoutModel'
+import { PANEL_ORDER, close, defaultLayout, detach, dock, locate, normalise, reorder, selectTab, setOpen, showTab } from '../layoutModel'
 
 const win = { x: 10, y: 10, w: 300, h: 300, z: 1 }
 const everywhere = (l: ReturnType<typeof defaultLayout>) =>
@@ -75,5 +75,17 @@ describe('panel layout', () => {
     const l = normalise({ left: { panels: ['characters'] }, right: { panels: ['chat', 'notes', 'members'] } }, false)
     expect(l.left.panels).toEqual(['characters', 'scene'])
     expect(l.right.panels).toEqual(['chat', 'notes', 'members', 'libraries'])
+  })
+
+  it('closes a panel, keeps it closed on reload, and reopens it where it was', () => {
+    const l = close(defaultLayout(false), 'notes')
+    expect(l.right.panels).not.toContain('notes')
+    expect(locate(l, 'notes')).toBe('closed')
+    expect(normalise(JSON.parse(JSON.stringify(l)), false).closed).toEqual(['notes'])
+    // Showing it (a link to a page, say) opens it again on its own side.
+    const back = showTab(l, 'notes')
+    expect(back.right.panels).toContain('notes')
+    expect(back.closed).toEqual([])
+    expect(back.right.active).toBe('notes')
   })
 })

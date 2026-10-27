@@ -4,6 +4,7 @@ import type { ComponentType } from 'preact'
 import { createPortal } from 'preact/compat'
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks'
 import { placeAnchored, pointAnchor } from '../ui/anchor'
+import { IconCheck } from '../ui/icons'
 import type { IconProps } from '../ui/icons'
 
 export type MenuItem =
@@ -13,6 +14,8 @@ export type MenuItem =
       shortcut?: string
       danger?: boolean
       disabled?: boolean
+      /** For an item that turns something on or off: ticked when it's on. */
+      checked?: boolean
       onSelect: () => void
     }
   | 'divider'
@@ -153,7 +156,8 @@ export function ContextMenu({
           <button
             key={i}
             type="button"
-            role="menuitem"
+            role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
+            aria-checked={item.checked}
             class="menu-item bevel"
             data-danger={item.danger}
             data-chosen={closing === i}
@@ -176,6 +180,7 @@ export function ContextMenu({
               item.onSelect()
             }}
           >
+            {item.checked !== undefined && (item.checked ? <IconCheck size={16} class="menu-check" /> : <span class="menu-icon-space" />)}
             {item.Icon ? <item.Icon size={16} /> : <span class="menu-icon-space" />}
             <span class="menu-label">{item.label}</span>
             {item.shortcut && <kbd class="menu-shortcut">{item.shortcut}</kbd>}

@@ -5,6 +5,7 @@ import { nextZ, noteZ } from '../ui/windows'
 import {
   PANEL_ORDER,
   SIDES,
+  close,
   detach,
   dock,
   locate,
@@ -100,6 +101,7 @@ export function isFloating(id: PanelId) {
 export function panelVisible(id: PanelId) {
   const side = locate(layout.value, id)
   if (side === 'floating') return true
+  if (side === 'closed') return false
   const s = layout.value[side]
   return s.open && s.active === id
 }
@@ -135,6 +137,14 @@ export function detachPanel(id: PanelId, x: number, y: number, w = 340, h = 440)
 export function dockPanel(id: PanelId, side?: Side, index?: number) {
   layout.value = dock(layout.value, id, side, index)
 }
+
+/** Close a panel, or open a closed one again where it was. */
+export function setPanelClosed(id: PanelId, closed: boolean) {
+  if (closed) layout.value = close(layout.value, id)
+  else if (isClosed(id)) layout.value = dock(layout.value, id)
+}
+
+export const isClosed = (id: PanelId) => layout.value.closed.includes(id)
 
 export function raiseWindow(id: PanelId) {
   const z = topZ()

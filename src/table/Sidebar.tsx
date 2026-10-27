@@ -1,6 +1,6 @@
 import { unreadCount } from '../chat/unread'
 import { useSignal } from '@preact/signals'
-import { IconDrag } from '../ui/icons'
+import { IconClose, IconDrag } from '../ui/icons'
 import type { Campaign } from '../store/campaign'
 import { device } from '../store/device'
 import { useY } from '../store/useY'
@@ -18,6 +18,7 @@ import {
   otherSide,
   selectPanel,
   reorderPanel,
+  setPanelClosed,
   setSideWidth,
   SIDEBAR_MIN_W,
   sidebarMaxWidth,
@@ -103,6 +104,9 @@ function tabMenu(id: PanelId, side: Side): MenuItem[] {
       label: 'Float in a window',
       onSelect: () => detachPanel(id, Math.max(innerWidth / 2 - 170, 0), 120),
     },
+    'divider',
+    // Back from the campaign menu, where each panel can be ticked again.
+    { label: 'Close', Icon: IconClose, onSelect: () => withTransition(() => setPanelClosed(id, true)) },
   ]
 }
 

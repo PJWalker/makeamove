@@ -24,6 +24,8 @@ import {
 } from '../ui/icons'
 import { isTyping } from '../ui/keys'
 import { dialogRequest } from './canvasState'
+import { layout, PANEL_ORDER, setPanelClosed } from './panelLayout'
+import { PANELS } from './panels'
 import { ContextMenu, type MenuItem } from './ContextMenu'
 
 export const TOOLS: {
@@ -135,6 +137,16 @@ function CampaignMenu({ isGm }: { isGm: boolean }) {
     { label: 'Player settings…', Icon: IconMembers, onSelect: () => (dialogRequest.value = 'player') },
     ...(isGm ? [{ label: 'Campaign settings…', Icon: IconSettings, onSelect: () => (dialogRequest.value = 'settings') }] : []),
     { label: 'Help and shortcuts…', Icon: IconHelp, onSelect: () => (dialogRequest.value = 'help') },
+    'divider',
+    // Which panels the table has: ticked ones are in a sidebar or a window.
+    ...PANEL_ORDER.map(
+      (id): MenuItem => ({
+        label: PANELS[id].label,
+        Icon: PANELS[id].Icon,
+        checked: !layout.value.closed.includes(id),
+        onSelect: () => setPanelClosed(id, !layout.value.closed.includes(id)),
+      }),
+    ),
     'divider',
     { label: 'Back to campaigns', Icon: IconLeave, onSelect: () => goToCampaign(null) },
   ]

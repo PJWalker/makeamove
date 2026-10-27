@@ -3,8 +3,10 @@ import { trackPointer } from '../ui/pointer'
 import { windowLayer } from '../ui/windows'
 import { createPortal } from 'preact/compat'
 import { useRef } from 'preact/hooks'
-import { dockTarget, floatingWindows, windowPointer, spawnedFromTab, raiseWindow, startWindowDrag, updateWindow, type FloatingWindow } from './panelLayout'
+import { dockTarget, setPanelClosed, floatingWindows, windowPointer, spawnedFromTab, raiseWindow, startWindowDrag, updateWindow, type FloatingWindow } from './panelLayout'
 import { PanelContent, PANELS, PaneToggle } from './panels'
+import { Button } from '../ui/Button'
+import { IconClose } from '../ui/icons'
 import { RESIZE_CURSORS, RESIZE_DIRS, resizeRect, type ResizeDir } from './resizeRect'
 
 /** Size of the tab a window morphs into. */
@@ -83,6 +85,9 @@ function Window({ win, campaign }: { win: FloatingWindow; campaign: Campaign }) 
       <header class="panel-header window-header" onPointerDown={onHeaderPointerDown}>
         <PaneToggle id={win.id} />
         <h2 class="panel-title">{label}</h2>
+        <Button variant="icon" label="Close (reopen from the campaign menu)" onClick={() => setPanelClosed(win.id, true)}>
+          <IconClose size={16} />
+        </Button>
       </header>
       <PanelContent id={win.id} campaign={campaign} />
       <span class="resize-grip" aria-hidden="true" />

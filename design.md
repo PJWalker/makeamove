@@ -2,7 +2,9 @@
 
 ## Overview
 
-We are building a local-first, peer-to-peer virtual tabletop (**Make a Move**) that runs in the browser as an installable PWA. Every participant holds a full copy of the campaign, works offline, and merges edits with peers when connected. Game rules live in plugins; Dungeon World is the first, but we should consider the possibility of D&D 5.5E, Daggerheart, PF2e, and other systems.
+local-first, peer-to-peer virtual tabletop that runs as a PWA. Every participant holds a full copy of the campaign, works offline, and merges edits with peers when connected.
+
+A generic core, with plugins for specific game systems. Dungeon World is the first, but we should consider the possibility of D&D 5.5E, Daggerheart, PF2e, Blades in the Dark, and other systems.
 
 ## Goals for the prototype
 
@@ -191,7 +193,7 @@ The right-hand sidebar is one chronological stream of chat, rolls and move cards
 - **Deleting:** players can delete their own messages, and the GM anyone's (including system notices and session markers). Deleting removes the message from the shared log for everyone; like other GM rules this is enforced in the UI only. Right-click a message (or long-press on touch) for a menu with “Delete message”. Swipe-to-delete was tried and dropped: browsers can't tell when fingers leave a trackpad, so a swipe there can't wait for the lift the way it should.
 - **Unread state** and a collapsible, translucent sidebar so the map stays visible.
 
-_As built in M3:_ the log is a `chat` Y.Array of chunk subdocuments on the campaign root, 500 messages each, each persisted in its own IndexedDB database and synced by the M2 session as soon as it loads; the newest two load on open and “Load earlier messages” pulls in older ones. Messages are immutable plain objects stamped with a hybrid logical clock (`src/lib/hlc.ts`), so peers agree on order even with skewed clocks. Commands: `/r` (public), `/sr` (secret: you and the GM), `/w name` or `/w gm`, `/me`, `/session start|end` (GM; numbered in the campaign), `/help`, and `//` to send text starting with a slash; typing `/` lists them. Text supports **bold**, *italic*, `code` and links, rendered as elements, never HTML. The quick dice bar has a Public / Secret toggle; its clicks gather into a pool that rolls as one entry 1 s after the last change (each button shows its count, right-click takes one back out, and a "roll now" button fills as the moment approaches). Whispers are hidden from everyone but sender and recipients, including the GM. Unread messages from others show as a count on the Chat tab. A player's first join posts “Name joined”. Not yet: speaking as a character (needs characters, M4), move cards (M4), exporting a session to notes (M6).
+_As built in M3:_ the log is a `chat` Y.Array of chunk subdocuments on the campaign root, 500 messages each, each persisted in its own IndexedDB database and synced by the M2 session as soon as it loads; the newest two load on open and “Load earlier messages” pulls in older ones. Messages are immutable plain objects stamped with a hybrid logical clock (`src/lib/hlc.ts`), so peers agree on order even with skewed clocks. Commands: `/r` (public), `/sr` (secret: you and the GM), `/w name` or `/w gm`, `/me`, `/session start|end` (GM; numbered in the campaign), `/help`, and `//` to send text starting with a slash; typing `/` lists them. Text supports **bold**, _italic_, `code` and links, rendered as elements, never HTML. The quick dice bar has a Public / Secret toggle; its clicks gather into a pool that rolls as one entry 1 s after the last change (each button shows its count, right-click takes one back out, and a "roll now" button fills as the moment approaches). Whispers are hidden from everyone but sender and recipients, including the GM. Unread messages from others show as a count on the Chat tab. A player's first join posts “Name joined”. Not yet: speaking as a character (needs characters, M4), move cards (M4), exporting a session to notes (M6).
 
 ## Notes
 
@@ -201,7 +203,6 @@ Notes are a folder tree of collaborative rich-text pages (TipTap over Yjs) with 
 - **Embeds:** link chips to characters, scenes, items and moves; images from the blob store; a note can be pinned to a scene location as a marker.
 - **GM-only pages** live in the GM vault doc, so they never reach players’ devices. Revealing a page copies it into the shared root. _(Built; see M6 status.)_
 - **Per-paragraph secrets:** a “GM only” block style inside a shared page, hidden in the UI from players (casual secrecy only).
-- **Dungeon World hooks:** the plugin adds templates for Fronts, Dangers (with grim portents as tickable checkboxes) and Steadings.
 
 ## Permissions: hide and lock
 
@@ -314,20 +315,20 @@ The second system is D&D 5th edition as revised in 2024 ("5.5e"), built from the
 
 ### From Dungeon World: made generic, or kept
 
-| Now in Dungeon World                          | Becomes                                                                   |
-| --------------------------------------------- | ------------------------------------------------------------------------- |
-| Stats and `modifier()`                        | Generic abilities; each system's own modifier rule                        |
-| Moves, move list, move cards                  | Actions with steps; one card renderer for any step results                |
-| `band()` and strong / weak / miss texts       | Kept: Dungeon World's result function and texts                           |
-| Suggestions (Mark XP, Roll damage)            | Generic follow-up buttons that a system defines per action or result      |
-| Forward and ongoing                           | Generic roll modifiers: one-shot or lasting (5.5e: Bless, Guidance)       |
-| Debilities                                    | Conditions, defined by Dungeon World                                      |
-| Item uses, HP                                 | Resources                                                                 |
-| Load and weight                               | A derived value and an item field any system may use                      |
-| Classes with HP, damage die, load             | Generic classes with features by level; numbers in each system's data    |
-| NPC fields                                    | Stat blocks                                                               |
-| Bonds, alignment, race, coin, XP rule         | Kept: Dungeon World's character data                                      |
-| Fronts, Dangers, Steadings                    | Kept: Dungeon World note templates (M6)                                   |
+| Now in Dungeon World                    | Becomes                                                               |
+| --------------------------------------- | --------------------------------------------------------------------- |
+| Stats and `modifier()`                  | Generic abilities; each system's own modifier rule                    |
+| Moves, move list, move cards            | Actions with steps; one card renderer for any step results            |
+| `band()` and strong / weak / miss texts | Kept: Dungeon World's result function and texts                       |
+| Suggestions (Mark XP, Roll damage)      | Generic follow-up buttons that a system defines per action or result  |
+| Forward and ongoing                     | Generic roll modifiers: one-shot or lasting (5.5e: Bless, Guidance)   |
+| Debilities                              | Conditions, defined by Dungeon World                                  |
+| Item uses, HP                           | Resources                                                             |
+| Load and weight                         | A derived value and an item field any system may use                  |
+| Classes with HP, damage die, load       | Generic classes with features by level; numbers in each system's data |
+| NPC fields                              | Stat blocks                                                           |
+| Bonds, alignment, race, coin, XP rule   | Kept: Dungeon World's character data                                  |
+| Fronts, Dangers, Steadings              | Kept: Dungeon World note templates (M6)                               |
 
 ### Order of work
 
@@ -352,15 +353,15 @@ A keyboard-first palette for finding and doing things without hunting through pa
 
 **The action index** is one in-memory list of everything a player can do or look up, rebuilt when the campaign, the selected character or the system plugin changes. Each entry has:
 
-| Field      | Meaning                                                                                                   |
-| ---------- | --------------------------------------------------------------------------------------------------------- |
-| `id`       | Stable id, such as `move:hack-and-slash` or `tool:ping`. The hotbar stores these, not copies               |
-| `kind`     | `move`, `item`, `tool`, `command`, `entry` (compendium, notes, characters, scenes) or `setting`           |
-| `title`    | Display name, plus `aliases` and `tags` for matching (_hack_, _H&S_, _melee_)                              |
-| `source`   | Where it comes from: core, the game-system plugin, the campaign's homebrew, or the selected character     |
-| `available`| Whether it can run now (for example, a move the selected character doesn't have, or no character selected) |
-| `run`      | What happens on Enter: activate the move (see Characters, moves and items), start the tool, open the page |
-| `open`     | Optional secondary action, usually showing the entry's full text without running it                       |
+| Field       | Meaning                                                                                                    |
+| ----------- | ---------------------------------------------------------------------------------------------------------- |
+| `id`        | Stable id, such as `move:hack-and-slash` or `tool:ping`. The hotbar stores these, not copies               |
+| `kind`      | `move`, `item`, `tool`, `command`, `entry` (compendium, notes, characters, scenes) or `setting`            |
+| `title`     | Display name, plus `aliases` and `tags` for matching (_hack_, _H&S_, _melee_)                              |
+| `source`    | Where it comes from: core, the game-system plugin, the campaign's homebrew, or the selected character      |
+| `available` | Whether it can run now (for example, a move the selected character doesn't have, or no character selected) |
+| `run`       | What happens on Enter: activate the move (see Characters, moves and items), start the tool, open the page  |
+| `open`      | Optional secondary action, usually showing the entry's full text without running it                        |
 
 - **Sources.** Core registers tools (select, pan, draw, ping, measure) and commands (fit to scene, undo, toggle chrome, new scene). The plugin's compendium (its Libraries) contributes moves, items, classes, monsters and tags. The campaign contributes characters, notes, scenes and homebrew. The selected character contributes their own moves and usable items, flagged so they rank first.
 - **Ranking.** Fuzzy match on title, aliases and tags; then the selected character's own moves, recently used actions, and exact-prefix matches rise. Entries that are unavailable are shown dimmed with the reason, not hidden, so players can still read them.
@@ -408,20 +409,19 @@ The hue transitions over 600 ms when the scene changes (`@property`-registered c
 **Shape language**
 
 - Buttons, inputs and panels use `border-radius` plus `corner-shape: bevel` (5px controls, 12px panels). Safari and Firefox get the same chamfer from a `clip-path` fallback.
-- **No hairline borders.** Regions separate by tone (sunken and raised fills) and spacing only. Focus rings (2px gold) are the one exception.
+- Prefer seperating regions separate by tone (sunken and raised fills) and spacing, rather than explicit borders.
+- Use subtle alternating colour backgrounds for long lists.
 - Panels clip their children (`overflow: clip`), so a tinted band at an edge never squares off a bevelled corner.
 - **Edge-docked elements** sit flush against the window: no margin, no bevel and no outer edge on the docked side.
 - **Icon strips** use a bevel as deep as the strip is wide, so each end reads as one diagonal running from the window edge.
 - Primary button: gold fill, dark ink. Secondary: raised fill that turns gold on hover. Icon buttons: no chrome until hovered; gold tint when active.
 - Avatars are circles; everything else is bevelled.
 
-**Icons:** Game-icons.net (CC BY 3.0, credited in Help) first, with Material Symbols Rounded (filled) where no game icon fits. Generic glyphs like add, close and chevrons come from Material Symbols. Icons are compiled into the bundle at build time and named by meaning in one module, so swapping one is a one-line change. Small icons will be 22x22px, no smaller.
+**Icons:** Game-icons.net first, with Material Symbols Rounded (filled) where no game icon fits. Generic glyphs like add, close and chevrons come from Material Symbols. Icons are compiled into the bundle at build time and named by meaning in one module, so swapping one is a one-line change. Small icons will be 22x22px, no smaller.
 
 **Motion:** view transitions animate state changes where the moving parts can briefly become snapshots: docking a window into the sidebar, switching sidebar tabs (the content slides up or down to match the tab order), showing and hiding the sidebar, and lobby ↔ table. Anything the user may reach into mid-animation animates its live elements with CSS instead — the scene menu grows with `interpolate-size` and a `grid-template-rows` drawer, so it stays hoverable. Dialogs fade and rise in with `@starting-style`, and close by receding: shrinking slightly about their centre as they fade, as if sinking back into the table. Everything is about 280 ms and switches off under reduced motion.
 
 **Type:** Cabin for controls and chat; Fraunces (optical sizing on, never small caps) for headings, move names and sheets.
-
-**Unobtrusiveness:** panels stay solid at all times (the hover fade was tried and dropped); Ctrl/Cmd + \\ hides all chrome, leaving Tab free for keyboard navigation; motion respects `prefers-reduced-motion`.
 
 ## Milestones
 
@@ -474,38 +474,38 @@ Each question has a proposed default; the first four are the ones that change th
 
 Decisions made while building M0 to M4, newest first. Earlier answers are recorded in Open questions.
 
-| Decision                                                                                                    | Why                                                                                                                  |
-| ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| Characters live in a root-doc `characters` Y.Map, not a subdoc each                                         | A campaign has a handful of characters; one doc keeps sync and persistence simple. Revisit if sheets grow large    |
-| Move suggestions (XP, damage) are buttons on the card, never applied automatically                          | The GM stays in charge of fiction and consequences                                                                   |
-| Hotbar: drag to reorder, drag off to remove (Alt+arrows, Delete by keyboard)                                               | Keyboard-accessible, and simple; drag can come later                                                                 |
-| Dungeon World text is abridged from memory and must be checked against the SRD                              | The data is in one file (`src/systems/dungeon-world.ts`) so it is easy to correct; credit is in the system's attribution |
-| Move 3D dice to M6; M3 shows rolls as 2D cards                                                              | dice-box can't land on a predetermined result, which shared rolls need; picking a replacement can wait for M6      |
-| Chat lives in 500-message chunk subdocuments, ordered by a hybrid logical clock                             | Long campaigns stay fast to open, and peers agree on order even when their clocks disagree                         |
-| No blind rolls; whispers are hidden from the GM                                                             | If a player shouldn't see a result, the GM can roll it; “hidden from others” includes the GM                        |
-| Quick dice pool for 1 s before rolling                                                                      | Several dice from the bar (2d20, d20 + d6) become one roll and one chat entry                                       |
-| Build the command palette before the hotbar, on one shared action index                                     | Both need a searchable list of moves, items and tools; the hotbar becomes pinned index ids instead of a second list |
-| Render the canvas on demand; commit drags on release                                                        | An idle table uses no GPU; each drag is one undo step and, from M2, one update for peers                             |
-| Token portraits use texture fills, not masks; the world is a render group                                   | Per-token stencil masks slow down in the hundreds, and the camera becomes one GPU transform (from the PixiJS skills) |
-| The UI always tints from the main map; the canvas colour is Auto (a dark shade of the map) or the GM's pick | Tinting is never worth turning off; what people want to choose is the colour around the map                          |
-| Small square images become tokens, the rest maps                                                            | No mode to pick when dropping files; right-click swaps them                                                          |
-| Shapes and text tools move out of M1; the ruler and pings go to M2                                          | M1's scope was maps, tokens, freehand and undo; measuring and pinging are presence, which needs peers                |
-| Keep the M0 layout; add an editable action hotbar at the bottom centre in M4                                | The built layout works; the hotbar needs character moves, which arrive with the Dungeon World plugin                 |
-| Scene menu grows with CSS on live elements, not a view transition                                           | It stays hoverable and clickable while it opens                                                                      |
-| Lobby backdrop: scattered Game-icons that occasionally swap, never overlapping                              | Playful and on-theme without looking like a grid                                                                     |
-| Cut tagline and other marketing or explanatory copy                                                         | The UI should explain itself                                                                                         |
-| Sidebar resizes from its inner edge; windows from every edge and corner, with whole-pixel geometry          | Only the bottom-right grip is drawn; the cursor shows the rest                                                       |
-| Panels clip their children with `overflow: clip`, not `contain: paint`                                      | Keeps bevelled corners without trapping `position: fixed` children                                                   |
-| View transitions for docking, tab switches (directional slides), sidebar and page swaps                     | Shows where things go; tab slides mirror the tab order                                                               |
-| Icons: Game-icons first, Material Symbols Rounded (filled) as fallback, bundled                             | Weighty, on-theme, works offline                                                                                     |
-| A new M5 for D&D 5.5e and a general rules engine; notes and polish move to M6                           | A second system tests the plugin API; tactical rules (targets, range, turns) are best designed in before more polish |
-| Campaign actions live in a menu at the start of the tool strip, not the Scenes tab                           | They're about the campaign, not scenes, and stay reachable whichever tabs are open                                   |
-| Presence avatars move into Chat; avatars are circles                                                        | Keeps the top edge clear                                                                                             |
-| Panels stay solid; no hover fade                                                                            | The fade made panels harder to read                                                                                  |
-| No hairline borders anywhere                                                                                | Tone and spacing separate regions                                                                                    |
-| Drag a tab or docked title out to float a panel; drop it on the sidebar to dock                             | Direct manipulation; no pop-out button                                                                               |
-| Two sidebars (left: characters, right: chat) with vertical tabs; tools on the top edge; tabs move between sides or float | Character sheet beside the map and chat opposite; tools out of the way of both                                  |
-| Right sidebar with vertical tabs, sliding in from the edge; dice tray inside Chat                           | Tabs read as one column with the content                                                                             |
-| Edge-docked elements sit flush; icon strips end in full diagonals                                           | Chrome reads as part of the window frame                                                                             |
-| Cabin and Fraunces, no small caps                                                                           | Your preference                                                                                                      |
-| Ctrl/Cmd + \\ hides the chrome, not Tab                                                                     | Tab stays free for keyboard navigation                                                                               |
+| Decision                                                                                                                 | Why                                                                                                                      |
+| ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| Characters live in a root-doc `characters` Y.Map, not a subdoc each                                                      | A campaign has a handful of characters; one doc keeps sync and persistence simple. Revisit if sheets grow large          |
+| Move suggestions (XP, damage) are buttons on the card, never applied automatically                                       | The GM stays in charge of fiction and consequences                                                                       |
+| Hotbar: drag to reorder, drag off to remove (Alt+arrows, Delete by keyboard)                                             | Keyboard-accessible, and simple; drag can come later                                                                     |
+| Dungeon World text is abridged from memory and must be checked against the SRD                                           | The data is in one file (`src/systems/dungeon-world.ts`) so it is easy to correct; credit is in the system's attribution |
+| Move 3D dice to M6; M3 shows rolls as 2D cards                                                                           | dice-box can't land on a predetermined result, which shared rolls need; picking a replacement can wait for M6            |
+| Chat lives in 500-message chunk subdocuments, ordered by a hybrid logical clock                                          | Long campaigns stay fast to open, and peers agree on order even when their clocks disagree                               |
+| No blind rolls; whispers are hidden from the GM                                                                          | If a player shouldn't see a result, the GM can roll it; “hidden from others” includes the GM                             |
+| Quick dice pool for 1 s before rolling                                                                                   | Several dice from the bar (2d20, d20 + d6) become one roll and one chat entry                                            |
+| Build the command palette before the hotbar, on one shared action index                                                  | Both need a searchable list of moves, items and tools; the hotbar becomes pinned index ids instead of a second list      |
+| Render the canvas on demand; commit drags on release                                                                     | An idle table uses no GPU; each drag is one undo step and, from M2, one update for peers                                 |
+| Token portraits use texture fills, not masks; the world is a render group                                                | Per-token stencil masks slow down in the hundreds, and the camera becomes one GPU transform (from the PixiJS skills)     |
+| The UI always tints from the main map; the canvas colour is Auto (a dark shade of the map) or the GM's pick              | Tinting is never worth turning off; what people want to choose is the colour around the map                              |
+| Small square images become tokens, the rest maps                                                                         | No mode to pick when dropping files; right-click swaps them                                                              |
+| Shapes and text tools move out of M1; the ruler and pings go to M2                                                       | M1's scope was maps, tokens, freehand and undo; measuring and pinging are presence, which needs peers                    |
+| Keep the M0 layout; add an editable action hotbar at the bottom centre in M4                                             | The built layout works; the hotbar needs character moves, which arrive with the Dungeon World plugin                     |
+| Scene menu grows with CSS on live elements, not a view transition                                                        | It stays hoverable and clickable while it opens                                                                          |
+| Lobby backdrop: scattered Game-icons that occasionally swap, never overlapping                                           | Playful and on-theme without looking like a grid                                                                         |
+| Cut tagline and other marketing or explanatory copy                                                                      | The UI should explain itself                                                                                             |
+| Sidebar resizes from its inner edge; windows from every edge and corner, with whole-pixel geometry                       | Only the bottom-right grip is drawn; the cursor shows the rest                                                           |
+| Panels clip their children with `overflow: clip`, not `contain: paint`                                                   | Keeps bevelled corners without trapping `position: fixed` children                                                       |
+| View transitions for docking, tab switches (directional slides), sidebar and page swaps                                  | Shows where things go; tab slides mirror the tab order                                                                   |
+| Icons: Game-icons first, Material Symbols Rounded (filled) as fallback, bundled                                          | Weighty, on-theme, works offline                                                                                         |
+| A new M5 for D&D 5.5e and a general rules engine; notes and polish move to M6                                            | A second system tests the plugin API; tactical rules (targets, range, turns) are best designed in before more polish     |
+| Campaign actions live in a menu at the start of the tool strip, not the Scenes tab                                       | They're about the campaign, not scenes, and stay reachable whichever tabs are open                                       |
+| Presence avatars move into Chat; avatars are circles                                                                     | Keeps the top edge clear                                                                                                 |
+| Panels stay solid; no hover fade                                                                                         | The fade made panels harder to read                                                                                      |
+| No hairline borders anywhere                                                                                             | Tone and spacing separate regions                                                                                        |
+| Drag a tab or docked title out to float a panel; drop it on the sidebar to dock                                          | Direct manipulation; no pop-out button                                                                                   |
+| Two sidebars (left: characters, right: chat) with vertical tabs; tools on the top edge; tabs move between sides or float | Character sheet beside the map and chat opposite; tools out of the way of both                                           |
+| Right sidebar with vertical tabs, sliding in from the edge; dice tray inside Chat                                        | Tabs read as one column with the content                                                                                 |
+| Edge-docked elements sit flush; icon strips end in full diagonals                                                        | Chrome reads as part of the window frame                                                                                 |
+| Cabin and Fraunces, no small caps                                                                                        | Your preference                                                                                                          |
+| Ctrl/Cmd + \\ hides the chrome, not Tab                                                                                  | Tab stays free for keyboard navigation                                                                                   |
