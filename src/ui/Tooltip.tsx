@@ -4,6 +4,11 @@ import { inTransition } from './transition'
 
 const DELAY = 150
 const GAP = 10
+/** The closest a tooltip comes to the window's edge. */
+const EDGE = 4
+
+type Dir = 'down' | 'up' | 'left' | 'right'
+const OPPOSITE: Record<Dir, Dir> = { down: 'up', up: 'down', left: 'right', right: 'left' }
 
 let hideNow: (() => void) | null = null
 
@@ -25,7 +30,8 @@ export function hideTooltip() {
  * a click that turns the tooltip into a window (hideTooltip ends it).
  */
 export function Tooltip() {
-  const tip = useSignal<{ text: string; long?: boolean; x: number; y: number; dir: 'down' | 'up' | 'left' | 'right'; instant?: boolean } | null>(null)
+  /** What to show, the element's box, and the side it would rather open on. */
+  const tip = useSignal<{ text: string; long?: boolean; r: DOMRect; dir: Dir; instant?: boolean } | null>(null)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -76,15 +82,19 @@ export function Tooltip() {
       // from the bottom.
       const cx = r.left + r.width / 2
       const cy = r.top + r.height / 2
-      if (el.closest('.sidebar-rail') || el.hasAttribute('data-tip-side')) {
-        // data-tip-side="left" or "right" picks a side; otherwise, the side with more room.
-        const side = el.getAttribute('data-tip-side')
-        const dir = side === 'left' || side === 'right' ? side : cx < innerWidth / 2 ? 'right' : 'left'
-        tip.value = { text, long, x: dir === 'right' ? r.right + GAP : r.left - GAP, y: cy, dir, instant }
-      } else {
-        const dir = cy < innerHeight / 2 ? 'down' : 'up'
-        tip.value = { text, long, x: cx, y: dir === 'down' ? r.bottom + GAP : r.top - GAP, dir, instant }
-      }
+      // data-tip-side="left" or "right" prefers a side; it still flips if it wouldn't fit.
+      const side = el.getAttribute('data-tip-side')
+      const dir: Dir =
+        el.closest('.sidebar-rail') || side !== null
+          ? side === 'left' || side === 'right'
+            ? side
+            : cx < innerWidth / 2
+              ? 'right'
+              : 'left'
+          : cy < innerHeight / 2
+            ? 'down'
+            : 'up'
+      tip.value = { text, long, r, dir, instant }
     }
 
     function consider(target: EventTarget | null, delay: number) {
@@ -135,7 +145,8 @@ export function Tooltip() {
   }, [])
 
   const t = tip.value
-  // Keep it on screen: centre on the target, then clamp to the window.
+  // Keep it on screen: open on the preferred side, or the opposite one if it
+  // wouldn't fit there; centre on the target, then clamp to the window.
   useEffect(() => {
     const el = ref.current
     if (!el) return
@@ -143,17 +154,29 @@ export function Tooltip() {
       if (!el.matches(':popover-open')) el.showPopover()
       const w = el.offsetWidth
       const h = el.offsetHeight
-      const clamp = (v: number, size: number, max: number) => Math.min(Math.max(v, 4), max - size - 4)
-      if (t.dir === 'left' || t.dir === 'right') {
-        el.style.left = `${t.dir === 'right' ? t.x : t.x - w}px`
-        const top = clamp(t.y - h / 2, h, innerHeight)
+      const { r } = t
+      const room: Record<Dir, number> = {
+        right: innerWidth - EDGE - (r.right + GAP),
+        left: r.left - GAP - EDGE,
+        down: innerHeight - EDGE - (r.bottom + GAP),
+        up: r.top - GAP - EDGE,
+      }
+      const need = t.dir === 'left' || t.dir === 'right' ? w : h
+      const dir = room[t.dir] < need && room[OPPOSITE[t.dir]] > room[t.dir] ? OPPOSITE[t.dir] : t.dir
+      el.dataset.dir = dir
+      const clamp = (v: number, size: number, max: number) => Math.min(Math.max(v, EDGE), max - size - EDGE)
+      if (dir === 'left' || dir === 'right') {
+        const y = r.top + r.height / 2
+        el.style.left = `${dir === 'right' ? r.right + GAP : r.left - GAP - w}px`
+        const top = clamp(y - h / 2, h, innerHeight)
         el.style.top = `${top}px`
-        el.style.setProperty('--arrow', `${t.y - top}px`)
+        el.style.setProperty('--arrow', `${y - top}px`)
       } else {
-        const left = clamp(t.x - w / 2, w, innerWidth)
+        const x = r.left + r.width / 2
+        const left = clamp(x - w / 2, w, innerWidth)
         el.style.left = `${left}px`
-        el.style.setProperty('--arrow', `${t.x - left}px`)
-        el.style.top = `${t.dir === 'down' ? t.y : t.y - h}px`
+        el.style.setProperty('--arrow', `${x - left}px`)
+        el.style.top = `${dir === 'down' ? r.bottom + GAP : r.top - GAP - h}px`
       }
     } else if (el.matches(':popover-open')) {
       el.hidePopover()
@@ -161,7 +184,7 @@ export function Tooltip() {
   }, [t])
 
   return (
-    <div ref={ref} class="tooltip" data-dir={t?.dir} data-instant={t?.instant || undefined} data-long={t?.long || undefined} popover="manual" role="tooltip">
+    <div ref={ref} class="tooltip" data-instant={t?.instant || undefined} data-long={t?.long || undefined} popover="manual" role="tooltip">
       {t?.text}
     </div>
   )
