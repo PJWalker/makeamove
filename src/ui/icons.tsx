@@ -11,6 +11,7 @@ import type { ComponentType, JSX } from 'preact'
 import GiArrowCursor from '~icons/game-icons/arrow-cursor'
 import GiBullseye from '~icons/game-icons/bullseye'
 import GiCog from '~icons/game-icons/cog'
+import GiCrosshair from '~icons/game-icons/crosshair'
 import GiCrossedSwords from '~icons/game-icons/crossed-swords'
 import GiExitDoor from '~icons/game-icons/exit-door'
 import GiFog from '~icons/game-icons/fog'
@@ -87,6 +88,7 @@ export const IconFog = icon(GiFog)
 // Scene elements and canvas actions
 export const IconToken = icon(GiPawn)
 export const IconMap = icon(GiTreasureMap)
+export const IconTarget = icon(GiCrosshair)
 export const IconLock = icon(GiPadlock)
 export const IconUnlock = icon(GiPadlockOpen)
 export const IconImage = icon(MsImage)

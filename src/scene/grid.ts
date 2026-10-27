@@ -7,14 +7,24 @@
 
 export type GridType = 'none' | 'square' | 'hex'
 
+/**
+ * How a square grid counts a diagonal step: always one cell (5.5e's default),
+ * alternately one and two cells, or its true length.
+ */
+export type DiagonalRule = 'one' | 'alternate' | 'euclid'
+
 export interface Grid {
   type: GridType
   size: number
   offsetX: number
   offsetY: number
+  /** How far one cell is, in `unitName`s: 5 ft. */
+  unit: number
+  unitName: string
+  diagonal: DiagonalRule
 }
 
-export const DEFAULT_GRID: Grid = { type: 'square', size: 70, offsetX: 0, offsetY: 0 }
+export const DEFAULT_GRID: Grid = { type: 'square', size: 70, offsetX: 0, offsetY: 0, unit: 5, unitName: 'ft', diagonal: 'one' }
 export const MIN_GRID_SIZE = 10
 
 export interface Point {
@@ -113,6 +123,12 @@ export function hexCellsIn(grid: Grid, view: { x: number; y: number; w: number; 
   }
   return cells
 }
+
+export const DIAGONAL_RULES: { id: DiagonalRule; label: string; title: string }[] = [
+  { id: 'one', label: '1', title: 'Every diagonal step is one cell' },
+  { id: 'alternate', label: '1, 2, 1', title: 'Diagonal steps alternate between one and two cells' },
+  { id: 'euclid', label: 'True', title: 'Measure the true distance' },
+]
 
 export const GRID_TYPES: { id: GridType; label: string }[] = [
   { id: 'none', label: 'None' },

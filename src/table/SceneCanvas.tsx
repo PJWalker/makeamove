@@ -5,7 +5,7 @@ import { openPopup } from '../ui/popup'
 import { type Signal, useSignal, useSignalEffect } from '@preact/signals'
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import { SceneController } from '../scene/controller'
-import { DEFAULT_GRID, GRID_TYPES, MIN_GRID_SIZE } from '../scene/grid'
+import { DEFAULT_GRID, DIAGONAL_RULES, GRID_TYPES, MIN_GRID_SIZE } from '../scene/grid'
 import { SceneRenderer } from '../scene/renderer'
 import { activeTool } from '../scene/tools'
 import { SceneDoc } from '../scene/sceneDoc'
@@ -15,6 +15,7 @@ import { isPlainToken, TOKEN_STYLES, type BlobRef, type TokenStyle } from '../sc
 import { DEFAULT_CANVAS_COLOUR, type Campaign } from '../store/campaign'
 import { listCharacters, selectCharacter, systemOf, tokenStatsByCharacter } from '../characters/api'
 import { CharacterSheet } from './sheets'
+import { device } from '../store/device'
 import { useY } from '../store/useY'
 import { BlobImage } from '../ui/BlobImage'
 import { Button } from '../ui/Button'
@@ -30,6 +31,7 @@ import {
   IconMap,
   IconRedo,
   IconRename,
+  IconTarget,
   IconToBack,
   IconToFront,
   IconToken,
@@ -101,10 +103,11 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
     let cancelled = false
     let scene: SceneDoc | null = null
     let ctl: SceneController | null = null
-    SceneDoc.open(subdoc, campaign.defaults().gridType).then((s) => {
+    SceneDoc.open(subdoc, { type: campaign.defaults().gridType, ...systemOf(campaign).scene }).then((s) => {
       scene = s
       if (cancelled) return s.destroy()
       ctl = new SceneController(s, renderer, hostRef.current!, sceneId, () => campaign.defaults(), campaign.presence)
+      ctl.ownCharacters = () => listCharacters(campaign).filter((c) => c.owner === device.value.id).map((c) => c.id)
       ctl.start()
       controller.value = ctl
       tokenDrop.value = (x, y, spec) => {
@@ -193,6 +196,17 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
         tokenTab.value = 'token'
         tokenOptions.value = one.id
       } })
+    }
+    const tokens = sel.filter((el) => el.type === 'token').map((el) => el.id)
+    if (tokens.length) {
+      const all = tokens.every((id) => ctl.targets.value.includes(id))
+      items.push({
+        label: all ? 'Stop targeting' : 'Target',
+        Icon: IconTarget,
+        shortcut: 'T',
+        onSelect: () =>
+          ctl.setTargets(all ? ctl.targets.value.filter((id) => !tokens.includes(id)) : [...new Set([...ctl.targets.value, ...tokens])]),
+      })
     }
     if (one?.type === 'map') items.push({ label: 'Use as token', Icon: IconToken, onSelect: () => ctl.convert(one.id, 'token') })
     if (one?.type === 'token' && one.image) {
@@ -331,7 +345,10 @@ function TokenOptionsDialog({
   const colour = useSignal('#000000')
   const characterId = useSignal('')
   const image = useSignal<BlobRef | undefined>(undefined)
+  const size = useSignal('')
   const fileRef = useRef<HTMLInputElement>(null)
+  const system = systemOf(campaign)
+  const grid = controller.renderer.grid
   const characters = useY(campaign.characters, () => listCharacters(campaign))
   // The character this token stands for, as saved (not the unsaved choice below).
   const linked = token?.characterId ? characters.find((c) => c.id === token.characterId) : undefined
@@ -343,6 +360,9 @@ function TokenOptionsDialog({
     colour.value = token.colour
     characterId.value = token.characterId ?? ''
     image.value = token.image
+    // The first size as wide as the token, or none if it's been resized by hand.
+    const cells = Math.max(token.w, token.h) / grid.size
+    size.value = system.sizes.find((z) => Math.abs(z.cells - cells) < 0.01)?.id ?? ''
     openPopup(ref.current)
   }, [id])
 
@@ -380,7 +400,7 @@ function TokenOptionsDialog({
               colour: colour.value,
               characterId: characterId.value || undefined,
               image: image.value,
-            })
+            }, system.sizes.find((z) => z.id === size.value)?.cells)
         }}
       >
         <label class="field">
@@ -441,6 +461,17 @@ function TokenOptionsDialog({
             }}
           />
         </div>
+        <label class="field">
+          Size
+          <select class="input bevel" value={size.value} onChange={(e) => (size.value = e.currentTarget.value)}>
+            {!size.value && <option value="">As drawn</option>}
+            {system.sizes.map((z) => (
+              <option key={z.id} value={z.id}>
+                {z.name} ({z.cells === 0.5 ? '½' : z.cells} {z.cells > 1 ? 'cells' : 'cell'})
+              </option>
+            ))}
+          </select>
+        </label>
         <div class="field">
           Style
           <Segmented
@@ -533,6 +564,42 @@ function SceneSettingsDialog({ campaign, sceneId, scene }: { campaign: Campaign;
           />
         </label>
       </div>
+      <div class="field-row">
+        <label class="field">
+          Each cell is
+          <input
+            class="input bevel"
+            type="number"
+            min={0}
+            step="any"
+            value={grid.unit}
+            disabled={!isGm}
+            onChange={(e) => scene.setGrid({ unit: Math.max(0, num(e.currentTarget.value, DEFAULT_GRID.unit)) })}
+          />
+        </label>
+        <label class="field">
+          Unit
+          <input
+            class="input bevel"
+            value={grid.unitName}
+            disabled={!isGm}
+            autoComplete="off"
+            onChange={(e) => scene.setGrid({ unitName: e.currentTarget.value.trim() })}
+          />
+        </label>
+      </div>
+      {grid.type === 'square' && (
+        <div class="field">
+          Diagonal steps count as
+          <Segmented
+            label="Diagonal steps"
+            value={grid.diagonal}
+            options={DIAGONAL_RULES}
+            disabled={!isGm}
+            onChange={(diagonal) => scene.setGrid({ diagonal })}
+          />
+        </div>
+      )}
       <div class="field">
         Canvas colour
         <span class="colour-row">

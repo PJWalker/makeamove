@@ -7,6 +7,7 @@
  */
 
 import type { CharacterView } from '../characters/store'
+import type { DiagonalRule } from '../scene/grid'
 import type { EffectSource, Resolved } from './effects'
 
 export interface StatDef {
@@ -169,6 +170,21 @@ export interface TagDef {
   text: string
 }
 
+/** A size a creature's token can be, in grid cells across: Large is 2. */
+export interface SizeDef {
+  id: string
+  name: string
+  cells: number
+}
+
+/** How a system measures its scenes, as defaults for new ones. */
+export interface SceneDefaults {
+  /** How far one cell is, in `unitName`s. */
+  unit: number
+  unitName: string
+  diagonal: DiagonalRule
+}
+
 /** A field on an NPC's sheet. The system decides what NPCs have. */
 export interface NpcFieldDef {
   id: string
@@ -221,6 +237,10 @@ export interface GameSystem {
   resources: ResourceDef[]
   /** The system's own character fields. */
   characterData: DataField[]
+  /** Token sizes, smallest first. */
+  sizes: SizeDef[]
+  /** Units and diagonal rule for new scenes. */
+  scene: SceneDefaults
   /** What an NPC's sheet records, besides name, HP and notes. */
   npcFields: NpcFieldDef[]
   /** A character's effective numbers, from their record and every active effect source. */

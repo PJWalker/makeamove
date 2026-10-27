@@ -472,6 +472,16 @@ export const dungeonWorld: GameSystem = {
     /** An NPC's maximum HP, set by hand. */
     { id: 'maxHp', default: NPC_HP, for: 'npc' },
   ],
+  // Dungeon World's size tags, as token sizes.
+  sizes: [
+    { id: 'tiny', name: 'Tiny', cells: 0.5 },
+    { id: 'small', name: 'Small', cells: 1 },
+    { id: 'human', name: 'Human-sized', cells: 1 },
+    { id: 'large', name: 'Large', cells: 2 },
+    { id: 'huge', name: 'Huge', cells: 3 },
+  ],
+  // Ranges are fictional (hand, close, near, far), so feet are only a guide.
+  scene: { unit: 5, unitName: 'ft', diagonal: 'one' },
   npcFields: [
     { id: 'damage', label: 'Damage', type: 'text' },
     { id: 'armor', label: 'Armor', type: 'number' },

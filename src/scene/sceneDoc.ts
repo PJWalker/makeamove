@@ -3,13 +3,14 @@ import * as Y from 'yjs'
 import { IndexeddbPersistence } from 'y-indexeddb'
 import { newId } from '../lib/ids'
 import { device } from '../store/device'
-import { DEFAULT_GRID, type Grid, type GridType } from './grid'
+import { DEFAULT_GRID, type Grid } from './grid'
 import { LAYERS, type Layer, type NewElement, type SceneElement } from './types'
 
 /*
  * Scene subdocument layout (see design doc, "Data model"):
  *
- *   settings  Y.Map  gridType, gridSize, gridOffsetX, gridOffsetY
+ *   settings  Y.Map  gridType, gridSize, gridOffsetX, gridOffsetY,
+ *                    gridUnit, gridUnitName, gridDiagonal
  *   elements  Y.Map  elementId -> Y.Map of SceneElement fields
  *
  * Each scene is a Yjs subdocument of the campaign root, persisted in its own
@@ -17,6 +18,17 @@ import { LAYERS, type Layer, type NewElement, type SceneElement } from './types'
  */
 
 export const sceneDbName = (guid: string) => `mam:scene:${guid}`
+
+/** Where each grid setting is kept in a scene's settings. */
+const GRID_KEYS: Record<keyof Grid, string> = {
+  type: 'gridType',
+  size: 'gridSize',
+  offsetX: 'gridOffsetX',
+  offsetY: 'gridOffsetY',
+  unit: 'gridUnit',
+  unitName: 'gridUnitName',
+  diagonal: 'gridDiagonal',
+}
 
 const byOrder = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
 
@@ -42,14 +54,18 @@ export class SceneDoc {
   }
 
   /**
-   * Load a scene. A scene that has never had a grid type gets `gridType`,
-   * the campaign's default, as an untracked edit (so it can't be undone).
+   * Load a scene. Grid settings it has never had (its type, units and
+   * diagonal rule) get the campaign's and system's defaults, as an untracked
+   * edit so they can't be undone.
    */
-  static async open(doc: Y.Doc, gridType: GridType = DEFAULT_GRID.type): Promise<SceneDoc> {
+  static async open(doc: Y.Doc, defaults: Partial<Grid> = {}): Promise<SceneDoc> {
     doc.load()
     const s = new SceneDoc(doc)
     await s.persistence.whenSynced
-    if (!s.settings.has('gridType')) doc.transact(() => s.settings.set('gridType', gridType))
+    const missing = Object.entries(defaults).filter(([k, v]) => v !== undefined && !s.settings.has(GRID_KEYS[k as keyof Grid]))
+    if (missing.length) doc.transact(() => {
+      for (const [k, v] of missing) s.settings.set(GRID_KEYS[k as keyof Grid], v)
+    })
     return s
   }
 
@@ -68,18 +84,17 @@ export class SceneDoc {
 
   grid(): Grid {
     const s = this.settings
-    return {
-      type: s.get('gridType') ?? DEFAULT_GRID.type,
-      size: s.get('gridSize') ?? DEFAULT_GRID.size,
-      offsetX: s.get('gridOffsetX') ?? DEFAULT_GRID.offsetX,
-      offsetY: s.get('gridOffsetY') ?? DEFAULT_GRID.offsetY,
+    const grid = { ...DEFAULT_GRID }
+    for (const k of Object.keys(GRID_KEYS) as (keyof Grid)[]) {
+      const v = s.get(GRID_KEYS[k])
+      if (v !== undefined) (grid as Record<string, unknown>)[k] = v
     }
+    return grid
   }
 
   setGrid(patch: Partial<Grid>) {
-    const keys: Record<keyof Grid, string> = { type: 'gridType', size: 'gridSize', offsetX: 'gridOffsetX', offsetY: 'gridOffsetY' }
     this.transact(() => {
-      for (const [k, v] of Object.entries(patch)) this.settings.set(keys[k as keyof Grid], v)
+      for (const [k, v] of Object.entries(patch)) this.settings.set(GRID_KEYS[k as keyof Grid], v)
     })
   }
 

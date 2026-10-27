@@ -47,6 +47,13 @@ export class SceneController {
   readonly mapColour = signal<string | null>(null)
   readonly canUndo = signal(false)
   readonly canRedo = signal(false)
+  /** Tokens this device has targeted, shared with peers through presence. */
+  readonly targets = signal<string[]>([])
+  /**
+   * Characters this device plays, for measuring to targets from their token
+   * when no token is selected. Set by the table.
+   */
+  ownCharacters: () => string[] = () => []
 
   private elements: SceneElement[] = []
   private byId = new Map<string, SceneElement>()
@@ -181,6 +188,8 @@ export class SceneController {
     this.elements = this.scene.views()
     this.byId = new Map(this.elements.map((e) => [e.id, e]))
     this.renderer.setElements(this.elements)
+    const targets = this.targets.value.filter((id) => this.byId.get(id)?.type === 'token')
+    if (targets.length !== this.targets.value.length) this.setTargets(targets)
     const sel = this.selection.value.filter((id) => this.byId.has(id))
     if (sel.length !== this.selection.value.length) this.selection.value = sel
     else this.updateOverlay()
@@ -228,8 +237,33 @@ export class SceneController {
             }
           : null,
       eraser: tool === 'erase' && this.hover ? { p: this.hover, r: ERASER_RADIUS / this.renderer.camera.zoom } : null,
+      rangeFrom: this.rangeFrom(),
     }
     this.renderer.invalidate('overlay')
+  }
+
+  /**
+   * The token distances to targets are measured from: the selected token, or
+   * else the first token of a character this device plays.
+   */
+  rangeFrom(): string | null {
+    const sel = this.selected()
+    if (sel.length === 1 && sel[0].type === 'token') return sel[0].id
+    const own = new Set(this.ownCharacters())
+    const mine = this.elements.find((el) => el.type === 'token' && !!el.characterId && own.has(el.characterId))
+    return mine?.id ?? null
+  }
+
+  /** Target a token, or stop targeting it. */
+  toggleTarget(id: string) {
+    const t = this.targets.value
+    this.setTargets(t.includes(id) ? t.filter((x) => x !== id) : [...t, id])
+  }
+
+  setTargets(ids: string[]) {
+    this.targets.value = ids
+    this.presence?.setTargets(ids)
+    this.updateOverlay()
   }
 
   private updateCursor(cursor?: string) {
@@ -772,6 +806,14 @@ export class SceneController {
         this.scene.update(sel.map((el) => [el.id, { x: el.x + dx, y: el.y + dy }]))
         return true
       }
+      case 't':
+      case 'T': {
+        // Target the token under the pointer; over empty ground, clear every target.
+        const hit = this.hover && this.hitTest(this.hover, true)
+        if (hit?.type === 'token') this.toggleTarget(hit.id)
+        else this.setTargets([])
+        return true
+      }
       case '=':
       case '+':
         this.zoomBy(1.25)
@@ -833,9 +875,16 @@ export class SceneController {
     this.scene.setLayer(ids, layer)
   }
 
-  /** Change a token's name, style and colour as one undo step. */
-  updateToken(id: string, patch: Partial<Pick<TokenElement, 'name' | 'style' | 'colour' | 'characterId' | 'image'>>) {
-    this.scene.update([[id, patch]])
+  /**
+   * Change a token's name, style and colour as one undo step; with `cells`,
+   * also make it that many cells across, snapped to the grid.
+   */
+  updateToken(id: string, patch: Partial<Pick<TokenElement, 'name' | 'style' | 'colour' | 'characterId' | 'image'>>, cells?: number) {
+    const el = this.byId.get(id)
+    const grid = this.renderer.grid
+    const size = cells && el ? cells * grid.size : 0
+    const resize = size && el && (Math.abs(el.w - size) > 0.5 || Math.abs(el.h - size) > 0.5)
+    this.scene.update([[id, resize ? { ...patch, ...snapPoint(grid, el, cells), w: size, h: size } : patch]])
   }
 
   /** Swap an image between being a map and being a token. */

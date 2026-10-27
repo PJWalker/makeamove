@@ -2,6 +2,7 @@ import { Application, Container, CullerPlugin, extensions, Graphics, ImageSource
 import { type Camera, type Rect, toScreen, visibleWorld } from './camera'
 import { corners } from './geometry'
 import { type Grid, DEFAULT_GRID, type Point, hexCellsIn, hexCentre, hexCorners, squareLines } from './grid'
+import { formatDistance, measure, tokenDistance } from './measure'
 import { forgetBitmaps, loadBitmap, onBlobFetcher } from "./images";
 import { PING_MS, TRAIL_MS, type PresenceMark } from "./presence";
 import type { TokenStat } from '../systems/types'
@@ -32,6 +33,8 @@ export interface OverlayState {
   marquee: Rect | null
   /** The eraser's reach, in world coordinates. */
   eraser: { p: Point; r: number } | null
+  /** The token this device's targets are measured from, if any. */
+  rangeFrom: string | null
 }
 
 interface View {
@@ -147,6 +150,7 @@ export class SceneRenderer {
     group: null,
     marquee: null,
     eraser: null,
+    rangeFrom: null,
   };
   draft: Draft | null = null;
   /** Parts of the canvas covered by UI (toolbar, scene bar, sidebar), in screen px. */
@@ -657,6 +661,48 @@ export class SceneRenderer {
     used.add(key);
   }
 
+  /**
+   * Each member's targets, as a ring in their colour around the token; a
+   * second member's ring sits just outside the first. This device's own
+   * targets show their distance from the token it measures from.
+   */
+  private drawTargets(g: Graphics, used: Set<string>) {
+    const cam = this.camera;
+    const byId = new Map(this.elements.map((e) => [e.id, e]));
+    const rings = new Map<string, number>();
+    const fromEl = this.overlayState.rangeFrom ? byId.get(this.overlayState.rangeFrom) : undefined;
+    const from = fromEl && (this.previews.get(fromEl.id) ?? fromEl);
+    for (const m of this.marks) {
+      for (const id of m.targets) {
+        const el = byId.get(id);
+        if (el?.type !== "token") continue;
+        const t = this.previews.get(id) ?? el;
+        const n = rings.get(id) ?? 0;
+        rings.set(id, n + 1);
+        const c = toScreen(cam, t);
+        const r = (Math.max(t.w, t.h) / 2) * cam.zoom + 8 + n * 6;
+        g.circle(c.x, c.y, r).stroke({ color: INK, width: 5, alpha: 0.5 });
+        g.circle(c.x, c.y, r).stroke({ color: m.colour, width: 2 });
+        // Sight ticks at the four compass points.
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          g.moveTo(c.x + dx * (r - 5), c.y + dy * (r - 5))
+            .lineTo(c.x + dx * (r + 5), c.y + dy * (r + 5))
+            .stroke({ color: m.colour, width: 2.5 });
+        }
+        if (m.self && from && fromEl.id !== id) {
+          this.label(
+            `target:${id}`,
+            formatDistance(this.grid, tokenDistance(this.grid, from, t)),
+            c.x + r * 0.72 + 6,
+            c.y + r * 0.72 - 4,
+            m.colour,
+            used,
+          );
+        }
+      }
+    }
+  }
+
   /** Returns true while a ping is still rippling and needs more frames. */
   private drawPresence(): boolean {
     const g = this.presenceG.clear();
@@ -664,6 +710,8 @@ export class SceneRenderer {
     const used = new Set<string>();
     const now = performance.now();
     let animating = false;
+
+    this.drawTargets(g, used);
 
     for (const m of this.marks) {
       if (m.cursor) {
@@ -676,8 +724,10 @@ export class SceneRenderer {
       }
 
       if (m.ruler) {
-        const a = toScreen(cam, m.ruler.a);
-        const b = toScreen(cam, m.ruler.b);
+        // On a grid, measure cell to cell, so draw between cell centres.
+        const r = measure(this.grid, m.ruler.a, m.ruler.b);
+        const a = toScreen(cam, r.a);
+        const b = toScreen(cam, r.b);
         g.moveTo(a.x, a.y)
           .lineTo(b.x, b.y)
           .stroke({ color: INK, width: 5, alpha: 0.6 });
@@ -686,17 +736,9 @@ export class SceneRenderer {
           .stroke({ color: m.colour, width: 2.5 });
         g.circle(a.x, a.y, 4).fill(m.colour).stroke({ color: INK, width: 1.5 });
         g.circle(b.x, b.y, 4).fill(m.colour).stroke({ color: INK, width: 1.5 });
-        const dist = Math.hypot(
-          m.ruler.b.x - m.ruler.a.x,
-          m.ruler.b.y - m.ruler.a.y,
-        );
-        const text =
-          this.grid.type === "none"
-            ? `${Math.round(dist)} px`
-            : `${(Math.round((dist / this.grid.size) * 2) / 2).toString()} cells`;
         this.label(
           `ruler:${m.id}`,
-          text,
+          formatDistance(this.grid, r.distance),
           (a.x + b.x) / 2 + 8,
           (a.y + b.y) / 2 + 8,
           m.colour,

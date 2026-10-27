@@ -33,6 +33,8 @@ export interface PresenceMark {
   cursor: Point | null
   ping: { p: Point; startedAt: number } | null
   ruler: Ruler | null
+  /** Token ids this member has targeted. */
+  targets: string[]
   /** Recent laser-pointer points, newest last; t is local performance.now(). */
   trail: { x: number; y: number; t: number }[] | null
 }
@@ -42,6 +44,8 @@ interface LocalState {
   cursor: Point | null
   ping: { x: number; y: number; n: number } | null
   ruler: Ruler | null
+  /** Token ids this member has targeted, on this scene. */
+  targets?: string[]
   /** Flat x, y, age-in-ms triples, so peers can fade it on their own clocks. */
   trail: number[] | null
   /** Bumps whenever the trail changes, so unrelated updates (cursor moves) don't restart its fade. */
@@ -53,7 +57,7 @@ interface RemoteState extends LocalState {
 }
 
 /**
- * Cursors, pings and rulers. Everything here is ephemeral: it rides on Yjs
+ * Cursors, pings, rulers and targets. Everything here is ephemeral: it rides on Yjs
  * awareness, so it reaches peers while they're connected and is never stored.
  * With no connection it still tracks this device's own pings and rulers.
  */
@@ -98,7 +102,7 @@ export class Presence {
 
   setScene(scene: string | null) {
     this.localTrail = []
-    this.publish({ scene, cursor: null, ping: null, ruler: null, trail: null })
+    this.publish({ scene, cursor: null, ping: null, ruler: null, targets: [], trail: null })
     this.localPing = null
   }
 
@@ -108,6 +112,15 @@ export class Presence {
 
   setRuler(ruler: Ruler | null) {
     this.publish({ ruler })
+  }
+
+  /** The tokens this device has targeted on its current scene. */
+  targets(): string[] {
+    return this.local.targets ?? []
+  }
+
+  setTargets(targets: string[]) {
+    this.publish({ targets })
   }
 
   ping(p: Point) {
@@ -146,6 +159,7 @@ export class Presence {
       cursor: null,
       ping: this.localPing && now - this.localPing.startedAt < PING_MS ? this.localPing : null,
       ruler: mine.scene === scene ? mine.ruler : null,
+      targets: mine.scene === scene ? (mine.targets ?? []) : [],
       trail: this.localTrail.length ? this.localTrail : null,
     })
     const states = this.awareness?.getStates()
@@ -179,7 +193,7 @@ export class Presence {
           if (now - t < TRAIL_MS) trail.push({ x: p.trail[i], y: p.trail[i + 1], t })
         }
       }
-      marks.push({ id: user.id, name: user.name, colour: user.colour ?? colourFor(user.id), self: false, cursor: p.cursor, ping, ruler: p.ruler, trail })
+      marks.push({ id: user.id, name: user.name, colour: user.colour ?? colourFor(user.id), self: false, cursor: p.cursor, ping, ruler: p.ruler, targets: p.targets ?? [], trail })
     }
     return marks
   }

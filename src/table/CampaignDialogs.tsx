@@ -168,6 +168,7 @@ const SHORTCUTS: [string, string][] = [
   ['T', 'Text'],
   ['M', 'Measure'],
   ['G', 'Ping'],
+  ['T', 'Target the token under the pointer (over empty ground: clear targets)'],
   ['E', 'Erase drawings'],
   ['Space + drag', 'Pan the map'],
   ['Scroll / pinch', 'Zoom (trackpads: two fingers pan)'],

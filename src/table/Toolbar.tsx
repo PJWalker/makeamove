@@ -40,10 +40,10 @@ export const TOOLS: {
   { id: 'draw', label: 'Draw', key: 'P', Icon: IconDraw },
   { id: 'erase', label: 'Erase', key: 'E', Icon: IconEraser },
   { id: 'shape', label: 'Shapes', key: 'R', Icon: IconShapes, arrives: 'a later milestone' },
-  { id: 'text', label: 'Text', key: 'T', Icon: IconText, arrives: 'a later milestone' },
+  { id: 'text', label: 'Text', key: 'X', Icon: IconText, arrives: 'a later milestone' },
   { id: 'ruler', label: 'Measure', key: 'M', Icon: IconMeasure },
   { id: 'ping', label: 'Ping', key: 'G', Icon: IconPing },
-  { id: 'fog', label: 'Fog of war', key: 'F', Icon: IconFog, gmOnly: true, arrives: 'M5' },
+  { id: 'fog', label: 'Fog of war', key: 'F', Icon: IconFog, gmOnly: true, arrives: 'M6' },
 ]
 
 const ORDER_KEY = 'mam:tool-order'

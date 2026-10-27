@@ -23,6 +23,8 @@ export function checkSystem(s: GameSystem): string[] {
   unique('conditions', s.conditions.map((x) => x.id))
   unique('resources', s.resources.map((x) => x.id))
   unique('character fields', s.characterData.map((x) => x.id))
+  unique('sizes', s.sizes.map((x) => x.id))
+  for (const z of s.sizes) if (!(z.cells > 0)) problems.push(`${z.name}: a size needs more than 0 cells.`)
 
   const stats = new Set(s.stats.map((x) => x.id))
   const categories = new Set(s.actionCategories.map((x) => x.id))
