@@ -11,7 +11,7 @@ import type { ActionDef, GameSystem } from '../systems/types'
 import { BlobImage } from '../ui/BlobImage'
 import { Button } from '../ui/Button'
 import { entryIcon } from '../ui/entryIcons'
-import { IconAdd, IconChat, IconDelete, IconDice, IconImage, IconRemove, IconRename, IconTarget } from '../ui/icons'
+import { IconAdd, IconDelete, IconImage, IconPost, IconRemove, IconRename, IconRoll, IconTarget } from '../ui/icons'
 import { List, Tag } from '../ui/List'
 import { menuTrigger } from '../ui/menuTrigger'
 import { openPopup } from '../ui/popup'
@@ -218,8 +218,8 @@ export function makeVerb(m: ActionDef) {
   return m.target
     ? { label: 'Target', Icon: IconTarget }
     : checkOf(m)
-      ? { label: 'Roll', Icon: IconDice }
-      : { label: 'Post', Icon: IconChat }
+      ? { label: 'Roll', Icon: IconRoll }
+      : { label: 'Post', Icon: IconPost }
 }
 
 /** The button that uses an action: an icon in a list row, or labelled in its window. */
@@ -233,8 +233,8 @@ function MakeButton({ m, onMake, big }: { m: ActionDef; onMake: (m: ActionDef) =
     )
   }
   return (
-    <Button size="sm" variant="icon" label={`${label}: ${m.name}`} onClick={() => onMake(m)}>
-      <Icon size={18} />
+    <Button size="sm" class="move-make" label={`${label}: ${m.name}`} aria-label={`${label}: ${m.name}`} onClick={() => onMake(m)}>
+      <Icon size={22} />
     </Button>
   )
 }

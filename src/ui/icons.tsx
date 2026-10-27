@@ -11,7 +11,6 @@ import type { ComponentType, JSX } from 'preact'
 import GiArrowCursor from '~icons/game-icons/arrow-cursor'
 import GiBullseye from '~icons/game-icons/bullseye'
 import GiCog from '~icons/game-icons/cog'
-import GiCrosshair from '~icons/game-icons/crosshair'
 import GiCrossedSwords from '~icons/game-icons/crossed-swords'
 import GiExitDoor from '~icons/game-icons/exit-door'
 import GiFog from '~icons/game-icons/fog'
@@ -36,6 +35,9 @@ import GiVisoredHelm from '~icons/game-icons/visored-helm'
 import MsSearch from '~icons/material-symbols/search-rounded'
 import MsAdd from '~icons/material-symbols/add-rounded'
 import MsCategory from '~icons/material-symbols/category-rounded'
+import MsMyLocation from '~icons/material-symbols/my-location-rounded'
+import MsCasino from '~icons/material-symbols/casino-rounded'
+import MsSend from '~icons/material-symbols/send-rounded'
 import MsClose from '~icons/material-symbols/close-rounded'
 import MsMenu from '~icons/material-symbols/menu-rounded'
 import MsVisibility from '~icons/material-symbols/visibility-rounded'
@@ -88,7 +90,10 @@ export const IconFog = icon(GiFog)
 // Scene elements and canvas actions
 export const IconToken = icon(GiPawn)
 export const IconMap = icon(GiTreasureMap)
-export const IconTarget = icon(GiCrosshair)
+export const IconTarget = icon(MsMyLocation)
+// Using an action: simple, bold glyphs that read at button size.
+export const IconRoll = icon(MsCasino)
+export const IconPost = icon(MsSend)
 export const IconLock = icon(GiPadlock)
 export const IconUnlock = icon(GiPadlockOpen)
 export const IconImage = icon(MsImage)
