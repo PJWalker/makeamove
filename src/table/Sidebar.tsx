@@ -48,7 +48,7 @@ export function Sidebar({ side, campaign }: { side: Side; campaign: Campaign }) 
 
   return (
     <aside
-      class="sidebar chrome"
+      class="sidebar"
       style={{ '--sidebar-user-w': `${s.width}px` }}
       data-side={side}
       data-open={open}

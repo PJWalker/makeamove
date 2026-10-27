@@ -131,9 +131,47 @@
     inset: 0;
     overflow: hidden;
   }
-  .table[data-chrome='hidden'] .chrome {
-    opacity: 0;
-    pointer-events: none;
+  /*
+   * Autohide: each edge's chrome slides out until only a sliver shows, and
+   * slides back when the pointer nears that edge (data-reveal, which also
+   * holds while the pointer is over it), or while the keyboard is in it.
+   * `transform` leaves `translate` to the sidebars' own open and close.
+   * Only for a mouse: touch has no way to approach an edge.
+   */
+  @media (hover: hover) and (pointer: fine) {
+    .table[data-autohide='true'] {
+      --autohide-sliver: 4px;
+      & .sidebar,
+      & .toolbar,
+      & .pen-options,
+      & .hotbar {
+        transition-property: transform, opacity, left, right;
+        transition-duration: 200ms;
+        transition-timing-function: var(--ease);
+      }
+      &:not([data-reveal~='left']) .sidebar[data-side='left']:not(:has(:focus-visible)) {
+        transform: translateX(calc(var(--autohide-sliver) - var(--dock-l, 48px)));
+        pointer-events: none;
+      }
+      &:not([data-reveal~='right']) .sidebar[data-side='right']:not(:has(:focus-visible)) {
+        transform: translateX(calc(var(--dock-r, 48px) - var(--autohide-sliver)));
+        pointer-events: none;
+      }
+      &:not([data-reveal~='top']) .toolbar:not(:has(:focus-visible)) {
+        transform: translateY(calc(var(--autohide-sliver) - 100%));
+        pointer-events: none;
+      }
+      /* Below the strip, so it leaves the screen entirely. */
+      &:not([data-reveal~='top']) .pen-options:not(:has(:focus-visible)) {
+        transform: translateY(calc(-100% - 48px - var(--space-2)));
+        opacity: 0;
+        pointer-events: none;
+      }
+      &:not([data-reveal~='bottom']) .hotbar:not(:has(:focus-visible), [data-dragging='true']) {
+        transform: translateY(calc(100% - var(--autohide-sliver)));
+        pointer-events: none;
+      }
+    }
   }
   /* The scene colour shows through the transparent PixiJS canvas. */
   .canvas {
@@ -2392,14 +2430,14 @@
     color: var(--text);
     font-size: var(--text-md);
   }
-  .help-section {
+  .dialog-section {
     display: grid;
     gap: var(--space-2);
   }
-  .help-heading {
+  .dialog-heading {
     font-size: var(--text-md);
   }
-  .help-section a {
+  .dialog-section a {
     color: var(--accent);
   }
   .shortcuts {

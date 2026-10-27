@@ -94,7 +94,7 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
     <div class="hotbar-wrap">
       <div
         ref={barRef}
-        class="hotbar panel bevel strip across dock-bottom chrome"
+        class="hotbar panel bevel strip across dock-bottom"
         role="toolbar"
         aria-label="Hotbar"
         data-dragging={dragging.value !== null}

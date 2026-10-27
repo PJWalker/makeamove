@@ -130,7 +130,8 @@ export class SceneController {
     )
     this.renderer.insets = () => {
       const host = this.host.getBoundingClientRect()
-      if (this.host.closest('.table')?.getAttribute('data-chrome') === 'hidden') return { left: 0, right: 0, top: 0 }
+      // Autohiding chrome doesn't cover the scene.
+      if (this.host.closest('.table')?.getAttribute('data-autohide') === 'true') return { left: 0, right: 0, top: 0 }
       const rect = (sel: string) => document.querySelector(sel)?.getBoundingClientRect()
       const tools = rect('.toolbar')
       const leftRail = rect('.sidebar[data-side="left"] .sidebar-rail')

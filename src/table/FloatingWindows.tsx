@@ -68,7 +68,7 @@ function Window({ win, campaign }: { win: FloatingWindow; campaign: Campaign }) 
       </div>
     )}
     <section
-      class="floating-window window panel bevel chrome"
+      class="floating-window window panel bevel"
       style={{
         left: win.x,
         top: win.y,

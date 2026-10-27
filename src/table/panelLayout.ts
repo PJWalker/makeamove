@@ -134,8 +134,8 @@ export function detachPanel(id: PanelId, x: number, y: number, w = 340, h = 440)
 }
 
 /** Dock a panel on a side, or back where it came from. Works from a window or the other side. */
-export function dockPanel(id: PanelId, side?: Side, index?: number) {
-  layout.value = dock(layout.value, id, side, index)
+export function dockPanel(id: PanelId, side?: Side, index?: number, reveal = true) {
+  layout.value = dock(layout.value, id, side, index, reveal)
 }
 
 /** Close a panel, or open a closed one again where it was. */
@@ -215,7 +215,8 @@ export function startWindowDrag(id: PanelId, e: PointerEvent, grabX: number, gra
     marker.hide()
     if (side) {
       const index = indexAmong(tabsOf(side), 'y', ev)
-      withTransition(() => dockPanel(id, side, index))
+      // Dropped on a closed sidebar, it joins the tabs without opening it.
+      withTransition(() => dockPanel(id, side, index, false))
     }
     dockTarget.value = null
     windowDragging.value = false

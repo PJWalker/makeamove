@@ -167,15 +167,18 @@ export function detach(l: Layout, id: PanelId, win: Omit<FloatingWindow, 'id'>):
 
 /**
  * Dock a panel on a side (its home side if none is given), from wherever it
- * is now, and show it. `index` places the tab; the default is the end.
+ * is now, and show it. `index` places the tab; the default is the end. With
+ * `reveal` false a closed sidebar stays closed, its new tab showing when it
+ * next opens.
  */
-export function dock(l: Layout, id: PanelId, side: Side = l.home[id] ?? DEFAULT_SIDE[id], index?: number): Layout {
+export function dock(l: Layout, id: PanelId, side: Side = l.home[id] ?? DEFAULT_SIDE[id], index?: number, reveal = true): Layout {
   const next = without(l, id)
   const panels = [...next[side].panels]
   panels.splice(index ?? panels.length, 0, id)
+  const open = reveal || next[side].open
   return {
     ...next,
-    [side]: { ...next[side], panels, active: id, open: true },
+    [side]: { ...next[side], panels, active: id, open },
     home: { ...l.home, [id]: side },
   }
 }

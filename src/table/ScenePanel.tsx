@@ -7,7 +7,7 @@ import { IconAdd, IconDelete, IconGrid } from '../ui/icons'
 import { morphOpen } from '../ui/morph'
 import { openPopup } from '../ui/popup'
 import { dialogRequest, sceneSettingsOpen } from './canvasState'
-import { HelpDialog, PlayerDialog, SettingsDialog } from './CampaignDialogs'
+import { HelpDialog, SettingsDialog } from './CampaignDialogs'
 
 /**
  * The campaign's dialogs, always mounted so the command palette and the Scene
@@ -15,20 +15,18 @@ import { HelpDialog, PlayerDialog, SettingsDialog } from './CampaignDialogs'
  */
 export function CampaignDialogHost({ campaign }: { campaign: Campaign }) {
   const settingsRef = useRef<HTMLDialogElement>(null)
-  const playerRef = useRef<HTMLDialogElement>(null)
   const helpRef = useRef<HTMLDialogElement>(null)
 
   useSignalEffect(() => {
     const want = dialogRequest.value
     if (!want) return
     dialogRequest.value = null
-    const dialog = { player: playerRef, settings: settingsRef, help: helpRef }[want].current
-    if (want !== 'settings' || campaign.isGm()) openPopup(dialog)
+    const dialog = { settings: settingsRef, help: helpRef }[want].current
+    openPopup(dialog)
   })
 
   return (
     <>
-      <PlayerDialog campaign={campaign} dialogRef={playerRef} />
       <SettingsDialog campaign={campaign} dialogRef={settingsRef} />
       <HelpDialog dialogRef={helpRef} />
     </>

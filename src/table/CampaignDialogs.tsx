@@ -12,6 +12,7 @@ import { inviteUrl } from '../sync/invite'
 import { useSignal } from '@preact/signals'
 import { createPortal } from 'preact/compat'
 import { dragPopup, raisePopup, resizePopup } from '../ui/popup'
+import { autohide, setAutohide } from './canvasState'
 import { RESIZE_DIRS } from './resizeRect'
 import { dragEntity, type DragEntity } from './entityDrag'
 import type { Icon } from '../ui/icons'
@@ -46,7 +47,7 @@ export function Dialog({
   return createPortal(
     <dialog
       ref={dialogRef}
-      class="dialog window panel bevel chrome"
+      class="dialog window panel bevel"
       closedby="none"
       aria-label={title}
       onClose={onClose}
@@ -93,7 +94,8 @@ export function Dialog({
   )
 }
 
-export function PlayerDialog({
+/** Everything you can set: for you on this device, and (for the GM) for the campaign. */
+export function SettingsDialog({
   campaign,
   dialogRef,
 }: {
@@ -103,54 +105,63 @@ export function PlayerDialog({
   const myName = useY(campaign.members, () => campaign.members.get(device.value.id)?.get('name') ?? '')
   const colour = colourOf(device.value)
   return (
-    <Dialog dialogRef={dialogRef} title="Player settings">
-      <label class="field">
-        Your name
-        <input
-          class="input bevel"
-          value={myName}
-          onChange={(e) => {
-            const v = e.currentTarget.value.trim()
-            if (!v) return
-            setDeviceName(v)
-            campaign.ensureMember(v)
-          }}
-        />
-      </label>
-      <label class="field">
-        Your colour
-        <input
-          type="color"
-          class="input bevel"
-          value={colour}
-          onInput={(e) => setDeviceColour(e.currentTarget.value)}
-          aria-label="Your colour"
-        />
-      </label>
-      <p class="muted">Your colour marks your cursor and pings, and is used for tokens you create.</p>
+    <Dialog dialogRef={dialogRef} title="Settings">
+      <section class="dialog-section">
+        <h3 class="dialog-heading">You</h3>
+        <label class="field">
+          Your name
+          <input
+            class="input bevel"
+            value={myName}
+            onChange={(e) => {
+              const v = e.currentTarget.value.trim()
+              if (!v) return
+              setDeviceName(v)
+              campaign.ensureMember(v)
+            }}
+          />
+        </label>
+        <label class="field">
+          Your colour
+          <input
+            type="color"
+            class="input bevel"
+            value={colour}
+            onInput={(e) => setDeviceColour(e.currentTarget.value)}
+            aria-label="Your colour"
+          />
+        </label>
+        <p class="muted">Your colour marks your cursor and pings, and is used for tokens you create.</p>
+        <div class="field">
+          Sidebars and toolbars
+          <Segmented
+            label="Sidebars and toolbars"
+            value={autohide.value ? 'autohide' : 'always'}
+            options={[
+              { id: 'always', label: 'Always shown' },
+              { id: 'autohide', label: 'Autohide' },
+            ]}
+            onChange={(v) => setAutohide(v === 'autohide')}
+          />
+          <span class="muted">Autohide keeps them out of sight until your pointer nears their edge of the window.</span>
+        </div>
+      </section>
+      {campaign.isGm() && <CampaignSettings campaign={campaign} />}
     </Dialog>
   )
 }
 
-export function SettingsDialog({
-  campaign,
-  dialogRef,
-}: {
-  campaign: Campaign
-  dialogRef: RefObject<HTMLDialogElement>
-}) {
+function CampaignSettings({ campaign }: { campaign: Campaign }) {
   const name = useY(campaign.meta, () => campaign.name)
-  const isGm = campaign.isGm()
   const defaults = useY(campaign.meta, () => campaign.defaults())
-
   return (
-    <Dialog dialogRef={dialogRef} title="Campaign settings">
+    <section class="dialog-section">
+      <h3 class="dialog-heading">Campaign</h3>
       <label class="field">
         Campaign name
         <input
           class="input bevel"
           value={name}
-          readOnly={!isGm}
           onChange={(e) => {
             const v = e.currentTarget.value.trim()
             if (v) campaign.rename(v)
@@ -167,7 +178,6 @@ export function SettingsDialog({
           label="Default token style"
           value={defaults.tokenStyle}
           options={TOKEN_STYLES}
-          disabled={!isGm}
           onChange={(tokenStyle) => campaign.setDefaults({ tokenStyle })}
         />
       </div>
@@ -177,13 +187,11 @@ export function SettingsDialog({
           label="Default grid"
           value={defaults.gridType}
           options={GRID_TYPES}
-          disabled={!isGm}
           onChange={(gridType) => campaign.setDefaults({ gridType })}
         />
       </div>
       <InviteField campaign={campaign} />
-      {!isGm && <p class="muted">Only the GM can rename the campaign or change its defaults.</p>}
-    </Dialog>
+    </section>
   )
 }
 
@@ -206,15 +214,15 @@ const SHORTCUTS: [string, string][] = [
   ['Delete', 'Delete the selection'],
   ['Arrows', 'Nudge (⇧ for a whole cell)'],
   ['Alt + drag', 'Move a token off the grid'],
-  ['Ctrl/⌘ + \\', 'Hide or show all panels'],
+  ['Ctrl/⌘ + \\', 'Autohide sidebars and toolbars'],
   ['Ctrl/⌘ + K', 'Search moves, tools, scenes and commands'],
 ]
 
 export function HelpDialog({ dialogRef }: { dialogRef: RefObject<HTMLDialogElement> }) {
   return (
     <Dialog dialogRef={dialogRef} title="Help">
-      <section class="help-section">
-        <h3 class="help-heading">Keyboard shortcuts</h3>
+      <section class="dialog-section">
+        <h3 class="dialog-heading">Keyboard shortcuts</h3>
         <dl class="shortcuts">
           {SHORTCUTS.map(([key, action]) => (
             <div key={key} class="shortcut">
@@ -226,24 +234,24 @@ export function HelpDialog({ dialogRef }: { dialogRef: RefObject<HTMLDialogEleme
           ))}
         </dl>
       </section>
-      <section class="help-section">
-        <h3 class="help-heading">Maps and tokens</h3>
+      <section class="dialog-section">
+        <h3 class="dialog-heading">Maps and tokens</h3>
         <p class="muted">
           Drop or paste images onto the canvas. Small, square images become tokens; anything bigger is placed as a
           map. Double-click a token to rename or restyle it; right-click anything to lock it, restack it or swap it between map and token. Undo only ever
           reverts your own changes.
         </p>
       </section>
-      <section class="help-section">
-        <h3 class="help-heading">Panels</h3>
+      <section class="dialog-section">
+        <h3 class="dialog-heading">Panels</h3>
         <p class="muted">
           Drag a sidebar tab, or a docked panel’s title, out onto the map to open it in its own window. Drag the
           window onto the left or right sidebar to dock it there, or use its dock button to put it back. Right-click a tab to
           move it to the other sidebar.
         </p>
       </section>
-      <section class="help-section">
-        <h3 class="help-heading">Credits</h3>
+      <section class="dialog-section">
+        <h3 class="dialog-heading">Credits</h3>
         <p class="muted">
           Icons by Lorc, Delapouite and contributors at{' '}
           <a href="https://game-icons.net" target="_blank" rel="noreferrer">

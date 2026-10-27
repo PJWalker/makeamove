@@ -5,8 +5,8 @@
  */
 
 /**
- * The layer windows render into. Tabletop attaches it inside the table, so
- * windows hide with the rest of the chrome; portals target it directly.
+ * The layer windows render into. Tabletop attaches it inside the table;
+ * portals target it directly.
  */
 export const windowLayer = document.createElement('div')
 windowLayer.className = 'window-layer'

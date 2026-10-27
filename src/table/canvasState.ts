@@ -52,8 +52,27 @@ export interface TokenSpec {
  */
 export const tokenDrop = signal<((x: number, y: number, spec: TokenSpec) => boolean) | null>(null)
 
-/** Ctrl/Cmd + \ hides all chrome. */
-export const chromeHidden = signal(false)
+const AUTOHIDE_KEY = 'mam:autohide'
+
+/** Sidebars and toolbars stay hidden until the pointer nears their edge (Ctrl/Cmd + \\ toggles it). Per device. */
+export const autohide = signal(loadAutohide())
+
+function loadAutohide() {
+  try {
+    return localStorage.getItem(AUTOHIDE_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
+export function setAutohide(on: boolean) {
+  autohide.value = on
+  try {
+    localStorage.setItem(AUTOHIDE_KEY, String(on))
+  } catch {
+    // Just won't persist.
+  }
+}
 
 /** What the command palette can ask of the open scene's canvas. */
 export interface CanvasCommands {
@@ -64,4 +83,4 @@ export interface CanvasCommands {
 export const canvasCommands = signal<CanvasCommands | null>(null)
 
 /** Open one of the campaign's dialogs (from the campaign menu or the command palette). */
-export const dialogRequest = signal<'player' | 'settings' | 'help' | null>(null)
+export const dialogRequest = signal<'settings' | 'help' | null>(null)

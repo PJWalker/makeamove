@@ -12,7 +12,6 @@ import {
   IconHelp,
   IconLeave,
   IconMeasure,
-  IconMembers,
   IconMenu,
   IconSettings,
   IconPan,
@@ -104,8 +103,8 @@ export function Toolbar({ isGm }: { isGm: boolean }) {
 
   return (
     <>
-      <nav class="toolbar panel bevel strip across dock-top chrome" aria-label="Canvas tools">
-        <CampaignMenu isGm={isGm} />
+      <nav class="toolbar panel bevel strip across dock-top" aria-label="Canvas tools">
+        <CampaignMenu />
         {tools.map(({ id, label, key, Icon, arrives }) => (
           <Button
             key={id}
@@ -131,11 +130,10 @@ export function Toolbar({ isGm }: { isGm: boolean }) {
  * way back to the campaign list. Opens on the press, like every menu, so
  * press, move to an item and release chooses it.
  */
-function CampaignMenu({ isGm }: { isGm: boolean }) {
+function CampaignMenu() {
   const menu = useSignal<{ x: number; y: number; press?: { x: number; y: number } } | null>(null)
   const items: MenuItem[] = [
-    { label: 'Player settings…', Icon: IconMembers, onSelect: () => (dialogRequest.value = 'player') },
-    ...(isGm ? [{ label: 'Campaign settings…', Icon: IconSettings, onSelect: () => (dialogRequest.value = 'settings') }] : []),
+    { label: 'Settings…', Icon: IconSettings, onSelect: () => (dialogRequest.value = 'settings') },
     { label: 'Help and shortcuts…', Icon: IconHelp, onSelect: () => (dialogRequest.value = 'help') },
     'divider',
     // Which panels the table has: ticked ones are in a sidebar or a window.
@@ -189,7 +187,7 @@ function CampaignMenu({ isGm }: { isGm: boolean }) {
 function PenOptions() {
   const { colour, width, layer } = pen.value
   return (
-    <div class="pen-options panel bevel chrome" role="group" aria-label="Pen">
+    <div class="pen-options panel bevel" role="group" aria-label="Pen">
       <input
         type="color"
         class="pen-colour"

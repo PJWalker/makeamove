@@ -1,7 +1,7 @@
 import { postRoll } from '../chat/send'
 import type { Campaign } from '../store/campaign'
 import { activeTool } from '../scene/tools'
-import { canvasCommands, chromeHidden, dialogRequest } from '../table/canvasState'
+import { autohide, canvasCommands, dialogRequest, setAutohide } from '../table/canvasState'
 import { PANEL_ORDER, showPanel } from '../table/panelLayout'
 import { PANELS } from '../table/panels'
 import { TOOLS } from '../table/Toolbar'
@@ -11,7 +11,6 @@ import {
   IconFit,
   IconHelp,
   IconMap,
-  IconMembers,
   IconRedo,
   IconSettings,
   IconSidebarHide,
@@ -76,15 +75,15 @@ export function coreActions(campaign: Campaign): Action[] {
       run: () => canvas?.redo(),
     },
     {
-      id: 'cmd:chrome',
+      id: 'cmd:autohide',
       kind: 'command',
-      title: 'Hide or show the interface',
-      aliases: ['toggle chrome', 'toggle ui'],
+      title: autohide.value ? 'Always show sidebars and toolbars' : 'Autohide sidebars and toolbars',
+      aliases: ['autohide', 'auto-hide', 'hide the interface', 'toggle ui'],
       source: 'Core',
       hint: `${MOD}\\`,
       icon: IconSidebarHide,
       available: true,
-      run: () => (chromeHidden.value = !chromeHidden.value),
+      run: () => setAutohide(!autohide.value),
     },
   )
 
@@ -101,21 +100,18 @@ export function coreActions(campaign: Campaign): Action[] {
   }
 
   out.push(
-    { id: 'setting:player', kind: 'setting', title: 'Player settings', aliases: ['name', 'colour'], source: 'Core', icon: IconMembers, available: true, run: () => (dialogRequest.value = 'player') },
-    { id: 'setting:help', kind: 'setting', title: 'Help and shortcuts', source: 'Core', icon: IconHelp, available: true, run: () => (dialogRequest.value = 'help') },
-  )
-  if (isGm) {
-    out.push({
-      id: 'setting:campaign',
+    {
+      id: 'setting:settings',
       kind: 'setting',
-      title: 'Campaign settings',
-      aliases: ['invite link'],
+      title: 'Settings',
+      aliases: ['player settings', 'campaign settings', 'name', 'colour', 'autohide', 'invite link'],
       source: 'Core',
       icon: IconSettings,
       available: true,
       run: () => (dialogRequest.value = 'settings'),
-    })
-  }
+    },
+    { id: 'setting:help', kind: 'setting', title: 'Help and shortcuts', source: 'Core', icon: IconHelp, available: true, run: () => (dialogRequest.value = 'help') },
+  )
 
   for (const id of PANEL_ORDER) {
     const { label, Icon } = PANELS[id]

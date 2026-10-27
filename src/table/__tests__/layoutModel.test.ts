@@ -45,6 +45,15 @@ describe('panel layout', () => {
     expect(everywhere(l)).toEqual([...PANEL_ORDER].sort());
   })
 
+  it('leaves a closed sidebar closed when a panel is dropped on it', () => {
+    let l = setOpen(detach(defaultLayout(false), 'chat', win), 'left', false)
+    l = dock(l, 'chat', 'left', 0, false)
+    expect(l.left).toMatchObject({ active: 'chat', open: false })
+    expect(l.left.panels[0]).toBe('chat')
+    l = dock(detach(l, 'notes', win), 'notes', 'right', undefined, false)
+    expect(l.right).toMatchObject({ active: 'notes', open: true })
+  })
+
   it('moves a docked tab between sides and repairs the side it left', () => {
     let l = dock(defaultLayout(false), 'characters', 'right', 0)
     expect(l.right.panels[0]).toBe('characters')

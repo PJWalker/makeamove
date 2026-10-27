@@ -58,7 +58,7 @@ export function TargetBar({ campaign }: { campaign: Campaign }) {
 
   return (
     <div class="target-bar-wrap">
-      <div class="target-bar panel bevel chrome" role="status" aria-live="polite">
+      <div class="target-bar panel bevel" role="status" aria-live="polite">
         <IconTarget size={22} class="target-bar-icon" />
         <div class="target-bar-text">
           <span class="eyebrow">
