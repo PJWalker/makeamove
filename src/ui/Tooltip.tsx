@@ -77,7 +77,9 @@ export function Tooltip() {
       const cx = r.left + r.width / 2
       const cy = r.top + r.height / 2
       if (el.closest('.sidebar-rail') || el.hasAttribute('data-tip-side')) {
-        const dir = cx < innerWidth / 2 ? 'right' : 'left'
+        // data-tip-side="left" or "right" picks a side; otherwise, the side with more room.
+        const side = el.getAttribute('data-tip-side')
+        const dir = side === 'left' || side === 'right' ? side : cx < innerWidth / 2 ? 'right' : 'left'
         tip.value = { text, long, x: dir === 'right' ? r.right + GAP : r.left - GAP, y: cy, dir, instant }
       } else {
         const dir = cy < innerHeight / 2 ? 'down' : 'up'

@@ -233,7 +233,7 @@ function MakeButton({ m, onMake, big }: { m: ActionDef; onMake: (m: ActionDef) =
     )
   }
   return (
-    <Button size="sm" variant="ghost" class="move-make" label={`${label}: ${m.name}`} aria-label={`${label}: ${m.name}`} onClick={() => onMake(m)}>
+    <Button size="sm" variant="ghost" class="move-make" data-tip-side="right" label={`${label}: ${m.name}`} aria-label={`${label}: ${m.name}`} onClick={() => onMake(m)}>
       <Icon size={19} />
     </Button>
   )
