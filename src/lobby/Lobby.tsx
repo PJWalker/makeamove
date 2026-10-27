@@ -60,7 +60,7 @@ export function Lobby({ error }: { error: string | null }) {
           {!registryReady.value ? null : list.length === 0 ? (
             <div class="empty">
               <IconCampaign size={28} />
-              No campaigns yet
+              No campaigns yet.
             </div>
           ) : (
             <ul class="campaign-list">

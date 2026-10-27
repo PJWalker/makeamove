@@ -78,8 +78,8 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
         <input
           class="input bevel"
           type="search"
-          placeholder="Search the libraries…"
-          aria-label="Search the libraries"
+          placeholder="Search the Libraries…"
+          aria-label="Search the Libraries"
           value={query}
           onInput={(e) => (view.value = { ...view.value, query: e.currentTarget.value })}
         />
