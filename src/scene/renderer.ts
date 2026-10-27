@@ -111,6 +111,9 @@ function textureFor(hash: string): Promise<Texture | null> {
   return p
 }
 
+/** Graphics only free their own geometry when told to destroy their context. */
+const DESTROY_VIEW = { children: true, context: true } as const
+
 function contentKey(el: SceneElement): string {
   switch (el.type) {
     case 'map':
@@ -157,9 +160,16 @@ export class SceneRenderer {
   /** What a linked token shows, from its character. */
   private statsFor: (characterId: string) => TokenStat[] = () => [];
   private elements: SceneElement[] = [];
+  private byId = new Map<string, SceneElement>();
+  /** Elements given a preview transform at the last render, to put back once it's gone. */
+  private previewed = new Set<string>();
   private order = "";
   private frame = 0;
-  private dirty = { elements: false, camera: true, grid: true, overlay: true };
+  /**
+   * What needs redrawing. previews: only drag transforms moved, not the
+   * elements themselves. presence: only cursors, pings, trails and rulers.
+   */
+  private dirty = { elements: false, previews: false, camera: true, grid: true, overlay: true, presence: true };
   private resizeObserver: ResizeObserver | null = null;
   private destroyed = false;
   private stopFetcherWatch: (() => void) | null = null;
@@ -205,6 +215,11 @@ export class SceneRenderer {
     });
     if (this.destroyed) return;
     this.app.ticker.stop();
+    // The controller handles input from DOM events. Left attached, Pixi's
+    // event system hit-tests the stage on every pointer move and keeps
+    // Ticker.system running a frame loop even when nothing is drawn.
+    this.app.renderer.events.setTargetElement(null as unknown as HTMLElement);
+    this.app.stage.eventMode = "none";
     host.appendChild(this.app.canvas);
     this.world.addChild(
       this.layers.map,
@@ -261,6 +276,7 @@ export class SceneRenderer {
 
   setElements(elements: SceneElement[]) {
     this.elements = elements;
+    this.byId = new Map(elements.map((e) => [e.id, e]));
     this.invalidate("elements", "overlay");
   }
 
@@ -292,7 +308,7 @@ export class SceneRenderer {
     }
     for (const id of this.cursors.keys())
       if (!live.has(id)) this.cursors.delete(id);
-    this.invalidate("overlay");
+    this.invalidate("presence");
   }
 
   setGrid(grid: Grid) {
@@ -304,28 +320,34 @@ export class SceneRenderer {
   private render() {
     this.frame = 0;
     if (this.destroyed || !this.app.renderer) return;
-    if (this.dirty.elements) this.syncElements();
+    const d = this.dirty;
+    if (d.elements) this.syncElements();
+    else if (d.previews) this.syncPreviews();
     this.hiddenSync();
-    if (this.dirty.camera) {
+    if (d.camera) {
       this.world.position.set(this.camera.x, this.camera.y);
       this.world.scale.set(this.camera.zoom);
-      this.dirty.grid = this.dirty.overlay = true;
+      d.grid = d.overlay = true;
     }
-    if (this.dirty.grid) this.drawGrid();
-    if (this.dirty.overlay) {
+    if (d.elements || d.previews) d.overlay = true;
+    if (d.grid) this.drawGrid();
+    if (d.overlay) {
       this.drawDraft();
       this.drawOverlay();
+      this.drawTokenLabels();
     }
-    this.drawTokenLabels();
+    // Targets ride on tokens, so presence redraws with anything else.
     const animating = this.drawPresence();
     this.dirty = {
       elements: false,
+      previews: false,
       camera: false,
       grid: false,
       overlay: false,
+      presence: false,
     };
     this.app.render();
-    if (animating) this.invalidate("overlay");
+    if (animating) this.invalidate("presence");
   }
 
   // Elements
@@ -347,7 +369,7 @@ export class SceneRenderer {
       const key = contentKey(el);
       let view = this.views.get(el.id);
       if (view && view.key !== key) {
-        view.root.destroy({ children: true });
+        view.root.destroy(DESTROY_VIEW);
         view = undefined;
       }
       if (!view) {
@@ -358,9 +380,10 @@ export class SceneRenderer {
       }
       view.apply(this.previews.get(el.id) ?? el);
     }
+    this.previewed = new Set(this.previews.keys());
     for (const [id, view] of this.views) {
       if (!seen.has(id)) {
-        view.root.destroy({ children: true });
+        view.root.destroy(DESTROY_VIEW);
         this.views.delete(id);
       }
     }
@@ -372,6 +395,17 @@ export class SceneRenderer {
       for (const el of this.elements)
         this.layers[el.layer].addChild(this.views.get(el.id)!.root);
     }
+  }
+
+  /** Moves just the elements being dragged, and any just let go. */
+  private syncPreviews() {
+    for (const id of this.previewed) {
+      if (this.previews.has(id)) continue;
+      const el = this.byId.get(id);
+      if (el) this.views.get(id)?.apply(el);
+    }
+    for (const [id, t] of this.previews) this.views.get(id)?.apply(t);
+    this.previewed = new Set(this.previews.keys());
   }
 
   private build(el: SceneElement, key: string): View {
@@ -634,7 +668,7 @@ export class SceneRenderer {
    */
   private drawTargets(g: Graphics, used: Set<string>) {
     const cam = this.camera;
-    const byId = new Map(this.elements.map((e) => [e.id, e]));
+    const byId = this.byId;
     const rings = new Map<string, number>();
     const fromEl = this.overlayState.rangeFrom ? byId.get(this.overlayState.rangeFrom) : undefined;
     const from = fromEl && (this.previews.get(fromEl.id) ?? fromEl);
@@ -830,6 +864,7 @@ export class SceneRenderer {
     const used = new Set<string>();
     const now = performance.now();
     let animating = false;
+    let insets: ReturnType<SceneRenderer["insets"]> | undefined;
 
     this.drawTargets(g, used);
 
@@ -914,7 +949,8 @@ export class SceneRenderer {
         if (age < 1) {
           animating = true;
           const c = toScreen(cam, m.ping.p);
-          const cover = this.insets();
+          // Reading the UI's layout is costly; once a frame is enough.
+          const cover = (insets ??= this.insets());
           const L = cover.left;
           const R = Math.max(L + 1, this.size.width - cover.right);
           const T = cover.top;

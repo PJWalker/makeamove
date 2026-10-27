@@ -562,7 +562,7 @@ export class SceneController {
           if (el.type === 'token' && !e.altKey) p = snapPoint(grid, p, Math.round(el.w / grid.size))
           this.renderer.previews.set(id, { ...el, ...p })
         }
-        this.renderer.invalidate('elements', 'overlay')
+        this.renderer.invalidate('previews', 'overlay')
         break
       }
 
@@ -579,7 +579,7 @@ export class SceneController {
           t = resizeFromCorner(el, g.corner, world, keepAspect)
         }
         this.renderer.previews.set(el.id, { ...el, ...t })
-        this.renderer.invalidate('elements', 'overlay')
+        this.renderer.invalidate('previews', 'overlay')
         break
       }
 
@@ -587,7 +587,7 @@ export class SceneController {
         // Shift snaps to 15° steps.
         const rot = rotationTowards(g.el, world, e.shiftKey ? 15 : 0)
         this.renderer.previews.set(g.el.id, { ...g.el, rot })
-        this.renderer.invalidate('elements', 'overlay')
+        this.renderer.invalidate('previews', 'overlay')
         break
       }
 
@@ -605,7 +605,7 @@ export class SceneController {
           const rot = Math.atan2(Math.sin(el.rot + delta), Math.cos(el.rot + delta))
           this.renderer.previews.set(el.id, { ...el, x: frame.x + dx * c - dy * s, y: frame.y + dx * s + dy * c, rot })
         }
-        this.renderer.invalidate('elements')
+        this.renderer.invalidate('previews')
         this.updateOverlay()
         break
       }
@@ -755,7 +755,7 @@ export class SceneController {
       if (hits(el, p, r)) {
         g.erased.add(el.id)
         this.renderer.hidden.add(el.id)
-        this.renderer.invalidate('elements')
+        this.renderer.invalidate()
       }
     }
   }
