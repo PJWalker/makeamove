@@ -17,6 +17,7 @@ import {
   type DndClass,
   type Spell,
 } from './data'
+import { BACKGROUNDS, FEATS, IMPROVEMENT_LEVELS, SPECIES, SPECIES_ACTIONS, SUBCLASSES, SUBCLASS_LEVEL } from './origins'
 
 /*
  * D&D 5th edition, 2024 rules ("5.5e"), from the SRD 5.2: the formulas, and
@@ -258,7 +259,46 @@ const WEAPON_ROLLS: FollowUpDef[] = (['str', 'dex'] as const).flatMap((a): Follo
   { id: `crit-${a}`, kind: 'roll', label: 'Roll critical damage', comment: 'Critical damage', damage: 'damage', formula: (_c, d) => weaponDamage(d, a, true) },
 ])
 
-const ACTIONS_ALL: ActionDef[] = [...ATTACKS, ...SPELL_ACTIONS, ...FEATURE_ACTIONS, ...BASIC, ...COMBAT, ...SAVES, ...SKILL_CHECKS, ...ABILITY_CHECKS]
+/* Subclasses: one action each, read out, from level 3. Species traits that are actions. */
+
+const SUBCLASS_ACTIONS: ActionDef[] = SUBCLASSES.map((k) => ({
+  id: `subclass-${k.id}`,
+  name: k.name,
+  category: 'class',
+  classId: k.classId,
+  trigger: `Level ${SUBCLASS_LEVEL} subclass`,
+  text: k.text,
+  steps: [],
+}))
+
+const breathDice = (level: number) => stepped(level, [[1, 1], [5, 2], [11, 3], [17, 4]])
+
+const SPECIES_ACTION_DEFS: ActionDef[] = SPECIES_ACTIONS.map((a) => ({
+  id: a.id,
+  name: a.name,
+  category: 'species',
+  trigger: a.trigger,
+  text: a.text,
+  ...(a.target ? { target: a.target } : {}),
+  steps: a.save
+    ? [{ kind: 'save', action: `save-${a.save}`, dc: 'speciesDc', success: 'Half damage.', failure: 'Full damage.' }]
+    : [],
+  ...(a.id === 'breath-weapon' ? { followUps: ['breath-weapon'] } : {}),
+}))
+
+const SPECIES_ROLLS: FollowUpDef[] = [
+  { id: 'breath-weapon', kind: 'roll', label: 'Roll damage', comment: 'Breath Weapon', damage: 'damage', formula: (c) => `${breathDice(c.level)}d10` },
+]
+
+/** The character's feats, from the comma-separated data field. */
+const featsOf = (c: CharacterView) =>
+  String(c.data.feats ?? '')
+    .split(',')
+    .filter(Boolean)
+    .map((id) => FEATS.find((f) => f.id === id))
+    .filter((f) => !!f)
+
+const ACTIONS_ALL: ActionDef[] = [...SUBCLASS_ACTIONS, ...SPECIES_ACTION_DEFS, ...ATTACKS, ...SPELL_ACTIONS, ...FEATURE_ACTIONS, ...BASIC, ...COMBAT, ...SAVES, ...SKILL_CHECKS, ...ABILITY_CHECKS]
 
 /* Resources: hit points, Hit Dice, spell slots and class pools. Those a character doesn't have have a maximum of 0. */
 
@@ -318,6 +358,7 @@ export const dnd55e: GameSystem = {
   actionCategories: [
     { id: 'attack', label: 'Attacks' },
     { id: 'class', label: 'Class' },
+    { id: 'species', label: 'Species' },
     { id: 'spell', label: 'Spells' },
     { id: 'action', label: 'Actions', onHotbar: false },
     { id: 'combat', label: 'Combat', onHotbar: false },
@@ -329,6 +370,7 @@ export const dnd55e: GameSystem = {
     ...WEAPON_ROLLS,
     ...SPELL_ROLLS,
     ...FEATURE_ROLLS,
+    ...SPECIES_ROLLS,
     { id: 'death-success', kind: 'bump', label: 'Mark a success', field: 'deathSuccesses', by: 1 },
     { id: 'death-failure', kind: 'bump', label: 'Mark a failure', field: 'deathFailures', by: 1 },
     { id: 'death-failure-2', kind: 'bump', label: 'Mark two failures', field: 'deathFailures', by: 2 },
@@ -342,6 +384,9 @@ export const dnd55e: GameSystem = {
   characterData: [
     { id: 'species', default: '' },
     { id: 'background', default: '' },
+    { id: 'subclass', default: '', for: 'pc' },
+    /** Feat ids, comma-separated. */
+    { id: 'feats', default: '', for: 'pc' },
     { id: 'alignment', default: '' },
     { id: 'xp', default: 0, for: 'pc' },
     { id: 'gp', default: 0, for: 'pc' },
@@ -417,8 +462,18 @@ export const dnd55e: GameSystem = {
     ac += r.acBonus
 
     // Hit points: the full Hit Die at level 1, then its average (rounded up) per level, plus Constitution each level.
+    // Some species, feats and subclasses add to it per level (Dwarven Toughness, Tough, Draconic Resilience).
     const perLevel = cls.hitDie / 2 + 1 + mods.con
-    const maxHp = npc ? Number(c.data.maxHp ?? NPC_HP) : Math.max(1, cls.hitDie + mods.con + (level - 1) * perLevel + Number(c.data.hpBonus ?? 0))
+    const species = SPECIES.find((x) => x.id === c.data.species)
+    const feats = npc ? [] : featsOf(c)
+    const extraPerLevel =
+      (species?.hpPerLevel ?? 0) + feats.reduce((n, f) => n + (f.hpPerLevel ?? 0), 0) + (c.data.subclass === 'draconic' && level >= SUBCLASS_LEVEL ? 1 : 0)
+    const maxHp = npc
+      ? Number(c.data.maxHp ?? NPC_HP)
+      : Math.max(1, cls.hitDie + mods.con + (level - 1) * perLevel + extraPerLevel * level + Number(c.data.hpBonus ?? 0))
+    const alert = feats.some((f) => f.initiativeProf) ? prof : 0
+    // Defense: +1 AC in armour.
+    if (r.armorWorn && feats.some((f) => f.id === 'defense')) ac += 1
 
     // Jack of All Trades: half proficiency on checks without it.
     const jack = !npc && cls.id === 'bard' && level >= 2 ? Math.floor(prof / 2) : 0
@@ -448,8 +503,9 @@ export const dnd55e: GameSystem = {
         hitDiceMax: npc ? 0 : level,
         reactionMax: 1,
         speed: Math.max(0, r.speed),
-        initiativeBonus: r.initiativeBonus + jack,
-        initiative: mods.dex + r.initiativeBonus + jack,
+        initiativeBonus: r.initiativeBonus + jack + alert,
+        initiative: mods.dex + r.initiativeBonus + jack + alert,
+        speciesDc: 8 + mods.con + prof,
         passivePerception: 10 + mods.wis + skills['skill:perception'],
         ...skills,
         ...saves,
@@ -489,14 +545,37 @@ export const dnd55e: GameSystem = {
     const spells = new Set(SPELLS.filter((s) => s.classes.includes(cls.id) && !!cls.casting && s.level <= highest).map((s) => s.id))
     // Favored Enemy: Rangers always have Hunter's Mark.
     if (cls.id === 'ranger') spells.add('hunters-mark')
-    return ACTIONS_ALL.filter((a) =>
-      a.category === 'class' ? features.has(a.id) || granted.has(a.id) : a.category === 'spell' ? spells.has(a.id) || granted.has(a.id) : true,
-    )
+    if (c.data.subclass && level >= SUBCLASS_LEVEL) features.add(`subclass-${c.data.subclass}`)
+    const traits = new Set(SPECIES_ACTIONS.filter((a) => a.species === c.data.species).map((a) => a.id))
+    const has = (a: ActionDef) =>
+      a.category === 'class' ? features.has(a.id) : a.category === 'spell' ? spells.has(a.id) : a.category === 'species' ? traits.has(a.id) : true
+    return ACTIONS_ALL.filter((a) => has(a) || granted.has(a.id))
   },
   tokenStats(c, d) {
     const hp = c.resources.hp ?? 0
     const max = d.values.maxHp
     return [{ id: 'hp', label: 'HP', value: hp, max, colour: hp <= max / 4 ? '#d04a3a' : hp <= max / 2 ? '#d49a32' : '#4aa35a' }]
+  },
+  creation: {
+    choices: [
+      { id: 'species', label: 'Species', field: 'species', at: 'create', options: SPECIES.map(({ id, name, text, speed }) => ({ id, name, text, grants: { speed } })) },
+      {
+        id: 'background',
+        label: 'Background',
+        plural: 'Backgrounds',
+        field: 'background',
+        at: 'create',
+        options: BACKGROUNDS.map(({ id, name, text, boost, grants, feat }) => ({ id, name, text, boost, grants: { ...grants, feats: feat } })),
+      },
+      { id: 'subclass', label: 'Subclass', plural: 'Subclasses', field: 'subclass', at: SUBCLASS_LEVEL, options: SUBCLASSES },
+    ],
+    scores: {
+      standardArray: [15, 14, 13, 12, 10, 8],
+      pointBuy: { budget: 27, costs: { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 } },
+      roll: '4d6kh3',
+    },
+    improvementLevels: IMPROVEMENT_LEVELS,
+    feats: { id: 'feat', label: 'Feat', plural: 'Feats', field: 'feats', at: 'create', options: FEATS.filter((f) => f.category !== 'fighting-style') },
   },
   attribution:
     'Condensed from the System Reference Document 5.2 by Wizards of the Coast LLC, available at https://dnd.wizards.com/resources/systems-reference-document, licensed under CC BY 4.0. Check the SRD for exact wording.',

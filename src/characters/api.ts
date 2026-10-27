@@ -112,11 +112,13 @@ export function selectCharacter(campaign: Campaign, id: string | undefined) {
   else m.delete('character')
 }
 
-export function newCharacter(campaign: Campaign, name: string, classId: string) {
+/** A new player character, with the scores and data the guided creation flow worked out, if any. */
+export function newCharacter(campaign: Campaign, name: string, classId: string, made?: { scores: Record<string, number>; data: Record<string, DataValue> }) {
   const id = createCharacter(campaign.characters, systemOf(campaign), {
     name: name.trim() || 'Unnamed',
     classId,
     owner: device.value.id,
+    ...made,
   })
   selectCharacter(campaign, id)
   return id

@@ -25,6 +25,8 @@ import { Avatar } from '../ui/Avatar'
 import { Button } from '../ui/Button'
 import { menuTrigger } from '../ui/menuTrigger'
 import { openPopup } from '../ui/popup'
+import { choicesAt } from '../characters/creation'
+import { ChoiceField, creationResult, emptyPick, ScoreFields, scoreMethods, scoresReady, startingScores, type Picked, type ScoreMethod } from './CreationParts'
 import { IconDelete, IconFolder, IconRename } from '../ui/icons'
 import { Segmented } from '../ui/Segmented'
 import { Dialog } from './CampaignDialogs'
@@ -268,10 +270,19 @@ function NewCharacter({
   const name = useSignal('')
   const classId = useSignal(system.classes[0].id)
   const folder = useSignal('')
+  // The guided flow: the system's choices at creation, then ability scores.
+  const creation = system.creation
+  const picks = useSignal<Record<string, Picked>>({})
+  const method = useSignal<ScoreMethod>(creation ? scoreMethods(creation.scores)[0].id : 'manual')
+  const scores = useSignal(creation ? startingScores(system, creation.scores, method.value) : {})
+  const choices = choicesAt(creation, 'create', classId.value)
+  const ready = kind.value === 'npc' || !creation || scoresReady(creation.scores, method.value, scores.value)
   const submit = () => {
+    if (!ready) return
     if (kind.value === 'npc') newNpc(campaign, name.value, folder.value || undefined)
     else {
-      const id = newCharacter(campaign, name.value, classId.value)
+      const made = creation ? creationResult(system, classId.value, scores.value, picks.value) : undefined
+      const id = newCharacter(campaign, name.value, classId.value, made)
       if (folder.value) moveToFolder(campaign, id, folder.value)
     }
     onDone()
@@ -316,6 +327,16 @@ function NewCharacter({
             </select>
           </label>
           {cls && <p class="muted">{cls.blurb}</p>}
+          {choices.map((ch) => (
+            <ChoiceField
+              key={ch.id}
+              system={system}
+              choice={ch}
+              value={picks.value[ch.id] ?? emptyPick()}
+              onChange={(p) => (picks.value = { ...picks.value, [ch.id]: p })}
+            />
+          ))}
+          {creation && <ScoreFields system={system} methods={creation.scores} method={method} scores={scores} />}
         </>
       )}
       {folders.length > 0 && (
@@ -332,7 +353,7 @@ function NewCharacter({
         </label>
       )}
       <div class="sheet-row">
-        <Button variant="primary" size="sm" type="submit">
+        <Button variant="primary" size="sm" type="submit" disabled={!ready}>
           Create
         </Button>
         <Button variant="ghost" size="sm" onClick={onDone}>

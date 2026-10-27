@@ -274,6 +274,84 @@ export interface DamageTypeDef {
   name: string
 }
 
+/** One option of a character-creation choice: a species, a background, a subclass, a feat. */
+export interface OptionDef {
+  id: string
+  name: string
+  /** What it is and gives, in a few lines. */
+  text: string
+  /** Stats the player may raise when picking it (5.5e backgrounds: +2 and +1, or +1 to all three), by these amounts. */
+  boost?: { stats: string[]; amounts: number[][] }
+  /** Data fields it sets on the character: a background's skill proficiencies. */
+  grants?: Record<string, DataValue>
+  /** Only for this class (subclasses). */
+  classId?: string
+}
+
+/** A choice made when creating or levelling a character, kept in a data field. */
+export interface ChoiceDef {
+  id: string
+  label: string
+  /** Its options' collection name in the Libraries ("Backgrounds"); the label if missing. */
+  plural?: string
+  /** The data field the chosen option's id is stored in. */
+  field: string
+  options: OptionDef[]
+  /** Made at creation, or on reaching a level (a subclass at 3). */
+  at: 'create' | number
+}
+
+/** Ways to set ability scores when creating a character. */
+export interface ScoreMethods {
+  /** Scores to assign, one to each stat. */
+  standardArray?: number[]
+  /** Points to spend, and each score's cost. */
+  pointBuy?: { budget: number; costs: Record<number, number> }
+  /** A formula to roll for each score. */
+  roll?: string
+}
+
+/** Character creation and levelling, as data the core's guided flow walks through. */
+export interface CreationDef {
+  choices: ChoiceDef[]
+  scores: ScoreMethods
+  /** Levels at which a character raises stats (by `asi` amounts) or takes a feat instead. */
+  improvementLevels?: number[]
+  /** The feats a character may take at those levels, if the system has feats. */
+  feats?: ChoiceDef
+}
+
+/**
+ * A section of a declarative character sheet (design: core change 13). The
+ * core draws each kind; a system lists them in order.
+ */
+export type SheetSection =
+  /** Name, portrait and the class or "NPC" line. */
+  | { kind: 'header' }
+  /** Numbers with − and + buttons: resources, data fields, the level. */
+  | { kind: 'counters'; items: SheetCounter[] }
+  /** A ready-to-level-up banner when a data field reaches a derived value. */
+  | { kind: 'levelUp'; xp: string; needed: string }
+  /** Derived values, read-only, each with the effects that changed it as a tooltip. */
+  | { kind: 'derived'; items: { label: string; value: string; format?: 'die'; plus?: string; max?: string }[] }
+  /** Each stat: its modifier (click to roll), its score, and any condition tied to it. */
+  | { kind: 'stats'; label: string; hint?: string }
+  /** The system's standing roll modifiers. */
+  | { kind: 'modifiers'; label: string }
+  /** The character's actions. */
+  | { kind: 'actions'; label: string }
+  | { kind: 'inventory' }
+  /** An NPC's system-defined fields. */
+  | { kind: 'npcFields' }
+  /** Rich text fields, under one heading (or none). */
+  | { kind: 'text'; label?: string; fields: { field: string; label: string; placeholder?: string }[] }
+
+/** A number on a sheet: a resource, a data field or the level, with an optional maximum (a derived value). */
+export type SheetCounter =
+  | { label: string; resource: string; max?: string }
+  | { label: string; data: string; max?: string; /** A plain number field instead of − and + buttons. */ input?: boolean }
+  | { label: string; level: true }
+
 /** A character's effective numbers, worked out by the system. */
 export interface Derived {
   /** Named values (max HP, armour, load…), after every active effect. */
@@ -334,6 +412,10 @@ export interface GameSystem {
   actionsFor(c: CharacterView, d: Derived): ActionDef[]
   /** What a token tied to this character shows, in order (the system decides). */
   tokenStats(c: CharacterView, d: Derived): TokenStat[]
+  /** Character creation and levelling, for the guided flow. */
+  creation?: CreationDef
+  /** Declarative sheets, drawn by the core. A system without them supplies its own components (table/sheets.tsx). */
+  sheet?: { pc: SheetSection[]; npc: SheetSection[] }
   /** Credit for the rules text. */
   attribution: string
 }

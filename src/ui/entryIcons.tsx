@@ -116,7 +116,7 @@ export const ENTRY_ICONS = {
 
 export type EntryIconName = keyof typeof ENTRY_ICONS
 
-const KIND_ICON: Record<EntryKind, EntryIconName> = { item: 'bag', move: 'move', class: 'hero', tag: 'tag' }
+const KIND_ICON: Record<EntryKind, EntryIconName> = { item: 'bag', move: 'move', class: 'hero', tag: 'tag', option: 'books' }
 
 /** The icon for an entry: the one it names, or its kind's. */
 export function entryIcon(kind: EntryKind, name?: string): Icon {

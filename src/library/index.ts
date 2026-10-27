@@ -1,5 +1,5 @@
 import { signal } from '@preact/signals'
-import type { ActionDef, ClassDef, GameSystem, ItemDef, TagDef } from '../systems/types'
+import type { ActionDef, ChoiceDef, ClassDef, GameSystem, ItemDef, OptionDef, TagDef } from '../systems/types'
 
 /*
  * Libraries: collections of things to look up and use (items, moves,
@@ -10,7 +10,7 @@ import type { ActionDef, ClassDef, GameSystem, ItemDef, TagDef } from '../system
  * homebrew); it holds named collections, each of one kind of entry.
  */
 
-export type EntryKind = 'item' | 'move' | 'class' | 'tag'
+export type EntryKind = 'item' | 'move' | 'class' | 'tag' | 'option'
 
 interface EntryBase {
   id: string
@@ -26,6 +26,8 @@ export type LibraryEntry =
   | (EntryBase & { kind: 'move'; move: ActionDef })
   | (EntryBase & { kind: 'class'; cls: ClassDef })
   | (EntryBase & { kind: 'tag'; tag: TagDef })
+  /** A character option: a species, background, subclass or feat. */
+  | (EntryBase & { kind: 'option'; option: OptionDef })
 
 export interface LibraryCollection {
   id: string
@@ -44,7 +46,7 @@ export interface LibrarySource {
   attribution?: string
 }
 
-export const KIND_LABEL: Record<EntryKind, string> = { item: 'Items', move: 'Moves', class: 'Classes', tag: 'Tags' }
+export const KIND_LABEL: Record<EntryKind, string> = { item: 'Items', move: 'Moves', class: 'Classes', option: 'Options', tag: 'Tags' }
 
 
 export const itemEntry = (i: ItemDef): LibraryEntry => ({ kind: 'item', id: i.id, name: i.name, text: i.description, tags: i.tags, icon: i.icon, item: i })
@@ -58,8 +60,24 @@ export const moveEntry = (m: ActionDef): LibraryEntry => ({
   move: m,
 })
 
-/** What a game system contributes: its gear, actions (by the system's categories), classes and tags. */
+const optionCollection = (c: ChoiceDef): LibraryCollection => ({
+  id: `options-${c.id}`,
+  name: c.plural ?? c.label,
+  kind: 'option',
+  entries: c.options.map((o) => ({ kind: 'option', id: o.id, name: o.name, text: o.text, tags: [], option: o })),
+})
+
+/** Built once per system: a system's data never changes while the app runs. */
+const built = new WeakMap<GameSystem, LibrarySource>()
+
+/** What a game system contributes: its gear, actions (by the system's categories), classes, character options and tags. */
 export function systemLibrary(system: GameSystem): LibrarySource {
+  let source = built.get(system)
+  if (!source) built.set(system, (source = buildSystemLibrary(system)))
+  return source
+}
+
+function buildSystemLibrary(system: GameSystem): LibrarySource {
   const collections: LibraryCollection[] = []
   if (system.items.length) {
     collections.push({ id: 'items', name: 'Gear', kind: 'item', entries: system.items.map(itemEntry) })
@@ -75,6 +93,9 @@ export function systemLibrary(system: GameSystem): LibrarySource {
       kind: 'class',
       entries: system.classes.map((c) => ({ kind: 'class', id: c.id, name: c.name, text: c.blurb, tags: [], icon: c.icon, cls: c })),
     })
+  }
+  for (const c of [...(system.creation?.choices ?? []), ...(system.creation?.feats ? [system.creation.feats] : [])]) {
+    if (c.options.length) collections.push(optionCollection(c))
   }
   if (system.tags.length) {
     collections.push({
@@ -106,12 +127,22 @@ export function librariesFor(system: GameSystem): LibrarySource[] {
   return [systemLibrary(system), ...plugins.value]
 }
 
+/** Each entry's search text, lower-cased once: name, tags, text. */
+const index = new WeakMap<LibraryEntry, [string, string, string]>()
+function indexed(e: LibraryEntry): [string, string, string] {
+  let k = index.get(e)
+  if (!k) index.set(e, (k = [e.name.toLowerCase(), e.tags.join(' ').toLowerCase(), e.text.toLowerCase()]))
+  return k
+}
+
 /** Entries matching a search: by name, tag or text, names first. */
 export function searchEntries(entries: LibraryEntry[], query: string): LibraryEntry[] {
   const q = query.trim().toLowerCase()
   if (!q) return entries
-  const rank = (e: LibraryEntry) =>
-    e.name.toLowerCase().includes(q) ? 0 : e.tags.some((t) => t.toLowerCase().includes(q)) ? 1 : e.text.toLowerCase().includes(q) ? 2 : -1
+  const rank = (e: LibraryEntry) => {
+    const [name, tags, text] = indexed(e)
+    return name.includes(q) ? 0 : tags.includes(q) ? 1 : text.includes(q) ? 2 : -1
+  }
   return entries
     .map((e) => [e, rank(e)] as const)
     .filter(([, r]) => r >= 0)

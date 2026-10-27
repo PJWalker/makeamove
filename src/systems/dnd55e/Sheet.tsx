@@ -21,6 +21,9 @@ import { Counter, MoveList, signedStr, TokenChip } from '../../table/sheetParts'
 import { Button } from '../../ui/Button'
 import type { ActionDef, Derived, GameSystem } from '../types'
 import { SKILLS } from './data'
+import { useSignal } from '@preact/signals'
+import { LevelUpDialog } from '../../table/CreationParts'
+import { FEATS } from './origins'
 
 /*
  * D&D 5.5e's character sheets, from the shared parts in table/sheetParts.tsx.
@@ -118,11 +121,7 @@ export function DndSheet({ campaign, system, c }: Props) {
   const pools = system.resources.filter((r) => r.id !== 'hp' && r.id !== 'hitDice' && (v[r.max] ?? 0) > 0)
   const conMod = d.mods.con
 
-  const levelUp = () => {
-    setField(campaign, c.id, 'level', c.level + 1)
-    bumpResource(campaign, c.id, 'hp', v.hitDie / 2 + 1 + conMod)
-    bumpResource(campaign, c.id, 'hitDice', 1)
-  }
+  const levelling = useSignal(false)
   const spendHitDie = () => {
     bumpResource(campaign, c.id, 'hitDice', -1)
     postRoll(campaign, `1d${v.hitDie}${conMod ? `${conMod < 0 ? '-' : '+'}${Math.abs(conMod)}[CON]` : ''}`, 'public', 'Hit Die')
@@ -142,18 +141,43 @@ export function DndSheet({ campaign, system, c }: Props) {
       <Name campaign={campaign} c={c} editable={editable} detail={`${cls.name} ${c.level}`} />
 
       <div class="dnd-fields">
-        {(['species', 'background'] as const).map((f) => (
-          <label key={f} class="field">
-            {f === 'species' ? 'Species' : 'Background'}
-            <input
-              class="input bevel"
-              value={String(c.data[f] ?? '')}
-              disabled={!editable}
-              onChange={(e) => setData(campaign, c.id, f, e.currentTarget.value)}
-            />
-          </label>
-        ))}
+        {(system.creation?.choices ?? [])
+          .filter((ch) => ch.at === 'create' || ch.at <= c.level)
+          .map((ch) => {
+            const options = ch.options.filter((o) => !o.classId || o.classId === c.classId)
+            const value = String(c.data[ch.field] ?? '')
+            return (
+              <label key={ch.id} class="field">
+                {ch.label}
+                <select class="input bevel" value={value} disabled={!editable} onChange={(e) => setData(campaign, c.id, ch.field, e.currentTarget.value)}>
+                  <option value="">None</option>
+                  {/* A value typed before species and backgrounds were data. */}
+                  {value && !options.some((o) => o.id === value) && <option value={value}>{value}</option>}
+                  {options.map((o) => (
+                    <option key={o.id} value={o.id} title={o.text}>
+                      {o.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )
+          })}
       </div>
+      {!!c.data.feats && (
+        <p class="dnd-feats">
+          <span class="eyebrow">Feats</span>{' '}
+          {String(c.data.feats)
+            .split(',')
+            .map((id) => FEATS.find((f) => f.id === id))
+            .filter((f) => !!f)
+            .map((f, i) => (
+              <span key={f.id} title={f.text}>
+                {i > 0 && ', '}
+                {f.name}
+              </span>
+            ))}
+        </p>
+      )}
 
       <section class="sheet-section" aria-label="Vitals">
         <div class="sheet-vitals">
@@ -190,11 +214,12 @@ export function DndSheet({ campaign, system, c }: Props) {
 
       {editable && c.level < 20 && xp >= v.xpNext && (
         <div class="sheet-levelup">
-          <Button size="sm" onClick={levelUp}>
+          <Button size="sm" onClick={() => (levelling.value = true)}>
             Level up
           </Button>
         </div>
       )}
+      {levelling.value && <LevelUpDialog campaign={campaign} characterId={c.id} onClose={() => (levelling.value = false)} />}
 
       {hp === 0 && (
         <section class="sheet-section" aria-label="Death saving throws">

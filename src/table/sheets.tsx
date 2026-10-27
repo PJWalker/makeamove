@@ -2,26 +2,29 @@ import type { ComponentType } from 'preact'
 import type { CharacterView } from '../characters/store'
 import type { Campaign } from '../store/campaign'
 import { DndNpcSheet, DndSheet } from '../systems/dnd55e/Sheet'
-import { DungeonWorldNpcSheet, DungeonWorldSheet } from '../systems/dungeon-world/Sheet'
 import type { GameSystem } from '../systems/types'
 import { CopyBanner, TemplateSettings } from './TemplateSettings'
+import { DeclarativeSheet } from './DeclarativeSheet'
 
 /*
- * Each system's character sheets, by system id. Kept apart from the systems'
- * rules so those stay free of UI code; declarative sheets (M5) replace most
- * of this.
+ * A character's sheet: the system's declarative layout, drawn by the core,
+ * or for a system that draws its own (5.5e), its components, kept here so
+ * the systems' rules stay free of UI code.
  */
 
 type SheetProps = { campaign: Campaign; system: GameSystem; c: CharacterView }
 
 const SHEETS: Record<string, { pc: ComponentType<SheetProps>; npc: ComponentType<SheetProps> }> = {
-  'dungeon-world': { pc: DungeonWorldSheet, npc: DungeonWorldNpcSheet },
   'dnd-5.5e': { pc: DndSheet, npc: DndNpcSheet },
 }
 
+/** For systems with a layout: the core's declarative sheet. */
+const declarative = (kind: 'pc' | 'npc') => (p: SheetProps) => <DeclarativeSheet {...p} layout={p.system.sheet![kind]} />
+const DECLARATIVE = { pc: declarative('pc'), npc: declarative('npc') }
+
 /** A character's sheet, as their campaign's system draws it. */
 export function CharacterSheet({ campaign, system, c }: SheetProps) {
-  const sheets = SHEETS[system.id] ?? SHEETS['dungeon-world']
+  const sheets = system.sheet ? DECLARATIVE : (SHEETS[system.id] ?? DECLARATIVE)
   const Sheet = c.kind === 'npc' ? sheets.npc : sheets.pc
   return (
     <>

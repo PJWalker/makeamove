@@ -531,6 +531,55 @@ export const dungeonWorld: GameSystem = {
     const max = d.values.maxHp
     return [{ id: 'hp', label: 'HP', value: hp, max, colour: hp <= max / 4 ? '#d04a3a' : hp <= max / 2 ? '#d49a32' : '#4aa35a' }]
   },
+  creation: { choices: [], scores: { standardArray: [16, 15, 13, 12, 9, 8] } },
+  sheet: {
+    pc: [
+      { kind: 'header' },
+      {
+        kind: 'counters',
+        items: [
+          { label: 'HP', resource: 'hp', max: 'maxHp' },
+          { label: 'XP', data: 'xp', max: 'xpNeeded' },
+          { label: 'Level', level: true },
+          { label: 'Coin', data: 'coin' },
+        ],
+      },
+      { kind: 'levelUp', xp: 'xp', needed: 'xpNeeded' },
+      {
+        kind: 'derived',
+        items: [
+          { label: 'Armor', value: 'armor' },
+          { label: 'Damage', value: 'damage', format: 'die', plus: 'damageBonus' },
+          { label: 'Load', value: 'load', max: 'maxLoad' },
+        ],
+      },
+      { kind: 'stats', label: 'Stats', hint: 'click a modifier to roll' },
+      { kind: 'modifiers', label: 'Situation' },
+      { kind: 'actions', label: 'Moves' },
+      { kind: 'inventory' },
+      {
+        kind: 'text',
+        label: 'Bonds & notes',
+        fields: [
+          { field: 'bonds', label: 'Bonds', placeholder: 'Type @ to name the character you share a bond with.' },
+          { field: 'notes', label: 'Notes' },
+        ],
+      },
+    ],
+    npc: [
+      { kind: 'header' },
+      {
+        kind: 'counters',
+        items: [
+          { label: 'HP', resource: 'hp', max: 'maxHp' },
+          { label: 'Max HP', data: 'maxHp', input: true },
+        ],
+      },
+      { kind: 'npcFields' },
+      { kind: 'inventory' },
+      { kind: 'text', fields: [{ field: 'notes', label: 'Notes' }] },
+    ],
+  },
   attribution:
     'Condensed from the Dungeon World SRD by Sage LaCroix and Adam Koebel, used under CC BY 3.0. Check the SRD for exact wording.',
 }

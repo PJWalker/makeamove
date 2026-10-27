@@ -117,7 +117,16 @@ const entries = <T,>(m: Y.Map<T> | undefined): Record<string, T> => (m ? Object.
 export function createCharacter(
   characters: Y.Map<CharacterMap>,
   system: GameSystem,
-  init: { name: string; classId: string; owner: string; scores?: Record<string, number>; kind?: CharacterKind; folder?: string },
+  init: {
+    name: string
+    classId: string
+    owner: string
+    scores?: Record<string, number>
+    /** The system's fields, over their defaults: choices made at creation. */
+    data?: Record<string, DataValue>
+    kind?: CharacterKind
+    folder?: string
+  },
 ): string {
   const id = newId()
   const kind = init.kind ?? 'pc'
@@ -135,7 +144,7 @@ export function createCharacter(
     for (const s of system.stats) scores.set(s.id, init.scores?.[s.id] ?? 10)
     m.set('scores', scores)
     const data = new Y.Map<DataValue>()
-    for (const f of system.characterData) if (!f.for || f.for === kind) data.set(f.id, f.default)
+    for (const f of system.characterData) if (!f.for || f.for === kind) data.set(f.id, init.data?.[f.id] ?? f.default)
     m.set('data', data)
     m.set('modifiers', new Y.Map<number>())
     m.set('fields', new Y.Map<string | number>())

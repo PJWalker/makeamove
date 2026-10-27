@@ -3115,3 +3115,50 @@
     margin: 0;
   }
 }
+
+/* Guided creation and levelling */
+@layer layout {
+  .creation-form {
+    display: grid;
+    gap: var(--space-3);
+  }
+  .creation-text {
+    margin: 0;
+    font-size: var(--text-sm);
+  }
+  .creation-boost {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .creation-boost-pick {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-weight: 700;
+    .input {
+      width: auto;
+    }
+  }
+  .creation-scores [data-over='true'] {
+    color: var(--danger);
+  }
+  .creation-score-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-2);
+  }
+  .creation-score {
+    display: grid;
+    gap: 2px;
+    justify-items: start;
+    .input {
+      width: 100%;
+    }
+  }
+  .dnd-feats {
+    margin: 0;
+    font-size: var(--text-sm);
+  }
+}
