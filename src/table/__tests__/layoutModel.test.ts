@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { PANEL_ORDER, close, defaultLayout, detach, dock, locate, normalise, reorder, selectTab, setOpen, showTab } from '../layoutModel'
+import { PANEL_ORDER, close, defaultLayout, detach, dock, locate, normalise, reorder, selectTab, setOpen, showTab, withoutPanels } from '../layoutModel'
 
 const win = { x: 10, y: 10, w: 300, h: 300, z: 1 }
 const everywhere = (l: ReturnType<typeof defaultLayout>) =>
@@ -8,7 +8,7 @@ const everywhere = (l: ReturnType<typeof defaultLayout>) =>
 describe('panel layout', () => {
   it('starts with characters on the left and chat on the right', () => {
     const l = defaultLayout(false)
-    expect(l.left.panels).toEqual(['scene', 'characters'])
+    expect(l.left.panels).toEqual(['scene', 'characters', 'combat'])
     expect(l.right.panels).toEqual(['chat', 'libraries', 'notes', 'members'])
     expect(l.right.active).toBe('chat')
   })
@@ -28,8 +28,8 @@ describe('panel layout', () => {
     let l = defaultLayout(false)
     l = detach(l, 'characters', win)
     expect(locate(l, 'characters')).toBe('floating')
-    expect(l.left).toMatchObject({ active: 'scene', panels: ['scene'] })
-    l = detach(l, 'scene', win)
+    expect(l.left).toMatchObject({ active: 'scene', panels: ['scene', 'combat'] })
+    l = detach(detach(l, 'scene', win), 'combat', win)
     expect(l.left).toMatchObject({ active: null, open: false, panels: [] })
     expect(everywhere(l)).toEqual([...PANEL_ORDER].sort())
   })
@@ -39,7 +39,7 @@ describe('panel layout', () => {
     expect(dock(l, 'chat').right.panels).toContain('chat')
     l = dock(l, 'chat', 'left')
     expect(l.left).toMatchObject({ active: 'chat', open: true })
-    expect(l.left.panels).toEqual(['scene', 'characters', 'chat'])
+    expect(l.left.panels).toEqual(['scene', 'characters', 'combat', 'chat'])
     expect(l.floating).toEqual([])
     expect(l.home.chat).toBe('left')
     expect(everywhere(l)).toEqual([...PANEL_ORDER].sort());
@@ -57,7 +57,7 @@ describe('panel layout', () => {
   it('moves a docked tab between sides and repairs the side it left', () => {
     let l = dock(defaultLayout(false), 'characters', 'right', 0)
     expect(l.right.panels[0]).toBe('characters')
-    expect(l.left).toMatchObject({ active: 'scene', panels: ['scene'] })
+    expect(l.left).toMatchObject({ active: 'scene', panels: ['scene', 'combat'] })
     l = setOpen(l, 'left', false)
     expect(l.left.open).toBe(false)
   })
@@ -82,8 +82,13 @@ describe('panel layout', () => {
 
   it('puts a panel missing from saved data back on its default side', () => {
     const l = normalise({ left: { panels: ['characters'] }, right: { panels: ['chat', 'notes', 'members'] } }, false)
-    expect(l.left.panels).toEqual(['characters', 'scene'])
+    expect(l.left.panels).toEqual(['characters', 'scene', 'combat'])
     expect(l.right.panels).toEqual(['chat', 'notes', 'members', 'libraries'])
+  })
+
+  it('leaves out panels the campaign doesn’t have, as shown', () => {
+    const l = withoutPanels(showTab(defaultLayout(false), 'combat'), ['combat'])
+    expect(l.left).toMatchObject({ active: 'scene', panels: ['scene', 'characters'] })
   })
 
   it('closes a panel, keeps it closed on reload, and reopens it where it was', () => {

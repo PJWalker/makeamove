@@ -112,6 +112,8 @@ export interface MoveMessage extends Base {
   suggestions: MoveSuggestion[]
   /** Asks every target to roll; answers are kept in the campaign's message state. */
   save?: SaveRequest
+  /** A concentration check: failing the save ends the character's concentration. */
+  concentration?: true
 }
 
 export type ChatMessage = TextMessage | RollMessage | SystemMessage | MoveMessage

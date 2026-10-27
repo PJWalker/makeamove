@@ -16,6 +16,19 @@ const INK = 0x14161c
 /** Token names never get smaller or bigger than this on screen, in px. */
 const NAME_MIN = 11;
 const NAME_MAX = 15;
+/** A token's condition pips and whether it's that token's turn. */
+export interface TokenMarks {
+  /** One colour per condition. */
+  pips: string[];
+  turn: boolean;
+}
+const NO_MARKS: TokenMarks = { pips: [], turn: false };
+const PIP_MIN_R = 3;
+const PIP_MAX_R = 6;
+/** More conditions than this show only this many pips. */
+const PIP_MAX = 6;
+const TURN_COLOUR = 0xf0c23b;
+
 /** Tokens smaller than this on screen, in px, only show their name and bars on hover. */
 const NAME_TOKEN_MIN = 24;
 /**
@@ -159,6 +172,8 @@ export class SceneRenderer {
   private views = new Map<string, View>();
   /** What a linked token shows, from its character. */
   private statsFor: (characterId: string) => TokenStat[] = () => [];
+  /** Condition pips and the turn marker, by token (see setTokenMarks). */
+  private marksFor: (tokenId: string, characterId?: string) => TokenMarks = () => NO_MARKS;
   private elements: SceneElement[] = [];
   private byId = new Map<string, SceneElement>();
   /** Elements given a preview transform at the last render, to put back once it's gone. */
@@ -351,6 +366,12 @@ export class SceneRenderer {
   }
 
   // Elements
+
+  /** What marks each token: a pip per condition, and a ring on the one whose turn it is. */
+  setTokenMarks(marksFor: (tokenId: string, characterId?: string) => TokenMarks) {
+    this.marksFor = marksFor;
+    this.invalidate("overlay");
+  }
 
   setTokenStats(statsFor: (characterId: string) => TokenStat[]) {
     this.statsFor = statsFor;
@@ -840,6 +861,25 @@ export class SceneRenderer {
         text.position.set(Math.round(x + w / 2), Math.round(y + barH / 2));
         usedValues.add(key);
         if (p.id === hover) this.barText.setChildIndex(text, this.barText.children.length - 1);
+      });
+    }
+
+    // Condition pips along each token's top edge, and a ring round the token whose turn it is.
+    for (const el of this.elements) {
+      if (el.type !== "token" || this.hidden.has(el.id)) continue;
+      const marks = this.marksFor(el.id, el.characterId);
+      if (!marks.pips.length && !marks.turn) continue;
+      const t = this.previews.get(el.id) ?? el;
+      const c = toScreen(cam, { x: t.x, y: t.y });
+      const half = (Math.max(t.w, t.h) * cam.zoom) / 2;
+      if (marks.turn) g.circle(c.x, c.y, half + 5).stroke({ color: TURN_COLOUR, width: 3, alpha: 0.95 });
+      const r = Math.round(Math.min(PIP_MAX_R, Math.max(PIP_MIN_R, half * 0.12)));
+      const shown = marks.pips.slice(0, PIP_MAX);
+      const span = shown.length * (r * 2 + 2) - 2;
+      const top = toScreen(cam, { x: t.x, y: t.y - t.h / 2 }).y;
+      shown.forEach((colour, i) => {
+        const x = c.x - span / 2 + r + i * (r * 2 + 2);
+        g.circle(x, top, r).fill({ color: colour }).stroke({ color: INK, width: 1.5 });
       });
     }
 

@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'preact/compat'
-import { useEffect } from 'preact/hooks'
+import { useEffect, useLayoutEffect } from 'preact/hooks'
 import { useSignal } from '@preact/signals'
 import { sceneHueFromHex } from '../lib/colour'
 import type { Campaign } from '../store/campaign'
@@ -8,7 +8,8 @@ import { FloatingWindows } from './FloatingWindows'
 import { windowLayer } from '../ui/windows'
 import { CampaignDialogHost } from './ScenePanel'
 import { Sidebar } from './Sidebar'
-import { dockInsets, windowDragging } from './panelLayout'
+import { dockInsets, unavailablePanels, windowDragging } from './panelLayout'
+import { hasCombat } from '../combat/api'
 import { activeMapColour, autohide, canvasColour, setAutohide } from './canvasState'
 import { ActionDialogs } from './ActionDialogs'
 import { ChatPopups } from './ChatPopups'
@@ -23,6 +24,12 @@ const SceneCanvas = lazy(() => import('./SceneCanvas'))
 
 export function Tabletop({ campaign }: { campaign: Campaign }) {
   const scenes = useY(campaign.scenes, () => campaign.sceneViews())
+  // A system without initiative has no turn tracker.
+  const combat = useY(campaign.meta, () => hasCombat(campaign))
+  useLayoutEffect(() => {
+    unavailablePanels.value = combat ? [] : ['combat']
+    return () => (unavailablePanels.value = [])
+  }, [combat])
   const activeId = useY(campaign.members, () => campaign.activeSceneId())
   const scene = scenes.find((s) => s.id === activeId) ?? scenes[0]
 

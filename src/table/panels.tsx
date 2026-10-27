@@ -3,6 +3,7 @@ import {
   IconAllowBack,
   IconCharacters,
   IconChat,
+  IconCombat,
   IconLibraries,
   IconMembers,
   IconNotes,
@@ -21,11 +22,13 @@ import { CharactersPanel, charactersLayout } from './CharactersPanel'
 import { LibrariesPanel } from './LibrariesPanel'
 import { NotesPanel, notesLayout } from './NotesPanel'
 import { ScenePanel } from './ScenePanel'
+import { CombatPanel } from './CombatPanel'
 
 export const PANELS: Record<PanelId, { label: string; Icon: ComponentType<any> }> = {
   scene: { label: 'Scenes', Icon: IconMap },
   chat: { label: 'Chat', Icon: IconChat },
   characters: { label: 'Characters', Icon: IconCharacters },
+  combat: { label: 'Combat', Icon: IconCombat },
   libraries: { label: 'Libraries', Icon: IconLibraries },
   notes: { label: 'Notes', Icon: IconNotes },
   members: { label: 'Members', Icon: IconMembers },
@@ -38,6 +41,7 @@ export function PanelContent({ id, campaign }: { id: PanelId; campaign: Campaign
   if (id === 'characters') return <CharactersPanel campaign={campaign} />
   if (id === 'libraries') return <LibrariesPanel campaign={campaign} />
   if (id === 'notes') return <NotesPanel campaign={campaign} />
+  if (id === 'combat') return <CombatPanel campaign={campaign} />
   return <MemberList campaign={campaign} />
 }
 

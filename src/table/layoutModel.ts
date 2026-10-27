@@ -9,10 +9,10 @@
  * "dock" puts it back.
  */
 
-export type PanelId = 'scene' | 'chat' | 'characters' | 'libraries' | 'notes' | 'members'
+export type PanelId = 'scene' | 'chat' | 'characters' | 'combat' | 'libraries' | 'notes' | 'members'
 export type Side = 'left' | 'right'
 
-export const PANEL_ORDER: PanelId[] = ['scene', 'chat', 'characters', 'libraries', 'notes', 'members']
+export const PANEL_ORDER: PanelId[] = ['scene', 'chat', 'characters', 'combat', 'libraries', 'notes', 'members']
 
 export interface FloatingWindow {
   id: PanelId
@@ -50,6 +50,7 @@ const DEFAULT_SIDE: Record<PanelId, Side> = {
   notes: 'right',
   members: 'right',
   characters: 'left',
+  combat: 'left',
   libraries: 'right',
 }
 
@@ -57,7 +58,7 @@ export const sideOfDefault = (id: PanelId): Side => DEFAULT_SIDE[id]
 
 export function defaultLayout(narrow: boolean): Layout {
   return {
-    left: { active: 'characters', open: !narrow, width: SIDEBAR_DEFAULT_W, panels: ['scene', 'characters'] },
+    left: { active: 'characters', open: !narrow, width: SIDEBAR_DEFAULT_W, panels: ['scene', 'characters', 'combat'] },
     right: { active: 'chat', open: !narrow, width: SIDEBAR_DEFAULT_W, panels: ['chat', 'libraries', 'notes', 'members'] },
     floating: [],
     closed: [],
@@ -117,6 +118,18 @@ export function normalise(saved: unknown, narrow: boolean): Layout {
     if (!seen.has(id)) (DEFAULT_SIDE[id] === 'left' ? left : right).panels.push(id)
   }
   return { left: tidy(left), right: tidy(right), floating, closed, home: s.home ?? {} }
+}
+
+/** The layout as shown, leaving out panels this campaign doesn't have (Combat without initiative). */
+export function withoutPanels(l: Layout, ids: PanelId[]): Layout {
+  if (!ids.length) return l
+  const keep = (id: PanelId) => !ids.includes(id)
+  return {
+    ...l,
+    left: tidy({ ...l.left, panels: l.left.panels.filter(keep) }),
+    right: tidy({ ...l.right, panels: l.right.panels.filter(keep) }),
+    floating: l.floating.filter((w) => keep(w.id)),
+  }
 }
 
 /** Click a tab: show it, or tuck its sidebar away if it is already the open tab. */

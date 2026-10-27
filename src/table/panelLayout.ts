@@ -19,6 +19,7 @@ import {
   type Layout,
   type PanelId,
   type Side,
+  withoutPanels,
 } from './layoutModel'
 
 export { PANEL_ORDER, otherSide }
@@ -60,12 +61,18 @@ effect(() => {
 // Saved windows keep their order; anything opened later goes above them.
 for (const w of layout.value.floating) noteZ(w.z)
 
-export const sideState = (side: Side) => layout.value[side]
-export const floatingWindows = computed(() => layout.value.floating)
+/** Panels the open campaign doesn't have, such as Combat for a system without initiative. */
+export const unavailablePanels = signal<PanelId[]>([])
+
+/** The layout as it shows, without the unavailable panels. */
+export const shownLayout = computed(() => withoutPanels(layout.value, unavailablePanels.value))
+
+export const sideState = (side: Side) => shownLayout.value[side]
+export const floatingWindows = computed(() => shownLayout.value.floating)
 
 /** Pixels each side takes: its body when open, and its tab strip. */
 export const dockInsets = computed(() => {
-  const l = layout.value
+  const l = shownLayout.value
   const of = (side: Side) => {
     const s = l[side]
     const body = s.open && s.panels.length ? s.width : 0

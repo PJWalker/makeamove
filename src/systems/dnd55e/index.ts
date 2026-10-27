@@ -227,6 +227,7 @@ const SPELL_ACTIONS: ActionDef[] = SPELLS.map((s) => ({
   text: s.text,
   tags: [s.level ? `level ${s.level}` : 'cantrip'],
   ...(s.target ? { target: s.target } : s.save ? { target: AREA } : {}),
+  ...(s.trigger.includes('Concentration') ? { concentration: true } : {}),
   steps: s.attack
     ? [
         check(
@@ -275,6 +276,7 @@ const ORDINAL = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th']
 
 const RESOURCES: ResourceDef[] = [
   { id: 'hp', name: 'HP', max: 'maxHp', resets: ['long-rest'] },
+  { id: 'reaction', name: 'Reaction', max: 'reactionMax', resets: ['turn', 'short-rest', 'long-rest'] },
   { id: 'hitDice', name: 'Hit Dice', max: 'hitDiceMax', resets: ['long-rest'] },
   ...SLOT_LEVELS.map((n): ResourceDef => ({ id: `slot${n}`, name: `${ORDINAL[n - 1]}-level slots`, max: `slots${n}`, resets: ['long-rest'] })),
   { id: 'pact', name: 'Pact slots', max: 'pactSlots', resets: ['short-rest', 'long-rest'] },
@@ -309,6 +311,9 @@ export const dnd55e: GameSystem = {
   longRange: { mode: 'disadvantage', cancels: 'advantage' },
   damageTypes: DAMAGE_TYPES,
   tempHp: 'tempHp',
+  initiative: 'initiative',
+  // DC 10 or half the damage, whichever is higher, up to 30.
+  concentrationSave: (damage) => ({ action: 'save-con', dc: Math.min(30, Math.max(10, Math.floor(damage / 2))) }),
   actions: ACTIONS_ALL,
   actionCategories: [
     { id: 'attack', label: 'Attacks' },
@@ -441,6 +446,7 @@ export const dnd55e: GameSystem = {
         jack,
         hitDie: cls.hitDie,
         hitDiceMax: npc ? 0 : level,
+        reactionMax: 1,
         speed: Math.max(0, r.speed),
         initiativeBonus: r.initiativeBonus + jack,
         initiative: mods.dex + r.initiativeBonus + jack,

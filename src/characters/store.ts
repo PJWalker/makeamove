@@ -20,6 +20,8 @@ import type { ActionDef, DataValue, Derived, Effect, EffectActive, GameSystem, I
  *   resources   Y.Map  resource id -> current value (HP, spell slots…)
  *   modifiers   Y.Map  modifier id -> value (Dungeon World's forward, ongoing)
  *   conditions  array  condition ids
+ *   durations   object condition id -> how long it lasts in combat (combat/combat.ts)
+ *   concentration      the action id the character is concentrating on
  *   fields      Y.Map  an NPC's system-defined fields
  *   inventory   Y.Map  item instances
  *
@@ -74,6 +76,10 @@ export interface CharacterView {
   resources: Record<string, number>
   /** Condition ids. */
   conditions: string[]
+  /** How long conditions last in combat, by condition id; those without one last until removed. */
+  durations: Record<string, Duration>
+  /** The action (a spell) the character is concentrating on. */
+  concentration?: string
   /** The system's standing roll modifiers, by id. */
   modifiers: Record<string, number>
   /** An NPC's system-defined fields, by id. */
@@ -90,6 +96,17 @@ export interface CharacterView {
   base?: string
   /** Actions learned beyond what their system gives them (dropped onto them), by id. */
   learned: string[]
+}
+
+/**
+ * A condition's time left: so many rounds, counted down at the start or end
+ * of one combatant's turn (usually whoever caused it).
+ */
+export interface Duration {
+  rounds: number
+  tick: 'start' | 'end'
+  /** The combatant whose turn counts it down. */
+  of: string
 }
 
 export type CharacterMap = Y.Map<any>
@@ -166,6 +183,8 @@ export function characterView(id: string, m: CharacterMap, system: GameSystem, b
     data,
     resources: merged<number>('resources'),
     conditions: (get('conditions') as string[] | undefined) ?? [],
+    durations: (get('durations') as Record<string, Duration> | undefined) ?? {},
+    concentration: get('concentration'),
     modifiers: merged<number>('modifiers'),
     fields,
     inventory,

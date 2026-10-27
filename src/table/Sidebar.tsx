@@ -15,6 +15,7 @@ import {
   dockPanel,
   dockTarget,
   layout,
+  shownLayout,
   otherSide,
   selectPanel,
   reorderPanel,
@@ -39,7 +40,7 @@ const DRAG_THRESHOLD = 10
  * being dragged, when it shows as a place to drop it.
  */
 export function Sidebar({ side, campaign }: { side: Side; campaign: Campaign }) {
-  const s = layout.value[side]
+  const s = shownLayout.value[side]
   const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(null)
   const empty = s.panels.length === 0
   if (empty && !windowDragging.value) return null
@@ -203,7 +204,7 @@ function SidebarResizeHandle({ side }: { side: Side }) {
  * the way the tabs are stacked: down the strip slides up, up the strip slides down.
  */
 function switchTo(id: PanelId, side: Side) {
-  const s = layout.value[side]
+  const s = shownLayout.value[side]
   const from = s.active
   const replacing = s.open && from !== null && from !== id
   const direction = from !== null && s.panels.indexOf(id) > s.panels.indexOf(from) ? 'vt-tab-next' : 'vt-tab-prev'

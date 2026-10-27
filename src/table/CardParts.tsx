@@ -71,11 +71,11 @@ export function SaveRequests({ campaign, m }: { campaign: Campaign; m: MoveMessa
                 </>
               ) : (gm || canAnswer(campaign, t)) ? (
                 <span class="card-target-actions">
-                  <Button size="sm" variant="ghost" onClick={() => answerSave(campaign, m.id, t, save)}>
+                  <Button size="sm" variant="ghost" onClick={() => answerSave(campaign, m.id, t, save, undefined, m.concentration)}>
                     Roll
                   </Button>
                   {modes.map((mode) => (
-                    <Button key={mode.id} size="sm" variant="ghost" onClick={() => answerSave(campaign, m.id, t, save, mode.id)}>
+                    <Button key={mode.id} size="sm" variant="ghost" onClick={() => answerSave(campaign, m.id, t, save, mode.id, m.concentration)}>
                       {mode.label}
                     </Button>
                   ))}

@@ -14,6 +14,7 @@ const char = (over: Partial<CharacterView> = {}): CharacterView => ({
   data: { race: '', alignment: '', xp: 0, coin: 0, hpBonus: 0 },
   resources: { hp: 10 },
   conditions: [],
+  durations: {},
   modifiers: {},
   fields: {},
   inventory: [],

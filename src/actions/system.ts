@@ -8,6 +8,7 @@ import {
   addItem,
   canEdit,
   updateItem,
+  rest,
 } from '../characters/api'
 import { actionsFor, derive } from '../characters/store'
 import type { Campaign } from '../store/campaign'
@@ -53,6 +54,26 @@ export function systemActions(campaign: Campaign): Action[] {
         selectCharacter(campaign, c.id)
         showPanel('characters')
       },
+    })
+  }
+
+  // Rests, for systems whose resources refill on them.
+  const rests = new Set(system.resources.flatMap((r) => r.resets ?? []))
+  for (const [event, title] of [
+    ['short-rest', 'Short Rest'],
+    ['long-rest', 'Long Rest'],
+  ] as const) {
+    if (!rests.has(event)) continue
+    out.push({
+      id: `rest:${event}`,
+      kind: 'command',
+      title,
+      aliases: ['rest'],
+      source: me?.name ?? system.name,
+      detail: me ? `Refill ${me.name}’s resources` : undefined,
+      mine: !!me,
+      available: reason,
+      run: () => me && rest(campaign, me.id, event),
     })
   }
 

@@ -2,7 +2,7 @@ import { postRoll } from '../chat/send'
 import type { Campaign } from '../store/campaign'
 import { activeTool } from '../scene/tools'
 import { autohide, canvasCommands, dialogRequest, setAutohide } from '../table/canvasState'
-import { PANEL_ORDER, showPanel } from '../table/panelLayout'
+import { PANEL_ORDER, showPanel, unavailablePanels } from '../table/panelLayout'
 import { PANELS } from '../table/panels'
 import { TOOLS } from '../table/Toolbar'
 import {
@@ -126,6 +126,7 @@ export function coreActions(campaign: Campaign): Action[] {
   )
 
   for (const id of PANEL_ORDER) {
+    if (unavailablePanels.value.includes(id)) continue
     const { label, Icon } = PANELS[id]
     out.push({
       id: `panel:${id}`,

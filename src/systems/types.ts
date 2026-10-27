@@ -28,8 +28,8 @@ export interface DataField {
   for?: 'pc' | 'npc'
 }
 
-/** Events that refill resources. */
-export type ResetEvent = 'short-rest' | 'long-rest'
+/** Events that refill resources: rests, and in combat the start of the character's turn. */
+export type ResetEvent = 'short-rest' | 'long-rest' | 'turn'
 
 /** A counter with a maximum: hit points, spell slots, a class resource. */
 export interface ResourceDef {
@@ -155,6 +155,8 @@ export interface ActionDef {
   text: string
   /** What it's aimed at, if it asks for targets. */
   target?: TargetSpec
+  /** Lasts while the character concentrates: using it ends any other concentration. */
+  concentration?: boolean
   /** What it does when it's used. With no steps it is just read out. */
   steps: ActionStep[]
   /** Follow-up buttons offered when it has no check (a heal, a spell's damage), by follow-up id. */
@@ -305,6 +307,10 @@ export interface GameSystem {
   damageTypes?: DamageTypeDef[]
   /** A data field that soaks damage before hit points do: temporary HP. */
   tempHp?: string
+  /** The action that rolls initiative. Systems without one have no turn tracker. */
+  initiative?: string
+  /** The save a concentrating character makes on taking damage. */
+  concentrationSave?(damage: number): { action: string; dc: number }
   actions: ActionDef[]
   actionCategories: ActionCategory[]
   followUps: FollowUpDef[]

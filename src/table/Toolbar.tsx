@@ -23,7 +23,7 @@ import {
 } from '../ui/icons'
 import { isTyping } from '../ui/keys'
 import { dialogRequest } from './canvasState'
-import { layout, PANEL_ORDER, setPanelClosed } from './panelLayout'
+import { layout, PANEL_ORDER, setPanelClosed, unavailablePanels } from './panelLayout'
 import { PANELS } from './panels'
 import { ContextMenu, type MenuItem } from './ContextMenu'
 
@@ -137,7 +137,7 @@ function CampaignMenu() {
     { label: 'Help and shortcuts…', Icon: IconHelp, onSelect: () => (dialogRequest.value = 'help') },
     'divider',
     // Which panels the table has: ticked ones are in a sidebar or a window.
-    ...PANEL_ORDER.map(
+    ...PANEL_ORDER.filter((id) => !unavailablePanels.value.includes(id)).map(
       (id): MenuItem => ({
         label: PANELS[id].label,
         Icon: PANELS[id].Icon,

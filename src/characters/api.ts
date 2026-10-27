@@ -194,7 +194,9 @@ export async function setPortrait(campaign: Campaign, id: string, file: Blob) {
 
 /** Set one of the core fields (name, level, notes, portrait…). */
 export function setField(campaign: Campaign, id: string, key: string, value: unknown) {
-  campaign.characters.get(id)?.set(key, value)
+  const m = campaign.characters.get(id)
+  if (value === undefined) m?.delete(key)
+  else m?.set(key, value)
 }
 
 /** Add to a numeric core field, never below zero. */
@@ -328,6 +330,8 @@ export function makeMove(campaign: Campaign, characterId: string, move: ActionDe
   const { spent, ...result } = performMove(system, move, c, d, choice, undefined, { targets, valueAt })
   // A roll uses up modifiers that last for one roll; text-only moves leave them.
   for (const id of spent) setModifier(campaign, c.id, id, 0)
+  // A concentration spell ends any other.
+  if (move.concentration) setField(campaign, c.id, 'concentration', move.id)
   return campaign.chat.post(
     {
       kind: 'move',
@@ -364,7 +368,7 @@ export function canAnswer(campaign: Campaign, t: MoveTarget): boolean {
  * action as the target's character (or the bare base roll for an unlinked
  * token), and record the total against the DC on the card.
  */
-export function answerSave(campaign: Campaign, messageId: string, t: MoveTarget, save: SaveRequest, mode?: string) {
+export function answerSave(campaign: Campaign, messageId: string, t: MoveTarget, save: SaveRequest, mode?: string, concentration?: boolean) {
   const system = systemOf(campaign)
   const action = system.actions.find((a) => a.id === save.action)
   const c = getCharacter(campaign, t.characterId)
@@ -372,7 +376,11 @@ export function answerSave(campaign: Campaign, messageId: string, t: MoveTarget,
     c && action ? planMove(system, action, c, derive(c, system), { mode }).formula : (system.rollModes?.find((m) => m.id === mode)?.roll ?? system.baseRoll)
   const r = roll(formula)
   const answer: SaveAnswer = { total: r.total, detail: describe(r), success: r.total >= save.dc, by: device.value.id }
-  setState(campaign.messageState, messageId, saveField(t.id), answer)
+  campaign.doc.transact(() => {
+    setState(campaign.messageState, messageId, saveField(t.id), answer)
+    // A failed concentration save ends the spell.
+    if (concentration && !answer.success && c) setField(campaign, c.id, 'concentration', undefined)
+  })
 }
 
 /**
@@ -400,6 +408,37 @@ export function applyDamage(campaign: Campaign, messageId: string, t: MoveTarget
     const before = getState<number>(campaign.messageState, messageId, appliedField(t.id)) ?? 0
     setState(campaign.messageState, messageId, appliedField(t.id), before + (healing ? amount : -amount))
   })
+  if (!healing && amount > 0) checkConcentration(campaign, c, amount)
+}
+
+/** A concentrating character who takes damage is asked for the system's concentration save, on a card of its own. */
+function checkConcentration(campaign: Campaign, c: CharacterView, damage: number) {
+  const system = systemOf(campaign)
+  if (!c.concentration || !system.concentrationSave) return
+  const { action, dc } = system.concentrationSave(damage)
+  const spell = system.actions.find((a) => a.id === c.concentration)?.name ?? 'a spell'
+  void campaign.chat.post(
+    {
+      kind: 'move',
+      moveId: 'concentration',
+      moveName: 'Concentration',
+      trigger: `Concentrating on ${spell}`,
+      characterId: c.id,
+      characterName: c.name,
+      targets: [{ id: c.id, name: c.name, characterId: c.id }],
+      outcome: `${c.name} took ${damage} damage while concentrating on ${spell}.`,
+      suggestions: [],
+      save: {
+        action,
+        name: system.actions.find((a) => a.id === action)?.name ?? action,
+        dc,
+        success: 'Concentration holds.',
+        failure: `${spell} ends.`,
+      },
+      concentration: true,
+    },
+    { id: device.value.id, name: myName(campaign) },
+  )
 }
 
 /* Inventory */

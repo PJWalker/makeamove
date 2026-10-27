@@ -1,4 +1,5 @@
 import { menuTrigger } from '../ui/menuTrigger'
+import { addTokens, combatantForToken, hasCombat, tokenMarksSource } from '../combat/api'
 import { bounds } from '../scene/geometry'
 import { setMorphOrigin } from '../ui/morph'
 import { openPopup } from '../ui/popup'
@@ -34,6 +35,7 @@ import {
   IconToBack,
   IconToFront,
   IconToken,
+  IconCombat,
   IconUndo,
   IconUnlock,
 } from '../ui/icons'
@@ -104,6 +106,21 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
     push()
     campaign.characters.observeDeep(push)
     return () => campaign.characters.unobserveDeep(push)
+  }, [ready.value, campaign])
+
+  // Condition pips on linked tokens, and the ring on whoever's turn it is.
+  useEffect(() => {
+    if (!ready.value) return
+    const push = () => renderer.setTokenMarks(tokenMarksSource(campaign))
+    push()
+    campaign.characters.observeDeep(push)
+    campaign.combat.observe(push)
+    campaign.combatants.observe(push)
+    return () => {
+      campaign.characters.unobserveDeep(push)
+      campaign.combat.unobserve(push)
+      campaign.combatants.unobserve(push)
+    }
   }, [ready.value, campaign])
 
   // Open the scene's subdocument and drive it, swapping on scene change.
@@ -241,6 +258,19 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
         tokenTab.value = 'token'
         tokenOptions.value = one.id
       } })
+    }
+    const tokens = sel.filter((el) => el.type === 'token')
+    if (tokens.length && sceneId && hasCombat(campaign) && campaign.isGm()) {
+      const out = tokens.filter((t) => !combatantForToken(campaign, t.id))
+      items.push({
+        label: 'Add to combat',
+        Icon: IconCombat,
+        disabled: !out.length,
+        onSelect: () => {
+          addTokens(campaign, sceneId, out.map((t) => ({ id: t.id, name: t.name, ...(t.type === 'token' && t.characterId ? { characterId: t.characterId } : {}) })))
+          showPanel('combat')
+        },
+      })
     }
     if (one?.type === 'map') items.push({ label: 'Use as token', Icon: IconToken, onSelect: () => ctl.convert(one.id, 'token') })
     if (one?.type === 'token' && one.image) {

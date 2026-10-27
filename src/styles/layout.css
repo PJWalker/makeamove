@@ -2999,3 +2999,119 @@
     padding: 0 var(--space-4) var(--space-4);
   }
 }
+
+/* Combat: the turn tracker */
+@layer layout {
+  .combat-panel {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    min-height: 0;
+    overflow: auto;
+  }
+  .combat-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    background: var(--surface-sunken);
+  }
+  .combat-round {
+    font-family: var(--font-display);
+    font-weight: 600;
+  }
+  .combat-controls {
+    display: flex;
+    gap: var(--space-1);
+  }
+  .combat-list {
+    margin: 0;
+    padding: var(--space-1) 0;
+    list-style: none;
+  }
+  .combat-row {
+    display: grid;
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-3);
+    border-inline-start: 3px solid transparent;
+    &:nth-child(even) {
+      background: color-mix(in oklab, var(--surface-sunken) 50%, transparent);
+    }
+    &[data-current] {
+      border-inline-start-color: var(--accent);
+      background: color-mix(in oklab, var(--accent) 12%, transparent);
+    }
+    &[data-hidden] {
+      opacity: 0.6;
+    }
+  }
+  .combat-main {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .combat-init {
+    width: 3.5em;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+  }
+  .combat-name {
+    flex: 1;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    &:hover {
+      color: var(--accent);
+    }
+    [data-current] & {
+      font-weight: 700;
+    }
+  }
+  .combat-conditions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    padding-inline-start: calc(3.5em + var(--space-2));
+  }
+  .combat-chip-x {
+    margin-inline-start: 4px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+  }
+  .combat-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-2);
+    background: var(--surface-sunken);
+    font-size: var(--text-sm);
+    .input {
+      width: auto;
+    }
+  }
+  .combat-form-rounds {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    input {
+      width: 4em;
+    }
+  }
+  .combat-empty {
+    padding: var(--space-3);
+    margin: 0;
+  }
+}
