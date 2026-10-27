@@ -91,4 +91,35 @@ describe('SyncSession', () => {
     expect([...sa.awareness.getStates().values()].map((s) => s.user?.name)).not.toContain('Robin')
     sa.destroy()
   })
+
+  it('shares a subdocument’s own awareness only between peers who have it open', async () => {
+    const room = new MemoryRoom()
+    const a = rootDoc()
+    const b = rootDoc()
+    const sa = new SyncSession(a, room.join('a'))
+    const sb = new SyncSession(b, room.join('b'))
+    const note = new Y.Doc({ guid: 'camp/note/n1' })
+    a.getMap('notes').set('n1', note)
+    await room.settle()
+    const theirs = b.getMap('notes').get('n1') as Y.Doc
+
+    note.load()
+    sa.awarenessFor(note).setLocalStateField('user', { name: 'Ann' })
+    theirs.load()
+    const bAware = sb.awarenessFor(theirs)
+    bAware.setLocalStateField('user', { name: 'Bo' })
+    await room.settle()
+    const names = (x: typeof bAware) => [...x.getStates().values()].map((s) => s.user?.name).sort()
+    // Bo hears Ann on joining the note, and Ann hears Bo.
+    expect(names(bAware)).toEqual(['Ann', 'Bo'])
+    expect(names(sa.awarenessFor(note))).toEqual(['Ann', 'Bo'])
+    // The root's presence isn't touched.
+    expect([...sb.awareness.getStates().values()].map((s) => s.user?.name)).not.toContain('Ann')
+
+    theirs.destroy()
+    await room.settle()
+    expect(names(sa.awarenessFor(note))).toEqual(['Ann'])
+    sa.destroy()
+    sb.destroy()
+  })
 })

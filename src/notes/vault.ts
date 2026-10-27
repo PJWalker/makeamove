@@ -66,6 +66,11 @@ export class Vault {
     this.session = new SyncSession(this.doc, transport)
   }
 
+  /** The connection to the campaign's other GM devices, while there is one. */
+  get sync(): SyncSession | null {
+    return this.session
+  }
+
   disconnect() {
     this.session?.destroy()
     this.session = null

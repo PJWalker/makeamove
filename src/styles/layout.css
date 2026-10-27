@@ -3162,3 +3162,63 @@
     font-size: var(--text-sm);
   }
 }
+
+/* Notes: carets of others editing, images, and the GM's secrets */
+@layer layout {
+  .note-caret {
+    position: relative;
+    margin-inline: -1px;
+    border-inline-start: 2px solid var(--caret);
+    pointer-events: none;
+    word-break: normal;
+  }
+  .note-caret-label {
+    position: absolute;
+    bottom: 100%;
+    left: -2px;
+    padding: 0 4px;
+    border-radius: 3px 3px 3px 0;
+    background: var(--caret);
+    color: #111;
+    font: 600 11px/1.5 var(--font-ui);
+    white-space: nowrap;
+    user-select: none;
+  }
+  .note-body .collaboration-carets__selection {
+    border-radius: 2px;
+  }
+  .note-image {
+    margin: 0;
+    max-width: 100%;
+    background: var(--surface-sunken);
+    &[data-loaded] {
+      background: none;
+    }
+    img {
+      display: block;
+      max-width: 100%;
+      height: auto;
+    }
+    &.ProseMirror-selectednode {
+      outline: 2px solid var(--accent);
+    }
+  }
+  .note-secret {
+    --bevel: var(--bevel-sm, 5px);
+    display: grid;
+    gap: 2px;
+    padding: var(--space-1) var(--space-2);
+    background: color-mix(in oklab, var(--accent) 10%, var(--surface-sunken));
+    border-inline-start: 3px solid var(--accent);
+    &.ProseMirror-selectednode {
+      outline: 2px solid var(--accent);
+    }
+  }
+  .note-secret-label {
+    color: var(--accent);
+    cursor: context-menu;
+  }
+  .note-secret-body .note-body {
+    min-height: 1.5em;
+  }
+}

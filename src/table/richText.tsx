@@ -7,6 +7,9 @@ import type { SuggestionKeyDownProps, SuggestionProps } from '@tiptap/suggestion
 import { ySyncPluginKey } from '@tiptap/y-tiptap'
 import { render } from 'preact'
 import type * as Y from 'yjs'
+import type { Awareness } from 'y-protocols/awareness'
+import { IconDelete, IconImage, IconReveal, IconSecret } from '../ui/icons'
+import { carets, deleteSecret, insertImages, makeSecret, NoteImage, revealSecret, secretFragment, secretNode, SECRET_NODE } from './noteExtensions'
 import { getNote, type LinkKind } from '../notes/api'
 import { LINK_NODE } from '../notes/links'
 import { followLink, linkLabel, linkTargets, linkTip, openInSidebar, type LinkTarget } from '../notes/targets'
@@ -41,6 +44,14 @@ export interface RichTextOptions {
   shared: boolean
   /** After each edit made here (not ones arriving from peers). */
   onLocalEdit?: (editor: Editor) => void
+  /** Others editing the same text, to show their carets, and the name to show for yours. */
+  carets?: { awareness: Awareness; name: string }
+  /**
+   * A note's secrets: the GM vault's document, where their text lives, or
+   * null for a player, who sees none of them. Absent where text has no
+   * secrets (sheets, chat, a secret's own text).
+   */
+  secrets?: { vault: Y.Doc | null }
 }
 
 const KIND_ICON: Partial<Record<LinkKind, Icon>> = { note: IconNotes, character: IconCharacters, scene: IconMap }
@@ -200,10 +211,34 @@ function suggestionList() {
 }
 
 
+/** Ask for image files and put them in at the cursor. */
+function pickImages(editor: Editor) {
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = 'image/*'
+  input.multiple = true
+  input.onchange = () => void insertImages(editor, [...(input.files ?? [])])
+  input.click()
+}
+
 /** Put a rich-text editor in `host`; returns it and a function that takes it down. */
-export function mountRichText(host: HTMLElement, o: RichTextOptions) {
+export function mountRichText(host: HTMLElement, o: RichTextOptions): { editor: Editor; destroy: () => void } {
   const { campaign } = o
-  const editor = new Editor({
+  const vault = o.secrets?.vault ?? null
+  /** A secret's own text, edited in place inside the note (GM only). */
+  const mountSecret = (body: HTMLElement, id: string, doc: Y.Doc): (() => void) => {
+    const nested = mountRichText(body, {
+      campaign,
+      fragment: secretFragment(doc, id),
+      placeholder: 'Only you can see this.',
+      label: 'Secret text',
+      editable: o.editable,
+      noteId: o.noteId,
+      shared: false,
+    })
+    return nested.destroy
+  }
+  const editor: Editor = new Editor({
     element: host,
     editable: o.editable ?? true,
     extensions: [
@@ -212,8 +247,27 @@ export function mountRichText(host: HTMLElement, o: RichTextOptions) {
       Collaboration.configure({ fragment: o.fragment }),
       Placeholder.configure({ placeholder: o.placeholder }),
       linkExtension(campaign, o),
+      NoteImage,
+      ...(o.carets ? [carets(o.carets.awareness, o.carets.name)] : []),
+      ...(o.secrets ? [secretNode(vault ? (host, id) => mountSecret(host, id, vault) : null)] : []),
     ],
-    editorProps: { attributes: { class: 'note-body', 'aria-label': o.label } },
+    editorProps: {
+      attributes: { class: 'note-body', 'aria-label': o.label },
+      // Image files pasted or dropped in are stored and shown in place.
+      handlePaste: (_view, e) => {
+        const files = [...(e.clipboardData?.files ?? [])].filter((f) => f.type.startsWith('image/'))
+        if (!files.length || !editor.isEditable) return false
+        void insertImages(editor, files)
+        return true
+      },
+      handleDrop: (view, e) => {
+        const files = [...(e.dataTransfer?.files ?? [])].filter((f) => f.type.startsWith('image/'))
+        if (!files.length || !editor.isEditable) return false
+        e.preventDefault()
+        void insertImages(editor, files, view.posAtCoords({ left: e.clientX, top: e.clientY })?.pos)
+        return true
+      },
+    },
     onUpdate: ({ editor: ed, transaction }) => {
       // Edits that arrived from peers are theirs to record.
       if (transaction.getMeta(ySyncPluginKey)?.isChangeOrigin) return
@@ -247,6 +301,24 @@ export function mountRichText(host: HTMLElement, o: RichTextOptions) {
     return null
   }
 
+  // Right-clicking text: add an image; for the GM, make it secret, or reveal or delete a secret.
+  const textMenu = menuTrigger((x, y) => {
+    if (!editor.isEditable) return
+    const items: MenuItem[] = [{ label: 'Insert image…', Icon: IconImage, onSelect: () => pickImages(editor) }]
+    if (vault) {
+      const secret = menuSecret
+      if (secret) {
+        const pos = editor.view.posAtDOM(secret, 0)
+        items.push('divider', { label: 'Reveal to players', Icon: IconReveal, onSelect: () => revealSecret(editor, vault, pos) })
+        items.push({ label: 'Delete secret', Icon: IconDelete, danger: true, onSelect: () => deleteSecret(editor, vault, pos) })
+      } else {
+        items.push('divider', { label: 'Make secret', Icon: IconSecret, onSelect: () => makeSecret(editor, vault) })
+      }
+    }
+    linkMenu.value = { x, y, items }
+  })
+  let menuSecret: HTMLElement | null = null
+
   // Right-clicking a link chip: open it elsewhere, or change what it says.
   const menu = menuTrigger((x, y) => {
     const chip = menuChip
@@ -278,13 +350,24 @@ export function mountRichText(host: HTMLElement, o: RichTextOptions) {
     if (items.length) linkMenu.value = { x, y, items }
   })
   let menuChip: HTMLElement | null = null
+  /** Whether a press is for the text menu: in this editor's own text, not a nested secret's, with notes' extras on. */
+  const ownText = (e: Event) => {
+    if (!o.secrets) return false
+    const secret = (e.target as Element).closest<HTMLElement>(`[data-type="${SECRET_NODE}"]`)
+    // A secret's text has its own editor and menu; its label is this one's.
+    if (secret && !(e.target as Element).closest('.note-secret-label')) return false
+    menuSecret = secret
+    return true
+  }
   const onMenuPress = (e: PointerEvent) => {
     menuChip = chipAt(e)
     if (menuChip) menu.onPointerDown(e)
+    else if (ownText(e)) textMenu.onPointerDown(e)
   }
   const onContextMenu = (e: MouseEvent) => {
     menuChip = chipAt(e)
     if (menuChip) menu.onContextMenu(e)
+    else if (ownText(e)) textMenu.onContextMenu(e)
   }
   host.addEventListener('pointerdown', onMenuPress)
   host.addEventListener('contextmenu', onContextMenu)
