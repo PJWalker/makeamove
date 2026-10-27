@@ -2012,8 +2012,9 @@
   .item-ghost .list-lead {
     color: var(--accent);
   }
-  /* Where an item will land: a character's inventory, or their row in the list. */
+  /* Where an item or move will land: a character's inventory or moves, or their row in the list. */
   .inventory[data-dropping='true'],
+  .sheet-section[data-dropping='true'],
   .list-pick[data-dropping='true'] {
     outline: 2px dashed var(--text-muted);
     outline-offset: 2px;
@@ -2022,6 +2023,7 @@
     outline-offset: -2px;
   }
   .inventory[data-dropped='true'],
+  .sheet-section[data-dropped='true'],
   .list-pick[data-dropped='true'] {
     animation: item-landed 600ms var(--ease);
   }

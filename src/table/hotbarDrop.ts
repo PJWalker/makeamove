@@ -1,14 +1,16 @@
 import { dropLine, indexAmong } from '../ui/reorder'
+import { dropMarker, dropOn, dropTargetAt, type DragEntity } from './entityDrag'
 
 const THRESHOLD = 5
 
 /**
  * Drag a row (the pressed element) onto the hotbar. A copy follows the
  * pointer, and over the bar a white line marks where it would be pinned;
- * releasing there calls `onDrop` with that position. A press that never
- * travels is left alone, so it stays an ordinary click.
+ * releasing there calls `onDrop` with that position. With an `entity`, it
+ * can instead land on a character or in a note (see entityDrag.ts). A press
+ * that never travels is left alone, so it stays an ordinary click.
  */
-export function dragToHotbar(e: PointerEvent, onDrop: (index: number) => void) {
+export function dragToHotbar(e: PointerEvent, onDrop: (index: number) => void, entity?: DragEntity) {
   if (e.button !== 0) return
   const row = e.currentTarget as HTMLElement
   const startX = e.clientX
@@ -16,6 +18,9 @@ export function dragToHotbar(e: PointerEvent, onDrop: (index: number) => void) {
   const grab = row.getBoundingClientRect()
   const marker = dropLine('x')
   let ghost: HTMLElement | null = null
+  // Off the hotbar, it can also land on a character or in a note.
+  const mark = dropMarker()
+  const elsewhere = (ev: PointerEvent) => (entity && !over(ev) ? dropTargetAt(ev.clientX, ev.clientY, entity) : null)
 
   const bar = () => document.querySelector<HTMLElement>('.hotbar')
   const slots = () => [...(bar()?.querySelectorAll<HTMLElement>('.hotbar-slot') ?? [])]
@@ -40,6 +45,7 @@ export function dragToHotbar(e: PointerEvent, onDrop: (index: number) => void) {
     if (b) b.dataset.dropping = String(over(ev))
     if (over(ev)) marker.show(slots(), indexAmong(slots(), 'x', ev))
     else marker.hide()
+    mark(elsewhere(ev))
   }
 
   function end(ev: PointerEvent, commit: boolean) {
@@ -48,6 +54,7 @@ export function dragToHotbar(e: PointerEvent, onDrop: (index: number) => void) {
     window.removeEventListener('pointercancel', cancel)
     marker.hide()
     delete bar()?.dataset.dropping
+    mark(null)
     if (!ghost) return
     ghost.remove()
     document.documentElement.classList.remove('is-reordering')
@@ -56,6 +63,8 @@ export function dragToHotbar(e: PointerEvent, onDrop: (index: number) => void) {
     window.addEventListener('click', swallow, { capture: true, once: true })
     setTimeout(() => window.removeEventListener('click', swallow, { capture: true }), 0)
     if (commit && over(ev)) onDrop(indexAmong(slots(), 'x', ev))
+    const target = commit ? elsewhere(ev) : null
+    if (target && entity) dropOn(target, entity, ev.clientX, ev.clientY)
   }
   const up = (ev: PointerEvent) => end(ev, true)
   const cancel = (ev: PointerEvent) => end(ev, false)

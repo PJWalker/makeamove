@@ -6,6 +6,7 @@ import {
   setField,
   setModifier,
   setNpcField,
+  setLearned,
   setScore,
   startMove,
   toggleCondition,
@@ -174,9 +175,15 @@ export function DungeonWorldSheet({ campaign, system, c }: { campaign: Campaign;
         </div>
       </section>
 
-      <section class="sheet-section" aria-label="Moves">
+      <section class="sheet-section" aria-label="Moves" data-move-drop={editable ? c.id : undefined}>
         <h3 class="sheet-heading">Moves</h3>
-        <MoveList system={system} moves={moves} onMake={make} />
+        <MoveList
+          system={system}
+          moves={moves}
+          onMake={make}
+          learned={c.learned}
+          onForget={editable ? (m) => setLearned(campaign, c.id, m.id, false) : undefined}
+        />
       </section>
 
       <Inventory campaign={campaign} c={c} d={d} editable={editable} />

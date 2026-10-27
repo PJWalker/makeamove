@@ -261,6 +261,15 @@ export function toggleCondition(campaign: Campaign, id: string, condition: strin
   m.set('conditions', now.includes(condition) ? now.filter((x) => x !== condition) : [...now, condition])
 }
 
+/** Teach a character an action (a move dropped on them), or with `known` false, let them forget it. */
+export function setLearned(campaign: Campaign, id: string, actionId: string, known: boolean) {
+  const m = campaign.characters.get(id)
+  if (!m) return
+  const now: string[] = (m.has('learned') ? m.get('learned') : baseOf(campaign, m)?.get('learned')) ?? []
+  if (known === now.includes(actionId)) return
+  m.set('learned', known ? [...now, actionId] : now.filter((x) => x !== actionId))
+}
+
 /** Set one of an NPC's system-defined fields. */
 export function setNpcField(campaign: Campaign, id: string, field: string, value: string | number) {
   part(campaign, id, 'fields')?.set(field, value)

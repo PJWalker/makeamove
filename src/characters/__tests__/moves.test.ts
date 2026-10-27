@@ -18,6 +18,7 @@ const char = (over: Partial<CharacterView> = {}): CharacterView => ({
   fields: {},
   notes: '',
   inventory: [],
+  learned: [],
   ...over,
 })
 const move = (id: string) => dw.actions.find((m) => m.id === id)!

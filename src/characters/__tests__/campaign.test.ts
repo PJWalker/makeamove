@@ -8,7 +8,8 @@ import * as Y from 'yjs'
 import { systemActions } from '../../actions/system'
 import { Campaign, createCampaign } from '../../store/campaign'
 import { device } from '../../store/device'
-import { addItem, createFolder, deleteCharacter, deleteFolder, getCharacter, listFolders, makeMove, moveRequest, moveToFolder, newCharacter, newNpc, renameFolder, tokenStatsSource, selectedCharacterId, setData, setModifier, startMove, systemOf, targetRequest, updateItem } from '../api'
+import { addItem, createFolder, deleteCharacter, deleteFolder, getCharacter, listFolders, makeMove, moveRequest, moveToFolder, newCharacter, newNpc, renameFolder, tokenStatsSource, selectedCharacterId, setData, setLearned, setModifier, startMove, systemOf, targetRequest, updateItem } from '../api'
+import { actionsFor, derive } from '../store'
 import { defaultHotbar, editHotbar, hotbarSlots, moveTo, pin, placeAt, insertAt, shift, unpin, MAX_SLOTS } from '../hotbar'
 
 async function setUp() {
@@ -51,6 +52,21 @@ describe('characters in a campaign', () => {
     const msg = await makeMove(c, id, sys.actions.find((m) => m.id === 'hack-and-slash')!)
     expect(msg).toMatchObject({ kind: 'move', moveId: 'hack-and-slash', characterName: 'Ayla' })
     expect(getCharacter(c, id)!.modifiers.forward).toBe(0)
+    c.destroy()
+  })
+
+  it('learns a move dropped on it, beyond its class, and can forget it', async () => {
+    const c = await setUp()
+    const id = newCharacter(c, 'Ayla', 'fighter')
+    const sys = systemOf(c)
+    const has = () => actionsFor(getCharacter(c, id)!, sys, derive(getCharacter(c, id)!, sys)).map((a) => a.id)
+    expect(has()).not.toContain('cast-a-spell')
+    setLearned(c, id, 'cast-a-spell', true)
+    setLearned(c, id, 'cast-a-spell', true)
+    expect(getCharacter(c, id)!.learned).toEqual(['cast-a-spell'])
+    expect(has()).toContain('cast-a-spell')
+    setLearned(c, id, 'cast-a-spell', false)
+    expect(has()).not.toContain('cast-a-spell')
     c.destroy()
   })
 

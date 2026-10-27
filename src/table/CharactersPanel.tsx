@@ -163,6 +163,7 @@ function CharacterList({
         pick={{
           'data-kind': c.kind,
           'data-item-drop': mine ? c.id : undefined,
+          'data-move-drop': mine ? c.id : undefined,
           onPointerDown: (e) => {
             trigger.onPointerDown(e)
             dragToFolder(

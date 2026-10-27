@@ -8,7 +8,7 @@ import { Segmented } from '../ui/Segmented'
 import { entryIcon } from '../ui/entryIcons'
 import { List, ListGroup, Tag } from '../ui/List'
 import { EntryRow, EntryWindow, rollTag, useEntryWindows } from './EntryWindow'
-import { dragItem } from './itemDrag'
+import { dragEntity, entity } from './entityDrag'
 import { libraryView as view, type KindFilter } from './libraryView'
 import { makeVerb } from './sheetParts'
 
@@ -117,9 +117,19 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
                         Icon={entryIcon(e.kind, e.icon)}
                         tag={tagOf(e)}
                         meta={metaOf(e)}
-                        tip={e.kind === 'item' ? `${e.text}\n\nDrag onto a character to give it to them.` : e.text}
+                        tip={
+                          e.kind === 'item'
+                            ? `${e.text}\n\nDrag onto a character to give it to them, or into a note to link it.`
+                            : e.kind === 'move'
+                              ? `${e.text}\n\nDrag onto a character to teach it to them, or into a note to link it.`
+                              : e.text
+                        }
                         onOpen={(row) => windows.show(keyOf(s.id, e), row)}
-                        onPointerDown={e.kind === 'item' ? (ev) => dragItem(ev, (id) => addItem(campaign, id, e.item)) : undefined}
+                        onPointerDown={
+                          e.kind === 'item' || e.kind === 'move'
+                            ? (ev) => dragEntity(ev, entity(campaign, e.kind, e.id, e.name))
+                            : undefined
+                        }
                       >
                         {actions(e)}
                       </EntryRow>

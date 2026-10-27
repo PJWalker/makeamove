@@ -13,6 +13,7 @@ import { LINK_NODE, linksIn } from '../notes/links'
 import { followLink, linkLabel, linkTargets, type LinkTarget } from '../notes/targets'
 import type { Campaign } from '../store/campaign'
 import { entryIcon } from '../ui/entryIcons'
+import { dragEntity, entity, registerLinkDrop } from './entityDrag'
 import { IconCharacters, IconMap, IconNotes, type Icon } from '../ui/icons'
 
 /** How long after the last keystroke a page records its links and edit time. */
@@ -211,9 +212,36 @@ export function NoteEditor({ campaign, noteId }: { campaign: Campaign; noteId: s
     }
     host.addEventListener('click', onClick)
 
+    // Dragging a link chip out: onto a character (gear and moves) or into another note.
+    const onPointerDown = (e: PointerEvent) => {
+      const chip = (e.target as Element).closest<HTMLElement>(`[data-type="${LINK_NODE}"]`)
+      if (!chip || chip.dataset.missing || e.button !== 0) return
+      // Keep the editor from starting a text selection; a click still follows the link.
+      e.preventDefault()
+      dragEntity(e, entity(campaign, chip.dataset.kind as LinkKind, chip.dataset.id ?? '', chip.textContent ?? ''), chip)
+    }
+    host.addEventListener('pointerdown', onPointerDown)
+
+    // Anything dragged in (from a list, the palette or another note) becomes a link where it's dropped.
+    const stopLinkDrop = registerLinkDrop(host, (dropped, x, y) => {
+      if (!editor) return
+      const gmPage = dropped.kind === 'note' && getNote(campaign, dropped.id)?.gmOnly && !getNote(campaign, noteId)?.gmOnly
+      const pos = editor.view.posAtCoords({ left: x, top: y })?.pos ?? editor.state.doc.content.size
+      editor
+        .chain()
+        .focus()
+        .insertContentAt(pos, [
+          { type: LINK_NODE, attrs: { kind: dropped.kind, id: dropped.id, label: gmPage ? '' : dropped.label } },
+          { type: 'text', text: ' ' },
+        ])
+        .run()
+    })
+
     return () => {
       cancelled = true
       host.removeEventListener('click', onClick)
+      host.removeEventListener('pointerdown', onPointerDown)
+      stopLinkDrop()
       // Record any edit still waiting, then let go of the page.
       if (timer && editor) {
         clearTimeout(timer)

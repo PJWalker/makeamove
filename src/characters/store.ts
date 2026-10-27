@@ -12,7 +12,8 @@ import type { ActionDef, DataValue, Derived, Effect, EffectActive, GameSystem, I
  * never overwrite each other:
  *
  *   name, owner, kind, folder, classId, level, notes, portrait,
- *   tokenStyle, tokenColour, template     plain fields
+ *   tokenStyle, tokenColour, template, base     plain fields
+ *   learned     array  action ids learned beyond the system's
  *   scores      Y.Map  stat id -> score
  *   data        Y.Map  the system's own fields (characterData)
  *   resources   Y.Map  resource id -> current value (HP, spell slots…)
@@ -87,6 +88,8 @@ export interface CharacterView {
   template?: TemplateSettings
   /** For a copy: the template it overrides. */
   base?: string
+  /** Actions learned beyond what their system gives them (dropped onto them), by id. */
+  learned: string[]
 }
 
 export type CharacterMap = Y.Map<any>
@@ -173,6 +176,7 @@ export function characterView(id: string, m: CharacterMap, system: GameSystem, b
     // A copy is never a template itself.
     template: m.get('template'),
     base: m.get('base'),
+    learned: (get('learned') as string[] | undefined) ?? [],
   }
 }
 
@@ -197,7 +201,9 @@ export function derive(c: CharacterView, system: GameSystem): Derived {
 
 /** The actions a character has, as their system decides. */
 export function actionsFor(c: CharacterView, system: GameSystem, d: Derived): ActionDef[] {
-  return system.actionsFor(c, d)
+  const own = system.actionsFor(c, d)
+  const learned = c.learned.flatMap((id) => system.actions.filter((a) => a.id === id && !own.includes(a)))
+  return [...own, ...learned]
 }
 
 /** The value a stat adds to rolls: its modifier plus any bonuses that apply to every roll with it. */

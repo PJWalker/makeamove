@@ -75,7 +75,20 @@ export const signedStr = (n: number) => (n < 0 ? `−${-n}` : `+${n}`)
  * tooltip beside the row. Clicking a move turns its tooltip into a window
  * that stays open, to read and make the move from.
  */
-export function MoveList({ system, moves, onMake }: { system: GameSystem; moves: ActionDef[]; onMake: (m: ActionDef) => void }) {
+export function MoveList({
+  system,
+  moves,
+  onMake,
+  learned = [],
+  onForget,
+}: {
+  system: GameSystem
+  moves: ActionDef[]
+  onMake: (m: ActionDef) => void
+  /** Moves the character learned beyond their system's, which they can forget. */
+  learned?: string[]
+  onForget?: (m: ActionDef) => void
+}) {
   // The system's groupings that this character has any of, in the system's order; the first is shown to start.
   const categories = system.actionCategories.filter((k) => moves.some((m) => m.category === k.id))
   const filter = useSignal<string>(categories[0]?.id ?? 'all')
@@ -113,6 +126,17 @@ export function MoveList({ system, moves, onMake }: { system: GameSystem; moves:
         return (
           <EntryWindow key={key} entryKey={key} title={m.name} text={m.text} onClose={() => windows.close(key)}>
             {tag && <Tag>{tag}</Tag>}
+            {onForget && learned.includes(m.id) && (
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  windows.close(key)
+                  onForget(m)
+                }}
+              >
+                Forget
+              </Button>
+            )}
             <MakeButton m={m} onMake={onMake} big />
           </EntryWindow>
         )
