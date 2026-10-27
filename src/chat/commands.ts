@@ -19,6 +19,9 @@ export type Command =
   | { kind: 'whisper'; to: MemberRef[]; text: string }
   | { kind: 'roll'; formula: string; comment?: string; visibility: RollVisibility }
   | { kind: 'session'; action: 'start' | 'end' }
+  | { kind: 'pin'; text: string }
+  | { kind: 'timer'; seconds: number; label: string }
+  | { kind: 'counter'; start: number; max?: number; label: string }
   | { kind: 'help' }
   | { kind: 'error'; message: string }
 
@@ -34,6 +37,9 @@ export const COMMANDS: CommandInfo[] = [
   { names: ['sr'], usage: '/sr 2d6+1 note', help: 'Secret roll: only you and the GM see it' },
   { names: ['w', 'whisper'], usage: '/w name message', help: 'Whisper to one person (or “gm”)' },
   { names: ['me'], usage: '/me draws her sword', help: 'Describe what you do' },
+  { names: ['pin'], usage: '/pin message', help: 'Send a message and pin it' },
+  { names: ['timer'], usage: '/timer 60s World ends', help: 'A pinned countdown, in seconds (s), minutes (m) or hours (h)' },
+  { names: ['count', 'counter'], usage: '/count 0/8 The cops arrive', help: 'A pinned counter to move by hand' },
   { names: ['session'], usage: '/session start | end', help: 'Mark the start or end of a session', gmOnly: true },
   { names: ['help', '?'], usage: '/help', help: 'List these commands' },
 ]
@@ -77,6 +83,20 @@ export function diceFormula(text: string): string | null {
     return null
   }
 }
+
+/** A duration like 90, 90s, 5m, 1h30m or 2:30, in seconds; null if it isn't one. */
+export function parseDuration(text: string): number | null {
+  const t = text.trim().toLowerCase()
+  const clock = /^(\d+):([0-5]\d)(?::([0-5]\d))?$/.exec(t)
+  if (clock) return clock[3] !== undefined ? +clock[1] * 3600 + +clock[2] * 60 + +clock[3] : +clock[1] * 60 + +clock[2]
+  if (/^\d+$/.test(t)) return +t
+  const parts = /^(?:(\d+)h)?\s*(?:(\d+)m(?:in)?)?\s*(?:(\d+)s(?:ec)?)?$/.exec(t)
+  if (!parts || !(parts[1] || parts[2] || parts[3])) return null
+  return (+(parts[1] ?? 0)) * 3600 + (+(parts[2] ?? 0)) * 60 + +(parts[3] ?? 0)
+}
+
+/** A label, without the quotes it may be typed in. */
+const unquote = (s: string) => s.trim().replace(/^["“'](.*)["”']$/s, '$1').trim()
 
 /** Whoever `rest` starts with: the longest matching member name, or "gm". */
 function whisperTarget(rest: string, members: MemberRef[]): { to: MemberRef[]; text: string } | null {
@@ -126,6 +146,22 @@ export function parseCommand(input: string, members: MemberRef[], isGm: boolean)
     }
     case 'me':
       return rest.trim() ? { kind: 'emote', text: rest.trim() } : { kind: 'error', message: 'Describe what you do: /me …' }
+    case 'pin':
+      return rest.trim() ? { kind: 'pin', text: rest.trim() } : { kind: 'error', message: 'What should the pinned message say? /pin …' }
+    case 'timer': {
+      const [first = '', ...words] = rest.trim().split(/\s+/)
+      const seconds = parseDuration(first)
+      if (!seconds) return { kind: 'error', message: 'How long? Try /timer 60s World ends.' }
+      if (seconds > 24 * 3600) return { kind: 'error', message: 'Timers run for a day at most.' }
+      return { kind: 'timer', seconds, label: unquote(words.join(' ')) }
+    }
+    case 'count': {
+      const m = /^(-?\d+)(?:\s*\/\s*(\d+))?\s*([\s\S]*)$/.exec(rest.trim())
+      if (!m) return { kind: 'error', message: 'Start where? Try /count 0/8 The cops arrive.' }
+      const max = m[2] !== undefined ? +m[2] : undefined
+      if (max !== undefined && max < 1) return { kind: 'error', message: 'Count up to 1 or more.' }
+      return { kind: 'counter', start: +m[1], ...(max !== undefined ? { max } : {}), label: unquote(m[3]) }
+    }
     case 'session': {
       const action = rest.trim().toLowerCase()
       if (action === 'start' || action === 'end') return { kind: 'session', action }

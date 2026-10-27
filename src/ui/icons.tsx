@@ -15,6 +15,7 @@ import GiCrossedSwords from '~icons/game-icons/crossed-swords'
 import GiSwordClash from '~icons/game-icons/sword-clash'
 import GiAnvilImpact from '~icons/game-icons/anvil-impact'
 import GiFamilyTree from '~icons/game-icons/family-tree'
+import MsPushPin from '~icons/material-symbols/push-pin'
 import GiExitDoor from '~icons/game-icons/exit-door'
 import GiFog from '~icons/game-icons/fog'
 import GiHand from '~icons/game-icons/hand'
@@ -132,6 +133,7 @@ export const IconCampaign = icon(GiCrossedSwords)
 export const IconCombat = icon(GiSwordClash)
 export const IconItems = icon(GiAnvilImpact)
 export const IconRelationships = icon(GiFamilyTree)
+export const IconPin = icon(MsPushPin)
 
 // Members
 export const IconRemoveMember = icon(MsPersonRemove)

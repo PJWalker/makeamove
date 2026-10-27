@@ -31,6 +31,10 @@ export function describe(m: ChatMessage, nameOf?: (kind: LinkKind, id: string) =
       return { title: m.name, body: `${m.comment ? `${m.comment}: ` : ''}${m.roll.formula} = ${m.roll.total}` }
     case 'move':
       return { title: m.characterName, body: `${m.moveName}${m.roll ? ` (${m.roll.total})` : ''}` }
+    case 'timer':
+      return { title: m.name, body: `Timer: ${m.label || 'started'}` }
+    case 'counter':
+      return { title: m.name, body: `Counter: ${m.label || 'started'}` }
     case 'system':
       return null
   }

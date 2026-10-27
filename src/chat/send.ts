@@ -1,5 +1,6 @@
 import { roll } from '../dice/notation'
 import { makeSessionPage } from '../notes/sessions'
+import { setState } from './messageState'
 import type { Campaign } from '../store/campaign'
 import { device } from '../store/device'
 import type { Command } from './commands'
@@ -39,6 +40,19 @@ export function runCommand(campaign: Campaign, cmd: Command): boolean {
       return true
     case 'roll':
       postRoll(campaign, cmd.formula, cmd.visibility, cmd.comment)
+      return true
+    case 'pin':
+      void campaign.chat.post({ kind: 'text', text: cmd.text }, author).then((m) => setState(campaign.messageState, m.id, 'pinned', true))
+      return true
+    case 'timer':
+      void campaign.chat
+        .post({ kind: 'timer', label: cmd.label, seconds: cmd.seconds, endsAt: Date.now() + cmd.seconds * 1000 }, author)
+        .then((m) => setState(campaign.messageState, m.id, 'pinned', true))
+      return true
+    case 'counter':
+      void campaign.chat
+        .post({ kind: 'counter', label: cmd.label, start: cmd.start, ...(cmd.max !== undefined ? { max: cmd.max } : {}) }, author)
+        .then((m) => setState(campaign.messageState, m.id, 'pinned', true))
       return true
     case 'session': {
       // Sessions are numbered in the campaign itself, so every peer agrees.

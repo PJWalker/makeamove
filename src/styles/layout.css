@@ -3344,3 +3344,85 @@
     pointer-events: none;
   }
 }
+
+/* Chat: pins above the log, timers, counters, edits */
+@layer layout {
+  .chat-pinned {
+    display: grid;
+    gap: 2px;
+    max-height: 40%;
+    overflow-y: auto;
+    padding: var(--space-1) var(--space-2);
+    background: var(--surface-sunken);
+  }
+  .chat-pin {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-size: var(--text-sm);
+  }
+  .chat-pin-body {
+    flex: 1;
+    min-width: 0;
+    > .chat-text {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+  .roll-card[data-compact] {
+    padding: var(--space-1) var(--space-2);
+    gap: 4px;
+  }
+  .chat-timer-clock,
+  .chat-counter-value {
+    margin-inline-start: auto;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+  }
+  .chat-counter-value {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+  }
+  .chat-timer[data-done] .chat-timer-clock {
+    color: var(--danger);
+  }
+  .chat-counter[data-done] .chat-counter-value {
+    color: var(--accent);
+  }
+  .chat-bar {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--surface-sunken);
+    overflow: hidden;
+    span {
+      display: block;
+      height: 100%;
+      background: var(--accent);
+      transition: width 0.5s linear;
+    }
+  }
+  .chat-pips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    span {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      &[data-on] {
+        background: var(--accent);
+      }
+    }
+  }
+  .chat-edit {
+    width: 100%;
+    resize: vertical;
+  }
+  .chat-edited {
+    font-size: var(--text-xs, 0.75rem);
+  }
+}

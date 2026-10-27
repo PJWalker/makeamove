@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { diceFormula, parseCommand, splitFormula, suggest } from '../commands'
+import { diceFormula, parseCommand, parseDuration, splitFormula, suggest } from '../commands'
 import { entityToken, tokenize } from '../markdown'
 
 const members = [
@@ -92,5 +92,20 @@ describe('markdown-lite', () => {
       { type: 'text', text: ' to ' },
       { type: 'entity', kind: 'character', id: 'c1', text: 'the chief' },
     ])
+  })
+
+  it('reads /pin, /timer and /count', () => {
+    expect(parseCommand('/pin Meet at the inn', [], false)).toEqual({ kind: 'pin', text: 'Meet at the inn' })
+    expect(parseCommand('/timer 60s "World Ends"', [], false)).toEqual({ kind: 'timer', seconds: 60, label: 'World Ends' })
+    expect(parseCommand('/timer 1h30m Siege', [], false)).toEqual({ kind: 'timer', seconds: 5400, label: 'Siege' })
+    expect(parseCommand('/timer 2:30', [], false)).toEqual({ kind: 'timer', seconds: 150, label: '' })
+    expect(parseCommand('/timer soon', [], false).kind).toBe('error')
+    expect(parseCommand('/count 0/8 "The cops arrive"', [], false)).toEqual({ kind: 'counter', start: 0, max: 8, label: 'The cops arrive' })
+    expect(parseCommand('/count 3 Torches', [], false)).toEqual({ kind: 'counter', start: 3, label: 'Torches' })
+    expect(parseCommand('/count lots', [], false).kind).toBe('error')
+  })
+
+  it('reads durations', () => {
+    expect([parseDuration('90'), parseDuration('5m'), parseDuration('1h'), parseDuration('1:00:05'), parseDuration('x')]).toEqual([90, 300, 3600, 3605, null])
   })
 })

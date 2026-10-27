@@ -116,13 +116,37 @@ export interface MoveMessage extends Base {
   concentration?: true
 }
 
-export type ChatMessage = TextMessage | RollMessage | SystemMessage | MoveMessage
+/** A real-time countdown: "/timer 60s World ends". Restarts and stops are kept in the message state. */
+export interface TimerMessage extends Base {
+  kind: 'timer'
+  label: string
+  /** How long it runs, in seconds. */
+  seconds: number
+  /** When it runs out, by the sender's clock (ms since the epoch). */
+  endsAt: number
+}
+
+/** A counter the table moves by hand: "/count 0/8 The cops arrive". Its value is kept in the message state. */
+export interface CounterMessage extends Base {
+  kind: 'counter'
+  label: string
+  start: number
+  max?: number
+}
+
+export type ChatMessage = TextMessage | RollMessage | SystemMessage | MoveMessage | TimerMessage | CounterMessage
 
 /** What someone sees of a message: all of it, a placeholder, or nothing. */
 export type Visibility = 'full' | 'masked' | 'hidden'
 
 /** Players may delete their own messages; the GM may delete anyone's. */
 export const canDelete = (m: ChatMessage, me: string, isGm: boolean) => isGm || m.author === me
+
+/** Only text can be edited, and only by whoever wrote it. */
+export const canEditMessage = (m: ChatMessage, me: string) => m.kind === 'text' && m.author === me
+
+/** Timers and counters are worked by whoever started them and the GM. */
+export const canWork = (m: ChatMessage, me: string, isGm: boolean) => isGm || m.author === me
 
 export function visibilityOf(m: ChatMessage, me: string, isGm: boolean): Visibility {
   if (m.kind === 'text' && m.to) return m.author === me || m.to.includes(me) ? 'full' : 'hidden'

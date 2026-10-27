@@ -6,7 +6,7 @@ import { COMMANDS, parseCommand, suggest } from '../chat/commands'
 import { tokenize } from '../chat/markdown'
 import { postRoll, runCommand } from '../chat/send'
 import type { ChatMessage, MoveMessage, RollMessage, RollVisibility, TextMessage } from '../chat/types'
-import { canDelete, visibilityOf } from '../chat/types'
+import { canDelete, canEditMessage, visibilityOf } from '../chat/types'
 import { logRows, type LogRow } from '../chat/sessions'
 import { markRead } from '../chat/unread'
 import { clearState } from '../chat/messageState'
@@ -21,12 +21,13 @@ import { Avatar } from '../ui/Avatar'
 import { Button } from '../ui/Button'
 import { ContextMenu, type MenuItem } from './ContextMenu'
 import { menuTrigger } from '../ui/menuTrigger'
-import { IconDelete, IconDice, IconExpand } from '../ui/icons'
+import { IconDelete, IconDice, IconExpand, IconPin, IconRename } from '../ui/icons'
 import { ChatInput, type ChatInputHandle } from './ChatInput'
 import { entityToken } from '../chat/markdown'
 import { registerLinkDrop } from './entityDrag'
 import { LinkChip } from './LinkChip'
 import { DamageTargets, SaveRequests, TargetRolls } from './CardParts'
+import { CounterCard, EditBox, editedText, editingMessage, isPinned, PinnedStrip, setPinned, TimerCard, useMessageState } from './ChatExtras'
 import { panelVisible } from './panelLayout'
 
 /*
@@ -89,6 +90,7 @@ export function ChatPanel({ campaign }: { campaign: Campaign }) {
 
   return (
     <div class="chat" ref={ref}>
+      <PinnedStrip campaign={campaign} render={(m) => <PinnedMessage campaign={campaign} m={m} />} />
       <ChatLogView campaign={campaign} notes={notes.value} />
       <Composer campaign={campaign} onNote={note} />
     </div>
@@ -135,7 +137,20 @@ function ChatLogView({ campaign, notes }: { campaign: Campaign; notes: { id: num
   const closeMenu = useCallback(() => (menu.value = null), [])
   const openMenu = useCallback(
     (x: number, y: number, id: string) => {
-      menu.value = { x, y, items: [{ label: 'Delete message', Icon: IconDelete, danger: true, onSelect: () => removeMessage(campaign, id) }] }
+      const m = campaign.chat.messages.peek().find((x) => x.id === id)
+      if (!m) return
+      const gm = campaign.isGm()
+      const items: MenuItem[] = []
+      if (canEditMessage(m, device.value.id)) items.push({ label: 'Edit message', Icon: IconRename, onSelect: () => (editingMessage.value = id) })
+      if (gm && m.kind !== 'system') {
+        const pinned = isPinned(campaign, id)
+        items.push({ label: pinned ? 'Unpin message' : 'Pin message', Icon: IconPin, onSelect: () => setPinned(campaign, id, !pinned) })
+      }
+      if (canDelete(m, device.value.id, gm)) {
+        if (items.length) items.push('divider')
+        items.push({ label: 'Delete message', Icon: IconDelete, danger: true, onSelect: () => removeMessage(campaign, id) })
+      }
+      if (items.length) menu.value = { x, y, items }
     },
     [campaign],
   )
@@ -322,7 +337,7 @@ function ChatLogView({ campaign, notes }: { campaign: Campaign; notes: { id: num
               mine={row.m.author === me}
               canAct={row.m.kind === 'move' && editable.split(' ').includes(row.m.characterId)}
               canGo={row.m.kind === 'system' && row.m.event === 'scene-change' && !!row.m.sceneId && row.m.sceneId !== here && sceneIds.includes(row.m.sceneId)}
-              onMenu={canDelete(row.m, me, isGm) ? openMenu : undefined}
+              onMenu={canDelete(row.m, me, isGm) || canEditMessage(row.m, me) || (isGm && row.m.kind !== 'system') ? openMenu : undefined}
             />
           ),
         )}
@@ -402,6 +417,10 @@ const Message = memo(function Message({ campaign, m, header, fresh, masked, mine
         <RollCard campaign={campaign} m={m} masked={masked} />
       ) : m.kind === 'move' ? (
         <MoveCard campaign={campaign} m={m} canAct={canAct} />
+      ) : m.kind === 'timer' ? (
+        <TimerCard campaign={campaign} m={m} />
+      ) : m.kind === 'counter' ? (
+        <CounterCard campaign={campaign} m={m} />
       ) : (
         <TextBody campaign={campaign} m={m} mine={mine} />
       )}
@@ -410,12 +429,35 @@ const Message = memo(function Message({ campaign, m, header, fresh, masked, mine
 })
 
 function TextBody({ campaign, m, mine }: { campaign: Campaign; m: TextMessage; mine: boolean }) {
+  const state = useMessageState(campaign, m.id)
+  const text = editedText(state, m.text)
+  if (editingMessage.value === m.id) return <EditBox campaign={campaign} id={m.id} text={text} />
   return (
     <div class="chat-text" data-emote={m.emote}>
       {m.to && <span class="chat-whisper-tag">{mine ? `Whisper to ${m.toNames?.join(', ')}` : 'Whispered to you'}</span>}
       {m.emote && <span class="chat-emote-name">{m.name} </span>}
-      <Rich campaign={campaign} text={m.text} />
+      <Rich campaign={campaign} text={text} />
+      {state.editedAt && <span class="chat-edited muted"> (edited)</span>}
     </div>
+  )
+}
+
+/** A pinned message in the strip above the log: timers and counters as they are, text with who said it. */
+function PinnedMessage({ campaign, m }: { campaign: Campaign; m: ChatMessage }) {
+  if (m.kind === 'timer') return <TimerCard campaign={campaign} m={m} compact />
+  if (m.kind === 'counter') return <CounterCard campaign={campaign} m={m} compact />
+  if (m.kind === 'text') return <PinnedText campaign={campaign} m={m} />
+  if (m.kind === 'roll') return <span>{m.name}: {m.comment ? `${m.comment} ` : ''}{m.roll.formula} = {m.roll.total}</span>
+  if (m.kind === 'move') return <span>{m.characterName}: {m.moveName}</span>
+  return null
+}
+
+function PinnedText({ campaign, m }: { campaign: Campaign; m: TextMessage }) {
+  const text = editedText(useMessageState(campaign, m.id), m.text)
+  return (
+    <span class="chat-text">
+      <strong>{m.name}</strong> <Rich campaign={campaign} text={text} />
+    </span>
   )
 }
 
