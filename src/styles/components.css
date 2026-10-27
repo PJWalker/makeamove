@@ -139,7 +139,7 @@
   }
 
   .btn:disabled {
-    opacity: 0.45;
+    opacity: var(--disabled-opacity);
     cursor: not-allowed;
   }
   /* Citrine */
@@ -162,7 +162,7 @@
   }
   /* Garnet, on hover */
   .btn-danger {
-    --gem: oklch(44% 0.14 25);
+    --gem: var(--gem-danger);
     color: var(--danger);
   }
   .btn-danger:hover:not(:disabled) {
@@ -324,7 +324,7 @@
     --bevel: 3px;
     flex: none;
     padding: 1px 5px;
-    font-size: 10px;
+    font-size: var(--text-2xs);
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;

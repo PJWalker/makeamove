@@ -17,7 +17,8 @@
 
     /*
      * Surfaces (low chroma so a vivid map never makes the chrome garish).
-     * Regions are separated by tone and space, never by hairline borders.
+     * Regions are separated by tone and space. Hairlines are only for edges
+     * inside a region (a window's rim, a section rule, a counter's ring).
      */
     --surface: oklch(20% 0.03 var(--scene-hue) / 0.82);
     --surface-solid: oklch(17% 0.025 var(--scene-hue));
@@ -29,6 +30,8 @@
     /* Translucent, so it picks up whatever it sits on (e.g. a gauge fill). */
     --text-faint: oklch(93% 0.01 var(--scene-hue) / 0.5);
     --canvas-bg: oklch(16% 0.03 var(--scene-hue));
+    --hairline: #fff1;
+    --hairline-strong: #fff2;
 
     /* Golden-yellow accent, independent of the scene */
     --accent: oklch(82% 0.15 85);
@@ -37,10 +40,17 @@
     --accent-ink: oklch(22% 0.04 85);
     --accent-soft: oklch(82% 0.15 85 / 0.16);
     --danger: oklch(68% 0.17 25);
+    --danger-soft: oklch(68% 0.17 25 / 0.14);
+    --success: oklch(78% 0.14 150);
+    /* Whispers and hidden rolls: anything only some people can see. */
+    --private: oklch(80% 0.08 300);
+    --private-soft: oklch(36% 0.07 300 / 0.35);
+    --disabled-opacity: 0.45;
     /* Gem colours for buttons (see components.css): a smoky stone in the
        scene's hue, and a quieter smoke for icon and ghost buttons on hover. */
     --gem-smoky: oklch(36% 0.075 var(--scene-hue));
     --gem-smoke: oklch(30% 0.04 var(--scene-hue));
+    --gem-danger: oklch(44% 0.14 25);
 
     /* Shape */
     --bevel-sm: 5px;
@@ -59,9 +69,13 @@
     --space-6: 32px;
     --font-ui: 'Cabin', system-ui, sans-serif;
     --font-display: 'Fraunces', Georgia, serif;
+    /* Count badges only. */
+    --text-2xs: 0.625rem;
     --text-xs: 0.75rem;
     --text-sm: 0.8125rem;
     --text-md: 0.9375rem;
+    /* Floating chrome that reads at body size: tooltips, pop-up tabs. */
+    --text-base: 1rem;
     --text-lg: 1.25rem;
     --text-xl: 1.75rem;
     /* Every menu's items and actions (scene menu, context menu): a house rule. */
