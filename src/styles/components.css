@@ -329,7 +329,7 @@
   .list-tag {
     --bevel: 3px;
     flex: none;
-    padding: 1px 5px;
+    padding: 1px var(--space-1);
     font-size: var(--text-2xs);
     font-weight: 700;
     letter-spacing: 0.04em;

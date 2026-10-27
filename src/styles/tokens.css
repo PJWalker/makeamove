@@ -13,7 +13,7 @@
   :root {
     color-scheme: dark;
     --scene-hue: 250;
-    transition: --scene-hue 600ms ease;
+    transition: --scene-hue 600ms var(--ease);
 
     /*
      * Surfaces (low chroma so a vivid map never makes the chrome garish).
@@ -58,6 +58,8 @@
     --bevel-lg: 12px;
     /* Floating windows and pop-ups, and the morph that opens them. */
     --window-shadow: 0 12px 32px -8px oklch(0% 0 0 / 0.55);
+    /* Whatever is being dragged: held a little lower than a window floats. */
+    --drag-shadow: 0 8px 24px -6px oklch(0% 0 0 / 0.55);
     --blur: 12px;
 
     /* Space and type */

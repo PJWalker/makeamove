@@ -579,6 +579,7 @@
   }
   .win-resize[data-dir='n'],
   .win-resize[data-dir='s'] {
+    /* Run under the 18px corner handles' inner edge. */
     inset-inline: 14px;
     height: 6px;
     cursor: ns-resize;
@@ -917,6 +918,7 @@
   }
   .die[data-sides='4'] {
     clip-path: polygon(50% 2%, 98% 94%, 2% 94%);
+    /* Optical centre of the triangle, not its box. */
     padding-top: 9px;
   }
   .die[data-sides='6'] {
@@ -1055,6 +1057,7 @@
     height: auto;
     max-height: 120px;
     overflow-y: auto;
+    /* One line (1.35 × --text-md) plus this makes the 34px of an .input. */
     padding-block: 7px;
     font-family: var(--font-ui);
     font-size: var(--text-md);
@@ -1368,7 +1371,7 @@
     background: var(--surface-raised);
     opacity: 0.9;
     pointer-events: none;
-    box-shadow: 0 8px 24px -6px oklch(0% 0 0 / 0.55);
+    box-shadow: var(--drag-shadow);
   }
   .hotbar[data-dropping='true'] {
     outline: 2px dashed var(--text-muted);
@@ -1437,7 +1440,7 @@
     height: 44px;
     color: oklch(100% 0 0);
     pointer-events: none;
-    box-shadow: 0 8px 24px -6px oklch(0% 0 0 / 0.55);
+    box-shadow: var(--drag-shadow);
   }
   .drag-tab {
     animation: tab-appear 100ms 100ms var(--ease) both;
