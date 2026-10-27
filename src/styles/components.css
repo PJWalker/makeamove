@@ -112,6 +112,7 @@
   .btn-primary,
   .btn-secondary,
   .btn:is(.btn-ghost, .btn-danger, .btn-icon):hover:not(:disabled),
+  .list-row:is(:hover, :focus-within) .btn.move-make,
   .btn-icon[aria-pressed='true'],
   .segment[aria-checked='true'] {
     --gem-light: oklch(from var(--gem) calc(l + 0.1) calc(c * 0.85) h);
@@ -178,15 +179,18 @@
   .btn-icon:hover:not(:disabled, [aria-pressed='true']) {
     color: var(--text);
   }
-  /* Using an action from a list: a square gold-tinted button, easy to spot down a column. */
+  /*
+   * Using an action from a list: a gold glyph, which becomes a gold button
+   * while its row is hovered.
+   */
   .btn.move-make {
     --gem: oklch(from var(--accent) 42% calc(c * 0.6) h);
-    width: 34px;
-    min-height: 30px;
+    width: 30px;
+    min-height: 28px;
     padding: 0;
     color: var(--accent);
   }
-  .btn.move-make:hover:not(:disabled) {
+  .list-row:is(:hover, :focus-within) .btn.move-make {
     color: oklch(100% 0 0);
   }
   /* Amber, for the chosen tool or tab */
