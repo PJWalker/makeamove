@@ -92,4 +92,4 @@ export interface CanvasCommands {
 export const canvasCommands = signal<CanvasCommands | null>(null)
 
 /** Open one of the campaign's dialogs (from the campaign menu or the command palette). */
-export const dialogRequest = signal<'settings' | 'help' | null>(null)
+export const dialogRequest = signal<'settings' | 'help' | 'relationships' | null>(null)

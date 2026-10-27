@@ -5,6 +5,7 @@ import { DndNpcSheet, DndSheet } from '../systems/dnd55e/Sheet'
 import type { GameSystem } from '../systems/types'
 import { CopyBanner, TemplateSettings } from './TemplateSettings'
 import { DeclarativeSheet } from './DeclarativeSheet'
+import { RelationshipsSection } from './Relationships'
 
 /*
  * A character's sheet: the system's declarative layout, drawn by the core,
@@ -30,6 +31,7 @@ export function CharacterSheet({ campaign, system, c }: SheetProps) {
     <>
       {c.base && <CopyBanner campaign={campaign} c={c} />}
       <Sheet key={c.id} campaign={campaign} system={system} c={c} />
+      <RelationshipsSection key={`rel-${c.id}`} campaign={campaign} c={c} />
       {c.kind === 'npc' && !c.base && <TemplateSettings campaign={campaign} c={c} />}
     </>
   )

@@ -11,6 +11,7 @@ import {
   IconEraser,
   IconFog,
   IconHelp,
+  IconRelationships,
   IconLeave,
   IconMeasure,
   IconMenu,
@@ -135,6 +136,7 @@ function CampaignMenu() {
   const menu = useSignal<{ x: number; y: number; press?: { x: number; y: number } } | null>(null)
   const items: MenuItem[] = [
     { label: 'Settings…', Icon: IconSettings, onSelect: () => (dialogRequest.value = 'settings') },
+    { label: 'Relationships…', Icon: IconRelationships, onSelect: () => (dialogRequest.value = 'relationships') },
     { label: 'Help and shortcuts…', Icon: IconHelp, onSelect: () => (dialogRequest.value = 'help') },
     'divider',
     // Which panels the table has: ticked ones are in a sidebar or a window.

@@ -8,6 +8,7 @@ import { morphOpen } from '../ui/morph'
 import { openPopup } from '../ui/popup'
 import { dialogRequest, sceneSettingsOpen } from './canvasState'
 import { HelpDialog, SettingsDialog } from './CampaignDialogs'
+import { RelationshipsDialog } from './Relationships'
 
 /**
  * The campaign's dialogs, always mounted so the command palette and the Scene
@@ -16,12 +17,13 @@ import { HelpDialog, SettingsDialog } from './CampaignDialogs'
 export function CampaignDialogHost({ campaign }: { campaign: Campaign }) {
   const settingsRef = useRef<HTMLDialogElement>(null)
   const helpRef = useRef<HTMLDialogElement>(null)
+  const webRef = useRef<HTMLDialogElement>(null)
 
   useSignalEffect(() => {
     const want = dialogRequest.value
     if (!want) return
     dialogRequest.value = null
-    const dialog = { settings: settingsRef, help: helpRef }[want].current
+    const dialog = { settings: settingsRef, help: helpRef, relationships: webRef }[want].current
     openPopup(dialog)
   })
 
@@ -29,6 +31,7 @@ export function CampaignDialogHost({ campaign }: { campaign: Campaign }) {
     <>
       <SettingsDialog campaign={campaign} dialogRef={settingsRef} />
       <HelpDialog dialogRef={helpRef} />
+      <RelationshipsDialog campaign={campaign} dialogRef={webRef} />
     </>
   )
 }

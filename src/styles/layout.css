@@ -3257,3 +3257,90 @@
     translate: -50% -50%;
   }
 }
+
+/* Relationships: on sheets, and the web */
+@layer layout {
+  .relationships {
+    display: grid;
+    gap: var(--space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .relationship {
+    display: grid;
+    gap: var(--space-1);
+  }
+  .relationship-row {
+    display: grid;
+    grid-template-columns: minmax(5em, auto) 1fr auto auto;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .relationship-name {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    font-weight: 700;
+    text-align: start;
+    cursor: pointer;
+    &:hover {
+      color: var(--accent);
+    }
+  }
+  .dialog:has(.relationship-web) {
+    width: min(680px, 100vw - 2 * var(--space-4));
+  }
+  .relationship-web {
+    display: block;
+    justify-self: stretch;
+    width: 640px;
+    max-width: 100%;
+    height: auto;
+    user-select: none;
+  }
+  .relationship-edge {
+    fill: none;
+    stroke: var(--text-muted);
+    stroke-width: 1.5;
+  }
+  .relationship-arrowhead {
+    fill: var(--text-muted);
+  }
+  .relationship-label {
+    fill: var(--text);
+    font: 600 11px var(--font-ui);
+    paint-order: stroke;
+    stroke: var(--surface-raised);
+    stroke-width: 4px;
+  }
+  .relationship-node {
+    cursor: grab;
+    circle {
+      fill: var(--surface-raised);
+      stroke: var(--accent);
+      stroke-width: 2;
+    }
+    &[data-npc] circle {
+      stroke: var(--text-muted);
+    }
+    &:hover circle {
+      fill: color-mix(in oklab, var(--accent) 25%, var(--surface-raised));
+    }
+  }
+  .relationship-initial {
+    fill: var(--text);
+    font: 600 16px var(--font-display);
+    pointer-events: none;
+  }
+  .relationship-node-name {
+    fill: var(--text);
+    font: 600 12px var(--font-ui);
+    paint-order: stroke;
+    stroke: var(--surface);
+    stroke-width: 4px;
+    pointer-events: none;
+  }
+}
