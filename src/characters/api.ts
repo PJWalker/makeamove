@@ -9,7 +9,7 @@ import type { Campaign } from '../store/campaign'
 import { device } from '../store/device'
 import { getSystem } from '../systems'
 import type { ActionDef, DataValue, ItemDef, TokenStat } from '../systems/types'
-import { asToken, type TemplateSettings, type TokenState } from './templates'
+import type { TemplateSettings } from './templates'
 import { performMove, needsChoice, type MoveChoice } from './moves'
 import {
   characterView,
@@ -23,35 +23,63 @@ import {
 
 export const systemOf = (campaign: Campaign) => getSystem(campaign.meta.get('system'))
 
-export function listCharacters(campaign: Campaign): CharacterView[] {
+/** A copy's template's map, if it's a copy. */
+const baseOf = (campaign: Campaign, m: Y.Map<any> | undefined): Y.Map<any> | undefined => {
+  const base = m?.get('base')
+  return base ? campaign.characters.get(base) : undefined
+}
+
+/**
+ * Every character, by name. Copies (a template's tokens) are left out unless
+ * asked for: they belong to their tokens, not the Characters list.
+ */
+export function listCharacters(campaign: Campaign, { copies = false } = {}): CharacterView[] {
   const system = systemOf(campaign)
   return [...campaign.characters.entries()]
-    .map(([id, m]) => characterView(id, m, system))
+    .filter(([, m]) => copies || !m.get('base'))
+    .map(([id, m]) => characterView(id, m, system, baseOf(campaign, m)))
     .sort((a, b) => a.name.localeCompare(b.name))
 }
 
-/** What each character's token shows, as the campaign's system defines it. */
 /**
- * What a token shows (HP bars), from its character, or for a template's
- * token from the template and that token's own state. Built from the
- * characters as they are now; make a new one when they change.
+ * What a linked token shows (HP bars), by character id, copies included.
+ * Built from the characters as they are now; make a new one when they change.
  */
 export function tokenStatsSource(campaign: Campaign) {
   const system = systemOf(campaign)
-  const characters = new Map(listCharacters(campaign).map((c) => [c.id, c]))
+  const characters = new Map(listCharacters(campaign, { copies: true }).map((c) => [c.id, c]))
   const cache = new Map<string, TokenStat[]>()
-  return (characterId: string, state?: TokenState): TokenStat[] => {
+  return (characterId: string): TokenStat[] => {
     const c = characters.get(characterId)
     if (!c) return []
-    const key = c.template ? `${characterId}:${JSON.stringify(state ?? null)}` : characterId
-    let stats = cache.get(key)
-    if (!stats) {
-      const v = c.template ? asToken(c, system, state) : c
-      stats = system.tokenStats(v, derive(v, system))
-      cache.set(key, stats)
-    }
+    let stats = cache.get(characterId)
+    if (!stats) cache.set(characterId, (stats = system.tokenStats(c, derive(c, system))))
     return stats
   }
+}
+
+/**
+ * A new copy of a template, for one of its tokens: it has only a name, and
+ * takes everything else from the template until it's changed on the copy.
+ */
+export function createCopy(campaign: Campaign, templateId: string, name: string): string {
+  const id = newId()
+  const m = new Y.Map<any>()
+  campaign.doc.transact(() => {
+    campaign.characters.set(id, m)
+    m.set('base', templateId)
+    m.set('name', name)
+  })
+  return id
+}
+
+/** Undo everything changed on a copy but its name, so it's the template again. */
+export function resetCopy(campaign: Campaign, id: string) {
+  const m = campaign.characters.get(id)
+  if (!m?.get('base')) return
+  campaign.doc.transact(() => {
+    for (const key of [...m.keys()]) if (key !== 'base' && key !== 'name') m.delete(key)
+  })
 }
 
 /** Make a character a template (its tokens keep their own state), or an individual again with null. */
@@ -64,7 +92,7 @@ export function setTemplate(campaign: Campaign, id: string, settings: TemplateSe
 
 export function getCharacter(campaign: Campaign, id: string | undefined): CharacterView | undefined {
   const m = id ? campaign.characters.get(id) : undefined
-  return m && id ? characterView(id, m, systemOf(campaign)) : undefined
+  return m && id ? characterView(id, m, systemOf(campaign), baseOf(campaign, m)) : undefined
 }
 
 /** The character this device is playing: their choice, else the only one they own. */
@@ -136,10 +164,11 @@ export function deleteFolder(campaign: Campaign, id: string) {
   })
 }
 
-/** Delete a character, and stop anyone playing it from pointing at it. */
+/** Delete a character (and a template's copies), and stop anyone playing it from pointing at it. */
 export function deleteCharacter(campaign: Campaign, id: string) {
   campaign.doc.transact(() => {
     for (const m of campaign.members.values()) if (m.get('character') === id) m.delete('character')
+    for (const [copy, m] of [...campaign.characters.entries()]) if (m.get('base') === id) campaign.characters.delete(copy)
     campaign.characters.delete(id)
   })
 }
@@ -170,11 +199,19 @@ export function setField(campaign: Campaign, id: string, key: string, value: unk
 export function bump(campaign: Campaign, id: string, key: string, by: number, max?: number) {
   const m = campaign.characters.get(id)
   if (!m) return
-  const next = Math.max(0, (m.get(key) ?? 0) + by)
+  const next = Math.max(0, ((m.has(key) ? m.get(key) : baseOf(campaign, m)?.get(key)) ?? 0) + by)
   m.set(key, max === undefined ? next : Math.min(next, max))
 }
 
-/** One of the character's sub-maps (data, scores, resources…), made if it's missing. */
+/** A sub-map value as the character has it: its own, or for a copy, its template's. */
+function current(campaign: Campaign, id: string, key: string, field: string): unknown {
+  const m = campaign.characters.get(id)
+  const own = m?.get(key) as Y.Map<any> | undefined
+  if (own?.has(field)) return own.get(field)
+  return (baseOf(campaign, m)?.get(key) as Y.Map<any> | undefined)?.get(field)
+}
+
+/** One of the character's sub-maps (data, scores, resources…), made if it's missing. A copy's writes land here, over its template. */
 function part(campaign: Campaign, id: string, key: 'data' | 'scores' | 'resources' | 'modifiers' | 'fields'): Y.Map<any> | undefined {
   const m = campaign.characters.get(id)
   if (!m) return undefined
@@ -195,7 +232,7 @@ export function setData(campaign: Campaign, id: string, key: string, value: Data
 export function bumpData(campaign: Campaign, id: string, key: string, by: number, max?: number) {
   const data = part(campaign, id, 'data')
   if (!data) return
-  const next = Math.max(0, Number(data.get(key) ?? 0) + by)
+  const next = Math.max(0, Number(current(campaign, id, 'data', key) ?? 0) + by)
   data.set(key, max === undefined ? next : Math.min(next, max))
 }
 
@@ -207,7 +244,7 @@ export function setScore(campaign: Campaign, id: string, stat: string, score: nu
 export function bumpResource(campaign: Campaign, id: string, resource: string, by: number, max?: number) {
   const r = part(campaign, id, 'resources')
   if (!r) return
-  const next = Math.max(0, (r.get(resource) ?? 0) + by)
+  const next = Math.max(0, Number(current(campaign, id, 'resources', resource) ?? 0) + by)
   r.set(resource, max === undefined ? next : Math.min(next, max))
 }
 
@@ -220,7 +257,7 @@ export function setModifier(campaign: Campaign, id: string, modifier: string, va
 export function toggleCondition(campaign: Campaign, id: string, condition: string) {
   const m = campaign.characters.get(id)
   if (!m) return
-  const now: string[] = m.get('conditions') ?? []
+  const now: string[] = (m.has('conditions') ? m.get('conditions') : baseOf(campaign, m)?.get('conditions')) ?? []
   m.set('conditions', now.includes(condition) ? now.filter((x) => x !== condition) : [...now, condition])
 }
 
@@ -280,8 +317,20 @@ export function applySuggestion(campaign: Campaign, characterId: string, s: Move
 /* Inventory */
 
 
+/**
+ * A character's inventory, to change. A copy that's still carrying its
+ * template's gear gets its own copy of it first.
+ */
 function inventoryOf(campaign: Campaign, characterId: string): Y.Map<ItemInstance> | undefined {
-  return campaign.characters.get(characterId)?.get('inventory')
+  const m = campaign.characters.get(characterId)
+  if (!m) return undefined
+  if (m.get('inventory') instanceof Y.Map) return m.get('inventory')
+  const base = baseOf(campaign, m)?.get('inventory') as Y.Map<ItemInstance> | undefined
+  if (!m.get('base')) return undefined
+  const own = new Y.Map<ItemInstance>()
+  m.set('inventory', own)
+  for (const [id, item] of base?.entries() ?? []) own.set(id, item)
+  return own
 }
 
 export function addItem(campaign: Campaign, characterId: string, def: ItemDef) {

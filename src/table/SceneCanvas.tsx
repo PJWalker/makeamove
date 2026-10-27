@@ -11,12 +11,11 @@ import { activeTool } from '../scene/tools'
 import { SceneDoc } from '../scene/sceneDoc'
 import type { Point } from '../scene/grid'
 import { importImage } from '../scene/images'
-import { isPlainToken, TOKEN_STYLES, type BlobRef, type TokenStyle } from '../scene/types'
+import { isPlainToken, TOKEN_STYLES, type BlobRef, type SceneElement, type TokenStyle } from '../scene/types'
 import { DEFAULT_CANVAS_COLOUR, type Campaign } from '../store/campaign'
-import { getCharacter, listCharacters, selectCharacter, systemOf, tokenStatsSource } from '../characters/api'
-import { freshState, tokenName } from '../characters/templates'
+import { createCopy, getCharacter, listCharacters, selectCharacter, systemOf, tokenStatsSource } from '../characters/api'
+import { tokenName } from '../characters/templates'
 import { CharacterSheet } from './sheets'
-import { TokenStatePanel } from './TokenStatePanel'
 import { useY } from '../store/useY'
 import { BlobImage } from '../ui/BlobImage'
 import { Button } from '../ui/Button'
@@ -121,13 +120,27 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
       ctl.start()
       controller.value = ctl
       tokenDrop.value = (x, y, spec) => {
-        // A template's token gets a name of its own and fresh state.
+        // A template's token is a new copy of it, with a name of its own.
         const c = getCharacter(campaign, spec.characterId)
-        const own = c?.template
-          ? { name: tokenName(c, c.template, ctl!.tokenNames()), state: freshState(c, systemOf(campaign)) }
-          : {}
-        ctl!.addCharacterToken(ctl!.toWorld(x, y), { ...spec, ...own })
+        if (c?.template) {
+          const name = tokenName(c, c.template, ctl!.tokenNames())
+          spec = { ...spec, name, characterId: createCopy(campaign, c.id, name) }
+        }
+        ctl!.addCharacterToken(ctl!.toWorld(x, y), spec)
         return true
+      }
+      // A duplicated copy's token gets a copy of its own, from the same template.
+      ctl.afterDuplicate = (ids) => {
+        const patches: [string, Partial<SceneElement>][] = []
+        for (const id of ids) {
+          const el = s.get(id)
+          const copy = el?.type === 'token' ? getCharacter(campaign, el.characterId) : undefined
+          const template = copy?.base ? getCharacter(campaign, copy.base) : undefined
+          if (!template?.template) continue
+          const name = tokenName(template, template.template, ctl!.tokenNames())
+          patches.push([id, { name, characterId: createCopy(campaign, template.id, name) }])
+        }
+        if (patches.length) s.update(patches)
       }
       // Handy for poking at the scene from the console while developing.
       if (import.meta.env.DEV) Object.assign(window, { mamScene: ctl })
@@ -373,14 +386,16 @@ function TokenOptionsDialog({
   const grid = controller.renderer.grid
   const characters = useY(campaign.characters, () => listCharacters(campaign))
   // The character this token stands for, as saved (not the unsaved choice below).
-  const linked = token?.characterId ? characters.find((c) => c.id === token.characterId) : undefined
+  const linked = useY(campaign.characters, () => getCharacter(campaign, token?.characterId))
 
   useEffect(() => {
     if (!token) return
     name.value = token.name
     style.value = isPlainToken(token) ? 'plain' : 'disc'
     colour.value = token.colour
-    characterId.value = token.characterId ?? ''
+    // A template's token shows the template it's a copy of.
+    const c = getCharacter(campaign, token.characterId)
+    characterId.value = c?.base ?? token.characterId ?? ''
     image.value = token.image
     showName.value = !token.hideName
     showBars.value = !token.hideBars
@@ -392,22 +407,24 @@ function TokenOptionsDialog({
 
   // The table stays usable while this is open, so the token may be deleted.
   const exists = useY(controller.scene.elements, () => !!id && controller.scene.get(id)?.type === 'token')
-  /** A token newly linked to a character: fresh state for a template's, none otherwise. */
-  const startState = (id: string) => {
-    const c = characters.find((k) => k.id === id)
-    return c?.template ? freshState(c, system) : undefined
+  /**
+   * The character a token links to when `chosen` is picked: a template makes
+   * it a new copy, unless it's already a copy of that template.
+   */
+  const linkTo = (chosen: string): { characterId?: string; name?: string } => {
+    if (!chosen) return { characterId: undefined }
+    if (linked?.base === chosen) return { characterId: linked.id }
+    const c = characters.find((k) => k.id === chosen)
+    if (!c?.template) return { characterId: chosen }
+    const copyName = name.value.trim() || tokenName(c, c.template, controller.tokenNames())
+    return { characterId: createCopy(campaign, chosen, copyName), name: copyName }
   }
-  // The token as it is now, for its own state (which changes while this is open).
-  const liveToken = useY(controller.scene.elements, () => {
-    const el = id ? controller.scene.get(id) : null
-    return el?.type === 'token' ? el : null
-  })
   useEffect(() => {
     if (id && !exists) ref.current?.close()
   }, [id, exists])
 
   return (
-    <Dialog dialogRef={ref} title={linked ? (linked.template ? token?.name || linked.name : linked.name) : 'Token options'} onClose={onClose}>
+    <Dialog dialogRef={ref} title={linked ? linked.name : 'Token options'} onClose={onClose}>
       {linked && (
         <PopupTabs
           tabs={[
@@ -420,16 +437,6 @@ function TokenOptionsDialog({
       )}
       {linked && tab.value === 'character' && (
         <div class="popup-sheet sheet-panel">
-          {linked.template && liveToken && (
-            <TokenStatePanel
-              campaign={campaign}
-              system={system}
-              template={linked}
-              token={liveToken}
-              onChange={(state) => controller.setTokenState(liveToken.id, state)}
-            />
-          )}
-          {linked.template && <h3 class="sheet-heading token-template-heading">Template: every {linked.name}</h3>}
           <CharacterSheet campaign={campaign} system={system} c={linked} />
         </div>
       )}
@@ -442,10 +449,8 @@ function TokenOptionsDialog({
               name: name.value.trim(),
               style: style.value === 'plain' && !image.value ? 'disc' : style.value,
               colour: colour.value,
-              characterId: characterId.value || undefined,
               image: image.value,
-              // Linked to a different character: a template's token starts fresh; others keep none.
-              ...(characterId.value !== (token?.characterId ?? '') ? { state: startState(characterId.value) } : {}),
+              ...linkTo(characterId.value),
               hideName: showName.value ? undefined : true,
               hideBars: showBars.value ? undefined : true,
             }, system.sizes.find((z) => z.id === size.value)?.cells)

@@ -5,7 +5,6 @@ import { colourOf, type Presence } from './presence'
 import { type Camera, clampZoom, fitCamera, toWorld, zoomAt } from './camera'
 import { CORNER_SIGNS, type Corner, bounds, contains, corners, fromLocal, hits, resizeFromCorner, rotationTowards } from './geometry'
 import { type Point, snapPoint, snapSize } from './grid'
-import type { TokenState } from '../characters/templates'
 import { importImage, imageColour } from './images'
 import { tokenDistance } from './measure'
 import { HANDLE_SIZE, type SceneRenderer, rotateHandlePosition } from './renderer'
@@ -882,8 +881,13 @@ export class SceneController {
   duplicate(ids: string[]) {
     if (!ids.length) return
     const grid = this.renderer.grid
-    this.selection.value = this.scene.duplicate(ids, grid.type === 'none' ? 20 : grid.size)
+    const copies = this.scene.duplicate(ids, grid.type === 'none' ? 20 : grid.size)
+    this.afterDuplicate(copies)
+    this.selection.value = copies
   }
+
+  /** Called with new duplicates, so the table can give a template's token a copy of its own. */
+  afterDuplicate: (ids: string[]) => void = () => {}
 
   setLocked(ids: string[], locked: boolean) {
     this.scene.update(ids.map((id) => [id, { locked }]))
@@ -903,7 +907,7 @@ export class SceneController {
    */
   updateToken(
     id: string,
-    patch: Partial<Pick<TokenElement, 'name' | 'style' | 'colour' | 'characterId' | 'image' | 'hideName' | 'hideBars' | 'state'>>,
+    patch: Partial<Pick<TokenElement, 'name' | 'style' | 'colour' | 'characterId' | 'image' | 'hideName' | 'hideBars'>>,
     cells?: number,
   ) {
     const el = this.byId.get(id)
@@ -916,11 +920,6 @@ export class SceneController {
   /** The names of every token on the scene, for naming new ones apart. */
   tokenNames(): string[] {
     return this.elements.flatMap((el) => (el.type === 'token' ? [el.name] : []))
-  }
-
-  /** Change a template token's own state (HP, conditions, modifiers), as one undo step. */
-  setTokenState(id: string, state: TokenState) {
-    this.scene.update([[id, { state }]])
   }
 
   /** Swap an image between being a map and being a token. */
@@ -965,7 +964,7 @@ export class SceneController {
   /** A token standing for a character, at a world point. */
   addCharacterToken(
     at: Point,
-    spec: { characterId: string; name: string; image?: BlobRef; style?: TokenStyle; colour?: string; state?: TokenState },
+    spec: { characterId: string; name: string; image?: BlobRef; style?: TokenStyle; colour?: string },
   ) {
     const grid = this.renderer.grid
     const size = grid.type === 'none' ? 70 : grid.size
@@ -974,7 +973,6 @@ export class SceneController {
       layer: 'token',
       name: spec.name,
       characterId: spec.characterId,
-      ...(spec.state ? { state: spec.state } : {}),
       image: spec.image,
       colour: spec.colour ?? memberColour(),
       style: spec.style ?? (spec.image ? this.defaults().tokenStyle : 'disc'),

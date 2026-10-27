@@ -23,6 +23,12 @@ import type { ActionDef, DataValue, Derived, Effect, EffectActive, GameSystem, I
  *
  * Effective values (armour, load, maximum HP) are worked out by the system
  * on read and never stored.
+ *
+ * A copy (a template's token, see characters/templates.ts) is a character
+ * with `base` set to its template. It stores only what's been changed on it;
+ * every field, and every key of every sub-map, it doesn't have comes from
+ * the template, like a subclass. Conditions and inventory are taken whole:
+ * the copy's own once it has any, else the template's.
  */
 
 export interface ItemInstance {
@@ -77,8 +83,10 @@ export interface CharacterView {
   /** How its token is drawn when placed on a map. */
   tokenStyle?: TokenStyle
   tokenColour?: string
-  /** Set for a template, whose tokens each keep their own state (see characters/templates.ts). */
+  /** Set for a template, whose tokens are each a copy of it (see characters/templates.ts). */
   template?: TemplateSettings
+  /** For a copy: the template it overrides. */
+  base?: string
 }
 
 export type CharacterMap = Y.Map<any>
@@ -123,39 +131,48 @@ export function createCharacter(
   return id
 }
 
-export function characterView(id: string, m: CharacterMap, system: GameSystem): CharacterView {
-  const kind: CharacterKind = m.get('kind') === 'npc' ? 'npc' : 'pc'
-  const storedScores = subMap(m, 'scores')
+/**
+ * A character as plain values. For a copy, pass its template's map as
+ * `base`: whatever the copy doesn't set comes from there.
+ */
+export function characterView(id: string, m: CharacterMap, system: GameSystem, base?: CharacterMap): CharacterView {
+  const get = (key: string) => (m.has(key) ? m.get(key) : base?.get(key))
+  /** A sub-map's keys, the copy's over the template's. */
+  const merged = <T,>(key: string): Record<string, T> => ({ ...entries<T>(base && subMap(base, key)), ...entries<T>(subMap(m, key)) })
+  const kind: CharacterKind = get('kind') === 'npc' ? 'npc' : 'pc'
+  const storedScores = merged<number>('scores')
   const scores: Record<string, number> = {}
-  for (const s of system.stats) scores[s.id] = storedScores?.get(s.id) ?? 10
-  const storedData = subMap(m, 'data')
+  for (const s of system.stats) scores[s.id] = storedScores[s.id] ?? 10
+  const storedData = merged<DataValue>('data')
   const data: Record<string, DataValue> = {}
-  for (const f of system.characterData) if (!f.for || f.for === kind) data[f.id] = storedData?.get(f.id) ?? f.default
-  const storedFields = subMap(m, 'fields')
+  for (const f of system.characterData) if (!f.for || f.for === kind) data[f.id] = storedData[f.id] ?? f.default
+  const storedFields = merged<string | number>('fields')
   const fields: Record<string, string | number> = {}
-  for (const f of system.npcFields) fields[f.id] = storedFields?.get(f.id) ?? (f.type === 'number' ? 0 : '')
-  const inv = subMap(m, 'inventory') as Y.Map<ItemInstance> | undefined
+  for (const f of system.npcFields) fields[f.id] = storedFields[f.id] ?? (f.type === 'number' ? 0 : '')
+  const inv = (subMap(m, 'inventory') ?? (base && subMap(base, 'inventory'))) as Y.Map<ItemInstance> | undefined
   const inventory = inv ? [...inv.values()].sort((a, b) => (a.order < b.order ? -1 : a.order > b.order ? 1 : 0)) : []
   return {
     id,
     kind,
     folder: m.get('folder'),
-    name: m.get('name') ?? 'Unnamed',
-    owner: m.get('owner') ?? '',
-    classId: m.get('classId') ?? system.classes[0]?.id ?? '',
-    level: m.get('level') ?? 1,
+    name: get('name') ?? 'Unnamed',
+    owner: get('owner') ?? '',
+    classId: get('classId') ?? system.classes[0]?.id ?? '',
+    level: get('level') ?? 1,
     scores,
     data,
-    resources: entries(subMap(m, 'resources')),
-    conditions: (m.get('conditions') as string[] | undefined) ?? [],
-    modifiers: entries(subMap(m, 'modifiers')),
+    resources: merged<number>('resources'),
+    conditions: (get('conditions') as string[] | undefined) ?? [],
+    modifiers: merged<number>('modifiers'),
     fields,
-    notes: m.get('notes') ?? '',
+    notes: get('notes') ?? '',
     inventory,
-    portrait: m.get('portrait'),
-    tokenStyle: m.get('tokenStyle'),
-    tokenColour: m.get('tokenColour'),
+    portrait: get('portrait'),
+    tokenStyle: get('tokenStyle'),
+    tokenColour: get('tokenColour'),
+    // A copy is never a template itself.
     template: m.get('template'),
+    base: m.get('base'),
   }
 }
 

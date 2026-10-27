@@ -3,7 +3,7 @@ import type { CharacterView } from '../characters/store'
 import type { Campaign } from '../store/campaign'
 import { DungeonWorldNpcSheet, DungeonWorldSheet } from '../systems/dungeon-world/Sheet'
 import type { GameSystem } from '../systems/types'
-import { TemplateSettings } from './TemplateSettings'
+import { CopyBanner, TemplateSettings } from './TemplateSettings'
 
 /*
  * Each system's character sheets, by system id. Kept apart from the systems'
@@ -23,8 +23,9 @@ export function CharacterSheet({ campaign, system, c }: SheetProps) {
   const Sheet = c.kind === 'npc' ? sheets.npc : sheets.pc
   return (
     <>
+      {c.base && <CopyBanner campaign={campaign} c={c} />}
       <Sheet key={c.id} campaign={campaign} system={system} c={c} />
-      {c.kind === 'npc' && <TemplateSettings campaign={campaign} c={c} />}
+      {c.kind === 'npc' && !c.base && <TemplateSettings campaign={campaign} c={c} />}
     </>
   )
 }

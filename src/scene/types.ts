@@ -7,8 +7,6 @@
  * layer.
  */
 
-import type { TokenState } from '../characters/templates'
-
 /** Bottom to top. Fog and presence layers arrive with M5 and M2. */
 export const LAYERS = ['map', 'under', 'token', 'over'] as const
 export type Layer = (typeof LAYERS)[number]
@@ -65,11 +63,6 @@ export interface TokenElement extends Base {
   style?: TokenStyle
   /** The character this token stands for; the system decides which of its stats show. */
   characterId?: string
-  /**
-   * Its own HP, conditions and modifiers, when its character is a template
-   * (see characters/templates.ts); missing until first changed means fresh.
-   */
-  state?: TokenState
   /** Hide its name under it. */
   hideName?: boolean
   /** Hide the bars its character's system shows (HP). */

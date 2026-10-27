@@ -12,6 +12,7 @@ import {
   newNpc,
   renameFolder,
   type FolderView,
+  getCharacter,
   selectCharacter,
   selectedCharacterId,
   systemOf,
@@ -45,7 +46,8 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
   const selectedId = useY(campaign.members, () => selectedCharacterId(campaign))
   const isGm = useY(campaign.members, () => campaign.isGm())
   const creating = useSignal(false)
-  const selected = characters.find((c) => c.id === selectedId)
+  // Copies (a template's tokens) aren't listed, but selecting one's token opens its sheet.
+  const selected = useY(campaign.characters, () => getCharacter(campaign, selectedId))
   // One at a time: which level shows, the list or the sheet.
   const { level, go } = usePaneLevel(charactersLayout, selectedId ? 'detail' : 'list')
   const seen = useRef(selectedId)

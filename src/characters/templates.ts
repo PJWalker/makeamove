@@ -1,12 +1,13 @@
-import type { GameSystem } from '../systems/types'
-import { derive, type CharacterView } from './store'
+import type { CharacterView } from './store'
 
 /*
  * A character is an individual or a template. An individual's tokens all
- * share its one record: hurt one and they all show it, on every scene. A
- * template's tokens each keep their own state (HP and other resources,
- * conditions, roll modifiers) on the token itself, and take everything else
- * (stats, fields, gear) from the template; a pack of goblins needs one sheet.
+ * share its one record: hurt one and they all show it, on every scene. Each
+ * token placed from a template is a copy of it: a character of its own that
+ * starts with only a name and takes everything else from the template, like
+ * a subclass. Anything changed on the copy's sheet (HP, a stat, a field,
+ * its gear) overrides the template for that token alone; anything left alone
+ * follows the template as it changes. A pack of goblins needs one sheet.
  */
 
 /** How a template names each token placed from it. */
@@ -25,29 +26,6 @@ export const NAMINGS: { id: Naming; label: string; title: string }[] = [
   { id: 'list', label: 'From a list', title: 'A name picked at random from your list' },
   { id: 'adjective', label: 'Adjective', title: 'A random word before the name: Scarred Goblin' },
 ]
-
-/** What one token of a template keeps for itself. */
-export interface TokenState {
-  resources: Record<string, number>
-  conditions: string[]
-  modifiers: Record<string, number>
-}
-
-/** A new token's state: every resource full, no conditions or modifiers. */
-export function freshState(c: CharacterView, system: GameSystem): TokenState {
-  const d = derive({ ...c, conditions: [], modifiers: {} }, system)
-  return {
-    resources: Object.fromEntries(system.resources.map((r) => [r.id, d.values[r.max] ?? 0])),
-    conditions: [],
-    modifiers: {},
-  }
-}
-
-/** The character as one of its tokens: the template, with the token's own state and name. */
-export function asToken(c: CharacterView, system: GameSystem, state: TokenState | undefined, name?: string): CharacterView {
-  const s = state ?? freshState(c, system)
-  return { ...c, name: name || c.name, resources: s.resources, conditions: s.conditions, modifiers: s.modifiers }
-}
 
 /** Fitting words to set one goblin apart from the next. */
 export const ADJECTIVES = [

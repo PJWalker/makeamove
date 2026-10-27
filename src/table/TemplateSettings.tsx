@@ -1,4 +1,5 @@
-import { canEdit, setTemplate } from '../characters/api'
+import { canEdit, getCharacter, resetCopy, setTemplate } from '../characters/api'
+import { Button } from '../ui/Button'
 import type { CharacterView } from '../characters/store'
 import { DEFAULT_TEMPLATE, NAMINGS } from '../characters/templates'
 import type { Campaign } from '../store/campaign'
@@ -50,9 +51,29 @@ export function TemplateSettings({ campaign, c }: { campaign: Campaign; c: Chara
               />
             </label>
           )}
-          <p class="muted">Each token placed from {c.name} keeps its own HP and conditions; change them from the token.</p>
+          <p class="muted">
+            Each token placed from {c.name} is a copy with its own name. Change anything on a token’s sheet and it applies to that
+            token alone; what you leave follows this template.
+          </p>
         </>
       )}
     </section>
+  )
+}
+
+/** Above a copy's sheet: what it's a copy of, and a way back to it. */
+export function CopyBanner({ campaign, c }: { campaign: Campaign; c: CharacterView }) {
+  const template = getCharacter(campaign, c.base)
+  return (
+    <div class="copy-banner">
+      <span>
+        A copy of <strong>{template?.name ?? 'a deleted template'}</strong>. What you change here applies to this token alone.
+      </span>
+      {template && canEdit(campaign, c) && (
+        <Button size="sm" variant="ghost" onClick={() => resetCopy(campaign, c.id)}>
+          Reset to {template.name}
+        </Button>
+      )}
+    </div>
   )
 }
