@@ -60,6 +60,7 @@ import MsRectangle from '~icons/material-symbols/rectangle-rounded'
 import MsVerticalSplit from '~icons/material-symbols/vertical-split-rounded'
 import MsPanelClose from '~icons/material-symbols/right-panel-close-rounded'
 import MsPanelOpen from '~icons/material-symbols/right-panel-open-rounded'
+import MsOpenInNew from '~icons/material-symbols/open-in-new-rounded'
 import MsPersonAdd from '~icons/material-symbols/person-add-rounded'
 import MsPersonRemove from '~icons/material-symbols/person-remove-rounded'
 import MsRemove from '~icons/material-symbols/remove-rounded'
@@ -146,3 +147,6 @@ export const IconLayoutSplit = icon(MsVerticalSplit)
 export const IconLayoutSingle = icon(MsRectangle)
 export const IconSidebarHide = icon(MsPanelClose)
 export const IconSidebarShow = icon(MsPanelOpen)
+/** Open something in its panel, or in a window of its own. */
+export const IconSidebar = icon(MsDockToRight)
+export const IconOpenWindow = icon(MsOpenInNew)

@@ -9,10 +9,14 @@ import { render } from 'preact'
 import type * as Y from 'yjs'
 import { getNote, type LinkKind } from '../notes/api'
 import { LINK_NODE } from '../notes/links'
-import { followLink, linkLabel, linkTargets, type LinkTarget } from '../notes/targets'
+import { followLink, linkLabel, linkTargets, linkTip, openInSidebar, type LinkTarget } from '../notes/targets'
+import { menuTrigger } from '../ui/menuTrigger'
+import type { MenuItem } from './ContextMenu'
+import { linkMenu, renameLink, showLink } from './linkState'
 import type { Campaign } from '../store/campaign'
+import { placeAnchored } from '../ui/anchor'
 import { entryIcon } from '../ui/entryIcons'
-import { IconCharacters, IconMap, IconNotes, type Icon } from '../ui/icons'
+import { IconCharacters, IconMap, IconNotes, IconOpenWindow, IconRename, IconSidebar, type Icon } from '../ui/icons'
 import { dragEntity, entity, registerLinkDrop } from './entityDrag'
 
 /*
@@ -58,12 +62,19 @@ function linkExtension(campaign: Campaign, o: Pick<RichTextOptions, 'noteId' | '
           parseHTML: (el: HTMLElement) => el.getAttribute('data-kind'),
           renderHTML: (attrs: { kind: string }) => ({ 'data-kind': attrs.kind }),
         },
+        /** Text chosen for the link, shown instead of its target's name. */
+        text: {
+          default: null,
+          parseHTML: (el: HTMLElement) => el.getAttribute('data-text'),
+          renderHTML: (attrs: { text: string | null }) => (attrs.text ? { 'data-text': attrs.text } : {}),
+        },
       }
     },
   }).configure({
     renderHTML: ({ node }) => {
-      const { kind, id, label } = node.attrs as { kind: LinkKind; id: string; label?: string }
+      const { kind, id, label, text } = node.attrs as { kind: LinkKind; id: string; label?: string; text?: string | null }
       const current = linkLabel(campaign, kind, id)
+      const tip = current === null ? 'Not available' : linkTip(campaign, kind, id)
       return [
         'span',
         mergeAttributes({
@@ -73,12 +84,15 @@ function linkExtension(campaign: Campaign, o: Pick<RichTextOptions, 'noteId' | '
           'data-id': id,
           'data-label': label,
           'data-missing': current === null ? 'true' : undefined,
-          'data-tip': current === null ? 'Not available' : undefined,
+          'data-tip': tip ?? undefined,
+          'data-tip-long': current === null ? undefined : 'true',
+          // Clicking turns the tooltip into the link's pop-up.
+          'data-tip-opens': current === null ? undefined : 'true',
         }),
-        current ?? (label || 'Unavailable'),
+        text || current || label || 'Unavailable',
       ]
     },
-    renderText: ({ node }) => `@${node.attrs.label ?? node.attrs.id}`,
+    renderText: ({ node }) => `@${node.attrs.text || node.attrs.label || node.attrs.id}`,
     suggestion: {
       char: '@',
       allowSpaces: true,
@@ -109,11 +123,10 @@ function suggestionList() {
   let props: SuggestionProps<LinkTarget> | null = null
   let index = 0
 
+  // Under the text being typed, or over it near the bottom of the window.
   const place = () => {
     const r = props?.clientRect?.()
-    if (!r) return
-    host.style.left = `${Math.round(Math.min(r.left, innerWidth - host.offsetWidth - 8))}px`
-    host.style.top = `${Math.round(r.bottom + 6)}px`
+    if (r) placeAnchored(host, r)
   }
   const draw = () => {
     if (!props) return
@@ -207,14 +220,73 @@ export function mountRichText(host: HTMLElement, o: RichTextOptions) {
     },
   })
 
-  // Following a link chip.
+  const chipAt = (e: Event) => (e.target as Element).closest<HTMLElement>(`[data-type="${LINK_NODE}"]`)
+  const refOf = (chip: HTMLElement) => ({ kind: chip.dataset.kind as LinkKind, id: chip.dataset.id ?? '' })
+  /** Opening a link: a note links on to another page in the Notes panel; anything else opens a pop-up. */
+  const followsInPlace = (kind: LinkKind) => kind === 'note' && !!o.noteId
+
+  // Clicking a link chip.
   const onClick = (e: MouseEvent) => {
-    const chip = (e.target as Element).closest<HTMLElement>(`[data-type="${LINK_NODE}"]`)
+    const chip = chipAt(e)
     if (!chip || chip.dataset.missing) return
     e.preventDefault()
-    followLink(campaign, chip.dataset.kind as LinkKind, chip.dataset.id ?? '')
+    const link = refOf(chip)
+    if (followsInPlace(link.kind)) followLink(campaign, link.kind, link.id)
+    else showLink(link, chip)
   }
   host.addEventListener('click', onClick)
+
+  /** The link node a chip draws, and where it is, so it can be changed. */
+  const nodeOf = (chip: HTMLElement) => {
+    const at = editor.view.posAtDOM(chip, 0)
+    for (const pos of [at, at - 1]) {
+      const node = pos >= 0 ? editor.state.doc.nodeAt(pos) : null
+      if (node?.type.name === LINK_NODE) return { pos, node }
+    }
+    return null
+  }
+
+  // Right-clicking a link chip: open it elsewhere, or change what it says.
+  const menu = menuTrigger((x, y) => {
+    const chip = menuChip
+    if (!chip) return
+    const link = refOf(chip)
+    const found = nodeOf(chip)
+    const items: MenuItem[] = []
+    if (!chip.dataset.missing) {
+      items.push({ label: 'Open in sidebar', Icon: IconSidebar, onSelect: () => openInSidebar(campaign, link.kind, link.id) })
+      if (followsInPlace(link.kind)) items.push({ label: 'Open in a window', Icon: IconOpenWindow, onSelect: () => showLink(link, chip) })
+    }
+    if (found && editor.isEditable) {
+      const custom = !!found.node.attrs.text
+      if (items.length) items.push('divider')
+      items.push({
+        label: 'Edit link text…',
+        Icon: IconRename,
+        onSelect: () =>
+          renameLink({
+            text: chip.textContent ?? '',
+            custom,
+            save: (text) => {
+              const now = nodeOf(chip) ?? found
+              editor.view.dispatch(editor.state.tr.setNodeMarkup(now.pos, undefined, { ...now.node.attrs, text: text?.trim() || null }))
+            },
+          }),
+      })
+    }
+    if (items.length) linkMenu.value = { x, y, items }
+  })
+  let menuChip: HTMLElement | null = null
+  const onMenuPress = (e: PointerEvent) => {
+    menuChip = chipAt(e)
+    if (menuChip) menu.onPointerDown(e)
+  }
+  const onContextMenu = (e: MouseEvent) => {
+    menuChip = chipAt(e)
+    if (menuChip) menu.onContextMenu(e)
+  }
+  host.addEventListener('pointerdown', onMenuPress)
+  host.addEventListener('contextmenu', onContextMenu)
 
   // Dragging a link chip out: onto a character (gear and moves), the hotbar or other text.
   const onPointerDown = (e: PointerEvent) => {
@@ -248,6 +320,8 @@ export function mountRichText(host: HTMLElement, o: RichTextOptions) {
     destroy() {
       host.removeEventListener('click', onClick)
       host.removeEventListener('pointerdown', onPointerDown)
+      host.removeEventListener('pointerdown', onMenuPress)
+      host.removeEventListener('contextmenu', onContextMenu)
       stopLinkDrop()
       editor.destroy()
     },

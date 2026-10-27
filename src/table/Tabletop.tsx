@@ -11,6 +11,7 @@ import { dockInsets } from './panelLayout'
 import { activeMapColour, canvasColour, chromeHidden } from './canvasState'
 import { Hotbar } from './Hotbar'
 import { TargetBar } from './TargetBar'
+import { LinkPopups } from './LinkPopups'
 import { MoveDialog } from './MoveDialog'
 import { Palette } from './Palette'
 import { Toolbar } from './Toolbar'
@@ -74,6 +75,7 @@ export function Tabletop({ campaign }: { campaign: Campaign }) {
       <Palette campaign={campaign} />
       <MoveDialog campaign={campaign} />
       <TargetBar campaign={campaign} />
+      <LinkPopups campaign={campaign} />
     </div>
   )
 }

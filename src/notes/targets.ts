@@ -57,6 +57,35 @@ export function linkLabel(campaign: Campaign, kind: LinkKind, id: string): strin
   }
 }
 
+/** What a link points at, in a sentence or two, for its tooltip; null if it's gone. */
+export function linkTip(campaign: Campaign, kind: LinkKind, id: string): string | null {
+  const system = systemOf(campaign)
+  switch (kind) {
+    case 'note': {
+      const n = listNotes(campaign).find((x) => x.id === id)
+      return n ? `${n.title}\n${n.gmOnly ? 'GM page' : 'Note'}` : null
+    }
+    case 'character': {
+      const c = listCharacters(campaign).find((x) => x.id === id)
+      if (!c) return null
+      const what = c.kind === 'npc' ? (c.template ? 'NPC template' : 'NPC') : (system.classes.find((k) => k.id === c.classId)?.name ?? 'Character')
+      return `${c.name}\n${what}, level ${c.level}`
+    }
+    case 'scene': {
+      const s = campaign.sceneViews().find((x) => x.id === id)
+      return s ? `${s.name}\nScene` : null
+    }
+    case 'item': {
+      const i = system.items.find((x) => x.id === id)
+      return i ? `${i.name}\n${i.description}` : null
+    }
+    case 'move': {
+      const m = system.actions.find((x) => x.id === id)
+      return m ? `${m.name}\n${m.trigger}` : null
+    }
+  }
+}
+
 /** The page open in the Notes panel, if any. */
 export const openNoteId = signal<string | null>(null)
 
@@ -68,6 +97,12 @@ export function openNote(id: string) {
   openNoteId.value = id
   noteOpened.value++
   showPanel('notes')
+}
+
+/** Show a link's target in its panel: the page, the sheet, the Scenes list, or the Libraries. */
+export function openInSidebar(campaign: Campaign, kind: LinkKind, id: string) {
+  if (kind === 'scene') return showPanel('scene')
+  followLink(campaign, kind, id)
 }
 
 /** Follow a link: open the page, the character's sheet, the scene, or the Libraries. */

@@ -3,6 +3,7 @@ import { elementAt, watchHoldRelease } from '../ui/holdRelease'
 import type { ComponentType } from 'preact'
 import { createPortal } from 'preact/compat'
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks'
+import { placeAnchored, pointAnchor } from '../ui/anchor'
 import type { IconProps } from '../ui/icons'
 
 export type MenuItem =
@@ -82,9 +83,8 @@ export function ContextMenu({
   useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
-    const r = el.getBoundingClientRect()
-    el.style.left = `${Math.round(Math.max(8, Math.min(x, innerWidth - r.width - 8)))}px`
-    el.style.top = `${Math.round(Math.max(8, Math.min(y, innerHeight - r.height - 8)))}px`
+    // Down from the pointer, or up from it near the bottom of the window.
+    placeAnchored(el, pointAnchor(x, y), 0)
   }, [x, y])
 
   useEffect(() => {

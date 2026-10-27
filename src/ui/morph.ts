@@ -38,10 +38,10 @@ export function setMorphOrigin(from: Element | DOMRect | null | undefined) {
   origin = { rect, at: performance.now() }
 }
 
-/** Where the next pop-up should open: the origin's top left, if it's fresh. */
-export function originPoint(): { x: number; y: number } | null {
+/** Where the next pop-up should open: over the thing that spawned it, if that was just now. */
+export function originRect(): DOMRect | null {
   if (!origin || performance.now() - origin.at > ORIGIN_TTL_MS) return null
-  return { x: origin.rect.left, y: origin.rect.top }
+  return origin.rect
 }
 
 const MORPH_NAME = 'popup-morph'

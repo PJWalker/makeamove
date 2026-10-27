@@ -1,4 +1,5 @@
-import { claimMorph, growFromOrigin, hasFreshOrigin, originPoint, releaseMorph } from './morph'
+import { placeAnchored } from './anchor'
+import { claimMorph, growFromOrigin, hasFreshOrigin, originRect, releaseMorph } from './morph'
 import { nextZ } from './windows'
 import { RESIZE_CURSORS, resizeRect, type ResizeDir } from '../table/resizeRect'
 import { trackPointer } from './pointer'
@@ -23,11 +24,13 @@ function place(el: HTMLElement, x: number, y: number) {
   el.style.top = `${whole(Math.min(innerHeight - 40, Math.max(0, y)))}px`
 }
 
-/** Place a pop-up that is just opening wholly on screen, as near (x, y) as fits. */
-function placeWithin(el: HTMLElement, x: number, y: number) {
-  const margin = 8
-  el.style.left = `${whole(Math.max(margin, Math.min(x, innerWidth - el.offsetWidth - margin)))}px`
-  el.style.top = `${whole(Math.max(margin, Math.min(y, innerHeight - el.offsetHeight - margin)))}px`
+/**
+ * Place a pop-up that is just opening over what spawned it, wholly on
+ * screen: from the spawner's top edge down, or where that won't fit, from
+ * its bottom edge up (see ui/anchor.ts).
+ */
+function placeOver(el: HTMLElement, from: DOMRect) {
+  placeAnchored(el, { left: from.left, top: from.bottom, bottom: from.top }, 0)
 }
 
 /** Bring a pop-up in front of every other window. */
@@ -43,7 +46,7 @@ export function openPopup(dialog: HTMLDialogElement | null | undefined) {
     releaseMorph()
     return
   }
-  const at = originPoint()
+  const at = originRect()
   const viewMorph = claimMorph(dialog)
   // Mark it before showing, so its own fade-in doesn't start underneath.
   if (hasFreshOrigin()) dialog.dataset.morph = 'true'
@@ -51,7 +54,7 @@ export function openPopup(dialog: HTMLDialogElement | null | undefined) {
   const r = dialog.getBoundingClientRect()
   if (at) {
     // Open over the thing that spawned it.
-    placeWithin(dialog, at.x, at.y)
+    placeOver(dialog, at)
   } else if (!dialog.style.left) {
     // Centred, stepping down and right past any pop-up already there.
     let x = (innerWidth - r.width) / 2

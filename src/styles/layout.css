@@ -1698,6 +1698,15 @@
     color: var(--text-faint);
     pointer-events: none;
   }
+  /* A note opened from a link elsewhere, in a pop-up. */
+  .link-note {
+    width: min(460px, calc(100vw - 48px));
+    max-height: min(60vh, 520px);
+    overflow-y: auto;
+  }
+  .link-note .note-body {
+    min-height: 8em;
+  }
   /* Rich text on a character sheet: a text box's look, growing with what's written. */
   .rich-field {
     height: auto;
