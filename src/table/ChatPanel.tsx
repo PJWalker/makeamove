@@ -27,7 +27,7 @@ import { entityToken } from '../chat/markdown'
 import { registerLinkDrop } from './entityDrag'
 import { LinkChip } from './LinkChip'
 import { DamageTargets, SaveRequests, TargetRolls } from './CardParts'
-import { CounterCard, EditBox, editedText, editingMessage, isPinned, PinnedStrip, setPinned, TimerCard, useMessageState } from './ChatExtras'
+import { CounterCard, EditBox, editedText, editingMessage, isPinned, PinnedStrip, setPinned, TimerCard, useTextState } from './ChatExtras'
 import { panelVisible } from './panelLayout'
 
 /*
@@ -429,7 +429,7 @@ const Message = memo(function Message({ campaign, m, header, fresh, masked, mine
 })
 
 function TextBody({ campaign, m, mine }: { campaign: Campaign; m: TextMessage; mine: boolean }) {
-  const state = useMessageState(campaign, m.id)
+  const state = useTextState(campaign, m.id)
   const text = editedText(state, m.text)
   if (editingMessage.value === m.id) return <EditBox campaign={campaign} id={m.id} text={text} />
   return (
@@ -453,7 +453,7 @@ function PinnedMessage({ campaign, m }: { campaign: Campaign; m: ChatMessage }) 
 }
 
 function PinnedText({ campaign, m }: { campaign: Campaign; m: TextMessage }) {
-  const text = editedText(useMessageState(campaign, m.id), m.text)
+  const text = editedText(useTextState(campaign, m.id), m.text)
   return (
     <span class="chat-text">
       <strong>{m.name}</strong> <Rich campaign={campaign} text={text} />

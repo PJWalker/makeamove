@@ -6,7 +6,10 @@ import { goToCampaign, routeCampaignId } from './router'
 import { activeCampaign, type Campaign, closeCampaign, deleteLocalCampaign, openCampaign } from './store/campaign'
 import { Button } from './ui/Button'
 import { Tooltip } from './ui/Tooltip'
-import { Tabletop } from './table/Tabletop'
+import { lazy, Suspense } from 'preact/compat'
+
+// The table (rich text, rules, panels) loads when a campaign opens, so the lobby comes up quickly.
+const Tabletop = lazy(() => import('./table/Tabletop').then((m) => ({ default: m.Tabletop })))
 
 const openError = signal<string | null>(null)
 
@@ -39,7 +42,12 @@ function Screen({ id }: { id: string | null }) {
   const campaign = activeCampaign.value
   if (id && campaign?.id === id) {
     if (campaign.removed.value) return <Removed campaign={campaign} />
-    return campaign.ready.value ? <Tabletop campaign={campaign} /> : <Waiting campaign={campaign} />
+    if (!campaign.ready.value) return <Waiting campaign={campaign} />
+    return (
+      <Suspense fallback={<div class="loading">Opening campaign…</div>}>
+        <Tabletop campaign={campaign} />
+      </Suspense>
+    )
   }
   if (id) return <div class="loading">Opening campaign…</div>
   return <Lobby error={openError.value} />

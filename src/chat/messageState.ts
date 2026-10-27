@@ -20,11 +20,21 @@ export function setState(state: MessageState, messageId: string, field: string, 
   else state.set(key(messageId, field), value)
 }
 
-/** Every field a message has, by field name. */
-export function stateOf(state: MessageState, messageId: string): Record<string, any> {
-  const prefix = `${messageId}/`
+/** Some of a message's fields, by name: direct lookups, so a long log's cards stay cheap. */
+export function fieldsOf(state: MessageState, messageId: string, fields: string[]): Record<string, any> {
   const out: Record<string, any> = {}
-  for (const [k, v] of state.entries()) if (k.startsWith(prefix)) out[k.slice(prefix.length)] = v
+  for (const f of fields) {
+    const v = state.get(key(messageId, f))
+    if (v !== undefined) out[f] = v
+  }
+  return out
+}
+
+/** Messages with a field set to a truthy value (pinned ones), by id. */
+export function withField(state: MessageState, field: string): string[] {
+  const suffix = `/${field}`
+  const out: string[] = []
+  for (const [k, v] of state.entries()) if (v && k.endsWith(suffix)) out.push(k.slice(0, -suffix.length))
   return out
 }
 

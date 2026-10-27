@@ -145,12 +145,6 @@ export function finishCombat(campaign: Campaign) {
   })
 }
 
-/** Whether it's this character's turn now. */
-export function isTurnOf(campaign: Campaign, characterId: string): boolean {
-  const turn = turnOf(combatMaps(campaign))
-  return !!turn && campaign.combatants.get(turn)?.characterId === characterId
-}
-
 /** Give a character a condition that lasts so many rounds, counted down on a combatant's turn; or with null, until removed. */
 export function setDuration(campaign: Campaign, characterId: string, condition: string, duration: Duration | null) {
   const m = campaign.characters.get(characterId)

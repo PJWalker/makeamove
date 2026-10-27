@@ -48,9 +48,6 @@ export function bounds(ts: Transform[]): Rect | null {
   return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 }
 }
 
-export const intersects = (a: Rect, b: Rect) =>
-  a.x <= b.x + b.w && b.x <= a.x + a.w && a.y <= b.y + b.h && b.y <= a.y + a.h
-
 export const contains = (outer: Rect, inner: Rect) =>
   outer.x <= inner.x && outer.y <= inner.y && inner.x + inner.w <= outer.x + outer.w && inner.y + inner.h <= outer.y + outer.h
 
@@ -78,17 +75,6 @@ export function shapeOutline(shape: ShapeKind, w: number, h: number): Point[] {
       return Array.from({ length: n }, (_, i) => ({ x: hw * Math.cos((i / n) * Math.PI * 2), y: hh * Math.sin((i / n) * Math.PI * 2) }))
     }
   }
-}
-
-/** Whether p is inside a polygon (even-odd). */
-export function insidePolygon(poly: Point[], p: Point): boolean {
-  let inside = false
-  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const a = poly[i]
-    const b = poly[j]
-    if (a.y > p.y !== b.y > p.y && p.x < ((b.x - a.x) * (p.y - a.y)) / (b.y - a.y) + a.x) inside = !inside
-  }
-  return inside
 }
 
 /** Whether world point p is inside a shape, grown by `margin` world px (a circle's or a cone's edge counts as in). */

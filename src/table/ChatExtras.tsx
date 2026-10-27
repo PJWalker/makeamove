@@ -1,6 +1,6 @@
 import { signal, useSignal } from '@preact/signals'
 import { useEffect } from 'preact/hooks'
-import { getState, setState, stateOf } from '../chat/messageState'
+import { fieldsOf, getState, setState, withField } from '../chat/messageState'
 import { canWork, visibilityOf, type ChatMessage, type CounterMessage, type TimerMessage } from '../chat/types'
 import type { Campaign } from '../store/campaign'
 import { device } from '../store/device'
@@ -18,10 +18,14 @@ import { IconClose, IconRemove, IconAdd } from '../ui/icons'
 /** The message being edited in place, on this device. */
 export const editingMessage = signal<string | null>(null)
 
-/** A message's state, re-read when it changes. */
-export function useMessageState(campaign: Campaign, id: string): Record<string, any> {
-  return JSON.parse(useY(campaign.messageState, () => JSON.stringify(stateOf(campaign.messageState, id))))
+/** Some of a message's state, re-read when it changes. */
+export function useMessageState(campaign: Campaign, id: string, fields: string[]): Record<string, any> {
+  return JSON.parse(useY(campaign.messageState, () => JSON.stringify(fieldsOf(campaign.messageState, id, fields))))
 }
+
+const TEXT_FIELDS = ['text', 'editedAt']
+/** An edited text message's state. */
+export const useTextState = (campaign: Campaign, id: string) => useMessageState(campaign, id, TEXT_FIELDS)
 
 /** Text as last edited, or as sent. */
 export const editedText = (state: Record<string, any>, text: string): string => state.text ?? text
@@ -86,7 +90,7 @@ const clock = (seconds: number) => {
 
 /** A countdown in real time: its label, the time left as a clock and a bar; restart or stop for whoever may. */
 export function TimerCard({ campaign, m, compact }: { campaign: Campaign; m: TimerMessage; compact?: boolean }) {
-  const state = useMessageState(campaign, m.id)
+  const state = useMessageState(campaign, m.id, ['endsAt', 'stoppedAt'])
   const endsAt: number = state.endsAt ?? m.endsAt
   const stopped: number | undefined = state.stoppedAt
   const now = useNow(!stopped)
@@ -147,7 +151,7 @@ export function TimerCard({ campaign, m, compact }: { campaign: Campaign; m: Tim
 
 /** A counter moved by hand: its value (out of its maximum), as pips when there are few. */
 export function CounterCard({ campaign, m, compact }: { campaign: Campaign; m: CounterMessage; compact?: boolean }) {
-  const state = useMessageState(campaign, m.id)
+  const state = useMessageState(campaign, m.id, ['value'])
   const value: number = state.value ?? m.start
   const gm = useY(campaign.members, () => campaign.isGm())
   const can = canWork(m, device.value.id, gm)
@@ -192,12 +196,7 @@ export function CounterCard({ campaign, m, compact }: { campaign: Campaign; m: C
 
 /** Pinned messages, above the log: timers and counters as they are, text in a line, each unpinnable by the GM. */
 export function PinnedStrip({ campaign, render }: { campaign: Campaign; render: (m: ChatMessage) => preact.ComponentChildren }) {
-  const pinnedIds = useY(campaign.messageState, () =>
-    [...campaign.messageState.entries()]
-      .filter(([k, v]) => k.endsWith('/pinned') && v)
-      .map(([k]) => k.slice(0, -'/pinned'.length))
-      .join(' '),
-  )
+  const pinnedIds = useY(campaign.messageState, () => withField(campaign.messageState, 'pinned').join(' '))
   const messages = campaign.chat.messages.value
   const gm = useY(campaign.members, () => campaign.isGm())
   const me = device.value.id

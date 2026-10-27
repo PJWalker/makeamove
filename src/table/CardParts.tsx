@@ -1,5 +1,7 @@
-import { answerSave, applyDamage, canAnswer, systemOf } from '../characters/api'
-import { appliedField, saveField, stateOf, type SaveAnswer } from '../chat/messageState'
+import { systemOf } from '../characters/api'
+import { answerSave, applyDamage, canAnswer } from '../characters/resolution'
+import { appliedField, saveField, type SaveAnswer } from '../chat/messageState'
+import { useMessageState } from './ChatExtras'
 import type { MoveMessage, MoveTarget, RollMessage } from '../chat/types'
 import type { Campaign } from '../store/campaign'
 import { useY } from '../store/useY'
@@ -12,11 +14,6 @@ import { Button } from '../ui/Button'
  * comes from the campaign's message state.
  */
 
-/** The message's changing state, re-read when it changes. */
-function useMessageState(campaign: Campaign, id: string): Record<string, any> {
-  const json = useY(campaign.messageState, () => JSON.stringify(stateOf(campaign.messageState, id)))
-  return JSON.parse(json)
-}
 
 /** One row per target of a check against targets: the roll, what it had to reach, and hit or miss. */
 export function TargetRolls({ campaign, m }: { campaign: Campaign; m: MoveMessage }) {
@@ -48,7 +45,7 @@ export function TargetRolls({ campaign, m }: { campaign: Campaign; m: MoveMessag
 /** A roll request per target: a button for whoever may answer, then the answer against the DC. */
 export function SaveRequests({ campaign, m }: { campaign: Campaign; m: MoveMessage }) {
   const save = m.save!
-  const state = useMessageState(campaign, m.id)
+  const state = useMessageState(campaign, m.id, (m.targets ?? []).map((t) => saveField(t.id)))
   const modes = systemOf(campaign).rollModes ?? []
   const gm = useY(campaign.members, () => campaign.isGm())
   return (
@@ -97,7 +94,7 @@ export function SaveRequests({ campaign, m }: { campaign: Campaign; m: MoveMessa
 /** Damage or healing on a roll card: for the GM, buttons per target to apply it whole, halved or doubled. */
 export function DamageTargets({ campaign, m }: { campaign: Campaign; m: RollMessage }) {
   const damage = m.damage!
-  const state = useMessageState(campaign, m.id)
+  const state = useMessageState(campaign, m.id, damage.targets.map((t) => appliedField(t.id)))
   const gm = useY(campaign.members, () => campaign.isGm())
   const healing = damage.type === 'healing'
   const typeName = systemOf(campaign).damageTypes?.find((d) => d.id === damage.type)?.name ?? damage.type

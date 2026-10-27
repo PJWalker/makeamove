@@ -55,8 +55,6 @@ const DEFAULT_SIDE: Record<PanelId, Side> = {
   items: 'right',
 }
 
-export const sideOfDefault = (id: PanelId): Side => DEFAULT_SIDE[id]
-
 export function defaultLayout(narrow: boolean): Layout {
   return {
     left: { active: 'characters', open: !narrow, width: SIDEBAR_DEFAULT_W, panels: ['scene', 'characters', 'combat'] },

@@ -13,7 +13,6 @@ import {
   reorder,
   otherSide,
   selectTab,
-  setOpen,
   showTab,
   type FloatingWindow,
   type Layout,
@@ -67,7 +66,6 @@ export const unavailablePanels = signal<PanelId[]>([])
 /** The layout as it shows, without the unavailable panels. */
 export const shownLayout = computed(() => withoutPanels(layout.value, unavailablePanels.value))
 
-export const sideState = (side: Side) => shownLayout.value[side]
 export const floatingWindows = computed(() => shownLayout.value.floating)
 
 /** Pixels each side takes: its body when open, and its tab strip. */
@@ -124,10 +122,6 @@ export function selectPanel(id: PanelId) {
     return
   }
   layout.value = selectTab(layout.value, id)
-}
-
-export function setSideOpen(side: Side, open: boolean) {
-  layout.value = setOpen(layout.value, side, open)
 }
 
 /** Bring a panel into view without ever hiding it, unlike clicking its tab. */

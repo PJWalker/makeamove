@@ -118,8 +118,6 @@ export type NewElement = DistributiveOmit<SceneElement, 'id' | 'z' | 'createdBy'
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never
 
-export const layerOf = (type: ElementType): Layer => (type === 'map' ? 'map' : type === 'token' ? 'token' : 'over')
-
 export const SHAPES: { id: ShapeKind; label: string }[] = [
   { id: 'rect', label: 'Square' },
   { id: 'circle', label: 'Circle' },
