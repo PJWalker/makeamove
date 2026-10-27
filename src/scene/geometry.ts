@@ -131,6 +131,11 @@ export function hits(el: SceneElement, p: Point, tolerance = 0): boolean {
       return shapeCovers(el, p, tolerance + el.width / 2)
     case 'text':
       return Math.abs(l.x) <= hw + tolerance && Math.abs(l.y) <= hh + tolerance
+    case 'wall':
+      // Along its length, within a few px of the line.
+      return Math.abs(l.x) <= hw + tolerance && Math.abs(l.y) <= Math.max(hh, 4) + tolerance
+    case 'light':
+      return Math.hypot(l.x, l.y) <= Math.min(hw, hh) + tolerance
   }
 }
 

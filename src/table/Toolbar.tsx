@@ -9,7 +9,8 @@ import { Button } from '../ui/Button'
 import {
   IconDraw,
   IconEraser,
-  IconFog,
+  IconLight,
+  IconWall,
   IconHelp,
   IconRelationships,
   IconLeave,
@@ -35,8 +36,6 @@ export const TOOLS: {
   key: string
   Icon: ComponentType<IconProps>
   gmOnly?: boolean
-  /** The milestone that brings this tool, while it isn't built yet. */
-  arrives?: string
 }[] = [
   { id: 'select', label: 'Select', key: 'V', Icon: IconSelect },
   { id: 'pan', label: 'Pan', key: 'H', Icon: IconPan },
@@ -46,7 +45,8 @@ export const TOOLS: {
   { id: 'text', label: 'Text', key: 'X', Icon: IconText },
   { id: 'ruler', label: 'Measure', key: 'M', Icon: IconMeasure },
   { id: 'ping', label: 'Ping', key: 'G', Icon: IconPing },
-  { id: 'fog', label: 'Fog of war', key: 'F', Icon: IconFog, gmOnly: true, arrives: 'M12' },
+  { id: 'wall', label: 'Walls', key: 'W', Icon: IconWall, gmOnly: true },
+  { id: 'light', label: 'Lights', key: 'L', Icon: IconLight, gmOnly: true },
 ]
 
 const ORDER_KEY = 'mam:tool-order'
@@ -96,7 +96,7 @@ export function Toolbar({ isGm }: { isGm: boolean }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target) || (e.target as Element).closest?.('dialog')) return
-      const tool = tools.find((t) => t.key === e.key.toUpperCase() && !t.arrives)
+      const tool = tools.find((t) => t.key === e.key.toUpperCase())
       if (tool) activeTool.value = tool.id
     }
     window.addEventListener('keydown', onKey)
@@ -107,13 +107,12 @@ export function Toolbar({ isGm }: { isGm: boolean }) {
     <>
       <nav class="toolbar panel bevel strip across dock-top" aria-label="Canvas tools">
         <CampaignMenu />
-        {tools.map(({ id, label, key, Icon, arrives }) => (
+        {tools.map(({ id, label, key, Icon }) => (
           <Button
             key={id}
             variant="icon"
-            label={arrives ? `${label} arrives in ${arrives}` : `${label} (${key})`}
+            label={`${label} (${key})`}
             pressed={activeTool.value === id}
-            disabled={!!arrives}
             data-tool={id}
             onPointerDown={(e: PointerEvent) => dragTool(id, e)}
             onClick={() => (activeTool.value = id)}

@@ -48,7 +48,7 @@ export function coreActions(campaign: Campaign): Action[] {
       source: 'Core',
       hint: t.key,
       icon: t.Icon,
-      available: t.arrives ? `Arrives in ${t.arrives}` : true,
+      available: true,
       run: () => (activeTool.value = t.id),
     })
   }

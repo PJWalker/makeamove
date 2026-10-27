@@ -7,11 +7,15 @@ import { CORNER_SIGNS, type Corner, bounds, contains, corners, fromLocal, hits, 
 import { type Point, snapPoint, snapSize } from './grid'
 import { importImage, imageColour } from './images'
 import { formatDistance, tokenDistance } from './measure'
+import { wallEnds } from './vision'
 import { HANDLE_SIZE, type SceneRenderer, rotateHandlePosition } from './renderer'
 import type { SceneDoc } from './sceneDoc'
 import { finishStroke, STRIDE } from './stroke'
 import { activeTool, ERASER_RADIUS, pen, SHAPE_WIDTH, shapeTool, TEMPLATE_STYLE } from './tools'
 import { LAYERS, type BlobRef, type Layer, type NewElement, type SceneElement, type TokenElement, type ShapeKind, type TokenStyle, type Transform } from './types'
+
+/** A new light: bright for 4 cells (20 ft on a 5 ft grid), dim for 4 more, warm. */
+const LIGHT_DEFAULT = (cell: number) => ({ bright: cell * 4, dim: cell * 8, colour: '#ffd27a' })
 
 /** An action's area waiting to be placed: its shape and size in world px, and who to tell. */
 export interface Placement {
@@ -36,6 +40,7 @@ type Gesture =
   | { kind: 'ruler' }
   | { kind: 'trail'; start: Point; active: boolean }
   | { kind: 'shape'; start: Point; shape: ShapeKind; fixed: Placement | null }
+  | { kind: 'wall'; start: Point }
 
 /** Screen px the pointer must travel before a press becomes a drag. */
 const DRAG_THRESHOLD = 3
@@ -73,6 +78,9 @@ export class SceneController {
 
   /** An area to place for an action: the next drag on the map puts it down (see placeArea). */
   readonly placing = signal<Placement | null>(null)
+
+  /** Whether this device is the GM's: only the GM sees and edits walls and lights. */
+  gm = false
 
   /** Asks the canvas for text to put on the map, or to change: set by SceneCanvas. */
   onTextRequest: ((req: { at: Point; screen: Point; id?: string; text?: string }) => void) | null = null
@@ -327,7 +335,7 @@ export class SceneController {
         ? 'grabbing'
         : this.spaceHeld || tool === 'pan'
           ? 'grab'
-          : this.placing.value || tool === 'draw' || tool === 'shape' || tool === 'ruler' || tool === 'ping' || (tool === 'select' && this.targetMode.value)
+          : this.placing.value || tool === 'draw' || tool === 'shape' || tool === 'wall' || tool === 'light' || tool === 'ruler' || tool === 'ping' || (tool === 'select' && this.targetMode.value)
             ? 'crosshair'
             : tool === 'text'
               ? 'text'
@@ -404,6 +412,7 @@ export class SceneController {
     for (let i = this.elements.length - 1; i >= 0; i--) {
       const el = this.elements[i]
       if (el.locked && !includeLocked) continue
+      if ((el.type === 'wall' || el.type === 'light') && !this.gm) continue
       if (hits(el, p, tolerance)) return el
     }
     return null
@@ -553,9 +562,89 @@ export class SceneController {
       case 'text':
         this.onTextRequest?.({ at: world, screen })
         break
+
+      case 'wall':
+        if (!this.gm) break
+        this.gesture = { kind: 'wall', start: this.snapWallPoint(world, e) }
+        this.showWallDraft(world, e)
+        break
+
+      case 'light': {
+        if (!this.gm) break
+        const grid = this.renderer.grid
+        const at = grid.type === 'square' && !e.altKey ? snapPoint(grid, world, 1) : world
+        this.scene.add({ type: 'light', layer: 'over', x: at.x, y: at.y, w: grid.size * 0.4, h: grid.size * 0.4, rot: 0, ...LIGHT_DEFAULT(grid.size) })
+        break
+      }
     }
     this.updateCursor()
     this.updateOverlay()
+  }
+
+  /** Where a wall ends: on another wall's end if one is near, else on a grid corner (Alt places freely). */
+  private snapWallPoint(p: Point, e: { altKey: boolean }): Point {
+    if (e.altKey) return p
+    const reach = 12 / this.renderer.camera.zoom
+    let best: Point | null = null
+    let bestD = reach
+    for (const el of this.elements) {
+      if (el.type !== 'wall') continue
+      const { a, b } = wallEnds(el)
+      for (const q of [a, b]) {
+        const d = Math.hypot(q.x - p.x, q.y - p.y)
+        if (d < bestD) {
+          best = q
+          bestD = d
+        }
+      }
+    }
+    if (best) return best
+    const grid = this.renderer.grid
+    if (grid.type !== 'square') return p
+    return {
+      x: grid.offsetX + Math.round((p.x - grid.offsetX) / grid.size) * grid.size,
+      y: grid.offsetY + Math.round((p.y - grid.offsetY) / grid.size) * grid.size,
+    }
+  }
+
+  /** A wall from where the drag started to (snapped) p. */
+  private wallFrom(start: Point, p: Point, e: { altKey: boolean }): Transform {
+    const end = this.snapWallPoint(p, e)
+    const len = Math.hypot(end.x - start.x, end.y - start.y)
+    return { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2, w: len, h: 6, rot: Math.atan2(end.y - start.y, end.x - start.x) }
+  }
+
+  private showWallDraft(p: Point, e: { altKey: boolean }) {
+    const g = this.gesture
+    if (g?.kind !== 'wall') return
+    const t = this.wallFrom(g.start, p, e)
+    const grid = this.renderer.grid
+    this.renderer.draft = {
+      kind: 'shape',
+      shape: 'line',
+      t: { ...t, h: 3 / this.renderer.camera.zoom },
+      colour: '#d8e0ff',
+      width: 2,
+      layer: 'over',
+      label: formatDistance(grid, (t.w / grid.size) * grid.unit),
+    }
+    this.renderer.invalidate('overlay', 'presence')
+  }
+
+  /** Open or close a door; turn a wall into a door or back. */
+  setDoor(id: string, patch: { door?: boolean; open?: boolean }) {
+    const el = this.byId.get(id)
+    if (el?.type !== 'wall') return
+    this.scene.update([[id, { ...patch, ...(patch.door === false ? { open: undefined } : {}) } as Partial<SceneElement>]])
+  }
+
+  /** Make a light reach further (or less far), by whole cells. */
+  resizeLight(id: string, cells: number) {
+    const el = this.byId.get(id)
+    if (el?.type !== 'light') return
+    const step = this.renderer.grid.size * cells
+    const bright = Math.max(this.renderer.grid.size, el.bright + step)
+    this.scene.update([[id, { bright, dim: Math.max(bright, el.dim + 2 * step) } as Partial<SceneElement>]])
   }
 
   /** Where a shape starts: a grid corner for squares, a cell centre or corner for the rest (Alt places freely). */
@@ -793,6 +882,10 @@ export class SceneController {
         this.showShapeDraft(world, e)
         break
 
+      case 'wall':
+        this.showWallDraft(world, e)
+        break
+
       case 'erase':
         for (const ev of e.getCoalescedEvents?.() ?? [e]) this.eraseAt(this.toWorld(ev.clientX, ev.clientY))
         this.updateOverlay()
@@ -853,6 +946,14 @@ export class SceneController {
         this.renderer.hidden.clear()
         this.renderer.invalidate('elements')
         break
+
+      case 'wall': {
+        this.renderer.draft = null
+        this.renderer.invalidate('overlay', 'presence')
+        const t = this.wallFrom(g.start, this.toWorld(e.clientX, e.clientY), e)
+        if (t.w * this.renderer.camera.zoom >= 4) this.scene.add({ type: 'wall', layer: 'over', ...t })
+        break
+      }
 
       case 'shape': {
         this.renderer.draft = null

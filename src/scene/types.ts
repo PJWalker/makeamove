@@ -11,7 +11,7 @@
 export const LAYERS = ['map', 'under', 'token', 'over'] as const
 export type Layer = (typeof LAYERS)[number]
 
-export type ElementType = 'map' | 'token' | 'drawing' | 'shape' | 'text'
+export type ElementType = 'map' | 'token' | 'drawing' | 'shape' | 'text' | 'wall' | 'light'
 
 /** An image in the blob store; the CRDT holds only this reference. */
 export interface BlobRef {
@@ -111,7 +111,26 @@ export interface TextElement extends Base {
   bh: number
 }
 
-export type SceneElement = MapElement | TokenElement | DrawingElement | ShapeElement | TextElement
+/**
+ * A wall (M12): a segment along its length (w) through its centre, at its
+ * rotation, that blocks sight and light. A door is a wall the GM can open.
+ * Only the GM sees walls.
+ */
+export interface WallElement extends Base {
+  type: 'wall'
+  door?: boolean
+  open?: boolean
+}
+
+/** A light (M12): bright light out to one radius, dim light out to another, in world px. Only the GM sees the lamp itself. */
+export interface LightElement extends Base {
+  type: 'light'
+  bright: number
+  dim: number
+  colour: string
+}
+
+export type SceneElement = MapElement | TokenElement | DrawingElement | ShapeElement | TextElement | WallElement | LightElement
 
 /** What callers supply when adding an element; the store fills in the rest. */
 export type NewElement = DistributiveOmit<SceneElement, 'id' | 'z' | 'createdBy' | 'locked'> & { locked?: boolean }

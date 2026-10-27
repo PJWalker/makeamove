@@ -1,7 +1,7 @@
 import { signal } from '@preact/signals'
 import type { Layer, ShapeKind } from './types'
 
-export type ToolId = 'select' | 'pan' | 'draw' | 'erase' | 'shape' | 'text' | 'ruler' | 'ping' | 'fog'
+export type ToolId = 'select' | 'pan' | 'draw' | 'erase' | 'shape' | 'text' | 'ruler' | 'ping' | 'wall' | 'light'
 
 export const activeTool = signal<ToolId>('select')
 

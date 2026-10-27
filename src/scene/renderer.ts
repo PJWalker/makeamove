@@ -1,4 +1,4 @@
-import { Application, CanvasTextMetrics, Container, CullerPlugin, extensions, Graphics, ImageSource, Matrix, Sprite, Text, TextStyle, Texture } from 'pixi.js'
+import { AlphaFilter, Application, CanvasTextMetrics, Container, CullerPlugin, extensions, Graphics, ImageSource, Matrix, Sprite, Text, TextStyle, Texture } from 'pixi.js'
 import { type Camera, type Rect, toScreen, visibleWorld } from './camera'
 import { corners, fromLocal as fromLocalPoint, shapeOutline } from './geometry'
 import { type Grid, DEFAULT_GRID, type Point, hexCellsIn, hexCentre, hexCorners, squareLines } from './grid'
@@ -7,6 +7,7 @@ import { forgetBitmaps, loadBitmap, onBlobFetcher } from "./images";
 import { PING_MS, TRAIL_MS, type PresenceMark } from "./presence";
 import type { TokenStat } from '../systems/types'
 import { strokeOutline, hasRealPressure } from './stroke'
+import { blockingSegments, insidePolygon, lightArea, visibilityPolygon } from './vision'
 import { isPlainToken, LAYERS, type Layer, type SceneElement, type ShapeKind, type Transform } from './types'
 
 /** The UI accent, oklch(82% 0.15 85), as sRGB for the canvas. */
@@ -16,6 +17,15 @@ const INK = 0x14161c
 /** Token names never get smaller or bigger than this on screen, in px. */
 const NAME_MIN = 11;
 const NAME_MAX = 15;
+/** A scene's lighting: whether it's on, and how dark it is where no light reaches (0 to 1). */
+export interface Lighting {
+  enabled: boolean;
+  darkness: number;
+}
+
+/** Points as Pixi's flat [x, y, x, y…]. */
+const flat = (pts: Point[]) => pts.flatMap((p) => [p.x, p.y]);
+
 /** A token's condition pips and whether it's that token's turn. */
 export interface TokenMarks {
   /** One colour per condition. */
@@ -137,6 +147,10 @@ function contentKey(el: SceneElement): string {
       return `shape:${el.shape}:${el.colour}:${el.width}`
     case 'text':
       return `text:${el.text}:${el.colour}:${el.size}:${el.bw}:${el.bh}`
+    case 'wall':
+      return `wall:${!!el.door}:${!!el.open}`
+    case 'light':
+      return `light:${el.bright}:${el.dim}:${el.colour}`
   }
 }
 
@@ -202,7 +216,7 @@ export class SceneRenderer {
    * What needs redrawing. previews: only drag transforms moved, not the
    * elements themselves. presence: only cursors, pings, trails and rulers.
    */
-  private dirty = { elements: false, previews: false, camera: true, grid: true, overlay: true, presence: true };
+  private dirty = { elements: false, previews: false, camera: true, grid: true, overlay: true, presence: true, lighting: true };
   private resizeObserver: ResizeObserver | null = null;
   private destroyed = false;
   private stopFetcherWatch: (() => void) | null = null;
@@ -222,6 +236,25 @@ export class SceneRenderer {
     rangeFrom: null,
   };
   draft: Draft | null = null;
+  /** Show the GM's walls and lights (only the GM sees them). */
+  showHelpers = false;
+  /** The scene's lighting: off, or how dark it is where no light reaches (0 to 1). */
+  lighting: Lighting = { enabled: false, darkness: 0 };
+  /**
+   * The tokens whose sight this device sees by (a player's own characters),
+   * or null to see everything (the GM, or a player with no tokens here).
+   */
+  viewers: string[] | null = null;
+  /** Darkness where lights don't reach, with lights erased out of it. */
+  private lightLayer = new Container();
+  private lightG = new Graphics();
+  private lightErase = new Graphics({ blendMode: "erase" });
+  /** Everything outside the viewers' sight, with what they see erased out of it. */
+  private fogLayer = new Container();
+  private fogG = new Graphics();
+  private fogErase = new Graphics({ blendMode: "erase" });
+  /** What the viewers see, for hiding the names of tokens they can't. */
+  private sight: Point[][] | null = null;
   /** Parts of the canvas covered by UI (toolbar, scene bar, sidebar), in screen px. */
   insets: () => { left: number; right: number; top: number } = () => ({
     left: 0,
@@ -260,7 +293,15 @@ export class SceneRenderer {
       this.layers.under,
       this.layers.token,
       this.layers.over,
+      this.lightLayer,
+      this.fogLayer,
     );
+    // Each draws dark over the view and erases what's lit or seen; a filter
+    // renders it apart, so the erasing only cuts its own darkness.
+    this.lightLayer.addChild(this.lightG, this.lightErase);
+    this.lightLayer.filters = [new AlphaFilter()];
+    this.fogLayer.addChild(this.fogG, this.fogErase);
+    this.fogLayer.filters = [new AlphaFilter()];
     this.app.stage.addChild(
       this.world,
       this.barsG,
@@ -364,6 +405,7 @@ export class SceneRenderer {
     }
     if (d.elements || d.previews) d.overlay = true;
     if (d.grid) this.drawGrid();
+    if (d.elements || d.previews || d.camera || d.lighting) this.drawLighting();
     if (d.overlay) {
       this.drawDraft();
       this.drawOverlay();
@@ -378,6 +420,7 @@ export class SceneRenderer {
       grid: false,
       overlay: false,
       presence: false,
+      lighting: false,
     };
     this.app.render();
     if (animating) this.invalidate("presence");
@@ -402,9 +445,12 @@ export class SceneRenderer {
     this.invalidate("overlay");
   }
 
+  /** Hide what's hidden for now (erased strokes), and the GM's walls and lights from everyone else. */
   private hiddenSync() {
-    for (const [id, view] of this.views)
-      view.root.visible = !this.hidden.has(id);
+    for (const [id, view] of this.views) {
+      const type = this.byId.get(id)?.type;
+      view.root.visible = !this.hidden.has(id) && (this.showHelpers || (type !== "wall" && type !== "light"));
+    }
   }
 
   private syncElements() {
@@ -617,6 +663,53 @@ export class SceneRenderer {
         };
       }
 
+      case "wall": {
+        // Walls and lights are the GM's: players see only their effect.
+        const g = new Graphics();
+        root.addChild(g);
+        let size = "";
+        return {
+          root,
+          key,
+          apply: (t) => {
+            root.position.set(t.x, t.y);
+            root.rotation = t.rot;
+            const next = `${t.w}`;
+            if (next === size) return;
+            size = next;
+            const colour = el.door ? 0xe0a33b : 0xd8e0ff;
+            g.clear()
+              .moveTo(-t.w / 2, 0)
+              .lineTo(t.w / 2, 0)
+              .stroke({ color: colour, width: el.door ? 8 : 5, alpha: el.door && el.open ? 0.4 : 0.9, cap: "round" })
+              .circle(-t.w / 2, 0, 4)
+              .circle(t.w / 2, 0, 4)
+              .fill({ color: colour });
+          },
+        };
+      }
+
+      case "light": {
+        const g = new Graphics();
+        root.addChild(g);
+        return {
+          root,
+          key,
+          apply: (t) => {
+            root.position.set(t.x, t.y);
+            const r = Math.min(t.w, t.h) / 2;
+            g.clear()
+              .circle(0, 0, el.dim)
+              .stroke({ color: el.colour, width: 1.5, alpha: 0.35 })
+              .circle(0, 0, el.bright)
+              .stroke({ color: el.colour, width: 1.5, alpha: 0.6 })
+              .circle(0, 0, r)
+              .fill({ color: el.colour })
+              .stroke({ color: INK, width: 2 });
+          },
+        };
+      }
+
       case "text": {
         const text = new Text({ text: el.text, style: textStyle(el.colour, el.size), anchor: 0.5, resolution: 2 });
         root.addChild(text);
@@ -631,6 +724,64 @@ export class SceneRenderer {
         };
       }
     }
+  }
+
+  // Light and sight
+
+  /** Set the scene's lighting, who sees, and whether the GM's walls and lights show. */
+  setLighting(lighting: Lighting, viewers: string[] | null, showHelpers: boolean) {
+    this.lighting = lighting;
+    this.viewers = viewers;
+    this.showHelpers = showHelpers;
+    this.invalidate("lighting", "overlay");
+  }
+
+  /**
+   * Darkness, with each light's reach erased out of it (bright fully, dim
+   * by half); then, for a player, black over everything their tokens can't
+   * see. Both stop at walls. The GM sees the darkness at half strength.
+   */
+  private drawLighting() {
+    const view = visibleWorld(this.camera, this.size.width, this.size.height);
+    const margin = Math.max(view.w, view.h);
+    const box = { x: view.x - margin, y: view.y - margin, w: view.w + 2 * margin, h: view.h + 2 * margin };
+    const at = (el: SceneElement) => this.previews.get(el.id) ?? el;
+    const walls = blockingSegments(this.elements.map((el) => ({ ...el, ...at(el) }) as SceneElement));
+
+    const lg = this.lightG.clear();
+    const erase = this.lightErase.clear();
+    const { enabled, darkness } = this.lighting;
+    this.lightLayer.visible = enabled && darkness > 0;
+    if (this.lightLayer.visible) {
+      lg.rect(box.x, box.y, box.w, box.h).fill({ color: 0x000000, alpha: darkness * (this.viewers ? 1 : 0.5) });
+      for (const el of this.elements) {
+        if (el.type !== "light" || this.hidden.has(el.id)) continue;
+        const t = at(el);
+        const lit = lightArea({ x: t.x, y: t.y }, walls, el.bright, el.dim);
+        erase.poly(flat(lit.dim)).fill({ color: 0xffffff, alpha: 0.55 });
+        erase.poly(flat(lit.bright)).fill({ color: 0xffffff, alpha: 1 });
+      }
+    }
+
+    const fg = this.fogG.clear();
+    const seen = this.fogErase.clear();
+    const viewers = this.viewers?.map((id) => this.byId.get(id)).filter((el) => !!el) ?? null;
+    this.fogLayer.visible = !!viewers?.length;
+    this.sight = null;
+    if (viewers?.length) {
+      fg.rect(box.x, box.y, box.w, box.h).fill({ color: 0x05070c, alpha: 1 });
+      const reach = Math.hypot(box.w, box.h);
+      this.sight = viewers.map((el) => {
+        const t = at(el);
+        return visibilityPolygon({ x: t.x, y: t.y }, walls, reach);
+      });
+      for (const poly of this.sight) seen.poly(flat(poly)).fill({ color: 0xffffff, alpha: 1 });
+    }
+  }
+
+  /** Whether a token is out of the viewers' sight (always false when they see everything). */
+  private unseen(t: Transform): boolean {
+    return !!this.sight && !this.sight.some((poly) => insidePolygon(poly, { x: t.x, y: t.y }));
   }
 
   // Grid
@@ -825,6 +976,8 @@ export class SceneRenderer {
     for (const el of this.elements) {
       if (el.type !== "token" || this.hidden.has(el.id)) continue;
       const t = this.previews.get(el.id) ?? el;
+      // Out of sight: no name or bars to give it away.
+      if (this.unseen(t)) continue;
       const screenW = t.w * cam.zoom;
       const stats = !el.hideBars && el.characterId ? this.statsFor(el.characterId) : [];
       const foot = toScreen(cam, { x: t.x, y: t.y + t.h / 2 });
@@ -932,7 +1085,7 @@ export class SceneRenderer {
 
     // Condition pips along each token's top edge, and a ring round the token whose turn it is.
     for (const el of this.elements) {
-      if (el.type !== "token" || this.hidden.has(el.id)) continue;
+      if (el.type !== "token" || this.hidden.has(el.id) || this.unseen(this.previews.get(el.id) ?? el)) continue;
       const marks = this.marksFor(el.id, el.characterId);
       if (!marks.pips.length && !marks.turn) continue;
       const t = this.previews.get(el.id) ?? el;

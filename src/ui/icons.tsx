@@ -17,7 +17,8 @@ import GiAnvilImpact from '~icons/game-icons/anvil-impact'
 import GiFamilyTree from '~icons/game-icons/family-tree'
 import MsPushPin from '~icons/material-symbols/push-pin'
 import GiExitDoor from '~icons/game-icons/exit-door'
-import GiFog from '~icons/game-icons/fog'
+import GiStoneWall from '~icons/game-icons/stone-wall'
+import GiLanternFlame from '~icons/game-icons/lantern-flame'
 import GiHand from '~icons/game-icons/hand'
 import GiHelp from '~icons/game-icons/help'
 import GiBookshelf from '~icons/game-icons/bookshelf'
@@ -91,7 +92,8 @@ export const IconShapes = icon(MsCategory)
 export const IconText = icon(MsTitle)
 export const IconMeasure = icon(GiMeasureTape)
 export const IconPing = icon(GiBullseye)
-export const IconFog = icon(GiFog)
+export const IconWall = icon(GiStoneWall)
+export const IconLight = icon(GiLanternFlame)
 
 // Scene elements and canvas actions
 export const IconToken = icon(GiPawn)

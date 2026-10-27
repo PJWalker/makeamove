@@ -9,7 +9,8 @@ import { LAYERS, type Layer, type NewElement, type SceneElement } from './types'
 /*
  * Scene subdocument layout (see design doc, "Data model"):
  *
- *   settings  Y.Map  gridType, gridSize, gridOffsetX, gridOffsetY,
+ *   settings  Y.Map  lighting, darkness, vision (M12),
+ *                    gridType, gridSize, gridOffsetX, gridOffsetY,
  *                    gridUnit, gridUnitName, gridDiagonal
  *   elements  Y.Map  elementId -> Y.Map of SceneElement fields
  *
@@ -18,6 +19,13 @@ import { LAYERS, type Layer, type NewElement, type SceneElement } from './types'
  */
 
 export const sceneDbName = (guid: string) => `mam:scene:${guid}`
+
+/** Lighting on or off, how dark unlit places are (0 to 1), and whether players see only what their tokens see. */
+export interface SceneLighting {
+  enabled: boolean
+  darkness: number
+  vision: boolean
+}
 
 /** Where each grid setting is kept in a scene's settings. */
 const GRID_KEYS: Record<keyof Grid, string> = {
@@ -90,6 +98,20 @@ export class SceneDoc {
       if (v !== undefined) (grid as Record<string, unknown>)[k] = v
     }
     return grid
+  }
+
+  /** The scene's lighting, and whether players see only what their tokens do (M12). */
+  lighting(): SceneLighting {
+    const s = this.settings
+    return { enabled: !!s.get('lighting'), darkness: s.get('darkness') ?? 0.75, vision: !!s.get('vision') }
+  }
+
+  setLighting(patch: Partial<SceneLighting>) {
+    this.transact(() => {
+      if (patch.enabled !== undefined) this.settings.set('lighting', patch.enabled)
+      if (patch.darkness !== undefined) this.settings.set('darkness', patch.darkness)
+      if (patch.vision !== undefined) this.settings.set('vision', patch.vision)
+    })
   }
 
   setGrid(patch: Partial<Grid>) {

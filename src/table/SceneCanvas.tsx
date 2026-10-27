@@ -3,7 +3,8 @@ import { addTokens, combatantForToken, hasCombat, tokenMarksSource } from '../co
 import { bounds } from '../scene/geometry'
 import { setMorphOrigin } from '../ui/morph'
 import { openPopup } from '../ui/popup'
-import { type Signal, untracked, useSignal, useSignalEffect } from '@preact/signals'
+import { effect, type Signal, untracked, useSignal, useSignalEffect } from '@preact/signals'
+import { device } from '../store/device'
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import { SceneController } from '../scene/controller'
 import { DEFAULT_GRID, DIAGONAL_RULES, GRID_TYPES, MIN_GRID_SIZE } from '../scene/grid'
@@ -11,6 +12,7 @@ import { SceneRenderer } from '../scene/renderer'
 import { activeTool } from '../scene/tools'
 import { SceneDoc } from '../scene/sceneDoc'
 import type { Point } from '../scene/grid'
+import type { SceneLighting } from '../scene/sceneDoc'
 import { importImage } from '../scene/images'
 import { isPlainToken, TOKEN_STYLES, type BlobRef, type SceneElement, type TokenStyle } from '../scene/types'
 import { DEFAULT_CANVAS_COLOUR, type Campaign } from '../store/campaign'
@@ -36,6 +38,8 @@ import {
   IconToFront,
   IconToken,
   IconCombat,
+  IconLight,
+  IconWall,
   IconUndo,
   IconUnlock,
 } from '../ui/icons'
@@ -109,6 +113,39 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
     campaign.characters.observeDeep(push)
     return () => campaign.characters.unobserveDeep(push)
   }, [ready.value, campaign])
+
+  // Light and sight: the scene's lighting, the GM's walls and lights, and for
+  // a player in a scene with vision on, sight through their own characters' tokens.
+  useEffect(() => {
+    const ctl = controller.value
+    if (!ctl) return
+    const push = () => {
+      const gm = campaign.isGm()
+      ctl.gm = gm
+      const lighting = ctl.scene.lighting()
+      const mine = new Set(listCharacters(campaign).filter((c) => c.kind === 'pc' && c.owner === device.value.id).map((c) => c.id))
+      const eyes = ctl
+        .allElements()
+        .filter((el) => el.type === 'token' && !!el.characterId && mine.has(el.characterId))
+        .map((el) => el.id)
+      // A player with no tokens here sees the whole scene, rather than nothing.
+      renderer.setLighting(lighting, !gm && lighting.vision && eyes.length ? eyes : null, gm)
+    }
+    push()
+    const stop = effect(() => {
+      void ctl.revision.value
+      untracked(push)
+    })
+    ctl.scene.settings.observe(push)
+    campaign.characters.observeDeep(push)
+    campaign.members.observeDeep(push)
+    return () => {
+      stop()
+      ctl.scene.settings.unobserve(push)
+      campaign.characters.unobserveDeep(push)
+      campaign.members.unobserveDeep(push)
+    }
+  }, [controller.value, campaign])
 
   // Condition pips on linked tokens, and the ring on whoever's turn it is.
   useEffect(() => {
@@ -324,6 +361,20 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
           showPanel('combat')
         },
       })
+    }
+    if (one?.type === 'wall') {
+      items.push(
+        one.door
+          ? { label: one.open ? 'Close door' : 'Open door', Icon: IconWall, onSelect: () => ctl.setDoor(one.id, { open: !one.open }) }
+          : { label: 'Make it a door', Icon: IconWall, onSelect: () => ctl.setDoor(one.id, { door: true, open: false }) },
+      )
+      if (one.door) items.push({ label: 'Make it a wall', Icon: IconWall, onSelect: () => ctl.setDoor(one.id, { door: false }) })
+    }
+    if (one?.type === 'light') {
+      items.push(
+        { label: 'Reach further', Icon: IconLight, onSelect: () => ctl.resizeLight(one.id, 1) },
+        { label: 'Reach less far', Icon: IconLight, onSelect: () => ctl.resizeLight(one.id, -1) },
+      )
     }
     if (one?.type === 'map') items.push({ label: 'Use as token', Icon: IconToken, onSelect: () => ctl.convert(one.id, 'token') })
     if (one?.type === 'token' && one.image) {
@@ -685,6 +736,7 @@ function TokenOptionsDialog({
 function SceneSettingsDialog({ campaign, sceneId, scene }: { campaign: Campaign; sceneId: string; scene: SceneDoc }) {
   const ref = useRef<HTMLDialogElement>(null)
   const grid = useY(scene.settings, () => scene.grid())
+  const lighting = JSON.parse(useY(scene.settings, () => JSON.stringify(scene.lighting()))) as SceneLighting
   const view = useY(campaign.scenes, () => campaign.sceneViews().find((s) => s.id === sceneId))
   const isGm = campaign.isGm()
   const shown = view ? canvasColour(view, activeMapColour.value) : DEFAULT_CANVAS_COLOUR
@@ -796,6 +848,45 @@ function SceneSettingsDialog({ campaign, sceneId, scene }: { campaign: Campaign;
             onInput={(e) => campaign.updateScene(sceneId, { canvasColour: e.currentTarget.value })}
           />
         </span>
+      </div>
+      <div class="field">
+        Lighting
+        <Segmented
+          label="Lighting"
+          value={lighting.enabled ? 'on' : 'off'}
+          options={[
+            { id: 'off', label: 'Off' },
+            { id: 'on', label: 'Dynamic' },
+          ]}
+          disabled={!isGm}
+          onChange={(v) => scene.setLighting({ enabled: v === 'on' })}
+        />
+        {lighting.enabled && (
+          <label class="field">
+            Darkness where no light reaches: {Math.round(lighting.darkness * 100)}%
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={Math.round(lighting.darkness * 100)}
+              disabled={!isGm}
+              onChange={(e) => scene.setLighting({ darkness: Number(e.currentTarget.value) / 100 })}
+            />
+          </label>
+        )}
+      </div>
+      <div class="field">
+        Players see
+        <Segmented
+          label="Players see"
+          value={lighting.vision ? 'sight' : 'all'}
+          options={[
+            { id: 'all', label: 'Everything' },
+            { id: 'sight', label: 'What their tokens see' },
+          ]}
+          disabled={!isGm}
+          onChange={(v) => scene.setLighting({ vision: v === 'sight' })}
+        />
       </div>
       {!isGm && <p class="muted">Only the GM can change scene settings.</p>}
     </Dialog>
