@@ -64,7 +64,17 @@ export interface ModifierDef {
 /** One result of a check, best first: "Full success". */
 export interface ResultDef {
   id: string
+  /** Shown on the card; empty to show no result line. */
   label: string
+  /** How the card colours it. */
+  tone?: 'good' | 'mixed' | 'bad'
+}
+
+/** Another way to make the base roll, offered before a check: "Advantage". */
+export interface RollMode {
+  id: string
+  label: string
+  roll: string
 }
 
 /** Something asked of the player before an action rolls. */
@@ -83,6 +93,8 @@ export interface CheckStep {
   /** The stat added. */
   stat?: string
   ask?: Ask
+  /** Derived values added after the stat, each with its label: proficiency, a spell attack bonus. Zero adds nothing. */
+  add?: { value: string; label: string }[]
   /** What each result means, by result id. */
   outcomes: Record<string, string>
   /** Follow-up buttons offered for each result, by follow-up id. */
@@ -123,6 +135,8 @@ export interface ActionDef {
   target?: TargetSpec
   /** What it does when it's used. With no steps it is just read out. */
   steps: ActionStep[]
+  /** Follow-up buttons offered when it has no check (a heal, a spell's damage), by follow-up id. */
+  followUps?: string[]
   tags?: string[]
 }
 
@@ -241,10 +255,12 @@ export interface GameSystem {
   modifier(score: number): number
   /** The roll a check starts from, before modifiers. */
   baseRoll: string
+  /** Other base rolls the player can pick before a check (advantage, disadvantage); a check then always asks. */
+  rollModes?: RollMode[]
   /** A check's possible results, best first. */
   results: ResultDef[]
-  /** Which result a check's total gets. */
-  result(total: number): string
+  /** Which result a check gets, from its total and the kept dice of its base roll. */
+  result(total: number, natural: number[]): string
   actions: ActionDef[]
   actionCategories: ActionCategory[]
   followUps: FollowUpDef[]

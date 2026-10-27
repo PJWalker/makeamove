@@ -7,6 +7,7 @@ import { parseInvite } from '../sync/invite'
 import { createCampaign, deleteLocalCampaign, joinCampaign } from '../store/campaign'
 import { device, setDeviceName } from '../store/device'
 import { campaigns, registryReady, type CampaignSummary } from '../store/registry'
+import { getSystem, listSystems } from '../systems'
 import { Button } from '../ui/Button'
 
 const relative = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' })
@@ -96,7 +97,7 @@ function CampaignRow({ c }: { c: CampaignSummary }) {
       <button type="button" class="campaign-open bevel" data-campaign-id={c.id} onClick={() => goToCampaign(c.id)}>
         <span class="campaign-name">{c.name}</span>
         <span class="campaign-meta">
-          {c.role === 'gm' ? 'GM' : 'Player'} · Dungeon World · opened {ago(c.lastOpenedAt)}
+          {c.role === 'gm' ? 'GM' : 'Player'} · {getSystem(c.systemId).name} · opened {ago(c.lastOpenedAt)}
         </span>
       </button>
       {confirming.value ? (
@@ -120,14 +121,16 @@ function CampaignRow({ c }: { c: CampaignSummary }) {
 function NewCampaignForm() {
   const name = useSignal('')
   const yourName = useSignal(device.value.name)
+  const systemId = useSignal('')
   const busy = useSignal(false)
+  const system = listSystems().find((s) => s.id === systemId.value)
 
   async function submit(e: Event) {
     e.preventDefault()
-    if (!name.value.trim() || !yourName.value.trim()) return
+    if (!name.value.trim() || !yourName.value.trim() || !system) return
     busy.value = true
     setDeviceName(yourName.value.trim())
-    const id = await createCampaign(name.value.trim(), yourName.value.trim())
+    const id = await createCampaign(name.value.trim(), yourName.value.trim(), system.id)
     busy.value = false
     goToCampaign(id)
   }
@@ -158,6 +161,21 @@ function NewCampaignForm() {
             autocomplete="nickname"
             required
           />
+        </label>
+      </div>
+      <div class="form-row">
+        <label class="field">
+          System
+          <select class="input bevel" value={systemId.value} onChange={(e) => (systemId.value = e.currentTarget.value)} required>
+            <option value="" disabled>
+              Choose a system
+            </option>
+            {listSystems().map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
         </label>
       </div>
       <div class="form-actions">

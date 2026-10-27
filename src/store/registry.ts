@@ -46,8 +46,15 @@ export function touchCampaign(id: string) {
 }
 
 export function renameCampaignEntry(id: string, name: string) {
+  updateCampaignEntry(id, { name })
+}
+
+/** Bring this device's entry in line with the campaign (its name, its system), writing only if something changed. */
+export function updateCampaignEntry(id: string, patch: Partial<Pick<CampaignSummary, 'name' | 'systemId'>>) {
   const existing = list.get(id)
-  if (existing && existing.name !== name) list.set(id, { ...existing, name })
+  if (!existing) return
+  const changed = (Object.keys(patch) as (keyof typeof patch)[]).some((k) => patch[k] !== undefined && existing[k] !== patch[k])
+  if (changed) list.set(id, { ...existing, ...patch })
 }
 
 export function forgetCampaign(id: string) {

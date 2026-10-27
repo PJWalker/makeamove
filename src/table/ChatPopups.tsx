@@ -5,6 +5,7 @@ import { chatPopups, dismissPopup } from '../chat/notify'
 import type { ChatMessage } from '../chat/types'
 import { markRead } from '../chat/unread'
 import type { Campaign } from '../store/campaign'
+import { collapsedInto, reducedMotion } from '../ui/bubble'
 import { Button } from '../ui/Button'
 import { IconClose } from '../ui/icons'
 import { LoneMessage } from './ChatPanel'
@@ -34,7 +35,6 @@ const EASE = 'cubic-bezier(0.2, 0.7, 0.2, 1)'
 const GAP = 16
 /** The closest the bubble comes to the window's top and bottom edges. */
 const MARGIN = 8
-const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)')
 
 const chatTab = () => document.querySelector('.rail-tab[data-panel="chat"]')
 
@@ -45,13 +45,7 @@ function tabRect() {
 }
 
 /** A popup squeezed into the Chat tab, or a little below itself when the tab isn't showing. */
-function collapsed(box: DOMRect): Keyframe {
-  const tab = tabRect()
-  if (!tab) return { transform: 'translateY(12px)', opacity: 0 }
-  const dx = tab.left + tab.width / 2 - (box.left + box.width / 2)
-  const dy = tab.top + tab.height / 2 - (box.top + box.height / 2)
-  return { transform: `translate(${dx}px, ${dy}px) scale(${tab.width / box.width}, ${tab.height / box.height})`, opacity: 0 }
-}
+const collapsed = (box: DOMRect): Keyframe => collapsedInto(box, tabRect())
 
 export function ChatPopups({ campaign }: { campaign: Campaign }) {
   const messages = campaign.chat.messages.value

@@ -433,9 +433,9 @@ export const dungeonWorld: GameSystem = {
   modifier: modifierOf,
   baseRoll: '2d6',
   results: [
-    { id: 'strong', label: 'Full success' },
-    { id: 'weak', label: 'Partial success' },
-    { id: 'miss', label: 'Miss' },
+    { id: 'strong', label: 'Full success', tone: 'good' },
+    { id: 'weak', label: 'Partial success', tone: 'mixed' },
+    { id: 'miss', label: 'Miss', tone: 'bad' },
   ],
   result: (total) => (total >= 10 ? 'strong' : total >= 7 ? 'weak' : 'miss'),
   actions: ACTIONS,

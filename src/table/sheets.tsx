@@ -1,6 +1,7 @@
 import type { ComponentType } from 'preact'
 import type { CharacterView } from '../characters/store'
 import type { Campaign } from '../store/campaign'
+import { DndNpcSheet, DndSheet } from '../systems/dnd55e/Sheet'
 import { DungeonWorldNpcSheet, DungeonWorldSheet } from '../systems/dungeon-world/Sheet'
 import type { GameSystem } from '../systems/types'
 import { CopyBanner, TemplateSettings } from './TemplateSettings'
@@ -15,6 +16,7 @@ type SheetProps = { campaign: Campaign; system: GameSystem; c: CharacterView }
 
 const SHEETS: Record<string, { pc: ComponentType<SheetProps>; npc: ComponentType<SheetProps> }> = {
   'dungeon-world': { pc: DungeonWorldSheet, npc: DungeonWorldNpcSheet },
+  'dnd-5.5e': { pc: DndSheet, npc: DndNpcSheet },
 }
 
 /** A character's sheet, as their campaign's system draws it. */

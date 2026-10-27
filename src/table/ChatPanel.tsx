@@ -697,8 +697,10 @@ function RollTerms({ roll }: { roll: Roll }) {
 
 /** A move: its name, the roll behind it, the outcome, and follow-up buttons. */
 function MoveCard({ campaign, m, canAct }: { campaign: Campaign; m: MoveMessage; canAct: boolean }) {
+  const result = m.result ? systemOf(campaign).results.find((r) => r.id === m.result) : undefined
+  const label = result ? result.label : m.result
   return (
-    <div class="roll-card move-card" data-band={m.result ?? 'none'}>
+    <div class="roll-card move-card" data-band={result?.tone ?? 'none'}>
       <div class="roll-head">
         <span class="roll-formula">{m.moveName}</span>
         <span class="roll-comment">{m.characterName}</span>
@@ -721,7 +723,7 @@ function MoveCard({ campaign, m, canAct }: { campaign: Campaign; m: MoveMessage;
           <span class="roll-total">{m.roll.total}</span>
         </div>
       )}
-      {m.result && <div class="move-band">{systemOf(campaign).results.find((r) => r.id === m.result)?.label ?? m.result}</div>}
+      {label && <div class="move-band">{label}</div>}
       <p class="move-outcome">{m.outcome}</p>
       {canAct && m.suggestions.length > 0 && (
         <div class="move-suggest">

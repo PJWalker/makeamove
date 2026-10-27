@@ -17,6 +17,8 @@ export interface MoveChoice {
   ask?: number
   /** An extra situational bonus the player adds. */
   extra?: number
+  /** One of the system's roll modes (advantage), instead of its base roll. */
+  mode?: string
 }
 
 export interface MovePlan {
@@ -35,6 +37,11 @@ export function needsChoice(action: ActionDef): Ask | null {
   return checkOf(action)?.ask ?? null
 }
 
+/** Whether using this action opens the roll dialog: it asks for something, or the system offers roll modes. */
+export function asksFirst(system: GameSystem, action: ActionDef): boolean {
+  return !!needsChoice(action) || (!!system.rollModes?.length && !!checkOf(action))
+}
+
 /**
  * The formula for an action's check: the base roll, then the stat, every
  * bonus that applies (conditions first, then items), the asked-for number,
@@ -49,12 +56,16 @@ export function planMove(
   choice: MoveChoice = {},
 ): MovePlan {
   const check = checkOf(action)
-  let formula = system.baseRoll
+  let formula = system.rollModes?.find((m) => m.id === choice.mode)?.roll ?? system.baseRoll
   const stat = check?.ask?.kind === 'stat' ? choice.stat : check?.stat
   const def = stat ? system.stats.find((s) => s.id === stat) : undefined
   if (def) {
     const mod = d.mods[def.id] ?? 0
     if (mod) formula += signed(mod, def.abbr)
+  }
+  for (const a of check?.add ?? []) {
+    const n = d.values[a.value] ?? 0
+    if (n) formula += signed(n, a.label)
   }
   const bonuses = d.resolved.bonuses.filter((b) => (!b.stat || b.stat === def?.id) && (!b.moves || b.moves.includes(action.id)))
   // Bonuses tied to the stat come straight after it, then the asked-for number, then the rest.
@@ -92,16 +103,20 @@ export function performMove(
   die?: (sides: number) => number,
 ): MoveResult {
   const check = checkOf(action)
-  if (!check) return { outcome: action.text, suggestions: [], spent: [] }
+  const offer = (ids: string[]) =>
+    ids.flatMap((id): MoveSuggestion[] => {
+      const f = system.followUps.find((x) => x.id === id)
+      if (!f) return []
+      if (f.kind === 'bump') return [{ id: f.id, label: f.label, bump: { field: f.field, by: f.by } }]
+      const formula = f.formula(c, d)
+      return [{ id: f.id, label: `${f.label} (${formula})`, roll: { formula, comment: f.comment } }]
+    })
+  if (!check) return { outcome: action.text, suggestions: offer(action.followUps ?? []), spent: [] }
   const plan = planMove(system, action, c, d, choice)
   const r = roll(plan.formula, die)
-  const result = system.result(r.total)
-  const suggestions: MoveSuggestion[] = (check.followUps?.[result] ?? []).flatMap((id): MoveSuggestion[] => {
-    const f = system.followUps.find((x) => x.id === id)
-    if (!f) return []
-    if (f.kind === 'bump') return [{ id: f.id, label: f.label, bump: { field: f.field, by: f.by } }]
-    const formula = f.formula(c, d)
-    return [{ id: f.id, label: `${f.label} (${formula})`, roll: { formula, comment: f.comment } }]
-  })
-  return { roll: r, result, outcome: check.outcomes[result] ?? '', suggestions, spent: plan.spends }
+  // The base roll is the first term; its kept dice are the natural roll (a d20's 20).
+  const first = r.terms[0]
+  const natural = first?.kind === 'dice' ? first.dice.filter((x) => x.kept).map((x) => x.value) : []
+  const result = system.result(r.total, natural)
+  return { roll: r, result, outcome: check.outcomes[result] ?? '', suggestions: offer(check.followUps?.[result] ?? []), spent: plan.spends }
 }

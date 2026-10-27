@@ -13,9 +13,8 @@ import { activeMapColour, autohide, canvasColour, setAutohide } from './canvasSt
 import { ActionDialogs } from './ActionDialogs'
 import { ChatPopups } from './ChatPopups'
 import { Hotbar } from './Hotbar'
-import { TargetBar } from './TargetBar'
 import { LinkPopups } from './LinkPopups'
-import { MoveDialog } from './MoveDialog'
+import { MovePrompt } from './MovePrompt'
 import { Palette } from './Palette'
 import { Toolbar } from './Toolbar'
 
@@ -80,8 +79,7 @@ export function Tabletop({ campaign }: { campaign: Campaign }) {
       <FloatingWindows campaign={campaign} />
       <Hotbar campaign={campaign} />
       <Palette campaign={campaign} />
-      <MoveDialog campaign={campaign} />
-      <TargetBar campaign={campaign} />
+      <MovePrompt campaign={campaign} />
       <LinkPopups campaign={campaign} />
       <ActionDialogs campaign={campaign} />
       <ChatPopups campaign={campaign} />

@@ -61,7 +61,7 @@ describe('Dungeon World data', () => {
   })
 
   it('bands 2d6 results', () => {
-    expect([12, 10, 9, 7, 6, 2].map(dw.result)).toEqual(['strong', 'strong', 'weak', 'weak', 'miss', 'miss'])
+    expect([12, 10, 9, 7, 6, 2].map((t) => dw.result(t, []))).toEqual(['strong', 'strong', 'weak', 'weak', 'miss', 'miss'])
     expect(dw.results.map((r) => r.label)).toEqual(['Full success', 'Partial success', 'Miss'])
   })
 

@@ -1,4 +1,4 @@
-import { signal } from '@preact/signals'
+import { batch, signal } from '@preact/signals'
 import { generateKeyBetween } from 'fractional-indexing'
 import * as Y from 'yjs'
 import { importImage } from '../scene/images'
@@ -8,9 +8,9 @@ import type { MoveSuggestion, MoveTarget } from '../chat/types'
 import type { Campaign } from '../store/campaign'
 import { device } from '../store/device'
 import { getSystem } from '../systems'
-import type { ActionDef, DataValue, ItemDef, TokenStat } from '../systems/types'
+import type { ActionDef, DataValue, ItemDef, ResetEvent, TokenStat } from '../systems/types'
 import type { TemplateSettings } from './templates'
-import { performMove, needsChoice, type MoveChoice } from './moves'
+import { asksFirst, performMove, type MoveChoice } from './moves'
 import {
   characterView,
   derive,
@@ -21,7 +21,7 @@ import {
   type ItemInstance,
 } from './store'
 
-export const systemOf = (campaign: Campaign) => getSystem(campaign.meta.get('system'))
+export const systemOf = (campaign: Campaign) => getSystem(campaign.meta.get('systemId'))
 
 /** A copy's template's map, if it's a copy. */
 const baseOf = (campaign: Campaign, m: Y.Map<any> | undefined): Y.Map<any> | undefined => {
@@ -248,6 +248,18 @@ export function bumpResource(campaign: Campaign, id: string, resource: string, b
   r.set(resource, max === undefined ? next : Math.min(next, max))
 }
 
+/** Refill every resource that this rest resets (see ResourceDef.resets) to its maximum. */
+export function rest(campaign: Campaign, id: string, event: ResetEvent) {
+  const system = systemOf(campaign)
+  const c = getCharacter(campaign, id)
+  const r = part(campaign, id, 'resources')
+  if (!c || !r) return
+  const d = derive(c, system)
+  campaign.doc.transact(() => {
+    for (const def of system.resources) if (def.resets?.includes(event)) r.set(def.id, d.values[def.max] ?? 0)
+  })
+}
+
 /** Set a standing roll modifier (Dungeon World's forward, ongoing). */
 export function setModifier(campaign: Campaign, id: string, modifier: string, value: number) {
   part(campaign, id, 'modifiers')?.set(modifier, value)
@@ -278,7 +290,7 @@ export function setNpcField(campaign: Campaign, id: string, field: string, value
 /** Set by Characters/Palette to ask for a stat or bond before a move rolls. */
 export const moveRequest = signal<{ moveId: string; characterId: string; targets?: MoveTarget[] } | null>(null)
 
-/** A move waiting for its targets to be picked on the scene (see table/TargetBar.tsx). */
+/** A move waiting for its targets to be picked on the scene (see table/MovePrompt.tsx). */
 export const targetRequest = signal<{ moveId: string; characterId: string } | null>(null)
 
 /** Make a move as a character: ask for input if it needs any, otherwise roll and post. */
@@ -287,11 +299,19 @@ export const targetRequest = signal<{ moveId: string; characterId: string } | nu
  * stat or number it needs, then roll.
  */
 export function startMove(campaign: Campaign, characterId: string, move: ActionDef, targets?: MoveTarget[]) {
-  if (move.target && !targets) {
-    moveRequest.value = null
-    targetRequest.value = { moveId: move.id, characterId }
-  } else if (needsChoice(move)) moveRequest.value = { moveId: move.id, characterId, targets }
-  else void makeMove(campaign, characterId, move, {}, targets)
+  batch(() => {
+    if (move.target && !targets) {
+      moveRequest.value = null
+      targetRequest.value = { moveId: move.id, characterId }
+      return
+    }
+    targetRequest.value = null
+    if (asksFirst(systemOf(campaign), move)) moveRequest.value = { moveId: move.id, characterId, targets }
+    else {
+      moveRequest.value = null
+      void makeMove(campaign, characterId, move, {}, targets)
+    }
+  })
 }
 
 export function makeMove(campaign: Campaign, characterId: string, move: ActionDef, choice: MoveChoice = {}, targets?: MoveTarget[]) {

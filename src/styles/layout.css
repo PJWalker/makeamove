@@ -858,13 +858,13 @@
     font-weight: 700;
     font-size: var(--text-sm);
   }
-  .move-card[data-band='strong'] .move-band {
+  .move-card[data-band='good'] .move-band {
     color: var(--success);
   }
-  .move-card[data-band='weak'] .move-band {
+  .move-card[data-band='mixed'] .move-band {
     color: var(--accent);
   }
-  .move-card[data-band='miss'] .move-band {
+  .move-card[data-band='bad'] .move-band {
     color: var(--danger);
   }
   .move-outcome {
@@ -1224,40 +1224,77 @@
     background: color-mix(in oklch, var(--accent) 12%, transparent);
   }
 
-  /* A move waiting for targets: a bar risen above the hotbar. */
-  .target-bar-wrap {
-    position: absolute;
-    left: var(--dock-l, 0px);
-    right: var(--dock-r, 0px);
-    bottom: calc(48px + var(--space-3));
-    display: flex;
-    justify-content: center;
-    padding-inline: var(--space-3);
-    pointer-events: none;
+  /*
+   * What a move asks before it rolls (table/MovePrompt.tsx): a speech bubble
+   * beside the button that started it, placed with top/left and data-side
+   * (the side of the button it's on); --tail is where along its edge the
+   * button is.
+   */
+  .roll-prompt {
+    position: fixed;
+    /* With the chat popups: above floating windows, pointing at its button. */
+    z-index: 11;
+    display: grid;
+    gap: var(--space-2);
+    width: min(340px, calc(100vw - 2 * var(--space-3)));
+    padding: var(--space-2) var(--space-3) var(--space-3);
+    background: var(--surface-raised);
+    box-shadow: var(--window-shadow);
   }
-  .target-bar {
+  .roll-prompt-head {
     display: flex;
     align-items: center;
-    gap: var(--space-3);
-    max-width: 100%;
-    padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4);
-    background: linear-gradient(90deg, color-mix(in oklch, var(--accent) 16%, transparent), transparent 40%), var(--surface-raised);
-    pointer-events: auto;
-    animation: target-bar-rise 160ms var(--ease) both;
+    justify-content: space-between;
+    gap: var(--space-2);
+    margin-right: calc(-1 * var(--space-2));
   }
-  .target-bar-icon {
-    flex: none;
-    color: var(--accent);
+  .roll-prompt-desc {
+    max-height: 9.5em;
+    overflow-y: auto;
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+    white-space: pre-wrap;
   }
-  .target-bar-text {
-    display: grid;
-    gap: 2px;
-    min-width: 0;
-  }
-  .target-bar-prompt {
+  .roll-prompt-text {
+    margin: 0;
     font-size: var(--text-menu);
   }
-  .target-bar-chosen {
+  .roll-prompt-extra .input {
+    inline-size: 6em;
+  }
+  .roll-prompt-tail {
+    display: none;
+    position: absolute;
+    background: var(--surface-raised);
+    animation: vt-fade-in 80ms ease-out 100ms both;
+    [data-side='right'] > &,
+    [data-side='left'] > & {
+      display: block;
+      top: clamp(var(--space-4), var(--tail), calc(100% - var(--space-4)));
+      width: 12px;
+      height: 24px;
+      translate: 0 -50%;
+    }
+    [data-side='right'] > & {
+      left: -12px;
+      clip-path: polygon(100% 0, 0 50%, 100% 100%);
+    }
+    [data-side='left'] > & {
+      right: -12px;
+      clip-path: polygon(0 0, 100% 50%, 0 100%);
+    }
+    [data-side='above'] > & {
+      display: block;
+      bottom: -12px;
+      left: clamp(var(--space-4), var(--tail), calc(100% - var(--space-4)));
+      width: 24px;
+      height: 12px;
+      translate: -50% 0;
+      clip-path: polygon(0 0, 100% 0, 50% 100%);
+    }
+  }
+  .roll-prompt-targets {
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-1);
@@ -1270,17 +1307,6 @@
     &[data-out] {
       color: var(--danger);
       background: color-mix(in oklch, var(--danger) 14%, transparent);
-    }
-  }
-  .target-bar-actions {
-    display: flex;
-    flex: none;
-    gap: var(--space-2);
-  }
-  @keyframes target-bar-rise {
-    from {
-      opacity: 0;
-      translate: 0 12px;
     }
   }
   /*
@@ -2128,7 +2154,114 @@
   }
   .stat-mod:hover {
     background: var(--accent);
-    color: var(--accent-text, var(--text));
+    color: var(--accent-ink);
+  }
+  .dnd-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+    gap: var(--space-2);
+  }
+  .dnd-fields .input,
+  .sheet .counter > .input {
+    min-width: 0;
+    inline-size: 100%;
+  }
+  .dnd-abilities .stat-score {
+    inline-size: 4em;
+  }
+  .dnd-save {
+    --bevel: var(--bevel-sm);
+    inline-size: 100%;
+    padding: var(--space-1);
+    font-size: var(--text-xs);
+    font-variant-numeric: tabular-nums;
+    background: var(--surface);
+    color: var(--text-muted);
+    border: 0;
+    cursor: pointer;
+  }
+  .dnd-save[data-prof='true'] {
+    color: var(--text);
+    font-weight: 700;
+    box-shadow: inset 0 0 0 1px var(--accent);
+  }
+  .dnd-save:hover,
+  .dnd-roll:hover:not(:disabled),
+  .dnd-skill:hover {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  .dnd-roll {
+    font: inherit;
+    font-variant-numeric: tabular-nums;
+    padding: 0 var(--space-1);
+    background: none;
+    color: inherit;
+    border: 0;
+    cursor: pointer;
+  }
+  .dnd-skills {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 2px var(--space-3);
+  }
+  .dnd-skills li {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .dnd-prof {
+    flex: none;
+    inline-size: 12px;
+    block-size: 12px;
+    padding: 0;
+    border: 1px solid var(--text-muted);
+    border-radius: 50%;
+    background: none;
+    cursor: pointer;
+  }
+  .dnd-prof[data-rank='1'] {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .dnd-prof[data-rank='2'] {
+    background: var(--accent);
+    border-color: var(--text);
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+  .dnd-prof:disabled {
+    cursor: default;
+  }
+  .dnd-skill {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    gap: var(--space-1);
+    align-items: baseline;
+    padding: 2px var(--space-1);
+    font: inherit;
+    font-size: var(--text-sm);
+    text-align: start;
+    background: none;
+    color: inherit;
+    border: 0;
+    cursor: pointer;
+  }
+  .dnd-skill .muted {
+    font-size: var(--text-xs);
+  }
+  .dnd-bonus {
+    margin-inline-start: auto;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .dnd-conditions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-3);
   }
   .stat-deb {
     display: flex;
@@ -2159,11 +2292,6 @@
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-1);
-  }
-  .move-formula {
-    margin: 0;
-    font-family: var(--font-mono, monospace);
-    font-size: var(--text-sm);
   }
 
   .item-tags {
@@ -2450,6 +2578,20 @@
     display: flex;
     align-items: center;
     gap: var(--space-3);
+  }
+  /* Lays out a hidden copy at its natural width, to measure whether it fits. */
+  .segmented-or-select {
+    position: relative;
+    min-width: 0;
+    display: grid;
+  }
+  .segmented-measure {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    width: max-content;
+    visibility: hidden;
+    pointer-events: none;
   }
   .colour-row .segmented {
     flex: 1;

@@ -1,5 +1,6 @@
 import type { GameSystem } from './types'
 import { dungeonWorld } from './dungeon-world'
+import { dnd55e } from './dnd55e'
 
 /*
  * The systems this app knows, by id; a campaign plays one. Built-in systems
@@ -41,6 +42,7 @@ export function checkSystem(s: GameSystem): string[] {
         for (const f of ids) if (!followUps.has(f)) problems.push(`${a.name}: no follow-up “${f}”.`)
     }
   }
+  for (const a of s.actions) for (const f of a.followUps ?? []) if (!followUps.has(f)) problems.push(`${a.name}: no follow-up “${f}”.`)
   for (const k of s.conditions) if (k.stat && !stats.has(k.stat)) problems.push(`${k.name}: no stat “${k.stat}”.`)
   for (const f of s.followUps) if (f.kind === 'bump' && !fields.has(f.field)) problems.push(`${f.label}: no character field “${f.field}”.`)
   return problems
@@ -57,6 +59,7 @@ export function defineSystem(system: GameSystem): GameSystem {
 }
 
 defineSystem(dungeonWorld)
+defineSystem(dnd55e)
 
 /** The system with this id; Dungeon World for campaigns that don't say. */
 export function getSystem(id: string | undefined): GameSystem {

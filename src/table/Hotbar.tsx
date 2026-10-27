@@ -6,6 +6,7 @@ import { shortcutFor, showCombo, slotLook } from '../actions/custom'
 import { buildIndex, pinnedRoll } from '../actions/registry'
 import { noteRecent } from '../actions/recent'
 import type { Campaign } from '../store/campaign'
+import { notePressed } from '../ui/pressed'
 import { useY } from '../store/useY'
 import { Button } from '../ui/Button'
 import { ENTRY_ICONS } from '../ui/entryIcons'
@@ -59,6 +60,8 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
       const id = slots[Number(e.key) - 1]
       if (id) {
         e.preventDefault()
+        // Whatever the slot starts appears beside it, as if it were clicked.
+        notePressed(barRef.current?.querySelectorAll('.hotbar-btn')[Number(e.key) - 1])
         run(id)
       }
     }

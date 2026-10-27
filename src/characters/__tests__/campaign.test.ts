@@ -8,6 +8,7 @@ import * as Y from 'yjs'
 import { systemActions } from '../../actions/system'
 import { Campaign, createCampaign } from '../../store/campaign'
 import { device } from '../../store/device'
+import { summaryOf } from '../../store/registry'
 import { addItem, createFolder, deleteCharacter, deleteFolder, getCharacter, listFolders, makeMove, moveRequest, moveToFolder, newCharacter, newNpc, renameFolder, tokenStatsSource, selectedCharacterId, setData, setLearned, setModifier, startMove, systemOf, targetRequest, updateItem } from '../api'
 import { actionsFor, derive } from '../store'
 import { defaultHotbar, editHotbar, hotbarSlots, moveTo, pin, placeAt, insertAt, shift, unpin, MAX_SLOTS } from '../hotbar'
@@ -21,6 +22,24 @@ async function setUp() {
   c.members.set('pat', pat)
   return c
 }
+
+describe('a campaign’s system', () => {
+  it('plays the system it was created with, and asks before every d20 roll', async () => {
+    device.value = { id: 'gm', name: 'Gwen' }
+    const id = await createCampaign('Sunless Citadel', 'Gwen', 'dnd-5.5e')
+    const c = await Campaign.open(id)
+    expect(systemOf(c).id).toBe('dnd-5.5e')
+    expect(summaryOf(id)?.systemId).toBe('dnd-5.5e')
+    const pc = newCharacter(c, 'Vex', 'rogue')
+    startMove(c, pc, systemOf(c).actions.find((a) => a.id === 'skill-stealth')!)
+    expect(moveRequest.value).toMatchObject({ moveId: 'skill-stealth' })
+    moveRequest.value = null
+  })
+
+  it('defaults to Dungeon World', async () => {
+    expect(systemOf(await setUp()).id).toBe('dungeon-world')
+  })
+})
 
 describe('characters in a campaign', () => {
   it('deletes a character and clears anyone playing it', async () => {

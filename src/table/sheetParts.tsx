@@ -15,7 +15,7 @@ import { IconAdd, IconDelete, IconImage, IconPost, IconRemove, IconRename, IconR
 import { List, Tag } from '../ui/List'
 import { menuTrigger } from '../ui/menuTrigger'
 import { openPopup } from '../ui/popup'
-import { Segmented } from '../ui/Segmented'
+import { Segmented, SegmentedOrSelect } from '../ui/Segmented'
 import { Dialog } from './CampaignDialogs'
 import { ContextMenu, type MenuItem } from './ContextMenu'
 import { EntryRow, EntryWindow, rollTag, useEntryWindows } from './EntryWindow'
@@ -101,7 +101,7 @@ export function MoveList({
   return (
     <div class="moves">
       {categories.length > 1 && (
-        <Segmented
+        <SegmentedOrSelect
           label="Move type"
           value={filter.value}
           options={[{ id: 'all', label: 'All' }, ...categories]}

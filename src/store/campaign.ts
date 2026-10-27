@@ -4,7 +4,8 @@ import * as Y from 'yjs'
 import { IndexeddbPersistence } from 'y-indexeddb'
 import { newId, newSecret } from '../lib/ids'
 import { device } from './device'
-import { forgetCampaign, renameCampaignEntry, summaryOf, touchCampaign, upsertCampaign } from './registry'
+import { forgetCampaign, renameCampaignEntry, summaryOf, touchCampaign, updateCampaignEntry, upsertCampaign } from './registry'
+import { getSystem } from '../systems'
 import type { Invite } from '../sync/invite'
 import { SyncSession } from '../sync/session'
 import { colourOf, Presence } from '../scene/presence'
@@ -70,6 +71,7 @@ export interface SceneView {
   visibility: Visibility
 }
 
+/** The system an invite assumes until the campaign arrives from a peer. */
 const DEFAULT_SYSTEM = { id: 'dungeon-world', version: '0.1.0' }
 /** Canvas colour for an auto scene with no map yet. */
 export const DEFAULT_CANVAS_COLOUR = '#2b3a55'
@@ -154,7 +156,7 @@ export class Campaign {
         this.ensureMember(name)
         this.chat.post({ kind: 'system', text: `${name} joined`, event: 'join' }, { id: device.value.id, name })
       }
-      if (named) renameCampaignEntry(this.id, this.name)
+      if (named) updateCampaignEntry(this.id, { name: this.name, systemId: this.meta.get('systemId') ?? DEFAULT_SYSTEM.id })
       this.ready.value = named
       this.removed.value = removed
       if (removed && !this.checkingRejoin) this.disconnect()
@@ -435,14 +437,15 @@ export class Campaign {
 
 export const activeCampaign = signal<Campaign | null>(null)
 
-export async function createCampaign(name: string, gmName: string): Promise<string> {
+export async function createCampaign(name: string, gmName: string, systemId = DEFAULT_SYSTEM.id): Promise<string> {
   const id = newId()
   const roomKey = newSecret()
+  const system = getSystem(systemId)
   const c = await Campaign.open(id)
   c.doc.transact(() => {
     c.meta.set('name', name)
-    c.meta.set('systemId', DEFAULT_SYSTEM.id)
-    c.meta.set('systemVersion', DEFAULT_SYSTEM.version)
+    c.meta.set('systemId', system.id)
+    c.meta.set('systemVersion', system.version)
     c.meta.set('roomKey', roomKey)
     c.meta.set('createdAt', Date.now())
     c.meta.set('createdBy', device.value.id)
@@ -456,7 +459,7 @@ export async function createCampaign(name: string, gmName: string): Promise<stri
   upsertCampaign({
     id,
     name,
-    systemId: DEFAULT_SYSTEM.id,
+    systemId: system.id,
     role: 'gm',
     roomKey,
     createdAt: now,

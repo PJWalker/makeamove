@@ -10,13 +10,20 @@ import { icon, type Icon } from './icons'
 
 import GiAnkh from '~icons/game-icons/ankh'
 import GiArrowFlights from '~icons/game-icons/arrow-flights'
+import GiBarbarian from '~icons/game-icons/barbarian'
 import GiBattleAxe from '~icons/game-icons/battle-axe'
 import GiBookPile from '~icons/game-icons/book-pile'
 import GiBowArrow from '~icons/game-icons/bow-arrow'
+import GiBreastplate from '~icons/game-icons/breastplate'
 import GiBroadsword from '~icons/game-icons/broadsword'
 import GiChainMail from '~icons/game-icons/chain-mail'
 import GiCheckedShield from '~icons/game-icons/checked-shield'
+import GiCloak from '~icons/game-icons/cloak'
 import GiCloakDagger from '~icons/game-icons/cloak-dagger'
+import GiCrossbow from '~icons/game-icons/crossbow'
+import GiCrystalWand from '~icons/game-icons/crystal-wand'
+import GiFlail from '~icons/game-icons/flail'
+import GiGauntlet from '~icons/game-icons/gauntlet'
 import GiGladius from '~icons/game-icons/gladius'
 import GiHalberd from '~icons/game-icons/halberd'
 import GiHamShank from '~icons/game-icons/ham-shank'
@@ -24,12 +31,17 @@ import GiHealthPotion from '~icons/game-icons/health-potion'
 import GiHerbsBundle from '~icons/game-icons/herbs-bundle'
 import GiHolySymbol from '~icons/game-icons/holy-symbol'
 import GiKnapsack from '~icons/game-icons/knapsack'
+import GiLeatherArmor from '~icons/game-icons/leather-armor'
 import GiLockpicks from '~icons/game-icons/lockpicks'
 import GiLyre from '~icons/game-icons/lyre'
+import GiMaceHead from '~icons/game-icons/mace-head'
+import GiMagicSwirl from '~icons/game-icons/magic-swirl'
+import GiMonkFace from '~icons/game-icons/monk-face'
 import GiOakLeaf from '~icons/game-icons/oak-leaf'
 import GiPointyHat from '~icons/game-icons/pointy-hat'
 import GiPowderBag from '~icons/game-icons/powder-bag'
 import GiPriceTag from '~icons/game-icons/price-tag'
+import GiRing from '~icons/game-icons/ring'
 import GiRollingDices from '~icons/game-icons/rolling-dices'
 import GiRopeCoil from '~icons/game-icons/rope-coil'
 import GiRoundShield from '~icons/game-icons/round-shield'
@@ -38,8 +50,12 @@ import GiSpears from '~icons/game-icons/spears'
 import GiSpellBook from '~icons/game-icons/spell-book'
 import GiStiletto from '~icons/game-icons/stiletto'
 import GiSwordman from '~icons/game-icons/swordman'
+import GiTorch from '~icons/game-icons/torch'
 import GiVisoredHelm from '~icons/game-icons/visored-helm'
+import GiWarhammer from '~icons/game-icons/warhammer'
+import GiWarlockEye from '~icons/game-icons/warlock-eye'
 import GiWingedSword from '~icons/game-icons/winged-sword'
+import GiWizardStaff from '~icons/game-icons/wizard-staff'
 
 /** The icon names systems and plugins can use. */
 export const ENTRY_ICONS = {
@@ -66,6 +82,18 @@ export const ENTRY_ICONS = {
   spellbook: icon(GiSpellBook),
   tools: icon(GiLockpicks),
   bag: icon(GiKnapsack),
+  mace: icon(GiMaceHead),
+  flail: icon(GiFlail),
+  hammer: icon(GiWarhammer),
+  staff: icon(GiWizardStaff),
+  crossbow: icon(GiCrossbow),
+  'leather-armor': icon(GiLeatherArmor),
+  breastplate: icon(GiBreastplate),
+  torch: icon(GiTorch),
+  wand: icon(GiCrystalWand),
+  ring: icon(GiRing),
+  cloak: icon(GiCloak),
+  gauntlet: icon(GiGauntlet),
   // Classes
   bard: icon(GiLyre),
   cleric: icon(GiAnkh),
@@ -76,6 +104,10 @@ export const ENTRY_ICONS = {
   thief: icon(GiCloakDagger),
   wizard: icon(GiPointyHat),
   hero: icon(GiVisoredHelm),
+  barbarian: icon(GiBarbarian),
+  monk: icon(GiMonkFace),
+  sorcerer: icon(GiMagicSwirl),
+  warlock: icon(GiWarlockEye),
   // Moves and tags
   move: icon(GiRollingDices),
   'class-move': icon(GiWingedSword),

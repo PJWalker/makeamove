@@ -186,9 +186,6 @@
     padding: 0;
     color: var(--accent);
   }
-  .btn.move-make:hover:not(:disabled) {
-    color: oklch(100% 0 0);
-  }
   /* Amber, for the chosen tool or tab */
   .btn-icon[aria-pressed='true'] {
     --gem: oklch(50% 0.11 76);
