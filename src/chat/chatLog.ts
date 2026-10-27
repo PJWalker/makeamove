@@ -41,6 +41,8 @@ export class ChatLog {
   readonly messages = signal<ChatMessage[]>([])
   /** Whether older chunks exist that aren't loaded. */
   readonly hasEarlier = signal(false)
+  /** About how many messages those hold: chunks fill before the next starts, so CHUNK_SIZE each. */
+  readonly earlierCount = signal(0)
 
   private readonly chunks: Y.Array<Y.Doc>
   private readonly loaded = new Map<string, LoadedChunk>()
@@ -74,6 +76,7 @@ export class ChatLog {
   private async loadFrom(index: number) {
     this.from = Math.min(this.from, index)
     this.hasEarlier.value = this.from > 0
+    this.earlierCount.value = this.from * CHUNK_SIZE
     const waits: Promise<unknown>[] = []
     this.chunks.forEach((doc, i) => {
       if (i >= this.from && !this.loaded.has(doc.guid)) waits.push(this.loadChunk(doc))

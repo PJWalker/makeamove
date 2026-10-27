@@ -11,6 +11,7 @@ import { Sidebar } from './Sidebar'
 import { dockInsets, windowDragging } from './panelLayout'
 import { activeMapColour, autohide, canvasColour, setAutohide } from './canvasState'
 import { ActionDialogs } from './ActionDialogs'
+import { ChatPopups } from './ChatPopups'
 import { Hotbar } from './Hotbar'
 import { TargetBar } from './TargetBar'
 import { LinkPopups } from './LinkPopups'
@@ -83,6 +84,7 @@ export function Tabletop({ campaign }: { campaign: Campaign }) {
       <TargetBar campaign={campaign} />
       <LinkPopups campaign={campaign} />
       <ActionDialogs campaign={campaign} />
+      <ChatPopups campaign={campaign} />
     </div>
   )
 }

@@ -700,8 +700,14 @@
     gap: var(--space-1);
     padding-bottom: var(--space-3);
   }
-  .chat-earlier {
-    align-self: center;
+  .chat-rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+  /* Stands in for rows that aren't rendered (ChatPanel.tsx), so the scrollbar spans the whole log. */
+  .chat-space {
+    flex: none;
   }
   .chat-msg {
     display: grid;
@@ -792,11 +798,6 @@
     position: relative;
   }
   /* Earlier sessions fold into a band that opens on click. */
-  .chat-session {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-  }
   .chat-session-fold {
     --bevel: var(--bevel-sm);
     display: flex;
@@ -1280,6 +1281,85 @@
     from {
       opacity: 0;
       translate: 0 12px;
+    }
+  }
+  /*
+   * Chat arriving while the Chat panel is out of view (table/ChatPopups.tsx):
+   * a speech bubble beside the Chat tab, which places it with top/left/right
+   * and data-anchor. Without the tab, it sits in the bottom-right corner.
+   */
+  .chat-popups {
+    position: fixed;
+    /* Above floating windows: it's brief, and points at the tab. */
+    z-index: 11;
+    width: min(360px, calc(100vw - var(--dock-l, 0px) - var(--dock-r, 0px) - 2 * var(--space-3)));
+    &[data-anchor='corner'],
+    &:not([data-anchor]) {
+      right: calc(var(--dock-r, 0px) + var(--space-3));
+      bottom: calc(48px + var(--space-3));
+    }
+  }
+  /* The newest in front; older ones recede behind it and peek out above. */
+  .chat-popup-stack {
+    position: relative;
+    perspective: 900px;
+    perspective-origin: 50% 100%;
+  }
+  .chat-popup {
+    position: relative;
+    max-height: min(60vh, 420px);
+    overflow-y: auto;
+    padding: var(--space-2) var(--space-3) var(--space-3);
+    background: var(--surface-raised);
+    box-shadow: var(--window-shadow);
+    cursor: pointer;
+    transition:
+      transform 260ms var(--ease),
+      filter 260ms var(--ease);
+    &:not([data-depth='0']) {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      cursor: default;
+      transform: translate3d(0, calc(var(--depth) * -24px), calc(var(--depth) * -50px));
+      filter: brightness(calc(1 - var(--depth) * 0.12));
+      /* A rim, so each card's edge reads against the one in front. */
+      box-shadow:
+        inset 0 1px 0 var(--hairline-strong),
+        var(--window-shadow);
+    }
+    & .chat-msg[data-header='true'] {
+      margin-top: 0;
+    }
+    /* Clear of the dismiss button. */
+    & .chat-msg-head {
+      padding-right: var(--space-5);
+    }
+  }
+  .chat-popup-close {
+    position: absolute;
+    top: var(--space-1);
+    right: var(--space-1);
+  }
+  /* The bubble's tail, pointing at the tab; it shows once the bubble has grown. */
+  .chat-popup-tail {
+    display: none;
+    position: absolute;
+    top: clamp(var(--space-4), var(--tail-y, 50%), calc(100% - var(--space-4)));
+    width: 12px;
+    height: 24px;
+    translate: 0 -50%;
+    background: var(--surface-raised);
+    animation: vt-fade-in 120ms ease-out 200ms both;
+    [data-anchor='right'] > & {
+      display: block;
+      right: -12px;
+      clip-path: polygon(0 0, 100% 50%, 0 100%);
+    }
+    [data-anchor='left'] > & {
+      display: block;
+      left: -12px;
+      clip-path: polygon(100% 0, 0 50%, 100% 100%);
     }
   }
   .move-targets {

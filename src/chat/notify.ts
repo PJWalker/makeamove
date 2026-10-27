@@ -1,4 +1,4 @@
-import { effect } from '@preact/signals'
+import { effect, signal } from '@preact/signals'
 import { stampTime } from '../lib/hlc'
 import { activeCampaign } from '../store/campaign'
 import { device } from '../store/device'
@@ -14,6 +14,10 @@ import { visibilityOf, type ChatMessage } from './types'
  * are local notifications, raised by this page when a message arrives. There
  * is no server to push from, so they work while the app is open, not after
  * it's closed.
+ *
+ * While the page itself is in front but the Chat panel isn't showing, the
+ * message pops up over the table instead (table/ChatPopups.tsx), so there's
+ * no system notification for something already on screen.
  */
 
 /** The title and body to show for a message, or null if it isn't worth a notification. */
@@ -32,7 +36,21 @@ export function describe(m: ChatMessage, nameOf?: (kind: LinkKind, id: string) =
   }
 }
 
-const inView = () => !document.hidden && document.hasFocus() && panelVisible('chat')
+const pageInView = () => !document.hidden && document.hasFocus()
+
+/** The most popups shown at once; older ones give way. */
+const MAX_POPUPS = 3
+
+/** Messages (by id) shown over the table while the Chat panel is out of view. */
+export const chatPopups = signal<string[]>([])
+
+export function dismissPopup(id: string) {
+  chatPopups.value = chatPopups.value.filter((p) => p !== id)
+}
+
+function popUp(id: string) {
+  chatPopups.value = [...chatPopups.value, id].slice(-MAX_POPUPS)
+}
 
 async function show(title: string, body: string, tag: string) {
   const options: NotificationOptions = { body, tag, icon: '/icon-192.png' }
@@ -57,8 +75,8 @@ function askPermission() {
 
 /** Start watching the open campaign's chat. Returns a stop function. */
 export function startChatNotifications() {
-  if (typeof Notification === 'undefined') return () => {}
-  askPermission()
+  const canNotify = typeof Notification !== 'undefined'
+  if (canNotify) askPermission()
   const started = Date.now()
   const told = new Set<string>()
   const stop = effect(() => {
@@ -72,10 +90,23 @@ export function startChatNotifications() {
       // History loaded at start-up, or synced from before this page opened, isn't news.
       if (stampTime(m.hlc) < started) continue
       told.add(m.id)
-      if (m.author === me || visibilityOf(m, me, isGm) !== 'full' || Notification.permission !== 'granted' || inView()) continue
-      const text = describe(m, (kind, id) => linkLabel(c, kind, id))
-      if (text) void show(text.title, text.body, m.id).catch(() => {})
+      if (m.kind === 'system' || visibilityOf(m, me, isGm) !== 'full' || panelVisible('chat')) continue
+      // My own messages pop up too (a move from the hotbar should show its result), but never notify.
+      if (pageInView()) popUp(m.id)
+      else if (m.author !== me && canNotify && Notification.permission === 'granted') {
+        const text = describe(m, (kind, id) => linkLabel(c, kind, id))
+        if (text) void show(text.title, text.body, m.id).catch(() => {})
+      }
     }
   })
-  return stop
+  // Opening the chat, or leaving the campaign, clears what's popped up.
+  const clear = effect(() => {
+    void activeCampaign.value
+    if (panelVisible('chat') || !activeCampaign.value) chatPopups.value = []
+  })
+  return () => {
+    stop()
+    clear()
+    chatPopups.value = []
+  }
 }
