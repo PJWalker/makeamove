@@ -59,8 +59,11 @@ export class SyncSession {
       for (const d of loaded) this.attach(d)
     }
     root.on('subdocs', onSubdocs)
-    // Subdocuments that were already loaded before the session started.
-    for (const d of root.getSubdocs()) if (d.isLoaded) this.attach(d)
+    // Subdocuments that were already loaded before the session started (chat
+    // chunks and an open scene, when a campaign is opened from storage).
+    // `shouldLoad` is what load() sets; Yjs only sets `isLoaded` when a
+    // provider emits 'sync', which IndexedDB persistence never does.
+    for (const d of root.getSubdocs()) if (d.shouldLoad) this.attach(d)
 
     const onAwareness = ({ added, updated, removed }: AwarenessChange, origin: unknown) => {
       if (origin === REMOTE) return

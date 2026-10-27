@@ -73,6 +73,27 @@ describe('SyncSession', () => {
     sb.destroy()
   })
 
+  it('syncs subdocuments that were loaded before the session started (a campaign opened from storage)', async () => {
+    const room = new MemoryRoom()
+    const a = rootDoc()
+    const b = rootDoc()
+    // Both already hold the chunk, loaded, as when a campaign reopens and its chat loads before connecting.
+    const chunk = new Y.Doc({ guid: 'camp/chat/c1' })
+    a.getArray('chat').push([chunk])
+    Y.applyUpdate(b, Y.encodeStateAsUpdate(a))
+    const theirs = b.getArray<Y.Doc>('chat').get(0)
+    theirs.load()
+    const sa = new SyncSession(a, room.join('a'))
+    const sb = new SyncSession(b, room.join('b'))
+    await room.settle()
+
+    chunk.getArray('messages').push(['Hello'])
+    await room.settle()
+    expect(theirs.getArray('messages').toArray()).toEqual(['Hello'])
+    sa.destroy()
+    sb.destroy()
+  })
+
   it('shares presence and clears it when a peer leaves', async () => {
     const room = new MemoryRoom()
     const a = rootDoc()
