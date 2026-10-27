@@ -8,6 +8,7 @@ import type { Campaign } from '../store/campaign'
 import { useY } from '../store/useY'
 import { Button } from '../ui/Button'
 import { IconSearch } from '../ui/icons'
+import { actionEntity, dropMarker, dropOn, dropTargetAt } from './entityDrag'
 import { paletteOpen } from './Palette'
 import { isTyping } from '../ui/keys'
 import { startReorder } from '../ui/reorder'
@@ -62,18 +63,32 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
   const endDrag = () => {
     dragging.value = null
   }
-  const dragSlot = (id: string, e: PointerEvent) =>
+  const dragSlot = (id: string, e: PointerEvent) => {
+    // Off the bar, a slot can land on a character or in a note, like a palette result; anywhere else unpins it.
+    const what = actionEntity(campaign, id, index.get(id)?.title ?? id)
+    const mark = dropMarker()
     startReorder({
       event: e,
       axis: 'x',
       container: barRef.current,
       items: () => [...barRef.current!.querySelectorAll<HTMLElement>('.hotbar-slot')],
       onLift: () => (dragging.value = id),
-      onEnd: endDrag,
+      onMove: (ev, inside) => mark(inside ? null : dropTargetAt(ev.clientX, ev.clientY, what)),
+      onEnd: () => {
+        mark(null)
+        endDrag()
+      },
       onDrop: (index) => edit((s) => placeAt(s, id, index)),
-      // Let go off the bar to unpin.
-      outside: { when: 'release', run: () => edit((s) => unpin(s, id)) },
+      outside: {
+        when: 'release',
+        run: (ev) => {
+          const target = dropTargetAt(ev.clientX, ev.clientY, what)
+          if (target) dropOn(target, what, ev.clientX, ev.clientY)
+          else edit((s) => unpin(s, id))
+        },
+      },
     })
+  }
 
   return (
     <div class="hotbar-wrap">

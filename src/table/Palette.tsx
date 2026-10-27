@@ -6,16 +6,11 @@ import { rank } from '../actions/search'
 import type { Action } from '../actions/types'
 import { editHotbar, insertAt, isPinned, pin, unpin } from '../characters/hotbar'
 import { IconAdd } from '../ui/icons'
-import type { LinkKind } from '../notes/api'
-import { entity } from './entityDrag'
-import { dragToHotbar } from './hotbarDrop'
+import { actionEntity, dragEntity } from './entityDrag'
 import { menuTrigger } from '../ui/menuTrigger'
 import { ContextMenu, type MenuItem } from './ContextMenu'
 import type { Campaign } from '../store/campaign'
 import { nextZ } from '../ui/windows'
-
-/** Results that can be dragged out, by the prefix of their action id. */
-const DRAG_KINDS: Record<string, LinkKind> = { move: 'move', library: 'item', character: 'character', scene: 'scene' }
 
 export const paletteOpen = signal(false)
 
@@ -70,13 +65,6 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
   }
 
   /** Right-click for a menu; press and drag to pin the action onto the hotbar. */
-  /** What a result is, for dragging onto a character or into a note: moves, gear, characters and scenes. */
-  function entityOf(a: Action) {
-    const i = a.id.indexOf(':')
-    const kind = DRAG_KINDS[a.id.slice(0, i)]
-    return kind ? entity(campaign, kind, a.id.slice(i + 1), a.title) : undefined
-  }
-
   function rowTriggers(a: Action, i: number) {
     const trigger = menuTrigger((x, y) => {
       cursor.value = i
@@ -94,13 +82,14 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
       onContextMenu: trigger.onContextMenu,
       onPointerDown(e: PointerEvent) {
         trigger.onPointerDown(e)
-        dragToHotbar(
-          e,
-          (index) => {
+        // Onto the hotbar, a character or a note.
+        const what = actionEntity(campaign, a.id, a.title)
+        dragEntity(e, {
+          ...what,
+          pin: (index) => {
             if (editHotbar(campaign, (slots) => insertAt(slots, a.id, index))) note.value = `Added ${a.title} to the hotbar`
           },
-          entityOf(a),
-        )
+        })
       },
     }
   }

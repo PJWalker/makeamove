@@ -17,6 +17,8 @@ export interface ReorderOptions {
   onDrop: (index: number) => void
   onLift?: () => void
   onEnd?: () => void
+  /** Called as the lifted item moves, with whether it's inside the container. */
+  onMove?: (e: PointerEvent, inside: boolean) => void
   /**
    * What leaving the container does: act as soon as the pointer is out
    * (the item is let go of), or when it is released out there. With none, a
@@ -76,6 +78,7 @@ export function startReorder(o: ReorderOptions) {
       o.onLift?.()
     }
     el.style.translate = `${e.clientX - startX}px ${e.clientY - startY}px`
+    o.onMove?.(e, inside(e))
     if (inside(e)) {
       showLine(slot(e))
     } else {
