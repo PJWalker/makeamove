@@ -86,7 +86,7 @@ export function TargetBar({ campaign }: { campaign: Campaign }) {
             Cancel
           </Button>
           <Button variant="primary" disabled={!ready} onClick={make}>
-            Make the move
+            {move.name}
           </Button>
         </div>
       </div>

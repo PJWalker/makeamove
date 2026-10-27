@@ -1,5 +1,4 @@
 import { signal } from '@preact/signals'
-import { checkOf } from '../characters/moves'
 import { addItem, canEdit, getCharacter, selectedCharacterId, startMove, systemOf } from '../characters/api'
 import { KIND_LABEL, librariesFor, searchEntries, type EntryKind, type LibraryEntry } from '../library'
 import type { Campaign } from '../store/campaign'
@@ -11,6 +10,7 @@ import { List, ListGroup, Tag } from '../ui/List'
 import { EntryRow, EntryWindow, rollTag, useEntryWindows } from './EntryWindow'
 import { dragItem } from './itemDrag'
 import { libraryView as view, type KindFilter } from './libraryView'
+import { makeVerb } from './sheetParts'
 
 /** Collections folded away, by "source/collection" (this device only). */
 const folded = signal<Set<string>>(new Set())
@@ -54,9 +54,10 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
       )
     }
     if (e.kind === 'move' && inWindow) {
+      const { label, Icon } = makeVerb(e.move)
       return (
         <Button variant="primary" disabled={!canAct} onClick={() => me && startMove(campaign, me.id, e.move)}>
-          {checkOf(e.move) ? 'Roll' : 'Post'}
+          <Icon size={18} /> {label}
           {me ? ` as ${me.name}` : ''}
         </Button>
       )

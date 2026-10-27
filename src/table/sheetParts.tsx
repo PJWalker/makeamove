@@ -11,7 +11,7 @@ import type { ActionDef, GameSystem } from '../systems/types'
 import { BlobImage } from '../ui/BlobImage'
 import { Button } from '../ui/Button'
 import { entryIcon } from '../ui/entryIcons'
-import { IconAdd, IconDelete, IconImage, IconRemove, IconRename } from '../ui/icons'
+import { IconAdd, IconChat, IconDelete, IconDice, IconImage, IconRemove, IconRename, IconTarget } from '../ui/icons'
 import { List, Tag } from '../ui/List'
 import { menuTrigger } from '../ui/menuTrigger'
 import { openPopup } from '../ui/popup'
@@ -81,7 +81,6 @@ export function MoveList({ system, moves, onMake }: { system: GameSystem; moves:
   const filter = useSignal<string>(categories[0]?.id ?? 'all')
   const windows = useEntryWindows()
   const shown = filter.value === 'all' ? moves : moves.filter((m) => m.category === filter.value)
-  const verb = (m: ActionDef) => (checkOf(m) ? 'Roll' : 'Post')
 
   return (
     <div class="moves">
@@ -103,9 +102,7 @@ export function MoveList({ system, moves, onMake }: { system: GameSystem; moves:
             tip={m.text}
             onOpen={(row) => windows.show(`move:${m.id}`, row)}
           >
-            <Button size="sm" onClick={() => onMake(m)}>
-              {verb(m)}
-            </Button>
+            <MakeButton m={m} onMake={onMake} />
           </EntryRow>
         ))}
       </List>
@@ -116,9 +113,7 @@ export function MoveList({ system, moves, onMake }: { system: GameSystem; moves:
         return (
           <EntryWindow key={key} entryKey={key} title={m.name} text={m.text} onClose={() => windows.close(key)}>
             {tag && <Tag>{tag}</Tag>}
-            <Button variant="primary" onClick={() => onMake(m)}>
-              {verb(m)}
-            </Button>
+            <MakeButton m={m} onMake={onMake} big />
           </EntryWindow>
         )
       })}
@@ -215,5 +210,31 @@ function TokenSettings({ campaign, c, onClose }: { campaign: Campaign; c: Charac
       </label>
       <p class="muted">Applies to tokens placed from now on. Change a token already on the map from its own options.</p>
     </Dialog>
+  )
+}
+
+/** What using an action does first: pick targets, roll, or just post it. */
+export function makeVerb(m: ActionDef) {
+  return m.target
+    ? { label: 'Target', Icon: IconTarget }
+    : checkOf(m)
+      ? { label: 'Roll', Icon: IconDice }
+      : { label: 'Post', Icon: IconChat }
+}
+
+/** The button that uses an action: an icon in a list row, or labelled in its window. */
+function MakeButton({ m, onMake, big }: { m: ActionDef; onMake: (m: ActionDef) => void; big?: boolean }) {
+  const { label, Icon } = makeVerb(m)
+  if (big) {
+    return (
+      <Button variant="primary" onClick={() => onMake(m)}>
+        <Icon size={18} /> {label}
+      </Button>
+    )
+  }
+  return (
+    <Button size="sm" variant="icon" label={`${label}: ${m.name}`} onClick={() => onMake(m)}>
+      <Icon size={18} />
+    </Button>
   )
 }
