@@ -18,10 +18,14 @@ const NAME_MIN = 11;
 const NAME_MAX = 15;
 /** Tokens smaller than this on screen, in px, only show their name and bars on hover. */
 const NAME_TOKEN_MIN = 24;
-/** Stat bars under tokens: their width on screen follows the token's, within these, in px. */
+/**
+ * Stat bars under tokens: half again as wide as the token where that clears
+ * every other token's bars, else just inside its width; never narrower than this, in px.
+ */
 const BAR_MIN_W = 36;
-const BAR_MAX_W = 84;
-const BAR_H = 11;
+/** Bar height grows with the token on screen, within these. */
+const BAR_MIN_H = 11;
+const BAR_MAX_H = 17;
 const BAR_GAP = 2;
 /** Bars narrower than this leave out their numbers. */
 const BAR_TEXT_MIN_W = 44;
@@ -685,7 +689,17 @@ export class SceneRenderer {
     const usedValues = new Set<string>();
     type Box = { id: string; x: number; y: number; w: number; h: number };
     const overlaps = (a: Box, b: Box) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
-    const plans: { id: string; t: Transform; stats: TokenStat[]; bars: Box | null; name: (Box & { text: Text }) | null; small: boolean }[] = [];
+    const plans: {
+      id: string;
+      t: Transform;
+      stats: TokenStat[];
+      bars: Box | null;
+      /** The bars half again as wide as the token, used where they clear every other token's. */
+      wideBars: Box | null;
+      barH: number;
+      name: (Box & { text: Text }) | null;
+      small: boolean;
+    }[] = [];
 
     for (const el of this.elements) {
       if (el.type !== "token" || this.hidden.has(el.id)) continue;
@@ -695,11 +709,16 @@ export class SceneRenderer {
       const foot = toScreen(cam, { x: t.x, y: t.y + t.h / 2 });
       let y = foot.y + 3;
       let bars: Box | null = null;
+      let wideBars: Box | null = null;
+      const barH = Math.round(Math.min(BAR_MAX_H, Math.max(BAR_MIN_H, screenW * 0.11)));
       if (stats.length) {
-        const w = Math.round(Math.min(BAR_MAX_W, Math.max(BAR_MIN_W, screenW * 0.9)));
-        const h = stats.length * (BAR_H + BAR_GAP) - BAR_GAP;
-        bars = { id: el.id, x: Math.round(foot.x - w / 2), y: Math.round(y), w, h };
-        y += h + 2;
+        // The first bar straddles the token's bottom edge.
+        const top = Math.round(foot.y - barH / 2);
+        const h = stats.length * (barH + BAR_GAP) - BAR_GAP;
+        const box = (w: number) => ({ id: el.id, x: Math.round(foot.x - w / 2), y: top, w: Math.round(w), h });
+        bars = box(Math.max(BAR_MIN_W, screenW * 0.9));
+        wideBars = box(Math.max(BAR_MIN_W, screenW * 1.5));
+        y = top + h + 2;
       }
       let name: (Box & { text: Text }) | null = null;
       const label = el.hideName ? "" : el.name.trim();
@@ -727,7 +746,7 @@ export class SceneRenderer {
         usedNames.add(el.id);
         name = { id: el.id, x: foot.x - text.width / 2, y, w: text.width, h: text.height, text };
       }
-      plans.push({ id: el.id, t, stats, bars, name, small: screenW < NAME_TOKEN_MIN });
+      plans.push({ id: el.id, t, stats, bars, wideBars, barH, name, small: screenW < NAME_TOKEN_MIN });
     }
 
     // Decide what shows: bars give way only to other bars; names give way to both.
@@ -735,6 +754,11 @@ export class SceneRenderer {
     const showBars = new Set<string>();
     const showName = new Set<string>();
     const shown = plans.filter((p) => !p.small);
+    // Wide bars where they'd touch no other token's wide bars.
+    const wide = new Set(
+      shown.filter((p) => p.wideBars && !shown.some((q) => q !== p && q.wideBars && overlaps(p.wideBars!, q.wideBars))).map((p) => p.id),
+    );
+    for (const p of plans) if (wide.has(p.id)) p.bars = p.wideBars;
     for (const p of shown) {
       if (p.bars && !shown.some((q) => q !== p && q.bars && overlaps(p.bars!, q.bars))) showBars.add(p.id);
     }
@@ -756,11 +780,12 @@ export class SceneRenderer {
       if (p.name) p.name.text.visible = showName.has(p.id);
       if (!p.bars || !showBars.has(p.id)) continue;
       const { x, w } = p.bars;
+      const barH = p.barH;
       p.stats.forEach((s, i) => {
-        const y = p.bars!.y + i * (BAR_H + BAR_GAP);
+        const y = p.bars!.y + i * (barH + BAR_GAP);
         const frac = s.max > 0 ? Math.min(1, Math.max(0, s.value / s.max)) : 0;
-        g.roundRect(x, y, w, BAR_H, 3).fill({ color: INK, alpha: 0.85 });
-        if (frac > 0) g.roundRect(x + 1.5, y + 1.5, (w - 3) * frac, BAR_H - 3, 2).fill({ color: s.colour });
+        g.roundRect(x, y, w, barH, 3).fill({ color: INK, alpha: 0.85 });
+        if (frac > 0) g.roundRect(x + 1.5, y + 1.5, (w - 3) * frac, barH - 3, 2).fill({ color: s.colour });
         // The value, when the bar is wide enough to read it.
         if (w < BAR_TEXT_MIN_W) return;
         const key = `${p.id}:${s.id}`;
@@ -768,7 +793,7 @@ export class SceneRenderer {
         if (!text) {
           text = new Text({
             text: "",
-            style: { fontFamily: "Cabin, sans-serif", fontSize: 10, fontWeight: "700", fill: 0xffffff },
+            style: { fontFamily: "Cabin, sans-serif", fontSize: BAR_MAX_H - 2, fontWeight: "700", fill: 0xffffff },
             anchor: 0.5,
             resolution: 2,
           });
@@ -777,7 +802,8 @@ export class SceneRenderer {
         }
         const value = `${s.value}/${s.max}`;
         if (text.text !== value) text.text = value;
-        text.position.set(Math.round(x + w / 2), Math.round(y + BAR_H / 2));
+        text.scale.set((barH - 1) / (BAR_MAX_H - 2));
+        text.position.set(Math.round(x + w / 2), Math.round(y + barH / 2));
         usedValues.add(key);
         if (p.id === hover) this.barText.setChildIndex(text, this.barText.children.length - 1);
       });
