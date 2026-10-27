@@ -1,7 +1,8 @@
 import { useSignal } from '@preact/signals'
 import type { ComponentChildren } from 'preact'
 import { useLayoutEffect, useRef } from 'preact/hooks'
-import type { GameSystem, MoveDef } from '../systems/types'
+import { checkOf } from '../characters/moves'
+import type { ActionDef, GameSystem } from '../systems/types'
 import { morphOpen } from '../ui/morph'
 import { openPopup, raisePopup } from '../ui/popup'
 import type { Icon } from '../ui/icons'
@@ -16,12 +17,13 @@ import { Dialog } from './CampaignDialogs'
  * row again brings it forward.
  */
 
-/** What a move rolls, as a short tag for its row. */
-export function rollTag(system: GameSystem, m: MoveDef) {
-  if (!m.roll) return null
-  if (m.roll.stat === 'choose') return 'any'
-  if (m.roll.stat === 'bond') return 'bond'
-  return system.stats.find((s) => s.id === m.roll!.stat)?.abbr ?? m.roll.stat
+/** What an action rolls, as a short tag for its row: a stat, "any", or what it asks for. */
+export function rollTag(system: GameSystem, m: ActionDef) {
+  const check = checkOf(m)
+  if (!check) return null
+  if (check.ask?.kind === 'stat') return 'any'
+  if (check.ask?.kind === 'number') return check.ask.label.toLowerCase()
+  return system.stats.find((s) => s.id === check.stat)?.abbr ?? check.stat ?? null
 }
 
 /** Which entries have windows open, and how to open one from its row. */

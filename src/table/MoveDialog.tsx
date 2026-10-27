@@ -26,11 +26,11 @@ export function MoveDialog({ campaign }: { campaign: Campaign }) {
   })
 
   const system = systemOf(campaign)
-  const move = req && system.moves.find((m) => m.id === req.moveId)
+  const move = req && system.actions.find((m) => m.id === req.moveId)
   const c: CharacterView | undefined = req ? getCharacter(campaign, req.characterId) : undefined
-  const kind = move ? needsChoice(move) : null
-  const choice = { stat: stat.value || undefined, bond: bond.value, extra: extra.value }
-  const ready = !!move && !!c && (kind !== 'stat' || !!stat.value)
+  const ask = move ? needsChoice(move) : null
+  const choice = { stat: stat.value || undefined, ask: bond.value, extra: extra.value }
+  const ready = !!move && !!c && (ask?.kind !== 'stat' || !!stat.value)
   const formula = ready ? planMove(system, move, c, derive(c, system), choice).formula : ''
 
   const go = () => {
@@ -50,7 +50,7 @@ export function MoveDialog({ campaign }: { campaign: Campaign }) {
           }}
         >
           <p class="muted">{move.trigger}</p>
-          {kind === 'stat' && (
+          {ask?.kind === 'stat' && (
             <div class="field" role="radiogroup" aria-label="Stat to roll">
               Roll which stat?
               <div class="move-stats">
@@ -67,14 +67,14 @@ export function MoveDialog({ campaign }: { campaign: Campaign }) {
               </div>
             </div>
           )}
-          {kind === 'bond' && (
+          {ask?.kind === 'number' && (
             <label class="field">
-              Bond bonus
+              {ask.prompt}
               <input
                 class="input bevel"
                 type="number"
-                min={0}
-                max={3}
+                min={ask.min}
+                max={ask.max}
                 value={bond.value}
                 onInput={(e) => (bond.value = Number(e.currentTarget.value) || 0)}
               />

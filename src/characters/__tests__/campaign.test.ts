@@ -8,7 +8,7 @@ import * as Y from 'yjs'
 import { systemActions } from '../../actions/system'
 import { Campaign, createCampaign } from '../../store/campaign'
 import { device } from '../../store/device'
-import { addItem, createFolder, deleteCharacter, deleteFolder, getCharacter, listFolders, makeMove, moveToFolder, newCharacter, newNpc, renameFolder, tokenStatsByCharacter, selectedCharacterId, setField, systemOf, updateItem } from '../api'
+import { addItem, createFolder, deleteCharacter, deleteFolder, getCharacter, listFolders, makeMove, moveToFolder, newCharacter, newNpc, renameFolder, tokenStatsByCharacter, selectedCharacterId, setData, setModifier, systemOf, updateItem } from '../api'
 import { defaultHotbar, editHotbar, hotbarSlots, moveTo, pin, placeAt, insertAt, shift, unpin, MAX_SLOTS } from '../hotbar'
 
 async function setUp() {
@@ -37,7 +37,7 @@ describe('characters in a campaign', () => {
     const c = await setUp()
     const id = newCharacter(c, 'Ayla', 'fighter')
     expect(selectedCharacterId(c)).toBe(id)
-    expect(getCharacter(c, id)).toMatchObject({ name: 'Ayla', classId: 'fighter', hp: 20, level: 1 })
+    expect(getCharacter(c, id)).toMatchObject({ name: 'Ayla', classId: 'fighter', resources: { hp: 20 }, level: 1 })
     c.destroy()
   })
 
@@ -45,12 +45,12 @@ describe('characters in a campaign', () => {
     const c = await setUp()
     const id = newCharacter(c, 'Ayla', 'fighter')
     const sys = systemOf(c)
-    setField(c, id, 'forward', 1)
-    await makeMove(c, id, sys.moves.find((m) => !m.roll)!)
-    expect(getCharacter(c, id)!.forward).toBe(1)
-    const msg = await makeMove(c, id, sys.moves.find((m) => m.id === 'hack-and-slash')!)
+    setModifier(c, id, 'forward', 1)
+    await makeMove(c, id, sys.actions.find((m) => !m.steps.length)!)
+    expect(getCharacter(c, id)!.modifiers.forward).toBe(1)
+    const msg = await makeMove(c, id, sys.actions.find((m) => m.id === 'hack-and-slash')!)
     expect(msg).toMatchObject({ kind: 'move', moveId: 'hack-and-slash', characterName: 'Ayla' })
-    expect(getCharacter(c, id)!.forward).toBe(0)
+    expect(getCharacter(c, id)!.modifiers.forward).toBe(0)
     c.destroy()
   })
 
@@ -104,9 +104,9 @@ describe('NPCs and folders', () => {
     const c = await setUp()
     const id = newNpc(c, 'Goblin')
     const npc = getCharacter(c, id)!
-    expect(npc).toMatchObject({ kind: 'npc', name: 'Goblin', hp: 6, maxHp: 6 })
+    expect(npc).toMatchObject({ kind: 'npc', name: 'Goblin', resources: { hp: 6 }, data: { maxHp: 6 } })
     expect(Object.keys(npc.fields)).toEqual(systemOf(c).npcFields.map((f) => f.id))
-    setField(c, id, 'maxHp', 12)
+    setData(c, id, 'maxHp', 12)
     expect(tokenStatsByCharacter(c).get(id)![0]).toMatchObject({ id: 'hp', value: 6, max: 12 })
     c.destroy()
   })

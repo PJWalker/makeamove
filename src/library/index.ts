@@ -1,5 +1,5 @@
 import { signal } from '@preact/signals'
-import type { ClassDef, GameSystem, ItemDef, MoveDef, TagDef } from '../systems/types'
+import type { ActionDef, ClassDef, GameSystem, ItemDef, TagDef } from '../systems/types'
 
 /*
  * Libraries: collections of things to look up and use (items, moves,
@@ -23,7 +23,7 @@ interface EntryBase {
 
 export type LibraryEntry =
   | (EntryBase & { kind: 'item'; item: ItemDef })
-  | (EntryBase & { kind: 'move'; move: MoveDef })
+  | (EntryBase & { kind: 'move'; move: ActionDef })
   | (EntryBase & { kind: 'class'; cls: ClassDef })
   | (EntryBase & { kind: 'tag'; tag: TagDef })
 
@@ -46,10 +46,9 @@ export interface LibrarySource {
 
 export const KIND_LABEL: Record<EntryKind, string> = { item: 'Items', move: 'Moves', class: 'Classes', tag: 'Tags' }
 
-const MOVE_GROUP: Record<MoveDef['category'], string> = { basic: 'Basic moves', special: 'Special moves', class: 'Class moves' }
 
 export const itemEntry = (i: ItemDef): LibraryEntry => ({ kind: 'item', id: i.id, name: i.name, text: i.description, tags: i.tags, icon: i.icon, item: i })
-export const moveEntry = (m: MoveDef): LibraryEntry => ({
+export const moveEntry = (m: ActionDef): LibraryEntry => ({
   kind: 'move',
   id: m.id,
   name: m.name,
@@ -59,15 +58,15 @@ export const moveEntry = (m: MoveDef): LibraryEntry => ({
   move: m,
 })
 
-/** What a game system contributes: its gear, moves (by category), classes and tags. */
+/** What a game system contributes: its gear, actions (by the system's categories), classes and tags. */
 export function systemLibrary(system: GameSystem): LibrarySource {
   const collections: LibraryCollection[] = []
   if (system.items.length) {
     collections.push({ id: 'items', name: 'Gear', kind: 'item', entries: system.items.map(itemEntry) })
   }
-  for (const cat of ['basic', 'special', 'class'] as const) {
-    const moves = system.moves.filter((m) => m.category === cat)
-    if (moves.length) collections.push({ id: `moves-${cat}`, name: MOVE_GROUP[cat], kind: 'move', entries: moves.map(moveEntry) })
+  for (const cat of system.actionCategories) {
+    const moves = system.actions.filter((m) => m.category === cat.id)
+    if (moves.length) collections.push({ id: `moves-${cat.id}`, name: `${cat.label} moves`, kind: 'move', entries: moves.map(moveEntry) })
   }
   if (system.classes.length) {
     collections.push({

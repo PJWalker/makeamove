@@ -9,7 +9,7 @@ import {
   canEdit,
   updateItem,
 } from '../characters/api'
-import { derive, movesFor } from '../characters/store'
+import { actionsFor, derive } from '../characters/store'
 import type { Campaign } from '../store/campaign'
 import { browseLibrary } from '../table/libraryView'
 import { showPanel } from '../table/panelLayout'
@@ -21,10 +21,10 @@ export function systemActions(campaign: Campaign): Action[] {
   const out: Action[] = []
   const selectedId = selectedCharacterId(campaign)
   const me = getCharacter(campaign, selectedId)
-  const mine = me ? new Set(movesFor(me, system, derive(me, system)).map((m) => m.id)) : new Set<string>()
+  const mine = me ? new Set(actionsFor(me, system, derive(me, system)).map((m) => m.id)) : new Set<string>()
   const reason = !me ? 'Choose a character first' : canEdit(campaign, me) ? true : 'Not your character'
 
-  for (const m of system.moves) {
+  for (const m of system.actions) {
     const ownsIt = mine.has(m.id)
     out.push({
       id: `move:${m.id}`,

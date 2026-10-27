@@ -1,5 +1,6 @@
 import { removeItem, updateItem } from '../characters/api'
-import type { CharacterView, Derived, ItemInstance } from '../characters/store'
+import type { CharacterView, ItemInstance } from '../characters/store'
+import type { Derived } from '../systems/types'
 import type { Campaign } from '../store/campaign'
 import { Button } from '../ui/Button'
 import { entryIcon } from '../ui/entryIcons'
@@ -31,7 +32,7 @@ export function Inventory({
 }) {
   const windows = useEntryWindows()
   const patch = (i: ItemInstance, p: Partial<ItemInstance>) => updateItem(campaign, c.id, i.id, p)
-  const over = d && d.load > d.maxLoad
+  const over = d && d.values.load > d.values.maxLoad
 
   const actions = (i: ItemInstance) => (
     <>
@@ -54,7 +55,7 @@ export function Inventory({
         Inventory{' '}
         {d && (
           <span class="muted" data-over={over}>
-            Load {d.load}/{d.maxLoad}
+            Load {d.values.load}/{d.values.maxLoad}
             {over && ' · overloaded'}
           </span>
         )}

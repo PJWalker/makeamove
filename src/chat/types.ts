@@ -52,11 +52,16 @@ export interface SystemMessage extends Base {
   sceneId?: string
 }
 
-/** A follow-up button on a move card. Never applied automatically. */
+/** A follow-up button on an action card. Never applied automatically. */
 export interface MoveSuggestion {
-  kind: 'xp' | 'damage'
-  /** For damage: the formula to roll, e.g. "d10+1". */
-  formula?: string
+  /** The system's follow-up id ("xp", "damage"). */
+  id: string
+  /** The button's text: "Mark XP", "Roll damage (d10+1)". */
+  label: string
+  /** Add to one of the character's data fields. */
+  bump?: { field: string; by: number }
+  /** Roll a formula and post it. */
+  roll?: { formula: string; comment: string }
 }
 
 /** A move being made, with its roll (if it has one) and the outcome text. */
@@ -68,8 +73,9 @@ export interface MoveMessage extends Base {
   characterId: string
   characterName: string
   roll?: Roll
-  band?: 'strong' | 'weak' | 'miss'
-  /** The outcome for the band, or the move's text when it doesn't roll. */
+  /** The check's result, by the system's id for it ("strong"). */
+  result?: string
+  /** The outcome for the result, or the move's text when it doesn't roll. */
   outcome: string
   suggestions: MoveSuggestion[]
 }

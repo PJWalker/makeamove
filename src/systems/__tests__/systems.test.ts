@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { dungeonWorld as dw } from '../dungeon-world'
+import { checkSystem, defineSystem } from '..'
 import { resolveEffects } from '../effects'
 
 describe('resolveEffects', () => {
@@ -60,16 +61,22 @@ describe('Dungeon World data', () => {
   })
 
   it('bands 2d6 results', () => {
-    expect([12, 10, 9, 7, 6, 2].map(dw.band)).toEqual(['strong', 'strong', 'weak', 'weak', 'miss', 'miss'])
+    expect([12, 10, 9, 7, 6, 2].map(dw.result)).toEqual(['strong', 'strong', 'weak', 'weak', 'miss', 'miss'])
+    expect(dw.results.map((r) => r.label)).toEqual(['Full success', 'Partial success', 'Miss'])
   })
 
   it('has unique ids, and every rolled move has outcomes for each band', () => {
-    const ids = dw.moves.map((m) => m.id)
+    const ids = dw.actions.map((m) => m.id)
     expect(new Set(ids).size).toBe(ids.length)
-    for (const m of dw.moves) if (m.roll) expect(m.outcomes, m.id).toBeDefined()
-    for (const m of dw.moves) if (m.roll && m.roll.stat !== 'choose' && m.roll.stat !== 'bond' && m.roll.stat !== 'none')
-      expect(dw.stats.some((s) => s.id === m.roll!.stat), m.id).toBe(true)
-    for (const m of dw.moves) if (m.classId) expect(dw.classes.some((c) => c.id === m.classId), m.id).toBe(true)
+    for (const m of dw.actions)
+      for (const step of m.steps) {
+        for (const r of dw.results) expect(step.outcomes[r.id], `${m.id} ${r.id}`).toBeDefined()
+        if (step.stat) expect(dw.stats.some((s) => s.id === step.stat), m.id).toBe(true)
+        for (const ids of Object.values(step.followUps ?? {}))
+          for (const f of ids) expect(dw.followUps.some((x) => x.id === f), `${m.id} ${f}`).toBe(true)
+      }
+    for (const m of dw.actions) if (m.classId) expect(dw.classes.some((c) => c.id === m.classId), m.id).toBe(true)
+    for (const m of dw.actions) expect(dw.actionCategories.some((k) => k.id === m.category), m.id).toBe(true)
   })
 
   it('has eight classes', () => {
@@ -79,8 +86,31 @@ describe('Dungeon World data', () => {
 
 describe('tokenStats', () => {
   it('shows HP as a bar that changes colour as it drops', () => {
-    const stats = (hp: number) => dw.tokenStats({ hp } as never, { maxHp: 16 } as never)[0]
+    const stats = (hp: number) => dw.tokenStats({ resources: { hp } } as never, { values: { maxHp: 16 } } as never)[0]
     expect(stats(16)).toMatchObject({ id: 'hp', value: 16, max: 16 })
     expect(new Set([stats(16).colour, stats(8).colour, stats(4).colour]).size).toBe(3)
+  })
+})
+
+describe('checking a system', () => {
+  it('finds nothing wrong with Dungeon World', () => {
+    expect(checkSystem(dw)).toEqual([])
+  })
+
+  it('names what does not hold together', () => {
+    const broken = {
+      ...dw,
+      actions: [
+        ...dw.actions,
+        { ...dw.actions[0], id: dw.actions[0].id },
+        { id: 'odd', name: 'Odd', category: 'nope', trigger: '', text: '', steps: [{ kind: 'check' as const, stat: 'luck', outcomes: {} }] },
+      ],
+    }
+    const problems = checkSystem(broken)
+    expect(problems).toContain(`Two actions share the id “${dw.actions[0].id}”.`)
+    expect(problems).toContain('Odd: no action category “nope”.')
+    expect(problems).toContain('Odd: no stat “luck”.')
+    expect(problems).toContain('Odd: no outcome for “Full success”.')
+    expect(() => defineSystem(broken)).toThrow(/has problems/)
   })
 })

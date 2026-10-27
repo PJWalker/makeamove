@@ -14,7 +14,7 @@ describe('libraries', () => {
     const gear = lib.collections.find((c) => c.kind === 'item')!
     expect(gear.entries).toHaveLength(dungeonWorld.items.length)
     const moves = lib.collections.filter((c) => c.kind === 'move').flatMap((c) => c.entries)
-    expect(moves).toHaveLength(dungeonWorld.moves.length)
+    expect(moves).toHaveLength(dungeonWorld.actions.length)
   })
 
   it('carries icons from definitions to entries and inventory items', () => {

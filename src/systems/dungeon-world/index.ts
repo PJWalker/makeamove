@@ -1,12 +1,45 @@
-import type { ClassDef, GameSystem, ItemDef, MoveDef, TagDef } from './types'
+import { resolveEffects } from '../effects'
+import type { ActionDef, ClassDef, GameSystem, ItemDef, TagDef } from '../types'
 
 /*
  * Dungeon World, core rules. Move and class text is a condensed paraphrase of
  * the Dungeon World SRD (Sage LaCroix and Adam Koebel), used under CC BY 3.0.
  * https://creativecommons.org/licenses/by/3.0/
+ *
+ * Moves are written in Dungeon World's own terms (roll +STAT, outcomes on
+ * 10+ / 7-9 / 6-) and turned into the core's actions below: each rolled move
+ * is one check step.
  */
 
-const BASIC: MoveDef[] = [
+type Band = 'strong' | 'weak' | 'miss'
+
+interface DwMove {
+  id: string
+  name: string
+  category: 'basic' | 'special' | 'class'
+  classId?: string
+  trigger: string
+  text: string
+  /** A stat id, 'choose' to ask which, 'bond' to ask for the bond's bonus, or 'none' for a plain roll. */
+  roll?: { stat: string }
+  outcomes?: Record<Band, string>
+  suggest?: Partial<Record<Band, ('xp' | 'damage')[]>>
+  tags?: string[]
+}
+
+interface DwClass {
+  id: string
+  name: string
+  baseHp: number
+  /** Damage die sides. */
+  damage: number
+  /** Load capacity before adding STR. */
+  load: number
+  blurb: string
+  icon?: string
+}
+
+const BASIC: DwMove[] = [
   {
     id: 'hack-and-slash',
     name: 'Hack and Slash',
@@ -129,7 +162,7 @@ const BASIC: MoveDef[] = [
   },
 ]
 
-const SPECIAL: MoveDef[] = [
+const SPECIAL: DwMove[] = [
   {
     id: 'last-breath',
     name: 'Last Breath',
@@ -251,7 +284,7 @@ const SPECIAL: MoveDef[] = [
 ]
 
 // Each class shows a handful of its starting moves, condensed.
-const CLASS_MOVES: MoveDef[] = [
+const CLASS_MOVES: DwMove[] = [
   { id: 'bend-bars', name: 'Bend Bars, Lift Gates', category: 'class', classId: 'fighter', trigger: 'When you use pure strength to destroy an inanimate obstacle', text: 'Roll +STR. On a 10+ choose 3; on a 7-9 choose 2: it doesn’t take a very long time; nothing of value is damaged; it doesn’t make an inordinate amount of noise; you can fix the thing again without too much effort.', roll: { stat: 'str' }, outcomes: { strong: 'Choose 3: it doesn’t take long; nothing of value is damaged; it isn’t very noisy; you can fix it again easily.', weak: 'Choose 2 of those four.', miss: 'The GM makes a move.' }, suggest: { miss: ['xp'] } },
   { id: 'armored', name: 'Armored', category: 'class', classId: 'fighter', trigger: 'Passive', text: 'You ignore the clumsy tag on armor you wear.' },
   { id: 'cast-a-spell', name: 'Cast a Spell', category: 'class', classId: 'wizard', trigger: 'When you release a spell you’ve prepared', text: 'Roll +INT. On a 10+ the spell is successfully cast and you don’t forget it. On a 7-9 the spell is cast, but choose one: you draw unwelcome attention or put yourself in a spot; the spell disturbs the fabric of reality (the GM chooses); or after it is cast, the spell is forgotten.', roll: { stat: 'int' }, outcomes: { strong: 'The spell is successfully cast and you don’t forget it.', weak: 'The spell is cast, but choose one: you draw unwelcome attention or put yourself in a spot; the spell disturbs reality; or the spell is forgotten.', miss: 'The GM makes a move, and the spell is forgotten.' }, suggest: { miss: ['xp'] } },
@@ -273,7 +306,7 @@ const CLASS_MOVES: MoveDef[] = [
   { id: 'the-spirits-sing', name: 'The Spirits Sing', category: 'class', classId: 'druid', trigger: 'When you enter a new place and listen to the spirits', text: 'Roll +WIS. On a 10+ hold 3; on a 7-9 hold 1. Spend hold, 1 for 1, to ask the spirits a question about this place or the creatures in it.', roll: { stat: 'wis' }, outcomes: { strong: 'Hold 3. Spend it to ask the spirits questions about this place.', weak: 'Hold 1. Spend it to ask one question.', miss: 'The GM makes a move.' }, suggest: { miss: ['xp'] } },
 ]
 
-const CLASSES: ClassDef[] = [
+const CLASSES: DwClass[] = [
   { id: 'bard', name: 'The Bard', baseHp: 6, damage: 6, load: 9, blurb: 'Performer, lorekeeper and charming rogue.', icon: 'bard' },
   { id: 'cleric', name: 'The Cleric', baseHp: 8, damage: 6, load: 7, blurb: 'Servant of a deity, healer and turner of undead.', icon: 'cleric' },
   { id: 'druid', name: 'The Druid', baseHp: 6, damage: 6, load: 5, blurb: 'Shapeshifter who speaks with the spirits of the land.', icon: 'druid' },
@@ -327,32 +360,117 @@ const TAGS: TagDef[] = [
 const modifierOf = (score: number) =>
   score <= 3 ? -3 : score <= 5 ? -2 : score <= 8 ? -1 : score <= 12 ? 0 : score <= 15 ? 1 : score <= 17 ? 2 : 3
 
+const BOND = { kind: 'number', label: 'Bond', prompt: 'Bond bonus', min: 0, max: 3 } as const
+
+/** A move as a core action: rolled moves are one check step. */
+function toAction(m: DwMove): ActionDef {
+  const stat = m.roll?.stat
+  return {
+    id: m.id,
+    name: m.name,
+    category: m.category,
+    ...(m.classId ? { classId: m.classId } : {}),
+    trigger: m.trigger,
+    text: m.text,
+    ...(m.tags ? { tags: m.tags } : {}),
+    steps:
+      stat && m.outcomes
+        ? [
+            {
+              kind: 'check',
+              ...(stat === 'choose'
+                ? { ask: { kind: 'stat' } as const }
+                : stat === 'bond'
+                  ? { ask: BOND }
+                  : stat === 'none'
+                    ? {}
+                    : { stat }),
+              outcomes: m.outcomes,
+              ...(m.suggest ? { followUps: m.suggest } : {}),
+            },
+          ]
+        : [],
+  }
+}
+
+const toClass = (k: DwClass): ClassDef => ({
+  id: k.id,
+  name: k.name,
+  blurb: k.blurb,
+  ...(k.icon ? { icon: k.icon } : {}),
+  values: { baseHp: k.baseHp, damage: k.damage, load: k.load },
+})
+
+const signed = (n: number, label: string) => `${n < 0 ? '-' : '+'}${Math.abs(n)}[${label}]`
+
+const STATS = [
+  { id: 'str', name: 'Strength', abbr: 'STR', debility: { id: 'weak', name: 'Weak' } },
+  { id: 'dex', name: 'Dexterity', abbr: 'DEX', debility: { id: 'shaky', name: 'Shaky' } },
+  { id: 'con', name: 'Constitution', abbr: 'CON', debility: { id: 'sick', name: 'Sick' } },
+  { id: 'int', name: 'Intelligence', abbr: 'INT', debility: { id: 'stunned', name: 'Stunned' } },
+  { id: 'wis', name: 'Wisdom', abbr: 'WIS', debility: { id: 'confused', name: 'Confused' } },
+  { id: 'cha', name: 'Charisma', abbr: 'CHA', debility: { id: 'scarred', name: 'Scarred' } },
+]
+
+/** Hit points a new NPC starts with. */
+const NPC_HP = 6
+
+const ACTIONS = [...BASIC, ...SPECIAL, ...CLASS_MOVES].map(toAction)
+
 export const dungeonWorld: GameSystem = {
   id: 'dungeon-world',
   name: 'Dungeon World',
   version: '0.1.0',
-  stats: [
-    { id: 'str', name: 'Strength', abbr: 'STR' },
-    { id: 'dex', name: 'Dexterity', abbr: 'DEX' },
-    { id: 'con', name: 'Constitution', abbr: 'CON' },
-    { id: 'int', name: 'Intelligence', abbr: 'INT' },
-    { id: 'wis', name: 'Wisdom', abbr: 'WIS' },
-    { id: 'cha', name: 'Charisma', abbr: 'CHA' },
-  ],
+  stats: STATS.map(({ id, name, abbr }) => ({ id, name, abbr })),
   modifier: modifierOf,
-  band: (total) => (total >= 10 ? 'strong' : total >= 7 ? 'weak' : 'miss'),
   baseRoll: '2d6',
-  moves: [...BASIC, ...SPECIAL, ...CLASS_MOVES],
-  classes: CLASSES,
+  results: [
+    { id: 'strong', label: 'Full success' },
+    { id: 'weak', label: 'Partial success' },
+    { id: 'miss', label: 'Miss' },
+  ],
+  result: (total) => (total >= 10 ? 'strong' : total >= 7 ? 'weak' : 'miss'),
+  actions: ACTIONS,
+  actionCategories: [
+    { id: 'class', label: 'Class' },
+    { id: 'basic', label: 'Basic' },
+    { id: 'special', label: 'Special', onHotbar: false },
+  ],
+  followUps: [
+    { id: 'xp', kind: 'bump', label: 'Mark XP', field: 'xp', by: 1 },
+    {
+      id: 'damage',
+      kind: 'roll',
+      label: 'Roll damage',
+      comment: 'Damage',
+      formula: (_c, d) => `d${d.values.damage}${d.values.damageBonus ? signed(d.values.damageBonus, 'Gear') : ''}`,
+    },
+  ],
+  classes: CLASSES.map(toClass),
   items: ITEMS,
   tags: TAGS,
-  debilities: [
-    { id: 'weak', name: 'Weak', stat: 'str' },
-    { id: 'shaky', name: 'Shaky', stat: 'dex' },
-    { id: 'sick', name: 'Sick', stat: 'con' },
-    { id: 'stunned', name: 'Stunned', stat: 'int' },
-    { id: 'confused', name: 'Confused', stat: 'wis' },
-    { id: 'scarred', name: 'Scarred', stat: 'cha' },
+  // Debilities: each takes 1 from rolls with its stat.
+  conditions: STATS.map((s) => ({
+    id: s.debility.id,
+    name: s.debility.name,
+    stat: s.id,
+    effects: [{ type: 'rollBonus' as const, stat: s.id, value: -1 }],
+  })),
+  modifiers: [
+    { id: 'forward', label: 'Forward', until: 'next-roll' },
+    { id: 'ongoing', label: 'Ongoing', until: 'removed' },
+  ],
+  resources: [{ id: 'hp', name: 'HP', max: 'maxHp' }],
+  characterData: [
+    { id: 'race', default: '' },
+    { id: 'alignment', default: '' },
+    { id: 'xp', default: 0, for: 'pc' },
+    { id: 'coin', default: 0, for: 'pc' },
+    { id: 'bonds', default: '', for: 'pc' },
+    /** Added to the computed maximum HP, for the odd homebrew change. */
+    { id: 'hpBonus', default: 0, for: 'pc' },
+    /** An NPC's maximum HP, set by hand. */
+    { id: 'maxHp', default: NPC_HP, for: 'npc' },
   ],
   npcFields: [
     { id: 'damage', label: 'Damage', type: 'text' },
@@ -361,15 +479,41 @@ export const dungeonWorld: GameSystem = {
     { id: 'instinct', label: 'Instinct', type: 'text' },
     { id: 'moves', label: 'Moves', type: 'longtext' },
   ],
-  tokenStats: (c, d) => [
-    {
-      id: 'hp',
-      label: 'HP',
-      value: c.hp,
-      max: d.maxHp,
-      colour: c.hp <= d.maxHp / 4 ? '#d04a3a' : c.hp <= d.maxHp / 2 ? '#d49a32' : '#4aa35a',
-    },
-  ],
+  derive(c, sources) {
+    const cls = CLASSES.find((k) => k.id === c.classId) ?? CLASSES[0]
+    const mods: Record<string, number> = {}
+    for (const s of STATS) mods[s.id] = modifierOf(c.scores[s.id] ?? 10)
+    const resolved = resolveEffects(
+      {
+        maxHp: c.kind === 'npc' ? Number(c.data.maxHp ?? NPC_HP) : cls.baseHp + (c.scores.con ?? 10) + Number(c.data.hpBonus ?? 0),
+        armor: 0,
+        damage: cls.damage,
+        damageBonus: 0,
+        maxLoad: cls.load + (mods.str ?? 0),
+      },
+      sources,
+    )
+    return {
+      mods,
+      resolved,
+      values: {
+        ...resolved.values,
+        load: c.inventory.reduce((n, i) => n + i.weight, 0),
+        /** XP needed to level up. */
+        xpNeeded: c.level + 7,
+      },
+    }
+  },
+  actionsFor(c, d) {
+    if (c.kind === 'npc') return []
+    const granted = new Set(d.resolved.moves)
+    return ACTIONS.filter((m) => m.category !== 'class' || m.classId === c.classId || granted.has(m.id))
+  },
+  tokenStats: (c, d) => {
+    const hp = c.resources.hp ?? 0
+    const max = d.values.maxHp
+    return [{ id: 'hp', label: 'HP', value: hp, max, colour: hp <= max / 4 ? '#d04a3a' : hp <= max / 2 ? '#d49a32' : '#4aa35a' }]
+  },
   attribution:
     'Condensed from the Dungeon World SRD by Sage LaCroix and Adam Koebel, used under CC BY 3.0. Check the SRD for exact wording.',
 }

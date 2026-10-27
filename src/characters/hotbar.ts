@@ -1,6 +1,6 @@
 import type { Campaign } from '../store/campaign'
 import { device } from '../store/device'
-import { movesFor, derive, itemActive } from './store'
+import { actionsFor, derive, itemActive } from './store'
 import { getCharacter, selectedCharacterId, systemOf } from './api'
 
 /*
@@ -37,8 +37,9 @@ export function defaultHotbar(campaign: Campaign, characterId: string): string[]
   const c = getCharacter(campaign, characterId)
   if (!c) return ['tool:ping', 'tool:ruler']
   const d = derive(c, system)
-  const moves = movesFor(c, system, d)
-    .filter((m) => m.category !== 'special')
+  const skip = new Set(system.actionCategories.filter((k) => k.onHotbar === false).map((k) => k.id))
+  const moves = actionsFor(c, system, d)
+    .filter((m) => !skip.has(m.category))
     .map((m) => `move:${m.id}`)
   const gear = c.inventory.filter((i) => i.uses && itemActive(i)).map((i) => `use:${i.id}`)
   return [...moves, ...gear, 'tool:ping', 'tool:ruler'].slice(0, MAX_SLOTS)

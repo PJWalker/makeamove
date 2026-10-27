@@ -30,7 +30,7 @@ export function linkTargets(campaign: Campaign, query: string, exceptNote?: stri
     ...listCharacters(campaign).map((c) => ({ kind: 'character' as const, id: c.id, label: c.name, detail: c.kind === 'npc' ? 'NPC' : KIND_DETAIL.character })),
     ...campaign.sceneViews().map((s) => ({ kind: 'scene' as const, id: s.id, label: s.name, detail: KIND_DETAIL.scene })),
     ...system.items.map((i) => ({ kind: 'item' as const, id: i.id, label: i.name, detail: KIND_DETAIL.item, icon: i.icon })),
-    ...system.moves.map((m) => ({ kind: 'move' as const, id: m.id, label: m.name, detail: KIND_DETAIL.move, icon: m.category === 'class' ? 'class-move' : undefined })),
+    ...system.actions.map((m) => ({ kind: 'move' as const, id: m.id, label: m.name, detail: KIND_DETAIL.move, icon: m.category === 'class' ? 'class-move' : undefined })),
   ]
   const q = query.trim().toLowerCase()
   if (!q) return all.slice(0, limit)
@@ -53,7 +53,7 @@ export function linkLabel(campaign: Campaign, kind: LinkKind, id: string): strin
     case 'item':
       return system.items.find((i) => i.id === id)?.name ?? null
     case 'move':
-      return system.moves.find((m) => m.id === id)?.name ?? null
+      return system.actions.find((m) => m.id === id)?.name ?? null
   }
 }
 

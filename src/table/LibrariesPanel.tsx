@@ -1,4 +1,5 @@
 import { signal } from '@preact/signals'
+import { checkOf } from '../characters/moves'
 import { addItem, canEdit, getCharacter, selectedCharacterId, startMove, systemOf } from '../characters/api'
 import { KIND_LABEL, librariesFor, searchEntries, type EntryKind, type LibraryEntry } from '../library'
 import type { Campaign } from '../store/campaign'
@@ -55,7 +56,7 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
     if (e.kind === 'move' && inWindow) {
       return (
         <Button variant="primary" disabled={!canAct} onClick={() => me && startMove(campaign, me.id, e.move)}>
-          {e.move.roll ? 'Roll' : 'Post'}
+          {checkOf(e.move) ? 'Roll' : 'Post'}
           {me ? ` as ${me.name}` : ''}
         </Button>
       )

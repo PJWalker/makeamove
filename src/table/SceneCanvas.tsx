@@ -14,7 +14,7 @@ import { importImage } from '../scene/images'
 import { isPlainToken, TOKEN_STYLES, type BlobRef, type TokenStyle } from '../scene/types'
 import { DEFAULT_CANVAS_COLOUR, type Campaign } from '../store/campaign'
 import { listCharacters, selectCharacter, systemOf, tokenStatsByCharacter } from '../characters/api'
-import { NpcSheet, Sheet } from './CharactersPanel'
+import { CharacterSheet } from './sheets'
 import { useY } from '../store/useY'
 import { BlobImage } from '../ui/BlobImage'
 import { Button } from '../ui/Button'
@@ -366,11 +366,7 @@ function TokenOptionsDialog({
       )}
       {linked && tab.value === 'character' && (
         <div class="popup-sheet sheet-panel">
-          {linked.kind === 'npc' ? (
-            <NpcSheet key={linked.id} campaign={campaign} system={systemOf(campaign)} c={linked} />
-          ) : (
-            <Sheet key={linked.id} campaign={campaign} system={systemOf(campaign)} c={linked} />
-          )}
+          <CharacterSheet campaign={campaign} system={systemOf(campaign)} c={linked} />
         </div>
       )}
       <form

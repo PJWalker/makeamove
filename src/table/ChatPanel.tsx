@@ -9,7 +9,7 @@ import { canDelete, visibilityOf } from '../chat/types'
 import { splitSessions } from '../chat/sessions'
 import { markRead } from '../chat/unread'
 import { NotationError, type Roll } from '../dice/notation'
-import { applySuggestion, canEdit, getCharacter } from '../characters/api'
+import { applySuggestion, canEdit, getCharacter, systemOf } from '../characters/api'
 import { poolFormula } from '../dice/pool'
 import { stampTime } from '../lib/hlc'
 import type { Campaign } from '../store/campaign'
@@ -565,7 +565,7 @@ function MoveCard({ campaign, m }: { campaign: Campaign; m: MoveMessage }) {
     return !!c && canEdit(campaign, c)
   })
   return (
-    <div class="roll-card move-card" data-band={m.band ?? 'none'}>
+    <div class="roll-card move-card" data-band={m.result ?? 'none'}>
       <div class="roll-head">
         <span class="roll-formula">{m.moveName}</span>
         <span class="roll-comment">{m.characterName}</span>
@@ -576,13 +576,13 @@ function MoveCard({ campaign, m }: { campaign: Campaign; m: MoveMessage }) {
           <span class="roll-total">{m.roll.total}</span>
         </div>
       )}
-      {m.band && <div class="move-band">{BAND_LABEL[m.band]}</div>}
+      {m.result && <div class="move-band">{systemOf(campaign).results.find((r) => r.id === m.result)?.label ?? m.result}</div>}
       <p class="move-outcome">{m.outcome}</p>
       {canAct && m.suggestions.length > 0 && (
         <div class="move-suggest">
           {m.suggestions.map((s, i) => (
             <Button key={i} size="sm" variant="ghost" onClick={() => applySuggestion(campaign, m.characterId, s)}>
-              {s.kind === 'xp' ? 'Mark XP' : `Roll damage (${s.formula})`}
+              {s.label}
             </Button>
           ))}
         </div>
@@ -591,4 +591,3 @@ function MoveCard({ campaign, m }: { campaign: Campaign; m: MoveMessage }) {
   )
 }
 
-const BAND_LABEL = { strong: 'Full success', weak: 'Partial success', miss: 'Miss' } as const

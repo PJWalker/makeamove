@@ -1,6 +1,6 @@
 import { signal } from '@preact/signals'
 import { generateKeyBetween } from 'fractional-indexing'
-import type * as Y from 'yjs'
+import * as Y from 'yjs'
 import { importImage } from '../scene/images'
 import { newId } from '../lib/ids'
 import { postRoll, myName } from '../chat/send'
@@ -8,7 +8,7 @@ import type { MoveSuggestion } from '../chat/types'
 import type { Campaign } from '../store/campaign'
 import { device } from '../store/device'
 import { getSystem } from '../systems'
-import type { ItemDef, MoveDef } from '../systems/types'
+import type { ActionDef, DataValue, ItemDef } from '../systems/types'
 import { performMove, needsChoice, type MoveChoice } from './moves'
 import {
   characterView,
@@ -134,11 +134,12 @@ export async function setPortrait(campaign: Campaign, id: string, file: Blob) {
   setField(campaign, id, 'portrait', image)
 }
 
+/** Set one of the core fields (name, level, notes, portrait…). */
 export function setField(campaign: Campaign, id: string, key: string, value: unknown) {
   campaign.characters.get(id)?.set(key, value)
 }
 
-/** Add to a numeric field, never below zero. */
+/** Add to a numeric core field, never below zero. */
 export function bump(campaign: Campaign, id: string, key: string, by: number, max?: number) {
   const m = campaign.characters.get(id)
   if (!m) return
@@ -146,23 +147,78 @@ export function bump(campaign: Campaign, id: string, key: string, by: number, ma
   m.set(key, max === undefined ? next : Math.min(next, max))
 }
 
+/** One of the character's sub-maps (data, scores, resources…), made if it's missing. */
+function part(campaign: Campaign, id: string, key: 'data' | 'scores' | 'resources' | 'modifiers' | 'fields'): Y.Map<any> | undefined {
+  const m = campaign.characters.get(id)
+  if (!m) return undefined
+  let map = m.get(key) as Y.Map<any> | undefined
+  if (!(map instanceof Y.Map)) {
+    map = new Y.Map()
+    m.set(key, map)
+  }
+  return map
+}
+
+/** Set one of the system's own fields. */
+export function setData(campaign: Campaign, id: string, key: string, value: DataValue) {
+  part(campaign, id, 'data')?.set(key, value)
+}
+
+/** Add to one of the system's numeric fields, never below zero. */
+export function bumpData(campaign: Campaign, id: string, key: string, by: number, max?: number) {
+  const data = part(campaign, id, 'data')
+  if (!data) return
+  const next = Math.max(0, Number(data.get(key) ?? 0) + by)
+  data.set(key, max === undefined ? next : Math.min(next, max))
+}
+
+export function setScore(campaign: Campaign, id: string, stat: string, score: number) {
+  part(campaign, id, 'scores')?.set(stat, score)
+}
+
+/** Add to a resource (HP, spell slots), between zero and its maximum. */
+export function bumpResource(campaign: Campaign, id: string, resource: string, by: number, max?: number) {
+  const r = part(campaign, id, 'resources')
+  if (!r) return
+  const next = Math.max(0, (r.get(resource) ?? 0) + by)
+  r.set(resource, max === undefined ? next : Math.min(next, max))
+}
+
+/** Set a standing roll modifier (Dungeon World's forward, ongoing). */
+export function setModifier(campaign: Campaign, id: string, modifier: string, value: number) {
+  part(campaign, id, 'modifiers')?.set(modifier, value)
+}
+
+/** Give or take away a condition. */
+export function toggleCondition(campaign: Campaign, id: string, condition: string) {
+  const m = campaign.characters.get(id)
+  if (!m) return
+  const now: string[] = m.get('conditions') ?? []
+  m.set('conditions', now.includes(condition) ? now.filter((x) => x !== condition) : [...now, condition])
+}
+
+/** Set one of an NPC's system-defined fields. */
+export function setNpcField(campaign: Campaign, id: string, field: string, value: string | number) {
+  part(campaign, id, 'fields')?.set(field, value)
+}
+
 /** Set by Characters/Palette to ask for a stat or bond before a move rolls. */
 export const moveRequest = signal<{ moveId: string; characterId: string } | null>(null)
 
 /** Make a move as a character: ask for input if it needs any, otherwise roll and post. */
-export function startMove(campaign: Campaign, characterId: string, move: MoveDef) {
+export function startMove(campaign: Campaign, characterId: string, move: ActionDef) {
   if (needsChoice(move)) moveRequest.value = { moveId: move.id, characterId }
   else void makeMove(campaign, characterId, move)
 }
 
-export function makeMove(campaign: Campaign, characterId: string, move: MoveDef, choice: MoveChoice = {}) {
+export function makeMove(campaign: Campaign, characterId: string, move: ActionDef, choice: MoveChoice = {}) {
   const system = systemOf(campaign)
   const c = getCharacter(campaign, characterId)
   if (!c) return
   const d = derive(c, system)
-  const result = performMove(system, move, c, d, choice)
-  // A roll spends +forward; text-only moves leave it for the next roll.
-  if (result.roll && c.forward) setField(campaign, c.id, 'forward', 0)
+  const { spent, ...result } = performMove(system, move, c, d, choice)
+  // A roll uses up modifiers that last for one roll; text-only moves leave them.
+  for (const id of spent) setModifier(campaign, c.id, id, 0)
   return campaign.chat.post(
     {
       kind: 'move',
@@ -179,8 +235,8 @@ export function makeMove(campaign: Campaign, characterId: string, move: MoveDef,
 
 /** Carry out a suggestion button from a move card. */
 export function applySuggestion(campaign: Campaign, characterId: string, s: MoveSuggestion) {
-  if (s.kind === 'xp') bump(campaign, characterId, 'xp', 1)
-  else if (s.formula) postRoll(campaign, s.formula, 'public', 'Damage')
+  if (s.bump) bumpData(campaign, characterId, s.bump.field, s.bump.by)
+  else if (s.roll) postRoll(campaign, s.roll.formula, 'public', s.roll.comment)
 }
 
 /* Inventory */

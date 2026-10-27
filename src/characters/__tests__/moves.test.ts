@@ -6,28 +6,21 @@ import { performMove, planMove } from '../moves'
 const char = (over: Partial<CharacterView> = {}): CharacterView => ({
   id: 'c1',
   kind: 'pc',
-  maxHp: 6,
-  fields: {},
   name: 'Ayla',
   owner: 'me',
   classId: 'fighter',
-  race: '',
-  alignment: '',
   level: 1,
-  xp: 0,
-  hp: 10,
-  hpBonus: 0,
   scores: { str: 16, dex: 9, con: 12, int: 8, wis: 13, cha: 6 },
-  debilities: [],
-  bonds: '',
+  data: { race: '', alignment: '', xp: 0, coin: 0, bonds: '', hpBonus: 0 },
+  resources: { hp: 10 },
+  conditions: [],
+  modifiers: {},
+  fields: {},
   notes: '',
-  coin: 0,
-  forward: 0,
-  ongoing: 0,
   inventory: [],
   ...over,
 })
-const move = (id: string) => dw.moves.find((m) => m.id === id)!
+const move = (id: string) => dw.actions.find((m) => m.id === id)!
 const seq = (...vals: number[]) => {
   let i = 0
   return () => vals[i++ % vals.length]
@@ -40,7 +33,7 @@ describe('planMove', () => {
   })
 
   it('applies debilities, forward and ongoing', () => {
-    const c = char({ debilities: ['weak'], forward: 1, ongoing: -1 })
+    const c = char({ conditions: ['weak'], modifiers: { forward: 1, ongoing: -1 } })
     expect(planMove(dw, move('hack-and-slash'), c, derive(c, dw)).formula).toBe('2d6+2[STR]-1[Weak]+1[Forward]-1[Ongoing]')
   })
 
@@ -48,7 +41,7 @@ describe('planMove', () => {
     const c = char()
     const d = derive(c, dw)
     expect(planMove(dw, move('defy-danger'), c, d, { stat: 'wis' }).formula).toBe('2d6+1[WIS]')
-    expect(planMove(dw, move('aid-or-interfere'), c, d, { bond: 1 }).formula).toBe('2d6+1[Bond]')
+    expect(planMove(dw, move('aid-or-interfere'), c, d, { ask: 1 }).formula).toBe('2d6+1[Bond]')
   })
 
   it('skips zero modifiers', () => {
@@ -62,27 +55,36 @@ describe('performMove', () => {
     const c = char()
     const d = derive(c, dw)
     const hit = performMove(dw, move('hack-and-slash'), c, d, {}, seq(6, 6))
-    expect(hit.band).toBe('strong')
-    expect(hit.suggestions.map((s) => s.kind)).toContain('damage')
+    expect(hit.result).toBe('strong')
+    expect(hit.suggestions.map((s) => s.id)).toContain('damage')
+    expect(hit.suggestions.find((s) => s.id === 'damage')).toMatchObject({ label: 'Roll damage (d10)', roll: { formula: 'd10', comment: 'Damage' } })
     const miss = performMove(dw, move('hack-and-slash'), c, d, {}, seq(1, 1))
     expect(miss.roll!.total).toBe(4)
-    expect(miss.band).toBe('miss')
-    expect(miss.suggestions.map((s) => s.kind)).toContain('xp')
+    expect(miss.result).toBe('miss')
+    expect(miss.suggestions.find((s) => s.id === 'xp')).toMatchObject({ label: 'Mark XP', bump: { field: 'xp', by: 1 } })
   })
 
   it('reads out moves that do not roll', () => {
     const c = char()
-    const r = performMove(dw, dw.moves.find((m) => !m.roll)!, c, derive(c, dw))
+    const r = performMove(dw, dw.actions.find((m) => !m.steps.length)!, c, derive(c, dw))
     expect(r.roll).toBeUndefined()
     expect(r.outcome).not.toBe('')
+  })
+})
+
+describe('spending modifiers', () => {
+  it('uses up forward on a roll, but not ongoing', () => {
+    const c = char({ modifiers: { forward: 2, ongoing: 1 } })
+    const r = performMove(dw, move('hack-and-slash'), c, derive(c, dw), {}, seq(3, 3))
+    expect(r.spent).toEqual(['forward'])
   })
 })
 
 describe('derive', () => {
   it('computes HP, load and damage from class and scores', () => {
     const d = derive(char(), dw)
-    expect(d.maxHp).toBe(22)
-    expect(d.maxLoad).toBe(14)
-    expect(d.damage).toBe(10)
+    expect(d.values.maxHp).toBe(22)
+    expect(d.values.maxLoad).toBe(14)
+    expect(d.values.damage).toBe(10)
   })
 })
