@@ -13,8 +13,10 @@ import type { Point } from '../scene/grid'
 import { importImage } from '../scene/images'
 import { isPlainToken, TOKEN_STYLES, type BlobRef, type TokenStyle } from '../scene/types'
 import { DEFAULT_CANVAS_COLOUR, type Campaign } from '../store/campaign'
-import { listCharacters, selectCharacter, systemOf, tokenStatsByCharacter } from '../characters/api'
+import { getCharacter, listCharacters, selectCharacter, systemOf, tokenStatsSource } from '../characters/api'
+import { freshState, tokenName } from '../characters/templates'
 import { CharacterSheet } from './sheets'
+import { TokenStatePanel } from './TokenStatePanel'
 import { useY } from '../store/useY'
 import { BlobImage } from '../ui/BlobImage'
 import { Button } from '../ui/Button'
@@ -98,7 +100,7 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
   // Keep linked tokens' stats current as characters change.
   useEffect(() => {
     if (!ready.value) return
-    const push = () => renderer.setTokenStats(tokenStatsByCharacter(campaign))
+    const push = () => renderer.setTokenStats(tokenStatsSource(campaign))
     push()
     campaign.characters.observeDeep(push)
     return () => campaign.characters.unobserveDeep(push)
@@ -119,7 +121,12 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
       ctl.start()
       controller.value = ctl
       tokenDrop.value = (x, y, spec) => {
-        ctl!.addCharacterToken(ctl!.toWorld(x, y), spec)
+        // A template's token gets a name of its own and fresh state.
+        const c = getCharacter(campaign, spec.characterId)
+        const own = c?.template
+          ? { name: tokenName(c, c.template, ctl!.tokenNames()), state: freshState(c, systemOf(campaign)) }
+          : {}
+        ctl!.addCharacterToken(ctl!.toWorld(x, y), { ...spec, ...own })
         return true
       }
       // Handy for poking at the scene from the console while developing.
@@ -385,12 +392,22 @@ function TokenOptionsDialog({
 
   // The table stays usable while this is open, so the token may be deleted.
   const exists = useY(controller.scene.elements, () => !!id && controller.scene.get(id)?.type === 'token')
+  /** A token newly linked to a character: fresh state for a template's, none otherwise. */
+  const startState = (id: string) => {
+    const c = characters.find((k) => k.id === id)
+    return c?.template ? freshState(c, system) : undefined
+  }
+  // The token as it is now, for its own state (which changes while this is open).
+  const liveToken = useY(controller.scene.elements, () => {
+    const el = id ? controller.scene.get(id) : null
+    return el?.type === 'token' ? el : null
+  })
   useEffect(() => {
     if (id && !exists) ref.current?.close()
   }, [id, exists])
 
   return (
-    <Dialog dialogRef={ref} title={linked ? linked.name : 'Token options'} onClose={onClose}>
+    <Dialog dialogRef={ref} title={linked ? (linked.template ? token?.name || linked.name : linked.name) : 'Token options'} onClose={onClose}>
       {linked && (
         <PopupTabs
           tabs={[
@@ -403,7 +420,17 @@ function TokenOptionsDialog({
       )}
       {linked && tab.value === 'character' && (
         <div class="popup-sheet sheet-panel">
-          <CharacterSheet campaign={campaign} system={systemOf(campaign)} c={linked} />
+          {linked.template && liveToken && (
+            <TokenStatePanel
+              campaign={campaign}
+              system={system}
+              template={linked}
+              token={liveToken}
+              onChange={(state) => controller.setTokenState(liveToken.id, state)}
+            />
+          )}
+          {linked.template && <h3 class="sheet-heading token-template-heading">Template: every {linked.name}</h3>}
+          <CharacterSheet campaign={campaign} system={system} c={linked} />
         </div>
       )}
       <form
@@ -417,6 +444,8 @@ function TokenOptionsDialog({
               colour: colour.value,
               characterId: characterId.value || undefined,
               image: image.value,
+              // Linked to a different character: a template's token starts fresh; others keep none.
+              ...(characterId.value !== (token?.characterId ?? '') ? { state: startState(characterId.value) } : {}),
               hideName: showName.value ? undefined : true,
               hideBars: showBars.value ? undefined : true,
             }, system.sizes.find((z) => z.id === size.value)?.cells)

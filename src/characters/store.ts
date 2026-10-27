@@ -2,6 +2,7 @@ import * as Y from 'yjs'
 import type { BlobRef, TokenStyle } from '../scene/types'
 import { newId } from '../lib/ids'
 import type { EffectSource } from '../systems/effects'
+import type { TemplateSettings } from './templates'
 import type { ActionDef, DataValue, Derived, Effect, EffectActive, GameSystem, ItemDef } from '../systems/types'
 
 /*
@@ -11,7 +12,7 @@ import type { ActionDef, DataValue, Derived, Effect, EffectActive, GameSystem, I
  * never overwrite each other:
  *
  *   name, owner, kind, folder, classId, level, notes, portrait,
- *   tokenStyle, tokenColour     plain fields
+ *   tokenStyle, tokenColour, template     plain fields
  *   scores      Y.Map  stat id -> score
  *   data        Y.Map  the system's own fields (characterData)
  *   resources   Y.Map  resource id -> current value (HP, spell slots…)
@@ -76,6 +77,8 @@ export interface CharacterView {
   /** How its token is drawn when placed on a map. */
   tokenStyle?: TokenStyle
   tokenColour?: string
+  /** Set for a template, whose tokens each keep their own state (see characters/templates.ts). */
+  template?: TemplateSettings
 }
 
 export type CharacterMap = Y.Map<any>
@@ -152,6 +155,7 @@ export function characterView(id: string, m: CharacterMap, system: GameSystem): 
     portrait: m.get('portrait'),
     tokenStyle: m.get('tokenStyle'),
     tokenColour: m.get('tokenColour'),
+    template: m.get('template'),
   }
 }
 

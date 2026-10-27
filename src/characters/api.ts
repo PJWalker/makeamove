@@ -8,7 +8,8 @@ import type { MoveSuggestion, MoveTarget } from '../chat/types'
 import type { Campaign } from '../store/campaign'
 import { device } from '../store/device'
 import { getSystem } from '../systems'
-import type { ActionDef, DataValue, ItemDef } from '../systems/types'
+import type { ActionDef, DataValue, ItemDef, TokenStat } from '../systems/types'
+import { asToken, type TemplateSettings, type TokenState } from './templates'
 import { performMove, needsChoice, type MoveChoice } from './moves'
 import {
   characterView,
@@ -30,9 +31,35 @@ export function listCharacters(campaign: Campaign): CharacterView[] {
 }
 
 /** What each character's token shows, as the campaign's system defines it. */
-export function tokenStatsByCharacter(campaign: Campaign) {
+/**
+ * What a token shows (HP bars), from its character, or for a template's
+ * token from the template and that token's own state. Built from the
+ * characters as they are now; make a new one when they change.
+ */
+export function tokenStatsSource(campaign: Campaign) {
   const system = systemOf(campaign)
-  return new Map(listCharacters(campaign).map((c) => [c.id, system.tokenStats(c, derive(c, system))]))
+  const characters = new Map(listCharacters(campaign).map((c) => [c.id, c]))
+  const cache = new Map<string, TokenStat[]>()
+  return (characterId: string, state?: TokenState): TokenStat[] => {
+    const c = characters.get(characterId)
+    if (!c) return []
+    const key = c.template ? `${characterId}:${JSON.stringify(state ?? null)}` : characterId
+    let stats = cache.get(key)
+    if (!stats) {
+      const v = c.template ? asToken(c, system, state) : c
+      stats = system.tokenStats(v, derive(v, system))
+      cache.set(key, stats)
+    }
+    return stats
+  }
+}
+
+/** Make a character a template (its tokens keep their own state), or an individual again with null. */
+export function setTemplate(campaign: Campaign, id: string, settings: TemplateSettings | null) {
+  const m = campaign.characters.get(id)
+  if (!m) return
+  if (settings) m.set('template', settings)
+  else m.delete('template')
 }
 
 export function getCharacter(campaign: Campaign, id: string | undefined): CharacterView | undefined {

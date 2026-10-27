@@ -6,6 +6,7 @@ import { formatDistance, measure, tokenDistance } from './measure'
 import { forgetBitmaps, loadBitmap, onBlobFetcher } from "./images";
 import { PING_MS, TRAIL_MS, type PresenceMark } from "./presence";
 import type { TokenStat } from '../systems/types'
+import type { TokenState } from '../characters/templates'
 import { strokeOutline, hasRealPressure } from './stroke'
 import { isPlainToken, LAYERS, type Layer, type SceneElement, type Transform } from './types'
 
@@ -154,8 +155,8 @@ export class SceneRenderer {
   private marks: PresenceMark[] = [];
   private cursors = new Map<string, CursorMove>();
   private views = new Map<string, View>();
-  /** What each linked character's token shows, by character id. */
-  private tokenStats = new Map<string, TokenStat[]>();
+  /** What a linked token shows, from its character and (for a template's token) its own state. */
+  private statsFor: (characterId: string, state?: TokenState) => TokenStat[] = () => [];
   private elements: SceneElement[] = [];
   private order = "";
   private frame = 0;
@@ -330,8 +331,8 @@ export class SceneRenderer {
 
   // Elements
 
-  setTokenStats(stats: Map<string, TokenStat[]>) {
-    this.tokenStats = stats;
+  setTokenStats(statsFor: (characterId: string, state?: TokenState) => TokenStat[]) {
+    this.statsFor = statsFor;
     this.invalidate("overlay");
   }
 
@@ -705,7 +706,7 @@ export class SceneRenderer {
       if (el.type !== "token" || this.hidden.has(el.id)) continue;
       const t = this.previews.get(el.id) ?? el;
       const screenW = t.w * cam.zoom;
-      const stats = (!el.hideBars && el.characterId && this.tokenStats.get(el.characterId)) || [];
+      const stats = !el.hideBars && el.characterId ? this.statsFor(el.characterId, el.state) : [];
       const foot = toScreen(cam, { x: t.x, y: t.y + t.h / 2 });
       let y = foot.y + 3;
       let bars: Box | null = null;

@@ -8,7 +8,7 @@ import * as Y from 'yjs'
 import { systemActions } from '../../actions/system'
 import { Campaign, createCampaign } from '../../store/campaign'
 import { device } from '../../store/device'
-import { addItem, createFolder, deleteCharacter, deleteFolder, getCharacter, listFolders, makeMove, moveRequest, moveToFolder, newCharacter, newNpc, renameFolder, tokenStatsByCharacter, selectedCharacterId, setData, setModifier, startMove, systemOf, targetRequest, updateItem } from '../api'
+import { addItem, createFolder, deleteCharacter, deleteFolder, getCharacter, listFolders, makeMove, moveRequest, moveToFolder, newCharacter, newNpc, renameFolder, tokenStatsSource, selectedCharacterId, setData, setModifier, startMove, systemOf, targetRequest, updateItem } from '../api'
 import { defaultHotbar, editHotbar, hotbarSlots, moveTo, pin, placeAt, insertAt, shift, unpin, MAX_SLOTS } from '../hotbar'
 
 async function setUp() {
@@ -126,7 +126,7 @@ describe('NPCs and folders', () => {
     expect(npc).toMatchObject({ kind: 'npc', name: 'Goblin', resources: { hp: 6 }, data: { maxHp: 6 } })
     expect(Object.keys(npc.fields)).toEqual(systemOf(c).npcFields.map((f) => f.id))
     setData(c, id, 'maxHp', 12)
-    expect(tokenStatsByCharacter(c).get(id)![0]).toMatchObject({ id: 'hp', value: 6, max: 12 })
+    expect(tokenStatsSource(c)(id)[0]).toMatchObject({ id: 'hp', value: 6, max: 12 })
     c.destroy()
   })
 

@@ -224,13 +224,16 @@ export function DungeonWorldNpcSheet({ campaign, system, c }: { campaign: Campai
         </div>
       </header>
       <div class="sheet-vitals">
-        <Counter
-          label="HP"
-          value={c.resources.hp ?? 0}
-          max={maxHp}
-          disabled={!editable}
-          onChange={(by) => bumpResource(campaign, c.id, 'hp', by, maxHp)}
-        />
+        {/* A template's tokens each track their own HP. */}
+        {!c.template && (
+          <Counter
+            label="HP"
+            value={c.resources.hp ?? 0}
+            max={maxHp}
+            disabled={!editable}
+            onChange={(by) => bumpResource(campaign, c.id, 'hp', by, maxHp)}
+          />
+        )}
         <label class="counter">
           <span class="eyebrow">Max HP</span>
           <input
