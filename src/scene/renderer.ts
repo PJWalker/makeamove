@@ -1,4 +1,4 @@
-import { AlphaFilter, Application, CanvasTextMetrics, Container, CullerPlugin, extensions, Graphics, ImageSource, Matrix, Sprite, Text, TextStyle, Texture } from 'pixi.js'
+import { AlphaFilter, Application, CanvasTextMetrics, Container, CullerPlugin, extensions, FillGradient, Graphics, ImageSource, Matrix, Sprite, Text, TextStyle, Texture } from 'pixi.js'
 import { type Camera, type Rect, toScreen, visibleWorld } from './camera'
 import { corners, fromLocal as fromLocalPoint, shapeOutline } from './geometry'
 import { type Grid, DEFAULT_GRID, type Point, hexCellsIn, hexCentre, hexCorners, squareLines } from './grid'
@@ -7,7 +7,7 @@ import { forgetBitmaps, loadBitmap, onBlobFetcher } from "./images";
 import { PING_MS, TRAIL_MS, type PresenceMark } from "./presence";
 import type { TokenStat } from '../systems/types'
 import { strokeOutline, hasRealPressure } from './stroke'
-import { blockingSegments, insidePolygon, lightArea, visibilityPolygon } from './vision'
+import { blockingSegments, insidePolygon, lightFalloff, visibilityPolygon } from './vision'
 import { isPlainToken, LAYERS, type Layer, type SceneElement, type ShapeKind, type Transform } from './types'
 
 /** The UI accent, oklch(82% 0.15 85), as sRGB for the canvas. */
@@ -249,6 +249,8 @@ export class SceneRenderer {
   private lightLayer = new Container();
   private lightG = new Graphics();
   private lightErase = new Graphics({ blendMode: "erase" });
+  /** Each light's falloff, in world space; remade only when the light moves or changes reach. */
+  private gradients = new Map<string, { key: string; gradient: FillGradient }>();
   /** Everything outside the viewers' sight, with what they see erased out of it. */
   private fogLayer = new Container();
   private fogG = new Graphics();
@@ -757,9 +759,15 @@ export class SceneRenderer {
       for (const el of this.elements) {
         if (el.type !== "light" || this.hidden.has(el.id)) continue;
         const t = at(el);
-        const lit = lightArea({ x: t.x, y: t.y }, walls, el.bright, el.dim);
-        erase.poly(flat(lit.dim)).fill({ color: 0xffffff, alpha: 0.55 });
-        erase.poly(flat(lit.bright)).fill({ color: 0xffffff, alpha: 1 });
+        // Everything the light reaches past walls, lit by how far it is from the lamp.
+        const area = visibilityPolygon({ x: t.x, y: t.y }, walls, Math.max(el.bright, el.dim));
+        erase.poly(flat(area)).fill(this.falloffFor(el, t));
+      }
+    }
+    for (const [id, g] of this.gradients) {
+      if (!this.byId.has(id)) {
+        g.gradient.destroy();
+        this.gradients.delete(id);
       }
     }
 
@@ -777,6 +785,27 @@ export class SceneRenderer {
       });
       for (const poly of this.sight) seen.poly(flat(poly)).fill({ color: 0xffffff, alpha: 1 });
     }
+  }
+
+  /** A light's falloff as a radial gradient centred on it, kept until it moves or changes. */
+  private falloffFor(el: SceneElement & { type: "light" }, t: Transform): FillGradient {
+    const reach = Math.max(el.bright, el.dim);
+    const key = `${t.x},${t.y},${el.bright},${el.dim}`;
+    const known = this.gradients.get(el.id);
+    if (known?.key === key) return known.gradient;
+    known?.gradient.destroy();
+    const gradient = new FillGradient({
+      type: "radial",
+      textureSpace: "global",
+      center: { x: t.x, y: t.y },
+      innerRadius: 0,
+      outerCenter: { x: t.x, y: t.y },
+      outerRadius: reach,
+      colorStops: lightFalloff(el.bright, el.dim).map((s) => ({ offset: s.offset, color: `rgba(255,255,255,${s.alpha})` })),
+      textureSize: 256,
+    });
+    this.gradients.set(el.id, { key, gradient });
+    return gradient;
   }
 
   /** Whether a token is out of the viewers' sight (always false when they see everything). */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { blockingSegments, insidePolygon, visibilityPolygon, wallEnds } from '../vision'
+import { blockingSegments, insidePolygon, lightFalloff, visibilityPolygon, wallEnds } from '../vision'
 import type { SceneElement } from '../types'
 
 const wall = (x1: number, y1: number, x2: number, y2: number, door?: { open: boolean }): SceneElement => ({
@@ -48,5 +48,27 @@ describe('line of sight', () => {
     const poly = visibilityPolygon({ x: 0, y: 0 }, blockingSegments(walls), 500)
     expect(insidePolygon(poly, { x: 200, y: 0 })).toBe(true)
     expect(insidePolygon(poly, { x: 200, y: 100 })).toBe(false)
+  })
+})
+
+describe('light falloff', () => {
+  it('fades smoothly from full at the lamp to nothing at the end of dim light', () => {
+    const stops = lightFalloff(20, 40)
+    expect(stops[0]).toEqual({ offset: 0, alpha: 1 })
+    expect(stops.at(-1)).toEqual({ offset: 1, alpha: 0 })
+    for (let i = 1; i < stops.length; i++) {
+      expect(stops[i].offset).toBeGreaterThan(stops[i - 1].offset)
+      expect(stops[i].alpha).toBeLessThanOrEqual(stops[i - 1].alpha)
+    }
+    // Still nearly full at the edge of bright light, halfway into the reach.
+    expect(stops.find((s) => s.offset === 0.5)?.alpha).toBeCloseTo(0.9)
+    // No step anywhere: neighbouring stops differ by a fraction.
+    for (let i = 1; i < stops.length; i++) expect(stops[i - 1].alpha - stops[i].alpha).toBeLessThan(0.25)
+  })
+
+  it('gives a light with no dim reach a short soft edge', () => {
+    const stops = lightFalloff(20, 0)
+    expect(stops.at(-1)?.alpha).toBe(0)
+    expect(stops.find((s) => s.alpha < 0.9 && s.alpha > 0)).toBeDefined()
   })
 })

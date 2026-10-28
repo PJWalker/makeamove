@@ -87,13 +87,31 @@ export function insidePolygon(poly: Point[], p: Point): boolean {
   return inside
 }
 
-/** A light, as the renderer draws it: where, how far its bright and dim light reach, and what it can reach past walls. */
-export interface LitArea {
-  bright: Point[]
-  dim: Point[]
+/** Stops for a light's falloff: how much of the dark it lifts (0 to 1) at each fraction of its reach. */
+export interface FalloffStop {
+  offset: number
+  alpha: number
 }
 
-/** The areas a light reaches: bright out to its bright radius, dim out to its dim one, both stopped by walls. */
-export function lightArea(origin: Point, segments: Segment[], bright: number, dim: number): LitArea {
-  return { bright: visibilityPolygon(origin, segments, bright), dim: visibilityPolygon(origin, segments, Math.max(bright, dim)) }
+/**
+ * How a light fades, as gradient stops from its centre to the end of its dim
+ * light: nearly full through its bright radius, easing a little towards its
+ * edge, then a smooth S-curve down to nothing at the dim radius, with no
+ * hard edge anywhere. A light with no dim reach still gets a short soft edge.
+ */
+export function lightFalloff(bright: number, dim: number, steps = 8): FalloffStop[] {
+  const reach = Math.max(dim, bright * 1.15, 1)
+  const b = Math.min(bright, reach) / reach
+  const stops: FalloffStop[] = []
+  // Through the bright light: from full to 90%.
+  for (let i = 0; i <= 3; i++) {
+    const f = i / 3
+    stops.push({ offset: b * f, alpha: 1 - 0.1 * f * f })
+  }
+  // Out through the dim light: 90% easing to nothing.
+  for (let i = 1; i <= steps; i++) {
+    const u = i / steps
+    stops.push({ offset: b + (1 - b) * u, alpha: 0.9 * (1 - u * u * (3 - 2 * u)) })
+  }
+  return stops
 }
