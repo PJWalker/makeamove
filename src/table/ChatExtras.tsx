@@ -1,5 +1,5 @@
 import { signal, useSignal } from '@preact/signals'
-import { useEffect } from 'preact/hooks'
+import { useEffect, useRef } from 'preact/hooks'
 import { fieldsOf, getState, setState, withField } from '../chat/messageState'
 import { canWork, visibilityOf, type ChatMessage, type CounterMessage, type TimerMessage } from '../chat/types'
 import type { Campaign } from '../store/campaign'
@@ -88,6 +88,40 @@ const clock = (seconds: number) => {
   return h ? `${h}:${pad(m)}:${pad(s % 60)}` : `${m}:${pad(s % 60)}`
 }
 
+/** How long a timer's bar flashes when it runs out, while the page is in view. */
+const RING_MS = 3600
+
+/**
+ * Whether a timer is ringing: from the moment it runs out while on screen,
+ * for a few seconds of the page being visible (so running out in a
+ * background tab still rings on coming back). One already out when it
+ * appears doesn't ring.
+ */
+function useRinging(done: boolean): boolean {
+  const ringing = useSignal(false)
+  const was = useRef(done)
+  useEffect(() => {
+    if (done && !was.current) ringing.value = true
+    if (!done) ringing.value = false
+    was.current = done
+  }, [done])
+  useEffect(() => {
+    if (!ringing.value) return
+    let timer = 0
+    const arm = () => {
+      clearTimeout(timer)
+      if (document.visibilityState === 'visible') timer = window.setTimeout(() => (ringing.value = false), RING_MS)
+    }
+    arm()
+    document.addEventListener('visibilitychange', arm)
+    return () => {
+      clearTimeout(timer)
+      document.removeEventListener('visibilitychange', arm)
+    }
+  }, [ringing.value])
+  return ringing.value
+}
+
 /** A countdown in real time: its label, the time left as a clock and a bar; restart or stop for whoever may. */
 export function TimerCard({ campaign, m, compact }: { campaign: Campaign; m: TimerMessage; compact?: boolean }) {
   const state = useMessageState(campaign, m.id, ['endsAt', 'stoppedAt'])
@@ -98,8 +132,9 @@ export function TimerCard({ campaign, m, compact }: { campaign: Campaign; m: Tim
   const done = left <= 0
   const gm = useY(campaign.members, () => campaign.isGm())
   const can = canWork(m, device.value.id, gm)
+  const ringing = useRinging(done)
   return (
-    <div class="roll-card chat-timer" data-done={done || undefined} data-compact={compact || undefined}>
+    <div class="roll-card chat-timer" data-done={done || undefined} data-ringing={ringing || undefined} data-compact={compact || undefined}>
       <div class="roll-head">
         <span class="roll-formula">{m.label || 'Timer'}</span>
         <span class="chat-timer-clock" aria-live={done ? 'polite' : 'off'}>
@@ -194,7 +229,14 @@ export function CounterCard({ campaign, m, compact }: { campaign: Campaign; m: C
   )
 }
 
-/** Pinned messages, above the log: timers and counters as they are, text in a line, each unpinnable by the GM. */
+/** How long an unpinned message takes to leave the strip; matches the CSS. */
+const PIN_LEAVE_MS = 240
+
+/**
+ * Pinned messages, above the log: timers and counters as they are, text in a
+ * line, each unpinnable by the GM. Pins slide in when pinned and fold away
+ * when unpinned; those already pinned when the strip appears don't animate.
+ */
 export function PinnedStrip({ campaign, render }: { campaign: Campaign; render: (m: ChatMessage) => preact.ComponentChildren }) {
   const pinnedIds = useY(campaign.messageState, () => withField(campaign.messageState, 'pinned').join(' '))
   const messages = campaign.chat.messages.value
@@ -202,13 +244,29 @@ export function PinnedStrip({ campaign, render }: { campaign: Campaign; render: 
   const me = device.value.id
   const ids = new Set(pinnedIds.split(' ').filter(Boolean))
   const pinned = messages.filter((m) => ids.has(m.id) && visibilityOf(m, me, gm) === 'full')
-  if (!pinned.length) return null
+  const shown = new Set(pinned.map((m) => m.id))
+
+  // Unpinned ones stay a moment to fold away.
+  const leaving = useSignal<Set<string>>(new Set())
+  const before = useRef<Set<string>>(shown)
+  useEffect(() => {
+    const gone = [...before.current].filter((id) => !shown.has(id))
+    before.current = shown
+    if (!gone.length) return
+    leaving.value = new Set([...leaving.value, ...gone])
+    window.setTimeout(() => (leaving.value = new Set([...leaving.value].filter((id) => !gone.includes(id)))), PIN_LEAVE_MS)
+  }, [pinnedIds, messages])
+  // Those here when the strip first drew came with it.
+  const initial = useRef(shown).current
+
+  const rows = messages.filter((m) => shown.has(m.id) || leaving.value.has(m.id))
+  if (!rows.length) return null
   return (
     <section class="chat-pinned" aria-label="Pinned">
-      {pinned.map((m) => (
-        <div key={m.id} class="chat-pin">
+      {rows.map((m) => (
+        <div key={m.id} class="chat-pin" data-new={!initial.has(m.id) || undefined} data-leaving={(!shown.has(m.id)) || undefined}>
           <div class="chat-pin-body">{render(m)}</div>
-          {gm && (
+          {gm && shown.has(m.id) && (
             <Button variant="icon" size="sm" label="Unpin" onClick={() => setPinned(campaign, m.id, false)}>
               <IconClose />
             </Button>

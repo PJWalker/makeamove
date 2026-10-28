@@ -378,13 +378,20 @@ type MessageProps = {
   onMenu?: (x: number, y: number, id: string) => void
 }
 
+/** Messages that have played their arrival, so scrolling the log's window back over them doesn't replay it. */
+const arrived = new Set<string>()
+
 /** Memoised: the log re-renders as messages arrive, but a message only when its own props change. */
 const Message = memo(function Message({ campaign, m, header, fresh, masked, mine, canAct, canGo, onMenu }: MessageProps) {
   const menu = useMemo(() => onMenu && menuTrigger((x, y) => onMenu(x, y, m.id)), [onMenu, m.id])
+  // Fixed when it mounts, so a re-render mid-animation doesn't cut it short.
+  const arriving = useRef(fresh && !arrived.has(m.id)).current
+  useEffect(() => void (fresh && arrived.add(m.id)), [])
+  const pinned = useY(campaign.messageState, () => isPinned(campaign, m.id))
   if (m.kind === 'system') {
     const session = m.event === 'session-start' || m.event === 'session-end'
     return (
-      <div class="chat-system" data-key={m.id} data-session={session} {...menu}>
+      <div class="chat-system" data-key={m.id} data-session={session} data-fresh={arriving} {...menu}>
         <span>{m.text}</span>
         {canGo && (
           <Button variant="ghost" size="sm" class="chat-go" onClick={() => campaign.setActiveScene(m.sceneId!)}>
@@ -401,7 +408,8 @@ const Message = memo(function Message({ campaign, m, header, fresh, masked, mine
       data-key={m.id}
       data-header={header}
       data-whisper={!!whisper}
-      data-fresh={fresh}
+      data-fresh={arriving}
+      data-pinned={pinned || undefined}
       {...menu}
     >
       {header && (
