@@ -8,11 +8,11 @@ import { type Point, snapPoint, snapSize } from './grid'
 import { importImage, imageColour } from './images'
 import { formatDistance, tokenDistance } from './measure'
 import { wallEnds } from './vision'
-import { HANDLE_SIZE, type SceneRenderer, rotateHandlePosition } from './renderer'
+import { HANDLE_SIZE, type LightPart, type SceneRenderer, lightHandles, rotateHandlePosition } from './renderer'
 import type { SceneDoc } from './sceneDoc'
 import { finishStroke, STRIDE } from './stroke'
-import { activeTool, ERASER_RADIUS, pen, SHAPE_WIDTH, shapeTool, TEMPLATE_STYLE } from './tools'
-import { LAYERS, type BlobRef, type Layer, type NewElement, type SceneElement, type TokenElement, type ShapeKind, type TokenStyle, type Transform } from './types'
+import { activeTool, ERASER_RADIUS, lightTool, pen, SHAPE_WIDTH, shapeTool, TEMPLATE_STYLE } from './tools'
+import { AREA_COLOURS, LAYERS, type BlobRef, type Layer, type AreaTone, type LightElement, type NewElement, type SceneElement, type TokenElement, type ShapeKind, type TokenStyle, type Transform } from './types'
 
 /** A new lamp's size, in cells: its shadows' softness. Resizing the lamp makes them softer or sharper. */
 const LAMP_SIZE = 0.6
@@ -36,6 +36,7 @@ type Gesture =
   | { kind: 'move'; start: Point; originals: Map<string, SceneElement>; moved: boolean }
   | { kind: 'resize'; el: SceneElement; corner: Corner }
   | { kind: 'rotate'; el: SceneElement }
+  | { kind: 'light'; el: LightElement; part: LightPart }
   | { kind: 'rotateGroup'; frame: Transform; originals: SceneElement[]; startAngle: number; delta: number }
   | { kind: 'marquee'; start: Point; base: string[]; pick: string | null; moved: boolean }
   | { kind: 'draw'; points: number[]; layer: Layer; colour: string; width: number }
@@ -49,6 +50,9 @@ type Gesture =
 const DRAG_THRESHOLD = 3
 
 const RESIZE_CURSORS = ['nwse-resize', 'nesw-resize', 'nwse-resize', 'nesw-resize']
+
+/** The cursor over each of a light's handles, which sit right, up-right and down-right of it. */
+const LIGHT_CURSORS: Record<LightPart, string> = { lamp: 'ew-resize', bright: 'nesw-resize', dim: 'nwse-resize' }
 
 /** This member's token colour, from their device id. */
 const memberColour = () => colourOf(device.value)
@@ -81,6 +85,9 @@ export class SceneController {
 
   /** An area to place for an action: the next drag on the map puts it down (see placeArea). */
   readonly placing = signal<Placement | null>(null)
+
+  /** The corners of an area of solid light or dark being placed, a click at a time. */
+  private area: { tone: AreaTone; points: Point[] } | null = null
 
   /** Whether this device is the GM's: only the GM sees and edits walls and lights. */
   gm = false
@@ -151,9 +158,17 @@ export class SceneController {
       }),
       effect(() => {
         void activeTool.value
+        void lightTool.value
         // Only a tool change should cancel a gesture, not the selection
         // changes that a marquee makes as it goes.
         untracked(() => {
+          // Lamps and areas show, and stay selected, only in the Lights tool.
+          this.renderer.lightsShown = activeTool.value === 'light'
+          const keep = this.selection.value.filter((id) => {
+            const el = this.byId.get(id)
+            return el && this.pickable(el)
+          })
+          if (keep.length !== this.selection.value.length) this.selection.value = keep
           this.cancelGesture()
           this.updateCursor()
           this.updateOverlay()
@@ -256,13 +271,13 @@ export class SceneController {
 
   private updateOverlay() {
     const tool = activeTool.value
-    const selected = tool === 'select' ? this.selected() : []
+    const selected = this.selecting() ? this.selected() : []
     const g = this.gesture
     const movable = selected.filter((el) => !el.locked)
     const groupBounds = movable.length > 1 && (!g || g.kind === 'rotateGroup') ? bounds(movable) : null
     this.renderer.overlayState = {
       selected,
-      handles: selected.length === 1 && !selected[0].locked && (!g || g.kind === 'resize' || g.kind === 'rotate'),
+      handles: selected.length === 1 && !selected[0].locked && (!g || g.kind === 'resize' || g.kind === 'rotate' || g.kind === 'light'),
       group:
         g?.kind === 'rotateGroup'
           ? { ...g.frame, rot: g.delta }
@@ -338,7 +353,7 @@ export class SceneController {
         ? 'grabbing'
         : this.spaceHeld || tool === 'pan'
           ? 'grab'
-          : this.placing.value || tool === 'draw' || tool === 'shape' || tool === 'wall' || tool === 'light' || tool === 'ruler' || tool === 'ping' || (tool === 'select' && this.targetMode.value)
+          : this.placing.value || tool === 'draw' || tool === 'shape' || tool === 'wall' || (tool === 'light' && !this.selecting()) || tool === 'ruler' || tool === 'ping' || (tool === 'select' && this.targetMode.value)
             ? 'crosshair'
             : tool === 'text'
               ? 'text'
@@ -409,19 +424,35 @@ export class SceneController {
 
   // Hit testing
 
+  /** Whether the tool in use selects: the Select tool, or the Lights tool's own. */
+  private selecting(): boolean {
+    const tool = activeTool.value
+    return tool === 'select' || (tool === 'light' && lightTool.value === 'select')
+  }
+
+  /**
+   * Whether an element can be picked with the tool in use: in the Lights tool
+   * only lamps and areas, which nothing else can pick. Only the GM picks walls.
+   */
+  private pickable(el: SceneElement): boolean {
+    const lamp = el.type === 'light' || el.type === 'area'
+    if (activeTool.value === 'light') return lamp && this.gm
+    return !lamp && (el.type !== 'wall' || this.gm)
+  }
+
   /** Topmost element under p. Locked elements only count when asked. */
   hitTest(p: Point, includeLocked = false): SceneElement | null {
     const tolerance = 4 / this.renderer.camera.zoom
     for (let i = this.elements.length - 1; i >= 0; i--) {
       const el = this.elements[i]
       if (el.locked && !includeLocked) continue
-      if ((el.type === 'wall' || el.type === 'light') && !this.gm) continue
+      if (!this.pickable(el)) continue
       if (hits(el, p, tolerance)) return el
     }
     return null
   }
 
-  private handleAt(screen: Point): { kind: 'corner'; corner: Corner } | { kind: 'rotate' } | null {
+  private handleAt(screen: Point): { kind: 'corner'; corner: Corner } | { kind: 'rotate' } | { kind: 'light'; part: LightPart } | null {
     const { selected, handles, group } = this.renderer.overlayState
     const cam = this.renderer.camera
     const reach = HANDLE_SIZE / 2 + 4
@@ -431,6 +462,12 @@ export class SceneController {
     }
     if (!handles || selected.length !== 1) return null
     const el = selected[0]
+    if (el.type === 'light') {
+      const near = lightHandles(el, cam).filter((h) => Math.hypot(screen.x - h.at.x, screen.y - h.at.y) <= reach)
+      // The lamp's own handle can sit under a ring's when the light is small; the rings win.
+      const h = near.find((h) => h.part !== 'lamp') ?? near[0]
+      return h ? { kind: 'light', part: h.part } : null
+    }
     const knob = rotateHandlePosition(el, cam)
     if (Math.hypot(screen.x - knob.x, screen.y - knob.y) <= reach) return { kind: 'rotate' }
     const cs = corners(el)
@@ -474,7 +511,7 @@ export class SceneController {
       return
     }
 
-    const tool = e.button === 1 || this.spaceHeld ? 'pan' : activeTool.value
+    const tool = e.button === 1 || this.spaceHeld ? 'pan' : this.selecting() ? 'select' : activeTool.value
     // Double-clicking text changes it.
     if (tool === 'select' && e.detail === 2) {
       const under = this.hitTest(world)
@@ -499,7 +536,14 @@ export class SceneController {
             break
           }
           const el = this.selected()[0]
-          this.gesture = handle.kind === 'rotate' ? { kind: 'rotate', el } : { kind: 'resize', el, corner: handle.corner }
+          this.gesture =
+            handle.kind === 'rotate'
+              ? { kind: 'rotate', el }
+              : handle.kind === 'light' && el.type === 'light'
+                ? { kind: 'light', el, part: handle.part }
+                : handle.kind === 'corner'
+                  ? { kind: 'resize', el, corner: handle.corner }
+                  : null
           break
         }
         const under = this.hitTest(world)
@@ -574,6 +618,11 @@ export class SceneController {
 
       case 'light': {
         if (!this.gm) break
+        const mode = lightTool.value
+        if (mode === 'light' || mode === 'dark') {
+          this.addAreaPoint(mode, world, e)
+          break
+        }
         const grid = this.renderer.grid
         const at = grid.type === 'square' && !e.altKey ? snapPoint(grid, world, 1) : world
         this.scene.add({ type: 'light', layer: 'over', x: at.x, y: at.y, w: grid.size * LAMP_SIZE, h: grid.size * LAMP_SIZE, rot: 0, ...LIGHT_DEFAULT(grid.size) })
@@ -582,6 +631,49 @@ export class SceneController {
     }
     this.updateCursor()
     this.updateOverlay()
+  }
+
+  /**
+   * A click while placing an area: its next corner, snapped like a wall's end.
+   * A click on its first corner, or a double click, closes it.
+   */
+  private addAreaPoint(tone: AreaTone, world: Point, e: PointerEvent) {
+    const p = this.snapWallPoint(world, e)
+    if (this.area?.tone !== tone) this.area = { tone, points: [] }
+    const pts = this.area.points
+    const first = pts[0]
+    const cam = this.renderer.camera
+    const onFirst = first && Math.hypot((first.x - p.x) * cam.zoom, (first.y - p.y) * cam.zoom) <= HANDLE_SIZE
+    if (pts.length >= 3 && (onFirst || e.detail >= 2)) {
+      this.finishArea()
+      return
+    }
+    const last = pts[pts.length - 1]
+    if (!last || last.x !== p.x || last.y !== p.y) pts.push(p)
+    this.showAreaDraft(world, e)
+  }
+
+  private showAreaDraft(p: Point, e: { altKey: boolean }) {
+    if (!this.area) return
+    this.renderer.draft = { kind: 'polygon', points: [...this.area.points, this.snapWallPoint(p, e)], colour: AREA_COLOURS[this.area.tone], layer: 'over' }
+    this.renderer.invalidate('overlay')
+  }
+
+  /** Put down the area being placed, if it has at least three corners. */
+  finishArea() {
+    const area = this.area
+    this.area = null
+    this.renderer.draft = null
+    this.renderer.invalidate('overlay')
+    if (!area || area.points.length < 3) return
+    const xs = area.points.map((p) => p.x)
+    const ys = area.points.map((p) => p.y)
+    const x = (Math.min(...xs) + Math.max(...xs)) / 2
+    const y = (Math.min(...ys) + Math.max(...ys)) / 2
+    const w = Math.max(1, Math.max(...xs) - Math.min(...xs))
+    const h = Math.max(1, Math.max(...ys) - Math.min(...ys))
+    const points = area.points.flatMap((p) => [p.x - x, p.y - y])
+    this.scene.add({ type: 'area', layer: 'over', x, y, w, h, rot: 0, tone: area.tone, points, bw: w, bh: h })
   }
 
   /** Where a wall ends: on another wall's end if one is near, else on a grid corner (Alt places freely). */
@@ -639,6 +731,33 @@ export class SceneController {
     const el = this.byId.get(id)
     if (el?.type !== 'wall') return
     this.scene.update([[id, { ...patch, ...(patch.door === false ? { open: undefined } : {}) } as Partial<SceneElement>]])
+  }
+
+  /**
+   * A light with one of its handles dragged to p: the lamp's rim sizes the lamp
+   * (softer or sharper shadows); the rings set how far bright and dim light
+   * reach, in whole cells unless Alt is held. Dim light never falls short of bright.
+   */
+  private dragLight(el: LightElement, part: LightPart, p: Point, free: boolean): LightElement {
+    const dist = Math.hypot(p.x - el.x, p.y - el.y)
+    if (part === 'lamp') {
+      const size = Math.max(8, dist * 2)
+      return { ...el, w: size, h: size }
+    }
+    const cell = this.renderer.grid.size
+    const r = free ? dist : Math.round(dist / cell) * cell
+    if (part === 'bright') {
+      const bright = Math.max(0, r)
+      return { ...el, bright, dim: Math.max(el.dim, bright) }
+    }
+    const dim = Math.max(free ? 8 : cell, r)
+    return { ...el, dim, bright: Math.min(el.bright, dim) }
+  }
+
+  /** Turn an area of light into one of dark, or back. */
+  setAreaTone(id: string, tone: AreaTone) {
+    if (this.byId.get(id)?.type !== 'area') return
+    this.scene.update([[id, { tone } as Partial<SceneElement>]])
   }
 
   /** Make a light reach further (or less far), by whole cells. */
@@ -752,7 +871,7 @@ export class SceneController {
     }
 
     if (!g) {
-      if (activeTool.value === 'select' && !this.spaceHeld) {
+      if (this.selecting() && !this.spaceHeld) {
         const handle = this.handleAt(screen)
         const hit = !handle && this.hitTest(world)
         this.updateCursor(
@@ -761,13 +880,14 @@ export class SceneController {
             : handle
               ? handle.kind === 'corner'
                 ? cornerCursor(this.selected()[0], handle.corner)
-                : 'grab'
+                : LIGHT_CURSORS[handle.part]
               : hit
                 ? 'move'
                 : undefined,
         )
       }
       if (activeTool.value === 'erase') this.updateOverlay()
+      if (this.area) this.showAreaDraft(world, e)
       return
     }
 
@@ -819,6 +939,12 @@ export class SceneController {
         break
       }
 
+      case 'light': {
+        this.renderer.previews.set(g.el.id, this.dragLight(g.el, g.part, world, e.altKey))
+        this.renderer.invalidate('previews', 'overlay')
+        break
+      }
+
       case 'rotate': {
         // Shift snaps to 15° steps.
         const rot = rotationTowards(g.el, world, e.shiftKey ? 15 : 0)
@@ -857,7 +983,7 @@ export class SceneController {
           w: Math.abs(world.x - g.start.x),
           h: Math.abs(world.y - g.start.y),
         }
-        const inside = this.elements.filter((el) => !el.locked && contains(rect, bounds([el])!)).map((el) => el.id)
+        const inside = this.elements.filter((el) => !el.locked && this.pickable(el) && contains(rect, bounds([el])!)).map((el) => el.id)
         this.selection.value = [...new Set([...g.base, ...inside])]
         this.updateOverlay()
         break
@@ -919,6 +1045,14 @@ export class SceneController {
       case 'rotateGroup':
         this.commitPreviews()
         break
+
+      case 'light': {
+        const light = this.renderer.previews.get(g.el.id) as LightElement | undefined
+        this.renderer.previews.clear()
+        if (light) this.scene.update([[light.id, { w: light.w, h: light.h, bright: light.bright, dim: light.dim } as Partial<SceneElement>]])
+        this.renderer.invalidate('elements', 'overlay')
+        break
+      }
 
       case 'marquee':
         // A click on a map, not a drag across it.
@@ -998,6 +1132,11 @@ export class SceneController {
 
   /** Drop an in-progress gesture without changing the scene. */
   cancelGesture() {
+    if (this.area) {
+      this.area = null
+      this.renderer.draft = null
+      this.renderer.invalidate('overlay')
+    }
     if (!this.gesture) return
     if (this.gesture.kind === 'trail') this.presence?.endTrail()
     if (this.gesture.kind === 'ruler') {
@@ -1081,8 +1220,8 @@ export class SceneController {
       return true
     }
     if (mod && key === 'a') {
-      activeTool.value = 'select'
-      this.selection.value = this.elements.filter((el) => !el.locked).map((el) => el.id)
+      if (!this.selecting()) activeTool.value = 'select'
+      this.selection.value = this.elements.filter((el) => !el.locked && this.pickable(el)).map((el) => el.id)
       return true
     }
     if (mod && key === 'd') {
@@ -1092,8 +1231,12 @@ export class SceneController {
     if (mod) return false
 
     switch (e.key) {
+      case 'Enter':
+        if (!this.area) return false
+        this.finishArea()
+        return true
       case 'Escape':
-        if (this.gesture) this.cancelGesture()
+        if (this.gesture || this.area) this.cancelGesture()
         else this.selection.value = []
         return true
       case 'Delete':

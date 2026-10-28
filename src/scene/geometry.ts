@@ -136,7 +136,29 @@ export function hits(el: SceneElement, p: Point, tolerance = 0): boolean {
       return Math.abs(l.x) <= hw + tolerance && Math.abs(l.y) <= Math.max(hh, 4) + tolerance
     case 'light':
       return Math.hypot(l.x, l.y) <= Math.min(hw, hh) + tolerance
+    case 'area':
+      return insidePolygon(areaPolygon(el), p)
   }
+}
+
+/** Whether p is inside a polygon (even-odd). */
+export function insidePolygon(poly: Point[], p: Point): boolean {
+  let inside = false
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const a = poly[i]
+    const b = poly[j]
+    if (a.y > p.y !== b.y > p.y && p.x < ((b.x - a.x) * (p.y - a.y)) / (b.y - a.y) + a.x) inside = !inside
+  }
+  return inside
+}
+
+/** An area's corners in the world, at its size and rotation. */
+export function areaPolygon(el: Transform & { points: number[]; bw: number; bh: number }): Point[] {
+  const sx = el.w / el.bw
+  const sy = el.h / el.bh
+  const out: Point[] = []
+  for (let i = 0; i < el.points.length; i += 2) out.push(fromLocal(el, { x: el.points[i] * sx, y: el.points[i + 1] * sy }))
+  return out
 }
 
 export type Corner = 0 | 1 | 2 | 3

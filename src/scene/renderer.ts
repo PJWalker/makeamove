@@ -1,14 +1,15 @@
-import { AlphaFilter, Application, CanvasTextMetrics, Container, CullerPlugin, extensions, FillGradient, Graphics, ImageSource, Matrix, Sprite, Text, TextStyle, Texture } from 'pixi.js'
+import { AlphaFilter, Application, CanvasTextMetrics, Container, CullerPlugin, extensions, Graphics, ImageSource, Matrix, Sprite, Text, TextStyle, Texture } from 'pixi.js'
 import { type Camera, type Rect, toScreen, visibleWorld } from './camera'
-import { corners, fromLocal as fromLocalPoint, shapeOutline } from './geometry'
+import { areaPolygon, corners, fromLocal as fromLocalPoint, shapeOutline } from './geometry'
 import { type Grid, DEFAULT_GRID, type Point, hexCellsIn, hexCentre, hexCorners, squareLines } from './grid'
 import { formatDistance, measure, tokenDistance } from './measure'
 import { forgetBitmaps, loadBitmap, onBlobFetcher } from "./images";
 import { PING_MS, TRAIL_MS, type PresenceMark } from "./presence";
 import type { TokenStat } from '../systems/types'
 import { strokeOutline, hasRealPressure } from './stroke'
-import { blockingSegments, insidePolygon, lightFalloff, lightSamples, passAlpha, visibilityPolygon } from './vision'
-import { isPlainToken, LAYERS, type Layer, type SceneElement, type ShapeKind, type Transform } from './types'
+import { blocked, blockingSegments, distanceToSegment, lightReach, type Segment, TOKEN_SHADE, tokenBlocker } from './vision'
+import { type Blocker, Lamp } from './lampShader'
+import { AREA_COLOURS, isPlainToken, LAYERS, type Layer, type SceneElement, type ShapeKind, type Transform } from './types'
 
 /** The UI accent, oklch(82% 0.15 85), as sRGB for the canvas. */
 const ACCENT = 0xf0bb3b
@@ -60,6 +61,7 @@ export const HANDLE_SIZE = 10
 /** What's being drawn, before it's added: a pen stroke, or a shape being dragged out (with its size to show). */
 export type Draft =
   | { kind?: 'stroke'; points: number[]; colour: string; width: number; layer: Layer }
+  | { kind: 'polygon'; points: Point[]; colour: string; layer: Layer }
   | { kind: 'shape'; shape: ShapeKind; t: Transform; colour: string; width: number; layer: Layer; label?: string }
 
 export interface OverlayState {
@@ -151,6 +153,8 @@ function contentKey(el: SceneElement): string {
       return `wall:${!!el.door}:${!!el.open}`
     case 'light':
       return `light:${el.bright}:${el.dim}:${el.colour}`
+    case 'area':
+      return `area:${el.tone}:${el.points.join(',')}:${el.bw}:${el.bh}`
   }
 }
 
@@ -238,6 +242,8 @@ export class SceneRenderer {
   draft: Draft | null = null;
   /** Show the GM's walls and lights (only the GM sees them). */
   showHelpers = false;
+  /** Whether the Lights tool is in use: only then do the GM's lamps and areas show. */
+  lightsShown = false;
   /** The scene's lighting: off, or how dark it is where no light reaches (0 to 1). */
   lighting: Lighting = { enabled: false, darkness: 0 };
   /**
@@ -248,15 +254,19 @@ export class SceneRenderer {
   /** Darkness where lights don't reach, with lights erased out of it. */
   private lightLayer = new Container();
   private lightG = new Graphics();
+  /** Each light's reach, erased from the darkness by the lamp shader. */
+  private lampLayer = new Container();
+  private lamps = new Map<string, Lamp>();
+  /** Areas of solid light, erased from the darkness. */
   private lightErase = new Graphics({ blendMode: "erase" });
-  /** Each light's falloff, in world space; remade only when the light moves or changes reach. */
-  private gradients = new Map<string, { key: string; gradient: FillGradient }>();
+  /** Areas of solid dark, over everything else. */
+  private lightDark = new Graphics();
   /** Everything outside the viewers' sight, with what they see erased out of it. */
   private fogLayer = new Container();
   private fogG = new Graphics();
-  private fogErase = new Graphics({ blendMode: "erase" });
-  /** What the viewers see, for hiding the names of tokens they can't. */
-  private sight: Point[][] | null = null;
+  private sights = new Map<string, Lamp>();
+  /** Where the viewers see from and the walls in the way, for hiding the names of tokens they can't see. */
+  private sight: { from: Point[]; walls: Segment[] } | null = null;
   /** Parts of the canvas covered by UI (toolbar, scene bar, sidebar), in screen px. */
   insets: () => { left: number; right: number; top: number } = () => ({
     left: 0,
@@ -300,9 +310,9 @@ export class SceneRenderer {
     );
     // Each draws dark over the view and erases what's lit or seen; a filter
     // renders it apart, so the erasing only cuts its own darkness.
-    this.lightLayer.addChild(this.lightG, this.lightErase);
+    this.lightLayer.addChild(this.lightG, this.lampLayer, this.lightErase, this.lightDark);
     this.lightLayer.filters = [new AlphaFilter()];
-    this.fogLayer.addChild(this.fogG, this.fogErase);
+    this.fogLayer.addChild(this.fogG);
     this.fogLayer.filters = [new AlphaFilter()];
     this.app.stage.addChild(
       this.world,
@@ -447,11 +457,12 @@ export class SceneRenderer {
     this.invalidate("overlay");
   }
 
-  /** Hide what's hidden for now (erased strokes), and the GM's walls and lights from everyone else. */
+  /** Hide what's hidden for now (erased strokes), the GM's walls from everyone else, and lamps and areas outside the Lights tool. */
   private hiddenSync() {
     for (const [id, view] of this.views) {
       const type = this.byId.get(id)?.type;
-      view.root.visible = !this.hidden.has(id) && (this.showHelpers || (type !== "wall" && type !== "light"));
+      const helper = type === "wall" ? this.showHelpers : type === "light" || type === "area" ? this.showHelpers && this.lightsShown : true;
+      view.root.visible = !this.hidden.has(id) && helper;
     }
   }
 
@@ -700,14 +711,37 @@ export class SceneRenderer {
           apply: (t) => {
             root.position.set(t.x, t.y);
             const r = Math.min(t.w, t.h) / 2;
+            // A drag on its reach handles previews the whole light, not just its transform.
+            const { bright, dim } = { ...el, ...t } as typeof el;
             g.clear()
-              .circle(0, 0, el.dim)
+              .circle(0, 0, dim)
               .stroke({ color: el.colour, width: 1.5, alpha: 0.35 })
-              .circle(0, 0, el.bright)
+              .circle(0, 0, bright)
               .stroke({ color: el.colour, width: 1.5, alpha: 0.6 })
               .circle(0, 0, r)
               .fill({ color: el.colour })
               .stroke({ color: INK, width: 2 });
+          },
+        };
+      }
+
+      case "area": {
+        const g = new Graphics();
+        const colour = AREA_COLOURS[el.tone];
+        const pts = el.points;
+        root.addChild(g);
+        return {
+          root,
+          key,
+          apply: (t) => {
+            root.position.set(t.x, t.y);
+            root.rotation = t.rot;
+            const sx = t.w / el.bw;
+            const sy = t.h / el.bh;
+            g.clear()
+              .poly(pts.map((v, i) => v * (i % 2 ? sy : sx)))
+              .fill({ color: colour, alpha: 0.12 })
+              .stroke({ color: colour, width: 2, alpha: 0.8 });
           },
         };
       }
@@ -739,9 +773,10 @@ export class SceneRenderer {
   }
 
   /**
-   * Darkness, with each light's reach erased out of it (bright fully, dim
-   * by half); then, for a player, black over everything their tokens can't
-   * see. Both stop at walls. The GM sees the darkness at half strength.
+   * Darkness, with each light's reach erased out of it by the lamp shader
+   * (scene/lampShader.ts), its walls and tokens casting soft shadows; then,
+   * for a player, black over everything their tokens can't see, by the same
+   * shader with a lamp a pixel across. The GM sees the darkness at half strength.
    */
   private drawLighting() {
     const view = visibleWorld(this.camera, this.size.width, this.size.height);
@@ -752,68 +787,91 @@ export class SceneRenderer {
 
     const lg = this.lightG.clear();
     const erase = this.lightErase.clear();
+    const dark = this.lightDark.clear();
     const { enabled, darkness } = this.lighting;
-    this.lightLayer.visible = enabled && darkness > 0;
+    const strength = this.viewers ? 1 : 0.5;
+    const areas = this.elements.filter((el) => el.type === "area" && !this.hidden.has(el.id));
+    this.lightLayer.visible = enabled && (darkness > 0 || areas.some((el) => el.type === "area" && el.tone === "dark"));
+    const lit = new Set<string>();
     if (this.lightLayer.visible) {
-      lg.rect(box.x, box.y, box.w, box.h).fill({ color: 0x000000, alpha: darkness * (this.viewers ? 1 : 0.5) });
+      lg.rect(box.x, box.y, box.w, box.h).fill({ color: 0x000000, alpha: darkness * strength });
+      const tokens = this.elements.filter((el) => el.type === "token" && !this.hidden.has(el.id)).map(at);
       for (const el of this.elements) {
         if (el.type !== "light" || this.hidden.has(el.id)) continue;
         const t = at(el);
-        // Cast from points across the lamp's disc, each a fraction of the light, for soft-edged
-        // shadows; the falloff is by distance from the lamp's centre.
-        const reach = Math.max(el.bright, el.dim);
-        const samples = lightSamples({ x: t.x, y: t.y }, Math.min(t.w, t.h) / 2, walls);
-        const fill = this.falloffFor(el, t, samples.length);
-        for (const p of samples) erase.poly(flat(visibilityPolygon(p, walls, reach))).fill(fill);
+        const centre = { x: t.x, y: t.y };
+        const reach = lightReach(el.bright, el.dim);
+        // Tokens in reach cast short shadows; one the lamp sits on (a torch carried) casts none.
+        const blockers: Blocker[] = [];
+        for (const k of tokens) {
+          if (Math.hypot(k.x - t.x, k.y - t.y) >= reach + k.w) continue;
+          const b = tokenBlocker(centre, k, Math.min(k.w, k.h));
+          if (b) blockers.push({ ...b, strength: TOKEN_SHADE });
+        }
+        lit.add(el.id);
+        this.lampFor(this.lamps, el.id, this.lampLayer).update({
+          at: centre,
+          radius: Math.min(t.w, t.h) / 2,
+          falloff: { bright: el.bright, dim: el.dim },
+          box: { x: t.x - reach, y: t.y - reach, w: reach * 2, h: reach * 2 },
+          walls: walls.filter((w) => distanceToSegment(centre, w) < reach),
+          blockers,
+        });
+      }
+      for (const el of areas) {
+        if (el.type !== "area") continue;
+        const poly = flat(areaPolygon({ ...el, ...at(el) }));
+        if (el.tone === "light") erase.poly(poly).fill({ color: 0xffffff, alpha: 1 });
+        else dark.poly(poly).fill({ color: 0x000000, alpha: strength });
       }
     }
-    for (const [id, g] of this.gradients) {
-      if (!this.byId.has(id)) {
-        g.gradient.destroy();
-        this.gradients.delete(id);
-      }
-    }
+    this.dropLamps(this.lamps, lit);
 
     const fg = this.fogG.clear();
-    const seen = this.fogErase.clear();
     const viewers = this.viewers?.map((id) => this.byId.get(id)).filter((el) => !!el) ?? null;
     this.fogLayer.visible = !!viewers?.length;
     this.sight = null;
+    const seeing = new Set<string>();
     if (viewers?.length) {
       fg.rect(box.x, box.y, box.w, box.h).fill({ color: 0x05070c, alpha: 1 });
-      const reach = Math.hypot(box.w, box.h);
-      this.sight = viewers.map((el) => {
+      const from = viewers.map((el) => {
         const t = at(el);
-        return visibilityPolygon({ x: t.x, y: t.y }, walls, reach);
+        return { id: el.id, at: { x: t.x, y: t.y } };
       });
-      for (const poly of this.sight) seen.poly(flat(poly)).fill({ color: 0xffffff, alpha: 1 });
+      this.sight = { from: from.map((v) => v.at), walls };
+      for (const v of from) {
+        seeing.add(v.id);
+        // An eye a pixel across, so the edge of sight is smooth but sharp.
+        this.lampFor(this.sights, v.id, this.fogLayer).update({ at: v.at, radius: 0.75 / this.camera.zoom, falloff: null, box, walls });
+      }
     }
+    this.dropLamps(this.sights, seeing);
   }
 
-  /** A light's falloff as a radial gradient centred on it, at the strength of one of `passes`; kept until it moves or changes. */
-  private falloffFor(el: SceneElement & { type: "light" }, t: Transform, passes: number): FillGradient {
-    const reach = Math.max(el.bright, el.dim);
-    const key = `${t.x},${t.y},${el.bright},${el.dim},${passes}`;
-    const known = this.gradients.get(el.id);
-    if (known?.key === key) return known.gradient;
-    known?.gradient.destroy();
-    const gradient = new FillGradient({
-      type: "radial",
-      textureSpace: "global",
-      center: { x: t.x, y: t.y },
-      innerRadius: 0,
-      outerCenter: { x: t.x, y: t.y },
-      outerRadius: reach,
-      colorStops: lightFalloff(el.bright, el.dim).map((s) => ({ offset: s.offset, color: `rgba(255,255,255,${passAlpha(s.alpha, passes)})` })),
-      textureSize: 256,
-    });
-    this.gradients.set(el.id, { key, gradient });
-    return gradient;
+  /** The lamp drawn for a light or a viewer, made the first time it's needed. */
+  private lampFor(lamps: Map<string, Lamp>, id: string, layer: Container): Lamp {
+    let lamp = lamps.get(id);
+    if (!lamp) {
+      lamp = new Lamp();
+      layer.addChild(lamp.mesh);
+      lamps.set(id, lamp);
+    }
+    return lamp;
+  }
+
+  /** Destroy the lamps not drawn this time. */
+  private dropLamps(lamps: Map<string, Lamp>, keep: Set<string>) {
+    for (const [id, lamp] of lamps) {
+      if (keep.has(id)) continue;
+      lamp.destroy();
+      lamps.delete(id);
+    }
   }
 
   /** Whether a token is out of the viewers' sight (always false when they see everything). */
   private unseen(t: Transform): boolean {
-    return !!this.sight && !this.sight.some((poly) => insidePolygon(poly, { x: t.x, y: t.y }));
+    const sight = this.sight;
+    return !!sight && sight.from.every((p) => blocked(p, t, sight.walls));
   }
 
   // Grid
@@ -887,6 +945,18 @@ export class SceneRenderer {
       return;
     }
     if (g.parent !== this.layers[d.layer]) this.layers[d.layer].addChild(g);
+    if (d.kind === "polygon") {
+      g.position.set(0, 0);
+      g.rotation = 0;
+      const width = 2 / this.camera.zoom;
+      if (d.points.length > 2) g.poly(flat(d.points)).fill({ color: d.colour, alpha: 0.15 });
+      g.moveTo(d.points[0].x, d.points[0].y);
+      for (const p of d.points.slice(1)) g.lineTo(p.x, p.y);
+      g.stroke({ color: d.colour, width });
+      for (const p of d.points.slice(0, -1)) g.circle(p.x, p.y, 4 / this.camera.zoom);
+      g.fill({ color: d.colour });
+      return;
+    }
     if (d.kind === "shape") {
       drawShape(g, d.shape, d.t.w, d.t.h, d.colour, d.width / this.camera.zoom);
       g.position.set(d.t.x, d.t.y);
@@ -1344,7 +1414,7 @@ export class SceneRenderer {
 
     for (const el of selected) {
       const t = this.previews.get(el.id) ?? el;
-      if (el.type === "token" && !isPlainToken(el)) {
+      if ((el.type === "token" && !isPlainToken(el)) || el.type === "light") {
         const c = toScreen(cam, t);
         g.circle(c.x, c.y, (Math.min(t.w, t.h) / 2) * cam.zoom + 3);
       } else {
@@ -1357,7 +1427,16 @@ export class SceneRenderer {
       });
     }
 
-    if (handles && selected.length === 1) {
+    if (handles && selected.length === 1 && selected[0].type === "light") {
+      const el = selected[0];
+      const light = { ...el, ...this.previews.get(el.id) } as typeof el;
+      const c = toScreen(cam, light);
+      for (const r of [light.bright, light.dim]) {
+        g.circle(c.x, c.y, r * cam.zoom).stroke({ color: ACCENT, alpha: 0.8, width: 1.5 });
+      }
+      for (const { at } of lightHandles(light, cam)) g.circle(at.x, at.y, HANDLE_SIZE / 2 + 1);
+      g.fill(ACCENT).stroke({ color: INK, width: 1.5 });
+    } else if (handles && selected.length === 1) {
       const el = selected[0];
       const t = this.previews.get(el.id) ?? el;
       const [tl, tr, br, bl] = corners(t).map((p) => toScreen(cam, p));
@@ -1410,6 +1489,23 @@ export class SceneRenderer {
       });
     }
   }
+}
+
+export type LightPart = 'lamp' | 'bright' | 'dim'
+
+/**
+ * A selected light's handles, in screen coordinates: one on the lamp's rim (its
+ * size) to the right, and one on each of the bright and dim rings, up and down
+ * the diagonal so they stay apart when the two radii match.
+ */
+export function lightHandles(light: Transform & { bright: number; dim: number }, cam: Camera): { part: LightPart; at: Point }[] {
+  const c = toScreen(cam, light)
+  const on = (r: number, angle: number) => ({ x: c.x + Math.cos(angle) * r * cam.zoom, y: c.y + Math.sin(angle) * r * cam.zoom })
+  return [
+    { part: 'lamp', at: on(Math.min(light.w, light.h) / 2, 0) },
+    { part: 'bright', at: on(light.bright, -Math.PI / 4) },
+    { part: 'dim', at: on(light.dim, Math.PI / 4) },
+  ]
 }
 
 /** Where the rotate knob sits, in screen coordinates. */

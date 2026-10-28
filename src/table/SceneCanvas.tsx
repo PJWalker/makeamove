@@ -376,6 +376,10 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
         { label: 'Reach less far', Icon: IconLight, onSelect: () => ctl.resizeLight(one.id, -1) },
       )
     }
+    if (one?.type === 'area') {
+      const tone = one.tone === 'light' ? 'dark' : 'light'
+      items.push({ label: tone === 'dark' ? 'Make it dark' : 'Make it light', Icon: IconLight, onSelect: () => ctl.setAreaTone(one.id, tone) })
+    }
     if (one?.type === 'map') items.push({ label: 'Use as token', Icon: IconToken, onSelect: () => ctl.convert(one.id, 'token') })
     if (one?.type === 'token' && one.image) {
       items.push({ label: 'Use as map', Icon: IconMap, onSelect: () => ctl.convert(one.id, 'map') })

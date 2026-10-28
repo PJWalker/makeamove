@@ -3,8 +3,8 @@ import { useEffect } from 'preact/hooks'
 import { signal, useSignal } from '@preact/signals'
 import { goToCampaign } from '../router'
 import { startReorder } from '../ui/reorder'
-import { activeTool, pen, PEN_WIDTHS, setPen, setShapeTool, shapeTool, type ToolId } from '../scene/tools'
-import { SHAPES, type ShapeKind } from '../scene/types'
+import { activeTool, lightTool, type LightToolMode, pen, PEN_WIDTHS, setLightTool, setPen, setShapeTool, shapeTool, type ToolId } from '../scene/tools'
+import { AREA_COLOURS, SHAPES, type ShapeKind } from '../scene/types'
 import { Button } from '../ui/Button'
 import {
   IconDraw,
@@ -122,6 +122,7 @@ export function Toolbar({ isGm }: { isGm: boolean }) {
         ))}
       </nav>
       {(activeTool.value === 'draw' || activeTool.value === 'shape' || activeTool.value === 'text') && <PenOptions tool={activeTool.value} />}
+      {activeTool.value === 'light' && <LightOptions />}
     </>
   )
 }
@@ -242,6 +243,56 @@ function PenOptions({ tool }: { tool: ToolId }) {
         {layer === 'under' ? 'Under tokens' : 'Over tokens'}
       </button>
     </div>
+  )
+}
+
+const LIGHT_MODES: { id: LightToolMode; label: string }[] = [
+  { id: 'select', label: 'Select lamps and areas' },
+  { id: 'lamp', label: 'Lamp' },
+  { id: 'light', label: 'Area of light' },
+  { id: 'dark', label: 'Area of dark' },
+]
+
+/** What the Lights tool places, beside the tool strip. */
+function LightOptions() {
+  return (
+    <div class="pen-options panel bevel" role="group" aria-label="Lights">
+      <div class="pen-widths" role="radiogroup" aria-label="Place">
+        {LIGHT_MODES.map((m) => (
+          <button
+            key={m.id}
+            type="button"
+            role="radio"
+            class="pen-width pen-shape bevel"
+            aria-checked={lightTool.value === m.id}
+            aria-label={m.label}
+            title={m.label}
+            onClick={() => setLightTool(m.id)}
+          >
+            <LightGlyph mode={m.id} />
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/** A small picture of what the Lights tool places, for its button. */
+function LightGlyph({ mode }: { mode: LightToolMode }) {
+  if (mode === 'select') return <IconSelect size={18} />
+  if (mode === 'lamp') {
+    return (
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+        <circle cx="9" cy="9" r="7.5" fill="none" stroke="#ffd27a" stroke-opacity="0.5" stroke-width="1.5" />
+        <circle cx="9" cy="9" r="3.5" fill="#ffd27a" />
+      </svg>
+    )
+  }
+  const colour = AREA_COLOURS[mode]
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+      <polygon points="2,5 11,2 16,10 9,16 3,12" fill={mode === 'dark' ? '#000' : colour} fill-opacity={mode === 'dark' ? 0.6 : 0.35} stroke={colour} stroke-width="1.5" />
+    </svg>
   )
 }
 

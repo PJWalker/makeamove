@@ -11,7 +11,7 @@
 export const LAYERS = ['map', 'under', 'token', 'over'] as const
 export type Layer = (typeof LAYERS)[number]
 
-export type ElementType = 'map' | 'token' | 'drawing' | 'shape' | 'text' | 'wall' | 'light'
+export type ElementType = 'map' | 'token' | 'drawing' | 'shape' | 'text' | 'wall' | 'light' | 'area'
 
 /** An image in the blob store; the CRDT holds only this reference. */
 export interface BlobRef {
@@ -130,7 +130,25 @@ export interface LightElement extends Base {
   colour: string
 }
 
-export type SceneElement = MapElement | TokenElement | DrawingElement | ShapeElement | TextElement | WallElement | LightElement
+/** Whether an area is lit whatever the lights do, or dark whatever they do. */
+export type AreaTone = 'light' | 'dark'
+
+/** How the GM sees an area of solid light or dark. */
+export const AREA_COLOURS: Record<AreaTone, string> = { light: '#ffe29a', dark: '#9b8cff' }
+
+/**
+ * An area of solid light or dark (M12): a polygon, its points flat [x, y, …]
+ * relative to the centre at the size bw × bh. Only the GM sees its outline.
+ */
+export interface AreaElement extends Base {
+  type: 'area'
+  tone: AreaTone
+  points: number[]
+  bw: number
+  bh: number
+}
+
+export type SceneElement = MapElement | TokenElement | DrawingElement | ShapeElement | TextElement | WallElement | LightElement | AreaElement
 
 /** What callers supply when adding an element; the store fills in the rest. */
 export type NewElement = DistributiveOmit<SceneElement, 'id' | 'z' | 'createdBy' | 'locked'> & { locked?: boolean }

@@ -1,5 +1,5 @@
 import { signal } from '@preact/signals'
-import type { Layer, ShapeKind } from './types'
+import type { AreaTone, Layer, ShapeKind } from './types'
 
 export type ToolId = 'select' | 'pan' | 'draw' | 'erase' | 'shape' | 'text' | 'ruler' | 'ping' | 'wall' | 'light'
 
@@ -57,6 +57,27 @@ export function setShapeTool(shape: ShapeKind) {
   shapeTool.value = shape
   try {
     localStorage.setItem(SHAPE_KEY, shape)
+  } catch {
+    // Just won't persist.
+  }
+}
+
+/** What the Lights tool does: select lamps and areas, or place a lamp or an area of solid light or dark. Remembered per device. */
+export type LightToolMode = 'select' | 'lamp' | AreaTone
+const LIGHT_TOOL_KEY = 'mam:light-tool'
+function loadLightTool(): LightToolMode {
+  try {
+    const v = localStorage.getItem(LIGHT_TOOL_KEY)
+    return v === 'select' || v === 'light' || v === 'dark' ? v : 'lamp'
+  } catch {
+    return 'lamp'
+  }
+}
+export const lightTool = signal<LightToolMode>(loadLightTool())
+export function setLightTool(mode: LightToolMode) {
+  lightTool.value = mode
+  try {
+    localStorage.setItem(LIGHT_TOOL_KEY, mode)
   } catch {
     // Just won't persist.
   }
