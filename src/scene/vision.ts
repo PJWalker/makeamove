@@ -115,3 +115,42 @@ export function lightFalloff(bright: number, dim: number, steps = 8): FalloffSto
   }
   return stops
 }
+
+/** How many points across a lamp's disc its light is cast from: more, smoother penumbrae. */
+export const LIGHT_SAMPLES = 16
+
+/**
+ * Points spread evenly over a light's own disc (a sunflower pattern), from
+ * which its light is cast: a lamp has size, so a wall hides it from some
+ * places only in part, which gives shadows a penumbra that widens with
+ * distance. A point on the far side of a wall from the centre is pulled back
+ * to the near side, so a lamp against a wall doesn't shine through it.
+ */
+export function lightSamples(origin: Point, radius: number, segments: Segment[], n = LIGHT_SAMPLES): Point[] {
+  if (radius <= 0 || n <= 1) return [origin]
+  const golden = Math.PI * (3 - Math.sqrt(5))
+  const out: Point[] = []
+  for (let i = 0; i < n; i++) {
+    const r = radius * Math.sqrt((i + 0.5) / n)
+    const a = i * golden
+    const dx = Math.cos(a)
+    const dy = Math.sin(a)
+    let d = r
+    for (const s of segments) {
+      const t = hitDistance(origin, dx, dy, s)
+      if (t !== null && t < d) d = t * 0.9
+    }
+    out.push({ x: origin.x + dx * d, y: origin.y + dy * d })
+  }
+  return out
+}
+
+/**
+ * The strength of one of `n` passes, so that all of them together lift the
+ * dark by `alpha`: erasing multiplies what's left by (1 − a) each time.
+ * Where only some passes reach, the dark lifts part way: the penumbra.
+ * Full strength is capped just short of 1, or a single pass would clear it.
+ */
+export function passAlpha(alpha: number, n: number): number {
+  return 1 - Math.pow(1 - Math.min(alpha, 0.995), 1 / n)
+}

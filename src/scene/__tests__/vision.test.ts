@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { blockingSegments, insidePolygon, lightFalloff, visibilityPolygon, wallEnds } from '../vision'
+import { blockingSegments, insidePolygon, lightFalloff, lightSamples, passAlpha, visibilityPolygon, wallEnds } from '../vision'
 import type { SceneElement } from '../types'
 
 const wall = (x1: number, y1: number, x2: number, y2: number, door?: { open: boolean }): SceneElement => ({
@@ -70,5 +70,46 @@ describe('light falloff', () => {
     const stops = lightFalloff(20, 0)
     expect(stops.at(-1)?.alpha).toBe(0)
     expect(stops.find((s) => s.alpha < 0.9 && s.alpha > 0)).toBeDefined()
+  })
+})
+
+describe('soft shadows', () => {
+  it('spreads a lamp’s light over its disc', () => {
+    const pts = lightSamples({ x: 0, y: 0 }, 10, [])
+    expect(pts).toHaveLength(16)
+    for (const p of pts) expect(Math.hypot(p.x, p.y)).toBeLessThanOrEqual(10)
+    // Covers the disc rather than bunching at its centre.
+    expect(Math.max(...pts.map((p) => Math.hypot(p.x, p.y)))).toBeGreaterThan(8)
+  })
+
+  it('keeps a lamp against a wall on its own side', () => {
+    const pts = lightSamples({ x: 0, y: 0 }, 10, blockingSegments([wall(3, -50, 3, 50)]))
+    for (const p of pts) expect(p.x).toBeLessThan(3)
+  })
+
+  it('adds up to the full light where the whole lamp is seen, and part of it in the penumbra', () => {
+    const n = 16
+    const a = passAlpha(0.8, n)
+    expect(1 - Math.pow(1 - a, n)).toBeCloseTo(0.8)
+    // Half the lamp in view: the dark lifts part way.
+    const half = 1 - Math.pow(1 - a, n / 2)
+    expect(half).toBeGreaterThan(0.3)
+    expect(half).toBeLessThan(0.8)
+    // Full strength never lets one pass clear the dark alone.
+    expect(passAlpha(1, n)).toBeLessThan(0.5)
+  })
+
+  it('casts a shadow that softens: lit, part-lit, then dark behind a wall’s end', () => {
+    // A wall from (50, 0) down; lamp of radius 10 at the origin. Points 200 away behind the wall's end.
+    const walls = blockingSegments([wall(50, 0, 50, 400)])
+    const pts = lightSamples({ x: 0, y: 0 }, 10, walls)
+    const seenBy = (p: { x: number; y: number }) => pts.filter((s) => insidePolygon(visibilityPolygon(s, walls, 1000), p)).length
+    const lit = seenBy({ x: 250, y: -60 })
+    const edge = seenBy({ x: 250, y: 0 })
+    const dark = seenBy({ x: 250, y: 80 })
+    expect(lit).toBe(16)
+    expect(edge).toBeGreaterThan(0)
+    expect(edge).toBeLessThan(16)
+    expect(dark).toBe(0)
   })
 })

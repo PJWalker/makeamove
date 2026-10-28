@@ -7,7 +7,7 @@ import { forgetBitmaps, loadBitmap, onBlobFetcher } from "./images";
 import { PING_MS, TRAIL_MS, type PresenceMark } from "./presence";
 import type { TokenStat } from '../systems/types'
 import { strokeOutline, hasRealPressure } from './stroke'
-import { blockingSegments, insidePolygon, lightFalloff, visibilityPolygon } from './vision'
+import { blockingSegments, insidePolygon, lightFalloff, lightSamples, passAlpha, visibilityPolygon } from './vision'
 import { isPlainToken, LAYERS, type Layer, type SceneElement, type ShapeKind, type Transform } from './types'
 
 /** The UI accent, oklch(82% 0.15 85), as sRGB for the canvas. */
@@ -759,9 +759,12 @@ export class SceneRenderer {
       for (const el of this.elements) {
         if (el.type !== "light" || this.hidden.has(el.id)) continue;
         const t = at(el);
-        // Everything the light reaches past walls, lit by how far it is from the lamp.
-        const area = visibilityPolygon({ x: t.x, y: t.y }, walls, Math.max(el.bright, el.dim));
-        erase.poly(flat(area)).fill(this.falloffFor(el, t));
+        // Cast from points across the lamp's disc, each a fraction of the light, for soft-edged
+        // shadows; the falloff is by distance from the lamp's centre.
+        const reach = Math.max(el.bright, el.dim);
+        const samples = lightSamples({ x: t.x, y: t.y }, Math.min(t.w, t.h) / 2, walls);
+        const fill = this.falloffFor(el, t, samples.length);
+        for (const p of samples) erase.poly(flat(visibilityPolygon(p, walls, reach))).fill(fill);
       }
     }
     for (const [id, g] of this.gradients) {
@@ -787,10 +790,10 @@ export class SceneRenderer {
     }
   }
 
-  /** A light's falloff as a radial gradient centred on it, kept until it moves or changes. */
-  private falloffFor(el: SceneElement & { type: "light" }, t: Transform): FillGradient {
+  /** A light's falloff as a radial gradient centred on it, at the strength of one of `passes`; kept until it moves or changes. */
+  private falloffFor(el: SceneElement & { type: "light" }, t: Transform, passes: number): FillGradient {
     const reach = Math.max(el.bright, el.dim);
-    const key = `${t.x},${t.y},${el.bright},${el.dim}`;
+    const key = `${t.x},${t.y},${el.bright},${el.dim},${passes}`;
     const known = this.gradients.get(el.id);
     if (known?.key === key) return known.gradient;
     known?.gradient.destroy();
@@ -801,7 +804,7 @@ export class SceneRenderer {
       innerRadius: 0,
       outerCenter: { x: t.x, y: t.y },
       outerRadius: reach,
-      colorStops: lightFalloff(el.bright, el.dim).map((s) => ({ offset: s.offset, color: `rgba(255,255,255,${s.alpha})` })),
+      colorStops: lightFalloff(el.bright, el.dim).map((s) => ({ offset: s.offset, color: `rgba(255,255,255,${passAlpha(s.alpha, passes)})` })),
       textureSize: 256,
     });
     this.gradients.set(el.id, { key, gradient });

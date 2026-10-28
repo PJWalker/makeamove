@@ -14,6 +14,9 @@ import { finishStroke, STRIDE } from './stroke'
 import { activeTool, ERASER_RADIUS, pen, SHAPE_WIDTH, shapeTool, TEMPLATE_STYLE } from './tools'
 import { LAYERS, type BlobRef, type Layer, type NewElement, type SceneElement, type TokenElement, type ShapeKind, type TokenStyle, type Transform } from './types'
 
+/** A new lamp's size, in cells: its shadows' softness. Resizing the lamp makes them softer or sharper. */
+const LAMP_SIZE = 0.6
+
 /** A new light: bright for 4 cells (20 ft on a 5 ft grid), dim for 4 more, warm. */
 const LIGHT_DEFAULT = (cell: number) => ({ bright: cell * 4, dim: cell * 8, colour: '#ffd27a' })
 
@@ -573,7 +576,7 @@ export class SceneController {
         if (!this.gm) break
         const grid = this.renderer.grid
         const at = grid.type === 'square' && !e.altKey ? snapPoint(grid, world, 1) : world
-        this.scene.add({ type: 'light', layer: 'over', x: at.x, y: at.y, w: grid.size * 0.4, h: grid.size * 0.4, rot: 0, ...LIGHT_DEFAULT(grid.size) })
+        this.scene.add({ type: 'light', layer: 'over', x: at.x, y: at.y, w: grid.size * LAMP_SIZE, h: grid.size * LAMP_SIZE, rot: 0, ...LIGHT_DEFAULT(grid.size) })
         break
       }
     }
