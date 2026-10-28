@@ -372,8 +372,13 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
     }
     if (one?.type === 'light') {
       items.push(
-        { label: 'Reach further', Icon: IconLight, onSelect: () => ctl.resizeLight(one.id, 1) },
-        { label: 'Reach less far', Icon: IconLight, onSelect: () => ctl.resizeLight(one.id, -1) },
+        {
+          label: 'Light colour',
+          colour: one.colour,
+          onPreview: (colour) => ctl.previewLightColour(one.id, colour),
+          onPick: (colour) => ctl.setLight(one.id, { colour }),
+        },
+        { label: 'Flicker', Icon: IconLight, checked: !!one.flicker, onSelect: () => ctl.setLight(one.id, { flicker: !one.flicker }) },
       )
     }
     if (one?.type === 'area') {

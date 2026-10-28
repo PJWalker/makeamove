@@ -4,6 +4,7 @@ import type { ComponentType } from 'preact'
 import { createPortal } from 'preact/compat'
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks'
 import { placeAnchored, pointAnchor } from '../ui/anchor'
+import { HexColorPicker } from 'react-colorful'
 import { IconCheck } from '../ui/icons'
 import type { IconProps } from '../ui/icons'
 
@@ -17,6 +18,17 @@ export type MenuItem =
       /** For an item that turns something on or off: ticked when it's on. */
       checked?: boolean
       onSelect: () => void
+    }
+  | {
+      /**
+       * A colour picker. While a colour is being picked, onPreview shows it
+       * (null: stop showing it); onPick keeps it, once per drag, or when the
+       * menu closes after picking by keyboard.
+       */
+      label: string
+      colour: string
+      onPreview: (colour: string | null) => void
+      onPick: (colour: string) => void
     }
   | 'divider'
 
@@ -98,6 +110,8 @@ export function ContextMenu({
     const onKey = (e: KeyboardEvent) => {
       const menu = ref.current
       if (!menu || e.metaKey || e.ctrlKey || e.altKey) return
+      // A colour picker's arrow keys move its pointers.
+      if ((e.target as Element | null)?.closest?.('.react-colorful') && e.key !== 'Escape' && e.key !== 'Tab') return
       const handled = () => {
         e.preventDefault()
         e.stopPropagation()
@@ -152,6 +166,8 @@ export function ContextMenu({
       {items.map((item, i) =>
         item === 'divider' ? (
           <div key={i} class="context-divider" role="separator" />
+        ) : 'colour' in item ? (
+          <MenuColour key={i} item={item} />
         ) : (
           <button
             key={i}
@@ -189,5 +205,46 @@ export function ContextMenu({
       )}
     </div>,
     document.body,
+  )
+}
+
+/**
+ * A colour picked in a menu: shown as it's dragged, kept once each drag
+ * ends (one undo step), or when the menu closes after keyboard changes.
+ */
+function MenuColour({ item }: { item: Extract<MenuItem, { colour: string }> }) {
+  const [shown, setShown] = useState(item.colour)
+  const pending = useRef<string | null>(null)
+  const latest = useRef(item)
+  latest.current = item
+  const keep = () => {
+    const colour = pending.current
+    if (!colour) return
+    pending.current = null
+    latest.current.onPick(colour)
+    latest.current.onPreview(null)
+  }
+  useEffect(() => {
+    // The picker follows a drag past its edges, so the drag ends wherever the pointer is let go.
+    // It reports a move from an effect, after the next paint; keep the colour once that's in.
+    const release = () => requestAnimationFrame(() => setTimeout(keep))
+    window.addEventListener('pointerup', release)
+    return () => {
+      window.removeEventListener('pointerup', release)
+      keep()
+    }
+  }, [])
+  return (
+    <div class="menu-colour" role="group" aria-label={item.label}>
+      <span class="menu-label">{item.label}</span>
+      <HexColorPicker
+        color={shown}
+        onChange={(colour) => {
+          setShown(colour)
+          pending.current = colour
+          item.onPreview(colour)
+        }}
+      />
+    </div>
   )
 }

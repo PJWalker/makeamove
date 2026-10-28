@@ -128,6 +128,8 @@ export interface LightElement extends Base {
   bright: number
   dim: number
   colour: string
+  /** Whether it wavers like a flame. */
+  flicker?: boolean
 }
 
 /** Whether an area is lit whatever the lights do, or dark whatever they do. */

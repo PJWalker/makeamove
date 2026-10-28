@@ -346,6 +346,27 @@
   .menu-icon-space {
     width: 16px;
   }
+  /* A colour picker in a right-click menu (react-colorful). */
+  .menu-colour {
+    display: grid;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-3) var(--space-2);
+    color: var(--text-muted);
+    font-size: var(--text-menu);
+  }
+  .menu-colour .react-colorful {
+    width: 100%;
+    height: 160px;
+  }
+  /* Square, like the rest of the UI, not rounded. */
+  .menu-colour .react-colorful__saturation,
+  .menu-colour .react-colorful__last-control {
+    border-radius: 0;
+  }
+  .menu-colour .react-colorful__pointer {
+    width: 20px;
+    height: 20px;
+  }
   .menu-label {
     flex: 1;
   }

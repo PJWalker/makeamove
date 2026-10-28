@@ -1,4 +1,4 @@
-import { Buffer, BufferUsage, Geometry, GlProgram, GpuProgram, Mesh, Shader, UniformGroup } from 'pixi.js'
+import { Buffer, BufferUsage, Color, Geometry, GlProgram, GpuProgram, Mesh, Shader, UniformGroup } from 'pixi.js'
 import type { Point } from './grid'
 import { distanceToSegment, type Segment } from './vision'
 
@@ -8,8 +8,14 @@ import { distanceToSegment, type Segment } from './vision'
  * the lamp's disc each wall near it hides (`lampHidden` in scene/vision.ts,
  * which this mirrors), and lights the pixel by the falloff (`lightAlpha`)
  * times what's left. Drawn erasing, it lifts the dark it's drawn over.
- * Sight is the same with a lamp a pixel across and no falloff.
+ * Sight is the same with a lamp a pixel across and no falloff. A second
+ * pass, below the dark, washes what a lamp lights with its colour (by how
+ * far the colour is from white, so white light changes nothing). A
+ * flickering lamp wavers in strength and reach.
  */
+
+/** How strongly a fully saturated lamp colours what it lights, where it's brightest. */
+const TINT = 0.4
 
 /** Most walls one lamp takes into account: the nearest, if there are more. */
 export const MAX_WALLS = 180
@@ -34,8 +40,10 @@ const glFragment = /* glsl */ `#version 300 es
 precision highp float;
 in vec2 vWorld;
 out vec4 finalColor;
-// x, y, radius, 1 for sight
+// x, y, radius, then 0 to light, 1 for sight, 2 to tint
 uniform vec4 uLamp;
+// r, g, b, then how far through a flicker (1 is steady)
+uniform vec4 uColour;
 // bright, dim, walls, blockers
 uniform vec4 uFalloff;
 uniform vec4 uWalls[${MAX_WALLS}];
@@ -70,6 +78,7 @@ float hidden(vec2 p, vec4 s) {
 }
 
 float lightAlpha(float d) {
+  d /= mix(0.94, 1.0, uColour.w);
   float reach = max(max(uFalloff.y, uFalloff.x * 1.15), 1.0);
   float b = min(uFalloff.x, reach) / reach;
   float f = d / reach;
@@ -81,7 +90,7 @@ float lightAlpha(float d) {
 
 void main() {
   float d = distance(vWorld, uLamp.xy);
-  float light = uLamp.w > 0.5 ? 1.0 : lightAlpha(d);
+  float light = uLamp.w == 1.0 ? 1.0 : lightAlpha(d) * mix(0.8, 1.0, uColour.w);
   float hid = 0.0;
   int walls = int(uFalloff.z);
   for (int i = 0; i < ${MAX_WALLS}; i++) {
@@ -94,7 +103,13 @@ void main() {
     vec4 f = uBlockers[i * 2 + 1];
     hid += f.x * hidden(vWorld, uBlockers[i * 2]) * (1.0 - smoothstep(f.y, f.z, d));
   }
-  finalColor = vec4(light * (1.0 - min(hid, 1.0)));
+  float a = light * (1.0 - min(hid, 1.0));
+  if (uLamp.w == 2.0) {
+    float wash = ${TINT} * a * (max(max(uColour.r, uColour.g), uColour.b) - min(min(uColour.r, uColour.g), uColour.b));
+    finalColor = vec4(uColour.rgb * wash, wash);
+  } else {
+    finalColor = vec4(a);
+  }
 }
 `
 
@@ -116,6 +131,7 @@ struct LocalUniforms {
 
 struct LampUniforms {
   uLamp: vec4<f32>,
+  uColour: vec4<f32>,
   uFalloff: vec4<f32>,
   uWalls: array<vec4<f32>, ${MAX_WALLS}>,
   uBlockers: array<vec4<f32>, ${MAX_BLOCKERS * 2}>,
@@ -164,8 +180,9 @@ fn hidden(p: vec2<f32>, s: vec4<f32>) -> f32 {
   return abs(discShare(dot(b, n) * dist / (db * r)) - discShare(dot(a, n) * dist / (da * r)));
 }
 
-fn lightAlpha(d: f32) -> f32 {
+fn lightAlpha(d0: f32) -> f32 {
   let fo = lampUniforms.uFalloff;
+  let d = d0 / mix(0.94, 1.0, lampUniforms.uColour.w);
   let reach = max(max(fo.y, fo.x * 1.15), 1.0);
   let b = min(fo.x, reach) / reach;
   let f = d / reach;
@@ -180,7 +197,7 @@ fn mainFrag(@location(0) world: vec2<f32>) -> @location(0) vec4<f32> {
   let lamp = lampUniforms.uLamp;
   let d = distance(world, lamp.xy);
   var light = 1.0;
-  if (lamp.w < 0.5) { light = lightAlpha(d); }
+  if (lamp.w != 1.0) { light = lightAlpha(d) * mix(0.8, 1.0, lampUniforms.uColour.w); }
   var hid = 0.0;
   let walls = min(i32(lampUniforms.uFalloff.z), ${MAX_WALLS});
   for (var i = 0; i < walls; i++) {
@@ -193,7 +210,13 @@ fn mainFrag(@location(0) world: vec2<f32>) -> @location(0) vec4<f32> {
     let f = lampUniforms.uBlockers[i * 2 + 1];
     hid += f.x * hidden(world, lampUniforms.uBlockers[i * 2]) * (1.0 - smoothstep(f.y, f.z, d));
   }
-  return vec4<f32>(light * (1.0 - min(hid, 1.0)));
+  let a = light * (1.0 - min(hid, 1.0));
+  if (lamp.w == 2.0) {
+    let c = lampUniforms.uColour.rgb;
+    let wash = ${TINT} * a * (max(max(c.r, c.g), c.b) - min(min(c.r, c.g), c.b));
+    return vec4<f32>(c * wash, wash);
+  }
+  return vec4<f32>(a);
 }
 `
 
@@ -216,15 +239,20 @@ export interface LampState {
   box: { x: number; y: number; w: number; h: number }
   walls: Segment[]
   blockers?: Blocker[]
+  /** The lamp's colour, for the tint pass. */
+  colour?: string
 }
 
-/** A lamp or a viewer's sight: one quad, erased from the dark it's drawn over. */
+/**
+ * A lamp or a viewer's sight: one quad, erased from the dark it's drawn
+ * over; or, with `tint`, a wash of a lamp's colour over what it lights.
+ */
 export class Lamp {
   readonly mesh: Mesh<Geometry, Shader>
   private readonly uniforms: UniformGroup
   private readonly positions = new Float32Array(8)
 
-  constructor() {
+  constructor(private readonly tint = false) {
     programs ??= {
       gl: GlProgram.from({ vertex: glVertex, fragment: glFragment, name: 'lamp' }),
       gpu: GpuProgram.from({
@@ -235,6 +263,7 @@ export class Lamp {
     }
     this.uniforms = new UniformGroup({
       uLamp: { value: new Float32Array(4), type: 'vec4<f32>' },
+      uColour: { value: new Float32Array([1, 1, 1, 1]), type: 'vec4<f32>' },
       uFalloff: { value: new Float32Array(4), type: 'vec4<f32>' },
       uWalls: { value: new Float32Array(MAX_WALLS * 4), type: 'vec4<f32>', size: MAX_WALLS },
       uBlockers: { value: new Float32Array(MAX_BLOCKERS * 8), type: 'vec4<f32>', size: MAX_BLOCKERS * 2 },
@@ -250,7 +279,7 @@ export class Lamp {
       indexBuffer: new Uint32Array([0, 1, 2, 0, 2, 3]),
     })
     const shader = new Shader({ glProgram: programs.gl, gpuProgram: programs.gpu, resources: { lampUniforms: this.uniforms } })
-    this.mesh = new Mesh({ geometry, shader, blendMode: 'erase' })
+    this.mesh = new Mesh({ geometry, shader, blendMode: tint ? 'normal' : 'erase' })
   }
 
   update(s: LampState) {
@@ -260,7 +289,10 @@ export class Lamp {
 
     const u = this.uniforms.uniforms
     const lamp = u.uLamp as Float32Array
-    lamp.set([s.at.x, s.at.y, s.radius, s.falloff ? 0 : 1])
+    lamp.set([s.at.x, s.at.y, s.radius, this.tint ? 2 : s.falloff ? 0 : 1])
+    const colour = u.uColour as Float32Array
+    const c = new Color(s.colour ?? 0xffffff)
+    colour.set([c.red, c.green, c.blue], 0)
     // The nearest walls, if there are more than fit.
     const walls =
       s.walls.length > MAX_WALLS
@@ -272,6 +304,12 @@ export class Lamp {
     const blockerData = u.uBlockers as Float32Array
     blockers.forEach((b, i) => blockerData.set([b.seg.a.x, b.seg.a.y, b.seg.b.x, b.seg.b.y, b.strength, b.fade[0], b.fade[1], 0], i * 8))
     ;(u.uFalloff as Float32Array).set([s.falloff?.bright ?? 0, s.falloff?.dim ?? 0, walls.length, blockers.length])
+    this.uniforms.update()
+  }
+
+  /** How far through a flicker the lamp is: 1 at full strength and reach. */
+  setFlicker(n: number) {
+    ;(this.uniforms.uniforms.uColour as Float32Array)[3] = n
     this.uniforms.update()
   }
 

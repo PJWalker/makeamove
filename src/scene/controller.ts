@@ -760,13 +760,19 @@ export class SceneController {
     this.scene.update([[id, { tone } as Partial<SceneElement>]])
   }
 
-  /** Make a light reach further (or less far), by whole cells. */
-  resizeLight(id: string, cells: number) {
+  /** Show a light in another colour, without changing it yet; null to stop. */
+  previewLightColour(id: string, colour: string | null) {
     const el = this.byId.get(id)
     if (el?.type !== 'light') return
-    const step = this.renderer.grid.size * cells
-    const bright = Math.max(this.renderer.grid.size, el.bright + step)
-    this.scene.update([[id, { bright, dim: Math.max(bright, el.dim + 2 * step) } as Partial<SceneElement>]])
+    if (colour) this.renderer.previews.set(id, { ...el, colour } as Transform)
+    else this.renderer.previews.delete(id)
+    this.renderer.invalidate('previews')
+  }
+
+  /** Change a light's colour, or whether it flickers. */
+  setLight(id: string, patch: { colour?: string; flicker?: boolean }) {
+    if (this.byId.get(id)?.type !== 'light') return
+    this.scene.update([[id, patch as Partial<SceneElement>]])
   }
 
   /** Where a shape starts: a grid corner for squares, a cell centre or corner for the rest (Alt places freely). */

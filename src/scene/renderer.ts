@@ -24,6 +24,13 @@ export interface Lighting {
   darkness: number;
 }
 
+/** An angle from an id, so each flickering light keeps its own rhythm. */
+function hashPhase(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
+  return ((h >>> 0) % 6283) / 1000;
+}
+
 /** Points as Pixi's flat [x, y, x, y…]. */
 const flat = (pts: Point[]) => pts.flatMap((p) => [p.x, p.y]);
 
@@ -257,6 +264,11 @@ export class SceneRenderer {
   /** Each light's reach, erased from the darkness by the lamp shader. */
   private lampLayer = new Container();
   private lamps = new Map<string, Lamp>();
+  /** Each light's colour, washed over what it lights, under the darkness. */
+  private tintLayer = new Container();
+  private tints = new Map<string, Lamp>();
+  /** The lights that flicker, with an offset so no two waver together. */
+  private flickering: { lamps: Lamp[]; phase: number }[] = [];
   /** Areas of solid light, erased from the darkness. */
   private lightErase = new Graphics({ blendMode: "erase" });
   /** Areas of solid dark, over everything else. */
@@ -305,6 +317,7 @@ export class SceneRenderer {
       this.layers.under,
       this.layers.token,
       this.layers.over,
+      this.tintLayer,
       this.lightLayer,
       this.fogLayer,
     );
@@ -424,7 +437,8 @@ export class SceneRenderer {
       this.drawTokenLabels();
     }
     // Targets ride on tokens, so presence redraws with anything else.
-    const animating = this.drawPresence();
+    const flickering = this.flicker();
+    const animating = this.drawPresence() || flickering;
     this.dirty = {
       elements: false,
       previews: false,
@@ -711,15 +725,15 @@ export class SceneRenderer {
           apply: (t) => {
             root.position.set(t.x, t.y);
             const r = Math.min(t.w, t.h) / 2;
-            // A drag on its reach handles previews the whole light, not just its transform.
-            const { bright, dim } = { ...el, ...t } as typeof el;
+            // A drag on its reach handles, or picking its colour, previews the whole light, not just its transform.
+            const { bright, dim, colour } = { ...el, ...t } as typeof el;
             g.clear()
               .circle(0, 0, dim)
-              .stroke({ color: el.colour, width: 1.5, alpha: 0.35 })
+              .stroke({ color: colour, width: 1.5, alpha: 0.35 })
               .circle(0, 0, bright)
-              .stroke({ color: el.colour, width: 1.5, alpha: 0.6 })
+              .stroke({ color: colour, width: 1.5, alpha: 0.6 })
               .circle(0, 0, r)
-              .fill({ color: el.colour })
+              .fill({ color: colour })
               .stroke({ color: INK, width: 2 });
           },
         };
@@ -793,7 +807,10 @@ export class SceneRenderer {
     const areas = this.elements.filter((el) => el.type === "area" && !this.hidden.has(el.id));
     this.lightLayer.visible = enabled && (darkness > 0 || areas.some((el) => el.type === "area" && el.tone === "dark"));
     const lit = new Set<string>();
-    if (this.lightLayer.visible) {
+    const tinted = new Set<string>();
+    this.flickering = [];
+    this.tintLayer.visible = enabled;
+    if (enabled) {
       lg.rect(box.x, box.y, box.w, box.h).fill({ color: 0x000000, alpha: darkness * strength });
       const tokens = this.elements.filter((el) => el.type === "token" && !this.hidden.has(el.id)).map(at);
       for (const el of this.elements) {
@@ -808,17 +825,26 @@ export class SceneRenderer {
           const b = tokenBlocker(centre, k, Math.min(k.w, k.h));
           if (b) blockers.push({ ...b, strength: TOKEN_SHADE });
         }
-        lit.add(el.id);
-        this.lampFor(this.lamps, el.id, this.lampLayer).update({
+        const state = {
           at: centre,
           radius: Math.min(t.w, t.h) / 2,
           falloff: { bright: el.bright, dim: el.dim },
           box: { x: t.x - reach, y: t.y - reach, w: reach * 2, h: reach * 2 },
           walls: walls.filter((w) => distanceToSegment(centre, w) < reach),
           blockers,
-        });
+          colour: ({ ...el, ...t } as typeof el).colour,
+        };
+        const drawn: Lamp[] = [];
+        if (this.lightLayer.visible) {
+          lit.add(el.id);
+          drawn.push(this.lampFor(this.lamps, el.id, this.lampLayer));
+        }
+        tinted.add(el.id);
+        drawn.push(this.lampFor(this.tints, el.id, this.tintLayer, true));
+        for (const lamp of drawn) lamp.update(state);
+        if (el.flicker) this.flickering.push({ lamps: drawn, phase: hashPhase(el.id) });
       }
-      for (const el of areas) {
+      for (const el of this.lightLayer.visible ? areas : []) {
         if (el.type !== "area") continue;
         const poly = flat(areaPolygon({ ...el, ...at(el) }));
         if (el.tone === "light") erase.poly(poly).fill({ color: 0xffffff, alpha: 1 });
@@ -826,6 +852,7 @@ export class SceneRenderer {
       }
     }
     this.dropLamps(this.lamps, lit);
+    this.dropLamps(this.tints, tinted);
 
     const fg = this.fogG.clear();
     const viewers = this.viewers?.map((id) => this.byId.get(id)).filter((el) => !!el) ?? null;
@@ -849,14 +876,30 @@ export class SceneRenderer {
   }
 
   /** The lamp drawn for a light or a viewer, made the first time it's needed. */
-  private lampFor(lamps: Map<string, Lamp>, id: string, layer: Container): Lamp {
+  private lampFor(lamps: Map<string, Lamp>, id: string, layer: Container, tint = false): Lamp {
     let lamp = lamps.get(id);
     if (!lamp) {
-      lamp = new Lamp();
+      lamp = new Lamp(tint);
       layer.addChild(lamp.mesh);
       lamps.set(id, lamp);
     }
     return lamp;
+  }
+
+  /**
+   * Waver the flickering lights, by a few sines out of step with each other,
+   * so it never quite repeats. Whether there are any, to draw the next frame.
+   * Steady under reduced motion.
+   */
+  private flicker(): boolean {
+    if (!this.flickering.length || matchMedia("(prefers-reduced-motion: reduce)").matches) return false;
+    const t = performance.now() / 1000;
+    for (const { lamps, phase: p } of this.flickering) {
+      const wave = 0.5 * Math.sin(7.3 * t + p) + 0.3 * Math.sin(13.7 * t + 2.1 * p) + 0.2 * Math.sin(23.1 * t + 3.7 * p);
+      const n = Math.min(1, Math.max(0, 0.55 + 0.45 * wave));
+      for (const lamp of lamps) lamp.setFlicker(n);
+    }
+    return true;
   }
 
   /** Destroy the lamps not drawn this time. */
