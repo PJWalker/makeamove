@@ -152,7 +152,6 @@ export function parseCommand(input: string, members: MemberRef[], isGm: boolean)
       const [first = '', ...words] = rest.trim().split(/\s+/)
       const seconds = parseDuration(first)
       if (!seconds) return { kind: 'error', message: 'How long? Try /timer 60s World ends.' }
-      if (seconds > 24 * 3600) return { kind: 'error', message: 'Timers run for a day at most.' }
       return { kind: 'timer', seconds, label: unquote(words.join(' ')) }
     }
     case 'count': {

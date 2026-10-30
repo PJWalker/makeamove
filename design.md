@@ -1,13 +1,11 @@
-# Tabletop VTT — Design Doc
+# Make a Move - Tabletop VTT Design Doc
 
 ## Overview
-
-local-first, peer-to-peer virtual tabletop that runs as a PWA. Every participant holds a full copy of the campaign, works offline, and merges edits with peers when connected.
+Local-first, peer-to-peer virtual tabletop that runs as a PWA. Every participant holds a full copy of the campaign, works offline, and merges edits with peers when connected.
 
 A generic core, with plugins for specific game systems. Dungeon World is the first, but we should consider the possibility of D&D 5.5E, Daggerheart, PF2e, Blades in the Dark, and other systems.
 
-## Goals for the prototype
-
+## Goals
 - Infinite-canvas scenes with maps, tokens and freehand drawing, editable by everyone at once.
 - Character sheets, moves, inventories, and items whose effects change stats or grant moves.
 - Characters come as PCs (class, moves) and GM-made NPCs (HP and system-defined fields). They live in a two-pane panel with shared folders, and selecting a character's token opens its sheet.
@@ -16,68 +14,60 @@ A generic core, with plugins for specific game systems. Dungeon World is the fir
 - A game-system plugin API, proven by Dungeon World & D&D5e system plugins.
 - Works with zero servers we operate beyond a tiny, replaceable signalling relay.
 
-**Non-goals (for now)**
-
+## Non-goals
 - Secure secrecy. Hidden things are hidden in the UI, not cryptographically (per brief).
 - Dynamic lighting, line-of-sight walls, audio/video chat, a marketplace.
 - Native mobile apps. Tablets should work in the browser; phones get a reduced player view later.
 
-**Guiding principles**
+## Guiding principles
 
 1. _Local-first:_ the local database is the source of truth; the network only syncs.
 2. _Prefer boring, well-maintained libraries_ over bespoke infrastructure.
+3. *Lightweight core, modular addons*: the 
+4. Prioritise Smooth cooperation over stringent rules enforcement. Systems should help players follow the rules, but shouldn't get in their way when the GM makes a ruling.
+
+## UI Design
+- Typefaces: Cabin and Fraunces, no small caps
+- Body text at 1rem.
+- Edge-docked elements sit flush; icon strips end in full diagonals
+- Game-icons & Material Symbols as icon sources
 
 ## Architecture
 
-Each browser runs the whole app against a local Yjs CRDT store persisted to IndexedDB; peers exchange Yjs updates over a WebRTC mesh, and large binaries (map images) travel separately as content-addressed blobs. No server holds game state.
+Each browser runs the whole app against a local Yjs CRDT store persisted to IndexedDB; peers exchange Yjs updates over a WebRTC mesh, and large binaries (map images) travel separately as content-addressed blobs. No server holds game state. 
 
-&#91;embedded content: architecture · one peer and its network\]
+| Layer            | Choice                                                                   | Why                                                                                                                                                  |
+| ---------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Language / build | TypeScript, Vite, PWA (service worker via vite-plugin-pwa)               | Installable, offline after first load                                                                                                                |
+| UI framework     | Preact + @preact/signals (TSX)                                           | Signals bridge cleanly to Yjs observers for fine-grained updates; \~4 KB; React libraries via preact/compat; TSX for plugin authors (decided Oct 25) |
+| Canvas           | PixiJS v8 (WebGL, WebGPU when available) + a custom camera               | Handles large maps and hundreds of tokens at 60 fps; tldraw needs a commercial licence for production                                                |
+| Freehand strokes | perfect-freehand                                                         | Pressure-aware, tiny, renders to polygons                                                                                                            |
+| CRDT             | Yjs (+ y-indexeddb for persistence, awareness protocol for presence)     | Mature, fast, rich types (Map, Array, Text), subdocument support                                                                                     |
+| Rich text        | TipTap 3 (ProseMirror) bound to Yjs with @tiptap/y-tiptap                | Collaborative editing for notes and sheet text; the same editor (without Yjs) is the chat box                                                        |
+| Peer transport   | WebRTC data channels; signalling via Trystero (public Nostr/MQTT relays) | Zero-ops by default, swappable                                                                                                                       |
+| Blob store       | Origin Private File System (OPFS), keyed by SHA-256                      | Dedupes; fetched from any peer that has it                                                                                                           |
 
-Dashed parts are infrastructure we do not need to run: relays only introduce peers, and the relay peer is optional.
+Added in M0: `unplugin-icons` with local Iconify data () for offline icons; `fractional-indexing` for conflict-free ordering; PNG and maskable app icons alongside the SVG, so browsers can install the PWA.
 
-**Proposed stack**
-
-| Layer            | Choice                                                                                                                  | Why                                                                                                                                                  |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Language / build | TypeScript, Vite, PWA (service worker via vite-plugin-pwa)                                                              | Installable, offline after first load                                                                                                                |
-| UI framework     | Preact + @preact/signals (TSX)                                                                                          | Signals bridge cleanly to Yjs observers for fine-grained updates; \~4 KB; React libraries via preact/compat; TSX for plugin authors (decided Oct 25) |
-| Canvas           | PixiJS v8 (WebGL, WebGPU when available) + a custom camera                                                              | Handles large maps and hundreds of tokens at 60 fps; tldraw needs a commercial licence for production                                                |
-| Freehand strokes | perfect-freehand                                                                                                        | Pressure-aware, tiny, renders to polygons                                                                                                            |
-| CRDT             | Yjs (+ y-indexeddb for persistence, awareness protocol for presence)                                                    | Mature, fast, rich types (Map, Array, Text), subdocument support                                                                                     |
-| Rich text        | TipTap 3 (ProseMirror) bound to Yjs with @tiptap/y-tiptap                                                               | Collaborative editing for notes and sheet text; the same editor (without Yjs) is the chat box                                                        |
-| Peer transport   | WebRTC data channels; signalling via Trystero (public Nostr/MQTT relays) with an optional self-hosted signalling server | Zero-ops by default, swappable                                                                                                                       |
-| Blob store       | Origin Private File System (OPFS), keyed by SHA-256                                                                     | Dedupes; fetched from any peer that has it                                                                                                           |
-| 3D dice (M6)     | @3d-dice/dice-box-threejs, or our own physics-free animation                                                            | Must land on recorded results, which the newer dice-box can't (see Dice)                                                                             |
-
-Added in M0: `unplugin-icons` with local Iconify data (Game-icons, Material Symbols) for offline icons; `fractional-indexing` for conflict-free ordering; PNG and maskable app icons alongside the SVG, so browsers can install the PWA.
-
-**Documents and sync topology**
+## Documents and sync topology
 
 - One _campaign root_ Y.Doc: campaign settings and defaults, the member list (each member's name, colour, role, chosen character and hotbars), the scene index, the note index (titles, folders, outgoing links), character folders, and the characters themselves (see Data model).
 - One subdocument per scene, per note page and per chat-log chunk, each in its own IndexedDB database. Peers load them lazily, so a big campaign does not have to sit in memory.
 - A separate _GM vault_ Y.Doc that only GM devices hold, synced over its own Trystero room whose key is kept in the vault, never in the campaign. It holds GM-only note pages. This gives real (if casual) secrecy almost for free; everything else is "hidden in the UI" only.
 - Presence (cursors, pings, rulers, laser trails, the tokens a player is targeting) goes over the Yjs awareness channel and is never persisted.
 
-**Joining and identity**
+## Joining and identity
 
 - The GM creates a campaign, which mints a random campaign ID and a shared room key. The invite link is `https://app/#join=<id>.<key>`; the key stays in the URL fragment, so it never reaches any server.
 - Signalling and all peer traffic are encrypted with that room key, so public relays see only ciphertext.
-- Each device generates a keypair on first launch. The GM's public key is recorded in the campaign root as owner; GM-only actions are checked against it in the UI layer.
 
-_M2 status:_ invite links and the room key are in. Devices still use a random id stored in localStorage; the WebCrypto keypair and owner-key check are deferred, since GM-only rules are only enforced in the UI for now and nothing yet depends on a verified identity.
-
-**Assets**
-
+## Assets
 - Dropping an image hashes it, stores it in OPFS and writes only `{hash, mime, width, height}` into the CRDT.
-- A peer that lacks a blob asks connected peers for it and receives 64 KB chunks over a dedicated data channel; images are re-encoded to WebP and capped (e.g. 8192 px) on import.
-- Optional export/import of the whole campaign (CRDT state + blobs) as a single `.makeamove` zip, for backups and moving between machines.
-
-**Mesh size:** a full mesh comfortably supports a GM plus 6–7 players. Larger groups are out of scope for the prototype.
-
-**Consequence to note:** with pure P2P, a player who edits their sheet midweek only shares it the next time they overlap with someone online. An optional always-on relay peer would fix that (see Open questions).
+- Images are re-encoded to WebP and capped (e.g. 8192 px) on import, then stored by SHA-256 in OPFS (Cache Storage where OPFS can't write). 
+- Small, squarish images become tokens; anything else is placed as a map at its own size. Right-click swaps one for the other.
+- A peer that lacks a blob asks connected peers for it and receives 64 KB chunks over a dedicated data channel; 
 
 ## Data model
-
 Every entity has a stable ULID. What a game system owns lives in sub-maps the core never interprets; the core keeps only what every system has. Visibility and lock flags are planned (see Permissions).
 
 | Entity            | Lives in                                  | Key fields                                                                                                                                                                                                                                   |
@@ -92,7 +82,7 @@ Every entity has a stable ULID. What a game system owns lives in sub-maps the co
 | Chat message      | chat chunk subdoc                         | id, author, HLC, kind (text, roll, move, system), payload; text carries links as `@[text](kind:id)`; move cards carry the roll, result, outcome, follow-ups and targets                                                                      |
 | Note page         | own subdoc (GM pages: the vault doc)      | title, folder, order, Y.XmlFragment body; its outgoing links are kept in the note index for backlinks                                                                                                                                        |
 
-**Conventions**
+## Conventions
 
 - _Ordering_ uses fractional indices (strings) so concurrent reorders do not conflict.
 - _Timestamps_ use a hybrid logical clock so chat order is stable across peers with skewed clocks.
@@ -101,10 +91,9 @@ Every entity has a stable ULID. What a game system owns lives in sub-maps the co
 - _Plugin data versioning (planned):_ each plugin ships migrations keyed by its own schema version; the core runs them when a newer plugin opens older data. Until the first release, data formats change freely and old test data is simply replaced.
 
 ## Scenes and the infinite canvas
-
 A scene is an unbounded 2D world rendered by PixiJS, with pan (drag / space-drag / two-finger), zoom to cursor (0.05× to 8×), and a fixed stack of layers that keeps maps under tokens under drawings.
 
-**Layers (bottom to top)**
+## Layers (bottom to top)
 
 1. _Background_ — scene colour or tiled texture.
 2. _Map_ — one or more placed images; usually locked after setup.
@@ -115,7 +104,7 @@ A scene is an unbounded 2D world rendered by PixiJS, with pan (drag / space-drag
 7. _Fog (planned, M6)_ — GM-painted reveal/hide mask.
 8. _Presence_ — other users’ cursors, pings, laser trails, measuring rulers and target rings (awareness only, never stored).
 
-**Tools:** select/move/rotate/scale, pan, freehand pen (perfect-freehand), eraser, ruler (in the scene's units), ping (click-and-hold, or hold and drag for a laser trail). Planned: line/arrow, rectangle/ellipse, text (shortcut X), and the GM's fog brush.
+## Tools: select/move/rotate/scale, pan, freehand pen (perfect-freehand), eraser, ruler (in the scene's units), ping (click-and-hold, or hold and drag for a laser trail). Planned: line/arrow, rectangle/ellipse, text (shortcut X), and the GM's fog brush.
 
 **Performance:** viewport culling, texture mip-mapping for large maps, drawings cached to render textures once finished, and CRDT updates batched per animation frame. Drag movements are sent via awareness while dragging and committed to the CRDT on release, which keeps history small.
 
@@ -123,28 +112,26 @@ A scene is an unbounded 2D world rendered by PixiJS, with pan (drag / space-drag
 
 **Undo** is per user via Y.UndoManager scoped to that user’s own changes, so undoing never reverts someone else’s move.
 
-**As built in M1**
-
 - Each scene is a subdocument of the campaign root with its own IndexedDB database, loaded only while it is open. Its id is derived from the campaign and scene ids, so two peers upgrading an M0 scene at once converge on one document.
 - The canvas renders on demand rather than every frame, so an idle table costs no GPU time. Drags preview locally and commit to the CRDT once on release, as one undo step.
-- Dropped images are re-encoded to WebP, capped at 8192 px and stored by SHA-256 in OPFS (Cache Storage where OPFS can't write). Small, squarish images become tokens; anything else is placed as a map at its own size. Right-click swaps one for the other.
 - Token options can change or remove a token's image. A character sheet has one stand-in token: click it to choose its image, drag it onto the map to place a token linked to that character, and right-click for Change/Remove image and Token settings (style and colour for tokens placed later).
-- A token can be tied to a character (Token options → Character). The game system's `tokenStats(character, derived)` says what the token shows; Dungeon World gives an HP bar that turns amber and red as it drops. Bars sit under the token and update as the sheet changes.
+- A token can be tied to a character (Token options → Character). 
 - Tokens snap to cell centres (even-sized tokens to intersections) and resize in whole cells; Alt places them freely. Maps keep their aspect ratio unless Shift is held.
 - The interface always takes its tint from the scene's main map (or from the canvas colour when there's no map). The canvas colour defaults to Auto, a darkened, muted version of the map's dominant colour; the GM can pick any colour instead in Scene settings or from the scene list.
 - Grid lines are drawn twice, dark then light, so they read on both dark and light maps, and fade out as cells get too small.
 - Tokens have two styles: round (image cropped to a circle on a coloured background with a border) or the image as it is, for cut-out art. Double-click a token for Token options: name, style and colour. The GM sets the style for new tokens, and the grid type for new scenes, in Campaign settings.
-- The pen colour is a free colour picker rather than presets.
 
-**Measuring, sizes and targets (M5)**
-
-- A scene's grid has a unit per cell (5 ft by default), a unit name, and on square grids a diagonal rule: every diagonal counts as one cell (5.5e's default), diagonals alternate one and two cells, or true distance. Hex grids count hexes; with no grid, distances are straight lines at the grid size per unit. New scenes take these from the system (`GameSystem.scene`); Scene settings change them.
+## Measuring, sizes and targets
+- A scene's grid has a unit per cell (5 ft by default), a unit name, and on square grids a diagonal rule: every diagonal counts as one cell, diagonals alternate one and two cells, or true distance. Hex grids count hexes; with no grid, distances are straight lines at the grid size per unit. New scenes take these from the system (`GameSystem.scene`); Scene settings change them.
 - The ruler measures cell to cell, draws between cell centres and reads out the distance ("15 ft").
 - Systems list token sizes in cells (`GameSystem.sizes`); Token options has a Size picker that resizes the token and snaps it to the grid.
 - Distances between tokens run edge to edge (`scene/measure.ts`): neighbouring cells are one cell apart, diagonally too, and a big token measures from its nearest cell. `inRange()` sorts a distance into normal range, long range or out of range.
 - Targets belong to one action at a time (see Characters, moves and items). While an action asks for them, clicking tokens targets them; each target shows as a ring with sight ticks in the player's colour, shared through presence so everyone sees what's being aimed at.
 
-**Token names and bars:** a token's name and stat bars are drawn in screen space, so they stay readable at any zoom. Bars straddle the token's bottom edge, 11 to 17 px tall, half again as wide as the token where that clears every other token's bars (otherwise just inside its width, never under 36 px; the numbers show from 44 px). Names are 11 to 15 px. Bars that would overlap other bars, names that would overlap other names or bars, and everything under tokens smaller than 24 px on screen show only while the token is hovered. Token options can hide a token's name or its bars for everyone.
+## Token names and bars
+The game system's `tokenStats(character, derived)` says what the token shows. (For example, Dungeon World gives an HP bar) Bars sit under the token and update as the sheet changes.
+
+A token's name and stat bars are drawn in screen space, so they stay readable at any zoom. Bars straddle the token's bottom edge, 11 to 17 px tall, half again as wide as the token where that clears every other token's bars (otherwise just inside its width, never under 36 px; the numbers show from 44 px). Names are 11 to 15 px. Bars that would overlap other bars, names that would overlap other names or bars, and everything under tokens smaller than 24 px on screen show only while the token is hovered. Token options can hide a token's name or its bars for everyone.
 
 **Scene switching:** the GM can pull everyone to a scene; players can browse other visible scenes on their own (an option the GM can turn off). _The pull-everyone control is not built yet._
 
@@ -197,7 +184,6 @@ The roller decides the result locally with a cryptographic RNG, writes it to the
 - **Fallback:** a 2D tumble animation when WebGL is unavailable, or when the user turns 3D off for speed.
 - **Visibility:** public, or secret (the roller and the GM; a GM's secret roll is the GM's alone). Others see “Name rolled in secret.” There are no blind rolls: if a player shouldn't see a result, the GM rolls it.
 - **Quick dice bar:** d4, d6, d8, d10, d12, d20, plus a free-form box; clicking a stat or move on a sheet rolls the right formula. Clicks gather into a pool for a moment before rolling as one entry (double-click the d20 for 2d20); right-click a die to take one back out.
-- **Honesty is social, not cryptographic.** A determined player could fake a roll in devtools. That fits the “needn’t be robust” brief; commit-reveal rolling could come later.
 
 _As built in M3:_ `src/dice/notation.ts` parses and rolls `2d6+2`, `d8+d4`, `4d6kh3` (also `k3`, `b3`), `2d20kl1` (also `w1`), `4d6dl1` / `dh`, `d6!` (capped at 20 extra dice), `d%`, and `[labels]` on any term, with unbiased `crypto.getRandomValues` dice. Rolls show in the chat as cards: formula and note, one chip per die shaped like that die (dropped dice faded, maximums in citrine, ones in garnet), and the total; a roll that arrives live tumbles in, die by die (off under reduced motion). Until 3D dice land, that card is the 2D fallback. Plugin syntax is not in yet.
 
@@ -209,10 +195,17 @@ The right-hand sidebar is one chronological stream of chat, rolls and move cards
 - **Slash commands:** `/r 2d6+1`, `/w name text`, `/move defy-danger dex`, `/sr` for a secret roll. Plugins register more.
 - **Scene changes:** when the GM settles on a scene (stays 1.5 s, so passing through scenes or renaming one doesn't post), the log gets “Scene changed to The Bog”, with a “Go there” button for anyone on a different scene. Players aren't moved; that waits for the GM's “pull everyone” control. The last announced scene is kept in the campaign, so a reload doesn't repeat it, and a new campaign's first scene isn't announced.
 - **Session markers:** the GM can start/end a session; the log groups by session and can export one as markdown into the notes. Earlier sessions fold into a band (“Session 2 · 34 messages”) until the reader opens them; the current session is always open.
-- **Deleting:** players can delete their own messages, and the GM anyone's (including system notices and session markers). Deleting removes the message from the shared log for everyone; like other GM rules this is enforced in the UI only. Right-click a message (or long-press on touch) for a menu with “Delete message”. Swipe-to-delete was tried and dropped: browsers can't tell when fingers leave a trackpad, so a swipe there can't wait for the lift the way it should.
+- **Deleting:** players can delete their own messages, and the GM anyone's (including system notices and session markers). Right-click a message (or long-press on touch) for a menu with “Delete message”.  Deleting removes the message from the shared log for everyone. 
 - **Links:** the message box is a small editor (`table/ChatInput.tsx`): typing `@` or dropping something into it adds a link, sent as `@[text](kind:id)` and shown in the message as a link chip that behaves like one in a note. Dropping something anywhere else on the chat sends a link to it straight away. Notifications show the link's name.
-- **Popups:** a message that arrives while the app is in front but the Chat panel is closed or behind another tab pops up beside the Chat tab as a speech bubble, its tail pointing at the tab: the whole message as the log shows it (a move card keeps its dice, outcome and follow-up buttons). My own messages pop up too, so a move made from the hotbar shows its result. Several in a row form a 3D stack, up to three deep, the newest in front and older ones receding behind it. Each grows out of the tab and shrinks back into it after 6 s; the stack waits while the pointer is on it. Clicking the front one (anywhere but its buttons and links) opens the chat, and its × sends the whole stack away. Interacting with the stack, or opening the chat, counts as reading it and clears the tab's unread badge; popups left to time out leave the badge. When the tab isn't on screen (the panel is floating or closed, or autohide has slid it away) the stack sits in the table's bottom-right corner. Popups show whether or not the window has focus. When the page is hidden (a background tab or a minimised window), other people's messages also send a system notification, and the stack waits until the page shows again; a visible but unfocused window gets popups only (`chat/notify.ts`, `table/ChatPopups.tsx`).
-- **Unread state** and a collapsible, translucent sidebar so the map stays visible.
+- **Popups:** Whenever a message arrives while the Chat panel isn't visible, it pops out beside the tab as a speech bubble, its tail pointing at the tab.  
+	- This includes the user's own messages (eg a move they make)
+	- The whole message is shown, including any outcomes or follow up buttons
+	- It grows out of the tab, then shrinks back into it after 6 s; the timer waits while the pointer is on message.
+	- Clicking the message (anywhere but its buttons and links) opens the chat. 
+	- If multiple messages come in, they form a 3D stack, the newest in front and older ones receding behind it. 
+	- Interacting with the stack, or opening the chat, counts as reading it and clears the tab's unread badge; 
+	- When the tab isn't on screen (the panel is floating or closed, or autohide has slid it away) the stack sits at the bottom center of the screen. 
+	- When the page is hidden (a background tab or a minimised window), other people's messages also send a system notification. A visible but unfocused window gets popups only
 
 _As built in M3:_ the log is a `chat` Y.Array of chunk subdocuments on the campaign root, 500 messages each, each persisted in its own IndexedDB database and synced by the M2 session as soon as it loads; the newest two load on open, and older ones load as the reader scrolls up into them (no button). The panel renders only a window of rows (100 to start, at most 250), sliding it as the reader scrolls and keeping whatever is on screen in place as rows come and go; spacers stand in for the rest, at measured heights or the average (500 a chunk for those not loaded yet), so the scrollbar spans the whole history, and dragging it renders wherever it lands, loading chunks to get there. Messages are memoised, and move cards share one subscription to the characters, so a log of thousands costs about what a short one does (`table/ChatPanel.tsx`, `logRows` in `chat/sessions.ts`). Messages are immutable plain objects stamped with a hybrid logical clock (`src/lib/hlc.ts`), so peers agree on order even with skewed clocks. Commands: `/r` (public), `/sr` (secret: you and the GM), `/w name` or `/w gm`, `/me`, `/session start|end` (GM; numbered in the campaign), `/help`, and `//` to send text starting with a slash; typing `/` lists them. Text supports **bold**, _italic_, `code` and links, rendered as elements, never HTML. The quick dice bar has a Public / Secret toggle; its clicks gather into a pool that rolls as one entry 1 s after the last change (each button shows its count, right-click takes one back out, and a "roll now" button fills as the moment approaches). Whispers are hidden from everyone but sender and recipients, including the GM. Unread messages from others show as a count on the Chat tab. A player's first join posts “Name joined”. Move cards arrived in M4.
 
@@ -483,10 +476,6 @@ We build in seven milestones, each ending in something you can open and try. Aft
 9. **M11: Design Review & Code Optimization**: _Done (Oct 28)._ The table loads lazily, so the lobby's script fell from 1,072 kB to about 330 kB (the tabletop is its own 712 kB chunk, PixiJS still apart). `useY` only re-renders when what a component reads changes (compared with `Object.is`), so a chat card or a combat row no longer redraws for every change to the map it watches. Chat cards read only their own keys of the message state rather than scanning it. Card resolution (roll requests, damage, concentration) moved out of `characters/api.ts` into `characters/resolution.ts`; unused exports went. Left for later: splitting the tabletop chunk further (rich text, the 5.5e data), and an index of pinned messages once logs are long.
 10. **M12: Dynamics:** _Done (Oct 28)._ Two GM tools replace the fog placeholder: Walls (W) drag wall segments that snap to grid corners and to other walls' ends, and Lights (L) put down a lamp (bright 4 cells, dim 4 more). Right-click a wall to make it a door and open or close it (open doors don't block); right-click a light to pick its colour (which tints what it lights) or make it flicker. Only the GM sees walls and lamps. Scene settings turn on dynamic lighting with a darkness level, where each light lifts the dark with a smooth falloff (nearly full through its bright radius, easing to nothing at the end of its dim light; `lightAlpha` in `scene/vision.ts`), stopped by walls with soft-edged shadows: a lamp has size (the lamp on the map, 0.6 cells across by default; resizing it softens or sharpens its shadows). Each lamp is one quad over its reach drawn by a shader (`scene/lampShader.ts`, GLSL and WGSL) that, per pixel, adds up how much of the lamp's disc each nearby wall hides, so the penumbra widens with distance and walls that meet end to end cast one unbroken shadow (`lampHidden`); and can make players see only what their own characters' tokens see, with everything else black and unseen tokens' names, bars and pips hidden (a player with no tokens on the scene sees all of it). The GM sees the darkness at half strength and never the fog. Sight is the same shader with a lamp a pixel across and no falloff; whether a token is in view is a line-of-sight test from each viewer (`blocked`). The renderer draws darkness and fog as layers with what's lit or seen erased out of them. Not yet: remembering explored areas, darkvision and per-token sight ranges, and editing a light's radii by number.
 
-
-
-**Known gaps:** Dungeon World's rules text is abridged from memory and needs checking against the SRD, and its class moves are partial. Deleting a template's token leaves its copy behind (hidden from lists). A reopened panel goes to the end of its sidebar's tabs.
-
 ## Open questions
 
 Each question has a proposed default; the first four are the ones that change the architecture.
@@ -508,45 +497,59 @@ Each question has a proposed default; the first four are the ones that change th
 
 Decisions made while building, newest first. Earlier answers are recorded in Open questions.
 
-| Decision                                                                                                                 | Why                                                                                                                            |
-| ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
-| Panels can be closed from the campaign menu, a tab's menu or a window's close button; windows lose their dock button     | Not every table wants every panel; docking is done by dragging                                                                 |
-| A pop-up showing something has a proxy icon in its title bar that drags like a link                                      | As on macOS: the window's subject can be dropped anywhere a link can                                                           |
-| Menus, lists and pop-ups open below their anchor, or above it when there's no room; tooltips flip side                   | Nothing anchored should ever open off screen                                                                                   |
-| Links start with `@`; clicking opens a pop-up, except page-to-page links, which open the page                            | One gesture to see what a link is without leaving the page; reading on through pages stays in the panel                        |
-| Long sheet text and the chat box use the notes editor; chat stores links as `@[text](kind:id)`                           | One linking and formatting model everywhere; chat stays plain text with markdown-lite                                          |
-| One drag for moves, gear, characters, scenes and pages, between every list, link, the hotbar, characters, notes and chat | Whatever you can see, you can drop where it's useful                                                                           |
-| Template tokens are copies: characters with `base` set, overriding the template field by field                           | Anything about one goblin can change from its sheet, and everything else follows the template                                  |
-| Token names and bars are drawn in screen space, at clamped sizes, and hidden when crowded                                | Readable at any zoom without crowding the map                                                                                  |
-| Scenes have units and a diagonal rule; distances between tokens run edge to edge                                         | Range checks work for 5.5e and other tactical systems                                                                          |
-| Dungeon World runs on a general rules core (M5 step 1) before any 5.5e code                                              | A second system tests the plugin API; porting the first proves it first                                                        |
-| No data migrations until the first release                                                                               | Test data is cheap to recreate; migrations would slow every change                                                             |
-| Characters live in a root-doc `characters` Y.Map, not a subdoc each                                                      | A campaign has a handful of characters; one doc keeps sync and persistence simple. Revisit if sheets grow large                |
-| Move suggestions (XP, damage) are buttons on the card, never applied automatically                                       | The GM stays in charge of fiction and consequences                                                                             |
-| Hotbar: drag to reorder, drag off to remove (Alt+arrows, Delete by keyboard)                                             | Keyboard-accessible, and simple; drag can come later                                                                           |
-| Dungeon World text is abridged from memory and must be checked against the SRD                                           | The data is in one file (`src/systems/dungeon-world/index.ts`) so it is easy to correct; credit is in the system's attribution |
-| Move 3D dice to M6; M3 shows rolls as 2D cards                                                                           | dice-box can't land on a predetermined result, which shared rolls need; picking a replacement can wait for M6                  |
-| Chat lives in 500-message chunk subdocuments, ordered by a hybrid logical clock                                          | Long campaigns stay fast to open, and peers agree on order even when their clocks disagree                                     |
-| No blind rolls; whispers are hidden from the GM                                                                          | If a player shouldn't see a result, the GM can roll it; “hidden from others” includes the GM                                   |
-| Quick dice pool for 1 s before rolling                                                                                   | Several dice from the bar (2d20, d20 + d6) become one roll and one chat entry                                                  |
-| Build the command palette before the hotbar, on one shared action index                                                  | Both need a searchable list of moves, items and tools; the hotbar becomes pinned index ids instead of a second list            |
-| Render the canvas on demand; commit drags on release                                                                     | An idle table uses no GPU; each drag is one undo step and, from M2, one update for peers                                       |
-| Token portraits use texture fills, not masks; the world is a render group                                                | Per-token stencil masks slow down in the hundreds, and the camera becomes one GPU transform (from the PixiJS skills)           |
-| The UI always tints from the main map; the canvas colour is Auto (a dark shade of the map) or the GM's pick              | Tinting is never worth turning off; what people want to choose is the colour around the map                                    |
-| Small square images become tokens, the rest maps                                                                         | No mode to pick when dropping files; right-click swaps them                                                                    |
-| Shapes and text tools move out of M1; the ruler and pings go to M2                                                       | M1's scope was maps, tokens, freehand and undo; measuring and pinging are presence, which needs peers                          |
-| Scene menu grows with CSS on live elements, not a view transition                                                        | It stays hoverable and clickable while it opens                                                                                |
-| Cut tagline and other marketing or explanatory copy                                                                      | The UI should explain itself                                                                                                   |
-| Sidebar resizes from its inner edge; windows from every edge and corner, with whole-pixel geometry                       | Only the bottom-right grip is drawn; the cursor shows the rest                                                                 |
-| Panels clip their children with `overflow: clip`, not `contain: paint`                                                   | Keeps bevelled corners without trapping `position: fixed` children                                                             |
-| View transitions for docking, tab switches (directional slides), sidebar and page swaps                                  | Shows where things go; tab slides mirror the tab order                                                                         |
-| Icons: Game-icons first, Material Symbols Rounded (filled) as fallback, bundled                                          | Weighty, on-theme, works offline                                                                                               |
-| A new M5 for D&D 5.5e and a general rules engine; notes and polish move to M6                                            | A second system tests the plugin API; tactical rules (targets, range, turns) are best designed in before more polish           |
-| Campaign actions live in a menu at the start of the tool strip                                         | They're about the campaign, not scenes, and stay reachable whichever tabs are open                                             |
-| Presence avatars move into Chat; avatars are circles                                                                     | Keeps the top edge clear                                                                                                       |
-| Drag a tab or docked title out to float a panel; drop it on the sidebar to dock                                          | Direct manipulation; no pop-out button                                                                                         |
-| Two sidebars (left: characters, right: chat) with vertical tabs; tools on the top edge; tabs move between sides or float | Character sheet beside the map and chat opposite; tools out of the way of both                                                 |
-| Right sidebar with vertical tabs, sliding in from the edge; dice tray inside Chat                                        | Tabs read as one column with the content                                                                                       |
-| Edge-docked elements sit flush; icon strips end in full diagonals                                                        | Chrome reads as part of the window frame                                                                                       |
-| Cabin and Fraunces, no small caps                                                                                        | Your preference                                                                                                                |
-| Ctrl/Cmd + \\ hides the chrome, not Tab                                                                                  | Tab stays free for keyboard navigation                                                                                         |
+| Decision                                                                                                                 | Why                                                                                                                                                                                                                                    |
+| ------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Panels can be closed from the campaign menu, a tab's menu or a window's close button; windows lose their dock button     | Not every table wants every panel; docking is done by dragging                                                                                                                                                                         |
+| A pop-up showing something has a proxy icon in its title bar that drags like a link                                      | As on macOS: the window's subject can be dropped anywhere a link can                                                                                                                                                                   |
+| Menus, lists and pop-ups open below their anchor, or above it when there's no room; tooltips flip side                   | Nothing anchored should ever open off screen                                                                                                                                                                                           |
+| Links start with `@`; clicking opens a pop-up, except page-to-page links, which open the page                            | One gesture to see what a link is without leaving the page; reading on through pages stays in the panel                                                                                                                                |
+| Long sheet text and the chat box use the notes editor; chat stores links as `@[text](kind:id)`                           | One linking and formatting model everywhere; chat stays plain text with markdown-lite                                                                                                                                                  |
+| One drag for moves, gear, characters, scenes and pages, between every list, link, the hotbar, characters, notes and chat | Whatever you can see, you can drop where it's useful                                                                                                                                                                                   |
+| Template tokens are copies: characters with `base` set, overriding the template field by field                           | Anything about one goblin can change from its sheet, and everything else follows the template                                                                                                                                          |
+| Token names and bars are drawn in screen space, at clamped sizes, and hidden when crowded                                | Readable at any zoom without crowding the map                                                                                                                                                                                          |
+| Scenes have units and a diagonal rule; distances between tokens run edge to edge                                         | Range checks work for 5.5e and other tactical systems                                                                                                                                                                                  |
+| Dungeon World runs on a general rules core (M5 step 1) before any 5.5e code                                              | A second system tests the plugin API; porting the first proves it first                                                                                                                                                                |
+| No data migrations until the first release                                                                               | Test data is cheap to recreate; migrations would slow every change                                                                                                                                                                     |
+| Characters live in a root-doc `characters` Y.Map, not a subdoc each                                                      | A campaign has a handful of characters; one doc keeps sync and persistence simple. Revisit if sheets grow large                                                                                                                        |
+| Move suggestions (XP, damage) are buttons on the card, never applied automatically                                       | The GM stays in charge of fiction and consequences                                                                                                                                                                                     |
+| Hotbar: drag to reorder, drag off to remove (Alt+arrows, Delete by keyboard)                                             | Keyboard-accessible, and simple; drag can come later                                                                                                                                                                                   |
+| Dungeon World text is abridged from memory and must be checked against the SRD                                           | The data is in one file (`src/systems/dungeon-world/index.ts`) so it is easy to correct; credit is in the system's attribution                                                                                                         |
+| Move 3D dice to M6; M3 shows rolls as 2D cards                                                                           | dice-box can't land on a predetermined result, which shared rolls need; picking a replacement can wait for M6                                                                                                                          |
+| Chat lives in 500-message chunk subdocuments, ordered by a hybrid logical clock                                          | Long campaigns stay fast to open, and peers agree on order even when their clocks disagree                                                                                                                                             |
+| No blind rolls; whispers are hidden from the GM                                                                          | If a player shouldn't see a result, the GM can roll it; “hidden from others” includes the GM                                                                                                                                           |
+| Quick dice pool for 1 s before rolling                                                                                   | Several dice from the bar (2d20, d20 + d6) become one roll and one chat entry                                                                                                                                                          |
+| Build the command palette before the hotbar, on one shared action index                                                  | Both need a searchable list of moves, items and tools; the hotbar becomes pinned index ids instead of a second list                                                                                                                    |
+| Render the canvas on demand; commit drags on release                                                                     | An idle table uses no GPU; each drag is one undo step and, from M2, one update for peers                                                                                                                                               |
+| Token portraits use texture fills, not masks; the world is a render group                                                | Per-token stencil masks slow down in the hundreds, and the camera becomes one GPU transform (from the PixiJS skills)                                                                                                                   |
+| The UI always tints from the main map; the canvas colour is Auto (a dark shade of the map) or the GM's pick              | Tinting is never worth turning off; what people want to choose is the colour around the map                                                                                                                                            |
+| Small square images become tokens, the rest maps                                                                         | No mode to pick when dropping files; right-click swaps them                                                                                                                                                                            |
+| Shapes and text tools move out of M1; the ruler and pings go to M2                                                       | M1's scope was maps, tokens, freehand and undo; measuring and pinging are presence, which needs peers                                                                                                                                  |
+| Scene menu grows with CSS on live elements, not a view transition                                                        | It stays hoverable and clickable while it opens                                                                                                                                                                                        |
+| Cut tagline and other marketing or explanatory copy                                                                      | The UI should explain itself                                                                                                                                                                                                           |
+| Panels clip their children with `overflow: clip`, not `contain: paint`                                                   | Keeps bevelled corners without trapping `position: fixed` chil                                                                                                                                                                         |
+| View transitions for docking, tab switches (directional slides), sidebar and page swaps                                  | Shows where things go; tab slides mirror the tab order                                                                                                                                                                                 |
+| Icons: Game-icons first, Material Symbols Rounded (filled) as fallback, bundled                                          | Weighty, on-theme, works offline                                                                                                                                                                                                       |
+| A new M5 for D&D 5.5e and a general rules engine; notes and polish move to M6                                            | A second system tests the plugin API; tactical rules (targets, range, turns) are best designed in before more polish                                                                                                                   |
+| Campaign actions live in a menu at the start of the tool strip                                                           | They're about the campaign, not scenes, and stay reachable whichever tabs are open                                                                                                                                                     |
+| Presence avatars move into Chat; avatars are circles                                                                     | Keeps the top edge clear                                                                                                                                                                                                               |
+| Drag a tab or docked title out to float a panel; drop it on the sidebar to dock                                          | Direct manipulation; no pop-out button                                                                                                                                                                                                 |
+| Two sidebars (left: characters, right: chat) with vertical tabs; tools on the top edge; tabs move between sides or float | Character sheet beside the map and chat opposite; tools out of the way of both                                                                                                                                                         |
+| Right sidebar with vertical tabs, sliding in from the edge; dice tray inside Chat                                        | Tabs read as one column with the content                                                                                                                                                                                               |
+| Edge-docked elements sit flush; icon strips end in full diagonals                                                        | Chrome reads as part of the window frame                                                                                       |                                                                                     | Your preference |
+|                                                                                                                          |                                                                                                                                                                                                                                        |
+| Scene menu grows with CSS on live elements, not a view transition                                                        | It stays hoverable and clickable while it opens                                                                                                                                                                                        |
+| Cut tagline and other marketing or explanatory copy                                                                      | The UI should explain itself                                                                                                                                                                                                           |
+| Panels clip their children with `overflow: clip`, not `contain: paint`                                                   | Keeps bevelled corners without trapping `position: fixed` chil                                                                                                                                                                         |
+| View transitions for docking, tab switches (directional slides), sidebar and page swaps                                  | Shows where things go; tab slides mirror the tab order                                                                                                                                                                                 |
+| Icons: Game-icons first, Material Symbols Rounded (filled) as fallback, bundled                                          | Weighty, on-theme, works offline                                                                                                                                                                                                       |
+| A new M5 for D&D 5.5e and a general rules engine; notes and polish move to M6                                            | A second system tests the plugin API; tactical rules (targets, range, turns) are best designed in before more polish                                                                                                                   |
+| Campaign actions live in a menu at the start of the tool strip                                                           | They're about the campaign, not scenes, and stay reachable whichever tabs are open                                                                                                                                                     |
+| Presence avatars move into Chat; avatars are circles                                                                     | Keeps the top edge clear                                                                                                                                                                                                               |
+| Drag a tab or docked title out to float a panel; drop it on the sidebar to dock                                          | Direct manipulation; no pop-out button                                                                                                                                                                                                 |
+| Two sidebars (left: characters, right: chat) with vertical tabs; tools on the top edge; tabs move between sides or float | Character sheet beside the map and chat opposite; tools out of the way of both                                                                                                                                                         |
+| Right sidebar with vertical tabs, sliding in from the edge; dice tray inside Chat                                        | Tabs read as one column with the content                                                                                                                                                                                               |
+
+
+# TODO
+- [ ] Campaign Import/Export as a single `.makeamove` zip, for backups and moving between machines.
+- [ ] Preserve Panel order when hiding/showing panels. 

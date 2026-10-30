@@ -65,10 +65,9 @@ export interface Roll {
   total: number
 }
 
-export const MAX_DICE = 100
+export const MAX_DICE = 1000
 export const MAX_SIDES = 1000
-/** Explosions stop after this many extra dice per term, so d1! can't run away. */
-export const MAX_EXPLOSIONS = 20
+export const MAX_EXPLOSIONS = 50
 
 export class NotationError extends Error {}
 

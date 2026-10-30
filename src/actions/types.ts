@@ -3,12 +3,9 @@ import type { Icon } from '../ui/icons'
 /*
  * The action index: one list of everything a player can do or look up. The
  * command palette searches it and the hotbar pins entries from it by id.
- * It is derived data, rebuilt from the synced sources and never stored.
  */
 
 export type ActionKind = 'move' | 'item' | 'tool' | 'command' | 'entry' | 'setting'
-
-/** What an `entry` is, so prefixes (@ for characters, # for notes) can narrow. */
 export type EntryGroup = 'character' | 'scene' | 'note' | 'library'
 
 export interface Action {
@@ -34,4 +31,3 @@ export interface Action {
   /** A secondary action, usually showing full text without running it. */
   open?: () => void
 }
-

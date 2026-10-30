@@ -9,7 +9,7 @@ import { planMove } from './moves'
 import { derive, type CharacterView } from './store'
 
 /*
- * What happens on a card after it's posted (design: core change 9): targets
+ * What happens on a card after it's posted: targets
  * answering roll requests, the GM applying damage or healing, and the
  * concentration save that damage calls for. Each is recorded in the
  * campaign's message state, so the card shows what was done.

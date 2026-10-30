@@ -8,7 +8,7 @@ import { Button } from './ui/Button'
 import { Tooltip } from './ui/Tooltip'
 import { lazy, Suspense } from 'preact/compat'
 
-// The table (rich text, rules, panels) loads when a campaign opens, so the lobby comes up quickly.
+// The table loads when a campaign opens, so the lobby comes up quickly.
 const Tabletop = lazy(() => import('./table/Tabletop').then((m) => ({ default: m.Tabletop })))
 
 const openError = signal<string | null>(null)

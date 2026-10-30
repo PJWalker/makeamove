@@ -16,7 +16,6 @@ import { browseLibrary } from '../table/libraryView'
 import { showPanel } from '../table/panelLayout'
 import type { Action } from './types'
 
-/** Moves, characters, gear and the libraries: what the game system adds. */
 export function systemActions(campaign: Campaign): Action[] {
   const system = systemOf(campaign)
   const out: Action[] = []
