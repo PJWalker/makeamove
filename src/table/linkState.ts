@@ -4,6 +4,8 @@ import { morphOpen } from '../ui/morph'
 import { raisePopup } from '../ui/popup'
 import { hideTooltip } from '../ui/Tooltip'
 import type { MenuItem } from './ContextMenu'
+import { entityTabId } from './entityWindows'
+import { layout, locate, showPanel } from './panelLayout'
 
 /*
  * What links in rich text have open: pop-ups showing what they point at,
@@ -24,6 +26,11 @@ export const openLinks = signal<LinkRef[]>([])
 
 /** Open a link's pop-up, growing out of its tooltip (or the link itself); bring it forward if it's open. */
 export function showLink(link: LinkRef, from: Element) {
+  const id = entityTabId(`link:${linkKey(link)}`)
+  if (locate(layout.value, id) !== 'closed') {
+    showPanel(id)
+    return
+  }
   const already = document.querySelector<HTMLElement>(`dialog[data-entry="${CSS.escape(`link:${linkKey(link)}`)}"]`)
   if (already) return raisePopup(already)
   const tip = document.querySelector('.tooltip:popover-open')

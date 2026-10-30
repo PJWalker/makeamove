@@ -15,6 +15,7 @@ import { ActionDialogs } from './ActionDialogs'
 import { ChatPopups } from './ChatPopups'
 import { Hotbar } from './Hotbar'
 import { LinkPopups } from './LinkPopups'
+import { EntityWindowHost } from './entityWindows'
 import { MovePrompt } from './MovePrompt'
 import { Palette } from './Palette'
 import { Toolbar } from './Toolbar'
@@ -84,6 +85,7 @@ export function Tabletop({ campaign }: { campaign: Campaign }) {
       <Sidebar side="left" campaign={campaign} />
       <Sidebar side="right" campaign={campaign} />
       <FloatingWindows campaign={campaign} />
+      <EntityWindowHost campaign={campaign} />
       <Hotbar campaign={campaign} />
       <Palette campaign={campaign} />
       <MovePrompt campaign={campaign} />

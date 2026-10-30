@@ -1,5 +1,5 @@
 import { useSignal } from '@preact/signals'
-import { useLayoutEffect, useRef } from 'preact/hooks'
+import { useRef } from "preact/hooks";
 import { setField, setPortrait } from '../characters/api'
 import { checkOf } from '../characters/moves'
 import type { CharacterView } from '../characters/store'
@@ -14,7 +14,7 @@ import { entryIcon } from '../ui/entryIcons'
 import { IconAdd, IconDelete, IconImage, IconPost, IconRemove, IconRename, IconRoll, IconTarget } from '../ui/icons'
 import { List, Tag } from '../ui/List'
 import { menuTrigger } from '../ui/menuTrigger'
-import { openPopup } from '../ui/popup'
+import { usePopupDialog } from "./usePopupDialog";
 import { Segmented, SegmentedOrSelect } from '../ui/Segmented'
 import { Dialog } from './CampaignDialogs'
 import { ContextMenu, type MenuItem } from './ContextMenu'
@@ -82,23 +82,30 @@ export function MoveList({
   campaign,
   system,
   moves,
+  ownerId,
   onMake,
   learned = [],
   onForget,
 }: {
-  campaign: Campaign
-  system: GameSystem
-  moves: ActionDef[]
-  onMake: (m: ActionDef) => void
+  campaign: Campaign;
+  system: GameSystem;
+  moves: ActionDef[];
+  ownerId: string;
+  onMake: (m: ActionDef) => void;
   /** Moves the character learned beyond their system's, which they can forget. */
-  learned?: string[]
-  onForget?: (m: ActionDef) => void
+  learned?: string[];
+  onForget?: (m: ActionDef) => void;
 }) {
   // The system's groupings that this character has any of, in the system's order; the first is shown to start.
-  const categories = system.actionCategories.filter((k) => moves.some((m) => m.category === k.id))
-  const filter = useSignal<string>(categories[0]?.id ?? 'all')
-  const windows = useEntryWindows()
-  const shown = filter.value === 'all' ? moves : moves.filter((m) => m.category === filter.value)
+  const categories = system.actionCategories.filter((k) =>
+    moves.some((m) => m.category === k.id),
+  );
+  const filter = useSignal<string>(categories[0]?.id ?? "all");
+  const windows = useEntryWindows();
+  const shown =
+    filter.value === "all"
+      ? moves
+      : moves.filter((m) => m.category === filter.value);
 
   return (
     <div class="moves">
@@ -121,7 +128,7 @@ export function MoveList({
             )}
             tag={rollTag(system, m)}
             tip={m.text}
-            onOpen={(row) => windows.show(`move:${m.id}`, row)}
+            onOpen={(row) => windows.show(`move:${ownerId}:${m.id}`, row)}
             onPointerDown={(ev) =>
               dragEntity(ev, entity(campaign, "move", m.id, m.name))
             }
@@ -134,7 +141,10 @@ export function MoveList({
         ))}
       </List>
       {windows.keys.map((key) => {
-        const m = moves.find((k) => `move:${k.id}` === key);
+        const prefix = `move:${ownerId}:`;
+        const m = key.startsWith(prefix)
+          ? moves.find((k) => k.id === key.slice(prefix.length))
+          : undefined;
         if (!m) return null;
         const tag = rollTag(system, m);
         return (
@@ -230,10 +240,9 @@ export function TokenChip({ campaign, c, editable }: { campaign: Campaign; c: Ch
 }
 
 function TokenSettings({ campaign, c, onClose }: { campaign: Campaign; c: CharacterView; onClose: () => void }) {
-  const ref = useRef<HTMLDialogElement>(null)
+  const ref = usePopupDialog();
   const style = c.tokenStyle ?? 'disc'
-  const colour = c.tokenColour ?? colourOf(device.value)
-  useLayoutEffect(() => openPopup(ref.current), [])
+  const colour = c.tokenColour ?? colourOf(device.value);
   return (
     <Dialog dialogRef={ref} title="Token settings" onClose={onClose}>
       <div class="field">

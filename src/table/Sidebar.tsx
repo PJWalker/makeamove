@@ -1,6 +1,6 @@
 import { unreadCount } from '../chat/unread'
 import { useSignal } from '@preact/signals'
-import { IconClose, IconDrag } from '../ui/icons'
+import { IconClose, IconDrag, IconOpenWindow } from '../ui/icons'
 import type { Campaign } from '../store/campaign'
 import { device } from '../store/device'
 import { useY } from '../store/useY'
@@ -14,6 +14,7 @@ import {
   detachPanel,
   dockPanel,
   dockTarget,
+  isPanelId,
   layout,
   shownLayout,
   otherSide,
@@ -26,10 +27,11 @@ import {
   spawnedFromTab,
   startWindowDrag,
   windowDragging,
-  type PanelId,
+  type DockItemId,
   type Side,
 } from './panelLayout'
 import { PanelContent, PANELS, PaneToggle } from './panels'
+import { closeEntityWindow, entityRecord, EntityWindowContent, isEntityTab } from './entityWindows'
 
 const DRAG_THRESHOLD = 10
 
@@ -65,19 +67,7 @@ export function Sidebar({ side, campaign }: { side: Side; campaign: Campaign }) 
 
       <section class={`sidebar-body panel dock-${side === 'left' ? 'left' : 'right'} dock-top dock-bottom`} role="tabpanel" inert={!open}>
         <SidebarResizeHandle side={side} />
-        {active && (
-          <div class="sidebar-panel" style={{ viewTransitionName: `panel-${active}` }}>
-            <header class="panel-header docked-header" {...withPull((e) => pullOut(active, e), (x, y) => (menu.value = { x, y, items: tabMenu(active, side) }))}
-            >
-              <PaneToggle id={active} />
-              <h2 class="panel-title" tabIndex={-1}>
-                {PANELS[active].label}
-              </h2>
-              <IconDrag size={16} class="drag-hint" aria-hidden="true" />
-            </header>
-            <PanelContent id={active} campaign={campaign} />
-          </div>
-        )}
+        {active && <ActiveTab campaign={campaign} id={active} onMenu={(x, y) => (menu.value = { x, y, items: tabMenu(active, side) })} />}
       </section>
       {menu.value && <ContextMenu {...menu.value} onClose={() => (menu.value = null)} />}
     </aside>
@@ -97,8 +87,16 @@ function withPull(onPress: (e: PointerEvent) => void, open: (x: number, y: numbe
 }
 
 /** Right-click menu for a tab: the keyboard-friendly way to rearrange panels. */
-function tabMenu(id: PanelId, side: Side): MenuItem[] {
+function tabMenu(id: DockItemId, side: Side): MenuItem[] {
   const other = otherSide(side)
+  if (isEntityTab(id)) {
+    return [
+      { label: `Move to ${other} sidebar`, onSelect: () => withTransition(() => dockPanel(id, other)) },
+      { label: 'Float in a window', onSelect: () => detachPanel(id, Math.max(innerWidth / 2 - 190, 0), 96, 380, 440) },
+      'divider',
+      { label: 'Close', Icon: IconClose, onSelect: () => closeDockedEntity(id) },
+    ]
+  }
   return [
     { label: `Move to ${other} sidebar`, onSelect: () => withTransition(() => dockPanel(id, other)) },
     {
@@ -116,7 +114,7 @@ function tabMenu(id: PanelId, side: Side): MenuItem[] {
  * past a small threshold, the panel pops out into a floating window that
  * follows the pointer; a release before that is an ordinary click.
  */
-function pullOut(id: PanelId, e: PointerEvent) {
+function pullOut(id: DockItemId, e: PointerEvent) {
   if (e.button !== 0) return
   const startX = e.clientX
   const startY = e.clientY
@@ -144,7 +142,7 @@ function pullOut(id: PanelId, e: PointerEvent) {
  * A tab is picked up at once: dragging along the strip reorders it, and
  * dragging away from the strip floats the panel in a window.
  */
-function dragTab(id: PanelId, e: PointerEvent) {
+function dragTab(id: DockItemId, e: PointerEvent) {
   const tab = e.currentTarget as HTMLElement
   const rail = tab.closest<HTMLElement>('.sidebar-rail')!
   startReorder({
@@ -203,7 +201,7 @@ function SidebarResizeHandle({ side }: { side: Side }) {
  * Select a tab. When one docked panel replaces another, the content slides
  * the way the tabs are stacked: down the strip slides up, up the strip slides down.
  */
-function switchTo(id: PanelId, side: Side) {
+function switchTo(id: DockItemId, side: Side) {
   const s = shownLayout.value[side]
   const from = s.active
   const replacing = s.open && from !== null && from !== id
@@ -219,8 +217,11 @@ function useOnlineCount(campaign: Campaign) {
 }
 
 /** A tab that selects its panel on click, or pulls it out into a window when dragged. */
-function RailTab({ campaign, id, side, selected, onMenu }: { campaign: Campaign; id: PanelId; side: Side; selected: boolean; onMenu: (x: number, y: number) => void }) {
-  const { label, Icon } = PANELS[id]
+function RailTab({ campaign, id, side, selected, onMenu }: { campaign: Campaign; id: DockItemId; side: Side; selected: boolean; onMenu: (x: number, y: number) => void }) {
+  const panel = isPanelId(id) ? PANELS[id] : undefined
+  const record = isEntityTab(id) ? entityRecord(id) : undefined
+  const label = panel?.label ?? record?.title ?? id.slice('entity:'.length)
+  const Icon = panel?.Icon ?? record?.icon ?? IconOpenWindow
   const onlineCount = useOnlineCount(campaign)
 
   function onPointerDown(e: PointerEvent) {
@@ -232,7 +233,8 @@ function RailTab({ campaign, id, side, selected, onMenu }: { campaign: Campaign;
       variant="icon"
       role="tab"
       class="rail-tab"
-      data-panel={id}
+      data-panel={panel ? id : undefined}
+      data-entity-window={record ? id : undefined}
       label={label + (id === 'chat' && unreadCount.value ? `, ${unreadCount.value} unread` : '') + (id === 'members' ? `, ${onlineCount} online` : '')}
       aria-selected={selected}
       pressed={selected}
@@ -244,4 +246,46 @@ function RailTab({ campaign, id, side, selected, onMenu }: { campaign: Campaign;
       <Icon size={22} />
     </Button>
   )
+}
+
+function ActiveTab({ campaign, id, onMenu }: { campaign: Campaign; id: DockItemId; onMenu: (x: number, y: number) => void }) {
+  if (isPanelId(id)) {
+    return (
+      <div class="sidebar-panel" style={{ viewTransitionName: `panel-${id}` }}>
+        <header class="panel-header docked-header" {...withPull((e) => pullOut(id, e), onMenu)}>
+          <PaneToggle id={id} />
+          <h2 class="panel-title" tabIndex={-1}>{PANELS[id].label}</h2>
+          <IconDrag size={16} class="drag-hint" aria-hidden="true" />
+        </header>
+        <PanelContent id={id} campaign={campaign} />
+      </div>
+    )
+  }
+
+  const record = entityRecord(id)
+  const Icon = record?.icon ?? IconOpenWindow
+  return (
+    <div class="sidebar-panel entity-sidebar-panel" style={{ viewTransitionName: `panel-${id}` }}>
+      <header class="panel-header docked-header" {...withPull((e) => pullOut(id, e), onMenu)}>
+        <Icon size={18} class="window-icon" />
+        <h2 class="panel-title" tabIndex={-1}>{record?.title ?? id.slice('entity:'.length)}</h2>
+        <Button variant="icon" label="Float in a window" onClick={() => detachPanel(id, Math.max(innerWidth / 2 - 190, 0), 96, 380, 440)}>
+          <IconOpenWindow size={16} />
+        </Button>
+        <Button variant="icon" label="Close window" onClick={() => closeDockedEntity(id)}>
+          <IconClose size={16} />
+        </Button>
+      </header>
+      <div class="entity-docked-body">
+        {record ? <EntityWindowContent campaign={campaign} record={record} /> : <p class="move-text move-window-text">This window is not available.</p>}
+        {record?.tags && record.tags.length > 0 && <p class="muted item-tags">{record.tags.join(', ')}</p>}
+      </div>
+    </div>
+  )
+}
+
+function closeDockedEntity(id: DockItemId) {
+  const record = entityRecord(id)
+  record?.close?.()
+  closeEntityWindow(id)
 }

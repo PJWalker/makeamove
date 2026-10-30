@@ -1,5 +1,5 @@
 import { useSignal } from '@preact/signals'
-import { useEffect, useLayoutEffect, useRef } from 'preact/hooks'
+import { useEffect, useRef } from "preact/hooks";
 import {
   canEdit,
   createFolder,
@@ -24,7 +24,7 @@ import type { GameSystem } from '../systems/types'
 import { Avatar } from '../ui/Avatar'
 import { Button } from '../ui/Button'
 import { menuTrigger } from '../ui/menuTrigger'
-import { openPopup } from '../ui/popup'
+import { usePopupDialog } from "./usePopupDialog";
 import { choicesAt } from '../characters/creation'
 import { ChoiceField, creationResult, emptyPick, ScoreFields, scoreMethods, scoresReady, startingScores, type Picked, type ScoreMethod } from './CreationParts'
 import { IconDelete, IconFolder, IconRename } from '../ui/icons'
@@ -37,6 +37,7 @@ import { ContextMenu, type MenuItem } from './ContextMenu'
 import { dragToFolder } from './folderDrag'
 import { tokenDrop } from './canvasState'
 import { CharacterSheet } from './sheets'
+import { showLink } from "./linkState";
 
 /** Side by side or one at a time (ui/TwoPane.tsx); kept under the key it always had. */
 export const charactersLayout = createPaneLayout('charsList', { list: 'list', detail: 'sheet' })
@@ -155,30 +156,41 @@ function CharacterList({
         key={c.id}
         lead={<Avatar id={c.id} name={c.name} />}
         name={c.name}
-        tag={c.kind === 'npc' ? 'NPC' : null}
+        tag={c.kind === "npc" ? "NPC" : null}
         selected={c.id === selectedId}
         onPick={() => onPick(c.id)}
         row={{
-          'data-tip': c.kind === 'npc' ? `${c.name} (NPC)` : `${c.name} (${system.classes.find((k) => k.id === c.classId)?.name ?? c.classId})`,
-          'data-tip-side': true,
+          "data-tip":
+            c.kind === "npc"
+              ? `${c.name} (NPC)`
+              : `${c.name} (${system.classes.find((k) => k.id === c.classId)?.name ?? c.classId})`,
+          "data-tip-side": true,
         }}
         pick={{
-          'data-kind': c.kind,
-          'data-item-drop': mine ? c.id : undefined,
-          'data-move-drop': mine ? c.id : undefined,
+          onDblClick: (e) =>
+            showLink({ kind: "character", id: c.id }, e.currentTarget),
+          "data-kind": c.kind,
+          "data-item-drop": mine ? c.id : undefined,
+          "data-move-drop": mine ? c.id : undefined,
           onPointerDown: (e) => {
-            trigger.onPointerDown(e)
+            trigger.onPointerDown(e);
             dragToFolder(
               e,
               mine ? (folder) => moveToFolder(campaign, c.id, folder) : null,
               (x, y) =>
-                tokenDrop.value?.(x, y, { characterId: c.id, name: c.name, image: c.portrait, style: c.tokenStyle, colour: c.tokenColour }),
-            )
+                tokenDrop.value?.(x, y, {
+                  characterId: c.id,
+                  name: c.name,
+                  image: c.portrait,
+                  style: c.tokenStyle,
+                  colour: c.tokenColour,
+                }),
+            );
           },
           onContextMenu: trigger.onContextMenu,
         }}
       />
-    )
+    );
   }
 
   const folderMenu = (f: FolderView) =>
@@ -366,8 +378,7 @@ function NewCharacter({
 
 /** Asks before deleting a character: it can't be undone. */
 function DeleteCharacter({ campaign, c, onClose }: { campaign: Campaign; c: CharacterView; onClose: () => void }) {
-  const ref = useRef<HTMLDialogElement>(null)
-  useLayoutEffect(() => openPopup(ref.current), [])
+  const ref = usePopupDialog();
   return (
     <Dialog dialogRef={ref} title="Delete character" onClose={onClose}>
       <p>

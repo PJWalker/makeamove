@@ -500,6 +500,7 @@ export function DndSheet({ campaign, system, c }: Props) {
           campaign={campaign}
           system={system}
           moves={actions}
+          ownerId={c.id}
           onMake={(m: ActionDef) => startMove(campaign, c.id, m)}
           learned={c.learned}
           onForget={

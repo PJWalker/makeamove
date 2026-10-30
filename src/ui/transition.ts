@@ -22,9 +22,13 @@ const nextRender = () => new Promise<void>((resolve) => setTimeout(resolve, 0))
  */
 export async function withTransition(
   update: () => void | Promise<void>,
-  { rootClass }: { rootClass?: string | string[] } = {},
+  { rootClass, scope }: { rootClass?: string | string[]; scope?: HTMLElement } = {},
 ): Promise<void> {
-  if (!document.startViewTransition || reducedMotion.matches) {
+  const scoped = scope as (HTMLElement & { startViewTransition?: typeof document.startViewTransition }) | undefined
+  const startViewTransition = scope
+    ? scoped?.startViewTransition?.bind(scope)
+    : document.startViewTransition?.bind(document)
+  if (!startViewTransition || reducedMotion.matches) {
     await update()
     await nextRender()
     return
@@ -36,7 +40,7 @@ export async function withTransition(
   root.classList.add(...classes)
   running++
   try {
-    const t = document.startViewTransition(async () => {
+    const t = startViewTransition(async () => {
       await update()
       await nextRender()
     })

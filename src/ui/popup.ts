@@ -102,12 +102,19 @@ export function resizePopup(dialog: HTMLElement, e: PointerEvent, dir: ResizeDir
 
 /** Drag a pop-up by its title bar; call from the bar's pointerdown. */
 export function dragPopup(dialog: HTMLElement, e: PointerEvent) {
-  if (e.button !== 0 || (e.target as HTMLElement).closest('button, input, select, textarea')) return
-  e.preventDefault()
-  raisePopup(dialog)
-  const r = dialog.getBoundingClientRect()
-  const dx = e.clientX - r.left
-  const dy = e.clientY - r.top
-  const stop = trackPointer('grabbing', (ev) => place(dialog, ev.clientX - dx, ev.clientY - dy))
-  window.addEventListener('pointerup', stop, { once: true })
+  if (
+    e.button !== 0 ||
+    (e.target as HTMLElement).closest("button, input, select, textarea")
+  )
+    return;
+  e.preventDefault();
+  raisePopup(dialog);
+  // Use layout coordinates: the opening scale/FLIP animation changes the
+  // visual rect, but dragging writes untransformed left/top coordinates.
+  const dx = e.clientX - dialog.offsetLeft;
+  const dy = e.clientY - dialog.offsetTop;
+  const stop = trackPointer("grabbing", (ev) =>
+    place(dialog, ev.clientX - dx, ev.clientY - dy),
+  );
+  window.addEventListener("pointerup", stop, { once: true });
 }

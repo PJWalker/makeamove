@@ -1,29 +1,46 @@
-import { IconClose } from '../ui/icons'
-import type { ComponentChildren, RefObject } from 'preact'
-import type { Campaign } from '../store/campaign'
-import { colourOf } from '../scene/presence'
-import { device, setDeviceColour, setDeviceName } from '../store/device'
-import { useY } from '../store/useY'
-import { GRID_TYPES } from '../scene/grid'
-import { TOKEN_STYLES } from '../scene/types'
-import { Button } from '../ui/Button'
-import { Segmented } from '../ui/Segmented'
-import { inviteUrl } from '../sync/invite'
-import { useSignal } from '@preact/signals'
-import { createPortal } from 'preact/compat'
-import { dragPopup, raisePopup, resizePopup } from '../ui/popup'
-import { autohide, setAutohide } from './canvasState'
-import { RESIZE_DIRS } from './resizeRect'
-import { dragEntity, type DragEntity } from './entityDrag'
-import type { Icon } from '../ui/icons'
+import { IconOpenWindow } from "../ui/icons";
+import type { ComponentChildren, RefObject } from "preact";
+import type { Campaign } from "../store/campaign";
+import { colourOf } from "../scene/presence";
+import { device, setDeviceColour, setDeviceName } from "../store/device";
+import { useY } from "../store/useY";
+import { GRID_TYPES } from "../scene/grid";
+import { TOKEN_STYLES } from "../scene/types";
+import { Button } from "../ui/Button";
+import { Segmented } from "../ui/Segmented";
+import { inviteUrl } from "../sync/invite";
+import { useSignal } from "@preact/signals";
+import { createPortal } from "preact/compat";
+import { useRef } from "preact/hooks";
+import { dragPopup, raisePopup, resizePopup } from "../ui/popup";
+import { trackPointer } from "../ui/pointer";
+import { autohide, setAutohide } from "./canvasState";
+import {
+  RESIZE_CURSORS,
+  RESIZE_DIRS,
+  resizeRect,
+  type ResizeDir,
+} from "./resizeRect";
+import { dragEntity, type DragEntity } from "./entityDrag";
+import type { Icon } from "../ui/icons";
 import type { menuTrigger } from "../ui/menuTrigger";
+import {
+  raiseWindow,
+  startWindowDrag,
+  updateWindow,
+  layout,
+  type DockItemId,
+} from "./panelLayout";
+import { WindowControls } from "./WindowControls";
 
 /** The icon in a window's title bar that stands for what it shows. */
 export interface WindowProxy {
-  Icon: Icon
-  entity: DragEntity
+  Icon: Icon;
+  entity: DragEntity;
 }
-import { windowLayer } from '../ui/windows'
+import { windowLayer } from "../ui/windows";
+
+let dialogTransitionId = 0;
 
 export function Dialog({
   dialogRef,
@@ -31,6 +48,9 @@ export function Dialog({
   onClose,
   proxy,
   contextMenu,
+  windowIcon,
+  dockId,
+  onDockMenu,
   children,
 }: {
   dialogRef: RefObject<HTMLDialogElement>;
@@ -42,8 +62,43 @@ export function Dialog({
    */
   proxy?: WindowProxy;
   contextMenu?: ReturnType<typeof menuTrigger>;
+  windowIcon?: Icon;
+  dockId?: DockItemId;
+  onDockMenu?: (x: number, y: number) => void;
   children: ComponentChildren;
 }) {
+  const rolled = useSignal(false);
+  const transitionName = useRef<string | null>(null);
+  if (!transitionName.current)
+    transitionName.current = `dialog-window-${++dialogTransitionId}`;
+  const win = dockId
+    ? layout.value.floating.find((item) => item.id === dockId)
+    : undefined;
+  const windowStyle = {
+    ...(win
+      ? { left: win.x, top: win.y, width: win.w, height: win.h, zIndex: win.z }
+      : {}),
+    viewTransitionName: transitionName.current,
+  };
+
+  function onResizePointerDown(e: PointerEvent, dir: ResizeDir) {
+    if (!dockId || !win) {
+      resizePopup(dialogRef.current!, e, dir);
+      return;
+    }
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    raiseWindow(dockId);
+    const start = { x: win.x, y: win.y, w: win.w, h: win.h };
+    const stop = trackPointer(RESIZE_CURSORS[dir], (ev) => {
+      updateWindow(
+        dockId,
+        resizeRect(start, dir, ev.clientX - e.clientX, ev.clientY - e.clientY),
+      );
+    });
+    window.addEventListener("pointerup", stop, { once: true });
+  }
   // Rendered in the window layer with the other windows: a non-modal dialog
   // would otherwise be clipped by the panel that opened it (the scene bar
   // clips its contents).
@@ -53,9 +108,14 @@ export function Dialog({
       class="dialog window panel bevel"
       closedby="none"
       aria-label={title}
+      tabIndex={-1}
+      data-rolled={rolled.value}
+      data-window-id={dockId}
+      style={windowStyle}
       onClose={onClose}
       onPointerDown={(e) => {
-        raisePopup(e.currentTarget);
+        if (dockId) raiseWindow(dockId);
+        else raisePopup(e.currentTarget);
         contextMenu?.onPointerDown(e);
       }}
       onContextMenu={(e) => contextMenu?.onContextMenu(e)}
@@ -66,47 +126,58 @@ export function Dialog({
         }
       }}
     >
-      <header
-        class="panel-header window-header"
-        onPointerDown={(e) => dragPopup(dialogRef.current!, e)}
-      >
-        {proxy && (
+      <WindowControls
+        title={title}
+        Icon={windowIcon ?? IconOpenWindow}
+        iconContent={
+          proxy ? (
+            <span
+              class="window-proxy"
+              data-tip="Drag to link it, or onto a character or the hotbar"
+              onPointerDown={(e) => {
+                // Not a drag of the window itself.
+                e.stopPropagation();
+                dragEntity(
+                  e,
+                  proxy.entity,
+                  e.currentTarget.nextElementSibling as HTMLElement,
+                );
+              }}
+            >
+              <proxy.Icon size={16} />
+            </span>
+          ) : undefined
+        }
+        rolled={rolled.value}
+        onToggleRoll={() => (rolled.value = !rolled.value)}
+        onDragStart={(e) => {
+          if (dockId && win) {
+            const dialog = dialogRef.current!;
+            startWindowDrag(
+              dockId,
+              e,
+              e.clientX - dialog.offsetLeft,
+              e.clientY - dialog.offsetTop,
+            );
+          } else dragPopup(dialogRef.current!, e);
+        }}
+        onDockMenu={dockId ? onDockMenu : undefined}
+        onClose={() => dialogRef.current?.close()}
+      />
+      <div class="dialog-body" inert={rolled.value}>
+        {children}
+      </div>
+      {!rolled.value && <span class="resize-grip" aria-hidden="true" />}
+      {!rolled.value &&
+        RESIZE_DIRS.map((dir) => (
           <span
-            class="window-proxy"
-            data-tip="Drag to link it, or onto a character or the hotbar"
-            onPointerDown={(e) => {
-              // Not a drag of the window itself.
-              e.stopPropagation();
-              dragEntity(
-                e,
-                proxy.entity,
-                e.currentTarget.nextElementSibling as HTMLElement,
-              );
-            }}
-          >
-            <proxy.Icon size={16} />
-          </span>
-        )}
-        <h2 class="panel-title">{title}</h2>
-        <Button
-          variant="icon"
-          label="Close"
-          onClick={() => dialogRef.current?.close()}
-        >
-          <IconClose size={16} />
-        </Button>
-      </header>
-      <div class="dialog-body">{children}</div>
-      <span class="resize-grip" aria-hidden="true" />
-      {RESIZE_DIRS.map((dir) => (
-        <span
-          key={dir}
-          class="win-resize"
-          data-dir={dir}
-          aria-hidden="true"
-          onPointerDown={(e) => resizePopup(dialogRef.current!, e, dir)}
-        />
-      ))}
+            key={dir}
+            class="win-resize"
+            data-dir={dir}
+            aria-hidden="true"
+            onPointerDown={(e) => onResizePointerDown(e, dir)}
+          />
+        ))}
     </dialog>,
     windowLayer,
   );
@@ -117,11 +188,14 @@ export function SettingsDialog({
   campaign,
   dialogRef,
 }: {
-  campaign: Campaign
-  dialogRef: RefObject<HTMLDialogElement>
+  campaign: Campaign;
+  dialogRef: RefObject<HTMLDialogElement>;
 }) {
-  const myName = useY(campaign.members, () => campaign.members.get(device.value.id)?.get('name') ?? '')
-  const colour = colourOf(device.value)
+  const myName = useY(
+    campaign.members,
+    () => campaign.members.get(device.value.id)?.get("name") ?? "",
+  );
+  const colour = colourOf(device.value);
   return (
     <Dialog dialogRef={dialogRef} title="Settings">
       <section class="dialog-section">
@@ -132,10 +206,10 @@ export function SettingsDialog({
             class="input bevel"
             value={myName}
             onChange={(e) => {
-              const v = e.currentTarget.value.trim()
-              if (!v) return
-              setDeviceName(v)
-              campaign.ensureMember(v)
+              const v = e.currentTarget.value.trim();
+              if (!v) return;
+              setDeviceName(v);
+              campaign.ensureMember(v);
             }}
           />
         </label>
@@ -149,29 +223,35 @@ export function SettingsDialog({
             aria-label="Your colour"
           />
         </label>
-        <p class="muted">Your colour marks your cursor and pings, and is used for tokens you create.</p>
+        <p class="muted">
+          Your colour marks your cursor and pings, and is used for tokens you
+          create.
+        </p>
         <div class="field">
           Sidebars and toolbars
           <Segmented
             label="Sidebars and toolbars"
-            value={autohide.value ? 'autohide' : 'always'}
+            value={autohide.value ? "autohide" : "always"}
             options={[
-              { id: 'always', label: 'Always shown' },
-              { id: 'autohide', label: 'Autohide' },
+              { id: "always", label: "Always shown" },
+              { id: "autohide", label: "Autohide" },
             ]}
-            onChange={(v) => setAutohide(v === 'autohide')}
+            onChange={(v) => setAutohide(v === "autohide")}
           />
-          <span class="muted">Autohide keeps them out of sight until your pointer nears their edge of the window.</span>
+          <span class="muted">
+            Autohide keeps them out of sight until your pointer nears their edge
+            of the window.
+          </span>
         </div>
       </section>
       {campaign.isGm() && <CampaignSettings campaign={campaign} />}
     </Dialog>
-  )
+  );
 }
 
 function CampaignSettings({ campaign }: { campaign: Campaign }) {
-  const name = useY(campaign.meta, () => campaign.name)
-  const defaults = useY(campaign.meta, () => campaign.defaults())
+  const name = useY(campaign.meta, () => campaign.name);
+  const defaults = useY(campaign.meta, () => campaign.defaults());
   return (
     <section class="dialog-section">
       <h3 class="dialog-heading">Campaign</h3>
@@ -181,8 +261,8 @@ function CampaignSettings({ campaign }: { campaign: Campaign }) {
           class="input bevel"
           value={name}
           onChange={(e) => {
-            const v = e.currentTarget.value.trim()
-            if (v) campaign.rename(v)
+            const v = e.currentTarget.value.trim();
+            if (v) campaign.rename(v);
           }}
         />
       </label>
@@ -210,33 +290,37 @@ function CampaignSettings({ campaign }: { campaign: Campaign }) {
       </div>
       <InviteField campaign={campaign} />
     </section>
-  )
+  );
 }
 
 const SHORTCUTS: [string, string][] = [
-  ['V', 'Select'],
-  ['H', 'Pan'],
-  ['P', 'Draw'],
-  ['R', 'Shapes'],
-  ['T', 'Text'],
-  ['M', 'Measure'],
-  ['G', 'Ping'],
-  ['E', 'Erase drawings'],
-  ['Space + drag', 'Pan the map'],
-  ['Scroll / pinch', 'Zoom (trackpads: two fingers pan)'],
-  ['⇧1', 'Fit the scene'],
-  ['⇧0', 'Zoom to 100%'],
-  ['Ctrl/⌘ + Z', 'Undo your last change'],
-  ['Ctrl/⌘ + ⇧Z', 'Redo'],
-  ['Ctrl/⌘ + D', 'Duplicate'],
-  ['Delete', 'Delete the selection'],
-  ['Arrows', 'Nudge (⇧ for a whole cell)'],
-  ['Alt + drag', 'Move a token off the grid'],
-  ['Ctrl/⌘ + \\', 'Autohide sidebars and toolbars'],
-  ['Ctrl/⌘ + K', 'Search moves, tools, scenes and commands'],
-]
+  ["V", "Select"],
+  ["H", "Pan"],
+  ["P", "Draw"],
+  ["R", "Shapes"],
+  ["T", "Text"],
+  ["M", "Measure"],
+  ["G", "Ping"],
+  ["E", "Erase drawings"],
+  ["Space + drag", "Pan the map"],
+  ["Scroll / pinch", "Zoom (trackpads: two fingers pan)"],
+  ["⇧1", "Fit the scene"],
+  ["⇧0", "Zoom to 100%"],
+  ["Ctrl/⌘ + Z", "Undo your last change"],
+  ["Ctrl/⌘ + ⇧Z", "Redo"],
+  ["Ctrl/⌘ + D", "Duplicate"],
+  ["Delete", "Delete the selection"],
+  ["Arrows", "Nudge (⇧ for a whole cell)"],
+  ["Alt + drag", "Move a token off the grid"],
+  ["Ctrl/⌘ + \\", "Autohide sidebars and toolbars"],
+  ["Ctrl/⌘ + K", "Search moves, tools, scenes and commands"],
+];
 
-export function HelpDialog({ dialogRef }: { dialogRef: RefObject<HTMLDialogElement> }) {
+export function HelpDialog({
+  dialogRef,
+}: {
+  dialogRef: RefObject<HTMLDialogElement>;
+}) {
   return (
     <Dialog dialogRef={dialogRef} title="Help">
       <section class="dialog-section">
@@ -255,59 +339,76 @@ export function HelpDialog({ dialogRef }: { dialogRef: RefObject<HTMLDialogEleme
       <section class="dialog-section">
         <h3 class="dialog-heading">Maps and tokens</h3>
         <p class="muted">
-          Drop or paste images onto the canvas. Small, square images become tokens; anything bigger is placed as a
-          map. Double-click a token to rename or restyle it; right-click anything to lock it, restack it or swap it between map and token. Undo only ever
-          reverts your own changes.
+          Drop or paste images onto the canvas. Small, square images become
+          tokens; anything bigger is placed as a map. Double-click a token to
+          rename or restyle it; right-click anything to lock it, restack it or
+          swap it between map and token. Undo only ever reverts your own
+          changes.
         </p>
       </section>
       <section class="dialog-section">
         <h3 class="dialog-heading">Panels</h3>
         <p class="muted">
-          Drag a sidebar tab, or a docked panel’s title, out onto the map to open it in its own window. Drag the
-          window onto the left or right sidebar to dock it there, or use its dock button to put it back. Right-click a tab to
-          move it to the other sidebar.
+          Drag a sidebar tab, or a docked panel’s title, out onto the map to
+          open it in its own window. Drag the window onto the left or right
+          sidebar to dock it there, or use its dock button to put it back.
+          Right-click a tab to move it to the other sidebar.
         </p>
       </section>
       <section class="dialog-section">
         <h3 class="dialog-heading">Credits</h3>
         <p class="muted">
-          Icons by Lorc, Delapouite and contributors at{' '}
+          Icons by Lorc, Delapouite and contributors at{" "}
           <a href="https://game-icons.net" target="_blank" rel="noreferrer">
             game-icons.net
-          </a>{' '}
-          (CC BY 3.0), and{' '}
-          <a href="https://fonts.google.com/icons" target="_blank" rel="noreferrer">
+          </a>{" "}
+          (CC BY 3.0), and{" "}
+          <a
+            href="https://fonts.google.com/icons"
+            target="_blank"
+            rel="noreferrer"
+          >
             Material Symbols
-          </a>{' '}
+          </a>{" "}
           (Apache 2.0).
         </p>
       </section>
     </Dialog>
-  )
+  );
 }
 
 function InviteField({ campaign }: { campaign: Campaign }) {
-  const copied = useSignal(false)
-  const roomKey = useY(campaign.meta, () => campaign.meta.get('roomKey') as string | undefined)
-  if (!roomKey) return null
-  const url = inviteUrl({ campaignId: campaign.id, roomKey })
+  const copied = useSignal(false);
+  const roomKey = useY(
+    campaign.meta,
+    () => campaign.meta.get("roomKey") as string | undefined,
+  );
+  if (!roomKey) return null;
+  const url = inviteUrl({ campaignId: campaign.id, roomKey });
   return (
     <div class="field">
       Invite link
       <div class="form-row">
-        <input class="input bevel" readOnly value={url} onFocus={(e) => e.currentTarget.select()} />
+        <input
+          class="input bevel"
+          readOnly
+          value={url}
+          onFocus={(e) => e.currentTarget.select()}
+        />
         <Button
           variant="secondary"
           onClick={async () => {
-            await navigator.clipboard.writeText(url)
-            copied.value = true
-            setTimeout(() => (copied.value = false), 1500)
+            await navigator.clipboard.writeText(url);
+            copied.value = true;
+            setTimeout(() => (copied.value = false), 1500);
           }}
         >
-          {copied.value ? 'Copied' : 'Copy'}
+          {copied.value ? "Copied" : "Copy"}
         </Button>
       </div>
-      <span class="muted">Anyone with this link can join. Keep it private.</span>
+      <span class="muted">
+        Anyone with this link can join. Keep it private.
+      </span>
     </div>
-  )
+  );
 }

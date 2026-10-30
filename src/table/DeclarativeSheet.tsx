@@ -161,6 +161,7 @@ function Section({ campaign, system, c, d, editable, section }: SectionProps) {
             campaign={campaign}
             system={system}
             moves={actionsFor(c, system, d)}
+            ownerId={c.id}
             onMake={(m) => startMove(campaign, c.id, m)}
             learned={c.learned}
             onForget={editable ? (m) => setLearned(campaign, c.id, m.id, false) : undefined}

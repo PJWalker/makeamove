@@ -128,7 +128,7 @@ export function Inventory({
               meta={metaOf(i)}
               tip={tipOf(i)}
               dim={i.equippable && !i.equipped}
-              onOpen={(row) => windows.show(`item:${i.id}`, row)}
+              onOpen={(row) => windows.show(`inventory:${c.id}:${i.id}`, row)}
               onPointerDown={(ev) => {
                 const source = i.defId
                   ? entity(campaign, "item", i.defId, i.name)
@@ -161,7 +161,7 @@ export function Inventory({
         </Button>
       )}
       {windows.keys.map((key) => {
-        const i = c.inventory.find((k) => `item:${k.id}` === key);
+        const i = c.inventory.find((k) => `inventory:${c.id}:${k.id}` === key);
         if (!i) return null;
         return (
           <EntryWindow

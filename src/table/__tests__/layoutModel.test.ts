@@ -102,4 +102,31 @@ describe('panel layout', () => {
     expect(back.closed).toEqual([])
     expect(back.right.active).toBe('notes')
   })
+
+  it('docks entity windows alongside panels and preserves their home side', () => {
+    const id = 'entity:link:character:hero'
+    let l = dock(defaultLayout(false), id, 'left', 1)
+    expect(l.left.panels).toEqual(['scene', id, 'characters', 'combat'])
+    expect(locate(l, id)).toBe('left')
+    l = detach(l, id, win)
+    expect(locate(l, id)).toBe('floating')
+    expect(dock(l, id).left.panels).toContain(id)
+    expect(locate(close(l, id), id)).toBe('closed')
+  })
+
+  it('normalizes and persists namespaced entity tabs without duplicating them', () => {
+    const id = 'entity:inventory:character:item'
+    const l = normalise(
+      {
+        left: { active: id, open: true, panels: [id, 'characters', id] },
+        right: { panels: ['chat'] },
+        floating: [{ id: 'entity:link:note:page', ...win }],
+      },
+      false,
+    )
+    expect(l.left.panels).toEqual([id, 'characters', 'scene', 'combat'])
+    expect(l.left.active).toBe(id)
+    expect(locate(l, 'entity:link:note:page')).toBe('floating')
+    expect(l.right.panels).toEqual(['chat', 'libraries', 'items', 'notes', 'members'])
+  })
 })

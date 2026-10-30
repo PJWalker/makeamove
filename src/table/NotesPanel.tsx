@@ -27,7 +27,7 @@ import { FolderName } from '../ui/FolderName'
 import { createPaneLayout, TwoPane, usePaneLevel } from '../ui/TwoPane'
 import { List, ListGroup, ListRow } from '../ui/List'
 import { menuTrigger } from '../ui/menuTrigger'
-import { openPopup } from '../ui/popup'
+import { usePopupDialog } from "./usePopupDialog";
 import { Dialog } from './CampaignDialogs'
 import { ContextMenu, type MenuItem } from './ContextMenu'
 import { dragEntity, entity } from "./entityDrag";
@@ -290,8 +290,7 @@ const revealing = signal<string | null>(null)
 
 /** Asks before revealing a GM-only page: players keep it once they have it. */
 function RevealPage({ campaign, note, onClose }: { campaign: Campaign; note: NoteView; onClose: () => void }) {
-  const ref = useRef<HTMLDialogElement>(null)
-  useLayoutEffect(() => openPopup(ref.current), [])
+  const ref = usePopupDialog();
   return (
     <Dialog dialogRef={ref} title="Reveal page" onClose={onClose}>
       <p>
@@ -317,8 +316,7 @@ function RevealPage({ campaign, note, onClose }: { campaign: Campaign; note: Not
 
 /** Asks before deleting a page: it can't be undone. */
 function DeletePage({ campaign, note, onClose }: { campaign: Campaign; note: NoteView; onClose: () => void }) {
-  const ref = useRef<HTMLDialogElement>(null)
-  useLayoutEffect(() => openPopup(ref.current), [])
+  const ref = usePopupDialog();
   return (
     <Dialog dialogRef={ref} title="Delete page" onClose={onClose}>
       <p>

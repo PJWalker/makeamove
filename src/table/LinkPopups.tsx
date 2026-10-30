@@ -1,13 +1,13 @@
 import { useSignal } from '@preact/signals'
 import type { ComponentChildren } from 'preact'
-import { useLayoutEffect, useRef } from 'preact/hooks'
+import { useEffect, useLayoutEffect } from "preact/hooks";
 import { addItem, canEdit, getCharacter, selectedCharacterId, startMove, systemOf } from '../characters/api'
 import { getNote } from '../notes/api'
-import { followLink } from '../notes/targets'
+import { followLink, linkLabel } from "../notes/targets";
 import type { Campaign } from '../store/campaign'
 import { useY } from '../store/useY'
 import { Button } from '../ui/Button'
-import { openPopup } from '../ui/popup'
+import { usePopupDialog } from "./usePopupDialog";
 import { Dialog } from './CampaignDialogs'
 import { ContextMenu } from './ContextMenu'
 import { EntryWindow, rollTag } from './EntryWindow'
@@ -17,6 +17,9 @@ import { CharacterSheet } from './sheets'
 import { linkProxy } from './LinkChip'
 import { makeVerb } from './sheetParts'
 import { actionMenuItems } from "./actionMenu";
+import { entityTabId, registerEntityWindow } from "./entityWindows";
+import { closeEntityWindow } from "./entityWindows";
+import { layout } from "./panelLayout";
 
 /*
  * What links in rich text open: a pop-up for each link clicked (gear and
@@ -25,6 +28,33 @@ import { actionMenuItems } from "./actionMenu";
  */
 
 export function LinkPopups({ campaign }: { campaign: Campaign }) {
+  useEffect(() => {
+    const ids = [
+      ...layout.value.left.panels,
+      ...layout.value.right.panels,
+      ...layout.value.floating.map((w) => w.id),
+    ];
+    const restored = ids.flatMap((id) => {
+      if (!id.startsWith("entity:link:")) return [];
+      const key = id.slice("entity:link:".length);
+      const split = key.indexOf(":");
+      if (split < 0) return [];
+      const kind = key.slice(0, split) as LinkRef["kind"];
+      if (!["character", "item", "move", "note", "scene"].includes(kind))
+        return [];
+      const link = { kind, id: key.slice(split + 1) };
+      if (linkLabel(campaign, link.kind, link.id) === null) {
+        closeEntityWindow(entityTabId(`link:${linkKey(link)}`));
+        return [];
+      }
+      return [link];
+    });
+    const known = new Set(openLinks.value.map(linkKey));
+    openLinks.value = [
+      ...openLinks.value,
+      ...restored.filter((link) => !known.has(linkKey(link))),
+    ];
+  }, [campaign]);
   return (
     <>
       {openLinks.value.map((l) => (
@@ -38,17 +68,19 @@ export function LinkPopups({ campaign }: { campaign: Campaign }) {
 
 /** A pop-up for one link, marked so clicking the link again brings it forward. */
 function LinkDialog({ campaign, link, title, children }: { campaign: Campaign; link: LinkRef; title: string; children: ComponentChildren }) {
-  const ref = useRef<HTMLDialogElement>(null)
+  const id = entityTabId(`link:${linkKey(link)}`);
   useLayoutEffect(() => {
-    if (!ref.current) return
-    ref.current.dataset.entry = `link:${linkKey(link)}`
-    openPopup(ref.current)
-  }, [])
-  return (
-    <Dialog dialogRef={ref} title={title} onClose={() => closeLink(link)} proxy={linkProxy(campaign, link.kind, link.id, title)}>
-      {children}
-    </Dialog>
-  )
+    const proxy = linkProxy(campaign, link.kind, link.id, title);
+    registerEntityWindow({
+      id,
+      title,
+      icon: proxy.Icon,
+      proxy,
+      content: children,
+      close: () => closeLink(link),
+    });
+  }, [campaign, id, link, title, children]);
+  return null;
 }
 
 function LinkPopup({ campaign, link }: { campaign: Campaign; link: LinkRef }) {
@@ -69,6 +101,7 @@ function LinkPopup({ campaign, link }: { campaign: Campaign; link: LinkRef }) {
       return (
         <EntryWindow
           entryKey={entryKey}
+          windowId={entityTabId(`link:${linkKey(link)}`)}
           title={item.name}
           text={item.description}
           tags={item.tags}
@@ -96,6 +129,7 @@ function LinkPopup({ campaign, link }: { campaign: Campaign; link: LinkRef }) {
       return (
         <EntryWindow
           entryKey={entryKey}
+          windowId={entityTabId(`link:${linkKey(link)}`)}
           title={move.name}
           text={move.text}
           tags={tag ? [tag] : undefined}
@@ -160,9 +194,8 @@ function RenameLink() {
 }
 
 function RenameLinkDialog({ req }: { req: NonNullable<typeof linkRename.value> }) {
-  const ref = useRef<HTMLDialogElement>(null)
-  const text = useSignal(req.text)
-  useLayoutEffect(() => openPopup(ref.current), [])
+  const ref = usePopupDialog();
+  const text = useSignal(req.text);
   const done = (value: string | null) => {
     req.save(value)
     ref.current?.close()

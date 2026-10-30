@@ -1,16 +1,19 @@
-import { useSignal } from '@preact/signals'
+import { signal, useSignal } from '@preact/signals'
 import type { ComponentChildren } from 'preact'
-import { useLayoutEffect, useRef } from 'preact/hooks'
+import { useLayoutEffect } from 'preact/hooks'
 import { checkOf } from '../characters/moves'
 import type { ActionDef, GameSystem } from '../systems/types'
 import { morphOpen } from '../ui/morph'
-import { openPopup, raisePopup } from '../ui/popup'
+import { raisePopup } from '../ui/popup'
 import type { Icon } from '../ui/icons'
 import { hideTooltip } from '../ui/Tooltip'
 import { ListRow } from '../ui/List'
-import { Dialog, type WindowProxy } from './CampaignDialogs'
+import type { WindowProxy } from './CampaignDialogs'
 import { menuTrigger } from "../ui/menuTrigger";
 import { ContextMenu, type MenuItem } from "./ContextMenu";
+import { entityTabId, registerEntityWindow, closeEntityWindow, entityWindows } from './entityWindows'
+import { layout, locate, showPanel } from './panelLayout'
+import type { DockItemId } from './panelLayout'
 
 /*
  * Rows that show their rules in a tooltip beside them and, when clicked,
@@ -28,23 +31,32 @@ export function rollTag(system: GameSystem, m: ActionDef) {
   return system.stats.find((s) => s.id === check.stat)?.abbr ?? check.stat ?? null
 }
 
+const openEntries = signal<string[]>(Object.keys(entityWindows.value)
+  .filter((id) => id.startsWith('entity:entry:'))
+  .map((id) => id.slice('entity:entry:'.length)))
+
 /** Which entries have windows open, and how to open one from its row. */
 export function useEntryWindows() {
-  const open = useSignal<string[]>([])
   return {
-    keys: open.value,
+    keys: openEntries.value,
     /** Open the window for `key`, morphing it out of the row's tooltip (or the row). */
     show(key: string, row: Element) {
-      const already = document.querySelector<HTMLElement>(`dialog[data-entry="${CSS.escape(key)}"]`)
+      const id = entityTabId(`entry:${key}`)
+      if (locate(layout.value, id) !== 'closed') {
+        showPanel(id)
+        return
+      }
+      const already = document.querySelector<HTMLElement>(`dialog[data-window-id="${CSS.escape(id)}"]`)
       if (already) return raisePopup(already)
       const tip = document.querySelector('.tooltip:popover-open')
       morphOpen(tip ?? row, () => {
         hideTooltip()
-        open.value = [...open.value, key]
+        openEntries.value = [...new Set([...openEntries.value, key])]
       })
     },
     close(key: string) {
-      open.value = open.value.filter((k) => k !== key)
+      openEntries.value = openEntries.value.filter((k) => k !== key)
+      closeEntityWindow(entityTabId(`entry:${key}`))
     },
   }
 }
@@ -58,6 +70,7 @@ export function EntryWindow({
   onClose,
   proxy,
   menuItems,
+  windowId,
   children,
 }: {
   entryKey: string;
@@ -69,42 +82,28 @@ export function EntryWindow({
   proxy?: WindowProxy;
   /** Context-menu actions for this entry. */
   menuItems?: MenuItem[];
+  /** Shared identity when this entry is opened from a link popup. */
+  windowId?: DockItemId;
   /** The actions along the bottom. */
   children?: ComponentChildren;
 }) {
-  const ref = useRef<HTMLDialogElement>(null);
-  const menu = useSignal<{ x: number; y: number } | null>(null);
-  const trigger = menuTrigger((x, y) => (menu.value = { x, y }));
+  const id = windowId ?? entityTabId(`entry:${entryKey}`)
   useLayoutEffect(() => {
-    const dialog = ref.current;
-    if (!dialog) return;
-    dialog.dataset.entry = entryKey;
-    openPopup(dialog);
-  }, []);
-  return (
-    <>
-      <Dialog
-        dialogRef={ref}
-        title={title}
-        onClose={onClose}
-        proxy={proxy}
-        contextMenu={menuItems?.length ? trigger : undefined}
-      >
+    registerEntityWindow({
+      id,
+      title,
+      text,
+      tags,
+      proxy,
+      menuItems,
+      close: onClose,
+      content: <>
         <p class="move-text move-window-text">{text}</p>
-        {tags && tags.length > 0 && (
-          <p class="muted item-tags">{tags.join(", ")}</p>
-        )}
         {children && <div class="form-actions">{children}</div>}
-      </Dialog>
-      {menu.value && menuItems && (
-        <ContextMenu
-          {...menu.value}
-          items={menuItems}
-          onClose={() => (menu.value = null)}
-        />
-      )}
-    </>
-  );
+      </>,
+    })
+  }, [id, title, text, tags, proxy, menuItems, onClose, children])
+  return null
 }
 
 /**

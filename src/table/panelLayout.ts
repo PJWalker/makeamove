@@ -15,14 +15,16 @@ import {
   selectTab,
   showTab,
   type FloatingWindow,
+  type DockItemId,
   type Layout,
   type PanelId,
   type Side,
   withoutPanels,
+  isPanelId,
 } from './layoutModel'
 
-export { PANEL_ORDER, otherSide }
-export type { FloatingWindow, PanelId, Side }
+export { PANEL_ORDER, otherSide, isPanelId, locate }
+export type { DockItemId, FloatingWindow, PanelId, Side }
 
 /*
  * Where each panel lives: docked on the left or right, or floating in its own
@@ -66,7 +68,8 @@ export const unavailablePanels = signal<PanelId[]>([])
 /** The layout as it shows, without the unavailable panels. */
 export const shownLayout = computed(() => withoutPanels(layout.value, unavailablePanels.value))
 
-export const floatingWindows = computed(() => shownLayout.value.floating)
+export const floatingWindows = computed(() => shownLayout.value.floating.filter((w): w is FloatingWindow & { id: PanelId } => isPanelId(w.id)))
+export const floatingEntityWindows = computed(() => shownLayout.value.floating.filter((w) => !isPanelId(w.id)))
 
 /** Pixels each side takes: its body when open, and its tab strip. */
 export const dockInsets = computed(() => {
@@ -94,16 +97,16 @@ export function setSideWidth(side: Side, width: number) {
   if (w !== s.width || !s.open) layout.value = { ...l, [side]: { ...s, width: w, open: true } }
 }
 
-export function reorderPanel(id: PanelId, index: number) {
+export function reorderPanel(id: DockItemId, index: number) {
   layout.value = reorder(layout.value, id, index)
 }
 
-export function isFloating(id: PanelId) {
+export function isFloating(id: DockItemId) {
   return locate(layout.value, id) === 'floating'
 }
 
 /** Whether a panel can be seen right now: floating, or the open tab of an open sidebar. */
-export function panelVisible(id: PanelId) {
+export function panelVisible(id: DockItemId) {
   const side = locate(layout.value, id)
   if (side === 'floating') return true
   if (side === 'closed') return false
@@ -116,7 +119,7 @@ function topZ() {
   return nextZ()
 }
 
-export function selectPanel(id: PanelId) {
+export function selectPanel(id: DockItemId) {
   if (isFloating(id)) {
     raiseWindow(id)
     return
@@ -125,34 +128,38 @@ export function selectPanel(id: PanelId) {
 }
 
 /** Bring a panel into view without ever hiding it, unlike clicking its tab. */
-export function showPanel(id: PanelId) {
+export function showPanel(id: DockItemId) {
   if (isFloating(id)) raiseWindow(id)
   else layout.value = showTab(layout.value, id)
 }
 
-export function detachPanel(id: PanelId, x: number, y: number, w = 340, h = 440) {
+export function detachPanel(id: DockItemId, x: number, y: number, w = 340, h = 440) {
   layout.value = detach(layout.value, id, { ...whole({ x, y, w, h }), z: topZ() })
 }
 
 /** Dock a panel on a side, or back where it came from. Works from a window or the other side. */
-export function dockPanel(id: PanelId, side?: Side, index?: number, reveal = true) {
+export function dockPanel(id: DockItemId, side?: Side, index?: number, reveal = true) {
   layout.value = dock(layout.value, id, side, index, reveal)
 }
 
 /** Close a panel, or open a closed one again where it was. */
-export function setPanelClosed(id: PanelId, closed: boolean) {
+export function setPanelClosed(id: DockItemId, closed: boolean) {
   if (closed) layout.value = close(layout.value, id)
   else if (isClosed(id)) layout.value = dock(layout.value, id)
 }
 
-export const isClosed = (id: PanelId) => layout.value.closed.includes(id)
+export function closeEntityTab(id: DockItemId) {
+  layout.value = close(layout.value, id)
+}
 
-export function raiseWindow(id: PanelId) {
+export const isClosed = (id: DockItemId) => layout.value.closed.includes(id)
+
+export function raiseWindow(id: DockItemId) {
   const z = topZ()
   updateWindow(id, { z })
 }
 
-export function updateWindow(id: PanelId, patch: Partial<Omit<FloatingWindow, 'id'>>) {
+export function updateWindow(id: DockItemId, patch: Partial<Omit<FloatingWindow, 'id'>>) {
   const l = layout.value
   const clean = whole(patch)
   layout.value = { ...l, floating: l.floating.map((w) => (w.id === id ? { ...w, ...clean } : w)) }
@@ -175,9 +182,9 @@ export const dockTarget = signal<Side | null>(null)
 /** True while a window is being dragged, so empty sides can show as drop zones. */
 export const windowDragging = signal(false)
 /** Panels just pulled out of a tab, whose window should grow out of the tab icon. */
-export const spawnedFromTab = new Set<PanelId>()
+export const spawnedFromTab = new Set<DockItemId>()
 /** The window being dragged and where its pointer is, so it can shrink to a tab over a sidebar. */
-export const windowPointer = signal<{ id: PanelId; x: number; y: number } | null>(null)
+export const windowPointer = signal<{ id: DockItemId; x: number; y: number } | null>(null)
 
 function sideAt(x: number, y: number): Side | null {
   for (const side of SIDES) {
@@ -194,7 +201,7 @@ function tabsOf(side: Side) {
   return [...document.querySelectorAll<HTMLElement>(`.sidebar[data-side="${side}"] .rail-tab`)]
 }
 
-export function startWindowDrag(id: PanelId, e: PointerEvent, grabX: number, grabY: number) {
+export function startWindowDrag(id: DockItemId, e: PointerEvent, grabX: number, grabY: number) {
   raiseWindow(id)
   windowDragging.value = true
   const marker = dropLine('y')
