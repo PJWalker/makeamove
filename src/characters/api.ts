@@ -402,11 +402,12 @@ function inventoryOf(campaign: Campaign, characterId: string): Y.Map<ItemInstanc
   return own
 }
 
-export function addItem(campaign: Campaign, characterId: string, def: ItemDef) {
+export function addItem(campaign: Campaign, characterId: string, def: ItemDef, equip = false) {
   const inv = inventoryOf(campaign, characterId)
   if (!inv) return
   const last = [...inv.values()].map((i) => i.order).sort().at(-1) ?? null
   const item = instanceOf(def, generateKeyBetween(last, null))
+  if (equip && item.equippable) item.equipped = true
   inv.set(item.id, item)
 }
 

@@ -7,10 +7,16 @@ import { buildIndex, findAction } from '../actions/registry'
 import { diceFormula } from '../chat/commands'
 import { rank } from '../actions/search'
 import type { Action } from '../actions/types'
-import { editHotbar, insertAt, isPinned, pin, unpin } from '../characters/hotbar'
-import { IconAdd, IconShortcut } from '../ui/icons'
+import {
+  editHotbar,
+  insertAt,
+  isPinned,
+  pin,
+  unpin,
+} from "../characters/hotbar";
 import { isTyping } from '../ui/keys'
-import { editAction, RECORDER } from './ActionDialogs'
+import { RECORDER } from "./ActionDialogs";
+import { actionMenuItems } from "./actionMenu";
 import { actionEntity, dragEntity } from './entityDrag'
 import { menuTrigger } from '../ui/menuTrigger'
 import { ContextMenu, type MenuItem } from './ContextMenu'
@@ -87,24 +93,21 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
   /** Right-click for a menu; press and drag to pin the action onto the hotbar. */
   function rowTriggers(a: Action, i: number) {
     const trigger = menuTrigger((x, y) => {
-      cursor.value = i
-      const pinned = isPinned(campaign, a.id)
+      cursor.value = i;
       menu.value = {
         x,
         y,
         items: [
-          { label: pinned ? 'Remove from hotbar' : 'Add to hotbar', Icon: IconAdd, shortcut: 'Alt+Enter', onSelect: () => togglePin(a) },
-          {
-            label: shortcutFor(campaign, a.id) ? 'Change shortcut…' : 'Add shortcut…',
-            Icon: IconShortcut,
-            onSelect: () => {
-              paletteOpen.value = false
-              editAction('shortcut', a.id, a.title)
-            },
-          },
-          ...(a.available === true ? [{ label: 'Run', onSelect: () => choose(a) }] : []),
+          ...actionMenuItems(
+            campaign,
+            [{ id: a.id, title: a.title }],
+            () => (paletteOpen.value = false),
+          ),
+          ...(a.available === true
+            ? [{ label: "Run", onSelect: () => choose(a) }]
+            : []),
         ],
-      }
+      };
     })
     return {
       onContextMenu: trigger.onContextMenu,

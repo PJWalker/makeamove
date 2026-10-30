@@ -1,19 +1,63 @@
-import { AlphaFilter, Application, CanvasTextMetrics, Container, CullerPlugin, extensions, Graphics, ImageSource, Matrix, Sprite, Text, TextStyle, Texture } from 'pixi.js'
-import { type Camera, type Rect, toScreen, visibleWorld } from './camera'
-import { areaPolygon, corners, fromLocal as fromLocalPoint, shapeOutline } from './geometry'
-import { type Grid, DEFAULT_GRID, type Point, hexCellsIn, hexCentre, hexCorners, squareLines } from './grid'
-import { formatDistance, measure, tokenDistance } from './measure'
+import { entryIconSvg } from "../ui/entryIcons";
+import {
+  AlphaFilter,
+  Application,
+  CanvasTextMetrics,
+  Container,
+  CullerPlugin,
+  extensions,
+  Graphics,
+  ImageSource,
+  Matrix,
+  Sprite,
+  Text,
+  TextStyle,
+  Texture,
+} from "pixi.js";
+import { type Camera, type Rect, toScreen, visibleWorld } from "./camera";
+import {
+  areaPolygon,
+  corners,
+  fromLocal as fromLocalPoint,
+  shapeOutline,
+} from "./geometry";
+import {
+  type Grid,
+  DEFAULT_GRID,
+  type Point,
+  hexCellsIn,
+  hexCentre,
+  hexCorners,
+  squareLines,
+} from "./grid";
+import { formatDistance, measure, tokenDistance } from "./measure";
 import { forgetBitmaps, loadBitmap, onBlobFetcher } from "./images";
 import { PING_MS, TRAIL_MS, type PresenceMark } from "./presence";
-import type { TokenStat } from '../systems/types'
-import { strokeOutline, hasRealPressure } from './stroke'
-import { blocked, blockingSegments, distanceToSegment, lightReach, type Segment, TOKEN_SHADE, tokenBlocker } from './vision'
-import { type Blocker, Lamp } from './lampShader'
-import { AREA_COLOURS, isPlainToken, LAYERS, type Layer, type SceneElement, type ShapeKind, type Transform } from './types'
+import type { TokenStat } from "../systems/types";
+import { strokeOutline, hasRealPressure } from "./stroke";
+import {
+  blocked,
+  blockingSegments,
+  distanceToSegment,
+  lightReach,
+  type Segment,
+  TOKEN_SHADE,
+  tokenBlocker,
+} from "./vision";
+import { type Blocker, Lamp } from "./lampShader";
+import {
+  AREA_COLOURS,
+  isPlainToken,
+  LAYERS,
+  type Layer,
+  type SceneElement,
+  type ShapeKind,
+  type Transform,
+} from "./types";
 
 /** The UI accent, oklch(82% 0.15 85), as sRGB for the canvas. */
-const ACCENT = 0xf0bb3b
-const INK = 0x14161c
+const ACCENT = 0xf0bb3b;
+const INK = 0x14161c;
 
 /** Token names never get smaller or bigger than this on screen, in px. */
 const NAME_MIN = 11;
@@ -62,37 +106,53 @@ const BAR_GAP = 2;
 const BAR_TEXT_MIN_W = 44;
 
 /** Screen px between a selection's top edge and its rotate handle. */
-export const ROTATE_HANDLE_GAP = 28
-export const HANDLE_SIZE = 10
+export const ROTATE_HANDLE_GAP = 28;
+export const HANDLE_SIZE = 10;
 
 /** What's being drawn, before it's added: a pen stroke, or a shape being dragged out (with its size to show). */
 export type Draft =
-  | { kind?: 'stroke'; points: number[]; colour: string; width: number; layer: Layer }
-  | { kind: 'polygon'; points: Point[]; colour: string; layer: Layer }
-  | { kind: 'shape'; shape: ShapeKind; t: Transform; colour: string; width: number; layer: Layer; label?: string }
+  | {
+      kind?: "stroke";
+      points: number[];
+      colour: string;
+      width: number;
+      layer: Layer;
+    }
+  | { kind: "polygon"; points: Point[]; colour: string; layer: Layer }
+  | {
+      kind: "shape";
+      shape: ShapeKind;
+      t: Transform;
+      colour: string;
+      width: number;
+      layer: Layer;
+      label?: string;
+    };
 
 export interface OverlayState {
-  selected: SceneElement[]
+  selected: SceneElement[];
   /** Show resize and rotate handles (one unlocked element selected). */
-  handles: boolean
+  handles: boolean;
   /** Frame around a multi-selection, with a knob to rotate it as a group. */
-  group: Transform | null
-  marquee: Rect | null
+  group: Transform | null;
+  marquee: Rect | null;
   /** The eraser's reach, in world coordinates. */
-  eraser: { p: Point; r: number } | null
+  eraser: { p: Point; r: number } | null;
   /** The token this device's targets are measured from, if any. */
-  rangeFrom: string | null
+  rangeFrom: string | null;
 }
 
 interface View {
-  root: Container
+  root: Container;
   /** Changes when the element needs rebuilding rather than just moving. */
-  key: string
-  apply: (t: Transform) => void
+  key: string;
+  apply: (t: Transform) => void;
+  dropHighlight?: Graphics;
+  dropFlash?: Graphics;
 }
 
 // Skip drawing elements that are off screen.
-extensions.add(CullerPlugin)
+extensions.add(CullerPlugin);
 
 /** A remote cursor travelling from one reported position to the next. */
 interface CursorMove {
@@ -112,17 +172,36 @@ function cursorAt(m: CursorMove, now: number): Point {
   };
 }
 
-const textures = new Map<string, Promise<Texture | null>>()
+const textures = new Map<string, Promise<Texture | null>>();
 
 /** Free every texture; call when the last renderer goes away. */
 function releaseTextures() {
-  for (const p of textures.values()) p.then((t) => t?.destroy(true))
-  textures.clear()
-  forgetBitmaps()
+  for (const p of textures.values()) p.then((t) => t?.destroy(true));
+  textures.clear();
+  forgetBitmaps();
+}
+
+function iconGraphicFor(name: string): Graphics | null {
+  const graphic = new Graphics();
+  try {
+    graphic.svg(entryIconSvg(name));
+  } catch (error) {
+    console.warn(`Couldn't draw token icon ${name}`, error);
+    return null;
+  }
+  const bounds = graphic.bounds;
+  if (!bounds.width || !bounds.height) return null;
+  const scale = 56 / Math.max(bounds.width, bounds.height);
+  graphic.scale.set(scale);
+  graphic.position.set(
+    -(bounds.x + bounds.width / 2) * scale,
+    -(bounds.y + bounds.height / 2) * scale,
+  );
+  return graphic;
 }
 
 function textureFor(hash: string): Promise<Texture | null> {
-  let p = textures.get(hash)
+  let p = textures.get(hash);
   if (!p) {
     p = loadBitmap(hash).then((bitmap) =>
       bitmap
@@ -138,48 +217,58 @@ function textureFor(hash: string): Promise<Texture | null> {
     // A miss isn't final; a peer may supply it later.
     p.then((t) => t || textures.get(hash) !== p || textures.delete(hash));
   }
-  return p
+  return p;
 }
 
 /** Graphics only free their own geometry when told to destroy their context. */
-const DESTROY_VIEW = { children: true, context: true } as const
+const DESTROY_VIEW = { children: true, context: true } as const;
 
 function contentKey(el: SceneElement): string {
   switch (el.type) {
-    case 'map':
-      return `map:${el.image.hash}`
-    case 'token':
-      return `token:${el.image?.hash ?? ''}:${el.name}:${el.colour}:${isPlainToken(el) ? 'plain' : 'disc'}`
-    case 'drawing':
-      return `drawing:${el.points.length}:${el.points[0]}:${el.points[1]}:${el.colour}:${el.width}:${el.bw}:${el.bh}`
-    case 'shape':
-      return `shape:${el.shape}:${el.colour}:${el.width}`
-    case 'text':
-      return `text:${el.text}:${el.colour}:${el.size}:${el.bw}:${el.bh}`
-    case 'wall':
-      return `wall:${!!el.door}:${!!el.open}`
-    case 'light':
-      return `light:${el.bright}:${el.dim}:${el.colour}`
-    case 'area':
-      return `area:${el.tone}:${el.points.join(',')}:${el.bw}:${el.bh}`
+    case "map":
+      return `map:${el.image.hash}`;
+    case "token":
+      return `token:${el.image?.hash ?? ""}:${el.icon ?? ""}:${el.name}:${el.colour}:${isPlainToken(el) ? "plain" : "disc"}`;
+    case "drawing":
+      return `drawing:${el.points.length}:${el.points[0]}:${el.points[1]}:${el.colour}:${el.width}:${el.bw}:${el.bh}`;
+    case "shape":
+      return `shape:${el.shape}:${el.colour}:${el.width}`;
+    case "text":
+      return `text:${el.text}:${el.colour}:${el.size}:${el.bw}:${el.bh}`;
+    case "wall":
+      return `wall:${!!el.door}:${!!el.open}`;
+    case "light":
+      return `light:${el.bright}:${el.dim}:${el.colour}`;
+    case "area":
+      return `area:${el.tone}:${el.points.join(",")}:${el.bw}:${el.bh}`;
   }
 }
 
 /** A shape's outline and tinted inside, drawn in its own frame at its size. */
-export function drawShape(g: Graphics, shape: ShapeKind, w: number, h: number, colour: string, width: number) {
-  const pts = shapeOutline(shape, w, h).flatMap((p) => [p.x, p.y])
-  g.clear().poly(pts).fill({ color: colour, alpha: 0.22 }).stroke({ color: colour, width, join: 'round' })
+export function drawShape(
+  g: Graphics,
+  shape: ShapeKind,
+  w: number,
+  h: number,
+  colour: string,
+  width: number,
+) {
+  const pts = shapeOutline(shape, w, h).flatMap((p) => [p.x, p.y]);
+  g.clear()
+    .poly(pts)
+    .fill({ color: colour, alpha: 0.22 })
+    .stroke({ color: colour, width, join: "round" });
 }
 
 /** Text on the map: a light outline keeps it readable over any map. */
 export const textStyle = (colour: string, size: number) => ({
-  fontFamily: 'Cabin, sans-serif',
+  fontFamily: "Cabin, sans-serif",
   fontSize: size,
-  fontWeight: '700' as const,
+  fontWeight: "700" as const,
   fill: colour,
-  stroke: { color: INK, width: Math.max(2, size / 8), join: 'round' as const },
-  align: 'center' as const,
-})
+  stroke: { color: INK, width: Math.max(2, size / 8), join: "round" as const },
+  align: "center" as const,
+});
 
 /**
  * Draws a scene with PixiJS. It renders on demand rather than every frame:
@@ -213,10 +302,13 @@ export class SceneRenderer {
   private marks: PresenceMark[] = [];
   private cursors = new Map<string, CursorMove>();
   private views = new Map<string, View>();
+  private dropHighlightToken: string | null = null;
+  private dropFlashFrames = new Map<string, number>();
   /** What a linked token shows, from its character. */
   private statsFor: (characterId: string) => TokenStat[] = () => [];
   /** Condition pips and the turn marker, by token (see setTokenMarks). */
-  private marksFor: (tokenId: string, characterId?: string) => TokenMarks = () => NO_MARKS;
+  private marksFor: (tokenId: string, characterId?: string) => TokenMarks =
+    () => NO_MARKS;
   private elements: SceneElement[] = [];
   private byId = new Map<string, SceneElement>();
   /** Elements given a preview transform at the last render, to put back once it's gone. */
@@ -227,7 +319,15 @@ export class SceneRenderer {
    * What needs redrawing. previews: only drag transforms moved, not the
    * elements themselves. presence: only cursors, pings, trails and rulers.
    */
-  private dirty = { elements: false, previews: false, camera: true, grid: true, overlay: true, presence: true, lighting: true };
+  private dirty = {
+    elements: false,
+    previews: false,
+    camera: true,
+    grid: true,
+    overlay: true,
+    presence: true,
+    lighting: true,
+  };
   private resizeObserver: ResizeObserver | null = null;
   private destroyed = false;
   private stopFetcherWatch: (() => void) | null = null;
@@ -323,7 +423,12 @@ export class SceneRenderer {
     );
     // Each draws dark over the view and erases what's lit or seen; a filter
     // renders it apart, so the erasing only cuts its own darkness.
-    this.lightLayer.addChild(this.lightG, this.lampLayer, this.lightErase, this.lightDark);
+    this.lightLayer.addChild(
+      this.lightG,
+      this.lampLayer,
+      this.lightErase,
+      this.lightDark,
+    );
     this.lightLayer.filters = [new AlphaFilter()];
     this.fogLayer.addChild(this.fogG);
     this.fogLayer.filters = [new AlphaFilter()];
@@ -352,6 +457,9 @@ export class SceneRenderer {
   destroy() {
     this.destroyed = true;
     cancelAnimationFrame(this.frame);
+    for (const frame of this.dropFlashFrames.values())
+      cancelAnimationFrame(frame);
+    this.dropFlashFrames.clear();
     this.resizeObserver?.disconnect();
     this.stopFetcherWatch?.();
     if (this.app.renderer) {
@@ -453,15 +561,24 @@ export class SceneRenderer {
   }
 
   /** The size text takes when drawn on the map, in world px. */
-  measureText(text: string, colour: string, size: number): { w: number; h: number } {
-    const m = CanvasTextMetrics.measureText(text, new TextStyle(textStyle(colour, size)));
+  measureText(
+    text: string,
+    colour: string,
+    size: number,
+  ): { w: number; h: number } {
+    const m = CanvasTextMetrics.measureText(
+      text,
+      new TextStyle(textStyle(colour, size)),
+    );
     return { w: Math.ceil(m.width), h: Math.ceil(m.height) };
   }
 
   // Elements
 
   /** What marks each token: a pip per condition, and a ring on the one whose turn it is. */
-  setTokenMarks(marksFor: (tokenId: string, characterId?: string) => TokenMarks) {
+  setTokenMarks(
+    marksFor: (tokenId: string, characterId?: string) => TokenMarks,
+  ) {
     this.marksFor = marksFor;
     this.invalidate("overlay");
   }
@@ -471,11 +588,52 @@ export class SceneRenderer {
     this.invalidate("overlay");
   }
 
+  setDropHighlight(tokenId: string | null) {
+    if (this.dropHighlightToken === tokenId) return;
+    this.dropHighlightToken = tokenId;
+    for (const [id, view] of this.views)
+      if (view.dropHighlight) view.dropHighlight.visible = id === tokenId;
+    this.invalidate("overlay");
+  }
+
+  flashToken(tokenId: string) {
+    const view = this.views.get(tokenId);
+    const ring = view?.dropFlash;
+    if (!view || !ring) return;
+    const oldFrame = this.dropFlashFrames.get(tokenId);
+    if (oldFrame) cancelAnimationFrame(oldFrame);
+    const start = performance.now();
+    ring.visible = true;
+    const animate = (now: number) => {
+      if (this.destroyed || this.views.get(tokenId) !== view) {
+        this.dropFlashFrames.delete(tokenId);
+        return;
+      }
+      const progress = Math.min(1, (now - start) / 360);
+      ring.alpha = Math.sin(progress * Math.PI);
+      this.invalidate("overlay");
+      if (progress < 1)
+        this.dropFlashFrames.set(tokenId, requestAnimationFrame(animate));
+      else {
+        ring.visible = false;
+        ring.alpha = 1;
+        this.dropFlashFrames.delete(tokenId);
+        this.invalidate("overlay");
+      }
+    };
+    this.dropFlashFrames.set(tokenId, requestAnimationFrame(animate));
+  }
+
   /** Hide what's hidden for now (erased strokes), the GM's walls from everyone else, and lamps and areas outside the Lights tool. */
   private hiddenSync() {
     for (const [id, view] of this.views) {
       const type = this.byId.get(id)?.type;
-      const helper = type === "wall" ? this.showHelpers : type === "light" || type === "area" ? this.showHelpers && this.lightsShown : true;
+      const helper =
+        type === "wall"
+          ? this.showHelpers
+          : type === "light" || type === "area"
+            ? this.showHelpers && this.lightsShown
+            : true;
       view.root.visible = !this.hidden.has(id) && helper;
     }
   }
@@ -622,6 +780,13 @@ export class SceneRenderer {
             anchor: 0.5,
           });
           body.addChildAt(initial, 1);
+          if (el.icon && !el.image) {
+            const icon = iconGraphicFor(el.icon);
+            if (icon) {
+              initial.visible = false;
+              body.addChildAt(icon, 1);
+            }
+          }
           if (el.image) {
             // The initial stands in until the image loads, or if it's missing.
             textureFor(el.image.hash).then((tex) => {
@@ -641,11 +806,24 @@ export class SceneRenderer {
             });
           }
         }
+        const dropHighlight = new Graphics()
+          .circle(0, 0, 49)
+          .stroke({ color: 0xffffff, width: 3 })
+          .circle(0, 0, 45)
+          .stroke({ color: ACCENT, width: 4 });
+        dropHighlight.visible = el.id === this.dropHighlightToken;
+        const dropFlash = new Graphics()
+          .circle(0, 0, 50)
+          .stroke({ color: 0xffffff, width: 10 });
+        dropFlash.visible = false;
+        body.addChild(dropHighlight, dropFlash);
         root.addChild(body);
 
         return {
           root,
           key,
+          dropHighlight,
+          dropFlash,
           apply: (t) => {
             root.position.set(t.x, t.y);
             body.rotation = t.rot;
@@ -708,7 +886,12 @@ export class SceneRenderer {
             g.clear()
               .moveTo(-t.w / 2, 0)
               .lineTo(t.w / 2, 0)
-              .stroke({ color: colour, width: el.door ? 8 : 5, alpha: el.door && el.open ? 0.4 : 0.9, cap: "round" })
+              .stroke({
+                color: colour,
+                width: el.door ? 8 : 5,
+                alpha: el.door && el.open ? 0.4 : 0.9,
+                cap: "round",
+              })
               .circle(-t.w / 2, 0, 4)
               .circle(t.w / 2, 0, 4)
               .fill({ color: colour });
@@ -761,7 +944,12 @@ export class SceneRenderer {
       }
 
       case "text": {
-        const text = new Text({ text: el.text, style: textStyle(el.colour, el.size), anchor: 0.5, resolution: 2 });
+        const text = new Text({
+          text: el.text,
+          style: textStyle(el.colour, el.size),
+          anchor: 0.5,
+          resolution: 2,
+        });
         root.addChild(text);
         return {
           root,
@@ -779,7 +967,11 @@ export class SceneRenderer {
   // Light and sight
 
   /** Set the scene's lighting, who sees, and whether the GM's walls and lights show. */
-  setLighting(lighting: Lighting, viewers: string[] | null, showHelpers: boolean) {
+  setLighting(
+    lighting: Lighting,
+    viewers: string[] | null,
+    showHelpers: boolean,
+  ) {
     this.lighting = lighting;
     this.viewers = viewers;
     this.showHelpers = showHelpers;
@@ -795,24 +987,41 @@ export class SceneRenderer {
   private drawLighting() {
     const view = visibleWorld(this.camera, this.size.width, this.size.height);
     const margin = Math.max(view.w, view.h);
-    const box = { x: view.x - margin, y: view.y - margin, w: view.w + 2 * margin, h: view.h + 2 * margin };
+    const box = {
+      x: view.x - margin,
+      y: view.y - margin,
+      w: view.w + 2 * margin,
+      h: view.h + 2 * margin,
+    };
     const at = (el: SceneElement) => this.previews.get(el.id) ?? el;
-    const walls = blockingSegments(this.elements.map((el) => ({ ...el, ...at(el) }) as SceneElement));
+    const walls = blockingSegments(
+      this.elements.map((el) => ({ ...el, ...at(el) }) as SceneElement),
+    );
 
     const lg = this.lightG.clear();
     const erase = this.lightErase.clear();
     const dark = this.lightDark.clear();
     const { enabled, darkness } = this.lighting;
     const strength = this.viewers ? 1 : 0.5;
-    const areas = this.elements.filter((el) => el.type === "area" && !this.hidden.has(el.id));
-    this.lightLayer.visible = enabled && (darkness > 0 || areas.some((el) => el.type === "area" && el.tone === "dark"));
+    const areas = this.elements.filter(
+      (el) => el.type === "area" && !this.hidden.has(el.id),
+    );
+    this.lightLayer.visible =
+      enabled &&
+      (darkness > 0 ||
+        areas.some((el) => el.type === "area" && el.tone === "dark"));
     const lit = new Set<string>();
     const tinted = new Set<string>();
     this.flickering = [];
     this.tintLayer.visible = enabled;
     if (enabled) {
-      lg.rect(box.x, box.y, box.w, box.h).fill({ color: 0x000000, alpha: darkness * strength });
-      const tokens = this.elements.filter((el) => el.type === "token" && !this.hidden.has(el.id)).map(at);
+      lg.rect(box.x, box.y, box.w, box.h).fill({
+        color: 0x000000,
+        alpha: darkness * strength,
+      });
+      const tokens = this.elements
+        .filter((el) => el.type === "token" && !this.hidden.has(el.id))
+        .map(at);
       for (const el of this.elements) {
         if (el.type !== "light" || this.hidden.has(el.id)) continue;
         const t = at(el);
@@ -842,12 +1051,14 @@ export class SceneRenderer {
         tinted.add(el.id);
         drawn.push(this.lampFor(this.tints, el.id, this.tintLayer, true));
         for (const lamp of drawn) lamp.update(state);
-        if (el.flicker) this.flickering.push({ lamps: drawn, phase: hashPhase(el.id) });
+        if (el.flicker)
+          this.flickering.push({ lamps: drawn, phase: hashPhase(el.id) });
       }
       for (const el of this.lightLayer.visible ? areas : []) {
         if (el.type !== "area") continue;
         const poly = flat(areaPolygon({ ...el, ...at(el) }));
-        if (el.tone === "light") erase.poly(poly).fill({ color: 0xffffff, alpha: 1 });
+        if (el.tone === "light")
+          erase.poly(poly).fill({ color: 0xffffff, alpha: 1 });
         else dark.poly(poly).fill({ color: 0x000000, alpha: strength });
       }
     }
@@ -855,7 +1066,8 @@ export class SceneRenderer {
     this.dropLamps(this.tints, tinted);
 
     const fg = this.fogG.clear();
-    const viewers = this.viewers?.map((id) => this.byId.get(id)).filter((el) => !!el) ?? null;
+    const viewers =
+      this.viewers?.map((id) => this.byId.get(id)).filter((el) => !!el) ?? null;
     this.fogLayer.visible = !!viewers?.length;
     this.sight = null;
     const seeing = new Set<string>();
@@ -869,14 +1081,25 @@ export class SceneRenderer {
       for (const v of from) {
         seeing.add(v.id);
         // An eye a pixel across, so the edge of sight is smooth but sharp.
-        this.lampFor(this.sights, v.id, this.fogLayer).update({ at: v.at, radius: 0.75 / this.camera.zoom, falloff: null, box, walls });
+        this.lampFor(this.sights, v.id, this.fogLayer).update({
+          at: v.at,
+          radius: 0.75 / this.camera.zoom,
+          falloff: null,
+          box,
+          walls,
+        });
       }
     }
     this.dropLamps(this.sights, seeing);
   }
 
   /** The lamp drawn for a light or a viewer, made the first time it's needed. */
-  private lampFor(lamps: Map<string, Lamp>, id: string, layer: Container, tint = false): Lamp {
+  private lampFor(
+    lamps: Map<string, Lamp>,
+    id: string,
+    layer: Container,
+    tint = false,
+  ): Lamp {
     let lamp = lamps.get(id);
     if (!lamp) {
       lamp = new Lamp(tint);
@@ -892,10 +1115,17 @@ export class SceneRenderer {
    * Steady under reduced motion.
    */
   private flicker(): boolean {
-    if (!this.flickering.length || matchMedia("(prefers-reduced-motion: reduce)").matches) return false;
+    if (
+      !this.flickering.length ||
+      matchMedia("(prefers-reduced-motion: reduce)").matches
+    )
+      return false;
     const t = performance.now() / 1000;
     for (const { lamps, phase: p } of this.flickering) {
-      const wave = 0.5 * Math.sin(7.3 * t + p) + 0.3 * Math.sin(13.7 * t + 2.1 * p) + 0.2 * Math.sin(23.1 * t + 3.7 * p);
+      const wave =
+        0.5 * Math.sin(7.3 * t + p) +
+        0.3 * Math.sin(13.7 * t + 2.1 * p) +
+        0.2 * Math.sin(23.1 * t + 3.7 * p);
       const n = Math.min(1, Math.max(0, 0.55 + 0.45 * wave));
       for (const lamp of lamps) lamp.setFlicker(n);
     }
@@ -992,11 +1222,13 @@ export class SceneRenderer {
       g.position.set(0, 0);
       g.rotation = 0;
       const width = 2 / this.camera.zoom;
-      if (d.points.length > 2) g.poly(flat(d.points)).fill({ color: d.colour, alpha: 0.15 });
+      if (d.points.length > 2)
+        g.poly(flat(d.points)).fill({ color: d.colour, alpha: 0.15 });
       g.moveTo(d.points[0].x, d.points[0].y);
       for (const p of d.points.slice(1)) g.lineTo(p.x, p.y);
       g.stroke({ color: d.colour, width });
-      for (const p of d.points.slice(0, -1)) g.circle(p.x, p.y, 4 / this.camera.zoom);
+      for (const p of d.points.slice(0, -1))
+        g.circle(p.x, p.y, 4 / this.camera.zoom);
       g.fill({ color: d.colour });
       return;
     }
@@ -1053,7 +1285,9 @@ export class SceneRenderer {
     const cam = this.camera;
     const byId = this.byId;
     const rings = new Map<string, number>();
-    const fromEl = this.overlayState.rangeFrom ? byId.get(this.overlayState.rangeFrom) : undefined;
+    const fromEl = this.overlayState.rangeFrom
+      ? byId.get(this.overlayState.rangeFrom)
+      : undefined;
     const from = fromEl && (this.previews.get(fromEl.id) ?? fromEl);
     for (const m of this.marks) {
       for (const id of m.targets) {
@@ -1067,7 +1301,12 @@ export class SceneRenderer {
         g.circle(c.x, c.y, r).stroke({ color: INK, width: 5, alpha: 0.5 });
         g.circle(c.x, c.y, r).stroke({ color: m.colour, width: 2 });
         // Sight ticks at the four compass points.
-        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        for (const [dx, dy] of [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ]) {
           g.moveTo(c.x + dx * (r - 5), c.y + dy * (r - 5))
             .lineTo(c.x + dx * (r + 5), c.y + dy * (r + 5))
             .stroke({ color: m.colour, width: 2.5 });
@@ -1105,7 +1344,8 @@ export class SceneRenderer {
     const usedNames = new Set<string>();
     const usedValues = new Set<string>();
     type Box = { id: string; x: number; y: number; w: number; h: number };
-    const overlaps = (a: Box, b: Box) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+    const overlaps = (a: Box, b: Box) =>
+      a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
     const plans: {
       id: string;
       t: Transform;
@@ -1124,17 +1364,26 @@ export class SceneRenderer {
       // Out of sight: no name or bars to give it away.
       if (this.unseen(t)) continue;
       const screenW = t.w * cam.zoom;
-      const stats = !el.hideBars && el.characterId ? this.statsFor(el.characterId) : [];
+      const stats =
+        !el.hideBars && el.characterId ? this.statsFor(el.characterId) : [];
       const foot = toScreen(cam, { x: t.x, y: t.y + t.h / 2 });
       let y = foot.y + 3;
       let bars: Box | null = null;
       let wideBars: Box | null = null;
-      const barH = Math.round(Math.min(BAR_MAX_H, Math.max(BAR_MIN_H, screenW * 0.11)));
+      const barH = Math.round(
+        Math.min(BAR_MAX_H, Math.max(BAR_MIN_H, screenW * 0.11)),
+      );
       if (stats.length) {
         // The first bar straddles the token's bottom edge.
         const top = Math.round(foot.y - barH / 2);
         const h = stats.length * (barH + BAR_GAP) - BAR_GAP;
-        const box = (w: number) => ({ id: el.id, x: Math.round(foot.x - w / 2), y: top, w: Math.round(w), h });
+        const box = (w: number) => ({
+          id: el.id,
+          x: Math.round(foot.x - w / 2),
+          y: top,
+          w: Math.round(w),
+          h,
+        });
         bars = box(Math.max(BAR_MIN_W, screenW * 0.9));
         wideBars = box(Math.max(BAR_MIN_W, screenW * 1.5));
         y = top + h + 2;
@@ -1160,12 +1409,30 @@ export class SceneRenderer {
           this.names.addChild(text);
         }
         if (text.text !== label) text.text = label;
-        text.scale.set(Math.min(NAME_MAX, Math.max(NAME_MIN, screenW * 0.2)) / NAME_MAX);
+        text.scale.set(
+          Math.min(NAME_MAX, Math.max(NAME_MIN, screenW * 0.2)) / NAME_MAX,
+        );
         text.position.set(Math.round(foot.x), Math.round(y));
         usedNames.add(el.id);
-        name = { id: el.id, x: foot.x - text.width / 2, y, w: text.width, h: text.height, text };
+        name = {
+          id: el.id,
+          x: foot.x - text.width / 2,
+          y,
+          w: text.width,
+          h: text.height,
+          text,
+        };
       }
-      plans.push({ id: el.id, t, stats, bars, wideBars, barH, name, small: screenW < NAME_TOKEN_MIN });
+      plans.push({
+        id: el.id,
+        t,
+        stats,
+        bars,
+        wideBars,
+        barH,
+        name,
+        small: screenW < NAME_TOKEN_MIN,
+      });
     }
 
     // Decide what shows: bars give way only to other bars; names give way to both.
@@ -1175,16 +1442,31 @@ export class SceneRenderer {
     const shown = plans.filter((p) => !p.small);
     // Wide bars where they'd touch no other token's wide bars.
     const wide = new Set(
-      shown.filter((p) => p.wideBars && !shown.some((q) => q !== p && q.wideBars && overlaps(p.wideBars!, q.wideBars))).map((p) => p.id),
+      shown
+        .filter(
+          (p) =>
+            p.wideBars &&
+            !shown.some(
+              (q) => q !== p && q.wideBars && overlaps(p.wideBars!, q.wideBars),
+            ),
+        )
+        .map((p) => p.id),
     );
     for (const p of plans) if (wide.has(p.id)) p.bars = p.wideBars;
     for (const p of shown) {
-      if (p.bars && !shown.some((q) => q !== p && q.bars && overlaps(p.bars!, q.bars))) showBars.add(p.id);
+      if (
+        p.bars &&
+        !shown.some((q) => q !== p && q.bars && overlaps(p.bars!, q.bars))
+      )
+        showBars.add(p.id);
     }
     for (const p of shown) {
       if (!p.name) continue;
       const clash = shown.some(
-        (q) => q !== p && ((q.name && overlaps(p.name!, q.name)) || (q.bars && showBars.has(q.id) && overlaps(p.name!, q.bars))),
+        (q) =>
+          q !== p &&
+          ((q.name && overlaps(p.name!, q.name)) ||
+            (q.bars && showBars.has(q.id) && overlaps(p.name!, q.bars))),
       );
       if (!clash) showName.add(p.id);
     }
@@ -1194,7 +1476,10 @@ export class SceneRenderer {
     }
 
     // Draw, the hovered token's last so it sits on top.
-    const ordered = [...plans.filter((p) => p.id !== hover), ...plans.filter((p) => p.id === hover)];
+    const ordered = [
+      ...plans.filter((p) => p.id !== hover),
+      ...plans.filter((p) => p.id === hover),
+    ];
     for (const p of ordered) {
       if (p.name) p.name.text.visible = showName.has(p.id);
       if (!p.bars || !showBars.has(p.id)) continue;
@@ -1204,7 +1489,10 @@ export class SceneRenderer {
         const y = p.bars!.y + i * (barH + BAR_GAP);
         const frac = s.max > 0 ? Math.min(1, Math.max(0, s.value / s.max)) : 0;
         g.roundRect(x, y, w, barH, 3).fill({ color: INK, alpha: 0.85 });
-        if (frac > 0) g.roundRect(x + 1.5, y + 1.5, (w - 3) * frac, barH - 3, 2).fill({ color: s.colour });
+        if (frac > 0)
+          g.roundRect(x + 1.5, y + 1.5, (w - 3) * frac, barH - 3, 2).fill({
+            color: s.colour,
+          });
         // The value, when the bar is wide enough to read it.
         if (w < BAR_TEXT_MIN_W) return;
         const key = `${p.id}:${s.id}`;
@@ -1212,7 +1500,12 @@ export class SceneRenderer {
         if (!text) {
           text = new Text({
             text: "",
-            style: { fontFamily: "Cabin, sans-serif", fontSize: BAR_MAX_H - 2, fontWeight: "700", fill: 0xffffff },
+            style: {
+              fontFamily: "Cabin, sans-serif",
+              fontSize: BAR_MAX_H - 2,
+              fontWeight: "700",
+              fill: 0xffffff,
+            },
             anchor: 0.5,
             resolution: 2,
           });
@@ -1224,31 +1517,47 @@ export class SceneRenderer {
         text.scale.set((barH - 1) / (BAR_MAX_H - 2));
         text.position.set(Math.round(x + w / 2), Math.round(y + barH / 2));
         usedValues.add(key);
-        if (p.id === hover) this.barText.setChildIndex(text, this.barText.children.length - 1);
+        if (p.id === hover)
+          this.barText.setChildIndex(text, this.barText.children.length - 1);
       });
     }
 
     // Condition pips along each token's top edge, and a ring round the token whose turn it is.
     for (const el of this.elements) {
-      if (el.type !== "token" || this.hidden.has(el.id) || this.unseen(this.previews.get(el.id) ?? el)) continue;
+      if (
+        el.type !== "token" ||
+        this.hidden.has(el.id) ||
+        this.unseen(this.previews.get(el.id) ?? el)
+      )
+        continue;
       const marks = this.marksFor(el.id, el.characterId);
       if (!marks.pips.length && !marks.turn) continue;
       const t = this.previews.get(el.id) ?? el;
       const c = toScreen(cam, { x: t.x, y: t.y });
       const half = (Math.max(t.w, t.h) * cam.zoom) / 2;
-      if (marks.turn) g.circle(c.x, c.y, half + 5).stroke({ color: TURN_COLOUR, width: 3, alpha: 0.95 });
-      const r = Math.round(Math.min(PIP_MAX_R, Math.max(PIP_MIN_R, half * 0.12)));
+      if (marks.turn)
+        g.circle(c.x, c.y, half + 5).stroke({
+          color: TURN_COLOUR,
+          width: 3,
+          alpha: 0.95,
+        });
+      const r = Math.round(
+        Math.min(PIP_MAX_R, Math.max(PIP_MIN_R, half * 0.12)),
+      );
       const shown = marks.pips.slice(0, PIP_MAX);
       const span = shown.length * (r * 2 + 2) - 2;
       const top = toScreen(cam, { x: t.x, y: t.y - t.h / 2 }).y;
       shown.forEach((colour, i) => {
         const x = c.x - span / 2 + r + i * (r * 2 + 2);
-        g.circle(x, top, r).fill({ color: colour }).stroke({ color: INK, width: 1.5 });
+        g.circle(x, top, r)
+          .fill({ color: colour })
+          .stroke({ color: INK, width: 1.5 });
       });
     }
 
     const hovered = hover && this.namePool.get(hover);
-    if (hovered && hovered.parent) this.names.setChildIndex(hovered, this.names.children.length - 1);
+    if (hovered && hovered.parent)
+      this.names.setChildIndex(hovered, this.names.children.length - 1);
     for (const [id, text] of this.namePool) {
       if (usedNames.has(id)) continue;
       text.destroy();
@@ -1276,7 +1585,10 @@ export class SceneRenderer {
     const d = this.draft;
     if (d?.kind === "shape" && d.label) {
       const end = fromLocalPoint(d.t, { x: d.t.w / 2, y: 0 });
-      const at = toScreen(cam, d.shape === "circle" ? { x: d.t.x, y: d.t.y } : end);
+      const at = toScreen(
+        cam,
+        d.shape === "circle" ? { x: d.t.x, y: d.t.y } : end,
+      );
       this.label("draft", d.label, at.x + 10, at.y - 18, "#ffffff", used);
     }
 
@@ -1475,9 +1787,14 @@ export class SceneRenderer {
       const light = { ...el, ...this.previews.get(el.id) } as typeof el;
       const c = toScreen(cam, light);
       for (const r of [light.bright, light.dim]) {
-        g.circle(c.x, c.y, r * cam.zoom).stroke({ color: ACCENT, alpha: 0.8, width: 1.5 });
+        g.circle(c.x, c.y, r * cam.zoom).stroke({
+          color: ACCENT,
+          alpha: 0.8,
+          width: 1.5,
+        });
       }
-      for (const { at } of lightHandles(light, cam)) g.circle(at.x, at.y, HANDLE_SIZE / 2 + 1);
+      for (const { at } of lightHandles(light, cam))
+        g.circle(at.x, at.y, HANDLE_SIZE / 2 + 1);
       g.fill(ACCENT).stroke({ color: INK, width: 1.5 });
     } else if (handles && selected.length === 1) {
       const el = selected[0];
@@ -1534,26 +1851,35 @@ export class SceneRenderer {
   }
 }
 
-export type LightPart = 'lamp' | 'bright' | 'dim'
+export type LightPart = "lamp" | "bright" | "dim";
 
 /**
  * A selected light's handles, in screen coordinates: one on the lamp's rim (its
  * size) to the right, and one on each of the bright and dim rings, up and down
  * the diagonal so they stay apart when the two radii match.
  */
-export function lightHandles(light: Transform & { bright: number; dim: number }, cam: Camera): { part: LightPart; at: Point }[] {
-  const c = toScreen(cam, light)
-  const on = (r: number, angle: number) => ({ x: c.x + Math.cos(angle) * r * cam.zoom, y: c.y + Math.sin(angle) * r * cam.zoom })
+export function lightHandles(
+  light: Transform & { bright: number; dim: number },
+  cam: Camera,
+): { part: LightPart; at: Point }[] {
+  const c = toScreen(cam, light);
+  const on = (r: number, angle: number) => ({
+    x: c.x + Math.cos(angle) * r * cam.zoom,
+    y: c.y + Math.sin(angle) * r * cam.zoom,
+  });
   return [
-    { part: 'lamp', at: on(Math.min(light.w, light.h) / 2, 0) },
-    { part: 'bright', at: on(light.bright, -Math.PI / 4) },
-    { part: 'dim', at: on(light.dim, Math.PI / 4) },
-  ]
+    { part: "lamp", at: on(Math.min(light.w, light.h) / 2, 0) },
+    { part: "bright", at: on(light.bright, -Math.PI / 4) },
+    { part: "dim", at: on(light.dim, Math.PI / 4) },
+  ];
 }
 
 /** Where the rotate knob sits, in screen coordinates. */
 export function rotateHandlePosition(t: Transform, cam: Camera): Point {
-  const [tl, tr] = corners(t).map((p) => toScreen(cam, p))
-  const top = { x: (tl.x + tr.x) / 2, y: (tl.y + tr.y) / 2 }
-  return { x: top.x + Math.sin(t.rot) * ROTATE_HANDLE_GAP, y: top.y - Math.cos(t.rot) * ROTATE_HANDLE_GAP }
+  const [tl, tr] = corners(t).map((p) => toScreen(cam, p));
+  const top = { x: (tl.x + tr.x) / 2, y: (tl.y + tr.y) / 2 };
+  return {
+    x: top.x + Math.sin(t.rot) * ROTATE_HANDLE_GAP,
+    y: top.y - Math.cos(t.rot) * ROTATE_HANDLE_GAP,
+  };
 }

@@ -48,9 +48,11 @@ export const sceneDistance = signal<(d: number) => string>((d) => `${d}`)
 
 /** What a character's token needs when it's dropped on the map. */
 export interface TokenSpec {
-  characterId: string
   name: string
+  characterId?: string
   image?: BlobRef
+  icon?: string
+  itemDefId?: string
   style?: TokenStyle
   colour?: string
 }
@@ -60,6 +62,18 @@ export interface TokenSpec {
  * whether the point was over the map.
  */
 export const tokenDrop = signal<((x: number, y: number, spec: TokenSpec) => boolean) | null>(null)
+
+/** Resolve a character token under a screen point, including whether it can be edited here. */
+export const sceneCharacterAt = signal<
+  ((x: number, y: number) => { characterId: string; tokenId: string; editable: boolean; center: { x: number; y: number } } | null) | null
+>(null)
+export const sceneDropHighlight = signal<string | null>(null)
+export const sceneDropFlash = signal<{ tokenId: string; nonce: number } | null>(null)
+let dropFlashNonce = 0
+
+export function flashSceneDrop(tokenId: string) {
+  sceneDropFlash.value = { tokenId, nonce: ++dropFlashNonce }
+}
 
 const AUTOHIDE_KEY = 'mam:autohide'
 

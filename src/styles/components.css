@@ -267,8 +267,8 @@
 
   /*
    * Lists (ui/List.tsx): characters, the Libraries, a sheet's moves and
-   * inventory. Rows have no background; hovering turns the name and icon
-   * gold, and the selected row keeps them gold with a bar at its start.
+  * inventory. Alternating rows have a subtle fill; hovering turns the name
+  * and icon gold, and the selected row keeps them gold with a bar at its start.
    */
   .list {
     list-style: none;
@@ -282,6 +282,9 @@
     align-items: center;
     gap: var(--space-2);
     padding-left: var(--space-2);
+  }
+  .list-row:nth-child(even) {
+    background: color-mix(in oklab, var(--surface-raised) 50%, transparent);
   }
   .list-pick,
   .list-group-head {
@@ -340,9 +343,7 @@
     font-weight: 400;
     color: var(--text-faint);
   }
-  .list-row:hover :is(.list-name, .list-lead),
   .list-pick:focus-visible :is(.list-name, .list-lead),
-  .list-group-head:hover :is(.list-name, .list-lead, .list-caret),
   .list-group-head:focus-visible :is(.list-name, .list-lead, .list-caret) {
     color: var(--accent);
   }
@@ -356,10 +357,6 @@
   .list-row[data-dim] .list-name {
     color: var(--text-muted);
   }
-  /* Rows that can be dragged somewhere, such as library items. */
-  .list-row[data-draggable] .list-pick {
-    cursor: grab;
-  }
 
   /* A foldable group of rows: caret, optional icon, label, count. */
   .list-group {
@@ -370,7 +367,11 @@
     padding-left: var(--space-1);
   }
   .list-group > .list {
+    margin-left: calc(-1 * var(--space-3));
     padding-left: var(--space-3);
+  }
+  .list-group > .list > .list-row {
+    padding-left: calc(var(--space-3) + var(--space-2));
   }
   /* A small diagonal caret: pointing right when folded, down when open. */
   .list-caret {

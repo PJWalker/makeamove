@@ -6,12 +6,14 @@ import { useY } from '../store/useY'
 import { Button } from '../ui/Button'
 import { Segmented } from '../ui/Segmented'
 import { entryIcon } from '../ui/entryIcons'
+import { IconGive } from "../ui/icons";
 import { List, ListGroup, Tag } from '../ui/List'
 import { EntryRow, EntryWindow, rollTag, useEntryWindows } from './EntryWindow'
 import { dragEntity, entity } from './entityDrag'
 import { libraryView as view, type KindFilter } from './libraryView'
 import { linkProxy } from './LinkChip'
 import { makeVerb } from './sheetParts'
+import { actionMenuItems } from "./actionMenu";
 
 /** Collections folded away, by "source/collection" (this device only). */
 const folded = signal<Set<string>>(new Set())
@@ -42,18 +44,24 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
 
   /** The buttons an entry offers, in its row or its window. */
   const actions = (e: LibraryEntry, inWindow = false) => {
-    if (e.kind === 'item') {
+    if (e.kind === "item" && inWindow) {
       return (
         <Button
           size="sm"
-          variant={inWindow ? 'primary' : 'secondary'}
+          variant="primary"
           disabled={!canAct}
-          title={canAct ? undefined : !me ? 'Choose a character first' : 'Not your character'}
+          title={
+            canAct
+              ? undefined
+              : !me
+                ? "Choose a character first"
+                : "Not your character"
+          }
           onClick={() => me && addItem(campaign, me.id, e.item)}
         >
-          {inWindow && me ? `Give to ${me.name}` : 'Add'}
+          {me ? `Give to ${me.name}` : "Choose a character"}
         </Button>
-      )
+      );
     }
     if (e.kind === 'move' && inWindow) {
       const { label, Icon } = makeVerb(e.move)
@@ -70,6 +78,28 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
   const tagOf = (e: LibraryEntry) => (e.kind === 'move' ? rollTag(system, e.move) : null)
   const metaOf = (e: LibraryEntry) =>
     e.kind === 'item' ? [e.item.weight ? `${e.item.weight} wt` : '', e.item.uses ? `${e.item.uses} ${e.item.uses === 1 ? 'use' : 'uses'}` : ''].filter(Boolean).join(' · ') : undefined
+
+  const menuItemsFor = (e: LibraryEntry) => {
+    const items =
+      e.kind === "item"
+        ? actionMenuItems(campaign, [{ id: `library:${e.id}`, title: e.name }])
+        : e.kind === "move"
+          ? actionMenuItems(campaign, [{ id: `move:${e.id}`, title: e.name }])
+          : [];
+    if (e.kind !== "item") return items.length ? items : undefined;
+    return [
+      {
+        label: me ? `Give to ${me.name}` : "Choose a character",
+        Icon: IconGive,
+        disabled: !canAct,
+        onSelect: () => {
+          if (me && canAct) addItem(campaign, me.id, e.item);
+        },
+      },
+      ...(items.length ? (["divider"] as const) : []),
+      ...items,
+    ];
+  };
 
   const all = sources.flatMap((s) => s.collections.flatMap((c) => c.entries.map((e) => [s.id, e] as const)))
 
@@ -110,7 +140,13 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
               const id = `${s.id}/${c.id}`
               const open = searching || !folded.value.has(id)
               return (
-                <ListGroup key={c.id} label={c.name} count={entries.length} open={open} onToggle={() => toggle(id)}>
+                <ListGroup
+                  key={c.id}
+                  label={c.name}
+                  count={entries.length}
+                  open={open}
+                  onToggle={() => toggle(id)}
+                >
                   <List>
                     {entries.map((e) => (
                       <EntryRow
@@ -120,17 +156,32 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
                         tag={tagOf(e)}
                         meta={metaOf(e)}
                         tip={
-                          e.kind === 'item'
+                          e.kind === "item"
                             ? `${e.text}\n\nDrag onto a character to give it to them, or into a note to link it.`
-                            : e.kind === 'move'
+                            : e.kind === "move"
                               ? `${e.text}\n\nDrag onto a character to teach it to them, or into a note to link it.`
                               : e.text
                         }
                         onOpen={(row) => windows.show(keyOf(s.id, e), row)}
-                        onPointerDown={
-                          e.kind === 'item' || e.kind === 'move'
-                            ? (ev) => dragEntity(ev, entity(campaign, e.kind, e.id, e.name))
-                            : undefined
+                        menuItems={menuItemsFor(e)}
+                        onPointerDown={(ev) =>
+                          dragEntity(
+                            ev,
+                            e.kind === "item" || e.kind === "move"
+                              ? entity(campaign, e.kind, e.id, e.name)
+                              : {
+                                  label: e.name,
+                                  token: {
+                                    name: e.name,
+                                    icon:
+                                      e.kind === "tag"
+                                        ? "tag"
+                                        : e.kind === "class"
+                                          ? (e.icon ?? "hero")
+                                          : "books",
+                                  },
+                                },
+                          )
                         }
                       >
                         {actions(e)}
@@ -138,7 +189,7 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
                     ))}
                   </List>
                 </ListGroup>
-              )
+              );
             })}
             {s.attribution && <p class="muted sheet-attribution">{s.attribution}</p>}
           </section>
@@ -161,13 +212,18 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
             text={e.text}
             tags={e.tags}
             onClose={() => windows.close(key)}
-            proxy={e.kind === 'item' || e.kind === 'move' ? linkProxy(campaign, e.kind, e.id, e.name, e.icon) : undefined}
+            proxy={
+              e.kind === "item" || e.kind === "move"
+                ? linkProxy(campaign, e.kind, e.id, e.name, e.icon)
+                : undefined
+            }
+            menuItems={menuItemsFor(e)}
           >
             {tag && <Tag>{tag}</Tag>}
             {metaOf(e) && <span class="muted">{metaOf(e)}</span>}
             {actions(e, true)}
           </EntryWindow>
-        )
+        );
       })}
     </div>
   )

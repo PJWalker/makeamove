@@ -25,6 +25,11 @@ export function dragToken(e: PointerEvent, spec: TokenSpec) {
       document.body.appendChild(ghost)
       document.documentElement.classList.add('is-reordering')
     }
+    const overScene =
+      !!document
+        .elementFromPoint(ev.clientX, ev.clientY)
+        ?.closest(".scene-canvas") && !!tokenDrop.value;
+    document.documentElement.dataset.dropValid = String(overScene);
     ghost.style.left = `${ev.clientX - box.width / 2}px`
     ghost.style.top = `${ev.clientY - box.height / 2}px`
   }
@@ -33,6 +38,7 @@ export function dragToken(e: PointerEvent, spec: TokenSpec) {
     window.removeEventListener('pointermove', move)
     window.removeEventListener('pointerup', up)
     window.removeEventListener('pointercancel', cancel)
+    delete document.documentElement.dataset.dropValid;
     if (!ghost) return
     ghost.remove()
     document.documentElement.classList.remove('is-reordering')

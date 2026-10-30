@@ -94,6 +94,10 @@ export class SceneController {
 
   /** Asks the canvas for text to put on the map, or to change: set by SceneCanvas. */
   onTextRequest: ((req: { at: Point; screen: Point; id?: string; text?: string }) => void) | null = null
+  /** Lets the table show eligible destinations while dragging a scene item token. */
+  onItemTokenDragMove: ((token: TokenElement | null, event: PointerEvent) => void) | null = null
+  /** Handles transferring an item token out of the scene on pointer release. */
+  onItemTokenDrop: ((token: TokenElement, event: PointerEvent) => boolean) | null = null
 
   private elements: SceneElement[] = []
   /** The scene's elements as they are now, bottom to top. */
@@ -107,6 +111,7 @@ export class SceneController {
   private hover: Point | null = null
   private disposers: (() => void)[] = []
   private saveTimer = 0
+  private itemTokenDropFrame = 0
 
   readonly scene: SceneDoc
   readonly renderer: SceneRenderer
@@ -229,6 +234,9 @@ export class SceneController {
 
   stop() {
     this.cancelGesture()
+    cancelAnimationFrame(this.itemTokenDropFrame)
+    this.itemTokenDropFrame = 0
+    this.renderer.previews.clear()
     this.renderer.onCameraChange = null
     clearTimeout(this.saveTimer)
     this.saveCamera()
@@ -441,12 +449,12 @@ export class SceneController {
   }
 
   /** Topmost element under p. Locked elements only count when asked. */
-  hitTest(p: Point, includeLocked = false): SceneElement | null {
+  hitTest(p: Point, includeLocked = false, ignoreTool = false): SceneElement | null {
     const tolerance = 4 / this.renderer.camera.zoom
     for (let i = this.elements.length - 1; i >= 0; i--) {
       const el = this.elements[i]
       if (el.locked && !includeLocked) continue
-      if (!this.pickable(el)) continue
+      if (!ignoreTool && !this.pickable(el)) continue
       if (hits(el, p, tolerance)) return el
     }
     return null
@@ -925,6 +933,8 @@ export class SceneController {
           this.renderer.previews.set(id, { ...el, ...p })
         }
         this.renderer.invalidate('previews', 'overlay')
+        const itemToken = g.originals.size === 1 ? [...g.originals.values()][0] : null
+        if (itemToken?.type === 'token' && itemToken.itemDefId) this.onItemTokenDragMove?.(itemToken, e)
         break
       }
 
@@ -1039,13 +1049,27 @@ export class SceneController {
       return
     }
     if (cancelled) {
+      const itemToken = g.kind === 'move' && g.originals.size === 1 ? [...g.originals.values()][0] : null
+      if (itemToken?.type === 'token' && itemToken.itemDefId) this.onItemTokenDragMove?.(null, e)
       this.cancelGesture()
       return
     }
     this.gesture = null
 
     switch (g.kind) {
-      case 'move':
+      case 'move': {
+        const itemToken = g.moved && g.originals.size === 1 ? [...g.originals.values()][0] : null
+        if (itemToken?.type === 'token' && itemToken.itemDefId) {
+          const handled = this.onItemTokenDrop?.(itemToken, e) ?? false
+          this.onItemTokenDragMove?.(null, e)
+          if (handled) {
+            this.renderer.invalidate('previews', 'overlay')
+            break
+          }
+        }
+        this.commitPreviews()
+        break
+      }
       case 'resize':
       case 'rotate':
       case 'rotateGroup':
@@ -1134,6 +1158,40 @@ export class SceneController {
     this.scene.update(patches)
     previews.clear()
     this.renderer.invalidate('elements', 'overlay')
+  }
+
+  /** Shrink a scene item token into its drop point before transferring it. */
+  animateItemTokenDrop(id: string, clientX: number, clientY: number, complete: () => void) {
+    const original = this.byId.get(id)
+    if (original?.type !== 'token') return complete()
+    const current = this.renderer.previews.get(id) ?? original
+    cancelAnimationFrame(this.itemTokenDropFrame)
+    const from = { x: current.x, y: current.y, w: current.w, h: current.h, rot: current.rot }
+    const point = this.toWorld(clientX, clientY)
+    const to = { ...from, x: point.x, y: point.y, w: Math.max(1, from.w * 0.06), h: Math.max(1, from.h * 0.06) }
+    const finish = () => {
+      this.renderer.previews.delete(id)
+      this.itemTokenDropFrame = 0
+      this.renderer.invalidate('previews', 'overlay')
+      complete()
+    }
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return finish()
+    const start = performance.now()
+    const tick = (now: number) => {
+      const progress = Math.min(1, (now - start) / 180)
+      const eased = 1 - (1 - progress) ** 3
+      this.renderer.previews.set(id, {
+        x: from.x + (to.x - from.x) * eased,
+        y: from.y + (to.y - from.y) * eased,
+        w: from.w + (to.w - from.w) * eased,
+        h: from.h + (to.h - from.h) * eased,
+        rot: from.rot,
+      })
+      this.renderer.invalidate('previews', 'overlay')
+      if (progress < 1) this.itemTokenDropFrame = requestAnimationFrame(tick)
+      else finish()
+    }
+    this.itemTokenDropFrame = requestAnimationFrame(tick)
   }
 
   /** Drop an in-progress gesture without changing the scene. */
@@ -1333,7 +1391,7 @@ export class SceneController {
    */
   updateToken(
     id: string,
-    patch: Partial<Pick<TokenElement, 'name' | 'style' | 'colour' | 'characterId' | 'image' | 'hideName' | 'hideBars'>>,
+    patch: Partial<Pick<TokenElement, 'name' | 'style' | 'colour' | 'characterId' | 'image' | 'itemDefId' | 'hideName' | 'hideBars'>>,
     cells?: number,
   ) {
     const el = this.byId.get(id)
@@ -1367,7 +1425,7 @@ export class SceneController {
     this.scene.setLayer([id], to)
   }
 
-  addToken(at: Point, name = '') {
+  addToken(at: Point, name = '', options: { image?: BlobRef; icon?: string; itemDefId?: string; style?: TokenStyle; colour?: string } = {}) {
     const grid = this.renderer.grid
     const size = grid.type === 'none' ? 70 : grid.size
     const p = snapPoint(grid, at)
@@ -1375,8 +1433,11 @@ export class SceneController {
       type: 'token',
       layer: 'token',
       name,
-      colour: memberColour(),
-      style: this.defaults().tokenStyle,
+      image: options.image,
+      icon: options.icon,
+      itemDefId: options.itemDefId,
+      colour: options.colour ?? memberColour(),
+      style: options.style ?? (options.image ? this.defaults().tokenStyle : 'disc'),
       ...p,
       w: size,
       h: size,

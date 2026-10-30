@@ -21,6 +21,8 @@ import { ContextMenu, type MenuItem } from './ContextMenu'
 import { EntryRow, EntryWindow, rollTag, useEntryWindows } from './EntryWindow'
 import { linkProxy } from './LinkChip'
 import { dragToken } from './tokenDrag'
+import { actionMenuItems } from "./actionMenu";
+import { dragEntity, entity } from "./entityDrag";
 
 /*
  * Pieces every system's sheet can use: counters, the action list, and the
@@ -104,7 +106,7 @@ export function MoveList({
         <SegmentedOrSelect
           label="Move type"
           value={filter.value}
-          options={[{ id: 'all', label: 'All' }, ...categories]}
+          options={[{ id: "all", label: "All" }, ...categories]}
           onChange={(k) => (filter.value = k)}
         />
       )}
@@ -113,19 +115,28 @@ export function MoveList({
           <EntryRow
             key={m.id}
             name={m.name}
-            Icon={entryIcon('move', m.category === 'class' ? 'class-move' : undefined)}
+            Icon={entryIcon(
+              "move",
+              m.category === "class" ? "class-move" : undefined,
+            )}
             tag={rollTag(system, m)}
             tip={m.text}
             onOpen={(row) => windows.show(`move:${m.id}`, row)}
+            onPointerDown={(ev) =>
+              dragEntity(ev, entity(campaign, "move", m.id, m.name))
+            }
+            menuItems={actionMenuItems(campaign, [
+              { id: `move:${m.id}`, title: m.name },
+            ])}
           >
             <MakeButton m={m} onMake={onMake} />
           </EntryRow>
         ))}
       </List>
       {windows.keys.map((key) => {
-        const m = moves.find((k) => `move:${k.id}` === key)
-        if (!m) return null
-        const tag = rollTag(system, m)
+        const m = moves.find((k) => `move:${k.id}` === key);
+        if (!m) return null;
+        const tag = rollTag(system, m);
         return (
           <EntryWindow
             key={key}
@@ -133,15 +144,24 @@ export function MoveList({
             title={m.name}
             text={m.text}
             onClose={() => windows.close(key)}
-            proxy={linkProxy(campaign, 'move', m.id, m.name, m.category === 'class' ? 'class-move' : undefined)}
+            proxy={linkProxy(
+              campaign,
+              "move",
+              m.id,
+              m.name,
+              m.category === "class" ? "class-move" : undefined,
+            )}
+            menuItems={actionMenuItems(campaign, [
+              { id: `move:${m.id}`, title: m.name },
+            ])}
           >
             {tag && <Tag>{tag}</Tag>}
             {onForget && learned.includes(m.id) && (
               <Button
                 variant="ghost"
                 onClick={() => {
-                  windows.close(key)
-                  onForget(m)
+                  windows.close(key);
+                  onForget(m);
                 }}
               >
                 Forget
@@ -149,10 +169,10 @@ export function MoveList({
             )}
             <MakeButton m={m} onMake={onMake} big />
           </EntryWindow>
-        )
+        );
       })}
     </div>
-  )
+  );
 }
 
 /** The character's stand-in token: drag it onto the map, click it to change its image. */

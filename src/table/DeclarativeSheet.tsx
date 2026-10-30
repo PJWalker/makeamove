@@ -35,15 +35,33 @@ export function DeclarativeSheet({ campaign, system, c, layout }: Props) {
   const d = derive(c, system)
   const editable = canEdit(campaign, c)
   return (
-    <div class="sheet">
+    <div
+      class="sheet"
+      data-item-drop={editable ? c.id : undefined}
+      data-move-drop={editable ? c.id : undefined}
+    >
       {layout.map((section, i) => (
-        <Section key={i} campaign={campaign} system={system} c={c} d={d} editable={editable} section={section} />
+        <Section
+          key={i}
+          campaign={campaign}
+          system={system}
+          c={c}
+          d={d}
+          editable={editable}
+          section={section}
+        />
       ))}
-      {c.kind === 'pc' && (
-        <p class="muted sheet-owner">{c.owner === device.value.id ? 'Yours' : editable ? 'Editing as GM' : 'View only'}</p>
+      {c.kind === "pc" && (
+        <p class="muted sheet-owner">
+          {c.owner === device.value.id
+            ? "Yours"
+            : editable
+              ? "Editing as GM"
+              : "View only"}
+        </p>
       )}
     </div>
-  )
+  );
 }
 
 type SectionProps = { campaign: Campaign; system: GameSystem; c: CharacterView; d: Derived; editable: boolean; section: SheetSection }

@@ -123,6 +123,7 @@ describe('characters in a campaign', () => {
     expect(hotbarSlots(c, id)).toEqual(defaultHotbar(c, id))
     c.destroy()
   })
+
 })
 
 describe('hotbar editing', () => {

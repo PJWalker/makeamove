@@ -14,7 +14,13 @@ import { IconDelete, IconImage, IconRename, IconSearch, IconShortcut } from '../
 import { menuTrigger } from '../ui/menuTrigger'
 import { editAction } from './ActionDialogs'
 import { ContextMenu, type MenuItem } from './ContextMenu'
-import { actionEntity, dropMarker, dropOn, dropTargetAt } from './entityDrag'
+import {
+  actionEntity,
+  dropMarker,
+  dropOn,
+  dropTargetAt,
+  setDropCursor,
+} from "./entityDrag";
 import { paletteOpen } from './Palette'
 import { isTyping } from '../ui/keys'
 import { startReorder } from '../ui/reorder'
@@ -98,25 +104,34 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
     const mark = dropMarker()
     startReorder({
       event: e,
-      axis: 'x',
+      axis: "x",
       container: barRef.current,
-      items: () => [...barRef.current!.querySelectorAll<HTMLElement>('.hotbar-slot')],
+      items: () => [
+        ...barRef.current!.querySelectorAll<HTMLElement>(".hotbar-slot"),
+      ],
       onLift: () => (dragging.value = id),
-      onMove: (ev, inside) => mark(inside ? null : dropTargetAt(ev.clientX, ev.clientY, what)),
+      onMove: (ev, inside) => {
+        const target = inside
+          ? null
+          : dropTargetAt(ev.clientX, ev.clientY, what);
+        mark(target);
+        setDropCursor(inside ? null : !!target);
+      },
       onEnd: () => {
-        mark(null)
-        endDrag()
+        mark(null);
+        setDropCursor(null);
+        endDrag();
       },
       onDrop: (index) => edit((s) => placeAt(s, id, index)),
       outside: {
-        when: 'release',
+        when: "release",
         run: (ev) => {
-          const target = dropTargetAt(ev.clientX, ev.clientY, what)
-          if (target) dropOn(target, what, ev.clientX, ev.clientY)
-          else edit((s) => unpin(s, id))
+          const target = dropTargetAt(ev.clientX, ev.clientY, what);
+          if (target) dropOn(target, what, ev.clientX, ev.clientY);
+          else edit((s) => unpin(s, id));
         },
       },
-    })
+    });
   }
 
   return (

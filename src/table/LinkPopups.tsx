@@ -16,6 +16,7 @@ import { NoteEditor } from './NoteEditor'
 import { CharacterSheet } from './sheets'
 import { linkProxy } from './LinkChip'
 import { makeVerb } from './sheetParts'
+import { actionMenuItems } from "./actionMenu";
 
 /*
  * What links in rich text open: a pop-up for each link clicked (gear and
@@ -72,13 +73,20 @@ function LinkPopup({ campaign, link }: { campaign: Campaign; link: LinkRef }) {
           text={item.description}
           tags={item.tags}
           onClose={close}
-          proxy={linkProxy(campaign, 'item', item.id, item.name, item.icon)}
+          proxy={linkProxy(campaign, "item", item.id, item.name, item.icon)}
+          menuItems={actionMenuItems(campaign, [
+            { id: `library:${item.id}`, title: item.name },
+          ])}
         >
-          <Button variant="primary" disabled={!canAct} onClick={() => me && addItem(campaign, me.id, item)}>
-            {me ? `Give to ${me.name}` : 'Choose a character first'}
+          <Button
+            variant="primary"
+            disabled={!canAct}
+            onClick={() => me && addItem(campaign, me.id, item)}
+          >
+            {me ? `Give to ${me.name}` : "Choose a character first"}
           </Button>
         </EntryWindow>
-      )
+      );
     }
     case 'move': {
       const move = system.actions.find((m) => m.id === link.id)
@@ -92,14 +100,27 @@ function LinkPopup({ campaign, link }: { campaign: Campaign; link: LinkRef }) {
           text={move.text}
           tags={tag ? [tag] : undefined}
           onClose={close}
-          proxy={linkProxy(campaign, 'move', move.id, move.name, move.category === 'class' ? 'class-move' : undefined)}
+          proxy={linkProxy(
+            campaign,
+            "move",
+            move.id,
+            move.name,
+            move.category === "class" ? "class-move" : undefined,
+          )}
+          menuItems={actionMenuItems(campaign, [
+            { id: `move:${move.id}`, title: move.name },
+          ])}
         >
-          <Button variant="primary" disabled={!canAct} onClick={() => me && startMove(campaign, me.id, move)}>
+          <Button
+            variant="primary"
+            disabled={!canAct}
+            onClick={() => me && startMove(campaign, me.id, move)}
+          >
             <Icon size={18} /> {label}
-            {me ? ` as ${me.name}` : ''}
+            {me ? ` as ${me.name}` : ""}
           </Button>
         </EntryWindow>
-      )
+      );
     }
     case 'character':
       return character ? (

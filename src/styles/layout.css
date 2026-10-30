@@ -1727,6 +1727,21 @@
     cursor: grabbing !important;
     user-select: none;
   }
+  .is-reordering[data-drop-valid='true'],
+  .is-reordering[data-drop-valid='true'] *,
+  .is-reordering[data-drop-valid='true'] *::before,
+  .is-reordering[data-drop-valid='true'] *::after {
+    cursor: copy !important;
+  }
+  .is-reordering[data-drop-valid='false'],
+  .is-reordering[data-drop-valid='false'] *,
+  .is-reordering[data-drop-valid='false'] *::before,
+  .is-reordering[data-drop-valid='false'] *::after {
+    cursor: not-allowed !important;
+  }
+  .character-sheet-drop {
+    display: contents;
+  }
   .hotbar-hint {
     flex: none;
     margin: 0;

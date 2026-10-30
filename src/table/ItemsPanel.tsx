@@ -7,10 +7,11 @@ import type { ActionDef, CheckStep, Effect, GameSystem, ItemDef, TargetSpec } fr
 import { Button } from '../ui/Button'
 import { ENTRY_ICONS, entryIcon, type EntryIconName } from '../ui/entryIcons'
 import { IconAdd, IconBack, IconDelete } from '../ui/icons'
-import { List, ListGroup, ListRow } from '../ui/List'
+import { List, ListGroup } from "../ui/List";
 import { Segmented } from '../ui/Segmented'
 import { dragEntity, entity } from './entityDrag'
-import { rollTag } from './EntryWindow'
+import { EntryRow, rollTag } from "./EntryWindow";
+import { actionMenuItems } from "./actionMenu";
 
 /*
  * Items: the table's own gear and moves (homebrew/homebrew.ts), with forms
@@ -63,68 +64,95 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
   return (
     <div class="panel-scroll items-panel">
       <div class="sheet-row items-new">
-        <Button size="sm" onClick={() => (editing.value = { kind: 'gear', id: null })}>
+        <Button
+          size="sm"
+          onClick={() => (editing.value = { kind: "gear", id: null })}
+        >
           <IconAdd size={18} /> New gear
         </Button>
-        <Button size="sm" onClick={() => (editing.value = { kind: 'move', id: null })}>
+        <Button
+          size="sm"
+          onClick={() => (editing.value = { kind: "move", id: null })}
+        >
           <IconAdd size={18} /> New move
         </Button>
       </div>
       {!entries.length && <p class="empty">No gear or moves yet.</p>}
       {gear.length > 0 && (
-        <ListGroup label="Gear" count={gear.length} {...fold('gear')}>
+        <ListGroup label="Gear" count={gear.length} {...fold("gear")}>
           <List>
             {gear.map((e) =>
-              e.kind === 'gear' ? (
-                <ListRow
+              e.kind === "gear" ? (
+                <EntryRow
                   key={e.id}
-                  lead={(() => {
-                    const Icon = entryIcon('item', e.item.icon)
-                    return <Icon size={20} />
-                  })()}
+                  Icon={entryIcon("item", e.item.icon)}
                   name={e.item.name}
-                  meta={[e.item.weight ? `${e.item.weight} wt` : '', e.item.uses ? `${e.item.uses} uses` : ''].filter(Boolean).join(' · ') || undefined}
-                  onPick={() => (editing.value = { kind: 'gear', id: e.id })}
-                  pick={{ onPointerDown: (ev: PointerEvent) => dragEntity(ev, entity(campaign, 'item', e.id, e.item.name)) }}
-                  row={{ 'data-tip': e.item.description || undefined }}
+                  meta={
+                    [
+                      e.item.weight ? `${e.item.weight} wt` : "",
+                      e.item.uses ? `${e.item.uses} uses` : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" · ") || undefined
+                  }
+                  tip={e.item.description}
+                  onOpen={() => (editing.value = { kind: "gear", id: e.id })}
+                  onPointerDown={(ev) =>
+                    dragEntity(ev, entity(campaign, "item", e.id, e.item.name))
+                  }
+                  menuItems={actionMenuItems(campaign, [
+                    { id: `library:${e.id}`, title: e.item.name },
+                  ])}
                 >
-                  <Button size="sm" variant="secondary" disabled={!canAct} onClick={() => me && addItem(campaign, me.id, e.item)}>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={!canAct}
+                    onClick={() => me && addItem(campaign, me.id, e.item)}
+                  >
                     Add
                   </Button>
-                </ListRow>
+                </EntryRow>
               ) : null,
             )}
           </List>
         </ListGroup>
       )}
       {moves.length > 0 && (
-        <ListGroup label="Moves" count={moves.length} {...fold('moves')}>
+        <ListGroup label="Moves" count={moves.length} {...fold("moves")}>
           <List>
             {moves.map((e) =>
-              e.kind === 'move' ? (
-                <ListRow
+              e.kind === "move" ? (
+                <EntryRow
                   key={e.id}
-                  lead={(() => {
-                    const Icon = entryIcon('move')
-                    return <Icon size={20} />
-                  })()}
+                  Icon={entryIcon("move")}
                   name={e.move.name}
                   tag={rollTag(system, e.move)}
-                  onPick={() => (editing.value = { kind: 'move', id: e.id })}
-                  pick={{ onPointerDown: (ev: PointerEvent) => dragEntity(ev, entity(campaign, 'move', e.id, e.move.name)) }}
-                  row={{ 'data-tip': `${e.move.text}\n\nDrag onto a character to teach it to them.` }}
+                  tip={`${e.move.text}\n\nDrag onto a character to teach it to them.`}
+                  onOpen={() => (editing.value = { kind: "move", id: e.id })}
+                  onPointerDown={(ev) =>
+                    dragEntity(ev, entity(campaign, "move", e.id, e.move.name))
+                  }
+                  menuItems={actionMenuItems(campaign, [
+                    { id: `move:${e.id}`, title: e.move.name },
+                  ])}
                 >
-                  <Button size="sm" variant="secondary" disabled={!canAct} onClick={() => me && startMove(campaign, me.id, e.move)}>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={!canAct}
+                    onClick={() => me && startMove(campaign, me.id, e.move)}
+                  >
                     Make
                   </Button>
-                </ListRow>
+                </EntryRow>
               ) : null,
             )}
           </List>
         </ListGroup>
       )}
     </div>
-  )
+  );
 }
 
 /** A text input bound to a signal. */

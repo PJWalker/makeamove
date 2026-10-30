@@ -28,8 +28,19 @@ group('parsing', () => {
     expect(parse('1d4 + 1[Ring of Strength]')[1].label).toBe('Ring of Strength')
   })
   it('explains bad formulas', () => {
-    for (const bad of ['', 'd', '2x6', '2d6 3', '101d6', 'd1001', '0d6', 'd1!', '4d6k1d1', '2d6+[x']) {
-      expect(() => parse(bad), bad).toThrow(NotationError)
+    for (const bad of [
+      "",
+      "d",
+      "2x6",
+      "2d6 3",
+      "10001d6",
+      "d1001",
+      "0d6",
+      "d1!",
+      "4d6k1d1",
+      "2d6+[x",
+    ]) {
+      expect(() => parse(bad), bad).toThrow(NotationError);
     }
   })
 })

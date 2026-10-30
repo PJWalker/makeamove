@@ -30,7 +30,7 @@ import { menuTrigger } from '../ui/menuTrigger'
 import { openPopup } from '../ui/popup'
 import { Dialog } from './CampaignDialogs'
 import { ContextMenu, type MenuItem } from './ContextMenu'
-import { dragToFolder } from './folderDrag'
+import { dragEntity, entity } from "./entityDrag";
 import { NoteEditor } from './NoteEditor'
 
 /** How long ago, roughly, for a page's last edit. */
@@ -125,6 +125,8 @@ function NoteList({
   const newPage = (folder?: string, gmOnly = false) => openNote(createNote(campaign, { folder, gmOnly }))
 
   const row = (n: NoteView) => {
+    const dragged = entity(campaign, "note", n.id, n.title);
+    dragged.folder = (folderId) => moveNote(campaign, n.id, folderId);
     const trigger = menuTrigger((x, y) => {
       const items: MenuItem[] = folders
         .filter((f) => f.id !== n.folder)
@@ -147,7 +149,7 @@ function NoteList({
         pick={{
           onPointerDown: (e) => {
             trigger.onPointerDown(e)
-            dragToFolder(e, (folder) => moveNote(campaign, n.id, folder))
+            dragEntity(e, dragged);
           },
           onContextMenu: trigger.onContextMenu,
         }}

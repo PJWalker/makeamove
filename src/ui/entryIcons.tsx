@@ -1,5 +1,6 @@
 import type { EntryKind } from '../library'
 import { icon, type Icon } from './icons'
+import { render } from "preact";
 
 /*
  * Icons for library entries and inventory items. Icons are bundled at build
@@ -121,4 +122,22 @@ const KIND_ICON: Record<EntryKind, EntryIconName> = { item: 'bag', move: 'move',
 /** The icon for an entry: the one it names, or its kind's. */
 export function entryIcon(kind: EntryKind, name?: string): Icon {
   return (name && ENTRY_ICONS[name as EntryIconName]) || ENTRY_ICONS[KIND_ICON[kind]]
+}
+
+/** SVG markup for the same bundled icon used in lists, ready for a canvas texture. */
+export function entryIconSvg(name?: string): string {
+  const Icon = (name && ENTRY_ICONS[name as EntryIconName]) || ENTRY_ICONS.bag
+  const host = document.createElement('span')
+  render(<Icon size={128} />, host)
+  const svg = host.querySelector('svg')
+  if (!svg) throw new Error('Could not render entry icon')
+  svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+  svg.setAttribute('width', '128')
+  svg.setAttribute('height', '128')
+  svg.setAttribute('fill', '#ffffff')
+  svg.style.color = '#ffffff'
+  for (const shape of svg.querySelectorAll('[fill="currentColor"]')) shape.setAttribute('fill', '#ffffff')
+  const markup = svg.outerHTML
+  render(null, host)
+  return markup
 }

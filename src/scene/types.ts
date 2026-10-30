@@ -54,19 +54,23 @@ export const TOKEN_STYLES: { id: TokenStyle; label: string }[] = [
 ]
 
 export interface TokenElement extends Base {
-  type: 'token'
-  image?: BlobRef
-  name: string
+  type: "token";
+  image?: BlobRef;
+  /** A bundled entry icon, rendered when the token has no image. */
+  icon?: string;
+  /** The gear definition represented by an item token. */
+  itemDefId?: string;
+  name: string;
   /** Background and ring colour of a disc token. */
-  colour: string
+  colour: string;
   /** Missing on tokens from before styles existed, which are discs. */
-  style?: TokenStyle
+  style?: TokenStyle;
   /** The character this token stands for; the system decides which of its stats show. */
-  characterId?: string
+  characterId?: string;
   /** Hide its name under it. */
-  hideName?: boolean
+  hideName?: boolean;
   /** Hide the bars its character's system shows (HP). */
-  hideBars?: boolean
+  hideBars?: boolean;
 }
 
 /** A token is only drawn plain if it has an image to show. */

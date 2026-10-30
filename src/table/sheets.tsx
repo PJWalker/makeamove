@@ -1,4 +1,5 @@
 import type { ComponentType } from 'preact'
+import { canEdit } from "../characters/api";
 import type { CharacterView } from '../characters/store'
 import type { Campaign } from '../store/campaign'
 import { DndNpcSheet, DndSheet } from '../systems/dnd55e/Sheet'
@@ -27,12 +28,19 @@ const DECLARATIVE = { pc: declarative('pc'), npc: declarative('npc') }
 export function CharacterSheet({ campaign, system, c }: SheetProps) {
   const sheets = system.sheet ? DECLARATIVE : (SHEETS[system.id] ?? DECLARATIVE)
   const Sheet = c.kind === 'npc' ? sheets.npc : sheets.pc
+  const editable = canEdit(campaign, c);
   return (
-    <>
+    <div
+      class="character-sheet-drop"
+      data-item-drop={editable ? c.id : undefined}
+      data-move-drop={editable ? c.id : undefined}
+    >
       {c.base && <CopyBanner campaign={campaign} c={c} />}
       <Sheet key={c.id} campaign={campaign} system={system} c={c} />
       <RelationshipsSection key={`rel-${c.id}`} campaign={campaign} c={c} />
-      {c.kind === 'npc' && !c.base && <TemplateSettings campaign={campaign} c={c} />}
-    </>
-  )
+      {c.kind === "npc" && !c.base && (
+        <TemplateSettings campaign={campaign} c={c} />
+      )}
+    </div>
+  );
 }

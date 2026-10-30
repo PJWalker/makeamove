@@ -1,6 +1,7 @@
 import { menuTrigger } from '../ui/menuTrigger'
 import { addTokens, combatantForToken, hasCombat, tokenMarksSource } from '../combat/api'
 import { bounds } from '../scene/geometry'
+import { toScreen } from '../scene/camera'
 import { setMorphOrigin } from '../ui/morph'
 import { openPopup } from '../ui/popup'
 import { effect, type Signal, untracked, useSignal, useSignalEffect } from '@preact/signals'
@@ -16,7 +17,7 @@ import type { SceneLighting } from '../scene/sceneDoc'
 import { importImage } from '../scene/images'
 import { isPlainToken, TOKEN_STYLES, type BlobRef, type SceneElement, type TokenStyle } from '../scene/types'
 import { DEFAULT_CANVAS_COLOUR, type Campaign } from '../store/campaign'
-import { createCopy, getCharacter, listCharacters, selectCharacter, systemOf, tokenStatsSource } from '../characters/api'
+import { canEdit, createCopy, getCharacter, listCharacters, selectCharacter, systemOf, tokenStatsSource } from '../characters/api'
 import { tokenName } from '../characters/templates'
 import { CharacterSheet } from './sheets'
 import { useY } from '../store/useY'
@@ -48,6 +49,7 @@ import { PopupTabs } from '../ui/PopupTabs'
 import { Segmented } from '../ui/Segmented'
 import { Dialog } from './CampaignDialogs'
 import { showPanel } from './panelLayout'
+import { dropOn, dropTargetAt, itemDefinitionForToken, itemTokenEntity, setDropCursor } from './entityDrag'
 import {
   activeMapColour,
   canvasColour,
@@ -60,6 +62,9 @@ import {
   seenMapColours,
   targetPick,
   tokenDrop,
+  sceneCharacterAt,
+  sceneDropFlash,
+  sceneDropHighlight,
 } from './canvasState'
 import { formatDistance } from '../scene/measure'
 import { linkProxy } from './LinkChip'
@@ -81,6 +86,17 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
   /** Which tab the token pop-up opens on. */
   const tokenTab = useSignal<'character' | 'token'>('token')
   const dropping = useSignal(false)
+  const lastDropFlash = useRef(0)
+
+  useSignalEffect(() => {
+    if (!ready.value) return
+    renderer.setDropHighlight(sceneDropHighlight.value)
+    const flash = sceneDropFlash.value
+    if (flash && flash.nonce !== lastDropFlash.current) {
+      lastDropFlash.current = flash.nonce
+      renderer.flashToken(flash.tokenId)
+    }
+  })
 
   // Selecting a character's token goes to that character's sheet.
   useEffect(() => {
@@ -178,12 +194,66 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
       controller.value = ctl
       tokenDrop.value = (x, y, spec) => {
         // A template's token is a new copy of it, with a name of its own.
-        const c = getCharacter(campaign, spec.characterId)
-        if (c?.template) {
-          const name = tokenName(c, c.template, ctl!.tokenNames())
-          spec = { ...spec, name, characterId: createCopy(campaign, c.id, name) }
+        if (spec.characterId) {
+          const c = getCharacter(campaign, spec.characterId)
+          if (c?.template) {
+            const name = tokenName(c, c.template, ctl!.tokenNames())
+            spec = { ...spec, name, characterId: createCopy(campaign, c.id, name) }
+          }
+          ctl!.addCharacterToken(ctl!.toWorld(x, y), spec as Required<Pick<typeof spec, 'characterId' | 'name'>> & typeof spec)
+        } else {
+          ctl!.addToken(ctl!.toWorld(x, y), spec.name, spec)
         }
-        ctl!.addCharacterToken(ctl!.toWorld(x, y), spec)
+        return true
+      }
+      sceneCharacterAt.value = (x, y) => {
+        const hit = ctl!.hitTest(ctl!.toWorld(x, y), true, true)
+        if (hit?.type !== 'token' || !hit.characterId) return null
+        const character = getCharacter(campaign, hit.characterId)
+        const bounds = hostRef.current!.getBoundingClientRect()
+        const screen = toScreen(renderer.camera, hit)
+        return {
+          characterId: hit.characterId,
+          tokenId: hit.id,
+          editable: !!character && canEdit(campaign, character),
+          center: { x: bounds.left + screen.x, y: bounds.top + screen.y },
+        }
+      }
+      ctl.onItemTokenDragMove = (token, event) => {
+        if (!token) {
+          document.documentElement.classList.remove('is-reordering')
+          setDropCursor(null)
+          sceneDropHighlight.value = null
+          return
+        }
+        const dragged = itemTokenEntity(campaign, token)
+        const target = dragged ? dropTargetAt(event.clientX, event.clientY, dragged) : null
+        document.documentElement.classList.add('is-reordering')
+        setDropCursor(!!target)
+        sceneDropHighlight.value = target?.tokenId ?? null
+      }
+      ctl.onItemTokenDrop = (token, event) => {
+        const dragged = itemTokenEntity(campaign, token)
+        const target = dragged ? dropTargetAt(event.clientX, event.clientY, dragged) : null
+        document.documentElement.classList.remove('is-reordering')
+        setDropCursor(null)
+        sceneDropHighlight.value = null
+        if (!target) {
+          const overCanvas = hostRef.current?.contains(document.elementFromPoint(event.clientX, event.clientY)) ?? false
+          if (!overCanvas) {
+            ctl!.renderer.previews.delete(token.id)
+            ctl!.renderer.invalidate('previews', 'overlay')
+            return true
+          }
+          return false
+        }
+        if (target.element.matches('.scene-canvas') && !target.tokenId) return false
+        const destination = target.tokenCenter ?? { x: event.clientX, y: event.clientY }
+        ctl!.animateItemTokenDrop(token.id, destination.x, destination.y, () => {
+          dropOn(target, dragged!, event.clientX, event.clientY)
+          ctl!.scene.remove([token.id])
+          ctl!.selection.value = ctl!.selection.value.filter((id) => id !== token.id)
+        })
         return true
       }
       // A duplicated copy's token gets a copy of its own, from the same template.
@@ -207,6 +277,12 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
       ctl?.stop()
       controller.value = null
       tokenDrop.value = null
+      sceneCharacterAt.value = null
+      sceneDropHighlight.value = null
+      if (ctl) {
+        ctl.onItemTokenDragMove = null
+        ctl.onItemTokenDrop = null
+      }
       renderer.setElements([])
       scene?.destroy()
     }
@@ -533,6 +609,9 @@ function TokenOptionsDialog({
   const ref = useRef<HTMLDialogElement>(null)
   const el = id ? controller.element(id) : null
   const token = el?.type === 'token' ? el : null
+  const system = systemOf(campaign)
+  const item = token ? itemDefinitionForToken(campaign, token) : undefined
+  const itemToken = !!item
   const name = useSignal('')
   const style = useSignal<TokenStyle>('disc')
   const colour = useSignal('#000000')
@@ -540,9 +619,7 @@ function TokenOptionsDialog({
   const image = useSignal<BlobRef | undefined>(undefined)
   const size = useSignal('')
   const showName = useSignal(true)
-  const showBars = useSignal(true)
   const fileRef = useRef<HTMLInputElement>(null)
-  const system = systemOf(campaign)
   const grid = controller.renderer.grid
   const characters = useY(campaign.characters, () => listCharacters(campaign))
   // The character this token stands for, as saved (not the unsaved choice below).
@@ -558,7 +635,6 @@ function TokenOptionsDialog({
     characterId.value = c?.base ?? token.characterId ?? ''
     image.value = token.image
     showName.value = !token.hideName
-    showBars.value = !token.hideBars
     // The first size as wide as the token, or none if it's been resized by hand.
     const cells = Math.max(token.w, token.h) / grid.size
     size.value = system.sizes.find((z) => Math.abs(z.cells - cells) < 0.01)?.id ?? ''
@@ -586,7 +662,7 @@ function TokenOptionsDialog({
   return (
     <Dialog
       dialogRef={ref}
-      title={linked ? linked.name : 'Token options'}
+      title={linked ? linked.name : item?.name ?? token?.name ?? 'Token options'}
       onClose={onClose}
       proxy={linked ? linkProxy(campaign, 'character', linked.id, linked.name) : undefined}
     >
@@ -615,9 +691,9 @@ function TokenOptionsDialog({
               style: style.value === 'plain' && !image.value ? 'disc' : style.value,
               colour: colour.value,
               image: image.value,
-              ...linkTo(characterId.value),
+              ...(item ? { itemDefId: item.id } : {}),
+              ...(!itemToken ? linkTo(characterId.value) : {}),
               hideName: showName.value ? undefined : true,
-              hideBars: showBars.value ? undefined : true,
             }, system.sizes.find((z) => z.id === size.value)?.cells)
         }}
       >
@@ -631,27 +707,29 @@ function TokenOptionsDialog({
             autoComplete="off"
           />
         </label>
-        <label class="field">
-          Character
-          <select
-            class="input bevel"
-            value={characterId.value}
-            onChange={(e) => {
-              characterId.value = e.currentTarget.value
-              // Linking an unnamed token names it after the character.
-              const c = characters.find((k) => k.id === characterId.value)
-              if (c && !name.value.trim()) name.value = c.name
-            }}
-          >
-            <option value="">None</option>
-            {characters.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <span class="muted">The game system decides which of its stats show on the token.</span>
-        </label>
+        {!itemToken && (
+          <label class="field">
+            Character
+            <select
+              class="input bevel"
+              value={characterId.value}
+              onChange={(e) => {
+                characterId.value = e.currentTarget.value
+                // Linking an unnamed token names it after the character.
+                const c = characters.find((k) => k.id === characterId.value)
+                if (c && !name.value.trim()) name.value = c.name
+              }}
+            >
+              <option value="">None</option>
+              {characters.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <span class="muted">The game system decides which of its stats show on the token.</span>
+          </label>
+        )}
         <div class="field">
           Image
           <span class="token-image-row">
@@ -695,15 +773,6 @@ function TokenOptionsDialog({
           <label class="check">
             <input type="checkbox" checked={showName.value} onChange={(e) => (showName.value = e.currentTarget.checked)} />
             Name under the token
-          </label>
-          <label class="check" data-disabled={!characterId.value || undefined}>
-            <input
-              type="checkbox"
-              checked={showBars.value}
-              disabled={!characterId.value}
-              onChange={(e) => (showBars.value = e.currentTarget.checked)}
-            />
-            Health bar
           </label>
         </div>
         <div class="field">

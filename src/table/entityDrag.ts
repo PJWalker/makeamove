@@ -1,9 +1,12 @@
-import { addItem, setLearned, systemOf } from '../characters/api'
+import { addItem, getCharacter, selectedCharacterId, setLearned, systemOf } from '../characters/api'
 import { editHotbar, insertAt } from '../characters/hotbar'
+import type { TokenElement } from '../scene/types'
 import type { LinkKind } from '../notes/api'
 import type { Campaign } from '../store/campaign'
+import type { ItemDef } from '../systems/types'
 import { dropLine, indexAmong } from '../ui/reorder'
 import { hideTooltip } from '../ui/Tooltip'
+import { flashSceneDrop, sceneCharacterAt, sceneDropHighlight, tokenDrop, type TokenSpec } from './canvasState'
 
 const THRESHOLD = 5
 
@@ -20,25 +23,69 @@ export interface DragEntity {
   link?: { kind: LinkKind; id: string }
   /** Give it to the character it's dropped on. */
   give?: { kind: 'item' | 'move'; to: (characterId: string) => void }
+  /** Place it on the map as a token. */
+  token?: TokenSpec
+  /** File it in a note or character folder. */
+  folder?: (folderId: string | undefined) => void
+}
+
+export interface DropTarget {
+  element: HTMLElement
+  characterId?: string
+  tokenId?: string
+  tokenCenter?: { x: number; y: number }
 }
 
 /** The hotbar action for a link target, so it can be pinned (see actions/). */
 const ACTION_PREFIX: Partial<Record<LinkKind, string>> = { move: 'move', item: 'library', character: 'character', scene: 'scene' }
 
 /** An entity for a link target: anything links; most also pin; gear and moves can be given. */
-export function entity(campaign: Campaign, kind: LinkKind, id: string, label: string): DragEntity {
+export function entity(campaign: Campaign, kind: LinkKind, id: string, label: string, equipOnGive = false): DragEntity {
   const prefix = ACTION_PREFIX[kind]
   const out: DragEntity = {
     label,
+    token: { name: label },
     link: { kind, id },
     pin: prefix ? (index) => void editHotbar(campaign, (slots) => insertAt(slots, `${prefix}:${id}`, index)) : undefined,
   }
+  if (kind === 'character') {
+    const character = getCharacter(campaign, id)
+    if (character) out.token = { characterId: id, name: character.name, image: character.portrait, style: character.tokenStyle, colour: character.tokenColour }
+  }
   if (kind === 'item') {
     const def = systemOf(campaign).items.find((i) => i.id === id)
-    if (def) out.give = { kind, to: (characterId) => addItem(campaign, characterId, def) }
+    out.token = { name: label, icon: def?.icon ?? 'bag', itemDefId: id }
+    if (def) out.give = { kind, to: (characterId) => addItem(campaign, characterId, def, equipOnGive) }
   }
-  if (kind === 'move') out.give = { kind, to: (characterId) => setLearned(campaign, characterId, id, true) }
+  if (kind === 'move') {
+    out.token = { name: label, icon: 'move' }
+    out.give = { kind, to: (characterId) => setLearned(campaign, characterId, id, true) }
+  }
   return out
+}
+
+/** A scene item token as a draggable inventory item or text link. */
+export function itemDefinitionForToken(campaign: Campaign, token: TokenElement): ItemDef | undefined {
+  const items = systemOf(campaign).items
+  if (token.itemDefId) return items.find((item) => item.id === token.itemDefId)
+  if (!token.icon) return undefined
+  const matches = items.filter((item) => item.name === token.name && (item.icon ?? 'bag') === token.icon)
+  return matches.length === 1 ? matches[0] : undefined
+}
+
+export function itemTokenEntity(campaign: Campaign, token: TokenElement): DragEntity | null {
+  const def = itemDefinitionForToken(campaign, token)
+  if (!def) return null
+  const dragged = entity(campaign, 'item', def.id, token.name, true)
+  dragged.token = {
+    itemDefId: def.id,
+    name: token.name,
+    image: token.image,
+    icon: token.icon ?? def.icon ?? 'bag',
+    style: token.style,
+    colour: token.colour,
+  }
+  return dragged
 }
 
 /** An entity for a hotbar or palette action, by its id: links and gifts where it names a link target. */
@@ -47,7 +94,19 @@ export function actionEntity(campaign: Campaign, actionId: string, label: string
   const prefix = actionId.slice(0, i)
   const kind = (Object.keys(ACTION_PREFIX) as LinkKind[]).find((k) => ACTION_PREFIX[k] === prefix)
   const pin = (index: number) => void editHotbar(campaign, (slots) => insertAt(slots, actionId, index))
-  return kind ? { ...entity(campaign, kind, actionId.slice(i + 1), label), pin } : { label, pin }
+  if (prefix === 'use' || prefix === 'equip') {
+    const character = getCharacter(campaign, selectedCharacterId(campaign))
+    const item = character?.inventory.find((entry) => entry.id === actionId.slice(i + 1))
+    if (item) {
+      return {
+        label,
+        pin,
+        token: { name: item.name, icon: item.icon ?? 'bag', itemDefId: item.defId ?? item.id },
+        give: { kind: 'item', to: (characterId) => addItem(campaign, characterId, item, true) },
+      }
+    }
+  }
+  return kind ? { ...entity(campaign, kind, actionId.slice(i + 1), label), pin } : { label, pin, token: { name: label } }
 }
 
 /** Editors that take a dropped entity as a link, by their element (marked `data-link-drop`). */
@@ -77,36 +136,78 @@ export function overHotbar(x: number, y: number) {
  * that links it, or a character that takes it (any element with
  * `data-item-drop` or `data-move-drop` holding the character's id).
  */
-export function dropTargetAt(x: number, y: number, entity: DragEntity): HTMLElement | null {
+export function dropTargetAt(x: number, y: number, entity: DragEntity): DropTarget | null {
   const el = document.elementFromPoint(x, y)
   const editor = el?.closest<HTMLElement>('[data-link-drop]')
-  if (entity.link && editor && linkDrops.has(editor)) return editor
-  if (entity.give) return el?.closest<HTMLElement>(`[data-${entity.give.kind}-drop]`) ?? null
-  return null
+  if (entity.link && editor && linkDrops.has(editor)) return { element: editor }
+  const folder = entity.folder ? el?.closest<HTMLElement>('[data-folder-drop]') : null
+  if (folder) return { element: folder }
+  if (entity.give) {
+    const character = el?.closest<HTMLElement>(`[data-${entity.give.kind}-drop]`)
+    if (character) {
+      const characterId = character.dataset[entity.give.kind === 'item' ? 'itemDrop' : 'moveDrop']
+      if (characterId) return { element: character, characterId }
+    }
+  }
+  const canvas = el?.closest<HTMLElement>('.scene-canvas')
+  if (!canvas || !tokenDrop.value) return null
+  const character = entity.give ? sceneCharacterAt.value?.(x, y) : null
+  if (character && !character.editable) return null
+  return {
+    element: canvas,
+    ...(character
+      ? { characterId: character.characterId, tokenId: character.tokenId, tokenCenter: character.center }
+      : {}),
+  }
 }
 
 /** Drop an entity on a target from dropTargetAt; it flashes to say it landed. */
-export function dropOn(target: HTMLElement, entity: DragEntity, x: number, y: number) {
-  const link = linkDrops.get(target)
+export function dropOn(target: DropTarget, entity: DragEntity, x: number, y: number) {
+  const link = linkDrops.get(target.element)
   if (link && entity.link) link({ ...entity.link, label: entity.label }, x, y)
-  else if (entity.give) {
-    const characterId = target.dataset[entity.give.kind === 'item' ? 'itemDrop' : 'moveDrop']
-    if (!characterId) return
-    entity.give.to(characterId)
+  else if (entity.folder && target.element.hasAttribute('data-folder-drop')) entity.folder(target.element.dataset.folderDrop || undefined)
+  else if (entity.give && target.characterId) {
+    entity.give.to(target.characterId)
+    if (target.tokenId) flashSceneDrop(target.tokenId)
   }
-  target.dataset.dropped = 'true'
-  setTimeout(() => delete target.dataset.dropped, 600)
+  else if (target.element.matches('.scene-canvas')) tokenDrop.value?.(x, y, entity.token ?? { name: entity.label })
+  target.element.dataset.dropped = 'true'
+  setTimeout(() => delete target.element.dataset.dropped, 600)
 }
 
 /** Marks the target under the pointer while dragging. */
 export function dropMarker() {
-  let target: HTMLElement | null = null
-  return (next: HTMLElement | null) => {
-    if (next === target) return
-    delete target?.dataset.dropping
+  let target: DropTarget | null = null
+  return (next: DropTarget | null) => {
+    if (next?.element === target?.element && next?.tokenId === target?.tokenId) return
+    delete target?.element.dataset.dropping
     target = next
-    if (target) target.dataset.dropping = 'true'
+    sceneDropHighlight.value = next?.tokenId ?? null
+    if (target) target.element.dataset.dropping = 'true'
   }
+}
+
+export function setDropCursor(valid: boolean | null) {
+  if (valid === null) delete document.documentElement.dataset.dropValid
+  else document.documentElement.dataset.dropValid = String(valid)
+}
+
+function sendGhostToToken(ghost: HTMLElement, center: { x: number; y: number }, complete: () => void) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    ghost.remove()
+    complete()
+    return
+  }
+  const box = ghost.getBoundingClientRect()
+  ghost.style.transition = 'left 180ms cubic-bezier(0.2, 0.8, 0.2, 1), top 180ms cubic-bezier(0.2, 0.8, 0.2, 1), transform 180ms ease-in, opacity 180ms ease-in'
+  ghost.style.left = `${center.x - box.width / 2}px`
+  ghost.style.top = `${center.y - box.height / 2}px`
+  ghost.style.transform = 'scale(0.08)'
+  ghost.style.opacity = '0'
+  window.setTimeout(() => {
+    ghost.remove()
+    complete()
+  }, 180)
 }
 
 /**
@@ -140,15 +241,19 @@ export function dragEntity(e: PointerEvent, entity: DragEntity, source = e.curre
     ghost.style.left = `${ev.clientX + 12}px`
     ghost.style.top = `${ev.clientY + 8}px`
     const bar = hotbar()
-    if (onBar(ev)) {
+    const onHotbar = onBar(ev)
+    let target: DropTarget | null = null
+    if (onHotbar) {
       if (bar) bar.dataset.dropping = 'true'
       line.show(hotbarSlots(), indexAmong(hotbarSlots(), 'x', ev))
       mark(null)
     } else {
       if (bar) delete bar.dataset.dropping
       line.hide()
-      mark(dropTargetAt(ev.clientX, ev.clientY, entity))
+      target = dropTargetAt(ev.clientX, ev.clientY, entity)
+      mark(target)
     }
+    setDropCursor(onHotbar || !!target)
   }
 
   function end(ev: PointerEvent, commit: boolean) {
@@ -157,18 +262,26 @@ export function dragEntity(e: PointerEvent, entity: DragEntity, source = e.curre
     window.removeEventListener('pointercancel', cancel)
     mark(null)
     line.hide()
+    setDropCursor(null)
+    sceneDropHighlight.value = null
     const bar = hotbar()
     if (bar) delete bar.dataset.dropping
     if (!ghost) return
-    ghost.remove()
+    const target = commit && !onBar(ev) ? dropTargetAt(ev.clientX, ev.clientY, entity) : null
     document.documentElement.classList.remove('is-reordering')
     // The click that ends a drag is not a press on the row.
     const swallow = (c: Event) => c.stopPropagation()
     window.addEventListener('click', swallow, { capture: true, once: true })
     setTimeout(() => window.removeEventListener('click', swallow, { capture: true }), 0)
-    if (!commit) return
-    if (onBar(ev)) return entity.pin!(indexAmong(hotbarSlots(), 'x', ev))
-    const target = dropTargetAt(ev.clientX, ev.clientY, entity)
+    if (!commit) return ghost.remove()
+    if (onBar(ev)) {
+      ghost.remove()
+      return entity.pin!(indexAmong(hotbarSlots(), 'x', ev))
+    }
+    if (target?.tokenId && target.tokenCenter && target.characterId && entity.give) {
+      return sendGhostToToken(ghost, target.tokenCenter, () => dropOn(target, entity, ev.clientX, ev.clientY))
+    }
+    ghost.remove()
     if (target) dropOn(target, entity, ev.clientX, ev.clientY)
   }
   const up = (ev: PointerEvent) => end(ev, true)

@@ -16,6 +16,7 @@ import { autohide, setAutohide } from './canvasState'
 import { RESIZE_DIRS } from './resizeRect'
 import { dragEntity, type DragEntity } from './entityDrag'
 import type { Icon } from '../ui/icons'
+import type { menuTrigger } from "../ui/menuTrigger";
 
 /** The icon in a window's title bar that stands for what it shows. */
 export interface WindowProxy {
@@ -29,17 +30,19 @@ export function Dialog({
   title,
   onClose,
   proxy,
+  contextMenu,
   children,
 }: {
-  dialogRef: RefObject<HTMLDialogElement>
-  title: string
-  onClose?: () => void
+  dialogRef: RefObject<HTMLDialogElement>;
+  title: string;
+  onClose?: () => void;
   /**
    * What the window shows, as an icon in its title bar that drags like a
    * link: onto a character, the hotbar, a note or the chat.
    */
-  proxy?: WindowProxy
-  children: ComponentChildren
+  proxy?: WindowProxy;
+  contextMenu?: ReturnType<typeof menuTrigger>;
+  children: ComponentChildren;
 }) {
   // Rendered in the window layer with the other windows: a non-modal dialog
   // would otherwise be clipped by the panel that opened it (the scene bar
@@ -51,30 +54,45 @@ export function Dialog({
       closedby="none"
       aria-label={title}
       onClose={onClose}
-      onPointerDown={(e) => raisePopup(e.currentTarget)}
+      onPointerDown={(e) => {
+        raisePopup(e.currentTarget);
+        contextMenu?.onPointerDown(e);
+      }}
+      onContextMenu={(e) => contextMenu?.onContextMenu(e)}
       onKeyDown={(e) => {
-        if (e.key === 'Escape' && !e.defaultPrevented) {
-          e.preventDefault()
-          e.currentTarget.close()
+        if (e.key === "Escape" && !e.defaultPrevented) {
+          e.preventDefault();
+          e.currentTarget.close();
         }
       }}
     >
-      <header class="panel-header window-header" onPointerDown={(e) => dragPopup(dialogRef.current!, e)}>
+      <header
+        class="panel-header window-header"
+        onPointerDown={(e) => dragPopup(dialogRef.current!, e)}
+      >
         {proxy && (
           <span
             class="window-proxy"
             data-tip="Drag to link it, or onto a character or the hotbar"
             onPointerDown={(e) => {
               // Not a drag of the window itself.
-              e.stopPropagation()
-              dragEntity(e, proxy.entity, e.currentTarget.nextElementSibling as HTMLElement)
+              e.stopPropagation();
+              dragEntity(
+                e,
+                proxy.entity,
+                e.currentTarget.nextElementSibling as HTMLElement,
+              );
             }}
           >
             <proxy.Icon size={16} />
           </span>
         )}
         <h2 class="panel-title">{title}</h2>
-        <Button variant="icon" label="Close" onClick={() => dialogRef.current?.close()}>
+        <Button
+          variant="icon"
+          label="Close"
+          onClick={() => dialogRef.current?.close()}
+        >
           <IconClose size={16} />
         </Button>
       </header>
@@ -91,7 +109,7 @@ export function Dialog({
       ))}
     </dialog>,
     windowLayer,
-  )
+  );
 }
 
 /** Everything you can set: for you on this device, and (for the GM) for the campaign. */

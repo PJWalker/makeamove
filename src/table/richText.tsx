@@ -21,6 +21,7 @@ import { placeAnchored } from '../ui/anchor'
 import { entryIcon } from '../ui/entryIcons'
 import { IconCharacters, IconMap, IconNotes, IconOpenWindow, IconRename, IconSidebar, type Icon } from '../ui/icons'
 import { dragEntity, entity, registerLinkDrop } from './entityDrag'
+import { actionMenuItems } from "./actionMenu";
 
 /*
  * Rich text edited together: notes, and the long text on character sheets.
@@ -326,7 +327,15 @@ export function mountRichText(host: HTMLElement, o: RichTextOptions): { editor: 
     const link = refOf(chip)
     const found = nodeOf(chip)
     const items: MenuItem[] = []
+    const actionId =
+      link.kind === "move"
+        ? `move:${link.id}`
+        : link.kind === "item"
+          ? `library:${link.id}`
+          : null;
+    if (actionId) items.push(...actionMenuItems(campaign, [{ id: actionId }]));
     if (!chip.dataset.missing) {
+      if (items.length) items.push("divider");
       items.push({ label: 'Open in sidebar', Icon: IconSidebar, onSelect: () => openInSidebar(campaign, link.kind, link.id) })
       if (followsInPlace(link.kind)) items.push({ label: 'Open in a window', Icon: IconOpenWindow, onSelect: () => showLink(link, chip) })
     }

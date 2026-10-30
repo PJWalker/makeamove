@@ -90,4 +90,14 @@ describe('template copies', () => {
     expect(getCharacter(c, a)).toBeUndefined()
     c.destroy()
   })
+
+  it('adds equippable gear already equipped when dropped from an item token', async () => {
+    device.value = { id: 'gm', name: 'Gwen' }
+    const c = await Campaign.open(await createCampaign('Barrows', 'Gwen'))
+    const id = newNpc(c, 'Goblin')
+    const gear = systemOf(c).items.find((item) => item.equippable)!
+    addItem(c, id, gear, true)
+    expect(getCharacter(c, id)!.inventory[0]).toMatchObject({ defId: gear.id, equipped: true })
+    c.destroy()
+  })
 })
