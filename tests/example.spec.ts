@@ -35,6 +35,13 @@ async function openCharacters(page: Page) {
   await create.click();
 }
 
+/** Wait for view transitions and other animations to finish. */
+async function settled(page: Page) {
+  await page.waitForFunction(
+    () => document.documentElement.getAnimations({ subtree: true }).length === 0,
+  );
+}
+
 test.beforeEach(async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
 });
@@ -363,4 +370,86 @@ test("a floating panel can be rolled up and restored", async ({ page }) => {
   await expect(newPage).toBeHidden();
   await title.dblclick();
   await expect(newPage).toBeVisible();
+});
+
+test("a sidebar resizes from its tab strip's edge by pointer and keyboard", async ({
+  page,
+}) => {
+  await createCampaign(page, "Sidebar resizing");
+  const sidebar = page.getByRole("complementary", { name: "Right sidebar" });
+  const body = sidebar.getByRole("tabpanel");
+  const handle = sidebar.getByRole("separator", { name: "Resize right sidebar" });
+  const chatTab = sidebar.getByRole("tab", { name: /^Chat/ });
+  await expect(sidebar).toHaveAttribute("data-open", "true");
+  await expect(handle).toHaveAttribute("aria-valuenow", "340");
+  const width = async () => (await body.boundingBox())!.width;
+  expect(await width()).toBeCloseTo(340, 0);
+
+  // Dragging the strip's outer edge widens the sidebar by the distance moved,
+  // once the view transitions have settled (they take over hit-testing).
+  await settled(page);
+  const edge = (await handle.boundingBox())!;
+  const x = edge.x + edge.width / 2;
+  const y = edge.y + edge.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x - 60, y, { steps: 6 });
+  await expect(page.locator("html")).toHaveClass(/is-dragging/);
+  await page.mouse.up();
+  await expect(page.locator("html")).not.toHaveClass(/is-dragging/);
+  await expect(handle).toHaveAttribute("aria-valuenow", "400");
+  expect(await width()).toBeCloseTo(400, 0);
+
+  // An interrupted drag ends cleanly.
+  await page.mouse.move(x - 60, y);
+  await page.mouse.down();
+  await page.mouse.move(x - 70, y);
+  await page.evaluate(() => window.dispatchEvent(new Event("blur")));
+  await expect(page.locator("html")).not.toHaveClass(/is-dragging/);
+  await page.mouse.move(x - 200, y);
+  await page.mouse.up();
+  await expect(handle).toHaveAttribute("aria-valuenow", "410");
+
+  // The keyboard: arrows step, Shift steps further, Home shuts, Enter resets.
+  await handle.focus();
+  await page.keyboard.press("ArrowLeft");
+  await expect(handle).toHaveAttribute("aria-valuenow", "426");
+  await page.keyboard.press("Shift+ArrowRight");
+  await expect(handle).toHaveAttribute("aria-valuenow", "362");
+  await page.keyboard.press("Home");
+  await expect(sidebar).toHaveAttribute("data-open", "false");
+  await expect(handle).toHaveAttribute("aria-valuetext", "Collapsed");
+  await page.keyboard.press("ArrowLeft");
+  await expect(sidebar).toHaveAttribute("data-open", "true");
+  await expect(handle).toHaveAttribute("aria-valuenow", "362");
+  await page.keyboard.press("Enter");
+  await expect(handle).toHaveAttribute("aria-valuenow", "340");
+
+  // The width is kept across a reload.
+  await page.keyboard.press("End");
+  const max = await handle.getAttribute("aria-valuemax");
+  await expect(handle).toHaveAttribute("aria-valuenow", max!);
+  await page.reload();
+  await expect(handle).toHaveAttribute("aria-valuenow", max!);
+
+  // The tabs still select and collapse the sidebar on click.
+  await chatTab.click();
+  await expect(sidebar).toHaveAttribute("data-open", "false");
+  await chatTab.click();
+  await expect(sidebar).toHaveAttribute("data-open", "true");
+  await expect(chatTab).toHaveAttribute("aria-selected", "true");
+
+  // A shut sidebar can be dragged back open from the strip's edge.
+  await chatTab.click();
+  await expect(sidebar).toHaveAttribute("data-open", "false");
+  await settled(page);
+  const shut = (await handle.boundingBox())!;
+  const shutX = shut.x + shut.width / 2;
+  const shutY = shut.y + shut.height / 2;
+  await page.mouse.move(shutX, shutY);
+  await page.mouse.down();
+  await page.mouse.move(shutX - 300, shutY, { steps: 8 });
+  await page.mouse.up();
+  await expect(sidebar).toHaveAttribute("data-open", "true");
+  await expect(handle).toHaveAttribute("aria-valuenow", "300");
 });

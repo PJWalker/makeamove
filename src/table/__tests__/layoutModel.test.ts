@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { PANEL_ORDER, close, defaultLayout, detach, dock, locate, normalise, reorder, setOpen, showTab, withoutPanels } from '../layoutModel'
+import { PANEL_ORDER, SIDEBAR_DEFAULT_W, SIDEBAR_MIN_W, close, defaultLayout, detach, dock, keyedSideWidth, locate, normalise, reorder, resizeSide, setOpen, showTab, withoutPanels } from '../layoutModel'
 
 const win = { x: 10, y: 10, w: 300, h: 300, z: 1 }
 const everywhere = (l: ReturnType<typeof defaultLayout>) =>
@@ -117,5 +117,42 @@ describe('panel layout', () => {
     expect(l.left.active).toBe(id)
     expect(locate(l, 'entity:link:note:page')).toBe('floating')
     expect(l.right.panels).toEqual(['chat', 'libraries', 'items', 'notes', 'members'])
+  })
+})
+
+describe('sidebar resizing', () => {
+  const max = 600
+  const side = (open: boolean, width = SIDEBAR_DEFAULT_W) => ({ ...defaultLayout(false).right, open, width })
+
+  it('clamps a width between the minimum and the maximum, reopening a shut side', () => {
+    const l = setOpen(defaultLayout(false), 'right', false)
+    expect(resizeSide(l, 'right', 200, max).right).toMatchObject({ open: true, width: SIDEBAR_MIN_W })
+    expect(resizeSide(l, 'right', 5000, max).right).toMatchObject({ open: true, width: max })
+    expect(resizeSide(l, 'right', 401.6, max).right).toMatchObject({ open: true, width: 402 })
+  })
+
+  it('shuts a side pulled very narrow and keeps its last width', () => {
+    const l = resizeSide(defaultLayout(false), 'left', 100, max)
+    expect(l.left).toMatchObject({ open: false, width: SIDEBAR_DEFAULT_W })
+    expect(resizeSide(l, 'left', 0, max)).toBe(l)
+  })
+
+  it('steps with the arrow keys in the direction that widens each side', () => {
+    expect(keyedSideWidth(side(true), 'ArrowLeft', false, -1, max)).toBe(SIDEBAR_DEFAULT_W + 16)
+    expect(keyedSideWidth(side(true), 'ArrowRight', false, -1, max)).toBe(SIDEBAR_DEFAULT_W - 16)
+    expect(keyedSideWidth(side(true), 'ArrowRight', true, 1, max)).toBe(SIDEBAR_DEFAULT_W + 64)
+    expect(keyedSideWidth(side(true, SIDEBAR_MIN_W), 'ArrowLeft', true, 1, max)).toBe(SIDEBAR_MIN_W)
+  })
+
+  it('reopens a shut side at its last width, and ignores shrinking it further', () => {
+    expect(keyedSideWidth(side(false, 420), 'ArrowLeft', false, -1, max)).toBe(420)
+    expect(keyedSideWidth(side(false, 420), 'ArrowRight', false, -1, max)).toBeNull()
+  })
+
+  it('jumps with Home, End and Enter, and ignores other keys', () => {
+    expect(keyedSideWidth(side(true), 'Home', false, 1, max)).toBe(0)
+    expect(keyedSideWidth(side(true), 'End', false, 1, max)).toBe(max)
+    expect(keyedSideWidth(side(true, 500), 'Enter', false, 1, max)).toBe(SIDEBAR_DEFAULT_W)
+    expect(keyedSideWidth(side(true), 'Tab', false, 1, max)).toBeNull()
   })
 })

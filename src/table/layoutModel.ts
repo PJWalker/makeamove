@@ -44,6 +44,11 @@ export interface Layout {
 }
 
 export const SIDEBAR_DEFAULT_W = 340
+export const SIDEBAR_MIN_W = 280
+/** Dragging a sidebar narrower than this shuts it. */
+const SIDEBAR_SNAP_SHUT_W = 180
+const SIDEBAR_KEY_STEP = 16
+const SIDEBAR_KEY_STEP_LARGE = 64
 
 const DEFAULT_SIDE: Record<PanelId, Side> = {
   scene: 'left',
@@ -165,6 +170,31 @@ export function showTab(l: Layout, id: DockItemId): Layout {
 
 export function setOpen(l: Layout, side: Side, open: boolean): Layout {
   return { ...l, [side]: tidy({ ...l[side], open }) }
+}
+
+/** Resize a side; pulling it very narrow snaps it shut, and widening it again reopens it. */
+export function resizeSide(l: Layout, side: Side, width: number, max: number): Layout {
+  const s = l[side]
+  if (width < SIDEBAR_SNAP_SHUT_W) return s.open ? { ...l, [side]: { ...s, open: false } } : l
+  const w = Math.round(Math.min(Math.max(width, SIDEBAR_MIN_W), Math.max(SIDEBAR_MIN_W, max)))
+  return w !== s.width || !s.open ? { ...l, [side]: { ...s, width: w, open: true } } : l
+}
+
+/**
+ * The width a key asks of a side's resize separator, or null for keys it
+ * doesn't handle. A shut side counts as zero wide: growing reopens it at its
+ * last width, Home shuts it, End widens it fully, and Enter resets it.
+ * `grow` is the direction (+1 right, -1 left) that widens the side.
+ */
+export function keyedSideWidth(s: SideState, key: string, shift: boolean, grow: 1 | -1, max: number): number | null {
+  const step = shift ? SIDEBAR_KEY_STEP_LARGE : SIDEBAR_KEY_STEP
+  const delta = key === 'ArrowRight' ? grow * step : key === 'ArrowLeft' ? -grow * step : 0
+  if (delta > 0) return s.open ? s.width + delta : s.width
+  if (delta < 0) return s.open ? Math.max(SIDEBAR_MIN_W, s.width + delta) : null
+  if (key === 'Home') return 0
+  if (key === 'End') return max
+  if (key === 'Enter') return SIDEBAR_DEFAULT_W
+  return null
 }
 
 function without(l: Layout, id: DockItemId): Layout {
