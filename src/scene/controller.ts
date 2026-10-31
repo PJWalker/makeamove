@@ -1,19 +1,29 @@
 import { effect, signal, untracked } from '@preact/signals'
-import type { CampaignDefaults } from '../store/campaign'
-import type { EntityGraphic, EntityGraphicRef } from "../graphics";
+import type { CampaignDefaults } from "../store/campaign";
 import { device } from '../store/device'
 import { colourOf, type Presence } from './presence'
 import { type Camera, clampZoom, fitCamera, toWorld, zoomAt } from './camera'
+import { readSceneCamera, saveSceneCamera } from "./cameraMemory";
 import { CORNER_SIGNS, type Corner, bounds, contains, corners, fromLocal, hits, resizeFromCorner, rotationTowards, tokensCovered } from './geometry'
 import { type Point, snapPoint, snapSize } from './grid'
-import { importImage, imageColour } from './images'
+import { imageColour } from "./images";
 import { formatDistance, tokenDistance } from './measure'
 import { wallEnds } from './vision'
 import { HANDLE_SIZE, type LightPart, type SceneRenderer, lightHandles, rotateHandlePosition } from './renderer'
 import type { SceneDoc } from './sceneDoc'
 import { finishStroke, STRIDE } from './stroke'
+import { SceneElementCommands } from "./elementCommands";
 import { activeTool, ERASER_RADIUS, lightTool, pen, SHAPE_WIDTH, shapeTool, TEMPLATE_STYLE } from './tools'
-import { AREA_COLOURS, LAYERS, type BlobRef, type Layer, type AreaTone, type LightElement, type NewElement, type SceneElement, type TokenElement, type ShapeKind, type TokenStyle, type Transform } from './types'
+import {
+  AREA_COLOURS,
+  type Layer,
+  type AreaTone,
+  type LightElement,
+  type SceneElement,
+  type TokenElement,
+  type ShapeKind,
+  type Transform,
+} from "./types";
 
 /** A new lamp's size, in cells: its shadows' softness. Resizing the lamp makes them softer or sharper. */
 const LAMP_SIZE = 0.6
@@ -54,11 +64,6 @@ const RESIZE_CURSORS = ['nwse-resize', 'nesw-resize', 'nwse-resize', 'nesw-resiz
 
 /** The cursor over each of a light's handles, which sit right, up-right and down-right of it. */
 const LIGHT_CURSORS: Record<LightPart, string> = { lamp: 'ew-resize', bright: 'nesw-resize', dim: 'nwse-resize' }
-
-/** This member's token colour, from their device id. */
-const memberColour = () => colourOf(device.value)
-
-const cameraKey = (sceneId: string) => `mam:camera:${sceneId}`
 
 /**
  * Turns pointer, wheel and keyboard input into camera moves and scene edits.
@@ -129,6 +134,7 @@ export class SceneController {
   private presence: Presence | null;
   private lastCursor = 0;
   private ruler: Point | null = null;
+  private readonly commands: SceneElementCommands;
 
   constructor(
     scene: SceneDoc,
@@ -144,6 +150,17 @@ export class SceneController {
     this.host = host;
     this.sceneId = sceneId;
     this.defaults = defaults;
+    this.commands = new SceneElementCommands({
+      scene,
+      renderer,
+      host,
+      defaults,
+      elements: () => this.elements,
+      element: (id) => this.byId.get(id),
+      selection: this.selection,
+      afterDuplicate: (ids) => this.afterDuplicate(ids),
+      updateCursor: () => this.updateCursor(),
+    });
   }
 
   start() {
@@ -439,16 +456,10 @@ export class SceneController {
   // Camera
 
   private restoreCamera() {
-    try {
-      const saved = JSON.parse(
-        localStorage.getItem(cameraKey(this.sceneId)) ?? "null",
-      );
-      if (saved && typeof saved.zoom === "number") {
-        this.renderer.setCamera(saved);
-        return;
-      }
-    } catch {
-      // Fall through to fitting the scene.
+    const saved = readSceneCamera(this.sceneId);
+    if (saved) {
+      this.renderer.setCamera(saved);
+      return;
     }
     this.fit();
   }
@@ -459,14 +470,7 @@ export class SceneController {
   }
 
   private saveCamera() {
-    try {
-      localStorage.setItem(
-        cameraKey(this.sceneId),
-        JSON.stringify(this.renderer.camera),
-      );
-    } catch {
-      // The view just won't be remembered.
-    }
+    saveSceneCamera(this.sceneId, this.renderer.camera);
   }
 
   /** Show everything in the scene, or the origin at 100% if it's empty. */
@@ -1755,270 +1759,46 @@ export class SceneController {
 
   // Edits, for menus and shortcuts
 
-  remove(ids: string[]) {
-    const removable = ids.filter(
-      (id) => this.byId.get(id) && !this.byId.get(id)!.locked,
-    );
-    if (!removable.length) return;
-    this.scene.remove(removable);
-    this.selection.value = this.selection.value.filter(
-      (id) => !removable.includes(id),
-    );
-  }
-
-  duplicate(ids: string[]) {
-    if (!ids.length) return;
-    const grid = this.renderer.grid;
-    const copies = this.scene.duplicate(
-      ids,
-      grid.type === "none" ? 20 : grid.size,
-    );
-    this.afterDuplicate(copies);
-    this.selection.value = copies;
-  }
-
   /** Called with new duplicates, so the table can give a template's token a copy of its own. */
   afterDuplicate: (ids: string[]) => void = () => {};
-
-  setLocked(ids: string[], locked: boolean) {
-    this.scene.update(ids.map((id) => [id, { locked }]));
+  remove(...args: Parameters<SceneElementCommands["remove"]>) {
+    return this.commands.remove(...args);
   }
-
-  restack(ids: string[], to: "front" | "back") {
-    this.scene.restack(ids, to);
+  duplicate(...args: Parameters<SceneElementCommands["duplicate"]>) {
+    return this.commands.duplicate(...args);
   }
-
-  setLayer(ids: string[], layer: Layer) {
-    this.scene.setLayer(ids, layer);
+  setLocked(...args: Parameters<SceneElementCommands["setLocked"]>) {
+    return this.commands.setLocked(...args);
   }
-
-  /**
-   * Change a token's name, style and colour as one undo step; with `cells`,
-   * also make it that many cells across, snapped to the grid.
-   */
-  updateToken(
-    id: string,
-    patch: Partial<
-      Pick<
-        TokenElement,
-        | "name"
-        | "style"
-        | "colour"
-        | "characterId"
-        | "graphic"
-        | "entityRef"
-        | "itemDefId"
-        | "hideName"
-        | "hideBars"
-      >
-    >,
-    cells?: number,
-  ) {
-    const el = this.byId.get(id);
-    const grid = this.renderer.grid;
-    const size = cells && el ? cells * grid.size : 0;
-    const resize =
-      size &&
-      el &&
-      (Math.abs(el.w - size) > 0.5 || Math.abs(el.h - size) > 0.5);
-    this.scene.update([
-      [
-        id,
-        resize
-          ? { ...patch, ...snapPoint(grid, el, cells), w: size, h: size }
-          : patch,
-      ],
-    ]);
+  restack(...args: Parameters<SceneElementCommands["restack"]>) {
+    return this.commands.restack(...args);
   }
-
-  /** The names of every token on the scene, for naming new ones apart. */
-  tokenNames(): string[] {
-    return this.elements.flatMap((el) =>
-      el.type === "token" ? [el.name] : [],
-    );
+  setLayer(...args: Parameters<SceneElementCommands["setLayer"]>) {
+    return this.commands.setLayer(...args);
   }
-
-  /** Swap an image between being a map and being a token. */
-  convert(id: string, to: "map" | "token") {
-    const el = this.byId.get(id);
-    if (!el || el.type === to) return;
-    const grid = this.renderer.grid;
-    if (to === "token") {
-      if (el.type !== "map") return;
-      const image = el.image;
-      const size = snapSize(grid, Math.min(el.w, el.h, grid.size));
-      const p = snapPoint(grid, el, Math.round(size / grid.size));
-      const token = {
-        type: "token",
-        name: "",
-        graphic: { kind: "image", image },
-        colour: memberColour(),
-        style: this.defaults().tokenStyle,
-        ...p,
-        w: size,
-        h: size,
-        rot: 0,
-      };
-      this.scene.update([[id, token as Partial<SceneElement>]]);
-    } else {
-      if (el.type !== "token" || el.graphic?.kind !== "image") return;
-      const image = el.graphic.image;
-      const k = el.w / Math.max(image.width, image.height);
-      const map = {
-        type: "map",
-        image,
-        name: undefined,
-        colour: undefined,
-        style: undefined,
-        w: image.width * k,
-        h: image.height * k,
-      };
-      this.scene.update([[id, map as Partial<SceneElement>]]);
-    }
-    this.scene.setLayer([id], to);
+  updateToken(...args: Parameters<SceneElementCommands["updateToken"]>) {
+    return this.commands.updateToken(...args);
   }
-
-  addToken(
-    at: Point,
-    name = "",
-    options: {
-      graphic?: EntityGraphic;
-      entityRef?: EntityGraphicRef;
-      itemDefId?: string;
-      style?: TokenStyle;
-      colour?: string;
-    } = {},
-  ) {
-    const grid = this.renderer.grid;
-    const size = grid.type === "none" ? 70 : grid.size;
-    const p = snapPoint(grid, at);
-    const [id] = this.scene.add({
-      type: "token",
-      layer: "token",
-      name,
-      graphic: options.graphic,
-      entityRef: options.entityRef,
-      itemDefId: options.itemDefId,
-      colour: options.colour ?? memberColour(),
-      style:
-        options.style ??
-        (options.graphic?.kind === "image"
-          ? this.defaults().tokenStyle
-          : "disc"),
-      ...p,
-      w: size,
-      h: size,
-      rot: 0,
-    });
-    activeTool.value = "select";
-    this.selection.value = [id];
-    return id;
+  tokenNames() {
+    return this.commands.tokenNames();
   }
-
-  /** A token standing for a character, at a world point. */
+  convert(...args: Parameters<SceneElementCommands["convert"]>) {
+    return this.commands.convert(...args);
+  }
+  addToken(...args: Parameters<SceneElementCommands["addToken"]>) {
+    return this.commands.addToken(...args);
+  }
   addCharacterToken(
-    at: Point,
-    spec: {
-      characterId: string;
-      name: string;
-      graphic?: EntityGraphic;
-      entityRef?: EntityGraphicRef;
-      style?: TokenStyle;
-      colour?: string;
-    },
+    ...args: Parameters<SceneElementCommands["addCharacterToken"]>
   ) {
-    const grid = this.renderer.grid;
-    const size = grid.type === "none" ? 70 : grid.size;
-    const [id] = this.scene.add({
-      type: "token",
-      layer: "token",
-      name: spec.name,
-      characterId: spec.characterId,
-      graphic: spec.graphic,
-      entityRef: spec.entityRef ?? { kind: "character", id: spec.characterId },
-      colour: spec.colour ?? memberColour(),
-      style:
-        spec.style ??
-        (spec.graphic?.kind === "image" ? this.defaults().tokenStyle : "disc"),
-      ...snapPoint(grid, at),
-      w: size,
-      h: size,
-      rot: 0,
-    });
-    activeTool.value = "select";
-    this.selection.value = [id];
-    return id;
+    return this.commands.addCharacterToken(...args);
   }
-
-  /**
-   * Import image files at a world point. Small, squarish images become
-   * tokens; anything else is placed as a map at its own size.
-   */
-  async importFiles(files: Iterable<File>, at: Point) {
-    const images = [...files].filter((f) => f.type.startsWith("image/"));
-    if (!images.length) return;
-    this.host.style.cursor = "progress";
-    const grid = this.renderer.grid;
-    const added: NewElement[] = [];
-    try {
-      for (const [i, file] of images.entries()) {
-        let image: BlobRef;
-        try {
-          image = await importImage(file);
-        } catch (err) {
-          console.warn(`Couldn't import ${file.name}`, err);
-          continue;
-        }
-        const shift = i * (grid.type === "none" ? 40 : grid.size);
-        const p = { x: at.x + shift, y: at.y + shift };
-        const ratio = image.width / image.height;
-        if (
-          Math.max(image.width, image.height) <= 512 &&
-          ratio > 0.8 &&
-          ratio < 1.25
-        ) {
-          const size = grid.type === "none" ? 70 : grid.size;
-          added.push({
-            type: "token",
-            layer: "token",
-            graphic: { kind: "image", image },
-            name: tokenName(file.name),
-            colour: memberColour(),
-            style: this.defaults().tokenStyle,
-            ...snapPoint(grid, p),
-            w: size,
-            h: size,
-            rot: 0,
-          });
-        } else {
-          added.push({
-            type: "map",
-            layer: "map",
-            image,
-            ...p,
-            w: image.width,
-            h: image.height,
-            rot: 0,
-          });
-        }
-      }
-    } finally {
-      this.updateCursor();
-    }
-    if (!added.length) return;
-    activeTool.value = "select";
-    this.selection.value = this.scene.add(...added);
+  importFiles(...args: Parameters<SceneElementCommands["importFiles"]>) {
+    return this.commands.importFiles(...args);
   }
-
   layers() {
-    return LAYERS;
+    return this.commands.layers();
   }
-}
-
-/** "goblin_archer-2.png" → "Goblin archer 2" */
-function tokenName(file: string): string {
-  const base = file.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim()
-  return base ? base[0].toUpperCase() + base.slice(1) : ''
 }
 
 /** Resize to exactly w × h, keeping the corner opposite `corner` fixed. */

@@ -68,8 +68,11 @@ export const unavailablePanels = signal<PanelId[]>([])
 /** The layout as it shows, without the unavailable panels. */
 export const shownLayout = computed(() => withoutPanels(layout.value, unavailablePanels.value))
 
-export const floatingWindows = computed(() => shownLayout.value.floating.filter((w): w is FloatingWindow & { id: PanelId } => isPanelId(w.id)))
-export const floatingEntityWindows = computed(() => shownLayout.value.floating.filter((w) => !isPanelId(w.id)))
+export const floatingWindows = computed(() =>
+  shownLayout.value.floating.filter(
+    (w): w is FloatingWindow & { id: PanelId } => isPanelId(w.id),
+  ),
+);
 
 /** Pixels each side takes: its body when open, and its tab strip. */
 export const dockInsets = computed(() => {

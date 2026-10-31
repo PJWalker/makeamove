@@ -3,7 +3,7 @@
 Make a Move is a shared tabletop for role-playing campaigns. Create a campaign,
 invite your group, and prepare scenes with maps, grids, tokens, and drawings.
 Keep characters, moves, rolls, and conversation together as you play. Dungeon
-World is the first supported game system.
+World and D&D 5.5e are supported game systems.
 
 ## Run It
 

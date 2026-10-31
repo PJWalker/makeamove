@@ -13,16 +13,6 @@ import type { EntityGraphic, EntityGraphicRef } from "../graphics";
 export const LAYERS = ["map", "under", "token", "over"] as const;
 export type Layer = (typeof LAYERS)[number];
 
-export type ElementType =
-  | "map"
-  | "token"
-  | "drawing"
-  | "shape"
-  | "text"
-  | "wall"
-  | "light"
-  | "area";
-
 /** An image in the blob store; the CRDT holds only this reference. */
 export interface BlobRef {
   hash: string;

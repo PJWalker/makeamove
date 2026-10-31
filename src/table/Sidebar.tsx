@@ -29,7 +29,8 @@ import {
   windowDragging,
   type DockItemId,
   type Side,
-} from './panelLayout'
+  showPanel,
+} from "./panelLayout";
 import { PanelContent, PANELS, PaneToggle } from './panels'
 import { closeEntityWindow, entityRecord, EntityWindowContent, isEntityTab } from './entityWindows'
 import { CampaignEntityGraphic } from "./EntityGraphic";

@@ -45,6 +45,7 @@ import {
   tokenBlocker,
 } from "./vision";
 import { type Blocker, Lamp } from "./lampShader";
+import { resolveTokenLabelLayout } from "./tokenLabelLayout";
 import {
   AREA_COLOURS,
   isPlainToken,
@@ -1348,8 +1349,6 @@ export class SceneRenderer {
     const usedNames = new Set<string>();
     const usedValues = new Set<string>();
     type Box = { id: string; x: number; y: number; w: number; h: number };
-    const overlaps = (a: Box, b: Box) =>
-      a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
     const plans: {
       id: string;
       t: Transform;
@@ -1439,45 +1438,8 @@ export class SceneRenderer {
       });
     }
 
-    // Decide what shows: bars give way only to other bars; names give way to both.
     const hover = this.hoverToken;
-    const showBars = new Set<string>();
-    const showName = new Set<string>();
-    const shown = plans.filter((p) => !p.small);
-    // Wide bars where they'd touch no other token's wide bars.
-    const wide = new Set(
-      shown
-        .filter(
-          (p) =>
-            p.wideBars &&
-            !shown.some(
-              (q) => q !== p && q.wideBars && overlaps(p.wideBars!, q.wideBars),
-            ),
-        )
-        .map((p) => p.id),
-    );
-    for (const p of plans) if (wide.has(p.id)) p.bars = p.wideBars;
-    for (const p of shown) {
-      if (
-        p.bars &&
-        !shown.some((q) => q !== p && q.bars && overlaps(p.bars!, q.bars))
-      )
-        showBars.add(p.id);
-    }
-    for (const p of shown) {
-      if (!p.name) continue;
-      const clash = shown.some(
-        (q) =>
-          q !== p &&
-          ((q.name && overlaps(p.name!, q.name)) ||
-            (q.bars && showBars.has(q.id) && overlaps(p.name!, q.bars))),
-      );
-      if (!clash) showName.add(p.id);
-    }
-    if (hover) {
-      showBars.add(hover);
-      showName.add(hover);
-    }
+    const { bars, showBars, showName } = resolveTokenLabelLayout(plans, hover);
 
     // Draw, the hovered token's last so it sits on top.
     const ordered = [
@@ -1486,11 +1448,12 @@ export class SceneRenderer {
     ];
     for (const p of ordered) {
       if (p.name) p.name.text.visible = showName.has(p.id);
-      if (!p.bars || !showBars.has(p.id)) continue;
-      const { x, w } = p.bars;
+      const barBox = bars.get(p.id);
+      if (!barBox || !showBars.has(p.id)) continue;
+      const { x, w } = barBox;
       const barH = p.barH;
       p.stats.forEach((s, i) => {
-        const y = p.bars!.y + i * (barH + BAR_GAP);
+        const y = barBox.y + i * (barH + BAR_GAP);
         const frac = s.max > 0 ? Math.min(1, Math.max(0, s.value / s.max)) : 0;
         g.roundRect(x, y, w, barH, 3).fill({ color: INK, alpha: 0.85 });
         if (frac > 0)

@@ -1,6 +1,6 @@
 import type { ComponentChildren } from "preact";
 import { createPortal } from "preact/compat";
-import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
+import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import { Button } from "./Button";
 import { IconSearch } from "./icons";
 import { useMenuOverlay } from "./menuOverlay";

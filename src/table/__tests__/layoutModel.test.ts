@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { PANEL_ORDER, close, defaultLayout, detach, dock, locate, normalise, reorder, selectTab, setOpen, showTab, withoutPanels } from '../layoutModel'
+import { PANEL_ORDER, close, defaultLayout, detach, dock, locate, normalise, reorder, setOpen, showTab, withoutPanels } from '../layoutModel'
 
 const win = { x: 10, y: 10, w: 300, h: 300, z: 1 }
 const everywhere = (l: ReturnType<typeof defaultLayout>) =>

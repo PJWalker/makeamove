@@ -219,14 +219,6 @@ export function setField(campaign: Campaign, id: string, key: string, value: unk
   else m?.set(key, value)
 }
 
-/** Add to a numeric core field, never below zero. */
-export function bump(campaign: Campaign, id: string, key: string, by: number, max?: number) {
-  const m = campaign.characters.get(id)
-  if (!m) return
-  const next = Math.max(0, ((m.has(key) ? m.get(key) : baseOf(campaign, m)?.get(key)) ?? 0) + by)
-  m.set(key, max === undefined ? next : Math.min(next, max))
-}
-
 /** A sub-map value as the character has it: its own, or for a copy, its template's. */
 function current(campaign: Campaign, id: string, key: string, field: string): unknown {
   const m = campaign.characters.get(id)

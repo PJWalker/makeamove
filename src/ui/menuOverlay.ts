@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from "preact/hooks";
+import { useLayoutEffect, useRef } from "preact/hooks";
 import type { RefObject } from "preact";
 import { placeAnchored, type Anchor } from "./anchor";
 

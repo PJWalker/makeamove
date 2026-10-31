@@ -7,11 +7,7 @@ import { device } from './device'
 import { forgetCampaign, renameCampaignEntry, summaryOf, touchCampaign, updateCampaignEntry, upsertCampaign } from './registry'
 import { getSystem } from '../systems'
 import type { Invite } from '../sync/invite'
-import { SyncSession } from '../sync/session'
-import { colourOf, Presence } from '../scene/presence'
-import { BlobExchange } from '../sync/blobs'
-import { setBlobFetcher } from '../scene/images'
-import { getBlob, putBlob } from './blobs'
+import { CampaignConnection } from "./campaignConnection";
 import type { GridType } from '../scene/grid'
 import { sceneDbName } from '../scene/sceneDoc'
 import { noteDbName, noteGuid } from '../notes/noteDoc'
@@ -26,7 +22,7 @@ import type { TokenStyle } from '../scene/types'
  *   meta     Y.Map   name, systemId, systemVersion, roomKey, createdAt, createdBy,
  *                    defaultTokenStyle, defaultGridType
  *   members  Y.Map   deviceId -> Y.Map { name, role, joinedAt, activeSceneId }
- *   scenes   Y.Map   sceneId  -> Y.Map { name, canvasColour, order, visibility, doc }
+ *   scenes   Y.Map   sceneId  -> Y.Map { name, canvasColour, order, doc }
  *   notes    Y.Map   noteId   -> Y.Map { title, folder, order, links, updatedAt, updatedBy, doc }
  *   noteFolders Y.Map folderId -> { name, order }
  *   combat, combatants  Y.Map  the turn tracker (combat/combat.ts)
@@ -118,19 +114,22 @@ export class Campaign {
   readonly vault = signal<Vault | null>(null);
   private persistence: IndexeddbPersistence;
   private destroyed = false;
-  private cleanups: (() => void)[] = [];
-  private session: SyncSession | null = null;
-  private blobs: BlobExchange | null = null;
-  private fetcher: ((hash: string) => Promise<Blob | null>) | null = null;
+  private rejoinCleanups: (() => void)[] = [];
+  readonly connection: CampaignConnection;
 
   /** False while joining by invite, until the first peer has sent the campaign. */
   /** Cursors, pings and rulers; live only while peers are connected. */
-  readonly presence = new Presence();
   readonly ready = signal(false);
-  /** Peers connected right now. */
-  readonly peerCount = signal(0);
-  /** Device ids of everyone present, this device included. */
-  readonly online = signal<ReadonlySet<string>>(new Set());
+
+  get presence() {
+    return this.connection.presence;
+  }
+  get peerCount() {
+    return this.connection.peerCount;
+  }
+  get online() {
+    return this.connection.online;
+  }
 
   private constructor(id: string) {
     this.id = id;
@@ -150,6 +149,7 @@ export class Campaign {
     this.entityGraphics = this.doc.getMap("entityGraphics");
     this.persistence = new IndexeddbPersistence(dbName(id), this.doc);
     this.chat = new ChatLog(this.doc, id, device.value.id);
+    this.connection = new CampaignConnection(id, this.doc);
   }
 
   /** Chat, rolls and the move log (see chat/chatLog.ts). */
@@ -206,7 +206,7 @@ export class Campaign {
    * peer, it disconnects again.
    */
   async connect(roomKey: string, { rejoin = false } = {}) {
-    if (this.session) return;
+    if (this.connection.sync) return;
     if (this.removed.value && !rejoin) return;
     if (rejoin && this.removed.value) {
       this.checkingRejoin = true;
@@ -218,70 +218,23 @@ export class Campaign {
           this.checkMembership();
         }, REJOIN_CHECK_MS);
       });
-      this.cleanups.push(stop, () => clearTimeout(timer));
+      this.rejoinCleanups.push(stop, () => clearTimeout(timer));
     }
-    let transport;
-    try {
-      transport = (await import("../sync/trystero")).trysteroTransport(
-        this.id,
-        roomKey,
-      );
-    } catch {
-      // Offline or blocked: the campaign still works locally.
-      return;
-    }
-    if (this.destroyed) {
-      transport.close();
-      return;
-    }
-    const session = new SyncSession(this.doc, transport);
-    this.session = session;
-    const refresh = () => {
-      this.peerCount.value = session.peerIds().length;
-      const ids = new Set<string>([device.value.id]);
-      for (const st of session.awareness.getStates().values())
-        if (st.user?.id) ids.add(st.user.id);
-      this.online.value = ids;
-    };
-    this.blobs = new BlobExchange(session, { get: getBlob, put: putBlob });
-    const exchange = this.blobs;
-    this.fetcher = (hash) => exchange.fetch(hash);
-    setBlobFetcher(this.fetcher);
-    this.presence.attach(session.awareness);
-    session.onChange = refresh;
-    // Keep peers current when this player changes their name or colour.
-    const stopIdentity = effect(() => {
-      const d = device.value;
-      session.awareness.setLocalStateField("user", {
-        id: d.id,
-        name: d.name,
-        colour: colourOf(d),
-      });
-    });
-    this.cleanups.push(stopIdentity);
-    refresh();
-    void this.vault.value?.connect();
+    if (await this.connection.connect(roomKey, () => this.destroyed))
+      void this.vault.value?.connect();
   }
 
   /** The connection to peers, for presence and blob transfer. */
-  get sync(): SyncSession | null {
-    return this.session;
+  get sync() {
+    return this.connection.sync;
   }
 
   /** Leave the room. The campaign stays open locally. */
   disconnect() {
-    for (const c of this.cleanups) c();
-    this.cleanups = [];
-    if (this.fetcher) setBlobFetcher(null, this.fetcher);
-    this.fetcher = null;
-    this.presence.detach();
-    this.blobs?.close();
-    this.blobs = null;
-    this.session?.destroy();
-    this.session = null;
+    for (const cleanup of this.rejoinCleanups) cleanup();
+    this.rejoinCleanups = [];
+    this.connection.disconnect();
     this.vault.value?.disconnect();
-    this.peerCount.value = 0;
-    this.online.value = new Set([device.value.id]);
   }
 
   destroy() {

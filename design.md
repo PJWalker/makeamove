@@ -13,13 +13,12 @@ A generic core, with plugins for specific game systems. Dungeon World is the fir
 - Characters come as PCs (class, moves) and GM-made NPCs (HP and system-defined fields). They live in a two-pane panel with shared folders, and selecting a character's token opens its sheet.
 - Dice roller, with every roll and triggered move posted to a shared chat log.
 - Session and world-building notes
-- A game-system plugin API
-  - Plugins for Dungeon World, MASKS, and D\&D 5.53
+- A game-system plugin API, currently used by the built-in Dungeon World and D\&D 5.5e systems; Daggerheart, PF2e and Blades in the Dark are possible future systems.
 - Works with zero servers we operate beyond a tiny, replaceable signalling relay.
 
 ## Non-goals
 
-- Secure secrecy. Hidden things are hidden in the UI, it’s ok if the player’s client gets info that the player shouldn’t know yet.
+- Secure secrecy for shared campaign data. GM-only notes use a separate vault document; other campaign data is shared with peers and may be inspected by their clients.
 
 ## UI Design
 
@@ -71,8 +70,8 @@ Every entity has a stable ULID. What a game system owns lives in sub-maps the co
 | :---- | :---- | :---- |
 | Campaign | root doc | name, system id, members {name, colour, role, character, hotbars per character}, active scene, defaults (grid type, token style), entity graphics keyed by entity kind and id, last announced scene, session count |
 | Entity graphic | root doc `entityGraphics` map | entity kind and id -> built-in icon name or blob reference; one shared graphic for lists, windows, sidebars and map tokens |
-| Scene | own subdoc | name, canvas colour (or Auto), grid {type: none/square/hex, size, offset, unit per cell, unit name, diagonal rule}, elements (Y.Map by id) |
-| Scene element | scene subdoc | id, type (map, token, drawing), layer (map, under, token, over), centre, size, rotation, z (fractional index), locked, createdBy; tokens add name, graphic, entity reference, colour, style, characterId, hideName, hideBars |
+| Scene | own subdoc | name, visibility, canvas colour (or Auto), grid {type: none/square/hex, size, offset, unit per cell, unit name, diagonal rule}, elements (Y.Map by id) |
+| Scene element | scene subdoc | id, type (map, token, drawing, shape, text, wall, light, area), layer (map, under, token, over), centre, size, rotation, z (fractional index), locked, createdBy; tokens add name, graphic, entity reference, colour, style, characterId, hideName, hideBars |
 | Character | root doc `characters` map | kind (pc or npc), name, owner, folder, class, level, token style; the system's `scores`, `data`, `resources`, `conditions`, `modifiers` and NPC `fields`; `learned` actions; `inventory`; rich text `text:*`; `template` or `base` |
 | Item definition | the game system (listed in the Libraries) | id, name, description, weight, uses, tags, effects, active (carried, equipped, always), icon |
 | Item instance | the character's `inventory` map | id, defId, name, description, weight, tags, uses left, equippable, equipped, effects, default icon, order (fractional index) |
@@ -99,12 +98,14 @@ A scene is an unbounded 2D world rendered by PixiJS, with pan (drag / space-drag
 2. *Map* — one or more placed images; usually locked after setup.
 3. *Grid* — optional square or hex overlay, snap-to-grid for tokens.
 4. *Drawing (under)* — terrain marks, spell areas.
-5. *Tokens* — characters and NPCs. Their names and the stat bars the system supplies (HP) are drawn under them in screen space; condition pips are planned.
+5. *Tokens* — characters and NPCs. Names, system stat bars, condition pips and the active-turn marker are drawn in screen space.
 6. *Drawing (over)* — annotations, arrows, text.
-7. *Fog (planned, M6)* — GM-painted reveal/hide mask.
+7. *Vision and lighting* — light, shadow and token line-of-sight masks.
 8. *Presence* — other users’ cursors, pings, laser trails, measuring rulers and target rings (awareness only, never stored).
 
-## Tools: select/move/rotate/scale, pan, freehand pen (perfect-freehand), eraser, ruler (in the scene's units), ping (click-and-hold, or hold and drag for a laser trail). Planned: line/arrow, rectangle/ellipse, text (shortcut X), and the GM's fog brush
+## Tools
+
+Select, move, rotate and scale; pan; draw and erase; use shapes, text, the ruler and ping; or place walls and lights. Shapes include rectangles, circles, lines and cones. The GM's wall and light tools control dynamic lighting and token sight.
 
 **Performance:** viewport culling, texture mip-mapping for large maps, drawings cached to render textures once finished, and CRDT updates batched per animation frame. Drag movements are sent via awareness while dragging and committed to the CRDT on release, which keeps history small.
 
@@ -135,7 +136,7 @@ The game system's `tokenStats(character, derived)` says what the token shows. (F
 
 A token's name and stat bars are drawn in screen space, so they stay readable at any zoom. Bars straddle the token's bottom edge, 11 to 17 px tall, half again as wide as the token where that clears every other token's bars (otherwise just inside its width, never under 36 px; the numbers show from 44 px). Names are 11 to 15 px. Bars that would overlap other bars, names that would overlap other names or bars, and everything under tokens smaller than 24 px on screen show only while the token is hovered. Token options can hide a token's name or its bars for everyone.
 
-**Scene switching:** the GM can pull everyone to a scene; players can browse other visible scenes on their own (an option the GM can turn off). *The pull-everyone control is not built yet.*
+**Scene switching:** each player can choose a scene independently. A GM's scene change is announced in chat with a Go there action; a group-wide pull-to-scene control is not implemented.
 
 ## Characters, moves and items
 
@@ -178,23 +179,22 @@ In a sheet's move list each action has a gold glyph that turns into a button whe
 
 ## Dice
 
-The roller decides the result locally with a cryptographic RNG, writes it to the chat log, and every peer animates 3D dice that land on those exact faces. Results never depend on physics, so all screens agree.
+The roller decides the result locally with a cryptographic RNG and writes it to the chat log. Every peer sees the same recorded result; rolls currently use animated 2D cards. Results never depend on physics.
 
 - **Notation:** a small parser for standard notation — `2d6+2`, `d8+d4`, `4d6kh3`, `2d20kl1` (disadvantage), `d6!` (exploding), `b` / `w` for advantage-style “best of”. Plugins can register extra syntax.
 - **Roll record:** `{formula, dice:[{sides, value, kept}], modifiers:[{label, value}], total, rollerKey, hlc}`. Each modifier keeps its label so the card can read “2d6 (4+5) \+ STR 2 \+ Ring 1 \= 12”.
-- **3D rendering (moved to M6):** a transparent full-screen overlay, lazy-loaded on the first roll, where every peer's dice land on the recorded faces. Per-user dice colour/theme. Note: @3d-dice/dice-box has no predetermined-results mode (it only rolls with live physics); only its older three.js fork, @3d-dice/dice-box-threejs (last updated 2022), can force results. M6 picks between that fork and our own physics-free animation.
-- **Fallback:** a 2D tumble animation when WebGL is unavailable, or when the user turns 3D off for speed.
+- **Future:** 3D dice are deferred; the current 2D card animation works regardless of WebGL support.
 - **Visibility:** public, or secret (the roller and the GM; a GM's secret roll is the GM's alone). Others see “Name rolled in secret.” There are no blind rolls: if a player shouldn't see a result, the GM rolls it.
 - **Quick dice bar:** d4, d6, d8, d10, d12, d20, plus a free-form box; clicking a stat or move on a sheet rolls the right formula. Clicks gather into a pool for a moment before rolling as one entry (double-click the d20 for 2d20); right-click a die to take one back out.
 
-*As built in M3:* `src/dice/notation.ts` parses and rolls `2d6+2`, `d8+d4`, `4d6kh3` (also `k3`, `b3`), `2d20kl1` (also `w1`), `4d6dl1` / `dh`, `d6!` (capped at 50 extra dice), `d%`, and `[labels]` on any term, with unbiased `crypto.getRandomValues` dice. Rolls show in the chat as cards: formula and note, one chip per die shaped like that die (dropped dice faded, maximums in citrine, ones in garnet), and the total; a roll that arrives live tumbles in, die by die (off under reduced motion). Until 3D dice land, that card is the 2D fallback. Plugin syntax is not in yet.
+`src/dice/notation.ts` parses and rolls `2d6+2`, `d8+d4`, `4d6kh3` (also `k3`, `b3`), `2d20kl1` (also `w1`), `4d6dl1` / `dh`, `d6!` (capped at 50 extra dice), `d%`, and `[labels]` on any term, with unbiased `crypto.getRandomValues` dice. Roll cards show the formula, note, dice and total; incoming rolls animate unless reduced motion is enabled. Plugin syntax is not implemented.
 
 ## Chat and move log
 
 The right-hand sidebar is one chronological stream of chat, rolls and move cards, stored as append-only chunks (one subdoc per \~500 messages) so long campaigns stay fast.
 
 - **Message kinds:** text (markdown-lite), roll card, move card (move name, trigger, roll breakdown, outcome band highlighted, outcome text, follow-up buttons), system (“Kira joined”, “Scene changed to The Bog”), whisper (to named members; hidden in UI from others).
-- **Slash commands:** `/r 2d6+1`, `/w name text`, `/move defy-danger dex`, `/sr` for a secret roll. Plugins register more.
+- **Slash commands:** `/r 2d6+1`, `/w name text`, `/move defy-danger dex`, `/sr` for a secret roll, plus session, pin, timer and counter commands. Plugin-provided slash commands are not implemented.
 - **Scene changes:** when the GM settles on a scene (stays 1.5 s, so passing through scenes or renaming one doesn't post), the log gets “Scene changed to The Bog”, with a “Go there” button for anyone on a different scene. Players aren't moved; that waits for the GM's “pull everyone” control. The last announced scene is kept in the campaign, so a reload doesn't repeat it, and a new campaign's first scene isn't announced.
 - **Session markers:** the GM can start/end a session; the log groups by session and can export one as markdown into the notes. Earlier sessions fold into a band (“Session 2 · 34 messages”) until the reader opens them; the current session is always open.
 - **Deleting:** players can delete their own messages, and the GM anyone's (including system notices and session markers). Right-click a message (or long-press on touch) for a menu with “Delete message”.  Deleting removes the message from the shared log for everyone.
@@ -226,22 +226,15 @@ Notes are a folder tree of collaborative rich-text pages (TipTap over Yjs) with 
 - **Backlinks:** each page records its outgoing links in the campaign's note index, so a page lists the pages that link to it ("Linked from") without loading them.
 - **GM-only pages** live in the GM vault (see Architecture). They share the campaign's folders and show with a secret-book icon and a GM tag; New GM page makes one. "Reveal to players…" copies a page into the campaign under the same id, so links keep working, then drops the vault copy; it can't be hidden again. A link to a GM-only page placed in shared text stores no title, and players see it as "Unavailable". Only the campaign's creator is a GM so far.
 - **Session pages:** `/session start` makes a "Session N" page in Sessions with Recap, Highlights and Loose threads headings.
-- **Planned:** per-paragraph secrets (a "GM only" block style in a shared page, hidden in the UI), images from the blob store, pinning a page to a scene location, live carets, exporting a session's log into its page, and Dungeon World's Fronts, Dangers and Steadings as templates.
+- **Planned:** pinning a page to a scene location, exporting a session's log into its page, and Dungeon World's Fronts, Dangers and Steadings as templates.
 
-## Permissions: hide and lock
+## Permissions
 
-Permissions are enforced by the UI and by a write filter in each client, not by cryptography. A client ignores incoming changes that its rules say the sender may not make, which stops accidents and casual meddling.
+Edit permissions are enforced by the client UI, not by a peer-level write filter. Campaign documents are shared with connected peers. GM-only notes are stored in a separate vault document; general campaign data is not secret from peers.
 
-| Flag | Values | Effect for non-GM users |
-| :---- | :---- | :---- |
-| `visibility` | everyone, owners, gm | Not rendered / not listed when they lack access; the GM sees it at 40% opacity with a hidden badge |
-| `lock` | none, position, full | *position*: cannot move or resize; *full*: cannot edit at all |
-| `ownerKeys` | device keys | Owners may edit their characters and tokens |
-
-- **Roles:** GM (one or more, by device key), Player, Observer (read-only).
-- **Fog of war** is a mask in the scene: players see revealed areas only; the GM sees a dim overlay.
-- **Real secrecy where it is cheap:** GM vault doc (notes, unrevealed prep scenes). Everything else is visible to anyone who opens devtools, as agreed.
-- **Rejected-write filter:** each client validates updates against the rules before applying them in its own UI; illegal changes from a peer are reverted and logged. This needs care with CRDT merges, so for the prototype we only revert edits to locked or GM-only entities.
+- Roles are GM, Player and Observer. Character owners and the GM can edit a character; other players can view it.
+- Scene elements can be locked. GM wall and light tools are hidden from players, while token sight can limit what players see when vision is enabled.
+- General per-entity visibility flags and a CRDT write filter are not implemented.
 
 ## Plugin system
 
@@ -287,23 +280,21 @@ export const dungeonWorld: GameSystem \= {
 
 }
 
-Still to come, from the original plan: a declarative `sheet` layout (each system draws its own sheet today, from shared parts in `table/sheetParts.tsx`), migrations, chat commands and cards, note templates, and hooks.
+The built-in systems provide declarative `sheet` layouts. Third-party system loading, schema migrations and system-provided hooks are not implemented; chat commands and cards are currently core features.
 
-- **Loading:** built-in systems ship with the app. Third-party systems load from a URL or a dropped `.js` file, are stored as a blob, and sync to peers like any asset, so everyone runs the same rules version.
-- **Trust:** plugin code runs on the page with full access. That is acceptable for a hobby tool among friends but means “only install systems you trust”.
-- **UI extension points:** sheet layouts are declarative so most systems need no UI code; an escape hatch lets a plugin supply a Preact component for a custom panel or chat card.
+- **Loading:** only the built-in systems currently ship with the app. Loading third-party systems from a URL or file is future work.
 - **One system per campaign.** Switching system is a deliberate migration, not a toggle.
 - **Homebrew without code:** the GM can add moves, items and effects through forms; they are stored in the campaign and use the same effect model.
 
 ## Dungeon World plugin
 
-The first plugin (`src/systems/dungeon-world/`) covers the core book: six stats with modifiers, the basic and special moves, the eight core classes, gear with tags, and (later) GM tools for Fronts. Dungeon World’s text is licensed CC BY 3.0, so we can ship move and class text with attribution. The text in the app is abridged from memory and must be checked against the SRD.
+The built-in Dungeon World system (`src/systems/dungeon-world/`) covers six stats with modifiers, basic and special moves, all eight core classes, and gear with tags. Class-move coverage is partial; GM tools for Fronts remain future work. Dungeon World’s text is licensed CC BY 3.0 and is attributed in the app.
 
 ### Character sheet
 
 - Stats STR, DEX, CON, INT, WIS, CHA as scores (3–18), with modifiers derived from the standard table (−3 to \+3), and the six debilities (Weak, Shaky, Sick, Stunned, Confused, Scarred) as conditions, each giving −1 to rolls with its stat.
 - HP (max \= class base \+ CON score), Armor, Damage die, Level, XP (with “mark XP” on a 6-), Alignment, Race, Bonds, Load (max \= class base \+ STR mod), coin.
-- Starting moves, and a Level up button once XP reaches level \+ 7\. Planned: a level-up flow offering the class’s eligible advanced moves (class moves are partial).
+- Starting moves and a guided level-up flow once XP reaches level \+ 7. Class-move coverage remains partial.
 
 ### Moves
 
@@ -379,7 +370,7 @@ The second system is D\&D 5th edition as revised in 2024 ("5.5e"), built from th
 
 4. *Done (Oct 28):* combat. A Combat panel (hidden for systems without `initiative`) lists combatants in initiative order (ties by the initiative bonus); the GM adds tokens from their right-click menu (NPCs join hidden), rolls for NPCs, starts, steps and ends the fight, and players roll their own. The tracker lives in the `combat` and `combatants` root maps (`combat/combat.ts`, pure and tested; `combat/api.ts` wires it to characters). Conditions can be given for so many rounds, counted down at the start or end of a chosen combatant's turn; resources that reset on `turn` (5.5e's Reaction) refill when a turn starts. Concentration actions set the character's `concentration`, ending any other; damage applied to a concentrating character posts a concentration save (the system's `concentrationSave`), and failing it ends the spell. Tokens show a pip per condition (white for concentration) and a gold ring for whoever's turn it is. Short and Long Rest are palette commands.
 
-5. *Done (Oct 28):* the 5.5e plugin (`src/systems/dnd55e/`): abilities, skills, saves and d20 tests with advantage and disadvantage (a system's `rollModes`), natural 20s and 1s (the result function sees the kept dice), proficiency and Expertise, AC from armour or Unarmored Defense, HP and Hit Dice by class and level, spell slots and Pact Magic, class resource pools, rests (`rest()` refills resources by their `resets`), Exhaustion, death saves, the twelve SRD classes with early features, a starter set of spells, weapons with masteries, armour, gear, magic items and conditions, and its own sheet. Checks can add derived values (`CheckStep.add`, for proficiency), and text-only actions can offer follow-ups (a spell's damage). The GM picks the system when creating a campaign. Then: species, backgrounds, feats and subclasses as data (`dnd55e/origins.ts`), with their numbers (Dwarven Toughness, Tough, Alert, Defense, Draconic Resilience) and actions (Breath Weapon as a save); more spells; a guided creation flow (a system's `creation`: choices with their text, a background's \+2/+1 or \+1/+1/+1, ability scores by standard array, point buy, roll or by hand) and a level-up dialog (the level's choices, such as a subclass at 3, and an Ability Score Improvement or a feat); declarative sheets (`SheetSection`s drawn by `table/DeclarativeSheet.tsx`), with Dungeon World's sheets now layouts while 5.5e keeps its own component; species, backgrounds, subclasses and feats in the Libraries, whose collections are built once per system and searched through a cached index. Still to do: the full SRD spell and monster lists.
+5. *Done (Oct 28):* built-in 5.5e support (`src/systems/dnd55e/`): d20 tests, proficiency, combat rules, spell slots, class features, a starter spell and gear catalog, origins, subclasses, feats, guided character creation and levelling, and a declarative sheet. Coverage remains a subset of the SRD; the full spell and monster lists are not included.
 
 6. Monsters and areas of effect: stat blocks, unlinked tokens, templates.
 
@@ -427,7 +418,7 @@ The canvas fills the window; all chrome floats over it as translucent dark panel
 ### Layout
 
 - *Top centre, docked:* the tool strip, starting with the campaign menu (a hamburger button): Player settings…, Campaign settings… (GM only), Help and shortcuts…, a ticked item for each panel (Scenes, Chat, Characters, Libraries, Notes, Members; unticking one closes it), and Back to campaigns. It opens on the press below the button, like every menu, and its pop-ups morph out of their items.
-- *Top edge, docked:* canvas tool strip — select, pan, draw, shapes, text, measure, ping, and fog for the GM — with single-key shortcuts. It centres itself in the space between the sidebars.
+- *Top edge, docked:* canvas tool strip — select, pan, draw, erase, shapes, text, measure, ping, walls and lights — with single-key shortcuts. It centres itself in the space between the sidebars.
 - *Left and right edges, docked:* two sidebars with vertical tabs. By default Scenes and Characters are on the left and Chat, Libraries, Notes and Members on the right. The scene list (and, for the GM, the active scene's settings) is the Scenes tab; campaign actions are in the campaign menu. Tabs, tools and hotbar slots are picked up as soon as they are dragged and reorder along their bar, with a white line showing the drop point; the tool order is a per-device preference, and dropping a hotbar slot off the bar unpins it. Dragging a tab away from its strip floats it. There is no hide button: dragging a sidebar very narrow snaps it shut, and clicking its open tab toggles it. Each body slides in from past the window edge, pushing the tab strip ahead of it, and its inner edge can be dragged to resize it. Any tab can move to the other side (drag it onto that sidebar, or right-click it), float in a window, or be closed (right-click → Close, or untick it in the campaign menu); a closed panel comes back on its side when ticked again or when something needs it, such as a link to a page. A side with no tabs disappears until a window is dragged.
 - *Chat panel:* dice tray above the message field; the message field takes `@` links.
 - *Characters and Notes panels:* each is a list and a detail (a character's sheet, a note's page) with one layout choice, kept per device and per panel: **side by side** (the list's width can be dragged; double-click the divider to reset it), or **one at a time** (a stack: pick an entry to open it, go back to the list). A toggle in the title bar switches; when the panel is too narrow for two columns (under 381 px) it shows one at a time regardless, and the toggle stays in place, disabled, saying why. Both use one component, `ui/TwoPane.tsx`.
@@ -472,11 +463,11 @@ The hue transitions over 600 ms when the scene changes (`@property`\-registered 
 
 **Type:** Cabin for controls and chat; Fraunces (optical sizing on, never small caps) for headings, move names and sheets.
 
-## Milestones
+## Milestone history
 
-We build in seven milestones, each ending in something you can open and try. After M4 a group can play a full Dungeon World session; M5 (added Oct 27\) generalises the rules engine and adds D\&D 5.5e as a second system; notes and polish are M6. Each milestone ends with a short review before the next begins. M2 came early on purpose: sync touches everything, so we proved it before building rules on top.
+The roadmap changed as the application grew. These completed milestones record major implementation steps; the sections above describe current behavior.
 
-### Next, in order
+### Completed work
 
 1. **M5 step 3, actions end to end:** *Done (Oct 28).* Attacks per target against AC, saves as roll requests, long range, typed damage applied by the GM from the card.
 2. **M5 step 4, combat:** *Done (Oct 28).* The turn tracker, timed conditions and pips, concentration, per-turn resets, rests.
@@ -486,7 +477,7 @@ We build in seven milestones, each ending in something you can open and try. Aft
 6. **M8: Canvas Creativity**: *Done (Oct 28).* The Shapes tool (R) drags out squares (corner to corner, Shift for square), circles (from the centre), lines and cones (from their origin, Shift for 45° steps), snapped to the grid and sized in whole cells, showing their size as they grow; they take the pen's colour and layer. The Text tool (X) types text where you click; double-click text to change it. Both are scene elements (`shape`, `text`) that select, move, resize and rotate like the rest. Actions can name an area (`TargetSpec.area`: sphere, emanation, cube, cone, line, in scene units); the targeting bubble offers to place it, the next press on the map puts it down (a drag aims a cone or line), it stays on the map under the tokens, and the tokens it covers, even partly, become the targets (`geometry.ts`: `shapeCovers`, `tokensCovered`). 5.5e's area spells and Breath Weapon have their areas. This also covers M5 step 6's areas; monster stat blocks remain.
 7. **M9: Relationships**: *Done (Oct 28).* Every sheet, in any system, ends with a Relationships section: pick another character, say in a few words how this one sees them, and keep notes on it in rich text. Relationships are one-way (`relationships` map on the character, notes in `text:rel:<id>`). The web (campaign menu, palette, or Web on a sheet) draws everyone in a relationship as nodes with labelled arrows, laid out by a small force simulation (`characters/relationships.ts`); two-way pairs bow apart, nodes drag, and clicking one opens that character.
 8. **M10: Chat Improvements**: *Done (Oct 28).* A message's menu offers Edit message (your own text; Enter saves, Escape cancels, and it's marked edited), Pin or Unpin message (GM), and Delete. `/pin text` sends a pinned message; `/timer 60s "World Ends"` (also `5m`, `1h30m`, `2:30`) posts a real-time countdown with a bar, which its starter or the GM can stop, resume or restart; `/count 0/8 "The cops arrive"` posts a counter with − and \+ (pips up to 12, a bar beyond), its maximum optional. Both pin themselves. Pins show in a strip above the log, where the GM unpins them. Messages stay immutable: edits, pins and the live state of timers and counters are in `messageState` (`table/ChatExtras.tsx`). Pins show for messages in the loaded part of the log.
-9. **M12: Dynamics:** *Done (Oct 28).* Two GM tools replace the fog placeholder: Walls (W) drag wall segments that snap to grid corners and to other walls' ends, and Lights (L) put down a lamp (bright 4 cells, dim 4 more). Right-click a wall to make it a door and open or close it (open doors don't block); right-click a light to pick its colour (which tints what it lights) or make it flicker. Only the GM sees walls and lamps. Scene settings turn on dynamic lighting with a darkness level, where each light lifts the dark with a smooth falloff (nearly full through its bright radius, easing to nothing at the end of its dim light; `lightAlpha` in `scene/vision.ts`), stopped by walls with soft-edged shadows: a lamp has size (the lamp on the map, 0.6 cells across by default; resizing it softens or sharpens its shadows). Each lamp is one quad over its reach drawn by a shader (`scene/lampShader.ts`, GLSL and WGSL) that, per pixel, adds up how much of the lamp's disc each nearby wall hides, so the penumbra widens with distance and walls that meet end to end cast one unbroken shadow (`lampHidden`); and can make players see only what their own characters' tokens see, with everything else black and unseen tokens' names, bars and pips hidden (a player with no tokens on the scene sees all of it). The GM sees the darkness at half strength and never the fog. Sight is the same shader with a lamp a pixel across and no falloff; whether a token is in view is a line-of-sight test from each viewer (`blocked`). The renderer draws darkness and fog as layers with what's lit or seen erased out of them. Not yet: remembering explored areas, darkvision and per-token sight ranges, and editing a light's radii by number.
+9. **M12: Dynamics:** *Done (Oct 28).* The Walls (W) tool places wall segments that snap to grid corners and other walls' ends; Lights (L) places lamps with bright and dim radii. Right-click a wall to make it a door and open or close it (open doors don't block); right-click a light to pick its colour or make it flicker. Only the GM sees walls and lamps. Scene settings turn on dynamic lighting with a darkness level, where each light lifts the dark with a smooth falloff, stopped by walls with soft-edged shadows. Each lamp is drawn by a shader (`scene/lampShader.ts`, GLSL and WGSL) that accounts for how nearby walls occlude its disc. Player vision can be limited to line of sight from their character tokens; unseen tokens' names, bars and pips are hidden. The GM sees the darkness at half strength and does not use the player sight mask. Explored-area persistence, darkvision, per-token sight ranges and numeric light-radius editing are not implemented.
 
 ## Open questions
 
@@ -504,9 +495,9 @@ Each question has a proposed default; the first four are the ones that change th
 
 - [x] **Move automation:** outcome side effects (damage, XP, hold) offered as buttons, or applied automatically? *Decided (Oct 26): buttons.*
 
-- [ ] **Dungeon World scope for v1:** all eight classes, or Fighter, Thief, Wizard and Cleric first? *Default: four first. (All eight are in, with partial class moves.)*
+- [x] **Dungeon World scope:** all eight classes are included; class-move coverage remains partial.
 
-- [ ] **Player scene browsing:** may players view scenes the GM is not showing? *Default: yes, GM can disable.*
+- [ ] **Player scene browsing:** players can choose scenes independently; scene visibility filters command-palette entries, but there is no GM setting to disable browsing.
 
 - [x] **Name:** Make a Move (`makeamove`).
 
@@ -555,9 +546,6 @@ Decisions made while building, newest first. Earlier answers are recorded in Ope
 
 - [ ] Campaign Import/Export as a single `.makeamove` zip, for backups and moving between machines.
 - [ ] Preserve Panel order when hiding/showing panels.
-- [x] To ensure client responsiveness on lower-end devices, move WebP image re-encoding and other background tasks to workers.
-- [x] Ensure all relevant actions can be right-clicked to be added to the hotbar, or given a keyboard shortcut, wherever they appear.
 - [ ] Add visibility and lock flags to entities (Notes, Tokens, Maps, Characters) which the GM can edit
-- [ ] Allow the user to drag arbitrary windows into the sidebars.
 - [ ] At a player option to ‘claim’ a character as their Player Character. This will make that character the default subject for actions and add a sidebar tab for that character specifically (with its avatar as the icon)
 - [ ] Add a ‘reroll’ entry to the context menu for roll cards.
