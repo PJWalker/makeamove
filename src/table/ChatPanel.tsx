@@ -81,6 +81,27 @@ export function ChatPanel({ campaign }: { campaign: Campaign }) {
   const notes = useSignal<{ id: number; text: string; error?: boolean }[]>([])
   const note = (text: string, error = false) => (notes.value = [...notes.value, { id: Date.now(), text, error }])
   const ref = useRef<HTMLDivElement>(null)
+  const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(null)
+  const closeMenu = useCallback(() => (menu.value = null), [])
+  const openMenu = useCallback(
+    (x: number, y: number, id: string) => {
+      const m = campaign.chat.messages.peek().find((message) => message.id === id)
+      if (!m) return
+      const gm = campaign.isGm()
+      const items: MenuItem[] = []
+      if (canEditMessage(m, device.value.id)) items.push({ label: 'Edit message', Icon: IconRename, onSelect: () => (editingMessage.value = id) })
+      if (gm && m.kind !== 'system') {
+        const pinned = isPinned(campaign, id)
+        items.push({ label: pinned ? 'Unpin message' : 'Pin message', Icon: IconPin, onSelect: () => setPinned(campaign, id, !pinned) })
+      }
+      if (canDelete(m, device.value.id, gm)) {
+        if (items.length) items.push('divider')
+        items.push({ label: 'Delete message', Icon: IconDelete, danger: true, onSelect: () => removeMessage(campaign, id) })
+      }
+      if (items.length) menu.value = { x, y, items }
+    },
+    [campaign],
+  )
 
   // Something dragged onto the chat is sent as a link (into the message box, it joins the message instead).
   useEffect(() => {
@@ -90,9 +111,10 @@ export function ChatPanel({ campaign }: { campaign: Campaign }) {
 
   return (
     <div class="chat" ref={ref}>
-      <PinnedStrip campaign={campaign} render={(m) => <PinnedMessage campaign={campaign} m={m} />} />
-      <ChatLogView campaign={campaign} notes={notes.value} />
+      <PinnedStrip campaign={campaign} render={(m) => <PinnedMessage campaign={campaign} m={m} />} onMenu={openMenu} />
+      <ChatLogView campaign={campaign} notes={notes.value} onMenu={openMenu} />
       <Composer campaign={campaign} onNote={note} />
+      {menu.value && <ContextMenu {...menu.value} onClose={closeMenu} />}
     </div>
   )
 }
@@ -105,7 +127,7 @@ function removeMessage(campaign: Campaign, id: string) {
   })
 }
 
-function ChatLogView({ campaign, notes }: { campaign: Campaign; notes: { id: number; text: string; error?: boolean }[] }) {
+function ChatLogView({ campaign, notes, onMenu }: { campaign: Campaign; notes: { id: number; text: string; error?: boolean }[]; onMenu: (x: number, y: number, id: string) => void }) {
   const ref = useRef<HTMLDivElement>(null)
   const list = useRef<HTMLDivElement>(null)
   /** Following the newest message at the bottom. */
@@ -131,29 +153,6 @@ function ChatLogView({ campaign, notes }: { campaign: Campaign; notes: { id: num
     window.addEventListener('focus', markRead)
     return () => window.removeEventListener('focus', markRead)
   }, [])
-
-  // Right-click (or long-press) on a message opens its menu.
-  const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(null)
-  const closeMenu = useCallback(() => (menu.value = null), [])
-  const openMenu = useCallback(
-    (x: number, y: number, id: string) => {
-      const m = campaign.chat.messages.peek().find((x) => x.id === id)
-      if (!m) return
-      const gm = campaign.isGm()
-      const items: MenuItem[] = []
-      if (canEditMessage(m, device.value.id)) items.push({ label: 'Edit message', Icon: IconRename, onSelect: () => (editingMessage.value = id) })
-      if (gm && m.kind !== 'system') {
-        const pinned = isPinned(campaign, id)
-        items.push({ label: pinned ? 'Unpin message' : 'Pin message', Icon: IconPin, onSelect: () => setPinned(campaign, id, !pinned) })
-      }
-      if (canDelete(m, device.value.id, gm)) {
-        if (items.length) items.push('divider')
-        items.push({ label: 'Delete message', Icon: IconDelete, danger: true, onSelect: () => removeMessage(campaign, id) })
-      }
-      if (items.length) menu.value = { x, y, items }
-    },
-    [campaign],
-  )
 
   const opened = openSessions.value
   const rows = useMemo(
@@ -362,7 +361,7 @@ function ChatLogView({ campaign, notes }: { campaign: Campaign; notes: { id: num
                 canDelete(row.m, me, isGm) ||
                 canEditMessage(row.m, me) ||
                 (isGm && row.m.kind !== "system")
-                  ? openMenu
+                  ? onMenu
                   : undefined
               }
             />
@@ -380,7 +379,6 @@ function ChatLogView({ campaign, notes }: { campaign: Campaign; notes: { id: num
             {n.text}
           </p>
         ))}
-      {menu.value && <ContextMenu {...menu.value} onClose={closeMenu} />}
     </div>
   );
 }
