@@ -233,8 +233,8 @@ export function CounterCard({ campaign, m, compact }: { campaign: Campaign; m: C
 const PIN_LEAVE_MS = 240
 
 /**
- * Pinned messages, above the log: timers and counters as they are, text in a
- * line, each unpinnable by the GM. Pins slide in when pinned and fold away
+ * Pinned messages float over the log, each unpinnable by the GM.
+ * Pins slide in when pinned and fold away
  * when unpinned; those already pinned when the strip appears don't animate.
  */
 export function PinnedStrip({ campaign, render }: { campaign: Campaign; render: (m: ChatMessage) => preact.ComponentChildren }) {
@@ -263,16 +263,18 @@ export function PinnedStrip({ campaign, render }: { campaign: Campaign; render: 
   if (!rows.length) return null
   return (
     <section class="chat-pinned" aria-label="Pinned">
-      {rows.map((m) => (
-        <div key={m.id} class="chat-pin" data-new={!initial.has(m.id) || undefined} data-leaving={(!shown.has(m.id)) || undefined}>
-          <div class="chat-pin-body">{render(m)}</div>
-          {gm && shown.has(m.id) && (
-            <Button variant="icon" size="sm" label="Unpin" onClick={() => setPinned(campaign, m.id, false)}>
-              <IconClose />
-            </Button>
-          )}
-        </div>
-      ))}
+      <div class="chat-pin-stack bevel">
+        {rows.map((m) => (
+          <div key={m.id} class="chat-pin" data-new={!initial.has(m.id) || undefined} data-leaving={!shown.has(m.id) || undefined}>
+            <div class="chat-pin-body">{render(m)}</div>
+            {gm && shown.has(m.id) && (
+              <Button variant="icon" size="sm" label="Unpin" onClick={() => setPinned(campaign, m.id, false)}>
+                <IconClose />
+              </Button>
+            )}
+          </div>
+        ))}
+      </div>
     </section>
   )
 }
