@@ -667,7 +667,8 @@
   /*
    * Sidebar resizing: a separator straddling the tab strip's table-facing
    * edge (between its bevelled ends), and an invisible strip along the body's
-   * edge. Both show an accent line on hover, focus, and while dragging.
+   * edge. Only keyboard focus shows an accent line; pointer resizing uses
+   * the cursor as its affordance.
    */
   .sidebar-resize,
   .sidebar-body-resize {
@@ -686,10 +687,6 @@
       background: var(--accent);
       opacity: 0;
       transition: opacity 120ms var(--ease);
-    }
-    &:hover::after,
-    &[data-dragging='true']::after {
-      opacity: 0.6;
     }
   }
   .sidebar-resize {
@@ -2133,10 +2130,6 @@
     cursor: col-resize;
     touch-action: none;
     background: transparent;
-  }
-  .panes-split:hover,
-  .panes-split:active {
-    background: var(--hairline-strong);
   }
   /*
    * One at a time: a navigation stack, the list or the detail (TwoPane
