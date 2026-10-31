@@ -6,7 +6,8 @@ import type { Campaign } from '../store/campaign'
 import { device } from '../store/device'
 import { useY } from '../store/useY'
 import { Button } from '../ui/Button'
-import { IconClose, IconRemove, IconAdd } from '../ui/icons'
+import { menuTrigger } from '../ui/menuTrigger'
+import { IconRemove, IconAdd } from '../ui/icons'
 
 /*
  * What chat messages gained in M10, all kept in the campaign's message state
@@ -237,7 +238,15 @@ const PIN_LEAVE_MS = 240
  * Pins slide in when pinned and fold away
  * when unpinned; those already pinned when the strip appears don't animate.
  */
-export function PinnedStrip({ campaign, render }: { campaign: Campaign; render: (m: ChatMessage) => preact.ComponentChildren }) {
+export function PinnedStrip({
+  campaign,
+  render,
+  onMenu,
+}: {
+  campaign: Campaign
+  render: (m: ChatMessage) => preact.ComponentChildren
+  onMenu: (x: number, y: number, id: string) => void
+}) {
   const pinnedIds = useY(campaign.messageState, () => withField(campaign.messageState, 'pinned').join(' '))
   const messages = campaign.chat.messages.value
   const gm = useY(campaign.members, () => campaign.isGm())
@@ -265,13 +274,16 @@ export function PinnedStrip({ campaign, render }: { campaign: Campaign; render: 
     <section class="chat-pinned" aria-label="Pinned">
       <div class="chat-pin-stack bevel">
         {rows.map((m) => (
-          <div key={m.id} class="chat-pin" data-new={!initial.has(m.id) || undefined} data-leaving={!shown.has(m.id) || undefined}>
+          <div
+            key={m.id}
+            class="chat-pin"
+            data-new={!initial.has(m.id) || undefined}
+            data-leaving={!shown.has(m.id) || undefined}
+            tabIndex={gm && shown.has(m.id) ? 0 : undefined}
+            aria-label={gm && shown.has(m.id) ? `Pinned message from ${m.name}` : undefined}
+            {...(gm && shown.has(m.id) ? menuTrigger((x, y) => onMenu(x, y, m.id)) : {})}
+          >
             <div class="chat-pin-body">{render(m)}</div>
-            {gm && shown.has(m.id) && (
-              <Button variant="icon" size="sm" label="Unpin" onClick={() => setPinned(campaign, m.id, false)}>
-                <IconClose />
-              </Button>
-            )}
           </div>
         ))}
       </div>
