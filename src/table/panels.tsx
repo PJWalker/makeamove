@@ -22,7 +22,7 @@ import { ChatPanel } from './ChatPanel'
 import { CharactersPanel, charactersLayout } from './CharactersPanel'
 import { LibrariesPanel } from './LibrariesPanel'
 import { NotesPanel, notesLayout } from './NotesPanel'
-import { ScenePanel } from './ScenePanel'
+import { ScenePanel, scenesLayout } from "./ScenePanel";
 import { CombatPanel } from './CombatPanel'
 import { ItemsPanel } from './ItemsPanel'
 
@@ -53,6 +53,7 @@ export function PanelContent({ id, campaign }: { id: PanelId; campaign: Campaign
 export function PaneToggle({ id }: { id: PanelId }) {
   if (id === 'characters') return <charactersLayout.Toggle />
   if (id === 'notes') return <notesLayout.Toggle />
+  if (id === "scene") return <scenesLayout.Toggle />;
   return null
 }
 

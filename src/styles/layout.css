@@ -405,6 +405,18 @@
   .scene-item[data-active='true'] :is(.scene-name-input, .scene-name-button) {
     color: var(--accent);
   }
+  .scene-presence {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex: none;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    white-space: nowrap;
+  }
+  .scene-campaign-name {
+    flex: 1 0 100%;
+  }
   .scene-name-input,
   /* Actions in the scene menu (View, Delete, New scene) are menu text too. */
   .scene-panel .btn {
@@ -1813,7 +1825,8 @@
     background: oklch(from var(--surface-sunken) l c h / 0.35);
   }
   .chars-list,
-  .notes-list {
+  .notes-list,
+  .scene-tree {
     flex: 1;
     min-height: 0;
     display: flex;
@@ -2703,8 +2716,9 @@
     font-size: var(--text-sm);
     cursor: pointer;
   }
-  .segment:hover:not(:disabled) {
+  .segment:hover:not(:disabled, [aria-checked='true']) {
     color: var(--text);
+
   }
   /* Cut as a citrine by the gem rule in components.css. */
   .segment[aria-checked='true'] {
@@ -2712,6 +2726,7 @@
     background-color: var(--gem);
     color: var(--accent-ink);
     font-weight: 600;
+    cursor: default;
   }
   .colour-row {
     display: flex;

@@ -2,6 +2,41 @@ import type { GameSystem } from './types'
 import { dungeonWorld } from './dungeon-world'
 import { dnd55e } from './dnd55e'
 
+export const NO_SYSTEM_ID = "none";
+
+const noSystem: GameSystem = {
+  id: NO_SYSTEM_ID,
+  name: "No system",
+  version: "1.0.0",
+  stats: [],
+  modifier: () => 0,
+  baseRoll: "d20",
+  results: [],
+  result: () => "",
+  actions: [],
+  actionCategories: [],
+  followUps: [],
+  classes: [],
+  items: [],
+  tags: [],
+  conditions: [],
+  modifiers: [],
+  resources: [],
+  characterData: [],
+  sizes: [],
+  scene: { unit: 5, unitName: "ft", diagonal: "euclid" },
+  npcFields: [],
+  derive: () => ({
+    values: {},
+    mods: {},
+    resolved: { values: {}, why: {}, moves: [], tags: [], bonuses: [] },
+  }),
+  actionsFor: () => [],
+  tokenStats: () => [],
+  sheet: { pc: [{ kind: "header" }], npc: [{ kind: "header" }] },
+  attribution: "",
+};
+
 /*
  * The systems this app knows, by id; a campaign plays one. Built-in systems
  * register here; loading one from a URL or a file is M6.
@@ -64,6 +99,7 @@ export function defineSystem(system: GameSystem): GameSystem {
 
 defineSystem(dungeonWorld)
 defineSystem(dnd55e)
+defineSystem(noSystem);
 
 /** The system with this id; Dungeon World for campaigns that don't say. */
 export function getSystem(id: string | undefined): GameSystem {

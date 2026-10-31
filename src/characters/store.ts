@@ -134,8 +134,8 @@ export function createCharacter(
     characters.set(id, m)
     m.set('name', init.name)
     m.set('owner', init.owner)
-    if (kind === 'npc') m.set('kind', 'npc')
-    else m.set('classId', cls.id)
+    if (kind === "npc") m.set("kind", "npc");
+    else if (cls) m.set("classId", cls.id);
     if (init.folder) m.set('folder', init.folder)
     m.set('level', 1)
     const scores = new Y.Map<number>()

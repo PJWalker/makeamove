@@ -22,7 +22,8 @@ import type { TokenStyle } from '../scene/types'
  *   meta     Y.Map   name, systemId, systemVersion, roomKey, createdAt, createdBy,
  *                    defaultTokenStyle, defaultGridType
  *   members  Y.Map   deviceId -> Y.Map { name, role, joinedAt, activeSceneId }
- *   scenes   Y.Map   sceneId  -> Y.Map { name, canvasColour, order, doc }
+ *   scenes   Y.Map   sceneId  -> Y.Map { name, folder, canvasColour, order, doc }
+ *   sceneFolders Y.Map folderId -> { name }
  *   notes    Y.Map   noteId   -> Y.Map { title, folder, order, links, updatedAt, updatedBy, doc }
  *   noteFolders Y.Map folderId -> { name, order }
  *   combat, combatants  Y.Map  the turn tracker (combat/combat.ts)
@@ -64,12 +65,13 @@ export interface MemberView {
 }
 
 export interface SceneView {
-  id: string
-  name: string
+  id: string;
+  name: string;
+  folder?: string;
   /** A chosen canvas colour, or null for auto (from the map). */
-  canvasColour: string | null
-  order: string
-  visibility: Visibility
+  canvasColour: string | null;
+  order: string;
+  visibility: Visibility;
 }
 
 /** The system an invite assumes until the campaign arrives from a peer. */
@@ -93,6 +95,8 @@ export class Campaign {
   /** deviceId -> { name, at, by } for each player the GM removed. */
   readonly revoked: Y.Map<{ name: string; at: number; by: string }>;
   readonly scenes: Y.Map<Y.Map<any>>;
+  /** id -> folder that scenes are filed in. */
+  readonly sceneFolders: Y.Map<{ name: string }>;
   /** id -> character (see characters/store.ts). */
   readonly characters: Y.Map<Y.Map<any>>;
   /** id -> folder that characters can be filed in. */
@@ -138,6 +142,7 @@ export class Campaign {
     this.members = this.doc.getMap("members");
     this.revoked = this.doc.getMap("revoked");
     this.scenes = this.doc.getMap("scenes");
+    this.sceneFolders = this.doc.getMap("sceneFolders");
     this.characters = this.doc.getMap("characters");
     this.characterFolders = this.doc.getMap("characterFolders");
     this.notes = this.doc.getMap("notes");
@@ -339,6 +344,7 @@ export class Campaign {
       .map(([id, s]) => ({
         id,
         name: s.get("name") ?? "Untitled scene",
+        folder: s.get("folder") ?? undefined,
         canvasColour: s.get("canvasColour") ?? null,
         order: s.get("order") ?? "a0",
         visibility: s.get("visibility") ?? "everyone",
@@ -409,6 +415,20 @@ export class Campaign {
     }
   }
 
+  /** Move every player to the scene and announce the pull immediately. */
+  pullPlayersToScene(sceneId: string) {
+    if (!this.isGm() || !this.scenes.has(sceneId)) return;
+    this.doc.transact(() => {
+      for (const member of this.members.values()) {
+        if (member.get("role") === "player")
+          member.set("activeSceneId", sceneId);
+      }
+    });
+    this.setActiveScene(sceneId);
+    clearTimeout(this.sceneNoticeTimer);
+    this.announceScene(true);
+  }
+
   /**
    * How long the GM must stay on a scene before it's announced, so passing
    * through scenes (or clicking one's name to rename it) doesn't flood the
@@ -418,10 +438,10 @@ export class Campaign {
   private sceneNoticeTimer: ReturnType<typeof setTimeout> | undefined;
 
   /** Post "Scene changed to …" unless this scene was the last one announced. */
-  private announceScene() {
+  private announceScene(force = false) {
     if (this.destroyed) return;
     const id = this.activeSceneId();
-    if (!id || id === this.meta.get("tableScene")) return;
+    if (!id || (!force && id === this.meta.get("tableScene"))) return;
     this.meta.set("tableScene", id);
     const name =
       this.sceneViews().find((s) => s.id === id)?.name ?? "a new scene";

@@ -1,5 +1,6 @@
 import { signal } from '@preact/signals'
 import type { EntityGraphic, EntityGraphicRef } from "../graphics";
+import type { SceneDoc } from "../scene/sceneDoc";
 import type { TokenStyle } from "../scene/types";
 import type { AreaSpec } from '../systems/types'
 import { backdropColour } from '../lib/colour'
@@ -9,9 +10,6 @@ import { DEFAULT_CANVAS_COLOUR, type SceneView } from '../store/campaign'
  * State shared between the scene canvas (loaded lazily, with PixiJS) and the
  * rest of the tabletop chrome, which shouldn't have to import it.
  */
-
-/** Set to true to open the active scene's settings. */
-export const sceneSettingsOpen = signal(false)
 
 /** Dominant colour of the active scene's main map, for the UI tint. */
 export const activeMapColour = signal<string | null>(null)
@@ -100,9 +98,11 @@ export function setAutohide(on: boolean) {
 
 /** What the command palette can ask of the open scene's canvas. */
 export interface CanvasCommands {
-  fit(): void
-  undo(): void
-  redo(): void
+  fit(): void;
+  undo(): void;
+  redo(): void;
+  sceneId: string;
+  scene: SceneDoc;
 }
 export const canvasCommands = signal<CanvasCommands | null>(null)
 

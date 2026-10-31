@@ -53,4 +53,21 @@ describe('scene change notices', () => {
     expect(notices(c)).toEqual([])
     c.destroy()
   })
+  it("pulls players into a scene and announces immediately, even when it was already announced", async () => {
+    const { c, bog, keep } = await setUp();
+    c.setActiveScene(bog);
+    await sleep(80);
+
+    c.pullPlayersToScene(keep);
+    await sleep(80);
+
+    expect(c.members.get("gm")?.get("activeSceneId")).toBe(keep);
+    expect(c.members.get("pat")?.get("activeSceneId")).toBe(keep);
+    expect(c.meta.get("tableScene")).toBe(keep);
+    expect(notices(c)).toEqual([
+      "Scene changed to The Bog",
+      "Scene changed to The Keep",
+    ]);
+    c.destroy();
+  });
 })

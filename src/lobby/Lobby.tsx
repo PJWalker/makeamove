@@ -7,7 +7,7 @@ import { parseInvite } from '../sync/invite'
 import { createCampaign, deleteLocalCampaign, joinCampaign } from '../store/campaign'
 import { device, setDeviceName } from '../store/device'
 import { campaigns, registryReady, type CampaignSummary } from '../store/registry'
-import { getSystem, listSystems } from '../systems'
+import { getSystem, listSystems, NO_SYSTEM_ID } from "../systems";
 import { Button } from '../ui/Button'
 
 const relative = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' })
@@ -139,7 +139,7 @@ function CampaignRow({ c }: { c: CampaignSummary }) {
 function NewCampaignForm() {
   const name = useSignal('')
   const yourName = useSignal(device.value.name)
-  const systemId = useSignal('')
+  const systemId = useSignal(NO_SYSTEM_ID);
   const busy = useSignal(false)
   const system = listSystems().find((s) => s.id === systemId.value)
 

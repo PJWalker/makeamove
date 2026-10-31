@@ -70,16 +70,17 @@ export function ContextMenu({
   const ref = useRef<HTMLDivElement>(null)
   // Index of the chosen item, or -1 when dismissed; null while open.
   const [closing, setClosing] = useState<number | null>(null)
-  const closingRef = useRef(false)
-  closingRef.current = closing !== null
+  const closingRef = useRef(false);
 
   const dismiss = (chosen = -1) => {
-    if (closingRef.current) return
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) onClose()
-    else setClosing(chosen)
-  }
-  const dismissRef = useRef(dismiss)
-  dismissRef.current = dismiss
+    if (closingRef.current) return false;
+    closingRef.current = true;
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) onClose();
+    else setClosing(chosen);
+    return true;
+  };
+  const dismissRef = useRef(dismiss);
+  dismissRef.current = dismiss;
   useMenuOverlay({
     open: true,
     ref,
@@ -88,14 +89,17 @@ export function ContextMenu({
     onDismiss: () => dismissRef.current(),
   });
 
-  // A new right-click reuses this instance; show the new menu. Not keyed on
-  // `items`, which is rebuilt on every parent render (e.g. after onSelect).
-  useLayoutEffect(() => setClosing(null), [x, y])
+  // A newly opened menu gets a fresh items array, even if it uses the same spot.
+  useLayoutEffect(() => {
+    closingRef.current = false;
+    setClosing(null);
+  }, [items, x, y]);
 
   // Press, hold and release: the release chooses (or closes).
   useEffect(
     () =>
       watchHoldRelease(press?.x ?? x, press?.y ?? y, button, (e) => {
+        if (closingRef.current) return;
         const item = elementAt(e)?.closest<HTMLButtonElement>('.menu-item:not(:disabled)')
         if (item && ref.current?.contains(item)) item.click()
         else dismissRef.current()
@@ -107,7 +111,8 @@ export function ContextMenu({
     // Captured at the document so the menu works even if focus has strayed.
     const onKey = (e: KeyboardEvent) => {
       const menu = ref.current;
-      if (!menu || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (!menu || closingRef.current || e.metaKey || e.ctrlKey || e.altKey)
+        return;
       // A colour picker's arrow keys move its pointers.
       if (
         (e.target as Element | null)?.closest?.(".react-colorful") &&
@@ -176,14 +181,16 @@ export function ContextMenu({
             class="menu-item bevel"
             data-danger={item.danger}
             data-chosen={closing === i}
-            onPointerMove={(e) =>
-              e.currentTarget.focus({ preventScroll: true })
-            }
-            disabled={item.disabled}
+            onPointerMove={(e) => {
+              if (!closingRef.current)
+                e.currentTarget.focus({ preventScroll: true });
+            }}
+            disabled={item.disabled || closing !== null}
             onClick={(e) => {
+              if (closingRef.current) return;
               // An item ending in "…" opens a pop-up, which morphs out of the
               // item while the menu goes at once.
-              if (item.label.endsWith("…") && !closingRef.current) {
+              if (item.label.endsWith("…")) {
                 closingRef.current = true;
                 morphOpen(e.currentTarget, () => {
                   onClose();
@@ -193,7 +200,7 @@ export function ContextMenu({
               }
               // Anything else it opens still grows out of it.
               setMorphOrigin(e.currentTarget);
-              dismiss(i);
+              if (!dismiss(i)) return;
               item.onSelect();
             }}
           >

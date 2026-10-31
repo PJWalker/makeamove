@@ -297,7 +297,7 @@ function NewCharacter({
 }) {
   const kind = useSignal<"pc" | "npc">("pc");
   const name = useSignal("");
-  const classId = useSignal(system.classes[0].id);
+  const classId = useSignal(system.classes[0]?.id ?? "");
   const folder = useSignal(initialFolder ?? "");
   // The guided flow: the system's choices at creation, then ability scores.
   const creation = system.creation;
@@ -358,7 +358,7 @@ function NewCharacter({
           autofocus
         />
       </label>
-      {kind.value === "pc" && (
+      {kind.value === "pc" && system.classes.length > 0 && (
         <>
           <label class="field">
             Class

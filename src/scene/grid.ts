@@ -125,10 +125,14 @@ export function hexCellsIn(grid: Grid, view: { x: number; y: number; w: number; 
 }
 
 export const DIAGONAL_RULES: { id: DiagonalRule; label: string; title: string }[] = [
-  { id: 'one', label: '1', title: 'Every diagonal step is one cell' },
-  { id: 'alternate', label: '1, 2, 1', title: 'Diagonal steps alternate between one and two cells' },
-  { id: 'euclid', label: 'True', title: 'Measure the true distance' },
-]
+  { id: "one", label: "1", title: "Every diagonal step is one cell" },
+  {
+    id: "alternate",
+    label: "1, 2, 1",
+    title: "Diagonal steps alternate between one and two cells",
+  },
+  { id: "euclid", label: "√2", title: "Measure the true distance" },
+];
 
 export const GRID_TYPES: { id: GridType; label: string }[] = [
   { id: 'none', label: 'None' },

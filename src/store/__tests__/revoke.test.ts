@@ -45,16 +45,18 @@ describe('revoking a player', () => {
 
     as('pat', 'Pat')
     const theirs = await Campaign.open(id)
-    expect(theirs.removed.value).toBe(true)
-    expect(theirs.members.has('pat')).toBe(false)
+    expect(theirs.memberViews().map((member) => member.id)).not.toContain(
+      "pat",
+    );
+    expect(theirs.revokedViews()).toMatchObject([{ id: "pat", name: "Pat" }]);
 
     // Let back in: the device notices and rejoins the member list.
     as('gm', 'Gwen')
     theirs.allowBack('pat')
     as('pat', 'Pat')
     theirs.meta.set('touched', 1)
-    expect(theirs.removed.value).toBe(false)
-    expect(theirs.members.has('pat')).toBe(true)
+    expect(theirs.memberViews().map((member) => member.id)).toContain("pat");
+    expect(theirs.revokedViews()).toEqual([]);
     theirs.destroy()
   })
 })

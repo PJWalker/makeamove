@@ -7,13 +7,11 @@ import { closePopup, openPopup } from "../ui/popup";
 import { effect, type Signal, untracked, useSignal, useSignalEffect } from '@preact/signals'
 import { device } from '../store/device'
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
-import { SceneController } from '../scene/controller'
-import { DEFAULT_GRID, DIAGONAL_RULES, GRID_TYPES, MIN_GRID_SIZE } from '../scene/grid'
+import { SceneController } from "../scene/controller";
 import { SceneRenderer } from '../scene/renderer'
 import { activeTool } from '../scene/tools'
 import { SceneDoc } from '../scene/sceneDoc'
-import type { Point } from '../scene/grid'
-import type { SceneLighting } from '../scene/sceneDoc'
+import type { Point } from "../scene/grid";
 import {
   isPlainToken,
   TOKEN_STYLES,
@@ -21,7 +19,7 @@ import {
   type TokenStyle,
 } from "../scene/types";
 import type { EntityGraphic } from "../graphics";
-import { DEFAULT_CANVAS_COLOUR, type Campaign } from '../store/campaign'
+import type { Campaign } from "../store/campaign";
 import { canEdit, createCopy, getCharacter, listCharacters, selectCharacter, systemOf, tokenStatsSource } from '../characters/api'
 import { tokenName } from '../characters/templates'
 import { CharacterSheet } from './sheets'
@@ -33,7 +31,6 @@ import {
   IconDelete,
   IconDuplicate,
   IconFit,
-  IconGrid,
   IconImage,
   IconLayers,
   IconLock,
@@ -48,7 +45,7 @@ import {
   IconWall,
   IconUndo,
   IconUnlock,
-} from '../ui/icons'
+} from "../ui/icons";
 import { isTyping, MOD } from '../ui/keys'
 import { PopupTabs } from '../ui/PopupTabs'
 import { Segmented } from '../ui/Segmented'
@@ -57,20 +54,18 @@ import { showPanel } from './panelLayout'
 import { dropOn, dropTargetAt, itemDefinitionForToken, itemTokenEntity, setDropCursor } from './entityDrag'
 import {
   activeMapColour,
-  canvasColour,
   canvasCommands,
   chosenTargets,
   areaRequest,
   placedArea,
   sceneDistance,
-  sceneSettingsOpen,
   seenMapColours,
   targetPick,
   tokenDrop,
   sceneCharacterAt,
   sceneDropFlash,
   sceneDropHighlight,
-} from './canvasState'
+} from "./canvasState";
 import { formatDistance } from '../scene/measure'
 import { linkProxy } from './LinkChip'
 import {
@@ -307,8 +302,14 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
     activeMapColour.value = colour
     if (ctl) seenMapColours.value = { ...seenMapColours.peek(), [ctl.sceneId]: colour }
     canvasCommands.value = ctl
-      ? { fit: () => ctl.fit(), undo: () => ctl.scene.undo.undo(), redo: () => ctl.scene.undo.redo() }
-      : null
+      ? {
+          fit: () => ctl.fit(),
+          undo: () => ctl.scene.undo.undo(),
+          redo: () => ctl.scene.undo.redo(),
+          sceneId: ctl.sceneId,
+          scene: ctl.scene,
+        }
+      : null;
   })
   useEffect(() => () => void (canvasCommands.value = null), [])
 
@@ -521,21 +522,46 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
 
   function canvasMenu(ctl: SceneController, at: Point): MenuItem[] {
     return [
-      { label: 'Add token here', Icon: IconAdd, onSelect: () => ctl.addToken(at) },
       {
-        label: 'Add image here…',
+        label: "Add token here",
+        Icon: IconAdd,
+        onSelect: () => ctl.addToken(at),
+      },
+      {
+        label: "Add image here…",
         Icon: IconImage,
         onSelect: () => {
-          importAt.current = at
-          fileRef.current?.click()
+          importAt.current = at;
+          fileRef.current?.click();
         },
       },
-      'divider',
-      { label: 'Undo', Icon: IconUndo, shortcut: `${MOD}Z`, disabled: !ctl.canUndo.value, onSelect: () => ctl.scene.undo.undo() },
-      { label: 'Redo', Icon: IconRedo, shortcut: `⇧${MOD}Z`, disabled: !ctl.canRedo.value, onSelect: () => ctl.scene.undo.redo() },
-      { label: 'Fit to scene', Icon: IconFit, shortcut: '⇧1', onSelect: () => ctl.fit() },
-      { label: 'Scene settings…', Icon: IconGrid, onSelect: () => (sceneSettingsOpen.value = true) },
-    ]
+      "divider",
+      {
+        label: "Undo",
+        Icon: IconUndo,
+        shortcut: `${MOD}Z`,
+        disabled: !ctl.canUndo.value,
+        onSelect: () => ctl.scene.undo.undo(),
+      },
+      {
+        label: "Redo",
+        Icon: IconRedo,
+        shortcut: `⇧${MOD}Z`,
+        disabled: !ctl.canRedo.value,
+        onSelect: () => ctl.scene.undo.redo(),
+      },
+      {
+        label: "Fit to scene",
+        Icon: IconFit,
+        shortcut: "⇧1",
+        onSelect: () => ctl.fit(),
+      },
+      {
+        label: "Scene settings…",
+        Icon: IconMap,
+        onSelect: () => showPanel("scene"),
+      },
+    ];
   }
 
   /** Double-clicking a token opens its options. */
@@ -591,10 +617,11 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
         multiple
         hidden
         onChange={(e) => {
-          const ctl = controller.value
-          const files = e.currentTarget.files
-          if (ctl && files?.length) ctl.importFiles([...files], importAt.current ?? ctl.centre())
-          e.currentTarget.value = ''
+          const ctl = controller.value;
+          const files = e.currentTarget.files;
+          if (ctl && files?.length)
+            ctl.importFiles([...files], importAt.current ?? ctl.centre());
+          e.currentTarget.value = "";
         }}
       />
       {menu.value && <ContextMenu {...menu.value} onClose={closeMenu} />}
@@ -602,26 +629,34 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
         <input
           key={`${textEdit.value.screen.x},${textEdit.value.screen.y}`}
           class="input bevel scene-text-input"
-          style={{ left: `${textEdit.value.screen.x}px`, top: `${textEdit.value.screen.y}px` }}
+          style={{
+            left: `${textEdit.value.screen.x}px`,
+            top: `${textEdit.value.screen.y}px`,
+          }}
           aria-label="Text"
-          defaultValue={textEdit.value.text ?? ''}
+          defaultValue={textEdit.value.text ?? ""}
           ref={(el) => void (el && requestAnimationFrame(() => el.focus()))}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') commitText(e.currentTarget.value)
-            else if (e.key === 'Escape') textEdit.value = null
-            e.stopPropagation()
+            if (e.key === "Enter") commitText(e.currentTarget.value);
+            else if (e.key === "Escape") textEdit.value = null;
+            e.stopPropagation();
           }}
           onBlur={(e) => textEdit.value && commitText(e.currentTarget.value)}
         />
       )}
       {controller.value && (
         <>
-          <TokenOptionsDialog campaign={campaign} controller={controller.value} id={tokenOptions.value} tab={tokenTab} onClose={() => (tokenOptions.value = null)} />
-          <SceneSettingsDialog campaign={campaign} sceneId={sceneId!} scene={controller.value.scene} />
+          <TokenOptionsDialog
+            campaign={campaign}
+            controller={controller.value}
+            id={tokenOptions.value}
+            tab={tokenTab}
+            onClose={() => (tokenOptions.value = null)}
+          />
         </>
       )}
     </>
-  )
+  );
 }
 
 /** Name, style and colour of a token, applied together as one undo step. */
@@ -900,164 +935,4 @@ function TokenOptionsDialog({
       </form>
     </Dialog>
   );
-}
-
-function SceneSettingsDialog({ campaign, sceneId, scene }: { campaign: Campaign; sceneId: string; scene: SceneDoc }) {
-  const ref = useRef<HTMLDialogElement>(null)
-  const grid = useY(scene.settings, () => scene.grid())
-  const lighting = JSON.parse(useY(scene.settings, () => JSON.stringify(scene.lighting()))) as SceneLighting
-  const view = useY(campaign.scenes, () => campaign.sceneViews().find((s) => s.id === sceneId))
-  const isGm = campaign.isGm()
-  const shown = view ? canvasColour(view, activeMapColour.value) : DEFAULT_CANVAS_COLOUR
-  const auto = !view?.canvasColour
-
-  useSignalEffect(() => {
-    if (sceneSettingsOpen.value) openPopup(ref.current)
-  })
-
-  const num = (v: string, fallback: number) => (Number.isFinite(parseFloat(v)) ? parseFloat(v) : fallback)
-
-  return (
-    <Dialog dialogRef={ref} title={view ? `${view.name} settings` : 'Scene settings'} onClose={() => (sceneSettingsOpen.value = false)}>
-      <div class="field">
-        Grid
-        <Segmented label="Grid type" value={grid.type} options={GRID_TYPES} disabled={!isGm} onChange={(type) => scene.setGrid({ type })} />
-      </div>
-      <div class="field-row">
-        <label class="field">
-          Cell size (px)
-          <input
-            class="input bevel"
-            type="number"
-            min={MIN_GRID_SIZE}
-            step={1}
-            value={grid.size}
-            disabled={!isGm || grid.type === 'none'}
-            onChange={(e) => scene.setGrid({ size: Math.max(MIN_GRID_SIZE, num(e.currentTarget.value, DEFAULT_GRID.size)) })}
-          />
-        </label>
-        <label class="field">
-          Offset X
-          <input
-            class="input bevel"
-            type="number"
-            step={1}
-            value={grid.offsetX}
-            disabled={!isGm || grid.type === 'none'}
-            onChange={(e) => scene.setGrid({ offsetX: num(e.currentTarget.value, 0) })}
-          />
-        </label>
-        <label class="field">
-          Offset Y
-          <input
-            class="input bevel"
-            type="number"
-            step={1}
-            value={grid.offsetY}
-            disabled={!isGm || grid.type === 'none'}
-            onChange={(e) => scene.setGrid({ offsetY: num(e.currentTarget.value, 0) })}
-          />
-        </label>
-      </div>
-      <div class="field-row">
-        <label class="field">
-          Each cell is
-          <input
-            class="input bevel"
-            type="number"
-            min={0}
-            step="any"
-            value={grid.unit}
-            disabled={!isGm}
-            onChange={(e) => scene.setGrid({ unit: Math.max(0, num(e.currentTarget.value, DEFAULT_GRID.unit)) })}
-          />
-        </label>
-        <label class="field">
-          Unit
-          <input
-            class="input bevel"
-            value={grid.unitName}
-            disabled={!isGm}
-            autoComplete="off"
-            onChange={(e) => scene.setGrid({ unitName: e.currentTarget.value.trim() })}
-          />
-        </label>
-      </div>
-      {grid.type === 'square' && (
-        <div class="field">
-          Diagonal steps count as
-          <Segmented
-            label="Diagonal steps"
-            value={grid.diagonal}
-            options={DIAGONAL_RULES}
-            disabled={!isGm}
-            onChange={(diagonal) => scene.setGrid({ diagonal })}
-          />
-        </div>
-      )}
-      <div class="field">
-        Canvas colour
-        <span class="colour-row">
-          <Segmented
-            label="Canvas colour"
-            value={auto ? 'auto' : 'custom'}
-            options={[
-              { id: 'auto', label: 'Auto', title: 'A dark shade of the map’s colour' },
-              { id: 'custom', label: 'Custom' },
-            ]}
-            disabled={!isGm}
-            onChange={(v) => campaign.updateScene(sceneId, { canvasColour: v === 'auto' ? null : shown })}
-          />
-          <input
-            type="color"
-            class="colour-input bevel"
-            value={shown}
-            aria-label="Pick a canvas colour"
-            disabled={!isGm}
-            onInput={(e) => campaign.updateScene(sceneId, { canvasColour: e.currentTarget.value })}
-          />
-        </span>
-      </div>
-      <div class="field">
-        Lighting
-        <Segmented
-          label="Lighting"
-          value={lighting.enabled ? 'on' : 'off'}
-          options={[
-            { id: 'off', label: 'Off' },
-            { id: 'on', label: 'Dynamic' },
-          ]}
-          disabled={!isGm}
-          onChange={(v) => scene.setLighting({ enabled: v === 'on' })}
-        />
-        {lighting.enabled && (
-          <label class="field">
-            Darkness where no light reaches: {Math.round(lighting.darkness * 100)}%
-            <input
-              type="range"
-              min={0}
-              max={100}
-              value={Math.round(lighting.darkness * 100)}
-              disabled={!isGm}
-              onChange={(e) => scene.setLighting({ darkness: Number(e.currentTarget.value) / 100 })}
-            />
-          </label>
-        )}
-      </div>
-      <div class="field">
-        Players see
-        <Segmented
-          label="Players see"
-          value={lighting.vision ? 'sight' : 'all'}
-          options={[
-            { id: 'all', label: 'Everything' },
-            { id: 'sight', label: 'What their tokens see' },
-          ]}
-          disabled={!isGm}
-          onChange={(v) => scene.setLighting({ vision: v === 'sight' })}
-        />
-      </div>
-      {!isGm && <p class="muted">Only the GM can change scene settings.</p>}
-    </Dialog>
-  )
 }
