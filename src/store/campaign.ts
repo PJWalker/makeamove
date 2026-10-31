@@ -17,6 +17,7 @@ import { sceneDbName } from '../scene/sceneDoc'
 import { noteDbName, noteGuid } from '../notes/noteDoc'
 import { Vault, vaultDbName, vaultNoteGuid } from '../notes/vault'
 import { ChatLog, deleteChatData } from '../chat/chatLog'
+import type { EntityGraphic } from "../graphics";
 import type { TokenStyle } from '../scene/types'
 
 /*
@@ -30,6 +31,7 @@ import type { TokenStyle } from '../scene/types'
  *   noteFolders Y.Map folderId -> { name, order }
  *   combat, combatants  Y.Map  the turn tracker (combat/combat.ts)
  *   homebrew Y.Map   id -> gear or move made at the table (homebrew/homebrew.ts)
+ *   entityGraphics Y.Map  entity key -> its shared image or built-in icon
  *   messageState Y.Map `messageId/field` -> what changes about a chat message (chat/messageState.ts)
  *
  * Each scene's contents (maps, tokens, drawings) live in its `doc`, a Yjs
@@ -88,104 +90,114 @@ const dbName = (id: string) => `mam:campaign:${id}`
 const sceneGuid = (campaignId: string, sceneId: string) => `${campaignId}/${sceneId}`
 
 export class Campaign {
-  readonly id: string
-  readonly doc: Y.Doc
-  readonly meta: Y.Map<any>
-  readonly members: Y.Map<Y.Map<any>>
+  readonly id: string;
+  readonly doc: Y.Doc;
+  readonly meta: Y.Map<any>;
+  readonly members: Y.Map<Y.Map<any>>;
   /** deviceId -> { name, at, by } for each player the GM removed. */
-  readonly revoked: Y.Map<{ name: string; at: number; by: string }>
-  readonly scenes: Y.Map<Y.Map<any>>
+  readonly revoked: Y.Map<{ name: string; at: number; by: string }>;
+  readonly scenes: Y.Map<Y.Map<any>>;
   /** id -> character (see characters/store.ts). */
-  readonly characters: Y.Map<Y.Map<any>>
+  readonly characters: Y.Map<Y.Map<any>>;
   /** id -> folder that characters can be filed in. */
-  readonly characterFolders: Y.Map<{ name: string }>
+  readonly characterFolders: Y.Map<{ name: string }>;
   /** id -> note page; its text is in a subdocument (see notes/noteDoc.ts). */
-  readonly notes: Y.Map<Y.Map<any>>
+  readonly notes: Y.Map<Y.Map<any>>;
   /** id -> folder that notes are filed in. */
-  readonly noteFolders: Y.Map<{ name: string; order: string }>
+  readonly noteFolders: Y.Map<{ name: string; order: string }>;
   /** Roll-request answers, applied damage, edits and pins, by message (see chat/messageState.ts). */
-  readonly messageState: Y.Map<any>
+  readonly messageState: Y.Map<any>;
   /** The turn tracker: round and whose turn, and who's in the fight (see combat/combat.ts). */
-  readonly combat: Y.Map<any>
-  readonly combatants: Y.Map<any>
+  readonly combat: Y.Map<any>;
+  readonly combatants: Y.Map<any>;
   /** Gear and moves made at the table (see homebrew/homebrew.ts). */
-  readonly homebrew: Y.Map<any>
+  readonly homebrew: Y.Map<any>;
+  /** One custom graphic per entity, shared by lists, windows and scene drops. */
+  readonly entityGraphics: Y.Map<EntityGraphic>;
   /** GM-only pages, on GM devices only (see notes/vault.ts). */
-  readonly vault = signal<Vault | null>(null)
-  private persistence: IndexeddbPersistence
-  private destroyed = false
-  private cleanups: (() => void)[] = []
-  private session: SyncSession | null = null
-  private blobs: BlobExchange | null = null
-  private fetcher: ((hash: string) => Promise<Blob | null>) | null = null
+  readonly vault = signal<Vault | null>(null);
+  private persistence: IndexeddbPersistence;
+  private destroyed = false;
+  private cleanups: (() => void)[] = [];
+  private session: SyncSession | null = null;
+  private blobs: BlobExchange | null = null;
+  private fetcher: ((hash: string) => Promise<Blob | null>) | null = null;
 
   /** False while joining by invite, until the first peer has sent the campaign. */
   /** Cursors, pings and rulers; live only while peers are connected. */
-  readonly presence = new Presence()
-  readonly ready = signal(false)
+  readonly presence = new Presence();
+  readonly ready = signal(false);
   /** Peers connected right now. */
-  readonly peerCount = signal(0)
+  readonly peerCount = signal(0);
   /** Device ids of everyone present, this device included. */
-  readonly online = signal<ReadonlySet<string>>(new Set())
+  readonly online = signal<ReadonlySet<string>>(new Set());
 
   private constructor(id: string) {
-    this.id = id
-    this.doc = new Y.Doc({ guid: id })
-    this.meta = this.doc.getMap('meta')
-    this.members = this.doc.getMap('members')
-    this.revoked = this.doc.getMap('revoked')
-    this.scenes = this.doc.getMap('scenes')
-    this.characters = this.doc.getMap('characters')
-    this.characterFolders = this.doc.getMap('characterFolders')
-    this.notes = this.doc.getMap('notes')
-    this.noteFolders = this.doc.getMap('noteFolders')
-    this.messageState = this.doc.getMap('messageState')
-    this.combat = this.doc.getMap('combat')
-    this.combatants = this.doc.getMap('combatants')
-    this.homebrew = this.doc.getMap('homebrew')
-    this.persistence = new IndexeddbPersistence(dbName(id), this.doc)
-    this.chat = new ChatLog(this.doc, id, device.value.id)
+    this.id = id;
+    this.doc = new Y.Doc({ guid: id });
+    this.meta = this.doc.getMap("meta");
+    this.members = this.doc.getMap("members");
+    this.revoked = this.doc.getMap("revoked");
+    this.scenes = this.doc.getMap("scenes");
+    this.characters = this.doc.getMap("characters");
+    this.characterFolders = this.doc.getMap("characterFolders");
+    this.notes = this.doc.getMap("notes");
+    this.noteFolders = this.doc.getMap("noteFolders");
+    this.messageState = this.doc.getMap("messageState");
+    this.combat = this.doc.getMap("combat");
+    this.combatants = this.doc.getMap("combatants");
+    this.homebrew = this.doc.getMap("homebrew");
+    this.entityGraphics = this.doc.getMap("entityGraphics");
+    this.persistence = new IndexeddbPersistence(dbName(id), this.doc);
+    this.chat = new ChatLog(this.doc, id, device.value.id);
   }
 
   /** Chat, rolls and the move log (see chat/chatLog.ts). */
-  readonly chat: ChatLog
+  readonly chat: ChatLog;
 
   static async open(id: string): Promise<Campaign> {
-    const c = new Campaign(id)
-    await c.persistence.whenSynced
-    c.watchMeta()
-    await c.chat.start()
-    if (c.isGm()) c.vault.value = await Vault.open(id)
-    return c
+    const c = new Campaign(id);
+    await c.persistence.whenSynced;
+    c.watchMeta();
+    await c.chat.start();
+    if (c.isGm()) c.vault.value = await Vault.open(id);
+    return c;
   }
 
   /** Track readiness and keep this device's list entry and membership current. */
   private watchMeta() {
     this.checkMembership = () => {
-      const named = this.meta.has('name')
-      const removed = this.revoked.has(device.value.id)
+      const named = this.meta.has("name");
+      const removed = this.revoked.has(device.value.id);
       // A removed player's device must not add itself back.
       if (named && !removed && !this.members.has(device.value.id)) {
-        const name = device.value.name || 'Player'
-        this.ensureMember(name)
-        this.chat.post({ kind: 'system', text: `${name} joined`, event: 'join' }, { id: device.value.id, name })
+        const name = device.value.name || "Player";
+        this.ensureMember(name);
+        this.chat.post(
+          { kind: "system", text: `${name} joined`, event: "join" },
+          { id: device.value.id, name },
+        );
       }
-      if (named) updateCampaignEntry(this.id, { name: this.name, systemId: this.meta.get('systemId') ?? DEFAULT_SYSTEM.id })
-      this.ready.value = named
-      this.removed.value = removed
-      if (removed && !this.checkingRejoin) this.disconnect()
-    }
-    this.meta.observe(this.checkMembership)
-    this.revoked.observe(this.checkMembership)
-    this.checkMembership()
+      if (named)
+        updateCampaignEntry(this.id, {
+          name: this.name,
+          systemId: this.meta.get("systemId") ?? DEFAULT_SYSTEM.id,
+        });
+      this.ready.value = named;
+      this.removed.value = removed;
+      if (removed && !this.checkingRejoin) this.disconnect();
+    };
+    this.meta.observe(this.checkMembership);
+    this.revoked.observe(this.checkMembership);
+    this.checkMembership();
   }
 
-  private checkMembership: () => void = () => {}
+  private checkMembership: () => void = () => {};
 
   /** True once the GM has removed this device from the campaign. */
-  readonly removed = signal(false)
+  readonly removed = signal(false);
   /** Connected despite being removed, to learn whether the GM allowed us back. */
-  private checkingRejoin = false
+  private checkingRejoin = false;
 
   /**
    * Join the campaign's room and start syncing with whoever else is in it.
@@ -194,112 +206,121 @@ export class Campaign {
    * peer, it disconnects again.
    */
   async connect(roomKey: string, { rejoin = false } = {}) {
-    if (this.session) return
-    if (this.removed.value && !rejoin) return
+    if (this.session) return;
+    if (this.removed.value && !rejoin) return;
     if (rejoin && this.removed.value) {
-      this.checkingRejoin = true
-      let timer = 0
+      this.checkingRejoin = true;
+      let timer = 0;
       const stop = effect(() => {
-        if (this.peerCount.value === 0 || timer) return
+        if (this.peerCount.value === 0 || timer) return;
         timer = window.setTimeout(() => {
-          this.checkingRejoin = false
-          this.checkMembership()
-        }, REJOIN_CHECK_MS)
-      })
-      this.cleanups.push(stop, () => clearTimeout(timer))
+          this.checkingRejoin = false;
+          this.checkMembership();
+        }, REJOIN_CHECK_MS);
+      });
+      this.cleanups.push(stop, () => clearTimeout(timer));
     }
-    let transport
+    let transport;
     try {
-      transport = (await import('../sync/trystero')).trysteroTransport(this.id, roomKey)
+      transport = (await import("../sync/trystero")).trysteroTransport(
+        this.id,
+        roomKey,
+      );
     } catch {
       // Offline or blocked: the campaign still works locally.
-      return
+      return;
     }
     if (this.destroyed) {
-      transport.close()
-      return
+      transport.close();
+      return;
     }
-    const session = new SyncSession(this.doc, transport)
-    this.session = session
+    const session = new SyncSession(this.doc, transport);
+    this.session = session;
     const refresh = () => {
-      this.peerCount.value = session.peerIds().length
-      const ids = new Set<string>([device.value.id])
-      for (const st of session.awareness.getStates().values()) if (st.user?.id) ids.add(st.user.id)
-      this.online.value = ids
-    }
-    this.blobs = new BlobExchange(session, { get: getBlob, put: putBlob })
-    const exchange = this.blobs
-    this.fetcher = (hash) => exchange.fetch(hash)
-    setBlobFetcher(this.fetcher)
-    this.presence.attach(session.awareness)
-    session.onChange = refresh
+      this.peerCount.value = session.peerIds().length;
+      const ids = new Set<string>([device.value.id]);
+      for (const st of session.awareness.getStates().values())
+        if (st.user?.id) ids.add(st.user.id);
+      this.online.value = ids;
+    };
+    this.blobs = new BlobExchange(session, { get: getBlob, put: putBlob });
+    const exchange = this.blobs;
+    this.fetcher = (hash) => exchange.fetch(hash);
+    setBlobFetcher(this.fetcher);
+    this.presence.attach(session.awareness);
+    session.onChange = refresh;
     // Keep peers current when this player changes their name or colour.
     const stopIdentity = effect(() => {
-      const d = device.value
-      session.awareness.setLocalStateField('user', { id: d.id, name: d.name, colour: colourOf(d) })
-    })
-    this.cleanups.push(stopIdentity)
-    refresh()
-    void this.vault.value?.connect()
+      const d = device.value;
+      session.awareness.setLocalStateField("user", {
+        id: d.id,
+        name: d.name,
+        colour: colourOf(d),
+      });
+    });
+    this.cleanups.push(stopIdentity);
+    refresh();
+    void this.vault.value?.connect();
   }
 
   /** The connection to peers, for presence and blob transfer. */
   get sync(): SyncSession | null {
-    return this.session
+    return this.session;
   }
 
   /** Leave the room. The campaign stays open locally. */
   disconnect() {
-    for (const c of this.cleanups) c()
-    this.cleanups = []
-    if (this.fetcher) setBlobFetcher(null, this.fetcher)
-    this.fetcher = null
-    this.presence.detach()
-    this.blobs?.close()
-    this.blobs = null
-    this.session?.destroy()
-    this.session = null
-    this.vault.value?.disconnect()
-    this.peerCount.value = 0
-    this.online.value = new Set([device.value.id])
+    for (const c of this.cleanups) c();
+    this.cleanups = [];
+    if (this.fetcher) setBlobFetcher(null, this.fetcher);
+    this.fetcher = null;
+    this.presence.detach();
+    this.blobs?.close();
+    this.blobs = null;
+    this.session?.destroy();
+    this.session = null;
+    this.vault.value?.disconnect();
+    this.peerCount.value = 0;
+    this.online.value = new Set([device.value.id]);
   }
 
   destroy() {
-    this.destroyed = true
-    clearTimeout(this.sceneNoticeTimer)
-    this.disconnect()
-    this.chat.destroy()
-    this.vault.value?.destroy()
-    this.persistence.destroy()
-    this.doc.destroy()
+    this.destroyed = true;
+    clearTimeout(this.sceneNoticeTimer);
+    this.disconnect();
+    this.chat.destroy();
+    this.vault.value?.destroy();
+    this.persistence.destroy();
+    this.doc.destroy();
   }
 
   get name(): string {
-    return this.meta.get('name') ?? 'Untitled campaign'
+    return this.meta.get("name") ?? "Untitled campaign";
   }
 
   rename(name: string) {
-    this.meta.set('name', name)
-    renameCampaignEntry(this.id, name)
+    this.meta.set("name", name);
+    renameCampaignEntry(this.id, name);
   }
 
   /** What the GM has chosen for new tokens and scenes. */
   defaults(): CampaignDefaults {
     return {
-      tokenStyle: this.meta.get('defaultTokenStyle') ?? 'disc',
-      gridType: this.meta.get('defaultGridType') ?? 'square',
-    }
+      tokenStyle: this.meta.get("defaultTokenStyle") ?? "disc",
+      gridType: this.meta.get("defaultGridType") ?? "square",
+    };
   }
 
   setDefaults(patch: Partial<CampaignDefaults>) {
     this.doc.transact(() => {
-      if (patch.tokenStyle) this.meta.set('defaultTokenStyle', patch.tokenStyle)
-      if (patch.gridType) this.meta.set('defaultGridType', patch.gridType)
-    })
+      if (patch.tokenStyle)
+        this.meta.set("defaultTokenStyle", patch.tokenStyle);
+      if (patch.gridType) this.meta.set("defaultGridType", patch.gridType);
+    });
   }
 
   isGm(deviceId = device.value.id): boolean {
-    return this.members.get(deviceId)?.get('role') === 'gm'
+    return this.members.get(deviceId)?.get("role") === "gm";
   }
 
   // Members
@@ -307,16 +328,16 @@ export class Campaign {
   memberViews(): MemberView[] {
     return [...this.members.entries()].map(([id, m]) => ({
       id,
-      name: m.get('name') ?? 'Unnamed',
-      role: m.get('role') ?? 'player',
-      activeSceneId: m.get('activeSceneId') ?? null,
-    }))
+      name: m.get("name") ?? "Unnamed",
+      role: m.get("role") ?? "player",
+      activeSceneId: m.get("activeSceneId") ?? null,
+    }));
   }
 
   revokedViews(): RevokedView[] {
     return [...this.revoked.entries()]
       .map(([id, r]) => ({ id, name: r.name, at: r.at }))
-      .sort((a, b) => b.at - a.at)
+      .sort((a, b) => b.at - a.at);
   }
 
   /**
@@ -326,31 +347,36 @@ export class Campaign {
    * still connect with a modified client.
    */
   revokeMember(id: string) {
-    const m = this.members.get(id)
-    if (!this.isGm() || id === device.value.id || !m || m.get('role') === 'gm') return
+    const m = this.members.get(id);
+    if (!this.isGm() || id === device.value.id || !m || m.get("role") === "gm")
+      return;
     this.doc.transact(() => {
-      this.revoked.set(id, { name: m.get('name') ?? 'Unnamed', at: Date.now(), by: device.value.id })
-      this.members.delete(id)
-    })
+      this.revoked.set(id, {
+        name: m.get("name") ?? "Unnamed",
+        at: Date.now(),
+        by: device.value.id,
+      });
+      this.members.delete(id);
+    });
   }
 
   /** Let a removed player back in; they rejoin with the invite link. */
   allowBack(id: string) {
-    if (this.isGm()) this.revoked.delete(id)
+    if (this.isGm()) this.revoked.delete(id);
   }
 
-  ensureMember(name: string, role: Role = 'player') {
-    const id = device.value.id
-    let m = this.members.get(id)
+  ensureMember(name: string, role: Role = "player") {
+    const id = device.value.id;
+    let m = this.members.get(id);
     this.doc.transact(() => {
       if (!m) {
-        m = new Y.Map()
-        m.set('role', role)
-        m.set('joinedAt', Date.now())
-        this.members.set(id, m)
+        m = new Y.Map();
+        m.set("role", role);
+        m.set("joinedAt", Date.now());
+        this.members.set(id, m);
       }
-      if (name && m.get('name') !== name) m.set('name', name)
-    })
+      if (name && m.get("name") !== name) m.set("name", name);
+    });
   }
 
   // Scenes
@@ -359,71 +385,74 @@ export class Campaign {
     return [...this.scenes.entries()]
       .map(([id, s]) => ({
         id,
-        name: s.get('name') ?? 'Untitled scene',
-        canvasColour: s.get('canvasColour') ?? null,
-        order: s.get('order') ?? 'a0',
-        visibility: s.get('visibility') ?? 'everyone',
+        name: s.get("name") ?? "Untitled scene",
+        canvasColour: s.get("canvasColour") ?? null,
+        order: s.get("order") ?? "a0",
+        visibility: s.get("visibility") ?? "everyone",
       }))
-      .sort((a, b) => (a.order < b.order ? -1 : a.order > b.order ? 1 : 0))
+      .sort((a, b) => (a.order < b.order ? -1 : a.order > b.order ? 1 : 0));
   }
 
   addScene(name: string): string {
-    const id = newId()
-    const views = this.sceneViews()
-    const last = views.length ? views[views.length - 1].order : null
-    const s = new Y.Map<any>()
-    s.set('name', name)
-    s.set('order', generateKeyBetween(last, null))
-    s.set('visibility', 'everyone')
-    s.set('doc', new Y.Doc({ guid: sceneGuid(this.id, id) }))
-    this.scenes.set(id, s)
-    return id
+    const id = newId();
+    const views = this.sceneViews();
+    const last = views.length ? views[views.length - 1].order : null;
+    const s = new Y.Map<any>();
+    s.set("name", name);
+    s.set("order", generateKeyBetween(last, null));
+    s.set("visibility", "everyone");
+    s.set("doc", new Y.Doc({ guid: sceneGuid(this.id, id) }));
+    this.scenes.set(id, s);
+    return id;
   }
 
   /** The scene's subdocument (not yet loaded). Scenes from M0 get one now. */
   sceneSubdoc(id: string): Y.Doc | null {
-    const s = this.scenes.get(id)
-    if (!s) return null
-    let doc = s.get('doc')
+    const s = this.scenes.get(id);
+    if (!s) return null;
+    let doc = s.get("doc");
     if (!(doc instanceof Y.Doc)) {
       // The guid is derived from the ids, so two peers doing this at once
       // still end up pointing at the same document.
-      doc = new Y.Doc({ guid: sceneGuid(this.id, id) })
-      s.set('doc', doc)
+      doc = new Y.Doc({ guid: sceneGuid(this.id, id) });
+      s.set("doc", doc);
     }
-    return doc
+    return doc;
   }
 
-  updateScene(id: string, patch: Partial<Omit<SceneView, 'id'>>) {
-    const s = this.scenes.get(id)
-    if (!s) return
+  updateScene(id: string, patch: Partial<Omit<SceneView, "id">>) {
+    const s = this.scenes.get(id);
+    if (!s) return;
     this.doc.transact(() => {
       for (const [k, v] of Object.entries(patch)) {
-        if (v === null) s.delete(k)
-        else s.set(k, v)
+        if (v === null) s.delete(k);
+        else s.set(k, v);
       }
-    })
+    });
   }
 
   removeScene(id: string) {
-    this.scenes.delete(id)
+    this.scenes.delete(id);
     // Drop this device's copy of the contents. Peers that still have the
     // scene keep theirs.
-    indexedDB.deleteDatabase(sceneDbName(sceneGuid(this.id, id)))
+    indexedDB.deleteDatabase(sceneDbName(sceneGuid(this.id, id)));
   }
 
   activeSceneId(): string | null {
-    const mine = this.members.get(device.value.id)?.get('activeSceneId')
-    if (mine && this.scenes.has(mine)) return mine
-    return this.sceneViews()[0]?.id ?? null
+    const mine = this.members.get(device.value.id)?.get("activeSceneId");
+    if (mine && this.scenes.has(mine)) return mine;
+    return this.sceneViews()[0]?.id ?? null;
   }
 
   setActiveScene(sceneId: string) {
-    this.members.get(device.value.id)?.set('activeSceneId', sceneId)
+    this.members.get(device.value.id)?.set("activeSceneId", sceneId);
     // Where the GM goes, the table goes: tell everyone once they've settled.
     if (this.isGm()) {
-      clearTimeout(this.sceneNoticeTimer)
-      this.sceneNoticeTimer = setTimeout(() => this.announceScene(), Campaign.sceneNoticeDelay)
+      clearTimeout(this.sceneNoticeTimer);
+      this.sceneNoticeTimer = setTimeout(
+        () => this.announceScene(),
+        Campaign.sceneNoticeDelay,
+      );
     }
   }
 
@@ -432,18 +461,30 @@ export class Campaign {
    * through scenes (or clicking one's name to rename it) doesn't flood the
    * chat. Tests shorten it.
    */
-  static sceneNoticeDelay = 1500
-  private sceneNoticeTimer: ReturnType<typeof setTimeout> | undefined
+  static sceneNoticeDelay = 1500;
+  private sceneNoticeTimer: ReturnType<typeof setTimeout> | undefined;
 
   /** Post "Scene changed to …" unless this scene was the last one announced. */
   private announceScene() {
-    if (this.destroyed) return
-    const id = this.activeSceneId()
-    if (!id || id === this.meta.get('tableScene')) return
-    this.meta.set('tableScene', id)
-    const name = this.sceneViews().find((s) => s.id === id)?.name ?? 'a new scene'
-    const author = { id: device.value.id, name: this.members.get(device.value.id)?.get('name') ?? 'GM' }
-    this.chat.post({ kind: 'system', text: `Scene changed to ${name}`, event: 'scene-change', sceneId: id }, author)
+    if (this.destroyed) return;
+    const id = this.activeSceneId();
+    if (!id || id === this.meta.get("tableScene")) return;
+    this.meta.set("tableScene", id);
+    const name =
+      this.sceneViews().find((s) => s.id === id)?.name ?? "a new scene";
+    const author = {
+      id: device.value.id,
+      name: this.members.get(device.value.id)?.get("name") ?? "GM",
+    };
+    this.chat.post(
+      {
+        kind: "system",
+        text: `Scene changed to ${name}`,
+        event: "scene-change",
+        sceneId: id,
+      },
+      author,
+    );
   }
 }
 

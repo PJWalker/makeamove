@@ -1,0 +1,71 @@
+- generic [ref=e37]:
+  - 'generic "Scene: The Opening Scene" [ref=e38]'
+  - navigation "Canvas tools" [ref=e41]:
+    - button "Campaign menu" [ref=e42] [cursor=pointer]
+    - button "Select (V)" [pressed] [ref=e45] [cursor=pointer]
+    - button "Pan (H)" [ref=e48] [cursor=pointer]
+    - button "Draw (P)" [ref=e51] [cursor=pointer]
+    - button "Erase (E)" [ref=e54] [cursor=pointer]
+    - button "Shapes (R)" [ref=e57] [cursor=pointer]
+    - button "Text (X)" [ref=e60] [cursor=pointer]
+    - button "Measure (M)" [ref=e63] [cursor=pointer]
+    - button "Ping (G)" [ref=e66] [cursor=pointer]
+    - button "Walls (W)" [ref=e69] [cursor=pointer]
+    - button "Lights (L)" [ref=e72] [cursor=pointer]
+  - complementary "Left sidebar" [ref=e75]:
+    - tablist [ref=e76]:
+      - tab "Scenes" [ref=e77] [cursor=pointer]
+      - tab "Characters" [selected] [ref=e80] [cursor=pointer]
+    - tabpanel [ref=e83]:
+      - separator "Resize sidebar" [ref=e84]
+      - generic [ref=e85]:
+        - generic [ref=e86]:
+          - button "One at a time (widen the panel to see the list and sheet side by side)" [disabled] [ref=e87]
+          - heading "Characters" [level=2] [ref=e90]
+        - generic [ref=e159]:
+          - generic [ref=e160]:
+            - button "Back to the character list" [ref=e161] [cursor=pointer]
+            - generic [ref=e164]: New character
+          - generic [ref=e166]:
+            - generic [ref=e167]:
+              - text: Type
+              - radiogroup "Character type" [ref=e168]:
+                - radio "Player character" [ref=e169] [cursor=pointer]
+                - radio "NPC" [checked] [active] [ref=e170] [cursor=pointer]
+            - generic [ref=e171]:
+              - text: Name
+              - textbox "Name" [ref=e172]
+            - generic [ref=e200]:
+              - button "Create" [ref=e201] [cursor=pointer]
+              - button "Cancel" [ref=e202] [cursor=pointer]
+  - complementary "Right sidebar" [ref=e102]:
+    - tablist [ref=e103]:
+      - tab "Chat" [selected] [ref=e104] [cursor=pointer]
+      - tab "Libraries" [ref=e107] [cursor=pointer]
+      - tab "Items" [ref=e110] [cursor=pointer]
+      - tab "Notes" [ref=e113] [cursor=pointer]
+      - tab "Members, 1 online" [ref=e116] [cursor=pointer]: "1"
+    - tabpanel [ref=e119]:
+      - separator "Resize sidebar" [ref=e120]
+      - generic [ref=e121]:
+        - heading "Chat" [level=2] [ref=e123]
+        - generic [ref=e126]:
+          - log [ref=e127]:
+            - generic [ref=e128]: Say hello, or roll some dice.
+          - generic [ref=e131]:
+            - generic [ref=e132]:
+              - button "d4" [ref=e133] [cursor=pointer]
+              - button "d6" [ref=e134] [cursor=pointer]
+              - button "d8" [ref=e135] [cursor=pointer]
+              - button "d10" [ref=e136] [cursor=pointer]
+              - button "d12" [ref=e137] [cursor=pointer]
+              - button "d20" [ref=e138] [cursor=pointer]
+              - button "Public" [ref=e139] [cursor=pointer]
+            - generic [ref=e140]:
+              - textbox "Message" [ref=e142]:
+                - paragraph [ref=e143]: Message, @ to link, or roll 2d6+1
+              - button "Send" [disabled] [ref=e144]
+  - toolbar "Hotbar" [ref=e145]:
+    - button "Ping" [ref=e147]
+    - button "Measure" [ref=e152]
+    - button "Command palette (Ctrl/Cmd+K)" [ref=e156] [cursor=pointer]

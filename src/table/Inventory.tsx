@@ -3,14 +3,16 @@ import type { CharacterView, ItemInstance } from "../characters/store";
 import type { Derived } from "../systems/types";
 import type { Campaign } from "../store/campaign";
 import { Button } from "../ui/Button";
-import { entryIcon } from "../ui/entryIcons";
-import { IconDelete } from "../ui/icons";
+import { IconDelete, IconImage } from "../ui/icons";
 import { List } from "../ui/List";
 import { EntryRow, EntryWindow, useEntryWindows } from "./EntryWindow";
 import { linkProxy } from "./LinkChip";
 import { browseLibrary } from "./libraryView";
 import { actionMenuItems } from "./actionMenu";
 import { dragEntity, entity } from "./entityDrag";
+import { CampaignEntityGraphic } from "./EntityGraphic";
+import { editEntityGraphic } from "./GraphicDialogs";
+import { getEntityGraphic } from "./entityGraphics";
 
 const menuTargets = (i: ItemInstance) => [
   ...(i.uses !== undefined
@@ -60,6 +62,26 @@ export function Inventory({
   const itemMenu = (i: ItemInstance) => {
     const items = actionMenuItems(campaign, menuTargets(i));
     return [
+      ...(i.equippable
+        ? [
+            {
+              label: i.equipped ? `Unequip ${i.name}` : `Equip ${i.name}`,
+              disabled: !editable,
+              onSelect: () => patch(i, { equipped: !i.equipped }),
+            },
+          ]
+        : []),
+      ...(i.uses !== undefined
+        ? [
+            {
+              label: `Use ${i.name}`,
+              disabled: !editable || !i.usesLeft,
+              onSelect: () =>
+                patch(i, { usesLeft: Math.max(0, (i.usesLeft ?? 0) - 1) }),
+            },
+          ]
+        : []),
+      ...(items.length ? (["divider"] as const) : []),
       ...items,
       ...(items.length ? (["divider"] as const) : []),
       {
@@ -68,6 +90,12 @@ export function Inventory({
         danger: true,
         disabled: !editable,
         onSelect: () => removeItem(campaign, c.id, i.id),
+      },
+      {
+        label: "Change graphic…",
+        Icon: IconImage,
+        onSelect: () =>
+          editEntityGraphic(campaign, "item", i.defId ?? i.id, i.name, i.icon),
       },
     ];
   };
@@ -124,7 +152,15 @@ export function Inventory({
             <EntryRow
               key={i.id}
               name={i.name}
-              Icon={entryIcon("item", i.icon)}
+              lead={
+                <CampaignEntityGraphic
+                  campaign={campaign}
+                  kind="item"
+                  id={i.defId ?? i.id}
+                  defaultIcon={i.icon}
+                  size={22}
+                />
+              }
               meta={metaOf(i)}
               tip={tipOf(i)}
               dim={i.equippable && !i.equipped}
@@ -134,7 +170,16 @@ export function Inventory({
                   ? entity(campaign, "item", i.defId, i.name)
                   : {
                       label: i.name,
-                      token: { name: i.name },
+                      token: {
+                        name: i.name,
+                        graphic: getEntityGraphic(
+                          campaign,
+                          "item",
+                          i.id,
+                          i.icon,
+                        ),
+                        entityRef: { kind: "item", id: i.id },
+                      },
                       give: {
                         kind: "item" as const,
                         to: (characterId: string) =>
@@ -172,6 +217,8 @@ export function Inventory({
             tags={i.tags}
             onClose={() => windows.close(key)}
             menuItems={itemMenu(i)}
+            graphicRef={{ kind: "item", id: i.defId ?? i.id }}
+            graphicDefaultIcon={i.icon}
             // Gear from the Libraries stands for its entry there.
             proxy={
               i.defId

@@ -93,7 +93,12 @@ function MemberList({ campaign }: { campaign: Campaign }) {
       <Presence campaign={campaign} />
       <ul class="member-list">
         {members.map((m) => (
-          <MemberRow key={m.id} campaign={campaign} m={m} canRemove={isGm && m.id !== device.value.id && m.role !== 'gm'} />
+          <MemberRow
+            key={m.id}
+            campaign={campaign}
+            m={m}
+            canRemove={isGm && m.id !== device.value.id && m.role !== "gm"}
+          />
         ))}
       </ul>
       {isGm && revoked.length > 0 && (
@@ -111,7 +116,7 @@ function MemberList({ campaign }: { campaign: Campaign }) {
                   label={`Let ${r.name} back in (they rejoin with the invite link)`}
                   onClick={() => campaign.allowBack(r.id)}
                 >
-                  <IconAllowBack size={16} />
+                  <IconAllowBack size={22} />
                 </Button>
               </li>
             ))}
@@ -119,7 +124,7 @@ function MemberList({ campaign }: { campaign: Campaign }) {
         </section>
       )}
     </div>
-  )
+  );
 }
 
 /** One member, with the GM's remove control and its confirmation. */
@@ -140,19 +145,27 @@ function MemberRow({ campaign, m, canRemove }: { campaign: Campaign; m: MemberVi
   }
   return (
     <li class="member">
-      <Avatar id={m.id} name={m.name} online={m.id === device.value.id || campaign.online.value.has(m.id)} />
+      <Avatar
+        id={m.id}
+        name={m.name}
+        online={m.id === device.value.id || campaign.online.value.has(m.id)}
+      />
       <span class="member-name">
         {m.name}
         {m.id === device.value.id && <span class="muted"> (you)</span>}
       </span>
       <span class="role-badge bevel" data-role={m.role}>
-        {m.role === 'gm' ? 'GM' : m.role === 'observer' ? 'Observer' : 'Player'}
+        {m.role === "gm" ? "GM" : m.role === "observer" ? "Observer" : "Player"}
       </span>
       {canRemove && (
-        <Button variant="icon" label={`Remove ${m.name}`} onClick={() => (confirming.value = true)}>
-          <IconRemoveMember size={16} />
+        <Button
+          variant="icon"
+          label={`Remove ${m.name}`}
+          onClick={() => (confirming.value = true)}
+        >
+          <IconRemoveMember size={22} />
         </Button>
       )}
     </li>
-  )
+  );
 }

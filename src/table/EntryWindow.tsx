@@ -1,6 +1,6 @@
 import { signal, useSignal } from '@preact/signals'
 import type { ComponentChildren } from 'preact'
-import { useLayoutEffect } from 'preact/hooks'
+import { useLayoutEffect, useRef } from "preact/hooks";
 import { checkOf } from '../characters/moves'
 import type { ActionDef, GameSystem } from '../systems/types'
 import { morphOpen } from '../ui/morph'
@@ -69,6 +69,8 @@ export function EntryWindow({
   tags,
   onClose,
   proxy,
+  graphicRef,
+  graphicDefaultIcon,
   menuItems,
   windowId,
   children,
@@ -80,6 +82,8 @@ export function EntryWindow({
   onClose: () => void;
   /** The entry as a draggable icon in the title bar. */
   proxy?: WindowProxy;
+  graphicRef?: { kind: string; id: string };
+  graphicDefaultIcon?: string;
   /** Context-menu actions for this entry. */
   menuItems?: MenuItem[];
   /** Shared identity when this entry is opened from a link popup. */
@@ -87,23 +91,28 @@ export function EntryWindow({
   /** The actions along the bottom. */
   children?: ComponentChildren;
 }) {
-  const id = windowId ?? entityTabId(`entry:${entryKey}`)
+  const id = windowId ?? entityTabId(`entry:${entryKey}`);
   useLayoutEffect(() => {
     registerEntityWindow({
       id,
       title,
       text,
       tags,
+      graphicRef:
+        graphicRef ?? (proxy ? { kind: proxy.kind, id: proxy.id } : undefined),
+      graphicDefaultIcon: graphicDefaultIcon ?? proxy?.defaultIcon,
       proxy,
       menuItems,
       close: onClose,
-      content: <>
-        <p class="move-text move-window-text">{text}</p>
-        {children && <div class="form-actions">{children}</div>}
-      </>,
-    })
-  }, [id, title, text, tags, proxy, menuItems, onClose, children])
-  return null
+      content: (
+        <>
+          <p class="move-text move-window-text">{text}</p>
+          {children && <div class="form-actions">{children}</div>}
+        </>
+      ),
+    });
+  }, [id, title, text, tags, proxy, menuItems, onClose, children]);
+  return null;
 }
 
 /**
@@ -113,10 +122,12 @@ export function EntryWindow({
 export function EntryRow({
   name,
   Icon,
+  lead,
   tag,
   meta,
   tip,
   onOpen,
+  openLabel = "Open",
   onPointerDown,
   menuItems,
   dim,
@@ -124,10 +135,13 @@ export function EntryRow({
 }: {
   name: string;
   Icon?: Icon;
+  lead?: ComponentChildren;
   tag?: string | null;
   meta?: string;
   tip: string;
   onOpen: (row: Element) => void;
+  /** The context-menu verb that uses the row's normal open action. */
+  openLabel?: string;
   /** For rows that can be dragged somewhere. */
   onPointerDown?: (e: PointerEvent) => void;
   /** Context-menu actions for this entry. */
@@ -137,11 +151,21 @@ export function EntryRow({
   children?: ComponentChildren;
 }) {
   const menu = useSignal<{ x: number; y: number } | null>(null);
+  const rowElement = useRef<Element | null>(null);
   const trigger = menuTrigger((x, y) => (menu.value = { x, y }));
+  const items: MenuItem[] = [
+    {
+      label: openLabel,
+      onSelect: () => {
+        if (rowElement.current?.isConnected) onOpen(rowElement.current);
+      },
+    },
+    ...(menuItems ?? []),
+  ];
   return (
     <>
       <ListRow
-        lead={Icon && <Icon size={18} />}
+        lead={lead ?? (Icon && <Icon size={22} />)}
         name={name}
         tag={tag}
         meta={meta}
@@ -154,18 +178,22 @@ export function EntryRow({
           "data-tip-side": true,
           "data-tip-opens": true,
           onPointerDown: (e) => {
-            if (menuItems?.length) trigger.onPointerDown(e);
+            rowElement.current = e.currentTarget;
+            trigger.onPointerDown(e);
             onPointerDown?.(e);
           },
-          onContextMenu: menuItems?.length ? trigger.onContextMenu : undefined,
+          onContextMenu: (e) => {
+            rowElement.current = e.currentTarget;
+            trigger.onContextMenu(e);
+          },
         }}
       >
         {children}
       </ListRow>
-      {menu.value && menuItems && (
+      {menu.value && (
         <ContextMenu
           {...menu.value}
-          items={menuItems}
+          items={items}
           onClose={() => (menu.value = null)}
         />
       )}

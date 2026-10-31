@@ -3,7 +3,8 @@ import { elementAt, watchHoldRelease } from '../ui/holdRelease'
 import type { ComponentType } from 'preact'
 import { createPortal } from 'preact/compat'
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks'
-import { placeAnchored, pointAnchor } from '../ui/anchor'
+import { pointAnchor } from "../ui/anchor";
+import { useMenuOverlay } from "../ui/menuOverlay";
 import { HexColorPicker } from 'react-colorful'
 import { IconCheck } from '../ui/icons'
 import type { IconProps } from '../ui/icons'
@@ -79,6 +80,13 @@ export function ContextMenu({
   }
   const dismissRef = useRef(dismiss)
   dismissRef.current = dismiss
+  useMenuOverlay({
+    open: true,
+    ref,
+    anchor: pointAnchor(x, y),
+    gap: 0,
+    onDismiss: () => dismissRef.current(),
+  });
 
   // A new right-click reuses this instance; show the new menu. Not keyed on
   // `items`, which is rebuilt on every parent render (e.g. after onSelect).
@@ -95,59 +103,50 @@ export function ContextMenu({
     [x, y],
   )
 
-  useLayoutEffect(() => {
-    const el = ref.current
-    if (!el) return
-    // Down from the pointer, or up from it near the bottom of the window.
-    placeAnchored(el, pointAnchor(x, y), 0)
-  }, [x, y])
-
   useEffect(() => {
-    const onDown = (e: PointerEvent) => {
-      if (!ref.current?.contains(e.target as Node)) dismissRef.current()
-    }
     // Captured at the document so the menu works even if focus has strayed.
     const onKey = (e: KeyboardEvent) => {
-      const menu = ref.current
-      if (!menu || e.metaKey || e.ctrlKey || e.altKey) return
+      const menu = ref.current;
+      if (!menu || e.metaKey || e.ctrlKey || e.altKey) return;
       // A colour picker's arrow keys move its pointers.
-      if ((e.target as Element | null)?.closest?.('.react-colorful') && e.key !== 'Escape' && e.key !== 'Tab') return
+      if (
+        (e.target as Element | null)?.closest?.(".react-colorful") &&
+        e.key !== "Escape" &&
+        e.key !== "Tab"
+      )
+        return;
       const handled = () => {
-        e.preventDefault()
-        e.stopPropagation()
-      }
-      if (e.key === 'Escape' || e.key === 'ArrowLeft') return handled(), dismissRef.current()
-      if (e.key === 'Tab') return dismissRef.current()
-      const buttons = [...menu.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')]
-      if (!buttons.length) return
-      const i = buttons.indexOf(document.activeElement as HTMLButtonElement)
-      const last = buttons.length - 1
-      let next: number | null = null
-      if (e.key === 'ArrowDown') next = i < 0 || i === last ? 0 : i + 1
-      else if (e.key === 'ArrowUp') next = i <= 0 ? last : i - 1
-      else if (e.key === 'Home') next = 0
-      else if (e.key === 'End') next = last
+        e.preventDefault();
+        e.stopPropagation();
+      };
+      if (e.key === "Escape" || e.key === "ArrowLeft")
+        return (handled(), dismissRef.current());
+      if (e.key === "Tab") return dismissRef.current();
+      const buttons = [
+        ...menu.querySelectorAll<HTMLButtonElement>("button:not(:disabled)"),
+      ];
+      if (!buttons.length) return;
+      const i = buttons.indexOf(document.activeElement as HTMLButtonElement);
+      const last = buttons.length - 1;
+      let next: number | null = null;
+      if (e.key === "ArrowDown") next = i < 0 || i === last ? 0 : i + 1;
+      else if (e.key === "ArrowUp") next = i <= 0 ? last : i - 1;
+      else if (e.key === "Home") next = 0;
+      else if (e.key === "End") next = last;
       if (next !== null) {
-        handled()
-        buttons[next].focus()
-      } else if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowRight') {
+        handled();
+        buttons[next].focus();
+      } else if (e.key === "Enter" || e.key === " " || e.key === "ArrowRight") {
         // There are no submenus, so Right activates like Enter.
-        handled()
-        if (i >= 0 && !e.repeat) buttons[i].click()
+        handled();
+        if (i >= 0 && !e.repeat) buttons[i].click();
       }
-    }
-    document.addEventListener('pointerdown', onDown, true)
-    document.addEventListener('keydown', onKey, true)
-    const onAway = () => dismissRef.current()
-    window.addEventListener('wheel', onAway, { passive: true })
-    window.addEventListener('blur', onAway)
+    };
+    document.addEventListener("keydown", onKey, true);
     return () => {
-      document.removeEventListener('pointerdown', onDown, true)
-      document.removeEventListener('keydown', onKey, true)
-      window.removeEventListener('wheel', onAway)
-      window.removeEventListener('blur', onAway)
-    }
-  }, [])
+      document.removeEventListener("keydown", onKey, true);
+    };
+  }, []);
 
   // On <body>, above any open pop-ups.
   return createPortal(
@@ -159,45 +158,56 @@ export function ContextMenu({
       style={{ left: x, top: y }}
       data-closing={closing !== null}
       onAnimationEnd={(e) => {
-        if (e.target === ref.current && closing !== null) onClose()
+        if (e.target === ref.current && closing !== null) onClose();
       }}
       onContextMenu={(e) => e.preventDefault()}
     >
       {items.map((item, i) =>
-        item === 'divider' ? (
+        item === "divider" ? (
           <div key={i} class="context-divider" role="separator" />
-        ) : 'colour' in item ? (
+        ) : "colour" in item ? (
           <MenuColour key={i} item={item} />
         ) : (
           <button
             key={i}
             type="button"
-            role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
+            role={item.checked === undefined ? "menuitem" : "menuitemcheckbox"}
             aria-checked={item.checked}
             class="menu-item bevel"
             data-danger={item.danger}
             data-chosen={closing === i}
-            onPointerMove={(e) => e.currentTarget.focus({ preventScroll: true })}
+            onPointerMove={(e) =>
+              e.currentTarget.focus({ preventScroll: true })
+            }
             disabled={item.disabled}
             onClick={(e) => {
               // An item ending in "…" opens a pop-up, which morphs out of the
               // item while the menu goes at once.
-              if (item.label.endsWith('…') && !closingRef.current) {
-                closingRef.current = true
+              if (item.label.endsWith("…") && !closingRef.current) {
+                closingRef.current = true;
                 morphOpen(e.currentTarget, () => {
-                  onClose()
-                  item.onSelect()
-                })
-                return
+                  onClose();
+                  item.onSelect();
+                });
+                return;
               }
               // Anything else it opens still grows out of it.
-              setMorphOrigin(e.currentTarget)
-              dismiss(i)
-              item.onSelect()
+              setMorphOrigin(e.currentTarget);
+              dismiss(i);
+              item.onSelect();
             }}
           >
-            {item.checked !== undefined && (item.checked ? <IconCheck size={16} class="menu-check" /> : <span class="menu-icon-space" />)}
-            {item.Icon ? <item.Icon size={16} /> : <span class="menu-icon-space" />}
+            {item.checked !== undefined &&
+              (item.checked ? (
+                <IconCheck size={22} class="menu-check" />
+              ) : (
+                <span class="menu-icon-space" />
+              ))}
+            {item.Icon ? (
+              <item.Icon size={22} />
+            ) : (
+              <span class="menu-icon-space" />
+            )}
             <span class="menu-label">{item.label}</span>
             {item.shortcut && <kbd class="menu-shortcut">{item.shortcut}</kbd>}
           </button>
@@ -205,7 +215,7 @@ export function ContextMenu({
       )}
     </div>,
     document.body,
-  )
+  );
 }
 
 /**

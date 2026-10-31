@@ -1,14 +1,16 @@
 import { useSignal } from "@preact/signals";
-import type { LinkKind } from "../notes/api";
-import { linkLabel, linkTip } from "../notes/targets";
+import { useRef } from "preact/hooks";
+import { getNote, type LinkKind } from "../notes/api";
+import { linkLabel, linkTip, openInSidebar } from "../notes/targets";
 import type { Campaign } from "../store/campaign";
 import { menuTrigger } from "../ui/menuTrigger";
+import { IconImage, IconOpenWindow, IconSidebar } from "../ui/icons";
 import type { WindowProxy } from "./CampaignDialogs";
 import { ContextMenu } from "./ContextMenu";
 import { actionMenuItems } from "./actionMenu";
 import { dragEntity, entity } from "./entityDrag";
-import { linkIcon } from "./richText";
-import { showLink } from "./linkState";
+import { linkActionItems, showLink } from "./linkState";
+import { editEntityGraphic } from "./GraphicDialogs";
 
 /**
  * A link outside the editors (in a chat message): it looks and behaves like
@@ -28,17 +30,50 @@ export function LinkChip({
 }) {
   const name = linkLabel(campaign, kind, id);
   const menu = useSignal<{ x: number; y: number } | null>(null);
+  const linkElement = useRef<HTMLSpanElement>(null);
   const actionId =
     kind === "move" ? `move:${id}` : kind === "item" ? `library:${id}` : null;
-  const items = actionId
+  const actionItems = actionId
     ? actionMenuItems(campaign, [
         { id: actionId, title: text || name || undefined },
       ])
     : [];
+    const primaryItems = linkActionItems(campaign, { kind, id });
+    const canChangeGraphic = kind !== "note" || !getNote(campaign, id)?.gmOnly;
+    const items = [
+      {
+        label: "Open in a window",
+        Icon: IconOpenWindow,
+        onSelect: () => {
+          if (linkElement.current) showLink({ kind, id }, linkElement.current);
+        },
+      },
+      {
+        label: "Open in sidebar",
+        Icon: IconSidebar,
+        onSelect: () => openInSidebar(campaign, kind, id),
+      },
+      ...(primaryItems.length ? (["divider"] as const) : []),
+      ...primaryItems,
+      ...(actionItems.length ? (["divider"] as const) : []),
+      ...actionItems,
+      ...(actionItems.length && canChangeGraphic ? (["divider"] as const) : []),
+      ...(canChangeGraphic
+        ? [
+            {
+              label: "Change graphic…",
+              Icon: IconImage,
+              onSelect: () =>
+                editEntityGraphic(campaign, kind, id, name ?? text ?? "Entity"),
+            },
+          ]
+        : []),
+    ];
   const trigger = menuTrigger((x, y) => (menu.value = { x, y }));
   if (name === null)
     return (
       <span
+        ref={linkElement}
         class="note-link bevel"
         data-missing="true"
         data-tip="Not available"
@@ -89,7 +124,10 @@ export function linkProxy(
   icon?: string,
 ): WindowProxy {
   return {
-    Icon: linkIcon({ kind, icon }),
+    campaign,
+    kind,
+    id,
+    defaultIcon: icon,
     entity: entity(campaign, kind, id, label),
   };
 }

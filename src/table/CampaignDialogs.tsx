@@ -11,8 +11,8 @@ import { Segmented } from "../ui/Segmented";
 import { inviteUrl } from "../sync/invite";
 import { useSignal } from "@preact/signals";
 import { createPortal } from "preact/compat";
-import { useRef } from "preact/hooks";
-import { dragPopup, raisePopup, resizePopup } from "../ui/popup";
+import { useLayoutEffect, useRef } from "preact/hooks";
+import { closePopup, dragPopup, raisePopup, resizePopup } from "../ui/popup";
 import { trackPointer } from "../ui/pointer";
 import { autohide, setAutohide } from "./canvasState";
 import {
@@ -32,10 +32,14 @@ import {
   type DockItemId,
 } from "./panelLayout";
 import { WindowControls } from "./WindowControls";
+import { CampaignEntityGraphic } from "./EntityGraphic";
 
 /** The icon in a window's title bar that stands for what it shows. */
 export interface WindowProxy {
-  Icon: Icon;
+  campaign: Campaign;
+  kind: string;
+  id: string;
+  defaultIcon?: string;
   entity: DragEntity;
 }
 import { windowLayer } from "../ui/windows";
@@ -47,10 +51,12 @@ export function Dialog({
   title,
   onClose,
   proxy,
+  graphicCampaign,
+  graphicRef,
+  graphicDefaultIcon,
   contextMenu,
   windowIcon,
   dockId,
-  onDockMenu,
   children,
 }: {
   dialogRef: RefObject<HTMLDialogElement>;
@@ -61,14 +67,25 @@ export function Dialog({
    * link: onto a character, the hotbar, a note or the chat.
    */
   proxy?: WindowProxy;
+  graphicCampaign?: Campaign;
+  graphicRef?: { kind: string; id: string };
+  graphicDefaultIcon?: string;
   contextMenu?: ReturnType<typeof menuTrigger>;
   windowIcon?: Icon;
   dockId?: DockItemId;
-  onDockMenu?: (x: number, y: number) => void;
   children: ComponentChildren;
 }) {
   const rolled = useSignal(false);
   const transitionName = useRef<string | null>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  useLayoutEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const preventNativeCancel = (event: Event) => event.preventDefault();
+    dialog.addEventListener("cancel", preventNativeCancel);
+    return () => dialog.removeEventListener("cancel", preventNativeCancel);
+  }, [dialogRef]);
   if (!transitionName.current)
     transitionName.current = `dialog-window-${++dialogTransitionId}`;
   const win = dockId
@@ -80,6 +97,7 @@ export function Dialog({
       : {}),
     viewTransitionName: transitionName.current,
   };
+  const close = () => closePopup(dialogRef.current, onCloseRef.current);
 
   function onResizePointerDown(e: PointerEvent, dir: ResizeDir) {
     if (!dockId || !win) {
@@ -112,7 +130,11 @@ export function Dialog({
       data-rolled={rolled.value}
       data-window-id={dockId}
       style={windowStyle}
-      onClose={onClose}
+      onSubmit={(event) => {
+        if ((event.target as HTMLFormElement).method !== "dialog") return;
+        event.preventDefault();
+        close();
+      }}
       onPointerDown={(e) => {
         if (dockId) raiseWindow(dockId);
         else raisePopup(e.currentTarget);
@@ -120,9 +142,16 @@ export function Dialog({
       }}
       onContextMenu={(e) => contextMenu?.onContextMenu(e)}
       onKeyDown={(e) => {
-        if (e.key === "Escape" && !e.defaultPrevented) {
+        const expandedDialogTrigger = document.querySelector(
+          '[aria-haspopup="dialog"][aria-expanded="true"]',
+        );
+        if (
+          e.key === "Escape" &&
+          !e.defaultPrevented &&
+          !expandedDialogTrigger
+        ) {
           e.preventDefault();
-          e.currentTarget.close();
+          close();
         }
       }}
     >
@@ -144,8 +173,22 @@ export function Dialog({
                 );
               }}
             >
-              <proxy.Icon size={16} />
+              <CampaignEntityGraphic
+                campaign={proxy.campaign}
+                kind={proxy.kind}
+                id={proxy.id}
+                defaultIcon={proxy.defaultIcon}
+                size={22}
+              />
             </span>
+          ) : graphicCampaign && graphicRef ? (
+            <CampaignEntityGraphic
+              campaign={graphicCampaign}
+              kind={graphicRef.kind}
+              id={graphicRef.id}
+              defaultIcon={graphicDefaultIcon}
+              size={22}
+            />
           ) : undefined
         }
         rolled={rolled.value}
@@ -161,8 +204,7 @@ export function Dialog({
             );
           } else dragPopup(dialogRef.current!, e);
         }}
-        onDockMenu={dockId ? onDockMenu : undefined}
-        onClose={() => dialogRef.current?.close()}
+        onClose={close}
       />
       <div class="dialog-body" inert={rolled.value}>
         {children}

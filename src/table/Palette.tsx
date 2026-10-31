@@ -215,14 +215,16 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
               onClick={() => choose(a)}
               {...rowTriggers(a, i)}
             >
-              <span class="palette-icon">{a.icon && <a.icon size={18} />}</span>
+              <span class="palette-icon">{a.icon && <a.icon size={22} />}</span>
               <span class="palette-text">
                 <span class="palette-title">{a.title}</span>
-                <span class="palette-detail">{off ? a.available : (a.detail ?? a.source)}</span>
+                <span class="palette-detail">
+                  {off ? a.available : (a.detail ?? a.source)}
+                </span>
               </span>
               {hint && <kbd>{hint}</kbd>}
             </li>
-          )
+          );
         })}
         {!results.length && (
           <li class="palette-empty" role="presentation">

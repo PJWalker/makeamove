@@ -1,0 +1,36 @@
+- main [ref=e3]:
+  - generic [ref=e4]:
+    - heading "Make a Move" [level=1] [ref=e6]
+    - region [ref=e7]:
+      - heading "Your campaigns" [level=2] [ref=e8]
+      - generic [ref=e9]: No campaigns yet.
+    - form [ref=e12]:
+      - heading "Start a campaign" [level=2] [ref=e13]
+      - generic [ref=e14]:
+        - generic [ref=e15]:
+          - text: Campaign name
+          - textbox "Campaign name" [ref=e16]:
+            - /placeholder: The Lost Barrows
+        - generic [ref=e17]:
+          - text: Your name
+          - textbox "Your name" [ref=e18]:
+            - /placeholder: Robin
+      - generic [ref=e20]:
+        - text: System
+        - combobox "System" [ref=e21]:
+          - option "Choose a system" [disabled] [selected]
+          - option "Dungeon World"
+          - option "D&D 5.5e"
+      - button "Create campaign" [ref=e23] [cursor=pointer]
+    - form [ref=e26]:
+      - heading "Join a campaign" [level=2] [ref=e27]
+      - generic [ref=e28]:
+        - generic [ref=e29]:
+          - text: Invite link
+          - textbox "Invite link" [ref=e30]:
+            - /placeholder: Paste an invite link
+        - generic [ref=e31]:
+          - text: Your name
+          - textbox "Your name" [ref=e32]:
+            - /placeholder: Robin
+      - button "Join" [disabled] [ref=e34]

@@ -27,6 +27,7 @@ A generic core, with plugins for specific game systems. Dungeon World is the fir
 - Body text at 1rem.
 - Edge-docked elements sit flush; icon strips end in full diagonals
 - Game-icons & Material Symbols as icon sources
+- Context menus expose every relevant action (verb) available for their object, including actions otherwise available only through row buttons, hover controls, or keyboard shortcuts. Reuse the same action handlers and respect the same permission and availability rules.
 
 ## Architecture
 
@@ -45,7 +46,7 @@ Each browser runs the whole app against a local Yjs CRDT store persisted to Inde
 
 ## Documents and sync topology
 
-- One *campaign root* Y.Doc: campaign settings and defaults, the member list (each member's name, colour, role, chosen character and hotbars), the scene index, the note index (titles, folders, outgoing links), character folders, and the characters themselves (see Data model).
+- One *campaign root* Y.Doc: campaign settings and defaults, the member list (each member's name, colour, role, chosen character and hotbars), the scene index, the note index (titles, folders, outgoing links), character folders, entity graphic overrides, and the characters themselves (see Data model).
 - One subdocument per scene, per note page and per chat-log chunk, each in its own IndexedDB database. Peers load them lazily, so a big campaign does not have to sit in memory.
 - A separate *GM vault* Y.Doc that only GM devices hold, synced over its own Trystero room whose key is kept in the vault, never in the campaign. It holds GM-only note pages. This gives real (if casual) secrecy almost for free; everything else is "hidden in the UI" only.
 - Presence (cursors, pings, rulers, laser trails, the tokens a player is targeting) goes over the Yjs awareness channel and is never persisted.
@@ -68,12 +69,13 @@ Every entity has a stable ULID. What a game system owns lives in sub-maps the co
 
 | Entity | Lives in | Key fields |
 | :---- | :---- | :---- |
-| Campaign | root doc | name, system id, members {name, colour, role, character, hotbars per character}, active scene, defaults (grid type, token style), last announced scene, session count |
+| Campaign | root doc | name, system id, members {name, colour, role, character, hotbars per character}, active scene, defaults (grid type, token style), entity graphics keyed by entity kind and id, last announced scene, session count |
+| Entity graphic | root doc `entityGraphics` map | entity kind and id -> built-in icon name or blob reference; one shared graphic for lists, windows, sidebars and map tokens |
 | Scene | own subdoc | name, canvas colour (or Auto), grid {type: none/square/hex, size, offset, unit per cell, unit name, diagonal rule}, elements (Y.Map by id) |
-| Scene element | scene subdoc | id, type (map, token, drawing), layer (map, under, token, over), centre, size, rotation, z (fractional index), locked, createdBy; tokens add name, image, colour, style, characterId, hideName, hideBars |
-| Character | root doc `characters` map | kind (pc or npc), name, owner, folder, class, level, portrait, token style; the system's `scores`, `data`, `resources`, `conditions`, `modifiers` and NPC `fields`; `learned` actions; `inventory`; rich text `text:*`; `template` or `base` |
+| Scene element | scene subdoc | id, type (map, token, drawing), layer (map, under, token, over), centre, size, rotation, z (fractional index), locked, createdBy; tokens add name, graphic, entity reference, colour, style, characterId, hideName, hideBars |
+| Character | root doc `characters` map | kind (pc or npc), name, owner, folder, class, level, token style; the system's `scores`, `data`, `resources`, `conditions`, `modifiers` and NPC `fields`; `learned` actions; `inventory`; rich text `text:*`; `template` or `base` |
 | Item definition | the game system (listed in the Libraries) | id, name, description, weight, uses, tags, effects, active (carried, equipped, always), icon |
-| Item instance | the character's `inventory` map | id, defId, name, description, weight, tags, uses left, equippable, equipped, effects, icon, order (fractional index) |
+| Item instance | the character's `inventory` map | id, defId, name, description, weight, tags, uses left, equippable, equipped, effects, default icon, order (fractional index) |
 | Action definition | the game system | id, name, category, class, trigger, text, target spec {prompt, min, max, range}, steps (a check: stat or ask, outcome text per result, follow-ups per result) |
 | Chat message | chat chunk subdoc | id, author, HLC, kind (text, roll, move, system), payload; text carries links as `@[text](kind:id)`; move cards carry the roll, result, outcome, follow-ups and targets |
 | Note page | own subdoc (GM pages: the vault doc) | title, folder, order, Y.XmlFragment body; its outgoing links are kept in the note index for backlinks |
@@ -84,6 +86,7 @@ Every entity has a stable ULID. What a game system owns lives in sub-maps the co
 - Timestamps use a hybrid logical clock (src/lib/hlc.ts) so orderings are stable across peers.
 - *Derived values* (effective stats after item modifiers, scene colour) are computed locally and never stored, so they cannot drift.
 - *Rich text* (note pages, long sheet fields) is a Y.XmlFragment, so several people can write in it at once.
+- *Entity graphics* are campaign-level overrides keyed by entity kind and id. A graphic is either a built-in icon name or a blob reference; lists, windows, sidebar tabs and dropped map tokens resolve the same value. System and library icons are defaults, not separate user customizations.
 - *Plugin data versioning (planned):* each plugin ships migrations keyed by its own schema version; the core runs them when a newer plugin opens older data. Until the first release, data formats change freely and old test data is simply replaced.
 
 ## Scenes and the infinite canvas
@@ -101,7 +104,7 @@ A scene is an unbounded 2D world rendered by PixiJS, with pan (drag / space-drag
 7. *Fog (planned, M6)* — GM-painted reveal/hide mask.
 8. *Presence* — other users’ cursors, pings, laser trails, measuring rulers and target rings (awareness only, never stored).
 
-## Tools: select/move/rotate/scale, pan, freehand pen (perfect-freehand), eraser, ruler (in the scene's units), ping (click-and-hold, or hold and drag for a laser trail). Planned: line/arrow, rectangle/ellipse, text (shortcut X), and the GM's fog brush.
+## Tools: select/move/rotate/scale, pan, freehand pen (perfect-freehand), eraser, ruler (in the scene's units), ping (click-and-hold, or hold and drag for a laser trail). Planned: line/arrow, rectangle/ellipse, text (shortcut X), and the GM's fog brush
 
 **Performance:** viewport culling, texture mip-mapping for large maps, drawings cached to render textures once finished, and CRDT updates batched per animation frame. Drag movements are sent via awareness while dragging and committed to the CRDT on release, which keeps history small.
 
@@ -111,12 +114,12 @@ A scene is an unbounded 2D world rendered by PixiJS, with pan (drag / space-drag
 
 - Each scene is a subdocument of the campaign root with its own IndexedDB database, loaded only while it is open. Its id is derived from the campaign and scene ids, so two peers upgrading a scene at once converge on one document.
 - The canvas renders on demand rather than every frame, so an idle table costs no GPU time. Drags preview locally and commit to the CRDT once on release, as one undo step.
-- Token options can change or remove a token's image. A character sheet has one stand-in token: click it to choose its image, drag it onto the map to place a token linked to that character, and right-click for Change/Remove image and Token settings (style and colour for tokens placed later).
+- Entity graphics can be a built-in icon or an imported image. Changing a character, item, move or library entry's graphic updates its lists, windows, sidebar tab and any linked tokens on open scenes. A character sheet has one stand-in token: click it to choose its graphic, or drag it onto the map to place a linked token. Unlinked tokens keep their own graphic.
 - A token can be tied to a character (Token options → Character).
 - Tokens snap to cell centres (even-sized tokens to intersections) and resize in whole cells; Alt places them freely. Maps keep their aspect ratio unless Shift is held.
 - The interface always takes its tint from the scene's main map (or from the canvas colour when there's no map). The canvas colour defaults to Auto, a darkened, muted version of the map's dominant colour; the GM can pick any colour instead in Scene settings or from the scene list.
 - Grid lines are drawn twice, dark then light, so they read on both dark and light maps, and fade out as cells get too small.
-- Tokens have two styles: round (image cropped to a circle on a coloured background with a border) or the image as it is, for cut-out art. Double-click a token for Token options: name, style and colour. The GM sets the style for new tokens, and the grid type for new scenes, in Campaign settings.
+- Tokens have two styles: round (image cropped to a circle on a coloured background with a border) or the image as it is, for cut-out art. Built-in icons use the round style. Double-click a token for Token options: graphic, name, style and colour. The GM sets the style for new tokens, and the grid type for new scenes, in Campaign settings.
 
 ## Measuring, sizes and targets
 
@@ -184,7 +187,7 @@ The roller decides the result locally with a cryptographic RNG, writes it to the
 - **Visibility:** public, or secret (the roller and the GM; a GM's secret roll is the GM's alone). Others see “Name rolled in secret.” There are no blind rolls: if a player shouldn't see a result, the GM rolls it.
 - **Quick dice bar:** d4, d6, d8, d10, d12, d20, plus a free-form box; clicking a stat or move on a sheet rolls the right formula. Clicks gather into a pool for a moment before rolling as one entry (double-click the d20 for 2d20); right-click a die to take one back out.
 
-*As built in M3:* `src/dice/notation.ts` parses and rolls `2d6+2`, `d8+d4`, `4d6kh3` (also `k3`, `b3`), `2d20kl1` (also `w1`), `4d6dl1` / `dh`, `d6!` (capped at 20 extra dice), `d%`, and `[labels]` on any term, with unbiased `crypto.getRandomValues` dice. Rolls show in the chat as cards: formula and note, one chip per die shaped like that die (dropped dice faded, maximums in citrine, ones in garnet), and the total; a roll that arrives live tumbles in, die by die (off under reduced motion). Until 3D dice land, that card is the 2D fallback. Plugin syntax is not in yet.
+*As built in M3:* `src/dice/notation.ts` parses and rolls `2d6+2`, `d8+d4`, `4d6kh3` (also `k3`, `b3`), `2d20kl1` (also `w1`), `4d6dl1` / `dh`, `d6!` (capped at 50 extra dice), `d%`, and `[labels]` on any term, with unbiased `crypto.getRandomValues` dice. Rolls show in the chat as cards: formula and note, one chip per die shaped like that die (dropped dice faded, maximums in citrine, ones in garnet), and the total; a roll that arrives live tumbles in, die by die (off under reduced motion). Until 3D dice land, that card is the 2D fallback. Plugin syntax is not in yet.
 
 ## Chat and move log
 
@@ -296,13 +299,13 @@ Still to come, from the original plan: a declarative `sheet` layout (each system
 
 The first plugin (`src/systems/dungeon-world/`) covers the core book: six stats with modifiers, the basic and special moves, the eight core classes, gear with tags, and (later) GM tools for Fronts. Dungeon World’s text is licensed CC BY 3.0, so we can ship move and class text with attribution. The text in the app is abridged from memory and must be checked against the SRD.
 
-**Character sheet**
+### Character sheet
 
 - Stats STR, DEX, CON, INT, WIS, CHA as scores (3–18), with modifiers derived from the standard table (−3 to \+3), and the six debilities (Weak, Shaky, Sick, Stunned, Confused, Scarred) as conditions, each giving −1 to rolls with its stat.
 - HP (max \= class base \+ CON score), Armor, Damage die, Level, XP (with “mark XP” on a 6-), Alignment, Race, Bonds, Load (max \= class base \+ STR mod), coin.
 - Starting moves, and a Level up button once XP reaches level \+ 7\. Planned: a level-up flow offering the class’s eligible advanced moves (class moves are partial).
 
-**Moves**
+### Moves
 
 - Basic moves: Hack and Slash, Volley, Defy Danger, Defend, Spout Lore, Discern Realities, Parley, Aid or Interfere.
 - Special moves: Last Breath, Encumbrance, Make Camp, Take Watch, Undertake a Perilous Journey, Level Up, End of Session, Carouse, Supply, Recover, Recruit, Outstanding Warrants, Bolster.
@@ -310,12 +313,12 @@ The first plugin (`src/systems/dungeon-world/`) covers the core book: six stats 
 - Damage rolls use the class die plus tags (e.g. *\+1 damage*, *messy*, *piercing 2*).
 - Hold and forward/ongoing tracked per character, decremented when spent.
 
-**Items and tags**
+### Items and tags
 
 - Gear with weight, uses and tags (*close*, *reach*, *near*, *far*, *precise*, *ration*, *2 piercing*, …). Tags map to effects: *\+1 armor* → `modify armor +1`; *precise* → use DEX for Hack and Slash; magic items can `grantMove`.
 - Adventuring gear uses (e.g. 5 uses) as an item resource.
 
-**GM tools**
+### GM tools
 
 - Planned: Fronts and Dangers note templates with grim-portent checklists and impending doom.
 - NPCs with HP and the fields Dungeon World gives monsters (damage, armor, tags, instinct, moves), as individuals or templates (see Characters). Token sizes are its size tags: Tiny, Small, Human-sized, Large, Huge.
@@ -327,7 +330,7 @@ The second system is D\&D 5th edition as revised in 2024 ("5.5e"), built from th
 ### Core changes
 
 1. **Systems as modules with a schema.** *(Done, but for migrations and loading from a URL.)* A registry of systems (built-in first; loading from a URL or file stays in M6) and a `defineSystem()` that checks a system's shape. A system declares its character data schema with defaults and its own migrations (see Plugin system).
-2. **A generic character record.** *(Done.)* The core keeps only what every system has: name, owner, kind (player character or NPC), folder, portrait and token style, notes, inventory, conditions, resources, and a level. Everything else (ability scores, bonds, debilities, death saves, spell slots, proficiencies, hit dice) lives in a `data` map the system owns and the core never interprets. Dungeon World's fields move into its own `data`.
+2. **A generic character record.** *(Done.)* The core keeps only what every system has: name, owner, kind (player character or NPC), folder, token style, notes, inventory, conditions, resources, and a level. Its shared graphic is stored in the campaign's `entityGraphics` map. Everything else (ability scores, bonds, debilities, death saves, spell slots, proficiencies, hit dice) lives in a `data` map the system owns and the core never interprets. Dungeon World's fields move into its own `data`.
 3. **Derived values from the system.** *(Done.)* `derive()` becomes a system function from the character and its active effects to named values (AC, max HP, attack bonus, spell save DC, initiative, load, carrying capacity, passive Perception), each with its explanation from the effect resolver, which stays in the core.
 4. **Resources and rests.** *(Resources done; rests and resets with step 4.)* Counters with a maximum that reset on a named event: HP and temporary HP, hit dice, spell slots by level, pact slots, class resources (Rage, Ki, Channel Divinity), item charges and "uses". Resets are tags (short rest, long rest, dawn, turn, round), and the core offers Short Rest and Long Rest commands that the system wires up. Dungeon World's item uses and HP become resources too.
 5. **Actions, not moves.** *(Started: actions with a check step, categories, follow-ups and target specs; costs, sources and the other steps with step 3.)* One action model for both systems: name, source (class, item, spell, feature), activation cost (action, bonus action, reaction, free, none), range, targeting (below), resource cost (a spell slot of some level, uses, ammunition), and a list of steps. Steps are generic: roll a formula, roll against a target number (attack vs AC, check vs DC), ask targets to save, roll damage with types, apply or offer effects. A Dungeon World move becomes one step ("roll 2d6 \+ stat, map the total to a band") with its band texts; the system supplies the band function as now.
@@ -421,7 +424,7 @@ The canvas fills the window; all chrome floats over it as translucent dark panel
 
 **Interface text is succinct and purely functional.** Labels, buttons, placeholders and messages say what a thing is or does, and nothing else: no commentary, explanations of design decisions, reassurances, parentheticals, or asides ("a campaign plays one system for good" is out). Rules text from a system is content, not interface, and is exempt.
 
-**Layout**
+### Layout
 
 - *Top centre, docked:* the tool strip, starting with the campaign menu (a hamburger button): Player settings…, Campaign settings… (GM only), Help and shortcuts…, a ticked item for each panel (Scenes, Chat, Characters, Libraries, Notes, Members; unticking one closes it), and Back to campaigns. It opens on the press below the button, like every menu, and its pop-ups morph out of their items.
 - *Top edge, docked:* canvas tool strip — select, pan, draw, shapes, text, measure, ping, and fog for the GM — with single-key shortcuts. It centres itself in the space between the sidebars.
@@ -452,7 +455,7 @@ The canvas fills the window; all chrome floats over it as translucent dark panel
 
 The hue transitions over 600 ms when the scene changes (`@property`\-registered custom property). Chroma stays low so that a vivid map never makes the UI garish, and text contrast is checked against the darkest and lightest tints (target WCAG AA 4.5:1).
 
-**Shape language**
+### Shape language
 
 - Buttons, inputs and panels use `border-radius` plus `corner-shape: bevel` (5px controls, 12px panels). Safari and Firefox get the same chamfer from a `clip-path` fallback.
 - Prefer seperating regions separate by tone (sunken and raised fills) and spacing, rather than explicit borders.
@@ -473,7 +476,7 @@ The hue transitions over 600 ms when the scene changes (`@property`\-registered 
 
 We build in seven milestones, each ending in something you can open and try. After M4 a group can play a full Dungeon World session; M5 (added Oct 27\) generalises the rules engine and adds D\&D 5.5e as a second system; notes and polish are M6. Each milestone ends with a short review before the next begins. M2 came early on purpose: sync touches everything, so we proved it before building rules on top.
 
-**Next, in order**
+### Next, in order
 
 1. **M5 step 3, actions end to end:** *Done (Oct 28).* Attacks per target against AC, saves as roll requests, long range, typed damage applied by the GM from the card.
 2. **M5 step 4, combat:** *Done (Oct 28).* The turn tracker, timed conditions and pips, concentration, per-turn resets, rests.
@@ -533,7 +536,7 @@ Decisions made while building, newest first. Earlier answers are recorded in Ope
 | Quick dice pool for 1 s before rolling | Several dice from the bar (2d20, d20 \+ d6) become one roll and one chat entry |
 | Build the command palette before the hotbar, on one shared action index | Both need a searchable list of moves, items and tools; the hotbar becomes pinned index ids instead of a second list |
 | Render the canvas on demand; commit drags on release | An idle table uses no GPU; each drag is one undo step and one update for peers |
-| Token portraits use texture fills, not masks; the world is a render group | Per-token stencil masks slow down in the hundreds, and the camera becomes one GPU transform (from the PixiJS skills) |
+| Token images use texture fills, not masks; the world is a render group | Per-token stencil masks slow down in the hundreds, and the camera becomes one GPU transform (from the PixiJS skills) |
 | The UI always tints from the main map; the canvas colour is Auto (a dark shade of the map) or the GM's pick | Tinting is never worth turning off; what people want to choose is the colour around the map |
 | Small square images become tokens, the rest maps | No mode to pick when dropping files; right-click swaps them |
 | Scene menu grows with CSS on live elements, not a view transition | It stays hoverable and clickable while it opens |
@@ -548,7 +551,7 @@ Decisions made while building, newest first. Earlier answers are recorded in Ope
 | Two sidebars (left: characters, right: chat) with vertical tabs; tools on the top edge; tabs move between sides or float | Character sheet beside the map and chat opposite; tools out of the way of both |
 | Right sidebar with vertical tabs, sliding in from the edge; dice tray inside Chat | Tabs read as one column with the content |
 
-# TODO
+## TODO
 
 - [ ] Campaign Import/Export as a single `.makeamove` zip, for backups and moving between machines.
 - [ ] Preserve Panel order when hiding/showing panels.

@@ -304,9 +304,10 @@ function ChatLogView({ campaign, notes }: { campaign: Campaign; notes: { id: num
       role="log"
       aria-live="polite"
       onScroll={(e) => {
-        const el = e.currentTarget
-        stick.current = atNewest && el.scrollHeight - el.scrollTop - el.clientHeight < 40
-        slide()
+        const el = e.currentTarget;
+        stick.current =
+          atNewest && el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+        slide();
       }}
     >
       {rows.length === 0 && notes.length === 0 && (
@@ -315,15 +316,26 @@ function ChatLogView({ campaign, notes }: { campaign: Campaign; notes: { id: num
           Say hello, or roll some dice.
         </div>
       )}
-      <div class="chat-space" style={{ height: `${Math.round(above)}px` }} aria-hidden="true" />
+      <div
+        class="chat-space"
+        style={{ height: `${Math.round(above)}px` }}
+        aria-hidden="true"
+      />
       <div ref={list} class="chat-rows">
         {shown.map((row) =>
-          row.kind === 'fold' ? (
-            <button key={row.key} data-key={row.key} type="button" class="chat-session-fold" aria-expanded={row.open} onClick={() => toggle(row.part)}>
-              <IconExpand size={16} class="chat-session-chevron" />
+          row.kind === "fold" ? (
+            <button
+              key={row.key}
+              data-key={row.key}
+              type="button"
+              class="chat-session-fold"
+              aria-expanded={row.open}
+              onClick={() => toggle(row.part)}
+            >
+              <IconExpand size={22} class="chat-session-chevron" />
               <span class="chat-session-title">{row.title}</span>
               <span class="chat-session-count">
-                {row.count} {row.count === 1 ? 'message' : 'messages'}
+                {row.count} {row.count === 1 ? "message" : "messages"}
               </span>
             </button>
           ) : (
@@ -333,16 +345,35 @@ function ChatLogView({ campaign, notes }: { campaign: Campaign; notes: { id: num
               m={row.m}
               header={row.header}
               fresh={!initial.current!.has(row.m.id)}
-              masked={visibilityOf(row.m, me, isGm) === 'masked'}
+              masked={visibilityOf(row.m, me, isGm) === "masked"}
               mine={row.m.author === me}
-              canAct={row.m.kind === 'move' && editable.split(' ').includes(row.m.characterId)}
-              canGo={row.m.kind === 'system' && row.m.event === 'scene-change' && !!row.m.sceneId && row.m.sceneId !== here && sceneIds.includes(row.m.sceneId)}
-              onMenu={canDelete(row.m, me, isGm) || canEditMessage(row.m, me) || (isGm && row.m.kind !== 'system') ? openMenu : undefined}
+              canAct={
+                row.m.kind === "move" &&
+                editable.split(" ").includes(row.m.characterId)
+              }
+              canGo={
+                row.m.kind === "system" &&
+                row.m.event === "scene-change" &&
+                !!row.m.sceneId &&
+                row.m.sceneId !== here &&
+                sceneIds.includes(row.m.sceneId)
+              }
+              onMenu={
+                canDelete(row.m, me, isGm) ||
+                canEditMessage(row.m, me) ||
+                (isGm && row.m.kind !== "system")
+                  ? openMenu
+                  : undefined
+              }
             />
           ),
         )}
       </div>
-      <div class="chat-space" style={{ height: `${Math.round(below)}px` }} aria-hidden="true" />
+      <div
+        class="chat-space"
+        style={{ height: `${Math.round(below)}px` }}
+        aria-hidden="true"
+      />
       {atNewest &&
         notes.map((n) => (
           <p key={n.id} class="chat-note" data-error={n.error}>
@@ -351,7 +382,7 @@ function ChatLogView({ campaign, notes }: { campaign: Campaign; notes: { id: num
         ))}
       {menu.value && <ContextMenu {...menu.value} onClose={closeMenu} />}
     </div>
-  )
+  );
 }
 
 /** One message on its own, as it shows in the log: for chat popping up outside the panel. */
@@ -801,4 +832,3 @@ function MoveCard({ campaign, m, canAct }: { campaign: Campaign; m: MoveMessage;
     </div>
   )
 }
-

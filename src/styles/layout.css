@@ -1629,8 +1629,8 @@
     outline-offset: 2px;
   }
 
-  /* Portrait and stand-in token on the character sheet. */
-  .sheet-portrait {
+  /* Shared entity graphic and stand-in token on the character sheet. */
+  .sheet-graphic {
     display: flex;
     gap: var(--space-3);
     align-items: center;
@@ -1639,6 +1639,9 @@
   .token-image-preview img {
     inline-size: 100%;
     block-size: 100%;
+    object-fit: cover;
+  }
+  .token-chip .entity-graphic-image {
     object-fit: cover;
   }
   .portrait-initial {
@@ -1663,7 +1666,7 @@
     border-radius: 0;
     background: none;
   }
-  .token-chip[data-style='plain'] img {
+  .token-chip[data-style='plain'] .entity-graphic-image {
     object-fit: contain;
   }
   .token-chip {
@@ -2619,19 +2622,11 @@
   .dialog[data-rolled='true'] .panel-title {
     white-space: nowrap;
   }
-  /*
-   * Pop-ups fade with CSS rather than a view transition. They open with a
-   * fade and rise, and close by receding: shrinking slightly about their
-   * centre as they fade, as if sinking back into the table.
-   */
+  /* Pop-ups enter with CSS; closing transitions animate their captured view. */
   .dialog {
     opacity: 0;
     scale: 0.96;
     transform-origin: 50% 50%;
-    transition:
-      opacity 180ms ease-in,
-      scale 180ms ease-in,
-      display 180ms allow-discrete;
   }
   .dialog[open] {
     opacity: 1;
@@ -2640,7 +2635,7 @@
     transition:
       opacity 180ms var(--ease),
       translate 180ms var(--ease),
-      display 180ms allow-discrete;
+      scale 180ms var(--ease);
   }
   @starting-style {
     .dialog[open] {
@@ -2923,6 +2918,81 @@
   }
   .icon-choice[aria-selected='true'] {
     box-shadow: inset 0 0 0 2px var(--accent);
+  }
+  .entity-graphic {
+    display: inline-grid;
+    flex: none;
+    place-items: center;
+    overflow: hidden;
+    color: inherit;
+  }
+  .entity-graphic-image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  .graphic-picker-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+  .graphic-picker-preview {
+    color: var(--accent);
+  }
+  .graphic-picker-error {
+    color: var(--danger);
+    font-size: var(--text-xs);
+  }
+  .filterable-menu-panel {
+    width: min(320px, calc(100vw - 32px));
+    max-height: min(55vh, 340px);
+    overflow: auto;
+    padding: var(--space-2);
+  }
+  .filterable-menu-search {
+    display: block;
+    position: sticky;
+    inset-block-start: 0;
+    padding-block-end: var(--space-2);
+    background: var(--surface-raised);
+  }
+  .filterable-menu-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+    gap: var(--space-1);
+  }
+  .filterable-menu-option {
+    display: grid;
+    min-width: 0;
+    min-height: 56px;
+    place-items: center;
+    gap: 2px;
+    padding: var(--space-1);
+    border: 0;
+    color: var(--text);
+    background: transparent;
+    font: inherit;
+    cursor: pointer;
+  }
+  .filterable-menu-option span {
+    max-width: 100%;
+    overflow: hidden;
+    font-size: var(--text-2xs);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .filterable-menu-option:hover,
+  .filterable-menu-option:focus-visible,
+  .filterable-menu-option[aria-selected='true'] {
+    color: var(--accent);
+    background: var(--surface-sunken);
+  }
+  .filterable-menu-empty {
+    margin: 0;
+    padding: var(--space-3);
+    color: var(--text-muted);
   }
   .palette-note {
     margin: 0;

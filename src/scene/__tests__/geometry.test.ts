@@ -35,10 +35,25 @@ describe('hit testing', () => {
     expect(hits(token, { x: 30, y: 30 })).toBe(false)
   })
   it('hits plain image tokens across their whole square', () => {
-    const token: TokenElement = { ...base, type: 'token', layer: 'token', name: '', colour: '#fff', image, style: 'plain', x: 0, y: 0, w: 70, h: 70, rot: 0 }
+    const token: TokenElement = {
+      ...base,
+      type: "token",
+      layer: "token",
+      name: "",
+      colour: "#fff",
+      graphic: { kind: "image", image },
+      style: "plain",
+      x: 0,
+      y: 0,
+      w: 70,
+      h: 70,
+      rot: 0,
+    };
     expect(hits(token, { x: 30, y: 30 })).toBe(true)
     // Without an image a plain token still draws, and hits, as a disc.
-    expect(hits({ ...token, image: undefined }, { x: 30, y: 30 })).toBe(false)
+    expect(hits({ ...token, graphic: undefined }, { x: 30, y: 30 })).toBe(
+      false,
+    );
   })
   it('hits drawings near the line only', () => {
     const geo = finishStroke([0, 0, 0.5, 100, 0, 0.5, 100, 100, 0.5], 10)

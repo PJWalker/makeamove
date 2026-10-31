@@ -1,0 +1,117 @@
+- generic [ref=e454]:
+  - 'generic "Scene: Scene 2" [ref=e455]'
+  - navigation "Canvas tools" [ref=e458]:
+    - button "Campaign menu" [ref=e459] [cursor=pointer]
+    - button "Select (V)" [pressed] [ref=e462] [cursor=pointer]
+    - button "Pan (H)" [ref=e465] [cursor=pointer]
+    - button "Draw (P)" [ref=e468] [cursor=pointer]
+    - button "Erase (E)" [ref=e471] [cursor=pointer]
+    - button "Shapes (R)" [ref=e474] [cursor=pointer]
+    - button "Text (X)" [ref=e477] [cursor=pointer]
+    - button "Measure (M)" [ref=e480] [cursor=pointer]
+    - button "Ping (G)" [ref=e483] [cursor=pointer]
+    - button "Walls (W)" [ref=e486] [cursor=pointer]
+    - button "Lights (L)" [ref=e489] [cursor=pointer]
+  - complementary "Left sidebar" [ref=e492]:
+    - tablist [ref=e493]:
+      - tab "Scenes" [ref=e494] [cursor=pointer]
+      - tab "Characters" [active] [selected] [ref=e497] [cursor=pointer]
+    - tabpanel [ref=e500]:
+      - separator "Resize sidebar" [ref=e501]
+      - generic [ref=e502]:
+        - generic [ref=e503]:
+          - button "One at a time (widen the panel to see the list and sheet side by side)" [disabled] [ref=e592]
+          - heading "Characters" [level=2] [ref=e595]
+        - generic [ref=e598]:
+          - generic [ref=e599]:
+            - button "Back to the character list" [ref=e600] [cursor=pointer]
+            - generic [ref=e603]: Mira Ashford
+          - generic [ref=e605]:
+            - generic [ref=e606]:
+              - generic [ref=e607]:
+                - button "Click to change the graphic; drag onto the map to place a token" [ref=e609]
+                - generic [ref=e613]:
+                  - textbox "Name" [ref=e614]: Mira Ashford
+                  - generic [ref=e615]: NPC
+              - region "Vitals" [ref=e616]:
+                - generic [ref=e617]:
+                  - group "HP" [ref=e618]:
+                    - generic [ref=e620]:
+                      - button "Decrease HP" [ref=e621] [cursor=pointer]
+                      - status [ref=e624]:
+                        - text: "6"
+                        - generic [ref=e625]: /6
+                      - button "Increase HP" [ref=e626] [cursor=pointer]
+                  - generic [ref=e629]:
+                    - generic [ref=e630]: Max HP
+                    - spinbutton "Max HP" [ref=e631]: "6"
+              - generic [ref=e632]:
+                - text: Damage
+                - textbox "Damage" [ref=e633]
+              - generic [ref=e634]:
+                - text: Armor
+                - spinbutton "Armor" [ref=e635]: "0"
+              - generic [ref=e636]:
+                - text: Tags
+                - textbox "Tags" [ref=e637]
+              - generic [ref=e638]:
+                - text: Instinct
+                - textbox "Instinct" [ref=e639]
+              - generic [ref=e640]:
+                - text: Moves
+                - textbox "Moves" [ref=e642]:
+                  - paragraph [ref=e643]: Type @ to link a note, character, gear or move.
+              - region "Inventory" [ref=e644]:
+                - heading "Inventory" [level=3] [ref=e645]
+                - paragraph [ref=e646]: Nothing carried yet. Drag gear here from the Libraries.
+                - button "Find items in the Libraries…" [ref=e647] [cursor=pointer]
+              - generic [ref=e648]:
+                - text: Notes
+                - textbox "Notes" [ref=e650]:
+                  - paragraph [ref=e651]: Type @ to link a note, character, gear or move.
+            - region "Relationships" [ref=e652]:
+              - heading "Relationships" [level=3] [ref=e653]
+              - button "Web" [ref=e655] [cursor=pointer]
+            - region "On the map" [ref=e656]:
+              - heading "On the map" [level=3] [ref=e657]
+              - radiogroup "Tokens" [ref=e658]:
+                - radio "Individual" [checked] [ref=e659] [cursor=pointer]
+                - radio "Template" [ref=e660] [cursor=pointer]
+  - complementary "Right sidebar" [ref=e530]:
+    - tablist [ref=e531]:
+      - tab "Chat" [selected] [ref=e532] [cursor=pointer]
+      - tab "Libraries" [ref=e535] [cursor=pointer]
+      - tab "Items" [ref=e538] [cursor=pointer]
+      - tab "Notes" [ref=e541] [cursor=pointer]
+      - tab "Members, 1 online" [ref=e544] [cursor=pointer]: "1"
+    - tabpanel [ref=e547]:
+      - separator "Resize sidebar" [ref=e548]
+      - generic [ref=e549]:
+        - heading "Chat" [level=2] [ref=e551]
+        - generic [ref=e554]:
+          - log [ref=e555]:
+            - generic [ref=e556]:
+              - article [ref=e557]:
+                - generic [ref=e558]:
+                  - generic [aria-hidden] [ref=e559]: T
+                  - generic [ref=e560]: Tester
+                  - time [ref=e561]: 10:46
+                - generic [ref=e562]: The guards retreat.
+              - generic [ref=e563]: Scene changed to Scene 2
+          - generic [ref=e564]:
+            - generic [ref=e565]:
+              - button "d4" [ref=e566] [cursor=pointer]
+              - button "d6" [ref=e567] [cursor=pointer]
+              - button "d8" [ref=e568] [cursor=pointer]
+              - button "d10" [ref=e569] [cursor=pointer]
+              - button "d12" [ref=e570] [cursor=pointer]
+              - button "d20" [ref=e571] [cursor=pointer]
+              - button "Public" [ref=e572] [cursor=pointer]
+            - generic [ref=e573]:
+              - textbox "Message" [ref=e575]:
+                - paragraph [ref=e576]: Message, @ to link, or roll 2d6+1
+              - button "Send" [disabled] [ref=e577]
+  - toolbar "Hotbar" [ref=e578]:
+    - button "Ping" [ref=e580]
+    - button "Measure" [ref=e585]
+    - button "Command palette (Ctrl/Cmd+K)" [ref=e589] [cursor=pointer]

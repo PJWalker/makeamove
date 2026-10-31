@@ -20,24 +20,24 @@ import {
 import type { CharacterView } from '../characters/store'
 import type { Campaign } from '../store/campaign'
 import { useY } from '../store/useY'
-import type { GameSystem } from '../systems/types'
-import { Avatar } from '../ui/Avatar'
+import type { GameSystem } from "../systems/types";
 import { Button } from '../ui/Button'
-import { menuTrigger } from '../ui/menuTrigger'
-import { usePopupDialog } from "./usePopupDialog";
+import { IconImage } from "../ui/icons";
+import { menuTrigger } from "../ui/menuTrigger";
 import { choicesAt } from '../characters/creation'
 import { ChoiceField, creationResult, emptyPick, ScoreFields, scoreMethods, scoresReady, startingScores, type Picked, type ScoreMethod } from './CreationParts'
 import { IconDelete, IconFolder, IconRename } from '../ui/icons'
 import { Segmented } from '../ui/Segmented'
-import { Dialog } from './CampaignDialogs'
-import { FolderName } from '../ui/FolderName'
+import { ConfirmDialog } from "./ConfirmDialog";
 import { createPaneLayout, TwoPane, usePaneLevel } from '../ui/TwoPane'
-import { List, ListGroup, ListRow } from '../ui/List'
+import { ListRow } from "../ui/List";
 import { ContextMenu, type MenuItem } from './ContextMenu'
-import { dragToFolder } from './folderDrag'
-import { tokenDrop } from './canvasState'
+import { dragEntity, entity } from "./entityDrag";
+import { CampaignEntityGraphic } from "./EntityGraphic";
+import { editEntityGraphic } from "./GraphicDialogs";
 import { CharacterSheet } from './sheets'
 import { showLink } from "./linkState";
+import { FolderTree } from "./FolderTree";
 
 /** Side by side or one at a time (ui/TwoPane.tsx); kept under the key it always had. */
 export const charactersLayout = createPaneLayout('charsList', { list: 'list', detail: 'sheet' })
@@ -49,6 +49,7 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
   const selectedId = useY(campaign.members, () => selectedCharacterId(campaign))
   const isGm = useY(campaign.members, () => campaign.isGm())
   const creating = useSignal(false)
+  const creationFolder = useSignal<string | undefined>(undefined);
   // Copies (a template's tokens) aren't listed, but selecting one's token opens its sheet.
   const selected = useY(campaign.characters, () => getCharacter(campaign, selectedId))
   // One at a time: which level shows, the list or the sheet.
@@ -65,9 +66,11 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
     <TwoPane
       layout={charactersLayout}
       level={level.value}
-      title={creating.value ? 'New character' : (selected?.name ?? 'Characters')}
+      title={
+        creating.value ? "New character" : (selected?.name ?? "Characters")
+      }
       backLabel="Back to the character list"
-      onBack={() => go('list')}
+      onBack={() => go("list")}
       resizeLabel="Resize character list"
       list={
         <CharacterList
@@ -76,30 +79,43 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
           characters={characters}
           folders={folders}
           selectedId={selectedId}
-          onNew={() => {
-            creating.value = true
-            go('detail')
+          onNew={(folderId) => {
+            creationFolder.value = folderId;
+            creating.value = true;
+            go("detail");
           }}
           onPick={(id) => {
-            creating.value = false
-            go('detail')
-            selectCharacter(campaign, id)
+            creating.value = false;
+            go("detail");
+            selectCharacter(campaign, id);
           }}
         />
       }
       detail={
         <div class="chars-sheet panel-scroll sheet-panel">
           {creating.value ? (
-            <NewCharacter campaign={campaign} system={system} folders={folders} isGm={isGm} onDone={() => (creating.value = false)} />
+            <NewCharacter
+              campaign={campaign}
+              system={system}
+              folders={folders}
+              isGm={isGm}
+              initialFolder={creationFolder.value}
+              onDone={() => {
+                creating.value = false;
+                creationFolder.value = undefined;
+              }}
+            />
           ) : selected ? (
             <CharacterSheet campaign={campaign} system={system} c={selected} />
           ) : (
-            <p class="empty">Create a character, or pick one to see its sheet.</p>
+            <p class="empty">
+              Create a character, or pick one to see its sheet.
+            </p>
           )}
         </div>
       }
     />
-  )
+  );
 }
 
 /** The left pane: characters, filed in folders. Drag a character onto a folder to file it. */
@@ -112,49 +128,72 @@ function CharacterList({
   onNew,
   onPick,
 }: {
-  campaign: Campaign
-  system: GameSystem
-  characters: CharacterView[]
-  folders: FolderView[]
-  selectedId: string | undefined
-  onNew: () => void
-  onPick: (id: string) => void
+  campaign: Campaign;
+  system: GameSystem;
+  characters: CharacterView[];
+  folders: FolderView[];
+  selectedId: string | undefined;
+  onNew: (folderId?: string) => void;
+  onPick: (id: string) => void;
 }) {
-  // Folders the user has folded away (this device only).
-  const folded = useSignal<Set<string>>(new Set())
-  // A folder being named: its id, or 'new'.
-  const naming = useSignal<string | null>(null)
-  const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(null)
+  const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(
+    null,
+  );
   // A character waiting for its deletion to be confirmed.
-  const deleting = useSignal<string | null>(null)
-  const known = new Set(folders.map((f) => f.id))
-  const inFolder = (id: string) => characters.filter((c) => c.folder === id)
-  const loose = characters.filter((c) => !c.folder || !known.has(c.folder))
-
-  const toggle = (id: string) => {
-    const next = new Set(folded.value)
-    if (!next.delete(id)) next.add(id)
-    folded.value = next
-  }
+  const deleting = useSignal<string | null>(null);
+  const known = new Set(folders.map((f) => f.id));
 
   const row = (c: CharacterView) => {
-    const mine = canEdit(campaign, c)
+    const mine = canEdit(campaign, c);
+    const dragged = entity(campaign, "character", c.id, c.name);
+    dragged.folder = mine
+      ? (folderId) => moveToFolder(campaign, c.id, folderId)
+      : undefined;
     const trigger = menuTrigger((x, y) => {
-      const items: MenuItem[] = []
+      const items: MenuItem[] = [
+        { label: "Open character", onSelect: () => onPick(c.id) },
+      ];
       if (mine) {
         for (const f of folders) {
-          if (f.id !== c.folder) items.push({ label: `Move to ${f.name}`, Icon: IconFolder, onSelect: () => moveToFolder(campaign, c.id, f.id) })
+          if (f.id !== c.folder)
+            items.push({
+              label: `Move to ${f.name}`,
+              Icon: IconFolder,
+              onSelect: () => moveToFolder(campaign, c.id, f.id),
+            });
         }
-        if (c.folder && known.has(c.folder)) items.push({ label: 'Remove from folder', onSelect: () => moveToFolder(campaign, c.id, undefined) })
-        if (items.length) items.push('divider')
-        items.push({ label: 'Delete character…', Icon: IconDelete, danger: true, onSelect: () => (deleting.value = c.id) })
+        if (c.folder && known.has(c.folder))
+          items.push({
+            label: "Remove from folder",
+            onSelect: () => moveToFolder(campaign, c.id, undefined),
+          });
+        if (items.length) items.push("divider");
+        items.push({
+          label: "Change graphic…",
+          Icon: IconImage,
+          onSelect: () =>
+            editEntityGraphic(campaign, "character", c.id, c.name),
+        });
+        items.push({
+          label: "Delete character…",
+          Icon: IconDelete,
+          danger: true,
+          onSelect: () => (deleting.value = c.id),
+        });
       }
-      if (items.length) menu.value = { x, y, items }
-    })
+      if (items.length) menu.value = { x, y, items };
+    });
     return (
       <ListRow
         key={c.id}
-        lead={<Avatar id={c.id} name={c.name} />}
+        lead={
+          <CampaignEntityGraphic
+            campaign={campaign}
+            kind="character"
+            id={c.id}
+            size={22}
+          />
+        }
         name={c.name}
         tag={c.kind === "npc" ? "NPC" : null}
         selected={c.id === selectedId}
@@ -174,138 +213,126 @@ function CharacterList({
           "data-move-drop": mine ? c.id : undefined,
           onPointerDown: (e) => {
             trigger.onPointerDown(e);
-            dragToFolder(
-              e,
-              mine ? (folder) => moveToFolder(campaign, c.id, folder) : null,
-              (x, y) =>
-                tokenDrop.value?.(x, y, {
-                  characterId: c.id,
-                  name: c.name,
-                  image: c.portrait,
-                  style: c.tokenStyle,
-                  colour: c.tokenColour,
-                }),
-            );
+            dragEntity(e, dragged);
           },
           onContextMenu: trigger.onContextMenu,
         }}
       />
     );
-  }
+  };
 
-  const folderMenu = (f: FolderView) =>
-    menuTrigger((x, y) => {
-      menu.value = {
-        x,
-        y,
-        items: [
-          { label: 'Rename folder', Icon: IconRename, onSelect: () => (naming.value = f.id) },
-          { label: 'Delete folder', Icon: IconDelete, danger: true, onSelect: () => deleteFolder(campaign, f.id) },
-        ],
-      }
-    })
-
-  const doomed = deleting.value ? characters.find((c) => c.id === deleting.value) : undefined
+  const doomed = deleting.value
+    ? characters.find((c) => c.id === deleting.value)
+    : undefined;
   return (
-    <nav class="chars-list" aria-label="Characters">
-      {doomed && <DeleteCharacter campaign={campaign} c={doomed} onClose={() => (deleting.value = null)} />}
-      <div class="chars-actions">
-        <Button size="sm" onClick={onNew}>
-          New
-        </Button>
-        <Button size="sm" variant="ghost" onClick={() => (naming.value = 'new')}>
-          New folder
-        </Button>
-      </div>
-      <div class="chars-tree panel-scroll" data-folder-drop="">
-        {naming.value === 'new' && (
-          <FolderName
-            onDone={(name) => {
-              if (name) createFolder(campaign, name)
-              naming.value = null
-            }}
-          />
+    <>
+      {doomed && (
+        <DeleteCharacter
+          campaign={campaign}
+          c={doomed}
+          onClose={() => (deleting.value = null)}
+        />
+      )}
+      <FolderTree
+        ariaLabel="Characters"
+        className="chars-list"
+        folders={folders}
+        items={characters}
+        folderOf={(character) => character.folder}
+        renderItem={row}
+        renderActions={(beginFolderNaming) => (
+          <>
+            <Button size="sm" onClick={() => onNew()}>
+              New
+            </Button>
+            <Button size="sm" variant="ghost" onClick={beginFolderNaming}>
+              New folder
+            </Button>
+          </>
         )}
-        {folders.map((f) => {
-          const kids = inFolder(f.id)
-          const open = !folded.value.has(f.id)
-          const trigger = folderMenu(f)
-          return (
-            <ListGroup
-              key={f.id}
-              label={f.name}
-              lead={<IconFolder size={16} />}
-              count={kids.length}
-              open={open}
-              onToggle={() => toggle(f.id)}
-              head={{ onPointerDown: trigger.onPointerDown, onContextMenu: trigger.onContextMenu }}
-              group={{ 'data-folder-drop': f.id }}
-              replaceHead={
-                naming.value === f.id ? (
-                  <FolderName
-                    initial={f.name}
-                    onDone={(name) => {
-                      if (name) renameFolder(campaign, f.id, name)
-                      naming.value = null
-                    }}
-                  />
-                ) : undefined
-              }
-            >
-              <List>{kids.map(row)}</List>
-            </ListGroup>
-          )
-        })}
-        <List>{loose.map(row)}</List>
-        {!characters.length && !folders.length && <p class="empty-inline">No characters yet.</p>}
-      </div>
-      {menu.value && <ContextMenu {...menu.value} onClose={() => (menu.value = null)} />}
-    </nav>
-  )
+        folderMenuItems={(folder, { open, toggle, rename }) => [
+          { label: "New character here", onSelect: () => onNew(folder.id) },
+          {
+            label: open ? "Collapse folder" : "Expand folder",
+            onSelect: toggle,
+          },
+          "divider",
+          { label: "Rename folder", Icon: IconRename, onSelect: rename },
+          {
+            label: "Delete folder",
+            Icon: IconDelete,
+            danger: true,
+            onSelect: () => deleteFolder(campaign, folder.id),
+          },
+        ]}
+        onCreateFolder={(name) => createFolder(campaign, name)}
+        onRenameFolder={(id, name) => renameFolder(campaign, id, name)}
+        emptyContent={
+          !characters.length && !folders.length ? (
+            <p class="empty-inline">No characters yet.</p>
+          ) : null
+        }
+      />
+      {menu.value && (
+        <ContextMenu {...menu.value} onClose={() => (menu.value = null)} />
+      )}
+    </>
+  );
 }
-
 
 function NewCharacter({
   campaign,
   system,
   folders,
   isGm,
+  initialFolder,
   onDone,
 }: {
-  campaign: Campaign
-  system: GameSystem
-  folders: FolderView[]
-  isGm: boolean
-  onDone: () => void
+  campaign: Campaign;
+  system: GameSystem;
+  folders: FolderView[];
+  isGm: boolean;
+  initialFolder?: string;
+  onDone: () => void;
 }) {
-  const kind = useSignal<'pc' | 'npc'>('pc')
-  const name = useSignal('')
-  const classId = useSignal(system.classes[0].id)
-  const folder = useSignal('')
+  const kind = useSignal<"pc" | "npc">("pc");
+  const name = useSignal("");
+  const classId = useSignal(system.classes[0].id);
+  const folder = useSignal(initialFolder ?? "");
   // The guided flow: the system's choices at creation, then ability scores.
-  const creation = system.creation
-  const picks = useSignal<Record<string, Picked>>({})
-  const method = useSignal<ScoreMethod>(creation ? scoreMethods(creation.scores)[0].id : 'manual')
-  const scores = useSignal(creation ? startingScores(system, creation.scores, method.value) : {})
-  const choices = choicesAt(creation, 'create', classId.value)
-  const ready = kind.value === 'npc' || !creation || scoresReady(creation.scores, method.value, scores.value)
+  const creation = system.creation;
+  const picks = useSignal<Record<string, Picked>>({});
+  const method = useSignal<ScoreMethod>(
+    creation ? scoreMethods(creation.scores)[0].id : "manual",
+  );
+  const scores = useSignal(
+    creation ? startingScores(system, creation.scores, method.value) : {},
+  );
+  const choices = choicesAt(creation, "create", classId.value);
+  const ready =
+    kind.value === "npc" ||
+    !creation ||
+    scoresReady(creation.scores, method.value, scores.value);
   const submit = () => {
-    if (!ready) return
-    if (kind.value === 'npc') newNpc(campaign, name.value, folder.value || undefined)
+    if (!ready) return;
+    if (kind.value === "npc")
+      newNpc(campaign, name.value, folder.value || undefined);
     else {
-      const made = creation ? creationResult(system, classId.value, scores.value, picks.value) : undefined
-      const id = newCharacter(campaign, name.value, classId.value, made)
-      if (folder.value) moveToFolder(campaign, id, folder.value)
+      const made = creation
+        ? creationResult(system, classId.value, scores.value, picks.value)
+        : undefined;
+      const id = newCharacter(campaign, name.value, classId.value, made);
+      if (folder.value) moveToFolder(campaign, id, folder.value);
     }
-    onDone()
-  }
-  const cls = system.classes.find((k) => k.id === classId.value)
+    onDone();
+  };
+  const cls = system.classes.find((k) => k.id === classId.value);
   return (
     <form
       class="sheet-new"
       onSubmit={(e) => {
-        e.preventDefault()
-        submit()
+        e.preventDefault();
+        submit();
       }}
     >
       {isGm && (
@@ -315,8 +342,8 @@ function NewCharacter({
             label="Character type"
             value={kind.value}
             options={[
-              { id: 'pc', label: 'Player character' },
-              { id: 'npc', label: 'NPC' },
+              { id: "pc", label: "Player character" },
+              { id: "npc", label: "NPC" },
             ]}
             onChange={(v) => (kind.value = v)}
           />
@@ -324,13 +351,22 @@ function NewCharacter({
       )}
       <label class="field">
         Name
-        <input class="input bevel" value={name.value} onInput={(e) => (name.value = e.currentTarget.value)} autofocus />
+        <input
+          class="input bevel"
+          value={name.value}
+          onInput={(e) => (name.value = e.currentTarget.value)}
+          autofocus
+        />
       </label>
-      {kind.value === 'pc' && (
+      {kind.value === "pc" && (
         <>
           <label class="field">
             Class
-            <select class="input bevel" value={classId.value} onChange={(e) => (classId.value = e.currentTarget.value)}>
+            <select
+              class="input bevel"
+              value={classId.value}
+              onChange={(e) => (classId.value = e.currentTarget.value)}
+            >
               {system.classes.map((k) => (
                 <option key={k.id} value={k.id}>
                   {k.name}
@@ -348,13 +384,24 @@ function NewCharacter({
               onChange={(p) => (picks.value = { ...picks.value, [ch.id]: p })}
             />
           ))}
-          {creation && <ScoreFields system={system} methods={creation.scores} method={method} scores={scores} />}
+          {creation && (
+            <ScoreFields
+              system={system}
+              methods={creation.scores}
+              method={method}
+              scores={scores}
+            />
+          )}
         </>
       )}
       {folders.length > 0 && (
         <label class="field">
           Folder
-          <select class="input bevel" value={folder.value} onChange={(e) => (folder.value = e.currentTarget.value)}>
+          <select
+            class="input bevel"
+            value={folder.value}
+            onChange={(e) => (folder.value = e.currentTarget.value)}
+          >
             <option value="">None</option>
             {folders.map((f) => (
               <option key={f.id} value={f.id}>
@@ -373,32 +420,31 @@ function NewCharacter({
         </Button>
       </div>
     </form>
-  )
+  );
 }
 
 /** Asks before deleting a character: it can't be undone. */
-function DeleteCharacter({ campaign, c, onClose }: { campaign: Campaign; c: CharacterView; onClose: () => void }) {
-  const ref = usePopupDialog();
+function DeleteCharacter({
+  campaign,
+  c,
+  onClose,
+}: {
+  campaign: Campaign;
+  c: CharacterView;
+  onClose: () => void;
+}) {
   return (
-    <Dialog dialogRef={ref} title="Delete character" onClose={onClose}>
+    <ConfirmDialog
+      title="Delete character"
+      confirmLabel="Delete"
+      confirmVariant="danger"
+      onClose={onClose}
+      onConfirm={() => deleteCharacter(campaign, c.id)}
+    >
       <p>
-        Delete <strong>{c.name}</strong>? Their sheet is gone for everyone, and tokens on the map stop being linked to
-        them. This can't be undone.
+        Delete <strong>{c.name}</strong>? Their sheet is gone for everyone, and
+        tokens on the map stop being linked to them. This can't be undone.
       </p>
-      <div class="form-actions">
-        <Button variant="ghost" onClick={() => ref.current?.close()}>
-          Cancel
-        </Button>
-        <Button
-          variant="danger"
-          onClick={() => {
-            deleteCharacter(campaign, c.id)
-            ref.current?.close()
-          }}
-        >
-          Delete
-        </Button>
-      </div>
-    </Dialog>
-  )
+    </ConfirmDialog>
+  );
 }

@@ -228,7 +228,7 @@ function contentKey(el: SceneElement): string {
     case "map":
       return `map:${el.image.hash}`;
     case "token":
-      return `token:${el.image?.hash ?? ""}:${el.icon ?? ""}:${el.name}:${el.colour}:${isPlainToken(el) ? "plain" : "disc"}`;
+      return `token:${el.graphic?.kind === "image" ? el.graphic.image.hash : ""}:${el.graphic?.kind === "icon" ? el.graphic.name : ""}:${el.name}:${el.colour}:${isPlainToken(el) ? "plain" : "disc"}`;
     case "drawing":
       return `drawing:${el.points.length}:${el.points[0]}:${el.points[1]}:${el.colour}:${el.width}:${el.bw}:${el.bh}`;
     case "shape":
@@ -741,9 +741,13 @@ export class SceneRenderer {
       case "token": {
         // The body is drawn 100 px across and scaled; the label stays upright.
         const body = new Container();
+        const image =
+          el.graphic?.kind === "image" ? el.graphic.image : undefined;
+        const iconName =
+          el.graphic?.kind === "icon" ? el.graphic.name : undefined;
         if (isPlainToken(el)) {
           // The image as it is, fitted inside the token's square.
-          textureFor(el.image!.hash).then((tex) => {
+          textureFor(image!.hash).then((tex) => {
             if (root.destroyed) return;
             if (!tex) {
               // Missing image: fall back to a plain disc so the token can be found.
@@ -780,16 +784,16 @@ export class SceneRenderer {
             anchor: 0.5,
           });
           body.addChildAt(initial, 1);
-          if (el.icon && !el.image) {
-            const icon = iconGraphicFor(el.icon);
+          if (iconName) {
+            const icon = iconGraphicFor(iconName);
             if (icon) {
               initial.visible = false;
               body.addChildAt(icon, 1);
             }
           }
-          if (el.image) {
+          if (image) {
             // The initial stands in until the image loads, or if it's missing.
-            textureFor(el.image.hash).then((tex) => {
+            textureFor(image.hash).then((tex) => {
               if (!tex || root.destroyed) return;
               initial.visible = false;
               // Fill a circle with the image, cropping its longer side. A

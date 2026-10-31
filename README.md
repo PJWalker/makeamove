@@ -13,7 +13,13 @@ npm run dev
 ```
 
 `npm run build` type-checks and produces an installable PWA in `dist/`.
-`npm test` runs the unit tests (Vitest).
+`npm test` runs the unit tests (Vitest). For browser workflows (Playwright),
+install the browsers once and then run the suite:
+
+```sh
+npx playwright install chromium webkit
+npm run test:e2e
+```
 
 ## Icons
 

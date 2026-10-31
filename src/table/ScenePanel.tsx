@@ -3,12 +3,13 @@ import { useRef } from 'preact/hooks'
 import type { Campaign } from '../store/campaign'
 import { useY } from '../store/useY'
 import { Button } from '../ui/Button'
-import { IconAdd, IconDelete, IconGrid } from '../ui/icons'
+import { IconAdd, IconDelete, IconGrid, IconImage } from "../ui/icons";
 import { morphOpen } from '../ui/morph'
 import { openPopup } from '../ui/popup'
 import { dialogRequest, sceneSettingsOpen } from './canvasState'
 import { HelpDialog, SettingsDialog } from './CampaignDialogs'
 import { RelationshipsDialog } from './Relationships'
+import { editEntityGraphic } from "./GraphicDialogs";
 
 /**
  * The campaign's dialogs, always mounted so the command palette and the Scene
@@ -54,23 +55,40 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
       <div class="eyebrow">{campaignName}</div>
       <ul class="scene-list" aria-label="Scenes">
         {scenes.map((s) => (
-          <li key={s.id} class="scene-item" data-active={s.id === activeId} data-scene-id={s.id}>
+          <li
+            key={s.id}
+            class="scene-item"
+            data-active={s.id === activeId}
+            data-scene-id={s.id}
+          >
             {isGm ? (
               <input
                 class="scene-name-input"
                 value={s.name}
                 aria-label="Scene name"
                 onFocus={() => campaign.setActiveScene(s.id)}
-                onChange={(e) => campaign.updateScene(s.id, { name: e.currentTarget.value || 'Untitled scene' })}
+                onChange={(e) =>
+                  campaign.updateScene(s.id, {
+                    name: e.currentTarget.value || "Untitled scene",
+                  })
+                }
               />
             ) : (
-              <button type="button" class="scene-name-button" onClick={() => campaign.setActiveScene(s.id)}>
+              <button
+                type="button"
+                class="scene-name-button"
+                onClick={() => campaign.setActiveScene(s.id)}
+              >
                 {s.name}
               </button>
             )}
             {isGm && scenes.length > 1 && (
-              <Button variant="icon" label={`Delete ${s.name}`} onClick={() => campaign.removeScene(s.id)}>
-                <IconDelete size={16} />
+              <Button
+                variant="icon"
+                label={`Delete ${s.name}`}
+                onClick={() => campaign.removeScene(s.id)}
+              >
+                <IconDelete size={22} />
               </Button>
             )}
           </li>
@@ -78,7 +96,7 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
       </ul>
       {isGm && (
         <Button variant="secondary" size="sm" onClick={addScene}>
-          <IconAdd size={16} /> New scene
+          <IconAdd size={22} /> New scene
         </Button>
       )}
 
@@ -87,12 +105,29 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
           <button
             type="button"
             class="menu-item bevel"
-            onClick={(e) => morphOpen(e.currentTarget, () => (sceneSettingsOpen.value = true))}
+            onClick={(e) =>
+              morphOpen(e.currentTarget, () => (sceneSettingsOpen.value = true))
+            }
           >
-            <IconGrid size={16} /> Scene settings
+            <IconGrid size={22} /> Scene settings
+          </button>
+          <button
+            type="button"
+            class="menu-item bevel"
+            onClick={() =>
+              editEntityGraphic(
+                campaign,
+                "scene",
+                active.id,
+                active.name,
+                "map",
+              )
+            }
+          >
+            <IconImage size={22} /> Change scene graphic…
           </button>
         </div>
       )}
     </div>
-  )
+  );
 }

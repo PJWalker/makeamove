@@ -21,6 +21,7 @@ import { roll } from "../dice/notation";
 import type { Campaign } from "../store/campaign";
 import type { ChoiceDef, GameSystem, ScoreMethods } from "../systems/types";
 import { Button } from "../ui/Button";
+import { closePopup } from "../ui/popup";
 import { usePopupDialog } from "./usePopupDialog";
 import { Segmented } from "../ui/Segmented";
 import { Dialog } from "./CampaignDialogs";
@@ -388,7 +389,7 @@ export function LevelUpDialog({
     if (gained > 0) bumpResource(campaign, c.id, "hp", gained, d.values.maxHp);
     if (system.resources.some((r) => r.id === "hitDice"))
       bumpResource(campaign, c.id, "hitDice", 1, d.values.hitDiceMax);
-    ref.current?.close();
+    closePopup(ref.current, onClose);
   };
 
   const statSelect = (sig: Signal<string>, label: string) => (
@@ -479,7 +480,10 @@ export function LevelUpDialog({
           <p class="muted">Hit points and Hit Dice go up.</p>
         )}
         <div class="form-actions">
-          <Button variant="ghost" onClick={() => ref.current?.close()}>
+          <Button
+            variant="ghost"
+            onClick={() => closePopup(ref.current, onClose)}
+          >
             Cancel
           </Button>
           <Button variant="primary" type="submit" disabled={!ready}>

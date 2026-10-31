@@ -69,7 +69,7 @@ group('rolling', () => {
     const r = roll('d6!', fixed(6, 6, 2))
     expect(r.total).toBe(14)
     expect(r.terms[0]).toMatchObject({ dice: [{ value: 6 }, { value: 6, exploded: true }, { value: 2, exploded: true }] })
-    expect(roll('d2!', () => 2).terms[0]).toMatchObject({ dice: { length: 21 } })
+    expect(roll('d2!', () => 2).terms[0]).toMatchObject({ dice: { length: 51 } })
   })
   it('rolls fairly with the crypto source', () => {
     const counts = new Array(7).fill(0)

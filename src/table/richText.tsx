@@ -15,13 +15,14 @@ import { LINK_NODE } from '../notes/links'
 import { followLink, linkLabel, linkTargets, linkTip, openInSidebar, type LinkTarget } from '../notes/targets'
 import { menuTrigger } from '../ui/menuTrigger'
 import type { MenuItem } from './ContextMenu'
-import { linkMenu, renameLink, showLink } from './linkState'
+import { linkActionItems, linkMenu, renameLink, showLink } from "./linkState";
 import type { Campaign } from '../store/campaign'
 import { placeAnchored } from '../ui/anchor'
-import { entryIcon } from '../ui/entryIcons'
-import { IconCharacters, IconMap, IconNotes, IconOpenWindow, IconRename, IconSidebar, type Icon } from '../ui/icons'
+import { IconOpenWindow, IconRename, IconSidebar } from "../ui/icons";
 import { dragEntity, entity, registerLinkDrop } from './entityDrag'
 import { actionMenuItems } from "./actionMenu";
+import { CampaignEntityGraphic } from "./EntityGraphic";
+import { editEntityGraphic } from "./GraphicDialogs";
 
 /*
  * Rich text edited together: notes, and the long text on character sheets.
@@ -55,10 +56,6 @@ export interface RichTextOptions {
   secrets?: { vault: Y.Doc | null }
 }
 
-const KIND_ICON: Partial<Record<LinkKind, Icon>> = { note: IconNotes, character: IconCharacters, scene: IconMap }
-/** A link target's icon: notes, characters and scenes by kind; gear and moves by their own icon. */
-export const linkIcon = (t: { kind: LinkKind; icon?: string }) => KIND_ICON[t.kind] ?? entryIcon(t.kind === 'item' ? 'item' : 'move', t.icon)
-
 /**
  * A link to a note, character, scene, item or move: an inline chip, typed
  * by starting a word with `@`. It stores its target's kind and id (and the
@@ -71,84 +68,93 @@ export function linkExtension(campaign: Campaign, o: Pick<RichTextOptions, 'note
       return {
         ...this.parent?.(),
         kind: {
-          default: 'note',
-          parseHTML: (el: HTMLElement) => el.getAttribute('data-kind'),
-          renderHTML: (attrs: { kind: string }) => ({ 'data-kind': attrs.kind }),
+          default: "note",
+          parseHTML: (el: HTMLElement) => el.getAttribute("data-kind"),
+          renderHTML: (attrs: { kind: string }) => ({
+            "data-kind": attrs.kind,
+          }),
         },
         /** Text chosen for the link, shown instead of its target's name. */
         text: {
           default: null,
-          parseHTML: (el: HTMLElement) => el.getAttribute('data-text'),
-          renderHTML: (attrs: { text: string | null }) => (attrs.text ? { 'data-text': attrs.text } : {}),
+          parseHTML: (el: HTMLElement) => el.getAttribute("data-text"),
+          renderHTML: (attrs: { text: string | null }) =>
+            attrs.text ? { "data-text": attrs.text } : {},
         },
-      }
+      };
     },
   }).configure({
     renderHTML: ({ node }) => {
-      const { kind, id, label, text } = node.attrs as { kind: LinkKind; id: string; label?: string; text?: string | null }
-      const current = linkLabel(campaign, kind, id)
-      const tip = current === null ? 'Not available' : linkTip(campaign, kind, id)
+      const { kind, id, label, text } = node.attrs as {
+        kind: LinkKind;
+        id: string;
+        label?: string;
+        text?: string | null;
+      };
+      const current = linkLabel(campaign, kind, id);
+      const tip =
+        current === null ? "Not available" : linkTip(campaign, kind, id);
       return [
-        'span',
+        "span",
         mergeAttributes({
-          class: 'note-link bevel',
-          'data-type': LINK_NODE,
-          'data-kind': kind,
-          'data-id': id,
-          'data-label': label,
-          'data-missing': current === null ? 'true' : undefined,
-          'data-tip': tip ?? undefined,
-          'data-tip-long': current === null ? undefined : 'true',
+          class: "note-link bevel",
+          "data-type": LINK_NODE,
+          "data-kind": kind,
+          "data-id": id,
+          "data-label": label,
+          "data-missing": current === null ? "true" : undefined,
+          "data-tip": tip ?? undefined,
+          "data-tip-long": current === null ? undefined : "true",
           // Clicking turns the tooltip into the link's pop-up.
-          'data-tip-opens': current === null ? undefined : 'true',
+          "data-tip-opens": current === null ? undefined : "true",
         }),
-        text || current || label || 'Unavailable',
-      ]
+        text || current || label || "Unavailable",
+      ];
     },
-    renderText: ({ node }) => `@${node.attrs.text || node.attrs.label || node.attrs.id}`,
+    renderText: ({ node }) =>
+      `@${node.attrs.text || node.attrs.label || node.attrs.id}`,
     suggestion: {
-      char: '@',
+      char: "@",
       allowSpaces: true,
       items: ({ query }) => linkTargets(campaign, query, o.noteId),
       command: ({ editor, range, props }) => {
-        const t = props as unknown as LinkTarget
+        const t = props as unknown as LinkTarget;
         // Shared text mustn't carry a GM-only page's title where players could read it.
-        const label = t.gmOnly && o.shared ? '' : t.label
+        const label = t.gmOnly && o.shared ? "" : t.label;
         editor
           .chain()
           .focus()
           .insertContentAt(range, [
             { type: LINK_NODE, attrs: { kind: t.kind, id: t.id, label } },
-            { type: 'text', text: ' ' },
+            { type: "text", text: " " },
           ])
-          .run()
+          .run();
       },
-      render: suggestionList,
+      render: () => suggestionList(campaign),
     },
-  })
+  });
 }
 
 /** The list that drops down after `@`: arrow keys move, Enter or Tab picks, Escape closes. */
-function suggestionList() {
-  const host = document.createElement('div')
-  host.className = 'note-suggest context-menu panel bevel'
-  host.setAttribute('role', 'listbox')
-  let props: SuggestionProps<LinkTarget> | null = null
-  let index = 0
+function suggestionList(campaign: Campaign) {
+  const host = document.createElement("div");
+  host.className = "note-suggest context-menu panel bevel";
+  host.setAttribute("role", "listbox");
+  let props: SuggestionProps<LinkTarget> | null = null;
+  let index = 0;
 
   // Under the text being typed, or over it near the bottom of the window.
   const place = () => {
-    const r = props?.clientRect?.()
-    if (r) placeAnchored(host, r)
-  }
+    const r = props?.clientRect?.();
+    if (r) placeAnchored(host, r);
+  };
   const draw = () => {
-    if (!props) return
-    const items = props.items
+    if (!props) return;
+    const items = props.items;
     render(
       items.length ? (
         <>
           {items.map((t, i) => {
-            const Icon = linkIcon(t)
             return (
               <button
                 key={`${t.kind}:${t.id}`}
@@ -160,55 +166,60 @@ function suggestionList() {
                 onPointerDown={(e) => e.preventDefault()}
                 onClick={() => props?.command(t)}
               >
-                <Icon size={16} />
+                <CampaignEntityGraphic
+                  campaign={campaign}
+                  kind={t.kind}
+                  id={t.id}
+                  size={22}
+                />
                 <span class="menu-label">{t.label}</span>
                 <span class="menu-shortcut">{t.detail}</span>
               </button>
-            )
+            );
           })}
         </>
       ) : (
         <p class="empty-inline note-suggest-empty">Nothing by that name.</p>
       ),
       host,
-    )
-    place()
-  }
+    );
+    place();
+  };
 
   return {
     onStart(p: SuggestionProps<LinkTarget>) {
-      props = p
-      index = 0
-      document.body.appendChild(host)
-      draw()
+      props = p;
+      index = 0;
+      document.body.appendChild(host);
+      draw();
     },
     onUpdate(p: SuggestionProps<LinkTarget>) {
-      props = p
-      index = Math.min(index, Math.max(0, p.items.length - 1))
-      draw()
+      props = p;
+      index = Math.min(index, Math.max(0, p.items.length - 1));
+      draw();
     },
     onKeyDown({ event }: SuggestionKeyDownProps) {
-      const n = props?.items.length ?? 0
-      if (event.key === 'Escape') {
-        host.remove()
-        return true
+      const n = props?.items.length ?? 0;
+      if (event.key === "Escape") {
+        host.remove();
+        return true;
       }
-      if (!n) return false
-      if (event.key === 'ArrowDown') index = (index + 1) % n
-      else if (event.key === 'ArrowUp') index = (index - 1 + n) % n
-      else if (event.key === 'Enter' || event.key === 'Tab') {
-        props?.command(props.items[index])
-        return true
-      } else return false
-      draw()
-      return true
+      if (!n) return false;
+      if (event.key === "ArrowDown") index = (index + 1) % n;
+      else if (event.key === "ArrowUp") index = (index - 1 + n) % n;
+      else if (event.key === "Enter" || event.key === "Tab") {
+        props?.command(props.items[index]);
+        return true;
+      } else return false;
+      draw();
+      return true;
     },
     onExit() {
-      render(null, host)
-      host.remove()
-      props = null
+      render(null, host);
+      host.remove();
+      props = null;
     },
-  }
+  };
 }
 
 
@@ -333,8 +344,29 @@ export function mountRichText(host: HTMLElement, o: RichTextOptions): { editor: 
         : link.kind === "item"
           ? `library:${link.id}`
           : null;
-    if (actionId) items.push(...actionMenuItems(campaign, [{ id: actionId }]));
+    if (actionId) {
+      items.push(...linkActionItems(campaign, link));
+      const actions = actionMenuItems(campaign, [{ id: actionId }]);
+      if (items.length && actions.length) items.push("divider");
+      items.push(...actions);
+    }
     if (!chip.dataset.missing) {
+      const privateNote =
+        link.kind === "note" && getNote(campaign, link.id)?.gmOnly;
+      if (!privateNote) {
+        if (items.length) items.push("divider");
+        items.push({
+          label: "Change graphic…",
+          Icon: IconImage,
+          onSelect: () =>
+            editEntityGraphic(
+              campaign,
+              link.kind,
+              link.id,
+              chip.textContent ?? "Entity",
+            ),
+        });
+      }
       if (items.length) items.push("divider");
       items.push({ label: 'Open in sidebar', Icon: IconSidebar, onSelect: () => openInSidebar(campaign, link.kind, link.id) })
       if (followsInPlace(link.kind)) items.push({ label: 'Open in a window', Icon: IconOpenWindow, onSelect: () => showLink(link, chip) })

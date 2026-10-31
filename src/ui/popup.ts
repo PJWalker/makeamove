@@ -3,6 +3,7 @@ import { claimMorph, growFromOrigin, hasFreshOrigin, originRect, releaseMorph } 
 import { nextZ } from './windows'
 import { RESIZE_CURSORS, resizeRect, type ResizeDir } from '../table/resizeRect'
 import { trackPointer } from './pointer'
+import { withTransition } from "./transition";
 
 /*
  * Pop-up panels: non-modal <dialog>s that float above the table, open
@@ -36,6 +37,18 @@ function placeOver(el: HTMLElement, from: DOMRect) {
 /** Bring a pop-up in front of every other window. */
 export function raisePopup(dialog: HTMLElement) {
   dialog.style.zIndex = String(nextZ())
+}
+
+/** Close a window and update its owner from the captured open state. */
+export function closePopup(
+  dialog: HTMLDialogElement | null | undefined,
+  onClose?: () => void,
+) {
+  if (!dialog?.open) return
+  void withTransition(() => {
+    dialog.close()
+    onClose?.()
+  })
 }
 
 /** Open a pop-up (or bring it forward if it's already open). */

@@ -279,7 +279,7 @@ function LightOptions() {
 
 /** A small picture of what the Lights tool places, for its button. */
 function LightGlyph({ mode }: { mode: LightToolMode }) {
-  if (mode === 'select') return <IconSelect size={18} />
+  if (mode === "select") return <IconSelect size={22} />;
   if (mode === 'lamp') {
     return (
       <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">

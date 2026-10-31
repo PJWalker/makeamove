@@ -1,5 +1,6 @@
 import { signal } from '@preact/signals'
-import type { BlobRef, TokenStyle } from '../scene/types'
+import type { EntityGraphic, EntityGraphicRef } from "../graphics";
+import type { TokenStyle } from "../scene/types";
 import type { AreaSpec } from '../systems/types'
 import { backdropColour } from '../lib/colour'
 import { DEFAULT_CANVAS_COLOUR, type SceneView } from '../store/campaign'
@@ -48,13 +49,13 @@ export const sceneDistance = signal<(d: number) => string>((d) => `${d}`)
 
 /** What a character's token needs when it's dropped on the map. */
 export interface TokenSpec {
-  name: string
-  characterId?: string
-  image?: BlobRef
-  icon?: string
-  itemDefId?: string
-  style?: TokenStyle
-  colour?: string
+  name: string;
+  characterId?: string;
+  graphic?: EntityGraphic;
+  entityRef?: EntityGraphicRef;
+  itemDefId?: string;
+  style?: TokenStyle;
+  colour?: string;
 }
 
 /**

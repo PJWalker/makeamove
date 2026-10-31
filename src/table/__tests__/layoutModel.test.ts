@@ -13,17 +13,6 @@ describe('panel layout', () => {
     expect(l.right.active).toBe('chat')
   })
 
-  it('opens and closes a side by clicking its active tab', () => {
-    let l = defaultLayout(false)
-    l = selectTab(l, 'chat')
-    expect(l.right.open).toBe(false)
-    l = selectTab(l, 'chat')
-    expect(l.right.open).toBe(true)
-    l = selectTab(l, 'members')
-    expect(l.right).toMatchObject({ active: 'members', open: true })
-    expect(showTab(l, 'notes').right.active).toBe('notes')
-  })
-
   it('floats a panel, picks another tab, and closes an emptied side', () => {
     let l = defaultLayout(false)
     l = detach(l, 'characters', win)

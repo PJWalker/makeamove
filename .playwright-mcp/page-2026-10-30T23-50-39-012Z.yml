@@ -1,0 +1,145 @@
+- generic [ref=e1]:
+  - generic [ref=e454]:
+    - 'generic "Scene: The Opening Scene" [ref=e685]'
+    - navigation "Canvas tools" [ref=e458]:
+      - button "Campaign menu" [ref=e459] [cursor=pointer]
+      - button "Select (V)" [pressed] [ref=e462] [cursor=pointer]
+      - button "Pan (H)" [ref=e465] [cursor=pointer]
+      - button "Draw (P)" [ref=e468] [cursor=pointer]
+      - button "Erase (E)" [ref=e471] [cursor=pointer]
+      - button "Shapes (R)" [ref=e474] [cursor=pointer]
+      - button "Text (X)" [ref=e477] [cursor=pointer]
+      - button "Measure (M)" [ref=e480] [cursor=pointer]
+      - button "Ping (G)" [ref=e483] [cursor=pointer]
+      - button "Walls (W)" [ref=e486] [cursor=pointer]
+      - button "Lights (L)" [ref=e489] [cursor=pointer]
+    - complementary "Left sidebar" [ref=e492]:
+      - tablist [ref=e493]:
+        - tab "Scenes" [selected] [ref=e494] [cursor=pointer]
+        - tab "Characters" [ref=e497] [cursor=pointer]
+      - tabpanel [ref=e500]:
+        - separator "Resize sidebar" [ref=e501]
+        - generic [ref=e502]:
+          - heading "Scenes" [level=2] [ref=e661]
+          - generic [ref=e662]:
+            - generic [ref=e663]: E2E Browser Check
+            - list "Scenes" [ref=e664]:
+              - listitem [ref=e665]:
+                - textbox "Scene name" [ref=e666]: The Opening Scene
+                - button "Delete The Opening Scene" [ref=e667] [cursor=pointer]
+              - listitem [ref=e670]:
+                - textbox "Scene name" [ref=e671]: Scene 2
+                - button "Delete Scene 2" [ref=e672] [cursor=pointer]
+            - button "New scene" [ref=e675] [cursor=pointer]
+            - group "The Opening Scene" [ref=e686]:
+              - button "Scene settings" [ref=e679] [cursor=pointer]
+              - button "Change scene graphic…" [ref=e682] [cursor=pointer]
+    - complementary "Right sidebar" [ref=e530]:
+      - tablist [ref=e531]:
+        - tab "Chat" [selected] [ref=e532] [cursor=pointer]
+        - tab "Libraries" [ref=e535] [cursor=pointer]
+        - tab "Items" [ref=e538] [cursor=pointer]
+        - tab "Notes" [ref=e541] [cursor=pointer]
+        - tab "Members, 1 online" [ref=e544] [cursor=pointer]: "1"
+      - tabpanel [ref=e547]:
+        - separator "Resize sidebar" [ref=e548]
+        - generic [ref=e549]:
+          - heading "Chat" [level=2] [ref=e551]
+          - generic [ref=e554]:
+            - log [ref=e555]:
+              - generic [ref=e556]:
+                - article [ref=e557]:
+                  - generic [ref=e558]:
+                    - generic [aria-hidden] [ref=e559]: T
+                    - generic [ref=e560]: Tester
+                    - time [ref=e561]: 10:46
+                  - generic [ref=e562]: The guards retreat.
+                - generic [ref=e563]:
+                  - generic [ref=e687]: Scene changed to Scene 2
+                  - button "Go there" [ref=e688] [cursor=pointer]
+                - generic [ref=e689]: Scene changed to The Opening Scene
+            - generic [ref=e564]:
+              - generic [ref=e565]:
+                - button "d4" [ref=e566] [cursor=pointer]
+                - button "d6" [ref=e567] [cursor=pointer]
+                - button "d8" [ref=e568] [cursor=pointer]
+                - button "d10" [ref=e569] [cursor=pointer]
+                - button "d12" [ref=e570] [cursor=pointer]
+                - button "d20" [ref=e571] [cursor=pointer]
+                - button "Public" [ref=e572] [cursor=pointer]
+              - generic [ref=e573]:
+                - textbox "Message" [ref=e575]:
+                  - paragraph [ref=e576]: Message, @ to link, or roll 2d6+1
+                - button "Send" [disabled] [ref=e577]
+    - toolbar "Hotbar" [ref=e578]:
+      - button "Ping" [ref=e580]
+      - button "Measure" [ref=e585]
+      - button "Command palette (Ctrl/Cmd+K)" [ref=e589] [cursor=pointer]
+    - dialog "Graphic for The Opening Scene" [ref=e690]:
+      - banner [ref=e691]:
+        - heading "Graphic for The Opening Scene" [level=2] [ref=e695]
+        - button "Close" [ref=e696] [cursor=pointer]
+      - generic [ref=e700]:
+        - text: Graphic
+        - generic [ref=e701]:
+          - button "Choose image…" [ref=e705] [cursor=pointer]
+          - button "Search icons…" [expanded] [ref=e709] [cursor=pointer]
+          - button "Use default" [ref=e712] [cursor=pointer]
+  - dialog "Built-in icons" [ref=e721]:
+    - generic [ref=e722]:
+      - text: Search built-in icons
+      - searchbox "Search built-in icons" [active] [ref=e723]
+    - listbox "Built-in icons" [ref=e724]:
+      - option "rations" [ref=e725] [cursor=pointer]
+      - option "gear" [ref=e729] [cursor=pointer]
+      - option "potion" [ref=e733] [cursor=pointer]
+      - option "herbs" [ref=e737] [cursor=pointer]
+      - option "poultice" [ref=e741] [cursor=pointer]
+      - option "books" [ref=e745] [cursor=pointer]
+      - option "dagger" [ref=e749] [cursor=pointer]
+      - option "sword" [ref=e753] [cursor=pointer]
+      - option "longsword" [ref=e757] [cursor=pointer]
+      - option "axe" [ref=e761] [cursor=pointer]
+      - option "spear" [ref=e765] [cursor=pointer]
+      - option "polearm" [ref=e769] [cursor=pointer]
+      - option "rapier" [ref=e773] [cursor=pointer]
+      - option "bow" [ref=e777] [cursor=pointer]
+      - option "arrows" [ref=e781] [cursor=pointer]
+      - option "chainmail" [ref=e785] [cursor=pointer]
+      - option "scale armor" [ref=e789] [cursor=pointer]
+      - option "shield" [ref=e793] [cursor=pointer]
+      - option "holy symbol" [ref=e797] [cursor=pointer]
+      - option "spellbook" [ref=e801] [cursor=pointer]
+      - option "tools" [ref=e805] [cursor=pointer]
+      - option "bag" [ref=e809] [cursor=pointer]
+      - option "mace" [ref=e813] [cursor=pointer]
+      - option "flail" [ref=e817] [cursor=pointer]
+      - option "hammer" [ref=e821] [cursor=pointer]
+      - option "staff" [ref=e825] [cursor=pointer]
+      - option "crossbow" [ref=e829] [cursor=pointer]
+      - option "leather armor" [ref=e833] [cursor=pointer]
+      - option "breastplate" [ref=e837] [cursor=pointer]
+      - option "torch" [ref=e841] [cursor=pointer]
+      - option "wand" [ref=e845] [cursor=pointer]
+      - option "ring" [ref=e849] [cursor=pointer]
+      - option "cloak" [ref=e853] [cursor=pointer]
+      - option "gauntlet" [ref=e857] [cursor=pointer]
+      - option "bard" [ref=e861] [cursor=pointer]
+      - option "cleric" [ref=e865] [cursor=pointer]
+      - option "druid" [ref=e869] [cursor=pointer]
+      - option "fighter" [ref=e873] [cursor=pointer]
+      - option "paladin" [ref=e877] [cursor=pointer]
+      - option "ranger" [ref=e881] [cursor=pointer]
+      - option "thief" [ref=e885] [cursor=pointer]
+      - option "wizard" [ref=e889] [cursor=pointer]
+      - option "hero" [ref=e893] [cursor=pointer]
+      - option "barbarian" [ref=e897] [cursor=pointer]
+      - option "monk" [ref=e901] [cursor=pointer]
+      - option "sorcerer" [ref=e905] [cursor=pointer]
+      - option "warlock" [ref=e909] [cursor=pointer]
+      - option "move" [ref=e913] [cursor=pointer]
+      - option "class move" [ref=e917] [cursor=pointer]
+      - option "tag" [ref=e921] [cursor=pointer]
+      - option "character" [ref=e925] [cursor=pointer]
+      - option "note" [ref=e929] [cursor=pointer]
+      - option "map" [selected] [ref=e933] [cursor=pointer]

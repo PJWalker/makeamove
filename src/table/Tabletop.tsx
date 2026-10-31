@@ -17,6 +17,7 @@ import { Hotbar } from './Hotbar'
 import { LinkPopups } from './LinkPopups'
 import { EntityWindowHost } from './entityWindows'
 import { MovePrompt } from './MovePrompt'
+import { GraphicDialogs } from "./GraphicDialogs";
 import { Palette } from './Palette'
 import { Toolbar } from './Toolbar'
 
@@ -63,18 +64,22 @@ export function Tabletop({ campaign }: { campaign: Campaign }) {
       class="table"
       data-autohide={autohide.value}
       // Which edges' chrome autohide is showing; a dragged window needs both sidebars to drop on.
-      data-reveal={windowDragging.value ? 'left right' : edges}
+      data-reveal={windowDragging.value ? "left right" : edges}
       // How much each side's docked chrome covers, for the bars that sit between them.
       style={{
-        '--dock-l': `${dockInsets.value.left.total}px`,
-        '--dock-r': `${dockInsets.value.right.total}px`,
+        "--dock-l": `${dockInsets.value.left.total}px`,
+        "--dock-r": `${dockInsets.value.right.total}px`,
       }}
       // Pulled-out panels and pop-ups render into this layer (ui/windows.ts).
       ref={(el) => {
-        if (el && el.lastChild !== windowLayer) el.appendChild(windowLayer)
+        if (el && el.lastChild !== windowLayer) el.appendChild(windowLayer);
       }}
     >
-      <div class="canvas" style={{ '--scene-colour': colour }} aria-label={scene ? `Scene: ${scene.name}` : 'No scene'}>
+      <div
+        class="canvas"
+        style={{ "--scene-colour": colour }}
+        aria-label={scene ? `Scene: ${scene.name}` : "No scene"}
+      >
         <Suspense fallback={null}>
           <SceneCanvas campaign={campaign} sceneId={scene?.id ?? null} />
         </Suspense>
@@ -89,11 +94,12 @@ export function Tabletop({ campaign }: { campaign: Campaign }) {
       <Hotbar campaign={campaign} />
       <Palette campaign={campaign} />
       <MovePrompt campaign={campaign} />
+      <GraphicDialogs campaign={campaign} />
       <LinkPopups campaign={campaign} />
       <ActionDialogs campaign={campaign} />
       <ChatPopups campaign={campaign} />
     </div>
-  )
+  );
 }
 
 /** How close to an edge of the window the pointer must come to show that edge's chrome. */

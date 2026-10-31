@@ -5,8 +5,7 @@ import type { Campaign } from '../store/campaign'
 import { useY } from '../store/useY'
 import { Button } from '../ui/Button'
 import { Segmented } from '../ui/Segmented'
-import { entryIcon } from '../ui/entryIcons'
-import { IconGive } from "../ui/icons";
+import { IconGive, IconImage } from "../ui/icons";
 import { List, ListGroup, Tag } from '../ui/List'
 import { EntryRow, EntryWindow, rollTag, useEntryWindows } from './EntryWindow'
 import { dragEntity, entity } from './entityDrag'
@@ -14,6 +13,9 @@ import { libraryView as view, type KindFilter } from './libraryView'
 import { linkProxy } from './LinkChip'
 import { makeVerb } from './sheetParts'
 import { actionMenuItems } from "./actionMenu";
+import { getEntityGraphic } from "./entityGraphics";
+import { CampaignEntityGraphic } from "./EntityGraphic";
+import { editEntityGraphic } from "./GraphicDialogs";
 
 /** Collections folded away, by "source/collection" (this device only). */
 const folded = signal<Set<string>>(new Set())
@@ -66,11 +68,15 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
     if (e.kind === 'move' && inWindow) {
       const { label, Icon } = makeVerb(e.move)
       return (
-        <Button variant="primary" disabled={!canAct} onClick={() => me && startMove(campaign, me.id, e.move)}>
-          <Icon size={18} /> {label}
-          {me ? ` as ${me.name}` : ''}
+        <Button
+          variant="primary"
+          disabled={!canAct}
+          onClick={() => me && startMove(campaign, me.id, e.move)}
+        >
+          <Icon size={22} /> {label}
+          {me ? ` as ${me.name}` : ""}
         </Button>
-      )
+      );
     }
     return null
   }
@@ -80,24 +86,48 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
     e.kind === 'item' ? [e.item.weight ? `${e.item.weight} wt` : '', e.item.uses ? `${e.item.uses} ${e.item.uses === 1 ? 'use' : 'uses'}` : ''].filter(Boolean).join(' · ') : undefined
 
   const menuItemsFor = (e: LibraryEntry) => {
-    const items =
+    const actions =
       e.kind === "item"
         ? actionMenuItems(campaign, [{ id: `library:${e.id}`, title: e.name }])
         : e.kind === "move"
           ? actionMenuItems(campaign, [{ id: `move:${e.id}`, title: e.name }])
           : [];
-    if (e.kind !== "item") return items.length ? items : undefined;
+    const items =
+      e.kind === "item"
+        ? [
+            {
+              label: me ? `Give to ${me.name}` : "Choose a character",
+              Icon: IconGive,
+              disabled: !canAct,
+              onSelect: () => {
+                if (me && canAct) addItem(campaign, me.id, e.item);
+              },
+            },
+            ...(actions.length ? (["divider"] as const) : []),
+            ...actions,
+          ]
+        : e.kind === "move"
+          ? [
+              {
+                label: "Make",
+                disabled: !canAct,
+                onSelect: () => {
+                  if (me && canAct) startMove(campaign, me.id, e.move);
+                },
+              },
+              ...(actions.length ? (["divider"] as const) : []),
+              ...actions,
+            ]
+          : actions;
     return [
-      {
-        label: me ? `Give to ${me.name}` : "Choose a character",
-        Icon: IconGive,
-        disabled: !canAct,
-        onSelect: () => {
-          if (me && canAct) addItem(campaign, me.id, e.item);
-        },
-      },
-      ...(items.length ? (["divider"] as const) : []),
       ...items,
+      ...(items.length ? (["divider"] as const) : []),
+      {
+        label: "Change graphic…",
+        Icon: IconImage,
+        onSelect: () =>
+          editEntityGraphic(campaign, e.kind, e.id, e.name, e.icon),
+      },
     ];
   };
 
@@ -152,7 +182,15 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
                       <EntryRow
                         key={e.id}
                         name={e.name}
-                        Icon={entryIcon(e.kind, e.icon)}
+                        lead={
+                          <CampaignEntityGraphic
+                            campaign={campaign}
+                            kind={e.kind}
+                            id={e.id}
+                            defaultIcon={e.icon}
+                            size={22}
+                          />
+                        }
                         tag={tagOf(e)}
                         meta={metaOf(e)}
                         tip={
@@ -173,12 +211,13 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
                                   label: e.name,
                                   token: {
                                     name: e.name,
-                                    icon:
-                                      e.kind === "tag"
-                                        ? "tag"
-                                        : e.kind === "class"
-                                          ? (e.icon ?? "hero")
-                                          : "books",
+                                    graphic: getEntityGraphic(
+                                      campaign,
+                                      e.kind,
+                                      e.id,
+                                      e.icon,
+                                    ),
+                                    entityRef: { kind: e.kind, id: e.id },
                                   },
                                 },
                           )
@@ -212,6 +251,8 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
             text={e.text}
             tags={e.tags}
             onClose={() => windows.close(key)}
+            graphicRef={{ kind: e.kind, id: e.id }}
+            graphicDefaultIcon={e.icon}
             proxy={
               e.kind === "item" || e.kind === "move"
                 ? linkProxy(campaign, e.kind, e.id, e.name, e.icon)

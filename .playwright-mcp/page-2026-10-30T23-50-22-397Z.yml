@@ -1,0 +1,75 @@
+- generic [ref=e2]:
+  - generic [ref=e454]:
+    - 'generic "Scene: Scene 2" [ref=e455]'
+    - navigation "Canvas tools" [ref=e458]:
+      - button "Campaign menu" [ref=e459] [cursor=pointer]
+      - button "Select (V)" [pressed] [ref=e462] [cursor=pointer]
+      - button "Pan (H)" [ref=e465] [cursor=pointer]
+      - button "Draw (P)" [ref=e468] [cursor=pointer]
+      - button "Erase (E)" [ref=e471] [cursor=pointer]
+      - button "Shapes (R)" [ref=e474] [cursor=pointer]
+      - button "Text (X)" [ref=e477] [cursor=pointer]
+      - button "Measure (M)" [ref=e480] [cursor=pointer]
+      - button "Ping (G)" [ref=e483] [cursor=pointer]
+      - button "Walls (W)" [ref=e486] [cursor=pointer]
+      - button "Lights (L)" [ref=e489] [cursor=pointer]
+    - complementary "Left sidebar" [ref=e492]:
+      - tablist [ref=e493]:
+        - tab "Scenes" [active] [selected] [ref=e494] [cursor=pointer]
+        - tab "Characters" [ref=e497] [cursor=pointer]
+      - tabpanel [ref=e500]:
+        - separator "Resize sidebar" [ref=e501]
+        - generic [ref=e502]:
+          - heading "Scenes" [level=2] [ref=e661]
+          - generic [ref=e662]:
+            - generic [ref=e663]: E2E Browser Check
+            - list "Scenes" [ref=e664]:
+              - listitem [ref=e665]:
+                - textbox "Scene name" [ref=e666]: The Opening Scene
+                - button "Delete The Opening Scene" [ref=e667] [cursor=pointer]
+              - listitem [ref=e670]:
+                - textbox "Scene name" [ref=e671]: Scene 2
+                - button "Delete Scene 2" [ref=e672] [cursor=pointer]
+            - button "New scene" [ref=e675] [cursor=pointer]
+            - group "Scene 2" [ref=e678]:
+              - button "Scene settings" [ref=e679] [cursor=pointer]
+              - button "Change scene graphic…" [ref=e682] [cursor=pointer]
+    - complementary "Right sidebar" [ref=e530]:
+      - tablist [ref=e531]:
+        - tab "Chat" [selected] [ref=e532] [cursor=pointer]
+        - tab "Libraries" [ref=e535] [cursor=pointer]
+        - tab "Items" [ref=e538] [cursor=pointer]
+        - tab "Notes" [ref=e541] [cursor=pointer]
+        - tab "Members, 1 online" [ref=e544] [cursor=pointer]: "1"
+      - tabpanel [ref=e547]:
+        - separator "Resize sidebar" [ref=e548]
+        - generic [ref=e549]:
+          - heading "Chat" [level=2] [ref=e551]
+          - generic [ref=e554]:
+            - log [ref=e555]:
+              - generic [ref=e556]:
+                - article [ref=e557]:
+                  - generic [ref=e558]:
+                    - generic [aria-hidden] [ref=e559]: T
+                    - generic [ref=e560]: Tester
+                    - time [ref=e561]: 10:46
+                  - generic [ref=e562]: The guards retreat.
+                - generic [ref=e563]: Scene changed to Scene 2
+            - generic [ref=e564]:
+              - generic [ref=e565]:
+                - button "d4" [ref=e566] [cursor=pointer]
+                - button "d6" [ref=e567] [cursor=pointer]
+                - button "d8" [ref=e568] [cursor=pointer]
+                - button "d10" [ref=e569] [cursor=pointer]
+                - button "d12" [ref=e570] [cursor=pointer]
+                - button "d20" [ref=e571] [cursor=pointer]
+                - button "Public" [ref=e572] [cursor=pointer]
+              - generic [ref=e573]:
+                - textbox "Message" [ref=e575]:
+                  - paragraph [ref=e576]: Message, @ to link, or roll 2d6+1
+                - button "Send" [disabled] [ref=e577]
+    - toolbar "Hotbar" [ref=e578]:
+      - button "Ping" [ref=e580]
+      - button "Measure" [ref=e585]
+      - button "Command palette (Ctrl/Cmd+K)" [ref=e589] [cursor=pointer]
+  - tooltip "Scenes"

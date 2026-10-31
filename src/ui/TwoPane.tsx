@@ -76,13 +76,13 @@ export function createPaneLayout(key: string, names: { list: string; detail: str
         disabled={tooNarrow.value}
         onPointerDown={(e) => e.stopPropagation()}
         onClick={() => {
-          chosen.value = split ? 'stack' : 'split'
-          save()
+          chosen.value = split ? "stack" : "split";
+          save();
         }}
       >
-        {split ? <IconLayoutSplit size={16} /> : <IconLayoutSingle size={16} />}
+        {split ? <IconLayoutSplit size={22} /> : <IconLayoutSingle size={22} />}
       </button>
-    )
+    );
   }
 
   return { key, listWidth, chosen, tooNarrow, mode, save, Toggle, el: null }

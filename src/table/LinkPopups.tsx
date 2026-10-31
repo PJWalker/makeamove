@@ -7,11 +7,20 @@ import { followLink, linkLabel } from "../notes/targets";
 import type { Campaign } from '../store/campaign'
 import { useY } from '../store/useY'
 import { Button } from '../ui/Button'
+import { closePopup } from "../ui/popup";
 import { usePopupDialog } from "./usePopupDialog";
 import { Dialog } from './CampaignDialogs'
-import { ContextMenu } from './ContextMenu'
+import { ContextMenu, type MenuItem } from "./ContextMenu";
 import { EntryWindow, rollTag } from './EntryWindow'
-import { closeLink, linkKey, linkMenu, linkRename, openLinks, type LinkRef } from './linkState'
+import {
+  closeLink,
+  linkActionItems,
+  linkKey,
+  linkMenu,
+  linkRename,
+  openLinks,
+  type LinkRef,
+} from "./linkState";
 import { NoteEditor } from './NoteEditor'
 import { CharacterSheet } from './sheets'
 import { linkProxy } from './LinkChip'
@@ -67,15 +76,29 @@ export function LinkPopups({ campaign }: { campaign: Campaign }) {
 }
 
 /** A pop-up for one link, marked so clicking the link again brings it forward. */
-function LinkDialog({ campaign, link, title, children }: { campaign: Campaign; link: LinkRef; title: string; children: ComponentChildren }) {
+function LinkDialog({
+  campaign,
+  link,
+  title,
+  children,
+  menuItems,
+}: {
+  campaign: Campaign;
+  link: LinkRef;
+  title: string;
+  children: ComponentChildren;
+  menuItems?: MenuItem[];
+}) {
   const id = entityTabId(`link:${linkKey(link)}`);
   useLayoutEffect(() => {
     const proxy = linkProxy(campaign, link.kind, link.id, title);
     registerEntityWindow({
       id,
       title,
-      icon: proxy.Icon,
+      graphicRef: { kind: proxy.kind, id: proxy.id },
+      graphicDefaultIcon: proxy.defaultIcon,
       proxy,
+      menuItems,
       content: children,
       close: () => closeLink(link),
     });
@@ -107,9 +130,12 @@ function LinkPopup({ campaign, link }: { campaign: Campaign; link: LinkRef }) {
           tags={item.tags}
           onClose={close}
           proxy={linkProxy(campaign, "item", item.id, item.name, item.icon)}
-          menuItems={actionMenuItems(campaign, [
-            { id: `library:${item.id}`, title: item.name },
-          ])}
+          menuItems={[
+            ...linkActionItems(campaign, link),
+            ...actionMenuItems(campaign, [
+              { id: `library:${item.id}`, title: item.name },
+            ]),
+          ]}
         >
           <Button
             variant="primary"
@@ -141,16 +167,19 @@ function LinkPopup({ campaign, link }: { campaign: Campaign; link: LinkRef }) {
             move.name,
             move.category === "class" ? "class-move" : undefined,
           )}
-          menuItems={actionMenuItems(campaign, [
-            { id: `move:${move.id}`, title: move.name },
-          ])}
+          menuItems={[
+            ...linkActionItems(campaign, link),
+            ...actionMenuItems(campaign, [
+              { id: `move:${move.id}`, title: move.name },
+            ]),
+          ]}
         >
           <Button
             variant="primary"
             disabled={!canAct}
             onClick={() => me && startMove(campaign, me.id, move)}
           >
-            <Icon size={18} /> {label}
+            <Icon size={22} /> {label}
             {me ? ` as ${me.name}` : ""}
           </Button>
         </EntryWindow>
@@ -158,31 +187,64 @@ function LinkPopup({ campaign, link }: { campaign: Campaign; link: LinkRef }) {
     }
     case 'character':
       return character ? (
-        <LinkDialog campaign={campaign} link={link} title={character.name}>
+        <LinkDialog
+          campaign={campaign}
+          link={link}
+          title={character.name}
+          menuItems={[
+            {
+              label: "Open in sidebar",
+              onSelect: () => followLink(campaign, "character", character.id),
+            },
+          ]}
+        >
           <div class="popup-sheet sheet-panel">
             <CharacterSheet campaign={campaign} system={system} c={character} />
           </div>
         </LinkDialog>
-      ) : null
+      ) : null;
     case 'scene':
       return scene ? (
-        <LinkDialog campaign={campaign} link={link} title={scene.name}>
+        <LinkDialog
+          campaign={campaign}
+          link={link}
+          title={scene.name}
+          menuItems={[
+            {
+              label: "Go to scene",
+              onSelect: () => followLink(campaign, "scene", scene.id),
+            },
+          ]}
+        >
           <p class="muted">A scene in this campaign.</p>
           <div class="form-actions">
-            <Button variant="primary" onClick={() => followLink(campaign, 'scene', scene.id)}>
+            <Button
+              variant="primary"
+              onClick={() => followLink(campaign, "scene", scene.id)}
+            >
               Go to scene
             </Button>
           </div>
         </LinkDialog>
-      ) : null
+      ) : null;
     case 'note':
       return note ? (
-        <LinkDialog campaign={campaign} link={link} title={note.title || 'Untitled'}>
+        <LinkDialog
+          campaign={campaign}
+          link={link}
+          title={note.title || "Untitled"}
+          menuItems={[
+            {
+              label: "Open in sidebar",
+              onSelect: () => followLink(campaign, "note", note.id),
+            },
+          ]}
+        >
           <div class="link-note">
             <NoteEditor campaign={campaign} noteId={note.id} />
           </div>
         </LinkDialog>
-      ) : null
+      ) : null;
   }
 }
 
@@ -196,17 +258,18 @@ function RenameLink() {
 function RenameLinkDialog({ req }: { req: NonNullable<typeof linkRename.value> }) {
   const ref = usePopupDialog();
   const text = useSignal(req.text);
+  const onClose = () => (linkRename.value = null);
   const done = (value: string | null) => {
     req.save(value)
-    ref.current?.close()
+    closePopup(ref.current, onClose);
   }
   return (
-    <Dialog dialogRef={ref} title="Link text" onClose={() => (linkRename.value = null)}>
+    <Dialog dialogRef={ref} title="Link text" onClose={onClose}>
       <form
         class="dialog-form"
         onSubmit={(e) => {
-          e.preventDefault()
-          done(text.value)
+          e.preventDefault();
+          done(text.value);
         }}
       >
         <label class="field">
@@ -232,5 +295,5 @@ function RenameLinkDialog({ req }: { req: NonNullable<typeof linkRename.value> }
         </div>
       </form>
     </Dialog>
-  )
+  );
 }

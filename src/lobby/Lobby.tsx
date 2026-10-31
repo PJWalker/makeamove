@@ -94,28 +94,46 @@ function CampaignRow({ c }: { c: CampaignSummary }) {
 
   return (
     <li class="campaign-row">
-      <button type="button" class="campaign-open bevel" data-campaign-id={c.id} onClick={() => goToCampaign(c.id)}>
+      <button
+        type="button"
+        class="campaign-open bevel"
+        data-campaign-id={c.id}
+        onClick={() => goToCampaign(c.id)}
+      >
         <span class="campaign-name">{c.name}</span>
         <span class="campaign-meta">
-          {c.role === 'gm' ? 'GM' : 'Player'} · {getSystem(c.systemId).name} · opened {ago(c.lastOpenedAt)}
+          {c.role === "gm" ? "GM" : "Player"} · {getSystem(c.systemId).name} ·
+          opened {ago(c.lastOpenedAt)}
         </span>
       </button>
       {confirming.value ? (
         <span class="campaign-confirm">
-          <Button variant="danger" size="sm" onClick={() => deleteLocalCampaign(c.id)}>
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={() => deleteLocalCampaign(c.id)}
+          >
             Delete from this device
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => (confirming.value = false)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => (confirming.value = false)}
+          >
             Cancel
           </Button>
         </span>
       ) : (
-        <Button variant="icon" label={`Delete ${c.name}`} onClick={() => (confirming.value = true)}>
-          <IconDelete size={16} />
+        <Button
+          variant="icon"
+          label={`Delete ${c.name}`}
+          onClick={() => (confirming.value = true)}
+        >
+          <IconDelete size={22} />
         </Button>
       )}
     </li>
-  )
+  );
 }
 
 function NewCampaignForm() {
@@ -136,7 +154,11 @@ function NewCampaignForm() {
   }
 
   return (
-    <form class="panel bevel lobby-section" onSubmit={submit} aria-labelledby="new-campaign">
+    <form
+      class="panel bevel lobby-section"
+      onSubmit={submit}
+      aria-labelledby="new-campaign"
+    >
       <h2 id="new-campaign" class="eyebrow">
         Start a campaign
       </h2>
@@ -166,7 +188,12 @@ function NewCampaignForm() {
       <div class="form-row">
         <label class="field">
           System
-          <select class="input bevel" value={systemId.value} onChange={(e) => (systemId.value = e.currentTarget.value)} required>
+          <select
+            class="input bevel"
+            value={systemId.value}
+            onChange={(e) => (systemId.value = e.currentTarget.value)}
+            required
+          >
             <option value="" disabled>
               Choose a system
             </option>
@@ -180,11 +207,11 @@ function NewCampaignForm() {
       </div>
       <div class="form-actions">
         <Button type="submit" variant="primary" disabled={busy.value}>
-          <IconAdd size={16} /> Create campaign
+          <IconAdd size={22} /> Create campaign
         </Button>
       </div>
     </form>
-  )
+  );
 }
 
 function JoinForm() {
@@ -204,7 +231,11 @@ function JoinForm() {
   }
 
   return (
-    <form class="panel bevel lobby-section lobby-join" onSubmit={submit} aria-labelledby="join-campaign">
+    <form
+      class="panel bevel lobby-section lobby-join"
+      onSubmit={submit}
+      aria-labelledby="join-campaign"
+    >
       <h2 id="join-campaign" class="eyebrow">
         Join a campaign
       </h2>
@@ -236,9 +267,9 @@ function JoinForm() {
       </div>
       <div class="form-actions">
         <Button type="submit" disabled={!invite || !yourName.value.trim()}>
-          <IconLink size={16} /> Join
+          <IconLink size={22} /> Join
         </Button>
       </div>
     </form>
-  )
+  );
 }

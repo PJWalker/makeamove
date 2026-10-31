@@ -83,17 +83,53 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
         x,
         y,
         items: [
-          { label: 'Rename…', Icon: IconRename, onSelect: () => editAction('rename', id, title) },
-          { label: 'Change icon…', Icon: IconImage, onSelect: () => editAction('icon', id, title) },
           {
-            label: shortcutFor(campaign, id) ? 'Change shortcut…' : 'Add shortcut…',
-            Icon: IconShortcut,
-            onSelect: () => editAction('shortcut', id, title),
+            label: `Run ${title}`,
+            disabled: find(id)?.available !== true,
+            onSelect: () => run(id),
           },
-          'divider',
-          { label: 'Remove from hotbar', Icon: IconDelete, danger: true, onSelect: () => edit((s) => unpin(s, id)) },
+          ...(slots.length > 1
+            ? [
+                "divider" as const,
+                {
+                  label: "Move earlier",
+                  disabled: slots.indexOf(id) <= 0,
+                  onSelect: () => edit((s) => shift(s, id, -1)),
+                },
+                {
+                  label: "Move later",
+                  disabled: slots.indexOf(id) === slots.length - 1,
+                  onSelect: () => edit((s) => shift(s, id, 1)),
+                },
+              ]
+            : []),
+          "divider",
+          {
+            label: "Rename…",
+            Icon: IconRename,
+            onSelect: () => editAction("rename", id, title),
+          },
+          {
+            label: "Change icon…",
+            Icon: IconImage,
+            onSelect: () => editAction("icon", id, title),
+          },
+          {
+            label: shortcutFor(campaign, id)
+              ? "Change shortcut…"
+              : "Add shortcut…",
+            Icon: IconShortcut,
+            onSelect: () => editAction("shortcut", id, title),
+          },
+          "divider",
+          {
+            label: "Remove from hotbar",
+            Icon: IconDelete,
+            danger: true,
+            onSelect: () => edit((s) => unpin(s, id)),
+          },
         ],
-      }
+      };
     })
   const endDrag = () => {
     dragging.value = null
@@ -192,7 +228,7 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
                   }
                 }}
               >
-                {Icon && <Icon size={18} />}
+                {Icon && <Icon size={22} />}
                 <span>{label}</span>
               </div>
             </div>

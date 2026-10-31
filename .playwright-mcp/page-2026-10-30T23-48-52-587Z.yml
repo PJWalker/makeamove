@@ -1,0 +1,43 @@
+- main [ref=e415]:
+  - generic [ref=e416]:
+    - heading "Make a Move" [level=1] [ref=e418]
+    - region [ref=e419]:
+      - heading "Your campaigns" [level=2] [ref=e420]
+      - list [ref=e421]:
+        - listitem [ref=e422]:
+          - button "E2E Browser Check GM · Dungeon World · opened 2 minutes ago" [ref=e423] [cursor=pointer]:
+            - generic [ref=e424]: E2E Browser Check
+            - generic [ref=e425]: GM · Dungeon World · opened 2 minutes ago
+          - button "Delete E2E Browser Check" [ref=e426] [cursor=pointer]
+    - form [ref=e429]:
+      - heading "Start a campaign" [level=2] [ref=e430]
+      - generic [ref=e431]:
+        - generic [ref=e432]:
+          - text: Campaign name
+          - textbox "Campaign name" [ref=e433]:
+            - /placeholder: The Lost Barrows
+        - generic [ref=e434]:
+          - text: Your name
+          - textbox "Your name" [ref=e435]:
+            - /placeholder: Robin
+            - text: Tester
+      - generic [ref=e437]:
+        - text: System
+        - combobox "System" [ref=e438]:
+          - option "Choose a system" [disabled] [selected]
+          - option "Dungeon World"
+          - option "D&D 5.5e"
+      - button "Create campaign" [ref=e440] [cursor=pointer]
+    - form [ref=e443]:
+      - heading "Join a campaign" [level=2] [ref=e444]
+      - generic [ref=e445]:
+        - generic [ref=e446]:
+          - text: Invite link
+          - textbox "Invite link" [ref=e447]:
+            - /placeholder: Paste an invite link
+        - generic [ref=e448]:
+          - text: Your name
+          - textbox "Your name" [ref=e449]:
+            - /placeholder: Robin
+            - text: Tester
+      - button "Join" [disabled] [ref=e451]

@@ -2,16 +2,23 @@ import { useSignal, type Signal } from '@preact/signals'
 import { addItem, canEdit, getCharacter, selectedCharacterId, startMove, systemOf } from '../characters/api'
 import { deleteHomebrew, listHomebrew, saveGear, saveMove, type HomebrewEntry } from '../homebrew/homebrew'
 import type { Campaign } from '../store/campaign'
+import type { EntityGraphic } from "../graphics";
 import { useY } from '../store/useY'
 import type { ActionDef, CheckStep, Effect, GameSystem, ItemDef, TargetSpec } from '../systems/types'
-import { Button } from '../ui/Button'
-import { ENTRY_ICONS, entryIcon, type EntryIconName } from '../ui/entryIcons'
+import { Button } from "../ui/Button";
 import { IconAdd, IconBack, IconDelete } from '../ui/icons'
 import { List, ListGroup } from "../ui/List";
 import { Segmented } from '../ui/Segmented'
 import { dragEntity, entity } from './entityDrag'
 import { EntryRow, rollTag } from "./EntryWindow";
 import { actionMenuItems } from "./actionMenu";
+import { CampaignEntityGraphic } from "./EntityGraphic";
+import { GraphicPicker } from "../ui/GraphicPicker";
+import {
+  getDefaultEntityGraphic,
+  getEntityGraphic,
+  setEntityGraphic,
+} from "./entityGraphics";
 
 /*
  * Items: the table's own gear and moves (homebrew/homebrew.ts), with forms
@@ -38,6 +45,37 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
   const meId = useY(campaign.members, () => selectedCharacterId(campaign))
   const me = useY(campaign.characters, () => getCharacter(campaign, meId))
   const canAct = !!me && canEdit(campaign, me)
+  const menuItemsFor = (e: HomebrewEntry & { id: string }) => {
+    const actions =
+      e.kind === "gear"
+        ? actionMenuItems(campaign, [
+            { id: `library:${e.id}`, title: e.item.name },
+          ])
+        : actionMenuItems(campaign, [
+            { id: `move:${e.id}`, title: e.move.name },
+          ]);
+    const primary =
+      e.kind === "gear"
+        ? {
+            label: me ? `Add to ${me.name}` : "Choose a character",
+            disabled: !canAct,
+            onSelect: () => {
+              if (me && canAct) addItem(campaign, me.id, e.item);
+            },
+          }
+        : {
+            label: `Make ${e.move.name}`,
+            disabled: !canAct,
+            onSelect: () => {
+              if (me && canAct) startMove(campaign, me.id, e.move);
+            },
+          };
+    return [
+      primary,
+      ...(actions.length ? (["divider"] as const) : []),
+      ...actions,
+    ];
+  };
 
   if (editing.value) {
     const { kind, id } = editing.value
@@ -47,16 +85,26 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
       <div class="panel-scroll items-panel">
         <div class="sheet-row">
           <Button variant="ghost" size="sm" onClick={close}>
-            <IconBack size={18} /> Items
+            <IconBack size={22} /> Items
           </Button>
         </div>
-        {kind === 'gear' ? (
-          <GearForm campaign={campaign} system={system} initial={found?.kind === 'gear' ? found.item : undefined} onDone={close} />
+        {kind === "gear" ? (
+          <GearForm
+            campaign={campaign}
+            system={system}
+            initial={found?.kind === "gear" ? found.item : undefined}
+            onDone={close}
+          />
         ) : (
-          <MoveForm campaign={campaign} system={system} initial={found?.kind === 'move' ? found.move : undefined} onDone={close} />
+          <MoveForm
+            campaign={campaign}
+            system={system}
+            initial={found?.kind === "move" ? found.move : undefined}
+            onDone={close}
+          />
         )}
       </div>
-    )
+    );
   }
 
   const gear = entries.filter((e) => e.kind === 'gear')
@@ -68,13 +116,13 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
           size="sm"
           onClick={() => (editing.value = { kind: "gear", id: null })}
         >
-          <IconAdd size={18} /> New gear
+          <IconAdd size={22} /> New gear
         </Button>
         <Button
           size="sm"
           onClick={() => (editing.value = { kind: "move", id: null })}
         >
-          <IconAdd size={18} /> New move
+          <IconAdd size={22} /> New move
         </Button>
       </div>
       {!entries.length && <p class="empty">No gear or moves yet.</p>}
@@ -85,8 +133,17 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
               e.kind === "gear" ? (
                 <EntryRow
                   key={e.id}
-                  Icon={entryIcon("item", e.item.icon)}
+                  lead={
+                    <CampaignEntityGraphic
+                      campaign={campaign}
+                      kind="item"
+                      id={e.id}
+                      defaultIcon={e.item.icon}
+                      size={22}
+                    />
+                  }
                   name={e.item.name}
+                  openLabel="Edit"
                   meta={
                     [
                       e.item.weight ? `${e.item.weight} wt` : "",
@@ -100,9 +157,7 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
                   onPointerDown={(ev) =>
                     dragEntity(ev, entity(campaign, "item", e.id, e.item.name))
                   }
-                  menuItems={actionMenuItems(campaign, [
-                    { id: `library:${e.id}`, title: e.item.name },
-                  ])}
+                  menuItems={menuItemsFor(e)}
                 >
                   <Button
                     size="sm"
@@ -125,17 +180,23 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
               e.kind === "move" ? (
                 <EntryRow
                   key={e.id}
-                  Icon={entryIcon("move")}
+                  lead={
+                    <CampaignEntityGraphic
+                      campaign={campaign}
+                      kind="move"
+                      id={e.id}
+                      size={22}
+                    />
+                  }
                   name={e.move.name}
+                  openLabel="Edit"
                   tag={rollTag(system, e.move)}
                   tip={`${e.move.text}\n\nDrag onto a character to teach it to them.`}
                   onOpen={() => (editing.value = { kind: "move", id: e.id })}
                   onPointerDown={(ev) =>
                     dragEntity(ev, entity(campaign, "move", e.id, e.move.name))
                   }
-                  menuItems={actionMenuItems(campaign, [
-                    { id: `move:${e.id}`, title: e.move.name },
-                  ])}
+                  menuItems={menuItemsFor(e)}
                 >
                   <Button
                     size="sm"
@@ -194,7 +255,10 @@ function GearForm({ campaign, system, initial, onDone }: { campaign: Campaign; s
   const uses = useSignal(initial?.uses ?? 0)
   const tags = useSignal((initial?.tags ?? []).join(', '))
   const equippable = useSignal(initial?.equippable ?? false)
-  const icon = useSignal<string>(initial?.icon ?? '')
+  const graphic = useSignal<EntityGraphic | undefined>(
+    initial?.id ? campaign.entityGraphics.get(`item:${initial.id}`) : undefined,
+  );
+  const resetGraphic = useSignal(false);
   const effects = useSignal<EffectRow[]>(
     (initial?.effects ?? []).flatMap((e): EffectRow[] =>
       e.type === 'rollBonus' ? [{ type: 'rollBonus', stat: e.stat ?? '', value: e.value }] : e.type === 'modify' && e.op === 'add' ? [{ type: 'modify', path: e.path, value: e.value }] : [],
@@ -206,17 +270,24 @@ function GearForm({ campaign, system, initial, onDone }: { campaign: Campaign; s
     const out: Effect[] = effects.value.map((e) =>
       e.type === 'rollBonus' ? { type: 'rollBonus', ...(e.stat ? { stat: e.stat } : {}), value: e.value } : { type: 'modify', path: e.path, op: 'add', value: e.value },
     )
-    saveGear(campaign.homebrew, {
-      id: initial?.id ?? '',
+    const id = saveGear(campaign.homebrew, {
+      id: initial?.id ?? "",
       name: name.value.trim(),
       description: description.value.trim(),
       weight: weight.value,
       ...(uses.value ? { uses: uses.value } : {}),
       tags: splitTags(tags.value),
       ...(out.length ? { effects: out } : {}),
-      ...(equippable.value ? { equippable: true, active: 'equipped' as const } : {}),
-      ...(icon.value ? { icon: icon.value } : {}),
-    })
+      ...(equippable.value
+        ? { equippable: true, active: "equipped" as const }
+        : {}),
+    });
+    setEntityGraphic(
+      campaign,
+      "item",
+      id,
+      resetGraphic.value ? undefined : graphic.value,
+    );
     onDone()
   }
   const setEffect = (i: number, patch: Partial<EffectRow>) => (effects.value = effects.value.map((e, j) => (j === i ? ({ ...e, ...patch } as EffectRow) : e)))
@@ -225,11 +296,11 @@ function GearForm({ campaign, system, initial, onDone }: { campaign: Campaign; s
     <form
       class="creation-form homebrew-form"
       onSubmit={(e) => {
-        e.preventDefault()
-        save()
+        e.preventDefault();
+        save();
       }}
     >
-      <h3 class="sheet-heading">{initial ? 'Edit gear' : 'New gear'}</h3>
+      <h3 class="sheet-heading">{initial ? "Edit gear" : "New gear"}</h3>
       <Text label="Name" value={name} />
       <Text label="Description" value={description} multiline />
       <div class="sheet-row">
@@ -238,20 +309,29 @@ function GearForm({ campaign, system, initial, onDone }: { campaign: Campaign; s
       </div>
       <Text label="Tags" value={tags} placeholder="close, +1 armor" />
       <label class="stat-deb">
-        <input type="checkbox" checked={equippable.value} onChange={() => (equippable.value = !equippable.value)} />
+        <input
+          type="checkbox"
+          checked={equippable.value}
+          onChange={() => (equippable.value = !equippable.value)}
+        />
         Equippable
       </label>
-      <label class="field">
-        Icon
-        <select class="input bevel" value={icon.value} onChange={(e) => (icon.value = e.currentTarget.value)}>
-          <option value="">Default</option>
-          {(Object.keys(ENTRY_ICONS) as EntryIconName[]).map((k) => (
-            <option key={k} value={k}>
-              {k}
-            </option>
-          ))}
-        </select>
-      </label>
+      <GraphicPicker
+        graphic={
+          resetGraphic.value
+            ? getDefaultEntityGraphic(campaign, "item", initial?.id ?? "")
+            : (graphic.value ??
+              getEntityGraphic(campaign, "item", initial?.id ?? ""))
+        }
+        onChange={(next) => {
+          graphic.value = next;
+          resetGraphic.value = false;
+        }}
+        onReset={() => {
+          graphic.value = undefined;
+          resetGraphic.value = true;
+        }}
+      />
       <div class="field">
         Effects
         {effects.value.map((e, i) => (
@@ -260,13 +340,27 @@ function GearForm({ campaign, system, initial, onDone }: { campaign: Campaign; s
               class="input bevel"
               aria-label="Effect"
               value={e.type}
-              onChange={(ev) => setEffect(i, ev.currentTarget.value === 'rollBonus' ? { type: 'rollBonus', stat: '' } : ({ type: 'modify', path: '' } as never))}
+              onChange={(ev) =>
+                setEffect(
+                  i,
+                  ev.currentTarget.value === "rollBonus"
+                    ? { type: "rollBonus", stat: "" }
+                    : ({ type: "modify", path: "" } as never),
+                )
+              }
             >
               <option value="rollBonus">Bonus to rolls</option>
               <option value="modify">Add to a value</option>
             </select>
-            {e.type === 'rollBonus' ? (
-              <select class="input bevel" aria-label="With stat" value={e.stat} onChange={(ev) => setEffect(i, { stat: ev.currentTarget.value })}>
+            {e.type === "rollBonus" ? (
+              <select
+                class="input bevel"
+                aria-label="With stat"
+                value={e.stat}
+                onChange={(ev) =>
+                  setEffect(i, { stat: ev.currentTarget.value })
+                }
+              >
                 <option value="">Every roll</option>
                 {system.stats.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -275,21 +369,58 @@ function GearForm({ campaign, system, initial, onDone }: { campaign: Campaign; s
                 ))}
               </select>
             ) : (
-              <input class="input bevel" aria-label="Value name" placeholder="armor, ac, speed" value={e.path} onInput={(ev) => setEffect(i, { path: ev.currentTarget.value.trim() })} />
+              <input
+                class="input bevel"
+                aria-label="Value name"
+                placeholder="armor, ac, speed"
+                value={e.path}
+                onInput={(ev) =>
+                  setEffect(i, { path: ev.currentTarget.value.trim() })
+                }
+              />
             )}
-            <input class="input bevel homebrew-num" type="number" aria-label="Amount" value={e.value} onInput={(ev) => setEffect(i, { value: Number(ev.currentTarget.value) || 0 })} />
-            <Button variant="icon" size="sm" label="Remove effect" onClick={() => (effects.value = effects.value.filter((_, j) => j !== i))}>
+            <input
+              class="input bevel homebrew-num"
+              type="number"
+              aria-label="Amount"
+              value={e.value}
+              onInput={(ev) =>
+                setEffect(i, { value: Number(ev.currentTarget.value) || 0 })
+              }
+            />
+            <Button
+              variant="icon"
+              size="sm"
+              label="Remove effect"
+              onClick={() =>
+                (effects.value = effects.value.filter((_, j) => j !== i))
+              }
+            >
               <IconDelete />
             </Button>
           </div>
         ))}
-        <Button size="sm" variant="ghost" onClick={() => (effects.value = [...effects.value, { type: 'rollBonus', stat: '', value: 1 }])}>
-          <IconAdd size={18} /> Add effect
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() =>
+            (effects.value = [
+              ...effects.value,
+              { type: "rollBonus", stat: "", value: 1 },
+            ])
+          }
+        >
+          <IconAdd size={22} /> Add effect
         </Button>
       </div>
-      <FormActions campaign={campaign} id={initial?.id} ready={ready} onDone={onDone} />
+      <FormActions
+        campaign={campaign}
+        id={initial?.id}
+        ready={ready}
+        onDone={onDone}
+      />
     </form>
-  )
+  );
 }
 
 type RollKind = 'none' | 'stat' | 'ask'
@@ -300,6 +431,10 @@ function MoveForm({ campaign, system, initial, onDone }: { campaign: Campaign; s
   const category = useSignal(initial?.category ?? system.actionCategories[0]?.id ?? '')
   const trigger = useSignal(initial?.trigger ?? '')
   const text = useSignal(initial?.text ?? '')
+  const graphic = useSignal<EntityGraphic | undefined>(
+    initial?.id ? campaign.entityGraphics.get(`move:${initial.id}`) : undefined,
+  );
+  const resetGraphic = useSignal(false);
   const rolls = useSignal<RollKind>(!check ? 'none' : check.ask?.kind === 'stat' ? 'ask' : 'stat')
   const stat = useSignal(check?.stat ?? system.stats[0]?.id ?? '')
   const outcomes = useSignal<Record<string, string>>(check?.outcomes ?? {})
@@ -328,16 +463,22 @@ function MoveForm({ campaign, system, initial, onDone }: { campaign: Campaign; s
             ...(targets.value === 'one' ? { max: 1 } : {}),
             ...(range.value ? { range: { normal: range.value } } : {}),
           }
-    saveMove(campaign.homebrew, {
-      id: initial?.id ?? '',
+    const id = saveMove(campaign.homebrew, {
+      id: initial?.id ?? "",
       name: name.value.trim(),
       category: category.value,
       trigger: trigger.value.trim(),
       text: text.value.trim(),
       steps,
       ...(target ? { target } : {}),
-      tags: ['homebrew'],
-    })
+      tags: ["homebrew"],
+    });
+    setEntityGraphic(
+      campaign,
+      "move",
+      id,
+      resetGraphic.value ? undefined : graphic.value,
+    );
     onDone()
   }
 
@@ -345,15 +486,19 @@ function MoveForm({ campaign, system, initial, onDone }: { campaign: Campaign; s
     <form
       class="creation-form homebrew-form"
       onSubmit={(e) => {
-        e.preventDefault()
-        save()
+        e.preventDefault();
+        save();
       }}
     >
-      <h3 class="sheet-heading">{initial ? 'Edit move' : 'New move'}</h3>
+      <h3 class="sheet-heading">{initial ? "Edit move" : "New move"}</h3>
       <Text label="Name" value={name} />
       <label class="field">
         Kind
-        <select class="input bevel" value={category.value} onChange={(e) => (category.value = e.currentTarget.value)}>
+        <select
+          class="input bevel"
+          value={category.value}
+          onChange={(e) => (category.value = e.currentTarget.value)}
+        >
           {system.actionCategories.map((k) => (
             <option key={k.id} value={k.id}>
               {k.label}
@@ -363,20 +508,41 @@ function MoveForm({ campaign, system, initial, onDone }: { campaign: Campaign; s
       </label>
       <Text label="Trigger" value={trigger} placeholder="When you…" />
       <Text label="Text" value={text} multiline />
+      <GraphicPicker
+        graphic={
+          resetGraphic.value
+            ? getDefaultEntityGraphic(campaign, "move", initial?.id ?? "")
+            : (graphic.value ??
+              getEntityGraphic(campaign, "move", initial?.id ?? ""))
+        }
+        onChange={(next) => {
+          graphic.value = next;
+          resetGraphic.value = false;
+        }}
+        onReset={() => {
+          graphic.value = undefined;
+          resetGraphic.value = true;
+        }}
+      />
       <div class="field">
         Roll
         <Segmented
           label="Roll"
           value={rolls.value}
           options={[
-            { id: 'none', label: 'No roll' },
-            { id: 'stat', label: 'With a stat' },
-            { id: 'ask', label: 'Stat chosen when made' },
+            { id: "none", label: "No roll" },
+            { id: "stat", label: "With a stat" },
+            { id: "ask", label: "Stat chosen when made" },
           ]}
           onChange={(v) => (rolls.value = v)}
         />
-        {rolls.value === 'stat' && (
-          <select class="input bevel" aria-label="Stat" value={stat.value} onChange={(e) => (stat.value = e.currentTarget.value)}>
+        {rolls.value === "stat" && (
+          <select
+            class="input bevel"
+            aria-label="Stat"
+            value={stat.value}
+            onChange={(e) => (stat.value = e.currentTarget.value)}
+          >
             {system.stats.map((s) => (
               <option key={s.id} value={s.id}>
                 {system.baseRoll} + {s.name}
@@ -385,15 +551,20 @@ function MoveForm({ campaign, system, initial, onDone }: { campaign: Campaign; s
           </select>
         )}
       </div>
-      {rolls.value !== 'none' &&
+      {rolls.value !== "none" &&
         system.results.map((r) => (
           <label key={r.id} class="field">
-            {r.label || 'Otherwise'}
+            {r.label || "Otherwise"}
             <textarea
               class="input bevel"
               rows={2}
-              value={outcomes.value[r.id] ?? ''}
-              onInput={(e) => (outcomes.value = { ...outcomes.value, [r.id]: e.currentTarget.value })}
+              value={outcomes.value[r.id] ?? ""}
+              onInput={(e) =>
+                (outcomes.value = {
+                  ...outcomes.value,
+                  [r.id]: e.currentTarget.value,
+                })
+              }
             />
           </label>
         ))}
@@ -403,17 +574,27 @@ function MoveForm({ campaign, system, initial, onDone }: { campaign: Campaign; s
           label="Targets"
           value={targets.value}
           options={[
-            { id: 'none', label: 'None' },
-            { id: 'one', label: 'One' },
-            { id: 'many', label: 'Any number' },
+            { id: "none", label: "None" },
+            { id: "one", label: "One" },
+            { id: "many", label: "Any number" },
           ]}
           onChange={(v) => (targets.value = v)}
         />
-        {targets.value !== 'none' && <NumberFieldInline label={`Range (${system.scene.unitName}, 0 for any)`} value={range} />}
+        {targets.value !== "none" && (
+          <NumberFieldInline
+            label={`Range (${system.scene.unitName}, 0 for any)`}
+            value={range}
+          />
+        )}
       </div>
-      <FormActions campaign={campaign} id={initial?.id} ready={ready} onDone={onDone} />
+      <FormActions
+        campaign={campaign}
+        id={initial?.id}
+        ready={ready}
+        onDone={onDone}
+      />
     </form>
-  )
+  );
 }
 
 function NumberFieldInline({ label, value }: { label: string; value: Signal<number> }) {

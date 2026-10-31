@@ -4,6 +4,7 @@ import type { TokenElement } from '../scene/types'
 import type { LinkKind } from '../notes/api'
 import type { Campaign } from '../store/campaign'
 import type { ItemDef } from '../systems/types'
+import { getEntityGraphic } from "./entityGraphics";
 import { dropLine, indexAmong } from '../ui/reorder'
 import { hideTooltip } from '../ui/Tooltip'
 import { flashSceneDrop, sceneCharacterAt, sceneDropHighlight, tokenDrop, type TokenSpec } from './canvasState'
@@ -44,21 +45,47 @@ export function entity(campaign: Campaign, kind: LinkKind, id: string, label: st
   const prefix = ACTION_PREFIX[kind]
   const out: DragEntity = {
     label,
-    token: { name: label },
+    token: {
+      name: label,
+      graphic: getEntityGraphic(campaign, kind, id),
+      entityRef: { kind, id },
+    },
     link: { kind, id },
-    pin: prefix ? (index) => void editHotbar(campaign, (slots) => insertAt(slots, `${prefix}:${id}`, index)) : undefined,
-  }
+    pin: prefix
+      ? (index) =>
+          void editHotbar(campaign, (slots) =>
+            insertAt(slots, `${prefix}:${id}`, index),
+          )
+      : undefined,
+  };
   if (kind === 'character') {
     const character = getCharacter(campaign, id)
-    if (character) out.token = { characterId: id, name: character.name, image: character.portrait, style: character.tokenStyle, colour: character.tokenColour }
+    if (character)
+      out.token = {
+        characterId: id,
+        name: character.name,
+        graphic: getEntityGraphic(campaign, kind, id),
+        entityRef: { kind, id },
+        style: character.tokenStyle,
+        colour: character.tokenColour,
+      };
   }
   if (kind === 'item') {
     const def = systemOf(campaign).items.find((i) => i.id === id)
-    out.token = { name: label, icon: def?.icon ?? 'bag', itemDefId: id }
+    out.token = {
+      name: label,
+      graphic: getEntityGraphic(campaign, kind, id),
+      entityRef: { kind, id },
+      itemDefId: id,
+    };
     if (def) out.give = { kind, to: (characterId) => addItem(campaign, characterId, def, equipOnGive) }
   }
   if (kind === 'move') {
-    out.token = { name: label, icon: 'move' }
+    out.token = {
+      name: label,
+      graphic: getEntityGraphic(campaign, kind, id),
+      entityRef: { kind, id },
+    };
     out.give = { kind, to: (characterId) => setLearned(campaign, characterId, id, true) }
   }
   return out
@@ -68,9 +95,7 @@ export function entity(campaign: Campaign, kind: LinkKind, id: string, label: st
 export function itemDefinitionForToken(campaign: Campaign, token: TokenElement): ItemDef | undefined {
   const items = systemOf(campaign).items
   if (token.itemDefId) return items.find((item) => item.id === token.itemDefId)
-  if (!token.icon) return undefined
-  const matches = items.filter((item) => item.name === token.name && (item.icon ?? 'bag') === token.icon)
-  return matches.length === 1 ? matches[0] : undefined
+  return undefined;
 }
 
 export function itemTokenEntity(campaign: Campaign, token: TokenElement): DragEntity | null {
@@ -80,11 +105,11 @@ export function itemTokenEntity(campaign: Campaign, token: TokenElement): DragEn
   dragged.token = {
     itemDefId: def.id,
     name: token.name,
-    image: token.image,
-    icon: token.icon ?? def.icon ?? 'bag',
+    graphic: token.graphic ?? getEntityGraphic(campaign, "item", def.id),
+    entityRef: { kind: "item", id: def.id },
     style: token.style,
     colour: token.colour,
-  }
+  };
   return dragged
 }
 
@@ -101,9 +126,17 @@ export function actionEntity(campaign: Campaign, actionId: string, label: string
       return {
         label,
         pin,
-        token: { name: item.name, icon: item.icon ?? 'bag', itemDefId: item.defId ?? item.id },
-        give: { kind: 'item', to: (characterId) => addItem(campaign, characterId, item, true) },
-      }
+        token: {
+          name: item.name,
+          graphic: getEntityGraphic(campaign, "item", item.defId ?? item.id),
+          entityRef: { kind: "item", id: item.defId ?? item.id },
+          itemDefId: item.defId ?? item.id,
+        },
+        give: {
+          kind: "item",
+          to: (characterId) => addItem(campaign, characterId, item, true),
+        },
+      };
     }
   }
   return kind ? { ...entity(campaign, kind, actionId.slice(i + 1), label), pin } : { label, pin, token: { name: label } }

@@ -1,5 +1,5 @@
 import * as Y from 'yjs'
-import type { BlobRef, TokenStyle } from '../scene/types'
+import type { TokenStyle } from "../scene/types";
 import { newId } from '../lib/ids'
 import type { EffectSource } from '../systems/effects'
 import type { TemplateSettings } from './templates'
@@ -11,7 +11,7 @@ import type { ActionDef, DataValue, Derived, Effect, EffectActive, GameSystem, I
  * system's, in maps of its own so two players editing different fields
  * never overwrite each other:
  *
- *   name, owner, kind, folder, classId, level, portrait,
+ *   name, owner, kind, folder, classId, level,
  *   tokenStyle, tokenColour, template, base     plain fields
  *   learned     array  action ids learned beyond the system's
  *   text:*      Y.XmlFragment  rich text: notes, bonds, an NPC's long fields
@@ -60,42 +60,40 @@ export interface ItemInstance {
 export type CharacterKind = 'pc' | 'npc'
 
 export interface CharacterView {
-  id: string
-  kind: CharacterKind
+  id: string;
+  kind: CharacterKind;
   /** The folder it's filed in, if any (see Campaign.characterFolders). */
-  folder?: string
-  name: string
+  folder?: string;
+  name: string;
   /** Device id of the player who owns it. */
-  owner: string
-  classId: string
-  level: number
-  scores: Record<string, number>
+  owner: string;
+  classId: string;
+  level: number;
+  scores: Record<string, number>;
   /** The system's own fields, with its defaults filled in. */
-  data: Record<string, DataValue>
+  data: Record<string, DataValue>;
   /** Current values of the system's resources. */
-  resources: Record<string, number>
+  resources: Record<string, number>;
   /** Condition ids. */
-  conditions: string[]
+  conditions: string[];
   /** How long conditions last in combat, by condition id; those without one last until removed. */
-  durations: Record<string, Duration>
+  durations: Record<string, Duration>;
   /** The action (a spell) the character is concentrating on. */
-  concentration?: string
+  concentration?: string;
   /** The system's standing roll modifiers, by id. */
-  modifiers: Record<string, number>
+  modifiers: Record<string, number>;
   /** An NPC's system-defined fields, by id. */
-  fields: Record<string, string | number>
-  inventory: ItemInstance[]
-  /** The character's picture, in the blob store. */
-  portrait?: BlobRef
+  fields: Record<string, string | number>;
+  inventory: ItemInstance[];
   /** How its token is drawn when placed on a map. */
-  tokenStyle?: TokenStyle
-  tokenColour?: string
+  tokenStyle?: TokenStyle;
+  tokenColour?: string;
   /** Set for a template, whose tokens are each a copy of it (see characters/templates.ts). */
-  template?: TemplateSettings
+  template?: TemplateSettings;
   /** For a copy: the template it overrides. */
-  base?: string
+  base?: string;
   /** Actions learned beyond what their system gives them (dropped onto them), by id. */
-  learned: string[]
+  learned: string[];
 }
 
 /**
@@ -183,28 +181,27 @@ export function characterView(id: string, m: CharacterMap, system: GameSystem, b
   return {
     id,
     kind,
-    folder: m.get('folder'),
-    name: get('name') ?? 'Unnamed',
-    owner: get('owner') ?? '',
-    classId: get('classId') ?? system.classes[0]?.id ?? '',
-    level: get('level') ?? 1,
+    folder: m.get("folder"),
+    name: get("name") ?? "Unnamed",
+    owner: get("owner") ?? "",
+    classId: get("classId") ?? system.classes[0]?.id ?? "",
+    level: get("level") ?? 1,
     scores,
     data,
-    resources: merged<number>('resources'),
-    conditions: (get('conditions') as string[] | undefined) ?? [],
-    durations: (get('durations') as Record<string, Duration> | undefined) ?? {},
-    concentration: get('concentration'),
-    modifiers: merged<number>('modifiers'),
+    resources: merged<number>("resources"),
+    conditions: (get("conditions") as string[] | undefined) ?? [],
+    durations: (get("durations") as Record<string, Duration> | undefined) ?? {},
+    concentration: get("concentration"),
+    modifiers: merged<number>("modifiers"),
     fields,
     inventory,
-    portrait: get('portrait'),
-    tokenStyle: get('tokenStyle'),
-    tokenColour: get('tokenColour'),
+    tokenStyle: get("tokenStyle"),
+    tokenColour: get("tokenColour"),
     // A copy is never a template itself.
-    template: m.get('template'),
-    base: m.get('base'),
-    learned: (get('learned') as string[] | undefined) ?? [],
-  }
+    template: m.get("template"),
+    base: m.get("base"),
+    learned: (get("learned") as string[] | undefined) ?? [],
+  };
 }
 
 /** Whether an item's effects count: carried, or worn/wielded. */

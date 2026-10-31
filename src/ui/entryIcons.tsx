@@ -1,5 +1,5 @@
 import type { EntryKind } from '../library'
-import { icon, type Icon } from './icons'
+import { icon, type Icon, IconCharacters, IconMap, IconNotes } from "./icons";
 import { render } from "preact";
 
 /*
@@ -77,9 +77,9 @@ export const ENTRY_ICONS = {
   bow: icon(GiBowArrow),
   arrows: icon(GiArrowFlights),
   chainmail: icon(GiChainMail),
-  'scale-armor': icon(GiScaleMail),
+  "scale-armor": icon(GiScaleMail),
   shield: icon(GiRoundShield),
-  'holy-symbol': icon(GiHolySymbol),
+  "holy-symbol": icon(GiHolySymbol),
   spellbook: icon(GiSpellBook),
   tools: icon(GiLockpicks),
   bag: icon(GiKnapsack),
@@ -88,7 +88,7 @@ export const ENTRY_ICONS = {
   hammer: icon(GiWarhammer),
   staff: icon(GiWizardStaff),
   crossbow: icon(GiCrossbow),
-  'leather-armor': icon(GiLeatherArmor),
+  "leather-armor": icon(GiLeatherArmor),
   breastplate: icon(GiBreastplate),
   torch: icon(GiTorch),
   wand: icon(GiCrystalWand),
@@ -111,9 +111,12 @@ export const ENTRY_ICONS = {
   warlock: icon(GiWarlockEye),
   // Moves and tags
   move: icon(GiRollingDices),
-  'class-move': icon(GiWingedSword),
+  "class-move": icon(GiWingedSword),
   tag: icon(GiPriceTag),
-} satisfies Record<string, Icon>
+  character: IconCharacters,
+  note: IconNotes,
+  map: IconMap,
+} satisfies Record<string, Icon>;
 
 export type EntryIconName = keyof typeof ENTRY_ICONS
 

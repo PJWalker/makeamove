@@ -1,0 +1,88 @@
+- generic [ref=e1]:
+  - generic [ref=e37]:
+    - 'generic "Scene: Scene 2" [ref=e282]'
+    - navigation "Canvas tools" [ref=e41]:
+      - button "Campaign menu" [expanded] [active] [pressed] [ref=e42] [cursor=pointer]
+      - button "Select (V)" [pressed] [ref=e45] [cursor=pointer]
+      - button "Pan (H)" [ref=e48] [cursor=pointer]
+      - button "Draw (P)" [ref=e51] [cursor=pointer]
+      - button "Erase (E)" [ref=e54] [cursor=pointer]
+      - button "Shapes (R)" [ref=e57] [cursor=pointer]
+      - button "Text (X)" [ref=e60] [cursor=pointer]
+      - button "Measure (M)" [ref=e63] [cursor=pointer]
+      - button "Ping (G)" [ref=e66] [cursor=pointer]
+      - button "Walls (W)" [ref=e69] [cursor=pointer]
+      - button "Lights (L)" [ref=e72] [cursor=pointer]
+    - complementary "Left sidebar" [ref=e75]:
+      - tablist [ref=e76]:
+        - tab "Scenes" [ref=e77] [cursor=pointer]
+        - tab "Characters" [ref=e80] [cursor=pointer]
+      - tabpanel [ref=e83]:
+        - separator "Resize sidebar" [ref=e84]
+        - generic [ref=e85]:
+          - heading "Scenes" [level=2] [ref=e266]
+          - generic [ref=e267]:
+            - generic [ref=e268]: E2E Browser Check
+            - list "Scenes" [ref=e269]:
+              - listitem [ref=e270]:
+                - textbox "Scene name" [ref=e271]: The Opening Scene
+                - button "Delete The Opening Scene" [ref=e283] [cursor=pointer]
+              - listitem [ref=e286]:
+                - textbox "Scene name" [ref=e287]: Scene 2
+                - button "Delete Scene 2" [ref=e288] [cursor=pointer]
+            - button "New scene" [ref=e272] [cursor=pointer]
+            - group "Scene 2" [ref=e291]:
+              - button "Scene settings" [ref=e276] [cursor=pointer]
+              - button "Change scene graphic…" [ref=e279] [cursor=pointer]
+    - complementary "Right sidebar" [ref=e102]:
+      - tablist [ref=e103]:
+        - tab "Chat" [selected] [ref=e104] [cursor=pointer]
+        - tab "Libraries" [ref=e107] [cursor=pointer]
+        - tab "Items" [ref=e110] [cursor=pointer]
+        - tab "Notes" [ref=e113] [cursor=pointer]
+        - tab "Members, 1 online" [ref=e116] [cursor=pointer]: "1"
+      - tabpanel [ref=e119]:
+        - separator "Resize sidebar" [ref=e120]
+        - generic [ref=e121]:
+          - heading "Chat" [level=2] [ref=e123]
+          - generic [ref=e126]:
+            - log [ref=e127]:
+              - generic [ref=e259]:
+                - article [ref=e260]:
+                  - generic [ref=e261]:
+                    - generic [aria-hidden] [ref=e262]: T
+                    - generic [ref=e263]: Tester
+                    - time [ref=e264]: 10:46
+                  - generic [ref=e265]: The guards retreat.
+                - generic [ref=e292]: Scene changed to Scene 2
+            - generic [ref=e131]:
+              - generic [ref=e132]:
+                - button "d4" [ref=e133] [cursor=pointer]
+                - button "d6" [ref=e134] [cursor=pointer]
+                - button "d8" [ref=e135] [cursor=pointer]
+                - button "d10" [ref=e136] [cursor=pointer]
+                - button "d12" [ref=e137] [cursor=pointer]
+                - button "d20" [ref=e138] [cursor=pointer]
+                - button "Public" [ref=e139] [cursor=pointer]
+              - generic [ref=e140]:
+                - textbox "Message" [ref=e142]:
+                  - paragraph [ref=e143]: Message, @ to link, or roll 2d6+1
+                - button "Send" [disabled] [ref=e144]
+    - toolbar "Hotbar" [ref=e145]:
+      - button "Ping" [ref=e147]
+      - button "Measure" [ref=e152]
+      - button "Command palette (Ctrl/Cmd+K)" [ref=e156] [cursor=pointer]
+  - menu "Campaign menu" [ref=e293]:
+    - menuitem "Settings…" [ref=e294] [cursor=pointer]
+    - menuitem "Relationships…" [ref=e298] [cursor=pointer]
+    - menuitem "Help and shortcuts…" [ref=e302] [cursor=pointer]
+    - separator [ref=e306]
+    - menuitemcheckbox "Scenes" [checked] [ref=e307] [cursor=pointer]
+    - menuitemcheckbox "Chat" [checked] [ref=e313] [cursor=pointer]
+    - menuitemcheckbox "Characters" [checked] [ref=e319] [cursor=pointer]
+    - menuitemcheckbox "Libraries" [checked] [ref=e325] [cursor=pointer]
+    - menuitemcheckbox "Items" [checked] [ref=e331] [cursor=pointer]
+    - menuitemcheckbox "Notes" [checked] [ref=e337] [cursor=pointer]
+    - menuitemcheckbox "Members" [checked] [ref=e343] [cursor=pointer]
+    - separator [ref=e349]
+    - menuitem "Back to campaigns" [ref=e350] [cursor=pointer]

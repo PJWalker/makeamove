@@ -1,4 +1,13 @@
 import { signal } from '@preact/signals'
+import {
+  addItem,
+  canEdit,
+  getCharacter,
+  selectedCharacterId,
+  startMove,
+  systemOf,
+} from "../characters/api";
+import type { Campaign } from "../store/campaign";
 import type { LinkKind } from '../notes/api'
 import { morphOpen } from '../ui/morph'
 import { raisePopup } from '../ui/popup'
@@ -17,6 +26,39 @@ import { layout, locate, showPanel } from './panelLayout'
 export interface LinkRef {
   kind: LinkKind
   id: string
+}
+
+/** The primary action exposed by a linked item or move. */
+export function linkActionItems(campaign: Campaign, link: LinkRef): MenuItem[] {
+  if (link.kind !== 'item' && link.kind !== 'move') return []
+  const me = getCharacter(campaign, selectedCharacterId(campaign))
+  const canAct = !!me && canEdit(campaign, me)
+  const system = systemOf(campaign)
+  if (link.kind === 'item') {
+    const item = system.items.find((candidate) => candidate.id === link.id)
+    return item
+      ? [{
+          label: me ? `Give to ${me.name}` : 'Choose a character',
+          disabled: !canAct,
+          onSelect: () => {
+            if (me && canAct) addItem(campaign, me.id, item)
+          },
+        }]
+      : []
+  }
+  if (link.kind === 'move') {
+    const move = system.actions.find((candidate) => candidate.id === link.id)
+    return move
+      ? [{
+          label: `Make ${move.name}`,
+          disabled: !canAct,
+          onSelect: () => {
+            if (me && canAct) startMove(campaign, me.id, move)
+          },
+        }]
+      : []
+  }
+  return []
 }
 
 export const linkKey = (l: LinkRef) => `${l.kind}:${l.id}`

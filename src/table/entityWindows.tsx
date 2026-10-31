@@ -41,6 +41,8 @@ export interface EntityWindowRecord {
   id: DockItemId;
   title: string;
   icon?: Icon;
+  graphicRef?: { kind: string; id: string };
+  graphicDefaultIcon?: string;
   content?: ComponentChildren;
   text?: string;
   tags?: string[];
@@ -173,6 +175,10 @@ function EntityPopup({
   const ref = usePopupDialog();
   const menu = useSignal<{ x: number; y: number } | null>(null);
   const trigger = menuTrigger((x, y) => (menu.value = { x, y }));
+  const close = () => {
+    record.close?.();
+    closeEntityWindow(record.id);
+  };
   const items: MenuItem[] = [
     {
       label: "Dock to left sidebar",
@@ -182,6 +188,8 @@ function EntityPopup({
       label: "Dock to right sidebar",
       onSelect: () => withTransition(() => dockPanel(record.id, "right")),
     },
+    "divider",
+    { label: "Close", onSelect: close },
     ...(record.menuItems?.length
       ? ["divider" as const, ...record.menuItems]
       : []),
@@ -191,15 +199,14 @@ function EntityPopup({
       <Dialog
         dialogRef={ref}
         title={record.title}
-        onClose={() => {
-          record.close?.();
-          closeEntityWindow(record.id);
-        }}
+        onClose={close}
         proxy={record.proxy}
+        graphicCampaign={campaign}
+        graphicRef={record.graphicRef}
+        graphicDefaultIcon={record.graphicDefaultIcon}
         windowIcon={record.icon ?? IconOpenWindow}
         dockId={record.id}
         contextMenu={trigger}
-        onDockMenu={(x, y) => (menu.value = { x, y })}
       >
         <EntityWindowContent campaign={campaign} record={record} />
         {record.tags && record.tags.length > 0 && (
@@ -416,7 +423,7 @@ function MoveAction({
       disabled={!character || !enabled}
       onClick={() => character && startMove(campaign, character.id, move)}
     >
-      <action.Icon size={18} /> {action.label}
+      <action.Icon size={22} /> {action.label}
       {character ? ` as ${character.name}` : ""}
     </Button>
   );

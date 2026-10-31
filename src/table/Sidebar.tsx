@@ -32,6 +32,7 @@ import {
 } from './panelLayout'
 import { PanelContent, PANELS, PaneToggle } from './panels'
 import { closeEntityWindow, entityRecord, EntityWindowContent, isEntityTab } from './entityWindows'
+import { CampaignEntityGraphic } from "./EntityGraphic";
 
 const DRAG_THRESHOLD = 10
 
@@ -91,22 +92,44 @@ function tabMenu(id: DockItemId, side: Side): MenuItem[] {
   const other = otherSide(side)
   if (isEntityTab(id)) {
     return [
-      { label: `Move to ${other} sidebar`, onSelect: () => withTransition(() => dockPanel(id, other)) },
-      { label: 'Float in a window', onSelect: () => detachPanel(id, Math.max(innerWidth / 2 - 190, 0), 96, 380, 440) },
-      'divider',
-      { label: 'Close', Icon: IconClose, onSelect: () => closeDockedEntity(id) },
-    ]
+      { label: "Open", onSelect: () => showPanel(id) },
+      "divider",
+      {
+        label: `Move to ${other} sidebar`,
+        onSelect: () => withTransition(() => dockPanel(id, other)),
+      },
+      {
+        label: "Float in a window",
+        onSelect: () =>
+          detachPanel(id, Math.max(innerWidth / 2 - 190, 0), 96, 380, 440),
+      },
+      "divider",
+      {
+        label: "Close",
+        Icon: IconClose,
+        onSelect: () => closeDockedEntity(id),
+      },
+    ];
   }
   return [
-    { label: `Move to ${other} sidebar`, onSelect: () => withTransition(() => dockPanel(id, other)) },
+    { label: "Open", onSelect: () => showPanel(id) },
+    "divider",
     {
-      label: 'Float in a window',
+      label: `Move to ${other} sidebar`,
+      onSelect: () => withTransition(() => dockPanel(id, other)),
+    },
+    {
+      label: "Float in a window",
       onSelect: () => detachPanel(id, Math.max(innerWidth / 2 - 170, 0), 120),
     },
-    'divider',
+    "divider",
     // Back from the campaign menu, where each panel can be ticked again.
-    { label: 'Close', Icon: IconClose, onSelect: () => withTransition(() => setPanelClosed(id, true)) },
-  ]
+    {
+      label: "Close",
+      Icon: IconClose,
+      onSelect: () => withTransition(() => setPanelClosed(id, true)),
+    },
+  ];
 }
 
 /**
@@ -221,7 +244,10 @@ function RailTab({ campaign, id, side, selected, onMenu }: { campaign: Campaign;
   const panel = isPanelId(id) ? PANELS[id] : undefined
   const record = isEntityTab(id) ? entityRecord(id) : undefined
   const label = panel?.label ?? record?.title ?? id.slice('entity:'.length)
-  const Icon = panel?.Icon ?? record?.icon ?? IconOpenWindow
+  const Icon =
+    panel?.Icon ??
+    record?.icon ??
+    (record?.graphicRef ? undefined : IconOpenWindow);
   const onlineCount = useOnlineCount(campaign)
 
   function onPointerDown(e: PointerEvent) {
@@ -235,53 +261,107 @@ function RailTab({ campaign, id, side, selected, onMenu }: { campaign: Campaign;
       class="rail-tab"
       data-panel={panel ? id : undefined}
       data-entity-window={record ? id : undefined}
-      label={label + (id === 'chat' && unreadCount.value ? `, ${unreadCount.value} unread` : '') + (id === 'members' ? `, ${onlineCount} online` : '')}
+      label={
+        label +
+        (id === "chat" && unreadCount.value
+          ? `, ${unreadCount.value} unread`
+          : "") +
+        (id === "members" ? `, ${onlineCount} online` : "")
+      }
       aria-selected={selected}
       pressed={selected}
-      data-unread={id === 'chat' && unreadCount.value > 0 ? Math.min(unreadCount.value, 99) : undefined}
-      data-online={id === 'members' ? onlineCount : undefined}
+      data-unread={
+        id === "chat" && unreadCount.value > 0
+          ? Math.min(unreadCount.value, 99)
+          : undefined
+      }
+      data-online={id === "members" ? onlineCount : undefined}
       onClick={() => switchTo(id, side)}
       {...withPull(onPointerDown, onMenu)}
     >
-      <Icon size={22} />
+      {record?.graphicRef ? (
+        <CampaignEntityGraphic
+          campaign={campaign}
+          kind={record.graphicRef.kind}
+          id={record.graphicRef.id}
+          defaultIcon={record.graphicDefaultIcon}
+          size={22}
+        />
+      ) : Icon ? (
+        <Icon size={22} />
+      ) : null}
     </Button>
-  )
+  );
 }
 
 function ActiveTab({ campaign, id, onMenu }: { campaign: Campaign; id: DockItemId; onMenu: (x: number, y: number) => void }) {
   if (isPanelId(id)) {
     return (
       <div class="sidebar-panel" style={{ viewTransitionName: `panel-${id}` }}>
-        <header class="panel-header docked-header" {...withPull((e) => pullOut(id, e), onMenu)}>
+        <header
+          class="panel-header docked-header"
+          {...withPull((e) => pullOut(id, e), onMenu)}
+        >
           <PaneToggle id={id} />
-          <h2 class="panel-title" tabIndex={-1}>{PANELS[id].label}</h2>
-          <IconDrag size={16} class="drag-hint" aria-hidden="true" />
+          <h2 class="panel-title" tabIndex={-1}>
+            {PANELS[id].label}
+          </h2>
+          <IconDrag size={22} class="drag-hint" aria-hidden="true" />
         </header>
         <PanelContent id={id} campaign={campaign} />
       </div>
-    )
+    );
   }
 
   const record = entityRecord(id)
-  const Icon = record?.icon ?? IconOpenWindow
+  const Icon =
+    record?.icon ?? (record?.graphicRef ? undefined : IconOpenWindow);
   return (
-    <div class="sidebar-panel entity-sidebar-panel" style={{ viewTransitionName: `panel-${id}` }}>
-      <header class="panel-header docked-header" {...withPull((e) => pullOut(id, e), onMenu)}>
-        <Icon size={18} class="window-icon" />
-        <h2 class="panel-title" tabIndex={-1}>{record?.title ?? id.slice('entity:'.length)}</h2>
-        <Button variant="icon" label="Float in a window" onClick={() => detachPanel(id, Math.max(innerWidth / 2 - 190, 0), 96, 380, 440)}>
-          <IconOpenWindow size={16} />
-        </Button>
-        <Button variant="icon" label="Close window" onClick={() => closeDockedEntity(id)}>
-          <IconClose size={16} />
+    <div
+      class="sidebar-panel entity-sidebar-panel"
+      style={{ viewTransitionName: `panel-${id}` }}
+    >
+      <header
+        class="panel-header docked-header"
+        {...withPull((e) => pullOut(id, e), onMenu)}
+      >
+        {record?.graphicRef ? (
+          <CampaignEntityGraphic
+            campaign={campaign}
+            kind={record.graphicRef.kind}
+            id={record.graphicRef.id}
+            defaultIcon={record.graphicDefaultIcon}
+            size={22}
+            class="window-icon"
+          />
+        ) : Icon ? (
+          <Icon size={22} class="window-icon" />
+        ) : null}
+        <h2 class="panel-title" tabIndex={-1}>
+          {record?.title ?? id.slice("entity:".length)}
+        </h2>
+        <Button
+          variant="icon"
+          label="Close window"
+          onClick={() => closeDockedEntity(id)}
+        >
+          <IconClose size={22} />
         </Button>
       </header>
       <div class="entity-docked-body">
-        {record ? <EntityWindowContent campaign={campaign} record={record} /> : <p class="move-text move-window-text">This window is not available.</p>}
-        {record?.tags && record.tags.length > 0 && <p class="muted item-tags">{record.tags.join(', ')}</p>}
+        {record ? (
+          <EntityWindowContent campaign={campaign} record={record} />
+        ) : (
+          <p class="move-text move-window-text">
+            This window is not available.
+          </p>
+        )}
+        {record?.tags && record.tags.length > 0 && (
+          <p class="muted item-tags">{record.tags.join(", ")}</p>
+        )}
       </div>
     </div>
-  )
+  );
 }
 
 function closeDockedEntity(id: DockItemId) {

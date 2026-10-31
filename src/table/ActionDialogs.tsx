@@ -12,6 +12,7 @@ import { findAction } from "../actions/registry";
 import type { Campaign } from "../store/campaign";
 import { Button } from "../ui/Button";
 import { ENTRY_ICONS, type EntryIconName } from "../ui/entryIcons";
+import { closePopup } from "../ui/popup";
 import { Dialog } from "./CampaignDialogs";
 import { usePopupDialog } from "./usePopupDialog";
 
@@ -56,10 +57,11 @@ interface Props {
 
 function usePopup() {
   const ref = usePopupDialog();
+  const onClose = () => (request.value = null);
   return {
     ref,
-    close: () => ref.current?.close(),
-    onClose: () => (request.value = null),
+    close: () => closePopup(ref.current, onClose),
+    onClose,
   };
 }
 
