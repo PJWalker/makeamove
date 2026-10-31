@@ -109,13 +109,12 @@ export function Dialog({
     e.stopPropagation();
     raiseWindow(dockId);
     const start = { x: win.x, y: win.y, w: win.w, h: win.h };
-    const stop = trackPointer(RESIZE_CURSORS[dir], (ev) => {
+    trackPointer(RESIZE_CURSORS[dir], (ev) => {
       updateWindow(
         dockId,
         resizeRect(start, dir, ev.clientX - e.clientX, ev.clientY - e.clientY),
       );
     });
-    window.addEventListener("pointerup", stop, { once: true });
   }
   // Rendered in the window layer with the other windows: a non-modal dialog
   // would otherwise be clipped by the panel that opened it (the scene bar

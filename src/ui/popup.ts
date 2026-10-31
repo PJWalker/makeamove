@@ -101,7 +101,7 @@ export function resizePopup(dialog: HTMLElement, e: PointerEvent, dir: ResizeDir
   // animation's scale if the pop-up is still opening.
   const start = { x: dialog.offsetLeft, y: dialog.offsetTop, w: dialog.offsetWidth, h: dialog.offsetHeight }
   dialog.dataset.sized = 'true'
-  const stop = trackPointer(RESIZE_CURSORS[dir], (ev) => {
+  trackPointer(RESIZE_CURSORS[dir], (ev) => {
     const next = resizeRect(start, dir, ev.clientX - e.clientX, ev.clientY - e.clientY)
     Object.assign(dialog.style, {
       left: `${next.x}px`,
@@ -110,7 +110,6 @@ export function resizePopup(dialog: HTMLElement, e: PointerEvent, dir: ResizeDir
       height: `${next.h}px`,
     })
   })
-  window.addEventListener('pointerup', stop, { once: true })
 }
 
 /** Drag a pop-up by its title bar; call from the bar's pointerdown. */
@@ -126,8 +125,7 @@ export function dragPopup(dialog: HTMLElement, e: PointerEvent) {
   // visual rect, but dragging writes untransformed left/top coordinates.
   const dx = e.clientX - dialog.offsetLeft;
   const dy = e.clientY - dialog.offsetTop;
-  const stop = trackPointer("grabbing", (ev) =>
+  trackPointer("grabbing", (ev) =>
     place(dialog, ev.clientX - dx, ev.clientY - dy),
   );
-  window.addEventListener("pointerup", stop, { once: true });
 }

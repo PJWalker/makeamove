@@ -22,7 +22,6 @@ import {
   reorderPanel,
   setPanelClosed,
   setSideWidth,
-  SIDEBAR_MIN_W,
   sidebarMaxWidth,
   spawnedFromTab,
   startWindowDrag,
@@ -34,6 +33,7 @@ import {
 import { PanelContent, PANELS, PaneToggle } from './panels'
 import { closeEntityWindow, entityRecord, EntityWindowContent, isEntityTab } from './entityWindows'
 import { CampaignEntityGraphic } from "./EntityGraphic";
+import { keyedSideWidth, SIDEBAR_DEFAULT_W } from './layoutModel'
 
 const DRAG_THRESHOLD = 10
 
@@ -61,14 +61,18 @@ export function Sidebar({ side, campaign }: { side: Side; campaign: Campaign }) 
       data-drop={dockTarget.value === side}
       aria-label={side === 'left' ? 'Left sidebar' : 'Right sidebar'}
     >
-      <div class={`sidebar-rail panel bevel strip ${outer}`} role="tablist" aria-orientation="vertical">
-        {s.panels.map((id) => (
-          <RailTab key={id} campaign={campaign} id={id} side={side} selected={open && active === id} onMenu={(x, y) => (menu.value = { x, y, items: tabMenu(id, side) })} />
-        ))}
+      <div class="sidebar-rail-edge">
+        <div class={`sidebar-rail panel bevel strip ${outer}`} role="tablist" aria-orientation="vertical">
+          {s.panels.map((id) => (
+            <RailTab key={id} campaign={campaign} id={id} side={side} selected={open && active === id} onMenu={(x, y) => (menu.value = { x, y, items: tabMenu(id, side) })} />
+          ))}
+        </div>
+        {!empty && <SidebarResizeHandle side={side} />}
       </div>
 
       <section class={`sidebar-body panel dock-${side === 'left' ? 'left' : 'right'} dock-top dock-bottom`} role="tabpanel" inert={!open}>
-        <SidebarResizeHandle side={side} />
+        {/* The body's edge drags too, for a taller target; the rail's separator is the one for keyboards. */}
+        <div class="sidebar-body-resize" aria-hidden="true" onPointerDown={(e) => dragSideWidth(side, e)} />
         {active && <ActiveTab campaign={campaign} id={active} onMenu={(x, y) => (menu.value = { x, y, items: tabMenu(active, side) })} />}
       </section>
       {menu.value && <ContextMenu {...menu.value} onClose={() => (menu.value = null)} />}
@@ -186,23 +190,44 @@ function dragTab(id: DockItemId, e: PointerEvent) {
   })
 }
 
-/** Drag (or arrow-key) the sidebar's inner edge to change its width. */
+/** The way along the x axis that widens a side. */
+const growDirection = (side: Side) => (side === 'left' ? 1 : -1)
+
+/**
+ * Drag a sidebar's edge to change its width. The width follows the pointer
+ * from where it was grabbed, so any edge (the rail's or the body's) works, and
+ * a shut sidebar counts as zero wide: dragging out far enough reopens it.
+ */
+function dragSideWidth(side: Side, e: PointerEvent) {
+  if (e.button !== 0) return
+  e.preventDefault()
+  e.stopPropagation()
+  const s = layout.value[side]
+  const start = s.open ? s.width : 0
+  const grow = growDirection(side)
+  const handle = e.currentTarget as HTMLElement
+  handle.dataset.dragging = 'true'
+  trackPointer(
+    'ew-resize',
+    (ev) => setSideWidth(side, start + grow * (ev.clientX - e.clientX)),
+    () => delete handle.dataset.dragging,
+  )
+}
+
+/**
+ * The separator on the tab strip's outer edge: drag it, or focus it and use
+ * the arrow keys (Shift for bigger steps), Home to shut the sidebar, End to
+ * widen it fully, and Enter (or a double-click) for the default width.
+ */
 function SidebarResizeHandle({ side }: { side: Side }) {
-  const width = layout.value[side].width
-  const grow = side === 'left' ? 1 : -1
-  function onPointerDown(e: PointerEvent) {
-    if (e.button !== 0) return
-    e.preventDefault()
-    const stop = trackPointer('ew-resize', (ev) => setSideWidth(side, side === 'left' ? ev.clientX : innerWidth - ev.clientX))
-    window.addEventListener('pointerup', stop, { once: true })
-  }
+  const s = layout.value[side]
+  const max = sidebarMaxWidth()
 
   function onKeyDown(e: KeyboardEvent) {
-    const step = e.shiftKey ? 64 : 16
-    if (e.key === 'ArrowLeft') setSideWidth(side, width - grow * step)
-    else if (e.key === 'ArrowRight') setSideWidth(side, width + grow * step)
-    else return
+    const width = keyedSideWidth(layout.value[side], e.key, e.shiftKey, growDirection(side), sidebarMaxWidth())
+    if (width === null) return
     e.preventDefault()
+    setSideWidth(side, width)
   }
 
   return (
@@ -210,12 +235,14 @@ function SidebarResizeHandle({ side }: { side: Side }) {
       class="sidebar-resize"
       role="separator"
       aria-orientation="vertical"
-      aria-label="Resize sidebar"
-      aria-valuemin={SIDEBAR_MIN_W}
-      aria-valuemax={sidebarMaxWidth()}
-      aria-valuenow={width}
+      aria-label={`Resize ${side} sidebar`}
+      aria-valuemin={0}
+      aria-valuemax={max}
+      aria-valuenow={s.open ? s.width : 0}
+      aria-valuetext={s.open ? `${s.width} pixels wide` : 'Collapsed'}
       tabIndex={0}
-      onPointerDown={onPointerDown}
+      onPointerDown={(e) => dragSideWidth(side, e)}
+      onDblClick={() => setSideWidth(side, SIDEBAR_DEFAULT_W)}
       onKeyDown={onKeyDown}
     />
   )

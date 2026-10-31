@@ -4,8 +4,10 @@ import { withTransition } from '../ui/transition'
 import { nextZ, noteZ } from '../ui/windows'
 import {
   PANEL_ORDER,
+  SIDEBAR_MIN_W,
   SIDES,
   close,
+  resizeSide,
   detach,
   dock,
   locate,
@@ -23,7 +25,7 @@ import {
   isPanelId,
 } from './layoutModel'
 
-export { PANEL_ORDER, otherSide, isPanelId, locate }
+export { PANEL_ORDER, SIDEBAR_MIN_W, otherSide, isPanelId, locate }
 export type { DockItemId, FloatingWindow, PanelId, Side }
 
 /*
@@ -32,7 +34,6 @@ export type { DockItemId, FloatingWindow, PanelId, Side }
  * so it is kept in localStorage.
  */
 
-export const SIDEBAR_MIN_W = 280
 export const sidebarMaxWidth = () => Math.max(SIDEBAR_MIN_W, Math.min(720, innerWidth - 160))
 
 const KEY = 'mam:panel-layout-2'
@@ -85,19 +86,9 @@ export const dockInsets = computed(() => {
   return { left: of('left'), right: of('right') }
 })
 
-/** Dragging a sidebar narrower than this shuts it. */
-const SNAP_SHUT_W = 180
-
 /** Resize a side; pulling it very narrow snaps it shut, and widening it again reopens it. */
 export function setSideWidth(side: Side, width: number) {
-  const l = layout.value
-  const s = l[side]
-  if (width < SNAP_SHUT_W) {
-    if (s.open) layout.value = { ...l, [side]: { ...s, open: false } }
-    return
-  }
-  const w = Math.round(Math.min(Math.max(width, SIDEBAR_MIN_W), sidebarMaxWidth()))
-  if (w !== s.width || !s.open) layout.value = { ...l, [side]: { ...s, width: w, open: true } }
+  layout.value = resizeSide(layout.value, side, width, sidebarMaxWidth())
 }
 
 export function reorderPanel(id: DockItemId, index: number) {

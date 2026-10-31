@@ -34,10 +34,9 @@ function Window({ win, campaign }: { win: FloatingWindow & { id: PanelId }; camp
     e.stopPropagation()
     raiseWindow(win.id)
     const start = { x: win.x, y: win.y, w: win.w, h: win.h }
-    const stop = trackPointer(RESIZE_CURSORS[dir], (ev) => {
+    trackPointer(RESIZE_CURSORS[dir], (ev) => {
       updateWindow(win.id, resizeRect(start, dir, ev.clientX - e.clientX, ev.clientY - e.clientY))
     })
-    window.addEventListener('pointerup', stop, { once: true })
   }
 
   function onHeaderPointerDown(e: PointerEvent) {

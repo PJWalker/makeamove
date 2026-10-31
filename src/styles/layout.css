@@ -526,9 +526,12 @@
   .sidebar[data-empty='true'] .sidebar-rail {
     min-height: 160px;
   }
-  .sidebar-rail {
+  .sidebar-rail-edge {
     position: relative;
     z-index: 1;
+  }
+  .sidebar-rail {
+    position: relative;
   }
   .rail-tab {
     position: relative;
@@ -661,23 +664,69 @@
    * Resize zones are invisible strips along the edges that change the cursor
    * on hover; corners take the diagonal cursors.
    */
-  .sidebar-resize {
+  /*
+   * Sidebar resizing: a separator straddling the tab strip's table-facing
+   * edge (between its bevelled ends), and an invisible strip along the body's
+   * edge. Both show an accent line on hover, focus, and while dragging.
+   */
+  .sidebar-resize,
+  .sidebar-body-resize {
     position: absolute;
-    inset: 0 auto 0 0;
     z-index: 2;
     width: 8px;
     cursor: ew-resize;
     touch-action: none;
+    &::after {
+      content: '';
+      position: absolute;
+      inset-block: 0;
+      left: 3px;
+      width: 2px;
+      border-radius: 1px;
+      background: var(--accent);
+      opacity: 0;
+      transition: opacity 120ms var(--ease);
+    }
+    &:hover::after,
+    &[data-dragging='true']::after {
+      opacity: 0.6;
+    }
+  }
+  .sidebar-resize {
+    /* Clear of the strip's bevelled ends, as deep as the strip is wide. */
+    inset-block: 48px;
+    left: -4px;
+    &:focus-visible {
+      outline: none;
+    }
+    &:focus-visible::after {
+      opacity: 1;
+    }
   }
   .sidebar[data-side='left'] .sidebar-resize {
-    inset: 0 0 0 auto;
+    left: auto;
+    right: -4px;
   }
-  .sidebar-resize:focus-visible {
-    outline: none;
-    box-shadow: inset 2px 0 0 var(--accent);
+  .sidebar-body-resize {
+    inset-block: 0;
+    left: 0;
+    &::after {
+      left: 0;
+    }
   }
-  .sidebar[data-side='left'] .sidebar-resize:focus-visible {
-    box-shadow: inset -2px 0 0 var(--accent);
+  .sidebar[data-side='left'] .sidebar-body-resize {
+    left: auto;
+    right: 0;
+    &::after {
+      left: auto;
+      right: 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sidebar-resize::after,
+    .sidebar-body-resize::after {
+      transition: none;
+    }
   }
   .win-resize {
     position: absolute;
