@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'preact/hooks'
+import { useEffect, useRef } from 'react'
 import * as Y from 'yjs'
 import type { CharacterView } from '../characters/store'
 import type { Campaign } from '../store/campaign'
@@ -71,9 +71,86 @@ export function CharacterText({
   }
 
   return (
-    <div class="field">
+    <div className="field">
       {label}
-      <div ref={hostRef} class="rich-field input bevel" data-disabled={!editable || undefined} onPointerDown={fork} />
+      <div ref={hostRef} className="rich-field input" data-disabled={!editable || undefined} onPointerDown={fork} />
+    </div>
+  )
+}
+
+/** A GM-only character field kept in the campaign's private vault document. */
+export function GMCharacterText({
+  campaign,
+  c,
+  field,
+  label,
+  editable,
+  placeholder = 'Type @ to link a note, character, gear or move.',
+}: {
+  campaign: Campaign
+  c: CharacterView
+  field: string
+  label: string
+  editable: boolean
+  placeholder?: string
+}) {
+  const vault = campaign.vault.value
+  return vault ? <VaultCharacterText vault={vault} campaign={campaign} c={c} field={field} label={label} editable={editable} placeholder={placeholder} /> : null
+}
+
+function VaultCharacterText({
+  vault,
+  campaign,
+  c,
+  field,
+  label,
+  editable,
+  placeholder,
+}: {
+  vault: NonNullable<Campaign['vault']['value']>
+  campaign: Campaign
+  c: CharacterView
+  field: string
+  label: string
+  editable: boolean
+  placeholder: string
+}) {
+  const hostRef = useRef<HTMLDivElement>(null)
+  const key = `${c.id}/${field}`
+  const own = useY(vault.characterText, () => vault.characterText.get(key))
+  const inherited = useY(vault.characterText, () => c.base ? vault.characterText.get(`${c.base}/${field}`) : undefined)
+  const shown = own ?? inherited
+
+  useEffect(() => {
+    if (shown || !editable) return
+    vault.characterText.set(key, new Y.XmlFragment())
+  }, [shown, editable, key, vault])
+
+  useEffect(() => {
+    const host = hostRef.current
+    if (!host || !shown) return
+    const rich = mountRichText(host, {
+      campaign,
+      fragment: shown,
+      placeholder,
+      label,
+      editable: editable && shown === own,
+      shared: false,
+    })
+    return () => rich.destroy()
+  }, [shown, editable, label, placeholder])
+
+  const fork = () => {
+    if (!editable || own || !inherited) return
+    const mine = new Y.XmlFragment()
+    vault.characterText.set(key, mine)
+    mine.insert(0, inherited.toArray().map((node) => (node as Y.XmlElement | Y.XmlText).clone()))
+  }
+
+  return (
+    <div className="field">
+      {label}
+      <div ref={hostRef} className="rich-field input" data-disabled={!editable || undefined} onPointerDown={fork} />
     </div>
   )
 }

@@ -1,38 +1,61 @@
-import type { ComponentChildren, JSX } from 'preact'
+import type * as React from "react";
+import type { ReactNode } from "react";
+import { forwardRef } from "react";
+import { mergeProps, useButton, useObjectRef } from "react-aria";
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'icon'
+type Variant = "primary" | "secondary" | "ghost" | "danger" | "icon";
 
-type Props = Omit<JSX.ButtonHTMLAttributes<HTMLButtonElement>, 'size'> & {
-  variant?: Variant
-  size?: 'sm' | 'md'
+type Props = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "size"> & {
+  [attribute: `data-${string}`]: string | number | boolean | undefined;
+  variant?: Variant;
+  size?: "sm" | "md";
   /** Accessible name; required for icon-only buttons and shown as a tooltip. */
-  label?: string
-  pressed?: boolean
-  children?: ComponentChildren
-}
+  label?: string;
+  pressed?: boolean;
+  children?: ReactNode;
+};
 
-export function Button({
-  variant = 'secondary',
-  size = 'md',
-  label,
-  pressed,
-  class: className,
-  children,
-  ...rest
-}: Props) {
-  const classes = ['btn', 'bevel', `btn-${variant}`, size === 'sm' && 'btn-sm', className]
+export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
+  {
+    variant = "secondary",
+    size = "md",
+    label,
+    pressed,
+    className: className,
+    children,
+    ...rest
+  }: Props,
+  forwardedRef,
+) {
+  const ref = useObjectRef(forwardedRef);
+  const { buttonProps } = useButton(
+    {
+      type: rest.type ?? "button",
+      ...(rest.disabled !== undefined ? { isDisabled: rest.disabled } : {}),
+    },
+    ref,
+  );
+  const classes = [
+    "btn",
+    `btn-${variant}`,
+    size === "sm" && "btn-sm",
+    className,
+  ]
     .filter(Boolean)
-    .join(' ')
+    .join(" ");
   return (
     <button
-      type="button"
-      class={classes}
-      aria-label={variant === 'icon' ? label : undefined}
-      title={label}
-      aria-pressed={pressed === undefined ? undefined : pressed}
-      {...rest}
+      {...mergeProps(buttonProps, rest)}
+      ref={ref}
+      type={rest.type ?? "button"}
+      className={classes}
+      aria-label={
+        rest["aria-label"] ?? (variant === "icon" ? label : undefined)
+      }
+      title={rest.title ?? label}
+      aria-pressed={pressed ?? rest["aria-pressed"]}
     >
       {children}
     </button>
-  )
-}
+  );
+});

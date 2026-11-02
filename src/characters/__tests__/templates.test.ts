@@ -1,5 +1,6 @@
 import 'fake-indexeddb/auto'
 import { describe, expect, it } from 'vitest'
+
 import { Campaign, createCampaign } from '../../store/campaign'
 import { device } from '../../store/device'
 import {
@@ -50,7 +51,7 @@ describe('template copies', () => {
     const id = newNpc(c, 'Goblin')
     setData(c, id, 'maxHp', 7)
     setNpcField(c, id, 'armor', 1)
-    addItem(c, id, systemOf(c).items[0])
+    addItem(c, id, (systemOf(c).items)[0]!)
     setTemplate(c, id, { naming: 'number', names: [] })
     expect(getCharacter(c, id)!.template).toEqual({ naming: 'number', names: [] })
 
@@ -66,7 +67,7 @@ describe('template copies', () => {
     expect(getCharacter(c, a)!.resources.hp).toBe(2)
     expect(getCharacter(c, b)!.resources.hp).toBe(6)
     expect(getCharacter(c, id)!.resources.hp).toBe(6)
-    expect(tokenStatsSource(c)(a)[0]).toMatchObject({ value: 2, max: 7 })
+    expect((tokenStatsSource(c)(a))[0]!).toMatchObject({ value: 2, max: 7 })
 
     // A change to the template reaches copies that haven't overridden it.
     setNpcField(c, b, 'armor', 3)
@@ -75,10 +76,10 @@ describe('template copies', () => {
     expect(getCharacter(c, b)!.fields.armor).toBe(3)
 
     // Conditions and gear become the copy's own when changed.
-    toggleCondition(c, a, systemOf(c).conditions[0].id)
+    toggleCondition(c, a, (systemOf(c).conditions)[0]!.id)
     expect(getCharacter(c, a)!.conditions).toHaveLength(1)
     expect(getCharacter(c, id)!.conditions).toHaveLength(0)
-    removeItem(c, a, getCharacter(c, a)!.inventory[0].id)
+    removeItem(c, a, (getCharacter(c, a)!.inventory)[0]!.id)
     expect(getCharacter(c, a)!.inventory).toHaveLength(0)
     expect(getCharacter(c, b)!.inventory).toHaveLength(1)
 

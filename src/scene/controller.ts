@@ -1,69 +1,138 @@
-import { effect, signal, untracked } from '@preact/signals'
+import { effect, signal, untracked } from "@preact/signals-react";
 import type { CampaignDefaults } from "../store/campaign";
-import { device } from '../store/device'
-import { colourOf, type Presence } from './presence'
-import { type Camera, clampZoom, fitCamera, toWorld, zoomAt } from './camera'
-import { readSceneCamera, saveSceneCamera } from "./cameraMemory";
-import { CORNER_SIGNS, type Corner, bounds, contains, corners, fromLocal, hits, resizeFromCorner, rotationTowards, tokensCovered } from './geometry'
-import { type Point, snapPoint, snapSize } from './grid'
-import { imageColour } from "./images";
-import { formatDistance, tokenDistance } from './measure'
-import { wallEnds } from './vision'
-import { HANDLE_SIZE, type LightPart, type SceneRenderer, lightHandles, rotateHandlePosition } from './renderer'
-import type { SceneDoc } from './sceneDoc'
-import { finishStroke, STRIDE } from './stroke'
-import { SceneElementCommands } from "./elementCommands";
-import { activeTool, ERASER_RADIUS, lightTool, pen, SHAPE_WIDTH, shapeTool, TEMPLATE_STYLE } from './tools'
+import { device } from "../store/device";
+
+import { colourOf, type Presence } from "./presence";
+import { type Camera, clampZoom, fitCamera, toWorld, zoomAt } from "./camera";
+import {
+  CORNER_SIGNS,
+  type Corner,
+  bounds,
+  contains,
+  corners,
+  fromLocal,
+  hits,
+  resizeFromCorner,
+  rotationTowards,
+  tokensCovered,
+} from "./geometry";
+import { type Point, snapPoint, snapSize } from "./grid";
+import { importImage, imageColour } from "./images";
+import { formatDistance, tokenDistance } from "./measure";
+import { wallEnds } from "./vision";
+import {
+  HANDLE_SIZE,
+  type LightPart,
+  type SceneRenderer,
+  lightHandles,
+  rotateHandlePosition,
+} from "./renderer";
+import type { SceneDoc } from "./sceneDoc";
+import { finishStroke, STRIDE } from "./stroke";
+import {
+  activeTool,
+  ERASER_RADIUS,
+  lightTool,
+  pen,
+  SHAPE_WIDTH,
+  shapeTool,
+  TEMPLATE_STYLE,
+} from "./tools";
 import {
   AREA_COLOURS,
+  LAYERS,
+  type BlobRef,
   type Layer,
   type AreaTone,
   type LightElement,
+  type NewElement,
   type SceneElement,
   type TokenElement,
   type ShapeKind,
+  type TokenStyle,
   type Transform,
 } from "./types";
 
 /** A new lamp's size, in cells: its shadows' softness. Resizing the lamp makes them softer or sharper. */
-const LAMP_SIZE = 0.6
+const LAMP_SIZE = 0.6;
 
 /** A new light: bright for 4 cells (20 ft on a 5 ft grid), dim for 4 more, warm. */
-const LIGHT_DEFAULT = (cell: number) => ({ bright: cell * 4, dim: cell * 8, colour: '#ffd27a' })
+const LIGHT_DEFAULT = (cell: number) => ({
+  bright: cell * 4,
+  dim: cell * 8,
+  colour: "#ffd27a",
+});
 
 /** An action's area waiting to be placed: its shape and size in world px, and who to tell. */
 export interface Placement {
-  shape: ShapeKind
+  shape: ShapeKind;
   /** A radius, a side, or a length. */
-  length: number
+  length: number;
   /** A line's width. */
-  width: number
-  onPlaced: (placed: { id: string; covered: string[] } | null) => void
+  width: number;
+  onPlaced: (placed: { id: string; covered: string[] } | null) => void;
 }
 
 type Gesture =
-  | { kind: 'pan'; start: Point; cam: Camera }
-  | { kind: 'pinch'; dist: number; mid: Point; cam: Camera }
-  | { kind: 'move'; start: Point; originals: Map<string, SceneElement>; moved: boolean }
-  | { kind: 'resize'; el: SceneElement; corner: Corner }
-  | { kind: 'rotate'; el: SceneElement }
-  | { kind: 'light'; el: LightElement; part: LightPart }
-  | { kind: 'rotateGroup'; frame: Transform; originals: SceneElement[]; startAngle: number; delta: number }
-  | { kind: 'marquee'; start: Point; base: string[]; pick: string | null; moved: boolean }
-  | { kind: 'draw'; points: number[]; layer: Layer; colour: string; width: number }
-  | { kind: 'erase'; erased: Set<string> }
-  | { kind: 'ruler' }
-  | { kind: 'trail'; start: Point; active: boolean }
-  | { kind: 'shape'; start: Point; shape: ShapeKind; fixed: Placement | null }
-  | { kind: 'wall'; start: Point }
+  | { kind: "pan"; start: Point; cam: Camera }
+  | { kind: "pinch"; dist: number; mid: Point; cam: Camera }
+  | {
+      kind: "move";
+      start: Point;
+      originals: Map<string, SceneElement>;
+      moved: boolean;
+    }
+  | { kind: "resize"; el: SceneElement; corner: Corner }
+  | { kind: "rotate"; el: SceneElement }
+  | { kind: "light"; el: LightElement; part: LightPart }
+  | {
+      kind: "rotateGroup";
+      frame: Transform;
+      originals: SceneElement[];
+      startAngle: number;
+      delta: number;
+    }
+  | {
+      kind: "marquee";
+      start: Point;
+      base: string[];
+      pick: string | null;
+      moved: boolean;
+    }
+  | {
+      kind: "draw";
+      points: number[];
+      layer: Layer;
+      colour: string;
+      width: number;
+    }
+  | { kind: "erase"; erased: Set<string> }
+  | { kind: "ruler" }
+  | { kind: "trail"; start: Point; active: boolean }
+  | { kind: "shape"; start: Point; shape: ShapeKind; fixed: Placement | null }
+  | { kind: "wall"; start: Point };
 
 /** Screen px the pointer must travel before a press becomes a drag. */
-const DRAG_THRESHOLD = 3
+const DRAG_THRESHOLD = 3;
 
-const RESIZE_CURSORS = ['nwse-resize', 'nesw-resize', 'nwse-resize', 'nesw-resize']
+const RESIZE_CURSORS = [
+  "nwse-resize",
+  "nesw-resize",
+  "nwse-resize",
+  "nesw-resize",
+];
 
 /** The cursor over each of a light's handles, which sit right, up-right and down-right of it. */
-const LIGHT_CURSORS: Record<LightPart, string> = { lamp: 'ew-resize', bright: 'nesw-resize', dim: 'nwse-resize' }
+const LIGHT_CURSORS: Record<LightPart, string> = {
+  lamp: "ew-resize",
+  bright: "nesw-resize",
+  dim: "nwse-resize",
+};
+
+/** This member's token colour, from their device id. */
+const memberColour = () => colourOf(device.value);
+
+const cameraKey = (sceneId: string) => `mam:camera:${sceneId}`;
 
 /**
  * Turns pointer, wheel and keyboard input into camera moves and scene edits.
@@ -110,6 +179,12 @@ export class SceneController {
   onItemTokenDrop:
     | ((token: TokenElement, event: PointerEvent) => boolean)
     | null = null;
+  onTokenClick: ((token: TokenElement) => void) | null = null;
+  onTokenDragMove:
+    | ((token: TokenElement | null, event?: PointerEvent) => void)
+    | null = null;
+  onTokenDrop: ((token: TokenElement, event: PointerEvent) => boolean) | null =
+    null;
 
   private elements: SceneElement[] = [];
   /** The scene's elements as they are now, bottom to top. */
@@ -134,7 +209,6 @@ export class SceneController {
   private presence: Presence | null;
   private lastCursor = 0;
   private ruler: Point | null = null;
-  private readonly commands: SceneElementCommands;
 
   constructor(
     scene: SceneDoc,
@@ -150,23 +224,13 @@ export class SceneController {
     this.host = host;
     this.sceneId = sceneId;
     this.defaults = defaults;
-    this.commands = new SceneElementCommands({
-      scene,
-      renderer,
-      host,
-      defaults,
-      elements: () => this.elements,
-      element: (id) => this.byId.get(id),
-      selection: this.selection,
-      afterDuplicate: (ids) => this.afterDuplicate(ids),
-      updateCursor: () => this.updateCursor(),
-    });
   }
 
   start() {
     const refresh = () => this.refresh();
     const regrid = () => {
-      this.renderer.setGrid(this.scene.grid());
+          this.renderer.setGrid(this.scene.grid());
+          this.renderer.invalidate("overlay");
     };
     const history = () => {
       this.canUndo.value = this.scene.undo.canUndo();
@@ -339,7 +403,7 @@ export class SceneController {
       selected,
       handles:
         selected.length === 1 &&
-        !selected[0].locked &&
+        !(selected)[0]!.locked &&
         (!g ||
           g.kind === "resize" ||
           g.kind === "rotate" ||
@@ -456,10 +520,16 @@ export class SceneController {
   // Camera
 
   private restoreCamera() {
-    const saved = readSceneCamera(this.sceneId);
-    if (saved) {
-      this.renderer.setCamera(saved);
-      return;
+    try {
+      const saved = JSON.parse(
+        localStorage.getItem(cameraKey(this.sceneId)) ?? "null",
+      );
+      if (saved && typeof saved.zoom === "number") {
+        this.renderer.setCamera(saved);
+        return;
+      }
+    } catch {
+      // Fall through to fitting the scene.
     }
     this.fit();
   }
@@ -470,7 +540,14 @@ export class SceneController {
   }
 
   private saveCamera() {
-    saveSceneCamera(this.sceneId, this.renderer.camera);
+    try {
+      localStorage.setItem(
+        cameraKey(this.sceneId),
+        JSON.stringify(this.renderer.camera),
+      );
+    } catch {
+      // The view just won't be remembered.
+    }
   }
 
   /** Show everything in the scene, or the origin at 100% if it's empty. */
@@ -544,6 +621,7 @@ export class SceneController {
     const tolerance = 4 / this.renderer.camera.zoom;
     for (let i = this.elements.length - 1; i >= 0; i--) {
       const el = this.elements[i];
+      if (!el) continue;
       if (el.locked && !includeLocked) continue;
       if (!ignoreTool && !this.pickable(el)) continue;
       if (hits(el, p, tolerance)) return el;
@@ -568,7 +646,7 @@ export class SceneController {
         : null;
     }
     if (!handles || selected.length !== 1) return null;
-    const el = selected[0];
+    const el = (selected)[0]!;
     if (el.type === "light") {
       const near = lightHandles(el, cam).filter(
         (h) => Math.hypot(screen.x - h.at.x, screen.y - h.at.y) <= reach,
@@ -582,9 +660,10 @@ export class SceneController {
       return { kind: "rotate" };
     const cs = corners(el);
     for (let i = 0; i < 4; i++) {
+      const corner = (cs)[i]!;
       const c = {
-        x: cs[i].x * cam.zoom + cam.x,
-        y: cs[i].y * cam.zoom + cam.y,
+        x: corner.x * cam.zoom + cam.x,
+        y: corner.y * cam.zoom + cam.y,
       };
       if (Math.hypot(screen.x - c.x, screen.y - c.y) <= reach)
         return { kind: "corner", corner: i as Corner };
@@ -605,7 +684,9 @@ export class SceneController {
     // A second finger turns whatever was happening into a pinch.
     if (this.pointers.size === 2) {
       this.cancelGesture();
-      const [a, b] = [...this.pointers.values()];
+      const points = [...this.pointers.values()];
+      const a = (points)[0]!;
+      const b = (points)[1]!;
       this.gesture = {
         kind: "pinch",
         dist: Math.hypot(a.x - b.x, a.y - b.y),
@@ -674,7 +755,7 @@ export class SceneController {
             };
             break;
           }
-          const el = this.selected()[0];
+          const el = (this.selected())[0]!;
           this.gesture =
             handle.kind === "rotate"
               ? { kind: "rotate", el }
@@ -1145,7 +1226,10 @@ export class SceneController {
     this.hover = world;
     const g = this.gesture;
     const under = this.hitTest(world, true);
-    this.renderer.setHoverToken(under?.type === "token" ? under.id : null);
+    this.renderer.setHoverToken(
+      under?.type === "token" ? under.id : null,
+      world,
+    );
 
     // Share the cursor at about 20 Hz.
     const now = performance.now();
@@ -1163,7 +1247,7 @@ export class SceneController {
             ? "grab"
             : handle
               ? handle.kind === "corner"
-                ? cornerCursor(this.selected()[0], handle.corner)
+                ? cornerCursor((this.selected())[0]!, handle.corner)
                 : LIGHT_CURSORS[handle.part]
               : hit
                 ? "move"
@@ -1220,6 +1304,8 @@ export class SceneController {
           g.originals.size === 1 ? [...g.originals.values()][0] : null;
         if (itemToken?.type === "token" && itemToken.itemDefId)
           this.onItemTokenDragMove?.(itemToken, e);
+        else if (itemToken?.type === "token")
+          this.onTokenDragMove?.(itemToken, e);
         break;
       }
 
@@ -1385,9 +1471,21 @@ export class SceneController {
           g.moved && g.originals.size === 1
             ? [...g.originals.values()][0]
             : null;
+        if (!g.moved && g.originals.size === 1) {
+          const clicked = ([...g.originals.values()])[0]!;
+          if (clicked.type === "token") this.onTokenClick?.(clicked);
+          break;
+        }
         if (itemToken?.type === "token" && itemToken.itemDefId) {
           const handled = this.onItemTokenDrop?.(itemToken, e) ?? false;
           this.onItemTokenDragMove?.(null, e);
+          if (handled) {
+            this.renderer.invalidate("previews", "overlay");
+            break;
+          }
+        } else if (itemToken?.type === "token") {
+          const handled = this.onTokenDrop?.(itemToken, e) ?? false;
+          this.onTokenDragMove?.(null, e);
           if (handled) {
             this.renderer.invalidate("previews", "overlay");
             break;
@@ -1479,7 +1577,7 @@ export class SceneController {
         const style = g.fixed
           ? TEMPLATE_STYLE
           : { ...pen.value, width: SHAPE_WIDTH };
-        const [id] = this.scene.add({
+        const id = (this.scene.add({
           type: "shape",
           shape: g.shape,
           colour: style.colour,
@@ -1487,7 +1585,7 @@ export class SceneController {
           layer: style.layer,
           ...t,
           ...(g.fixed ? { template: true } : {}),
-        });
+        }))[0]!;
         if (g.fixed) {
           const fixed = g.fixed;
           this.placing.value = null;
@@ -1579,6 +1677,15 @@ export class SceneController {
     }
     if (!this.gesture) return;
     if (this.gesture.kind === "trail") this.presence?.endTrail();
+    if (
+      this.gesture.kind === "move" &&
+      this.gesture.moved &&
+      this.gesture.originals.size === 1
+    ) {
+      const token = ([...this.gesture.originals.values()])[0]!;
+      if (token.type === "token" && !token.itemDefId)
+        this.onTokenDragMove?.(null);
+    }
     if (this.gesture.kind === "ruler") {
       this.ruler = null;
       this.presence?.setRuler(null);
@@ -1598,8 +1705,8 @@ export class SceneController {
     const n = pts.length;
     // Skip points closer than half a screen px to the last one.
     if (
-      n &&
-      Math.hypot(p.x - pts[n - STRIDE], p.y - pts[n - STRIDE + 1]) *
+      n >= STRIDE &&
+      Math.hypot(p.x - (pts)[n - STRIDE]!, p.y - (pts)[n - STRIDE + 1]!) *
         this.renderer.camera.zoom <
         0.5
     )
@@ -1759,61 +1866,289 @@ export class SceneController {
 
   // Edits, for menus and shortcuts
 
+  remove(ids: string[]) {
+    const removable = ids.filter(
+      (id) => this.byId.get(id) && !this.byId.get(id)!.locked,
+    );
+    if (!removable.length) return;
+    this.scene.remove(removable);
+    this.selection.value = this.selection.value.filter(
+      (id) => !removable.includes(id),
+    );
+  }
+
+  duplicate(ids: string[]) {
+    if (!ids.length) return;
+    const grid = this.renderer.grid;
+    const copies = this.scene.duplicate(
+      ids,
+      grid.type === "none" ? 20 : grid.size,
+    );
+    this.afterDuplicate(copies);
+    this.selection.value = copies;
+  }
+
   /** Called with new duplicates, so the table can give a template's token a copy of its own. */
   afterDuplicate: (ids: string[]) => void = () => {};
-  remove(...args: Parameters<SceneElementCommands["remove"]>) {
-    return this.commands.remove(...args);
+
+  setLocked(ids: string[], locked: boolean) {
+    this.scene.update(ids.map((id) => [id, { locked }]));
   }
-  duplicate(...args: Parameters<SceneElementCommands["duplicate"]>) {
-    return this.commands.duplicate(...args);
+
+  restack(ids: string[], to: "front" | "back") {
+    this.scene.restack(ids, to);
   }
-  setLocked(...args: Parameters<SceneElementCommands["setLocked"]>) {
-    return this.commands.setLocked(...args);
+
+  setLayer(ids: string[], layer: Layer) {
+    this.scene.setLayer(ids, layer);
   }
-  restack(...args: Parameters<SceneElementCommands["restack"]>) {
-    return this.commands.restack(...args);
-  }
-  setLayer(...args: Parameters<SceneElementCommands["setLayer"]>) {
-    return this.commands.setLayer(...args);
-  }
-  updateToken(...args: Parameters<SceneElementCommands["updateToken"]>) {
-    return this.commands.updateToken(...args);
-  }
-  tokenNames() {
-    return this.commands.tokenNames();
-  }
-  convert(...args: Parameters<SceneElementCommands["convert"]>) {
-    return this.commands.convert(...args);
-  }
-  addToken(...args: Parameters<SceneElementCommands["addToken"]>) {
-    return this.commands.addToken(...args);
-  }
-  addCharacterToken(
-    ...args: Parameters<SceneElementCommands["addCharacterToken"]>
+
+  /**
+   * Change a token's name, style and colour as one undo step; with `cells`,
+   * also make it that many cells across, snapped to the grid.
+   */
+  updateToken(
+    id: string,
+    patch: Partial<
+      Pick<
+        TokenElement,
+        | "name"
+        | "style"
+        | "colour"
+        | "characterId"
+        | "image"
+        | "itemDefId"
+        | "hideName"
+        | "hideBars"
+      >
+    >,
+    cells?: number,
   ) {
-    return this.commands.addCharacterToken(...args);
+    const el = this.byId.get(id);
+    const grid = this.renderer.grid;
+    const size = cells && el ? cells * grid.size : 0;
+    const resize =
+      size &&
+      el &&
+      (Math.abs(el.w - size) > 0.5 || Math.abs(el.h - size) > 0.5);
+    this.scene.update([
+      [
+        id,
+        resize
+          ? { ...patch, ...snapPoint(grid, el, cells), w: size, h: size }
+          : patch,
+      ],
+    ]);
   }
-  importFiles(...args: Parameters<SceneElementCommands["importFiles"]>) {
-    return this.commands.importFiles(...args);
+
+  /** The names of every token on the scene, for naming new ones apart. */
+  tokenNames(): string[] {
+    return this.elements.flatMap((el) =>
+      el.type === "token" ? [el.name] : [],
+    );
   }
+
+  /** Swap an image between being a map and being a token. */
+  convert(id: string, to: "map" | "token") {
+    const el = this.byId.get(id);
+    if (!el || el.type === to || !("image" in el) || !el.image) return;
+    const image = el.image;
+    const grid = this.renderer.grid;
+    if (to === "token") {
+      const size = snapSize(grid, Math.min(el.w, el.h, grid.size));
+      const p = snapPoint(grid, el, Math.round(size / grid.size));
+      const token = {
+        type: "token",
+        name: "",
+        colour: memberColour(),
+        style: this.defaults().tokenStyle,
+        ...p,
+        w: size,
+        h: size,
+        rot: 0,
+      };
+      this.scene.update([[id, token as Partial<SceneElement>]]);
+    } else {
+      const k = el.w / Math.max(image.width, image.height);
+      const map = {
+        type: "map",
+        name: undefined,
+        colour: undefined,
+        style: undefined,
+        w: image.width * k,
+        h: image.height * k,
+      };
+      this.scene.update([[id, map as Partial<SceneElement>]]);
+    }
+    this.scene.setLayer([id], to);
+  }
+
+  addToken(
+    at: Point,
+    name = "",
+    options: {
+      image?: BlobRef;
+      icon?: string;
+      itemDefId?: string;
+      style?: TokenStyle;
+      colour?: string;
+    } = {},
+  ) {
+    const grid = this.renderer.grid;
+    const size = grid.type === "none" ? 70 : grid.size;
+    const p = snapPoint(grid, at);
+    const id = (this.scene.add({
+      type: "token",
+      layer: "token",
+      name,
+      ...(options.image ? { image: options.image } : {}),
+      ...(options.icon ? { icon: options.icon } : {}),
+      ...(options.itemDefId ? { itemDefId: options.itemDefId } : {}),
+      colour: options.colour ?? memberColour(),
+      style:
+        options.style ?? (options.image ? this.defaults().tokenStyle : "disc"),
+      ...p,
+      w: size,
+      h: size,
+      rot: 0,
+    }))[0]!;
+    activeTool.value = "select";
+    this.selection.value = [id];
+    return id;
+  }
+
+  /** A token standing for a character, at a world point. */
+  addCharacterToken(
+    at: Point,
+    spec: {
+      characterId: string;
+      name: string;
+      image?: BlobRef;
+      style?: TokenStyle;
+      colour?: string;
+    },
+  ) {
+    const grid = this.renderer.grid;
+    const size = grid.type === "none" ? 70 : grid.size;
+    const id = (this.scene.add({
+      type: "token",
+      layer: "token",
+      name: spec.name,
+      characterId: spec.characterId,
+      ...(spec.image ? { image: spec.image } : {}),
+      colour: spec.colour ?? memberColour(),
+      style: spec.style ?? (spec.image ? this.defaults().tokenStyle : "disc"),
+      ...snapPoint(grid, at),
+      w: size,
+      h: size,
+      rot: 0,
+    }))[0]!;
+    activeTool.value = "select";
+    this.selection.value = [id];
+    return id;
+  }
+
+  /**
+   * Import image files at a world point. Small, squarish images become
+   * tokens; anything else is placed as a map at its own size.
+   */
+  async importFiles(files: Iterable<File>, at: Point) {
+    const images = [...files].filter((f) => f.type.startsWith("image/"));
+    if (!images.length) return;
+    this.host.style.cursor = "progress";
+    const grid = this.renderer.grid;
+    const added: NewElement[] = [];
+    try {
+      for (const [i, file] of images.entries()) {
+        let image: BlobRef;
+        try {
+          image = await importImage(file);
+        } catch (err) {
+          console.warn(`Couldn't import ${file.name}`, err);
+          continue;
+        }
+        const shift = i * (grid.type === "none" ? 40 : grid.size);
+        const p = { x: at.x + shift, y: at.y + shift };
+        const ratio = image.width / image.height;
+        if (
+          Math.max(image.width, image.height) <= 512 &&
+          ratio > 0.8 &&
+          ratio < 1.25
+        ) {
+          const size = grid.type === "none" ? 70 : grid.size;
+          added.push({
+            type: "token",
+            layer: "token",
+            image,
+            name: tokenName(file.name),
+            colour: memberColour(),
+            style: this.defaults().tokenStyle,
+            ...snapPoint(grid, p),
+            w: size,
+            h: size,
+            rot: 0,
+          });
+        } else {
+          added.push({
+            type: "map",
+            layer: "map",
+            image,
+            ...p,
+            w: image.width,
+            h: image.height,
+            rot: 0,
+          });
+        }
+      }
+    } finally {
+      this.updateCursor();
+    }
+    if (!added.length) return;
+    activeTool.value = "select";
+    this.selection.value = this.scene.add(...added);
+  }
+
   layers() {
-    return this.commands.layers();
+    return LAYERS;
   }
 }
 
+/** "goblin_archer-2.png" → "Goblin archer 2" */
+function tokenName(file: string): string {
+  const base = file
+    .replace(/\.[^.]+$/, "")
+    .replace(/[-_]+/g, " ")
+    .trim();
+  return base ? base.charAt(0).toUpperCase() + base.slice(1) : "";
+}
+
 /** Resize to exactly w × h, keeping the corner opposite `corner` fixed. */
-function resizeToSize(t: Transform, corner: Corner, w: number, h: number): Transform {
-  const sign = CORNER_SIGNS[corner]
-  const anchor = fromLocal(t, { x: (-sign.x * t.w) / 2, y: (-sign.y * t.h) / 2 })
-  const c = Math.cos(t.rot)
-  const s = Math.sin(t.rot)
-  const lx = (sign.x * w) / 2
-  const ly = (sign.y * h) / 2
-  return { ...t, x: anchor.x + lx * c - ly * s, y: anchor.y + lx * s + ly * c, w, h }
+function resizeToSize(
+  t: Transform,
+  corner: Corner,
+  w: number,
+  h: number,
+): Transform {
+  const sign = CORNER_SIGNS[corner];
+  const anchor = fromLocal(t, {
+    x: (-sign.x * t.w) / 2,
+    y: (-sign.y * t.h) / 2,
+  });
+  const c = Math.cos(t.rot);
+  const s = Math.sin(t.rot);
+  const lx = (sign.x * w) / 2;
+  const ly = (sign.y * h) / 2;
+  return {
+    ...t,
+    x: anchor.x + lx * c - ly * s,
+    y: anchor.y + lx * s + ly * c,
+    w,
+    h,
+  };
 }
 
 /** A resize cursor that matches the corner's direction once rotated. */
 function cornerCursor(t: Transform, corner: Corner): string {
-  const turns = Math.round(t.rot / (Math.PI / 2))
-  return RESIZE_CURSORS[(((corner + turns) % 4) + 4) % 4]
+  const turns = Math.round(t.rot / (Math.PI / 2));
+  return (RESIZE_CURSORS)[(((corner + turns) % 4) + 4) % 4]!;
 }

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+
 import { bounds, corners, hits, resizeFromCorner, rotationTowards, shapeCovers, toLocal, tokensCovered } from '../geometry'
 import { finishStroke } from '../stroke'
 import type { DrawingElement, MapElement, TokenElement } from '../types'
@@ -10,8 +11,8 @@ const map: MapElement = { ...base, type: 'map', layer: 'map', image, x: 100, y: 
 describe('transforms', () => {
   it('finds corners of a rotated rectangle', () => {
     const c = corners({ x: 0, y: 0, w: 20, h: 10, rot: Math.PI / 2 })
-    expect(c[0].x).toBeCloseTo(5)
-    expect(c[0].y).toBeCloseTo(-10)
+    expect((c)[0]!.x).toBeCloseTo(5)
+    expect((c)[0]!.y).toBeCloseTo(-10)
   })
   it('measures bounds', () => {
     expect(bounds([map])).toEqual({ x: 0, y: 0, w: 200, h: 100 })
@@ -51,9 +52,9 @@ describe('hit testing', () => {
     };
     expect(hits(token, { x: 30, y: 30 })).toBe(true)
     // Without an image a plain token still draws, and hits, as a disc.
-    expect(hits({ ...token, graphic: undefined }, { x: 30, y: 30 })).toBe(
-      false,
-    );
+    const plainToken = { ...token };
+    delete plainToken.graphic;
+    expect(hits(plainToken, { x: 30, y: 30 })).toBe(false);
   })
   it('hits drawings near the line only', () => {
     const geo = finishStroke([0, 0, 0.5, 100, 0, 0.5, 100, 100, 0.5], 10)
@@ -77,9 +78,9 @@ describe('resizing and rotating', () => {
   })
   it('works on rotated shapes', () => {
     const r = { ...map, x: 0, y: 0, rot: Math.PI / 2 }
-    const before = corners(r)[0]
+    const before = (corners(r))[0]!
     const t = resizeFromCorner(r, 2, { x: -100, y: 150 }, false)
-    const after = corners(t)[0]
+    const after = (corners(t))[0]!
     expect(after.x).toBeCloseTo(before.x)
     expect(after.y).toBeCloseTo(before.y)
   })

@@ -1,4 +1,4 @@
-import { useSignal } from '@preact/signals'
+import { useSignal } from '@preact/signals-react'
 import { useY } from "../store/useY";
 import { setField } from "../characters/api";
 import type { EntityGraphic } from "../graphics";
@@ -50,13 +50,13 @@ export function Counter({
 }: {
   label: string
   value: number
-  max?: number
+  max?: number | undefined
   onChange: (by: number) => void
   disabled: boolean
 }) {
   return (
     <div
-      class="counter"
+      className="counter"
       role="group"
       aria-label={label}
       data-label={label}
@@ -69,24 +69,24 @@ export function Counter({
           : undefined
       }
     >
-      <span class="eyebrow">{label}</span>
-      <div class="counter-row">
+      <span className="eyebrow">{label}</span>
+      <div className="counter-row">
         <Button
           variant="secondary"
-          class="counter-btn"
+          className="counter-btn"
           label={`Decrease ${label}`}
           disabled={disabled}
           onClick={() => onChange(-1)}
         >
           <IconRemove size={22} />
         </Button>
-        <output class="counter-value">
+        <output className="counter-value">
           {value}
-          {max !== undefined && <span class="muted">/{max}</span>}
+          {max !== undefined && <span className="muted">/{max}</span>}
         </output>
         <Button
           variant="secondary"
-          class="counter-btn"
+          className="counter-btn"
           label={`Increase ${label}`}
           disabled={disabled}
           onClick={() => onChange(1)}
@@ -123,7 +123,7 @@ export function MoveList({
   onMake: (m: ActionDef) => void;
   /** Moves the character learned beyond their system's, which they can forget. */
   learned?: string[];
-  onForget?: (m: ActionDef) => void;
+  onForget?: ((m: ActionDef) => void) | undefined;
 }) {
   // The system's groupings that this character has any of, in the system's order; the first is shown to start.
   const categories = system.actionCategories.filter((k) =>
@@ -137,7 +137,7 @@ export function MoveList({
       : moves.filter((m) => m.category === filter.value);
 
   return (
-    <div class="moves">
+    <div className="moves">
       {categories.length > 1 && (
         <SegmentedOrSelect
           label="Move type"
@@ -262,9 +262,9 @@ export function TokenChip({
       : []),
   ];
   return (
-    <div class="sheet-graphic">
+    <div className="sheet-graphic">
       <div
-        class="token-chip"
+        className="token-chip"
         role="button"
         tabIndex={0}
         title={
@@ -283,8 +283,8 @@ export function TokenChip({
             name: c.name,
             graphic,
             entityRef: { kind: "character", id: c.id },
-            style: c.tokenStyle,
-            colour: c.tokenColour,
+            ...(c.tokenStyle ? { style: c.tokenStyle } : {}),
+            ...(c.tokenColour ? { colour: c.tokenColour } : {}),
           });
         }}
         onContextMenu={trigger.onContextMenu}
@@ -337,7 +337,7 @@ function TokenSettings({
         onChange={(next) => setEntityGraphic(campaign, "character", c.id, next)}
         onReset={() => setEntityGraphic(campaign, "character", c.id)}
       />
-      <div class="field">
+      <div className="field">
         Style
         <Segmented
           label="Token style"
@@ -353,22 +353,22 @@ function TokenSettings({
           onChange={(v) => setField(campaign, c.id, "tokenStyle", v)}
         />
       </div>
-      <label class="field colour-field" data-disabled={style === "plain"}>
+      <label className="field colour-field" data-disabled={style === "plain"}>
         Background and border
-        <span class="colour-row">
+        <span className="colour-row">
           <input
             type="color"
-            class="colour-input bevel"
+            className="colour-input"
             value={colour}
             disabled={style === "plain"}
             onInput={(e) =>
               setField(campaign, c.id, "tokenColour", e.currentTarget.value)
             }
           />
-          <span class="colour-hex">{colour}</span>
+          <span className="colour-hex">{colour}</span>
         </span>
       </label>
-      <p class="muted">Applies wherever this character appears.</p>
+      <p className="muted">Applies wherever this character appears.</p>
     </Dialog>
   );
 }
@@ -396,7 +396,7 @@ function MakeButton({ m, onMake, big }: { m: ActionDef; onMake: (m: ActionDef) =
     <Button
       size="sm"
       variant="ghost"
-      class="move-make"
+      className="move-make"
       data-tip-side="right"
       label={`${label}: ${m.name}`}
       aria-label={`${label}: ${m.name}`}

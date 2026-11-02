@@ -1,4 +1,4 @@
-import { signal } from '@preact/signals'
+import { signal } from '@preact/signals-react'
 
 /** Recently run actions, newest first, remembered on this device. */
 const KEY = 'mam:recent-actions'

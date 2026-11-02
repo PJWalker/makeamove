@@ -71,9 +71,9 @@ export function tokenCells(grid: Grid, t: Transform) {
   const span = (centre: number, size: number, offset: number) => {
     const lo = Math.round((centre - size / 2 - offset) / grid.size)
     const hi = Math.round((centre + size / 2 - offset) / grid.size) - 1
-    if (hi >= lo) return [lo, hi]
+    if (hi >= lo) return [lo, hi] as const
     const c = Math.floor((centre - offset) / grid.size)
-    return [c, c]
+    return [c, c] as const
   }
   const [i0, i1] = span(t.x, t.w, grid.offsetX)
   const [j0, j1] = span(t.y, t.h, grid.offsetY)

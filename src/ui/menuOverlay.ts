@@ -1,5 +1,5 @@
-import { useLayoutEffect, useRef } from "preact/hooks";
-import type { RefObject } from "preact";
+import { useLayoutEffect, useRef } from "react";
+import type { RefObject } from "react";
 import { placeAnchored, type Anchor } from "./anchor";
 
 export function useMenuOverlay<T extends HTMLElement>({
@@ -12,7 +12,7 @@ export function useMenuOverlay<T extends HTMLElement>({
   positionKey,
 }: {
   open: boolean;
-  ref: RefObject<T>;
+  ref: RefObject<T | null>;
   anchor: Anchor | null;
   onDismiss: () => void;
   inside?: (Node | null)[];
@@ -31,7 +31,7 @@ export function useMenuOverlay<T extends HTMLElement>({
 
   useLayoutEffect(() => {
     if (!open) return;
-    const onOutsidePointer = (event: PointerEvent) => {
+    const onOutside = (event: Event) => {
       const target = event.target as Node;
       if (
         ref.current?.contains(target) ||
@@ -41,12 +41,12 @@ export function useMenuOverlay<T extends HTMLElement>({
       dismiss.current();
     };
     const onAway = () => dismiss.current();
-    document.addEventListener("pointerdown", onOutsidePointer, true);
-    window.addEventListener("wheel", onAway, { passive: true });
+    document.addEventListener("pointerdown", onOutside, true);
+    window.addEventListener("wheel", onOutside, { passive: true });
     window.addEventListener("blur", onAway);
     return () => {
-      document.removeEventListener("pointerdown", onOutsidePointer, true);
-      window.removeEventListener("wheel", onAway);
+      document.removeEventListener("pointerdown", onOutside, true);
+      window.removeEventListener("wheel", onOutside);
       window.removeEventListener("blur", onAway);
     };
   }, [open, ref]);

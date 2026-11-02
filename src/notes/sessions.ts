@@ -24,7 +24,7 @@ export async function makeSessionPage(campaign: Campaign, n: number): Promise<st
   const existing = sessionPageId(campaign, n)
   if (existing) return existing
   const folder = campaign.noteFolders.has('sessions') ? 'sessions' : undefined
-  const id = createNote(campaign, { title: `Session ${n}`, folder })
+  const id = createNote(campaign, { title: `Session ${n}`, ...(folder ? { folder } : {}) })
   campaign.notes.get(id)!.set('session', n)
 
   const page = await NoteDoc.open(noteSubdoc(campaign, id)!)

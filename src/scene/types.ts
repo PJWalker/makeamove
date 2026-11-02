@@ -13,6 +13,16 @@ import type { EntityGraphic, EntityGraphicRef } from "../graphics";
 export const LAYERS = ["map", "under", "token", "over"] as const;
 export type Layer = (typeof LAYERS)[number];
 
+export type ElementType =
+  | "map"
+  | "token"
+  | "drawing"
+  | "shape"
+  | "text"
+  | "wall"
+  | "light"
+  | "area";
+
 /** An image in the blob store; the CRDT holds only this reference. */
 export interface BlobRef {
   hash: string;
@@ -55,8 +65,11 @@ export const TOKEN_STYLES: { id: TokenStyle; label: string }[] = [
 
 export interface TokenElement extends Base {
   type: "token";
+  image?: BlobRef;
   graphic?: EntityGraphic;
   entityRef?: EntityGraphicRef;
+  /** A bundled entry icon, rendered when the token has no image. */
+  icon?: string;
   /** The gear definition represented by an item token. */
   itemDefId?: string;
   name: string;
@@ -72,9 +85,8 @@ export interface TokenElement extends Base {
   hideBars?: boolean;
 }
 
-/** Plain style is for images; built-in icons use the coloured disc treatment. */
-export const isPlainToken = (el: SceneElement) =>
-  el.type === "token" && el.style === "plain" && el.graphic?.kind === "image";
+/** A token is only drawn plain if it has an image to show. */
+export const isPlainToken = (el: SceneElement) => el.type === 'token' && el.style === 'plain' && (!!el.image || el.graphic?.kind === 'image')
 
 export interface DrawingElement extends Base {
   type: "drawing";

@@ -1,16 +1,24 @@
-import { signal } from '@preact/signals'
-import type { ActionDef, ChoiceDef, ClassDef, GameSystem, ItemDef, OptionDef, TagDef } from '../systems/types'
+import { signal } from '@preact/signals-react'
+import type {
+  ActionDef,
+  ChoiceDef,
+  GameSystem,
+  ItemDef,
+  MonsterDef,
+  OptionDef,
+  TagDef,
+} from "../systems/types";
 
 /*
  * Libraries: collections of things to look up and use (items, moves,
- * classes, tags), contributed by the game system and by plugins. The
+ * options, tags), contributed by the game system and by plugins. The
  * Libraries panel lists them; characters' inventories draw on them.
  *
  * A source is whoever contributes (a system, a plugin, later the campaign's
  * homebrew); it holds named collections, each of one kind of entry.
  */
 
-export type EntryKind = 'item' | 'move' | 'class' | 'tag' | 'option'
+export type EntryKind = "item" | "move" | "tag" | "option" | "monster";
 
 interface EntryBase {
   id: string
@@ -22,12 +30,12 @@ interface EntryBase {
 }
 
 export type LibraryEntry =
-  | (EntryBase & { kind: 'item'; item: ItemDef })
-  | (EntryBase & { kind: 'move'; move: ActionDef })
-  | (EntryBase & { kind: 'class'; cls: ClassDef })
-  | (EntryBase & { kind: 'tag'; tag: TagDef })
+  | (EntryBase & { kind: "item"; item: ItemDef })
+  | (EntryBase & { kind: "move"; move: ActionDef })
+  | (EntryBase & { kind: "tag"; tag: TagDef })
   /** A character option: a species, background, subclass or feat. */
-  | (EntryBase & { kind: 'option'; option: OptionDef })
+  | (EntryBase & { kind: "option"; option: OptionDef })
+  | (EntryBase & { kind: "monster"; monster: MonsterDef });
 
 export interface LibraryCollection {
   id: string
@@ -46,31 +54,46 @@ export interface LibrarySource {
   attribution?: string
 }
 
-export const KIND_LABEL: Record<EntryKind, string> = { item: 'Gear', move: 'Moves', class: 'Classes', option: 'Options', tag: 'Tags' }
+export const KIND_LABEL: Record<EntryKind, string> = {
+  item: "Gear",
+  move: "Moves",
+  option: "Options",
+  monster: "Monsters",
+  tag: "Tags",
+};
 
 
-export const itemEntry = (i: ItemDef): LibraryEntry => ({ kind: 'item', id: i.id, name: i.name, text: i.description, tags: i.tags, icon: i.icon, item: i })
+export const itemEntry = (i: ItemDef): LibraryEntry => ({ kind: 'item', id: i.id, name: i.name, text: i.description, tags: i.tags, ...(i.icon ? { icon: i.icon } : {}), item: i })
 export const moveEntry = (m: ActionDef): LibraryEntry => ({
   kind: 'move',
   id: m.id,
   name: m.name,
   text: m.text,
   tags: m.tags ?? [],
-  icon: m.category === 'class' ? 'class-move' : undefined,
+  ...(m.category === 'class' ? { icon: 'class-move' } : {}),
   move: m,
 })
+export const monsterEntry = (m: MonsterDef): LibraryEntry => ({ kind: 'monster', id: m.id, name: m.name, text: m.description, tags: [], monster: m })
 
 const optionCollection = (c: ChoiceDef): LibraryCollection => ({
   id: `options-${c.id}`,
   name: c.plural ?? c.label,
-  kind: 'option',
-  entries: c.options.map((o) => ({ kind: 'option', id: o.id, name: o.name, text: o.text, tags: [], option: o })),
-})
+  kind: "option",
+  entries: c.options.map((o) => ({
+    kind: "option",
+    id: o.id,
+    name: o.name,
+    text: o.text,
+    tags: [],
+    ...(o.icon ? { icon: o.icon } : {}),
+    option: o,
+  })),
+});
 
 /** Built once per system: a system's data never changes while the app runs. */
 const built = new WeakMap<GameSystem, LibrarySource>()
 
-/** What a game system contributes: its gear, actions (by the system's categories), classes, character options and tags. */
+/** What a game system contributes: gear, actions, character options and tags. */
 export function systemLibrary(system: GameSystem): LibrarySource {
   let source = built.get(system)
   if (!source) built.set(system, (source = buildSystemLibrary(system)))
@@ -82,17 +105,16 @@ function buildSystemLibrary(system: GameSystem): LibrarySource {
   if (system.items.length) {
     collections.push({ id: 'items', name: 'Gear', kind: 'item', entries: system.items.map(itemEntry) })
   }
+  if (system.monsters?.length) collections.push({ id: 'monsters', name: 'Monsters', kind: 'monster', entries: system.monsters.map(monsterEntry) })
   for (const cat of system.actionCategories) {
-    const moves = system.actions.filter((m) => m.category === cat.id)
-    if (moves.length) collections.push({ id: `moves-${cat.id}`, name: `${cat.label} moves`, kind: 'move', entries: moves.map(moveEntry) })
-  }
-  if (system.classes.length) {
-    collections.push({
-      id: 'classes',
-      name: 'Classes',
-      kind: 'class',
-      entries: system.classes.map((c) => ({ kind: 'class', id: c.id, name: c.name, text: c.blurb, tags: [], icon: c.icon, cls: c })),
-    })
+    const moves = system.actions.filter((m) => m.category === cat.id);
+    if (moves.length)
+      collections.push({
+        id: `moves-${cat.id}`,
+        name: `${cat.label} moves`,
+        kind: "move",
+        entries: moves.map(moveEntry),
+      });
   }
   for (const c of [...(system.creation?.choices ?? []), ...(system.creation?.feats ? [system.creation.feats] : [])]) {
     if (c.options.length) collections.push(optionCollection(c))

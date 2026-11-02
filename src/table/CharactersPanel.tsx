@@ -1,5 +1,5 @@
-import { useSignal } from '@preact/signals'
-import { useEffect, useRef } from "preact/hooks";
+import { useSignal } from "@preact/signals-react";
+import { useEffect, useRef } from "react";
 import {
   canEdit,
   createFolder,
@@ -16,51 +16,72 @@ import {
   selectCharacter,
   selectedCharacterId,
   systemOf,
-} from '../characters/api'
-import type { CharacterView } from '../characters/store'
-import type { Campaign } from '../store/campaign'
-import { useY } from '../store/useY'
+} from "../characters/api";
+import type { CharacterView } from "../characters/store";
+import type { Campaign } from "../store/campaign";
+import { useY } from "../store/useY";
 import type { GameSystem } from "../systems/types";
-import { Button } from '../ui/Button'
+import { Button } from "../ui/Button";
 import { IconImage } from "../ui/icons";
 import { menuTrigger } from "../ui/menuTrigger";
-import { choicesAt } from '../characters/creation'
-import { ChoiceField, creationResult, emptyPick, ScoreFields, scoreMethods, scoresReady, startingScores, type Picked, type ScoreMethod } from './CreationParts'
-import { IconDelete, IconFolder, IconRename } from '../ui/icons'
-import { Segmented } from '../ui/Segmented'
+import { choicesAt } from "../characters/creation";
+import {
+  ChoiceField,
+  creationResult,
+  emptyPick,
+  ScoreFields,
+  scoreMethods,
+  scoresReady,
+  startingScores,
+  type Picked,
+  type ScoreMethod,
+} from "./CreationParts";
+import { IconDelete, IconFolder, IconRename } from "../ui/icons";
+import { Segmented } from "../ui/Segmented";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { createPaneLayout, TwoPane, usePaneLevel } from '../ui/TwoPane'
+import { TwoPane, usePaneLevel } from "../ui/TwoPane";
 import { ListRow } from "../ui/List";
-import { ContextMenu, type MenuItem } from './ContextMenu'
+import { ContextMenu, type MenuItem } from "./ContextMenu";
 import { dragEntity, entity } from "./entityDrag";
 import { CampaignEntityGraphic } from "./EntityGraphic";
 import { editEntityGraphic } from "./GraphicDialogs";
-import { CharacterSheet } from './sheets'
+import { CharacterSheet } from "./sheets";
 import { showLink } from "./linkState";
 import { FolderTree } from "./FolderTree";
+import { charactersLayout } from "./panelLayouts";
 
-/** Side by side or one at a time (ui/TwoPane.tsx); kept under the key it always had. */
-export const charactersLayout = createPaneLayout('charsList', { list: 'list', detail: 'sheet' })
 
 export function CharactersPanel({ campaign }: { campaign: Campaign }) {
-  const system = systemOf(campaign)
-  const characters = useY(campaign.characters, () => listCharacters(campaign))
-  const folders = useY(campaign.characterFolders, () => listFolders(campaign))
-  const selectedId = useY(campaign.members, () => selectedCharacterId(campaign))
-  const isGm = useY(campaign.members, () => campaign.isGm())
-  const creating = useSignal(false)
+  const system = systemOf(campaign);
+  const characters = useY(campaign.characters, () => listCharacters(campaign));
+  const folders = useY(campaign.characterFolders, () => listFolders(campaign));
+  const selectedId = useY(campaign.members, () =>
+    selectedCharacterId(campaign),
+  );
+  const isGm = useY(campaign.members, () => campaign.isGm());
+  const creating = useSignal(false);
   const creationFolder = useSignal<string | undefined>(undefined);
   // Copies (a template's tokens) aren't listed, but selecting one's token opens its sheet.
-  const selected = useY(campaign.characters, () => getCharacter(campaign, selectedId))
+  const selected = useY(campaign.characters, () =>
+    getCharacter(campaign, selectedId),
+  );
   // One at a time: which level shows, the list or the sheet.
-  const { level, go } = usePaneLevel(charactersLayout, selectedId ? 'detail' : 'list')
-  const seen = useRef(selectedId)
+  const { level, go } = usePaneLevel(
+    charactersLayout,
+    selectedId ? "detail" : "list",
+  );
+  const seen = useRef(selectedId);
   useEffect(() => {
     // The open character was deleted: back to the list, not on to another sheet.
-    if (seen.current && seen.current !== selectedId && !campaign.characters.has(seen.current)) go('list')
-    else if (seen.current !== selectedId && selectedId) go('detail')
-    seen.current = selectedId
-  }, [selectedId])
+    if (
+      seen.current &&
+      seen.current !== selectedId &&
+      !campaign.characters.has(seen.current)
+    )
+      go("list");
+    else if (seen.current !== selectedId && selectedId) go("detail");
+    seen.current = selectedId;
+  }, [selectedId]);
 
   return (
     <TwoPane
@@ -75,7 +96,6 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
       list={
         <CharacterList
           campaign={campaign}
-          system={system}
           characters={characters}
           folders={folders}
           selectedId={selectedId}
@@ -92,7 +112,7 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
         />
       }
       detail={
-        <div class="chars-sheet panel-scroll sheet-panel">
+        <div className="chars-sheet panel-scroll sheet-panel">
           {creating.value ? (
             <NewCharacter
               campaign={campaign}
@@ -108,7 +128,7 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
           ) : selected ? (
             <CharacterSheet campaign={campaign} system={system} c={selected} />
           ) : (
-            <p class="empty">
+            <p className="empty">
               Create a character, or pick one to see its sheet.
             </p>
           )}
@@ -121,7 +141,6 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
 /** The left pane: characters, filed in folders. Drag a character onto a folder to file it. */
 function CharacterList({
   campaign,
-  system,
   characters,
   folders,
   selectedId,
@@ -129,7 +148,6 @@ function CharacterList({
   onPick,
 }: {
   campaign: Campaign;
-  system: GameSystem;
   characters: CharacterView[];
   folders: FolderView[];
   selectedId: string | undefined;
@@ -146,9 +164,8 @@ function CharacterList({
   const row = (c: CharacterView) => {
     const mine = canEdit(campaign, c);
     const dragged = entity(campaign, "character", c.id, c.name);
-    dragged.folder = mine
-      ? (folderId) => moveToFolder(campaign, c.id, folderId)
-      : undefined;
+    if (mine) dragged.folder = (folderId) => moveToFolder(campaign, c.id, folderId);
+    else delete dragged.folder;
     const trigger = menuTrigger((x, y) => {
       const items: MenuItem[] = [
         { label: "Open character", onSelect: () => onPick(c.id) },
@@ -199,14 +216,11 @@ function CharacterList({
         selected={c.id === selectedId}
         onPick={() => onPick(c.id)}
         row={{
-          "data-tip":
-            c.kind === "npc"
-              ? `${c.name} (NPC)`
-              : `${c.name} (${system.classes.find((k) => k.id === c.classId)?.name ?? c.classId})`,
+          "data-tip": c.kind === "npc" ? `${c.name} (NPC)` : c.name,
           "data-tip-side": true,
         }}
         pick={{
-          onDblClick: (e) =>
+          onDoubleClick: (e) =>
             showLink({ kind: "character", id: c.id }, e.currentTarget),
           "data-kind": c.kind,
           "data-item-drop": mine ? c.id : undefined,
@@ -269,7 +283,7 @@ function CharacterList({
         onRenameFolder={(id, name) => renameFolder(campaign, id, name)}
         emptyContent={
           !characters.length && !folders.length ? (
-            <p class="empty-inline">No characters yet.</p>
+            <p className="empty-inline">No characters yet.</p>
           ) : null
         }
       />
@@ -292,23 +306,48 @@ function NewCharacter({
   system: GameSystem;
   folders: FolderView[];
   isGm: boolean;
-  initialFolder?: string;
+  initialFolder?: string | undefined;
   onDone: () => void;
 }) {
   const kind = useSignal<"pc" | "npc">("pc");
   const name = useSignal("");
-  const classId = useSignal(system.classes[0]?.id ?? "");
   const folder = useSignal(initialFolder ?? "");
   // The guided flow: the system's choices at creation, then ability scores.
   const creation = system.creation;
-  const picks = useSignal<Record<string, Picked>>({});
+  const picks = useSignal<Record<string, Picked>>(
+    Object.fromEntries(
+      (creation?.choices ?? []).flatMap((choice) => {
+        const value = system.characterData.find(
+          (field) => field.id === choice.field,
+        )?.default;
+        return choice.at === "create" && typeof value === "string" && value
+          ? [[choice.id, { option: value, pattern: 0, order: [] }]]
+          : [];
+      }),
+    ),
+  );
   const method = useSignal<ScoreMethod>(
-    creation ? scoreMethods(creation.scores)[0].id : "manual",
+    creation ? (scoreMethods(creation.scores))[0]!.id : "manual",
   );
   const scores = useSignal(
     creation ? startingScores(system, creation.scores, method.value) : {},
   );
-  const choices = choicesAt(creation, "create", classId.value);
+  const choiceData = Object.fromEntries(
+    (creation?.choices ?? []).flatMap((choice) => {
+      const option = choice.options.find(
+        (item) => item.id === picks.value[choice.id]?.option,
+      );
+      return option
+        ? [[choice.field, option.id], ...Object.entries(option.grants ?? [])]
+        : [];
+    }),
+  );
+  const defaults = Object.fromEntries(
+    system.characterData
+      .filter((field) => !field.for || field.for === kind.value)
+      .map((field) => [field.id, field.default]),
+  );
+  const choices = choicesAt(creation, "create", { ...defaults, ...choiceData });
   const ready =
     kind.value === "npc" ||
     !creation ||
@@ -319,24 +358,28 @@ function NewCharacter({
       newNpc(campaign, name.value, folder.value || undefined);
     else {
       const made = creation
-        ? creationResult(system, classId.value, scores.value, picks.value)
+        ? creationResult(system, scores.value, picks.value)
         : undefined;
-      const id = newCharacter(campaign, name.value, classId.value, made);
+      const id = newCharacter(
+        campaign,
+        name.value,
+        String(choiceData.classId ?? ""),
+        made,
+      );
       if (folder.value) moveToFolder(campaign, id, folder.value);
     }
     onDone();
   };
-  const cls = system.classes.find((k) => k.id === classId.value);
   return (
     <form
-      class="sheet-new"
+      className="sheet-new"
       onSubmit={(e) => {
         e.preventDefault();
         submit();
       }}
     >
       {isGm && (
-        <div class="field">
+        <div className="field">
           Type
           <Segmented
             label="Character type"
@@ -349,32 +392,16 @@ function NewCharacter({
           />
         </div>
       )}
-      <label class="field">
+      <label className="field">
         Name
         <input
-          class="input bevel"
           value={name.value}
           onInput={(e) => (name.value = e.currentTarget.value)}
-          autofocus
+          autoFocus
         />
       </label>
-      {kind.value === "pc" && system.classes.length > 0 && (
+      {kind.value === "pc" && creation && (
         <>
-          <label class="field">
-            Class
-            <select
-              class="input bevel"
-              value={classId.value}
-              onChange={(e) => (classId.value = e.currentTarget.value)}
-            >
-              {system.classes.map((k) => (
-                <option key={k.id} value={k.id}>
-                  {k.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          {cls && <p class="muted">{cls.blurb}</p>}
           {choices.map((ch) => (
             <ChoiceField
               key={ch.id}
@@ -395,10 +422,9 @@ function NewCharacter({
         </>
       )}
       {folders.length > 0 && (
-        <label class="field">
+        <label className="field">
           Folder
           <select
-            class="input bevel"
             value={folder.value}
             onChange={(e) => (folder.value = e.currentTarget.value)}
           >
@@ -411,7 +437,7 @@ function NewCharacter({
           </select>
         </label>
       )}
-      <div class="sheet-row">
+      <div className="sheet-row">
         <Button variant="primary" size="sm" type="submit" disabled={!ready}>
           Create
         </Button>

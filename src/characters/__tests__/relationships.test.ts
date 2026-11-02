@@ -35,12 +35,17 @@ describe('relationships', () => {
     const edges = [{ from: 'a', to: 'b', label: '' }]
     const pos = layoutWeb(ids, edges, { width: 500, height: 300, fixed: { d: { x: 50, y: 50 } } })
     expect(pos.d).toEqual({ x: 50, y: 50 })
+    const point = (id: string) => {
+      const value = pos[id];
+      if (!value) throw new Error(`Missing test position ${id}`);
+      return value;
+    };
     for (const id of ids) {
-      expect(pos[id].x).toBeGreaterThanOrEqual(40)
-      expect(pos[id].x).toBeLessThanOrEqual(460)
+      expect(point(id).x).toBeGreaterThanOrEqual(40)
+      expect(point(id).x).toBeLessThanOrEqual(460)
     }
     // Related characters end up closer than unrelated ones.
-    const dist = (p: string, q: string) => Math.hypot(pos[p].x - pos[q].x, pos[p].y - pos[q].y)
+    const dist = (p: string, q: string) => Math.hypot(point(p).x - point(q).x, point(p).y - point(q).y)
     expect(dist('a', 'b')).toBeLessThan(dist('a', 'c'))
   })
 })

@@ -1,10 +1,11 @@
-import { useSignal } from "@preact/signals";
-import type { ComponentChildren } from "preact";
+import { useSignal } from "@preact/signals-react";
+import type { ReactNode } from "react";
 import { IconFolder } from "../ui/icons";
 import { FolderName } from "../ui/FolderName";
 import { List, ListGroup } from "../ui/List";
 import { menuTrigger } from "../ui/menuTrigger";
 import { ContextMenu, type MenuItem } from "./ContextMenu";
+import { PanelActions } from "./PanelActions";
 
 type FolderRecord = { id: string; name: string };
 
@@ -32,12 +33,12 @@ export function FolderTree<Item, Folder extends FolderRecord>({
   folders: Folder[];
   items: Item[];
   folderOf: (item: Item) => string | undefined;
-  renderItem: (item: Item) => ComponentChildren;
-  renderActions: (beginFolderNaming: () => void) => ComponentChildren;
+  renderItem: (item: Item) => ReactNode;
+  renderActions: (beginFolderNaming: () => void) => ReactNode;
   folderMenuItems: (folder: Folder, state: FolderMenuState) => MenuItem[];
   onCreateFolder: (name: string) => void;
   onRenameFolder: (id: string, name: string) => void;
-  emptyContent?: ComponentChildren;
+  emptyContent?: ReactNode;
 }) {
   const folded = useSignal<Set<string>>(new Set());
   const naming = useSignal<string | null>(null);
@@ -57,11 +58,8 @@ export function FolderTree<Item, Folder extends FolderRecord>({
   };
 
   return (
-    <nav class={className} aria-label={ariaLabel}>
-      <div class="chars-actions">
-        {renderActions(() => (naming.value = "new"))}
-      </div>
-      <div class="chars-tree panel-scroll" data-folder-drop="">
+    <nav className={className} aria-label={ariaLabel}>
+      <PanelActions>
         {naming.value === "new" && (
           <FolderName
             onDone={(name) => {
@@ -70,6 +68,9 @@ export function FolderTree<Item, Folder extends FolderRecord>({
             }}
           />
         )}
+        {naming.value !== "new" && renderActions(() => (naming.value = "new"))}
+      </PanelActions>
+      <div className="chars-tree panel-scroll" data-folder-drop="">
         {folders.map((folder) => {
           const children = items.filter((item) => folderOf(item) === folder.id);
           const open = !folded.value.has(folder.id);

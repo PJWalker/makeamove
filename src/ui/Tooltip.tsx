@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'preact/hooks'
-import { useSignal } from '@preact/signals'
+import { useEffect, useRef } from 'react'
+import { useSignal } from '@preact/signals-react'
 import { inTransition } from './transition'
 
 const DELAY = 150
@@ -184,7 +184,7 @@ export function Tooltip() {
   }, [t])
 
   return (
-    <div ref={ref} class="tooltip" data-instant={t?.instant || undefined} data-long={t?.long || undefined} popover="manual" role="tooltip">
+    <div ref={ref} className="tooltip" data-instant={t?.instant || undefined} data-long={t?.long || undefined} popover="manual" role="tooltip">
       {t?.text}
     </div>
   )

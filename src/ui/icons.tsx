@@ -1,4 +1,5 @@
-import type { ComponentType, JSX } from 'preact'
+import type * as React from "react";
+import type { ComponentType } from 'react'
 
 /*
  * Every icon in the app, named for what it means rather than what it shows.
@@ -75,10 +76,10 @@ import MsRedo from "~icons/material-symbols/redo-rounded";
 import MsTitle from '~icons/material-symbols/title-rounded'
 import MsUndo from "~icons/material-symbols/undo-rounded";
 
-export type IconProps = Omit<JSX.SVGAttributes<SVGSVGElement>, 'size'> & { size?: number }
+export type IconProps = Omit<React.SVGProps<SVGSVGElement>, 'size'> & { size?: number }
 export type Icon = ComponentType<IconProps>
 
-export function icon(Svg: ComponentType<JSX.SVGAttributes<SVGSVGElement>>): Icon {
+export function icon(Svg: ComponentType<React.SVGProps<SVGSVGElement>>): Icon {
   return ({ size = 22, ...rest }) => (
     <Svg width={size} height={size} aria-hidden="true" {...rest} />
   );

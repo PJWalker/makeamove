@@ -1,6 +1,10 @@
 import type { GameSystem } from './types'
 import { dungeonWorld } from './dungeon-world'
+import { dungeonWorld2 } from './dungeon-world-2'
+import { bladesInTheDark } from './blades-in-the-dark'
+import { daggerheart } from './daggerheart'
 import { dnd55e } from './dnd55e'
+import { testSystem } from './test'
 
 export const NO_SYSTEM_ID = "none";
 
@@ -16,7 +20,6 @@ const noSystem: GameSystem = {
   actions: [],
   actionCategories: [],
   followUps: [],
-  classes: [],
   items: [],
   tags: [],
   conditions: [],
@@ -53,8 +56,10 @@ export function checkSystem(s: GameSystem): string[] {
     }
   }
   unique('stats', s.stats.map((x) => x.id))
-  unique('actions', s.actions.map((x) => x.id))
-  unique('classes', s.classes.map((x) => x.id))
+  unique(
+    "actions",
+    s.actions.map((x) => x.id),
+  );
   unique('items', s.items.map((x) => x.id))
   unique('conditions', s.conditions.map((x) => x.id))
   unique('resources', s.resources.map((x) => x.id))
@@ -63,13 +68,12 @@ export function checkSystem(s: GameSystem): string[] {
   for (const z of s.sizes) if (!(z.cells > 0)) problems.push(`${z.name}: a size needs more than 0 cells.`)
 
   const stats = new Set(s.stats.map((x) => x.id))
-  const categories = new Set(s.actionCategories.map((x) => x.id))
-  const classes = new Set(s.classes.map((x) => x.id))
+  const categories = new Set(s.actionCategories.map((x) => x.id));
   const followUps = new Set(s.followUps.map((x) => x.id))
   const fields = new Set(s.characterData.map((x) => x.id))
   for (const a of s.actions) {
-    if (!categories.has(a.category)) problems.push(`${a.name}: no action category “${a.category}”.`)
-    if (a.classId && !classes.has(a.classId)) problems.push(`${a.name}: no class “${a.classId}”.`)
+    if (!categories.has(a.category))
+      problems.push(`${a.name}: no action category “${a.category}”.`);
     for (const step of a.steps) {
       if (step.kind === 'save') {
         if (!s.actions.some((x) => x.id === step.action)) problems.push(`${a.name}: no action “${step.action}” to save with.`)
@@ -83,7 +87,11 @@ export function checkSystem(s: GameSystem): string[] {
   }
   for (const a of s.actions) for (const f of a.followUps ?? []) if (!followUps.has(f)) problems.push(`${a.name}: no follow-up “${f}”.`)
   for (const k of s.conditions) if (k.stat && !stats.has(k.stat)) problems.push(`${k.name}: no stat “${k.stat}”.`)
-  for (const f of s.followUps) if (f.kind === 'bump' && !fields.has(f.field)) problems.push(`${f.label}: no character field “${f.field}”.`)
+  for (const f of s.followUps) {
+    if (f.kind === 'bump' && !fields.has(f.field)) problems.push(`${f.label}: no character field “${f.field}”.`)
+    if (f.kind === 'resource' && !s.resources.some((resource) => resource.id === f.resource)) problems.push(`${f.label}: no resource “${f.resource}”.`)
+    if (f.kind === 'counter' && f.systemCounter && !s.counters?.some((counter) => counter.id === f.systemCounter)) problems.push(`${f.label}: no system counter “${f.systemCounter}”.`)
+  }
   return problems
 }
 
@@ -98,7 +106,11 @@ export function defineSystem(system: GameSystem): GameSystem {
 }
 
 defineSystem(dungeonWorld)
+defineSystem(dungeonWorld2)
+defineSystem(bladesInTheDark)
+defineSystem(daggerheart)
 defineSystem(dnd55e)
+defineSystem(testSystem)
 defineSystem(noSystem);
 
 /** The system with this id; Dungeon World for campaigns that don't say. */

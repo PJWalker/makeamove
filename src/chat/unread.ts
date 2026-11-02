@@ -1,4 +1,4 @@
-import { computed, signal } from '@preact/signals'
+import { computed, signal } from '@preact/signals-react'
 import { activeCampaign } from '../store/campaign'
 import { device } from '../store/device'
 import { visibilityOf } from './types'

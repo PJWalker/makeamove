@@ -33,7 +33,12 @@ describe('homebrew', () => {
     expect(withHomebrew(dungeonWorld, [])).toBe(dungeonWorld)
 
     const chars = new Y.Doc().getMap<Y.Map<any>>('characters')
-    const cid = createCharacter(chars, system, { name: 'Lux', classId: 'bard', owner: 'me', scores: { cha: 16 } })
+    const cid = createCharacter(chars, system, {
+      name: "Lux",
+      owner: "me",
+      scores: { cha: 16 },
+      data: { classId: "bard" },
+    });
     chars.get(cid)!.set('learned', [id])
     const c = characterView(cid, chars.get(cid)!, system)
     const move = actionsFor(c, system, derive(c, system)).find((a) => a.id === id)!

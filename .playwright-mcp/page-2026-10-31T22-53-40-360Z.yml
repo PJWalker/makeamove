@@ -1,0 +1,52 @@
+- main [ref=f33e3]:
+  - generic [ref=f33e4]:
+    - heading "Make a Move" [level=1] [ref=f33e6]
+    - region [ref=f33e7]:
+      - heading "Your campaigns" [level=2] [ref=f33e8]
+      - list [ref=f33e9]:
+        - listitem [ref=f33e10]:
+          - button "Local dice collisions GM · No system · opened 6 hours ago" [ref=f33e11] [cursor=pointer]:
+            - generic [ref=f33e12]: Local dice collisions
+            - generic [ref=f33e13]: GM · No system · opened 6 hours ago
+          - button "Delete Local dice collisions" [ref=f33e14] [cursor=pointer]
+        - listitem [ref=f33e17]:
+          - button "E2E Browser Check GM · Dungeon World · opened 15 hours ago" [ref=f33e18] [cursor=pointer]:
+            - generic [ref=f33e19]: E2E Browser Check
+            - generic [ref=f33e20]: GM · Dungeon World · opened 15 hours ago
+          - button "Delete E2E Browser Check" [ref=f33e21] [cursor=pointer]
+    - form [ref=f33e24]:
+      - heading "Start a campaign" [level=2] [ref=f33e25]
+      - generic [ref=f33e26]:
+        - generic [ref=f33e27]:
+          - text: Campaign name
+          - textbox "Campaign name" [ref=f33e28]:
+            - /placeholder: The Lost Barrows
+        - generic [ref=f33e29]:
+          - text: Your name
+          - textbox "Your name" [ref=f33e30]:
+            - /placeholder: Robin
+            - text: Tester
+      - generic [ref=f33e32]:
+        - text: System
+        - combobox "System" [ref=f33e33]:
+          - option "Choose a system" [disabled]
+          - option "Dungeon World"
+          - option "Dungeon World 2"
+          - option "Blades in the Dark"
+          - option "Daggerheart"
+          - option "D&D 5.5e"
+          - option "No system" [selected]
+      - button "Create campaign" [ref=f33e35] [cursor=pointer]
+    - form [ref=f33e38]:
+      - heading "Join a campaign" [level=2] [ref=f33e39]
+      - generic [ref=f33e40]:
+        - generic [ref=f33e41]:
+          - text: Invite link
+          - textbox "Invite link" [ref=f33e42]:
+            - /placeholder: Paste an invite link
+        - generic [ref=f33e43]:
+          - text: Your name
+          - textbox "Your name" [ref=f33e44]:
+            - /placeholder: Robin
+            - text: Tester
+      - button "Join" [disabled] [ref=f33e46]

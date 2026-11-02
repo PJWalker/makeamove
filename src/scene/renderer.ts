@@ -1,4 +1,5 @@
 import { entryIconSvg } from "../ui/entryIcons";
+
 import {
   AlphaFilter,
   Application,
@@ -45,7 +46,8 @@ import {
   tokenBlocker,
 } from "./vision";
 import { type Blocker, Lamp } from "./lampShader";
-import { resolveTokenLabelLayout } from "./tokenLabelLayout";
+import { resolveTokenLabelLayout, zoomTokenBars } from "./tokenLabelLayout";
+import { conditionContains, conditionLayout, hoverSpring } from "./conditionLayout";
 import {
   AREA_COLOURS,
   isPlainToken,
@@ -81,16 +83,22 @@ const flat = (pts: Point[]) => pts.flatMap((p) => [p.x, p.y]);
 
 /** A token's condition pips and whether it's that token's turn. */
 export interface TokenMarks {
-  /** One colour per condition. */
-  pips: string[];
+  pips: { id: string; name: string; colour: string }[];
   turn: boolean;
 }
 const NO_MARKS: TokenMarks = { pips: [], turn: false };
 const PIP_MIN_R = 3;
 const PIP_MAX_R = 6;
-/** More conditions than this show only this many pips. */
-const PIP_MAX = 6;
 const TURN_COLOUR = 0xf0c23b;
+
+interface ConditionView {
+  text: Text;
+  current: Rect;
+  from: Rect;
+  target: Rect;
+  start: number;
+  expanded: boolean;
+}
 
 /** Tokens smaller than this on screen, in px, only show their name and bars on hover. */
 const NAME_TOKEN_MIN = 24;
@@ -298,8 +306,18 @@ export class SceneRenderer {
   private barsG = new Graphics();
   private barText = new Container();
   private barTextPool = new Map<string, Text>();
+  private barHover: { tokenId: string; statId: string } | null = null;
+  private barZoom = new Map<string, { scale: number; from: number; target: number; start: number }>();
+  private barsAnimating = false;
   /** The token under the pointer, whose name always shows. */
   private hoverToken: string | null = null;
+  private hoverPointer: Point | null = null;
+  private conditionHover: { id: string; anchor: number; bounds: Rect } | null = null;
+  private conditionsG = new Graphics();
+  private conditionTexts = new Container();
+  private conditionViews = new Map<string, ConditionView>();
+  private conditionsAnimating = false;
+  private conditionCamera: Camera | null = null;
   private marks: PresenceMark[] = [];
   private cursors = new Map<string, CursorMove>();
   private views = new Map<string, View>();
@@ -441,6 +459,8 @@ export class SceneRenderer {
       this.overlay,
       this.presenceG,
       this.labels,
+      this.conditionsG,
+      this.conditionTexts,
     );
     this.resizeObserver = new ResizeObserver(() => {
       this.app.renderer.resize(host.clientWidth, host.clientHeight);
@@ -559,6 +579,8 @@ export class SceneRenderer {
     };
     this.app.render();
     if (animating) this.invalidate("presence");
+    if (this.conditionsAnimating) this.invalidate("overlay");
+    if (this.barsAnimating) this.invalidate("overlay");
   }
 
   /** The size text takes when drawn on the map, in world px. */
@@ -1201,10 +1223,14 @@ export class SceneRenderer {
       // Each hex draws its three upper edges; neighbours supply the rest.
       for (const { q, r } of hexCellsIn(grid, view)) {
         const c = hexCorners(hexCentre(grid, q, r), grid.size);
-        g.moveTo(c[3].x, c[3].y)
-          .lineTo(c[4].x, c[4].y)
-          .lineTo(c[5].x, c[5].y)
-          .lineTo(c[0].x, c[0].y);
+        const c0 = (c)[0]!;
+        const c3 = (c)[3]!;
+        const c4 = (c)[4]!;
+        const c5 = (c)[5]!;
+        g.moveTo(c3.x, c3.y)
+          .lineTo(c4.x, c4.y)
+          .lineTo(c5.x, c5.y)
+          .lineTo(c0.x, c0.y);
       }
     }
     // A dark line and a light one on the same pixels read on maps of any
@@ -1227,9 +1253,11 @@ export class SceneRenderer {
       g.position.set(0, 0);
       g.rotation = 0;
       const width = 2 / this.camera.zoom;
+      if (!d.points.length) return;
       if (d.points.length > 2)
         g.poly(flat(d.points)).fill({ color: d.colour, alpha: 0.15 });
-      g.moveTo(d.points[0].x, d.points[0].y);
+      const first = (d.points)[0]!;
+      g.moveTo(first.x, first.y);
       for (const p of d.points.slice(1)) g.lineTo(p.x, p.y);
       g.stroke({ color: d.colour, width });
       for (const p of d.points.slice(0, -1))
@@ -1311,7 +1339,7 @@ export class SceneRenderer {
           [-1, 0],
           [0, 1],
           [0, -1],
-        ]) {
+        ] as const) {
           g.moveTo(c.x + dx * (r - 5), c.y + dy * (r - 5))
             .lineTo(c.x + dx * (r + 5), c.y + dy * (r + 5))
             .stroke({ color: m.colour, width: 2.5 });
@@ -1330,9 +1358,15 @@ export class SceneRenderer {
     }
   }
 
-  setHoverToken(id: string | null) {
-    if (id === this.hoverToken) return;
+  setHoverToken(id: string | null, pointer: Point | null = null) {
+    if (
+      id === this.hoverToken &&
+      pointer?.x === this.hoverPointer?.x &&
+      pointer?.y === this.hoverPointer?.y
+    )
+      return;
     this.hoverToken = id;
+    this.hoverPointer = pointer;
     this.invalidate("overlay");
   }
 
@@ -1438,8 +1472,28 @@ export class SceneRenderer {
       });
     }
 
-    const hover = this.hoverToken;
-    const { bars, showBars, showName } = resolveTokenLabelLayout(plans, hover);
+    const pointer = this.hoverPointer;
+    const initialLayout = resolveTokenLabelLayout(plans, this.hoverToken);
+    let hoveredBar: typeof this.barHover = null;
+    if (pointer) {
+      for (const plan of plans) {
+        const box = initialLayout.bars.get(plan.id);
+        if (!box || (!initialLayout.showBars.has(plan.id) && plan.id !== this.barHover?.tokenId)) continue;
+        const zoomed = zoomTokenBars(box, plan.barH, BAR_GAP,
+          plan.stats.map(stat => this.barZoom.get(`${plan.id}:${stat.id}`)?.scale ?? 1));
+        for (const [index, bar] of zoomed.bars.entries()) {
+          if (pointer.x >= bar.x && pointer.x <= bar.x + bar.w && pointer.y >= bar.y && pointer.y <= bar.y + bar.h)
+            hoveredBar = { tokenId: plan.id, statId: (plan.stats)[index]!.id };
+        }
+      }
+    }
+    this.barHover = hoveredBar;
+    const hover = hoveredBar?.tokenId ?? this.hoverToken;
+    const { bars, showBars, showName } = hover === this.hoverToken ? initialLayout : resolveTokenLabelLayout(plans, hover);
+    const now = performance.now();
+    const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const usedZooms = new Set<string>();
+    this.barsAnimating = false;
 
     // Draw, the hovered token's last so it sits on top.
     const ordered = [
@@ -1450,10 +1504,30 @@ export class SceneRenderer {
       if (p.name) p.name.text.visible = showName.has(p.id);
       const barBox = bars.get(p.id);
       if (!barBox || !showBars.has(p.id)) continue;
-      const { x, w } = barBox;
-      const barH = p.barH;
+      const scales = p.stats.map(stat => {
+        const key = `${p.id}:${stat.id}`;
+        usedZooms.add(key);
+        let zoom = this.barZoom.get(key);
+        if (!zoom) {
+          zoom = { scale: 1, from: 1, target: 1, start: now - 320 };
+          this.barZoom.set(key, zoom);
+        }
+        const active = hoveredBar?.tokenId === p.id && hoveredBar.statId === stat.id;
+        const target = active ? Math.max(1.3, Math.min(2, 72 / barBox.w), 22 / p.barH) : 1;
+        if (zoom.target !== target) {
+          zoom.from = zoom.scale;
+          zoom.target = target;
+          zoom.start = now;
+        }
+        const progress = reducedMotion ? 1 : Math.min(1, (now - zoom.start) / 320);
+        zoom.scale = Math.max(1, zoom.from + (zoom.target - zoom.from) * hoverSpring(progress));
+        if (progress < 1) this.barsAnimating = true;
+        return zoom.scale;
+      });
+      const zoomed = zoomTokenBars(barBox, p.barH, BAR_GAP, scales);
+      if (p.name) p.name.text.y += zoomed.nameOffset;
       p.stats.forEach((s, i) => {
-        const y = barBox.y + i * (barH + BAR_GAP);
+        const { x, y, w, h: barH } = (zoomed.bars)[i]!;
         const frac = s.max > 0 ? Math.min(1, Math.max(0, s.value / s.max)) : 0;
         g.roundRect(x, y, w, barH, 3).fill({ color: INK, alpha: 0.85 });
         if (frac > 0)
@@ -1481,7 +1555,8 @@ export class SceneRenderer {
         }
         const value = `${s.value}/${s.max}`;
         if (text.text !== value) text.text = value;
-        text.scale.set((barH - 1) / (BAR_MAX_H - 2));
+        text.scale.set(1);
+        text.scale.set(Math.min((barH - 2) / text.height, (w - 8) / text.width));
         text.position.set(Math.round(x + w / 2), Math.round(y + barH / 2));
         usedValues.add(key);
         if (p.id === hover)
@@ -1489,37 +1564,10 @@ export class SceneRenderer {
       });
     }
 
-    // Condition pips along each token's top edge, and a ring round the token whose turn it is.
-    for (const el of this.elements) {
-      if (
-        el.type !== "token" ||
-        this.hidden.has(el.id) ||
-        this.unseen(this.previews.get(el.id) ?? el)
-      )
-        continue;
-      const marks = this.marksFor(el.id, el.characterId);
-      if (!marks.pips.length && !marks.turn) continue;
-      const t = this.previews.get(el.id) ?? el;
-      const c = toScreen(cam, { x: t.x, y: t.y });
-      const half = (Math.max(t.w, t.h) * cam.zoom) / 2;
-      if (marks.turn)
-        g.circle(c.x, c.y, half + 5).stroke({
-          color: TURN_COLOUR,
-          width: 3,
-          alpha: 0.95,
-        });
-      const r = Math.round(
-        Math.min(PIP_MAX_R, Math.max(PIP_MIN_R, half * 0.12)),
-      );
-      const shown = marks.pips.slice(0, PIP_MAX);
-      const span = shown.length * (r * 2 + 2) - 2;
-      const top = toScreen(cam, { x: t.x, y: t.y - t.h / 2 }).y;
-      shown.forEach((colour, i) => {
-        const x = c.x - span / 2 + r + i * (r * 2 + 2);
-        g.circle(x, top, r)
-          .fill({ color: colour })
-          .stroke({ color: INK, width: 1.5 });
-      });
+    this.drawConditions(g);
+
+    for (const key of this.barZoom.keys()) {
+      if (!usedZooms.has(key)) this.barZoom.delete(key);
     }
 
     const hovered = hover && this.namePool.get(hover);
@@ -1534,6 +1582,146 @@ export class SceneRenderer {
       if (usedValues.has(key)) continue;
       text.destroy();
       this.barTextPool.delete(key);
+    }
+  }
+
+  private drawConditions(turns: Graphics) {
+    const now = performance.now();
+    const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const cam = this.camera;
+    const previousCamera = this.conditionCamera;
+    const cameraChanged = previousCamera !== null &&
+      (previousCamera.x !== cam.x || previousCamera.y !== cam.y || previousCamera.zoom !== cam.zoom);
+    if (this.conditionHover && previousCamera && cameraChanged) {
+      this.conditionHover.bounds.x += cam.x - previousCamera.x;
+      this.conditionHover.bounds.y += cam.y - previousCamera.y;
+    }
+    this.conditionCamera = { ...cam };
+    const pointer = this.hoverPointer;
+    const insets = this.insets();
+    const viewport: Rect = {
+      x: insets.left + 4,
+      y: insets.top + 4,
+      w: Math.max(1, this.size.width - insets.left - insets.right - 8),
+      h: Math.max(1, this.size.height - insets.top - 8),
+    };
+    const tokens = this.elements.filter(el => el.type === "token" &&
+      !this.hidden.has(el.id) && !this.unseen(this.previews.get(el.id) ?? el));
+    const boxes = new Map(tokens.map(el => {
+      const t = this.previews.get(el.id) ?? el;
+      const c = toScreen(cam, t);
+      return [el.id, { x: c.x - t.w * cam.zoom / 2, y: c.y - t.h * cam.zoom / 2, w: t.w * cam.zoom, h: t.h * cam.zoom }] as const;
+    }));
+    const used = new Set<string>();
+    const plans = tokens.map(el => {
+      const marks = this.marksFor(el.id, el.type === "token" ? el.characterId : undefined);
+      const t = this.previews.get(el.id) ?? el;
+      const c = toScreen(cam, t);
+      const half = Math.max(t.w, t.h) * cam.zoom / 2;
+      if (marks.turn) turns.circle(c.x, c.y, half + 5).stroke({ color: TURN_COLOUR, width: 3, alpha: 0.95 });
+      const radius = Math.round(Math.min(PIP_MAX_R, Math.max(PIP_MIN_R, half * 0.12)));
+      const views = marks.pips.map(pip => {
+        const key = `${el.id}:${pip.id}`;
+        used.add(key);
+        let view = this.conditionViews.get(key);
+        if (!view) {
+          const text = new Text({ text: pip.name, style: {
+            fontFamily: "Cabin, sans-serif", fontSize: 12, fontWeight: "700", fill: INK,
+            wordWrap: true, breakWords: true, wordWrapWidth: Math.max(1, viewport.w - 16),
+          }, resolution: 2 });
+          const initial = { x: c.x - radius, y: boxes.get(el.id)!.y - radius, w: radius * 2, h: radius * 2 };
+          view = { text, current: initial, from: initial, target: initial, start: now, expanded: false };
+          this.conditionViews.set(key, view);
+          this.conditionTexts.addChild(text);
+        }
+        if (view.text.text !== pip.name) view.text.text = pip.name;
+        view.text.style.wordWrapWidth = Math.max(1, viewport.w - 16);
+        view.text.scale.set(1);
+        return view;
+      });
+      const layout = conditionLayout({
+        x: c.x, y: boxes.get(el.id)!.y, tokenWidth: t.w * cam.zoom, radius,
+        labels: views.map(view => ({ w: view.text.width + 16, h: view.text.height + 8 })),
+        viewport, obstacles: [...boxes.entries()].filter(([id]) => id !== el.id).map(([, box]) => box),
+      });
+      return { id: el.id, marks, views, layout, radius };
+    });
+    let hovered = this.conditionHover && pointer && conditionContains(this.conditionHover.bounds, pointer.x, pointer.y)
+      ? this.conditionHover : null;
+    if (hovered && !plans.some(plan => plan.id === hovered?.id && plan.views.length)) hovered = null;
+    if (!hovered && pointer) {
+      for (const plan of plans) {
+        if (plan.layout.inline) continue;
+        const anchor = plan.layout.collapsed.findIndex(box =>
+          Math.hypot(pointer.x - box.x - box.w / 2, pointer.y - box.y - box.h / 2) <= plan.radius + 2);
+        if (anchor >= 0) hovered = { id: plan.id, anchor, bounds: (plan.layout.collapsed)[anchor]! };
+      }
+    }
+    this.conditionHover = hovered;
+    this.conditionsG.clear();
+    this.conditionsAnimating = false;
+    const ordered = [...plans.filter(plan => plan.id !== hovered?.id), ...plans.filter(plan => plan.id === hovered?.id)];
+    for (const plan of ordered) {
+      const expanded = plan.layout.inline || plan.id === hovered?.id;
+      let targets = plan.layout.inline ? plan.layout.horizontal : plan.layout.collapsed;
+      if (!plan.layout.inline && plan.id === hovered?.id) {
+        const box = boxes.get(plan.id)!;
+        targets = conditionLayout({
+          x: box.x + box.w / 2, y: box.y, tokenWidth: box.w, radius: plan.radius,
+          labels: plan.views.map(view => ({ w: view.text.width + 16, h: view.text.height + 8 })),
+          viewport, obstacles: [],
+        }).vertical;
+        const all = [...targets, ...plan.layout.collapsed];
+        const left = Math.min(...all.map(box => box.x));
+        const top = Math.min(...all.map(box => box.y));
+        hovered.bounds = { x: left, y: top, w: Math.max(...all.map(box => box.x + box.w)) - left, h: Math.max(...all.map(box => box.y + box.h)) - top };
+      }
+      for (const [index, view] of plan.views.entries()) {
+        const target = (targets)[index]!;
+        if (view.expanded !== expanded && !cameraChanged) {
+          view.from = view.current;
+          view.target = target;
+          view.expanded = expanded;
+          view.start = now + (expanded ? Math.min(100, Math.abs(index - (hovered?.anchor ?? 0)) * 18) : 0);
+        } else if (view.expanded !== expanded) {
+          view.from = view.current = view.target = target;
+          view.expanded = expanded;
+          view.start = now - 320;
+        } else {
+          const relocate = (box: Rect): Rect => ({
+            x: box.x + target.x - view.target.x,
+            y: box.y + target.y - view.target.y,
+            w: box.w + target.w - view.target.w,
+            h: box.h + target.h - view.target.h,
+          });
+          view.from = relocate(view.from);
+          view.current = relocate(view.current);
+          view.target = target;
+        }
+        const progress = reducedMotion ? 1 : Math.min(1, Math.max(0, (now - view.start) / 320));
+        const spring = hoverSpring(progress);
+        const mix = (key: keyof Rect) => view.from[key] + (view.target[key] - view.from[key]) * spring;
+        const current = { x: mix("x"), y: mix("y"), w: Math.max(1, mix("w")), h: Math.max(1, mix("h")) };
+        view.current = current;
+        if (progress < 1) this.conditionsAnimating = true;
+        if (!expanded && progress === 1)
+          this.conditionsG.circle(current.x + current.w / 2, current.y + current.h / 2, current.w / 2);
+        else
+          this.conditionsG.roundRect(current.x, current.y, current.w, current.h, Math.min(expanded ? 4 : plan.radius, current.h / 2));
+        this.conditionsG
+          .fill({ color: (plan.marks.pips)[index]!.colour }).stroke({ color: INK, width: 1.5 });
+        const scale = Math.max(0, Math.min(1, (current.w - 16) / view.text.width, (current.h - 8) / view.text.height));
+        view.text.scale.set(scale);
+        view.text.alpha = Math.min(1, Math.max(0, (scale - 0.4) / 0.6));
+        view.text.visible = view.text.alpha > 0;
+        view.text.position.set(current.x + 8, current.y + (current.h - view.text.height) / 2);
+        if (plan.id === hovered?.id) this.conditionTexts.setChildIndex(view.text, this.conditionTexts.children.length - 1);
+      }
+    }
+    for (const [key, view] of this.conditionViews) {
+      if (used.has(key)) continue;
+      view.text.destroy();
+      this.conditionViews.delete(key);
     }
   }
 
@@ -1598,17 +1786,19 @@ export class SceneRenderer {
           .filter((q) => q.f > 0);
         if (pts.length) animating = true;
         for (let i = 1; i < pts.length; i++) {
-          const f = (pts[i].f + pts[i - 1].f) / 2;
-          g.moveTo(pts[i - 1].x, pts[i - 1].y)
-            .lineTo(pts[i].x, pts[i].y)
+          const previous = (pts)[i - 1]!;
+          const current = (pts)[i]!;
+          const f = (current.f + previous.f) / 2;
+          g.moveTo(previous.x, previous.y)
+            .lineTo(current.x, current.y)
             .stroke({
               color: m.colour,
               width: 3 + 7 * f,
               alpha: 0.25 * f,
               cap: "round",
             });
-          g.moveTo(pts[i - 1].x, pts[i - 1].y)
-            .lineTo(pts[i].x, pts[i].y)
+          g.moveTo(previous.x, previous.y)
+            .lineTo(current.x, current.y)
             .stroke({
               color: 0xffffff,
               width: 1 + 2 * f,
@@ -1749,8 +1939,9 @@ export class SceneRenderer {
       });
     }
 
-    if (handles && selected.length === 1 && selected[0].type === "light") {
-      const el = selected[0];
+    const selectedElement = selected.length === 1 ? (selected)[0]! : undefined;
+    if (handles && selectedElement?.type === "light") {
+      const el = selectedElement;
       const light = { ...el, ...this.previews.get(el.id) } as typeof el;
       const c = toScreen(cam, light);
       for (const r of [light.bright, light.dim]) {
@@ -1764,9 +1955,13 @@ export class SceneRenderer {
         g.circle(at.x, at.y, HANDLE_SIZE / 2 + 1);
       g.fill(ACCENT).stroke({ color: INK, width: 1.5 });
     } else if (handles && selected.length === 1) {
-      const el = selected[0];
+      const el = (selected)[0]!;
       const t = this.previews.get(el.id) ?? el;
-      const [tl, tr, br, bl] = corners(t).map((p) => toScreen(cam, p));
+      const points = corners(t).map((p) => toScreen(cam, p));
+      const tl = (points)[0]!;
+      const tr = (points)[1]!;
+      const br = (points)[2]!;
+      const bl = (points)[3]!;
       const top = { x: (tl.x + tr.x) / 2, y: (tl.y + tr.y) / 2 };
       const knob = rotateHandlePosition(t, cam);
       g.moveTo(top.x, top.y)
@@ -1785,7 +1980,11 @@ export class SceneRenderer {
     }
 
     if (group) {
-      const [tl, tr, br, bl] = corners(group).map((p) => toScreen(cam, p));
+      const points = corners(group).map((p) => toScreen(cam, p));
+      const tl = (points)[0]!;
+      const tr = (points)[1]!;
+      const br = (points)[2]!;
+      const bl = (points)[3]!;
       const top = { x: (tl.x + tr.x) / 2, y: (tl.y + tr.y) / 2 };
       const knob = rotateHandlePosition(group, cam);
       g.poly([tl, tr, br, bl]).stroke({
@@ -1843,7 +2042,9 @@ export function lightHandles(
 
 /** Where the rotate knob sits, in screen coordinates. */
 export function rotateHandlePosition(t: Transform, cam: Camera): Point {
-  const [tl, tr] = corners(t).map((p) => toScreen(cam, p));
+  const points = corners(t).map((p) => toScreen(cam, p));
+  const tl = (points)[0]!;
+  const tr = (points)[1]!;
   const top = { x: (tl.x + tr.x) / 2, y: (tl.y + tr.y) / 2 };
   return {
     x: top.x + Math.sin(t.rot) * ROTATE_HANDLE_GAP,

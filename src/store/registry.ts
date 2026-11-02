@@ -1,4 +1,4 @@
-import { signal } from '@preact/signals'
+import { signal } from '@preact/signals-react'
 import * as Y from 'yjs'
 import { IndexeddbPersistence } from 'y-indexeddb'
 

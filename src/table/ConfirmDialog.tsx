@@ -1,4 +1,4 @@
-import type { ComponentChildren } from "preact";
+import type { ReactNode } from "react";
 import { closePopup } from "../ui/popup";
 import { Button } from "../ui/Button";
 import { Dialog } from "./CampaignDialogs";
@@ -17,7 +17,7 @@ export function ConfirmDialog({
   confirmVariant: "primary" | "danger";
   onClose: () => void;
   onConfirm: () => void;
-  children: ComponentChildren;
+  children: ReactNode;
 }) {
   const ref = usePopupDialog();
   const close = () => closePopup(ref.current, onClose);
@@ -25,7 +25,7 @@ export function ConfirmDialog({
   return (
     <Dialog dialogRef={ref} title={title} onClose={onClose}>
       {children}
-      <div class="form-actions">
+      <div className="form-actions">
         <Button variant="ghost" onClick={close}>
           Cancel
         </Button>

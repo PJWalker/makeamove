@@ -1,15 +1,19 @@
-import { useSignal } from '@preact/signals'
-import type { JSX } from 'preact'
-import { useEffect, useLayoutEffect, useRef } from 'preact/hooks'
+import type * as React from "react";
+import { useSignal } from '@preact/signals-react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
+import { lazy, Suspense } from "react";
 import { chatPopups, dismissPopup } from '../chat/notify'
 import type { ChatMessage } from '../chat/types'
 import { markRead } from '../chat/unread'
 import type { Campaign } from '../store/campaign'
 import { collapsedInto, reducedMotion } from '../ui/bubble'
 import { Button } from '../ui/Button'
-import { IconClose } from '../ui/icons'
-import { LoneMessage } from './ChatPanel'
+import { IconClose } from "../ui/icons";
 import { showPanel } from './panelLayout'
+
+const LoneMessage = lazy(() =>
+  import("./ChatPanel").then((module) => ({ default: module.LoneMessage })),
+);
 
 /*
  * Chat that arrives while the Chat panel is closed or behind another tab pops
@@ -122,14 +126,14 @@ export function ChatPopups({ campaign }: { campaign: Campaign }) {
   return (
     <div
       ref={ref}
-      class="chat-popups"
+      className="chat-popups"
       role="status"
       aria-live="polite"
       onPointerEnter={() => (held.value = true)}
       onPointerLeave={() => (held.value = false)}
       onPointerDown={markRead}
     >
-      <div ref={stack} class="chat-popup-stack">
+      <div ref={stack} className="chat-popup-stack">
         {shown.map((m, i) => (
           <Popup
             key={m.id}
@@ -144,7 +148,7 @@ export function ChatPopups({ campaign }: { campaign: Campaign }) {
           />
         ))}
       </div>
-      <span class="chat-popup-tail" aria-hidden="true" />
+      <span className="chat-popup-tail" aria-hidden="true" />
     </div>
   )
 }
@@ -211,7 +215,7 @@ function Popup({
     if (leaving) leave()
   }, [leaving])
 
-  const open = (e: JSX.TargetedMouseEvent<HTMLDivElement>) => {
+  const open = (e: React.MouseEvent<HTMLDivElement>) => {
     if ((e.target as Element).closest('button, a')) return
     showPanel('chat')
   }
@@ -220,17 +224,25 @@ function Popup({
   return (
     <div
       ref={ref}
-      class="chat-popup panel bevel"
+      className="chat-popup panel"
       data-depth={depth}
-      style={{ '--depth': depth }}
+      style={{ "--depth": depth }}
       inert={!front}
-      title={front ? 'Open the chat' : undefined}
+      title={front ? "Open the chat" : undefined}
       onClick={open}
     >
-      <LoneMessage campaign={campaign} m={m} />
-      <Button variant="icon" size="sm" class="chat-popup-close" label="Dismiss" onClick={onDismissAll}>
+      <Suspense fallback={null}>
+        <LoneMessage campaign={campaign} m={m} />
+      </Suspense>
+      <Button
+        variant="icon"
+        size="sm"
+        className="chat-popup-close"
+        label="Dismiss"
+        onClick={onDismissAll}
+      >
         <IconClose />
       </Button>
     </div>
-  )
+  );
 }

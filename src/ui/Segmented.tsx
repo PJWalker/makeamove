@@ -1,5 +1,6 @@
-import { useSignal } from '@preact/signals'
-import { useLayoutEffect, useRef } from 'preact/hooks'
+import { useSignal } from "@preact/signals-react";
+import { useLayoutEffect, useRef } from "react";
+import { Radio, RadioGroup } from "react-aria-components";
 
 /** A row of mutually exclusive choices, like a set of radio buttons. */
 export function Segmented<T extends string>({
@@ -9,30 +10,34 @@ export function Segmented<T extends string>({
   onChange,
   disabled,
 }: {
-  label: string
-  value: T
-  options: { id: T; label: string; disabled?: boolean; title?: string }[]
-  onChange: (id: T) => void
-  disabled?: boolean
+  label: string;
+  value: T;
+  options: { id: T; label: string; disabled?: boolean | undefined; title?: string | undefined }[];
+  onChange: (id: T) => void;
+  disabled?: boolean | undefined;
 }) {
   return (
-    <div class="segmented bevel" role="radiogroup" aria-label={label}>
+    <RadioGroup
+      className="segmented"
+      aria-label={label}
+      orientation="horizontal"
+      value={value}
+      onChange={(next) => onChange(next as T)}
+      {...(disabled !== undefined ? { isDisabled: disabled } : {})}
+    >
       {options.map((o) => (
-        <button
+        <Radio
           key={o.id}
-          type="button"
-          role="radio"
-          aria-checked={value === o.id}
-          class="segment bevel"
-          disabled={disabled || o.disabled}
-          title={o.title}
-          onClick={() => onChange(o.id)}
+          value={o.id}
+          className="segment"
+          {...(o.disabled !== undefined ? { isDisabled: o.disabled } : {})}
+          {...(o.title !== undefined ? { "data-tip": o.title } : {})}
         >
           {o.label}
-        </button>
+        </Radio>
       ))}
-    </div>
-  )
+    </RadioGroup>
+  );
 }
 
 /**
@@ -40,31 +45,48 @@ export function Segmented<T extends string>({
  * select. A hidden copy of the segmented control is measured as the space
  * changes.
  */
-export function SegmentedOrSelect<T extends string>(props: Parameters<typeof Segmented<T>>[0]) {
-  const { label, value, options, onChange, disabled } = props
-  const rootRef = useRef<HTMLDivElement>(null)
-  const measureRef = useRef<HTMLDivElement>(null)
-  const fits = useSignal(true)
+export function SegmentedOrSelect<T extends string>(
+  props: Parameters<typeof Segmented<T>>[0],
+) {
+  const { label, value, options, onChange, disabled } = props;
+  const rootRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLDivElement>(null);
+  const fits = useSignal(true);
   useLayoutEffect(() => {
-    const root = rootRef.current
-    const measure = measureRef.current
-    if (!root || !measure) return
-    const check = () => (fits.value = measure.offsetWidth <= root.clientWidth)
-    check()
-    const ro = new ResizeObserver(check)
-    ro.observe(root)
-    ro.observe(measure)
-    return () => ro.disconnect()
-  }, [])
+    const root = rootRef.current;
+    const measure = measureRef.current;
+    if (!root || !measure) return;
+    const check = () => (fits.value = measure.offsetWidth <= root.clientWidth);
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(root);
+    ro.observe(measure);
+    return () => ro.disconnect();
+  }, []);
   return (
-    <div class="segmented-or-select" ref={rootRef}>
-      <div class="segmented-measure" ref={measureRef} aria-hidden="true" inert>
-        <Segmented label={label} value={value} options={options} onChange={() => {}} />
+    <div className="segmented-or-select" ref={rootRef}>
+      <div
+        className="segmented-measure"
+        ref={measureRef}
+        aria-hidden="true"
+        inert
+      >
+        <Segmented
+          label={label}
+          value={value}
+          options={options}
+          onChange={() => {}}
+        />
       </div>
       {fits.value ? (
         <Segmented {...props} />
       ) : (
-        <select class="input bevel" aria-label={label} value={value} disabled={disabled} onChange={(e) => onChange(e.currentTarget.value as T)}>
+        <select
+          aria-label={label}
+          value={value}
+          disabled={disabled}
+          onChange={(e) => onChange(e.currentTarget.value as T)}
+        >
           {options.map((o) => (
             <option key={o.id} value={o.id} disabled={o.disabled}>
               {o.label}
@@ -73,5 +95,5 @@ export function SegmentedOrSelect<T extends string>(props: Parameters<typeof Seg
         </select>
       )}
     </div>
-  )
+  );
 }

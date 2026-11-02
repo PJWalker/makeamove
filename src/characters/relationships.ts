@@ -1,5 +1,6 @@
 import * as Y from 'yjs'
 
+
 /*
  * Relationships between characters: each character keeps a `relationships`
  * map of other character id -> how they see them ("Owes a debt to"), with
@@ -74,6 +75,11 @@ export function layoutWeb(
   { width = 600, height = 400, fixed = {} as Record<string, NodePosition>, steps = 300 } = {},
 ): Record<string, NodePosition> {
   const pos: Record<string, NodePosition> = {}
+  const point = (positions: Record<string, NodePosition>, id: string) => {
+    const value = positions[id];
+    if (!value) throw new Error(`Missing relationship position: ${id}`);
+    return value;
+  };
   const r = Math.min(width, height) * 0.35
   ids.forEach((id, i) => {
     const a = (i / Math.max(1, ids.length)) * Math.PI * 2
@@ -85,8 +91,10 @@ export function layoutWeb(
     const force: Record<string, NodePosition> = Object.fromEntries(ids.map((id) => [id, { x: 0, y: 0 }]))
     for (let i = 0; i < ids.length; i++) {
       for (let j = i + 1; j < ids.length; j++) {
-        const a = pos[ids[i]]
-        const b = pos[ids[j]]
+        const fromId = (ids)[i]!;
+        const toId = (ids)[j]!;
+        const a = point(pos, fromId)
+        const b = point(pos, toId)
         let dx = a.x - b.x
         let dy = a.y - b.y
         let d = Math.hypot(dx, dy)
@@ -96,39 +104,41 @@ export function layoutWeb(
           d = Math.hypot(dx, dy)
         }
         const push = (ideal * ideal) / d
-        force[ids[i]].x += (dx / d) * push
-        force[ids[i]].y += (dy / d) * push
-        force[ids[j]].x -= (dx / d) * push
-        force[ids[j]].y -= (dy / d) * push
+        point(force, fromId).x += (dx / d) * push
+        point(force, fromId).y += (dy / d) * push
+        point(force, toId).x -= (dx / d) * push
+        point(force, toId).y -= (dy / d) * push
       }
     }
     for (const e of edges) {
       const a = pos[e.from]
       const b = pos[e.to]
+      if (!a || !b) continue;
       const dx = a.x - b.x
       const dy = a.y - b.y
       const d = Math.max(0.01, Math.hypot(dx, dy))
       const pull = (d * d) / ideal
-      force[e.from].x -= (dx / d) * pull
-      force[e.from].y -= (dy / d) * pull
-      force[e.to].x += (dx / d) * pull
-      force[e.to].y += (dy / d) * pull
+      point(force, e.from).x -= (dx / d) * pull
+      point(force, e.from).y -= (dy / d) * pull
+      point(force, e.to).x += (dx / d) * pull
+      point(force, e.to).y += (dy / d) * pull
     }
     for (const id of ids) {
       if (fixed[id]) continue
-      const f = force[id]
+      const f = point(force, id)
+      const current = point(pos, id)
       // Towards the middle, so loose characters don't wander off.
-      f.x += (width / 2 - pos[id].x) * 0.05
-      f.y += (height / 2 - pos[id].y) * 0.05
+      f.x += (width / 2 - current.x) * 0.05
+      f.y += (height / 2 - current.y) * 0.05
       const m = Math.hypot(f.x, f.y)
       const limit = 12 * heat + 0.5
       if (m > limit) {
         f.x = (f.x / m) * limit
         f.y = (f.y / m) * limit
       }
-      pos[id].x = Math.min(width - 40, Math.max(40, pos[id].x + f.x))
+      current.x = Math.min(width - 40, Math.max(40, current.x + f.x))
       // Room below for the name.
-      pos[id].y = Math.min(height - 45, Math.max(30, pos[id].y + f.y))
+      current.y = Math.min(height - 45, Math.max(30, current.y + f.y))
     }
   }
   return pos

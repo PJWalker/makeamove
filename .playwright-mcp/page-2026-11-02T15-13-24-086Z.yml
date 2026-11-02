@@ -1,0 +1,150 @@
+- generic [ref=f78e32]:
+  - 'generic "Scene: The Opening Scene" [ref=f78e33]'
+  - navigation "Canvas tools" [ref=f78e36]:
+    - button "Campaign menu" [ref=f78e37]
+    - button "Select (V)" [pressed] [ref=f78e40]
+    - button "Pan (H)" [ref=f78e43]
+    - button "Draw (P)" [ref=f78e46]
+    - button "Erase (E)" [ref=f78e49]
+    - button "Shapes (R)" [ref=f78e52]
+    - button "Text (X)" [ref=f78e55]
+    - button "Measure (M)" [ref=f78e58]
+    - button "Ping (G)" [ref=f78e61]
+    - button "Walls (W)" [ref=f78e64]
+    - button "Lights (L)" [ref=f78e67]
+  - complementary "Left sidebar" [ref=f78e70]:
+    - generic [ref=f78e71]:
+      - tablist [ref=f78e72]:
+        - tab "Items" [ref=f78e73]
+        - tab "Scenes" [selected] [ref=f78e76]
+      - separator "Resize left sidebar"
+    - tabpanel [ref=f78e79]:
+      - generic [ref=f78e81]:
+        - generic [ref=f78e82]:
+          - 'button "Side by side: click to show one at a time" [pressed] [ref=f78e83] [cursor=pointer]'
+          - heading "Scenes" [level=2] [ref=f78e86]
+          - generic [ref=f78e87]:
+            - button "New scene" [ref=f78e88]
+            - button "New folder" [ref=f78e91]
+        - generic [ref=f78e93]:
+          - navigation "Scenes" [ref=f78e95]:
+            - list [ref=f78e97]:
+              - listitem [ref=f78e98]:
+                - button "The Opening Scene" [ref=f78e99] [cursor=pointer]
+          - separator "Resize the scene list" [ref=f78e100]
+          - generic [ref=f78e102]:
+            - textbox "Scene name" [ref=f78e103]: The Opening Scene
+            - button "Pull players here" [ref=f78e104]
+            - region "Scene settings" [ref=f78e107]:
+              - heading "Scene settings" [level=3] [ref=f78e108]
+              - generic [ref=f78e109]:
+                - text: Grid
+                - radiogroup "Grid type" [ref=f78e110]:
+                  - generic [ref=f78e111] [cursor=pointer]:
+                    - radio "None" [ref=f78e113]
+                    - text: None
+                  - generic [ref=f78e114] [cursor=pointer]:
+                    - radio "Square" [checked] [ref=f78e116]
+                    - text: Square
+                  - generic [ref=f78e117] [cursor=pointer]:
+                    - radio "Hex" [ref=f78e119]
+                    - text: Hex
+              - generic [ref=f78e120]:
+                - generic [ref=f78e121]:
+                  - text: Cell size (px)
+                  - spinbutton "Cell size (px)" [ref=f78e122]: "70"
+                - generic [ref=f78e123]:
+                  - text: Offset X
+                  - spinbutton "Offset X" [ref=f78e124]: "0"
+                - generic [ref=f78e125]:
+                  - text: Offset Y
+                  - spinbutton "Offset Y" [ref=f78e126]: "0"
+              - generic [ref=f78e127]:
+                - generic [ref=f78e128]:
+                  - text: Each cell is
+                  - spinbutton "Each cell is" [ref=f78e129]: "5"
+                - generic [ref=f78e130]:
+                  - text: Unit
+                  - textbox "Unit" [ref=f78e131]: ft
+              - generic [ref=f78e132]:
+                - text: Diagonal steps count as
+                - radiogroup "Diagonal steps" [ref=f78e133]:
+                  - generic [ref=f78e134] [cursor=pointer]:
+                    - radio "1" [ref=f78e136]
+                    - text: "1"
+                  - generic [ref=f78e137] [cursor=pointer]:
+                    - radio "1, 2, 1" [ref=f78e139]
+                    - text: 1, 2, 1
+                  - generic [ref=f78e140] [cursor=pointer]:
+                    - radio "√2" [checked] [ref=f78e142]
+                    - text: √2
+              - generic [ref=f78e143]:
+                - text: Canvas colour
+                - generic [ref=f78e144]:
+                  - radiogroup "Canvas colour" [ref=f78e145]:
+                    - generic [ref=f78e146] [cursor=pointer]:
+                      - radio "Auto" [checked] [ref=f78e148]
+                      - text: Auto
+                    - generic [ref=f78e149] [cursor=pointer]:
+                      - radio "Custom" [ref=f78e151]
+                      - text: Custom
+                  - textbox "Pick a canvas colour" [ref=f78e152] [cursor=pointer]: "#2b3a55"
+              - generic [ref=f78e153]:
+                - text: Lighting
+                - radiogroup "Lighting" [ref=f78e154]:
+                  - generic [ref=f78e155] [cursor=pointer]:
+                    - radio "Off" [checked] [ref=f78e157]
+                    - text: "Off"
+                  - generic [ref=f78e158] [cursor=pointer]:
+                    - radio "Dynamic" [ref=f78e160]
+                    - text: Dynamic
+              - generic [ref=f78e161]:
+                - text: Players see
+                - radiogroup "Players see" [ref=f78e162]:
+                  - generic [ref=f78e163] [cursor=pointer]:
+                    - radio "Everything" [checked] [ref=f78e165]
+                    - text: Everything
+                  - generic [ref=f78e166] [cursor=pointer]:
+                    - radio "What their tokens see" [ref=f78e168]
+                    - text: What their tokens see
+            - generic [ref=f78e169]:
+              - text: Scene graphic
+              - generic [ref=f78e170]:
+                - button "Choose image…" [ref=f78e174]
+                - button "Search icons…" [ref=f78e178]
+                - button "Use default" [ref=f78e181]
+  - complementary "Right sidebar" [ref=f78e182]:
+    - generic [ref=f78e183]:
+      - tablist [ref=f78e184]:
+        - tab "Chat" [ref=f78e185]
+        - tab "Notes" [selected] [ref=f78e188]
+        - tab "Libraries" [ref=f78e191]
+        - tab "Members, 1 online" [ref=f78e194]: "1"
+      - separator "Resize right sidebar" [ref=f78e197]
+    - tabpanel [ref=f78e198]:
+      - generic [ref=f78e200]:
+        - generic [ref=f78e201]:
+          - button "One at a time (widen the panel to see the list and page side by side)" [disabled] [ref=f78e202]
+          - heading "Notes" [level=2] [ref=f78e205]
+          - generic [ref=f78e206]:
+            - button "New page" [ref=f78e207]
+            - button "New GM page" [ref=f78e208]
+            - button "New folder" [ref=f78e209]
+        - navigation "Notes" [ref=f78e213]:
+          - generic [ref=f78e214]:
+            - generic [ref=f78e215]:
+              - button "Sessions 0" [expanded] [ref=f78e216] [cursor=pointer]:
+                - generic [ref=f78e221]: Sessions
+                - generic [ref=f78e222]: "0"
+              - list
+            - generic [ref=f78e223]:
+              - button "World 0" [expanded] [ref=f78e224] [cursor=pointer]:
+                - generic [ref=f78e229]: World
+                - generic [ref=f78e230]: "0"
+              - list
+            - list
+            - paragraph [ref=f78e231]: No pages yet.
+  - toolbar "Hotbar" [ref=f78e232]:
+    - button "Ping" [ref=f78e234]
+    - button "Measure" [ref=f78e239]
+    - button "Command palette (Ctrl/Cmd+K)" [ref=f78e243]

@@ -1,5 +1,6 @@
 import 'fake-indexeddb/auto'
 import { describe, expect, it } from 'vitest'
+import { commandText, contentFromText } from "../content";
 import * as Y from 'yjs'
 import { SyncSession } from '../../sync/session'
 import { MemoryRoom } from '../../sync/__tests__/memoryRoom'
@@ -23,7 +24,10 @@ async function pair() {
   return { room, a, b }
 }
 
-const text = (t: string) => ({ kind: 'text' as const, text: t })
+const text = (t: string) => ({
+  kind: "text" as const,
+  text: contentFromText(t),
+});
 const until = async (check: () => boolean, room: MemoryRoom) => {
   for (let i = 0; i < 50 && !check(); i++) {
     await room.settle()
@@ -36,7 +40,14 @@ describe('chat log', () => {
     const { room, a, b } = await pair()
     await a.log.post(text('Hello'), { id: 'a', name: 'Ann' })
     await until(() => b.log.messages.value.length === 1, room)
-    expect(b.log.messages.value).toMatchObject([{ kind: 'text', text: 'Hello', author: 'a', name: 'Ann' }])
+    expect(b.log.messages.value).toMatchObject([
+      {
+        kind: "text",
+        text: contentFromText("Hello"),
+        author: "a",
+        name: "Ann",
+      },
+    ]);
   })
 
   it('agrees on the order of posts made at the same time', async () => {
@@ -48,7 +59,8 @@ describe('chat log', () => {
       b.log.post(text('from b'), { id: 'b', name: 'Bo' }),
     ])
     await until(() => a.log.messages.value.length === 3 && b.log.messages.value.length === 3, room)
-    const order = (log: ChatLog) => log.messages.value.map((m) => m.kind === 'text' && m.text)
+    const order = (log: ChatLog) =>
+      log.messages.value.map((m) => m.kind === "text" && commandText(m.text));
     expect(order(a.log)).toEqual(order(b.log))
     expect(order(a.log)[0]).toBe('first')
   })
@@ -67,10 +79,21 @@ describe('chat log', () => {
     // Fill a chunk directly; posting 500 messages one by one is slow.
     await a.log.post(text('seed'), { id: 'a', name: 'Ann' })
     const first = chunks.get(0).getArray('messages')
-    first.push(Array.from({ length: CHUNK_SIZE - 1 }, (_, i) => ({ kind: 'text', text: `m${i}`, id: `x${i}`, hlc: `0:${i}`, author: 'a', name: 'Ann' })))
+    first.push(
+      Array.from({ length: CHUNK_SIZE - 1 }, (_, i) => ({
+        kind: "text",
+        text: contentFromText(`m${i}`),
+        id: `x${i}`,
+        hlc: `0:${i}`,
+        author: "a",
+        name: "Ann",
+      })),
+    );
     await a.log.post(text('overflow'), { id: 'a', name: 'Ann' })
     expect(chunks.length).toBe(2)
-    expect(a.log.messages.value.at(-1)).toMatchObject({ text: 'overflow' })
+    expect(a.log.messages.value.at(-1)).toMatchObject({
+      text: contentFromText("overflow"),
+    });
   })
 })
 

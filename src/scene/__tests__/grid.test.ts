@@ -26,7 +26,7 @@ describe('square snapping', () => {
 
 describe('hex grids', () => {
   it('round-trips centres through hexAt', () => {
-    for (const [q, r] of [[0, 0], [3, -2], [-4, 5], [1, 1]]) {
+    for (const [q, r] of [[0, 0], [3, -2], [-4, 5], [1, 1]] as const) {
       expect(hexAt(hex, hexCentre(hex, q, r))).toEqual({ q, r })
     }
   })

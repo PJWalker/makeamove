@@ -21,6 +21,9 @@
   h1,
   h2,
   h3,
+  h4,
+  h5,
+  h6,
   p {
     margin: 0;
   }
@@ -33,18 +36,30 @@
     font-family: var(--font-ui);
     font-size: var(--text-md);
     line-height: 1.45;
+    accent-color: var(--accent);
     overflow: hidden;
     -webkit-font-smoothing: antialiased;
   }
   #app {
     height: 100%;
   }
+
   h1,
   h2,
-  h3 {
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--font-display);
     font-weight: 600;
     font-optical-sizing: auto;
+  }
+  label {
+    color: var(--text-muted);
+  }
+  small {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
   }
   ::selection {
     background: var(--accent-soft);

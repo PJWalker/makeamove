@@ -58,7 +58,7 @@ export function Inventory({
   const windows = useEntryWindows();
   const patch = (i: ItemInstance, p: Partial<ItemInstance>) =>
     updateItem(campaign, c.id, i.id, p);
-  const over = d && d.values.load > d.values.maxLoad;
+  const over = d && (d.values.load ?? 0) > (d.values.maxLoad ?? 0);
   const itemMenu = (i: ItemInstance) => {
     const items = actionMenuItems(campaign, menuTargets(i));
     return [
@@ -128,21 +128,21 @@ export function Inventory({
 
   return (
     <section
-      class="sheet-section inventory"
+      className="form-section sheet-section inventory"
       aria-label="Inventory"
       data-item-drop={editable ? c.id : undefined}
     >
-      <h3 class="sheet-heading">
+      <h3 className="sheet-heading">
         Inventory{" "}
         {d && (
-          <span class="muted" data-over={over}>
+          <span className="muted" data-over={over}>
             Load {d.values.load}/{d.values.maxLoad}
             {over && " · overloaded"}
           </span>
         )}
       </h3>
       {c.inventory.length === 0 ? (
-        <p class="empty-inline">
+        <p className="empty-inline">
           Nothing carried yet.
           {editable && " Drag gear here from the Libraries."}
         </p>
@@ -199,7 +199,7 @@ export function Inventory({
         <Button
           size="sm"
           variant="ghost"
-          class="inventory-find"
+          className="inventory-find"
           onClick={() => browseLibrary("item")}
         >
           Find items in the Libraries…
@@ -226,7 +226,7 @@ export function Inventory({
                 : undefined
             }
           >
-            {metaOf(i) && <span class="muted">{metaOf(i)}</span>}
+            {metaOf(i) && <span className="muted">{metaOf(i)}</span>}
             {actions(i)}
           </EntryWindow>
         );

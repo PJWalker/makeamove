@@ -1,20 +1,29 @@
-import { effect, signal } from '@preact/signals'
-import { generateKeyBetween } from 'fractional-indexing'
-import * as Y from 'yjs'
-import { IndexeddbPersistence } from 'y-indexeddb'
-import { newId, newSecret } from '../lib/ids'
-import { device } from './device'
-import { forgetCampaign, renameCampaignEntry, summaryOf, touchCampaign, updateCampaignEntry, upsertCampaign } from './registry'
-import { getSystem } from '../systems'
-import type { Invite } from '../sync/invite'
+import { effect, signal } from "@preact/signals-react";
+import { generateKeyBetween } from "fractional-indexing";
+import * as Y from "yjs";
+import { IndexeddbPersistence } from "y-indexeddb";
+import { newId, newSecret } from "../lib/ids";
+
+import { formatCommaList, parseCommaList } from "../lib/list";
+import { device } from "./device";
+import {
+  forgetCampaign,
+  renameCampaignEntry,
+  summaryOf,
+  touchCampaign,
+  updateCampaignEntry,
+  upsertCampaign,
+} from "./registry";
+import { getSystem } from "../systems";
+import type { Invite } from "../sync/invite";
 import { CampaignConnection } from "./campaignConnection";
-import type { GridType } from '../scene/grid'
-import { sceneDbName } from '../scene/sceneDoc'
-import { noteDbName, noteGuid } from '../notes/noteDoc'
-import { Vault, vaultDbName, vaultNoteGuid } from '../notes/vault'
-import { ChatLog, deleteChatData } from '../chat/chatLog'
+import type { GridType } from "../scene/grid";
+import { sceneDbName } from "../scene/sceneDoc";
+import { noteDbName, noteGuid } from "../notes/noteDoc";
+import { Vault, vaultDbName, vaultNoteGuid } from "../notes/vault";
+import { ChatLog, deleteChatData } from "../chat/chatLog";
 import type { EntityGraphic } from "../graphics";
-import type { TokenStyle } from '../scene/types'
+import type { TokenStyle } from "../scene/types";
 
 /*
  * Campaign root document layout (see design doc, "Data model"):
@@ -38,30 +47,30 @@ import type { TokenStyle } from '../scene/types'
  * one, and from the canvas colour otherwise.
  */
 
-export type Role = 'gm' | 'player' | 'observer'
-export type Visibility = 'everyone' | 'owners' | 'gm'
+export type Role = "gm" | "player" | "observer";
+export type Visibility = "everyone" | "owners" | "gm";
 
 /** Someone the GM removed from the campaign. */
 export interface RevokedView {
-  id: string
-  name: string
-  at: number
+  id: string;
+  name: string;
+  at: number;
 }
 
 /**
  * How long a device the GM removed stays connected after rejoining by invite,
  * to hear whether the GM has let it back in.
  */
-const REJOIN_CHECK_MS = 5000
+const REJOIN_CHECK_MS = 5000;
 
 /** Campaigns being rejoined by invite link; see Campaign.connect. */
-const rejoining = new Set<string>()
+const rejoining = new Set<string>();
 
 export interface MemberView {
-  id: string
-  name: string
-  role: Role
-  activeSceneId: string | null
+  id: string;
+  name: string;
+  role: Role;
+  activeSceneId: string | null;
 }
 
 export interface SceneView {
@@ -75,22 +84,25 @@ export interface SceneView {
 }
 
 /** The system an invite assumes until the campaign arrives from a peer. */
-const DEFAULT_SYSTEM = { id: 'dungeon-world', version: '0.1.0' }
+const DEFAULT_SYSTEM = { id: "dungeon-world", version: "0.1.0" };
 /** Canvas colour for an auto scene with no map yet. */
-export const DEFAULT_CANVAS_COLOUR = '#2b3a55'
+export const DEFAULT_CANVAS_COLOUR = "#2b3a55";
 
 export interface CampaignDefaults {
-  tokenStyle: TokenStyle
-  gridType: GridType
+  tokenStyle: TokenStyle;
+  gridType: GridType;
 }
 
-const dbName = (id: string) => `mam:campaign:${id}`
-const sceneGuid = (campaignId: string, sceneId: string) => `${campaignId}/${sceneId}`
+const dbName = (id: string) => `mam:campaign:${id}`;
+const sceneGuid = (campaignId: string, sceneId: string) =>
+  `${campaignId}/${sceneId}`;
 
 export class Campaign {
   readonly id: string;
   readonly doc: Y.Doc;
   readonly meta: Y.Map<any>;
+  /** System-owned campaign-wide state, shared with every campaign member. */
+  readonly systemData: Y.Map<any>;
   readonly members: Y.Map<Y.Map<any>>;
   /** deviceId -> { name, at, by } for each player the GM removed. */
   readonly revoked: Y.Map<{ name: string; at: number; by: string }>;
@@ -139,6 +151,7 @@ export class Campaign {
     this.id = id;
     this.doc = new Y.Doc({ guid: id });
     this.meta = this.doc.getMap("meta");
+    this.systemData = this.doc.getMap("systemData");
     this.members = this.doc.getMap("members");
     this.revoked = this.doc.getMap("revoked");
     this.scenes = this.doc.getMap("scenes");
@@ -355,7 +368,7 @@ export class Campaign {
   addScene(name: string): string {
     const id = newId();
     const views = this.sceneViews();
-    const last = views.length ? views[views.length - 1].order : null;
+    const last = views.length ? (views)[views.length - 1]!.order : null;
     const s = new Y.Map<any>();
     s.set("name", name);
     s.set("order", generateKeyBetween(last, null));
@@ -463,54 +476,113 @@ export class Campaign {
 
 // Lifecycle
 
-export const activeCampaign = signal<Campaign | null>(null)
+export const activeCampaign = signal<Campaign | null>(null);
 
-export async function createCampaign(name: string, gmName: string, systemId = DEFAULT_SYSTEM.id): Promise<string> {
-  const id = newId()
-  const roomKey = newSecret()
-  const system = getSystem(systemId)
-  const c = await Campaign.open(id)
+export async function createCampaign(
+  name: string,
+  gmName: string,
+  systemId = DEFAULT_SYSTEM.id,
+): Promise<string> {
+  const id = newId();
+  const roomKey = newSecret();
+  const system = getSystem(systemId);
+  const c = await Campaign.open(id);
   c.doc.transact(() => {
-    c.meta.set('name', name)
-    c.meta.set('systemId', system.id)
-    c.meta.set('systemVersion', system.version)
-    c.meta.set('roomKey', roomKey)
-    c.meta.set('createdAt', Date.now())
-    c.meta.set('createdBy', device.value.id)
-    c.ensureMember(gmName, 'gm')
-    const first = c.addScene('The Opening Scene')
+    c.meta.set("name", name);
+    c.meta.set("systemId", system.id);
+    c.meta.set("systemVersion", system.version);
+    for (const field of system.campaignFields ?? [])
+      c.systemData.set(field.id, field.default);
+    c.meta.set("roomKey", roomKey);
+    c.meta.set("createdAt", Date.now());
+    c.meta.set("createdBy", device.value.id);
+    c.ensureMember(gmName, "gm");
+    const first = c.addScene("The Opening Scene");
     // The table starts here; there's nothing to announce.
-    c.meta.set('tableScene', first)
-    c.setActiveScene(first)
-  })
-  const now = Date.now()
+    c.meta.set("tableScene", first);
+    c.setActiveScene(first);
+  });
+  const now = Date.now();
   upsertCampaign({
     id,
     name,
     systemId: system.id,
-    role: 'gm',
+    role: "gm",
     roomKey,
     createdAt: now,
     lastOpenedAt: now,
-  })
-  c.destroy()
-  return id
+  });
+  c.destroy();
+  return id;
+}
+
+/** Resolve a system's campaign-level values, falling back for older stored campaigns. */
+export function systemCampaignData(
+  campaign: Campaign,
+): Record<string, string | number | boolean> {
+  const system = getSystem(campaign.meta.get("systemId"));
+  return Object.fromEntries(
+    (system.campaignFields ?? []).map((field) => [
+      field.id,
+      campaign.systemData.get(field.id) ?? field.default,
+    ]),
+  );
+}
+
+/** Change one declared shared system field. Only the GM may edit campaign state. */
+export function setSystemCampaignData(
+  campaign: Campaign,
+  fieldId: string,
+  value: string | number | boolean,
+) {
+  if (!campaign.isGm()) return;
+  const field = getSystem(campaign.meta.get("systemId")).campaignFields?.find(
+    (candidate) => candidate.id === fieldId,
+  );
+  if (!field) return;
+  if (field.type === "number") {
+    const number = Number(value);
+    if (
+      !Number.isFinite(number) ||
+      !Number.isInteger(number) ||
+      (field.min !== undefined && number < field.min) ||
+      (field.max !== undefined && number > field.max)
+    )
+      return;
+    campaign.systemData.set(fieldId, number);
+    return;
+  }
+  if (
+    field.type === "select" &&
+    !field.options?.some((option) => option.id === value)
+  )
+    return;
+  if (field.type === "multiselect") {
+    const values = parseCommaList(String(value)).filter(Boolean);
+    if (values.some((id) => !field.options?.some((option) => option.id === id)))
+      return;
+    campaign.systemData.set(fieldId, formatCommaList([...new Set(values)]));
+    return;
+  }
+  if (field.type === "text" && typeof value !== "string") return;
+  campaign.systemData.set(fieldId, value);
 }
 
 export async function openCampaign(id: string) {
-  if (activeCampaign.value?.id === id) return
-  closeCampaign()
-  const c = await Campaign.open(id)
-  const roomKey: string | undefined = summaryOf(id)?.roomKey ?? c.meta.get('roomKey')
-  if (!c.meta.has('name') && !roomKey) {
+  if (activeCampaign.value?.id === id) return;
+  closeCampaign();
+  const c = await Campaign.open(id);
+  const roomKey: string | undefined =
+    summaryOf(id)?.roomKey ?? c.meta.get("roomKey");
+  if (!c.meta.has("name") && !roomKey) {
     // Nothing stored locally and no invite to fetch it with.
-    c.destroy()
-    await deleteLocalCampaign(id)
-    throw new Error('it is not stored on this device')
+    c.destroy();
+    await deleteLocalCampaign(id);
+    throw new Error("it is not stored on this device");
   }
-  touchCampaign(id)
-  activeCampaign.value = c
-  if (roomKey) c.connect(roomKey, { rejoin: rejoining.delete(id) })
+  touchCampaign(id);
+  activeCampaign.value = c;
+  if (roomKey) c.connect(roomKey, { rejoin: rejoining.delete(id) });
 }
 
 /**
@@ -519,48 +591,51 @@ export async function openCampaign(id: string) {
  */
 export function joinCampaign({ campaignId, roomKey }: Invite): string {
   // Opening an invite is how a removed player asks to come back.
-  rejoining.add(campaignId)
+  rejoining.add(campaignId);
   if (!summaryOf(campaignId)) {
-    const now = Date.now()
+    const now = Date.now();
     upsertCampaign({
       id: campaignId,
-      name: 'Joining…',
+      name: "Joining…",
       systemId: DEFAULT_SYSTEM.id,
-      role: 'player',
+      role: "player",
       roomKey,
       createdAt: now,
       lastOpenedAt: now,
-    })
+    });
   }
-  return campaignId
+  return campaignId;
 }
 
 export function closeCampaign() {
-  activeCampaign.value?.destroy()
-  activeCampaign.value = null
+  activeCampaign.value?.destroy();
+  activeCampaign.value = null;
 }
 
 /** Drop this device's GM vault for a campaign, and its pages' text. */
 async function deleteVault(id: string) {
-  const doc = new Y.Doc()
-  const p = new IndexeddbPersistence(vaultDbName(id), doc)
-  await p.whenSynced
-  for (const noteId of doc.getMap('notes').keys()) indexedDB.deleteDatabase(noteDbName(vaultNoteGuid(id, noteId)))
-  await p.clearData()
-  doc.destroy()
+  const doc = new Y.Doc();
+  const p = new IndexeddbPersistence(vaultDbName(id), doc);
+  await p.whenSynced;
+  for (const noteId of doc.getMap("notes").keys())
+    indexedDB.deleteDatabase(noteDbName(vaultNoteGuid(id, noteId)));
+  await p.clearData();
+  doc.destroy();
 }
 
 /** Remove a campaign from this device only. Peers keep their copies. */
 export async function deleteLocalCampaign(id: string) {
-  if (activeCampaign.value?.id === id) closeCampaign()
-  const doc = new Y.Doc()
-  const p = new IndexeddbPersistence(dbName(id), doc)
-  await p.whenSynced
-  for (const sceneId of doc.getMap('scenes').keys()) indexedDB.deleteDatabase(sceneDbName(sceneGuid(id, sceneId)))
-  for (const noteId of doc.getMap('notes').keys()) indexedDB.deleteDatabase(noteDbName(noteGuid(id, noteId)))
-  await deleteVault(id)
-  deleteChatData(doc)
-  await p.clearData()
-  doc.destroy()
-  forgetCampaign(id)
+  if (activeCampaign.value?.id === id) closeCampaign();
+  const doc = new Y.Doc();
+  const p = new IndexeddbPersistence(dbName(id), doc);
+  await p.whenSynced;
+  for (const sceneId of doc.getMap("scenes").keys())
+    indexedDB.deleteDatabase(sceneDbName(sceneGuid(id, sceneId)));
+  for (const noteId of doc.getMap("notes").keys())
+    indexedDB.deleteDatabase(noteDbName(noteGuid(id, noteId)));
+  await deleteVault(id);
+  deleteChatData(doc);
+  await p.clearData();
+  doc.destroy();
+  forgetCampaign(id);
 }

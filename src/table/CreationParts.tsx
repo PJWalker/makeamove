@@ -1,9 +1,9 @@
-import { useSignal, type Signal } from "@preact/signals";
+import { useSignal, type Signal } from "@preact/signals-react";
+
 import {
   bumpResource,
   getCharacter,
   setData,
-  setField,
   setScore,
   systemOf,
 } from "../characters/api";
@@ -11,16 +11,19 @@ import {
   boostFrom,
   choicesAt,
   dataFrom,
-  flatScores,
   pointsSpent,
   raise,
   SCORE_CAP,
+  validBoost,
+  previewChoices,
 } from "../characters/creation";
 import { derive } from "../characters/store";
 import { roll } from "../dice/notation";
+import { formatCommaList, parseCommaList } from "../lib/list";
 import type { Campaign } from "../store/campaign";
 import type { ChoiceDef, GameSystem, ScoreMethods } from "../systems/types";
 import { Button } from "../ui/Button";
+import { OptionPicker } from "../ui/OptionPicker";
 import { closePopup } from "../ui/popup";
 import { usePopupDialog } from "./usePopupDialog";
 import { Segmented } from "../ui/Segmented";
@@ -29,8 +32,8 @@ import { Dialog } from "./CampaignDialogs";
 /*
  * The guided flow's parts (design: core change 14): a choice with its
  * options' text and any stat boost to place; ability scores by standard
- * array, point buy or roll; and the level-up dialog, which asks for the
- * choices and improvements the new level brings.
+ * array, point buy or roll; and the advancement dialog, which asks for the
+ * choices and improvements at the next system-defined rank.
  */
 
 /** What's been picked for one choice, and how its boost is placed. */
@@ -50,11 +53,13 @@ export function ChoiceField({
   choice,
   value,
   onChange,
+  blockedStats = [],
 }: {
   system: GameSystem;
   choice: ChoiceDef;
   value: Picked;
   onChange: (p: Picked) => void;
+  blockedStats?: string[];
 }) {
   const option = choice.options.find((o) => o.id === value.option);
   const boost = option?.boost;
@@ -62,34 +67,23 @@ export function ChoiceField({
   const statName = (id: string) =>
     system.stats.find((s) => s.id === id)?.abbr ?? id;
   return (
-    <div class="field creation-choice">
-      <label class="field">
-        {choice.label}
-        <select
-          class="input bevel"
-          value={value.option}
-          onChange={(e) => {
-            const o = choice.options.find(
-              (x) => x.id === e.currentTarget.value,
-            );
-            onChange({
-              option: e.currentTarget.value,
-              pattern: 0,
-              order: o?.boost?.stats.slice() ?? [],
-            });
-          }}
-        >
-          <option value="">Choose…</option>
-          {choice.options.map((o) => (
-            <option key={o.id} value={o.id}>
-              {o.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      {option && <p class="muted creation-text">{option.text}</p>}
+    <div className="field creation-choice">
+      <OptionPicker
+        label={choice.label}
+        options={choice.options}
+        value={value.option}
+        emptyLabel="Choose…"
+        onChange={(id) => {
+          const o = choice.options.find((x) => x.id === id);
+          onChange({
+            option: id,
+            pattern: 0,
+            order: o?.boost?.stats.slice() ?? [],
+          });
+        }}
+      />
       {boost && (
-        <div class="creation-boost">
+        <div className="creation-boost">
           <Segmented
             label="Increase"
             value={String(value.pattern)}
@@ -104,22 +98,22 @@ export function ChoiceField({
           />
           {amounts.map((n, i) =>
             n ? (
-              <label key={i} class="creation-boost-pick">
+              <label key={i} className="creation-boost-pick">
                 +{n}
                 <select
-                  class="input bevel"
-                  value={value.order[i]}
+
+                  value={value.order[i] ?? ""}
                   onChange={(e) => {
                     // Swap so each stat takes one amount.
                     const order = value.order.slice();
                     const j = order.indexOf(e.currentTarget.value);
-                    if (j >= 0) order[j] = order[i];
+                    if (j >= 0) order[j] = order[i] ?? e.currentTarget.value;
                     order[i] = e.currentTarget.value;
                     onChange({ ...value, order });
                   }}
                 >
                   {boost.stats.map((s) => (
-                    <option key={s} value={s}>
+                    <option key={s} value={s} disabled={blockedStats.includes(s)}>
                       {statName(s)}
                     </option>
                   ))}
@@ -155,7 +149,7 @@ export const startingScores = (
 ) =>
   method === "array" && methods.standardArray
     ? assignInOrder(system, methods.standardArray)
-    : flatScores(system, method === "buy" ? 8 : 10);
+    : Object.fromEntries(system.stats.map((stat) => [stat.id, method === "buy" && methods.pointBuy ? Math.min(...Object.keys(methods.pointBuy.costs).map(Number)) : stat.default ?? 10]));
 
 /** Ability scores: assign a standard array or rolled set, spend a point buy, or type them in. */
 export function ScoreFields({
@@ -176,7 +170,7 @@ export function ScoreFields({
     if (m === "array") {
       pool.value = methods.standardArray!;
       scores.value = assignInOrder(system, pool.value);
-    } else if (m === "buy") scores.value = flatScores(system, 8);
+    } else if (m === "buy") scores.value = startingScores(system, methods, m);
     else if (m === "roll") rollPool();
   };
   const rollPool = () => {
@@ -193,7 +187,7 @@ export function ScoreFields({
     : [];
 
   return (
-    <div class="field creation-scores">
+    <div className="field creation-scores">
       <span>Ability scores</span>
       <Segmented
         label="Method"
@@ -203,7 +197,7 @@ export function ScoreFields({
       />
       {method.value === "buy" && methods.pointBuy && (
         <span
-          class="muted"
+          className="muted"
           data-over={spent === null || spent > methods.pointBuy.budget}
         >
           {spent ?? "–"} / {methods.pointBuy.budget} points
@@ -214,13 +208,13 @@ export function ScoreFields({
           Roll again ({methods.roll})
         </Button>
       )}
-      <div class="creation-score-grid">
+      <div className="creation-score-grid">
         {system.stats.map((s) => (
-          <label key={s.id} class="creation-score">
-            <span class="stat-abbr">{s.abbr}</span>
+          <label key={s.id} className="creation-score">
+            <span className="stat-abbr">{s.abbr}</span>
             {method.value === "array" || method.value === "roll" ? (
               <select
-                class="input bevel"
+
                 value={scores.value[s.id]}
                 onChange={(e) =>
                   (scores.value = swapScore(
@@ -238,10 +232,10 @@ export function ScoreFields({
               </select>
             ) : (
               <input
-                class="input bevel"
+
                 type="number"
-                min={method.value === "buy" ? Math.min(...buyable) : 1}
-                max={method.value === "buy" ? Math.max(...buyable) : SCORE_CAP}
+                min={method.value === "buy" ? Math.min(...buyable) : s.min ?? 1}
+                max={method.value === "buy" ? Math.max(...buyable) : s.max ?? SCORE_CAP}
                 value={scores.value[s.id]}
                 onInput={(e) =>
                   (scores.value = {
@@ -285,18 +279,27 @@ function swapScore(
   return {
     ...scores,
     [stat]: value,
-    ...(other ? { [other]: scores[stat] } : {}),
+    ...(other ? { [other]: scores[stat] ?? value } : {}),
   };
 }
 
 /** What the guided creation form hands to newCharacter: scores with boosts, and the data its choices write. */
 export function creationResult(
   system: GameSystem,
-  classId: string,
   scores: Record<string, number>,
   picks: Record<string, Picked>,
 ) {
-  const choices = choicesAt(system.creation, "create", classId);
+  const pickedOptions = Object.fromEntries(
+    Object.entries(picks).map(([id, pick]) => [id, pick.option]),
+  );
+  const pickedData: Record<string, string | number | boolean> = {}
+  for (const choice of system.creation?.choices ?? []) {
+    const option = choice.options.find((item) => item.id === pickedOptions[choice.id])
+    if (!option) continue
+    pickedData[choice.field] = option.id
+    Object.assign(pickedData, option.grants)
+  }
+  const choices = choicesAt(system.creation, "create", pickedData);
   let raised = scores;
   for (const c of choices) {
     const p = picks[c.id];
@@ -308,26 +311,21 @@ export function creationResult(
           p.pattern,
           p.order,
         ),
+        Object.fromEntries(system.stats.map((stat) => [stat.id, stat.max ?? SCORE_CAP])),
       );
   }
-  const data = dataFrom(
-    choices,
-    Object.fromEntries(Object.entries(picks).map(([k, p]) => [k, p.option])),
-    listFieldsOf(system),
-  );
+  const data = dataFrom(choices, pickedOptions, listFieldsOf(system));
   return { scores: raised, data };
 }
 
 /** Data fields that gather several picks (5.5e's feats). */
 const listFieldsOf = (system: GameSystem) =>
-  system.creation?.feats ? [system.creation.feats.field] : [];
+  [...(system.creation?.listFields ?? []), ...(system.creation?.feats ? [system.creation.feats.field] : [])];
 
-/**
- * Level up: the new level's choices (a subclass), and at improvement levels
- * either +2 to one stat or +1 to two, or a feat. Hit points rise by the
- * difference in the maximum.
- */
-export function LevelUpDialog({
+const scoreCapsOf = (system: GameSystem) => Object.fromEntries(system.stats.map((stat) => [stat.id, stat.max ?? SCORE_CAP]));
+
+/** Choices and improvements at the next system-defined advancement point. */
+export function AdvancementDialog({
   campaign,
   characterId,
   onClose,
@@ -339,30 +337,67 @@ export function LevelUpDialog({
   const ref = usePopupDialog();
   const system = systemOf(campaign);
   const c = getCharacter(campaign, characterId)!;
-  const level = c.level + 1;
-  const choices = choicesAt(system.creation, level, c.classId);
-  const improves = !!system.creation?.improvementLevels?.includes(level);
+  const field = system.creation?.advancementField;
+  const rank = Number(field ? c.data[field] : 1) + 1;
   const picks = useSignal<Record<string, Picked>>({});
+  const choices = previewChoices(system.creation, rank, c.data, c.scores, Object.fromEntries(Object.entries(picks.value).map(([id, picked]) => [id, picked.option])));
+  const improves = !!system.creation?.improvementsAt?.includes(rank);
   const improvement = useSignal<"two" | "split" | "feat">("two");
-  const first = useSignal(system.stats[0].id);
-  const second = useSignal(system.stats[1].id);
+  const first = useSignal((system.stats)[0]!.id);
+  const second = useSignal((system.stats)[1]!.id);
   const feat = useSignal("");
   const featChoice = system.creation?.feats;
+  const markedStatsField = system.creation?.markedStatsField;
+  const resetsMarks = !!system.creation?.resetMarkedStatsAt?.includes(rank);
+  const blockedStats = markedStatsField && !resetsMarks ? parseCommaList(String(c.data[markedStatsField] ?? '')).filter(Boolean) : [];
+  const optionalChoices = choices.filter((choice) => choice.optional);
+  const advancementCost = optionalChoices.reduce((cost, choice) => {
+    const option = choice.options.find((item) => item.id === picks.value[choice.id]?.option)
+    return cost + (option ? option.cost ?? 1 : 0)
+  }, 0)
   const ready =
-    choices.every((ch) => picks.value[ch.id]?.option) &&
+    choices.filter((ch) => !ch.optional).every((ch) => picks.value[ch.id]?.option) &&
+    choices.every((choice) => {
+      const pick = picks.value[choice.id]
+      return !pick?.option || validBoost(choice.options.find((option) => option.id === pick.option), pick.pattern, pick.order, c.scores, scoreCapsOf(system), blockedStats)
+    }) &&
+    advancementCost === (system.creation?.choicesPerAdvancement ?? 0) &&
     (!improves || improvement.value !== "feat" || !!feat.value);
 
   const apply = () => {
     const before = derive(c, system).values.maxHp ?? 0;
     campaign.doc.transact(() => {
-      setField(campaign, c.id, "level", level);
+      if (field) setData(campaign, c.id, field, rank);
+      let advancedScores = c.scores;
+      const markedStats = new Set(resetsMarks ? [] : blockedStats);
+      for (const choice of choices) {
+        const picked = picks.value[choice.id];
+        if (!picked?.option) continue;
+        const option = choice.options.find((item) => item.id === picked.option);
+        if (option?.boost) {
+          advancedScores = raise(advancedScores, boostFrom(option, picked.pattern, picked.order), scoreCapsOf(system));
+          const amounts = option.boost.amounts[picked.pattern] ?? [];
+          amounts.forEach((amount, index) => {
+            if (amount && picked.order[index]) markedStats.add(picked.order[index]);
+          });
+        }
+      }
       const data = dataFrom(
         choices,
         Object.fromEntries(
           Object.entries(picks.value).map(([k, p]) => [k, p.option]),
         ),
+        listFieldsOf(system),
+        c.data,
       );
-      for (const [k, v] of Object.entries(data)) setData(campaign, c.id, k, v);
+      for (const [k, v] of Object.entries(data)) {
+        const value = listFieldsOf(system).includes(k) && c.data[k]
+          ? `${c.data[k]},${v}`
+          : v
+        setData(campaign, c.id, k, value)
+      }
+      if (system.creation?.advancementCounterField)
+        setData(campaign, c.id, system.creation.advancementCounterField, 0);
       if (improves) {
         if (improvement.value === "feat" && featChoice) {
           const now = String(c.data[featChoice.field] ?? "");
@@ -377,11 +412,12 @@ export function LevelUpDialog({
             improvement.value === "two"
               ? { [first.value]: 2 }
               : { [first.value]: 1, [second.value]: 1 };
-          const scores = raise(c.scores, by);
-          for (const [k, v] of Object.entries(scores))
-            if (v !== c.scores[k]) setScore(campaign, c.id, k, v);
+          advancedScores = raise(advancedScores, by, scoreCapsOf(system));
         }
       }
+      for (const [k, v] of Object.entries(advancedScores))
+        if (v !== c.scores[k]) setScore(campaign, c.id, k, v);
+      if (markedStatsField) setData(campaign, c.id, markedStatsField, formatCommaList([...markedStats]));
     });
     const after = getCharacter(campaign, c.id)!;
     const d = derive(after, system);
@@ -394,7 +430,7 @@ export function LevelUpDialog({
 
   const statSelect = (sig: Signal<string>, label: string) => (
     <select
-      class="input bevel"
+
       aria-label={label}
       value={sig.value}
       onChange={(e) => (sig.value = e.currentTarget.value)}
@@ -403,7 +439,7 @@ export function LevelUpDialog({
         <option
           key={s.id}
           value={s.id}
-          disabled={(c.scores[s.id] ?? 10) >= SCORE_CAP}
+          disabled={(c.scores[s.id] ?? 10) >= (s.max ?? SCORE_CAP)}
         >
           {s.name} ({c.scores[s.id]})
         </option>
@@ -414,11 +450,11 @@ export function LevelUpDialog({
   return (
     <Dialog
       dialogRef={ref}
-      title={`${c.name}: level ${level}`}
+      title={`${c.name}: advancement ${rank}`}
       onClose={onClose}
     >
       <form
-        class="creation-form"
+        className="creation-form"
         onSubmit={(e) => {
           e.preventDefault();
           if (ready) apply();
@@ -430,11 +466,12 @@ export function LevelUpDialog({
             system={system}
             choice={ch}
             value={picks.value[ch.id] ?? emptyPick()}
+            blockedStats={blockedStats}
             onChange={(p) => (picks.value = { ...picks.value, [ch.id]: p })}
           />
         ))}
         {improves && (
-          <div class="field">
+          <div className="field">
             Ability Score Improvement
             <Segmented
               label="Improvement"
@@ -450,7 +487,7 @@ export function LevelUpDialog({
             />
             {improvement.value === "feat" && featChoice ? (
               <select
-                class="input bevel"
+
                 aria-label="Feat"
                 value={feat.value}
                 onChange={(e) => (feat.value = e.currentTarget.value)}
@@ -463,23 +500,23 @@ export function LevelUpDialog({
                 ))}
               </select>
             ) : (
-              <div class="sheet-row">
+              <div className="sheet-row">
                 {statSelect(first, "First ability")}
                 {improvement.value === "split" &&
                   statSelect(second, "Second ability")}
               </div>
             )}
             {improvement.value === "feat" && feat.value && (
-              <p class="muted">
+              <p className="muted">
                 {featChoice?.options.find((o) => o.id === feat.value)?.text}
               </p>
             )}
           </div>
         )}
         {!choices.length && !improves && (
-          <p class="muted">Hit points and Hit Dice go up.</p>
+          <p className="muted">Hit points and Hit Dice go up.</p>
         )}
-        <div class="form-actions">
+        <div className="form-actions">
           <Button
             variant="ghost"
             onClick={() => closePopup(ref.current, onClose)}

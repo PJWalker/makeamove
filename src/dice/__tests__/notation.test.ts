@@ -1,10 +1,12 @@
 import { describe as group, expect, it } from 'vitest'
 import { cryptoDie, describe, NotationError, parse, roll } from '../notation'
 
+
 /** A die that returns these values in order. */
 const fixed = (...values: number[]) => {
   let i = 0
-  return () => values[i++]
+  if (!values.length) throw new RangeError("Dice fixture needs at least one result")
+  return () => (values)[i++ % values.length]!
 }
 
 group('parsing', () => {
@@ -17,15 +19,15 @@ group('parsing', () => {
     expect(parse('d%')).toMatchObject([{ sides: 100 }])
   })
   it('reads keep, drop and explode in any order', () => {
-    expect(parse('4d6kh3')[0]).toMatchObject({ keep: { which: 'high', n: 3 } })
-    expect(parse('2d20kl1')[0]).toMatchObject({ keep: { which: 'low', n: 1 } })
-    expect(parse('2d20b1')[0]).toMatchObject({ keep: { which: 'high', n: 1 } })
-    expect(parse('2d20w1')[0]).toMatchObject({ keep: { which: 'low', n: 1 } })
-    expect(parse('4d6dl1')[0]).toMatchObject({ drop: { which: 'low', n: 1 } })
-    expect(parse('3d6!k2')[0]).toMatchObject({ explode: true, keep: { which: 'high', n: 2 } })
+    expect((parse('4d6kh3'))[0]!).toMatchObject({ keep: { which: 'high', n: 3 } })
+    expect((parse('2d20kl1'))[0]!).toMatchObject({ keep: { which: 'low', n: 1 } })
+    expect((parse('2d20b1'))[0]!).toMatchObject({ keep: { which: 'high', n: 1 } })
+    expect((parse('2d20w1'))[0]!).toMatchObject({ keep: { which: 'low', n: 1 } })
+    expect((parse('4d6dl1'))[0]!).toMatchObject({ drop: { which: 'low', n: 1 } })
+    expect((parse('3d6!k2'))[0]!).toMatchObject({ explode: true, keep: { which: 'high', n: 2 } })
   })
   it('keeps label case and spaces', () => {
-    expect(parse('1d4 + 1[Ring of Strength]')[1].label).toBe('Ring of Strength')
+    expect((parse('1d4 + 1[Ring of Strength]'))[1]!.label).toBe('Ring of Strength')
   })
   it('explains bad formulas', () => {
     for (const bad of [
@@ -57,19 +59,19 @@ group('rolling', () => {
   it('keeps the highest or lowest', () => {
     const best = roll('4d6kh3', fixed(3, 6, 1, 4))
     expect(best.total).toBe(13)
-    expect(best.terms[0]).toMatchObject({ dice: [{ kept: true }, { kept: true }, { kept: false }, { kept: true }] })
+    expect((best.terms)[0]!).toMatchObject({ dice: [{ kept: true }, { kept: true }, { kept: false }, { kept: true }] })
     expect(roll('2d20kl1', fixed(17, 8)).total).toBe(8)
   })
   it('drops the lowest, with ties going to the earlier die', () => {
     const r = roll('3d6dl1', fixed(2, 5, 2))
     expect(r.total).toBe(7)
-    expect(r.terms[0]).toMatchObject({ dice: [{ kept: false }, { kept: true }, { kept: true }] })
+    expect((r.terms)[0]!).toMatchObject({ dice: [{ kept: false }, { kept: true }, { kept: true }] })
   })
   it('explodes on the maximum, and stops eventually', () => {
     const r = roll('d6!', fixed(6, 6, 2))
     expect(r.total).toBe(14)
-    expect(r.terms[0]).toMatchObject({ dice: [{ value: 6 }, { value: 6, exploded: true }, { value: 2, exploded: true }] })
-    expect(roll('d2!', () => 2).terms[0]).toMatchObject({ dice: { length: 51 } })
+    expect((r.terms)[0]!).toMatchObject({ dice: [{ value: 6 }, { value: 6, exploded: true }, { value: 2, exploded: true }] })
+    expect((roll('d2!', () => 2).terms)[0]!).toMatchObject({ dice: { length: 51 } })
   })
   it('rolls fairly with the crypto source', () => {
     const counts = new Array(7).fill(0)

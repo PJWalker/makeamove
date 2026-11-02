@@ -1,7 +1,7 @@
-import { signal } from "@preact/signals";
-import type { ComponentChildren } from "preact";
-import { useLayoutEffect } from "preact/hooks";
-import { useSignal } from "@preact/signals";
+import { signal } from "@preact/signals-react";
+import type { ReactNode } from "react";
+import { useLayoutEffect } from "react";
+import { useSignal } from "@preact/signals-react";
 import type { Campaign } from "../store/campaign";
 import {
   addItem,
@@ -40,22 +40,22 @@ import { withTransition } from "../ui/transition";
 export interface EntityWindowRecord {
   id: DockItemId;
   title: string;
-  icon?: Icon;
-  graphicRef?: { kind: string; id: string };
-  graphicDefaultIcon?: string;
-  content?: ComponentChildren;
-  text?: string;
-  tags?: string[];
-  proxy?: WindowProxy;
-  menuItems?: MenuItem[];
-  close?: () => void;
+  icon?: Icon | undefined;
+  graphicRef?: { kind: string; id: string } | undefined;
+  graphicDefaultIcon?: string | undefined;
+  content?: ReactNode | undefined;
+  text?: string | undefined;
+  tags?: string[] | undefined;
+  proxy?: WindowProxy | undefined;
+  menuItems?: MenuItem[] | undefined;
+  close?: (() => void) | undefined;
 }
 
 interface SavedEntityWindow {
   id: string;
   title: string;
-  text?: string;
-  tags?: string[];
+  text?: string | undefined;
+  tags?: string[] | undefined;
 }
 
 const META_KEY = "mam:entity-windows-1";
@@ -200,7 +200,7 @@ function EntityPopup({
         dialogRef={ref}
         title={record.title}
         onClose={close}
-        proxy={record.proxy}
+        {...(record.proxy ? { proxy: record.proxy } : {})}
         graphicCampaign={campaign}
         graphicRef={record.graphicRef}
         graphicDefaultIcon={record.graphicDefaultIcon}
@@ -210,7 +210,7 @@ function EntityPopup({
       >
         <EntityWindowContent campaign={campaign} record={record} />
         {record.tags && record.tags.length > 0 && (
-          <p class="muted item-tags">{record.tags.join(", ")}</p>
+          <p className="muted item-tags">{record.tags.join(", ")}</p>
         )}
       </Dialog>
       {menu.value && (
@@ -266,7 +266,7 @@ export function EntityWindowContent({
   if (record.content) return <>{record.content}</>;
 
   const text = (
-    <p class="move-text move-window-text">
+    <p className="move-text move-window-text">
       {record.text ?? "This window is not available."}
     </p>
   );

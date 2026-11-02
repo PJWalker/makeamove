@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { diceFormula, parseCommand, parseDuration, splitFormula, suggest } from '../commands'
-import { entityToken, tokenize } from '../markdown'
+import {
+  diceFormula,
+  parseCommand,
+  parseDuration,
+  splitFormula,
+  suggest,
+} from "../commands";
 
 const members = [
   { id: 'g', name: 'Gwen', role: 'gm' },
@@ -62,50 +67,56 @@ describe('commands', () => {
   })
 })
 
-describe('markdown-lite', () => {
-  it('splits styles, code and links', () => {
-    expect(tokenize('a **b** *c* _d_ `e` [f](https://x.y) https://z.w/p.')).toEqual([
-      { type: 'text', text: 'a ' },
-      { type: 'bold', text: 'b' },
-      { type: 'text', text: ' ' },
-      { type: 'italic', text: 'c' },
-      { type: 'text', text: ' ' },
-      { type: 'italic', text: 'd' },
-      { type: 'text', text: ' ' },
-      { type: 'code', text: 'e' },
-      { type: 'text', text: ' ' },
-      { type: 'link', text: 'f', href: 'https://x.y' },
-      { type: 'text', text: ' ' },
-      { type: 'link', text: 'https://z.w/p', href: 'https://z.w/p' },
-      { type: 'text', text: '.' },
-    ])
-  })
-  it('leaves snake_case and unsafe links alone', () => {
-    expect(tokenize('my_var_name')).toEqual([{ type: 'text', text: 'my_var_name' }])
-    expect(tokenize('[x](javascript:alert(1))')).toEqual([{ type: 'text', text: '[x](javascript:alert(1))' }])
-  })
-  it('reads links to things in the campaign', () => {
-    const text = `Take ${entityToken('item', 'healing-potion')} to ${entityToken('character', 'c1', 'the chief')}`
-    expect(tokenize(text)).toEqual([
-      { type: 'text', text: 'Take ' },
-      { type: 'entity', kind: 'item', id: 'healing-potion', text: '' },
-      { type: 'text', text: ' to ' },
-      { type: 'entity', kind: 'character', id: 'c1', text: 'the chief' },
-    ])
-  })
+describe("chat commands", () => {
+  it("reads /pin, /timer, /count and /clock", () => {
+    expect(parseCommand("/pin Meet at the inn", [], false)).toEqual({
+      kind: "pin",
+      text: "Meet at the inn",
+    });
+    expect(parseCommand('/timer 60s "World Ends"', [], false)).toEqual({
+      kind: "timer",
+      seconds: 60,
+      label: "World Ends",
+    });
+    expect(parseCommand("/timer 1h30m Siege", [], false)).toEqual({
+      kind: "timer",
+      seconds: 5400,
+      label: "Siege",
+    });
+    expect(parseCommand("/timer 2:30", [], false)).toEqual({
+      kind: "timer",
+      seconds: 150,
+      label: "",
+    });
+    expect(parseCommand("/timer soon", [], false).kind).toBe("error");
+    expect(parseCommand('/count 0/8 "The cops arrive"', [], false)).toEqual({
+      kind: "counter",
+      start: 0,
+      max: 8,
+      label: "The cops arrive",
+    });
+    expect(parseCommand("/count 3 Torches", [], false)).toEqual({
+      kind: "counter",
+      start: 3,
+      label: "Torches",
+    });
+    expect(parseCommand("/count lots", [], false).kind).toBe("error");
+    expect(parseCommand("/clock 8 The alarm sounds", [], false)).toEqual({
+      kind: "counter",
+      start: 0,
+      max: 8,
+      label: "The alarm sounds",
+    });
+    expect(parseCommand("/clock zero Alarm", [], false).kind).toBe("error");
+  });
 
-  it('reads /pin, /timer and /count', () => {
-    expect(parseCommand('/pin Meet at the inn', [], false)).toEqual({ kind: 'pin', text: 'Meet at the inn' })
-    expect(parseCommand('/timer 60s "World Ends"', [], false)).toEqual({ kind: 'timer', seconds: 60, label: 'World Ends' })
-    expect(parseCommand('/timer 1h30m Siege', [], false)).toEqual({ kind: 'timer', seconds: 5400, label: 'Siege' })
-    expect(parseCommand('/timer 2:30', [], false)).toEqual({ kind: 'timer', seconds: 150, label: '' })
-    expect(parseCommand('/timer soon', [], false).kind).toBe('error')
-    expect(parseCommand('/count 0/8 "The cops arrive"', [], false)).toEqual({ kind: 'counter', start: 0, max: 8, label: 'The cops arrive' })
-    expect(parseCommand('/count 3 Torches', [], false)).toEqual({ kind: 'counter', start: 3, label: 'Torches' })
-    expect(parseCommand('/count lots', [], false).kind).toBe('error')
-  })
-
-  it('reads durations', () => {
-    expect([parseDuration('90'), parseDuration('5m'), parseDuration('1h'), parseDuration('1:00:05'), parseDuration('x')]).toEqual([90, 300, 3600, 3605, null])
-  })
-})
+  it("reads durations", () => {
+    expect([
+      parseDuration("90"),
+      parseDuration("5m"),
+      parseDuration("1h"),
+      parseDuration("1:00:05"),
+      parseDuration("x"),
+    ]).toEqual([90, 300, 3600, 3605, null]);
+  });
+});

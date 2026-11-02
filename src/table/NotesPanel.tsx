@@ -1,5 +1,5 @@
-import { signal, useSignal } from '@preact/signals'
-import { useEffect, useLayoutEffect, useRef } from 'preact/hooks'
+import { signal, useSignal } from "@preact/signals-react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import {
   backlinks,
   createNote,
@@ -16,11 +16,11 @@ import {
   revealNote,
   type NoteFolderView,
   type NoteView,
-} from '../notes/api'
-import { noteOpened, openNote, openNoteId } from '../notes/targets'
-import type { Campaign } from '../store/campaign'
-import { useY } from '../store/useY'
-import { Button } from '../ui/Button'
+} from "../notes/api";
+import { noteOpened, openNote, openNoteId } from "../notes/targets";
+import type { Campaign } from "../store/campaign";
+import { useY } from "../store/useY";
+import { Button } from "../ui/Button";
 import {
   IconDelete,
   IconFolder,
@@ -31,28 +31,26 @@ import {
   IconSecret,
 } from "../ui/icons";
 import { morphOpen } from "../ui/morph";
-import { createPaneLayout, TwoPane, usePaneLevel } from '../ui/TwoPane'
+import { TwoPane, usePaneLevel } from "../ui/TwoPane";
 import { List, ListRow } from "../ui/List";
-import { menuTrigger } from '../ui/menuTrigger'
+import { menuTrigger } from "../ui/menuTrigger";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { ContextMenu, type MenuItem } from './ContextMenu'
+import { ContextMenu, type MenuItem } from "./ContextMenu";
 import { dragEntity, entity } from "./entityDrag";
 import { editEntityGraphic } from "./GraphicDialogs";
-import { NoteEditor } from './NoteEditor'
+import { NoteEditor } from "./NoteEditor";
 import { FolderTree } from "./FolderTree";
+import { notesLayout } from "./panelLayouts";
 
 /** How long ago, roughly, for a page's last edit. */
 function ago(at: number) {
-  if (!at) return ''
-  const s = (Date.now() - at) / 1000
-  if (s < 60) return 'just now'
-  if (s < 3600) return `${Math.floor(s / 60)}m ago`
-  if (s < 86400) return `${Math.floor(s / 3600)}h ago`
-  return `${Math.floor(s / 86400)}d ago`
+  if (!at) return "";
+  const s = (Date.now() - at) / 1000;
+  if (s < 60) return "just now";
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
 }
-
-/** Side by side or one at a time (ui/TwoPane.tsx). */
-export const notesLayout = createPaneLayout('notesList', { list: 'list', detail: 'page' })
 
 /**
  * Notes: pages filed in folders (Sessions and World to start with), written
@@ -60,50 +58,69 @@ export const notesLayout = createPaneLayout('notesList', { list: 'list', detail:
  */
 export function NotesPanel({ campaign }: { campaign: Campaign }) {
   // GM-only pages, on a GM device; watched too, so the list keeps up with them.
-  const vault = campaign.vault.value
-  useY(vault?.notes, () => null)
-  const notes = useY(campaign.notes, () => listNotes(campaign))
-  const folders = useY(campaign.noteFolders, () => listNoteFolders(campaign))
+  const vault = campaign.vault.value;
+  useY(vault?.notes, () => null);
+  const notes = useY(campaign.notes, () => listNotes(campaign));
+  const folders = useY(campaign.noteFolders, () => listNoteFolders(campaign));
   // After useY, so it is already watching when the folders appear.
-  useEffect(() => ensureNoteFolders(campaign), [campaign])
-  const openId = openNoteId.value
-  const open = openId ? notes.find((n) => n.id === openId) : undefined
-  const { level, go } = usePaneLevel(notesLayout, open ? 'detail' : 'list')
+  useEffect(() => ensureNoteFolders(campaign), [campaign]);
+  const openId = openNoteId.value;
+  const open = openId ? notes.find((n) => n.id === openId) : undefined;
+  const { level, go } = usePaneLevel(notesLayout, open ? "detail" : "list");
 
   // Asked to open a page (from the list, a link or elsewhere): show it.
-  const requests = noteOpened.value
-  const seen = useRef(requests)
+  const requests = noteOpened.value;
+  const seen = useRef(requests);
   useEffect(() => {
-    if (requests !== seen.current && openNoteId.peek()) go('detail')
-    seen.current = requests
-  }, [requests])
+    if (requests !== seen.current && openNoteId.peek()) go("detail");
+    seen.current = requests;
+  }, [requests]);
   // The open page was deleted: back to the list.
   useEffect(() => {
     if (openId && !open && !campaign.notes.has(openId)) {
-      openNoteId.value = null
-      go('list')
+      openNoteId.value = null;
+      go("list");
     }
-  }, [openId, open])
+  }, [openId, open]);
 
-  const folder = folders.find((f) => f.id === open?.folder)
-  const revealingNote = revealing.value ? notes.find((n) => n.id === revealing.value) : undefined
+  const folder = folders.find((f) => f.id === open?.folder);
+  const revealingNote = revealing.value
+    ? notes.find((n) => n.id === revealing.value)
+    : undefined;
   return (
     <TwoPane
       layout={notesLayout}
       level={level.value}
-      title={folder?.name ?? 'Notes'}
+      title={folder?.name ?? "Notes"}
       backLabel="Back to the notes"
-      onBack={() => go('list')}
+      onBack={() => go("list")}
       resizeLabel="Resize the notes list"
-      list={<NoteList campaign={campaign} notes={notes} folders={folders} openId={openId} />}
+      list={
+        <NoteList
+          campaign={campaign}
+          notes={notes}
+          folders={folders}
+          openId={openId}
+        />
+      }
       detail={
         <>
-          {open ? <NotePage campaign={campaign} note={open} notes={notes} /> : <p class="empty">Pick a page, or make a new one.</p>}
-          {revealingNote && <RevealPage campaign={campaign} note={revealingNote} onClose={() => (revealing.value = null)} />}
+          {open ? (
+            <NotePage campaign={campaign} note={open} notes={notes} />
+          ) : (
+            <p className="empty">Pick a page, or make a new one.</p>
+          )}
+          {revealingNote && (
+            <RevealPage
+              campaign={campaign}
+              note={revealingNote}
+              onClose={() => (revealing.value = null)}
+            />
+          )}
         </>
       }
     />
-  )
+  );
 }
 
 function NoteList({
@@ -124,7 +141,7 @@ function NoteList({
   const known = new Set(folders.map((f) => f.id));
   const isGm = !!campaign.vault.value;
   const newPage = (folder?: string, gmOnly = false) =>
-    openNote(createNote(campaign, { folder, gmOnly }));
+    openNote(createNote(campaign, { ...(folder ? { folder } : {}), gmOnly }));
 
   const row = (n: NoteView) => {
     const dragged = entity(campaign, "note", n.id, n.title);
@@ -254,7 +271,7 @@ function NoteList({
         onCreateFolder={(name) => createNoteFolder(campaign, name)}
         onRenameFolder={(id, name) => renameNoteFolder(campaign, id, name)}
         emptyContent={
-          !notes.length ? <p class="empty-inline">No pages yet.</p> : null
+          !notes.length ? <p className="empty-inline">No pages yet.</p> : null
         }
       />
       {menu.value && (
@@ -264,25 +281,34 @@ function NoteList({
   );
 }
 
-function NotePage({ campaign, note, notes }: { campaign: Campaign; note: NoteView; notes: NoteView[] }) {
-  const linkedFrom = backlinks(campaign, `note:${note.id}`)
-  const titleRef = useRef<HTMLInputElement>(null)
+function NotePage({
+  campaign,
+  note,
+  notes,
+}: {
+  campaign: Campaign;
+  note: NoteView;
+  notes: NoteView[];
+}) {
+  const linkedFrom = backlinks(campaign, `note:${note.id}`);
+  const titleRef = useRef<HTMLInputElement>(null);
   // A brand-new page starts with its title ready to type.
   useLayoutEffect(() => {
-    if (!getNote(campaign, note.id)?.title || note.title === 'Untitled') titleRef.current?.focus()
-  }, [note.id])
+    if (!getNote(campaign, note.id)?.title || note.title === "Untitled")
+      titleRef.current?.focus();
+  }, [note.id]);
 
   return (
-    <article class="note-page" aria-label={note.title}>
-      <div class="panel-scroll note-scroll">
+    <article className="note-page" aria-label={note.title}>
+      <div className="panel-scroll note-scroll">
         {note.gmOnly && (
-          <p class="note-secret bevel">
+          <p className="note-secret">
             <IconSecret size={22} />
             <span>Only you can see this page.</span>
             <Button
               size="sm"
               variant="ghost"
-              onClick={(e: MouseEvent) =>
+              onClick={(e) =>
                 morphOpen(
                   e.currentTarget as Element,
                   () => (revealing.value = note.id),
@@ -295,7 +321,7 @@ function NotePage({ campaign, note, notes }: { campaign: Campaign; note: NoteVie
         )}
         <input
           ref={titleRef}
-          class="note-title"
+          className="title"
           aria-label="Title"
           placeholder="Untitled"
           value={note.title === "Untitled" ? "" : note.title}
@@ -314,8 +340,8 @@ function NotePage({ campaign, note, notes }: { campaign: Campaign; note: NoteVie
         />
         <NoteEditor key={note.id} campaign={campaign} noteId={note.id} />
         {linkedFrom.length > 0 && (
-          <section class="note-backlinks" aria-label="Linked from">
-            <h3 class="eyebrow">Linked from</h3>
+          <section className="note-backlinks" aria-label="Linked from">
+            <h3 className="eyebrow">Linked from</h3>
             <List>
               {linkedFrom.map((n) => (
                 <ListRow
@@ -334,7 +360,7 @@ function NotePage({ campaign, note, notes }: { campaign: Campaign; note: NoteVie
 }
 
 /** A page waiting for the GM to confirm revealing it. */
-const revealing = signal<string | null>(null)
+const revealing = signal<string | null>(null);
 
 /** Asks before revealing a GM-only page: players keep it once they have it. */
 function RevealPage({

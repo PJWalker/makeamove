@@ -1,5 +1,5 @@
 import type { Editor } from '@tiptap/core'
-import { useEffect, useRef, useState } from 'preact/hooks'
+import { useEffect, useRef, useState } from 'react'
 import { getNote, noteSubdoc, touchNote } from '../notes/api'
 import { NoteDoc } from '../notes/noteDoc'
 import { linksIn } from '../notes/links'
@@ -67,7 +67,7 @@ export function NoteEditor({ campaign, noteId }: { campaign: Campaign; noteId: s
   }, [campaign, noteId])
 
   return (
-    <div class="note-editor" data-loading={loading || undefined}>
+    <div className="note-editor" data-loading={loading || undefined}>
       <div ref={hostRef} />
     </div>
   )

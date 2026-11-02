@@ -4,7 +4,7 @@
 
 Local-first, peer-to-peer virtual tabletop that runs as a PWA. Every participant holds a full copy of the campaign, works offline, and merges edits with peers when connected.
 
-A generic core, with plugins for specific game systems. Dungeon World is the first, but we should consider the possibility of D\&D 5.5E, Daggerheart, PF2e, Blades in the Dark, and other systems.
+A generic core, with plugins for specific game systems. The built-in systems include Dungeon World, Dungeon World 2, D\&D 5.5E, Blades in the Dark, and Daggerheart; Triangle Agency, PF2e, and other systems remain planned.
 
 ## Goals
 
@@ -13,7 +13,7 @@ A generic core, with plugins for specific game systems. Dungeon World is the fir
 - Characters come as PCs (class, moves) and GM-made NPCs (HP and system-defined fields). They live in a two-pane panel with shared folders, and selecting a character's token opens its sheet.
 - Dice roller, with every roll and triggered move posted to a shared chat log.
 - Session and world-building notes
-- A game-system plugin API, currently used by the built-in Dungeon World and D\&D 5.5e systems; Daggerheart, PF2e and Blades in the Dark are possible future systems.
+- A game-system plugin API used by the built-in Dungeon World, Dungeon World 2, D\&D 5.5e, and Blades in the Dark systems.
 - Works with zero servers we operate beyond a tiny, replaceable signalling relay.
 
 ## Non-goals
@@ -22,8 +22,9 @@ A generic core, with plugins for specific game systems. Dungeon World is the fir
 
 ## UI Design
 
-- Typefaces: Cabin and Fraunces, no small caps
-- Body text at 1rem.
+- Typography: Cabin throughout, 1rem body text, compact headings
+- Neutral surfaces, thin separators, and subtle gradient
+- Flat controls; reserve the gold accent for primary and selected actions
 - Edge-docked elements sit flush; icon strips end in full diagonals
 - Game-icons & Material Symbols as icon sources
 - Context menus expose every relevant action (verb) available for their object, including actions otherwise available only through row buttons, hover controls, or keyboard shortcuts. Reuse the same action handlers and respect the same permission and availability rules.
@@ -35,7 +36,7 @@ Each browser runs the whole app against a local Yjs CRDT store persisted to Inde
 | Layer | Choice | Why |
 | :---- | :---- | :---- |
 | Language / build | TypeScript, Vite, PWA (service worker via vite-plugin-pwa) | Installable, offline after first load |
-| UI framework | Preact \+ @preact/signals (TSX) | Signals bridge cleanly to Yjs observers for fine-grained updates; \~4 KB; React libraries via preact/compat; TSX for plugin authors (decided Oct 25\) |
+| UI framework | React + React Aria Components + @preact/signals-react (TSX) | React Aria supplies accessible control behavior; existing CSS supplies the visual design. The signals compiler transform tracks component reads and keeps the Yjs observer model. React replaces Preact because React Aria's collection renderer and synthetic keyboard events are not compatible with Preact (decided Nov 2). |
 | Canvas | PixiJS v8 (WebGL, WebGPU when available) \+ a custom camera | Handles large maps and hundreds of tokens at 60 fps; tldraw needs a commercial licence for production |
 | Freehand strokes | perfect-freehand | Pressure-aware, tiny, renders to polygons |
 | CRDT | Yjs (+ y-indexeddb for persistence, awareness protocol for presence) | Mature, fast, rich types (Map, Array, Text), subdocument support |
@@ -211,7 +212,7 @@ The right-hand sidebar is one chronological stream of chat, rolls and move cards
 
 The log is a `chat` Y.Array of chunk subdocuments on the campaign root, 500 messages each, each persisted in its own IndexedDB database and synced by the session as soon as it loads; the newest two load on open, and older ones load as the reader scrolls up into them (no button). The panel renders only a window of rows (100 to start, at most 250), sliding it as the reader scrolls and keeping whatever is on screen in place as rows come and go; spacers stand in for the rest, at measured heights or the average (500 a chunk for those not loaded yet), so the scrollbar spans the whole history, and dragging it renders wherever it lands, loading chunks to get there. Messages are memoised, and move cards share one subscription to the characters, so a log of thousands costs about what a short one does (`table/ChatPanel.tsx`, `logRows` in `chat/sessions.ts`). Messages are immutable plain objects with a timestamp.
 
-**Pinned messages:** a bevelled, solid scene-tinted panel floats over the top of the chat log with the window shadow and 12px insets. Text uses Fraunces at 1rem and wraps; emphasized text is gold. Timers, counters and GM unpin controls keep their behavior. The panel scrolls when it reaches 35vh or 320px.
+**Pinned messages:** a square-cornered, solid scene-tinted panel floats over the top of the chat log with the window shadow and 12px insets. Text uses Fraunces at 1rem and wraps; emphasized text is gold. Timers, counters and GM unpin controls keep their behavior. The panel scrolls when it reaches 35vh or 320px.
 
  **Commands**: `/r` (public), `/sr` (secret: you and the GM), `/w name` or `/w gm`, `/me`, `/session start|end` (GM; numbered in the campaign), `/help`, and `//` to send text starting with a slash; typing `/` lists them. Text supports **bold**, *italic*, `code` and links, rendered as elements, never HTML.
 
@@ -238,6 +239,26 @@ Edit permissions are enforced by the client UI, not by a peer-level write filter
 - Scene elements can be locked. GM wall and light tools are hidden from players, while token sight can limit what players see when vision is enabled.
 - General per-entity visibility flags and a CRDT write filter are not implemented.
 
+## System Roadmap
+
+- [x] Dungeon World 2: beta-based core moves, class starting moves, direct stats, advantage/disadvantage, Conditions, HP, and guided class/stat creation.
+- [x] Blades in the Dark: action and resistance pools, position bands, stress/trauma tracking, downtime rolls, playbooks, and custom PC/NPC sheets.
+- Built-in plugins own PC and NPC components in `systems/<id>/Sheet.tsx`, registered in `table/sheets.tsx`. Dungeon World emphasizes abilities and debilities; Dungeon World 2 includes locked Conditions and origins; Blades groups actions by resistance attribute with trauma, harm, armor, and load controls; D&D retains its dedicated sheets. Common sections and editing permissions are shared, with declarative layouts available as a fallback for other systems.
+- [x] Daggerheart: add the core SRD class/heritage data, Duality Dice, Hope/Fear outcomes, Difficulty/Evasion checks, domain-card choices, and damage/armor tracks.
+- [x] Shared roll difficulty: fixed, prompted, actor-derived, and target-derived values; saving throws and concentration use the same model.
+- [x] Shared action variants, resource costs, owned/active loadouts, advancement grant previews, acquisition limits, and roll-dependent follow-ups.
+- [x] DW2: all 27 Paths and 135 source-backed move rules, checks for explicitly rolled Path moves, and cumulative tiered advancement limits.
+- [x] Daggerheart: damage severity and Armor Slots, marked Stress, five-card loadout and Recall costs, paired Experience improvements, multiclass domain/foundation acquisition, and selectable Spellcast traits.
+- [x] D&D: SRD spell/feat/magic-item/monster catalogs, complete class/subclass feature descriptions, preparation tables, Wizard spellbooks, slot/Pact Magic/ritual casting, upcast dice, and Champion critical ranges.
+- [x] Blades: source-backed ability rules, Veteran playbook advances, attribute advances with Mastery caps, crew XP/upgrades/profits/Tier progression, and roll-dependent XP/Stress suggestions.
+- [ ] DW1: complete starting and advanced class moves, level-up move selection, spell preparation, and Fronts/Dangers. Verification against the DW1 SRD site is blocked by the workspace network policy; a local licensed source is needed.
+- [ ] DW2: automate remaining class/Path passive interactions, Struggles, class-change reassignment, and magic-item/Artifact selection. Review redistribution terms for the supplied beta before publishing its content.
+- [ ] Daggerheart: complete tier-specific advancement slot quotas, equipment restrictions, downtime/death workflows, and feature-use tracking. Narrative feature triggers remain table-managed.
+- [ ] Blades: complete named crew/playbook-specific catalogs beyond the supplied SRD toolkit, structured claims/factions/cohorts, creation dot constraints, and score/downtime bookkeeping.
+- [ ] D&D: complete multiclass progression, feature/condition automation, monster actions and legendary/recharge workflows, and remaining spell-specific behavior. Descriptions are available even where mechanical execution remains manual.
+- [ ] Triangle Agency: add its Agency/Anomaly character model, d4 resolution, and campaign rules when implementation resumes.
+- [ ] PF2e: evaluate rules coverage and additional action, proficiency, and condition support.
+
 ## Plugin system
 
 A game system is an ES module that exports a `GameSystem` object: mostly declarative data plus a few pure functions. The core provides characters, sheets, dice, chat, effects, targeting and storage; the system describes the rules. `defineSystem()` checks a system as it registers (unique ids, and every action's category, class, stat, outcomes and follow-ups exist) and throws with a list of problems. The shape today (`src/systems/types.ts`):
@@ -252,11 +273,12 @@ export const dungeonWorld: GameSystem \= {
 
   baseRoll: '2d6',
 
-  rollModes,                     // optional other base rolls offered first (5.5e: advantage, disadvantage)
+  rollModes,                     // optional base modes, scoped to action categories as needed
 
   results,                       // best first, each with a tone for the card: Full success, Partial success, Miss
 
-  result: (total, natural) \=\> ..., // which result a check gets, from its total and the kept dice
+  checkRoll,                     // optional system-owned formula construction for pools and special dice
+  result: (total, natural, roll) \=\> ..., // the full roll is available for pool-specific outcomes
 
   actions, actionCategories,     // actions with target specs and steps; categories say what fills a new hotbar
 
@@ -282,7 +304,7 @@ export const dungeonWorld: GameSystem \= {
 
 }
 
-The built-in systems provide declarative `sheet` layouts. Third-party system loading, schema migrations and system-provided hooks are not implemented; chat commands and cards are currently core features.
+The built-in systems provide declarative `sheet` layouts. System roll modes can be scoped to action categories, and systems can finalize check formulas and interpret the full roll without moving game-specific rules into the core. Third-party system loading, schema migrations and system-provided hooks are not implemented; chat commands and cards are currently core features.
 
 - **Loading:** only the built-in systems currently ship with the app. Loading third-party systems from a URL or file is future work.
 - **One system per campaign.** Switching system is a deliberate migration, not a toggle.
@@ -315,6 +337,18 @@ The built-in Dungeon World system (`src/systems/dungeon-world/`) covers six stat
 
 - Planned: Fronts and Dangers note templates with grim-portent checklists and impending doom.
 - NPCs with HP and the fields Dungeon World gives monsters (damage, armor, tags, instinct, moves), as individuals or templates (see Characters). Token sizes are its size tags: Tiny, Small, Human-sized, Large, Huge.
+
+## Dungeon World 2 plugin
+
+The beta-based DW2 plugin (`src/systems/dungeon-world-2/`) uses five direct stats, the beta's standard array and class HP, the core move set, and one starting move per class. Advantage and Condition-driven disadvantage use system roll modes and the formula hook; Conditions distinguish clear, marked, and locked states. All 27 Paths expose their five move rules from the supplied beta, with check steps for explicit stat rolls. Advancement limits cover stat picks, own/multiclass Paths, Path moves, and magic-item/Artifact awards. Passive interactions and class-change reassignment remain manual.
+
+## Blades in the Dark plugin
+
+The Blades plugin (`src/systems/blades-in-the-dark/`) models action/resistance pools, zero-dice rolls, criticals, and position-specific bands. Its sheet tracks stress, trauma, XP, load, and armor use. Playbook and attribute advances consume their XP tracks; Veteran picks can select other playbooks' abilities and Mastery unlocks four-dot advancement. Crew controls in campaign settings consume the shared Crew XP counter, award abilities or upgrade points and stash profits, and validate rep/hold/coin for Tier advancement. Desperate XP, resistance Stress, and vice clearing are explicit follow-up buttons. The supplied SRD is a toolkit, not a complete named crew/playbook catalog; fictional prerequisites, claims, factions, cohorts, and most passive consequences remain table-managed.
+
+## Daggerheart plugin
+
+The Daggerheart plugin (`src/systems/daggerheart/`) imports the supplied SRD class, subclass, heritage, domain, weapon, and armor catalogs. Duality outcomes use the shared difficulty model; adversary Difficulty and damage thresholds come from their stat blocks. Damage application converts incoming damage to HP severity and can spend an Armor Slot. Domain cards are acquired into a pooled collection and only five can be active; Recall marks Stress unless the user declares a rest or level-up swap. Advancement preserves acquired cards, improves pairs of Experiences, and supports multiclass class features, one domain, and a subclass foundation. Slot quotas, equipment restrictions, rest/death workflows, and many passive features still require table adjudication.
 
 ## D\&D 5.5e plugin and a general rules engine (M5)
 
@@ -407,7 +441,7 @@ A keyboard-first palette for finding and doing things without hunting through pa
 - **Moves run in place.** Choosing a move opens the same small input popover as from the sheet or hotbar, then rolls and posts a move card. Shift \+ Enter opens the move's text instead of rolling.
 - **Visibility follows permissions.** Hidden characters, notes and GM-only compendium entries never enter a player's index (see Permissions).
 - **Plugin hook.** A system can add its own entries through `index: { entries, aliases }`, so move text and tags become searchable without any UI code. The index is derived data and is not synced; every peer builds it from the same synced sources.
-- **UI.** A bevelled panel in the usual style over the canvas, with a gold focus ring on the active row, each row showing an icon, title, source and shortcut hint. It animates like other popovers (about 280 ms) and respects reduced motion. The right-click menu and tool strip stay as they are; the palette is an extra way in, not a replacement.
+- **UI.** A square-cornered panel over the canvas, with a gold focus ring on the active row, each row showing an icon, title, source and shortcut hint. It animates like other popovers (about 280 ms) and respects reduced motion. The right-click menu and tool strip stay as they are; the palette is an extra way in, not a replacement.
 
 The hotbar then becomes a pinned, ordered selection of index ids per character, so adding to it can be done from the palette (for example, Alt \+ Enter pins the highlighted action). Palette results also drag: onto the hotbar to pin them, and (moves, gear, characters and scenes) onto a character or into text like a link.
 
@@ -428,36 +462,12 @@ The canvas fills the window; all chrome floats over it as translucent dark panel
 - *Command palette:* Ctrl/Cmd \+ K opens a search over moves, items, tools, commands and library or campaign entries. See Command palette and action index.
 - *Bottom centre:* the action hotbar — the selected character's moves and item actions, plus global actions like ping and measure — that each player can add to, remove from and reorder; keys 1 to 9 trigger its first slots. It pulls from the same action index as the command palette. Anything that drags (palette results, Libraries rows, links) can be dropped on it to pin it; a slot dragged off it can land on a character or in text, and anywhere else unpins it. What an action asks before it rolls appears in a bubble beside the slot.
 - *Campaign list:* a lobby over a non-overlapping scatter of Game-icons that slowly swap.
-- *Menus:* one shared menu component, for right-click menus (canvas, chat, characters) and the campaign menu, plus the scene menu. Menu text is 1rem. Every menu works as on macOS, on every platform: menus open on the press (right button for context menus, left for the campaign and scene menus), and holding, moving to an item and releasing chooses it, while releasing elsewhere closes the menu; a quick click leaves it open. Right-click menus open on the press even on Windows, where browsers would otherwise wait for the release; the keyboard menu key and touch long-press still open them. In the scene menu, releasing on a scene switches to it, and scene deletes (which have no confirmation) are never chosen by a release. An open scene menu sits above floating windows.
-- *Lists:* one list design (`ui/List.tsx`) for every list of things in a panel: the character list and its folders, the Libraries' collections, and a sheet's moves and inventory. A row is a leading icon or avatar, a name, an optional tag chip (a stat, “NPC”) and quieter detail (weight, uses), then any buttons. Rows have no background: hovering turns the name and icon gold, and the selected row stays gold with a bar at its start. Groups (folders, collections) are foldable headings with a caret, an optional icon, the label and a count, with their rows indented beneath. Tags are tinted bevelled chips, not outlined boxes.
+- *Menus:* one shared React Aria menu component, for right-click menus (canvas, chat, characters) and the campaign menu. Menu text is 1rem. React Aria owns arrow-key navigation, typeahead, disabled and checked items, positioning and dismissal. Selecting an action closes its menu immediately; the former hold-drag-release selection and blink-before-close animation are removed. Menu items that open pop-ups retain their morphing animation. Light colour controls remain embedded in the same surface, outside the action list's menu semantics so their arrow keys adjust colour instead of navigating actions.
+- *Shared controls:* buttons use React Aria press handling; segmented choices use RadioGroup with arrow-key selection and one Tab stop; popup tabs use Tabs with associated tab panels. Searchable list and tile pickers use Autocomplete, ListBox and Popover. Search retains focus while arrows move the active option; Left and Right remain available for text editing. Escape clears a nonempty search first, then dismisses an empty picker; selection returns focus to the trigger. Window docking, resizing, domain drag/drop, global tooltip delegation and the command palette's ranked action model remain app-owned.
+- *Lists:* one list design (`ui/List.tsx`) for every list of things in a panel: the character list and its folders, the Libraries' collections, and a sheet's moves and inventory. A row is a leading icon or avatar, a name, an optional tag chip (a stat, “NPC”) and quieter detail (weight, uses), then any buttons. Rows have no background: hovering turns the name and icon gold, and the selected row stays gold with a bar at its start. Groups (folders, collections) are foldable headings with a caret, an optional icon, the label and a count, with their rows indented beneath. Tags are square tinted chips, not outlined boxes.
 - *Pop-ups:* a pop-up emerges from the thing that spawned it and opens right there (from the spawner's top edge down, or where that won't fit, from its bottom edge up), not centred or anywhere else it would have to travel to. Menu items whose label ends in “…” open pop-ups, as on macOS: the menu closes at once and the item morphs into the dialog with a shared-element view transition. So do Scene settings in the Scenes tab and the campaign menu's items (player and campaign settings, help), and a move's tooltip morphs into its move window the same way when the move is clicked. The morphing box casts the window's shadow as it grows, so the shadow arrives with the window. Openers that can't run a transition still open in place and grow out of the spawner's rectangle. Only a pop-up with no spawner opens where it was last left, or centred. A pop-up that shows something (gear, a move, a sheet, a scene, a page, a linked token) has a *proxy icon* before its title, which drags like a link to it.
-- *Anchored elements:* menus, the `@` list and pop-ups open below what they belong to, or above it when there isn't room below, and always stay inside the window (`ui/anchor.ts`). Tooltips open toward the middle of the screen or on a side the element asks for, and flip to the other side when they wouldn't fit.
+- *Anchored elements:* React Aria positions menus and searchable pickers with collision handling. The `@` list, relationship suggestions and nonmodal windows retain `ui/anchor.ts`. Tooltips open toward the middle of the screen or on a side the element asks for, and flip to the other side when they wouldn't fit.
 - *Dragging things:* one drag (`table/entityDrag.ts`) carries moves, gear, characters, scenes and pages between the Libraries, the palette, the hotbar, links in text, pop-up proxy icons, characters, notes and the chat. A small copy of the thing follows the pointer, and the target under it is outlined, then flashes when it lands.
-
-**Colour system (OKLCH, all derived from one scene hue `h`)**
-
-| Token | Value | Use |
-| :---- | :---- | :---- |
-| `--surface` | oklch(20% 0.03 h / 0.82) \+ backdrop blur 12px | Panels |
-| `--surface-raised` | oklch(26% 0.035 h / 0.9) | Popovers, active tab |
-| `--surface-sunken` | oklch(14% 0.02 h / 0.7) | Inset fields, the dice tray and menu-footer bands |
-| `--text` | oklch(93% 0.01 h) | Body text |
-| `--text-muted` | oklch(72% 0.02 h) | Labels, timestamps |
-| `--accent` | oklch(82% 0.15 85\) ≈ \#F0C23B | Primary buttons, focus ring, selection |
-| `--accent-ink` | oklch(22% 0.04 85\) | Text on gold |
-
-The hue transitions over 600 ms when the scene changes (`@property`\-registered custom property). Chroma stays low so that a vivid map never makes the UI garish, and text contrast is checked against the darkest and lightest tints (target WCAG AA 4.5:1).
-
-### Shape language
-
-- Buttons, inputs and panels use `border-radius` plus `corner-shape: bevel` (5px controls, 12px panels). Safari and Firefox get the same chamfer from a `clip-path` fallback.
-- Prefer seperating regions separate by tone (sunken and raised fills) and spacing, rather than explicit borders.
-- Use subtle alternating colour backgrounds for long lists.
-- Panels clip their children (`overflow: clip`), so a tinted band at an edge never squares off a bevelled corner.
-- **Edge-docked elements** sit flush against the window: no margin, no bevel and no outer edge on the docked side.
-- **Icon strips** use a bevel as deep as the strip is wide, so each end reads as one diagonal running from the window edge.
-- Primary button: gold fill, dark ink. Secondary: raised fill that turns gold on hover. Icon buttons: no chrome until hovered; gold tint when active.
-- Avatars are circles; everything else is bevelled.
 
 **Icons:** Game-icons.net first, with Material Symbols Rounded (filled) where no game icon fits. Generic glyphs like add, close and chevrons come from Material Symbols. Icons are compiled into the bundle at build time and named by meaning in one module, so swapping one is a one-line change. Small icons will be 22x22px, no smaller.
 
@@ -465,88 +475,8 @@ The hue transitions over 600 ms when the scene changes (`@property`\-registered 
 
 **Type:** Cabin for controls and chat; Fraunces (optical sizing on, never small caps) for headings, move names and sheets.
 
-## Milestone history
-
-The roadmap changed as the application grew. These completed milestones record major implementation steps; the sections above describe current behavior.
-
-### Completed work
-
-1. **M5 step 3, actions end to end:** *Done (Oct 28).* Attacks per target against AC, saves as roll requests, long range, typed damage applied by the GM from the card.
-2. **M5 step 4, combat:** *Done (Oct 28).* The turn tracker, timed conditions and pips, concentration, per-turn resets, rests.
-3. **M5 step 5, the 5.5e plugin:** *Done (Oct 28).* Origins and subclasses as data, guided creation and levelling, declarative sheets, indexed libraries.
-4. **M6, Notes Improvements:** *Done (Oct 28).* Secrets: the GM right-clicks text to make it secret, which moves it into the vault (a `secret:<id>` fragment) and leaves a placeholder in the page that players' editors don't show; the GM edits it in place, and can reveal or delete it. Live carets: each open subdocument can have its own awareness in the sync session (`awarenessFor`), sent only between peers with that page open, so notes show others' carets and names in their colours (GM pages through the vault's session). Images: pasted, dropped or inserted from the text menu, stored in the blob store like maps and fetched from peers (`table/noteExtensions.ts`).
-5. **M7: Homebrewed:** *Done (Oct 28).* Interface text says gear, not items. A new Items panel (right sidebar) lists the campaign's homebrew gear and moves, kept in the root `homebrew` map, with forms to make, change and delete them: gear with weight, uses, tags, an icon, equippable, and effects (a bonus to rolls, optionally with one stat, or an amount added to a derived value); moves with a kind, trigger, text, an optional check (a set stat or one chosen when made) with an outcome per result, and targets with a range. `systemOf()` merges homebrew into the system (rebuilt only when homebrew changes), so homebrew is given, learned, linked and made like the system's own; the Libraries keep showing only the system's.
-6. **M8: Canvas Creativity**: *Done (Oct 28).* The Shapes tool (R) drags out squares (corner to corner, Shift for square), circles (from the centre), lines and cones (from their origin, Shift for 45° steps), snapped to the grid and sized in whole cells, showing their size as they grow; they take the pen's colour and layer. The Text tool (X) types text where you click; double-click text to change it. Both are scene elements (`shape`, `text`) that select, move, resize and rotate like the rest. Actions can name an area (`TargetSpec.area`: sphere, emanation, cube, cone, line, in scene units); the targeting bubble offers to place it, the next press on the map puts it down (a drag aims a cone or line), it stays on the map under the tokens, and the tokens it covers, even partly, become the targets (`geometry.ts`: `shapeCovers`, `tokensCovered`). 5.5e's area spells and Breath Weapon have their areas. This also covers M5 step 6's areas; monster stat blocks remain.
-7. **M9: Relationships**: *Done (Oct 28).* Every sheet, in any system, ends with a Relationships section: pick another character, say in a few words how this one sees them, and keep notes on it in rich text. Relationships are one-way (`relationships` map on the character, notes in `text:rel:<id>`). The web (campaign menu, palette, or Web on a sheet) draws everyone in a relationship as nodes with labelled arrows, laid out by a small force simulation (`characters/relationships.ts`); two-way pairs bow apart, nodes drag, and clicking one opens that character.
-8. **M10: Chat Improvements**: *Done (Oct 28).* A message's menu offers Edit message (your own text; Enter saves, Escape cancels, and it's marked edited), Pin or Unpin message (GM), and Delete. `/pin text` sends a pinned message; `/timer 60s "World Ends"` (also `5m`, `1h30m`, `2:30`) posts a real-time countdown with a bar, which its starter or the GM can stop, resume or restart; `/count 0/8 "The cops arrive"` posts a counter with − and \+ (pips up to 12, a bar beyond), its maximum optional. Both pin themselves. Pins show in a strip above the log, where the GM unpins them. Messages stay immutable: edits, pins and the live state of timers and counters are in `messageState` (`table/ChatExtras.tsx`). Pins show for messages in the loaded part of the log.
-9. **M12: Dynamics:** *Done (Oct 28).* The Walls (W) tool places wall segments that snap to grid corners and other walls' ends; Lights (L) places lamps with bright and dim radii. Right-click a wall to make it a door and open or close it (open doors don't block); right-click a light to pick its colour or make it flicker. Only the GM sees walls and lamps. Scene settings turn on dynamic lighting with a darkness level, where each light lifts the dark with a smooth falloff, stopped by walls with soft-edged shadows. Each lamp is drawn by a shader (`scene/lampShader.ts`, GLSL and WGSL) that accounts for how nearby walls occlude its disc. Player vision can be limited to line of sight from their character tokens; unseen tokens' names, bars and pips are hidden. The GM sees the darkness at half strength and does not use the player sight mask. Explored-area persistence, darkvision, per-token sight ranges and numeric light-radius editing are not implemented.
-
-## Open questions
-
-Each question has a proposed default; the first four are the ones that change the architecture.
-
-- [x] **Sync between sessions:** pure P2P (edits spread only when peers overlap), or also an optional always-on relay peer the group can self-host? *Decided (Oct 25): pure P2P now, relay designed in as a plug-in provider.*
-
-- [x] **Signalling:** public relays via Trystero (zero setup, depends on third-party Nostr/MQTT servers) or a tiny self-hosted signalling server? *Decided (Oct 25): Trystero, with a self-host option.*
-
-- [x] **UI framework:** *Decided (Oct 25): Preact \+ Signals.*
-
-- [x] **Browser support:** is Chromium-first acceptable (native `corner-shape`, OPFS, WebGPU), with Safari/Firefox on fallbacks? *Decided (Oct 25): yes.*
-
-- [ ] **Plugin trust:** unsandboxed JS plugins (“only install what you trust”) acceptable for now? *Default: yes.*
-
-- [x] **Move automation:** outcome side effects (damage, XP, hold) offered as buttons, or applied automatically? *Decided (Oct 26): buttons.*
-
-- [x] **Dungeon World scope:** all eight classes are included; class-move coverage remains partial.
-
-- [ ] **Player scene browsing:** players can choose scenes independently; scene visibility filters command-palette entries, but there is no GM setting to disable browsing.
-
-- [x] **Name:** Make a Move (`makeamove`).
-
-- [x] **Where the code lives:** `~/makeamove`.
-
-## Decision log
-
-Decisions made while building, newest first. Earlier answers are recorded in Open questions.
-
-| Decision | Why |
-| :---- | :---- |
-| A pop-up showing something has a proxy icon in its title bar that drags like a link | As on macOS: the window's subject can be dropped anywhere a link can |
-| Menus, lists and pop-ups open below their anchor, or above it when there's no room; tooltips flip side | Nothing anchored should ever open off screen |
-| Links start with `@`; clicking opens a pop-up, except page-to-page links, which open the page | One gesture to see what a link is without leaving the page; reading on through pages stays in the panel |
-| Long sheet text and the chat box use the notes editor; chat stores links as `@[text](kind:id)` | One linking and formatting model everywhere; chat stays plain text with markdown-lite |
-| One drag for moves, gear, characters, scenes and pages, between every list, link, the hotbar, characters, notes and chat | Whatever you can see, you can drop where it's useful |
-| Template tokens are copies: characters with `base` set, overriding the template field by field | Anything about one goblin can change from its sheet, and everything else follows the template |
-| Token names and bars are drawn in screen space, at clamped sizes, and hidden when crowded | Readable at any zoom without crowding the map |
-| Scenes have units and a diagonal rule; distances between tokens run edge to edge | Range checks work for 5.5e and other tactical systems |
-| Dungeon World runs on a general rules core (M5 step 1\) before any 5.5e code | A second system tests the plugin API; porting the first proves it first |
-| No data migrations until the first release | Test data is cheap to recreate; migrations would slow every change |
-| Characters live in a root-doc `characters` Y.Map, not a subdoc each | A campaign has a handful of characters; one doc keeps sync and persistence simple. Revisit if sheets grow large |
-| Move suggestions (XP, damage) are buttons on the card, never applied automatically | The GM stays in charge of fiction and consequences |
-| Hotbar: drag to reorder, drag off to remove (Alt+arrows, Delete by keyboard) | Keyboard-accessible, and simple; drag can come later |
-| Chat lives in 500-message chunk subdocuments, ordered by a hybrid logical clock | Long campaigns stay fast to open, and peers agree on order even when their clocks disagree |
-| No blind rolls; whispers are hidden from the GM | If a player shouldn't see a result, the GM can roll it; “hidden from others” includes the GM |
-| Quick dice pool for 1 s before rolling | Several dice from the bar (2d20, d20 \+ d6) become one roll and one chat entry |
-| Build the command palette before the hotbar, on one shared action index | Both need a searchable list of moves, items and tools; the hotbar becomes pinned index ids instead of a second list |
-| Render the canvas on demand; commit drags on release | An idle table uses no GPU; each drag is one undo step and one update for peers |
-| Token images use texture fills, not masks; the world is a render group | Per-token stencil masks slow down in the hundreds, and the camera becomes one GPU transform (from the PixiJS skills) |
-| The UI always tints from the main map; the canvas colour is Auto (a dark shade of the map) or the GM's pick | Tinting is never worth turning off; what people want to choose is the colour around the map |
-| Small square images become tokens, the rest maps | No mode to pick when dropping files; right-click swaps them |
-| Scene menu grows with CSS on live elements, not a view transition | It stays hoverable and clickable while it opens |
-| Cut tagline and other marketing or explanatory copy | The UI should explain itself |
-| Panels clip their children with `overflow: clip`, not `contain: paint` | Keeps bevelled corners without trapping `position: fixed` chil |
-| View transitions for docking, tab switches (directional slides), sidebar and page swaps | Shows where things go; tab slides mirror the tab order |
-| Icons: Game-icons first, Material Symbols Rounded (filled) as fallback, bundled | Weighty, on-theme, works offline |
-| A new M5 for D\&D 5.5e and a general rules engine; notes and polish move to M6 | A second system tests the plugin API; tactical rules (targets, range, turns) are best designed in before more polish |
-| Campaign actions live in a menu at the start of the tool strip | They're about the campaign, not scenes, and stay reachable whichever tabs are open |
-| Presence avatars move into Chat; avatars are circles | Keeps the top edge clear |
-| Drag a tab or docked title out to float a panel; drop it on the sidebar to dock | Direct manipulation; no pop-out button |
-| Two sidebars (left: characters, right: chat) with vertical tabs; tools on the top edge; tabs move between sides or float | Character sheet beside the map and chat opposite; tools out of the way of both |
-| Right sidebar with vertical tabs, sliding in from the edge; dice tray inside Chat | Tabs read as one column with the content |
-
 ## TODO
 
-- [ ] Campaign Import/Export as a single `.makeamove` zip, for backups and moving between machines.
 - [ ] Preserve Panel order when hiding/showing panels.
 - [ ] Add visibility and lock flags to entities (Notes, Tokens, Maps, Characters) which the GM can edit
 - [ ] At a player option to ‘claim’ a character as their Player Character. This will make that character the default subject for actions and add a sidebar tab for that character specifically (with its avatar as the icon)

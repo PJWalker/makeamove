@@ -43,6 +43,29 @@ export const SKILLS: { id: string; name: string; ability: Ability }[] = [
 /** How a class casts spells: full casters, half casters (Paladin, Ranger) or Pact Magic. */
 export type Caster = 'full' | 'half' | 'pact'
 
+const FULL_PREPARATION = [
+  4, 5, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 17, 18, 18, 19, 20, 21, 22,
+];
+const HALF_PREPARATION = [
+  2, 3, 4, 5, 6, 6, 7, 7, 9, 9, 10, 10, 11, 11, 12, 12, 14, 14, 15, 15,
+];
+export const PREPARATION_COUNTS: Record<string, number[]> = {
+  bard: FULL_PREPARATION,
+  cleric: FULL_PREPARATION,
+  druid: FULL_PREPARATION,
+  paladin: HALF_PREPARATION,
+  ranger: HALF_PREPARATION,
+  sorcerer: [
+    2, 4, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 17, 18, 18, 19, 20, 21, 22,
+  ],
+  warlock: [
+    2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15,
+  ],
+  wizard: [
+    4, 5, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 18, 19, 21, 22, 23, 24, 25,
+  ],
+};
+
 export interface DndClass {
   id: string
   name: string
@@ -126,15 +149,16 @@ export const ACTIONS: TextAction[] = [
 /* Class features, by the level each class gains them. */
 
 export interface Feature {
-  id: string
-  name: string
+  subclassId?: string;
+  id: string;
+  name: string;
   /** Which classes have it, and from what level. */
-  classes: Record<string, number>
-  trigger: string
-  text: string
+  classes: Record<string, number>;
+  trigger: string;
+  text: string;
   /** A follow-up to roll, by id (see FEATURE_ROLLS in index.ts). */
-  roll?: string
-  target?: TargetSpec
+  roll?: string;
+  target?: TargetSpec;
 }
 
 export const FEATURES: Feature[] = [
@@ -170,23 +194,33 @@ export const FEATURES: Feature[] = [
 /* Spells. */
 
 export interface Spell {
-  id: string
-  name: string
+  id: string;
+  name: string;
   /** 0 for cantrips. */
-  level: number
-  classes: string[]
+  level: number;
+  ritual?: boolean;
+  upcastDice?: number;
+  classes: string[];
   /** Casting time, range and duration, in a line. */
-  trigger: string
-  text: string
+  trigger: string;
+  text: string;
   /** A spell attack, rolled against the target's AC. */
-  attack?: boolean
+  attack?: boolean;
   /** Damage or healing dice: count per die (scaled for cantrips), and whether the spellcasting modifier adds. */
-  roll?: { label: 'damage' | 'healing'; type?: string; count: number; die: number; plus?: number; mod?: boolean; scales?: boolean }
+  roll?: {
+    label: "damage" | "healing";
+    type?: string;
+    count: number;
+    die: number;
+    plus?: number;
+    mod?: boolean;
+    scales?: boolean;
+  };
   /** The saving throw each target makes against the caster's spell save DC. */
-  save?: Ability
-  target?: TargetSpec
+  save?: Ability;
+  target?: TargetSpec;
   /** The area it fills, placed on the scene to pick its targets. */
-  area?: AreaSpec
+  area?: AreaSpec;
 }
 
 const one = (prompt: string, range: number): TargetSpec => ({ prompt, min: 1, max: 1, range: { normal: range } })

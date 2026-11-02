@@ -8,25 +8,34 @@
  */
 
 /** A right-button press opened a menu; its `contextmenu` event is still to come. */
-let pressOpened = false
+let pressOpened = false;
 
-export function menuTrigger(open: (x: number, y: number) => void) {
+type PointerInput = Pick<
+  PointerEvent,
+  "button" | "pointerType" | "clientX" | "clientY"
+>;
+type MouseInput = Pick<MouseEvent, "clientX" | "clientY" | "preventDefault">;
+
+export function menuTrigger(open: (x: number, y: number) => void): {
+  onPointerDown: (event: PointerInput) => void;
+  onContextMenu: (event: MouseInput) => void;
+} {
   return {
-    onPointerDown(e: PointerEvent) {
-      if (e.button !== 2 || e.pointerType === 'touch') {
-        pressOpened = false
-        return
+    onPointerDown(e) {
+      if (e.button !== 2 || e.pointerType === "touch") {
+        pressOpened = false;
+        return;
       }
-      pressOpened = true
-      open(e.clientX, e.clientY)
+      pressOpened = true;
+      open(e.clientX, e.clientY);
     },
-    onContextMenu(e: MouseEvent) {
-      e.preventDefault()
+    onContextMenu(e) {
+      e.preventDefault();
       if (pressOpened) {
-        pressOpened = false
-        return
+        pressOpened = false;
+        return;
       }
-      open(e.clientX, e.clientY)
+      open(e.clientX, e.clientY);
     },
-  }
+  };
 }

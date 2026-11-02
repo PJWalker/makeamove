@@ -30,6 +30,3 @@ export function placeAnchored(el: HTMLElement, anchor: Anchor, gap = 6): 'below'
   el.dataset.side = side
   return side
 }
-
-/** A point as an anchor, for menus opened where the pointer is. */
-export const pointAnchor = (x: number, y: number): Anchor => ({ left: x, top: y, bottom: y })

@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "react";
 import { importImage } from "../scene/images";
 import type { EntityGraphic } from "../graphics";
 import { Button } from "./Button";
 import { EntityGraphicView } from "./EntityGraphic";
 import { ENTRY_ICONS } from "./entryIcons";
 import { FilterableMenu, type FilterableMenuOption } from "./FilterableMenu";
-import { IconImage } from "./icons";
+import { IconImage, IconSearch } from "./icons";
 
 const iconNames = (
   Object.keys(ENTRY_ICONS) as (keyof typeof ENTRY_ICONS)[]
@@ -35,9 +35,9 @@ export function GraphicPicker({
   onReset,
   label = "Graphic",
 }: {
-  graphic?: EntityGraphic;
+  graphic?: EntityGraphic | undefined;
   onChange: (graphic: EntityGraphic) => void;
-  onReset?: () => void;
+  onReset?: (() => void) | undefined;
   label?: string;
 }) {
   const file = useRef<HTMLInputElement>(null);
@@ -50,20 +50,24 @@ export function GraphicPicker({
     [],
   );
   return (
-    <div class="field graphic-picker">
+    <div className="field graphic-picker">
       {label}
-      <div class="graphic-picker-row">
+      <div className="graphic-picker-row">
         <EntityGraphicView
           graphic={graphic}
           size={32}
-          class="graphic-picker-preview"
+          className="graphic-picker-preview"
         />
         <Button size="sm" onClick={() => file.current?.click()}>
           <IconImage size={22} /> Choose image…
         </Button>
         <FilterableMenu
           label="Built-in icons"
-          buttonLabel="Search icons…"
+          trigger={
+            <>
+              <IconSearch size={22} /> Search icons…
+            </>
+          }
           searchLabel="Search built-in icons"
           placeholder="Filter icons"
           options={iconOptions}
@@ -111,7 +115,7 @@ export function GraphicPicker({
         }}
       />
       {error && (
-        <span class="graphic-picker-error" role="alert">
+        <span className="graphic-picker-error" role="alert">
           Could not import that image.
         </span>
       )}

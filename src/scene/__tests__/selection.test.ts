@@ -19,14 +19,14 @@ function setup(els: any[]) {
     previews: new Map(),
     hidden: new Set(),
     overlayState: {},
-    grid: { type: 'none', size: 70, offsetX: 0, offsetY: 0 },
+    grid: { type: "none", size: 70, offsetX: 0, offsetY: 0 },
     size: { width: 800, height: 600 },
     invalidate: () => {},
     setElements: () => {},
     setCamera: () => {},
     setGrid: () => {},
-    setHoverToken: () => {},
-  }
+    setHoverToken: vi.fn(),
+  };
   const scene: any = {
     views: () => els,
     elements: { observeDeep() {}, unobserveDeep() {} },
@@ -50,6 +50,116 @@ function setup(els: any[]) {
 const token = (id: string, x: number, y: number) => ({ id, type: 'token', x, y, w: 40, h: 40, rot: 0, locked: false, layer: 'token', z: 'a', colour: '#fff', name: '' })
 
 describe("SceneController", () => {
+  it("opens token details on click release, never while dragging", () => {
+    const source = { ...token("character", 100, 100), characterId: "hero" };
+    const { c, fire } = setup([source]);
+    c.onTokenClick = vi.fn();
+    fire("pointerdown", 100, 100);
+    expect(c.onTokenClick).not.toHaveBeenCalled();
+    fire("pointerup", 100, 100);
+    expect(c.onTokenClick).toHaveBeenCalledWith(source);
+    vi.mocked(c.onTokenClick).mockClear();
+    fire("pointerdown", 100, 100);
+    fire("pointermove", 200, 200);
+    fire("pointerup", 200, 200);
+    expect(c.onTokenClick).not.toHaveBeenCalled();
+  });
+
+  it("forwards non-item token drags and leaves canvas movement to the controller", () => {
+    const source = { ...token("character", 100, 100), characterId: "hero" };
+    const { c, scene, fire } = setup([source]);
+    c.onTokenDragMove = vi.fn();
+    c.onTokenDrop = vi.fn(() => false);
+    fire("pointerdown", 100, 100);
+    fire("pointermove", 102, 100);
+    expect(c.onTokenDragMove).not.toHaveBeenCalled();
+    fire("pointermove", 200, 200, { metaKey: true });
+    expect(c.onTokenDragMove).toHaveBeenCalledWith(
+      source,
+      expect.objectContaining({ metaKey: true }),
+    );
+    fire("pointerup", 200, 200, { metaKey: true });
+    expect(c.onTokenDrop).toHaveBeenCalledWith(
+      source,
+      expect.objectContaining({ metaKey: true }),
+    );
+    expect(scene.update).toHaveBeenCalledWith([
+      ["character", expect.objectContaining({ x: 200, y: 200 })],
+    ]);
+    expect(c.onTokenDragMove).toHaveBeenLastCalledWith(null, expect.any(Event));
+  });
+
+  it.each(["pointercancel", "escape"])(
+    "restores token previews on %s",
+    (cancel) => {
+      const { c, renderer, scene, fire } = setup([token("source", 100, 100)]);
+      c.onTokenDragMove = vi.fn();
+      c.onTokenDrop = vi.fn(() => true);
+      fire("pointerdown", 100, 100);
+      fire("pointermove", 200, 200);
+      expect(renderer.previews.size).toBe(1);
+      if (cancel === "pointercancel") fire("pointercancel", 200, 200);
+      else c.cancelGesture();
+      expect(renderer.previews.size).toBe(0);
+      expect(scene.update).not.toHaveBeenCalled();
+      expect(c.onTokenDrop).not.toHaveBeenCalled();
+      expect(c.onTokenDragMove).toHaveBeenLastCalledWith(null);
+    },
+  );
+
+  it("does not commit canvas positions after a handled external drop", () => {
+    const { c, renderer, scene, fire } = setup([token("source", 100, 100)]);
+    c.onTokenDrop = vi.fn(() => {
+      renderer.previews.clear();
+      return true;
+    });
+    fire("pointerdown", 100, 100);
+    fire("pointermove", 200, 200);
+    fire("pointerup", 200, 200);
+    expect(c.onTokenDrop).toHaveBeenCalledOnce();
+    expect(scene.update).not.toHaveBeenCalled();
+  });
+
+  it("keeps multi-token movements inside the normal canvas gesture path", () => {
+    const { c, scene, fire } = setup([
+      token("first", 100, 100),
+      token("second", 200, 100),
+    ]);
+    c.selection.value = ["first", "second"];
+    c.onTokenDragMove = vi.fn();
+    c.onTokenDrop = vi.fn(() => true);
+    fire("pointerdown", 100, 100);
+    fire("pointermove", 300, 300);
+    fire("pointerup", 300, 300);
+    expect(c.onTokenDragMove).not.toHaveBeenCalled();
+    expect(c.onTokenDrop).not.toHaveBeenCalled();
+    expect(scene.update.mock.calls[0][0]).toHaveLength(2);
+  });
+
+  it("does not drag locked tokens to external targets", () => {
+    const locked = { ...token("locked", 100, 100), locked: true };
+    const { c, scene, fire } = setup([locked]);
+    c.onTokenDragMove = vi.fn();
+    c.onTokenDrop = vi.fn(() => true);
+    fire("pointerdown", 100, 100);
+    fire("pointermove", 300, 300);
+    fire("pointerup", 300, 300);
+    expect(c.onTokenDragMove).not.toHaveBeenCalled();
+    expect(c.onTokenDrop).not.toHaveBeenCalled();
+    expect(scene.update).not.toHaveBeenCalled();
+  });
+
+  it("forwards screen hover positions outside tokens and clears them on leave", () => {
+    const { renderer, fire } = setup([token("a", 100, 100)]);
+    fire("pointermove", 100, 60);
+    expect(renderer.setHoverToken).toHaveBeenLastCalledWith(null, {
+      x: 100,
+      y: 60,
+    });
+    fire("pointerleave", 100, 60);
+    expect(renderer.setHoverToken).toHaveBeenLastCalledWith(null);
+  });
+
   it("marquee selects elements inside a dragged rectangle", () => {
     const { c, renderer, fire } = setup([
       token("a", 100, 100),

@@ -1,5 +1,6 @@
 import 'fake-indexeddb/auto'
 import { describe, expect, it } from 'vitest'
+
 import * as Y from 'yjs'
 import { Campaign, createCampaign } from '../campaign'
 import { device } from '../device'
@@ -17,7 +18,7 @@ async function setUp() {
   c.members.set('pat', pat)
   const bog = c.addScene('The Bog')
   const keep = c.addScene('The Keep')
-  return { c, bog, keep, first: c.sceneViews()[0].id }
+  return { c, bog, keep, first: (c.sceneViews())[0]!.id }
 }
 
 const notices = (c: Campaign) =>

@@ -1,7 +1,6 @@
 /*
- * Design tokens. Every surface colour is derived from --scene-hue, which the
- * app sets from the active scene's dominant colour. Registering it with
- * @property lets the whole UI glide between hues when the scene changes.
+ * Design tokens. --scene-hue is set from the active scene's dominant color;
+ * core surfaces stay neutral while scene-aware accents can still use it.
  */
 @property --scene-hue {
   syntax: '<number>';
@@ -17,52 +16,48 @@
 
     /*
      * Surfaces (low chroma so a vivid map never makes the chrome garish).
-     * Regions are separated by tone and space. Hairlines are only for edges
-     * inside a region (a window's rim, a section rule, a counter's ring).
-     */
-    --surface: oklch(20% 0.03 var(--scene-hue) / 0.82);
-    --surface-solid: oklch(17% 0.025 var(--scene-hue));
-    --surface-raised: oklch(26% 0.035 var(--scene-hue) / 0.92);
-    --surface-sunken: oklch(14% 0.02 var(--scene-hue) / 0.7);
-    --surface-sunken-hover: oklch(11% 0.02 var(--scene-hue) / 0.8);
-    --text: oklch(93% 0.01 var(--scene-hue));
-    --text-muted: oklch(72% 0.02 var(--scene-hue));
-    /* Translucent, so it picks up whatever it sits on (e.g. a gauge fill). */
-    --text-faint: oklch(93% 0.01 var(--scene-hue) / 0.5);
-    --canvas-bg: oklch(16% 0.03 var(--scene-hue));
-    --hairline: #fff1;
-    --hairline-strong: #fff2;
+      * Neutral surfaces let the scene, not the chrome, carry the color.
+      */
+     --surface: oklch(18% 0.008 250 / 0.96);
+     --surface-solid: oklch(15% 0.008 250);
+     --surface-raised: oklch(22% 0.01 250);
+     --surface-sunken: oklch(12% 0.006 250);
+     --surface-sunken-hover: oklch(10% 0.006 250);
+     --text: oklch(92% 0.005 250);
+     --text-muted: oklch(68% 0.008 250);
+     --text-faint: oklch(65% 0.008 250);
+     --canvas-bg: oklch(12% 0.008 250);
+     --hairline: #ffffff14;
+     --hairline-strong: #ffffff22;
+     --surface-highlight: oklch(100% 0 0 / 0.07);
+     --surface-rim: oklch(100% 0 0 / 0.12);
+     --control-shadow:
+       inset 0 1px 0 var(--surface-highlight),
+       0 1px 3px oklch(0% 0 0 / 0.28);
 
-    /* Golden-yellow accent, independent of the scene */
-    --accent: oklch(82% 0.15 85);
-    --accent-hover: oklch(87% 0.14 88);
-    --accent-press: oklch(76% 0.15 82);
-    --accent-ink: oklch(22% 0.04 85);
-    --accent-soft: oklch(82% 0.15 85 / 0.16);
-    --danger: oklch(68% 0.17 25);
-    --danger-soft: oklch(68% 0.17 25 / 0.14);
-    --success: oklch(78% 0.14 150);
-    /* Whispers and hidden rolls: anything only some people can see. */
-    --private: oklch(80% 0.08 300);
-    --private-soft: oklch(36% 0.07 300 / 0.35);
-    --disabled-opacity: 0.45;
-    /* Gem colours for buttons (see components.css): a smoky stone in the
-       scene's hue, and a quieter smoke for icon and ghost buttons on hover. */
-    --gem-smoky: oklch(36% 0.075 var(--scene-hue));
-    --gem-smoke: oklch(30% 0.04 var(--scene-hue));
-    --gem-danger: oklch(44% 0.14 25);
+     --accent: oklch(80% 0.12 82);
+     --accent-hover: oklch(84% 0.12 84);
+     --accent-press: oklch(74% 0.12 80);
+     --accent-ink: oklch(22% 0.04 85);
+     --accent-soft: oklch(80% 0.12 82 / 0.12);
+     --danger: oklch(68% 0.17 25);
+     --danger-soft: oklch(68% 0.17 25 / 0.14);
+     --success: oklch(78% 0.14 150);
+     --private: oklch(80% 0.08 300);
+     --private-soft: oklch(36% 0.07 300 / 0.35);
+     --disabled-opacity: 0.45;
 
-    /* Shape */
-    --bevel-sm: 5px;
-    --bevel-md: 8px;
-    --bevel-lg: 12px;
-    /* Floating windows and pop-ups, and the morph that opens them. */
-    --window-shadow: 0 12px 32px -8px oklch(0% 0 0 / 0.55);
-    /* Whatever is being dragged: held a little lower than a window floats. */
-    --drag-shadow: 0 8px 24px -6px oklch(0% 0 0 / 0.55);
-    --blur: 12px;
+     --gem-smoky: oklch(36% 0.075 var(--scene-hue));
+     --gem-smoke: oklch(30% 0.04 var(--scene-hue));
+     --gem-danger: oklch(44% 0.14 25);
 
-    /* Space and type */
+     --window-shadow:
+       0 14px 32px -10px oklch(0% 0 0 / 0.48),
+       0 3px 8px oklch(0% 0 0 / 0.22);
+     --drag-shadow:
+       0 8px 20px -6px oklch(0% 0 0 / 0.42),
+       0 2px 5px oklch(0% 0 0 / 0.2);
+     --blur: 0px;
     --space-1: 4px;
     --space-2: 8px;
     --space-3: 12px;
@@ -70,12 +65,12 @@
     --space-5: 24px;
     --space-6: 32px;
     --font-ui: 'Cabin', system-ui, sans-serif;
-    --font-display: 'Fraunces', Georgia, serif;
+    --font-display: var(--font-ui);
     /* Count badges only. */
     --text-2xs: 0.625rem;
     --text-xs: 0.75rem;
     --text-sm: 0.8125rem;
-    --text-md: 0.9375rem;
+    --text-md: 1rem;
     /* Floating chrome that reads at body size: tooltips, pop-up tabs. */
     --text-base: 1rem;
     --text-lg: 1.25rem;

@@ -1,3 +1,4 @@
+
 export interface Oklab {
   L: number
   a: number
@@ -15,7 +16,9 @@ const fromLinear = (v: number) => {
 
 /** sRGB channels (0–255) → OKLab. */
 export function rgbToOklab(r8: number, g8: number, b8: number): Oklab {
-  const [r, g, b] = [r8, g8, b8].map(toLinear)
+  const r = toLinear(r8)
+  const g = toLinear(g8)
+  const b = toLinear(b8)
   const l_ = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b)
   const m_ = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b)
   const s_ = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)
@@ -31,7 +34,9 @@ export function oklabToHex({ L, a, b }: Oklab): string {
   const l_ = L + 0.3963377774 * a + 0.2158037573 * b
   const m_ = L - 0.1055613458 * a - 0.0638541728 * b
   const s_ = L - 0.0894841775 * a - 1.291485548 * b
-  const [l, m, s] = [l_ ** 3, m_ ** 3, s_ ** 3]
+  const l = l_ ** 3
+  const m = m_ ** 3
+  const s = s_ ** 3
   const rgb = [
     4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
     -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
@@ -84,13 +89,15 @@ export function backdropColour(hex: string, maxL = 0.34, maxC = 0.07): string {
 export function dominantColour(rgba: Uint8ClampedArray, k = 5, iterations = 8): string {
   const px: Oklab[] = []
   for (let i = 0; i < rgba.length; i += 4) {
-    if (rgba[i + 3] < 128) continue
-    px.push(rgbToOklab(rgba[i], rgba[i + 1], rgba[i + 2]))
+    if (i + 3 >= rgba.length) break;
+    if (rgba[i + 3]! < 128) continue
+    px.push(rgbToOklab(rgba[i]!, rgba[i + 1]!, rgba[i + 2]!))
   }
   if (!px.length) return '#000000'
 
   // Deterministic seeds spread through the pixels keep results stable.
-  let centres = Array.from({ length: Math.min(k, px.length) }, (_, i) => px[Math.floor((i * px.length) / k)])
+  const clusterCount = Math.max(1, Math.min(k, px.length));
+  let centres = Array.from({ length: clusterCount }, (_, i) => px[Math.floor((i * px.length) / clusterCount)]!)
   let counts: number[] = []
   for (let it = 0; it < iterations; it++) {
     const sums = centres.map(() => ({ L: 0, a: 0, b: 0 }))
@@ -105,17 +112,20 @@ export function dominantColour(rgba: Uint8ClampedArray, k = 5, iterations = 8): 
           best = j
         }
       })
-      sums[best].L += p.L
-      sums[best].a += p.a
-      sums[best].b += p.b
-      counts[best]++
+      const sum = sums[best]!
+      sum.L += p.L
+      sum.a += p.a
+      sum.b += p.b
+      counts[best] = counts[best]! + 1
     }
-    centres = centres.map((c, j) =>
-      counts[j] ? { L: sums[j].L / counts[j], a: sums[j].a / counts[j], b: sums[j].b / counts[j] } : c,
-    )
+    centres = centres.map((c, j) => {
+      const count = counts[j]!
+      const sum = sums[j]!
+      return count ? { L: sum.L / count, a: sum.a / count, b: sum.b / count } : c
+    })
   }
 
-  const order = centres.map((c, j) => ({ c, n: counts[j] })).sort((x, y) => y.n - x.n)
+  const order = centres.map((c, j) => ({ c, n: counts[j]! })).sort((x, y) => y.n - x.n)
   const colourful = order.find(({ c, n }) => Math.hypot(c.a, c.b) >= 0.03 && n >= px.length * 0.1)
-  return oklabToHex((colourful ?? order[0]).c)
+  return oklabToHex((colourful ?? order[0]!).c)
 }

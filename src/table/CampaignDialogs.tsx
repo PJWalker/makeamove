@@ -1,6 +1,11 @@
 import { IconOpenWindow } from "../ui/icons";
-import type { ComponentChildren, RefObject } from "preact";
-import type { Campaign } from "../store/campaign";
+import type { ReactNode, RefObject } from "react";
+import {
+  setSystemCampaignData,
+  systemCampaignData,
+  type Campaign,
+} from "../store/campaign";
+import { getSystem } from "../systems";
 import { colourOf } from "../scene/presence";
 import { device, setDeviceColour, setDeviceName } from "../store/device";
 import { useY } from "../store/useY";
@@ -9,11 +14,12 @@ import { TOKEN_STYLES } from "../scene/types";
 import { Button } from "../ui/Button";
 import { Segmented } from "../ui/Segmented";
 import { inviteUrl } from "../sync/invite";
-import { useSignal } from "@preact/signals";
-import { createPortal } from "preact/compat";
-import { useLayoutEffect, useRef } from "preact/hooks";
+import { useSignal } from "@preact/signals-react";
+import { createPortal } from "react-dom";
+import { useLayoutEffect, useRef } from "react";
 import { closePopup, dragPopup, raisePopup, resizePopup } from "../ui/popup";
 import { trackPointer } from "../ui/pointer";
+import { formatCommaList, parseCommaList } from "../lib/list";
 import { autohide, setAutohide } from "./canvasState";
 import {
   RESIZE_CURSORS,
@@ -39,10 +45,11 @@ export interface WindowProxy {
   campaign: Campaign;
   kind: string;
   id: string;
-  defaultIcon?: string;
+  defaultIcon?: string | undefined;
   entity: DragEntity;
 }
 import { windowLayer } from "../ui/windows";
+import { CampaignSystemSheet } from "./campaignSheets";
 
 let dialogTransitionId = 0;
 
@@ -59,21 +66,21 @@ export function Dialog({
   dockId,
   children,
 }: {
-  dialogRef: RefObject<HTMLDialogElement>;
+  dialogRef: RefObject<HTMLDialogElement | null>;
   title: string;
   onClose?: () => void;
   /**
    * What the window shows, as an icon in its title bar that drags like a
    * link: onto a character, the hotbar, a note or the chat.
    */
-  proxy?: WindowProxy;
-  graphicCampaign?: Campaign;
-  graphicRef?: { kind: string; id: string };
-  graphicDefaultIcon?: string;
-  contextMenu?: ReturnType<typeof menuTrigger>;
-  windowIcon?: Icon;
-  dockId?: DockItemId;
-  children: ComponentChildren;
+  proxy?: WindowProxy | undefined;
+  graphicCampaign?: Campaign | undefined;
+  graphicRef?: { kind: string; id: string } | undefined;
+  graphicDefaultIcon?: string | undefined;
+  contextMenu?: ReturnType<typeof menuTrigger> | undefined;
+  windowIcon?: Icon | undefined;
+  dockId?: DockItemId | undefined;
+  children: ReactNode;
 }) {
   const rolled = useSignal(false);
   const transitionName = useRef<string | null>(null);
@@ -122,7 +129,7 @@ export function Dialog({
   return createPortal(
     <dialog
       ref={dialogRef}
-      class="dialog window panel bevel"
+      className="dialog window panel"
       closedby="none"
       aria-label={title}
       tabIndex={-1}
@@ -160,7 +167,7 @@ export function Dialog({
         iconContent={
           proxy ? (
             <span
-              class="window-proxy"
+              className="window-proxy"
               data-tip="Drag to link it, or onto a character or the hotbar"
               onPointerDown={(e) => {
                 // Not a drag of the window itself.
@@ -205,18 +212,18 @@ export function Dialog({
         }}
         onClose={close}
       />
-      <div class="dialog-body" inert={rolled.value}>
+      <div className="dialog-body" inert={rolled.value}>
         {children}
       </div>
-      {!rolled.value && <span class="resize-grip" aria-hidden="true" />}
+      {!rolled.value && <span className="resize-grip" aria-hidden="true" />}
       {!rolled.value &&
         RESIZE_DIRS.map((dir) => (
           <span
             key={dir}
-            class="win-resize"
+            className="win-resize"
             data-dir={dir}
             aria-hidden="true"
-            onPointerDown={(e) => onResizePointerDown(e, dir)}
+            onPointerDown={(e) => onResizePointerDown(e.nativeEvent, dir)}
           />
         ))}
     </dialog>,
@@ -230,7 +237,7 @@ export function SettingsDialog({
   dialogRef,
 }: {
   campaign: Campaign;
-  dialogRef: RefObject<HTMLDialogElement>;
+  dialogRef: RefObject<HTMLDialogElement | null>;
 }) {
   const myName = useY(
     campaign.members,
@@ -239,53 +246,57 @@ export function SettingsDialog({
   const colour = colourOf(device.value);
   return (
     <Dialog dialogRef={dialogRef} title="Settings">
-      <section class="dialog-section">
-        <h3 class="dialog-heading">You</h3>
-        <label class="field">
-          Your name
-          <input
-            class="input bevel"
-            value={myName}
-            onChange={(e) => {
-              const v = e.currentTarget.value.trim();
-              if (!v) return;
-              setDeviceName(v);
-              campaign.ensureMember(v);
-            }}
-          />
-        </label>
-        <label class="field">
-          Your colour
-          <input
-            type="color"
-            class="input bevel"
-            value={colour}
-            onInput={(e) => setDeviceColour(e.currentTarget.value)}
-            aria-label="Your colour"
-          />
-        </label>
-        <p class="muted">
-          Your colour marks your cursor and pings, and is used for tokens you
-          create.
-        </p>
-        <div class="field">
-          Sidebars and toolbars
-          <Segmented
-            label="Sidebars and toolbars"
-            value={autohide.value ? "autohide" : "always"}
-            options={[
-              { id: "always", label: "Always shown" },
-              { id: "autohide", label: "Autohide" },
-            ]}
-            onChange={(v) => setAutohide(v === "autohide")}
-          />
-          <span class="muted">
-            Autohide keeps them out of sight until your pointer nears their edge
-            of the window.
-          </span>
+      <section className="dialog-section form-layout">
+        <h3 className="dialog-heading form-title">You</h3>
+        <div className="dialog-subsection form-subsection">
+          <h4 className="dialog-subheading form-subheading">Profile</h4>
+          <label className="field">
+            Your name
+            <input
+              value={myName}
+              onChange={(e) => {
+                const v = e.currentTarget.value.trim();
+                if (!v) return;
+                setDeviceName(v);
+                campaign.ensureMember(v);
+              }}
+            />
+          </label>
+          <label className="field">
+            Your colour
+            <input
+              type="color"
+              value={colour}
+              onInput={(e) => setDeviceColour(e.currentTarget.value)}
+              aria-label="Your colour"
+            />
+          </label>
+          <p className="muted">
+            Used for your cursor, pings, and new tokens.
+          </p>
+        </div>
+        <div className="dialog-subsection form-subsection">
+          <h4 className="dialog-subheading form-subheading">Interface</h4>
+          <div className="field">
+            Sidebars and toolbars
+            <Segmented
+              label="Sidebars and toolbars"
+              value={autohide.value ? "autohide" : "always"}
+              options={[
+                { id: "always", label: "Always shown" },
+                { id: "autohide", label: "Autohide" },
+              ]}
+              onChange={(v) => setAutohide(v === "autohide")}
+            />
+            <span className="muted">
+              Autohide hides them until your pointer nears a window edge.
+            </span>
+          </div>
         </div>
       </section>
       {campaign.isGm() && <CampaignSettings campaign={campaign} />}
+      <SystemCampaignFields campaign={campaign} />
+      <CampaignSystemSheet campaign={campaign} />
     </Dialog>
   );
 }
@@ -294,42 +305,140 @@ function CampaignSettings({ campaign }: { campaign: Campaign }) {
   const name = useY(campaign.meta, () => campaign.name);
   const defaults = useY(campaign.meta, () => campaign.defaults());
   return (
-    <section class="dialog-section">
-      <h3 class="dialog-heading">Campaign</h3>
-      <label class="field">
-        Campaign name
-        <input
-          class="input bevel"
-          value={name}
-          onChange={(e) => {
-            const v = e.currentTarget.value.trim();
-            if (v) campaign.rename(v);
-          }}
-        />
-      </label>
-      <div class="field">
-        Game system
-        <span class="dialog-value">Dungeon World</span>
+    <section className="dialog-section form-layout">
+      <h3 className="dialog-heading form-title">Campaign</h3>
+      <div className="dialog-subsection form-subsection">
+        <h4 className="dialog-subheading form-subheading">Details</h4>
+        <label className="field">
+          Campaign name
+          <input
+            value={name}
+            onChange={(e) => {
+              const v = e.currentTarget.value.trim();
+              if (v) campaign.rename(v);
+            }}
+          />
+        </label>
+        <div className="field">
+          Game system
+          <span className="dialog-value">
+            {getSystem(campaign.meta.get("systemId")).name}
+          </span>
+        </div>
       </div>
-      <div class="field">
-        New tokens
-        <Segmented
-          label="Default token style"
-          value={defaults.tokenStyle}
-          options={TOKEN_STYLES}
-          onChange={(tokenStyle) => campaign.setDefaults({ tokenStyle })}
-        />
-      </div>
-      <div class="field">
-        Grid for new scenes
-        <Segmented
-          label="Default grid"
-          value={defaults.gridType}
-          options={GRID_TYPES}
-          onChange={(gridType) => campaign.setDefaults({ gridType })}
-        />
+      <div className="dialog-subsection form-subsection">
+        <h4 className="dialog-subheading form-subheading">Defaults</h4>
+        <div className="field">
+          New tokens
+          <Segmented
+            label="Default token style"
+            value={defaults.tokenStyle}
+            options={TOKEN_STYLES}
+            onChange={(tokenStyle) => campaign.setDefaults({ tokenStyle })}
+          />
+        </div>
+        <div className="field">
+          Grid for new scenes
+          <Segmented
+            label="Default grid"
+            value={defaults.gridType}
+            options={GRID_TYPES}
+            onChange={(gridType) => campaign.setDefaults({ gridType })}
+          />
+        </div>
       </div>
       <InviteField campaign={campaign} />
+    </section>
+  );
+}
+
+function SystemCampaignFields({ campaign }: { campaign: Campaign }) {
+  const system = getSystem(campaign.meta.get("systemId"));
+  const fields = system.campaignFields ?? [];
+  const values = useY(campaign.systemData, () => systemCampaignData(campaign));
+  if (!fields.length) return null;
+  return (
+    <section
+      className="dialog-section form-layout"
+      aria-label={system.campaignLabel ?? "Campaign state"}
+    >
+      <h3 className="dialog-heading form-title">
+        {system.campaignLabel ?? "Campaign state"}
+      </h3>
+      {fields.map((field) => (
+        <label key={field.id} className="field">
+          {field.label}
+          {field.type === "select" ? (
+            <select
+              value={String(values[field.id] ?? field.default)}
+              disabled={!campaign.isGm()}
+              onChange={(event) =>
+                setSystemCampaignData(
+                  campaign,
+                  field.id,
+                  event.currentTarget.value,
+                )
+              }
+            >
+              {field.options?.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          ) : field.type === "multiselect" ? (
+            (() => {
+              const selected = new Set(
+                parseCommaList(String(values[field.id] ?? "")).filter(Boolean),
+              );
+              return (
+                <select
+                  multiple
+                  disabled={!campaign.isGm()}
+                  onChange={(event) =>
+                    setSystemCampaignData(
+                      campaign,
+                      field.id,
+                      formatCommaList(
+                        [...event.currentTarget.selectedOptions].map(
+                          (option) => option.value,
+                        ),
+                      ),
+                    )
+                  }
+                >
+                  {field.options?.map((option) => (
+                    <option
+                      key={option.id}
+                      value={option.id}
+                      selected={selected.has(option.id)}
+                    >
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              );
+            })()
+          ) : (
+            <input
+              type={field.type === "number" ? "number" : "text"}
+              min={field.type === "number" ? field.min : undefined}
+              max={field.type === "number" ? field.max : undefined}
+              value={String(values[field.id] ?? field.default)}
+              disabled={!campaign.isGm()}
+              onChange={(event) =>
+                setSystemCampaignData(
+                  campaign,
+                  field.id,
+                  field.type === "number"
+                    ? Number(event.currentTarget.value)
+                    : event.currentTarget.value,
+                )
+              }
+            />
+          )}
+        </label>
+      ))}
     </section>
   );
 }
@@ -360,26 +469,26 @@ const SHORTCUTS: [string, string][] = [
 export function HelpDialog({
   dialogRef,
 }: {
-  dialogRef: RefObject<HTMLDialogElement>;
+  dialogRef: RefObject<HTMLDialogElement | null>;
 }) {
   return (
     <Dialog dialogRef={dialogRef} title="Help">
-      <section class="dialog-section">
-        <h3 class="dialog-heading">Keyboard shortcuts</h3>
-        <dl class="shortcuts">
+      <section className="dialog-section">
+        <h3 className="dialog-heading">Keyboard shortcuts</h3>
+        <dl className="shortcuts">
           {SHORTCUTS.map(([key, action]) => (
-            <div key={key} class="shortcut">
+            <div key={key} className="shortcut">
               <dt>
-                <kbd class="bevel">{key}</kbd>
+                <kbd>{key}</kbd>
               </dt>
               <dd>{action}</dd>
             </div>
           ))}
         </dl>
       </section>
-      <section class="dialog-section">
-        <h3 class="dialog-heading">Maps and tokens</h3>
-        <p class="muted">
+      <section className="dialog-section">
+        <h3 className="dialog-heading">Maps and tokens</h3>
+        <p className="muted">
           Drop or paste images onto the canvas. Small, square images become
           tokens; anything bigger is placed as a map. Double-click a token to
           rename or restyle it; right-click anything to lock it, restack it or
@@ -387,18 +496,18 @@ export function HelpDialog({
           changes.
         </p>
       </section>
-      <section class="dialog-section">
-        <h3 class="dialog-heading">Panels</h3>
-        <p class="muted">
+      <section className="dialog-section">
+        <h3 className="dialog-heading">Panels</h3>
+        <p className="muted">
           Drag a sidebar tab, or a docked panel’s title, out onto the map to
           open it in its own window. Drag the window onto the left or right
           sidebar to dock it there, or use its dock button to put it back.
           Right-click a tab to move it to the other sidebar.
         </p>
       </section>
-      <section class="dialog-section">
-        <h3 class="dialog-heading">Credits</h3>
-        <p class="muted">
+      <section className="dialog-section">
+        <h3 className="dialog-heading">Credits</h3>
+        <p className="muted">
           Icons by Lorc, Delapouite and contributors at{" "}
           <a href="https://game-icons.net" target="_blank" rel="noreferrer">
             game-icons.net
@@ -427,29 +536,27 @@ function InviteField({ campaign }: { campaign: Campaign }) {
   if (!roomKey) return null;
   const url = inviteUrl({ campaignId: campaign.id, roomKey });
   return (
-    <div class="field">
-      Invite link
-      <div class="form-row">
-        <input
-          class="input bevel"
-          readOnly
-          value={url}
-          onFocus={(e) => e.currentTarget.select()}
-        />
-        <Button
-          variant="secondary"
-          onClick={async () => {
-            await navigator.clipboard.writeText(url);
-            copied.value = true;
-            setTimeout(() => (copied.value = false), 1500);
-          }}
-        >
-          {copied.value ? "Copied" : "Copy"}
-        </Button>
+    <div className="dialog-subsection">
+      <h4 className="dialog-subheading">Sharing</h4>
+      <div className="field">
+        Invite link
+        <div className="form-row">
+          <input readOnly value={url} onFocus={(e) => e.currentTarget.select()} />
+          <Button
+            variant="secondary"
+            onClick={async () => {
+              await navigator.clipboard.writeText(url);
+              copied.value = true;
+              setTimeout(() => (copied.value = false), 1500);
+            }}
+          >
+            {copied.value ? "Copied" : "Copy"}
+          </Button>
+        </div>
+        <span className="muted">
+          Anyone with this link can join. Keep it private.
+        </span>
       </div>
-      <span class="muted">
-        Anyone with this link can join. Keep it private.
-      </span>
     </div>
   );
 }

@@ -10,6 +10,7 @@ import {
   updateItem,
   rest,
 } from '../characters/api'
+import { ensureSystemCounter } from '../chat/send'
 import { actionsFor, derive } from '../characters/store'
 import type { Campaign } from '../store/campaign'
 import { browseLibrary } from '../table/libraryView'
@@ -31,7 +32,7 @@ export function systemActions(campaign: Campaign): Action[] {
       kind: 'move',
       title: m.name,
       aliases: ['move'],
-      tags: m.tags,
+      ...(m.tags ? { tags: m.tags } : {}),
       source: system.name,
       detail: m.trigger,
       mine: ownsIt,
@@ -43,17 +44,17 @@ export function systemActions(campaign: Campaign): Action[] {
   for (const c of listCharacters(campaign)) {
     out.push({
       id: `character:${c.id}`,
-      kind: 'entry',
-      group: 'character',
+      kind: "entry",
+      group: "character",
       title: c.name,
-      source: 'Characters',
-      detail: c.kind === 'npc' ? 'NPC' : system.classes.find((k) => k.id === c.classId)?.name,
+      source: "Characters",
+      detail: c.kind === "npc" ? "NPC" : "Character",
       available: true,
       run: () => {
-        selectCharacter(campaign, c.id)
-        showPanel('characters')
+        selectCharacter(campaign, c.id);
+        showPanel("characters");
       },
-    })
+    });
   }
 
   // Rests, for systems whose resources refill on them.
@@ -69,10 +70,22 @@ export function systemActions(campaign: Campaign): Action[] {
       title,
       aliases: ['rest'],
       source: me?.name ?? system.name,
-      detail: me ? `Refill ${me.name}’s resources` : undefined,
+      ...(me ? { detail: `Refill ${me.name}’s resources` } : {}),
       mine: !!me,
       available: reason,
       run: () => me && rest(campaign, me.id, event),
+    })
+  }
+
+  for (const counter of system.counters ?? []) {
+    out.push({
+      id: `counter:${counter.id}`,
+      kind: 'command',
+      title: `Show ${counter.label}`,
+      aliases: ['count', counter.label.toLowerCase()],
+      source: system.name,
+      available: campaign.isGm() ? true : 'GM only',
+      run: () => { void ensureSystemCounter(campaign, counter) },
     })
   }
 

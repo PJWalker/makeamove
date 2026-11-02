@@ -1,6 +1,7 @@
 import { resolveEffects } from '../effects'
-import type { ActionDef, ClassDef, GameSystem, TargetSpec } from "../types";
-import { CLASSES, ITEMS, TAGS, type DwClass } from "./data";
+
+import type { ActionDef, GameSystem, TargetSpec } from "../types";
+import { CLASSES, ITEMS, TAGS } from "./data";
 
 /*
  * Dungeon World, core rules. Move and class text is a condensed paraphrase of
@@ -315,7 +316,6 @@ function toAction(m: DwMove): ActionDef {
     id: m.id,
     name: m.name,
     category: m.category,
-    ...(m.classId ? { classId: m.classId } : {}),
     trigger: m.trigger,
     text: m.text,
     ...(m.tags ? { tags: m.tags } : {}),
@@ -324,12 +324,12 @@ function toAction(m: DwMove): ActionDef {
       stat && m.outcomes
         ? [
             {
-              kind: 'check',
-              ...(stat === 'choose'
-                ? { ask: { kind: 'stat' } as const }
-                : stat === 'bond'
+              kind: "check",
+              ...(stat === "choose"
+                ? { ask: { kind: "stat" } as const }
+                : stat === "bond"
                   ? { ask: BOND }
-                  : stat === 'none'
+                  : stat === "none"
                     ? {}
                     : { stat }),
               outcomes: m.outcomes,
@@ -337,16 +337,12 @@ function toAction(m: DwMove): ActionDef {
             },
           ]
         : [],
-  }
+  };
 }
 
-const toClass = (k: DwClass): ClassDef => ({
-  id: k.id,
-  name: k.name,
-  blurb: k.blurb,
-  ...(k.icon ? { icon: k.icon } : {}),
-  values: { baseHp: k.baseHp, damage: k.damage, load: k.load },
-})
+const CLASS_ACTIONS = new Map(
+  [...CLASS_MOVES].map((move) => [move.id, move.classId]),
+);
 
 const signed = (n: number, label: string) => `${n < 0 ? '-' : '+'}${Math.abs(n)}[${label}]`
 
@@ -365,90 +361,99 @@ const NPC_HP = 6
 const ACTIONS = [...BASIC, ...SPECIAL, ...CLASS_MOVES].map(toAction)
 
 export const dungeonWorld: GameSystem = {
-  id: 'dungeon-world',
-  name: 'Dungeon World',
-  version: '0.1.0',
+  id: "dungeon-world",
+  name: "Dungeon World",
+  version: "0.1.0",
   stats: STATS.map(({ id, name, abbr }) => ({ id, name, abbr })),
   modifier: modifierOf,
-  baseRoll: '2d6',
+  baseRoll: "2d6",
   results: [
-    { id: 'strong', label: 'Full success', tone: 'good' },
-    { id: 'weak', label: 'Partial success', tone: 'mixed' },
-    { id: 'miss', label: 'Miss', tone: 'bad' },
+    { id: "strong", label: "Full success", tone: "good" },
+    { id: "weak", label: "Partial success", tone: "mixed" },
+    { id: "miss", label: "Miss", tone: "bad" },
   ],
-  result: (total) => (total >= 10 ? 'strong' : total >= 7 ? 'weak' : 'miss'),
+  result: (total) => (total >= 10 ? "strong" : total >= 7 ? "weak" : "miss"),
   actions: ACTIONS,
   actionCategories: [
-    { id: 'class', label: 'Class' },
-    { id: 'basic', label: 'Basic' },
-    { id: 'special', label: 'Special', onHotbar: false },
+    { id: "class", label: "Class" },
+    { id: "basic", label: "Basic" },
+    { id: "special", label: "Special", onHotbar: false },
   ],
   followUps: [
-    { id: 'xp', kind: 'bump', label: 'Mark XP', field: 'xp', by: 1 },
+    { id: "xp", kind: "bump", label: "Mark XP", field: "xp", by: 1 },
     {
-      id: 'damage',
-      kind: 'roll',
-      label: 'Roll damage',
-      comment: 'Damage',
-      formula: (_c, d) => `d${d.values.damage}${d.values.damageBonus ? signed(d.values.damageBonus, 'Gear') : ''}`,
+      id: "damage",
+      kind: "roll",
+      label: "Roll damage",
+      comment: "Damage",
+      formula: (_c, d) =>
+        `d${d.values.damage}${d.values.damageBonus ? signed(d.values.damageBonus, "Gear") : ""}`,
     },
   ],
-  classes: CLASSES.map(toClass),
   items: ITEMS,
   tags: TAGS,
   // Debilities: each takes 1 from rolls with its stat.
-  conditions: STATS.map((s) => ({
-    id: s.debility.id,
-    name: s.debility.name,
-    stat: s.id,
-    effects: [{ type: 'rollBonus' as const, stat: s.id, value: -1 }],
-  })),
+  conditions: STATS.flatMap((s) => {
+    const debility = s.debility;
+    return debility ? [{
+      id: debility.id,
+      name: debility.name,
+      stat: s.id,
+      effects: [{ type: "rollBonus" as const, stat: s.id, value: -1 }],
+    }] : [];
+  }),
   modifiers: [
-    { id: 'forward', label: 'Forward', until: 'next-roll' },
-    { id: 'ongoing', label: 'Ongoing', until: 'removed' },
+    { id: "forward", label: "Forward", until: "next-roll" },
+    { id: "ongoing", label: "Ongoing", until: "removed" },
   ],
-  resources: [{ id: 'hp', name: 'HP', max: 'maxHp' }],
+  resources: [{ id: "hp", name: "HP", max: "maxHp" }],
   characterData: [
-    { id: 'race', default: '' },
-    { id: 'alignment', default: '' },
-    { id: 'xp', default: 0, for: 'pc' },
-    { id: 'coin', default: 0, for: 'pc' },
+    { id: "classId", default: (CLASSES)[0]!.id, for: "pc" },
+    { id: "level", default: 1, for: "pc" },
+    { id: "race", default: "" },
+    { id: "alignment", default: "" },
+    { id: "xp", default: 0, for: "pc" },
+    { id: "coin", default: 0, for: "pc" },
     /** Added to the computed maximum HP, for the odd homebrew change. */
-    { id: 'hpBonus', default: 0, for: 'pc' },
+    { id: "hpBonus", default: 0, for: "pc" },
     /** An NPC's maximum HP, set by hand. */
-    { id: 'maxHp', default: NPC_HP, for: 'npc' },
+    { id: "maxHp", default: NPC_HP, for: "npc" },
   ],
   // Dungeon World's size tags, as token sizes.
   sizes: [
-    { id: 'tiny', name: 'Tiny', cells: 0.5 },
-    { id: 'small', name: 'Small', cells: 1 },
-    { id: 'human', name: 'Human-sized', cells: 1 },
-    { id: 'large', name: 'Large', cells: 2 },
-    { id: 'huge', name: 'Huge', cells: 3 },
+    { id: "tiny", name: "Tiny", cells: 0.5 },
+    { id: "small", name: "Small", cells: 1 },
+    { id: "human", name: "Human-sized", cells: 1 },
+    { id: "large", name: "Large", cells: 2 },
+    { id: "huge", name: "Huge", cells: 3 },
   ],
   // Ranges are fictional (hand, close, near, far), so feet are only a guide.
-  scene: { unit: 5, unitName: 'ft', diagonal: 'one' },
+  scene: { unit: 5, unitName: "ft", diagonal: "one" },
   npcFields: [
-    { id: 'damage', label: 'Damage', type: 'text' },
-    { id: 'armor', label: 'Armor', type: 'number' },
-    { id: 'tags', label: 'Tags', type: 'text' },
-    { id: 'instinct', label: 'Instinct', type: 'text' },
-    { id: 'moves', label: 'Moves', type: 'longtext' },
+    { id: "damage", label: "Damage", type: "text" },
+    { id: "armor", label: "Armor", type: "number" },
+    { id: "tags", label: "Tags", type: "text" },
+    { id: "instinct", label: "Instinct", type: "text" },
+    { id: "moves", label: "Moves", type: "longtext" },
   ],
   derive(c, sources) {
-    const cls = CLASSES.find((k) => k.id === c.classId) ?? CLASSES[0]
-    const mods: Record<string, number> = {}
-    for (const s of STATS) mods[s.id] = modifierOf(c.scores[s.id] ?? 10)
+    const cls = CLASSES.find((k) => k.id === c.data.classId) ?? (CLASSES)[0]!;
+    const level = Number(c.data.level ?? 1);
+    const mods: Record<string, number> = {};
+    for (const s of STATS) mods[s.id] = modifierOf(c.scores[s.id] ?? 10);
     const resolved = resolveEffects(
       {
-        maxHp: c.kind === 'npc' ? Number(c.data.maxHp ?? NPC_HP) : cls.baseHp + (c.scores.con ?? 10) + Number(c.data.hpBonus ?? 0),
+        maxHp:
+          c.kind === "npc"
+            ? Number(c.data.maxHp ?? NPC_HP)
+            : cls.baseHp + (c.scores.con ?? 10) + Number(c.data.hpBonus ?? 0),
         armor: 0,
         damage: cls.damage,
         damageBonus: 0,
         maxLoad: cls.load + (mods.str ?? 0),
       },
       sources,
-    )
+    );
     return {
       mods,
       resolved,
@@ -456,69 +461,53 @@ export const dungeonWorld: GameSystem = {
         ...resolved.values,
         load: c.inventory.reduce((n, i) => n + i.weight, 0),
         /** XP needed to level up. */
-        xpNeeded: c.level + 7,
+        xpNeeded: level + 7,
       },
-    }
+    };
   },
   actionsFor(c, d) {
-    if (c.kind === 'npc') return []
-    const granted = new Set(d.resolved.moves)
-    return ACTIONS.filter((m) => m.category !== 'class' || m.classId === c.classId || granted.has(m.id))
+    if (c.kind === "npc") return [];
+    const granted = new Set(d.resolved.moves);
+    return ACTIONS.filter(
+      (m) =>
+        m.category !== "class" ||
+        CLASS_ACTIONS.get(m.id) === c.data.classId ||
+        granted.has(m.id),
+    );
   },
   tokenStats: (c, d) => {
-    const hp = c.resources.hp ?? 0
-    const max = d.values.maxHp
-    return [{ id: 'hp', label: 'HP', value: hp, max, colour: hp <= max / 4 ? '#d04a3a' : hp <= max / 2 ? '#d49a32' : '#4aa35a' }]
+    const hp = c.resources.hp ?? 0;
+    const max = d.values.maxHp ?? 0;
+    return [
+      {
+        id: "hp",
+        label: "HP",
+        value: hp,
+        max,
+        colour:
+          hp <= max / 4 ? "#d04a3a" : hp <= max / 2 ? "#d49a32" : "#4aa35a",
+      },
+    ];
   },
-  creation: { choices: [], scores: { standardArray: [16, 15, 13, 12, 9, 8] } },
-  sheet: {
-    pc: [
-      { kind: 'header' },
+  creation: {
+    advancementField: "level",
+    choices: [
       {
-        kind: 'counters',
-        items: [
-          { label: 'HP', resource: 'hp', max: 'maxHp' },
-          { label: 'XP', data: 'xp', max: 'xpNeeded' },
-          { label: 'Level', level: true },
-          { label: 'Coin', data: 'coin' },
-        ],
-      },
-      { kind: 'levelUp', xp: 'xp', needed: 'xpNeeded' },
-      {
-        kind: 'derived',
-        items: [
-          { label: 'Armor', value: 'armor' },
-          { label: 'Damage', value: 'damage', format: 'die', plus: 'damageBonus' },
-          { label: 'Load', value: 'load', max: 'maxLoad' },
-        ],
-      },
-      { kind: 'stats', label: 'Stats', hint: 'click a modifier to roll' },
-      { kind: 'modifiers', label: 'Situation' },
-      { kind: 'actions', label: 'Moves' },
-      { kind: 'inventory' },
-      {
-        kind: 'text',
-        label: 'Bonds & notes',
-        fields: [
-          { field: 'bonds', label: 'Bonds', placeholder: 'Type @ to name the character you share a bond with.' },
-          { field: 'notes', label: 'Notes' },
-        ],
+        id: "class",
+        label: "Class",
+        plural: "Classes",
+        field: "classId",
+        at: "create",
+        options: CLASSES.map(({ id, name, blurb, icon }) => ({
+          id,
+          name,
+          text: blurb,
+          ...(icon ? { icon } : {}),
+        })),
       },
     ],
-    npc: [
-      { kind: 'header' },
-      {
-        kind: 'counters',
-        items: [
-          { label: 'HP', resource: 'hp', max: 'maxHp' },
-          { label: 'Max HP', data: 'maxHp', input: true },
-        ],
-      },
-      { kind: 'npcFields' },
-      { kind: 'inventory' },
-      { kind: 'text', fields: [{ field: 'notes', label: 'Notes' }] },
-    ],
+    scores: { standardArray: [16, 15, 13, 12, 9, 8] },
   },
   attribution:
-    'Condensed from the Dungeon World SRD by Sage LaCroix and Adam Koebel, used under CC BY 3.0. Check the SRD for exact wording.',
-}
+    "Condensed from the Dungeon World SRD by Sage LaCroix and Adam Koebel, used under CC BY 3.0. Check the SRD for exact wording.",
+};

@@ -1,6 +1,7 @@
 import 'fake-indexeddb/auto'
 import { describe, expect, it, vi } from 'vitest'
 
+
 // The action provider shows panels; the layout needs a browser.
 vi.mock('../../table/panelLayout', () => ({ showPanel: () => {} }))
 
@@ -8,6 +9,7 @@ import * as Y from 'yjs'
 import { systemActions } from '../../actions/system'
 import { Campaign, createCampaign } from '../../store/campaign'
 import { device } from '../../store/device'
+import { summaryOf } from "../../store/registry";
 import {
   addItem,
   createFolder,
@@ -16,6 +18,7 @@ import {
   getCharacter,
   listFolders,
   makeMove,
+  moveRequest,
   moveToFolder,
   newCharacter,
   newNpc,
@@ -25,7 +28,9 @@ import {
   setData,
   setLearned,
   setModifier,
+  startMove,
   systemOf,
+  targetRequest,
   updateItem,
 } from "../api";
 import { actionsFor, derive } from '../store'
@@ -42,39 +47,24 @@ async function setUp() {
 }
 
 describe('a campaign’s system', () => {
-  it("uses the game system selected when the campaign was created", async () => {
+  it("plays the system it was created with, and asks before every d20 roll", async () => {
     device.value = { id: "gm", name: "Gwen" };
     const id = await createCampaign("Sunless Citadel", "Gwen", "dnd-5.5e");
     const c = await Campaign.open(id);
     expect(systemOf(c).id).toBe("dnd-5.5e");
-    expect(
-      systemOf(c).actions.some((action) => action.id === "skill-stealth"),
-    ).toBe(true);
-    c.destroy();
-  });
-
-  it('defaults to Dungeon World', async () => {
-    expect(systemOf(await setUp()).id).toBe('dungeon-world')
-  })
-
-  it("can start without a game system", async () => {
-    const id = await createCampaign("Freeform", "Gwen", "none");
-    const c = await Campaign.open(id);
-    expect(systemOf(c).id).toBe("none");
-    c.destroy();
-  });
-
-  it("creates a classless player character without a game system", async () => {
-    const c = await Campaign.open(
-      await createCampaign("Freeform", "Gwen", "none"),
+    expect(summaryOf(id)?.systemId).toBe("dnd-5.5e");
+    const pc = newCharacter(c, "Vex", "rogue");
+    startMove(
+      c,
+      pc,
+      systemOf(c).actions.find((a) => a.id === "skill-stealth")!,
     );
-    const id = newCharacter(c, "Rook", "");
-    expect(getCharacter(c, id)).toMatchObject({
-      name: "Rook",
-      kind: "pc",
-      classId: "",
-    });
-    c.destroy();
+    expect(moveRequest.value).toMatchObject({ moveId: "skill-stealth" });
+    moveRequest.value = null;
+  });
+
+  it("defaults to Dungeon World", async () => {
+    expect(systemOf(await setUp()).id).toBe("dungeon-world");
   });
 })
 
@@ -85,10 +75,8 @@ describe('characters in a campaign', () => {
     c.members.get('pat')!.set('character', id)
     deleteCharacter(c, id)
     expect(getCharacter(c, id)).toBeUndefined()
-    expect(selectedCharacterId(c)).toBeUndefined();
-    device.value = { id: "pat", name: "Pat" };
-    expect(selectedCharacterId(c)).toBeUndefined();
-    device.value = { id: "gm", name: "Gwen" };
+    expect(c.members.get("gm")!.get("character")).toBeUndefined();
+    expect(c.members.get("pat")!.get("character")).toBeUndefined();
     c.destroy()
   })
 
@@ -96,7 +84,11 @@ describe('characters in a campaign', () => {
     const c = await setUp()
     const id = newCharacter(c, 'Ayla', 'fighter')
     expect(selectedCharacterId(c)).toBe(id)
-    expect(getCharacter(c, id)).toMatchObject({ name: 'Ayla', classId: 'fighter', resources: { hp: 20 }, level: 1 })
+    expect(getCharacter(c, id)).toMatchObject({
+      name: "Ayla",
+      data: { classId: "fighter", level: 1 },
+      resources: { hp: 20 },
+    });
     c.destroy()
   })
 
@@ -128,13 +120,29 @@ describe('characters in a campaign', () => {
     c.destroy()
   })
 
-  it("posts a targeted move with its chosen target", async () => {
+  it("asks for targets before a move aimed at someone, then posts them on the card", async () => {
     const c = await setUp();
     const id = newCharacter(c, "Ayla", "fighter");
     const hack = systemOf(c).actions.find((m) => m.id === "hack-and-slash")!;
+    startMove(c, id, hack);
+    expect(targetRequest.value).toEqual({
+      moveId: "hack-and-slash",
+      characterId: id,
+    });
+    expect(moveRequest.value).toBeNull();
+    targetRequest.value = null;
     const goblin = { id: "tok1", name: "Goblin", distance: "5 ft" };
     const msg = await makeMove(c, id, hack, {}, [goblin]);
     expect(msg).toMatchObject({ kind: "move", targets: [goblin] });
+    // Aid asks for a target, then for the bond.
+    const aid = systemOf(c).actions.find((m) => m.id === "aid-or-interfere")!;
+    startMove(c, id, aid, [goblin]);
+    expect(moveRequest.value).toEqual({
+      moveId: "aid-or-interfere",
+      characterId: id,
+      targets: [goblin],
+    });
+    moveRequest.value = null;
     c.destroy();
   });
 
@@ -143,9 +151,9 @@ describe('characters in a campaign', () => {
     const id = newCharacter(c, 'Ayla', 'fighter')
     const armour = systemOf(c).items.find((i) => i.effects?.some((e) => e.type === 'modify'))!
     addItem(c, id, armour)
-    const item = getCharacter(c, id)!.inventory[0]
+    const item = (getCharacter(c, id)!.inventory)[0]!
     updateItem(c, id, item.id, { equipped: true })
-    expect(getCharacter(c, id)!.inventory[0].equipped).toBe(true)
+    expect((getCharacter(c, id)!.inventory)[0]!.equipped).toBe(true)
     const ids = systemActions(c).map((a) => a.id)
     expect(ids).toContain('move:hack-and-slash')
     expect(ids).toContain(`character:${id}`)

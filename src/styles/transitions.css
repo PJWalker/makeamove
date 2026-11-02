@@ -45,6 +45,11 @@
  * Switching sidebar tabs: old and new content slide together in the direction
  * the tabs are stacked, so the panels read as a vertical column like the tabs.
  */
+.vt-tab-next .sidebar,
+.vt-tab-prev .sidebar {
+  view-transition-name: none;
+}
+
 .vt-tab-next::view-transition-old(.sidebar-panel):only-child {
   animation: vt-slide-out-up 240ms var(--ease) both;
 }
@@ -245,13 +250,6 @@
   overflow: clip;
   box-shadow: var(--window-shadow);
   animation: vt-shadow-in 240ms var(--ease) both;
-}
-/* Cast in the window's bevelled shape, where the browser can draw one. */
-@supports (corner-shape: bevel) {
-  ::view-transition-image-pair(popup-morph) {
-    border-radius: var(--bevel-lg);
-    corner-shape: bevel;
-  }
 }
 ::view-transition-old(popup-morph),
 ::view-transition-new(popup-morph) {

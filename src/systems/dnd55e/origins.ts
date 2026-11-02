@@ -1,5 +1,6 @@
 import type { Effect, OptionDef, TargetSpec } from '../types'
 import type { Ability } from './data'
+import { SRD_FEATS } from './srdFeats'
 
 /*
  * D&D 5.5e character origins and growth from the SRD 5.2: species,
@@ -62,7 +63,7 @@ export interface Feat extends OptionDef {
   initiativeProf?: boolean
 }
 
-export const FEATS: Feat[] = [
+const IMPLEMENTED_FEATS: Feat[] = [
   { id: 'alert', name: 'Alert', category: 'origin', initiativeProf: true, text: 'Add your Proficiency Bonus to Initiative rolls, and you can swap your Initiative with a willing ally’s.' },
   { id: 'magic-initiate', name: 'Magic Initiate', category: 'origin', text: 'Learn two cantrips and one level 1 spell from the Cleric, Druid or Wizard list. You can cast the spell once per Long Rest without a slot.' },
   { id: 'savage-attacker', name: 'Savage Attacker', category: 'origin', text: 'Once per turn when you hit with a weapon, roll its damage dice twice and use either roll.' },
@@ -76,24 +77,86 @@ export const FEATS: Feat[] = [
   { id: 'two-weapon-fighting', name: 'Two-Weapon Fighting', category: 'fighting-style', text: 'When you make an extra attack from the Light property, add your ability modifier to its damage.' },
 ]
 
+export const FEATS: Feat[] = [...new Map([...SRD_FEATS, ...IMPLEMENTED_FEATS].map((feat) => [feat.id, feat as Feat])).values()]
+
 export interface Subclass extends OptionDef {
-  classId: string
+  requires: { classId: string };
 }
 
 export const SUBCLASSES: Subclass[] = [
-  { id: 'berserker', classId: 'barbarian', name: 'Path of the Berserker', text: 'Frenzy: while raging, if you use Reckless Attack, the first target you hit takes extra damage (d6s equal to your Rage Damage bonus). Mindless Rage from level 6.' },
-  { id: 'lore', classId: 'bard', name: 'College of Lore', text: 'Bonus Proficiencies in three skills. Cutting Words: as a Reaction, spend Bardic Inspiration to subtract the die from a creature’s attack roll, check or damage roll.' },
-  { id: 'life', classId: 'cleric', name: 'Life Domain', text: 'Disciple of Life: healing spells restore an extra 2 + the spell’s level. Life Domain Spells always prepared. Preserve Life: Channel Divinity to restore HP equal to five times your Cleric level, split among creatures.' },
-  { id: 'land', classId: 'druid', name: 'Circle of the Land', text: 'Circle of the Land Spells by your chosen land (arid, polar, temperate, tropical). Land’s Aid: Channel Wild Shape to deal 2d6 Necrotic damage in a sphere (Con save) and heal one creature 2d6.' },
-  { id: 'champion', classId: 'fighter', name: 'Champion', text: 'Improved Critical: your weapon and Unarmed Strike attacks score a Critical Hit on a roll of 19 or 20. Remarkable Athlete: Advantage on Initiative and Strength (Athletics) checks.' },
-  { id: 'open-hand', classId: 'monk', name: 'Warrior of the Open Hand', text: 'Open Hand Technique: when you hit with Flurry of Blows, impose Addle, Push (Str save or pushed 15 ft) or Topple (Dex save or Prone).' },
-  { id: 'devotion', classId: 'paladin', name: 'Oath of Devotion', text: 'Oath of Devotion Spells always prepared. Sacred Weapon: Channel Divinity to add your Charisma modifier to attack rolls with a weapon for 10 minutes; it sheds light and deals Radiant damage if you choose.' },
-  { id: 'hunter', classId: 'ranger', name: 'Hunter', text: 'Hunter’s Lore: know a marked creature’s immunities, resistances and vulnerabilities. Hunter’s Prey: Colossus Slayer (extra 1d8 to a wounded target once per turn) or Horde Breaker.' },
-  { id: 'thief', classId: 'rogue', name: 'Thief', text: 'Fast Hands: Cunning Action can Sleight of Hand, use Thieves’ Tools, or Utilize. Second-Story Work: climb at full Speed and jump farther.' },
-  { id: 'draconic', classId: 'sorcerer', name: 'Draconic Sorcery', text: 'Draconic Resilience: +1 Hit Point maximum per Sorcerer level, and AC 10 + Dex + Cha without armour. Draconic Spells always prepared.' },
-  { id: 'fiend', classId: 'warlock', name: 'Fiend Patron', text: 'Dark One’s Blessing: when you reduce an enemy to 0 HP, gain Temporary Hit Points equal to your Charisma modifier + Warlock level. Fiend Spells always prepared.' },
-  { id: 'evoker', classId: 'wizard', name: 'Evoker', text: 'Evocation Savant: add two Evocation spells to your spellbook for free. Potent Cantrip: a cantrip that misses or is saved against still deals half damage.' },
-]
+  {
+    id: "berserker",
+    requires: { classId: "barbarian" },
+    name: "Path of the Berserker",
+    text: "Frenzy: while raging, if you use Reckless Attack, the first target you hit takes extra damage (d6s equal to your Rage Damage bonus). Mindless Rage from level 6.",
+  },
+  {
+    id: "lore",
+    requires: { classId: "bard" },
+    name: "College of Lore",
+    text: "Bonus Proficiencies in three skills. Cutting Words: as a Reaction, spend Bardic Inspiration to subtract the die from a creature’s attack roll, check or damage roll.",
+  },
+  {
+    id: "life",
+    requires: { classId: "cleric" },
+    name: "Life Domain",
+    text: "Disciple of Life: healing spells restore an extra 2 + the spell’s level. Life Domain Spells always prepared. Preserve Life: Channel Divinity to restore HP equal to five times your Cleric level, split among creatures.",
+  },
+  {
+    id: "land",
+    requires: { classId: "druid" },
+    name: "Circle of the Land",
+    text: "Circle of the Land Spells by your chosen land (arid, polar, temperate, tropical). Land’s Aid: Channel Wild Shape to deal 2d6 Necrotic damage in a sphere (Con save) and heal one creature 2d6.",
+  },
+  {
+    id: "champion",
+    requires: { classId: "fighter" },
+    name: "Champion",
+    text: "Improved Critical: your weapon and Unarmed Strike attacks score a Critical Hit on a roll of 19 or 20. Remarkable Athlete: Advantage on Initiative and Strength (Athletics) checks.",
+  },
+  {
+    id: "open-hand",
+    requires: { classId: "monk" },
+    name: "Warrior of the Open Hand",
+    text: "Open Hand Technique: when you hit with Flurry of Blows, impose Addle, Push (Str save or pushed 15 ft) or Topple (Dex save or Prone).",
+  },
+  {
+    id: "devotion",
+    requires: { classId: "paladin" },
+    name: "Oath of Devotion",
+    text: "Oath of Devotion Spells always prepared. Sacred Weapon: Channel Divinity to add your Charisma modifier to attack rolls with a weapon for 10 minutes; it sheds light and deals Radiant damage if you choose.",
+  },
+  {
+    id: "hunter",
+    requires: { classId: "ranger" },
+    name: "Hunter",
+    text: "Hunter’s Lore: know a marked creature’s immunities, resistances and vulnerabilities. Hunter’s Prey: Colossus Slayer (extra 1d8 to a wounded target once per turn) or Horde Breaker.",
+  },
+  {
+    id: "thief",
+    requires: { classId: "rogue" },
+    name: "Thief",
+    text: "Fast Hands: Cunning Action can Sleight of Hand, use Thieves’ Tools, or Utilize. Second-Story Work: climb at full Speed and jump farther.",
+  },
+  {
+    id: "draconic",
+    requires: { classId: "sorcerer" },
+    name: "Draconic Sorcery",
+    text: "Draconic Resilience: +1 Hit Point maximum per Sorcerer level, and AC 10 + Dex + Cha without armour. Draconic Spells always prepared.",
+  },
+  {
+    id: "fiend",
+    requires: { classId: "warlock" },
+    name: "Fiend Patron",
+    text: "Dark One’s Blessing: when you reduce an enemy to 0 HP, gain Temporary Hit Points equal to your Charisma modifier + Warlock level. Fiend Spells always prepared.",
+  },
+  {
+    id: "evoker",
+    requires: { classId: "wizard" },
+    name: "Evoker",
+    text: "Evocation Savant: add two Evocation spells to your spellbook for free. Potent Cantrip: a cantrip that misses or is saved against still deals half damage.",
+  },
+];
 
 /** The level every class picks its subclass. */
 export const SUBCLASS_LEVEL = 3

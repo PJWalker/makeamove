@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+
 import * as Y from 'yjs'
 import { Presence } from '../../scene/presence'
 import { SyncSession } from '../session'
@@ -69,11 +70,13 @@ describe('laser trail fade', () => {
     a.presence.trailTo({ x: 0, y: 0 })
     a.presence.endTrail()
     await room.settle()
-    const first = b.presence.marks('s1', 'b', 'B').find((m) => m.id === 'a')!.trail![0].t
+    const firstMark = (b.presence.marks('s1', 'b', 'B').filter((m) => m.id === 'a'))[0]!
+    const first = (firstMark.trail ?? [])[0]!.t
     await new Promise((r) => setTimeout(r, 30))
     a.presence.setCursor({ x: 9, y: 9 })
     await room.settle()
-    const again = b.presence.marks('s1', 'b', 'B').find((m) => m.id === 'a')!.trail![0].t
+    const againMark = (b.presence.marks('s1', 'b', 'B').filter((m) => m.id === 'a'))[0]!
+    const again = (againMark.trail ?? [])[0]!.t
     expect(again).toBe(first)
   })
 })

@@ -2,20 +2,20 @@
 export function FolderName({ initial = '', onDone }: { initial?: string; onDone: (name: string | null) => void }) {
   return (
     <input
-      class="input bevel chars-folder-input"
+      className="chars-folder-input"
       aria-label="Folder name"
       placeholder="Folder name"
-      value={initial}
+      defaultValue={initial}
       autoFocus
       onFocus={(e) => e.currentTarget.select()}
       onBlur={(e) => onDone(e.currentTarget.value.trim() || null)}
       onKeyDown={(e) => {
-        if (e.key === 'Enter') e.currentTarget.blur()
-        if (e.key === 'Escape') {
-          e.currentTarget.value = ''
-          e.currentTarget.blur()
+        if (e.key === "Enter") e.currentTarget.blur();
+        if (e.key === "Escape") {
+          e.currentTarget.value = "";
+          e.currentTarget.blur();
         }
       }}
     />
-  )
+  );
 }

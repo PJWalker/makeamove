@@ -1,5 +1,5 @@
-import { useSignal } from "@preact/signals";
-import { useRef } from "preact/hooks";
+import { useSignal } from "@preact/signals-react";
+import { useRef } from "react";
 import { getNote, type LinkKind } from "../notes/api";
 import { linkLabel, linkTip, openInSidebar } from "../notes/targets";
 import type { Campaign } from "../store/campaign";
@@ -26,7 +26,7 @@ export function LinkChip({
   campaign: Campaign;
   kind: LinkKind;
   id: string;
-  text?: string;
+  text?: string | undefined;
 }) {
   const name = linkLabel(campaign, kind, id);
   const menu = useSignal<{ x: number; y: number } | null>(null);
@@ -74,7 +74,7 @@ export function LinkChip({
     return (
       <span
         ref={linkElement}
-        class="note-link bevel"
+        className="note-link"
         data-missing="true"
         data-tip="Not available"
       >
@@ -85,7 +85,7 @@ export function LinkChip({
   return (
     <>
       <span
-        class="note-link bevel"
+        className="note-link"
         role="link"
         tabIndex={0}
         data-kind={kind}

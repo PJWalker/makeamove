@@ -12,6 +12,7 @@ import { SyncSession } from '../sync/session'
  *
  *   meta   Y.Map  key
  *   notes  Y.Map  noteId -> Y.Map { title, folder, order, links, updatedAt, updatedBy, doc }
+ *   characterText Y.Map characterId/field -> Y.XmlFragment
  *
  * A vault page's text is a subdocument of the vault, like a shared page's is
  * of the campaign root.
@@ -23,63 +24,71 @@ export const vaultGuid = (campaignId: string) => `${campaignId}/vault`
 export const vaultNoteGuid = (campaignId: string, noteId: string) => `${campaignId}/gm-note/${noteId}`
 
 export class Vault {
-  readonly doc: Y.Doc
-  readonly meta: Y.Map<any>
-  readonly notes: Y.Map<Y.Map<any>>
-  private persistence: IndexeddbPersistence
-  private session: SyncSession | null = null
-  private destroyed = false
+  readonly doc: Y.Doc;
+  readonly meta: Y.Map<any>;
+  readonly notes: Y.Map<Y.Map<any>>;
+  readonly characterText: Y.Map<Y.XmlFragment>;
+  private persistence: IndexeddbPersistence;
+  private session: SyncSession | null = null;
+  private destroyed = false;
 
   private constructor(readonly campaignId: string) {
-    this.doc = new Y.Doc({ guid: vaultGuid(campaignId) })
-    this.meta = this.doc.getMap('meta')
-    this.notes = this.doc.getMap('notes')
-    this.persistence = new IndexeddbPersistence(vaultDbName(campaignId), this.doc)
+    this.doc = new Y.Doc({ guid: vaultGuid(campaignId) });
+    this.meta = this.doc.getMap("meta");
+    this.notes = this.doc.getMap("notes");
+    this.characterText = this.doc.getMap("characterText");
+    this.persistence = new IndexeddbPersistence(
+      vaultDbName(campaignId),
+      this.doc,
+    );
   }
 
   static async open(campaignId: string): Promise<Vault> {
-    const v = new Vault(campaignId)
-    await v.persistence.whenSynced
-    if (!v.meta.has('key')) v.meta.set('key', newSecret())
-    return v
+    const v = new Vault(campaignId);
+    await v.persistence.whenSynced;
+    if (!v.meta.has("key")) v.meta.set("key", newSecret());
+    return v;
   }
 
   /** The secret to the vault's room. */
   get key(): string {
-    return this.meta.get('key')
+    return this.meta.get("key");
   }
 
   /** Sync with the campaign's other GM devices, if any are around. */
   async connect() {
-    if (this.session || this.destroyed) return
-    let transport
+    if (this.session || this.destroyed) return;
+    let transport;
     try {
-      transport = (await import('../sync/trystero')).trysteroTransport(vaultGuid(this.campaignId), this.key)
+      transport = (await import("../sync/trystero")).trysteroTransport(
+        vaultGuid(this.campaignId),
+        this.key,
+      );
     } catch {
       // Offline or blocked: the vault still works on this device.
-      return
+      return;
     }
     if (this.destroyed || this.session) {
-      transport.close()
-      return
+      transport.close();
+      return;
     }
-    this.session = new SyncSession(this.doc, transport)
+    this.session = new SyncSession(this.doc, transport);
   }
 
   /** The connection to the campaign's other GM devices, while there is one. */
   get sync(): SyncSession | null {
-    return this.session
+    return this.session;
   }
 
   disconnect() {
-    this.session?.destroy()
-    this.session = null
+    this.session?.destroy();
+    this.session = null;
   }
 
   destroy() {
-    this.destroyed = true
-    this.disconnect()
-    this.persistence.destroy()
-    this.doc.destroy()
+    this.destroyed = true;
+    this.disconnect();
+    this.persistence.destroy();
+    this.doc.destroy();
   }
 }

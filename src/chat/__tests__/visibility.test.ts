@@ -1,10 +1,17 @@
 import { describe, expect, it } from 'vitest'
+import { contentFromText } from "../content";
 import { roll } from '../../dice/notation'
 import { visibilityOf, type ChatMessage, type RollVisibility } from '../types'
 
 const base = { id: 'm', hlc: '0', author: 'pat', name: 'Pat' }
 const rollBy = (visibility: RollVisibility): ChatMessage => ({ ...base, kind: 'roll', roll: roll('d6', () => 3), visibility })
-const whisper: ChatMessage = { ...base, kind: 'text', text: 'psst', to: ['kim'], toNames: ['Kim'] }
+const whisper: ChatMessage = {
+  ...base,
+  kind: "text",
+  text: contentFromText("psst"),
+  to: ["kim"],
+  toNames: ["Kim"],
+};
 
 describe('who sees what', () => {
   it('shows public rolls to everyone', () => {

@@ -10,14 +10,14 @@ export function CampaignEntityGraphic({
   id,
   defaultIcon,
   size = 22,
-  class: className,
+  className: className,
 }: {
   campaign: Campaign;
   kind: string;
   id: string;
-  defaultIcon?: string;
+  defaultIcon?: string | undefined;
   size?: number;
-  class?: string;
+  className?: string | undefined;
 }) {
   const savedGraphic = useY(campaign.entityGraphics, () =>
     JSON.stringify(getEntityGraphic(campaign, kind, id, defaultIcon)),
@@ -26,5 +26,5 @@ export function CampaignEntityGraphic({
     JSON.stringify(getEntityGraphic(campaign, kind, id, defaultIcon)),
   );
   const graphic = JSON.parse(savedGraphic) as EntityGraphic;
-  return <EntityGraphicView graphic={graphic} size={size} class={className} />;
+  return <EntityGraphicView graphic={graphic} size={size} className={className} />;
 }

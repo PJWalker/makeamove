@@ -17,7 +17,7 @@ const encode = ({ wall, counter, node }: Hlc) =>
   `${wall.toString(36).padStart(9, '0')}:${counter.toString(36).padStart(4, '0')}:${node}`
 
 export function decode(stamp: string): Hlc {
-  const [wall, counter, ...node] = stamp.split(':')
+  const [wall = "0", counter = "0", ...node] = stamp.split(':')
   return { wall: parseInt(wall, 36), counter: parseInt(counter, 36), node: node.join(':') }
 }
 

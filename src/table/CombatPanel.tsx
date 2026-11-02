@@ -1,4 +1,4 @@
-import { useSignal } from '@preact/signals'
+import { useSignal } from '@preact/signals-react'
 import { getCharacter, systemOf, toggleCondition } from '../characters/api'
 import { derive } from '../characters/store'
 import { roundOf, removeCombatant, turnOf, turnOrder, updateCombatant, previousTurn, type CombatantView } from '../combat/combat'
@@ -16,6 +16,7 @@ import type { Campaign } from '../store/campaign'
 import { device } from '../store/device'
 import { useY } from '../store/useY'
 import { Button } from '../ui/Button'
+import { PanelActions } from "./PanelActions";
 import { IconClose, IconDice, IconReveal, IconSecret } from '../ui/icons'
 
 /*
@@ -36,11 +37,11 @@ export function CombatPanel({ campaign }: { campaign: Campaign }) {
   const open = useSignal<string | null>(null)
 
   return (
-    <div class="combat-panel">
-      <div class="combat-bar">
-        <span class="combat-round">{round ? `Round ${round}` : 'Not started'}</span>
+    <div className="combat-panel">
+      <PanelActions>
+        <span className="combat-round">{round ? `Round ${round}` : 'Not started'}</span>
         {gm && (
-          <span class="combat-controls">
+          <span className="combat-controls">
             {round > 0 ? (
               <>
                 <Button size="sm" variant="ghost" onClick={() => previousTurn(combatMaps(campaign))}>
@@ -65,9 +66,9 @@ export function CombatPanel({ campaign }: { campaign: Campaign }) {
             )}
           </span>
         )}
-      </div>
+      </PanelActions>
       {shown.length ? (
-        <ol class="combat-list">
+        <ol className="combat-list">
           {shown.map((c) => (
             <CombatRow
               key={c.id}
@@ -83,7 +84,7 @@ export function CombatPanel({ campaign }: { campaign: Campaign }) {
           ))}
         </ol>
       ) : (
-        <p class="combat-empty muted">{gm ? 'Select tokens, then right-click: Add to combat.' : 'No fight yet.'}</p>
+        <p className="combat-empty muted">{gm ? 'Select tokens, then right-click: Add to combat.' : 'No fight yet.'}</p>
       )}
     </div>
   )
@@ -119,22 +120,22 @@ function CombatRow({
   const setInit = (v: string) => updateCombatant(combatMaps(campaign), c.id, { init: v === '' ? null : Number(v) })
 
   return (
-    <li class="combat-row" data-current={current || undefined} data-hidden={c.hidden || undefined}>
-      <div class="combat-main">
+    <li className="combat-row" data-current={current || undefined} data-hidden={c.hidden || undefined}>
+      <div className="combat-main">
         {mine || gm ? (
           <input
-            class="input bevel combat-init"
+            className="combat-init"
             type="number"
             aria-label={`${c.name} initiative`}
             value={c.init ?? ''}
             onChange={(e) => setInit(e.currentTarget.value)}
           />
         ) : (
-          <span class="combat-init">{c.init ?? '–'}</span>
+          <span className="combat-init">{c.init ?? '–'}</span>
         )}
-        <button type="button" class="combat-name" onClick={onToggle} aria-expanded={open}>
+        <button type="button" className="combat-name" onClick={onToggle} aria-expanded={open}>
           {c.name}
-          {hp !== null && gm && <span class="muted"> {hp}/{maxHp}</span>}
+          {hp !== null && gm && <span className="muted"> {hp}/{maxHp}</span>}
         </button>
         {c.init === null && (mine || gm) && (
           <Button variant="icon" size="sm" label="Roll initiative" onClick={() => void rollInitiative(campaign, c.id)}>
@@ -158,22 +159,22 @@ function CombatRow({
         )}
       </div>
       {ch && (ch.conditions.length > 0 || concentration) && (
-        <div class="combat-conditions">
+        <div className="combat-conditions">
           {ch.conditions.map((id) => {
             const def = system.conditions.find((k) => k.id === id)
             const d = ch.durations[id]
             return (
-              <span key={id} class="list-tag bevel" title={def?.text}>
+              <span key={id} className="list-tag" title={def?.text}>
                 {def?.name ?? id}
                 {d && ` ${d.rounds}`}
               </span>
             )
           })}
           {concentration && (
-            <span class="list-tag bevel combat-concentration">
+            <span className="list-tag combat-concentration">
               {concentration}
               {mine && (
-                <button type="button" class="combat-chip-x" aria-label="End concentration" onClick={() => endConcentration(campaign, ch.id)}>
+                <button type="button" className="combat-chip-x" aria-label="End concentration" onClick={() => endConcentration(campaign, ch.id)}>
                   ×
                 </button>
               )}
@@ -204,28 +205,28 @@ function ConditionForm({ campaign, characterId, turn, everyone }: { campaign: Ca
   }
   return (
     <form
-      class="combat-form"
+      className="combat-form"
       onSubmit={(e) => {
         e.preventDefault()
         add()
       }}
     >
-      <select class="input bevel" aria-label="Condition" value={condition.value} onChange={(e) => (condition.value = e.currentTarget.value)}>
+      <select  aria-label="Condition" value={condition.value} onChange={(e) => (condition.value = e.currentTarget.value)}>
         {system.conditions.map((k) => (
           <option key={k.id} value={k.id}>
             {k.name}
           </option>
         ))}
       </select>
-      <label class="combat-form-rounds">
-        <input class="input bevel" type="number" min={0} max={100} value={rounds.value} onInput={(e) => (rounds.value = Number(e.currentTarget.value) || 0)} />
+      <label className="combat-form-rounds">
+        <input  type="number" min={0} max={100} value={rounds.value} onInput={(e) => (rounds.value = Number(e.currentTarget.value) || 0)} />
         rounds, to the
       </label>
-      <select class="input bevel" aria-label="Counted at" value={tick.value} onChange={(e) => (tick.value = e.currentTarget.value as 'start' | 'end')}>
+      <select  aria-label="Counted at" value={tick.value} onChange={(e) => (tick.value = e.currentTarget.value as 'start' | 'end')}>
         <option value="end">end</option>
         <option value="start">start</option>
       </select>
-      <select class="input bevel" aria-label="Of whose turn" value={of.value} onChange={(e) => (of.value = e.currentTarget.value)}>
+      <select  aria-label="Of whose turn" value={of.value} onChange={(e) => (of.value = e.currentTarget.value)}>
         {everyone.map((x) => (
           <option key={x.id} value={x.id}>
             of {x.name}’s turn
@@ -246,4 +247,3 @@ function ConditionForm({ campaign, characterId, turn, everyone }: { campaign: Ca
     </form>
   )
 }
-

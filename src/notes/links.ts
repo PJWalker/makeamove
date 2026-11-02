@@ -8,8 +8,8 @@ export const LINK_KINDS: LinkKind[] = ['note', 'character', 'scene', 'item', 'mo
 /** A document node as the editor serialises it (ProseMirror JSON). */
 interface DocNode {
   type?: string
-  attrs?: Record<string, unknown>
-  content?: DocNode[]
+  attrs?: Record<string, unknown> | undefined
+  content?: DocNode[] | undefined
 }
 
 /** Every distinct link in a page, in the order they appear. */

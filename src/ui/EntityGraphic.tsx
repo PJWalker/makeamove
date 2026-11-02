@@ -5,11 +5,11 @@ import { entryIcon } from "./entryIcons";
 export function EntityGraphicView({
   graphic,
   size = 22,
-  class: className,
+  className: className,
 }: {
-  graphic?: EntityGraphic;
+  graphic?: EntityGraphic | undefined;
   size?: number;
-  class?: string;
+  className?: string | undefined;
 }) {
   const shown = graphic ?? { kind: "icon", name: "bag" as const };
   const classes = ["entity-graphic", className].filter(Boolean).join(" ");
@@ -17,13 +17,13 @@ export function EntityGraphicView({
     const Fallback = entryIcon("item", "bag");
     return (
       <span
-        class={classes}
+        className={classes}
         style={{ width: size, height: size }}
         aria-hidden="true"
       >
         <BlobImage
           image={shown.image}
-          class="entity-graphic-image"
+          className="entity-graphic-image"
           fallback={<Fallback size={size} />}
         />
       </span>
@@ -32,7 +32,7 @@ export function EntityGraphicView({
   const Icon = entryIcon("item", shown.name);
   return (
     <span
-      class={classes}
+      className={classes}
       style={{ width: size, height: size }}
       aria-hidden="true"
     >

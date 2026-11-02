@@ -1,5 +1,6 @@
 import type { CharacterView } from './store'
 
+
 /*
  * A character is an individual or a template. An individual's tokens all
  * share its one record: hurt one and they all show it, on every scene. Each
@@ -52,7 +53,10 @@ function numbered(base: string, taken: string[]): string {
  * numbers.
  */
 export function tokenName(c: Pick<CharacterView, 'name'>, t: TemplateSettings, taken: string[], random = Math.random): string {
-  const pick = <T,>(xs: T[]) => xs[Math.floor(random() * xs.length)]
+  const pick = <T,>(xs: T[]) => {
+    if (!xs.length) throw new RangeError("Cannot choose from an empty list");
+    return (xs)[Math.floor(random() * xs.length)]!;
+  }
   const base = c.name.trim() || 'Unnamed'
   if (t.naming === 'list') {
     const names = t.names.map((n) => n.trim()).filter(Boolean)

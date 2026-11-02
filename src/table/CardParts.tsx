@@ -1,5 +1,6 @@
-import { systemOf } from '../characters/api'
+import { getCharacter, systemOf } from '../characters/api'
 import { answerSave, applyDamage, canAnswer } from '../characters/resolution'
+import { rollModesFor } from '../characters/moves'
 import { appliedField, saveField, type SaveAnswer } from '../chat/messageState'
 import { useMessageState } from './ChatExtras'
 import type { MoveMessage, MoveTarget, RollMessage } from '../chat/types'
@@ -19,22 +20,22 @@ import { Button } from '../ui/Button'
 export function TargetRolls({ campaign, m }: { campaign: Campaign; m: MoveMessage }) {
   const results = systemOf(campaign).results
   return (
-    <ul class="card-targets">
+    <ul className="card-targets">
       {m.targets!.map((t) => {
         const label = results.find((r) => r.id === t.result)?.label
         const verdict = t.hit === undefined ? null : t.hit ? 'Hit' : 'Miss'
         return (
-          <li key={t.id} class="card-target" data-hit={t.hit}>
-            <span class="card-target-name">
+          <li key={t.id} className="card-target" data-hit={t.hit}>
+            <span className="card-target-name">
               {t.name}
-              {t.distance && <span class="muted"> {t.distance}</span>}
-              {t.long && <span class="muted"> long range</span>}
+              {t.distance && <span className="muted"> {t.distance}</span>}
+              {t.long && <span className="muted"> long range</span>}
             </span>
-            <span class="card-target-roll" title={t.roll?.formula}>
+            <span className="card-target-roll" title={t.roll?.formula}>
               {t.roll?.total}
-              {t.against !== undefined && <span class="muted"> vs {t.against}</span>}
+              {t.against !== undefined && <span className="muted"> vs {t.against}</span>}
             </span>
-            <span class="card-target-verdict">{[label, verdict].filter(Boolean).join(' · ')}</span>
+            <span className="card-target-verdict">{[label, verdict].filter(Boolean).join(' · ')}</span>
           </li>
         )
       })}
@@ -45,29 +46,31 @@ export function TargetRolls({ campaign, m }: { campaign: Campaign; m: MoveMessag
 /** A roll request per target: a button for whoever may answer, then the answer against the DC. */
 export function SaveRequests({ campaign, m }: { campaign: Campaign; m: MoveMessage }) {
   const save = m.save!
-  const state = useMessageState(campaign, m.id, (m.targets ?? []).map((t) => saveField(t.id)))
-  const modes = systemOf(campaign).rollModes ?? []
+  const state = useMessageState<SaveAnswer>(campaign, m.id, (m.targets ?? []).map((t) => saveField(t.id)))
+  const system = systemOf(campaign)
+  const saveAction = system.actions.find((action) => action.id === save.action)
+  const modes = saveAction ? rollModesFor(system, saveAction) : []
   const gm = useY(campaign.members, () => campaign.isGm())
   return (
-    <div class="card-save">
-      <p class="card-save-head">
-        {save.name} · DC {save.dc}
+    <div className="card-save">
+      <p className="card-save-head">
+        {save.name} · Difficulty {save.difficulty}
       </p>
-      <ul class="card-targets">
+      <ul className="card-targets">
         {(m.targets ?? []).map((t) => {
           const answer: SaveAnswer | undefined = state[saveField(t.id)]
           return (
-            <li key={t.id} class="card-target" data-hit={answer ? !answer.success : undefined}>
-              <span class="card-target-name">{t.name}</span>
+            <li key={t.id} className="card-target" data-hit={answer ? !answer.success : undefined}>
+              <span className="card-target-name">{t.name}</span>
               {answer ? (
                 <>
-                  <span class="card-target-roll" title={answer.detail}>
+                  <span className="card-target-roll" title={answer.detail}>
                     {answer.total}
                   </span>
-                  <span class="card-target-verdict">{answer.success ? 'Saved' : 'Failed'}</span>
+                  <span className="card-target-verdict">{answer.success ? 'Saved' : 'Failed'}</span>
                 </>
               ) : (gm || canAnswer(campaign, t)) ? (
-                <span class="card-target-actions">
+                <span className="card-target-actions">
                   <Button size="sm" variant="ghost" onClick={() => answerSave(campaign, m.id, t, save, undefined, m.concentration)}>
                     Roll
                   </Button>
@@ -78,13 +81,13 @@ export function SaveRequests({ campaign, m }: { campaign: Campaign; m: MoveMessa
                   ))}
                 </span>
               ) : (
-                <span class="muted">Waiting</span>
+                <span className="muted">Waiting</span>
               )}
             </li>
           )
         })}
       </ul>
-      <p class="card-save-outcomes">
+      <p className="card-save-outcomes">
         <strong>Success:</strong> {save.success} <strong>Failure:</strong> {save.failure}
       </p>
     </div>
@@ -94,29 +97,30 @@ export function SaveRequests({ campaign, m }: { campaign: Campaign; m: MoveMessa
 /** Damage or healing on a roll card: for the GM, buttons per target to apply it whole, halved or doubled. */
 export function DamageTargets({ campaign, m }: { campaign: Campaign; m: RollMessage }) {
   const damage = m.damage!
-  const state = useMessageState(campaign, m.id, damage.targets.map((t) => appliedField(t.id)))
+  const state = useMessageState<number>(campaign, m.id, damage.targets.map((t) => appliedField(t.id)))
   const gm = useY(campaign.members, () => campaign.isGm())
   const healing = damage.type === 'healing'
   const typeName = systemOf(campaign).damageTypes?.find((d) => d.id === damage.type)?.name ?? damage.type
   const total = m.roll.total
-  const apply = (t: MoveTarget, n: number) => applyDamage(campaign, m.id, t, n, healing)
+  const armor = systemOf(campaign).damageArmor
+  const apply = (t: MoveTarget, n: number, useArmor = false) => applyDamage(campaign, m.id, t, n, healing, { armor: useArmor, type: damage.type })
   return (
-    <div class="card-damage">
-      <p class="card-save-head">{typeName}</p>
-      <ul class="card-targets">
+    <div className="card-damage">
+      <p className="card-save-head">{typeName}</p>
+      <ul className="card-targets">
         {damage.targets.map((t) => {
           const applied: number | undefined = state[appliedField(t.id)]
           return (
-            <li key={t.id} class="card-target">
-              <span class="card-target-name">{t.name}</span>
+            <li key={t.id} className="card-target">
+              <span className="card-target-name">{t.name}</span>
               {applied !== undefined && (
-                <span class="card-target-verdict">
+                <span className="card-target-verdict">
                   {applied > 0 ? '+' : ''}
                   {applied} HP
                 </span>
               )}
-              {gm && t.characterId && (
-                <span class="card-target-actions">
+              {gm && t.characterId && applied === undefined && (
+                <span className="card-target-actions">
                   {healing ? (
                     <Button size="sm" variant="ghost" onClick={() => apply(t, total)}>
                       Heal {total}
@@ -132,6 +136,9 @@ export function DamageTargets({ campaign, m }: { campaign: Campaign; m: RollMess
                       <Button size="sm" variant="ghost" title="Vulnerability: double" onClick={() => apply(t, total * 2)}>
                         ×2
                       </Button>
+                      {armor && (getCharacter(campaign, t.characterId)?.resources[armor.resource] ?? 0) > 0 && (
+                        <Button size="sm" variant="ghost" onClick={() => apply(t, total, true)}>{armor.label}</Button>
+                      )}
                     </>
                   )}
                 </span>

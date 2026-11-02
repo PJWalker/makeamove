@@ -1,0 +1,89 @@
+- generic [ref=f4e41]:
+  - 'generic "Scene: The Opening Scene" [ref=f4e42]'
+  - navigation "Canvas tools" [ref=f4e45]:
+    - button "Campaign menu" [ref=f4e46] [cursor=pointer]
+    - button "Select (V)" [pressed] [ref=f4e49] [cursor=pointer]
+    - button "Pan (H)" [ref=f4e52] [cursor=pointer]
+    - button "Draw (P)" [ref=f4e55] [cursor=pointer]
+    - button "Erase (E)" [ref=f4e58] [cursor=pointer]
+    - button "Shapes (R)" [ref=f4e61] [cursor=pointer]
+    - button "Text (X)" [ref=f4e64] [cursor=pointer]
+    - button "Measure (M)" [ref=f4e67] [cursor=pointer]
+    - button "Ping (G)" [ref=f4e70] [cursor=pointer]
+    - button "Walls (W)" [ref=f4e73] [cursor=pointer]
+    - button "Lights (L)" [ref=f4e76] [cursor=pointer]
+  - complementary "Left sidebar" [ref=f4e79]:
+    - generic [ref=f4e80]:
+      - tablist [ref=f4e81]:
+        - tab "Scenes" [ref=f4e82] [cursor=pointer]
+        - tab "Characters" [selected] [ref=f4e85] [cursor=pointer]
+      - separator "Resize left sidebar" [ref=f4e88]
+    - tabpanel [ref=f4e89]:
+      - generic [ref=f4e91]:
+        - generic [ref=f4e92]:
+          - button "One at a time (widen the panel to see the list and sheet side by side)" [disabled] [ref=f4e93]
+          - heading "Characters" [level=2] [ref=f4e96]
+        - navigation "Characters" [ref=f4e102]:
+          - generic [ref=f4e103]:
+            - button "New" [ref=f4e104] [cursor=pointer]
+            - button "New folder" [ref=f4e105] [cursor=pointer]
+          - generic [ref=f4e106]:
+            - list
+            - paragraph [ref=f4e107]: No characters yet.
+  - complementary "Right sidebar" [ref=f4e108]:
+    - generic [ref=f4e109]:
+      - tablist [ref=f4e110]:
+        - tab "Chat" [selected] [ref=f4e111] [cursor=pointer]
+        - tab "Libraries" [ref=f4e114] [cursor=pointer]
+        - tab "Items" [ref=f4e117] [cursor=pointer]
+        - tab "Notes" [ref=f4e120] [cursor=pointer]
+        - tab "Members, 1 online" [ref=f4e123] [cursor=pointer]: "1"
+      - separator "Resize right sidebar" [ref=f4e126]
+    - tabpanel [ref=f4e127]:
+      - generic [ref=f4e129]:
+        - heading "Chat" [level=2] [ref=f4e131]
+        - generic [ref=f4e134]:
+          - log [ref=f4e37]:
+            - article [ref=f4e136]:
+              - generic [ref=f4e137]:
+                - generic [aria-hidden] [ref=f4e138]: T
+                - generic [ref=f4e139]: Tester
+                - time [ref=f4e140]: 3:13
+              - 'generic "1d4+1d6+1d8+1d10+1d12+1d20: 24" [ref=f4e141]':
+                - generic [ref=f4e142]: 1d4+1d6+1d8+1d10+1d12+1d20
+                - generic [ref=f4e144]:
+                  - generic [ref=f4e145]:
+                    - generic "d4" [ref=f4e147]
+                    - generic [ref=f4e148]:
+                      - generic [ref=f4e149]: +
+                      - generic "d6" [ref=f4e150]
+                    - generic [ref=f4e151]:
+                      - generic [ref=f4e152]: +
+                      - generic "d8" [ref=f4e153]
+                    - generic [ref=f4e154]:
+                      - generic [ref=f4e155]: +
+                      - generic "d10" [ref=f4e156]
+                    - generic [ref=f4e157]:
+                      - generic [ref=f4e158]: +
+                      - generic "d12" [ref=f4e159]
+                    - generic [ref=f4e160]:
+                      - generic [ref=f4e161]: +
+                      - generic "d20" [ref=f4e162]
+                  - generic [ref=f4e163]: "24"
+          - generic [ref=f4e164]:
+            - generic [ref=f4e165]:
+              - button "d4" [ref=f4e166] [cursor=pointer]
+              - button "d6" [ref=f4e167] [cursor=pointer]
+              - button "d8" [ref=f4e168] [cursor=pointer]
+              - button "d10" [ref=f4e169] [cursor=pointer]
+              - button "d12" [ref=f4e170] [cursor=pointer]
+              - button "d20" [ref=f4e171] [cursor=pointer]
+              - button "Public" [ref=f4e172] [cursor=pointer]
+            - generic [ref=f4e173]:
+              - textbox "Message" [active] [ref=f4e175]:
+                - paragraph [ref=f4e176]: Message, @ to link, or roll 2d6+1
+              - button "Send" [disabled] [ref=f4e177]
+  - toolbar "Hotbar" [ref=f4e178]:
+    - button "Ping" [ref=f4e180]
+    - button "Measure" [ref=f4e185]
+    - button "Command palette (Ctrl/Cmd+K)" [ref=f4e189] [cursor=pointer]

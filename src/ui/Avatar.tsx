@@ -10,7 +10,7 @@ export function Avatar({ id, name, online }: { id: string; name: string; online?
       .join('') || '?'
   return (
     <span
-      class="avatar"
+      className="avatar"
       style={{ '--avatar-hue': hueFromString(id) }}
       data-online={online === undefined ? undefined : String(online)}
       title={online === false ? `${name} (away)` : name}

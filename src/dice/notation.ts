@@ -14,6 +14,8 @@
  * can be recorded once and replayed (as an animation) by every peer.
  */
 
+
+
 export interface DiceTerm {
   kind: 'dice'
   sign: 1 | -1
@@ -35,12 +37,14 @@ export interface FlatTerm {
 export type Term = DiceTerm | FlatTerm
 
 export interface Die {
-  sides: number
-  value: number
+  sides: number;
+  value: number;
   /** Counts towards the total (not dropped by keep or drop). */
-  kept: boolean
+  kept: boolean;
+  /** Removed from a shared roll by its owner. */
+  disabled?: boolean;
   /** Rolled because the die before it exploded. */
-  exploded?: boolean
+  exploded?: boolean;
 }
 
 export interface RolledDice {
@@ -80,7 +84,7 @@ export function parse(formula: string): Term[] {
   let i = 0
 
   const skipSpace = () => {
-    while (i < src.length && /\s/.test(src[i])) i++
+     while (i < src.length && /\s/.test(src.charAt(i))) i++
   }
   const int = (): number | null => {
     const m = /^\d+/.exec(src.slice(i))
@@ -168,7 +172,8 @@ export function cryptoDie(sides: number): number {
   const buf = new Uint32Array(1)
   for (;;) {
     crypto.getRandomValues(buf)
-    if (buf[0] < limit) return (buf[0] % sides) + 1
+    const value = (buf)[0]!
+    if (value < limit) return (value % sides) + 1
   }
 }
 
@@ -181,7 +186,7 @@ const notationOf = (t: DiceTerm) =>
 /** Roll parsed terms. `die` is the random source, injectable for tests. */
 export function rollTerms(formula: string, terms: Term[], die: (sides: number) => number = cryptoDie): Roll {
   const rolled = terms.map((t): RolledDice | RolledFlat => {
-    if (t.kind === 'flat') return { kind: 'flat', sign: t.sign, value: t.value, label: t.label }
+    if (t.kind === 'flat') return { kind: 'flat', sign: t.sign, value: t.value, ...(t.label !== undefined ? { label: t.label } : {}) }
 
     const dice: Die[] = []
     let explosions = 0
@@ -198,7 +203,7 @@ export function rollTerms(formula: string, terms: Term[], die: (sides: number) =
     // Keep or drop by value; ties go to the earlier die.
     const rule = t.keep ?? t.drop
     if (rule) {
-      const order = dice.map((_, idx) => idx).sort((a, b) => dice[a].value - dice[b].value || a - b)
+      const order = dice.map((_, idx) => idx).sort((a, b) => (dice)[a]!.value - (dice)[b]!.value || a - b)
       const n = Math.min(rule.n, dice.length)
       const low = order.slice(0, n)
       const high = order.slice(dice.length - n)
@@ -207,7 +212,7 @@ export function rollTerms(formula: string, terms: Term[], die: (sides: number) =
     }
 
     const subtotal = dice.reduce((sum, d) => sum + (d.kept ? d.value : 0), 0)
-    return { kind: 'dice', sign: t.sign, notation: notationOf(t), label: t.label, dice, subtotal }
+    return { kind: 'dice', sign: t.sign, notation: notationOf(t), ...(t.label !== undefined ? { label: t.label } : {}), dice, subtotal }
   })
 
   const total = rolled.reduce((sum, t) => sum + t.sign * (t.kind === 'dice' ? t.subtotal : t.value), 0)

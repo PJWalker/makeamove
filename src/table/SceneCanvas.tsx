@@ -3,34 +3,49 @@ import { addTokens, combatantForToken, hasCombat, tokenMarksSource } from '../co
 import { bounds } from '../scene/geometry'
 import { toScreen } from '../scene/camera'
 import { setMorphOrigin } from '../ui/morph'
-import { closePopup, openPopup } from "../ui/popup";
-import { effect, type Signal, untracked, useSignal, useSignalEffect } from '@preact/signals'
+import { openPopup } from "../ui/popup";
+import {
+  effect,
+  type Signal,
+  untracked,
+  useSignal,
+  useSignalEffect,
+} from "@preact/signals-react";
 import { device } from '../store/device'
-import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type DragEvent as ReactDragEvent,
+  type MouseEvent as ReactMouseEvent,
+} from "react";
 import { SceneController } from "../scene/controller";
 import { SceneRenderer } from '../scene/renderer'
 import { activeTool } from '../scene/tools'
 import { SceneDoc } from '../scene/sceneDoc'
 import type { Point } from "../scene/grid";
+import { importImage } from "../scene/images";
 import {
   isPlainToken,
   TOKEN_STYLES,
+  type BlobRef,
   type SceneElement,
   type TokenStyle,
 } from "../scene/types";
-import type { EntityGraphic } from "../graphics";
 import type { Campaign } from "../store/campaign";
 import { canEdit, createCopy, getCharacter, listCharacters, selectCharacter, systemOf, tokenStatsSource } from '../characters/api'
 import { tokenName } from '../characters/templates'
 import { CharacterSheet } from './sheets'
 import { useY } from '../store/useY'
-import { GraphicPicker } from "../ui/GraphicPicker";
+import { BlobImage } from "../ui/BlobImage";
 import { Button } from '../ui/Button'
 import {
   IconAdd,
   IconDelete,
   IconDuplicate,
   IconFit,
+  IconGrid,
   IconImage,
   IconLayers,
   IconLock,
@@ -50,6 +65,7 @@ import { isTyping, MOD } from '../ui/keys'
 import { PopupTabs } from '../ui/PopupTabs'
 import { Segmented } from '../ui/Segmented'
 import { Dialog } from './CampaignDialogs'
+import { SceneSettingsFields } from "./SceneSettingsFields";
 import { showPanel } from './panelLayout'
 import { dropOn, dropTargetAt, itemDefinitionForToken, itemTokenEntity, setDropCursor } from './entityDrag'
 import {
@@ -59,6 +75,7 @@ import {
   areaRequest,
   placedArea,
   sceneDistance,
+  sceneSettingsOpen,
   seenMapColours,
   targetPick,
   tokenDrop,
@@ -67,12 +84,7 @@ import {
   sceneDropHighlight,
 } from "./canvasState";
 import { formatDistance } from '../scene/measure'
-import { linkProxy } from './LinkChip'
-import {
-  getDefaultEntityGraphic,
-  getEntityGraphic,
-  setEntityGraphic,
-} from "./entityGraphics";
+import { linkProxy } from "./LinkChip";
 import { ContextMenu, type MenuItem } from './ContextMenu'
 
 /**
@@ -85,10 +97,7 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
   const importAt = useRef<Point | null>(null)
   const [renderer] = useState(() => new SceneRenderer())
   const ready = useSignal(false)
-  const controller = useSignal<SceneController | null>(null)
-  const graphicMap = useY(campaign.entityGraphics, () =>
-    JSON.stringify([...campaign.entityGraphics.entries()]),
-  );
+  const controller = useSignal<SceneController | null>(null);
   const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(null)
   const tokenOptions = useSignal<string | null>(null)
   /** Which tab the token pop-up opens on. */
@@ -113,7 +122,8 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
     let last = ''
     let first = true
     return ctl.selection.subscribe((sel) => {
-      const el = sel.length === 1 ? ctl.element(sel[0]) : null
+      const selectedId = sel.length === 1 ? sel[0] : undefined
+      const el = selectedId ? ctl.element(selectedId) : null
       const id = el?.type === 'token' ? el.characterId : undefined
       const fresh = id && sel[0] !== last && !first && campaign.characters.has(id)
       last = sel[0] ?? ''
@@ -303,11 +313,11 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
     if (ctl) seenMapColours.value = { ...seenMapColours.peek(), [ctl.sceneId]: colour }
     canvasCommands.value = ctl
       ? {
+          sceneId: ctl.sceneId,
+          scene: ctl.scene,
           fit: () => ctl.fit(),
           undo: () => ctl.scene.undo.undo(),
           redo: () => ctl.scene.undo.redo(),
-          sceneId: ctl.sceneId,
-          scene: ctl.scene,
         }
       : null;
   })
@@ -427,21 +437,6 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
   // Opens on the right-button press on every platform (see ui/menuTrigger.ts).
   const menuOpener = menuTrigger(openMenuAt)
 
-  useEffect(() => {
-    const ctl = controller.value;
-    if (!ctl) return;
-    for (const token of ctl.allElements()) {
-      if (token.type !== "token" || !token.entityRef) continue;
-      const graphic = getEntityGraphic(
-        campaign,
-        token.entityRef.kind,
-        token.entityRef.id,
-      );
-      if (JSON.stringify(graphic) !== JSON.stringify(token.graphic))
-        ctl.updateToken(token.id, { graphic });
-    }
-  }, [graphicMap, controller.value]);
-
   function selectionMenu(ctl: SceneController): MenuItem[] {
     const sel = ctl.selected()
     const ids = sel.map((el) => el.id)
@@ -491,7 +486,7 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
       items.push({ label: tone === 'dark' ? 'Make it dark' : 'Make it light', Icon: IconLight, onSelect: () => ctl.setAreaTone(one.id, tone) })
     }
     if (one?.type === 'map') items.push({ label: 'Use as token', Icon: IconToken, onSelect: () => ctl.convert(one.id, 'token') })
-    if (one?.type === "token" && one.graphic?.kind === "image") {
+    if (one?.type === "token" && one.image) {
       items.push({
         label: "Use as map",
         Icon: IconMap,
@@ -558,54 +553,59 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
       },
       {
         label: "Scene settings…",
-        Icon: IconMap,
-        onSelect: () => showPanel("scene"),
+        Icon: IconGrid,
+        onSelect: () => (sceneSettingsOpen.value = true),
       },
     ];
   }
 
   /** Double-clicking a token opens its options. */
-  function onDoubleClick(e: MouseEvent) {
-    const ctl = controller.value
-    if (!ctl || activeTool.value !== 'select') return
-    const hit = ctl.hitTest(ctl.toWorld(e.clientX, e.clientY))
-    if (hit?.type !== 'token') return
+  function onDoubleClick(e: ReactMouseEvent<HTMLDivElement>) {
+    const ctl = controller.value;
+    if (!ctl || activeTool.value !== "select") return;
+    const hit = ctl.hitTest(ctl.toWorld(e.clientX, e.clientY));
+    if (hit?.type !== "token") return;
     // Grow the options out of the token itself.
-    const b = bounds([hit])!
-    const cam = ctl.renderer.camera
-    const host = hostRef.current!.getBoundingClientRect()
+    const b = bounds([hit])!;
+    const cam = ctl.renderer.camera;
+    const host = hostRef.current!.getBoundingClientRect();
     setMorphOrigin(
-      new DOMRect(host.left + b.x * cam.zoom + cam.x, host.top + b.y * cam.zoom + cam.y, b.w * cam.zoom, b.h * cam.zoom),
-    )
+      new DOMRect(
+        host.left + b.x * cam.zoom + cam.x,
+        host.top + b.y * cam.zoom + cam.y,
+        b.w * cam.zoom,
+        b.h * cam.zoom,
+      ),
+    );
     // A token with a character opens on its sheet.
-    tokenTab.value = hit.characterId ? 'character' : 'token'
-    tokenOptions.value = hit.id
+    tokenTab.value = hit.characterId ? "character" : "token";
+    tokenOptions.value = hit.id;
   }
 
-  function onDragOver(e: DragEvent) {
-    if (!e.dataTransfer?.types.includes('Files')) return
-    e.preventDefault()
-    e.dataTransfer.dropEffect = 'copy'
-    dropping.value = true
+  function onDragOver(e: ReactDragEvent) {
+    if (!e.dataTransfer?.types.includes("Files")) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+    dropping.value = true;
   }
 
-  function onDrop(e: DragEvent) {
-    dropping.value = false
-    const ctl = controller.value
-    if (!ctl || !e.dataTransfer?.files.length) return
-    e.preventDefault()
-    ctl.importFiles(e.dataTransfer.files, ctl.toWorld(e.clientX, e.clientY))
+  function onDrop(e: ReactDragEvent) {
+    dropping.value = false;
+    const ctl = controller.value;
+    if (!ctl || !e.dataTransfer?.files.length) return;
+    e.preventDefault();
+    ctl.importFiles(e.dataTransfer.files, ctl.toWorld(e.clientX, e.clientY));
   }
 
   return (
     <>
       <div
         ref={hostRef}
-        class="scene-canvas"
+        className="scene-canvas"
         data-drop={dropping.value}
         onPointerDown={menuOpener.onPointerDown}
         onContextMenu={menuOpener.onContextMenu}
-        onDblClick={onDoubleClick}
+        onDoubleClick={onDoubleClick}
         onDragOver={onDragOver}
         onDragLeave={() => (dropping.value = false)}
         onDrop={onDrop}
@@ -628,7 +628,7 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
       {textEdit.value && (
         <input
           key={`${textEdit.value.screen.x},${textEdit.value.screen.y}`}
-          class="input bevel scene-text-input"
+          className="input scene-text-input"
           style={{
             left: `${textEdit.value.screen.x}px`,
             top: `${textEdit.value.screen.y}px`,
@@ -653,6 +653,11 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
             tab={tokenTab}
             onClose={() => (tokenOptions.value = null)}
           />
+          <SceneSettingsDialog
+            campaign={campaign}
+            sceneId={sceneId!}
+            scene={controller.value.scene}
+          />
         </>
       )}
     </>
@@ -667,74 +672,74 @@ function TokenOptionsDialog({
   tab,
   onClose,
 }: {
-  campaign: Campaign
-  controller: SceneController
-  id: string | null
-  tab: Signal<'character' | 'token'>
-  onClose: () => void
+  campaign: Campaign;
+  controller: SceneController;
+  id: string | null;
+  tab: Signal<"character" | "token">;
+  onClose: () => void;
 }) {
-  const ref = useRef<HTMLDialogElement>(null)
-  const el = id ? controller.element(id) : null
-  const token = el?.type === 'token' ? el : null
-  const system = systemOf(campaign)
-  const item = token ? itemDefinitionForToken(campaign, token) : undefined
-  const itemToken = !!item
-  const entityRef =
-    token?.entityRef ??
-    (item
-      ? { kind: "item", id: item.id }
-      : token?.characterId
-        ? { kind: "character", id: token.characterId }
-        : undefined);
-  const name = useSignal('')
-  const style = useSignal<TokenStyle>('disc')
-  const colour = useSignal('#000000')
-  const characterId = useSignal('')
-  const graphic = useSignal<EntityGraphic | undefined>(undefined);
-  const resetGraphic = useSignal(false);
-  const size = useSignal('')
+  const ref = useRef<HTMLDialogElement>(null);
+  const el = id ? controller.element(id) : null;
+  const token = el?.type === "token" ? el : null;
+  const system = systemOf(campaign);
+  const item = token ? itemDefinitionForToken(campaign, token) : undefined;
+  const itemToken = !!item;
+  const name = useSignal("");
+  const style = useSignal<TokenStyle>("disc");
+  const colour = useSignal("#000000");
+  const characterId = useSignal("");
+  const image = useSignal<BlobRef | undefined>(undefined);
+  const size = useSignal("");
   const showName = useSignal(true);
-  const grid = controller.renderer.grid
-  const characters = useY(campaign.characters, () => listCharacters(campaign))
+  const fileRef = useRef<HTMLInputElement>(null);
+  const grid = controller.renderer.grid;
+  const characters = useY(campaign.characters, () => listCharacters(campaign));
   // The character this token stands for, as saved (not the unsaved choice below).
-  const linked = useY(campaign.characters, () => getCharacter(campaign, token?.characterId))
+  const linked = useY(campaign.characters, () =>
+    getCharacter(campaign, token?.characterId),
+  );
 
   useEffect(() => {
-    if (!token) return
-    name.value = token.name
-    style.value = isPlainToken(token) ? 'plain' : 'disc'
-    colour.value = token.colour
+    if (!token) return;
+    name.value = token.name;
+    style.value = isPlainToken(token) ? "plain" : "disc";
+    colour.value = token.colour;
     // A template's token shows the template it's a copy of.
-    const c = getCharacter(campaign, token.characterId)
-    characterId.value = c?.base ?? token.characterId ?? ''
-    graphic.value = entityRef
-      ? getEntityGraphic(campaign, entityRef.kind, entityRef.id)
-      : token.graphic;
-    resetGraphic.value = false;
-    showName.value = !token.hideName
+    const c = getCharacter(campaign, token.characterId);
+    characterId.value = c?.base ?? token.characterId ?? "";
+    image.value = token.image;
+    showName.value = !token.hideName;
     // The first size as wide as the token, or none if it's been resized by hand.
-    const cells = Math.max(token.w, token.h) / grid.size
-    size.value = system.sizes.find((z) => Math.abs(z.cells - cells) < 0.01)?.id ?? ''
-    openPopup(ref.current)
-  }, [id])
+    const cells = Math.max(token.w, token.h) / grid.size;
+    size.value =
+      system.sizes.find((z) => Math.abs(z.cells - cells) < 0.01)?.id ?? "";
+    openPopup(ref.current);
+  }, [id]);
 
   // The table stays usable while this is open, so the token may be deleted.
-  const exists = useY(controller.scene.elements, () => !!id && controller.scene.get(id)?.type === 'token')
+  const exists = useY(
+    controller.scene.elements,
+    () => !!id && controller.scene.get(id)?.type === "token",
+  );
   /**
    * The character a token links to when `chosen` is picked: a template makes
    * it a new copy, unless it's already a copy of that template.
    */
   const linkTo = (chosen: string): { characterId?: string; name?: string } => {
-    if (!chosen) return { characterId: undefined }
-    if (linked?.base === chosen) return { characterId: linked.id }
-    const c = characters.find((k) => k.id === chosen)
-    if (!c?.template) return { characterId: chosen }
-    const copyName = name.value.trim() || tokenName(c, c.template, controller.tokenNames())
-    return { characterId: createCopy(campaign, chosen, copyName), name: copyName }
-  }
+    if (!chosen) return {};
+    if (linked?.base === chosen) return { characterId: linked.id };
+    const c = characters.find((k) => k.id === chosen);
+    if (!c?.template) return { characterId: chosen };
+    const copyName =
+      name.value.trim() || tokenName(c, c.template, controller.tokenNames());
+    return {
+      characterId: createCopy(campaign, chosen, copyName),
+      name: copyName,
+    };
+  };
   useEffect(() => {
-    if (id && !exists) closePopup(ref.current, onClose);
-  }, [id, exists])
+    if (id && !exists) ref.current?.close();
+  }, [id, exists]);
 
   return (
     <Dialog
@@ -743,11 +748,9 @@ function TokenOptionsDialog({
         linked ? linked.name : (item?.name ?? token?.name ?? "Token options")
       }
       onClose={onClose}
-      proxy={
-        linked
-          ? linkProxy(campaign, "character", linked.id, linked.name)
-          : undefined
-      }
+      {...(linked
+        ? { proxy: linkProxy(campaign, "character", linked.id, linked.name) }
+        : {})}
     >
       {linked && (
         <PopupTabs
@@ -760,57 +763,38 @@ function TokenOptionsDialog({
         />
       )}
       {linked && tab.value === "character" && (
-        <div class="popup-sheet sheet-panel">
+        <div className="popup-sheet sheet-panel">
           <CharacterSheet campaign={campaign} system={system} c={linked} />
         </div>
       )}
       <form
         hidden={!!linked && tab.value === "character"}
         method="dialog"
-        class="dialog-form"
+        className="dialog-form"
         onSubmit={() => {
-          if (!id) return;
-          const chosenLink = !itemToken ? linkTo(characterId.value) : {};
-          const nextEntityRef = item
-            ? { kind: "item", id: item.id }
-            : chosenLink.characterId
-              ? { kind: "character", id: chosenLink.characterId }
-              : undefined;
-          if (nextEntityRef)
-            setEntityGraphic(
-              campaign,
-              nextEntityRef.kind,
-              nextEntityRef.id,
-              resetGraphic.value ? undefined : graphic.value,
+          if (id)
+            controller.updateToken(
+              id,
+              {
+                name: name.value.trim(),
+                style:
+                  style.value === "plain" && !image.value
+                    ? "disc"
+                    : style.value,
+                colour: colour.value,
+                ...(image.value ? { image: image.value } : {}),
+                ...(item ? { itemDefId: item.id } : {}),
+                ...(!itemToken ? linkTo(characterId.value) : {}),
+                ...(!showName.value ? { hideName: true } : {}),
+              },
+              system.sizes.find((z) => z.id === size.value)?.cells,
             );
-          const shownGraphic = nextEntityRef
-            ? getEntityGraphic(campaign, nextEntityRef.kind, nextEntityRef.id)
-            : resetGraphic.value
-              ? getDefaultEntityGraphic(campaign, "token", "")
-              : graphic.value;
-          controller.updateToken(
-            id,
-            {
-              name: name.value.trim(),
-              style:
-                style.value === "plain" && shownGraphic?.kind !== "image"
-                  ? "disc"
-                  : style.value,
-              colour: colour.value,
-              graphic: shownGraphic,
-              entityRef: nextEntityRef,
-              ...(item ? { itemDefId: item.id } : {}),
-              ...chosenLink,
-              hideName: showName.value ? undefined : true,
-            },
-            system.sizes.find((z) => z.id === size.value)?.cells,
-          );
         }}
       >
-        <label class="field">
+        <label className="field">
           Name
           <input
-            class="input bevel"
+            className="input"
             value={name.value}
             onInput={(e) => (name.value = e.currentTarget.value)}
             autoFocus
@@ -818,10 +802,10 @@ function TokenOptionsDialog({
           />
         </label>
         {!itemToken && (
-          <label class="field">
+          <label className="field">
             Character
             <select
-              class="input bevel"
+              className="input"
               value={characterId.value}
               onChange={(e) => {
                 characterId.value = e.currentTarget.value;
@@ -837,41 +821,50 @@ function TokenOptionsDialog({
                 </option>
               ))}
             </select>
-            <span class="muted">
+            <span className="muted">
               The game system decides which of its stats show on the token.
             </span>
           </label>
         )}
-        <GraphicPicker
-          graphic={
-            resetGraphic.value
-              ? getDefaultEntityGraphic(
-                  campaign,
-                  entityRef?.kind ?? "token",
-                  entityRef?.id ?? "",
-                )
-              : (graphic.value ??
-                (token?.entityRef
-                  ? getEntityGraphic(
-                      campaign,
-                      token.entityRef.kind,
-                      token.entityRef.id,
-                    )
-                  : token?.graphic))
-          }
-          onChange={(next) => {
-            graphic.value = next;
-            resetGraphic.value = false;
-          }}
-          onReset={() => {
-            graphic.value = undefined;
-            resetGraphic.value = true;
-          }}
-        />
-        <label class="field">
+        <div className="field">
+          Image
+          <span className="token-image-row">
+            <span className="token-image-preview">
+              <BlobImage
+                image={image.value}
+                fallback={<span className="muted">None</span>}
+              />
+            </span>
+            <Button size="sm" onClick={() => fileRef.current?.click()}>
+              {image.value ? "Change…" : "Choose…"}
+            </Button>
+            {image.value && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => (image.value = undefined)}
+              >
+                Remove
+              </Button>
+            )}
+          </span>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={async (e) => {
+              const file = e.currentTarget.files?.[0];
+              e.currentTarget.value = "";
+              if (file)
+                image.value = await importImage(file).catch(() => image.value);
+            }}
+          />
+        </div>
+        <label className="field">
           Size
           <select
-            class="input bevel"
+            className="input"
             value={size.value}
             onChange={(e) => (size.value = e.currentTarget.value)}
           >
@@ -884,9 +877,9 @@ function TokenOptionsDialog({
             ))}
           </select>
         </label>
-        <div class="field">
+        <div className="field">
           Show
-          <label class="check">
+          <label className="check">
             <input
               type="checkbox"
               checked={showName.value}
@@ -895,44 +888,76 @@ function TokenOptionsDialog({
             Name under the token
           </label>
         </div>
-        <div class="field">
+        <div className="field">
           Style
           <Segmented
             label="Token style"
             value={style.value}
             options={TOKEN_STYLES.map((s) => ({
               ...s,
-              disabled: s.id === "plain" && graphic.value?.kind !== "image",
+              disabled: s.id === "plain" && !image.value,
               title:
-                s.id === "plain" && graphic.value?.kind !== "image"
-                  ? "Needs an image"
-                  : undefined,
+                s.id === "plain" && !image.value ? "Needs an image" : undefined,
             }))}
             onChange={(v) => (style.value = v)}
           />
         </div>
         <label
-          class="field colour-field"
+          className="field colour-field"
           data-disabled={style.value === "plain"}
         >
           Background and border
-          <span class="colour-row">
+          <span className="colour-row">
             <input
               type="color"
-              class="colour-input bevel"
+              className="colour-input"
               value={colour.value}
               disabled={style.value === "plain"}
               onInput={(e) => (colour.value = e.currentTarget.value)}
             />
-            <span class="colour-hex">{colour.value}</span>
+            <span className="colour-hex">{colour.value}</span>
           </span>
         </label>
-        <div class="form-actions">
+        <div className="form-actions">
           <Button variant="primary" type="submit">
             Save
           </Button>
         </div>
       </form>
+    </Dialog>
+  );
+}
+
+function SceneSettingsDialog({
+  campaign,
+  sceneId,
+  scene,
+}: {
+  campaign: Campaign;
+  sceneId: string;
+  scene: SceneDoc;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const view = useY(campaign.scenes, () =>
+    campaign.sceneViews().find((s) => s.id === sceneId),
+  );
+
+  useSignalEffect(() => {
+    if (sceneSettingsOpen.value) openPopup(ref.current);
+  });
+
+  return (
+    <Dialog
+      dialogRef={ref}
+      title={view ? `${view.name} settings` : "Scene settings"}
+      onClose={() => (sceneSettingsOpen.value = false)}
+    >
+      <SceneSettingsFields
+        campaign={campaign}
+        sceneId={sceneId}
+        scene={scene}
+        showHeading={false}
+      />
     </Dialog>
   );
 }

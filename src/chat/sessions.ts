@@ -1,4 +1,5 @@
 import { stampTime } from '../lib/hlc'
+
 import type { ChatMessage, SystemMessage } from './types'
 
 /*
@@ -31,7 +32,7 @@ export function splitSessions(messages: ChatMessage[]): SessionPart[] {
     }
   }
   if (part.marker || part.messages.length) parts.push(part)
-  if (parts.length) parts[parts.length - 1].current = true
+  if (parts.length) (parts)[parts.length - 1]!.current = true
   return parts
 }
 

@@ -1,4 +1,5 @@
 import * as Y from 'yjs'
+
 import { newId } from '../lib/ids'
 import type { Duration } from '../characters/store'
 
@@ -101,7 +102,7 @@ export function nextTurn(m: CombatMaps): TurnChange {
   const now = turnOf(m)
   const i = order.findIndex((c) => c.id === now)
   const wraps = i === order.length - 1
-  const next = order[wraps || i < 0 ? 0 : i + 1]
+  const next = (order)[wraps || i < 0 ? 0 : i + 1]!
   m.combatants.doc!.transact(() => {
     if (wraps) m.combat.set('round', roundOf(m) + 1)
     m.combat.set('turn', next.id)
@@ -117,7 +118,7 @@ export function previousTurn(m: CombatMaps) {
   if (i <= 0 && roundOf(m) <= 1) return
   m.combatants.doc!.transact(() => {
     if (i <= 0) m.combat.set('round', roundOf(m) - 1)
-    m.combat.set('turn', order[i <= 0 ? order.length - 1 : i - 1].id)
+    m.combat.set('turn', (order)[i <= 0 ? order.length - 1 : i - 1]!.id)
   })
 }
 

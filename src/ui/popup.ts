@@ -1,8 +1,20 @@
-import { placeAnchored } from './anchor'
-import { claimMorph, growFromOrigin, hasFreshOrigin, originRect, releaseMorph } from './morph'
-import { nextZ } from './windows'
-import { RESIZE_CURSORS, resizeRect, type ResizeDir } from '../table/resizeRect'
-import { trackPointer } from './pointer'
+import type * as React from "react";
+
+import { placeAnchored } from "./anchor";
+import {
+  claimMorph,
+  growFromOrigin,
+  hasFreshOrigin,
+  originRect,
+  releaseMorph,
+} from "./morph";
+import { nextZ } from "./windows";
+import {
+  RESIZE_CURSORS,
+  resizeRect,
+  type ResizeDir,
+} from "../table/resizeRect";
+import { trackPointer } from "./pointer";
 import { withTransition } from "./transition";
 
 /*
@@ -14,15 +26,15 @@ import { withTransition } from "./transition";
  */
 
 /** How much of a pop-up must stay on screen, so it can always be dragged back. */
-const KEEP_VISIBLE = 80
+const KEEP_VISIBLE = 80;
 
-const whole = (v: number) => Math.round(v)
-const CASCADE = 28
+const whole = (v: number) => Math.round(v);
+const CASCADE = 28;
 
 function place(el: HTMLElement, x: number, y: number) {
-  const { width } = el.getBoundingClientRect()
-  el.style.left = `${whole(Math.min(innerWidth - KEEP_VISIBLE, Math.max(KEEP_VISIBLE - width, x)))}px`
-  el.style.top = `${whole(Math.min(innerHeight - 40, Math.max(0, y)))}px`
+  const { width } = el.getBoundingClientRect();
+  el.style.left = `${whole(Math.min(innerWidth - KEEP_VISIBLE, Math.max(KEEP_VISIBLE - width, x)))}px`;
+  el.style.top = `${whole(Math.min(innerHeight - 40, Math.max(0, y)))}px`;
 }
 
 /**
@@ -31,12 +43,12 @@ function place(el: HTMLElement, x: number, y: number) {
  * its bottom edge up (see ui/anchor.ts).
  */
 function placeOver(el: HTMLElement, from: DOMRect) {
-  placeAnchored(el, { left: from.left, top: from.bottom, bottom: from.top }, 0)
+  placeAnchored(el, { left: from.left, top: from.bottom, bottom: from.top }, 0);
 }
 
 /** Bring a pop-up in front of every other window. */
 export function raisePopup(dialog: HTMLElement) {
-  dialog.style.zIndex = String(nextZ())
+  dialog.style.zIndex = String(nextZ());
 }
 
 /** Close a window and update its owner from the captured open state. */
@@ -44,47 +56,51 @@ export function closePopup(
   dialog: HTMLDialogElement | null | undefined,
   onClose?: () => void,
 ) {
-  if (!dialog?.open) return
+  if (!dialog?.open) return;
   void withTransition(() => {
-    dialog.close()
-    onClose?.()
-  })
+    dialog.close();
+    onClose?.();
+  });
 }
 
 /** Open a pop-up (or bring it forward if it's already open). */
 export function openPopup(dialog: HTMLDialogElement | null | undefined) {
-  if (!dialog) return
-  raisePopup(dialog)
+  if (!dialog) return;
+  raisePopup(dialog);
   if (dialog.open) {
-    releaseMorph()
-    return
+    releaseMorph();
+    return;
   }
-  const at = originRect()
-  const viewMorph = claimMorph(dialog)
+  const at = originRect();
+  const viewMorph = claimMorph(dialog);
   // Mark it before showing, so its own fade-in doesn't start underneath.
-  if (hasFreshOrigin()) dialog.dataset.morph = 'true'
-  dialog.show()
-  const r = dialog.getBoundingClientRect()
+  if (hasFreshOrigin()) dialog.dataset.morph = "true";
+  dialog.show();
+  const r = dialog.getBoundingClientRect();
   if (at) {
     // Open over the thing that spawned it.
-    placeOver(dialog, at)
+    placeOver(dialog, at);
   } else if (!dialog.style.left) {
     // Centred, stepping down and right past any pop-up already there.
-    let x = (innerWidth - r.width) / 2
-    let y = Math.max(48, (innerHeight - r.height) / 3)
-    const others = [...document.querySelectorAll<HTMLElement>('dialog[open]')].filter((d) => d !== dialog)
+    let x = (innerWidth - r.width) / 2;
+    let y = Math.max(48, (innerHeight - r.height) / 3);
+    const others = [
+      ...document.querySelectorAll<HTMLElement>("dialog[open]"),
+    ].filter((d) => d !== dialog);
     const taken = (x: number, y: number) =>
-      others.some((d) => Math.abs(d.offsetLeft - x) < 8 && Math.abs(d.offsetTop - y) < 48)
+      others.some(
+        (d) => Math.abs(d.offsetLeft - x) < 8 && Math.abs(d.offsetTop - y) < 48,
+      );
     while (taken(whole(x), whole(y))) {
-      x += CASCADE
-      y += CASCADE
+      x += CASCADE;
+      y += CASCADE;
     }
-    place(dialog, x, y)
+    place(dialog, x, y);
   } else {
-    place(dialog, r.left, r.top)
+    place(dialog, r.left, r.top);
   }
   // A view transition animates it; otherwise grow it here.
-  if (!viewMorph) growFromOrigin(dialog)
+  if (!viewMorph) growFromOrigin(dialog);
 }
 
 /**
@@ -92,28 +108,45 @@ export function openPopup(dialog: HTMLDialogElement | null | undefined) {
  * a resize zone's pointerdown. Once sized by hand, a pop-up keeps that size
  * (its body scrolls) instead of fitting its content.
  */
-export function resizePopup(dialog: HTMLElement, e: PointerEvent, dir: ResizeDir) {
-  if (e.button !== 0) return
-  e.preventDefault()
-  e.stopPropagation()
-  raisePopup(dialog)
+export function resizePopup(
+  dialog: HTMLElement,
+  e: PointerEvent | React.PointerEvent,
+  dir: ResizeDir,
+) {
+  if (e.button !== 0) return;
+  e.preventDefault();
+  e.stopPropagation();
+  raisePopup(dialog);
   // Layout size, not getBoundingClientRect: that would include the grow
   // animation's scale if the pop-up is still opening.
-  const start = { x: dialog.offsetLeft, y: dialog.offsetTop, w: dialog.offsetWidth, h: dialog.offsetHeight }
-  dialog.dataset.sized = 'true'
+  const start = {
+    x: dialog.offsetLeft,
+    y: dialog.offsetTop,
+    w: dialog.offsetWidth,
+    h: dialog.offsetHeight,
+  };
+  dialog.dataset.sized = "true";
   trackPointer(RESIZE_CURSORS[dir], (ev) => {
-    const next = resizeRect(start, dir, ev.clientX - e.clientX, ev.clientY - e.clientY)
+    const next = resizeRect(
+      start,
+      dir,
+      ev.clientX - e.clientX,
+      ev.clientY - e.clientY,
+    );
     Object.assign(dialog.style, {
       left: `${next.x}px`,
       top: `${next.y}px`,
       width: `${next.w}px`,
       height: `${next.h}px`,
-    })
-  })
+    });
+  });
 }
 
 /** Drag a pop-up by its title bar; call from the bar's pointerdown. */
-export function dragPopup(dialog: HTMLElement, e: PointerEvent) {
+export function dragPopup(
+  dialog: HTMLElement,
+  e: PointerEvent | React.PointerEvent,
+) {
   if (
     e.button !== 0 ||
     (e.target as HTMLElement).closest("button, input, select, textarea")

@@ -9,7 +9,6 @@ const DEFAULT_ICON: Record<string, string> = {
   move: "move",
   note: "note",
   scene: "map",
-  class: "hero",
   tag: "tag",
   option: "books",
 };
@@ -42,14 +41,18 @@ export function getDefaultEntityGraphic(
       if (inherited) return inherited;
     }
     name =
-      system.classes.find((cls) => cls.id === character?.classId)?.icon ?? name;
+      system.creation?.choices
+        .flatMap((choice) =>
+          choice.options
+            .filter((option) => option.id === character?.data[choice.field])
+            .map((option) => option.icon),
+        )
+        .find((icon) => !!icon) ?? name;
   } else if (kind === "item") {
     name = system.items.find((item) => item.id === id)?.icon ?? name;
   } else if (kind === "move") {
     const move = system.actions.find((action) => action.id === id);
     if (move) name = move.category === "class" ? "class-move" : "move";
-  } else if (kind === "class") {
-    name = system.classes.find((cls) => cls.id === id)?.icon ?? name;
   }
   return { kind: "icon", name };
 }

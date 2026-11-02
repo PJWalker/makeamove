@@ -16,7 +16,7 @@ import { editAction } from "./ActionDialogs";
 
 export interface ActionMenuTarget {
   id: string;
-  title?: string;
+  title?: string | undefined;
 }
 
 /** Context-menu actions for entries that can be pinned or assigned a shortcut. */
@@ -51,7 +51,7 @@ export function actionMenuItems(
       {
         label: `${shortcut ? "Change" : "Add"} shortcut${multiple ? ` for ${title}` : ""}…`,
         Icon: IconShortcut,
-        shortcut: shortcut ? showCombo(shortcut) : undefined,
+        ...(shortcut ? { shortcut: showCombo(shortcut) } : {}),
         onSelect: () => {
           beforeShortcut?.();
           editAction("shortcut", id, title);

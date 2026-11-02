@@ -39,7 +39,7 @@ export function resolveEffects(base: Record<string, number>, sources: EffectSour
         if (!out.moves.includes(e.move)) out.moves.push(e.move)
       } else if (e.type === 'grantTag') {
         if (!out.tags.includes(e.tag)) out.tags.push(e.tag)
-      } else out.bonuses.push({ source: s.name, stat: e.stat, moves: e.moves, value: e.value })
+      } else out.bonuses.push({ source: s.name, ...(e.stat ? { stat: e.stat } : {}), ...(e.moves ? { moves: e.moves } : {}), value: e.value })
     }
   }
 

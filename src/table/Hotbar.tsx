@@ -1,19 +1,32 @@
-import { useSignal } from '@preact/signals'
-import { useEffect, useRef } from 'preact/hooks'
-import { selectedCharacterId } from '../characters/api'
-import { editHotbar, hotbarSlots, placeAt, shift, unpin } from '../characters/hotbar'
-import { shortcutFor, showCombo, slotLook } from '../actions/custom'
-import { buildIndex, pinnedRoll } from '../actions/registry'
-import { noteRecent } from '../actions/recent'
-import type { Campaign } from '../store/campaign'
-import { notePressed } from '../ui/pressed'
-import { useY } from '../store/useY'
-import { Button } from '../ui/Button'
-import { ENTRY_ICONS } from '../ui/entryIcons'
-import { IconDelete, IconImage, IconRename, IconSearch, IconShortcut } from '../ui/icons'
-import { menuTrigger } from '../ui/menuTrigger'
-import { editAction } from './ActionDialogs'
-import { ContextMenu, type MenuItem } from './ContextMenu'
+import type { PointerEvent as ReactPointerEvent } from "react";
+import { useSignal } from "@preact/signals-react";
+import { useEffect, useRef } from "react";
+import { selectedCharacterId } from "../characters/api";
+import {
+  editHotbar,
+  hotbarSlots,
+  placeAt,
+  shift,
+  unpin,
+} from "../characters/hotbar";
+import { shortcutFor, showCombo, slotLook } from "../actions/custom";
+import { buildIndex, pinnedRoll } from "../actions/registry";
+import { noteRecent } from "../actions/recent";
+import type { Campaign } from "../store/campaign";
+import { notePressed } from "../ui/pressed";
+import { useY } from "../store/useY";
+import { Button } from "../ui/Button";
+import { ENTRY_ICONS } from "../ui/entryIcons";
+import {
+  IconDelete,
+  IconImage,
+  IconRename,
+  IconSearch,
+  IconShortcut,
+} from "../ui/icons";
+import { menuTrigger } from "../ui/menuTrigger";
+import { editAction } from "./ActionDialogs";
+import { ContextMenu, type MenuItem } from "./ContextMenu";
 import {
   actionEntity,
   dropMarker,
@@ -21,9 +34,9 @@ import {
   dropTargetAt,
   setDropCursor,
 } from "./entityDrag";
-import { paletteOpen } from './Palette'
-import { isTyping } from '../ui/keys'
-import { startReorder } from '../ui/reorder'
+import { paletteOpen } from "./Palette";
+import { isTyping } from "../ui/keys";
+import { startReorder } from "../ui/reorder";
 
 /**
  * Pinned actions for the selected character, docked at the bottom centre.
@@ -32,51 +45,64 @@ import { startReorder } from '../ui/reorder'
  * Right-click a slot to rename it, give it an icon or a shortcut.
  */
 export function Hotbar({ campaign }: { campaign: Campaign }) {
-  const charId = useY(campaign.members, () => selectedCharacterId(campaign))
-  const dragging = useSignal<string | null>(null)
-  const barRef = useRef<HTMLDivElement>(null)
+  const charId = useY(campaign.members, () => selectedCharacterId(campaign));
+  const dragging = useSignal<string | null>(null);
+  const barRef = useRef<HTMLDivElement>(null);
   // Rebuilt on any change to characters or members so labels and availability stay current.
-  const tick = useSignal(0)
+  const tick = useSignal(0);
   useEffect(() => {
-    const bump = () => tick.value++
-    campaign.characters.observeDeep(bump)
-    campaign.members.observeDeep(bump)
+    const bump = () => tick.value++;
+    campaign.characters.observeDeep(bump);
+    campaign.members.observeDeep(bump);
     return () => {
-      campaign.characters.unobserveDeep(bump)
-      campaign.members.unobserveDeep(bump)
-    }
-  }, [campaign])
-  void tick.value
+      campaign.characters.unobserveDeep(bump);
+      campaign.members.unobserveDeep(bump);
+    };
+  }, [campaign]);
+  void tick.value;
 
-  const slots = hotbarSlots(campaign, charId)
-  const index = new Map(buildIndex(campaign).map((a) => [a.id, a]))
-  const find = (id: string) => index.get(id) ?? pinnedRoll(campaign, id)
+  const slots = hotbarSlots(campaign, charId);
+  const index = new Map(buildIndex(campaign).map((a) => [a.id, a]));
+  const find = (id: string) => index.get(id) ?? pinnedRoll(campaign, id);
   const run = (id: string) => {
-    const a = find(id)
-    if (a?.available !== true) return
-    noteRecent(a.id)
-    a.run()
-  }
+    const a = find(id);
+    if (a?.available !== true) return;
+    noteRecent(a.id);
+    a.run();
+  };
 
   // 1–9 trigger the first nine slots.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || isTyping(e.target)) return
-      if (!/^[1-9]$/.test(e.key)) return
-      const id = slots[Number(e.key) - 1]
+      if (
+        e.ctrlKey ||
+        e.metaKey ||
+        e.altKey ||
+        e.shiftKey ||
+        isTyping(e.target)
+      )
+        return;
+      if (!/^[1-9]$/.test(e.key)) return;
+      const id = slots[Number(e.key) - 1];
       if (id) {
-        e.preventDefault()
+        e.preventDefault();
         // Whatever the slot starts appears beside it, as if it were clicked.
-        notePressed(barRef.current?.querySelectorAll('.hotbar-btn')[Number(e.key) - 1])
-        run(id)
+        notePressed(
+          barRef.current?.querySelectorAll(".hotbar-slot > .btn")[
+            Number(e.key) - 1
+          ],
+        );
+        run(id);
       }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  })
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
 
-  const edit = (fn: (s: string[]) => string[]) => editHotbar(campaign, fn)
-  const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(null)
+  const edit = (fn: (s: string[]) => string[]) => editHotbar(campaign, fn);
+  const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(
+    null,
+  );
   const slotMenu = (id: string, title: string) =>
     menuTrigger((x, y) => {
       menu.value = {
@@ -130,14 +156,14 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
           },
         ],
       };
-    })
+    });
   const endDrag = () => {
-    dragging.value = null
-  }
-  const dragSlot = (id: string, e: PointerEvent) => {
+    dragging.value = null;
+  };
+  const dragSlot = (id: string, e: ReactPointerEvent) => {
     // Off the bar, a slot can land on a character or in a note, like a palette result; anywhere else unpins it.
-    const what = actionEntity(campaign, id, find(id)?.title ?? id)
-    const mark = dropMarker()
+    const what = actionEntity(campaign, id, find(id)?.title ?? id);
+    const mark = dropMarker();
     startReorder({
       event: e,
       axis: "x",
@@ -168,13 +194,13 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
         },
       },
     });
-  }
+  };
 
   return (
-    <div class="hotbar-wrap">
+    <>
       <div
         ref={barRef}
-        class="hotbar panel bevel strip across dock-bottom"
+        className="dock-strip hotbar strip across dock-bottom"
         role="toolbar"
         aria-label="Hotbar"
         data-dragging={dragging.value !== null}
@@ -196,7 +222,7 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
           return (
             <div
               key={id}
-              class="hotbar-slot"
+              className="hotbar-slot"
               data-unavailable={off}
               data-dragging={dragging.value === id}
               onPointerDown={(e) => {
@@ -208,7 +234,7 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
               <div
                 role="button"
                 tabIndex={0}
-                class="hotbar-btn btn btn-ghost bevel"
+                className="btn btn-ghost"
                 aria-disabled={off}
                 title={combo ? `${tip} (${showCombo(combo)})` : tip}
                 onClick={() => run(id)}
@@ -236,14 +262,16 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
         })}
         <Button
           variant="icon"
-          class="hotbar-palette"
+          className="hotbar-palette"
           label="Command palette (Ctrl/Cmd+K)"
           onClick={() => (paletteOpen.value = !paletteOpen.value)}
         >
           <IconSearch size={22} />
         </Button>
       </div>
-      {menu.value && <ContextMenu {...menu.value} onClose={() => (menu.value = null)} />}
-    </div>
+      {menu.value && (
+        <ContextMenu {...menu.value} onClose={() => (menu.value = null)} />
+      )}
+    </>
   );
 }

@@ -1,4 +1,5 @@
 import type { Awareness } from 'y-protocols/awareness'
+
 import { oklabToHex } from '../lib/colour'
 import type { Point } from './grid'
 
@@ -189,8 +190,8 @@ export class Presence {
         }
         trail = []
         for (let i = 0; i + 2 < p.trail.length; i += 3) {
-          const t = seen.at - p.trail[i + 2]
-          if (now - t < TRAIL_MS) trail.push({ x: p.trail[i], y: p.trail[i + 1], t })
+          const t = seen.at - (p.trail)[i + 2]!
+          if (now - t < TRAIL_MS) trail.push({ x: (p.trail)[i]!, y: (p.trail)[i + 1]!, t })
         }
       }
       marks.push({ id: user.id, name: user.name, colour: user.colour ?? colourFor(user.id), self: false, cursor: p.cursor, ping, ruler: p.ruler, targets: p.targets ?? [], trail })

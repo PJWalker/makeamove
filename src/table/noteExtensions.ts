@@ -140,7 +140,7 @@ export function secretNode(mountSecret: ((host: HTMLElement, id: string) => () =
           dom.hidden = true
           return { dom }
         }
-        dom.className = 'note-secret bevel'
+        dom.className = 'note-secret'
         const label = document.createElement('span')
         label.className = 'note-secret-label eyebrow'
         label.textContent = 'Secret'

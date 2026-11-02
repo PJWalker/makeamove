@@ -1,0 +1,53 @@
+- main [ref=f70e3]:
+  - generic [ref=f70e4]:
+    - heading "Make a Move" [level=1] [ref=f70e6]
+    - region [ref=f70e7]:
+      - heading "Your campaigns" [level=2] [ref=f70e8]
+      - list [ref=f70e9]:
+        - listitem [ref=f70e10]:
+          - button "hi GM · Dungeon World · opened 8 minutes ago" [ref=f70e11] [cursor=pointer]:
+            - generic [ref=f70e12]: hi
+            - generic [ref=f70e13]: GM · Dungeon World · opened 8 minutes ago
+          - button "Delete hi" [ref=f70e14]
+        - listitem [ref=f70e17]:
+          - button "hi GM · No system · opened 47 minutes ago" [ref=f70e18] [cursor=pointer]:
+            - generic [ref=f70e19]: hi
+            - generic [ref=f70e20]: GM · No system · opened 47 minutes ago
+          - button "Delete hi" [ref=f70e21]
+    - form [ref=f70e24]:
+      - heading "Start a campaign" [level=2] [ref=f70e25]
+      - generic [ref=f70e26]:
+        - generic [ref=f70e27]:
+          - text: Campaign name
+          - textbox "Campaign name" [ref=f70e28]:
+            - /placeholder: The Lost Barrows
+        - generic [ref=f70e29]:
+          - text: Your name
+          - textbox "Your name" [ref=f70e30]:
+            - /placeholder: Robin
+            - text: h
+      - generic [ref=f70e32]:
+        - text: System
+        - combobox "System" [ref=f70e33]:
+          - option "Choose a system" [disabled]
+          - option "Dungeon World"
+          - option "Dungeon World 2"
+          - option "Blades in the Dark"
+          - option "Daggerheart"
+          - option "D&D 5.5e"
+          - option "Test system"
+          - option "No system" [selected]
+      - button "Create campaign" [ref=f70e35]
+    - form [ref=f70e38]:
+      - heading "Join a campaign" [level=2] [ref=f70e39]
+      - generic [ref=f70e40]:
+        - generic [ref=f70e41]:
+          - text: Invite link
+          - textbox "Invite link" [ref=f70e42]:
+            - /placeholder: Paste an invite link
+        - generic [ref=f70e43]:
+          - text: Your name
+          - textbox "Your name" [ref=f70e44]:
+            - /placeholder: Robin
+            - text: h
+      - button "Join" [disabled] [ref=f70e46]

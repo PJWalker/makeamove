@@ -1,8 +1,14 @@
-import { computed, signal, useSignal, type Signal } from '@preact/signals'
-import type { ComponentChildren, JSX } from 'preact'
-import { useEffect, useRef } from 'preact/hooks'
-import { IconBack, IconLayoutSingle, IconLayoutSplit } from './icons'
-import { withTransition } from './transition'
+import type * as React from "react";
+import {
+  computed,
+  signal,
+  useSignal,
+  type Signal,
+} from "@preact/signals-react";
+import type { ReactNode } from "react";
+import { useEffect, useRef } from "react";
+import { IconBack, IconLayoutSingle, IconLayoutSplit } from "./icons";
+import { withTransition } from "./transition";
 
 /*
  * A panel that is a list and a detail (characters and their sheets, notes
@@ -13,63 +19,74 @@ import { withTransition } from './transition'
  * regardless, with the switch disabled.
  */
 
-export type PaneLayoutMode = 'split' | 'stack'
-export type PaneLevel = 'list' | 'detail'
+export type PaneLayoutMode = "split" | "stack";
+export type PaneLevel = "list" | "detail";
 
 /** Narrower than this, the list and detail take turns. */
-const SPLIT_MIN_W = 381
-const DEFAULT_LIST_W = 200
+const SPLIT_MIN_W = 381;
+const DEFAULT_LIST_W = 200;
 
 export interface PaneLayout {
-  key: string
-  listWidth: Signal<number>
-  chosen: Signal<PaneLayoutMode>
-  tooNarrow: Signal<boolean>
+  key: string;
+  listWidth: Signal<number>;
+  chosen: Signal<PaneLayoutMode>;
+  tooNarrow: Signal<boolean>;
   /** What actually shows. */
-  mode: { readonly value: PaneLayoutMode; peek(): PaneLayoutMode }
-  save(): void
+  mode: { readonly value: PaneLayoutMode; peek(): PaneLayoutMode };
+  save(): void;
   /** The panel's two-pane element, while it's on screen. */
-  el: HTMLElement | null
+  el: HTMLElement | null;
   /** The layout switch for the panel's title bar. */
-  Toggle: () => JSX.Element
+  Toggle: () => React.JSX.Element;
 }
 
 /**
  * One panel's layout, kept in localStorage under `key`. `names` words the
  * switch's label: what the list and detail are ("list", "sheet").
  */
-export function createPaneLayout(key: string, names: { list: string; detail: string }): PaneLayout {
-  const storeKey = `makeamove.${key}`
+export function createPaneLayout(
+  key: string,
+  names: { list: string; detail: string },
+): PaneLayout {
+  const storeKey = `makeamove.${key}`;
   const saved = (() => {
     try {
-      return JSON.parse(localStorage.getItem(storeKey) ?? '{}') as { w?: number; layout?: PaneLayoutMode }
+      return JSON.parse(localStorage.getItem(storeKey) ?? "{}") as {
+        w?: number;
+        layout?: PaneLayoutMode;
+      };
     } catch {
-      return {}
+      return {};
     }
-  })()
-  const listWidth = signal(saved.w ?? DEFAULT_LIST_W)
-  const chosen = signal<PaneLayoutMode>(saved.layout ?? 'split')
-  const tooNarrow = signal(false)
-  const mode = computed<PaneLayoutMode>(() => (tooNarrow.value ? 'stack' : chosen.value))
+  })();
+  const listWidth = signal(saved.w ?? DEFAULT_LIST_W);
+  const chosen = signal<PaneLayoutMode>(saved.layout ?? "split");
+  const tooNarrow = signal(false);
+  const mode = computed<PaneLayoutMode>(() =>
+    tooNarrow.value ? "stack" : chosen.value,
+  );
   const save = () => {
     try {
-      localStorage.setItem(storeKey, JSON.stringify({ w: listWidth.value, layout: chosen.value }))
+      localStorage.setItem(
+        storeKey,
+        JSON.stringify({ w: listWidth.value, layout: chosen.value }),
+      );
     } catch {
       // The layout just won't persist.
     }
-  }
+  };
 
   function Toggle() {
-    const split = mode.value === 'split'
+    const split = mode.value === "split";
     const label = tooNarrow.value
       ? `One at a time (widen the panel to see the ${names.list} and ${names.detail} side by side)`
       : split
-        ? 'Side by side: click to show one at a time'
-        : `One at a time: click to show the ${names.list} and ${names.detail} side by side`
+        ? "Side by side: click to show one at a time"
+        : `One at a time: click to show the ${names.list} and ${names.detail} side by side`;
     return (
       <button
         type="button"
-        class="pane-toggle"
+        className="pane-toggle"
         aria-label={label}
         title={label}
         aria-pressed={split}
@@ -85,7 +102,7 @@ export function createPaneLayout(key: string, names: { list: string; detail: str
     );
   }
 
-  return { key, listWidth, chosen, tooNarrow, mode, save, Toggle, el: null }
+  return { key, listWidth, chosen, tooNarrow, mode, save, Toggle, el: null };
 }
 
 /**
@@ -93,40 +110,46 @@ export function createPaneLayout(key: string, names: { list: string; detail: str
  * one at a time, the move slides; side by side, both already show.
  */
 export function usePaneLevel(layout: PaneLayout, initial: PaneLevel) {
-  const level = useSignal<PaneLevel>(initial)
+  const level = useSignal<PaneLevel>(initial);
   const go = (to: PaneLevel) => {
-    if (level.value === to) return
-    if (layout.mode.peek() !== 'stack') {
-      level.value = to
-      return
+    if (level.value === to) return;
+    if (layout.mode.peek() !== "stack") {
+      level.value = to;
+      return;
     }
     // Only this panel slides: it alone is named for the transition.
-    const el = layout.el
-    if (el) el.dataset.sliding = 'true'
-    void withTransition(() => {
-      level.value = to
-    }, { rootClass: to === 'detail' ? 'vt-pane-fwd' : 'vt-pane-back' }).finally(() => {
-      if (el) delete el.dataset.sliding
-    })
-  }
-  return { level, go }
+    const el = layout.el;
+    if (el) el.dataset.sliding = "true";
+    void withTransition(
+      () => {
+        level.value = to;
+      },
+      { rootClass: to === "detail" ? "vt-pane-fwd" : "vt-pane-back" },
+    ).finally(() => {
+      if (el) delete el.dataset.sliding;
+    });
+  };
+  return { level, go };
 }
 
-function dragSplit(layout: PaneLayout, e: PointerEvent) {
-  if (e.button !== 0) return
-  const split = e.currentTarget as HTMLElement
-  const grid = split.parentElement!
-  split.setPointerCapture(e.pointerId)
-  const left = grid.getBoundingClientRect().left
-  const max = () => grid.clientWidth - 160
-  const move = (ev: PointerEvent) => (layout.listWidth.value = Math.round(Math.max(100, Math.min(max(), ev.clientX - left))))
+function dragSplit(layout: PaneLayout, e: React.PointerEvent) {
+  if (e.button !== 0) return;
+  const split = e.currentTarget as HTMLElement;
+  const grid = split.parentElement!;
+  split.setPointerCapture(e.pointerId);
+  const left = grid.getBoundingClientRect().left;
+  const max = () => grid.clientWidth - 160;
+  const move = (ev: PointerEvent) =>
+    (layout.listWidth.value = Math.round(
+      Math.max(100, Math.min(max(), ev.clientX - left)),
+    ));
   const up = () => {
-    split.removeEventListener('pointermove', move)
-    split.removeEventListener('pointerup', up)
-    layout.save()
-  }
-  split.addEventListener('pointermove', move)
-  split.addEventListener('pointerup', up)
+    split.removeEventListener("pointermove", move);
+    split.removeEventListener("pointerup", up);
+    layout.save();
+  };
+  split.addEventListener("pointermove", move);
+  split.addEventListener("pointerup", up);
 }
 
 export function TwoPane({
@@ -139,61 +162,71 @@ export function TwoPane({
   onBack,
   resizeLabel,
 }: {
-  layout: PaneLayout
-  level: PaneLevel
+  layout: PaneLayout;
+  level: PaneLevel;
   /** The list pane. */
-  list: ComponentChildren
+  list: ReactNode;
   /** The detail pane, under its back bar. */
-  detail: ComponentChildren
+  detail: ReactNode;
   /** Named in the back bar. */
-  title: string
-  backLabel: string
-  onBack: () => void
-  resizeLabel: string
+  title: string;
+  backLabel: string;
+  onBack: () => void;
+  resizeLabel: string;
 }) {
-  const rootRef = useRef<HTMLDivElement>(null)
+  const rootRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const el = rootRef.current
-    if (!el) return
-    const ro = new ResizeObserver(() => (layout.tooNarrow.value = el.clientWidth < SPLIT_MIN_W))
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [layout])
+    const el = rootRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(
+      () => (layout.tooNarrow.value = el.clientWidth < SPLIT_MIN_W),
+    );
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [layout]);
 
   return (
-    <div class="panes-root" ref={rootRef}>
+    <div className="panes-root" ref={rootRef}>
       <div
-        class="panes"
+        className="panes"
         ref={(el) => {
-          layout.el = el
+          layout.el = el;
         }}
         data-layout={layout.mode.value}
         data-level={level}
         // Its own transition name, so two panels can slide at once.
-        style={{ '--list-w': `${layout.listWidth.value}px`, '--pane-vt': `pane-${layout.key}` }}
+        style={{
+          "--list-w": `${layout.listWidth.value}px`,
+          "--pane-vt": `pane-${layout.key}`,
+        }}
       >
-        <div class="panes-list">{list}</div>
+        <div className="panes-list">{list}</div>
         <div
-          class="panes-split"
+          className="panes-split"
           role="separator"
           aria-orientation="vertical"
           aria-label={resizeLabel}
           onPointerDown={(e) => dragSplit(layout, e)}
-          onDblClick={() => {
-            layout.listWidth.value = DEFAULT_LIST_W
-            layout.save()
+          onDoubleClick={() => {
+            layout.listWidth.value = DEFAULT_LIST_W;
+            layout.save();
           }}
         />
-        <div class="panes-detail">
-          <div class="panes-back">
-            <button type="button" class="panes-back-btn" aria-label={backLabel} onClick={onBack}>
+        <div className="panes-detail">
+          <div className="panes-back">
+            <button
+              type="button"
+              className="panes-back-btn"
+              aria-label={backLabel}
+              onClick={onBack}
+            >
               <IconBack />
             </button>
-            <span class="panes-title">{title}</span>
+            <span className="panes-title">{title}</span>
           </div>
           {detail}
         </div>
       </div>
     </div>
-  )
+  );
 }

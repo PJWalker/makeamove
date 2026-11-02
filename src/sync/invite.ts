@@ -19,5 +19,7 @@ export function inviteUrl(invite: Invite, base = location.href.split('#')[0]): s
 /** Read an invite from a link or a bare hash; null if it isn't one. */
 export function parseInvite(text: string): Invite | null {
   const m = text.match(/#?join=([0-9a-z]+)\.([A-Za-z0-9_-]{16,})\s*$/)
-  return m ? { campaignId: m[1], roomKey: m[2] } : null
+  const campaignId = m?.[1]
+  const roomKey = m?.[2]
+  return campaignId && roomKey ? { campaignId, roomKey } : null
 }

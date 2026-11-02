@@ -1,4 +1,5 @@
 import type { Roll } from '../dice/notation'
+import type { ChatContent } from "./content";
 
 /*
  * Chat messages are immutable plain objects, appended to a chunk of the log
@@ -16,14 +17,14 @@ interface Base {
 }
 
 export interface TextMessage extends Base {
-  kind: 'text'
-  text: string
+  kind: "text";
+  text: ChatContent;
   /** "/me draws her sword" */
-  emote?: boolean
+  emote?: boolean;
   /** A whisper: only these devices (and the sender) see it. */
-  to?: string[]
+  to?: string[];
   /** Recipients' names when it was sent, for the "to …" line. */
-  toNames?: string[]
+  toNames?: string[];
 }
 
 /**
@@ -57,13 +58,22 @@ export interface SystemMessage extends Base {
 /** A follow-up button on an action card. Never applied automatically. */
 export interface MoveSuggestion {
   /** The system's follow-up id ("xp", "damage"). */
-  id: string
+  id: string;
   /** The button's text: "Mark XP", "Roll damage (d10+1)". */
-  label: string
+  label: string;
   /** Add to one of the character's data fields. */
-  bump?: { field: string; by: number }
+  bump?: { field: string; by: number };
+  /** Change a character resource. */
+  resource?: { id: string; by: number };
+  /** Advance a selected counter card or a system-owned count. */
+  count?: { messageId?: string; systemCounter?: string; by: number };
   /** Roll a formula and post it; with `damage`, as damage of that type (or healing) for `targets`. */
-  roll?: { formula: string; comment: string; damage?: string; targets?: MoveTarget[] }
+  roll?: {
+    formula: string;
+    comment: string;
+    damage?: string;
+    targets?: MoveTarget[];
+  };
 }
 
 /** A token a move was aimed at, as it was when the move was made. */
@@ -87,33 +97,40 @@ export interface MoveTarget {
 /** A roll each target is asked to make: a saving throw against the actor's DC. */
 export interface SaveRequest {
   /** The action each target rolls. */
-  action: string
+  action: string;
   /** Its name: "Dexterity Save". */
-  name: string
-  dc: number
-  success: string
-  failure: string
+  name: string;
+  difficulty: number;
+  success: string;
+  failure: string;
 }
 
 /** A move being made, with its roll (or a roll per target), and the outcome text. */
 export interface MoveMessage extends Base {
-  kind: 'move'
-  moveId: string
-  moveName: string
-  trigger: string
-  characterId: string
-  characterName: string
-  targets?: MoveTarget[]
-  roll?: Roll
+  kind: "move";
+  moveId: string;
+  moveName: string;
+  trigger: string;
+  /** The move's full description. */
+  text?: string;
+  characterId: string;
+  characterName: string;
+  targets?: MoveTarget[];
+  roll?: Roll;
   /** The check's result, by the system's id for it ("strong"). */
-  result?: string
+  result?: string;
+  /** Difficulty used when the system's result depends on a target number. */
+  difficulty?: number;
+  rollValues?: Record<string, number>;
+  /** Counter selected by a move that advances a shared clock. */
+  counterMessageId?: string;
   /** The outcome for the result, or the move's text when it doesn't roll. */
-  outcome: string
-  suggestions: MoveSuggestion[]
+  outcome: string;
+  suggestions: MoveSuggestion[];
   /** Asks every target to roll; answers are kept in the campaign's message state. */
-  save?: SaveRequest
+  save?: SaveRequest;
   /** A concentration check: failing the save ends the character's concentration. */
-  concentration?: true
+  concentration?: true;
 }
 
 /** A real-time countdown: "/timer 60s World ends". Restarts and stops are kept in the message state. */
@@ -128,10 +145,12 @@ export interface TimerMessage extends Base {
 
 /** A counter the table moves by hand: "/count 0/8 The cops arrive". Its value is kept in the message state. */
 export interface CounterMessage extends Base {
-  kind: 'counter'
-  label: string
-  start: number
-  max?: number
+  kind: "counter";
+  label: string;
+  start: number;
+  max?: number;
+  /** Stable key for a count declared by the campaign's game system. */
+  systemCounter?: string;
 }
 
 export type ChatMessage = TextMessage | RollMessage | SystemMessage | MoveMessage | TimerMessage | CounterMessage

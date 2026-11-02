@@ -1,11 +1,13 @@
-import { useSignal, type Signal } from '@preact/signals'
+import { useSignal, type Signal } from '@preact/signals-react'
 import { addItem, canEdit, getCharacter, selectedCharacterId, startMove, systemOf } from '../characters/api'
+import { parseCommaList } from '../lib/list'
 import { deleteHomebrew, listHomebrew, saveGear, saveMove, type HomebrewEntry } from '../homebrew/homebrew'
 import type { Campaign } from '../store/campaign'
 import type { EntityGraphic } from "../graphics";
 import { useY } from '../store/useY'
 import type { ActionDef, CheckStep, Effect, GameSystem, ItemDef, TargetSpec } from '../systems/types'
 import { Button } from "../ui/Button";
+import { PanelActions } from "./PanelActions";
 import { IconAdd, IconBack, IconDelete } from '../ui/icons'
 import { List, ListGroup } from "../ui/List";
 import { Segmented } from '../ui/Segmented'
@@ -82,8 +84,8 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
     const found = id ? entries.find((e) => e.id === id) : undefined
     const close = () => (editing.value = null)
     return (
-      <div class="panel-scroll items-panel">
-        <div class="sheet-row">
+      <div className="panel-scroll items-panel">
+        <div className="sheet-row">
           <Button variant="ghost" size="sm" onClick={close}>
             <IconBack size={22} /> Items
           </Button>
@@ -92,14 +94,14 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
           <GearForm
             campaign={campaign}
             system={system}
-            initial={found?.kind === "gear" ? found.item : undefined}
+            {...(found?.kind === "gear" ? { initial: found.item } : {})}
             onDone={close}
           />
         ) : (
           <MoveForm
             campaign={campaign}
             system={system}
-            initial={found?.kind === "move" ? found.move : undefined}
+            {...(found?.kind === "move" ? { initial: found.move } : {})}
             onDone={close}
           />
         )}
@@ -110,8 +112,8 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
   const gear = entries.filter((e) => e.kind === 'gear')
   const moves = entries.filter((e) => e.kind === 'move')
   return (
-    <div class="panel-scroll items-panel">
-      <div class="sheet-row items-new">
+    <div className="panel-scroll items-panel">
+      <PanelActions>
         <Button
           size="sm"
           onClick={() => (editing.value = { kind: "gear", id: null })}
@@ -124,8 +126,8 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
         >
           <IconAdd size={22} /> New move
         </Button>
-      </div>
-      {!entries.length && <p class="empty">No gear or moves yet.</p>}
+      </PanelActions>
+      {!entries.length && <p className="empty">No gear or moves yet.</p>}
       {gear.length > 0 && (
         <ListGroup label="Gear" count={gear.length} {...fold("gear")}>
           <List>
@@ -219,12 +221,12 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
 /** A text input bound to a signal. */
 function Text({ label, value, multiline, placeholder }: { label: string; value: Signal<string>; multiline?: boolean; placeholder?: string }) {
   return (
-    <label class="field">
+    <label className="field">
       {label}
       {multiline ? (
-        <textarea class="input bevel" rows={4} value={value.value} placeholder={placeholder} onInput={(e) => (value.value = e.currentTarget.value)} />
+        <textarea  rows={4} value={value.value} placeholder={placeholder} onInput={(e) => (value.value = e.currentTarget.value)} />
       ) : (
-        <input class="input bevel" value={value.value} placeholder={placeholder} onInput={(e) => (value.value = e.currentTarget.value)} />
+        <input  value={value.value} placeholder={placeholder} onInput={(e) => (value.value = e.currentTarget.value)} />
       )}
     </label>
   )
@@ -232,16 +234,15 @@ function Text({ label, value, multiline, placeholder }: { label: string; value: 
 
 function NumberField({ label, value, min = 0 }: { label: string; value: Signal<number>; min?: number }) {
   return (
-    <label class="field">
+    <label className="field">
       {label}
-      <input class="input bevel" type="number" min={min} value={value.value} onInput={(e) => (value.value = Number(e.currentTarget.value) || 0)} />
+      <input  type="number" min={min} value={value.value} onInput={(e) => (value.value = Number(e.currentTarget.value) || 0)} />
     </label>
   )
 }
 
 const splitTags = (s: string) =>
-  s
-    .split(',')
+  parseCommaList(s)
     .map((t) => t.trim())
     .filter(Boolean)
 
@@ -294,50 +295,57 @@ function GearForm({ campaign, system, initial, onDone }: { campaign: Campaign; s
 
   return (
     <form
-      class="creation-form homebrew-form"
+      className="creation-form homebrew-form form-layout"
       onSubmit={(e) => {
         e.preventDefault();
         save();
       }}
     >
-      <h3 class="sheet-heading">{initial ? "Edit gear" : "New gear"}</h3>
-      <Text label="Name" value={name} />
-      <Text label="Description" value={description} multiline />
-      <div class="sheet-row">
-        <NumberField label="Weight" value={weight} />
-        <NumberField label="Uses" value={uses} />
-      </div>
-      <Text label="Tags" value={tags} placeholder="close, +1 armor" />
-      <label class="stat-deb">
-        <input
-          type="checkbox"
-          checked={equippable.value}
-          onChange={() => (equippable.value = !equippable.value)}
+      <h3 className="form-title">{initial ? "Edit gear" : "New gear"}</h3>
+      <section className="form-section">
+        <h4 className="form-heading">Details</h4>
+        <Text label="Name" value={name} />
+        <Text label="Description" value={description} multiline />
+        <div className="sheet-row">
+          <NumberField label="Weight" value={weight} />
+          <NumberField label="Uses" value={uses} />
+        </div>
+        <Text label="Tags" value={tags} placeholder="close, +1 armor" />
+      </section>
+      <section className="form-section">
+        <h4 className="form-heading">Appearance and use</h4>
+        <label className="stat-deb">
+          <input
+            type="checkbox"
+            checked={equippable.value}
+            onChange={() => (equippable.value = !equippable.value)}
+          />
+          Equippable
+        </label>
+        <GraphicPicker
+          graphic={
+            resetGraphic.value
+              ? getDefaultEntityGraphic(campaign, "item", initial?.id ?? "")
+              : (graphic.value ??
+                getEntityGraphic(campaign, "item", initial?.id ?? ""))
+          }
+          onChange={(next) => {
+            graphic.value = next;
+            resetGraphic.value = false;
+          }}
+          onReset={() => {
+            graphic.value = undefined;
+            resetGraphic.value = true;
+          }}
         />
-        Equippable
-      </label>
-      <GraphicPicker
-        graphic={
-          resetGraphic.value
-            ? getDefaultEntityGraphic(campaign, "item", initial?.id ?? "")
-            : (graphic.value ??
-              getEntityGraphic(campaign, "item", initial?.id ?? ""))
-        }
-        onChange={(next) => {
-          graphic.value = next;
-          resetGraphic.value = false;
-        }}
-        onReset={() => {
-          graphic.value = undefined;
-          resetGraphic.value = true;
-        }}
-      />
-      <div class="field">
-        Effects
+      </section>
+      <section className="form-section">
+        <h4 className="form-heading">Effects</h4>
+        <div className="form-fields">
         {effects.value.map((e, i) => (
-          <div key={i} class="sheet-row homebrew-effect">
+          <div key={i} className="sheet-row homebrew-effect">
             <select
-              class="input bevel"
+
               aria-label="Effect"
               value={e.type}
               onChange={(ev) =>
@@ -354,7 +362,7 @@ function GearForm({ campaign, system, initial, onDone }: { campaign: Campaign; s
             </select>
             {e.type === "rollBonus" ? (
               <select
-                class="input bevel"
+
                 aria-label="With stat"
                 value={e.stat}
                 onChange={(ev) =>
@@ -370,7 +378,7 @@ function GearForm({ campaign, system, initial, onDone }: { campaign: Campaign; s
               </select>
             ) : (
               <input
-                class="input bevel"
+
                 aria-label="Value name"
                 placeholder="armor, ac, speed"
                 value={e.path}
@@ -380,7 +388,7 @@ function GearForm({ campaign, system, initial, onDone }: { campaign: Campaign; s
               />
             )}
             <input
-              class="input bevel homebrew-num"
+              className="homebrew-num"
               type="number"
               aria-label="Amount"
               value={e.value}
@@ -412,7 +420,8 @@ function GearForm({ campaign, system, initial, onDone }: { campaign: Campaign; s
         >
           <IconAdd size={22} /> Add effect
         </Button>
-      </div>
+        </div>
+      </section>
       <FormActions
         campaign={campaign}
         id={initial?.id}
@@ -484,109 +493,123 @@ function MoveForm({ campaign, system, initial, onDone }: { campaign: Campaign; s
 
   return (
     <form
-      class="creation-form homebrew-form"
+      className="creation-form homebrew-form form-layout"
       onSubmit={(e) => {
         e.preventDefault();
         save();
       }}
     >
-      <h3 class="sheet-heading">{initial ? "Edit move" : "New move"}</h3>
-      <Text label="Name" value={name} />
-      <label class="field">
-        Kind
-        <select
-          class="input bevel"
-          value={category.value}
-          onChange={(e) => (category.value = e.currentTarget.value)}
-        >
-          {system.actionCategories.map((k) => (
-            <option key={k.id} value={k.id}>
-              {k.label}
-            </option>
-          ))}
-        </select>
-      </label>
-      <Text label="Trigger" value={trigger} placeholder="When you…" />
-      <Text label="Text" value={text} multiline />
-      <GraphicPicker
-        graphic={
-          resetGraphic.value
-            ? getDefaultEntityGraphic(campaign, "move", initial?.id ?? "")
-            : (graphic.value ??
-              getEntityGraphic(campaign, "move", initial?.id ?? ""))
-        }
-        onChange={(next) => {
-          graphic.value = next;
-          resetGraphic.value = false;
-        }}
-        onReset={() => {
-          graphic.value = undefined;
-          resetGraphic.value = true;
-        }}
-      />
-      <div class="field">
-        Roll
-        <Segmented
-          label="Roll"
-          value={rolls.value}
-          options={[
-            { id: "none", label: "No roll" },
-            { id: "stat", label: "With a stat" },
-            { id: "ask", label: "Stat chosen when made" },
-          ]}
-          onChange={(v) => (rolls.value = v)}
-        />
-        {rolls.value === "stat" && (
+      <h3 className="form-title">{initial ? "Edit move" : "New move"}</h3>
+      <section className="form-section">
+        <h4 className="form-heading">Details</h4>
+        <Text label="Name" value={name} />
+        <label className="field">
+          Kind
           <select
-            class="input bevel"
-            aria-label="Stat"
-            value={stat.value}
-            onChange={(e) => (stat.value = e.currentTarget.value)}
+
+            value={category.value}
+            onChange={(e) => (category.value = e.currentTarget.value)}
           >
-            {system.stats.map((s) => (
-              <option key={s.id} value={s.id}>
-                {system.baseRoll} + {s.name}
+            {system.actionCategories.map((k) => (
+              <option key={k.id} value={k.id}>
+                {k.label}
               </option>
             ))}
           </select>
-        )}
-      </div>
-      {rolls.value !== "none" &&
-        system.results.map((r) => (
-          <label key={r.id} class="field">
-            {r.label || "Otherwise"}
-            <textarea
-              class="input bevel"
-              rows={2}
-              value={outcomes.value[r.id] ?? ""}
-              onInput={(e) =>
-                (outcomes.value = {
-                  ...outcomes.value,
-                  [r.id]: e.currentTarget.value,
-                })
-              }
-            />
-          </label>
-        ))}
-      <div class="field">
-        Targets
-        <Segmented
-          label="Targets"
-          value={targets.value}
-          options={[
-            { id: "none", label: "None" },
-            { id: "one", label: "One" },
-            { id: "many", label: "Any number" },
-          ]}
-          onChange={(v) => (targets.value = v)}
+        </label>
+        <Text label="Trigger" value={trigger} placeholder="When you…" />
+        <Text label="Text" value={text} multiline />
+      </section>
+      <section className="form-section">
+        <h4 className="form-heading">Appearance</h4>
+        <GraphicPicker
+          graphic={
+            resetGraphic.value
+              ? getDefaultEntityGraphic(campaign, "move", initial?.id ?? "")
+              : (graphic.value ??
+                getEntityGraphic(campaign, "move", initial?.id ?? ""))
+          }
+          onChange={(next) => {
+            graphic.value = next;
+            resetGraphic.value = false;
+          }}
+          onReset={() => {
+            graphic.value = undefined;
+            resetGraphic.value = true;
+          }}
         />
-        {targets.value !== "none" && (
-          <NumberFieldInline
-            label={`Range (${system.scene.unitName}, 0 for any)`}
-            value={range}
+      </section>
+      <section className="form-section">
+        <h4 className="form-heading">Roll</h4>
+        <div className="form-fields">
+          <div className="field">
+            Type
+            <Segmented
+              label="Roll type"
+              value={rolls.value}
+              options={[
+                { id: "none", label: "No roll" },
+                { id: "stat", label: "With a stat" },
+                { id: "ask", label: "Stat chosen when made" },
+              ]}
+              onChange={(v) => (rolls.value = v)}
+            />
+            {rolls.value === "stat" && (
+              <select
+
+                aria-label="Stat"
+                value={stat.value}
+                onChange={(e) => (stat.value = e.currentTarget.value)}
+              >
+                {system.stats.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {system.baseRoll} + {s.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+          {rolls.value !== "none" &&
+            system.results.map((r) => (
+              <label key={r.id} className="field">
+                {r.label || "Otherwise"}
+                <textarea
+
+                  rows={2}
+                  value={outcomes.value[r.id] ?? ""}
+                  onInput={(e) =>
+                    (outcomes.value = {
+                      ...outcomes.value,
+                      [r.id]: e.currentTarget.value,
+                    })
+                  }
+                />
+              </label>
+            ))}
+        </div>
+      </section>
+      <section className="form-section">
+        <h4 className="form-heading">Targets</h4>
+        <div className="field">
+          Selection
+          <Segmented
+            label="Target selection"
+            value={targets.value}
+            options={[
+              { id: "none", label: "None" },
+              { id: "one", label: "One" },
+              { id: "many", label: "Any number" },
+            ]}
+            onChange={(v) => (targets.value = v)}
           />
-        )}
-      </div>
+          {targets.value !== "none" && (
+            <NumberFieldInline
+              label={`Range (${system.scene.unitName}, 0 for any)`}
+              value={range}
+            />
+          )}
+        </div>
+      </section>
       <FormActions
         campaign={campaign}
         id={initial?.id}
@@ -599,16 +622,16 @@ function MoveForm({ campaign, system, initial, onDone }: { campaign: Campaign; s
 
 function NumberFieldInline({ label, value }: { label: string; value: Signal<number> }) {
   return (
-    <label class="sheet-row">
-      <input class="input bevel homebrew-num" type="number" min={0} value={value.value} onInput={(e) => (value.value = Number(e.currentTarget.value) || 0)} />
-      <span class="muted">{label}</span>
+    <label className="sheet-row">
+      <input className="homebrew-num" type="number" min={0} value={value.value} onInput={(e) => (value.value = Number(e.currentTarget.value) || 0)} />
+      <span className="muted">{label}</span>
     </label>
   )
 }
 
-function FormActions({ campaign, id, ready, onDone }: { campaign: Campaign; id?: string; ready: boolean; onDone: () => void }) {
+function FormActions({ campaign, id, ready, onDone }: { campaign: Campaign; id?: string | undefined; ready: boolean; onDone: () => void }) {
   return (
-    <div class="form-actions">
+    <div className="form-actions">
       {id && (
         <Button
           variant="danger"

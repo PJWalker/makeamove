@@ -116,7 +116,9 @@ export class BlobExchange {
     if ((await sha256Hex(blob)) !== hash) return
     if (!this.pending.delete(hash)) return
     clearInterval(pending.retry)
-    await this.store.put(blob)
+    await Promise.resolve()
+      .then(() => this.store.put(blob))
+      .catch(() => undefined);
     for (const w of pending.waiters) w(blob)
   }
 }

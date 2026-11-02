@@ -1,4 +1,4 @@
-import { computed, effect, signal } from '@preact/signals'
+import { computed, effect, signal } from '@preact/signals-react'
 import { dropLine, indexAmong } from '../ui/reorder'
 import { withTransition } from '../ui/transition'
 import { nextZ, noteZ } from '../ui/windows'

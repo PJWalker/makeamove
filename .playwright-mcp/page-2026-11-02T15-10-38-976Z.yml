@@ -1,0 +1,38 @@
+- main [ref=f78e3]:
+  - generic [ref=f78e4]:
+    - heading "Make a Move" [level=1] [ref=f78e6]
+    - region [ref=f78e7]:
+      - heading "Your campaigns" [level=2] [ref=f78e8]
+      - list [ref=f78e9]:
+        - listitem [ref=f78e10]:
+          - button "hi GM · No system · opened 9 minutes ago" [ref=f78e11] [cursor=pointer]:
+            - generic [ref=f78e12]: hi
+            - generic [ref=f78e13]: GM · No system · opened 9 minutes ago
+        - listitem [ref=f78e14]:
+          - button "hi GM · Dungeon World · opened 14 minutes ago" [ref=f78e15] [cursor=pointer]:
+            - generic [ref=f78e16]: hi
+            - generic [ref=f78e17]: GM · Dungeon World · opened 14 minutes ago
+    - form [ref=f78e18]:
+      - heading "Start a campaign" [level=2] [ref=f78e19]
+      - generic [ref=f78e20]:
+        - generic [ref=f78e21]:
+          - text: Campaign name
+          - textbox "Campaign name" [ref=f78e22]:
+            - /placeholder: The Lost Barrows
+        - generic [ref=f78e23]:
+          - text: Your name
+          - textbox "Your name" [ref=f78e24]:
+            - /placeholder: Robin
+            - text: h
+      - generic [ref=f78e26]:
+        - text: System
+        - combobox "System" [ref=f78e27]:
+          - option "Choose a system" [disabled]
+          - option "Dungeon World"
+          - option "Dungeon World 2"
+          - option "Blades in the Dark"
+          - option "Daggerheart"
+          - option "D&D 5.5e"
+          - option "Test system"
+          - option "No system" [selected]
+      - button "Create campaign" [ref=f78e29]

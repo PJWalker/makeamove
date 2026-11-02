@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { rank, scoreAction, splitPrefix } from '../search'
+
+import { rank, scoreAction } from "../search";
 import type { Action } from '../types'
 
 const act = (id: string, title: string, extra: Partial<Action> = {}): Action => ({
@@ -18,12 +19,12 @@ const ping = act('tool:ping', 'Ping', { kind: 'tool' })
 const fit = act('cmd:fit', 'Fit to scene')
 
 describe('scoreAction', () => {
-  it('prefers exact over prefix over word-prefix over substring', () => {
-    const q = (title: string) => scoreAction(act('x', title), 'sla')
-    expect(q('Sla')).toBeGreaterThan(q('Slash'))
-    expect(q('Slash')).toBeGreaterThan(q('Hack and Slash'))
-    expect(q('Hack and Slash')).toBeGreaterThan(q('Gaslamp'))
-  })
+  it("matches misspellings and ranks exact results higher", () => {
+    expect(scoreAction(act("x", "Strike"), "strkie")).toBeGreaterThan(0);
+    expect(
+      (rank([act("typo", "Strkie"), act("exact", "Strike")], "strike"))[0]!.id,
+    ).toBe("exact");
+  });
 
   it('matches aliases and tags, and needs every word to match', () => {
     expect(scoreAction(hs, 'melee')).toBeGreaterThan(0)
@@ -42,21 +43,12 @@ describe('scoreAction', () => {
   })
 })
 
-describe('splitPrefix', () => {
-  it('reads a narrowing prefix', () => {
-    expect(splitPrefix('>fit').query).toBe('fit')
-    expect(splitPrefix('fit').narrow).toBeNull()
-  })
-})
-
 describe('rank', () => {
   const all = [fit, ping, hs, volley]
 
-  it('narrows by prefix', () => {
-    expect(rank(all, '/').map((a) => a.id)).toEqual(['move:hs', 'move:volley'])
-    expect(rank(all, '>').map((a) => a.id)).toEqual(['cmd:fit', 'tool:ping'])
-    expect(rank(all, '/vol').map((a) => a.id)).toEqual(['move:volley'])
-  })
+  it("does not narrow results based on a leading character", () => {
+    expect(rank(all, "/ping").map((a) => a.id)).toContain("tool:ping");
+  });
 
   it('shows recents then own moves when nothing is typed', () => {
     const mine = { ...volley, mine: true }
@@ -69,10 +61,10 @@ describe('rank', () => {
   it('ranks the selected character, recents and available actions higher', () => {
     const a = act('a', 'Strike')
     const b = act('b', 'Strike', { mine: true })
-    expect(rank([a, b], 'strike')[0].id).toBe('b')
-    expect(rank([a, act('c', 'Strike')], 'strike', { recent: ['c'] })[0].id).toBe('c')
+    expect((rank([a, b], 'strike'))[0]!.id).toBe('b')
+    expect((rank([a, act('c', 'Strike')], 'strike', { recent: ['c'] }))[0]!.id).toBe('c')
     const off = act('d', 'Strike', { available: 'No character selected' })
-    expect(rank([off, a], 'strike')[0].id).toBe('a')
+    expect((rank([off, a], 'strike'))[0]!.id).toBe('a')
     expect(rank([off], 'strike')).toHaveLength(1)
   })
 

@@ -9,7 +9,7 @@ let running = 0
  */
 export const inTransition = () => running > 0
 
-/** Let Preact flush the renders queued by a state change. */
+/** Let React flush the renders queued by a state change. */
 const nextRender = () => new Promise<void>((resolve) => setTimeout(resolve, 0))
 
 /**

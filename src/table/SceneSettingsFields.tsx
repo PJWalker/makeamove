@@ -14,10 +14,12 @@ export function SceneSettingsFields({
   campaign,
   sceneId,
   scene,
+  showHeading = true,
 }: {
   campaign: Campaign;
   sceneId: string;
   scene: SceneDoc;
+  showHeading?: boolean;
 }) {
   const grid = useY(scene.settings, () => scene.grid());
   const lighting = useY(scene.settings, () => scene.lighting());
@@ -33,190 +35,194 @@ export function SceneSettingsFields({
     Number.isFinite(parseFloat(v)) ? parseFloat(v) : fallback;
 
   return (
-    <section class="scene-settings-fields" aria-label="Scene settings">
-      <h3 class="eyebrow">Scene settings</h3>
-      <div class="field">
-        Grid
-        <Segmented
-          label="Grid type"
-          value={grid.type}
-          options={GRID_TYPES}
-          disabled={!isGm}
-          onChange={(type) => scene.setGrid({ type })}
-        />
-      </div>
-      <div class="field-row">
-        <label class="field">
-          Cell size (px)
-          <input
-            class="input bevel"
-            type="number"
-            min={MIN_GRID_SIZE}
-            step={1}
-            value={grid.size}
-            disabled={!isGm || grid.type === "none"}
-            onChange={(e) =>
-              scene.setGrid({
-                size: Math.max(
-                  MIN_GRID_SIZE,
-                  num(e.currentTarget.value, DEFAULT_GRID.size),
-                ),
-              })
-            }
-          />
-        </label>
-        <label class="field">
-          Offset X
-          <input
-            class="input bevel"
-            type="number"
-            step={1}
-            value={grid.offsetX}
-            disabled={!isGm || grid.type === "none"}
-            onChange={(e) =>
-              scene.setGrid({ offsetX: num(e.currentTarget.value, 0) })
-            }
-          />
-        </label>
-        <label class="field">
-          Offset Y
-          <input
-            class="input bevel"
-            type="number"
-            step={1}
-            value={grid.offsetY}
-            disabled={!isGm || grid.type === "none"}
-            onChange={(e) =>
-              scene.setGrid({ offsetY: num(e.currentTarget.value, 0) })
-            }
-          />
-        </label>
-      </div>
-      <div class="field-row">
-        <label class="field">
-          Each cell is
-          <input
-            class="input bevel"
-            type="number"
-            min={0}
-            step="any"
-            value={grid.unit}
-            disabled={!isGm}
-            onChange={(e) =>
-              scene.setGrid({
-                unit: Math.max(
-                  0,
-                  num(e.currentTarget.value, DEFAULT_GRID.unit),
-                ),
-              })
-            }
-          />
-        </label>
-        <label class="field">
-          Unit
-          <input
-            class="input bevel"
-            value={grid.unitName}
-            disabled={!isGm}
-            autoComplete="off"
-            onChange={(e) =>
-              scene.setGrid({ unitName: e.currentTarget.value.trim() })
-            }
-          />
-        </label>
-      </div>
-      {grid.type === "square" && (
-        <div class="field">
-          Diagonal steps count as
+    <section className="form-layout" aria-label="Scene settings">
+      {showHeading && <h3 className="form-title">Scene settings</h3>}
+      <section className="form-section" aria-label="Grid">
+        <h4 className="form-heading">Grid</h4>
+        <div className="field">
+          Type
           <Segmented
-            label="Diagonal steps"
-            value={grid.diagonal}
-            options={DIAGONAL_RULES}
+            label="Grid type"
+            value={grid.type}
+            options={GRID_TYPES}
             disabled={!isGm}
-            onChange={(diagonal) => scene.setGrid({ diagonal })}
+            onChange={(type) => scene.setGrid({ type })}
           />
         </div>
-      )}
-      <div class="field">
-        Canvas colour
-        <span class="colour-row">
-          <Segmented
-            label="Canvas colour"
-            value={auto ? "auto" : "custom"}
-            options={[
-              {
-                id: "auto",
-                label: "Auto",
-                title: "A dark shade of the map’s colour",
-              },
-              { id: "custom", label: "Custom" },
-            ]}
-            disabled={!isGm}
-            onChange={(v) =>
-              campaign.updateScene(sceneId, {
-                canvasColour: v === "auto" ? null : shown,
-              })
-            }
-          />
-          <input
-            type="color"
-            class="colour-input bevel"
-            value={shown}
-            aria-label="Pick a canvas colour"
-            disabled={!isGm}
-            onInput={(e) =>
-              campaign.updateScene(sceneId, {
-                canvasColour: e.currentTarget.value,
-              })
-            }
-          />
-        </span>
-      </div>
-      <div class="field">
-        Lighting
-        <Segmented
-          label="Lighting"
-          value={lighting.enabled ? "on" : "off"}
-          options={[
-            { id: "off", label: "Off" },
-            { id: "on", label: "Dynamic" },
-          ]}
-          disabled={!isGm}
-          onChange={(v) => scene.setLighting({ enabled: v === "on" })}
-        />
-        {lighting.enabled && (
-          <label class="field">
-            Darkness where no light reaches:{" "}
-            {Math.round(lighting.darkness * 100)}%
+        <div className="field-row">
+          <label className="field">
+            Cell size (px)
             <input
-              type="range"
-              min={0}
-              max={100}
-              value={Math.round(lighting.darkness * 100)}
-              disabled={!isGm}
+              type="number"
+              min={MIN_GRID_SIZE}
+              step={1}
+              value={grid.size}
+              disabled={!isGm || grid.type === "none"}
               onChange={(e) =>
-                scene.setLighting({
-                  darkness: Number(e.currentTarget.value) / 100,
+                scene.setGrid({
+                  size: Math.max(
+                    MIN_GRID_SIZE,
+                    num(e.currentTarget.value, DEFAULT_GRID.size),
+                  ),
                 })
               }
             />
           </label>
+          <label className="field">
+            Offset X
+            <input
+              type="number"
+              step={1}
+              value={grid.offsetX}
+              disabled={!isGm || grid.type === "none"}
+              onChange={(e) =>
+                scene.setGrid({ offsetX: num(e.currentTarget.value, 0) })
+              }
+            />
+          </label>
+          <label className="field">
+            Offset Y
+            <input
+              type="number"
+              step={1}
+              value={grid.offsetY}
+              disabled={!isGm || grid.type === "none"}
+              onChange={(e) =>
+                scene.setGrid({ offsetY: num(e.currentTarget.value, 0) })
+              }
+            />
+          </label>
+        </div>
+        <div className="field-row">
+          <label className="field">
+            Each cell is
+            <input
+              type="number"
+              min={0}
+              step="any"
+              value={grid.unit}
+              disabled={!isGm}
+              onChange={(e) =>
+                scene.setGrid({
+                  unit: Math.max(
+                    0,
+                    num(e.currentTarget.value, DEFAULT_GRID.unit),
+                  ),
+                })
+              }
+            />
+          </label>
+          <label className="field">
+            Unit
+            <input
+              value={grid.unitName}
+              disabled={!isGm}
+              autoComplete="off"
+              onChange={(e) =>
+                scene.setGrid({ unitName: e.currentTarget.value.trim() })
+              }
+            />
+          </label>
+        </div>
+        {grid.type === "square" && (
+          <div className="field">
+            Diagonal steps count as
+            <Segmented
+              label="Diagonal steps"
+              value={grid.diagonal}
+              options={DIAGONAL_RULES}
+              disabled={!isGm}
+              onChange={(diagonal) => scene.setGrid({ diagonal })}
+            />
+          </div>
         )}
-      </div>
-      <div class="field">
-        Players see
-        <Segmented
-          label="Players see"
-          value={lighting.vision ? "sight" : "all"}
-          options={[
-            { id: "all", label: "Everything" },
-            { id: "sight", label: "What their tokens see" },
-          ]}
-          disabled={!isGm}
-          onChange={(v) => scene.setLighting({ vision: v === "sight" })}
-        />
-      </div>
-      {!isGm && <p class="muted">Only the GM can change scene settings.</p>}
+      </section>
+      <section className="form-section" aria-label="Appearance">
+        <h4 className="form-heading">Appearance</h4>
+        <div className="field">
+          Canvas colour
+          <span className="colour-row">
+            <Segmented
+              label="Canvas colour"
+              value={auto ? "auto" : "custom"}
+              options={[
+                {
+                  id: "auto",
+                  label: "Auto",
+                  title: "A dark shade of the map’s colour",
+                },
+                { id: "custom", label: "Custom" },
+              ]}
+              disabled={!isGm}
+              onChange={(v) =>
+                campaign.updateScene(sceneId, {
+                  canvasColour: v === "auto" ? null : shown,
+                })
+              }
+            />
+            <input
+              type="color"
+              className="colour-input"
+              value={shown}
+              aria-label="Pick a canvas colour"
+              disabled={!isGm}
+              onInput={(e) =>
+                campaign.updateScene(sceneId, {
+                  canvasColour: e.currentTarget.value,
+                })
+              }
+            />
+          </span>
+        </div>
+      </section>
+      <section className="form-section" aria-label="Lighting">
+        <h4 className="form-heading">Lighting</h4>
+        <div className="field">
+          Mode
+          <Segmented
+            label="Lighting mode"
+            value={lighting.enabled ? "on" : "off"}
+            options={[
+              { id: "off", label: "Off" },
+              { id: "on", label: "Dynamic" },
+            ]}
+            disabled={!isGm}
+            onChange={(v) => scene.setLighting({ enabled: v === "on" })}
+          />
+          {lighting.enabled && (
+            <label className="field">
+              Darkness where no light reaches: {" "}
+              {Math.round(lighting.darkness * 100)}%
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={Math.round(lighting.darkness * 100)}
+                disabled={!isGm}
+                onChange={(e) =>
+                  scene.setLighting({
+                    darkness: Number(e.currentTarget.value) / 100,
+                  })
+                }
+              />
+            </label>
+          )}
+        </div>
+        <div className="field">
+          Players see
+          <Segmented
+            label="Players see"
+            value={lighting.vision ? "sight" : "all"}
+            options={[
+              { id: "all", label: "Everything" },
+              { id: "sight", label: "What their tokens see" },
+            ]}
+            disabled={!isGm}
+            onChange={(v) => scene.setLighting({ vision: v === "sight" })}
+          />
+        </div>
+      </section>
+      {!isGm && <p className="muted">Only the GM can change scene settings.</p>}
     </section>
   );
 }

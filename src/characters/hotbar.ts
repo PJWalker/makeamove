@@ -1,5 +1,6 @@
 import type { Campaign } from '../store/campaign'
 import { device } from '../store/device'
+
 import { actionsFor, derive, itemActive } from './store'
 import { getCharacter, selectedCharacterId, systemOf } from './api'
 
@@ -27,7 +28,10 @@ export function shift(slots: string[], id: string, by: -1 | 1): string[] {
   const j = i + by
   if (i < 0 || j < 0 || j >= slots.length) return slots
   const next = [...slots]
-  ;[next[i], next[j]] = [next[j], next[i]]
+  const left = (next)[i]!;
+  const right = (next)[j]!;
+  next[i] = right;
+  next[j] = left;
   return next
 }
 

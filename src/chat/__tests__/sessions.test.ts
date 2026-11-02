@@ -1,9 +1,17 @@
 import { describe, expect, it } from 'vitest'
+import { contentFromText, plainText } from "../content";
 import { logRows, splitSessions } from '../sessions'
 import { canDelete, type ChatMessage } from '../types'
 
 let n = 0
-const text = (t: string, author = 'pat'): ChatMessage => ({ kind: 'text', text: t, id: `m${n++}`, hlc: `${n}`, author, name: author })
+const text = (t: string, author = "pat"): ChatMessage => ({
+  kind: "text",
+  text: contentFromText(t),
+  id: `m${n++}`,
+  hlc: `${n}`,
+  author,
+  name: author,
+});
 const marker = (session: number, end = false): ChatMessage => ({
   kind: 'system',
   text: `Session ${session} ${end ? 'ends' : 'begins'}`,
@@ -45,7 +53,18 @@ describe('deleting', () => {
 
 describe('the rows the log shows', () => {
   const log = () => [text('pre'), marker(1), text('one'), text('one more'), marker(2), text('two', 'kim'), text('two again', 'kim'), text('reply')]
-  const describeRows = (rows: ReturnType<typeof logRows>) => rows.map((r) => (r.kind === 'fold' ? `fold ${r.title} (${r.count})${r.open ? ' open' : ''}` : `${(r.m as { text: string }).text}${r.header ? ' *' : ''}`))
+  const describeRows = (rows: ReturnType<typeof logRows>) =>
+    rows.map((r) => {
+      if (r.kind === "fold")
+        return `fold ${r.title} (${r.count})${r.open ? " open" : ""}`;
+      const text =
+        r.m.kind === "text"
+          ? plainText(r.m.text)
+          : r.m.kind === "system"
+            ? r.m.text
+            : "";
+      return `${text}${r.header ? " *" : ""}`;
+    });
 
   it('folds earlier sessions and shows the current one from its marker, with a header where the speaker changes', () => {
     expect(describeRows(logRows(log(), () => false))).toEqual([

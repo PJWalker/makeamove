@@ -1,4 +1,5 @@
 import type { Rect } from './camera'
+
 import type { Point } from './grid'
 import { distanceToStroke } from './stroke'
 import { isPlainToken, type SceneElement, type ShapeKind, type Transform } from './types'
@@ -143,10 +144,11 @@ export function hits(el: SceneElement, p: Point, tolerance = 0): boolean {
 
 /** Whether p is inside a polygon (even-odd). */
 export function insidePolygon(poly: Point[], p: Point): boolean {
+  if (poly.length < 3) return false
   let inside = false
   for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const a = poly[i]
-    const b = poly[j]
+    const a = (poly)[i]!
+    const b = (poly)[j]!
     if (a.y > p.y !== b.y > p.y && p.x < ((b.x - a.x) * (p.y - a.y)) / (b.y - a.y) + a.x) inside = !inside
   }
   return inside
@@ -154,15 +156,16 @@ export function insidePolygon(poly: Point[], p: Point): boolean {
 
 /** An area's corners in the world, at its size and rotation. */
 export function areaPolygon(el: Transform & { points: number[]; bw: number; bh: number }): Point[] {
+  if (el.points.length % 2 !== 0) throw new RangeError('Area points must be coordinate pairs')
   const sx = el.w / el.bw
   const sy = el.h / el.bh
   const out: Point[] = []
-  for (let i = 0; i < el.points.length; i += 2) out.push(fromLocal(el, { x: el.points[i] * sx, y: el.points[i + 1] * sy }))
+  for (let i = 0; i < el.points.length; i += 2) out.push(fromLocal(el, { x: (el.points)[i]! * sx, y: (el.points)[i + 1]! * sy }))
   return out
 }
 
 export type Corner = 0 | 1 | 2 | 3
-export const CORNER_SIGNS: Point[] = [
+export const CORNER_SIGNS: readonly [Point, Point, Point, Point] = [
   { x: -1, y: -1 },
   { x: 1, y: -1 },
   { x: 1, y: 1 },
@@ -174,7 +177,7 @@ export const CORNER_SIGNS: Point[] = [
  * where it is. With `keepAspect` the shape scales uniformly.
  */
 export function resizeFromCorner(t: Transform, corner: Corner, p: Point, keepAspect: boolean, min = 8): Transform {
-  const sign = CORNER_SIGNS[corner]
+  const sign = (CORNER_SIGNS)[corner]!
   const opposite = { x: (-sign.x * t.w) / 2, y: (-sign.y * t.h) / 2 }
   const l = toLocal(t, p)
   let w = Math.max(min, (l.x - opposite.x) * sign.x)

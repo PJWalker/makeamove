@@ -14,6 +14,32 @@ export interface TokenLabelPlan {
   small: boolean;
 }
 
+export function zoomTokenBars(
+  box: LabelBox,
+  height: number,
+  gap: number,
+  scales: number[],
+) {
+  const extra = scales.reduce(
+    (total, scale) => total + height * (scale - 1),
+    0,
+  );
+  let top = box.y - extra / 2;
+  const bars = scales.map((scale) => {
+    const width = box.w * scale;
+    const barHeight = height * scale;
+    const bar = {
+      x: box.x + (box.w - width) / 2,
+      y: top,
+      w: width,
+      h: barHeight,
+    };
+    top += barHeight + gap;
+    return bar;
+  });
+  return { bars, nameOffset: extra / 2 };
+}
+
 export function resolveTokenLabelLayout(
   plans: TokenLabelPlan[],
   hover: string | null,

@@ -7,12 +7,12 @@ import type * as Y from 'yjs'
  * different targets never conflict, and deleting a message drops its keys.
  */
 
-export type MessageState = Y.Map<any>
+export type MessageState = Y.Map<unknown>
 
 const key = (messageId: string, field: string) => `${messageId}/${field}`
 
 export function getState<T>(state: MessageState, messageId: string, field: string): T | undefined {
-  return state.get(key(messageId, field))
+  return state.get(key(messageId, field)) as T | undefined
 }
 
 export function setState(state: MessageState, messageId: string, field: string, value: unknown) {
@@ -21,10 +21,10 @@ export function setState(state: MessageState, messageId: string, field: string, 
 }
 
 /** Some of a message's fields, by name: direct lookups, so a long log's cards stay cheap. */
-export function fieldsOf(state: MessageState, messageId: string, fields: string[]): Record<string, any> {
-  const out: Record<string, any> = {}
+export function fieldsOf<T = unknown>(state: MessageState, messageId: string, fields: string[]): Record<string, T> {
+  const out: Record<string, T> = {}
   for (const f of fields) {
-    const v = state.get(key(messageId, f))
+    const v = state.get(key(messageId, f)) as T | undefined
     if (v !== undefined) out[f] = v
   }
   return out

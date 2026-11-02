@@ -1,0 +1,49 @@
+- main [ref=f25e3]:
+  - generic [ref=f25e4]:
+    - heading "Make a Move" [level=1] [ref=f25e6]
+    - region [ref=f25e7]:
+      - heading "Your campaigns" [level=2] [ref=f25e8]
+      - list [ref=f25e9]:
+        - listitem [ref=f25e10]:
+          - button "Physical dice test GM · No system · opened 40 minutes ago" [ref=f25e11] [cursor=pointer]:
+            - generic [ref=f25e12]: Physical dice test
+            - generic [ref=f25e13]: GM · No system · opened 40 minutes ago
+          - button "Delete Physical dice test" [ref=f25e14] [cursor=pointer]
+        - listitem [ref=f25e17]:
+          - button "Dice test GM · No system · opened 1 hour ago" [ref=f25e18] [cursor=pointer]:
+            - generic [ref=f25e19]: Dice test
+            - generic [ref=f25e20]: GM · No system · opened 1 hour ago
+          - button "Delete Dice test" [ref=f25e21] [cursor=pointer]
+    - form [ref=f25e24]:
+      - heading "Start a campaign" [level=2] [ref=f25e25]
+      - generic [ref=f25e26]:
+        - generic [ref=f25e27]:
+          - text: Campaign name
+          - textbox "Campaign name" [ref=f25e28]:
+            - /placeholder: The Lost Barrows
+        - generic [ref=f25e29]:
+          - text: Your name
+          - textbox "Your name" [ref=f25e30]:
+            - /placeholder: Robin
+            - text: Tester
+      - generic [ref=f25e32]:
+        - text: System
+        - combobox "System" [ref=f25e33]:
+          - option "Choose a system" [disabled]
+          - option "Dungeon World"
+          - option "D&D 5.5e"
+          - option "No system" [selected]
+      - button "Create campaign" [ref=f25e35] [cursor=pointer]
+    - form [ref=f25e38]:
+      - heading "Join a campaign" [level=2] [ref=f25e39]
+      - generic [ref=f25e40]:
+        - generic [ref=f25e41]:
+          - text: Invite link
+          - textbox "Invite link" [ref=f25e42]:
+            - /placeholder: Paste an invite link
+        - generic [ref=f25e43]:
+          - text: Your name
+          - textbox "Your name" [ref=f25e44]:
+            - /placeholder: Robin
+            - text: Tester
+      - button "Join" [disabled] [ref=f25e46]

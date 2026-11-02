@@ -11,7 +11,7 @@ import type { ActionDef, DataValue, Derived, Effect, EffectActive, GameSystem, I
  * system's, in maps of its own so two players editing different fields
  * never overwrite each other:
  *
- *   name, owner, kind, folder, classId, level,
+ *   name, owner, kind, folder,
  *   tokenStyle, tokenColour, template, base     plain fields
  *   learned     array  action ids learned beyond the system's
  *   text:*      Y.XmlFragment  rich text: notes, bonds, an NPC's long fields
@@ -56,7 +56,7 @@ export interface ItemInstance {
   order: string
 }
 
-/** A player character has a class and a full sheet; an NPC has the fields its system lists. */
+/** A player character has a full sheet; an NPC has the fields its system lists. */
 export type CharacterKind = 'pc' | 'npc'
 
 export interface CharacterView {
@@ -67,8 +67,6 @@ export interface CharacterView {
   name: string;
   /** Device id of the player who owns it. */
   owner: string;
-  classId: string;
-  level: number;
   scores: Record<string, number>;
   /** The system's own fields, with its defaults filled in. */
   data: Record<string, DataValue>;
@@ -76,6 +74,8 @@ export interface CharacterView {
   resources: Record<string, number>;
   /** Condition ids. */
   conditions: string[];
+  /** Active conditions that cannot be cleared by ordinary recovery. */
+  lockedConditions?: string[];
   /** How long conditions last in combat, by condition id; those without one last until removed. */
   durations: Record<string, Duration>;
   /** The action (a spell) the character is concentrating on. */
@@ -116,46 +116,45 @@ export function createCharacter(
   characters: Y.Map<CharacterMap>,
   system: GameSystem,
   init: {
-    name: string
-    classId: string
-    owner: string
-    scores?: Record<string, number>
+    name: string;
+    owner: string;
+    scores?: Record<string, number>;
     /** The system's fields, over their defaults: choices made at creation. */
-    data?: Record<string, DataValue>
-    kind?: CharacterKind
-    folder?: string
+    data?: Record<string, DataValue>;
+    kind?: CharacterKind;
+    folder?: string;
   },
 ): string {
-  const id = newId()
-  const kind = init.kind ?? 'pc'
-  const cls = system.classes.find((c) => c.id === init.classId) ?? system.classes[0]
-  const m = new Y.Map<any>()
+  const id = newId();
+  const kind = init.kind ?? "pc";
+  const m = new Y.Map<any>();
   characters.doc!.transact(() => {
-    characters.set(id, m)
-    m.set('name', init.name)
-    m.set('owner', init.owner)
+    characters.set(id, m);
+    m.set("name", init.name);
+    m.set("owner", init.owner);
     if (kind === "npc") m.set("kind", "npc");
-    else if (cls) m.set("classId", cls.id);
-    if (init.folder) m.set('folder', init.folder)
-    m.set('level', 1)
-    const scores = new Y.Map<number>()
-    for (const s of system.stats) scores.set(s.id, init.scores?.[s.id] ?? 10)
-    m.set('scores', scores)
-    const data = new Y.Map<DataValue>()
-    for (const f of system.characterData) if (!f.for || f.for === kind) data.set(f.id, init.data?.[f.id] ?? f.default)
-    m.set('data', data)
-    m.set('modifiers', new Y.Map<number>())
-    m.set('fields', new Y.Map<string | number>())
-    m.set('conditions', [])
-    m.set('inventory', new Y.Map())
+    if (init.folder) m.set("folder", init.folder);
+    const scores = new Y.Map<number>();
+    for (const s of system.stats) scores.set(s.id, init.scores?.[s.id] ?? s.default ?? 10);
+    m.set("scores", scores);
+    const data = new Y.Map<DataValue>();
+    for (const f of system.characterData)
+      if (!f.for || f.for === kind)
+        data.set(f.id, init.data?.[f.id] ?? f.default);
+    m.set("data", data);
+    m.set("modifiers", new Y.Map<number>());
+    m.set("fields", new Y.Map<string | number>());
+    m.set("conditions", []);
+    m.set("lockedConditions", []);
+    m.set("inventory", new Y.Map());
     // Every resource starts full.
-    const resources = new Y.Map<number>()
-    m.set('resources', resources)
-    const c = characterView(id, m, system)
-    const d = derive(c, system)
-    for (const r of system.resources) resources.set(r.id, d.values[r.max] ?? 0)
-  })
-  return id
+    const resources = new Y.Map<number>();
+    m.set("resources", resources);
+    const c = characterView(id, m, system);
+    const d = derive(c, system);
+    for (const r of system.resources) resources.set(r.id, r.initial ?? d.values[r.max] ?? 0);
+  });
+  return id;
 }
 
 /**
@@ -169,13 +168,13 @@ export function characterView(id: string, m: CharacterMap, system: GameSystem, b
   const kind: CharacterKind = get('kind') === 'npc' ? 'npc' : 'pc'
   const storedScores = merged<number>('scores')
   const scores: Record<string, number> = {}
-  for (const s of system.stats) scores[s.id] = storedScores[s.id] ?? 10
+  for (const s of system.stats) scores[s.id] = storedScores[s.id] ?? s.default ?? 10
   const storedData = merged<DataValue>('data')
   const data: Record<string, DataValue> = {}
   for (const f of system.characterData) if (!f.for || f.for === kind) data[f.id] = storedData[f.id] ?? f.default
   const storedFields = merged<string | number>('fields')
   const fields: Record<string, string | number> = {}
-  for (const f of system.npcFields) fields[f.id] = storedFields[f.id] ?? (f.type === 'number' ? 0 : '')
+  for (const f of system.npcFields) fields[f.id] = storedFields[f.id] ?? f.default ?? (f.type === 'number' ? 0 : '')
   const inv = (subMap(m, 'inventory') ?? (base && subMap(base, 'inventory'))) as Y.Map<ItemInstance> | undefined
   const inventory = inv ? [...inv.values()].sort((a, b) => (a.order < b.order ? -1 : a.order > b.order ? 1 : 0)) : []
   return {
@@ -184,12 +183,11 @@ export function characterView(id: string, m: CharacterMap, system: GameSystem, b
     folder: m.get("folder"),
     name: get("name") ?? "Unnamed",
     owner: get("owner") ?? "",
-    classId: get("classId") ?? system.classes[0]?.id ?? "",
-    level: get("level") ?? 1,
     scores,
     data,
     resources: merged<number>("resources"),
     conditions: (get("conditions") as string[] | undefined) ?? [],
+    lockedConditions: (get('lockedConditions') as string[] | undefined) ?? [],
     durations: (get("durations") as Record<string, Duration> | undefined) ?? {},
     concentration: get("concentration"),
     modifiers: merged<number>("modifiers"),
@@ -226,7 +224,7 @@ export function derive(c: CharacterView, system: GameSystem): Derived {
 /** The actions a character has, as their system decides. */
 export function actionsFor(c: CharacterView, system: GameSystem, d: Derived): ActionDef[] {
   const own = system.actionsFor(c, d)
-  const learned = c.learned.flatMap((id) => system.actions.filter((a) => a.id === id && !own.includes(a)))
+  const learned = c.learned.flatMap((id) => system.actions.filter((a) => a.id === id && !own.includes(a) && (!system.learnedActionAllowed || system.learnedActionAllowed(a, c, d))))
   return [...own, ...learned]
 }
 

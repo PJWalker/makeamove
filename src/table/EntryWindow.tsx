@@ -1,19 +1,25 @@
-import { signal, useSignal } from '@preact/signals'
-import type { ComponentChildren } from 'preact'
-import { useLayoutEffect, useRef } from "preact/hooks";
-import { checkOf } from '../characters/moves'
-import type { ActionDef, GameSystem } from '../systems/types'
-import { morphOpen } from '../ui/morph'
-import { raisePopup } from '../ui/popup'
-import type { Icon } from '../ui/icons'
-import { hideTooltip } from '../ui/Tooltip'
-import { ListRow } from '../ui/List'
-import type { WindowProxy } from './CampaignDialogs'
+import type { PointerEvent as ReactPointerEvent } from "react";
+import { signal, useSignal } from "@preact/signals-react";
+import type { ReactNode } from "react";
+import { useLayoutEffect, useRef } from "react";
+import { checkOf } from "../characters/moves";
+import type { ActionDef, GameSystem } from "../systems/types";
+import { morphOpen } from "../ui/morph";
+import { raisePopup } from "../ui/popup";
+import type { Icon } from "../ui/icons";
+import { hideTooltip } from "../ui/Tooltip";
+import { ListRow } from "../ui/List";
+import type { WindowProxy } from "./CampaignDialogs";
 import { menuTrigger } from "../ui/menuTrigger";
 import { ContextMenu, type MenuItem } from "./ContextMenu";
-import { entityTabId, registerEntityWindow, closeEntityWindow, entityWindows } from './entityWindows'
-import { layout, locate, showPanel } from './panelLayout'
-import type { DockItemId } from './panelLayout'
+import {
+  entityTabId,
+  registerEntityWindow,
+  closeEntityWindow,
+  entityWindows,
+} from "./entityWindows";
+import { layout, locate, showPanel } from "./panelLayout";
+import type { DockItemId } from "./panelLayout";
 
 /*
  * Rows that show their rules in a tooltip beside them and, when clicked,
@@ -24,16 +30,20 @@ import type { DockItemId } from './panelLayout'
 
 /** What an action rolls, as a short tag for its row: a stat, "any", or what it asks for. */
 export function rollTag(system: GameSystem, m: ActionDef) {
-  const check = checkOf(m)
-  if (!check) return null
-  if (check.ask?.kind === 'stat') return 'any'
-  if (check.ask?.kind === 'number') return check.ask.label.toLowerCase()
-  return system.stats.find((s) => s.id === check.stat)?.abbr ?? check.stat ?? null
+  const check = checkOf(m);
+  if (!check) return null;
+  if (check.ask?.kind === "stat") return "any";
+  if (check.ask?.kind === "number") return check.ask.label.toLowerCase();
+  return (
+    system.stats.find((s) => s.id === check.stat)?.abbr ?? check.stat ?? null
+  );
 }
 
-const openEntries = signal<string[]>(Object.keys(entityWindows.value)
-  .filter((id) => id.startsWith('entity:entry:'))
-  .map((id) => id.slice('entity:entry:'.length)))
+const openEntries = signal<string[]>(
+  Object.keys(entityWindows.value)
+    .filter((id) => id.startsWith("entity:entry:"))
+    .map((id) => id.slice("entity:entry:".length)),
+);
 
 /** Which entries have windows open, and how to open one from its row. */
 export function useEntryWindows() {
@@ -41,24 +51,26 @@ export function useEntryWindows() {
     keys: openEntries.value,
     /** Open the window for `key`, morphing it out of the row's tooltip (or the row). */
     show(key: string, row: Element) {
-      const id = entityTabId(`entry:${key}`)
-      if (locate(layout.value, id) !== 'closed') {
-        showPanel(id)
-        return
+      const id = entityTabId(`entry:${key}`);
+      if (locate(layout.value, id) !== "closed") {
+        showPanel(id);
+        return;
       }
-      const already = document.querySelector<HTMLElement>(`dialog[data-window-id="${CSS.escape(id)}"]`)
-      if (already) return raisePopup(already)
-      const tip = document.querySelector('.tooltip:popover-open')
+      const already = document.querySelector<HTMLElement>(
+        `dialog[data-window-id="${CSS.escape(id)}"]`,
+      );
+      if (already) return raisePopup(already);
+      const tip = document.querySelector(".tooltip:popover-open");
       morphOpen(tip ?? row, () => {
-        hideTooltip()
-        openEntries.value = [...new Set([...openEntries.value, key])]
-      })
+        hideTooltip();
+        openEntries.value = [...new Set([...openEntries.value, key])];
+      });
     },
     close(key: string) {
-      openEntries.value = openEntries.value.filter((k) => k !== key)
-      closeEntityWindow(entityTabId(`entry:${key}`))
+      openEntries.value = openEntries.value.filter((k) => k !== key);
+      closeEntityWindow(entityTabId(`entry:${key}`));
     },
-  }
+  };
 }
 
 /** An entry's rules in a window of its own. */
@@ -78,18 +90,18 @@ export function EntryWindow({
   entryKey: string;
   title: string;
   text: string;
-  tags?: string[];
+  tags?: string[] | undefined;
   onClose: () => void;
   /** The entry as a draggable icon in the title bar. */
-  proxy?: WindowProxy;
-  graphicRef?: { kind: string; id: string };
-  graphicDefaultIcon?: string;
+  proxy?: WindowProxy | undefined;
+  graphicRef?: { kind: string; id: string } | undefined;
+  graphicDefaultIcon?: string | undefined;
   /** Context-menu actions for this entry. */
-  menuItems?: MenuItem[];
+  menuItems?: MenuItem[] | undefined;
   /** Shared identity when this entry is opened from a link popup. */
-  windowId?: DockItemId;
+  windowId?: DockItemId | undefined;
   /** The actions along the bottom. */
-  children?: ComponentChildren;
+  children?: ReactNode | undefined;
 }) {
   const id = windowId ?? entityTabId(`entry:${entryKey}`);
   useLayoutEffect(() => {
@@ -106,8 +118,8 @@ export function EntryWindow({
       close: onClose,
       content: (
         <>
-          <p class="move-text move-window-text">{text}</p>
-          {children && <div class="form-actions">{children}</div>}
+          <p className="move-text move-window-text">{text}</p>
+          {children && <div className="form-actions">{children}</div>}
         </>
       ),
     });
@@ -135,20 +147,20 @@ export function EntryRow({
 }: {
   name: string;
   Icon?: Icon;
-  lead?: ComponentChildren;
-  tag?: string | null;
-  meta?: string;
+  lead?: ReactNode;
+  tag?: string | null | undefined;
+  meta?: string | undefined;
   tip: string;
   onOpen: (row: Element) => void;
   /** The context-menu verb that uses the row's normal open action. */
   openLabel?: string;
   /** For rows that can be dragged somewhere. */
-  onPointerDown?: (e: PointerEvent) => void;
+  onPointerDown?: ((e: ReactPointerEvent<HTMLLIElement>) => void) | undefined;
   /** Context-menu actions for this entry. */
-  menuItems?: MenuItem[];
+  menuItems?: MenuItem[] | undefined;
   /** Shown faded, such as an item that's unequipped. */
-  dim?: boolean;
-  children?: ComponentChildren;
+  dim?: boolean | undefined;
+  children?: ReactNode | undefined;
 }) {
   const menu = useSignal<{ x: number; y: number } | null>(null);
   const rowElement = useRef<Element | null>(null);

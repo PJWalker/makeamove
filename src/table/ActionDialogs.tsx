@@ -1,4 +1,4 @@
-import { signal, useSignal } from "@preact/signals";
+import { signal, useSignal } from "@preact/signals-react";
 import {
   actionForCombo,
   comboOf,
@@ -76,23 +76,23 @@ function RenameDialog({ campaign, id, title }: Props) {
   return (
     <Dialog dialogRef={ref} title="Rename" onClose={onClose}>
       <form
-        class="dialog-form"
+        className="dialog-form"
         onSubmit={(e) => {
           e.preventDefault();
           done(text.value);
         }}
       >
-        <label class="field">
+        <label className="field">
           Show on the hotbar as
           <input
-            class="input bevel"
+
             value={text.value}
             autoFocus
             onFocus={(e) => e.currentTarget.select()}
             onInput={(e) => (text.value = e.currentTarget.value)}
           />
         </label>
-        <div class="form-actions">
+        <div className="form-actions">
           {custom && (
             <Button variant="ghost" onClick={() => done(undefined)}>
               Use its own name
@@ -126,8 +126,8 @@ function IconDialog({ campaign, id, title }: Props) {
       title={`Icon for ${slotLook(campaign, id).label ?? title}`}
       onClose={onClose}
     >
-      <div class="dialog-form">
-        <div class="icon-choices" role="listbox" aria-label="Icons">
+      <div className="dialog-form">
+        <div className="icon-choices" role="listbox" aria-label="Icons">
           {CHOICES.map((name) => {
             const Icon = ENTRY_ICONS[name];
             return (
@@ -135,7 +135,7 @@ function IconDialog({ campaign, id, title }: Props) {
                 key={name}
                 type="button"
                 role="option"
-                class="icon-choice btn btn-ghost bevel"
+                className="icon-choice btn-ghost"
                 aria-selected={name === current}
                 aria-label={name.replace("-", " ")}
                 data-tip={name.replace("-", " ")}
@@ -146,7 +146,7 @@ function IconDialog({ campaign, id, title }: Props) {
             );
           })}
         </div>
-        <div class="form-actions">
+        <div className="form-actions">
           <Button
             variant="ghost"
             disabled={!current}
@@ -180,16 +180,16 @@ function ShortcutDialog({ campaign, id, title }: Props) {
   return (
     <Dialog dialogRef={ref} title={`Shortcut for ${title}`} onClose={onClose}>
       <form
-        class="dialog-form"
+        className="dialog-form"
         onSubmit={(e) => {
           e.preventDefault();
           save(combo.value);
         }}
       >
-        <label class="field">
+        <label className="field">
           Press the keys to use
           <input
-            class={`input bevel ${RECORDER}`}
+            className={`input ${RECORDER}`}
             readOnly
             autoFocus
             placeholder="Press a key…"
@@ -219,12 +219,12 @@ function ShortcutDialog({ campaign, id, title }: Props) {
             }}
           />
         </label>
-        <p class="muted" role="status">
+        <p className="muted" role="status">
           {taken
             ? `Now on ${taken}. Saving moves it here.`
             : "Backspace clears it."}
         </p>
-        <div class="form-actions">
+        <div className="form-actions">
           {existing && (
             <Button variant="ghost" onClick={() => save(null)}>
               Remove shortcut

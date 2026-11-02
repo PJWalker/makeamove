@@ -70,6 +70,110 @@ test("a campaign can be created, left, and reopened", async ({ page }) => {
   ).toBeVisible();
 });
 
+test("selected menu items fade after the menu closes", async ({ page }) => {
+  await createCampaign(page, "Menu selection transition");
+  await settled(page);
+
+  for (const interaction of ["pointer", "keyboard", "reduced-motion"] as const) {
+    await page.emulateMedia({
+      reducedMotion: interaction === "reduced-motion" ? "reduce" : "no-preference",
+    });
+    await page.getByRole("button", { name: "Campaign menu" }).click();
+    const item = page.getByRole("menuitemcheckbox").first();
+    if (interaction === "keyboard") await item.focus();
+    await page.evaluate(() => {
+      const start = document.startViewTransition.bind(document);
+      document.startViewTransition = ((update: () => void) => {
+        const transition = start(update);
+        void transition.ready.then(() => {
+          for (const animation of document.getAnimations()) {
+            if (animation.animationName === "vt-exit") animation.pause();
+          }
+        });
+        return transition;
+      }) as typeof document.startViewTransition;
+    });
+    if (interaction === "keyboard") await item.press("Enter");
+    else await item.click();
+
+    await expect(page.getByRole("menu")).toHaveCount(0);
+    const outgoing = () => page.evaluate(() =>
+      document.getAnimations().filter((animation) =>
+        animation instanceof CSSAnimation &&
+        animation.animationName === "vt-exit" &&
+        (animation.effect as KeyframeEffect).pseudoElement?.startsWith(
+          "::view-transition-old(menu-selection-",
+        ),
+      ).length,
+    );
+    if (interaction === "reduced-motion") expect(await outgoing()).toBe(0);
+    else {
+      await expect.poll(outgoing).toBe(1);
+      await page.evaluate(() => {
+        for (const animation of document.getAnimations()) animation.finish();
+      });
+      await settled(page);
+    }
+  }
+});
+
+test("right-drag menus select and close on release", async ({ page }) => {
+  await createCampaign(page, "Right-drag menu");
+  await page.getByRole("button", { name: "Campaign menu" }).click();
+  await page.getByRole("menuitem", { name: "Back to campaigns" }).click();
+  const campaign = page.getByRole("button", { name: /^Right-drag menu/ });
+  await expect(campaign).toBeVisible();
+  await settled(page);
+  await campaign.hover();
+  await page.mouse.down({ button: "right" });
+  const item = page.getByRole("menuitem", { name: "Delete…" });
+  await expect(item).toBeVisible();
+  await item.hover();
+  await page.mouse.up({ button: "right" });
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "Delete campaign?" })).toBeVisible();
+});
+
+test("campaign deletion is available from the right-click menu and confirms", async ({
+  page,
+}) => {
+  await createCampaign(page, "Delete menu test");
+  await page.getByRole("button", { name: "Campaign menu" }).click();
+  await page.getByRole("menuitem", { name: "Back to campaigns" }).click();
+
+  const campaign = page.getByRole("button", { name: /^Delete menu test/ });
+  await expect(campaign).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Delete Delete menu test" }),
+  ).toHaveCount(0);
+  await campaign.click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Delete…" }).click();
+
+  const confirmation = page.getByRole("dialog", { name: "Delete campaign?" });
+  await expect(confirmation).toBeVisible();
+  await confirmation.getByRole("button", { name: "Cancel" }).click();
+  await expect(confirmation).toBeHidden();
+
+  await campaign.click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Delete…" }).click();
+  await page
+    .getByRole("dialog", { name: "Delete campaign?" })
+    .getByRole("button", { name: "Delete from this device" })
+    .click();
+  await expect(campaign).toHaveCount(0);
+});
+
+test("opening an invite link presents a join modal, not a lobby section", async ({
+  page,
+}) => {
+  await page.goto("/#join=abc.1234567890abcdef");
+
+  const invitation = page.getByRole("dialog", { name: "Join a campaign" });
+  await expect(invitation).toBeVisible();
+  await expect(invitation.getByLabel("Your name")).toBeFocused();
+  await expect(page.locator(".lobby-join")).toHaveCount(0);
+});
+
 test("a GM can create an NPC", async ({ page }) => {
   await createCampaign(page);
   await page.getByRole("button", { name: "New", exact: true }).click();
@@ -80,6 +184,24 @@ test("a GM can create an NPC", async ({ page }) => {
   await expect(page.getByRole("textbox", { name: "Name" })).toHaveValue(
     "Mira Ashford",
   );
+  await expect(
+    page.getByRole("textbox", { name: "Description" }),
+  ).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "GM Notes" })).toBeVisible();
+});
+
+test("a GM can create a PC with common description and GM notes", async ({
+  page,
+}) => {
+  await createCampaign(page, "Character notes test");
+  await openCharacters(page);
+  await page.getByRole("textbox", { name: "Name" }).fill("Ayla");
+  await page.getByRole("button", { name: "Create", exact: true }).click();
+
+  await expect(
+    page.getByRole("textbox", { name: "Description" }),
+  ).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "GM Notes" })).toBeVisible();
 });
 
 test("a player can send a chat message", async ({ page }) => {
@@ -319,15 +441,87 @@ test("rapid panel changes settle on the last selected panel", async ({
   const notes = page.getByRole("tab", { name: "Notes" });
   const chat = page.getByRole("tab", { name: /^Chat/ });
 
+  await settled(page);
+  await page.addStyleTag({
+    content: `
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) {
+        animation-duration: 5s !important;
+      }
+    `,
+  });
   await notes.click();
-  await chat.click();
-  await notes.click();
-  await chat.click();
-  await notes.click();
+  await page.waitForFunction(() =>
+    document.getAnimations().some((animation) =>
+      animation.effect instanceof KeyframeEffect &&
+      animation.effect.pseudoElement?.startsWith("::view-transition"),
+    ),
+  );
+  await chat.click({ timeout: 1000 });
+  await notes.click({ timeout: 1000 });
+  await chat.click({ timeout: 1000 });
+  await notes.click({ timeout: 1000 });
 
   await expect(notes).toHaveAttribute("aria-selected", "true");
   await expect(page.getByText("No pages yet.")).toBeVisible();
   await expect(page.getByRole("button", { name: "New page" })).toBeVisible();
+});
+
+test("panel creation actions share the title bar when docked and floating", async ({ page }) => {
+  await createCampaign(page, "Inline panel actions", "dnd-5.5e");
+  for (const [title, actions] of [
+    ["Characters", ["New", "New folder"]],
+    ["Scenes", ["New scene", "New folder"]],
+    ["Notes", ["New page", "New GM page", "New folder"]],
+    ["Items", ["New gear", "New move"]],
+    ["Combat", ["Roll for NPCs", "Start"]],
+  ] as const) {
+    const tab = page.getByRole("tab", { name: title, exact: true });
+    if ((await tab.getAttribute("aria-selected")) !== "true") await tab.click();
+    const header = page.locator(".sidebar-panel > .panel-header").filter({
+      has: page.getByRole("heading", { name: title, exact: true }),
+    });
+    for (const action of actions) {
+      await expect(header.getByRole("button", { name: action, exact: true })).toBeVisible();
+    }
+    if (actions.some((action) => action === "New folder")) {
+      await header.getByRole("button", { name: "New folder", exact: true }).click();
+      const folderName = header.getByRole("textbox", { name: "Folder name" });
+      await expect(folderName).toBeFocused();
+      await folderName.fill(`${title} folder`);
+      await folderName.press("Enter");
+      await expect(folderName).toHaveCount(0);
+      await expect(header.getByRole("button", { name: "New folder", exact: true })).toBeVisible();
+    }
+  }
+
+  const itemsTab = page.getByRole("tab", { name: "Items", exact: true });
+  if ((await itemsTab.getAttribute("aria-selected")) !== "true") await itemsTab.click();
+  await page.getByRole("button", { name: "New gear", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "New gear", exact: true })).toBeVisible();
+  await expect(page.locator(".panel-actions").getByRole("button", { name: "New gear" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Items", exact: true }).click();
+  await page.getByRole("tab", { name: "Items", exact: true }).click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Float in a window" }).click();
+  const itemsWindow = page.getByRole("region", { name: "Items", exact: true });
+  const header = itemsWindow.locator(".panel-header");
+  const title = header.getByRole("heading", { name: "Items", exact: true });
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 800 });
+    for (const action of ["New gear", "New move"]) {
+      const button = header.getByRole("button", { name: action, exact: true });
+      await expect(button).toBeVisible();
+      const titleBox = (await title.boundingBox())!;
+      const buttonBox = (await button.boundingBox())!;
+      expect(buttonBox.x).toBeGreaterThanOrEqual(titleBox.x + titleBox.width);
+      expect(buttonBox.y).toBeLessThan(titleBox.y + titleBox.height);
+      expect(buttonBox.y + buttonBox.height).toBeGreaterThan(titleBox.y);
+    }
+  }
+  await header.getByRole("button", { name: "New move", exact: true }).click();
+  await expect(itemsWindow.getByRole("heading", { name: "New move", exact: true })).toBeVisible();
+  await expect(itemsWindow).toHaveAttribute("data-rolled", "false");
 });
 
 test("a panel can be floated and docked on the other sidebar", async ({

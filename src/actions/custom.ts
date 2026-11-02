@@ -9,8 +9,8 @@ import type { EntryIconName } from '../ui/entryIcons'
  */
 
 export interface SlotLook {
-  label?: string
-  icon?: EntryIconName
+  label?: string | undefined
+  icon?: EntryIconName | undefined
 }
 
 const LOOKS = 'hotbarLooks'
@@ -95,7 +95,8 @@ export function showCombo(combo: string, mac = MAC): string {
   const parts = combo.split('+')
   // "+" itself is a key: `Shift++`.
   if (combo.endsWith('++')) parts.splice(-2, 2, '+')
-  const key = ARROWS[parts[parts.length - 1]] ?? parts[parts.length - 1]
+  const last = parts.at(-1) ?? ""
+  const key = ARROWS[last] ?? last
   const mods = parts.slice(0, -1)
   if (mac) return mods.map((m) => MAC_GLYPHS[m]).join('') + key
   return [...mods.map((m) => (m === 'Meta' ? 'Win' : m)), key].join('+')

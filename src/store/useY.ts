@@ -1,5 +1,5 @@
-import { useSignal } from '@preact/signals'
-import { useEffect, useRef } from 'preact/hooks'
+import { useSignal } from '@preact/signals-react'
+import { useEffect, useRef } from 'react'
 import type * as Y from 'yjs'
 
 /**
@@ -13,7 +13,10 @@ import type * as Y from 'yjs'
  * depends on props or state (such as "does element `id` exist?") is never
  * stale when only the prop changes.
  */
-export function useY<T>(type: Y.AbstractType<any> | null | undefined, read: () => T): T {
+export function useY<T, EventType>(
+  type: Y.AbstractType<EventType> | null | undefined,
+  read: () => T,
+): T {
   const changes = useSignal(0)
   const latest = useRef(read)
   latest.current = read
@@ -27,6 +30,7 @@ export function useY<T>(type: Y.AbstractType<any> | null | undefined, read: () =
       if (!Object.is(latest.current(), shown.current)) changes.value++
     }
     type.observeDeep(bump)
+    bump()
     return () => type.unobserveDeep(bump)
   }, [type])
 

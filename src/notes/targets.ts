@@ -1,4 +1,4 @@
-import { signal } from '@preact/signals'
+import { signal } from '@preact/signals-react'
 import { getCharacter, listCharacters, selectCharacter, systemOf } from '../characters/api'
 import type { Campaign } from '../store/campaign'
 import { libraryView } from '../table/libraryView'
@@ -20,6 +20,18 @@ export interface LinkTarget {
 
 const KIND_DETAIL: Record<LinkKind, string> = { note: 'Note', character: 'Character', scene: 'Scene', item: 'Gear', move: 'Move' }
 
+export function characterLinkTargets(campaign: Campaign): LinkTarget[] {
+  return listCharacters(campaign).map((character) => ({ kind: 'character', id: character.id, label: character.name, detail: character.kind === 'npc' ? 'NPC' : KIND_DETAIL.character }))
+}
+
+export function matchingLinkTargets(targets: LinkTarget[], query: string, limit = 8): LinkTarget[] {
+  const normalized = query.trim().toLowerCase()
+  if (!normalized) return targets.slice(0, limit)
+  const starts = targets.filter((target) => target.label.toLowerCase().startsWith(normalized))
+  const contains = targets.filter((target) => !target.label.toLowerCase().startsWith(normalized) && target.label.toLowerCase().includes(normalized))
+  return [...starts, ...contains].slice(0, limit)
+}
+
 /** Link targets matching a query: notes, characters, scenes, then the system's items and moves. */
 export function linkTargets(campaign: Campaign, query: string, exceptNote?: string, limit = 8): LinkTarget[] {
   const system = systemOf(campaign)
@@ -27,17 +39,12 @@ export function linkTargets(campaign: Campaign, query: string, exceptNote?: stri
     ...listNotes(campaign)
       .filter((n) => n.id !== exceptNote)
       .map((n) => ({ kind: 'note' as const, id: n.id, label: n.title, detail: n.gmOnly ? 'GM page' : KIND_DETAIL.note, gmOnly: n.gmOnly })),
-    ...listCharacters(campaign).map((c) => ({ kind: 'character' as const, id: c.id, label: c.name, detail: c.kind === 'npc' ? 'NPC' : KIND_DETAIL.character })),
+    ...characterLinkTargets(campaign),
     ...campaign.sceneViews().map((s) => ({ kind: 'scene' as const, id: s.id, label: s.name, detail: KIND_DETAIL.scene })),
-    ...system.items.map((i) => ({ kind: 'item' as const, id: i.id, label: i.name, detail: KIND_DETAIL.item, icon: i.icon })),
-    ...system.actions.map((m) => ({ kind: 'move' as const, id: m.id, label: m.name, detail: KIND_DETAIL.move, icon: m.category === 'class' ? 'class-move' : undefined })),
+    ...system.items.map((i) => ({ kind: 'item' as const, id: i.id, label: i.name, detail: KIND_DETAIL.item, ...(i.icon ? { icon: i.icon } : {}) })),
+    ...system.actions.map((m) => ({ kind: 'move' as const, id: m.id, label: m.name, detail: KIND_DETAIL.move, ...(m.category === 'class' ? { icon: 'class-move' } : {}) })),
   ]
-  const q = query.trim().toLowerCase()
-  if (!q) return all.slice(0, limit)
-  // Names that start with the query first, then any that contain it.
-  const starts = all.filter((t) => t.label.toLowerCase().startsWith(q))
-  const contains = all.filter((t) => !t.label.toLowerCase().startsWith(q) && t.label.toLowerCase().includes(q))
-  return [...starts, ...contains].slice(0, limit)
+  return matchingLinkTargets(all, query, limit)
 }
 
 /** The current name of a link's target, or null if it's gone. */
@@ -68,8 +75,9 @@ export function linkTip(campaign: Campaign, kind: LinkKind, id: string): string 
     case 'character': {
       const c = getCharacter(campaign, id)
       if (!c) return null
-      const what = c.kind === 'npc' ? (c.template ? 'NPC template' : 'NPC') : (system.classes.find((k) => k.id === c.classId)?.name ?? 'Character')
-      return `${c.name}\n${what}, level ${c.level}`
+      const what =
+        c.kind === "npc" ? (c.template ? "NPC template" : "NPC") : "Character";
+      return `${c.name}\n${what}`;
     }
     case 'scene': {
       const s = campaign.sceneViews().find((x) => x.id === id)

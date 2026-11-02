@@ -5,7 +5,7 @@ import { describe, roll } from '../dice/notation'
 import type { Campaign } from '../store/campaign'
 import { device } from '../store/device'
 import { bumpResource, canEdit, getCharacter, setData, setField, systemOf } from './api'
-import { planMove } from './moves'
+import { planMove, resolveDifficulty, rollModesFor } from './moves'
 import { derive, type CharacterView } from './store'
 
 /*
@@ -28,13 +28,14 @@ export function canAnswer(campaign: Campaign, t: MoveTarget): boolean {
  * token), and record the total against the DC on the card.
  */
 export function answerSave(campaign: Campaign, messageId: string, t: MoveTarget, save: SaveRequest, mode?: string, concentration?: boolean) {
+  if (!canAnswer(campaign, t) || getState(campaign.messageState, messageId, saveField(t.id))) return
   const system = systemOf(campaign)
   const action = system.actions.find((a) => a.id === save.action)
   const c = getCharacter(campaign, t.characterId)
   const formula =
-    c && action ? planMove(system, action, c, derive(c, system), { mode }).formula : (system.rollModes?.find((m) => m.id === mode)?.roll ?? system.baseRoll)
+    c && action ? planMove(system, action, c, derive(c, system), { mode }).formula : (action ? rollModesFor(system, action).find((m) => m.id === mode)?.roll : undefined) ?? system.baseRoll
   const r = roll(formula)
-  const answer: SaveAnswer = { total: r.total, detail: describe(r), success: r.total >= save.dc, by: device.value.id }
+  const answer: SaveAnswer = { total: r.total, detail: describe(r), success: r.total >= save.difficulty, by: device.value.id }
   campaign.doc.transact(() => {
     setState(campaign.messageState, messageId, saveField(t.id), answer)
     // A failed concentration save ends the spell.
@@ -47,15 +48,20 @@ export function answerSave(campaign: Campaign, messageId: string, t: MoveTarget,
  * HP soak damage first, then hit points, never below zero or above the
  * maximum. Recorded on the card, so it shows what was done.
  */
-export function applyDamage(campaign: Campaign, messageId: string, t: MoveTarget, amount: number, healing: boolean) {
+export function applyDamage(campaign: Campaign, messageId: string, t: MoveTarget, amount: number, healing: boolean, options: { armor?: boolean; type?: string } = {}) {
+  if (!campaign.isGm() || !Number.isFinite(amount) || amount < 0 || getState(campaign.messageState, messageId, appliedField(t.id)) !== undefined) return
   const system = systemOf(campaign)
   const c = getCharacter(campaign, t.characterId)
   if (!c) return
-  const max = derive(c, system).values[system.resources.find((r) => r.id === 'hp')?.max ?? 'maxHp']
+  const derived = derive(c, system)
+  const max = derived.values[system.resources.find((r) => r.id === 'hp')?.max ?? 'maxHp']
+  const damage = !healing && system.resolveDamage ? system.resolveDamage(c, derived, amount, options) : { hp: amount }
+  if (damage.resources?.some(({ id, by }) => (c.resources[id] ?? 0) + by < 0)) return
+  const hpBefore = c.resources.hp ?? 0
   campaign.doc.transact(() => {
     if (healing) bumpResource(campaign, c.id, 'hp', amount, max)
     else {
-      let left = amount
+      let left = damage.hp
       if (system.tempHp) {
         const temp = Number(c.data[system.tempHp] ?? 0)
         const soaked = Math.min(temp, left)
@@ -63,9 +69,12 @@ export function applyDamage(campaign: Campaign, messageId: string, t: MoveTarget
         left -= soaked
       }
       if (left) bumpResource(campaign, c.id, 'hp', -left)
+      for (const { id, by } of damage.resources ?? []) {
+        const resource = system.resources.find((candidate) => candidate.id === id)
+        if (resource) bumpResource(campaign, c.id, id, by, derived.values[resource.max])
+      }
     }
-    const before = getState<number>(campaign.messageState, messageId, appliedField(t.id)) ?? 0
-    setState(campaign.messageState, messageId, appliedField(t.id), before + (healing ? amount : -amount))
+    setState(campaign.messageState, messageId, appliedField(t.id), (getCharacter(campaign, c.id)?.resources.hp ?? hpBefore) - hpBefore)
   })
   if (!healing && amount > 0) checkConcentration(campaign, c, amount)
 }
@@ -74,7 +83,7 @@ export function applyDamage(campaign: Campaign, messageId: string, t: MoveTarget
 function checkConcentration(campaign: Campaign, c: CharacterView, damage: number) {
   const system = systemOf(campaign)
   if (!c.concentration || !system.concentrationSave) return
-  const { action, dc } = system.concentrationSave(damage)
+  const { action, difficulty } = system.concentrationSave(damage)
   const spell = system.actions.find((a) => a.id === c.concentration)?.name ?? 'a spell'
   void campaign.chat.post(
     {
@@ -90,7 +99,7 @@ function checkConcentration(campaign: Campaign, c: CharacterView, damage: number
       save: {
         action,
         name: system.actions.find((a) => a.id === action)?.name ?? action,
-        dc,
+        difficulty: resolveDifficulty(difficulty, derive(c, system)) ?? 0,
         success: 'Concentration holds.',
         failure: `${spell} ends.`,
       },

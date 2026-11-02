@@ -1,13 +1,14 @@
 import type { Campaign } from '../store/campaign'
 import { trackPointer } from '../ui/pointer'
 import { windowLayer } from '../ui/windows'
-import { createPortal } from 'preact/compat'
-import { useSignal } from '@preact/signals'
-import { useRef } from 'preact/hooks'
+import { createPortal } from "react-dom";
+import { useSignal } from "@preact/signals-react";
+import { useRef } from "react";
 import { dockTarget, setPanelClosed, floatingWindows, windowPointer, spawnedFromTab, raiseWindow, startWindowDrag, updateWindow, type FloatingWindow, type PanelId } from './panelLayout'
 import { PanelContent, PANELS, PaneToggle } from './panels'
 import { RESIZE_CURSORS, RESIZE_DIRS, resizeRect, type ResizeDir } from './resizeRect'
 import { WindowControls } from './WindowControls'
+import { PanelActionsProvider, PanelActionsSlot } from "./PanelActions";
 
 /** Size of the tab a window morphs into. */
 const TAB = 44
@@ -60,45 +61,61 @@ function Window({ win, campaign }: { win: FloatingWindow & { id: PanelId }; camp
   const toTab = `translate(${to.x - TAB / 2 - win.x}px, ${to.y - TAB / 2 - win.y}px) scale(${TAB / win.w}, ${TAB / win.h})`
 
   return (
-    <>
-    {asTab && (
-      <div class="drag-tab panel bevel" style={{ left: asTab.x - TAB / 2, top: asTab.y - TAB / 2 }} aria-hidden="true">
-        <Icon size={22} />
-      </div>
-    )}
-    <section
-      class="floating-window window panel bevel"
-      style={{
-        left: win.x,
-        top: win.y,
-        width: win.w,
-        height: win.h,
-        zIndex: win.z,
-        viewTransitionName: `panel-${win.id}`,
-        '--to-tab': toTab,
-      }}
-      data-morph={morph}
-      data-rolled={rolled.value}
-      aria-label={label}
-      tabIndex={-1}
-      onPointerDown={() => raiseWindow(win.id)}
-    >
-      <WindowControls
-        title={label}
-        Icon={Icon}
-        beforeTitle={<PaneToggle id={win.id} />}
-        rolled={rolled.value}
-        onToggleRoll={() => (rolled.value = !rolled.value)}
-        onDragStart={onHeaderPointerDown}
-        onClose={() => setPanelClosed(win.id, true)}
-        closeLabel="Close (reopen from the campaign menu)"
-      />
-      {!rolled.value && <div class="floating-window-content"><PanelContent id={win.id} campaign={campaign} /></div>}
-      {!rolled.value && <span class="resize-grip" aria-hidden="true" />}
-      {!rolled.value && RESIZE_DIRS.map((dir) => (
-        <span key={dir} class="win-resize" data-dir={dir} aria-hidden="true" onPointerDown={(e) => onResizePointerDown(e, dir)} />
-      ))}
-    </section>
-    </>
-  )
+    <PanelActionsProvider>
+      {asTab && (
+        <div
+          className="drag-tab panel"
+          style={{ left: asTab.x - TAB / 2, top: asTab.y - TAB / 2 }}
+          aria-hidden="true"
+        >
+          <Icon size={22} />
+        </div>
+      )}
+      <section
+        className="floating-window window panel"
+        style={{
+          left: win.x,
+          top: win.y,
+          width: win.w,
+          height: win.h,
+          zIndex: win.z,
+          viewTransitionName: `panel-${win.id}`,
+          "--to-tab": toTab,
+        }}
+        data-morph={morph}
+        data-rolled={rolled.value}
+        aria-label={label}
+        tabIndex={-1}
+        onPointerDown={() => raiseWindow(win.id)}
+      >
+        <WindowControls
+          title={label}
+          Icon={Icon}
+          beforeTitle={<PaneToggle id={win.id} />}
+          afterTitle={!rolled.value && <PanelActionsSlot />}
+          rolled={rolled.value}
+          onToggleRoll={() => (rolled.value = !rolled.value)}
+          onDragStart={onHeaderPointerDown}
+          onClose={() => setPanelClosed(win.id, true)}
+          closeLabel="Close (reopen from the campaign menu)"
+        />
+        {!rolled.value && (
+          <div className="floating-window-content">
+            <PanelContent id={win.id} campaign={campaign} />
+          </div>
+        )}
+        {!rolled.value && <span className="resize-grip" aria-hidden="true" />}
+        {!rolled.value &&
+          RESIZE_DIRS.map((dir) => (
+            <span
+              key={dir}
+              className="win-resize"
+              data-dir={dir}
+              aria-hidden="true"
+              onPointerDown={(e) => onResizePointerDown(e.nativeEvent, dir)}
+            />
+          ))}
+      </section>
+    </PanelActionsProvider>
+  );
 }

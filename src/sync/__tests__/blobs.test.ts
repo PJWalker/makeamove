@@ -50,6 +50,39 @@ describe('blob exchange', () => {
     expect(storeB.blobs.has(hash)).toBe(true)
   })
 
+  it("resolves verified data to every waiter when local caching fails", async () => {
+    const room = new MemoryRoom();
+    const a = new SyncSession(new Y.Doc(), room.join("a"));
+    const b = new SyncSession(new Y.Doc(), room.join("b"));
+    const storeA = memoryStore();
+    const bytes = new Uint8Array([1, 2, 3, 4]);
+    const blob = new Blob([bytes]);
+    const hash = await storeA.put(blob);
+    const failingStore: BlobStore = {
+      async get() {
+        return null;
+      },
+      put() {
+        throw new Error("storage unavailable");
+      },
+    };
+    new BlobExchange(a, storeA);
+    const exchange = new BlobExchange(b, failingStore);
+
+    const results = [exchange.fetch(hash), exchange.fetch(hash)];
+    await room.settle();
+    await tick();
+    await room.settle();
+    await tick();
+    await room.settle();
+
+    for (const result of await Promise.all(results)) {
+      expect(result && new Uint8Array(await result.arrayBuffer())).toEqual(
+        bytes,
+      );
+    }
+  });
+
   it('rejects data that does not match the hash', async () => {
     const room = new MemoryRoom()
     const a = new SyncSession(new Y.Doc(), room.join('a'))

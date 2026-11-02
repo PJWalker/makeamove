@@ -14,8 +14,8 @@ export function TemplateSettings({ campaign, c }: { campaign: Campaign; c: Chara
   const editable = canEdit(campaign, c)
   const t = c.template
   return (
-    <section class="sheet-section" aria-label="On the map">
-      <h3 class="sheet-heading">On the map</h3>
+    <section className="form-section sheet-section" aria-label="On the map">
+      <h3 className="sheet-heading">On the map</h3>
       <Segmented
         label="Tokens"
         value={t ? 'template' : 'individual'}
@@ -28,7 +28,7 @@ export function TemplateSettings({ campaign, c }: { campaign: Campaign; c: Chara
       />
       {t && (
         <>
-          <div class="field">
+          <div className="field">
             Name each token
             <Segmented
               label="Token names"
@@ -39,10 +39,10 @@ export function TemplateSettings({ campaign, c }: { campaign: Campaign; c: Chara
             />
           </div>
           {t.naming === 'list' && (
-            <label class="field">
+            <label className="field">
               Names, one per line
               <textarea
-                class="input bevel"
+
                 rows={4}
                 value={t.names.join('\n')}
                 disabled={!editable}
@@ -51,9 +51,8 @@ export function TemplateSettings({ campaign, c }: { campaign: Campaign; c: Chara
               />
             </label>
           )}
-          <p class="muted">
-            Each token placed from {c.name} is a copy with its own name. Change anything on a token’s sheet and it applies to that
-            token alone; what you leave follows this template.
+          <p className="muted">
+            Changes to a token stay on that copy; new tokens inherit this template.
           </p>
         </>
       )}
@@ -65,7 +64,7 @@ export function TemplateSettings({ campaign, c }: { campaign: Campaign; c: Chara
 export function CopyBanner({ campaign, c }: { campaign: Campaign; c: CharacterView }) {
   const template = getCharacter(campaign, c.base)
   return (
-    <div class="copy-banner">
+    <div className="copy-banner">
       <span>
         Derived From <strong>{template?.name ?? 'a deleted template'}</strong>.
       </span>

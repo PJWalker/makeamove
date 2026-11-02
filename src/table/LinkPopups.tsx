@@ -1,6 +1,6 @@
-import { useSignal } from '@preact/signals'
-import type { ComponentChildren } from 'preact'
-import { useEffect, useLayoutEffect } from "preact/hooks";
+import { useSignal } from '@preact/signals-react'
+import type { ReactNode } from 'react'
+import { useEffect, useLayoutEffect } from "react";
 import { addItem, canEdit, getCharacter, selectedCharacterId, startMove, systemOf } from '../characters/api'
 import { getNote } from '../notes/api'
 import { followLink, linkLabel } from "../notes/targets";
@@ -86,7 +86,7 @@ function LinkDialog({
   campaign: Campaign;
   link: LinkRef;
   title: string;
-  children: ComponentChildren;
+  children: ReactNode;
   menuItems?: MenuItem[];
 }) {
   const id = entityTabId(`link:${linkKey(link)}`);
@@ -198,7 +198,7 @@ function LinkPopup({ campaign, link }: { campaign: Campaign; link: LinkRef }) {
             },
           ]}
         >
-          <div class="popup-sheet sheet-panel">
+          <div className="popup-sheet sheet-panel">
             <CharacterSheet campaign={campaign} system={system} c={character} />
           </div>
         </LinkDialog>
@@ -216,8 +216,8 @@ function LinkPopup({ campaign, link }: { campaign: Campaign; link: LinkRef }) {
             },
           ]}
         >
-          <p class="muted">A scene in this campaign.</p>
-          <div class="form-actions">
+          <p className="muted">A scene in this campaign.</p>
+          <div className="form-actions">
             <Button
               variant="primary"
               onClick={() => followLink(campaign, "scene", scene.id)}
@@ -240,7 +240,7 @@ function LinkPopup({ campaign, link }: { campaign: Campaign; link: LinkRef }) {
             },
           ]}
         >
-          <div class="link-note">
+          <div className="link-note">
             <NoteEditor campaign={campaign} noteId={note.id} />
           </div>
         </LinkDialog>
@@ -266,16 +266,16 @@ function RenameLinkDialog({ req }: { req: NonNullable<typeof linkRename.value> }
   return (
     <Dialog dialogRef={ref} title="Link text" onClose={onClose}>
       <form
-        class="dialog-form"
+        className="dialog-form"
         onSubmit={(e) => {
           e.preventDefault();
           done(text.value);
         }}
       >
-        <label class="field">
+        <label className="field">
           Show this link as
           <input
-            class="input bevel"
+
             value={text.value}
             autoFocus
             // Typing replaces it.
@@ -283,7 +283,7 @@ function RenameLinkDialog({ req }: { req: NonNullable<typeof linkRename.value> }
             onInput={(e) => (text.value = e.currentTarget.value)}
           />
         </label>
-        <div class="form-actions">
+        <div className="form-actions">
           {req.custom && (
             <Button variant="ghost" onClick={() => done(null)}>
               Use its own name

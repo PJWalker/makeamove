@@ -1,4 +1,4 @@
-import { signal } from '@preact/signals'
+import { signal } from '@preact/signals-react'
 import type { AreaTone, Layer, ShapeKind } from './types'
 
 export type ToolId = 'select' | 'pan' | 'draw' | 'erase' | 'shape' | 'text' | 'ruler' | 'ping' | 'wall' | 'light'
@@ -8,7 +8,7 @@ export const activeTool = signal<ToolId>('select')
 /*
  * Pen settings, remembered per device.
  */
-export const PEN_WIDTHS = [3, 6, 12]
+export const PEN_WIDTHS: readonly [number, number, number] = [3, 6, 12]
 
 interface PenSettings {
   colour: string

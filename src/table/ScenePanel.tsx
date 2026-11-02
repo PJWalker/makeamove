@@ -1,5 +1,4 @@
-import { useSignal, useSignalEffect } from "@preact/signals";
-import { useRef } from "preact/hooks";
+import { useSignal } from "@preact/signals-react";
 import type { Campaign, SceneView } from "../store/campaign";
 import { useY } from "../store/useY";
 import { Button } from "../ui/Button";
@@ -10,17 +9,15 @@ import {
   IconMembers,
   IconRename,
 } from "../ui/icons";
-import { openPopup } from "../ui/popup";
-import { canvasCommands, dialogRequest } from "./canvasState";
-import { HelpDialog, SettingsDialog } from "./CampaignDialogs";
-import { RelationshipsDialog } from "./Relationships";
-import { createPaneLayout, TwoPane, usePaneLevel } from "../ui/TwoPane";
+import { canvasCommands } from "./canvasState";
+import { TwoPane, usePaneLevel } from "../ui/TwoPane";
 import { GraphicPicker } from "../ui/GraphicPicker";
 import { getEntityGraphic, setEntityGraphic } from "./entityGraphics";
 import { SceneSettingsFields } from "./SceneSettingsFields";
 import { FolderTree } from "./FolderTree";
 import { ContextMenu, type MenuItem } from "./ContextMenu";
 import { menuTrigger } from "../ui/menuTrigger";
+import { scenesLayout } from "./panelLayouts";
 import {
   createSceneFolder,
   deleteSceneFolder,
@@ -28,42 +25,6 @@ import {
   moveSceneToFolder,
   renameSceneFolder,
 } from "../scene/folders";
-
-/** Side by side or one at a time (ui/TwoPane.tsx). */
-export const scenesLayout = createPaneLayout("scenesList", {
-  list: "scenes",
-  detail: "settings",
-});
-
-/**
- * The campaign's dialogs, always mounted so the command palette and the Scene
- * panel can open them whether or not that panel is on screen.
- */
-export function CampaignDialogHost({ campaign }: { campaign: Campaign }) {
-  const settingsRef = useRef<HTMLDialogElement>(null);
-  const helpRef = useRef<HTMLDialogElement>(null);
-  const webRef = useRef<HTMLDialogElement>(null);
-
-  useSignalEffect(() => {
-    const want = dialogRequest.value;
-    if (!want) return;
-    dialogRequest.value = null;
-    const dialog = {
-      settings: settingsRef,
-      help: helpRef,
-      relationships: webRef,
-    }[want].current;
-    openPopup(dialog);
-  });
-
-  return (
-    <>
-      <SettingsDialog campaign={campaign} dialogRef={settingsRef} />
-      <HelpDialog dialogRef={helpRef} />
-      <RelationshipsDialog campaign={campaign} dialogRef={webRef} />
-    </>
-  );
-}
 
 /** The scene list, and the active scene's settings. (Campaign actions are in the tool strip's menu.) */
 export function ScenePanel({ campaign }: { campaign: Campaign }) {
@@ -74,7 +35,6 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
     scenes[0]?.id ??
     null;
   const members = useY(campaign.members, () => campaign.memberViews());
-  const campaignName = useY(campaign.meta, () => campaign.name);
   const isGm = campaign.isGm();
   const active = scenes.find((s) => s.id === activeId);
   const { level, go } = usePaneLevel(scenesLayout, active ? "detail" : "list");
@@ -153,13 +113,13 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
     return (
       <li
         key={s.id}
-        class="scene-item"
+        className="scene-item"
         data-active={s.id === activeId}
         data-scene-id={s.id}
       >
         <button
           type="button"
-          class="scene-name-button"
+          className="scene-name-button"
           aria-current={s.id === activeId ? "true" : undefined}
           onClick={() => openScene(s.id)}
           onPointerDown={trigger.onPointerDown}
@@ -169,7 +129,7 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
         </button>
         {playerCount > 0 && (
           <span
-            class="scene-presence"
+            className="scene-presence"
             title={`${playerCount} ${playerCount === 1 ? "player" : "players"} here`}
           >
             <IconMembers size={16} /> {playerCount} here
@@ -198,7 +158,6 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
             renderItem={sceneRow}
             renderActions={(beginFolderNaming) => (
               <>
-                <div class="eyebrow scene-campaign-name">{campaignName}</div>
                 {isGm && (
                   <>
                     <Button
@@ -250,7 +209,7 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
             onRenameFolder={(id, name) => renameSceneFolder(campaign, id, name)}
             emptyContent={
               !scenes.length && !folders.length ? (
-                <p class="empty-inline">No scenes yet.</p>
+                <p className="empty-inline">No scenes yet.</p>
               ) : null
             }
           />
@@ -260,10 +219,10 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
         </>
       }
       detail={
-        <div class="panel-scroll scene-panel">
+        <div className="panel-scroll scene-panel">
           {isGm && active && (
             <input
-              class="scene-name-input"
+              className="title"
               value={active.name}
               aria-label="Scene name"
               onChange={(e) =>
@@ -289,7 +248,7 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
                   scene={scene}
                 />
               ) : (
-                <p class="muted">Loading scene settings…</p>
+                <p className="muted">Loading scene settings…</p>
               )}
               <GraphicPicker
                 label="Scene graphic"

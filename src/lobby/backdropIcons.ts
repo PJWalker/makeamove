@@ -1,4 +1,5 @@
-import type { ComponentType, JSX } from 'preact'
+import type * as React from "react";
+import type { ComponentType } from 'react'
 
 import GiCrystalBall from '~icons/game-icons/crystal-ball'
 import GiBroadsword from '~icons/game-icons/broadsword'
@@ -42,7 +43,7 @@ import GiHeartBottle from '~icons/game-icons/heart-bottle'
 import GiPerspectiveDiceSixFacesRandom from '~icons/game-icons/perspective-dice-six-faces-random'
 
 /** Fantasy odds and ends for the lobby backdrop (Game-icons.net, CC BY 3.0). */
-export const BACKDROP_ICONS: ComponentType<JSX.SVGAttributes<SVGSVGElement>>[] = [
+export const BACKDROP_ICONS: ComponentType<React.SVGProps<SVGSVGElement>>[] = [
   GiCrystalBall,
   GiBroadsword,
   GiFairyWand,

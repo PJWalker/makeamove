@@ -5,7 +5,7 @@ import Placeholder from '@tiptap/extension-placeholder'
 import StarterKit from '@tiptap/starter-kit'
 import type { SuggestionKeyDownProps, SuggestionProps } from '@tiptap/suggestion'
 import { ySyncPluginKey } from '@tiptap/y-tiptap'
-import { render } from 'preact'
+import { createRoot, type Root } from "react-dom/client";
 import type * as Y from 'yjs'
 import type { Awareness } from 'y-protocols/awareness'
 import { IconDelete, IconImage, IconReveal, IconSecret } from '../ui/icons'
@@ -39,9 +39,9 @@ export interface RichTextOptions {
   placeholder: string
   /** Its accessible name. */
   label: string
-  editable?: boolean
+  editable?: boolean | undefined
   /** The note being edited, so it doesn't offer itself as a link. */
-  noteId?: string
+  noteId?: string | undefined
   /** Players can read it: links to GM-only pages leave their titles off. */
   shared: boolean
   /** After each edit made here (not ones arriving from peers). */
@@ -97,7 +97,7 @@ export function linkExtension(campaign: Campaign, o: Pick<RichTextOptions, 'note
       return [
         "span",
         mergeAttributes({
-          class: "note-link bevel",
+          class: "note-link",
           "data-type": LINK_NODE,
           "data-kind": kind,
           "data-id": id,
@@ -138,7 +138,8 @@ export function linkExtension(campaign: Campaign, o: Pick<RichTextOptions, 'note
 /** The list that drops down after `@`: arrow keys move, Enter or Tab picks, Escape closes. */
 function suggestionList(campaign: Campaign) {
   const host = document.createElement("div");
-  host.className = "note-suggest context-menu panel bevel";
+  let root: Root | null = null;
+  host.className = "note-suggest context-menu panel";
   host.setAttribute("role", "listbox");
   let props: SuggestionProps<LinkTarget> | null = null;
   let index = 0;
@@ -151,7 +152,7 @@ function suggestionList(campaign: Campaign) {
   const draw = () => {
     if (!props) return;
     const items = props.items;
-    render(
+    root?.render(
       items.length ? (
         <>
           {items.map((t, i) => {
@@ -160,7 +161,7 @@ function suggestionList(campaign: Campaign) {
                 key={`${t.kind}:${t.id}`}
                 type="button"
                 role="option"
-                class="menu-item bevel"
+                className="menu-item"
                 aria-selected={i === index}
                 data-active={i === index || undefined}
                 onPointerDown={(e) => e.preventDefault()}
@@ -172,22 +173,22 @@ function suggestionList(campaign: Campaign) {
                   id={t.id}
                   size={22}
                 />
-                <span class="menu-label">{t.label}</span>
-                <span class="menu-shortcut">{t.detail}</span>
+                <span className="menu-label">{t.label}</span>
+                <span className="menu-shortcut">{t.detail}</span>
               </button>
             );
           })}
         </>
       ) : (
-        <p class="empty-inline note-suggest-empty">Nothing by that name.</p>
+        <p className="empty-inline note-suggest-empty">Nothing by that name.</p>
       ),
-      host,
     );
     place();
   };
 
   return {
     onStart(p: SuggestionProps<LinkTarget>) {
+      root = createRoot(host);
       props = p;
       index = 0;
       document.body.appendChild(host);
@@ -215,7 +216,8 @@ function suggestionList(campaign: Campaign) {
       return true;
     },
     onExit() {
-      render(null, host);
+      root?.unmount();
+      root = null;
       host.remove();
       props = null;
     },

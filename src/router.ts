@@ -1,11 +1,11 @@
-import { signal } from '@preact/signals'
+import { signal } from '@preact/signals-react'
 import { parseInvite, type Invite } from './sync/invite'
 import { until, withTransition } from './ui/transition'
 
 /** Hash routes: `#/` is the lobby, `#/c/<campaignId>` is a campaign. */
 function campaignIdFromHash(): string | null {
   const m = location.hash.match(/^#\/c\/([0-9a-z]+)/)
-  return m ? m[1] : null
+  return m?.[1] ?? null
 }
 
 export const routeCampaignId = signal<string | null>(campaignIdFromHash())

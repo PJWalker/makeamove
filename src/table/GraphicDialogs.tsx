@@ -1,4 +1,4 @@
-import { signal } from "@preact/signals";
+import { signal } from "@preact/signals-react";
 import { Dialog } from "./CampaignDialogs";
 import type { Campaign } from "../store/campaign";
 import { useY } from "../store/useY";
@@ -13,7 +13,7 @@ type Request = {
   kind: string;
   id: string;
   title: string;
-  defaultIcon?: string;
+  defaultIcon?: string | undefined;
 } | null;
 
 const request = signal<Request>(null);

@@ -16,13 +16,15 @@ import { postRoll } from '../../chat/send'
 import type { Campaign } from '../../store/campaign'
 import { device } from '../../store/device'
 import { CharacterText } from '../../table/CharacterText'
+import { parseCommaList } from '../../lib/list'
 import { Inventory } from '../../table/Inventory'
+import { SheetSectionView } from '../../table/DeclarativeSheet'
 import { Counter, MoveList, signedStr, TokenChip } from '../../table/sheetParts'
 import { Button } from '../../ui/Button'
 import type { ActionDef, Derived, GameSystem } from '../types'
 import { SKILLS } from './data'
-import { useSignal } from '@preact/signals'
-import { LevelUpDialog } from '../../table/CreationParts'
+import { useSignal } from '@preact/signals-react'
+import { AdvancementDialog } from "../../table/CreationParts";
 import { FEATS } from './origins'
 
 /*
@@ -34,21 +36,22 @@ import { FEATS } from './origins'
 type Props = { campaign: Campaign; system: GameSystem; c: CharacterView }
 
 const num = (v: unknown) => Number(v ?? 0)
+const valueOf = (values: Record<string, number>, key: string) => values[key] ?? 0
 const RANK = ['Not proficient', 'Proficient', 'Expertise']
 
 function Name({ campaign, c, editable, detail }: { campaign: Campaign; c: CharacterView; editable: boolean; detail: string }) {
   return (
-    <header class="sheet-head">
+    <header className="sheet-head">
       <TokenChip campaign={campaign} c={c} editable={editable} />
-      <div class="sheet-title">
+      <div className="sheet-title">
         <input
-          class="input bevel sheet-name"
+          className="sheet-name"
           aria-label="Name"
           value={c.name}
           disabled={!editable}
           onChange={(e) => e.currentTarget.value.trim() && setField(campaign, c.id, 'name', e.currentTarget.value.trim())}
         />
-        <span class="muted">{detail}</span>
+        <span className="muted">{detail}</span>
       </div>
     </header>
   )
@@ -57,24 +60,27 @@ function Name({ campaign, c, editable, detail }: { campaign: Campaign; c: Charac
 /** Ability scores, each with its check and saving throw. */
 function Abilities({ campaign, system, c, d, editable, use }: Props & { d: Derived; editable: boolean; use: (id: string) => void }) {
   return (
-    <ul class="sheet-stats dnd-abilities">
+    <ul className="sheet-stats dnd-abilities">
       {system.stats.map((s) => {
-        const prof = d.values[`save:${s.id}`] > 0
+        const saveBonus = valueOf(d.values, `save:${s.id}`)
+        const score = valueOf(d.values, s.id)
+        const modifier = valueOf(d.mods, s.id)
+        const prof = saveBonus > 0
         return (
           <li key={s.id}>
-            <span class="stat-abbr" title={s.name}>
+            <span className="stat-abbr" title={s.name}>
               {s.abbr}
             </span>
-            <button type="button" class="stat-mod bevel" aria-label={`${s.name} check`} onClick={() => use(`check-${s.id}`)}>
-              {signedStr(d.mods[s.id])}
+            <button type="button" className="stat-mod" aria-label={`${s.name} check`} onClick={() => use(`check-${s.id}`)}>
+              {signedStr(modifier)}
             </button>
             <input
-              class="input bevel stat-score"
+              className="stat-score"
               type="number"
               min={1}
               max={30}
               aria-label={`${s.name} score`}
-              title={d.values[s.id] !== c.scores[s.id] ? `Effective ${d.values[s.id]}` : undefined}
+              title={score !== c.scores[s.id] ? `Effective ${score}` : undefined}
               value={c.scores[s.id]}
               disabled={!editable}
               onChange={(e) => {
@@ -82,8 +88,8 @@ function Abilities({ campaign, system, c, d, editable, use }: Props & { d: Deriv
                 if (n >= 1 && n <= 30) setScore(campaign, c.id, s.id, n)
               }}
             />
-            <button type="button" class="dnd-save bevel" data-prof={prof} aria-label={`${s.name} save`} onClick={() => use(`save-${s.id}`)}>
-              Save {signedStr(d.mods[s.id] + d.values[`save:${s.id}`])}
+            <button type="button" className="dnd-save" data-prof={prof} aria-label={`${s.name} save`} onClick={() => use(`save-${s.id}`)}>
+              Save {signedStr(modifier + saveBonus)}
             </button>
           </li>
         )
@@ -94,9 +100,9 @@ function Abilities({ campaign, system, c, d, editable, use }: Props & { d: Deriv
 
 function Conditions({ campaign, system, c, editable }: Props & { editable: boolean }) {
   return (
-    <div class="dnd-conditions">
+    <div className="dnd-conditions">
       {system.conditions.map((k) => (
-        <label key={k.id} class="stat-deb" title={k.text}>
+        <label key={k.id} className="stat-deb" title={k.text}>
           <input type="checkbox" checked={c.conditions.includes(k.id)} disabled={!editable} onChange={() => toggleCondition(campaign, c.id, k.id)} />
           {k.name}
         </label>
@@ -109,7 +115,13 @@ function Conditions({ campaign, system, c, editable }: Props & { editable: boole
 export function DndSheet({ campaign, system, c }: Props) {
   const d = derive(c, system)
   const v = d.values
-  const cls = system.classes.find((k) => k.id === c.classId) ?? system.classes[0]
+  const level = Math.min(20, Math.max(1, num(c.data.level) || 1));
+  const classChoice = system.creation?.choices.find(
+    (choice) => choice.field === "classId",
+  );
+  const cls = classChoice?.options.find(
+    (option) => option.id === c.data.classId,
+  );
   const editable = canEdit(campaign, c)
   const actions = actionsFor(c, system, d)
   const use = (id: string) => {
@@ -138,7 +150,7 @@ export function DndSheet({ campaign, system, c }: Props) {
 
   return (
     <div
-      class="sheet"
+      className="sheet"
       data-item-drop={editable ? c.id : undefined}
       data-move-drop={editable ? c.id : undefined}
     >
@@ -146,22 +158,26 @@ export function DndSheet({ campaign, system, c }: Props) {
         campaign={campaign}
         c={c}
         editable={editable}
-        detail={`${cls.name} ${c.level}`}
+        detail={`${cls?.name ?? c.data.classId} ${level}`}
       />
 
-      <div class="dnd-fields">
+      <section className="form-section sheet-section" aria-label="Character details">
+        <h3 className="sheet-heading">Character details</h3>
+        <div className="dnd-fields">
         {(system.creation?.choices ?? [])
-          .filter((ch) => ch.at === "create" || ch.at <= c.level)
+          .filter((ch) => ch.at === "create" || typeof ch.at === 'number' && ch.at <= level)
           .map((ch) => {
-            const options = ch.options.filter(
-              (o) => !o.classId || o.classId === c.classId,
+            const options = ch.options.filter((o) =>
+              Object.entries(o.requires ?? {}).every(
+                ([field, value]) => c.data[field] === value,
+              ),
             );
             const value = String(c.data[ch.field] ?? "");
             return (
-              <label key={ch.id} class="field">
+              <label key={ch.id} className="field">
                 {ch.label}
                 <select
-                  class="input bevel"
+
                   value={value}
                   disabled={!editable}
                   onChange={(e) =>
@@ -182,12 +198,12 @@ export function DndSheet({ campaign, system, c }: Props) {
               </label>
             );
           })}
-      </div>
+        </div>
+      </section>
       {!!c.data.feats && (
-        <p class="dnd-feats">
-          <span class="eyebrow">Feats</span>{" "}
-          {String(c.data.feats)
-            .split(",")
+        <p className="dnd-feats">
+          <span className="eyebrow">Feats</span>{" "}
+          {parseCommaList(String(c.data.feats))
             .map((id) => FEATS.find((f) => f.id === id))
             .filter((f) => !!f)
             .map((f, i) => (
@@ -199,8 +215,9 @@ export function DndSheet({ campaign, system, c }: Props) {
         </p>
       )}
 
-      <section class="sheet-section" aria-label="Vitals">
-        <div class="sheet-vitals">
+      <section className="form-section sheet-section" aria-label="Vitals">
+        <h3 className="sheet-heading">Vitals</h3>
+        <div className="sheet-vitals">
           <Counter
             label="HP"
             value={hp}
@@ -225,23 +242,23 @@ export function DndSheet({ campaign, system, c }: Props) {
           />
           <Counter
             label="Level"
-            value={c.level}
+            value={level}
             disabled={!editable}
             onChange={(by) =>
-              setField(
+              setData(
                 campaign,
                 c.id,
                 "level",
-                Math.min(20, Math.max(1, c.level + by)),
+                Math.min(20, Math.max(1, level + by)),
               )
             }
           />
-          <label class="counter">
-            <span class="eyebrow">
-              XP{c.level < 20 && <span class="muted"> / {v.xpNext}</span>}
+          <label className="counter">
+            <span className="eyebrow">
+              XP{level < 20 && <span className="muted"> / {v.xpNext}</span>}
             </span>
             <input
-              class="input bevel"
+
               type="number"
               min={0}
               value={xp}
@@ -263,8 +280,8 @@ export function DndSheet({ campaign, system, c }: Props) {
             onChange={(by) => bumpData(campaign, c.id, "gp", by)}
           />
         </div>
-        <div class="sheet-row">
-          <label class="stat-deb">
+        <div className="sheet-row">
+          <label className="stat-deb">
             <input
               type="checkbox"
               checked={!!c.data.inspiration}
@@ -278,15 +295,15 @@ export function DndSheet({ campaign, system, c }: Props) {
         </div>
       </section>
 
-      {editable && c.level < 20 && xp >= v.xpNext && (
-        <div class="sheet-levelup">
+      {editable && level < 20 && xp >= valueOf(v, "xpNext") && (
+        <div className="sheet-advancement">
           <Button size="sm" onClick={() => (levelling.value = true)}>
             Level up
           </Button>
         </div>
       )}
       {levelling.value && (
-        <LevelUpDialog
+        <AdvancementDialog
           campaign={campaign}
           characterId={c.id}
           onClose={() => (levelling.value = false)}
@@ -294,9 +311,9 @@ export function DndSheet({ campaign, system, c }: Props) {
       )}
 
       {hp === 0 && (
-        <section class="sheet-section" aria-label="Death saving throws">
-          <h3 class="sheet-heading">Death saves</h3>
-          <div class="sheet-vitals">
+        <section className="form-section sheet-section" aria-label="Death saving throws">
+          <h3 className="sheet-heading">Death saves</h3>
+          <div className="sheet-vitals">
             <Counter
               label="Successes"
               value={num(c.data.deathSuccesses)}
@@ -316,7 +333,7 @@ export function DndSheet({ campaign, system, c }: Props) {
               }
             />
           </div>
-          <div class="sheet-row">
+          <div className="sheet-row">
             <Button
               size="sm"
               disabled={!editable}
@@ -328,7 +345,9 @@ export function DndSheet({ campaign, system, c }: Props) {
         </section>
       )}
 
-      <dl class="sheet-derived" aria-label="Combat">
+      <section className="form-section sheet-derived-group" aria-label="Combat">
+        <h3 className="sheet-heading">Combat</h3>
+        <dl className="sheet-derived">
         <div
           title={
             [
@@ -345,11 +364,11 @@ export function DndSheet({ campaign, system, c }: Props) {
           <dd>
             <button
               type="button"
-              class="dnd-roll"
+              className="dnd-roll"
               disabled={!editable}
               onClick={() => use("initiative")}
             >
-              {signedStr(v.initiative)}
+              {signedStr(valueOf(v, "initiative"))}
             </button>
           </dd>
         </div>
@@ -359,28 +378,29 @@ export function DndSheet({ campaign, system, c }: Props) {
         </div>
         <div>
           <dt>Proficiency</dt>
-          <dd>{signedStr(v.prof)}</dd>
+          <dd>{signedStr(valueOf(v, "prof"))}</dd>
         </div>
         <div>
           <dt>Passive Perception</dt>
           <dd>{v.passivePerception}</dd>
         </div>
-        {v.spellDc > 0 && (
+        {valueOf(v, "spellDc") > 0 && (
           <>
             <div>
               <dt>Spell save DC</dt>
-              <dd>{v.spellDc}</dd>
+              <dd>{valueOf(v, "spellDc")}</dd>
             </div>
             <div>
               <dt>Spell attack</dt>
-              <dd>{signedStr(v.spellAttack)}</dd>
+              <dd>{signedStr(valueOf(v, "spellAttack"))}</dd>
             </div>
           </>
         )}
-      </dl>
+        </dl>
+      </section>
 
-      <section class="sheet-section" aria-label="Abilities">
-        <h3 class="sheet-heading">Abilities</h3>
+      <section className="form-section sheet-section" aria-label="Abilities">
+        <h3 className="sheet-heading">Abilities</h3>
         <Abilities
           campaign={campaign}
           system={system}
@@ -391,9 +411,9 @@ export function DndSheet({ campaign, system, c }: Props) {
         />
       </section>
 
-      <section class="sheet-section" aria-label="Skills">
-        <h3 class="sheet-heading">Skills</h3>
-        <ul class="dnd-skills">
+      <section className="form-section sheet-section" aria-label="Skills">
+        <h3 className="sheet-heading">Skills</h3>
+        <ul className="dnd-skills">
           {SKILLS.map((s) => {
             const rank = num(c.data[`skill:${s.id}`]);
             const abbr = system.stats.find((x) => x.id === s.ability)?.abbr;
@@ -401,7 +421,7 @@ export function DndSheet({ campaign, system, c }: Props) {
               <li key={s.id}>
                 <button
                   type="button"
-                  class="dnd-prof"
+                  className="dnd-prof"
                   data-rank={rank}
                   aria-label={`${s.name}: ${RANK[rank]}`}
                   title={RANK[rank]}
@@ -412,13 +432,13 @@ export function DndSheet({ campaign, system, c }: Props) {
                 />
                 <button
                   type="button"
-                  class="dnd-skill"
+                  className="dnd-skill"
                   onClick={() => use(`skill-${s.id}`)}
                 >
                   <span>{s.name}</span>
-                  <span class="muted">{abbr}</span>
-                  <span class="dnd-bonus">
-                    {signedStr(d.mods[s.ability] + v[`skill:${s.id}`])}
+                  <span className="muted">{abbr}</span>
+                  <span className="dnd-bonus">
+                    {signedStr(valueOf(d.mods, s.ability) + valueOf(v, `skill:${s.id}`))}
                   </span>
                 </button>
               </li>
@@ -428,20 +448,20 @@ export function DndSheet({ campaign, system, c }: Props) {
       </section>
 
       {pools.length > 0 && (
-        <section class="sheet-section" aria-label="Resources">
-          <h3 class="sheet-heading">Resources</h3>
-          <div class="sheet-vitals">
+        <section className="form-section sheet-section" aria-label="Resources">
+          <h3 className="sheet-heading">Resources</h3>
+          <div className="sheet-vitals">
             {pools.map((r) => (
               <Counter
                 key={r.id}
                 label={
-                  r.id === "pact" ? `Pact slots (level ${v.pactLevel})` : r.name
+                  r.id === "pact" ? `Pact slots (level ${valueOf(v, "pactLevel")})` : r.name
                 }
-                value={Math.min(c.resources[r.id] ?? 0, v[r.max])}
-                max={v[r.max]}
+                value={Math.min(c.resources[r.id] ?? 0, valueOf(v, r.max))}
+                max={valueOf(v, r.max)}
                 disabled={!editable}
                 onChange={(by) =>
-                  bumpResource(campaign, c.id, r.id, by, v[r.max])
+                  bumpResource(campaign, c.id, r.id, by, valueOf(v, r.max))
                 }
               />
             ))}
@@ -449,8 +469,9 @@ export function DndSheet({ campaign, system, c }: Props) {
         </section>
       )}
 
-      <section class="sheet-section" aria-label="Rest">
-        <div class="sheet-row">
+      <section className="form-section sheet-section" aria-label="Rest">
+        <h3 className="sheet-heading">Rest</h3>
+        <div className="sheet-row">
           <Button
             size="sm"
             disabled={!editable || !(c.resources.hitDice ?? 0)}
@@ -471,12 +492,12 @@ export function DndSheet({ campaign, system, c }: Props) {
         </div>
       </section>
 
-      <section class="sheet-section" aria-label="Conditions">
-        <h3 class="sheet-heading">Conditions</h3>
-        <div class="sheet-vitals">
+      <section className="form-section sheet-section" aria-label="Conditions">
+        <h3 className="sheet-heading">Conditions</h3>
+        <div className="sheet-vitals">
           <Counter
             label="Exhaustion"
-            value={v.exhaustion}
+            value={valueOf(v, "exhaustion")}
             max={6}
             disabled={!editable}
             onChange={(by) => bumpData(campaign, c.id, "exhaustion", by, 6)}
@@ -491,11 +512,11 @@ export function DndSheet({ campaign, system, c }: Props) {
       </section>
 
       <section
-        class="sheet-section"
+        className="form-section sheet-section"
         aria-label="Actions"
         data-move-drop={editable ? c.id : undefined}
       >
-        <h3 class="sheet-heading">Actions</h3>
+        <h3 className="sheet-heading">Actions</h3>
         <MoveList
           campaign={campaign}
           system={system}
@@ -511,10 +532,11 @@ export function DndSheet({ campaign, system, c }: Props) {
         />
       </section>
 
+      {['spellbook', 'cantrips', 'prepared'].map((loadout) => <SheetSectionView key={loadout} campaign={campaign} system={system} c={c} d={d} editable={editable} section={{ kind: 'loadout', loadout }} />)}
       <Inventory campaign={campaign} c={c} d={d} editable={editable} />
 
-      <section class="sheet-section" aria-label="Features and notes">
-        <h3 class="sheet-heading">Features &amp; notes</h3>
+      <section className="form-section sheet-section" aria-label="Features and notes">
+        <h3 className="sheet-heading">Features &amp; notes</h3>
         <CharacterText
           campaign={campaign}
           c={c}
@@ -530,7 +552,7 @@ export function DndSheet({ campaign, system, c }: Props) {
           editable={editable}
         />
       </section>
-      <p class="muted sheet-owner">
+      <p className="muted sheet-owner">
         {c.owner === device.value.id
           ? "Yours"
           : editable
@@ -555,10 +577,10 @@ export function DndNpcSheet({ campaign, system, c }: Props) {
     f.type === 'longtext' ? (
       <CharacterText key={f.id} campaign={campaign} c={c} field={`field:${f.id}`} label={f.label} editable={editable} />
     ) : (
-      <label key={f.id} class="field">
+      <label key={f.id} className="field">
         {f.label}
         <input
-          class="input bevel"
+
           type={f.type === 'number' ? 'number' : 'text'}
           value={c.fields[f.id]}
           disabled={!editable}
@@ -568,74 +590,89 @@ export function DndNpcSheet({ campaign, system, c }: Props) {
     )
   return (
     <div
-      class="sheet"
+      className="sheet"
       data-item-drop={editable ? c.id : undefined}
       data-move-drop={editable ? c.id : undefined}
     >
       <Name campaign={campaign} c={c} editable={editable} detail="NPC" />
-      <div class="sheet-vitals">
-        <Counter
-          label="HP"
-          value={c.resources.hp ?? 0}
-          max={maxHp}
-          disabled={!editable}
-          onChange={(by) => bumpResource(campaign, c.id, "hp", by, maxHp)}
-        />
-        <label class="counter">
-          <span class="eyebrow">Max HP</span>
-          <input
-            class="input bevel stat-score"
-            type="number"
-            min={1}
-            value={maxHp}
+      <section className="form-section sheet-section" aria-label="Vitals">
+        <h3 className="sheet-heading">Vitals</h3>
+        <div className="sheet-vitals">
+          <Counter
+            label="HP"
+            value={c.resources.hp ?? 0}
+            max={maxHp}
             disabled={!editable}
-            onChange={(e) => {
-              const n = Math.floor(Number(e.currentTarget.value));
-              if (n >= 1) setData(campaign, c.id, "maxHp", n);
-            }}
+            onChange={(by) => bumpResource(campaign, c.id, "hp", by, maxHp)}
           />
-        </label>
-        <Counter
-          label="Temp HP"
-          value={num(c.data.tempHp)}
-          disabled={!editable}
-          onChange={(by) => bumpData(campaign, c.id, "tempHp", by)}
-        />
-      </div>
-      <div class="dnd-fields">
-        {text(field("ac"))}
-        {text(field("speed"))}
-        {text(field("cr"))}
-      </div>
-      <dl class="sheet-derived" aria-label="Combat">
-        <div>
-          <dt>Initiative</dt>
-          <dd>
-            <button
-              type="button"
-              class="dnd-roll"
+          <label className="counter">
+            <span className="eyebrow">Max HP</span>
+            <input
+              className="stat-score"
+              type="number"
+              min={1}
+              value={maxHp}
               disabled={!editable}
-              onClick={() => use("initiative")}
-            >
-              {signedStr(d.values.initiative)}
-            </button>
-          </dd>
+              onChange={(e) => {
+                const n = Math.floor(Number(e.currentTarget.value));
+                if (n >= 1) setData(campaign, c.id, "maxHp", n);
+              }}
+            />
+          </label>
+          <Counter
+            label="Temp HP"
+            value={num(c.data.tempHp)}
+            disabled={!editable}
+            onChange={(by) => bumpData(campaign, c.id, "tempHp", by)}
+          />
         </div>
-      </dl>
-      <Abilities
-        campaign={campaign}
-        system={system}
-        c={c}
-        d={d}
-        editable={editable}
-        use={use}
-      />
-      {text(field("senses"))}
-      {text(field("languages"))}
-      {text(field("traits"))}
-      {text(field("actions"))}
-      <section class="sheet-section" aria-label="Conditions">
-        <h3 class="sheet-heading">Conditions</h3>
+      </section>
+      <section className="form-section sheet-section" aria-label="Defenses">
+        <h3 className="sheet-heading">Defenses</h3>
+        <div className="dnd-fields">
+          {text(field("ac"))}
+          {text(field("speed"))}
+          {text(field("cr"))}
+        </div>
+      </section>
+      <section className="form-section sheet-derived-group" aria-label="Combat">
+        <h3 className="sheet-heading">Combat</h3>
+        <dl className="sheet-derived">
+          <div>
+            <dt>Initiative</dt>
+            <dd>
+              <button
+                type="button"
+                className="dnd-roll"
+                disabled={!editable}
+                onClick={() => use("initiative")}
+              >
+                {signedStr(valueOf(d.values, "initiative"))}
+              </button>
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section className="form-section sheet-section" aria-label="Abilities">
+        <h3 className="sheet-heading">Abilities</h3>
+        <Abilities
+          campaign={campaign}
+          system={system}
+          c={c}
+          d={d}
+          editable={editable}
+          use={use}
+        />
+      </section>
+      <section className="form-section sheet-section" aria-label="Traits and actions">
+        <h3 className="sheet-heading">Traits and actions</h3>
+        {text(field("senses"))}
+        {text(field("languages"))}
+        {text(field("traits"))}
+        {text(field("actions"))}
+      </section>
+      <section className="form-section sheet-section" aria-label="Conditions">
+        <h3 className="sheet-heading">Conditions</h3>
         <Conditions
           campaign={campaign}
           system={system}

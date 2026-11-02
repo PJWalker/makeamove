@@ -1,5 +1,5 @@
-import { signal } from '@preact/signals'
-import { addItem, baseSystemOf, canEdit, getCharacter, selectedCharacterId, startMove, systemOf } from '../characters/api'
+import { signal } from '@preact/signals-react'
+import { addItem, baseSystemOf, canEdit, getCharacter, newNpcFromMonster, selectedCharacterId, startMove, systemOf } from '../characters/api'
 import { KIND_LABEL, librariesFor, searchEntries, type EntryKind, type LibraryEntry } from '../library'
 import type { Campaign } from '../store/campaign'
 import { useY } from '../store/useY'
@@ -22,7 +22,7 @@ const folded = signal<Set<string>>(new Set())
 
 /**
  * The Libraries: everything the game system and plugins contribute (items,
- * moves, classes, tags), grouped by where it comes from. Gear can be added
+ * moves, options, tags), grouped by where it comes from. Gear can be added
  * to the selected character, and moves made by them.
  */
 export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
@@ -78,6 +78,9 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
         </Button>
       );
     }
+    if (e.kind === 'monster' && inWindow) {
+      return <Button size="sm" variant="primary" disabled={!campaign.isGm()} onClick={() => newNpcFromMonster(campaign, e.monster.id)}>Create NPC</Button>
+    }
     return null
   }
 
@@ -118,7 +121,9 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
               ...(actions.length ? (["divider"] as const) : []),
               ...actions,
             ]
-          : actions;
+          : e.kind === 'monster'
+            ? [{ label: 'Create NPC', disabled: !campaign.isGm(), onSelect: () => { if (campaign.isGm()) newNpcFromMonster(campaign, e.monster.id) } }]
+            : actions;
     return [
       ...items,
       ...(items.length ? (["divider"] as const) : []),
@@ -134,10 +139,10 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
   const all = sources.flatMap((s) => s.collections.flatMap((c) => c.entries.map((e) => [s.id, e] as const)))
 
   return (
-    <div class="panel-scroll libraries">
-      <div class="libraries-tools">
+    <div className="panel-scroll libraries">
+      <div className="libraries-tools">
         <input
-          class="input bevel"
+
           type="search"
           placeholder="Search the Libraries…"
           aria-label="Search the Libraries"
@@ -152,7 +157,7 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
             onChange={(k) => (view.value = { ...view.value, kind: k })}
           />
         )}
-        <p class="muted libraries-target">
+        <p className="muted libraries-target">
           {me ? (canAct ? `Adding to ${me.name}` : `${me.name} isn’t yours to change`) : 'Choose a character to add things to'}
         </p>
       </div>
@@ -164,8 +169,8 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
           .filter(({ entries }) => entries.length > 0)
         if (!collections.length) return null
         return (
-          <section key={s.id} class="library-source" aria-label={s.name}>
-            <h3 class="eyebrow">{s.name}</h3>
+          <section key={s.id} className="library-source" aria-label={s.name}>
+            <h3 className="eyebrow">{s.name}</h3>
             {collections.map(({ c, entries }) => {
               const id = `${s.id}/${c.id}`
               const open = searching || !folded.value.has(id)
@@ -202,7 +207,7 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
                         }
                         onOpen={(row) => windows.show(keyOf(s.id, e), row)}
                         menuItems={menuItemsFor(e)}
-                        onPointerDown={(ev) =>
+                        onPointerDown={e.kind === 'monster' ? undefined : (ev) =>
                           dragEntity(
                             ev,
                             e.kind === "item" || e.kind === "move"
@@ -230,12 +235,12 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
                 </ListGroup>
               );
             })}
-            {s.attribution && <p class="muted sheet-attribution">{s.attribution}</p>}
+            {s.attribution && <p className="muted sheet-attribution">{s.attribution}</p>}
           </section>
         )
       })}
       {searching && !all.some(([, e]) => (kind === 'all' || e.kind === kind) && searchEntries([e], query).length) && (
-        <p class="empty">Nothing matches “{query.trim()}”.</p>
+        <p className="empty">Nothing matches “{query.trim()}”.</p>
       )}
 
       {windows.keys.map((key) => {
@@ -261,7 +266,7 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
             menuItems={menuItemsFor(e)}
           >
             {tag && <Tag>{tag}</Tag>}
-            {metaOf(e) && <span class="muted">{metaOf(e)}</span>}
+            {metaOf(e) && <span className="muted">{metaOf(e)}</span>}
             {actions(e, true)}
           </EntryWindow>
         );

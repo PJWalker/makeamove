@@ -1,4 +1,4 @@
-import { effect, signal } from "@preact/signals";
+import { effect, signal } from "@preact/signals-react";
 import * as Y from "yjs";
 import { colourOf, Presence } from "../scene/presence";
 import { setBlobFetcher } from "../scene/images";

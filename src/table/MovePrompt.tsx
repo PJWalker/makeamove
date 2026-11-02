@@ -1,7 +1,7 @@
-import { useSignal, useSignalEffect } from '@preact/signals'
-import { useEffect, useLayoutEffect, useRef } from 'preact/hooks'
+import { useSignal, useSignalEffect } from '@preact/signals-react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import { getCharacter, makeMove, moveRequest, startMove, systemOf, targetRequest } from '../characters/api'
-import { needsChoice, planMove } from '../characters/moves'
+import { canPayMove, checkOf, needsChoice, planMove, rollModesFor, saveOf } from '../characters/moves'
 import { derive } from '../characters/store'
 import { inRange } from '../scene/measure'
 import { activeTool } from '../scene/tools'
@@ -161,7 +161,7 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
   useSignalEffect(() => {
     const r = targetRequest.value
     const s = r && systemOf(campaign).actions.find((m) => m.id === r.moveId)?.target
-    targetPick.value = r && s ? { max: s.max, actor: r.characterId } : null
+    targetPick.value = r && s ? { ...(s.max !== undefined ? { max: s.max } : {}), actor: r.characterId } : null
     if (r) activeTool.value = 'select'
   })
   useEffect(() => () => cancel(), [])
@@ -184,22 +184,22 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
   if (!req || !move || !c) return null
 
   return (
-    <div ref={ref} class="roll-prompt panel bevel" role="dialog" aria-label={`${move.name} (${c.name})`} inert={!live}>
-      <div class="roll-prompt-head">
-        <span class="eyebrow">
+    <div ref={ref} className="roll-prompt panel" role="dialog" aria-label={`${move.name} (${c.name})`} inert={!live}>
+      <div className="roll-prompt-head">
+        <span className="eyebrow">
           {move.name} · {c.name}
         </span>
         <Button variant="icon" size="sm" label="Cancel" onClick={cancel}>
           <IconClose />
         </Button>
       </div>
-      <p class="roll-prompt-desc">{move.text}</p>
+      <p className="roll-prompt-desc">{move.text}</p>
       {req.kind === 'target' ? (
         <TargetStep campaign={campaign} characterId={c.id} moveId={move.id} />
       ) : (
-        <AskStep campaign={campaign} characterId={c.id} moveId={move.id} />
+        <AskStep key={`${c.id}:${move.id}`} campaign={campaign} characterId={c.id} moveId={move.id} />
       )}
-      <span class="roll-prompt-tail" aria-hidden="true" />
+      <span className="roll-prompt-tail" aria-hidden="true" />
     </div>
   )
 }
@@ -229,28 +229,28 @@ function TargetStep({ campaign, characterId, moveId }: { campaign: Campaign; cha
   const placing = !!areaRequest.value
   const placeArea = () => (areaRequest.value = placing ? null : { area: area!, actor: characterId, n: Date.now() })
   return (
-    <div class="move-form">
-      <p class="roll-prompt-text">{spec.prompt}</p>
+    <div className="move-form">
+      <p className="roll-prompt-text">{spec.prompt}</p>
       {area && (
         <Button size="sm" variant={placedArea.value ? 'ghost' : 'secondary'} pressed={placing} onClick={placeArea}>
           {placing ? 'Click the map to place it' : placedArea.value ? 'Place the area again' : `Place the ${areaName(area)}`}
         </Button>
       )}
       {targets.length ? (
-        <span class="roll-prompt-targets">
+        <span className="roll-prompt-targets">
           {targets.map((t) => {
             const r = reach(t.distance)
             const out = r === 'out'
             return (
-              <span key={t.id} class="target-chip" data-out={out || undefined} title={out ? 'Out of range' : r === 'long' ? 'Long range' : undefined}>
+              <span key={t.id} className="target-chip" data-out={out || undefined} title={out ? 'Out of range' : r === 'long' ? 'Long range' : undefined}>
                 {t.name}
-                {t.distance !== null && <span class="muted"> {fmt(t.distance)}</span>}
+                {t.distance !== null && <span className="muted"> {fmt(t.distance)}</span>}
               </span>
             )
           })}
         </span>
       ) : (
-        <span class="muted">{area ? 'Place the area, or click' : 'Click'} a token on the map: {wanted}.</span>
+        <span className="muted">{area ? 'Place the area, or click' : 'Click'} a token on the map: {wanted}.</span>
       )}
       <Button variant="primary" disabled={!ready || blocked} onClick={go}>
         {blocked ? 'Out of range' : move.name}
@@ -272,17 +272,37 @@ function AskStep({ campaign, characterId, moveId }: { campaign: Campaign; charac
   const c = getCharacter(campaign, characterId)!
   const targets = moveRequest.value?.targets
   const stat = useSignal('')
-  const bond = useSignal(1)
+  const ask = needsChoice(move)
+  const check = checkOf(move)
+  const difficultySource = check?.difficulty ?? saveOf(move)?.difficulty
+  const unknownDefense = difficultySource?.kind === 'target' && targets?.some((target) => {
+    const character = getCharacter(campaign, target.characterId)
+    return !character || derive(character, system).values[difficultySource.value] === undefined
+  })
+  const difficultySpec = difficultySource?.kind === 'prompt' ? difficultySource
+    : unknownDefense ? { prompt: 'Difficulty for targets with unknown defense', initial: 10, min: 0, max: 99 } : undefined
+  const counterSpec = checkOf(move)?.counter
+  const rollBonusSpecs = checkOf(move)?.rollBonuses ?? []
+  const counters = campaign.chat.messages.value.filter((message) => message.kind === 'counter')
+  const difficulty = useSignal(String(difficultySpec?.initial ?? 10))
+  const counterMessageId = useSignal(counters[0]?.id ?? '')
+  const rollBonuses = useSignal<string[]>([])
+  const bond = useSignal(ask?.kind === 'number' ? ask.initial ?? 1 : 1)
   const extra = useSignal(0)
   const mode = useSignal('')
+  const variant = useSignal('')
+  const variants = move.variants?.(c, derive(c, system))
+  const rollModes = check ? rollModesFor(system, move) : []
   const formRef = useRef<HTMLFormElement>(null)
   // Enter rolls straight away.
   useEffect(() => formRef.current?.querySelector<HTMLButtonElement>('button[type="submit"]')?.focus({ preventScroll: true }), [])
 
-  const ask = needsChoice(move)
-  const choice = { stat: stat.value || undefined, ask: bond.value, extra: extra.value, mode: mode.value || undefined }
-  const ready = ask?.kind !== 'stat' || !!stat.value
-  const formula = ready ? planMove(system, move, c, derive(c, system), choice).formula : ''
+  const chosenDifficulty = difficulty.value.trim() ? Number(difficulty.value) : undefined
+  const difficultyReady = !difficultySpec || (chosenDifficulty !== undefined && Number.isFinite(chosenDifficulty) && chosenDifficulty >= (difficultySpec.min ?? 0) && chosenDifficulty <= (difficultySpec.max ?? 99))
+  const choice = { stat: stat.value || undefined, ask: bond.value, extra: extra.value, mode: mode.value || undefined, difficulty: difficultySpec ? chosenDifficulty : undefined, counterMessageId: counterSpec ? counterMessageId.value : undefined, rollBonuses: rollBonuses.value, variant: variant.value || undefined }
+  const plan = planMove(system, move, c, derive(c, system), choice)
+  const ready = (ask?.kind !== 'stat' || !!stat.value) && (!counterSpec || !!counterMessageId.value) && difficultyReady && canPayMove(c, plan)
+  const formula = ready ? plan.formula : ''
   const go = () => {
     if (!ready) return
     void makeMove(campaign, c.id, move, choice, targets)
@@ -292,16 +312,22 @@ function AskStep({ campaign, characterId, moveId }: { campaign: Campaign; charac
   return (
     <form
       ref={formRef}
-      class="move-form"
+      className="move-form"
       onSubmit={(e) => {
         e.preventDefault()
         go()
       }}
     >
+      {variants && <label className="field">Casting or use
+        <select value={variant.value || variants[0]?.id || ''} disabled={!variants.length} onChange={(event) => (variant.value = event.currentTarget.value)}>
+          {!variants.length && <option value="">No available uses</option>}
+          {variants.map((entry) => <option key={entry.id} value={entry.id}>{entry.label}</option>)}
+        </select>
+      </label>}
       {ask?.kind === 'stat' && (
-        <div class="field" role="radiogroup" aria-label="Stat to roll">
+        <div className="field" role="radiogroup" aria-label="Stat to roll">
           Roll which stat?
-          <div class="move-stats">
+          <div className="move-stats">
             {system.stats.map((s) => (
               <Button key={s.id} size="sm" pressed={stat.value === s.id} onClick={() => (stat.value = s.id)}>
                 {s.abbr}
@@ -311,11 +337,12 @@ function AskStep({ campaign, characterId, moveId }: { campaign: Campaign; charac
         </div>
       )}
       {ask?.kind === 'number' && (
-        <label class="field">
+        <label className="field">
           {ask.prompt}
           <input
-            class="input bevel"
+
             type="number"
+            required
             min={ask.min}
             max={ask.max}
             value={bond.value}
@@ -323,27 +350,64 @@ function AskStep({ campaign, characterId, moveId }: { campaign: Campaign; charac
           />
         </label>
       )}
-      {system.rollModes && (
+      {difficultySpec && (
+        <label className="field">
+          {difficultySpec.prompt}
+          <input
+            type="number"
+            required
+            min={difficultySpec.min ?? 0}
+            max={difficultySpec.max ?? 99}
+            value={difficulty.value}
+            onInput={(e) => (difficulty.value = e.currentTarget.value)}
+          />
+        </label>
+      )}
+      {counterSpec && (
+        <label className="field">
+          {counterSpec.prompt}
+          <select value={counterMessageId.value} disabled={!counters.length} onChange={(e) => (counterMessageId.value = e.currentTarget.value)}>
+            <option value="">Choose a counter</option>
+            {counters.map((counter) => counter.kind === 'counter' ? <option key={counter.id} value={counter.id}>{counter.label} ({counter.start}{counter.max !== undefined ? `/${counter.max}` : ''})</option> : null)}
+          </select>
+          {!counters.length && <span className="muted">Create a track with /clock or /count first.</span>}
+        </label>
+      )}
+      {rollBonusSpecs.filter((bonus) => !bonus.nameField || String(c.data[bonus.nameField] ?? '').trim()).map((bonus) => {
+        const selected = rollBonuses.value.includes(bonus.id)
+        return (
+          <label key={bonus.id} className="check-option">
+            <input
+              type="checkbox"
+              checked={selected}
+              disabled={!selected && !!bonus.cost && (c.resources[bonus.cost.resource] ?? 0) < bonus.cost.by}
+              onChange={() => (rollBonuses.value = selected ? rollBonuses.value.filter((id) => id !== bonus.id) : [...rollBonuses.value, bonus.id])}
+            />
+            {bonus.nameField ? c.data[bonus.nameField] : bonus.label} (+{Number(c.data[bonus.valueField] ?? 0)}; {bonus.cost ? `spend ${bonus.cost.by} ${bonus.cost.resource}` : 'no cost'})
+          </label>
+        )
+      })}
+      {rollModes.length > 0 && (
         <Segmented
           label="Roll"
           value={mode.value}
-          options={[{ id: '', label: 'Normal' }, ...system.rollModes.map((m) => ({ id: m.id, label: m.label }))]}
+          options={[{ id: '', label: system.defaultRollLabel ?? 'Normal' }, ...rollModes.map((m) => ({ id: m.id, label: m.label }))]}
           onChange={(v) => (mode.value = v)}
         />
       )}
-      <label class="field roll-prompt-extra">
+      {check && <label className="field roll-prompt-extra">
         Extra bonus
         <input
-          class="input bevel"
+
           type="number"
           min={-10}
           max={10}
           value={extra.value}
           onInput={(e) => (extra.value = Number(e.currentTarget.value) || 0)}
         />
-      </label>
+      </label>}
       <Button variant="primary" type="submit" disabled={!ready} title={formula || undefined}>
-        {ready ? `Roll ${bare(formula)}` : 'Pick a stat'}
+        {ready ? check ? `Roll ${bare(formula)}` : 'Use' : 'Roll'}
       </Button>
     </form>
   )
