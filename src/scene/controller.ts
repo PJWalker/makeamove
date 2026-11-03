@@ -4,6 +4,7 @@ import { device } from "../store/device";
 
 import { colourOf, type Presence } from "./presence";
 import { type Camera, clampZoom, fitCamera, toWorld, zoomAt } from "./camera";
+import { readSceneCamera, saveSceneCamera } from "./cameraMemory";
 import {
   CORNER_SIGNS,
   type Corner,
@@ -131,8 +132,6 @@ const LIGHT_CURSORS: Record<LightPart, string> = {
 
 /** This member's token colour, from their device id. */
 const memberColour = () => colourOf(device.value);
-
-const cameraKey = (sceneId: string) => `mam:camera:${sceneId}`;
 
 /**
  * Turns pointer, wheel and keyboard input into camera moves and scene edits.
@@ -520,16 +519,10 @@ export class SceneController {
   // Camera
 
   private restoreCamera() {
-    try {
-      const saved = JSON.parse(
-        localStorage.getItem(cameraKey(this.sceneId)) ?? "null",
-      );
-      if (saved && typeof saved.zoom === "number") {
-        this.renderer.setCamera(saved);
-        return;
-      }
-    } catch {
-      // Fall through to fitting the scene.
+    const saved = readSceneCamera(this.sceneId);
+    if (saved) {
+      this.renderer.setCamera(saved);
+      return;
     }
     this.fit();
   }
@@ -540,14 +533,7 @@ export class SceneController {
   }
 
   private saveCamera() {
-    try {
-      localStorage.setItem(
-        cameraKey(this.sceneId),
-        JSON.stringify(this.renderer.camera),
-      );
-    } catch {
-      // The view just won't be remembered.
-    }
+    saveSceneCamera(this.sceneId, this.renderer.camera);
   }
 
   /** Show everything in the scene, or the origin at 100% if it's empty. */

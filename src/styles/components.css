@@ -3951,9 +3951,6 @@
       max-width: 100%;
       height: auto;
     }
-    &.ProseMirror-selectednode {
-      outline: 2px solid var(--accent);
-    }
   }
   .note-secret {
     display: grid;
@@ -3961,9 +3958,10 @@
     padding: var(--space-1) var(--space-2);
     background: color-mix(in oklab, var(--accent) 10%, var(--surface-sunken));
     border-inline-start: 3px solid var(--accent);
-    &.ProseMirror-selectednode {
-      outline: 2px solid var(--accent);
-    }
+  }
+  .note-image.ProseMirror-selectednode,
+  .note-secret.ProseMirror-selectednode {
+    outline: 2px solid var(--accent);
   }
   .note-secret-label {
     color: var(--accent);
