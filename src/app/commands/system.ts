@@ -9,12 +9,12 @@ import {
   canEdit,
   updateItem,
   rest,
-} from '../characters/api'
-import { ensureSystemCounter } from '../chat/send'
-import { actionsFor, derive } from '../characters/store'
-import type { Campaign } from '../store/campaign'
-import { browseLibrary } from '../table/libraryView'
-import { showPanel } from '../table/panelLayout'
+} from '../../features/characters/api'
+import { ensureSystemCounter } from '../../features/chat/send'
+import { actionsFor, derive } from '../../features/characters/store'
+import type { Campaign } from '../../campaign/campaign'
+import { browseLibrary } from '../../table/libraryView'
+import { showPanel } from '../../table/panelLayout'
 import type { Action } from './types'
 
 export function systemActions(campaign: Campaign): Action[] {

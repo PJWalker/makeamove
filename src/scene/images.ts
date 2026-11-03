@@ -1,4 +1,4 @@
-import { getBlob, putBlob } from "../store/blobs";
+import { getBlob, putBlob } from "../platform/blobs";
 import {
   type ImageWorkerRequest,
   type ImageWorkerResponse,

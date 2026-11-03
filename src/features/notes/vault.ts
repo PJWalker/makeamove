@@ -1,7 +1,8 @@
 import * as Y from 'yjs'
 import { IndexeddbPersistence } from 'y-indexeddb'
-import { newSecret } from '../lib/ids'
-import { SyncSession } from '../sync/session'
+import { newSecret } from '../../lib/ids'
+import { dataName } from '../../platform/dataEpoch'
+import { SyncSession } from '../../sync/session'
 
 /*
  * The GM vault: a document of its own for GM-only pages, kept apart from the
@@ -18,7 +19,7 @@ import { SyncSession } from '../sync/session'
  * of the campaign root.
  */
 
-export const vaultDbName = (campaignId: string) => `mam:vault:${campaignId}`
+export const vaultDbName = (campaignId: string) => dataName('vault', campaignId)
 export const vaultGuid = (campaignId: string) => `${campaignId}/vault`
 /** Its own guid, so a page revealed later doesn't collide with its vault copy. */
 export const vaultNoteGuid = (campaignId: string, noteId: string) => `${campaignId}/gm-note/${noteId}`
@@ -60,7 +61,7 @@ export class Vault {
     if (this.session || this.destroyed) return;
     let transport;
     try {
-      transport = (await import("../sync/trystero")).trysteroTransport(
+      transport = (await import("../../sync/trystero")).trysteroTransport(
         vaultGuid(this.campaignId),
         this.key,
       );

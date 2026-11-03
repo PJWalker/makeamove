@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DiceFlight, simulateDice } from "../../table/diePhysics";
+import { DiceFlight, simulateDice } from "../../../table/diePhysics";
 
 
 const cube = {

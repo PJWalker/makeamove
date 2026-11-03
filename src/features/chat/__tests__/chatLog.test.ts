@@ -2,8 +2,8 @@ import 'fake-indexeddb/auto'
 import { describe, expect, it } from 'vitest'
 import { commandText, contentFromText } from "../content";
 import * as Y from 'yjs'
-import { SyncSession } from '../../sync/session'
-import { MemoryRoom } from '../../sync/__tests__/memoryRoom'
+import { SyncSession } from '../../../sync/session'
+import { MemoryRoom } from '../../../sync/__tests__/memoryRoom'
 import { ChatLog, CHUNK_SIZE } from '../chatLog'
 
 let n = 0

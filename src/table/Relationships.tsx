@@ -7,7 +7,7 @@ import {
   getCharacter,
   listCharacters,
   selectCharacter,
-} from "../characters/api";
+} from "../features/characters/api";
 import {
   layoutWeb,
   relationshipNotes,
@@ -16,17 +16,17 @@ import {
   removeRelationship,
   setRelationship,
   type NodePosition,
-} from "../characters/relationships";
-import type { CharacterView } from "../characters/store";
-import type { Campaign } from "../store/campaign";
-import { useY } from "../store/useY";
+} from "../features/characters/relationships";
+import type { CharacterView } from "../features/characters/types";
+import type { Campaign } from "../campaign/campaign";
+import { useY } from "../ui/useY";
 import { Button } from "../ui/Button";
 import { IconDelete, IconExpand } from "../ui/icons";
 import { Dialog } from "./CampaignDialogs";
 import { CharacterText } from "./CharacterText";
 import { showPanel } from "./panelLayout";
 import { dialogRequest } from "./canvasState";
-import { characterLinkTargets, matchingLinkTargets } from "../notes/targets";
+import { characterLinkTargets, matchingLinkTargets } from "../features/notes/targets";
 import { useMenuOverlay } from "../ui/menuOverlay";
 import { CampaignEntityGraphic } from "./EntityGraphic";
 import { registerEntityDrop } from "./entityDrag";

@@ -1,4 +1,4 @@
-import { parse } from "../../dice/notation";
+import { parse } from "../../features/dice/notation";
 import { parseCommaList } from "../../lib/list";
 import { resolveEffects } from "../effects";
 import type { ActionDef, CheckStep, GameSystem } from "../types";

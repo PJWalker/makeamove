@@ -1,5 +1,5 @@
-import { findAction } from "../actions/registry";
-import { shortcutFor, showCombo } from "../actions/custom";
+import { findAction } from "../app/commands/registry";
+import { shortcutFor, showCombo } from "../app/commands/custom";
 import {
   editHotbar,
   hotbarSlots,
@@ -7,9 +7,9 @@ import {
   MAX_SLOTS,
   pin,
   unpin,
-} from "../characters/hotbar";
-import { selectedCharacterId } from "../characters/api";
-import type { Campaign } from "../store/campaign";
+} from "../features/characters/hotbar";
+import { selectedCharacterId } from "../features/characters/api";
+import type { Campaign } from "../campaign/campaign";
 import { IconAdd, IconDelete, IconShortcut } from "../ui/icons";
 import type { MenuItem } from "./ContextMenu";
 import { editAction } from "./ActionDialogs";

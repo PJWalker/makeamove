@@ -2,7 +2,7 @@ import { signal } from "@preact/signals-react";
 import type { ReactNode } from "react";
 import { useLayoutEffect } from "react";
 import { useSignal } from "@preact/signals-react";
-import type { Campaign } from "../store/campaign";
+import type { Campaign } from "../campaign/campaign";
 import {
   addItem,
   baseSystemOf,
@@ -13,10 +13,11 @@ import {
   startMove,
   systemOf,
   updateItem,
-} from "../characters/api";
-import { checkOf } from "../characters/moves";
-import { useY } from "../store/useY";
-import { librariesFor } from "../library";
+} from "../features/characters/api";
+import { checkOf } from "../features/characters/moves";
+import { getStorageJson, setStorageJson } from "../platform/localStorage";
+import { useY } from "../ui/useY";
+import { librariesFor } from "../features/library";
 import type { Icon } from "../ui/icons";
 import { IconOpenWindow } from "../ui/icons";
 import { IconPost, IconRoll, IconTarget } from "../ui/icons";
@@ -61,21 +62,16 @@ interface SavedEntityWindow {
 const META_KEY = "mam:entity-windows-1";
 
 function load(): Record<string, EntityWindowRecord> {
-  try {
-    const saved = JSON.parse(
-      localStorage.getItem(META_KEY) ?? "[]",
-    ) as SavedEntityWindow[];
-    const records: Record<string, EntityWindowRecord> = {};
-    for (const item of saved) {
-      if (!item?.id?.startsWith("entity:") || typeof item.title !== "string")
-        continue;
-      const id = item.id as DockItemId;
-      records[id] = { id, title: item.title, text: item.text, tags: item.tags };
-    }
-    return records;
-  } catch {
-    return {};
+  const saved = getStorageJson<unknown>(META_KEY, []);
+  if (!Array.isArray(saved)) return {};
+  const records: Record<string, EntityWindowRecord> = {};
+  for (const item of saved as SavedEntityWindow[]) {
+    if (!item?.id?.startsWith("entity:") || typeof item.title !== "string")
+      continue;
+    const id = item.id as DockItemId;
+    records[id] = { id, title: item.title, text: item.text, tags: item.tags };
   }
+  return records;
 }
 
 export const entityWindows = signal<Record<string, EntityWindowRecord>>(load());
@@ -83,14 +79,10 @@ export const entityWindows = signal<Record<string, EntityWindowRecord>>(load());
 export const entityTabId = (key: string) => `entity:${key}` as const;
 
 function persist(records: Record<string, EntityWindowRecord>) {
-  try {
-    const saved: SavedEntityWindow[] = Object.values(records).map(
-      ({ id, title, text, tags }) => ({ id, title, text, tags }),
-    );
-    localStorage.setItem(META_KEY, JSON.stringify(saved));
-  } catch {
-    // Entity windows remain usable even when local storage is unavailable.
-  }
+  const saved: SavedEntityWindow[] = Object.values(records).map(
+    ({ id, title, text, tags }) => ({ id, title, text, tags }),
+  );
+  setStorageJson(META_KEY, saved);
 }
 
 export function registerEntityWindow(record: EntityWindowRecord) {

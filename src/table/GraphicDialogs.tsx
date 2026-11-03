@@ -1,11 +1,11 @@
 import { signal } from "@preact/signals-react";
 import { Dialog } from "./CampaignDialogs";
-import type { Campaign } from "../store/campaign";
-import { useY } from "../store/useY";
+import type { Campaign } from "../campaign/campaign";
+import { useY } from "../ui/useY";
 import { GraphicPicker } from "../ui/GraphicPicker";
 import { getEntityGraphic, setEntityGraphic } from "./entityGraphics";
 import { usePopupDialog } from "./usePopupDialog";
-import { getNote } from "../notes/api";
+import { getNote } from "../features/notes/api";
 
 type Request = {
   n: number;

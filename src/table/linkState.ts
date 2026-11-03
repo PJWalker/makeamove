@@ -6,9 +6,9 @@ import {
   selectedCharacterId,
   startMove,
   systemOf,
-} from "../characters/api";
-import type { Campaign } from "../store/campaign";
-import type { LinkKind } from '../notes/api'
+} from "../features/characters/api";
+import type { Campaign } from "../campaign/campaign";
+import type { LinkKind } from '../features/notes/api'
 import { morphOpen } from '../ui/morph'
 import { raisePopup } from '../ui/popup'
 import { hideTooltip } from '../ui/Tooltip'

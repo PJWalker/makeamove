@@ -7,7 +7,7 @@ import { newId } from '../lib/ids'
 import { colourOf } from '../scene/presence'
 import { importImage, loadBlob, onBlobFetcher } from '../scene/images'
 import type { BlobRef } from '../scene/types'
-import { device } from '../store/device'
+import { device } from '../platform/device'
 
 /*
  * What notes have beyond rich text (M6):

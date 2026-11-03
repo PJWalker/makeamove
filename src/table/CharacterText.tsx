@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react'
 import * as Y from 'yjs'
-import type { CharacterView } from '../characters/store'
-import type { Campaign } from '../store/campaign'
-import { useY } from '../store/useY'
+import type { CharacterView } from '../features/characters/types'
+import type { Campaign } from '../campaign/campaign'
+import { useY } from '../ui/useY'
 import { mountRichText } from './richText'
 
 /** Where a character keeps one of its rich-text fields: `text:notes`, `text:bonds`, `text:field:moves`. */

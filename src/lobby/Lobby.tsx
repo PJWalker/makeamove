@@ -3,18 +3,18 @@ import type { ComponentType } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useSignal } from "@preact/signals-react";
 import { IconAdd, IconCampaign, IconDelete } from "../ui/icons";
-import { goToCampaign, pendingInvite } from "../router";
+import { goToCampaign, pendingInvite } from "../app/router";
 import {
   createCampaign,
   deleteLocalCampaign,
   joinCampaign,
-} from "../store/campaign";
-import { device, setDeviceName } from "../store/device";
+} from "../campaign/campaign";
+import { device, setDeviceName } from "../platform/device";
 import {
   campaigns,
   registryReady,
   type CampaignSummary,
-} from "../store/registry";
+} from "../campaign/registry";
 import { getSystem, listSystems, NO_SYSTEM_ID } from "../systems";
 import { Button } from "../ui/Button";
 import { ContextMenu } from "../table/ContextMenu";

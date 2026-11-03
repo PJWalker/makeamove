@@ -5,8 +5,9 @@ import type {
 import type { ComponentType } from "react";
 import { useEffect } from "react";
 import { signal, useSignal } from "@preact/signals-react";
-import { goToCampaign } from "../router";
+import { goToCampaign } from "../app/router";
 import { startReorder } from "../ui/reorder";
+import { getStorageJson, setStorageJson } from "../platform/localStorage";
 import {
   activeTool,
   lightTool,
@@ -72,15 +73,7 @@ export const TOOLS: {
 const ORDER_KEY = "mam:tool-order";
 
 /** The player's own tool order, kept per device. */
-const toolOrder = signal<ToolId[]>(
-  (() => {
-    try {
-      return JSON.parse(localStorage.getItem(ORDER_KEY) ?? "[]");
-    } catch {
-      return [];
-    }
-  })(),
-);
+const toolOrder = signal<ToolId[]>(getStorageJson<ToolId[]>(ORDER_KEY, []));
 
 /** Tools in the player's order; any not mentioned keep their default place after the others. */
 function inOrder(tools: typeof TOOLS, order: ToolId[]) {
@@ -112,11 +105,7 @@ export function Toolbar({ isGm }: { isGm: boolean }) {
         // Hidden (GM-only) tools keep their place among the rest.
         const hidden = TOOLS.map((t) => t.id).filter((t) => !ids.includes(t));
         toolOrder.value = [...ids, ...hidden];
-        try {
-          localStorage.setItem(ORDER_KEY, JSON.stringify(toolOrder.value));
-        } catch {
-          // The order just won't persist.
-        }
+        setStorageJson(ORDER_KEY, toolOrder.value);
       },
     });
   }

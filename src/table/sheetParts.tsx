@@ -1,13 +1,13 @@
 import { useSignal } from '@preact/signals-react'
-import { useY } from "../store/useY";
-import { setField } from "../characters/api";
+import { useY } from "../ui/useY";
+import { setField } from "../features/characters/api";
 import type { EntityGraphic } from "../graphics";
-import { checkOf } from '../characters/moves'
-import type { CharacterView } from '../characters/store'
+import { checkOf } from '../features/characters/moves'
+import type { CharacterView } from '../features/characters/types'
 import { colourOf } from '../scene/presence'
 import { TOKEN_STYLES } from '../scene/types'
-import type { Campaign } from '../store/campaign'
-import { device } from '../store/device'
+import type { Campaign } from '../campaign/campaign'
+import { device } from '../platform/device'
 import type { ActionDef, GameSystem } from "../systems/types";
 import { Button } from '../ui/Button'
 import { EntityGraphicView } from "../ui/EntityGraphic";

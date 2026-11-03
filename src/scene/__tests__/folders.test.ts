@@ -1,7 +1,7 @@
 import "fake-indexeddb/auto";
 import { describe, expect, it } from "vitest";
-import { Campaign, createCampaign } from "../../store/campaign";
-import { device } from "../../store/device";
+import { Campaign, createCampaign } from "../../campaign/campaign";
+import { device } from "../../platform/device";
 import {
   createSceneFolder,
   deleteSceneFolder,

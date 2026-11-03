@@ -1,22 +1,22 @@
 import type * as React from "react";
 import { signal, useSignal } from "@preact/signals-react";
 import { useEffect, useRef } from "react";
-import { fieldsOf, getState, setState, withField } from "../chat/messageState";
+import { fieldsOf, getState, setState, withField } from "../features/chat/messageState";
 import {
   commandText,
   contentForCommand,
   type ChatContent,
-} from "../chat/content";
+} from "../features/chat/content";
 import {
   canWork,
   visibilityOf,
   type ChatMessage,
   type CounterMessage,
   type TimerMessage,
-} from "../chat/types";
-import type { Campaign } from "../store/campaign";
-import { device } from "../store/device";
-import { useY } from "../store/useY";
+} from "../features/chat/types";
+import type { Campaign } from "../campaign/campaign";
+import { device } from "../platform/device";
+import { useY } from "../ui/useY";
 import { Button } from "../ui/Button";
 import { menuTrigger } from "../ui/menuTrigger";
 import { IconRemove, IconAdd } from "../ui/icons";

@@ -1,12 +1,12 @@
 import type { Editor } from '@tiptap/core'
 import { useEffect, useRef, useState } from 'react'
-import { getNote, noteSubdoc, touchNote } from '../notes/api'
-import { NoteDoc } from '../notes/noteDoc'
-import { linksIn } from '../notes/links'
-import type { Campaign } from '../store/campaign'
+import { getNote, noteSubdoc, touchNote } from '../features/notes/api'
+import { NoteDoc } from '../features/notes/noteDoc'
+import { linksIn } from '../features/notes/links'
+import type { Campaign } from '../campaign/campaign'
 import { mountRichText } from './richText'
 import { Awareness } from 'y-protocols/awareness'
-import { myName } from '../chat/send'
+import { myName } from '../features/chat/send'
 
 /** How long after the last keystroke a page records its links and edit time. */
 const TOUCH_MS = 800

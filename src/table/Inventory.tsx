@@ -1,7 +1,7 @@
-import { addItem, removeItem, updateItem } from "../characters/api";
-import type { CharacterView, ItemInstance } from "../characters/store";
+import { addItem, removeItem, updateItem } from "../features/characters/api";
+import type { CharacterView, ItemInstance } from "../features/characters/types";
 import type { Derived } from "../systems/types";
-import type { Campaign } from "../store/campaign";
+import type { Campaign } from "../campaign/campaign";
 import { Button } from "../ui/Button";
 import { IconDelete, IconImage } from "../ui/icons";
 import { List } from "../ui/List";

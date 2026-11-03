@@ -9,8 +9,8 @@ import type {
   Derived,
   GameSystem,
   SaveStep,
-} from "../systems/types";
-import type { CharacterView } from './store'
+} from "../../systems/types";
+import type { CharacterView } from './types'
 
 /*
  * Making a move: work out the formula for its check, roll it,

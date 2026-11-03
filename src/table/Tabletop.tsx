@@ -2,14 +2,14 @@ import { lazy, Suspense } from "react";
 import { useEffect, useLayoutEffect } from "react";
 import { useSignal } from "@preact/signals-react";
 import { sceneHueFromHex } from "../lib/colour";
-import type { Campaign } from "../store/campaign";
-import { useY } from "../store/useY";
+import type { Campaign } from "../campaign/campaign";
+import { useY } from "../ui/useY";
 import { FloatingWindows } from "./FloatingWindows";
 import { windowLayer } from "../ui/windows";
 import { CampaignDialogHost } from "./CampaignDialogHost";
 import { Sidebar } from "./Sidebar";
 import { dockInsets, unavailablePanels, windowDragging } from "./panelLayout";
-import { hasCombat } from "../combat/api";
+import { hasCombat } from "../features/combat/api";
 import {
   activeMapColour,
   autohide,

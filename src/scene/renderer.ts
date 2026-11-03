@@ -48,6 +48,7 @@ import {
 import { type Blocker, Lamp } from "./lampShader";
 import { resolveTokenLabelLayout, zoomTokenBars } from "./tokenLabelLayout";
 import { conditionContains, conditionLayout, hoverSpring } from "./conditionLayout";
+import type { TokenMarks } from "./tokenMarks";
 import {
   AREA_COLOURS,
   isPlainToken,
@@ -81,11 +82,6 @@ function hashPhase(id: string): number {
 /** Points as Pixi's flat [x, y, x, y…]. */
 const flat = (pts: Point[]) => pts.flatMap((p) => [p.x, p.y]);
 
-/** A token's condition pips and whether it's that token's turn. */
-export interface TokenMarks {
-  pips: { id: string; name: string; colour: string }[];
-  turn: boolean;
-}
 const NO_MARKS: TokenMarks = { pips: [], turn: false };
 const PIP_MIN_R = 3;
 const PIP_MAX_R = 6;

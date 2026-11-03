@@ -1,6 +1,6 @@
 import type * as Y from 'yjs'
-import { newId } from '../lib/ids'
-import type { ActionDef, GameSystem, ItemDef } from '../systems/types'
+import { newId } from '../../lib/ids'
+import type { ActionDef, GameSystem, ItemDef } from '../../systems/types'
 
 /*
  * A campaign's homebrew: gear and moves made at the table, kept in the

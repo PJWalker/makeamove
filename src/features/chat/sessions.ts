@@ -1,4 +1,4 @@
-import { stampTime } from '../lib/hlc'
+import { stampTime } from '../../lib/hlc'
 
 import type { ChatMessage, SystemMessage } from './types'
 

@@ -4,6 +4,6 @@ import "./styles/tokens.css";
 import "./styles/components.css";
 import "./styles/transitions.css";
 import "./ui/sounds";
-import { App } from "./app";
+import { App } from "./app/App";
 
 createRoot(document.getElementById("app")!).render(<App />);

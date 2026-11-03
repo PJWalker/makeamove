@@ -7,7 +7,7 @@ import type {
   ItemDef,
   OptionDef,
 } from "../types";
-import type { CharacterView } from "../../characters/store";
+import type { CharacterView } from "../../features/characters/types";
 import { parseCommaList } from "../../lib/list";
 
 import {

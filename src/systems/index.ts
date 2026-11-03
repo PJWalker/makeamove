@@ -4,7 +4,6 @@ import { dungeonWorld2 } from './dungeon-world-2'
 import { bladesInTheDark } from './blades-in-the-dark'
 import { daggerheart } from './daggerheart'
 import { dnd55e } from './dnd55e'
-import { testSystem } from './test'
 
 export const NO_SYSTEM_ID = "none";
 
@@ -110,7 +109,6 @@ defineSystem(dungeonWorld2)
 defineSystem(bladesInTheDark)
 defineSystem(daggerheart)
 defineSystem(dnd55e)
-defineSystem(testSystem)
 defineSystem(noSystem);
 
 /** The system with this id; Dungeon World for campaigns that don't say. */

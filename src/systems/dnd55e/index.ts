@@ -1,4 +1,4 @@
-import type { CharacterView } from '../../characters/store'
+import type { CharacterView } from '../../features/characters/types'
 import { formatCommaList, parseCommaList } from '../../lib/list'
 
 import { resolveEffects, type EffectSource } from '../effects'

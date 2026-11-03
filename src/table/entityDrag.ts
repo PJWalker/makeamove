@@ -5,12 +5,12 @@ import {
   selectedCharacterId,
   setLearned,
   systemOf,
-} from "../characters/api";
-import { editHotbar, insertAt } from "../characters/hotbar";
+} from "../features/characters/api";
+import { editHotbar, insertAt } from "../features/characters/hotbar";
 import type { TokenElement } from "../scene/types";
-import type { LinkKind } from "../notes/api";
-import { linkLabel } from "../notes/targets";
-import type { Campaign } from "../store/campaign";
+import type { LinkKind } from "../features/notes/api";
+import { linkLabel } from "../features/notes/targets";
+import type { Campaign } from "../campaign/campaign";
 import type { ItemDef } from "../systems/types";
 import { dropLine, indexAmong } from "../ui/reorder";
 import { hideTooltip } from "../ui/Tooltip";
@@ -73,7 +73,7 @@ export function registerEntityDrop(
   };
 }
 
-/** The hotbar action for a link target, so it can be pinned (see actions/). */
+/** The hotbar action for a link target, so it can be pinned (see app/commands/). */
 const ACTION_PREFIX: Partial<Record<LinkKind, string>> = {
   move: "move",
   item: "library",

@@ -1,5 +1,6 @@
-import type { ChoiceDef, CreationDef, DataValue, GameSystem, OptionDef, ScoreMethods } from '../systems/types'
-import { parseCommaList } from '../lib/list'
+import type { DataValue } from '../../core/types'
+import type { ChoiceDef, CreationDef, GameSystem, OptionDef, ScoreMethods } from '../../systems/types'
+import { parseCommaList } from '../../lib/list'
 
 /*
  * The rules of the guided creation and advancement flow, apart from its UI:

@@ -1,4 +1,4 @@
-import type { Campaign } from '../store/campaign'
+import type { Campaign } from '../campaign/campaign'
 import { trackPointer } from '../ui/pointer'
 import { windowLayer } from '../ui/windows'
 import { createPortal } from "react-dom";

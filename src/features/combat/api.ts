@@ -6,12 +6,13 @@ import {
   setField,
   systemOf,
 } from "../characters/api";
-import { derive, type Duration } from "../characters/store";
+import { derive } from "../characters/store";
+import type { Duration } from "../characters/types";
 import { myName } from "../chat/send";
 import { roll } from "../dice/notation";
-import type { Campaign } from "../store/campaign";
-import { device } from "../store/device";
-import type { TokenMarks } from "../scene/renderer";
+import type { Campaign } from "../../campaign/campaign";
+import { device } from "../../platform/device";
+import type { TokenMarks } from "../../scene/tokenMarks";
 import { conditionPipColour } from "./pipColours";
 import {
   addCombatant,

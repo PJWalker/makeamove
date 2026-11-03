@@ -1,7 +1,7 @@
 import type { ComponentType } from 'react'
-import { canEdit } from "../characters/api";
-import type { CharacterView } from '../characters/store'
-import type { Campaign } from '../store/campaign'
+import { canEdit } from "../features/characters/api";
+import type { CharacterView } from '../features/characters/types'
+import type { Campaign } from '../campaign/campaign'
 import { DndNpcSheet, DndSheet } from '../systems/dnd55e/Sheet'
 import { DungeonWorldNpcSheet, DungeonWorldSheet } from '../systems/dungeon-world/Sheet'
 import { DungeonWorld2NpcSheet, DungeonWorld2Sheet } from '../systems/dungeon-world-2/Sheet'

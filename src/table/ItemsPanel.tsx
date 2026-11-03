@@ -1,10 +1,11 @@
 import { useSignal, type Signal } from '@preact/signals-react'
-import { addItem, canEdit, getCharacter, selectedCharacterId, startMove, systemOf } from '../characters/api'
+import { addItem, canEdit, getCharacter, selectedCharacterId, startMove, systemOf } from '../features/characters/api'
 import { parseCommaList } from '../lib/list'
-import { deleteHomebrew, listHomebrew, saveGear, saveMove, type HomebrewEntry } from '../homebrew/homebrew'
-import type { Campaign } from '../store/campaign'
+import { toggleSetValue } from '../lib/set'
+import { deleteHomebrew, listHomebrew, saveGear, saveMove, type HomebrewEntry } from '../features/homebrew/homebrew'
+import type { Campaign } from '../campaign/campaign'
 import type { EntityGraphic } from "../graphics";
-import { useY } from '../store/useY'
+import { useY } from '../ui/useY'
 import type { ActionDef, CheckStep, Effect, GameSystem, ItemDef, TargetSpec } from '../systems/types'
 import { Button } from "../ui/Button";
 import { PanelActions } from "./PanelActions";
@@ -38,11 +39,7 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
   const folded = useSignal<Set<string>>(new Set())
   const fold = (id: string) => ({
     open: !folded.value.has(id),
-    onToggle: () => {
-      const next = new Set(folded.value)
-      if (!next.delete(id)) next.add(id)
-      folded.value = next
-    },
+    onToggle: () => (folded.value = toggleSetValue(folded.value, id)),
   })
   const meId = useY(campaign.members, () => selectedCharacterId(campaign))
   const me = useY(campaign.characters, () => getCharacter(campaign, meId))

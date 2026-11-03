@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import type { Campaign } from "../store/campaign";
+import type { Campaign } from "../campaign/campaign";
 import { BladesCrewControls } from "../systems/blades-in-the-dark/CrewSheet";
 
 const SHEETS: Record<string, ComponentType<{ campaign: Campaign }>> = {

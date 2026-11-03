@@ -1,8 +1,8 @@
 import { effect, signal } from "@preact/signals-react";
-import { stampTime } from "../lib/hlc";
-import { activeCampaign } from "../store/campaign";
-import { device } from "../store/device";
-import { panelVisible } from "../table/panelLayout";
+import { stampTime } from "../../lib/hlc";
+import { activeCampaign } from "../../campaign/campaign";
+import { device } from "../../platform/device";
+import { panelVisible } from "../../table/panelLayout";
 import type { LinkKind } from "../notes/api";
 import { linkLabel } from "../notes/targets";
 import { plainText } from "./content";

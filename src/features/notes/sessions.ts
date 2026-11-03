@@ -1,5 +1,5 @@
 import * as Y from 'yjs'
-import type { Campaign } from '../store/campaign'
+import type { Campaign } from '../../campaign/campaign'
 import { createNote, listNotes, noteSubdoc } from './api'
 import { NoteDoc } from './noteDoc'
 

@@ -4,7 +4,7 @@ vi.mock('../renderer', () => ({
   HANDLE_SIZE: 10,
   rotateHandlePosition: () => ({ x: -999, y: -999 }),
 }))
-vi.mock('../../store/device', () => ({ device: { value: { id: 'x' } } }))
+vi.mock('../../platform/device', () => ({ device: { value: { id: 'x' } } }))
 vi.mock('../images', () => ({ importImage: vi.fn(), imageColour: vi.fn() }))
 
 const { SceneController } = await import('../controller')

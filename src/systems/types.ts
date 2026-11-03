@@ -6,11 +6,16 @@
  * engine").
  */
 
-import type { CharacterView } from '../characters/store'
-import type { Roll } from '../dice/notation'
+import type { CharacterView } from '../features/characters/types'
+import type { DataValue } from '../core/types'
+import type { Roll } from '../features/dice/notation'
 import type { DiagonalRule } from '../scene/grid'
 import type { Range } from '../scene/measure'
 import type { EffectSource, Resolved } from './effects'
+import type { Effect, EffectActive } from './effectTypes'
+
+export type { DataValue } from '../core/types'
+export type { Effect, EffectActive, EffectOp } from './effectTypes'
 
 export interface StatDef {
   id: string
@@ -20,9 +25,6 @@ export interface StatDef {
   min?: number
   max?: number
 }
-
-/** A value the system keeps in a character's data. */
-export type DataValue = string | number | boolean
 
 /** One of the system's own character fields, with its value on a new character. */
 export interface DataField {
@@ -238,19 +240,6 @@ export type FollowUpDef =
       /** A damage type, or 'healing': the roll then offers to apply itself to the action's targets. */
       damage?: string
     }
-
-export type EffectOp = 'add' | 'set' | 'multiply' | 'min' | 'max'
-
-/** Shared by items, conditions and features (design: "Effect model"). */
-export type Effect =
-  | { type: 'modify'; path: string; op: EffectOp; value: number; priority?: number }
-  /** Gives the character an action they wouldn't otherwise have. */
-  | { type: 'grantMove'; move: string }
-  | { type: 'grantTag'; tag: string }
-  /** Adds to rolls with a stat, or with given actions. */
-  | { type: 'rollBonus'; stat?: string; moves?: string[]; value: number }
-
-export type EffectActive = 'always' | 'carried' | 'equipped'
 
 export interface ItemDef {
   id: string

@@ -1,6 +1,6 @@
-import type { Campaign } from "../store/campaign";
+import type { Campaign } from "../campaign/campaign";
 import type { EntityGraphic } from "../graphics";
-import { useY } from "../store/useY";
+import { useY } from "../ui/useY";
 import { EntityGraphicView } from "../ui/EntityGraphic";
 import { getEntityGraphic } from "./entityGraphics";
 

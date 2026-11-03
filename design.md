@@ -51,9 +51,20 @@ Each browser runs the whole app against a local Yjs CRDT store persisted to Inde
 - A separate *GM vault* Y.Doc that only GM devices hold, synced over its own Trystero room whose key is kept in the vault, never in the campaign. It holds GM-only note pages. This gives real (if casual) secrecy almost for free; everything else is "hidden in the UI" only.
 - Presence (cursors, pings, rulers, laser trails, the tokens a player is targeting) goes over the Yjs awareness channel and is never persisted.
 
+## Source ownership
+
+- `app` owns startup, routing, top-level composition, panel/window orchestration, and command composition.
+- `campaign` owns the root document lifecycle, membership, invites, and campaign indexes. Feature modules own the behavior of their records.
+- `features` own their domain models, operations, persistence adapters, and user-facing views where those belong to one feature.
+- `scene` owns scene subdocuments, geometry, interactions, rendering, and scene views; the campaign owns only the scene index.
+- `systems` define game rules and system-specific content. They depend on shared model contracts, not feature storage implementations or table composition.
+- `platform` owns device identity, persistence names, blobs, and peer synchronization. `core` contains framework-neutral values and utilities; `ui` contains shared presentation and framework integration.
+- Imports flow toward domain contracts and infrastructure. App composition may depend on features; features and systems do not import app or table composition.
+
 ## Joining and identity
 
-- The GM creates a campaign, which mints a random campaign ID and a shared room key. The invite link is `https://app/#join=<id>.<key>`; the key stays in the URL fragment, so it never reaches any server.
+- The GM creates a campaign, which mints a random campaign ID and a shared room key. The invite link is `https://app/#join=v2.<id>.<key>`; the key stays in the URL fragment, so it never reaches any server.
+- Invite links include the current data epoch. A new epoch intentionally invalidates old invites and uses new IndexedDB and blob-cache namespaces; there is no migration before the first release. Device identity and user-level UI preferences use separate keys and are preserved.
 - Signalling and all peer traffic are encrypted with that room key, so public relays see only ciphertext.
 
 ## Assets

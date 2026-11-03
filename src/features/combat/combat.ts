@@ -1,7 +1,7 @@
 import * as Y from 'yjs'
 
-import { newId } from '../lib/ids'
-import type { Duration } from '../characters/store'
+import { newId } from '../../lib/ids'
+import type { Duration } from '../characters/types'
 
 /*
  * The turn tracker (design: core change 11). One fight at a time per

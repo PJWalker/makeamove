@@ -4,8 +4,8 @@ import type {
 } from "react";
 import { signal, useSignal } from "@preact/signals-react";
 import { useEffect, useMemo, useRef } from "react";
-import { noteRecent, recentActions } from "../actions/recent";
-import { rollAction } from "../actions/core";
+import { noteRecent, recentActions } from "../app/commands/recent";
+import { rollAction } from "../app/commands/core";
 import {
   actionForCombo,
   comboOf,
@@ -13,25 +13,25 @@ import {
   shortcutFor,
   shortcuts,
   showCombo,
-} from "../actions/custom";
-import { buildIndex, findAction } from "../actions/registry";
-import { diceFormula } from "../chat/commands";
-import { rank } from "../actions/search";
-import type { Action } from "../actions/types";
+} from "../app/commands/custom";
+import { buildIndex, findAction } from "../app/commands/registry";
+import { diceFormula } from "../features/chat/commands";
+import { rank } from "../app/commands/search";
+import type { Action } from "../app/commands/types";
 import {
   editHotbar,
   insertAt,
   isPinned,
   pin,
   unpin,
-} from "../characters/hotbar";
+} from "../features/characters/hotbar";
 import { isTyping } from "../ui/keys";
 import { RECORDER } from "./ActionDialogs";
 import { actionMenuItems } from "./actionMenu";
 import { actionEntity, dragEntity } from "./entityDrag";
 import { menuTrigger } from "../ui/menuTrigger";
 import { ContextMenu, type MenuItem } from "./ContextMenu";
-import type { Campaign } from "../store/campaign";
+import type { Campaign } from "../campaign/campaign";
 
 export const paletteOpen = signal(false);
 

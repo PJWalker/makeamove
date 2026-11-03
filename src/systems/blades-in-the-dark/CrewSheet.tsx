@@ -1,10 +1,10 @@
 import { useSignal } from "@preact/signals-react";
 import { parseCommaList } from "../../lib/list";
-import { systemOf } from "../../characters/api";
-import { getState, setState } from "../../chat/messageState";
-import { ensureSystemCounter } from "../../chat/send";
-import { systemCampaignData, type Campaign } from "../../store/campaign";
-import { useY } from "../../store/useY";
+import { systemOf } from "../../features/characters/api";
+import { getState, setState } from "../../features/chat/messageState";
+import { ensureSystemCounter } from "../../features/chat/send";
+import { systemCampaignData, type Campaign } from "../../campaign/campaign";
+import { useY } from "../../ui/useY";
 import { Button } from "../../ui/Button";
 import { Counter } from "../../table/sheetParts";
 import {

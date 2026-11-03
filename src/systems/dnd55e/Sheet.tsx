@@ -10,11 +10,12 @@ import {
   setScore,
   startMove,
   toggleCondition,
-} from '../../characters/api'
-import { actionsFor, derive, type CharacterView } from '../../characters/store'
-import { postRoll } from '../../chat/send'
-import type { Campaign } from '../../store/campaign'
-import { device } from '../../store/device'
+} from '../../features/characters/api'
+import { actionsFor, derive } from '../../features/characters/store'
+import type { CharacterView } from '../../features/characters/types'
+import { postRoll } from '../../features/chat/send'
+import type { Campaign } from '../../campaign/campaign'
+import { device } from '../../platform/device'
 import { CharacterText } from '../../table/CharacterText'
 import { parseCommaList } from '../../lib/list'
 import { Inventory } from '../../table/Inventory'

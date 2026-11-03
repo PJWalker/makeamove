@@ -2,7 +2,7 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 import { signal, useSignal } from "@preact/signals-react";
 import type { ReactNode } from "react";
 import { useLayoutEffect, useRef } from "react";
-import { checkOf } from "../characters/moves";
+import { checkOf } from "../features/characters/moves";
 import type { ActionDef, GameSystem } from "../systems/types";
 import { morphOpen } from "../ui/morph";
 import { raisePopup } from "../ui/popup";

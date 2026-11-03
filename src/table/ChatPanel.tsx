@@ -14,37 +14,38 @@ import {
   useRef,
 } from "react";
 import { renderToReactElement } from "@tiptap/static-renderer/pm/react";
-import { COMMANDS, parseCommand, suggest } from "../chat/commands";
+import { COMMANDS, parseCommand, suggest } from "../features/chat/commands";
 import {
   commandText,
   emptyChatContent,
   entityContent,
   type ChatContent,
-} from "../chat/content";
-import { postRoll, postText, runCommand } from "../chat/send";
+} from "../features/chat/content";
+import { postRoll, postText, runCommand } from "../features/chat/send";
 import type {
   ChatMessage,
   MoveMessage,
   RollMessage,
   RollVisibility,
   TextMessage,
-} from "../chat/types";
-import { canDelete, canEditMessage, visibilityOf } from "../chat/types";
-import { logRows, type LogRow } from "../chat/sessions";
-import { markRead } from "../chat/unread";
-import { clearState } from "../chat/messageState";
-import { NotationError, type Roll } from "../dice/notation";
+} from "../features/chat/types";
+import { canDelete, canEditMessage, visibilityOf } from "../features/chat/types";
+import { logRows, type LogRow } from "../features/chat/sessions";
+import { markRead } from "../features/chat/unread";
+import { clearState } from "../features/chat/messageState";
+import { toggleSetValue } from "../lib/set";
+import { NotationError, type Roll } from "../features/dice/notation";
 import {
   applySuggestion,
   canEdit,
   getCharacter,
   systemOf,
-} from "../characters/api";
-import { poolFormula } from "../dice/pool";
+} from "../features/characters/api";
+import { poolFormula } from "../features/dice/pool";
 import { stampTime } from "../lib/hlc";
-import type { Campaign } from "../store/campaign";
-import { device } from "../store/device";
-import { useY } from "../store/useY";
+import type { Campaign } from "../campaign/campaign";
+import { device } from "../platform/device";
+import { useY } from "../ui/useY";
 import { Avatar } from "../ui/Avatar";
 import { Button } from "../ui/Button";
 import { ContextMenu, type MenuItem } from "./ContextMenu";
@@ -58,8 +59,8 @@ import {
 } from "../ui/icons";
 import { ChatInput, type ChatInputHandle } from "./ChatInput";
 import { chatContentExtensions } from "./ChatInput";
-import { LINK_NODE } from "../notes/links";
-import type { LinkKind } from "../notes/api";
+import { LINK_NODE } from "../features/notes/links";
+import type { LinkKind } from "../features/notes/api";
 import { registerLinkDrop } from "./entityDrag";
 import { LinkChip } from "./LinkChip";
 import { DamageTargets, SaveRequests, TargetRolls } from "./CardParts";
@@ -76,17 +77,17 @@ import {
   useTextState,
 } from "./ChatExtras";
 import { panelVisible } from "./panelLayout";
-import { canWork } from "../chat/types";
+import { canWork } from "../features/chat/types";
 import {
   readRollState,
   rerollDie,
   rerollMessage,
   toggleRollDie,
-} from "../chat/rollState";
+} from "../features/chat/rollState";
 import { useShake } from "../ui/useShake";
 import { playUiSound } from "../ui/sounds";
-import { readRollResult } from "../characters/moves";
-import { derive } from "../characters/store";
+import { readRollResult } from "../features/characters/moves";
+import { derive } from "../features/characters/store";
 
 
 /*
@@ -264,10 +265,7 @@ function ChatLogView({
   );
   const toggle = (key: string) => {
     const k = `${campaign.id}:${key}`;
-    const next = new Set(openSessions.value);
-    if (next.has(k)) next.delete(k);
-    else next.add(k);
-    openSessions.value = next;
+    openSessions.value = toggleSetValue(openSessions.value, k);
   };
 
   // The window, as indices into rows.

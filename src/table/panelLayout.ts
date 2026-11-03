@@ -1,4 +1,5 @@
 import { computed, effect, signal } from '@preact/signals-react'
+import { getStorageJson, setStorageJson } from '../platform/localStorage'
 import { dropLine, indexAmong } from '../ui/reorder'
 import { withTransition } from '../ui/transition'
 import { nextZ, noteZ } from '../ui/windows'
@@ -40,12 +41,7 @@ const KEY = 'mam:panel-layout-2'
 const narrow = matchMedia('(max-width: 600px)').matches
 
 function load(): Layout {
-  let saved: unknown
-  try {
-    saved = JSON.parse(localStorage.getItem(KEY) ?? 'null')
-  } catch {
-    // Fall back to the default layout.
-  }
+  const saved = getStorageJson<unknown>(KEY, null)
   const l = normalise(saved, narrow)
   return { ...l, floating: l.floating.map((w) => ({ ...w, ...whole({ x: w.x, y: w.y, w: w.w, h: w.h }) })) }
 }
@@ -53,11 +49,7 @@ function load(): Layout {
 export const layout = signal<Layout>(load())
 
 effect(() => {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(layout.value))
-  } catch {
-    // Layout just won't persist.
-  }
+  setStorageJson(KEY, layout.value)
 })
 
 // Saved windows keep their order; anything opened later goes above them.

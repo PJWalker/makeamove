@@ -2,11 +2,12 @@ import { appliedField, getState, saveField, setState, type SaveAnswer } from '..
 import { myName } from '../chat/send'
 import type { MoveTarget, SaveRequest } from '../chat/types'
 import { describe, roll } from '../dice/notation'
-import type { Campaign } from '../store/campaign'
-import { device } from '../store/device'
+import type { Campaign } from '../../campaign/campaign'
+import { device } from '../../platform/device'
 import { bumpResource, canEdit, getCharacter, setData, setField, systemOf } from './api'
 import { planMove, resolveDifficulty, rollModesFor } from './moves'
-import { derive, type CharacterView } from './store'
+import { derive } from './store'
+import type { CharacterView } from './types'
 
 /*
  * What happens on a card after it's posted: targets

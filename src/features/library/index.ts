@@ -7,7 +7,7 @@ import type {
   MonsterDef,
   OptionDef,
   TagDef,
-} from "../systems/types";
+} from "../../systems/types";
 
 /*
  * Libraries: collections of things to look up and use (items, moves,

@@ -1,7 +1,7 @@
 import { useSignal } from '@preact/signals-react'
 import { getCharacter, systemOf, toggleCondition } from '../characters/api'
 import { derive } from '../characters/store'
-import { roundOf, removeCombatant, turnOf, turnOrder, updateCombatant, previousTurn, type CombatantView } from '../combat/combat'
+import { roundOf, removeCombatant, turnOf, turnOrder, updateCombatant, previousTurn, type CombatantView } from './combat'
 import {
   advanceTurn,
   beginCombat,
@@ -11,13 +11,13 @@ import {
   rollAllInitiative,
   rollInitiative,
   setDuration,
-} from '../combat/api'
-import type { Campaign } from '../store/campaign'
-import { device } from '../store/device'
-import { useY } from '../store/useY'
-import { Button } from '../ui/Button'
-import { PanelActions } from "./PanelActions";
-import { IconClose, IconDice, IconReveal, IconSecret } from '../ui/icons'
+} from './api'
+import type { Campaign } from '../../campaign/campaign'
+import { device } from '../../platform/device'
+import { useY } from '../../ui/useY'
+import { Button } from '../../ui/Button'
+import { PanelActions } from "../../table/PanelActions";
+import { IconClose, IconDice, IconReveal, IconSecret } from '../../ui/icons'
 
 /*
  * The turn tracker: who's in the fight, in initiative order, whose turn it

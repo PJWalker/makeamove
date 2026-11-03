@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { TokenElement } from "../../scene/types";
-import type { Campaign } from "../../store/campaign";
+import type { Campaign } from "../../campaign/campaign";
 
-vi.mock("../../characters/api", () => ({
+vi.mock("../../features/characters/api", () => ({
   addItem: vi.fn(),
   canEdit: vi.fn(() => true),
   getCharacter: () => ({ name: "Character" }),
@@ -10,11 +10,11 @@ vi.mock("../../characters/api", () => ({
   setLearned: vi.fn(),
   systemOf: () => ({ items: [{ id: "item", name: "Sword" }] }),
 }));
-vi.mock("../../characters/hotbar", () => ({
+vi.mock("../../features/characters/hotbar", () => ({
   editHotbar: vi.fn(),
   insertAt: vi.fn(),
 }));
-vi.mock("../../notes/targets", () => ({
+vi.mock("../../features/notes/targets", () => ({
   linkLabel: (_campaign: unknown, _kind: string, id: string) =>
     id === "missing" ? null : id,
 }));
@@ -133,7 +133,7 @@ describe("dropOn", () => {
   });
 
   it("rechecks inventory target identity and editability", async () => {
-    const { canEdit, addItem } = await import("../../characters/api");
+    const { canEdit, addItem } = await import("../../features/characters/api");
     const element = receiver({ itemDrop: "recipient" });
     const dragged = tokenEntity(campaign, token({ itemDefId: "item" }))!;
     vi.mocked(canEdit).mockReturnValueOnce(false);
@@ -179,7 +179,7 @@ describe("tokenEntity", () => {
       colour: "#fff",
     });
     dragged.give!.to("recipient");
-    const { addItem } = await import("../../characters/api");
+    const { addItem } = await import("../../features/characters/api");
     expect(addItem).toHaveBeenCalledWith(
       campaign,
       "recipient",

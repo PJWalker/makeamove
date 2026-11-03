@@ -1,5 +1,5 @@
 import { newId } from "../lib/ids";
-import type { Campaign } from "../store/campaign";
+import type { Campaign } from "../campaign/campaign";
 
 export interface SceneFolderView {
   id: string;

@@ -3,13 +3,13 @@ import { describe, expect, it, vi } from 'vitest'
 
 
 // The action provider shows panels; the layout needs a browser.
-vi.mock('../../table/panelLayout', () => ({ showPanel: () => {} }))
+vi.mock('../../../table/panelLayout', () => ({ showPanel: () => {} }))
 
 import * as Y from 'yjs'
-import { systemActions } from '../../actions/system'
-import { Campaign, createCampaign } from '../../store/campaign'
-import { device } from '../../store/device'
-import { summaryOf } from "../../store/registry";
+import { systemActions } from '../../../app/commands/system'
+import { Campaign, createCampaign } from '../../../campaign/campaign'
+import { device } from '../../../platform/device'
+import { summaryOf } from "../../../campaign/registry";
 import {
   addItem,
   createFolder,

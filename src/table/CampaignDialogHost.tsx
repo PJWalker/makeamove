@@ -1,6 +1,6 @@
 import { useSignalEffect } from "@preact/signals-react";
 import { useRef } from "react";
-import type { Campaign } from "../store/campaign";
+import type { Campaign } from "../campaign/campaign";
 import { openPopup } from "../ui/popup";
 import { dialogRequest } from "./canvasState";
 import { HelpDialog, SettingsDialog } from "./CampaignDialogs";

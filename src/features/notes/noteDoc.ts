@@ -1,5 +1,6 @@
 import * as Y from 'yjs'
 import { IndexeddbPersistence } from 'y-indexeddb'
+import { dataName } from '../../platform/dataEpoch'
 
 /*
  * A note's text: a Yjs subdocument of the campaign root, holding one
@@ -9,7 +10,7 @@ import { IndexeddbPersistence } from 'y-indexeddb'
  */
 
 export const noteGuid = (campaignId: string, noteId: string) => `${campaignId}/note/${noteId}`
-export const noteDbName = (guid: string) => `mam:note:${guid}`
+export const noteDbName = (guid: string) => dataName('note', guid)
 
 export class NoteDoc {
   readonly doc: Y.Doc

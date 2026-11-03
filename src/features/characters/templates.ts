@@ -1,4 +1,4 @@
-import type { CharacterView } from './store'
+import type { CharacterView, Naming, TemplateSettings } from './types'
 
 
 /*
@@ -10,15 +10,6 @@ import type { CharacterView } from './store'
  * its gear) overrides the template for that token alone; anything left alone
  * follows the template as it changes. A pack of goblins needs one sheet.
  */
-
-/** How a template names each token placed from it. */
-export type Naming = 'number' | 'list' | 'adjective'
-
-export interface TemplateSettings {
-  naming: Naming
-  /** Names to pick from, for 'list'. */
-  names: string[]
-}
 
 export const DEFAULT_TEMPLATE: TemplateSettings = { naming: 'number', names: [] }
 

@@ -4,7 +4,8 @@ import type { BlobRef, TokenStyle } from "../scene/types";
 import type { EntityGraphic, EntityGraphicRef } from "../graphics";
 import type { AreaSpec } from "../systems/types";
 import { backdropColour } from "../lib/colour";
-import { DEFAULT_CANVAS_COLOUR, type SceneView } from "../store/campaign";
+import { getStorageItem, setStorageItem } from "../platform/localStorage";
+import { DEFAULT_CANVAS_COLOUR, type SceneView } from "../campaign/campaign";
 
 /*
  * State shared between the scene canvas (loaded lazily, with PixiJS) and the
@@ -110,20 +111,12 @@ const AUTOHIDE_KEY = "mam:autohide";
 export const autohide = signal(loadAutohide());
 
 function loadAutohide() {
-  try {
-    return localStorage.getItem(AUTOHIDE_KEY) === "true";
-  } catch {
-    return false;
-  }
+  return getStorageItem(AUTOHIDE_KEY) === "true";
 }
 
 export function setAutohide(on: boolean) {
   autohide.value = on;
-  try {
-    localStorage.setItem(AUTOHIDE_KEY, String(on));
-  } catch {
-    // Just won't persist.
-  }
+  setStorageItem(AUTOHIDE_KEY, String(on));
 }
 
 /** What the command palette can ask of the open scene's canvas. */

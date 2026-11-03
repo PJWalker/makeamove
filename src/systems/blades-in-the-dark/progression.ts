@@ -5,14 +5,14 @@ import {
   setData,
   setScore,
   systemOf,
-} from "../../characters/api";
+} from "../../features/characters/api";
 import { formatCommaList, parseCommaList } from "../../lib/list";
-import { getState, setState } from "../../chat/messageState";
+import { getState, setState } from "../../features/chat/messageState";
 import {
   systemCampaignData,
   setSystemCampaignData,
   type Campaign,
-} from "../../store/campaign";
+} from "../../campaign/campaign";
 import { ATTRIBUTES } from "./index";
 
 export function advanceAttribute(

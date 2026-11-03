@@ -1,5 +1,6 @@
 import { signal } from '@preact/signals-react'
 import { newId } from '../lib/ids'
+import { getStorageJson, setStorageJson } from './localStorage'
 
 /**
  * This browser's identity. M0 uses a random id; M2 replaces it with a
@@ -15,23 +16,15 @@ export interface Device {
 const KEY = 'mam:device'
 
 function load(): Device {
-  try {
-    const saved = localStorage.getItem(KEY)
-    if (saved) return JSON.parse(saved) as Device
-  } catch {
-    // Storage blocked or corrupt: fall through to a fresh identity.
-  }
+  const saved = getStorageJson<Device | null>(KEY, null)
+  if (saved) return saved
   const fresh: Device = { id: newId(), name: '' }
   save(fresh)
   return fresh
 }
 
 function save(d: Device) {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(d))
-  } catch {
-    // Non-persistent identity is acceptable; the session still works.
-  }
+  setStorageJson(KEY, d)
 }
 
 export const device = signal<Device>(load())

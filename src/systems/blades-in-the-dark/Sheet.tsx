@@ -4,7 +4,7 @@ import {
   setScore,
   startMove,
   toggleCondition,
-} from "../../characters/api";
+} from "../../features/characters/api";
 import {
   SheetFrame,
   SheetSectionView,
@@ -17,7 +17,7 @@ import { IconRoll } from "../../ui/icons";
 import { ATTRIBUTES, TRAUMAS } from "./index";
 import { useSignal } from "@preact/signals-react";
 import { parseCommaList } from "../../lib/list";
-import { systemCampaignData } from "../../store/campaign";
+import { systemCampaignData } from "../../campaign/campaign";
 import { advanceAttribute } from "./progression";
 
 function AttributeAdvance({

@@ -1,4 +1,4 @@
-import type { Icon } from '../ui/icons'
+import type { Icon } from '../../ui/icons'
 
 /*
  * The action index: one list of everything a player can do or look up. The

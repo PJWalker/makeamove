@@ -1,6 +1,6 @@
-import type { Campaign } from '../store/campaign'
-import { device } from '../store/device'
-import type { EntryIconName } from '../ui/entryIcons'
+import type { Campaign } from '../../campaign/campaign'
+import { device } from '../../platform/device'
+import type { EntryIconName } from '../../ui/entryIcons'
 
 /*
  * A player's own touches on actions: what a hotbar slot is called and shows,

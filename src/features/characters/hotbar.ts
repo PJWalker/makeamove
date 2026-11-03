@@ -1,5 +1,5 @@
-import type { Campaign } from '../store/campaign'
-import { device } from '../store/device'
+import type { Campaign } from '../../campaign/campaign'
+import { device } from '../../platform/device'
 
 import { actionsFor, derive, itemActive } from './store'
 import { getCharacter, selectedCharacterId, systemOf } from './api'

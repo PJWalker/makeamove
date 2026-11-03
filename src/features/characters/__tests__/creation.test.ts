@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
 import { boostFrom, choicesAt, dataFrom, pointsSpent, raise, validBoost, previewChoices } from '../creation'
 import { characterView, createCharacter, derive, actionsFor } from '../store'
-import { dnd55e as dnd } from '../../systems/dnd55e'
+import { dnd55e as dnd } from '../../../systems/dnd55e'
 
 describe('guided creation', () => {
   const creation = dnd.creation!

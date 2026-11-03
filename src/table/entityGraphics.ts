@@ -1,7 +1,7 @@
 import type { EntityGraphic } from "../graphics";
 import { entityGraphicKey } from "../graphics";
-import { getCharacter, systemOf } from "../characters/api";
-import type { Campaign } from "../store/campaign";
+import { getCharacter, systemOf } from "../features/characters/api";
+import type { Campaign } from "../campaign/campaign";
 
 const DEFAULT_ICON: Record<string, string> = {
   character: "character",

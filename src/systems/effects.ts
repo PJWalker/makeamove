@@ -1,4 +1,4 @@
-import type { Effect } from './types'
+import type { Effect } from './effectTypes'
 
 /*
  * The effect resolver. A character's effective values are the base values

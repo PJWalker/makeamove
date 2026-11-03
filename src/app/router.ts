@@ -1,6 +1,6 @@
 import { signal } from '@preact/signals-react'
-import { parseInvite, type Invite } from './sync/invite'
-import { until, withTransition } from './ui/transition'
+import { parseInvite, type Invite } from '../sync/invite'
+import { until, withTransition } from '../ui/transition'
 
 /** Hash routes: `#/` is the lobby, `#/c/<campaignId>` is a campaign. */
 function campaignIdFromHash(): string | null {

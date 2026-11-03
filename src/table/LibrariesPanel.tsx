@@ -1,8 +1,9 @@
 import { signal } from '@preact/signals-react'
-import { addItem, baseSystemOf, canEdit, getCharacter, newNpcFromMonster, selectedCharacterId, startMove, systemOf } from '../characters/api'
-import { KIND_LABEL, librariesFor, searchEntries, type EntryKind, type LibraryEntry } from '../library'
-import type { Campaign } from '../store/campaign'
-import { useY } from '../store/useY'
+import { addItem, baseSystemOf, canEdit, getCharacter, newNpcFromMonster, selectedCharacterId, startMove, systemOf } from '../features/characters/api'
+import { KIND_LABEL, librariesFor, searchEntries, type EntryKind, type LibraryEntry } from '../features/library'
+import { toggleSetValue } from '../lib/set'
+import type { Campaign } from '../campaign/campaign'
+import { useY } from '../ui/useY'
 import { Button } from '../ui/Button'
 import { Segmented } from '../ui/Segmented'
 import { IconGive, IconImage } from "../ui/icons";
@@ -39,9 +40,7 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
   const kinds = (Object.keys(KIND_LABEL) as EntryKind[]).filter((k) => sources.some((s) => s.collections.some((c) => c.kind === k)))
   const keyOf = (sourceId: string, e: LibraryEntry) => `lib:${sourceId}:${e.kind}:${e.id}`
   const toggle = (id: string) => {
-    const next = new Set(folded.value)
-    if (!next.delete(id)) next.add(id)
-    folded.value = next
+    folded.value = toggleSetValue(folded.value, id)
   }
 
   /** The buttons an entry offers, in its row or its window. */

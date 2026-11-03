@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
-import { dungeonWorld } from '../../systems/dungeon-world'
+import { dungeonWorld } from '../../../systems/dungeon-world'
 import { performMove } from '../../characters/moves'
 import { characterView, createCharacter, derive, actionsFor } from '../../characters/store'
 import { deleteHomebrew, isHomebrew, listHomebrew, saveGear, saveMove, withHomebrew, type HomebrewEntry } from '../homebrew'

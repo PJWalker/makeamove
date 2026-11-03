@@ -16,15 +16,15 @@ import {
   selectCharacter,
   selectedCharacterId,
   systemOf,
-} from "../characters/api";
-import type { CharacterView } from "../characters/store";
-import type { Campaign } from "../store/campaign";
-import { useY } from "../store/useY";
+} from "../features/characters/api";
+import type { CharacterView } from "../features/characters/types";
+import type { Campaign } from "../campaign/campaign";
+import { useY } from "../ui/useY";
 import type { GameSystem } from "../systems/types";
 import { Button } from "../ui/Button";
 import { IconImage } from "../ui/icons";
 import { menuTrigger } from "../ui/menuTrigger";
-import { choicesAt } from "../characters/creation";
+import { choicesAt } from "../features/characters/creation";
 import {
   ChoiceField,
   creationResult,

@@ -4,8 +4,8 @@ import { colourOf, Presence } from "../scene/presence";
 import { setBlobFetcher } from "../scene/images";
 import { BlobExchange } from "../sync/blobs";
 import { SyncSession } from "../sync/session";
-import { device } from "./device";
-import { getBlob, putBlob } from "./blobs";
+import { device } from "../platform/device";
+import { getBlob, putBlob } from "../platform/blobs";
 
 export class CampaignConnection {
   readonly presence = new Presence();

@@ -1,5 +1,5 @@
 import { menuTrigger } from '../ui/menuTrigger'
-import { addTokens, combatantForToken, hasCombat, tokenMarksSource } from '../combat/api'
+import { addTokens, combatantForToken, hasCombat, tokenMarksSource } from '../features/combat/api'
 import { bounds } from '../scene/geometry'
 import { toScreen } from '../scene/camera'
 import { setMorphOrigin } from '../ui/morph'
@@ -11,7 +11,7 @@ import {
   useSignal,
   useSignalEffect,
 } from "@preact/signals-react";
-import { device } from '../store/device'
+import { device } from '../platform/device'
 import {
   useCallback,
   useEffect,
@@ -33,11 +33,11 @@ import {
   type SceneElement,
   type TokenStyle,
 } from "../scene/types";
-import type { Campaign } from "../store/campaign";
-import { canEdit, createCopy, getCharacter, listCharacters, selectCharacter, systemOf, tokenStatsSource } from '../characters/api'
-import { tokenName } from '../characters/templates'
+import type { Campaign } from "../campaign/campaign";
+import { canEdit, createCopy, getCharacter, listCharacters, selectCharacter, systemOf, tokenStatsSource } from '../features/characters/api'
+import { tokenName } from '../features/characters/templates'
 import { CharacterSheet } from './sheets'
-import { useY } from '../store/useY'
+import { useY } from '../ui/useY'
 import { BlobImage } from "../ui/BlobImage";
 import { Button } from '../ui/Button'
 import {

@@ -2,7 +2,8 @@ import { generateKeyBetween } from 'fractional-indexing'
 import * as Y from 'yjs'
 import { IndexeddbPersistence } from 'y-indexeddb'
 import { newId } from '../lib/ids'
-import { device } from '../store/device'
+import { dataName } from '../platform/dataEpoch'
+import { device } from '../platform/device'
 import { DEFAULT_GRID, type Grid } from './grid'
 import { LAYERS, type Layer, type NewElement, type SceneElement } from './types'
 
@@ -18,7 +19,7 @@ import { LAYERS, type Layer, type NewElement, type SceneElement } from './types'
  * IndexedDB database and loaded only while someone is looking at it.
  */
 
-export const sceneDbName = (guid: string) => `mam:scene:${guid}`
+export const sceneDbName = (guid: string) => dataName('scene', guid)
 
 /** Lighting on or off, how dark unlit places are (0 to 1), and whether players see only what their tokens see. */
 export interface SceneLighting {

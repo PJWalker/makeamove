@@ -8,6 +8,7 @@ import {
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import { IconBack, IconLayoutSingle, IconLayoutSplit } from "./icons";
+import { getStorageJson, setStorageJson } from "../platform/localStorage";
 import { withTransition } from "./transition";
 
 /*
@@ -49,16 +50,10 @@ export function createPaneLayout(
   names: { list: string; detail: string },
 ): PaneLayout {
   const storeKey = `makeamove.${key}`;
-  const saved = (() => {
-    try {
-      return JSON.parse(localStorage.getItem(storeKey) ?? "{}") as {
-        w?: number;
-        layout?: PaneLayoutMode;
-      };
-    } catch {
-      return {};
-    }
-  })();
+  const saved = getStorageJson<{ w?: number; layout?: PaneLayoutMode }>(
+    storeKey,
+    {},
+  );
   const listWidth = signal(saved.w ?? DEFAULT_LIST_W);
   const chosen = signal<PaneLayoutMode>(saved.layout ?? "split");
   const tooNarrow = signal(false);
@@ -66,14 +61,7 @@ export function createPaneLayout(
     tooNarrow.value ? "stack" : chosen.value,
   );
   const save = () => {
-    try {
-      localStorage.setItem(
-        storeKey,
-        JSON.stringify({ w: listWidth.value, layout: chosen.value }),
-      );
-    } catch {
-      // The layout just won't persist.
-    }
+    setStorageJson(storeKey, { w: listWidth.value, layout: chosen.value });
   };
 
   function Toggle() {

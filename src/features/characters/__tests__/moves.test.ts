@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { dungeonWorld as dw } from '../../systems/dungeon-world'
-import { derive, type CharacterView } from '../store'
+import { dungeonWorld as dw } from '../../../systems/dungeon-world'
+import { derive } from '../store'
+import type { CharacterView } from '../types'
 import { canPayMove, performMove, planMove, resolveDifficulty } from '../moves'
 import { parse } from '../../dice/notation'
 

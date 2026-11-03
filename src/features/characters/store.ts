@@ -1,9 +1,9 @@
 import * as Y from 'yjs'
-import type { TokenStyle } from "../scene/types";
-import { newId } from '../lib/ids'
-import type { EffectSource } from '../systems/effects'
-import type { TemplateSettings } from './templates'
-import type { ActionDef, DataValue, Derived, Effect, EffectActive, GameSystem, ItemDef } from '../systems/types'
+import { newId } from '../../lib/ids'
+import type { EffectSource } from '../../systems/effects'
+import type { ActionDef, Derived, GameSystem, ItemDef } from '../../systems/types'
+import type { DataValue } from '../../core/types'
+import type { CharacterKind, CharacterView, Duration, ItemInstance } from './types'
 
 /*
  * Characters live in the campaign's root document as `characters`, a Y.Map
@@ -34,78 +34,6 @@ import type { ActionDef, DataValue, Derived, Effect, EffectActive, GameSystem, I
  * the template, like a subclass. Conditions and inventory are taken whole:
  * the copy's own once it has any, else the template's.
  */
-
-export interface ItemInstance {
-  id: string
-  /** The library entry this came from, if any. */
-  defId?: string
-  name: string
-  description: string
-  weight: number
-  tags: string[]
-  /** Total uses, and how many are left. */
-  uses?: number
-  usesLeft?: number
-  equippable?: boolean
-  equipped: boolean
-  /** The icon it was given, by name (see ui/entryIcons.tsx). */
-  icon?: string
-  effects: Effect[]
-  active: EffectActive
-  /** Fractional position, so reordering never conflicts. */
-  order: string
-}
-
-/** A player character has a full sheet; an NPC has the fields its system lists. */
-export type CharacterKind = 'pc' | 'npc'
-
-export interface CharacterView {
-  id: string;
-  kind: CharacterKind;
-  /** The folder it's filed in, if any (see Campaign.characterFolders). */
-  folder?: string;
-  name: string;
-  /** Device id of the player who owns it. */
-  owner: string;
-  scores: Record<string, number>;
-  /** The system's own fields, with its defaults filled in. */
-  data: Record<string, DataValue>;
-  /** Current values of the system's resources. */
-  resources: Record<string, number>;
-  /** Condition ids. */
-  conditions: string[];
-  /** Active conditions that cannot be cleared by ordinary recovery. */
-  lockedConditions?: string[];
-  /** How long conditions last in combat, by condition id; those without one last until removed. */
-  durations: Record<string, Duration>;
-  /** The action (a spell) the character is concentrating on. */
-  concentration?: string;
-  /** The system's standing roll modifiers, by id. */
-  modifiers: Record<string, number>;
-  /** An NPC's system-defined fields, by id. */
-  fields: Record<string, string | number>;
-  inventory: ItemInstance[];
-  /** How its token is drawn when placed on a map. */
-  tokenStyle?: TokenStyle;
-  tokenColour?: string;
-  /** Set for a template, whose tokens are each a copy of it (see characters/templates.ts). */
-  template?: TemplateSettings;
-  /** For a copy: the template it overrides. */
-  base?: string;
-  /** Actions learned beyond what their system gives them (dropped onto them), by id. */
-  learned: string[];
-}
-
-/**
- * A condition's time left: so many rounds, counted down at the start or end
- * of one combatant's turn (usually whoever caused it).
- */
-export interface Duration {
-  rounds: number
-  tick: 'start' | 'end'
-  /** The combatant whose turn counts it down. */
-  of: string
-}
 
 export type CharacterMap = Y.Map<any>
 

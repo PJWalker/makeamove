@@ -8,8 +8,8 @@ import * as Y from 'yjs'
 import { checkSystem, getSystem } from "..";
 import { dnd55e as dnd, pactMagic, proficiencyAt, spellSlots } from '../dnd55e'
 import { CLASSES, ITEMS } from '../dnd55e/data'
-import { characterView, createCharacter, derive, instanceOf, actionsFor } from '../../characters/store'
-import { performMove, planMove } from '../../characters/moves'
+import { characterView, createCharacter, derive, instanceOf, actionsFor } from '../../features/characters/store'
+import { performMove, planMove } from '../../features/characters/moves'
 
 
 const fixed = (...values: number[]) => {

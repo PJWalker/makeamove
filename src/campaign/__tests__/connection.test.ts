@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as Y from "yjs";
 import { MemoryRoom } from "../../sync/__tests__/memoryRoom";
-import { CampaignConnection } from "../campaignConnection";
-import { device } from "../device";
+import { CampaignConnection } from "../connection";
+import { device } from "../../platform/device";
 
 const mockTrysteroTransport = vi.hoisted(() => vi.fn());
 

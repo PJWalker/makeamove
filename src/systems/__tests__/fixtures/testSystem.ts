@@ -1,6 +1,6 @@
-import type { CharacterView } from "../../characters/store";
-import { resolveEffects } from "../effects";
-import type { ActionDef, GameSystem } from "../types";
+import type { CharacterView } from "../../../features/characters/types";
+import { resolveEffects } from "../../effects";
+import type { ActionDef, GameSystem } from "../../types";
 
 const outcomes = {
   success: "The test succeeds.",

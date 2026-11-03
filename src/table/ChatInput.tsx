@@ -6,9 +6,9 @@ import {
   contentFromText,
   emptyChatContent,
   type ChatContent,
-} from "../chat/content";
-import { LINK_NODE } from "../notes/links";
-import type { Campaign } from "../store/campaign";
+} from "../features/chat/content";
+import { LINK_NODE } from "../features/notes/links";
+import type { Campaign } from "../campaign/campaign";
 import { registerLinkDrop } from "./entityDrag";
 import { linkExtension } from "./richText";
 

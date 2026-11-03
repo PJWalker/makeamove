@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto'
 import { describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
 import { Campaign, createCampaign } from '../campaign'
-import { device } from '../device'
+import { device } from '../../platform/device'
 
 const as = (id: string, name: string) => (device.value = { id, name })
 

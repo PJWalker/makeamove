@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { Die } from "../dice/notation";
+import type { Die } from "../features/dice/notation";
 import { lastPointer } from "../ui/pointer";
 import { useShake } from "../ui/useShake";
 import type { DiceRenderer, Point } from "./diceRenderer";

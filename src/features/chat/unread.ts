@@ -1,6 +1,8 @@
 import { computed, signal } from '@preact/signals-react'
-import { activeCampaign } from '../store/campaign'
-import { device } from '../store/device'
+import { activeCampaign } from '../../campaign/campaign'
+import { dataName } from '../../platform/dataEpoch'
+import { device } from '../../platform/device'
+import { getStorageItem, setStorageItem } from '../../platform/localStorage'
 import { visibilityOf } from './types'
 
 /*
@@ -9,14 +11,10 @@ import { visibilityOf } from './types'
  * in localStorage (it's a per-device convenience, not shared state).
  */
 
-const key = (campaignId: string) => `mam:chat-seen:${campaignId}`
+const key = (campaignId: string) => dataName('chat-seen', campaignId)
 
 function load(campaignId: string): string {
-  try {
-    return localStorage.getItem(key(campaignId)) ?? ''
-  } catch {
-    return ''
-  }
+  return getStorageItem(key(campaignId)) ?? ''
 }
 
 const stamps = new Map<string, string>()
@@ -50,9 +48,5 @@ export function markRead() {
   if (!c || !last || last.hlc <= seenStamp(c.id)) return
   stamps.set(c.id, last.hlc)
   version.value++
-  try {
-    localStorage.setItem(key(c.id), last.hlc)
-  } catch {
-    // Unread counts just won't survive a reload.
-  }
+  setStorageItem(key(c.id), last.hlc)
 }

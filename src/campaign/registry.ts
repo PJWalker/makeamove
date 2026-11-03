@@ -1,6 +1,7 @@
 import { signal } from '@preact/signals-react'
 import * as Y from 'yjs'
 import { IndexeddbPersistence } from 'y-indexeddb'
+import { dataName } from '../platform/dataEpoch'
 
 /**
  * The local list of campaigns on this device. It never syncs to peers: each
@@ -19,7 +20,7 @@ export interface CampaignSummary {
 
 const doc = new Y.Doc()
 const list = doc.getMap<CampaignSummary>('campaigns')
-const persistence = new IndexeddbPersistence('mam:registry', doc)
+const persistence = new IndexeddbPersistence(dataName('registry'), doc)
 
 export const campaigns = signal<CampaignSummary[]>([])
 export const registryReady = signal(false)

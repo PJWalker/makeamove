@@ -14,14 +14,15 @@ import {
   setConditionState,
   startMove,
   toggleCondition,
-} from '../characters/api'
-import { actionsFor, derive, statBonus, type CharacterView } from '../characters/store'
-import { conditionPipColour } from '../combat/pipColours'
-import { postRoll } from '../chat/send'
-import type { Campaign } from '../store/campaign'
-import { device } from '../store/device'
+} from '../features/characters/api'
+import { actionsFor, derive, statBonus } from '../features/characters/store'
+import type { CharacterView } from '../features/characters/types'
+import { conditionPipColour } from '../features/combat/pipColours'
+import { postRoll } from '../features/chat/send'
+import type { Campaign } from '../campaign/campaign'
+import { device } from '../platform/device'
 import type { Derived, GameSystem, SheetCounter, SheetSection } from '../systems/types'
-import { choicesAt } from "../characters/creation";
+import { choicesAt } from "../features/characters/creation";
 import { parseCommaList } from '../lib/list'
 import { Button } from '../ui/Button'
 import { OptionPicker } from '../ui/OptionPicker'

@@ -1,10 +1,10 @@
-import { postRoll } from '../chat/send'
-import type { Campaign } from '../store/campaign'
-import { activeTool } from '../scene/tools'
-import { autohide, canvasCommands, dialogRequest, setAutohide } from '../table/canvasState'
-import { PANEL_ORDER, showPanel, unavailablePanels } from '../table/panelLayout'
-import { PANELS } from '../table/panels'
-import { TOOLS } from '../table/Toolbar'
+import { postRoll } from '../../features/chat/send'
+import type { Campaign } from '../../campaign/campaign'
+import { activeTool } from '../../scene/tools'
+import { autohide, canvasCommands, dialogRequest, setAutohide } from '../../table/canvasState'
+import { PANEL_ORDER, showPanel, unavailablePanels } from '../../table/panelLayout'
+import { PANELS } from '../../table/panels'
+import { TOOLS } from '../../table/Toolbar'
 import {
   IconAdd,
   IconDice,
@@ -16,8 +16,8 @@ import {
   IconSettings,
   IconSidebarHide,
   IconUndo,
-} from '../ui/icons'
-import { MOD } from '../ui/keys'
+} from '../../ui/icons'
+import { MOD } from '../../ui/keys'
 import type { Action } from './types'
 
 /** Rolling one formula, for everyone to see. The palette offers one for any formula typed in it, to run or drag onto the hotbar. */

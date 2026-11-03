@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { instanceOf } from '../../characters/store'
-import { dungeonWorld } from '../../systems/dungeon-world'
+import { dungeonWorld } from '../../../systems/dungeon-world'
 import { librariesFor, registerLibrary, searchEntries, systemLibrary } from '../index'
 
 describe('libraries', () => {

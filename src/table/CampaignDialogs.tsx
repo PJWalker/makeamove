@@ -4,11 +4,11 @@ import {
   setSystemCampaignData,
   systemCampaignData,
   type Campaign,
-} from "../store/campaign";
+} from "../campaign/campaign";
 import { getSystem } from "../systems";
 import { colourOf } from "../scene/presence";
-import { device, setDeviceColour, setDeviceName } from "../store/device";
-import { useY } from "../store/useY";
+import { device, setDeviceColour, setDeviceName } from "../platform/device";
+import { useY } from "../ui/useY";
 import { GRID_TYPES } from "../scene/grid";
 import { TOKEN_STYLES } from "../scene/types";
 import { Button } from "../ui/Button";

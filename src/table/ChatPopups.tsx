@@ -2,10 +2,10 @@ import type * as React from "react";
 import { useSignal } from '@preact/signals-react'
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { lazy, Suspense } from "react";
-import { chatPopups, dismissPopup } from '../chat/notify'
-import type { ChatMessage } from '../chat/types'
-import { markRead } from '../chat/unread'
-import type { Campaign } from '../store/campaign'
+import { chatPopups, dismissPopup } from '../features/chat/notify'
+import type { ChatMessage } from '../features/chat/types'
+import { markRead } from '../features/chat/unread'
+import type { Campaign } from '../campaign/campaign'
 import { collapsedInto, reducedMotion } from '../ui/bubble'
 import { Button } from '../ui/Button'
 import { IconClose } from "../ui/icons";

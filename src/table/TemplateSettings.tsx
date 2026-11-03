@@ -1,8 +1,8 @@
-import { canEdit, getCharacter, resetCopy, setTemplate } from '../characters/api'
+import { canEdit, getCharacter, resetCopy, setTemplate } from '../features/characters/api'
 import { Button } from '../ui/Button'
-import type { CharacterView } from '../characters/store'
-import { DEFAULT_TEMPLATE, NAMINGS } from '../characters/templates'
-import type { Campaign } from '../store/campaign'
+import type { CharacterView } from '../features/characters/types'
+import { DEFAULT_TEMPLATE, NAMINGS } from '../features/characters/templates'
+import type { Campaign } from '../campaign/campaign'
 import { Segmented } from '../ui/Segmented'
 
 /**

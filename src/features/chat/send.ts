@@ -1,8 +1,8 @@
 import { roll } from '../dice/notation'
 import { makeSessionPage } from '../notes/sessions'
 import { setState } from './messageState'
-import type { Campaign } from '../store/campaign'
-import { device } from '../store/device'
+import type { Campaign } from '../../campaign/campaign'
+import { device } from '../../platform/device'
 import type { Command } from './commands'
 import {
   contentForCommand,
@@ -10,8 +10,8 @@ import {
   type ChatContent,
 } from "./content";
 import type { RollMessage, RollVisibility, TextMessage } from "./types";
-import type { SystemCounterDef } from "../systems/types";
-import { getSystem } from "../systems";
+import type { SystemCounterDef } from "../../systems/types";
+import { getSystem } from "../../systems";
 
 /** This device's name in the campaign, as other players see it. */
 export function myName(campaign: Campaign): string {

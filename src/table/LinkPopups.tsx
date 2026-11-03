@@ -1,11 +1,11 @@
 import { useSignal } from '@preact/signals-react'
 import type { ReactNode } from 'react'
 import { useEffect, useLayoutEffect } from "react";
-import { addItem, canEdit, getCharacter, selectedCharacterId, startMove, systemOf } from '../characters/api'
-import { getNote } from '../notes/api'
-import { followLink, linkLabel } from "../notes/targets";
-import type { Campaign } from '../store/campaign'
-import { useY } from '../store/useY'
+import { addItem, canEdit, getCharacter, selectedCharacterId, startMove, systemOf } from '../features/characters/api'
+import { getNote } from '../features/notes/api'
+import { followLink, linkLabel } from "../features/notes/targets";
+import type { Campaign } from '../campaign/campaign'
+import { useY } from '../ui/useY'
 import { Button } from '../ui/Button'
 import { closePopup } from "../ui/popup";
 import { usePopupDialog } from "./usePopupDialog";

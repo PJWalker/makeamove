@@ -1,11 +1,11 @@
-import { getCharacter, systemOf } from '../characters/api'
-import { answerSave, applyDamage, canAnswer } from '../characters/resolution'
-import { rollModesFor } from '../characters/moves'
-import { appliedField, saveField, type SaveAnswer } from '../chat/messageState'
+import { getCharacter, systemOf } from '../features/characters/api'
+import { answerSave, applyDamage, canAnswer } from '../features/characters/resolution'
+import { rollModesFor } from '../features/characters/moves'
+import { appliedField, saveField, type SaveAnswer } from '../features/chat/messageState'
 import { useMessageState } from './ChatExtras'
-import type { MoveMessage, MoveTarget, RollMessage } from '../chat/types'
-import type { Campaign } from '../store/campaign'
-import { useY } from '../store/useY'
+import type { MoveMessage, MoveTarget, RollMessage } from '../features/chat/types'
+import type { Campaign } from '../campaign/campaign'
+import { useY } from '../ui/useY'
 import { Button } from '../ui/Button'
 
 /*

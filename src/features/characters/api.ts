@@ -1,24 +1,24 @@
 import { batch, signal } from "@preact/signals-react";
 import { generateKeyBetween } from "fractional-indexing";
 import * as Y from "yjs";
-import { importImage } from "../scene/images";
-import { newId } from "../lib/ids";
+import { importImage } from "../../scene/images";
+import { newId } from "../../lib/ids";
 
 import { postRoll, myName } from "../chat/send";
 import type { MoveSuggestion, MoveTarget } from "../chat/types";
-import type { Campaign } from "../store/campaign";
-import { device } from "../store/device";
-import { getSystem } from "../systems";
+import type { Campaign } from "../../campaign/campaign";
+import { device } from "../../platform/device";
+import { getSystem } from "../../systems";
 import type {
   ActionDef,
-  DataValue,
   GameSystem,
   ItemDef,
   ResetEvent,
   TokenStat,
-} from "../systems/types";
+} from "../../systems/types";
+import type { DataValue } from "../../core/types";
 import { listHomebrew, withHomebrew } from "../homebrew/homebrew";
-import type { TemplateSettings } from "./templates";
+import type { CharacterView, ItemInstance, TemplateSettings } from "./types";
 import { asksFirst, performMove, type MoveChoice } from "./moves";
 import {
   characterView,
@@ -26,8 +26,6 @@ import {
   canEditCharacter,
   createCharacter,
   instanceOf,
-  type CharacterView,
-  type ItemInstance,
 } from "./store";
 
 /** The campaign's system as published, without the table's homebrew: for the Libraries. */

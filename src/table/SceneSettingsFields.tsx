@@ -5,8 +5,8 @@ import {
   MIN_GRID_SIZE,
 } from "../scene/grid";
 import type { SceneDoc } from "../scene/sceneDoc";
-import { DEFAULT_CANVAS_COLOUR, type Campaign } from "../store/campaign";
-import { useY } from "../store/useY";
+import { DEFAULT_CANVAS_COLOUR, type Campaign } from "../campaign/campaign";
+import { useY } from "../ui/useY";
 import { Segmented } from "../ui/Segmented";
 import { activeMapColour, canvasColour } from "./canvasState";
 

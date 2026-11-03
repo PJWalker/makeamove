@@ -3,9 +3,10 @@ import { generateKeyBetween } from "fractional-indexing";
 import * as Y from "yjs";
 import { IndexeddbPersistence } from "y-indexeddb";
 import { newId, newSecret } from "../lib/ids";
+import { dataName } from "../platform/dataEpoch";
 
 import { formatCommaList, parseCommaList } from "../lib/list";
-import { device } from "./device";
+import { device } from "../platform/device";
 import {
   forgetCampaign,
   renameCampaignEntry,
@@ -16,12 +17,12 @@ import {
 } from "./registry";
 import { getSystem } from "../systems";
 import type { Invite } from "../sync/invite";
-import { CampaignConnection } from "./campaignConnection";
+import { CampaignConnection } from "./connection";
 import type { GridType } from "../scene/grid";
 import { sceneDbName } from "../scene/sceneDoc";
-import { noteDbName, noteGuid } from "../notes/noteDoc";
-import { Vault, vaultDbName, vaultNoteGuid } from "../notes/vault";
-import { ChatLog, deleteChatData } from "../chat/chatLog";
+import { noteDbName, noteGuid } from "../features/notes/noteDoc";
+import { Vault, vaultDbName, vaultNoteGuid } from "../features/notes/vault";
+import { ChatLog, deleteChatData } from "../features/chat/chatLog";
 import type { EntityGraphic } from "../graphics";
 import type { TokenStyle } from "../scene/types";
 
@@ -93,7 +94,7 @@ export interface CampaignDefaults {
   gridType: GridType;
 }
 
-const dbName = (id: string) => `mam:campaign:${id}`;
+const dbName = (id: string) => dataName("campaign", id);
 const sceneGuid = (campaignId: string, sceneId: string) =>
   `${campaignId}/${sceneId}`;
 

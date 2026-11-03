@@ -1,7 +1,7 @@
 import { signal } from "@preact/signals-react";
 import { lazy, Suspense, useEffect } from "react";
-import { startChatNotifications } from "./chat/notify";
-import { Lobby } from "./lobby/Lobby";
+import { startChatNotifications } from "../features/chat/notify";
+import { Lobby } from "../lobby/Lobby";
 import { goToCampaign, routeCampaignId } from "./router";
 import {
   activeCampaign,
@@ -9,13 +9,13 @@ import {
   closeCampaign,
   deleteLocalCampaign,
   openCampaign,
-} from "./store/campaign";
-import { Button } from "./ui/Button";
-import { Tooltip } from "./ui/Tooltip";
+} from "../campaign/campaign";
+import { Button } from "../ui/Button";
+import { Tooltip } from "../ui/Tooltip";
 
 // The table loads when a campaign opens, so the lobby comes up quickly.
 const Tabletop = lazy(() =>
-  import("./table/Tabletop").then((m) => ({ default: m.Tabletop })),
+  import("../table/Tabletop").then((m) => ({ default: m.Tabletop })),
 );
 
 const openError = signal<string | null>(null);

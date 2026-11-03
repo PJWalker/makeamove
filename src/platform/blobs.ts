@@ -6,8 +6,10 @@
  * by hash.
  */
 
-const DIR = 'blobs'
-const CACHE = 'mam-blobs'
+import { dataName } from './dataEpoch'
+
+const DIR = dataName('blobs')
+const CACHE = dataName('blob-cache')
 
 let dirPromise: Promise<FileSystemDirectoryHandle | null> | null = null
 

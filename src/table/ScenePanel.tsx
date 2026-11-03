@@ -1,6 +1,6 @@
 import { useSignal } from "@preact/signals-react";
-import type { Campaign, SceneView } from "../store/campaign";
-import { useY } from "../store/useY";
+import type { Campaign, SceneView } from "../campaign/campaign";
+import { useY } from "../ui/useY";
 import { Button } from "../ui/Button";
 import {
   IconAdd,

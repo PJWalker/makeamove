@@ -2,12 +2,12 @@ import type {
   PointerEvent as ReactPointerEvent,
   KeyboardEvent as ReactKeyboardEvent,
 } from "react";
-import { unreadCount } from "../chat/unread";
+import { unreadCount } from "../features/chat/unread";
 import { useSignal } from "@preact/signals-react";
 import { IconClose, IconOpenWindow } from "../ui/icons";
-import type { Campaign } from "../store/campaign";
-import { device } from "../store/device";
-import { useY } from "../store/useY";
+import type { Campaign } from "../campaign/campaign";
+import { device } from "../platform/device";
+import { useY } from "../ui/useY";
 import { Button } from "../ui/Button";
 import { menuTrigger } from "../ui/menuTrigger";
 import { trackPointer } from "../ui/pointer";

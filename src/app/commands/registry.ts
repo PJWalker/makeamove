@@ -1,5 +1,5 @@
-import type { Campaign } from '../store/campaign'
-import { diceFormula } from '../chat/commands'
+import type { Campaign } from '../../campaign/campaign'
+import { diceFormula } from '../../features/chat/commands'
 import { coreActions, rollAction } from './core'
 import { systemActions } from './system'
 import type { Action } from './types'

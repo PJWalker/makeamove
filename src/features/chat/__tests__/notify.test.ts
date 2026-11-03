@@ -1,8 +1,8 @@
 import { describe as suite, expect, it, vi } from 'vitest'
 import { contentFromText } from "../content";
 
-vi.mock('../../table/panelLayout', () => ({ panelVisible: () => true }))
-vi.mock('../../store/campaign', () => ({ activeCampaign: { value: null } }))
+vi.mock('../../../table/panelLayout', () => ({ panelVisible: () => true }))
+vi.mock('../../../campaign/campaign', () => ({ activeCampaign: { value: null } }))
 
 const { delivery, describe } = await import('../notify')
 

@@ -5,11 +5,12 @@ import { resolveEffects } from '../effects'
 import { bladesInTheDark as blades } from '../blades-in-the-dark'
 import { dungeonWorld2 as dw2 } from '../dungeon-world-2'
 import { daggerheart as dh } from '../daggerheart'
-import { testCharacter, testSystem } from '../test'
+import { testCharacter, testSystem } from './fixtures/testSystem'
 import { PATHS as DW2_PATHS } from '../dungeon-world-2/paths'
-import { derive, type CharacterView } from '../../characters/store'
-import { asksFirst, performMove, planMove } from '../../characters/moves'
-import { boostFrom, choicesAt } from '../../characters/creation'
+import { derive } from '../../features/characters/store'
+import type { CharacterView } from '../../features/characters/types'
+import { asksFirst, performMove, planMove } from '../../features/characters/moves'
+import { boostFrom, choicesAt } from '../../features/characters/creation'
 
 
 const bladesCharacter = (over: Partial<CharacterView> = {}): CharacterView => ({
@@ -23,9 +24,9 @@ const dice = (...values: number[]) => {
 }
 
 describe('Test system', () => {
-  it('registers valid data for the shared system API', () => {
+  it('validates the fixture without registering it for the app', () => {
     expect(checkSystem(testSystem)).toEqual([])
-    expect(listSystems()).toContain(testSystem)
+    expect(listSystems()).not.toContain(testSystem)
     expect((testSystem.items)[0]!.equippable).toBe(true)
     expect((testSystem.conditions)[0]!.lockable).toBe(true)
     expect(testSystem.creation?.choices[0]?.options).toHaveLength(2)

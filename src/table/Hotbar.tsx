@@ -1,20 +1,20 @@
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useSignal } from "@preact/signals-react";
 import { useEffect, useRef } from "react";
-import { selectedCharacterId } from "../characters/api";
+import { selectedCharacterId } from "../features/characters/api";
 import {
   editHotbar,
   hotbarSlots,
   placeAt,
   shift,
   unpin,
-} from "../characters/hotbar";
-import { shortcutFor, showCombo, slotLook } from "../actions/custom";
-import { buildIndex, pinnedRoll } from "../actions/registry";
-import { noteRecent } from "../actions/recent";
-import type { Campaign } from "../store/campaign";
+} from "../features/characters/hotbar";
+import { shortcutFor, showCombo, slotLook } from "../app/commands/custom";
+import { buildIndex, pinnedRoll } from "../app/commands/registry";
+import { noteRecent } from "../app/commands/recent";
+import type { Campaign } from "../campaign/campaign";
 import { notePressed } from "../ui/pressed";
-import { useY } from "../store/useY";
+import { useY } from "../ui/useY";
 import { Button } from "../ui/Button";
 import { ENTRY_ICONS } from "../ui/entryIcons";
 import {

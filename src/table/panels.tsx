@@ -12,9 +12,9 @@ import {
   IconRemoveMember,
   IconMap,
 } from "../ui/icons";
-import type { Campaign, MemberView } from "../store/campaign";
-import { device } from "../store/device";
-import { useY } from "../store/useY";
+import type { Campaign, MemberView } from "../campaign/campaign";
+import { device } from "../platform/device";
+import { useY } from "../ui/useY";
 import { Avatar } from "../ui/Avatar";
 import { Button } from "../ui/Button";
 import type { Icon } from "../ui/icons";
@@ -41,7 +41,7 @@ const NotesPanel = lazy(() =>
   import("./NotesPanel").then((module) => ({ default: module.NotesPanel })),
 );
 const CombatPanel = lazy(() =>
-  import("./CombatPanel").then((module) => ({ default: module.CombatPanel })),
+  import("../features/combat/CombatPanel").then((module) => ({ default: module.CombatPanel })),
 );
 const ItemsPanel = lazy(() =>
   import("./ItemsPanel").then((module) => ({ default: module.ItemsPanel })),

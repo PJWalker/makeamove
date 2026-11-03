@@ -1,8 +1,8 @@
 import { useSignal } from "@preact/signals-react";
 import { useRef } from "react";
-import { getNote, type LinkKind } from "../notes/api";
-import { linkLabel, linkTip, openInSidebar } from "../notes/targets";
-import type { Campaign } from "../store/campaign";
+import { getNote, type LinkKind } from "../features/notes/api";
+import { linkLabel, linkTip, openInSidebar } from "../features/notes/targets";
+import type { Campaign } from "../campaign/campaign";
 import { menuTrigger } from "../ui/menuTrigger";
 import { IconImage, IconOpenWindow, IconSidebar } from "../ui/icons";
 import type { WindowProxy } from "./CampaignDialogs";

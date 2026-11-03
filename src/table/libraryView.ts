@@ -1,5 +1,5 @@
 import { signal } from '@preact/signals-react'
-import type { EntryKind } from '../library'
+import type { EntryKind } from '../features/library'
 import { showPanel } from './panelLayout'
 
 export type KindFilter = 'all' | EntryKind

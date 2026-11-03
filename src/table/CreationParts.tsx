@@ -6,7 +6,7 @@ import {
   setData,
   setScore,
   systemOf,
-} from "../characters/api";
+} from "../features/characters/api";
 import {
   boostFrom,
   choicesAt,
@@ -16,11 +16,11 @@ import {
   SCORE_CAP,
   validBoost,
   previewChoices,
-} from "../characters/creation";
-import { derive } from "../characters/store";
-import { roll } from "../dice/notation";
+} from "../features/characters/creation";
+import { derive } from "../features/characters/store";
+import { roll } from "../features/dice/notation";
 import { formatCommaList, parseCommaList } from "../lib/list";
-import type { Campaign } from "../store/campaign";
+import type { Campaign } from "../campaign/campaign";
 import type { ChoiceDef, GameSystem, ScoreMethods } from "../systems/types";
 import { Button } from "../ui/Button";
 import { OptionPicker } from "../ui/OptionPicker";

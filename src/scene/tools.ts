@@ -1,4 +1,5 @@
 import { signal } from '@preact/signals-react'
+import { getStorageItem, getStorageJson, setStorageItem, setStorageJson } from '../platform/localStorage'
 import type { AreaTone, Layer, ShapeKind } from './types'
 
 export type ToolId = 'select' | 'pan' | 'draw' | 'erase' | 'shape' | 'text' | 'ruler' | 'ping' | 'wall' | 'light'
@@ -21,22 +22,14 @@ const PEN_KEY = 'mam:pen'
 function loadPen(): PenSettings {
   // Gold, like the UI accent.
   const fallback: PenSettings = { colour: '#f0bb3b', width: PEN_WIDTHS[1], layer: 'over' }
-  try {
-    return { ...fallback, ...JSON.parse(localStorage.getItem(PEN_KEY) ?? '{}') }
-  } catch {
-    return fallback
-  }
+  return { ...fallback, ...getStorageJson<Partial<PenSettings>>(PEN_KEY, {}) }
 }
 
 export const pen = signal<PenSettings>(loadPen())
 
 export function setPen(patch: Partial<PenSettings>) {
   pen.value = { ...pen.value, ...patch }
-  try {
-    localStorage.setItem(PEN_KEY, JSON.stringify(pen.value))
-  } catch {
-    // Settings just won't persist.
-  }
+  setStorageJson(PEN_KEY, pen.value)
 }
 
 /** Eraser radius in screen px. */
@@ -45,42 +38,26 @@ export const ERASER_RADIUS = 14
 /** The shape the Shapes tool draws, remembered per device. */
 const SHAPE_KEY = 'mam:shape'
 function loadShape(): ShapeKind {
-  try {
-    const v = localStorage.getItem(SHAPE_KEY)
-    return v === 'circle' || v === 'line' || v === 'cone' ? v : 'rect'
-  } catch {
-    return 'rect'
-  }
+  const v = getStorageItem(SHAPE_KEY)
+  return v === 'circle' || v === 'line' || v === 'cone' ? v : 'rect'
 }
 export const shapeTool = signal<ShapeKind>(loadShape())
 export function setShapeTool(shape: ShapeKind) {
   shapeTool.value = shape
-  try {
-    localStorage.setItem(SHAPE_KEY, shape)
-  } catch {
-    // Just won't persist.
-  }
+  setStorageItem(SHAPE_KEY, shape)
 }
 
 /** What the Lights tool does: select lamps and areas, or place a lamp or an area of solid light or dark. Remembered per device. */
 export type LightToolMode = 'select' | 'lamp' | AreaTone
 const LIGHT_TOOL_KEY = 'mam:light-tool'
 function loadLightTool(): LightToolMode {
-  try {
-    const v = localStorage.getItem(LIGHT_TOOL_KEY)
-    return v === 'select' || v === 'light' || v === 'dark' ? v : 'lamp'
-  } catch {
-    return 'lamp'
-  }
+  const v = getStorageItem(LIGHT_TOOL_KEY)
+  return v === 'select' || v === 'light' || v === 'dark' ? v : 'lamp'
 }
 export const lightTool = signal<LightToolMode>(loadLightTool())
 export function setLightTool(mode: LightToolMode) {
   lightTool.value = mode
-  try {
-    localStorage.setItem(LIGHT_TOOL_KEY, mode)
-  } catch {
-    // Just won't persist.
-  }
+  setStorageItem(LIGHT_TOOL_KEY, mode)
 }
 
 /** Outline width of drawn shapes, in world px. */

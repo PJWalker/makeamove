@@ -16,10 +16,10 @@ import {
   revealNote,
   type NoteFolderView,
   type NoteView,
-} from "../notes/api";
-import { noteOpened, openNote, openNoteId } from "../notes/targets";
-import type { Campaign } from "../store/campaign";
-import { useY } from "../store/useY";
+} from "../features/notes/api";
+import { noteOpened, openNote, openNoteId } from "../features/notes/targets";
+import type { Campaign } from "../campaign/campaign";
+import { useY } from "../ui/useY";
 import { Button } from "../ui/Button";
 import {
   IconDelete,

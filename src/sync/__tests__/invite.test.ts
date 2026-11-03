@@ -13,5 +13,6 @@ describe('invites', () => {
     expect(parseInvite('')).toBeNull()
     expect(parseInvite('#/c/abc')).toBeNull()
     expect(parseInvite('#join=abc.short')).toBeNull()
+    expect(parseInvite('#join=abc.1234567890123456')).toBeNull()
   })
 })

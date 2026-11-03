@@ -1,8 +1,9 @@
 import { signal } from '@preact/signals-react'
 import * as Y from 'yjs'
 import { IndexeddbPersistence } from 'y-indexeddb'
-import { HybridClock } from '../lib/hlc'
-import { newId } from '../lib/ids'
+import { HybridClock } from '../../lib/hlc'
+import { newId } from '../../lib/ids'
+import { dataName } from '../../platform/dataEpoch'
 import type { ChatMessage } from './types'
 
 /*
@@ -20,7 +21,7 @@ export const CHUNK_SIZE = 500
 /** Chunks loaded when the log opens. */
 const INITIAL_CHUNKS = 2
 
-export const chatDbName = (guid: string) => `mam:chat:${guid}`
+export const chatDbName = (guid: string) => dataName('chat', guid)
 
 /** Remove this device's copy of every chunk listed in a campaign's root doc. */
 export function deleteChatData(root: Y.Doc) {

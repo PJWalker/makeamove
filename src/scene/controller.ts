@@ -1,6 +1,6 @@
 import { effect, signal, untracked } from "@preact/signals-react";
-import type { CampaignDefaults } from "../store/campaign";
-import { device } from "../store/device";
+import type { CampaignDefaults } from "../campaign/campaign";
+import { device } from "../platform/device";
 
 import { colourOf, type Presence } from "./presence";
 import { type Camera, clampZoom, fitCamera, toWorld, zoomAt } from "./camera";

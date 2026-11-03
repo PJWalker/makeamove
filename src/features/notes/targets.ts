@@ -1,8 +1,8 @@
 import { signal } from '@preact/signals-react'
 import { getCharacter, listCharacters, selectCharacter, systemOf } from '../characters/api'
-import type { Campaign } from '../store/campaign'
-import { libraryView } from '../table/libraryView'
-import { showPanel } from '../table/panelLayout'
+import type { Campaign } from '../../campaign/campaign'
+import { libraryView } from '../../table/libraryView'
+import { showPanel } from '../../table/panelLayout'
 import { listNotes, type LinkKind } from './api'
 
 /** Something a note can link to, as offered after typing `@`. */
