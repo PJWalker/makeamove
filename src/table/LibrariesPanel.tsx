@@ -40,7 +40,6 @@ import { getEntityGraphic } from "./entityGraphics";
 import { CampaignEntityGraphic } from "./EntityGraphic";
 import { editEntityGraphic } from "./GraphicDialogs";
 import type { ItemDef } from "../systems/types";
-import { INITIAL_TREASURE_BOXES, purchaseAtWealth } from "../systems/dungeon-world-2/wealth";
 
 /** Collections and entries shown open, by "source/collection[/entry…]" (this device only). */
 const opened = signal<Set<string>>(new Set());
@@ -64,37 +63,17 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
   const kinds = (Object.keys(KIND_LABEL) as EntryKind[]).filter((k) =>
     sources.some((s) => s.collections.some((c) => c.kind === k)),
   );
-  const purchaseCost = (item: ItemDef) =>
-    system.id === "dungeon-world-2" ? item.wealthCost : undefined;
-  const isRareMagicItem = (item: ItemDef) =>
-    system.id === "dungeon-world-2" && item.tags.includes("magic");
+  const acquisition = (item: ItemDef) => system.acquireItem?.(item, me);
   const canPurchase = (item: ItemDef) => {
-    if (isRareMagicItem(item)) return campaign.isGm() && canAct;
-    const cost = purchaseCost(item);
-    if (!cost || !me) return canAct;
-    return (
-      canAct &&
-      purchaseAtWealth(Number(me.data.treasureBoxes ?? INITIAL_TREASURE_BOXES), cost.rank) !== null
-    );
+    const how = acquisition(item);
+    return canAct && (!how?.gmOnly || campaign.isGm()) && !how?.blocked;
   };
   const acquireItem = (item: ItemDef) => {
-    if (!me || !canAct) return;
-    if (isRareMagicItem(item)) {
-      if (campaign.isGm()) addItem(campaign, me.id, item);
-      return;
-    }
-    const cost = purchaseCost(item);
-    if (!cost) {
-      addItem(campaign, me.id, item);
-      return;
-    }
-    const remaining = purchaseAtWealth(
-      Number(me.data.treasureBoxes ?? INITIAL_TREASURE_BOXES),
-      cost.rank,
-    );
-    if (remaining === null) return;
+    if (!me || !canPurchase(item)) return;
+    const how = acquisition(item);
     campaign.doc.transact(() => {
-      setData(campaign, me.id, "treasureBoxes", remaining);
+      for (const [field, value] of Object.entries(how?.data ?? {}))
+        setData(campaign, me.id, field, value);
       addItem(campaign, me.id, item);
     });
   };
@@ -117,17 +96,12 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
                 ? "Choose a character first"
                 : !canAct
                   ? "Not your character"
-                  : "This item is above your Wealth"
+                  : (acquisition(e.item)?.blocked ??
+                    (acquisition(e.item)?.gmOnly ? "Only the GM can grant this" : undefined))
           }
           onClick={() => acquireItem(e.item)}
         >
-          {isRareMagicItem(e.item)
-            ? "GM grant"
-            : purchaseCost(e.item)
-              ? "Purchase"
-              : me
-                ? `Give to ${me.name}`
-                : "Choose a character"}
+          {acquisition(e.item)?.label ?? (me ? `Give to ${me.name}` : "Choose a character")}
         </Button>
       );
     }
@@ -194,13 +168,8 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
       e.kind === "item"
         ? [
             {
-              label: isRareMagicItem(e.item)
-                ? "GM grant"
-                : purchaseCost(e.item)
-                  ? "Purchase"
-                  : me
-                    ? `Give to ${me.name}`
-                    : "Choose a character",
+              label:
+                acquisition(e.item)?.label ?? (me ? `Give to ${me.name}` : "Choose a character"),
               Icon: IconGive,
               disabled: !canPurchase(e.item),
               onSelect: () => {

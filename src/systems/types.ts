@@ -6,7 +6,7 @@
  * engine").
  */
 
-import type { CharacterView } from "../features/characters/types";
+import type { CharacterView, ItemInstance } from "../features/characters/types";
 import type { DataValue } from "../core/types";
 import type { Roll } from "../features/dice/notation";
 import type { DiagonalRule } from "../scene/grid";
@@ -282,10 +282,10 @@ export interface ItemDef {
   wealthCost?: { rank: number; tier: string };
   /** Total uses, for things that run out (rations, ammo, potions). */
   uses?: number;
-  /** Uses refreshed when a DW2 camp is completed. */
+  /** Uses refreshed by the system's own camp or rest move, rather than spent by the Use button. */
   resetUsesAtCamp?: boolean;
-  /** Deterministic use behavior supported by the inventory UI. */
-  itemUse?: "healing-potion" | "hearty-feast" | "magic-wand";
+  /** A system-defined use: the system's inventory extension decides what using it does. */
+  itemUse?: string;
   /** Progress and move choices for a source-defined Artifact. */
   artifact?: ArtifactDef;
   tags: string[];
@@ -484,6 +484,19 @@ export interface CreationDef {
   improvementsAt?: number[];
   /** An additional choice available at specified advancement points, if the system defines one. */
   feats?: ChoiceDef;
+  /** Free-text character fields asked for at creation, under one heading. */
+  identity?: { label: string; fields: { field: string; label: string }[] };
+  /** A data field that player characters should each pick differently, with the note shown when one repeats. */
+  distinct?: { field: string; note: string };
+  /** A new player character starts with a relationship to an existing one, with a starting depth. */
+  startingRelationship?: { depths: { value: number; label: string }[] };
+  /** Prompts shown while creating a character, from the choices made so far. */
+  guidance?(data: Record<string, DataValue>): CreationGuidance | undefined;
+}
+
+export interface CreationGuidance {
+  label: string;
+  sections: { heading: string; text: string }[];
 }
 
 export interface LoadoutDef {
@@ -702,8 +715,42 @@ export interface GameSystem {
   creation?: CreationDef;
   /** Declarative sheets, drawn by the core. A system without them supplies its own components (table/sheets.tsx). */
   sheet?: { pc: SheetSection[]; npc: SheetSection[] };
+  /** Relationships carry a depth, from 0 to its maximum. */
+  relationshipDepth?: RelationshipDepthDef;
+  /** What follows a move once it's rolled (a missed journey's XP for the party). */
+  afterMove?(move: ActionDef, result: string | undefined): MoveAftermath | undefined;
+  /** Items a character can spend to block a hit of this damage type, best first. */
+  damageBlockers?(c: CharacterView, damageType: string): ItemInstance[];
+  /** How an item is taken from the Libraries, by the chosen character if any; given for free if absent or undefined. */
+  acquireItem?(item: ItemDef, c: CharacterView | undefined): ItemAcquisition | undefined;
+  /** Whether the inventory offers a Use button for an item with uses; true if absent. */
+  itemUsable?(item: ItemInstance, definition: ItemDef | undefined): boolean;
   /** Credit for the rules text. */
   attribution: string;
+}
+
+/** How relationships between characters are measured, for systems that rate them. */
+export interface RelationshipDepthDef {
+  label: string;
+  max: number;
+}
+
+/** What follows a move automatically, for the core to apply. */
+export interface MoveAftermath {
+  /** Data fields bumped on every player character. */
+  partyBumps?: { field: string; by: number }[];
+}
+
+/** How a character can take an item from the Libraries. */
+export interface ItemAcquisition {
+  /** The button's label. */
+  label: string;
+  /** Only the GM can hand it out. */
+  gmOnly?: boolean;
+  /** Why it can't be taken now, if it can't. */
+  blocked?: string;
+  /** Data fields set on the character as it's taken: a spent currency. */
+  data?: Record<string, DataValue>;
 }
 
 /** Context used by result rules that compare a roll against a difficulty. */

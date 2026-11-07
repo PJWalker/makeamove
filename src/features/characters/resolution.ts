@@ -92,22 +92,11 @@ export function applyDamage(
   const c = getCharacter(campaign, t.characterId);
   if (!c) return;
   const shield = options.shieldItemId
-    ? c.inventory.find(
-        (item) =>
-          item.id === options.shieldItemId &&
-          item.equipped &&
-          item.resetUsesAtCamp &&
-          (item.usesLeft ?? 0) > 0,
-      )
+    ? system
+        .damageBlockers?.(c, options.type ?? "")
+        .find((item) => item.id === options.shieldItemId)
     : undefined;
-  if (
-    options.shieldItemId &&
-    (!shield ||
-      healing ||
-      options.type?.toLowerCase() === "piercing" ||
-      system.id !== "dungeon-world-2")
-  )
-    return;
+  if (options.shieldItemId && (!shield || healing)) return;
   const derived = derive(c, system);
   const max = derived.values[system.resources.find((r) => r.id === "hp")?.max ?? "maxHp"];
   const damage = shield

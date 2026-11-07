@@ -6,7 +6,8 @@ import {
   type SheetProps,
 } from "../../table/DeclarativeSheet";
 import { CharacterText } from "../../table/CharacterText";
-import { addItem, resolveStruggle, setData } from "../../features/characters/api";
+import { addItem, setData } from "../../features/characters/api";
+import { resolveStruggle } from "./campaign";
 import { STRUGGLES } from "./struggles";
 import { Button } from "../../ui/Button";
 import { Counter } from "../../table/sheetParts";

@@ -11,20 +11,13 @@ import { device } from "../../../platform/device";
 import { summaryOf } from "../../../campaign/registry";
 import {
   addItem,
-  applyClassChange,
   bumpResource,
-  breakDungeonWorld2Weapon,
   clearArtifactTrack,
-  beginDungeonWorld2Downtime,
-  carouseDungeonWorld2,
   createFolder,
   deleteCharacter,
   deleteFolder,
-  endDungeonWorld2Session,
   getCharacter,
   listFolders,
-  dungeonWorld2DowntimeEpoch,
-  makeDungeonWorld2Camp,
   markArtifactTrack,
   makeMove,
   moveRequest,
@@ -32,27 +25,36 @@ import {
   newCharacter,
   newNpc,
   renameFolder,
-  prepareDungeonWorld2Journey,
-  resolveComfortOrSupport,
-  resolveStruggle,
-  resupplyDungeonWorld2,
-  saleValueDungeonWorld2Item,
-  sellDungeonWorld2Item,
   selectCharacter,
   tokenStatsSource,
-  trainDungeonWorld2,
   selectedCharacterId,
   setData,
   setConditionState,
-  shopDungeonWorld2Service,
   setLearned,
   setModifier,
   startMove,
   systemOf,
   targetRequest,
   updateItem,
-  consumeDungeonWorld2Item,
 } from "../api";
+import {
+  applyClassChange,
+  beginDungeonWorld2Downtime,
+  breakDungeonWorld2Weapon,
+  carouseDungeonWorld2,
+  consumeDungeonWorld2Item,
+  dungeonWorld2DowntimeEpoch,
+  endDungeonWorld2Session,
+  makeDungeonWorld2Camp,
+  prepareDungeonWorld2Journey,
+  resolveComfortOrSupport,
+  resolveStruggle,
+  resupplyDungeonWorld2,
+  saleValueDungeonWorld2Item,
+  sellDungeonWorld2Item,
+  shopDungeonWorld2Service,
+  trainDungeonWorld2,
+} from "../../../systems/dungeon-world-2/campaign";
 import { actionsFor, derive } from "../store";
 import { sessionMoveUsed } from "../sessionMoves";
 import { relationshipsOf, setRelationship, setRelationshipDepth } from "../relationships";
@@ -312,7 +314,7 @@ describe("characters in a campaign", () => {
     setConditionState(campaign, ayla, "angry", "marked");
     setConditionState(campaign, brom, "frightened", "marked");
     setRelationship(campaign.characters, brom, ayla, "Trusts");
-    setRelationshipDepth(campaign.characters, brom, ayla, 1);
+    setRelationshipDepth(campaign.characters, brom, ayla, 1, 3);
 
     expect(
       await resolveComfortOrSupport(campaign, ayla, brom, [

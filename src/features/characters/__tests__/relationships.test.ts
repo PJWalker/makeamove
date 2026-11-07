@@ -5,6 +5,8 @@ import {
   bondBetween,
   bondsFor,
   forgeBond,
+} from "../../../systems/dungeon-world-2/bondStore";
+import {
   layoutWeb,
   relationshipsOf,
   relationshipWeb,
@@ -26,7 +28,7 @@ describe("relationships", () => {
     setRelationship(chars, "brom", "ayla", "Resents");
     setRelationship(chars, "ayla", "ayla", "Loves");
     expect(relationshipsOf(chars, "ayla")).toEqual([{ to: "brom", label: "Trusts", depth: 0 }]);
-    setRelationshipDepth(chars, "ayla", "brom", 2);
+    setRelationshipDepth(chars, "ayla", "brom", 2, 3);
     setRelationship(chars, "ayla", "brom", "Trusts deeply");
     expect(relationshipsOf(chars, "ayla")).toEqual([
       { to: "brom", label: "Trusts deeply", depth: 2 },
@@ -41,10 +43,10 @@ describe("relationships", () => {
     const chars = cast("ayla", "brom");
     setRelationship(chars, "ayla", "brom", "Trusts");
     setRelationship(chars, "brom", "ayla", "Resents");
-    setRelationshipDepth(chars, "ayla", "brom", 8);
+    setRelationshipDepth(chars, "ayla", "brom", 8, 3);
     expect(relationshipsOf(chars, "ayla")[0]?.depth).toBe(3);
     expect(relationshipsOf(chars, "brom")[0]?.depth).toBe(0);
-    setRelationshipDepth(chars, "ayla", "brom", -1);
+    setRelationshipDepth(chars, "ayla", "brom", -1, 3);
     expect(relationshipsOf(chars, "ayla")[0]?.depth).toBe(0);
   });
 
@@ -53,9 +55,9 @@ describe("relationships", () => {
     const systemData = chars.doc!.getMap("systemData");
     setRelationship(chars, "ayla", "brom", "Trusts");
     setRelationship(chars, "brom", "ayla", "Respects");
-    setRelationshipDepth(chars, "ayla", "brom", 3);
+    setRelationshipDepth(chars, "ayla", "brom", 3, 3);
     expect(forgeBond(systemData, chars, "ayla", "brom", "comrades")).toBe(false);
-    setRelationshipDepth(chars, "brom", "ayla", 3);
+    setRelationshipDepth(chars, "brom", "ayla", 3, 3);
     chars.get("ayla")!.set("text:rel:brom", new Y.XmlFragment());
     chars.get("brom")!.set("text:rel:ayla", new Y.XmlFragment());
 
@@ -83,14 +85,14 @@ describe("relationships", () => {
     }
     setRelationship(chars, "ayla", "brom", "Trusts");
     setRelationship(chars, "brom", "ayla", "Respects");
-    setRelationshipDepth(chars, "ayla", "brom", 3);
-    setRelationshipDepth(chars, "brom", "ayla", 3);
+    setRelationshipDepth(chars, "ayla", "brom", 3, 3);
+    setRelationshipDepth(chars, "brom", "ayla", 3, 3);
     expect(forgeBond(systemData, chars, "ayla", "brom", "comrades")).toBe(true);
     setRelationship(chars, "ayla", "brom", "Trusts");
     setRelationship(chars, "brom", "ayla", "Respects");
-    setRelationshipDepth(chars, "ayla", "brom", 3);
+    setRelationshipDepth(chars, "ayla", "brom", 3, 3);
     expect(advanceBond(systemData, chars, "brom", "ayla", "back-to-back")).toBe(false);
-    setRelationshipDepth(chars, "brom", "ayla", 3);
+    setRelationshipDepth(chars, "brom", "ayla", 3, 3);
     chars.get("ayla")!.set("text:rel:brom", new Y.XmlFragment());
     chars.get("brom")!.set("text:rel:ayla", new Y.XmlFragment());
     expect(advanceBond(systemData, chars, "brom", "ayla", "back-to-back")).toBe(true);
@@ -101,8 +103,8 @@ describe("relationships", () => {
 
     setRelationship(chars, "ayla", "brom", "Trusts");
     setRelationship(chars, "brom", "ayla", "Respects");
-    setRelationshipDepth(chars, "ayla", "brom", 3);
-    setRelationshipDepth(chars, "brom", "ayla", 3);
+    setRelationshipDepth(chars, "ayla", "brom", 3, 3);
+    setRelationshipDepth(chars, "brom", "ayla", 3, 3);
     expect(forgeBond(systemData, chars, "ayla", "brom", "rivals")).toBe(true);
     expect(bondBetween(systemData, "ayla", "brom")?.advancedMoves).toEqual([]);
     expect(chars.get("ayla")!.get("data").get("xp")).toBe(1);

@@ -15,9 +15,6 @@ import {
   relationshipsOf,
   relationshipWeb,
   removeRelationship,
-  advanceBond,
-  bondsFor,
-  forgeBond,
   setRelationship,
   setRelationshipDepth,
   type NodePosition,
@@ -35,7 +32,7 @@ import { characterLinkTargets, matchingLinkTargets } from "../features/notes/tar
 import { useMenuOverlay } from "../ui/menuOverlay";
 import { CampaignEntityGraphic } from "./EntityGraphic";
 import { registerEntityDrop } from "./entityDrag";
-import { BONDS } from "../systems/dungeon-world-2/bonds";
+import { extensionOf } from "../systems/extensions";
 
 /*
  * Relationships (M9): a section on every character sheet listing how this
@@ -46,7 +43,10 @@ import { BONDS } from "../systems/dungeon-world-2/bonds";
 /** The Relationships section of a sheet. */
 export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: CharacterView }) {
   const editable = canEdit(campaign, c);
-  const tracksDepth = systemOf(campaign).id === "dungeon-world-2";
+  const system = systemOf(campaign);
+  const depth = system.relationshipDepth;
+  const tracksDepth = !!depth;
+  const Extra = extensionOf(system).relationshipsExtra;
   const json = useY(campaign.characters, () =>
     JSON.stringify(relationshipsOf(campaign.characters, c.id)),
   );
@@ -61,38 +61,6 @@ export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: C
     () => JSON.parse(peopleJson) as ReturnType<typeof characterLinkTargets>,
     [peopleJson],
   );
-  const depthWebJson = useY(campaign.characters, () =>
-    JSON.stringify(
-      relationshipWeb(
-        campaign.characters,
-        listCharacters(campaign).map((person) => person.id),
-      ),
-    ),
-  );
-  const depthWeb = useMemo(
-    () => JSON.parse(depthWebJson) as ReturnType<typeof relationshipWeb>,
-    [depthWebJson],
-  );
-  const bondsJson = useY(campaign.systemData, () =>
-    JSON.stringify(bondsFor(campaign.systemData, c.id)),
-  );
-  const bonds = useMemo(() => JSON.parse(bondsJson) as ReturnType<typeof bondsFor>, [bondsJson]);
-  const eligibleBondmates = useMemo(
-    () =>
-      people.filter((person) => {
-        const other = getCharacter(campaign, person.id);
-        const ownDepth =
-          depthWeb.find(
-            (relationship) => relationship.from === c.id && relationship.to === person.id,
-          )?.depth ?? 0;
-        const theirDepth =
-          depthWeb.find(
-            (relationship) => relationship.from === person.id && relationship.to === c.id,
-          )?.depth ?? 0;
-        return person.id !== c.id && other?.kind === "pc" && ownDepth >= 3 && theirDepth >= 3;
-      }),
-    [campaign, people, depthWeb, c.id],
-  );
   const others = useMemo(
     () =>
       people.filter(
@@ -104,9 +72,6 @@ export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: C
   const open = useSignal<string | null>(null);
   const suggesting = useSignal(false);
   const active = useSignal(0);
-  const bondmateId = useSignal("");
-  const bondType = useSignal("");
-  const bondMoveId = useSignal("");
   const section = useRef<HTMLElement>(null);
   const input = useRef<HTMLInputElement>(null);
   const panel = useRef<HTMLDivElement>(null);
@@ -188,23 +153,24 @@ export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: C
                       setRelationship(campaign.characters, c.id, r.to, e.currentTarget.value.trim())
                     }
                   />
-                  {tracksDepth && (
+                  {depth && (
                     <label className="relationship-depth">
-                      Depth
+                      {depth.label}
                       <input
                         type="number"
                         min={0}
-                        max={3}
+                        max={depth.max}
                         step={1}
                         value={r.depth ?? 0}
                         disabled={!editable}
-                        aria-label={`Depth with ${other.name}`}
+                        aria-label={`${depth.label} with ${other.name}`}
                         onChange={(event) =>
                           setRelationshipDepth(
                             campaign.characters,
                             c.id,
                             r.to,
                             Number(event.currentTarget.value),
+                            depth.max,
                           )
                         }
                       />
@@ -244,146 +210,7 @@ export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: C
           })}
         </ul>
       )}
-      {tracksDepth && bonds.length > 0 && (
-        <ul className="relationships" aria-label="Bonds">
-          {bonds.map((bond) => {
-            const partnerId = bond.first === c.id ? bond.second : bond.first;
-            const partner = getCharacter(campaign, partnerId);
-            const definition = BONDS.find((entry) => entry.id === bond.type);
-            return (
-              <li key={`${bond.first}:${bond.second}`} className="relationship">
-                <div className="relationship-row">
-                  <span className="relationship-name">{partner?.name ?? "Former PC"}</span>
-                  <strong>{definition?.name ?? bond.type}</strong>
-                </div>
-                {definition && (
-                  <details className="relationship-bond-rules">
-                    <summary>Bond rules</summary>
-                    <p>{definition.text}</p>
-                    <ul aria-label={`${definition.name} moves`}>
-                      {definition.moves.map((move) => (
-                        <li key={move.id}>
-                          {move.name}:{" "}
-                          {move.starting
-                            ? "Starting move"
-                            : bond.advancedMoves.includes(move.id)
-                              ? "Unlocked"
-                              : "Locked"}
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
-      {tracksDepth &&
-        editable &&
-        eligibleBondmates.length > 0 &&
-        (() => {
-          const currentBond = bonds.find(
-            (bond) =>
-              (bond.first === c.id && bond.second === bondmateId.value) ||
-              (bond.second === c.id && bond.first === bondmateId.value),
-          );
-          const reinforcing = currentBond?.type === bondType.value;
-          const definition = BONDS.find((bond) => bond.id === bondType.value);
-          const availableMoves = reinforcing
-            ? (definition?.moves.slice(1) ?? []).filter(
-                (move) => !currentBond.advancedMoves.includes(move.id),
-              )
-            : [];
-          return (
-            <div className="relationship-bond-controls">
-              <label>
-                Bondmate
-                <select
-                  value={bondmateId.value}
-                  onChange={(event) => {
-                    bondmateId.value = event.currentTarget.value;
-                    bondMoveId.value = "";
-                  }}
-                >
-                  <option value="">Choose a PC</option>
-                  {eligibleBondmates.map((person) => (
-                    <option key={person.id} value={person.id}>
-                      {person.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Bond
-                <select
-                  aria-label="Bond type"
-                  value={bondType.value}
-                  onChange={(event) => {
-                    bondType.value = event.currentTarget.value;
-                    bondMoveId.value = "";
-                  }}
-                >
-                  <option value="">Choose a Bond</option>
-                  {BONDS.map((bond) => (
-                    <option key={bond.id} value={bond.id}>
-                      {bond.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {reinforcing && availableMoves.length > 0 && (
-                <label>
-                  Advanced move
-                  <select
-                    value={bondMoveId.value}
-                    onChange={(event) => (bondMoveId.value = event.currentTarget.value)}
-                  >
-                    <option value="">Choose a move</option>
-                    {availableMoves.map((move) => (
-                      <option key={move.id} value={move.id}>
-                        {move.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
-              {reinforcing && availableMoves.length === 0 && (
-                <span className="muted">All advanced Bond moves are unlocked.</span>
-              )}
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={
-                  !bondmateId.value || !bondType.value || (reinforcing && !bondMoveId.value)
-                }
-                onClick={() => {
-                  const changed = reinforcing
-                    ? advanceBond(
-                        campaign.systemData,
-                        campaign.characters,
-                        c.id,
-                        bondmateId.value,
-                        bondMoveId.value,
-                      )
-                    : forgeBond(
-                        campaign.systemData,
-                        campaign.characters,
-                        c.id,
-                        bondmateId.value,
-                        bondType.value,
-                      );
-                  if (changed) {
-                    bondmateId.value = "";
-                    bondMoveId.value = "";
-                  }
-                }}
-              >
-                {reinforcing ? "Reinforce Bond" : "Forge Bond"}
-              </Button>
-            </div>
-          );
-        })()}
+      {Extra && <Extra campaign={campaign} c={c} editable={editable} />}
       <div className="sheet-row">
         {editable && (
           <input

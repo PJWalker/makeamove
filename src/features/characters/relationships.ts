@@ -12,7 +12,7 @@ export interface Relationship {
   to: string;
   /** How this character sees them, in a few words. */
   label: string;
-  /** Dungeon World 2 relationship Depth, from 0 to 3. */
+  /** How deep it runs, for systems that rate relationships (see GameSystem.relationshipDepth). */
   depth?: number;
 }
 
@@ -21,17 +21,8 @@ export interface RelationshipEdge extends Relationship {
   from: string;
 }
 
-export interface SharedBond {
-  first: string;
-  second: string;
-  type: string;
-  advancedMoves: string[];
-}
-
 /** The notes field for one relationship. */
 export const relationshipNotes = (to: string) => `rel:${to}`;
-const bondsKey = "dungeon-world-2:bonds";
-const pairKey = (first: string, second: string) => [first, second].sort().join(":");
 
 function mapOf(
   characters: Y.Map<Y.Map<any>>,
@@ -68,16 +59,18 @@ export function setRelationship(
   rel?.set(to, { label, depth: rel.get(to)?.depth ?? 0 });
 }
 
+/** Set a relationship's depth, from 0 to the system's maximum. */
 export function setRelationshipDepth(
   characters: Y.Map<Y.Map<any>>,
   from: string,
   to: string,
   depth: number,
+  max: number,
 ) {
   const rel = mapOf(characters, from, false);
   const current = rel?.get(to);
   if (!current) return;
-  rel?.set(to, { ...current, depth: Math.max(0, Math.min(3, Math.trunc(depth))) });
+  rel?.set(to, { ...current, depth: Math.max(0, Math.min(max, Math.trunc(depth))) });
 }
 
 export function removeRelationship(characters: Y.Map<Y.Map<any>>, from: string, to: string) {
@@ -86,92 +79,6 @@ export function removeRelationship(characters: Y.Map<Y.Map<any>>, from: string, 
     mapOf(characters, from, false)?.delete(to);
     m?.delete(`text:${relationshipNotes(to)}`);
   });
-}
-
-function bondsOf(systemData: Y.Map<any>, create: boolean): Y.Map<SharedBond> | undefined {
-  let bonds = systemData.get(bondsKey) as Y.Map<SharedBond> | undefined;
-  if (!(bonds instanceof Y.Map) && create) {
-    bonds = new Y.Map();
-    systemData.set(bondsKey, bonds);
-  }
-  return bonds instanceof Y.Map ? bonds : undefined;
-}
-
-export function bondBetween(
-  systemData: Y.Map<any>,
-  first: string,
-  second: string,
-): SharedBond | undefined {
-  const bond = bondsOf(systemData, false)?.get(pairKey(first, second));
-  return bond ? { ...bond, advancedMoves: [...bond.advancedMoves] } : undefined;
-}
-
-export function bondsFor(systemData: Y.Map<any>, characterId: string): SharedBond[] {
-  return [...(bondsOf(systemData, false)?.values() ?? [])]
-    .filter((bond) => bond.first === characterId || bond.second === characterId)
-    .map((bond) => ({ ...bond, advancedMoves: [...bond.advancedMoves] }));
-}
-
-/** Forge or reinforce the shared Bond after both PCs reach Depth 3. */
-export function forgeBond(
-  systemData: Y.Map<any>,
-  characters: Y.Map<Y.Map<any>>,
-  first: string,
-  second: string,
-  type: string,
-): boolean {
-  if (first === second || !characters.has(first) || !characters.has(second)) return false;
-  const firstDepth = relationshipsOf(characters, first).find((r) => r.to === second)?.depth ?? 0;
-  const secondDepth = relationshipsOf(characters, second).find((r) => r.to === first)?.depth ?? 0;
-  if (firstDepth < 3 || secondDepth < 3) return false;
-
-  const [pairFirst, pairSecond] = [first, second].sort();
-  const existing = bondBetween(systemData, first, second);
-  const bond: SharedBond = {
-    first: pairFirst!,
-    second: pairSecond!,
-    type,
-    advancedMoves: existing?.type === type ? existing.advancedMoves : [],
-  };
-  const bonds = bondsOf(systemData, true);
-  if (!bonds) return false;
-  characters.doc!.transact(() => {
-    bonds.set(pairKey(first, second), bond);
-    removeRelationship(characters, first, second);
-    removeRelationship(characters, second, first);
-    if (existing && existing.type !== type) {
-      for (const id of [first, second]) {
-        const data = characters.get(id)?.get("data") as Y.Map<any> | undefined;
-        if (data && existing.advancedMoves.length) {
-          data.set("xp", Number(data.get("xp") ?? 0) + existing.advancedMoves.length);
-        }
-      }
-    }
-  });
-  return true;
-}
-
-export function advanceBond(
-  systemData: Y.Map<any>,
-  characters: Y.Map<Y.Map<any>>,
-  first: string,
-  second: string,
-  moveId: string,
-): boolean {
-  const bonds = bondsOf(systemData, false);
-  const key = pairKey(first, second);
-  const current = bonds?.get(key);
-  if (!bonds || !current || current.advancedMoves.includes(moveId)) return false;
-  const firstDepth = relationshipsOf(characters, first).find((r) => r.to === second)?.depth ?? 0;
-  const secondDepth = relationshipsOf(characters, second).find((r) => r.to === first)?.depth ?? 0;
-  if (firstDepth < 3 || secondDepth < 3) return false;
-  bonds.set(key, {
-    ...current,
-    advancedMoves: [...current.advancedMoves, moveId],
-  });
-  removeRelationship(characters, first, second);
-  removeRelationship(characters, second, first);
-  return true;
 }
 
 /** Every relationship between characters in `ids`, for the graph. */

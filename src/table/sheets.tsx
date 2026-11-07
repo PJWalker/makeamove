@@ -1,30 +1,9 @@
-import type { ComponentType } from "react";
 import { canEdit } from "../features/characters/api";
-import type { CharacterView } from "../features/characters/types";
-import type { Campaign } from "../campaign/campaign";
-import { DndNpcSheet, DndSheet } from "../systems/dnd55e/Sheet";
-import { DungeonWorldNpcSheet, DungeonWorldSheet } from "../systems/dungeon-world/Sheet";
-import { DungeonWorld2NpcSheet, DungeonWorld2Sheet } from "../systems/dungeon-world-2/Sheet";
-import { BladesNpcSheet, BladesSheet } from "../systems/blades-in-the-dark/Sheet";
-import type { GameSystem } from "../systems/types";
+import { extensionOf, type SheetProps } from "../systems/extensions";
 import { CopyBanner, TemplateSettings } from "./TemplateSettings";
 import { DeclarativeSheet } from "./DeclarativeSheet";
 import { RelationshipsSection } from "./Relationships";
 import { CharacterText, GMCharacterText } from "./CharacterText";
-
-/*
- * Built-in systems own their sheet components. Keep UI registration here
- * so importing a system's rules does not pull in its sheet or the table.
- */
-
-type SheetProps = { campaign: Campaign; system: GameSystem; c: CharacterView };
-
-const SHEETS: Record<string, { pc: ComponentType<SheetProps>; npc: ComponentType<SheetProps> }> = {
-  "dnd-5.5e": { pc: DndSheet, npc: DndNpcSheet },
-  "dungeon-world": { pc: DungeonWorldSheet, npc: DungeonWorldNpcSheet },
-  "dungeon-world-2": { pc: DungeonWorld2Sheet, npc: DungeonWorld2NpcSheet },
-  "blades-in-the-dark": { pc: BladesSheet, npc: BladesNpcSheet },
-};
 
 /** For systems with a layout: the core's declarative sheet. */
 const declarative = (kind: "pc" | "npc") =>
@@ -35,7 +14,7 @@ const DECLARATIVE = { pc: declarative("pc"), npc: declarative("npc") };
 
 /** A character's sheet, as their campaign's system draws it. */
 export function CharacterSheet({ campaign, system, c }: SheetProps) {
-  const sheets = SHEETS[system.id] ?? DECLARATIVE;
+  const sheets = extensionOf(system).sheets ?? DECLARATIVE;
   const Sheet = c.kind === "npc" ? sheets.npc : sheets.pc;
   const editable = canEdit(campaign, c);
   return (

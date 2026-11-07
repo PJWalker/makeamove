@@ -7,6 +7,9 @@ import { dnd55e } from "./dnd55e";
 
 export const NO_SYSTEM_ID = "none";
 
+/** The system for campaigns that don't say which they play. */
+export const DEFAULT_SYSTEM_ID = dungeonWorld.id;
+
 const noSystem: GameSystem = {
   id: NO_SYSTEM_ID,
   name: "No system",
@@ -143,9 +146,9 @@ defineSystem(daggerheart);
 defineSystem(dnd55e);
 defineSystem(noSystem);
 
-/** The system with this id; Dungeon World for campaigns that don't say. */
+/** The system with this id; the default system for campaigns that don't say. */
 export function getSystem(id: string | undefined): GameSystem {
-  return (id && SYSTEMS.get(id)) || dungeonWorld;
+  return (id && SYSTEMS.get(id)) || SYSTEMS.get(DEFAULT_SYSTEM_ID)!;
 }
 
 /** Every system this app knows. */

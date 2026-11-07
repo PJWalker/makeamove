@@ -1,12 +1,8 @@
-import type { ComponentType } from "react";
 import type { Campaign } from "../campaign/campaign";
-import { BladesCrewControls } from "../systems/blades-in-the-dark/CrewSheet";
+import { extensionOf } from "../systems/extensions";
 
-const SHEETS: Record<string, ComponentType<{ campaign: Campaign }>> = {
-  "blades-in-the-dark": BladesCrewControls,
-};
-
+/** The campaign's system-wide controls, if its system has any. */
 export function CampaignSystemSheet({ campaign }: { campaign: Campaign }) {
-  const Sheet = SHEETS[String(campaign.meta.get("systemId"))];
+  const Sheet = extensionOf(String(campaign.meta.get("systemId"))).campaignSheet;
   return Sheet ? <Sheet campaign={campaign} /> : null;
 }

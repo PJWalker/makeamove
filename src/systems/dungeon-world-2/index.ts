@@ -5,7 +5,9 @@ import { resolveEffects } from "../effects";
 import type { ActionDef, ChoiceDef, GameSystem, OptionDef } from "../types";
 import { PATHS, sourceGmReference, sourceMoveOutcomes, sourceMoveRichText } from "./paths";
 import { STRUGGLES } from "./struggles";
-import { INITIAL_TREASURE_BOXES, MAX_TREASURE_BOXES } from "./wealth";
+import { INITIAL_TREASURE_BOXES, MAX_TREASURE_BOXES, purchaseAtWealth } from "./wealth";
+import { DW2_RELATIONSHIP_DEPTH } from "./bondStore";
+import { classCreationGuidance } from "./classGuidance";
 import { DW2_CLASS_GEAR, DW2_GEAR, DW2_MAGIC_ITEMS } from "./gear";
 import { DW2_CLASS_SCORE_ASSIGNMENTS } from "./stats";
 import { CLASS_STARTING_CHOICES } from "./startingOptions";
@@ -959,7 +961,65 @@ export const dungeonWorld2: GameSystem = {
       ADVANCEMENT,
     ],
     scores: { standardArray: [2, 1, 0, 0, -1] },
+    identity: {
+      label: "Pronouns and Origins",
+      fields: [
+        { field: "pronouns", label: "Pronouns" },
+        { field: "ancestry", label: "Ancestry" },
+        { field: "community", label: "Community" },
+        { field: "background", label: "Background" },
+      ],
+    },
+    distinct: {
+      field: "classId",
+      note: "Another PC already plays this Class. The group may prefer distinct Classes.",
+    },
+    startingRelationship: {
+      depths: [
+        { value: 0, label: "Just met" },
+        { value: 1, label: "Adventured together" },
+        { value: 2, label: "Grew up together" },
+      ],
+    },
+    guidance(data) {
+      const guidance = classCreationGuidance(String(data.classId ?? ""));
+      return guidance
+        ? {
+            label: "Class creation prompts",
+            sections: [
+              { heading: "Origins", text: guidance.origins },
+              { heading: "Relationships", text: guidance.relationships },
+              { heading: "Equipment and appearance", text: guidance.equipment },
+              { heading: "Name and stats", text: guidance.namesAndStats },
+            ],
+          }
+        : undefined;
+    },
   },
+  relationshipDepth: DW2_RELATIONSHIP_DEPTH,
+  afterMove: (move, result) =>
+    move.id === "perilous-journey" && result === "miss"
+      ? { partyBumps: [{ field: "xp", by: 1 }] }
+      : undefined,
+  damageBlockers: (character, damageType) =>
+    damageType.toLowerCase() === "piercing"
+      ? []
+      : character.inventory.filter(
+          (item) => item.equipped && item.resetUsesAtCamp && (item.usesLeft ?? 0) > 0,
+        ),
+  acquireItem(item, character) {
+    if (item.tags.includes("magic")) return { label: "GM grant", gmOnly: true };
+    if (!item.wealthCost) return undefined;
+    if (!character) return { label: "Purchase" };
+    const remaining = purchaseAtWealth(
+      Number(character.data.treasureBoxes ?? INITIAL_TREASURE_BOXES),
+      item.wealthCost.rank,
+    );
+    return remaining === null
+      ? { label: "Purchase", blocked: "This item is above your Wealth" }
+      : { label: "Purchase", data: { treasureBoxes: remaining } };
+  },
+  itemUsable: (item, definition) => !item.resetUsesAtCamp || !!definition?.itemUse,
   attribution:
     "Dungeon World 2 Beta v3 (October 2026). System moves and class options are concise original summaries; consult the supplied beta for full rules and advancement details.",
   gmReference: sourceGmReference(),

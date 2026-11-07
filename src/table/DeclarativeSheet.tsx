@@ -30,7 +30,8 @@ import { IconLock } from "../ui/icons";
 import { menuTrigger } from "../ui/menuTrigger";
 import { ContextMenu, type MenuItem } from "./ContextMenu";
 import { CharacterText } from "./CharacterText";
-import { AdvancementDialog, ClassChangeDialog } from "./CreationParts";
+import { AdvancementDialog } from "./CreationParts";
+import { extensionOf } from "../systems/extensions";
 import { Inventory } from "./Inventory";
 import { Counter, MoveList, signedStr, TokenChip } from "./sheetParts";
 
@@ -98,7 +99,7 @@ function Advancement({
   section,
 }: Omit<SectionProps, "section"> & { section: Extract<SheetSection, { kind: "advancement" }> }) {
   const open = useSignal(false);
-  const changeClassOpen = useSignal(false);
+  const Actions = extensionOf(system).advancementActions;
   const needed = d.values[section.needed];
   if (
     !editable ||
@@ -113,23 +114,12 @@ function Advancement({
       <Button size="sm" onClick={() => (open.value = true)}>
         {section.button}
       </Button>
-      {system.id === "dungeon-world-2" && (
-        <Button size="sm" variant="ghost" onClick={() => (changeClassOpen.value = true)}>
-          Change Class
-        </Button>
-      )}
+      {Actions && <Actions campaign={campaign} characterId={c.id} />}
       {open.value && (
         <AdvancementDialog
           campaign={campaign}
           characterId={c.id}
           onClose={() => (open.value = false)}
-        />
-      )}
-      {changeClassOpen.value && (
-        <ClassChangeDialog
-          campaign={campaign}
-          characterId={c.id}
-          onClose={() => (changeClassOpen.value = false)}
         />
       )}
     </div>

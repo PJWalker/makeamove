@@ -14,7 +14,7 @@ import {
   updateCampaignEntry,
   upsertCampaign,
 } from "./registry";
-import { getSystem } from "../systems";
+import { DEFAULT_SYSTEM_ID, getSystem } from "../systems";
 import type { Invite } from "../sync/invite";
 import { CampaignConnection } from "./connection";
 import { noteDbName, noteGuid } from "../features/notes/noteDoc";
@@ -66,7 +66,7 @@ const REJOIN_CHECK_MS = 5000;
 const rejoining = new Set<string>();
 
 /** The system an invite assumes until the campaign arrives from a peer. */
-const DEFAULT_SYSTEM = { id: "dungeon-world", version: "0.1.0" };
+const DEFAULT_SYSTEM = getSystem(DEFAULT_SYSTEM_ID);
 /** Canvas colour for an auto scene with no map yet. */
 export const DEFAULT_CANVAS_COLOUR = "#2b3a55";
 

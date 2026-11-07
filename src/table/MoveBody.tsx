@@ -1,22 +1,15 @@
-import type { ComponentType } from "react";
 import type { Campaign } from "../campaign/campaign";
 import { canEdit, getCharacter, systemOf } from "../features/characters/api";
 import type { CharacterView } from "../features/characters/types";
-import { DW2_MOVE_FORMS, type MoveFormProps } from "../systems/dungeon-world-2/MoveForms";
+import { extensionOf } from "../systems/extensions";
 import type { ActionDef } from "../systems/types";
 import { useY } from "../ui/useY";
 import { FormattedText } from "./FormattedText";
 
 /*
  * A move's text, formatted with buttons that change the character's numbers,
- * then any form the system has for it (who to comfort, the journey's pace).
- * Built-in systems' move forms are registered here, as their sheets are in
- * sheets.tsx.
+ * then any form the system's extension has for it.
  */
-
-const MOVE_FORMS: Record<string, Record<string, ComponentType<MoveFormProps>>> = {
-  "dungeon-world-2": DW2_MOVE_FORMS,
-};
 
 export function MoveBody({
   campaign,
@@ -33,7 +26,7 @@ export function MoveBody({
     JSON.stringify(getCharacter(campaign, characterId ?? undefined) ?? null),
   );
   const c = JSON.parse(json) as CharacterView | null;
-  const Form = MOVE_FORMS[system.id]?.[move.id];
+  const Form = extensionOf(system).moveForms?.[move.id];
   return (
     <>
       <FormattedText

@@ -131,9 +131,9 @@ export function DamageTargets({ campaign, m }: { campaign: Campaign; m: RollMess
         {damage.targets.map((t) => {
           const applied: number | undefined = state[appliedField(t.id)];
           const targetCharacter = t.characterId ? getCharacter(campaign, t.characterId) : undefined;
-          const shield = targetCharacter?.inventory.find(
-            (item) => item.equipped && item.resetUsesAtCamp && (item.usesLeft ?? 0) > 0,
-          );
+          const shield = targetCharacter
+            ? systemOf(campaign).damageBlockers?.(targetCharacter, damage.type)[0]
+            : undefined;
           return (
             <li key={t.id} className="card-target">
               <span className="card-target-name">{t.name}</span>
@@ -182,22 +182,20 @@ export function DamageTargets({ campaign, m }: { campaign: Campaign; m: RollMess
                             {armor.label}
                           </Button>
                         )}
-                      {systemOf(campaign).id === "dungeon-world-2" &&
-                        damage.type.toLowerCase() !== "piercing" &&
-                        shield && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() =>
-                              applyDamage(campaign, m.id, t, total, false, {
-                                type: damage.type,
-                                shieldItemId: shield.id,
-                              })
-                            }
-                          >
-                            Block with {shield.name}
-                          </Button>
-                        )}
+                      {shield && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() =>
+                            applyDamage(campaign, m.id, t, total, false, {
+                              type: damage.type,
+                              shieldItemId: shield.id,
+                            })
+                          }
+                        >
+                          Block with {shield.name}
+                        </Button>
+                      )}
                     </>
                   )}
                 </span>

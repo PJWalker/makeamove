@@ -1,13 +1,11 @@
 import { useSignal } from "@preact/signals-react";
 import type { ComponentType } from "react";
-import type { Campaign } from "../../campaign/campaign";
+import { getCharacter, listCharacters } from "../../features/characters/api";
 import {
   beginDungeonWorld2Downtime,
   carouseDungeonWorld2,
   dungeonWorld2DowntimeEpoch,
   endDungeonWorld2Session,
-  getCharacter,
-  listCharacters,
   makeDungeonWorld2Camp,
   prepareDungeonWorld2Journey,
   resupplyDungeonWorld2,
@@ -17,14 +15,14 @@ import {
   trainedDuringDungeonWorld2Downtime,
   type ComfortBenefit,
   type JourneyPace,
-} from "../../features/characters/api";
+} from "./campaign";
 import { sessionMoveUsed, sessionUseSnapshot } from "../../features/characters/sessionMoves";
 import { relationshipsOf } from "../../features/characters/relationships";
 import type { CharacterView } from "../../features/characters/types";
 import { Button } from "../../ui/Button";
 import { useY } from "../../ui/useY";
 import { derive } from "../../features/characters/store";
-import type { GameSystem } from "../types";
+import type { MoveFormProps } from "../extensions";
 import { DW2_SERVICES, type ServiceRank } from "./wealth";
 
 /*
@@ -33,16 +31,6 @@ import { DW2_SERVICES, type ServiceRank } from "./wealth";
  * journey's leader and pace, Downtime's activities, the session's questions,
  * what each PC clears at camp.
  */
-
-export interface MoveFormProps {
-  sheet: {
-    campaign: Campaign;
-    /** The character making the move. */
-    c: CharacterView;
-    system: GameSystem;
-    editable: boolean;
-  };
-}
 
 const SESSION_QUESTIONS = [
   "Did anyone add Depth to their Relationship(s)?",

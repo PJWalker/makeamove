@@ -2,9 +2,12 @@ import * as Y from "yjs";
 import type { Campaign } from "../../campaign/campaign";
 import type { ChatMessage } from "../chat/types";
 import { splitSessions } from "../chat/sessions";
+import { getSystem } from "../../systems";
 import type { ActionDef } from "../../systems/types";
 
-const usesKey = "dungeon-world-2:session-move-uses";
+/** Kept in the campaign's system data, under the system's own id. */
+const usesKey = (campaign: Campaign) =>
+  `${getSystem(campaign.meta.get("systemId")).id}:session-move-uses`;
 
 function sessionUseKey(
   characterId: string,
@@ -18,10 +21,10 @@ function sessionUseKey(
 }
 
 function usesMap(campaign: Campaign, create: boolean): Y.Map<true> | undefined {
-  let uses = campaign.systemData.get(usesKey) as Y.Map<true> | undefined;
+  let uses = campaign.systemData.get(usesKey(campaign)) as Y.Map<true> | undefined;
   if (!(uses instanceof Y.Map) && create) {
     uses = new Y.Map<true>();
-    campaign.systemData.set(usesKey, uses);
+    campaign.systemData.set(usesKey(campaign), uses);
   }
   return uses instanceof Y.Map ? uses : undefined;
 }
