@@ -2,7 +2,7 @@ import { useState } from "react";
 import { getCharacter, systemOf } from "../../features/characters/api";
 import { boostFrom, choicesAt, dataFrom, raise } from "../../features/characters/creation";
 import type { DataValue } from "../../core/types";
-import { parseCommaList } from "../../lib/list";
+import { commaListOf } from "../../lib/list";
 import type { Campaign } from "../../campaign/campaign";
 import type { ChoiceDef } from "../types";
 import { Button } from "../../ui/Button";
@@ -50,9 +50,7 @@ function ClassChangeDialog({
   const assignmentOptions = creation?.classScoreAssignments?.[newClassId] ?? [];
   const assignment =
     assignmentOptions.find((option) => option.id === assignmentId) ?? assignmentOptions[0];
-  const oldAdvancementCount = parseCommaList(String(character.data.advancements ?? "")).filter(
-    Boolean,
-  ).length;
+  const oldAdvancementCount = commaListOf(character.data.advancements).length;
   const stageData: Record<string, DataValue> = {
     ...character.data,
     classId: newClassId,
@@ -92,8 +90,7 @@ function ClassChangeDialog({
     stages.length === oldAdvancementCount &&
     stages.every(
       ({ id, choice }) =>
-        !!picks[id]?.option &&
-        choice.options.some((option) => option.id === picks[id]?.option),
+        !!picks[id]?.option && choice.options.some((option) => option.id === picks[id]?.option),
     );
   const classOptions =
     classChoice?.options.filter((option) => option.id !== character.data.classId) ?? [];

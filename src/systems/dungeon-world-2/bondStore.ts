@@ -1,4 +1,5 @@
-import * as Y from "yjs";
+import type * as Y from "yjs";
+import { pairKey, systemStore } from "../../campaign/systemStore";
 import { relationshipsOf, removeRelationship } from "../../features/characters/relationships";
 import type { RelationshipDepthDef } from "../types";
 
@@ -17,29 +18,21 @@ export interface SharedBond {
   advancedMoves: string[];
 }
 
-const bondsKey = "dungeon-world-2:bonds";
-const pairKey = (first: string, second: string) => [first, second].sort().join(":");
-
-function bondsOf(systemData: Y.Map<any>, create: boolean): Y.Map<SharedBond> | undefined {
-  let bonds = systemData.get(bondsKey) as Y.Map<SharedBond> | undefined;
-  if (!(bonds instanceof Y.Map) && create) {
-    bonds = new Y.Map();
-    systemData.set(bondsKey, bonds);
-  }
-  return bonds instanceof Y.Map ? bonds : undefined;
-}
+const bondsOf = (systemData: Y.Map<any>) =>
+  systemStore<SharedBond>(systemData, "dungeon-world-2:bonds");
 
 export function bondBetween(
   systemData: Y.Map<any>,
   first: string,
   second: string,
 ): SharedBond | undefined {
-  const bond = bondsOf(systemData, false)?.get(pairKey(first, second));
+  const bond = bondsOf(systemData).get(pairKey(first, second));
   return bond ? { ...bond, advancedMoves: [...bond.advancedMoves] } : undefined;
 }
 
 export function bondsFor(systemData: Y.Map<any>, characterId: string): SharedBond[] {
-  return [...(bondsOf(systemData, false)?.values() ?? [])]
+  return bondsOf(systemData)
+    .values()
     .filter((bond) => bond.first === characterId || bond.second === characterId)
     .map((bond) => ({ ...bond, advancedMoves: [...bond.advancedMoves] }));
 }
@@ -65,8 +58,7 @@ export function forgeBond(
     type,
     advancedMoves: existing?.type === type ? existing.advancedMoves : [],
   };
-  const bonds = bondsOf(systemData, true);
-  if (!bonds) return false;
+  const bonds = bondsOf(systemData);
   characters.doc!.transact(() => {
     bonds.set(pairKey(first, second), bond);
     removeRelationship(characters, first, second);
@@ -90,10 +82,10 @@ export function advanceBond(
   second: string,
   moveId: string,
 ): boolean {
-  const bonds = bondsOf(systemData, false);
+  const bonds = bondsOf(systemData);
   const key = pairKey(first, second);
-  const current = bonds?.get(key);
-  if (!bonds || !current || current.advancedMoves.includes(moveId)) return false;
+  const current = bonds.get(key);
+  if (!current || current.advancedMoves.includes(moveId)) return false;
   const firstDepth = relationshipsOf(characters, first).find((r) => r.to === second)?.depth ?? 0;
   const secondDepth = relationshipsOf(characters, second).find((r) => r.to === first)?.depth ?? 0;
   if (firstDepth < FULL || secondDepth < FULL) return false;

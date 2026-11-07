@@ -1,5 +1,5 @@
 import { parse } from "../../features/dice/notation";
-import { parseCommaList } from "../../lib/list";
+import { commaListOf } from "../../lib/list";
 import { resolveEffects } from "../effects";
 import type { ActionDef, CheckStep, GameSystem } from "../types";
 import { abilityRules, CREW_ABILITIES as CREW_RULES } from "./content";
@@ -944,7 +944,7 @@ export const bladesInTheDark: GameSystem = {
         actions.filter((actionId) => (mods[actionId] ?? 0) > 0).length,
       ]),
     );
-    const abilities = parseCommaList(String(character.data.specialAbilities ?? ""));
+    const abilities = commaListOf(character.data.specialAbilities);
     const resolved = resolveEffects(
       {
         ...attributes,
@@ -972,7 +972,7 @@ export const bladesInTheDark: GameSystem = {
   },
   actionsFor(character) {
     if (character.kind === "npc") return [];
-    const abilities = parseCommaList(String(character.data.specialAbilities ?? "")).filter(Boolean);
+    const abilities = commaListOf(character.data.specialAbilities);
     return [
       ...bladesInTheDark.actions.filter((action) => action.category !== "ability"),
       ...PLAYBOOK_ACTIONS.filter((action) => abilities.includes(action.id)),

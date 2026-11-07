@@ -14,7 +14,7 @@ import { createPortal } from "react-dom";
 import { useLayoutEffect, useRef, useState } from "react";
 import { closePopup, dragPopup, raisePopup, resizePopup } from "../ui/popup";
 import { trackPointer } from "../ui/pointer";
-import { formatCommaList, parseCommaList } from "../lib/list";
+import { commaListOf, formatCommaList } from "../lib/list";
 import { autohide, setAutohide } from "./canvasState";
 import { RESIZE_CURSORS, RESIZE_DIRS, resizeRect, type ResizeDir } from "./resizeRect";
 import { dragEntity, type DragEntity } from "./entityDrag";
@@ -342,9 +342,7 @@ function SystemCampaignFields({ campaign }: { campaign: Campaign }) {
             </select>
           ) : field.type === "multiselect" ? (
             (() => {
-              const selected = new Set(
-                parseCommaList(String(values[field.id] ?? "")).filter(Boolean),
-              );
+              const selected = new Set(commaListOf(values[field.id]));
               return (
                 <select
                   multiple

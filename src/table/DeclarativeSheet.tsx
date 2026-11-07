@@ -22,7 +22,7 @@ import type { Campaign } from "../campaign/campaign";
 import { device } from "../platform/device";
 import type { Derived, GameSystem, SheetCounter, SheetSection } from "../systems/types";
 import { choicesAt } from "../features/characters/creation";
-import { parseCommaList } from "../lib/list";
+import { commaListOf } from "../lib/list";
 import { Button } from "../ui/Button";
 import { OptionPicker } from "../ui/OptionPicker";
 import { IconLock } from "../ui/icons";
@@ -118,11 +118,7 @@ function Advancement({
       </Button>
       {Actions && <Actions campaign={campaign} characterId={c.id} />}
       {open && (
-        <AdvancementDialog
-          campaign={campaign}
-          characterId={c.id}
-          onClose={() => setOpen(false)}
-        />
+        <AdvancementDialog campaign={campaign} characterId={c.id} onClose={() => setOpen(false)} />
       )}
     </div>
   );
@@ -141,12 +137,8 @@ function Loadout({
   const definition = system.loadouts?.find((entry) => entry.id === id);
   if (!definition) return null;
   const max = typeof definition.max === "number" ? definition.max : (d.values[definition.max] ?? 0);
-  const owned =
-    definition.available?.(c, d) ??
-    parseCommaList(String(c.data[definition.ownedField] ?? "")).filter(Boolean);
-  const active = parseCommaList(String(c.data[definition.activeField] ?? ""))
-    .filter(Boolean)
-    .slice(0, max);
+  const owned = definition.available?.(c, d) ?? commaListOf(c.data[definition.ownedField]);
+  const active = commaListOf(c.data[definition.activeField]).slice(0, max);
   const options = definition.options.filter((option) => owned.includes(option.id));
   if (!options.length || max <= 0) return null;
   return (
@@ -548,7 +540,12 @@ function Stats({
   hint?: string | undefined;
   showScore: boolean;
 }) {
-  const [menu, setMenu] = useState<{ x: number; y: number; label: string; items: MenuItem[] } | null>(null);
+  const [menu, setMenu] = useState<{
+    x: number;
+    y: number;
+    label: string;
+    items: MenuItem[];
+  } | null>(null);
   const rollStat = (statId: string, abbr: string) => {
     const mod = statBonus(d, statId);
     const formula = `${system.baseRoll}${mod ? `${mod < 0 ? "-" : "+"}${Math.abs(mod)}` : ""}[${abbr}]`;

@@ -1,5 +1,6 @@
 import * as Y from "yjs";
 import type { Campaign } from "../../campaign/campaign";
+import { systemStore } from "../../campaign/systemStore";
 import { contentFromText } from "../../features/chat/content";
 import { postText } from "../../features/chat/send";
 import {
@@ -24,9 +25,10 @@ import {
 } from "../../features/characters/relationships";
 import { actionsFor, derive } from "../../features/characters/store";
 import type { DataValue } from "../../core/types";
-import { formatCommaList, parseCommaList } from "../../lib/list";
+import { commaListOf, formatCommaList } from "../../lib/list";
 import type { GameSystem } from "../types";
 import { DW2_RELATIONSHIP_DEPTH } from "./bondStore";
+import { dungeonWorld2 } from "./index";
 import {
   addTreasureBoxes,
   DW2_SERVICES,
@@ -41,8 +43,8 @@ import {
  * move forms, sheet and inventory extension.
  */
 
-const DW2_ID = "dungeon-world-2";
-const isDw2 = (system: GameSystem) => system.id === DW2_ID;
+/** Whether this campaign plays these rules; the actions do nothing elsewhere. */
+const isDw2 = (system: GameSystem) => system === dungeonWorld2;
 
 /** Tags that make an item a weapon, which Snap the Blade can break. */
 export const WEAPON_TAGS = new Set([
@@ -66,7 +68,7 @@ export function resolveStruggle(campaign: Campaign, id: string): boolean {
   const previousMaxHp = derive(character, system).values.maxHp ?? 0;
   const struggleId = String(character.data.struggleId ?? "");
   const revealed = `reveal-struggle-${struggleId}`;
-  const advancements = parseCommaList(String(character.data.advancements ?? "")).filter(
+  const advancements = commaListOf(character.data.advancements).filter(
     (entry) => entry !== revealed,
   );
 
@@ -277,7 +279,9 @@ export function prepareDungeonWorld2Journey(
 }
 
 const DW2_DOWNTIME_KEY = "dungeon-world-2:downtime";
-const DW2_DOWNTIME_TRAINED_KEY = "dungeon-world-2:downtime-trained";
+/** Each PC's id -> the Downtime epoch they last trained in. */
+const trainedIn = (campaign: Campaign) =>
+  systemStore<number>(campaign.systemData, "dungeon-world-2:downtime-trained");
 
 export function dungeonWorld2DowntimeEpoch(campaign: Campaign): number {
   return Number(campaign.systemData.get(DW2_DOWNTIME_KEY) ?? 0);
@@ -296,8 +300,7 @@ export function trainedDuringDungeonWorld2Downtime(
   characterId: string,
 ): boolean {
   const epoch = dungeonWorld2DowntimeEpoch(campaign);
-  const trained = campaign.systemData.get(DW2_DOWNTIME_TRAINED_KEY) as Y.Map<number> | undefined;
-  return epoch > 0 && trained?.get(characterId) === epoch;
+  return epoch > 0 && trainedIn(campaign).get(characterId) === epoch;
 }
 
 function spendTreasure(campaign: Campaign, characterId: string): boolean {
@@ -459,12 +462,7 @@ export function trainDungeonWorld2(campaign: Campaign, characterId: string): boo
   return campaign.doc.transact(() => {
     if (!spendTreasure(campaign, characterId)) return false;
     bumpData(campaign, characterId, "xp", 1);
-    let trained = campaign.systemData.get(DW2_DOWNTIME_TRAINED_KEY) as Y.Map<number> | undefined;
-    if (!(trained instanceof Y.Map)) {
-      trained = new Y.Map<number>();
-      campaign.systemData.set(DW2_DOWNTIME_TRAINED_KEY, trained);
-    }
-    trained.set(characterId, epoch);
+    trainedIn(campaign).set(characterId, epoch);
     return true;
   });
 }

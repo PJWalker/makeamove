@@ -6,7 +6,7 @@ import {
   type OptionDef,
   type ScoreMethods,
 } from "../../systems/types";
-import { parseCommaList } from "../../lib/list";
+import { commaListOf } from "../../lib/list";
 
 /*
  * The rules of the guided creation and advancement flow, apart from its UI:
@@ -42,15 +42,15 @@ export function choicesAt(
               atLevel(o.requiresScoreBelow.value, level)) &&
           (o.limits ?? []).every(
             ({ field, prefix, max }) =>
-              parseCommaList(String(data[field] ?? "")).filter(
+              commaListOf(data[field]).filter(
                 (value) => value && (!prefix || value.startsWith(prefix)),
               ).length < atLevel(max, level),
           ) &&
           (o.requiresIncludes ?? []).every(({ field, value }) =>
-            parseCommaList(String(data[field] ?? "")).includes(value),
+            commaListOf(data[field]).includes(value),
           ) &&
           (o.notIncludes ?? []).every(
-            ({ field, value }) => !parseCommaList(String(data[field] ?? "")).includes(value),
+            ({ field, value }) => !commaListOf(data[field]).includes(value),
           ),
       ),
     }))

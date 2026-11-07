@@ -1,13 +1,16 @@
-import * as Y from "yjs";
 import type { Campaign } from "../../campaign/campaign";
+import { systemStore } from "../../campaign/systemStore";
 import type { ChatMessage } from "../chat/types";
 import { splitSessions } from "../chat/sessions";
 import { getSystem } from "../../systems";
 import type { ActionDef } from "../../systems/types";
 
 /** Kept in the campaign's system data, under the system's own id. */
-const usesKey = (campaign: Campaign) =>
-  `${getSystem(campaign.meta.get("systemId")).id}:session-move-uses`;
+const usesOf = (campaign: Campaign) =>
+  systemStore<true>(
+    campaign.systemData,
+    `${getSystem(campaign.meta.get("systemId")).id}:session-move-uses`,
+  );
 
 function sessionUseKey(
   characterId: string,
@@ -20,15 +23,6 @@ function sessionUseKey(
   return `${sessionId}/${action.id}/${owner}`;
 }
 
-function usesMap(campaign: Campaign, create: boolean): Y.Map<true> | undefined {
-  let uses = campaign.systemData.get(usesKey(campaign)) as Y.Map<true> | undefined;
-  if (!(uses instanceof Y.Map) && create) {
-    uses = new Y.Map<true>();
-    campaign.systemData.set(usesKey(campaign), uses);
-  }
-  return uses instanceof Y.Map ? uses : undefined;
-}
-
 export function sessionMoveUsed(
   campaign: Campaign,
   characterId: string,
@@ -36,7 +30,7 @@ export function sessionMoveUsed(
   messages: ChatMessage[] = campaign.chat.messages.value,
 ): boolean {
   const key = sessionUseKey(characterId, action, messages);
-  return !!key && !!usesMap(campaign, false)?.has(key);
+  return !!key && usesOf(campaign).has(key);
 }
 
 export function claimSessionMove(
@@ -47,8 +41,7 @@ export function claimSessionMove(
 ): boolean {
   const key = sessionUseKey(characterId, action, messages);
   if (!key) return true;
-  const uses = usesMap(campaign, true);
-  if (!uses) return false;
+  const uses = usesOf(campaign);
   let claimed = false;
   campaign.doc.transact(() => {
     if (uses.has(key)) return;

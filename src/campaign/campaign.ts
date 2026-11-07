@@ -4,7 +4,7 @@ import { IndexeddbPersistence } from "y-indexeddb";
 import { newId, newSecret } from "../lib/ids";
 import { dataName } from "../platform/dataEpoch";
 
-import { formatCommaList, parseCommaList } from "../lib/list";
+import { commaListOf, formatCommaList } from "../lib/list";
 import { device } from "../platform/device";
 import {
   forgetCampaign,
@@ -480,7 +480,7 @@ export function setSystemCampaignData(
   }
   if (field.type === "select" && !field.options?.some((option) => option.id === value)) return;
   if (field.type === "multiselect") {
-    const values = parseCommaList(String(value)).filter(Boolean);
+    const values = commaListOf(value);
     if (values.some((id) => !field.options?.some((option) => option.id === id))) return;
     campaign.systemData.set(fieldId, formatCommaList([...new Set(values)]));
     return;

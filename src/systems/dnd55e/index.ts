@@ -1,5 +1,5 @@
 import type { CharacterView } from "../../features/characters/types";
-import { formatCommaList, parseCommaList } from "../../lib/list";
+import { commaListOf, formatCommaList } from "../../lib/list";
 
 import { resolveEffects, type EffectSource } from "../effects";
 import type {
@@ -45,6 +45,7 @@ import { SRD_SPELLS } from "./srdSpells";
 import { SRD_MONSTERS } from "./srdMonsters";
 import { SRD_MAGIC_ITEMS } from "./srdMagicItems";
 import { SRD_CLASS_FEATURES } from "./srdClasses";
+import { hpTokenStat } from "../tokenStats";
 
 /*
  * D&D 5th edition, 2024 rules ("5.5e"), from the SRD 5.2: the formulas, and
@@ -139,9 +140,7 @@ const spellOptions = SPELLS_ALL.map((spell) => ({
   text: `${spell.level ? `Level ${spell.level}` : "Cantrip"} · ${spell.trigger}\n${spell.text}`,
 }));
 const selectedIds = (character: CharacterView, field: string, max = Infinity) =>
-  parseCommaList(String(character.data[field] ?? ""))
-    .filter(Boolean)
-    .slice(0, max);
+  commaListOf(character.data[field]).slice(0, max);
 
 const criticalThreshold = (context?: RollContext) =>
   context?.action.category === "attack" &&
@@ -590,8 +589,7 @@ const SPECIES_ROLLS: FollowUpDef[] = [
 
 /** The character's feats, from the comma-separated data field. */
 const featsOf = (c: CharacterView) =>
-  parseCommaList(String(c.data.feats ?? ""))
-    .filter(Boolean)
+  commaListOf(c.data.feats)
     .map((id) => FEATS.find((f) => f.id === id))
     .filter((f) => !!f);
 
@@ -1082,19 +1080,7 @@ export const dnd55e: GameSystem = {
             : true;
     return ACTIONS_ALL.filter((a) => has(a) || granted.has(a.id));
   },
-  tokenStats(c, d) {
-    const hp = c.resources.hp ?? 0;
-    const max = valueOf(d.values, "maxHp");
-    return [
-      {
-        id: "hp",
-        label: "HP",
-        value: hp,
-        max,
-        colour: hp <= max / 4 ? "#d04a3a" : hp <= max / 2 ? "#d49a32" : "#4aa35a",
-      },
-    ];
-  },
+  tokenStats: (c, d) => [hpTokenStat(c, valueOf(d.values, "maxHp"))],
   creation: {
     advancementField: "level",
     choices: [

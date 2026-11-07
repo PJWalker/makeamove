@@ -19,7 +19,7 @@ import {
 } from "../features/characters/creation";
 import { derive } from "../features/characters/store";
 import { roll } from "../features/dice/notation";
-import { formatCommaList, parseCommaList } from "../lib/list";
+import { commaListOf, formatCommaList } from "../lib/list";
 import type { Campaign } from "../campaign/campaign";
 import type { ChoiceDef, GameSystem, ScoreAssignmentOption, ScoreMethods } from "../systems/types";
 import { Button } from "../ui/Button";
@@ -193,8 +193,7 @@ export function ScoreFields({
   const buyable = methods.pointBuy ? Object.keys(methods.pointBuy.costs).map(Number) : [];
 
   if (assignments?.length) {
-    const selected =
-      assignments.find((option) => option.id === assignmentId) ?? assignments[0]!;
+    const selected = assignments.find((option) => option.id === assignmentId) ?? assignments[0]!;
     return (
       <div className="field creation-scores">
         <span>Ability scores</span>
@@ -372,9 +371,7 @@ export function AdvancementDialog({
   const markedStatsField = system.creation?.markedStatsField;
   const resetsMarks = !!system.creation?.resetMarkedStatsAt?.includes(rank);
   const blockedStats =
-    markedStatsField && !resetsMarks
-      ? parseCommaList(String(c.data[markedStatsField] ?? "")).filter(Boolean)
-      : [];
+    markedStatsField && !resetsMarks ? commaListOf(c.data[markedStatsField]) : [];
   const optionalChoices = choices.filter((choice) => choice.optional);
   const advancementCost = optionalChoices.reduce((cost, choice) => {
     const option = choice.options.find((item) => item.id === picks[choice.id]?.option);
@@ -438,10 +435,7 @@ export function AdvancementDialog({
           const now = String(c.data[featChoice.field] ?? "");
           setData(campaign, c.id, featChoice.field, now ? `${now},${feat}` : feat);
         } else {
-          const by =
-            improvement === "two"
-              ? { [first]: 2 }
-              : { [first]: 1, [second]: 1 };
+          const by = improvement === "two" ? { [first]: 2 } : { [first]: 1, [second]: 1 };
           advancedScores = raise(advancedScores, by, scoreCapsOf(system));
         }
       }

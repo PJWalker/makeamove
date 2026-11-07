@@ -16,7 +16,7 @@ import { Counter } from "../../table/sheetParts";
 import { Button } from "../../ui/Button";
 import { IconRoll } from "../../ui/icons";
 import { ATTRIBUTES, TRAUMAS } from "./index";
-import { parseCommaList } from "../../lib/list";
+import { commaListOf } from "../../lib/list";
 import { systemCampaignData } from "../../campaign/campaign";
 import { advanceAttribute } from "./progression";
 
@@ -29,11 +29,7 @@ function AttributeAdvance({
 }) {
   const [selected, setSelected] = useState(attribute.actions[0] ?? "");
   const { campaign, c, editable } = sheet;
-  const cap = parseCommaList(String(systemCampaignData(campaign).crewUpgrades ?? "")).includes(
-    "mastery",
-  )
-    ? 4
-    : 3;
+  const cap = commaListOf(systemCampaignData(campaign).crewUpgrades).includes("mastery") ? 4 : 3;
   if (Number(c.data[`${attribute.id}Xp`] ?? 0) < 6 || !editable) return null;
   const eligible = attribute.actions.filter((id) => (c.scores[id] ?? 0) < cap);
   const chosen = eligible.includes(selected) ? selected : (eligible[0] ?? "");

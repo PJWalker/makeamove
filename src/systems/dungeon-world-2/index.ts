@@ -1,5 +1,5 @@
 import { parse } from "../../features/dice/notation";
-import { parseCommaList } from "../../lib/list";
+import { commaListOf } from "../../lib/list";
 
 import { resolveEffects } from "../effects";
 import type { ActionDef, ChoiceDef, GameSystem, OptionDef } from "../types";
@@ -12,6 +12,7 @@ import { DW2_CLASS_GEAR, DW2_GEAR, DW2_MAGIC_ITEMS } from "./gear";
 import { DW2_CLASS_SCORE_ASSIGNMENTS } from "./stats";
 import { CLASS_STARTING_CHOICES } from "./startingOptions";
 import { dw2Library } from "./library";
+import { hpTokenStat } from "../tokenStats";
 
 type Band = "strong" | "weak" | "miss";
 type MoveSpec = {
@@ -888,10 +889,8 @@ export const dungeonWorld2: GameSystem = {
     const ownClassMoves = ACTIONS.filter(
       (move) => CLASS_ACTIONS.get(move.id) === character.data.classId,
     );
-    const ownedPaths = parseCommaList(String(character.data.ownedPaths ?? "")).filter(Boolean);
-    const ownedPathMoves = parseCommaList(String(character.data.ownedPathMoves ?? "")).filter(
-      Boolean,
-    );
+    const ownedPaths = commaListOf(character.data.ownedPaths);
+    const ownedPathMoves = commaListOf(character.data.ownedPathMoves);
     const pathMoves = PATH_ACTIONS.filter((move) => {
       const path = PATHS.find(
         (entry) => entry.id === move.id.replace(/^path-/, "").replace(/-\d+$/, ""),
@@ -917,20 +916,7 @@ export const dungeonWorld2: GameSystem = {
       ...artifactMoves,
     ];
   },
-  tokenStats: (character, derived) => [
-    {
-      id: "hp",
-      label: "HP",
-      value: character.resources.hp ?? 0,
-      max: derived.values.maxHp ?? 0,
-      colour:
-        (character.resources.hp ?? 0) <= (derived.values.maxHp ?? 0) / 4
-          ? "#d04a3a"
-          : (character.resources.hp ?? 0) <= (derived.values.maxHp ?? 0) / 2
-            ? "#d49a32"
-            : "#4aa35a",
-    },
-  ],
+  tokenStats: (character, derived) => [hpTokenStat(character, derived.values.maxHp ?? 0)],
   creation: {
     advancementField: "level",
     advancementCounterField: "xp",

@@ -50,7 +50,7 @@ import { CharacterSheet } from "./sheets";
 import { showLink } from "./linkState";
 import { FolderTree } from "./FolderTree";
 import { charactersLayout } from "./panelLayouts";
-import { parseCommaList } from "../lib/list";
+import { commaListOf } from "../lib/list";
 
 export function CharactersPanel({ campaign }: { campaign: Campaign }) {
   const system = systemOf(campaign);
@@ -301,14 +301,16 @@ function NewCharacter({
   const [folder, setFolder] = useState(initialFolder ?? "");
   // The guided flow: the system's choices at creation, then ability scores.
   const creation = system.creation;
-  const [picks, setPicks] = useState<Record<string, Picked>>(Object.fromEntries(
+  const [picks, setPicks] = useState<Record<string, Picked>>(
+    Object.fromEntries(
       (creation?.choices ?? []).flatMap((choice) => {
         const value = system.characterData.find((field) => field.id === choice.field)?.default;
         return choice.at === "create" && typeof value === "string" && value
           ? [[choice.id, { option: value, pattern: 0, order: [] }]]
           : [];
       }),
-    ));
+    ),
+  );
   const [method, setMethod] = useState<ScoreMethod>(() =>
     creation ? scoreMethods(creation.scores)[0]!.id : "manual",
   );
@@ -356,18 +358,13 @@ function NewCharacter({
       const id = newCharacter(campaign, name, String(choiceData.classId ?? ""), made);
       const startingItemsField = creation?.startingItemsField;
       if (startingItemsField && made) {
-        for (const itemId of parseCommaList(String(made.data[startingItemsField] ?? ""))) {
+        for (const itemId of commaListOf(made.data[startingItemsField])) {
           const item = system.items.find((entry) => entry.id === itemId);
           if (item) addItem(campaign, id, item, !!item.equippable);
         }
       }
       if (startingRelationship && relationshipTo) {
-        setRelationship(
-          campaign.characters,
-          id,
-          relationshipTo,
-          relationshipText.trim(),
-        );
+        setRelationship(campaign.characters, id, relationshipTo, relationshipText.trim());
         setRelationshipDepth(
           campaign.characters,
           id,

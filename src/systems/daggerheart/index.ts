@@ -1,7 +1,7 @@
 import { resolveEffects } from "../effects";
 import type { ActionDef, CheckStep, Derived, GameSystem, ItemDef, OptionDef } from "../types";
 import type { CharacterView } from "../../features/characters/types";
-import { parseCommaList } from "../../lib/list";
+import { commaListOf } from "../../lib/list";
 
 import {
   ANCESTRIES,
@@ -13,6 +13,7 @@ import {
   SUBCLASSES,
   WEAPONS,
 } from "./data";
+import { hpTokenStat } from "../tokenStats";
 
 const TRAITS = [
   { id: "agility", name: "Agility", abbr: "AGI" },
@@ -742,7 +743,7 @@ export const daggerheart: GameSystem = {
     const classData = CLASSES.find((entry) => entry.id === character.data.classId) ?? CLASSES[0]!;
     const subclass = SUBCLASSES.find((entry) => entry.id === character.data.subclassId);
     const level = Math.max(1, Number(character.data.level ?? 1));
-    const advancements = parseCommaList(String(character.data.advancements ?? "")).filter(Boolean);
+    const advancements = commaListOf(character.data.advancements);
     const countAdvancement = (id: string) => advancements.filter((entry) => entry === id).length;
     const proficiency = 1 + (level >= 2 ? 1 : 0) + (level >= 5 ? 1 : 0) + (level >= 8 ? 1 : 0);
     const mods = Object.fromEntries(
@@ -836,11 +837,7 @@ export const daggerheart: GameSystem = {
     const ownCommunity = communityActions
       .filter((entry) => entry.communityId === character.data.community)
       .map((entry) => entry.action);
-    const selectedCards = new Set(
-      parseCommaList(String(character.data.activeDomainCards ?? ""))
-        .filter(Boolean)
-        .slice(0, 5),
-    );
+    const selectedCards = new Set(commaListOf(character.data.activeDomainCards).slice(0, 5));
     const ownCards = domainActions
       .filter((entry) => selectedCards.has(entry.cardId))
       .map((entry) => entry.action);
@@ -861,20 +858,7 @@ export const daggerheart: GameSystem = {
       ),
     ];
   },
-  tokenStats: (character, derived) => [
-    {
-      id: "hp",
-      label: "HP",
-      value: character.resources.hp ?? 0,
-      max: derived.values.maxHp ?? 0,
-      colour:
-        (character.resources.hp ?? 0) <= (derived.values.maxHp ?? 0) / 4
-          ? "#d04a3a"
-          : (character.resources.hp ?? 0) <= (derived.values.maxHp ?? 0) / 2
-            ? "#d49a32"
-            : "#4aa35a",
-    },
-  ],
+  tokenStats: (character, derived) => [hpTokenStat(character, derived.values.maxHp ?? 0)],
   creation: {
     advancementField: "level",
     advancementCounterField: "milestone",

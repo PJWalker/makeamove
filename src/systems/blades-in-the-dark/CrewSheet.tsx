@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { parseCommaList } from "../../lib/list";
+import { commaListOf } from "../../lib/list";
 import { systemOf } from "../../features/characters/api";
 import { getState, setState } from "../../features/chat/messageState";
 import { ensureSystemCounter } from "../../features/chat/send";
@@ -22,8 +22,8 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
   );
   const abilities = system.campaignFields!.find((field) => field.id === "crewAbilities")!.options!;
   const upgrades = system.campaignFields!.find((field) => field.id === "crewUpgrades")!.options!;
-  const ownedAbilities = parseCommaList(String(state.crewAbilities ?? ""));
-  const ownedUpgrades = parseCommaList(String(state.crewUpgrades ?? ""));
+  const ownedAbilities = commaListOf(state.crewAbilities);
+  const ownedUpgrades = commaListOf(state.crewUpgrades);
   const cost = crewTierCost(campaign);
   const upgradeCost = upgrade === "mastery" ? 4 : upgrade === "cohort" ? 2 : 1;
   const gm = campaign.isGm();

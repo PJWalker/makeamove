@@ -18,7 +18,7 @@ import { postRoll } from "../../features/chat/send";
 import type { Campaign } from "../../campaign/campaign";
 import { device } from "../../platform/device";
 import { CharacterText } from "../../table/CharacterText";
-import { parseCommaList } from "../../lib/list";
+import { commaListOf } from "../../lib/list";
 import { Inventory } from "../../table/Inventory";
 import { SheetSectionView } from "../../table/DeclarativeSheet";
 import { Counter, MoveList, signedStr, TokenChip } from "../../table/sheetParts";
@@ -240,7 +240,7 @@ export function DndSheet({ campaign, system, c }: Props) {
       {!!c.data.feats && (
         <p className="dnd-feats">
           <span className="eyebrow">Feats</span>{" "}
-          {parseCommaList(String(c.data.feats))
+          {commaListOf(c.data.feats)
             .map((id) => FEATS.find((f) => f.id === id))
             .filter((f) => !!f)
             .map((f, i) => (

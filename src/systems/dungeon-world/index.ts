@@ -2,6 +2,7 @@ import { resolveEffects } from "../effects";
 
 import type { ActionDef, GameSystem, TargetSpec } from "../types";
 import { CLASSES, ITEMS, TAGS } from "./data";
+import { hpTokenStat } from "../tokenStats";
 
 /*
  * Dungeon World, core rules. Move and class text is a condensed paraphrase of
@@ -717,19 +718,7 @@ export const dungeonWorld: GameSystem = {
         m.category !== "class" || CLASS_ACTIONS.get(m.id) === c.data.classId || granted.has(m.id),
     );
   },
-  tokenStats: (c, d) => {
-    const hp = c.resources.hp ?? 0;
-    const max = d.values.maxHp ?? 0;
-    return [
-      {
-        id: "hp",
-        label: "HP",
-        value: hp,
-        max,
-        colour: hp <= max / 4 ? "#d04a3a" : hp <= max / 2 ? "#d49a32" : "#4aa35a",
-      },
-    ];
-  },
+  tokenStats: (c, d) => [hpTokenStat(c, d.values.maxHp ?? 0)],
   creation: {
     advancementField: "level",
     choices: [

@@ -6,7 +6,7 @@ import {
   setScore,
   systemOf,
 } from "../../features/characters/api";
-import { formatCommaList, parseCommaList } from "../../lib/list";
+import { commaListOf, formatCommaList } from "../../lib/list";
 import { getState, setState } from "../../features/chat/messageState";
 import { systemCampaignData, setSystemCampaignData, type Campaign } from "../../campaign/campaign";
 import { ATTRIBUTES } from "./index";
@@ -19,9 +19,7 @@ export function advanceAttribute(
 ): boolean {
   const character = getCharacter(campaign, characterId);
   const attribute = ATTRIBUTES.find((entry) => entry.id === attributeId);
-  const mastery = parseCommaList(String(systemCampaignData(campaign).crewUpgrades ?? "")).includes(
-    "mastery",
-  );
+  const mastery = commaListOf(systemCampaignData(campaign).crewUpgrades).includes("mastery");
   const cap = mastery ? 4 : 3;
   if (
     systemOf(campaign).id !== "blades-in-the-dark" ||
@@ -50,7 +48,7 @@ export function advanceCrew(campaign: Campaign, reward: string): boolean {
   const needed = counter.max ?? 10;
   const xp = getState<number>(campaign.messageState, counter.id, "value") ?? counter.start;
   const state = systemCampaignData(campaign);
-  const abilities = parseCommaList(String(state.crewAbilities ?? "")).filter(Boolean);
+  const abilities = commaListOf(state.crewAbilities);
   const allowed = system.campaignFields
     ?.find((field) => field.id === "crewAbilities")
     ?.options?.some((option) => option.id === reward);
@@ -82,7 +80,7 @@ export function buyCrewUpgrade(campaign: Campaign, upgrade: string): boolean {
     ?.find((field) => field.id === "crewUpgrades")
     ?.options?.some((option) => option.id === upgrade);
   const state = systemCampaignData(campaign);
-  const owned = parseCommaList(String(state.crewUpgrades ?? "")).filter(Boolean);
+  const owned = commaListOf(state.crewUpgrades);
   const cost = upgrade === "mastery" ? 4 : upgrade === "cohort" ? 2 : 1;
   if (
     system.id !== "blades-in-the-dark" ||
@@ -101,7 +99,7 @@ export function buyCrewUpgrade(campaign: Campaign, upgrade: string): boolean {
 
 export function crewTierCost(campaign: Campaign) {
   const state = systemCampaignData(campaign);
-  const abilities = parseCommaList(String(state.crewAbilities ?? ""));
+  const abilities = commaListOf(state.crewAbilities);
   return {
     rep: Math.max(
       6,
