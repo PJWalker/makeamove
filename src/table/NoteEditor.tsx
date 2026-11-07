@@ -3,18 +3,30 @@ import { useEffect, useRef, useState } from "react";
 import { getNote, noteSubdoc, touchNote } from "../features/notes/api";
 import { NoteDoc } from "../features/notes/noteDoc";
 import { linksIn } from "../features/notes/links";
+import { noteSearchTarget } from "../features/notes/targets";
 import type { Campaign } from "../campaign/campaign";
 import { mountRichText } from "./richText";
 import { Awareness } from "y-protocols/awareness";
 import { myName } from "../features/chat/send";
+import { useValue } from "../ui/useValue";
 
 /** How long after the last keystroke a page records its links and edit time. */
 const TOUCH_MS = 800;
 
 /** A note's text, edited together: anyone at the table can write in it. */
-export function NoteEditor({ campaign, noteId }: { campaign: Campaign; noteId: string }) {
+export function NoteEditor({
+  campaign,
+  noteId,
+  active,
+}: {
+  campaign: Campaign;
+  noteId: string;
+  active: boolean;
+}) {
   const hostRef = useRef<HTMLDivElement>(null);
+  const editorRef = useRef<Editor | null>(null);
   const [loading, setLoading] = useState(true);
+  const searchTarget = useValue(noteSearchTarget);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -55,6 +67,7 @@ export function NoteEditor({ campaign, noteId }: { campaign: Campaign; noteId: s
         },
       });
       editor = rich.editor;
+      editorRef.current = editor;
       setLoading(false);
     });
 
@@ -66,10 +79,21 @@ export function NoteEditor({ campaign, noteId }: { campaign: Campaign; noteId: s
         touchNote(campaign, noteId, linksIn(editor.getJSON()));
       }
       rich?.destroy();
+      editorRef.current = null;
       local?.destroy();
       note?.destroy();
     };
   }, [campaign, noteId]);
+
+  useEffect(() => {
+    const target = searchTarget;
+    const editor = editorRef.current;
+    if (!active || loading || !editor || target?.noteId !== noteId) return;
+    const from = Math.max(1, Math.min(target.from, editor.state.doc.content.size));
+    const to = Math.max(from, Math.min(target.to, editor.state.doc.content.size));
+    editor.chain().setTextSelection({ from, to }).scrollIntoView().focus().run();
+    noteSearchTarget.value = null;
+  }, [active, loading, noteId, searchTarget]);
 
   return (
     <div className="note-editor" data-loading={loading || undefined}>

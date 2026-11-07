@@ -1,9 +1,9 @@
 import "fake-indexeddb/auto";
 import { describe, expect, it } from "vitest";
-import { Campaign, createCampaign } from "../../../campaign/campaign";
-import { device } from "../../../platform/device";
-import { dungeonWorld2 } from "../../../systems/dungeon-world-2";
-import { getCharacter, newCharacter, setData } from "../api";
+import { Campaign, createCampaign } from "../../campaign/campaign";
+import { device } from "../../platform/device";
+import { dungeonWorld2 } from "../dungeon-world-2";
+import { getCharacter, newCharacter, setData } from "../../features/characters/api";
 import {
   findTracker,
   parseTrackerButton,
@@ -11,7 +11,7 @@ import {
   pressTracker,
   trackerBlock,
   trackerToken,
-} from "../trackers";
+} from "../../features/characters/trackers";
 
 describe("inline resource buttons", () => {
   it("parses [[±N name]] with an optional label, and writes it back", () => {

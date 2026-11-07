@@ -1,7 +1,11 @@
-import { expect, test } from "@playwright/test";
-import { createCampaign, openCharacters, openSheetMove, chooseCreationOptions, addRelationshipAtDepthThree } from "./e2e-helpers";
-
-test.use({ viewport: { width: 1280, height: 800 } });
+import { expect, test } from "./browser-test";
+import {
+  createCampaign,
+  openCharacters,
+  openSheetMove,
+  chooseCreationOptions,
+  addRelationshipAtDepthThree,
+} from "./e2e-helpers";
 
 test("DW2 PCs forge and advance one shared Bond at mutual Depth three", async ({ page }) => {
   await createCampaign(page, "Bond progression", "dungeon-world-2");
@@ -136,8 +140,10 @@ test("DW2 GM Reference searches source NPC guidance", async ({ page }) => {
   await expect(page.getByRole("region", { name: "GM Reference" })).toHaveCount(0);
   await page.getByRole("tab", { name: "Reference" }).click();
   await page.getByRole("searchbox", { name: "Search the Reference" }).fill("Drive");
+  await page.getByRole("button", { name: "Major NPCs" }).click();
   const npcs = page.locator(".reference-section", { hasText: "Major NPCs" });
   await expect(npcs).toContainText("A Non-Player Character (NPC)");
+  await expect(npcs.locator(".search-hit").first()).toBeVisible();
 });
 
 test("DW2 Artifact tracks unlock and expose a wielded move", async ({ page }) => {

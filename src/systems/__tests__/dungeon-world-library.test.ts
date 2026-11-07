@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { instanceOf } from "../../characters/store";
-import { dungeonWorld } from "../../../systems/dungeon-world";
-import { librariesFor, registerLibrary, searchEntries, systemLibrary } from "../index";
+import { instanceOf } from "../../features/characters/store";
+import { dungeonWorld } from "../dungeon-world";
+import {
+  librariesFor,
+  registerLibrary,
+  searchEntries,
+  systemLibrary,
+} from "../../features/library";
 
 describe("libraries", () => {
   it("collects a system's gear, moves by category, choices and tags", () => {

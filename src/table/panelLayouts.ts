@@ -8,6 +8,10 @@ export const notesLayout = createPaneLayout("notesList", {
   list: "list",
   detail: "page",
 });
+export const referenceLayout = createPaneLayout("referenceList", {
+  list: "entries",
+  detail: "entry",
+});
 export const scenesLayout = createPaneLayout("scenesList", {
   list: "scenes",
   detail: "settings",

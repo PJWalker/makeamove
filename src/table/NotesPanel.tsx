@@ -14,10 +14,11 @@ import {
   renameNote,
   renameNoteFolder,
   revealNote,
+  searchNote,
   type NoteFolderView,
   type NoteView,
 } from "../features/notes/api";
-import { noteOpened, openNote, openNoteId } from "../features/notes/targets";
+import { noteOpened, noteSearchTarget, openNote, openNoteId } from "../features/notes/targets";
 import type { Campaign } from "../campaign/campaign";
 import { useY } from "../ui/useY";
 import { Button } from "../ui/Button";
@@ -67,6 +68,7 @@ export function NotesPanel({ campaign }: { campaign: Campaign }) {
   useEffect(() => ensureNoteFolders(campaign), [campaign]);
   const openId = useValue(openNoteId);
   const open = openId ? notes.find((n) => n.id === openId) : undefined;
+  const split = useValue(notesLayout.mode) === "split";
   const { level, go } = usePaneLevel(notesLayout, open ? "detail" : "list");
 
   // Asked to open a page (from the list, a link or elsewhere): show it.
@@ -99,7 +101,12 @@ export function NotesPanel({ campaign }: { campaign: Campaign }) {
       detail={
         <>
           {open ? (
-            <NotePage campaign={campaign} note={open} notes={notes} />
+            <NotePage
+              campaign={campaign}
+              note={open}
+              notes={notes}
+              active={level === "detail" || split}
+            />
           ) : (
             <p className="empty">Pick a page, or make a new one.</p>
           )}
@@ -129,8 +136,41 @@ function NoteList({
 }) {
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [matches, setMatches] = useState<
+    { note: NoteView; from?: number; to?: number; snippet: string }[]
+  >([]);
+  const [searching, setSearching] = useState(false);
   const known = new Set(folders.map((f) => f.id));
   const isGm = !!useValue(campaign.vault);
+  useEffect(() => {
+    const needle = query.trim();
+    if (!needle) {
+      setMatches([]);
+      setSearching(false);
+      return;
+    }
+    let cancelled = false;
+    setMatches([]);
+    setSearching(true);
+    const timer = window.setTimeout(async () => {
+      const found: { note: NoteView; from?: number; to?: number; snippet: string }[] = [];
+      for (const note of notes) {
+        if (cancelled) return;
+        if (note.title.toLowerCase().includes(needle.toLowerCase()))
+          found.push({ note, snippet: note.title });
+        const noteMatches = await searchNote(campaign, note.id, needle);
+        if (cancelled) return;
+        for (const match of noteMatches) found.push({ note, ...match });
+      }
+      setMatches(found);
+      setSearching(false);
+    }, 180);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [campaign, notes, query]);
   const newPage = (folder?: string, gmOnly = false) =>
     openNote(createNote(campaign, { ...(folder ? { folder } : {}), gmOnly }));
 
@@ -195,68 +235,106 @@ function NoteList({
   const doomed = deleting ? notes.find((n) => n.id === deleting) : undefined;
   return (
     <>
-      {doomed && (
-        <DeletePage campaign={campaign} note={doomed} onClose={() => setDeleting(null)} />
-      )}
-      <FolderTree
-        ariaLabel="Notes"
-        className="notes-list"
-        folders={folders}
-        items={notes}
-        folderOf={(note) => note.folder}
-        renderItem={row}
-        renderActions={(beginFolderNaming) => (
-          <>
-            <Button size="sm" onClick={() => newPage()}>
-              New page
-            </Button>
-            {isGm && (
-              <Button
-                size="sm"
-                variant="ghost"
-                title="Only you can see it, until you reveal it"
-                onClick={() => newPage(undefined, true)}
-              >
-                New GM page
-              </Button>
+      {doomed && <DeletePage campaign={campaign} note={doomed} onClose={() => setDeleting(null)} />}
+      <div className="notes-browser">
+        <input
+          className="notes-search"
+          type="search"
+          aria-label="Search Notes"
+          placeholder="Search Notes…"
+          value={query}
+          onChange={(event) => setQuery(event.currentTarget.value)}
+        />
+        {query.trim() ? (
+          <div className="panel-scroll notes-search-results">
+            {searching ? (
+              <p className="empty">Searching notes…</p>
+            ) : matches.length ? (
+              <List>
+                {matches.map((match, index) => (
+                  <ListRow
+                    key={`${match.note.id}:${match.from ?? "title"}:${index}`}
+                    lead={match.note.gmOnly ? <IconSecret size={22} /> : <IconNotes size={22} />}
+                    name={match.note.title}
+                    meta={match.snippet}
+                    tag={match.note.gmOnly ? "GM" : null}
+                    selected={match.note.id === openId}
+                    onPick={() => {
+                      noteSearchTarget.value =
+                        match.from === undefined
+                          ? null
+                          : { noteId: match.note.id, from: match.from, to: match.to! };
+                      openNote(match.note.id);
+                    }}
+                  />
+                ))}
+              </List>
+            ) : (
+              <p className="empty">Nothing matches “{query.trim()}”.</p>
             )}
-            <Button size="sm" variant="ghost" onClick={beginFolderNaming}>
-              New folder
-            </Button>
-          </>
+          </div>
+        ) : (
+          <FolderTree
+            ariaLabel="Notes"
+            className="notes-list"
+            folders={folders}
+            items={notes}
+            folderOf={(note) => note.folder}
+            renderItem={row}
+            renderActions={(beginFolderNaming) => (
+              <>
+                <Button size="sm" onClick={() => newPage()}>
+                  New page
+                </Button>
+                {isGm && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    title="Only you can see it, until you reveal it"
+                    onClick={() => newPage(undefined, true)}
+                  >
+                    New GM page
+                  </Button>
+                )}
+                <Button size="sm" variant="ghost" onClick={beginFolderNaming}>
+                  New folder
+                </Button>
+              </>
+            )}
+            folderMenuItems={(folder, { open, toggle, rename }) => [
+              {
+                label: open ? "Collapse folder" : "Expand folder",
+                onSelect: toggle,
+              },
+              "divider",
+              {
+                label: "New page here",
+                Icon: IconNotes,
+                onSelect: () => newPage(folder.id),
+              },
+              ...(isGm
+                ? [
+                    {
+                      label: "New GM page here",
+                      Icon: IconSecret,
+                      onSelect: () => newPage(folder.id, true),
+                    },
+                  ]
+                : []),
+              { label: "Rename folder", Icon: IconRename, onSelect: rename },
+              {
+                label: "Delete folder",
+                Icon: IconDelete,
+                danger: true,
+                onSelect: () => deleteNoteFolder(campaign, folder.id),
+              },
+            ]}
+            onCreateFolder={(name) => createNoteFolder(campaign, name)}
+            onRenameFolder={(id, name) => renameNoteFolder(campaign, id, name)}
+            emptyContent={!notes.length ? <p className="empty-inline">No pages yet.</p> : null}
+          />
         )}
-        folderMenuItems={(folder, { open, toggle, rename }) => [
-          {
-            label: open ? "Collapse folder" : "Expand folder",
-            onSelect: toggle,
-          },
-          "divider",
-          {
-            label: "New page here",
-            Icon: IconNotes,
-            onSelect: () => newPage(folder.id),
-          },
-          ...(isGm
-            ? [
-                {
-                  label: "New GM page here",
-                  Icon: IconSecret,
-                  onSelect: () => newPage(folder.id, true),
-                },
-              ]
-            : []),
-          { label: "Rename folder", Icon: IconRename, onSelect: rename },
-          {
-            label: "Delete folder",
-            Icon: IconDelete,
-            danger: true,
-            onSelect: () => deleteNoteFolder(campaign, folder.id),
-          },
-        ]}
-        onCreateFolder={(name) => createNoteFolder(campaign, name)}
-        onRenameFolder={(id, name) => renameNoteFolder(campaign, id, name)}
-        emptyContent={!notes.length ? <p className="empty-inline">No pages yet.</p> : null}
-      />
+      </div>
       {menu && <ContextMenu {...menu} onClose={() => setMenu(null)} />}
     </>
   );
@@ -266,10 +344,12 @@ function NotePage({
   campaign,
   note,
   notes,
+  active,
 }: {
   campaign: Campaign;
   note: NoteView;
   notes: NoteView[];
+  active: boolean;
 }) {
   const linkedFrom = backlinks(campaign, `note:${note.id}`);
   const titleRef = useRef<HTMLInputElement>(null);
@@ -315,7 +395,7 @@ function NotePage({
             }
           }}
         />
-        <NoteEditor key={note.id} campaign={campaign} noteId={note.id} />
+        <NoteEditor key={note.id} campaign={campaign} noteId={note.id} active={active} />
         {linkedFrom.length > 0 && (
           <section className="note-backlinks" aria-label="Linked from">
             <h3 className="eyebrow">Linked from</h3>

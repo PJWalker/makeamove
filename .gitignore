@@ -36,3 +36,6 @@ dist-ssr
 # Coverage
 /coverage/
 /reference/
+
+# Vitest browser mode failure screenshots
+/tests/__screenshots__/

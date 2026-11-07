@@ -4,7 +4,9 @@ import { newId } from "../../lib/ids";
 import type { Campaign } from "../../campaign/campaign";
 import { device } from "../../platform/device";
 import { IndexeddbPersistence } from "y-indexeddb";
-import { noteDbName, noteGuid } from "./noteDoc";
+import { yXmlFragmentToProsemirrorJSON } from "@tiptap/y-tiptap";
+import { NoteDoc, noteDbName, noteGuid } from "./noteDoc";
+import { LINK_NODE } from "./links";
 import { vaultNoteGuid } from "./vault";
 
 /*
@@ -151,6 +153,90 @@ export function noteSubdoc(campaign: Campaign, id: string): Y.Doc | null {
     at.m.set("doc", doc);
   }
   return doc;
+}
+
+export interface NoteTextMatch {
+  from: number;
+  to: number;
+  snippet: string;
+}
+
+type TextNode = {
+  type?: string;
+  text?: string;
+  attrs?: Record<string, unknown>;
+  content?: TextNode[];
+};
+const TEXT_BLOCKS = new Set(["paragraph", "heading", "codeBlock"]);
+
+/** Search a page's rich text and return editor positions for every occurrence. */
+export async function searchNote(campaign: Campaign, id: string, query: string) {
+  const sub = noteSubdoc(campaign, id);
+  if (!sub || !query) return [] as NoteTextMatch[];
+  const searchDoc = sub.isLoaded ? null : new Y.Doc({ guid: sub.guid });
+  const page = searchDoc ? await NoteDoc.open(searchDoc) : null;
+  try {
+    if (searchDoc) Y.applyUpdate(searchDoc, Y.encodeStateAsUpdate(sub));
+    const root = yXmlFragmentToProsemirrorJSON(
+      (searchDoc ?? sub).getXmlFragment("body"),
+    ) as TextNode;
+    let text = "";
+    const positions: number[] = [];
+    let textBlocks = 0;
+    const append = (value: string, position: number) => {
+      text += value;
+      for (let offset = 0; offset < value.length; offset++) positions.push(position + offset);
+    };
+    const walk = (node: TextNode, position: number): number => {
+      if (node.type === "text") {
+        append(node.text ?? "", position);
+        return node.text?.length ?? 0;
+      }
+      if (node.type === LINK_NODE) {
+        const label = node.attrs?.text || node.attrs?.label || node.attrs?.id;
+        if (typeof label === "string" && label) append(`@${label}`, position);
+        return 1;
+      }
+      if (node.type === "doc") {
+        let next = position;
+        for (const child of node.content ?? []) next += walk(child, next);
+        return next - position;
+      }
+      if (node.type && TEXT_BLOCKS.has(node.type)) {
+        if (textBlocks++) {
+          text += "\n";
+          positions.push(-1);
+        }
+      }
+      const children = node.content ?? [];
+      if (!children.length) return 1;
+      let next = position + 1;
+      for (const child of children) next += walk(child, next);
+      return next - position + 1;
+    };
+    walk(root, 0);
+
+    const normalized = query.toLowerCase();
+    const matches: NoteTextMatch[] = [];
+    let offset = 0;
+    while ((offset = text.toLowerCase().indexOf(normalized, offset)) !== -1) {
+      const from = positions[offset];
+      const last = positions[offset + query.length - 1];
+      if (from !== undefined && from >= 0 && last !== undefined && last >= 0) {
+        const start = Math.max(0, offset - 42);
+        const end = Math.min(text.length, offset + query.length + 42);
+        matches.push({
+          from,
+          to: last + 1,
+          snippet: `${start ? "…" : ""}${text.slice(start, end).replace(/\s+/g, " ")}${end < text.length ? "…" : ""}`,
+        });
+      }
+      offset += Math.max(1, query.length);
+    }
+    return matches;
+  } finally {
+    page?.destroy();
+  }
 }
 
 export function renameNote(campaign: Campaign, id: string, title: string) {

@@ -9,9 +9,14 @@ import {
   raise,
   validBoost,
   previewChoices,
-} from "../creation";
-import { characterView, createCharacter, derive, actionsFor } from "../store";
-import { dnd55e as dnd } from "../../../systems/dnd55e";
+} from "../../features/characters/creation";
+import {
+  characterView,
+  createCharacter,
+  derive,
+  actionsFor,
+} from "../../features/characters/store";
+import { dnd55e as dnd } from "../dnd55e";
 
 describe("guided creation", () => {
   const creation = dnd.creation!;

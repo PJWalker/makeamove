@@ -1,7 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./browser-test";
 import { createCampaign } from "./e2e-helpers";
-
-test.use({ viewport: { width: 1280, height: 800 } });
 
 test("a GM can add and rename a scene, and toggle its sidebar", async ({ page }) => {
   await createCampaign(page);

@@ -156,7 +156,7 @@ export default function SceneCanvas({
   useEffect(() => {
     renderer.init(hostRef.current!).then(() => setReady(true));
     return () => renderer.destroy();
-  }, [renderer, ready]);
+  }, [renderer]);
 
   // Keep linked tokens' stats current as characters change.
   useEffect(() => {
@@ -428,7 +428,12 @@ export default function SceneCanvas({
   }, [controller]);
 
   // Text: typed in a box where it goes on the map.
-  const [textEdit, setTextEdit] = useState<{ at: Point; screen: Point; id?: string; text?: string } | null>(null);
+  const [textEdit, setTextEdit] = useState<{
+    at: Point;
+    screen: Point;
+    id?: string;
+    text?: string;
+  } | null>(null);
   const onTextRequest = useEffectEvent((req: NonNullable<typeof textEdit>) => {
     setTextEdit(req);
   });
@@ -765,11 +770,7 @@ export default function SceneCanvas({
             onTabChange={setTokenTab}
             onClose={() => setTokenOptions(null)}
           />
-          <SceneSettingsDialog
-            campaign={campaign}
-            sceneId={sceneId!}
-            scene={controller.scene}
-          />
+          <SceneSettingsDialog campaign={campaign} sceneId={sceneId!} scene={controller.scene} />
         </>
       )}
     </>
@@ -963,11 +964,7 @@ function TokenOptionsDialog({
         </div>
         <label className="field">
           Size
-          <select
-            className="input"
-            value={size}
-            onChange={(e) => setSize(e.currentTarget.value)}
-          >
+          <select className="input" value={size} onChange={(e) => setSize(e.currentTarget.value)}>
             {!size && <option value="">As drawn</option>}
             {system.sizes.map((z) => (
               <option key={z.id} value={z.id}>

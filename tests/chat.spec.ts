@@ -1,7 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./browser-test";
 import { createCampaign, openCharacters } from "./e2e-helpers";
-
-test.use({ viewport: { width: 1280, height: 800 } });
 
 test("a player can send a chat message", async ({ page }) => {
   await createCampaign(page);

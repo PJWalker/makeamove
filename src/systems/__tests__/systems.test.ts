@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
+import "fake-indexeddb/auto";
 import { dungeonWorld as dw } from "../dungeon-world";
-import { checkSystem, defineSystem, listSystems } from "..";
+import { checkSystem, defineSystem, getSystem, listSystems, NO_SYSTEM_ID } from "..";
+import { Campaign, createCampaign } from "../../campaign/campaign";
+import { systemOf } from "../../features/characters/api";
+import { device } from "../../platform/device";
 import { resolveEffects } from "../effects";
 import { bladesInTheDark as blades } from "../blades-in-the-dark";
 import { dungeonWorld2 as dw2 } from "../dungeon-world-2";
@@ -48,6 +52,18 @@ const dice = (...values: number[]) => {
 };
 
 describe("Test system", () => {
+  it("uses No system as the default and resolves its sentinel id", () => {
+    expect(getSystem(undefined).name).toBe("No system");
+    expect(getSystem(NO_SYSTEM_ID).name).toBe("No system");
+  });
+
+  it("uses No system for campaigns without an explicit system", async () => {
+    device.value = { id: "gm", name: "Gwen" };
+    const campaign = await Campaign.open(await createCampaign("No system", "Gwen"));
+    expect(systemOf(campaign).id).toBe(NO_SYSTEM_ID);
+    campaign.destroy();
+  });
+
   it("validates the fixture without registering it for the app", () => {
     expect(checkSystem(testSystem)).toEqual([]);
     expect(listSystems()).not.toContain(testSystem);

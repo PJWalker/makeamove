@@ -1,7 +1,6 @@
-import { expect, type Locator, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "./browser-test";
 
 export async function createCampaign(page: Page, name = "The Lost Barrows", systemId?: string) {
-  await page.goto("/");
   await page.getByPlaceholder("The Lost Barrows").fill(name);
   await page.getByPlaceholder("Robin").first().fill("Tester");
   if (systemId) await page.getByLabel("System").selectOption(systemId);
@@ -12,7 +11,8 @@ export async function createCampaign(page: Page, name = "The Lost Barrows", syst
 export async function drag(page: Page, from: Locator, x: number, y: number) {
   const bounds = await from.boundingBox();
   expect(bounds).not.toBeNull();
-  await page.mouse.move(bounds!.x + bounds!.width / 2, bounds!.y + bounds!.height / 2);
+  if (!bounds) throw new Error("Cannot drag an element without a bounding box.");
+  await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
   await page.mouse.down();
   await page.mouse.move(x, y, { steps: 10 });
   await page.mouse.up();

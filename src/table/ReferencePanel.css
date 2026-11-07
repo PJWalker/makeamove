@@ -1,16 +1,40 @@
 @layer components {
   /* Libraries */
-  .reference {
+  .reference-list {
     display: grid;
     align-content: start;
     gap: var(--space-2);
   }
-  .reference-section > summary {
-    padding: var(--space-1) 0;
-    font-weight: 600;
-    cursor: pointer;
+  .reference-detail {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .reference-search {
+    flex: none;
+    margin: var(--space-2) var(--space-3) 0;
+  }
+  .reference-entry {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    align-content: start;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4) var(--space-5);
+  }
+  .reference-entry h2 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--text-title);
   }
   .reference-text {
     padding-bottom: var(--space-2);
+  }
+  .search-hit {
+    background: var(--accent-soft);
+    color: var(--text);
+    outline: 1px solid color-mix(in oklab, var(--accent) 45%, transparent);
+    outline-offset: 1px;
   }
 }

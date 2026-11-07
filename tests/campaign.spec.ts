@@ -1,7 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./browser-test";
 import { createCampaign, settled } from "./e2e-helpers";
-
-test.use({ viewport: { width: 1280, height: 800 } });
 
 test("a campaign can be created, left, and reopened", async ({ page }) => {
   await createCampaign(page);
@@ -13,7 +11,7 @@ test("a campaign can be created, left, and reopened", async ({ page }) => {
 
   await page.getByRole("button", { name: "Campaign menu" }).click();
   await page.getByRole("menuitem", { name: "Back to campaigns" }).click();
-  const campaign = page.getByRole("button", { name: /^The Lost Barrows/ });
+  const campaign = page.getByRole("button", { name: /^The Lost Barrows/ }).last();
   await expect(campaign).toBeVisible();
   await expect(campaign).toContainText("No system");
   await campaign.click();
@@ -39,7 +37,8 @@ test("selected menu items fade after the menu closes", async ({ page }) => {
         const transition = start(update);
         void transition.ready.then(() => {
           for (const animation of document.getAnimations()) {
-            if (animation.animationName === "vt-exit") animation.pause();
+            if (animation instanceof CSSAnimation && animation.animationName === "vt-exit")
+              animation.pause();
           }
         });
         return transition;
@@ -118,6 +117,7 @@ test("campaign deletion is available from the right-click menu and confirms", as
 
 test("opening an invite link presents a join modal, not a lobby section", async ({ page }) => {
   await page.goto("/#join=abc.1234567890abcdef");
+  await settled(page);
 
   const invitation = page.getByRole("dialog", { name: "Join a campaign" });
   await expect(invitation).toBeVisible();

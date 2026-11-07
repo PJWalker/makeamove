@@ -19,6 +19,24 @@ import { shake, trackerTip } from "./trackerButtons";
 
 const INLINE = /(\[\[[^\]]+\]\])|\*\*([^*]+)\*\*|\*([^*\n]+)\*/g;
 
+export function SearchHighlight({ text, term }: { text: string; term: string }) {
+  if (!term) return text;
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return (
+    <>
+      {text.split(new RegExp(`(${escaped})`, "ig")).map((part, i) =>
+        part.toLowerCase() === term.toLowerCase() ? (
+          <mark key={i} className="search-hit">
+            {part}
+          </mark>
+        ) : (
+          part
+        ),
+      )}
+    </>
+  );
+}
+
 /** A button in text, live for one character. */
 function TrackerButtonView({
   campaign,
@@ -50,12 +68,14 @@ function TrackerButtonView({
   );
 }
 
-function inline(text: string, ctx: Ctx, key: string): ReactNode[] {
+function inline(text: string, ctx: Ctx, key: string, searchTerm = ""): ReactNode[] {
   const out: ReactNode[] = [];
+  const highlight = (value: string, baseKey: string) =>
+    searchTerm ? <SearchHighlight key={baseKey} text={value} term={searchTerm} /> : value;
   let last = 0;
   let n = 0;
   for (const m of text.matchAll(INLINE)) {
-    if (m.index > last) out.push(text.slice(last, m.index));
+    if (m.index > last) out.push(highlight(text.slice(last, m.index), `${key}.${n++}`));
     const k = `${key}.${n++}`;
     if (m[1]) {
       const b = parseTrackerButton(m[1]);
@@ -70,11 +90,11 @@ function inline(text: string, ctx: Ctx, key: string): ReactNode[] {
           <TrackerButtonView key={k} campaign={ctx.campaign} characterId={ctx.characterId} b={b} />
         ),
       );
-    } else if (m[2]) out.push(<strong key={k}>{inline(m[2], ctx, k)}</strong>);
-    else if (m[3]) out.push(<em key={k}>{inline(m[3], ctx, k)}</em>);
+    } else if (m[2]) out.push(<strong key={k}>{inline(m[2], ctx, k, searchTerm)}</strong>);
+    else if (m[3]) out.push(<em key={k}>{inline(m[3], ctx, k, searchTerm)}</em>);
     last = m.index + m[0].length;
   }
-  if (last < text.length) out.push(text.slice(last));
+  if (last < text.length) out.push(highlight(text.slice(last), `${key}.${n++}`));
   return out;
 }
 
@@ -89,12 +109,14 @@ export function FormattedText({
   text,
   characterId,
   className = "move-text",
+  searchTerm = "",
 }: {
   campaign: Campaign;
   text: string;
   /** Whose numbers its buttons change: null when no one is chosen; leave out to show buttons as labels. */
   characterId?: string | null | undefined;
   className?: string;
+  searchTerm?: string;
 }) {
   const ctx: Ctx = { campaign, characterId };
   const blocks = text
@@ -119,19 +141,21 @@ export function FormattedText({
         return runs.map((run, r) =>
           run.heading ? (
             <h4 key={`${i}.${r}`} className="formatted-heading">
-              {inline(run.lines[0]!, ctx, `${i}.${r}`)}
+              {inline(run.lines[0]!, ctx, `${i}.${r}`, searchTerm)}
             </h4>
           ) : run.list ? (
             <ul key={`${i}.${r}`}>
               {run.lines.map((l, j) => (
-                <li key={j}>{inline(l.trim().replace(/^[-*•]\s+/, ""), ctx, `${i}.${r}.${j}`)}</li>
+                <li key={j}>
+                  {inline(l.trim().replace(/^[-*•]\s+/, ""), ctx, `${i}.${r}.${j}`, searchTerm)}
+                </li>
               ))}
             </ul>
           ) : (
             <p key={`${i}.${r}`}>
               {run.lines.flatMap((l, j) => [
                 ...(j ? [<br key={`br${j}`} />] : []),
-                ...inline(l, ctx, `${i}.${r}.${j}`),
+                ...inline(l, ctx, `${i}.${r}.${j}`, searchTerm),
               ])}
             </p>
           ),

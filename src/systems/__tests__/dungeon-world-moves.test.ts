@@ -1,9 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { dungeonWorld as dw } from "../../../systems/dungeon-world";
-import { derive } from "../store";
-import type { CharacterView } from "../types";
-import { canPayMove, performMove, planMove, resolveDifficulty } from "../moves";
-import { parse } from "../../dice/notation";
+import { dungeonWorld as dw } from "../dungeon-world";
+import { derive } from "../../features/characters/store";
+import type { CharacterView } from "../../features/characters/types";
+import {
+  canPayMove,
+  performMove,
+  planMove,
+  resolveDifficulty,
+} from "../../features/characters/moves";
+import { parse } from "../../features/dice/notation";
 
 const char = (over: Partial<CharacterView> = {}): CharacterView => ({
   id: "c1",
@@ -78,7 +83,11 @@ describe("planMove", () => {
         );
         return count > 0 ? `${count}d6kh1` : "2d6kl1";
       },
-      result: (_total: number, _natural: number[], rolled?: import("../../dice/notation").Roll) => {
+      result: (
+        _total: number,
+        _natural: number[],
+        rolled?: import("../../features/dice/notation").Roll,
+      ) => {
         const first = rolled?.terms[0];
         return first?.kind === "dice" && first.dice.filter((die) => die.value === 6).length > 1
           ? "strong"
@@ -201,7 +210,7 @@ describe("performMove", () => {
       result: (
         total: number,
         _natural: number[],
-        _roll?: import("../../dice/notation").Roll,
+        _roll?: import("../../features/dice/notation").Roll,
         context?: { action: { id: string }; difficulty?: number },
       ) => {
         seen = {

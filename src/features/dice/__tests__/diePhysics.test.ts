@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CALM_AFTER, DiceFlight, PHYSICS_STEP, simulateDice } from "../../../table/diePhysics";
+import { DiceFlight, simulateDice } from "../../../table/diePhysics";
 
 const cube = {
   vertices: [
@@ -39,30 +39,55 @@ describe("natural dice flight", () => {
   });
 
   it("cannot escape after capture even with a large impulse", () => {
-    const flight = new DiceFlight(tray, [{ hull: cube, seed: "wall-test" }]);
-    const die = flight.dice[0]!;
-    for (let step = 0; step < 240 && !die.captured; step++) flight.step();
-    expect(die.captured).toBe(true);
-    die.body.velocity.set(400, 400, 10);
+    const flight = new DiceFlight(tray, [
+      {
+        hull: cube,
+        seed: "wall-test",
+        state: {
+          position: [4, -3, 0.65],
+          quaternion: { x: 0, y: 0, z: 0, w: 1 },
+          velocity: [400, 400, 10],
+          angularVelocity: [0, 0, 0],
+        },
+      },
+    ]);
     for (let steps = 0; steps < 120; steps++) {
       flight.step();
-      expect(die.body.position.x).toBeGreaterThanOrEqual(tray.left);
-      expect(die.body.position.x).toBeLessThanOrEqual(tray.right);
-      expect(-die.body.position.y).toBeGreaterThanOrEqual(tray.top);
-      expect(-die.body.position.y).toBeLessThanOrEqual(tray.bottom);
-      expect(die.captured).toBe(true);
+      const pose = flight.poses()[0]!;
+      expect(pose.x).toBeGreaterThanOrEqual(tray.left);
+      expect(pose.x).toBeLessThanOrEqual(tray.right);
+      expect(pose.y).toBeGreaterThanOrEqual(tray.top);
+      expect(pose.y).toBeLessThanOrEqual(tray.bottom);
+      expect(pose.captured).toBe(true);
     }
   });
 
-  it("calms unsettled dice using damping after a while, not a target pose", () => {
-    const flight = new DiceFlight(tray, [{ hull: cube, seed: "damping-test" }]);
-    const { body } = flight.dice[0]!;
-    const calm = Math.round(CALM_AFTER / PHYSICS_STEP);
-    for (let step = 0; step < calm; step++) flight.step();
-    expect(body.linearDamping).toBeLessThan(0.5);
-    flight.step();
-    expect(body.linearDamping).toBe(0.95);
-    expect(body.angularDamping).toBe(0.98);
+  it("settles a moving die into a stable resting pose", () => {
+    const flight = new DiceFlight(
+      tray,
+      [
+        {
+          hull: cube,
+          seed: "settling-test",
+          state: {
+            position: [2, -3, 0.65],
+            quaternion: { x: 0, y: 0, z: 0, w: 1 },
+            velocity: [5, 0, 0],
+            angularVelocity: [0, 0, 5],
+          },
+        },
+      ],
+      0.1,
+    );
+    let settled = false;
+    for (let step = 0; step < 1200 && !settled; step++) settled = flight.step();
+
+    expect(settled).toBe(true);
+    const restingPose = flight.poses()[0]!;
+    expect(restingPose.captured).toBe(true);
+    expect(restingPose.z).toBeCloseTo(0.65, 2);
+    for (let step = 0; step < 60; step++) flight.step();
+    expect(flight.poses()[0]).toEqual(restingPose);
   });
 
   it("uses the client tray bounds without stretching the dice", () => {
@@ -80,27 +105,33 @@ describe("natural dice flight", () => {
 
   it("transfers momentum between dice in the same world", () => {
     const flight = new DiceFlight(tray, [
-      { hull: cube, seed: "collision-a" },
-      { hull: cube, seed: "collision-b" },
+      {
+        hull: cube,
+        seed: "collision-a",
+        state: {
+          position: [2, -3, 0.65],
+          quaternion: { x: 0, y: 0, z: 0, w: 1 },
+          velocity: [8, 0, 0],
+          angularVelocity: [0, 0, 0],
+        },
+      },
+      {
+        hull: cube,
+        seed: "collision-b",
+        state: {
+          position: [4, -3, 0.65],
+          quaternion: { x: 0, y: 0, z: 0, w: 1 },
+          velocity: [0, 0, 0],
+          angularVelocity: [0, 0, 0],
+        },
+      },
     ]);
-    flight.step();
-    const first = flight.dice[0]!;
-    const second = flight.dice[1]!;
-    for (const [index, die] of flight.dice.entries()) {
-      die.captured = true;
-      die.body.collisionFilterMask = 3;
-      die.body.position.set(2 + index * 2, -3, 0.65);
-      die.body.quaternion.set(0, 0, 0, 1);
-      die.body.velocity.set(index === 0 ? 8 : 0, 0, 0);
-      die.body.angularVelocity.set(0, 0, 0);
-    }
-    let transferredSpeed = 0;
+    let impact = 0;
     for (let step = 0; step < 40; step++) {
       flight.step();
-      transferredSpeed = Math.max(transferredSpeed, second.body.velocity.x);
+      impact = Math.max(impact, flight.poses()[1]!.impact ?? 0);
     }
-    expect(transferredSpeed).toBeGreaterThan(0.5);
-    expect(first.body.velocity.x).toBeLessThan(6);
+    expect(impact).toBeGreaterThan(0.5);
   });
 
   it("waits for delayed dice and settles the whole roll together", () => {

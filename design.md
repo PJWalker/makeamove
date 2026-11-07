@@ -1,494 +1,385 @@
-# Make a Move \- Tabletop VTT Design Doc
-
-## Overview
+Contributor guide · architecture review · updated Nov 7
 
-Local-first, peer-to-peer virtual tabletop that runs as a PWA. Every participant holds a full copy of the campaign, works offline, and merges edits with peers when connected.
+# How Make a Move is built
 
-A generic core, with plugins for specific game systems. The built-in systems include Dungeon World, Dungeon World 2, D\&D 5.5E, Blades in the Dark, and Daggerheart; Triangle Agency, PF2e, and other systems remain planned.
+Make a Move is a virtual tabletop with no game server. Every player's browser runs the whole app against its own copy of the campaign, stored locally and merged with the other players over peer-to-peer connections. This page explains the parts, why they were chosen, what those choices cost, where the code has drifted from its own rules, and what is still to be built.
 
-## Goals
+**\~57k** lines of TypeScript, TSX and CSS in `src/`
 
-- Infinite-canvas scenes with maps, tokens and freehand drawing, editable by everyone at once.
-- Character sheets, moves, inventories, and items whose effects change stats or grant moves.
-- Characters come as PCs (class, moves) and GM-made NPCs (HP and system-defined fields). They live in a two-pane panel with shared folders, and selecting a character's token opens its sheet.
-- Dice roller, with every roll and triggered move posted to a shared chat log.
-- Session and world-building notes
-- A game-system plugin API used by the built-in Dungeon World, Dungeon World 2, D\&D 5.5e, and Blades in the Dark systems.
-- Works with zero servers we operate beyond a tiny, replaceable signalling relay.
+**0** servers holding game state
 
-## Non-goals
+**5** game systems built in: Dungeon World, Dungeon World 2, D&D 5.5e, Blades in the Dark, Daggerheart
 
-- Secure secrecy for shared campaign data. GM-only notes use a separate vault document; other campaign data is shared with peers and may be inspected by their clients.
+**392** unit tests in 55 files, all passing (about 4.5 s)
 
-## UI Design
+[Runtime](#runtime) [Data and documents](#documents) [Source modules](#modules) [How an edit travels](#flow) [Key decisions](#decisions) [Conventions](#conventions) [Testing and tooling](#testing) [Improvement opportunities](#improvements) [Product rules](#product) [Roadmap and TODO](#roadmap)
 
-- Typography: Cabin throughout, 1rem body text, compact headings
-- Neutral surfaces, thin separators, and subtle gradient
-- Flat controls; reserve the gold accent for primary and selected actions
-- Edge-docked elements sit flush; icon strips end in full diagonals
-- Game-icons & Material Symbols as icon sources
-- Context menus expose every relevant action (verb) available for their object, including actions otherwise available only through row buttons, hover controls, or keyboard shortcuts. Reuse the same action handlers and respect the same permission and availability rules.
+## Changes since the first review
 
-## Architecture
+- **System rules moved out of core.** `features/characters/api.ts` went from 1,300 lines to a 54-line barrel over focused modules (`moves`, `inventory`, `templates`, `relationships`, `trackers`, `sessionMoves`, …). Core code under `features/`, `table/`, `scene/`, `app/` and `campaign/` no longer names any system.
+- **System UI goes through `systems/extensions.ts`.** A `SystemExtension` supplies sheets, a campaign sheet (Blades' crew), move forms, advancement actions, relationship extras, item-use controls and item menu entries. `table/sheets.tsx` asks `extensionOf(system)` and falls back to the declarative sheet; it no longer maps system ids.
+- **Large modules split.** `scene/controller.ts` is 931 lines with one gesture module per tool in `scene/gestures/`; `scene/renderer.ts` is 315 lines over per-layer modules in `scene/render/`; `ChatPanel.tsx` is 91 lines over `ChatLog`, `ChatMessage`, `ChatComposer`, `ChatPopups` and `ChatExtras`; `styles/components.css` is 73 lines, with styles in CSS files beside their components.
+- **Signals replaced by explicit stores.** `@preact/signals-react` and its Babel transform are gone. `lib/store.ts` provides observable values read in React through `ui/useValue.ts` (`useSyncExternalStore`) and outside React through `watch`.
+- **3D dice.** `table/diceRenderer.ts` (three.js, WebGPU with a WebGL 2 fallback) and `table/diePhysics.ts` (cannon-es) draw dice thrown into the chat; landed dice sit in their message's canvas and can be picked up and shaken.
+- **CI runs every check.** `.github/workflows/ci.yml` runs lint, typecheck, Prettier, knip, unit tests with coverage and the build; `playwright.yml` runs the browser suite; `audit.yml` checks runtime dependencies weekly and on lockfile changes.
+- **Browser tests split by feature** into `tests/campaign`, `characters`, `chat`, `notes`, `panels`, `scenes` and `dungeon-world-2` specs, with shared helpers in `tests/e2e-helpers.ts`. A Vitest browser-mode smoke test (`vitest.browser.config.ts`, `tests/browser-smoke.spec.ts`) is in progress.
+- **System tests moved beside systems.** Creation, relationships, trackers, homebrew, library and moves tests now sit in `systems/__tests__/` under the system they exercise, alongside new per-system suites.
+- **Reference materials untracked.** `reference/` is ignored and removed from the index.
+- **Test output untracked.** `.playwright-mcp/` is now ignored and removed from the index.
+- **In the working tree, not yet committed:** full-text search across note pages (`searchNote` in `features/notes/api.ts`, results in `NotesPanel.tsx`), and invite links that no longer carry the data epoch (`#join=<id>.<key>`).
 
-Each browser runs the whole app against a local Yjs CRDT store persisted to IndexedDB; peers exchange Yjs updates over a WebRTC mesh, and large binaries (map images) travel separately as content-addressed blobs. No server holds game state.
+## The runtime: browsers, not servers {#runtime}
 
-| Layer | Choice | Why |
-| :---- | :---- | :---- |
-| Language / build | TypeScript, Vite, PWA (service worker via vite-plugin-pwa) | Installable, offline after first load |
-| UI framework | React + React Aria Components (TSX) | React Aria supplies accessible control behavior; existing CSS supplies the visual design. Components subscribe to observable stores explicitly, while Yjs observers keep collaborative data reactive. React replaced Preact because React Aria's collection renderer and synthetic keyboard events are not compatible with Preact (decided Nov 2). |
-| Canvas | PixiJS v8 (WebGL, WebGPU when available) \+ a custom camera | Handles large maps and hundreds of tokens at 60 fps; tldraw needs a commercial licence for production |
-| Freehand strokes | perfect-freehand | Pressure-aware, tiny, renders to polygons |
-| CRDT | Yjs (+ y-indexeddb for persistence, awareness protocol for presence) | Mature, fast, rich types (Map, Array, Text), subdocument support |
-| Rich text | TipTap 3 (ProseMirror) bound to Yjs with @tiptap/y-tiptap | Collaborative editing for notes and sheet text; the same editor (without Yjs) is the chat box |
-| Peer transport | WebRTC data channels; signalling via Trystero (public Nostr/MQTT relays) | Zero-ops by default, swappable |
-| Blob store | Origin Private File System (OPFS), keyed by SHA-256 | Dedupes; fetched from any peer that has it |
+The app is a static Progressive Web App. Once its files have loaded, it works offline. Game state never goes to a server. Each device keeps its campaigns in IndexedDB and its images in the Origin Private File System (OPFS). When players are online at the same time, their devices find each other through public signalling relays and then talk directly over WebRTC data channels.
 
-## Documents and sync topology
+The invite link carries the campaign id and a room key in the URL fragment, so the key never reaches a web server. Trystero uses the key as its room password, so relays only pass encrypted handshakes.
 
-- One *campaign root* Y.Doc: campaign settings and defaults, the member list (each member's name, colour, role, chosen character and hotbars), the scene index, the note index (titles, folders, outgoing links), character folders, entity graphic overrides, and the characters themselves (see Data model).
-- One subdocument per scene, per note page and per chat-log chunk, each in its own IndexedDB database. Peers load them lazily, so a big campaign does not have to sit in memory.
-- A separate *GM vault* Y.Doc that only GM devices hold, synced over its own Trystero room whose key is kept in the vault, never in the campaign. It holds GM-only note pages. This gives real (if casual) secrecy almost for free; everything else is "hidden in the UI" only.
-- Presence (cursors, pings, rulers, laser trails, the tokens a player is targeting) goes over the Yjs awareness channel and is never persisted.
+A consequence to keep in mind: someone must be online to share the campaign. A player who joins from an invite sees "Waiting for someone from this campaign to come online…" until a peer that already holds the campaign connects (`src/app/App.tsx`).
 
-## Source ownership
+## Data lives in Yjs documents {#documents}
 
-- `app` owns startup, routing, top-level composition, panel/window orchestration, and command composition.
-- `campaign` owns the root document lifecycle, membership, invites, and campaign indexes. Feature modules own the behavior of their records.
-- `features` own their domain models, operations, persistence adapters, and user-facing views where those belong to one feature.
-- `scene` owns scene subdocuments, geometry, interactions, rendering, and scene views; the campaign owns only the scene index.
-- `systems` define game rules and system-specific content. They depend on shared model contracts, not feature storage implementations or table composition.
-- `platform` owns device identity, persistence names, blobs, and peer synchronization. `core` contains framework-neutral values and utilities; `ui` contains shared presentation and framework integration.
-- Imports flow toward domain contracts and infrastructure. App composition may depend on features; features and systems do not import app or table composition.
+All shared state is a set of [Yjs](https://docs.yjs.dev/) CRDT documents. A CRDT lets two people edit the same data while offline and merge later without a conflict. The campaign is split into one root document plus many subdocuments that load only when needed, so a long campaign doesn't have to sit in memory.
 
-## Joining and identity
+- **Campaign root:** settings and defaults, members (name, colour, role, chosen character, hotbars), the scene index, the note index (titles, folders, outgoing links), character folders, entity graphic overrides, and the characters.
+- **Subdocuments:** one per scene, per note page and per chat chunk (500 messages), each in its own IndexedDB database.
+- **GM vault:** a separate document only GM devices hold, synced over its own room whose key lives in the vault. It holds GM-only note pages.
+- **Presence:** cursors, pings, rulers, laser trails and targets go over Yjs awareness and are never stored.
 
-- The GM creates a campaign, which mints a random campaign ID and a shared room key. The invite link is `https://app/#join=v2.<id>.<key>`; the key stays in the URL fragment, so it never reaches any server.
-- Invite links include the current data epoch. A new epoch intentionally invalidates old invites and uses new IndexedDB and blob-cache namespaces; there is no migration before the first release. Device identity and user-level UI preferences use separate keys and are preserved.
-- Signalling and all peer traffic are encrypted with that room key, so public relays see only ciphertext.
+Every document has its own IndexedDB database, named by `dataName()` in `src/platform/dataEpoch.ts`. Changing `DATA_EPOCH` (currently 2) moves every device onto fresh database names.
 
-## Assets
+Core code owns the generic shape of a record (a character's name, owner and inventory). Each game system owns sub-maps it alone writes, such as `scores`, `data` and `resources`. Because these are separate Yjs maps, two players editing different fields never overwrite each other. Values that can be calculated, like maximum HP after item bonuses, are never stored; every device derives them.
 
-- Dropping an image hashes it, stores it in OPFS and writes only `{hash, mime, width, height}` into the CRDT.
-- Images are re-encoded to WebP and capped (e.g. 8192 px) on import, then stored by SHA-256 in OPFS (Cache Storage where OPFS can't write).
-- Small, squarish images become tokens; anything else is placed as a map at its own size. Right-click swaps one for the other.
-- A peer that lacks a blob asks connected peers for it and receives 64 KB chunks over a dedicated data channel;
+## Source modules {#modules}
 
-## Data model
+The code is grouped by responsibility. Imports should flow downward, toward domain contracts and infrastructure: composition code may use features, but features and rules may not reach back up into composition.
 
-Every entity has a stable ULID. What a game system owns lives in sub-maps the core doesn’t touch.
+| Folder | Purpose | Files |
+| --- | --- | --- |
+| `app/` | Startup, hash routing (`#/c/<id>`), the top-level `App` shell, and the action index behind the command palette and hotbar (`app/commands`). | 9 |
+| `lobby/` | The campaign list, create and join forms, and the animated icon backdrop. | 4 |
+| `table/` | Composition for an open campaign: `Tabletop`, sidebars and floating windows, panels, sheets, dialogs, the hotbar, palette, drag-and-drop between panels, and the 3D dice tray. Each component has its own CSS file. | 115 |
+| `features/` | Domain models and operations: characters, chat, notes, combat, dice notation and pools, library, homebrew. Mostly plain functions over a `Campaign` and its Yjs maps. | 43 |
+| `scene/` | The canvas engine: `SceneDoc` (scene subdocument and undo), `SceneController` with a gesture module per tool (`gestures/`), `SceneRenderer` with a module per layer (`render/`), grid, geometry, measuring, vision, lighting, presence, and an image worker. | 48 |
+| `systems/` | Game-system plugins. `types.ts` is the rules contract, `extensions.ts` the UI contract; each system folder exports a `GameSystem` and, where needed, a `SystemExtension` with its components. | 48 |
+| `campaign/` | The `Campaign` class: root document lifecycle, members and removal, scene index and folders, plus the device-local campaign registry and the peer connection. | 6 |
+| `sync/` | Networking: `SyncSession` (Yjs sync protocol over many docs), the `Transport` interface and its Trystero implementation, peer-to-peer blob exchange, and invite links. | 5 |
+| `platform/` | Browser services: device identity, safe `localStorage`, OPFS blob store, database naming. | 4 |
+| `ui/` | Shared presentation: buttons, lists, pickers, tooltips, icons, popups, morphing, view transitions, `useY` (React over Yjs) and `useValue` (React over stores). | 49 |
+| `lib/`, `core/` | Framework-neutral utilities: ids, hybrid logical clock, colour maths, list and set helpers, observable stores, and the shared `DataValue` type. | 7 |
+| `styles/` | Global CSS only: design tokens, primitives, base, transitions. | 5 |
 
-| Entity | Lives in | Key fields |
-| :---- | :---- | :---- |
-| Campaign | root doc | name, system id, members {name, colour, role, character, hotbars per character}, active scene, defaults (grid type, token style), entity graphics keyed by entity kind and id, last announced scene, session count |
-| Entity graphic | root doc `entityGraphics` map | entity kind and id -> built-in icon name or blob reference; one shared graphic for lists, windows, sidebars and map tokens |
-| Scene | own subdoc | name, visibility, canvas colour (or Auto), grid {type: none/square/hex, size, offset, unit per cell, unit name, diagonal rule}, elements (Y.Map by id) |
-| Scene element | scene subdoc | id, type (map, token, drawing, shape, text, wall, light, area), layer (map, under, token, over), centre, size, rotation, z (fractional index), locked, createdBy; tokens add name, graphic, entity reference, colour, style, characterId, hideName, hideBars |
-| Character | root doc `characters` map | kind (pc or npc), name, owner, folder, class, level, token style; the system's `scores`, `data`, `resources`, `conditions`, `modifiers` and NPC `fields`; `learned` actions; `inventory`; rich text `text:*`; `template` or `base` |
-| Item definition | the game system (listed in the Libraries) | id, name, description, weight, uses, tags, effects, active (carried, equipped, always), icon |
-| Item instance | the character's `inventory` map | id, defId, name, description, weight, tags, uses left, equippable, equipped, effects, default icon, order (fractional index) |
-| Action definition | the game system | id, name, category, class, trigger, text, target spec {prompt, min, max, range}, steps (a check: stat or ask, outcome text per result, follow-ups per result) |
-| Chat message | chat chunk subdoc | id, author, HLC, kind (text, roll, move, system), payload; text carries links as `@[text](kind:id)`; move cards carry the roll, result, outcome, follow-ups and targets |
-| Note page | own subdoc (GM pages: the vault doc) | title, folder, order, Y.XmlFragment body; its outgoing links are kept in the note index for backlinks |
+File counts exclude tests. The remaining upward imports are listed under Improvement opportunities.
 
-## Conventions
+## How an edit travels {#flow}
 
-- *Ordering* uses fractional indices (strings) so concurrent reorders do not conflict.
-- Timestamps use a hybrid logical clock (src/lib/hlc.ts) so orderings are stable across peers.
-- *Derived values* (effective stats after item modifiers, scene colour) are computed locally and never stored, so they cannot drift.
-- *Rich text* (note pages, long sheet fields) is a Y.XmlFragment, so several people can write in it at once.
-- *Entity graphics* are campaign-level overrides keyed by entity kind and id. A graphic is either a built-in icon name or a blob reference; lists, windows, sidebar tabs and dropped map tokens resolve the same value. System and library icons are defaults, not separate user customizations.
-- *Plugin data versioning (planned):* each plugin ships migrations keyed by its own schema version; the core runs them when a newer plugin opens older data. Until the first release, data formats change freely and old test data is simply replaced.
+Moving a token shows the pattern every feature follows: change the Yjs document, and let observers update the screen, the local database and the peers. Nothing pushes changes to the UI directly.
 
-## Scenes and the infinite canvas
+Two binding styles exist side by side. The **canvas** is imperative: `SceneCanvas.tsx` opens a `SceneDoc`, creates a `SceneRenderer` and a `SceneController`, and the controller observes the doc and redraws Pixi objects itself. The **panels** are React components that read Yjs through `useY(type, read)`, which re-renders only when the derived value changes. App-level state that isn't shared (the active campaign, panel layout, open windows) lives in module-level stores from `lib/store.ts`, read with `useValue`.
 
-A scene is an unbounded 2D world rendered by PixiJS, with pan (drag / space-drag / two-finger), zoom to cursor (0.05× to 8×), and a fixed stack of layers that keeps maps under tokens under drawings.
+## Key decisions and their trade-offs {#decisions}
 
-## Layers (bottom to top)
+### Local-first state in Yjs
 
-1. *Background* — scene colour or tiled texture.
-2. *Map* — one or more placed images; usually locked after setup.
-3. *Grid* — optional square or hex overlay, snap-to-grid for tokens.
-4. *Drawing (under)* — terrain marks, spell areas.
-5. *Tokens* — characters and NPCs. Names, system stat bars, condition pips and the active-turn marker are drawn in screen space.
-6. *Drawing (over)* — annotations, arrows, text.
-7. *Vision and lighting* — light, shadow and token line-of-sight masks.
-8. *Presence* — other users’ cursors, pings, laser trails, measuring rulers and target rings (awareness only, never stored).
+Every device holds the full campaign in CRDT documents and merges with peers. This is the decision everything else follows from.
 
-## Tools
+#### Benefits
 
-Select, move, rotate and scale; pan; draw and erase; use shapes, text, the ruler and ping; or place walls and lights. Shapes include rectangles, circles, lines and cones. The GM's wall and light tools control dynamic lighting and token sight.
+- Works offline; edits merge on reconnect without conflict handling code.
+- No backend to run, pay for, or secure.
+- Rich types (maps, arrays, XML text) give collaborative rich text and per-field merging for free.
+- Undo per user via `Y.UndoManager` origins.
 
-**Performance:** viewport culling, texture mip-mapping for large maps, drawings cached to render textures once finished, and CRDT updates batched per animation frame. Drag movements are sent via awareness while dragging and committed to the CRDT on release, which keeps history small.
+#### Downsides
 
-**Scene colour:** when a scene opens, we sample its main map (downscaled to 64×64, k-means in OKLab) to pick a dominant hue, or use the GM’s override. That colour drives the UI tint (see UI section).
+- No authority: any client can write anything. Validation and permissions are advisory.
+- Schema changes need care; the project resets data with an epoch rather than migrating.
+- CRDT data is loosely typed (`Y.Map<any>`); mistakes surface at runtime, not compile time.
+- Deleted history accumulates in documents over a long campaign.
 
-**Undo** is per user via Y.UndoManager scoped to that user’s own changes, so undoing never reverts someone else’s move.
+### Peer-to-peer sync over WebRTC with Trystero
 
-- Each scene is a subdocument of the campaign root with its own IndexedDB database, loaded only while it is open. Its id is derived from the campaign and scene ids, so two peers upgrading a scene at once converge on one document.
-- The canvas renders on demand rather than every frame, so an idle table costs no GPU time. Drags preview locally and commit to the CRDT once on release, as one undo step.
-- Entity graphics can be a built-in icon or an imported image. Changing a character, item, move or library entry's graphic updates its lists, windows, sidebar tab and any linked tokens on open scenes. A character sheet has one stand-in token: click it to choose its graphic, or drag it onto the map to place a linked token. Unlinked tokens keep their own graphic.
-- A token can be tied to a character (Token options → Character).
-- Tokens snap to cell centres (even-sized tokens to intersections) and resize in whole cells; Alt places them freely. Maps keep their aspect ratio unless Shift is held.
-- The interface always takes its tint from the scene's main map (or from the canvas colour when there's no map). The canvas colour defaults to Auto, a darkened, muted version of the map's dominant colour; the GM can pick any colour instead in Scene settings or from the scene list.
-- Grid lines are drawn twice, dark then light, so they read on both dark and light maps, and fade out as cells get too small.
-- Tokens have two styles: round (image cropped to a circle on a coloured background with a border) or the image as it is, for cut-out art. Built-in icons use the round style. Double-click a token for Token options: graphic, name, style and colour. The GM sets the style for new tokens, and the grid type for new scenes, in Campaign settings.
+A thin `Transport` interface hides Trystero, so `SyncSession` runs over an in-memory network in tests.
 
-## Measuring, sizes and targets
+#### Benefits
 
-- A scene's grid has a unit per cell (5 ft by default), a unit name, and on square grids a diagonal rule: every diagonal counts as one cell, diagonals alternate one and two cells, or true distance. Hex grids count hexes; with no grid, distances are straight lines at the grid size per unit. New scenes take these from the system (`GameSystem.scene`); Scene settings change them.
-- The ruler measures cell to cell, draws between cell centres and reads out the distance ("15 ft").
-- Systems list token sizes in cells (`GameSystem.sizes`); Token options has a Size picker that resizes the token and snaps it to the grid.
-- Distances between tokens run edge to edge (`scene/measure.ts`): neighbouring cells are one cell apart, diagonally too, and a big token measures from its nearest cell. `inRange()` sorts a distance into normal range, long range or out of range.
-- Targets belong to one action at a time (see Characters, moves and items). While an action asks for them, clicking tokens targets them; each target shows as a ring with sight ticks in the player's colour, shared through presence so everyone sees what's being aimed at.
+- Zero operations: public relays only introduce peers.
+- End-to-end encryption by room key; relays see ciphertext.
+- The transport is swappable, for example for a self-hosted relay or a WebSocket server later.
 
-## Token names and bars
+#### Downsides
 
-The game system's `tokenStats(character, derived)` says what the token shows. (For example, Dungeon World gives an HP bar) Bars sit under the token and update as the sheet changes.
+- Somebody who has the data must be online for others to get it.
+- Full mesh traffic grows with the square of the player count; fine for a table of six, not for fifty.
+- Strict NATs can block connections, and there is no TURN fallback configured.
+- Public relays can change or go down outside the project's control.
 
-A token's name and stat bars are drawn in screen space, so they stay readable at any zoom. Bars straddle the token's bottom edge, 11 to 17 px tall, half again as wide as the token where that clears every other token's bars (otherwise just inside its width, never under 36 px; the numbers show from 44 px). Names are 11 to 15 px. Bars that would overlap other bars, names that would overlap other names or bars, and everything under tokens smaller than 24 px on screen show only while the token is hovered. Token options can hide a token's name or its bars for everyone.
+### Subdocuments for scenes, notes and chat
 
-**Scene switching:** each player can choose a scene independently. A GM's scene change is announced in chat with a Go there action; a group-wide pull-to-scene control is not implemented.
+`SyncSession` only syncs the documents a device has loaded, so a peer receives the scenes it opens, not every scene.
 
-## Characters, moves and items
+#### Benefits
 
-A character’s *effective* state is computed on every change: base data from the sheet, plus the effects of every active source (equipped items, conditions, class features), resolved in a fixed order. The sheet shows base and effective values side by side.
+- Memory and bandwidth scale with what is on screen.
+- Chat chunks keep a years-long log fast; HLC stamps keep message order consistent across peers.
 
-**Effect model** (shared by items, conditions and features)
+#### Downsides
 
-| Effect type | Example | Applied as |
-| :---- | :---- | :---- |
-| `modify` | Ring of Strength: STR \+1 | path, operator (add, multiply, set, min, max), value, priority |
-| `grantMove` | Holy Symbol grants *Turn Undead* | move id added to the character’s move list while active |
-| `grantTag` | Chain mail: *clumsy* | tag added; other rules can read it |
-| `rollBonus` | Fine sword: \+1 forward to Hack and Slash | move or tag selector, bonus, duration (ongoing / forward / until used) |
-| `resource` | Healing potion: 3 uses | counter on the item instance; consumed by an action |
-| `script` | anything exotic | a named function the plugin exports, called with (base, effective, ctx) |
+- A scene exists only on devices that have opened it, so data can be stranded on one laptop.
+- More moving parts: each subdocument has its own persistence, awareness and lifecycle to clean up.
+- Note search has to load every page's subdocument to read its text.
 
-Built so far: `modify`, `grantMove`, `grantTag` and `rollBonus`; item uses and the system's resources cover `resource`, and `script` is planned. Effects carry an `active` condition: `equipped`, `carried`, `always`, or a plugin predicate. The resolver applies `set` first, then `add`, then `multiply`, then `min`/`max` clamps, within each priority band, and records which source changed each value so the sheet can explain “Damage d10 \= class d6 → Fighter feature d10”.
+### Permissions enforced in the UI, secrets in a separate vault
 
-**Actions** (Dungeon World's moves) are definitions from the game system: a name, trigger, rules text and category, an optional target spec, and steps. Today the one kind of step is a *check*: the system's base roll plus a stat (or a stat or number the player picks), read out as one of the system's results with its outcome text. Using an action:
+Roles (GM, player, observer) hide and disable controls. GM-only notes go in a document that never reaches player devices.
 
-Everything an action asks before it rolls appears in one speech bubble beside the control that started it (a sheet's roll button, a hotbar slot, a move's glyph; a hotbar key counts as its slot), with a tail pointing at it. It grows out of that control and shrinks back into it, like a chat popup but faster (150 ms in, 110 ms out), since the user started it; it follows the control as sidebars slide, and sits above the hotbar when the control isn't on screen. × or Escape backs out.
+#### Benefits
 
-1. If it's aimed at someone, the bubble names the action, the actor and what to target. Clicking tokens targets them (past the maximum, the oldest drops off); each shows with its distance from the actor's token, in red when out of range. Its button, labelled with the action's name, goes on.
-2. Asks for any stat or number the check needs (Defy Danger's stat, Aid's bond), a roll mode if the system has them (5.5e: Normal, Advantage, Disadvantage) and an extra bonus, showing the formula as it will roll.
-3. Builds the roll: base roll, stat modifier, bonuses from conditions and gear, the asked-for number, then standing modifiers (Forward is spent by the roll; Ongoing stays).
-4. Rolls (see Dice) and posts a move card: the roll breakdown, the result, its outcome text, and the targets with their distances.
-5. Offers the outcome's follow-ups (Mark XP, Roll damage) as buttons on the card, never automatic changes, so the GM stays in charge of the fiction.
+- Simple and honest: shared data is explicitly not secret.
+- The vault gives real secrecy where it matters most, at little cost.
 
-In a sheet's move list each action has a gold glyph that turns into a button when hovered: a crosshair to target, a die to roll, an arrow to post its text. A character can also learn actions beyond what their system gives them: dropping a move onto them adds it to their `learned` list, and its window offers Forget.
+#### Downsides
 
-**Individuals and templates.** An NPC is either an individual (every token is that one character, sharing its record across tokens and scenes) or a template, set under On the map on its sheet. Each token placed from a template, or duplicated from one of its tokens, is a *copy*: a character of its own with `base` set to the template, which starts with only a name. Like a subclass, anything changed on the copy's sheet (HP, a stat, a field, a condition, its gear, its text) is stored on the copy and overrides the template for that token alone; everything else follows the template as it changes. Sub-maps merge key by key; conditions, gear and rich text are taken whole once the copy changes them. Copies aren't listed under Characters, but selecting a copy's token opens its sheet, under a banner naming the template with a Reset button that drops every override but the name. Deleting a template deletes its copies. A template names each copy one of three ways: numbered (Goblin 1, Goblin 2), picked from a list in the template (numbered once the list runs out), or a random adjective before the name (Scarred Goblin), avoiding names already on the scene.
+- A modified client can edit anything and read all shared data.
+- Removing a player doesn't rotate the room key, so a determined removed player can still connect.
 
-**Long text on sheets** (notes, Dungeon World's bonds, an NPC's long fields such as Moves) is rich text, edited together like a note page, with the same formatting and `@` links (see Notes).
+### Game systems as declarative plugins, with a separate UI extension
 
-**Inventories** are ordered lists of item instances on a character, shown as an Inventory section on every character sheet (player characters and NPCs) with the load it comes to. Gear and moves can be dragged onto a character (their inventory or moves section, or their row in the character list; only where you may edit them, outlined while you hover and flashing when it lands) from the Libraries, the command palette, the hotbar, a link in a note or the chat, or a pop-up's title-bar icon. An item's Add button and “Find items in the Libraries…” work too. Planned: drag between characters, and to and from the scene (an item token on the canvas). Load/weight totals come from the system.
+A system is a `GameSystem` object: stats, actions, results, items, conditions and resources as data, plus a few pure functions such as `derive` and `actionsFor`. `defineSystem()` validates cross-references at registration and throws a readable list of problems. What a system adds to the table (React components and campaign-changing actions) is a `SystemExtension`, kept apart so importing a system's rules doesn't pull in its UI.
 
-**Libraries** are a tab listing everything the game system and plugins contribute, as named collections grouped by source: the system gives its gear, moves (by category), classes and tags; a plugin adds its own with `registerLibrary()` (`src/library`). Search covers names, then tags, then text; a filter narrows to one kind. Each entry has an icon and shows its text as a tooltip beside it, and morphs into a window when clicked. Icons are bundled at build time, so systems and plugins name one from a core vocabulary (`icon` on an item or class; `ui/entryIcons.tsx`), and anything unnamed gets its kind's icon. Gear and moves can be added to the selected character, dragged onto any character, pinned to the hotbar or dropped into text as a link. Later sources: the campaign's homebrew, and monsters.
+#### Benefits
 
-**Ownership:** a character has one or more owners. Owners and the GM edit; others view (or see nothing, if hidden).
+- The core owns sheets, dice, chat, effects and targeting once; systems describe rules.
+- Pure functions are easy to unit test; each system has its own suite in `systems/__tests__`.
+- A declarative sheet layout is the fallback, so a new system needs no React (Daggerheart has no extension).
+- Core code asks for hooks, never for system ids.
 
-## Dice
+#### Downsides
 
-The roller decides the result locally with a cryptographic RNG and writes it to the chat log. Every peer sees the same recorded result; rolls currently use animated 2D cards. Results never depend on physics.
+- The contracts keep growing as each system needs a new hook (`types.ts` is 761 lines; `extensions.ts` has eight hooks).
+- Built-in sheets still reach into `table/` for parts (see below).
+- Rules text from the reference SRDs is bundled into the app; licensing must be checked per system.
 
-- **Notation:** a small parser for standard notation — `2d6+2`, `d8+d4`, `4d6kh3`, `2d20kl1` (disadvantage), `d6!` (exploding), `b` / `w` for advantage-style “best of”. Plugins can register extra syntax.
-- **Roll record:** `{formula, dice:[{sides, value, kept}], modifiers:[{label, value}], total, rollerKey, hlc}`. Each modifier keeps its label so the card can read “2d6 (4+5) \+ STR 2 \+ Ring 1 \= 12”.
-- **Future:** 3D dice are deferred; the current 2D card animation works regardless of WebGL support.
-- **Visibility:** public, or secret (the roller and the GM; a GM's secret roll is the GM's alone). Others see “Name rolled in secret.” There are no blind rolls: if a player shouldn't see a result, the GM rolls it.
-- **Quick dice bar:** d4, d6, d8, d10, d12, d20, plus a free-form box; clicking a stat or move on a sheet rolls the right formula. Clicks gather into a pool for a moment before rolling as one entry (double-click the d20 for 2d20); right-click a die to take one back out.
+### React with React Aria and stores; PixiJS and three.js outside React
 
-`src/dice/notation.ts` parses and rolls `2d6+2`, `d8+d4`, `4d6kh3` (also `k3`, `b3`), `2d20kl1` (also `w1`), `4d6dl1` / `dh`, `d6!` (capped at 50 extra dice), `d%`, and `[labels]` on any term, with unbiased `crypto.getRandomValues` dice. Roll cards show the formula, note, dice and total; incoming rolls animate unless reduced motion is enabled. Plugin syntax is not implemented.
+React Aria supplies accessible behaviour for menus, pickers and tabs; the project's own CSS supplies the look. Explicit stores replace signals, so every dependency is visible to React and to React Compiler. The canvas is drawn by PixiJS and the dice by three.js, both managed imperatively.
 
-## Chat and move log
+#### Benefits
 
-The right-hand sidebar is one chronological stream of chat, rolls and move cards, stored as append-only chunks (one subdoc per \~500 messages) so long campaigns stay fast.
+- Keyboard and screen-reader behaviour without writing it by hand.
+- Stores keep the observer model without a Babel transform or hidden subscriptions.
+- The canvas runs at 60 fps with hundreds of tokens because React doesn't re-render it.
+- Lazy loading keeps the lobby light: `Tabletop`, `SceneCanvas` (Pixi) and each panel are separate chunks.
 
-- **Message kinds:** text (markdown-lite), roll card, move card (move name, trigger, roll breakdown, outcome band highlighted, outcome text, follow-up buttons), system (“Kira joined”, “Scene changed to The Bog”), whisper (to named members; hidden in UI from others).
-- **Slash commands:** `/r 2d6+1`, `/w name text`, `/move defy-danger dex`, `/sr` for a secret roll, plus session, pin, timer and counter commands. Plugin-provided slash commands are not implemented.
-- **Scene changes:** when the GM settles on a scene (stays 1.5 s, so passing through scenes or renaming one doesn't post), the log gets “Scene changed to The Bog”, with a “Go there” button for anyone on a different scene. Players aren't moved; that waits for the GM's “pull everyone” control. The last announced scene is kept in the campaign, so a reload doesn't repeat it, and a new campaign's first scene isn't announced.
-- **Session markers:** the GM can start/end a session; the log groups by session and can export one as markdown into the notes. Earlier sessions fold into a band (“Session 2 · 34 messages”) until the reader opens them; the current session is always open.
-- **Deleting:** players can delete their own messages, and the GM anyone's (including system notices and session markers). Right-click a message (or long-press on touch) for a menu with “Delete message”.  Deleting removes the message from the shared log for everyone.
-- **Links:** the message box is a small editor (`table/ChatInput.tsx`): typing `@` or dropping something into it adds a link, sent as `@[text](kind:id)` and shown in the message as a link chip that behaves like one in a note. Dropping something anywhere else on the chat sends a link to it straight away. Notifications show the link's name.
-- **Popups:** Whenever a message arrives while the Chat panel isn't visible, it pops out beside the tab as a speech bubble, its tail pointing at the tab.
-  - This includes the user's own messages (eg a move they make)
-  - The whole message is shown, including any outcomes or follow up buttons
-  - It grows out of the tab, then shrinks back into it after 6 s; the timer waits while the pointer is on message.
-  - Clicking the message (anywhere but its buttons and links) opens the chat.
-  - If multiple messages come in, they form a 3D stack, the newest in front and older ones receding behind it.
-  - Interacting with the stack, or opening the chat, counts as reading it and clears the tab's unread badge;
-  - When the tab isn't on screen (the panel is floating or closed, or autohide has slid it away) the stack sits at the bottom center of the screen.
-  - When the page is hidden (a background tab or a minimised window), other people's messages also send a system notification. A visible but unfocused window gets popups only
+#### Downsides
 
-The log is a `chat` Y.Array of chunk subdocuments on the campaign root, 500 messages each, each persisted in its own IndexedDB database and synced by the session as soon as it loads; the newest two load on open, and older ones load as the reader scrolls up into them (no button). The panel renders only a window of rows (100 to start, at most 250), sliding it as the reader scrolls and keeping whatever is on screen in place as rows come and go; spacers stand in for the rest, at measured heights or the average (500 a chunk for those not loaded yet), so the scrollbar spans the whole history, and dragging it renders wherever it lands, loading chunks to get there. Messages are memoised, and move cards share one subscription to the characters, so a log of thousands costs about what a short one does (`table/ChatPanel.tsx`, `logRows` in `chat/sessions.ts`). Messages are immutable plain objects with a timestamp.
+- Three reactivity systems (React state, stores, Yjs observers) to understand.
+- Module-level stores are hidden global state; they make tests and multi-campaign scenarios harder.
+- Two rendering engines (Pixi and three.js) add bundle weight and GPU contexts.
 
-**Pinned messages:** a square-cornered, solid scene-tinted panel floats over the top of the chat log with the window shadow and 12px insets. Text uses Fraunces at 1rem and wraps; emphasized text is gold. Timers, counters and GM unpin controls keep their behavior. The panel scrolls when it reaches 35vh or 320px.
+### Content-addressed blobs
 
- **Commands**: `/r` (public), `/sr` (secret: you and the GM), `/w name` or `/w gm`, `/me`, `/session start|end` (GM; numbered in the campaign), `/help`, and `//` to send text starting with a slash; typing `/` lists them. Text supports **bold**, *italic*, `code` and links, rendered as elements, never HTML.
+Images are re-encoded to WebP in a worker, stored in OPFS under their SHA-256 hash, and referenced by hash in the CRDT. Missing images are fetched from peers in 64 KB chunks and the hash is checked on arrival.
 
-**Quick dice bar**: A Public / Secret toggle; its clicks gather into a pool that rolls as one entry 1 s after the last change (each button shows its count, right-click takes one back out, and a "roll now" button fills as the moment approaches).
-Whispers are hidden from everyone but sender and recipients, including the GM. Unread messages from others show as a count on the Chat tab. A player's first join posts “Name joined”.
+#### Benefits
 
-## Notes
+- CRDT documents stay small.
+- The same map in two campaigns is stored once.
+- A peer can't swap in a different file.
 
-Notes are a folder tree of collaborative rich-text pages (TipTap over Yjs) with `@` links and backlinks.
+#### Downsides
 
-- **Folders:** *Sessions* and *World* to start (under fixed ids so peers never make two); more can be added, renamed and deleted, and pages dragged between them. The Notes panel is a list and a page, like Characters (see UI).
-- **Pages:** each page's text is a Yjs subdocument in its own IndexedDB database, synced like a scene; undo comes from Yjs history, so it only takes back your own edits. Markdown-style shortcuts format it (`#` headings, `**` bold, `-` lists, `>` quotes).
-- **Links:** typing `@` offers notes, characters, scenes, items and moves and inserts a link chip showing its target's current name (struck through if the target is gone). A chip's tooltip says what it points at. Clicking it opens a pop-up out of that tooltip: gear and moves with their rules and a Give or Roll/Target button for the character you're playing, a character's sheet, a scene with Go to scene, or a page's text; a link from one page to another opens that page in the Notes panel instead. Right-clicking offers Open in sidebar, Open in a window (page-to-page links) and Edit link text…, which shows the link as other words until Use its own name. Chips drag like anything else (onto characters, the hotbar, other text, the chat), and anything dragged in becomes a link where it's dropped. The same links work in sheet text and chat (`table/richText.tsx`, `table/LinkPopups.tsx`).
-- **Backlinks:** each page records its outgoing links in the campaign's note index, so a page lists the pages that link to it ("Linked from") without loading them.
-- **GM-only pages** live in the GM vault (see Architecture). They share the campaign's folders and show with a secret-book icon and a GM tag; New GM page makes one. "Reveal to players…" copies a page into the campaign under the same id, so links keep working, then drops the vault copy; it can't be hidden again. A link to a GM-only page placed in shared text stores no title, and players see it as "Unavailable". Only the campaign's creator is a GM so far.
-- **Session pages:** `/session start` makes a "Session N" page in Sessions with Recap, Highlights and Loose threads headings.
-- **Planned:** pinning a page to a scene location, exporting a session's log into its page, and Dungeon World's Fronts, Dangers and Steadings as templates.
+- If nobody online has an image, it can't be shown.
+- Blobs are never garbage-collected when no document references them.
 
-## Permissions
+## Conventions to follow {#conventions}
 
-Edit permissions are enforced by the client UI, not by a peer-level write filter. Campaign documents are shared with connected peers. GM-only notes are stored in a separate vault document; general campaign data is not secret from peers.
+- **Order with fractional indices.** Lists store a string key from `fractional-indexing`, so two people reordering at once don't conflict.
+- **Timestamps use the hybrid logical clock** in `lib/hlc.ts` wherever peers must agree on order.
+- **Derive, don't store.** Effective stats, maximum HP and UI tint are computed on read.
+- **Write in one transaction.** Wrap related writes in `doc.transact()` so peers and undo see one change. Drags write once, on release.
+- **Read Yjs in React with `useY`** and return plain values from the read function so unrelated changes don't re-render. Read stores with `useValue`.
+- **Mark origins.** Local scene edits use `SceneDoc.origin` so they can be undone; remote ones use the `REMOTE` origin.
+- **Systems own their sub-maps.** Core code reads a character's `data` or `resources` only through the system's definitions.
+- **Core never names a system.** Add a hook to `GameSystem` or `SystemExtension` instead of branching on a system id.
+- **CSS lives beside its component.** `styles/` holds only tokens, primitives, base and transitions.
+- **No migrations before release.** Bump `DATA_EPOCH` instead. The project instructions also prefer breaking changes that improve the design over compatibility work.
+- **Interface text is functional.** Labels say what something is or does, with no commentary.
+- **Icons come from `ui/icons.tsx`**, named by meaning.
 
-- Roles are GM, Player and Observer. Character owners and the GM can edit a character; other players can view it.
-- Scene elements can be locked. GM wall and light tools are hidden from players, while token sight can limit what players see when vision is enabled.
-- General per-entity visibility flags and a CRDT write filter are not implemented.
+## Testing and tooling {#testing}
 
-## System Roadmap
+- **Vite 8** builds the app and the PWA service worker. Large SRD reference files are split into their own chunks in `vite.config.ts`.
+- **TypeScript 6** is strict, including `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`. `npm run build` runs ESLint, then `tsc -b`, then Vite.
+- **Vitest** unit tests sit in `__tests__` folders beside the code. They use `fake-indexeddb` and an in-memory transport, so sync logic is tested without browsers. `npm run test:coverage` adds V8 coverage.
+- **Playwright** end-to-end tests run in Chromium and WebKit against the dev server, one spec per feature in `tests/`.
+- **knip** finds unused files, exports and dependencies; **Prettier** checks formatting.
+- **CI:** `ci.yml` (lint, typecheck, format, knip, unit tests, build), `playwright.yml` (browser suite), `audit.yml` (dependency audit).
 
-- [x] Dungeon World 2: beta-based core moves, class starting moves, direct stats, advantage/disadvantage, Conditions, HP, and guided class/stat creation.
-- [x] Blades in the Dark: action and resistance pools, position bands, stress/trauma tracking, downtime rolls, playbooks, and custom PC/NPC sheets.
-- Built-in plugins own PC and NPC components in `systems/<id>/Sheet.tsx`, registered in `table/sheets.tsx`. Dungeon World emphasizes abilities and debilities; Dungeon World 2 includes locked Conditions and origins; Blades groups actions by resistance attribute with trauma, harm, armor, and load controls; D&D retains its dedicated sheets. Common sections and editing permissions are shared, with declarative layouts available as a fallback for other systems.
-- [x] Daggerheart: add the core SRD class/heritage data, Duality Dice, Hope/Fear outcomes, Difficulty/Evasion checks, domain-card choices, and damage/armor tracks.
-- [x] Shared roll difficulty: fixed, prompted, actor-derived, and target-derived values; saving throws and concentration use the same model.
-- [x] Shared action variants, resource costs, owned/active loadouts, advancement grant previews, acquisition limits, and roll-dependent follow-ups.
-- [x] DW2: all 27 Paths and 135 source-backed move rules, checks for explicitly rolled Path moves, and cumulative tiered advancement limits.
-- [x] Daggerheart: damage severity and Armor Slots, marked Stress, five-card loadout and Recall costs, paired Experience improvements, multiclass domain/foundation acquisition, and selectable Spellcast traits.
-- [x] D&D: SRD spell/feat/magic-item/monster catalogs, complete class/subclass feature descriptions, preparation tables, Wizard spellbooks, slot/Pact Magic/ritual casting, upcast dice, and Champion critical ranges.
-- [x] Blades: source-backed ability rules, Veteran playbook advances, attribute advances with Mastery caps, crew XP/upgrades/profits/Tier progression, and roll-dependent XP/Stress suggestions.
-- [ ] DW1: complete starting and advanced class moves, level-up move selection, spell preparation, and Fronts/Dangers. Verification against the DW1 SRD site is blocked by the workspace network policy; a local licensed source is needed.
-- [ ] DW2: automate remaining class/Path passive interactions, Struggles, class-change reassignment, and magic-item/Artifact selection. Review redistribution terms for the supplied beta before publishing its content.
-- [ ] Daggerheart: complete tier-specific advancement slot quotas, equipment restrictions, downtime/death workflows, and feature-use tracking. Narrative feature triggers remain table-managed.
-- [ ] Blades: complete named crew/playbook-specific catalogs beyond the supplied SRD toolkit, structured claims/factions/cohorts, creation dot constraints, and score/downtime bookkeeping.
-- [ ] D&D: complete multiclass progression, feature/condition automation, monster actions and legendary/recharge workflows, and remaining spell-specific behavior. Descriptions are available even where mechanical execution remains manual.
-- [ ] Triangle Agency: add its Agency/Anomaly character model, d4 resolution, and campaign rules when implementation resumes.
-- [ ] PF2e: evaluate rules coverage and additional action, proficiency, and condition support.
+To start: `npm install`, `npm run dev`, then open two browser profiles and join one from the other's invite link to see sync working.
 
-## Plugin system
+## Improvement opportunities {#improvements}
 
-A game system is an ES module that exports a `GameSystem` object: mostly declarative data plus a few pure functions. The core provides characters, sheets, dice, chat, effects, targeting and storage; the system describes the rules. `defineSystem()` checks a system as it registers (unique ids, and every action's category, class, stat, outcomes and follow-ups exist) and throws with a list of problems. The shape today (`src/systems/types.ts`):
+Ordered by how much each one affects the codebase's coherence or the safety of players' data. Resolved items from the first review are listed at the end.
 
-export const dungeonWorld: GameSystem \= {
+High
 
-  id: 'dungeon-world', name: 'Dungeon World', version: '0.1.0',
+### No way to back up or export a campaign
 
-  stats,                         // id, name, abbr
+With no server, a campaign's only copies are on players' devices, and scenes are only on devices that opened them. Clearing site data or losing a laptop can lose a scene for good.
 
-  modifier: (score) \=\> ...,      // a stat score's modifier
+**Consider:** an export that loads the root, every subdocument and the referenced blobs, writes them with `Y.encodeStateAsUpdate` into one file, and a matching import. It also helps with bug reports.
 
-  baseRoll: '2d6',
+High
 
-  rollModes,                     // optional base modes, scoped to action categories as needed
+### Imports still point upward between layers
 
-  results,                       // best first, each with a tone for the card: Full success, Partial success, Miss
+Fewer than before, but the rule isn't enforced, so it will drift again:
 
-  checkRoll,                     // optional system-owned formula construction for pools and special dice
-  result: (total, natural, roll) \=\> ..., // the full roll is available for pool-specific outcomes
+- System sheets import `table/` parts: `dnd55e/Sheet.tsx` (5), `dungeon-world-2/Sheet.tsx` and `ClassChange.tsx` (3 each), `blades-in-the-dark/Sheet.tsx` (2), `CrewSheet.tsx`, `dungeon-world/Sheet.tsx`, `dungeon-world-2/extension.ts`.
+- `systems/extensions.ts` imports the `MenuItem` type from `table/ContextMenu`.
+- `features/notes/targets.ts` imports `table/libraryView` and `table/panelLayout`; `features/chat/notify.ts` imports `table/panelLayout`.
+- `features/combat/CombatPanel.tsx` is a panel inside `features/` that imports `table/PanelActions`.
+- `ui/popup.ts` imports `table/resizeRect`.
+- `table/` imports the action index from `app/commands` in five files.
 
-  actions, actionCategories,     // actions with target specs and steps; categories say what fills a new hotbar
+**Consider:** move shared sheet parts (`DeclarativeSheet`, `sheetParts`, `Inventory`, `CharacterText`, `CreationParts`) and the `MenuItem` type to a module below both table and systems (for example `ui/sheet/`); move `resizeRect` into `ui/`; move `CombatPanel` into `table/`; have features raise store changes the table listens to instead of calling panel layout; move `app/commands` to `features/commands`. Then add ESLint `no-restricted-imports` patterns so drift fails CI.
 
-  followUps,                     // buttons on cards: bump a data field (Mark XP), or roll a formula (Roll damage)
+Medium
 
-  classes, items, tags,          // also listed in the Libraries
+### Bundled source text needs a licensing review
 
-  conditions, modifiers,         // conditions with effects; standing roll modifiers (next roll, or until removed)
+`systems/dungeon-world-2/paths.ts` (589 lines) bundles the Dungeon World 2 beta text into the app, which needs a redistribution review before publishing. Git history still contains the `.playwright-mcp/` output, including `Dungeon-World-2-Beta-v3.docx`.
 
-  resources,                     // counters with a derived maximum (HP); resets on rests later
+**Consider:** settle licensing for each bundled source before the first public deploy; rewrite history if the beta document must not stay in the repository.
 
-  characterData, npcFields,      // the system's own fields with defaults; an NPC's fields
+Medium
 
-  sizes, scene,                  // token sizes in cells; units and diagonal rule for new scenes
+### Old invites no longer fail clearly
 
-  derive(c, sources) { ... },    // named values (max HP, armour, load) via the core effect resolver
+The uncommitted change to `sync/invite.ts` drops the epoch from invite links. After a `DATA_EPOCH` bump, an old invite opens an empty campaign under the new database names and waits for a peer.
 
-  actionsFor(c, derived) { ... },// the actions a character has
+**Consider:** keep the epoch out, but show a clear message when no peer has the campaign.
 
-  tokenStats(c, derived) { ... },// bars on its tokens
+Low
 
-  attribution,
+### Stray top-level modules
 
-}
+`core/` holds one type, and `src/graphics.ts` sits at the top level.
 
-The built-in systems provide declarative `sheet` layouts. System roll modes can be scoped to action categories, and systems can finalize check formulas and interpret the full roll without moving game-specific rules into the core. Third-party system loading, schema migrations and system-provided hooks are not implemented; chat commands and cards are currently core features.
+**Consider:** fold both into an existing module.
 
-- **Loading:** only the built-in systems currently ship with the app. Loading third-party systems from a URL or file is future work.
-- **One system per campaign.** Switching system is a deliberate migration, not a toggle.
-- **Homebrew without code:** the GM can add moves, items and effects through forms; they are stored in the campaign and use the same effect model.
+Medium
 
-## Dungeon World plugin
+### Removing a player doesn't rotate the room key
 
-The built-in Dungeon World system (`src/systems/dungeon-world/`) covers six stats with modifiers, basic and special moves, all eight core classes, and gear with tags. Class-move coverage is partial; GM tools for Fronts remain future work. Dungeon World’s text is licensed CC BY 3.0 and is attributed in the app.
+The room key sits in the campaign's `meta` map, which every member holds. A removed player stays out only because their client cooperates.
 
-### Character sheet
+**Consider:** on removal, the GM mints a new key and gives it to remaining members, for example through a short-lived message encrypted per member. This only matters if removal needs to resist a modified client.
 
-- Stats STR, DEX, CON, INT, WIS, CHA as scores (3–18), with modifiers derived from the standard table (−3 to \+3), and the six debilities (Weak, Shaky, Sick, Stunned, Confused, Scarred) as conditions, each giving −1 to rolls with its stat.
-- HP (max \= class base \+ CON score), Armor, Damage die, Level, XP (with “mark XP” on a 6-), Alignment, Race, Bonds, Load (max \= class base \+ STR mod), coin.
-- Starting moves and a guided level-up flow once XP reaches level \+ 7. Class-move coverage remains partial.
+Medium
 
-### Moves
+### Remaining large files
 
-- Basic moves: Hack and Slash, Volley, Defy Danger, Defend, Spout Lore, Discern Realities, Parley, Aid or Interfere.
-- Special moves: Last Breath, Encumbrance, Make Camp, Take Watch, Undertake a Perilous Journey, Level Up, End of Session, Carouse, Supply, Recover, Recruit, Outstanding Warrants, Bolster.
-- Roll \= 2d6 \+ stat mod (+ forward/ongoing). Outcome bands 10+ / 7–9 / 6-, with each band’s text on the move card; “choose N” options as checkboxes are planned. Hack and Slash, Volley, Defend, Parley, Aid or Interfere, Lay on Hands, Arcane Art and Turn Undead ask for targets.
-- Damage rolls use the class die plus tags (e.g. *\+1 damage*, *messy*, *piercing 2*).
-- Hold and forward/ongoing tracked per character, decremented when spent.
+`systems/dnd55e/data.ts` (1,640) is data and fine. `systems/dnd55e/index.ts` (1,170), `table/diceRenderer.ts` (1,089), `table/SceneCanvas.tsx` (1,057), and each system's `index.ts` (about 1,000) mix several responsibilities.
 
-### Items and tags
+**Consider:** split system `index.ts` files into stats, actions, derive and catalog modules, as `dungeon-world-2/` has started; move dice rendering out of `table/` into its own module.
 
-- Gear with weight, uses and tags (*close*, *reach*, *near*, *far*, *precise*, *ration*, *2 piercing*, …). Tags map to effects: *\+1 armor* → `modify armor +1`; *precise* → use DEX for Hack and Slash; magic items can `grantMove`.
-- Adventuring gear uses (e.g. 5 uses) as an item resource.
+Low
 
-### GM tools
+### Unknown system ids fall back silently
 
-- Planned: Fronts and Dangers note templates with grim-portent checklists and impending doom.
-- NPCs with HP and the fields Dungeon World gives monsters (damage, armor, tags, instinct, moves), as individuals or templates (see Characters). Token sizes are its size tags: Tiny, Small, Human-sized, Large, Huge.
+`getSystem()` returns Dungeon World for any id it doesn't know, so a typo or a removed system shows the wrong rules without an error. `extensionOf()` keeps a hand-written id map in `systems/extensions.ts`.
 
-## Dungeon World 2 plugin
+**Consider:** fall back to the "No system" plugin and show a notice, or throw during development; register extensions alongside their systems.
 
-The beta-based DW2 plugin (`src/systems/dungeon-world-2/`) uses five direct stats, the beta's standard array and class HP, the core move set, and one starting move per class. Advantage and Condition-driven disadvantage use system roll modes and the formula hook; Conditions distinguish clear, marked, and locked states. All 27 Paths expose their five move rules from the supplied beta, with check steps for explicit stat rolls. Advancement limits cover stat picks, own/multiclass Paths, Path moves, and magic-item/Artifact awards. Passive interactions and class-change reassignment remain manual.
+Low
 
-## Blades in the Dark plugin
+### Hidden global state
 
-The Blades plugin (`src/systems/blades-in-the-dark/`) models action/resistance pools, zero-dice rolls, criticals, and position-specific bands. Its sheet tracks stress, trauma, XP, load, and armor use. Playbook and attribute advances consume their XP tracks; Veteran picks can select other playbooks' abilities and Mastery unlocks four-dot advancement. Crew controls in campaign settings consume the shared Crew XP counter, award abilities or upgrade points and stash profits, and validate rep/hold/coin for Tier advancement. Desperate XP, resistance Stress, and vice clearing are explicit follow-up buttons. The supplied SRD is a toolkit, not a complete named crew/playbook catalog; fictional prerequisites, claims, factions, cohorts, and most passive consequences remain table-managed.
+Sixteen modules export top-level stores, and `setBlobFetcher` in `scene/images.ts` is a global set by `campaign/connection.ts`. This works because one campaign is open at a time, but the dependency is invisible.
 
-## Daggerheart plugin
+**Consider:** hang per-campaign state off the `Campaign` object or a context, and keep module stores for true device-wide state.
 
-The Daggerheart plugin (`src/systems/daggerheart/`) imports the supplied SRD class, subclass, heritage, domain, weapon, and armor catalogs. Duality outcomes use the shared difficulty model; adversary Difficulty and damage thresholds come from their stat blocks. Damage application converts incoming damage to HP severity and can spend an Armor Slot. Domain cards are acquired into a pooled collection and only five can be active; Recall marks Stress unless the user declares a rest or level-up swap. Advancement preserves acquired cards, improves pairs of Experiences, and supports multiclass class features, one domain, and a subclass foundation. Slot quotas, equipment restrictions, rest/death workflows, and many passive features still require table adjudication.
+Low
 
-## D\&D 5.5e plugin and a general rules engine (M5)
+### React Compiler installed but not enabled, and orphaned blobs
 
-The second system is D\&D 5th edition as revised in 2024 ("5.5e"), built from the System Reference Document 5.2 (CC BY 4.0, so its text can ship with attribution, like Dungeon World's). It is the test of the plugin API: anything 5.5e needs that Dungeon World also has, or that any tactical system would need, goes into the core; anything that is only 5.5e's arithmetic stays in the plugin. The aim is that a third system (Daggerheart, Pathfinder) needs data and formulas, not core changes.
+`babel-plugin-react-compiler` is a dev dependency and `lib/store.ts` is written for it, but `vite.config.ts` doesn't enable it. OPFS blobs are never removed when no campaign references them.
 
-### Core changes
+**Consider:** enable the compiler now that signals are gone, or remove it; add a blob sweep when a campaign is deleted from a device.
 
-1. **Systems as modules with a schema.** *(Done, but for migrations and loading from a URL.)* A registry of systems (built-in first; loading from a URL or file stays in M6) and a `defineSystem()` that checks a system's shape. A system declares its character data schema with defaults and its own migrations (see Plugin system).
-2. **A generic character record.** *(Done.)* The core keeps only what every system has: name, owner, kind (player character or NPC), folder, token style, notes, inventory, conditions, resources, and a level. Its shared graphic is stored in the campaign's `entityGraphics` map. Everything else (ability scores, bonds, debilities, death saves, spell slots, proficiencies, hit dice) lives in a `data` map the system owns and the core never interprets. Dungeon World's fields move into its own `data`.
-3. **Derived values from the system.** *(Done.)* `derive()` becomes a system function from the character and its active effects to named values (AC, max HP, attack bonus, spell save DC, initiative, load, carrying capacity, passive Perception), each with its explanation from the effect resolver, which stays in the core.
-4. **Resources and rests.** *(Resources done; rests and resets with step 4.)* Counters with a maximum that reset on a named event: HP and temporary HP, hit dice, spell slots by level, pact slots, class resources (Rage, Ki, Channel Divinity), item charges and "uses". Resets are tags (short rest, long rest, dawn, turn, round), and the core offers Short Rest and Long Rest commands that the system wires up. Dungeon World's item uses and HP become resources too.
-5. **Actions, not moves.** *(Started: actions with a check step, categories, follow-ups and target specs; costs, sources and the other steps with step 3.)* One action model for both systems: name, source (class, item, spell, feature), activation cost (action, bonus action, reaction, free, none), range, targeting (below), resource cost (a spell slot of some level, uses, ammunition), and a list of steps. Steps are generic: roll a formula, roll against a target number (attack vs AC, check vs DC), ask targets to save, roll damage with types, apply or offer effects. A Dungeon World move becomes one step ("roll 2d6 \+ stat, map the total to a band") with its band texts; the system supplies the band function as now.
-6. **Targets and targeting.** *(Done, changed: targets are picked per action from a bar, not kept between actions; resolving per target comes with step 3.)* Each player can mark tokens as targets (shown as a ring in their colour and shared through presence, like cursors). An action with a targeting spec ("one creature within 60 ft", "up to three creatures", "self", "a 20 ft sphere") asks for targets when it is used, checks range on the scene, and resolves per target: one attack roll per target against that target's AC, one save per target against the caster's DC.
-7. **Distance and scene units.** *(Done.)* A scene gets units per grid cell (5 ft by default) and a diagonal rule: 5.5e's default counts every diagonal as one square (Chebyshev); the alternating 5 / 10 ft rule and true distance are options. The ruler shows feet, range checks measure between token edges, and tokens get size categories (Tiny to Gargantuan → cells). Hex grids count hexes.
-8. **Areas of effect.** *(Step 6.)* Templates as scene elements (cone, line, cube, sphere / emanation, cylinder), placed when an action needs one, listing the tokens they cover so the action can target them.
-9. **Rolls.** *(Step 3.)* Advantage and disadvantage as a roll option (the notation already has `2d20kh1`), critical hits that double damage dice, damage types, and roll requests: a card that asks a target's owner to roll a save or check, with a button only they (or the GM) can press. The GM applies damage from the card (with resistance, vulnerability and immunity offered by the system); nothing is automatic, as with Dungeon World's suggestions.
-10. **Conditions with durations.** *(Conditions with effects done; durations, pips and concentration with step 4.)* Conditions on characters and tokens (pips on the token), each with a duration: rounds, until the end or start of someone's turn, until removed, or concentration (dropped when the caster takes damage and fails, or casts another concentration spell; the core tracks it, the system supplies the check). Systems define their conditions and the effects each applies. Dungeon World's debilities can become conditions.
-11. **Combat and initiative.** *(Step 4.)* A turn tracker: who's in the fight, initiative order (the system supplies the roll and tie-breaks), rounds, whose turn it is, and per-turn resets (reaction, movement, "once per turn" features). Systems without initiative, like Dungeon World, hide it.
-12. **NPCs and monsters from the Libraries.** *(Partly done, changed: templates whose tokens are copies cover packs of monsters; stat blocks in the Libraries with step 6.)* A stat block is a library entry; placing one on the map makes a token with its own HP and conditions, unlinked from any character record, so a pack of goblins needs no sheets. A token can be promoted to a full NPC when it matters.
-13. **Declarative sheets.** *(Step 5.)* The sheet is built from the system's layout of sections and field widgets (ability block, counter, gauge, resource track, action list, inventory, text, choice list), so most systems need no UI code; a system can still supply a component for an unusual section. Dungeon World's hand-written sheet becomes its layout.
-14. **Character creation and levelling.** *(Step 5.)* A guided flow driven by system data: class, species, background, ability scores (standard array, point buy or rolled), and the choices each level grants. Dungeon World's class picker becomes a short version of the same flow.
-15. **Bigger libraries.** *(Step 5.)* Spells, feats, species, backgrounds, classes with subclasses and level tables, monsters and magic items: hundreds of entries, so collections load lazily and search uses an index. Library entries can carry actions, so a spell or a weapon on the sheet is the same thing as in the Libraries.
+### Resolved since the first review
 
-### Kept in the 5.5e plugin
+- Game-system rules leaking into core feature code: moved into systems behind hooks.
+- Sheet registration hard-coding system ids in `table/`: replaced by `SystemExtension.sheets`.
+- CI not running lint, type-check or unit tests: `ci.yml` runs them all.
+- Very large controller, renderer, character API, chat panel and global CSS: split.
+- Single end-to-end test file: split by feature.
+- Signals Babel transform blocking React Compiler: replaced by explicit stores.
+- `reference/` and `.playwright-mcp/` committed: untracked and ignored.
+- `design.md` out of date: removed; this document replaces it.
 
-- The SRD 5.2 data: classes, subclasses and their level tables; species; backgrounds; feats; spells; weapons with their mastery properties; armour; adventuring gear; magic items; monsters; conditions; the rules glossary.
-- The formulas: ability modifiers, proficiency bonus by level, AC from armour category, Dexterity cap and shield, attack and damage bonuses, spell save DC and attack bonus, initiative, passive scores, carrying capacity, hit points by class and level, multiclass spell slots, exhaustion (−2 per level to d20 tests in 2024).
-- Spellcasting rules (prepared spells, slots, pact magic, rituals, cantrip scaling), Heroic Inspiration, death saving throws, and the sheet layout.
-- Which conditions exist and what each does; damage types; creature sizes; the default diagonal rule.
+## Product rules {#product}
 
-### From Dungeon World: made generic, or kept
+These govern behaviour more than code.
 
-| Now in Dungeon World | Becomes |
-| :---- | :---- |
-| Stats and `modifier()` | Generic abilities; each system's own modifier rule |
-| Moves, move list, move cards | Actions with steps; one card renderer for any step results |
-| `band()` and strong / weak / miss texts | Kept: Dungeon World's result function and texts |
-| Suggestions (Mark XP, Roll damage) | Generic follow-up buttons that a system defines per action or result |
-| Forward and ongoing | Generic roll modifiers: one-shot or lasting (5.5e: Bless, Guidance) |
-| Debilities | Conditions, defined by Dungeon World |
-| Item uses, HP | Resources |
-| Load and weight | A derived value and an item field any system may use |
-| Classes with HP, damage die, load | Generic classes with features by level; numbers in each system's data |
-| NPC fields | Stat blocks |
-| Bonds, alignment, race, coin, XP rule | Kept: Dungeon World's character data |
-| Fronts, Dangers, Steadings | Kept: Dungeon World note templates (M6) |
+### UI design
 
-### Order of work
+- Cabin for controls and chat, 1rem body text, compact headings; Fraunces (optical sizing on, never small caps) for headings, move names and sheets.
+- Neutral surfaces, thin separators and a subtle gradient. All chrome floats over the canvas as translucent dark panels tinted by the scene colour.
+- Flat controls; the gold accent is reserved for primary and selected actions.
+- Edge-docked elements sit flush; icon strips end in full diagonals.
+- Icons: Game-icons first, Material Symbols Rounded (filled) where no game icon fits; compiled at build time, named by meaning, never smaller than 22×22 px.
+- Context menus expose every action available for their object, including ones otherwise reached through row buttons, hover controls or shortcuts, using the same handlers and permission rules.
+- Pop-ups emerge from the thing that spawned them and open there; menu items ending in "…" morph into their dialog.
+- Motion is about 280 ms and switches off under reduced motion. View transitions animate state changes that can briefly be snapshots; anything the user may reach into mid-animation animates live with CSS.
+- Interface text is succinct and functional: no commentary, reassurances, parentheticals or asides. System rules text is content and exempt.
 
-1. *Done (Oct 27):* port Dungeon World onto the general core with no change in behaviour: system registry and schema, the generic character record, system `derive()`, resources, actions with steps, roll modifiers and conditions.
+### Permissions
 
-2. *Done (Oct 27):* scenes: units, diagonal rules, token sizes, the ruler in feet, range checks, and targets. Along the way: individuals and templates, learned moves, and screen-space token names and bars.
+- Roles are GM, Player and Observer. Character owners and the GM edit a character; other players view it.
+- Edit permissions are enforced by the client UI, not by a peer-level write filter. Only GM-only notes are secret.
+- Only the campaign's creator is a GM so far.
+- Scene elements can be locked. Wall and light tools are GM-only.
 
-3. *Done (Oct 28):* actions end to end. A check with `against: 'ac'` rolls once per target and reads each against that target's value (the system's `hits()`: 5.5e's natural 20 and 1); targets at long range roll with the system's `longRange` mode, which the opposite mode cancels; targets out of range can't be picked. A `save` step puts a roll request per target on the card, answered by that target's owner or the GM (with any roll mode) and kept in the campaign's `messageState` map; follow-ups that roll damage carry a damage type and the targets, and the roll card gives the GM buttons to apply it whole, halved or doubled (temporary HP first) or to heal (`table/CardParts.tsx`).
+### Dice
 
-4. *Done (Oct 28):* combat. A Combat panel (hidden for systems without `initiative`) lists combatants in initiative order (ties by the initiative bonus); the GM adds tokens from their right-click menu (NPCs join hidden), rolls for NPCs, starts, steps and ends the fight, and players roll their own. The tracker lives in the `combat` and `combatants` root maps (`combat/combat.ts`, pure and tested; `combat/api.ts` wires it to characters). Conditions can be given for so many rounds, counted down at the start or end of a chosen combatant's turn; resources that reset on `turn` (5.5e's Reaction) refill when a turn starts. Concentration actions set the character's `concentration`, ending any other; damage applied to a concentrating character posts a concentration save (the system's `concentrationSave`), and failing it ends the spell. Tokens show a pip per condition (white for concentration) and a gold ring for whoever's turn it is. Short and Long Rest are palette commands.
+- The roller decides results locally with `crypto.getRandomValues` and records them in chat; every peer sees the same result.
+- Visibility is public or secret (the roller and the GM). There are no blind rolls.
+- Whispers are hidden from everyone but sender and recipients, including the GM.
 
-5. *Done (Oct 28):* built-in 5.5e support (`src/systems/dnd55e/`): d20 tests, proficiency, combat rules, spell slots, class features, a starter spell and gear catalog, origins, subclasses, feats, guided character creation and levelling, and a declarative sheet. Coverage remains a subset of the SRD; the full spell and monster lists are not included.
+## Roadmap and TODO {#roadmap}
 
-6. Monsters and areas of effect: stat blocks, unlinked tokens, templates.
+### TODO
 
-### Open questions for M5
+- [ ] Preserve panel order when hiding and showing panels.
+- [ ] Add visibility and lock flags to entities (notes, tokens, maps, characters) that the GM can edit.
+- [ ] Let a player claim a character as their player character: it becomes the default subject for actions and gets its own sidebar tab with its avatar as the icon.
+- [ ] Add a Reroll entry to the context menu for roll cards.
 
-- [ ] **Content:** SRD 5.2 only (free to ship), with homebrew forms for anything else? *Default: yes.*
-- [ ] **Automation:** attacks and saves resolve against targets automatically, but damage and conditions are applied by the GM from the card? *Default: yes, as with Dungeon World.*
-- [ ] **Movement:** track movement per turn and opportunity attacks, or leave them to the table? *Default: leave them, for now.*
+### Planned core features
+
+- Monsters and areas of effect (M5 step 6): stat blocks in the Libraries, unlinked tokens, and area templates (cone, line, cube, sphere, cylinder) that list the tokens they cover.
+- Plugin data migrations keyed by each plugin's schema version, and loading third-party systems from a URL or file.
+- Plugin-provided dice syntax and slash commands; the `script` effect type.
+- A GM "pull everyone to this scene" control.
+- Dragging items between characters, and item tokens on the canvas.
+- Pinning a note page to a scene location; exporting a session's log into its page.
+- Dungeon World Fronts, Dangers and Steadings as note templates; "choose N" move options as checkboxes.
+- Homebrew and monsters as Library sources.
+
+### Open systems work
+
+- [ ] DW1: complete starting and advanced class moves, level-up move selection, spell preparation, and Fronts/Dangers. Needs a local licensed source to verify against the SRD.
+- [ ] DW2: automate remaining class/Path passive interactions, Struggles, class-change reassignment, and magic-item/Artifact selection. Review redistribution terms for the beta before publishing its content.
+- [ ] Daggerheart: tier-specific advancement slot quotas, equipment restrictions, downtime/death workflows, and feature-use tracking.
+- [ ] Blades: named crew/playbook catalogs beyond the SRD toolkit, structured claims/factions/cohorts, creation dot constraints, and score/downtime bookkeeping.
+- [ ] D&D: multiclass progression, feature/condition automation, monster actions and legendary/recharge workflows, and remaining spell-specific behaviour.
+- [ ] Triangle Agency: Agency/Anomaly character model, d4 resolution, and campaign rules.
+- [ ] PF2e: evaluate rules coverage and action, proficiency and condition support.
+
+### Open questions (M5)
+
+- [ ] **Automation:** attacks and saves resolve against targets automatically, but the GM applies damage and conditions from the card? *Default: yes.*
+- [ ] **Movement:** track movement per turn and opportunity attacks? *Default: leave them to the table for now.*
 - [ ] **Multiclassing** in the first version? *Default: later.*
-- [x] **Diagonals:** default to 5.5e's one-square diagonals, with the GM able to switch per scene? *Decided (Oct 27): yes; the system sets the default and Scene settings switch it.*
-- [x] **Targets:** kept by each player between actions, or picked for each action? *Decided (Oct 27): picked for each action; since Oct 28 in a bubble beside the control that started it.*
-
-## Command palette and action index
-
-A keyboard-first palette for finding and doing things without hunting through panels. Ctrl/Cmd \+ K opens a centred popover with one search field; typing filters a ranked list, Up/Down move, Enter runs the top choice, Escape closes. It is built **before the hotbar** in M4, because both read from the same **action index**.
-
-**The action index** is one in-memory list of everything a player can do or look up, rebuilt when the campaign, the selected character or the system plugin changes. Each entry has:
-
-| Field | Meaning |
-| :---- | :---- |
-| `id` | Stable id, such as `move:hack-and-slash` or `tool:ping`. The hotbar stores these, not copies |
-| `kind` | `move`, `item`, `tool`, `command`, `entry` (compendium, notes, characters, scenes) or `setting` |
-| `title` | Display name, plus `aliases` and `tags` for matching (*hack*, *H\&S*, *melee*) |
-| `source` | Where it comes from: core, the game-system plugin, the campaign's homebrew, or the selected character |
-| `available` | Whether it can run now (for example, a move the selected character doesn't have, or no character selected) |
-| `run` | What happens on Enter: activate the move (see Characters, moves and items), start the tool, open the page |
-| `open` | Optional secondary action, usually showing the entry's full text without running it |
-
-- **Sources.** Core registers tools (select, pan, draw, ping, measure) and commands (fit to scene, undo, toggle chrome, new scene). The plugin's compendium (its Libraries) contributes moves, items, classes, monsters and tags. The campaign contributes characters, notes, scenes and homebrew. The selected character contributes their own moves and usable items, flagged so they rank first.
-- **Ranking.** Fuzzy match on title, aliases and tags; then the selected character's own moves, recently used actions, and exact-prefix matches rise. Entries that are unavailable are shown dimmed with the reason, not hidden, so players can still read them.
-- **Prefixes narrow the search:** `>` commands only, `/` moves, `@` characters, `#` notes and compendium entries. With no query it shows recent actions and the selected character's moves.
-- **Moves run in place.** Choosing a move opens the same small input popover as from the sheet or hotbar, then rolls and posts a move card. Shift \+ Enter opens the move's text instead of rolling.
-- **Visibility follows permissions.** Hidden characters, notes and GM-only compendium entries never enter a player's index (see Permissions).
-- **Plugin hook.** A system can add its own entries through `index: { entries, aliases }`, so move text and tags become searchable without any UI code. The index is derived data and is not synced; every peer builds it from the same synced sources.
-- **UI.** A square-cornered panel over the canvas, with a gold focus ring on the active row, each row showing an icon, title, source and shortcut hint. It animates like other popovers (about 280 ms) and respects reduced motion. The right-click menu and tool strip stay as they are; the palette is an extra way in, not a replacement.
-
-The hotbar then becomes a pinned, ordered selection of index ids per character, so adding to it can be done from the palette (for example, Alt \+ Enter pins the highlighted action). Palette results also drag: onto the hotbar to pin them, and (moves, gear, characters and scenes) onto a character or into text like a link.
-
-## UI and visual design
-
-The canvas fills the window; all chrome floats over it as translucent dark panels tinted by the scene colour, with light text and a golden-yellow accent reserved for primary actions, selection.
-
-**Interface text is succinct and purely functional.** Labels, buttons, placeholders and messages say what a thing is or does, and nothing else: no commentary, explanations of design decisions, reassurances, parentheticals, or asides ("a campaign plays one system for good" is out). Rules text from a system is content, not interface, and is exempt.
-
-### Layout
-
-- *Top centre, docked:* the tool strip, starting with the campaign menu (a hamburger button): Player settings…, Campaign settings… (GM only), Help and shortcuts…, a ticked item for each panel (Scenes, Chat, Characters, Libraries, Notes, Members; unticking one closes it), and Back to campaigns. It opens on the press below the button, like every menu, and its pop-ups morph out of their items.
-- *Top edge, docked:* canvas tool strip — select, pan, draw, erase, shapes, text, measure, ping, walls and lights — with single-key shortcuts. It centres itself in the space between the sidebars.
-- *Left and right edges, docked:* two sidebars with vertical tabs. By default Scenes and Characters are on the left and Chat, Libraries, Notes and Members on the right. The scene list (and, for the GM, the active scene's settings) is the Scenes tab; campaign actions are in the campaign menu. Tabs, tools and hotbar slots are picked up as soon as they are dragged and reorder along their bar, with a white line showing the drop point; the tool order is a per-device preference, and dropping a hotbar slot off the bar unpins it. Dragging a tab away from its strip floats it. There is no hide button: dragging a sidebar very narrow snaps it shut, and clicking its open tab toggles it. Each body slides in from past the window edge, pushing the tab strip ahead of it, and its inner edge can be dragged to resize it. Any tab can move to the other side (drag it onto that sidebar, or right-click it), float in a window, or be closed (right-click → Close, or untick it in the campaign menu); a closed panel comes back on its side when ticked again or when something needs it, such as a link to a page. A side with no tabs disappears until a window is dragged.
-- *Chat panel:* dice tray above the message field; the message field takes `@` links.
-- *Characters and Notes panels:* each is a list and a detail (a character's sheet, a note's page) with one layout choice, kept per device and per panel: **side by side** (the list's width can be dragged; double-click the divider to reset it), or **one at a time** (a stack: pick an entry to open it, go back to the list). A toggle in the title bar switches; when the panel is too narrow for two columns (under 381 px) it shows one at a time regardless, and the toggle stays in place, disabled, saying why. Both use one component, `ui/TwoPane.tsx`.
-- *Customisability:* any panel can be dragged out into a floating window, resized from any edge, and docked back by dragging it to a sidebar; a window's close button closes the panel. Character sheets, item cards and note pages open as pop-ups.
-- *Command palette:* Ctrl/Cmd \+ K opens a search over moves, items, tools, commands and library or campaign entries. See Command palette and action index.
-- *Bottom centre:* the action hotbar — the selected character's moves and item actions, plus global actions like ping and measure — that each player can add to, remove from and reorder; keys 1 to 9 trigger its first slots. It pulls from the same action index as the command palette. Anything that drags (palette results, Libraries rows, links) can be dropped on it to pin it; a slot dragged off it can land on a character or in text, and anywhere else unpins it. What an action asks before it rolls appears in a bubble beside the slot.
-- *Campaign list:* a lobby over a non-overlapping scatter of Game-icons that slowly swap.
-- *Menus:* one shared React Aria menu component, for right-click menus (canvas, chat, characters) and the campaign menu. Menu text is 1rem. React Aria owns arrow-key navigation, typeahead, disabled and checked items, positioning and dismissal. Selecting an action closes its menu immediately; the former hold-drag-release selection and blink-before-close animation are removed. Menu items that open pop-ups retain their morphing animation. Light colour controls remain embedded in the same surface, outside the action list's menu semantics so their arrow keys adjust colour instead of navigating actions.
-- *Shared controls:* buttons use React Aria press handling; segmented choices use RadioGroup with arrow-key selection and one Tab stop; popup tabs use Tabs with associated tab panels. Searchable list and tile pickers use Autocomplete, ListBox and Popover. Search retains focus while arrows move the active option; Left and Right remain available for text editing. Escape clears a nonempty search first, then dismisses an empty picker; selection returns focus to the trigger. Window docking, resizing, domain drag/drop, global tooltip delegation and the command palette's ranked action model remain app-owned.
-- *Lists:* one list design (`ui/List.tsx`) for every list of things in a panel: the character list and its folders, the Libraries' collections, and a sheet's moves and inventory. A row is a leading icon or avatar, a name, an optional tag chip (a stat, “NPC”) and quieter detail (weight, uses), then any buttons. Rows have no background: hovering turns the name and icon gold, and the selected row stays gold with a bar at its start. Groups (folders, collections) are foldable headings with a caret, an optional icon, the label and a count, with their rows indented beneath. Tags are square tinted chips, not outlined boxes.
-- *Pop-ups:* a pop-up emerges from the thing that spawned it and opens right there (from the spawner's top edge down, or where that won't fit, from its bottom edge up), not centred or anywhere else it would have to travel to. Menu items whose label ends in “…” open pop-ups, as on macOS: the menu closes at once and the item morphs into the dialog with a shared-element view transition. So do Scene settings in the Scenes tab and the campaign menu's items (player and campaign settings, help), and a move's tooltip morphs into its move window the same way when the move is clicked. The morphing box casts the window's shadow as it grows, so the shadow arrives with the window. Openers that can't run a transition still open in place and grow out of the spawner's rectangle. Only a pop-up with no spawner opens where it was last left, or centred. A pop-up that shows something (gear, a move, a sheet, a scene, a page, a linked token) has a *proxy icon* before its title, which drags like a link to it.
-- *Anchored elements:* React Aria positions menus and searchable pickers with collision handling. The `@` list, relationship suggestions and nonmodal windows retain `ui/anchor.ts`. Tooltips open toward the middle of the screen or on a side the element asks for, and flip to the other side when they wouldn't fit.
-- *Dragging things:* one drag (`table/entityDrag.ts`) carries moves, gear, characters, scenes and pages between the Libraries, the palette, the hotbar, links in text, pop-up proxy icons, characters, notes and the chat. A small copy of the thing follows the pointer, and the target under it is outlined, then flashes when it lands.
-
-**Icons:** Game-icons.net first, with Material Symbols Rounded (filled) where no game icon fits. Generic glyphs like add, close and chevrons come from Material Symbols. Icons are compiled into the bundle at build time and named by meaning in one module, so swapping one is a one-line change. Small icons will be 22x22px, no smaller.
-
-**Motion:** view transitions animate state changes where the moving parts can briefly become snapshots: docking a window into the sidebar, switching sidebar tabs (the content slides up or down to match the tab order), showing and hiding the sidebar, and lobby ↔ table. Anything the user may reach into mid-animation animates its live elements with CSS instead — the scene menu grows with `interpolate-size` and a `grid-template-rows` drawer, so it stays hoverable. Dialogs fade and rise in with `@starting-style`, and close by receding: shrinking slightly about their centre as they fade, as if sinking back into the table. Everything is about 280 ms and switches off under reduced motion.
-
-**Type:** Cabin for controls and chat; Fraunces (optical sizing on, never small caps) for headings, move names and sheets.
-
-## TODO
-
-- [ ] Preserve Panel order when hiding/showing panels.
-- [ ] Add visibility and lock flags to entities (Notes, Tokens, Maps, Characters) which the GM can edit
-- [ ] At a player option to ‘claim’ a character as their Player Character. This will make that character the default subject for actions and add a sidebar tab for that character specifically (with its avatar as the icon)
-- [ ] Add a ‘reroll’ entry to the context menu for roll cards.

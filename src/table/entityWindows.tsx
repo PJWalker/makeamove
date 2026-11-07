@@ -71,6 +71,18 @@ export const entityWindows = store<Record<string, EntityWindowRecord>>(load());
 
 export const entityTabId = (key: string) => `entity:${key}` as const;
 
+function sameEntityWindow(a: EntityWindowRecord, b: EntityWindowRecord) {
+  return (
+    a.title === b.title &&
+    a.text === b.text &&
+    a.graphicDefaultIcon === b.graphicDefaultIcon &&
+    a.graphicRef?.kind === b.graphicRef?.kind &&
+    a.graphicRef?.id === b.graphicRef?.id &&
+    a.tags?.length === b.tags?.length &&
+    a.tags?.every((tag, index) => tag === b.tags?.[index])
+  );
+}
+
 function persist(records: Record<string, EntityWindowRecord>) {
   const saved: SavedEntityWindow[] = Object.values(records).map(({ id, title, text, tags }) => ({
     id,
@@ -82,12 +94,13 @@ function persist(records: Record<string, EntityWindowRecord>) {
 }
 
 export function registerEntityWindow(record: EntityWindowRecord) {
-  const records = {
-    ...entityWindows.value,
-    [record.id]: { ...entityWindows.value[record.id], ...record },
-  };
-  entityWindows.value = records;
-  persist(records);
+  const previous = entityWindows.value[record.id];
+  if (previous && sameEntityWindow(previous, record)) Object.assign(previous, record);
+  else {
+    const records = { ...entityWindows.value, [record.id]: { ...previous, ...record } };
+    entityWindows.value = records;
+    persist(records);
+  }
   if (locate(layout.value, record.id) === "closed") {
     detachPanel(record.id, Math.max(innerWidth / 2 - 190, 0), 96, 380, 440);
   }

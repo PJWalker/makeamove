@@ -202,7 +202,6 @@ describe("SceneController", () => {
   it("rotates a multi-selection around its centre", () => {
     const { c, renderer, scene, fire } = setup([token("a", 100, 100), token("b", 200, 100)]);
     c.selection.value = ["a", "b"];
-    (c as any).updateOverlay();
     const frame = renderer.overlayState.group;
     expect(frame).toMatchObject({ x: 150, y: 100 });
     // Pretend the knob sits at the frame's right edge, then turn it 90° clockwise.

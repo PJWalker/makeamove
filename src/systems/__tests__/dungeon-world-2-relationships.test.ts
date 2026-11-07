@@ -1,25 +1,23 @@
 import { describe, expect, it } from "vitest";
 import * as Y from "yjs";
-import {
-  advanceBond,
-  bondBetween,
-  bondsFor,
-  forgeBond,
-} from "../../../systems/dungeon-world-2/bondStore";
+import { advanceBond, bondBetween, bondsFor, forgeBond } from "../dungeon-world-2/bondStore";
 import {
   layoutWeb,
+  relationshipNotes,
   relationshipsOf,
   relationshipWeb,
   removeRelationship,
   setRelationship,
   setRelationshipDepth,
-} from "../relationships";
+} from "../../features/characters/relationships";
 
 function cast(...ids: string[]) {
   const characters = new Y.Doc().getMap<Y.Map<any>>("characters");
   for (const id of ids) characters.set(id, new Y.Map());
   return characters;
 }
+
+const relationshipNoteField = (to: string) => `text:${relationshipNotes(to)}`;
 
 describe("relationships", () => {
   it("are one-way, labelled, and gone with their notes when removed", () => {
@@ -33,10 +31,10 @@ describe("relationships", () => {
     expect(relationshipsOf(chars, "ayla")).toEqual([
       { to: "brom", label: "Trusts deeply", depth: 2 },
     ]);
-    chars.get("ayla")!.set("text:rel:brom", new Y.XmlFragment());
+    chars.get("ayla")!.set(relationshipNoteField("brom"), new Y.XmlFragment());
     removeRelationship(chars, "ayla", "brom");
     expect(relationshipsOf(chars, "ayla")).toEqual([]);
-    expect(chars.get("ayla")!.has("text:rel:brom")).toBe(false);
+    expect(chars.get("ayla")!.get(relationshipNoteField("brom"))).toBeUndefined();
   });
 
   it("keeps relationship Depth directional and clamps it to the beta track", () => {
@@ -58,8 +56,8 @@ describe("relationships", () => {
     setRelationshipDepth(chars, "ayla", "brom", 3, 3);
     expect(forgeBond(systemData, chars, "ayla", "brom", "comrades")).toBe(false);
     setRelationshipDepth(chars, "brom", "ayla", 3, 3);
-    chars.get("ayla")!.set("text:rel:brom", new Y.XmlFragment());
-    chars.get("brom")!.set("text:rel:ayla", new Y.XmlFragment());
+    chars.get("ayla")!.set(relationshipNoteField("brom"), new Y.XmlFragment());
+    chars.get("brom")!.set(relationshipNoteField("ayla"), new Y.XmlFragment());
 
     expect(forgeBond(systemData, chars, "brom", "ayla", "comrades")).toBe(true);
     expect(bondBetween(systemData, "brom", "ayla")).toEqual({
@@ -71,8 +69,8 @@ describe("relationships", () => {
     expect(bondsFor(systemData, "ayla")).toHaveLength(1);
     expect(relationshipsOf(chars, "ayla")).toEqual([]);
     expect(relationshipsOf(chars, "brom")).toEqual([]);
-    expect(chars.get("ayla")!.has("text:rel:brom")).toBe(false);
-    expect(chars.get("brom")!.has("text:rel:ayla")).toBe(false);
+    expect(chars.get("ayla")!.get(relationshipNoteField("brom"))).toBeUndefined();
+    expect(chars.get("brom")!.get(relationshipNoteField("ayla"))).toBeUndefined();
   });
 
   it("tracks Bond advances once and resets them when a pair forges a different Bond", () => {
@@ -93,13 +91,13 @@ describe("relationships", () => {
     setRelationshipDepth(chars, "ayla", "brom", 3, 3);
     expect(advanceBond(systemData, chars, "brom", "ayla", "back-to-back")).toBe(false);
     setRelationshipDepth(chars, "brom", "ayla", 3, 3);
-    chars.get("ayla")!.set("text:rel:brom", new Y.XmlFragment());
-    chars.get("brom")!.set("text:rel:ayla", new Y.XmlFragment());
+    chars.get("ayla")!.set(relationshipNoteField("brom"), new Y.XmlFragment());
+    chars.get("brom")!.set(relationshipNoteField("ayla"), new Y.XmlFragment());
     expect(advanceBond(systemData, chars, "brom", "ayla", "back-to-back")).toBe(true);
     expect(advanceBond(systemData, chars, "ayla", "brom", "back-to-back")).toBe(false);
     expect(bondBetween(systemData, "ayla", "brom")?.advancedMoves).toEqual(["back-to-back"]);
     expect(relationshipsOf(chars, "ayla")).toEqual([]);
-    expect(chars.get("ayla")!.has("text:rel:brom")).toBe(false);
+    expect(chars.get("ayla")!.get(relationshipNoteField("brom"))).toBeUndefined();
 
     setRelationship(chars, "ayla", "brom", "Trusts");
     setRelationship(chars, "brom", "ayla", "Respects");

@@ -3,7 +3,8 @@ import { SRD_FEATS } from "../dnd55e/srdFeats";
 import { SRD_MONSTERS } from "../dnd55e/srdMonsters";
 import { SRD_MAGIC_ITEMS } from "../dnd55e/srdMagicItems";
 import { SRD_CLASS_FEATURES } from "../dnd55e/srdClasses";
-import { describe, expect, it } from "vitest";
+import "fake-indexeddb/auto";
+import { describe, expect, it, vi } from "vitest";
 import * as Y from "yjs";
 import { checkSystem, getSystem } from "..";
 import { dnd55e as dnd, pactMagic, proficiencyAt, spellSlots } from "../dnd55e";
@@ -16,6 +17,12 @@ import {
   actionsFor,
 } from "../../features/characters/store";
 import { performMove, planMove } from "../../features/characters/moves";
+import { Campaign, createCampaign } from "../../campaign/campaign";
+import { summaryOf } from "../../campaign/registry";
+import { device } from "../../platform/device";
+import { newCharacter, moveRequest, startMove, systemOf } from "../../features/characters/api";
+
+vi.mock("../../table/panelLayout", () => ({ showPanel: () => {} }));
 
 const fixed = (...values: number[]) => {
   if (!values.length) throw new RangeError("Dice fixture needs at least one result");
@@ -329,5 +336,24 @@ describe("D&D 5.5e", () => {
         targets: [{ id: "t1" }, { id: "t2" }],
       });
     });
+  });
+});
+
+describe("D&D 5.5e campaign behavior", () => {
+  it("plays the system selected for a campaign and asks before a d20 roll", async () => {
+    device.value = { id: "gm", name: "Gwen" };
+    const campaignId = await createCampaign("Sunless Citadel", "Gwen", "dnd-5.5e");
+    const campaign = await Campaign.open(campaignId);
+    expect(systemOf(campaign).id).toBe("dnd-5.5e");
+    expect(summaryOf(campaignId)?.systemId).toBe("dnd-5.5e");
+    const characterId = newCharacter(campaign, "Vex", "rogue");
+    startMove(
+      campaign,
+      characterId,
+      systemOf(campaign).actions.find((action) => action.id === "skill-stealth")!,
+    );
+    expect(moveRequest.value).toMatchObject({ moveId: "skill-stealth" });
+    moveRequest.value = null;
+    campaign.destroy();
   });
 });

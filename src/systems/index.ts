@@ -8,7 +8,7 @@ import { dnd55e } from "./dnd55e";
 export const NO_SYSTEM_ID = "none";
 
 /** The system for campaigns that don't say which they play. */
-export const DEFAULT_SYSTEM_ID = dungeonWorld.id;
+export const DEFAULT_SYSTEM_ID = NO_SYSTEM_ID;
 
 const noSystem: GameSystem = {
   id: NO_SYSTEM_ID,

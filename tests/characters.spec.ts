@@ -1,10 +1,9 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./browser-test";
 import { createCampaign, openCharacters } from "./e2e-helpers";
-
-test.use({ viewport: { width: 1280, height: 800 } });
 
 test("a GM can create an NPC", async ({ page }) => {
   await createCampaign(page);
+  await openCharacters(page);
   await page.getByRole("button", { name: "New", exact: true }).click();
   await page.getByRole("radio", { name: "NPC" }).click();
   await page.getByRole("textbox", { name: "Name" }).fill("Mira Ashford");
@@ -18,7 +17,7 @@ test("a GM can create an NPC", async ({ page }) => {
 test("a GM can create a PC with common description and GM notes", async ({ page }) => {
   await createCampaign(page, "Character notes test");
   await openCharacters(page);
-  await page.getByRole("textbox", { name: "Name" }).fill("Ayla");
+  await page.locator('.sheet-new input:not([type="radio"]):not([type="checkbox"])').first().fill("Ayla");
   await page.getByRole("button", { name: "Create", exact: true }).click();
 
   await expect(page.getByRole("textbox", { name: "Description" })).toBeVisible();
@@ -26,9 +25,8 @@ test("a GM can create a PC with common description and GM notes", async ({ page 
 });
 
 test("the system-less default starts a usable campaign", async ({ page }) => {
-  await page.goto("/");
-  await page.getByPlaceholder("The Lost Barrows").fill("Freeform Table");
-  await page.getByPlaceholder("Robin").first().fill("Tester");
+  await page.locator('input[placeholder="The Lost Barrows"]').fill("Freeform Table");
+  await page.locator('input[placeholder="Robin"]').first().fill("Tester");
   await expect(page.getByLabel("System")).toHaveValue("none");
   await page.getByRole("button", { name: "Create campaign" }).click();
 
@@ -37,7 +35,10 @@ test("the system-less default starts a usable campaign", async ({ page }) => {
   await expect(page.getByRole("button", { name: "New page" })).toBeVisible();
 
   await openCharacters(page);
-  await page.getByRole("textbox", { name: "Name" }).fill("Freeform Hero");
+  await page
+    .locator('.sheet-new input:not([type="radio"]):not([type="checkbox"])')
+    .first()
+    .fill("Freeform Hero");
   await page.getByRole("button", { name: "Create", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "Name" })).toHaveValue("Freeform Hero");
 });

@@ -248,7 +248,7 @@ function LinkPopup({ campaign, link }: { campaign: Campaign; link: LinkRef }) {
           ]}
         >
           <div className="link-note">
-            <NoteEditor campaign={campaign} noteId={note.id} />
+            <NoteEditor campaign={campaign} noteId={note.id} active />
           </div>
         </LinkDialog>
       ) : null;

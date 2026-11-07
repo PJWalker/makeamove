@@ -1,7 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./browser-test";
 import { createCampaign, drag, settled } from "./e2e-helpers";
-
-test.use({ viewport: { width: 1280, height: 800 } });
 
 test("rapid panel changes settle on the last selected panel", async ({ page }) => {
   await createCampaign(page, "Panel transitions");

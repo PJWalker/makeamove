@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
 import * as Y from "yjs";
-import { dungeonWorld } from "../../../systems/dungeon-world";
-import { performMove } from "../../characters/moves";
-import { characterView, createCharacter, derive, actionsFor } from "../../characters/store";
+import { dungeonWorld } from "../dungeon-world";
+import { performMove } from "../../features/characters/moves";
+import {
+  characterView,
+  createCharacter,
+  derive,
+  actionsFor,
+} from "../../features/characters/store";
 import {
   deleteHomebrew,
   isHomebrew,
@@ -11,7 +16,7 @@ import {
   saveMove,
   withHomebrew,
   type HomebrewEntry,
-} from "../homebrew";
+} from "../../features/homebrew/homebrew";
 
 describe("homebrew", () => {
   const doc = () => new Y.Doc().getMap<HomebrewEntry>("homebrew");

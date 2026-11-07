@@ -136,6 +136,9 @@ export function linkTip(campaign: Campaign, kind: LinkKind, id: string): string 
 /** The page open in the Notes panel, if any. */
 export const openNoteId = store<string | null>(null);
 
+/** A match to select after its page's editor is ready. */
+export const noteSearchTarget = store<{ noteId: string; from: number; to: number } | null>(null);
+
 /** Counts each request to open a page, even the one already chosen, so the panel shows it. */
 export const noteOpened = store(0);
 
