@@ -8,15 +8,15 @@ import { device } from "../platform/device";
 import { useY } from "../ui/useY";
 import { Button } from "../ui/Button";
 import { DamageTargets, SaveRequests, TargetRolls } from "./CardParts";
-import { pickUpRollCard, RollDie } from "./RollDie";
+import { rollCarriedDice, RollDie } from "./RollDie";
 import { canWork } from "../features/chat/types";
 import { readRollState, rerollDie, rerollMessage, toggleRollDie } from "../features/chat/rollState";
-import { useShake } from "../ui/useShake";
+import { useThrow } from "../ui/useThrow";
 import { readRollResult } from "../features/characters/moves";
 import { derive } from "../features/characters/store";
 import { useValue } from "../ui/useValue";
 
-/* Rolls and moves in the chat: their dice, which anyone allowed can reroll or shake, and their outcome. */
+/* Rolls and moves in the chat: their dice, which anyone allowed can reroll or throw, and their outcome. */
 
 const VISIBILITY_LABEL: Record<RollVisibility, string> = {
   public: "",
@@ -61,11 +61,11 @@ export function RollCard({
   mine,
 }: { campaign: Campaign; m: RollMessage; masked: boolean } & Thrown) {
   const interaction = useSharedRoll(campaign, m);
-  const shake = useShake({
-    onShake: interaction.rerollAll,
+  const gesture = useThrow({
+    onThrow: interaction.rerollAll,
+    onAway: rollCarriedDice,
     enabled: interaction.allowed && !masked,
     ignoreControls: true,
-    onPickUp: pickUpRollCard,
   });
   if (masked) {
     return (
@@ -79,10 +79,10 @@ export function RollCard({
     <div
       className="roll-card"
       aria-label={`${r.formula}${m.comment ? `, ${m.comment}` : ""}: ${r.total}`}
-      data-shakeable={interaction.allowed || undefined}
-      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable so the roll can be shaken by keyboard
+      data-throwable={interaction.allowed || undefined}
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable so the roll can be rerolled by keyboard
       tabIndex={interaction.allowed ? 0 : undefined}
-      {...shake}
+      {...gesture}
     >
       <div className="roll-head">
         <span className="roll-formula">{r.formula}</span>
@@ -155,11 +155,11 @@ export function MoveCard({
   const messages = useValue(campaign.chat.messages);
   const gm = useY(campaign.members, () => campaign.isGm());
   const me = useValue(device).id;
-  const shake = useShake({
-    onShake: interaction.rerollAll,
+  const gesture = useThrow({
+    onThrow: interaction.rerollAll,
+    onAway: rollCarriedDice,
     enabled: interaction.allowed && !!original.roll,
     ignoreControls: true,
-    onPickUp: pickUpRollCard,
   });
   let m = original;
   if (interaction.snapshot?.edited && original.roll) {
@@ -190,10 +190,10 @@ export function MoveCard({
     <div
       className="roll-card move-card"
       data-band={result?.tone ?? "none"}
-      data-shakeable={(interaction.allowed && !!m.roll) || undefined}
-      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable so the roll can be shaken by keyboard
+      data-throwable={(interaction.allowed && !!m.roll) || undefined}
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable so the roll can be rerolled by keyboard
       tabIndex={interaction.allowed && m.roll ? 0 : undefined}
-      {...shake}
+      {...gesture}
     >
       <div className="roll-head">
         <span className="roll-formula">{m.moveName}</span>

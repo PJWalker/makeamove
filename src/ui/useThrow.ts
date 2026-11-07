@@ -1,17 +1,18 @@
 import type * as React from "react";
 import { useEffect, useRef } from "react";
 
-export interface ShakeOptions {
-  onShake: () => void;
+export interface ThrowOptions {
+  /** Called when the element is let go at least THROW_DISTANCE from where it was picked up. */
+  onThrow: () => void;
   enabled: boolean;
   /** Leave presses on buttons and fields inside the element alone. */
   ignoreControls?: boolean;
   onTap?: (() => void) | undefined;
   /**
-   * Called as the element is picked up, with the copy of it that follows the
-   * pointer; returns what to do when it's put down, and whether it was shaken.
+   * Called as the carried copy goes THROW_DISTANCE or further from where it was
+   * picked up; returns what to do when it comes back, or is let go.
    */
-  onPickUp?: (element: HTMLElement, carrier: HTMLElement) => (shaken: boolean) => void;
+  onAway?: ((element: HTMLElement, carrier: HTMLElement) => () => void) | undefined;
 }
 
 /** Inherited text styles a lifted copy loses when it leaves its panel. */
@@ -36,7 +37,15 @@ function lift(element: HTMLElement) {
   carrier.removeAttribute("tabindex");
   carrier.setAttribute("aria-hidden", "true");
   carrier.inert = true;
-  carrier.classList.add("shake-carrier");
+  carrier.classList.add("throw-carrier");
+  // A cloned canvas comes up blank; copy what each one shows.
+  const canvases = element.querySelectorAll("canvas");
+  carrier.querySelectorAll("canvas").forEach((copy, index) => {
+    const source = canvases[index]!;
+    copy.width = source.width;
+    copy.height = source.height;
+    copy.getContext("2d")?.drawImage(source, 0, 0);
+  });
   for (const property of INHERITED)
     carrier.style.setProperty(property, computed.getPropertyValue(property));
   Object.assign(carrier.style, {
@@ -57,45 +66,37 @@ function lift(element: HTMLElement) {
   };
 }
 
-const REROLL_SPEED = 220;
-const RELEASE_DECAY_MS = 60;
+/** How far (CSS px) a picked-up element must be carried for letting go to throw it. */
+const THROW_DISTANCE = 128;
 
-export function useShake({
-  onShake,
+export function useThrow({
+  onThrow,
   enabled,
   ignoreControls = false,
   onTap,
-  onPickUp,
-}: ShakeOptions) {
+  onAway,
+}: ThrowOptions) {
   const gesture = useRef<{
     pointer: number;
     originX: number;
     originY: number;
-    x: number;
-    y: number;
-    dx: number;
-    dy: number;
-    distance: number;
-    reversals: number;
     moved: boolean;
-    time: number;
-    vx: number;
-    vy: number;
     grabbed: string | undefined;
     element: HTMLElement;
     carrier: HTMLElement;
     drop: () => void;
     cursor: string;
-    putDown?: (shaken: boolean) => void;
+    /** Set while the copy is far enough away to throw: brings it back. */
+    back?: (() => void) | undefined;
   } | null>(null);
-  const release = (shaken = false) => {
+  const release = () => {
     const current = gesture.current;
     if (!current) return;
     gesture.current = null;
     current.element.style.cursor = current.cursor;
     if (current.grabbed === undefined) delete current.element.dataset.grabbed;
     else current.element.dataset.grabbed = current.grabbed;
-    current.putDown?.(shaken);
+    current.back?.();
     current.drop();
     return current;
   };
@@ -128,16 +129,7 @@ export function useShake({
         pointer: event.pointerId,
         originX: event.clientX,
         originY: event.clientY,
-        x: event.clientX,
-        y: event.clientY,
-        dx: 0,
-        dy: 0,
-        distance: 0,
-        reversals: 0,
         moved: false,
-        time: event.timeStamp,
-        vx: 0,
-        vy: 0,
         grabbed: element.dataset.grabbed,
         element,
         carrier,
@@ -146,8 +138,6 @@ export function useShake({
       };
       element.dataset.grabbed = "true";
       element.style.cursor = "grabbing";
-      const putDown = onPickUp?.(element, carrier);
-      if (putDown) gesture.current.putDown = putDown;
     },
     onPointerMove(event: React.PointerEvent<HTMLElement>) {
       const current = gesture.current;
@@ -155,39 +145,24 @@ export function useShake({
       const offsetX = event.clientX - current.originX;
       const offsetY = event.clientY - current.originY;
       current.carrier.style.translate = `${offsetX}px ${offsetY}px`;
-      current.moved ||= Math.hypot(offsetX, offsetY) >= 6;
-      const dx = event.clientX - current.x;
-      const dy = event.clientY - current.y;
-      const elapsed = Math.max(1, event.timeStamp - current.time);
-      const dt = Math.max(16, elapsed);
-      const smoothing = Math.min(1, Math.max(0.35, elapsed / 35));
-      current.vx += ((dx * 1000) / dt - current.vx) * smoothing;
-      current.vy += ((dy * 1000) / dt - current.vy) * smoothing;
-      current.time = event.timeStamp;
-      current.x = event.clientX;
-      current.y = event.clientY;
-      const distance = Math.hypot(dx, dy);
-      if (distance < 6) return;
-      if (dx * current.dx + dy * current.dy < 0) current.reversals++;
-      current.distance += distance;
-      current.dx = dx;
-      current.dy = dy;
+      const distance = Math.hypot(offsetX, offsetY);
+      current.moved ||= distance >= 6;
+      const away = distance >= THROW_DISTANCE;
+      if (away && !current.back)
+        current.back = onAway?.(current.element, current.carrier) ?? (() => {});
+      else if (!away && current.back) {
+        current.back();
+        current.back = undefined;
+      }
     },
     onPointerUp(event: React.PointerEvent<HTMLElement>) {
       const current = gesture.current;
       if (!current || current.pointer !== event.pointerId) return;
-      current.moved ||=
-        Math.hypot(event.clientX - current.originX, event.clientY - current.originY) >= 6;
-      const releaseAge = Math.max(0, event.timeStamp - current.time);
-      const releaseSpeed =
-        Math.hypot(current.vx, current.vy) * Math.exp(-releaseAge / RELEASE_DECAY_MS);
-      const shaken =
-        enabled &&
-        (releaseSpeed >= REROLL_SPEED || (current.reversals >= 2 && current.distance >= 70));
-      release(shaken);
+      const distance = Math.hypot(event.clientX - current.originX, event.clientY - current.originY);
+      release();
       event.stopPropagation();
-      if (shaken) onShake();
-      else if (enabled && !current.moved) onTap?.();
+      if (enabled && distance >= THROW_DISTANCE) onThrow();
+      else if (enabled && !current.moved && distance < 6) onTap?.();
     },
     onPointerCancel() {
       release();
@@ -205,7 +180,7 @@ export function useShake({
       event.preventDefault();
       event.stopPropagation();
       if (onTap) onTap();
-      else onShake();
+      else onThrow();
     },
   };
 }

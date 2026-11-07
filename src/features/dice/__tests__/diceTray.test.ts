@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Quaternion, Vec3 } from "cannon-es";
-import { DiceHold, simulateDice, type DieHull } from "../../../table/diePhysics";
+import { simulateDice, type DieHull } from "../../../table/diePhysics";
 
 const cube: DieHull = {
   vertices: [
@@ -68,52 +68,5 @@ describe("a roll of several dice in one tray", () => {
 
   it("reports when dice strike something, for the sound of the roll", () => {
     expect(frames.flat().some((pose) => (pose.impact ?? 0) > 2.5)).toBe(true);
-  });
-});
-
-describe("dice carried in a tray", () => {
-  it("knock into each other instead of overlapping", () => {
-    const hold = new DiceHold(
-      { left: 0, top: 0, right: 8, bottom: 4 },
-      [2, 5].map((x) => ({
-        hull: cube,
-        x,
-        y: 2,
-        z: 0.65,
-        quaternion: { x: 0, y: 0, z: 0, w: 1 },
-      })),
-      "tray",
-    );
-    for (let frame = 0; frame < 240; frame++) {
-      if (frame % 10 === 0) hold.jolt(-12, 0);
-      hold.step();
-      const [a, b] = hold.poses();
-      expect(Math.hypot(a!.x - b!.x, a!.y - b!.y, a!.z - b!.z)).toBeGreaterThan(1.1);
-    }
-  });
-
-  it("stay inside the walls of the tray", () => {
-    const hold = new DiceHold(
-      { left: 0, top: 0, right: 8, bottom: 4 },
-      [
-        {
-          hull: cube,
-          x: 4,
-          y: 2,
-          z: 0.65,
-          quaternion: { x: 0, y: 0, z: 0, w: 1 },
-        },
-      ],
-      "tray",
-    );
-    for (let frame = 0; frame < 240; frame++) {
-      hold.jolt(frame % 20 < 10 ? 30 : -30, frame % 14 < 7 ? 30 : -30);
-      hold.step();
-      const pose = hold.poses()[0]!;
-      expect(pose.x).toBeGreaterThanOrEqual(0.65 - 1e-3);
-      expect(pose.x).toBeLessThanOrEqual(8 - 0.65 + 1e-3);
-      expect(pose.y).toBeGreaterThanOrEqual(0.65 - 1e-3);
-      expect(pose.y).toBeLessThanOrEqual(4 - 0.65 + 1e-3);
-    }
   });
 });

@@ -24,10 +24,6 @@ export interface DieTray {
 
 export const PHYSICS_STEP = 1 / 120;
 const GRAVITY = 28;
-const MAX_HOLD_HEIGHT = 8;
-const MAX_HOLD_LIFT = 4;
-const MAX_HOLD_UPWARD_SPEED = 10;
-const MAX_HOLD_SPEED = 40;
 /** How far a resting die's bottom face may tip from the floor before it counts as cocked. */
 const COCKED = 0.995;
 /** A die slower than this (units/s, and radians/s) for STILL_TIME has stopped. */
@@ -80,13 +76,6 @@ export interface DiePose {
   impact?: number;
 }
 
-/** Height of a die's centre when its resting orientation touches the tray floor. */
-export function restingHeight(hull: DieHull, orientation: DiePose["quaternion"]): number {
-  const rotation = new Quaternion(orientation.x, orientation.y, orientation.z, orientation.w);
-  const lowest = Math.min(...hull.vertices.map(([x, y, z]) => rotation.vmult(new Vec3(x, y, z)).z));
-  return Math.max(0.5, -lowest);
-}
-
 /** Groups: dice are 1, the tray floor and walls are 2. */
 const DICE = 1;
 const TRAY = 2;
@@ -105,10 +94,7 @@ class TrayWorld {
   private readonly wallMaterial = new Material("wall");
   private readonly contacts: Record<"dieDie" | "dieFloor" | "dieWall", ContactMaterial>;
 
-  constructor(
-    private readonly tray: DieTray,
-    ceiling?: number,
-  ) {
+  constructor(private readonly tray: DieTray) {
     const solver = new GSSolver();
     solver.iterations = 20;
     solver.tolerance = 1e-4;
@@ -135,7 +121,6 @@ class TrayWorld {
     this.addPlane(new Vec3(tray.right, 0, 0), new Vec3(-1, 0, 0));
     this.addPlane(new Vec3(0, -tray.top, 0), new Vec3(0, -1, 0));
     this.addPlane(new Vec3(0, -tray.bottom, 0), new Vec3(0, 1, 0));
-    if (ceiling !== undefined) this.addPlane(new Vec3(0, 0, ceiling), new Vec3(0, 0, -1));
   }
 
   private addPlane(position: Vec3, normal: Vec3, material: Material = this.wallMaterial) {
@@ -254,139 +239,6 @@ function impactOf(before: Vec3, body: Body) {
   change.z += GRAVITY * PHYSICS_STEP;
   const size = change.length();
   return size > 1 ? size : 0;
-}
-
-export interface HeldDie {
-  hull: DieHull;
-  x: number;
-  y: number;
-  z: number;
-  quaternion: { x: number; y: number; z: number; w: number };
-}
-
-interface LockedBody {
-  position: Vec3;
-  quaternion: Quaternion;
-  angularVelocity: Vec3;
-}
-
-interface CarriedBody {
-  body: Body;
-  vertices: Vec3[];
-  impact: number;
-}
-
-/** Dice held at a cursor position, or carried inside a tray that can be jolted. */
-export class DiceHold {
-  private readonly locked: LockedBody[] = [];
-  private readonly carried: CarriedBody[] = [];
-  private readonly trayWorld?: TrayWorld;
-
-  constructor(
-    tray: DieTray,
-    dice: HeldDie[],
-    private readonly mode: "locked" | "tray",
-  ) {
-    if (mode === "locked") {
-      this.locked = dice.map((die) => ({
-        position: new Vec3(die.x, -die.y, die.z),
-        quaternion: new Quaternion(
-          die.quaternion.x,
-          die.quaternion.y,
-          die.quaternion.z,
-          die.quaternion.w,
-        ),
-        angularVelocity: new Vec3(8, 11, 6),
-      }));
-      return;
-    }
-    const trayWorld = new TrayWorld(tray, MAX_HOLD_HEIGHT);
-    this.trayWorld = trayWorld;
-    this.carried = dice.map((die) => {
-      const vertices = die.hull.vertices.map(([x, y, z]) => new Vec3(x, y, z));
-      const body = trayWorld.dieBody(die.hull, vertices);
-      body.allowSleep = false;
-      body.collisionFilterMask = DICE | TRAY;
-      body.position.set(die.x, -die.y, die.z);
-      body.quaternion.set(die.quaternion.x, die.quaternion.y, die.quaternion.z, die.quaternion.w);
-      trayWorld.world.addBody(body);
-      return { body, vertices, impact: 0 };
-    });
-  }
-
-  /** The tray changed speed by (x, y) units/s; the dice inside keep going and hit its walls. */
-  jolt(x: number, y: number) {
-    if (this.mode !== "tray") return;
-    for (const { body } of this.carried) {
-      body.velocity.x -= x;
-      body.velocity.y += y;
-      body.velocity.z = Math.min(
-        MAX_HOLD_UPWARD_SPEED,
-        body.velocity.z + Math.min(MAX_HOLD_LIFT, Math.hypot(x, y) * 0.7),
-      );
-      const speed = Math.hypot(body.velocity.x, body.velocity.y);
-      if (speed > MAX_HOLD_SPEED) {
-        body.velocity.x *= MAX_HOLD_SPEED / speed;
-        body.velocity.y *= MAX_HOLD_SPEED / speed;
-      }
-      body.angularVelocity.x += y * 1.5;
-      body.angularVelocity.y += x * 1.5;
-    }
-  }
-
-  step() {
-    const dt = PHYSICS_STEP;
-    for (const die of this.locked) {
-      const speed = die.angularVelocity.length();
-      if (!speed) continue;
-      const axis = die.angularVelocity.scale(1 / speed, new Vec3());
-      const delta = new Quaternion().setFromAxisAngle(axis, speed * dt);
-      die.quaternion.mult(delta, die.quaternion);
-    }
-    if (!this.trayWorld) return;
-    const before = this.carried.map(({ body }) => body.velocity.clone());
-    this.trayWorld.world.step(dt);
-    this.carried.forEach((die, index) => {
-      this.trayWorld!.contain(die.body, die.vertices, 0.5);
-      die.impact = impactOf(before[index]!, die.body);
-    });
-  }
-
-  /** Where each die is and how it's moving, to carry on rolling from. */
-  states(): DieState[] {
-    const vector = (v: Vec3): [number, number, number] => [v.x, v.y, v.z];
-    const turn = (q: Quaternion) => ({ x: q.x, y: q.y, z: q.z, w: q.w });
-    if (this.mode === "locked")
-      return this.locked.map((die) => ({
-        position: vector(die.position),
-        quaternion: turn(die.quaternion),
-        velocity: [0, 0, 3],
-        angularVelocity: vector(die.angularVelocity),
-      }));
-    return this.carried.map(({ body }) => ({
-      position: vector(body.position),
-      quaternion: turn(body.quaternion),
-      velocity: vector(body.velocity),
-      angularVelocity: vector(body.angularVelocity),
-    }));
-  }
-
-  poses(): DiePose[] {
-    if (this.mode === "locked")
-      return this.locked.map((die) => ({
-        x: die.position.x,
-        y: -die.position.y,
-        z: die.position.z,
-        quaternion: {
-          x: die.quaternion.x,
-          y: die.quaternion.y,
-          z: die.quaternion.z,
-          w: die.quaternion.w,
-        },
-        captured: true,
-      }));
-    return this.carried.map(({ body, impact }) => poseOf(body, true, impact));
-  }
 }
 
 function seededRandom(seed: string) {

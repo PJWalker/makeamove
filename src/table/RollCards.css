@@ -103,8 +103,8 @@
     text-align: right;
     transition: opacity 560ms var(--ease);
   }
-  /* Reveal the total as the final glide begins. */
-  .roll-body:has(.die:is([data-phase="pending"], [data-phase="flying"]):not([data-reveal-started]))
+  /* Reveal the total once every die has landed. */
+  .roll-body:has(.die:is([data-phase="pending"], [data-phase="flying"]))
     > .roll-total {
     opacity: 0;
   }

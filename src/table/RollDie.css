@@ -38,7 +38,7 @@
     position: absolute;
     inset: 0;
   }
-  .roll-card[data-shakeable] {
+  .roll-card[data-throwable] {
     touch-action: pan-y;
     cursor: grab;
   }
@@ -46,7 +46,7 @@
     position: relative;
   }
   /* A roll card or die being carried: a copy above every panel, free to leave the chat. */
-  .shake-carrier {
+  .throw-carrier {
     position: fixed;
     z-index: 10000;
     margin: 0;
@@ -64,7 +64,7 @@
     z-index: 10001;
     pointer-events: none;
   }
-  /* Without WebGPU: a flat chip shaped like the die, cut from the same stones as buttons. */
+  /* Without WebGL: a flat chip shaped like the die, cut from the same stones as buttons. */
   .die[data-phase="flat"] {
     width: 64px;
     height: 64px;

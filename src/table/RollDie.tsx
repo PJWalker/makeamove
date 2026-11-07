@@ -1,25 +1,27 @@
 import { useEffect, useRef, useState } from "react";
 import type { Die } from "../features/dice/notation";
 import { lastPointer } from "../ui/pointer";
-import { useShake } from "../ui/useShake";
+import { useThrow } from "../ui/useThrow";
 import type { DiceRenderer, Point } from "./diceRenderer";
 
 /** Waiting for the renderer, in the air, at rest, or drawn flat where the browser can't draw 3D at all. */
 type Phase = "pending" | "flying" | "landed" | "flat";
 
 let renderer: Promise<DiceRenderer | null> | undefined;
-let loadedRenderer: DiceRenderer | null = null;
+let loaded: DiceRenderer | undefined;
 const loadRenderer = () =>
   (renderer ??= import("./diceRenderer")
-    .then((m) => m.createDiceRenderer())
-    .then((instance) => {
-      loadedRenderer = instance;
-      return instance;
-    })
+    .then((m) => (loaded = m.createDiceRenderer()))
     .catch(() => null));
 
-export function pickUpRollCard(element: HTMLElement, carrier: HTMLElement) {
-  return loadedRenderer?.pickUp(element, carrier) ?? (() => {});
+/** Tumbles the dice in a carried copy of `element`; the returned function settles them back. */
+export function rollCarriedDice(element: HTMLElement, carrier: HTMLElement) {
+  return (
+    loaded?.spin(
+      [...element.querySelectorAll("canvas")],
+      [...carrier.querySelectorAll("canvas")],
+    ) ?? (() => {})
+  );
 }
 
 /** Where a die thrown into this slot starts: the roller's pointer, or else above the log. */
@@ -67,22 +69,20 @@ export function RollDie({
     arriving,
     mine,
     index,
-    max,
-    min,
     sides: die.sides,
     value: die.value,
     seed,
   });
   const interactive = !!onReroll && (phase === "landed" || phase === "flat");
-  const shake = useShake({
-    onShake: () => onReroll?.(),
+  const gesture = useThrow({
+    onThrow: () => onReroll?.(),
+    onAway: rollCarriedDice,
     enabled: interactive,
-    onPickUp: pickUpRollCard,
     ...(onToggle ? { onTap: onToggle } : {}),
   });
 
   useEffect(() => {
-    const { phase, arriving, mine, index, max, min, sides, value, seed } = initial.current;
+    const { phase, arriving, mine, index, sides, value, seed } = initial.current;
     if (phase === "flat") return;
     const thrown =
       arriving && !matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -94,19 +94,10 @@ export function RollDie({
       .then((dice) => {
         if (gone) return;
         if (!dice || !slot.current || !canvas.current) return setPhase("flat");
-        const tone = max ? "max" : min ? "min" : "plain";
-        const mounted = dice.mount(
-          canvas.current,
-          slot.current,
-          { sides, value, tone, seed },
-          thrown,
-        );
+        const mounted = dice.mount(canvas.current, slot.current, { sides, value, seed }, thrown);
         dispose = mounted.dispose;
         setPhase(thrown ? "flying" : "landed");
-        void mounted.landed.then(
-          () => !gone && setPhase("landed"),
-          () => !gone && setPhase("flat"),
-        );
+        void mounted.landed.then(() => !gone && setPhase("landed"));
       })
       .catch(() => {
         if (!gone) setPhase("flat");
@@ -135,7 +126,7 @@ export function RollDie({
       style={{ "--i": index }}
       aria-label={`d${die.sides}: ${die.value}${die.disabled ? ", disabled" : die.kept ? "" : ", dropped"}`}
       title={dieTitle(die)}
-      {...shake}
+      {...gesture}
       onKeyDown={(event) => {
         if (interactive && event.shiftKey && event.key === "Enter") {
           event.preventDefault();
@@ -145,7 +136,7 @@ export function RollDie({
           event.preventDefault();
           event.stopPropagation();
           onToggle();
-        } else shake.onKeyDown(event);
+        } else gesture.onKeyDown(event);
       }}
     >
       {phase !== "flat" && <canvas ref={canvas} className="die-canvas" aria-hidden="true" />}
