@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("../renderer", () => ({
+const handles = vi.hoisted(() => ({ knob: { x: -999, y: -999 } }));
+vi.mock("../render/handles", () => ({
   HANDLE_SIZE: 10,
-  rotateHandlePosition: () => ({ x: -999, y: -999 }),
+  rotateHandlePosition: () => handles.knob,
+  lightHandles: () => [],
 }));
 vi.mock("../../platform/device", () => ({ device: { value: { id: "x" } } }));
 vi.mock("../images", () => ({ importImage: vi.fn(), imageColour: vi.fn() }));
@@ -205,8 +207,9 @@ describe("SceneController", () => {
     expect(frame).toMatchObject({ x: 150, y: 100 });
     // Pretend the knob sits at the frame's right edge, then turn it 90° clockwise.
     renderer.overlayState.group = frame;
-    (c as any).handleAt = () => ({ kind: "rotate" });
+    handles.knob = { x: 250, y: 100 };
     fire("pointerdown", 250, 100);
+    handles.knob = { x: -999, y: -999 };
     fire("pointermove", 150, 200);
     const a = renderer.previews.get("a");
     expect(a.x).toBeCloseTo(150);

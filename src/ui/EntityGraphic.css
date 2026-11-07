@@ -1,0 +1,15 @@
+@layer components {
+  .entity-graphic {
+    display: inline-grid;
+    flex: none;
+    place-items: center;
+    overflow: hidden;
+    color: inherit;
+  }
+  .entity-graphic-image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+}

@@ -1,0 +1,13 @@
+@layer components {
+  .chat {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .chat[data-dropping="true"] {
+    outline: 2px dashed var(--text-muted);
+    outline-offset: -4px;
+  }
+}

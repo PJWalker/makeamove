@@ -1,0 +1,123 @@
+@layer components {
+  .chat-msg {
+    display: grid;
+    gap: var(--space-1);
+  }
+  .chat-msg[data-header="true"] {
+    margin-top: var(--space-3);
+  }
+  .chat-msg-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .chat-msg-head .avatar {
+    width: 24px;
+    height: 24px;
+    font-size: var(--text-xs);
+  }
+  .chat-author {
+    font-weight: 600;
+    font-size: var(--text-md);
+  }
+  .chat-time {
+    color: var(--text-faint);
+    font-size: var(--text-xs);
+  }
+  .chat-text {
+    font-size: var(--text-md);
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+  .chat-text p {
+    display: inline;
+    margin: 0;
+  }
+  .chat-text p + p::before {
+    content: "\A";
+    white-space: pre;
+  }
+  .chat-text a {
+    color: var(--accent);
+  }
+  .chat-text code {
+    padding: 0 3px;
+    background: var(--surface-sunken);
+    font-size: 0.9em;
+  }
+  .chat-text[data-emote="true"] {
+    color: var(--text-muted);
+    font-style: italic;
+  }
+  .chat-emote-name {
+    font-style: normal;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .chat-msg[data-whisper="true"] .chat-text {
+    padding: var(--space-1) var(--space-2);
+    background: var(--private-soft);
+  }
+  .chat-whisper-tag {
+    display: block;
+    color: var(--private);
+    font-size: var(--text-xs);
+    font-weight: 600;
+  }
+  .chat-system {
+    align-self: center;
+    margin-block: var(--space-2);
+    color: var(--text-faint);
+    font-size: var(--text-xs);
+  }
+  .chat-system:has(.chat-go) {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .chat-go {
+    min-height: 24px;
+    color: var(--accent);
+  }
+  /* Session markers span the log as a band of tone, not a rule. */
+  .chat-system[data-session="true"] {
+    align-self: stretch;
+    margin-block: var(--space-4) var(--space-2);
+    padding: var(--space-2);
+    background: var(--surface-sunken);
+    color: var(--accent);
+    font-family: var(--font-display);
+    font-size: var(--text-md);
+    text-align: center;
+  }
+  .chat-msg,
+  .chat-system {
+    position: relative;
+  }
+}
+
+@layer layout {
+  /* Chat motion: arrivals, pins, and timers running out */
+  /* A message that just arrived rises into place. */
+  :is(.chat-msg, .chat-system)[data-fresh="true"] {
+    animation: msg-in 320ms var(--ease) both;
+  }
+  @keyframes msg-in {
+    from {
+      opacity: 0;
+      translate: 0 10px;
+    }
+  }
+
+  /* A pinned message in the log carries a gold bar that eases in and out. */
+  .chat-msg {
+    box-shadow: inset 0 0 0 transparent;
+    transition:
+      box-shadow 280ms var(--ease),
+      padding-inline-start 280ms var(--ease);
+  }
+  .chat-msg[data-pinned] {
+    padding-inline-start: var(--space-2);
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
+}

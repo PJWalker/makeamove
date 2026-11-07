@@ -1,0 +1,145 @@
+@layer layout {
+  /* Chat: pins above the log, timers, counters, edits */
+  .chat-pinned {
+    position: relative;
+    z-index: 2;
+    height: 0;
+    flex: none;
+  }
+  .chat-pin-stack {
+    position: absolute;
+    inset: var(--space-3) var(--space-3) auto;
+    max-height: min(35vh, 320px);
+    overflow-y: auto;
+    padding: var(--space-3);
+    background: var(--surface-solid);
+    box-shadow: var(--window-shadow);
+  }
+  .chat-pin {
+    display: flex;
+    align-items: flex-start;
+    padding: var(--space-1) 0;
+    gap: var(--space-2);
+    font-size: var(--text-base);
+  }
+  .chat-pin-body {
+    flex: 1;
+    min-width: 0;
+    > .chat-text {
+      display: block;
+      font-family: var(--font-display);
+      font-size: var(--text-base);
+      line-height: 1.4;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      strong {
+        color: var(--accent);
+      }
+    }
+  }
+  .roll-card[data-compact] {
+    padding: var(--space-1) var(--space-2);
+    gap: 4px;
+  }
+  .chat-timer-clock,
+  .chat-counter-value {
+    margin-inline-start: auto;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+  }
+  .chat-counter-value {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+  }
+  .chat-timer[data-done] .chat-timer-clock {
+    color: var(--danger);
+  }
+  .chat-counter[data-done] .chat-counter-value {
+    color: var(--accent);
+  }
+  .chat-bar {
+    height: 6px;
+    background: var(--surface-sunken);
+    overflow: hidden;
+    span {
+      display: block;
+      height: 100%;
+      background: var(--accent);
+      transition: width 0.5s linear;
+    }
+  }
+  .chat-pips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    span {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      &[data-on] {
+        background: var(--accent);
+      }
+    }
+  }
+  .chat-edit {
+    width: 100%;
+    resize: vertical;
+  }
+  .chat-edited {
+    font-size: var(--text-xs, 0.75rem);
+  }
+
+  /* Pins slide down into the strip with a gold flash, and fold away when unpinned. */
+  .chat-pin[data-new] {
+    animation: pin-in 360ms var(--ease) both;
+  }
+  .chat-pin[data-leaving] {
+    overflow: clip;
+    animation: pin-out 240ms ease-in both;
+    pointer-events: none;
+  }
+  @keyframes pin-in {
+    from {
+      opacity: 0;
+      translate: 0 -8px;
+      background: color-mix(in oklab, var(--accent) 35%, transparent);
+    }
+    60% {
+      opacity: 1;
+      translate: 0 0;
+      background: color-mix(in oklab, var(--accent) 25%, transparent);
+    }
+  }
+  @keyframes pin-out {
+    from {
+      max-height: 120px;
+    }
+    to {
+      opacity: 0;
+      max-height: 0;
+      translate: 0 -6px;
+    }
+  }
+
+  /* A timer that runs out rings: its bar flashes red. */
+  .chat-timer[data-ringing] .chat-bar {
+    background: var(--danger);
+    animation: timer-flash 400ms steps(1) 9;
+  }
+  @keyframes timer-flash {
+    50% {
+      background: transparent;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :is(.chat-msg, .chat-system)[data-fresh="true"],
+    .chat-pin[data-new],
+    .chat-pin[data-leaving],
+    .chat-timer[data-ringing] .chat-bar {
+      animation: none;
+    }
+  }
+}

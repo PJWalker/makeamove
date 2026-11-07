@@ -1,0 +1,32 @@
+@layer layout {
+  /* Items: homebrew gear and moves */
+  .items-panel {
+    display: grid;
+    align-content: start;
+    gap: var(--space-2);
+  }
+  .homebrew-form {
+    padding: 0 var(--space-3) var(--space-3);
+  }
+  .homebrew-effect {
+    flex-wrap: nowrap;
+    :is(input, textarea, select):not(
+      [type="checkbox"],
+      [type="radio"],
+      [type="range"],
+      [type="file"],
+      [type="hidden"],
+      [type="button"],
+      [type="submit"],
+      [type="reset"],
+      [type="image"],
+      [type="color"]
+    ) {
+      min-width: 0;
+    }
+  }
+  .homebrew-num {
+    width: 5em;
+    flex: none;
+  }
+}

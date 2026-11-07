@@ -1,0 +1,105 @@
+@layer components {
+  /*
+   * What a move asks before it rolls (table/MovePrompt.tsx): a speech bubble
+   * beside the button that started it, placed with top/left and data-side
+   * (the side of the button it's on); --tail is where along its edge the
+   * button is.
+   */
+  .roll-prompt {
+    position: fixed;
+    /* With the chat popups: above floating windows, pointing at its button. */
+    z-index: 11;
+    display: grid;
+    gap: var(--space-2);
+    width: min(340px, calc(100vw - 2 * var(--space-3)));
+    padding: var(--space-2) var(--space-3) var(--space-3);
+    background: var(--surface-raised);
+    box-shadow: var(--window-shadow);
+  }
+  .roll-prompt-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    margin-right: calc(-1 * var(--space-2));
+  }
+  .roll-prompt-desc {
+    max-height: 9.5em;
+    overflow-y: auto;
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+    white-space: pre-wrap;
+  }
+  .roll-prompt-text {
+    margin: 0;
+    font-size: var(--text-menu);
+  }
+  .roll-prompt-extra
+    :is(input, textarea, select):not(
+      [type="checkbox"],
+      [type="radio"],
+      [type="range"],
+      [type="file"],
+      [type="hidden"],
+      [type="button"],
+      [type="submit"],
+      [type="reset"],
+      [type="image"],
+      [type="color"]
+    ) {
+    inline-size: 6em;
+  }
+  .roll-prompt-tail {
+    display: none;
+    position: absolute;
+    background: var(--surface-raised);
+    animation: vt-fade-in 80ms ease-out 100ms both;
+    [data-side="right"] > &,
+    [data-side="left"] > & {
+      display: block;
+      top: clamp(var(--space-4), var(--tail), calc(100% - var(--space-4)));
+      width: 12px;
+      height: 24px;
+      translate: 0 -50%;
+    }
+    [data-side="right"] > & {
+      left: -12px;
+      clip-path: polygon(100% 0, 0 50%, 100% 100%);
+    }
+    [data-side="left"] > & {
+      right: -12px;
+      clip-path: polygon(0 0, 100% 50%, 0 100%);
+    }
+    [data-side="above"] > & {
+      display: block;
+      bottom: -12px;
+      left: clamp(var(--space-4), var(--tail), calc(100% - var(--space-4)));
+      width: 24px;
+      height: 12px;
+      translate: -50% 0;
+      clip-path: polygon(0 0, 100% 0, 50% 100%);
+    }
+  }
+  .roll-prompt-targets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+  }
+  .target-chip {
+    padding: 0 var(--space-2);
+    font-size: var(--text-sm);
+    color: var(--accent);
+    background: color-mix(in oklch, var(--accent) 14%, transparent);
+    &[data-out] {
+      color: var(--danger);
+      background: color-mix(in oklch, var(--danger) 14%, transparent);
+    }
+  }
+
+  .move-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+  }
+}

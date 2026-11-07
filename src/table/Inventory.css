@@ -1,0 +1,9 @@
+@layer components {
+  .sheet-heading [data-over="true"] {
+    color: var(--danger);
+  }
+
+  .inventory-find {
+    justify-self: start;
+  }
+}

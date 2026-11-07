@@ -1,0 +1,105 @@
+@layer components {
+  .dnd-abilities .stat-score {
+    inline-size: 4em;
+  }
+  .dnd-save {
+    inline-size: 100%;
+    padding: var(--space-1);
+    font-size: var(--text-xs);
+    font-variant-numeric: tabular-nums;
+    background: var(--surface);
+    color: var(--text-muted);
+    border: 0;
+    cursor: pointer;
+  }
+  .dnd-save[data-prof="true"] {
+    color: var(--text);
+    font-weight: 700;
+    box-shadow: inset 0 0 0 1px var(--accent);
+  }
+  .dnd-save:hover,
+  .dnd-roll:hover:not(:disabled),
+  .dnd-skill:hover {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  .dnd-roll {
+    font: inherit;
+    font-variant-numeric: tabular-nums;
+    padding: 0 var(--space-1);
+    background: none;
+    color: inherit;
+    border: 0;
+    cursor: pointer;
+  }
+  .dnd-skills {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 2px var(--space-3);
+  }
+  .dnd-skills li {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .dnd-prof {
+    flex: none;
+    inline-size: 12px;
+    block-size: 12px;
+    padding: 0;
+    border: 1px solid var(--text-muted);
+    border-radius: 50%;
+    background: none;
+    cursor: pointer;
+  }
+  .dnd-prof[data-rank="1"] {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .dnd-prof[data-rank="2"] {
+    background: var(--accent);
+    border-color: var(--text);
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+  .dnd-prof:disabled {
+    cursor: default;
+  }
+  .dnd-skill {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    gap: var(--space-1);
+    align-items: baseline;
+    padding: 2px var(--space-1);
+    font: inherit;
+    font-size: var(--text-sm);
+    text-align: start;
+    background: none;
+    color: inherit;
+    border: 0;
+    cursor: pointer;
+  }
+  .dnd-skill .muted {
+    font-size: var(--text-xs);
+  }
+  .dnd-bonus {
+    margin-inline-start: auto;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .dnd-conditions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-3);
+  }
+}
+
+@layer layout {
+  .dnd-feats {
+    margin: 0;
+    font-size: var(--text-sm);
+  }
+}

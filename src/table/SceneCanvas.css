@@ -1,0 +1,37 @@
+@layer components {
+  /* The scene colour shows through the transparent PixiJS canvas. */
+  .canvas {
+    position: absolute;
+    inset: 0;
+    background: var(--scene-colour, var(--canvas-bg));
+    transition: background-color 600ms var(--ease);
+  }
+  .scene-canvas {
+    position: absolute;
+    inset: 0;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .scene-canvas canvas {
+    display: block;
+  }
+  /* Dropping files: wash the canvas in gold rather than outlining it. */
+  .scene-canvas[data-drop="true"]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--accent-soft);
+    pointer-events: none;
+  }
+}
+
+@layer layout {
+  /* Text typed onto the map */
+  .scene-text-input {
+    position: fixed;
+    z-index: 30;
+    width: 16em;
+    translate: -50% -50%;
+  }
+}

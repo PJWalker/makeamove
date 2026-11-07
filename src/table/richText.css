@@ -1,0 +1,13 @@
+@layer components {
+  /* The list after typing @ */
+  .note-suggest {
+    max-width: min(360px, calc(100vw - 16px));
+  }
+  .note-suggest .menu-item[data-active] {
+    background: color-mix(in oklch, var(--accent) 40%, transparent);
+    color: var(--text);
+  }
+  .note-suggest-empty {
+    padding-block: var(--space-1);
+  }
+}

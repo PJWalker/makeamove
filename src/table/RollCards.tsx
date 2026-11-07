@@ -1,0 +1,263 @@
+import { FormattedText } from "./FormattedText";
+import { useRef } from "react";
+import type { MoveMessage, RollMessage, RollVisibility } from "../features/chat/types";
+import { type Roll } from "../features/dice/notation";
+import { applySuggestion, getCharacter, systemOf } from "../features/characters/api";
+import type { Campaign } from "../campaign/campaign";
+import { device } from "../platform/device";
+import { useY } from "../ui/useY";
+import { Button } from "../ui/Button";
+import { DamageTargets, SaveRequests, TargetRolls } from "./CardParts";
+import { pickUpRollCard, RollDie } from "./RollDie";
+import { canWork } from "../features/chat/types";
+import { readRollState, rerollDie, rerollMessage, toggleRollDie } from "../features/chat/rollState";
+import { useShake } from "../ui/useShake";
+import { readRollResult } from "../features/characters/moves";
+import { derive } from "../features/characters/store";
+
+/* Rolls and moves in the chat: their dice, which anyone allowed can reroll or shake, and their outcome. */
+
+const VISIBILITY_LABEL: Record<RollVisibility, string> = {
+  public: "",
+  private: "Secret: you and the GM",
+};
+
+type Thrown = { arriving: boolean; mine: boolean };
+
+function useSharedRoll(campaign: Campaign, message: RollMessage | MoveMessage) {
+  const source = message.roll;
+  const snapshot = JSON.parse(
+    useY(campaign.messageState, () =>
+      JSON.stringify(source ? readRollState(campaign.messageState, message.id, source) : null),
+    ),
+  ) as ReturnType<typeof readRollState> | null;
+  const allowed = useY(campaign.members, () => canWork(message, device.value.id, campaign.isGm()));
+  const canChange = () => canWork(message, device.value.id, campaign.isGm());
+  return {
+    snapshot,
+    allowed,
+    rerollAll: () => {
+      if (source && canChange()) rerollMessage(campaign.messageState, message.id, source);
+    },
+    reroll: (term: number, die: number) => {
+      if (source && canChange()) rerollDie(campaign.messageState, message.id, source, term, die);
+    },
+    toggle: (term: number, die: number) => {
+      if (source && canChange())
+        toggleRollDie(campaign.messageState, message.id, source, term, die);
+    },
+  };
+}
+
+type RollInteraction = ReturnType<typeof useSharedRoll>;
+
+export function RollCard({
+  campaign,
+  m,
+  masked,
+  arriving,
+  mine,
+}: { campaign: Campaign; m: RollMessage; masked: boolean } & Thrown) {
+  const interaction = useSharedRoll(campaign, m);
+  const shake = useShake({
+    onShake: interaction.rerollAll,
+    enabled: interaction.allowed && !masked,
+    ignoreControls: true,
+    onPickUp: pickUpRollCard,
+  });
+  if (masked) {
+    return (
+      <div className="roll-card" data-masked="true">
+        <span className="roll-secret">{m.name} rolled in secret.</span>
+      </div>
+    );
+  }
+  const r = interaction.snapshot!.roll;
+  return (
+    <div
+      className="roll-card"
+      aria-label={`${r.formula}${m.comment ? `, ${m.comment}` : ""}: ${r.total}`}
+      data-shakeable={interaction.allowed || undefined}
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable so the roll can be shaken by keyboard
+      tabIndex={interaction.allowed ? 0 : undefined}
+      {...shake}
+    >
+      <div className="roll-head">
+        <span className="roll-formula">{r.formula}</span>
+        {m.comment && <span className="roll-comment">{m.comment}</span>}
+        {m.visibility !== "public" && (
+          <span className="roll-visibility">{VISIBILITY_LABEL[m.visibility]}</span>
+        )}
+      </div>
+      <div className="roll-body">
+        <RollTerms roll={r} arriving={arriving} mine={mine} interaction={interaction} />
+        <span className="roll-total">{r.total}</span>
+      </div>
+      {m.damage && <DamageTargets campaign={campaign} m={{ ...m, roll: r }} />}
+    </div>
+  );
+}
+function RollTerms({
+  roll,
+  arriving,
+  mine,
+  interaction,
+}: { roll: Roll; interaction: RollInteraction } & Thrown) {
+  const seeds = interaction.snapshot!.seeds;
+  const initial = useRef(new Set(seeds.flat()));
+  return (
+    <div className="roll-terms">
+      {roll.terms.map((t, i) => (
+        <span key={i} className="roll-term">
+          {(i > 0 || t.sign < 0) && <span className="roll-op">{t.sign < 0 ? "−" : "+"}</span>}
+          {t.kind === "flat" ? (
+            <span className="roll-flat">
+              {t.value}
+              {t.label && <span className="roll-label">{t.label}</span>}
+            </span>
+          ) : (
+            <>
+              {t.dice.map((d, j) => {
+                const seed = seeds[i]![j]!;
+                return (
+                  <RollDie
+                    key={seed}
+                    die={d}
+                    index={j}
+                    arriving={arriving || !initial.current.has(seed)}
+                    mine={mine}
+                    seed={seed}
+                    onReroll={interaction.allowed ? () => interaction.reroll(i, j) : undefined}
+                    onToggle={interaction.allowed ? () => interaction.toggle(i, j) : undefined}
+                  />
+                );
+              })}
+              {t.label && <span className="roll-label">{t.label}</span>}
+            </>
+          )}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** A move: its name, the roll behind it, the outcome, and follow-up buttons. */
+export function MoveCard({
+  campaign,
+  m: original,
+  canAct,
+  arriving,
+  mine,
+}: { campaign: Campaign; m: MoveMessage; canAct: boolean } & Thrown) {
+  const interaction = useSharedRoll(campaign, original);
+  const shake = useShake({
+    onShake: interaction.rerollAll,
+    enabled: interaction.allowed && !!original.roll,
+    ignoreControls: true,
+    onPickUp: pickUpRollCard,
+  });
+  let m = original;
+  if (interaction.snapshot?.edited && original.roll) {
+    const system = systemOf(campaign);
+    const character = getCharacter(campaign, original.characterId);
+    const action = system.actions.find((candidate) => candidate.id === original.moveId);
+    if (character && action) {
+      const derived = derive(character, system);
+      m = {
+        ...original,
+        roll: interaction.snapshot.roll,
+        ...readRollResult(
+          system,
+          action,
+          character,
+          { ...derived, values: { ...derived.values, ...original.rollValues } },
+          interaction.snapshot.roll,
+          original.targets,
+          original.difficulty,
+          original.counterMessageId,
+        ),
+      };
+    }
+  }
+  const result = m.result ? systemOf(campaign).results.find((r) => r.id === m.result) : undefined;
+  const label = result ? result.label : m.result;
+  return (
+    <div
+      className="roll-card move-card"
+      data-band={result?.tone ?? "none"}
+      data-shakeable={(interaction.allowed && !!m.roll) || undefined}
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable so the roll can be shaken by keyboard
+      tabIndex={interaction.allowed && m.roll ? 0 : undefined}
+      {...shake}
+    >
+      <div className="roll-head">
+        <span className="roll-formula">{m.moveName}</span>
+        <span className="roll-comment">{m.characterName}</span>
+      </div>
+      {m.text && m.text !== m.outcome && <FormattedText campaign={campaign} text={m.text} />}
+      {m.targets?.some((t) => t.roll) ? (
+        <TargetRolls campaign={campaign} m={m} />
+      ) : (
+        m.targets &&
+        !m.save && (
+          <p className="move-targets">
+            <span className="muted">Targeting</span>{" "}
+            {m.targets.map((t, i) => (
+              <span key={t.id}>
+                {i > 0 && ", "}
+                {t.name}
+                {t.distance && <span className="muted"> ({t.distance})</span>}
+              </span>
+            ))}
+          </p>
+        )
+      )}
+      {m.roll && (
+        <div className="roll-body">
+          <RollTerms
+            roll={interaction.snapshot!.roll}
+            arriving={arriving}
+            mine={mine}
+            interaction={interaction}
+          />
+          <span className="roll-total">{interaction.snapshot!.roll.total}</span>
+        </div>
+      )}
+      {label && <div className="move-band">{label}</div>}
+      <FormattedText
+        campaign={campaign}
+        text={m.outcome}
+        characterId={m.characterId ?? null}
+        className="move-outcome"
+      />
+      {m.save && <SaveRequests campaign={campaign} m={m} />}
+      {canAct && m.suggestions.length > 0 && (
+        <div className="move-suggest">
+          {m.suggestions.map((s, i) => {
+            const count = s.count?.messageId
+              ? campaign.chat.messages.value.find((message) => message.id === s.count!.messageId)
+              : undefined;
+            const canAdvance =
+              !s.count ||
+              (s.count.systemCounter
+                ? campaign.isGm()
+                : !!count &&
+                  count.kind === "counter" &&
+                  canWork(count, device.value.id, campaign.isGm()));
+            return (
+              <Button
+                key={i}
+                size="sm"
+                variant="ghost"
+                disabled={!canAdvance}
+                onClick={() => applySuggestion(campaign, m.characterId, s)}
+              >
+                {s.label}
+              </Button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}

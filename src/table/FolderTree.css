@@ -1,0 +1,35 @@
+@layer components {
+  .chars-list,
+  .notes-list,
+  .scene-tree {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  /* Character rows drag (into folders, onto the map), so touch doesn't scroll them. */
+  .chars-tree .list-pick,
+  .chars-tree .list-group-head {
+    touch-action: none;
+  }
+  .chars-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    padding: var(--space-2);
+  }
+  .chars-tree {
+    padding: var(--space-1) var(--space-2) var(--space-2);
+  }
+  .chars-sheet {
+    min-width: 0;
+  }
+  .chars-folder-input {
+    inline-size: 100%;
+  }
+  .chars-tree[data-dropping="true"],
+  .chars-tree .list-group[data-dropping="true"] {
+    outline: 2px dashed var(--text-muted);
+    outline-offset: -2px;
+  }
+}

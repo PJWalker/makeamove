@@ -1,0 +1,52 @@
+@layer components {
+  .colour-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+  /* Lays out a hidden copy at its natural width, to measure whether it fits. */
+  .segmented-or-select {
+    position: relative;
+    min-width: 0;
+    display: grid;
+  }
+  .segmented-measure {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    width: max-content;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .colour-row .segmented {
+    flex: 1;
+  }
+  .colour-input {
+    width: 48px;
+    height: 34px;
+    padding: 4px;
+    border: 0;
+    background: var(--surface-sunken);
+    cursor: pointer;
+  }
+  .colour-input::-webkit-color-swatch-wrapper {
+    padding: 0;
+  }
+  .colour-input::-webkit-color-swatch {
+    border: 0;
+  }
+  .colour-input::-moz-color-swatch {
+    border: 0;
+  }
+  .colour-input:disabled {
+    opacity: var(--disabled-opacity);
+    cursor: default;
+  }
+  .colour-field[data-disabled="true"] {
+    color: var(--text-faint);
+  }
+  .colour-hex {
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+}

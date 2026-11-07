@@ -1,0 +1,20 @@
+@layer components {
+  /* A link to a note, character, scene, item or move. */
+  .note-link {
+    padding: 0 4px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .note-link:hover {
+    background: color-mix(in oklch, var(--accent) 30%, transparent);
+  }
+  .note-link[data-missing] {
+    background: var(--surface-sunken);
+    color: var(--text-faint);
+    text-decoration: line-through;
+    cursor: default;
+  }
+}

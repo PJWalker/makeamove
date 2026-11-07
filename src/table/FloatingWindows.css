@@ -1,0 +1,203 @@
+@layer components {
+  /*
+   * Windows: panels pulled out of the sidebar and pop-ups opened from menus
+   * share one layer, one stacking order (ui/windows.ts) and one look. The
+   * layer passes clicks through to the table except on the windows.
+   */
+  .window-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    pointer-events: none;
+  }
+  .window-layer > * {
+    pointer-events: auto;
+  }
+  .window {
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    background-clip: padding-box;
+    box-shadow: var(--window-shadow);
+  }
+  .floating-window {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    min-width: 260px;
+    min-height: 200px;
+  }
+  .window-header,
+  .docked-header {
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    background: linear-gradient(var(--hairline), transparent);
+  }
+  .window[data-rolled="true"] .window-header {
+    padding: var(--space-2);
+  }
+  .window-icon {
+    display: inline-flex;
+    flex: none;
+    color: var(--text-faint);
+  }
+  .floating-window-content {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .floating-window[data-rolled="true"] {
+    width: max-content !important;
+    height: auto !important;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .floating-window[data-rolled="true"] .floating-window-content {
+    display: none;
+  }
+  .floating-window[data-rolled="true"] .panel-title {
+    white-space: nowrap;
+  }
+  .window-header:active,
+  .docked-header:active {
+    cursor: grabbing;
+  }
+
+  .win-resize {
+    position: absolute;
+    z-index: 2;
+    touch-action: none;
+  }
+  .win-resize[data-dir="n"],
+  .win-resize[data-dir="s"] {
+    /* Run under the 18px corner handles' inner edge. */
+    inset-inline: 14px;
+    height: 6px;
+    cursor: ns-resize;
+  }
+  .win-resize[data-dir="e"],
+  .win-resize[data-dir="w"] {
+    inset-block: 14px;
+    width: 6px;
+    cursor: ew-resize;
+  }
+  .win-resize[data-dir="n"] {
+    top: 0;
+  }
+  .win-resize[data-dir="s"] {
+    bottom: 0;
+  }
+  .win-resize[data-dir="e"] {
+    right: 0;
+  }
+  .win-resize[data-dir="w"] {
+    left: 0;
+  }
+  .win-resize:is([data-dir="ne"], [data-dir="nw"], [data-dir="se"], [data-dir="sw"]) {
+    width: 18px;
+    height: 18px;
+  }
+  .win-resize[data-dir="nw"] {
+    top: 0;
+    left: 0;
+    cursor: nwse-resize;
+  }
+  .win-resize[data-dir="se"] {
+    right: 0;
+    bottom: 0;
+    cursor: nwse-resize;
+  }
+  .win-resize[data-dir="ne"] {
+    top: 0;
+    right: 0;
+    cursor: nesw-resize;
+  }
+  .win-resize[data-dir="sw"] {
+    bottom: 0;
+    left: 0;
+    cursor: nesw-resize;
+  }
+
+  /*
+  * A short resize hint; the invisible 'se' zone on top of it takes the drag.
+   */
+  .resize-grip {
+    position: absolute;
+    right: 5px;
+    bottom: 9px;
+    width: 14px;
+    height: 1.5px;
+    background: var(--text-faint);
+    rotate: -45deg;
+    pointer-events: none;
+  }
+
+  /* A window over a sidebar, shrunk to the tab it would become. */
+  .drag-tab {
+    position: fixed;
+    z-index: 1000;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    color: oklch(100% 0 0);
+    pointer-events: none;
+    box-shadow: var(--drag-shadow);
+  }
+  .drag-tab {
+    animation: tab-appear 100ms 100ms var(--ease) both;
+  }
+  @keyframes tab-appear {
+    from {
+      opacity: 0;
+    }
+  }
+  /*
+   * Over a sidebar, the window shrinks into the tab's box (--to-tab, set from
+   * the pointer) and dissolves as the tab icon appears; leaving reverses it.
+   */
+  .floating-window {
+    transform-origin: 0 0;
+  }
+  .floating-window[data-morph="in"] {
+    animation: window-to-tab 200ms var(--ease) both;
+    pointer-events: none;
+  }
+  .floating-window[data-morph="out"] {
+    animation: tab-to-window 200ms var(--ease) both;
+  }
+  .floating-window[data-morph="hidden"] {
+    opacity: 0;
+    pointer-events: none;
+  }
+  @keyframes window-to-tab {
+    60% {
+      opacity: 0.6;
+    }
+    to {
+      transform: var(--to-tab);
+      opacity: 0;
+    }
+  }
+  /* Its own keyframes: reversing the same animation in place doesn't restart it. */
+  @keyframes tab-to-window {
+    from {
+      transform: var(--to-tab);
+      opacity: 0;
+    }
+    40% {
+      opacity: 0.6;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .drag-tab,
+    .floating-window[data-morph] {
+      animation: none;
+    }
+    .floating-window[data-morph="in"] {
+      opacity: 0;
+    }
+  }
+}

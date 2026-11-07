@@ -1,0 +1,41 @@
+@layer components {
+  /* A picked-up tab, tool or slot follows the pointer; a white line marks where it will land. */
+  .reorder-lifted {
+    position: relative;
+    z-index: 50;
+    scale: 1.15;
+    opacity: 0.9;
+    pointer-events: none;
+    cursor: grabbing;
+  }
+
+  .reorder-line {
+    position: fixed;
+    z-index: 1000;
+    background: #fff;
+    pointer-events: none;
+  }
+  .is-reordering,
+  .is-reordering * {
+    cursor: grabbing !important;
+    user-select: none;
+  }
+  .is-reordering[data-drop-valid="true"],
+  .is-reordering[data-drop-valid="true"] *,
+  .is-reordering[data-drop-valid="true"] *::before,
+  .is-reordering[data-drop-valid="true"] *::after {
+    cursor: copy !important;
+  }
+  .is-reordering[data-drop-valid="true"][data-drop-effect="move"],
+  .is-reordering[data-drop-valid="true"][data-drop-effect="move"] *,
+  .is-reordering[data-drop-valid="true"][data-drop-effect="move"] *::before,
+  .is-reordering[data-drop-valid="true"][data-drop-effect="move"] *::after {
+    cursor: move !important;
+  }
+  .is-reordering[data-drop-valid="false"],
+  .is-reordering[data-drop-valid="false"] *,
+  .is-reordering[data-drop-valid="false"] *::before,
+  .is-reordering[data-drop-valid="false"] *::after {
+    cursor: not-allowed !important;
+  }
+}

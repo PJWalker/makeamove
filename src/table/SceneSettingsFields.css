@@ -1,0 +1,37 @@
+@layer components {
+  .field-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-3);
+  }
+  .field-row
+    :is(input, textarea, select):not(
+      [type="checkbox"],
+      [type="radio"],
+      [type="range"],
+      [type="file"],
+      [type="hidden"],
+      [type="button"],
+      [type="submit"],
+      [type="reset"],
+      [type="image"],
+      [type="color"]
+    ) {
+    min-width: 0;
+  }
+  :is(input, textarea, select):not(
+      [type="checkbox"],
+      [type="radio"],
+      [type="range"],
+      [type="file"],
+      [type="hidden"],
+      [type="button"],
+      [type="submit"],
+      [type="reset"],
+      [type="image"],
+      [type="color"]
+    ):disabled,
+  .input:disabled {
+    opacity: var(--disabled-opacity);
+  }
+}

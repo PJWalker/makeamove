@@ -1,0 +1,19 @@
+@layer components {
+  .menu-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: 34px;
+    padding: 0 var(--space-3);
+    background: transparent;
+    border: 0;
+    color: var(--text-muted);
+    font-size: var(--text-menu);
+    text-align: start;
+    cursor: pointer;
+  }
+  .menu-item:hover {
+    background: var(--surface-raised);
+    color: var(--text);
+  }
+}

@@ -1,0 +1,73 @@
+@layer layout {
+  /*
+   * Tabs in a pop-up (the token pop-up: Character, Token). Trapezoids: the top
+   * corners are cut as deep as the tab is tall, so each side is one diagonal,
+   * like the ends of the tool strip. Neighbours overlap so their diagonals
+   * nest; the chosen tab sits on top, open to the content like a folder tab.
+   */
+  /*
+   * The band under the title runs edge to edge, out through the dialog
+   * body's padding, and fades in from the title area above.
+   */
+  .popup-tabbed,
+  .popup-tab-panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    gap: var(--space-3);
+  }
+  .popup-tabbed {
+    flex: 1;
+  }
+  .popup-tab-panel {
+    overflow: auto;
+  }
+  .popup-tabs {
+    --tab-h: 34px;
+    --tab-rule: 1px;
+    position: relative;
+    display: flex;
+    gap: var(--space-1);
+    margin: calc(var(--space-3) * -1) calc(var(--space-4) * -1) 0;
+    padding: var(--space-4) var(--space-4) 0;
+    border-bottom: var(--tab-rule) solid var(--hairline-strong);
+    background: linear-gradient(to bottom, transparent, var(--surface-sunken));
+  }
+  .popup-tab {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: var(--tab-h);
+    margin-bottom: calc(-1 * var(--tab-rule));
+    padding: 0 var(--space-3);
+    border: 1px solid transparent;
+    border-bottom-width: 0;
+
+    color: var(--text-muted);
+    font-size: var(--text-base);
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      background-color 140ms var(--ease),
+      color 140ms var(--ease);
+  }
+  .popup-tab:hover:not([aria-selected="true"]) {
+    color: var(--text);
+  }
+  .popup-tab[aria-selected="true"] {
+    z-index: 1;
+    border-image: var(--shine);
+
+    background: var(--surface);
+    color: var(--accent);
+  }
+  .popup-tab:focus-visible {
+    outline: none;
+    color: var(--text);
+    text-decoration: underline;
+  }
+  .popup-tab[aria-selected="true"]:focus-visible {
+    color: var(--accent);
+  }
+}

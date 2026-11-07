@@ -1,0 +1,63 @@
+@layer layout {
+  /* Guided creation and levelling */
+  .creation-form {
+    display: grid;
+    gap: var(--space-3);
+  }
+  .creation-form.form-layout {
+    gap: var(--space-4);
+  }
+  .creation-boost {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .creation-boost-pick {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-weight: 700;
+    :is(input, textarea, select):not(
+      [type="checkbox"],
+      [type="radio"],
+      [type="range"],
+      [type="file"],
+      [type="hidden"],
+      [type="button"],
+      [type="submit"],
+      [type="reset"],
+      [type="image"],
+      [type="color"]
+    ) {
+      width: auto;
+    }
+  }
+  .creation-scores [data-over="true"] {
+    color: var(--danger);
+  }
+  .creation-score-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-2);
+  }
+  .creation-score {
+    display: grid;
+    gap: 2px;
+    justify-items: start;
+    :is(input, textarea, select):not(
+      [type="checkbox"],
+      [type="radio"],
+      [type="range"],
+      [type="file"],
+      [type="hidden"],
+      [type="button"],
+      [type="submit"],
+      [type="reset"],
+      [type="image"],
+      [type="color"]
+    ) {
+      width: 100%;
+    }
+  }
+}

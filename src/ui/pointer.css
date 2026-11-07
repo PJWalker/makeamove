@@ -1,0 +1,8 @@
+@layer components {
+  /* While a resize drag runs, keep its cursor everywhere and stop text selection. */
+  .is-dragging,
+  .is-dragging * {
+    cursor: var(--drag-cursor) !important;
+    user-select: none;
+  }
+}

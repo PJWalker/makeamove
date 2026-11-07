@@ -1,0 +1,50 @@
+@layer components {
+  .libraries {
+    display: grid;
+    align-content: start;
+    gap: var(--space-4);
+  }
+  .libraries-tools {
+    display: grid;
+    gap: var(--space-2);
+  }
+  .libraries-target {
+    margin: 0;
+    font-size: var(--text-xs);
+  }
+  .library-source {
+    display: grid;
+    gap: var(--space-2);
+  }
+  .library-source .eyebrow {
+    margin: 0;
+  }
+  /* What an entry holds (a class's paths, a path's moves), indented under it. */
+  .library-nest {
+    display: grid;
+    gap: var(--space-1);
+    padding: 0 0 var(--space-2) calc(var(--space-3) + 10px);
+    list-style: none;
+  }
+  .library-nest-group {
+    display: grid;
+  }
+  .library-nest-name {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    margin: var(--space-1) 0 0;
+    color: var(--text-muted);
+    font-size: var(--text-2xs);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .library-nest-name .list-meta {
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .sheet-attribution {
+    font-size: var(--text-xs);
+  }
+}

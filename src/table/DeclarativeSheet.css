@@ -1,0 +1,51 @@
+@layer components {
+  .stat-deb {
+    display: flex;
+    gap: var(--space-1);
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+  }
+  .condition-status {
+    flex: none;
+    height: 28px;
+    min-height: 28px;
+    padding: 0;
+    color: var(--text-muted);
+  }
+  .condition-symbol {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 16px;
+    height: 16px;
+  }
+  .condition-name {
+    color: var(--text-muted);
+  }
+  .condition-status:is([data-state="marked"], [data-state="locked"]) .condition-name {
+    color: var(--text);
+    font-weight: 700;
+  }
+  .condition-status:hover:not(:disabled) {
+    background: var(--surface-sunken-hover);
+  }
+  .condition-status[data-state="marked"],
+  .condition-status[data-state="locked"] {
+    color: var(--condition-colour);
+  }
+  .condition-dot {
+    width: 10px;
+    height: 10px;
+    border: 1.5px solid currentColor;
+    border-radius: 50%;
+  }
+  .condition-status[data-state="marked"] .condition-dot {
+    background: currentColor;
+  }
+}

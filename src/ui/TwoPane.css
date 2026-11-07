@@ -1,0 +1,114 @@
+@layer components {
+  /* Characters: a list (with folders) beside the sheet */
+  /* A list and a detail, side by side or taking turns (ui/TwoPane.tsx). */
+  .panes-root {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    container-type: inline-size;
+  }
+  .panes {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: var(--list-w, 200px) 6px 1fr;
+  }
+  .panes-list {
+    min-height: 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    /* Set apart from the detail by tone, not a line. */
+    background: oklch(from var(--surface-sunken) l c h / 0.35);
+  }
+
+  .panes-detail {
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .chars-sheet {
+    flex: 1;
+  }
+  .panes-back {
+    display: none;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-2);
+    background: oklch(from var(--surface-sunken) l c h / 0.35);
+  }
+  .panes-back-btn {
+    display: grid;
+    place-items: center;
+    padding: var(--space-1);
+    background: none;
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+    font-size: var(--text-lg);
+  }
+  .pane-toggle + .panel-title {
+    margin-right: auto;
+  }
+  .pane-toggle {
+    margin-left: calc(var(--space-1) * -1);
+    display: grid;
+    place-items: center;
+    padding: var(--space-1);
+    background: none;
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+  }
+  .pane-toggle:hover:not(:disabled) {
+    color: var(--accent);
+  }
+  /* Too narrow for two columns: still there, but it can't switch. */
+  .pane-toggle:disabled {
+    opacity: var(--disabled-opacity);
+    cursor: default;
+  }
+
+  .panes-title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+  }
+
+  .panes-split {
+    cursor: col-resize;
+    touch-action: none;
+    background: transparent;
+  }
+  /*
+   * One at a time: a navigation stack, the list or the detail (TwoPane
+   * chooses this when asked, or when the panel is too narrow for two).
+   */
+  .panes[data-layout="stack"] {
+    grid-template-columns: 1fr;
+  }
+  .panes[data-layout="stack"][data-level="list"] .panes-detail,
+  .panes[data-layout="stack"][data-level="detail"] .panes-list,
+  .panes[data-layout="stack"] .panes-split {
+    display: none;
+  }
+  .panes[data-layout="stack"] .panes-list {
+    background: none;
+  }
+  .panes[data-layout="stack"] .panes-back {
+    display: flex;
+  }
+  /*
+   * Only one level shows, so they share the panel's own transition name;
+   * only while this panel is the one sliding, so others stay still.
+   */
+  .panes[data-sliding][data-layout="stack"][data-level="detail"] .panes-detail,
+  .panes[data-sliding][data-layout="stack"][data-level="list"] .panes-list {
+    view-transition-name: var(--pane-vt);
+    view-transition-class: pane;
+  }
+}

@@ -1,0 +1,55 @@
+@layer components {
+  /* Notes: a list of pages and the open page (NotesPanel.tsx). */
+  .note-page {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .note-scroll {
+    flex: 1;
+    display: grid;
+    align-content: start;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4) var(--space-5);
+  }
+  /* On a GM-only page: who can see it, and the way to show everyone. */
+  .note-secret {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0;
+    padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: var(--text-sm);
+  }
+  .note-secret span {
+    flex: 1;
+  }
+  .title {
+    width: 100%;
+    padding: 0;
+    background: none;
+    border: 0;
+    color: var(--text);
+    font-family: var(--font-display);
+    font-size: var(--text-title);
+    font-weight: 600;
+  }
+  .title:focus-visible {
+    outline: none;
+  }
+  .title::placeholder {
+    color: #fff5;
+  }
+
+  .note-backlinks {
+    display: grid;
+    gap: var(--space-1);
+    padding-top: var(--space-3);
+  }
+  .note-backlinks .eyebrow {
+    margin: 0;
+  }
+}

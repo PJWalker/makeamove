@@ -12,7 +12,7 @@ import { IconClose } from "../ui/icons";
 import { showPanel } from "./panelLayout";
 
 const LoneMessage = lazy(() =>
-  import("./ChatPanel").then((module) => ({ default: module.LoneMessage })),
+  import("./ChatMessage").then((module) => ({ default: module.LoneMessage })),
 );
 
 /*

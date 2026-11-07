@@ -1,0 +1,106 @@
+@layer components {
+  /* Dice: solids drawn in 3D (table/diceRenderer.ts), the result written on the face turned to you. */
+  .die {
+    --gem: var(--gem-smoky);
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
+    color: oklch(97% 0.01 var(--scene-hue));
+    font-size: var(--text-md);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    &[role="button"] {
+      cursor: grab;
+      touch-action: none;
+      user-select: none;
+    }
+    &[data-max="true"] {
+      --gem: var(--accent);
+      color: var(--accent-ink);
+    }
+    &[data-min="true"] {
+      --gem: var(--gem-danger);
+    }
+    &[data-kept="false"] {
+      opacity: 0.35;
+      .die-value {
+        text-decoration: line-through;
+      }
+    }
+    /* In the air, or not yet drawn: the slot waits empty. */
+    &:is([data-phase="pending"], [data-phase="flying"]) > * {
+      visibility: hidden;
+    }
+  }
+  .die-canvas {
+    position: absolute;
+    inset: 0;
+  }
+  .roll-card[data-shakeable] {
+    touch-action: pan-y;
+    cursor: grab;
+  }
+  .die-value {
+    position: relative;
+  }
+  /* A roll card or die being carried: a copy above every panel, free to leave the chat. */
+  .shake-carrier {
+    position: fixed;
+    z-index: 10000;
+    margin: 0;
+    box-sizing: border-box;
+    pointer-events: none;
+    cursor: grabbing;
+    &.roll-card {
+      box-shadow: 0 12px 32px oklch(0% 0 0 / 0.45);
+    }
+  }
+  /* Thrown dice cross the window on their way to the chat. */
+  .dice-flight {
+    position: fixed;
+    inset: 0 auto auto 0;
+    z-index: 10001;
+    pointer-events: none;
+  }
+  /* Without WebGPU: a flat chip shaped like the die, cut from the same stones as buttons. */
+  .die[data-phase="flat"] {
+    width: 64px;
+    height: 64px;
+    background:
+      radial-gradient(ellipse 60% 70% at 30% 0%, oklch(100% 0 0 / 0.28), transparent 70%),
+      radial-gradient(
+        ellipse 85% 70% at 50% 120%,
+        oklch(from var(--gem) calc(l + 0.08) calc(c * 1.3) h / 0.9),
+        transparent 75%
+      ),
+      var(--gem);
+    .die-value {
+      translate: none;
+      text-shadow: 0 1px 1px color-mix(in oklch, var(--gem) 65%, black);
+    }
+    &[data-sides="4"] {
+      clip-path: polygon(50% 2%, 98% 94%, 2% 94%);
+      /* Optical centre of the triangle, not its box. */
+      padding-top: 9px;
+    }
+    &[data-sides="6"] {
+      clip-path: polygon(14% 0, 86% 0, 100% 14%, 100% 86%, 86% 100%, 14% 100%, 0 86%, 0 14%);
+    }
+    &[data-sides="8"] {
+      clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+    }
+    &[data-sides="10"] {
+      clip-path: polygon(50% 0, 100% 42%, 50% 100%, 0 42%);
+      padding-bottom: 4px;
+    }
+    &[data-sides="12"] {
+      clip-path: polygon(50% 0, 98% 36%, 80% 96%, 20% 96%, 2% 36%);
+      padding-top: 3px;
+    }
+    &:is([data-sides="20"], [data-sides="n"]) {
+      clip-path: polygon(50% 0, 96% 25%, 96% 75%, 50% 100%, 4% 75%, 4% 25%);
+    }
+  }
+}

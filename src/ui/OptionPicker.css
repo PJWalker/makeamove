@@ -1,0 +1,13 @@
+@layer components {
+  .option-picker-trigger,
+  .option-picker-value {
+    justify-self: start;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .option-picker-value {
+    color: var(--text);
+  }
+}

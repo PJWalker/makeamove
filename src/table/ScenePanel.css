@@ -1,0 +1,58 @@
+@layer components {
+  /* Scenes panel: the scene list and the active scene's settings */
+  .scene-panel {
+    display: grid;
+    align-content: start;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+
+  .scene-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 2px var(--space-1);
+  }
+  .scene-item[data-active="true"] {
+    background: var(--accent-soft);
+  }
+  .scene-item[data-active="true"] :is(.scene-name-input, .scene-name-button) {
+    color: var(--accent);
+  }
+  .scene-presence {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex: none;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    white-space: nowrap;
+  }
+  .scene-campaign-name {
+    flex: 1 0 100%;
+  }
+  .scene-name-input,
+  /* Actions in the scene menu (View, Delete, New scene) are menu text too. */
+  .scene-panel button {
+    font-size: var(--text-menu);
+  }
+  .scene-name-button {
+    flex: 1;
+    min-width: 0;
+    min-height: 30px;
+    padding: 0 var(--space-2);
+    background: transparent;
+    border: 0;
+    text-align: start;
+    font-size: var(--text-menu);
+    cursor: pointer;
+  }
+  .scene-name-input:hover {
+    background: var(--surface-sunken);
+  }
+  .scene-name-input:focus-visible {
+    outline: none;
+    background: var(--surface-sunken);
+    box-shadow: inset 0 0 0 2px var(--accent);
+  }
+}

@@ -1,0 +1,77 @@
+@layer components {
+  .filterable-menu-panel {
+    width: min(320px, calc(100vw - 32px));
+    max-height: min(55vh, 340px);
+    overflow: auto;
+    padding: var(--space-2);
+  }
+  .filterable-menu-search {
+    display: block;
+    position: sticky;
+    inset-block-start: 0;
+    padding-block-end: var(--space-2);
+    background: var(--surface-raised);
+  }
+  .filterable-menu-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+    gap: var(--space-1);
+  }
+  .filterable-menu-option {
+    display: grid;
+    min-width: 0;
+    min-height: 56px;
+    place-items: center;
+    gap: 2px;
+    padding: var(--space-1);
+    border: 0;
+    color: var(--text);
+    background: transparent;
+    font: inherit;
+    cursor: pointer;
+  }
+  .filterable-menu-option span {
+    max-width: 100%;
+    overflow: hidden;
+    font-size: var(--text-2xs);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .filterable-menu-option:hover,
+  .filterable-menu-option:focus-visible,
+  .filterable-menu-option[data-focused],
+  .filterable-menu-option[aria-selected="true"] {
+    color: var(--accent);
+    background: var(--surface-sunken);
+  }
+  .filterable-menu-empty {
+    margin: 0;
+    padding: var(--space-3);
+    color: var(--text-muted);
+  }
+  .filterable-menu-panel[data-layout="list"] {
+    width: min(420px, calc(100vw - 32px));
+    max-height: min(65vh, 480px);
+    .filterable-menu-options {
+      grid-template-columns: 1fr;
+    }
+    .filterable-menu-option {
+      min-height: 0;
+      place-items: start;
+      padding: var(--space-2);
+      text-align: start;
+    }
+    .filterable-menu-option span {
+      overflow: visible;
+      color: var(--text-muted);
+      font-size: var(--text-xs);
+      white-space: pre-line;
+    }
+  }
+  .filterable-menu-option .option-picker-group {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+}

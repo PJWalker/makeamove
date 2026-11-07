@@ -1,0 +1,35 @@
+@layer components {
+  .segmented {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    gap: 2px;
+    padding: 2px;
+    background: var(--surface-sunken);
+  }
+  .segment {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 6px;
+    min-height: 30px;
+    border: 0;
+    background-color: transparent;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    cursor: pointer;
+  }
+  .segment:hover:not([data-disabled], [data-selected]) {
+    color: var(--text);
+  }
+
+  .segment[data-focus-visible] {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+  .segment[data-disabled] {
+    opacity: var(--disabled-opacity);
+    cursor: default;
+  }
+}

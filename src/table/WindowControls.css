@@ -1,0 +1,15 @@
+@layer components {
+  /* What a window shows, as an icon to drag out of its title bar. */
+  .window-proxy + .panel-title {
+    flex: 1;
+    min-width: 0;
+  }
+  .window-proxy {
+    display: inline-flex;
+    flex: none;
+    margin-right: var(--space-2);
+    color: var(--accent);
+    cursor: grab;
+    touch-action: none;
+  }
+}

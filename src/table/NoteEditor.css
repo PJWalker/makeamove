@@ -1,0 +1,121 @@
+@layer components {
+  .note-editor[data-loading] {
+    min-height: 6em;
+    opacity: 0.5;
+  }
+  .note-body {
+    min-height: 12em;
+    outline: none;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+  }
+  .note-body > * + * {
+    margin-top: 0.6em;
+  }
+  .note-body :is(p, ul, ol, blockquote, pre, h1, h2, h3) {
+    margin-block: 0;
+  }
+  .note-body :is(h1, h2, h3) {
+    font-family: var(--font-display);
+    line-height: 1.25;
+  }
+  .note-body h1 {
+    font-size: var(--text-h1);
+  }
+  .note-body h2 {
+    font-size: var(--text-h2);
+  }
+  .note-body h3 {
+    font-size: var(--text-h3);
+  }
+  .note-body :is(ul, ol) {
+    padding-left: 1.4em;
+  }
+  .note-body blockquote {
+    padding-left: var(--space-3);
+    box-shadow: inset 3px 0 0 var(--accent-soft);
+    color: var(--text-muted);
+  }
+  .note-body code {
+    padding: 0 3px;
+    background: var(--surface-sunken);
+    font-size: 0.9em;
+  }
+  .note-body pre {
+    padding: var(--space-2) var(--space-3);
+    background: var(--surface-sunken);
+    overflow-x: auto;
+  }
+  .note-body pre code {
+    padding: 0;
+    background: none;
+  }
+  .note-body hr {
+    height: 2px;
+    border: 0;
+    background: var(--surface-sunken);
+  }
+  .note-body p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    color: #fff5;
+    pointer-events: none;
+  }
+}
+
+@layer layout {
+  /* Notes: carets of others editing, images, and the GM's secrets */
+  .note-caret {
+    position: relative;
+    margin-inline: -1px;
+    border-inline-start: 2px solid var(--caret);
+    pointer-events: none;
+    word-break: normal;
+  }
+  .note-caret-label {
+    position: absolute;
+    bottom: 100%;
+    left: -2px;
+    padding: 0 4px;
+    background: var(--caret);
+    color: #111;
+    font: 600 11px/1.5 var(--font-ui);
+    white-space: nowrap;
+    user-select: none;
+  }
+  .note-body .collaboration-carets__selection {
+    border-radius: 0;
+  }
+  .note-image {
+    margin: 0;
+    max-width: 100%;
+    background: var(--surface-sunken);
+    &[data-loaded] {
+      background: none;
+    }
+    img {
+      display: block;
+      max-width: 100%;
+      height: auto;
+    }
+  }
+  .note-secret {
+    display: grid;
+    gap: 2px;
+    padding: var(--space-1) var(--space-2);
+    background: color-mix(in oklab, var(--accent) 10%, var(--surface-sunken));
+    border-inline-start: 3px solid var(--accent);
+  }
+  .note-image.ProseMirror-selectednode,
+  .note-secret.ProseMirror-selectednode {
+    outline: 2px solid var(--accent);
+  }
+  .note-secret-label {
+    color: var(--accent);
+    cursor: context-menu;
+  }
+  .note-secret-body .note-body {
+    min-height: 1.5em;
+  }
+}

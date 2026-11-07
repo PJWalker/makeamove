@@ -1,0 +1,19 @@
+@layer components {
+  /* A note opened from a link elsewhere, in a pop-up. */
+  .link-note {
+    width: min(460px, calc(100vw - 48px));
+    max-height: min(60vh, 520px);
+    overflow-y: auto;
+  }
+  .link-note .note-body {
+    min-height: 8em;
+  }
+}
+
+@layer layout {
+  .popup-sheet {
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0 var(--space-4) var(--space-4);
+  }
+}

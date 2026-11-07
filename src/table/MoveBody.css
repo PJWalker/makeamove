@@ -1,0 +1,16 @@
+@layer components {
+  .moves {
+    display: grid;
+    gap: var(--space-2);
+  }
+  .dialog .move-window-text {
+    margin: 0;
+    max-width: 52ch;
+  }
+  .move-text {
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-md);
+    color: var(--text-muted);
+    white-space: pre-wrap;
+  }
+}

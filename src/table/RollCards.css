@@ -1,0 +1,116 @@
+@layer components {
+  /* Roll cards */
+  .roll-card {
+    display: grid;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    background: var(--surface-raised);
+  }
+  .roll-card[data-masked="true"] {
+    background: var(--surface-sunken);
+  }
+  .move-band {
+    font-weight: 700;
+    font-size: var(--text-lg);
+  }
+  .move-card[data-band="good"] .move-band {
+    color: var(--success);
+  }
+  .move-card[data-band="mixed"] .move-band {
+    color: var(--accent);
+  }
+  .move-card[data-band="bad"] .move-band {
+    color: var(--danger);
+  }
+  .move-text {
+    margin: 0;
+    font-size: var(--text-md);
+    color: var(--text-muted);
+    white-space: pre-wrap;
+  }
+  .move-outcome {
+    margin: 0;
+    font-size: var(--text-md);
+    white-space: pre-wrap;
+  }
+  .move-suggest {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+  }
+  .roll-secret {
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: var(--text-md);
+  }
+  .roll-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-1) var(--space-2);
+    font-size: var(--text-md);
+  }
+  .roll-formula {
+    font-weight: 600;
+  }
+  .roll-comment {
+    color: var(--text-muted);
+  }
+  .roll-visibility {
+    color: var(--private);
+    font-size: var(--text-xs);
+  }
+  .roll-body {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: 112px;
+    outline-offset: -2px;
+  }
+  .roll-terms {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1);
+  }
+  .roll-term {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1);
+  }
+  .roll-op {
+    color: var(--text-faint);
+    padding-inline: 2px;
+  }
+  .roll-flat {
+    font-weight: 600;
+  }
+  .roll-label {
+    margin-left: var(--space-1);
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    font-weight: 500;
+  }
+  .roll-total {
+    min-width: 2ch;
+    font-family: var(--font-display);
+    font-size: var(--text-xl);
+    font-weight: 600;
+    line-height: 1;
+    color: var(--accent);
+    text-align: right;
+    transition: opacity 560ms var(--ease);
+  }
+  /* Reveal the total as the final glide begins. */
+  .roll-body:has(.die:is([data-phase="pending"], [data-phase="flying"]):not([data-reveal-started]))
+    > .roll-total {
+    opacity: 0;
+  }
+
+  .move-targets {
+    margin: 0;
+    font-size: var(--text-sm);
+  }
+}

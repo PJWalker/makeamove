@@ -1,0 +1,119 @@
+@layer components {
+  /* Icon strips */
+  .strip {
+    --strip-w: 48px;
+    display: grid;
+    justify-items: center;
+    width: var(--strip-w);
+    padding-block: var(--space-2);
+    background: #0005;
+  }
+
+  /* The same strip laid out along a window edge, for the tools on top. */
+  .strip.across {
+    grid-auto-flow: column;
+    align-items: center;
+    width: auto;
+    height: var(--strip-w);
+    padding-block: 0;
+    padding-inline: var(--space-2);
+  }
+
+  :is(.toolbar, .hotbar) .btn:not([aria-pressed="true"]) {
+    border-color: transparent;
+    border-image: none;
+    box-shadow: none;
+  }
+
+  .dock-strip {
+    position: absolute;
+    left: calc(var(--dock-l, 0px) + (100% - var(--dock-l, 0px) - var(--dock-r, 0px)) / 2);
+    translate: -50% 0;
+    z-index: 4;
+    max-width: calc(100% - var(--dock-l, 0px) - var(--dock-r, 0px));
+    transition: left 200ms var(--ease);
+  }
+  .dock-strip.dock-top {
+    top: 0;
+  }
+  .dock-strip.dock-bottom {
+    bottom: 0;
+  }
+
+  /* Pen settings, beside the tool strip */
+  .pen-options {
+    position: absolute;
+    top: calc(48px + var(--space-2)); /* below the tool strip */
+    left: calc(var(--dock-l, 0px) + (100% - var(--dock-l, 0px) - var(--dock-r, 0px)) / 2);
+    translate: -50% 0;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+  }
+  .pen-widths {
+    display: flex;
+    gap: var(--space-1);
+  }
+  /* The native colour picker, shown as a round swatch. */
+  .pen-colour {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    cursor: pointer;
+  }
+  .pen-colour::-webkit-color-swatch-wrapper {
+    padding: 0;
+  }
+  .pen-colour::-webkit-color-swatch {
+    border: 0;
+    border-radius: 50%;
+  }
+  .pen-colour::-moz-color-swatch {
+    border: 0;
+    border-radius: 50%;
+  }
+  .pen-colour:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px var(--surface-solid),
+      0 0 0 4px var(--accent);
+  }
+  .pen-width {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+  .pen-width span {
+    border-radius: 50%;
+  }
+  .pen-width:hover {
+    background: var(--surface-raised);
+  }
+  .pen-layer {
+    width: 56px;
+    padding: var(--space-1);
+    border: 0;
+    background: var(--surface-sunken);
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    line-height: 1.2;
+    cursor: pointer;
+  }
+  .pen-layer:hover {
+    color: var(--text);
+  }
+
+  /* The campaign menu stands a little apart from the tools after it. */
+  .toolbar .toolbar-menu {
+    margin-right: var(--space-2);
+  }
+}

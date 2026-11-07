@@ -1,0 +1,50 @@
+@layer components {
+  /* Formatted text (move descriptions): paragraphs and lists, no pre-wrap. */
+  .formatted-text {
+    display: grid;
+    gap: var(--space-2);
+    white-space: normal;
+  }
+  .formatted-text > p,
+  .formatted-text > ul {
+    margin: 0;
+  }
+  .formatted-text > ul {
+    padding-left: var(--space-4);
+  }
+  .formatted-heading {
+    margin: var(--space-1) 0 0;
+    font-size: var(--text-md);
+    color: var(--text);
+  }
+  .formatted-text strong {
+    color: var(--text);
+  }
+  /* An inline button in text that adds to or spends a character's number. */
+  .tracker-button {
+    display: inline;
+    padding: 0 4px;
+    border: 1px solid color-mix(in oklab, var(--accent) 45%, transparent);
+    background: var(--accent-soft);
+    color: var(--accent);
+    font: inherit;
+    font-weight: 600;
+    line-height: inherit;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .tracker-button:hover:not([aria-disabled]) {
+    background: color-mix(in oklab, var(--accent) 25%, transparent);
+  }
+  .tracker-button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+  .tracker-button[aria-disabled],
+  .tracker-button[data-static] {
+    border-color: var(--hairline);
+    background: none;
+    color: var(--text-muted);
+    cursor: default;
+  }
+}
