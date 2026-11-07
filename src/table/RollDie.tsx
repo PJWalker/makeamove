@@ -3,6 +3,9 @@ import type { Die } from "../features/dice/notation";
 import { lastPointer } from "../ui/pointer";
 import { useThrow } from "../ui/useThrow";
 import type { DiceRenderer, Point } from "./diceRenderer";
+import { backdropColour } from "../lib/colour";
+import { colourOf } from "../scene/presence";
+import { device } from "../platform/device";
 
 /** Waiting for the renderer, in the air, at rest, or drawn flat where the browser can't draw 3D at all. */
 type Phase = "pending" | "flying" | "landed" | "flat";
@@ -14,6 +17,9 @@ const loadRenderer = () =>
     .then((m) => (loaded = m.createDiceRenderer()))
     .catch(() => null));
 
+/** A player's colour as a die's body: dark and muted enough to carry light numbers. */
+export const dieColour = (player: string) => backdropColour(player, 0.42, 0.1);
+
 /** Tumbles the dice in a carried copy of `element`; the returned function settles them back. */
 export function rollCarriedDice(element: HTMLElement, carrier: HTMLElement) {
   return (
@@ -22,6 +28,44 @@ export function rollCarriedDice(element: HTMLElement, carrier: HTMLElement) {
       [...carrier.querySelectorAll("canvas")],
     ) ?? (() => {})
   );
+}
+
+/** A new die held under the pointer, tumbling, until it's let go of. */
+export function holdNewDie(sides: number) {
+  const ghost = document.createElement("span");
+  ghost.className = "die die-ghost";
+  ghost.dataset.phase = "flat";
+  ghost.dataset.sides = [4, 6, 8, 10, 12, 20].includes(sides) ? String(sides) : "n";
+  ghost.setAttribute("aria-hidden", "true");
+  ghost.style.setProperty("--die-colour", dieColour(colourOf(device.value)));
+  const value = document.createElement("span");
+  value.className = "die-value";
+  value.textContent = String(sides);
+  ghost.append(value);
+  document.body.append(ghost);
+  let settle: (() => void) | undefined;
+  let gone = false;
+  void loadRenderer().then((dice) => {
+    if (!dice || gone) return;
+    const canvas = document.createElement("canvas");
+    canvas.className = "die-canvas";
+    // In place before it's drawn, so it's drawn in the ghost's colours.
+    ghost.replaceChildren(canvas);
+    dice.mount(canvas, ghost, { sides, value: sides, seed: "" });
+    ghost.dataset.phase = "landed";
+    settle = dice.spin([canvas], [canvas]);
+  });
+  return {
+    move(x: number, y: number) {
+      ghost.style.left = `${x}px`;
+      ghost.style.top = `${y}px`;
+    },
+    remove() {
+      gone = true;
+      settle?.();
+      ghost.remove();
+    },
+  };
 }
 
 /** Where a die thrown into this slot starts: the roller's pointer, or else above the log. */
@@ -48,11 +92,14 @@ export function RollDie({
   arriving,
   mine,
   seed,
+  colour,
   onReroll,
   onToggle,
 }: {
   die: Die;
   index: number;
+  /** The die's body colour (see dieColour). */
+  colour: string;
   arriving: boolean;
   mine: boolean;
   seed: string;
@@ -123,7 +170,7 @@ export function RollDie({
       role={onReroll ? "button" : undefined}
       tabIndex={onReroll ? 0 : undefined}
       aria-pressed={onToggle ? !die.disabled : undefined}
-      style={{ "--i": index }}
+      style={{ "--i": index, "--die-colour": colour }}
       aria-label={`d${die.sides}: ${die.value}${die.disabled ? ", disabled" : die.kept ? "" : ", dropped"}`}
       title={dieTitle(die)}
       {...gesture}

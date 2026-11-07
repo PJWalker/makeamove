@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { COMMANDS, parseCommand, suggest } from "../features/chat/commands";
 import { commandText, emptyChatContent, type ChatContent } from "../features/chat/content";
-import { postRoll, runCommand } from "../features/chat/send";
+import { addDieToRoll, postRoll, runCommand } from "../features/chat/send";
 import type { RollVisibility } from "../features/chat/types";
 import { NotationError } from "../features/dice/notation";
 import { poolFormula } from "../features/dice/pool";
 import type { Campaign } from "../campaign/campaign";
 import { useY } from "../ui/useY";
 import { Button } from "../ui/Button";
+import { trackPointer } from "../ui/pointer";
 import { ChatInput, type ChatInputHandle } from "./ChatInput";
+import { holdNewDie } from "./RollDie";
 
 const VISIBILITIES: { id: RollVisibility; label: string; title: string }[] = [
   { id: "public", label: "Public", title: "Everyone sees the roll" },
@@ -21,6 +23,12 @@ const VISIBILITIES: { id: RollVisibility; label: string; title: string }[] = [
 const DICE = [4, 6, 8, 10, 12, 20];
 /** How long after the last quick-dice click the pool rolls. */
 const POOL_MS = 1000;
+/** How far (CSS px) the pointer moves from a die button before it carries a die off. */
+const DRAG_START = 6;
+
+/** The roll a die let go of at this point joins, if any. */
+const rollAt = (x: number, y: number) =>
+  document.elementFromPoint(x, y)?.closest<HTMLElement>("[data-dice-target]") ?? null;
 
 /** The message box, its command hints, and the quick dice bar above it. */
 export function ChatComposer({
@@ -83,24 +91,64 @@ export function ChatComposer({
   }
   rollPoolRef.current = rollPool;
 
-  function restartPoolTimer() {
+  function setPoolAndTimer(next: number[]) {
+    setPool(next);
     clearTimeout(poolTimer.current);
-    if (pool.length)
-      poolTimer.current = window.setTimeout(() => rollPoolRef.current(), POOL_MS);
+    if (next.length) poolTimer.current = window.setTimeout(() => rollPoolRef.current(), POOL_MS);
   }
 
   function addDie(sides: number) {
-    setPool([...pool, sides]);
-    restartPoolTimer();
+    setPoolAndTimer([...pool, sides]);
   }
 
   /** Right-click while pooling: take one of these dice back out. */
   function removeDie(sides: number) {
     const i = pool.lastIndexOf(sides);
     if (i < 0) return;
-    setPool(pool.filter((_, j) => j !== i));
-    restartPoolTimer();
+    setPoolAndTimer(pool.filter((_, j) => j !== i));
   }
+  /**
+   * Dragging out of a die button carries off a new die: let go over a roll
+   * this device may change, it joins that roll; anywhere else but the tray,
+   * it's rolled on its own.
+   */
+  const dragged = useRef(false);
+  function dragOut(event: React.PointerEvent<HTMLButtonElement>, sides: number) {
+    if (event.button !== 0) return;
+    dragged.current = false;
+    const origin = { x: event.clientX, y: event.clientY };
+    let held: ReturnType<typeof holdNewDie> | undefined;
+    let target: HTMLElement | null = null;
+    const aim = (card: HTMLElement | null) => {
+      if (card === target) return;
+      target?.removeAttribute("data-drop-target");
+      card?.setAttribute("data-drop-target", "");
+      target = card;
+    };
+    trackPointer(
+      "grabbing",
+      (move) => {
+        if (!held) {
+          if (Math.hypot(move.clientX - origin.x, move.clientY - origin.y) < DRAG_START) return;
+          held = holdNewDie(sides);
+          dragged.current = true;
+        }
+        held.move(move.clientX, move.clientY);
+        aim(rollAt(move.clientX, move.clientY));
+      },
+      (end) => {
+        if (!held) return;
+        held.remove();
+        const card = target;
+        aim(null);
+        if (!(end instanceof PointerEvent) || end.type !== "pointerup") return;
+        if (card?.dataset.diceTarget) addDieToRoll(campaign, card.dataset.diceTarget, sides);
+        else if (!document.elementFromPoint(end.clientX, end.clientY)?.closest(".dice-tray"))
+          void postRoll(campaign, `d${sides}`, visibility);
+      },
+    );
+  }
+
   // Dice picked just before the panel closes still get rolled.
   useEffect(() => () => rollPoolRef.current(), []);
 
@@ -125,9 +173,14 @@ export function ChatComposer({
               label={
                 n
                   ? `Add another d${sides} (${n} so far; right-click to remove one)`
-                  : `Roll a d${sides} (click again for more)`
+                  : `Roll a d${sides} (click again for more, or drag onto a roll to add it)`
               }
-              onClick={() => addDie(sides)}
+              onPointerDown={(event) => dragOut(event, sides)}
+              onClick={() => {
+                // The click that ends a drag out of the button isn't a pick.
+                if (dragged.current) dragged.current = false;
+                else addDie(sides);
+              }}
               onContextMenu={(e) => {
                 if (!pool.length) return;
                 e.preventDefault();

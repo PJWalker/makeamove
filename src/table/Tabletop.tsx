@@ -49,8 +49,8 @@ export function Tabletop({ campaign }: { campaign: Campaign }) {
   const mapColour = useValue(activeMapColour);
   const colour = scene ? canvasColour(scene, mapColour) : null;
 
-  // Tint the whole UI from the map, or from the canvas when there's no map.
-  const tint = mapColour ?? colour;
+  // Tint the whole UI from the scene's custom colour, else from the map, else from the canvas.
+  const tint = scene?.canvasColour ?? mapColour ?? colour;
   useEffect(() => {
     if (tint)
       document.documentElement.style.setProperty("--scene-hue", String(sceneHueFromHex(tint)));

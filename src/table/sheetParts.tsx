@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { plainText } from "../features/characters/trackers";
 import { MoveBody } from "./MoveBody";
 import { useY } from "../ui/useY";
@@ -84,10 +84,10 @@ export function Counter({
         >
           <IconRemove size={22} />
         </Button>
-        <output className="counter-value">
-          {value}
+        <span className="counter-value">
+          <CounterInput label={label} value={value} disabled={disabled} onChange={onChange} />
           {max !== undefined && <span className="muted">/{max}</span>}
-        </output>
+        </span>
         <Button
           variant="secondary"
           className="counter-btn"
@@ -99,6 +99,68 @@ export function Counter({
         </Button>
       </div>
     </div>
+  );
+}
+
+/**
+ * The counter's number, typed over directly. It reads as plain text until
+ * hovered or focused; Enter or leaving the field commits, Escape reverts.
+ * The change goes out as a step from the current value, so callers keep
+ * their own clamping.
+ */
+function CounterInput({
+  label,
+  value,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  disabled: boolean;
+  onChange: (by: number) => void;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const cancelled = useRef(false);
+  const commit = () => {
+    if (draft === null || cancelled.current) {
+      cancelled.current = false;
+      setDraft(null);
+      return;
+    }
+    const next = Number(draft.trim().replace("−", "-"));
+    setDraft(null);
+    if (draft.trim() !== "" && Number.isFinite(next) && Math.trunc(next) !== value) {
+      onChange(Math.trunc(next) - value);
+    }
+  };
+  return (
+    <input
+      className="counter-input"
+      type="text"
+      inputMode="numeric"
+      aria-label={label}
+      value={draft ?? String(value)}
+      disabled={disabled}
+      size={Math.max(1, (draft ?? String(value)).length)}
+      onFocus={(e) => {
+        setDraft(String(value));
+        e.currentTarget.select();
+      }}
+      onChange={(e) => setDraft(e.currentTarget.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+        else if (e.key === "Escape") {
+          e.stopPropagation();
+          cancelled.current = true;
+          e.currentTarget.blur();
+        } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+          e.preventDefault();
+          setDraft(null);
+          onChange(e.key === "ArrowUp" ? 1 : -1);
+        }
+      }}
+    />
   );
 }
 

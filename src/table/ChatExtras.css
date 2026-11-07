@@ -39,6 +39,7 @@
   }
   .roll-card[data-compact] {
     padding: var(--space-1) var(--space-2);
+    border-width: 4px;
     gap: 4px;
   }
   .chat-timer-clock,

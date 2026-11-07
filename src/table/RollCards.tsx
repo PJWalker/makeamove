@@ -8,7 +8,8 @@ import { device } from "../platform/device";
 import { useY } from "../ui/useY";
 import { Button } from "../ui/Button";
 import { DamageTargets, SaveRequests, TargetRolls } from "./CardParts";
-import { rollCarriedDice, RollDie } from "./RollDie";
+import { dieColour, rollCarriedDice, RollDie } from "./RollDie";
+import { colourOf } from "../scene/presence";
 import { canWork } from "../features/chat/types";
 import { readRollState, rerollDie, rerollMessage, toggleRollDie } from "../features/chat/rollState";
 import { useThrow } from "../ui/useThrow";
@@ -24,6 +25,10 @@ const VISIBILITY_LABEL: Record<RollVisibility, string> = {
 };
 
 type Thrown = { arriving: boolean; mine: boolean };
+
+/** The dice of a roll take the colour of the player who rolled them. */
+const rollerDiceColour = (m: RollMessage | MoveMessage) =>
+  dieColour(colourOf({ id: m.author, ...(m.colour ? { colour: m.colour } : {}) }));
 
 function useSharedRoll(campaign: Campaign, message: RollMessage | MoveMessage) {
   const source = message.roll;
@@ -80,6 +85,7 @@ export function RollCard({
       className="roll-card"
       aria-label={`${r.formula}${m.comment ? `, ${m.comment}` : ""}: ${r.total}`}
       data-throwable={interaction.allowed || undefined}
+      data-dice-target={interaction.allowed ? m.id : undefined}
       // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable so the roll can be rerolled by keyboard
       tabIndex={interaction.allowed ? 0 : undefined}
       {...gesture}
@@ -92,7 +98,13 @@ export function RollCard({
         )}
       </div>
       <div className="roll-body">
-        <RollTerms roll={r} arriving={arriving} mine={mine} interaction={interaction} />
+        <RollTerms
+          roll={r}
+          colour={rollerDiceColour(m)}
+          arriving={arriving}
+          mine={mine}
+          interaction={interaction}
+        />
         <span className="roll-total">{r.total}</span>
       </div>
       {m.damage && <DamageTargets campaign={campaign} m={{ ...m, roll: r }} />}
@@ -101,10 +113,11 @@ export function RollCard({
 }
 function RollTerms({
   roll,
+  colour,
   arriving,
   mine,
   interaction,
-}: { roll: Roll; interaction: RollInteraction } & Thrown) {
+}: { roll: Roll; colour: string; interaction: RollInteraction } & Thrown) {
   const seeds = interaction.snapshot!.seeds;
   const initial = useRef(new Set(seeds.flat()));
   return (
@@ -129,6 +142,7 @@ function RollTerms({
                     arriving={arriving || !initial.current.has(seed)}
                     mine={mine}
                     seed={seed}
+                    colour={colour}
                     onReroll={interaction.allowed ? () => interaction.reroll(i, j) : undefined}
                     onToggle={interaction.allowed ? () => interaction.toggle(i, j) : undefined}
                   />
@@ -191,6 +205,7 @@ export function MoveCard({
       className="roll-card move-card"
       data-band={result?.tone ?? "none"}
       data-throwable={(interaction.allowed && !!m.roll) || undefined}
+      data-dice-target={interaction.allowed && m.roll ? m.id : undefined}
       // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable so the roll can be rerolled by keyboard
       tabIndex={interaction.allowed && m.roll ? 0 : undefined}
       {...gesture}
@@ -221,6 +236,7 @@ export function MoveCard({
         <div className="roll-body">
           <RollTerms
             roll={interaction.snapshot!.roll}
+            colour={rollerDiceColour(original)}
             arriving={arriving}
             mine={mine}
             interaction={interaction}

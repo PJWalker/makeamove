@@ -52,8 +52,8 @@ export type { CampaignDefaults, MemberView, RevokedView, Role, SceneView } from 
  * Each scene's contents (maps, tokens, drawings) live in its `doc`, a Yjs
  * subdocument that is loaded only while the scene is open (see SceneDoc).
  * Without a canvasColour the canvas takes a darkened version of the main
- * map's colour ("auto"). The UI is always tinted from the map when there is
- * one, and from the canvas colour otherwise.
+ * map's colour ("auto"). The UI is tinted from a custom canvasColour when
+ * there is one, else from the map, else from the default canvas colour.
  */
 
 /**

@@ -67,7 +67,7 @@ const Z = new Vector3(0, 0, 1);
 
 type Tone = "plain" | "max" | "min";
 const TONE_TOKEN: Record<Tone, string> = {
-  plain: "--gem-smoky",
+  plain: "--die-colour",
   max: "--accent",
   min: "--gem-danger",
 };
@@ -216,10 +216,9 @@ function shapeFor(sides: number): Shape {
 
 const probe = document.createElement("canvas").getContext("2d", { willReadFrequently: true })!;
 /** A colour token as rgb(), which three can read; the tokens are written in oklch. */
-function token(name: string): string {
+function token(name: string, from: Element = document.documentElement): string {
   probe.fillStyle = "#888";
-  probe.fillStyle =
-    getComputedStyle(document.documentElement).getPropertyValue(name).trim() || "#888";
+  probe.fillStyle = getComputedStyle(from).getPropertyValue(name).trim() || "#888";
   probe.fillRect(0, 0, 1, 1);
   const [r, g, b] = probe.getImageData(0, 0, 1, 1).data;
   return `rgb(${r}, ${g}, ${b})`;
@@ -261,10 +260,13 @@ export function createDiceRenderer(): DiceRenderer {
   ) as Record<Tone, MeshPhysicalMaterial>;
   const edgeMaterial = new LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 });
 
-  /** A die showing `value` on its first face, with every face numbered; dispose() frees its labels. */
-  function dieMesh(shape: Shape, value: number, sides: number) {
+  /**
+   * A die showing `value` on its first face, with every face numbered, in the
+   * colours of the slot `canvas` sits in; dispose() frees its labels.
+   */
+  function dieMesh(shape: Shape, value: number, sides: number, canvas: HTMLCanvasElement) {
     for (const tone of ["plain", "max", "min"] as const)
-      materials[tone].color.set(token(TONE_TOKEN[tone]));
+      materials[tone].color.set(token(TONE_TOKEN[tone], canvas));
     const die = new Mesh(
       shape.geometry,
       shape.faces.map((_, i) => materials[toneOf(faceValue(value, i, sides), sides)]),
@@ -326,7 +328,7 @@ export function createDiceRenderer(): DiceRenderer {
   /** Draws a die at rest in its slot's canvas. */
   function still(canvas: HTMLCanvasElement, sides: number, value: number) {
     const shape = shapeFor(sides);
-    const { die, dispose } = dieMesh(shape, value, sides);
+    const { die, dispose } = dieMesh(shape, value, sides, canvas);
     die.quaternion.copy(shape.rest);
     draw(die, canvas);
     dispose();
@@ -345,7 +347,7 @@ export function createDiceRenderer(): DiceRenderer {
     const up = shape.faces.map((face) => face.normal.clone().applyQuaternion(final).z);
     const top = up.indexOf(Math.max(...up));
     const first = ((roll.value - 1 - top + roll.sides) % roll.sides) + 1;
-    const { die, dispose } = dieMesh(shape, first, roll.sides);
+    const { die, dispose } = dieMesh(shape, first, roll.sides, canvas);
     die.quaternion.copy(final);
     draw(die, canvas);
     posed.set(canvas, { sides: roll.sides, value: first, rotation: final });
@@ -463,7 +465,7 @@ export function createDiceRenderer(): DiceRenderer {
     const dice = copies.flatMap((canvas, index) => {
       const pose = posed.get(originals[index]!);
       if (!pose) return [];
-      const { die, dispose } = dieMesh(shapeFor(pose.sides), pose.value, pose.sides);
+      const { die, dispose } = dieMesh(shapeFor(pose.sides), pose.value, pose.sides, canvas);
       die.quaternion.copy(pose.rotation);
       const axis = new Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
       return [{ canvas, die, dispose, rest: pose.rotation, axis: axis.normalize() }];

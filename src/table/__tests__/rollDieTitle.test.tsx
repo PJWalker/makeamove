@@ -5,7 +5,9 @@ import { RollDie, dieTitle } from "../RollDie";
 
 const titleOf = (die: Die) =>
   /title="([^"]*)"/.exec(
-    renderToStaticMarkup(<RollDie die={die} index={0} arriving={false} mine seed="s" />),
+    renderToStaticMarkup(
+      <RollDie die={die} index={0} arriving={false} mine seed="s" colour="#445" />,
+    ),
   )?.[1];
 
 describe("a rolled die's tooltip", () => {

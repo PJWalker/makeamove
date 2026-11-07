@@ -6,7 +6,7 @@
     justify-items: center;
     width: var(--strip-w);
     padding-block: var(--space-2);
-    background: #0005;
+    background: var(--toolbar);
   }
 
   /* The same strip laid out along a window edge, for the tools on top. */
@@ -31,6 +31,11 @@
     translate: -50% 0;
     z-index: 4;
     max-width: calc(100% - var(--dock-l, 0px) - var(--dock-r, 0px));
+    /* Too many items for the space between the sidebars: clip them and scroll sideways. */
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
     transition: left 200ms var(--ease);
   }
   .dock-strip.dock-top {

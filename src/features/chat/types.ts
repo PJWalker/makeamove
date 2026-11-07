@@ -14,6 +14,8 @@ interface Base {
   author: string;
   /** The sender's name when they sent it. */
   name: string;
+  /** The sender's colour when they sent it; older messages fall back to one derived from `author`. */
+  colour?: string;
 }
 
 export interface TextMessage extends Base {

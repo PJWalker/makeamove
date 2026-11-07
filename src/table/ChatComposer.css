@@ -27,6 +27,8 @@
   /* How many of each die are in the pool so far. */
   .dice-pick {
     position: relative;
+    /* Dragging out of a die button carries a new die off, rather than scrolling. */
+    touch-action: none;
     border-color: var(--hairline);
     background: linear-gradient(
       to bottom,

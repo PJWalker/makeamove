@@ -54,7 +54,8 @@ export function readRollState(state: MessageState, messageId: string, source: Ro
 }
 
 export function rerollMessage(state: MessageState, messageId: string, source: Roll) {
-  const next = roll(source.formula);
+  const current = getState<StoredRoll>(state, messageId, ROLL_FIELD)?.roll ?? source;
+  const next = roll(current.formula);
   storeRoll(
     state,
     messageId,
@@ -115,4 +116,43 @@ export function toggleRollDie(
     recalculate({ ...current, terms }),
     stored?.seeds ?? seedsFor(messageId, current),
   );
+}
+
+/** A roll's terms written back out as a formula, as it would be typed. */
+function formulaOf(terms: Roll["terms"]) {
+  return terms
+    .map(
+      (term, index) =>
+        (term.sign < 0 ? "-" : index ? "+" : "") +
+        (term.kind === "dice" ? term.notation.replace(/^1d/, "d") : term.value) +
+        (term.label ? `[${term.label}]` : ""),
+    )
+    .join("");
+}
+
+/** Adds a freshly rolled die to a shared roll: one more of a plain term with the same dice, or a term of its own. */
+export function addRollDie(state: MessageState, messageId: string, source: Roll, sides: number) {
+  const stored = getState<StoredRoll>(state, messageId, ROLL_FIELD);
+  const current = stored?.roll ?? source;
+  const seeds = stored?.seeds ?? seedsFor(messageId, current);
+  const die = { sides, value: cryptoDie(sides), kept: true };
+  const face = sides === 100 ? "%" : String(sides);
+  const plain = (term: Roll["terms"][number]): term is RolledDice =>
+    term.kind === "dice" &&
+    term.sign === 1 &&
+    !term.label &&
+    term.notation === `${term.dice.length}d${face}`;
+  let termIndex = current.terms.findIndex(plain);
+  const terms: Roll["terms"] = current.terms.map((term, index) =>
+    index === termIndex && plain(term)
+      ? { ...term, notation: `${term.dice.length + 1}d${face}`, dice: [...term.dice, die] }
+      : term,
+  );
+  if (termIndex < 0) {
+    termIndex = terms.length;
+    terms.push({ kind: "dice", sign: 1, notation: `1d${face}`, dice: [die], subtotal: 0 });
+  }
+  const row = seeds[termIndex] ?? [];
+  seeds[termIndex] = [...row, `${messageId}:${Date.now()}:${termIndex}:${row.length}`];
+  storeRoll(state, messageId, recalculate({ ...current, terms, formula: formulaOf(terms) }), seeds);
 }

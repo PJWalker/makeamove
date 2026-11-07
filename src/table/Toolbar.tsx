@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { store } from "../lib/store";
 import { goToCampaign } from "../app/router";
 import { startReorder } from "../ui/reorder";
+import { scrollSideways } from "../ui/wheel";
+import { createPortal } from "react-dom";
 import { getStorageJson, setStorageJson } from "../platform/localStorage";
 import {
   activeTool,
@@ -124,7 +126,11 @@ export function Toolbar({ isGm }: { isGm: boolean }) {
 
   return (
     <>
-      <nav className="dock-strip toolbar strip across dock-top" aria-label="Canvas tools">
+      <nav
+        className="dock-strip toolbar strip across dock-top"
+        aria-label="Canvas tools"
+        onWheel={scrollSideways}
+      >
         <CampaignMenu />
         {tools.map(({ id, label, key, Icon }) => (
           <Button
@@ -221,14 +227,17 @@ function CampaignMenu() {
       >
         <IconMenu size={22} />
       </Button>
-      {menu && (
-        <ContextMenu
-          {...menu}
-          items={items}
-          label="Campaign menu"
-          onClose={() => setMenu(null)}
-        />
-      )}
+      {/* Out of the strip, which would clip it. */}
+      {menu &&
+        createPortal(
+          <ContextMenu
+            {...menu}
+            items={items}
+            label="Campaign menu"
+            onClose={() => setMenu(null)}
+          />,
+          document.body,
+        )}
     </>
   );
 }

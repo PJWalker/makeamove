@@ -1,0 +1,1 @@
+Prefer clean code to unchanging code - eg: something would make more sense with a different name, rename it using the typescript language server

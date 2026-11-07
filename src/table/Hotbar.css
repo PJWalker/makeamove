@@ -1,9 +1,5 @@
 @layer components {
   .hotbar {
-    overflow-x: auto;
-    overflow-y: hidden;
-    overscroll-behavior-x: contain;
-    scrollbar-width: none;
     pointer-events: auto;
   }
   .hotbar-slot {
@@ -15,7 +11,10 @@
   .hotbar-slot[data-unavailable="true"] {
     opacity: 0.5;
   }
+  /* As tall as the tool strip's icon buttons, with room for the label. */
   .hotbar-slot > .btn {
+    min-height: 36px;
+    padding-inline: var(--space-3);
     cursor: grab;
     user-select: none;
   }

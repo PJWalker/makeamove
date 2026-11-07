@@ -1,6 +1,6 @@
 /*
  * Design tokens. --scene-hue is set from the active scene's dominant color;
- * core surfaces stay neutral while scene-aware accents can still use it.
+ * surfaces and text take a low-chroma tint of it, so the whole UI follows the scene.
  */
 @property --scene-hue {
   syntax: "<number>";
@@ -15,20 +15,19 @@
     transition: --scene-hue 600ms var(--ease);
 
     /*
-     * Surfaces (low chroma so a vivid map never makes the chrome garish).
-      * Neutral surfaces let the scene, not the chrome, carry the color.
-      */
-
+     * Surfaces: tinted by the scene, at low chroma so a vivid map never makes the chrome garish.
+     */
+    --toolbar: oklch(0.2 0.05 var(--scene-hue) / .7);
     --shine: linear-gradient(to bottom right, #fff4, #fff2, #fff3) 1;
-    --surface: oklch(18% 0.008 250 / 0.96);
-    --surface-solid: oklch(15% 0.008 250);
-    --surface-raised: oklch(22% 0.01 250);
-    --surface-sunken: oklch(12% 0.006 250);
-    --surface-sunken-hover: oklch(10% 0.006 250);
-    --text: oklch(92% 0.005 250);
-    --text-muted: oklch(68% 0.008 250);
-    --text-faint: oklch(65% 0.008 250);
-    --canvas-bg: oklch(12% 0.008 250);
+    --surface: oklch(18% 0.018 var(--scene-hue) / 0.96);
+    --surface-solid: oklch(15% 0.018 var(--scene-hue));
+    --surface-raised: oklch(22% 0.022 var(--scene-hue));
+    --surface-sunken: oklch(12% 0.014 var(--scene-hue));
+    --surface-sunken-hover: oklch(10% 0.014 var(--scene-hue));
+    --text: oklch(1 0.01 var(--scene-hue) / .95);
+    --text-muted: oklch(1 0.02 var(--scene-hue) / .7);
+    --text-faint: oklch(1 0.02 var(--scene-hue) .65);
+    --canvas-bg: oklch(12% 0.02 var(--scene-hue));
     --hairline: #ffffff14;
     --hairline-strong: #ffffff22;
     --surface-highlight: oklch(100% 0 0 / 0.07);

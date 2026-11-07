@@ -4,6 +4,8 @@ import { IndexeddbPersistence } from "y-indexeddb";
 import { HybridClock } from "../../lib/hlc";
 import { newId } from "../../lib/ids";
 import { dataName } from "../../platform/dataEpoch";
+import { device } from "../../platform/device";
+import { colourOf } from "../../scene/presence";
 import type { ChatMessage } from "./types";
 
 /*
@@ -38,7 +40,7 @@ interface LoadedChunk {
 
 export type NewMessage = ChatMessage extends infer M
   ? M extends ChatMessage
-    ? Omit<M, "id" | "hlc" | "author" | "name">
+    ? Omit<M, "id" | "hlc" | "author" | "name" | "colour">
     : never
   : never;
 
@@ -143,6 +145,7 @@ export class ChatLog {
         hlc: this.clock.tick(),
         author: author.id,
         name: author.name,
+        colour: colourOf(device.value),
       } as ChatMessage;
       chunk.messages.push([full]);
       return full;

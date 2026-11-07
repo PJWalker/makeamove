@@ -18,6 +18,7 @@ import { actionEntity, dropMarker, dropOn, dropTargetAt, setDropCursor } from ".
 import { paletteOpen } from "./Palette";
 import { isTyping } from "../ui/keys";
 import { startReorder } from "../ui/reorder";
+import { scrollSideways } from "../ui/wheel";
 import { useValue } from "../ui/useValue";
 
 /**
@@ -170,10 +171,7 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
         role="toolbar"
         aria-label="Hotbar"
         data-dragging={dragging !== null}
-        onWheel={(e) => {
-          // A mouse wheel scrolls the bar sideways.
-          if (e.deltaY && !e.deltaX) e.currentTarget.scrollLeft += e.deltaY;
-        }}
+        onWheel={scrollSideways}
       >
         {slots.map((id) => {
           const a = find(id);

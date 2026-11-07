@@ -26,9 +26,7 @@ import {
 import { actionsFor, derive } from "../../features/characters/store";
 import type { DataValue } from "../../core/types";
 import { commaListOf, formatCommaList } from "../../lib/list";
-import type { GameSystem } from "../types";
 import { DW2_RELATIONSHIP_DEPTH } from "./bondStore";
-import { dungeonWorld2 } from "./index";
 import {
   addTreasureBoxes,
   DW2_SERVICES,
@@ -42,9 +40,6 @@ import {
  * that change several characters or the campaign at once, called by its
  * move forms, sheet and inventory extension.
  */
-
-/** Whether this campaign plays these rules; the actions do nothing elsewhere. */
-const isDw2 = (system: GameSystem) => system === dungeonWorld2;
 
 /** Tags that make an item a weapon, which Snap the Blade can break. */
 export const WEAPON_TAGS = new Set([
@@ -61,8 +56,7 @@ export const WEAPON_TAGS = new Set([
 export function resolveStruggle(campaign: Campaign, id: string): boolean {
   const system = systemOf(campaign);
   const character = getCharacter(campaign, id);
-  if (!isDw2(system) || character?.kind !== "pc" || character.data.struggleRevealed !== true)
-    return false;
+  if (character?.kind !== "pc" || character.data.struggleRevealed !== true) return false;
 
   const level = Number(character.data.level ?? 1) + 1;
   const previousMaxHp = derive(character, system).values.maxHp ?? 0;
@@ -102,7 +96,6 @@ export function applyClassChange(
   const character = getCharacter(campaign, id);
   const classChoice = system.creation?.choices.find((choice) => choice.id === "class");
   if (
-    !isDw2(system) ||
     character?.kind !== "pc" ||
     character.data.classId === classId ||
     !classChoice?.options.some((option) => option.id === classId)
@@ -139,7 +132,7 @@ export async function endDungeonWorld2Session(
   const system = systemOf(campaign);
   const move = system.actions.find((action) => action.id === "end-the-session");
   const actor = getCharacter(campaign, actorId);
-  if (!isDw2(system) || !move || actor?.kind !== "pc") return false;
+  if (!move || actor?.kind !== "pc") return false;
 
   const card = await makeMove(campaign, actorId, move);
   if (!card) return false;
@@ -162,7 +155,7 @@ export async function makeDungeonWorld2Camp(
   const system = systemOf(campaign);
   const move = system.actions.find((action) => action.id === "make-camp");
   const actor = getCharacter(campaign, actorId);
-  if (!isDw2(system) || !move || actor?.kind !== "pc") return false;
+  if (!move || actor?.kind !== "pc") return false;
 
   const card = await makeMove(campaign, actorId, move);
   if (!card) return false;
@@ -210,13 +203,7 @@ export async function resolveComfortOrSupport(
   const move = system.actions.find((action) => action.id === "comfort-or-support");
   const supporter = getCharacter(campaign, supporterId);
   const comforted = getCharacter(campaign, comfortedId);
-  if (
-    !isDw2(system) ||
-    !move ||
-    supporter?.kind !== "pc" ||
-    comforted?.kind !== "pc" ||
-    supporterId === comfortedId
-  )
+  if (!move || supporter?.kind !== "pc" || comforted?.kind !== "pc" || supporterId === comfortedId)
     return false;
 
   const card = await makeMove(campaign, supporterId, move);
@@ -259,7 +246,7 @@ export function prepareDungeonWorld2Journey(
   const system = systemOf(campaign);
   const move = system.actions.find((action) => action.id === "perilous-journey");
   const leader = getCharacter(campaign, leaderId);
-  if (!isDw2(system) || !move || leader?.kind !== "pc") return false;
+  if (!move || leader?.kind !== "pc") return false;
   const party = listCharacters(campaign).filter((character) => character.kind === "pc");
   const affected = pace === "quick" ? party : pace === "regular" ? [leader] : [];
   for (const character of affected) {
@@ -289,7 +276,7 @@ export function dungeonWorld2DowntimeEpoch(campaign: Campaign): number {
 
 /** Start a fresh Downtime period so each PC can Train once during it. */
 export function beginDungeonWorld2Downtime(campaign: Campaign): number | undefined {
-  if (!isDw2(systemOf(campaign)) || !campaign.isGm()) return;
+  if (!campaign.isGm()) return;
   const epoch = dungeonWorld2DowntimeEpoch(campaign) + 1;
   campaign.systemData.set(DW2_DOWNTIME_KEY, epoch);
   return epoch;
@@ -320,12 +307,7 @@ export function carouseDungeonWorld2(
 ): boolean {
   const character = getCharacter(campaign, characterId);
   const target = targetId ? getCharacter(campaign, targetId) : undefined;
-  if (
-    !isDw2(systemOf(campaign)) ||
-    character?.kind !== "pc" ||
-    dungeonWorld2DowntimeEpoch(campaign) === 0
-  )
-    return false;
+  if (character?.kind !== "pc" || dungeonWorld2DowntimeEpoch(campaign) === 0) return false;
   if (benefit === "clear-locked") {
     if (!condition || !character.lockedConditions?.includes(condition)) return false;
   } else if (
@@ -359,7 +341,6 @@ export function carouseDungeonWorld2(
 export function resupplyDungeonWorld2(campaign: Campaign, characterId: string): boolean {
   const character = getCharacter(campaign, characterId);
   if (
-    !isDw2(systemOf(campaign)) ||
     character?.kind !== "pc" ||
     dungeonWorld2DowntimeEpoch(campaign) === 0 ||
     Number(character.data.treasureBoxes ?? 0) < 1
@@ -390,7 +371,6 @@ export async function shopDungeonWorld2Service(
   const tier = WEALTH_TIERS.find((entry) => entry.rank === rank);
   const example = service?.examples[rank];
   if (
-    !isDw2(systemOf(campaign)) ||
     character?.kind !== "pc" ||
     dungeonWorld2DowntimeEpoch(campaign) === 0 ||
     !service ||
@@ -420,7 +400,6 @@ export function saleValueDungeonWorld2Item(
   const definition =
     item && systemOf(campaign).items.find((entry) => entry.id === (item.defId ?? item.id));
   if (
-    !isDw2(systemOf(campaign)) ||
     dungeonWorld2DowntimeEpoch(campaign) === 0 ||
     character?.kind !== "pc" ||
     definition?.wealthCost === undefined
@@ -451,7 +430,6 @@ export function trainDungeonWorld2(campaign: Campaign, characterId: string): boo
   const character = getCharacter(campaign, characterId);
   const epoch = dungeonWorld2DowntimeEpoch(campaign);
   if (
-    !isDw2(systemOf(campaign)) ||
     character?.kind !== "pc" ||
     epoch === 0 ||
     trainedDuringDungeonWorld2Downtime(campaign, characterId) ||
@@ -476,7 +454,6 @@ export function breakDungeonWorld2Weapon(
   const character = getCharacter(campaign, characterId);
   const item = character?.inventory.find((entry) => entry.id === itemId);
   if (
-    !isDw2(system) ||
     character?.kind !== "pc" ||
     !item?.equippable ||
     item.broken ||
@@ -516,7 +493,7 @@ export function consumeDungeonWorld2Item(
         ? (choice ?? { kind: "drain" as const })
         : choice;
   if (definition?.itemUse === "healing-potion") {
-    if (!isDw2(system) || !resolvedChoice) return false;
+    if (!resolvedChoice) return false;
     if (
       resolvedChoice.kind === "clear-locked" &&
       !character.lockedConditions?.includes(resolvedChoice.condition)
@@ -529,7 +506,7 @@ export function consumeDungeonWorld2Item(
       return false;
   }
   if (definition?.itemUse === "magic-wand") {
-    if (!isDw2(system) || !resolvedChoice) return false;
+    if (!resolvedChoice) return false;
     if (
       resolvedChoice.kind === "mark-condition" &&
       (!system.conditions.some((entry) => entry.id === resolvedChoice.condition) ||
@@ -542,7 +519,7 @@ export function consumeDungeonWorld2Item(
     definition?.itemUse === "magic-wand" && resolvedChoice?.kind === "mark-condition";
   if (!wandMarksCondition)
     updateItem(campaign, characterId, itemId, { usesLeft: Math.max(0, (item.usesLeft ?? 0) - 1) });
-  if (isDw2(system) && definition?.itemUse === "healing-potion") {
+  if (definition?.itemUse === "healing-potion") {
     if (resolvedChoice?.kind === "clear-locked")
       clearCondition(campaign, characterId, resolvedChoice.condition);
     else if (resolvedChoice?.kind === "heal-half-lost") {
@@ -550,17 +527,13 @@ export function consumeDungeonWorld2Item(
       const lostHp = Math.max(0, maxHp - (character.resources.hp ?? 0));
       bumpResource(campaign, characterId, "hp", Math.floor(lostHp / 2), maxHp);
     }
-  } else if (isDw2(system) && definition?.itemUse === "hearty-feast") {
+  } else if (definition?.itemUse === "hearty-feast") {
     for (const ally of listCharacters(campaign)) {
       if (ally.kind !== "pc") continue;
       const maxHp = derive(ally, system).values.maxHp ?? 0;
       bumpResource(campaign, ally.id, "hp", Math.floor(maxHp / 2), maxHp);
     }
-  } else if (
-    isDw2(system) &&
-    definition?.itemUse === "magic-wand" &&
-    resolvedChoice?.kind === "mark-condition"
-  ) {
+  } else if (definition?.itemUse === "magic-wand" && resolvedChoice?.kind === "mark-condition") {
     const state = character.conditions.includes(resolvedChoice.condition) ? "locked" : "marked";
     setConditionState(campaign, characterId, resolvedChoice.condition, state);
   }

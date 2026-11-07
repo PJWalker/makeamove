@@ -1,7 +1,9 @@
 @layer components {
   /* Dice: solids drawn in 3D (table/diceRenderer.ts), the result written on the face turned to you. */
   .die {
-    --gem: var(--gem-smoky);
+    /* The body of a die that isn't a max or min: the roller's colour, set inline. */
+    --die-colour: var(--gem-smoky);
+    --gem: var(--die-colour);
     position: relative;
     display: inline-grid;
     place-items: center;
@@ -22,6 +24,9 @@
     }
     &[data-min="true"] {
       --gem: var(--gem-danger);
+    }
+    &[data-disabled] {
+      opacity: var(--disabled-opacity);
     }
     &[data-kept="false"] {
       opacity: 0.35;
@@ -56,6 +61,13 @@
     &.roll-card {
       box-shadow: 0 12px 32px oklch(0% 0 0 / 0.45);
     }
+  }
+  /* A new die dragged out of the dice tray, under the pointer. */
+  .die-ghost {
+    position: fixed;
+    z-index: 10001;
+    translate: -50% -50%;
+    pointer-events: none;
   }
   /* Thrown dice cross the window on their way to the chat. */
   .dice-flight {

@@ -1,11 +1,12 @@
 import { roll } from "../dice/notation";
 import { makeSessionPage } from "../notes/sessions";
 import { setState } from "./messageState";
+import { addRollDie } from "./rollState";
 import type { Campaign } from "../../campaign/campaign";
 import { device } from "../../platform/device";
 import type { Command } from "./commands";
 import { contentForCommand, contentFromText, type ChatContent } from "./content";
-import type { RollMessage, RollVisibility, TextMessage } from "./types";
+import { canWork, type RollMessage, type RollVisibility, type TextMessage } from "./types";
 import type { SystemCounterDef } from "../../systems/types";
 import { getSystem } from "../../systems";
 
@@ -56,6 +57,14 @@ export async function ensureSystemCounter(campaign: Campaign, counter: SystemCou
   campaign.systemData.set(field, message.id);
   setState(campaign.messageState, message.id, "pinned", true);
   return message;
+}
+
+/** Adds a new die to a roll in the chat, if it's one this device may change. */
+export function addDieToRoll(campaign: Campaign, messageId: string, sides: number) {
+  const message = campaign.chat.messages.value.find((candidate) => candidate.id === messageId);
+  if (!message || (message.kind !== "roll" && message.kind !== "move") || !message.roll) return;
+  if (!canWork(message, device.value.id, campaign.isGm())) return;
+  addRollDie(campaign.messageState, messageId, message.roll, sides);
 }
 
 /** Roll a formula and post the result. Throws NotationError for bad formulas. */
