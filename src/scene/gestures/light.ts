@@ -63,7 +63,7 @@ export class AreaDraft {
     const cam = this.c.renderer.camera;
     const onFirst =
       first && Math.hypot((first.x - p.x) * cam.zoom, (first.y - p.y) * cam.zoom) <= HANDLE_SIZE;
-    if (pts.length >= 3 && (onFirst || e.detail >= 2)) {
+    if (pts.length >= 3 && (onFirst || this.c.pressCount >= 2)) {
       this.finish();
       return;
     }

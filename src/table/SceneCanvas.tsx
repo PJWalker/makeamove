@@ -338,7 +338,7 @@ export default function SceneCanvas({
       renderer.setElements([]);
       scene?.destroy();
     };
-  }, [ready, sceneId, campaign, controller, renderer]);
+  }, [ready, sceneId, campaign, renderer]);
 
   useEffect(() => {
     if (!controller) {

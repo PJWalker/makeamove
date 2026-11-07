@@ -56,6 +56,31 @@ async function dispatchKey(key: string) {
   });
 }
 
+/**
+ * Where a point in the app's CSS pixels is in the page CDP dispatches input
+ * to: Vitest runs the app in an iframe that it scales to fit its UI.
+ */
+function toInputPoint(x: number, y: number) {
+  const frame = window.frameElement;
+  if (!frame) return { x, y };
+  const rect = frame.getBoundingClientRect();
+  return {
+    x: rect.left + (x * rect.width) / innerWidth,
+    y: rect.top + (y * rect.height) / innerHeight,
+  };
+}
+
+async function dispatchMouse(
+  type: "mouseMoved" | "mousePressed" | "mouseReleased",
+  options: { button?: string; buttons: number; clickCount?: number },
+) {
+  await cdp().send("Input.dispatchMouseEvent", {
+    type,
+    ...toInputPoint(mouseX, mouseY),
+    ...options,
+  });
+}
+
 const mouse = {
   async move(x: number, y: number, options?: { steps?: number }) {
     const steps = options?.steps ?? 1;
@@ -64,42 +89,36 @@ const mouse = {
     for (let step = 1; step <= steps; step++) {
       mouseX = startX + ((x - startX) * step) / steps;
       mouseY = startY + ((y - startY) * step) / steps;
-      await cdp().send("Input.dispatchMouseEvent", {
-        type: "mouseMoved",
-        x: mouseX,
-        y: mouseY,
-        buttons: pressedButtons.size ? 1 : 0,
-      });
+      await dispatchMouse("mouseMoved", { buttons: pressedButtons.size ? 1 : 0 });
     }
   },
-  async down(options?: { button?: "left" | "right" | "middle" }) {
+  async down(options?: { button?: "left" | "right" | "middle"; clickCount?: number }) {
     const button = options?.button ?? "left";
     pressedButtons.add(button);
-    await cdp().send("Input.dispatchMouseEvent", {
-      type: "mousePressed",
-      x: mouseX,
-      y: mouseY,
+    await dispatchMouse("mousePressed", {
       button,
       buttons: pressedButtons.size,
-      clickCount: 1,
+      clickCount: options?.clickCount ?? 1,
     });
   },
-  async up(options?: { button?: "left" | "right" | "middle" }) {
+  async up(options?: { button?: "left" | "right" | "middle"; clickCount?: number }) {
     const button = options?.button ?? "left";
     pressedButtons.delete(button);
-    await cdp().send("Input.dispatchMouseEvent", {
-      type: "mouseReleased",
-      x: mouseX,
-      y: mouseY,
+    await dispatchMouse("mouseReleased", {
       button,
       buttons: pressedButtons.size,
-      clickCount: 1,
+      clickCount: options?.clickCount ?? 1,
     });
   },
   async click(x: number, y: number) {
     await this.move(x, y);
     await this.down();
     await this.up();
+  },
+  async dblclick(x: number, y: number) {
+    await this.click(x, y);
+    await this.down({ clickCount: 2 });
+    await this.up({ clickCount: 2 });
   },
 };
 

@@ -33,6 +33,10 @@ import { putText } from "./gestures/text";
 import type { Gesture, ToolContext } from "./gestures/types";
 
 /** This member's token colour, from their device id. */
+/** How soon, and how near in screen px, a press must follow the last to count as a double click. */
+const MULTI_CLICK_MS = 500;
+const MULTI_CLICK_SLOP = 6;
+
 const memberColour = () => colourOf(device.value);
 
 /**
@@ -87,6 +91,12 @@ export class SceneController implements ToolContext {
   private byId = new Map<string, SceneElement>();
   private gesture: Gesture | null = null;
   readonly pointers = new Map<number, Point>();
+  /**
+   * Which press in a quick run of them this is: 2 for a double click.
+   * Counted here, since a pointer event's `detail` is always 0.
+   */
+  pressCount = 0;
+  private lastPress = { time: -Infinity, x: 0, y: 0 };
   private spaceHeld = false;
   private hover: Point | null = null;
   private disposers: (() => void)[] = [];
@@ -456,6 +466,7 @@ export class SceneController implements ToolContext {
     if (e.button === 2) return;
     const screen = this.toScreen(e.clientX, e.clientY);
     const world = toWorld(this.renderer.camera, screen);
+    this.countPress(e, screen);
     this.pointers.set(e.pointerId, screen);
     this.host.setPointerCapture(e.pointerId);
     this.hover = world;
@@ -481,6 +492,15 @@ export class SceneController implements ToolContext {
     this.gesture = TOOL_PRESS[tool](this, e, world, screen);
     this.updateCursor();
     this.updateOverlay();
+  }
+
+  private countPress(e: PointerEvent, screen: Point) {
+    const last = this.lastPress;
+    const again =
+      e.timeStamp - last.time <= MULTI_CLICK_MS &&
+      Math.hypot(screen.x - last.x, screen.y - last.y) <= MULTI_CLICK_SLOP;
+    this.pressCount = again ? this.pressCount + 1 : 1;
+    this.lastPress = { time: e.timeStamp, ...screen };
   }
 
   private onPointerMove(e: PointerEvent) {

@@ -11,7 +11,7 @@ import { dragged, type Gesture, type ToolContext, type ToolPress } from "./types
  * on a token targets it instead.
  */
 export const select: ToolPress = (c, e, world, screen) => {
-  if (e.detail === 2) {
+  if (c.pressCount === 2) {
     const under = c.hitTest(world);
     if (under?.type === "text") {
       c.onTextRequest?.({

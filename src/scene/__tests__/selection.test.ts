@@ -41,8 +41,11 @@ function setup(els: any[]) {
   const c = new SceneController(scene, renderer, host, "s", () => ({}) as any);
   (c as any).restoreCamera = () => {};
   c.start();
-  const fire = (type: string, x: number, y: number, extra = {}) => {
+  const fire = (type: string, x: number, y: number, extra: Record<string, unknown> = {}) => {
     const e: any = new Event(type);
+    const { timeStamp, ...rest } = extra;
+    if (timeStamp !== undefined) Object.defineProperty(e, "timeStamp", { value: timeStamp });
+    extra = rest;
     Object.assign(e, {
       pointerId: 1,
       button: 0,
@@ -73,6 +76,49 @@ const token = (id: string, x: number, y: number) => ({
 });
 
 describe("SceneController", () => {
+  describe("double-clicking text", () => {
+    const words = {
+      ...token("words", 100, 100),
+      type: "text",
+      layer: "over",
+      w: 120,
+      h: 30,
+      text: "Ford the river here",
+    };
+    // A pointer event's `detail` is always 0, so the controller counts clicks itself.
+    const click = (fire: (...args: any[]) => void, x: number, y: number, timeStamp: number) => {
+      fire("pointerdown", x, y, { detail: 0, timeStamp });
+      fire("pointerup", x, y, { detail: 0, timeStamp });
+    };
+
+    it("asks to edit it", () => {
+      const { c, fire } = setup([words]);
+      c.onTextRequest = vi.fn();
+      click(fire, 140, 110, 1000);
+      expect(c.onTextRequest).not.toHaveBeenCalled();
+      click(fire, 141, 111, 1200);
+      expect(c.onTextRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "words", text: "Ford the river here" }),
+      );
+    });
+
+    it("needs both clicks close together in time", () => {
+      const { c, fire } = setup([words]);
+      c.onTextRequest = vi.fn();
+      click(fire, 140, 110, 1000);
+      click(fire, 140, 110, 2000);
+      expect(c.onTextRequest).not.toHaveBeenCalled();
+    });
+
+    it("needs both clicks in the same place", () => {
+      const { c, fire } = setup([{ ...words, w: 400 }]);
+      c.onTextRequest = vi.fn();
+      click(fire, 140, 110, 1000);
+      click(fire, 240, 110, 1100);
+      expect(c.onTextRequest).not.toHaveBeenCalled();
+    });
+  });
+
   it("opens token details on click release, never while dragging", () => {
     const source = { ...token("character", 100, 100), characterId: "hero" };
     const { c, fire } = setup([source]);

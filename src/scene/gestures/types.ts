@@ -56,6 +56,8 @@ export interface ToolContext {
   readonly presence: Presence | null;
   /** Pointers down on the canvas, in screen px. */
   readonly pointers: ReadonlyMap<number, Point>;
+  /** Which press in a quick run of them the latest is: 2 for a double click. */
+  readonly pressCount: number;
   readonly selection: Store<string[]>;
   readonly targetMode: Store<{ max?: number; actor?: string } | null>;
   readonly placing: Store<Placement | null>;
