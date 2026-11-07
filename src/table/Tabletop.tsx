@@ -11,12 +11,7 @@ import { Sidebar } from "./Sidebar";
 import { dockInsets, unavailablePanels, windowDragging } from "./panelLayout";
 import { hasCombat } from "../features/combat/api";
 import { systemOf } from "../features/characters/api";
-import {
-  activeMapColour,
-  autohide,
-  canvasColour,
-  setAutohide,
-} from "./canvasState";
+import { activeMapColour, autohide, canvasColour, setAutohide } from "./canvasState";
 import { ActionDialogs } from "./ActionDialogs";
 import { ChatPopups } from "./ChatPopups";
 import { Hotbar } from "./Hotbar";
@@ -35,7 +30,10 @@ export function Tabletop({ campaign }: { campaign: Campaign }) {
   // A system without initiative has no turn tracker.
   const combat = useY(campaign.meta, () => hasCombat(campaign));
   // The Reference holds GM guidance, for systems that have it.
-  const reference = useY(campaign.members, () => campaign.isGm() && !!systemOf(campaign).gmReference?.length);
+  const reference = useY(
+    campaign.members,
+    () => campaign.isGm() && !!systemOf(campaign).gmReference?.length,
+  );
   useLayoutEffect(() => {
     unavailablePanels.value = [
       ...(combat ? [] : (["combat"] as const)),
@@ -55,10 +53,7 @@ export function Tabletop({ campaign }: { campaign: Campaign }) {
   const tint = mapColour ?? colour;
   useEffect(() => {
     if (tint)
-      document.documentElement.style.setProperty(
-        "--scene-hue",
-        String(sceneHueFromHex(tint)),
-      );
+      document.documentElement.style.setProperty("--scene-hue", String(sceneHueFromHex(tint)));
   }, [tint]);
   useEffect(
     () => () => {

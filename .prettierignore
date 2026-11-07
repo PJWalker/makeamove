@@ -1,0 +1,15 @@
+dist
+dev-dist
+coverage
+playwright-report
+test-results
+blob-report
+reference
+public
+package-lock.json
+skills-lock.json
+*.md
+.agents
+.claude
+.playwright*
+.vscode

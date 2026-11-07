@@ -48,22 +48,11 @@ const RESULTS = [
   { id: "miss-desperate", label: "1-3: desperate", tone: "bad" as const },
 ];
 
-const outcomes = (
-  critical: string,
-  strong: string,
-  weak: string,
-  miss: string,
-) =>
+const outcomes = (critical: string, strong: string, weak: string, miss: string) =>
   Object.fromEntries(
     RESULTS.map(({ id }) => [
       id,
-      id === "critical"
-        ? critical
-        : id === "strong"
-          ? strong
-          : id.startsWith("weak")
-            ? weak
-            : miss,
+      id === "critical" ? critical : id === "strong" ? strong : id.startsWith("weak") ? weak : miss,
     ]),
   );
 
@@ -76,18 +65,18 @@ const actionOutcomes = {
   ),
   "weak-controlled":
     "Withdraw and change approach, or succeed with a minor complication, reduced effect, lesser harm, or risky position.",
-  "miss-controlled":
-    "Withdraw and change approach, or seize a risky opportunity.",
+  "miss-controlled": "Withdraw and change approach, or seize a risky opportunity.",
   "weak-desperate":
     "You achieve your goal but suffer severe harm, a serious complication, or reduced effect. Mark attribute XP.",
   "miss-desperate":
     "Suffer severe harm, a serious complication, or lose the opportunity. Mark attribute XP.",
 };
 
-const check = (
-  outcomes: Record<string, string>,
-  extra: Partial<CheckStep> = {},
-): CheckStep => ({ kind: "check", outcomes, ...extra });
+const check = (outcomes: Record<string, string>, extra: Partial<CheckStep> = {}): CheckStep => ({
+  kind: "check",
+  outcomes,
+  ...extra,
+});
 const defineAction = (
   id: string,
   name: string,
@@ -150,9 +139,7 @@ const moveActions = ACTIONS.map(([id, name, description]) =>
       stat: id,
       followUpsFor: (roll) =>
         roll.terms[0]?.label?.toLowerCase() === "desperate"
-          ? [
-              `xp-${ATTRIBUTES.find((attribute) => attribute.actions.includes(id))!.id}`,
-            ]
+          ? [`xp-${ATTRIBUTES.find((attribute) => attribute.actions.includes(id))!.id}`]
           : [],
     }),
   ),
@@ -175,11 +162,8 @@ const resistanceActions = ATTRIBUTES.map(({ id, name }) =>
           first?.kind === "dice" &&
           notation?.kind === "dice" &&
           notation.keep?.which !== "low" &&
-          first.dice.filter((die) => !die.disabled && die.value === 6).length >
-            1;
-        return critical || roll.total === 6
-          ? []
-          : [`resist-stress-${6 - roll.total}`];
+          first.dice.filter((die) => !die.disabled && die.value === 6).length > 1;
+        return critical || roll.total === 6 ? [] : [`resist-stress-${6 - roll.total}`];
       },
     }),
   ),
@@ -215,13 +199,7 @@ const PLAYBOOKS = [
     text: "A relentless tracker. XP trigger: address a challenge with tracking or violence.",
     primary: "hunt",
     secondary: "survey",
-    abilities: [
-      "Sharpshooter",
-      "Focused",
-      "Scout",
-      "Vengeful",
-      "Tough as nails",
-    ],
+    abilities: ["Sharpshooter", "Focused", "Scout", "Vengeful", "Tough as nails"],
   },
   {
     id: "leech",
@@ -229,13 +207,7 @@ const PLAYBOOKS = [
     text: "A technical expert. XP trigger: address a challenge with technical skill or mayhem.",
     primary: "tinker",
     secondary: "wreck",
-    abilities: [
-      "Alchemist",
-      "Analyst",
-      "Artificer",
-      "Saboteur",
-      "Strange methods",
-    ],
+    abilities: ["Alchemist", "Analyst", "Artificer", "Saboteur", "Strange methods"],
   },
   {
     id: "lurk",
@@ -243,14 +215,7 @@ const PLAYBOOKS = [
     text: "An elusive infiltrator. XP trigger: address a challenge with stealth or evasion.",
     primary: "prowl",
     secondary: "finesse",
-    abilities: [
-      "Ambush",
-      "Daredevil",
-      "The devil's footsteps",
-      "Expertise",
-      "Reflexes",
-      "Shadow",
-    ],
+    abilities: ["Ambush", "Daredevil", "The devil's footsteps", "Expertise", "Reflexes", "Shadow"],
   },
   {
     id: "slide",
@@ -273,13 +238,7 @@ const PLAYBOOKS = [
     text: "A calculating mastermind. XP trigger: address a challenge with calculation or conspiracy.",
     primary: "consort",
     secondary: "study",
-    abilities: [
-      "Foresight",
-      "Calculating",
-      "Connected",
-      "Mastermind",
-      "Weaving the web",
-    ],
+    abilities: ["Foresight", "Calculating", "Connected", "Mastermind", "Weaving the web"],
   },
   {
     id: "whisper",
@@ -287,24 +246,11 @@ const PLAYBOOKS = [
     text: "An occult practitioner. XP trigger: address a challenge with knowledge or arcane power.",
     primary: "attune",
     secondary: "study",
-    abilities: [
-      "Arcane mind",
-      "Iron will",
-      "Ritual",
-      "Strange methods",
-      "Warded",
-    ],
+    abilities: ["Arcane mind", "Iron will", "Ritual", "Strange methods", "Warded"],
   },
 ];
 
-const CREW_TYPES = [
-  "assassins",
-  "bravos",
-  "cult",
-  "hawkers",
-  "shadows",
-  "smugglers",
-];
+const CREW_TYPES = ["assassins", "bravos", "cult", "hawkers", "shadows", "smugglers"];
 const CREW_REPUTATIONS = [
   "ambitious",
   "brutal",
@@ -334,195 +280,194 @@ const CREW_UPGRADES = [
   "Workshop",
 ];
 
-const ABILITIES_BY_PLAYBOOK: Record<string, { name: string; text: string }[]> =
-  {
-    cutter: [
-      {
-        name: "Battleborn",
-        text: "Use special armor to reduce combat harm or push yourself in a fight.",
-      },
-      {
-        name: "Bodyguard",
-        text: "Gain a die when resisting a consequence taken while protecting a teammate; gain effect when surveying threats.",
-      },
-      {
-        name: "Arcane fighter",
-        text: "Imbue your hands, melee weapons, or tools with spirit energy for potency against supernatural foes.",
-      },
-      {
-        name: "Leader",
-        text: "Your commanded cohorts fight harder, gain effect, and have armor.",
-      },
-      {
-        name: "Mule",
-        text: "Increase the amount of load you can carry at each load level.",
-      },
-      {
-        name: "Not to be trifled with",
-        text: "Push yourself for a feat of superhuman force or to face a small gang on equal footing.",
-      },
-      {
-        name: "Savage",
-        text: "Your violent reputation makes your threats and attacks more frightening.",
-      },
-      {
-        name: "Vigorous",
-        text: "Gain an extra healing-clock segment and a bonus die when recovering.",
-      },
-    ],
-    hound: [
-      {
-        name: "Sharpshooter",
-        text: "Push yourself to make an otherwise impossible long-range shot or suppress a small gang with sustained fire.",
-      },
-      {
-        name: "Focused",
-        text: "Spend special armor to negate surprise or mental harm, or push yourself for ranged combat or tracking without stress.",
-      },
-      {
-        name: "Scout",
-        text: "Gain increased effect when locating a target, and a bonus die to avoid detection from a prepared position or camouflage.",
-      },
-      {
-        name: "Vengeful",
-        text: "Gain an additional XP trigger for getting payback against someone who harmed you or someone you care about.",
-      },
-      {
-        name: "Tough as nails",
-        text: "Harm penalties affect you as if they were one level less severe; level 4 harm remains fatal.",
-      },
-    ],
-    leech: [
-      {
-        name: "Alchemist",
-        text: "Gain improved results when inventing or crafting alchemical creations and begin with a known formula.",
-      },
-      {
-        name: "Analyst",
-        text: "During downtime, mark two segments across investigation or formula/design long-term projects.",
-      },
-      {
-        name: "Artificer",
-        text: "Gain improved results when inventing or crafting spark-craft creations and begin with a known design.",
-      },
-      {
-        name: "Fortitude",
-        text: "Spend special armor to resist fatigue, weakness, or chemical consequences, or push yourself for technical work.",
-      },
-      {
-        name: "Saboteur",
-        text: "Make Wreck work quieter and conceal the resulting damage from casual inspection.",
-      },
-      {
-        name: "Infiltrator",
-        text: "Ignore enemy quality or Tier penalties when bypassing security.",
-      },
-      {
-        name: "Strange methods",
-        text: "Gain improved results when inventing or crafting arcane creations and begin with a known design.",
-      },
-      {
-        name: "Supernatural ward",
-        text: "Make an area hostile or alluring to supernatural entities through arcane sabotage.",
-      },
-    ],
-    lurk: [
-      {
-        name: "Ambush",
-        text: "Gain a bonus die when attacking from hiding or springing a trap.",
-      },
-      {
-        name: "Daredevil",
-        text: "On a desperate action, trade a die from consequence resistance for a bonus action die.",
-      },
-      {
-        name: "The devil's footsteps",
-        text: "Push yourself for an extreme athletic feat or briefly turn enemies against one another.",
-      },
-      {
-        name: "Expertise",
-        text: "When leading a group action with one chosen action, cap your resulting stress at 1.",
-      },
-      {
-        name: "Reflexes",
-        text: "When timing determines who acts first, you do.",
-      },
-      {
-        name: "Shadow",
-        text: "Spend special armor to resist detection/security consequences or push yourself for athletics or stealth.",
-      },
-    ],
-    slide: [
-      {
-        name: "Rook's gambit",
-        text: "Take 2 stress to roll your best action rating while performing another action.",
-      },
-      {
-        name: "Like looking into a mirror",
-        text: "You can always tell when someone is lying to you.",
-      },
-      {
-        name: "A little something on the side",
-        text: "Gain 2 stash at the end of each downtime phase.",
-      },
-      {
-        name: "Mesmerism",
-        text: "When you Sway someone, you can make them forget the interaction until you meet again.",
-      },
-      {
-        name: "Subterfuge",
-        text: "Spend special armor to resist suspicion/persuasion consequences or push yourself for subterfuge.",
-      },
-      {
-        name: "Trust in me",
-        text: "Gain a bonus die against someone with whom you have an intimate relationship.",
-      },
-    ],
-    spider: [
-      {
-        name: "Foresight",
-        text: "Assist a teammate twice per score without paying stress by describing prior preparation.",
-      },
-      {
-        name: "Calculating",
-        text: "Give yourself or another crew member one additional downtime activity.",
-      },
-      {
-        name: "Connected",
-        text: "Improve the result level of downtime asset acquisition or heat reduction.",
-      },
-      {
-        name: "Mastermind",
-        text: "Spend special armor to protect a teammate remotely or push yourself for information or a long-term project.",
-      },
-      {
-        name: "Weaving the web",
-        text: "Gain a bonus die to Consort for score information and to that operation’s engagement roll.",
-      },
-    ],
-    whisper: [
-      {
-        name: "Arcane mind",
-        text: "Sense nearby supernatural entities and gain a bonus die when gathering information about them.",
-      },
-      {
-        name: "Iron will",
-        text: "Resist supernatural terror and gain a bonus die to Resolve resistance rolls.",
-      },
-      {
-        name: "Ritual",
-        text: "Learn and perform occult rituals; begin with one ritual already learned.",
-      },
-      {
-        name: "Strange methods",
-        text: "Gain improved results when inventing or crafting arcane creations and begin with a known design.",
-      },
-      {
-        name: "Warded",
-        text: "Spend special armor to resist supernatural consequences or push yourself while working with arcane forces.",
-      },
-    ],
-  };
+const ABILITIES_BY_PLAYBOOK: Record<string, { name: string; text: string }[]> = {
+  cutter: [
+    {
+      name: "Battleborn",
+      text: "Use special armor to reduce combat harm or push yourself in a fight.",
+    },
+    {
+      name: "Bodyguard",
+      text: "Gain a die when resisting a consequence taken while protecting a teammate; gain effect when surveying threats.",
+    },
+    {
+      name: "Arcane fighter",
+      text: "Imbue your hands, melee weapons, or tools with spirit energy for potency against supernatural foes.",
+    },
+    {
+      name: "Leader",
+      text: "Your commanded cohorts fight harder, gain effect, and have armor.",
+    },
+    {
+      name: "Mule",
+      text: "Increase the amount of load you can carry at each load level.",
+    },
+    {
+      name: "Not to be trifled with",
+      text: "Push yourself for a feat of superhuman force or to face a small gang on equal footing.",
+    },
+    {
+      name: "Savage",
+      text: "Your violent reputation makes your threats and attacks more frightening.",
+    },
+    {
+      name: "Vigorous",
+      text: "Gain an extra healing-clock segment and a bonus die when recovering.",
+    },
+  ],
+  hound: [
+    {
+      name: "Sharpshooter",
+      text: "Push yourself to make an otherwise impossible long-range shot or suppress a small gang with sustained fire.",
+    },
+    {
+      name: "Focused",
+      text: "Spend special armor to negate surprise or mental harm, or push yourself for ranged combat or tracking without stress.",
+    },
+    {
+      name: "Scout",
+      text: "Gain increased effect when locating a target, and a bonus die to avoid detection from a prepared position or camouflage.",
+    },
+    {
+      name: "Vengeful",
+      text: "Gain an additional XP trigger for getting payback against someone who harmed you or someone you care about.",
+    },
+    {
+      name: "Tough as nails",
+      text: "Harm penalties affect you as if they were one level less severe; level 4 harm remains fatal.",
+    },
+  ],
+  leech: [
+    {
+      name: "Alchemist",
+      text: "Gain improved results when inventing or crafting alchemical creations and begin with a known formula.",
+    },
+    {
+      name: "Analyst",
+      text: "During downtime, mark two segments across investigation or formula/design long-term projects.",
+    },
+    {
+      name: "Artificer",
+      text: "Gain improved results when inventing or crafting spark-craft creations and begin with a known design.",
+    },
+    {
+      name: "Fortitude",
+      text: "Spend special armor to resist fatigue, weakness, or chemical consequences, or push yourself for technical work.",
+    },
+    {
+      name: "Saboteur",
+      text: "Make Wreck work quieter and conceal the resulting damage from casual inspection.",
+    },
+    {
+      name: "Infiltrator",
+      text: "Ignore enemy quality or Tier penalties when bypassing security.",
+    },
+    {
+      name: "Strange methods",
+      text: "Gain improved results when inventing or crafting arcane creations and begin with a known design.",
+    },
+    {
+      name: "Supernatural ward",
+      text: "Make an area hostile or alluring to supernatural entities through arcane sabotage.",
+    },
+  ],
+  lurk: [
+    {
+      name: "Ambush",
+      text: "Gain a bonus die when attacking from hiding or springing a trap.",
+    },
+    {
+      name: "Daredevil",
+      text: "On a desperate action, trade a die from consequence resistance for a bonus action die.",
+    },
+    {
+      name: "The devil's footsteps",
+      text: "Push yourself for an extreme athletic feat or briefly turn enemies against one another.",
+    },
+    {
+      name: "Expertise",
+      text: "When leading a group action with one chosen action, cap your resulting stress at 1.",
+    },
+    {
+      name: "Reflexes",
+      text: "When timing determines who acts first, you do.",
+    },
+    {
+      name: "Shadow",
+      text: "Spend special armor to resist detection/security consequences or push yourself for athletics or stealth.",
+    },
+  ],
+  slide: [
+    {
+      name: "Rook's gambit",
+      text: "Take 2 stress to roll your best action rating while performing another action.",
+    },
+    {
+      name: "Like looking into a mirror",
+      text: "You can always tell when someone is lying to you.",
+    },
+    {
+      name: "A little something on the side",
+      text: "Gain 2 stash at the end of each downtime phase.",
+    },
+    {
+      name: "Mesmerism",
+      text: "When you Sway someone, you can make them forget the interaction until you meet again.",
+    },
+    {
+      name: "Subterfuge",
+      text: "Spend special armor to resist suspicion/persuasion consequences or push yourself for subterfuge.",
+    },
+    {
+      name: "Trust in me",
+      text: "Gain a bonus die against someone with whom you have an intimate relationship.",
+    },
+  ],
+  spider: [
+    {
+      name: "Foresight",
+      text: "Assist a teammate twice per score without paying stress by describing prior preparation.",
+    },
+    {
+      name: "Calculating",
+      text: "Give yourself or another crew member one additional downtime activity.",
+    },
+    {
+      name: "Connected",
+      text: "Improve the result level of downtime asset acquisition or heat reduction.",
+    },
+    {
+      name: "Mastermind",
+      text: "Spend special armor to protect a teammate remotely or push yourself for information or a long-term project.",
+    },
+    {
+      name: "Weaving the web",
+      text: "Gain a bonus die to Consort for score information and to that operation’s engagement roll.",
+    },
+  ],
+  whisper: [
+    {
+      name: "Arcane mind",
+      text: "Sense nearby supernatural entities and gain a bonus die when gathering information about them.",
+    },
+    {
+      name: "Iron will",
+      text: "Resist supernatural terror and gain a bonus die to Resolve resistance rolls.",
+    },
+    {
+      name: "Ritual",
+      text: "Learn and perform occult rituals; begin with one ritual already learned.",
+    },
+    {
+      name: "Strange methods",
+      text: "Gain improved results when inventing or crafting arcane creations and begin with a known design.",
+    },
+    {
+      name: "Warded",
+      text: "Spend special armor to resist supernatural consequences or push yourself while working with arcane forces.",
+    },
+  ],
+};
 
 const PLAYBOOK_ABILITIES = PLAYBOOKS.flatMap((playbook) =>
   (ABILITIES_BY_PLAYBOOK[playbook.id] ?? []).map((ability) => ({
@@ -552,17 +497,19 @@ export const TRAUMAS = [
   ["vicious", "Vicious"],
 ] as const;
 
-const ITEMS = ([
-  ["blade", "Blade", 1],
-  ["pistols", "Pistols", 1],
-  ["large-weapon", "Large weapon", 2],
-  ["armor", "Armor", 2],
-  ["heavy-armor", "Heavy armor", 3],
-  ["burglary-kit", "Burglary kit", 1],
-  ["climbing-kit", "Climbing kit", 2],
-  ["occult-tools", "Occult tools", 1],
-  ["papers", "Documents", 0],
-] as const).map(([id, name, weight]) => ({
+const ITEMS = (
+  [
+    ["blade", "Blade", 1],
+    ["pistols", "Pistols", 1],
+    ["large-weapon", "Large weapon", 2],
+    ["armor", "Armor", 2],
+    ["heavy-armor", "Heavy armor", 3],
+    ["burglary-kit", "Burglary kit", 1],
+    ["climbing-kit", "Climbing kit", 2],
+    ["occult-tools", "Occult tools", 1],
+    ["papers", "Documents", 0],
+  ] as const
+).map(([id, name, weight]) => ({
   id: String(id),
   name: String(name),
   weight: Number(weight),
@@ -750,23 +697,15 @@ export const bladesInTheDark: GameSystem = {
   results: RESULTS,
   result(total, natural, rolled) {
     const first = rolled?.terms[0];
-    const dice =
-      first?.kind === "dice" ? first.dice.filter((die) => !die.disabled) : [];
+    const dice = first?.kind === "dice" ? first.dice.filter((die) => !die.disabled) : [];
     const specification = rolled ? parse(rolled.formula)[0] : undefined;
-    const zeroDice =
-      specification?.kind === "dice" && specification.keep?.which === "low";
+    const zeroDice = specification?.kind === "dice" && specification.keep?.which === "low";
     const values = dice.length ? dice.map((die) => die.value) : natural;
-    if (!zeroDice && values.filter((value) => value === 6).length > 1)
-      return "critical";
-    const highest = zeroDice
-      ? total
-      : values.length
-        ? Math.max(...values)
-        : total;
+    if (!zeroDice && values.filter((value) => value === 6).length > 1) return "critical";
+    const highest = zeroDice ? total : values.length ? Math.max(...values) : total;
     const band = highest === 6 ? "strong" : highest >= 4 ? "weak" : "miss";
     const position = first?.label?.toLowerCase();
-    return band !== "strong" &&
-      (position === "controlled" || position === "desperate")
+    return band !== "strong" && (position === "controlled" || position === "desperate")
       ? `${band}-${position}`
       : band;
   },
@@ -779,15 +718,9 @@ export const bladesInTheDark: GameSystem = {
       "special",
       "When uncertainty needs resolving without an action roll",
       "Choose an appropriate pool and interpret the highest die.",
-      check(
-        outcomes(
-          "Exceptional result.",
-          "Good result.",
-          "Limited result.",
-          "Poor result.",
-        ),
-        { ask: DICE },
-      ),
+      check(outcomes("Exceptional result.", "Good result.", "Limited result.", "Poor result."), {
+        ask: DICE,
+      }),
     ),
     defineAction(
       "engagement",
@@ -812,12 +745,7 @@ export const bladesInTheDark: GameSystem = {
       "When you obtain temporary use of an asset",
       "Roll crew tier; the result sets quality. Coin can improve the quality.",
       check(
-        outcomes(
-          "Quality: tier +2.",
-          "Quality: tier +1.",
-          "Quality: tier.",
-          "Quality: tier -1.",
-        ),
+        outcomes("Quality: tier +2.", "Quality: tier +1.", "Quality: tier.", "Quality: tier -1."),
         { ask: { ...DICE, prompt: "Crew tier" } },
       ),
     ),
@@ -1008,10 +936,7 @@ export const bladesInTheDark: GameSystem = {
   ],
   derive(character, sources) {
     const mods = Object.fromEntries(
-      ACTIONS.map(([id]) => [
-        id,
-        Math.max(0, Math.min(4, Math.floor(character.scores[id] ?? 0))),
-      ]),
+      ACTIONS.map(([id]) => [id, Math.max(0, Math.min(4, Math.floor(character.scores[id] ?? 0)))]),
     );
     const attributes = Object.fromEntries(
       ATTRIBUTES.map(({ id, actions }) => [
@@ -1019,9 +944,7 @@ export const bladesInTheDark: GameSystem = {
         actions.filter((actionId) => (mods[actionId] ?? 0) > 0).length,
       ]),
     );
-    const abilities = parseCommaList(
-      String(character.data.specialAbilities ?? ""),
-    );
+    const abilities = parseCommaList(String(character.data.specialAbilities ?? ""));
     const resolved = resolveEffects(
       {
         ...attributes,
@@ -1034,9 +957,7 @@ export const bladesInTheDark: GameSystem = {
       },
       sources,
     );
-    const trauma = TRAUMAS.filter(([id]) =>
-      character.conditions.includes(id),
-    ).length;
+    const trauma = TRAUMAS.filter(([id]) => character.conditions.includes(id)).length;
     return {
       mods,
       resolved,
@@ -1045,20 +966,15 @@ export const bladesInTheDark: GameSystem = {
         trauma,
         load: character.inventory.reduce((sum, item) => sum + item.weight, 0),
         maxLoad:
-          Number(character.data.load ?? 5) +
-          (abilities.includes("ability-cutter-mule") ? 2 : 0),
+          Number(character.data.load ?? 5) + (abilities.includes("ability-cutter-mule") ? 2 : 0),
       },
     };
   },
   actionsFor(character) {
     if (character.kind === "npc") return [];
-    const abilities = parseCommaList(
-      String(character.data.specialAbilities ?? ""),
-    ).filter(Boolean);
+    const abilities = parseCommaList(String(character.data.specialAbilities ?? "")).filter(Boolean);
     return [
-      ...bladesInTheDark.actions.filter(
-        (action) => action.category !== "ability",
-      ),
+      ...bladesInTheDark.actions.filter((action) => action.category !== "ability"),
       ...PLAYBOOK_ACTIONS.filter((action) => abilities.includes(action.id)),
     ];
   },
@@ -1099,19 +1015,13 @@ export const bladesInTheDark: GameSystem = {
         label: "Vice",
         field: "vice",
         at: "create",
-        options: [
-          "Faith",
-          "Gambling",
-          "Luxury",
-          "Obligation",
-          "Pleasure",
-          "Stupor",
-          "Weird",
-        ].map((name) => ({
-          id: name.toLowerCase(),
-          name,
-          text: `Describe how ${name.toLowerCase()} draws your character and name a purveyor.`,
-        })),
+        options: ["Faith", "Gambling", "Luxury", "Obligation", "Pleasure", "Stupor", "Weird"].map(
+          (name) => ({
+            id: name.toLowerCase(),
+            name,
+            text: `Describe how ${name.toLowerCase()} draws your character and name a purveyor.`,
+          }),
+        ),
       },
       {
         id: "specialAbility",

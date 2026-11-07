@@ -1,4 +1,4 @@
-import { hueFromString } from '../lib/colour'
+import { hueFromString } from "../lib/colour";
 
 export function Avatar({ id, name, online }: { id: string; name: string; online?: boolean }) {
   const initials =
@@ -7,16 +7,16 @@ export function Avatar({ id, name, online }: { id: string; name: string; online?
       .filter(Boolean)
       .slice(0, 2)
       .map((w) => w[0]!.toUpperCase())
-      .join('') || '?'
+      .join("") || "?";
   return (
     <span
       className="avatar"
-      style={{ '--avatar-hue': hueFromString(id) }}
+      style={{ "--avatar-hue": hueFromString(id) }}
       data-online={online === undefined ? undefined : String(online)}
       title={online === false ? `${name} (away)` : name}
       aria-hidden="true"
     >
       {initials}
     </span>
-  )
+  );
 }

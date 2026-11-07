@@ -57,40 +57,94 @@ const rule = (
 ): AssignmentRule => ({ fixed, variants, remaining });
 
 export const DW2_CLASS_SCORE_ASSIGNMENTS: Record<string, ScoreAssignmentOption[]> = {
-  barbarian: assignments(rule({ str: 2 }, [
-    { label: "WIS +2", scores: { wis: 2 } },
-    { label: "CHA +2", scores: { cha: 2 } },
-  ], [0, 0, -1])),
-  bard: assignments(rule({ cha: 2 }, [
-    { label: "DEX +1", scores: { dex: 1 } },
-    { label: "INT +1", scores: { int: 1 } },
-  ], [1, 0, -1])),
-  cleric: assignments(rule({ wis: 2 }, [
-    { label: "STR +1", scores: { str: 1 } },
-    { label: "CHA +1", scores: { cha: 1 } },
-  ], [1, 0, -1])),
-  druid: assignments(rule({ wis: 2 }, [
-    { label: "DEX +2", scores: { dex: 2 } },
-    { label: "CHA +2", scores: { cha: 2 } },
-  ], [0, 0, -1])),
-  fighter: assignments(rule({}, [
-    { label: "STR +2, DEX +1", scores: { str: 2, dex: 1 } },
-    { label: "DEX +2, STR +1", scores: { dex: 2, str: 1 } },
-  ], [1, 0, -1])),
-  paladin: assignments(rule({ cha: 2 }, [
-    { label: "STR +2", scores: { str: 2 } },
-    { label: "WIS +2", scores: { wis: 2 } },
-  ], [0, 0, -1])),
-  ranger: assignments(rule({ dex: 2 }, [
-    { label: "STR +2", scores: { str: 2 } },
-    { label: "INT +2", scores: { int: 2 } },
-  ], [0, 0, -1])),
-  rogue: assignments(rule({ dex: 2 }, [
-    { label: "WIS +1", scores: { wis: 1 } },
-    { label: "CHA +1", scores: { cha: 1 } },
-  ], [1, 0, -1])),
-  wizard: assignments(rule({ int: 2 }, [
-    { label: "DEX +1", scores: { dex: 1 } },
-    { label: "CHA +1", scores: { cha: 1 } },
-  ], [1, 0, -1])),
+  barbarian: assignments(
+    rule(
+      { str: 2 },
+      [
+        { label: "WIS +2", scores: { wis: 2 } },
+        { label: "CHA +2", scores: { cha: 2 } },
+      ],
+      [0, 0, -1],
+    ),
+  ),
+  bard: assignments(
+    rule(
+      { cha: 2 },
+      [
+        { label: "DEX +1", scores: { dex: 1 } },
+        { label: "INT +1", scores: { int: 1 } },
+      ],
+      [1, 0, -1],
+    ),
+  ),
+  cleric: assignments(
+    rule(
+      { wis: 2 },
+      [
+        { label: "STR +1", scores: { str: 1 } },
+        { label: "CHA +1", scores: { cha: 1 } },
+      ],
+      [1, 0, -1],
+    ),
+  ),
+  druid: assignments(
+    rule(
+      { wis: 2 },
+      [
+        { label: "DEX +2", scores: { dex: 2 } },
+        { label: "CHA +2", scores: { cha: 2 } },
+      ],
+      [0, 0, -1],
+    ),
+  ),
+  fighter: assignments(
+    rule(
+      {},
+      [
+        { label: "STR +2, DEX +1", scores: { str: 2, dex: 1 } },
+        { label: "DEX +2, STR +1", scores: { dex: 2, str: 1 } },
+      ],
+      [1, 0, -1],
+    ),
+  ),
+  paladin: assignments(
+    rule(
+      { cha: 2 },
+      [
+        { label: "STR +2", scores: { str: 2 } },
+        { label: "WIS +2", scores: { wis: 2 } },
+      ],
+      [0, 0, -1],
+    ),
+  ),
+  ranger: assignments(
+    rule(
+      { dex: 2 },
+      [
+        { label: "STR +2", scores: { str: 2 } },
+        { label: "INT +2", scores: { int: 2 } },
+      ],
+      [0, 0, -1],
+    ),
+  ),
+  rogue: assignments(
+    rule(
+      { dex: 2 },
+      [
+        { label: "WIS +1", scores: { wis: 1 } },
+        { label: "CHA +1", scores: { cha: 1 } },
+      ],
+      [1, 0, -1],
+    ),
+  ),
+  wizard: assignments(
+    rule(
+      { int: 2 },
+      [
+        { label: "DEX +1", scores: { dex: 1 } },
+        { label: "CHA +1", scores: { cha: 1 } },
+      ],
+      [1, 0, -1],
+    ),
+  ),
 };

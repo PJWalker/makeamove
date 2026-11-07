@@ -1,7 +1,6 @@
 import source from "../../../reference/Dungeon World 2 Beta v3.md?raw";
 import type { ArtifactDef, ItemDef, ReferenceSectionDef } from "../types";
 
-
 export interface Dw2PathMove {
   name: string;
   text: string;
@@ -31,7 +30,7 @@ export const richText = (raw: string) =>
   raw
     .replace(/\[([^\]]+)\]\((?:\\.|[^)])*\)/g, "$1")
     .replace(/\\\*/g, "∗")
-    .replace(/\\([\\!+_#.|(){}\[\]-])/g, "$1")
+    .replace(/\\([\\!+_#.|(){}[\]-])/g, "$1")
     .replace(/\{#[^}]+\}/g, "")
     .replace(/__([^_]+)__/g, "**$1**")
     .replace(/[ \t]+/g, " ")
@@ -44,8 +43,14 @@ export const richText = (raw: string) =>
     // "*It's risky*; …" options, as a list.
     .replace(/(^|\s)\*([A-Z][^*\n]{0,40}?)\*;\s/g, "$1\n- *$2*; ")
     // An italic run of questions, one to a line.
-    .replace(/:\s*\*([^*\n]+\?)\*\s*/g, (_m, qs: string) =>
-      `:\n${qs.split(/(?<=\?)\s+/).map((q) => `- *${q.trim()}*`).join("\n")}\n\n`)
+    .replace(
+      /:\s*\*([^*\n]+\?)\*\s*/g,
+      (_m, qs: string) =>
+        `:\n${qs
+          .split(/(?<=\?)\s+/)
+          .map((q) => `- *${q.trim()}*`)
+          .join("\n")}\n\n`,
+    )
     // Each result band its own paragraph.
     .replace(/\s*[✷✶]\s*On a (10\+|12\+|7-9|6-)([,:]?)\s*/g, "\n\n**On a $1$2** ")
     .replace(/\b(?:mark|marks) (?:1 )?XP\b/gi, (m) => `[[+1 XP|${m}]]`)
@@ -56,7 +61,7 @@ export const richText = (raw: string) =>
 const plain = (text: string) =>
   text
     .replace(/\[([^\]]+)\]\((?:\\.|[^)])*\)/g, "$1")
-    .replace(/\\([\\!*+_#.|(){}\[\]-])/g, "$1")
+    .replace(/\\([\\!*+_#.|(){}[\]-])/g, "$1")
     .replace(/[*_]/g, "")
     .replace(/\{#[^}]+\}/g, "")
     .trim();
@@ -75,7 +80,10 @@ const artifactDefinitions: Record<string, ArtifactDef> = {
     unlockMode: "choose",
     requiresEquipped: true,
     unlocks: ["Gravity-Defying Menace", "Reality Rifter", "The Great Banisher"].map((name) => ({
-      id: name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+      id: name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, ""),
       name,
     })),
   },
@@ -85,7 +93,10 @@ const artifactDefinitions: Record<string, ArtifactDef> = {
     unlockMode: "choose",
     requiresEquipped: true,
     unlocks: ["A New Dawn", "Bright Eyes", "Promised Victory"].map((name) => ({
-      id: name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+      id: name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, ""),
       name,
     })),
   },
@@ -95,7 +106,10 @@ const artifactDefinitions: Record<string, ArtifactDef> = {
     unlockMode: "choose",
     requiresEquipped: true,
     unlocks: ["Master of Puppets", "Spy the World’s Mind Web", "Willbreaker"].map((name) => ({
-      id: name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+      id: name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, ""),
       name,
     })),
   },
@@ -104,7 +118,10 @@ const artifactDefinitions: Record<string, ArtifactDef> = {
     capacity: 5,
     unlockMode: "choose",
     unlocks: ["Claws Like Steel", "Fire Tongue", "Sinewy Wings"].map((name) => ({
-      id: name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+      id: name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, ""),
       name,
     })),
   },
@@ -113,20 +130,30 @@ const artifactDefinitions: Record<string, ArtifactDef> = {
     capacity: 5,
     unlockMode: "sequential-replace",
     requiresEquipped: true,
-    unlocks: ["Spring’s Saplings", "Summer’s Blooms", "Autumn’s Fruits", "Winter’s Solace"].map((name) => ({
-      id: name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
-      name,
-    })),
+    unlocks: ["Spring’s Saplings", "Summer’s Blooms", "Autumn’s Fruits", "Winter’s Solace"].map(
+      (name) => ({
+        id: name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, ""),
+        name,
+      }),
+    ),
   },
   "Lazurite Dragon Orb": {
     track: "Mastery",
     capacity: 5,
     unlockMode: "choose",
     requiresEquipped: true,
-    unlocks: ["Draconic Might", "Draconic Magic", "Draconic Power", "Draconic Sway"].map((name) => ({
-      id: name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
-      name,
-    })),
+    unlocks: ["Draconic Might", "Draconic Magic", "Draconic Power", "Draconic Sway"].map(
+      (name) => ({
+        id: name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, ""),
+        name,
+      }),
+    ),
   },
 };
 
@@ -159,7 +186,9 @@ export const sourceMagicItems = (): ItemDef[] => {
           .filter((line) => line.trim() && !/^\s*\|\s*:?[-]+/.test(line))
           .map((line) => line.replace(/^\s*\|\s?|\s*\|\s*$/g, ""))
           .join(" "),
-      ).replace(/\s+/g, " ").trim();
+      )
+        .replace(/\s+/g, " ")
+        .trim();
       const uses = (rawName.match(/◯/g) ?? []).length;
       if (!name || !description) return [];
       const artifactDefinition = artifact ? artifactDefinitions[name] : undefined;
@@ -177,20 +206,25 @@ export const sourceMagicItems = (): ItemDef[] => {
         );
         return { ...unlock, ...(start >= 0 ? { text: description.slice(start, end).trim() } : {}) };
       });
-      return [{
-        id: `dw2-${artifact ? "artifact" : "magic"}-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`,
-        name,
-        description,
-        weight: 0,
-        tags: ["magic", artifact ? "artifact" : "magic-item"],
-        ...(uses > 0 ? { uses } : {}),
-        ...(name === "animated shield" || name === "magic wand" ? { resetUsesAtCamp: true } : {}),
-        ...(name === "magic wand" ? { itemUse: "magic-wand" as const } : {}),
-        ...(artifactDefinition?.requiresEquipped ? { equippable: true } : {}),
-        ...(artifactDefinition
-          ? { artifact: { ...artifactDefinition, unlocks: artifactUnlocks! } }
-          : {}),
-      }];
+      return [
+        {
+          id: `dw2-${artifact ? "artifact" : "magic"}-${name
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-|-$/g, "")}`,
+          name,
+          description,
+          weight: 0,
+          tags: ["magic", artifact ? "artifact" : "magic-item"],
+          ...(uses > 0 ? { uses } : {}),
+          ...(name === "animated shield" || name === "magic wand" ? { resetUsesAtCamp: true } : {}),
+          ...(name === "magic wand" ? { itemUse: "magic-wand" as const } : {}),
+          ...(artifactDefinition?.requiresEquipped ? { equippable: true } : {}),
+          ...(artifactDefinition
+            ? { artifact: { ...artifactDefinition, unlocks: artifactUnlocks! } }
+            : {}),
+        },
+      ];
     });
   });
 };
@@ -220,15 +254,11 @@ export const sourceGmReference = (): ReferenceSectionDef[] => {
   });
 };
 
-export const sourceClassSectionText = (
-  classId: string,
-  sectionName: string,
-): string => {
+export const sourceClassSectionText = (classId: string, sectionName: string): string => {
   const classHeading = [...source.matchAll(/^## The (.+?) \{#[^}]+\}$/gm)].find(
     (heading) => key(heading[1] ?? "") === key(classId),
   );
-  if (!classHeading?.index)
-    throw new Error(`Missing Dungeon World 2 class: ${classId}`);
+  if (!classHeading?.index) throw new Error(`Missing Dungeon World 2 class: ${classId}`);
   const nextClass = [...source.matchAll(/^## /gm)].find(
     (heading) => (heading.index ?? 0) > classHeading.index!,
   );
@@ -241,18 +271,14 @@ export const sourceClassSectionText = (
   );
   if (!sectionHeading?.index || !sectionHeading[0])
     throw new Error(`Missing ${sectionName} prompt for ${classId}`);
-  const nextSection = moveHeadings.find(
-    (heading) => (heading.index ?? 0) > sectionHeading.index!,
-  );
+  const nextSection = moveHeadings.find((heading) => (heading.index ?? 0) > sectionHeading.index!);
   const sectionEnd = Math.min(nextSection?.index ?? classEnd, classEnd);
   return plain(source.slice(sectionHeading.index + sectionHeading[0].length, sectionEnd));
 };
 
 export const sourceMoveText = (name: string, level: 3 | 4 = 3): string => {
   const candidates = level === 3 ? moveHeadings : headings;
-  const index = candidates.findIndex((heading) =>
-    key(heading[1] ?? "").startsWith(key(name)),
-  );
+  const index = candidates.findIndex((heading) => key(heading[1] ?? "").startsWith(key(name)));
   if (index < 0) throw new Error(`Missing Dungeon World 2 move: ${name}`);
   const heading = candidates[index]!;
   if (heading.index === undefined || !heading[0])
@@ -300,19 +326,17 @@ export const sourceMoveOutcomes = (
 };
 
 const ruleFor = (name: string): Dw2PathMove => {
-  const index = headings.findIndex((heading) =>
-    (heading[1] ?? "").length > 0 && key(heading[1] ?? "").startsWith(key(name)),
+  const index = headings.findIndex(
+    (heading) => (heading[1] ?? "").length > 0 && key(heading[1] ?? "").startsWith(key(name)),
   );
   if (index < 0) throw new Error(`Missing Dungeon World 2 Path move: ${name}`);
-  const heading = (headings)[index]!;
+  const heading = headings[index]!;
   if (heading.index === undefined || !heading[0])
     throw new Error(`Malformed Dungeon World 2 Path heading: ${name}`);
-  const section = source
-    .slice(
-      heading.index + heading[0].length,
-      headings[index + 1]?.index ?? source.length,
-    )
-    .split(/^### /m)[0] ?? "";
+  const section =
+    source
+      .slice(heading.index + heading[0].length, headings[index + 1]?.index ?? source.length)
+      .split(/^### /m)[0] ?? "";
   const cells = section
     .split("\n")
     .filter((line) => !/^\s*\|\s*:?-+/.test(line))
@@ -324,15 +348,14 @@ const ruleFor = (name: string): Dw2PathMove => {
     markers.flatMap((marker, position) => {
       const threshold = marker[1];
       if (!threshold || marker.index === undefined || !marker[0]) return [];
-      return [[
-      threshold === "10+" ? "strong" : threshold === "7-9" ? "weak" : "miss",
-      text
-        .slice(
-          marker.index + marker[0].length,
-          markers[position + 1]?.index ?? text.length,
-        )
-        .trim(),
-      ]];
+      return [
+        [
+          threshold === "10+" ? "strong" : threshold === "7-9" ? "weak" : "miss",
+          text
+            .slice(marker.index + marker[0].length, markers[position + 1]?.index ?? text.length)
+            .trim(),
+        ],
+      ];
     }),
   );
   const statName = text.match(/roll\s*\+\s*(STR|DEX|INT|WIS|CHA)/i)?.[1];
@@ -344,17 +367,23 @@ const ruleFor = (name: string): Dw2PathMove => {
     name,
     text,
     rich: richText(cells.replace(/\n\s*\n/g, "\n\n")),
-    trigger: (text.split(/\broll\s*\+/i).at(0) ?? "")
-      .split("\n").at(0)?.trim() ?? "",
-    ...(stat && strong && weak && miss
-      ? { stat, outcomes: { strong, weak, miss } }
-      : {}),
+    trigger: (text.split(/\broll\s*\+/i).at(0) ?? "").split("\n").at(0)?.trim() ?? "",
+    ...(stat && strong && weak && miss ? { stat, outcomes: { strong, weak, miss } } : {}),
   };
 };
 
 const taglineFor = (name: string) => {
-  const at = source.search(new RegExp(`^### ${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "m"));
-  const line = at < 0 ? undefined : source.slice(at).split("\n").slice(1).find((l) => l.trim());
+  const at = source.search(
+    new RegExp(`^### ${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "m"),
+  );
+  const line =
+    at < 0
+      ? undefined
+      : source
+          .slice(at)
+          .split("\n")
+          .slice(1)
+          .find((l) => l.trim());
   return line && /^\*[^*]/.test(line.trim()) ? plain(line) : "";
 };
 

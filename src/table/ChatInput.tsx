@@ -2,11 +2,7 @@ import { Editor, Extension } from "@tiptap/core";
 import Placeholder from "@tiptap/extension-placeholder";
 import StarterKit from "@tiptap/starter-kit";
 import { useEffect, useRef } from "react";
-import {
-  contentFromText,
-  emptyChatContent,
-  type ChatContent,
-} from "../features/chat/content";
+import { contentFromText, emptyChatContent, type ChatContent } from "../features/chat/content";
 import { LINK_NODE } from "../features/notes/links";
 import type { Campaign } from "../campaign/campaign";
 import { registerLinkDrop } from "./entityDrag";
@@ -140,8 +136,7 @@ export function ChatInput({
     // Something dragged in becomes a link where it's dropped.
     const stop = registerLinkDrop(host, (link, x, y) => {
       const pos =
-        editor.view.posAtCoords({ left: x, top: y })?.pos ??
-        editor.state.doc.content.size;
+        editor.view.posAtCoords({ left: x, top: y })?.pos ?? editor.state.doc.content.size;
       editor
         .chain()
         .focus()

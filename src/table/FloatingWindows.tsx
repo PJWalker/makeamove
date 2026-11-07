@@ -1,18 +1,28 @@
-import type { Campaign } from '../campaign/campaign'
-import { trackPointer } from '../ui/pointer'
-import { windowLayer } from '../ui/windows'
+import type { Campaign } from "../campaign/campaign";
+import { trackPointer } from "../ui/pointer";
+import { windowLayer } from "../ui/windows";
 import { createPortal } from "react-dom";
 import { useSignal } from "@preact/signals-react";
 import { useRef } from "react";
-import { dockTarget, setPanelClosed, floatingWindows, windowPointer, spawnedFromTab, raiseWindow, startWindowDrag, updateWindow, type FloatingWindow, type PanelId } from './panelLayout'
-import { PanelContent, PANELS, PaneToggle } from './panels'
-import { RESIZE_CURSORS, RESIZE_DIRS, resizeRect, type ResizeDir } from './resizeRect'
-import { WindowControls } from './WindowControls'
+import {
+  dockTarget,
+  setPanelClosed,
+  floatingWindows,
+  windowPointer,
+  spawnedFromTab,
+  raiseWindow,
+  startWindowDrag,
+  updateWindow,
+  type FloatingWindow,
+  type PanelId,
+} from "./panelLayout";
+import { PanelContent, PANELS, PaneToggle } from "./panels";
+import { RESIZE_CURSORS, RESIZE_DIRS, resizeRect, type ResizeDir } from "./resizeRect";
+import { WindowControls } from "./WindowControls";
 import { PanelActionsProvider, PanelActionsSlot } from "./PanelActions";
 
 /** Size of the tab a window morphs into. */
-const TAB = 44
-
+const TAB = 44;
 
 export function FloatingWindows({ campaign }: { campaign: Campaign }) {
   return createPortal(
@@ -22,43 +32,45 @@ export function FloatingWindows({ campaign }: { campaign: Campaign }) {
       ))}
     </>,
     windowLayer,
-  )
+  );
 }
 
 function Window({ win, campaign }: { win: FloatingWindow & { id: PanelId }; campaign: Campaign }) {
-  const { label, Icon } = PANELS[win.id]
-  const rolled = useSignal(false)
+  const { label, Icon } = PANELS[win.id];
+  const rolled = useSignal(false);
 
   function onResizePointerDown(e: PointerEvent, dir: ResizeDir) {
-    if (e.button !== 0) return
-    e.preventDefault()
-    e.stopPropagation()
-    raiseWindow(win.id)
-    const start = { x: win.x, y: win.y, w: win.w, h: win.h }
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    raiseWindow(win.id);
+    const start = { x: win.x, y: win.y, w: win.w, h: win.h };
     trackPointer(RESIZE_CURSORS[dir], (ev) => {
-      updateWindow(win.id, resizeRect(start, dir, ev.clientX - e.clientX, ev.clientY - e.clientY))
-    })
+      updateWindow(win.id, resizeRect(start, dir, ev.clientX - e.clientX, ev.clientY - e.clientY));
+    });
   }
 
   function onHeaderPointerDown(e: PointerEvent) {
-    if (e.button !== 0 || (e.target as HTMLElement).closest('button')) return
-    e.preventDefault()
-    startWindowDrag(win.id, e, e.clientX - win.x, e.clientY - win.y)
+    if (e.button !== 0 || (e.target as HTMLElement).closest("button")) return;
+    e.preventDefault();
+    startWindowDrag(win.id, e, e.clientX - win.x, e.clientY - win.y);
   }
 
   // Over a sidebar the window morphs into the tab it would become, and back out again.
-  const pointer = windowPointer.value
-  const asTab = dockTarget.value !== null && pointer?.id === win.id ? pointer : null
+  const pointer = windowPointer.value;
+  const asTab = dockTarget.value !== null && pointer?.id === win.id ? pointer : null;
   // The phase sticks until the next change, so re-rendering on pointer moves doesn't cut an animation short.
   // A window pulled out of a tab starts as the tab ('hidden') and grows from it when it leaves the sidebar.
-  const phase = useRef<'in' | 'out' | 'hidden' | undefined>(spawnedFromTab.delete(win.id) ? 'hidden' : undefined)
+  const phase = useRef<"in" | "out" | "hidden" | undefined>(
+    spawnedFromTab.delete(win.id) ? "hidden" : undefined,
+  );
   if (pointer?.id !== win.id) {
-    if (phase.current !== 'hidden') phase.current = undefined
-  } else if (asTab) phase.current = phase.current === 'hidden' ? 'hidden' : 'in'
-  else if (phase.current) phase.current = 'out'
-  const morph = phase.current
-  const to = pointer ?? { x: win.x, y: win.y }
-  const toTab = `translate(${to.x - TAB / 2 - win.x}px, ${to.y - TAB / 2 - win.y}px) scale(${TAB / win.w}, ${TAB / win.h})`
+    if (phase.current !== "hidden") phase.current = undefined;
+  } else if (asTab) phase.current = phase.current === "hidden" ? "hidden" : "in";
+  else if (phase.current) phase.current = "out";
+  const morph = phase.current;
+  const to = pointer ?? { x: win.x, y: win.y };
+  const toTab = `translate(${to.x - TAB / 2 - win.x}px, ${to.y - TAB / 2 - win.y}px) scale(${TAB / win.w}, ${TAB / win.h})`;
 
   return (
     <PanelActionsProvider>

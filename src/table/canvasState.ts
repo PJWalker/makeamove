@@ -25,14 +25,8 @@ export const seenMapColours = signal<Record<string, string | null>>({});
  * The colour behind a scene's maps: the GM's choice, or (auto) a darkened
  * version of the map's colour, or a neutral default before there's a map.
  */
-export function canvasColour(
-  scene: SceneView,
-  mapColour: string | null,
-): string {
-  return (
-    scene.canvasColour ??
-    (mapColour ? backdropColour(mapColour) : DEFAULT_CANVAS_COLOUR)
-  );
+export function canvasColour(scene: SceneView, mapColour: string | null): string {
+  return scene.canvasColour ?? (mapColour ? backdropColour(mapColour) : DEFAULT_CANVAS_COLOUR);
 }
 
 /**
@@ -78,9 +72,7 @@ export interface TokenSpec {
  * Set by the open scene canvas: puts a token at a screen point and returns
  * whether the point was over the map.
  */
-export const tokenDrop = signal<
-  ((x: number, y: number, spec: TokenSpec) => boolean) | null
->(null);
+export const tokenDrop = signal<((x: number, y: number, spec: TokenSpec) => boolean) | null>(null);
 
 /** Resolve a character token under a screen point, including whether it can be edited here. */
 export const sceneCharacterAt = signal<
@@ -96,9 +88,7 @@ export const sceneCharacterAt = signal<
   | null
 >(null);
 export const sceneDropHighlight = signal<string | null>(null);
-export const sceneDropFlash = signal<{ tokenId: string; nonce: number } | null>(
-  null,
-);
+export const sceneDropFlash = signal<{ tokenId: string; nonce: number } | null>(null);
 let dropFlashNonce = 0;
 
 export function flashSceneDrop(tokenId: string) {
@@ -130,6 +120,4 @@ export interface CanvasCommands {
 export const canvasCommands = signal<CanvasCommands | null>(null);
 
 /** Open one of the campaign's dialogs (from the campaign menu or the command palette). */
-export const dialogRequest = signal<
-  "settings" | "help" | "relationships" | null
->(null);
+export const dialogRequest = signal<"settings" | "help" | "relationships" | null>(null);

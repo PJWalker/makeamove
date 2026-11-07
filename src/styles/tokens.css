@@ -3,7 +3,7 @@
  * core surfaces stay neutral while scene-aware accents can still use it.
  */
 @property --scene-hue {
-  syntax: '<number>';
+  syntax: "<number>";
   inherits: true;
   initial-value: 250;
 }
@@ -19,54 +19,48 @@
       * Neutral surfaces let the scene, not the chrome, carry the color.
       */
 
-      --shine: linear-gradient(to bottom right, #fff4, #fff2, #fff3) 1;
-     --surface: oklch(18% 0.008 250 / 0.96);
-     --surface-solid: oklch(15% 0.008 250);
-     --surface-raised: oklch(22% 0.01 250);
-     --surface-sunken: oklch(12% 0.006 250);
-     --surface-sunken-hover: oklch(10% 0.006 250);
-     --text: oklch(92% 0.005 250);
-     --text-muted: oklch(68% 0.008 250);
-     --text-faint: oklch(65% 0.008 250);
-     --canvas-bg: oklch(12% 0.008 250);
-     --hairline: #ffffff14;
-     --hairline-strong: #ffffff22;
-     --surface-highlight: oklch(100% 0 0 / 0.07);
-     --surface-rim: oklch(100% 0 0 / 0.12);
-     --control-shadow:
-       inset 0 1px 0 var(--surface-highlight),
-       0 1px 3px oklch(0% 0 0 / 0.28);
+    --shine: linear-gradient(to bottom right, #fff4, #fff2, #fff3) 1;
+    --surface: oklch(18% 0.008 250 / 0.96);
+    --surface-solid: oklch(15% 0.008 250);
+    --surface-raised: oklch(22% 0.01 250);
+    --surface-sunken: oklch(12% 0.006 250);
+    --surface-sunken-hover: oklch(10% 0.006 250);
+    --text: oklch(92% 0.005 250);
+    --text-muted: oklch(68% 0.008 250);
+    --text-faint: oklch(65% 0.008 250);
+    --canvas-bg: oklch(12% 0.008 250);
+    --hairline: #ffffff14;
+    --hairline-strong: #ffffff22;
+    --surface-highlight: oklch(100% 0 0 / 0.07);
+    --surface-rim: oklch(100% 0 0 / 0.12);
+    --control-shadow: inset 0 1px 0 var(--surface-highlight), 0 1px 3px oklch(0% 0 0 / 0.28);
 
-     --accent: oklch(80% 0.12 82);
-     --accent-hover: oklch(84% 0.12 84);
-     --accent-press: oklch(74% 0.12 80);
-     --accent-ink: oklch(22% 0.04 85);
-     --accent-soft: oklch(80% 0.12 82 / 0.12);
-     --danger: oklch(68% 0.17 25);
-     --danger-soft: oklch(68% 0.17 25 / 0.14);
-     --success: oklch(78% 0.14 150);
-     --private: oklch(80% 0.08 300);
-     --private-soft: oklch(36% 0.07 300 / 0.35);
-     --disabled-opacity: 0.45;
+    --accent: oklch(80% 0.12 82);
+    --accent-hover: oklch(84% 0.12 84);
+    --accent-press: oklch(74% 0.12 80);
+    --accent-ink: oklch(22% 0.04 85);
+    --accent-soft: oklch(80% 0.12 82 / 0.12);
+    --danger: oklch(68% 0.17 25);
+    --danger-soft: oklch(68% 0.17 25 / 0.14);
+    --success: oklch(78% 0.14 150);
+    --private: oklch(80% 0.08 300);
+    --private-soft: oklch(36% 0.07 300 / 0.35);
+    --disabled-opacity: 0.45;
 
-     --gem-smoky: oklch(36% 0.075 var(--scene-hue));
-     --gem-smoke: oklch(30% 0.04 var(--scene-hue));
-     --gem-danger: oklch(44% 0.14 25);
+    --gem-smoky: oklch(36% 0.075 var(--scene-hue));
+    --gem-smoke: oklch(30% 0.04 var(--scene-hue));
+    --gem-danger: oklch(44% 0.14 25);
 
-     --window-shadow:
-       0 14px 32px -10px oklch(0% 0 0 / 0.48),
-       0 3px 8px oklch(0% 0 0 / 0.22);
-     --drag-shadow:
-       0 8px 20px -6px oklch(0% 0 0 / 0.42),
-       0 2px 5px oklch(0% 0 0 / 0.2);
-     --blur: 0px;
+    --window-shadow: 0 14px 32px -10px oklch(0% 0 0 / 0.48), 0 3px 8px oklch(0% 0 0 / 0.22);
+    --drag-shadow: 0 8px 20px -6px oklch(0% 0 0 / 0.42), 0 2px 5px oklch(0% 0 0 / 0.2);
+    --blur: 0px;
     --space-1: 4px;
     --space-2: 8px;
     --space-3: 12px;
     --space-4: 16px;
     --space-5: 24px;
     --space-6: 32px;
-    --font-ui: 'Cabin', system-ui, sans-serif;
+    --font-ui: "Cabin", system-ui, sans-serif;
     --font-display: var(--font-ui);
     /* Count badges only. */
     --text-2xs: 0.625rem;

@@ -5,12 +5,12 @@
  * (or wherever has more room); and stay wholly inside the window.
  */
 
-const MARGIN = 8
+const MARGIN = 8;
 
 export interface Anchor {
-  left: number
-  top: number
-  bottom: number
+  left: number;
+  top: number;
+  bottom: number;
 }
 
 /**
@@ -18,15 +18,15 @@ export interface Anchor {
  * anchor's, `gap` px below it, or above it when it won't fit below.
  * Returns the side it went to.
  */
-export function placeAnchored(el: HTMLElement, anchor: Anchor, gap = 6): 'below' | 'above' {
-  const w = el.offsetWidth
-  const h = el.offsetHeight
-  const below = innerHeight - MARGIN - (anchor.bottom + gap)
-  const above = anchor.top - gap - MARGIN
-  const side = h <= below || below >= above ? 'below' : 'above'
-  const y = side === 'below' ? anchor.bottom + gap : anchor.top - gap - h
-  el.style.left = `${Math.round(Math.max(MARGIN, Math.min(anchor.left, innerWidth - w - MARGIN)))}px`
-  el.style.top = `${Math.round(Math.max(MARGIN, Math.min(y, innerHeight - h - MARGIN)))}px`
-  el.dataset.side = side
-  return side
+export function placeAnchored(el: HTMLElement, anchor: Anchor, gap = 6): "below" | "above" {
+  const w = el.offsetWidth;
+  const h = el.offsetHeight;
+  const below = innerHeight - MARGIN - (anchor.bottom + gap);
+  const above = anchor.top - gap - MARGIN;
+  const side = h <= below || below >= above ? "below" : "above";
+  const y = side === "below" ? anchor.bottom + gap : anchor.top - gap - h;
+  el.style.left = `${Math.round(Math.max(MARGIN, Math.min(anchor.left, innerWidth - w - MARGIN)))}px`;
+  el.style.top = `${Math.round(Math.max(MARGIN, Math.min(y, innerHeight - h - MARGIN)))}px`;
+  el.dataset.side = side;
+  return side;
 }

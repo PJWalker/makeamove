@@ -54,34 +54,22 @@ import { charactersLayout } from "./panelLayouts";
 import { classCreationGuidance } from "../systems/dungeon-world-2/classGuidance";
 import { parseCommaList } from "../lib/list";
 
-
 export function CharactersPanel({ campaign }: { campaign: Campaign }) {
   const system = systemOf(campaign);
   const characters = useY(campaign.characters, () => listCharacters(campaign));
   const folders = useY(campaign.characterFolders, () => listFolders(campaign));
-  const selectedId = useY(campaign.members, () =>
-    selectedCharacterId(campaign),
-  );
+  const selectedId = useY(campaign.members, () => selectedCharacterId(campaign));
   const isGm = useY(campaign.members, () => campaign.isGm());
   const creating = useSignal(false);
   const creationFolder = useSignal<string | undefined>(undefined);
   // Copies (a template's tokens) aren't listed, but selecting one's token opens its sheet.
-  const selected = useY(campaign.characters, () =>
-    getCharacter(campaign, selectedId),
-  );
+  const selected = useY(campaign.characters, () => getCharacter(campaign, selectedId));
   // One at a time: which level shows, the list or the sheet.
-  const { level, go } = usePaneLevel(
-    charactersLayout,
-    selectedId ? "detail" : "list",
-  );
+  const { level, go } = usePaneLevel(charactersLayout, selectedId ? "detail" : "list");
   const seen = useRef(selectedId);
   useEffect(() => {
     // The open character was deleted: back to the list, not on to another sheet.
-    if (
-      seen.current &&
-      seen.current !== selectedId &&
-      !campaign.characters.has(seen.current)
-    )
+    if (seen.current && seen.current !== selectedId && !campaign.characters.has(seen.current))
       go("list");
     else if (seen.current !== selectedId && selectedId) go("detail");
     seen.current = selectedId;
@@ -91,9 +79,7 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
     <TwoPane
       layout={charactersLayout}
       level={level.value}
-      title={
-        creating.value ? "New character" : (selected?.name ?? "Characters")
-      }
+      title={creating.value ? "New character" : (selected?.name ?? "Characters")}
       backLabel="Back to the character list"
       onBack={() => go("list")}
       resizeLabel="Resize character list"
@@ -133,9 +119,7 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
           ) : selected ? (
             <CharacterSheet campaign={campaign} system={system} c={selected} />
           ) : (
-            <p className="empty">
-              Create a character, or pick one to see its sheet.
-            </p>
+            <p className="empty">Create a character, or pick one to see its sheet.</p>
           )}
         </div>
       }
@@ -177,9 +161,7 @@ function CharacterList({
   onNew: (folderId?: string) => void;
   onPick: (id: string) => void;
 }) {
-  const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(
-    null,
-  );
+  const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(null);
   // A character waiting for its deletion to be confirmed.
   const deleting = useSignal<string | null>(null);
   const known = new Set(folders.map((f) => f.id));
@@ -190,9 +172,7 @@ function CharacterList({
     if (mine) dragged.folder = (folderId) => moveToFolder(campaign, c.id, folderId);
     else delete dragged.folder;
     const trigger = menuTrigger((x, y) => {
-      const items: MenuItem[] = [
-        { label: "Open character", onSelect: () => onPick(c.id) },
-      ];
+      const items: MenuItem[] = [{ label: "Open character", onSelect: () => onPick(c.id) }];
       if (mine) {
         for (const f of folders) {
           if (f.id !== c.folder)
@@ -211,8 +191,7 @@ function CharacterList({
         items.push({
           label: "Change graphic…",
           Icon: IconImage,
-          onSelect: () =>
-            editEntityGraphic(campaign, "character", c.id, c.name),
+          onSelect: () => editEntityGraphic(campaign, "character", c.id, c.name),
         });
         items.push({
           label: "Delete character…",
@@ -226,14 +205,7 @@ function CharacterList({
     return (
       <ListRow
         key={c.id}
-        lead={
-          <CampaignEntityGraphic
-            campaign={campaign}
-            kind="character"
-            id={c.id}
-            size={22}
-          />
-        }
+        lead={<CampaignEntityGraphic campaign={campaign} kind="character" id={c.id} size={22} />}
         name={c.name}
         tag={c.kind === "npc" ? "NPC" : null}
         selected={c.id === selectedId}
@@ -243,8 +215,7 @@ function CharacterList({
           "data-tip-side": true,
         }}
         pick={{
-          onDoubleClick: (e) =>
-            showLink({ kind: "character", id: c.id }, e.currentTarget),
+          onDoubleClick: (e) => showLink({ kind: "character", id: c.id }, e.currentTarget),
           "data-kind": c.kind,
           "data-item-drop": mine ? c.id : undefined,
           "data-move-drop": mine ? c.id : undefined,
@@ -258,17 +229,11 @@ function CharacterList({
     );
   };
 
-  const doomed = deleting.value
-    ? characters.find((c) => c.id === deleting.value)
-    : undefined;
+  const doomed = deleting.value ? characters.find((c) => c.id === deleting.value) : undefined;
   return (
     <>
       {doomed && (
-        <DeleteCharacter
-          campaign={campaign}
-          c={doomed}
-          onClose={() => (deleting.value = null)}
-        />
+        <DeleteCharacter campaign={campaign} c={doomed} onClose={() => (deleting.value = null)} />
       )}
       <FolderTree
         ariaLabel="Characters"
@@ -310,9 +275,7 @@ function CharacterList({
           ) : null
         }
       />
-      {menu.value && (
-        <ContextMenu {...menu.value} onClose={() => (menu.value = null)} />
-      )}
+      {menu.value && <ContextMenu {...menu.value} onClose={() => (menu.value = null)} />}
     </>
   );
 }
@@ -349,29 +312,19 @@ function NewCharacter({
   const picks = useSignal<Record<string, Picked>>(
     Object.fromEntries(
       (creation?.choices ?? []).flatMap((choice) => {
-        const value = system.characterData.find(
-          (field) => field.id === choice.field,
-        )?.default;
+        const value = system.characterData.find((field) => field.id === choice.field)?.default;
         return choice.at === "create" && typeof value === "string" && value
           ? [[choice.id, { option: value, pattern: 0, order: [] }]]
           : [];
       }),
     ),
   );
-  const method = useSignal<ScoreMethod>(
-    creation ? (scoreMethods(creation.scores))[0]!.id : "manual",
-  );
-  const scores = useSignal(
-    creation ? startingScores(system, creation.scores, method.value) : {},
-  );
+  const method = useSignal<ScoreMethod>(creation ? scoreMethods(creation.scores)[0]!.id : "manual");
+  const scores = useSignal(creation ? startingScores(system, creation.scores, method.value) : {});
   const choiceData = Object.fromEntries(
     (creation?.choices ?? []).flatMap((choice) => {
-      const option = choice.options.find(
-        (item) => item.id === picks.value[choice.id]?.option,
-      );
-      return option
-        ? [[choice.field, option.id], ...Object.entries(option.grants ?? [])]
-        : [];
+      const option = choice.options.find((item) => item.id === picks.value[choice.id]?.option);
+      return option ? [[choice.field, option.id], ...Object.entries(option.grants ?? [])] : [];
     }),
   );
   const defaults = Object.fromEntries(
@@ -396,24 +349,16 @@ function NewCharacter({
       (system.id !== "dungeon-world-2" || !existingPcs.length || !!relationshipTo.value));
   const submit = () => {
     if (!ready) return;
-    if (kind.value === "npc")
-      newNpc(campaign, name.value, folder.value || undefined);
+    if (kind.value === "npc") newNpc(campaign, name.value, folder.value || undefined);
     else {
-      const made = creation
-        ? creationResult(system, scores.value, picks.value)
-        : undefined;
+      const made = creation ? creationResult(system, scores.value, picks.value) : undefined;
       if (made) {
         made.data.pronouns = pronouns.value.trim();
         made.data.ancestry = ancestry.value.trim();
         made.data.community = community.value.trim();
         made.data.background = background.value.trim();
       }
-      const id = newCharacter(
-        campaign,
-        name.value,
-        String(choiceData.classId ?? ""),
-        made,
-      );
+      const id = newCharacter(campaign, name.value, String(choiceData.classId ?? ""), made);
       const startingItemsField = creation?.startingItemsField;
       if (startingItemsField && made) {
         for (const itemId of parseCommaList(String(made.data[startingItemsField] ?? ""))) {
@@ -422,8 +367,18 @@ function NewCharacter({
         }
       }
       if (system.id === "dungeon-world-2" && relationshipTo.value) {
-        setRelationship(campaign.characters, id, relationshipTo.value, relationshipText.value.trim());
-        setRelationshipDepth(campaign.characters, id, relationshipTo.value, Number(relationshipDepth.value));
+        setRelationship(
+          campaign.characters,
+          id,
+          relationshipTo.value,
+          relationshipText.value.trim(),
+        );
+        setRelationshipDepth(
+          campaign.characters,
+          id,
+          relationshipTo.value,
+          Number(relationshipDepth.value),
+        );
       }
       if (folder.value) moveToFolder(campaign, id, folder.value);
     }
@@ -453,21 +408,41 @@ function NewCharacter({
       )}
       <label className="field">
         Name
-        <input
-          value={name.value}
-          onInput={(e) => (name.value = e.currentTarget.value)}
-          autoFocus
-        />
+        <input value={name.value} onInput={(e) => (name.value = e.currentTarget.value)} autoFocus />
       </label>
       {kind.value === "pc" && creation && (
         <>
           {system.id === "dungeon-world-2" && (
             <fieldset className="form-section creation-identity">
               <legend>Pronouns and Origins</legend>
-              <label className="field">Pronouns<input value={pronouns.value} onInput={(event) => (pronouns.value = event.currentTarget.value)} /></label>
-              <label className="field">Ancestry<input value={ancestry.value} onInput={(event) => (ancestry.value = event.currentTarget.value)} /></label>
-              <label className="field">Community<input value={community.value} onInput={(event) => (community.value = event.currentTarget.value)} /></label>
-              <label className="field">Background<input value={background.value} onInput={(event) => (background.value = event.currentTarget.value)} /></label>
+              <label className="field">
+                Pronouns
+                <input
+                  value={pronouns.value}
+                  onInput={(event) => (pronouns.value = event.currentTarget.value)}
+                />
+              </label>
+              <label className="field">
+                Ancestry
+                <input
+                  value={ancestry.value}
+                  onInput={(event) => (ancestry.value = event.currentTarget.value)}
+                />
+              </label>
+              <label className="field">
+                Community
+                <input
+                  value={community.value}
+                  onInput={(event) => (community.value = event.currentTarget.value)}
+                />
+              </label>
+              <label className="field">
+                Background
+                <input
+                  value={background.value}
+                  onInput={(event) => (background.value = event.currentTarget.value)}
+                />
+              </label>
             </fieldset>
           )}
           {system.id === "dungeon-world-2" && existingPcs.length > 0 && (
@@ -483,7 +458,9 @@ function NewCharacter({
                 >
                   <option value="">Choose a PC</option>
                   {existingPcs.map((character) => (
-                    <option key={character.id} value={character.id}>{character.name}</option>
+                    <option key={character.id} value={character.id}>
+                      {character.name}
+                    </option>
                   ))}
                 </select>
               </label>
@@ -522,9 +499,7 @@ function NewCharacter({
               Another PC already plays this Class. The group may prefer distinct Classes.
             </p>
           )}
-          {choiceData.classId && (
-            <ClassCreationGuidance classId={String(choiceData.classId)} />
-          )}
+          {choiceData.classId && <ClassCreationGuidance classId={String(choiceData.classId)} />}
           {creation && (
             <ScoreFields
               key={String(choiceData.classId ?? "generic")}
@@ -542,10 +517,7 @@ function NewCharacter({
       {folders.length > 0 && (
         <label className="field">
           Folder
-          <select
-            value={folder.value}
-            onChange={(e) => (folder.value = e.currentTarget.value)}
-          >
+          <select value={folder.value} onChange={(e) => (folder.value = e.currentTarget.value)}>
             <option value="">None</option>
             {folders.map((f) => (
               <option key={f.id} value={f.id}>
@@ -586,8 +558,8 @@ function DeleteCharacter({
       onConfirm={() => deleteCharacter(campaign, c.id)}
     >
       <p>
-        Delete <strong>{c.name}</strong>? Their sheet is gone for everyone, and
-        tokens on the map stop being linked to them. This can't be undone.
+        Delete <strong>{c.name}</strong>? Their sheet is gone for everyone, and tokens on the map
+        stop being linked to them. This can&apos;t be undone.
       </p>
     </ConfirmDialog>
   );

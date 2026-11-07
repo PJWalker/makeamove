@@ -67,8 +67,7 @@ export function ChoiceField({
   const option = choice.options.find((o) => o.id === value.option);
   const boost = option?.boost;
   const amounts = boost?.amounts[value.pattern] ?? [];
-  const statName = (id: string) =>
-    system.stats.find((s) => s.id === id)?.abbr ?? id;
+  const statName = (id: string) => system.stats.find((s) => s.id === id)?.abbr ?? id;
   return (
     <div className="field creation-choice">
       <OptionPicker
@@ -104,7 +103,6 @@ export function ChoiceField({
               <label key={i} className="creation-boost-pick">
                 +{n}
                 <select
-
                   value={value.order[i] ?? ""}
                   onChange={(e) => {
                     // Swap so each stat takes one amount.
@@ -133,26 +131,25 @@ export function ChoiceField({
 export type ScoreMethod = "array" | "buy" | "roll" | "manual";
 
 /** The methods a system offers, first the one to start with. */
-export const scoreMethods = (
-  methods: ScoreMethods,
-): { id: ScoreMethod; label: string }[] => [
-  ...(methods.standardArray
-    ? [{ id: "array" as const, label: "Standard array" }]
-    : []),
+export const scoreMethods = (methods: ScoreMethods): { id: ScoreMethod; label: string }[] => [
+  ...(methods.standardArray ? [{ id: "array" as const, label: "Standard array" }] : []),
   ...(methods.pointBuy ? [{ id: "buy" as const, label: "Point buy" }] : []),
   ...(methods.roll ? [{ id: "roll" as const, label: "Roll" }] : []),
   { id: "manual", label: "Manual" },
 ];
 
 /** The scores a method starts from. */
-export const startingScores = (
-  system: GameSystem,
-  methods: ScoreMethods,
-  method: ScoreMethod,
-) =>
+export const startingScores = (system: GameSystem, methods: ScoreMethods, method: ScoreMethod) =>
   method === "array" && methods.standardArray
     ? assignInOrder(system, methods.standardArray)
-    : Object.fromEntries(system.stats.map((stat) => [stat.id, method === "buy" && methods.pointBuy ? Math.min(...Object.keys(methods.pointBuy.costs).map(Number)) : stat.default ?? 10]));
+    : Object.fromEntries(
+        system.stats.map((stat) => [
+          stat.id,
+          method === "buy" && methods.pointBuy
+            ? Math.min(...Object.keys(methods.pointBuy.costs).map(Number))
+            : (stat.default ?? 10),
+        ]),
+      );
 
 /** Ability scores: assign a standard array or rolled set, spend a point buy, or type them in. */
 export function ScoreFields({
@@ -186,20 +183,15 @@ export function ScoreFields({
     else if (m === "roll") rollPool();
   };
   const rollPool = () => {
-    pool.value = system.stats
-      .map(() => roll(methods.roll!).total)
-      .sort((a, b) => b - a);
+    pool.value = system.stats.map(() => roll(methods.roll!).total).sort((a, b) => b - a);
     scores.value = assignInOrder(system, pool.value);
   };
-  const spent = methods.pointBuy
-    ? pointsSpent(scores.value, methods.pointBuy)
-    : null;
-  const buyable = methods.pointBuy
-    ? Object.keys(methods.pointBuy.costs).map(Number)
-    : [];
+  const spent = methods.pointBuy ? pointsSpent(scores.value, methods.pointBuy) : null;
+  const buyable = methods.pointBuy ? Object.keys(methods.pointBuy.costs).map(Number) : [];
 
   if (assignments?.length) {
-    const selected = assignments.find((option) => option.id === assignmentId.value) ?? assignments[0]!;
+    const selected =
+      assignments.find((option) => option.id === assignmentId.value) ?? assignments[0]!;
     return (
       <div className="field creation-scores">
         <span>Ability scores</span>
@@ -229,17 +221,9 @@ export function ScoreFields({
   return (
     <div className="field creation-scores">
       <span>Ability scores</span>
-      <Segmented
-        label="Method"
-        value={method.value}
-        options={available}
-        onChange={choose}
-      />
+      <Segmented label="Method" value={method.value} options={available} onChange={choose} />
       {method.value === "buy" && methods.pointBuy && (
-        <span
-          className="muted"
-          data-over={spent === null || spent > methods.pointBuy.budget}
-        >
+        <span className="muted" data-over={spent === null || spent > methods.pointBuy.budget}>
           {spent ?? "–"} / {methods.pointBuy.budget} points
         </span>
       )}
@@ -254,14 +238,9 @@ export function ScoreFields({
             <span className="stat-abbr">{s.abbr}</span>
             {method.value === "array" || method.value === "roll" ? (
               <select
-
                 value={scores.value[s.id]}
                 onChange={(e) =>
-                  (scores.value = swapScore(
-                    scores.value,
-                    s.id,
-                    Number(e.currentTarget.value),
-                  ))
+                  (scores.value = swapScore(scores.value, s.id, Number(e.currentTarget.value)))
                 }
               >
                 {pool.value.map((n, i) => (
@@ -272,10 +251,9 @@ export function ScoreFields({
               </select>
             ) : (
               <input
-
                 type="number"
-                min={method.value === "buy" ? Math.min(...buyable) : s.min ?? 1}
-                max={method.value === "buy" ? Math.max(...buyable) : s.max ?? SCORE_CAP}
+                min={method.value === "buy" ? Math.min(...buyable) : (s.min ?? 1)}
+                max={method.value === "buy" ? Math.max(...buyable) : (s.max ?? SCORE_CAP)}
                 value={scores.value[s.id]}
                 onInput={(e) =>
                   (scores.value = {
@@ -313,9 +291,7 @@ function swapScore(
   stat: string,
   value: number,
 ): Record<string, number> {
-  const other = Object.keys(scores).find(
-    (k) => k !== stat && scores[k] === value,
-  );
+  const other = Object.keys(scores).find((k) => k !== stat && scores[k] === value);
   return {
     ...scores,
     [stat]: value,
@@ -332,12 +308,12 @@ export function creationResult(
   const pickedOptions = Object.fromEntries(
     Object.entries(picks).map(([id, pick]) => [id, pick.option]),
   );
-  const pickedData: Record<string, string | number | boolean> = {}
+  const pickedData: Record<string, string | number | boolean> = {};
   for (const choice of system.creation?.choices ?? []) {
-    const option = choice.options.find((item) => item.id === pickedOptions[choice.id])
-    if (!option) continue
-    pickedData[choice.field] = option.id
-    Object.assign(pickedData, option.grants)
+    const option = choice.options.find((item) => item.id === pickedOptions[choice.id]);
+    if (!option) continue;
+    pickedData[choice.field] = option.id;
+    Object.assign(pickedData, option.grants);
   }
   const choices = choicesAt(system.creation, "create", pickedData);
   let raised = scores;
@@ -359,10 +335,13 @@ export function creationResult(
 }
 
 /** Data fields that gather several picks (5.5e's feats). */
-const listFieldsOf = (system: GameSystem) =>
-  [...(system.creation?.listFields ?? []), ...(system.creation?.feats ? [system.creation.feats.field] : [])];
+const listFieldsOf = (system: GameSystem) => [
+  ...(system.creation?.listFields ?? []),
+  ...(system.creation?.feats ? [system.creation.feats.field] : []),
+];
 
-const scoreCapsOf = (system: GameSystem) => Object.fromEntries(system.stats.map((stat) => [stat.id, stat.max ?? SCORE_CAP]));
+const scoreCapsOf = (system: GameSystem) =>
+  Object.fromEntries(system.stats.map((stat) => [stat.id, stat.max ?? SCORE_CAP]));
 
 /** Choices and improvements at the next system-defined advancement point. */
 export function AdvancementDialog({
@@ -380,26 +359,45 @@ export function AdvancementDialog({
   const field = system.creation?.advancementField;
   const rank = Number(field ? c.data[field] : 1) + 1;
   const picks = useSignal<Record<string, Picked>>({});
-  const choices = previewChoices(system.creation, rank, c.data, c.scores, Object.fromEntries(Object.entries(picks.value).map(([id, picked]) => [id, picked.option])));
+  const choices = previewChoices(
+    system.creation,
+    rank,
+    c.data,
+    c.scores,
+    Object.fromEntries(Object.entries(picks.value).map(([id, picked]) => [id, picked.option])),
+  );
   const improves = !!system.creation?.improvementsAt?.includes(rank);
   const improvement = useSignal<"two" | "split" | "feat">("two");
-  const first = useSignal((system.stats)[0]!.id);
-  const second = useSignal((system.stats)[1]!.id);
+  const first = useSignal(system.stats[0]!.id);
+  const second = useSignal(system.stats[1]!.id);
   const feat = useSignal("");
   const featChoice = system.creation?.feats;
   const markedStatsField = system.creation?.markedStatsField;
   const resetsMarks = !!system.creation?.resetMarkedStatsAt?.includes(rank);
-  const blockedStats = markedStatsField && !resetsMarks ? parseCommaList(String(c.data[markedStatsField] ?? '')).filter(Boolean) : [];
+  const blockedStats =
+    markedStatsField && !resetsMarks
+      ? parseCommaList(String(c.data[markedStatsField] ?? "")).filter(Boolean)
+      : [];
   const optionalChoices = choices.filter((choice) => choice.optional);
   const advancementCost = optionalChoices.reduce((cost, choice) => {
-    const option = choice.options.find((item) => item.id === picks.value[choice.id]?.option)
-    return cost + (option ? option.cost ?? 1 : 0)
-  }, 0)
+    const option = choice.options.find((item) => item.id === picks.value[choice.id]?.option);
+    return cost + (option ? (option.cost ?? 1) : 0);
+  }, 0);
   const ready =
     choices.filter((ch) => !ch.optional).every((ch) => picks.value[ch.id]?.option) &&
     choices.every((choice) => {
-      const pick = picks.value[choice.id]
-      return !pick?.option || validBoost(choice.options.find((option) => option.id === pick.option), pick.pattern, pick.order, c.scores, scoreCapsOf(system), blockedStats)
+      const pick = picks.value[choice.id];
+      return (
+        !pick?.option ||
+        validBoost(
+          choice.options.find((option) => option.id === pick.option),
+          pick.pattern,
+          pick.order,
+          c.scores,
+          scoreCapsOf(system),
+          blockedStats,
+        )
+      );
     }) &&
     advancementCost === (system.creation?.choicesPerAdvancement ?? 0) &&
     (!improves || improvement.value !== "feat" || !!feat.value);
@@ -415,7 +413,11 @@ export function AdvancementDialog({
         if (!picked?.option) continue;
         const option = choice.options.find((item) => item.id === picked.option);
         if (option?.boost) {
-          advancedScores = raise(advancedScores, boostFrom(option, picked.pattern, picked.order), scoreCapsOf(system));
+          advancedScores = raise(
+            advancedScores,
+            boostFrom(option, picked.pattern, picked.order),
+            scoreCapsOf(system),
+          );
           const amounts = option.boost.amounts[picked.pattern] ?? [];
           amounts.forEach((amount, index) => {
             if (amount && picked.order[index]) markedStats.add(picked.order[index]);
@@ -424,29 +426,20 @@ export function AdvancementDialog({
       }
       const data = dataFrom(
         choices,
-        Object.fromEntries(
-          Object.entries(picks.value).map(([k, p]) => [k, p.option]),
-        ),
+        Object.fromEntries(Object.entries(picks.value).map(([k, p]) => [k, p.option])),
         listFieldsOf(system),
         c.data,
       );
       for (const [k, v] of Object.entries(data)) {
-        const value = listFieldsOf(system).includes(k) && c.data[k]
-          ? `${c.data[k]},${v}`
-          : v
-        setData(campaign, c.id, k, value)
+        const value = listFieldsOf(system).includes(k) && c.data[k] ? `${c.data[k]},${v}` : v;
+        setData(campaign, c.id, k, value);
       }
       if (system.creation?.advancementCounterField)
         setData(campaign, c.id, system.creation.advancementCounterField, 0);
       if (improves) {
         if (improvement.value === "feat" && featChoice) {
           const now = String(c.data[featChoice.field] ?? "");
-          setData(
-            campaign,
-            c.id,
-            featChoice.field,
-            now ? `${now},${feat.value}` : feat.value,
-          );
+          setData(campaign, c.id, featChoice.field, now ? `${now},${feat.value}` : feat.value);
         } else {
           const by =
             improvement.value === "two"
@@ -457,7 +450,8 @@ export function AdvancementDialog({
       }
       for (const [k, v] of Object.entries(advancedScores))
         if (v !== c.scores[k]) setScore(campaign, c.id, k, v);
-      if (markedStatsField) setData(campaign, c.id, markedStatsField, formatCommaList([...markedStats]));
+      if (markedStatsField)
+        setData(campaign, c.id, markedStatsField, formatCommaList([...markedStats]));
     });
     const after = getCharacter(campaign, c.id)!;
     const d = derive(after, system);
@@ -470,17 +464,12 @@ export function AdvancementDialog({
 
   const statSelect = (sig: Signal<string>, label: string) => (
     <select
-
       aria-label={label}
       value={sig.value}
       onChange={(e) => (sig.value = e.currentTarget.value)}
     >
       {system.stats.map((s) => (
-        <option
-          key={s.id}
-          value={s.id}
-          disabled={(c.scores[s.id] ?? 10) >= (s.max ?? SCORE_CAP)}
-        >
+        <option key={s.id} value={s.id} disabled={(c.scores[s.id] ?? 10) >= (s.max ?? SCORE_CAP)}>
           {s.name} ({c.scores[s.id]})
         </option>
       ))}
@@ -488,11 +477,7 @@ export function AdvancementDialog({
   );
 
   return (
-    <Dialog
-      dialogRef={ref}
-      title={`${c.name}: advancement ${rank}`}
-      onClose={onClose}
-    >
+    <Dialog dialogRef={ref} title={`${c.name}: advancement ${rank}`} onClose={onClose}>
       <form
         className="creation-form"
         onSubmit={(e) => {
@@ -519,15 +504,12 @@ export function AdvancementDialog({
               options={[
                 { id: "two", label: "+2 to one" },
                 { id: "split", label: "+1 to two" },
-                ...(featChoice
-                  ? [{ id: "feat" as const, label: "A feat" }]
-                  : []),
+                ...(featChoice ? [{ id: "feat" as const, label: "A feat" }] : []),
               ]}
               onChange={(v) => (improvement.value = v)}
             />
             {improvement.value === "feat" && featChoice ? (
               <select
-
                 aria-label="Feat"
                 value={feat.value}
                 onChange={(e) => (feat.value = e.currentTarget.value)}
@@ -542,25 +524,17 @@ export function AdvancementDialog({
             ) : (
               <div className="sheet-row">
                 {statSelect(first, "First ability")}
-                {improvement.value === "split" &&
-                  statSelect(second, "Second ability")}
+                {improvement.value === "split" && statSelect(second, "Second ability")}
               </div>
             )}
             {improvement.value === "feat" && feat.value && (
-              <p className="muted">
-                {featChoice?.options.find((o) => o.id === feat.value)?.text}
-              </p>
+              <p className="muted">{featChoice?.options.find((o) => o.id === feat.value)?.text}</p>
             )}
           </div>
         )}
-        {!choices.length && !improves && (
-          <p className="muted">Hit points and Hit Dice go up.</p>
-        )}
+        {!choices.length && !improves && <p className="muted">Hit points and Hit Dice go up.</p>}
         <div className="form-actions">
-          <Button
-            variant="ghost"
-            onClick={() => closePopup(ref.current, onClose)}
-          >
+          <Button variant="ghost" onClick={() => closePopup(ref.current, onClose)}>
             Cancel
           </Button>
           <Button variant="primary" type="submit" disabled={!ready}>
@@ -579,9 +553,7 @@ function appendChoiceData(
 ): Record<string, DataValue> {
   const next = { ...current };
   for (const [field, value] of Object.entries(changes)) {
-    next[field] = listFields.includes(field) && next[field]
-      ? `${next[field]},${value}`
-      : value;
+    next[field] = listFields.includes(field) && next[field] ? `${next[field]},${value}` : value;
   }
   return next;
 }
@@ -604,8 +576,11 @@ export function ClassChangeDialog({
   const assignmentId = useSignal("");
   const picks = useSignal<Record<string, Picked>>({});
   const assignmentOptions = creation?.classScoreAssignments?.[newClassId.value] ?? [];
-  const assignment = assignmentOptions.find((option) => option.id === assignmentId.value) ?? assignmentOptions[0];
-  const oldAdvancementCount = parseCommaList(String(character.data.advancements ?? "")).filter(Boolean).length;
+  const assignment =
+    assignmentOptions.find((option) => option.id === assignmentId.value) ?? assignmentOptions[0];
+  const oldAdvancementCount = parseCommaList(String(character.data.advancements ?? "")).filter(
+    Boolean,
+  ).length;
   const stageData: Record<string, DataValue> = {
     ...character.data,
     classId: newClassId.value,
@@ -620,8 +595,9 @@ export function ClassChangeDialog({
 
   for (let index = 0; index < oldAdvancementCount; index++) {
     const rank = index + 2;
-    const choice = choicesAt(creation, rank, stageData, stageScores)
-      .find((entry) => entry.at === 'advance' || entry.at === rank);
+    const choice = choicesAt(creation, rank, stageData, stageScores).find(
+      (entry) => entry.at === "advance" || entry.at === rank,
+    );
     if (!choice) continue;
     const id = `reassign-${rank}`;
     stages.push({ id, choice, display: { ...choice, id, label: `Advancement ${rank}` } });
@@ -638,9 +614,17 @@ export function ClassChangeDialog({
       );
   }
 
-  const ready = !!newClassId.value && !!assignment && stages.length === oldAdvancementCount &&
-    stages.every(({ id, choice }) => !!picks.value[id]?.option && choice.options.some((option) => option.id === picks.value[id]?.option));
-  const classOptions = classChoice?.options.filter((option) => option.id !== character.data.classId) ?? [];
+  const ready =
+    !!newClassId.value &&
+    !!assignment &&
+    stages.length === oldAdvancementCount &&
+    stages.every(
+      ({ id, choice }) =>
+        !!picks.value[id]?.option &&
+        choice.options.some((option) => option.id === picks.value[id]?.option),
+    );
+  const classOptions =
+    classChoice?.options.filter((option) => option.id !== character.data.classId) ?? [];
   const apply = () => {
     if (!ready) return;
     if (applyClassChange(campaign, characterId, newClassId.value, stageScores, stageData))
@@ -649,8 +633,17 @@ export function ClassChangeDialog({
 
   return (
     <Dialog dialogRef={ref} title={`${character.name}: change Class`} onClose={onClose}>
-      <form className="creation-form" onSubmit={(event) => { event.preventDefault(); apply(); }}>
-        <p>Reassign existing advancements under the new Class. Level, XP, and Treasure remain unchanged.</p>
+      <form
+        className="creation-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          apply();
+        }}
+      >
+        <p>
+          Reassign existing advancements under the new Class. Level, XP, and Treasure remain
+          unchanged.
+        </p>
         <OptionPicker
           label="New Class"
           options={classOptions}
@@ -668,7 +661,9 @@ export function ClassChangeDialog({
             options={assignmentOptions}
             value={assignment?.id ?? ""}
             emptyLabel="Choose…"
-            onChange={(id) => { assignmentId.value = id; }}
+            onChange={(id) => {
+              assignmentId.value = id;
+            }}
           />
         )}
         {assignment && (
@@ -694,8 +689,12 @@ export function ClassChangeDialog({
           <p className="muted">This character has no advancements to reassign.</p>
         )}
         <div className="form-actions">
-          <Button variant="ghost" onClick={() => closePopup(ref.current, onClose)}>Cancel</Button>
-          <Button variant="primary" type="submit" disabled={!ready}>Change Class</Button>
+          <Button variant="ghost" onClick={() => closePopup(ref.current, onClose)}>
+            Cancel
+          </Button>
+          <Button variant="primary" type="submit" disabled={!ready}>
+            Change Class
+          </Button>
         </div>
       </form>
     </Dialog>

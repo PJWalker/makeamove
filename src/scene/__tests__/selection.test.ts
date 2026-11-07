@@ -1,19 +1,19 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from "vitest";
 
-vi.mock('../renderer', () => ({
+vi.mock("../renderer", () => ({
   HANDLE_SIZE: 10,
   rotateHandlePosition: () => ({ x: -999, y: -999 }),
-}))
-vi.mock('../../platform/device', () => ({ device: { value: { id: 'x' } } }))
-vi.mock('../images', () => ({ importImage: vi.fn(), imageColour: vi.fn() }))
+}));
+vi.mock("../../platform/device", () => ({ device: { value: { id: "x" } } }));
+vi.mock("../images", () => ({ importImage: vi.fn(), imageColour: vi.fn() }));
 
-const { SceneController } = await import('../controller')
+const { SceneController } = await import("../controller");
 
 function setup(els: any[]) {
-  const host: any = new EventTarget()
-  host.style = {}
-  host.getBoundingClientRect = () => ({ left: 0, top: 0 })
-  host.setPointerCapture = () => {}
+  const host: any = new EventTarget();
+  host.style = {};
+  host.getBoundingClientRect = () => ({ left: 0, top: 0 });
+  host.setPointerCapture = () => {};
   const renderer: any = {
     camera: { x: 0, y: 0, zoom: 1 },
     previews: new Map(),
@@ -36,18 +36,39 @@ function setup(els: any[]) {
     update: vi.fn(),
     remove: vi.fn(),
   };
-  const c = new SceneController(scene, renderer, host, 's', () => ({}) as any)
-  ;(c as any).restoreCamera = () => {}
-  c.start()
+  const c = new SceneController(scene, renderer, host, "s", () => ({}) as any);
+  (c as any).restoreCamera = () => {};
+  c.start();
   const fire = (type: string, x: number, y: number, extra = {}) => {
-    const e: any = new Event(type)
-    Object.assign(e, { pointerId: 1, button: 0, clientX: x, clientY: y, shiftKey: false, altKey: false, ...extra })
-    host.dispatchEvent(e)
-  }
-  return { c, renderer, scene, fire }
+    const e: any = new Event(type);
+    Object.assign(e, {
+      pointerId: 1,
+      button: 0,
+      clientX: x,
+      clientY: y,
+      shiftKey: false,
+      altKey: false,
+      ...extra,
+    });
+    host.dispatchEvent(e);
+  };
+  return { c, renderer, scene, fire };
 }
 
-const token = (id: string, x: number, y: number) => ({ id, type: 'token', x, y, w: 40, h: 40, rot: 0, locked: false, layer: 'token', z: 'a', colour: '#fff', name: '' })
+const token = (id: string, x: number, y: number) => ({
+  id,
+  type: "token",
+  x,
+  y,
+  w: 40,
+  h: 40,
+  rot: 0,
+  locked: false,
+  layer: "token",
+  z: "a",
+  colour: "#fff",
+  name: "",
+});
 
 describe("SceneController", () => {
   it("opens token details on click release, never while dragging", () => {
@@ -79,33 +100,27 @@ describe("SceneController", () => {
       expect.objectContaining({ metaKey: true }),
     );
     fire("pointerup", 200, 200, { metaKey: true });
-    expect(c.onTokenDrop).toHaveBeenCalledWith(
-      source,
-      expect.objectContaining({ metaKey: true }),
-    );
+    expect(c.onTokenDrop).toHaveBeenCalledWith(source, expect.objectContaining({ metaKey: true }));
     expect(scene.update).toHaveBeenCalledWith([
       ["character", expect.objectContaining({ x: 200, y: 200 })],
     ]);
     expect(c.onTokenDragMove).toHaveBeenLastCalledWith(null, expect.any(Event));
   });
 
-  it.each(["pointercancel", "escape"])(
-    "restores token previews on %s",
-    (cancel) => {
-      const { c, renderer, scene, fire } = setup([token("source", 100, 100)]);
-      c.onTokenDragMove = vi.fn();
-      c.onTokenDrop = vi.fn(() => true);
-      fire("pointerdown", 100, 100);
-      fire("pointermove", 200, 200);
-      expect(renderer.previews.size).toBe(1);
-      if (cancel === "pointercancel") fire("pointercancel", 200, 200);
-      else c.cancelGesture();
-      expect(renderer.previews.size).toBe(0);
-      expect(scene.update).not.toHaveBeenCalled();
-      expect(c.onTokenDrop).not.toHaveBeenCalled();
-      expect(c.onTokenDragMove).toHaveBeenLastCalledWith(null);
-    },
-  );
+  it.each(["pointercancel", "escape"])("restores token previews on %s", (cancel) => {
+    const { c, renderer, scene, fire } = setup([token("source", 100, 100)]);
+    c.onTokenDragMove = vi.fn();
+    c.onTokenDrop = vi.fn(() => true);
+    fire("pointerdown", 100, 100);
+    fire("pointermove", 200, 200);
+    expect(renderer.previews.size).toBe(1);
+    if (cancel === "pointercancel") fire("pointercancel", 200, 200);
+    else c.cancelGesture();
+    expect(renderer.previews.size).toBe(0);
+    expect(scene.update).not.toHaveBeenCalled();
+    expect(c.onTokenDrop).not.toHaveBeenCalled();
+    expect(c.onTokenDragMove).toHaveBeenLastCalledWith(null);
+  });
 
   it("does not commit canvas positions after a handled external drop", () => {
     const { c, renderer, scene, fire } = setup([token("source", 100, 100)]);
@@ -121,10 +136,7 @@ describe("SceneController", () => {
   });
 
   it("keeps multi-token movements inside the normal canvas gesture path", () => {
-    const { c, scene, fire } = setup([
-      token("first", 100, 100),
-      token("second", 200, 100),
-    ]);
+    const { c, scene, fire } = setup([token("first", 100, 100), token("second", 200, 100)]);
     c.selection.value = ["first", "second"];
     c.onTokenDragMove = vi.fn();
     c.onTokenDrop = vi.fn(() => true);
@@ -186,10 +198,7 @@ describe("SceneController", () => {
   });
 
   it("rotates a multi-selection around its centre", () => {
-    const { c, renderer, scene, fire } = setup([
-      token("a", 100, 100),
-      token("b", 200, 100),
-    ]);
+    const { c, renderer, scene, fire } = setup([token("a", 100, 100), token("b", 200, 100)]);
     c.selection.value = ["a", "b"];
     (c as any).updateOverlay();
     const frame = renderer.overlayState.group;

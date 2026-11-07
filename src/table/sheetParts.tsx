@@ -1,20 +1,20 @@
-import { useSignal } from '@preact/signals-react'
+import { useSignal } from "@preact/signals-react";
 import { plainText } from "../features/characters/trackers";
 import { MoveBody } from "./MoveBody";
 import { useY } from "../ui/useY";
 import { setField } from "../features/characters/api";
 import type { EntityGraphic } from "../graphics";
-import { checkOf } from '../features/characters/moves'
-import type { CharacterView } from '../features/characters/types'
-import { colourOf } from '../scene/presence'
-import { TOKEN_STYLES } from '../scene/types'
-import type { Campaign } from '../campaign/campaign'
-import { device } from '../platform/device'
+import { checkOf } from "../features/characters/moves";
+import type { CharacterView } from "../features/characters/types";
+import { colourOf } from "../scene/presence";
+import { TOKEN_STYLES } from "../scene/types";
+import type { Campaign } from "../campaign/campaign";
+import { device } from "../platform/device";
 import type { ActionDef, GameSystem } from "../systems/types";
-import { Button } from '../ui/Button'
+import { Button } from "../ui/Button";
 import { EntityGraphicView } from "../ui/EntityGraphic";
 import { GraphicPicker } from "../ui/GraphicPicker";
-import { entryIcon } from '../ui/entryIcons'
+import { entryIcon } from "../ui/entryIcons";
 import {
   IconAdd,
   IconImage,
@@ -24,15 +24,15 @@ import {
   IconRoll,
   IconTarget,
 } from "../ui/icons";
-import { List, Tag } from '../ui/List'
-import { menuTrigger } from '../ui/menuTrigger'
+import { List, Tag } from "../ui/List";
+import { menuTrigger } from "../ui/menuTrigger";
 import { usePopupDialog } from "./usePopupDialog";
-import { Segmented, SegmentedOrSelect } from '../ui/Segmented'
-import { Dialog } from './CampaignDialogs'
-import { ContextMenu, type MenuItem } from './ContextMenu'
-import { EntryRow, EntryWindow, rollTag, useEntryWindows } from './EntryWindow'
-import { linkProxy } from './LinkChip'
-import { dragToken } from './tokenDrag'
+import { Segmented, SegmentedOrSelect } from "../ui/Segmented";
+import { Dialog } from "./CampaignDialogs";
+import { ContextMenu, type MenuItem } from "./ContextMenu";
+import { EntryRow, EntryWindow, rollTag, useEntryWindows } from "./EntryWindow";
+import { linkProxy } from "./LinkChip";
+import { dragToken } from "./tokenDrag";
 import { getEntityGraphic, setEntityGraphic } from "./entityGraphics";
 import { actionMenuItems } from "./actionMenu";
 import { dragEntity, entity } from "./entityDrag";
@@ -51,11 +51,11 @@ export function Counter({
   onChange,
   disabled,
 }: {
-  label: string
-  value: number
-  max?: number | undefined
-  onChange: (by: number) => void
-  disabled: boolean
+  label: string;
+  value: number;
+  max?: number | undefined;
+  onChange: (by: number) => void;
+  disabled: boolean;
 }) {
   return (
     <div
@@ -102,8 +102,7 @@ export function Counter({
 }
 
 /** A signed number as the sheet shows it: +2, −1. */
-export const signedStr = (n: number) => (n < 0 ? `−${-n}` : `+${n}`)
-
+export const signedStr = (n: number) => (n < 0 ? `−${-n}` : `+${n}`);
 
 /**
  * Moves as a filterable list: one row each, with the move's rules in a
@@ -129,9 +128,7 @@ export function MoveList({
   onForget?: ((m: ActionDef) => void) | undefined;
 }) {
   // The system's groupings that this character has any of, in the system's order; the first is shown to start.
-  const categories = system.actionCategories.filter((k) =>
-    moves.some((m) => m.category === k.id),
-  );
+  const categories = system.actionCategories.filter((k) => moves.some((m) => m.category === k.id));
   const filter = useSignal<string>(categories[0]?.id ?? "all");
   const windows = useEntryWindows();
   const sessionMessages = campaign.chat.messages.value;
@@ -139,10 +136,7 @@ export function MoveList({
     sessionUseSnapshot(campaign, ownerId, moves, sessionMessages),
   );
   void sessionUsage;
-  const shown =
-    filter.value === "all"
-      ? moves
-      : moves.filter((m) => m.category === filter.value);
+  const shown = filter.value === "all" ? moves : moves.filter((m) => m.category === filter.value);
 
   return (
     <div className="moves">
@@ -161,25 +155,18 @@ export function MoveList({
             <EntryRow
               key={m.id}
               name={m.name}
-              Icon={entryIcon(
-                "move",
-                m.category === "class" ? "class-move" : undefined,
-              )}
+              Icon={entryIcon("move", m.category === "class" ? "class-move" : undefined)}
               tag={rollTag(system, m)}
               tip={plainText(m.text)}
               onOpen={(row) => windows.show(`move:${ownerId}:${m.id}`, row)}
-              onPointerDown={(ev) =>
-                dragEntity(ev, entity(campaign, "move", m.id, m.name))
-              }
+              onPointerDown={(ev) => dragEntity(ev, entity(campaign, "move", m.id, m.name))}
               menuItems={[
                 {
                   label: used ? "Already used this session" : makeVerb(m).label,
                   disabled: used,
                   onSelect: () => onMake(m),
                 },
-                ...actionMenuItems(campaign, [
-                  { id: `move:${m.id}`, title: m.name },
-                ]),
+                ...actionMenuItems(campaign, [{ id: `move:${m.id}`, title: m.name }]),
               ]}
             >
               <MakeButton m={m} onMake={onMake} disabled={used} />
@@ -227,9 +214,7 @@ export function MoveList({
                     },
                   ]
                 : []),
-              ...actionMenuItems(campaign, [
-                { id: `move:${m.id}`, title: m.name },
-              ]),
+              ...actionMenuItems(campaign, [{ id: `move:${m.id}`, title: m.name }]),
             ]}
           >
             {tag && <Tag>{tag}</Tag>}
@@ -293,9 +278,7 @@ export function TokenChip({
             ? "Click to change the graphic; drag onto the map to place a token"
             : "Drag onto the map to place a token"
         }
-        data-style={
-          graphic.kind === "image" ? (c.tokenStyle ?? "disc") : "disc"
-        }
+        data-style={graphic.kind === "image" ? (c.tokenStyle ?? "disc") : "disc"}
         style={{ "--token-colour": c.tokenColour ?? "" }}
         onPointerDown={(e) => {
           trigger.onPointerDown(e);
@@ -311,19 +294,13 @@ export function TokenChip({
         onContextMenu={trigger.onContextMenu}
         onClick={() => editable && pick()}
         onKeyDown={(e) =>
-          editable &&
-          (e.key === "Enter" || e.key === " ") &&
-          (e.preventDefault(), pick())
+          editable && (e.key === "Enter" || e.key === " ") && (e.preventDefault(), pick())
         }
       >
         <EntityGraphicView graphic={graphic} size={58} />
       </div>
       {menu.value && items.length > 0 && (
-        <ContextMenu
-          {...menu.value}
-          items={items}
-          onClose={() => (menu.value = null)}
-        />
+        <ContextMenu {...menu.value} items={items} onClose={() => (menu.value = null)} />
       )}
       {settings.value && (
         <TokenSettings
@@ -366,10 +343,7 @@ function TokenSettings({
           options={TOKEN_STYLES.map((s) => ({
             ...s,
             disabled: s.id === "plain" && graphic.kind !== "image",
-            title:
-              s.id === "plain" && graphic.kind !== "image"
-                ? "Needs an image"
-                : undefined,
+            title: s.id === "plain" && graphic.kind !== "image" ? "Needs an image" : undefined,
           }))}
           onChange={(v) => setField(campaign, c.id, "tokenStyle", v)}
         />
@@ -382,9 +356,7 @@ function TokenSettings({
             className="colour-input"
             value={colour}
             disabled={style === "plain"}
-            onInput={(e) =>
-              setField(campaign, c.id, "tokenColour", e.currentTarget.value)
-            }
+            onInput={(e) => setField(campaign, c.id, "tokenColour", e.currentTarget.value)}
           />
           <span className="colour-hex">{colour}</span>
         </span>
@@ -397,15 +369,25 @@ function TokenSettings({
 /** What using an action does first: pick targets, roll, or just post it. */
 export function makeVerb(m: ActionDef) {
   return m.target
-    ? { label: 'Target', Icon: IconTarget }
+    ? { label: "Target", Icon: IconTarget }
     : checkOf(m)
-      ? { label: 'Roll', Icon: IconRoll }
-      : { label: 'Post', Icon: IconPost }
+      ? { label: "Roll", Icon: IconRoll }
+      : { label: "Post", Icon: IconPost };
 }
 
 /** The button that uses an action: an icon in a list row, or labelled in its window. */
-function MakeButton({ m, onMake, big, disabled = false }: { m: ActionDef; onMake: (m: ActionDef) => void; big?: boolean; disabled?: boolean }) {
-  const { label, Icon } = makeVerb(m)
+function MakeButton({
+  m,
+  onMake,
+  big,
+  disabled = false,
+}: {
+  m: ActionDef;
+  onMake: (m: ActionDef) => void;
+  big?: boolean;
+  disabled?: boolean;
+}) {
+  const { label, Icon } = makeVerb(m);
   if (big) {
     return (
       <Button variant="primary" disabled={disabled} onClick={() => onMake(m)}>

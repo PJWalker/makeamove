@@ -2,11 +2,7 @@ import type * as React from "react";
 import { signal, useSignal } from "@preact/signals-react";
 import { useEffect, useEffectEvent, useRef } from "react";
 import { fieldsOf, getState, setState, withField } from "../features/chat/messageState";
-import {
-  commandText,
-  contentForCommand,
-  type ChatContent,
-} from "../features/chat/content";
+import { commandText, contentForCommand, type ChatContent } from "../features/chat/content";
 import {
   canWork,
   visibilityOf,
@@ -39,9 +35,7 @@ export function useMessageState<T = unknown>(
   fields: string[],
 ): Record<string, T> {
   return JSON.parse(
-    useY(campaign.messageState, () =>
-      JSON.stringify(fieldsOf(campaign.messageState, id, fields)),
-    ),
+    useY(campaign.messageState, () => JSON.stringify(fieldsOf(campaign.messageState, id, fields))),
   ) as Record<string, T>;
 }
 
@@ -51,10 +45,8 @@ export const useTextState = (campaign: Campaign, id: string) =>
   useMessageState<ChatContent | number>(campaign, id, TEXT_FIELDS);
 
 /** Text as last edited, or as sent. */
-export const editedText = (
-  state: Record<string, unknown>,
-  text: ChatContent,
-): ChatContent => (state.text as ChatContent | undefined) ?? text;
+export const editedText = (state: Record<string, unknown>, text: ChatContent): ChatContent =>
+  (state.text as ChatContent | undefined) ?? text;
 
 export function saveEdit(campaign: Campaign, id: string, text: ChatContent) {
   campaign.doc.transact(() => {
@@ -196,11 +188,7 @@ export function TimerCard({
       <div className="roll-head">
         <span className="roll-formula">{m.label || "Timer"}</span>
         <span className="chat-timer-clock" aria-live={done ? "polite" : "off"}>
-          {done
-            ? "Time’s up"
-            : stopped
-              ? `${clock(left)} stopped`
-              : clock(left)}
+          {done ? "Time’s up" : stopped ? `${clock(left)} stopped` : clock(left)}
         </span>
       </div>
       <div className="chat-bar" aria-hidden="true">
@@ -217,12 +205,7 @@ export function TimerCard({
             variant="ghost"
             onClick={() =>
               campaign.doc.transact(() => {
-                setState(
-                  campaign.messageState,
-                  m.id,
-                  "endsAt",
-                  Date.now() + m.seconds * 1000,
-                );
+                setState(campaign.messageState, m.id, "endsAt", Date.now() + m.seconds * 1000);
                 setState(campaign.messageState, m.id, "stoppedAt", undefined);
               })
             }
@@ -243,12 +226,7 @@ export function TimerCard({
                       "endsAt",
                       Date.now() + (endsAt - stopped),
                     );
-                    setState(
-                      campaign.messageState,
-                      m.id,
-                      "stoppedAt",
-                      undefined,
-                    );
+                    setState(campaign.messageState, m.id, "stoppedAt", undefined);
                   })
                 }
               >
@@ -258,9 +236,7 @@ export function TimerCard({
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() =>
-                  setState(campaign.messageState, m.id, "stoppedAt", Date.now())
-                }
+                onClick={() => setState(campaign.messageState, m.id, "stoppedAt", Date.now())}
               >
                 Stop
               </Button>
@@ -370,9 +346,7 @@ export function PinnedStrip({
   const gm = useY(campaign.members, () => campaign.isGm());
   const me = device.value.id;
   const ids = new Set(pinnedIds.split(" ").filter(Boolean));
-  const pinned = messages.filter(
-    (m) => ids.has(m.id) && visibilityOf(m, me, gm) === "full",
-  );
+  const pinned = messages.filter((m) => ids.has(m.id) && visibilityOf(m, me, gm) === "full");
   const shownIds = pinned.map((m) => m.id).join(" ");
   const shown = new Set(shownIds.split(" ").filter(Boolean));
 
@@ -386,19 +360,14 @@ export function PinnedStrip({
     if (!gone.length) return;
     leaving.value = new Set([...leaving.value, ...gone]);
     window.setTimeout(
-      () =>
-        (leaving.value = new Set(
-          [...leaving.value].filter((id) => !gone.includes(id)),
-        )),
+      () => (leaving.value = new Set([...leaving.value].filter((id) => !gone.includes(id)))),
       PIN_LEAVE_MS,
     );
   }, [shownIds, leaving]);
   // Those here when the strip first drew came with it.
   const initial = useRef(shown).current;
 
-  const rows = messages.filter(
-    (m) => shown.has(m.id) || leaving.value.has(m.id),
-  );
+  const rows = messages.filter((m) => shown.has(m.id) || leaving.value.has(m.id));
   if (!rows.length) return null;
   return (
     <section className="chat-pinned" aria-label="Pinned">
@@ -409,15 +378,10 @@ export function PinnedStrip({
             className="chat-pin"
             data-new={!initial.has(m.id) || undefined}
             data-leaving={!shown.has(m.id) || undefined}
+            // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable so the GM can open its menu by keyboard
             tabIndex={gm && shown.has(m.id) ? 0 : undefined}
-            aria-label={
-              gm && shown.has(m.id)
-                ? `Pinned message from ${m.name}`
-                : undefined
-            }
-            {...(gm && shown.has(m.id)
-              ? menuTrigger((x, y) => onMenu(x, y, m.id))
-              : {})}
+            aria-label={gm && shown.has(m.id) ? `Pinned message from ${m.name}` : undefined}
+            {...(gm && shown.has(m.id) ? menuTrigger((x, y) => onMenu(x, y, m.id)) : {})}
           >
             <div className="chat-pin-body">{render(m)}</div>
           </div>

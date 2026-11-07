@@ -27,9 +27,7 @@ function throwFrom(slot: HTMLElement, mine: boolean): Point {
   const pointer = mine ? lastPointer() : null;
   if (pointer) return pointer;
   const box = slot.getBoundingClientRect();
-  const log = (
-    slot.closest(".chat-log, .chat-popup") ?? slot
-  ).getBoundingClientRect();
+  const log = (slot.closest(".chat-log, .chat-popup") ?? slot).getBoundingClientRect();
   return {
     x: box.left + box.width / 2 + (Math.random() - 0.5) * 160,
     y: log.top - 40,
@@ -84,8 +82,7 @@ export function RollDie({
   });
 
   useEffect(() => {
-    const { phase, arriving, mine, index, max, min, sides, value, seed } =
-      initial.current;
+    const { phase, arriving, mine, index, max, min, sides, value, seed } = initial.current;
     if (phase === "flat") return;
     const thrown =
       arriving && !matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -151,9 +148,7 @@ export function RollDie({
         } else shake.onKeyDown(event);
       }}
     >
-      {phase !== "flat" && (
-        <canvas ref={canvas} className="die-canvas" aria-hidden="true" />
-      )}
+      {phase !== "flat" && <canvas ref={canvas} className="die-canvas" aria-hidden="true" />}
       {phase === "flat" && (
         <span className="die-value" aria-hidden="true">
           {die.value}

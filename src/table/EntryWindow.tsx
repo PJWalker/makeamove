@@ -34,9 +34,7 @@ export function rollTag(system: GameSystem, m: ActionDef) {
   if (!check) return null;
   if (check.ask?.kind === "stat") return "any";
   if (check.ask?.kind === "number") return check.ask.label.toLowerCase();
-  return (
-    system.stats.find((s) => s.id === check.stat)?.abbr ?? check.stat ?? null
-  );
+  return system.stats.find((s) => s.id === check.stat)?.abbr ?? check.stat ?? null;
 }
 
 const openEntries = signal<string[]>(
@@ -113,8 +111,7 @@ export function EntryWindow({
       title,
       text,
       tags,
-      graphicRef:
-        graphicRef ?? (proxy ? { kind: proxy.kind, id: proxy.id } : undefined),
+      graphicRef: graphicRef ?? (proxy ? { kind: proxy.kind, id: proxy.id } : undefined),
       graphicDefaultIcon: graphicDefaultIcon ?? proxy?.defaultIcon,
       proxy,
       menuItems,
@@ -222,11 +219,7 @@ export function EntryRow({
         {children}
       </ListRow>
       {menu.value && (
-        <ContextMenu
-          {...menu.value}
-          items={items}
-          onClose={() => (menu.value = null)}
-        />
+        <ContextMenu {...menu.value} items={items} onClose={() => (menu.value = null)} />
       )}
     </>
   );

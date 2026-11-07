@@ -98,8 +98,7 @@ export const ITEMS: ItemDef[] = [
   {
     id: "adventuring-gear",
     name: "Adventuring Gear",
-    description:
-      "Rope, torches, flint and the like. Spend a use to have just what you need.",
+    description: "Rope, torches, flint and the like. Spend a use to have just what you need.",
     weight: 1,
     uses: 5,
     tags: [],
@@ -135,8 +134,7 @@ export const ITEMS: ItemDef[] = [
   {
     id: "bag-of-books",
     name: "Bag of Books",
-    description:
-      "Spend a use to gain knowledge: take +1 to Spout Lore on the subject.",
+    description: "Spend a use to gain knowledge: take +1 to Spout Lore on the subject.",
     weight: 2,
     uses: 5,
     tags: [],

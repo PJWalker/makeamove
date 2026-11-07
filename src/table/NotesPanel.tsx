@@ -84,9 +84,7 @@ export function NotesPanel({ campaign }: { campaign: Campaign }) {
   }, [openId, open, campaign.notes, go]);
 
   const folder = folders.find((f) => f.id === open?.folder);
-  const revealingNote = revealing.value
-    ? notes.find((n) => n.id === revealing.value)
-    : undefined;
+  const revealingNote = revealing.value ? notes.find((n) => n.id === revealing.value) : undefined;
   return (
     <TwoPane
       layout={notesLayout}
@@ -95,14 +93,7 @@ export function NotesPanel({ campaign }: { campaign: Campaign }) {
       backLabel="Back to the notes"
       onBack={() => go("list")}
       resizeLabel="Resize the notes list"
-      list={
-        <NoteList
-          campaign={campaign}
-          notes={notes}
-          folders={folders}
-          openId={openId}
-        />
-      }
+      list={<NoteList campaign={campaign} notes={notes} folders={folders} openId={openId} />}
       detail={
         <>
           {open ? (
@@ -134,9 +125,7 @@ function NoteList({
   folders: NoteFolderView[];
   openId: string | null;
 }) {
-  const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(
-    null,
-  );
+  const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const deleting = useSignal<string | null>(null);
   const known = new Set(folders.map((f) => f.id));
   const isGm = !!campaign.vault.value;
@@ -201,17 +190,11 @@ function NoteList({
     );
   };
 
-  const doomed = deleting.value
-    ? notes.find((n) => n.id === deleting.value)
-    : undefined;
+  const doomed = deleting.value ? notes.find((n) => n.id === deleting.value) : undefined;
   return (
     <>
       {doomed && (
-        <DeletePage
-          campaign={campaign}
-          note={doomed}
-          onClose={() => (deleting.value = null)}
-        />
+        <DeletePage campaign={campaign} note={doomed} onClose={() => (deleting.value = null)} />
       )}
       <FolderTree
         ariaLabel="Notes"
@@ -270,13 +253,9 @@ function NoteList({
         ]}
         onCreateFolder={(name) => createNoteFolder(campaign, name)}
         onRenameFolder={(id, name) => renameNoteFolder(campaign, id, name)}
-        emptyContent={
-          !notes.length ? <p className="empty-inline">No pages yet.</p> : null
-        }
+        emptyContent={!notes.length ? <p className="empty-inline">No pages yet.</p> : null}
       />
-      {menu.value && (
-        <ContextMenu {...menu.value} onClose={() => (menu.value = null)} />
-      )}
+      {menu.value && <ContextMenu {...menu.value} onClose={() => (menu.value = null)} />}
     </>
   );
 }
@@ -294,8 +273,7 @@ function NotePage({
   const titleRef = useRef<HTMLInputElement>(null);
   // A brand-new page starts with its title ready to type.
   useLayoutEffect(() => {
-    if (!getNote(campaign, note.id)?.title || note.title === "Untitled")
-      titleRef.current?.focus();
+    if (!getNote(campaign, note.id)?.title || note.title === "Untitled") titleRef.current?.focus();
   }, [campaign, note.id, note.title]);
 
   return (
@@ -309,10 +287,7 @@ function NotePage({
               size="sm"
               variant="ghost"
               onClick={(e) =>
-                morphOpen(
-                  e.currentTarget as Element,
-                  () => (revealing.value = note.id),
-                )
+                morphOpen(e.currentTarget as Element, () => (revealing.value = note.id))
               }
             >
               Reveal to players…
@@ -381,8 +356,8 @@ function RevealPage({
       onConfirm={() => void revealNote(campaign, note.id)}
     >
       <p>
-        Show <strong>{note.title}</strong> to everyone? Players get their own
-        copy, so it can't be hidden again.
+        Show <strong>{note.title}</strong> to everyone? Players get their own copy, so it can&apos;t
+        be hidden again.
       </p>
     </ConfirmDialog>
   );
@@ -407,8 +382,8 @@ function DeletePage({
       onConfirm={() => deleteNote(campaign, note.id)}
     >
       <p>
-        Delete <strong>{note.title}</strong>? It's gone for everyone, and links
-        to it stop working. This can't be undone.
+        Delete <strong>{note.title}</strong>? It&apos;s gone for everyone, and links to it stop
+        working. This can&apos;t be undone.
       </p>
     </ConfirmDialog>
   );

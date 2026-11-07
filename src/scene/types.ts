@@ -13,16 +13,6 @@ import type { EntityGraphic, EntityGraphicRef } from "../graphics";
 export const LAYERS = ["map", "under", "token", "over"] as const;
 export type Layer = (typeof LAYERS)[number];
 
-export type ElementType =
-  | "map"
-  | "token"
-  | "drawing"
-  | "shape"
-  | "text"
-  | "wall"
-  | "light"
-  | "area";
-
 /** An image in the blob store; the CRDT holds only this reference. */
 export interface BlobRef {
   hash: string;
@@ -86,7 +76,8 @@ export interface TokenElement extends Base {
 }
 
 /** A token is only drawn plain if it has an image to show. */
-export const isPlainToken = (el: SceneElement) => el.type === 'token' && el.style === 'plain' && (!!el.image || el.graphic?.kind === 'image')
+export const isPlainToken = (el: SceneElement) =>
+  el.type === "token" && el.style === "plain" && (!!el.image || el.graphic?.kind === "image");
 
 export interface DrawingElement extends Base {
   type: "drawing";
@@ -180,14 +171,11 @@ export type SceneElement =
   | AreaElement;
 
 /** What callers supply when adding an element; the store fills in the rest. */
-export type NewElement = DistributiveOmit<
-  SceneElement,
-  "id" | "z" | "createdBy" | "locked"
-> & { locked?: boolean };
+export type NewElement = DistributiveOmit<SceneElement, "id" | "z" | "createdBy" | "locked"> & {
+  locked?: boolean;
+};
 
-type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
-  ? Omit<T, K>
-  : never;
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 
 export const SHAPES: { id: ShapeKind; label: string }[] = [
   { id: "rect", label: "Square" },

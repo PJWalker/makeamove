@@ -1,1 +1,1 @@
-export type DataValue = string | number | boolean
+export type DataValue = string | number | boolean;

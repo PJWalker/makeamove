@@ -1,10 +1,6 @@
 import { IconOpenWindow } from "../ui/icons";
 import type { ReactNode, RefObject } from "react";
-import {
-  setSystemCampaignData,
-  systemCampaignData,
-  type Campaign,
-} from "../campaign/campaign";
+import { setSystemCampaignData, systemCampaignData, type Campaign } from "../campaign/campaign";
 import { getSystem } from "../systems";
 import { colourOf } from "../scene/presence";
 import { device, setDeviceColour, setDeviceName } from "../platform/device";
@@ -21,22 +17,11 @@ import { closePopup, dragPopup, raisePopup, resizePopup } from "../ui/popup";
 import { trackPointer } from "../ui/pointer";
 import { formatCommaList, parseCommaList } from "../lib/list";
 import { autohide, setAutohide } from "./canvasState";
-import {
-  RESIZE_CURSORS,
-  RESIZE_DIRS,
-  resizeRect,
-  type ResizeDir,
-} from "./resizeRect";
+import { RESIZE_CURSORS, RESIZE_DIRS, resizeRect, type ResizeDir } from "./resizeRect";
 import { dragEntity, type DragEntity } from "./entityDrag";
 import type { Icon } from "../ui/icons";
 import type { menuTrigger } from "../ui/menuTrigger";
-import {
-  raiseWindow,
-  startWindowDrag,
-  updateWindow,
-  layout,
-  type DockItemId,
-} from "./panelLayout";
+import { raiseWindow, startWindowDrag, updateWindow, layout, type DockItemId } from "./panelLayout";
 import { WindowControls } from "./WindowControls";
 import { CampaignEntityGraphic } from "./EntityGraphic";
 
@@ -93,15 +78,10 @@ export function Dialog({
     dialog.addEventListener("cancel", preventNativeCancel);
     return () => dialog.removeEventListener("cancel", preventNativeCancel);
   }, [dialogRef]);
-  if (!transitionName.current)
-    transitionName.current = `dialog-window-${++dialogTransitionId}`;
-  const win = dockId
-    ? layout.value.floating.find((item) => item.id === dockId)
-    : undefined;
+  if (!transitionName.current) transitionName.current = `dialog-window-${++dialogTransitionId}`;
+  const win = dockId ? layout.value.floating.find((item) => item.id === dockId) : undefined;
   const windowStyle = {
-    ...(win
-      ? { left: win.x, top: win.y, width: win.w, height: win.h, zIndex: win.z }
-      : {}),
+    ...(win ? { left: win.x, top: win.y, width: win.w, height: win.h, zIndex: win.z } : {}),
     viewTransitionName: transitionName.current,
   };
   const close = () => closePopup(dialogRef.current, onCloseRef.current);
@@ -117,10 +97,7 @@ export function Dialog({
     raiseWindow(dockId);
     const start = { x: win.x, y: win.y, w: win.w, h: win.h };
     trackPointer(RESIZE_CURSORS[dir], (ev) => {
-      updateWindow(
-        dockId,
-        resizeRect(start, dir, ev.clientX - e.clientX, ev.clientY - e.clientY),
-      );
+      updateWindow(dockId, resizeRect(start, dir, ev.clientX - e.clientX, ev.clientY - e.clientY));
     });
   }
   // Rendered in the window layer with the other windows: a non-modal dialog
@@ -151,11 +128,7 @@ export function Dialog({
         const expandedDialogTrigger = document.querySelector(
           '[aria-haspopup="dialog"][aria-expanded="true"]',
         );
-        if (
-          e.key === "Escape" &&
-          !e.defaultPrevented &&
-          !expandedDialogTrigger
-        ) {
+        if (e.key === "Escape" && !e.defaultPrevented && !expandedDialogTrigger) {
           e.preventDefault();
           close();
         }
@@ -172,11 +145,7 @@ export function Dialog({
               onPointerDown={(e) => {
                 // Not a drag of the window itself.
                 e.stopPropagation();
-                dragEntity(
-                  e,
-                  proxy.entity,
-                  e.currentTarget.nextElementSibling as HTMLElement,
-                );
+                dragEntity(e, proxy.entity, e.currentTarget.nextElementSibling as HTMLElement);
               }}
             >
               <CampaignEntityGraphic
@@ -202,12 +171,7 @@ export function Dialog({
         onDragStart={(e) => {
           if (dockId && win) {
             const dialog = dialogRef.current!;
-            startWindowDrag(
-              dockId,
-              e,
-              e.clientX - dialog.offsetLeft,
-              e.clientY - dialog.offsetTop,
-            );
+            startWindowDrag(dockId, e, e.clientX - dialog.offsetLeft, e.clientY - dialog.offsetTop);
           } else dragPopup(dialogRef.current!, e);
         }}
         onClose={close}
@@ -271,9 +235,7 @@ export function SettingsDialog({
               aria-label="Your colour"
             />
           </label>
-          <p className="muted">
-            Used for your cursor, pings, and new tokens.
-          </p>
+          <p className="muted">Used for your cursor, pings, and new tokens.</p>
         </div>
         <div className="dialog-subsection form-subsection">
           <h4 className="dialog-subheading form-subheading">Interface</h4>
@@ -321,9 +283,7 @@ function CampaignSettings({ campaign }: { campaign: Campaign }) {
         </label>
         <div className="field">
           Game system
-          <span className="dialog-value">
-            {getSystem(campaign.meta.get("systemId")).name}
-          </span>
+          <span className="dialog-value">{getSystem(campaign.meta.get("systemId")).name}</span>
         </div>
       </div>
       <div className="dialog-subsection form-subsection">
@@ -362,9 +322,7 @@ function SystemCampaignFields({ campaign }: { campaign: Campaign }) {
       className="dialog-section form-layout"
       aria-label={system.campaignLabel ?? "Campaign state"}
     >
-      <h3 className="dialog-heading form-title">
-        {system.campaignLabel ?? "Campaign state"}
-      </h3>
+      <h3 className="dialog-heading form-title">{system.campaignLabel ?? "Campaign state"}</h3>
       {fields.map((field) => (
         <label key={field.id} className="field">
           {field.label}
@@ -373,11 +331,7 @@ function SystemCampaignFields({ campaign }: { campaign: Campaign }) {
               value={String(values[field.id] ?? field.default)}
               disabled={!campaign.isGm()}
               onChange={(event) =>
-                setSystemCampaignData(
-                  campaign,
-                  field.id,
-                  event.currentTarget.value,
-                )
+                setSystemCampaignData(campaign, field.id, event.currentTarget.value)
               }
             >
               {field.options?.map((option) => (
@@ -400,19 +354,13 @@ function SystemCampaignFields({ campaign }: { campaign: Campaign }) {
                       campaign,
                       field.id,
                       formatCommaList(
-                        [...event.currentTarget.selectedOptions].map(
-                          (option) => option.value,
-                        ),
+                        [...event.currentTarget.selectedOptions].map((option) => option.value),
                       ),
                     )
                   }
                 >
                   {field.options?.map((option) => (
-                    <option
-                      key={option.id}
-                      value={option.id}
-                      selected={selected.has(option.id)}
-                    >
+                    <option key={option.id} value={option.id} selected={selected.has(option.id)}>
                       {option.label}
                     </option>
                   ))}
@@ -466,11 +414,7 @@ const SHORTCUTS: [string, string][] = [
   ["Ctrl/⌘ + K", "Search moves, tools, scenes and commands"],
 ];
 
-export function HelpDialog({
-  dialogRef,
-}: {
-  dialogRef: RefObject<HTMLDialogElement | null>;
-}) {
+export function HelpDialog({ dialogRef }: { dialogRef: RefObject<HTMLDialogElement | null> }) {
   return (
     <Dialog dialogRef={dialogRef} title="Help">
       <section className="dialog-section">
@@ -489,20 +433,18 @@ export function HelpDialog({
       <section className="dialog-section">
         <h3 className="dialog-heading">Maps and tokens</h3>
         <p className="muted">
-          Drop or paste images onto the canvas. Small, square images become
-          tokens; anything bigger is placed as a map. Double-click a token to
-          rename or restyle it; right-click anything to lock it, restack it or
-          swap it between map and token. Undo only ever reverts your own
+          Drop or paste images onto the canvas. Small, square images become tokens; anything bigger
+          is placed as a map. Double-click a token to rename or restyle it; right-click anything to
+          lock it, restack it or swap it between map and token. Undo only ever reverts your own
           changes.
         </p>
       </section>
       <section className="dialog-section">
         <h3 className="dialog-heading">Panels</h3>
         <p className="muted">
-          Drag a sidebar tab, or a docked panel’s title, out onto the map to
-          open it in its own window. Drag the window onto the left or right
-          sidebar to dock it there, or use its dock button to put it back.
-          Right-click a tab to move it to the other sidebar.
+          Drag a sidebar tab, or a docked panel’s title, out onto the map to open it in its own
+          window. Drag the window onto the left or right sidebar to dock it there, or use its dock
+          button to put it back. Right-click a tab to move it to the other sidebar.
         </p>
       </section>
       <section className="dialog-section">
@@ -513,11 +455,7 @@ export function HelpDialog({
             game-icons.net
           </a>{" "}
           (CC BY 3.0), and{" "}
-          <a
-            href="https://fonts.google.com/icons"
-            target="_blank"
-            rel="noreferrer"
-          >
+          <a href="https://fonts.google.com/icons" target="_blank" rel="noreferrer">
             Material Symbols
           </a>{" "}
           (Apache 2.0).
@@ -529,10 +467,7 @@ export function HelpDialog({
 
 function InviteField({ campaign }: { campaign: Campaign }) {
   const copied = useSignal(false);
-  const roomKey = useY(
-    campaign.meta,
-    () => campaign.meta.get("roomKey") as string | undefined,
-  );
+  const roomKey = useY(campaign.meta, () => campaign.meta.get("roomKey") as string | undefined);
   if (!roomKey) return null;
   const url = inviteUrl({ campaignId: campaign.id, roomKey });
   return (
@@ -553,9 +488,7 @@ function InviteField({ campaign }: { campaign: Campaign }) {
             {copied.value ? "Copied" : "Copy"}
           </Button>
         </div>
-        <span className="muted">
-          Anyone with this link can join. Keep it private.
-        </span>
+        <span className="muted">Anyone with this link can join. Keep it private.</span>
       </div>
     </div>
   );

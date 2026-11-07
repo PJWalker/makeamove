@@ -14,9 +14,7 @@ import { Button } from "../ui/Button";
 import { Tooltip } from "../ui/Tooltip";
 
 // The table loads when a campaign opens, so the lobby comes up quickly.
-const Tabletop = lazy(() =>
-  import("../table/Tabletop").then((m) => ({ default: m.Tabletop })),
-);
+const Tabletop = lazy(() => import("../table/Tabletop").then((m) => ({ default: m.Tabletop })));
 
 const openError = signal<string | null>(null);
 
@@ -65,9 +63,7 @@ function Removed({ campaign }: { campaign: Campaign }) {
   return (
     <main className="loading waiting">
       <p>The GM removed you from {campaign.name}.</p>
-      <p className="muted">
-        If they let you back in, open their invite link again to rejoin.
-      </p>
+      <p className="muted">If they let you back in, open their invite link again to rejoin.</p>
       <div className="form-actions">
         <Button onClick={() => goToCampaign(null)}>Back to the lobby</Button>
         <Button

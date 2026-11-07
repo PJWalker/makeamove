@@ -32,3 +32,6 @@ dist-ssr
 ./playwright-mcp/
 # Playwright CLI output (may contain credentials)
 .playwright-cli/
+
+# Coverage
+/coverage/

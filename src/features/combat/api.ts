@@ -41,16 +41,11 @@ export const combatMaps = (campaign: Campaign): CombatMaps => ({
 });
 
 /** Whether the campaign's system has initiative, and so a turn tracker. */
-export const hasCombat = (campaign: Campaign) =>
-  !!systemOf(campaign).initiative;
+export const hasCombat = (campaign: Campaign) => !!systemOf(campaign).initiative;
 
 /** The combatant standing for a token, if it's in the fight. */
-export function combatantForToken(
-  campaign: Campaign,
-  tokenId: string,
-): string | undefined {
-  for (const [id, c] of campaign.combatants.entries())
-    if (c.tokenId === tokenId) return id;
+export function combatantForToken(campaign: Campaign, tokenId: string): string | undefined {
+  for (const [id, c] of campaign.combatants.entries()) if (c.tokenId === tokenId) return id;
   return undefined;
 }
 
@@ -113,10 +108,7 @@ export async function rollInitiative(campaign: Campaign, id: string) {
 }
 
 /** Roll for everyone who hasn't rolled yet. */
-export async function rollAllInitiative(
-  campaign: Campaign,
-  { npcsOnly = false } = {},
-) {
+export async function rollAllInitiative(campaign: Campaign, { npcsOnly = false } = {}) {
   for (const c of turnOrder(campaign.combatants)) {
     if (c.init !== null) continue;
     const char = getCharacter(campaign, c.characterId);
@@ -126,20 +118,13 @@ export async function rollAllInitiative(
 }
 
 /** Count down durations for one point of a turn, on every character, removing conditions that ran out. */
-function tick(
-  campaign: Campaign,
-  combatant: string | null,
-  point: "start" | "end",
-) {
+function tick(campaign: Campaign, combatant: string | null, point: "start" | "end") {
   if (!combatant) return;
   for (const [id, m] of campaign.characters.entries()) {
-    const durations = m.get("durations") as
-      | Record<string, Duration>
-      | undefined;
+    const durations = m.get("durations") as Record<string, Duration> | undefined;
     if (!durations || !Object.keys(durations).length) continue;
     const { left, expired } = tickDurations(durations, combatant, point);
-    if (!expired.length && JSON.stringify(left) === JSON.stringify(durations))
-      continue;
+    if (!expired.length && JSON.stringify(left) === JSON.stringify(durations)) continue;
     m.set("durations", left);
     for (const condition of expired) clearCondition(campaign, id, condition);
   }
@@ -147,9 +132,7 @@ function tick(
 
 /** Refill the resources that reset each turn, for the combatant whose turn it now is. */
 function startTurn(campaign: Campaign, combatant: string | null) {
-  const who: Combatant | undefined = combatant
-    ? campaign.combatants.get(combatant)
-    : undefined;
+  const who: Combatant | undefined = combatant ? campaign.combatants.get(combatant) : undefined;
   const c = getCharacter(campaign, who?.characterId);
   if (!c) return;
   const system = systemOf(campaign);
@@ -190,8 +173,7 @@ export function advanceTurn(campaign: Campaign) {
 /** End the fight; timed conditions stay, without their timers. */
 export function finishCombat(campaign: Campaign) {
   campaign.doc.transact(() => {
-    for (const m of campaign.characters.values())
-      if (m.get("durations")) m.delete("durations");
+    for (const m of campaign.characters.values()) if (m.get("durations")) m.delete("durations");
     endCombat(combatMaps(campaign));
   });
 }
@@ -227,18 +209,14 @@ const CONCENTRATION_PIP = "#ffffff";
 export function tokenMarksSource(campaign: Campaign) {
   const system = systemOf(campaign);
   const turn = turnOf(combatMaps(campaign));
-  const turnToken: string | undefined = turn
-    ? campaign.combatants.get(turn)?.tokenId
-    : undefined;
+  const turnToken: string | undefined = turn ? campaign.combatants.get(turn)?.tokenId : undefined;
   const pips = new Map<string, TokenMarks["pips"]>();
   return (tokenId: string, characterId?: string) => {
     let p = characterId ? pips.get(characterId) : [];
     if (!p && characterId) {
       const c = getCharacter(campaign, characterId);
       p = (c?.conditions ?? []).map((id) => {
-        const index = system.conditions.findIndex(
-          (condition) => condition.id === id,
-        );
+        const index = system.conditions.findIndex((condition) => condition.id === id);
         return {
           id,
           name: system.conditions[index]?.name ?? id,

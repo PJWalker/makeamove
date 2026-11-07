@@ -53,10 +53,7 @@ const ItemsPanel = lazy(() =>
   import("./ItemsPanel").then((module) => ({ default: module.ItemsPanel })),
 );
 
-export const PANELS: Record<
-  PanelId,
-  { label: string; Icon: Icon }
-> = {
+export const PANELS: Record<PanelId, { label: string; Icon: Icon }> = {
   scene: { label: "Scenes", Icon: IconMap },
   chat: { label: "Chat", Icon: IconChat },
   characters: { label: "Characters", Icon: IconCharacters },
@@ -69,13 +66,7 @@ export const PANELS: Record<
 };
 
 /** The body of a panel; the same component renders docked or floating. */
-export function PanelContent({
-  id,
-  campaign,
-}: {
-  id: PanelId;
-  campaign: Campaign;
-}) {
+export function PanelContent({ id, campaign }: { id: PanelId; campaign: Campaign }) {
   return (
     <Suspense
       fallback={
@@ -121,29 +112,19 @@ function Presence({ campaign }: { campaign: Campaign }) {
   const me = device.value.id;
   const online = campaign.online.value;
   const peers = campaign.peerCount.value;
-  const sorted = [...members].sort(
-    (a, b) => Number(b.id === me) - Number(a.id === me),
-  );
+  const sorted = [...members].sort((a, b) => Number(b.id === me) - Number(a.id === me));
   return (
     <div className="chat-presence">
       <ul className="avatar-stack" aria-label="People in this campaign">
         {sorted.map((m) => (
           <li key={m.id}>
-            <Avatar
-              id={m.id}
-              name={m.name}
-              online={m.id === me || online.has(m.id)}
-            />
+            <Avatar id={m.id} name={m.name} online={m.id === me || online.has(m.id)} />
           </li>
         ))}
       </ul>
       <span
         className="status"
-        title={
-          peers
-            ? "Syncing directly with other players"
-            : "Waiting for other players"
-        }
+        title={peers ? "Syncing directly with other players" : "Waiting for other players"}
       >
         <span className="status-dot" aria-hidden="true" data-on={peers > 0} />{" "}
         {peers ? `${peers} connected` : "Local only"}
@@ -210,18 +191,10 @@ function MemberRow({
     return (
       <li className="member member-confirm">
         <span className="member-name">Remove {m.name} from the campaign?</span>
-        <Button
-          variant="danger"
-          size="sm"
-          onClick={() => campaign.revokeMember(m.id)}
-        >
+        <Button variant="danger" size="sm" onClick={() => campaign.revokeMember(m.id)}>
           Remove
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => (confirming.value = false)}
-        >
+        <Button variant="ghost" size="sm" onClick={() => (confirming.value = false)}>
           Cancel
         </Button>
       </li>
@@ -242,11 +215,7 @@ function MemberRow({
         {m.role === "gm" ? "GM" : m.role === "observer" ? "Observer" : "Player"}
       </span>
       {canRemove && (
-        <Button
-          variant="icon"
-          label={`Remove ${m.name}`}
-          onClick={() => (confirming.value = true)}
-        >
+        <Button variant="icon" label={`Remove ${m.name}`} onClick={() => (confirming.value = true)}>
           <IconRemoveMember size={22} />
         </Button>
       )}

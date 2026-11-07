@@ -6,66 +6,66 @@
  * engine").
  */
 
-import type { CharacterView } from '../features/characters/types'
-import type { DataValue } from '../core/types'
-import type { Roll } from '../features/dice/notation'
-import type { DiagonalRule } from '../scene/grid'
-import type { Range } from '../scene/measure'
-import type { EffectSource, Resolved } from './effects'
-import type { Effect, EffectActive } from './effectTypes'
+import type { CharacterView } from "../features/characters/types";
+import type { DataValue } from "../core/types";
+import type { Roll } from "../features/dice/notation";
+import type { DiagonalRule } from "../scene/grid";
+import type { Range } from "../scene/measure";
+import type { EffectSource, Resolved } from "./effects";
+import type { Effect, EffectActive } from "./effectTypes";
 
-export type { DataValue } from '../core/types'
-export type { Effect, EffectActive, EffectOp } from './effectTypes'
+export type { DataValue } from "../core/types";
+export type { Effect, EffectActive } from "./effectTypes";
 
 export interface StatDef {
-  id: string
-  name: string
-  abbr: string
-  default?: number
-  min?: number
-  max?: number
+  id: string;
+  name: string;
+  abbr: string;
+  default?: number;
+  min?: number;
+  max?: number;
 }
 
 /** One of the system's own character fields, with its value on a new character. */
 export interface DataField {
-  id: string
-  default: DataValue
+  id: string;
+  default: DataValue;
   /** Only on player characters, or only on NPCs. */
-  for?: 'pc' | 'npc'
+  for?: "pc" | "npc";
 }
 
 /** A system-owned value shared by everyone in a campaign rather than one character. */
 export interface CampaignFieldDef {
-  id: string
-  label: string
-  default: DataValue
-  type: 'text' | 'number' | 'select' | 'multiselect'
-  options?: { id: string; label: string }[]
-  min?: number
-  max?: number
+  id: string;
+  label: string;
+  default: DataValue;
+  type: "text" | "number" | "select" | "multiselect";
+  options?: { id: string; label: string }[];
+  min?: number;
+  max?: number;
 }
 
 /** A named campaign count rendered and advanced by the shared chat counter card. */
 export interface SystemCounterDef {
-  id: string
-  label: string
-  start: number
-  max?: number
+  id: string;
+  label: string;
+  start: number;
+  max?: number;
 }
 
 /** Events that refill resources: rests, and in combat the start of the character's turn. */
-export type ResetEvent = 'short-rest' | 'long-rest' | 'turn'
+export type ResetEvent = "short-rest" | "long-rest" | "turn";
 
 /** A counter with a maximum: hit points, spell slots, a system resource. */
 export interface ResourceDef {
-  id: string
-  name: string
+  id: string;
+  name: string;
   /** The derived value that is its maximum. */
-  max: string
+  max: string;
   /** Starting value for a new character; defaults to the maximum. */
-  initial?: number
+  initial?: number;
   /** What refills it to its maximum. */
-  resets?: ResetEvent[]
+  resets?: ResetEvent[];
 }
 
 /**
@@ -73,27 +73,27 @@ export interface ResourceDef {
  * written [[+1 XP]] or [[-1 Treasure|Spend 1 Treasure]].
  */
 export interface TrackerDef {
-  id: string
-  name: string
+  id: string;
+  name: string;
   /** Other names text may use for it ("Treasure boxes"). */
-  aliases?: string[]
+  aliases?: string[];
   /** Where it's kept: a resource, or one of the system's data fields. */
-  resource?: string
-  data?: string
+  resource?: string;
+  data?: string;
   /** Its maximum: a number, or a derived value's name. */
-  max?: number | string
+  max?: number | string;
 }
 
 /** A condition a character can have, and what it does while they have it. */
 export interface ConditionDef {
-  id: string
-  name: string
-  text?: string
-  effects: Effect[]
+  id: string;
+  name: string;
+  text?: string;
+  effects: Effect[];
   /** Offer clear, marked, and locked states instead of a binary toggle. */
-  lockable?: boolean
+  lockable?: boolean;
   /** The stat it's shown beside on the sheet, if it belongs to one. */
-  stat?: string
+  stat?: string;
 }
 
 /**
@@ -101,65 +101,71 @@ export interface ConditionDef {
  * roll, or kept until removed.
  */
 export interface ModifierDef {
-  id: string
-  label: string
-  until: 'next-roll' | 'removed'
+  id: string;
+  label: string;
+  until: "next-roll" | "removed";
 }
 
 /** One result of a check, best first: "Full success". */
 export interface ResultDef {
-  id: string
+  id: string;
   /** Shown on the card; empty to show no result line. */
-  label: string
+  label: string;
   /** How the card colours it. */
-  tone?: 'good' | 'mixed' | 'bad'
+  tone?: "good" | "mixed" | "bad";
 }
 
 /** Another way to make the base roll, offered before a check: "Advantage". */
 export interface RollMode {
-  id: string
-  label: string
-  roll: string
+  id: string;
+  label: string;
+  roll: string;
   /** Limit this mode to action categories such as Blades action rolls. */
-  categories?: string[]
+  categories?: string[];
 }
 
 /** Something asked of the player before an action rolls. */
 export type Ask =
   /** Which stat to add. */
-  | { kind: 'stat' }
+  | { kind: "stat" }
   /** A number to add, such as a bond. `label` names it in the formula. */
-  | { kind: 'number'; label: string; prompt: string; min: number; max: number; initial?: number }
+  | { kind: "number"; label: string; prompt: string; min: number; max: number; initial?: number };
 
 /**
  * Roll the system's base roll plus a stat and every bonus that applies, and
  * read out the result: Dungeon World's moves.
  */
 export interface CheckStep {
-  kind: 'check'
+  kind: "check";
   /** The stat added. */
-  stat?: string
-  ask?: Ask
+  stat?: string;
+  ask?: Ask;
   /** Difficulty is either entered for a roll or read from each targeted character. */
-  difficulty?: CheckDifficulty
+  difficulty?: CheckDifficulty;
   /** A shared counter selected before the roll; follow-ups can advance it. */
-  counter?: { prompt: string }
+  counter?: { prompt: string };
   /** Character-owned optional bonuses selectable before this check. */
-  rollBonuses?: { id: string; label: string; nameField?: string; valueField: string; cost?: { resource: string; by: number } }[]
+  rollBonuses?: {
+    id: string;
+    label: string;
+    nameField?: string;
+    valueField: string;
+    cost?: { resource: string; by: number };
+  }[];
   /** Derived values added after the stat, each with its label: proficiency, a spell attack bonus. Zero adds nothing. */
-  add?: { value: string; label: string }[]
+  add?: { value: string; label: string }[];
   /** What each result means, by result id. */
-  outcomes: Record<string, string>
+  outcomes: Record<string, string>;
   /** Follow-up buttons offered for each result, by follow-up id. On a check against targets, those of the best result that hit. */
-  followUps?: Record<string, string[]>
-  followUpsFor?(roll: Roll, character: CharacterView, derived: Derived): string[]
+  followUps?: Record<string, string[]>;
+  followUpsFor?(roll: Roll, character: CharacterView, derived: Derived): string[];
 }
 
 export type CheckDifficulty =
-  | { kind: 'fixed'; value: number }
-  | { kind: 'derived'; value: string }
-  | { kind: 'prompt'; prompt: string; initial?: number; min?: number; max?: number }
-  | { kind: 'target'; value: string }
+  | { kind: "fixed"; value: number }
+  | { kind: "derived"; value: string }
+  | { kind: "prompt"; prompt: string; initial?: number; min?: number; max?: number }
+  | { kind: "target"; value: string };
 
 /**
  * Ask each target to roll one of their own actions (a saving throw) against
@@ -167,14 +173,14 @@ export type CheckDifficulty =
  * request per target, which only that target's owner or the GM can answer.
  */
 export interface SaveStep {
-  kind: 'save'
+  kind: "save";
   /** The action each target rolls: "save-dex". */
-  action: string
+  action: string;
   /** The actor's derived value it's rolled against: "spellDc". */
-  difficulty: CheckDifficulty
+  difficulty: CheckDifficulty;
   /** What happens on a success and on a failure. */
-  success: string
-  failure: string
+  success: string;
+  failure: string;
 }
 
 /**
@@ -183,15 +189,15 @@ export interface SaveStep {
  */
 export interface TargetSpec {
   /** What to target, as an instruction: "Target the enemy you're attacking". */
-  prompt: string
+  prompt: string;
   /** How many must be chosen, at least. */
-  min: number
+  min: number;
   /** How many can be chosen; no limit if missing. */
-  max?: number
+  max?: number;
   /** How far away a target may be, in scene units. */
-  range?: Range
+  range?: Range;
   /** An area placed on the scene; the tokens it covers become the targets. */
-  area?: AreaSpec
+  area?: AreaSpec;
 }
 
 /**
@@ -199,13 +205,13 @@ export interface TargetSpec {
  * cube by its side, a cone or line by its length (and a line's width).
  */
 export interface AreaSpec {
-  shape: 'sphere' | 'emanation' | 'cube' | 'cone' | 'line'
-  size: number
-  width?: number
+  shape: "sphere" | "emanation" | "cube" | "cone" | "line";
+  size: number;
+  width?: number;
 }
 
 /** Parts of an action, done in order. */
-export type ActionStep = CheckStep | SaveStep
+export type ActionStep = CheckStep | SaveStep;
 
 /** Something a character can do: a move, an attack, a spell, a feature. */
 export interface ActionDef {
@@ -226,7 +232,15 @@ export interface ActionDef {
   /** What it does when it's used. With no steps it is just read out. */
   steps: ActionStep[];
   costs?: { resource: string; by: number }[];
-  variants?(character: CharacterView, derived: Derived): { id: string; label: string; costs: { resource: string; by: number }[]; values?: Record<string, number> }[];
+  variants?(
+    character: CharacterView,
+    derived: Derived,
+  ): {
+    id: string;
+    label: string;
+    costs: { resource: string; by: number }[];
+    values?: Record<string, number>;
+  }[];
   /** Follow-up buttons offered when it has no check (a heal, a spell's damage), by follow-up id. */
   followUps?: string[];
   tags?: string[];
@@ -234,126 +248,126 @@ export interface ActionDef {
 
 /** A grouping of actions, for the sheet's filter. */
 export interface ActionCategory {
-  id: string
-  label: string
+  id: string;
+  label: string;
   /** False for actions too situational to fill a new hotbar with. */
-  onHotbar?: boolean
+  onHotbar?: boolean;
 }
 
 /** A follow-up button on an action card. The GM stays in charge: nothing is automatic. */
 export type FollowUpDef =
   /** Add to one of the character's data fields: "Mark XP". */
-  | { id: string; kind: 'bump'; label: string; field: string; by: number }
+  | { id: string; kind: "bump"; label: string; field: string; by: number }
   /** Change a character resource such as Hope, HP, or Stress. */
-  | { id: string; kind: 'resource'; label: string; resource: string; by: number }
+  | { id: string; kind: "resource"; label: string; resource: string; by: number }
   /** Advance the selected counter, or a named system counter. */
-  | { id: string; kind: 'counter'; label: string; by: number; systemCounter?: string }
+  | { id: string; kind: "counter"; label: string; by: number; systemCounter?: string }
   /** Roll a formula worked out from the character: "Roll damage". */
   | {
-      id: string
-      kind: 'roll'
-      label: string
-      comment: string
-      formula: (c: CharacterView, d: Derived) => string
+      id: string;
+      kind: "roll";
+      label: string;
+      comment: string;
+      formula: (c: CharacterView, d: Derived) => string;
       /** A damage type, or 'healing': the roll then offers to apply itself to the action's targets. */
-      damage?: string
-    }
+      damage?: string;
+    };
 
 export interface ItemDef {
-  id: string
-  name: string
-  description: string
-  weight: number
+  id: string;
+  name: string;
+  description: string;
+  weight: number;
   /** Optional abstract Wealth tier cost used by systems with campaign economies. */
-  wealthCost?: { rank: number; tier: string }
+  wealthCost?: { rank: number; tier: string };
   /** Total uses, for things that run out (rations, ammo, potions). */
-  uses?: number
+  uses?: number;
   /** Uses refreshed when a DW2 camp is completed. */
-  resetUsesAtCamp?: boolean
+  resetUsesAtCamp?: boolean;
   /** Deterministic use behavior supported by the inventory UI. */
-  itemUse?: "healing-potion" | "hearty-feast" | "magic-wand"
+  itemUse?: "healing-potion" | "hearty-feast" | "magic-wand";
   /** Progress and move choices for a source-defined Artifact. */
-  artifact?: ArtifactDef
-  tags: string[]
-  effects?: Effect[]
+  artifact?: ArtifactDef;
+  tags: string[];
+  effects?: Effect[];
   /** Which state turns the effects on; defaults to 'carried'. */
-  active?: EffectActive
+  active?: EffectActive;
   /** True for things you can wear or wield, so the sheet shows an Equipped toggle. */
-  equippable?: boolean
+  equippable?: boolean;
   /** An icon from the core vocabulary (ui/entryIcons.tsx), by name. */
-  icon?: string
+  icon?: string;
 }
 
 export interface ArtifactDef {
-  track: string
-  capacity: number
-  unlocks: { id: string; name: string; text?: string }[]
-  unlockMode: "choose" | "sequential" | "sequential-replace"
-  requiresEquipped?: boolean
+  track: string;
+  capacity: number;
+  unlocks: { id: string; name: string; text?: string }[];
+  unlockMode: "choose" | "sequential" | "sequential-replace";
+  requiresEquipped?: boolean;
 }
 
 export interface TagDef {
-  id: string
-  name: string
-  text: string
+  id: string;
+  name: string;
+  text: string;
 }
 
 export interface ReferenceSectionDef {
-  id: string
-  title: string
-  text: string
+  id: string;
+  title: string;
+  text: string;
 }
 
 /** A size a creature's token can be, in grid cells across: Large is 2. */
 export interface SizeDef {
-  id: string
-  name: string
-  cells: number
+  id: string;
+  name: string;
+  cells: number;
 }
 
 /** How a system measures its scenes, as defaults for new ones. */
 export interface SceneDefaults {
   /** How far one cell is, in `unitName`s. */
-  unit: number
-  unitName: string
-  diagonal: DiagonalRule
+  unit: number;
+  unitName: string;
+  diagonal: DiagonalRule;
 }
 
 /** A field on an NPC's sheet. The system decides what NPCs have. */
 export interface NpcFieldDef {
-  id: string
-  label: string
+  id: string;
+  label: string;
   /** 'longtext' is rich text, kept apart from the other fields (see table/CharacterText.tsx). */
-  type: 'text' | 'number' | 'longtext'
-  default?: string | number
+  type: "text" | "number" | "longtext";
+  default?: string | number;
 }
 
 /** A system-provided NPC/monster entry that can be copied into a campaign character. */
 export interface MonsterDef {
-  id: string
-  name: string
-  description: string
-  hp: number
-  scores?: Record<string, number>
-  fields: Record<string, string | number>
-  size?: string
+  id: string;
+  name: string;
+  description: string;
+  hp: number;
+  scores?: Record<string, number>;
+  fields: Record<string, string | number>;
+  size?: string;
 }
 
 /** A figure a system shows on a character's token. */
 export interface TokenStat {
-  id: string
-  label: string
+  id: string;
+  label: string;
   /** Drawn as a bar of value out of max. */
-  value: number
-  max: number
+  value: number;
+  max: number;
   /** CSS colour of the filled part. */
-  colour: string
+  colour: string;
 }
 
 /** A kind of damage, which a creature may resist (half), be vulnerable to (double) or be immune to. */
 export interface DamageTypeDef {
-  id: string
-  name: string
+  id: string;
+  name: string;
 }
 
 /** One option of a character-creation choice: a species, background, or other system-defined selection. */
@@ -422,7 +436,7 @@ export interface ChoiceDef {
   field: string;
   options: OptionDef[];
   /** Made at creation, or at a system-defined advancement point. */
-  at: "create" | 'advance' | number;
+  at: "create" | "advance" | number;
   /** Advancement choices the player may skip. */
   optional?: boolean;
 }
@@ -430,11 +444,11 @@ export interface ChoiceDef {
 /** Ways to set ability scores when creating a character. */
 export interface ScoreMethods {
   /** Scores to assign, one to each stat. */
-  standardArray?: number[]
+  standardArray?: number[];
   /** Points to spend, and each score's cost. */
-  pointBuy?: { budget: number; costs: Record<number, number> }
+  pointBuy?: { budget: number; costs: Record<number, number> };
   /** A formula to roll for each score. */
-  roll?: string
+  roll?: string;
 }
 
 export interface ScoreAssignmentOption {
@@ -473,15 +487,15 @@ export interface CreationDef {
 }
 
 export interface LoadoutDef {
-  id: string
-  label: string
-  ownedField: string
-  available?(character: CharacterView, derived: Derived): string[]
-  activeField: string
-  max: number | string
-  options: OptionDef[]
-  costs?: Record<string, { resource: string; by: number }>
-  freeSwapLabel?: string
+  id: string;
+  label: string;
+  ownedField: string;
+  available?(character: CharacterView, derived: Derived): string[];
+  activeField: string;
+  max: number | string;
+  options: OptionDef[];
+  costs?: Record<string, { resource: string; by: number }>;
+  freeSwapLabel?: string;
 }
 
 /**
@@ -493,12 +507,18 @@ export type SheetSection =
   | { kind: "header" }
   /** System-defined choices shown on the sheet. */
   | { kind: "choices"; choices?: string[] }
-  | { kind: 'loadout'; loadout: string }
+  | { kind: "loadout"; loadout: string }
   /** Editable system-owned text or numeric data fields. */
   | {
       kind: "fields";
       label?: string;
-      items: { field: string; label: string; type: 'text' | 'number'; min?: number; max?: number }[];
+      items: {
+        field: string;
+        label: string;
+        type: "text" | "number";
+        min?: number;
+        max?: number;
+      }[];
     }
   /** Numbers with minus and plus buttons: resources and data fields. */
   | { kind: "counters"; items: SheetCounter[] }
@@ -551,11 +571,11 @@ export type SheetCounter =
 /** A character's effective numbers, worked out by the system. */
 export interface Derived {
   /** Named values (max HP, armour, load…), after every active effect. */
-  values: Record<string, number>
+  values: Record<string, number>;
   /** Each stat's modifier. */
-  mods: Record<string, number>
+  mods: Record<string, number>;
   /** How effects changed things: explanations, granted actions, roll bonuses. */
-  resolved: Resolved
+  resolved: Resolved;
 }
 
 /**
@@ -600,7 +620,12 @@ export interface GameSystem {
   /** Label for the unselected base mode in the roll prompt. */
   defaultRollLabel?: string;
   /** Finalize a check formula using system-owned rules. */
-  checkRoll?(formula: string, stat: string | undefined, character: CharacterView, action?: ActionDef): string;
+  checkRoll?(
+    formula: string,
+    stat: string | undefined,
+    character: CharacterView,
+    action?: ActionDef,
+  ): string;
   /** Other base rolls the player can pick before a check (advantage, disadvantage); a check then always asks. */
   rollModes?: RollMode[];
   /** A check's possible results, best first. */
@@ -608,7 +633,13 @@ export interface GameSystem {
   /** Which result a check gets, from its total and the kept dice of its base roll. */
   result(total: number, natural: number[], roll?: Roll, context?: RollContext): string;
   /** Whether a check against a target's value hits; by default, when the total reaches it. */
-  hits?(total: number, natural: number[], target: number, roll?: Roll, context?: RollContext): boolean;
+  hits?(
+    total: number,
+    natural: number[],
+    target: number,
+    roll?: Roll,
+    context?: RollContext,
+  ): boolean;
   /** The roll mode forced at long range (disadvantage); a chosen opposite mode cancels it to a normal roll. */
   longRange?: { mode: string; cancels: string };
   /** Damage types, for follow-ups that roll damage. */
@@ -616,7 +647,12 @@ export interface GameSystem {
   /** A data field that soaks damage before hit points do: temporary HP. */
   tempHp?: string;
   damageArmor?: { resource: string; label: string };
-  resolveDamage?(character: CharacterView, derived: Derived, amount: number, options: { armor?: boolean; type?: string }): { hp: number; resources?: { id: string; by: number }[] };
+  resolveDamage?(
+    character: CharacterView,
+    derived: Derived,
+    amount: number,
+    options: { armor?: boolean; type?: string },
+  ): { hp: number; resources?: { id: string; by: number }[] };
   /** The action that rolls initiative. Systems without one have no turn tracker. */
   initiative?: string;
   /** The save a concentrating character makes on taking damage. */
@@ -672,7 +708,7 @@ export interface GameSystem {
 
 /** Context used by result rules that compare a roll against a difficulty. */
 export interface RollContext {
-  action: ActionDef
-  character?: CharacterView
+  action: ActionDef;
+  character?: CharacterView;
   difficulty?: number;
 }

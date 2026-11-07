@@ -1,39 +1,21 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  resolveTokenLabelLayout,
-  zoomTokenBars,
-  type TokenLabelPlan,
-} from "../tokenLabelLayout";
+import { resolveTokenLabelLayout, zoomTokenBars, type TokenLabelPlan } from "../tokenLabelLayout";
 
 const box = (id: string, x: number, w: number) => ({ id, x, y: 0, w, h: 10 });
 
 describe("token label layout", () => {
   it("enlarges a hovered bar around its centre without overlapping neighbors or its name", () => {
-    const layout = zoomTokenBars(
-      { id: "one", x: 100, y: 200, w: 60, h: 28 },
-      12,
-      4,
-      [1.5, 1],
-    );
-    expect((layout.bars)[0]!).toEqual({ x: 85, y: 197, w: 90, h: 18 });
-    expect((layout.bars)[1]!.y).toBe(219);
+    const layout = zoomTokenBars({ id: "one", x: 100, y: 200, w: 60, h: 28 }, 12, 4, [1.5, 1]);
+    expect(layout.bars[0]!).toEqual({ x: 85, y: 197, w: 90, h: 18 });
+    expect(layout.bars[1]!.y).toBe(219);
     expect(layout.nameOffset).toBe(3);
   });
 
   it("moves enlarged bars immediately with their screen-space anchor", () => {
-    const original = (zoomTokenBars(
-      { id: "one", x: 100, y: 200, w: 60, h: 12 },
-      12,
-      4,
-      [1.5],
-    ).bars)[0]!;
-    const moved = (zoomTokenBars(
-      { id: "one", x: 140, y: 180, w: 60, h: 12 },
-      12,
-      4,
-      [1.5],
-    ).bars)[0]!;
+    const original = zoomTokenBars({ id: "one", x: 100, y: 200, w: 60, h: 12 }, 12, 4, [1.5])
+      .bars[0]!;
+    const moved = zoomTokenBars({ id: "one", x: 140, y: 180, w: 60, h: 12 }, 12, 4, [1.5]).bars[0]!;
     expect(moved.x - original.x).toBe(40);
     expect(moved.y - original.y).toBe(-20);
     expect(moved.w).toBe(original.w);
@@ -48,9 +30,7 @@ describe("token label layout", () => {
       small: false,
     };
 
-    expect(resolveTokenLabelLayout([plan], null).bars.get("one")).toEqual(
-      plan.wideBars,
-    );
+    expect(resolveTokenLabelLayout([plan], null).bars.get("one")).toEqual(plan.wideBars);
   });
 
   it("falls back to narrow bars when wider bars overlap", () => {

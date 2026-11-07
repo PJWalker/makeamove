@@ -16,11 +16,7 @@ export function EntityGraphicView({
   if (shown.kind === "image") {
     const Fallback = entryIcon("item", "bag");
     return (
-      <span
-        className={classes}
-        style={{ width: size, height: size }}
-        aria-hidden="true"
-      >
+      <span className={classes} style={{ width: size, height: size }} aria-hidden="true">
         <BlobImage
           image={shown.image}
           className="entity-graphic-image"
@@ -31,11 +27,7 @@ export function EntityGraphicView({
   }
   const Icon = entryIcon("item", shown.name);
   return (
-    <span
-      className={classes}
-      style={{ width: size, height: size }}
-      aria-hidden="true"
-    >
+    <span className={classes} style={{ width: size, height: size }} aria-hidden="true">
       <Icon size={size} />
     </span>
   );

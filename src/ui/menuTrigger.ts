@@ -10,10 +10,7 @@
 /** A right-button press opened a menu; its `contextmenu` event is still to come. */
 let pressOpened = false;
 
-type PointerInput = Pick<
-  PointerEvent,
-  "button" | "pointerType" | "clientX" | "clientY"
->;
+type PointerInput = Pick<PointerEvent, "button" | "pointerType" | "clientX" | "clientY">;
 type MouseInput = Pick<MouseEvent, "clientX" | "clientY" | "preventDefault">;
 
 export function menuTrigger(open: (x: number, y: number) => void): {

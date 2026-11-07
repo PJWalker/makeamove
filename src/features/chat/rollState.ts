@@ -7,7 +7,7 @@ export interface SharedRoll {
   seeds: string[][];
 }
 
-interface StoredRoll extends SharedRoll {}
+type StoredRoll = SharedRoll;
 
 const ROLL_FIELD = "roll";
 
@@ -22,8 +22,7 @@ function recalculate(source: Roll): Roll {
     return { ...term, dice, subtotal };
   });
   const total = terms.reduce(
-    (sum, term) =>
-      sum + term.sign * (term.kind === "dice" ? term.subtotal : term.value),
+    (sum, term) => sum + term.sign * (term.kind === "dice" ? term.subtotal : term.value),
     0,
   );
   return { ...source, terms, total };
@@ -37,12 +36,7 @@ function seedsFor(messageId: string, source: Roll) {
   );
 }
 
-function storeRoll(
-  state: MessageState,
-  messageId: string,
-  source: Roll,
-  seeds: string[][],
-) {
+function storeRoll(state: MessageState, messageId: string, source: Roll, seeds: string[][]) {
   setState(state, messageId, ROLL_FIELD, {
     roll: source,
     edited: true,
@@ -50,11 +44,7 @@ function storeRoll(
   } satisfies StoredRoll);
 }
 
-export function readRollState(
-  state: MessageState,
-  messageId: string,
-  source: Roll,
-): SharedRoll {
+export function readRollState(state: MessageState, messageId: string, source: Roll): SharedRoll {
   const stored = getState<StoredRoll>(state, messageId, ROLL_FIELD);
   return {
     roll: stored?.roll ?? source,
@@ -63,17 +53,18 @@ export function readRollState(
   };
 }
 
-export function rerollMessage(
-  state: MessageState,
-  messageId: string,
-  source: Roll,
-) {
+export function rerollMessage(state: MessageState, messageId: string, source: Roll) {
   const next = roll(source.formula);
-  storeRoll(state, messageId, next, next.terms.map((term, termIndex) =>
-    term.kind === "dice"
-      ? term.dice.map((_, dieIndex) => `${messageId}:${Date.now()}:${termIndex}:${dieIndex}`)
-      : [],
-  ));
+  storeRoll(
+    state,
+    messageId,
+    next,
+    next.terms.map((term, termIndex) =>
+      term.kind === "dice"
+        ? term.dice.map((_, dieIndex) => `${messageId}:${Date.now()}:${termIndex}:${dieIndex}`)
+        : [],
+    ),
+  );
 }
 
 export function rerollDie(
@@ -88,9 +79,7 @@ export function rerollDie(
   const term = current.terms[termIndex];
   if (term?.kind !== "dice" || !term.dice[dieIndex]) return;
   const dice = term.dice.map((die, index) =>
-    index === dieIndex
-      ? { ...die, value: cryptoDie(die.sides), disabled: false }
-      : die,
+    index === dieIndex ? { ...die, value: cryptoDie(die.sides), disabled: false } : die,
   );
   const terms = current.terms.map((entry, index) =>
     index === termIndex ? ({ ...entry, dice } as RolledDice) : entry,

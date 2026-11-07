@@ -28,13 +28,7 @@ export function useMenuOverlay<T extends HTMLElement>({
   const bottom = anchor?.bottom;
 
   useLayoutEffect(() => {
-    if (
-      !open ||
-      !ref.current ||
-      left === undefined ||
-      top === undefined ||
-      bottom === undefined
-    )
+    if (!open || !ref.current || left === undefined || top === undefined || bottom === undefined)
       return;
     placeAnchored(ref.current, { left, top, bottom }, gap);
   }, [open, ref, left, top, bottom, gap, positionKey]);

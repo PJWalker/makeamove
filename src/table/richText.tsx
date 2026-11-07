@@ -1,25 +1,42 @@
-import { Editor, mergeAttributes } from '@tiptap/core'
-import Collaboration from '@tiptap/extension-collaboration'
-import Mention from '@tiptap/extension-mention'
-import Placeholder from '@tiptap/extension-placeholder'
-import StarterKit from '@tiptap/starter-kit'
-import type { SuggestionKeyDownProps, SuggestionProps } from '@tiptap/suggestion'
-import { ySyncPluginKey } from '@tiptap/y-tiptap'
+import { Editor, mergeAttributes } from "@tiptap/core";
+import Collaboration from "@tiptap/extension-collaboration";
+import Mention from "@tiptap/extension-mention";
+import Placeholder from "@tiptap/extension-placeholder";
+import StarterKit from "@tiptap/starter-kit";
+import type { SuggestionKeyDownProps, SuggestionProps } from "@tiptap/suggestion";
+import { ySyncPluginKey } from "@tiptap/y-tiptap";
 import { createRoot, type Root } from "react-dom/client";
-import type * as Y from 'yjs'
-import type { Awareness } from 'y-protocols/awareness'
-import { IconDelete, IconImage, IconReveal, IconSecret } from '../ui/icons'
-import { carets, deleteSecret, insertImages, makeSecret, NoteImage, revealSecret, secretFragment, secretNode, SECRET_NODE } from './noteExtensions'
-import { getNote, type LinkKind } from '../features/notes/api'
-import { LINK_NODE } from '../features/notes/links'
-import { followLink, linkLabel, linkTargets, linkTip, openInSidebar, type LinkTarget } from '../features/notes/targets'
-import { menuTrigger } from '../ui/menuTrigger'
-import type { MenuItem } from './ContextMenu'
+import type * as Y from "yjs";
+import type { Awareness } from "y-protocols/awareness";
+import { IconDelete, IconImage, IconReveal, IconSecret } from "../ui/icons";
+import {
+  carets,
+  deleteSecret,
+  insertImages,
+  makeSecret,
+  NoteImage,
+  revealSecret,
+  secretFragment,
+  secretNode,
+  SECRET_NODE,
+} from "./noteExtensions";
+import { getNote, type LinkKind } from "../features/notes/api";
+import { LINK_NODE } from "../features/notes/links";
+import {
+  followLink,
+  linkLabel,
+  linkTargets,
+  linkTip,
+  openInSidebar,
+  type LinkTarget,
+} from "../features/notes/targets";
+import { menuTrigger } from "../ui/menuTrigger";
+import type { MenuItem } from "./ContextMenu";
 import { linkActionItems, linkMenu, renameLink, showLink } from "./linkState";
-import type { Campaign } from '../campaign/campaign'
-import { placeAnchored } from '../ui/anchor'
+import type { Campaign } from "../campaign/campaign";
+import { placeAnchored } from "../ui/anchor";
 import { IconOpenWindow, IconRename, IconSidebar } from "../ui/icons";
-import { dragEntity, entity, registerLinkDrop } from './entityDrag'
+import { dragEntity, entity, registerLinkDrop } from "./entityDrag";
 import { actionMenuItems } from "./actionMenu";
 import { CampaignEntityGraphic } from "./EntityGraphic";
 import { editEntityGraphic } from "./GraphicDialogs";
@@ -35,27 +52,27 @@ import { trackerButtonExtension } from "./trackerButtons";
  */
 
 export interface RichTextOptions {
-  campaign: Campaign
+  campaign: Campaign;
   /** The Yjs fragment holding the text. */
-  fragment: Y.XmlFragment
-  placeholder: string
+  fragment: Y.XmlFragment;
+  placeholder: string;
   /** Its accessible name. */
-  label: string
-  editable?: boolean | undefined
+  label: string;
+  editable?: boolean | undefined;
   /** The note being edited, so it doesn't offer itself as a link. */
-  noteId?: string | undefined
+  noteId?: string | undefined;
   /** Players can read it: links to GM-only pages leave their titles off. */
-  shared: boolean
+  shared: boolean;
   /** After each edit made here (not ones arriving from peers). */
-  onLocalEdit?: (editor: Editor) => void
+  onLocalEdit?: (editor: Editor) => void;
   /** Others editing the same text, to show their carets, and the name to show for yours. */
-  carets?: { awareness: Awareness; name: string }
+  carets?: { awareness: Awareness; name: string };
   /**
    * A note's secrets: the GM vault's document, where their text lives, or
    * null for a player, who sees none of them. Absent where text has no
    * secrets (sheets, chat, a secret's own text).
    */
-  secrets?: { vault: Y.Doc | null }
+  secrets?: { vault: Y.Doc | null };
 }
 
 /**
@@ -63,7 +80,7 @@ export interface RichTextOptions {
  * by starting a word with `@`. It stores its target's kind and id (and the
  * name it had, as a fallback); it shows the target's current name.
  */
-export function linkExtension(campaign: Campaign, o: Pick<RichTextOptions, 'noteId' | 'shared'>) {
+export function linkExtension(campaign: Campaign, o: Pick<RichTextOptions, "noteId" | "shared">) {
   return Mention.extend({
     name: LINK_NODE,
     addAttributes() {
@@ -94,8 +111,7 @@ export function linkExtension(campaign: Campaign, o: Pick<RichTextOptions, 'note
         text?: string | null;
       };
       const current = linkLabel(campaign, kind, id);
-      const tip =
-        current === null ? "Not available" : linkTip(campaign, kind, id);
+      const tip = current === null ? "Not available" : linkTip(campaign, kind, id);
       return [
         "span",
         mergeAttributes({
@@ -113,8 +129,7 @@ export function linkExtension(campaign: Campaign, o: Pick<RichTextOptions, 'note
         text || current || label || "Unavailable",
       ];
     },
-    renderText: ({ node }) =>
-      `@${node.attrs.text || node.attrs.label || node.attrs.id}`,
+    renderText: ({ node }) => `@${node.attrs.text || node.attrs.label || node.attrs.id}`,
     suggestion: {
       char: "@",
       allowSpaces: true,
@@ -169,12 +184,7 @@ function suggestionList(campaign: Campaign) {
                 onPointerDown={(e) => e.preventDefault()}
                 onClick={() => props?.command(t)}
               >
-                <CampaignEntityGraphic
-                  campaign={campaign}
-                  kind={t.kind}
-                  id={t.id}
-                  size={22}
-                />
+                <CampaignEntityGraphic campaign={campaign} kind={t.kind} id={t.id} size={22} />
                 <span className="menu-label">{t.label}</span>
                 <span className="menu-shortcut">{t.detail}</span>
               </button>
@@ -226,34 +236,36 @@ function suggestionList(campaign: Campaign) {
   };
 }
 
-
 /** Ask for image files and put them in at the cursor. */
 function pickImages(editor: Editor) {
-  const input = document.createElement('input')
-  input.type = 'file'
-  input.accept = 'image/*'
-  input.multiple = true
-  input.onchange = () => void insertImages(editor, [...(input.files ?? [])])
-  input.click()
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.multiple = true;
+  input.onchange = () => void insertImages(editor, [...(input.files ?? [])]);
+  input.click();
 }
 
 /** Put a rich-text editor in `host`; returns it and a function that takes it down. */
-export function mountRichText(host: HTMLElement, o: RichTextOptions): { editor: Editor; destroy: () => void } {
-  const { campaign } = o
-  const vault = o.secrets?.vault ?? null
+export function mountRichText(
+  host: HTMLElement,
+  o: RichTextOptions,
+): { editor: Editor; destroy: () => void } {
+  const { campaign } = o;
+  const vault = o.secrets?.vault ?? null;
   /** A secret's own text, edited in place inside the note (GM only). */
   const mountSecret = (body: HTMLElement, id: string, doc: Y.Doc): (() => void) => {
     const nested = mountRichText(body, {
       campaign,
       fragment: secretFragment(doc, id),
-      placeholder: 'Only you can see this.',
-      label: 'Secret text',
+      placeholder: "Only you can see this.",
+      label: "Secret text",
       editable: o.editable,
       noteId: o.noteId,
       shared: false,
-    })
-    return nested.destroy
-  }
+    });
+    return nested.destroy;
+  };
   const editor: Editor = new Editor({
     element: host,
     editable: o.editable ?? true,
@@ -269,86 +281,107 @@ export function mountRichText(host: HTMLElement, o: RichTextOptions): { editor: 
       ...(o.secrets ? [secretNode(vault ? (host, id) => mountSecret(host, id, vault) : null)] : []),
     ],
     editorProps: {
-      attributes: { class: 'note-body', 'aria-label': o.label },
+      attributes: { class: "note-body", "aria-label": o.label },
       // Image files pasted or dropped in are stored and shown in place.
       handlePaste: (_view, e) => {
-        const files = [...(e.clipboardData?.files ?? [])].filter((f) => f.type.startsWith('image/'))
-        if (!files.length || !editor.isEditable) return false
-        void insertImages(editor, files)
-        return true
+        const files = [...(e.clipboardData?.files ?? [])].filter((f) =>
+          f.type.startsWith("image/"),
+        );
+        if (!files.length || !editor.isEditable) return false;
+        void insertImages(editor, files);
+        return true;
       },
       handleDrop: (view, e) => {
-        const files = [...(e.dataTransfer?.files ?? [])].filter((f) => f.type.startsWith('image/'))
-        if (!files.length || !editor.isEditable) return false
-        e.preventDefault()
-        void insertImages(editor, files, view.posAtCoords({ left: e.clientX, top: e.clientY })?.pos)
-        return true
+        const files = [...(e.dataTransfer?.files ?? [])].filter((f) => f.type.startsWith("image/"));
+        if (!files.length || !editor.isEditable) return false;
+        e.preventDefault();
+        void insertImages(
+          editor,
+          files,
+          view.posAtCoords({ left: e.clientX, top: e.clientY })?.pos,
+        );
+        return true;
       },
     },
     onUpdate: ({ editor: ed, transaction }) => {
       // Edits that arrived from peers are theirs to record.
-      if (transaction.getMeta(ySyncPluginKey)?.isChangeOrigin) return
-      o.onLocalEdit?.(ed)
+      if (transaction.getMeta(ySyncPluginKey)?.isChangeOrigin) return;
+      o.onLocalEdit?.(ed);
     },
-  })
+  });
 
-  const chipAt = (e: Event) => (e.target as Element).closest<HTMLElement>(`[data-type="${LINK_NODE}"]`)
-  const refOf = (chip: HTMLElement) => ({ kind: chip.dataset.kind as LinkKind, id: chip.dataset.id ?? '' })
+  const chipAt = (e: Event) =>
+    (e.target as Element).closest<HTMLElement>(`[data-type="${LINK_NODE}"]`);
+  const refOf = (chip: HTMLElement) => ({
+    kind: chip.dataset.kind as LinkKind,
+    id: chip.dataset.id ?? "",
+  });
   /** Opening a link: a note links on to another page in the Notes panel; anything else opens a pop-up. */
-  const followsInPlace = (kind: LinkKind) => kind === 'note' && !!o.noteId
+  const followsInPlace = (kind: LinkKind) => kind === "note" && !!o.noteId;
 
   // Clicking a link chip.
   const onClick = (e: MouseEvent) => {
-    const chip = chipAt(e)
-    if (!chip || chip.dataset.missing) return
-    e.preventDefault()
-    const link = refOf(chip)
-    if (followsInPlace(link.kind)) followLink(campaign, link.kind, link.id)
-    else showLink(link, chip)
-  }
-  host.addEventListener('click', onClick)
+    const chip = chipAt(e);
+    if (!chip || chip.dataset.missing) return;
+    e.preventDefault();
+    const link = refOf(chip);
+    if (followsInPlace(link.kind)) followLink(campaign, link.kind, link.id);
+    else showLink(link, chip);
+  };
+  host.addEventListener("click", onClick);
 
   /** The link node a chip draws, and where it is, so it can be changed. */
   const nodeOf = (chip: HTMLElement) => {
-    const at = editor.view.posAtDOM(chip, 0)
+    const at = editor.view.posAtDOM(chip, 0);
     for (const pos of [at, at - 1]) {
-      const node = pos >= 0 ? editor.state.doc.nodeAt(pos) : null
-      if (node?.type.name === LINK_NODE) return { pos, node }
+      const node = pos >= 0 ? editor.state.doc.nodeAt(pos) : null;
+      if (node?.type.name === LINK_NODE) return { pos, node };
     }
-    return null
-  }
+    return null;
+  };
 
   // Right-clicking text: add an image; for the GM, make it secret, or reveal or delete a secret.
   const textMenu = menuTrigger((x, y) => {
-    if (!editor.isEditable) return
-    const items: MenuItem[] = [{ label: 'Insert image…', Icon: IconImage, onSelect: () => pickImages(editor) }]
+    if (!editor.isEditable) return;
+    const items: MenuItem[] = [
+      { label: "Insert image…", Icon: IconImage, onSelect: () => pickImages(editor) },
+    ];
     if (vault) {
-      const secret = menuSecret
+      const secret = menuSecret;
       if (secret) {
-        const pos = editor.view.posAtDOM(secret, 0)
-        items.push('divider', { label: 'Reveal to players', Icon: IconReveal, onSelect: () => revealSecret(editor, vault, pos) })
-        items.push({ label: 'Delete secret', Icon: IconDelete, danger: true, onSelect: () => deleteSecret(editor, vault, pos) })
+        const pos = editor.view.posAtDOM(secret, 0);
+        items.push("divider", {
+          label: "Reveal to players",
+          Icon: IconReveal,
+          onSelect: () => revealSecret(editor, vault, pos),
+        });
+        items.push({
+          label: "Delete secret",
+          Icon: IconDelete,
+          danger: true,
+          onSelect: () => deleteSecret(editor, vault, pos),
+        });
       } else {
-        items.push('divider', { label: 'Make secret', Icon: IconSecret, onSelect: () => makeSecret(editor, vault) })
+        items.push("divider", {
+          label: "Make secret",
+          Icon: IconSecret,
+          onSelect: () => makeSecret(editor, vault),
+        });
       }
     }
-    linkMenu.value = { x, y, items }
-  })
-  let menuSecret: HTMLElement | null = null
+    linkMenu.value = { x, y, items };
+  });
+  let menuSecret: HTMLElement | null = null;
 
   // Right-clicking a link chip: open it elsewhere, or change what it says.
   const menu = menuTrigger((x, y) => {
-    const chip = menuChip
-    if (!chip) return
-    const link = refOf(chip)
-    const found = nodeOf(chip)
-    const items: MenuItem[] = []
+    const chip = menuChip;
+    if (!chip) return;
+    const link = refOf(chip);
+    const found = nodeOf(chip);
+    const items: MenuItem[] = [];
     const actionId =
-      link.kind === "move"
-        ? `move:${link.id}`
-        : link.kind === "item"
-          ? `library:${link.id}`
-          : null;
+      link.kind === "move" ? `move:${link.id}` : link.kind === "item" ? `library:${link.id}` : null;
     if (actionId) {
       items.push(...linkActionItems(campaign, link));
       const actions = actionMenuItems(campaign, [{ id: actionId }]);
@@ -356,104 +389,126 @@ export function mountRichText(host: HTMLElement, o: RichTextOptions): { editor: 
       items.push(...actions);
     }
     if (!chip.dataset.missing) {
-      const privateNote =
-        link.kind === "note" && getNote(campaign, link.id)?.gmOnly;
+      const privateNote = link.kind === "note" && getNote(campaign, link.id)?.gmOnly;
       if (!privateNote) {
         if (items.length) items.push("divider");
         items.push({
           label: "Change graphic…",
           Icon: IconImage,
           onSelect: () =>
-            editEntityGraphic(
-              campaign,
-              link.kind,
-              link.id,
-              chip.textContent ?? "Entity",
-            ),
+            editEntityGraphic(campaign, link.kind, link.id, chip.textContent ?? "Entity"),
         });
       }
       if (items.length) items.push("divider");
-      items.push({ label: 'Open in sidebar', Icon: IconSidebar, onSelect: () => openInSidebar(campaign, link.kind, link.id) })
-      if (followsInPlace(link.kind)) items.push({ label: 'Open in a window', Icon: IconOpenWindow, onSelect: () => showLink(link, chip) })
+      items.push({
+        label: "Open in sidebar",
+        Icon: IconSidebar,
+        onSelect: () => openInSidebar(campaign, link.kind, link.id),
+      });
+      if (followsInPlace(link.kind))
+        items.push({
+          label: "Open in a window",
+          Icon: IconOpenWindow,
+          onSelect: () => showLink(link, chip),
+        });
     }
     if (found && editor.isEditable) {
-      const custom = !!found.node.attrs.text
-      if (items.length) items.push('divider')
+      const custom = !!found.node.attrs.text;
+      if (items.length) items.push("divider");
       items.push({
-        label: 'Edit link text…',
+        label: "Edit link text…",
         Icon: IconRename,
         onSelect: () =>
           renameLink({
-            text: chip.textContent ?? '',
+            text: chip.textContent ?? "",
             custom,
             save: (text) => {
-              const now = nodeOf(chip) ?? found
-              editor.view.dispatch(editor.state.tr.setNodeMarkup(now.pos, undefined, { ...now.node.attrs, text: text?.trim() || null }))
+              const now = nodeOf(chip) ?? found;
+              editor.view.dispatch(
+                editor.state.tr.setNodeMarkup(now.pos, undefined, {
+                  ...now.node.attrs,
+                  text: text?.trim() || null,
+                }),
+              );
             },
           }),
-      })
+      });
     }
-    if (items.length) linkMenu.value = { x, y, items }
-  })
-  let menuChip: HTMLElement | null = null
+    if (items.length) linkMenu.value = { x, y, items };
+  });
+  let menuChip: HTMLElement | null = null;
   /** Whether a press is for the text menu: in this editor's own text, not a nested secret's, with notes' extras on. */
   const ownText = (e: Event) => {
-    if (!o.secrets) return false
-    const secret = (e.target as Element).closest<HTMLElement>(`[data-type="${SECRET_NODE}"]`)
+    if (!o.secrets) return false;
+    const secret = (e.target as Element).closest<HTMLElement>(`[data-type="${SECRET_NODE}"]`);
     // A secret's text has its own editor and menu; its label is this one's.
-    if (secret && !(e.target as Element).closest('.note-secret-label')) return false
-    menuSecret = secret
-    return true
-  }
+    if (secret && !(e.target as Element).closest(".note-secret-label")) return false;
+    menuSecret = secret;
+    return true;
+  };
   const onMenuPress = (e: PointerEvent) => {
-    menuChip = chipAt(e)
-    if (menuChip) menu.onPointerDown(e)
-    else if (ownText(e)) textMenu.onPointerDown(e)
-  }
+    menuChip = chipAt(e);
+    if (menuChip) menu.onPointerDown(e);
+    else if (ownText(e)) textMenu.onPointerDown(e);
+  };
   const onContextMenu = (e: MouseEvent) => {
-    menuChip = chipAt(e)
-    if (menuChip) menu.onContextMenu(e)
-    else if (ownText(e)) textMenu.onContextMenu(e)
-  }
-  host.addEventListener('pointerdown', onMenuPress)
-  host.addEventListener('contextmenu', onContextMenu)
+    menuChip = chipAt(e);
+    if (menuChip) menu.onContextMenu(e);
+    else if (ownText(e)) textMenu.onContextMenu(e);
+  };
+  host.addEventListener("pointerdown", onMenuPress);
+  host.addEventListener("contextmenu", onContextMenu);
 
   // Dragging a link chip out: onto a character (gear and moves), the hotbar or other text.
   const onPointerDown = (e: PointerEvent) => {
-    const chip = (e.target as Element).closest<HTMLElement>(`[data-type="${LINK_NODE}"]`)
-    if (!chip || chip.dataset.missing || e.button !== 0) return
+    const chip = (e.target as Element).closest<HTMLElement>(`[data-type="${LINK_NODE}"]`);
+    if (!chip || chip.dataset.missing || e.button !== 0) return;
     // Keep the editor from starting a text selection; a click still follows the link.
-    e.preventDefault()
-    dragEntity(e, entity(campaign, chip.dataset.kind as LinkKind, chip.dataset.id ?? '', chip.textContent ?? ''), chip)
-  }
-  host.addEventListener('pointerdown', onPointerDown)
+    e.preventDefault();
+    dragEntity(
+      e,
+      entity(
+        campaign,
+        chip.dataset.kind as LinkKind,
+        chip.dataset.id ?? "",
+        chip.textContent ?? "",
+      ),
+      chip,
+    );
+  };
+  host.addEventListener("pointerdown", onPointerDown);
 
   // Anything dragged in (from a list, the palette, the hotbar or other text) becomes a link where it's dropped.
   const stopLinkDrop =
     o.editable === false
       ? () => {}
       : registerLinkDrop(host, (dropped, x, y) => {
-          const gmPage = dropped.kind === 'note' && getNote(campaign, dropped.id)?.gmOnly && o.shared
-          const pos = editor.view.posAtCoords({ left: x, top: y })?.pos ?? editor.state.doc.content.size
+          const gmPage =
+            dropped.kind === "note" && getNote(campaign, dropped.id)?.gmOnly && o.shared;
+          const pos =
+            editor.view.posAtCoords({ left: x, top: y })?.pos ?? editor.state.doc.content.size;
           editor
             .chain()
             .focus()
             .insertContentAt(pos, [
-              { type: LINK_NODE, attrs: { kind: dropped.kind, id: dropped.id, label: gmPage ? '' : dropped.label } },
-              { type: 'text', text: ' ' },
+              {
+                type: LINK_NODE,
+                attrs: { kind: dropped.kind, id: dropped.id, label: gmPage ? "" : dropped.label },
+              },
+              { type: "text", text: " " },
             ])
-            .run()
-        })
+            .run();
+        });
 
   return {
     editor,
     destroy() {
-      host.removeEventListener('click', onClick)
-      host.removeEventListener('pointerdown', onPointerDown)
-      host.removeEventListener('pointerdown', onMenuPress)
-      host.removeEventListener('contextmenu', onContextMenu)
-      stopLinkDrop()
-      editor.destroy()
+      host.removeEventListener("click", onClick);
+      host.removeEventListener("pointerdown", onPointerDown);
+      host.removeEventListener("pointerdown", onMenuPress);
+      host.removeEventListener("contextmenu", onContextMenu);
+      stopLinkDrop();
+      editor.destroy();
     },
-  }
+  };
 }

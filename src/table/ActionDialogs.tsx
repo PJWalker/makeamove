@@ -85,7 +85,6 @@ function RenameDialog({ campaign, id, title }: Props) {
         <label className="field">
           Show on the hotbar as
           <input
-
             value={text.value}
             autoFocus
             onFocus={(e) => e.currentTarget.select()}
@@ -109,8 +108,7 @@ function RenameDialog({ campaign, id, title }: Props) {
 
 /** Each icon once: some names share one (fighter and longsword). */
 const CHOICES = (Object.keys(ENTRY_ICONS) as EntryIconName[]).filter(
-  (name, i, all) =>
-    all.findIndex((n) => ENTRY_ICONS[n] === ENTRY_ICONS[name]) === i,
+  (name, i, all) => all.findIndex((n) => ENTRY_ICONS[n] === ENTRY_ICONS[name]) === i,
 );
 
 function IconDialog({ campaign, id, title }: Props) {
@@ -147,11 +145,7 @@ function IconDialog({ campaign, id, title }: Props) {
           })}
         </div>
         <div className="form-actions">
-          <Button
-            variant="ghost"
-            disabled={!current}
-            onClick={() => choose(undefined)}
-          >
+          <Button variant="ghost" disabled={!current} onClick={() => choose(undefined)}>
             Use its own icon
           </Button>
         </div>
@@ -164,14 +158,10 @@ function ShortcutDialog({ campaign, id, title }: Props) {
   const { ref, close, onClose } = usePopup();
   const existing = shortcuts(campaign)[id] ?? null;
   const combo = useSignal<string | null>(existing);
-  const other = combo.value
-    ? actionForCombo(shortcuts(campaign), combo.value)
-    : undefined;
+  const other = combo.value ? actionForCombo(shortcuts(campaign), combo.value) : undefined;
   const taken =
     other && other !== id
-      ? (slotLook(campaign, other).label ??
-        findAction(campaign, other)?.title ??
-        "another action")
+      ? (slotLook(campaign, other).label ?? findAction(campaign, other)?.title ?? "another action")
       : null;
   const save = (value: string | null) => {
     setShortcut(campaign, id, value);
@@ -220,9 +210,7 @@ function ShortcutDialog({ campaign, id, title }: Props) {
           />
         </label>
         <p className="muted" role="status">
-          {taken
-            ? `Now on ${taken}. Saving moves it here.`
-            : "Backspace clears it."}
+          {taken ? `Now on ${taken}. Saving moves it here.` : "Backspace clears it."}
         </p>
         <div className="form-actions">
           {existing && (
@@ -230,11 +218,7 @@ function ShortcutDialog({ campaign, id, title }: Props) {
               Remove shortcut
             </Button>
           )}
-          <Button
-            variant="primary"
-            type="submit"
-            disabled={combo.value === existing}
-          >
+          <Button variant="primary" type="submit" disabled={combo.value === existing}>
             Save
           </Button>
         </div>

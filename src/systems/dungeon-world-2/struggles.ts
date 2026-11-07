@@ -35,5 +35,3 @@ export const STRUGGLES = STRUGGLE_SPECS.map((struggle) => ({
   ...struggle,
   text: sourceMoveText(struggle.name, 4),
 }));
-
-export type Dw2Struggle = (typeof STRUGGLES)[number];

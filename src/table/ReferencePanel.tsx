@@ -14,8 +14,8 @@ export function ReferencePanel({ campaign }: { campaign: Campaign }) {
   const reference = systemOf(campaign).gmReference ?? [];
   if (!gm || !reference.length) return <p className="empty">No reference for this game.</p>;
   const needle = query.value.trim().toLowerCase();
-  const sections = reference.filter((section) =>
-    !needle || `${section.title}\n${section.text}`.toLowerCase().includes(needle),
+  const sections = reference.filter(
+    (section) => !needle || `${section.title}\n${section.text}`.toLowerCase().includes(needle),
   );
   return (
     <div className="panel-scroll reference">

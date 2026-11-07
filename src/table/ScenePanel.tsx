@@ -9,13 +9,7 @@ import {
 } from "../campaign/sceneFolders";
 import { useY } from "../ui/useY";
 import { Button } from "../ui/Button";
-import {
-  IconAdd,
-  IconDelete,
-  IconFolder,
-  IconMembers,
-  IconRename,
-} from "../ui/icons";
+import { IconAdd, IconDelete, IconFolder, IconMembers, IconRename } from "../ui/icons";
 import { canvasCommands } from "./canvasState";
 import { TwoPane, usePaneLevel } from "../ui/TwoPane";
 import { GraphicPicker } from "../ui/GraphicPicker";
@@ -29,24 +23,15 @@ import { scenesLayout } from "./panelLayouts";
 /** The scene list, and the active scene's settings. (Campaign actions are in the tool strip's menu.) */
 export function ScenePanel({ campaign }: { campaign: Campaign }) {
   const scenes = useY(campaign.scenes, () => campaign.sceneViews());
-  const folders = useY(campaign.sceneFolders, () =>
-    listSceneFolders(campaign.sceneFolders),
-  );
-  const activeId =
-    useY(campaign.members, () => campaign.activeSceneId()) ??
-    scenes[0]?.id ??
-    null;
+  const folders = useY(campaign.sceneFolders, () => listSceneFolders(campaign.sceneFolders));
+  const activeId = useY(campaign.members, () => campaign.activeSceneId()) ?? scenes[0]?.id ?? null;
   const members = useY(campaign.members, () => campaign.memberViews());
   const isGm = campaign.isGm();
   const active = scenes.find((s) => s.id === activeId);
   const { level, go } = usePaneLevel(scenesLayout, active ? "detail" : "list");
-  const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(
-    null,
-  );
+  const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const scene =
-    active && canvasCommands.value?.sceneId === active.id
-      ? canvasCommands.value.scene
-      : null;
+    active && canvasCommands.value?.sceneId === active.id ? canvasCommands.value.scene : null;
   const graphic = useY(campaign.entityGraphics, () =>
     active ? getEntityGraphic(campaign, "scene", active.id, "map") : undefined,
   );
@@ -58,8 +43,7 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
       member.activeSceneId && knownScenes.has(member.activeSceneId)
         ? member.activeSceneId
         : scenes[0]?.id;
-    if (sceneId)
-      playerCounts.set(sceneId, (playerCounts.get(sceneId) ?? 0) + 1);
+    if (sceneId) playerCounts.set(sceneId, (playerCounts.get(sceneId) ?? 0) + 1);
   }
 
   function addScene(folderId?: string) {
@@ -76,9 +60,7 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
 
   function sceneRow(s: SceneView) {
     const trigger = menuTrigger((x, y) => {
-      const items: MenuItem[] = [
-        { label: "Open scene", onSelect: () => openScene(s.id) },
-      ];
+      const items: MenuItem[] = [{ label: "Open scene", onSelect: () => openScene(s.id) }];
       if (isGm) {
         items.push("divider", {
           label: "Pull players here",
@@ -90,8 +72,7 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
             items.push({
               label: `Move to ${folder.name}`,
               Icon: IconFolder,
-              onSelect: () =>
-                moveSceneToFolder(campaign.scenes, s.id, folder.id),
+              onSelect: () => moveSceneToFolder(campaign.scenes, s.id, folder.id),
             });
           }
         }
@@ -114,12 +95,7 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
     });
     const playerCount = playerCounts.get(s.id) ?? 0;
     return (
-      <li
-        key={s.id}
-        className="scene-item"
-        data-active={s.id === activeId}
-        data-scene-id={s.id}
-      >
+      <li key={s.id} className="scene-item" data-active={s.id === activeId} data-scene-id={s.id}>
         <button
           type="button"
           className="scene-name-button"
@@ -163,18 +139,10 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
               <>
                 {isGm && (
                   <>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => addScene()}
-                    >
+                    <Button variant="secondary" size="sm" onClick={() => addScene()}>
                       <IconAdd size={22} /> New scene
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={beginFolderNaming}
-                    >
+                    <Button size="sm" variant="ghost" onClick={beginFolderNaming}>
                       New folder
                     </Button>
                   </>
@@ -214,21 +182,15 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
                   ]
                 : []),
             ]}
-            onCreateFolder={(name) =>
-              createSceneFolder(campaign.sceneFolders, name)
-            }
-            onRenameFolder={(id, name) =>
-              renameSceneFolder(campaign.sceneFolders, id, name)
-            }
+            onCreateFolder={(name) => createSceneFolder(campaign.sceneFolders, name)}
+            onRenameFolder={(id, name) => renameSceneFolder(campaign.sceneFolders, id, name)}
             emptyContent={
               !scenes.length && !folders.length ? (
                 <p className="empty-inline">No scenes yet.</p>
               ) : null
             }
           />
-          {menu.value && (
-            <ContextMenu {...menu.value} onClose={() => (menu.value = null)} />
-          )}
+          {menu.value && <ContextMenu {...menu.value} onClose={() => (menu.value = null)} />}
         </>
       }
       detail={
@@ -255,20 +217,14 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
                 <IconMembers size={22} /> Pull players here
               </Button>
               {scene ? (
-                <SceneSettingsFields
-                  campaign={campaign}
-                  sceneId={active.id}
-                  scene={scene}
-                />
+                <SceneSettingsFields campaign={campaign} sceneId={active.id} scene={scene} />
               ) : (
                 <p className="muted">Loading scene settings…</p>
               )}
               <GraphicPicker
                 label="Scene graphic"
                 graphic={graphic}
-                onChange={(next) =>
-                  setEntityGraphic(campaign, "scene", active.id, next)
-                }
+                onChange={(next) => setEntityGraphic(campaign, "scene", active.id, next)}
                 onReset={() => setEntityGraphic(campaign, "scene", active.id)}
               />
             </>

@@ -1,6 +1,6 @@
-import { stampTime } from '../../lib/hlc'
+import { stampTime } from "../../lib/hlc";
 
-import type { ChatMessage, SystemMessage } from './types'
+import type { ChatMessage, SystemMessage } from "./types";
 
 /*
  * The log split at the GM's session markers, so earlier sessions can be
@@ -11,38 +11,39 @@ import type { ChatMessage, SystemMessage } from './types'
 
 export interface SessionPart {
   /** The starting marker's id, or "before" for messages before the first one. */
-  key: string
-  marker: SystemMessage | null
-  messages: ChatMessage[]
+  key: string;
+  marker: SystemMessage | null;
+  messages: ChatMessage[];
   /** The latest part, which is never folded. */
-  current: boolean
+  current: boolean;
 }
 
-export const isSessionStart = (m: ChatMessage): m is SystemMessage => m.kind === 'system' && m.event === 'session-start'
+export const isSessionStart = (m: ChatMessage): m is SystemMessage =>
+  m.kind === "system" && m.event === "session-start";
 
 export function splitSessions(messages: ChatMessage[]): SessionPart[] {
-  const parts: SessionPart[] = []
-  let part: SessionPart = { key: 'before', marker: null, messages: [], current: false }
+  const parts: SessionPart[] = [];
+  let part: SessionPart = { key: "before", marker: null, messages: [], current: false };
   for (const m of messages) {
     if (isSessionStart(m)) {
-      if (part.marker || part.messages.length) parts.push(part)
-      part = { key: m.id, marker: m, messages: [], current: false }
+      if (part.marker || part.messages.length) parts.push(part);
+      part = { key: m.id, marker: m, messages: [], current: false };
     } else {
-      part.messages.push(m)
+      part.messages.push(m);
     }
   }
-  if (part.marker || part.messages.length) parts.push(part)
-  if (parts.length) (parts)[parts.length - 1]!.current = true
-  return parts
+  if (part.marker || part.messages.length) parts.push(part);
+  if (parts.length) parts[parts.length - 1]!.current = true;
+  return parts;
 }
 
 /** Messages from one person within this long share a header. */
-export const GROUP_MS = 5 * 60 * 1000
+export const GROUP_MS = 5 * 60 * 1000;
 
 /** One row of the chat log as shown: a message, or an earlier session's fold. */
 export type LogRow =
-  | { kind: 'message'; key: string; m: ChatMessage; header: boolean }
-  | { kind: 'fold'; key: string; part: string; title: string; count: number; open: boolean }
+  | { kind: "message"; key: string; m: ChatMessage; header: boolean }
+  | { kind: "fold"; key: string; part: string; title: string; count: number; open: boolean };
 
 /**
  * The log flattened into the rows it shows, so the panel can render just a
@@ -50,30 +51,36 @@ export type LogRow =
  * when open; the current session shows its marker and everything after it.
  */
 export function logRows(messages: ChatMessage[], isOpen: (part: string) => boolean): LogRow[] {
-  const rows: LogRow[] = []
+  const rows: LogRow[] = [];
   const add = (list: ChatMessage[]) =>
     list.forEach((m, i) => {
-      const prev = list[i - 1]
+      const prev = list[i - 1];
       const header =
-        m.kind !== 'system' && (!prev || prev.kind === 'system' || prev.author !== m.author || stampTime(m.hlc) - stampTime(prev.hlc) > GROUP_MS)
-      rows.push({ kind: 'message', key: m.id, m, header })
-    })
+        m.kind !== "system" &&
+        (!prev ||
+          prev.kind === "system" ||
+          prev.author !== m.author ||
+          stampTime(m.hlc) - stampTime(prev.hlc) > GROUP_MS);
+      rows.push({ kind: "message", key: m.id, m, header });
+    });
   for (const part of splitSessions(messages)) {
     if (part.current) {
-      if (part.marker) add([part.marker])
-      add(part.messages)
-      continue
+      if (part.marker) add([part.marker]);
+      add(part.messages);
+      continue;
     }
-    const open = isOpen(part.key)
+    const open = isOpen(part.key);
     rows.push({
-      kind: 'fold',
+      kind: "fold",
       key: `fold:${part.key}`,
       part: part.key,
-      title: part.marker ? `Session ${part.marker.session ?? ''}`.trim() : 'Before the first session',
-      count: part.messages.filter((m) => m.kind !== 'system').length,
+      title: part.marker
+        ? `Session ${part.marker.session ?? ""}`.trim()
+        : "Before the first session",
+      count: part.messages.filter((m) => m.kind !== "system").length,
       open,
-    })
-    if (open) add(part.messages)
+    });
+    if (open) add(part.messages);
   }
-  return rows
+  return rows;
 }

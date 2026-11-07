@@ -21,22 +21,16 @@ async function sampleColour(bitmap: ImageBitmap): Promise<string> {
   return dominantColour(context.getImageData(0, 0, 64, 64).data);
 }
 
-async function runTask(
-  task: ImageWorkerRequest["task"],
-): Promise<ImageWorkerResult> {
+async function runTask(task: ImageWorkerRequest["task"]): Promise<ImageWorkerResult> {
   if (task.type === "decode") {
     return { type: "decode", bitmap: await createImageBitmap(task.blob) };
   }
 
   const bitmap = await createImageBitmap(task.blob);
   try {
-    if (task.type === "colour")
-      return { type: "colour", colour: await sampleColour(bitmap) };
+    if (task.type === "colour") return { type: "colour", colour: await sampleColour(bitmap) };
 
-    const scale = Math.min(
-      1,
-      MAX_IMAGE_SIZE / Math.max(bitmap.width, bitmap.height),
-    );
+    const scale = Math.min(1, MAX_IMAGE_SIZE / Math.max(bitmap.width, bitmap.height));
     const width = Math.max(1, Math.round(bitmap.width * scale));
     const height = Math.max(1, Math.round(bitmap.height * scale));
     const canvas = new OffscreenCanvas(width, height);
@@ -56,10 +50,7 @@ async function runTask(
 scope.onmessage = async ({ data }) => {
   try {
     const result = await runTask(data.task);
-    scope.postMessage(
-      { id: data.id, result },
-      result.type === "decode" ? [result.bitmap] : [],
-    );
+    scope.postMessage({ id: data.id, result }, result.type === "decode" ? [result.bitmap] : []);
   } catch (error) {
     scope.postMessage({
       id: data.id,

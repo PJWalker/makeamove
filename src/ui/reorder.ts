@@ -71,18 +71,14 @@ export function startReorder(o: ReorderOptions) {
       // The click that ends a drag is not a press on the item.
       const swallow = (ev: Event) => ev.stopPropagation();
       window.addEventListener("click", swallow, { capture: true, once: true });
-      setTimeout(
-        () => window.removeEventListener("click", swallow, { capture: true }),
-        0,
-      );
+      setTimeout(() => window.removeEventListener("click", swallow, { capture: true }), 0);
       o.onEnd?.();
     }
   }
 
   function move(e: PointerEvent) {
     if (!lifted) {
-      if (Math.hypot(e.clientX - startX, e.clientY - startY) < LIFT_DISTANCE)
-        return;
+      if (Math.hypot(e.clientX - startX, e.clientY - startY) < LIFT_DISTANCE) return;
       lifted = true;
       el.classList.add("reorder-lifted");
       document.documentElement.classList.add("is-reordering");

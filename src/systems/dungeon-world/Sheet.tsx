@@ -10,10 +10,7 @@ export function DungeonWorldSheet(props: SheetProps) {
   return (
     <SheetFrame {...sheet}>
       <SheetSectionView {...sheet} section={{ kind: "header" }} />
-      <SheetSectionView
-        {...sheet}
-        section={{ kind: "choices", choices: ["class"] }}
-      />
+      <SheetSectionView {...sheet} section={{ kind: "choices", choices: ["class"] }} />
       <SheetSectionView
         {...sheet}
         section={{
@@ -53,18 +50,9 @@ export function DungeonWorldSheet(props: SheetProps) {
           ],
         }}
       />
-      <SheetSectionView
-        {...sheet}
-        section={{ kind: "stats", label: "Abilities & debilities" }}
-      />
-      <SheetSectionView
-        {...sheet}
-        section={{ kind: "modifiers", label: "Situation" }}
-      />
-      <SheetSectionView
-        {...sheet}
-        section={{ kind: "actions", label: "Moves" }}
-      />
+      <SheetSectionView {...sheet} section={{ kind: "stats", label: "Abilities & debilities" }} />
+      <SheetSectionView {...sheet} section={{ kind: "modifiers", label: "Situation" }} />
+      <SheetSectionView {...sheet} section={{ kind: "actions", label: "Moves" }} />
       <SheetSectionView {...sheet} section={{ kind: "inventory" }} />
     </SheetFrame>
   );

@@ -10,21 +10,21 @@ const slug = (value: string) =>
 function abilities(title: string) {
   const start = source.indexOf(title);
   if (start < 0) return [];
-  const section = source
-    .slice(start + title.length)
-    .split(/^#{1,2} /m)[0] ?? "";
+  const section = source.slice(start + title.length).split(/^#{1,2} /m)[0] ?? "";
   const headings = [...section.matchAll(/^### (.+)$/gm)];
   return headings.flatMap((heading, index) => {
     const name = heading[1]?.trim();
     if (!name || heading.index === undefined) return [];
     const next = headings[index + 1];
-    return [{
-      id: slug(name),
-      name,
-      text: section
-        .slice(heading.index + (heading[0]?.length ?? 0), next?.index ?? section.length)
-        .trim(),
-    }];
+    return [
+      {
+        id: slug(name),
+        name,
+        text: section
+          .slice(heading.index + (heading[0]?.length ?? 0), next?.index ?? section.length)
+          .trim(),
+      },
+    ];
   });
 }
 

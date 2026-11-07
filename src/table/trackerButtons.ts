@@ -1,7 +1,13 @@
 import { InputRule, mergeAttributes, Node, PasteRule } from "@tiptap/core";
 import type { Campaign } from "../campaign/campaign";
 import { selectedCharacterId } from "../features/characters/api";
-import { parseTrackerButton, pressTracker, trackerBlock, trackerToken, type TrackerButton } from "../features/characters/trackers";
+import {
+  parseTrackerButton,
+  pressTracker,
+  trackerBlock,
+  trackerToken,
+  type TrackerButton,
+} from "../features/characters/trackers";
 
 /*
  * Inline resource buttons in rich text: typing or pasting [[+1 XP]] (or
@@ -20,7 +26,11 @@ export function shake(el: Element) {
 }
 
 /** What a press does, as its tooltip: the change, or why it can't happen. */
-export function trackerTip(campaign: Campaign, characterId: string | null | undefined, b: TrackerButton): string {
+export function trackerTip(
+  campaign: Campaign,
+  characterId: string | null | undefined,
+  b: TrackerButton,
+): string {
   const blocked = trackerBlock(campaign, characterId, b);
   if (blocked) return blocked;
   return `${b.by > 0 ? "Add" : "Spend"} ${Math.abs(b.by)} ${b.name}`;
@@ -42,7 +52,10 @@ export function trackerButtonExtension(campaign: Campaign) {
       return {
         by: { default: 1, parseHTML: (el: HTMLElement) => Number(el.dataset.by ?? 1) },
         name: { default: "", parseHTML: (el: HTMLElement) => el.dataset.name ?? "" },
-        label: { default: "", parseHTML: (el: HTMLElement) => el.dataset.label ?? el.textContent ?? "" },
+        label: {
+          default: "",
+          parseHTML: (el: HTMLElement) => el.dataset.label ?? el.textContent ?? "",
+        },
       };
     },
     parseHTML() {
@@ -92,7 +105,8 @@ export function trackerButtonExtension(campaign: Campaign) {
     },
     onCreate() {
       const dom = this.editor.view.dom;
-      const buttonAt = (e: Event) => (e.target as Element).closest<HTMLElement>(`[data-type="${TRACKER_NODE}"]`);
+      const buttonAt = (e: Event) =>
+        (e.target as Element).closest<HTMLElement>(`[data-type="${TRACKER_NODE}"]`);
       const toButton = (el: HTMLElement): TrackerButton => ({
         by: Number(el.dataset.by ?? 0),
         name: el.dataset.name ?? "",

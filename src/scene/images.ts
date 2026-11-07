@@ -6,8 +6,6 @@ import {
 } from "./imageWorkerProtocol";
 import type { BlobRef } from "./types";
 
-export { MAX_IMAGE_SIZE } from "./imageWorkerProtocol";
-
 type PendingRequest = {
   resolve: (result: ImageWorkerResult) => void;
   reject: (error: Error) => void;
@@ -31,8 +29,7 @@ function getImageWorker() {
   worker.onmessage = ({ data }: MessageEvent<ImageWorkerResponse>) => {
     const pending = pendingRequests.get(data.id);
     if (!pending) {
-      if ("result" in data && data.result.type === "decode")
-        data.result.bitmap.close();
+      if ("result" in data && data.result.type === "decode") data.result.bitmap.close();
       return;
     }
     pendingRequests.delete(data.id);
@@ -56,8 +53,7 @@ function runImageTask<T extends ImageWorkerRequest["task"]["type"]>(
   const worker = getImageWorker();
   return new Promise((resolve, reject) => {
     pendingRequests.set(id, {
-      resolve: (result) =>
-        resolve(result as Extract<ImageWorkerResult, { type: T }>),
+      resolve: (result) => resolve(result as Extract<ImageWorkerResult, { type: T }>),
       reject,
     });
     try {
@@ -87,10 +83,7 @@ type BlobFetcher = (hash: string) => Promise<Blob | null>;
 let fetchFromPeers: BlobFetcher | null = null;
 
 /** Set (or clear) how to get images this device lacks, e.g. from other players. */
-export function setBlobFetcher(
-  fn: BlobFetcher | null,
-  onlyIfCurrent?: BlobFetcher,
-) {
+export function setBlobFetcher(fn: BlobFetcher | null, onlyIfCurrent?: BlobFetcher) {
   if (onlyIfCurrent && fetchFromPeers !== onlyIfCurrent) return;
   fetchFromPeers = fn;
   if (fn) for (const l of fetcherListeners) l();
@@ -117,9 +110,7 @@ export function loadBitmap(hash: string): Promise<ImageBitmap | null> {
   if (!p) {
     p = getBlob(hash)
       .then((blob) => blob ?? fetchFromPeers?.(hash) ?? null)
-      .then(async (blob) =>
-        blob ? (await runImageTask({ type: "decode", blob })).bitmap : null,
-      );
+      .then(async (blob) => (blob ? (await runImageTask({ type: "decode", blob })).bitmap : null));
     bitmaps.set(hash, p);
     // A miss isn't final: a peer may have it later.
     p.then((b) => b || bitmaps.delete(hash));

@@ -49,10 +49,7 @@ export function parseCsv(source: string): CsvRecord[] {
     .filter((cells) => cells.some(Boolean))
     .map((cells) =>
       Object.fromEntries(
-        header.map((key, index) => [
-          key.replace(/^\uFEFF/, ""),
-          cells[index] ?? "",
-        ]),
+        header.map((key, index) => [key.replace(/^\uFEFF/, ""), cells[index] ?? ""]),
       ),
     );
 }
@@ -100,17 +97,13 @@ export const CLASSES: DaggerheartClass[] = records.classes.map((record) => ({
   domains: [field(record, "Domain 1"), field(record, "Domain 2")],
   evasion: Number(field(record, "Evasion")),
   hp: Number(field(record, "HP")),
-  suggestedTraits: (field(record, "Suggested Traits").match(/[+-]?\d+/g) ?? []).map(
-    Number,
-  ),
+  suggestedTraits: (field(record, "Suggested Traits").match(/[+-]?\d+/g) ?? []).map(Number),
   items: field(record, "Items"),
   hopeFeature: {
     name: field(record, "Hope Feature Name"),
     text: field(record, "Hope Feature Text"),
   },
-  features: [1, 2, 3]
-    .map((index) => feature(record, index))
-    .filter((entry) => entry.name),
+  features: [1, 2, 3].map((index) => feature(record, index)).filter((entry) => entry.name),
   subclasses: [field(record, "Subclass 1"), field(record, "Subclass 2")],
 }));
 
@@ -118,9 +111,7 @@ export const ANCESTRIES = records.ancestries.map((record) => ({
   id: slug(field(record, "Name")),
   name: field(record, "Name"),
   description: field(record, "Description"),
-  features: [1, 2]
-    .map((index) => feature(record, index))
-    .filter((entry) => entry.name),
+  features: [1, 2].map((index) => feature(record, index)).filter((entry) => entry.name),
 }));
 
 export const COMMUNITIES = records.communities.map((record) => ({
@@ -131,9 +122,7 @@ export const COMMUNITIES = records.communities.map((record) => ({
 }));
 
 const classForSubclass = new Map<string, string>(
-  CLASSES.flatMap((entry) =>
-    entry.subclasses.map((name) => [name, entry.id] as const),
-  ),
+  CLASSES.flatMap((entry) => entry.subclasses.map((name) => [name, entry.id] as const)),
 );
 export const SUBCLASSES = records.subclasses.map((record) => ({
   id: slug(field(record, "Name")),

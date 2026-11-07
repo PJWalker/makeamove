@@ -29,12 +29,19 @@ export function MoveBody({
   characterId: string | null | undefined;
 }) {
   const system = systemOf(campaign);
-  const json = useY(campaign.characters, () => JSON.stringify(getCharacter(campaign, characterId ?? undefined) ?? null));
+  const json = useY(campaign.characters, () =>
+    JSON.stringify(getCharacter(campaign, characterId ?? undefined) ?? null),
+  );
   const c = JSON.parse(json) as CharacterView | null;
   const Form = MOVE_FORMS[system.id]?.[move.id];
   return (
     <>
-      <FormattedText campaign={campaign} text={move.text} characterId={characterId ?? null} className="move-text move-window-text" />
+      <FormattedText
+        campaign={campaign}
+        text={move.text}
+        characterId={characterId ?? null}
+        className="move-text move-window-text"
+      />
       {Form && c?.kind === "pc" && (
         <Form key={c.id} sheet={{ campaign, c, system, editable: canEdit(campaign, c) }} />
       )}

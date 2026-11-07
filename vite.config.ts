@@ -50,10 +50,7 @@ export default defineConfig({
   plugins: [
     react({
       babel: {
-        plugins: [
-
-          ["module:@preact/signals-react-transform", { mode: "all" }],
-        ],
+        plugins: [["module:@preact/signals-react-transform", { mode: "all" }]],
       },
     }),
     // Icons are compiled into the bundle from local Iconify data, so they work offline.

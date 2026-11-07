@@ -1,8 +1,8 @@
-import * as Y from 'yjs'
-import { IndexeddbPersistence } from 'y-indexeddb'
-import { newSecret } from '../../lib/ids'
-import { dataName } from '../../platform/dataEpoch'
-import { SyncSession } from '../../sync/session'
+import * as Y from "yjs";
+import { IndexeddbPersistence } from "y-indexeddb";
+import { newSecret } from "../../lib/ids";
+import { dataName } from "../../platform/dataEpoch";
+import { SyncSession } from "../../sync/session";
 
 /*
  * The GM vault: a document of its own for GM-only pages, kept apart from the
@@ -19,10 +19,11 @@ import { SyncSession } from '../../sync/session'
  * of the campaign root.
  */
 
-export const vaultDbName = (campaignId: string) => dataName('vault', campaignId)
-export const vaultGuid = (campaignId: string) => `${campaignId}/vault`
+export const vaultDbName = (campaignId: string) => dataName("vault", campaignId);
+export const vaultGuid = (campaignId: string) => `${campaignId}/vault`;
 /** Its own guid, so a page revealed later doesn't collide with its vault copy. */
-export const vaultNoteGuid = (campaignId: string, noteId: string) => `${campaignId}/gm-note/${noteId}`
+export const vaultNoteGuid = (campaignId: string, noteId: string) =>
+  `${campaignId}/gm-note/${noteId}`;
 
 export class Vault {
   readonly doc: Y.Doc;
@@ -38,10 +39,7 @@ export class Vault {
     this.meta = this.doc.getMap("meta");
     this.notes = this.doc.getMap("notes");
     this.characterText = this.doc.getMap("characterText");
-    this.persistence = new IndexeddbPersistence(
-      vaultDbName(campaignId),
-      this.doc,
-    );
+    this.persistence = new IndexeddbPersistence(vaultDbName(campaignId), this.doc);
   }
 
   static async open(campaignId: string): Promise<Vault> {

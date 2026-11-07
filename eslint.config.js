@@ -33,11 +33,13 @@ export default defineConfig([
       "no-empty": ["error", { allowEmptyCatch: true }],
       "no-useless-escape": "warn",
       "no-case-declarations": "warn",
-      "react/no-unknown-property": "warn",
+      // `closedby` is a standard <dialog> attribute React doesn't know yet.
+      "react/no-unknown-property": ["error", { ignore: ["closedby"] }],
       "react/no-unescaped-entities": "warn",
       "react/display-name": "warn",
       "react/prop-types": "off",
-      "jsx-a11y/no-autofocus": "warn",
+      // Dialogs, menus and inline renames deliberately move focus in when they open.
+      "jsx-a11y/no-autofocus": "off",
       "jsx-a11y/no-noninteractive-tabindex": "warn",
       "jsx-a11y/no-noninteractive-element-interactions": "warn",
       "jsx-a11y/no-static-element-interactions": "warn",

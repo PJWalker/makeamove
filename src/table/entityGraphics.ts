@@ -35,9 +35,7 @@ export function getDefaultEntityGraphic(
   if (kind === "character") {
     const character = getCharacter(campaign, id);
     if (character?.base) {
-      const inherited = campaign.entityGraphics.get(
-        entityGraphicKey(kind, character.base),
-      );
+      const inherited = campaign.entityGraphics.get(entityGraphicKey(kind, character.base));
       if (inherited) return inherited;
     }
     name =

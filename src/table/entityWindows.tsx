@@ -24,13 +24,7 @@ import { IconPost, IconRoll, IconTarget } from "../ui/icons";
 import { Button } from "../ui/Button";
 import { usePopupDialog } from "./usePopupDialog";
 import { Dialog, type WindowProxy } from "./CampaignDialogs";
-import {
-  closeEntityTab,
-  detachPanel,
-  dockPanel,
-  isFloating,
-  layout,
-} from "./panelLayout";
+import { closeEntityTab, detachPanel, dockPanel, isFloating, layout } from "./panelLayout";
 import { locate } from "./layoutModel";
 import type { DockItemId } from "./panelLayout";
 import type { MenuItem } from "./ContextMenu";
@@ -66,8 +60,7 @@ function load(): Record<string, EntityWindowRecord> {
   if (!Array.isArray(saved)) return {};
   const records: Record<string, EntityWindowRecord> = {};
   for (const item of saved as SavedEntityWindow[]) {
-    if (!item?.id?.startsWith("entity:") || typeof item.title !== "string")
-      continue;
+    if (!item?.id?.startsWith("entity:") || typeof item.title !== "string") continue;
     const id = item.id as DockItemId;
     records[id] = { id, title: item.title, text: item.text, tags: item.tags };
   }
@@ -79,9 +72,12 @@ export const entityWindows = signal<Record<string, EntityWindowRecord>>(load());
 export const entityTabId = (key: string) => `entity:${key}` as const;
 
 function persist(records: Record<string, EntityWindowRecord>) {
-  const saved: SavedEntityWindow[] = Object.values(records).map(
-    ({ id, title, text, tags }) => ({ id, title, text, tags }),
-  );
+  const saved: SavedEntityWindow[] = Object.values(records).map(({ id, title, text, tags }) => ({
+    id,
+    title,
+    text,
+    tags,
+  }));
   setStorageJson(META_KEY, saved);
 }
 
@@ -119,14 +115,12 @@ export function EntityWindowHost({ campaign }: { campaign: Campaign }) {
       const key = id.slice("entity:entry:".length);
       if (key.startsWith("inventory:")) {
         const parts = key.slice("inventory:".length).split(":");
-        const character =
-          parts.length === 2 ? getCharacter(campaign, parts[0]) : undefined;
+        const character = parts.length === 2 ? getCharacter(campaign, parts[0]) : undefined;
         if (!character?.inventory.some((item) => item.id === parts[1]))
           closeEntityWindow(id as DockItemId);
       } else if (key.startsWith("move:")) {
         const moveId = key.split(":").at(-1);
-        if (!system.actions.some((move) => move.id === moveId))
-          closeEntityWindow(id as DockItemId);
+        if (!system.actions.some((move) => move.id === moveId)) closeEntityWindow(id as DockItemId);
       } else if (key.startsWith("lib:")) {
         const found = entryByKey(sources, key);
         if (found && !found.entry) {
@@ -146,13 +140,7 @@ export function EntityWindowHost({ campaign }: { campaign: Campaign }) {
   );
 }
 
-function EntityPopup({
-  campaign,
-  record,
-}: {
-  campaign: Campaign;
-  record: EntityWindowRecord;
-}) {
+function EntityPopup({ campaign, record }: { campaign: Campaign; record: EntityWindowRecord }) {
   const ref = usePopupDialog();
   const menu = useSignal<{ x: number; y: number } | null>(null);
   const trigger = menuTrigger((x, y) => (menu.value = { x, y }));
@@ -171,9 +159,7 @@ function EntityPopup({
     },
     "divider",
     { label: "Close", onSelect: close },
-    ...(record.menuItems?.length
-      ? ["divider" as const, ...record.menuItems]
-      : []),
+    ...(record.menuItems?.length ? ["divider" as const, ...record.menuItems] : []),
   ];
   return (
     <>
@@ -195,11 +181,7 @@ function EntityPopup({
         )}
       </Dialog>
       {menu.value && (
-        <ContextMenu
-          {...menu.value}
-          items={items}
-          onClose={() => (menu.value = null)}
-        />
+        <ContextMenu {...menu.value} items={items} onClose={() => (menu.value = null)} />
       )}
     </>
   );
@@ -216,27 +198,17 @@ export function EntityWindowContent({
   campaign: Campaign;
   record: EntityWindowRecord;
 }) {
-  const key = record.id.startsWith("entity:entry:")
-    ? record.id.slice("entity:entry:".length)
-    : "";
+  const key = record.id.startsWith("entity:entry:") ? record.id.slice("entity:entry:".length) : "";
   const inventoryParts = key.startsWith("inventory:")
     ? key.slice("inventory:".length).split(":")
     : [];
-  const inventoryCharacterId =
-    inventoryParts.length === 2 ? inventoryParts[0] : undefined;
-  const moveParts = key.startsWith("move:")
-    ? key.slice("move:".length).split(":")
-    : [];
+  const inventoryCharacterId = inventoryParts.length === 2 ? inventoryParts[0] : undefined;
+  const moveParts = key.startsWith("move:") ? key.slice("move:".length).split(":") : [];
   const moveOwnerId = moveParts.length > 1 ? moveParts[0] : undefined;
-  const moveId =
-    moveParts.length > 1 ? moveParts.slice(1).join(":") : moveParts[0];
+  const moveId = moveParts.length > 1 ? moveParts.slice(1).join(":") : moveParts[0];
   const system = useY(campaign.homebrew, () => systemOf(campaign));
-  const selectedId = useY(campaign.members, () =>
-    selectedCharacterId(campaign),
-  );
-  const selectedCharacter = useY(campaign.characters, () =>
-    getCharacter(campaign, selectedId),
-  );
+  const selectedId = useY(campaign.members, () => selectedCharacterId(campaign));
+  const selectedCharacter = useY(campaign.characters, () => getCharacter(campaign, selectedId));
   const inventoryCharacter = useY(campaign.characters, () =>
     getCharacter(campaign, inventoryCharacterId),
   );
@@ -247,9 +219,7 @@ export function EntityWindowContent({
   if (record.content) return <>{record.content}</>;
 
   const text = (
-    <p className="move-text move-window-text">
-      {record.text ?? "This window is not available."}
-    </p>
+    <p className="move-text move-window-text">{record.text ?? "This window is not available."}</p>
   );
   if (inventoryCharacter && inventoryParts.length === 2) {
     const item = inventoryCharacter.inventory.find(
@@ -294,8 +264,7 @@ export function EntityWindowContent({
   if (key.startsWith("lib:")) {
     const entry = entryByKey(librariesFor(baseSystemOf(campaign)), key)?.entry;
     if (!entry) return text;
-    const editable =
-      !!selectedCharacter && canEdit(campaign, selectedCharacter);
+    const editable = !!selectedCharacter && canEdit(campaign, selectedCharacter);
     if (entry.kind === "item") {
       return (
         <>
@@ -303,14 +272,9 @@ export function EntityWindowContent({
           <Button
             variant="primary"
             disabled={!editable}
-            onClick={() =>
-              selectedCharacter &&
-              addItem(campaign, selectedCharacter.id, entry.item)
-            }
+            onClick={() => selectedCharacter && addItem(campaign, selectedCharacter.id, entry.item)}
           >
-            {selectedCharacter
-              ? `Give to ${selectedCharacter.name}`
-              : "Choose a character"}
+            {selectedCharacter ? `Give to ${selectedCharacter.name}` : "Choose a character"}
           </Button>
         </>
       );
@@ -346,9 +310,7 @@ export function EntityWindowContent({
         {moveCharacter.learned.includes(move.id) && editable && (
           <Button
             variant="ghost"
-            onClick={() =>
-              setLearned(campaign, moveCharacter.id, move.id, false)
-            }
+            onClick={() => setLearned(campaign, moveCharacter.id, move.id, false)}
           >
             Forget
           </Button>

@@ -22,11 +22,7 @@ export function contentFromText(text: string): ChatContent {
   return { type: "doc", content: [{ type: "paragraph", content }] };
 }
 
-export function entityContent(
-  kind: LinkKind,
-  id: string,
-  label: string,
-): ChatContent {
+export function entityContent(kind: LinkKind, id: string, label: string): ChatContent {
   return {
     type: "doc",
     content: [
@@ -54,28 +50,18 @@ function entityTokenOf(node: JSONContent): string {
   );
 }
 
-function inlineText(
-  node: JSONContent,
-  linkText: (node: JSONContent) => string,
-): string {
+function inlineText(node: JSONContent, linkText: (node: JSONContent) => string): string {
   if (node.type === "text") return node.text ?? "";
   if (node.type === LINK_NODE) return linkText(node);
   if (node.type === "hardBreak") return "\n";
-  return (node.content ?? [])
-    .map((child) => inlineText(child, linkText))
-    .join("");
+  return (node.content ?? []).map((child) => inlineText(child, linkText)).join("");
 }
 
 export function commandText(content: ChatContent): string {
-  return (content.content ?? [])
-    .map((block) => inlineText(block, entityTokenOf))
-    .join("\n");
+  return (content.content ?? []).map((block) => inlineText(block, entityTokenOf)).join("\n");
 }
 
-export function plainText(
-  content: ChatContent,
-  nameOf: NameOf = () => null,
-): string {
+export function plainText(content: ChatContent, nameOf: NameOf = () => null): string {
   const linkText = (node: JSONContent) => {
     const attrs = attrsOf(node);
     return (
@@ -85,26 +71,17 @@ export function plainText(
       "a link"
     );
   };
-  return (content.content ?? [])
-    .map((block) => inlineText(block, linkText))
-    .join("\n");
+  return (content.content ?? []).map((block) => inlineText(block, linkText)).join("\n");
 }
 
 function nodeLength(node: JSONContent): number {
   if (node.type === "text") return node.text?.length ?? 0;
   if (node.type === LINK_NODE) return entityTokenOf(node).length;
   if (node.type === "hardBreak") return 1;
-  return (node.content ?? []).reduce(
-    (length, child) => length + nodeLength(child),
-    0,
-  );
+  return (node.content ?? []).reduce((length, child) => length + nodeLength(child), 0);
 }
 
-function sliceInline(
-  nodes: JSONContent[],
-  start: number,
-  end: number,
-): JSONContent[] {
+function sliceInline(nodes: JSONContent[], start: number, end: number): JSONContent[] {
   const selected: JSONContent[] = [];
   let offset = 0;
   for (const node of nodes) {
@@ -136,10 +113,7 @@ function sliceInline(
   return selected;
 }
 
-export function contentForCommand(
-  content: ChatContent,
-  body: string,
-): ChatContent {
+export function contentForCommand(content: ChatContent, body: string): ChatContent {
   if (!body) return emptyChatContent();
   const source = commandText(content);
   const start = source.lastIndexOf(body);

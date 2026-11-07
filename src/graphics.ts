@@ -1,8 +1,6 @@
 import type { BlobRef } from "./scene/types";
 
-export type EntityGraphic =
-  | { kind: "icon"; name: string }
-  | { kind: "image"; image: BlobRef };
+export type EntityGraphic = { kind: "icon"; name: string } | { kind: "image"; image: BlobRef };
 
 export interface EntityGraphicRef {
   kind: string;

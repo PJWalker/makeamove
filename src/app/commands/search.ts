@@ -53,9 +53,7 @@ export function rank(
   const matches = typed
     ? new Fuse(actions, fuseOptions).search(typed)
     : actions.map((item) => ({ item, score: 0 }));
-  const registrationOrder = new Map(
-    actions.map((action, index) => [action, index]),
-  );
+  const registrationOrder = new Map(actions.map((action, index) => [action, index]));
   const scored: { a: Action; s: number; i: number }[] = [];
   matches.forEach(({ item: a, score }) => {
     const base = 100 * (1 - (score ?? 0));

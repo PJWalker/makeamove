@@ -1,17 +1,11 @@
-import { menuTrigger } from '../ui/menuTrigger'
-import { addTokens, combatantForToken, hasCombat, tokenMarksSource } from '../features/combat/api'
-import { bounds } from '../scene/geometry'
-import { toScreen } from '../scene/camera'
-import { setMorphOrigin } from '../ui/morph'
+import { menuTrigger } from "../ui/menuTrigger";
+import { addTokens, combatantForToken, hasCombat, tokenMarksSource } from "../features/combat/api";
+import { bounds } from "../scene/geometry";
+import { toScreen } from "../scene/camera";
+import { setMorphOrigin } from "../ui/morph";
 import { openPopup } from "../ui/popup";
-import {
-  effect,
-  type Signal,
-  untracked,
-  useSignal,
-  useSignalEffect,
-} from "@preact/signals-react";
-import { device } from '../platform/device'
+import { effect, type Signal, untracked, useSignal, useSignalEffect } from "@preact/signals-react";
+import { device } from "../platform/device";
 import {
   useCallback,
   useEffect,
@@ -22,9 +16,9 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from "react";
 import { SceneController } from "../scene/controller";
-import { SceneRenderer } from '../scene/renderer'
-import { activeTool } from '../scene/tools'
-import { SceneDoc } from '../scene/sceneDoc'
+import { SceneRenderer } from "../scene/renderer";
+import { activeTool } from "../scene/tools";
+import { SceneDoc } from "../scene/sceneDoc";
 import type { Point } from "../scene/grid";
 import { importImage } from "../scene/images";
 import {
@@ -35,12 +29,20 @@ import {
   type TokenStyle,
 } from "../scene/types";
 import type { Campaign } from "../campaign/campaign";
-import { canEdit, createCopy, getCharacter, listCharacters, selectCharacter, systemOf, tokenStatsSource } from '../features/characters/api'
-import { tokenName } from '../features/characters/templates'
-import { CharacterSheet } from './sheets'
-import { useY } from '../ui/useY'
+import {
+  canEdit,
+  createCopy,
+  getCharacter,
+  listCharacters,
+  selectCharacter,
+  systemOf,
+  tokenStatsSource,
+} from "../features/characters/api";
+import { tokenName } from "../features/characters/templates";
+import { CharacterSheet } from "./sheets";
+import { useY } from "../ui/useY";
 import { BlobImage } from "../ui/BlobImage";
-import { Button } from '../ui/Button'
+import { Button } from "../ui/Button";
 import {
   IconAdd,
   IconDelete,
@@ -62,13 +64,19 @@ import {
   IconUndo,
   IconUnlock,
 } from "../ui/icons";
-import { isTyping, MOD } from '../ui/keys'
-import { PopupTabs } from '../ui/PopupTabs'
-import { Segmented } from '../ui/Segmented'
-import { Dialog } from './CampaignDialogs'
+import { isTyping, MOD } from "../ui/keys";
+import { PopupTabs } from "../ui/PopupTabs";
+import { Segmented } from "../ui/Segmented";
+import { Dialog } from "./CampaignDialogs";
 import { SceneSettingsFields } from "./SceneSettingsFields";
-import { showPanel } from './panelLayout'
-import { dropOn, dropTargetAt, itemDefinitionForToken, itemTokenEntity, setDropCursor } from './entityDrag'
+import { showPanel } from "./panelLayout";
+import {
+  dropOn,
+  dropTargetAt,
+  itemDefinitionForToken,
+  itemTokenEntity,
+  setDropCursor,
+} from "./entityDrag";
 import {
   activeMapColour,
   canvasCommands,
@@ -84,234 +92,258 @@ import {
   sceneDropFlash,
   sceneDropHighlight,
 } from "./canvasState";
-import { formatDistance } from '../scene/measure'
+import { formatDistance } from "../scene/measure";
 import { linkProxy } from "./LinkChip";
-import { ContextMenu, type MenuItem } from './ContextMenu'
+import { ContextMenu, type MenuItem } from "./ContextMenu";
 
 /**
  * The scene canvas: hosts the PixiJS renderer and wires it to the active
  * scene. Loaded lazily, so PixiJS stays out of the lobby's bundle.
  */
-export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign; sceneId: string | null }) {
-  const hostRef = useRef<HTMLDivElement>(null)
-  const fileRef = useRef<HTMLInputElement>(null)
-  const importAt = useRef<Point | null>(null)
-  const [renderer] = useState(() => new SceneRenderer())
-  const ready = useSignal(false)
+export default function SceneCanvas({
+  campaign,
+  sceneId,
+}: {
+  campaign: Campaign;
+  sceneId: string | null;
+}) {
+  const hostRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const importAt = useRef<Point | null>(null);
+  const [renderer] = useState(() => new SceneRenderer());
+  const ready = useSignal(false);
   const controller = useSignal<SceneController | null>(null);
-  const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(null)
-  const tokenOptions = useSignal<string | null>(null)
+  const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(null);
+  const tokenOptions = useSignal<string | null>(null);
   /** Which tab the token pop-up opens on. */
-  const tokenTab = useSignal<'character' | 'token'>('token')
-  const dropping = useSignal(false)
-  const lastDropFlash = useRef(0)
+  const tokenTab = useSignal<"character" | "token">("token");
+  const dropping = useSignal(false);
+  const lastDropFlash = useRef(0);
 
   useSignalEffect(() => {
-    if (!ready.value) return
-    renderer.setDropHighlight(sceneDropHighlight.value)
-    const flash = sceneDropFlash.value
+    if (!ready.value) return;
+    renderer.setDropHighlight(sceneDropHighlight.value);
+    const flash = sceneDropFlash.value;
     if (flash && flash.nonce !== lastDropFlash.current) {
-      lastDropFlash.current = flash.nonce
-      renderer.flashToken(flash.tokenId)
+      lastDropFlash.current = flash.nonce;
+      renderer.flashToken(flash.tokenId);
     }
-  })
+  });
 
   // Selecting a character's token goes to that character's sheet.
   useEffect(() => {
-    const ctl = controller.value
-    if (!ctl) return
-    let last = ''
-    let first = true
+    const ctl = controller.value;
+    if (!ctl) return;
+    let last = "";
+    let first = true;
     return ctl.selection.subscribe((sel) => {
-      const selectedId = sel.length === 1 ? sel[0] : undefined
-      const el = selectedId ? ctl.element(selectedId) : null
-      const id = el?.type === 'token' ? el.characterId : undefined
-      const fresh = id && sel[0] !== last && !first && campaign.characters.has(id)
-      last = sel[0] ?? ''
-      first = false
-      if (!fresh) return
-      selectCharacter(campaign, id)
-      showPanel('characters')
-    })
-  }, [controller.value, campaign])
+      const selectedId = sel.length === 1 ? sel[0] : undefined;
+      const el = selectedId ? ctl.element(selectedId) : null;
+      const id = el?.type === "token" ? el.characterId : undefined;
+      const fresh = id && sel[0] !== last && !first && campaign.characters.has(id);
+      last = sel[0] ?? "";
+      first = false;
+      if (!fresh) return;
+      selectCharacter(campaign, id);
+      showPanel("characters");
+    });
+  }, [controller.value, campaign]);
 
   useEffect(() => {
-    renderer.init(hostRef.current!).then(() => (ready.value = true))
-    return () => renderer.destroy()
-  }, [renderer, ready])
+    renderer.init(hostRef.current!).then(() => (ready.value = true));
+    return () => renderer.destroy();
+  }, [renderer, ready]);
 
   // Keep linked tokens' stats current as characters change.
   useEffect(() => {
-    if (!ready.value) return
-    const push = () => renderer.setTokenStats(tokenStatsSource(campaign))
-    push()
-    campaign.characters.observeDeep(push)
-    return () => campaign.characters.unobserveDeep(push)
-  }, [ready.value, campaign, renderer])
+    if (!ready.value) return;
+    const push = () => renderer.setTokenStats(tokenStatsSource(campaign));
+    push();
+    campaign.characters.observeDeep(push);
+    return () => campaign.characters.unobserveDeep(push);
+  }, [ready.value, campaign, renderer]);
 
   // Light and sight: the scene's lighting, the GM's walls and lights, and for
   // a player in a scene with vision on, sight through their own characters' tokens.
   useEffect(() => {
-    const ctl = controller.value
-    if (!ctl) return
+    const ctl = controller.value;
+    if (!ctl) return;
     const push = () => {
-      const gm = campaign.isGm()
-      ctl.gm = gm
-      const lighting = ctl.scene.lighting()
-      const mine = new Set(listCharacters(campaign).filter((c) => c.kind === 'pc' && c.owner === device.value.id).map((c) => c.id))
+      const gm = campaign.isGm();
+      ctl.gm = gm;
+      const lighting = ctl.scene.lighting();
+      const mine = new Set(
+        listCharacters(campaign)
+          .filter((c) => c.kind === "pc" && c.owner === device.value.id)
+          .map((c) => c.id),
+      );
       const eyes = ctl
         .allElements()
-        .filter((el) => el.type === 'token' && !!el.characterId && mine.has(el.characterId))
-        .map((el) => el.id)
+        .filter((el) => el.type === "token" && !!el.characterId && mine.has(el.characterId))
+        .map((el) => el.id);
       // A player with no tokens here sees the whole scene, rather than nothing.
-      renderer.setLighting(lighting, !gm && lighting.vision && eyes.length ? eyes : null, gm)
-    }
-    push()
+      renderer.setLighting(lighting, !gm && lighting.vision && eyes.length ? eyes : null, gm);
+    };
+    push();
     const stop = effect(() => {
-      void ctl.revision.value
-      untracked(push)
-    })
-    ctl.scene.settings.observe(push)
-    campaign.characters.observeDeep(push)
-    campaign.members.observeDeep(push)
+      void ctl.revision.value;
+      untracked(push);
+    });
+    ctl.scene.settings.observe(push);
+    campaign.characters.observeDeep(push);
+    campaign.members.observeDeep(push);
     return () => {
-      stop()
-      ctl.scene.settings.unobserve(push)
-      campaign.characters.unobserveDeep(push)
-      campaign.members.unobserveDeep(push)
-    }
-  }, [controller.value, campaign, renderer])
+      stop();
+      ctl.scene.settings.unobserve(push);
+      campaign.characters.unobserveDeep(push);
+      campaign.members.unobserveDeep(push);
+    };
+  }, [controller.value, campaign, renderer]);
 
   // Condition pips on linked tokens, and the ring on whoever's turn it is.
   useEffect(() => {
-    if (!ready.value) return
-    const push = () => renderer.setTokenMarks(tokenMarksSource(campaign))
-    push()
-    campaign.characters.observeDeep(push)
-    campaign.combat.observe(push)
-    campaign.combatants.observe(push)
+    if (!ready.value) return;
+    const push = () => renderer.setTokenMarks(tokenMarksSource(campaign));
+    push();
+    campaign.characters.observeDeep(push);
+    campaign.combat.observe(push);
+    campaign.combatants.observe(push);
     return () => {
-      campaign.characters.unobserveDeep(push)
-      campaign.combat.unobserve(push)
-      campaign.combatants.unobserve(push)
-    }
-  }, [ready.value, campaign, renderer])
+      campaign.characters.unobserveDeep(push);
+      campaign.combat.unobserve(push);
+      campaign.combatants.unobserve(push);
+    };
+  }, [ready.value, campaign, renderer]);
 
   // Open the scene's subdocument and drive it, swapping on scene change.
   useEffect(() => {
-    if (!ready.value || !sceneId) return
-    const subdoc = campaign.sceneSubdoc(sceneId)
-    if (!subdoc) return
-    let cancelled = false
-    let scene: SceneDoc | null = null
-    let ctl: SceneController | null = null
-    SceneDoc.open(subdoc, { type: campaign.defaults().gridType, ...systemOf(campaign).scene }).then((s) => {
-      scene = s
-      if (cancelled) return s.destroy()
-      ctl = new SceneController(s, renderer, hostRef.current!, sceneId, () => campaign.defaults(), campaign.presence)
-      ctl.start()
-      controller.value = ctl
-      tokenDrop.value = (x, y, spec) => {
-        // A template's token is a new copy of it, with a name of its own.
-        if (spec.characterId) {
-          const c = getCharacter(campaign, spec.characterId)
-          if (c?.template) {
-            const name = tokenName(c, c.template, ctl!.tokenNames())
-            spec = { ...spec, name, characterId: createCopy(campaign, c.id, name) }
+    if (!ready.value || !sceneId) return;
+    const subdoc = campaign.sceneSubdoc(sceneId);
+    if (!subdoc) return;
+    let cancelled = false;
+    let scene: SceneDoc | null = null;
+    let ctl: SceneController | null = null;
+    SceneDoc.open(subdoc, { type: campaign.defaults().gridType, ...systemOf(campaign).scene }).then(
+      (s) => {
+        scene = s;
+        if (cancelled) return s.destroy();
+        ctl = new SceneController(
+          s,
+          renderer,
+          hostRef.current!,
+          sceneId,
+          () => campaign.defaults(),
+          campaign.presence,
+        );
+        ctl.start();
+        controller.value = ctl;
+        tokenDrop.value = (x, y, spec) => {
+          // A template's token is a new copy of it, with a name of its own.
+          if (spec.characterId) {
+            const c = getCharacter(campaign, spec.characterId);
+            if (c?.template) {
+              const name = tokenName(c, c.template, ctl!.tokenNames());
+              spec = { ...spec, name, characterId: createCopy(campaign, c.id, name) };
+            }
+            ctl!.addCharacterToken(
+              ctl!.toWorld(x, y),
+              spec as Required<Pick<typeof spec, "characterId" | "name">> & typeof spec,
+            );
+          } else {
+            ctl!.addToken(ctl!.toWorld(x, y), spec.name, spec);
           }
-          ctl!.addCharacterToken(ctl!.toWorld(x, y), spec as Required<Pick<typeof spec, 'characterId' | 'name'>> & typeof spec)
-        } else {
-          ctl!.addToken(ctl!.toWorld(x, y), spec.name, spec)
-        }
-        return true
-      }
-      sceneCharacterAt.value = (x, y) => {
-        const hit = ctl!.hitTest(ctl!.toWorld(x, y), true, true)
-        if (hit?.type !== 'token' || !hit.characterId) return null
-        const character = getCharacter(campaign, hit.characterId)
-        const bounds = hostRef.current!.getBoundingClientRect()
-        const screen = toScreen(renderer.camera, hit)
-        return {
-          characterId: hit.characterId,
-          tokenId: hit.id,
-          editable: !!character && canEdit(campaign, character),
-          center: { x: bounds.left + screen.x, y: bounds.top + screen.y },
-        }
-      }
-      ctl.onItemTokenDragMove = (token, event) => {
-        if (!token) {
-          document.documentElement.classList.remove('is-reordering')
-          setDropCursor(null)
-          sceneDropHighlight.value = null
-          return
-        }
-        const dragged = itemTokenEntity(campaign, token)
-        const target = dragged ? dropTargetAt(event.clientX, event.clientY, dragged) : null
-        document.documentElement.classList.add('is-reordering')
-        setDropCursor(!!target)
-        sceneDropHighlight.value = target?.tokenId ?? null
-      }
-      ctl.onItemTokenDrop = (token, event) => {
-        const dragged = itemTokenEntity(campaign, token)
-        const target = dragged ? dropTargetAt(event.clientX, event.clientY, dragged) : null
-        document.documentElement.classList.remove('is-reordering')
-        setDropCursor(null)
-        sceneDropHighlight.value = null
-        if (!target) {
-          const overCanvas = hostRef.current?.contains(document.elementFromPoint(event.clientX, event.clientY)) ?? false
-          if (!overCanvas) {
-            ctl!.renderer.previews.delete(token.id)
-            ctl!.renderer.invalidate('previews', 'overlay')
-            return true
+          return true;
+        };
+        sceneCharacterAt.value = (x, y) => {
+          const hit = ctl!.hitTest(ctl!.toWorld(x, y), true, true);
+          if (hit?.type !== "token" || !hit.characterId) return null;
+          const character = getCharacter(campaign, hit.characterId);
+          const bounds = hostRef.current!.getBoundingClientRect();
+          const screen = toScreen(renderer.camera, hit);
+          return {
+            characterId: hit.characterId,
+            tokenId: hit.id,
+            editable: !!character && canEdit(campaign, character),
+            center: { x: bounds.left + screen.x, y: bounds.top + screen.y },
+          };
+        };
+        ctl.onItemTokenDragMove = (token, event) => {
+          if (!token) {
+            document.documentElement.classList.remove("is-reordering");
+            setDropCursor(null);
+            sceneDropHighlight.value = null;
+            return;
           }
-          return false
-        }
-        if (target.element.matches('.scene-canvas') && !target.tokenId) return false
-        const destination = target.tokenCenter ?? { x: event.clientX, y: event.clientY }
-        ctl!.animateItemTokenDrop(token.id, destination.x, destination.y, () => {
-          dropOn(target, dragged!, event.clientX, event.clientY)
-          ctl!.scene.remove([token.id])
-          ctl!.selection.value = ctl!.selection.value.filter((id) => id !== token.id)
-        })
-        return true
-      }
-      // A duplicated copy's token gets a copy of its own, from the same template.
-      ctl.afterDuplicate = (ids) => {
-        const patches: [string, Partial<SceneElement>][] = []
-        for (const id of ids) {
-          const el = s.get(id)
-          const copy = el?.type === 'token' ? getCharacter(campaign, el.characterId) : undefined
-          const template = copy?.base ? getCharacter(campaign, copy.base) : undefined
-          if (!template?.template) continue
-          const name = tokenName(template, template.template, ctl!.tokenNames())
-          patches.push([id, { name, characterId: createCopy(campaign, template.id, name) }])
-        }
-        if (patches.length) s.update(patches)
-      }
-      // Handy for poking at the scene from the console while developing.
-      if (import.meta.env.DEV) Object.assign(window, { mamScene: ctl })
-    })
+          const dragged = itemTokenEntity(campaign, token);
+          const target = dragged ? dropTargetAt(event.clientX, event.clientY, dragged) : null;
+          document.documentElement.classList.add("is-reordering");
+          setDropCursor(!!target);
+          sceneDropHighlight.value = target?.tokenId ?? null;
+        };
+        ctl.onItemTokenDrop = (token, event) => {
+          const dragged = itemTokenEntity(campaign, token);
+          const target = dragged ? dropTargetAt(event.clientX, event.clientY, dragged) : null;
+          document.documentElement.classList.remove("is-reordering");
+          setDropCursor(null);
+          sceneDropHighlight.value = null;
+          if (!target) {
+            const overCanvas =
+              hostRef.current?.contains(document.elementFromPoint(event.clientX, event.clientY)) ??
+              false;
+            if (!overCanvas) {
+              ctl!.renderer.previews.delete(token.id);
+              ctl!.renderer.invalidate("previews", "overlay");
+              return true;
+            }
+            return false;
+          }
+          if (target.element.matches(".scene-canvas") && !target.tokenId) return false;
+          const destination = target.tokenCenter ?? { x: event.clientX, y: event.clientY };
+          ctl!.animateItemTokenDrop(token.id, destination.x, destination.y, () => {
+            dropOn(target, dragged!, event.clientX, event.clientY);
+            ctl!.scene.remove([token.id]);
+            ctl!.selection.value = ctl!.selection.value.filter((id) => id !== token.id);
+          });
+          return true;
+        };
+        // A duplicated copy's token gets a copy of its own, from the same template.
+        ctl.afterDuplicate = (ids) => {
+          const patches: [string, Partial<SceneElement>][] = [];
+          for (const id of ids) {
+            const el = s.get(id);
+            const copy = el?.type === "token" ? getCharacter(campaign, el.characterId) : undefined;
+            const template = copy?.base ? getCharacter(campaign, copy.base) : undefined;
+            if (!template?.template) continue;
+            const name = tokenName(template, template.template, ctl!.tokenNames());
+            patches.push([id, { name, characterId: createCopy(campaign, template.id, name) }]);
+          }
+          if (patches.length) s.update(patches);
+        };
+        // Handy for poking at the scene from the console while developing.
+        if (import.meta.env.DEV) Object.assign(window, { mamScene: ctl });
+      },
+    );
     return () => {
-      cancelled = true
-      ctl?.stop()
-      controller.value = null
-      tokenDrop.value = null
-      sceneCharacterAt.value = null
-      sceneDropHighlight.value = null
+      cancelled = true;
+      ctl?.stop();
+      controller.value = null;
+      tokenDrop.value = null;
+      sceneCharacterAt.value = null;
+      sceneDropHighlight.value = null;
       if (ctl) {
-        ctl.onItemTokenDragMove = null
-        ctl.onItemTokenDrop = null
+        ctl.onItemTokenDragMove = null;
+        ctl.onItemTokenDrop = null;
       }
-      renderer.setElements([])
-      scene?.destroy()
-    }
-  }, [ready.value, sceneId, campaign, controller, renderer])
+      renderer.setElements([]);
+      scene?.destroy();
+    };
+  }, [ready.value, sceneId, campaign, controller, renderer]);
 
   useSignalEffect(() => {
-    const ctl = controller.value
-    const colour = ctl?.mapColour.value ?? null
-    activeMapColour.value = colour
-    if (ctl) seenMapColours.value = { ...seenMapColours.peek(), [ctl.sceneId]: colour }
+    const ctl = controller.value;
+    const colour = ctl?.mapColour.value ?? null;
+    activeMapColour.value = colour;
+    if (ctl) seenMapColours.value = { ...seenMapColours.peek(), [ctl.sceneId]: colour };
     canvasCommands.value = ctl
       ? {
           sceneId: ctl.sceneId,
@@ -321,181 +353,234 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
           redo: () => ctl.scene.undo.redo(),
         }
       : null;
-  })
-  useEffect(() => () => void (canvasCommands.value = null), [])
+  });
+  useEffect(() => () => void (canvasCommands.value = null), []);
 
   // Targeting for an action: hand the request to the scene, and its choices back.
   useSignalEffect(() => {
-    const ctl = controller.value
-    const pick = targetPick.value
-    untracked(() => ctl?.setTargetMode(pick))
-  })
+    const ctl = controller.value;
+    const pick = targetPick.value;
+    untracked(() => ctl?.setTargetMode(pick));
+  });
   useSignalEffect(() => {
-    const ctl = controller.value
-    if (!ctl) return void (chosenTargets.value = [])
-    void ctl.targets.value
-    void ctl.revision.value
-    const grid = ctl.renderer.grid
-    chosenTargets.value = untracked(() => ctl.targetDetails())
-    sceneDistance.value = (d) => formatDistance(grid, d)
-  })
+    const ctl = controller.value;
+    if (!ctl) return void (chosenTargets.value = []);
+    void ctl.targets.value;
+    void ctl.revision.value;
+    const grid = ctl.renderer.grid;
+    chosenTargets.value = untracked(() => ctl.targetDetails());
+    sceneDistance.value = (d) => formatDistance(grid, d);
+  });
 
   // An action's area: place it, then target the tokens it covers (not the actor's, for areas that start from them).
   useSignalEffect(() => {
-    const ctl = controller.value
-    const req = areaRequest.value
-    if (!ctl) return
+    const ctl = controller.value;
+    const req = areaRequest.value;
+    if (!ctl) return;
     untracked(() => {
-      if (!req) return ctl.placeArea(null)
-      const grid = ctl.renderer.grid
-      const px = (units: number) => (units / (grid.unit || 1)) * grid.size
-      const { area } = req
-      const shape = area.shape === 'cube' ? 'rect' : area.shape === 'cone' ? 'cone' : area.shape === 'line' ? 'line' : 'circle'
-      const fromActor = area.shape === 'cone' || area.shape === 'line' || area.shape === 'emanation'
+      if (!req) return ctl.placeArea(null);
+      const grid = ctl.renderer.grid;
+      const px = (units: number) => (units / (grid.unit || 1)) * grid.size;
+      const { area } = req;
+      const shape =
+        area.shape === "cube"
+          ? "rect"
+          : area.shape === "cone"
+            ? "cone"
+            : area.shape === "line"
+              ? "line"
+              : "circle";
+      const fromActor =
+        area.shape === "cone" || area.shape === "line" || area.shape === "emanation";
       ctl.placeArea({
         shape,
         length: px(area.size),
         width: px(area.width ?? grid.unit),
         onPlaced: (placed) => {
-          if (areaRequest.peek() === req) areaRequest.value = null
-          if (!placed) return
+          if (areaRequest.peek() === req) areaRequest.value = null;
+          if (!placed) return;
           // A new area replaces the last one placed for this action.
-          const before = placedArea.peek()
-          if (before) ctl.scene.remove([before])
-          placedArea.value = placed.id
+          const before = placedArea.peek();
+          if (before) ctl.scene.remove([before]);
+          placedArea.value = placed.id;
           const actorTokens = new Set(
-            ctl.allElements().filter((el) => el.type === 'token' && req.actor && el.characterId === req.actor).map((el) => el.id),
-          )
-          const covered = placed.covered.filter((id) => !(fromActor && actorTokens.has(id)))
-          ctl.setTargets(targetPick.peek()?.max ? covered.slice(0, targetPick.peek()!.max) : covered)
+            ctl
+              .allElements()
+              .filter((el) => el.type === "token" && req.actor && el.characterId === req.actor)
+              .map((el) => el.id),
+          );
+          const covered = placed.covered.filter((id) => !(fromActor && actorTokens.has(id)));
+          ctl.setTargets(
+            targetPick.peek()?.max ? covered.slice(0, targetPick.peek()!.max) : covered,
+          );
         },
-      })
-    })
-  })
+      });
+    });
+  });
   // Asking for targets again starts without an area.
   useSignalEffect(() => {
-    if (!targetPick.value) placedArea.value = null
-  })
+    if (!targetPick.value) placedArea.value = null;
+  });
 
   // Text: typed in a box where it goes on the map.
-  const textEdit = useSignal<{ at: Point; screen: Point; id?: string; text?: string } | null>(null)
+  const textEdit = useSignal<{ at: Point; screen: Point; id?: string; text?: string } | null>(null);
   const setTextEdit = useEffectEvent((req: NonNullable<typeof textEdit.value>) => {
     textEdit.value = req;
   });
   useEffect(() => {
-    const ctl = controller.value
-    if (!ctl) return
-    ctl.onTextRequest = (req) => setTextEdit(req)
-    return () => void (ctl.onTextRequest = null)
-  }, [controller.value])
+    const ctl = controller.value;
+    if (!ctl) return;
+    ctl.onTextRequest = (req) => setTextEdit(req);
+    return () => void (ctl.onTextRequest = null);
+  }, [controller.value]);
   const commitText = (value: string) => {
-    const req = textEdit.value
-    textEdit.value = null
-    if (req) controller.value?.putText(req.at, value, req.id)
-  }
+    const req = textEdit.value;
+    textEdit.value = null;
+    if (req) controller.value?.putText(req.at, value, req.id);
+  };
 
   // Keyboard shortcuts, unless a field or dialog has the keyboard.
   const onDown = useEffectEvent((e: KeyboardEvent) => {
     // Pop-ups are non-modal: only keys aimed inside one stay with it.
-    const blocked = (event: KeyboardEvent) => isTyping(event.target) || !!(event.target as Element).closest?.('dialog')
-    if (e.defaultPrevented || blocked(e)) return
+    const blocked = (event: KeyboardEvent) =>
+      isTyping(event.target) || !!(event.target as Element).closest?.("dialog");
+    if (e.defaultPrevented || blocked(e)) return;
     // Space only pans when nothing focusable would otherwise take it.
-    if (e.key === ' ' && document.activeElement instanceof HTMLButtonElement) return
-    if (controller.value?.onKeyDown(e)) e.preventDefault()
+    if (e.key === " " && document.activeElement instanceof HTMLButtonElement) return;
+    if (controller.value?.onKeyDown(e)) e.preventDefault();
   });
   const onUp = useEffectEvent((e: KeyboardEvent) => controller.value?.onKeyUp(e));
   const onBlur = useEffectEvent(() => controller.value?.onBlur());
   const onPaste = useEffectEvent((e: ClipboardEvent) => {
-    const ctl = controller.value
-    const files = [...(e.clipboardData?.files ?? [])].filter((f) => f.type.startsWith('image/'))
-    if (!ctl || !files.length || isTyping(e.target)) return
-    e.preventDefault()
-    ctl.importFiles(files, ctl.centre())
+    const ctl = controller.value;
+    const files = [...(e.clipboardData?.files ?? [])].filter((f) => f.type.startsWith("image/"));
+    if (!ctl || !files.length || isTyping(e.target)) return;
+    e.preventDefault();
+    ctl.importFiles(files, ctl.centre());
   });
   useEffect(() => {
     const onDownListener = (e: KeyboardEvent) => {
-      onDown(e)
+      onDown(e);
     };
     const onUpListener = (e: KeyboardEvent) => onUp(e);
     const onBlurListener = () => onBlur();
     const onPasteListener = (e: ClipboardEvent) => onPaste(e);
-    window.addEventListener('keydown', onDownListener)
-    window.addEventListener('keyup', onUpListener)
-    window.addEventListener('blur', onBlurListener)
-    document.addEventListener('paste', onPasteListener)
+    window.addEventListener("keydown", onDownListener);
+    window.addEventListener("keyup", onUpListener);
+    window.addEventListener("blur", onBlurListener);
+    document.addEventListener("paste", onPasteListener);
     return () => {
-      window.removeEventListener('keydown', onDownListener)
-      window.removeEventListener('keyup', onUpListener)
-      window.removeEventListener('blur', onBlurListener)
-      document.removeEventListener('paste', onPasteListener)
-    }
-  }, [])
+      window.removeEventListener("keydown", onDownListener);
+      window.removeEventListener("keyup", onUpListener);
+      window.removeEventListener("blur", onBlurListener);
+      document.removeEventListener("paste", onPasteListener);
+    };
+  }, []);
 
-  const closeMenu = useCallback(() => (menu.value = null), [menu])
+  const closeMenu = useCallback(() => (menu.value = null), [menu]);
 
   /** Open the right-click menu for whatever is at a client point. */
   function openMenuAt(x: number, y: number) {
-    const ctl = controller.value
-    if (!ctl) return
-    ctl.cancelGesture()
-    const at = ctl.toWorld(x, y)
-    const hit = ctl.hitTest(at, true)
-    if (hit && !ctl.selection.value.includes(hit.id)) ctl.selection.value = [hit.id]
-    if (!hit) ctl.selection.value = []
-    menu.value = { x, y, items: hit ? selectionMenu(ctl) : canvasMenu(ctl, at) }
+    const ctl = controller.value;
+    if (!ctl) return;
+    ctl.cancelGesture();
+    const at = ctl.toWorld(x, y);
+    const hit = ctl.hitTest(at, true);
+    if (hit && !ctl.selection.value.includes(hit.id)) ctl.selection.value = [hit.id];
+    if (!hit) ctl.selection.value = [];
+    menu.value = { x, y, items: hit ? selectionMenu(ctl) : canvasMenu(ctl, at) };
   }
   // Opens on the right-button press on every platform (see ui/menuTrigger.ts).
-  const menuOpener = menuTrigger(openMenuAt)
+  const menuOpener = menuTrigger(openMenuAt);
 
   function selectionMenu(ctl: SceneController): MenuItem[] {
-    const sel = ctl.selected()
-    const ids = sel.map((el) => el.id)
-    const one = sel.length === 1 ? sel[0] : null
-    const allLocked = sel.every((el) => el.locked)
-    const items: MenuItem[] = []
-    if (one?.type === 'token') {
-      items.push({ label: 'Token options…', Icon: IconRename, onSelect: () => {
-        tokenTab.value = 'token'
-        tokenOptions.value = one.id
-      } })
-    }
-    const tokens = sel.filter((el) => el.type === 'token')
-    if (tokens.length && sceneId && hasCombat(campaign) && campaign.isGm()) {
-      const out = tokens.filter((t) => !combatantForToken(campaign, t.id))
+    const sel = ctl.selected();
+    const ids = sel.map((el) => el.id);
+    const one = sel.length === 1 ? sel[0] : null;
+    const allLocked = sel.every((el) => el.locked);
+    const items: MenuItem[] = [];
+    if (one?.type === "token") {
       items.push({
-        label: 'Add to combat',
+        label: "Token options…",
+        Icon: IconRename,
+        onSelect: () => {
+          tokenTab.value = "token";
+          tokenOptions.value = one.id;
+        },
+      });
+    }
+    const tokens = sel.filter((el) => el.type === "token");
+    if (tokens.length && sceneId && hasCombat(campaign) && campaign.isGm()) {
+      const out = tokens.filter((t) => !combatantForToken(campaign, t.id));
+      items.push({
+        label: "Add to combat",
         Icon: IconCombat,
         disabled: !out.length,
         onSelect: () => {
-          addTokens(campaign, sceneId, out.map((t) => ({ id: t.id, name: t.name, ...(t.type === 'token' && t.characterId ? { characterId: t.characterId } : {}) })))
-          showPanel('combat')
+          addTokens(
+            campaign,
+            sceneId,
+            out.map((t) => ({
+              id: t.id,
+              name: t.name,
+              ...(t.type === "token" && t.characterId ? { characterId: t.characterId } : {}),
+            })),
+          );
+          showPanel("combat");
         },
-      })
+      });
     }
-    if (one?.type === 'wall') {
+    if (one?.type === "wall") {
       items.push(
         one.door
-          ? { label: one.open ? 'Close door' : 'Open door', Icon: IconWall, onSelect: () => ctl.setDoor(one.id, { open: !one.open }) }
-          : { label: 'Make it a door', Icon: IconWall, onSelect: () => ctl.setDoor(one.id, { door: true, open: false }) },
-      )
-      if (one.door) items.push({ label: 'Make it a wall', Icon: IconWall, onSelect: () => ctl.setDoor(one.id, { door: false }) })
+          ? {
+              label: one.open ? "Close door" : "Open door",
+              Icon: IconWall,
+              onSelect: () => ctl.setDoor(one.id, { open: !one.open }),
+            }
+          : {
+              label: "Make it a door",
+              Icon: IconWall,
+              onSelect: () => ctl.setDoor(one.id, { door: true, open: false }),
+            },
+      );
+      if (one.door)
+        items.push({
+          label: "Make it a wall",
+          Icon: IconWall,
+          onSelect: () => ctl.setDoor(one.id, { door: false }),
+        });
     }
-    if (one?.type === 'light') {
+    if (one?.type === "light") {
       items.push(
         {
-          label: 'Light colour',
+          label: "Light colour",
           colour: one.colour,
           onPreview: (colour) => ctl.previewLightColour(one.id, colour),
           onPick: (colour) => ctl.setLight(one.id, { colour }),
         },
-        { label: 'Flicker', Icon: IconLight, checked: !!one.flicker, onSelect: () => ctl.setLight(one.id, { flicker: !one.flicker }) },
-      )
+        {
+          label: "Flicker",
+          Icon: IconLight,
+          checked: !!one.flicker,
+          onSelect: () => ctl.setLight(one.id, { flicker: !one.flicker }),
+        },
+      );
     }
-    if (one?.type === 'area') {
-      const tone = one.tone === 'light' ? 'dark' : 'light'
-      items.push({ label: tone === 'dark' ? 'Make it dark' : 'Make it light', Icon: IconLight, onSelect: () => ctl.setAreaTone(one.id, tone) })
+    if (one?.type === "area") {
+      const tone = one.tone === "light" ? "dark" : "light";
+      items.push({
+        label: tone === "dark" ? "Make it dark" : "Make it light",
+        Icon: IconLight,
+        onSelect: () => ctl.setAreaTone(one.id, tone),
+      });
     }
-    if (one?.type === 'map') items.push({ label: 'Use as token', Icon: IconToken, onSelect: () => ctl.convert(one.id, 'token') })
+    if (one?.type === "map")
+      items.push({
+        label: "Use as token",
+        Icon: IconToken,
+        onSelect: () => ctl.convert(one.id, "token"),
+      });
     if (one?.type === "token" && one.image) {
       items.push({
         label: "Use as map",
@@ -503,26 +588,38 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
         onSelect: () => ctl.convert(one.id, "map"),
       });
     }
-    if (sel.every((el) => el.type === 'drawing')) {
-      const under = sel.every((el) => el.layer === 'under')
+    if (sel.every((el) => el.type === "drawing")) {
+      const under = sel.every((el) => el.layer === "under");
       items.push({
-        label: under ? 'Move above tokens' : 'Move below tokens',
+        label: under ? "Move above tokens" : "Move below tokens",
         Icon: IconLayers,
-        onSelect: () => ctl.setLayer(ids, under ? 'over' : 'under'),
-      })
+        onSelect: () => ctl.setLayer(ids, under ? "over" : "under"),
+      });
     }
-    if (items.length) items.push('divider')
+    if (items.length) items.push("divider");
     items.push(
-      { label: 'Bring to front', Icon: IconToFront, onSelect: () => ctl.restack(ids, 'front') },
-      { label: 'Send to back', Icon: IconToBack, onSelect: () => ctl.restack(ids, 'back') },
-      { label: 'Duplicate', Icon: IconDuplicate, shortcut: `${MOD}D`, onSelect: () => ctl.duplicate(ids) },
+      { label: "Bring to front", Icon: IconToFront, onSelect: () => ctl.restack(ids, "front") },
+      { label: "Send to back", Icon: IconToBack, onSelect: () => ctl.restack(ids, "back") },
+      {
+        label: "Duplicate",
+        Icon: IconDuplicate,
+        shortcut: `${MOD}D`,
+        onSelect: () => ctl.duplicate(ids),
+      },
       allLocked
-        ? { label: 'Unlock', Icon: IconUnlock, onSelect: () => ctl.setLocked(ids, false) }
-        : { label: 'Lock', Icon: IconLock, onSelect: () => ctl.setLocked(ids, true) },
-      'divider',
-      { label: 'Delete', Icon: IconDelete, shortcut: 'Del', danger: true, disabled: allLocked, onSelect: () => ctl.remove(ids) },
-    )
-    return items
+        ? { label: "Unlock", Icon: IconUnlock, onSelect: () => ctl.setLocked(ids, false) }
+        : { label: "Lock", Icon: IconLock, onSelect: () => ctl.setLocked(ids, true) },
+      "divider",
+      {
+        label: "Delete",
+        Icon: IconDelete,
+        shortcut: "Del",
+        danger: true,
+        disabled: allLocked,
+        onSelect: () => ctl.remove(ids),
+      },
+    );
+    return items;
   }
 
   function canvasMenu(ctl: SceneController, at: Point): MenuItem[] {
@@ -629,8 +726,7 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
         onChange={(e) => {
           const ctl = controller.value;
           const files = e.currentTarget.files;
-          if (ctl && files?.length)
-            ctl.importFiles([...files], importAt.current ?? ctl.centre());
+          if (ctl && files?.length) ctl.importFiles([...files], importAt.current ?? ctl.centre());
           e.currentTarget.value = "";
         }}
       />
@@ -705,9 +801,7 @@ function TokenOptionsDialog({
   const grid = controller.renderer.grid;
   const characters = useY(campaign.characters, () => listCharacters(campaign));
   // The character this token stands for, as saved (not the unsaved choice below).
-  const linked = useY(campaign.characters, () =>
-    getCharacter(campaign, token?.characterId),
-  );
+  const linked = useY(campaign.characters, () => getCharacter(campaign, token?.characterId));
 
   const initializeTokenOptions = useEffectEvent(() => {
     if (!token) return;
@@ -721,8 +815,7 @@ function TokenOptionsDialog({
     showName.value = !token.hideName;
     // The first size as wide as the token, or none if it's been resized by hand.
     const cells = Math.max(token.w, token.h) / grid.size;
-    size.value =
-      system.sizes.find((z) => Math.abs(z.cells - cells) < 0.01)?.id ?? "";
+    size.value = system.sizes.find((z) => Math.abs(z.cells - cells) < 0.01)?.id ?? "";
   });
 
   useEffect(() => {
@@ -745,8 +838,7 @@ function TokenOptionsDialog({
     if (linked?.base === chosen) return { characterId: linked.id };
     const c = characters.find((k) => k.id === chosen);
     if (!c?.template) return { characterId: chosen };
-    const copyName =
-      name.value.trim() || tokenName(c, c.template, controller.tokenNames());
+    const copyName = name.value.trim() || tokenName(c, c.template, controller.tokenNames());
     return {
       characterId: createCopy(campaign, chosen, copyName),
       name: copyName,
@@ -759,13 +851,9 @@ function TokenOptionsDialog({
   return (
     <Dialog
       dialogRef={ref}
-      title={
-        linked ? linked.name : (item?.name ?? token?.name ?? "Token options")
-      }
+      title={linked ? linked.name : (item?.name ?? token?.name ?? "Token options")}
       onClose={onClose}
-      {...(linked
-        ? { proxy: linkProxy(campaign, "character", linked.id, linked.name) }
-        : {})}
+      {...(linked ? { proxy: linkProxy(campaign, "character", linked.id, linked.name) } : {})}
     >
       {linked && (
         <PopupTabs
@@ -792,10 +880,7 @@ function TokenOptionsDialog({
               id,
               {
                 name: name.value.trim(),
-                style:
-                  style.value === "plain" && !image.value
-                    ? "disc"
-                    : style.value,
+                style: style.value === "plain" && !image.value ? "disc" : style.value,
                 colour: colour.value,
                 ...(image.value ? { image: image.value } : {}),
                 ...(item ? { itemDefId: item.id } : {}),
@@ -845,20 +930,13 @@ function TokenOptionsDialog({
           Image
           <span className="token-image-row">
             <span className="token-image-preview">
-              <BlobImage
-                image={image.value}
-                fallback={<span className="muted">None</span>}
-              />
+              <BlobImage image={image.value} fallback={<span className="muted">None</span>} />
             </span>
             <Button size="sm" onClick={() => fileRef.current?.click()}>
               {image.value ? "Change…" : "Choose…"}
             </Button>
             {image.value && (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => (image.value = undefined)}
-              >
+              <Button size="sm" variant="ghost" onClick={() => (image.value = undefined)}>
                 Remove
               </Button>
             )}
@@ -871,8 +949,7 @@ function TokenOptionsDialog({
             onChange={async (e) => {
               const file = e.currentTarget.files?.[0];
               e.currentTarget.value = "";
-              if (file)
-                image.value = await importImage(file).catch(() => image.value);
+              if (file) image.value = await importImage(file).catch(() => image.value);
             }}
           />
         </div>
@@ -886,8 +963,7 @@ function TokenOptionsDialog({
             {!size.value && <option value="">As drawn</option>}
             {system.sizes.map((z) => (
               <option key={z.id} value={z.id}>
-                {z.name} ({z.cells === 0.5 ? "½" : z.cells}{" "}
-                {z.cells > 1 ? "cells" : "cell"})
+                {z.name} ({z.cells === 0.5 ? "½" : z.cells} {z.cells > 1 ? "cells" : "cell"})
               </option>
             ))}
           </select>
@@ -911,16 +987,12 @@ function TokenOptionsDialog({
             options={TOKEN_STYLES.map((s) => ({
               ...s,
               disabled: s.id === "plain" && !image.value,
-              title:
-                s.id === "plain" && !image.value ? "Needs an image" : undefined,
+              title: s.id === "plain" && !image.value ? "Needs an image" : undefined,
             }))}
             onChange={(v) => (style.value = v)}
           />
         </div>
-        <label
-          className="field colour-field"
-          data-disabled={style.value === "plain"}
-        >
+        <label className="field colour-field" data-disabled={style.value === "plain"}>
           Background and border
           <span className="colour-row">
             <input
@@ -953,9 +1025,7 @@ function SceneSettingsDialog({
   scene: SceneDoc;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
-  const view = useY(campaign.scenes, () =>
-    campaign.sceneViews().find((s) => s.id === sceneId),
-  );
+  const view = useY(campaign.scenes, () => campaign.sceneViews().find((s) => s.id === sceneId));
 
   useSignalEffect(() => {
     if (sceneSettingsOpen.value) openPopup(ref.current);

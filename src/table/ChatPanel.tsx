@@ -1,19 +1,8 @@
-import {
-  signal,
-  useComputed,
-  useSignal,
-  useSignalEffect,
-} from "@preact/signals-react";
+import { signal, useComputed, useSignal, useSignalEffect } from "@preact/signals-react";
 import { FormattedText } from "./FormattedText";
 import type { ReactNode } from "react";
 import { memo } from "react";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-} from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { renderToReactElement } from "@tiptap/static-renderer/pm/react";
 import { COMMANDS, parseCommand, suggest } from "../features/chat/commands";
 import {
@@ -36,12 +25,7 @@ import { markRead } from "../features/chat/unread";
 import { clearState } from "../features/chat/messageState";
 import { toggleSetValue } from "../lib/set";
 import { NotationError, type Roll } from "../features/dice/notation";
-import {
-  applySuggestion,
-  canEdit,
-  getCharacter,
-  systemOf,
-} from "../features/characters/api";
+import { applySuggestion, canEdit, getCharacter, systemOf } from "../features/characters/api";
 import { poolFormula } from "../features/dice/pool";
 import { stampTime } from "../lib/hlc";
 import type { Campaign } from "../campaign/campaign";
@@ -51,13 +35,7 @@ import { Avatar } from "../ui/Avatar";
 import { Button } from "../ui/Button";
 import { ContextMenu, type MenuItem } from "./ContextMenu";
 import { menuTrigger } from "../ui/menuTrigger";
-import {
-  IconDelete,
-  IconDice,
-  IconExpand,
-  IconPin,
-  IconRename,
-} from "../ui/icons";
+import { IconDelete, IconDice, IconExpand, IconPin, IconRename } from "../ui/icons";
 import { ChatInput, type ChatInputHandle } from "./ChatInput";
 import { chatContentExtensions } from "./ChatInput";
 import { LINK_NODE } from "../features/notes/links";
@@ -79,17 +57,11 @@ import {
 } from "./ChatExtras";
 import { panelVisible } from "./panelLayout";
 import { canWork } from "../features/chat/types";
-import {
-  readRollState,
-  rerollDie,
-  rerollMessage,
-  toggleRollDie,
-} from "../features/chat/rollState";
+import { readRollState, rerollDie, rerollMessage, toggleRollDie } from "../features/chat/rollState";
 import { useShake } from "../ui/useShake";
 import { playUiSound } from "../ui/sounds";
 import { readRollResult } from "../features/characters/moves";
 import { derive } from "../features/characters/store";
-
 
 /*
  * The chat panel: who's here, the log of chat and rolls, the message box
@@ -148,15 +120,11 @@ export function ChatPanel({ campaign }: { campaign: Campaign }) {
   const note = (text: string, error = false) =>
     (notes.value = [...notes.value, { id: Date.now(), text, error }]);
   const ref = useRef<HTMLDivElement>(null);
-  const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(
-    null,
-  );
+  const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const closeMenu = useCallback(() => (menu.value = null), [menu]);
   const openMenu = useCallback(
     (x: number, y: number, id: string) => {
-      const m = campaign.chat.messages
-        .peek()
-        .find((message) => message.id === id);
+      const m = campaign.chat.messages.peek().find((message) => message.id === id);
       if (!m) return;
       const gm = campaign.isGm();
       const items: MenuItem[] = [];
@@ -234,9 +202,7 @@ function ChatLogView({
   const messages = campaign.chat.messages.value;
   const isGm = useY(campaign.members, () => campaign.isGm());
   const here = useY(campaign.members, () => campaign.activeSceneId());
-  const sceneIds = useY(campaign.scenes, () =>
-    [...campaign.scenes.keys()].join(),
-  );
+  const sceneIds = useY(campaign.scenes, () => [...campaign.scenes.keys()].join());
   // One subscription for every move card's follow-up buttons, rather than one per card.
   const editable = useY(campaign.characters, () => editableIds(campaign));
   const me = device.value.id;
@@ -274,8 +240,7 @@ function ChatLogView({
   const indexOf = (key: string | null) =>
     key === null ? -1 : rows.findIndex((r) => r.key === key);
   const endKeyAt = indexOf(span.value.end);
-  const endIdx =
-    span.value.end === null || endKeyAt < 0 ? rows.length : endKeyAt + 1;
+  const endIdx = span.value.end === null || endKeyAt < 0 ? rows.length : endKeyAt + 1;
   const startKeyAt = indexOf(span.value.start);
   const startIdx =
     span.value.start === null || startKeyAt < 0 || startKeyAt >= endIdx
@@ -307,8 +272,7 @@ function ChatLogView({
       end: to >= rows.length ? null : rows[to - 1]!.key,
     };
     // Unchanged, it mustn't re-render: slide() runs after every render.
-    if (next.start !== span.peek().start || next.end !== span.peek().end)
-      span.value = next;
+    if (next.start !== span.peek().start || next.end !== span.peek().end) span.value = next;
   };
   const loading = useSignal(false);
   // Read so finishing a load re-renders, and slide() can ask for the next chunk.
@@ -330,11 +294,7 @@ function ChatLogView({
       return;
     }
     let i = 0;
-    for (
-      let acc = unloaded;
-      i < rows.length - 1 && acc + heightOf(rows[i]!) <= y;
-      i++
-    )
+    for (let acc = unloaded; i < rows.length - 1 && acc + heightOf(rows[i]!) <= y; i++)
       acc += heightOf(rows[i]!);
     const from = Math.max(0, i - JUMP_LEAD);
     setSpan(from, Math.min(rows.length, from + WINDOW));
@@ -388,8 +348,7 @@ function ChatLogView({
       const key = (row as HTMLElement).dataset.key;
       if (key) measured.set(key, (row as HTMLElement).offsetHeight + ROW_GAP);
     }
-    if (measured.size !== measuredCount.peek())
-      measuredCount.value = measured.size;
+    if (measured.size !== measuredCount.peek()) measuredCount.value = measured.size;
     if (stick.current) el.scrollTop = el.scrollHeight;
     else if (anchor.current) {
       const row = list.current?.querySelector<HTMLElement>(
@@ -397,9 +356,7 @@ function ChatLogView({
       );
       if (row)
         el.scrollTop +=
-          row.getBoundingClientRect().top -
-          el.getBoundingClientRect().top -
-          anchor.current.top;
+          row.getBoundingClientRect().top - el.getBoundingClientRect().top - anchor.current.top;
     }
     jumped.current = false;
     // The window may still not reach far enough (a short window, rows just loaded, or a jump into unloaded chunks).
@@ -438,8 +395,7 @@ function ChatLogView({
       aria-live="polite"
       onScroll={(e) => {
         const el = e.currentTarget;
-        stick.current =
-          atNewest && el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+        stick.current = atNewest && el.scrollHeight - el.scrollTop - el.clientHeight < 40;
         slide();
       }}
     >
@@ -449,11 +405,7 @@ function ChatLogView({
           Say hello, or roll some dice.
         </div>
       )}
-      <div
-        className="chat-space"
-        style={{ height: `${Math.round(above)}px` }}
-        aria-hidden="true"
-      />
+      <div className="chat-space" style={{ height: `${Math.round(above)}px` }} aria-hidden="true" />
       <div ref={list} className="chat-rows">
         {shown.map((row) =>
           row.kind === "fold" ? (
@@ -480,10 +432,7 @@ function ChatLogView({
               fresh={!initial.current!.has(row.m.id)}
               masked={visibilityOf(row.m, me, isGm) === "masked"}
               mine={row.m.author === me}
-              canAct={
-                row.m.kind === "move" &&
-                editable.split(" ").includes(row.m.characterId)
-              }
+              canAct={row.m.kind === "move" && editable.split(" ").includes(row.m.characterId)}
               canGo={
                 row.m.kind === "system" &&
                 row.m.event === "scene-change" &&
@@ -502,11 +451,7 @@ function ChatLogView({
           ),
         )}
       </div>
-      <div
-        className="chat-space"
-        style={{ height: `${Math.round(below)}px` }}
-        aria-hidden="true"
-      />
+      <div className="chat-space" style={{ height: `${Math.round(below)}px` }} aria-hidden="true" />
       {atNewest &&
         notes.map((n) => (
           <p key={n.id} className="chat-note" data-error={n.error}>
@@ -518,16 +463,9 @@ function ChatLogView({
 }
 
 /** One message on its own, as it shows in the log: for chat popping up outside the panel. */
-export function LoneMessage({
-  campaign,
-  m,
-}: {
-  campaign: Campaign;
-  m: ChatMessage;
-}) {
+export function LoneMessage({ campaign, m }: { campaign: Campaign; m: ChatMessage }) {
   const canAct = useY(campaign.characters, () => {
-    const c =
-      m.kind === "move" ? getCharacter(campaign, m.characterId) : undefined;
+    const c = m.kind === "move" ? getCharacter(campaign, m.characterId) : undefined;
     return !!c && canEdit(campaign, c);
   });
   return (
@@ -573,10 +511,7 @@ const Message = memo(function Message({
   canGo,
   onMenu,
 }: MessageProps) {
-  const menu = useMemo(
-    () => onMenu && menuTrigger((x, y) => onMenu(x, y, m.id)),
-    [onMenu, m.id],
-  );
+  const menu = useMemo(() => onMenu && menuTrigger((x, y) => onMenu(x, y, m.id)), [onMenu, m.id]);
   // Fixed when it mounts, so a re-render mid-animation doesn't cut it short.
   const arriving = useRef(fresh && !arrived.has(m.id)).current;
   const arrival = useRef({ fresh, id: m.id, mine, arriving }).current;
@@ -625,30 +560,15 @@ const Message = memo(function Message({
         <header className="chat-msg-head">
           <Avatar id={m.author} name={m.name} online />
           <span className="chat-author">{m.name}</span>
-          <time
-            className="chat-time"
-            dateTime={new Date(stampTime(m.hlc)).toISOString()}
-          >
+          <time className="chat-time" dateTime={new Date(stampTime(m.hlc)).toISOString()}>
             {time.format(stampTime(m.hlc))}
           </time>
         </header>
       )}
       {m.kind === "roll" ? (
-        <RollCard
-          campaign={campaign}
-          m={m}
-          masked={masked}
-          arriving={arriving}
-          mine={mine}
-        />
+        <RollCard campaign={campaign} m={m} masked={masked} arriving={arriving} mine={mine} />
       ) : m.kind === "move" ? (
-        <MoveCard
-          campaign={campaign}
-          m={m}
-          canAct={canAct}
-          arriving={arriving}
-          mine={mine}
-        />
+        <MoveCard campaign={campaign} m={m} canAct={canAct} arriving={arriving} mine={mine} />
       ) : m.kind === "timer" ? (
         <TimerCard campaign={campaign} m={m} />
       ) : m.kind === "counter" ? (
@@ -660,19 +580,10 @@ const Message = memo(function Message({
   );
 });
 
-function TextBody({
-  campaign,
-  m,
-  mine,
-}: {
-  campaign: Campaign;
-  m: TextMessage;
-  mine: boolean;
-}) {
+function TextBody({ campaign, m, mine }: { campaign: Campaign; m: TextMessage; mine: boolean }) {
   const state = useTextState(campaign, m.id);
   const text = editedText(state, m.text);
-  if (editingMessage.value === m.id)
-    return <EditBox campaign={campaign} id={m.id} text={text} />;
+  if (editingMessage.value === m.id) return <EditBox campaign={campaign} id={m.id} text={text} />;
   return (
     <div className="chat-text" data-emote={m.emote}>
       {m.to && (
@@ -690,17 +601,9 @@ function TextBody({
 }
 
 /** A pinned message in the strip above the log: timers and counters as they are, text with who said it. */
-function PinnedMessage({
-  campaign,
-  m,
-}: {
-  campaign: Campaign;
-  m: ChatMessage;
-}) {
-  if (m.kind === "timer")
-    return <TimerCard campaign={campaign} m={m} compact />;
-  if (m.kind === "counter")
-    return <CounterCard campaign={campaign} m={m} compact />;
+function PinnedMessage({ campaign, m }: { campaign: Campaign; m: ChatMessage }) {
+  if (m.kind === "timer") return <TimerCard campaign={campaign} m={m} compact />;
+  if (m.kind === "counter") return <CounterCard campaign={campaign} m={m} compact />;
   if (m.kind === "text") return <PinnedText campaign={campaign} m={m} />;
   if (m.kind === "roll")
     return (
@@ -727,13 +630,7 @@ function PinnedText({ campaign, m }: { campaign: Campaign; m: TextMessage }) {
   );
 }
 
-function Rich({
-  campaign,
-  content,
-}: {
-  campaign: Campaign;
-  content: ChatContent;
-}) {
+function Rich({ campaign, content }: { campaign: Campaign; content: ChatContent }) {
   const rendered = renderToReactElement({
     extensions: chatContentExtensions(campaign),
     content,
@@ -771,27 +668,19 @@ function useSharedRoll(campaign: Campaign, message: RollMessage | MoveMessage) {
   const source = message.roll;
   const snapshot = JSON.parse(
     useY(campaign.messageState, () =>
-      JSON.stringify(
-        source
-          ? readRollState(campaign.messageState, message.id, source)
-          : null,
-      ),
+      JSON.stringify(source ? readRollState(campaign.messageState, message.id, source) : null),
     ),
   ) as ReturnType<typeof readRollState> | null;
-  const allowed = useY(campaign.members, () =>
-    canWork(message, device.value.id, campaign.isGm()),
-  );
+  const allowed = useY(campaign.members, () => canWork(message, device.value.id, campaign.isGm()));
   const canChange = () => canWork(message, device.value.id, campaign.isGm());
   return {
     snapshot,
     allowed,
     rerollAll: () => {
-      if (source && canChange())
-        rerollMessage(campaign.messageState, message.id, source);
+      if (source && canChange()) rerollMessage(campaign.messageState, message.id, source);
     },
     reroll: (term: number, die: number) => {
-      if (source && canChange())
-        rerollDie(campaign.messageState, message.id, source, term, die);
+      if (source && canChange()) rerollDie(campaign.messageState, message.id, source, term, die);
     },
     toggle: (term: number, die: number) => {
       if (source && canChange())
@@ -829,6 +718,7 @@ function RollCard({
       className="roll-card"
       aria-label={`${r.formula}${m.comment ? `, ${m.comment}` : ""}: ${r.total}`}
       data-shakeable={interaction.allowed || undefined}
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable so the roll can be shaken by keyboard
       tabIndex={interaction.allowed ? 0 : undefined}
       {...shake}
     >
@@ -836,18 +726,11 @@ function RollCard({
         <span className="roll-formula">{r.formula}</span>
         {m.comment && <span className="roll-comment">{m.comment}</span>}
         {m.visibility !== "public" && (
-          <span className="roll-visibility">
-            {VISIBILITY_LABEL[m.visibility]}
-          </span>
+          <span className="roll-visibility">{VISIBILITY_LABEL[m.visibility]}</span>
         )}
       </div>
       <div className="roll-body">
-        <RollTerms
-          roll={r}
-          arriving={arriving}
-          mine={mine}
-          interaction={interaction}
-        />
+        <RollTerms roll={r} arriving={arriving} mine={mine} interaction={interaction} />
         <span className="roll-total">{r.total}</span>
       </div>
       {m.damage && <DamageTargets campaign={campaign} m={{ ...m, roll: r }} />}
@@ -895,24 +778,14 @@ function Composer({
       return;
     }
     if (cmd.kind === "help") {
-      const lines = COMMANDS.filter((c) => isGm || !c.gmOnly).map(
-        (c) => `${c.usage}  ${c.help}`,
-      );
+      const lines = COMMANDS.filter((c) => isGm || !c.gmOnly).map((c) => `${c.usage}  ${c.help}`);
       onNote(
-        [
-          "Commands:",
-          ...lines,
-          "Formulas: 2d6+1, 4d6kh3, 2d20kl1, d6!, 1d8+2[STR]",
-        ].join("\n"),
+        ["Commands:", ...lines, "Formulas: 2d6+1, 4d6kh3, 2d20kl1, d6!, 1d8+2[STR]"].join("\n"),
       );
     } else {
       // A roll typed with /r or /sr uses its own visibility; quick dice and a bare formula use the toggle.
       const bare = cmd.kind === "roll" && !source.trim().startsWith("/");
-      runCommand(
-        campaign,
-        bare ? { ...cmd, visibility: visibility.value } : cmd,
-        message,
-      );
+      runCommand(campaign, bare ? { ...cmd, visibility: visibility.value } : cmd, message);
     }
     last.current = source;
     input.current?.set("");
@@ -941,10 +814,7 @@ function Composer({
   function restartPoolTimer() {
     clearTimeout(poolTimer.current);
     if (pool.value.length)
-      poolTimer.current = window.setTimeout(
-        () => rollPoolRef.current(),
-        POOL_MS,
-      );
+      poolTimer.current = window.setTimeout(() => rollPoolRef.current(), POOL_MS);
   }
 
   function addDie(sides: number) {
@@ -964,10 +834,9 @@ function Composer({
 
   const nextVisibility = () => {
     const options = VISIBILITIES.map((v) => v.id);
-    visibility.value =
-      (options)[(options.indexOf(visibility.value) + 1) % options.length]!;
+    visibility.value = options[(options.indexOf(visibility.value) + 1) % options.length]!;
   };
-  const vis = VISIBILITIES.find((v) => v.id === visibility.value) ?? (VISIBILITIES)[0]!;
+  const vis = VISIBILITIES.find((v) => v.id === visibility.value) ?? VISIBILITIES[0]!;
 
   return (
     <div className="dice-tray">
@@ -1062,13 +931,7 @@ function Composer({
             error.value = null;
           }}
         />
-        <Button
-          variant="primary"
-          size="sm"
-          type="submit"
-          label="Send"
-          disabled={!typed.trim()}
-        >
+        <Button variant="primary" size="sm" type="submit" label="Send" disabled={!typed.trim()}>
           Send
         </Button>
       </form>
@@ -1093,9 +956,7 @@ function RollTerms({
     <div className="roll-terms">
       {roll.terms.map((t, i) => (
         <span key={i} className="roll-term">
-          {(i > 0 || t.sign < 0) && (
-            <span className="roll-op">{t.sign < 0 ? "−" : "+"}</span>
-          )}
+          {(i > 0 || t.sign < 0) && <span className="roll-op">{t.sign < 0 ? "−" : "+"}</span>}
           {t.kind === "flat" ? (
             <span className="roll-flat">
               {t.value}
@@ -1104,25 +965,19 @@ function RollTerms({
           ) : (
             <>
               {t.dice.map((d, j) => {
-                const seed = seeds[i]![j]!
-                return <RollDie
-                  key={seed}
-                  die={d}
-                  index={j}
-                  arriving={arriving || !initial.current.has(seed)}
-                  mine={mine}
-                  seed={seed}
-                  onReroll={
-                    interaction.allowed
-                      ? () => interaction.reroll(i, j)
-                      : undefined
-                  }
-                  onToggle={
-                    interaction.allowed
-                      ? () => interaction.toggle(i, j)
-                      : undefined
-                  }
-                />;
+                const seed = seeds[i]![j]!;
+                return (
+                  <RollDie
+                    key={seed}
+                    die={d}
+                    index={j}
+                    arriving={arriving || !initial.current.has(seed)}
+                    mine={mine}
+                    seed={seed}
+                    onReroll={interaction.allowed ? () => interaction.reroll(i, j) : undefined}
+                    onToggle={interaction.allowed ? () => interaction.toggle(i, j) : undefined}
+                  />
+                );
               })}
               {t.label && <span className="roll-label">{t.label}</span>}
             </>
@@ -1152,9 +1007,7 @@ function MoveCard({
   if (interaction.snapshot?.edited && original.roll) {
     const system = systemOf(campaign);
     const character = getCharacter(campaign, original.characterId);
-    const action = system.actions.find(
-      (candidate) => candidate.id === original.moveId,
-    );
+    const action = system.actions.find((candidate) => candidate.id === original.moveId);
     if (character && action) {
       const derived = derive(character, system);
       m = {
@@ -1173,15 +1026,14 @@ function MoveCard({
       };
     }
   }
-  const result = m.result
-    ? systemOf(campaign).results.find((r) => r.id === m.result)
-    : undefined;
+  const result = m.result ? systemOf(campaign).results.find((r) => r.id === m.result) : undefined;
   const label = result ? result.label : m.result;
   return (
     <div
       className="roll-card move-card"
       data-band={result?.tone ?? "none"}
       data-shakeable={(interaction.allowed && !!m.roll) || undefined}
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable so the roll can be shaken by keyboard
       tabIndex={interaction.allowed && m.roll ? 0 : undefined}
       {...shake}
     >
@@ -1219,15 +1071,18 @@ function MoveCard({
         </div>
       )}
       {label && <div className="move-band">{label}</div>}
-      <FormattedText campaign={campaign} text={m.outcome} characterId={m.characterId ?? null} className="move-outcome" />
+      <FormattedText
+        campaign={campaign}
+        text={m.outcome}
+        characterId={m.characterId ?? null}
+        className="move-outcome"
+      />
       {m.save && <SaveRequests campaign={campaign} m={m} />}
       {canAct && m.suggestions.length > 0 && (
         <div className="move-suggest">
           {m.suggestions.map((s, i) => {
             const count = s.count?.messageId
-              ? campaign.chat.messages.value.find(
-                  (message) => message.id === s.count!.messageId,
-                )
+              ? campaign.chat.messages.value.find((message) => message.id === s.count!.messageId)
               : undefined;
             const canAdvance =
               !s.count ||

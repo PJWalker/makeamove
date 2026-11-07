@@ -8,22 +8,14 @@ const slug = (value: string) =>
     .replace(/^-|-$/g, "");
 
 function valueAfter(section: string, label: string) {
-  return (
-    new RegExp(`\\*\\*${label}\\*\\*\\s*([^<*\\n]+)`, "i")
-      .exec(section)?.[1]
-      ?.trim() ?? ""
-  );
+  return new RegExp(`\\*\\*${label}\\*\\*\\s*([^<*\\n]+)`, "i").exec(section)?.[1]?.trim() ?? "";
 }
 
 function sectionText(block: string, name: string) {
   const headings = [...block.matchAll(/^#### (.+)$/gm)];
-  const heading = headings.find(
-    (entry) => entry[1]?.trim().toLowerCase() === name.toLowerCase(),
-  );
+  const heading = headings.find((entry) => entry[1]?.trim().toLowerCase() === name.toLowerCase());
   if (!heading || heading.index === undefined) return "";
-  const end =
-    headings.find((entry) => (entry.index ?? -1) > heading.index!)?.index ??
-    block.length;
+  const end = headings.find((entry) => (entry.index ?? -1) > heading.index!)?.index ?? block.length;
   return block
     .slice(heading.index + (heading[0]?.length ?? 0), end)
     .replace(/<[^>]+>/g, " ")
@@ -72,10 +64,7 @@ export function parseSrdMonsters(markdown: string): MonsterDef[] {
           id: slug(name),
           name,
           description: `${details}${fields.cr ? ` · CR ${fields.cr}` : ""}`,
-          hp:
-            Number(
-              valueAfter(block, "HP").replace(/,/g, "").match(/^\d+/)?.[0],
-            ) || 1,
+          hp: Number(valueAfter(block, "HP").replace(/,/g, "").match(/^\d+/)?.[0]) || 1,
           scores,
           fields,
           ...(size ? { size } : {}),

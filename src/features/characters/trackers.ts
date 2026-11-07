@@ -34,12 +34,17 @@ export const trackerToken = (b: TrackerButton) =>
   `[[${b.by > 0 ? "+" : ""}${b.by} ${b.name}${b.label !== `${b.by > 0 ? "+" : ""}${b.by} ${b.name}` ? `|${b.label}` : ""}]]`;
 
 export function trackersOf(system: GameSystem): TrackerDef[] {
-  return system.trackers ?? system.resources.map((r) => ({ id: r.id, name: r.name, resource: r.id, max: r.max }));
+  return (
+    system.trackers ??
+    system.resources.map((r) => ({ id: r.id, name: r.name, resource: r.id, max: r.max }))
+  );
 }
 
 export function findTracker(system: GameSystem, name: string): TrackerDef | undefined {
   const n = name.trim().toLowerCase();
-  return trackersOf(system).find((t) => [t.id, t.name, ...(t.aliases ?? [])].some((x) => x.toLowerCase() === n));
+  return trackersOf(system).find((t) =>
+    [t.id, t.name, ...(t.aliases ?? [])].some((x) => x.toLowerCase() === n),
+  );
 }
 
 function maxOf(system: GameSystem, c: CharacterView, t: TrackerDef): number | undefined {
@@ -51,7 +56,11 @@ const valueOf = (c: CharacterView, t: TrackerDef) =>
   Number((t.resource ? c.resources[t.resource] : c.data[t.data ?? ""]) ?? 0);
 
 /** Why a button can't be pressed for this character, or null if it can. */
-export function trackerBlock(campaign: Campaign, characterId: string | null | undefined, b: TrackerButton): string | null {
+export function trackerBlock(
+  campaign: Campaign,
+  characterId: string | null | undefined,
+  b: TrackerButton,
+): string | null {
   const system = systemOf(campaign);
   const t = findTracker(system, b.name);
   if (!t) return `${b.name} isn't something this game tracks`;

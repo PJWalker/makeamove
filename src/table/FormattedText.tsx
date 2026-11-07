@@ -1,7 +1,12 @@
 import type { ReactNode } from "react";
 import type { Campaign } from "../campaign/campaign";
 import { getCharacter } from "../features/characters/api";
-import { parseTrackerButton, pressTracker, trackerBlock, type TrackerButton } from "../features/characters/trackers";
+import {
+  parseTrackerButton,
+  pressTracker,
+  trackerBlock,
+  type TrackerButton,
+} from "../features/characters/trackers";
 import { useY } from "../ui/useY";
 import { shake, trackerTip } from "./trackerButtons";
 
@@ -15,7 +20,15 @@ import { shake, trackerTip } from "./trackerButtons";
 const INLINE = /(\[\[[^\]]+\]\])|\*\*([^*]+)\*\*|\*([^*\n]+)\*/g;
 
 /** A button in text, live for one character. */
-function TrackerButtonView({ campaign, characterId, b }: { campaign: Campaign; characterId: string | null; b: TrackerButton }) {
+function TrackerButtonView({
+  campaign,
+  characterId,
+  b,
+}: {
+  campaign: Campaign;
+  characterId: string | null;
+  b: TrackerButton;
+}) {
   // Pressable or not follows the character's numbers as they change.
   const blocked = useY(campaign.characters, () => {
     void getCharacter(campaign, characterId ?? undefined);
@@ -28,7 +41,8 @@ function TrackerButtonView({ campaign, characterId, b }: { campaign: Campaign; c
       aria-disabled={blocked ? true : undefined}
       data-tip={trackerTip(campaign, characterId, b)}
       onClick={(e) => {
-        if (blocked || !characterId || !pressTracker(campaign, characterId, b)) shake(e.currentTarget);
+        if (blocked || !characterId || !pressTracker(campaign, characterId, b))
+          shake(e.currentTarget);
       }}
     >
       {b.label}
@@ -46,8 +60,12 @@ function inline(text: string, ctx: Ctx, key: string): ReactNode[] {
     if (m[1]) {
       const b = parseTrackerButton(m[1]);
       out.push(
-        !b ? m[1] : ctx.characterId === undefined ? (
-          <span key={k} className="tracker-button" data-static="true">{b.label}</span>
+        !b ? (
+          m[1]
+        ) : ctx.characterId === undefined ? (
+          <span key={k} className="tracker-button" data-static="true">
+            {b.label}
+          </span>
         ) : (
           <TrackerButtonView key={k} campaign={ctx.campaign} characterId={ctx.characterId} b={b} />
         ),
@@ -79,7 +97,10 @@ export function FormattedText({
   className?: string;
 }) {
   const ctx: Ctx = { campaign, characterId };
-  const blocks = text.split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean);
+  const blocks = text
+    .split(/\n\s*\n/)
+    .map((b) => b.trim())
+    .filter(Boolean);
   return (
     <div className={`formatted-text ${className}`}>
       {blocks.flatMap((block, i) => {
@@ -97,7 +118,9 @@ export function FormattedText({
         }
         return runs.map((run, r) =>
           run.heading ? (
-            <h4 key={`${i}.${r}`} className="formatted-heading">{inline(run.lines[0]!, ctx, `${i}.${r}`)}</h4>
+            <h4 key={`${i}.${r}`} className="formatted-heading">
+              {inline(run.lines[0]!, ctx, `${i}.${r}`)}
+            </h4>
           ) : run.list ? (
             <ul key={`${i}.${r}`}>
               {run.lines.map((l, j) => (
@@ -106,7 +129,10 @@ export function FormattedText({
             </ul>
           ) : (
             <p key={`${i}.${r}`}>
-              {run.lines.flatMap((l, j) => [...(j ? [<br key={`br${j}`} />] : []), ...inline(l, ctx, `${i}.${r}.${j}`)])}
+              {run.lines.flatMap((l, j) => [
+                ...(j ? [<br key={`br${j}`} />] : []),
+                ...inline(l, ctx, `${i}.${r}.${j}`),
+              ])}
             </p>
           ),
         );

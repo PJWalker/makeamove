@@ -1,20 +1,40 @@
-import { signal } from '@preact/signals-react'
+import { signal } from "@preact/signals-react";
 import { plainText } from "../features/characters/trackers";
 import { MoveBody } from "./MoveBody";
-import { addItem, baseSystemOf, canEdit, getCharacter, newNpcFromMonster, selectedCharacterId, setData, startMove, systemOf } from '../features/characters/api'
-import { KIND_LABEL, librariesFor, libraryKey, sourceEntries, topLevelKeys, viewEntries, type EntryKind, type EntryView, type LibraryEntry } from '../features/library'
-import { toggleSetValue } from '../lib/set'
-import type { Campaign } from '../campaign/campaign'
-import { useY } from '../ui/useY'
-import { Button } from '../ui/Button'
-import { Segmented } from '../ui/Segmented'
+import {
+  addItem,
+  baseSystemOf,
+  canEdit,
+  getCharacter,
+  newNpcFromMonster,
+  selectedCharacterId,
+  setData,
+  startMove,
+  systemOf,
+} from "../features/characters/api";
+import {
+  KIND_LABEL,
+  librariesFor,
+  libraryKey,
+  sourceEntries,
+  topLevelKeys,
+  viewEntries,
+  type EntryKind,
+  type EntryView,
+  type LibraryEntry,
+} from "../features/library";
+import { toggleSetValue } from "../lib/set";
+import type { Campaign } from "../campaign/campaign";
+import { useY } from "../ui/useY";
+import { Button } from "../ui/Button";
+import { Segmented } from "../ui/Segmented";
 import { IconGive, IconImage } from "../ui/icons";
-import { List, ListExpand, ListGroup, Tag } from '../ui/List'
-import { EntryRow, EntryWindow, rollTag, useEntryWindows } from './EntryWindow'
-import { dragEntity, entity } from './entityDrag'
-import { libraryView as view, type KindFilter } from './libraryView'
-import { linkProxy } from './LinkChip'
-import { makeVerb } from './sheetParts'
+import { List, ListExpand, ListGroup, Tag } from "../ui/List";
+import { EntryRow, EntryWindow, rollTag, useEntryWindows } from "./EntryWindow";
+import { dragEntity, entity } from "./entityDrag";
+import { libraryView as view, type KindFilter } from "./libraryView";
+import { linkProxy } from "./LinkChip";
+import { makeVerb } from "./sheetParts";
 import { actionMenuItems } from "./actionMenu";
 import { getEntityGraphic } from "./entityGraphics";
 import { CampaignEntityGraphic } from "./EntityGraphic";
@@ -23,7 +43,7 @@ import type { ItemDef } from "../systems/types";
 import { INITIAL_TREASURE_BOXES, purchaseAtWealth } from "../systems/dungeon-world-2/wealth";
 
 /** Collections and entries shown open, by "source/collection[/entry…]" (this device only). */
-const opened = signal<Set<string>>(new Set())
+const opened = signal<Set<string>>(new Set());
 
 /**
  * The Libraries: everything the game system and plugins contribute (items,
@@ -31,17 +51,19 @@ const opened = signal<Set<string>>(new Set())
  * to the selected character, and moves made by them.
  */
 export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
-  const system = systemOf(campaign)
+  const system = systemOf(campaign);
   // The Libraries are the system's own; homebrew is in the Items panel.
-  const sources = librariesFor(baseSystemOf(campaign))
-  const meId = useY(campaign.members, () => selectedCharacterId(campaign))
-  const me = useY(campaign.characters, () => getCharacter(campaign, meId))
-  const canAct = !!me && canEdit(campaign, me)
-  const windows = useEntryWindows()
-  const { kind, query } = view.value
-  const searching = query.trim() !== ''
+  const sources = librariesFor(baseSystemOf(campaign));
+  const meId = useY(campaign.members, () => selectedCharacterId(campaign));
+  const me = useY(campaign.characters, () => getCharacter(campaign, meId));
+  const canAct = !!me && canEdit(campaign, me);
+  const windows = useEntryWindows();
+  const { kind, query } = view.value;
+  const searching = query.trim() !== "";
 
-  const kinds = (Object.keys(KIND_LABEL) as EntryKind[]).filter((k) => sources.some((s) => s.collections.some((c) => c.kind === k)))
+  const kinds = (Object.keys(KIND_LABEL) as EntryKind[]).filter((k) =>
+    sources.some((s) => s.collections.some((c) => c.kind === k)),
+  );
   const purchaseCost = (item: ItemDef) =>
     system.id === "dungeon-world-2" ? item.wealthCost : undefined;
   const isRareMagicItem = (item: ItemDef) =>
@@ -50,10 +72,10 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
     if (isRareMagicItem(item)) return campaign.isGm() && canAct;
     const cost = purchaseCost(item);
     if (!cost || !me) return canAct;
-    return canAct && purchaseAtWealth(
-      Number(me.data.treasureBoxes ?? INITIAL_TREASURE_BOXES),
-      cost.rank,
-    ) !== null;
+    return (
+      canAct &&
+      purchaseAtWealth(Number(me.data.treasureBoxes ?? INITIAL_TREASURE_BOXES), cost.rank) !== null
+    );
   };
   const acquireItem = (item: ItemDef) => {
     if (!me || !canAct) return;
@@ -77,8 +99,8 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
     });
   };
   const toggle = (id: string) => {
-    opened.value = toggleSetValue(opened.value, id)
-  }
+    opened.value = toggleSetValue(opened.value, id);
+  };
 
   /** The buttons an entry offers, in its row or its window. */
   const actions = (e: LibraryEntry, inWindow = false) => {
@@ -109,8 +131,8 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
         </Button>
       );
     }
-    if (e.kind === 'move' && inWindow) {
-      const { label, Icon } = makeVerb(e.move)
+    if (e.kind === "move" && inWindow) {
+      const { label, Icon } = makeVerb(e.move);
       return (
         <Button
           variant="primary"
@@ -122,23 +144,44 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
         </Button>
       );
     }
-    if (e.kind === 'monster' && inWindow) {
-      return <Button size="sm" variant="primary" disabled={!campaign.isGm()} onClick={() => newNpcFromMonster(campaign, e.monster.id)}>Create NPC</Button>
+    if (e.kind === "monster" && inWindow) {
+      return (
+        <Button
+          size="sm"
+          variant="primary"
+          disabled={!campaign.isGm()}
+          onClick={() => newNpcFromMonster(campaign, e.monster.id)}
+        >
+          Create NPC
+        </Button>
+      );
     }
-    return null
-  }
+    return null;
+  };
 
-  const tagOf = (e: LibraryEntry) => (e.kind === 'move' ? rollTag(system, e.move) : null)
+  const tagOf = (e: LibraryEntry) => (e.kind === "move" ? rollTag(system, e.move) : null);
   const metaOf = (e: LibraryEntry) =>
     [
-      e.note ?? '',
-      ...(e.kind === 'item'
-        ? [e.item.weight ? `${e.item.weight} wt` : '', e.item.uses ? `${e.item.uses} ${e.item.uses === 1 ? 'use' : 'uses'}` : '', e.item.wealthCost ? `${e.item.wealthCost.tier} (${e.item.wealthCost.rank})` : '']
+      e.note ?? "",
+      ...(e.kind === "item"
+        ? [
+            e.item.weight ? `${e.item.weight} wt` : "",
+            e.item.uses ? `${e.item.uses} ${e.item.uses === 1 ? "use" : "uses"}` : "",
+            e.item.wealthCost ? `${e.item.wealthCost.tier} (${e.item.wealthCost.rank})` : "",
+          ]
         : []),
-    ].filter(Boolean).join(' · ') || undefined
+    ]
+      .filter(Boolean)
+      .join(" · ") || undefined;
   /** An entry's text, with what it holds listed after. */
   const textOf = (e: LibraryEntry) =>
-    [e.text, ...(e.groups ?? []).map((g) => `${g.name}${g.note ? ` (${g.note})` : ''}: ${g.entries.map((c) => c.name).join(', ')}`)].join('\n\n')
+    [
+      e.text,
+      ...(e.groups ?? []).map(
+        (g) =>
+          `${g.name}${g.note ? ` (${g.note})` : ""}: ${g.entries.map((c) => c.name).join(", ")}`,
+      ),
+    ].join("\n\n");
 
   const menuItemsFor = (e: LibraryEntry) => {
     const actions =
@@ -179,8 +222,16 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
               ...(actions.length ? (["divider"] as const) : []),
               ...actions,
             ]
-          : e.kind === 'monster'
-            ? [{ label: 'Create NPC', disabled: !campaign.isGm(), onSelect: () => { if (campaign.isGm()) newNpcFromMonster(campaign, e.monster.id) } }]
+          : e.kind === "monster"
+            ? [
+                {
+                  label: "Create NPC",
+                  disabled: !campaign.isGm(),
+                  onSelect: () => {
+                    if (campaign.isGm()) newNpcFromMonster(campaign, e.monster.id);
+                  },
+                },
+              ]
             : actions;
     return [
       ...items,
@@ -188,36 +239,40 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
       {
         label: "Change graphic…",
         Icon: IconImage,
-        onSelect: () =>
-          editEntityGraphic(campaign, e.kind, e.id, e.name, e.icon),
+        onSelect: () => editEntityGraphic(campaign, e.kind, e.id, e.name, e.icon),
       },
     ];
   };
 
-  const all = sources.flatMap((s) => sourceEntries(s).map((e) => [s.id, e] as const))
+  const all = sources.flatMap((s) => sourceEntries(s).map((e) => [s.id, e] as const));
   const shown = sources
     .map((s) => {
-      const listed = topLevelKeys(s)
+      const listed = topLevelKeys(s);
       return {
         s,
         collections: s.collections
           .map((c) => ({ c, views: viewEntries(c.entries, query, kind, listed) }))
           .filter(({ views }) => views.length > 0),
-      }
+      };
     })
-    .filter(({ collections }) => collections.length > 0)
+    .filter(({ collections }) => collections.length > 0);
 
   const row = (sourceId: string, path: string, v: EntryView, aligned: boolean) => {
-    const e = v.entry
-    const id = `${path}/${e.id}`
-    const open = v.groups.length > 0 && (searching ? v.reveal || opened.value.has(id) : opened.value.has(id))
+    const e = v.entry;
+    const id = `${path}/${e.id}`;
+    const open =
+      v.groups.length > 0 && (searching ? v.reveal || opened.value.has(id) : opened.value.has(id));
     return [
       <EntryRow
         key={e.id}
         name={e.name}
         before={
           v.groups.length ? (
-            <ListExpand open={open} onToggle={() => toggle(id)} label={`${open ? 'Hide' : 'Show'} what ${e.name} holds`} />
+            <ListExpand
+              open={open}
+              onToggle={() => toggle(id)}
+              label={`${open ? "Hide" : "Show"} what ${e.name} holds`}
+            />
           ) : aligned ? (
             <span className="list-expand" aria-hidden="true" />
           ) : undefined
@@ -242,25 +297,23 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
         }
         onOpen={(rowElement) => windows.show(libraryKey(sourceId, e), rowElement)}
         menuItems={menuItemsFor(e)}
-        onPointerDown={e.kind === 'monster' ? undefined : (ev) =>
-          dragEntity(
-            ev,
-            e.kind === "item" || e.kind === "move"
-              ? entity(campaign, e.kind, e.id, e.name)
-              : {
-                  label: e.name,
-                  token: {
-                    name: e.name,
-                    graphic: getEntityGraphic(
-                      campaign,
-                      e.kind,
-                      e.id,
-                      e.icon,
-                    ),
-                    entityRef: { kind: e.kind, id: e.id },
-                  },
-                },
-          )
+        onPointerDown={
+          e.kind === "monster"
+            ? undefined
+            : (ev) =>
+                dragEntity(
+                  ev,
+                  e.kind === "item" || e.kind === "move"
+                    ? entity(campaign, e.kind, e.id, e.name)
+                    : {
+                        label: e.name,
+                        token: {
+                          name: e.name,
+                          graphic: getEntityGraphic(campaign, e.kind, e.id, e.icon),
+                          entityRef: { kind: e.kind, id: e.id },
+                        },
+                      },
+                )
         }
       >
         {actions(e)}
@@ -268,7 +321,11 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
       open && (
         <li key={`${e.id}/held`} className="library-nest">
           {v.groups.map(({ group, entries }) => (
-            <section key={group.id} className="library-nest-group" aria-label={`${e.name}: ${group.name}`}>
+            <section
+              key={group.id}
+              className="library-nest-group"
+              aria-label={`${e.name}: ${group.name}`}
+            >
               {(v.groups.length > 1 || group.note) && (
                 <h4 className="library-nest-name">
                   {group.name}
@@ -280,18 +337,17 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
           ))}
         </li>
       ),
-    ]
-  }
+    ];
+  };
   const rows = (sourceId: string, path: string, views: EntryView[]) => {
-    const aligned = views.some((v) => v.groups.length > 0)
-    return <List>{views.flatMap((v) => row(sourceId, path, v, aligned))}</List>
-  }
+    const aligned = views.some((v) => v.groups.length > 0);
+    return <List>{views.flatMap((v) => row(sourceId, path, v, aligned))}</List>;
+  };
 
   return (
     <div className="panel-scroll libraries">
       <div className="libraries-tools">
         <input
-
           type="search"
           placeholder="Search the Libraries…"
           aria-label="Search the Libraries"
@@ -302,12 +358,19 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
           <Segmented
             label="Show"
             value={kind}
-            options={[{ id: 'all' as KindFilter, label: 'All' }, ...kinds.map((k) => ({ id: k as KindFilter, label: KIND_LABEL[k] }))]}
+            options={[
+              { id: "all" as KindFilter, label: "All" },
+              ...kinds.map((k) => ({ id: k as KindFilter, label: KIND_LABEL[k] })),
+            ]}
             onChange={(k) => (view.value = { ...view.value, kind: k })}
           />
         )}
         <p className="muted libraries-target">
-          {me ? (canAct ? `Adding to ${me.name}` : `${me.name} isn’t yours to change`) : 'Choose a character to add things to'}
+          {me
+            ? canAct
+              ? `Adding to ${me.name}`
+              : `${me.name} isn’t yours to change`
+            : "Choose a character to add things to"}
         </p>
       </div>
 
@@ -315,8 +378,8 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
         <section key={s.id} className="library-source" aria-label={s.name}>
           <h3 className="eyebrow">{s.name}</h3>
           {collections.map(({ c, views }) => {
-            const id = `${s.id}/${c.id}`
-            const open = searching || opened.value.has(id)
+            const id = `${s.id}/${c.id}`;
+            const open = searching || opened.value.has(id);
             return (
               <ListGroup
                 key={c.id}
@@ -332,22 +395,24 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
           {s.attribution && <p className="muted sheet-attribution">{s.attribution}</p>}
         </section>
       ))}
-      {searching && !shown.length && (
-        <p className="empty">Nothing matches “{query.trim()}”.</p>
-      )}
+      {searching && !shown.length && <p className="empty">Nothing matches “{query.trim()}”.</p>}
 
       {windows.keys.map((key) => {
-        const found = all.find(([sid, e]) => libraryKey(sid, e) === key)
-        if (!found) return null
-        const e = found[1]
-        const tag = tagOf(e)
+        const found = all.find(([sid, e]) => libraryKey(sid, e) === key);
+        if (!found) return null;
+        const e = found[1];
+        const tag = tagOf(e);
         return (
           <EntryWindow
             key={key}
             entryKey={key}
             title={e.name}
             text={plainText(textOf(e))}
-            body={e.kind === 'move' ? <MoveBody campaign={campaign} move={e.move} characterId={me?.id ?? null} /> : undefined}
+            body={
+              e.kind === "move" ? (
+                <MoveBody campaign={campaign} move={e.move} characterId={me?.id ?? null} />
+              ) : undefined
+            }
             tags={e.tags}
             onClose={() => windows.close(key)}
             graphicRef={{ kind: e.kind, id: e.id }}
@@ -366,5 +431,5 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
         );
       })}
     </div>
-  )
+  );
 }

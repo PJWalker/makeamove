@@ -44,13 +44,7 @@ import { BONDS } from "../systems/dungeon-world-2/bonds";
  */
 
 /** The Relationships section of a sheet. */
-export function RelationshipsSection({
-  campaign,
-  c,
-}: {
-  campaign: Campaign;
-  c: CharacterView;
-}) {
+export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: CharacterView }) {
   const editable = canEdit(campaign, c);
   const tracksDepth = systemOf(campaign).id === "dungeon-world-2";
   const json = useY(campaign.characters, () =>
@@ -64,8 +58,7 @@ export function RelationshipsSection({
     JSON.stringify(characterLinkTargets(campaign)),
   );
   const people = useMemo(
-    () =>
-      JSON.parse(peopleJson) as ReturnType<typeof characterLinkTargets>,
+    () => JSON.parse(peopleJson) as ReturnType<typeof characterLinkTargets>,
     [peopleJson],
   );
   const depthWebJson = useY(campaign.characters, () =>
@@ -83,35 +76,27 @@ export function RelationshipsSection({
   const bondsJson = useY(campaign.systemData, () =>
     JSON.stringify(bondsFor(campaign.systemData, c.id)),
   );
-  const bonds = useMemo(
-    () => JSON.parse(bondsJson) as ReturnType<typeof bondsFor>,
-    [bondsJson],
-  );
+  const bonds = useMemo(() => JSON.parse(bondsJson) as ReturnType<typeof bondsFor>, [bondsJson]);
   const eligibleBondmates = useMemo(
     () =>
       people.filter((person) => {
         const other = getCharacter(campaign, person.id);
-        const ownDepth = depthWeb.find(
-          (relationship) => relationship.from === c.id && relationship.to === person.id,
-        )?.depth ?? 0;
-        const theirDepth = depthWeb.find(
-          (relationship) => relationship.from === person.id && relationship.to === c.id,
-        )?.depth ?? 0;
-        return (
-          person.id !== c.id &&
-          other?.kind === "pc" &&
-          ownDepth >= 3 &&
-          theirDepth >= 3
-        );
+        const ownDepth =
+          depthWeb.find(
+            (relationship) => relationship.from === c.id && relationship.to === person.id,
+          )?.depth ?? 0;
+        const theirDepth =
+          depthWeb.find(
+            (relationship) => relationship.from === person.id && relationship.to === c.id,
+          )?.depth ?? 0;
+        return person.id !== c.id && other?.kind === "pc" && ownDepth >= 3 && theirDepth >= 3;
       }),
     [campaign, people, depthWeb, c.id],
   );
   const others = useMemo(
     () =>
       people.filter(
-        (other) =>
-          other.id !== c.id &&
-          !rels.some((relationship) => relationship.to === other.id),
+        (other) => other.id !== c.id && !rels.some((relationship) => relationship.to === other.id),
       ),
     [people, c.id, rels],
   );
@@ -127,8 +112,7 @@ export function RelationshipsSection({
   const panel = useRef<HTMLDivElement>(null);
   const listId = useId();
   const matches = matchingLinkTargets(others, adding.value.replace(/^@/, ""));
-  const expanded =
-    editable && suggesting.value && adding.value.trim().length > 0;
+  const expanded = editable && suggesting.value && adding.value.trim().length > 0;
   const index = Math.min(active.value, Math.max(0, matches.length - 1));
   const add = useCallback(
     (to: string) => {
@@ -138,9 +122,7 @@ export function RelationshipsSection({
         !canEdit(campaign, current) ||
         to === c.id ||
         !getCharacter(campaign, to) ||
-        relationshipsOf(campaign.characters, c.id).some(
-          (relationship) => relationship.to === to,
-        )
+        relationshipsOf(campaign.characters, c.id).some((relationship) => relationship.to === to)
       )
         return false;
       setRelationship(campaign.characters, c.id, to, "");
@@ -158,8 +140,7 @@ export function RelationshipsSection({
     return registerEntityDrop(
       element,
       (entity) =>
-        entity.link?.kind === "character" &&
-        others.some((other) => other.id === entity.link?.id),
+        entity.link?.kind === "character" && others.some((other) => other.id === entity.link?.id),
       (entity) => {
         return entity.link ? add(entity.link.id) : false;
       },
@@ -170,20 +151,14 @@ export function RelationshipsSection({
   useMenuOverlay({
     open: expanded,
     ref: panel,
-    anchor: bounds
-      ? { left: bounds.left, top: bounds.top, bottom: bounds.bottom }
-      : null,
+    anchor: bounds ? { left: bounds.left, top: bounds.top, bottom: bounds.bottom } : null,
     inside: [input.current],
     onDismiss: () => (suggesting.value = false),
     positionKey: `${adding.value}:${matches.map((match) => match.id).join(",")}`,
   });
 
   return (
-    <section
-      ref={section}
-      className="form-section sheet-section"
-      aria-label="Relationships"
-    >
+    <section ref={section} className="form-section sheet-section" aria-label="Relationships">
       <h3 className="sheet-heading">Relationships</h3>{" "}
       <Button size="sm" variant="ghost" onClick={() => openRelationshipWeb()}>
         Web
@@ -196,9 +171,7 @@ export function RelationshipsSection({
             const expanded = open.value === r.to;
             return (
               <li key={r.to} className="relationship">
-                <div
-                  className={`relationship-row${tracksDepth ? " has-depth" : ""}`}
-                >
+                <div className={`relationship-row${tracksDepth ? " has-depth" : ""}`}>
                   <button
                     type="button"
                     className="relationship-name"
@@ -212,12 +185,7 @@ export function RelationshipsSection({
                     value={r.label}
                     disabled={!editable}
                     onChange={(e) =>
-                      setRelationship(
-                        campaign.characters,
-                        c.id,
-                        r.to,
-                        e.currentTarget.value.trim(),
-                      )
+                      setRelationship(campaign.characters, c.id, r.to, e.currentTarget.value.trim())
                     }
                   />
                   {tracksDepth && (
@@ -256,9 +224,7 @@ export function RelationshipsSection({
                       variant="icon"
                       size="sm"
                       label="Remove"
-                      onClick={() =>
-                        removeRelationship(campaign.characters, c.id, r.to)
-                      }
+                      onClick={() => removeRelationship(campaign.characters, c.id, r.to)}
                     >
                       <IconDelete />
                     </Button>
@@ -287,9 +253,7 @@ export function RelationshipsSection({
             return (
               <li key={`${bond.first}:${bond.second}`} className="relationship">
                 <div className="relationship-row">
-                  <span className="relationship-name">
-                    {partner?.name ?? "Former PC"}
-                  </span>
+                  <span className="relationship-name">{partner?.name ?? "Former PC"}</span>
                   <strong>{definition?.name ?? bond.type}</strong>
                 </div>
                 {definition && (
@@ -373,9 +337,7 @@ export function RelationshipsSection({
                   Advanced move
                   <select
                     value={bondMoveId.value}
-                    onChange={(event) =>
-                      (bondMoveId.value = event.currentTarget.value)
-                    }
+                    onChange={(event) => (bondMoveId.value = event.currentTarget.value)}
                   >
                     <option value="">Choose a move</option>
                     {availableMoves.map((move) => (
@@ -387,17 +349,13 @@ export function RelationshipsSection({
                 </label>
               )}
               {reinforcing && availableMoves.length === 0 && (
-                <span className="muted">
-                  All advanced Bond moves are unlocked.
-                </span>
+                <span className="muted">All advanced Bond moves are unlocked.</span>
               )}
               <Button
                 size="sm"
                 variant="secondary"
                 disabled={
-                  !bondmateId.value ||
-                  !bondType.value ||
-                  (reinforcing && !bondMoveId.value)
+                  !bondmateId.value || !bondType.value || (reinforcing && !bondMoveId.value)
                 }
                 onClick={() => {
                   const changed = reinforcing
@@ -437,9 +395,7 @@ export function RelationshipsSection({
             aria-expanded={expanded}
             aria-controls={expanded ? listId : undefined}
             aria-activedescendant={
-              expanded && matches[index]
-                ? `${listId}-${matches[index].id}`
-                : undefined
+              expanded && matches[index] ? `${listId}-${matches[index].id}` : undefined
             }
             placeholder="Character name"
             autoComplete="off"
@@ -463,10 +419,7 @@ export function RelationshipsSection({
               ) {
                 event.preventDefault();
                 active.value =
-                  (index +
-                    (event.key === "ArrowDown" ? 1 : -1) +
-                    matches.length) %
-                  matches.length;
+                  (index + (event.key === "ArrowDown" ? 1 : -1) + matches.length) % matches.length;
               } else if (
                 expanded &&
                 matches[index] &&
@@ -512,9 +465,7 @@ export function RelationshipsSection({
                 </button>
               ))
             ) : (
-              <p className="empty-inline note-suggest-empty">
-                Nothing by that name.
-              </p>
+              <p className="empty-inline note-suggest-empty">Nothing by that name.</p>
             )}
           </div>,
           document.body,
@@ -524,8 +475,7 @@ export function RelationshipsSection({
 }
 
 /** Open the web, from anywhere (the campaign's dialog host has it). */
-export const openRelationshipWeb = () =>
-  (dialogRequest.value = "relationships");
+export const openRelationshipWeb = () => (dialogRequest.value = "relationships");
 
 const W = 640;
 const H = 440;
@@ -555,13 +505,10 @@ export function RelationshipsDialog({
     [json],
   );
   // Only characters in a relationship, unless there are none yet.
-  const shown = useMemo(
-    () => {
-      const linked = new Set(edges.flatMap((e) => [e.from, e.to]));
-      return people.filter((p) => linked.has(p.id));
-    },
-    [people, edges],
-  );
+  const shown = useMemo(() => {
+    const linked = new Set(edges.flatMap((e) => [e.from, e.to]));
+    return people.filter((p) => linked.has(p.id));
+  }, [people, edges]);
   const dragged = useSignal<Record<string, NodePosition>>({});
   const ids = useMemo(() => shown.map((p) => p.id), [shown]);
   const pos = useMemo(
@@ -678,18 +625,10 @@ export function RelationshipsDialog({
                 onPointerDown={(e) => drag(p.id, e as unknown as PointerEvent)}
               >
                 <circle r={NODE_R} />
-                <text
-                  className="relationship-initial"
-                  textAnchor="middle"
-                  dy="0.35em"
-                >
+                <text className="relationship-initial" textAnchor="middle" dy="0.35em">
                   {p.name.trim()[0]?.toUpperCase()}
                 </text>
-                <text
-                  className="relationship-node-name"
-                  textAnchor="middle"
-                  y={NODE_R + 14}
-                >
+                <text className="relationship-node-name" textAnchor="middle" y={NODE_R + 14}>
                   {p.name}
                 </text>
               </g>
@@ -697,9 +636,7 @@ export function RelationshipsDialog({
           })}
         </svg>
       ) : (
-        <p className="empty">
-          No relationships yet. Add them from a character’s sheet.
-        </p>
+        <p className="empty">No relationships yet. Add them from a character’s sheet.</p>
       )}
     </Dialog>
   );

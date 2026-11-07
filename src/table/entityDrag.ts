@@ -95,10 +95,10 @@ export function entity(
     token: { name: label },
     link: { kind, id },
     ...(prefix
-      ? { pin: (index: number) =>
-          void editHotbar(campaign, (slots) =>
-            insertAt(slots, `${prefix}:${id}`, index),
-          ) }
+      ? {
+          pin: (index: number) =>
+            void editHotbar(campaign, (slots) => insertAt(slots, `${prefix}:${id}`, index)),
+        }
       : {}),
   };
   if (kind === "character") {
@@ -152,10 +152,7 @@ export function itemDefinitionForToken(
   return matches.length === 1 ? matches[0] : undefined;
 }
 
-export function itemTokenEntity(
-  campaign: Campaign,
-  token: TokenElement,
-): DragEntity | null {
+export function itemTokenEntity(campaign: Campaign, token: TokenElement): DragEntity | null {
   const def = itemDefinitionForToken(campaign, token);
   if (!def) return null;
   const dragged = entity(campaign, "item", def.id, token.name, true);
@@ -171,23 +168,15 @@ export function itemTokenEntity(
 }
 
 /** An entity for a hotbar or palette action, by its id: links and gifts where it names a link target. */
-export function actionEntity(
-  campaign: Campaign,
-  actionId: string,
-  label: string,
-): DragEntity {
+export function actionEntity(campaign: Campaign, actionId: string, label: string): DragEntity {
   const i = actionId.indexOf(":");
   const prefix = actionId.slice(0, i);
-  const kind = (Object.keys(ACTION_PREFIX) as LinkKind[]).find(
-    (k) => ACTION_PREFIX[k] === prefix,
-  );
+  const kind = (Object.keys(ACTION_PREFIX) as LinkKind[]).find((k) => ACTION_PREFIX[k] === prefix);
   const pin = (index: number) =>
     void editHotbar(campaign, (slots) => insertAt(slots, actionId, index));
   if (prefix === "use" || prefix === "equip") {
     const character = getCharacter(campaign, selectedCharacterId(campaign));
-    const item = character?.inventory.find(
-      (entry) => entry.id === actionId.slice(i + 1),
-    );
+    const item = character?.inventory.find((entry) => entry.id === actionId.slice(i + 1));
     if (item) {
       return {
         label,
@@ -216,11 +205,7 @@ export function actionEntity(
 /** Editors that take a dropped entity as a link, by their element (marked `data-link-drop`). */
 const linkDrops = new Map<
   Element,
-  (
-    link: { kind: LinkKind; id: string; label: string },
-    x: number,
-    y: number,
-  ) => boolean | void
+  (link: { kind: LinkKind; id: string; label: string }, x: number, y: number) => boolean | void
 >();
 
 /** Let an editor take dropped entities as links; returns a function that stops it. */
@@ -242,9 +227,7 @@ export function registerLinkDrop(
 
 const hotbar = () => document.querySelector<HTMLElement>(".hotbar");
 const hotbarSlots = (except?: Element | null) =>
-  [...(hotbar()?.querySelectorAll<HTMLElement>(".hotbar-slot") ?? [])].filter(
-    (s) => s !== except,
-  );
+  [...(hotbar()?.querySelectorAll<HTMLElement>(".hotbar-slot") ?? [])].filter((s) => s !== except);
 
 /** Whether a point is over the hotbar (with a little room above it). */
 export function overHotbar(x: number, y: number) {
@@ -257,28 +240,16 @@ export function overHotbar(x: number, y: number) {
  * that links it, or a character that takes it (any element with
  * `data-item-drop` or `data-move-drop` holding the character's id).
  */
-export function dropTargetAt(
-  x: number,
-  y: number,
-  entity: DragEntity,
-): DropTarget | null {
+export function dropTargetAt(x: number, y: number, entity: DragEntity): DropTarget | null {
   const el = document.elementFromPoint(x, y);
   const editor = el?.closest<HTMLElement>("[data-link-drop]");
-  if (entity.link && editor && linkDrops.has(editor))
-    return { element: editor };
-  const folder = entity.folder
-    ? el?.closest<HTMLElement>("[data-folder-drop]")
-    : null;
+  if (entity.link && editor && linkDrops.has(editor)) return { element: editor };
+  const folder = entity.folder ? el?.closest<HTMLElement>("[data-folder-drop]") : null;
   if (folder) return { element: folder };
   if (entity.give) {
-    const character = el?.closest<HTMLElement>(
-      `[data-${entity.give.kind}-drop]`,
-    );
+    const character = el?.closest<HTMLElement>(`[data-${entity.give.kind}-drop]`);
     if (character) {
-      const characterId =
-        character.dataset[
-          entity.give.kind === "item" ? "itemDrop" : "moveDrop"
-        ];
+      const characterId = character.dataset[entity.give.kind === "item" ? "itemDrop" : "moveDrop"];
       if (characterId) return { element: character, characterId };
     }
   }
@@ -299,37 +270,25 @@ export function dropTargetAt(
 }
 
 /** Drop an entity on a target from dropTargetAt; it flashes to say it landed. */
-export function dropOn(
-  target: DropTarget,
-  entity: DragEntity,
-  x: number,
-  y: number,
-) {
+export function dropOn(target: DropTarget, entity: DragEntity, x: number, y: number) {
   if (!target.element.isConnected) return false;
   const registered = entityDrops.get(target.element);
   if (registered) {
-    if (!registered.accepts(entity) || registered.drop(entity, x, y) === false)
-      return false;
+    if (!registered.accepts(entity) || registered.drop(entity, x, y) === false) return false;
   } else {
     const link = linkDrops.get(target.element);
     if (link && entity.link) {
-      if (link({ ...entity.link, label: entity.label }, x, y) === false)
-        return false;
-    } else if (
-      entity.folder &&
-      target.element.hasAttribute("data-folder-drop")
-    ) {
+      if (link({ ...entity.link, label: entity.label }, x, y) === false) return false;
+    } else if (entity.folder && target.element.hasAttribute("data-folder-drop")) {
       entity.folder(target.element.dataset.folderDrop || undefined);
     } else if (entity.give && target.characterId) {
       const key = entity.give.kind === "item" ? "itemDrop" : "moveDrop";
       if (target.element.dataset[key] !== target.characterId) return false;
-      if (entity.give.canGive && !entity.give.canGive(target.characterId))
-        return false;
+      if (entity.give.canGive && !entity.give.canGive(target.characterId)) return false;
       entity.give.to(target.characterId);
       if (target.tokenId) flashSceneDrop(target.tokenId);
     } else if (target.element.matches(".scene-canvas")) {
-      if (!tokenDrop.value?.(x, y, entity.token ?? { name: entity.label }))
-        return false;
+      if (!tokenDrop.value?.(x, y, entity.token ?? { name: entity.label })) return false;
     } else return false;
   }
   target.element.dataset.dropped = "true";
@@ -338,10 +297,7 @@ export function dropOn(
 }
 
 /** Resolve a scene token back to the library entry it represents. */
-export function tokenEntity(
-  campaign: Campaign,
-  token: TokenElement,
-): DragEntity | null {
+export function tokenEntity(campaign: Campaign, token: TokenElement): DragEntity | null {
   const extra = token as TokenElement & {
     entityRef?: { kind: string; id: string };
     graphic?: import("../graphics").EntityGraphic;
@@ -352,8 +308,7 @@ export function tokenEntity(
       ? "item"
       : (extra.entityRef?.kind ?? "");
   const id = token.characterId ?? token.itemDefId ?? extra.entityRef?.id;
-  if (!id || !["character", "item", "move", "note", "scene"].includes(kind))
-    return null;
+  if (!id || !["character", "item", "move", "note", "scene"].includes(kind)) return null;
   const linkKind = kind as LinkKind;
   if (linkLabel(campaign, linkKind, id) === null) return null;
   const dragged =
@@ -379,8 +334,7 @@ export function tokenEntity(
 export function dropMarker() {
   let target: DropTarget | null = null;
   return (next: DropTarget | null) => {
-    if (next?.element === target?.element && next?.tokenId === target?.tokenId)
-      return;
+    if (next?.element === target?.element && next?.tokenId === target?.tokenId) return;
     delete target?.element.dataset.dropping;
     target = next;
     sceneDropHighlight.value = next?.tokenId ?? null;
@@ -433,13 +387,11 @@ export function dragEntity(
   let ghost: HTMLElement | null = null;
   const mark = dropMarker();
   const line = dropLine("x");
-  const onBar = (ev: PointerEvent) =>
-    !!entity.pin && overHotbar(ev.clientX, ev.clientY);
+  const onBar = (ev: PointerEvent) => !!entity.pin && overHotbar(ev.clientX, ev.clientY);
 
   function move(ev: PointerEvent) {
     if (!ghost) {
-      if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < THRESHOLD)
-        return;
+      if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < THRESHOLD) return;
       // Just the name and icon, not the row's buttons or details.
       const pick = source.querySelector(".list-pick, .palette-title") ?? source;
       ghost = pick.cloneNode(true) as HTMLElement;
@@ -479,29 +431,18 @@ export function dragEntity(
     const bar = hotbar();
     if (bar) delete bar.dataset.dropping;
     if (!ghost) return;
-    const target =
-      commit && !onBar(ev)
-        ? dropTargetAt(ev.clientX, ev.clientY, entity)
-        : null;
+    const target = commit && !onBar(ev) ? dropTargetAt(ev.clientX, ev.clientY, entity) : null;
     document.documentElement.classList.remove("is-reordering");
     // The click that ends a drag is not a press on the row.
     const swallow = (c: Event) => c.stopPropagation();
     window.addEventListener("click", swallow, { capture: true, once: true });
-    setTimeout(
-      () => window.removeEventListener("click", swallow, { capture: true }),
-      0,
-    );
+    setTimeout(() => window.removeEventListener("click", swallow, { capture: true }), 0);
     if (!commit) return ghost.remove();
     if (onBar(ev)) {
       ghost.remove();
       return entity.pin!(indexAmong(hotbarSlots(), "x", ev));
     }
-    if (
-      target?.tokenId &&
-      target.tokenCenter &&
-      target.characterId &&
-      entity.give
-    ) {
+    if (target?.tokenId && target.tokenCenter && target.characterId && entity.give) {
       return sendGhostToToken(ghost, target.tokenCenter, () =>
         dropOn(target, entity, ev.clientX, ev.clientY),
       );

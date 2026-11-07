@@ -82,8 +82,7 @@ const RETURN_MS = 280;
 const ARRANGEMENT_LEAD_MS = 800;
 const ARRANGEMENT_DURATION_MS = 650;
 
-const toQuaternion = (q: DiePose["quaternion"]) =>
-  new Quaternion(q.x, q.y, q.z, q.w);
+const toQuaternion = (q: DiePose["quaternion"]) => new Quaternion(q.x, q.y, q.z, q.w);
 
 interface Shape {
   geometry: BufferGeometry;
@@ -111,10 +110,10 @@ function trapezohedron(): BufferGeometry {
   });
   const triangles: [Vector3, Vector3, Vector3][] = [];
   for (let k = 0; k < 10; k += 2) {
-    const up = (zigzag)[k]!;
-    const down = (zigzag)[(k + 1) % 10]!;
-    const nextUp = (zigzag)[(k + 2) % 10]!;
-    const nextDown = (zigzag)[(k + 3) % 10]!;
+    const up = zigzag[k]!;
+    const down = zigzag[(k + 1) % 10]!;
+    const nextUp = zigzag[(k + 2) % 10]!;
+    const nextDown = zigzag[(k + 3) % 10]!;
     triangles.push(
       [top, up, down],
       [top, down, nextUp],
@@ -123,9 +122,7 @@ function trapezohedron(): BufferGeometry {
     );
   }
   const positions = triangles.flatMap(([a, b, c]) => {
-    const normal = new Vector3()
-      .subVectors(b, a)
-      .cross(new Vector3().subVectors(c, a));
+    const normal = new Vector3().subVectors(b, a).cross(new Vector3().subVectors(c, a));
     const outward = normal.dot(a.clone().add(b).add(c)) > 0;
     return (outward ? [a, b, c] : [a, c, b]).flatMap((v) => v.toArray());
   });
@@ -141,33 +138,23 @@ function facing(geometry: BufferGeometry, upright: boolean): Quaternion {
   const corners = Array.from({ length: position.count }, (_, i) =>
     new Vector3().fromBufferAttribute(position, i),
   );
-  const a = (corners)[0]!;
-  const b = (corners)[1]!;
-  const c = (corners)[2]!;
-  const normal = new Vector3()
-    .subVectors(b, a)
-    .cross(new Vector3().subVectors(c, a))
-    .normalize();
+  const a = corners[0]!;
+  const b = corners[1]!;
+  const c = corners[2]!;
+  const normal = new Vector3().subVectors(b, a).cross(new Vector3().subVectors(c, a)).normalize();
   const face = corners.filter(
     (v, i) =>
       Math.abs(normal.dot(v.clone().sub(a))) < 1e-4 &&
       corners.findIndex((w) => w.distanceTo(v) < 1e-4) === i,
   );
-  const centre = face
-    .reduce((sum, v) => sum.add(v), new Vector3())
-    .divideScalar(face.length);
+  const centre = face.reduce((sum, v) => sum.add(v), new Vector3()).divideScalar(face.length);
   const rest = new Quaternion().setFromUnitVectors(normal, Z);
   if (upright) {
     const far = face.reduce((best, v) =>
       v.distanceTo(centre) > best.distanceTo(centre) ? v : best,
     );
     const tip = far.clone().sub(centre).applyQuaternion(rest);
-    rest.premultiply(
-      new Quaternion().setFromAxisAngle(
-        Z,
-        Math.PI / 2 - Math.atan2(tip.y, tip.x),
-      ),
-    );
+    rest.premultiply(new Quaternion().setFromAxisAngle(Z, Math.PI / 2 - Math.atan2(tip.y, tip.x)));
   }
   return rest;
 }
@@ -185,12 +172,12 @@ function faceData(geometry: BufferGeometry) {
     const triangle = [0, 1, 2].map((index) =>
       new Vector3().fromBufferAttribute(positions, offset + index),
     );
-    const normal = (triangle)[1]!
+    const normal = triangle[1]!
       .clone()
-      .sub((triangle)[0]!)
-      .cross((triangle)[2]!.clone().sub((triangle)[0]!))
+      .sub(triangle[0]!)
+      .cross(triangle[2]!.clone().sub(triangle[0]!))
       .normalize();
-    const distance = normal.dot((triangle)[0]!);
+    const distance = normal.dot(triangle[0]!);
     let plane = planes.find(
       (candidate) =>
         candidate.normal.distanceTo(normal) < 1e-4 &&
@@ -202,9 +189,7 @@ function faceData(geometry: BufferGeometry) {
     }
     plane.triangles.push(offset);
     for (const vertex of triangle) {
-      let index = vertices.findIndex(
-        (candidate) => candidate.distanceTo(vertex) < 1e-4,
-      );
+      let index = vertices.findIndex((candidate) => candidate.distanceTo(vertex) < 1e-4);
       if (index < 0) {
         index = vertices.length;
         vertices.push(vertex);
@@ -215,20 +200,19 @@ function faceData(geometry: BufferGeometry) {
   const faces = planes.map((plane) => {
     const indices = [...plane.indices];
     const centre = indices
-    .reduce((sum, index) => sum.add((vertices)[index]!), new Vector3())
+      .reduce((sum, index) => sum.add(vertices[index]!), new Vector3())
       .divideScalar(indices.length);
     const rotation = new Quaternion().setFromUnitVectors(Z, plane.normal);
     const inverse = rotation.clone().invert();
     indices.sort((first, second) => {
-      const a = (vertices)[first]!.clone().sub(centre).applyQuaternion(inverse);
-      const b = (vertices)[second]!.clone().sub(centre).applyQuaternion(inverse);
+      const a = vertices[first]!.clone().sub(centre).applyQuaternion(inverse);
+      const b = vertices[second]!.clone().sub(centre).applyQuaternion(inverse);
       return Math.atan2(a.y, a.x) - Math.atan2(b.y, b.x);
     });
     let inset = Infinity;
     indices.forEach((index, offset) => {
-      const a = (vertices)[index]!.clone().sub(centre);
-      const edge = (vertices)[indices[(offset + 1) % indices.length]!]!.clone()
-        .sub((vertices)[index]!);
+      const a = vertices[index]!.clone().sub(centre);
+      const edge = vertices[indices[(offset + 1) % indices.length]!]!.clone().sub(vertices[index]!);
       inset = Math.min(inset, a.clone().cross(edge).length() / edge.length());
     });
     return {
@@ -281,15 +265,12 @@ function shapeFor(sides: number): Shape {
   return shape;
 }
 
-const probe = document
-  .createElement("canvas")
-  .getContext("2d", { willReadFrequently: true })!;
+const probe = document.createElement("canvas").getContext("2d", { willReadFrequently: true })!;
 /** A colour token as rgb(), which three can read; the tokens are written in oklch. */
 function token(name: string): string {
   probe.fillStyle = "#888";
   probe.fillStyle =
-    getComputedStyle(document.documentElement).getPropertyValue(name).trim() ||
-    "#888";
+    getComputedStyle(document.documentElement).getPropertyValue(name).trim() || "#888";
   probe.fillRect(0, 0, 1, 1);
   const [r, g, b] = probe.getImageData(0, 0, 1, 1).data;
   return `rgb(${r}, ${g}, ${b})`;
@@ -391,9 +372,7 @@ async function startRenderer(forceWebGL: boolean) {
 
 export async function createDiceRenderer(): Promise<DiceRenderer | null> {
   const renderer = await startRenderer(!("gpu" in navigator));
-  const webgpu = !!(
-    renderer.backend as unknown as { isWebGPUBackend?: boolean }
-  ).isWebGPUBackend;
+  const webgpu = !!(renderer.backend as unknown as { isWebGPUBackend?: boolean }).isWebGPUBackend;
   const environment = reflectionsFor(renderer);
   // WebGL can't draw into other canvases, so landed dice get a renderer of their own.
   const slotRenderer = webgpu ? undefined : await startRenderer(true);
@@ -436,22 +415,10 @@ export async function createDiceRenderer(): Promise<DiceRenderer | null> {
   });
 
   const still = new Scene();
-  still.environment = slotRenderer
-    ? reflectionsFor(slotRenderer).texture
-    : environment.texture;
+  still.environment = slotRenderer ? reflectionsFor(slotRenderer).texture : environment.texture;
   still.environmentIntensity = 0.8;
-  const stillCamera = new OrthographicCamera(
-    -SLOT / 2,
-    SLOT / 2,
-    SLOT / 2,
-    -SLOT / 2,
-    -100,
-    100,
-  );
-  const stillDie = new Mesh<BufferGeometry, MeshPhysicalMaterial[]>(
-    new BufferGeometry(),
-    [],
-  );
+  const stillCamera = new OrthographicCamera(-SLOT / 2, SLOT / 2, SLOT / 2, -SLOT / 2, -100, 100);
+  const stillDie = new Mesh<BufferGeometry, MeshPhysicalMaterial[]>(new BufferGeometry(), []);
   const stillEdges = new LineSegments(new BufferGeometry(), edgeMaterial);
   stillDie.add(stillEdges);
   stillDie.scale.setScalar(SCALE);
@@ -475,12 +442,7 @@ export async function createDiceRenderer(): Promise<DiceRenderer | null> {
     void renderer.setAnimationLoop(frame);
   }
 
-  function dieMesh(
-    shape: Shape,
-    material: MeshPhysicalMaterial[],
-    value: number,
-    sides: number,
-  ) {
+  function dieMesh(shape: Shape, material: MeshPhysicalMaterial[], value: number, sides: number) {
     const die = new Mesh(shape.geometry, material);
     die.add(new LineSegments(shape.edges, edgeMaterial));
     const labels = numberFaces(die, shape, value, sides);
@@ -515,9 +477,7 @@ export async function createDiceRenderer(): Promise<DiceRenderer | null> {
       context.font = `700 104px ${getComputedStyle(document.body).fontFamily}`;
       context.textAlign = "center";
       context.textBaseline = "middle";
-      context.fillStyle = token(
-        faceTone(number, sides) === "max" ? "--accent-ink" : "--text",
-      );
+      context.fillStyle = token(faceTone(number, sides) === "max" ? "--accent-ink" : "--text");
       context.fillText(String(number), 64, 67, 120);
       const texture = new CanvasTexture(canvas);
       texture.colorSpace = SRGBColorSpace;
@@ -529,9 +489,7 @@ export async function createDiceRenderer(): Promise<DiceRenderer | null> {
       const geometry = new PlaneGeometry(face.size, face.size);
       const label = new Mesh(geometry, material);
       label.position.copy(face.centre).addScaledVector(face.normal, 0.003);
-      label.quaternion.copy(
-        index === 0 ? shape.rest.clone().invert() : face.rotation,
-      );
+      label.quaternion.copy(index === 0 ? shape.rest.clone().invert() : face.rotation);
       mesh.add(label);
       return () => {
         mesh.remove(label);
@@ -554,23 +512,15 @@ export async function createDiceRenderer(): Promise<DiceRenderer | null> {
     if (now < f.start + f.delay) return;
     const box = f.slot.getBoundingClientRect();
     if (!f.slot.isConnected || !box.width) return finish(f);
-    if (
-      box.right <= 0 ||
-      box.left >= innerWidth ||
-      box.bottom <= 0 ||
-      box.top >= innerHeight
-    )
+    if (box.right <= 0 || box.left >= innerWidth || box.bottom <= 0 || box.top >= innerHeight)
       return finish(f);
     const tray = f.tray.getBoundingClientRect();
-    const frame = Math.min(
-      (now - f.start) / (PHYSICS_STEP * 1000),
-      f.frames.length - 1,
-    );
+    const frame = Math.min((now - f.start) / (PHYSICS_STEP * 1000), f.frames.length - 1);
     const poseIndex = Math.floor(frame);
-    const pose = (f.frames)[poseIndex]!;
-    const next = (f.frames)[Math.min(poseIndex + 1, f.frames.length - 1)]!;
+    const pose = f.frames[poseIndex]!;
+    const next = f.frames[Math.min(poseIndex + 1, f.frames.length - 1)]!;
     const mix = frame % 1;
-    const resting = (f.frames)[f.frames.length - 1]!;
+    const resting = f.frames[f.frames.length - 1]!;
     if (frame >= f.frames.length - 1) f.settle();
     if (poseIndex !== f.lastImpactFrame) {
       f.lastImpactFrame = poseIndex;
@@ -584,7 +534,7 @@ export async function createDiceRenderer(): Promise<DiceRenderer | null> {
     });
     let position: Point;
     if (frame < f.entry) {
-      const entry = mapPose((f.frames)[f.entry]!);
+      const entry = mapPose(f.frames[f.entry]!);
       const launch = f.delay / (PHYSICS_STEP * 1000);
       const progress = Math.max(0, (frame - launch) / (f.entry - launch));
       position = {
@@ -601,9 +551,7 @@ export async function createDiceRenderer(): Promise<DiceRenderer | null> {
     }
     const arrangedAt = arrangementStarts.get(f.tray);
     const arrangement =
-      arrangedAt === undefined
-        ? 0
-        : Math.min(1, (now - arrangedAt) / ARRANGEMENT_DURATION_MS);
+      arrangedAt === undefined ? 0 : Math.min(1, (now - arrangedAt) / ARRANGEMENT_DURATION_MS);
     const eased = arrangement * arrangement;
     position.x += (centre.x - position.x) * eased;
     position.y += (centre.y - position.y) * eased;
@@ -666,8 +614,7 @@ export async function createDiceRenderer(): Promise<DiceRenderer | null> {
       const dt = (now - last.t) / 1000;
       const vx = last.vx + ((x - last.x) / dt - last.vx) * 0.5;
       const vy = last.vy + ((y - last.y) / dt - last.vy) * 0.5;
-      const jolt = (dv: number) =>
-        Math.max(-MAX_JOLT, Math.min(MAX_JOLT, (dv * JOLT) / SCALE));
+      const jolt = (dv: number) => Math.max(-MAX_JOLT, Math.min(MAX_JOLT, (dv * JOLT) / SCALE));
       hold.physics.jolt(jolt(vx - last.vx), jolt(vy - last.vy));
       hold.time += Math.min(dt, 0.1);
       while (hold.time >= PHYSICS_STEP) {
@@ -680,7 +627,7 @@ export async function createDiceRenderer(): Promise<DiceRenderer | null> {
     }
     const poses = hold.physics.poses();
     for (const held of hold.dice) {
-      const pose = (poses)[held.index]!;
+      const pose = poses[held.index]!;
       place(
         held.die,
         held.shadow,
@@ -736,7 +683,7 @@ export async function createDiceRenderer(): Promise<DiceRenderer | null> {
           bottom: trayHeight / SCALE,
         },
         picked.map(([, rest], index) => {
-          const { x, y, z, quaternion: q } = (starts)[index]!;
+          const { x, y, z, quaternion: q } = starts[index]!;
           return {
             hull: rest.shape.hull,
             x: (x - origin.x) / SCALE,
@@ -788,29 +735,23 @@ export async function createDiceRenderer(): Promise<DiceRenderer | null> {
     }
     const trays = new Set([...flights].map((flight) => flight.tray));
     for (const tray of trays) {
-      const trayFlights = [...flights].filter(
-        (flight) => flight.tray === tray,
-      );
+      const trayFlights = [...flights].filter((flight) => flight.tray === tray);
       if (
         arrangementStarts.has(tray) ||
         !trayFlights.every(
-            (flight) =>
-              now >=
-              flight.start +
-                (flight.frames.length - 1) * PHYSICS_STEP * 1000 -
-                ARRANGEMENT_LEAD_MS,
+          (flight) =>
+            now >=
+            flight.start + (flight.frames.length - 1) * PHYSICS_STEP * 1000 - ARRANGEMENT_LEAD_MS,
         )
       )
         continue;
       arrangementStarts.set(tray, now);
-      for (const flight of trayFlights)
-        flight.slot.dataset.revealStarted = "true";
+      for (const flight of trayFlights) flight.slot.dataset.revealStarted = "true";
     }
     for (const f of flights) step(f, now);
     for (const hold of [...holds]) stepHold(hold, now);
     for (const tray of arrangementStarts.keys()) {
-      if (![...flights].some((flight) => flight.tray === tray))
-        arrangementStarts.delete(tray);
+      if (![...flights].some((flight) => flight.tray === tray)) arrangementStarts.delete(tray);
     }
     renderer.setCanvasTarget(overlay);
     renderer.render(air, airCamera);
@@ -875,13 +816,13 @@ export async function createDiceRenderer(): Promise<DiceRenderer | null> {
     start: number,
   ): MountedDie {
     const shape = shapeFor(die.sides);
-    const final = (frames)[frames.length - 1]!.quaternion;
+    const final = frames[frames.length - 1]!.quaternion;
     const rotation = toQuaternion(final);
     let topFace = 0;
     shape.faces.forEach((face, index) => {
       if (
         face.normal.clone().applyQuaternion(rotation).z >
-        (shape.faces)[topFace]!.normal.clone().applyQuaternion(rotation).z
+        shape.faces[topFace]!.normal.clone().applyQuaternion(rotation).z
       )
         topFace = index;
     });
@@ -889,8 +830,7 @@ export async function createDiceRenderer(): Promise<DiceRenderer | null> {
     for (const tone of ["plain", "max", "min"] as const)
       materials[tone].color.set(token(TONE_TOKEN[tone]));
     const material = shape.faces.map(
-      (_, index) =>
-        materials[faceTone(faceValue(firstValue, index, die.sides), die.sides)],
+      (_, index) => materials[faceTone(faceValue(firstValue, index, die.sides), die.sides)],
     );
     stillDie.geometry = shape.geometry;
     stillDie.material = material;
@@ -991,7 +931,7 @@ export async function createDiceRenderer(): Promise<DiceRenderer | null> {
         );
         const start = performance.now();
         mounts.forEach((mount, index) => {
-          mount.mounted = mountDie(mount.args, (frames)[index]!, tray, start);
+          mount.mounted = mountDie(mount.args, frames[index]!, tray, start);
           void mount.mounted.landed.then(mount.resolve, mount.reject);
           void mount.mounted.settled.then(mount.settle);
         });

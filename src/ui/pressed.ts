@@ -5,21 +5,21 @@
  */
 
 /** A press only counts for whatever it starts right away. */
-const TTL_MS = 1000
+const TTL_MS = 1000;
 
-let last: { el: Element; at: number } | null = null
+let last: { el: Element; at: number } | null = null;
 
 export function notePressed(el: Element | null | undefined) {
-  last = el ? { el, at: performance.now() } : null
+  last = el ? { el, at: performance.now() } : null;
 }
 
 addEventListener(
-  'pointerdown',
+  "pointerdown",
   (e) => notePressed((e.target as Element | null)?.closest?.('button, [role="button"], a')),
   true,
-)
+);
 
 /** The control pressed just now, if any. */
 export function lastPressed(): Element | null {
-  return last && performance.now() - last.at < TTL_MS ? last.el : null
+  return last && performance.now() - last.at < TTL_MS ? last.el : null;
 }

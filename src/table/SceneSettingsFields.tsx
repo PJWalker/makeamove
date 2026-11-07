@@ -1,9 +1,4 @@
-import {
-  DEFAULT_GRID,
-  DIAGONAL_RULES,
-  GRID_TYPES,
-  MIN_GRID_SIZE,
-} from "../scene/grid";
+import { DEFAULT_GRID, DIAGONAL_RULES, GRID_TYPES, MIN_GRID_SIZE } from "../scene/grid";
 import type { SceneDoc } from "../scene/sceneDoc";
 import { DEFAULT_CANVAS_COLOUR, type Campaign } from "../campaign/campaign";
 import { useY } from "../ui/useY";
@@ -23,13 +18,9 @@ export function SceneSettingsFields({
 }) {
   const grid = useY(scene.settings, () => scene.grid());
   const lighting = useY(scene.settings, () => scene.lighting());
-  const view = useY(campaign.scenes, () =>
-    campaign.sceneViews().find((s) => s.id === sceneId),
-  );
+  const view = useY(campaign.scenes, () => campaign.sceneViews().find((s) => s.id === sceneId));
   const isGm = campaign.isGm();
-  const shown = view
-    ? canvasColour(view, activeMapColour.value)
-    : DEFAULT_CANVAS_COLOUR;
+  const shown = view ? canvasColour(view, activeMapColour.value) : DEFAULT_CANVAS_COLOUR;
   const auto = !view?.canvasColour;
   const num = (v: string, fallback: number) =>
     Number.isFinite(parseFloat(v)) ? parseFloat(v) : fallback;
@@ -60,10 +51,7 @@ export function SceneSettingsFields({
               disabled={!isGm || grid.type === "none"}
               onChange={(e) =>
                 scene.setGrid({
-                  size: Math.max(
-                    MIN_GRID_SIZE,
-                    num(e.currentTarget.value, DEFAULT_GRID.size),
-                  ),
+                  size: Math.max(MIN_GRID_SIZE, num(e.currentTarget.value, DEFAULT_GRID.size)),
                 })
               }
             />
@@ -75,9 +63,7 @@ export function SceneSettingsFields({
               step={1}
               value={grid.offsetX}
               disabled={!isGm || grid.type === "none"}
-              onChange={(e) =>
-                scene.setGrid({ offsetX: num(e.currentTarget.value, 0) })
-              }
+              onChange={(e) => scene.setGrid({ offsetX: num(e.currentTarget.value, 0) })}
             />
           </label>
           <label className="field">
@@ -87,9 +73,7 @@ export function SceneSettingsFields({
               step={1}
               value={grid.offsetY}
               disabled={!isGm || grid.type === "none"}
-              onChange={(e) =>
-                scene.setGrid({ offsetY: num(e.currentTarget.value, 0) })
-              }
+              onChange={(e) => scene.setGrid({ offsetY: num(e.currentTarget.value, 0) })}
             />
           </label>
         </div>
@@ -104,10 +88,7 @@ export function SceneSettingsFields({
               disabled={!isGm}
               onChange={(e) =>
                 scene.setGrid({
-                  unit: Math.max(
-                    0,
-                    num(e.currentTarget.value, DEFAULT_GRID.unit),
-                  ),
+                  unit: Math.max(0, num(e.currentTarget.value, DEFAULT_GRID.unit)),
                 })
               }
             />
@@ -118,9 +99,7 @@ export function SceneSettingsFields({
               value={grid.unitName}
               disabled={!isGm}
               autoComplete="off"
-              onChange={(e) =>
-                scene.setGrid({ unitName: e.currentTarget.value.trim() })
-              }
+              onChange={(e) => scene.setGrid({ unitName: e.currentTarget.value.trim() })}
             />
           </label>
         </div>
@@ -191,8 +170,7 @@ export function SceneSettingsFields({
           />
           {lighting.enabled && (
             <label className="field">
-              Darkness where no light reaches: {" "}
-              {Math.round(lighting.darkness * 100)}%
+              Darkness where no light reaches: {Math.round(lighting.darkness * 100)}%
               <input
                 type="range"
                 min={0}

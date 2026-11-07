@@ -89,9 +89,7 @@ function popUp(id: string) {
 
 async function show(title: string, body: string, tag: string) {
   const options: NotificationOptions = { body, tag, icon: "/icon-192.png" };
-  const reg = await navigator.serviceWorker
-    ?.getRegistration()
-    .catch(() => undefined);
+  const reg = await navigator.serviceWorker?.getRegistration().catch(() => undefined);
   if (reg) {
     await reg.showNotification(title, options);
     return;
@@ -105,11 +103,7 @@ async function show(title: string, body: string, tag: string) {
 
 /** Asks once, on the first interaction (browsers only allow it then). */
 function askPermission() {
-  if (
-    typeof Notification === "undefined" ||
-    Notification.permission !== "default"
-  )
-    return;
+  if (typeof Notification === "undefined" || Notification.permission !== "default") return;
   const ask = () => void Notification.requestPermission();
   window.addEventListener("pointerdown", ask, { once: true });
 }

@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  CALM_AFTER,
-  DiceFlight,
-  PHYSICS_STEP,
-  simulateDice,
-} from "../../../table/diePhysics";
-
+import { CALM_AFTER, DiceFlight, PHYSICS_STEP, simulateDice } from "../../../table/diePhysics";
 
 const cube = {
   vertices: [
@@ -29,7 +23,7 @@ const cube = {
 };
 
 const tray = { left: 0, top: 0, right: 8, bottom: 6 };
-const roll = (seed: string) => (simulateDice(tray, [{ hull: cube, seed }]))[0]!;
+const roll = (seed: string) => simulateDice(tray, [{ hull: cube, seed }])[0]!;
 
 describe("natural dice flight", () => {
   it("replays exactly from the same shared seed", () => {
@@ -46,7 +40,7 @@ describe("natural dice flight", () => {
 
   it("cannot escape after capture even with a large impulse", () => {
     const flight = new DiceFlight(tray, [{ hull: cube, seed: "wall-test" }]);
-    const die = (flight.dice)[0]!;
+    const die = flight.dice[0]!;
     for (let step = 0; step < 240 && !die.captured; step++) flight.step();
     expect(die.captured).toBe(true);
     die.body.velocity.set(400, 400, 10);
@@ -62,7 +56,7 @@ describe("natural dice flight", () => {
 
   it("calms unsettled dice using damping after a while, not a target pose", () => {
     const flight = new DiceFlight(tray, [{ hull: cube, seed: "damping-test" }]);
-    const { body } = (flight.dice)[0]!;
+    const { body } = flight.dice[0]!;
     const calm = Math.round(CALM_AFTER / PHYSICS_STEP);
     for (let step = 0; step < calm; step++) flight.step();
     expect(body.linearDamping).toBeLessThan(0.5);
@@ -73,7 +67,7 @@ describe("natural dice flight", () => {
 
   it("uses the client tray bounds without stretching the dice", () => {
     const bounds = { left: 2, top: 3, right: 17, bottom: 7 };
-    const frames = (simulateDice(bounds, [{ hull: cube, seed: "wide-tray" }]))[0]!;
+    const frames = simulateDice(bounds, [{ hull: cube, seed: "wide-tray" }])[0]!;
     expect(frames.at(-1)!.captured).toBe(true);
     for (const pose of frames.filter((pose) => pose.captured)) {
       expect(pose.x).toBeGreaterThanOrEqual(bounds.left);
@@ -90,8 +84,8 @@ describe("natural dice flight", () => {
       { hull: cube, seed: "collision-b" },
     ]);
     flight.step();
-    const first = (flight.dice)[0]!;
-    const second = (flight.dice)[1]!;
+    const first = flight.dice[0]!;
+    const second = flight.dice[1]!;
     for (const [index, die] of flight.dice.entries()) {
       die.captured = true;
       die.body.collisionFilterMask = 3;
@@ -115,10 +109,10 @@ describe("natural dice flight", () => {
       { hull: cube, seed: "group-b", delay: 180 },
     ];
     const frames = simulateDice(tray, throws);
-    const firstFrames = (frames)[0]!;
-    const secondFrames = (frames)[1]!;
+    const firstFrames = frames[0]!;
+    const secondFrames = frames[1]!;
     expect(firstFrames.length).toBe(secondFrames.length);
-    expect((secondFrames)[10]!).toEqual((secondFrames)[0]!);
+    expect(secondFrames[10]!).toEqual(secondFrames[0]!);
     expect(frames.every((poses) => poses.at(-1)!.captured)).toBe(true);
     expect(simulateDice(tray, throws)).toEqual(frames);
   });

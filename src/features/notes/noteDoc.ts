@@ -1,6 +1,6 @@
-import * as Y from 'yjs'
-import { IndexeddbPersistence } from 'y-indexeddb'
-import { dataName } from '../../platform/dataEpoch'
+import * as Y from "yjs";
+import { IndexeddbPersistence } from "y-indexeddb";
+import { dataName } from "../../platform/dataEpoch";
 
 /*
  * A note's text: a Yjs subdocument of the campaign root, holding one
@@ -9,30 +9,30 @@ import { dataName } from '../../platform/dataEpoch'
  * sync session picks it up as soon as it loads.
  */
 
-export const noteGuid = (campaignId: string, noteId: string) => `${campaignId}/note/${noteId}`
-export const noteDbName = (guid: string) => dataName('note', guid)
+export const noteGuid = (campaignId: string, noteId: string) => `${campaignId}/note/${noteId}`;
+export const noteDbName = (guid: string) => dataName("note", guid);
 
 export class NoteDoc {
-  readonly doc: Y.Doc
-  readonly body: Y.XmlFragment
-  private persistence: IndexeddbPersistence
+  readonly doc: Y.Doc;
+  readonly body: Y.XmlFragment;
+  private persistence: IndexeddbPersistence;
 
   private constructor(doc: Y.Doc) {
-    this.doc = doc
-    this.body = doc.getXmlFragment('body')
-    this.persistence = new IndexeddbPersistence(noteDbName(doc.guid), doc)
+    this.doc = doc;
+    this.body = doc.getXmlFragment("body");
+    this.persistence = new IndexeddbPersistence(noteDbName(doc.guid), doc);
   }
 
   static async open(doc: Y.Doc): Promise<NoteDoc> {
-    doc.load()
-    const n = new NoteDoc(doc)
-    await n.persistence.whenSynced
-    return n
+    doc.load();
+    const n = new NoteDoc(doc);
+    await n.persistence.whenSynced;
+    return n;
   }
 
   /** Unload the note. Its subdocument is replaced by an unloaded stub. */
   destroy() {
-    this.persistence.destroy()
-    this.doc.destroy()
+    this.persistence.destroy();
+    this.doc.destroy();
   }
 }

@@ -1,7 +1,4 @@
-import type {
-  PointerEvent as ReactPointerEvent,
-  KeyboardEvent as ReactKeyboardEvent,
-} from "react";
+import type { PointerEvent as ReactPointerEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
 import { unreadCount } from "../features/chat/unread";
 import { useSignal } from "@preact/signals-react";
 import { IconClose, IconOpenWindow } from "../ui/icons";
@@ -36,12 +33,7 @@ import {
 } from "./panelLayout";
 import { PanelContent, PANELS, PaneToggle } from "./panels";
 import { PanelActionsProvider, PanelActionsSlot } from "./PanelActions";
-import {
-  closeEntityWindow,
-  entityRecord,
-  EntityWindowContent,
-  isEntityTab,
-} from "./entityWindows";
+import { closeEntityWindow, entityRecord, EntityWindowContent, isEntityTab } from "./entityWindows";
 import { CampaignEntityGraphic } from "./EntityGraphic";
 import { keyedSideWidth, SIDEBAR_DEFAULT_W } from "./layoutModel";
 
@@ -53,17 +45,9 @@ const DRAG_THRESHOLD = 10;
  * right one mirrored. A side with no panels disappears, unless a window is
  * being dragged, when it shows as a place to drop it.
  */
-export function Sidebar({
-  side,
-  campaign,
-}: {
-  side: Side;
-  campaign: Campaign;
-}) {
+export function Sidebar({ side, campaign }: { side: Side; campaign: Campaign }) {
   const s = shownLayout.value[side];
-  const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(
-    null,
-  );
+  const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const empty = s.panels.length === 0;
   if (empty && !windowDragging.value) return null;
   const { open, active } = s;
@@ -80,11 +64,7 @@ export function Sidebar({
       aria-label={side === "left" ? "Left sidebar" : "Right sidebar"}
     >
       <div className="sidebar-rail-edge">
-        <div
-          className={`sidebar-rail strip ${outer}`}
-          role="tablist"
-          aria-orientation="vertical"
-        >
+        <div className={`sidebar-rail strip ${outer}`} role="tablist" aria-orientation="vertical">
           {s.panels.map((id) => (
             <RailTab
               key={id}
@@ -92,9 +72,7 @@ export function Sidebar({
               id={id}
               side={side}
               selected={open && active === id}
-              onMenu={(x, y) =>
-                (menu.value = { x, y, items: tabMenu(id, side) })
-              }
+              onMenu={(x, y) => (menu.value = { x, y, items: tabMenu(id, side) })}
             />
           ))}
         </div>
@@ -116,24 +94,17 @@ export function Sidebar({
           <ActiveTab
             campaign={campaign}
             id={active}
-            onMenu={(x, y) =>
-              (menu.value = { x, y, items: tabMenu(active, side) })
-            }
+            onMenu={(x, y) => (menu.value = { x, y, items: tabMenu(active, side) })}
           />
         )}
       </section>
-      {menu.value && (
-        <ContextMenu {...menu.value} onClose={() => (menu.value = null)} />
-      )}
+      {menu.value && <ContextMenu {...menu.value} onClose={() => (menu.value = null)} />}
     </aside>
   );
 }
 
 /** A right-click menu trigger that also keeps a primary-button press handler. */
-function withPull(
-  onPress: (e: ReactPointerEvent) => void,
-  open: (x: number, y: number) => void,
-) {
+function withPull(onPress: (e: ReactPointerEvent) => void, open: (x: number, y: number) => void) {
   const trigger = menuTrigger(open);
   return {
     onContextMenu: trigger.onContextMenu,
@@ -157,8 +128,7 @@ function tabMenu(id: DockItemId, side: Side): MenuItem[] {
       },
       {
         label: "Float in a window",
-        onSelect: () =>
-          detachPanel(id, Math.max(innerWidth / 2 - 190, 0), 96, 380, 440),
+        onSelect: () => detachPanel(id, Math.max(innerWidth / 2 - 190, 0), 96, 380, 440),
       },
       "divider",
       {
@@ -203,8 +173,7 @@ function pullOut(id: DockItemId, e: ReactPointerEvent) {
   const grabX = Math.min(startX - header.left, 300);
   const grabY = startY - header.top;
   const move = (ev: PointerEvent) => {
-    if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < DRAG_THRESHOLD)
-      return;
+    if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < DRAG_THRESHOLD) return;
     cleanup();
     detachPanel(id, ev.clientX - grabX, ev.clientY - grabY);
     startWindowDrag(id, ev, grabX, grabY);
@@ -290,6 +259,8 @@ function SidebarResizeHandle({ side }: { side: Side }) {
   }
 
   return (
+    // A focusable separator is an interactive widget (ARIA window splitter).
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
     <div
       className="sidebar-resize"
       role="separator"
@@ -299,6 +270,7 @@ function SidebarResizeHandle({ side }: { side: Side }) {
       aria-valuemax={max}
       aria-valuenow={s.open ? s.width : 0}
       aria-valuetext={s.open ? `${s.width} pixels wide` : "Collapsed"}
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
       tabIndex={0}
       onPointerDown={(e) => dragSideWidth(side, e)}
       onDoubleClick={() => setSideWidth(side, SIDEBAR_DEFAULT_W)}
@@ -316,9 +288,7 @@ function switchTo(id: DockItemId, side: Side) {
   const from = s.active;
   const replacing = s.open && from !== null && from !== id;
   const direction =
-    from !== null && s.panels.indexOf(id) > s.panels.indexOf(from)
-      ? "vt-tab-next"
-      : "vt-tab-prev";
+    from !== null && s.panels.indexOf(id) > s.panels.indexOf(from) ? "vt-tab-next" : "vt-tab-prev";
   withTransition(() => selectPanel(id), {
     ...(replacing ? { rootClass: direction } : {}),
   });
@@ -350,10 +320,7 @@ function RailTab({
   const panel = isPanelId(id) ? PANELS[id] : undefined;
   const record = isEntityTab(id) ? entityRecord(id) : undefined;
   const label = panel?.label ?? record?.title ?? id.slice("entity:".length);
-  const Icon =
-    panel?.Icon ??
-    record?.icon ??
-    (record?.graphicRef ? undefined : IconOpenWindow);
+  const Icon = panel?.Icon ?? record?.icon ?? (record?.graphicRef ? undefined : IconOpenWindow);
   const onlineCount = useOnlineCount(campaign);
 
   function onPointerDown(e: ReactPointerEvent) {
@@ -369,17 +336,13 @@ function RailTab({
       data-entity-window={record ? id : undefined}
       label={
         label +
-        (id === "chat" && unreadCount.value
-          ? `, ${unreadCount.value} unread`
-          : "") +
+        (id === "chat" && unreadCount.value ? `, ${unreadCount.value} unread` : "") +
         (id === "members" ? `, ${onlineCount} online` : "")
       }
       aria-selected={selected}
       pressed={selected}
       data-unread={
-        id === "chat" && unreadCount.value > 0
-          ? Math.min(unreadCount.value, 99)
-          : undefined
+        id === "chat" && unreadCount.value > 0 ? Math.min(unreadCount.value, 99) : undefined
       }
       data-online={id === "members" ? onlineCount : undefined}
       onClick={() => switchTo(id, side)}
@@ -412,10 +375,7 @@ function ActiveTab({
   if (isPanelId(id)) {
     return (
       <PanelActionsProvider key={id}>
-        <div
-          className="sidebar-panel"
-          style={{ viewTransitionName: `panel-${id}` }}
-        >
+        <div className="sidebar-panel" style={{ viewTransitionName: `panel-${id}` }}>
           <header
             className="panel-header docked-header"
             {...withPull((e) => pullOut(id, e), onMenu)}
@@ -433,17 +393,13 @@ function ActiveTab({
   }
 
   const record = entityRecord(id);
-  const Icon =
-    record?.icon ?? (record?.graphicRef ? undefined : IconOpenWindow);
+  const Icon = record?.icon ?? (record?.graphicRef ? undefined : IconOpenWindow);
   return (
     <div
       className="sidebar-panel entity-sidebar-panel"
       style={{ viewTransitionName: `panel-${id}` }}
     >
-      <header
-        className="panel-header docked-header"
-        {...withPull((e) => pullOut(id, e), onMenu)}
-      >
+      <header className="panel-header docked-header" {...withPull((e) => pullOut(id, e), onMenu)}>
         {record?.graphicRef ? (
           <CampaignEntityGraphic
             campaign={campaign}
@@ -459,11 +415,7 @@ function ActiveTab({
         <h2 className="panel-title" tabIndex={-1}>
           {record?.title ?? id.slice("entity:".length)}
         </h2>
-        <Button
-          variant="icon"
-          label="Close window"
-          onClick={() => closeDockedEntity(id)}
-        >
+        <Button variant="icon" label="Close window" onClick={() => closeDockedEntity(id)}>
           <IconClose size={22} />
         </Button>
       </header>
@@ -471,9 +423,7 @@ function ActiveTab({
         {record ? (
           <EntityWindowContent campaign={campaign} record={record} />
         ) : (
-          <p className="move-text move-window-text">
-            This window is not available.
-          </p>
+          <p className="move-text move-window-text">This window is not available.</p>
         )}
         {record?.tags && record.tags.length > 0 && (
           <p className="muted item-tags">{record.tags.join(", ")}</p>

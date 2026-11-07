@@ -1,7 +1,6 @@
 import { batch, signal } from "@preact/signals-react";
 import { generateKeyBetween } from "fractional-indexing";
 import * as Y from "yjs";
-import { importImage } from "../../scene/images";
 import { newId } from "../../lib/ids";
 import { formatCommaList, parseCommaList } from "../../lib/list";
 
@@ -11,20 +10,20 @@ import type { MoveSuggestion, MoveTarget } from "../chat/types";
 import type { Campaign } from "../../campaign/campaign";
 import { device } from "../../platform/device";
 import { getSystem } from "../../systems";
-import type {
-  ActionDef,
-  GameSystem,
-  ItemDef,
-  ResetEvent,
-  TokenStat,
-} from "../../systems/types";
+import type { ActionDef, GameSystem, ItemDef, ResetEvent, TokenStat } from "../../systems/types";
 import type { DataValue } from "../../core/types";
 import { listHomebrew, withHomebrew } from "../homebrew/homebrew";
 import type { CharacterView, ItemInstance, TemplateSettings } from "./types";
 import { asksFirst, performMove, type MoveChoice } from "./moves";
 import { claimSessionMove, sessionMoveUsed } from "./sessionMoves";
 import { relationshipsOf, setRelationship, setRelationshipDepth } from "./relationships";
-import { addTreasureBoxes, DW2_SERVICES, wealthTierForBoxes, WEALTH_TIERS, type ServiceRank } from "../../systems/dungeon-world-2/wealth";
+import {
+  addTreasureBoxes,
+  DW2_SERVICES,
+  wealthTierForBoxes,
+  WEALTH_TIERS,
+  type ServiceRank,
+} from "../../systems/dungeon-world-2/wealth";
 import {
   characterView,
   derive,
@@ -35,14 +34,10 @@ import {
 } from "./store";
 
 /** The campaign's system as published, without the table's homebrew: for the Libraries. */
-export const baseSystemOf = (campaign: Campaign) =>
-  getSystem(campaign.meta.get("systemId"));
+export const baseSystemOf = (campaign: Campaign) => getSystem(campaign.meta.get("systemId"));
 
 /** The merged system, rebuilt only when the system or homebrew changes. */
-const merged = new WeakMap<
-  Campaign,
-  { base: GameSystem; version: number; system: GameSystem }
->();
+const merged = new WeakMap<Campaign, { base: GameSystem; version: number; system: GameSystem }>();
 const versions = new WeakMap<Campaign, number>();
 
 /** Count homebrew changes, so the merged system knows when to rebuild. */
@@ -50,9 +45,7 @@ function homebrewVersion(campaign: Campaign): number {
   let v = versions.get(campaign);
   if (v === undefined) {
     versions.set(campaign, (v = 0));
-    campaign.homebrew.observe(() =>
-      versions.set(campaign, (versions.get(campaign) ?? 0) + 1),
-    );
+    campaign.homebrew.observe(() => versions.set(campaign, (versions.get(campaign) ?? 0) + 1));
   }
   return v;
 }
@@ -62,18 +55,14 @@ export function systemOf(campaign: Campaign): GameSystem {
   const base = baseSystemOf(campaign);
   const version = homebrewVersion(campaign);
   const known = merged.get(campaign);
-  if (known && known.base === base && known.version === version)
-    return known.system;
+  if (known && known.base === base && known.version === version) return known.system;
   const system = withHomebrew(base, listHomebrew(campaign.homebrew));
   merged.set(campaign, { base, version, system });
   return system;
 }
 
 /** A copy's template's map, if it's a copy. */
-const baseOf = (
-  campaign: Campaign,
-  m: Y.Map<any> | undefined,
-): Y.Map<any> | undefined => {
+const baseOf = (campaign: Campaign, m: Y.Map<any> | undefined): Y.Map<any> | undefined => {
   const base = m?.get("base");
   return base ? campaign.characters.get(base) : undefined;
 };
@@ -82,10 +71,7 @@ const baseOf = (
  * Every character, by name. Copies (a template's tokens) are left out unless
  * asked for: they belong to their tokens, not the Characters list.
  */
-export function listCharacters(
-  campaign: Campaign,
-  { copies = false } = {},
-): CharacterView[] {
+export function listCharacters(campaign: Campaign, { copies = false } = {}): CharacterView[] {
   const system = systemOf(campaign);
   return [...campaign.characters.entries()]
     .filter(([, m]) => copies || !m.get("base"))
@@ -99,16 +85,13 @@ export function listCharacters(
  */
 export function tokenStatsSource(campaign: Campaign) {
   const system = systemOf(campaign);
-  const characters = new Map(
-    listCharacters(campaign, { copies: true }).map((c) => [c.id, c]),
-  );
+  const characters = new Map(listCharacters(campaign, { copies: true }).map((c) => [c.id, c]));
   const cache = new Map<string, TokenStat[]>();
   return (characterId: string): TokenStat[] => {
     const c = characters.get(characterId);
     if (!c) return [];
     let stats = cache.get(characterId);
-    if (!stats)
-      cache.set(characterId, (stats = system.tokenStats(c, derive(c, system))));
+    if (!stats) cache.set(characterId, (stats = system.tokenStats(c, derive(c, system))));
     return stats;
   };
 }
@@ -117,11 +100,7 @@ export function tokenStatsSource(campaign: Campaign) {
  * A new copy of a template, for one of its tokens: it has only a name, and
  * takes everything else from the template until it's changed on the copy.
  */
-export function createCopy(
-  campaign: Campaign,
-  templateId: string,
-  name: string,
-): string {
+export function createCopy(campaign: Campaign, templateId: string, name: string): string {
   const id = newId();
   const m = new Y.Map<any>();
   campaign.doc.transact(() => {
@@ -137,17 +116,12 @@ export function resetCopy(campaign: Campaign, id: string) {
   const m = campaign.characters.get(id);
   if (!m?.get("base")) return;
   campaign.doc.transact(() => {
-    for (const key of [...m.keys()])
-      if (key !== "base" && key !== "name") m.delete(key);
+    for (const key of [...m.keys()]) if (key !== "base" && key !== "name") m.delete(key);
   });
 }
 
 /** Make a character a template (its tokens keep their own state), or an individual again with null. */
-export function setTemplate(
-  campaign: Campaign,
-  id: string,
-  settings: TemplateSettings | null,
-) {
+export function setTemplate(campaign: Campaign, id: string, settings: TemplateSettings | null) {
   const m = campaign.characters.get(id);
   if (!m) return;
   if (settings) m.set("template", settings);
@@ -159,21 +133,17 @@ export function getCharacter(
   id: string | undefined,
 ): CharacterView | undefined {
   const m = id ? campaign.characters.get(id) : undefined;
-  return m && id
-    ? characterView(id, m, systemOf(campaign), baseOf(campaign, m))
-    : undefined;
+  return m && id ? characterView(id, m, systemOf(campaign), baseOf(campaign, m)) : undefined;
 }
 
 /** The character this device is playing: their choice, else the only one they own. */
 export function selectedCharacterId(campaign: Campaign): string | undefined {
-  const chosen: string | undefined = campaign.members
-    .get(device.value.id)
-    ?.get("character");
+  const chosen: string | undefined = campaign.members.get(device.value.id)?.get("character");
   if (chosen && campaign.characters.has(chosen)) return chosen;
   const mine = listCharacters(campaign).filter(
     (c) => c.kind === "pc" && c.owner === device.value.id,
   );
-  return mine.length === 1 ? (mine)[0]!.id : undefined;
+  return mine.length === 1 ? mine[0]!.id : undefined;
 }
 
 export function selectCharacter(campaign: Campaign, id: string | undefined) {
@@ -222,8 +192,7 @@ export function newNpcFromMonster(campaign: Campaign, monsterId: string) {
   if (monster.scores) {
     const scores = character.get("scores") as Y.Map<number>;
     for (const [stat, value] of Object.entries(monster.scores))
-      if (system.stats.some((entry) => entry.id === stat))
-        scores.set(stat, value);
+      if (system.stats.some((entry) => entry.id === stat)) scores.set(stat, value);
   }
   const hp = system.resources.find((resource) => resource.id === "hp");
   if (hp) (character.get("resources") as Y.Map<number>).set(hp.id, monster.hp);
@@ -262,8 +231,7 @@ export function renameFolder(campaign: Campaign, id: string, name: string) {
 /** Deleting a folder files its characters back at the top. */
 export function deleteFolder(campaign: Campaign, id: string) {
   campaign.doc.transact(() => {
-    for (const m of campaign.characters.values())
-      if (m.get("folder") === id) m.delete("folder");
+    for (const m of campaign.characters.values()) if (m.get("folder") === id) m.delete("folder");
     campaign.characterFolders.delete(id);
   });
 }
@@ -271,8 +239,7 @@ export function deleteFolder(campaign: Campaign, id: string) {
 /** Delete a character (and a template's copies), and stop anyone playing it from pointing at it. */
 export function deleteCharacter(campaign: Campaign, id: string) {
   campaign.doc.transact(() => {
-    for (const m of campaign.members.values())
-      if (m.get("character") === id) m.delete("character");
+    for (const m of campaign.members.values()) if (m.get("character") === id) m.delete("character");
     for (const [copy, m] of [...campaign.characters.entries()])
       if (m.get("base") === id) campaign.characters.delete(copy);
     campaign.characters.delete(id);
@@ -294,48 +261,15 @@ export function canEdit(campaign: Campaign, c: CharacterView) {
   return canEditCharacter(c, device.value.id, campaign.isGm());
 }
 
-/** Store an image file as the character's portrait. */
-export async function setPortrait(campaign: Campaign, id: string, file: Blob) {
-  const image = await importImage(file);
-  setField(campaign, id, "portrait", image);
-}
-
 /** Set one of the core fields (name, level, notes, portrait…). */
-export function setField(
-  campaign: Campaign,
-  id: string,
-  key: string,
-  value: unknown,
-) {
+export function setField(campaign: Campaign, id: string, key: string, value: unknown) {
   const m = campaign.characters.get(id);
   if (value === undefined) m?.delete(key);
   else m?.set(key, value);
 }
 
-/** Add to a numeric core field, never below zero. */
-export function bump(
-  campaign: Campaign,
-  id: string,
-  key: string,
-  by: number,
-  max?: number,
-) {
-  const m = campaign.characters.get(id);
-  if (!m) return;
-  const next = Math.max(
-    0,
-    ((m.has(key) ? m.get(key) : baseOf(campaign, m)?.get(key)) ?? 0) + by,
-  );
-  m.set(key, max === undefined ? next : Math.min(next, max));
-}
-
 /** A sub-map value as the character has it: its own, or for a copy, its template's. */
-function current(
-  campaign: Campaign,
-  id: string,
-  key: string,
-  field: string,
-): unknown {
+function current(campaign: Campaign, id: string, key: string, field: string): unknown {
   const m = campaign.characters.get(id);
   const own = m?.get(key) as Y.Map<any> | undefined;
   if (own?.has(field)) return own.get(field);
@@ -359,29 +293,15 @@ function part(
 }
 
 /** Set one of the system's own fields. */
-export function setData(
-  campaign: Campaign,
-  id: string,
-  key: string,
-  value: DataValue,
-) {
+export function setData(campaign: Campaign, id: string, key: string, value: DataValue) {
   part(campaign, id, "data")?.set(key, value);
 }
 
 /** Add to one of the system's numeric fields, never below zero. */
-export function bumpData(
-  campaign: Campaign,
-  id: string,
-  key: string,
-  by: number,
-  max?: number,
-) {
+export function bumpData(campaign: Campaign, id: string, key: string, by: number, max?: number) {
   const data = part(campaign, id, "data");
   if (!data) return;
-  const next = Math.max(
-    0,
-    Number(current(campaign, id, "data", key) ?? 0) + by,
-  );
+  const next = Math.max(0, Number(current(campaign, id, "data", key) ?? 0) + by);
   data.set(key, max === undefined ? next : Math.min(next, max));
 }
 
@@ -400,9 +320,9 @@ export function resolveStruggle(campaign: Campaign, id: string): boolean {
   const previousMaxHp = derive(character, system).values.maxHp ?? 0;
   const struggleId = String(character.data.struggleId ?? "");
   const revealed = `reveal-struggle-${struggleId}`;
-  const advancements = parseCommaList(
-    String(character.data.advancements ?? ""),
-  ).filter((entry) => entry !== revealed);
+  const advancements = parseCommaList(String(character.data.advancements ?? "")).filter(
+    (entry) => entry !== revealed,
+  );
 
   campaign.doc.transact(() => {
     setData(campaign, id, "level", level);
@@ -442,8 +362,8 @@ export function applyClassChange(
     return false;
 
   const hpResource = system.resources.find((resource) => resource.id === "hp");
-  const oldMaxHp = hpResource ? derive(character, system).values[hpResource.max] ?? 0 : 0;
-  const oldHp = hpResource ? character.resources[hpResource.id] ?? 0 : 0;
+  const oldMaxHp = hpResource ? (derive(character, system).values[hpResource.max] ?? 0) : 0;
+  const oldHp = hpResource ? (character.resources[hpResource.id] ?? 0) : 0;
   campaign.doc.transact(() => {
     setData(campaign, id, "classId", classId);
     for (const [field, value] of Object.entries(reallocatedData))
@@ -453,23 +373,16 @@ export function applyClassChange(
   });
 
   const changed = getCharacter(campaign, id);
-  const newMaxHp = changed && hpResource ? derive(changed, system).values[hpResource.max] ?? 0 : 0;
+  const newMaxHp =
+    changed && hpResource ? (derive(changed, system).values[hpResource.max] ?? 0) : 0;
   if (changed && hpResource) {
     const resources = campaign.characters.get(id)?.get("resources") as Y.Map<number> | undefined;
-    resources?.set(
-      hpResource.id,
-      Math.max(1, Math.min(newMaxHp, oldHp + newMaxHp - oldMaxHp)),
-    );
+    resources?.set(hpResource.id, Math.max(1, Math.min(newMaxHp, oldHp + newMaxHp - oldMaxHp)));
   }
   return true;
 }
 
-export function setScore(
-  campaign: Campaign,
-  id: string,
-  stat: string,
-  score: number,
-) {
+export function setScore(campaign: Campaign, id: string, stat: string, score: number) {
   part(campaign, id, "scores")?.set(stat, score);
 }
 
@@ -483,10 +396,7 @@ export function bumpResource(
 ) {
   const r = part(campaign, id, "resources");
   if (!r) return;
-  const next = Math.max(
-    0,
-    Number(current(campaign, id, "resources", resource) ?? 0) + by,
-  );
+  const next = Math.max(0, Number(current(campaign, id, "resources", resource) ?? 0) + by);
   r.set(resource, max === undefined ? next : Math.min(next, max));
 }
 
@@ -504,32 +414,19 @@ export function rest(campaign: Campaign, id: string, event: ResetEvent) {
 }
 
 /** Set a standing roll modifier (Dungeon World's forward, ongoing). */
-export function setModifier(
-  campaign: Campaign,
-  id: string,
-  modifier: string,
-  value: number,
-) {
+export function setModifier(campaign: Campaign, id: string, modifier: string, value: number) {
   part(campaign, id, "modifiers")?.set(modifier, value);
 }
 
 /** Give or take away a condition. */
-export function toggleCondition(
-  campaign: Campaign,
-  id: string,
-  condition: string,
-) {
+export function toggleCondition(campaign: Campaign, id: string, condition: string) {
   const m = campaign.characters.get(id);
   if (!m) return;
   const now: string[] =
-    (m.has("conditions")
-      ? m.get("conditions")
-      : baseOf(campaign, m)?.get("conditions")) ?? [];
+    (m.has("conditions") ? m.get("conditions") : baseOf(campaign, m)?.get("conditions")) ?? [];
   m.set(
     "conditions",
-    now.includes(condition)
-      ? now.filter((x) => x !== condition)
-      : [...now, condition],
+    now.includes(condition) ? now.filter((x) => x !== condition) : [...now, condition],
   );
 }
 
@@ -546,14 +443,11 @@ export function setConditionState(
   if (!m) return;
   const inherited = baseOf(campaign, m);
   const conditions = new Set<string>(
-    (m.has("conditions")
-      ? m.get("conditions")
-      : inherited?.get("conditions")) ?? [],
+    (m.has("conditions") ? m.get("conditions") : inherited?.get("conditions")) ?? [],
   );
   const locked = new Set<string>(
-    (m.has("lockedConditions")
-      ? m.get("lockedConditions")
-      : inherited?.get("lockedConditions")) ?? [],
+    (m.has("lockedConditions") ? m.get("lockedConditions") : inherited?.get("lockedConditions")) ??
+      [],
   );
   if (state === "clear") conditions.delete(condition);
   else conditions.add(condition);
@@ -569,41 +463,22 @@ export function setConditionState(
 }
 
 /** Clear a condition and its duration. */
-export function clearCondition(
-  campaign: Campaign,
-  id: string,
-  condition: string,
-) {
+export function clearCondition(campaign: Campaign, id: string, condition: string) {
   setConditionState(campaign, id, condition, "clear");
 }
 
 /** Teach a character an action (a move dropped on them), or with `known` false, let them forget it. */
-export function setLearned(
-  campaign: Campaign,
-  id: string,
-  actionId: string,
-  known: boolean,
-) {
+export function setLearned(campaign: Campaign, id: string, actionId: string, known: boolean) {
   const m = campaign.characters.get(id);
   if (!m) return;
   const now: string[] =
-    (m.has("learned")
-      ? m.get("learned")
-      : baseOf(campaign, m)?.get("learned")) ?? [];
+    (m.has("learned") ? m.get("learned") : baseOf(campaign, m)?.get("learned")) ?? [];
   if (known === now.includes(actionId)) return;
-  m.set(
-    "learned",
-    known ? [...now, actionId] : now.filter((x) => x !== actionId),
-  );
+  m.set("learned", known ? [...now, actionId] : now.filter((x) => x !== actionId));
 }
 
 /** Set one of an NPC's system-defined fields. */
-export function setNpcField(
-  campaign: Campaign,
-  id: string,
-  field: string,
-  value: string | number,
-) {
+export function setNpcField(campaign: Campaign, id: string, field: string, value: string | number) {
   part(campaign, id, "fields")?.set(field, value);
 }
 
@@ -621,9 +496,7 @@ export function setLoadout(
   if (!definition || !character) return;
   const derived = derive(character, system);
   const maximum =
-    typeof definition.max === "number"
-      ? definition.max
-      : derived.values[definition.max];
+    typeof definition.max === "number" ? definition.max : derived.values[definition.max];
   if (maximum === undefined || !Number.isFinite(maximum) || maximum < 0) return;
   const owned = new Set(
     definition.available?.(character, derived) ??
@@ -643,16 +516,12 @@ export function setLoadout(
     for (const option of next)
       if (!previous.includes(option)) {
         const cost = definition.costs?.[option];
-        if (cost)
-          costs.set(cost.resource, (costs.get(cost.resource) ?? 0) + cost.by);
+        if (cost) costs.set(cost.resource, (costs.get(cost.resource) ?? 0) + cost.by);
       }
   }
   for (const [resource, by] of costs) {
     const currentValue = character.resources[resource] ?? 0;
-    const max =
-      derived.values[
-        system.resources.find((entry) => entry.id === resource)?.max ?? ""
-      ];
+    const max = derived.values[system.resources.find((entry) => entry.id === resource)?.max ?? ""];
     if (max === undefined || currentValue + by < 0 || currentValue + by > max) return;
   }
   campaign.doc.transact(() => {
@@ -663,9 +532,7 @@ export function setLoadout(
         characterId,
         resource,
         by,
-        derived.values[
-          system.resources.find((entry) => entry.id === resource)?.max ?? ""
-        ],
+        derived.values[system.resources.find((entry) => entry.id === resource)?.max ?? ""],
       );
   });
 }
@@ -709,7 +576,7 @@ export function startMove(
         moveId: move.id,
         characterId,
         ...(targets ? { targets } : {}),
-          ...(initialChoice ? { choice: initialChoice } : {}),
+        ...(initialChoice ? { choice: initialChoice } : {}),
       };
     else {
       moveRequest.value = null;
@@ -734,15 +601,10 @@ export function makeMove(
     const tc = getCharacter(campaign, t.characterId);
     return tc ? derive(tc, system).values[key] : undefined;
   };
-  const { spent, ...result } = performMove(
-    system,
-    move,
-    c,
-    d,
-    choice,
-    undefined,
-    { ...(targets ? { targets } : {}), valueAt },
-  );
+  const { spent, ...result } = performMove(system, move, c, d, choice, undefined, {
+    ...(targets ? { targets } : {}),
+    valueAt,
+  });
   // A roll uses up modifiers that last for one roll; text-only moves leave them.
   for (const id of spent) setModifier(campaign, c.id, id, 0);
   if (
@@ -779,8 +641,7 @@ export async function endDungeonWorld2Session(
   const system = systemOf(campaign);
   const move = system.actions.find((action) => action.id === "end-the-session");
   const actor = getCharacter(campaign, actorId);
-  if (system.id !== "dungeon-world-2" || !move || actor?.kind !== "pc")
-    return false;
+  if (system.id !== "dungeon-world-2" || !move || actor?.kind !== "pc") return false;
 
   const card = await makeMove(campaign, actorId, move);
   if (!card) return false;
@@ -803,8 +664,7 @@ export async function makeDungeonWorld2Camp(
   const system = systemOf(campaign);
   const move = system.actions.find((action) => action.id === "make-camp");
   const actor = getCharacter(campaign, actorId);
-  if (system.id !== "dungeon-world-2" || !move || actor?.kind !== "pc")
-    return false;
+  if (system.id !== "dungeon-world-2" || !move || actor?.kind !== "pc") return false;
 
   const card = await makeMove(campaign, actorId, move);
   if (!card) return false;
@@ -817,13 +677,18 @@ export async function makeDungeonWorld2Camp(
       if (item.resetUsesAtCamp && item.uses !== undefined && item.usesLeft !== item.uses)
         inventory?.set(itemId, { ...item, usesLeft: item.uses });
     const condition = clearByCharacter[character.id];
-    if (condition && character.conditions.includes(condition) && !character.lockedConditions?.includes(condition))
+    if (
+      condition &&
+      character.conditions.includes(condition) &&
+      !character.lockedConditions?.includes(condition)
+    )
       clearCondition(campaign, character.id, condition);
     const repairItemId = repairByCharacter[character.id];
     if (repairItemId) {
       const current = getCharacter(campaign, character.id)!;
-      const hasSnapTheBlade = actionsFor(current, system, derive(current, system))
-        .some((action) => action.name === "Snap the Blade");
+      const hasSnapTheBlade = actionsFor(current, system, derive(current, system)).some(
+        (action) => action.name === "Snap the Blade",
+      );
       const item = current.inventory.find((entry) => entry.id === repairItemId);
       if (hasSnapTheBlade && item?.broken && !item.tags.includes("magic"))
         updateItem(campaign, character.id, repairItemId, { broken: false });
@@ -849,19 +714,22 @@ export async function resolveComfortOrSupport(
   const supporter = getCharacter(campaign, supporterId);
   const comforted = getCharacter(campaign, comfortedId);
   if (
-    system.id !== "dungeon-world-2" || !move ||
-    supporter?.kind !== "pc" || comforted?.kind !== "pc" ||
+    system.id !== "dungeon-world-2" ||
+    !move ||
+    supporter?.kind !== "pc" ||
+    comforted?.kind !== "pc" ||
     supporterId === comfortedId
-  ) return false;
+  )
+    return false;
 
   const card = await makeMove(campaign, supporterId, move);
   if (!card) return false;
   for (const benefit of benefits) {
     if (benefit.kind === "gain-depth") {
-      const relationship = relationshipsOf(campaign.characters, comfortedId)
-        .find((entry) => entry.to === supporterId);
-      if (!relationship)
-        setRelationship(campaign.characters, comfortedId, supporterId, "");
+      const relationship = relationshipsOf(campaign.characters, comfortedId).find(
+        (entry) => entry.to === supporterId,
+      );
+      if (!relationship) setRelationship(campaign.characters, comfortedId, supporterId, "");
       setRelationshipDepth(
         campaign.characters,
         comfortedId,
@@ -874,7 +742,8 @@ export async function resolveComfortOrSupport(
       if (
         character?.conditions.includes(benefit.condition) &&
         !character.lockedConditions?.includes(benefit.condition)
-      ) clearCondition(campaign, characterId, benefit.condition);
+      )
+        clearCondition(campaign, characterId, benefit.condition);
     }
   }
   return true;
@@ -892,8 +761,7 @@ export function prepareDungeonWorld2Journey(
   const system = systemOf(campaign);
   const move = system.actions.find((action) => action.id === "perilous-journey");
   const leader = getCharacter(campaign, leaderId);
-  if (system.id !== "dungeon-world-2" || !move || leader?.kind !== "pc")
-    return false;
+  if (system.id !== "dungeon-world-2" || !move || leader?.kind !== "pc") return false;
   const party = listCharacters(campaign).filter((character) => character.kind === "pc");
   const affected = pace === "quick" ? party : pace === "regular" ? [leader] : [];
   for (const character of affected) {
@@ -902,7 +770,8 @@ export function prepareDungeonWorld2Journey(
       !condition ||
       !system.conditions.some((entry) => entry.id === condition) ||
       character.conditions.includes(condition)
-    ) return false;
+    )
+      return false;
   }
   for (const character of affected)
     setConditionState(campaign, character.id, conditionByCharacter[character.id]!, "marked");
@@ -926,7 +795,10 @@ export function beginDungeonWorld2Downtime(campaign: Campaign): number | undefin
   return epoch;
 }
 
-export function trainedDuringDungeonWorld2Downtime(campaign: Campaign, characterId: string): boolean {
+export function trainedDuringDungeonWorld2Downtime(
+  campaign: Campaign,
+  characterId: string,
+): boolean {
   const epoch = dungeonWorld2DowntimeEpoch(campaign);
   const trained = campaign.systemData.get(DW2_DOWNTIME_TRAINED_KEY) as Y.Map<number> | undefined;
   return epoch > 0 && trained?.get(characterId) === epoch;
@@ -953,21 +825,32 @@ export function carouseDungeonWorld2(
     systemOf(campaign).id !== "dungeon-world-2" ||
     character?.kind !== "pc" ||
     dungeonWorld2DowntimeEpoch(campaign) === 0
-  ) return false;
+  )
+    return false;
   if (benefit === "clear-locked") {
     if (!condition || !character.lockedConditions?.includes(condition)) return false;
   } else if (
-    target?.kind !== "pc" || target.id === characterId ||
-    (relationshipsOf(campaign.characters, characterId).find((entry) => entry.to === targetId)?.depth ?? 0) >= 3
-  ) return false;
+    target?.kind !== "pc" ||
+    target.id === characterId ||
+    (relationshipsOf(campaign.characters, characterId).find((entry) => entry.to === targetId)
+      ?.depth ?? 0) >= 3
+  )
+    return false;
 
   return campaign.doc.transact(() => {
     if (!spendTreasure(campaign, characterId)) return false;
     if (benefit === "clear-locked") clearCondition(campaign, characterId, condition!);
     else {
-      const relationship = relationshipsOf(campaign.characters, characterId).find((entry) => entry.to === targetId);
+      const relationship = relationshipsOf(campaign.characters, characterId).find(
+        (entry) => entry.to === targetId,
+      );
       if (!relationship) setRelationship(campaign.characters, characterId, targetId!, "");
-      setRelationshipDepth(campaign.characters, characterId, targetId!, (relationship?.depth ?? 0) + 1);
+      setRelationshipDepth(
+        campaign.characters,
+        characterId,
+        targetId!,
+        (relationship?.depth ?? 0) + 1,
+      );
     }
     return true;
   });
@@ -984,8 +867,9 @@ export function resupplyDungeonWorld2(campaign: Campaign, characterId: string): 
     return false;
   const inventory = inventoryOf(campaign, characterId);
   if (!inventory) return false;
-  const replenishable = [...inventory.entries()].filter(([, item]) =>
-    item.uses !== undefined && !item.tags.includes("magic") && item.usesLeft !== item.uses,
+  const replenishable = [...inventory.entries()].filter(
+    ([, item]) =>
+      item.uses !== undefined && !item.tags.includes("magic") && item.usesLeft !== item.uses,
   );
   if (!replenishable.length) return false;
   campaign.doc.transact(() => {
@@ -1010,14 +894,19 @@ export async function shopDungeonWorld2Service(
     systemOf(campaign).id !== "dungeon-world-2" ||
     character?.kind !== "pc" ||
     dungeonWorld2DowntimeEpoch(campaign) === 0 ||
-    !service || !tier || !example ||
+    !service ||
+    !tier ||
+    !example ||
     Number(character.data.treasureBoxes ?? 0) < 1
-  ) return false;
+  )
+    return false;
 
   setData(campaign, characterId, "treasureBoxes", Number(character.data.treasureBoxes ?? 0) - 1);
   await postText(
     campaign,
-    contentFromText(`${character.name} spends 1 Treasure on ${service.name} ${tier.name} (${rank}): ${example}.`),
+    contentFromText(
+      `${character.name} spends 1 Treasure on ${service.name} ${tier.name} (${rank}): ${example}.`,
+    ),
   );
   return true;
 }
@@ -1029,14 +918,19 @@ export function saleValueDungeonWorld2Item(
 ): number | null {
   const character = getCharacter(campaign, characterId);
   const item = character?.inventory.find((entry) => entry.id === itemId);
-  const definition = item && systemOf(campaign).items.find((entry) => entry.id === (item.defId ?? item.id));
+  const definition =
+    item && systemOf(campaign).items.find((entry) => entry.id === (item.defId ?? item.id));
   if (
     systemOf(campaign).id !== "dungeon-world-2" ||
     dungeonWorld2DowntimeEpoch(campaign) === 0 ||
     character?.kind !== "pc" ||
     definition?.wealthCost === undefined
-  ) return null;
-  return definition.wealthCost.rank > wealthTierForBoxes(Number(character.data.treasureBoxes ?? 0)).rank ? 1 : 0;
+  )
+    return null;
+  return definition.wealthCost.rank >
+    wealthTierForBoxes(Number(character.data.treasureBoxes ?? 0)).rank
+    ? 1
+    : 0;
 }
 
 /** Sell priced gear during Downtime using the beta's Wealth-based resale rule. */
@@ -1063,7 +957,8 @@ export function trainDungeonWorld2(campaign: Campaign, characterId: string): boo
     epoch === 0 ||
     trainedDuringDungeonWorld2Downtime(campaign, characterId) ||
     Number(character.data.treasureBoxes ?? 0) < 1
-  ) return false;
+  )
+    return false;
 
   return campaign.doc.transact(() => {
     if (!spendTreasure(campaign, characterId)) return false;
@@ -1079,11 +974,7 @@ export function trainDungeonWorld2(campaign: Campaign, characterId: string): boo
 }
 
 /** Carry out a suggestion button from a move card. */
-export function applySuggestion(
-  campaign: Campaign,
-  characterId: string,
-  s: MoveSuggestion,
-) {
+export function applySuggestion(campaign: Campaign, characterId: string, s: MoveSuggestion) {
   if (s.bump) bumpData(campaign, characterId, s.bump.field, s.bump.by);
   else if (s.roll) {
     const { formula, comment, damage, targets } = s.roll;
@@ -1103,16 +994,11 @@ export function applySuggestion(
  * A character's inventory, to change. A copy that's still carrying its
  * template's gear gets its own copy of it first.
  */
-function inventoryOf(
-  campaign: Campaign,
-  characterId: string,
-): Y.Map<ItemInstance> | undefined {
+function inventoryOf(campaign: Campaign, characterId: string): Y.Map<ItemInstance> | undefined {
   const m = campaign.characters.get(characterId);
   if (!m) return undefined;
   if (m.get("inventory") instanceof Y.Map) return m.get("inventory");
-  const base = baseOf(campaign, m)?.get("inventory") as
-    | Y.Map<ItemInstance>
-    | undefined;
+  const base = baseOf(campaign, m)?.get("inventory") as Y.Map<ItemInstance> | undefined;
   if (!m.get("base")) return undefined;
   const own = new Y.Map<ItemInstance>();
   m.set("inventory", own);
@@ -1120,12 +1006,7 @@ function inventoryOf(
   return own;
 }
 
-export function addItem(
-  campaign: Campaign,
-  characterId: string,
-  def: ItemDef,
-  equip = false,
-) {
+export function addItem(campaign: Campaign, characterId: string, def: ItemDef, equip = false) {
   const inv = inventoryOf(campaign, characterId);
   if (!inv) return;
   const last =
@@ -1160,11 +1041,17 @@ export function breakDungeonWorld2Weapon(
   const item = character?.inventory.find((entry) => entry.id === itemId);
   const weaponTags = new Set(["close", "hand", "near", "far", "precise", "thrown", "piercing"]);
   if (
-    system.id !== "dungeon-world-2" || character?.kind !== "pc" ||
-    !item?.equippable || item.broken || item.tags.includes("magic") ||
+    system.id !== "dungeon-world-2" ||
+    character?.kind !== "pc" ||
+    !item?.equippable ||
+    item.broken ||
+    item.tags.includes("magic") ||
     !item.tags.some((tag) => weaponTags.has(tag)) ||
-    !actionsFor(character, system, derive(character, system)).some((action) => action.name === "Snap the Blade")
-  ) return false;
+    !actionsFor(character, system, derive(character, system)).some(
+      (action) => action.name === "Snap the Blade",
+    )
+  )
+    return false;
   updateItem(campaign, characterId, itemId, { broken: true });
   return true;
 }
@@ -1177,7 +1064,8 @@ export function markArtifactTrack(
 ): boolean {
   const character = getCharacter(campaign, characterId);
   const item = character?.inventory.find((entry) => entry.id === itemId);
-  const definition = item && systemOf(campaign).items.find((entry) => entry.id === (item.defId ?? item.id));
+  const definition =
+    item && systemOf(campaign).items.find((entry) => entry.id === (item.defId ?? item.id));
   const artifact = definition?.artifact;
   if (!item || !artifact || character?.kind !== "pc") return false;
   const progress = item.artifactProgress ?? 0;
@@ -1194,15 +1082,15 @@ export function markArtifactTrack(
     updateItem(campaign, characterId, itemId, { artifactProgress: artifact.capacity });
     return true;
   }
-  const selected = artifact.unlockMode === "choose"
-    ? available.find((move) => move.id === unlockId)
-    : available[0];
+  const selected =
+    artifact.unlockMode === "choose"
+      ? available.find((move) => move.id === unlockId)
+      : available[0];
   if (!selected || (artifact.unlockMode === "choose" && !unlockId)) return false;
   updateItem(campaign, characterId, itemId, {
     artifactProgress: 0,
-    artifactUnlocked: artifact.unlockMode === "sequential-replace"
-      ? [selected.id]
-      : [...unlocked, selected.id],
+    artifactUnlocked:
+      artifact.unlockMode === "sequential-replace" ? [selected.id] : [...unlocked, selected.id],
   });
   return true;
 }
@@ -1215,13 +1103,19 @@ export function clearArtifactTrack(
 ): boolean {
   const character = getCharacter(campaign, characterId);
   const item = character?.inventory.find((entry) => entry.id === itemId);
-  const definition = item && systemOf(campaign).items.find((entry) => entry.id === (item.defId ?? item.id));
+  const definition =
+    item && systemOf(campaign).items.find((entry) => entry.id === (item.defId ?? item.id));
   const capacity = definition?.artifact?.capacity;
   const progress = item?.artifactProgress ?? 0;
   if (
-    !item || capacity === undefined || character?.kind !== "pc" ||
-    !Number.isInteger(amount) || amount < 1 || amount > progress
-  ) return false;
+    !item ||
+    capacity === undefined ||
+    character?.kind !== "pc" ||
+    !Number.isInteger(amount) ||
+    amount < 1 ||
+    amount > progress
+  )
+    return false;
   updateItem(campaign, characterId, itemId, { artifactProgress: progress - amount });
   return true;
 }
@@ -1243,17 +1137,25 @@ export function consumeDungeonWorld2Item(
   const character = getCharacter(campaign, characterId);
   const item = character?.inventory.find((entry) => entry.id === itemId);
   const definition = item && system.items.find((entry) => entry.id === (item.defId ?? item.id));
-  if (!character || !item || item.uses === undefined || (item.usesLeft ?? 0) <= 0)
-    return false;
-  const resolvedChoice = definition?.itemUse === "healing-potion"
-    ? choice ?? { kind: "heal-half-lost" as const }
-    : definition?.itemUse === "magic-wand"
-      ? choice ?? { kind: "drain" as const }
-      : choice;
+  if (!character || !item || item.uses === undefined || (item.usesLeft ?? 0) <= 0) return false;
+  const resolvedChoice =
+    definition?.itemUse === "healing-potion"
+      ? (choice ?? { kind: "heal-half-lost" as const })
+      : definition?.itemUse === "magic-wand"
+        ? (choice ?? { kind: "drain" as const })
+        : choice;
   if (definition?.itemUse === "healing-potion") {
     if (system.id !== "dungeon-world-2" || !resolvedChoice) return false;
-    if (resolvedChoice.kind === "clear-locked" && !character.lockedConditions?.includes(resolvedChoice.condition)) return false;
-    if (resolvedChoice.kind === "heal-half-lost" && (derive(character, system).values.maxHp ?? 0) <= (character.resources.hp ?? 0)) return false;
+    if (
+      resolvedChoice.kind === "clear-locked" &&
+      !character.lockedConditions?.includes(resolvedChoice.condition)
+    )
+      return false;
+    if (
+      resolvedChoice.kind === "heal-half-lost" &&
+      (derive(character, system).values.maxHp ?? 0) <= (character.resources.hp ?? 0)
+    )
+      return false;
   }
   if (definition?.itemUse === "magic-wand") {
     if (system.id !== "dungeon-world-2" || !resolvedChoice) return false;
@@ -1261,14 +1163,17 @@ export function consumeDungeonWorld2Item(
       resolvedChoice.kind === "mark-condition" &&
       (!system.conditions.some((entry) => entry.id === resolvedChoice.condition) ||
         character.lockedConditions?.includes(resolvedChoice.condition))
-    ) return false;
+    )
+      return false;
   }
 
-  const wandMarksCondition = definition?.itemUse === "magic-wand" && resolvedChoice?.kind === "mark-condition";
+  const wandMarksCondition =
+    definition?.itemUse === "magic-wand" && resolvedChoice?.kind === "mark-condition";
   if (!wandMarksCondition)
     updateItem(campaign, characterId, itemId, { usesLeft: Math.max(0, (item.usesLeft ?? 0) - 1) });
   if (system.id === "dungeon-world-2" && definition?.itemUse === "healing-potion") {
-    if (resolvedChoice?.kind === "clear-locked") clearCondition(campaign, characterId, resolvedChoice.condition);
+    if (resolvedChoice?.kind === "clear-locked")
+      clearCondition(campaign, characterId, resolvedChoice.condition);
     else if (resolvedChoice?.kind === "heal-half-lost") {
       const maxHp = derive(character, system).values.maxHp ?? 0;
       const lostHp = Math.max(0, maxHp - (character.resources.hp ?? 0));
@@ -1291,10 +1196,6 @@ export function consumeDungeonWorld2Item(
   return true;
 }
 
-export function removeItem(
-  campaign: Campaign,
-  characterId: string,
-  itemId: string,
-) {
+export function removeItem(campaign: Campaign, characterId: string, itemId: string) {
   inventoryOf(campaign, characterId)?.delete(itemId);
 }

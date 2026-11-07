@@ -31,53 +31,44 @@ export function LinkChip({
   const name = linkLabel(campaign, kind, id);
   const menu = useSignal<{ x: number; y: number } | null>(null);
   const linkElement = useRef<HTMLSpanElement>(null);
-  const actionId =
-    kind === "move" ? `move:${id}` : kind === "item" ? `library:${id}` : null;
+  const actionId = kind === "move" ? `move:${id}` : kind === "item" ? `library:${id}` : null;
   const actionItems = actionId
-    ? actionMenuItems(campaign, [
-        { id: actionId, title: text || name || undefined },
-      ])
+    ? actionMenuItems(campaign, [{ id: actionId, title: text || name || undefined }])
     : [];
-    const primaryItems = linkActionItems(campaign, { kind, id });
-    const canChangeGraphic = kind !== "note" || !getNote(campaign, id)?.gmOnly;
-    const items = [
-      {
-        label: "Open in a window",
-        Icon: IconOpenWindow,
-        onSelect: () => {
-          if (linkElement.current) showLink({ kind, id }, linkElement.current);
-        },
+  const primaryItems = linkActionItems(campaign, { kind, id });
+  const canChangeGraphic = kind !== "note" || !getNote(campaign, id)?.gmOnly;
+  const items = [
+    {
+      label: "Open in a window",
+      Icon: IconOpenWindow,
+      onSelect: () => {
+        if (linkElement.current) showLink({ kind, id }, linkElement.current);
       },
-      {
-        label: "Open in sidebar",
-        Icon: IconSidebar,
-        onSelect: () => openInSidebar(campaign, kind, id),
-      },
-      ...(primaryItems.length ? (["divider"] as const) : []),
-      ...primaryItems,
-      ...(actionItems.length ? (["divider"] as const) : []),
-      ...actionItems,
-      ...(actionItems.length && canChangeGraphic ? (["divider"] as const) : []),
-      ...(canChangeGraphic
-        ? [
-            {
-              label: "Change graphic…",
-              Icon: IconImage,
-              onSelect: () =>
-                editEntityGraphic(campaign, kind, id, name ?? text ?? "Entity"),
-            },
-          ]
-        : []),
-    ];
+    },
+    {
+      label: "Open in sidebar",
+      Icon: IconSidebar,
+      onSelect: () => openInSidebar(campaign, kind, id),
+    },
+    ...(primaryItems.length ? (["divider"] as const) : []),
+    ...primaryItems,
+    ...(actionItems.length ? (["divider"] as const) : []),
+    ...actionItems,
+    ...(actionItems.length && canChangeGraphic ? (["divider"] as const) : []),
+    ...(canChangeGraphic
+      ? [
+          {
+            label: "Change graphic…",
+            Icon: IconImage,
+            onSelect: () => editEntityGraphic(campaign, kind, id, name ?? text ?? "Entity"),
+          },
+        ]
+      : []),
+  ];
   const trigger = menuTrigger((x, y) => (menu.value = { x, y }));
   if (name === null)
     return (
-      <span
-        ref={linkElement}
-        className="note-link"
-        data-missing="true"
-        data-tip="Not available"
-      >
+      <span ref={linkElement} className="note-link" data-missing="true" data-tip="Not available">
         {text || "Unavailable"}
       </span>
     );
@@ -93,9 +84,7 @@ export function LinkChip({
         data-tip-long="true"
         data-tip-opens="true"
         onClick={(e) => showLink({ kind, id }, e.currentTarget)}
-        onKeyDown={(e) =>
-          e.key === "Enter" && showLink({ kind, id }, e.currentTarget)
-        }
+        onKeyDown={(e) => e.key === "Enter" && showLink({ kind, id }, e.currentTarget)}
         onPointerDown={(e) => {
           if (items.length) trigger.onPointerDown(e);
           dragEntity(e, entity(campaign, kind, id, shown));
@@ -105,11 +94,7 @@ export function LinkChip({
         {shown}
       </span>
       {menu.value && items.length > 0 && (
-        <ContextMenu
-          {...menu.value}
-          items={items}
-          onClose={() => (menu.value = null)}
-        />
+        <ContextMenu {...menu.value} items={items} onClose={() => (menu.value = null)} />
       )}
     </>
   );

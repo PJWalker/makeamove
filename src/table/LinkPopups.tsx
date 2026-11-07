@@ -1,19 +1,26 @@
-import { useSignal } from '@preact/signals-react'
+import { useSignal } from "@preact/signals-react";
 import { plainText } from "../features/characters/trackers";
 import { MoveBody } from "./MoveBody";
-import type { ReactNode } from 'react'
+import type { ReactNode } from "react";
 import { useEffect, useLayoutEffect } from "react";
-import { addItem, canEdit, getCharacter, selectedCharacterId, startMove, systemOf } from '../features/characters/api'
-import { getNote } from '../features/notes/api'
+import {
+  addItem,
+  canEdit,
+  getCharacter,
+  selectedCharacterId,
+  startMove,
+  systemOf,
+} from "../features/characters/api";
+import { getNote } from "../features/notes/api";
 import { followLink, linkLabel } from "../features/notes/targets";
-import type { Campaign } from '../campaign/campaign'
-import { useY } from '../ui/useY'
-import { Button } from '../ui/Button'
+import type { Campaign } from "../campaign/campaign";
+import { useY } from "../ui/useY";
+import { Button } from "../ui/Button";
 import { closePopup } from "../ui/popup";
 import { usePopupDialog } from "./usePopupDialog";
-import { Dialog } from './CampaignDialogs'
+import { Dialog } from "./CampaignDialogs";
 import { ContextMenu, type MenuItem } from "./ContextMenu";
-import { EntryWindow, rollTag } from './EntryWindow'
+import { EntryWindow, rollTag } from "./EntryWindow";
 import {
   closeLink,
   linkActionItems,
@@ -23,10 +30,10 @@ import {
   openLinks,
   type LinkRef,
 } from "./linkState";
-import { NoteEditor } from './NoteEditor'
-import { CharacterSheet } from './sheets'
-import { linkProxy } from './LinkChip'
-import { makeVerb } from './sheetParts'
+import { NoteEditor } from "./NoteEditor";
+import { CharacterSheet } from "./sheets";
+import { linkProxy } from "./LinkChip";
+import { makeVerb } from "./sheetParts";
 import { actionMenuItems } from "./actionMenu";
 import { entityTabId, registerEntityWindow } from "./entityWindows";
 import { closeEntityWindow } from "./entityWindows";
@@ -51,8 +58,7 @@ export function LinkPopups({ campaign }: { campaign: Campaign }) {
       const split = key.indexOf(":");
       if (split < 0) return [];
       const kind = key.slice(0, split) as LinkRef["kind"];
-      if (!["character", "item", "move", "note", "scene"].includes(kind))
-        return [];
+      if (!["character", "item", "move", "note", "scene"].includes(kind)) return [];
       const link = { kind, id: key.slice(split + 1) };
       if (linkLabel(campaign, link.kind, link.id) === null) {
         closeEntityWindow(entityTabId(`link:${linkKey(link)}`));
@@ -61,20 +67,19 @@ export function LinkPopups({ campaign }: { campaign: Campaign }) {
       return [link];
     });
     const known = new Set(openLinks.value.map(linkKey));
-    openLinks.value = [
-      ...openLinks.value,
-      ...restored.filter((link) => !known.has(linkKey(link))),
-    ];
+    openLinks.value = [...openLinks.value, ...restored.filter((link) => !known.has(linkKey(link)))];
   }, [campaign]);
   return (
     <>
       {openLinks.value.map((l) => (
         <LinkPopup key={linkKey(l)} campaign={campaign} link={l} />
       ))}
-      {linkMenu.value && <ContextMenu {...linkMenu.value} onClose={() => (linkMenu.value = null)} />}
+      {linkMenu.value && (
+        <ContextMenu {...linkMenu.value} onClose={() => (linkMenu.value = null)} />
+      )}
       <RenameLink />
     </>
-  )
+  );
 }
 
 /** A pop-up for one link, marked so clicking the link again brings it forward. */
@@ -109,20 +114,26 @@ function LinkDialog({
 }
 
 function LinkPopup({ campaign, link }: { campaign: Campaign; link: LinkRef }) {
-  const system = systemOf(campaign)
-  const close = () => closeLink(link)
-  const entryKey = `link:${linkKey(link)}`
+  const system = systemOf(campaign);
+  const close = () => closeLink(link);
+  const entryKey = `link:${linkKey(link)}`;
   // Gear and moves go to the character this device is playing, if they can change it.
-  const me = useY(campaign.characters, () => getCharacter(campaign, selectedCharacterId(campaign)))
-  const canAct = !!me && canEdit(campaign, me)
-  const character = useY(campaign.characters, () => (link.kind === 'character' ? getCharacter(campaign, link.id) : undefined))
-  const scene = useY(campaign.scenes, () => (link.kind === 'scene' ? campaign.sceneViews().find((s) => s.id === link.id) : undefined))
-  const note = useY(campaign.notes, () => (link.kind === 'note' ? getNote(campaign, link.id) : undefined))
+  const me = useY(campaign.characters, () => getCharacter(campaign, selectedCharacterId(campaign)));
+  const canAct = !!me && canEdit(campaign, me);
+  const character = useY(campaign.characters, () =>
+    link.kind === "character" ? getCharacter(campaign, link.id) : undefined,
+  );
+  const scene = useY(campaign.scenes, () =>
+    link.kind === "scene" ? campaign.sceneViews().find((s) => s.id === link.id) : undefined,
+  );
+  const note = useY(campaign.notes, () =>
+    link.kind === "note" ? getNote(campaign, link.id) : undefined,
+  );
 
   switch (link.kind) {
-    case 'item': {
-      const item = system.items.find((i) => i.id === link.id)
-      if (!item) return null
+    case "item": {
+      const item = system.items.find((i) => i.id === link.id);
+      if (!item) return null;
       return (
         <EntryWindow
           entryKey={entryKey}
@@ -134,9 +145,7 @@ function LinkPopup({ campaign, link }: { campaign: Campaign; link: LinkRef }) {
           proxy={linkProxy(campaign, "item", item.id, item.name, item.icon)}
           menuItems={[
             ...linkActionItems(campaign, link),
-            ...actionMenuItems(campaign, [
-              { id: `library:${item.id}`, title: item.name },
-            ]),
+            ...actionMenuItems(campaign, [{ id: `library:${item.id}`, title: item.name }]),
           ]}
         >
           <Button
@@ -149,11 +158,11 @@ function LinkPopup({ campaign, link }: { campaign: Campaign; link: LinkRef }) {
         </EntryWindow>
       );
     }
-    case 'move': {
-      const move = system.actions.find((m) => m.id === link.id)
-      if (!move) return null
-      const { label, Icon } = makeVerb(move)
-      const tag = rollTag(system, move)
+    case "move": {
+      const move = system.actions.find((m) => m.id === link.id);
+      if (!move) return null;
+      const { label, Icon } = makeVerb(move);
+      const tag = rollTag(system, move);
       return (
         <EntryWindow
           entryKey={entryKey}
@@ -172,9 +181,7 @@ function LinkPopup({ campaign, link }: { campaign: Campaign; link: LinkRef }) {
           )}
           menuItems={[
             ...linkActionItems(campaign, link),
-            ...actionMenuItems(campaign, [
-              { id: `move:${move.id}`, title: move.name },
-            ]),
+            ...actionMenuItems(campaign, [{ id: `move:${move.id}`, title: move.name }]),
           ]}
         >
           <Button
@@ -188,7 +195,7 @@ function LinkPopup({ campaign, link }: { campaign: Campaign; link: LinkRef }) {
         </EntryWindow>
       );
     }
-    case 'character':
+    case "character":
       return character ? (
         <LinkDialog
           campaign={campaign}
@@ -206,7 +213,7 @@ function LinkPopup({ campaign, link }: { campaign: Campaign; link: LinkRef }) {
           </div>
         </LinkDialog>
       ) : null;
-    case 'scene':
+    case "scene":
       return scene ? (
         <LinkDialog
           campaign={campaign}
@@ -221,16 +228,13 @@ function LinkPopup({ campaign, link }: { campaign: Campaign; link: LinkRef }) {
         >
           <p className="muted">A scene in this campaign.</p>
           <div className="form-actions">
-            <Button
-              variant="primary"
-              onClick={() => followLink(campaign, "scene", scene.id)}
-            >
+            <Button variant="primary" onClick={() => followLink(campaign, "scene", scene.id)}>
               Go to scene
             </Button>
           </div>
         </LinkDialog>
       ) : null;
-    case 'note':
+    case "note":
       return note ? (
         <LinkDialog
           campaign={campaign}
@@ -253,9 +257,9 @@ function LinkPopup({ campaign, link }: { campaign: Campaign; link: LinkRef }) {
 
 /** Change what a link says, or put its target's own name back. */
 function RenameLink() {
-  const req = linkRename.value
+  const req = linkRename.value;
   // A new pop-up for each request, opened as it mounts so the menu item's morph catches it.
-  return req ? <RenameLinkDialog key={req.n} req={req} /> : null
+  return req ? <RenameLinkDialog key={req.n} req={req} /> : null;
 }
 
 function RenameLinkDialog({ req }: { req: NonNullable<typeof linkRename.value> }) {
@@ -263,9 +267,9 @@ function RenameLinkDialog({ req }: { req: NonNullable<typeof linkRename.value> }
   const text = useSignal(req.text);
   const onClose = () => (linkRename.value = null);
   const done = (value: string | null) => {
-    req.save(value)
+    req.save(value);
     closePopup(ref.current, onClose);
-  }
+  };
   return (
     <Dialog dialogRef={ref} title="Link text" onClose={onClose}>
       <form
@@ -278,7 +282,6 @@ function RenameLinkDialog({ req }: { req: NonNullable<typeof linkRename.value> }
         <label className="field">
           Show this link as
           <input
-
             value={text.value}
             autoFocus
             // Typing replaces it.

@@ -26,8 +26,7 @@
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
     "exactOptionalPropertyTypes": true,
-    "noImplicitReturns": true,
-
+    "noImplicitReturns": true
   },
   "include": ["src"]
 }

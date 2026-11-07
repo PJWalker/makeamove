@@ -35,12 +35,7 @@ export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
     },
     ref,
   );
-  const classes = [
-    "btn",
-    `btn-${variant}`,
-    size === "sm" && "btn-sm",
-    className,
-  ]
+  const classes = ["btn", `btn-${variant}`, size === "sm" && "btn-sm", className]
     .filter(Boolean)
     .join(" ");
   return (
@@ -49,9 +44,7 @@ export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
       ref={ref}
       type={rest.type ?? "button"}
       className={classes}
-      aria-label={
-        rest["aria-label"] ?? (variant === "icon" ? label : undefined)
-      }
+      aria-label={rest["aria-label"] ?? (variant === "icon" ? label : undefined)}
       title={rest.title ?? label}
       aria-pressed={pressed ?? rest["aria-pressed"]}
     >

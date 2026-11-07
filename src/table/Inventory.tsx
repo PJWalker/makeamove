@@ -1,5 +1,13 @@
 import { useSignal } from "@preact/signals-react";
-import { addItem, breakDungeonWorld2Weapon, consumeDungeonWorld2Item, removeItem, saleValueDungeonWorld2Item, sellDungeonWorld2Item, updateItem } from "../features/characters/api";
+import {
+  addItem,
+  breakDungeonWorld2Weapon,
+  consumeDungeonWorld2Item,
+  removeItem,
+  saleValueDungeonWorld2Item,
+  sellDungeonWorld2Item,
+  updateItem,
+} from "../features/characters/api";
 import { clearArtifactTrack, markArtifactTrack, systemOf } from "../features/characters/api";
 import type { CharacterView, ItemInstance } from "../features/characters/types";
 import type { Derived } from "../systems/types";
@@ -18,9 +26,7 @@ import { getEntityGraphic } from "./entityGraphics";
 import { derive } from "../features/characters/store";
 
 const menuTargets = (i: ItemInstance) => [
-  ...(i.uses !== undefined
-    ? [{ id: `use:${i.id}`, title: `Use ${i.name}` }]
-    : []),
+  ...(i.uses !== undefined ? [{ id: `use:${i.id}`, title: `Use ${i.name}` }] : []),
   ...(i.equippable
     ? [
         {
@@ -62,17 +68,22 @@ function ArtifactTracker({
   const unlocked = new Set(item.artifactUnlocked ?? []);
   const available = artifact.unlocks.filter((move) => !unlocked.has(move.id));
   const needsChoice =
-    progress === artifact.capacity - 1 &&
-    available.length > 0 &&
-    artifact.unlockMode === "choose";
-  const selected = choice.value && available.some((move) => move.id === choice.value)
-    ? choice.value
-    : available[0]?.id ?? "";
+    progress === artifact.capacity - 1 && available.length > 0 && artifact.unlockMode === "choose";
+  const selected =
+    choice.value && available.some((move) => move.id === choice.value)
+      ? choice.value
+      : (available[0]?.id ?? "");
   return (
     <section className="inventory-artifact" aria-label={`${item.name} Artifact track`}>
       <h4>{artifact.track}</h4>
-      <progress aria-label={`${artifact.track} progress`} max={artifact.capacity} value={progress} />
-      <output>{progress}/{artifact.capacity}</output>
+      <progress
+        aria-label={`${artifact.track} progress`}
+        max={artifact.capacity}
+        value={progress}
+      />
+      <output>
+        {progress}/{artifact.capacity}
+      </output>
       {needsChoice && (
         <fieldset className="form-section">
           <legend>Unlock a move</legend>
@@ -95,7 +106,9 @@ function ArtifactTracker({
         <Button
           size="sm"
           disabled={!editable || progress >= artifact.capacity || (needsChoice && !selected)}
-          onClick={() => markArtifactTrack(campaign, characterId, item.id, needsChoice ? selected : undefined)}
+          onClick={() =>
+            markArtifactTrack(campaign, characterId, item.id, needsChoice ? selected : undefined)
+          }
         >
           Mark {artifact.track}
         </Button>
@@ -139,28 +152,67 @@ function ItemUseControls({
   const definition = systemOf(campaign).items.find((entry) => entry.id === item.defId);
   if (item.uses === undefined) return null;
   const locked = character.lockedConditions ?? [];
-  const missingHp = (derive(character, systemOf(campaign)).values.maxHp ?? 0) > (character.resources.hp ?? 0);
+  const missingHp =
+    (derive(character, systemOf(campaign)).values.maxHp ?? 0) > (character.resources.hp ?? 0);
   const outOfUses = (item.usesLeft ?? 0) <= 0;
   if (definition?.itemUse === "magic-wand") {
-    const availableConditions = systemOf(campaign).conditions.filter((entry) => !locked.includes(entry.id));
+    const availableConditions = systemOf(campaign).conditions.filter(
+      (entry) => !locked.includes(entry.id),
+    );
     return (
       <div className="inventory-item-use">
         <label className="field">
           Effect
-          <select value={choice.value === "mark-condition" ? "mark-condition" : "drain"} disabled={!editable || outOfUses} onChange={(event) => (choice.value = event.currentTarget.value as "drain" | "mark-condition")}>
+          <select
+            value={choice.value === "mark-condition" ? "mark-condition" : "drain"}
+            disabled={!editable || outOfUses}
+            onChange={(event) =>
+              (choice.value = event.currentTarget.value as "drain" | "mark-condition")
+            }
+          >
             <option value="drain">Drain the wand until camp</option>
-            <option value="mark-condition" disabled={!availableConditions.length}>Mark or lock a Condition instead</option>
+            <option value="mark-condition" disabled={!availableConditions.length}>
+              Mark or lock a Condition instead
+            </option>
           </select>
         </label>
         {choice.value === "mark-condition" && availableConditions.length > 0 && (
           <label className="field">
             Condition
-            <select value={condition.value || availableConditions[0]!.id} disabled={!editable || outOfUses} onChange={(event) => (condition.value = event.currentTarget.value)}>
-              {availableConditions.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}</option>)}
+            <select
+              value={condition.value || availableConditions[0]!.id}
+              disabled={!editable || outOfUses}
+              onChange={(event) => (condition.value = event.currentTarget.value)}
+            >
+              {availableConditions.map((entry) => (
+                <option key={entry.id} value={entry.id}>
+                  {entry.name}
+                </option>
+              ))}
             </select>
           </label>
         )}
-        <Button size="sm" disabled={!editable || outOfUses || (choice.value === "mark-condition" && !availableConditions.length)} onClick={() => consumeDungeonWorld2Item(campaign, character.id, item.id, choice.value === "mark-condition" ? { kind: "mark-condition", condition: condition.value || availableConditions[0]!.id } : { kind: "drain" })}>
+        <Button
+          size="sm"
+          disabled={
+            !editable ||
+            outOfUses ||
+            (choice.value === "mark-condition" && !availableConditions.length)
+          }
+          onClick={() =>
+            consumeDungeonWorld2Item(
+              campaign,
+              character.id,
+              item.id,
+              choice.value === "mark-condition"
+                ? {
+                    kind: "mark-condition",
+                    condition: condition.value || availableConditions[0]!.id,
+                  }
+                : { kind: "drain" },
+            )
+          }
+        >
           Use
         </Button>
       </div>
@@ -171,27 +223,64 @@ function ItemUseControls({
       <div className="inventory-item-use">
         <label className="field">
           Effect
-          <select value={choice.value} disabled={!editable || outOfUses} onChange={(event) => (choice.value = event.currentTarget.value as "heal" | "clear-locked")}>
+          <select
+            value={choice.value}
+            disabled={!editable || outOfUses}
+            onChange={(event) =>
+              (choice.value = event.currentTarget.value as "heal" | "clear-locked")
+            }
+          >
             <option value="heal">Recover half lost HP</option>
-            <option value="clear-locked" disabled={!locked.length}>Clear a locked Condition</option>
+            <option value="clear-locked" disabled={!locked.length}>
+              Clear a locked Condition
+            </option>
           </select>
         </label>
         {choice.value === "clear-locked" && locked.length > 0 && (
           <label className="field">
             Locked Condition
-            <select value={condition.value || locked[0]} disabled={!editable || outOfUses} onChange={(event) => (condition.value = event.currentTarget.value)}>
-              {locked.map((entry) => <option key={entry} value={entry}>{entry}</option>)}
+            <select
+              value={condition.value || locked[0]}
+              disabled={!editable || outOfUses}
+              onChange={(event) => (condition.value = event.currentTarget.value)}
+            >
+              {locked.map((entry) => (
+                <option key={entry} value={entry}>
+                  {entry}
+                </option>
+              ))}
             </select>
           </label>
         )}
-        <Button size="sm" disabled={!editable || outOfUses || (choice.value === "clear-locked" ? !locked.length : !missingHp)} onClick={() => consumeDungeonWorld2Item(campaign, character.id, item.id, choice.value === "heal" ? { kind: "heal-half-lost" } : { kind: "clear-locked", condition: condition.value || locked[0]! })}>
+        <Button
+          size="sm"
+          disabled={
+            !editable ||
+            outOfUses ||
+            (choice.value === "clear-locked" ? !locked.length : !missingHp)
+          }
+          onClick={() =>
+            consumeDungeonWorld2Item(
+              campaign,
+              character.id,
+              item.id,
+              choice.value === "heal"
+                ? { kind: "heal-half-lost" }
+                : { kind: "clear-locked", condition: condition.value || locked[0]! },
+            )
+          }
+        >
           Use
         </Button>
       </div>
     );
   }
   return (
-    <Button size="sm" disabled={!editable || outOfUses} onClick={() => consumeDungeonWorld2Item(campaign, character.id, item.id)}>
+    <Button
+      size="sm"
+      disabled={!editable || outOfUses}
+      onClick={() => consumeDungeonWorld2Item(campaign, character.id, item.id)}
+    >
       Use
     </Button>
   );
@@ -214,17 +303,21 @@ export function Inventory({
   editable: boolean;
 }) {
   const windows = useEntryWindows();
-  const patch = (i: ItemInstance, p: Partial<ItemInstance>) =>
-    updateItem(campaign, c.id, i.id, p);
+  const patch = (i: ItemInstance, p: Partial<ItemInstance>) => updateItem(campaign, c.id, i.id, p);
   const over = d && (d.values.load ?? 0) > (d.values.maxLoad ?? 0);
   const itemMenu = (i: ItemInstance) => {
     const definition = systemOf(campaign).items.find((entry) => entry.id === i.defId);
     const genericUseAllowed = !i.resetUsesAtCamp || !!definition?.itemUse;
-    const items = actionMenuItems(campaign, menuTargets(i).filter((target) =>
-      genericUseAllowed || !target.id.startsWith(`use:${i.id}`),
-    ));
+    const items = actionMenuItems(
+      campaign,
+      menuTargets(i).filter((target) => genericUseAllowed || !target.id.startsWith(`use:${i.id}`)),
+    );
     const saleValue = saleValueDungeonWorld2Item(campaign, c.id, i.id);
-    const canBreak = i.equippable && ["close", "hand", "near", "far", "precise", "thrown", "piercing"].some((tag) => i.tags.includes(tag));
+    const canBreak =
+      i.equippable &&
+      ["close", "hand", "near", "far", "precise", "thrown", "piercing"].some((tag) =>
+        i.tags.includes(tag),
+      );
     return [
       ...(i.equippable
         ? [
@@ -245,18 +338,23 @@ export function Inventory({
           ]
         : []),
       ...(canBreak && !i.broken
-        ? [{
-            label: `Mark ${i.name} broken`,
-            disabled: !editable,
-            onSelect: () => breakDungeonWorld2Weapon(campaign, c.id, i.id),
-          }]
+        ? [
+            {
+              label: `Mark ${i.name} broken`,
+              disabled: !editable,
+              onSelect: () => breakDungeonWorld2Weapon(campaign, c.id, i.id),
+            },
+          ]
         : []),
       ...(saleValue !== null
-        ? [{
-            label: saleValue > 0 ? `Sell ${i.name} for 1 Treasure` : `Sell ${i.name} for no Treasure`,
-            disabled: !editable,
-            onSelect: () => sellDungeonWorld2Item(campaign, c.id, i.id),
-          }]
+        ? [
+            {
+              label:
+                saleValue > 0 ? `Sell ${i.name} for 1 Treasure` : `Sell ${i.name} for no Treasure`,
+              disabled: !editable,
+              onSelect: () => sellDungeonWorld2Item(campaign, c.id, i.id),
+            },
+          ]
         : []),
       ...(items.length ? (["divider"] as const) : []),
       ...items,
@@ -271,8 +369,7 @@ export function Inventory({
       {
         label: "Change graphic…",
         Icon: IconImage,
-        onSelect: () =>
-          editEntityGraphic(campaign, "item", i.defId ?? i.id, i.name, i.icon),
+        onSelect: () => editEntityGraphic(campaign, "item", i.defId ?? i.id, i.name, i.icon),
       },
     ];
   };
@@ -289,9 +386,11 @@ export function Inventory({
           {i.equipped ? "Equipped" : "Equip"}
         </Button>
       )}
-      {i.uses !== undefined && (!i.resetUsesAtCamp || !!systemOf(campaign).items.find((entry) => entry.id === i.defId)?.itemUse) && (
-        <ItemUseControls campaign={campaign} character={c} item={i} editable={editable} />
-      )}
+      {i.uses !== undefined &&
+        (!i.resetUsesAtCamp ||
+          !!systemOf(campaign).items.find((entry) => entry.id === i.defId)?.itemUse) && (
+          <ItemUseControls campaign={campaign} character={c} item={i} editable={editable} />
+        )}
     </>
   );
 
@@ -341,18 +440,12 @@ export function Inventory({
                       label: i.name,
                       token: {
                         name: i.name,
-                        graphic: getEntityGraphic(
-                          campaign,
-                          "item",
-                          i.id,
-                          i.icon,
-                        ),
+                        graphic: getEntityGraphic(campaign, "item", i.id, i.icon),
                         entityRef: { kind: "item", id: i.id },
                       },
                       give: {
                         kind: "item" as const,
-                        to: (characterId: string) =>
-                          addItem(campaign, characterId, i),
+                        to: (characterId: string) => addItem(campaign, characterId, i),
                       },
                     };
                 dragEntity(ev, source);
@@ -389,11 +482,7 @@ export function Inventory({
             graphicRef={{ kind: "item", id: i.defId ?? i.id }}
             graphicDefaultIcon={i.icon}
             // Gear from the Libraries stands for its entry there.
-            proxy={
-              i.defId
-                ? linkProxy(campaign, "item", i.defId, i.name, i.icon)
-                : undefined
-            }
+            proxy={i.defId ? linkProxy(campaign, "item", i.defId, i.name, i.icon) : undefined}
           >
             {metaOf(i) && <span className="muted">{metaOf(i)}</span>}
             <ArtifactTracker campaign={campaign} characterId={c.id} item={i} editable={editable} />

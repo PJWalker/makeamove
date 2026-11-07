@@ -60,12 +60,7 @@ export function FilterableMenu({
           if (next) setQuery("");
         }}
       >
-        <Button
-          size="sm"
-          aria-haspopup="dialog"
-          aria-expanded={open}
-          {...triggerProps}
-        >
+        <Button size="sm" aria-haspopup="dialog" aria-expanded={open} {...triggerProps}>
           {trigger}
         </Button>
         <Popover
@@ -77,10 +72,7 @@ export function FilterableMenu({
         >
           <Dialog aria-label={label}>
             <Autocomplete inputValue={query} onInputChange={setQuery}>
-              <SearchField
-                className="filterable-menu-search"
-                aria-label={searchLabel}
-              >
+              <SearchField className="filterable-menu-search" aria-label={searchLabel}>
                 <Input autoFocus placeholder={placeholder} />
               </SearchField>
               <ListBox
@@ -92,16 +84,13 @@ export function FilterableMenu({
                 disallowEmptySelection
                 selectedKeys={selected ? [selected] : []}
                 onSelectionChange={(keys) => {
-                  const id =
-                    keys === "all" ? undefined : keys.values().next().value;
+                  const id = keys === "all" ? undefined : keys.values().next().value;
                   if (id !== undefined) {
                     setOpen(false);
                     onSelect(String(id));
                   }
                 }}
-                renderEmptyState={() => (
-                  <p className="filterable-menu-empty">{emptyMessage}</p>
-                )}
+                renderEmptyState={() => <p className="filterable-menu-empty">{emptyMessage}</p>}
               >
                 {(option) => (
                   <ListBoxItem

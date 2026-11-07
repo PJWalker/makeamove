@@ -1,7 +1,4 @@
-import type {
-  PointerEvent as ReactPointerEvent,
-  KeyboardEvent as ReactKeyboardEvent,
-} from "react";
+import type { PointerEvent as ReactPointerEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
 import { signal, useSignal } from "@preact/signals-react";
 import { useEffect, useMemo, useRef } from "react";
 import { noteRecent, recentActions } from "../app/commands/recent";
@@ -18,13 +15,7 @@ import { buildIndex, findAction } from "../app/commands/registry";
 import { diceFormula } from "../features/chat/commands";
 import { rank } from "../app/commands/search";
 import type { Action } from "../app/commands/types";
-import {
-  editHotbar,
-  insertAt,
-  isPinned,
-  pin,
-  unpin,
-} from "../features/characters/hotbar";
+import { editHotbar, insertAt, isPinned, pin, unpin } from "../features/characters/hotbar";
 import { isTyping } from "../ui/keys";
 import { RECORDER } from "./ActionDialogs";
 import { actionMenuItems } from "./actionMenu";
@@ -41,12 +32,7 @@ export function Palette({ campaign }: { campaign: Campaign }) {
   // Ctrl/Cmd + K toggles, even from a text field, as in most apps.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (
-        e.key.toLowerCase() === "k" &&
-        (e.metaKey || e.ctrlKey) &&
-        !e.altKey &&
-        !e.shiftKey
-      ) {
+      if (e.key.toLowerCase() === "k" && (e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey) {
         e.preventDefault();
         paletteOpen.value = !paletteOpen.value;
       }
@@ -58,8 +44,7 @@ export function Palette({ campaign }: { campaign: Campaign }) {
   // The player's own shortcuts, ahead of the app's (captured, so a tool key bound to something else stays bound).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.repeat || (e.target as Element | null)?.closest?.(`.${RECORDER}`))
-        return;
+      if (e.repeat || (e.target as Element | null)?.closest?.(`.${RECORDER}`)) return;
       const combo = comboOf(e);
       if (!combo) return;
       const id = actionForCombo(shortcuts(campaign), combo);
@@ -92,26 +77,16 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
   // A dice formula typed on its own rolls it, first in the list.
   const formula = diceFormula(query.value);
   const roll = formula ? rollAction(campaign, formula) : null;
-  const results = roll
-    ? [roll, ...ranked.filter((a) => a.id !== roll.id)]
-    : ranked;
+  const results = roll ? [roll, ...ranked.filter((a) => a.id !== roll.id)] : ranked;
   const active = Math.min(cursor.value, Math.max(0, results.length - 1));
   const returnTo = useRef<Element | null>(document.activeElement);
-  const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(
-    null,
-  );
+  const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const note = useSignal("");
 
   function togglePin(a: Action) {
     const pinned = isPinned(campaign, a.id);
-    if (
-      editHotbar(campaign, (slots) =>
-        pinned ? unpin(slots, a.id) : pin(slots, a.id),
-      )
-    ) {
-      note.value = pinned
-        ? `Removed ${a.title} from the hotbar`
-        : `Added ${a.title} to the hotbar`;
+    if (editHotbar(campaign, (slots) => (pinned ? unpin(slots, a.id) : pin(slots, a.id)))) {
+      note.value = pinned ? `Removed ${a.title} from the hotbar` : `Added ${a.title} to the hotbar`;
     }
   }
 
@@ -128,9 +103,7 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
             [{ id: a.id, title: a.title }],
             () => (paletteOpen.value = false),
           ),
-          ...(a.available === true
-            ? [{ label: "Run", onSelect: () => choose(a) }]
-            : []),
+          ...(a.available === true ? [{ label: "Run", onSelect: () => choose(a) }] : []),
         ],
       };
     });
@@ -167,10 +140,7 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
   useEffect(() => {
     const onDown = (e: PointerEvent) => {
       const t = e.target as Element;
-      if (
-        !rootRef.current?.contains(t) &&
-        !t.closest?.(".context-menu, .hotbar-palette")
-      )
+      if (!rootRef.current?.contains(t) && !t.closest?.(".context-menu, .hotbar-palette"))
         paletteOpen.value = false;
     };
     document.addEventListener("pointerdown", onDown, true);
@@ -208,6 +178,8 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
 
   const empty = !query.value;
   return (
+    // Arrow/Enter handling for the whole palette lives on the dialog.
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
     <div
       className="palette panel"
       role="dialog"
@@ -222,9 +194,7 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
         role="combobox"
         aria-expanded="true"
         aria-controls="palette-list"
-        aria-activedescendant={
-          results[active] ? `palette-${active}` : undefined
-        }
+        aria-activedescendant={results[active] ? `palette-${active}` : undefined}
         aria-label="Search actions"
         placeholder="Search moves, tools, scenes and commands, or roll 2d6+1…"
         autoComplete="off"
@@ -235,17 +205,14 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
           cursor.value = 0;
         }}
       />
-      <ul
-        id="palette-list"
-        className="palette-list"
-        role="listbox"
-        ref={listRef}
-      >
+      <ul id="palette-list" className="palette-list" role="listbox" ref={listRef}>
         {results.map((a, i) => {
           const off = a.available !== true;
           const combo = shortcutFor(campaign, a.id);
           const hint = combo ? showCombo(combo) : a.hint;
           return (
+            // Options are chosen by keyboard through the dialog's onKeyDown.
+            // eslint-disable-next-line jsx-a11y/click-events-have-key-events
             <li
               key={a.id}
               id={`palette-${i}`}
@@ -258,14 +225,10 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
               onClick={() => choose(a)}
               {...rowTriggers(a, i)}
             >
-              <span className="palette-icon">
-                {a.icon && <a.icon size={22} />}
-              </span>
+              <span className="palette-icon">{a.icon && <a.icon size={22} />}</span>
               <span className="palette-text">
                 <span className="palette-title">{a.title}</span>
-                <span className="palette-detail">
-                  {off ? a.available : (a.detail ?? a.source)}
-                </span>
+                <span className="palette-detail">{off ? a.available : (a.detail ?? a.source)}</span>
               </span>
               {hint && <kbd>{hint}</kbd>}
             </li>
@@ -277,9 +240,7 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
           </li>
         )}
       </ul>
-      {menu.value && (
-        <ContextMenu {...menu.value} onClose={() => (menu.value = null)} />
-      )}
+      {menu.value && <ContextMenu {...menu.value} onClose={() => (menu.value = null)} />}
       <p className="palette-note" role="status">
         {note.value}
       </p>

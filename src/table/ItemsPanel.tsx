@@ -1,28 +1,44 @@
-import { useSignal, type Signal } from '@preact/signals-react'
+import { useSignal, type Signal } from "@preact/signals-react";
 import { plainText } from "../features/characters/trackers";
-import { addItem, canEdit, getCharacter, selectedCharacterId, startMove, systemOf } from '../features/characters/api'
-import { parseCommaList } from '../lib/list'
-import { toggleSetValue } from '../lib/set'
-import { deleteHomebrew, listHomebrew, saveGear, saveMove, type HomebrewEntry } from '../features/homebrew/homebrew'
-import type { Campaign } from '../campaign/campaign'
+import {
+  addItem,
+  canEdit,
+  getCharacter,
+  selectedCharacterId,
+  startMove,
+  systemOf,
+} from "../features/characters/api";
+import { parseCommaList } from "../lib/list";
+import { toggleSetValue } from "../lib/set";
+import {
+  deleteHomebrew,
+  listHomebrew,
+  saveGear,
+  saveMove,
+  type HomebrewEntry,
+} from "../features/homebrew/homebrew";
+import type { Campaign } from "../campaign/campaign";
 import type { EntityGraphic } from "../graphics";
-import { useY } from '../ui/useY'
-import type { ActionDef, CheckStep, Effect, GameSystem, ItemDef, TargetSpec } from '../systems/types'
+import { useY } from "../ui/useY";
+import type {
+  ActionDef,
+  CheckStep,
+  Effect,
+  GameSystem,
+  ItemDef,
+  TargetSpec,
+} from "../systems/types";
 import { Button } from "../ui/Button";
 import { PanelActions } from "./PanelActions";
-import { IconAdd, IconBack, IconDelete } from '../ui/icons'
+import { IconAdd, IconBack, IconDelete } from "../ui/icons";
 import { List, ListGroup } from "../ui/List";
-import { Segmented } from '../ui/Segmented'
-import { dragEntity, entity } from './entityDrag'
+import { Segmented } from "../ui/Segmented";
+import { dragEntity, entity } from "./entityDrag";
 import { EntryRow, rollTag } from "./EntryWindow";
 import { actionMenuItems } from "./actionMenu";
 import { CampaignEntityGraphic } from "./EntityGraphic";
 import { GraphicPicker } from "../ui/GraphicPicker";
-import {
-  getDefaultEntityGraphic,
-  getEntityGraphic,
-  setEntityGraphic,
-} from "./entityGraphics";
+import { getDefaultEntityGraphic, getEntityGraphic, setEntityGraphic } from "./entityGraphics";
 
 /*
  * Items: the table's own gear and moves (homebrew/homebrew.ts), with forms
@@ -30,30 +46,26 @@ import {
  * character, given from here, or made from a character's sheet once learned.
  */
 
-type Editing = { kind: 'gear' | 'move'; id: string | null } | null
+type Editing = { kind: "gear" | "move"; id: string | null } | null;
 
 export function ItemsPanel({ campaign }: { campaign: Campaign }) {
-  const json = useY(campaign.homebrew, () => JSON.stringify(listHomebrew(campaign.homebrew)))
-  const entries: (HomebrewEntry & { id: string })[] = JSON.parse(json)
-  const system = systemOf(campaign)
-  const editing = useSignal<Editing>(null)
-  const folded = useSignal<Set<string>>(new Set())
+  const json = useY(campaign.homebrew, () => JSON.stringify(listHomebrew(campaign.homebrew)));
+  const entries: (HomebrewEntry & { id: string })[] = JSON.parse(json);
+  const system = systemOf(campaign);
+  const editing = useSignal<Editing>(null);
+  const folded = useSignal<Set<string>>(new Set());
   const fold = (id: string) => ({
     open: !folded.value.has(id),
     onToggle: () => (folded.value = toggleSetValue(folded.value, id)),
-  })
-  const meId = useY(campaign.members, () => selectedCharacterId(campaign))
-  const me = useY(campaign.characters, () => getCharacter(campaign, meId))
-  const canAct = !!me && canEdit(campaign, me)
+  });
+  const meId = useY(campaign.members, () => selectedCharacterId(campaign));
+  const me = useY(campaign.characters, () => getCharacter(campaign, meId));
+  const canAct = !!me && canEdit(campaign, me);
   const menuItemsFor = (e: HomebrewEntry & { id: string }) => {
     const actions =
       e.kind === "gear"
-        ? actionMenuItems(campaign, [
-            { id: `library:${e.id}`, title: e.item.name },
-          ])
-        : actionMenuItems(campaign, [
-            { id: `move:${e.id}`, title: e.move.name },
-          ]);
+        ? actionMenuItems(campaign, [{ id: `library:${e.id}`, title: e.item.name }])
+        : actionMenuItems(campaign, [{ id: `move:${e.id}`, title: e.move.name }]);
     const primary =
       e.kind === "gear"
         ? {
@@ -70,17 +82,13 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
               if (me && canAct) startMove(campaign, me.id, e.move);
             },
           };
-    return [
-      primary,
-      ...(actions.length ? (["divider"] as const) : []),
-      ...actions,
-    ];
+    return [primary, ...(actions.length ? (["divider"] as const) : []), ...actions];
   };
 
   if (editing.value) {
-    const { kind, id } = editing.value
-    const found = id ? entries.find((e) => e.id === id) : undefined
-    const close = () => (editing.value = null)
+    const { kind, id } = editing.value;
+    const found = id ? entries.find((e) => e.id === id) : undefined;
+    const close = () => (editing.value = null);
     return (
       <div className="panel-scroll items-panel">
         <div className="sheet-row">
@@ -107,21 +115,15 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
     );
   }
 
-  const gear = entries.filter((e) => e.kind === 'gear')
-  const moves = entries.filter((e) => e.kind === 'move')
+  const gear = entries.filter((e) => e.kind === "gear");
+  const moves = entries.filter((e) => e.kind === "move");
   return (
     <div className="panel-scroll items-panel">
       <PanelActions>
-        <Button
-          size="sm"
-          onClick={() => (editing.value = { kind: "gear", id: null })}
-        >
+        <Button size="sm" onClick={() => (editing.value = { kind: "gear", id: null })}>
           <IconAdd size={22} /> New gear
         </Button>
-        <Button
-          size="sm"
-          onClick={() => (editing.value = { kind: "move", id: null })}
-        >
+        <Button size="sm" onClick={() => (editing.value = { kind: "move", id: null })}>
           <IconAdd size={22} /> New move
         </Button>
       </PanelActions>
@@ -181,12 +183,7 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
                 <EntryRow
                   key={e.id}
                   lead={
-                    <CampaignEntityGraphic
-                      campaign={campaign}
-                      kind="move"
-                      id={e.id}
-                      size={22}
-                    />
+                    <CampaignEntityGraphic campaign={campaign} kind="move" id={e.id} size={22} />
                   }
                   name={e.move.name}
                   openLabel="Edit"
@@ -217,58 +214,108 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
 }
 
 /** A text input bound to a signal. */
-function Text({ label, value, multiline, placeholder }: { label: string; value: Signal<string>; multiline?: boolean; placeholder?: string }) {
+function Text({
+  label,
+  value,
+  multiline,
+  placeholder,
+}: {
+  label: string;
+  value: Signal<string>;
+  multiline?: boolean;
+  placeholder?: string;
+}) {
   return (
     <label className="field">
       {label}
       {multiline ? (
-        <textarea  rows={4} value={value.value} placeholder={placeholder} onInput={(e) => (value.value = e.currentTarget.value)} />
+        <textarea
+          rows={4}
+          value={value.value}
+          placeholder={placeholder}
+          onInput={(e) => (value.value = e.currentTarget.value)}
+        />
       ) : (
-        <input  value={value.value} placeholder={placeholder} onInput={(e) => (value.value = e.currentTarget.value)} />
+        <input
+          value={value.value}
+          placeholder={placeholder}
+          onInput={(e) => (value.value = e.currentTarget.value)}
+        />
       )}
     </label>
-  )
+  );
 }
 
-function NumberField({ label, value, min = 0 }: { label: string; value: Signal<number>; min?: number }) {
+function NumberField({
+  label,
+  value,
+  min = 0,
+}: {
+  label: string;
+  value: Signal<number>;
+  min?: number;
+}) {
   return (
     <label className="field">
       {label}
-      <input  type="number" min={min} value={value.value} onInput={(e) => (value.value = Number(e.currentTarget.value) || 0)} />
+      <input
+        type="number"
+        min={min}
+        value={value.value}
+        onInput={(e) => (value.value = Number(e.currentTarget.value) || 0)}
+      />
     </label>
-  )
+  );
 }
 
 const splitTags = (s: string) =>
   parseCommaList(s)
     .map((t) => t.trim())
-    .filter(Boolean)
+    .filter(Boolean);
 
 /** An effect row in the gear form: a bonus to rolls with a stat, or a change to a derived value. */
-type EffectRow = { type: 'rollBonus'; stat: string; value: number } | { type: 'modify'; path: string; value: number }
+type EffectRow =
+  | { type: "rollBonus"; stat: string; value: number }
+  | { type: "modify"; path: string; value: number };
 
-function GearForm({ campaign, system, initial, onDone }: { campaign: Campaign; system: GameSystem; initial?: ItemDef; onDone: () => void }) {
-  const name = useSignal(initial?.name ?? '')
-  const description = useSignal(initial?.description ?? '')
-  const weight = useSignal(initial?.weight ?? 0)
-  const uses = useSignal(initial?.uses ?? 0)
-  const tags = useSignal((initial?.tags ?? []).join(', '))
-  const equippable = useSignal(initial?.equippable ?? false)
+function GearForm({
+  campaign,
+  system,
+  initial,
+  onDone,
+}: {
+  campaign: Campaign;
+  system: GameSystem;
+  initial?: ItemDef;
+  onDone: () => void;
+}) {
+  const name = useSignal(initial?.name ?? "");
+  const description = useSignal(initial?.description ?? "");
+  const weight = useSignal(initial?.weight ?? 0);
+  const uses = useSignal(initial?.uses ?? 0);
+  const tags = useSignal((initial?.tags ?? []).join(", "));
+  const equippable = useSignal(initial?.equippable ?? false);
   const graphic = useSignal<EntityGraphic | undefined>(
     initial?.id ? campaign.entityGraphics.get(`item:${initial.id}`) : undefined,
   );
   const resetGraphic = useSignal(false);
   const effects = useSignal<EffectRow[]>(
     (initial?.effects ?? []).flatMap((e): EffectRow[] =>
-      e.type === 'rollBonus' ? [{ type: 'rollBonus', stat: e.stat ?? '', value: e.value }] : e.type === 'modify' && e.op === 'add' ? [{ type: 'modify', path: e.path, value: e.value }] : [],
+      e.type === "rollBonus"
+        ? [{ type: "rollBonus", stat: e.stat ?? "", value: e.value }]
+        : e.type === "modify" && e.op === "add"
+          ? [{ type: "modify", path: e.path, value: e.value }]
+          : [],
     ),
-  )
-  const ready = !!name.value.trim()
+  );
+  const ready = !!name.value.trim();
   const save = () => {
-    if (!ready) return
+    if (!ready) return;
     const out: Effect[] = effects.value.map((e) =>
-      e.type === 'rollBonus' ? { type: 'rollBonus', ...(e.stat ? { stat: e.stat } : {}), value: e.value } : { type: 'modify', path: e.path, op: 'add', value: e.value },
-    )
+      e.type === "rollBonus"
+        ? { type: "rollBonus", ...(e.stat ? { stat: e.stat } : {}), value: e.value }
+        : { type: "modify", path: e.path, op: "add", value: e.value },
+    );
     const id = saveGear(campaign.homebrew, {
       id: initial?.id ?? "",
       name: name.value.trim(),
@@ -277,19 +324,15 @@ function GearForm({ campaign, system, initial, onDone }: { campaign: Campaign; s
       ...(uses.value ? { uses: uses.value } : {}),
       tags: splitTags(tags.value),
       ...(out.length ? { effects: out } : {}),
-      ...(equippable.value
-        ? { equippable: true, active: "equipped" as const }
-        : {}),
+      ...(equippable.value ? { equippable: true, active: "equipped" as const } : {}),
     });
-    setEntityGraphic(
-      campaign,
-      "item",
-      id,
-      resetGraphic.value ? undefined : graphic.value,
-    );
-    onDone()
-  }
-  const setEffect = (i: number, patch: Partial<EffectRow>) => (effects.value = effects.value.map((e, j) => (j === i ? ({ ...e, ...patch } as EffectRow) : e)))
+    setEntityGraphic(campaign, "item", id, resetGraphic.value ? undefined : graphic.value);
+    onDone();
+  };
+  const setEffect = (i: number, patch: Partial<EffectRow>) =>
+    (effects.value = effects.value.map((e, j) =>
+      j === i ? ({ ...e, ...patch } as EffectRow) : e,
+    ));
 
   return (
     <form
@@ -324,8 +367,7 @@ function GearForm({ campaign, system, initial, onDone }: { campaign: Campaign; s
           graphic={
             resetGraphic.value
               ? getDefaultEntityGraphic(campaign, "item", initial?.id ?? "")
-              : (graphic.value ??
-                getEntityGraphic(campaign, "item", initial?.id ?? ""))
+              : (graphic.value ?? getEntityGraphic(campaign, "item", initial?.id ?? ""))
           }
           onChange={(next) => {
             graphic.value = next;
@@ -340,136 +382,131 @@ function GearForm({ campaign, system, initial, onDone }: { campaign: Campaign; s
       <section className="form-section">
         <h4 className="form-heading">Effects</h4>
         <div className="form-fields">
-        {effects.value.map((e, i) => (
-          <div key={i} className="sheet-row homebrew-effect">
-            <select
-
-              aria-label="Effect"
-              value={e.type}
-              onChange={(ev) =>
-                setEffect(
-                  i,
-                  ev.currentTarget.value === "rollBonus"
-                    ? { type: "rollBonus", stat: "" }
-                    : ({ type: "modify", path: "" } as never),
-                )
-              }
-            >
-              <option value="rollBonus">Bonus to rolls</option>
-              <option value="modify">Add to a value</option>
-            </select>
-            {e.type === "rollBonus" ? (
+          {effects.value.map((e, i) => (
+            <div key={i} className="sheet-row homebrew-effect">
               <select
-
-                aria-label="With stat"
-                value={e.stat}
+                aria-label="Effect"
+                value={e.type}
                 onChange={(ev) =>
-                  setEffect(i, { stat: ev.currentTarget.value })
+                  setEffect(
+                    i,
+                    ev.currentTarget.value === "rollBonus"
+                      ? { type: "rollBonus", stat: "" }
+                      : ({ type: "modify", path: "" } as never),
+                  )
                 }
               >
-                <option value="">Every roll</option>
-                {system.stats.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    with {s.name}
-                  </option>
-                ))}
+                <option value="rollBonus">Bonus to rolls</option>
+                <option value="modify">Add to a value</option>
               </select>
-            ) : (
+              {e.type === "rollBonus" ? (
+                <select
+                  aria-label="With stat"
+                  value={e.stat}
+                  onChange={(ev) => setEffect(i, { stat: ev.currentTarget.value })}
+                >
+                  <option value="">Every roll</option>
+                  {system.stats.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      with {s.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  aria-label="Value name"
+                  placeholder="armor, ac, speed"
+                  value={e.path}
+                  onInput={(ev) => setEffect(i, { path: ev.currentTarget.value.trim() })}
+                />
+              )}
               <input
-
-                aria-label="Value name"
-                placeholder="armor, ac, speed"
-                value={e.path}
-                onInput={(ev) =>
-                  setEffect(i, { path: ev.currentTarget.value.trim() })
-                }
+                className="homebrew-num"
+                type="number"
+                aria-label="Amount"
+                value={e.value}
+                onInput={(ev) => setEffect(i, { value: Number(ev.currentTarget.value) || 0 })}
               />
-            )}
-            <input
-              className="homebrew-num"
-              type="number"
-              aria-label="Amount"
-              value={e.value}
-              onInput={(ev) =>
-                setEffect(i, { value: Number(ev.currentTarget.value) || 0 })
-              }
-            />
-            <Button
-              variant="icon"
-              size="sm"
-              label="Remove effect"
-              onClick={() =>
-                (effects.value = effects.value.filter((_, j) => j !== i))
-              }
-            >
-              <IconDelete />
-            </Button>
-          </div>
-        ))}
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() =>
-            (effects.value = [
-              ...effects.value,
-              { type: "rollBonus", stat: "", value: 1 },
-            ])
-          }
-        >
-          <IconAdd size={22} /> Add effect
-        </Button>
+              <Button
+                variant="icon"
+                size="sm"
+                label="Remove effect"
+                onClick={() => (effects.value = effects.value.filter((_, j) => j !== i))}
+              >
+                <IconDelete />
+              </Button>
+            </div>
+          ))}
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() =>
+              (effects.value = [...effects.value, { type: "rollBonus", stat: "", value: 1 }])
+            }
+          >
+            <IconAdd size={22} /> Add effect
+          </Button>
         </div>
       </section>
-      <FormActions
-        campaign={campaign}
-        id={initial?.id}
-        ready={ready}
-        onDone={onDone}
-      />
+      <FormActions campaign={campaign} id={initial?.id} ready={ready} onDone={onDone} />
     </form>
   );
 }
 
-type RollKind = 'none' | 'stat' | 'ask'
+type RollKind = "none" | "stat" | "ask";
 
-function MoveForm({ campaign, system, initial, onDone }: { campaign: Campaign; system: GameSystem; initial?: ActionDef; onDone: () => void }) {
-  const check = initial?.steps.find((s): s is CheckStep => s.kind === 'check')
-  const name = useSignal(initial?.name ?? '')
-  const category = useSignal(initial?.category ?? system.actionCategories[0]?.id ?? '')
-  const trigger = useSignal(initial?.trigger ?? '')
-  const text = useSignal(initial?.text ?? '')
+function MoveForm({
+  campaign,
+  system,
+  initial,
+  onDone,
+}: {
+  campaign: Campaign;
+  system: GameSystem;
+  initial?: ActionDef;
+  onDone: () => void;
+}) {
+  const check = initial?.steps.find((s): s is CheckStep => s.kind === "check");
+  const name = useSignal(initial?.name ?? "");
+  const category = useSignal(initial?.category ?? system.actionCategories[0]?.id ?? "");
+  const trigger = useSignal(initial?.trigger ?? "");
+  const text = useSignal(initial?.text ?? "");
   const graphic = useSignal<EntityGraphic | undefined>(
     initial?.id ? campaign.entityGraphics.get(`move:${initial.id}`) : undefined,
   );
   const resetGraphic = useSignal(false);
-  const rolls = useSignal<RollKind>(!check ? 'none' : check.ask?.kind === 'stat' ? 'ask' : 'stat')
-  const stat = useSignal(check?.stat ?? system.stats[0]?.id ?? '')
-  const outcomes = useSignal<Record<string, string>>(check?.outcomes ?? {})
-  const targets = useSignal(initial?.target ? (initial.target.max === 1 ? 'one' : 'many') : 'none')
-  const range = useSignal(initial?.target?.range?.normal ?? 0)
-  const ready = !!name.value.trim()
+  const rolls = useSignal<RollKind>(!check ? "none" : check.ask?.kind === "stat" ? "ask" : "stat");
+  const stat = useSignal(check?.stat ?? system.stats[0]?.id ?? "");
+  const outcomes = useSignal<Record<string, string>>(check?.outcomes ?? {});
+  const targets = useSignal(initial?.target ? (initial.target.max === 1 ? "one" : "many") : "none");
+  const range = useSignal(initial?.target?.range?.normal ?? 0);
+  const ready = !!name.value.trim();
 
   const save = () => {
-    if (!ready) return
+    if (!ready) return;
     const steps: CheckStep[] =
-      rolls.value === 'none'
+      rolls.value === "none"
         ? []
         : [
             {
-              kind: 'check',
-              ...(rolls.value === 'stat' ? { stat: stat.value } : { ask: { kind: 'stat' as const } }),
-              outcomes: Object.fromEntries(system.results.map((r) => [r.id, outcomes.value[r.id]?.trim() ?? ''])),
+              kind: "check",
+              ...(rolls.value === "stat"
+                ? { stat: stat.value }
+                : { ask: { kind: "stat" as const } }),
+              outcomes: Object.fromEntries(
+                system.results.map((r) => [r.id, outcomes.value[r.id]?.trim() ?? ""]),
+              ),
             },
-          ]
+          ];
     const target: TargetSpec | undefined =
-      targets.value === 'none'
+      targets.value === "none"
         ? undefined
         : {
-            prompt: targets.value === 'one' ? 'Choose a target' : 'Choose targets',
+            prompt: targets.value === "one" ? "Choose a target" : "Choose targets",
             min: 1,
-            ...(targets.value === 'one' ? { max: 1 } : {}),
+            ...(targets.value === "one" ? { max: 1 } : {}),
             ...(range.value ? { range: { normal: range.value } } : {}),
-          }
+          };
     const id = saveMove(campaign.homebrew, {
       id: initial?.id ?? "",
       name: name.value.trim(),
@@ -480,14 +517,9 @@ function MoveForm({ campaign, system, initial, onDone }: { campaign: Campaign; s
       ...(target ? { target } : {}),
       tags: ["homebrew"],
     });
-    setEntityGraphic(
-      campaign,
-      "move",
-      id,
-      resetGraphic.value ? undefined : graphic.value,
-    );
-    onDone()
-  }
+    setEntityGraphic(campaign, "move", id, resetGraphic.value ? undefined : graphic.value);
+    onDone();
+  };
 
   return (
     <form
@@ -503,11 +535,7 @@ function MoveForm({ campaign, system, initial, onDone }: { campaign: Campaign; s
         <Text label="Name" value={name} />
         <label className="field">
           Kind
-          <select
-
-            value={category.value}
-            onChange={(e) => (category.value = e.currentTarget.value)}
-          >
+          <select value={category.value} onChange={(e) => (category.value = e.currentTarget.value)}>
             {system.actionCategories.map((k) => (
               <option key={k.id} value={k.id}>
                 {k.label}
@@ -524,8 +552,7 @@ function MoveForm({ campaign, system, initial, onDone }: { campaign: Campaign; s
           graphic={
             resetGraphic.value
               ? getDefaultEntityGraphic(campaign, "move", initial?.id ?? "")
-              : (graphic.value ??
-                getEntityGraphic(campaign, "move", initial?.id ?? ""))
+              : (graphic.value ?? getEntityGraphic(campaign, "move", initial?.id ?? ""))
           }
           onChange={(next) => {
             graphic.value = next;
@@ -554,7 +581,6 @@ function MoveForm({ campaign, system, initial, onDone }: { campaign: Campaign; s
             />
             {rolls.value === "stat" && (
               <select
-
                 aria-label="Stat"
                 value={stat.value}
                 onChange={(e) => (stat.value = e.currentTarget.value)}
@@ -572,7 +598,6 @@ function MoveForm({ campaign, system, initial, onDone }: { campaign: Campaign; s
               <label key={r.id} className="field">
                 {r.label || "Otherwise"}
                 <textarea
-
                   rows={2}
                   value={outcomes.value[r.id] ?? ""}
                   onInput={(e) =>
@@ -608,12 +633,7 @@ function MoveForm({ campaign, system, initial, onDone }: { campaign: Campaign; s
           )}
         </div>
       </section>
-      <FormActions
-        campaign={campaign}
-        id={initial?.id}
-        ready={ready}
-        onDone={onDone}
-      />
+      <FormActions campaign={campaign} id={initial?.id} ready={ready} onDone={onDone} />
     </form>
   );
 }
@@ -621,21 +641,37 @@ function MoveForm({ campaign, system, initial, onDone }: { campaign: Campaign; s
 function NumberFieldInline({ label, value }: { label: string; value: Signal<number> }) {
   return (
     <label className="sheet-row">
-      <input className="homebrew-num" type="number" min={0} value={value.value} onInput={(e) => (value.value = Number(e.currentTarget.value) || 0)} />
+      <input
+        className="homebrew-num"
+        type="number"
+        min={0}
+        value={value.value}
+        onInput={(e) => (value.value = Number(e.currentTarget.value) || 0)}
+      />
       <span className="muted">{label}</span>
     </label>
-  )
+  );
 }
 
-function FormActions({ campaign, id, ready, onDone }: { campaign: Campaign; id?: string | undefined; ready: boolean; onDone: () => void }) {
+function FormActions({
+  campaign,
+  id,
+  ready,
+  onDone,
+}: {
+  campaign: Campaign;
+  id?: string | undefined;
+  ready: boolean;
+  onDone: () => void;
+}) {
   return (
     <div className="form-actions">
       {id && (
         <Button
           variant="danger"
           onClick={() => {
-            deleteHomebrew(campaign.homebrew, id)
-            onDone()
+            deleteHomebrew(campaign.homebrew, id);
+            onDone();
           }}
         >
           Delete
@@ -648,5 +684,5 @@ function FormActions({ campaign, id, ready, onDone }: { campaign: Campaign; id?:
         Save
       </Button>
     </div>
-  )
+  );
 }

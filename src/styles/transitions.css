@@ -109,7 +109,7 @@
   transform-origin: var(--zoom-origin, 50% 50%);
 }
 .vt-zoom-in::view-transition-old(page) {
-  animation: vt-lobby-dive 700ms cubic-bezier(0.99,-0.21,0,0.97) both;
+  animation: vt-lobby-dive 700ms cubic-bezier(0.99, -0.21, 0, 0.97) both;
 }
 .vt-zoom-out::view-transition-new(page) {
   animation: vt-lobby-settle 500ms cubic-bezier(0.19, 1, 0.22, 1) both;

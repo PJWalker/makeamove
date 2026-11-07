@@ -1,10 +1,5 @@
 import type * as React from "react";
-import {
-  computed,
-  signal,
-  useSignal,
-  type Signal,
-} from "@preact/signals-react";
+import { computed, signal, useSignal, type Signal } from "@preact/signals-react";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useRef } from "react";
 import { IconBack, IconLayoutSingle, IconLayoutSplit } from "./icons";
@@ -45,21 +40,13 @@ export interface PaneLayout {
  * One panel's layout, kept in localStorage under `key`. `names` words the
  * switch's label: what the list and detail are ("list", "sheet").
  */
-export function createPaneLayout(
-  key: string,
-  names: { list: string; detail: string },
-): PaneLayout {
+export function createPaneLayout(key: string, names: { list: string; detail: string }): PaneLayout {
   const storeKey = `makeamove.${key}`;
-  const saved = getStorageJson<{ w?: number; layout?: PaneLayoutMode }>(
-    storeKey,
-    {},
-  );
+  const saved = getStorageJson<{ w?: number; layout?: PaneLayoutMode }>(storeKey, {});
   const listWidth = signal(saved.w ?? DEFAULT_LIST_W);
   const chosen = signal<PaneLayoutMode>(saved.layout ?? "split");
   const tooNarrow = signal(false);
-  const mode = computed<PaneLayoutMode>(() =>
-    tooNarrow.value ? "stack" : chosen.value,
-  );
+  const mode = computed<PaneLayoutMode>(() => (tooNarrow.value ? "stack" : chosen.value));
   const save = () => {
     setStorageJson(storeKey, { w: listWidth.value, layout: chosen.value });
   };
@@ -131,9 +118,7 @@ function dragSplit(layout: PaneLayout, e: React.PointerEvent) {
   const left = grid.getBoundingClientRect().left;
   const max = () => grid.clientWidth - 160;
   const move = (ev: PointerEvent) =>
-    (layout.listWidth.value = Math.round(
-      Math.max(100, Math.min(max(), ev.clientX - left)),
-    ));
+    (layout.listWidth.value = Math.round(Math.max(100, Math.min(max(), ev.clientX - left))));
   const up = () => {
     split.removeEventListener("pointermove", move);
     split.removeEventListener("pointerup", up);
@@ -169,9 +154,7 @@ export function TwoPane({
   useEffect(() => {
     const el = rootRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(
-      () => (layout.tooNarrow.value = el.clientWidth < SPLIT_MIN_W),
-    );
+    const ro = new ResizeObserver(() => (layout.tooNarrow.value = el.clientWidth < SPLIT_MIN_W));
     ro.observe(el);
     return () => ro.disconnect();
   }, [layout]);

@@ -17,8 +17,7 @@ export function parseSrdMagicItems(markdown: string): ItemDef[] {
       const [heading, ...lines] = block.split(/\r?\n/);
       const name = heading?.trim();
       if (!name) return [];
-      const metadata =
-        lines.find((line) => /^_[^_]+_$/.test(line.trim()))?.trim() ?? "";
+      const metadata = lines.find((line) => /^_[^_]+_$/.test(line.trim()))?.trim() ?? "";
       const rarity =
         /\b(Common|Uncommon|Rare|Very Rare|Legendary|Artifact)\b/i
           .exec(metadata)?.[1]

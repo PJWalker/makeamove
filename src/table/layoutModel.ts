@@ -9,98 +9,129 @@
  * "dock" puts it back.
  */
 
-export type PanelId = 'scene' | 'chat' | 'characters' | 'combat' | 'libraries' | 'reference' | 'items' | 'notes' | 'members'
-export type DockItemId = PanelId | `entity:${string}`
-export type Side = 'left' | 'right'
+export type PanelId =
+  | "scene"
+  | "chat"
+  | "characters"
+  | "combat"
+  | "libraries"
+  | "reference"
+  | "items"
+  | "notes"
+  | "members";
+export type DockItemId = PanelId | `entity:${string}`;
+export type Side = "left" | "right";
 
-export const PANEL_ORDER: PanelId[] = ['scene', 'chat', 'characters', 'combat', 'libraries', 'reference', 'items', 'notes', 'members']
+export const PANEL_ORDER: PanelId[] = [
+  "scene",
+  "chat",
+  "characters",
+  "combat",
+  "libraries",
+  "reference",
+  "items",
+  "notes",
+  "members",
+];
 
 export interface FloatingWindow {
-  id: DockItemId
-  x: number
-  y: number
-  w: number
-  h: number
-  z: number
+  id: DockItemId;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  z: number;
 }
 
 export interface SideState {
   /** The tab showing, or null when nothing is docked here. */
-  active: DockItemId | null
-  open: boolean
+  active: DockItemId | null;
+  open: boolean;
   /** Width of the sidebar body in CSS pixels. */
-  width: number
+  width: number;
   /** Docked panels, in tab order. */
-  panels: DockItemId[]
+  panels: DockItemId[];
 }
 
 export interface Layout {
-  left: SideState
-  right: SideState
-  floating: FloatingWindow[]
+  left: SideState;
+  right: SideState;
+  floating: FloatingWindow[];
   /** Panels closed from the campaign menu or their tab, shown nowhere. */
-  closed: DockItemId[]
-  home: Partial<Record<DockItemId, Side>>
+  closed: DockItemId[];
+  home: Partial<Record<DockItemId, Side>>;
 }
 
-export const SIDEBAR_DEFAULT_W = 340
-export const SIDEBAR_MIN_W = 280
+export const SIDEBAR_DEFAULT_W = 340;
+export const SIDEBAR_MIN_W = 280;
 /** Dragging a sidebar narrower than this shuts it. */
-const SIDEBAR_SNAP_SHUT_W = 180
-const SIDEBAR_KEY_STEP = 16
-const SIDEBAR_KEY_STEP_LARGE = 64
+const SIDEBAR_SNAP_SHUT_W = 180;
+const SIDEBAR_KEY_STEP = 16;
+const SIDEBAR_KEY_STEP_LARGE = 64;
 
 const DEFAULT_SIDE: Record<PanelId, Side> = {
-  scene: 'left',
-  chat: 'right',
-  notes: 'right',
-  members: 'right',
-  characters: 'left',
-  combat: 'left',
-  libraries: 'right',
-  reference: 'right',
-  items: 'right',
-}
+  scene: "left",
+  chat: "right",
+  notes: "right",
+  members: "right",
+  characters: "left",
+  combat: "left",
+  libraries: "right",
+  reference: "right",
+  items: "right",
+};
 
-const PANEL_IDS = new Set<string>(PANEL_ORDER)
+const PANEL_IDS = new Set<string>(PANEL_ORDER);
 
 function isDockItemId(id: unknown): id is DockItemId {
-  return typeof id === 'string' && (PANEL_IDS.has(id) || id.startsWith('entity:') && id.length > 7)
+  return (
+    typeof id === "string" && (PANEL_IDS.has(id) || (id.startsWith("entity:") && id.length > 7))
+  );
 }
 
 export function isPanelId(id: DockItemId): id is PanelId {
-  return PANEL_IDS.has(id)
+  return PANEL_IDS.has(id);
 }
 
 function defaultSide(id: DockItemId): Side {
-  return PANEL_IDS.has(id) ? DEFAULT_SIDE[id as PanelId] : 'right'
+  return PANEL_IDS.has(id) ? DEFAULT_SIDE[id as PanelId] : "right";
 }
 
 export function defaultLayout(narrow: boolean): Layout {
   return {
-    left: { active: 'characters', open: !narrow, width: SIDEBAR_DEFAULT_W, panels: ['scene', 'characters', 'combat'] },
-    right: { active: 'chat', open: !narrow, width: SIDEBAR_DEFAULT_W, panels: ['chat', 'libraries', 'reference', 'items', 'notes', 'members'] },
+    left: {
+      active: "characters",
+      open: !narrow,
+      width: SIDEBAR_DEFAULT_W,
+      panels: ["scene", "characters", "combat"],
+    },
+    right: {
+      active: "chat",
+      open: !narrow,
+      width: SIDEBAR_DEFAULT_W,
+      panels: ["chat", "libraries", "reference", "items", "notes", "members"],
+    },
     floating: [],
     closed: [],
     home: {},
-  }
+  };
 }
 
-export function locate(l: Layout, id: DockItemId): Side | 'floating' | 'closed' {
-  if (l.floating.some((w) => w.id === id)) return 'floating'
-  if (l.closed.includes(id)) return 'closed'
-  if (l.left.panels.includes(id)) return 'left'
-  if (l.right.panels.includes(id)) return 'right'
-  return 'closed'
+export function locate(l: Layout, id: DockItemId): Side | "floating" | "closed" {
+  if (l.floating.some((w) => w.id === id)) return "floating";
+  if (l.closed.includes(id)) return "closed";
+  if (l.left.panels.includes(id)) return "left";
+  if (l.right.panels.includes(id)) return "right";
+  return "closed";
 }
 
 /** The sides, left first. */
-export const SIDES: Side[] = ['left', 'right']
+export const SIDES: Side[] = ["left", "right"];
 
 /** Keep a side consistent: the active tab is one of its panels, and an empty side is closed. */
 function tidy(s: SideState): SideState {
-  const active = s.active && s.panels.includes(s.active) ? s.active : (s.panels[0] ?? null)
-  return { ...s, active, open: active ? s.open : false }
+  const active = s.active && s.panels.includes(s.active) ? s.active : (s.panels[0] ?? null);
+  return { ...s, active, open: active ? s.open : false };
 }
 
 /**
@@ -108,77 +139,79 @@ function tidy(s: SideState): SideState {
  * and any panel that went missing put back where it starts.
  */
 export function normalise(saved: unknown, narrow: boolean): Layout {
-  const base = defaultLayout(narrow)
-  if (!saved || typeof saved !== 'object') return base
-  const s = saved as Partial<Layout>
-  const seen = new Set<DockItemId>()
+  const base = defaultLayout(narrow);
+  if (!saved || typeof saved !== "object") return base;
+  const s = saved as Partial<Layout>;
+  const seen = new Set<DockItemId>();
   const take = (ids: unknown): DockItemId[] =>
     (Array.isArray(ids) ? ids : []).filter((id): id is DockItemId => {
-      if (!isDockItemId(id) || seen.has(id)) return false
-      seen.add(id)
-      return true
-    })
-  const closed = take(s.closed)
-  const floating = (Array.isArray(s.floating) ? s.floating : []).filter((w): w is FloatingWindow => {
-    if (!w || !isDockItemId(w.id) || seen.has(w.id)) return false
-    seen.add(w.id)
-    return true
-  })
+      if (!isDockItemId(id) || seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+  const closed = take(s.closed);
+  const floating = (Array.isArray(s.floating) ? s.floating : []).filter(
+    (w): w is FloatingWindow => {
+      if (!w || !isDockItemId(w.id) || seen.has(w.id)) return false;
+      seen.add(w.id);
+      return true;
+    },
+  );
   const side = (name: Side): SideState => {
-    const v = s[name]
+    const v = s[name];
     return {
       active: isDockItemId(v?.active) ? v.active : null,
       open: narrow ? false : (v?.open ?? true),
-      width: typeof v?.width === 'number' ? v.width : SIDEBAR_DEFAULT_W,
+      width: typeof v?.width === "number" ? v.width : SIDEBAR_DEFAULT_W,
       panels: take(v?.panels),
-    }
-  }
-  const left = side('left')
-  const right = side('right')
+    };
+  };
+  const left = side("left");
+  const right = side("right");
   for (const id of PANEL_ORDER) {
-    if (!seen.has(id)) (DEFAULT_SIDE[id] === 'left' ? left : right).panels.push(id)
+    if (!seen.has(id)) (DEFAULT_SIDE[id] === "left" ? left : right).panels.push(id);
   }
-  return { left: tidy(left), right: tidy(right), floating, closed, home: s.home ?? {} }
+  return { left: tidy(left), right: tidy(right), floating, closed, home: s.home ?? {} };
 }
 
 /** The layout as shown, leaving out panels this campaign doesn't have (Combat without initiative). */
 export function withoutPanels(l: Layout, ids: PanelId[]): Layout {
-  if (!ids.length) return l
-  const keep = (id: DockItemId) => !isPanelId(id) || !ids.includes(id)
+  if (!ids.length) return l;
+  const keep = (id: DockItemId) => !isPanelId(id) || !ids.includes(id);
   return {
     ...l,
     left: tidy({ ...l.left, panels: l.left.panels.filter(keep) }),
     right: tidy({ ...l.right, panels: l.right.panels.filter(keep) }),
     floating: l.floating.filter((w) => keep(w.id)),
-  }
+  };
 }
 
 /** Click a tab: show it, or tuck its sidebar away if it is already the open tab. */
 export function selectTab(l: Layout, id: DockItemId): Layout {
-  const side = locate(l, id)
-  if (side === 'floating' || side === 'closed') return l
-  const s = l[side]
-  return { ...l, [side]: { ...s, active: id, open: !(s.open && s.active === id) } }
+  const side = locate(l, id);
+  if (side === "floating" || side === "closed") return l;
+  const s = l[side];
+  return { ...l, [side]: { ...s, active: id, open: !(s.open && s.active === id) } };
 }
 
 /** Bring a panel into view without ever hiding it. */
 export function showTab(l: Layout, id: DockItemId): Layout {
-  const side = locate(l, id)
-  if (side === 'closed') return dock(l, id)
-  if (side === 'floating') return l
-  return { ...l, [side]: { ...l[side], active: id, open: true } }
+  const side = locate(l, id);
+  if (side === "closed") return dock(l, id);
+  if (side === "floating") return l;
+  return { ...l, [side]: { ...l[side], active: id, open: true } };
 }
 
 export function setOpen(l: Layout, side: Side, open: boolean): Layout {
-  return { ...l, [side]: tidy({ ...l[side], open }) }
+  return { ...l, [side]: tidy({ ...l[side], open }) };
 }
 
 /** Resize a side; pulling it very narrow snaps it shut, and widening it again reopens it. */
 export function resizeSide(l: Layout, side: Side, width: number, max: number): Layout {
-  const s = l[side]
-  if (width < SIDEBAR_SNAP_SHUT_W) return s.open ? { ...l, [side]: { ...s, open: false } } : l
-  const w = Math.round(Math.min(Math.max(width, SIDEBAR_MIN_W), Math.max(SIDEBAR_MIN_W, max)))
-  return w !== s.width || !s.open ? { ...l, [side]: { ...s, width: w, open: true } } : l
+  const s = l[side];
+  if (width < SIDEBAR_SNAP_SHUT_W) return s.open ? { ...l, [side]: { ...s, open: false } } : l;
+  const w = Math.round(Math.min(Math.max(width, SIDEBAR_MIN_W), Math.max(SIDEBAR_MIN_W, max)));
+  return w !== s.width || !s.open ? { ...l, [side]: { ...s, width: w, open: true } } : l;
 }
 
 /**
@@ -187,15 +220,21 @@ export function resizeSide(l: Layout, side: Side, width: number, max: number): L
  * last width, Home shuts it, End widens it fully, and Enter resets it.
  * `grow` is the direction (+1 right, -1 left) that widens the side.
  */
-export function keyedSideWidth(s: SideState, key: string, shift: boolean, grow: 1 | -1, max: number): number | null {
-  const step = shift ? SIDEBAR_KEY_STEP_LARGE : SIDEBAR_KEY_STEP
-  const delta = key === 'ArrowRight' ? grow * step : key === 'ArrowLeft' ? -grow * step : 0
-  if (delta > 0) return s.open ? s.width + delta : s.width
-  if (delta < 0) return s.open ? Math.max(SIDEBAR_MIN_W, s.width + delta) : null
-  if (key === 'Home') return 0
-  if (key === 'End') return max
-  if (key === 'Enter') return SIDEBAR_DEFAULT_W
-  return null
+export function keyedSideWidth(
+  s: SideState,
+  key: string,
+  shift: boolean,
+  grow: 1 | -1,
+  max: number,
+): number | null {
+  const step = shift ? SIDEBAR_KEY_STEP_LARGE : SIDEBAR_KEY_STEP;
+  const delta = key === "ArrowRight" ? grow * step : key === "ArrowLeft" ? -grow * step : 0;
+  if (delta > 0) return s.open ? s.width + delta : s.width;
+  if (delta < 0) return s.open ? Math.max(SIDEBAR_MIN_W, s.width + delta) : null;
+  if (key === "Home") return 0;
+  if (key === "End") return max;
+  if (key === "Enter") return SIDEBAR_DEFAULT_W;
+  return null;
 }
 
 function without(l: Layout, id: DockItemId): Layout {
@@ -205,23 +244,31 @@ function without(l: Layout, id: DockItemId): Layout {
     right: tidy({ ...l.right, panels: l.right.panels.filter((p) => p !== id) }),
     floating: l.floating.filter((w) => w.id !== id),
     closed: l.closed.filter((p) => p !== id),
-  }
+  };
 }
 
 /** Close a panel: it leaves its sidebar or window until it's opened again (on the side it was on). */
 export function close(l: Layout, id: DockItemId): Layout {
-  const where = locate(l, id)
-  if (where === 'closed') return l
-  const next = without(l, id)
-  return { ...next, closed: [...next.closed, id], home: where === 'floating' ? l.home : { ...l.home, [id]: where } }
+  const where = locate(l, id);
+  if (where === "closed") return l;
+  const next = without(l, id);
+  return {
+    ...next,
+    closed: [...next.closed, id],
+    home: where === "floating" ? l.home : { ...l.home, [id]: where },
+  };
 }
 
 /** Pull a docked panel out into a window. */
-export function detach(l: Layout, id: DockItemId, win: Omit<FloatingWindow, 'id'>): Layout {
-  const where = locate(l, id)
-  if (where === 'floating') return l
-  const next = without(l, id)
-  return { ...next, floating: [...next.floating, { id, ...win }], home: where === 'closed' ? l.home : { ...l.home, [id]: where } }
+export function detach(l: Layout, id: DockItemId, win: Omit<FloatingWindow, "id">): Layout {
+  const where = locate(l, id);
+  if (where === "floating") return l;
+  const next = without(l, id);
+  return {
+    ...next,
+    floating: [...next.floating, { id, ...win }],
+    home: where === "closed" ? l.home : { ...l.home, [id]: where },
+  };
 }
 
 /**
@@ -230,26 +277,32 @@ export function detach(l: Layout, id: DockItemId, win: Omit<FloatingWindow, 'id'
  * `reveal` false a closed sidebar stays closed, its new tab showing when it
  * next opens.
  */
-export function dock(l: Layout, id: DockItemId, side: Side = l.home[id] ?? defaultSide(id), index?: number, reveal = true): Layout {
-  const next = without(l, id)
-  const panels = [...next[side].panels]
-  panels.splice(index ?? panels.length, 0, id)
-  const open = reveal || next[side].open
+export function dock(
+  l: Layout,
+  id: DockItemId,
+  side: Side = l.home[id] ?? defaultSide(id),
+  index?: number,
+  reveal = true,
+): Layout {
+  const next = without(l, id);
+  const panels = [...next[side].panels];
+  panels.splice(index ?? panels.length, 0, id);
+  const open = reveal || next[side].open;
   return {
     ...next,
     [side]: { ...next[side], panels, active: id, open },
     home: { ...l.home, [id]: side },
-  }
+  };
 }
 
 /** Where a panel is, for the "Move to…" menu. */
-export const otherSide = (side: Side): Side => (side === 'left' ? 'right' : 'left')
+export const otherSide = (side: Side): Side => (side === "left" ? "right" : "left");
 
 /** Move a docked tab to a place in its own sidebar, without changing what is showing. */
 export function reorder(l: Layout, id: DockItemId, index: number): Layout {
-  const side = locate(l, id)
-  if (side === 'floating' || side === 'closed') return l
-  const panels = l[side].panels.filter((p) => p !== id)
-  panels.splice(Math.min(Math.max(index, 0), panels.length), 0, id)
-  return { ...l, [side]: { ...l[side], panels } }
+  const side = locate(l, id);
+  if (side === "floating" || side === "closed") return l;
+  const panels = l[side].panels.filter((p) => p !== id);
+  panels.splice(Math.min(Math.max(index, 0), panels.length), 0, id);
+  return { ...l, [side]: { ...l[side], panels } };
 }

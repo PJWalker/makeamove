@@ -1,9 +1,9 @@
-import * as Y from 'yjs'
-import { newId } from '../../lib/ids'
-import type { EffectSource } from '../../systems/effects'
-import type { ActionDef, Derived, GameSystem, ItemDef } from '../../systems/types'
-import type { DataValue } from '../../core/types'
-import type { CharacterKind, CharacterView, Duration, ItemInstance } from './types'
+import * as Y from "yjs";
+import { newId } from "../../lib/ids";
+import type { EffectSource } from "../../systems/effects";
+import type { ActionDef, Derived, GameSystem, ItemDef } from "../../systems/types";
+import type { DataValue } from "../../core/types";
+import type { CharacterKind, CharacterView, Duration, ItemInstance } from "./types";
 
 /*
  * Characters live in the campaign's root document as `characters`, a Y.Map
@@ -35,10 +35,12 @@ import type { CharacterKind, CharacterView, Duration, ItemInstance } from './typ
  * the copy's own once it has any, else the template's.
  */
 
-export type CharacterMap = Y.Map<any>
+export type CharacterMap = Y.Map<any>;
 
-const subMap = (m: CharacterMap, key: string): Y.Map<any> | undefined => m.get(key) as Y.Map<any> | undefined
-const entries = <T,>(m: Y.Map<T> | undefined): Record<string, T> => (m ? Object.fromEntries(m.entries()) : {})
+const subMap = (m: CharacterMap, key: string): Y.Map<any> | undefined =>
+  m.get(key) as Y.Map<any> | undefined;
+const entries = <T>(m: Y.Map<T> | undefined): Record<string, T> =>
+  m ? Object.fromEntries(m.entries()) : {};
 
 export function createCharacter(
   characters: Y.Map<CharacterMap>,
@@ -67,8 +69,7 @@ export function createCharacter(
     m.set("scores", scores);
     const data = new Y.Map<DataValue>();
     for (const f of system.characterData)
-      if (!f.for || f.for === kind)
-        data.set(f.id, init.data?.[f.id] ?? f.default);
+      if (!f.for || f.for === kind) data.set(f.id, init.data?.[f.id] ?? f.default);
     m.set("data", data);
     m.set("modifiers", new Y.Map<number>());
     m.set("fields", new Y.Map<string | number>());
@@ -89,22 +90,35 @@ export function createCharacter(
  * A character as plain values. For a copy, pass its template's map as
  * `base`: whatever the copy doesn't set comes from there.
  */
-export function characterView(id: string, m: CharacterMap, system: GameSystem, base?: CharacterMap): CharacterView {
-  const get = (key: string) => (m.has(key) ? m.get(key) : base?.get(key))
+export function characterView(
+  id: string,
+  m: CharacterMap,
+  system: GameSystem,
+  base?: CharacterMap,
+): CharacterView {
+  const get = (key: string) => (m.has(key) ? m.get(key) : base?.get(key));
   /** A sub-map's keys, the copy's over the template's. */
-  const merged = <T,>(key: string): Record<string, T> => ({ ...entries<T>(base && subMap(base, key)), ...entries<T>(subMap(m, key)) })
-  const kind: CharacterKind = get('kind') === 'npc' ? 'npc' : 'pc'
-  const storedScores = merged<number>('scores')
-  const scores: Record<string, number> = {}
-  for (const s of system.stats) scores[s.id] = storedScores[s.id] ?? s.default ?? 10
-  const storedData = merged<DataValue>('data')
-  const data: Record<string, DataValue> = {}
-  for (const f of system.characterData) if (!f.for || f.for === kind) data[f.id] = storedData[f.id] ?? f.default
-  const storedFields = merged<string | number>('fields')
-  const fields: Record<string, string | number> = {}
-  for (const f of system.npcFields) fields[f.id] = storedFields[f.id] ?? f.default ?? (f.type === 'number' ? 0 : '')
-  const inv = (subMap(m, 'inventory') ?? (base && subMap(base, 'inventory'))) as Y.Map<ItemInstance> | undefined
-  const inventory = inv ? [...inv.values()].sort((a, b) => (a.order < b.order ? -1 : a.order > b.order ? 1 : 0)) : []
+  const merged = <T>(key: string): Record<string, T> => ({
+    ...entries<T>(base && subMap(base, key)),
+    ...entries<T>(subMap(m, key)),
+  });
+  const kind: CharacterKind = get("kind") === "npc" ? "npc" : "pc";
+  const storedScores = merged<number>("scores");
+  const scores: Record<string, number> = {};
+  for (const s of system.stats) scores[s.id] = storedScores[s.id] ?? s.default ?? 10;
+  const storedData = merged<DataValue>("data");
+  const data: Record<string, DataValue> = {};
+  for (const f of system.characterData)
+    if (!f.for || f.for === kind) data[f.id] = storedData[f.id] ?? f.default;
+  const storedFields = merged<string | number>("fields");
+  const fields: Record<string, string | number> = {};
+  for (const f of system.npcFields)
+    fields[f.id] = storedFields[f.id] ?? f.default ?? (f.type === "number" ? 0 : "");
+  const inv = (subMap(m, "inventory") ?? (base && subMap(base, "inventory"))) as
+    Y.Map<ItemInstance> | undefined;
+  const inventory = inv
+    ? [...inv.values()].sort((a, b) => (a.order < b.order ? -1 : a.order > b.order ? 1 : 0))
+    : [];
   return {
     id,
     kind,
@@ -115,7 +129,7 @@ export function characterView(id: string, m: CharacterMap, system: GameSystem, b
     data,
     resources: merged<number>("resources"),
     conditions: (get("conditions") as string[] | undefined) ?? [],
-    lockedConditions: (get('lockedConditions') as string[] | undefined) ?? [],
+    lockedConditions: (get("lockedConditions") as string[] | undefined) ?? [],
     durations: (get("durations") as Record<string, Duration> | undefined) ?? {},
     concentration: get("concentration"),
     modifiers: merged<number>("modifiers"),
@@ -132,33 +146,45 @@ export function characterView(id: string, m: CharacterMap, system: GameSystem, b
 
 /** Whether an item's effects count: carried, or worn/wielded. */
 export function itemActive(item: ItemInstance): boolean {
-  return item.active === 'always' || item.active === 'carried' || item.equipped
+  return item.active === "always" || item.active === "carried" || item.equipped;
 }
 
 /** Everything changing a character's numbers: their conditions, then their active items. */
 export function effectSources(c: CharacterView, system: GameSystem): EffectSource[] {
   const conditions = system.conditions
     .filter((k) => c.conditions.includes(k.id) && k.effects.length)
-    .map((k) => ({ name: k.name, effects: k.effects }))
-  const items = c.inventory.filter((i) => i.effects.length && itemActive(i)).map((i) => ({ name: i.name, effects: i.effects }))
-  return [...conditions, ...items]
+    .map((k) => ({ name: k.name, effects: k.effects }));
+  const items = c.inventory
+    .filter((i) => i.effects.length && itemActive(i))
+    .map((i) => ({ name: i.name, effects: i.effects }));
+  return [...conditions, ...items];
 }
 
 /** A character's effective numbers, as their system works them out. */
 export function derive(c: CharacterView, system: GameSystem): Derived {
-  return system.derive(c, effectSources(c, system))
+  return system.derive(c, effectSources(c, system));
 }
 
 /** The actions a character has, as their system decides. */
 export function actionsFor(c: CharacterView, system: GameSystem, d: Derived): ActionDef[] {
-  const own = system.actionsFor(c, d)
-  const learned = c.learned.flatMap((id) => system.actions.filter((a) => a.id === id && !own.includes(a) && (!system.learnedActionAllowed || system.learnedActionAllowed(a, c, d))))
-  return [...own, ...learned]
+  const own = system.actionsFor(c, d);
+  const learned = c.learned.flatMap((id) =>
+    system.actions.filter(
+      (a) =>
+        a.id === id &&
+        !own.includes(a) &&
+        (!system.learnedActionAllowed || system.learnedActionAllowed(a, c, d)),
+    ),
+  );
+  return [...own, ...learned];
 }
 
 /** The value a stat adds to rolls: its modifier plus any bonuses that apply to every roll with it. */
 export function statBonus(d: Derived, statId: string): number {
-  return (d.mods[statId] ?? 0) + d.resolved.bonuses.filter((b) => b.stat === statId && !b.moves).reduce((n, b) => n + b.value, 0)
+  return (
+    (d.mods[statId] ?? 0) +
+    d.resolved.bonuses.filter((b) => b.stat === statId && !b.moves).reduce((n, b) => n + b.value, 0)
+  );
 }
 
 export function instanceOf(def: ItemDef, order: string): ItemInstance {
@@ -176,11 +202,11 @@ export function instanceOf(def: ItemDef, order: string): ItemInstance {
     equipped: false,
     ...(def.icon ? { icon: def.icon } : {}),
     effects: def.effects ?? [],
-    active: def.active ?? 'carried',
+    active: def.active ?? "carried",
     order,
-  }
+  };
 }
 
 export function canEditCharacter(c: CharacterView, deviceId: string, isGm: boolean) {
-  return isGm || c.owner === deviceId
+  return isGm || c.owner === deviceId;
 }

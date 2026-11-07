@@ -36,8 +36,7 @@ export function WindowControls({
       }}
       onDoubleClick={(event) => {
         if ((event.target as HTMLElement).closest("button")) return;
-        const scope =
-          event.currentTarget.closest<HTMLElement>(".window") ?? undefined;
+        const scope = event.currentTarget.closest<HTMLElement>(".window") ?? undefined;
         if (!rolled) scope?.focus({ preventScroll: true });
         void withTransition(onToggleRoll, scope ? { scope } : {});
       }}

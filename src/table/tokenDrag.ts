@@ -9,10 +9,7 @@ const THRESHOLD = 5;
  * the pointer; releasing over the scene places a token for the character.
  * A press that never travels stays an ordinary click.
  */
-export function dragToken(
-  e: PointerEvent | ReactPointerEvent,
-  spec: TokenSpec,
-) {
+export function dragToken(e: PointerEvent | ReactPointerEvent, spec: TokenSpec) {
   if (e.button !== 0) return;
   const src = e.currentTarget as HTMLElement;
   const startX = e.clientX;
@@ -22,8 +19,7 @@ export function dragToken(
 
   function move(ev: PointerEvent) {
     if (!ghost) {
-      if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < THRESHOLD)
-        return;
+      if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < THRESHOLD) return;
       ghost = src.cloneNode(true) as HTMLElement;
       ghost.classList.add("drag-ghost");
       ghost.style.width = `${box.width}px`;
@@ -32,9 +28,8 @@ export function dragToken(
       document.documentElement.classList.add("is-reordering");
     }
     const overScene =
-      !!document
-        .elementFromPoint(ev.clientX, ev.clientY)
-        ?.closest(".scene-canvas") && !!tokenDrop.value;
+      !!document.elementFromPoint(ev.clientX, ev.clientY)?.closest(".scene-canvas") &&
+      !!tokenDrop.value;
     document.documentElement.dataset.dropValid = String(overScene);
     ghost.style.left = `${ev.clientX - box.width / 2}px`;
     ghost.style.top = `${ev.clientY - box.height / 2}px`;
@@ -49,12 +44,7 @@ export function dragToken(
     ghost.remove();
     document.documentElement.classList.remove("is-reordering");
     suppressNextClick();
-    if (
-      commit &&
-      document
-        .elementFromPoint(ev.clientX, ev.clientY)
-        ?.closest(".scene-canvas")
-    ) {
+    if (commit && document.elementFromPoint(ev.clientX, ev.clientY)?.closest(".scene-canvas")) {
       tokenDrop.value?.(ev.clientX, ev.clientY, spec);
     }
   }

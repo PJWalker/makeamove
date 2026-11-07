@@ -1,5 +1,3 @@
-
-
 export const CONDITION_PIP_COLOURS = [
   "#e0614f",
   "#e3a23b",
@@ -12,5 +10,5 @@ export const CONDITION_PIP_COLOURS = [
 ];
 
 export function conditionPipColour(index: number): string {
-  return (CONDITION_PIP_COLOURS)[Math.max(0, index) % CONDITION_PIP_COLOURS.length]!;
+  return CONDITION_PIP_COLOURS[Math.max(0, index) % CONDITION_PIP_COLOURS.length]!;
 }

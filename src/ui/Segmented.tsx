@@ -45,9 +45,7 @@ export function Segmented<T extends string>({
  * select. A hidden copy of the segmented control is measured as the space
  * changes.
  */
-export function SegmentedOrSelect<T extends string>(
-  props: Parameters<typeof Segmented<T>>[0],
-) {
+export function SegmentedOrSelect<T extends string>(props: Parameters<typeof Segmented<T>>[0]) {
   const { label, value, options, onChange, disabled } = props;
   const rootRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
@@ -65,18 +63,8 @@ export function SegmentedOrSelect<T extends string>(
   }, [fits]);
   return (
     <div className="segmented-or-select" ref={rootRef}>
-      <div
-        className="segmented-measure"
-        ref={measureRef}
-        aria-hidden="true"
-        inert
-      >
-        <Segmented
-          label={label}
-          value={value}
-          options={options}
-          onChange={() => {}}
-        />
+      <div className="segmented-measure" ref={measureRef} aria-hidden="true" inert>
+        <Segmented label={label} value={value} options={options} onChange={() => {}} />
       </div>
       {fits.value ? (
         <Segmented {...props} />

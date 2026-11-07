@@ -28,12 +28,7 @@ export function parseSrdFeats(markdown: string): SrdFeat[] {
       const name = heading?.trim();
       if (!name) continue;
       const text = lines
-        .filter(
-          (line) =>
-            !/^_(?:Origin|General|Fighting Style|Epic Boon) Feat/.test(
-              line.trim(),
-            ),
-        )
+        .filter((line) => !/^_(?:Origin|General|Fighting Style|Epic Boon) Feat/.test(line.trim()))
         .join("\n")
         .trim();
       feats.push({

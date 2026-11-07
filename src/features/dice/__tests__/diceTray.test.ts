@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Quaternion, Vec3 } from "cannon-es";
-import {
-  DiceHold,
-  simulateDice,
-  type DieHull,
-} from "../../../table/diePhysics";
+import { DiceHold, simulateDice, type DieHull } from "../../../table/diePhysics";
 
 const cube: DieHull = {
   vertices: [
@@ -63,14 +59,10 @@ describe("a roll of several dice in one tray", () => {
   it("never lets two dice pass through each other", () => {
     const length = frames[0]!.length;
     for (let frame = 0; frame < length; frame += 4) {
-      const poses = frames
-        .map((poses) => poses[frame]!)
-        .filter((pose) => pose.captured);
+      const poses = frames.map((poses) => poses[frame]!).filter((pose) => pose.captured);
       for (const [index, a] of poses.entries())
         for (const b of poses.slice(index + 1))
-          expect(Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z)).toBeGreaterThan(
-            1.1,
-          );
+          expect(Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z)).toBeGreaterThan(1.1);
     }
   });
 
@@ -96,9 +88,7 @@ describe("dice carried in a tray", () => {
       if (frame % 10 === 0) hold.jolt(-12, 0);
       hold.step();
       const [a, b] = hold.poses();
-      expect(
-        Math.hypot(a!.x - b!.x, a!.y - b!.y, a!.z - b!.z),
-      ).toBeGreaterThan(1.1);
+      expect(Math.hypot(a!.x - b!.x, a!.y - b!.y, a!.z - b!.z)).toBeGreaterThan(1.1);
     }
   });
 

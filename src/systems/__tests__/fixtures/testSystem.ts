@@ -106,8 +106,7 @@ export const testSystem: GameSystem = {
     { id: "mixed", label: "Mixed", tone: "mixed" },
     { id: "failure", label: "Failure", tone: "bad" },
   ],
-  result: (total) =>
-    total >= 12 ? "success" : total >= 7 ? "mixed" : "failure",
+  result: (total) => (total >= 12 ? "success" : total >= 7 ? "mixed" : "failure"),
   hits: (total, natural, target) => total >= target || natural.includes(20),
   longRange: { mode: "disadvantage", cancels: "advantage" },
   damageTypes: [{ id: "test-damage", name: "Test damage" }],
@@ -115,9 +114,7 @@ export const testSystem: GameSystem = {
   damageArmor: { resource: "focus", label: "Focus" },
   resolveDamage: (_character, _derived, amount, options) => ({
     hp: Math.max(0, Math.ceil(amount)),
-    ...(options.armor && amount > 0
-      ? { resources: [{ id: "focus", by: -1 }] }
-      : {}),
+    ...(options.armor && amount > 0 ? { resources: [{ id: "focus", by: -1 }] } : {}),
   }),
   concentrationSave: (damage) => ({
     action: "test-save",
@@ -130,8 +127,7 @@ export const testSystem: GameSystem = {
       id: "test-loadout",
       label: "Test options",
       ownedField: "testOptions",
-      available: (character) =>
-        character.data.originId === "curious" ? ["curious-option"] : [],
+      available: (character) => (character.data.originId === "curious" ? ["curious-option"] : []),
       activeField: "activeTestOption",
       max: 1,
       options: [
@@ -265,9 +261,7 @@ export const testSystem: GameSystem = {
   derive: (character, sources) => {
     const resolved = resolveEffects(
       {
-        maxHp: Number(
-          character.kind === "npc" ? (character.data.maxHp ?? 6) : 12,
-        ),
+        maxHp: Number(character.kind === "npc" ? (character.data.maxHp ?? 6) : 12),
         maxFocus: 3,
         armor: Number(character.fields.armor ?? 0),
         guard: 10,
@@ -289,9 +283,7 @@ export const testSystem: GameSystem = {
     };
   },
   actionsFor: (character) =>
-    character.kind === "npc"
-      ? []
-      : actions.filter((action) => action.id !== "test-learnable"),
+    character.kind === "npc" ? [] : actions.filter((action) => action.id !== "test-learnable"),
   tokenStats: (character, derived) => [
     {
       id: "hp",
@@ -361,9 +353,7 @@ export const testSystem: GameSystem = {
   attribution: "Generic fixture for testing the shared system API.",
 };
 
-export function testCharacter(
-  overrides: Partial<CharacterView> = {},
-): CharacterView {
+export function testCharacter(overrides: Partial<CharacterView> = {}): CharacterView {
   return {
     id: "test-character",
     kind: "pc",

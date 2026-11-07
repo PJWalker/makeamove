@@ -116,12 +116,7 @@ type Gesture =
 /** Screen px the pointer must travel before a press becomes a drag. */
 const DRAG_THRESHOLD = 3;
 
-const RESIZE_CURSORS = [
-  "nwse-resize",
-  "nesw-resize",
-  "nwse-resize",
-  "nesw-resize",
-];
+const RESIZE_CURSORS = ["nwse-resize", "nesw-resize", "nwse-resize", "nesw-resize"];
 
 /** The cursor over each of a light's handles, which sit right, up-right and down-right of it. */
 const LIGHT_CURSORS: Record<LightPart, string> = {
@@ -167,23 +162,15 @@ export class SceneController {
   gm = false;
 
   /** Asks the canvas for text to put on the map, or to change: set by SceneCanvas. */
-  onTextRequest:
-    | ((req: { at: Point; screen: Point; id?: string; text?: string }) => void)
-    | null = null;
-  /** Lets the table show eligible destinations while dragging a scene item token. */
-  onItemTokenDragMove:
-    | ((token: TokenElement | null, event: PointerEvent) => void)
-    | null = null;
-  /** Handles transferring an item token out of the scene on pointer release. */
-  onItemTokenDrop:
-    | ((token: TokenElement, event: PointerEvent) => boolean)
-    | null = null;
-  onTokenClick: ((token: TokenElement) => void) | null = null;
-  onTokenDragMove:
-    | ((token: TokenElement | null, event?: PointerEvent) => void)
-    | null = null;
-  onTokenDrop: ((token: TokenElement, event: PointerEvent) => boolean) | null =
+  onTextRequest: ((req: { at: Point; screen: Point; id?: string; text?: string }) => void) | null =
     null;
+  /** Lets the table show eligible destinations while dragging a scene item token. */
+  onItemTokenDragMove: ((token: TokenElement | null, event: PointerEvent) => void) | null = null;
+  /** Handles transferring an item token out of the scene on pointer release. */
+  onItemTokenDrop: ((token: TokenElement, event: PointerEvent) => boolean) | null = null;
+  onTokenClick: ((token: TokenElement) => void) | null = null;
+  onTokenDragMove: ((token: TokenElement | null, event?: PointerEvent) => void) | null = null;
+  onTokenDrop: ((token: TokenElement, event: PointerEvent) => boolean) | null = null;
 
   private elements: SceneElement[] = [];
   /** The scene's elements as they are now, bottom to top. */
@@ -228,8 +215,8 @@ export class SceneController {
   start() {
     const refresh = () => this.refresh();
     const regrid = () => {
-          this.renderer.setGrid(this.scene.grid());
-          this.renderer.invalidate("overlay");
+      this.renderer.setGrid(this.scene.grid());
+      this.renderer.invalidate("overlay");
     };
     const history = () => {
       this.canUndo.value = this.scene.undo.canUndo();
@@ -260,8 +247,7 @@ export class SceneController {
             const el = this.byId.get(id);
             return el && this.pickable(el);
           });
-          if (keep.length !== this.selection.value.length)
-            this.selection.value = keep;
+          if (keep.length !== this.selection.value.length) this.selection.value = keep;
           this.cancelGesture();
           this.updateCursor();
           this.updateOverlay();
@@ -273,8 +259,7 @@ export class SceneController {
       // Autohiding chrome doesn't cover the scene.
       if (this.host.closest(".table")?.getAttribute("data-autohide") === "true")
         return { left: 0, right: 0, top: 0 };
-      const rect = (sel: string) =>
-        document.querySelector(sel)?.getBoundingClientRect();
+      const rect = (sel: string) => document.querySelector(sel)?.getBoundingClientRect();
       const tools = rect(".toolbar");
       const leftRail = rect('.sidebar[data-side="left"] .sidebar-rail');
       const rightRail = rect('.sidebar[data-side="right"] .sidebar-rail');
@@ -288,12 +273,7 @@ export class SceneController {
       const presence = this.presence;
       const show = () =>
         this.renderer.setPresence(
-          presence.marks(
-            this.sceneId,
-            device.value.id,
-            device.value.name,
-            colourOf(device.value),
-          ),
+          presence.marks(this.sceneId, device.value.id, device.value.name, colourOf(device.value)),
         );
       presence.setScene(this.sceneId);
       this.disposers.push(
@@ -321,9 +301,7 @@ export class SceneController {
       opts?: AddEventListenerOptions,
     ) => {
       el.addEventListener(type, fn as EventListener, opts);
-      this.disposers.push(() =>
-        el.removeEventListener(type, fn as EventListener, opts),
-      );
+      this.disposers.push(() => el.removeEventListener(type, fn as EventListener, opts));
     };
     listen("pointerdown", (e) => this.onPointerDown(e));
     listen("pointermove", (e) => this.onPointerMove(e));
@@ -357,9 +335,7 @@ export class SceneController {
     this.elements = this.scene.views();
     this.byId = new Map(this.elements.map((e) => [e.id, e]));
     this.renderer.setElements(this.elements);
-    const targets = this.targets.value.filter(
-      (id) => this.byId.get(id)?.type === "token",
-    );
+    const targets = this.targets.value.filter((id) => this.byId.get(id)?.type === "token");
     if (targets.length !== this.targets.value.length) this.setTargets(targets);
     const sel = this.selection.value.filter((id) => this.byId.has(id));
     if (sel.length !== this.selection.value.length) this.selection.value = sel;
@@ -370,8 +346,7 @@ export class SceneController {
   private updateMapColour() {
     let main: SceneElement | null = null;
     for (const el of this.elements)
-      if (el.type === "map" && (!main || el.w * el.h > main.w * main.h))
-        main = el;
+      if (el.type === "map" && (!main || el.w * el.h > main.w * main.h)) main = el;
     if (!main || main.type !== "map") {
       this.mapColour.value = null;
       return;
@@ -395,18 +370,13 @@ export class SceneController {
     const g = this.gesture;
     const movable = selected.filter((el) => !el.locked);
     const groupBounds =
-      movable.length > 1 && (!g || g.kind === "rotateGroup")
-        ? bounds(movable)
-        : null;
+      movable.length > 1 && (!g || g.kind === "rotateGroup") ? bounds(movable) : null;
     this.renderer.overlayState = {
       selected,
       handles:
         selected.length === 1 &&
-        !(selected)[0]!.locked &&
-        (!g ||
-          g.kind === "resize" ||
-          g.kind === "rotate" ||
-          g.kind === "light"),
+        !selected[0]!.locked &&
+        (!g || g.kind === "resize" || g.kind === "rotate" || g.kind === "light"),
       group:
         g?.kind === "rotateGroup"
           ? { ...g.frame, rot: g.delta }
@@ -439,11 +409,7 @@ export class SceneController {
   rangeFrom(): string | null {
     const actor = this.targetMode.value?.actor;
     if (!actor) return null;
-    return (
-      this.elements.find(
-        (el) => el.type === "token" && el.characterId === actor,
-      )?.id ?? null
-    );
+    return this.elements.find((el) => el.type === "token" && el.characterId === actor)?.id ?? null;
   }
 
   /** Target a token, or stop targeting it. */
@@ -541,20 +507,14 @@ export class SceneController {
     const { width, height } = this.renderer.size;
     const b = bounds(this.elements);
     this.renderer.setCamera(
-      b
-        ? fitCamera(b, width, height)
-        : { x: width / 2, y: height / 2, zoom: 1 },
+      b ? fitCamera(b, width, height) : { x: width / 2, y: height / 2, zoom: 1 },
     );
   }
 
   zoomBy(factor: number, at?: Point) {
     const { width, height } = this.renderer.size;
     this.renderer.setCamera(
-      zoomAt(
-        this.renderer.camera,
-        at ?? { x: width / 2, y: height / 2 },
-        factor,
-      ),
+      zoomAt(this.renderer.camera, at ?? { x: width / 2, y: height / 2 }, factor),
     );
     this.updateOverlay();
   }
@@ -583,9 +543,7 @@ export class SceneController {
   /** Whether the tool in use selects: the Select tool, or the Lights tool's own. */
   private selecting(): boolean {
     const tool = activeTool.value;
-    return (
-      tool === "select" || (tool === "light" && lightTool.value === "select")
-    );
+    return tool === "select" || (tool === "light" && lightTool.value === "select");
   }
 
   /**
@@ -599,11 +557,7 @@ export class SceneController {
   }
 
   /** Topmost element under p. Locked elements only count when asked. */
-  hitTest(
-    p: Point,
-    includeLocked = false,
-    ignoreTool = false,
-  ): SceneElement | null {
+  hitTest(p: Point, includeLocked = false, ignoreTool = false): SceneElement | null {
     const tolerance = 4 / this.renderer.camera.zoom;
     for (let i = this.elements.length - 1; i >= 0; i--) {
       const el = this.elements[i];
@@ -627,12 +581,10 @@ export class SceneController {
     const reach = HANDLE_SIZE / 2 + 4;
     if (group) {
       const knob = rotateHandlePosition(group, cam);
-      return Math.hypot(screen.x - knob.x, screen.y - knob.y) <= reach
-        ? { kind: "rotate" }
-        : null;
+      return Math.hypot(screen.x - knob.x, screen.y - knob.y) <= reach ? { kind: "rotate" } : null;
     }
     if (!handles || selected.length !== 1) return null;
-    const el = (selected)[0]!;
+    const el = selected[0]!;
     if (el.type === "light") {
       const near = lightHandles(el, cam).filter(
         (h) => Math.hypot(screen.x - h.at.x, screen.y - h.at.y) <= reach,
@@ -642,11 +594,10 @@ export class SceneController {
       return h ? { kind: "light", part: h.part } : null;
     }
     const knob = rotateHandlePosition(el, cam);
-    if (Math.hypot(screen.x - knob.x, screen.y - knob.y) <= reach)
-      return { kind: "rotate" };
+    if (Math.hypot(screen.x - knob.x, screen.y - knob.y) <= reach) return { kind: "rotate" };
     const cs = corners(el);
     for (let i = 0; i < 4; i++) {
-      const corner = (cs)[i]!;
+      const corner = cs[i]!;
       const c = {
         x: corner.x * cam.zoom + cam.x,
         y: corner.y * cam.zoom + cam.y,
@@ -671,8 +622,8 @@ export class SceneController {
     if (this.pointers.size === 2) {
       this.cancelGesture();
       const points = [...this.pointers.values()];
-      const a = (points)[0]!;
-      const b = (points)[1]!;
+      const a = points[0]!;
+      const b = points[1]!;
       this.gesture = {
         kind: "pinch",
         dist: Math.hypot(a.x - b.x, a.y - b.y),
@@ -698,11 +649,7 @@ export class SceneController {
     }
 
     const tool =
-      e.button === 1 || this.spaceHeld
-        ? "pan"
-        : this.selecting()
-          ? "select"
-          : activeTool.value;
+      e.button === 1 || this.spaceHeld ? "pan" : this.selecting() ? "select" : activeTool.value;
     // Double-clicking text changes it.
     if (tool === "select" && e.detail === 2) {
       const under = this.hitTest(world);
@@ -741,7 +688,7 @@ export class SceneController {
             };
             break;
           }
-          const el = (this.selected())[0]!;
+          const el = this.selected()[0]!;
           this.gesture =
             handle.kind === "rotate"
               ? { kind: "rotate", el }
@@ -760,10 +707,7 @@ export class SceneController {
         // An unselected map is usually just the backdrop: dragging over it
         // draws a marquee, and a click selects it. Select it to move it.
         const hit =
-          under &&
-          (under.type !== "map" || this.selection.value.includes(under.id))
-            ? under
-            : null;
+          under && (under.type !== "map" || this.selection.value.includes(under.id)) ? under : null;
         if (hit) {
           const sel = this.selection.value;
           if (e.shiftKey) {
@@ -854,10 +798,7 @@ export class SceneController {
           break;
         }
         const grid = this.renderer.grid;
-        const at =
-          grid.type === "square" && !e.altKey
-            ? snapPoint(grid, world, 1)
-            : world;
+        const at = grid.type === "square" && !e.altKey ? snapPoint(grid, world, 1) : world;
         this.scene.add({
           type: "light",
           layer: "over",
@@ -886,9 +827,7 @@ export class SceneController {
     const first = pts[0];
     const cam = this.renderer.camera;
     const onFirst =
-      first &&
-      Math.hypot((first.x - p.x) * cam.zoom, (first.y - p.y) * cam.zoom) <=
-        HANDLE_SIZE;
+      first && Math.hypot((first.x - p.x) * cam.zoom, (first.y - p.y) * cam.zoom) <= HANDLE_SIZE;
     if (pts.length >= 3 && (onFirst || e.detail >= 2)) {
       this.finishArea();
       return;
@@ -959,10 +898,8 @@ export class SceneController {
     const grid = this.renderer.grid;
     if (grid.type !== "square") return p;
     return {
-      x:
-        grid.offsetX + Math.round((p.x - grid.offsetX) / grid.size) * grid.size,
-      y:
-        grid.offsetY + Math.round((p.y - grid.offsetY) / grid.size) * grid.size,
+      x: grid.offsetX + Math.round((p.x - grid.offsetX) / grid.size) * grid.size,
+      y: grid.offsetY + Math.round((p.y - grid.offsetY) / grid.size) * grid.size,
     };
   }
 
@@ -1016,12 +953,7 @@ export class SceneController {
    * (softer or sharper shadows); the rings set how far bright and dim light
    * reach, in whole cells unless Alt is held. Dim light never falls short of bright.
    */
-  private dragLight(
-    el: LightElement,
-    part: LightPart,
-    p: Point,
-    free: boolean,
-  ): LightElement {
+  private dragLight(el: LightElement, part: LightPart, p: Point, free: boolean): LightElement {
     const dist = Math.hypot(p.x - el.x, p.y - el.y);
     if (part === "lamp") {
       const size = Math.max(8, dist * 2);
@@ -1082,10 +1014,8 @@ export class SceneController {
   ): Transform & { label: string } {
     const grid = this.renderer.grid;
     const step = grid.type === "none" || e.altKey ? 0 : grid.size;
-    const round = (n: number) =>
-      step ? Math.max(step, Math.round(n / step) * step) : n;
-    const units = (n: number) =>
-      formatDistance(grid, (n / grid.size) * grid.unit);
+    const round = (n: number) => (step ? Math.max(step, Math.round(n / step) * step) : n);
+    const units = (n: number) => formatDistance(grid, (n / grid.size) * grid.unit);
     const s = g.start;
     const dx = p.x - s.x;
     const dy = p.y - s.y;
@@ -1125,9 +1055,7 @@ export class SceneController {
     }
     // Lines and cones run from the start towards the pointer.
     const angle = Math.hypot(dx, dy) > 0 ? Math.atan2(dy, dx) : 0;
-    const rot = e.shiftKey
-      ? Math.round(angle / (Math.PI / 4)) * (Math.PI / 4)
-      : angle;
+    const rot = e.shiftKey ? Math.round(angle / (Math.PI / 4)) * (Math.PI / 4) : angle;
     const len = fixed ? fixed.length : round(Math.hypot(dx, dy));
     const thick = g.shape === "cone" ? len : fixed ? fixed.width : grid.size;
     return {
@@ -1184,9 +1112,7 @@ export class SceneController {
     const m = this.renderer.measureText(clean, colour, size);
     if (old) {
       const k = old.w / old.bw;
-      this.scene.update([
-        [old.id, { text: clean, bw: m.w, bh: m.h, w: m.w * k, h: m.h * k }],
-      ]);
+      this.scene.update([[old.id, { text: clean, bw: m.w, bh: m.h, w: m.w * k, h: m.h * k }]]);
     } else {
       this.scene.add({
         type: "text",
@@ -1212,10 +1138,7 @@ export class SceneController {
     this.hover = world;
     const g = this.gesture;
     const under = this.hitTest(world, true);
-    this.renderer.setHoverToken(
-      under?.type === "token" ? under.id : null,
-      screen,
-    );
+    this.renderer.setHoverToken(under?.type === "token" ? under.id : null, screen);
 
     // Share the cursor at about 20 Hz.
     const now = performance.now();
@@ -1233,7 +1156,7 @@ export class SceneController {
             ? "grab"
             : handle
               ? handle.kind === "corner"
-                ? cornerCursor((this.selected())[0]!, handle.corner)
+                ? cornerCursor(this.selected()[0]!, handle.corner)
                 : LIGHT_CURSORS[handle.part]
               : hit
                 ? "move"
@@ -1271,11 +1194,7 @@ export class SceneController {
       case "move": {
         const dx = world.x - g.start.x;
         const dy = world.y - g.start.y;
-        if (
-          !g.moved &&
-          Math.hypot(dx, dy) * this.renderer.camera.zoom < DRAG_THRESHOLD
-        )
-          break;
+        if (!g.moved && Math.hypot(dx, dy) * this.renderer.camera.zoom < DRAG_THRESHOLD) break;
         g.moved = true;
         const grid = this.renderer.grid;
         for (const [id, el] of g.originals) {
@@ -1286,12 +1205,10 @@ export class SceneController {
           this.renderer.previews.set(id, { ...el, ...p });
         }
         this.renderer.invalidate("previews", "overlay");
-        const itemToken =
-          g.originals.size === 1 ? [...g.originals.values()][0] : null;
+        const itemToken = g.originals.size === 1 ? [...g.originals.values()][0] : null;
         if (itemToken?.type === "token" && itemToken.itemDefId)
           this.onItemTokenDragMove?.(itemToken, e);
-        else if (itemToken?.type === "token")
-          this.onTokenDragMove?.(itemToken, e);
+        else if (itemToken?.type === "token") this.onTokenDragMove?.(itemToken, e);
         break;
       }
 
@@ -1313,10 +1230,7 @@ export class SceneController {
       }
 
       case "light": {
-        this.renderer.previews.set(
-          g.el.id,
-          this.dragLight(g.el, g.part, world, e.altKey),
-        );
+        this.renderer.previews.set(g.el.id, this.dragLight(g.el, g.part, world, e.altKey));
         this.renderer.invalidate("previews", "overlay");
         break;
       }
@@ -1331,21 +1245,16 @@ export class SceneController {
 
       case "rotateGroup": {
         const { frame } = g;
-        let delta =
-          Math.atan2(world.y - frame.y, world.x - frame.x) - g.startAngle;
+        let delta = Math.atan2(world.y - frame.y, world.x - frame.x) - g.startAngle;
         // Shift snaps to 15° steps.
-        if (e.shiftKey)
-          delta = Math.round(delta / (Math.PI / 12)) * (Math.PI / 12);
+        if (e.shiftKey) delta = Math.round(delta / (Math.PI / 12)) * (Math.PI / 12);
         g.delta = delta;
         const c = Math.cos(delta);
         const s = Math.sin(delta);
         for (const el of g.originals) {
           const dx = el.x - frame.x;
           const dy = el.y - frame.y;
-          const rot = Math.atan2(
-            Math.sin(el.rot + delta),
-            Math.cos(el.rot + delta),
-          );
+          const rot = Math.atan2(Math.sin(el.rot + delta), Math.cos(el.rot + delta));
           this.renderer.previews.set(el.id, {
             ...el,
             x: frame.x + dx * c - dy * s,
@@ -1361,8 +1270,7 @@ export class SceneController {
       case "marquee": {
         if (!g.moved) {
           if (
-            Math.hypot(world.x - g.start.x, world.y - g.start.y) *
-              this.renderer.camera.zoom <
+            Math.hypot(world.x - g.start.x, world.y - g.start.y) * this.renderer.camera.zoom <
             DRAG_THRESHOLD
           )
             break;
@@ -1375,10 +1283,7 @@ export class SceneController {
           h: Math.abs(world.y - g.start.y),
         };
         const inside = this.elements
-          .filter(
-            (el) =>
-              !el.locked && this.pickable(el) && contains(rect, bounds([el])!),
-          )
+          .filter((el) => !el.locked && this.pickable(el) && contains(rect, bounds([el])!))
           .map((el) => el.id);
         this.selection.value = [...new Set([...g.base, ...inside])];
         this.updateOverlay();
@@ -1388,8 +1293,7 @@ export class SceneController {
       case "trail":
         if (!g.active) {
           if (
-            Math.hypot(world.x - g.start.x, world.y - g.start.y) *
-              this.renderer.camera.zoom <
+            Math.hypot(world.x - g.start.x, world.y - g.start.y) * this.renderer.camera.zoom <
             DRAG_THRESHOLD
           )
             break;
@@ -1397,9 +1301,7 @@ export class SceneController {
           this.presence?.trailTo(g.start);
         }
         this.presence?.trailTo(
-          ...(e.getCoalescedEvents?.() ?? [e]).map((ev) =>
-            this.toWorld(ev.clientX, ev.clientY),
-          ),
+          ...(e.getCoalescedEvents?.() ?? [e]).map((ev) => this.toWorld(ev.clientX, ev.clientY)),
         );
         break;
 
@@ -1441,11 +1343,8 @@ export class SceneController {
     }
     if (cancelled) {
       const itemToken =
-        g.kind === "move" && g.originals.size === 1
-          ? [...g.originals.values()][0]
-          : null;
-      if (itemToken?.type === "token" && itemToken.itemDefId)
-        this.onItemTokenDragMove?.(null, e);
+        g.kind === "move" && g.originals.size === 1 ? [...g.originals.values()][0] : null;
+      if (itemToken?.type === "token" && itemToken.itemDefId) this.onItemTokenDragMove?.(null, e);
       this.cancelGesture();
       return;
     }
@@ -1453,12 +1352,9 @@ export class SceneController {
 
     switch (g.kind) {
       case "move": {
-        const itemToken =
-          g.moved && g.originals.size === 1
-            ? [...g.originals.values()][0]
-            : null;
+        const itemToken = g.moved && g.originals.size === 1 ? [...g.originals.values()][0] : null;
         if (!g.moved && g.originals.size === 1) {
-          const clicked = ([...g.originals.values()])[0]!;
+          const clicked = [...g.originals.values()][0]!;
           if (clicked.type === "token") this.onTokenClick?.(clicked);
           break;
         }
@@ -1487,9 +1383,7 @@ export class SceneController {
         break;
 
       case "light": {
-        const light = this.renderer.previews.get(g.el.id) as
-          | LightElement
-          | undefined;
+        const light = this.renderer.previews.get(g.el.id) as LightElement | undefined;
         this.renderer.previews.clear();
         if (light)
           this.scene.update([
@@ -1560,10 +1454,8 @@ export class SceneController {
         const world = this.toWorld(e.clientX, e.clientY);
         const { label: _label, ...t } = this.shapeFrom(g, world, e);
         if (!g.fixed && (t.w < 4 || t.h < 4)) break;
-        const style = g.fixed
-          ? TEMPLATE_STYLE
-          : { ...pen.value, width: SHAPE_WIDTH };
-        const id = (this.scene.add({
+        const style = g.fixed ? TEMPLATE_STYLE : { ...pen.value, width: SHAPE_WIDTH };
+        const id = this.scene.add({
           type: "shape",
           shape: g.shape,
           colour: style.colour,
@@ -1571,7 +1463,7 @@ export class SceneController {
           layer: style.layer,
           ...t,
           ...(g.fixed ? { template: true } : {}),
-        }))[0]!;
+        })[0]!;
         if (g.fixed) {
           const fixed = g.fixed;
           this.placing.value = null;
@@ -1592,11 +1484,7 @@ export class SceneController {
     const previews = this.renderer.previews;
     if (!previews.size) return;
     const patches = [...previews].map(
-      ([id, t]) =>
-        [id, { x: t.x, y: t.y, w: t.w, h: t.h, rot: t.rot }] as [
-          string,
-          Transform,
-        ],
+      ([id, t]) => [id, { x: t.x, y: t.y, w: t.w, h: t.h, rot: t.rot }] as [string, Transform],
     );
     this.scene.update(patches);
     previews.clear();
@@ -1604,12 +1492,7 @@ export class SceneController {
   }
 
   /** Shrink a scene item token into its drop point before transferring it. */
-  animateItemTokenDrop(
-    id: string,
-    clientX: number,
-    clientY: number,
-    complete: () => void,
-  ) {
+  animateItemTokenDrop(id: string, clientX: number, clientY: number, complete: () => void) {
     const original = this.byId.get(id);
     if (original?.type !== "token") return complete();
     const current = this.renderer.previews.get(id) ?? original;
@@ -1663,14 +1546,9 @@ export class SceneController {
     }
     if (!this.gesture) return;
     if (this.gesture.kind === "trail") this.presence?.endTrail();
-    if (
-      this.gesture.kind === "move" &&
-      this.gesture.moved &&
-      this.gesture.originals.size === 1
-    ) {
-      const token = ([...this.gesture.originals.values()])[0]!;
-      if (token.type === "token" && !token.itemDefId)
-        this.onTokenDragMove?.(null);
+    if (this.gesture.kind === "move" && this.gesture.moved && this.gesture.originals.size === 1) {
+      const token = [...this.gesture.originals.values()][0]!;
+      if (token.type === "token" && !token.itemDefId) this.onTokenDragMove?.(null);
     }
     if (this.gesture.kind === "ruler") {
       this.ruler = null;
@@ -1692,8 +1570,7 @@ export class SceneController {
     // Skip points closer than half a screen px to the last one.
     if (
       n >= STRIDE &&
-      Math.hypot(p.x - (pts)[n - STRIDE]!, p.y - (pts)[n - STRIDE + 1]!) *
-        this.renderer.camera.zoom <
+      Math.hypot(p.x - pts[n - STRIDE]!, p.y - pts[n - STRIDE + 1]!) * this.renderer.camera.zoom <
         0.5
     )
       return;
@@ -1727,16 +1604,10 @@ export class SceneController {
     // Pinching a trackpad sends ctrl + wheel; a mouse wheel sends big whole
     // steps. Both zoom. Two-finger trackpad scrolling pans.
     const mouseWheel =
-      lines ||
-      (e.deltaX === 0 &&
-        Number.isInteger(e.deltaY) &&
-        Math.abs(e.deltaY) >= 50);
+      lines || (e.deltaX === 0 && Number.isInteger(e.deltaY) && Math.abs(e.deltaY) >= 50);
     if (e.ctrlKey || e.metaKey || mouseWheel) {
       const dy = lines ? e.deltaY * 40 : e.deltaY;
-      this.zoomBy(
-        Math.exp(-dy * (e.ctrlKey && !mouseWheel ? 0.01 : 0.0015)),
-        at,
-      );
+      this.zoomBy(Math.exp(-dy * (e.ctrlKey && !mouseWheel ? 0.01 : 0.0015)), at);
     } else {
       const cam = this.renderer.camera;
       this.renderer.setCamera({
@@ -1805,15 +1676,11 @@ export class SceneController {
       case "ArrowLeft":
       case "ArrowRight": {
         const step = e.shiftKey ? (grid.type === "none" ? 10 : grid.size) : 1;
-        const dx =
-          e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0;
-        const dy =
-          e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0;
+        const dx = e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0;
+        const dy = e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0;
         const sel = this.selected().filter((el) => !el.locked);
         if (!sel.length) return false;
-        this.scene.update(
-          sel.map((el) => [el.id, { x: el.x + dx, y: el.y + dy }]),
-        );
+        this.scene.update(sel.map((el) => [el.id, { x: el.x + dx, y: el.y + dy }]));
         return true;
       }
       case "=":
@@ -1853,23 +1720,16 @@ export class SceneController {
   // Edits, for menus and shortcuts
 
   remove(ids: string[]) {
-    const removable = ids.filter(
-      (id) => this.byId.get(id) && !this.byId.get(id)!.locked,
-    );
+    const removable = ids.filter((id) => this.byId.get(id) && !this.byId.get(id)!.locked);
     if (!removable.length) return;
     this.scene.remove(removable);
-    this.selection.value = this.selection.value.filter(
-      (id) => !removable.includes(id),
-    );
+    this.selection.value = this.selection.value.filter((id) => !removable.includes(id));
   }
 
   duplicate(ids: string[]) {
     if (!ids.length) return;
     const grid = this.renderer.grid;
-    const copies = this.scene.duplicate(
-      ids,
-      grid.type === "none" ? 20 : grid.size,
-    );
+    const copies = this.scene.duplicate(ids, grid.type === "none" ? 20 : grid.size);
     this.afterDuplicate(copies);
     this.selection.value = copies;
   }
@@ -1913,25 +1773,15 @@ export class SceneController {
     const el = this.byId.get(id);
     const grid = this.renderer.grid;
     const size = cells && el ? cells * grid.size : 0;
-    const resize =
-      size &&
-      el &&
-      (Math.abs(el.w - size) > 0.5 || Math.abs(el.h - size) > 0.5);
+    const resize = size && el && (Math.abs(el.w - size) > 0.5 || Math.abs(el.h - size) > 0.5);
     this.scene.update([
-      [
-        id,
-        resize
-          ? { ...patch, ...snapPoint(grid, el, cells), w: size, h: size }
-          : patch,
-      ],
+      [id, resize ? { ...patch, ...snapPoint(grid, el, cells), w: size, h: size } : patch],
     ]);
   }
 
   /** The names of every token on the scene, for naming new ones apart. */
   tokenNames(): string[] {
-    return this.elements.flatMap((el) =>
-      el.type === "token" ? [el.name] : [],
-    );
+    return this.elements.flatMap((el) => (el.type === "token" ? [el.name] : []));
   }
 
   /** Swap an image between being a map and being a token. */
@@ -1983,7 +1833,7 @@ export class SceneController {
     const grid = this.renderer.grid;
     const size = grid.type === "none" ? 70 : grid.size;
     const p = snapPoint(grid, at);
-    const id = (this.scene.add({
+    const id = this.scene.add({
       type: "token",
       layer: "token",
       name,
@@ -1991,13 +1841,12 @@ export class SceneController {
       ...(options.icon ? { icon: options.icon } : {}),
       ...(options.itemDefId ? { itemDefId: options.itemDefId } : {}),
       colour: options.colour ?? memberColour(),
-      style:
-        options.style ?? (options.image ? this.defaults().tokenStyle : "disc"),
+      style: options.style ?? (options.image ? this.defaults().tokenStyle : "disc"),
       ...p,
       w: size,
       h: size,
       rot: 0,
-    }))[0]!;
+    })[0]!;
     activeTool.value = "select";
     this.selection.value = [id];
     return id;
@@ -2016,7 +1865,7 @@ export class SceneController {
   ) {
     const grid = this.renderer.grid;
     const size = grid.type === "none" ? 70 : grid.size;
-    const id = (this.scene.add({
+    const id = this.scene.add({
       type: "token",
       layer: "token",
       name: spec.name,
@@ -2028,7 +1877,7 @@ export class SceneController {
       w: size,
       h: size,
       rot: 0,
-    }))[0]!;
+    })[0]!;
     activeTool.value = "select";
     this.selection.value = [id];
     return id;
@@ -2056,11 +1905,7 @@ export class SceneController {
         const shift = i * (grid.type === "none" ? 40 : grid.size);
         const p = { x: at.x + shift, y: at.y + shift };
         const ratio = image.width / image.height;
-        if (
-          Math.max(image.width, image.height) <= 512 &&
-          ratio > 0.8 &&
-          ratio < 1.25
-        ) {
+        if (Math.max(image.width, image.height) <= 512 && ratio > 0.8 && ratio < 1.25) {
           const size = grid.type === "none" ? 70 : grid.size;
           added.push({
             type: "token",
@@ -2109,12 +1954,7 @@ function tokenName(file: string): string {
 }
 
 /** Resize to exactly w × h, keeping the corner opposite `corner` fixed. */
-function resizeToSize(
-  t: Transform,
-  corner: Corner,
-  w: number,
-  h: number,
-): Transform {
+function resizeToSize(t: Transform, corner: Corner, w: number, h: number): Transform {
   const sign = CORNER_SIGNS[corner];
   const anchor = fromLocal(t, {
     x: (-sign.x * t.w) / 2,
@@ -2136,5 +1976,5 @@ function resizeToSize(
 /** A resize cursor that matches the corner's direction once rotated. */
 function cornerCursor(t: Transform, corner: Corner): string {
   const turns = Math.round(t.rot / (Math.PI / 2));
-  return (RESIZE_CURSORS)[(((corner + turns) % 4) + 4) % 4]!;
+  return RESIZE_CURSORS[(((corner + turns) % 4) + 4) % 4]!;
 }

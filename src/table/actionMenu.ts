@@ -40,13 +40,9 @@ export function actionMenuItems(
         label: pinned ? `Remove${name} from hotbar` : `Add${name} to hotbar`,
         Icon: pinned ? IconDelete : IconAdd,
         disabled:
-          !pinned &&
-          hotbarSlots(campaign, selectedCharacterId(campaign)).length >=
-            MAX_SLOTS,
+          !pinned && hotbarSlots(campaign, selectedCharacterId(campaign)).length >= MAX_SLOTS,
         onSelect: () =>
-          editHotbar(campaign, (slots) =>
-            pinned ? unpin(slots, id) : pin(slots, id),
-          ),
+          editHotbar(campaign, (slots) => (pinned ? unpin(slots, id) : pin(slots, id))),
       },
       {
         label: `${shortcut ? "Change" : "Add"} shortcut${multiple ? ` for ${title}` : ""}…`,

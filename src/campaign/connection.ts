@@ -25,10 +25,7 @@ export class CampaignConnection {
     if (this.session) return false;
     let transport;
     try {
-      transport = (await import("../sync/trystero")).trysteroTransport(
-        this.id,
-        roomKey,
-      );
+      transport = (await import("../sync/trystero")).trysteroTransport(this.id, roomKey);
     } catch {
       return false;
     }

@@ -1,6 +1,6 @@
-import { useSignal } from '@preact/signals-react'
-import { useEffect, useEffectEvent, useRef } from 'react'
-import type * as Y from 'yjs'
+import { useSignal } from "@preact/signals-react";
+import { useEffect, useEffectEvent, useRef } from "react";
+import type * as Y from "yjs";
 
 /**
  * Subscribe a component to a Yjs type. `read` derives a plain value from it;
@@ -17,25 +17,25 @@ export function useY<T, EventType>(
   type: Y.AbstractType<EventType> | null | undefined,
   read: () => T,
 ): T {
-  const changes = useSignal(0)
-  const latest = useRef(read)
-  latest.current = read
-  const value = read()
-  const shown = useRef(value)
-  shown.current = value
+  const changes = useSignal(0);
+  const latest = useRef(read);
+  latest.current = read;
+  const value = read();
+  const shown = useRef(value);
+  shown.current = value;
   const bump = useEffectEvent(() => {
-    if (!Object.is(latest.current(), shown.current)) changes.value++
-  })
+    if (!Object.is(latest.current(), shown.current)) changes.value++;
+  });
 
   useEffect(() => {
-    if (!type) return
-    const onChange = () => bump()
-    type.observeDeep(onChange)
-    onChange()
-    return () => type.unobserveDeep(onChange)
-  }, [type])
+    if (!type) return;
+    const onChange = () => bump();
+    type.observeDeep(onChange);
+    onChange();
+    return () => type.unobserveDeep(onChange);
+  }, [type]);
 
   // Reading the counter subscribes this component to it.
-  void changes.value
-  return value
+  void changes.value;
+  return value;
 }

@@ -29,16 +29,14 @@ function AttributeAdvance({
 }) {
   const selected = useSignal(attribute.actions[0] ?? "");
   const { campaign, c, editable } = sheet;
-  const cap = parseCommaList(
-    String(systemCampaignData(campaign).crewUpgrades ?? ""),
-  ).includes("mastery")
+  const cap = parseCommaList(String(systemCampaignData(campaign).crewUpgrades ?? "")).includes(
+    "mastery",
+  )
     ? 4
     : 3;
   if (Number(c.data[`${attribute.id}Xp`] ?? 0) < 6 || !editable) return null;
   const eligible = attribute.actions.filter((id) => (c.scores[id] ?? 0) < cap);
-  const chosen = eligible.includes(selected.value)
-    ? selected.value
-    : (eligible[0] ?? "");
+  const chosen = eligible.includes(selected.value) ? selected.value : (eligible[0] ?? "");
   return (
     <div className="sheet-row">
       <select
@@ -73,10 +71,7 @@ export function BladesSheet(props: SheetProps) {
   return (
     <SheetFrame {...sheet}>
       <SheetSectionView {...sheet} section={{ kind: "header" }} />
-      <SheetSectionView
-        {...sheet}
-        section={{ kind: "choices", choices: ["playbook", "vice"] }}
-      />
+      <SheetSectionView {...sheet} section={{ kind: "choices", choices: ["playbook", "vice"] }} />
       <SheetSectionView
         {...sheet}
         section={{
@@ -178,21 +173,14 @@ export function BladesSheet(props: SheetProps) {
           <AttributeAdvance sheet={sheet} attribute={{ id, name, actions }} />
         </section>
       ))}
-      <SheetSectionView
-        {...sheet}
-        section={{ kind: "modifiers", label: "Bonus dice" }}
-      />
+      <SheetSectionView {...sheet} section={{ kind: "modifiers", label: "Bonus dice" }} />
       <section className="form-section sheet-section" aria-label="Harm & recovery">
         <h3 className="sheet-heading">Harm & recovery</h3>
         <div className="blades-toggles">
           {system.conditions
             .filter((condition) => condition.id.startsWith("harm-"))
             .map((condition) => (
-              <label
-                key={condition.id}
-                className="stat-deb"
-                title={condition.text}
-              >
+              <label key={condition.id} className="stat-deb" title={condition.text}>
                 <input
                   type="checkbox"
                   checked={c.conditions.includes(condition.id)}
@@ -218,23 +206,20 @@ export function BladesSheet(props: SheetProps) {
           onChange={(by) => bumpData(campaign, c.id, "healing", by)}
         />
         <div className="blades-toggles">
-          {([
-            ["armorUsed", "Armor used"],
-            ["heavyArmorUsed", "Heavy armor used"],
-            ["specialArmorUsed", "Special armor used"],
-          ] as const).map(([field, label]) => (
+          {(
+            [
+              ["armorUsed", "Armor used"],
+              ["heavyArmorUsed", "Heavy armor used"],
+              ["specialArmorUsed", "Special armor used"],
+            ] as const
+          ).map(([field, label]) => (
             <label key={field} className="stat-deb">
               <input
                 type="checkbox"
                 checked={Number(c.data[field] ?? 0) > 0}
                 disabled={!editable}
                 onChange={(event) =>
-                  setData(
-                    campaign,
-                    c.id,
-                    field,
-                    event.currentTarget.checked ? 1 : 0,
-                  )
+                  setData(campaign, c.id, field, event.currentTarget.checked ? 1 : 0)
                 }
               />
               {label}
@@ -249,9 +234,7 @@ export function BladesSheet(props: SheetProps) {
           <select
             value={String(c.data.load ?? 5)}
             disabled={!editable}
-            onChange={(event) =>
-              setData(campaign, c.id, "load", Number(event.currentTarget.value))
-            }
+            onChange={(event) => setData(campaign, c.id, "load", Number(event.currentTarget.value))}
           >
             <option value="3">Light (3)</option>
             <option value="5">Normal (5)</option>
@@ -267,10 +250,7 @@ export function BladesSheet(props: SheetProps) {
         />
       </section>
       <SheetSectionView {...sheet} section={{ kind: "inventory" }} />
-      <SheetSectionView
-        {...sheet}
-        section={{ kind: "actions", label: "Abilities & downtime" }}
-      />
+      <SheetSectionView {...sheet} section={{ kind: "actions", label: "Abilities & downtime" }} />
       <SheetSectionView
         {...sheet}
         section={{

@@ -17,42 +17,74 @@ export const DW2_SERVICES: DungeonWorld2Service[] = [
   {
     id: "stay",
     name: "A week's stay at…",
-    examples: { 2: "a shared room in a simple inn", 3: "separate rooms at a luxurious inn", 4: "a noble's manor or palace wing" },
+    examples: {
+      2: "a shared room in a simple inn",
+      3: "separate rooms at a luxurious inn",
+      4: "a noble's manor or palace wing",
+    },
   },
   {
     id: "property",
     name: "Buying or building a…",
-    examples: { 2: "simple one-room cottage", 3: "comfortable multi-room house", 4: "large homestead or manor" },
+    examples: {
+      2: "simple one-room cottage",
+      3: "comfortable multi-room house",
+      4: "large homestead or manor",
+    },
   },
   {
     id: "passage",
     name: "Guided passage through an area that is…",
-    examples: { 2: "inconvenient or unpleasant", 3: "dangerous or unforgiving", 4: "deadly or unfathomable" },
+    examples: {
+      2: "inconvenient or unpleasant",
+      3: "dangerous or unforgiving",
+      4: "deadly or unfathomable",
+    },
   },
   {
     id: "entertainment",
     name: "A night of song, dance, or companionship with…",
-    examples: { 2: "someone ordinary", 3: "someone prestigious or elusive", 4: "someone royal, magical, or divine" },
+    examples: {
+      2: "someone ordinary",
+      3: "someone prestigious or elusive",
+      4: "someone royal, magical, or divine",
+    },
   },
   {
     id: "organization",
     name: "Access to an organization that is…",
-    examples: { 2: "an everyday club or association", 3: "a noble court or prominent guild", 4: "a secret cabal or legendary group" },
+    examples: {
+      2: "an everyday club or association",
+      3: "a noble court or prominent guild",
+      4: "a secret cabal or legendary group",
+    },
   },
   {
     id: "information",
     name: "Information about…",
-    examples: { 2: "a public figure or recent event", 3: "a private figure or obscure history", 4: "a shadowy mastermind or ancient mystery" },
+    examples: {
+      2: "a public figure or recent event",
+      3: "a private figure or obscure history",
+      4: "a shadowy mastermind or ancient mystery",
+    },
   },
   {
     id: "repair",
     name: "Repair of…",
-    examples: { 2: "standard equipment or a small house", 3: "masterwork equipment, most magic items, or a manor", 4: "Artifacts, ancient magic items, a palace, or a fortress" },
+    examples: {
+      2: "standard equipment or a small house",
+      3: "masterwork equipment, most magic items, or a manor",
+      4: "Artifacts, ancient magic items, a palace, or a fortress",
+    },
   },
   {
     id: "fine",
     name: "A fine, bounty, or bribe for a…",
-    examples: { 2: "small crime, such as pickpocketing", 3: "significant crime, such as assault or arson", 4: "capital crime, such as murder or treason" },
+    examples: {
+      2: "small crime, such as pickpocketing",
+      3: "significant crime, such as assault or arson",
+      4: "capital crime, such as murder or treason",
+    },
   },
 ];
 
@@ -66,10 +98,7 @@ export const WEALTH_TIERS: WealthTier[] = [
 ] as const;
 
 export const INITIAL_TREASURE_BOXES = WEALTH_TIERS[0]!.slots;
-export const MAX_TREASURE_BOXES = WEALTH_TIERS.reduce(
-  (total, tier) => total + tier.slots,
-  0,
-);
+export const MAX_TREASURE_BOXES = WEALTH_TIERS.reduce((total, tier) => total + tier.slots, 0);
 
 export function clampTreasureBoxes(boxes: number): number {
   return Math.max(0, Math.min(MAX_TREASURE_BOXES, Math.floor(boxes)));

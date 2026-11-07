@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DiceHold, type DieHull } from "../diePhysics";
 
-
 const tetrahedron: DieHull = {
   vertices: [
     [1, 1, 1],
@@ -32,11 +31,11 @@ describe("DiceHold", () => {
       ],
       "locked",
     );
-    const resting = (hold.poses())[0]!;
+    const resting = hold.poses()[0]!;
 
     for (let frame = 0; frame < 24; frame++) hold.step();
 
-    const spinning = (hold.poses())[0]!;
+    const spinning = hold.poses()[0]!;
     expect(spinning.x).toBe(resting.x);
     expect(spinning.y).toBe(resting.y);
     expect(spinning.z).toBe(resting.z);
@@ -57,12 +56,12 @@ describe("DiceHold", () => {
       ],
       "tray",
     );
-    const resting = (hold.poses())[0]!;
+    const resting = hold.poses()[0]!;
 
     hold.jolt(4, 0);
     for (let frame = 0; frame < 24; frame++) hold.step();
 
-    const moving = (hold.poses())[0]!;
+    const moving = hold.poses()[0]!;
     expect(moving.x).not.toBe(resting.x);
     expect(moving.z).not.toBe(resting.z);
   });

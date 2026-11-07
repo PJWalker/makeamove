@@ -1,15 +1,15 @@
-import type { ComponentType } from 'react'
+import type { ComponentType } from "react";
 import { canEdit } from "../features/characters/api";
-import type { CharacterView } from '../features/characters/types'
-import type { Campaign } from '../campaign/campaign'
-import { DndNpcSheet, DndSheet } from '../systems/dnd55e/Sheet'
-import { DungeonWorldNpcSheet, DungeonWorldSheet } from '../systems/dungeon-world/Sheet'
-import { DungeonWorld2NpcSheet, DungeonWorld2Sheet } from '../systems/dungeon-world-2/Sheet'
-import { BladesNpcSheet, BladesSheet } from '../systems/blades-in-the-dark/Sheet'
-import type { GameSystem } from '../systems/types'
-import { CopyBanner, TemplateSettings } from './TemplateSettings'
-import { DeclarativeSheet } from './DeclarativeSheet'
-import { RelationshipsSection } from './Relationships'
+import type { CharacterView } from "../features/characters/types";
+import type { Campaign } from "../campaign/campaign";
+import { DndNpcSheet, DndSheet } from "../systems/dnd55e/Sheet";
+import { DungeonWorldNpcSheet, DungeonWorldSheet } from "../systems/dungeon-world/Sheet";
+import { DungeonWorld2NpcSheet, DungeonWorld2Sheet } from "../systems/dungeon-world-2/Sheet";
+import { BladesNpcSheet, BladesSheet } from "../systems/blades-in-the-dark/Sheet";
+import type { GameSystem } from "../systems/types";
+import { CopyBanner, TemplateSettings } from "./TemplateSettings";
+import { DeclarativeSheet } from "./DeclarativeSheet";
+import { RelationshipsSection } from "./Relationships";
 import { CharacterText, GMCharacterText } from "./CharacterText";
 
 /*
@@ -17,23 +17,26 @@ import { CharacterText, GMCharacterText } from "./CharacterText";
  * so importing a system's rules does not pull in its sheet or the table.
  */
 
-type SheetProps = { campaign: Campaign; system: GameSystem; c: CharacterView }
+type SheetProps = { campaign: Campaign; system: GameSystem; c: CharacterView };
 
 const SHEETS: Record<string, { pc: ComponentType<SheetProps>; npc: ComponentType<SheetProps> }> = {
-  'dnd-5.5e': { pc: DndSheet, npc: DndNpcSheet },
-  'dungeon-world': { pc: DungeonWorldSheet, npc: DungeonWorldNpcSheet },
-  'dungeon-world-2': { pc: DungeonWorld2Sheet, npc: DungeonWorld2NpcSheet },
-  'blades-in-the-dark': { pc: BladesSheet, npc: BladesNpcSheet },
-}
+  "dnd-5.5e": { pc: DndSheet, npc: DndNpcSheet },
+  "dungeon-world": { pc: DungeonWorldSheet, npc: DungeonWorldNpcSheet },
+  "dungeon-world-2": { pc: DungeonWorld2Sheet, npc: DungeonWorld2NpcSheet },
+  "blades-in-the-dark": { pc: BladesSheet, npc: BladesNpcSheet },
+};
 
 /** For systems with a layout: the core's declarative sheet. */
-const declarative = (kind: 'pc' | 'npc') => (p: SheetProps) => <DeclarativeSheet {...p} layout={p.system.sheet![kind]} />
-const DECLARATIVE = { pc: declarative('pc'), npc: declarative('npc') }
+const declarative = (kind: "pc" | "npc") =>
+  function Declarative(p: SheetProps) {
+    return <DeclarativeSheet {...p} layout={p.system.sheet![kind]} />;
+  };
+const DECLARATIVE = { pc: declarative("pc"), npc: declarative("npc") };
 
 /** A character's sheet, as their campaign's system draws it. */
 export function CharacterSheet({ campaign, system, c }: SheetProps) {
-  const sheets = SHEETS[system.id] ?? DECLARATIVE
-  const Sheet = c.kind === 'npc' ? sheets.npc : sheets.pc
+  const sheets = SHEETS[system.id] ?? DECLARATIVE;
+  const Sheet = c.kind === "npc" ? sheets.npc : sheets.pc;
   const editable = canEdit(campaign, c);
   return (
     <div
@@ -53,19 +56,11 @@ export function CharacterSheet({ campaign, system, c }: SheetProps) {
           editable={editable}
         />
         {campaign.isGm() && (
-          <GMCharacterText
-            campaign={campaign}
-            c={c}
-            field="gm-notes"
-            label="GM Notes"
-            editable
-          />
+          <GMCharacterText campaign={campaign} c={c} field="gm-notes" label="GM Notes" editable />
         )}
       </section>
       <RelationshipsSection key={`rel-${c.id}`} campaign={campaign} c={c} />
-      {c.kind === "npc" && !c.base && (
-        <TemplateSettings campaign={campaign} c={c} />
-      )}
+      {c.kind === "npc" && !c.base && <TemplateSettings campaign={campaign} c={c} />}
     </div>
   );
 }

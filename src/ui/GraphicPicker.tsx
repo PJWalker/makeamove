@@ -7,12 +7,9 @@ import { ENTRY_ICONS } from "./entryIcons";
 import { FilterableMenu, type FilterableMenuOption } from "./FilterableMenu";
 import { IconImage, IconSearch } from "./icons";
 
-const iconNames = (
-  Object.keys(ENTRY_ICONS) as (keyof typeof ENTRY_ICONS)[]
-).filter(
+const iconNames = (Object.keys(ENTRY_ICONS) as (keyof typeof ENTRY_ICONS)[]).filter(
   (name, index, all) =>
-    all.findIndex((other) => ENTRY_ICONS[other] === ENTRY_ICONS[name]) ===
-    index,
+    all.findIndex((other) => ENTRY_ICONS[other] === ENTRY_ICONS[name]) === index,
 );
 
 const iconOptions: FilterableMenuOption[] = iconNames.map((name) => {
@@ -53,11 +50,7 @@ export function GraphicPicker({
     <div className="field graphic-picker">
       {label}
       <div className="graphic-picker-row">
-        <EntityGraphicView
-          graphic={graphic}
-          size={32}
-          className="graphic-picker-preview"
-        />
+        <EntityGraphicView graphic={graphic} size={32} className="graphic-picker-preview" />
         <Button size="sm" onClick={() => file.current?.click()}>
           <IconImage size={22} /> Choose image…
         </Button>

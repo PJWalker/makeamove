@@ -7,12 +7,7 @@ import { systemCampaignData, type Campaign } from "../../campaign/campaign";
 import { useY } from "../../ui/useY";
 import { Button } from "../../ui/Button";
 import { Counter } from "../../table/sheetParts";
-import {
-  advanceCrew,
-  advanceCrewTier,
-  buyCrewUpgrade,
-  crewTierCost,
-} from "./progression";
+import { advanceCrew, advanceCrewTier, buyCrewUpgrade, crewTierCost } from "./progression";
 
 export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
   const reward = useSignal("upgrades");
@@ -25,17 +20,12 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
     campaign.messageState,
     () => getState<number>(campaign.messageState, messageId, "value") ?? 0,
   );
-  const abilities = system.campaignFields!.find(
-    (field) => field.id === "crewAbilities",
-  )!.options!;
-  const upgrades = system.campaignFields!.find(
-    (field) => field.id === "crewUpgrades",
-  )!.options!;
+  const abilities = system.campaignFields!.find((field) => field.id === "crewAbilities")!.options!;
+  const upgrades = system.campaignFields!.find((field) => field.id === "crewUpgrades")!.options!;
   const ownedAbilities = parseCommaList(String(state.crewAbilities ?? ""));
   const ownedUpgrades = parseCommaList(String(state.crewUpgrades ?? ""));
   const cost = crewTierCost(campaign);
-  const upgradeCost =
-    upgrade.value === "mastery" ? 4 : upgrade.value === "cohort" ? 2 : 1;
+  const upgradeCost = upgrade.value === "mastery" ? 4 : upgrade.value === "cohort" ? 2 : 1;
   const gm = campaign.isGm();
   return (
     <section className="dialog-section" aria-label="Crew advancement">
@@ -56,11 +46,7 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
                   0,
                   Math.min(
                     counter.max ?? Infinity,
-                    (getState<number>(
-                      campaign.messageState,
-                      message.id,
-                      "value",
-                    ) ?? 0) + by,
+                    (getState<number>(campaign.messageState, message.id, "value") ?? 0) + by,
                   ),
                 ),
               );
@@ -108,11 +94,7 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
         </select>
       </label>
       <Button
-        disabled={
-          !gm ||
-          !upgrade.value ||
-          Number(state.crewUpgradePoints ?? 0) < upgradeCost
-        }
+        disabled={!gm || !upgrade.value || Number(state.crewUpgradePoints ?? 0) < upgradeCost}
         onClick={() => buyCrewUpgrade(campaign, upgrade.value)}
       >
         Buy upgrade ({upgradeCost})
@@ -122,8 +104,7 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
           !gm ||
           Number(state.crewRep ?? 0) < cost.rep ||
           (state.crewHold !== "weak" &&
-            (Number(state.crewCoin ?? 0) < cost.coin ||
-              Number(state.crewTier ?? 0) >= 4))
+            (Number(state.crewCoin ?? 0) < cost.coin || Number(state.crewTier ?? 0) >= 4))
         }
         onClick={() => advanceCrewTier(campaign)}
       >

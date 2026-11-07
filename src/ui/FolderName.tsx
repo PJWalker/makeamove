@@ -1,5 +1,11 @@
 /** A field for naming a folder in place: Enter keeps the name, Escape or leaving it empty cancels. */
-export function FolderName({ initial = '', onDone }: { initial?: string; onDone: (name: string | null) => void }) {
+export function FolderName({
+  initial = "",
+  onDone,
+}: {
+  initial?: string;
+  onDone: (name: string | null) => void;
+}) {
   return (
     <input
       className="chars-folder-input"

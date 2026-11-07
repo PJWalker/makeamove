@@ -114,9 +114,7 @@ export function useShake({
       if (!enabled || event.button !== 0) return;
       if (
         ignoreControls &&
-        (event.target as Element).closest(
-          'button, input, textarea, select, a, [role="button"]',
-        )
+        (event.target as Element).closest('button, input, textarea, select, a, [role="button"]')
       )
         return;
       event.preventDefault();
@@ -179,20 +177,15 @@ export function useShake({
       const current = gesture.current;
       if (!current || current.pointer !== event.pointerId) return;
       current.moved ||=
-        Math.hypot(
-          event.clientX - current.originX,
-          event.clientY - current.originY,
-        ) >= 6;
+        Math.hypot(event.clientX - current.originX, event.clientY - current.originY) >= 6;
       const releaseAge = Math.max(0, event.timeStamp - current.time);
       const releaseSpeed =
-        Math.hypot(current.vx, current.vy) *
-        Math.exp(-releaseAge / RELEASE_DECAY_MS);
+        Math.hypot(current.vx, current.vy) * Math.exp(-releaseAge / RELEASE_DECAY_MS);
       release();
       event.stopPropagation();
       if (
         enabled &&
-        (releaseSpeed >= REROLL_SPEED ||
-          (current.reversals >= 2 && current.distance >= 70))
+        (releaseSpeed >= REROLL_SPEED || (current.reversals >= 2 && current.distance >= 70))
       )
         onShake();
       else if (enabled && !current.moved) onTap?.();

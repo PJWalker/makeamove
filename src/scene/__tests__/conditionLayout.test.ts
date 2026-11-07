@@ -25,9 +25,7 @@ describe("condition layout", () => {
   it("automatically shows names only when the whole row comfortably fits", () => {
     expect(conditionLayout(input).inline).toBe(false);
     expect(conditionLayout({ ...input, tokenWidth: 240 }).inline).toBe(true);
-    expect(conditionLayout({ ...input, tokenWidth: 240, x: 20 }).inline).toBe(
-      false,
-    );
+    expect(conditionLayout({ ...input, tokenWidth: 240, x: 20 }).inline).toBe(false);
     expect(
       conditionLayout({
         ...input,
@@ -40,23 +38,17 @@ describe("condition layout", () => {
   it("arranges every condition upward from the pip row", () => {
     const layout = conditionLayout(input);
     expect(layout.vertical).toHaveLength(3);
-    expect(conditionContains((layout.vertical)[2]!, 200, 200)).toBe(true);
-    expect((layout.vertical)[2]!.y + (layout.vertical)[2]!.h).toBe(
-      input.y + input.radius,
-    );
-    expect((layout.vertical)[0]!.y + (layout.vertical)[0]!.h).toBeLessThan(
-      (layout.vertical)[1]!.y,
-    );
-    expect((layout.vertical)[1]!.y + (layout.vertical)[1]!.h).toBeLessThan(
-      (layout.vertical)[2]!.y,
-    );
+    expect(conditionContains(layout.vertical[2]!, 200, 200)).toBe(true);
+    expect(layout.vertical[2]!.y + layout.vertical[2]!.h).toBe(input.y + input.radius);
+    expect(layout.vertical[0]!.y + layout.vertical[0]!.h).toBeLessThan(layout.vertical[1]!.y);
+    expect(layout.vertical[1]!.y + layout.vertical[1]!.h).toBeLessThan(layout.vertical[2]!.y);
     expect(new Set(layout.vertical.map((box) => box.w)).size).toBe(1);
   });
 
   it("opens downward when there is not enough room above", () => {
     const layout = conditionLayout({ ...input, y: 20 });
-    expect((layout.vertical)[0]!.y).toBe(15);
-    expect((layout.vertical)[2]!.y).toBeGreaterThan(20);
+    expect(layout.vertical[0]!.y).toBe(15);
+    expect(layout.vertical[2]!.y).toBeGreaterThan(20);
   });
 
   it("keeps edge lists inside the viewport and includes more than six conditions", () => {

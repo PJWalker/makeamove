@@ -14,16 +14,8 @@ export interface TokenLabelPlan {
   small: boolean;
 }
 
-export function zoomTokenBars(
-  box: LabelBox,
-  height: number,
-  gap: number,
-  scales: number[],
-) {
-  const extra = scales.reduce(
-    (total, scale) => total + height * (scale - 1),
-    0,
-  );
+export function zoomTokenBars(box: LabelBox, height: number, gap: number, scales: number[]) {
+  const extra = scales.reduce((total, scale) => total + height * (scale - 1), 0);
   let top = box.y - extra / 2;
   const bars = scales.map((scale) => {
     const width = box.w * scale;
@@ -40,10 +32,7 @@ export function zoomTokenBars(
   return { bars, nameOffset: extra / 2 };
 }
 
-export function resolveTokenLabelLayout(
-  plans: TokenLabelPlan[],
-  hover: string | null,
-) {
+export function resolveTokenLabelLayout(plans: TokenLabelPlan[], hover: string | null) {
   const overlaps = (a: LabelBox, b: LabelBox) =>
     a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
   const shown = plans.filter((plan) => !plan.small);
@@ -53,19 +42,13 @@ export function resolveTokenLabelLayout(
         (plan) =>
           plan.wideBars &&
           !shown.some(
-            (other) =>
-              other !== plan &&
-              other.wideBars &&
-              overlaps(plan.wideBars!, other.wideBars),
+            (other) => other !== plan && other.wideBars && overlaps(plan.wideBars!, other.wideBars),
           ),
       )
       .map((plan) => plan.id),
   );
   const bars = new Map(
-    plans.map((plan) => [
-      plan.id,
-      wide.has(plan.id) ? plan.wideBars : plan.bars,
-    ]),
+    plans.map((plan) => [plan.id, wide.has(plan.id) ? plan.wideBars : plan.bars]),
   );
   const showBars = new Set<string>();
   const showName = new Set<string>();
@@ -75,10 +58,7 @@ export function resolveTokenLabelLayout(
     if (
       box &&
       !shown.some(
-        (other) =>
-          other !== plan &&
-          bars.get(other.id) &&
-          overlaps(box, bars.get(other.id)!),
+        (other) => other !== plan && bars.get(other.id) && overlaps(box, bars.get(other.id)!),
       )
     )
       showBars.add(plan.id);

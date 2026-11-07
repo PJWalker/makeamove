@@ -1,19 +1,9 @@
 import type * as React from "react";
 
 import { placeAnchored } from "./anchor";
-import {
-  claimMorph,
-  growFromOrigin,
-  hasFreshOrigin,
-  originRect,
-  releaseMorph,
-} from "./morph";
+import { claimMorph, growFromOrigin, hasFreshOrigin, originRect, releaseMorph } from "./morph";
 import { nextZ } from "./windows";
-import {
-  RESIZE_CURSORS,
-  resizeRect,
-  type ResizeDir,
-} from "../table/resizeRect";
+import { RESIZE_CURSORS, resizeRect, type ResizeDir } from "../table/resizeRect";
 import { trackPointer } from "./pointer";
 import { withTransition } from "./transition";
 
@@ -52,10 +42,7 @@ export function raisePopup(dialog: HTMLElement) {
 }
 
 /** Close a window and update its owner from the captured open state. */
-export function closePopup(
-  dialog: HTMLDialogElement | null | undefined,
-  onClose?: () => void,
-) {
+export function closePopup(dialog: HTMLDialogElement | null | undefined, onClose?: () => void) {
   if (!dialog?.open) return;
   void withTransition(() => {
     dialog.close();
@@ -84,13 +71,11 @@ export function openPopup(dialog: HTMLDialogElement | null | undefined) {
     // Centred, stepping down and right past any pop-up already there.
     let x = (innerWidth - r.width) / 2;
     let y = Math.max(48, (innerHeight - r.height) / 3);
-    const others = [
-      ...document.querySelectorAll<HTMLElement>("dialog[open]"),
-    ].filter((d) => d !== dialog);
+    const others = [...document.querySelectorAll<HTMLElement>("dialog[open]")].filter(
+      (d) => d !== dialog,
+    );
     const taken = (x: number, y: number) =>
-      others.some(
-        (d) => Math.abs(d.offsetLeft - x) < 8 && Math.abs(d.offsetTop - y) < 48,
-      );
+      others.some((d) => Math.abs(d.offsetLeft - x) < 8 && Math.abs(d.offsetTop - y) < 48);
     while (taken(whole(x), whole(y))) {
       x += CASCADE;
       y += CASCADE;
@@ -127,12 +112,7 @@ export function resizePopup(
   };
   dialog.dataset.sized = "true";
   trackPointer(RESIZE_CURSORS[dir], (ev) => {
-    const next = resizeRect(
-      start,
-      dir,
-      ev.clientX - e.clientX,
-      ev.clientY - e.clientY,
-    );
+    const next = resizeRect(start, dir, ev.clientX - e.clientX, ev.clientY - e.clientY);
     Object.assign(dialog.style, {
       left: `${next.x}px`,
       top: `${next.y}px`,
@@ -143,14 +123,8 @@ export function resizePopup(
 }
 
 /** Drag a pop-up by its title bar; call from the bar's pointerdown. */
-export function dragPopup(
-  dialog: HTMLElement,
-  e: PointerEvent | React.PointerEvent,
-) {
-  if (
-    e.button !== 0 ||
-    (e.target as HTMLElement).closest("button, input, select, textarea")
-  )
+export function dragPopup(dialog: HTMLElement, e: PointerEvent | React.PointerEvent) {
+  if (e.button !== 0 || (e.target as HTMLElement).closest("button, input, select, textarea"))
     return;
   e.preventDefault();
   raisePopup(dialog);
@@ -158,7 +132,5 @@ export function dragPopup(
   // visual rect, but dragging writes untransformed left/top coordinates.
   const dx = e.clientX - dialog.offsetLeft;
   const dy = e.clientY - dialog.offsetTop;
-  trackPointer("grabbing", (ev) =>
-    place(dialog, ev.clientX - dx, ev.clientY - dy),
-  );
+  trackPointer("grabbing", (ev) => place(dialog, ev.clientX - dx, ev.clientY - dy));
 }

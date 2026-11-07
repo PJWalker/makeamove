@@ -8,11 +8,7 @@ const PanelActionsContext = createContext<{
 
 export function PanelActionsProvider({ children }: { children: ReactNode }) {
   const [target, setTarget] = useState<HTMLDivElement | null>(null);
-  return (
-    <PanelActionsContext value={{ target, setTarget }}>
-      {children}
-    </PanelActionsContext>
-  );
+  return <PanelActionsContext value={{ target, setTarget }}>{children}</PanelActionsContext>;
 }
 
 export function PanelActionsSlot() {

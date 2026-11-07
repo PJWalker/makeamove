@@ -1,15 +1,15 @@
 import type * as React from "react";
-import { useSignal } from '@preact/signals-react'
-import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useRef } from 'react'
+import { useSignal } from "@preact/signals-react";
+import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useRef } from "react";
 import { lazy, Suspense } from "react";
-import { chatPopups, dismissPopup } from '../features/chat/notify'
-import type { ChatMessage } from '../features/chat/types'
-import { markRead } from '../features/chat/unread'
-import type { Campaign } from '../campaign/campaign'
-import { collapsedInto, reducedMotion } from '../ui/bubble'
-import { Button } from '../ui/Button'
+import { chatPopups, dismissPopup } from "../features/chat/notify";
+import type { ChatMessage } from "../features/chat/types";
+import { markRead } from "../features/chat/unread";
+import type { Campaign } from "../campaign/campaign";
+import { collapsedInto, reducedMotion } from "../ui/bubble";
+import { Button } from "../ui/Button";
 import { IconClose } from "../ui/icons";
-import { showPanel } from './panelLayout'
+import { showPanel } from "./panelLayout";
 
 const LoneMessage = lazy(() =>
   import("./ChatPanel").then((module) => ({ default: module.LoneMessage })),
@@ -32,97 +32,104 @@ const LoneMessage = lazy(() =>
  */
 
 /** How long a popup stays, once the pointer isn't on the stack. */
-const STAY_MS = 6000
-const ENTER_MS = 280
-const LEAVE_MS = 220
-const EASE = 'cubic-bezier(0.2, 0.7, 0.2, 1)'
+const STAY_MS = 6000;
+const ENTER_MS = 280;
+const LEAVE_MS = 220;
+const EASE = "cubic-bezier(0.2, 0.7, 0.2, 1)";
 /** Between the tab and the bubble, room for the bubble's tail. */
-const GAP = 16
+const GAP = 16;
 /** The closest the bubble comes to the window's top and bottom edges. */
-const MARGIN = 8
+const MARGIN = 8;
 
-const chatTab = () => document.querySelector('.rail-tab[data-panel="chat"]')
+const chatTab = () => document.querySelector('.rail-tab[data-panel="chat"]');
 
 /** The Chat tab's box, if it's on screen. */
 function tabRect() {
-  const r = chatTab()?.getBoundingClientRect()
-  return r && r.width > 0 && r.right > 0 && r.left < innerWidth && r.bottom > 0 && r.top < innerHeight ? r : null
+  const r = chatTab()?.getBoundingClientRect();
+  return r &&
+    r.width > 0 &&
+    r.right > 0 &&
+    r.left < innerWidth &&
+    r.bottom > 0 &&
+    r.top < innerHeight
+    ? r
+    : null;
 }
 
 /** A popup squeezed into the Chat tab, or a little below itself when the tab isn't showing. */
-const collapsed = (box: DOMRect): Keyframe => collapsedInto(box, tabRect())
+const collapsed = (box: DOMRect): Keyframe => collapsedInto(box, tabRect());
 
 export function ChatPopups({ campaign }: { campaign: Campaign }) {
-  const messages = campaign.chat.messages.value
+  const messages = campaign.chat.messages.value;
   // Looked up live, so a deleted message takes its popup with it.
-  const shown = chatPopups.value.map((id) => messages.find((m) => m.id === id)).filter((m) => !!m)
-  const held = useSignal(false)
-  const hidden = useSignal(document.visibilityState === 'hidden')
+  const shown = chatPopups.value.map((id) => messages.find((m) => m.id === id)).filter((m) => !!m);
+  const held = useSignal(false);
+  const hidden = useSignal(document.visibilityState === "hidden");
   useEffect(() => {
-    const onVisibility = () => (hidden.value = document.visibilityState === 'hidden')
-    document.addEventListener('visibilitychange', onVisibility)
-    return () => document.removeEventListener('visibilitychange', onVisibility)
-  }, [hidden])
-  const leavingAll = useSignal(false)
-  const ref = useRef<HTMLDivElement>(null)
-  const stack = useRef<HTMLDivElement>(null)
-  const any = shown.length > 0
+    const onVisibility = () => (hidden.value = document.visibilityState === "hidden");
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [hidden]);
+  const leavingAll = useSignal(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const stack = useRef<HTMLDivElement>(null);
+  const any = shown.length > 0;
 
   // Beside the Chat tab, or in the corner without it.
-  const placed = useRef('')
+  const placed = useRef("");
   const place = useCallback(() => {
-    const el = ref.current
-    const box = stack.current
-    if (!el || !box) return
-    const tab = tabRect()
-    const h = box.offsetHeight
-    let next: Record<string, string>
-    if (!tab) next = { anchor: 'corner', left: '', right: '', top: '', tail: '' }
+    const el = ref.current;
+    const box = stack.current;
+    if (!el || !box) return;
+    const tab = tabRect();
+    const h = box.offsetHeight;
+    let next: Record<string, string>;
+    if (!tab) next = { anchor: "corner", left: "", right: "", top: "", tail: "" };
     else {
-      const right = tab.left + tab.width / 2 > innerWidth / 2
-      const mid = tab.top + tab.height / 2
-      const top = Math.round(Math.min(Math.max(mid - h / 2, MARGIN), innerHeight - h - MARGIN))
+      const right = tab.left + tab.width / 2 > innerWidth / 2;
+      const mid = tab.top + tab.height / 2;
+      const top = Math.round(Math.min(Math.max(mid - h / 2, MARGIN), innerHeight - h - MARGIN));
       next = {
-        anchor: right ? 'right' : 'left',
-        left: right ? '' : `${Math.round(tab.right + GAP)}px`,
-        right: right ? `${Math.round(innerWidth - tab.left + GAP)}px` : '',
+        anchor: right ? "right" : "left",
+        left: right ? "" : `${Math.round(tab.right + GAP)}px`,
+        right: right ? `${Math.round(innerWidth - tab.left + GAP)}px` : "",
         top: `${top}px`,
         tail: `${Math.round(mid - top)}px`,
-      }
+      };
     }
-    const key = Object.values(next).join()
-    if (key === placed.current) return
-    placed.current = key
-    el.dataset.anchor = next.anchor
-    el.style.left = next.left!
-    el.style.right = next.right!
-    el.style.top = next.top!
-    el.style.setProperty('--tail-y', next.tail!)
-  }, [])
+    const key = Object.values(next).join();
+    if (key === placed.current) return;
+    placed.current = key;
+    el.dataset.anchor = next.anchor;
+    el.style.left = next.left!;
+    el.style.right = next.right!;
+    el.style.top = next.top!;
+    el.style.setProperty("--tail-y", next.tail!);
+  }, []);
 
   // Follow the tab while anything is showing: it slides with its sidebar and with autohide.
   useLayoutEffect(() => {
     if (!any) {
-      placed.current = ''
-      return
+      placed.current = "";
+      return;
     }
-    let frame = 0
+    let frame = 0;
     const follow = () => {
-      place()
-      frame = requestAnimationFrame(follow)
-    }
-    follow()
-    return () => cancelAnimationFrame(frame)
-  }, [any, place])
+      place();
+      frame = requestAnimationFrame(follow);
+    };
+    follow();
+    return () => cancelAnimationFrame(frame);
+  }, [any, place]);
 
   useEffect(() => {
     if (!any) {
-      held.value = false
-      leavingAll.value = false
+      held.value = false;
+      leavingAll.value = false;
     }
-  }, [any, held, leavingAll])
+  }, [any, held, leavingAll]);
 
-  if (!any) return null
+  if (!any) return null;
   return (
     <div
       ref={ref}
@@ -150,7 +157,7 @@ export function ChatPopups({ campaign }: { campaign: Campaign }) {
       </div>
       <span className="chat-popup-tail" aria-hidden="true" />
     </div>
-  )
+  );
 }
 
 function Popup({
@@ -163,65 +170,74 @@ function Popup({
   place,
   onDismissAll,
 }: {
-  campaign: Campaign
-  m: ChatMessage
+  campaign: Campaign;
+  m: ChatMessage;
   /** 0 for the one in front, counting back. */
-  depth: number
-  held: boolean
+  depth: number;
+  held: boolean;
   /** The whole stack is going away. */
-  leaving: boolean
+  leaving: boolean;
   /** Every popup shares the stack's box; the ones behind are only shifted by their depth. */
-  stack: { current: HTMLDivElement | null }
+  stack: { current: HTMLDivElement | null };
   /** Puts the stack beside the tab; it must be there before a popup measures where to grow from. */
-  place: () => void
-  onDismissAll: () => void
+  place: () => void;
+  onDismissAll: () => void;
 }) {
-  const ref = useRef<HTMLDivElement>(null)
-  const gone = useRef(false)
+  const ref = useRef<HTMLDivElement>(null);
+  const gone = useRef(false);
 
   const leave = useEffectEvent(() => {
-    const el = ref.current
-    const box = stack.current?.getBoundingClientRect()
-    if (gone.current) return
-    gone.current = true
-    if (!el || !box || reducedMotion.matches) return dismissPopup(m.id)
+    const el = ref.current;
+    const box = stack.current?.getBoundingClientRect();
+    if (gone.current) return;
+    gone.current = true;
+    if (!el || !box || reducedMotion.matches) return dismissPopup(m.id);
     // Start from wherever it is now: at rest, part-way in, or set back in the stack.
-    const from = getComputedStyle(el).transform
-    el.getAnimations().forEach((a) => a.cancel())
-    el.animate([{ transform: from, opacity: 1 }, { opacity: 1, offset: 0.6 }, collapsed(box)], { duration: LEAVE_MS, easing: 'ease-in', fill: 'forwards' }).finished.then(
+    const from = getComputedStyle(el).transform;
+    el.getAnimations().forEach((a) => a.cancel());
+    el.animate([{ transform: from, opacity: 1 }, { opacity: 1, offset: 0.6 }, collapsed(box)], {
+      duration: LEAVE_MS,
+      easing: "ease-in",
+      fill: "forwards",
+    }).finished.then(
       () => dismissPopup(m.id),
       () => {},
-    )
-  })
+    );
+  });
 
   useLayoutEffect(() => {
     // This runs before the stack's own layout effect places it, so place it now.
-    place()
-    const el = ref.current
-    const box = stack.current?.getBoundingClientRect()
+    place();
+    const el = ref.current;
+    const box = stack.current?.getBoundingClientRect();
     if (el && box && !reducedMotion.matches) {
-      el.animate([collapsed(box), { opacity: 1, offset: 0.4 }, { transform: 'none', opacity: 1 }], { duration: ENTER_MS, easing: EASE })
+      el.animate([collapsed(box), { opacity: 1, offset: 0.4 }, { transform: "none", opacity: 1 }], {
+        duration: ENTER_MS,
+        easing: EASE,
+      });
     }
-  }, [place, stack])
+  }, [place, stack]);
 
   // Each waits its own time, all of them paused while the pointer is on the stack.
   useEffect(() => {
-    if (held || leaving) return
-    const timer = setTimeout(leave, STAY_MS)
-    return () => clearTimeout(timer)
-  }, [held, leaving])
+    if (held || leaving) return;
+    const timer = setTimeout(leave, STAY_MS);
+    return () => clearTimeout(timer);
+  }, [held, leaving]);
 
   useEffect(() => {
-    if (leaving) leave()
-  }, [leaving])
+    if (leaving) leave();
+  }, [leaving]);
 
   const open = (e: React.MouseEvent<HTMLDivElement>) => {
-    if ((e.target as Element).closest('button, a')) return
-    showPanel('chat')
-  }
+    if ((e.target as Element).closest("button, a")) return;
+    showPanel("chat");
+  };
 
-  const front = depth === 0
+  const front = depth === 0;
   return (
+    // Clicking the popup is a mouse shortcut; the chat panel is reachable by keyboard.
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
     <div
       ref={ref}
       className="chat-popup panel"

@@ -1,16 +1,16 @@
-const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)')
+const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 
-let running = 0
+let running = 0;
 
 /**
  * Whether a view transition is under way. Starting one moves hit testing to
  * the root, which fires pointerout/over without the pointer moving; hover
  * effects should ignore those.
  */
-export const inTransition = () => running > 0
+export const inTransition = () => running > 0;
 
 /** Let React flush the renders queued by a state change. */
-const nextRender = () => new Promise<void>((resolve) => setTimeout(resolve, 0))
+const nextRender = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
 /**
  * Apply a UI state change as a view transition. Elements with a
@@ -24,43 +24,44 @@ export async function withTransition(
   update: () => void | Promise<void>,
   { rootClass, scope }: { rootClass?: string | string[]; scope?: HTMLElement } = {},
 ): Promise<void> {
-  const scoped = scope as (HTMLElement & { startViewTransition?: typeof document.startViewTransition }) | undefined
+  const scoped = scope as
+    (HTMLElement & { startViewTransition?: typeof document.startViewTransition }) | undefined;
   const startViewTransition = scope
     ? scoped?.startViewTransition?.bind(scope)
-    : document.startViewTransition?.bind(document)
+    : document.startViewTransition?.bind(document);
   if (!startViewTransition || reducedMotion.matches) {
-    await update()
-    await nextRender()
-    return
+    await update();
+    await nextRender();
+    return;
   }
   // A class on <html> for the transition's lifetime lets CSS name extra
   // elements just for this kind of transition.
-  const root = document.documentElement
-  const classes = rootClass ? [rootClass].flat() : []
-  root.classList.add(...classes)
-  running++
+  const root = document.documentElement;
+  const classes = rootClass ? [rootClass].flat() : [];
+  root.classList.add(...classes);
+  running++;
   try {
     const t = startViewTransition(async () => {
-      await update()
-      await nextRender()
-    })
+      await update();
+      await nextRender();
+    });
     // A newer transition skips this one; that's expected, not an error.
-    await t.finished.catch(() => {})
+    await t.finished.catch(() => {});
   } finally {
-    running--
-    root.classList.remove(...classes)
+    running--;
+    root.classList.remove(...classes);
   }
 }
 
 /** Resolve once `check` passes, or after `timeout` ms, whichever is first. */
 export function until(check: () => boolean, timeout = 1500): Promise<void> {
-  const start = performance.now()
+  const start = performance.now();
   return new Promise((resolve) => {
     const poll = () => {
       // Timers, not rAF: rendering is paused while a transition's update runs.
-      if (check() || performance.now() - start > timeout) resolve()
-      else setTimeout(poll, 16)
-    }
-    poll()
-  })
+      if (check() || performance.now() - start > timeout) resolve();
+      else setTimeout(poll, 16);
+    };
+    poll();
+  });
 }

@@ -1,7 +1,4 @@
-import type {
-  PointerEvent as ReactPointerEvent,
-  MouseEvent as ReactMouseEvent,
-} from "react";
+import type { PointerEvent as ReactPointerEvent, MouseEvent as ReactMouseEvent } from "react";
 import type { ComponentType } from "react";
 import { useEffect, useMemo } from "react";
 import { signal, useSignal } from "@preact/signals-react";
@@ -42,12 +39,7 @@ import {
 } from "../ui/icons";
 import { isTyping } from "../ui/keys";
 import { dialogRequest } from "./canvasState";
-import {
-  layout,
-  PANEL_ORDER,
-  setPanelClosed,
-  unavailablePanels,
-} from "./panelLayout";
+import { layout, PANEL_ORDER, setPanelClosed, unavailablePanels } from "./panelLayout";
 import { PANELS } from "./panels";
 import { ContextMenu, type MenuItem } from "./ContextMenu";
 
@@ -78,9 +70,7 @@ const toolOrder = signal<ToolId[]>(getStorageJson<ToolId[]>(ORDER_KEY, []));
 /** Tools in the player's order; any not mentioned keep their default place after the others. */
 function inOrder(tools: typeof TOOLS, order: ToolId[]) {
   const rank = (id: ToolId) =>
-    order.includes(id)
-      ? order.indexOf(id)
-      : order.length + TOOLS.findIndex((t) => t.id === id);
+    order.includes(id) ? order.indexOf(id) : order.length + TOOLS.findIndex((t) => t.id === id);
   return [...tools].sort((a, b) => rank(a.id) - rank(b.id));
 }
 
@@ -96,9 +86,7 @@ export function Toolbar({ isGm }: { isGm: boolean }) {
   );
 
   function dragTool(id: ToolId, e: ReactPointerEvent) {
-    const bar = (e.currentTarget as HTMLElement).closest<HTMLElement>(
-      ".toolbar",
-    )!;
+    const bar = (e.currentTarget as HTMLElement).closest<HTMLElement>(".toolbar")!;
     startReorder({
       event: e,
       axis: "x",
@@ -134,10 +122,7 @@ export function Toolbar({ isGm }: { isGm: boolean }) {
 
   return (
     <>
-      <nav
-        className="dock-strip toolbar strip across dock-top"
-        aria-label="Canvas tools"
-      >
+      <nav className="dock-strip toolbar strip across dock-top" aria-label="Canvas tools">
         <CampaignMenu />
         {tools.map(({ id, label, key, Icon }) => (
           <Button
@@ -190,14 +175,12 @@ function CampaignMenu() {
     },
     "divider",
     // Which panels the table has: ticked ones are in a sidebar or a window.
-    ...PANEL_ORDER.filter((id) => !unavailablePanels.value.includes(id)).map(
-      (id): MenuItem => ({
-        label: PANELS[id].label,
-        Icon: PANELS[id].Icon,
-        checked: !layout.value.closed.includes(id),
-        onSelect: () => setPanelClosed(id, !layout.value.closed.includes(id)),
-      }),
-    ),
+    ...PANEL_ORDER.filter((id) => !unavailablePanels.value.includes(id)).map((id): MenuItem => ({
+      label: PANELS[id].label,
+      Icon: PANELS[id].Icon,
+      checked: !layout.value.closed.includes(id),
+      onSelect: () => setPanelClosed(id, !layout.value.closed.includes(id)),
+    })),
     "divider",
     {
       label: "Back to campaigns",
@@ -231,8 +214,7 @@ function CampaignMenu() {
         }}
         // From the keyboard: Enter or Space.
         onClick={(e: ReactMouseEvent) => {
-          if (e.detail === 0 && !menu.value)
-            openBelow(e.currentTarget as HTMLElement);
+          if (e.detail === 0 && !menu.value) openBelow(e.currentTarget as HTMLElement);
         }}
       >
         <IconMenu size={22} />
@@ -391,13 +373,9 @@ function ShapeGlyph({ shape, colour }: { shape: ShapeKind; colour: string }) {
   };
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
-      {shape === "rect" && (
-        <rect x="3" y="3" width="12" height="12" {...common} />
-      )}
+      {shape === "rect" && <rect x="3" y="3" width="12" height="12" {...common} />}
       {shape === "circle" && <circle cx="9" cy="9" r="6.5" {...common} />}
-      {shape === "line" && (
-        <rect x="1" y="7" width="16" height="4" {...common} />
-      )}
+      {shape === "line" && <rect x="1" y="7" width="16" height="4" {...common} />}
       {shape === "cone" && <polygon points="2,9 16,2 16,16" {...common} />}
     </svg>
   );

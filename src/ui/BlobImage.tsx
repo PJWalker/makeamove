@@ -41,9 +41,5 @@ export function BlobImage({
     };
   }, [hash, tries]);
 
-  return url ? (
-    <img className={cls} src={url} alt={alt} draggable={false} />
-  ) : (
-    <>{fallback}</>
-  );
+  return url ? <img className={cls} src={url} alt={alt} draggable={false} /> : <>{fallback}</>;
 }

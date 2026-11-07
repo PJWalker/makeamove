@@ -29,10 +29,7 @@ function tone(
     const waveform = sound === "press" ? "triangle" : "sine";
     oscillator.type = waveform;
     oscillator.frequency.setValueAtTime(startFrequency, startTime);
-    oscillator.frequency.exponentialRampToValueAtTime(
-      endFrequency,
-      startTime + duration,
-    );
+    oscillator.frequency.exponentialRampToValueAtTime(endFrequency, startTime + duration);
     gain.gain.setValueAtTime(0.0001, startTime);
     gain.gain.exponentialRampToValueAtTime(volume, startTime + 0.008);
     gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
@@ -62,8 +59,7 @@ export function playUiSound(sound: UiSound) {
     failure: [330, 175, 0.16, 0.02],
   };
   if (sound === "open" || sound === "close") {
-    if (lastTransition?.sound === sound && now - lastTransition.time < 0.08)
-      return;
+    if (lastTransition?.sound === sound && now - lastTransition.time < 0.08) return;
     lastTransition = { sound, time: now };
   }
   if (sound === "critical" || sound === "failure") {
@@ -91,11 +87,7 @@ export function playDiceImpact(strength: number) {
 
   const intensity = Math.min(1, Math.max(0, strength / 12));
   if (!noise) {
-    noise = current.createBuffer(
-      1,
-      Math.ceil(current.sampleRate * 0.05),
-      current.sampleRate,
-    );
+    noise = current.createBuffer(1, Math.ceil(current.sampleRate * 0.05), current.sampleRate);
     const samples = noise.getChannelData(0);
     for (let index = 0; index < samples.length; index++) {
       samples[index] = (Math.random() * 2 - 1) * (1 - index / samples.length);
@@ -110,10 +102,7 @@ export function playDiceImpact(strength: number) {
   const gain = current.createGain();
   gain.gain.setValueAtTime(0.0001, now);
   gain.gain.exponentialRampToValueAtTime(0.025 + intensity * 0.08, now + 0.002);
-  gain.gain.exponentialRampToValueAtTime(
-    0.0001,
-    now + 0.045 + intensity * 0.025,
-  );
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.045 + intensity * 0.025);
   source.connect(filter);
   filter.connect(gain);
   gain.connect(current.destination);
@@ -144,9 +133,7 @@ function openSurfaces() {
   return new Set<Element>([
     ...document.querySelectorAll("dialog[open], details[open]"),
     ...[...document.querySelectorAll<HTMLElement>("[popover]")].filter(
-      (el) =>
-        !el.matches('.tooltip, [role="tooltip"]') &&
-        el.matches(":popover-open"),
+      (el) => !el.matches('.tooltip, [role="tooltip"]') && el.matches(":popover-open"),
     ),
   ]);
 }
@@ -160,9 +147,7 @@ document.addEventListener(
     );
     if (
       !control ||
-      control.matches(
-        ":disabled, [aria-disabled='true'], [data-sound='off']",
-      ) ||
+      control.matches(":disabled, [aria-disabled='true'], [data-sound='off']") ||
       control.hasAttribute("aria-expanded") ||
       control.hasAttribute("aria-haspopup")
     )
@@ -170,11 +155,7 @@ document.addEventListener(
     const before = openSurfaces();
     window.setTimeout(() => {
       const after = openSurfaces();
-      if (
-        before.size !== after.size ||
-        [...before].some((surface) => !after.has(surface))
-      )
-        return;
+      if (before.size !== after.size || [...before].some((surface) => !after.has(surface))) return;
       playUiSound("press");
     }, 0);
   },

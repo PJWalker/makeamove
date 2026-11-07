@@ -1,5 +1,5 @@
 import type * as React from "react";
-import type { ReactNode } from 'react'
+import type { ReactNode } from "react";
 
 /*
  * The one list design, for every list of things in a panel: characters and
@@ -12,15 +12,17 @@ import type { ReactNode } from 'react'
  * count) with its rows indented beneath.
  */
 
-type LiProps = Omit<React.HTMLAttributes<HTMLLIElement>, 'children'> & Record<`data-${string}`, unknown>
-type ButtonProps = Omit<React.HTMLAttributes<HTMLButtonElement>, 'children' | 'type'> & Record<`data-${string}`, unknown>
+type LiProps = Omit<React.HTMLAttributes<HTMLLIElement>, "children"> &
+  Record<`data-${string}`, unknown>;
+type ButtonProps = Omit<React.HTMLAttributes<HTMLButtonElement>, "children" | "type"> &
+  Record<`data-${string}`, unknown>;
 
 export function List({ children, label }: { children: ReactNode; label?: string }) {
   return (
     <ul className="list" aria-label={label}>
       {children}
     </ul>
-  )
+  );
 }
 
 export function ListRow({
@@ -37,29 +39,40 @@ export function ListRow({
   children,
 }: {
   /** Before the row's button, such as a toggle to show what it holds. */
-  before?: ReactNode | undefined
+  before?: ReactNode | undefined;
   /** An icon or avatar before the name. */
-  lead?: ReactNode | undefined
-  name: string
+  lead?: ReactNode | undefined;
+  name: string;
   /** A short chip after the name, such as a stat or "NPC". */
-  tag?: string | null | undefined
+  tag?: string | null | undefined;
   /** Quieter detail after that, such as weight or uses. */
-  meta?: string | undefined
-  selected?: boolean | undefined
+  meta?: string | undefined;
+  selected?: boolean | undefined;
   /** Shown faded, such as gear that isn't equipped. */
-  dim?: boolean | undefined
-  onPick?: ((e: React.MouseEvent<HTMLButtonElement>) => void) | undefined
+  dim?: boolean | undefined;
+  onPick?: ((e: React.MouseEvent<HTMLButtonElement>) => void) | undefined;
   /** Extra attributes for the row (tooltips, drags onto it). */
-  row?: LiProps | undefined
+  row?: LiProps | undefined;
   /** Extra attributes for the name button (menus, drags from it). */
-  pick?: ButtonProps | undefined
+  pick?: ButtonProps | undefined;
   /** Buttons after the name. */
-  children?: ReactNode | undefined
+  children?: ReactNode | undefined;
 }) {
   return (
-    <li className="list-row" data-selected={selected || undefined} data-dim={dim || undefined} {...row}>
+    <li
+      className="list-row"
+      data-selected={selected || undefined}
+      data-dim={dim || undefined}
+      {...row}
+    >
       {before}
-      <button type="button" className="list-pick" aria-current={selected || undefined} onClick={onPick} {...pick}>
+      <button
+        type="button"
+        className="list-pick"
+        aria-current={selected || undefined}
+        onClick={onPick}
+        {...pick}
+      >
         {lead && <span className="list-lead">{lead}</span>}
         <span className="list-name">{name}</span>
         {tag && <span className="list-tag">{tag}</span>}
@@ -67,7 +80,7 @@ export function ListRow({
       </button>
       {children}
     </li>
-  )
+  );
 }
 
 export function ListGroup({
@@ -81,25 +94,31 @@ export function ListGroup({
   group,
   children,
 }: {
-  label: string
+  label: string;
   /** An icon before the label, such as a folder. */
-  lead?: ReactNode
-  count?: number
-  open: boolean
-  onToggle: () => void
+  lead?: ReactNode;
+  count?: number;
+  open: boolean;
+  onToggle: () => void;
   /** Extra attributes for the heading (menus). */
-  head?: ButtonProps
+  head?: ButtonProps;
   /** Shown instead of the heading, such as a field to rename the group. */
-  replaceHead?: ReactNode
+  replaceHead?: ReactNode;
   /** Extra attributes for the group (drops into it). */
-  group?: Omit<React.HTMLAttributes<HTMLElement>, 'children'> & Record<`data-${string}`, unknown>
+  group?: Omit<React.HTMLAttributes<HTMLElement>, "children"> & Record<`data-${string}`, unknown>;
   /** The rows, shown while open. */
-  children?: ReactNode
+  children?: ReactNode;
 }) {
   return (
     <section className="list-group" data-open={open} {...group}>
       {replaceHead ?? (
-        <button type="button" className="list-group-head" aria-expanded={open} onClick={onToggle} {...head}>
+        <button
+          type="button"
+          className="list-group-head"
+          aria-expanded={open}
+          onClick={onToggle}
+          {...head}
+        >
           <span className="list-caret" aria-hidden="true" />
           {lead && <span className="list-lead">{lead}</span>}
           <span className="list-name">{label}</span>
@@ -108,19 +127,33 @@ export function ListGroup({
       )}
       {open && children}
     </section>
-  )
+  );
 }
 
 /** A row's toggle to show or hide what it holds; a spacer in its place keeps names aligned. */
-export function ListExpand({ open, onToggle, label }: { open: boolean; onToggle: () => void; label: string }) {
+export function ListExpand({
+  open,
+  onToggle,
+  label,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  label: string;
+}) {
   return (
-    <button type="button" className="list-expand" aria-expanded={open} aria-label={label} onClick={onToggle}>
+    <button
+      type="button"
+      className="list-expand"
+      aria-expanded={open}
+      aria-label={label}
+      onClick={onToggle}
+    >
       <span className="list-caret" aria-hidden="true" />
     </button>
-  )
+  );
 }
 
 /** A short chip, as rows show after a name; for the same look elsewhere. */
 export function Tag({ children }: { children: ReactNode }) {
-  return <span className="list-tag">{children}</span>
+  return <span className="list-tag">{children}</span>;
 }

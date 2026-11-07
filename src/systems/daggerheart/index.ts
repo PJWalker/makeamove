@@ -1,12 +1,5 @@
 import { resolveEffects } from "../effects";
-import type {
-  ActionDef,
-  CheckStep,
-  Derived,
-  GameSystem,
-  ItemDef,
-  OptionDef,
-} from "../types";
+import type { ActionDef, CheckStep, Derived, GameSystem, ItemDef, OptionDef } from "../types";
 import type { CharacterView } from "../../features/characters/types";
 import { parseCommaList } from "../../lib/list";
 
@@ -47,9 +40,7 @@ const OUTCOMES = {
 };
 
 const idOf = (prefix: string, value: string) => `${prefix}-${slug(value)}`;
-const traitsByName = new Map(
-  TRAITS.map((trait) => [trait.name.toLowerCase(), trait.id]),
-);
+const traitsByName = new Map(TRAITS.map((trait) => [trait.name.toLowerCase(), trait.id]));
 const EXPERIENCE_BONUSES = Array.from({ length: 5 }, (_, index) => ({
   id: `experience-${index + 1}`,
   label: "Experience",
@@ -84,8 +75,7 @@ function rollStep(
   options: { target?: boolean; prompt?: string } = {},
 ): CheckStep | undefined {
   const spellcast = /spellcast roll/i.test(text);
-  const traitMatch =
-    /\b(Agility|Strength|Finesse|Instinct|Presence|Knowledge) Roll/i.exec(text);
+  const traitMatch = /\b(Agility|Strength|Finesse|Instinct|Presence|Knowledge) Roll/i.exec(text);
   if (!spellcast && !traitMatch) return undefined;
   const traitName = traitMatch?.[1];
   if (!spellcast && !traitName) return undefined;
@@ -93,9 +83,7 @@ function rollStep(
     /(?:Spellcast|Trait|Agility|Strength|Finesse|Instinct|Presence|Knowledge) Roll\s*\((\d+)\)/i.exec(
       text,
     )?.[1];
-  const stat = !spellcast && traitName
-    ? traitsByName.get(traitName.toLowerCase())
-    : undefined;
+  const stat = !spellcast && traitName ? traitsByName.get(traitName.toLowerCase()) : undefined;
   const difficulty = options.target
     ? { kind: "target" as const, value: "difficulty" }
     : fixedDifficulty
@@ -148,11 +136,8 @@ function action(
               costs: [],
               values: { spellcast: derived.values.spellcast ?? 0 },
             };
-            const multiclassTrait = String(
-              character.data.multiclassSpellcastTrait ?? "",
-            );
-            return multiclassTrait &&
-              multiclassTrait !== character.data.spellcastTrait
+            const multiclassTrait = String(character.data.multiclassSpellcastTrait ?? "");
+            return multiclassTrait && multiclassTrait !== character.data.spellcastTrait
               ? [
                   primary,
                   {
@@ -194,12 +179,8 @@ const classActions: ActionDef[] = CLASSES.flatMap((entry) => [
 
 const subclassActions = SUBCLASSES.flatMap((entry) =>
   entry.features.map((feature) => {
-    const isTargeted = /against (?:a|the) target|against all targets/i.test(
-      feature.text,
-    );
-    const target = isTargeted
-      ? { prompt: "Target the creature or adversary", min: 1 }
-      : undefined;
+    const isTargeted = /against (?:a|the) target|against all targets/i.test(feature.text);
+    const target = isTargeted ? { prompt: "Target the creature or adversary", min: 1 } : undefined;
     return {
       action: action(
         idOf("subclass", `${entry.id}-${feature.name}`),
@@ -212,12 +193,7 @@ const subclassActions = SUBCLASSES.flatMap((entry) =>
       ),
       classId: entry.classId,
       subclassId: entry.id,
-      level:
-        feature.tier === "Mastery"
-          ? 8
-          : feature.tier === "Specialization"
-            ? 5
-            : 1,
+      level: feature.tier === "Mastery" ? 8 : feature.tier === "Specialization" ? 5 : 1,
     };
   }),
 );
@@ -248,13 +224,10 @@ const communityActions = COMMUNITIES.map((entry) => ({
 }));
 
 const domainActions = DOMAIN_CARDS.map((card) => {
-  const targeted =
-    /against (?:a|the) target|against all targets|against each target/i.test(
-      card.text,
-    );
-  const target = targeted
-    ? { prompt: "Target the creature or adversary", min: 1 }
-    : undefined;
+  const targeted = /against (?:a|the) target|against all targets|against each target/i.test(
+    card.text,
+  );
+  const target = targeted ? { prompt: "Target the creature or adversary", min: 1 } : undefined;
   const step = rollStep(card.text, {
     target: targeted,
     prompt: "Difficulty Class",
@@ -299,11 +272,9 @@ const weaponItems: ItemDef[] = WEAPONS.map((weapon) => ({
     .filter(Boolean)
     .join(" · "),
   weight: 0,
-  tags: [
-    weapon.kind.toLowerCase(),
-    weapon.range.toLowerCase(),
-    weapon.burden.toLowerCase(),
-  ].filter(Boolean),
+  tags: [weapon.kind.toLowerCase(), weapon.range.toLowerCase(), weapon.burden.toLowerCase()].filter(
+    Boolean,
+  ),
   equippable: true,
   active: "equipped",
 }));
@@ -380,16 +351,14 @@ const CONDITIONS = [
   },
 ];
 
-const DOMAIN_OPTIONS = DOMAIN_CARDS.map(
-  (card): OptionDef => ({
-    id: card.id,
-    name: card.name,
-    text: `Level ${card.level} ${card.type} · Recall ${card.recall}. ${card.text}`,
-    requiresAny: [{ domain1: card.domain }, { domain2: card.domain }],
-    notIncludes: [{ field: "domainCards", value: card.id }],
-    grants: { activeDomainCards: card.id },
-  }),
-);
+const DOMAIN_OPTIONS = DOMAIN_CARDS.map((card): OptionDef => ({
+  id: card.id,
+  name: card.name,
+  text: `Level ${card.level} ${card.type} · Recall ${card.recall}. ${card.text}`,
+  requiresAny: [{ domain1: card.domain }, { domain2: card.domain }],
+  notIncludes: [{ field: "domainCards", value: card.id }],
+  grants: { activeDomainCards: card.id },
+}));
 
 const domainOptionsAt = (level: number) =>
   DOMAIN_CARDS.filter((card) => card.level <= level).map((card) => {
@@ -398,9 +367,7 @@ const domainOptionsAt = (level: number) =>
       ...option,
       requiresAny: [
         ...option.requiresAny!,
-        ...(card.level <= Math.ceil(level / 2)
-          ? [{ multiclassDomain: card.domain }]
-          : []),
+        ...(card.level <= Math.ceil(level / 2) ? [{ multiclassDomain: card.domain }] : []),
       ],
     };
   });
@@ -490,9 +457,7 @@ function advancementOptionsAt(level: number): OptionDef[] {
   if (level >= 5)
     for (const cls of CLASSES)
       for (const domain of cls.domains)
-        for (const subclass of SUBCLASSES.filter(
-          (entry) => entry.classId === cls.id,
-        ))
+        for (const subclass of SUBCLASSES.filter((entry) => entry.classId === cls.id))
           options.push({
             id: `multiclass-${cls.id}-${slug(domain)}-${subclass.id}`,
             name: `Multiclass: ${cls.name} · ${domain} · ${subclass.name}`,
@@ -520,9 +485,7 @@ const SUBCLASS_OPTIONS: OptionDef[] = SUBCLASSES.map((entry) => ({
   name: entry.name,
   text: entry.description,
   requires: { classId: entry.classId },
-  ...(entry.spellcastTrait
-    ? { grants: { spellcastTrait: slug(entry.spellcastTrait) } }
-    : {}),
+  ...(entry.spellcastTrait ? { grants: { spellcastTrait: slug(entry.spellcastTrait) } } : {}),
 }));
 
 export const daggerheart: GameSystem = {
@@ -549,12 +512,8 @@ export const daggerheart: GameSystem = {
   ],
   results: RESULTS,
   result(total, _natural, roll, context) {
-    const hope = roll?.terms.find(
-      (term) => term.kind === "dice" && term.label === "Hope",
-    );
-    const fear = roll?.terms.find(
-      (term) => term.kind === "dice" && term.label === "Fear",
-    );
+    const hope = roll?.terms.find((term) => term.kind === "dice" && term.label === "Hope");
+    const fear = roll?.terms.find((term) => term.kind === "dice" && term.label === "Fear");
     if (hope?.kind !== "dice" || fear?.kind !== "dice") return "failure-fear";
     const hopeFace = hope.dice[0]?.value ?? 0;
     const fearFace = fear.dice[0]?.value ?? 0;
@@ -569,12 +528,8 @@ export const daggerheart: GameSystem = {
         : "failure-fear";
   },
   hits(total, _natural, difficulty, roll) {
-    const hope = roll?.terms.find(
-      (term) => term.kind === "dice" && term.label === "Hope",
-    );
-    const fear = roll?.terms.find(
-      (term) => term.kind === "dice" && term.label === "Fear",
-    );
+    const hope = roll?.terms.find((term) => term.kind === "dice" && term.label === "Hope");
+    const fear = roll?.terms.find((term) => term.kind === "dice" && term.label === "Fear");
     return (
       !!(
         hope?.kind === "dice" &&
@@ -597,9 +552,7 @@ export const daggerheart: GameSystem = {
           ? 2
           : 1;
     const useArmor =
-      options.armor &&
-      character.kind === "pc" &&
-      (character.resources.armor ?? 0) > 0;
+      options.armor && character.kind === "pc" && (character.resources.armor ?? 0) > 0;
     return {
       hp: severity - (useArmor ? 1 : 0),
       ...(useArmor ? { resources: [{ id: "armor", by: -1 }] } : {}),
@@ -657,10 +610,7 @@ export const daggerheart: GameSystem = {
       max: 5,
       options: DOMAIN_OPTIONS,
       costs: Object.fromEntries(
-        DOMAIN_CARDS.map((card) => [
-          card.id,
-          { resource: "stress", by: card.recall },
-        ]),
+        DOMAIN_CARDS.map((card) => [card.id, { resource: "stress", by: card.recall }]),
       ),
       freeSwapLabel: "Rest or level-up",
     },
@@ -729,7 +679,7 @@ export const daggerheart: GameSystem = {
     { id: "armor", name: "Armor Slots", max: "armorScore" },
   ],
   characterData: [
-    { id: "classId", default: (CLASSES)[0]!.id, for: "pc" },
+    { id: "classId", default: CLASSES[0]!.id, for: "pc" },
     { id: "subclassId", default: "", for: "pc" },
     { id: "ancestry", default: "", for: "pc" },
     { id: "community", default: "", for: "pc" },
@@ -789,20 +739,12 @@ export const daggerheart: GameSystem = {
     { id: "features", label: "Features", type: "longtext" },
   ],
   derive(character, sources) {
-    const classData =
-      CLASSES.find((entry) => entry.id === character.data.classId) ??
-      (CLASSES)[0]!;
-    const subclass = SUBCLASSES.find(
-      (entry) => entry.id === character.data.subclassId,
-    );
+    const classData = CLASSES.find((entry) => entry.id === character.data.classId) ?? CLASSES[0]!;
+    const subclass = SUBCLASSES.find((entry) => entry.id === character.data.subclassId);
     const level = Math.max(1, Number(character.data.level ?? 1));
-    const advancements = parseCommaList(
-      String(character.data.advancements ?? ""),
-    ).filter(Boolean);
-    const countAdvancement = (id: string) =>
-      advancements.filter((entry) => entry === id).length;
-    const proficiency =
-      1 + (level >= 2 ? 1 : 0) + (level >= 5 ? 1 : 0) + (level >= 8 ? 1 : 0);
+    const advancements = parseCommaList(String(character.data.advancements ?? "")).filter(Boolean);
+    const countAdvancement = (id: string) => advancements.filter((entry) => entry === id).length;
+    const proficiency = 1 + (level >= 2 ? 1 : 0) + (level >= 5 ? 1 : 0) + (level >= 8 ? 1 : 0);
     const mods = Object.fromEntries(
       TRAITS.map(({ id }) => [
         id,
@@ -810,9 +752,7 @@ export const daggerheart: GameSystem = {
       ]),
     );
     const spellcastTrait = traitsByName.get(
-      String(
-        character.data.spellcastTrait || subclass?.spellcastTrait || "",
-      ).toLowerCase(),
+      String(character.data.spellcastTrait || subclass?.spellcastTrait || "").toLowerCase(),
     );
     const resolved = resolveEffects(
       {
@@ -822,31 +762,21 @@ export const daggerheart: GameSystem = {
         maxHp:
           character.kind === "npc"
             ? Number(character.fields.hp ?? character.data.maxHp ?? 6)
-            : classData.hp +
-              Number(character.data.hpBonus ?? 0) +
-              countAdvancement("hp-slot"),
+            : classData.hp + Number(character.data.hpBonus ?? 0) + countAdvancement("hp-slot"),
         maxStress:
           character.kind === "npc"
             ? Number(character.fields.stress ?? character.data.maxStress ?? 0)
-            : 6 +
-              Number(character.data.stressBonus ?? 0) +
-              countAdvancement("stress-slot"),
+            : 6 + Number(character.data.stressBonus ?? 0) + countAdvancement("stress-slot"),
         maxHope: 6 + Number(character.data.hopeBonus ?? 0),
         evasion:
           character.kind === "npc"
-            ? Number(
-                character.fields.evasion ?? character.fields.difficulty ?? 10,
-              )
+            ? Number(character.fields.evasion ?? character.fields.difficulty ?? 10)
             : classData.evasion,
         proficiency: proficiency + countAdvancement("proficiency"),
         spellcast: spellcastTrait ? (mods[spellcastTrait] ?? 0) : 0,
         evasionBonus: countAdvancement("evasion"),
         thresholdBonus: countAdvancement("thresholds"),
-        experienceSlots:
-          2 +
-          (level >= 2 ? 1 : 0) +
-          (level >= 5 ? 1 : 0) +
-          (level >= 8 ? 1 : 0),
+        experienceSlots: 2 + (level >= 2 ? 1 : 0) + (level >= 5 ? 1 : 0) + (level >= 8 ? 1 : 0),
       },
       sources,
     );
@@ -869,15 +799,11 @@ export const daggerheart: GameSystem = {
               (resolved.values.thresholdBonus ?? 0),
         difficulty:
           character.kind === "npc"
-            ? Number(
-                character.fields.difficulty ?? character.data.difficulty ?? 10,
-              )
+            ? Number(character.fields.difficulty ?? character.data.difficulty ?? 10)
             : (resolved.values.evasion ?? 0) + (resolved.values.evasionBonus ?? 0),
         evasion:
           character.kind === "npc"
-            ? Number(
-                character.fields.evasion ?? character.fields.difficulty ?? 10,
-              )
+            ? Number(character.fields.evasion ?? character.fields.difficulty ?? 10)
             : (resolved.values.evasion ?? 0) + (resolved.values.evasionBonus ?? 0),
         experienceSlots: resolved.values.experienceSlots ?? 0,
         milestoneNeeded: level < 10 ? 1 : 2,
@@ -896,8 +822,7 @@ export const daggerheart: GameSystem = {
     const ownSubclassActions = subclassActions
       .filter(
         (entry) =>
-          (entry.subclassId === character.data.multiclassSubclass &&
-            entry.level === 1) ||
+          (entry.subclassId === character.data.multiclassSubclass && entry.level === 1) ||
           (entry.classId === character.data.classId &&
             entry.subclassId === character.data.subclassId &&
             (entry.level === 1 ||
@@ -920,14 +845,9 @@ export const daggerheart: GameSystem = {
       .filter((entry) => selectedCards.has(entry.cardId))
       .map((entry) => entry.action);
     const weapons = WEAPONS.filter((weapon) =>
-      character.inventory.some(
-        (item) => item.defId === `weapon-${weapon.id}` && item.equipped,
-      ),
+      character.inventory.some((item) => item.defId === `weapon-${weapon.id}` && item.equipped),
     )
-      .map(
-        (weapon) =>
-          weaponActions.find((entry) => entry.id === `attack-${weapon.id}`)!,
-      )
+      .map((weapon) => weaponActions.find((entry) => entry.id === `attack-${weapon.id}`)!)
       .filter(Boolean);
     return [
       ...ownClassActions,
@@ -936,11 +856,8 @@ export const daggerheart: GameSystem = {
       ...ownCommunity,
       ...ownCards,
       ...weapons,
-      ...TRAITS.map(
-        (trait) =>
-          daggerheart.actions.find(
-            (entry) => entry.id === `trait-${trait.id}`,
-          )!,
+      ...TRAITS.map((trait) =>
+        daggerheart.actions.find((entry) => entry.id === `trait-${trait.id}`)!,
       ),
     ];
   },
@@ -1009,8 +926,7 @@ export const daggerheart: GameSystem = {
         field: "domainCards",
         at: "create" as const,
         options: DOMAIN_OPTIONS.filter(
-          (option) =>
-            DOMAIN_CARDS.find((card) => card.id === option.id)!.level === 1,
+          (option) => DOMAIN_CARDS.find((card) => card.id === option.id)!.level === 1,
         ),
       })),
       ...Array.from({ length: 9 }, (_, index) => {

@@ -15,8 +15,7 @@ vi.mock("../../features/characters/hotbar", () => ({
   insertAt: vi.fn(),
 }));
 vi.mock("../../features/notes/targets", () => ({
-  linkLabel: (_campaign: unknown, _kind: string, id: string) =>
-    id === "missing" ? null : id,
+  linkLabel: (_campaign: unknown, _kind: string, id: string) => (id === "missing" ? null : id),
 }));
 vi.mock("../entityGraphics", () => ({
   getEntityGraphic: () => ({ kind: "icon", name: "sword" }),
@@ -29,8 +28,7 @@ vi.mock("../canvasState", () => ({
 }));
 vi.mock("../../ui/Tooltip", () => ({ hideTooltip: vi.fn() }));
 
-const { dropOn, registerEntityDrop, registerLinkDrop, tokenEntity } =
-  await import("../entityDrag");
+const { dropOn, registerEntityDrop, registerLinkDrop, tokenEntity } = await import("../entityDrag");
 const campaign = {} as Campaign;
 const token = (patch: Partial<TokenElement> = {}): TokenElement => ({
   id: "token",
@@ -56,8 +54,7 @@ describe("dropOn", () => {
       dataset,
       isConnected: true,
       matches: () => canvas,
-      hasAttribute: (name: string) =>
-        name === "data-folder-drop" && "folderDrop" in dataset,
+      hasAttribute: (name: string) => name === "data-folder-drop" && "folderDrop" in dataset,
     }) as unknown as HTMLElement;
 
   afterEach(() => {
@@ -111,14 +108,9 @@ describe("dropOn", () => {
   it("propagates a rejected editor insertion", () => {
     const element = receiver();
     const unregister = registerLinkDrop(element, () => false);
-    expect(
-      dropOn(
-        { element },
-        { label: "Entity", link: { kind: "note", id: "note" } },
-        0,
-        0,
-      ),
-    ).toBe(false);
+    expect(dropOn({ element }, { label: "Entity", link: { kind: "note", id: "note" } }, 0, 0)).toBe(
+      false,
+    );
     expect(element.dataset.dropped).toBeUndefined();
     unregister();
   });
@@ -126,9 +118,7 @@ describe("dropOn", () => {
   it("propagates a rejected canvas drop", async () => {
     const { tokenDrop } = await import("../canvasState");
     tokenDrop.value = vi.fn(() => false);
-    expect(
-      dropOn({ element: receiver({}, true) }, { label: "Entity" }, 0, 0),
-    ).toBe(false);
+    expect(dropOn({ element: receiver({}, true) }, { label: "Entity" }, 0, 0)).toBe(false);
     tokenDrop.value = null;
   });
 
@@ -137,13 +127,9 @@ describe("dropOn", () => {
     const element = receiver({ itemDrop: "recipient" });
     const dragged = tokenEntity(campaign, token({ itemDefId: "item" }))!;
     vi.mocked(canEdit).mockReturnValueOnce(false);
-    expect(dropOn({ element, characterId: "recipient" }, dragged, 0, 0)).toBe(
-      false,
-    );
+    expect(dropOn({ element, characterId: "recipient" }, dragged, 0, 0)).toBe(false);
     element.dataset.itemDrop = "another";
-    expect(dropOn({ element, characterId: "recipient" }, dragged, 0, 0)).toBe(
-      false,
-    );
+    expect(dropOn({ element, characterId: "recipient" }, dragged, 0, 0)).toBe(false);
     expect(addItem).not.toHaveBeenCalled();
   });
 });
@@ -152,25 +138,17 @@ describe("tokenEntity", () => {
   it.each(["character", "item", "move", "note", "scene"] as const)(
     "resolves a linked %s token",
     (kind) => {
-      const dragged = tokenEntity(
-        campaign,
-        token({ entityRef: { kind, id: kind } }),
-      )!;
+      const dragged = tokenEntity(campaign, token({ entityRef: { kind, id: kind } }))!;
       expect(dragged.link).toEqual({ kind, id: kind });
       expect(dragged.label).toBe("Scene name");
       expect(!!dragged.pin).toBe(kind !== "note");
-      expect(dragged.give?.kind).toBe(
-        kind === "item" || kind === "move" ? kind : undefined,
-      );
+      expect(dragged.give?.kind).toBe(kind === "item" || kind === "move" ? kind : undefined);
     },
   );
 
   it("preserves item identity and token appearance", async () => {
     const graphic = { kind: "icon", name: "gem" } as const;
-    const dragged = tokenEntity(
-      campaign,
-      token({ itemDefId: "item", graphic }),
-    )!;
+    const dragged = tokenEntity(campaign, token({ itemDefId: "item", graphic }))!;
     expect(dragged.token).toMatchObject({
       name: "Scene name",
       itemDefId: "item",
@@ -202,12 +180,7 @@ describe("tokenEntity", () => {
 
   it("rejects unlinked, unknown and missing entities", () => {
     expect(tokenEntity(campaign, token())).toBeNull();
-    expect(
-      tokenEntity(
-        campaign,
-        token({ entityRef: { kind: "unknown", id: "item" } }),
-      ),
-    ).toBeNull();
+    expect(tokenEntity(campaign, token({ entityRef: { kind: "unknown", id: "item" } }))).toBeNull();
     expect(tokenEntity(campaign, token({ itemDefId: "missing" }))).toBeNull();
   });
 });

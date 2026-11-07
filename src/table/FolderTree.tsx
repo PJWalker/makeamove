@@ -42,9 +42,7 @@ export function FolderTree<Item, Folder extends FolderRecord>({
 }) {
   const folded = useSignal<Set<string>>(new Set());
   const naming = useSignal<string | null>(null);
-  const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(
-    null,
-  );
+  const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const known = new Set(folders.map((folder) => folder.id));
   const loose = items.filter((item) => {
     const folderId = folderOf(item);
@@ -118,9 +116,7 @@ export function FolderTree<Item, Folder extends FolderRecord>({
         <List>{loose.map(renderItem)}</List>
         {emptyContent}
       </div>
-      {menu.value && (
-        <ContextMenu {...menu.value} onClose={() => (menu.value = null)} />
-      )}
+      {menu.value && <ContextMenu {...menu.value} onClose={() => (menu.value = null)} />}
     </nav>
   );
 }

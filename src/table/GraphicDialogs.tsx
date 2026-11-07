@@ -48,9 +48,7 @@ function GraphicDialog({ request: edit }: { request: NonNullable<Request> }) {
     <Dialog dialogRef={ref} title={`Graphic for ${edit.title}`} onClose={close}>
       <GraphicPicker
         graphic={graphic}
-        onChange={(next) =>
-          setEntityGraphic(edit.campaign, edit.kind, edit.id, next)
-        }
+        onChange={(next) => setEntityGraphic(edit.campaign, edit.kind, edit.id, next)}
         onReset={() => setEntityGraphic(edit.campaign, edit.kind, edit.id)}
       />
     </Dialog>

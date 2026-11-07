@@ -1,10 +1,10 @@
-import { postRoll } from '../../features/chat/send'
-import type { Campaign } from '../../campaign/campaign'
-import { activeTool } from '../../scene/tools'
-import { autohide, canvasCommands, dialogRequest, setAutohide } from '../../table/canvasState'
-import { PANEL_ORDER, showPanel, unavailablePanels } from '../../table/panelLayout'
-import { PANELS } from '../../table/panels'
-import { TOOLS } from '../../table/Toolbar'
+import { postRoll } from "../../features/chat/send";
+import type { Campaign } from "../../campaign/campaign";
+import { activeTool } from "../../scene/tools";
+import { autohide, canvasCommands, dialogRequest, setAutohide } from "../../table/canvasState";
+import { PANEL_ORDER, showPanel, unavailablePanels } from "../../table/panelLayout";
+import { PANELS } from "../../table/panels";
+import { TOOLS } from "../../table/Toolbar";
 import {
   IconAdd,
   IconDice,
@@ -16,156 +16,174 @@ import {
   IconSettings,
   IconSidebarHide,
   IconUndo,
-} from '../../ui/icons'
-import { MOD } from '../../ui/keys'
-import type { Action } from './types'
+} from "../../ui/icons";
+import { MOD } from "../../ui/keys";
+import type { Action } from "./types";
 
 /** Rolling one formula, for everyone to see. The palette offers one for any formula typed in it, to run or drag onto the hotbar. */
 export function rollAction(campaign: Campaign, formula: string): Action {
   return {
     id: `roll:${formula}`,
-    kind: 'command',
+    kind: "command",
     title: `Roll ${formula}`,
-    aliases: [formula, 'dice'],
-    source: 'Core',
+    aliases: [formula, "dice"],
+    source: "Core",
     icon: IconDice,
     available: true,
-    run: () => postRoll(campaign, formula, 'public'),
-  }
+    run: () => postRoll(campaign, formula, "public"),
+  };
 }
 
 /** Tools, commands, settings, panels and scenes: what every campaign has. */
 export function coreActions(campaign: Campaign): Action[] {
-  const isGm = campaign.isGm()
-  const out: Action[] = []
+  const isGm = campaign.isGm();
+  const out: Action[] = [];
 
   for (const t of TOOLS) {
-    if (t.gmOnly && !isGm) continue
+    if (t.gmOnly && !isGm) continue;
     out.push({
       id: `tool:${t.id}`,
-      kind: 'tool',
+      kind: "tool",
       title: t.label,
-      source: 'Core',
+      source: "Core",
       hint: t.key,
       icon: t.Icon,
       available: true,
       run: () => (activeTool.value = t.id),
-    })
+    });
   }
 
-  const canvas = canvasCommands.value
-  const needCanvas = canvas ? true : ('Open a scene first' as const)
+  const canvas = canvasCommands.value;
+  const needCanvas = canvas ? true : ("Open a scene first" as const);
   out.push(
     {
-      id: 'cmd:fit',
-      kind: 'command',
-      title: 'Fit to scene',
-      aliases: ['zoom to fit', 'reset view'],
-      source: 'Core',
-      hint: '⇧1',
+      id: "cmd:fit",
+      kind: "command",
+      title: "Fit to scene",
+      aliases: ["zoom to fit", "reset view"],
+      source: "Core",
+      hint: "⇧1",
       icon: IconFit,
       available: needCanvas,
       run: () => canvas?.fit(),
     },
     {
-      id: 'cmd:undo',
-      kind: 'command',
-      title: 'Undo',
-      source: 'Core',
+      id: "cmd:undo",
+      kind: "command",
+      title: "Undo",
+      source: "Core",
       hint: `${MOD}Z`,
       icon: IconUndo,
       available: needCanvas,
       run: () => canvas?.undo(),
     },
     {
-      id: 'cmd:redo',
-      kind: 'command',
-      title: 'Redo',
-      source: 'Core',
+      id: "cmd:redo",
+      kind: "command",
+      title: "Redo",
+      source: "Core",
       hint: `⇧${MOD}Z`,
       icon: IconRedo,
       available: needCanvas,
       run: () => canvas?.redo(),
     },
     {
-      id: 'cmd:autohide',
-      kind: 'command',
-      title: autohide.value ? 'Always show sidebars and toolbars' : 'Autohide sidebars and toolbars',
-      aliases: ['autohide', 'auto-hide', 'hide the interface', 'toggle ui'],
-      source: 'Core',
+      id: "cmd:autohide",
+      kind: "command",
+      title: autohide.value
+        ? "Always show sidebars and toolbars"
+        : "Autohide sidebars and toolbars",
+      aliases: ["autohide", "auto-hide", "hide the interface", "toggle ui"],
+      source: "Core",
       hint: `${MOD}\\`,
       icon: IconSidebarHide,
       available: true,
       run: () => setAutohide(!autohide.value),
     },
-  )
+  );
 
   if (isGm) {
     out.push({
-      id: 'cmd:new-scene',
-      kind: 'command',
-      title: 'New scene',
-      source: 'Core',
+      id: "cmd:new-scene",
+      kind: "command",
+      title: "New scene",
+      source: "Core",
       icon: IconAdd,
       available: true,
-      run: () => campaign.setActiveScene(campaign.addScene(`Scene ${campaign.sceneViews().length + 1}`)),
-    })
+      run: () =>
+        campaign.setActiveScene(campaign.addScene(`Scene ${campaign.sceneViews().length + 1}`)),
+    });
   }
 
   out.push(
     {
-      id: 'setting:settings',
-      kind: 'setting',
-      title: 'Settings',
-      aliases: ['player settings', 'campaign settings', 'name', 'colour', 'autohide', 'invite link'],
-      source: 'Core',
+      id: "setting:settings",
+      kind: "setting",
+      title: "Settings",
+      aliases: [
+        "player settings",
+        "campaign settings",
+        "name",
+        "colour",
+        "autohide",
+        "invite link",
+      ],
+      source: "Core",
       icon: IconSettings,
       available: true,
-      run: () => (dialogRequest.value = 'settings'),
+      run: () => (dialogRequest.value = "settings"),
     },
     {
-      id: 'command:relationships',
-      kind: 'command',
-      title: 'Show relationships',
-      aliases: ['web', 'relationships'],
-      source: 'Core',
+      id: "command:relationships",
+      kind: "command",
+      title: "Show relationships",
+      aliases: ["web", "relationships"],
+      source: "Core",
       icon: IconRelationships,
       available: true,
-      run: () => (dialogRequest.value = 'relationships'),
+      run: () => (dialogRequest.value = "relationships"),
     },
-    { id: 'setting:help', kind: 'setting', title: 'Help and shortcuts', source: 'Core', icon: IconHelp, available: true, run: () => (dialogRequest.value = 'help') },
-  )
+    {
+      id: "setting:help",
+      kind: "setting",
+      title: "Help and shortcuts",
+      source: "Core",
+      icon: IconHelp,
+      available: true,
+      run: () => (dialogRequest.value = "help"),
+    },
+  );
 
   for (const id of PANEL_ORDER) {
-    if (unavailablePanels.value.includes(id)) continue
-    const { label, Icon } = PANELS[id]
+    if (unavailablePanels.value.includes(id)) continue;
+    const { label, Icon } = PANELS[id];
     out.push({
       id: `panel:${id}`,
-      kind: 'command',
+      kind: "command",
       title: `Show ${label}`,
       aliases: [label],
-      source: 'Core',
+      source: "Core",
       icon: Icon,
       available: true,
       run: () => showPanel(id),
-    })
+    });
   }
 
-  const active = campaign.activeSceneId()
+  const active = campaign.activeSceneId();
   for (const s of campaign.sceneViews()) {
-    if (s.visibility !== 'everyone' && !isGm) continue
+    if (s.visibility !== "everyone" && !isGm) continue;
     out.push({
       id: `scene:${s.id}`,
-      kind: 'entry',
-      group: 'scene',
+      kind: "entry",
+      group: "scene",
       title: s.name,
-      detail: s.id === active ? 'Current scene' : 'Go to scene',
-      source: 'Scenes',
+      detail: s.id === active ? "Current scene" : "Go to scene",
+      source: "Scenes",
       icon: IconMap,
       available: true,
       run: () => campaign.setActiveScene(s.id),
-    })
+    });
   }
 
-  return out
+  return out;
 }

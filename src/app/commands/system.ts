@@ -9,43 +9,50 @@ import {
   canEdit,
   updateItem,
   rest,
-} from '../../features/characters/api'
-import { ensureSystemCounter } from '../../features/chat/send'
-import { actionsFor, derive } from '../../features/characters/store'
-import { sessionMoveUsed } from '../../features/characters/sessionMoves'
-import type { Campaign } from '../../campaign/campaign'
-import { browseLibrary } from '../../table/libraryView'
-import { showPanel } from '../../table/panelLayout'
-import type { Action } from './types'
+} from "../../features/characters/api";
+import { ensureSystemCounter } from "../../features/chat/send";
+import { actionsFor, derive } from "../../features/characters/store";
+import { sessionMoveUsed } from "../../features/characters/sessionMoves";
+import type { Campaign } from "../../campaign/campaign";
+import { browseLibrary } from "../../table/libraryView";
+import { showPanel } from "../../table/panelLayout";
+import type { Action } from "./types";
 
 export function systemActions(campaign: Campaign): Action[] {
-  const system = systemOf(campaign)
-  const out: Action[] = []
-  const selectedId = selectedCharacterId(campaign)
-  const me = getCharacter(campaign, selectedId)
-  const mine = me ? new Set(actionsFor(me, system, derive(me, system)).map((m) => m.id)) : new Set<string>()
-  const reason = !me ? 'Choose a character first' : canEdit(campaign, me) ? true : 'Not your character'
+  const system = systemOf(campaign);
+  const out: Action[] = [];
+  const selectedId = selectedCharacterId(campaign);
+  const me = getCharacter(campaign, selectedId);
+  const mine = me
+    ? new Set(actionsFor(me, system, derive(me, system)).map((m) => m.id))
+    : new Set<string>();
+  const reason = !me
+    ? "Choose a character first"
+    : canEdit(campaign, me)
+      ? true
+      : "Not your character";
 
   for (const m of system.actions) {
-    const ownsIt = mine.has(m.id)
+    const ownsIt = mine.has(m.id);
     out.push({
       id: `move:${m.id}`,
-      kind: 'move',
+      kind: "move",
       title: m.name,
-      aliases: ['move'],
+      aliases: ["move"],
       ...(m.tags ? { tags: m.tags } : {}),
       source: system.name,
       detail: m.trigger,
       mine: ownsIt,
-      available: reason !== true
-        ? reason
-        : !ownsIt
-          ? 'Not one of this character’s moves'
-          : sessionMoveUsed(campaign, me!.id, m)
-            ? 'Already used this session'
-            : true,
+      available:
+        reason !== true
+          ? reason
+          : !ownsIt
+            ? "Not one of this character’s moves"
+            : sessionMoveUsed(campaign, me!.id, m)
+              ? "Already used this session"
+              : true,
       run: () => me && startMove(campaign, me.id, m),
-    })
+    });
   }
 
   for (const c of listCharacters(campaign)) {
@@ -65,35 +72,37 @@ export function systemActions(campaign: Campaign): Action[] {
   }
 
   // Rests, for systems whose resources refill on them.
-  const rests = new Set(system.resources.flatMap((r) => r.resets ?? []))
+  const rests = new Set(system.resources.flatMap((r) => r.resets ?? []));
   for (const [event, title] of [
-    ['short-rest', 'Short Rest'],
-    ['long-rest', 'Long Rest'],
+    ["short-rest", "Short Rest"],
+    ["long-rest", "Long Rest"],
   ] as const) {
-    if (!rests.has(event)) continue
+    if (!rests.has(event)) continue;
     out.push({
       id: `rest:${event}`,
-      kind: 'command',
+      kind: "command",
       title,
-      aliases: ['rest'],
+      aliases: ["rest"],
       source: me?.name ?? system.name,
       ...(me ? { detail: `Refill ${me.name}’s resources` } : {}),
       mine: !!me,
       available: reason,
       run: () => me && rest(campaign, me.id, event),
-    })
+    });
   }
 
   for (const counter of system.counters ?? []) {
     out.push({
       id: `counter:${counter.id}`,
-      kind: 'command',
+      kind: "command",
       title: `Show ${counter.label}`,
-      aliases: ['count', counter.label.toLowerCase()],
+      aliases: ["count", counter.label.toLowerCase()],
       source: system.name,
-      available: campaign.isGm() ? true : 'GM only',
-      run: () => { void ensureSystemCounter(campaign, counter) },
-    })
+      available: campaign.isGm() ? true : "GM only",
+      run: () => {
+        void ensureSystemCounter(campaign, counter);
+      },
+    });
   }
 
   if (me) {
@@ -101,25 +110,26 @@ export function systemActions(campaign: Campaign): Action[] {
       if (i.uses !== undefined) {
         out.push({
           id: `use:${i.id}`,
-          kind: 'item',
+          kind: "item",
           title: `Use ${i.name}`,
           source: me.name,
           detail: `${i.usesLeft}/${i.uses} uses left`,
           mine: true,
-          available: !i.usesLeft ? 'No uses left' : reason,
-          run: () => updateItem(campaign, me.id, i.id, { usesLeft: Math.max(0, (i.usesLeft ?? 0) - 1) }),
-        })
+          available: !i.usesLeft ? "No uses left" : reason,
+          run: () =>
+            updateItem(campaign, me.id, i.id, { usesLeft: Math.max(0, (i.usesLeft ?? 0) - 1) }),
+        });
       }
       if (i.equippable) {
         out.push({
           id: `equip:${i.id}`,
-          kind: 'item',
-          title: `${i.equipped ? 'Unequip' : 'Equip'} ${i.name}`,
+          kind: "item",
+          title: `${i.equipped ? "Unequip" : "Equip"} ${i.name}`,
           source: me.name,
           mine: true,
           available: reason,
           run: () => updateItem(campaign, me.id, i.id, { equipped: !i.equipped }),
-        })
+        });
       }
     }
   }
@@ -127,17 +137,19 @@ export function systemActions(campaign: Campaign): Action[] {
   for (const i of system.items) {
     out.push({
       id: `library:${i.id}`,
-      kind: 'entry',
-      group: 'library',
+      kind: "entry",
+      group: "library",
       title: i.name,
       tags: i.tags,
       source: system.name,
-      detail: me ? `Add to ${me.name}’s inventory. Shift+Enter shows it in the Libraries.` : i.description,
+      detail: me
+        ? `Add to ${me.name}’s inventory. Shift+Enter shows it in the Libraries.`
+        : i.description,
       available: reason,
       run: () => me && addItem(campaign, me.id, i),
-      open: () => browseLibrary('item'),
-    })
+      open: () => browseLibrary("item"),
+    });
   }
 
-  return out
+  return out;
 }

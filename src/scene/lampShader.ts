@@ -1,6 +1,16 @@
-import { Buffer, BufferUsage, Color, Geometry, GlProgram, GpuProgram, Mesh, Shader, UniformGroup } from 'pixi.js'
-import type { Point } from './grid'
-import { distanceToSegment, type Segment } from './vision'
+import {
+  Buffer,
+  BufferUsage,
+  Color,
+  Geometry,
+  GlProgram,
+  GpuProgram,
+  Mesh,
+  Shader,
+  UniformGroup,
+} from "pixi.js";
+import type { Point } from "./grid";
+import { distanceToSegment, type Segment } from "./vision";
 
 /*
  * A lamp's light, or a viewer's sight, worked out per pixel (M12). One quad
@@ -15,12 +25,12 @@ import { distanceToSegment, type Segment } from './vision'
  */
 
 /** How strongly a fully saturated lamp colours what it lights, where it's brightest. */
-const TINT = 0.4
+const TINT = 0.4;
 
 /** Most walls one lamp takes into account: the nearest, if there are more. */
-export const MAX_WALLS = 180
+export const MAX_WALLS = 180;
 /** Most tokens one lamp shadows. */
-export const MAX_BLOCKERS = 16
+export const MAX_BLOCKERS = 16;
 
 const glVertex = /* glsl */ `#version 300 es
 in vec2 aPosition;
@@ -34,7 +44,7 @@ void main() {
   gl_Position = vec4((mvp * vec3(aPosition, 1.0)).xy, 0.0, 1.0);
   vWorld = aPosition;
 }
-`
+`;
 
 const glFragment = /* glsl */ `#version 300 es
 precision highp float;
@@ -111,7 +121,7 @@ void main() {
     finalColor = vec4(a);
   }
 }
-`
+`;
 
 const wgsl = /* wgsl */ `
 struct GlobalUniforms {
@@ -218,29 +228,29 @@ fn mainFrag(@location(0) world: vec2<f32>) -> @location(0) vec4<f32> {
   }
   return vec4<f32>(a);
 }
-`
+`;
 
-let programs: { gl: GlProgram; gpu: GpuProgram } | null = null
+let programs: { gl: GlProgram; gpu: GpuProgram } | null = null;
 
 /** Something that shadows a lamp's light part way, fading out with distance from the lamp: a token. */
 export interface Blocker {
-  seg: Segment
-  strength: number
-  fade: [number, number]
+  seg: Segment;
+  strength: number;
+  fade: [number, number];
 }
 
 export interface LampState {
-  at: Point
+  at: Point;
   /** The lamp's radius: how soft its shadows are. */
-  radius: number
+  radius: number;
   /** Its falloff; null for sight, which is full everywhere it reaches. */
-  falloff: { bright: number; dim: number } | null
+  falloff: { bright: number; dim: number } | null;
   /** The area it's drawn over, in world space. */
-  box: { x: number; y: number; w: number; h: number }
-  walls: Segment[]
-  blockers?: Blocker[]
+  box: { x: number; y: number; w: number; h: number };
+  walls: Segment[];
+  blockers?: Blocker[];
   /** The lamp's colour, for the tint pass. */
-  colour?: string
+  colour?: string;
 }
 
 /**
@@ -248,74 +258,97 @@ export interface LampState {
  * over; or, with `tint`, a wash of a lamp's colour over what it lights.
  */
 export class Lamp {
-  readonly mesh: Mesh<Geometry, Shader>
-  private readonly uniforms: UniformGroup
-  private readonly positions = new Float32Array(8)
+  readonly mesh: Mesh<Geometry, Shader>;
+  private readonly uniforms: UniformGroup;
+  private readonly positions = new Float32Array(8);
 
   constructor(private readonly tint = false) {
     programs ??= {
-      gl: GlProgram.from({ vertex: glVertex, fragment: glFragment, name: 'lamp' }),
+      gl: GlProgram.from({ vertex: glVertex, fragment: glFragment, name: "lamp" }),
       gpu: GpuProgram.from({
-        vertex: { source: wgsl, entryPoint: 'mainVert' },
-        fragment: { source: wgsl, entryPoint: 'mainFrag' },
-        name: 'lamp',
+        vertex: { source: wgsl, entryPoint: "mainVert" },
+        fragment: { source: wgsl, entryPoint: "mainFrag" },
+        name: "lamp",
       }),
-    }
+    };
     this.uniforms = new UniformGroup({
-      uLamp: { value: new Float32Array(4), type: 'vec4<f32>' },
-      uColour: { value: new Float32Array([1, 1, 1, 1]), type: 'vec4<f32>' },
-      uFalloff: { value: new Float32Array(4), type: 'vec4<f32>' },
-      uWalls: { value: new Float32Array(MAX_WALLS * 4), type: 'vec4<f32>', size: MAX_WALLS },
-      uBlockers: { value: new Float32Array(MAX_BLOCKERS * 8), type: 'vec4<f32>', size: MAX_BLOCKERS * 2 },
-    })
+      uLamp: { value: new Float32Array(4), type: "vec4<f32>" },
+      uColour: { value: new Float32Array([1, 1, 1, 1]), type: "vec4<f32>" },
+      uFalloff: { value: new Float32Array(4), type: "vec4<f32>" },
+      uWalls: { value: new Float32Array(MAX_WALLS * 4), type: "vec4<f32>", size: MAX_WALLS },
+      uBlockers: {
+        value: new Float32Array(MAX_BLOCKERS * 8),
+        type: "vec4<f32>",
+        size: MAX_BLOCKERS * 2,
+      },
+    });
     const geometry = new Geometry({
       // A bare array would make a buffer the GPU never rewrites; the quad moves with its lamp.
       attributes: {
         aPosition: {
-          buffer: new Buffer({ data: this.positions, usage: BufferUsage.VERTEX | BufferUsage.COPY_DST }),
-          format: 'float32x2',
+          buffer: new Buffer({
+            data: this.positions,
+            usage: BufferUsage.VERTEX | BufferUsage.COPY_DST,
+          }),
+          format: "float32x2",
         },
       },
       indexBuffer: new Uint32Array([0, 1, 2, 0, 2, 3]),
-    })
-    const shader = new Shader({ glProgram: programs.gl, gpuProgram: programs.gpu, resources: { lampUniforms: this.uniforms } })
-    this.mesh = new Mesh({ geometry, shader, blendMode: tint ? 'normal' : 'erase' })
+    });
+    const shader = new Shader({
+      glProgram: programs.gl,
+      gpuProgram: programs.gpu,
+      resources: { lampUniforms: this.uniforms },
+    });
+    this.mesh = new Mesh({ geometry, shader, blendMode: tint ? "normal" : "erase" });
   }
 
   update(s: LampState) {
-    const { x, y, w, h } = s.box
-    this.positions.set([x, y, x + w, y, x + w, y + h, x, y + h])
-    this.mesh.geometry.getBuffer('aPosition').update()
+    const { x, y, w, h } = s.box;
+    this.positions.set([x, y, x + w, y, x + w, y + h, x, y + h]);
+    this.mesh.geometry.getBuffer("aPosition").update();
 
-    const u = this.uniforms.uniforms
-    const lamp = u.uLamp as Float32Array
-    lamp.set([s.at.x, s.at.y, s.radius, this.tint ? 2 : s.falloff ? 0 : 1])
-    const colour = u.uColour as Float32Array
-    const c = new Color(s.colour ?? 0xffffff)
-    colour.set([c.red, c.green, c.blue], 0)
+    const u = this.uniforms.uniforms;
+    const lamp = u.uLamp as Float32Array;
+    lamp.set([s.at.x, s.at.y, s.radius, this.tint ? 2 : s.falloff ? 0 : 1]);
+    const colour = u.uColour as Float32Array;
+    const c = new Color(s.colour ?? 0xffffff);
+    colour.set([c.red, c.green, c.blue], 0);
     // The nearest walls, if there are more than fit.
     const walls =
       s.walls.length > MAX_WALLS
-        ? [...s.walls].sort((a, b) => distanceToSegment(s.at, a) - distanceToSegment(s.at, b)).slice(0, MAX_WALLS)
-        : s.walls
-    const wallData = u.uWalls as Float32Array
-    walls.forEach((seg, i) => wallData.set([seg.a.x, seg.a.y, seg.b.x, seg.b.y], i * 4))
-    const blockers = (s.blockers ?? []).slice(0, MAX_BLOCKERS)
-    const blockerData = u.uBlockers as Float32Array
-    blockers.forEach((b, i) => blockerData.set([b.seg.a.x, b.seg.a.y, b.seg.b.x, b.seg.b.y, b.strength, b.fade[0], b.fade[1], 0], i * 8))
-    ;(u.uFalloff as Float32Array).set([s.falloff?.bright ?? 0, s.falloff?.dim ?? 0, walls.length, blockers.length])
-    this.uniforms.update()
+        ? [...s.walls]
+            .sort((a, b) => distanceToSegment(s.at, a) - distanceToSegment(s.at, b))
+            .slice(0, MAX_WALLS)
+        : s.walls;
+    const wallData = u.uWalls as Float32Array;
+    walls.forEach((seg, i) => wallData.set([seg.a.x, seg.a.y, seg.b.x, seg.b.y], i * 4));
+    const blockers = (s.blockers ?? []).slice(0, MAX_BLOCKERS);
+    const blockerData = u.uBlockers as Float32Array;
+    blockers.forEach((b, i) =>
+      blockerData.set(
+        [b.seg.a.x, b.seg.a.y, b.seg.b.x, b.seg.b.y, b.strength, b.fade[0], b.fade[1], 0],
+        i * 8,
+      ),
+    );
+    (u.uFalloff as Float32Array).set([
+      s.falloff?.bright ?? 0,
+      s.falloff?.dim ?? 0,
+      walls.length,
+      blockers.length,
+    ]);
+    this.uniforms.update();
   }
 
   /** How far through a flicker the lamp is: 1 at full strength and reach. */
   setFlicker(n: number) {
-    ;(this.uniforms.uniforms.uColour as Float32Array)[3] = n
-    this.uniforms.update()
+    (this.uniforms.uniforms.uColour as Float32Array)[3] = n;
+    this.uniforms.update();
   }
 
   destroy() {
-    this.mesh.shader?.destroy()
-    this.mesh.geometry.destroy()
-    this.mesh.destroy()
+    this.mesh.shader?.destroy();
+    this.mesh.geometry.destroy();
+    this.mesh.destroy();
   }
 }

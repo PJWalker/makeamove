@@ -4,17 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { useSignal } from "@preact/signals-react";
 import { IconAdd, IconCampaign, IconDelete } from "../ui/icons";
 import { goToCampaign, pendingInvite } from "../app/router";
-import {
-  createCampaign,
-  deleteLocalCampaign,
-  joinCampaign,
-} from "../campaign/campaign";
+import { createCampaign, deleteLocalCampaign, joinCampaign } from "../campaign/campaign";
 import { device, setDeviceName } from "../platform/device";
-import {
-  campaigns,
-  registryReady,
-  type CampaignSummary,
-} from "../campaign/registry";
+import { campaigns, registryReady, type CampaignSummary } from "../campaign/registry";
 import { getSystem, listSystems, NO_SYSTEM_ID } from "../systems";
 import { Button } from "../ui/Button";
 import { ContextMenu } from "../table/ContextMenu";
@@ -41,9 +33,7 @@ let shownOrder: string[] | null = null;
 function stableOrder(list: CampaignSummary[]): CampaignSummary[] {
   if (shownOrder) {
     const rank = new Map(shownOrder.map((id, i) => [id, i]));
-    list = [...list].sort(
-      (a, b) => (rank.get(a.id) ?? -1) - (rank.get(b.id) ?? -1),
-    );
+    list = [...list].sort((a, b) => (rank.get(a.id) ?? -1) - (rank.get(b.id) ?? -1));
   }
   shownOrder = list.map((c) => c.id);
   return list;
@@ -66,10 +56,7 @@ export function Lobby({ error }: { error: string | null }) {
           </p>
         )}
 
-        <section
-          className="panel lobby-section"
-          aria-labelledby="your-campaigns"
-        >
+        <section className="panel lobby-section" aria-labelledby="your-campaigns">
           <h2 id="your-campaigns" className="eyebrow">
             Your campaigns
           </h2>
@@ -121,8 +108,8 @@ function CampaignRow({ c }: { c: CampaignSummary }) {
       >
         <span className="campaign-name">{c.name}</span>
         <span className="campaign-meta">
-          {c.role === "gm" ? "GM" : "Player"} · {getSystem(c.systemId).name} ·
-          opened {ago(c.lastOpenedAt)}
+          {c.role === "gm" ? "GM" : "Player"} · {getSystem(c.systemId).name} · opened{" "}
+          {ago(c.lastOpenedAt)}
         </span>
       </button>
       {menu.value && (
@@ -176,8 +163,7 @@ function DeleteCampaignDialog({
         Delete campaign?
       </h2>
       <p>
-        Remove <strong>{campaignName}</strong> from this device? This cannot be
-        undone.
+        Remove <strong>{campaignName}</strong> from this device? This cannot be undone.
       </p>
       <div className="form-actions">
         <button
@@ -215,21 +201,13 @@ function NewCampaignForm() {
     if (!name.value.trim() || !yourName.value.trim() || !system) return;
     busy.value = true;
     setDeviceName(yourName.value.trim());
-    const id = await createCampaign(
-      name.value.trim(),
-      yourName.value.trim(),
-      system.id,
-    );
+    const id = await createCampaign(name.value.trim(), yourName.value.trim(), system.id);
     busy.value = false;
     goToCampaign(id);
   }
 
   return (
-    <form
-      className="panel lobby-section"
-      onSubmit={submit}
-      aria-labelledby="new-campaign"
-    >
+    <form className="panel lobby-section" onSubmit={submit} aria-labelledby="new-campaign">
       <h2 id="new-campaign" className="eyebrow">
         Start a campaign
       </h2>
@@ -309,7 +287,7 @@ function JoinInviteDialog({ invite }: { invite: NonNullable<typeof pendingInvite
       <h2 id="join-campaign-title" className="eyebrow">
         Join a campaign
       </h2>
-      <p>You've been invited to a campaign.</p>
+      <p>You&apos;ve been invited to a campaign.</p>
       <form onSubmit={submit}>
         <label className="field">
           Your name
@@ -323,11 +301,7 @@ function JoinInviteDialog({ invite }: { invite: NonNullable<typeof pendingInvite
           />
         </label>
         <div className="form-actions">
-          <button
-            className="btn btn-ghost"
-            type="button"
-            onClick={() => dialog.current?.close()}
-          >
+          <button className="btn btn-ghost" type="button" onClick={() => dialog.current?.close()}>
             Cancel
           </button>
           <Button type="submit" disabled={!yourName.value.trim()}>

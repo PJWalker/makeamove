@@ -2,13 +2,7 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 import { useSignal } from "@preact/signals-react";
 import { useEffect, useEffectEvent, useRef } from "react";
 import { selectedCharacterId } from "../features/characters/api";
-import {
-  editHotbar,
-  hotbarSlots,
-  placeAt,
-  shift,
-  unpin,
-} from "../features/characters/hotbar";
+import { editHotbar, hotbarSlots, placeAt, shift, unpin } from "../features/characters/hotbar";
 import { shortcutFor, showCombo, slotLook } from "../app/commands/custom";
 import { buildIndex, pinnedRoll } from "../app/commands/registry";
 import { noteRecent } from "../app/commands/recent";
@@ -17,23 +11,11 @@ import { notePressed } from "../ui/pressed";
 import { useY } from "../ui/useY";
 import { Button } from "../ui/Button";
 import { ENTRY_ICONS } from "../ui/entryIcons";
-import {
-  IconDelete,
-  IconImage,
-  IconRename,
-  IconSearch,
-  IconShortcut,
-} from "../ui/icons";
+import { IconDelete, IconImage, IconRename, IconSearch, IconShortcut } from "../ui/icons";
 import { menuTrigger } from "../ui/menuTrigger";
 import { editAction } from "./ActionDialogs";
 import { ContextMenu, type MenuItem } from "./ContextMenu";
-import {
-  actionEntity,
-  dropMarker,
-  dropOn,
-  dropTargetAt,
-  setDropCursor,
-} from "./entityDrag";
+import { actionEntity, dropMarker, dropOn, dropTargetAt, setDropCursor } from "./entityDrag";
 import { paletteOpen } from "./Palette";
 import { isTyping } from "../ui/keys";
 import { startReorder } from "../ui/reorder";
@@ -77,24 +59,13 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
   // 1–9 trigger the first nine slots.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (
-        e.ctrlKey ||
-        e.metaKey ||
-        e.altKey ||
-        e.shiftKey ||
-        isTyping(e.target)
-      )
-        return;
+      if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || isTyping(e.target)) return;
       if (!/^[1-9]$/.test(e.key)) return;
       const id = slots[Number(e.key) - 1];
       if (id) {
         e.preventDefault();
         // Whatever the slot starts appears beside it, as if it were clicked.
-        notePressed(
-          barRef.current?.querySelectorAll(".hotbar-slot > .btn")[
-            Number(e.key) - 1
-          ],
-        );
+        notePressed(barRef.current?.querySelectorAll(".hotbar-slot > .btn")[Number(e.key) - 1]);
         run(id);
       }
     };
@@ -103,9 +74,7 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
   });
 
   const edit = (fn: (s: string[]) => string[]) => editHotbar(campaign, fn);
-  const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(
-    null,
-  );
+  const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const slotMenu = (id: string, title: string) =>
     menuTrigger((x, y) => {
       menu.value = {
@@ -144,9 +113,7 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
             onSelect: () => editAction("icon", id, title),
           },
           {
-            label: shortcutFor(campaign, id)
-              ? "Change shortcut…"
-              : "Add shortcut…",
+            label: shortcutFor(campaign, id) ? "Change shortcut…" : "Add shortcut…",
             Icon: IconShortcut,
             onSelect: () => editAction("shortcut", id, title),
           },
@@ -171,14 +138,10 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
       event: e,
       axis: "x",
       container: barRef.current,
-      items: () => [
-        ...barRef.current!.querySelectorAll<HTMLElement>(".hotbar-slot"),
-      ],
+      items: () => [...barRef.current!.querySelectorAll<HTMLElement>(".hotbar-slot")],
       onLift: () => (dragging.value = id),
       onMove: (ev, inside) => {
-        const target = inside
-          ? null
-          : dropTargetAt(ev.clientX, ev.clientY, what);
+        const target = inside ? null : dropTargetAt(ev.clientX, ev.clientY, what);
         mark(target);
         setDropCursor(inside ? null : !!target);
       },
@@ -245,10 +208,7 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
                     run(id);
-                  } else if (
-                    e.altKey &&
-                    (e.key === "ArrowLeft" || e.key === "ArrowRight")
-                  ) {
+                  } else if (e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
                     e.preventDefault();
                     edit((s) => shift(s, id, e.key === "ArrowLeft" ? -1 : 1));
                   } else if (e.key === "Delete" || e.key === "Backspace") {
@@ -272,9 +232,7 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
           <IconSearch size={22} />
         </Button>
       </div>
-      {menu.value && (
-        <ContextMenu {...menu.value} onClose={() => (menu.value = null)} />
-      )}
+      {menu.value && <ContextMenu {...menu.value} onClose={() => (menu.value = null)} />}
     </>
   );
 }

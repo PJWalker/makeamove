@@ -71,19 +71,9 @@ export interface DiePose {
 }
 
 /** Height of a die's centre when its resting orientation touches the tray floor. */
-export function restingHeight(
-  hull: DieHull,
-  orientation: DiePose["quaternion"],
-): number {
-  const rotation = new Quaternion(
-    orientation.x,
-    orientation.y,
-    orientation.z,
-    orientation.w,
-  );
-  const lowest = Math.min(
-    ...hull.vertices.map(([x, y, z]) => rotation.vmult(new Vec3(x, y, z)).z),
-  );
+export function restingHeight(hull: DieHull, orientation: DiePose["quaternion"]): number {
+  const rotation = new Quaternion(orientation.x, orientation.y, orientation.z, orientation.w);
+  const lowest = Math.min(...hull.vertices.map(([x, y, z]) => rotation.vmult(new Vec3(x, y, z)).z));
   return Math.max(0.5, -lowest);
 }
 
@@ -103,10 +93,7 @@ class TrayWorld {
   readonly dieMaterial = new Material("die");
   private readonly floorMaterial = new Material("floor");
   private readonly wallMaterial = new Material("wall");
-  private readonly contacts: Record<
-    "dieDie" | "dieFloor" | "dieWall",
-    ContactMaterial
-  >;
+  private readonly contacts: Record<"dieDie" | "dieFloor" | "dieWall", ContactMaterial>;
 
   constructor(
     private readonly tray: DieTray,
@@ -132,22 +119,16 @@ class TrayWorld {
         restitution: 0.6,
       }),
     };
-    for (const contact of Object.values(this.contacts))
-      this.world.addContactMaterial(contact);
+    for (const contact of Object.values(this.contacts)) this.world.addContactMaterial(contact);
     this.addPlane(new Vec3(), new Vec3(0, 0, 1), this.floorMaterial);
     this.addPlane(new Vec3(tray.left, 0, 0), new Vec3(1, 0, 0));
     this.addPlane(new Vec3(tray.right, 0, 0), new Vec3(-1, 0, 0));
     this.addPlane(new Vec3(0, -tray.top, 0), new Vec3(0, -1, 0));
     this.addPlane(new Vec3(0, -tray.bottom, 0), new Vec3(0, 1, 0));
-    if (ceiling !== undefined)
-      this.addPlane(new Vec3(0, 0, ceiling), new Vec3(0, 0, -1));
+    if (ceiling !== undefined) this.addPlane(new Vec3(0, 0, ceiling), new Vec3(0, 0, -1));
   }
 
-  private addPlane(
-    position: Vec3,
-    normal: Vec3,
-    material: Material = this.wallMaterial,
-  ) {
+  private addPlane(position: Vec3, normal: Vec3, material: Material = this.wallMaterial) {
     const wall = new Body({
       mass: 0,
       shape: new Plane(),
@@ -191,15 +172,11 @@ class TrayWorld {
       ["x", tray.left, tray.right],
       ["y", -tray.bottom, -tray.top],
     ] as const) {
-      const lower =
-        minimum - Math.min(...offsets.map((vertex) => vertex[axis]));
-      const upper =
-        maximum - Math.max(...offsets.map((vertex) => vertex[axis]));
+      const lower = minimum - Math.min(...offsets.map((vertex) => vertex[axis]));
+      const upper = maximum - Math.max(...offsets.map((vertex) => vertex[axis]));
       const position = body.position[axis];
       body.position[axis] =
-        lower > upper
-          ? (minimum + maximum) / 2
-          : Math.max(lower, Math.min(upper, position));
+        lower > upper ? (minimum + maximum) / 2 : Math.max(lower, Math.min(upper, position));
       if (
         (position < lower && body.velocity[axis] < 0) ||
         (position > upper && body.velocity[axis] > 0)
@@ -321,12 +298,7 @@ export class DiceHold {
       body.allowSleep = false;
       body.collisionFilterMask = DICE | TRAY;
       body.position.set(die.x, -die.y, die.z);
-      body.quaternion.set(
-        die.quaternion.x,
-        die.quaternion.y,
-        die.quaternion.z,
-        die.quaternion.w,
-      );
+      body.quaternion.set(die.quaternion.x, die.quaternion.y, die.quaternion.z, die.quaternion.w);
       trayWorld.world.addBody(body);
       return { body, vertices, impact: 0 };
     });
@@ -390,8 +362,7 @@ export class DiceHold {
 
 function seededRandom(seed: string) {
   let state = 2166136261;
-  for (const character of seed)
-    state = Math.imul(state ^ character.charCodeAt(0), 16777619);
+  for (const character of seed) state = Math.imul(state ^ character.charCodeAt(0), 16777619);
   return () => {
     state += 0x6d2b79f5;
     let mixed = Math.imul(state ^ (state >>> 15), state | 1);
@@ -423,26 +394,10 @@ export class DiceFlight {
       const body = trayWorld.dieBody(hull, vertices);
       // Spread across the tray's width so dice thrown together don't start inside each other.
       const lane = (index + 0.25 + random() * 0.5) / throws.length;
-      body.position.set(
-        tray.left + (0.15 + lane * 0.7) * width,
-        -tray.top + 2,
-        4 + random() * 2,
-      );
-      body.quaternion.setFromEuler(
-        random() * Math.PI,
-        random() * Math.PI,
-        random() * Math.PI,
-      );
-      body.velocity.set(
-        (random() - 0.5) * 5,
-        -10 - random() * 6,
-        3 + random() * 4,
-      );
-      body.angularVelocity.set(
-        random() * 24 - 12,
-        random() * 24 - 12,
-        random() * 24 - 12,
-      );
+      body.position.set(tray.left + (0.15 + lane * 0.7) * width, -tray.top + 2, 4 + random() * 2);
+      body.quaternion.setFromEuler(random() * Math.PI, random() * Math.PI, random() * Math.PI);
+      body.velocity.set((random() - 0.5) * 5, -10 - random() * 6, 3 + random() * 4);
+      body.angularVelocity.set(random() * 24 - 12, random() * 24 - 12, random() * 24 - 12);
       return {
         body,
         vertices,
@@ -484,15 +439,10 @@ export class DiceFlight {
   private ease(die: FlightBody): Ease {
     const { body, vertices } = die;
     const from = body.quaternion.clone();
-    const to = new Quaternion()
-      .setFromVectors(downFace(body), new Vec3(0, 0, -1))
-      .mult(from);
+    const to = new Quaternion().setFromVectors(downFace(body), new Vec3(0, 0, -1)).mult(from);
     to.normalize();
     // Keep its lowest point where it is, so a die lying on another stays on it.
-    const toZ =
-      body.position.z +
-      lowestPoint(from, vertices) -
-      lowestPoint(to, vertices);
+    const toZ = body.position.z + lowestPoint(from, vertices) - lowestPoint(to, vertices);
     body.collisionFilterMask = 0;
     return { die, from, to, fromZ: body.position.z, toZ };
   }
@@ -528,11 +478,7 @@ export class DiceFlight {
       (centre.y / toCentre) * 2 + (random() - 0.5) * 3,
       3,
     );
-    body.angularVelocity.set(
-      (random() - 0.5) * 12,
-      (random() - 0.5) * 12,
-      (random() - 0.5) * 4,
-    );
+    body.angularVelocity.set((random() - 0.5) * 12, (random() - 0.5) * 12, (random() - 0.5) * 4);
   }
 
   /** Catches a die that was knocked off course before it reached the tray. */
@@ -566,8 +512,7 @@ export class DiceFlight {
     this.elapsed += PHYSICS_STEP;
     if (
       !this.calmed &&
-      this.elapsed >=
-        CALM_AFTER + Math.max(0, ...this.dice.map((die) => die.delay))
+      this.elapsed >= CALM_AFTER + Math.max(0, ...this.dice.map((die) => die.delay))
     ) {
       this.calmed = true;
       for (const { body } of this.dice) {
@@ -582,10 +527,7 @@ export class DiceFlight {
     for (const [index, die] of this.dice.entries()) {
       if (!die.active) continue;
       die.age += PHYSICS_STEP;
-      if (
-        !die.captured &&
-        this.entersTray(previous[index]!, die.body.position, this.tray)
-      )
+      if (!die.captured && this.entersTray(previous[index]!, die.body.position, this.tray))
         this.capture(die);
       else if (!die.captured && die.age > MAX_APPROACH) this.dropIn(die);
       if (!die.captured) continue;
@@ -594,21 +536,15 @@ export class DiceFlight {
       // Dice touching in a heap keep each other just awake; one that has all but stopped is put to sleep.
       const { velocity, angularVelocity } = die.body;
       die.still =
-        velocity.length() < STILL_SPEED &&
-        angularVelocity.length() < STILL_SPEED
+        velocity.length() < STILL_SPEED && angularVelocity.length() < STILL_SPEED
           ? die.still + PHYSICS_STEP
           : 0;
-      if (die.still >= STILL_TIME && die.body.sleepState !== Body.SLEEPING)
-        die.body.sleep();
+      if (die.still >= STILL_TIME && die.body.sleepState !== Body.SLEEPING) die.body.sleep();
     }
-    const resting = this.dice.every(
-      (die) => die.captured && die.still >= STILL_TIME,
-    );
+    const resting = this.dice.every((die) => die.captured && die.still >= STILL_TIME);
     if (!resting) return false;
     const leaning = this.dice.filter(
-      (die) =>
-        tilted(die.body) ||
-        (this.nudges < MAX_NUDGES && raised(die.body, die.vertices)),
+      (die) => tilted(die.body) || (this.nudges < MAX_NUDGES && raised(die.body, die.vertices)),
     );
     if (!leaning.length) return true;
     if (this.nudges >= MAX_NUDGES) {
@@ -625,9 +561,7 @@ export class DiceFlight {
   }
 
   poses(): DiePose[] {
-    return this.dice.map(({ body, captured, impact }) =>
-      poseOf(body, captured, impact),
-    );
+    return this.dice.map(({ body, captured, impact }) => poseOf(body, captured, impact));
   }
 }
 

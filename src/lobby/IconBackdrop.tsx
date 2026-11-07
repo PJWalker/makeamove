@@ -2,7 +2,6 @@ import { signal, type Signal } from "@preact/signals-react";
 import { useEffect, useRef, useState } from "react";
 import { BACKDROP_ICONS } from "./backdropIcons";
 
-
 const SIZE_RANGE: readonly [number, number] = [20, 42]; // icon size in px, random within this range
 const GAP = 16; // minimum clear space between icons, in px
 const TILT = 18; // maximum rotation either way, in degrees
@@ -47,8 +46,7 @@ function scatter(w: number, h: number, keep: Cell[]): Cell[] {
   // a bucket this big means each check only looks at the 3 × 3 buckets around it.
   const bucket = 2 * maxReach + GAP;
   const grid = new Map<string, Cell[]>();
-  const keyOf = (x: number, y: number) =>
-    `${Math.floor(x / bucket)},${Math.floor(y / bucket)}`;
+  const keyOf = (x: number, y: number) => `${Math.floor(x / bucket)},${Math.floor(y / bucket)}`;
   const inBounds = (x: number, y: number) =>
     x > -maxReach && x < w + maxReach && y > -maxReach && y < h + maxReach;
 
@@ -58,8 +56,7 @@ function scatter(w: number, h: number, keep: Cell[]): Cell[] {
     for (let dx = -1; dx <= 1; dx++) {
       for (let dy = -1; dy <= 1; dy++) {
         for (const o of grid.get(`${bx + dx},${by + dy}`) ?? []) {
-          if (Math.hypot(o.x - x, o.y - y) < reach(size) + reach(o.size) + GAP)
-            return false;
+          if (Math.hypot(o.x - x, o.y - y) < reach(size) + reach(o.size) + GAP) return false;
         }
       }
     }
@@ -88,14 +85,13 @@ function scatter(w: number, h: number, keep: Cell[]): Cell[] {
   const active = [...cells];
   while (active.length) {
     const a = Math.floor(Math.random() * active.length);
-    const from = (active)[a]!;
+    const from = active[a]!;
     let placed = false;
     for (let t = 0; t < TRIES && !placed; t++) {
       const size = between(SIZE_RANGE);
       // Just past touching, up to 60% further: close enough to fill the field,
       // loose enough not to look gridded.
-      const dist =
-        (reach(from.size) + reach(size) + GAP) * (1 + Math.random() * 0.6);
+      const dist = (reach(from.size) + reach(size) + GAP) * (1 + Math.random() * 0.6);
       const angle = Math.random() * Math.PI * 2;
       const x = from.x + Math.cos(angle) * dist;
       const y = from.y + Math.sin(angle) * dist;
@@ -162,13 +158,10 @@ export function IconBackdrop() {
           // Wait a frame for React to swap the SVG, then pop the new one in.
           requestAnimationFrame(() => {
             el.getAnimations().forEach((a) => a.cancel());
-            el.animate(
-              [{ scale: 0 }, { scale: 1.2, offset: 0.6 }, { scale: 1 }],
-              {
-                duration: 380,
-                easing: "cubic-bezier(0.2, 0.8, 0.3, 1)",
-              },
-            );
+            el.animate([{ scale: 0 }, { scale: 1.2, offset: 0.6 }, { scale: 1 }], {
+              duration: 380,
+              easing: "cubic-bezier(0.2, 0.8, 0.3, 1)",
+            });
           });
         })
         .catch(() => {});
@@ -188,7 +181,7 @@ export function IconBackdrop() {
 }
 
 function BackdropIcon({ cell }: { cell: Cell }) {
-  const Icon = (BACKDROP_ICONS)[cell.icon.value]!;
+  const Icon = BACKDROP_ICONS[cell.icon.value]!;
   return (
     <span
       className="backdrop-icon"

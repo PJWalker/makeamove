@@ -31,21 +31,8 @@ import {
   sceneViews,
   updateScene,
 } from "./sceneIndex";
-import type {
-  CampaignDefaults,
-  MemberView,
-  RevokedView,
-  Role,
-  SceneView,
-} from "./types";
-export type {
-  CampaignDefaults,
-  MemberView,
-  RevokedView,
-  Role,
-  SceneView,
-  Visibility,
-} from "./types";
+import type { CampaignDefaults, MemberView, RevokedView, Role, SceneView } from "./types";
+export type { CampaignDefaults, MemberView, RevokedView, Role, SceneView } from "./types";
 
 /*
  * Campaign root document layout (see design doc, "Data model"):
@@ -272,8 +259,7 @@ export class Campaign {
 
   setDefaults(patch: Partial<CampaignDefaults>) {
     this.doc.transact(() => {
-      if (patch.tokenStyle)
-        this.meta.set("defaultTokenStyle", patch.tokenStyle);
+      if (patch.tokenStyle) this.meta.set("defaultTokenStyle", patch.tokenStyle);
       if (patch.gridType) this.meta.set("defaultGridType", patch.gridType);
     });
   }
@@ -307,8 +293,7 @@ export class Campaign {
    */
   revokeMember(id: string) {
     const m = this.members.get(id);
-    if (!this.isGm() || id === device.value.id || !m || m.get("role") === "gm")
-      return;
+    if (!this.isGm() || id === device.value.id || !m || m.get("role") === "gm") return;
     this.doc.transact(() => {
       this.revoked.set(id, {
         name: m.get("name") ?? "Unnamed",
@@ -370,10 +355,7 @@ export class Campaign {
     // Where the GM goes, the table goes: tell everyone once they've settled.
     if (this.isGm()) {
       clearTimeout(this.sceneNoticeTimer);
-      this.sceneNoticeTimer = setTimeout(
-        () => this.announceScene(),
-        Campaign.sceneNoticeDelay,
-      );
+      this.sceneNoticeTimer = setTimeout(() => this.announceScene(), Campaign.sceneNoticeDelay);
     }
   }
 
@@ -382,8 +364,7 @@ export class Campaign {
     if (!this.isGm() || !this.scenes.has(sceneId)) return;
     this.doc.transact(() => {
       for (const member of this.members.values()) {
-        if (member.get("role") === "player")
-          member.set("activeSceneId", sceneId);
+        if (member.get("role") === "player") member.set("activeSceneId", sceneId);
       }
     });
     this.setActiveScene(sceneId);
@@ -405,8 +386,7 @@ export class Campaign {
     const id = activeSceneIdFromIndex(this.members, this.scenes, device.value.id);
     if (!id || (!force && id === this.meta.get("tableScene"))) return;
     this.meta.set("tableScene", id);
-    const name =
-      sceneViews(this.scenes).find((s) => s.id === id)?.name ?? "a new scene";
+    const name = sceneViews(this.scenes).find((s) => s.id === id)?.name ?? "a new scene";
     const author = {
       id: device.value.id,
       name: this.members.get(device.value.id)?.get("name") ?? "GM",
@@ -440,8 +420,7 @@ export async function createCampaign(
     c.meta.set("name", name);
     c.meta.set("systemId", system.id);
     c.meta.set("systemVersion", system.version);
-    for (const field of system.campaignFields ?? [])
-      c.systemData.set(field.id, field.default);
+    for (const field of system.campaignFields ?? []) c.systemData.set(field.id, field.default);
     c.meta.set("roomKey", roomKey);
     c.meta.set("createdAt", Date.now());
     c.meta.set("createdBy", device.value.id);
@@ -466,9 +445,7 @@ export async function createCampaign(
 }
 
 /** Resolve a system's campaign-level values, falling back for older stored campaigns. */
-export function systemCampaignData(
-  campaign: Campaign,
-): Record<string, string | number | boolean> {
+export function systemCampaignData(campaign: Campaign): Record<string, string | number | boolean> {
   const system = getSystem(campaign.meta.get("systemId"));
   return Object.fromEntries(
     (system.campaignFields ?? []).map((field) => [
@@ -501,15 +478,10 @@ export function setSystemCampaignData(
     campaign.systemData.set(fieldId, number);
     return;
   }
-  if (
-    field.type === "select" &&
-    !field.options?.some((option) => option.id === value)
-  )
-    return;
+  if (field.type === "select" && !field.options?.some((option) => option.id === value)) return;
   if (field.type === "multiselect") {
     const values = parseCommaList(String(value)).filter(Boolean);
-    if (values.some((id) => !field.options?.some((option) => option.id === id)))
-      return;
+    if (values.some((id) => !field.options?.some((option) => option.id === id))) return;
     campaign.systemData.set(fieldId, formatCommaList([...new Set(values)]));
     return;
   }
@@ -521,8 +493,7 @@ export async function openCampaign(id: string) {
   if (activeCampaign.value?.id === id) return;
   closeCampaign();
   const c = await Campaign.open(id);
-  const roomKey: string | undefined =
-    summaryOf(id)?.roomKey ?? c.meta.get("roomKey");
+  const roomKey: string | undefined = summaryOf(id)?.roomKey ?? c.meta.get("roomKey");
   if (!c.meta.has("name") && !roomKey) {
     // Nothing stored locally and no invite to fetch it with.
     c.destroy();

@@ -1,5 +1,5 @@
-import { morphOpen, setMorphOrigin } from '../ui/morph'
-import { withTransition } from '../ui/transition'
+import { morphOpen, setMorphOrigin } from "../ui/morph";
+import { withTransition } from "../ui/transition";
 import type { ComponentType } from "react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
@@ -9,19 +9,19 @@ import {
   Popover,
   Separator,
 } from "react-aria-components";
-import { IconCheck } from '../ui/icons'
-import type { IconProps } from '../ui/icons'
+import { IconCheck } from "../ui/icons";
+import type { IconProps } from "../ui/icons";
 
 export type MenuItem =
   | {
-      label: string
-      Icon?: ComponentType<IconProps>
-      shortcut?: string
-      danger?: boolean
-      disabled?: boolean
+      label: string;
+      Icon?: ComponentType<IconProps>;
+      shortcut?: string;
+      danger?: boolean;
+      disabled?: boolean;
       /** For an item that turns something on or off: ticked when it's on. */
-      checked?: boolean
-      onSelect: () => void
+      checked?: boolean;
+      onSelect: () => void;
     }
   | {
       /**
@@ -29,12 +29,12 @@ export type MenuItem =
        * (null: stop showing it); onPick keeps it, once per drag, or when the
        * menu closes after picking by keyboard.
        */
-      label: string
-      colour: string
-      onPreview: (colour: string | null) => void
-      onPick: (colour: string) => void
+      label: string;
+      colour: string;
+      onPreview: (colour: string | null) => void;
+      onPick: (colour: string) => void;
     }
-  | 'divider'
+  | "divider";
 
 export function ContextMenu({
   x,
@@ -60,15 +60,10 @@ export function ContextMenu({
     closed.current = true;
     onClose();
   };
-  const choose = (
-    item: Extract<MenuItem, { onSelect: () => void }>,
-    index: number,
-  ) => {
+  const choose = (item: Extract<MenuItem, { onSelect: () => void }>, index: number) => {
     if (closed.current || item.disabled) return;
     closed.current = true;
-    const origin = ref.current?.querySelector<HTMLElement>(
-      `[data-action-index="${index}"]`,
-    );
+    const origin = ref.current?.querySelector<HTMLElement>(`[data-action-index="${index}"]`);
     const run = () => {
       onClose();
       item.onSelect();
@@ -100,23 +95,16 @@ export function ContextMenu({
       className="context-menu panel"
       onContextMenu={(e) => e.preventDefault()}
     >
-      <Menu
-        aria-label={label ?? "Actions"}
-        className="context-menu-actions"
-        autoFocus="first"
-      >
+      <Menu aria-label={label ?? "Actions"} className="context-menu-actions" autoFocus="first">
         {items.map((item, index) => {
-          if (item === "divider")
-            return <Separator key={index} className="context-divider" />;
+          if (item === "divider") return <Separator key={index} className="context-divider" />;
           if ("colour" in item) return null;
           const action = (
             <AriaMenuItem
               key={index}
               id={String(index)}
               textValue={item.label}
-              {...(item.disabled !== undefined
-                ? { isDisabled: item.disabled }
-                : {})}
+              {...(item.disabled !== undefined ? { isDisabled: item.disabled } : {})}
               className="menu-item"
               data-action-index={index}
               data-danger={item.danger}
@@ -128,15 +116,9 @@ export function ContextMenu({
                 ) : (
                   <span className="menu-icon-space" />
                 ))}
-              {item.Icon ? (
-                <item.Icon size={22} />
-              ) : (
-                <span className="menu-icon-space" />
-              )}
+              {item.Icon ? <item.Icon size={22} /> : <span className="menu-icon-space" />}
               <span className="menu-label">{item.label}</span>
-              {item.shortcut && (
-                <kbd className="menu-shortcut">{item.shortcut}</kbd>
-              )}
+              {item.shortcut && <kbd className="menu-shortcut">{item.shortcut}</kbd>}
             </AriaMenuItem>
           );
           return item.checked === undefined ? (
@@ -154,9 +136,7 @@ export function ContextMenu({
         })}
       </Menu>
       {items.map((item, index) =>
-        item !== "divider" && "colour" in item ? (
-          <MenuColour key={index} item={item} />
-        ) : null,
+        item !== "divider" && "colour" in item ? <MenuColour key={index} item={item} /> : null,
       )}
     </Popover>
   );
@@ -166,25 +146,25 @@ export function ContextMenu({
 function MenuColour({ item }: { item: Extract<MenuItem, { colour: string }> }) {
   const [shown, setShown] = useState(item.colour);
   const inputRef = useRef<HTMLInputElement>(null);
-  const pending = useRef<string | null>(null)
-  const latest = useRef(item)
-  latest.current = item
+  const pending = useRef<string | null>(null);
+  const latest = useRef(item);
+  latest.current = item;
   const keep = () => {
-    const colour = pending.current
-    if (!colour) return
-    pending.current = null
-    latest.current.onPick(colour)
-    latest.current.onPreview(null)
-  }
+    const colour = pending.current;
+    if (!colour) return;
+    pending.current = null;
+    latest.current.onPick(colour);
+    latest.current.onPreview(null);
+  };
   useEffect(() => {
     const input = inputRef.current;
     if (!input) return;
     input.addEventListener("change", keep);
     return () => {
       input.removeEventListener("change", keep);
-      keep()
-    }
-  }, [])
+      keep();
+    };
+  }, []);
   return (
     <div className="menu-colour" role="group" aria-label={item.label}>
       <span className="menu-label">{item.label}</span>

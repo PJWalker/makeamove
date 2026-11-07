@@ -8,17 +8,17 @@
  * The layer windows render into. Tabletop attaches it inside the table;
  * portals target it directly.
  */
-export const windowLayer = document.createElement('div')
-windowLayer.className = 'window-layer'
+export const windowLayer = document.createElement("div");
+windowLayer.className = "window-layer";
 
-let top = 0
+let top = 0;
 
 /** A z-index above every window so far. */
 export function nextZ(): number {
-  return ++top
+  return ++top;
 }
 
 /** Account for a z-index restored from storage, so new ones stay above it. */
 export function noteZ(z: number) {
-  top = Math.max(top, z)
+  top = Math.max(top, z);
 }

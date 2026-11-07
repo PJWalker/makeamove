@@ -24,22 +24,14 @@ export function parseSrdSpells(markdown: string): Spell[] {
       const [nameLine, ...lines] = block.split(/\r?\n/);
       const name = nameLine?.trim();
       const metadata =
-        lines
-          .find(
-            (line) => line.trim().startsWith("_") && line.trim().endsWith("_"),
-          )
-          ?.trim() ?? "";
-      const header =
-        /^_(?:Level (\d+) [A-Za-z]+|[A-Za-z]+ Cantrip) \(([^)]+)\)_/.exec(
-          metadata,
-        );
+        lines.find((line) => line.trim().startsWith("_") && line.trim().endsWith("_"))?.trim() ??
+        "";
+      const header = /^_(?:Level (\d+) [A-Za-z]+|[A-Za-z]+ Cantrip) \(([^)]+)\)_/.exec(metadata);
       if (!name || !header) return [];
       const casterList = header[2];
       if (!casterList) return [];
       const level = Number(header[1] ?? 0);
-      const classes = parseCommaList(casterList).map((value) =>
-        slug(value.trim()),
-      );
+      const classes = parseCommaList(casterList).map((value) => slug(value.trim()));
       const field = (label: string) =>
         lines
           .find((line) => line.startsWith(`**${label}:**`))
@@ -56,32 +48,16 @@ export function parseSrdSpells(markdown: string): Spell[] {
         )
         .join("\n")
         .trim();
-      const saveName = new RegExp(
-        `\\b(${Object.keys(ABILITIES).join("|")}) saving throw`,
-        "i",
-      )
+      const saveName = new RegExp(`\\b(${Object.keys(ABILITIES).join("|")}) saving throw`, "i")
         .exec(body)?.[1]
         ?.toLowerCase();
-      const damage = new RegExp(
-        `(\\d+)d(\\d+)\\s*(${DAMAGE})?\\s*damage`,
-        "i",
-      ).exec(body);
-      const healing =
-        /regains? (?:a number of )?(?:Hit Points equal to )?(\d+)d(\d+)/i.exec(
-          body,
-        );
+      const damage = new RegExp(`(\\d+)d(\\d+)\\s*(${DAMAGE})?\\s*damage`, "i").exec(body);
+      const healing = /regains? (?:a number of )?(?:Hit Points equal to )?(\d+)d(\d+)/i.exec(body);
       const scaling =
-        /(?:damage|healing) increases by (\d+)d\d+ for each (?:spell )?slot level/i.exec(
-          body,
-        );
-      const damageModifier = /plus your spellcasting ability modifier/i.test(
-        body,
-      );
+        /(?:damage|healing) increases by (\d+)d\d+ for each (?:spell )?slot level/i.exec(body);
+      const damageModifier = /plus your spellcasting ability modifier/i.test(body);
       const attack = /spell attack|attack roll/i.test(body) && !saveName;
-      const shapeMatch =
-        /(\d+)-foot(?:-radius)?\s+(Cube|Sphere|Cone|Line|Emanation)/i.exec(
-          body,
-        );
+      const shapeMatch = /(\d+)-foot(?:-radius)?\s+(Cube|Sphere|Cone|Line|Emanation)/i.exec(body);
       const shape = shapeMatch?.[2]?.toLowerCase();
       const shapeSize = shapeMatch?.[1];
       const area =
@@ -106,9 +82,7 @@ export function parseSrdSpells(markdown: string): Spell[] {
           name,
           level,
           classes,
-          trigger: [castingTime, rangeText, duration]
-            .filter(Boolean)
-            .join(" · "),
+          trigger: [castingTime, rangeText, duration].filter(Boolean).join(" · "),
           text: body,
           ...(/ritual/i.test(castingTime) ? { ritual: true } : {}),
           ...(scaling ? { upcastDice: Number(scaling[1]) } : {}),
@@ -135,14 +109,8 @@ export function parseSrdSpells(markdown: string): Spell[] {
                 },
               }
             : {}),
-          ...(saveName && ABILITIES[saveName]
-            ? { save: ABILITIES[saveName] }
-            : {}),
-          ...(target
-            ? { target: { ...target, ...(area ? { area } : {}) } }
-            : area
-              ? { area }
-              : {}),
+          ...(saveName && ABILITIES[saveName] ? { save: ABILITIES[saveName] } : {}),
+          ...(target ? { target: { ...target, ...(area ? { area } : {}) } } : area ? { area } : {}),
         },
       ];
     });

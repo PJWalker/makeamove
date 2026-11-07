@@ -53,8 +53,6 @@ describe("chat content", () => {
   it("uses the link label or target name for visible text", () => {
     const linked = entityContent("item", "potion", "Healing draught");
     expect(plainText(linked)).toBe("Healing draught ");
-    expect(plainText(entityContent("item", "potion", ""), () => "Potion")).toBe(
-      "Potion ",
-    );
+    expect(plainText(entityContent("item", "potion", ""), () => "Potion")).toBe("Potion ");
   });
 });

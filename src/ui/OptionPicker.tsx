@@ -31,7 +31,9 @@ export function OptionPicker({
   const selected = options.find((option) => option.id === value);
   // A value from before the options changed shows as it is.
   const name = selected
-    ? selected.group ? `${selected.group} · ${selected.name}` : selected.name
+    ? selected.group
+      ? `${selected.group} · ${selected.name}`
+      : selected.name
     : value || emptyLabel;
   return (
     <div className="field option-picker">
@@ -39,6 +41,7 @@ export function OptionPicker({
       {disabled ? (
         <span
           className="option-picker-value"
+          // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable so its tooltip is reachable by keyboard
           tabIndex={0}
           aria-label={`${label}: ${name}`}
           data-tip={selected?.text}
@@ -67,9 +70,7 @@ export function OptionPicker({
               : {}),
             content: (
               <>
-                {option.group && (
-                  <span className="option-picker-group">{option.group}</span>
-                )}
+                {option.group && <span className="option-picker-group">{option.group}</span>}
                 <strong>{option.name}</strong>
                 {option.text && <span>{option.text}</span>}
               </>
