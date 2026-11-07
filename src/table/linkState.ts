@@ -1,4 +1,4 @@
-import { signal } from "@preact/signals-react";
+import { store } from "../lib/store";
 import {
   addItem,
   canEdit,
@@ -68,7 +68,7 @@ export function linkActionItems(campaign: Campaign, link: LinkRef): MenuItem[] {
 export const linkKey = (l: LinkRef) => `${l.kind}:${l.id}`;
 
 /** Links with a pop-up open, oldest first. */
-export const openLinks = signal<LinkRef[]>([]);
+export const openLinks = store<LinkRef[]>([]);
 
 /** Open a link's pop-up, growing out of its tooltip (or the link itself); bring it forward if it's open. */
 export function showLink(link: LinkRef, from: Element) {
@@ -93,10 +93,10 @@ export function closeLink(link: LinkRef) {
 }
 
 /** A link's right-click menu, where it was opened. */
-export const linkMenu = signal<{ x: number; y: number; items: MenuItem[] } | null>(null);
+export const linkMenu = store<{ x: number; y: number; items: MenuItem[] } | null>(null);
 
 /** Renaming a link: its text now, and what saving does (null puts the target's own name back). */
-export const linkRename = signal<{
+export const linkRename = store<{
   n: number;
   text: string;
   custom: boolean;

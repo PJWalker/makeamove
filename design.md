@@ -36,7 +36,7 @@ Each browser runs the whole app against a local Yjs CRDT store persisted to Inde
 | Layer | Choice | Why |
 | :---- | :---- | :---- |
 | Language / build | TypeScript, Vite, PWA (service worker via vite-plugin-pwa) | Installable, offline after first load |
-| UI framework | React + React Aria Components + @preact/signals-react (TSX) | React Aria supplies accessible control behavior; existing CSS supplies the visual design. The signals compiler transform tracks component reads and keeps the Yjs observer model. React replaces Preact because React Aria's collection renderer and synthetic keyboard events are not compatible with Preact (decided Nov 2). |
+| UI framework | React + React Aria Components (TSX) | React Aria supplies accessible control behavior; existing CSS supplies the visual design. Components subscribe to observable stores explicitly, while Yjs observers keep collaborative data reactive. React replaced Preact because React Aria's collection renderer and synthetic keyboard events are not compatible with Preact (decided Nov 2). |
 | Canvas | PixiJS v8 (WebGL, WebGPU when available) \+ a custom camera | Handles large maps and hundreds of tokens at 60 fps; tldraw needs a commercial licence for production |
 | Freehand strokes | perfect-freehand | Pressure-aware, tiny, renders to polygons |
 | CRDT | Yjs (+ y-indexeddb for persistence, awareness protocol for presence) | Mature, fast, rich types (Map, Array, Text), subdocument support |

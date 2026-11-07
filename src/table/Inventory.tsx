@@ -1,4 +1,4 @@
-import { useSignal } from "@preact/signals-react";
+import { useState } from "react";
 import { addItem, removeItem, updateItem, spendItemUse } from "../features/characters/api";
 import { clearArtifactTrack, markArtifactTrack, systemOf } from "../features/characters/api";
 import type { CharacterView, ItemInstance } from "../features/characters/types";
@@ -52,7 +52,7 @@ function ArtifactTracker({
   item: ItemInstance;
   editable: boolean;
 }) {
-  const choice = useSignal("");
+  const [choice, setChoice] = useState("");
   const definition = systemOf(campaign).items.find((entry) => entry.id === item.defId);
   const artifact = definition?.artifact;
   if (!artifact) return null;
@@ -62,8 +62,8 @@ function ArtifactTracker({
   const needsChoice =
     progress === artifact.capacity - 1 && available.length > 0 && artifact.unlockMode === "choose";
   const selected =
-    choice.value && available.some((move) => move.id === choice.value)
-      ? choice.value
+    choice && available.some((move) => move.id === choice)
+      ? choice
       : (available[0]?.id ?? "");
   return (
     <section className="inventory-artifact" aria-label={`${item.name} Artifact track`}>
@@ -87,7 +87,7 @@ function ArtifactTracker({
                 value={move.id}
                 checked={selected === move.id}
                 disabled={!editable}
-                onChange={() => (choice.value = move.id)}
+                onChange={() => setChoice(move.id)}
               />
               {move.name}
             </label>

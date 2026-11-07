@@ -1,4 +1,4 @@
-import { useSignal } from "@preact/signals-react";
+import { useState } from "react";
 import type { Campaign } from "../campaign/campaign";
 import { systemOf } from "../features/characters/api";
 import { useY } from "../ui/useY";
@@ -9,11 +9,11 @@ import { FormattedText } from "./FormattedText";
  * the like, searchable, each section folded until opened.
  */
 export function ReferencePanel({ campaign }: { campaign: Campaign }) {
-  const query = useSignal("");
+  const [query, setQuery] = useState("");
   const gm = useY(campaign.members, () => campaign.isGm());
   const reference = systemOf(campaign).gmReference ?? [];
   if (!gm || !reference.length) return <p className="empty">No reference for this game.</p>;
-  const needle = query.value.trim().toLowerCase();
+  const needle = query.trim().toLowerCase();
   const sections = reference.filter(
     (section) => !needle || `${section.title}\n${section.text}`.toLowerCase().includes(needle),
   );
@@ -23,8 +23,8 @@ export function ReferencePanel({ campaign }: { campaign: Campaign }) {
         type="search"
         placeholder="Search the Reference…"
         aria-label="Search the Reference"
-        value={query.value}
-        onInput={(event) => (query.value = event.currentTarget.value)}
+        value={query}
+        onInput={(event) => setQuery(event.currentTarget.value)}
       />
       {sections.length ? (
         sections.map((section) => (
@@ -34,7 +34,7 @@ export function ReferencePanel({ campaign }: { campaign: Campaign }) {
           </details>
         ))
       ) : (
-        <p className="empty">Nothing matches “{query.value.trim()}”.</p>
+        <p className="empty">Nothing matches “{query.trim()}”.</p>
       )}
     </div>
   );

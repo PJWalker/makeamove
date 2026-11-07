@@ -1,4 +1,4 @@
-import { batch, signal } from "@preact/signals-react";
+import { batch, store } from "../../lib/store";
 import type { Campaign } from "../../campaign/campaign";
 import { device } from "../../platform/device";
 import type { ActionDef } from "../../systems/types";
@@ -16,7 +16,7 @@ import { systemOf } from "./system";
  */
 
 /** Set by Characters/Palette to ask for a stat or bond before a move rolls. */
-export const moveRequest = signal<{
+export const moveRequest = store<{
   moveId: string;
   characterId: string;
   targets?: MoveTarget[];
@@ -24,7 +24,7 @@ export const moveRequest = signal<{
 } | null>(null);
 
 /** A move waiting for its targets to be picked on the scene (see table/MovePrompt.tsx). */
-export const targetRequest = signal<{
+export const targetRequest = store<{
   moveId: string;
   characterId: string;
 } | null>(null);

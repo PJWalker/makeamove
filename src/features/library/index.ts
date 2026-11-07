@@ -1,4 +1,4 @@
-import { signal } from "@preact/signals-react";
+import { store } from "../../lib/store";
 import type {
   ActionDef,
   ChoiceDef,
@@ -9,6 +9,7 @@ import type {
   OptionDef,
   TagDef,
 } from "../../systems/types";
+import { useValue } from "../../ui/useValue";
 
 /*
  * Libraries: collections of things to look up and use (items, moves,
@@ -235,7 +236,7 @@ function flat(system: GameSystem): LibraryCollection[] {
   return collections;
 }
 
-const plugins = signal<LibrarySource[]>([]);
+const plugins = store<LibrarySource[]>([]);
 
 /**
  * Add a plugin's library. Returns a function that takes it away again.
@@ -252,6 +253,11 @@ export function registerLibrary(source: LibrarySource): () => void {
 /** Every library a campaign can see: its system's first, then plugins'. */
 export function librariesFor(system: GameSystem): LibrarySource[] {
   return [systemLibrary(system), ...plugins.value];
+}
+
+/** `librariesFor`, re-rendering when a plugin's library comes or goes. */
+export function useLibrariesFor(system: GameSystem): LibrarySource[] {
+  return [systemLibrary(system), ...useValue(plugins)];
 }
 
 /** Each entry's search text, lower-cased once: name, tags, text. */

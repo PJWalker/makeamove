@@ -1,4 +1,4 @@
-import { useSignal } from "@preact/signals-react";
+import { useState } from "react";
 import { getCharacter, systemOf, toggleCondition } from "../characters/api";
 import { derive } from "../characters/store";
 import {
@@ -26,6 +26,7 @@ import { useY } from "../../ui/useY";
 import { Button } from "../../ui/Button";
 import { PanelActions } from "../../table/PanelActions";
 import { IconClose, IconDice, IconReveal, IconSecret } from "../../ui/icons";
+import { useValue } from "../../ui/useValue";
 
 /*
  * The turn tracker: who's in the fight, in initiative order, whose turn it
@@ -45,7 +46,7 @@ export function CombatPanel({ campaign }: { campaign: Campaign }) {
   const order = useY(campaign.combatants, () => JSON.stringify(turnOrder(campaign.combatants)));
   const all: CombatantView[] = JSON.parse(order);
   const shown = gm ? all : all.filter((c) => !c.hidden);
-  const open = useSignal<string | null>(null);
+  const [open, setOpen] = useState<string | null>(null);
 
   return (
     <div className="combat-panel">
@@ -106,8 +107,8 @@ export function CombatPanel({ campaign }: { campaign: Campaign }) {
               c={c}
               current={c.id === turn}
               gm={gm}
-              open={open.value === c.id}
-              onToggle={() => (open.value = open.value === c.id ? null : c.id)}
+              open={open === c.id}
+              onToggle={() => setOpen(open === c.id ? null : c.id)}
               turn={turn || null}
               everyone={all}
             />
@@ -145,7 +146,8 @@ function CombatRow({
   // Re-render when the character changes (HP, conditions).
   useY(campaign.characters, () => JSON.stringify(getCharacter(campaign, c.characterId) ?? null));
   const ch = getCharacter(campaign, c.characterId);
-  const mine = !!ch && (gm || ch.owner === device.value.id);
+  const me = useValue(device).id;
+  const mine = !!ch && (gm || ch.owner === me);
   const hp = ch ? (ch.resources.hp ?? 0) : null;
   const maxHp = ch ? derive(ch, system).values.maxHp : null;
   const concentration = ch?.concentration
@@ -261,22 +263,22 @@ function ConditionForm({
   everyone: CombatantView[];
 }) {
   const system = systemOf(campaign);
-  const condition = useSignal(system.conditions[0]?.id ?? "");
-  const rounds = useSignal(1);
-  const of = useSignal(turn ?? everyone[0]?.id ?? "");
-  const tick = useSignal<"start" | "end">("end");
+  const [condition, setCondition] = useState(system.conditions[0]?.id ?? "");
+  const [rounds, setRounds] = useState(1);
+  const [of, setOf] = useState(turn ?? everyone[0]?.id ?? "");
+  const [tick, setTick] = useState<"start" | "end">("end");
   const ch = getCharacter(campaign, characterId)!;
-  const has = ch.conditions.includes(condition.value);
+  const has = ch.conditions.includes(condition);
   const add = () => {
-    if (!condition.value) return;
+    if (!condition) return;
     campaign.doc.transact(() => {
-      if (!has) toggleCondition(campaign, characterId, condition.value);
+      if (!has) toggleCondition(campaign, characterId, condition);
       setDuration(
         campaign,
         characterId,
-        condition.value,
-        rounds.value > 0 && of.value
-          ? { rounds: rounds.value, tick: tick.value, of: of.value }
+        condition,
+        rounds > 0 && of
+          ? { rounds: rounds, tick: tick, of: of }
           : null,
       );
     });
@@ -291,8 +293,8 @@ function ConditionForm({
     >
       <select
         aria-label="Condition"
-        value={condition.value}
-        onChange={(e) => (condition.value = e.currentTarget.value)}
+        value={condition}
+        onChange={(e) => setCondition(e.currentTarget.value)}
       >
         {system.conditions.map((k) => (
           <option key={k.id} value={k.id}>
@@ -305,23 +307,23 @@ function ConditionForm({
           type="number"
           min={0}
           max={100}
-          value={rounds.value}
-          onInput={(e) => (rounds.value = Number(e.currentTarget.value) || 0)}
+          value={rounds}
+          onInput={(e) => setRounds(Number(e.currentTarget.value) || 0)}
         />
         rounds, to the
       </label>
       <select
         aria-label="Counted at"
-        value={tick.value}
-        onChange={(e) => (tick.value = e.currentTarget.value as "start" | "end")}
+        value={tick}
+        onChange={(e) => setTick(e.currentTarget.value as "start" | "end")}
       >
         <option value="end">end</option>
         <option value="start">start</option>
       </select>
       <select
         aria-label="Of whose turn"
-        value={of.value}
-        onChange={(e) => (of.value = e.currentTarget.value)}
+        value={of}
+        onChange={(e) => setOf(e.currentTarget.value)}
       >
         {everyone.map((x) => (
           <option key={x.id} value={x.id}>
@@ -338,8 +340,8 @@ function ConditionForm({
           variant="ghost"
           onClick={() =>
             campaign.doc.transact(() => {
-              toggleCondition(campaign, characterId, condition.value);
-              setDuration(campaign, characterId, condition.value, null);
+              toggleCondition(campaign, characterId, condition);
+              setDuration(campaign, characterId, condition, null);
             })
           }
         >

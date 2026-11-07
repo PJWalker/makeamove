@@ -1,4 +1,4 @@
-import { signal } from "@preact/signals-react";
+import { store } from "../lib/store";
 import { Dialog } from "./CampaignDialogs";
 import type { Campaign } from "../campaign/campaign";
 import { useY } from "../ui/useY";
@@ -6,6 +6,7 @@ import { GraphicPicker } from "../ui/GraphicPicker";
 import { getEntityGraphic, setEntityGraphic } from "./entityGraphics";
 import { usePopupDialog } from "./usePopupDialog";
 import { getNote } from "../features/notes/api";
+import { useValue } from "../ui/useValue";
 
 type Request = {
   n: number;
@@ -16,7 +17,7 @@ type Request = {
   defaultIcon?: string | undefined;
 } | null;
 
-const request = signal<Request>(null);
+const request = store<Request>(null);
 let nextRequest = 0;
 
 export function editEntityGraphic(
@@ -31,7 +32,7 @@ export function editEntityGraphic(
 }
 
 export function GraphicDialogs({ campaign }: { campaign: Campaign }) {
-  const current = request.value;
+  const current = useValue(request);
   if (!current || current.campaign !== campaign) return null;
   return <GraphicDialog key={current.n} request={current} />;
 }

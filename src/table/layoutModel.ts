@@ -206,6 +206,27 @@ export function setOpen(l: Layout, side: Side, open: boolean): Layout {
   return { ...l, [side]: tidy({ ...l[side], open }) };
 }
 
+/** The narrowest the map may get between two open sidebars before one of them has to give way. */
+export const MIN_CANVAS_W = 320;
+/** The width of a side's tab strip. */
+const RAIL_W = 48;
+
+/** Whether both sidebars open at once would leave too little of the map in a window this wide. */
+export function bothSidesCramped(l: Layout, viewportWidth: number): boolean {
+  return l.left.width + l.right.width + 2 * RAIL_W + MIN_CANVAS_W > viewportWidth;
+}
+
+/**
+ * In a window too narrow for both sidebars and the map, opening one sidebar
+ * shuts the other. A side that was already open stays as it is.
+ */
+export function oneSideIfCramped(prev: Layout, next: Layout, viewportWidth: number): Layout {
+  if (!next.left.open || !next.right.open || !bothSidesCramped(next, viewportWidth)) return next;
+  if (!prev.left.open) return { ...next, right: { ...next.right, open: false } };
+  if (!prev.right.open) return { ...next, left: { ...next.left, open: false } };
+  return next;
+}
+
 /** Resize a side; pulling it very narrow snaps it shut, and widening it again reopens it. */
 export function resizeSide(l: Layout, side: Side, width: number, max: number): Layout {
   const s = l[side];

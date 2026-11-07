@@ -1,7 +1,6 @@
-import { useSignal } from "@preact/signals-react";
 import type { RefObject } from "react";
 import { createPortal } from "react-dom";
-import { useCallback, useEffect, useId, useMemo, useRef } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   canEdit,
   getCharacter,
@@ -68,17 +67,17 @@ export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: C
       ),
     [people, c.id, rels],
   );
-  const adding = useSignal("");
-  const open = useSignal<string | null>(null);
-  const suggesting = useSignal(false);
-  const active = useSignal(0);
+  const [adding, setAdding] = useState("");
+  const [open, setOpen] = useState<string | null>(null);
+  const [suggesting, setSuggesting] = useState(false);
+  const [active, setActive] = useState(0);
   const section = useRef<HTMLElement>(null);
   const input = useRef<HTMLInputElement>(null);
   const panel = useRef<HTMLDivElement>(null);
   const listId = useId();
-  const matches = matchingLinkTargets(others, adding.value.replace(/^@/, ""));
-  const expanded = editable && suggesting.value && adding.value.trim().length > 0;
-  const index = Math.min(active.value, Math.max(0, matches.length - 1));
+  const matches = matchingLinkTargets(others, adding.replace(/^@/, ""));
+  const expanded = editable && suggesting && adding.trim().length > 0;
+  const index = Math.min(active, Math.max(0, matches.length - 1));
   const add = useCallback(
     (to: string) => {
       const current = getCharacter(campaign, c.id);
@@ -91,12 +90,12 @@ export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: C
       )
         return false;
       setRelationship(campaign.characters, c.id, to, "");
-      adding.value = "";
-      suggesting.value = false;
-      open.value = null;
+      setAdding("");
+      setSuggesting(false);
+      setOpen(null);
       return true;
     },
-    [campaign, c.id, adding, open, suggesting],
+    [campaign, c.id],
   );
 
   useEffect(() => {
@@ -118,8 +117,8 @@ export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: C
     ref: panel,
     anchor: bounds ? { left: bounds.left, top: bounds.top, bottom: bounds.bottom } : null,
     inside: [input.current],
-    onDismiss: () => (suggesting.value = false),
-    positionKey: `${adding.value}:${matches.map((match) => match.id).join(",")}`,
+    onDismiss: () => setSuggesting(false),
+    positionKey: `${adding}:${matches.map((match) => match.id).join(",")}`,
   });
 
   return (
@@ -133,7 +132,7 @@ export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: C
           {rels.map((r) => {
             const other = getCharacter(campaign, r.to);
             if (!other) return null;
-            const expanded = open.value === r.to;
+            const expanded = open === r.to;
             return (
               <li key={r.to} className="relationship">
                 <div className={`relationship-row${tracksDepth ? " has-depth" : ""}`}>
@@ -181,7 +180,7 @@ export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: C
                     size="sm"
                     label={expanded ? "Hide notes" : "Notes"}
                     pressed={expanded}
-                    onClick={() => (open.value = expanded ? null : r.to)}
+                    onClick={() => setOpen(expanded ? null : r.to)}
                   >
                     <IconExpand />
                   </Button>
@@ -226,27 +225,26 @@ export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: C
             }
             placeholder="Character name"
             autoComplete="off"
-            value={adding.value}
+            value={adding}
             onInput={(event) => {
-              adding.value = event.currentTarget.value;
-              active.value = 0;
-              suggesting.value = true;
+              setAdding(event.currentTarget.value);
+              setActive(0);
+              setSuggesting(true);
             }}
-            onFocus={() => (suggesting.value = adding.value.trim().length > 0)}
-            onBlur={() => (suggesting.value = false)}
+            onFocus={() => setSuggesting(adding.trim().length > 0)}
+            onBlur={() => setSuggesting(false)}
             onKeyDown={(event) => {
               if (event.key === "Escape" && expanded) {
                 event.preventDefault();
                 event.stopPropagation();
-                suggesting.value = false;
+                setSuggesting(false);
               } else if (
                 expanded &&
                 matches.length &&
                 (event.key === "ArrowDown" || event.key === "ArrowUp")
               ) {
                 event.preventDefault();
-                active.value =
-                  (index + (event.key === "ArrowDown" ? 1 : -1) + matches.length) % matches.length;
+                setActive((index + (event.key === "ArrowDown" ? 1 : -1) + matches.length) % matches.length);
               } else if (
                 expanded &&
                 matches[index] &&
@@ -336,11 +334,11 @@ export function RelationshipsDialog({
     const linked = new Set(edges.flatMap((e) => [e.from, e.to]));
     return people.filter((p) => linked.has(p.id));
   }, [people, edges]);
-  const dragged = useSignal<Record<string, NodePosition>>({});
+  const [dragged, setDragged] = useState<Record<string, NodePosition>>({});
   const ids = useMemo(() => shown.map((p) => p.id), [shown]);
   const pos = useMemo(
-    () => layoutWeb(ids, edges, { width: W, height: H, fixed: dragged.value }),
-    [ids, edges, dragged.value],
+    () => layoutWeb(ids, edges, { width: W, height: H, fixed: dragged }),
+    [ids, edges, dragged],
   );
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -359,7 +357,7 @@ export function RelationshipsDialog({
       const p = at(ev);
       if (!moved && Math.hypot(p.x - start.x, p.y - start.y) < 4) return;
       moved = true;
-      dragged.value = { ...dragged.value, [id]: p };
+      setDragged({ ...dragged, [id]: p });
     };
     const up = () => {
       window.removeEventListener("pointermove", move);

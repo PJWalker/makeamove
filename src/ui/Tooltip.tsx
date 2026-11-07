@@ -1,5 +1,4 @@
-import { useEffect, useRef } from "react";
-import { useSignal } from "@preact/signals-react";
+import { useEffect, useRef, useState } from "react";
 import { inTransition } from "./transition";
 
 const DELAY = 150;
@@ -31,7 +30,7 @@ export function hideTooltip() {
  */
 export function Tooltip() {
   /** What to show, the element's box, and the side it would rather open on. */
-  const tip = useSignal<{
+  const [tip, setTip] = useState<{
     text: string;
     long?: boolean;
     r: DOMRect;
@@ -50,8 +49,8 @@ export function Tooltip() {
     const hide = () => {
       clearTimeout(timer);
       current = null;
-      if (tip.value) lastShown = performance.now();
-      tip.value = null;
+      if (tip) lastShown = performance.now();
+      setTip(null);
     };
     // A press, key or scroll ends the "already browsing" state too.
     const dismiss = () => {
@@ -100,7 +99,7 @@ export function Tooltip() {
           : cy < innerHeight / 2
             ? "down"
             : "up";
-      tip.value = { text, long, r, dir, instant };
+      setTip({ text, long, r, dir, instant });
     }
 
     function consider(target: EventTarget | null, delay: number) {
@@ -152,7 +151,7 @@ export function Tooltip() {
     };
   }, [tip]);
 
-  const t = tip.value;
+  const t = tip;
   // Keep it on screen: open on the preferred side, or the opposite one if it
   // wouldn't fit there; centre on the target, then clamp to the window.
   useEffect(() => {

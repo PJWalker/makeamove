@@ -1,4 +1,4 @@
-import { useSignal } from "@preact/signals-react";
+import { useState } from "react";
 import type { Campaign, SceneView } from "../campaign/campaign";
 import {
   createSceneFolder,
@@ -19,6 +19,7 @@ import { FolderTree } from "./FolderTree";
 import { ContextMenu, type MenuItem } from "./ContextMenu";
 import { menuTrigger } from "../ui/menuTrigger";
 import { scenesLayout } from "./panelLayouts";
+import { useValue } from "../ui/useValue";
 
 /** The scene list, and the active scene's settings. (Campaign actions are in the tool strip's menu.) */
 export function ScenePanel({ campaign }: { campaign: Campaign }) {
@@ -29,9 +30,9 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
   const isGm = campaign.isGm();
   const active = scenes.find((s) => s.id === activeId);
   const { level, go } = usePaneLevel(scenesLayout, active ? "detail" : "list");
-  const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(null);
-  const scene =
-    active && canvasCommands.value?.sceneId === active.id ? canvasCommands.value.scene : null;
+  const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
+  const commands = useValue(canvasCommands);
+  const scene = active && commands?.sceneId === active.id ? commands.scene : null;
   const graphic = useY(campaign.entityGraphics, () =>
     active ? getEntityGraphic(campaign, "scene", active.id, "map") : undefined,
   );
@@ -91,7 +92,7 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
           });
         }
       }
-      menu.value = { x, y, items };
+      setMenu({ x, y, items });
     });
     const playerCount = playerCounts.get(s.id) ?? 0;
     return (
@@ -121,7 +122,7 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
   return (
     <TwoPane
       layout={scenesLayout}
-      level={level.value}
+      level={level}
       title={active?.name ?? "Scenes"}
       backLabel="Back to the scene list"
       onBack={() => go("list")}
@@ -190,7 +191,7 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
               ) : null
             }
           />
-          {menu.value && <ContextMenu {...menu.value} onClose={() => (menu.value = null)} />}
+          {menu && <ContextMenu {...menu} onClose={() => setMenu(null)} />}
         </>
       }
       detail={

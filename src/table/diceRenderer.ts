@@ -35,6 +35,7 @@ import {
   DiceHold,
   PHYSICS_STEP,
   type DieHull,
+  type DieTray,
   type DiePose,
 } from "./diePhysics";
 
@@ -66,9 +67,10 @@ export interface DiceRenderer {
   /**
    * Wakes the landed dice inside an element that's been picked up, carried by
    * `carrier` (the element itself, or a copy of it lifted above the page).
-   * The returned function puts them back.
+   * The returned function puts them back, or, after a shake, lets them roll on
+   * in place until the dice rolled in their stead take them over.
    */
-  pickUp(element: HTMLElement, carrier?: HTMLElement): () => void;
+  pickUp(element: HTMLElement, carrier?: HTMLElement): (shaken?: boolean) => void;
 }
 
 /** A landed die's canvas, in CSS px; dice are drawn at SCALE px per unit. */
@@ -81,6 +83,10 @@ const MAX_JOLT = 30;
 const RETURN_MS = 280;
 const ARRANGEMENT_LEAD_MS = 800;
 const ARRANGEMENT_DURATION_MS = 650;
+/** Seconds a shaken roll goes on rolling before its dice lose their bounce. */
+const ROLL_ON_CALM = 0.8;
+/** How long shaken dice wait for their reroll before going back where they were. */
+const ROLL_ON_WAIT_MS = 1500;
 
 const toQuaternion = (q: DiePose["quaternion"]) => new Quaternion(q.x, q.y, q.z, q.w);
 
@@ -342,11 +348,14 @@ interface Held {
 interface Hold {
   element: HTMLElement;
   offset: Point;
+  tray: DieTray;
   physics: DiceHold;
   dice: Held[];
   time: number;
   last?: { x: number; y: number; vx: number; vy: number; t: number };
   released: boolean;
+  /** Shaken and let go: rolling on in the roll card, which is now `element`. */
+  rolling: boolean;
 }
 
 function reflectionsFor(renderer: WebGPURenderer) {
@@ -615,7 +624,7 @@ export async function createDiceRenderer(): Promise<DiceRenderer | null> {
       const vx = last.vx + ((x - last.x) / dt - last.vx) * 0.5;
       const vy = last.vy + ((y - last.y) / dt - last.vy) * 0.5;
       const jolt = (dv: number) => Math.max(-MAX_JOLT, Math.min(MAX_JOLT, (dv * JOLT) / SCALE));
-      hold.physics.jolt(jolt(vx - last.vx), jolt(vy - last.vy));
+      if (!hold.rolling) hold.physics.jolt(jolt(vx - last.vx), jolt(vy - last.vy));
       hold.time += Math.min(dt, 0.1);
       while (hold.time >= PHYSICS_STEP) {
         hold.physics.step();
@@ -651,6 +660,9 @@ export async function createDiceRenderer(): Promise<DiceRenderer | null> {
       y: (box.height - trayHeight) / 2,
     };
     const origin = { x: box.left + offset.x, y: box.top + offset.y };
+    const card = element.closest<HTMLElement>(".roll-card") ?? element;
+    const cardBox = card.getBoundingClientRect();
+    const tray = { left: 0, top: 0, right: trayWidth / SCALE, bottom: trayHeight / SCALE };
     // A die still returning from an earlier pick-up is caught where it is.
     const starts = picked.map(([slot, rest]) => {
       if (rest.held) {
@@ -675,13 +687,9 @@ export async function createDiceRenderer(): Promise<DiceRenderer | null> {
     const hold: Hold = {
       element: carrier,
       offset,
+      tray,
       physics: new DiceHold(
-        {
-          left: 0,
-          top: 0,
-          right: trayWidth / SCALE,
-          bottom: trayHeight / SCALE,
-        },
+        tray,
         picked.map(([, rest], index) => {
           const { x, y, z, quaternion: q } = starts[index]!;
           return {
@@ -697,6 +705,7 @@ export async function createDiceRenderer(): Promise<DiceRenderer | null> {
       dice: [],
       time: 0,
       released: false,
+      rolling: false,
     };
     hold.dice = picked.map(([slot, rest], index) => {
       const mesh = dieMesh(rest.shape, rest.material, rest.value, rest.sides);
@@ -707,20 +716,89 @@ export async function createDiceRenderer(): Promise<DiceRenderer | null> {
     holds.add(hold);
     stepHold(hold, performance.now());
     animate();
-    return () => {
-      if (hold.released) return;
-      hold.released = true;
-      const start = performance.now();
-      for (const held of hold.dice) {
-        held.returning = {
-          start,
-          x: held.die.position.x,
-          y: -held.die.position.y,
-          z: held.die.position.z / SCALE,
-          quaternion: held.die.quaternion.clone(),
-        };
-      }
+    return (shaken = false) => {
+      if (hold.released || hold.rolling) return;
+      if (!shaken || !card.isConnected) return putBack(hold);
+      // The carried copy is gone; the dice roll on where the card itself lies.
+      hold.rolling = true;
+      hold.element = card;
+      hold.offset = { x: origin.x - cardBox.left, y: origin.y - cardBox.top };
+      setTimeout(() => {
+        if (holds.has(hold)) putBack(hold);
+      }, ROLL_ON_WAIT_MS);
     };
+  }
+
+  function putBack(hold: Hold) {
+    if (hold.released) return;
+    hold.released = true;
+    const start = performance.now();
+    for (const held of hold.dice) {
+      held.returning = {
+        start,
+        x: held.die.position.x,
+        y: -held.die.position.y,
+        z: held.die.position.z / SCALE,
+        quaternion: held.die.quaternion.clone(),
+      };
+    }
+  }
+
+  /**
+   * Hands shaken dice still rolling in `tray` over to the dice rerolled in
+   * their place, which carry on from where they are and settle on their new
+   * values. Returns the mounts left to throw in as usual.
+   */
+  function rollOn(tray: HTMLElement, mounts: PendingMount[]) {
+    const left = [...mounts];
+    for (const hold of [...holds]) {
+      if (!hold.rolling || hold.released || hold.element !== tray) continue;
+      const pairs: [PendingMount, Held][] = [];
+      for (const held of hold.dice) {
+        if (held.slot.isConnected) continue;
+        const index = left.findIndex(({ args }) => args[2].sides === held.rest.sides);
+        if (index >= 0) pairs.push([left.splice(index, 1)[0]!, held]);
+      }
+      if (!pairs.length) continue;
+      const states = hold.physics.states();
+      const shift = (pose: DiePose): DiePose => ({
+        ...pose,
+        x: pose.x + hold.offset.x / SCALE,
+        y: pose.y + hold.offset.y / SCALE,
+      });
+      try {
+        const frames = simulateDice(
+          hold.tray,
+          pairs.map(([{ args }, held]) => ({
+            hull: held.rest.shape.hull,
+            seed: args[2].seed,
+            state: states[held.index]!,
+          })),
+          ROLL_ON_CALM,
+        );
+        const start = performance.now();
+        pairs.forEach(([mount, held], index) => {
+          sleep(held);
+          const [canvas, slot, die] = mount.args;
+          mount.mounted = mountDie(
+            [canvas, slot, die, { from: { x: 0, y: 0 }, delay: 0 }],
+            frames[index]!.map(shift),
+            tray,
+            start,
+          );
+          void mount.mounted.landed.then(mount.resolve, mount.reject);
+          void mount.mounted.settled.then(mount.settle);
+        });
+      } catch (error) {
+        for (const [mount] of pairs) {
+          mount.mounted?.dispose();
+          mount.reject(error);
+          mount.settle();
+        }
+      }
+      putBack(hold);
+    }
+    return left;
   }
 
   function frame(now: number) {
@@ -892,7 +970,8 @@ export async function createDiceRenderer(): Promise<DiceRenderer | null> {
         disposed = true;
         flight?.cancel();
         resting.delete(slot);
-        if (rest.held) sleep(rest.held);
+        // A shaken die rolls on until the die rerolled in its place takes over.
+        if (rest.held && !rest.held.hold.rolling) sleep(rest.held);
         target?.dispose();
       },
     };
@@ -912,7 +991,10 @@ export async function createDiceRenderer(): Promise<DiceRenderer | null> {
     const batches = [...pending];
     pending.clear();
     for (const [tray, batch] of batches) {
-      const mounts = batch.filter((mount) => !mount.cancelled);
+      const mounts = rollOn(
+        tray,
+        batch.filter((mount) => !mount.cancelled),
+      );
       if (!mounts.length) continue;
       try {
         const box = tray.getBoundingClientRect();

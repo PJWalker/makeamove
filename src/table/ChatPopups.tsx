@@ -1,6 +1,5 @@
 import type * as React from "react";
-import { useSignal } from "@preact/signals-react";
-import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useRef } from "react";
+import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from "react";
 import { lazy, Suspense } from "react";
 import { chatPopups, dismissPopup } from "../features/chat/notify";
 import type { ChatMessage } from "../features/chat/types";
@@ -10,6 +9,7 @@ import { collapsedInto, reducedMotion } from "../ui/bubble";
 import { Button } from "../ui/Button";
 import { IconClose } from "../ui/icons";
 import { showPanel } from "./panelLayout";
+import { useValue } from "../ui/useValue";
 
 const LoneMessage = lazy(() =>
   import("./ChatMessage").then((module) => ({ default: module.LoneMessage })),
@@ -60,17 +60,17 @@ function tabRect() {
 const collapsed = (box: DOMRect): Keyframe => collapsedInto(box, tabRect());
 
 export function ChatPopups({ campaign }: { campaign: Campaign }) {
-  const messages = campaign.chat.messages.value;
+  const messages = useValue(campaign.chat.messages);
   // Looked up live, so a deleted message takes its popup with it.
-  const shown = chatPopups.value.map((id) => messages.find((m) => m.id === id)).filter((m) => !!m);
-  const held = useSignal(false);
-  const hidden = useSignal(document.visibilityState === "hidden");
+  const shown = useValue(chatPopups).map((id) => messages.find((m) => m.id === id)).filter((m) => !!m);
+  const [held, setHeld] = useState(false);
+  const [hidden, setHidden] = useState(document.visibilityState === "hidden");
   useEffect(() => {
-    const onVisibility = () => (hidden.value = document.visibilityState === "hidden");
+    const onVisibility = () => setHidden(document.visibilityState === "hidden");
     document.addEventListener("visibilitychange", onVisibility);
     return () => document.removeEventListener("visibilitychange", onVisibility);
-  }, [hidden]);
-  const leavingAll = useSignal(false);
+  }, []);
+  const [leavingAll, setLeavingAll] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const stack = useRef<HTMLDivElement>(null);
   const any = shown.length > 0;
@@ -124,10 +124,10 @@ export function ChatPopups({ campaign }: { campaign: Campaign }) {
 
   useEffect(() => {
     if (!any) {
-      held.value = false;
-      leavingAll.value = false;
+      setHeld(false);
+      setLeavingAll(false);
     }
-  }, [any, held, leavingAll]);
+  }, [any]);
 
   if (!any) return null;
   return (
@@ -136,8 +136,8 @@ export function ChatPopups({ campaign }: { campaign: Campaign }) {
       className="chat-popups"
       role="status"
       aria-live="polite"
-      onPointerEnter={() => (held.value = true)}
-      onPointerLeave={() => (held.value = false)}
+      onPointerEnter={() => setHeld(true)}
+      onPointerLeave={() => setHeld(false)}
       onPointerDown={markRead}
     >
       <div ref={stack} className="chat-popup-stack">
@@ -147,11 +147,11 @@ export function ChatPopups({ campaign }: { campaign: Campaign }) {
             campaign={campaign}
             m={m}
             depth={shown.length - 1 - i}
-            held={held.value || hidden.value}
-            leaving={leavingAll.value}
+            held={held || hidden}
+            leaving={leavingAll}
             stack={stack}
             place={place}
-            onDismissAll={() => (leavingAll.value = true)}
+            onDismissAll={() => setLeavingAll(true)}
           />
         ))}
       </div>

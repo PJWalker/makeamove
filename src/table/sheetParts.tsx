@@ -1,4 +1,4 @@
-import { useSignal } from "@preact/signals-react";
+import { useState } from "react";
 import { plainText } from "../features/characters/trackers";
 import { MoveBody } from "./MoveBody";
 import { useY } from "../ui/useY";
@@ -37,6 +37,7 @@ import { getEntityGraphic, setEntityGraphic } from "./entityGraphics";
 import { actionMenuItems } from "./actionMenu";
 import { dragEntity, entity } from "./entityDrag";
 import { sessionMoveUsed, sessionUseSnapshot } from "../features/characters/sessionMoves";
+import { useValue } from "../ui/useValue";
 
 /*
  * Pieces every system's sheet can use: counters, the action list, and the
@@ -129,23 +130,23 @@ export function MoveList({
 }) {
   // The system's groupings that this character has any of, in the system's order; the first is shown to start.
   const categories = system.actionCategories.filter((k) => moves.some((m) => m.category === k.id));
-  const filter = useSignal<string>(categories[0]?.id ?? "all");
+  const [filter, setFilter] = useState<string>(categories[0]?.id ?? "all");
   const windows = useEntryWindows();
-  const sessionMessages = campaign.chat.messages.value;
+  const sessionMessages = useValue(campaign.chat.messages);
   const sessionUsage = useY(campaign.systemData, () =>
     sessionUseSnapshot(campaign, ownerId, moves, sessionMessages),
   );
   void sessionUsage;
-  const shown = filter.value === "all" ? moves : moves.filter((m) => m.category === filter.value);
+  const shown = filter === "all" ? moves : moves.filter((m) => m.category === filter);
 
   return (
     <div className="moves">
       {categories.length > 1 && (
         <SegmentedOrSelect
           label="Move type"
-          value={filter.value}
+          value={filter}
           options={[{ id: "all", label: "All" }, ...categories]}
-          onChange={(k) => (filter.value = k)}
+          onChange={(k) => setFilter(k)}
         />
       )}
       <List>
@@ -247,13 +248,13 @@ export function TokenChip({
   c: CharacterView;
   editable: boolean;
 }) {
-  const menu = useSignal<{ x: number; y: number } | null>(null);
-  const settings = useSignal(false);
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const [settings, setSettings] = useState(false);
   const graphic = useY(campaign.entityGraphics, () =>
     getEntityGraphic(campaign, "character", c.id),
   );
-  const pick = () => (settings.value = true);
-  const trigger = menuTrigger((x, y) => (menu.value = { x, y }));
+  const pick = () => setSettings(true);
+  const trigger = menuTrigger((x, y) => setMenu({ x, y }));
   const items: MenuItem[] = [
     ...(editable
       ? [
@@ -262,7 +263,7 @@ export function TokenChip({
           {
             label: "Token settings…",
             Icon: IconRename,
-            onSelect: () => (settings.value = true),
+            onSelect: () => setSettings(true),
           },
         ]
       : []),
@@ -299,15 +300,15 @@ export function TokenChip({
       >
         <EntityGraphicView graphic={graphic} size={58} />
       </div>
-      {menu.value && items.length > 0 && (
-        <ContextMenu {...menu.value} items={items} onClose={() => (menu.value = null)} />
+      {menu && items.length > 0 && (
+        <ContextMenu {...menu} items={items} onClose={() => setMenu(null)} />
       )}
-      {settings.value && (
+      {settings && (
         <TokenSettings
           campaign={campaign}
           c={c}
           graphic={graphic}
-          onClose={() => (settings.value = false)}
+          onClose={() => setSettings(false)}
         />
       )}
     </div>
@@ -327,7 +328,8 @@ function TokenSettings({
 }) {
   const ref = usePopupDialog();
   const style = graphic.kind === "image" ? (c.tokenStyle ?? "disc") : "disc";
-  const colour = c.tokenColour ?? colourOf(device.value);
+  const me = useValue(device);
+  const colour = c.tokenColour ?? colourOf(me);
   return (
     <Dialog dialogRef={ref} title="Token settings" onClose={onClose}>
       <GraphicPicker

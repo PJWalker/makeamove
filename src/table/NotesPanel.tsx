@@ -1,5 +1,5 @@
-import { signal, useSignal } from "@preact/signals-react";
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { store } from "../lib/store";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   backlinks,
   createNote,
@@ -41,6 +41,7 @@ import { editEntityGraphic } from "./GraphicDialogs";
 import { NoteEditor } from "./NoteEditor";
 import { FolderTree } from "./FolderTree";
 import { notesLayout } from "./panelLayouts";
+import { useValue } from "../ui/useValue";
 
 /** How long ago, roughly, for a page's last edit. */
 function ago(at: number) {
@@ -58,21 +59,21 @@ function ago(at: number) {
  */
 export function NotesPanel({ campaign }: { campaign: Campaign }) {
   // GM-only pages, on a GM device; watched too, so the list keeps up with them.
-  const vault = campaign.vault.value;
+  const vault = useValue(campaign.vault);
   useY(vault?.notes, () => null);
   const notes = useY(campaign.notes, () => listNotes(campaign));
   const folders = useY(campaign.noteFolders, () => listNoteFolders(campaign));
   // After useY, so it is already watching when the folders appear.
   useEffect(() => ensureNoteFolders(campaign), [campaign]);
-  const openId = openNoteId.value;
+  const openId = useValue(openNoteId);
   const open = openId ? notes.find((n) => n.id === openId) : undefined;
   const { level, go } = usePaneLevel(notesLayout, open ? "detail" : "list");
 
   // Asked to open a page (from the list, a link or elsewhere): show it.
-  const requests = noteOpened.value;
+  const requests = useValue(noteOpened);
   const seen = useRef(requests);
   useEffect(() => {
-    if (requests !== seen.current && openNoteId.peek()) go("detail");
+    if (requests !== seen.current && openNoteId.value) go("detail");
     seen.current = requests;
   }, [requests, go]);
   // The open page was deleted: back to the list.
@@ -84,11 +85,12 @@ export function NotesPanel({ campaign }: { campaign: Campaign }) {
   }, [openId, open, campaign.notes, go]);
 
   const folder = folders.find((f) => f.id === open?.folder);
-  const revealingNote = revealing.value ? notes.find((n) => n.id === revealing.value) : undefined;
+  const revealingId = useValue(revealing);
+  const revealingNote = revealingId ? notes.find((n) => n.id === revealingId) : undefined;
   return (
     <TwoPane
       layout={notesLayout}
-      level={level.value}
+      level={level}
       title={folder?.name ?? "Notes"}
       backLabel="Back to the notes"
       onBack={() => go("list")}
@@ -125,10 +127,10 @@ function NoteList({
   folders: NoteFolderView[];
   openId: string | null;
 }) {
-  const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(null);
-  const deleting = useSignal<string | null>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const known = new Set(folders.map((f) => f.id));
-  const isGm = !!campaign.vault.value;
+  const isGm = !!useValue(campaign.vault);
   const newPage = (folder?: string, gmOnly = false) =>
     openNote(createNote(campaign, { ...(folder ? { folder } : {}), gmOnly }));
 
@@ -166,9 +168,9 @@ function NoteList({
         label: "Delete page…",
         Icon: IconDelete,
         danger: true,
-        onSelect: () => (deleting.value = n.id),
+        onSelect: () => setDeleting(n.id),
       });
-      menu.value = { x, y, items };
+      setMenu({ x, y, items });
     });
     return (
       <ListRow
@@ -190,11 +192,11 @@ function NoteList({
     );
   };
 
-  const doomed = deleting.value ? notes.find((n) => n.id === deleting.value) : undefined;
+  const doomed = deleting ? notes.find((n) => n.id === deleting) : undefined;
   return (
     <>
       {doomed && (
-        <DeletePage campaign={campaign} note={doomed} onClose={() => (deleting.value = null)} />
+        <DeletePage campaign={campaign} note={doomed} onClose={() => setDeleting(null)} />
       )}
       <FolderTree
         ariaLabel="Notes"
@@ -255,7 +257,7 @@ function NoteList({
         onRenameFolder={(id, name) => renameNoteFolder(campaign, id, name)}
         emptyContent={!notes.length ? <p className="empty-inline">No pages yet.</p> : null}
       />
-      {menu.value && <ContextMenu {...menu.value} onClose={() => (menu.value = null)} />}
+      {menu && <ContextMenu {...menu} onClose={() => setMenu(null)} />}
     </>
   );
 }
@@ -335,7 +337,7 @@ function NotePage({
 }
 
 /** A page waiting for the GM to confirm revealing it. */
-const revealing = signal<string | null>(null);
+const revealing = store<string | null>(null);
 
 /** Asks before revealing a GM-only page: players keep it once they have it. */
 function RevealPage({

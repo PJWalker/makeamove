@@ -1,4 +1,4 @@
-import { signal } from "@preact/signals-react";
+import { store } from "../../lib/store";
 import { getStorageJson, setStorageJson } from "../../platform/localStorage";
 
 /** Recently run actions, newest first, remembered on this device. */
@@ -10,7 +10,7 @@ function load(): string[] {
   return Array.isArray(v) ? v.filter((x) => typeof x === "string").slice(0, MAX) : [];
 }
 
-export const recentActions = signal<string[]>(load());
+export const recentActions = store<string[]>(load());
 
 export function noteRecent(id: string) {
   recentActions.value = [id, ...recentActions.value.filter((x) => x !== id)].slice(0, MAX);

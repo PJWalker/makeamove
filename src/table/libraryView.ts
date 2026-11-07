@@ -1,11 +1,11 @@
-import { signal } from "@preact/signals-react";
+import { store } from "../lib/store";
 import type { EntryKind } from "../features/library";
 import { showPanel } from "./panelLayout";
 
 export type KindFilter = "all" | EntryKind;
 
 /** What the Libraries panel shows, kept apart from it so sheets and actions can steer it. */
-export const libraryView = signal<{ kind: KindFilter; query: string }>({ kind: "all", query: "" });
+export const libraryView = store<{ kind: KindFilter; query: string }>({ kind: "all", query: "" });
 
 /** Open the Libraries panel on one kind of entry, such as items for an inventory. */
 export function browseLibrary(kind: KindFilter) {

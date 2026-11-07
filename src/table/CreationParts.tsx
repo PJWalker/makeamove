@@ -1,5 +1,4 @@
-import { useSignal, type Signal } from "@preact/signals-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import {
   bumpResource,
@@ -154,42 +153,48 @@ export function ScoreFields({
   system,
   methods,
   method,
+  onMethod,
   scores,
+  onScores,
   assignments,
 }: {
   system: GameSystem;
   methods: ScoreMethods;
-  method: Signal<ScoreMethod>;
-  scores: Signal<Record<string, number>>;
+  method: ScoreMethod;
+  onMethod: (method: ScoreMethod) => void;
+  scores: Record<string, number>;
+  onScores: (scores: Record<string, number>) => void;
   assignments?: ScoreAssignmentOption[];
 }) {
   const available = scoreMethods(methods);
-  const pool = useSignal<number[]>(methods.standardArray ?? []);
-  const assignmentId = useSignal(assignments?.[0]?.id ?? "");
+  const [pool, setPool] = useState<number[]>(methods.standardArray ?? []);
+  const [assignmentId, setAssignmentId] = useState(assignments?.[0]?.id ?? "");
+  const takePool = (next: number[]) => {
+    setPool(next);
+    onScores(assignInOrder(system, next));
+  };
   useEffect(() => {
     const initial = assignments?.[0];
     if (!initial) return;
-    assignmentId.value = initial.id;
-    scores.value = { ...initial.scores };
-  }, [assignments, assignmentId, scores]);
+    setAssignmentId(initial.id);
+    onScores({ ...initial.scores });
+    // Only a new set of assignments resets the choice.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assignments]);
+  const rollPool = () =>
+    takePool(system.stats.map(() => roll(methods.roll!).total).sort((a, b) => b - a));
   const choose = (m: ScoreMethod) => {
-    method.value = m;
-    if (m === "array") {
-      pool.value = methods.standardArray!;
-      scores.value = assignInOrder(system, pool.value);
-    } else if (m === "buy") scores.value = startingScores(system, methods, m);
+    onMethod(m);
+    if (m === "array") takePool(methods.standardArray!);
+    else if (m === "buy") onScores(startingScores(system, methods, m));
     else if (m === "roll") rollPool();
   };
-  const rollPool = () => {
-    pool.value = system.stats.map(() => roll(methods.roll!).total).sort((a, b) => b - a);
-    scores.value = assignInOrder(system, pool.value);
-  };
-  const spent = methods.pointBuy ? pointsSpent(scores.value, methods.pointBuy) : null;
+  const spent = methods.pointBuy ? pointsSpent(scores, methods.pointBuy) : null;
   const buyable = methods.pointBuy ? Object.keys(methods.pointBuy.costs).map(Number) : [];
 
   if (assignments?.length) {
     const selected =
-      assignments.find((option) => option.id === assignmentId.value) ?? assignments[0]!;
+      assignments.find((option) => option.id === assignmentId) ?? assignments[0]!;
     return (
       <div className="field creation-scores">
         <span>Ability scores</span>
@@ -200,8 +205,8 @@ export function ScoreFields({
           onChange={(id) => {
             const option = assignments.find((entry) => entry.id === id);
             if (!option) return;
-            assignmentId.value = option.id;
-            scores.value = { ...option.scores };
+            setAssignmentId(option.id);
+            onScores({ ...option.scores });
           }}
         />
         <div className="creation-score-grid">
@@ -219,13 +224,13 @@ export function ScoreFields({
   return (
     <div className="field creation-scores">
       <span>Ability scores</span>
-      <Segmented label="Method" value={method.value} options={available} onChange={choose} />
-      {method.value === "buy" && methods.pointBuy && (
+      <Segmented label="Method" value={method} options={available} onChange={choose} />
+      {method === "buy" && methods.pointBuy && (
         <span className="muted" data-over={spent === null || spent > methods.pointBuy.budget}>
           {spent ?? "–"} / {methods.pointBuy.budget} points
         </span>
       )}
-      {method.value === "roll" && (
+      {method === "roll" && (
         <Button size="sm" variant="ghost" onClick={rollPool}>
           Roll again ({methods.roll})
         </Button>
@@ -234,14 +239,12 @@ export function ScoreFields({
         {system.stats.map((s) => (
           <label key={s.id} className="creation-score">
             <span className="stat-abbr">{s.abbr}</span>
-            {method.value === "array" || method.value === "roll" ? (
+            {method === "array" || method === "roll" ? (
               <select
-                value={scores.value[s.id]}
-                onChange={(e) =>
-                  (scores.value = swapScore(scores.value, s.id, Number(e.currentTarget.value)))
-                }
+                value={scores[s.id]}
+                onChange={(e) => onScores(swapScore(scores, s.id, Number(e.currentTarget.value)))}
               >
-                {pool.value.map((n, i) => (
+                {pool.map((n, i) => (
                   <option key={i} value={n}>
                     {n}
                   </option>
@@ -250,15 +253,10 @@ export function ScoreFields({
             ) : (
               <input
                 type="number"
-                min={method.value === "buy" ? Math.min(...buyable) : (s.min ?? 1)}
-                max={method.value === "buy" ? Math.max(...buyable) : (s.max ?? SCORE_CAP)}
-                value={scores.value[s.id]}
-                onInput={(e) =>
-                  (scores.value = {
-                    ...scores.value,
-                    [s.id]: Number(e.currentTarget.value) || 0,
-                  })
-                }
+                min={method === "buy" ? Math.min(...buyable) : (s.min ?? 1)}
+                max={method === "buy" ? Math.max(...buyable) : (s.max ?? SCORE_CAP)}
+                value={scores[s.id]}
+                onInput={(e) => onScores({ ...scores, [s.id]: Number(e.currentTarget.value) || 0 })}
               />
             )}
           </label>
@@ -357,19 +355,19 @@ export function AdvancementDialog({
   const c = getCharacter(campaign, characterId)!;
   const field = system.creation?.advancementField;
   const rank = Number(field ? c.data[field] : 1) + 1;
-  const picks = useSignal<Record<string, Picked>>({});
+  const [picks, setPicks] = useState<Record<string, Picked>>({});
   const choices = previewChoices(
     system.creation,
     rank,
     c.data,
     c.scores,
-    Object.fromEntries(Object.entries(picks.value).map(([id, picked]) => [id, picked.option])),
+    Object.fromEntries(Object.entries(picks).map(([id, picked]) => [id, picked.option])),
   );
   const improves = !!system.creation?.improvementsAt?.includes(rank);
-  const improvement = useSignal<"two" | "split" | "feat">("two");
-  const first = useSignal(system.stats[0]!.id);
-  const second = useSignal(system.stats[1]!.id);
-  const feat = useSignal("");
+  const [improvement, setImprovement] = useState<"two" | "split" | "feat">("two");
+  const [first, setFirst] = useState(system.stats[0]!.id);
+  const [second, setSecond] = useState(system.stats[1]!.id);
+  const [feat, setFeat] = useState("");
   const featChoice = system.creation?.feats;
   const markedStatsField = system.creation?.markedStatsField;
   const resetsMarks = !!system.creation?.resetMarkedStatsAt?.includes(rank);
@@ -379,13 +377,13 @@ export function AdvancementDialog({
       : [];
   const optionalChoices = choices.filter((choice) => choice.optional);
   const advancementCost = optionalChoices.reduce((cost, choice) => {
-    const option = choice.options.find((item) => item.id === picks.value[choice.id]?.option);
+    const option = choice.options.find((item) => item.id === picks[choice.id]?.option);
     return cost + (option ? (option.cost ?? 1) : 0);
   }, 0);
   const ready =
-    choices.filter((ch) => !ch.optional).every((ch) => picks.value[ch.id]?.option) &&
+    choices.filter((ch) => !ch.optional).every((ch) => picks[ch.id]?.option) &&
     choices.every((choice) => {
-      const pick = picks.value[choice.id];
+      const pick = picks[choice.id];
       return (
         !pick?.option ||
         validBoost(
@@ -399,7 +397,7 @@ export function AdvancementDialog({
       );
     }) &&
     advancementCost === (system.creation?.choicesPerAdvancement ?? 0) &&
-    (!improves || improvement.value !== "feat" || !!feat.value);
+    (!improves || improvement !== "feat" || !!feat);
 
   const apply = () => {
     const before = derive(c, system).values.maxHp ?? 0;
@@ -408,7 +406,7 @@ export function AdvancementDialog({
       let advancedScores = c.scores;
       const markedStats = new Set(resetsMarks ? [] : blockedStats);
       for (const choice of choices) {
-        const picked = picks.value[choice.id];
+        const picked = picks[choice.id];
         if (!picked?.option) continue;
         const option = choice.options.find((item) => item.id === picked.option);
         if (option?.boost) {
@@ -425,7 +423,7 @@ export function AdvancementDialog({
       }
       const data = dataFrom(
         choices,
-        Object.fromEntries(Object.entries(picks.value).map(([k, p]) => [k, p.option])),
+        Object.fromEntries(Object.entries(picks).map(([k, p]) => [k, p.option])),
         listFieldsOf(system),
         c.data,
       );
@@ -436,14 +434,14 @@ export function AdvancementDialog({
       if (system.creation?.advancementCounterField)
         setData(campaign, c.id, system.creation.advancementCounterField, 0);
       if (improves) {
-        if (improvement.value === "feat" && featChoice) {
+        if (improvement === "feat" && featChoice) {
           const now = String(c.data[featChoice.field] ?? "");
-          setData(campaign, c.id, featChoice.field, now ? `${now},${feat.value}` : feat.value);
+          setData(campaign, c.id, featChoice.field, now ? `${now},${feat}` : feat);
         } else {
           const by =
-            improvement.value === "two"
-              ? { [first.value]: 2 }
-              : { [first.value]: 1, [second.value]: 1 };
+            improvement === "two"
+              ? { [first]: 2 }
+              : { [first]: 1, [second]: 1 };
           advancedScores = raise(advancedScores, by, scoreCapsOf(system));
         }
       }
@@ -461,12 +459,8 @@ export function AdvancementDialog({
     closePopup(ref.current, onClose);
   };
 
-  const statSelect = (sig: Signal<string>, label: string) => (
-    <select
-      aria-label={label}
-      value={sig.value}
-      onChange={(e) => (sig.value = e.currentTarget.value)}
-    >
+  const statSelect = (value: string, onChange: (id: string) => void, label: string) => (
+    <select aria-label={label} value={value} onChange={(e) => onChange(e.currentTarget.value)}>
       {system.stats.map((s) => (
         <option key={s.id} value={s.id} disabled={(c.scores[s.id] ?? 10) >= (s.max ?? SCORE_CAP)}>
           {s.name} ({c.scores[s.id]})
@@ -489,9 +483,9 @@ export function AdvancementDialog({
             key={ch.id}
             system={system}
             choice={ch.at === "advance" ? { ...ch, label: `${ch.label} ${rank}` } : ch}
-            value={picks.value[ch.id] ?? emptyPick()}
+            value={picks[ch.id] ?? emptyPick()}
             blockedStats={blockedStats}
-            onChange={(p) => (picks.value = { ...picks.value, [ch.id]: p })}
+            onChange={(p) => setPicks({ ...picks, [ch.id]: p })}
           />
         ))}
         {improves && (
@@ -499,19 +493,19 @@ export function AdvancementDialog({
             Ability Score Improvement
             <Segmented
               label="Improvement"
-              value={improvement.value}
+              value={improvement}
               options={[
                 { id: "two", label: "+2 to one" },
                 { id: "split", label: "+1 to two" },
                 ...(featChoice ? [{ id: "feat" as const, label: "A feat" }] : []),
               ]}
-              onChange={(v) => (improvement.value = v)}
+              onChange={(v) => setImprovement(v)}
             />
-            {improvement.value === "feat" && featChoice ? (
+            {improvement === "feat" && featChoice ? (
               <select
                 aria-label="Feat"
-                value={feat.value}
-                onChange={(e) => (feat.value = e.currentTarget.value)}
+                value={feat}
+                onChange={(e) => setFeat(e.currentTarget.value)}
               >
                 <option value="">Choose…</option>
                 {featChoice.options.map((o) => (
@@ -522,12 +516,12 @@ export function AdvancementDialog({
               </select>
             ) : (
               <div className="sheet-row">
-                {statSelect(first, "First ability")}
-                {improvement.value === "split" && statSelect(second, "Second ability")}
+                {statSelect(first, setFirst, "First ability")}
+                {improvement === "split" && statSelect(second, setSecond, "Second ability")}
               </div>
             )}
-            {improvement.value === "feat" && feat.value && (
-              <p className="muted">{featChoice?.options.find((o) => o.id === feat.value)?.text}</p>
+            {improvement === "feat" && feat && (
+              <p className="muted">{featChoice?.options.find((o) => o.id === feat)?.text}</p>
             )}
           </div>
         )}

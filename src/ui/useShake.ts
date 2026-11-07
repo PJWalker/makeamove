@@ -9,9 +9,9 @@ export interface ShakeOptions {
   onTap?: (() => void) | undefined;
   /**
    * Called as the element is picked up, with the copy of it that follows the
-   * pointer; returns what to do when it's put down.
+   * pointer; returns what to do when it's put down, and whether it was shaken.
    */
-  onPickUp?: (element: HTMLElement, carrier: HTMLElement) => () => void;
+  onPickUp?: (element: HTMLElement, carrier: HTMLElement) => (shaken: boolean) => void;
 }
 
 /** Inherited text styles a lifted copy loses when it leaves its panel. */
@@ -86,16 +86,16 @@ export function useShake({
     carrier: HTMLElement;
     drop: () => void;
     cursor: string;
-    putDown?: () => void;
+    putDown?: (shaken: boolean) => void;
   } | null>(null);
-  const release = () => {
+  const release = (shaken = false) => {
     const current = gesture.current;
     if (!current) return;
     gesture.current = null;
     current.element.style.cursor = current.cursor;
     if (current.grabbed === undefined) delete current.element.dataset.grabbed;
     else current.element.dataset.grabbed = current.grabbed;
-    current.putDown?.();
+    current.putDown?.(shaken);
     current.drop();
     return current;
   };
@@ -181,13 +181,12 @@ export function useShake({
       const releaseAge = Math.max(0, event.timeStamp - current.time);
       const releaseSpeed =
         Math.hypot(current.vx, current.vy) * Math.exp(-releaseAge / RELEASE_DECAY_MS);
-      release();
-      event.stopPropagation();
-      if (
+      const shaken =
         enabled &&
-        (releaseSpeed >= REROLL_SPEED || (current.reversals >= 2 && current.distance >= 70))
-      )
-        onShake();
+        (releaseSpeed >= REROLL_SPEED || (current.reversals >= 2 && current.distance >= 70));
+      release(shaken);
+      event.stopPropagation();
+      if (shaken) onShake();
       else if (enabled && !current.moved) onTap?.();
     },
     onPointerCancel() {

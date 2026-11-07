@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   bumpData,
   bumpResource,
@@ -24,9 +25,9 @@ import { Counter, MoveList, signedStr, TokenChip } from "../../table/sheetParts"
 import { Button } from "../../ui/Button";
 import type { ActionDef, Derived, GameSystem } from "../types";
 import { SKILLS } from "./data";
-import { useSignal } from "@preact/signals-react";
 import { AdvancementDialog } from "../../table/CreationParts";
 import { FEATS } from "./origins";
+import { useValue } from "../../ui/useValue";
 
 /*
  * D&D 5.5e's character sheets, from the shared parts in table/sheetParts.tsx.
@@ -156,6 +157,7 @@ export function DndSheet({ campaign, system, c }: Props) {
   const classChoice = system.creation?.choices.find((choice) => choice.field === "classId");
   const cls = classChoice?.options.find((option) => option.id === c.data.classId);
   const editable = canEdit(campaign, c);
+  const me = useValue(device).id;
   const actions = actionsFor(c, system, d);
   const use = (id: string) => {
     const a = system.actions.find((x) => x.id === id);
@@ -168,7 +170,7 @@ export function DndSheet({ campaign, system, c }: Props) {
   );
   const conMod = d.mods.con;
 
-  const levelling = useSignal(false);
+  const [levelling, setLevelling] = useState(false);
   const spendHitDie = () => {
     bumpResource(campaign, c.id, "hitDice", -1);
     postRoll(
@@ -322,16 +324,16 @@ export function DndSheet({ campaign, system, c }: Props) {
 
       {editable && level < 20 && xp >= valueOf(v, "xpNext") && (
         <div className="sheet-advancement">
-          <Button size="sm" onClick={() => (levelling.value = true)}>
+          <Button size="sm" onClick={() => setLevelling(true)}>
             Level up
           </Button>
         </div>
       )}
-      {levelling.value && (
+      {levelling && (
         <AdvancementDialog
           campaign={campaign}
           characterId={c.id}
-          onClose={() => (levelling.value = false)}
+          onClose={() => setLevelling(false)}
         />
       )}
 
@@ -542,7 +544,7 @@ export function DndSheet({ campaign, system, c }: Props) {
         <CharacterText campaign={campaign} c={c} field="notes" label="Notes" editable={editable} />
       </section>
       <p className="muted sheet-owner">
-        {c.owner === device.value.id ? "Yours" : editable ? "Editing as GM" : "View only"}
+        {c.owner === me ? "Yours" : editable ? "Editing as GM" : "View only"}
       </p>
     </div>
   );

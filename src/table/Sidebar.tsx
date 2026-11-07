@@ -1,6 +1,6 @@
 import type { PointerEvent as ReactPointerEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
-import { unreadCount } from "../features/chat/unread";
-import { useSignal } from "@preact/signals-react";
+import { useState } from "react";
+import { useUnreadCount } from "../features/chat/unread";
 import { IconClose, IconOpenWindow } from "../ui/icons";
 import type { Campaign } from "../campaign/campaign";
 import { device } from "../platform/device";
@@ -33,9 +33,16 @@ import {
 } from "./panelLayout";
 import { PanelContent, PANELS, PaneToggle } from "./panels";
 import { PanelActionsProvider, PanelActionsSlot } from "./PanelActions";
-import { closeEntityWindow, entityRecord, EntityWindowContent, isEntityTab } from "./entityWindows";
+import {
+  closeEntityWindow,
+  entityRecord,
+  entityWindows,
+  EntityWindowContent,
+  isEntityTab,
+} from "./entityWindows";
 import { CampaignEntityGraphic } from "./EntityGraphic";
 import { keyedSideWidth, SIDEBAR_DEFAULT_W } from "./layoutModel";
+import { useValue } from "../ui/useValue";
 
 const DRAG_THRESHOLD = 10;
 
@@ -46,10 +53,12 @@ const DRAG_THRESHOLD = 10;
  * being dragged, when it shows as a place to drop it.
  */
 export function Sidebar({ side, campaign }: { side: Side; campaign: Campaign }) {
-  const s = shownLayout.value[side];
-  const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(null);
+  const s = useValue(shownLayout)[side];
+  const dragging = useValue(windowDragging);
+  const target = useValue(dockTarget);
+  const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const empty = s.panels.length === 0;
-  if (empty && !windowDragging.value) return null;
+  if (empty && !dragging) return null;
   const { open, active } = s;
   const outer = side === "left" ? "dock-left" : "dock-right";
 
@@ -60,7 +69,7 @@ export function Sidebar({ side, campaign }: { side: Side; campaign: Campaign }) 
       data-side={side}
       data-open={open}
       data-empty={empty}
-      data-drop={dockTarget.value === side}
+      data-drop={target === side}
       aria-label={side === "left" ? "Left sidebar" : "Right sidebar"}
     >
       <div className="sidebar-rail-edge">
@@ -72,7 +81,7 @@ export function Sidebar({ side, campaign }: { side: Side; campaign: Campaign }) 
               id={id}
               side={side}
               selected={open && active === id}
-              onMenu={(x, y) => (menu.value = { x, y, items: tabMenu(id, side) })}
+              onMenu={(x, y) => setMenu({ x, y, items: tabMenu(id, side) })}
             />
           ))}
         </div>
@@ -94,11 +103,11 @@ export function Sidebar({ side, campaign }: { side: Side; campaign: Campaign }) 
           <ActiveTab
             campaign={campaign}
             id={active}
-            onMenu={(x, y) => (menu.value = { x, y, items: tabMenu(active, side) })}
+            onMenu={(x, y) => setMenu({ x, y, items: tabMenu(active, side) })}
           />
         )}
       </section>
-      {menu.value && <ContextMenu {...menu.value} onClose={() => (menu.value = null)} />}
+      {menu && <ContextMenu {...menu} onClose={() => setMenu(null)} />}
     </aside>
   );
 }
@@ -242,7 +251,7 @@ function dragSideWidth(side: Side, e: ReactPointerEvent) {
  * widen it fully, and Enter (or a double-click) for the default width.
  */
 function SidebarResizeHandle({ side }: { side: Side }) {
-  const s = layout.value[side];
+  const s = useValue(layout)[side];
   const max = sidebarMaxWidth();
 
   function onKeyDown(e: ReactKeyboardEvent) {
@@ -296,8 +305,8 @@ function switchTo(id: DockItemId, side: Side) {
 
 /** How many members are online, counting this device. */
 function useOnlineCount(campaign: Campaign) {
-  const me = device.value.id;
-  const online = campaign.online.value;
+  const me = useValue(device).id;
+  const online = useValue(campaign.online);
   return useY(campaign.members, () => campaign.memberViews()).filter(
     (m) => m.id === me || online.has(m.id),
   ).length;
@@ -318,10 +327,12 @@ function RailTab({
   onMenu: (x: number, y: number) => void;
 }) {
   const panel = isPanelId(id) ? PANELS[id] : undefined;
-  const record = isEntityTab(id) ? entityRecord(id) : undefined;
+  const records = useValue(entityWindows);
+  const record = isEntityTab(id) ? entityRecord(id, records) : undefined;
   const label = panel?.label ?? record?.title ?? id.slice("entity:".length);
   const Icon = panel?.Icon ?? record?.icon ?? (record?.graphicRef ? undefined : IconOpenWindow);
   const onlineCount = useOnlineCount(campaign);
+  const unread = useUnreadCount();
 
   function onPointerDown(e: ReactPointerEvent) {
     dragTab(id, e);
@@ -336,13 +347,13 @@ function RailTab({
       data-entity-window={record ? id : undefined}
       label={
         label +
-        (id === "chat" && unreadCount.value ? `, ${unreadCount.value} unread` : "") +
+        (id === "chat" && unread ? `, ${unread} unread` : "") +
         (id === "members" ? `, ${onlineCount} online` : "")
       }
       aria-selected={selected}
       pressed={selected}
       data-unread={
-        id === "chat" && unreadCount.value > 0 ? Math.min(unreadCount.value, 99) : undefined
+        id === "chat" && unread > 0 ? Math.min(unread, 99) : undefined
       }
       data-online={id === "members" ? onlineCount : undefined}
       onClick={() => switchTo(id, side)}
@@ -372,6 +383,7 @@ function ActiveTab({
   id: DockItemId;
   onMenu: (x: number, y: number) => void;
 }) {
+  const records = useValue(entityWindows);
   if (isPanelId(id)) {
     return (
       <PanelActionsProvider key={id}>
@@ -392,7 +404,7 @@ function ActiveTab({
     );
   }
 
-  const record = entityRecord(id);
+  const record = entityRecord(id, records);
   const Icon = record?.icon ?? (record?.graphicRef ? undefined : IconOpenWindow);
   return (
     <div

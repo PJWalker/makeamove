@@ -1,6 +1,6 @@
 import type { PointerEvent as ReactPointerEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
-import { signal, useSignal } from "@preact/signals-react";
-import { useEffect, useMemo, useRef } from "react";
+import { store } from "../lib/store";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { noteRecent, recentActions } from "../app/commands/recent";
 import { rollAction } from "../app/commands/core";
 import {
@@ -23,11 +23,12 @@ import { actionEntity, dragEntity } from "./entityDrag";
 import { menuTrigger } from "../ui/menuTrigger";
 import { ContextMenu, type MenuItem } from "./ContextMenu";
 import type { Campaign } from "../campaign/campaign";
+import { useValue } from "../ui/useValue";
 
-export const paletteOpen = signal(false);
+export const paletteOpen = store(false);
 
 export function Palette({ campaign }: { campaign: Campaign }) {
-  const open = paletteOpen.value;
+  const open = useValue(paletteOpen);
 
   // Ctrl/Cmd + K toggles, even from a text field, as in most apps.
   useEffect(() => {
@@ -65,36 +66,37 @@ export function Palette({ campaign }: { campaign: Campaign }) {
 }
 
 function PaletteBody({ campaign }: { campaign: Campaign }) {
-  const query = useSignal("");
-  const cursor = useSignal(0);
+  const [query, setQuery] = useState("");
+  const [cursor, setCursor] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
 
   // The index is built once per opening, from whatever is current then.
   const index = useMemo(() => buildIndex(campaign), [campaign]);
-  const ranked = rank(index, query.value, { recent: recentActions.value });
+  const recent = useValue(recentActions);
+  const ranked = rank(index, query, { recent });
   // A dice formula typed on its own rolls it, first in the list.
-  const formula = diceFormula(query.value);
+  const formula = diceFormula(query);
   const roll = formula ? rollAction(campaign, formula) : null;
   const results = roll ? [roll, ...ranked.filter((a) => a.id !== roll.id)] : ranked;
-  const active = Math.min(cursor.value, Math.max(0, results.length - 1));
+  const active = Math.min(cursor, Math.max(0, results.length - 1));
   const returnTo = useRef<Element | null>(document.activeElement);
-  const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(null);
-  const note = useSignal("");
+  const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
+  const [note, setNote] = useState("");
 
   function togglePin(a: Action) {
     const pinned = isPinned(campaign, a.id);
     if (editHotbar(campaign, (slots) => (pinned ? unpin(slots, a.id) : pin(slots, a.id)))) {
-      note.value = pinned ? `Removed ${a.title} from the hotbar` : `Added ${a.title} to the hotbar`;
+      setNote(pinned ? `Removed ${a.title} from the hotbar` : `Added ${a.title} to the hotbar`);
     }
   }
 
   /** Right-click for a menu; press and drag to pin the action onto the hotbar. */
   function rowTriggers(a: Action, i: number) {
     const trigger = menuTrigger((x, y) => {
-      cursor.value = i;
-      menu.value = {
+      setCursor(i);
+      setMenu({
         x,
         y,
         items: [
@@ -105,7 +107,7 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
           ),
           ...(a.available === true ? [{ label: "Run", onSelect: () => choose(a) }] : []),
         ],
-      };
+      });
     });
     return {
       onContextMenu: trigger.onContextMenu,
@@ -117,7 +119,7 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
           ...what,
           pin: (index) => {
             if (editHotbar(campaign, (slots) => insertAt(slots, a.id, index)))
-              note.value = `Added ${a.title} to the hotbar`;
+              setNote(`Added ${a.title} to the hotbar`);
           },
         });
       },
@@ -158,14 +160,14 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
   }
 
   function onKeyDown(e: ReactKeyboardEvent) {
-    if (e.key === "Escape" && menu.value) return;
+    if (e.key === "Escape" && menu) return;
     if (e.key === "Escape") {
       e.preventDefault();
       paletteOpen.value = false;
     } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
       const n = results.length;
-      if (n) cursor.value = (active + (e.key === "ArrowDown" ? 1 : -1) + n) % n;
+      if (n) setCursor((active + (e.key === "ArrowDown" ? 1 : -1) + n) % n);
     } else if (e.key === "Enter" && e.altKey) {
       e.preventDefault();
       const a = results[active];
@@ -176,7 +178,7 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
     }
   }
 
-  const empty = !query.value;
+  const empty = !query;
   return (
     // Arrow/Enter handling for the whole palette lives on the dialog.
     // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
@@ -199,10 +201,10 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
         placeholder="Search moves, tools, scenes and commands, or roll 2d6+1…"
         autoComplete="off"
         spellCheck={false}
-        value={query.value}
+        value={query}
         onInput={(e) => {
-          query.value = e.currentTarget.value;
-          cursor.value = 0;
+          setQuery(e.currentTarget.value);
+          setCursor(0);
         }}
       />
       <ul id="palette-list" className="palette-list" role="listbox" ref={listRef}>
@@ -221,7 +223,7 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
               aria-disabled={off}
               data-active={i === active}
               data-unavailable={off}
-              onPointerMove={() => cursor.value !== i && (cursor.value = i)}
+              onPointerMove={() => cursor !== i && setCursor(i)}
               onClick={() => choose(a)}
               {...rowTriggers(a, i)}
             >
@@ -240,9 +242,9 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
           </li>
         )}
       </ul>
-      {menu.value && <ContextMenu {...menu.value} onClose={() => (menu.value = null)} />}
+      {menu && <ContextMenu {...menu} onClose={() => setMenu(null)} />}
       <p className="palette-note" role="status">
-        {note.value}
+        {note}
       </p>
     </div>
   );

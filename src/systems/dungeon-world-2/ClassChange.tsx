@@ -1,4 +1,4 @@
-import { useSignal } from "@preact/signals-react";
+import { useState } from "react";
 import { getCharacter, systemOf } from "../../features/characters/api";
 import { boostFrom, choicesAt, dataFrom, raise } from "../../features/characters/creation";
 import type { DataValue } from "../../core/types";
@@ -44,18 +44,18 @@ function ClassChangeDialog({
   const character = getCharacter(campaign, characterId)!;
   const creation = system.creation;
   const classChoice = creation?.choices.find((choice) => choice.id === "class");
-  const newClassId = useSignal("");
-  const assignmentId = useSignal("");
-  const picks = useSignal<Record<string, Picked>>({});
-  const assignmentOptions = creation?.classScoreAssignments?.[newClassId.value] ?? [];
+  const [newClassId, setNewClassId] = useState("");
+  const [assignmentId, setAssignmentId] = useState("");
+  const [picks, setPicks] = useState<Record<string, Picked>>({});
+  const assignmentOptions = creation?.classScoreAssignments?.[newClassId] ?? [];
   const assignment =
-    assignmentOptions.find((option) => option.id === assignmentId.value) ?? assignmentOptions[0];
+    assignmentOptions.find((option) => option.id === assignmentId) ?? assignmentOptions[0];
   const oldAdvancementCount = parseCommaList(String(character.data.advancements ?? "")).filter(
     Boolean,
   ).length;
   const stageData: Record<string, DataValue> = {
     ...character.data,
-    classId: newClassId.value,
+    classId: newClassId,
     advancements: "",
     ownedPaths: "",
     ownedPathMoves: "",
@@ -73,7 +73,7 @@ function ClassChangeDialog({
     if (!choice) continue;
     const id = `reassign-${rank}`;
     stages.push({ id, choice, display: { ...choice, id, label: `Advancement ${rank}` } });
-    const pick = picks.value[id];
+    const pick = picks[id];
     const option = choice.options.find((entry) => entry.id === pick?.option);
     if (!pick || !option) continue;
     const changes = dataFrom([choice], { [choice.id]: option.id }, listFields, stageData);
@@ -87,19 +87,19 @@ function ClassChangeDialog({
   }
 
   const ready =
-    !!newClassId.value &&
+    !!newClassId &&
     !!assignment &&
     stages.length === oldAdvancementCount &&
     stages.every(
       ({ id, choice }) =>
-        !!picks.value[id]?.option &&
-        choice.options.some((option) => option.id === picks.value[id]?.option),
+        !!picks[id]?.option &&
+        choice.options.some((option) => option.id === picks[id]?.option),
     );
   const classOptions =
     classChoice?.options.filter((option) => option.id !== character.data.classId) ?? [];
   const apply = () => {
     if (!ready) return;
-    if (applyClassChange(campaign, characterId, newClassId.value, stageScores, stageData))
+    if (applyClassChange(campaign, characterId, newClassId, stageScores, stageData))
       closePopup(ref.current, onClose);
   };
 
@@ -119,12 +119,12 @@ function ClassChangeDialog({
         <OptionPicker
           label="New Class"
           options={classOptions}
-          value={newClassId.value}
+          value={newClassId}
           emptyLabel="Choose…"
           onChange={(id) => {
-            newClassId.value = id;
-            assignmentId.value = creation?.classScoreAssignments?.[id]?.[0]?.id ?? "";
-            picks.value = {};
+            setNewClassId(id);
+            setAssignmentId(creation?.classScoreAssignments?.[id]?.[0]?.id ?? "");
+            setPicks({});
           }}
         />
         {assignmentOptions.length > 0 && (
@@ -134,7 +134,7 @@ function ClassChangeDialog({
             value={assignment?.id ?? ""}
             emptyLabel="Choose…"
             onChange={(id) => {
-              assignmentId.value = id;
+              setAssignmentId(id);
             }}
           />
         )}
@@ -153,11 +153,11 @@ function ClassChangeDialog({
             key={id}
             system={system}
             choice={display}
-            value={picks.value[id] ?? emptyPick()}
-            onChange={(pick) => (picks.value = { ...picks.value, [id]: pick })}
+            value={picks[id] ?? emptyPick()}
+            onChange={(pick) => setPicks({ ...picks, [id]: pick })}
           />
         ))}
-        {!oldAdvancementCount && newClassId.value && (
+        {!oldAdvancementCount && newClassId && (
           <p className="muted">This character has no advancements to reassign.</p>
         )}
         <div className="form-actions">
@@ -181,17 +181,17 @@ export function ChangeClassAction({
   campaign: Campaign;
   characterId: string;
 }) {
-  const open = useSignal(false);
+  const [open, setOpen] = useState(false);
   return (
     <>
-      <Button size="sm" variant="ghost" onClick={() => (open.value = true)}>
+      <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>
         Change Class
       </Button>
-      {open.value && (
+      {open && (
         <ClassChangeDialog
           campaign={campaign}
           characterId={characterId}
-          onClose={() => (open.value = false)}
+          onClose={() => setOpen(false)}
         />
       )}
     </>

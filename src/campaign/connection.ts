@@ -1,4 +1,4 @@
-import { effect, signal } from "@preact/signals-react";
+import { store, watch } from "../lib/store";
 import * as Y from "yjs";
 import { colourOf, Presence } from "../scene/presence";
 import { setBlobFetcher } from "../scene/images";
@@ -9,8 +9,8 @@ import { getBlob, putBlob } from "../platform/blobs";
 
 export class CampaignConnection {
   readonly presence = new Presence();
-  readonly peerCount = signal(0);
-  readonly online = signal<ReadonlySet<string>>(new Set());
+  readonly peerCount = store(0);
+  readonly online = store<ReadonlySet<string>>(new Set());
   private cleanups: (() => void)[] = [];
   private session: SyncSession | null = null;
   private blobs: BlobExchange | null = null;
@@ -49,7 +49,7 @@ export class CampaignConnection {
     setBlobFetcher(this.fetcher);
     this.presence.attach(session.awareness);
     session.onChange = refresh;
-    const stopIdentity = effect(() => {
+    const stopIdentity = watch([device], () => {
       const currentDevice = device.value;
       session.awareness.setLocalStateField("user", {
         id: currentDevice.id,

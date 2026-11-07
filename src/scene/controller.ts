@@ -1,4 +1,4 @@
-import { effect, signal, untracked } from "@preact/signals-react";
+import { store, watch } from "../lib/store";
 import type { CampaignDefaults } from "../campaign/campaign";
 import { device } from "../platform/device";
 
@@ -42,25 +42,25 @@ const memberColour = () => colourOf(device.value);
  * offers the edits menus and shortcuts make.
  */
 export class SceneController implements ToolContext {
-  readonly selection = signal<string[]>([]);
+  readonly selection = store<string[]>([]);
   /** Dominant colour of the scene's largest map, for the UI tint. */
-  readonly mapColour = signal<string | null>(null);
-  readonly canUndo = signal(false);
-  readonly canRedo = signal(false);
+  readonly mapColour = store<string | null>(null);
+  readonly canUndo = store(false);
+  readonly canRedo = store(false);
   /**
    * While an action asks for targets: clicking a token targets it (or stops
    * targeting it) instead of selecting it. `max` caps how many; past it the
    * oldest target drops off. `actor` is the acting character, whose token
    * distances are measured from.
    */
-  readonly targetMode = signal<{ max?: number; actor?: string } | null>(null);
+  readonly targetMode = store<{ max?: number; actor?: string } | null>(null);
   /** Tokens chosen while targeting, shared with peers through presence. */
-  readonly targets = signal<string[]>([]);
+  readonly targets = store<string[]>([]);
   /** Bumps whenever the scene's elements change. */
-  readonly revision = signal(0);
+  readonly revision = store(0);
 
   /** An area to place for an action: the next drag on the map puts it down (see placeArea). */
-  readonly placing = signal<Placement | null>(null);
+  readonly placing = store<Placement | null>(null);
 
   /** The corners of an area of solid light or dark being placed, a click at a time. */
   readonly area: AreaDraft = new AreaDraft(this);
@@ -137,27 +137,20 @@ export class SceneController implements ToolContext {
       () => this.scene.settings.unobserve(regrid),
       () => this.scene.undo.off("stack-item-added", history),
       () => this.scene.undo.off("stack-item-popped", history),
-      effect(() => {
-        void this.selection.value;
-        this.updateOverlay();
-      }),
-      effect(() => {
-        void activeTool.value;
-        void lightTool.value;
-        // Only a tool change should cancel a gesture, not the selection
-        // changes that a marquee makes as it goes.
-        untracked(() => {
-          // Lamps and areas show, and stay selected, only in the Lights tool.
-          this.renderer.lightsShown = activeTool.value === "light";
-          const keep = this.selection.value.filter((id) => {
-            const el = this.byId.get(id);
-            return el && this.pickable(el);
-          });
-          if (keep.length !== this.selection.value.length) this.selection.value = keep;
-          this.cancelGesture();
-          this.updateCursor();
-          this.updateOverlay();
+      watch([this.selection], () => this.updateOverlay()),
+      // Only a tool change should cancel a gesture, not the selection
+      // changes that a marquee makes as it goes.
+      watch([activeTool, lightTool], () => {
+        // Lamps and areas show, and stay selected, only in the Lights tool.
+        this.renderer.lightsShown = activeTool.value === "light";
+        const keep = this.selection.value.filter((id) => {
+          const el = this.byId.get(id);
+          return el && this.pickable(el);
         });
+        if (keep.length !== this.selection.value.length) this.selection.value = keep;
+        this.cancelGesture();
+        this.updateCursor();
+        this.updateOverlay();
       }),
     );
     this.renderer.insets = () => {
@@ -188,10 +181,7 @@ export class SceneController implements ToolContext {
         () => this.renderer.setPresence([]),
       );
       this.disposers.push(
-        effect(() => {
-          void device.value;
-          untracked(show);
-        }),
+        watch([device], show),
       );
       show();
     }

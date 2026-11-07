@@ -1,5 +1,4 @@
-import { useSignal } from "@preact/signals-react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { getNote, type LinkKind } from "../features/notes/api";
 import { linkLabel, linkTip, openInSidebar } from "../features/notes/targets";
 import type { Campaign } from "../campaign/campaign";
@@ -29,7 +28,7 @@ export function LinkChip({
   text?: string | undefined;
 }) {
   const name = linkLabel(campaign, kind, id);
-  const menu = useSignal<{ x: number; y: number } | null>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const linkElement = useRef<HTMLSpanElement>(null);
   const actionId = kind === "move" ? `move:${id}` : kind === "item" ? `library:${id}` : null;
   const actionItems = actionId
@@ -65,7 +64,7 @@ export function LinkChip({
         ]
       : []),
   ];
-  const trigger = menuTrigger((x, y) => (menu.value = { x, y }));
+  const trigger = menuTrigger((x, y) => setMenu({ x, y }));
   if (name === null)
     return (
       <span ref={linkElement} className="note-link" data-missing="true" data-tip="Not available">
@@ -93,8 +92,8 @@ export function LinkChip({
       >
         {shown}
       </span>
-      {menu.value && items.length > 0 && (
-        <ContextMenu {...menu.value} items={items} onClose={() => (menu.value = null)} />
+      {menu && items.length > 0 && (
+        <ContextMenu {...menu} items={items} onClose={() => setMenu(null)} />
       )}
     </>
   );

@@ -1,4 +1,4 @@
-import type { Signal } from "@preact/signals-react";
+import type { Store } from "../../lib/store";
 import type { Rect } from "../camera";
 import type { Point } from "../grid";
 import type { Presence } from "../presence";
@@ -56,9 +56,9 @@ export interface ToolContext {
   readonly presence: Presence | null;
   /** Pointers down on the canvas, in screen px. */
   readonly pointers: ReadonlyMap<number, Point>;
-  readonly selection: Signal<string[]>;
-  readonly targetMode: Signal<{ max?: number; actor?: string } | null>;
-  readonly placing: Signal<Placement | null>;
+  readonly selection: Store<string[]>;
+  readonly targetMode: Store<{ max?: number; actor?: string } | null>;
+  readonly placing: Store<Placement | null>;
   /** An area of solid light or dark being placed, a click at a time. */
   readonly area: AreaDraft;
   readonly onTextRequest:

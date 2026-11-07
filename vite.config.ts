@@ -48,11 +48,7 @@ export default defineConfig({
     },
   },
   plugins: [
-    react({
-      babel: {
-        plugins: [["module:@preact/signals-react-transform", { mode: "all" }]],
-      },
-    }),
+    react(),
     // Icons are compiled into the bundle from local Iconify data, so they work offline.
     Icons({ compiler: "jsx", jsx: "react", scale: 1 }),
     VitePWA({

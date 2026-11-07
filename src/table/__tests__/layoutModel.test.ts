@@ -10,7 +10,9 @@ import {
   keyedSideWidth,
   locate,
   normalise,
+  oneSideIfCramped,
   reorder,
+  selectTab,
   resizeSide,
   setOpen,
   showTab,
@@ -192,5 +194,34 @@ describe("sidebar resizing", () => {
     expect(keyedSideWidth(side(true), "End", false, 1, max)).toBe(max);
     expect(keyedSideWidth(side(true, 500), "Enter", false, 1, max)).toBe(SIDEBAR_DEFAULT_W);
     expect(keyedSideWidth(side(true), "Tab", false, 1, max)).toBeNull();
+  });
+});
+
+describe("one sidebar at a time in narrow windows", () => {
+  const shut = setOpen(defaultLayout(false), "right", false);
+  // Two default sidebars, their tab strips and the minimum map need 1096px.
+  const narrow = 900;
+  const wide = 1400;
+
+  it("shuts the other side when one opens in a narrow window", () => {
+    const opened = oneSideIfCramped(shut, selectTab(shut, "chat"), narrow);
+    expect(opened.right.open).toBe(true);
+    expect(opened.left.open).toBe(false);
+
+    const leftShut = setOpen(defaultLayout(false), "left", false);
+    const back = oneSideIfCramped(leftShut, selectTab(leftShut, "scene"), narrow);
+    expect(back.left.open).toBe(true);
+    expect(back.right.open).toBe(false);
+  });
+
+  it("keeps both open when the window has room", () => {
+    const next = selectTab(shut, "chat");
+    expect(oneSideIfCramped(shut, next, wide)).toBe(next);
+  });
+
+  it("leaves sides that were already open alone", () => {
+    const both = defaultLayout(false);
+    const next = selectTab(both, "notes");
+    expect(oneSideIfCramped(both, next, narrow)).toBe(next);
   });
 });

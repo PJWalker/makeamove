@@ -1,6 +1,5 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState } from "react";
 import { useEffect, useLayoutEffect } from "react";
-import { useSignal } from "@preact/signals-react";
 import { sceneHueFromHex } from "../lib/colour";
 import type { Campaign } from "../campaign/campaign";
 import { useY } from "../ui/useY";
@@ -21,6 +20,7 @@ import { MovePrompt } from "./MovePrompt";
 import { GraphicDialogs } from "./GraphicDialogs";
 import { Palette } from "./Palette";
 import { Toolbar } from "./Toolbar";
+import { useValue } from "../ui/useValue";
 
 // PixiJS is big; load it only once someone opens a table.
 const SceneCanvas = lazy(() => import("./SceneCanvas"));
@@ -46,7 +46,7 @@ export function Tabletop({ campaign }: { campaign: Campaign }) {
   const activeId = useY(campaign.members, () => campaign.activeSceneId());
   const scene = scenes.find((s) => s.id === activeId) ?? scenes[0];
 
-  const mapColour = activeMapColour.value;
+  const mapColour = useValue(activeMapColour);
   const colour = scene ? canvasColour(scene, mapColour) : null;
 
   // Tint the whole UI from the map, or from the canvas when there's no map.
@@ -74,18 +74,21 @@ export function Tabletop({ campaign }: { campaign: Campaign }) {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const edges = useNearEdges(autohide.value);
+  const hiding = useValue(autohide);
+  const dragging = useValue(windowDragging);
+  const insets = useValue(dockInsets);
+  const edges = useNearEdges(hiding);
 
   return (
     <div
       className="table"
-      data-autohide={autohide.value}
+      data-autohide={hiding}
       // Which edges' chrome autohide is showing; a dragged window needs both sidebars to drop on.
-      data-reveal={windowDragging.value ? "left right" : edges}
+      data-reveal={dragging ? "left right" : edges}
       // How much each side's docked chrome covers, for the bars that sit between them.
       style={{
-        "--dock-l": `${dockInsets.value.left.total}px`,
-        "--dock-r": `${dockInsets.value.right.total}px`,
+        "--dock-l": `${insets.left.total}px`,
+        "--dock-r": `${insets.right.total}px`,
       }}
       // Pulled-out panels and pop-ups render into this layer (ui/windows.ts).
       ref={(el) => {
@@ -137,7 +140,7 @@ type Edge = keyof typeof EDGE_CHROME;
  * switching sidebar tabs) drops for its duration.
  */
 function useNearEdges(on: boolean) {
-  const edges = useSignal("");
+  const [edges, setEdges] = useState("");
   useEffect(() => {
     if (!on) return;
     let shown = new Set<Edge>();
@@ -160,20 +163,20 @@ function useNearEdges(on: boolean) {
           (edge) => near[edge] || (shown.has(edge) && over(edge, x, y)),
         ),
       );
-      edges.value = [...shown].join(" ");
+      setEdges([...shown].join(" "));
     };
     // Leaving the window over an edge shouldn't leave its chrome showing.
     const onLeave = () => {
       shown = new Set();
-      edges.value = "";
+      setEdges("");
     };
     window.addEventListener("pointermove", onMove);
     document.documentElement.addEventListener("pointerleave", onLeave);
     return () => {
       window.removeEventListener("pointermove", onMove);
       document.documentElement.removeEventListener("pointerleave", onLeave);
-      edges.value = "";
+      setEdges("");
     };
   }, [on, edges]);
-  return edges.value;
+  return edges;
 }

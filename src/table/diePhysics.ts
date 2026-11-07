@@ -42,10 +42,20 @@ const EASE_STEPS = 14;
 export const CALM_AFTER = 2.5;
 const MAX_STEPS = 3600;
 
+/** A die's position and motion in a tray, in the physics world's own axes (y up). */
+export interface DieState {
+  position: [number, number, number];
+  quaternion: { x: number; y: number; z: number; w: number };
+  velocity: [number, number, number];
+  angularVelocity: [number, number, number];
+}
+
 export interface DieThrow {
   hull: DieHull;
   seed: string;
   delay?: number;
+  /** Already in the tray and moving like this, rather than thrown in over its edge. */
+  state?: DieState;
 }
 
 interface FlightBody {
@@ -342,6 +352,25 @@ export class DiceHold {
     });
   }
 
+  /** Where each die is and how it's moving, to carry on rolling from. */
+  states(): DieState[] {
+    const vector = (v: Vec3): [number, number, number] => [v.x, v.y, v.z];
+    const turn = (q: Quaternion) => ({ x: q.x, y: q.y, z: q.z, w: q.w });
+    if (this.mode === "locked")
+      return this.locked.map((die) => ({
+        position: vector(die.position),
+        quaternion: turn(die.quaternion),
+        velocity: [0, 0, 3],
+        angularVelocity: vector(die.angularVelocity),
+      }));
+    return this.carried.map(({ body }) => ({
+      position: vector(body.position),
+      quaternion: turn(body.quaternion),
+      velocity: vector(body.velocity),
+      angularVelocity: vector(body.angularVelocity),
+    }));
+  }
+
   poses(): DiePose[] {
     if (this.mode === "locked")
       return this.locked.map((die) => ({
@@ -384,14 +413,32 @@ export class DiceFlight {
   constructor(
     private readonly tray: DieTray,
     throws: DieThrow[],
+    private readonly calmAfter = CALM_AFTER,
   ) {
     const trayWorld = new TrayWorld(tray);
     this.trayWorld = trayWorld;
     const width = tray.right - tray.left;
-    this.dice = throws.map(({ hull, seed, delay = 0 }, index) => {
+    this.dice = throws.map(({ hull, seed, delay = 0, state }, index) => {
       const random = seededRandom(seed);
       const vertices = hull.vertices.map(([x, y, z]) => new Vec3(x, y, z));
       const body = trayWorld.dieBody(hull, vertices);
+      if (state) {
+        body.position.set(...state.position);
+        const q = state.quaternion;
+        body.quaternion.set(q.x, q.y, q.z, q.w);
+        body.velocity.set(...state.velocity);
+        body.angularVelocity.set(...state.angularVelocity);
+        return {
+          body,
+          vertices,
+          delay: delay / 1000,
+          active: false,
+          captured: true,
+          impact: 0,
+          age: 0,
+          still: 0,
+        };
+      }
       // Spread across the tray's width so dice thrown together don't start inside each other.
       const lane = (index + 0.25 + random() * 0.5) / throws.length;
       body.position.set(tray.left + (0.15 + lane * 0.7) * width, -tray.top + 2, 4 + random() * 2);
@@ -505,14 +552,14 @@ export class DiceFlight {
       if (!die.active && this.elapsed >= die.delay) {
         die.active = true;
         // Dice hit each other in the air, but only meet the walls once over the tray.
-        die.body.collisionFilterMask = DICE;
+        die.body.collisionFilterMask = die.captured ? DICE | TRAY : DICE;
         this.trayWorld.world.addBody(die.body);
       }
     }
     this.elapsed += PHYSICS_STEP;
     if (
       !this.calmed &&
-      this.elapsed >= CALM_AFTER + Math.max(0, ...this.dice.map((die) => die.delay))
+      this.elapsed >= this.calmAfter + Math.max(0, ...this.dice.map((die) => die.delay))
     ) {
       this.calmed = true;
       for (const { body } of this.dice) {
@@ -569,8 +616,8 @@ export class DiceFlight {
  * Every frame of a roll, per die, from the throw until all the dice are at rest.
  * A roll that hasn't stopped by the time limit ends where it is.
  */
-export function simulateDice(tray: DieTray, throws: DieThrow[]) {
-  const flight = new DiceFlight(tray, throws);
+export function simulateDice(tray: DieTray, throws: DieThrow[], calmAfter = CALM_AFTER) {
+  const flight = new DiceFlight(tray, throws, calmAfter);
   const frames = flight.poses().map((pose) => [pose]);
   for (let step = 0; step < MAX_STEPS; step++) {
     const sleeping = flight.step();

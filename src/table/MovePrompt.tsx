@@ -1,6 +1,6 @@
-import { useSignal, useSignalEffect } from "@preact/signals-react";
 import { FormattedText } from "./FormattedText";
-import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { watch } from "../lib/store";
 import {
   getCharacter,
   makeMove,
@@ -27,6 +27,7 @@ import { IconClose } from "../ui/icons";
 import { lastPressed } from "../ui/pressed";
 import { Segmented } from "../ui/Segmented";
 import { areaRequest, chosenTargets, placedArea, sceneDistance, targetPick } from "./canvasState";
+import { useValue } from "../ui/useValue";
 import type { AreaSpec } from "../systems/types";
 import type { MoveTarget } from "../features/chat/types";
 
@@ -72,8 +73,8 @@ function anchorRect(el: Element | null): DOMRect | null {
 }
 
 export function MovePrompt({ campaign }: { campaign: Campaign }) {
-  const target = targetRequest.value;
-  const requestedMove = moveRequest.value;
+  const target = useValue(targetRequest);
+  const requestedMove = useValue(moveRequest);
   const live: Request | null = useMemo(
     () =>
       target
@@ -85,7 +86,7 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
   );
   const hasLive = live !== null;
   // What's on screen: the live request, or the last one while it shrinks away.
-  const shown = useSignal<Request | null>(null);
+  const [shown, setShown] = useState<Request | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const anchor = useRef<Element | null>(null);
   const leaving = useRef<Animation | null>(null);
@@ -95,18 +96,18 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
     if (!live) return;
     const pressed = lastPressed();
     if (pressed && !ref.current?.contains(pressed)) anchor.current = pressed;
-    else if (!shown.value) anchor.current = null;
+    else if (!shown) anchor.current = null;
     leaving.current?.cancel();
     leaving.current = null;
-    shown.value = live;
+    setShown(live);
   }, [live, shown]);
 
   // Shrink back into the button once the request is done or cancelled.
   useLayoutEffect(() => {
-    if (hasLive || !shown.value) return;
+    if (hasLive || !shown) return;
     const el = ref.current;
     if (!el || reducedMotion.matches) {
-      shown.value = null;
+      setShown(null);
       return;
     }
     const box = el.getBoundingClientRect();
@@ -124,7 +125,7 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
     leaving.current = a;
     a.finished.then(
       () => {
-        if (leaving.current === a) shown.value = null;
+        if (leaving.current === a) setShown(null);
       },
       () => {},
     );
@@ -170,7 +171,7 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
     el.style.setProperty("--tail", `${tail}px`);
   };
 
-  const open = !!shown.value;
+  const open = !!shown;
   // Grow out of the button, then follow it while open: it slides with its sidebar and with autohide.
   useLayoutEffect(() => {
     if (!open) {
@@ -203,13 +204,17 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
   }, [open]);
 
   // Hand a targeting request to the scene, so clicks on tokens target it.
-  useSignalEffect(() => {
-    const r = targetRequest.value;
-    const s = r && systemOf(campaign).actions.find((m) => m.id === r.moveId)?.target;
-    targetPick.value =
-      r && s ? { ...(s.max !== undefined ? { max: s.max } : {}), actor: r.characterId } : null;
-    if (r) activeTool.value = "select";
-  });
+  useEffect(
+    () =>
+      watch([targetRequest], () => {
+        const r = targetRequest.value;
+        const s = r && systemOf(campaign).actions.find((m) => m.id === r.moveId)?.target;
+        targetPick.value =
+          r && s ? { ...(s.max !== undefined ? { max: s.max } : {}), actor: r.characterId } : null;
+        if (r) activeTool.value = "select";
+      }),
+    [campaign],
+  );
   useEffect(() => () => cancel(), []);
 
   // Escape backs out, before the canvas uses it to clear the selection.
@@ -224,7 +229,7 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
     return () => window.removeEventListener("keydown", onKey, true);
   }, [hasLive]);
 
-  const req = shown.value;
+  const req = shown;
   const move = req ? systemOf(campaign).actions.find((m) => m.id === req.moveId) : undefined;
   const c = req ? getCharacter(campaign, req.characterId) : undefined;
   if (!req || !move || !c) return null;
@@ -278,9 +283,9 @@ function TargetStep({
 }) {
   const move = systemOf(campaign).actions.find((m) => m.id === moveId)!;
   const spec = move.target!;
-  const targets = chosenTargets.value;
+  const targets = useValue(chosenTargets);
   const ready = targets.length >= spec.min;
-  const fmt = sceneDistance.value;
+  const fmt = useValue(sceneDistance);
   const wanted =
     spec.max === 1
       ? "one target"
@@ -302,7 +307,9 @@ function TargetStep({
     startMove(campaign, characterId, move, picked);
   };
   const area = spec.area;
-  const placing = !!areaRequest.value;
+  const request = useValue(areaRequest);
+  const placed = useValue(placedArea);
+  const placing = !!request;
   const placeArea = () =>
     (areaRequest.value = placing ? null : { area: area!, actor: characterId, n: Date.now() });
   return (
@@ -311,13 +318,13 @@ function TargetStep({
       {area && (
         <Button
           size="sm"
-          variant={placedArea.value ? "ghost" : "secondary"}
+          variant={placed ? "ghost" : "secondary"}
           pressed={placing}
           onClick={placeArea}
         >
           {placing
             ? "Click the map to place it"
-            : placedArea.value
+            : placed
               ? "Place the area again"
               : `Place the ${areaName(area)}`}
         </Button>
@@ -372,7 +379,7 @@ function AskStep({
   const move = system.actions.find((m) => m.id === moveId)!;
   const c = getCharacter(campaign, characterId)!;
   const targets = moveRequest.value?.targets;
-  const stat = useSignal("");
+  const [stat, setStat] = useState("");
   const ask = needsChoice(move);
   const check = checkOf(move);
   const difficultySource = check?.difficulty ?? saveOf(move)?.difficulty;
@@ -391,13 +398,13 @@ function AskStep({
   const counterSpec = checkOf(move)?.counter;
   const rollBonusSpecs = checkOf(move)?.rollBonuses ?? [];
   const counters = campaign.chat.messages.value.filter((message) => message.kind === "counter");
-  const difficulty = useSignal(String(difficultySpec?.initial ?? 10));
-  const counterMessageId = useSignal(counters[0]?.id ?? "");
-  const rollBonuses = useSignal<string[]>([]);
-  const bond = useSignal(ask?.kind === "number" ? (ask.initial ?? 1) : 1);
-  const extra = useSignal(moveRequest.value?.choice?.extra ?? 0);
-  const mode = useSignal("");
-  const variant = useSignal("");
+  const [difficulty, setDifficulty] = useState(String(difficultySpec?.initial ?? 10));
+  const [counterMessageId, setCounterMessageId] = useState(counters[0]?.id ?? "");
+  const [rollBonuses, setRollBonuses] = useState<string[]>([]);
+  const [bond, setBond] = useState(ask?.kind === "number" ? (ask.initial ?? 1) : 1);
+  const [extra, setExtra] = useState(moveRequest.value?.choice?.extra ?? 0);
+  const [mode, setMode] = useState("");
+  const [variant, setVariant] = useState("");
   const variants = move.variants?.(c, derive(c, system));
   const rollModes = check ? rollModesFor(system, move) : [];
   const formRef = useRef<HTMLFormElement>(null);
@@ -410,7 +417,7 @@ function AskStep({
     [],
   );
 
-  const chosenDifficulty = difficulty.value.trim() ? Number(difficulty.value) : undefined;
+  const chosenDifficulty = difficulty.trim() ? Number(difficulty) : undefined;
   const difficultyReady =
     !difficultySpec ||
     (chosenDifficulty !== undefined &&
@@ -418,19 +425,19 @@ function AskStep({
       chosenDifficulty >= (difficultySpec.min ?? 0) &&
       chosenDifficulty <= (difficultySpec.max ?? 99));
   const choice = {
-    stat: stat.value || undefined,
-    ask: bond.value,
-    extra: extra.value,
-    mode: mode.value || undefined,
+    stat: stat || undefined,
+    ask: bond,
+    extra: extra,
+    mode: mode || undefined,
     difficulty: difficultySpec ? chosenDifficulty : undefined,
-    counterMessageId: counterSpec ? counterMessageId.value : undefined,
-    rollBonuses: rollBonuses.value,
-    variant: variant.value || undefined,
+    counterMessageId: counterSpec ? counterMessageId : undefined,
+    rollBonuses: rollBonuses,
+    variant: variant || undefined,
   };
   const plan = planMove(system, move, c, derive(c, system), choice);
   const ready =
-    (ask?.kind !== "stat" || !!stat.value) &&
-    (!counterSpec || !!counterMessageId.value) &&
+    (ask?.kind !== "stat" || !!stat) &&
+    (!counterSpec || !!counterMessageId) &&
     difficultyReady &&
     canPayMove(c, plan);
   const formula = ready ? plan.formula : "";
@@ -453,9 +460,9 @@ function AskStep({
         <label className="field">
           Casting or use
           <select
-            value={variant.value || variants[0]?.id || ""}
+            value={variant || variants[0]?.id || ""}
             disabled={!variants.length}
-            onChange={(event) => (variant.value = event.currentTarget.value)}
+            onChange={(event) => setVariant(event.currentTarget.value)}
           >
             {!variants.length && <option value="">No available uses</option>}
             {variants.map((entry) => (
@@ -474,8 +481,8 @@ function AskStep({
               <Button
                 key={s.id}
                 size="sm"
-                pressed={stat.value === s.id}
-                onClick={() => (stat.value = s.id)}
+                pressed={stat === s.id}
+                onClick={() => setStat(s.id)}
               >
                 {s.abbr}
               </Button>
@@ -491,8 +498,8 @@ function AskStep({
             required
             min={ask.min}
             max={ask.max}
-            value={bond.value}
-            onInput={(e) => (bond.value = Number(e.currentTarget.value) || 0)}
+            value={bond}
+            onInput={(e) => setBond(Number(e.currentTarget.value) || 0)}
           />
         </label>
       )}
@@ -504,8 +511,8 @@ function AskStep({
             required
             min={difficultySpec.min ?? 0}
             max={difficultySpec.max ?? 99}
-            value={difficulty.value}
-            onInput={(e) => (difficulty.value = e.currentTarget.value)}
+            value={difficulty}
+            onInput={(e) => setDifficulty(e.currentTarget.value)}
           />
         </label>
       )}
@@ -513,9 +520,9 @@ function AskStep({
         <label className="field">
           {counterSpec.prompt}
           <select
-            value={counterMessageId.value}
+            value={counterMessageId}
             disabled={!counters.length}
-            onChange={(e) => (counterMessageId.value = e.currentTarget.value)}
+            onChange={(e) => setCounterMessageId(e.currentTarget.value)}
           >
             <option value="">Choose a counter</option>
             {counters.map((counter) =>
@@ -535,7 +542,7 @@ function AskStep({
       {rollBonusSpecs
         .filter((bonus) => !bonus.nameField || String(c.data[bonus.nameField] ?? "").trim())
         .map((bonus) => {
-          const selected = rollBonuses.value.includes(bonus.id);
+          const selected = rollBonuses.includes(bonus.id);
           return (
             <label key={bonus.id} className="check-option">
               <input
@@ -547,9 +554,9 @@ function AskStep({
                   (c.resources[bonus.cost.resource] ?? 0) < bonus.cost.by
                 }
                 onChange={() =>
-                  (rollBonuses.value = selected
-                    ? rollBonuses.value.filter((id) => id !== bonus.id)
-                    : [...rollBonuses.value, bonus.id])
+                  setRollBonuses(selected
+                    ? rollBonuses.filter((id) => id !== bonus.id)
+                    : [...rollBonuses, bonus.id])
                 }
               />
               {bonus.nameField ? c.data[bonus.nameField] : bonus.label} (+
@@ -561,12 +568,12 @@ function AskStep({
       {rollModes.length > 0 && (
         <Segmented
           label="Roll"
-          value={mode.value}
+          value={mode}
           options={[
             { id: "", label: system.defaultRollLabel ?? "Normal" },
             ...rollModes.map((m) => ({ id: m.id, label: m.label })),
           ]}
-          onChange={(v) => (mode.value = v)}
+          onChange={(v) => setMode(v)}
         />
       )}
       {check && (
@@ -576,8 +583,8 @@ function AskStep({
             type="number"
             min={-10}
             max={10}
-            value={extra.value}
-            onInput={(e) => (extra.value = Number(e.currentTarget.value) || 0)}
+            value={extra}
+            onInput={(e) => setExtra(Number(e.currentTarget.value) || 0)}
           />
         </label>
       )}

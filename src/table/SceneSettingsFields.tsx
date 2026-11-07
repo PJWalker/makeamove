@@ -4,6 +4,7 @@ import { DEFAULT_CANVAS_COLOUR, type Campaign } from "../campaign/campaign";
 import { useY } from "../ui/useY";
 import { Segmented } from "../ui/Segmented";
 import { activeMapColour, canvasColour } from "./canvasState";
+import { useValue } from "../ui/useValue";
 
 export function SceneSettingsFields({
   campaign,
@@ -20,7 +21,8 @@ export function SceneSettingsFields({
   const lighting = useY(scene.settings, () => scene.lighting());
   const view = useY(campaign.scenes, () => campaign.sceneViews().find((s) => s.id === sceneId));
   const isGm = campaign.isGm();
-  const shown = view ? canvasColour(view, activeMapColour.value) : DEFAULT_CANVAS_COLOUR;
+  const mapColour = useValue(activeMapColour);
+  const shown = view ? canvasColour(view, mapColour) : DEFAULT_CANVAS_COLOUR;
   const auto = !view?.canvasColour;
   const num = (v: string, fallback: number) =>
     Number.isFinite(parseFloat(v)) ? parseFloat(v) : fallback;

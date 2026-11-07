@@ -27,6 +27,7 @@ import {
 } from "./ChatExtras";
 import { playUiSound } from "../ui/sounds";
 import { MoveCard, RollCard } from "./RollCards";
+import { useValue } from "../ui/useValue";
 
 /* One message in the chat, as the log and the pinned strip show it. */
 
@@ -41,6 +42,7 @@ export function LoneMessage({ campaign, m }: { campaign: Campaign; m: ChatMessag
     const c = m.kind === "move" ? getCharacter(campaign, m.characterId) : undefined;
     return !!c && canEdit(campaign, c);
   });
+  const me = useValue(device).id;
   return (
     <Message
       campaign={campaign}
@@ -48,7 +50,7 @@ export function LoneMessage({ campaign, m }: { campaign: Campaign; m: ChatMessag
       header
       fresh
       masked={false}
-      mine={m.author === device.value.id}
+      mine={m.author === me}
       canAct={canAct}
     />
   );
@@ -156,7 +158,8 @@ export const Message = memo(function Message({
 function TextBody({ campaign, m, mine }: { campaign: Campaign; m: TextMessage; mine: boolean }) {
   const state = useTextState(campaign, m.id);
   const text = editedText(state, m.text);
-  if (editingMessage.value === m.id) return <EditBox campaign={campaign} id={m.id} text={text} />;
+  const editing = useValue(editingMessage);
+  if (editing === m.id) return <EditBox campaign={campaign} id={m.id} text={text} />;
   return (
     <div className="chat-text" data-emote={m.emote}>
       {m.to && (

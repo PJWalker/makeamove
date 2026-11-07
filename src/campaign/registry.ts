@@ -1,4 +1,4 @@
-import { signal } from "@preact/signals-react";
+import { store } from "../lib/store";
 import * as Y from "yjs";
 import { IndexeddbPersistence } from "y-indexeddb";
 import { dataName } from "../platform/dataEpoch";
@@ -22,8 +22,8 @@ const doc = new Y.Doc();
 const list = doc.getMap<CampaignSummary>("campaigns");
 const persistence = new IndexeddbPersistence(dataName("registry"), doc);
 
-export const campaigns = signal<CampaignSummary[]>([]);
-export const registryReady = signal(false);
+export const campaigns = store<CampaignSummary[]>([]);
+export const registryReady = store(false);
 
 function refresh() {
   campaigns.value = [...list.values()].sort((a, b) => b.lastOpenedAt - a.lastOpenedAt);

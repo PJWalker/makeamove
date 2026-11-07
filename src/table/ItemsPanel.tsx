@@ -1,4 +1,4 @@
-import { useSignal, type Signal } from "@preact/signals-react";
+import { useState } from "react";
 import { plainText } from "../features/characters/trackers";
 import {
   addItem,
@@ -52,11 +52,11 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
   const json = useY(campaign.homebrew, () => JSON.stringify(listHomebrew(campaign.homebrew)));
   const entries: (HomebrewEntry & { id: string })[] = JSON.parse(json);
   const system = systemOf(campaign);
-  const editing = useSignal<Editing>(null);
-  const folded = useSignal<Set<string>>(new Set());
+  const [editing, setEditing] = useState<Editing>(null);
+  const [folded, setFolded] = useState<Set<string>>(new Set());
   const fold = (id: string) => ({
-    open: !folded.value.has(id),
-    onToggle: () => (folded.value = toggleSetValue(folded.value, id)),
+    open: !folded.has(id),
+    onToggle: () => setFolded(toggleSetValue(folded, id)),
   });
   const meId = useY(campaign.members, () => selectedCharacterId(campaign));
   const me = useY(campaign.characters, () => getCharacter(campaign, meId));
@@ -85,10 +85,10 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
     return [primary, ...(actions.length ? (["divider"] as const) : []), ...actions];
   };
 
-  if (editing.value) {
-    const { kind, id } = editing.value;
+  if (editing) {
+    const { kind, id } = editing;
     const found = id ? entries.find((e) => e.id === id) : undefined;
-    const close = () => (editing.value = null);
+    const close = () => setEditing(null);
     return (
       <div className="panel-scroll items-panel">
         <div className="sheet-row">
@@ -120,10 +120,10 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
   return (
     <div className="panel-scroll items-panel">
       <PanelActions>
-        <Button size="sm" onClick={() => (editing.value = { kind: "gear", id: null })}>
+        <Button size="sm" onClick={() => setEditing({ kind: "gear", id: null })}>
           <IconAdd size={22} /> New gear
         </Button>
-        <Button size="sm" onClick={() => (editing.value = { kind: "move", id: null })}>
+        <Button size="sm" onClick={() => setEditing({ kind: "move", id: null })}>
           <IconAdd size={22} /> New move
         </Button>
       </PanelActions>
@@ -155,7 +155,7 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
                       .join(" · ") || undefined
                   }
                   tip={e.item.description}
-                  onOpen={() => (editing.value = { kind: "gear", id: e.id })}
+                  onOpen={() => setEditing({ kind: "gear", id: e.id })}
                   onPointerDown={(ev) =>
                     dragEntity(ev, entity(campaign, "item", e.id, e.item.name))
                   }
@@ -189,7 +189,7 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
                   openLabel="Edit"
                   tag={rollTag(system, e.move)}
                   tip={`${plainText(e.move.text)}\n\nDrag onto a character to teach it to them.`}
-                  onOpen={() => (editing.value = { kind: "move", id: e.id })}
+                  onOpen={() => setEditing({ kind: "move", id: e.id })}
                   onPointerDown={(ev) =>
                     dragEntity(ev, entity(campaign, "move", e.id, e.move.name))
                   }
@@ -218,10 +218,12 @@ function Text({
   label,
   value,
   multiline,
+  onChange,
   placeholder,
 }: {
   label: string;
-  value: Signal<string>;
+  value: string;
+  onChange: (value: string) => void;
   multiline?: boolean;
   placeholder?: string;
 }) {
@@ -231,15 +233,15 @@ function Text({
       {multiline ? (
         <textarea
           rows={4}
-          value={value.value}
+          value={value}
           placeholder={placeholder}
-          onInput={(e) => (value.value = e.currentTarget.value)}
+          onInput={(e) => onChange(e.currentTarget.value)}
         />
       ) : (
         <input
-          value={value.value}
+          value={value}
           placeholder={placeholder}
-          onInput={(e) => (value.value = e.currentTarget.value)}
+          onInput={(e) => onChange(e.currentTarget.value)}
         />
       )}
     </label>
@@ -249,10 +251,12 @@ function Text({
 function NumberField({
   label,
   value,
+  onChange,
   min = 0,
 }: {
   label: string;
-  value: Signal<number>;
+  value: number;
+  onChange: (value: number) => void;
   min?: number;
 }) {
   return (
@@ -261,8 +265,8 @@ function NumberField({
       <input
         type="number"
         min={min}
-        value={value.value}
-        onInput={(e) => (value.value = Number(e.currentTarget.value) || 0)}
+        value={value}
+        onInput={(e) => onChange(Number(e.currentTarget.value) || 0)}
       />
     </label>
   );
@@ -289,48 +293,44 @@ function GearForm({
   initial?: ItemDef;
   onDone: () => void;
 }) {
-  const name = useSignal(initial?.name ?? "");
-  const description = useSignal(initial?.description ?? "");
-  const weight = useSignal(initial?.weight ?? 0);
-  const uses = useSignal(initial?.uses ?? 0);
-  const tags = useSignal((initial?.tags ?? []).join(", "));
-  const equippable = useSignal(initial?.equippable ?? false);
-  const graphic = useSignal<EntityGraphic | undefined>(
-    initial?.id ? campaign.entityGraphics.get(`item:${initial.id}`) : undefined,
-  );
-  const resetGraphic = useSignal(false);
-  const effects = useSignal<EffectRow[]>(
-    (initial?.effects ?? []).flatMap((e): EffectRow[] =>
+  const [name, setName] = useState(initial?.name ?? "");
+  const [description, setDescription] = useState(initial?.description ?? "");
+  const [weight, setWeight] = useState(initial?.weight ?? 0);
+  const [uses, setUses] = useState(initial?.uses ?? 0);
+  const [tags, setTags] = useState((initial?.tags ?? []).join(", "));
+  const [equippable, setEquippable] = useState(initial?.equippable ?? false);
+  const [graphic, setGraphic] = useState<EntityGraphic | undefined>(initial?.id ? campaign.entityGraphics.get(`item:${initial.id}`) : undefined);
+  const [resetGraphic, setResetGraphic] = useState(false);
+  const [effects, setEffects] = useState<EffectRow[]>((initial?.effects ?? []).flatMap((e): EffectRow[] =>
       e.type === "rollBonus"
         ? [{ type: "rollBonus", stat: e.stat ?? "", value: e.value }]
         : e.type === "modify" && e.op === "add"
           ? [{ type: "modify", path: e.path, value: e.value }]
           : [],
-    ),
-  );
-  const ready = !!name.value.trim();
+    ));
+  const ready = !!name.trim();
   const save = () => {
     if (!ready) return;
-    const out: Effect[] = effects.value.map((e) =>
+    const out: Effect[] = effects.map((e) =>
       e.type === "rollBonus"
         ? { type: "rollBonus", ...(e.stat ? { stat: e.stat } : {}), value: e.value }
         : { type: "modify", path: e.path, op: "add", value: e.value },
     );
     const id = saveGear(campaign.homebrew, {
       id: initial?.id ?? "",
-      name: name.value.trim(),
-      description: description.value.trim(),
-      weight: weight.value,
-      ...(uses.value ? { uses: uses.value } : {}),
-      tags: splitTags(tags.value),
+      name: name.trim(),
+      description: description.trim(),
+      weight: weight,
+      ...(uses ? { uses: uses } : {}),
+      tags: splitTags(tags),
       ...(out.length ? { effects: out } : {}),
-      ...(equippable.value ? { equippable: true, active: "equipped" as const } : {}),
+      ...(equippable ? { equippable: true, active: "equipped" as const } : {}),
     });
-    setEntityGraphic(campaign, "item", id, resetGraphic.value ? undefined : graphic.value);
+    setEntityGraphic(campaign, "item", id, resetGraphic ? undefined : graphic);
     onDone();
   };
   const setEffect = (i: number, patch: Partial<EffectRow>) =>
-    (effects.value = effects.value.map((e, j) =>
+    setEffects(effects.map((e, j) =>
       j === i ? ({ ...e, ...patch } as EffectRow) : e,
     ));
 
@@ -345,44 +345,44 @@ function GearForm({
       <h3 className="form-title">{initial ? "Edit gear" : "New gear"}</h3>
       <section className="form-section">
         <h4 className="form-heading">Details</h4>
-        <Text label="Name" value={name} />
-        <Text label="Description" value={description} multiline />
+        <Text label="Name" value={name} onChange={setName} />
+        <Text label="Description" value={description} onChange={setDescription} multiline />
         <div className="sheet-row">
-          <NumberField label="Weight" value={weight} />
-          <NumberField label="Uses" value={uses} />
+          <NumberField label="Weight" value={weight} onChange={setWeight} />
+          <NumberField label="Uses" value={uses} onChange={setUses} />
         </div>
-        <Text label="Tags" value={tags} placeholder="close, +1 armor" />
+        <Text label="Tags" value={tags} onChange={setTags} placeholder="close, +1 armor" />
       </section>
       <section className="form-section">
         <h4 className="form-heading">Appearance and use</h4>
         <label className="stat-deb">
           <input
             type="checkbox"
-            checked={equippable.value}
-            onChange={() => (equippable.value = !equippable.value)}
+            checked={equippable}
+            onChange={() => setEquippable(!equippable)}
           />
           Equippable
         </label>
         <GraphicPicker
           graphic={
-            resetGraphic.value
+            resetGraphic
               ? getDefaultEntityGraphic(campaign, "item", initial?.id ?? "")
-              : (graphic.value ?? getEntityGraphic(campaign, "item", initial?.id ?? ""))
+              : (graphic ?? getEntityGraphic(campaign, "item", initial?.id ?? ""))
           }
           onChange={(next) => {
-            graphic.value = next;
-            resetGraphic.value = false;
+            setGraphic(next);
+            setResetGraphic(false);
           }}
           onReset={() => {
-            graphic.value = undefined;
-            resetGraphic.value = true;
+            setGraphic(undefined);
+            setResetGraphic(true);
           }}
         />
       </section>
       <section className="form-section">
         <h4 className="form-heading">Effects</h4>
         <div className="form-fields">
-          {effects.value.map((e, i) => (
+          {effects.map((e, i) => (
             <div key={i} className="sheet-row homebrew-effect">
               <select
                 aria-label="Effect"
@@ -431,7 +431,7 @@ function GearForm({
                 variant="icon"
                 size="sm"
                 label="Remove effect"
-                onClick={() => (effects.value = effects.value.filter((_, j) => j !== i))}
+                onClick={() => setEffects(effects.filter((_, j) => j !== i))}
               >
                 <IconDelete />
               </Button>
@@ -441,7 +441,7 @@ function GearForm({
             size="sm"
             variant="ghost"
             onClick={() =>
-              (effects.value = [...effects.value, { type: "rollBonus", stat: "", value: 1 }])
+              setEffects([...effects, { type: "rollBonus", stat: "", value: 1 }])
             }
           >
             <IconAdd size={22} /> Add effect
@@ -467,57 +467,55 @@ function MoveForm({
   onDone: () => void;
 }) {
   const check = initial?.steps.find((s): s is CheckStep => s.kind === "check");
-  const name = useSignal(initial?.name ?? "");
-  const category = useSignal(initial?.category ?? system.actionCategories[0]?.id ?? "");
-  const trigger = useSignal(initial?.trigger ?? "");
-  const text = useSignal(initial?.text ?? "");
-  const graphic = useSignal<EntityGraphic | undefined>(
-    initial?.id ? campaign.entityGraphics.get(`move:${initial.id}`) : undefined,
-  );
-  const resetGraphic = useSignal(false);
-  const rolls = useSignal<RollKind>(!check ? "none" : check.ask?.kind === "stat" ? "ask" : "stat");
-  const stat = useSignal(check?.stat ?? system.stats[0]?.id ?? "");
-  const outcomes = useSignal<Record<string, string>>(check?.outcomes ?? {});
-  const targets = useSignal(initial?.target ? (initial.target.max === 1 ? "one" : "many") : "none");
-  const range = useSignal(initial?.target?.range?.normal ?? 0);
-  const ready = !!name.value.trim();
+  const [name, setName] = useState(initial?.name ?? "");
+  const [category, setCategory] = useState(initial?.category ?? system.actionCategories[0]?.id ?? "");
+  const [trigger, setTrigger] = useState(initial?.trigger ?? "");
+  const [text, setText] = useState(initial?.text ?? "");
+  const [graphic, setGraphic] = useState<EntityGraphic | undefined>(initial?.id ? campaign.entityGraphics.get(`move:${initial.id}`) : undefined);
+  const [resetGraphic, setResetGraphic] = useState(false);
+  const [rolls, setRolls] = useState<RollKind>(!check ? "none" : check.ask?.kind === "stat" ? "ask" : "stat");
+  const [stat, setStat] = useState(check?.stat ?? system.stats[0]?.id ?? "");
+  const [outcomes, setOutcomes] = useState<Record<string, string>>(check?.outcomes ?? {});
+  const [targets, setTargets] = useState(initial?.target ? (initial.target.max === 1 ? "one" : "many") : "none");
+  const [range, setRange] = useState(initial?.target?.range?.normal ?? 0);
+  const ready = !!name.trim();
 
   const save = () => {
     if (!ready) return;
     const steps: CheckStep[] =
-      rolls.value === "none"
+      rolls === "none"
         ? []
         : [
             {
               kind: "check",
-              ...(rolls.value === "stat"
-                ? { stat: stat.value }
+              ...(rolls === "stat"
+                ? { stat: stat }
                 : { ask: { kind: "stat" as const } }),
               outcomes: Object.fromEntries(
-                system.results.map((r) => [r.id, outcomes.value[r.id]?.trim() ?? ""]),
+                system.results.map((r) => [r.id, outcomes[r.id]?.trim() ?? ""]),
               ),
             },
           ];
     const target: TargetSpec | undefined =
-      targets.value === "none"
+      targets === "none"
         ? undefined
         : {
-            prompt: targets.value === "one" ? "Choose a target" : "Choose targets",
+            prompt: targets === "one" ? "Choose a target" : "Choose targets",
             min: 1,
-            ...(targets.value === "one" ? { max: 1 } : {}),
-            ...(range.value ? { range: { normal: range.value } } : {}),
+            ...(targets === "one" ? { max: 1 } : {}),
+            ...(range ? { range: { normal: range } } : {}),
           };
     const id = saveMove(campaign.homebrew, {
       id: initial?.id ?? "",
-      name: name.value.trim(),
-      category: category.value,
-      trigger: trigger.value.trim(),
-      text: text.value.trim(),
+      name: name.trim(),
+      category: category,
+      trigger: trigger.trim(),
+      text: text.trim(),
       steps,
       ...(target ? { target } : {}),
       tags: ["homebrew"],
     });
-    setEntityGraphic(campaign, "move", id, resetGraphic.value ? undefined : graphic.value);
+    setEntityGraphic(campaign, "move", id, resetGraphic ? undefined : graphic);
     onDone();
   };
 
@@ -532,10 +530,10 @@ function MoveForm({
       <h3 className="form-title">{initial ? "Edit move" : "New move"}</h3>
       <section className="form-section">
         <h4 className="form-heading">Details</h4>
-        <Text label="Name" value={name} />
+        <Text label="Name" value={name} onChange={setName} />
         <label className="field">
           Kind
-          <select value={category.value} onChange={(e) => (category.value = e.currentTarget.value)}>
+          <select value={category} onChange={(e) => setCategory(e.currentTarget.value)}>
             {system.actionCategories.map((k) => (
               <option key={k.id} value={k.id}>
                 {k.label}
@@ -543,24 +541,24 @@ function MoveForm({
             ))}
           </select>
         </label>
-        <Text label="Trigger" value={trigger} placeholder="When you…" />
-        <Text label="Text" value={text} multiline />
+        <Text label="Trigger" value={trigger} onChange={setTrigger} placeholder="When you…" />
+        <Text label="Text" value={text} onChange={setText} multiline />
       </section>
       <section className="form-section">
         <h4 className="form-heading">Appearance</h4>
         <GraphicPicker
           graphic={
-            resetGraphic.value
+            resetGraphic
               ? getDefaultEntityGraphic(campaign, "move", initial?.id ?? "")
-              : (graphic.value ?? getEntityGraphic(campaign, "move", initial?.id ?? ""))
+              : (graphic ?? getEntityGraphic(campaign, "move", initial?.id ?? ""))
           }
           onChange={(next) => {
-            graphic.value = next;
-            resetGraphic.value = false;
+            setGraphic(next);
+            setResetGraphic(false);
           }}
           onReset={() => {
-            graphic.value = undefined;
-            resetGraphic.value = true;
+            setGraphic(undefined);
+            setResetGraphic(true);
           }}
         />
       </section>
@@ -571,19 +569,19 @@ function MoveForm({
             Type
             <Segmented
               label="Roll type"
-              value={rolls.value}
+              value={rolls}
               options={[
                 { id: "none", label: "No roll" },
                 { id: "stat", label: "With a stat" },
                 { id: "ask", label: "Stat chosen when made" },
               ]}
-              onChange={(v) => (rolls.value = v)}
+              onChange={(v) => setRolls(v)}
             />
-            {rolls.value === "stat" && (
+            {rolls === "stat" && (
               <select
                 aria-label="Stat"
-                value={stat.value}
-                onChange={(e) => (stat.value = e.currentTarget.value)}
+                value={stat}
+                onChange={(e) => setStat(e.currentTarget.value)}
               >
                 {system.stats.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -593,16 +591,16 @@ function MoveForm({
               </select>
             )}
           </div>
-          {rolls.value !== "none" &&
+          {rolls !== "none" &&
             system.results.map((r) => (
               <label key={r.id} className="field">
                 {r.label || "Otherwise"}
                 <textarea
                   rows={2}
-                  value={outcomes.value[r.id] ?? ""}
+                  value={outcomes[r.id] ?? ""}
                   onInput={(e) =>
-                    (outcomes.value = {
-                      ...outcomes.value,
+                    setOutcomes({
+                      ...outcomes,
                       [r.id]: e.currentTarget.value,
                     })
                   }
@@ -617,18 +615,18 @@ function MoveForm({
           Selection
           <Segmented
             label="Target selection"
-            value={targets.value}
+            value={targets}
             options={[
               { id: "none", label: "None" },
               { id: "one", label: "One" },
               { id: "many", label: "Any number" },
             ]}
-            onChange={(v) => (targets.value = v)}
+            onChange={(v) => setTargets(v)}
           />
-          {targets.value !== "none" && (
+          {targets !== "none" && (
             <NumberFieldInline
               label={`Range (${system.scene.unitName}, 0 for any)`}
-              value={range}
+              value={range} onChange={setRange}
             />
           )}
         </div>
@@ -638,15 +636,23 @@ function MoveForm({
   );
 }
 
-function NumberFieldInline({ label, value }: { label: string; value: Signal<number> }) {
+function NumberFieldInline({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+}) {
   return (
     <label className="sheet-row">
       <input
         className="homebrew-num"
         type="number"
         min={0}
-        value={value.value}
-        onInput={(e) => (value.value = Number(e.currentTarget.value) || 0)}
+        value={value}
+        onInput={(e) => onChange(Number(e.currentTarget.value) || 0)}
       />
       <span className="muted">{label}</span>
     </label>

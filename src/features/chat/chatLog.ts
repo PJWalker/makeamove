@@ -1,4 +1,4 @@
-import { signal } from "@preact/signals-react";
+import { store } from "../../lib/store";
 import * as Y from "yjs";
 import { IndexeddbPersistence } from "y-indexeddb";
 import { HybridClock } from "../../lib/hlc";
@@ -44,11 +44,11 @@ export type NewMessage = ChatMessage extends infer M
 
 export class ChatLog {
   /** Loaded messages, oldest first. */
-  readonly messages = signal<ChatMessage[]>([]);
+  readonly messages = store<ChatMessage[]>([]);
   /** Whether older chunks exist that aren't loaded. */
-  readonly hasEarlier = signal(false);
+  readonly hasEarlier = store(false);
   /** About how many messages those hold: chunks fill before the next starts, so CHUNK_SIZE each. */
-  readonly earlierCount = signal(0);
+  readonly earlierCount = store(0);
 
   private readonly chunks: Y.Array<Y.Doc>;
   private readonly loaded = new Map<string, LoadedChunk>();

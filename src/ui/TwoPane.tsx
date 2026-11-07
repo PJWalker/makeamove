@@ -1,10 +1,11 @@
 import type * as React from "react";
-import { computed, signal, useSignal, type Signal } from "@preact/signals-react";
+import { derived, store, type ReadonlyStore, type Store } from "../lib/store";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { IconBack, IconLayoutSingle, IconLayoutSplit } from "./icons";
 import { getStorageJson, setStorageJson } from "../platform/localStorage";
 import { withTransition } from "./transition";
+import { useValue } from "./useValue";
 
 /*
  * A panel that is a list and a detail (characters and their sheets, notes
@@ -24,11 +25,11 @@ const DEFAULT_LIST_W = 200;
 
 export interface PaneLayout {
   key: string;
-  listWidth: Signal<number>;
-  chosen: Signal<PaneLayoutMode>;
-  tooNarrow: Signal<boolean>;
+  listWidth: Store<number>;
+  chosen: Store<PaneLayoutMode>;
+  tooNarrow: Store<boolean>;
   /** What actually shows. */
-  mode: { readonly value: PaneLayoutMode; peek(): PaneLayoutMode };
+  mode: ReadonlyStore<PaneLayoutMode>;
   save(): void;
   /** The panel's two-pane element, while it's on screen. */
   el: HTMLElement | null;
@@ -43,17 +44,20 @@ export interface PaneLayout {
 export function createPaneLayout(key: string, names: { list: string; detail: string }): PaneLayout {
   const storeKey = `makeamove.${key}`;
   const saved = getStorageJson<{ w?: number; layout?: PaneLayoutMode }>(storeKey, {});
-  const listWidth = signal(saved.w ?? DEFAULT_LIST_W);
-  const chosen = signal<PaneLayoutMode>(saved.layout ?? "split");
-  const tooNarrow = signal(false);
-  const mode = computed<PaneLayoutMode>(() => (tooNarrow.value ? "stack" : chosen.value));
+  const listWidth = store(saved.w ?? DEFAULT_LIST_W);
+  const chosen = store<PaneLayoutMode>(saved.layout ?? "split");
+  const tooNarrow = store(false);
+  const mode = derived<PaneLayoutMode>([tooNarrow, chosen], () =>
+    tooNarrow.value ? "stack" : chosen.value,
+  );
   const save = () => {
     setStorageJson(storeKey, { w: listWidth.value, layout: chosen.value });
   };
 
   function Toggle() {
-    const split = mode.value === "split";
-    const label = tooNarrow.value
+    const split = useValue(mode) === "split";
+    const narrow = useValue(tooNarrow);
+    const label = narrow
       ? `One at a time (widen the panel to see the ${names.list} and ${names.detail} side by side)`
       : split
         ? "Side by side: click to show one at a time"
@@ -65,7 +69,7 @@ export function createPaneLayout(key: string, names: { list: string; detail: str
         aria-label={label}
         title={label}
         aria-pressed={split}
-        disabled={tooNarrow.value}
+        disabled={narrow}
         onPointerDown={(e) => e.stopPropagation()}
         onClick={() => {
           chosen.value = split ? "stack" : "split";
@@ -85,12 +89,12 @@ export function createPaneLayout(key: string, names: { list: string; detail: str
  * one at a time, the move slides; side by side, both already show.
  */
 export function usePaneLevel(layout: PaneLayout, initial: PaneLevel) {
-  const level = useSignal<PaneLevel>(initial);
+  const [level, setLevel] = useState<PaneLevel>(initial);
   const go = useCallback(
     (to: PaneLevel) => {
-      if (level.value === to) return;
-      if (layout.mode.peek() !== "stack") {
-        level.value = to;
+      if (level === to) return;
+      if (layout.mode.value !== "stack") {
+        setLevel(to);
         return;
       }
       // Only this panel slides: it alone is named for the transition.
@@ -98,7 +102,7 @@ export function usePaneLevel(layout: PaneLayout, initial: PaneLevel) {
       if (el) el.dataset.sliding = "true";
       void withTransition(
         () => {
-          level.value = to;
+          setLevel(to);
         },
         { rootClass: to === "detail" ? "vt-pane-fwd" : "vt-pane-back" },
       ).finally(() => {
@@ -151,6 +155,8 @@ export function TwoPane({
   resizeLabel: string;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const mode = useValue(layout.mode);
+  const listWidth = useValue(layout.listWidth);
   useEffect(() => {
     const el = rootRef.current;
     if (!el) return;
@@ -166,11 +172,11 @@ export function TwoPane({
         ref={(el) => {
           layout.el = el;
         }}
-        data-layout={layout.mode.value}
+        data-layout={mode}
         data-level={level}
         // Its own transition name, so two panels can slide at once.
         style={{
-          "--list-w": `${layout.listWidth.value}px`,
+          "--list-w": `${listWidth}px`,
           "--pane-vt": `pane-${layout.key}`,
         }}
       >

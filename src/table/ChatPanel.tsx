@@ -1,5 +1,4 @@
-import { useSignal } from "@preact/signals-react";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { entityContent } from "../features/chat/content";
 import { postText } from "../features/chat/send";
 import { canDelete, canEditMessage } from "../features/chat/types";
@@ -21,15 +20,15 @@ import { PinnedMessage } from "./ChatMessage";
 
 export function ChatPanel({ campaign }: { campaign: Campaign }) {
   /** Replies only this device sees: /help, and errors. */
-  const notes = useSignal<{ id: number; text: string; error?: boolean }[]>([]);
+  const [notes, setNotes] = useState<{ id: number; text: string; error?: boolean }[]>([]);
   const note = (text: string, error = false) =>
-    (notes.value = [...notes.value, { id: Date.now(), text, error }]);
+    setNotes([...notes, { id: Date.now(), text, error }]);
   const ref = useRef<HTMLDivElement>(null);
-  const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(null);
-  const closeMenu = useCallback(() => (menu.value = null), [menu]);
+  const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
+  const closeMenu = useCallback(() => setMenu(null), []);
   const openMenu = useCallback(
     (x: number, y: number, id: string) => {
-      const m = campaign.chat.messages.peek().find((message) => message.id === id);
+      const m = campaign.chat.messages.value.find((message) => message.id === id);
       if (!m) return;
       const gm = campaign.isGm();
       const items: MenuItem[] = [];
@@ -56,9 +55,9 @@ export function ChatPanel({ campaign }: { campaign: Campaign }) {
           onSelect: () => removeMessage(campaign, id),
         });
       }
-      if (items.length) menu.value = { x, y, items };
+      if (items.length) setMenu({ x, y, items });
     },
-    [campaign, menu],
+    [campaign],
   );
 
   // Something dragged onto the chat is sent as a link (into the message box, it joins the message instead).
@@ -76,9 +75,9 @@ export function ChatPanel({ campaign }: { campaign: Campaign }) {
         render={(m) => <PinnedMessage campaign={campaign} m={m} />}
         onMenu={openMenu}
       />
-      <ChatLog campaign={campaign} notes={notes.value} onMenu={openMenu} />
+      <ChatLog campaign={campaign} notes={notes} onMenu={openMenu} />
       <ChatComposer campaign={campaign} onNote={note} />
-      {menu.value && <ContextMenu {...menu.value} onClose={closeMenu} />}
+      {menu && <ContextMenu {...menu} onClose={closeMenu} />}
     </div>
   );
 }

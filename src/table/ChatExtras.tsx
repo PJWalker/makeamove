@@ -1,6 +1,6 @@
 import type * as React from "react";
-import { signal, useSignal } from "@preact/signals-react";
-import { useEffect, useEffectEvent, useRef } from "react";
+import { store } from "../lib/store";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { fieldsOf, getState, setState, withField } from "../features/chat/messageState";
 import { commandText, contentForCommand, type ChatContent } from "../features/chat/content";
 import {
@@ -17,6 +17,7 @@ import { Button } from "../ui/Button";
 import { menuTrigger } from "../ui/menuTrigger";
 import { IconRemove, IconAdd } from "../ui/icons";
 import { ChatInput, type ChatInputHandle } from "./ChatInput";
+import { useValue } from "../ui/useValue";
 
 /*
  * What chat messages gained in M10, all kept in the campaign's message state
@@ -26,7 +27,7 @@ import { ChatInput, type ChatInputHandle } from "./ChatInput";
  */
 
 /** The message being edited in place, on this device. */
-export const editingMessage = signal<string | null>(null);
+export const editingMessage = store<string | null>(null);
 
 /** Some of a message's state, re-read when it changes. */
 export function useMessageState<T = unknown>(
@@ -70,11 +71,11 @@ export function EditBox({
   id: string;
   text: ChatContent;
 }) {
-  const value = useSignal<ChatContent>(text);
+  const [value, setValue] = useState<ChatContent>(text);
   const input = useRef<ChatInputHandle | null>(null);
   const done = (save: boolean) => {
-    const body = commandText(value.value).trim();
-    const content = contentForCommand(value.value, body);
+    const body = commandText(value).trim();
+    const content = contentForCommand(value, body);
     if (save && body && JSON.stringify(content) !== JSON.stringify(text))
       saveEdit(campaign, id, content);
     editingMessage.value = null;
@@ -95,7 +96,7 @@ export function EditBox({
         className="input chat-input"
         initialContent={text}
         handle={input}
-        onChange={(content) => (value.value = content)}
+        onChange={(content) => setValue(content)}
         onEnter={() => done(true)}
         onUp={() => {}}
         onEscape={() => done(false)}
@@ -106,14 +107,14 @@ export function EditBox({
 
 /** The clock now, ticking every half second while something needs it. */
 function useNow(running: boolean): number {
-  const now = useSignal(Date.now());
-  const updateNow = useEffectEvent(() => (now.value = Date.now()));
+  const [now, setNow] = useState(Date.now());
+  const updateNow = useEffectEvent(() => setNow(Date.now()));
   useEffect(() => {
     if (!running) return;
     const t = window.setInterval(updateNow, 500);
     return () => clearInterval(t);
   }, [running]);
-  return now.value;
+  return now;
 }
 
 const clock = (seconds: number) => {
@@ -134,20 +135,20 @@ const RING_MS = 3600;
  * appears doesn't ring.
  */
 function useRinging(done: boolean): boolean {
-  const ringing = useSignal(false);
+  const [ringing, setRinging] = useState(false);
   const was = useRef(done);
   useEffect(() => {
-    if (done && !was.current) ringing.value = true;
-    if (!done) ringing.value = false;
+    if (done && !was.current) setRinging(true);
+    if (!done) setRinging(false);
     was.current = done;
   }, [done, ringing]);
   useEffect(() => {
-    if (!ringing.value) return;
+    if (!ringing) return;
     let timer = 0;
     const arm = () => {
       clearTimeout(timer);
       if (document.visibilityState === "visible")
-        timer = window.setTimeout(() => (ringing.value = false), RING_MS);
+        timer = window.setTimeout(() => setRinging(false), RING_MS);
     };
     arm();
     document.addEventListener("visibilitychange", arm);
@@ -155,8 +156,8 @@ function useRinging(done: boolean): boolean {
       clearTimeout(timer);
       document.removeEventListener("visibilitychange", arm);
     };
-  }, [ringing, ringing.value]);
-  return ringing.value;
+  }, [ringing]);
+  return ringing;
 }
 
 /** A countdown in real time: its label, the time left as a clock and a bar; restart or stop for whoever may. */
@@ -176,7 +177,8 @@ export function TimerCard({
   const left = (((stopped ?? now) - endsAt) * -1) / 1000;
   const done = left <= 0;
   const gm = useY(campaign.members, () => campaign.isGm());
-  const can = canWork(m, device.value.id, gm);
+  const me = useValue(device).id;
+  const can = canWork(m, me, gm);
   const ringing = useRinging(done);
   return (
     <div
@@ -260,7 +262,8 @@ export function CounterCard({
   const state = useMessageState<number>(campaign, m.id, ["value"]);
   const value: number = state.value ?? m.start;
   const gm = useY(campaign.members, () => campaign.isGm());
-  const can = canWork(m, device.value.id, gm);
+  const me = useValue(device).id;
+  const can = canWork(m, me, gm);
   const set = (n: number) =>
     setState(
       campaign.messageState,
@@ -342,32 +345,32 @@ export function PinnedStrip({
   const pinnedIds = useY(campaign.messageState, () =>
     withField(campaign.messageState, "pinned").join(" "),
   );
-  const messages = campaign.chat.messages.value;
+  const messages = useValue(campaign.chat.messages);
   const gm = useY(campaign.members, () => campaign.isGm());
-  const me = device.value.id;
+  const me = useValue(device).id;
   const ids = new Set(pinnedIds.split(" ").filter(Boolean));
   const pinned = messages.filter((m) => ids.has(m.id) && visibilityOf(m, me, gm) === "full");
   const shownIds = pinned.map((m) => m.id).join(" ");
   const shown = new Set(shownIds.split(" ").filter(Boolean));
 
   // Unpinned ones stay a moment to fold away.
-  const leaving = useSignal<Set<string>>(new Set());
+  const [leaving, setLeaving] = useState<Set<string>>(new Set());
   const before = useRef<Set<string>>(shown);
   useEffect(() => {
     const currentShown = new Set(shownIds.split(" ").filter(Boolean));
     const gone = [...before.current].filter((id) => !currentShown.has(id));
     before.current = currentShown;
     if (!gone.length) return;
-    leaving.value = new Set([...leaving.value, ...gone]);
+    setLeaving(new Set([...leaving, ...gone]));
     window.setTimeout(
-      () => (leaving.value = new Set([...leaving.value].filter((id) => !gone.includes(id)))),
+      () => setLeaving(new Set([...leaving].filter((id) => !gone.includes(id)))),
       PIN_LEAVE_MS,
     );
   }, [shownIds, leaving]);
   // Those here when the strip first drew came with it.
   const initial = useRef(shown).current;
 
-  const rows = messages.filter((m) => shown.has(m.id) || leaving.value.has(m.id));
+  const rows = messages.filter((m) => shown.has(m.id) || leaving.has(m.id));
   if (!rows.length) return null;
   return (
     <section className="chat-pinned" aria-label="Pinned">

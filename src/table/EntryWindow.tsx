@@ -1,7 +1,7 @@
 import type { PointerEvent as ReactPointerEvent } from "react";
-import { signal, useSignal } from "@preact/signals-react";
+import { store } from "../lib/store";
 import type { ReactNode } from "react";
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { checkOf } from "../features/characters/moves";
 import type { ActionDef, GameSystem } from "../systems/types";
 import { morphOpen } from "../ui/morph";
@@ -20,6 +20,7 @@ import {
 } from "./entityWindows";
 import { layout, locate, showPanel } from "./panelLayout";
 import type { DockItemId } from "./panelLayout";
+import { useValue } from "../ui/useValue";
 
 /*
  * Rows that show their rules in a tooltip beside them and, when clicked,
@@ -37,7 +38,7 @@ export function rollTag(system: GameSystem, m: ActionDef) {
   return system.stats.find((s) => s.id === check.stat)?.abbr ?? check.stat ?? null;
 }
 
-const openEntries = signal<string[]>(
+const openEntries = store<string[]>(
   Object.keys(entityWindows.value)
     .filter((id) => id.startsWith("entity:entry:"))
     .map((id) => id.slice("entity:entry:".length)),
@@ -46,7 +47,7 @@ const openEntries = signal<string[]>(
 /** Which entries have windows open, and how to open one from its row. */
 export function useEntryWindows() {
   return {
-    keys: openEntries.value,
+    keys: useValue(openEntries),
     /** Open the window for `key`, morphing it out of the row's tooltip (or the row). */
     show(key: string, row: Element) {
       const id = entityTabId(`entry:${key}`);
@@ -177,9 +178,9 @@ export function EntryRow({
   dim?: boolean | undefined;
   children?: ReactNode | undefined;
 }) {
-  const menu = useSignal<{ x: number; y: number } | null>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const rowElement = useRef<Element | null>(null);
-  const trigger = menuTrigger((x, y) => (menu.value = { x, y }));
+  const trigger = menuTrigger((x, y) => setMenu({ x, y }));
   const items: MenuItem[] = [
     {
       label: openLabel,
@@ -218,8 +219,8 @@ export function EntryRow({
       >
         {children}
       </ListRow>
-      {menu.value && (
-        <ContextMenu {...menu.value} items={items} onClose={() => (menu.value = null)} />
+      {menu && (
+        <ContextMenu {...menu} items={items} onClose={() => setMenu(null)} />
       )}
     </>
   );

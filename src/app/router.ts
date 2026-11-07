@@ -1,4 +1,4 @@
-import { signal } from "@preact/signals-react";
+import { store } from "../lib/store";
 import { parseInvite, type Invite } from "../sync/invite";
 import { until, withTransition } from "../ui/transition";
 
@@ -8,10 +8,10 @@ function campaignIdFromHash(): string | null {
   return m?.[1] ?? null;
 }
 
-export const routeCampaignId = signal<string | null>(campaignIdFromHash());
+export const routeCampaignId = store<string | null>(campaignIdFromHash());
 
 /** An invite link that was opened, waiting for the player to confirm their name. */
-export const pendingInvite = signal<Invite | null>(null);
+export const pendingInvite = store<Invite | null>(null);
 
 /** Take an invite out of the address bar so the secret doesn't stay in the URL. */
 function readHash() {

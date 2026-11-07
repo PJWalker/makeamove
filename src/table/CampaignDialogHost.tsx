@@ -1,5 +1,5 @@
-import { useSignalEffect } from "@preact/signals-react";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
+import { watch } from "../lib/store";
 import type { Campaign } from "../campaign/campaign";
 import { openPopup } from "../ui/popup";
 import { dialogRequest } from "./canvasState";
@@ -12,17 +12,21 @@ export function CampaignDialogHost({ campaign }: { campaign: Campaign }) {
   const helpRef = useRef<HTMLDialogElement>(null);
   const relationshipsRef = useRef<HTMLDialogElement>(null);
 
-  useSignalEffect(() => {
-    const want = dialogRequest.value;
-    if (!want) return;
-    dialogRequest.value = null;
-    const dialog = {
-      settings: settingsRef,
-      help: helpRef,
-      relationships: relationshipsRef,
-    }[want].current;
-    openPopup(dialog);
-  });
+  useEffect(
+    () =>
+      watch([dialogRequest], () => {
+        const want = dialogRequest.value;
+        if (!want) return;
+        dialogRequest.value = null;
+        const dialog = {
+          settings: settingsRef,
+          help: helpRef,
+          relationships: relationshipsRef,
+        }[want].current;
+        openPopup(dialog);
+      }),
+    [],
+  );
 
   return (
     <>

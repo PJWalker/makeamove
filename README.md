@@ -28,9 +28,9 @@ work are tracked in [design.md](design.md#system-roadmap).
 ## UI Foundation
 
 The interface uses React and headless React Aria controls with the existing CSS
-theme. Signal state uses `@preact/signals-react`; Vite applies its compiler
-transform to subscribe components automatically. Yjs remains the collaborative
-data model.
+theme. Components subscribe to observable stores through `useValue`, while
+non-React code reacts to store changes with `watch`. Yjs remains the
+collaborative data model.
 
 Segmented choices and popup tabs support arrow-key navigation and a single Tab
 stop. Searchable pickers retain focus in search while navigating results;

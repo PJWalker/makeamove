@@ -1,5 +1,4 @@
-import { useSignal } from "@preact/signals-react";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState } from "react";
 import {
   IconAllowBack,
   IconCharacters,
@@ -21,6 +20,7 @@ import { Button } from "../ui/Button";
 import type { Icon } from "../ui/icons";
 import type { PanelId } from "./panelLayout";
 import { charactersLayout, notesLayout, scenesLayout } from "./panelLayouts";
+import { useValue } from "../ui/useValue";
 
 const ScenePanel = lazy(() =>
   import("./ScenePanel").then((module) => ({ default: module.ScenePanel })),
@@ -109,9 +109,9 @@ export function PaneToggle({ id }: { id: PanelId }) {
 /** Who's at the table, and who's online right now. */
 function Presence({ campaign }: { campaign: Campaign }) {
   const members = useY(campaign.members, () => campaign.memberViews());
-  const me = device.value.id;
-  const online = campaign.online.value;
-  const peers = campaign.peerCount.value;
+  const me = useValue(device).id;
+  const online = useValue(campaign.online);
+  const peers = useValue(campaign.peerCount);
   const sorted = [...members].sort((a, b) => Number(b.id === me) - Number(a.id === me));
   return (
     <div className="chat-presence">
@@ -137,6 +137,7 @@ function MemberList({ campaign }: { campaign: Campaign }) {
   const members = useY(campaign.members, () => campaign.memberViews());
   const revoked = useY(campaign.revoked, () => campaign.revokedViews());
   const isGm = useY(campaign.members, () => campaign.isGm());
+  const me = useValue(device).id;
   return (
     <div className="panel-scroll">
       <Presence campaign={campaign} />
@@ -146,7 +147,7 @@ function MemberList({ campaign }: { campaign: Campaign }) {
             key={m.id}
             campaign={campaign}
             m={m}
-            canRemove={isGm && m.id !== device.value.id && m.role !== "gm"}
+            canRemove={isGm && m.id !== me && m.role !== "gm"}
           />
         ))}
       </ul>
@@ -186,15 +187,17 @@ function MemberRow({
   m: MemberView;
   canRemove: boolean;
 }) {
-  const confirming = useSignal(false);
-  if (confirming.value) {
+  const me = useValue(device).id;
+  const online = useValue(campaign.online);
+  const [confirming, setConfirming] = useState(false);
+  if (confirming) {
     return (
       <li className="member member-confirm">
         <span className="member-name">Remove {m.name} from the campaign?</span>
         <Button variant="danger" size="sm" onClick={() => campaign.revokeMember(m.id)}>
           Remove
         </Button>
-        <Button variant="ghost" size="sm" onClick={() => (confirming.value = false)}>
+        <Button variant="ghost" size="sm" onClick={() => setConfirming(false)}>
           Cancel
         </Button>
       </li>
@@ -205,17 +208,17 @@ function MemberRow({
       <Avatar
         id={m.id}
         name={m.name}
-        online={m.id === device.value.id || campaign.online.value.has(m.id)}
+        online={m.id === me || online.has(m.id)}
       />
       <span className="member-name">
         {m.name}
-        {m.id === device.value.id && <span className="muted"> (you)</span>}
+        {m.id === me && <span className="muted"> (you)</span>}
       </span>
       <span className="role-badge" data-role={m.role}>
         {m.role === "gm" ? "GM" : m.role === "observer" ? "Observer" : "Player"}
       </span>
       {canRemove && (
-        <Button variant="icon" label={`Remove ${m.name}`} onClick={() => (confirming.value = true)}>
+        <Button variant="icon" label={`Remove ${m.name}`} onClick={() => setConfirming(true)}>
           <IconRemoveMember size={22} />
         </Button>
       )}

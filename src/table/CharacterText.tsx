@@ -4,6 +4,7 @@ import type { CharacterView } from "../features/characters/types";
 import type { Campaign } from "../campaign/campaign";
 import { useY } from "../ui/useY";
 import { mountRichText } from "./richText";
+import { useValue } from "../ui/useValue";
 
 /** Where a character keeps one of its rich-text fields: `text:notes`, `text:bonds`, `text:field:moves`. */
 export const textKey = (field: string) => `text:${field}`;
@@ -105,7 +106,7 @@ export function GMCharacterText({
   editable: boolean;
   placeholder?: string;
 }) {
-  const vault = campaign.vault.value;
+  const vault = useValue(campaign.vault);
   return vault ? (
     <VaultCharacterText
       vault={vault}

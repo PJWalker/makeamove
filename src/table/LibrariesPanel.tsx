@@ -1,4 +1,4 @@
-import { signal } from "@preact/signals-react";
+import { store } from "../lib/store";
 import { plainText } from "../features/characters/trackers";
 import { MoveBody } from "./MoveBody";
 import {
@@ -14,7 +14,7 @@ import {
 } from "../features/characters/api";
 import {
   KIND_LABEL,
-  librariesFor,
+  useLibrariesFor,
   libraryKey,
   sourceEntries,
   topLevelKeys,
@@ -40,9 +40,10 @@ import { getEntityGraphic } from "./entityGraphics";
 import { CampaignEntityGraphic } from "./EntityGraphic";
 import { editEntityGraphic } from "./GraphicDialogs";
 import type { ItemDef } from "../systems/types";
+import { useValue } from "../ui/useValue";
 
 /** Collections and entries shown open, by "source/collection[/entry…]" (this device only). */
-const opened = signal<Set<string>>(new Set());
+const opened = store<Set<string>>(new Set());
 
 /**
  * The Libraries: everything the game system and plugins contribute (items,
@@ -52,12 +53,13 @@ const opened = signal<Set<string>>(new Set());
 export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
   const system = systemOf(campaign);
   // The Libraries are the system's own; homebrew is in the Items panel.
-  const sources = librariesFor(baseSystemOf(campaign));
+  const sources = useLibrariesFor(baseSystemOf(campaign));
   const meId = useY(campaign.members, () => selectedCharacterId(campaign));
   const me = useY(campaign.characters, () => getCharacter(campaign, meId));
   const canAct = !!me && canEdit(campaign, me);
   const windows = useEntryWindows();
-  const { kind, query } = view.value;
+  const { kind, query } = useValue(view);
+  const openedIds = useValue(opened);
   const searching = query.trim() !== "";
 
   const kinds = (Object.keys(KIND_LABEL) as EntryKind[]).filter((k) =>
@@ -230,7 +232,7 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
     const e = v.entry;
     const id = `${path}/${e.id}`;
     const open =
-      v.groups.length > 0 && (searching ? v.reveal || opened.value.has(id) : opened.value.has(id));
+      v.groups.length > 0 && (searching ? v.reveal || openedIds.has(id) : openedIds.has(id));
     return [
       <EntryRow
         key={e.id}
@@ -348,7 +350,7 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
           <h3 className="eyebrow">{s.name}</h3>
           {collections.map(({ c, views }) => {
             const id = `${s.id}/${c.id}`;
-            const open = searching || opened.value.has(id);
+            const open = searching || openedIds.has(id);
             return (
               <ListGroup
                 key={c.id}

@@ -1,7 +1,6 @@
 import type { FormEvent } from "react";
 import type { ComponentType } from "react";
 import { useEffect, useRef, useState } from "react";
-import { useSignal } from "@preact/signals-react";
 import { IconAdd, IconCampaign, IconDelete } from "../ui/icons";
 import { goToCampaign, pendingInvite } from "../app/router";
 import { createCampaign, deleteLocalCampaign, joinCampaign } from "../campaign/campaign";
@@ -11,6 +10,7 @@ import { getSystem, listSystems, NO_SYSTEM_ID } from "../systems";
 import { Button } from "../ui/Button";
 import { ContextMenu } from "../table/ContextMenu";
 import { menuTrigger } from "../ui/menuTrigger";
+import { useValue } from "../ui/useValue";
 
 const relative = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
 
@@ -40,7 +40,9 @@ function stableOrder(list: CampaignSummary[]): CampaignSummary[] {
 }
 
 export function Lobby({ error }: { error: string | null }) {
-  const list = stableOrder(campaigns.value);
+  const list = stableOrder(useValue(campaigns));
+  const ready = useValue(registryReady);
+  const invite = useValue(pendingInvite);
 
   return (
     <main className="lobby">
@@ -60,7 +62,7 @@ export function Lobby({ error }: { error: string | null }) {
           <h2 id="your-campaigns" className="eyebrow">
             Your campaigns
           </h2>
-          {!registryReady.value ? null : list.length === 0 ? (
+          {!ready ? null : list.length === 0 ? (
             <div className="empty">
               <IconCampaign size={28} />
               No campaigns yet.
@@ -76,7 +78,7 @@ export function Lobby({ error }: { error: string | null }) {
 
         <NewCampaignForm />
 
-        {pendingInvite.value && <JoinInviteDialog invite={pendingInvite.value} />}
+        {invite && <JoinInviteDialog invite={invite} />}
       </div>
     </main>
   );
@@ -92,9 +94,9 @@ function LazyBackdrop() {
 }
 
 function CampaignRow({ c }: { c: CampaignSummary }) {
-  const confirming = useSignal(false);
-  const menu = useSignal<{ x: number; y: number } | null>(null);
-  const trigger = menuTrigger((x, y) => (menu.value = { x, y }));
+  const [confirming, setConfirming] = useState(false);
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const trigger = menuTrigger((x, y) => setMenu({ x, y }));
 
   return (
     <li className="campaign-row">
@@ -112,25 +114,25 @@ function CampaignRow({ c }: { c: CampaignSummary }) {
           {ago(c.lastOpenedAt)}
         </span>
       </button>
-      {menu.value && (
+      {menu && (
         <ContextMenu
-          {...menu.value}
+          {...menu}
           label={`${c.name} actions`}
           items={[
             {
               label: "Delete…",
               Icon: IconDelete,
               danger: true,
-              onSelect: () => (confirming.value = true),
+              onSelect: () => setConfirming(true),
             },
           ]}
-          onClose={() => (menu.value = null)}
+          onClose={() => setMenu(null)}
         />
       )}
-      {confirming.value && (
+      {confirming && (
         <DeleteCampaignDialog
           campaignName={c.name}
-          onClose={() => (confirming.value = false)}
+          onClose={() => setConfirming(false)}
           onConfirm={() => deleteLocalCampaign(c.id)}
         />
       )}
@@ -190,19 +192,19 @@ function DeleteCampaignDialog({
 }
 
 function NewCampaignForm() {
-  const name = useSignal("");
-  const yourName = useSignal(device.value.name);
-  const systemId = useSignal(NO_SYSTEM_ID);
-  const busy = useSignal(false);
-  const system = listSystems().find((s) => s.id === systemId.value);
+  const [name, setName] = useState("");
+  const [yourName, setYourName] = useState(device.value.name);
+  const [systemId, setSystemId] = useState(NO_SYSTEM_ID);
+  const [busy, setBusy] = useState(false);
+  const system = listSystems().find((s) => s.id === systemId);
 
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!name.value.trim() || !yourName.value.trim() || !system) return;
-    busy.value = true;
-    setDeviceName(yourName.value.trim());
-    const id = await createCampaign(name.value.trim(), yourName.value.trim(), system.id);
-    busy.value = false;
+    if (!name.trim() || !yourName.trim() || !system) return;
+    setBusy(true);
+    setDeviceName(yourName.trim());
+    const id = await createCampaign(name.trim(), yourName.trim(), system.id);
+    setBusy(false);
     goToCampaign(id);
   }
 
@@ -215,8 +217,8 @@ function NewCampaignForm() {
         <label className="field">
           Campaign name
           <input
-            value={name.value}
-            onInput={(e) => (name.value = e.currentTarget.value)}
+            value={name}
+            onInput={(e) => setName(e.currentTarget.value)}
             placeholder="The Lost Barrows"
             required
           />
@@ -224,8 +226,8 @@ function NewCampaignForm() {
         <label className="field">
           Your name
           <input
-            value={yourName.value}
-            onInput={(e) => (yourName.value = e.currentTarget.value)}
+            value={yourName}
+            onInput={(e) => setYourName(e.currentTarget.value)}
             placeholder="Robin"
             autoComplete="nickname"
             required
@@ -236,8 +238,8 @@ function NewCampaignForm() {
         <label className="field">
           System
           <select
-            value={systemId.value}
-            onChange={(e) => (systemId.value = e.currentTarget.value)}
+            value={systemId}
+            onChange={(e) => setSystemId(e.currentTarget.value)}
             required
           >
             <option value="" disabled>
@@ -252,7 +254,7 @@ function NewCampaignForm() {
         </label>
       </div>
       <div className="form-actions">
-        <Button type="submit" variant="primary" disabled={busy.value}>
+        <Button type="submit" variant="primary" disabled={busy}>
           <IconAdd size={22} /> Create campaign
         </Button>
       </div>
@@ -262,15 +264,15 @@ function NewCampaignForm() {
 
 function JoinInviteDialog({ invite }: { invite: NonNullable<typeof pendingInvite.value> }) {
   const dialog = useRef<HTMLDialogElement>(null);
-  const yourName = useSignal(device.value.name);
+  const [yourName, setYourName] = useState(device.value.name);
   useEffect(() => {
     dialog.current?.showModal();
   }, []);
 
   function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!yourName.value.trim()) return;
-    setDeviceName(yourName.value.trim());
+    if (!yourName.trim()) return;
+    setDeviceName(yourName.trim());
     const id = joinCampaign(invite);
     dialog.current?.close();
     pendingInvite.value = null;
@@ -292,8 +294,8 @@ function JoinInviteDialog({ invite }: { invite: NonNullable<typeof pendingInvite
         <label className="field">
           Your name
           <input
-            value={yourName.value}
-            onInput={(e) => (yourName.value = e.currentTarget.value)}
+            value={yourName}
+            onInput={(e) => setYourName(e.currentTarget.value)}
             placeholder="Robin"
             autoComplete="nickname"
             autoFocus
@@ -304,7 +306,7 @@ function JoinInviteDialog({ invite }: { invite: NonNullable<typeof pendingInvite
           <button className="btn btn-ghost" type="button" onClick={() => dialog.current?.close()}>
             Cancel
           </button>
-          <Button type="submit" disabled={!yourName.value.trim()}>
+          <Button type="submit" disabled={!yourName.trim()}>
             Join
           </Button>
         </div>

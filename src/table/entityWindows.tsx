@@ -1,7 +1,6 @@
-import { signal } from "@preact/signals-react";
+import { store } from "../lib/store";
 import type { ReactNode } from "react";
-import { useLayoutEffect } from "react";
-import { useSignal } from "@preact/signals-react";
+import { useLayoutEffect, useState } from "react";
 import type { Campaign } from "../campaign/campaign";
 import {
   addItem,
@@ -17,7 +16,7 @@ import {
 import { checkOf } from "../features/characters/moves";
 import { getStorageJson, setStorageJson } from "../platform/localStorage";
 import { useY } from "../ui/useY";
-import { entryByKey, librariesFor } from "../features/library";
+import { entryByKey, librariesFor, useLibrariesFor } from "../features/library";
 import type { Icon } from "../ui/icons";
 import { IconOpenWindow } from "../ui/icons";
 import { IconPost, IconRoll, IconTarget } from "../ui/icons";
@@ -31,6 +30,7 @@ import type { MenuItem } from "./ContextMenu";
 import { menuTrigger } from "../ui/menuTrigger";
 import { ContextMenu } from "./ContextMenu";
 import { withTransition } from "../ui/transition";
+import { useValue } from "../ui/useValue";
 
 export interface EntityWindowRecord {
   id: DockItemId;
@@ -67,7 +67,7 @@ function load(): Record<string, EntityWindowRecord> {
   return records;
 }
 
-export const entityWindows = signal<Record<string, EntityWindowRecord>>(load());
+export const entityWindows = store<Record<string, EntityWindowRecord>>(load());
 
 export const entityTabId = (key: string) => `entity:${key}` as const;
 
@@ -129,10 +129,12 @@ export function EntityWindowHost({ campaign }: { campaign: Campaign }) {
       }
     }
   }, [campaign]);
+  const records = useValue(entityWindows);
+  const shown = useValue(layout);
   return (
     <>
-      {Object.values(entityWindows.value)
-        .filter((record) => isFloating(record.id))
+      {Object.values(records)
+        .filter((record) => isFloating(record.id, shown))
         .map((record) => (
           <EntityPopup key={record.id} campaign={campaign} record={record} />
         ))}
@@ -142,8 +144,8 @@ export function EntityWindowHost({ campaign }: { campaign: Campaign }) {
 
 function EntityPopup({ campaign, record }: { campaign: Campaign; record: EntityWindowRecord }) {
   const ref = usePopupDialog();
-  const menu = useSignal<{ x: number; y: number } | null>(null);
-  const trigger = menuTrigger((x, y) => (menu.value = { x, y }));
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const trigger = menuTrigger((x, y) => setMenu({ x, y }));
   const close = () => {
     record.close?.();
     closeEntityWindow(record.id);
@@ -180,15 +182,16 @@ function EntityPopup({ campaign, record }: { campaign: Campaign; record: EntityW
           <p className="muted item-tags">{record.tags.join(", ")}</p>
         )}
       </Dialog>
-      {menu.value && (
-        <ContextMenu {...menu.value} items={items} onClose={() => (menu.value = null)} />
+      {menu && (
+        <ContextMenu {...menu} items={items} onClose={() => setMenu(null)} />
       )}
     </>
   );
 }
 
-export function entityRecord(id: DockItemId) {
-  return entityWindows.value[id];
+/** An entity window's record; components pass the records they read. */
+export function entityRecord(id: DockItemId, records = entityWindows.value) {
+  return records[id];
 }
 
 export function EntityWindowContent({
@@ -215,6 +218,7 @@ export function EntityWindowContent({
   const moveCharacter = useY(campaign.characters, () =>
     getCharacter(campaign, moveOwnerId ?? selectedId),
   );
+  const libraries = useLibrariesFor(baseSystemOf(campaign));
 
   if (record.content) return <>{record.content}</>;
 
@@ -262,7 +266,7 @@ export function EntityWindowContent({
   }
 
   if (key.startsWith("lib:")) {
-    const entry = entryByKey(librariesFor(baseSystemOf(campaign)), key)?.entry;
+    const entry = entryByKey(libraries, key)?.entry;
     if (!entry) return text;
     const editable = !!selectedCharacter && canEdit(campaign, selectedCharacter);
     if (entry.kind === "item") {

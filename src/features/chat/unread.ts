@@ -1,4 +1,5 @@
-import { computed, signal } from "@preact/signals-react";
+import { store } from "../../lib/store";
+import { useValue } from "../../ui/useValue";
 import { activeCampaign } from "../../campaign/campaign";
 import { dataName } from "../../platform/dataEpoch";
 import { device } from "../../platform/device";
@@ -19,23 +20,25 @@ function load(campaignId: string): string {
 
 const stamps = new Map<string, string>();
 /** Bumped when a stamp changes, so the unread count recomputes. */
-const version = signal(0);
+const version = store(0);
 
 /** The last stamp seen in a campaign. */
 function seenStamp(campaignId: string): string {
-  void version.value;
   if (!stamps.has(campaignId)) stamps.set(campaignId, load(campaignId));
   return stamps.get(campaignId)!;
 }
 
-export const unreadCount = computed(() => {
-  const c = activeCampaign.value;
+/** How many messages in the open campaign's chat this device hasn't seen. */
+export function useUnreadCount(): number {
+  const c = useValue(activeCampaign);
+  const messages = useValue(c?.chat.messages) ?? [];
+  useValue(version);
   if (!c) return 0;
   const since = seenStamp(c.id);
   const me = device.value.id;
   const isGm = c.isGm();
   let n = 0;
-  for (const m of c.chat.messages.value) {
+  for (const m of messages) {
     if (
       m.hlc > since &&
       m.author !== me &&
@@ -45,12 +48,12 @@ export const unreadCount = computed(() => {
       n++;
   }
   return n;
-});
+}
 
 /** The chat is in view: everything up to now is read. */
 export function markRead() {
   const c = activeCampaign.value;
-  const last = c?.chat.messages.peek().at(-1);
+  const last = c?.chat.messages.value.at(-1);
   if (!c || !last || last.hlc <= seenStamp(c.id)) return;
   stamps.set(c.id, last.hlc);
   version.value++;

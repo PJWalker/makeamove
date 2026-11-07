@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   bumpData,
   setData,
@@ -15,7 +16,6 @@ import { Counter } from "../../table/sheetParts";
 import { Button } from "../../ui/Button";
 import { IconRoll } from "../../ui/icons";
 import { ATTRIBUTES, TRAUMAS } from "./index";
-import { useSignal } from "@preact/signals-react";
 import { parseCommaList } from "../../lib/list";
 import { systemCampaignData } from "../../campaign/campaign";
 import { advanceAttribute } from "./progression";
@@ -27,7 +27,7 @@ function AttributeAdvance({
   sheet: ReturnType<typeof useSheet>;
   attribute: (typeof ATTRIBUTES)[number];
 }) {
-  const selected = useSignal(attribute.actions[0] ?? "");
+  const [selected, setSelected] = useState(attribute.actions[0] ?? "");
   const { campaign, c, editable } = sheet;
   const cap = parseCommaList(String(systemCampaignData(campaign).crewUpgrades ?? "")).includes(
     "mastery",
@@ -36,13 +36,13 @@ function AttributeAdvance({
     : 3;
   if (Number(c.data[`${attribute.id}Xp`] ?? 0) < 6 || !editable) return null;
   const eligible = attribute.actions.filter((id) => (c.scores[id] ?? 0) < cap);
-  const chosen = eligible.includes(selected.value) ? selected.value : (eligible[0] ?? "");
+  const chosen = eligible.includes(selected) ? selected : (eligible[0] ?? "");
   return (
     <div className="sheet-row">
       <select
         aria-label={`${attribute.name} advancement action`}
         value={chosen}
-        onChange={(event) => (selected.value = event.currentTarget.value)}
+        onChange={(event) => setSelected(event.currentTarget.value)}
       >
         {eligible.map((id) => (
           <option key={id} value={id}>

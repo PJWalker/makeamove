@@ -1,8 +1,8 @@
-import { effect, signal } from "@preact/signals-react";
+import { store, watch } from "../../lib/store";
 import { stampTime } from "../../lib/hlc";
 import { activeCampaign } from "../../campaign/campaign";
 import { device } from "../../platform/device";
-import { panelVisible } from "../../table/panelLayout";
+import { layout, panelVisible } from "../../table/panelLayout";
 import type { LinkKind } from "../notes/api";
 import { linkLabel } from "../notes/targets";
 import { plainText } from "./content";
@@ -77,7 +77,7 @@ const pageHidden = () => document.visibilityState === "hidden";
 const MAX_POPUPS = 3;
 
 /** Messages (by id) shown over the table while the Chat panel is out of view. */
-export const chatPopups = signal<string[]>([]);
+export const chatPopups = store<string[]>([]);
 
 export function dismissPopup(id: string) {
   chatPopups.value = chatPopups.value.filter((p) => p !== id);
@@ -114,10 +114,8 @@ export function startChatNotifications() {
   if (canNotify) askPermission();
   const started = Date.now();
   const told = new Set<string>();
-  const stop = effect(() => {
-    const c = activeCampaign.value;
-    const messages = c?.chat.messages.value;
-    if (!c || !messages) return;
+  const check = (c: NonNullable<typeof activeCampaign.value>) => {
+    const messages = c.chat.messages.value;
     const me = device.value.id;
     const isGm = c.isGm();
     for (const m of messages) {
@@ -140,10 +138,19 @@ export function startChatNotifications() {
         if (text) void show(text.title, text.body, m.id).catch(() => {});
       }
     }
+  };
+  let stopMessages = () => {};
+  const stopCampaign = watch([activeCampaign], () => {
+    stopMessages();
+    const c = activeCampaign.value;
+    stopMessages = c ? watch([c.chat.messages], () => check(c)) : () => {};
   });
+  const stop = () => {
+    stopCampaign();
+    stopMessages();
+  };
   // Opening the chat, or leaving the campaign, clears what's popped up.
-  const clear = effect(() => {
-    void activeCampaign.value;
+  const clear = watch([activeCampaign, layout], () => {
     if (panelVisible("chat") || !activeCampaign.value) chatPopups.value = [];
   });
   return () => {

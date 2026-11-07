@@ -1,4 +1,4 @@
-import { signal } from "@preact/signals-react";
+import { store } from "../lib/store";
 import {
   getStorageItem,
   getStorageJson,
@@ -10,7 +10,7 @@ import type { AreaTone, Layer, ShapeKind } from "./types";
 export type ToolId =
   "select" | "pan" | "draw" | "erase" | "shape" | "text" | "ruler" | "ping" | "wall" | "light";
 
-export const activeTool = signal<ToolId>("select");
+export const activeTool = store<ToolId>("select");
 
 /*
  * Pen settings, remembered per device.
@@ -31,7 +31,7 @@ function loadPen(): PenSettings {
   return { ...fallback, ...getStorageJson<Partial<PenSettings>>(PEN_KEY, {}) };
 }
 
-export const pen = signal<PenSettings>(loadPen());
+export const pen = store<PenSettings>(loadPen());
 
 export function setPen(patch: Partial<PenSettings>) {
   pen.value = { ...pen.value, ...patch };
@@ -47,7 +47,7 @@ function loadShape(): ShapeKind {
   const v = getStorageItem(SHAPE_KEY);
   return v === "circle" || v === "line" || v === "cone" ? v : "rect";
 }
-export const shapeTool = signal<ShapeKind>(loadShape());
+export const shapeTool = store<ShapeKind>(loadShape());
 export function setShapeTool(shape: ShapeKind) {
   shapeTool.value = shape;
   setStorageItem(SHAPE_KEY, shape);
@@ -60,7 +60,7 @@ function loadLightTool(): LightToolMode {
   const v = getStorageItem(LIGHT_TOOL_KEY);
   return v === "select" || v === "light" || v === "dark" ? v : "lamp";
 }
-export const lightTool = signal<LightToolMode>(loadLightTool());
+export const lightTool = store<LightToolMode>(loadLightTool());
 export function setLightTool(mode: LightToolMode) {
   lightTool.value = mode;
   setStorageItem(LIGHT_TOOL_KEY, mode);

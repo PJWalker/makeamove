@@ -1,5 +1,5 @@
-import { signal, useComputed, useSignal, useSignalEffect } from "@preact/signals-react";
-import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { store } from "../lib/store";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { canDelete, canEditMessage, visibilityOf } from "../features/chat/types";
 import { logRows, type LogRow } from "../features/chat/sessions";
 import { markRead } from "../features/chat/unread";
@@ -9,13 +9,14 @@ import type { Campaign } from "../campaign/campaign";
 import { device } from "../platform/device";
 import { useY } from "../ui/useY";
 import { IconDice, IconExpand } from "../ui/icons";
-import { panelVisible } from "./panelLayout";
+import { usePanelVisible } from "./panelLayout";
 import { Message } from "./ChatMessage";
+import { useValue } from "../ui/useValue";
 
 /* The chat log: every message and roll, rendered a window at a time. */
 
 /** Earlier sessions the reader has opened, as "campaignId:key", for this visit. */
-const openSessions = signal<Set<string>>(new Set());
+const openSessions = store<Set<string>>(new Set());
 
 /*
  * A log can run to thousands of messages, so only a window of rows is
@@ -68,29 +69,28 @@ export function ChatLog({
   const list = useRef<HTMLDivElement>(null);
   /** Following the newest message at the bottom. */
   const stick = useRef(true);
-  const messages = campaign.chat.messages.value;
+  const messages = useValue(campaign.chat.messages);
   const isGm = useY(campaign.members, () => campaign.isGm());
   const here = useY(campaign.members, () => campaign.activeSceneId());
   const sceneIds = useY(campaign.scenes, () => [...campaign.scenes.keys()].join());
   // One subscription for every move card's follow-up buttons, rather than one per card.
   const editable = useY(campaign.characters, () => editableIds(campaign));
-  const me = device.value.id;
+  const me = useValue(device).id;
   // Messages already here when the panel opened don't animate in.
   const initial = useRef<Set<string> | null>(null);
   initial.current ??= new Set(messages.map((m) => m.id));
 
   // In view means read.
-  const visible = useComputed(() => panelVisible("chat"));
-  useSignalEffect(() => {
-    void campaign.chat.messages.value;
-    if (visible.value && document.hasFocus()) markRead();
-  });
+  const visible = usePanelVisible("chat");
+  useEffect(() => {
+    if (visible && document.hasFocus()) markRead();
+  }, [messages, visible]);
   useEffect(() => {
     window.addEventListener("focus", markRead);
     return () => window.removeEventListener("focus", markRead);
   }, []);
 
-  const opened = openSessions.value;
+  const opened = useValue(openSessions);
   const rows = useMemo(
     () =>
       logRows(
@@ -105,14 +105,14 @@ export function ChatLog({
   };
 
   // The window, as indices into rows.
-  const span = useSignal<Span>({ start: null, end: null });
+  const [span, setSpanKeys] = useState<Span>({ start: null, end: null });
   const indexOf = (key: string | null) =>
     key === null ? -1 : rows.findIndex((r) => r.key === key);
-  const endKeyAt = indexOf(span.value.end);
-  const endIdx = span.value.end === null || endKeyAt < 0 ? rows.length : endKeyAt + 1;
-  const startKeyAt = indexOf(span.value.start);
+  const endKeyAt = indexOf(span.end);
+  const endIdx = span.end === null || endKeyAt < 0 ? rows.length : endKeyAt + 1;
+  const startKeyAt = indexOf(span.start);
   const startIdx =
-    span.value.start === null || startKeyAt < 0 || startKeyAt >= endIdx
+    span.start === null || startKeyAt < 0 || startKeyAt >= endIdx
       ? Math.max(0, endIdx - WINDOW)
       : startKeyAt;
   const atNewest = endIdx === rows.length;
@@ -122,13 +122,13 @@ export function ChatLog({
   const heights = useRef(new Map<string, number>());
   const measured = heights.current;
   // Re-render once new rows are measured, so the spacers use the better average.
-  const measuredCount = useSignal(0);
-  void measuredCount.value;
+  const [measuredCount, setMeasuredCount] = useState(0);
+  void measuredCount;
   let total = 0;
   for (const h of measured.values()) total += h;
   const guess = measured.size ? total / measured.size : ROW_GUESS;
   const heightOf = (r: LogRow) => measured.get(r.key) ?? guess;
-  const earlierCount = campaign.chat.earlierCount.value;
+  const earlierCount = useValue(campaign.chat.earlierCount);
   const unloaded = earlierCount * guess;
   let above = unloaded;
   for (let i = 0; i < startIdx; i++) above += heightOf(rows[i]!);
@@ -141,15 +141,15 @@ export function ChatLog({
       end: to >= rows.length ? null : rows[to - 1]!.key,
     };
     // Unchanged, it mustn't re-render: slide() runs after every render.
-    if (next.start !== span.peek().start || next.end !== span.peek().end) span.value = next;
+    if (next.start !== span.start || next.end !== span.end) setSpanKeys(next);
   };
-  const loading = useSignal(false);
+  const [loading, setLoading] = useState(false);
   // Read so finishing a load re-renders, and slide() can ask for the next chunk.
-  void loading.value;
+  void loading;
   const loadEarlier = () => {
-    if (!campaign.chat.hasEarlier.peek() || loading.peek()) return;
-    loading.value = true;
-    void campaign.chat.loadEarlier().finally(() => (loading.value = false));
+    if (!campaign.chat.hasEarlier.value || loading) return;
+    setLoading(true);
+    void campaign.chat.loadEarlier().finally(() => setLoading(false));
   };
   /** Set when the window moves to where the scrollbar was dragged: the spacers place it, so no anchoring. */
   const jumped = useRef(false);
@@ -190,9 +190,11 @@ export function ChatLog({
       setSpan(Math.max(startIdx, to - MAX_ROWS), to);
     } else if (stick.current && endIdx - startIdx > MAX_ROWS) {
       // Back at the newest after reading far up: let go of the old rows.
-      span.value = { start: null, end: null };
+      setSpanKeys({ start: null, end: null });
     }
   };
+  const slideRef = useRef(slide);
+  slideRef.current = slide;
 
   // Keep what's on screen where it is while rows come and go around it: note
   // where a row in view sits before rendering, and put it back after.
@@ -217,7 +219,7 @@ export function ChatLog({
       const key = (row as HTMLElement).dataset.key;
       if (key) measured.set(key, (row as HTMLElement).offsetHeight + ROW_GAP);
     }
-    if (measured.size !== measuredCount.peek()) measuredCount.value = measured.size;
+    if (measured.size !== measuredCount) setMeasuredCount(measured.size);
     if (stick.current) el.scrollTop = el.scrollHeight;
     else if (anchor.current) {
       const row = list.current?.querySelector<HTMLElement>(
@@ -229,8 +231,8 @@ export function ChatLog({
     }
     jumped.current = false;
     // The window may still not reach far enough (a short window, rows just loaded, or a jump into unloaded chunks).
-    slide();
-  });
+    slideRef.current();
+  }, [measured, measuredCount, rows, startIdx, endIdx, earlierCount, loading, editable, notes]);
 
   // My own new message scrolls to the bottom even when I'd scrolled up.
   const newest = messages.at(-1);
@@ -240,10 +242,10 @@ export function ChatLog({
     seenNewest.current = newest?.id;
     if (newest?.author !== me) return;
     stick.current = true;
-    span.value = { start: null, end: null };
+    setSpanKeys({ start: null, end: null });
     const el = ref.current;
     if (el) el.scrollTop = el.scrollHeight;
-  });
+  }, [newest?.id, newest?.author, me]);
 
   // Rows change size after they render (dice settling, fonts, images): stay at the bottom.
   useEffect(() => {

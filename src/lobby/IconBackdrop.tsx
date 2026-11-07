@@ -1,6 +1,7 @@
-import { signal, type Signal } from "@preact/signals-react";
+import { store, type Store } from "../lib/store";
 import { useEffect, useRef, useState } from "react";
 import { BACKDROP_ICONS } from "./backdropIcons";
+import { useValue } from "../ui/useValue";
 
 const SIZE_RANGE: readonly [number, number] = [20, 42]; // icon size in px, random within this range
 const GAP = 16; // minimum clear space between icons, in px
@@ -13,7 +14,7 @@ interface Cell {
   y: number;
   size: number;
   rotate: number;
-  icon: Signal<number>;
+  icon: Store<number>;
 }
 
 const between = ([min, max]: readonly [number, number]) => min + Math.random() * (max - min);
@@ -78,7 +79,7 @@ function scatter(w: number, h: number, keep: Cell[]): Cell[] {
       y: h / 2,
       size,
       rotate: between([-TILT, TILT]),
-      icon: signal(randomIcon()),
+      icon: store(randomIcon()),
     });
   }
 
@@ -101,7 +102,7 @@ function scatter(w: number, h: number, keep: Cell[]): Cell[] {
           y,
           size,
           rotate: between([-TILT, TILT]),
-          icon: signal(randomIcon()),
+          icon: store(randomIcon()),
         };
         add(cell);
         active.push(cell);
@@ -181,7 +182,7 @@ export function IconBackdrop() {
 }
 
 function BackdropIcon({ cell }: { cell: Cell }) {
-  const Icon = BACKDROP_ICONS[cell.icon.value]!;
+  const Icon = BACKDROP_ICONS[useValue(cell.icon)]!;
   return (
     <span
       className="backdrop-icon"

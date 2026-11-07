@@ -1,4 +1,4 @@
-import { signal } from "@preact/signals-react";
+import { store } from "../../lib/store";
 import { getCharacter, listCharacters, selectCharacter, systemOf } from "../characters/api";
 import type { Campaign } from "../../campaign/campaign";
 import { libraryView } from "../../table/libraryView";
@@ -134,10 +134,10 @@ export function linkTip(campaign: Campaign, kind: LinkKind, id: string): string 
 }
 
 /** The page open in the Notes panel, if any. */
-export const openNoteId = signal<string | null>(null);
+export const openNoteId = store<string | null>(null);
 
 /** Counts each request to open a page, even the one already chosen, so the panel shows it. */
-export const noteOpened = signal(0);
+export const noteOpened = store(0);
 
 /** Open a note's page in the Notes panel. */
 export function openNote(id: string) {

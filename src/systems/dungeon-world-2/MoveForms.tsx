@@ -1,4 +1,3 @@
-import { useSignal } from "@preact/signals-react";
 import type { ComponentType } from "react";
 import { getCharacter, listCharacters } from "../../features/characters/api";
 import {
@@ -24,6 +23,8 @@ import { useY } from "../../ui/useY";
 import { derive } from "../../features/characters/store";
 import type { MoveFormProps } from "../extensions";
 import { DW2_SERVICES, type ServiceRank } from "./wealth";
+import { useState } from "react";
+import { useValue } from "../../ui/useValue";
 
 /*
  * What some Dungeon World 2 moves ask for and do, shown with the move's text
@@ -44,9 +45,9 @@ const COMFORT_QUESTIONS = [
 ] as const;
 
 function EndSession({ sheet }: MoveFormProps) {
-  const answers = useSignal<boolean[]>([false, false, false]);
+  const [answers, setAnswers] = useState<boolean[]>([false, false, false]);
   const move = sheet.system.actions.find((action) => action.id === "end-the-session");
-  const sessionMessages = sheet.campaign.chat.messages.value;
+  const sessionMessages = useValue(sheet.campaign.chat.messages);
   const usage = useY(sheet.campaign.systemData, () =>
     sessionUseSnapshot(sheet.campaign, sheet.c.id, move ? [move] : [], sessionMessages),
   );
@@ -58,12 +59,12 @@ function EndSession({ sheet }: MoveFormProps) {
         <label className="check-option" key={question}>
           <input
             type="checkbox"
-            checked={answers.value[index] ?? false}
+            checked={answers[index] ?? false}
             disabled={!sheet.editable || used}
             onChange={(event) => {
-              const next = [...answers.value];
+              const next = [...answers];
               next[index] = event.currentTarget.checked;
-              answers.value = next;
+              setAnswers(next);
             }}
           />
           {question}
@@ -74,9 +75,9 @@ function EndSession({ sheet }: MoveFormProps) {
         disabled={!sheet.editable || used}
         onClick={() =>
           void endDungeonWorld2Session(sheet.campaign, sheet.c.id, [
-            answers.value[0] ?? false,
-            answers.value[1] ?? false,
-            answers.value[2] ?? false,
+            answers[0] ?? false,
+            answers[1] ?? false,
+            answers[2] ?? false,
           ])
         }
       >
@@ -87,12 +88,12 @@ function EndSession({ sheet }: MoveFormProps) {
 }
 
 function ComfortOrSupport({ sheet }: MoveFormProps) {
-  const comfortedId = useSignal("");
-  const answers = useSignal<boolean[]>([false, false, false]);
-  const benefitKinds = useSignal<Record<number, string>>({});
-  const conditionPicks = useSignal<Record<number, string>>({});
+  const [comfortedId, setComfortedId] = useState("");
+  const [answers, setAnswers] = useState<boolean[]>([false, false, false]);
+  const [benefitKinds, setBenefitKinds] = useState<Record<number, string>>({});
+  const [conditionPicks, setConditionPicks] = useState<Record<number, string>>({});
   const move = sheet.system.actions.find((action) => action.id === "comfort-or-support");
-  const sessionMessages = sheet.campaign.chat.messages.value;
+  const sessionMessages = useValue(sheet.campaign.chat.messages);
   const usage = useY(sheet.campaign.systemData, () =>
     sessionUseSnapshot(sheet.campaign, sheet.c.id, move ? [move] : [], sessionMessages),
   );
@@ -101,7 +102,7 @@ function ComfortOrSupport({ sheet }: MoveFormProps) {
   );
   void usage;
   const party = JSON.parse(partyJson) as CharacterView[];
-  const comforted = party.find((character) => character.id === comfortedId.value);
+  const comforted = party.find((character) => character.id === comfortedId);
   const receiverDepth = comforted
     ? (relationshipsOf(sheet.campaign.characters, comforted.id).find(
         (relationship) => relationship.to === sheet.c.id,
@@ -117,17 +118,17 @@ function ComfortOrSupport({ sheet }: MoveFormProps) {
   const used = move ? sessionMoveUsed(sheet.campaign, sheet.c.id, move, sessionMessages) : false;
   const benefits: ComfortBenefit[] = [];
   let ready = !!comforted && comforted.id !== sheet.c.id;
-  answers.value.forEach((yes, index) => {
+  answers.forEach((yes, index) => {
     if (!yes) return;
-    const kind = benefitKinds.value[index] ?? "clear-comforted";
+    const kind = benefitKinds[index] ?? "clear-comforted";
     if (kind === "gain-depth") {
       if (canGainDepth) benefits.push({ kind });
       else ready = false;
     } else {
       const options = kind === "clear-comforted" ? receiverConditions : supporterConditions;
       const condition =
-        conditionPicks.value[index] && options.includes(conditionPicks.value[index]!)
-          ? conditionPicks.value[index]!
+        conditionPicks[index] && options.includes(conditionPicks[index]!)
+          ? conditionPicks[index]!
           : options[0];
       if (!condition) ready = false;
       else benefits.push({ kind: kind as "clear-comforted" | "clear-supporter", condition });
@@ -138,10 +139,10 @@ function ComfortOrSupport({ sheet }: MoveFormProps) {
       <label className="field">
         Comforted PC
         <select
-          value={comfortedId.value}
+          value={comfortedId}
           disabled={!sheet.editable || used}
-          onChange={(event) => (comfortedId.value = event.currentTarget.value)}
-          onInput={(event) => (comfortedId.value = event.currentTarget.value)}
+          onChange={(event) => setComfortedId(event.currentTarget.value)}
+          onInput={(event) => setComfortedId(event.currentTarget.value)}
         >
           <option value="">Choose a PC</option>
           {party
@@ -158,26 +159,26 @@ function ComfortOrSupport({ sheet }: MoveFormProps) {
           <label className="check-option">
             <input
               type="checkbox"
-              checked={answers.value[index] ?? false}
+              checked={answers[index] ?? false}
               disabled={!sheet.editable || used || !comforted}
               onChange={(event) => {
-                const next = [...answers.value];
+                const next = [...answers];
                 next[index] = event.currentTarget.checked;
-                answers.value = next;
+                setAnswers(next);
               }}
             />
             {question}
           </label>
-          {answers.value[index] && (
+          {answers[index] && (
             <div className="move-form">
               <label className="field">
                 Benefit
                 <select
-                  value={benefitKinds.value[index] ?? "clear-comforted"}
+                  value={benefitKinds[index] ?? "clear-comforted"}
                   disabled={!sheet.editable || used}
                   onChange={(event) =>
-                    (benefitKinds.value = {
-                      ...benefitKinds.value,
+                    setBenefitKinds({
+                      ...benefitKinds,
                       [index]: event.currentTarget.value,
                     })
                   }
@@ -191,26 +192,26 @@ function ComfortOrSupport({ sheet }: MoveFormProps) {
                   )}
                 </select>
               </label>
-              {(benefitKinds.value[index] ?? "clear-comforted") !== "gain-depth" && (
+              {(benefitKinds[index] ?? "clear-comforted") !== "gain-depth" && (
                 <label className="field">
                   Condition
                   <select
                     value={
-                      conditionPicks.value[index] ??
-                      ((benefitKinds.value[index] ?? "clear-comforted") === "clear-comforted"
+                      conditionPicks[index] ??
+                      ((benefitKinds[index] ?? "clear-comforted") === "clear-comforted"
                         ? receiverConditions[0]
                         : supporterConditions[0]) ??
                       ""
                     }
                     disabled={!sheet.editable || used}
                     onChange={(event) =>
-                      (conditionPicks.value = {
-                        ...conditionPicks.value,
+                      setConditionPicks({
+                        ...conditionPicks,
                         [index]: event.currentTarget.value,
                       })
                     }
                   >
-                    {((benefitKinds.value[index] ?? "clear-comforted") === "clear-comforted"
+                    {((benefitKinds[index] ?? "clear-comforted") === "clear-comforted"
                       ? receiverConditions
                       : supporterConditions
                     ).map((condition) => (
@@ -240,22 +241,22 @@ function ComfortOrSupport({ sheet }: MoveFormProps) {
 }
 
 function PerilousJourney({ sheet }: MoveFormProps) {
-  const pace = useSignal<JourneyPace>("regular");
-  const leaderId = useSignal(sheet.c.id);
-  const conditions = useSignal<Record<string, string>>({});
+  const [pace, setPace] = useState<JourneyPace>("regular");
+  const [leaderId, setLeaderId] = useState(sheet.c.id);
+  const [conditions, setConditions] = useState<Record<string, string>>({});
   const partyJson = useY(sheet.campaign.characters, () =>
     JSON.stringify(listCharacters(sheet.campaign).filter((character) => character.kind === "pc")),
   );
   const party = JSON.parse(partyJson) as CharacterView[];
-  const leader = party.find((character) => character.id === leaderId.value);
+  const leader = party.find((character) => character.id === leaderId);
   const affected =
-    pace.value === "quick" ? party : pace.value === "regular" && leader ? [leader] : [];
+    pace === "quick" ? party : pace === "regular" && leader ? [leader] : [];
   const conditionPicks = Object.fromEntries(
     affected.map((character) => {
       const available = sheet.system.conditions.filter(
         (condition) => !character.conditions.includes(condition.id),
       );
-      const selected = conditions.value[character.id];
+      const selected = conditions[character.id];
       return [
         character.id,
         selected && available.some((condition) => condition.id === selected)
@@ -270,8 +271,8 @@ function PerilousJourney({ sheet }: MoveFormProps) {
       <label className="field">
         Leader
         <select
-          value={leaderId.value}
-          onChange={(event) => (leaderId.value = event.currentTarget.value)}
+          value={leaderId}
+          onChange={(event) => setLeaderId(event.currentTarget.value)}
         >
           {party.map((character) => (
             <option key={character.id} value={character.id}>
@@ -283,8 +284,8 @@ function PerilousJourney({ sheet }: MoveFormProps) {
       <label className="field">
         Pace
         <select
-          value={pace.value}
-          onChange={(event) => (pace.value = event.currentTarget.value as JourneyPace)}
+          value={pace}
+          onChange={(event) => setPace(event.currentTarget.value as JourneyPace)}
         >
           <option value="quick">Quickly, risking it all (-1; everyone marks a Condition)</option>
           <option value="regular">Regular pace (+1; leader marks a Condition)</option>
@@ -302,8 +303,8 @@ function PerilousJourney({ sheet }: MoveFormProps) {
               value={conditionPicks[character.id]}
               disabled={!sheet.editable}
               onChange={(event) =>
-                (conditions.value = {
-                  ...conditions.value,
+                setConditions({
+                  ...conditions,
                   [character.id]: event.currentTarget.value,
                 })
               }
@@ -322,7 +323,7 @@ function PerilousJourney({ sheet }: MoveFormProps) {
         disabled={!sheet.editable || !ready || !leader}
         onClick={() =>
           leader &&
-          prepareDungeonWorld2Journey(sheet.campaign, leader.id, pace.value, conditionPicks)
+          prepareDungeonWorld2Journey(sheet.campaign, leader.id, pace, conditionPicks)
         }
       >
         Prepare Journey
@@ -332,13 +333,11 @@ function PerilousJourney({ sheet }: MoveFormProps) {
 }
 
 function Downtime({ sheet }: MoveFormProps) {
-  const benefit = useSignal<"clear-locked" | "gain-depth">(
-    sheet.c.lockedConditions?.length ? "clear-locked" : "gain-depth",
-  );
-  const condition = useSignal(sheet.c.lockedConditions?.[0] ?? "");
-  const partyId = useSignal("");
-  const serviceId = useSignal(DW2_SERVICES[0]!.id);
-  const serviceRank = useSignal<ServiceRank>(2);
+  const [benefit, setBenefit] = useState<"clear-locked" | "gain-depth">(sheet.c.lockedConditions?.length ? "clear-locked" : "gain-depth");
+  const [condition, setCondition] = useState(sheet.c.lockedConditions?.[0] ?? "");
+  const [partyId, setPartyId] = useState("");
+  const [serviceId, setServiceId] = useState(DW2_SERVICES[0]!.id);
+  const [serviceRank, setServiceRank] = useState<ServiceRank>(2);
   const epochSnapshot = useY(sheet.campaign.systemData, () =>
     String(dungeonWorld2DowntimeEpoch(sheet.campaign)),
   );
@@ -353,7 +352,7 @@ function Downtime({ sheet }: MoveFormProps) {
   void characterSnapshot;
   const party = JSON.parse(partyJson) as CharacterView[];
   const others = party.filter((character) => character.id !== sheet.c.id);
-  const selectedPartyId = partyId.value || others[0]?.id;
+  const selectedPartyId = partyId || others[0]?.id;
   const epoch = dungeonWorld2DowntimeEpoch(sheet.campaign);
   const boxes = Number(sheet.c.data.treasureBoxes ?? 0);
   const trained = trainedDuringDungeonWorld2Downtime(sheet.campaign, sheet.c.id);
@@ -373,9 +372,9 @@ function Downtime({ sheet }: MoveFormProps) {
       <label className="field">
         Carouse
         <select
-          value={benefit.value}
+          value={benefit}
           onChange={(event) =>
-            (benefit.value = event.currentTarget.value as "clear-locked" | "gain-depth")
+            setBenefit(event.currentTarget.value as "clear-locked" | "gain-depth")
           }
         >
           <option value="clear-locked" disabled={!canClearLocked}>
@@ -386,12 +385,12 @@ function Downtime({ sheet }: MoveFormProps) {
           </option>
         </select>
       </label>
-      {benefit.value === "clear-locked" && canClearLocked && (
+      {benefit === "clear-locked" && canClearLocked && (
         <label className="field">
           Locked Condition
           <select
-            value={condition.value}
-            onChange={(event) => (condition.value = event.currentTarget.value)}
+            value={condition}
+            onChange={(event) => setCondition(event.currentTarget.value)}
           >
             {sheet.c.lockedConditions?.map((entry) => (
               <option key={entry} value={entry}>
@@ -401,12 +400,12 @@ function Downtime({ sheet }: MoveFormProps) {
           </select>
         </label>
       )}
-      {benefit.value === "gain-depth" && canGainDepth && (
+      {benefit === "gain-depth" && canGainDepth && (
         <label className="field">
           PC
           <select
-            value={partyId.value || others[0]?.id || ""}
-            onChange={(event) => (partyId.value = event.currentTarget.value)}
+            value={partyId || others[0]?.id || ""}
+            onChange={(event) => setPartyId(event.currentTarget.value)}
           >
             {others.map((character) => (
               <option key={character.id} value={character.id}>
@@ -422,15 +421,15 @@ function Downtime({ sheet }: MoveFormProps) {
           !sheet.editable ||
           epoch === 0 ||
           boxes < 1 ||
-          (benefit.value === "clear-locked" ? !canClearLocked : !canGainDepth)
+          (benefit === "clear-locked" ? !canClearLocked : !canGainDepth)
         }
         onClick={() =>
           carouseDungeonWorld2(
             sheet.campaign,
             sheet.c.id,
-            benefit.value,
-            partyId.value || others[0]?.id,
-            condition.value,
+            benefit,
+            partyId || others[0]?.id,
+            condition,
           )
         }
       >
@@ -446,8 +445,8 @@ function Downtime({ sheet }: MoveFormProps) {
       <label className="field">
         Shop service
         <select
-          value={serviceId.value}
-          onChange={(event) => (serviceId.value = event.currentTarget.value)}
+          value={serviceId}
+          onChange={(event) => setServiceId(event.currentTarget.value)}
         >
           {DW2_SERVICES.map((service) => (
             <option key={service.id} value={service.id}>
@@ -459,9 +458,9 @@ function Downtime({ sheet }: MoveFormProps) {
       <label className="field">
         Service tier
         <select
-          value={serviceRank.value}
+          value={serviceRank}
           onChange={(event) =>
-            (serviceRank.value = Number(event.currentTarget.value) as ServiceRank)
+            setServiceRank(Number(event.currentTarget.value) as ServiceRank)
           }
         >
           <option value={2}>Modest (2)</option>
@@ -476,8 +475,8 @@ function Downtime({ sheet }: MoveFormProps) {
           void shopDungeonWorld2Service(
             sheet.campaign,
             sheet.c.id,
-            serviceId.value,
-            serviceRank.value,
+            serviceId,
+            serviceRank,
           )
         }
       >
@@ -495,10 +494,10 @@ function Downtime({ sheet }: MoveFormProps) {
 }
 
 function MakeCamp({ sheet }: MoveFormProps) {
-  const selections = useSignal<Record<string, string>>({});
-  const repairs = useSignal<Record<string, string>>({});
+  const [selections, setSelections] = useState<Record<string, string>>({});
+  const [repairs, setRepairs] = useState<Record<string, string>>({});
   const move = sheet.system.actions.find((action) => action.id === "make-camp");
-  const sessionMessages = sheet.campaign.chat.messages.value;
+  const sessionMessages = useValue(sheet.campaign.chat.messages);
   const usage = useY(sheet.campaign.systemData, () =>
     sessionUseSnapshot(sheet.campaign, sheet.c.id, move ? [move] : [], sessionMessages),
   );
@@ -513,7 +512,7 @@ function MakeCamp({ sheet }: MoveFormProps) {
       const marked = character.conditions.filter(
         (condition) => !character.lockedConditions?.includes(condition),
       );
-      const selected = selections.value[character.id];
+      const selected = selections[character.id];
       return [character.id, selected && marked.includes(selected) ? selected : (marked[0] ?? "")];
     }),
   );
@@ -530,7 +529,7 @@ function MakeCamp({ sheet }: MoveFormProps) {
   });
   const repairChoices = Object.fromEntries(
     repairOptions.map(([character, options]) => {
-      const selected = repairs.value[character.id];
+      const selected = repairs[character.id];
       return [
         character.id,
         selected && options.some((item) => item.id === selected)
@@ -552,8 +551,8 @@ function MakeCamp({ sheet }: MoveFormProps) {
               value={choices[character.id]}
               disabled={!sheet.editable || used}
               onChange={(event) =>
-                (selections.value = {
-                  ...selections.value,
+                setSelections({
+                  ...selections,
                   [character.id]: event.currentTarget.value,
                 })
               }
@@ -575,7 +574,7 @@ function MakeCamp({ sheet }: MoveFormProps) {
               value={repairChoices[character.id]}
               disabled={!sheet.editable || used}
               onChange={(event) =>
-                (repairs.value = { ...repairs.value, [character.id]: event.currentTarget.value })
+                setRepairs({ ...repairs, [character.id]: event.currentTarget.value })
               }
             >
               {options.map((item) => (

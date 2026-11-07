@@ -1,5 +1,4 @@
-import { useSignal } from "@preact/signals-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { COMMANDS, parseCommand, suggest } from "../features/chat/commands";
 import { commandText, emptyChatContent, type ChatContent } from "../features/chat/content";
 import { postRoll, runCommand } from "../features/chat/send";
@@ -31,10 +30,10 @@ export function ChatComposer({
   campaign: Campaign;
   onNote: (text: string, error?: boolean) => void;
 }) {
-  const content = useSignal<ChatContent>(emptyChatContent());
-  const typed = commandText(content.value);
-  const error = useSignal<string | null>(null);
-  const visibility = useSignal<RollVisibility>("public");
+  const [content, setContent] = useState<ChatContent>(emptyChatContent());
+  const typed = commandText(content);
+  const [error, setError] = useState<string | null>(null);
+  const [visibility, setVisibility] = useState<RollVisibility>("public");
   const last = useRef("");
   const input = useRef<ChatInputHandle | null>(null);
   const isGm = useY(campaign.members, () => campaign.isGm());
@@ -42,12 +41,12 @@ export function ChatComposer({
   const hints = suggest(typed, isGm);
 
   function send() {
-    const message = content.value;
+    const message = content;
     const source = commandText(message);
     if (!source.trim()) return;
     const cmd = parseCommand(source, members, isGm);
     if (cmd.kind === "error") {
-      error.value = cmd.message;
+      setError(cmd.message);
       return;
     }
     if (cmd.kind === "help") {
@@ -58,48 +57,48 @@ export function ChatComposer({
     } else {
       // A roll typed with /r or /sr uses its own visibility; quick dice and a bare formula use the toggle.
       const bare = cmd.kind === "roll" && !source.trim().startsWith("/");
-      runCommand(campaign, bare ? { ...cmd, visibility: visibility.value } : cmd, message);
+      runCommand(campaign, bare ? { ...cmd, visibility: visibility } : cmd, message);
     }
     last.current = source;
     input.current?.set("");
-    error.value = null;
+    setError(null);
   }
 
   // Quick dice gather into a pool, rolled together once the clicks stop:
   // clicking the d20 twice rolls 2d20 as one entry.
-  const pool = useSignal<number[]>([]);
+  const [pool, setPool] = useState<number[]>([]);
   const poolTimer = useRef(0);
   const rollPoolRef = useRef<() => void>(() => {});
 
   function rollPool() {
     clearTimeout(poolTimer.current);
-    const picked = pool.value;
-    pool.value = [];
+    const picked = pool;
+    setPool([]);
     if (!picked.length) return;
     try {
-      postRoll(campaign, poolFormula(picked), visibility.value);
+      postRoll(campaign, poolFormula(picked), visibility);
     } catch (e) {
-      if (e instanceof NotationError) error.value = e.message;
+      if (e instanceof NotationError) setError(e.message);
     }
   }
   rollPoolRef.current = rollPool;
 
   function restartPoolTimer() {
     clearTimeout(poolTimer.current);
-    if (pool.value.length)
+    if (pool.length)
       poolTimer.current = window.setTimeout(() => rollPoolRef.current(), POOL_MS);
   }
 
   function addDie(sides: number) {
-    pool.value = [...pool.value, sides];
+    setPool([...pool, sides]);
     restartPoolTimer();
   }
 
   /** Right-click while pooling: take one of these dice back out. */
   function removeDie(sides: number) {
-    const i = pool.value.lastIndexOf(sides);
+    const i = pool.lastIndexOf(sides);
     if (i < 0) return;
-    pool.value = pool.value.filter((_, j) => j !== i);
+    setPool(pool.filter((_, j) => j !== i));
     restartPoolTimer();
   }
   // Dice picked just before the panel closes still get rolled.
@@ -107,15 +106,15 @@ export function ChatComposer({
 
   const nextVisibility = () => {
     const options = VISIBILITIES.map((v) => v.id);
-    visibility.value = options[(options.indexOf(visibility.value) + 1) % options.length]!;
+    setVisibility(options[(options.indexOf(visibility) + 1) % options.length]!);
   };
-  const vis = VISIBILITIES.find((v) => v.id === visibility.value) ?? VISIBILITIES[0]!;
+  const vis = VISIBILITIES.find((v) => v.id === visibility) ?? VISIBILITIES[0]!;
 
   return (
     <div className="dice-tray">
       <div className="dice-quick">
         {DICE.map((sides) => {
-          const n = pool.value.filter((p) => p === sides).length;
+          const n = pool.filter((p) => p === sides).length;
           return (
             <Button
               key={sides}
@@ -130,7 +129,7 @@ export function ChatComposer({
               }
               onClick={() => addDie(sides)}
               onContextMenu={(e) => {
-                if (!pool.value.length) return;
+                if (!pool.length) return;
                 e.preventDefault();
                 removeDie(sides);
               }}
@@ -139,18 +138,18 @@ export function ChatComposer({
             </Button>
           );
         })}
-        {pool.value.length ? (
+        {pool.length ? (
           // Restarted on every change, so the fill shows time left before the roll.
           <Button
-            key={pool.value.join()}
+            key={pool.join()}
             variant="secondary"
             size="sm"
             className="dice-roll-now"
             style={{ "--pool-ms": `${POOL_MS}ms` }}
-            label={`Roll ${poolFormula(pool.value)} now`}
+            label={`Roll ${poolFormula(pool)} now`}
             onClick={rollPool}
           >
-            {poolFormula(pool.value).replace(/\b1d/g, "d")}
+            {poolFormula(pool).replace(/\b1d/g, "d")}
           </Button>
         ) : (
           <Button
@@ -192,25 +191,25 @@ export function ChatComposer({
           handle={input}
           placeholder="Message, @ to link, or roll 2d6+1"
           label="Message"
-          invalid={!!error.value}
+          invalid={!!error}
           onChange={(next) => {
-            content.value = next;
-            error.value = null;
+            setContent(next);
+            setError(null);
           }}
           onEnter={send}
           onUp={() => last.current && input.current?.set(last.current)}
           onEscape={() => {
             input.current?.set("");
-            error.value = null;
+            setError(null);
           }}
         />
         <Button variant="primary" size="sm" type="submit" label="Send" disabled={!typed.trim()}>
           Send
         </Button>
       </form>
-      {error.value && (
+      {error && (
         <p className="chat-error" role="alert">
-          {error.value}
+          {error}
         </p>
       )}
     </div>

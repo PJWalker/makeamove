@@ -14,6 +14,7 @@ import { readRollState, rerollDie, rerollMessage, toggleRollDie } from "../featu
 import { useShake } from "../ui/useShake";
 import { readRollResult } from "../features/characters/moves";
 import { derive } from "../features/characters/store";
+import { useValue } from "../ui/useValue";
 
 /* Rolls and moves in the chat: their dice, which anyone allowed can reroll or shake, and their outcome. */
 
@@ -31,8 +32,9 @@ function useSharedRoll(campaign: Campaign, message: RollMessage | MoveMessage) {
       JSON.stringify(source ? readRollState(campaign.messageState, message.id, source) : null),
     ),
   ) as ReturnType<typeof readRollState> | null;
-  const allowed = useY(campaign.members, () => canWork(message, device.value.id, campaign.isGm()));
-  const canChange = () => canWork(message, device.value.id, campaign.isGm());
+  const me = useValue(device).id;
+  const allowed = useY(campaign.members, () => canWork(message, me, campaign.isGm()));
+  const canChange = () => canWork(message, me, campaign.isGm());
   return {
     snapshot,
     allowed,
@@ -150,6 +152,9 @@ export function MoveCard({
   mine,
 }: { campaign: Campaign; m: MoveMessage; canAct: boolean } & Thrown) {
   const interaction = useSharedRoll(campaign, original);
+  const messages = useValue(campaign.chat.messages);
+  const gm = useY(campaign.members, () => campaign.isGm());
+  const me = useValue(device).id;
   const shake = useShake({
     onShake: interaction.rerollAll,
     enabled: interaction.allowed && !!original.roll,
@@ -235,15 +240,13 @@ export function MoveCard({
         <div className="move-suggest">
           {m.suggestions.map((s, i) => {
             const count = s.count?.messageId
-              ? campaign.chat.messages.value.find((message) => message.id === s.count!.messageId)
+              ? messages.find((message) => message.id === s.count!.messageId)
               : undefined;
             const canAdvance =
               !s.count ||
               (s.count.systemCounter
-                ? campaign.isGm()
-                : !!count &&
-                  count.kind === "counter" &&
-                  canWork(count, device.value.id, campaign.isGm()));
+                ? gm
+                : !!count && count.kind === "counter" && canWork(count, me, gm));
             return (
               <Button
                 key={i}

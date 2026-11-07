@@ -1,8 +1,7 @@
-import { useSignal } from "@preact/signals-react";
 import { plainText } from "../features/characters/trackers";
 import { MoveBody } from "./MoveBody";
 import type { ReactNode } from "react";
-import { useEffect, useLayoutEffect } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import {
   addItem,
   canEdit,
@@ -38,6 +37,7 @@ import { actionMenuItems } from "./actionMenu";
 import { entityTabId, registerEntityWindow } from "./entityWindows";
 import { closeEntityWindow } from "./entityWindows";
 import { layout } from "./panelLayout";
+import { useValue } from "../ui/useValue";
 
 /*
  * What links in rich text open: a pop-up for each link clicked (gear and
@@ -69,14 +69,14 @@ export function LinkPopups({ campaign }: { campaign: Campaign }) {
     const known = new Set(openLinks.value.map(linkKey));
     openLinks.value = [...openLinks.value, ...restored.filter((link) => !known.has(linkKey(link)))];
   }, [campaign]);
+  const links = useValue(openLinks);
+  const menu = useValue(linkMenu);
   return (
     <>
-      {openLinks.value.map((l) => (
+      {links.map((l) => (
         <LinkPopup key={linkKey(l)} campaign={campaign} link={l} />
       ))}
-      {linkMenu.value && (
-        <ContextMenu {...linkMenu.value} onClose={() => (linkMenu.value = null)} />
-      )}
+      {menu && <ContextMenu {...menu} onClose={() => (linkMenu.value = null)} />}
       <RenameLink />
     </>
   );
@@ -257,14 +257,14 @@ function LinkPopup({ campaign, link }: { campaign: Campaign; link: LinkRef }) {
 
 /** Change what a link says, or put its target's own name back. */
 function RenameLink() {
-  const req = linkRename.value;
+  const req = useValue(linkRename);
   // A new pop-up for each request, opened as it mounts so the menu item's morph catches it.
   return req ? <RenameLinkDialog key={req.n} req={req} /> : null;
 }
 
 function RenameLinkDialog({ req }: { req: NonNullable<typeof linkRename.value> }) {
   const ref = usePopupDialog();
-  const text = useSignal(req.text);
+  const [text, setText] = useState(req.text);
   const onClose = () => (linkRename.value = null);
   const done = (value: string | null) => {
     req.save(value);
@@ -276,17 +276,17 @@ function RenameLinkDialog({ req }: { req: NonNullable<typeof linkRename.value> }
         className="dialog-form"
         onSubmit={(e) => {
           e.preventDefault();
-          done(text.value);
+          done(text);
         }}
       >
         <label className="field">
           Show this link as
           <input
-            value={text.value}
+            value={text}
             autoFocus
             // Typing replaces it.
             onFocus={(e) => e.currentTarget.select()}
-            onInput={(e) => (text.value = e.currentTarget.value)}
+            onInput={(e) => setText(e.currentTarget.value)}
           />
         </label>
         <div className="form-actions">

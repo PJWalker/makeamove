@@ -1,4 +1,4 @@
-import { signal } from "@preact/signals-react";
+import { store } from "../lib/store";
 import { lazy, Suspense, useEffect } from "react";
 import { startChatNotifications } from "../features/chat/notify";
 import { Lobby } from "../lobby/Lobby";
@@ -12,14 +12,15 @@ import {
 } from "../campaign/campaign";
 import { Button } from "../ui/Button";
 import { Tooltip } from "../ui/Tooltip";
+import { useValue } from "../ui/useValue";
 
 // The table loads when a campaign opens, so the lobby comes up quickly.
 const Tabletop = lazy(() => import("../table/Tabletop").then((m) => ({ default: m.Tabletop })));
 
-const openError = signal<string | null>(null);
+const openError = store<string | null>(null);
 
 export function App() {
-  const id = routeCampaignId.value;
+  const id = useValue(routeCampaignId);
 
   useEffect(() => startChatNotifications(), []);
 
@@ -44,10 +45,13 @@ export function App() {
 }
 
 function Screen({ id }: { id: string | null }) {
-  const campaign = activeCampaign.value;
+  const campaign = useValue(activeCampaign);
+  const removed = useValue(campaign?.removed);
+  const ready = useValue(campaign?.ready);
+  const error = useValue(openError);
   if (id && campaign?.id === id) {
-    if (campaign.removed.value) return <Removed campaign={campaign} />;
-    if (!campaign.ready.value) return <Waiting campaign={campaign} />;
+    if (removed) return <Removed campaign={campaign} />;
+    if (!ready) return <Waiting campaign={campaign} />;
     return (
       <Suspense fallback={<div className="loading">Opening campaign…</div>}>
         <Tabletop campaign={campaign} />
@@ -55,7 +59,7 @@ function Screen({ id }: { id: string | null }) {
     );
   }
   if (id) return <div className="loading">Opening campaign…</div>;
-  return <Lobby error={openError.value} />;
+  return <Lobby error={error} />;
 }
 
 /** Shown to a player the GM removed; their device has left the room. */
@@ -82,10 +86,11 @@ function Removed({ campaign }: { campaign: Campaign }) {
 
 /** A joined campaign is empty until the first peer sends it over. */
 function Waiting({ campaign }: { campaign: Campaign }) {
+  const peers = useValue(campaign.peerCount);
   return (
     <main className="loading waiting">
       <p>Waiting for someone from this campaign to come online…</p>
-      <p className="muted">{campaign.peerCount.value} connected</p>
+      <p className="muted">{peers} connected</p>
       <Button onClick={() => goToCampaign(null)}>Back to the lobby</Button>
     </main>
   );

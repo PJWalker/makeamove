@@ -1,5 +1,4 @@
-import { useSignal } from "@preact/signals-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { Campaign } from "../../campaign/campaign";
 import { getCharacter, listCharacters } from "../../features/characters/api";
 import { relationshipWeb } from "../../features/characters/relationships";
@@ -61,9 +60,9 @@ export function Dw2Bonds({
       }),
     [campaign, people, depthWeb, c.id],
   );
-  const bondmateId = useSignal("");
-  const bondType = useSignal("");
-  const bondMoveId = useSignal("");
+  const [bondmateId, setBondmateId] = useState("");
+  const [bondType, setBondType] = useState("");
+  const [bondMoveId, setBondMoveId] = useState("");
   return (
     <>
       {bonds.length > 0 && (
@@ -106,11 +105,11 @@ export function Dw2Bonds({
         (() => {
           const currentBond = bonds.find(
             (bond) =>
-              (bond.first === c.id && bond.second === bondmateId.value) ||
-              (bond.second === c.id && bond.first === bondmateId.value),
+              (bond.first === c.id && bond.second === bondmateId) ||
+              (bond.second === c.id && bond.first === bondmateId),
           );
-          const reinforcing = currentBond?.type === bondType.value;
-          const definition = BONDS.find((bond) => bond.id === bondType.value);
+          const reinforcing = currentBond?.type === bondType;
+          const definition = BONDS.find((bond) => bond.id === bondType);
           const availableMoves = reinforcing
             ? (definition?.moves.slice(1) ?? []).filter(
                 (move) => !currentBond.advancedMoves.includes(move.id),
@@ -121,10 +120,10 @@ export function Dw2Bonds({
               <label>
                 Bondmate
                 <select
-                  value={bondmateId.value}
+                  value={bondmateId}
                   onChange={(event) => {
-                    bondmateId.value = event.currentTarget.value;
-                    bondMoveId.value = "";
+                    setBondmateId(event.currentTarget.value);
+                    setBondMoveId("");
                   }}
                 >
                   <option value="">Choose a PC</option>
@@ -139,10 +138,10 @@ export function Dw2Bonds({
                 Bond
                 <select
                   aria-label="Bond type"
-                  value={bondType.value}
+                  value={bondType}
                   onChange={(event) => {
-                    bondType.value = event.currentTarget.value;
-                    bondMoveId.value = "";
+                    setBondType(event.currentTarget.value);
+                    setBondMoveId("");
                   }}
                 >
                   <option value="">Choose a Bond</option>
@@ -157,8 +156,8 @@ export function Dw2Bonds({
                 <label>
                   Advanced move
                   <select
-                    value={bondMoveId.value}
-                    onChange={(event) => (bondMoveId.value = event.currentTarget.value)}
+                    value={bondMoveId}
+                    onChange={(event) => setBondMoveId(event.currentTarget.value)}
                   >
                     <option value="">Choose a move</option>
                     {availableMoves.map((move) => (
@@ -176,7 +175,7 @@ export function Dw2Bonds({
                 size="sm"
                 variant="secondary"
                 disabled={
-                  !bondmateId.value || !bondType.value || (reinforcing && !bondMoveId.value)
+                  !bondmateId || !bondType || (reinforcing && !bondMoveId)
                 }
                 onClick={() => {
                   const changed = reinforcing
@@ -184,19 +183,19 @@ export function Dw2Bonds({
                         campaign.systemData,
                         campaign.characters,
                         c.id,
-                        bondmateId.value,
-                        bondMoveId.value,
+                        bondmateId,
+                        bondMoveId,
                       )
                     : forgeBond(
                         campaign.systemData,
                         campaign.characters,
                         c.id,
-                        bondmateId.value,
-                        bondType.value,
+                        bondmateId,
+                        bondType,
                       );
                   if (changed) {
-                    bondmateId.value = "";
-                    bondMoveId.value = "";
+                    setBondmateId("");
+                    setBondMoveId("");
                   }
                 }}
               >

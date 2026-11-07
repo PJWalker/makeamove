@@ -1,5 +1,4 @@
-import { useSignal } from "@preact/signals-react";
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { Radio, RadioGroup } from "react-aria-components";
 
 /** A row of mutually exclusive choices, like a set of radio buttons. */
@@ -49,12 +48,12 @@ export function SegmentedOrSelect<T extends string>(props: Parameters<typeof Seg
   const { label, value, options, onChange, disabled } = props;
   const rootRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
-  const fits = useSignal(true);
+  const [fits, setFits] = useState(true);
   useLayoutEffect(() => {
     const root = rootRef.current;
     const measure = measureRef.current;
     if (!root || !measure) return;
-    const check = () => (fits.value = measure.offsetWidth <= root.clientWidth);
+    const check = () => setFits(measure.offsetWidth <= root.clientWidth);
     check();
     const ro = new ResizeObserver(check);
     ro.observe(root);
@@ -66,7 +65,7 @@ export function SegmentedOrSelect<T extends string>(props: Parameters<typeof Seg
       <div className="segmented-measure" ref={measureRef} aria-hidden="true" inert>
         <Segmented label={label} value={value} options={options} onChange={() => {}} />
       </div>
-      {fits.value ? (
+      {fits ? (
         <Segmented {...props} />
       ) : (
         <select

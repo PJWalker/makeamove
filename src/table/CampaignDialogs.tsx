@@ -10,9 +10,8 @@ import { TOKEN_STYLES } from "../scene/types";
 import { Button } from "../ui/Button";
 import { Segmented } from "../ui/Segmented";
 import { inviteUrl } from "../sync/invite";
-import { useSignal } from "@preact/signals-react";
 import { createPortal } from "react-dom";
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { closePopup, dragPopup, raisePopup, resizePopup } from "../ui/popup";
 import { trackPointer } from "../ui/pointer";
 import { formatCommaList, parseCommaList } from "../lib/list";
@@ -35,6 +34,7 @@ export interface WindowProxy {
 }
 import { windowLayer } from "../ui/windows";
 import { CampaignSystemSheet } from "./campaignSheets";
+import { useValue } from "../ui/useValue";
 
 let dialogTransitionId = 0;
 
@@ -67,7 +67,7 @@ export function Dialog({
   dockId?: DockItemId | undefined;
   children: ReactNode;
 }) {
-  const rolled = useSignal(false);
+  const [rolled, setRolled] = useState(false);
   const transitionName = useRef<string | null>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
@@ -79,7 +79,8 @@ export function Dialog({
     return () => dialog.removeEventListener("cancel", preventNativeCancel);
   }, [dialogRef]);
   if (!transitionName.current) transitionName.current = `dialog-window-${++dialogTransitionId}`;
-  const win = dockId ? layout.value.floating.find((item) => item.id === dockId) : undefined;
+  const floating = useValue(layout).floating;
+  const win = dockId ? floating.find((item) => item.id === dockId) : undefined;
   const windowStyle = {
     ...(win ? { left: win.x, top: win.y, width: win.w, height: win.h, zIndex: win.z } : {}),
     viewTransitionName: transitionName.current,
@@ -110,7 +111,7 @@ export function Dialog({
       closedby="none"
       aria-label={title}
       tabIndex={-1}
-      data-rolled={rolled.value}
+      data-rolled={rolled}
       data-window-id={dockId}
       style={windowStyle}
       onSubmit={(event) => {
@@ -166,8 +167,8 @@ export function Dialog({
             />
           ) : undefined
         }
-        rolled={rolled.value}
-        onToggleRoll={() => (rolled.value = !rolled.value)}
+        rolled={rolled}
+        onToggleRoll={() => setRolled(!rolled)}
         onDragStart={(e) => {
           if (dockId && win) {
             const dialog = dialogRef.current!;
@@ -176,11 +177,11 @@ export function Dialog({
         }}
         onClose={close}
       />
-      <div className="dialog-body" inert={rolled.value}>
+      <div className="dialog-body" inert={rolled}>
         {children}
       </div>
-      {!rolled.value && <span className="resize-grip" aria-hidden="true" />}
-      {!rolled.value &&
+      {!rolled && <span className="resize-grip" aria-hidden="true" />}
+      {!rolled &&
         RESIZE_DIRS.map((dir) => (
           <span
             key={dir}
@@ -203,11 +204,10 @@ export function SettingsDialog({
   campaign: Campaign;
   dialogRef: RefObject<HTMLDialogElement | null>;
 }) {
-  const myName = useY(
-    campaign.members,
-    () => campaign.members.get(device.value.id)?.get("name") ?? "",
-  );
-  const colour = colourOf(device.value);
+  const me = useValue(device);
+  const hiding = useValue(autohide);
+  const myName = useY(campaign.members, () => campaign.members.get(me.id)?.get("name") ?? "");
+  const colour = colourOf(me);
   return (
     <Dialog dialogRef={dialogRef} title="Settings">
       <section className="dialog-section form-layout">
@@ -243,7 +243,7 @@ export function SettingsDialog({
             Sidebars and toolbars
             <Segmented
               label="Sidebars and toolbars"
-              value={autohide.value ? "autohide" : "always"}
+              value={hiding ? "autohide" : "always"}
               options={[
                 { id: "always", label: "Always shown" },
                 { id: "autohide", label: "Autohide" },
@@ -466,7 +466,7 @@ export function HelpDialog({ dialogRef }: { dialogRef: RefObject<HTMLDialogEleme
 }
 
 function InviteField({ campaign }: { campaign: Campaign }) {
-  const copied = useSignal(false);
+  const [copied, setCopied] = useState(false);
   const roomKey = useY(campaign.meta, () => campaign.meta.get("roomKey") as string | undefined);
   if (!roomKey) return null;
   const url = inviteUrl({ campaignId: campaign.id, roomKey });
@@ -481,11 +481,11 @@ function InviteField({ campaign }: { campaign: Campaign }) {
             variant="secondary"
             onClick={async () => {
               await navigator.clipboard.writeText(url);
-              copied.value = true;
-              setTimeout(() => (copied.value = false), 1500);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1500);
             }}
           >
-            {copied.value ? "Copied" : "Copy"}
+            {copied ? "Copied" : "Copy"}
           </Button>
         </div>
         <span className="muted">Anyone with this link can join. Keep it private.</span>

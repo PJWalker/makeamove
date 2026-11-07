@@ -1,7 +1,7 @@
 import type { PointerEvent as ReactPointerEvent, MouseEvent as ReactMouseEvent } from "react";
 import type { ComponentType } from "react";
-import { useEffect, useMemo } from "react";
-import { signal, useSignal } from "@preact/signals-react";
+import { useEffect, useMemo, useState } from "react";
+import { store } from "../lib/store";
 import { goToCampaign } from "../app/router";
 import { startReorder } from "../ui/reorder";
 import { getStorageJson, setStorageJson } from "../platform/localStorage";
@@ -42,6 +42,7 @@ import { dialogRequest } from "./canvasState";
 import { layout, PANEL_ORDER, setPanelClosed, unavailablePanels } from "./panelLayout";
 import { PANELS } from "./panels";
 import { ContextMenu, type MenuItem } from "./ContextMenu";
+import { useValue } from "../ui/useValue";
 
 export const TOOLS: {
   id: ToolId;
@@ -65,7 +66,7 @@ export const TOOLS: {
 const ORDER_KEY = "mam:tool-order";
 
 /** The player's own tool order, kept per device. */
-const toolOrder = signal<ToolId[]>(getStorageJson<ToolId[]>(ORDER_KEY, []));
+const toolOrder = store<ToolId[]>(getStorageJson<ToolId[]>(ORDER_KEY, []));
 
 /** Tools in the player's order; any not mentioned keep their default place after the others. */
 function inOrder(tools: typeof TOOLS, order: ToolId[]) {
@@ -75,7 +76,8 @@ function inOrder(tools: typeof TOOLS, order: ToolId[]) {
 }
 
 export function Toolbar({ isGm }: { isGm: boolean }) {
-  const order = toolOrder.value;
+  const order = useValue(toolOrder);
+  const tool = useValue(activeTool);
   const tools = useMemo(
     () =>
       inOrder(
@@ -129,7 +131,7 @@ export function Toolbar({ isGm }: { isGm: boolean }) {
             key={id}
             variant="icon"
             label={`${label} (${key})`}
-            pressed={activeTool.value === id}
+            pressed={tool === id}
             data-tool={id}
             onPointerDown={(e) => dragTool(id, e)}
             onClick={() => (activeTool.value = id)}
@@ -138,10 +140,8 @@ export function Toolbar({ isGm }: { isGm: boolean }) {
           </Button>
         ))}
       </nav>
-      {(activeTool.value === "draw" ||
-        activeTool.value === "shape" ||
-        activeTool.value === "text") && <PenOptions tool={activeTool.value} />}
-      {activeTool.value === "light" && <LightOptions />}
+      {(tool === "draw" || tool === "shape" || tool === "text") && <PenOptions tool={tool} />}
+      {tool === "light" && <LightOptions />}
     </>
   );
 }
@@ -152,7 +152,9 @@ export function Toolbar({ isGm }: { isGm: boolean }) {
  * press, move to an item and release chooses it.
  */
 function CampaignMenu() {
-  const menu = useSignal<{
+  const unavailable = useValue(unavailablePanels);
+  const closed = useValue(layout).closed;
+  const [menu, setMenu] = useState<{
     x: number;
     y: number;
     press?: { x: number; y: number };
@@ -175,10 +177,10 @@ function CampaignMenu() {
     },
     "divider",
     // Which panels the table has: ticked ones are in a sidebar or a window.
-    ...PANEL_ORDER.filter((id) => !unavailablePanels.value.includes(id)).map((id): MenuItem => ({
+    ...PANEL_ORDER.filter((id) => !unavailable.includes(id)).map((id): MenuItem => ({
       label: PANELS[id].label,
       Icon: PANELS[id].Icon,
-      checked: !layout.value.closed.includes(id),
+      checked: !closed.includes(id),
       onSelect: () => setPanelClosed(id, !layout.value.closed.includes(id)),
     })),
     "divider",
@@ -190,7 +192,7 @@ function CampaignMenu() {
   ];
   const openBelow = (el: HTMLElement, press?: { x: number; y: number }) => {
     const r = el.getBoundingClientRect();
-    menu.value = { x: r.left, y: r.bottom + 6, ...(press ? { press } : {}) };
+    setMenu({ x: r.left, y: r.bottom + 6, ...(press ? { press } : {}) });
   };
   return (
     <>
@@ -198,13 +200,13 @@ function CampaignMenu() {
         variant="icon"
         label="Campaign menu"
         className="toolbar-menu"
-        pressed={!!menu.value}
+        pressed={!!menu}
         aria-haspopup="menu"
-        aria-expanded={!!menu.value}
+        aria-expanded={!!menu}
         onPointerDown={(e: ReactPointerEvent) => {
           if (e.button !== 0) return;
-          if (menu.value) {
-            menu.value = null;
+          if (menu) {
+            setMenu(null);
             return;
           }
           openBelow(e.currentTarget as HTMLElement, {
@@ -214,17 +216,17 @@ function CampaignMenu() {
         }}
         // From the keyboard: Enter or Space.
         onClick={(e: ReactMouseEvent) => {
-          if (e.detail === 0 && !menu.value) openBelow(e.currentTarget as HTMLElement);
+          if (e.detail === 0 && !menu) openBelow(e.currentTarget as HTMLElement);
         }}
       >
         <IconMenu size={22} />
       </Button>
-      {menu.value && (
+      {menu && (
         <ContextMenu
-          {...menu.value}
+          {...menu}
           items={items}
           label="Campaign menu"
-          onClose={() => (menu.value = null)}
+          onClose={() => setMenu(null)}
         />
       )}
     </>
@@ -233,7 +235,8 @@ function CampaignMenu() {
 
 /** Colour, width and layer for the pen (and the shape for the Shapes tool), beside the tool strip. */
 function PenOptions({ tool }: { tool: ToolId }) {
-  const { colour, width, layer } = pen.value;
+  const { colour, width, layer } = useValue(pen);
+  const shape = useValue(shapeTool);
   return (
     <div className="pen-options panel" role="group" aria-label="Pen">
       {tool === "shape" && (
@@ -244,7 +247,7 @@ function PenOptions({ tool }: { tool: ToolId }) {
               type="button"
               role="radio"
               className="pen-width pen-shape"
-              aria-checked={shapeTool.value === s.id}
+              aria-checked={shape === s.id}
               aria-label={s.label}
               title={s.label}
               onClick={() => setShapeTool(s.id)}
@@ -308,6 +311,7 @@ const LIGHT_MODES: { id: LightToolMode; label: string }[] = [
 
 /** What the Lights tool places, beside the tool strip. */
 function LightOptions() {
+  const mode = useValue(lightTool);
   return (
     <div className="pen-options panel" role="group" aria-label="Lights">
       <div className="pen-widths" role="radiogroup" aria-label="Place">
@@ -317,7 +321,7 @@ function LightOptions() {
             type="button"
             role="radio"
             className="pen-width pen-shape"
-            aria-checked={lightTool.value === m.id}
+            aria-checked={mode === m.id}
             aria-label={m.label}
             title={m.label}
             onClick={() => setLightTool(m.id)}

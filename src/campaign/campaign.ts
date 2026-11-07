@@ -1,4 +1,4 @@
-import { effect, signal } from "@preact/signals-react";
+import { store, watch } from "../lib/store";
 import * as Y from "yjs";
 import { IndexeddbPersistence } from "y-indexeddb";
 import { newId, newSecret } from "../lib/ids";
@@ -102,7 +102,7 @@ export class Campaign {
   /** One custom graphic per entity, shared by lists, windows and scene drops. */
   readonly entityGraphics: Y.Map<EntityGraphic>;
   /** GM-only pages, on GM devices only (see notes/vault.ts). */
-  readonly vault = signal<Vault | null>(null);
+  readonly vault = store<Vault | null>(null);
   private persistence: IndexeddbPersistence;
   private destroyed = false;
   private rejoinCleanups: (() => void)[] = [];
@@ -110,7 +110,7 @@ export class Campaign {
 
   /** False while joining by invite, until the first peer has sent the campaign. */
   /** Cursors, pings and rulers; live only while peers are connected. */
-  readonly ready = signal(false);
+  readonly ready = store(false);
 
   get presence() {
     return this.connection.presence;
@@ -188,7 +188,7 @@ export class Campaign {
   private checkMembership: () => void = () => {};
 
   /** True once the GM has removed this device from the campaign. */
-  readonly removed = signal(false);
+  readonly removed = store(false);
   /** Connected despite being removed, to learn whether the GM allowed us back. */
   private checkingRejoin = false;
 
@@ -204,7 +204,7 @@ export class Campaign {
     if (rejoin && this.removed.value) {
       this.checkingRejoin = true;
       let timer = 0;
-      const stop = effect(() => {
+      const stop = watch([this.peerCount], () => {
         if (this.peerCount.value === 0 || timer) return;
         timer = window.setTimeout(() => {
           this.checkingRejoin = false;
@@ -405,7 +405,7 @@ export class Campaign {
 
 // Lifecycle
 
-export const activeCampaign = signal<Campaign | null>(null);
+export const activeCampaign = store<Campaign | null>(null);
 
 export async function createCampaign(
   name: string,

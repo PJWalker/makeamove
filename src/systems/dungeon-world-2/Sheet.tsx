@@ -1,4 +1,4 @@
-import { useSignal } from "@preact/signals-react";
+import { useState } from "react";
 import {
   SheetFrame,
   SheetSectionView,
@@ -184,7 +184,7 @@ function ItemAward({
     tag === "magic-item"
       ? [...DW2_GEAR.filter((item) => item.tags.includes("magic")), ...DW2_MAGIC_ITEMS]
       : DW2_MAGIC_ITEMS.filter((item) => item.tags.includes(tag));
-  const selected = useSignal(options[0]?.id ?? "");
+  const [selected, setSelected] = useState(options[0]?.id ?? "");
   const pending =
     sheet.c.kind === "pc" && sheet.c.data[field] === true && sheet.c.data[claimedField] !== true;
   if (!pending) return null;
@@ -194,8 +194,8 @@ function ItemAward({
       <label className="field">
         Choose an item
         <select
-          value={selected.value}
-          onChange={(event) => (selected.value = event.currentTarget.value)}
+          value={selected}
+          onChange={(event) => setSelected(event.currentTarget.value)}
         >
           {options.map((item) => (
             <option key={item.id} value={item.id}>
@@ -206,9 +206,9 @@ function ItemAward({
       </label>
       <Button
         variant="secondary"
-        disabled={!sheet.editable || !selected.value}
+        disabled={!sheet.editable || !selected}
         onClick={() => {
-          const item = options.find((entry) => entry.id === selected.value);
+          const item = options.find((entry) => entry.id === selected);
           if (!item) return;
           addItem(sheet.campaign, sheet.c.id, item);
           setData(sheet.campaign, sheet.c.id, claimedField, true);

@@ -1,4 +1,3 @@
-import { useSignal } from "@preact/signals-react";
 import type { ReactNode } from "react";
 import { IconFolder } from "../ui/icons";
 import { FolderName } from "../ui/FolderName";
@@ -6,6 +5,7 @@ import { List, ListGroup } from "../ui/List";
 import { menuTrigger } from "../ui/menuTrigger";
 import { ContextMenu, type MenuItem } from "./ContextMenu";
 import { PanelActions } from "./PanelActions";
+import { useState } from "react";
 
 type FolderRecord = { id: string; name: string };
 
@@ -40,9 +40,9 @@ export function FolderTree<Item, Folder extends FolderRecord>({
   onRenameFolder: (id: string, name: string) => void;
   emptyContent?: ReactNode;
 }) {
-  const folded = useSignal<Set<string>>(new Set());
-  const naming = useSignal<string | null>(null);
-  const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(null);
+  const [folded, setFolded] = useState<Set<string>>(new Set());
+  const [naming, setNaming] = useState<string | null>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const known = new Set(folders.map((folder) => folder.id));
   const loose = items.filter((item) => {
     const folderId = folderOf(item);
@@ -50,38 +50,38 @@ export function FolderTree<Item, Folder extends FolderRecord>({
   });
 
   const toggle = (id: string) => {
-    const next = new Set(folded.value);
+    const next = new Set(folded);
     if (!next.delete(id)) next.add(id);
-    folded.value = next;
+    setFolded(next);
   };
 
   return (
     <nav className={className} aria-label={ariaLabel}>
       <PanelActions>
-        {naming.value === "new" && (
+        {naming === "new" && (
           <FolderName
             onDone={(name) => {
               if (name) onCreateFolder(name);
-              naming.value = null;
+              setNaming(null);
             }}
           />
         )}
-        {naming.value !== "new" && renderActions(() => (naming.value = "new"))}
+        {naming !== "new" && renderActions(() => setNaming("new"))}
       </PanelActions>
       <div className="chars-tree panel-scroll" data-folder-drop="">
         {folders.map((folder) => {
           const children = items.filter((item) => folderOf(item) === folder.id);
-          const open = !folded.value.has(folder.id);
+          const open = !folded.has(folder.id);
           const trigger = menuTrigger((x, y) => {
-            menu.value = {
+            setMenu({
               x,
               y,
               items: folderMenuItems(folder, {
                 open,
                 toggle: () => toggle(folder.id),
-                rename: () => (naming.value = folder.id),
+                rename: () => setNaming(folder.id),
               }),
-            };
+            });
           });
 
           return (
@@ -98,12 +98,12 @@ export function FolderTree<Item, Folder extends FolderRecord>({
               }}
               group={{ "data-folder-drop": folder.id }}
               replaceHead={
-                naming.value === folder.id ? (
+                naming === folder.id ? (
                   <FolderName
                     initial={folder.name}
                     onDone={(name) => {
                       if (name) onRenameFolder(folder.id, name);
-                      naming.value = null;
+                      setNaming(null);
                     }}
                   />
                 ) : undefined
@@ -116,7 +116,7 @@ export function FolderTree<Item, Folder extends FolderRecord>({
         <List>{loose.map(renderItem)}</List>
         {emptyContent}
       </div>
-      {menu.value && <ContextMenu {...menu.value} onClose={() => (menu.value = null)} />}
+      {menu && <ContextMenu {...menu} onClose={() => setMenu(null)} />}
     </nav>
   );
 }

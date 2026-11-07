@@ -1,4 +1,4 @@
-import { signal } from "@preact/signals-react";
+import { store } from "../lib/store";
 import { newId } from "../lib/ids";
 import { getStorageJson, setStorageJson } from "./localStorage";
 
@@ -27,7 +27,7 @@ function save(d: Device) {
   setStorageJson(KEY, d);
 }
 
-export const device = signal<Device>(load());
+export const device = store<Device>(load());
 
 export function setDeviceName(name: string) {
   device.value = { ...device.value, name };

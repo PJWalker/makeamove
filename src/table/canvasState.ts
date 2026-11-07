@@ -1,4 +1,4 @@
-import { signal } from "@preact/signals-react";
+import { store } from "../lib/store";
 import type { SceneDoc } from "../scene/sceneDoc";
 import type { BlobRef, TokenStyle } from "../scene/types";
 import type { EntityGraphic, EntityGraphicRef } from "../graphics";
@@ -13,13 +13,13 @@ import { DEFAULT_CANVAS_COLOUR, type SceneView } from "../campaign/campaign";
  */
 
 /** Set to true to open the active scene's settings. */
-export const sceneSettingsOpen = signal(false);
+export const sceneSettingsOpen = store(false);
 
 /** Dominant colour of the active scene's main map, for the UI tint. */
-export const activeMapColour = signal<string | null>(null);
+export const activeMapColour = store<string | null>(null);
 
 /** Map colours of scenes opened this session, so the scene list can show them. */
-export const seenMapColours = signal<Record<string, string | null>>({});
+export const seenMapColours = store<Record<string, string | null>>({});
 
 /**
  * The colour behind a scene's maps: the GM's choice, or (auto) a darkened
@@ -33,10 +33,10 @@ export function canvasColour(scene: SceneView, mapColour: string | null): string
  * While an action asks for targets: how many it takes at most, and the acting
  * character. The open scene canvas lets clicks on tokens target them.
  */
-export const targetPick = signal<{ max?: number; actor?: string } | null>(null);
+export const targetPick = store<{ max?: number; actor?: string } | null>(null);
 
 /** The targets chosen on the open scene, with distances from the actor's token in scene units. */
-export const chosenTargets = signal<
+export const chosenTargets = store<
   { id: string; name: string; characterId?: string; distance: number | null }[]
 >([]);
 
@@ -45,15 +45,15 @@ export const chosenTargets = signal<
  * spheres), in scene units; the canvas places it and targets what it
  * covers, then sets `placedArea` to the new shape's id.
  */
-export const areaRequest = signal<{
+export const areaRequest = store<{
   area: AreaSpec;
   actor?: string;
   n: number;
 } | null>(null);
-export const placedArea = signal<string | null>(null);
+export const placedArea = store<string | null>(null);
 
 /** Formats a distance in the open scene's units; set by the scene canvas. */
-export const sceneDistance = signal<(d: number) => string>((d) => `${d}`);
+export const sceneDistance = store<(d: number) => string>((d) => `${d}`);
 
 /** What a character's token needs when it's dropped on the map. */
 export interface TokenSpec {
@@ -72,10 +72,10 @@ export interface TokenSpec {
  * Set by the open scene canvas: puts a token at a screen point and returns
  * whether the point was over the map.
  */
-export const tokenDrop = signal<((x: number, y: number, spec: TokenSpec) => boolean) | null>(null);
+export const tokenDrop = store<((x: number, y: number, spec: TokenSpec) => boolean) | null>(null);
 
 /** Resolve a character token under a screen point, including whether it can be edited here. */
-export const sceneCharacterAt = signal<
+export const sceneCharacterAt = store<
   | ((
       x: number,
       y: number,
@@ -87,8 +87,8 @@ export const sceneCharacterAt = signal<
     } | null)
   | null
 >(null);
-export const sceneDropHighlight = signal<string | null>(null);
-export const sceneDropFlash = signal<{ tokenId: string; nonce: number } | null>(null);
+export const sceneDropHighlight = store<string | null>(null);
+export const sceneDropFlash = store<{ tokenId: string; nonce: number } | null>(null);
 let dropFlashNonce = 0;
 
 export function flashSceneDrop(tokenId: string) {
@@ -98,7 +98,7 @@ export function flashSceneDrop(tokenId: string) {
 const AUTOHIDE_KEY = "mam:autohide";
 
 /** Sidebars and toolbars stay hidden until the pointer nears their edge (Ctrl/Cmd + \\ toggles it). Per device. */
-export const autohide = signal(loadAutohide());
+export const autohide = store(loadAutohide());
 
 function loadAutohide() {
   return getStorageItem(AUTOHIDE_KEY) === "true";
@@ -117,7 +117,7 @@ export interface CanvasCommands {
   undo(): void;
   redo(): void;
 }
-export const canvasCommands = signal<CanvasCommands | null>(null);
+export const canvasCommands = store<CanvasCommands | null>(null);
 
 /** Open one of the campaign's dialogs (from the campaign menu or the command palette). */
-export const dialogRequest = signal<"settings" | "help" | "relationships" | null>(null);
+export const dialogRequest = store<"settings" | "help" | "relationships" | null>(null);

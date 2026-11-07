@@ -1,5 +1,4 @@
-import { useSignal } from "@preact/signals-react";
-import { useEffect, useEffectEvent, useRef } from "react";
+import { useEffect, useEffectEvent, useReducer, useRef } from "react";
 import type * as Y from "yjs";
 
 /**
@@ -11,20 +10,22 @@ import type * as Y from "yjs";
  *
  * `read` runs on every render rather than being cached, so a value that also
  * depends on props or state (such as "does element `id` exist?") is never
- * stale when only the prop changes.
+ * stale when only the prop changes. Yjs types are mutable, so this hook opts
+ * out of React Compiler: memoizing `read()` on its identity would miss edits.
  */
 export function useY<T, EventType>(
   type: Y.AbstractType<EventType> | null | undefined,
   read: () => T,
 ): T {
-  const changes = useSignal(0);
+  "use no memo";
+  const [, rerender] = useReducer((n: number) => n + 1, 0);
   const latest = useRef(read);
   latest.current = read;
   const value = read();
   const shown = useRef(value);
   shown.current = value;
   const bump = useEffectEvent(() => {
-    if (!Object.is(latest.current(), shown.current)) changes.value++;
+    if (!Object.is(latest.current(), shown.current)) rerender();
   });
 
   useEffect(() => {
@@ -35,7 +36,5 @@ export function useY<T, EventType>(
     return () => type.unobserveDeep(onChange);
   }, [type]);
 
-  // Reading the counter subscribes this component to it.
-  void changes.value;
   return value;
 }

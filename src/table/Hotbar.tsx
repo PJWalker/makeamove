@@ -1,6 +1,5 @@
 import type { PointerEvent as ReactPointerEvent } from "react";
-import { useSignal } from "@preact/signals-react";
-import { useEffect, useEffectEvent, useRef } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { selectedCharacterId } from "../features/characters/api";
 import { editHotbar, hotbarSlots, placeAt, shift, unpin } from "../features/characters/hotbar";
 import { shortcutFor, showCombo, slotLook } from "../app/commands/custom";
@@ -19,6 +18,7 @@ import { actionEntity, dropMarker, dropOn, dropTargetAt, setDropCursor } from ".
 import { paletteOpen } from "./Palette";
 import { isTyping } from "../ui/keys";
 import { startReorder } from "../ui/reorder";
+import { useValue } from "../ui/useValue";
 
 /**
  * Pinned actions for the selected character, docked at the bottom centre.
@@ -28,11 +28,11 @@ import { startReorder } from "../ui/reorder";
  */
 export function Hotbar({ campaign }: { campaign: Campaign }) {
   const charId = useY(campaign.members, () => selectedCharacterId(campaign));
-  const dragging = useSignal<string | null>(null);
+  const [dragging, setDragging] = useState<string | null>(null);
   const barRef = useRef<HTMLDivElement>(null);
   // Rebuilt on any change to characters or members so labels and availability stay current.
-  const tick = useSignal(0);
-  const bumpTick = useEffectEvent(() => tick.value++);
+  const [tick, setTick] = useState(0);
+  const bumpTick = useEffectEvent(() => setTick((n) => n + 1));
   useEffect(() => {
     const bump = () => bumpTick();
     campaign.characters.observeDeep(bump);
@@ -42,9 +42,9 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
       campaign.members.unobserveDeep(bump);
     };
   }, [campaign]);
-  void tick.value;
-  const sessionMessages = campaign.chat.messages.value;
-  void sessionMessages;
+  void tick;
+  // Session-limited moves change with the chat.
+  useValue(campaign.chat.messages);
 
   const slots = hotbarSlots(campaign, charId);
   const index = new Map(buildIndex(campaign).map((a) => [a.id, a]));
@@ -74,10 +74,10 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
   });
 
   const edit = (fn: (s: string[]) => string[]) => editHotbar(campaign, fn);
-  const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const slotMenu = (id: string, title: string) =>
     menuTrigger((x, y) => {
-      menu.value = {
+      setMenu({
         x,
         y,
         items: [
@@ -125,10 +125,10 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
             onSelect: () => edit((s) => unpin(s, id)),
           },
         ],
-      };
+      });
     });
   const endDrag = () => {
-    dragging.value = null;
+    setDragging(null);
   };
   const dragSlot = (id: string, e: ReactPointerEvent) => {
     // Off the bar, a slot can land on a character or in a note, like a palette result; anywhere else unpins it.
@@ -139,7 +139,7 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
       axis: "x",
       container: barRef.current,
       items: () => [...barRef.current!.querySelectorAll<HTMLElement>(".hotbar-slot")],
-      onLift: () => (dragging.value = id),
+      onLift: () => setDragging(id),
       onMove: (ev, inside) => {
         const target = inside ? null : dropTargetAt(ev.clientX, ev.clientY, what);
         mark(target);
@@ -169,7 +169,7 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
         className="dock-strip hotbar strip across dock-bottom"
         role="toolbar"
         aria-label="Hotbar"
-        data-dragging={dragging.value !== null}
+        data-dragging={dragging !== null}
         onWheel={(e) => {
           // A mouse wheel scrolls the bar sideways.
           if (e.deltaY && !e.deltaX) e.currentTarget.scrollLeft += e.deltaY;
@@ -190,7 +190,7 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
               key={id}
               className="hotbar-slot"
               data-unavailable={off}
-              data-dragging={dragging.value === id}
+              data-dragging={dragging === id}
               onPointerDown={(e) => {
                 trigger.onPointerDown(e);
                 dragSlot(id, e);
@@ -232,7 +232,7 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
           <IconSearch size={22} />
         </Button>
       </div>
-      {menu.value && <ContextMenu {...menu.value} onClose={() => (menu.value = null)} />}
+      {menu && <ContextMenu {...menu} onClose={() => setMenu(null)} />}
     </>
   );
 }

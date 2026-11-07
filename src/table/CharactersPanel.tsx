@@ -1,5 +1,4 @@
-import { useSignal } from "@preact/signals-react";
-import { Fragment, useEffect, useRef } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import {
   addItem,
   canEdit,
@@ -59,8 +58,8 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
   const folders = useY(campaign.characterFolders, () => listFolders(campaign));
   const selectedId = useY(campaign.members, () => selectedCharacterId(campaign));
   const isGm = useY(campaign.members, () => campaign.isGm());
-  const creating = useSignal(false);
-  const creationFolder = useSignal<string | undefined>(undefined);
+  const [creating, setCreating] = useState(false);
+  const [creationFolder, setCreationFolder] = useState<string | undefined>(undefined);
   // Copies (a template's tokens) aren't listed, but selecting one's token opens its sheet.
   const selected = useY(campaign.characters, () => getCharacter(campaign, selectedId));
   // One at a time: which level shows, the list or the sheet.
@@ -77,8 +76,8 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
   return (
     <TwoPane
       layout={charactersLayout}
-      level={level.value}
-      title={creating.value ? "New character" : (selected?.name ?? "Characters")}
+      level={level}
+      title={creating ? "New character" : (selected?.name ?? "Characters")}
       backLabel="Back to the character list"
       onBack={() => go("list")}
       resizeLabel="Resize character list"
@@ -89,12 +88,12 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
           folders={folders}
           selectedId={selectedId}
           onNew={(folderId) => {
-            creationFolder.value = folderId;
-            creating.value = true;
+            setCreationFolder(folderId);
+            setCreating(true);
             go("detail");
           }}
           onPick={(id) => {
-            creating.value = false;
+            setCreating(false);
             go("detail");
             selectCharacter(campaign, id);
           }}
@@ -102,17 +101,17 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
       }
       detail={
         <div className="chars-sheet panel-scroll sheet-panel">
-          {creating.value ? (
+          {creating ? (
             <NewCharacter
               campaign={campaign}
               system={system}
               folders={folders}
               existingCharacters={characters}
               isGm={isGm}
-              initialFolder={creationFolder.value}
+              initialFolder={creationFolder}
               onDone={() => {
-                creating.value = false;
-                creationFolder.value = undefined;
+                setCreating(false);
+                setCreationFolder(undefined);
               }}
             />
           ) : selected ? (
@@ -157,9 +156,9 @@ function CharacterList({
   onNew: (folderId?: string) => void;
   onPick: (id: string) => void;
 }) {
-  const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
   // A character waiting for its deletion to be confirmed.
-  const deleting = useSignal<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const known = new Set(folders.map((f) => f.id));
 
   const row = (c: CharacterView) => {
@@ -193,10 +192,10 @@ function CharacterList({
           label: "Delete character…",
           Icon: IconDelete,
           danger: true,
-          onSelect: () => (deleting.value = c.id),
+          onSelect: () => setDeleting(c.id),
         });
       }
-      if (items.length) menu.value = { x, y, items };
+      if (items.length) setMenu({ x, y, items });
     });
     return (
       <ListRow
@@ -225,11 +224,11 @@ function CharacterList({
     );
   };
 
-  const doomed = deleting.value ? characters.find((c) => c.id === deleting.value) : undefined;
+  const doomed = deleting ? characters.find((c) => c.id === deleting) : undefined;
   return (
     <>
       {doomed && (
-        <DeleteCharacter campaign={campaign} c={doomed} onClose={() => (deleting.value = null)} />
+        <DeleteCharacter campaign={campaign} c={doomed} onClose={() => setDeleting(null)} />
       )}
       <FolderTree
         ariaLabel="Characters"
@@ -271,7 +270,7 @@ function CharacterList({
           ) : null
         }
       />
-      {menu.value && <ContextMenu {...menu.value} onClose={() => (menu.value = null)} />}
+      {menu && <ContextMenu {...menu} onClose={() => setMenu(null)} />}
     </>
   );
 }
@@ -293,36 +292,38 @@ function NewCharacter({
   initialFolder?: string | undefined;
   onDone: () => void;
 }) {
-  const kind = useSignal<"pc" | "npc">("pc");
-  const name = useSignal("");
-  const identity = useSignal<Record<string, string>>({});
-  const relationshipTo = useSignal("");
-  const relationshipText = useSignal("");
-  const relationshipDepth = useSignal("0");
-  const folder = useSignal(initialFolder ?? "");
+  const [kind, setKind] = useState<"pc" | "npc">("pc");
+  const [name, setName] = useState("");
+  const [identity, setIdentity] = useState<Record<string, string>>({});
+  const [relationshipTo, setRelationshipTo] = useState("");
+  const [relationshipText, setRelationshipText] = useState("");
+  const [relationshipDepth, setDepth] = useState("0");
+  const [folder, setFolder] = useState(initialFolder ?? "");
   // The guided flow: the system's choices at creation, then ability scores.
   const creation = system.creation;
-  const picks = useSignal<Record<string, Picked>>(
-    Object.fromEntries(
+  const [picks, setPicks] = useState<Record<string, Picked>>(Object.fromEntries(
       (creation?.choices ?? []).flatMap((choice) => {
         const value = system.characterData.find((field) => field.id === choice.field)?.default;
         return choice.at === "create" && typeof value === "string" && value
           ? [[choice.id, { option: value, pattern: 0, order: [] }]]
           : [];
       }),
-    ),
+    ));
+  const [method, setMethod] = useState<ScoreMethod>(() =>
+    creation ? scoreMethods(creation.scores)[0]!.id : "manual",
   );
-  const method = useSignal<ScoreMethod>(creation ? scoreMethods(creation.scores)[0]!.id : "manual");
-  const scores = useSignal(creation ? startingScores(system, creation.scores, method.value) : {});
+  const [scores, setScores] = useState<Record<string, number>>(() =>
+    creation ? startingScores(system, creation.scores, method) : {},
+  );
   const choiceData = Object.fromEntries(
     (creation?.choices ?? []).flatMap((choice) => {
-      const option = choice.options.find((item) => item.id === picks.value[choice.id]?.option);
+      const option = choice.options.find((item) => item.id === picks[choice.id]?.option);
       return option ? [[choice.field, option.id], ...Object.entries(option.grants ?? [])] : [];
     }),
   );
   const defaults = Object.fromEntries(
     system.characterData
-      .filter((field) => !field.for || field.for === kind.value)
+      .filter((field) => !field.for || field.for === kind)
       .map((field) => [field.id, field.default]),
   );
   const choices = choicesAt(creation, "create", { ...defaults, ...choiceData });
@@ -333,26 +334,26 @@ function NewCharacter({
     !!choiceData[distinct.field] &&
     existingPcs.some((character) => character.data[distinct.field] === choiceData[distinct.field]);
   const startingRelationship =
-    kind.value === "pc" && existingPcs.length > 0 ? creation?.startingRelationship : undefined;
+    kind === "pc" && existingPcs.length > 0 ? creation?.startingRelationship : undefined;
   const guidance = creation?.guidance?.({ ...defaults, ...choiceData });
   const creationChoicesReady =
     !creation?.requireAllCreationChoicesAtCreate ||
-    choices.every((choice) => choice.optional || !!picks.value[choice.id]?.option);
+    choices.every((choice) => choice.optional || !!picks[choice.id]?.option);
   const ready =
-    kind.value === "npc" ||
+    kind === "npc" ||
     !creation ||
-    (scoresReady(creation.scores, method.value, scores.value) &&
+    (scoresReady(creation.scores, method, scores) &&
       creationChoicesReady &&
-      (!startingRelationship || !!relationshipTo.value));
+      (!startingRelationship || !!relationshipTo));
   const submit = () => {
     if (!ready) return;
-    if (kind.value === "npc") newNpc(campaign, name.value, folder.value || undefined);
+    if (kind === "npc") newNpc(campaign, name, folder || undefined);
     else {
-      const made = creation ? creationResult(system, scores.value, picks.value) : undefined;
+      const made = creation ? creationResult(system, scores, picks) : undefined;
       if (made)
         for (const { field } of creation?.identity?.fields ?? [])
-          made.data[field] = (identity.value[field] ?? "").trim();
-      const id = newCharacter(campaign, name.value, String(choiceData.classId ?? ""), made);
+          made.data[field] = (identity[field] ?? "").trim();
+      const id = newCharacter(campaign, name, String(choiceData.classId ?? ""), made);
       const startingItemsField = creation?.startingItemsField;
       if (startingItemsField && made) {
         for (const itemId of parseCommaList(String(made.data[startingItemsField] ?? ""))) {
@@ -360,22 +361,22 @@ function NewCharacter({
           if (item) addItem(campaign, id, item, !!item.equippable);
         }
       }
-      if (startingRelationship && relationshipTo.value) {
+      if (startingRelationship && relationshipTo) {
         setRelationship(
           campaign.characters,
           id,
-          relationshipTo.value,
-          relationshipText.value.trim(),
+          relationshipTo,
+          relationshipText.trim(),
         );
         setRelationshipDepth(
           campaign.characters,
           id,
-          relationshipTo.value,
-          Number(relationshipDepth.value),
+          relationshipTo,
+          Number(relationshipDepth),
           system.relationshipDepth?.max ?? 0,
         );
       }
-      if (folder.value) moveToFolder(campaign, id, folder.value);
+      if (folder) moveToFolder(campaign, id, folder);
     }
     onDone();
   };
@@ -392,20 +393,20 @@ function NewCharacter({
           Type
           <Segmented
             label="Character type"
-            value={kind.value}
+            value={kind}
             options={[
               { id: "pc", label: "Player character" },
               { id: "npc", label: "NPC" },
             ]}
-            onChange={(v) => (kind.value = v)}
+            onChange={(v) => setKind(v)}
           />
         </div>
       )}
       <label className="field">
         Name
-        <input value={name.value} onInput={(e) => (name.value = e.currentTarget.value)} autoFocus />
+        <input value={name} onInput={(e) => setName(e.currentTarget.value)} autoFocus />
       </label>
-      {kind.value === "pc" && creation && (
+      {kind === "pc" && creation && (
         <>
           {creation.identity && (
             <fieldset className="form-section creation-identity">
@@ -414,9 +415,9 @@ function NewCharacter({
                 <label key={field} className="field">
                   {label}
                   <input
-                    value={identity.value[field] ?? ""}
+                    value={identity[field] ?? ""}
                     onInput={(event) =>
-                      (identity.value = { ...identity.value, [field]: event.currentTarget.value })
+                      setIdentity({ ...identity, [field]: event.currentTarget.value })
                     }
                   />
                 </label>
@@ -430,9 +431,9 @@ function NewCharacter({
                 PC
                 <select
                   required
-                  value={relationshipTo.value}
-                  onChange={(event) => (relationshipTo.value = event.currentTarget.value)}
-                  onInput={(event) => (relationshipTo.value = event.currentTarget.value)}
+                  value={relationshipTo}
+                  onChange={(event) => setRelationshipTo(event.currentTarget.value)}
+                  onInput={(event) => setRelationshipTo(event.currentTarget.value)}
                 >
                   <option value="">Choose a PC</option>
                   {existingPcs.map((character) => (
@@ -446,15 +447,15 @@ function NewCharacter({
                 Relationship
                 <textarea
                   rows={2}
-                  value={relationshipText.value}
-                  onInput={(event) => (relationshipText.value = event.currentTarget.value)}
+                  value={relationshipText}
+                  onInput={(event) => setRelationshipText(event.currentTarget.value)}
                 />
               </label>
               <label className="field">
                 Shared history
                 <select
-                  value={relationshipDepth.value}
-                  onChange={(event) => (relationshipDepth.value = event.currentTarget.value)}
+                  value={relationshipDepth}
+                  onChange={(event) => setDepth(event.currentTarget.value)}
                 >
                   {startingRelationship.depths.map((depth) => (
                     <option key={depth.value} value={String(depth.value)}>
@@ -470,8 +471,8 @@ function NewCharacter({
               key={ch.id}
               system={system}
               choice={ch}
-              value={picks.value[ch.id] ?? emptyPick()}
-              onChange={(p) => (picks.value = { ...picks.value, [ch.id]: p })}
+              value={picks[ch.id] ?? emptyPick()}
+              onChange={(p) => setPicks({ ...picks, [ch.id]: p })}
             />
           ))}
           {repeatsChoice && distinct && (
@@ -486,7 +487,9 @@ function NewCharacter({
               system={system}
               methods={creation.scores}
               method={method}
+              onMethod={setMethod}
               scores={scores}
+              onScores={setScores}
               {...(creation.classScoreAssignments?.[String(choiceData.classId ?? "")]
                 ? { assignments: creation.classScoreAssignments[String(choiceData.classId ?? "")] }
                 : {})}
@@ -497,7 +500,7 @@ function NewCharacter({
       {folders.length > 0 && (
         <label className="field">
           Folder
-          <select value={folder.value} onChange={(e) => (folder.value = e.currentTarget.value)}>
+          <select value={folder} onChange={(e) => setFolder(e.currentTarget.value)}>
             <option value="">None</option>
             {folders.map((f) => (
               <option key={f.id} value={f.id}>

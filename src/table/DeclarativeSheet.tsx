@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { useSignal } from "@preact/signals-react";
 import {
   bumpData,
   bumpResource,
@@ -34,6 +33,8 @@ import { AdvancementDialog } from "./CreationParts";
 import { extensionOf } from "../systems/extensions";
 import { Inventory } from "./Inventory";
 import { Counter, MoveList, signedStr, TokenChip } from "./sheetParts";
+import { useState } from "react";
+import { useValue } from "../ui/useValue";
 
 /*
  * Shared sections for system-owned sheet components, and a declarative
@@ -54,6 +55,7 @@ export function SheetFrame({
   editable,
   children,
 }: SheetProps & { editable: boolean; children: ReactNode }) {
+  const me = useValue(device).id;
   return (
     <div
       className="sheet"
@@ -63,7 +65,7 @@ export function SheetFrame({
       {children}
       {c.kind === "pc" && (
         <p className="muted sheet-owner">
-          {c.owner === device.value.id ? "Yours" : editable ? "Editing as GM" : "View only"}
+          {c.owner === me ? "Yours" : editable ? "Editing as GM" : "View only"}
         </p>
       )}
     </div>
@@ -98,7 +100,7 @@ function Advancement({
   editable,
   section,
 }: Omit<SectionProps, "section"> & { section: Extract<SheetSection, { kind: "advancement" }> }) {
-  const open = useSignal(false);
+  const [open, setOpen] = useState(false);
   const Actions = extensionOf(system).advancementActions;
   const needed = d.values[section.needed];
   if (
@@ -111,15 +113,15 @@ function Advancement({
   return (
     <div className="sheet-advancement">
       <span>{section.label}</span>
-      <Button size="sm" onClick={() => (open.value = true)}>
+      <Button size="sm" onClick={() => setOpen(true)}>
         {section.button}
       </Button>
       {Actions && <Actions campaign={campaign} characterId={c.id} />}
-      {open.value && (
+      {open && (
         <AdvancementDialog
           campaign={campaign}
           characterId={c.id}
-          onClose={() => (open.value = false)}
+          onClose={() => setOpen(false)}
         />
       )}
     </div>
@@ -134,8 +136,8 @@ function Loadout({
   editable,
   id,
 }: Omit<SectionProps, "section"> & { id: string }) {
-  const free = useSignal(false);
-  const query = useSignal("");
+  const [free, setFree] = useState(false);
+  const [query, setQuery] = useState("");
   const definition = system.loadouts?.find((entry) => entry.id === id);
   if (!definition) return null;
   const max = typeof definition.max === "number" ? definition.max : (d.values[definition.max] ?? 0);
@@ -156,9 +158,9 @@ function Loadout({
         <label className="check-option">
           <input
             type="checkbox"
-            checked={free.value}
+            checked={free}
             disabled={!editable}
-            onChange={(event) => (free.value = event.currentTarget.checked)}
+            onChange={(event) => setFree(event.currentTarget.checked)}
           />
           {definition.freeSwapLabel}
         </label>
@@ -167,19 +169,19 @@ function Loadout({
         <input
           type="search"
           aria-label={`Search ${definition.label}`}
-          value={query.value}
-          onInput={(event) => (query.value = event.currentTarget.value)}
+          value={query}
+          onInput={(event) => setQuery(event.currentTarget.value)}
         />
       )}
       {options
-        .filter((option) => option.name.toLowerCase().includes(query.value.trim().toLowerCase()))
+        .filter((option) => option.name.toLowerCase().includes(query.trim().toLowerCase()))
         .map((option) => {
           const selected = active.includes(option.id);
           const cost = definition.costs?.[option.id];
           const resource = cost && system.resources.find((entry) => entry.id === cost.resource);
           const affordable =
             !cost ||
-            free.value ||
+            free ||
             (!!resource &&
               (c.resources[cost.resource] ?? 0) + cost.by <= (d.values[resource.max] ?? 0) &&
               (c.resources[cost.resource] ?? 0) + cost.by >= 0);
@@ -197,7 +199,7 @@ function Loadout({
                     selected
                       ? active.filter((entry) => entry !== option.id)
                       : [...active, option.id],
-                    free.value,
+                    free,
                   )
                 }
               />
@@ -546,7 +548,7 @@ function Stats({
   hint?: string | undefined;
   showScore: boolean;
 }) {
-  const menu = useSignal<{ x: number; y: number; label: string; items: MenuItem[] } | null>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number; label: string; items: MenuItem[] } | null>(null);
   const rollStat = (statId: string, abbr: string) => {
     const mod = statBonus(d, statId);
     const formula = `${system.baseRoll}${mod ? `${mod < 0 ? "-" : "+"}${Math.abs(mod)}` : ""}[${abbr}]`;
@@ -571,7 +573,7 @@ function Stats({
             if (!editable) return;
             const min = s.min ?? 1;
             const max = s.max ?? 20;
-            menu.value = {
+            setMenu({
               x,
               y,
               label: `Edit ${s.name}`,
@@ -583,7 +585,7 @@ function Stats({
                   onSelect: () => setScore(campaign, c.id, s.id, value),
                 };
               }),
-            };
+            });
           });
           return (
             <li key={s.id} data-debilitated={has}>
@@ -661,7 +663,7 @@ function Stats({
           );
         })}
       </ul>
-      {menu.value && <ContextMenu {...menu.value} onClose={() => (menu.value = null)} />}
+      {menu && <ContextMenu {...menu} onClose={() => setMenu(null)} />}
     </section>
   );
 }

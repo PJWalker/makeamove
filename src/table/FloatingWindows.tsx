@@ -2,8 +2,7 @@ import type { Campaign } from "../campaign/campaign";
 import { trackPointer } from "../ui/pointer";
 import { windowLayer } from "../ui/windows";
 import { createPortal } from "react-dom";
-import { useSignal } from "@preact/signals-react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import {
   dockTarget,
   setPanelClosed,
@@ -20,14 +19,16 @@ import { PanelContent, PANELS, PaneToggle } from "./panels";
 import { RESIZE_CURSORS, RESIZE_DIRS, resizeRect, type ResizeDir } from "./resizeRect";
 import { WindowControls } from "./WindowControls";
 import { PanelActionsProvider, PanelActionsSlot } from "./PanelActions";
+import { useValue } from "../ui/useValue";
 
 /** Size of the tab a window morphs into. */
 const TAB = 44;
 
 export function FloatingWindows({ campaign }: { campaign: Campaign }) {
+  const windows = useValue(floatingWindows);
   return createPortal(
     <>
-      {floatingWindows.value.map((w) => (
+      {windows.map((w) => (
         <Window key={w.id} win={w} campaign={campaign} />
       ))}
     </>,
@@ -37,7 +38,9 @@ export function FloatingWindows({ campaign }: { campaign: Campaign }) {
 
 function Window({ win, campaign }: { win: FloatingWindow & { id: PanelId }; campaign: Campaign }) {
   const { label, Icon } = PANELS[win.id];
-  const rolled = useSignal(false);
+  const [rolled, setRolled] = useState(false);
+  const pointer = useValue(windowPointer);
+  const target = useValue(dockTarget);
 
   function onResizePointerDown(e: PointerEvent, dir: ResizeDir) {
     if (e.button !== 0) return;
@@ -57,8 +60,7 @@ function Window({ win, campaign }: { win: FloatingWindow & { id: PanelId }; camp
   }
 
   // Over a sidebar the window morphs into the tab it would become, and back out again.
-  const pointer = windowPointer.value;
-  const asTab = dockTarget.value !== null && pointer?.id === win.id ? pointer : null;
+  const asTab = target !== null && pointer?.id === win.id ? pointer : null;
   // The phase sticks until the next change, so re-rendering on pointer moves doesn't cut an animation short.
   // A window pulled out of a tab starts as the tab ('hidden') and grows from it when it leaves the sidebar.
   const phase = useRef<"in" | "out" | "hidden" | undefined>(
@@ -95,7 +97,7 @@ function Window({ win, campaign }: { win: FloatingWindow & { id: PanelId }; camp
           "--to-tab": toTab,
         }}
         data-morph={morph}
-        data-rolled={rolled.value}
+        data-rolled={rolled}
         aria-label={label}
         tabIndex={-1}
         onPointerDown={() => raiseWindow(win.id)}
@@ -104,20 +106,20 @@ function Window({ win, campaign }: { win: FloatingWindow & { id: PanelId }; camp
           title={label}
           Icon={Icon}
           beforeTitle={<PaneToggle id={win.id} />}
-          afterTitle={!rolled.value && <PanelActionsSlot />}
-          rolled={rolled.value}
-          onToggleRoll={() => (rolled.value = !rolled.value)}
+          afterTitle={!rolled && <PanelActionsSlot />}
+          rolled={rolled}
+          onToggleRoll={() => setRolled(!rolled)}
           onDragStart={onHeaderPointerDown}
           onClose={() => setPanelClosed(win.id, true)}
           closeLabel="Close (reopen from the campaign menu)"
         />
-        {!rolled.value && (
+        {!rolled && (
           <div className="floating-window-content">
             <PanelContent id={win.id} campaign={campaign} />
           </div>
         )}
-        {!rolled.value && <span className="resize-grip" aria-hidden="true" />}
-        {!rolled.value &&
+        {!rolled && <span className="resize-grip" aria-hidden="true" />}
+        {!rolled &&
           RESIZE_DIRS.map((dir) => (
             <span
               key={dir}

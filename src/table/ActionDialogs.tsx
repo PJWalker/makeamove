@@ -1,4 +1,5 @@
-import { signal, useSignal } from "@preact/signals-react";
+import { useState } from "react";
+import { store } from "../lib/store";
 import {
   actionForCombo,
   comboOf,
@@ -15,6 +16,7 @@ import { ENTRY_ICONS, type EntryIconName } from "../ui/entryIcons";
 import { closePopup } from "../ui/popup";
 import { Dialog } from "./CampaignDialogs";
 import { usePopupDialog } from "./usePopupDialog";
+import { useValue } from "../ui/useValue";
 
 /*
  * Pop-ups for a player's own touches on an action (app/commands/custom.ts):
@@ -24,7 +26,7 @@ import { usePopupDialog } from "./usePopupDialog";
 
 type Kind = "rename" | "icon" | "shortcut";
 
-const request = signal<{
+const request = store<{
   n: number;
   kind: Kind;
   id: string;
@@ -40,7 +42,7 @@ export function editAction(kind: Kind, id: string, title: string) {
 export const RECORDER = "shortcut-recorder";
 
 export function ActionDialogs({ campaign }: { campaign: Campaign }) {
-  const req = request.value;
+  const req = useValue(request);
   if (!req) return null;
   // A new pop-up for each request, opened as it mounts so the menu item's morph catches it.
   const props = { key: req.n, campaign, id: req.id, title: req.title };
@@ -68,7 +70,7 @@ function usePopup() {
 function RenameDialog({ campaign, id, title }: Props) {
   const { ref, close, onClose } = usePopup();
   const custom = slotLook(campaign, id).label;
-  const text = useSignal(custom ?? title);
+  const [text, setText] = useState(custom ?? title);
   const done = (label: string | undefined) => {
     setSlotLook(campaign, id, { label: label?.trim() || undefined });
     close();
@@ -79,16 +81,16 @@ function RenameDialog({ campaign, id, title }: Props) {
         className="dialog-form"
         onSubmit={(e) => {
           e.preventDefault();
-          done(text.value);
+          done(text);
         }}
       >
         <label className="field">
           Show on the hotbar as
           <input
-            value={text.value}
+            value={text}
             autoFocus
             onFocus={(e) => e.currentTarget.select()}
-            onInput={(e) => (text.value = e.currentTarget.value)}
+            onInput={(e) => setText(e.currentTarget.value)}
           />
         </label>
         <div className="form-actions">
@@ -157,8 +159,8 @@ function IconDialog({ campaign, id, title }: Props) {
 function ShortcutDialog({ campaign, id, title }: Props) {
   const { ref, close, onClose } = usePopup();
   const existing = shortcuts(campaign)[id] ?? null;
-  const combo = useSignal<string | null>(existing);
-  const other = combo.value ? actionForCombo(shortcuts(campaign), combo.value) : undefined;
+  const [combo, setCombo] = useState<string | null>(existing);
+  const other = combo ? actionForCombo(shortcuts(campaign), combo) : undefined;
   const taken =
     other && other !== id
       ? (slotLook(campaign, other).label ?? findAction(campaign, other)?.title ?? "another action")
@@ -173,7 +175,7 @@ function ShortcutDialog({ campaign, id, title }: Props) {
         className="dialog-form"
         onSubmit={(e) => {
           e.preventDefault();
-          save(combo.value);
+          save(combo);
         }}
       >
         <label className="field">
@@ -183,7 +185,7 @@ function ShortcutDialog({ campaign, id, title }: Props) {
             readOnly
             autoFocus
             placeholder="Press a key…"
-            value={combo.value ? showCombo(combo.value) : ""}
+            value={combo ? showCombo(combo) : ""}
             onKeyDown={(e) => {
               // Escape closes and Tab moves on, as everywhere else; Enter saves.
               if (
@@ -201,11 +203,11 @@ function ShortcutDialog({ campaign, id, title }: Props) {
                 !e.altKey &&
                 !e.shiftKey
               ) {
-                combo.value = null;
+                setCombo(null);
                 return;
               }
               const next = comboOf(e);
-              if (next) combo.value = next;
+              if (next) setCombo(next);
             }}
           />
         </label>
@@ -218,7 +220,7 @@ function ShortcutDialog({ campaign, id, title }: Props) {
               Remove shortcut
             </Button>
           )}
-          <Button variant="primary" type="submit" disabled={combo.value === existing}>
+          <Button variant="primary" type="submit" disabled={combo === existing}>
             Save
           </Button>
         </div>

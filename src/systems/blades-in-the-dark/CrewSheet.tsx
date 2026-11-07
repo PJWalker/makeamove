@@ -1,4 +1,4 @@
-import { useSignal } from "@preact/signals-react";
+import { useState } from "react";
 import { parseCommaList } from "../../lib/list";
 import { systemOf } from "../../features/characters/api";
 import { getState, setState } from "../../features/chat/messageState";
@@ -10,8 +10,8 @@ import { Counter } from "../../table/sheetParts";
 import { advanceCrew, advanceCrewTier, buyCrewUpgrade, crewTierCost } from "./progression";
 
 export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
-  const reward = useSignal("upgrades");
-  const upgrade = useSignal("");
+  const [reward, setReward] = useState("upgrades");
+  const [upgrade, setUpgrade] = useState("");
   const system = systemOf(campaign);
   const state = useY(campaign.systemData, () => systemCampaignData(campaign));
   const counter = system.counters!.find((entry) => entry.id === "crew-xp")!;
@@ -25,7 +25,7 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
   const ownedAbilities = parseCommaList(String(state.crewAbilities ?? ""));
   const ownedUpgrades = parseCommaList(String(state.crewUpgrades ?? ""));
   const cost = crewTierCost(campaign);
-  const upgradeCost = upgrade.value === "mastery" ? 4 : upgrade.value === "cohort" ? 2 : 1;
+  const upgradeCost = upgrade === "mastery" ? 4 : upgrade === "cohort" ? 2 : 1;
   const gm = campaign.isGm();
   return (
     <section className="dialog-section" aria-label="Crew advancement">
@@ -57,8 +57,8 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
         Crew advance
         <select
           disabled={!gm}
-          value={reward.value}
-          onChange={(event) => (reward.value = event.currentTarget.value)}
+          value={reward}
+          onChange={(event) => setReward(event.currentTarget.value)}
         >
           <option value="upgrades">Two crew upgrades</option>
           {abilities
@@ -72,7 +72,7 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
       </label>
       <Button
         disabled={!gm || xp < (counter.max ?? 10)}
-        onClick={() => advanceCrew(campaign, reward.value)}
+        onClick={() => advanceCrew(campaign, reward)}
       >
         Advance crew
       </Button>
@@ -80,8 +80,8 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
         Upgrade ({state.crewUpgradePoints} unspent)
         <select
           disabled={!gm}
-          value={upgrade.value}
-          onChange={(event) => (upgrade.value = event.currentTarget.value)}
+          value={upgrade}
+          onChange={(event) => setUpgrade(event.currentTarget.value)}
         >
           <option value="">Choose an upgrade</option>
           {upgrades
@@ -94,8 +94,8 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
         </select>
       </label>
       <Button
-        disabled={!gm || !upgrade.value || Number(state.crewUpgradePoints ?? 0) < upgradeCost}
-        onClick={() => buyCrewUpgrade(campaign, upgrade.value)}
+        disabled={!gm || !upgrade || Number(state.crewUpgradePoints ?? 0) < upgradeCost}
+        onClick={() => buyCrewUpgrade(campaign, upgrade)}
       >
         Buy upgrade ({upgradeCost})
       </Button>

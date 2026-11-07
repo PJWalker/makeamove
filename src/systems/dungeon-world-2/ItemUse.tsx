@@ -1,4 +1,4 @@
-import { useSignal } from "@preact/signals-react";
+import { useState } from "react";
 import { systemOf } from "../../features/characters/api";
 import { derive } from "../../features/characters/store";
 import { Button } from "../../ui/Button";
@@ -7,8 +7,8 @@ import { consumeDungeonWorld2Item } from "./campaign";
 
 /** Controls for Dungeon World 2's charged items: a potion's or a wand's choice of effect. */
 export function Dw2ItemUse({ campaign, character, item, editable }: ItemUseProps) {
-  const choice = useSignal<"heal" | "clear-locked" | "drain" | "mark-condition">("heal");
-  const condition = useSignal(character.lockedConditions?.[0] ?? "");
+  const [choice, setChoice] = useState<"heal" | "clear-locked" | "drain" | "mark-condition">("heal");
+  const [condition, setCondition] = useState(character.lockedConditions?.[0] ?? "");
   const definition = systemOf(campaign).items.find((entry) => entry.id === item.defId);
   if (item.uses === undefined) return null;
   const locked = character.lockedConditions ?? [];
@@ -24,10 +24,10 @@ export function Dw2ItemUse({ campaign, character, item, editable }: ItemUseProps
         <label className="field">
           Effect
           <select
-            value={choice.value === "mark-condition" ? "mark-condition" : "drain"}
+            value={choice === "mark-condition" ? "mark-condition" : "drain"}
             disabled={!editable || outOfUses}
             onChange={(event) =>
-              (choice.value = event.currentTarget.value as "drain" | "mark-condition")
+              setChoice(event.currentTarget.value as "drain" | "mark-condition")
             }
           >
             <option value="drain">Drain the wand until camp</option>
@@ -36,13 +36,13 @@ export function Dw2ItemUse({ campaign, character, item, editable }: ItemUseProps
             </option>
           </select>
         </label>
-        {choice.value === "mark-condition" && availableConditions.length > 0 && (
+        {choice === "mark-condition" && availableConditions.length > 0 && (
           <label className="field">
             Condition
             <select
-              value={condition.value || availableConditions[0]!.id}
+              value={condition || availableConditions[0]!.id}
               disabled={!editable || outOfUses}
-              onChange={(event) => (condition.value = event.currentTarget.value)}
+              onChange={(event) => setCondition(event.currentTarget.value)}
             >
               {availableConditions.map((entry) => (
                 <option key={entry.id} value={entry.id}>
@@ -57,17 +57,17 @@ export function Dw2ItemUse({ campaign, character, item, editable }: ItemUseProps
           disabled={
             !editable ||
             outOfUses ||
-            (choice.value === "mark-condition" && !availableConditions.length)
+            (choice === "mark-condition" && !availableConditions.length)
           }
           onClick={() =>
             consumeDungeonWorld2Item(
               campaign,
               character.id,
               item.id,
-              choice.value === "mark-condition"
+              choice === "mark-condition"
                 ? {
                     kind: "mark-condition",
-                    condition: condition.value || availableConditions[0]!.id,
+                    condition: condition || availableConditions[0]!.id,
                   }
                 : { kind: "drain" },
             )
@@ -84,10 +84,10 @@ export function Dw2ItemUse({ campaign, character, item, editable }: ItemUseProps
         <label className="field">
           Effect
           <select
-            value={choice.value}
+            value={choice}
             disabled={!editable || outOfUses}
             onChange={(event) =>
-              (choice.value = event.currentTarget.value as "heal" | "clear-locked")
+              setChoice(event.currentTarget.value as "heal" | "clear-locked")
             }
           >
             <option value="heal">Recover half lost HP</option>
@@ -96,13 +96,13 @@ export function Dw2ItemUse({ campaign, character, item, editable }: ItemUseProps
             </option>
           </select>
         </label>
-        {choice.value === "clear-locked" && locked.length > 0 && (
+        {choice === "clear-locked" && locked.length > 0 && (
           <label className="field">
             Locked Condition
             <select
-              value={condition.value || locked[0]}
+              value={condition || locked[0]}
               disabled={!editable || outOfUses}
-              onChange={(event) => (condition.value = event.currentTarget.value)}
+              onChange={(event) => setCondition(event.currentTarget.value)}
             >
               {locked.map((entry) => (
                 <option key={entry} value={entry}>
@@ -117,16 +117,16 @@ export function Dw2ItemUse({ campaign, character, item, editable }: ItemUseProps
           disabled={
             !editable ||
             outOfUses ||
-            (choice.value === "clear-locked" ? !locked.length : !missingHp)
+            (choice === "clear-locked" ? !locked.length : !missingHp)
           }
           onClick={() =>
             consumeDungeonWorld2Item(
               campaign,
               character.id,
               item.id,
-              choice.value === "heal"
+              choice === "heal"
                 ? { kind: "heal-half-lost" }
-                : { kind: "clear-locked", condition: condition.value || locked[0]! },
+                : { kind: "clear-locked", condition: condition || locked[0]! },
             )
           }
         >
