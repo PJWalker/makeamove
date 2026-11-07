@@ -60,7 +60,7 @@
               - generic [ref=e640]:
                 - text: Moves
                 - textbox "Moves" [ref=e642]:
-                  - paragraph [ref=e643]: Type @ to link a note, character, gear or move.
+                  - paragraph [ref=e643]: Type @ to link
               - region "Inventory" [ref=e644]:
                 - heading "Inventory" [level=3] [ref=e645]
                 - paragraph [ref=e646]: Nothing carried yet. Drag gear here from the Libraries.
@@ -68,7 +68,7 @@
               - generic [ref=e648]:
                 - text: Notes
                 - textbox "Notes" [ref=e650]:
-                  - paragraph [ref=e651]: Type @ to link a note, character, gear or move.
+                  - paragraph [ref=e651]: Type @ to link
             - region "Relationships" [ref=e652]:
               - heading "Relationships" [level=3] [ref=e653]
               - button "Web" [ref=e655] [cursor=pointer]

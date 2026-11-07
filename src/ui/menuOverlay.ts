@@ -23,11 +23,21 @@ export function useMenuOverlay<T extends HTMLElement>({
   const insideRefs = useRef(inside);
   dismiss.current = onDismiss;
   insideRefs.current = inside;
+  const left = anchor?.left;
+  const top = anchor?.top;
+  const bottom = anchor?.bottom;
 
   useLayoutEffect(() => {
-    if (!open || !ref.current || !anchor) return;
-    placeAnchored(ref.current, anchor, gap);
-  }, [open, ref, anchor?.left, anchor?.top, anchor?.bottom, gap, positionKey]);
+    if (
+      !open ||
+      !ref.current ||
+      left === undefined ||
+      top === undefined ||
+      bottom === undefined
+    )
+      return;
+    placeAnchored(ref.current, { left, top, bottom }, gap);
+  }, [open, ref, left, top, bottom, gap, positionKey]);
 
   useLayoutEffect(() => {
     if (!open) return;

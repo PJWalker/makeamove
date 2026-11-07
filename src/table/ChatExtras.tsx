@@ -1,6 +1,6 @@
 import type * as React from "react";
 import { signal, useSignal } from "@preact/signals-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useRef } from "react";
 import { fieldsOf, getState, setState, withField } from "../features/chat/messageState";
 import {
   commandText,
@@ -115,9 +115,10 @@ export function EditBox({
 /** The clock now, ticking every half second while something needs it. */
 function useNow(running: boolean): number {
   const now = useSignal(Date.now());
+  const updateNow = useEffectEvent(() => (now.value = Date.now()));
   useEffect(() => {
     if (!running) return;
-    const t = window.setInterval(() => (now.value = Date.now()), 500);
+    const t = window.setInterval(updateNow, 500);
     return () => clearInterval(t);
   }, [running]);
   return now.value;
@@ -147,7 +148,7 @@ function useRinging(done: boolean): boolean {
     if (done && !was.current) ringing.value = true;
     if (!done) ringing.value = false;
     was.current = done;
-  }, [done]);
+  }, [done, ringing]);
   useEffect(() => {
     if (!ringing.value) return;
     let timer = 0;
@@ -162,7 +163,7 @@ function useRinging(done: boolean): boolean {
       clearTimeout(timer);
       document.removeEventListener("visibilitychange", arm);
     };
-  }, [ringing.value]);
+  }, [ringing, ringing.value]);
   return ringing.value;
 }
 
@@ -372,14 +373,16 @@ export function PinnedStrip({
   const pinned = messages.filter(
     (m) => ids.has(m.id) && visibilityOf(m, me, gm) === "full",
   );
-  const shown = new Set(pinned.map((m) => m.id));
+  const shownIds = pinned.map((m) => m.id).join(" ");
+  const shown = new Set(shownIds.split(" ").filter(Boolean));
 
   // Unpinned ones stay a moment to fold away.
   const leaving = useSignal<Set<string>>(new Set());
   const before = useRef<Set<string>>(shown);
   useEffect(() => {
-    const gone = [...before.current].filter((id) => !shown.has(id));
-    before.current = shown;
+    const currentShown = new Set(shownIds.split(" ").filter(Boolean));
+    const gone = [...before.current].filter((id) => !currentShown.has(id));
+    before.current = currentShown;
     if (!gone.length) return;
     leaving.value = new Set([...leaving.value, ...gone]);
     window.setTimeout(
@@ -389,7 +392,7 @@ export function PinnedStrip({
         )),
       PIN_LEAVE_MS,
     );
-  }, [pinnedIds, messages]);
+  }, [shownIds, leaving]);
   // Those here when the strip first drew came with it.
   const initial = useRef(shown).current;
 

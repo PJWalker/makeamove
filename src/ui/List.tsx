@@ -33,8 +33,11 @@ export function ListRow({
   onPick,
   row,
   pick,
+  before,
   children,
 }: {
+  /** Before the row's button, such as a toggle to show what it holds. */
+  before?: ReactNode | undefined
   /** An icon or avatar before the name. */
   lead?: ReactNode | undefined
   name: string
@@ -55,6 +58,7 @@ export function ListRow({
 }) {
   return (
     <li className="list-row" data-selected={selected || undefined} data-dim={dim || undefined} {...row}>
+      {before}
       <button type="button" className="list-pick" aria-current={selected || undefined} onClick={onPick} {...pick}>
         {lead && <span className="list-lead">{lead}</span>}
         <span className="list-name">{name}</span>
@@ -104,6 +108,15 @@ export function ListGroup({
       )}
       {open && children}
     </section>
+  )
+}
+
+/** A row's toggle to show or hide what it holds; a spacer in its place keeps names aligned. */
+export function ListExpand({ open, onToggle, label }: { open: boolean; onToggle: () => void; label: string }) {
+  return (
+    <button type="button" className="list-expand" aria-expanded={open} aria-label={label} onClick={onToggle}>
+      <span className="list-caret" aria-hidden="true" />
+    </button>
   )
 }
 

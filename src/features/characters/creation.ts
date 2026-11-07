@@ -1,5 +1,5 @@
 import type { DataValue } from '../../core/types'
-import type { ChoiceDef, CreationDef, GameSystem, OptionDef, ScoreMethods } from '../../systems/types'
+import { atLevel, type ChoiceDef, type CreationDef, type GameSystem, type OptionDef, type ScoreMethods } from '../../systems/types'
 import { parseCommaList } from '../../lib/list'
 
 /*
@@ -11,19 +11,21 @@ import { parseCommaList } from '../../lib/list'
 
 /** Choices available at creation or a system-defined advancement point. */
 export function choicesAt(creation: CreationDef | undefined, at: 'create' | number, data: Record<string, DataValue> = {}, scores: Record<string, number> = {}): ChoiceDef[] {
+  const level = typeof at === 'number' ? at : 1
   return (creation?.choices ?? [])
     .filter((c) => c.at === at || c.at === 'advance' && typeof at === 'number')
     .map((c) => ({
       ...c,
       options: c.options.filter((o) =>
+        (!o.minLevel || level >= o.minLevel) &&
         Object.entries(o.requires ?? {}).every(
           ([field, value]) => data[field] === value,
         ) && (!o.requiresAny || o.requiresAny.some((requirements) =>
           Object.entries(requirements).every(([field, value]) => data[field] === value),
         )) && Object.entries(o.notRequires ?? {}).every(([field, value]) => data[field] !== value) &&
         (o.requiresFilled ?? []).every((field) => !!data[field]) &&
-        (!o.requiresScoreBelow || (scores[o.requiresScoreBelow.stat] ?? 0) < o.requiresScoreBelow.value) &&
-        (o.limits ?? []).every(({ field, prefix, max }) => parseCommaList(String(data[field] ?? '')).filter((value) => value && (!prefix || value.startsWith(prefix))).length < max) &&
+        (!o.requiresScoreBelow || (scores[o.requiresScoreBelow.stat] ?? 0) < atLevel(o.requiresScoreBelow.value, level)) &&
+        (o.limits ?? []).every(({ field, prefix, max }) => parseCommaList(String(data[field] ?? '')).filter((value) => value && (!prefix || value.startsWith(prefix))).length < atLevel(max, level)) &&
         (o.requiresIncludes ?? []).every(({ field, value }) => parseCommaList(String(data[field] ?? '')).includes(value)) &&
         (o.notIncludes ?? []).every(({ field, value }) => !parseCommaList(String(data[field] ?? '')).includes(value)),
       ),

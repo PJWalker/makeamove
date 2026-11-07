@@ -1,5 +1,5 @@
 import { useSignal } from '@preact/signals-react'
-import { useEffect, useRef } from 'react'
+import { useEffect, useEffectEvent, useRef } from 'react'
 import type * as Y from 'yjs'
 
 /**
@@ -23,15 +23,16 @@ export function useY<T, EventType>(
   const value = read()
   const shown = useRef(value)
   shown.current = value
+  const bump = useEffectEvent(() => {
+    if (!Object.is(latest.current(), shown.current)) changes.value++
+  })
 
   useEffect(() => {
     if (!type) return
-    const bump = () => {
-      if (!Object.is(latest.current(), shown.current)) changes.value++
-    }
-    type.observeDeep(bump)
-    bump()
-    return () => type.unobserveDeep(bump)
+    const onChange = () => bump()
+    type.observeDeep(onChange)
+    onChange()
+    return () => type.unobserveDeep(onChange)
   }, [type])
 
   // Reading the counter subscribes this component to it.

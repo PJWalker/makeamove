@@ -15,6 +15,7 @@ import { device } from '../platform/device'
 import {
   useCallback,
   useEffect,
+  useEffectEvent,
   useRef,
   useState,
   type DragEvent as ReactDragEvent,
@@ -132,12 +133,12 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
       selectCharacter(campaign, id)
       showPanel('characters')
     })
-  }, [controller.value])
+  }, [controller.value, campaign])
 
   useEffect(() => {
     renderer.init(hostRef.current!).then(() => (ready.value = true))
     return () => renderer.destroy()
-  }, [])
+  }, [renderer, ready])
 
   // Keep linked tokens' stats current as characters change.
   useEffect(() => {
@@ -146,7 +147,7 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
     push()
     campaign.characters.observeDeep(push)
     return () => campaign.characters.unobserveDeep(push)
-  }, [ready.value, campaign])
+  }, [ready.value, campaign, renderer])
 
   // Light and sight: the scene's lighting, the GM's walls and lights, and for
   // a player in a scene with vision on, sight through their own characters' tokens.
@@ -179,7 +180,7 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
       campaign.characters.unobserveDeep(push)
       campaign.members.unobserveDeep(push)
     }
-  }, [controller.value, campaign])
+  }, [controller.value, campaign, renderer])
 
   // Condition pips on linked tokens, and the ring on whoever's turn it is.
   useEffect(() => {
@@ -194,7 +195,7 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
       campaign.combat.unobserve(push)
       campaign.combatants.unobserve(push)
     }
-  }, [ready.value, campaign])
+  }, [ready.value, campaign, renderer])
 
   // Open the scene's subdocument and drive it, swapping on scene change.
   useEffect(() => {
@@ -304,7 +305,7 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
       renderer.setElements([])
       scene?.destroy()
     }
-  }, [ready.value, sceneId])
+  }, [ready.value, sceneId, campaign, controller, renderer])
 
   useSignalEffect(() => {
     const ctl = controller.value
@@ -378,10 +379,13 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
 
   // Text: typed in a box where it goes on the map.
   const textEdit = useSignal<{ at: Point; screen: Point; id?: string; text?: string } | null>(null)
+  const setTextEdit = useEffectEvent((req: NonNullable<typeof textEdit.value>) => {
+    textEdit.value = req;
+  });
   useEffect(() => {
     const ctl = controller.value
     if (!ctl) return
-    ctl.onTextRequest = (req) => (textEdit.value = req)
+    ctl.onTextRequest = (req) => setTextEdit(req)
     return () => void (ctl.onTextRequest = null)
   }, [controller.value])
   const commitText = (value: string) => {
@@ -391,37 +395,43 @@ export default function SceneCanvas({ campaign, sceneId }: { campaign: Campaign;
   }
 
   // Keyboard shortcuts, unless a field or dialog has the keyboard.
-  useEffect(() => {
+  const onDown = useEffectEvent((e: KeyboardEvent) => {
     // Pop-ups are non-modal: only keys aimed inside one stay with it.
-    const blocked = (e: KeyboardEvent) => isTyping(e.target) || !!(e.target as Element).closest?.('dialog')
-    const onDown = (e: KeyboardEvent) => {
-      if (e.defaultPrevented || blocked(e)) return
-      // Space only pans when nothing focusable would otherwise take it.
-      if (e.key === ' ' && document.activeElement instanceof HTMLButtonElement) return
-      if (controller.value?.onKeyDown(e)) e.preventDefault()
-    }
-    const onUp = (e: KeyboardEvent) => controller.value?.onKeyUp(e)
-    const onBlur = () => controller.value?.onBlur()
-    const onPaste = (e: ClipboardEvent) => {
-      const ctl = controller.value
-      const files = [...(e.clipboardData?.files ?? [])].filter((f) => f.type.startsWith('image/'))
-      if (!ctl || !files.length || isTyping(e.target)) return
-      e.preventDefault()
-      ctl.importFiles(files, ctl.centre())
-    }
-    window.addEventListener('keydown', onDown)
-    window.addEventListener('keyup', onUp)
-    window.addEventListener('blur', onBlur)
-    document.addEventListener('paste', onPaste)
+    const blocked = (event: KeyboardEvent) => isTyping(event.target) || !!(event.target as Element).closest?.('dialog')
+    if (e.defaultPrevented || blocked(e)) return
+    // Space only pans when nothing focusable would otherwise take it.
+    if (e.key === ' ' && document.activeElement instanceof HTMLButtonElement) return
+    if (controller.value?.onKeyDown(e)) e.preventDefault()
+  });
+  const onUp = useEffectEvent((e: KeyboardEvent) => controller.value?.onKeyUp(e));
+  const onBlur = useEffectEvent(() => controller.value?.onBlur());
+  const onPaste = useEffectEvent((e: ClipboardEvent) => {
+    const ctl = controller.value
+    const files = [...(e.clipboardData?.files ?? [])].filter((f) => f.type.startsWith('image/'))
+    if (!ctl || !files.length || isTyping(e.target)) return
+    e.preventDefault()
+    ctl.importFiles(files, ctl.centre())
+  });
+  useEffect(() => {
+    const onDownListener = (e: KeyboardEvent) => {
+      onDown(e)
+    };
+    const onUpListener = (e: KeyboardEvent) => onUp(e);
+    const onBlurListener = () => onBlur();
+    const onPasteListener = (e: ClipboardEvent) => onPaste(e);
+    window.addEventListener('keydown', onDownListener)
+    window.addEventListener('keyup', onUpListener)
+    window.addEventListener('blur', onBlurListener)
+    document.addEventListener('paste', onPasteListener)
     return () => {
-      window.removeEventListener('keydown', onDown)
-      window.removeEventListener('keyup', onUp)
-      window.removeEventListener('blur', onBlur)
-      document.removeEventListener('paste', onPaste)
+      window.removeEventListener('keydown', onDownListener)
+      window.removeEventListener('keyup', onUpListener)
+      window.removeEventListener('blur', onBlurListener)
+      document.removeEventListener('paste', onPasteListener)
     }
   }, [])
 
-  const closeMenu = useCallback(() => (menu.value = null), [])
+  const closeMenu = useCallback(() => (menu.value = null), [menu])
 
   /** Open the right-click menu for whatever is at a client point. */
   function openMenuAt(x: number, y: number) {
@@ -699,7 +709,7 @@ function TokenOptionsDialog({
     getCharacter(campaign, token?.characterId),
   );
 
-  useEffect(() => {
+  const initializeTokenOptions = useEffectEvent(() => {
     if (!token) return;
     name.value = token.name;
     style.value = isPlainToken(token) ? "plain" : "disc";
@@ -713,6 +723,11 @@ function TokenOptionsDialog({
     const cells = Math.max(token.w, token.h) / grid.size;
     size.value =
       system.sizes.find((z) => Math.abs(z.cells - cells) < 0.01)?.id ?? "";
+  });
+
+  useEffect(() => {
+    if (!id) return;
+    initializeTokenOptions();
     openPopup(ref.current);
   }, [id]);
 

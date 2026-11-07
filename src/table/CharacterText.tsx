@@ -20,7 +20,7 @@ export function CharacterText({
   field,
   label,
   editable,
-  placeholder = 'Type @ to link a note, character, gear or move.',
+  placeholder = 'Type @ to link',
 }: {
   campaign: Campaign
   c: CharacterView
@@ -41,7 +41,7 @@ export function CharacterText({
   useEffect(() => {
     if (shown || !editable) return
     campaign.characters.get(c.id)?.set(key, new Y.XmlFragment())
-  }, [shown, editable, c.id, key])
+  }, [shown, editable, c.id, key, campaign.characters])
 
   useEffect(() => {
     const host = hostRef.current
@@ -56,7 +56,7 @@ export function CharacterText({
       shared: true,
     })
     return () => rich.destroy()
-  }, [shown, editable])
+  }, [shown, editable, campaign, label, own, placeholder])
 
   /** A copy's first press: its own text, starting from the template's. */
   const fork = () => {
@@ -85,7 +85,7 @@ export function GMCharacterText({
   field,
   label,
   editable,
-  placeholder = 'Type @ to link a note, character, gear or move.',
+  placeholder = 'Type @ to link',
 }: {
   campaign: Campaign
   c: CharacterView
@@ -138,7 +138,7 @@ function VaultCharacterText({
       shared: false,
     })
     return () => rich.destroy()
-  }, [shown, editable, label, placeholder])
+  }, [shown, editable, label, placeholder, campaign, own])
 
   const fork = () => {
     if (!editable || own || !inherited) return

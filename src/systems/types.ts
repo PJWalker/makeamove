@@ -68,6 +68,22 @@ export interface ResourceDef {
   resets?: ResetEvent[]
 }
 
+/**
+ * A number on a character that text can change with an inline button,
+ * written [[+1 XP]] or [[-1 Treasure|Spend 1 Treasure]].
+ */
+export interface TrackerDef {
+  id: string
+  name: string
+  /** Other names text may use for it ("Treasure boxes"). */
+  aliases?: string[]
+  /** Where it's kept: a resource, or one of the system's data fields. */
+  resource?: string
+  data?: string
+  /** Its maximum: a number, or a derived value's name. */
+  max?: number | string
+}
+
 /** A condition a character can have, and what it does while they have it. */
 export interface ConditionDef {
   id: string
@@ -197,6 +213,8 @@ export interface ActionDef {
   name: string;
   /** The system's grouping, for filters. */
   category: string;
+  /** A move limited per character or per campaign session. */
+  sessionUse?: "character" | "campaign";
   /** When it applies, in a line. */
   trigger: string;
   /** The full rules text. */
@@ -246,8 +264,16 @@ export interface ItemDef {
   name: string
   description: string
   weight: number
+  /** Optional abstract Wealth tier cost used by systems with campaign economies. */
+  wealthCost?: { rank: number; tier: string }
   /** Total uses, for things that run out (rations, ammo, potions). */
   uses?: number
+  /** Uses refreshed when a DW2 camp is completed. */
+  resetUsesAtCamp?: boolean
+  /** Deterministic use behavior supported by the inventory UI. */
+  itemUse?: "healing-potion" | "hearty-feast" | "magic-wand"
+  /** Progress and move choices for a source-defined Artifact. */
+  artifact?: ArtifactDef
   tags: string[]
   effects?: Effect[]
   /** Which state turns the effects on; defaults to 'carried'. */
@@ -258,9 +284,23 @@ export interface ItemDef {
   icon?: string
 }
 
+export interface ArtifactDef {
+  track: string
+  capacity: number
+  unlocks: { id: string; name: string; text?: string }[]
+  unlockMode: "choose" | "sequential" | "sequential-replace"
+  requiresEquipped?: boolean
+}
+
 export interface TagDef {
   id: string
   name: string
+  text: string
+}
+
+export interface ReferenceSectionDef {
+  id: string
+  title: string
   text: string
 }
 
@@ -339,14 +379,37 @@ export interface OptionDef {
   /** System-owned data changes applied when this advancement is selected. */
   dataBoost?: { field: string; by: number }[];
   /** Offer only while this stat is below the given score. */
-  requiresScoreBelow?: { stat: string; value: number };
-  limits?: { field: string; prefix?: string; max: number }[];
+  requiresScoreBelow?: { stat: string; value: ByLevel };
+  /** How many of a list field's values (those starting with prefix) a character may have. */
+  limits?: { field: string; prefix?: string; max: ByLevel }[];
+  /** Offered only from this advancement level on. */
+  minLevel?: number;
+  /** A heading the option sits under among its choice's options ("Gain a Path"). */
+  group?: string;
   /** Show when any one set of system-defined requirements matches. */
   requiresAny?: Record<string, DataValue>[];
   /** Show when every value exists in a comma-separated system choice field. */
   requiresIncludes?: { field: string; value: string }[];
   /** Hide when a value already exists in a comma-separated choice field. */
   notIncludes?: { field: string; value: string }[];
+}
+
+/**
+ * A number that can change with level: a plain number, or the value from each
+ * level on ({ 1: 2, 5: 3, 10: 4 } is 2 until level 5, then 3, then 4 from 10).
+ */
+export type ByLevel = number | Record<number, number>;
+
+/** A ByLevel value at a level: the entry for the highest level at or below it. */
+export function atLevel(value: ByLevel, level: number): number {
+  if (typeof value === "number") return value;
+  let out = 0;
+  let best = -Infinity;
+  for (const [from, n] of Object.entries(value)) {
+    const at = Number(from);
+    if (at <= level && at > best) [best, out] = [at, n];
+  }
+  return out;
 }
 
 /** A choice made when creating or advancing a character, kept in a data field. */
@@ -374,10 +437,23 @@ export interface ScoreMethods {
   roll?: string
 }
 
+export interface ScoreAssignmentOption {
+  id: string;
+  name: string;
+  text: string;
+  scores: Record<string, number>;
+}
+
 /** Character creation and advancement, as data the core's guided flow walks through. */
 export interface CreationDef {
   choices: ChoiceDef[];
   scores: ScoreMethods;
+  /** Class-specific complete score assignments, when a class defines its own prompt. */
+  classScoreAssignments?: Record<string, ScoreAssignmentOption[]>;
+  /** Character-data field containing item ids to add to inventory after creation. */
+  startingItemsField?: string;
+  /** Require every non-optional creation choice to be selected before creating. */
+  requireAllCreationChoicesAtCreate?: boolean;
   /** Fields that gather repeated choice ids as comma-separated values. */
   listFields?: string[];
   /** The system's data field that tracks advancement, if it has one. */
@@ -482,6 +558,36 @@ export interface Derived {
   resolved: Resolved
 }
 
+/**
+ * An entry in a system's own Libraries layout: one of its items or moves by
+ * id, or a rules entity (a class, a path, a struggle) that can hold others.
+ */
+export type LibraryNode = (
+  | { item: string }
+  | { move: string }
+  | { entity: { id: string; name: string; text: string; icon?: string } }
+) & {
+  /** A few words on when or how it applies: "Level 5+", "Starting move". */
+  note?: string;
+  /** What it holds, under headings: a class's paths, a path's moves. */
+  groups?: LibraryNodeGroup[];
+};
+
+export interface LibraryNodeGroup {
+  id: string;
+  name: string;
+  /** How many to take, or similar: "Choose 2". */
+  note?: string;
+  entries: LibraryNode[];
+}
+
+export interface LibraryLayoutCollection {
+  id: string;
+  name: string;
+  kind: "item" | "move" | "option";
+  entries: LibraryNode[];
+}
+
 export interface GameSystem {
   id: string;
   name: string;
@@ -525,6 +631,8 @@ export interface GameSystem {
   conditions: ConditionDef[];
   modifiers: ModifierDef[];
   resources: ResourceDef[];
+  /** What inline buttons in text can change; the resources if absent. */
+  trackers?: TrackerDef[];
   /** The system's own character fields. */
   characterData: DataField[];
   /** Shared system state such as crew tier or the GM's Fear pool. */
@@ -540,6 +648,14 @@ export interface GameSystem {
   npcFields: NpcFieldDef[];
   /** Optional prepared monster/NPC entries for the system library. */
   monsters?: MonsterDef[];
+  /**
+   * The system's gear, moves and character options as it wants them browsed,
+   * nested where they belong. Without it, the Libraries list each kind flat.
+   * Tags and monsters are listed as usual either way.
+   */
+  library?: LibraryLayoutCollection[];
+  /** Searchable, system-provided guidance for the GM. */
+  gmReference?: ReferenceSectionDef[];
   /** A character's effective numbers, from their record and every active effect source. */
   derive(c: CharacterView, sources: EffectSource[]): Derived;
   /** The actions a character has. */

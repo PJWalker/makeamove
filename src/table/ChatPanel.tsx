@@ -4,6 +4,7 @@ import {
   useSignal,
   useSignalEffect,
 } from "@preact/signals-react";
+import { FormattedText } from "./FormattedText";
 import type { ReactNode } from "react";
 import { memo } from "react";
 import {
@@ -150,7 +151,7 @@ export function ChatPanel({ campaign }: { campaign: Campaign }) {
   const menu = useSignal<{ x: number; y: number; items: MenuItem[] } | null>(
     null,
   );
-  const closeMenu = useCallback(() => (menu.value = null), []);
+  const closeMenu = useCallback(() => (menu.value = null), [menu]);
   const openMenu = useCallback(
     (x: number, y: number, id: string) => {
       const m = campaign.chat.messages
@@ -184,7 +185,7 @@ export function ChatPanel({ campaign }: { campaign: Campaign }) {
       }
       if (items.length) menu.value = { x, y, items };
     },
-    [campaign],
+    [campaign, menu],
   );
 
   // Something dragged onto the chat is sent as a link (into the message box, it joins the message instead).
@@ -578,11 +579,12 @@ const Message = memo(function Message({
   );
   // Fixed when it mounts, so a re-render mid-animation doesn't cut it short.
   const arriving = useRef(fresh && !arrived.has(m.id)).current;
+  const arrival = useRef({ fresh, id: m.id, mine, arriving }).current;
   useEffect(() => {
-    if (!fresh) return;
-    arrived.add(m.id);
-    if (arriving && !mine) playUiSound("message");
-  }, []);
+    if (!arrival.fresh) return;
+    arrived.add(arrival.id);
+    if (arrival.arriving && !arrival.mine) playUiSound("message");
+  }, [arrival]);
   const pinned = useY(campaign.messageState, () => isPinned(campaign, m.id));
   if (m.kind === "system") {
     const session = m.event === "session-start" || m.event === "session-end";
@@ -1187,7 +1189,7 @@ function MoveCard({
         <span className="roll-formula">{m.moveName}</span>
         <span className="roll-comment">{m.characterName}</span>
       </div>
-      {m.text && m.text !== m.outcome && <p className="move-text">{m.text}</p>}
+      {m.text && m.text !== m.outcome && <FormattedText campaign={campaign} text={m.text} />}
       {m.targets?.some((t) => t.roll) ? (
         <TargetRolls campaign={campaign} m={m} />
       ) : (
@@ -1217,7 +1219,7 @@ function MoveCard({
         </div>
       )}
       {label && <div className="move-band">{label}</div>}
-      <p className="move-outcome">{m.outcome}</p>
+      <FormattedText campaign={campaign} text={m.outcome} characterId={m.characterId ?? null} className="move-outcome" />
       {m.save && <SaveRequests campaign={campaign} m={m} />}
       {canAct && m.suggestions.length > 0 && (
         <div className="move-suggest">

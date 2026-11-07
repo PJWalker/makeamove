@@ -1,4 +1,6 @@
 import { useSignal } from '@preact/signals-react'
+import { plainText } from "../features/characters/trackers";
+import { MoveBody } from "./MoveBody";
 import type { ReactNode } from 'react'
 import { useEffect, useLayoutEffect } from "react";
 import { addItem, canEdit, getCharacter, selectedCharacterId, startMove, systemOf } from '../features/characters/api'
@@ -102,7 +104,7 @@ function LinkDialog({
       content: children,
       close: () => closeLink(link),
     });
-  }, [campaign, id, link, title, children]);
+  }, [campaign, id, link, title, children, menuItems]);
   return null;
 }
 
@@ -157,7 +159,8 @@ function LinkPopup({ campaign, link }: { campaign: Campaign; link: LinkRef }) {
           entryKey={entryKey}
           windowId={entityTabId(`link:${linkKey(link)}`)}
           title={move.name}
-          text={move.text}
+          text={plainText(move.text)}
+          body={<MoveBody campaign={campaign} move={move} characterId={me?.id ?? null} />}
           tags={tag ? [tag] : undefined}
           onClose={close}
           proxy={linkProxy(

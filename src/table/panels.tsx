@@ -7,6 +7,7 @@ import {
   IconCombat,
   IconItems,
   IconLibraries,
+  IconReference,
   IconMembers,
   IconNotes,
   IconRemoveMember,
@@ -37,6 +38,11 @@ const LibrariesPanel = lazy(() =>
     default: module.LibrariesPanel,
   })),
 );
+const ReferencePanel = lazy(() =>
+  import("./ReferencePanel").then((module) => ({
+    default: module.ReferencePanel,
+  })),
+);
 const NotesPanel = lazy(() =>
   import("./NotesPanel").then((module) => ({ default: module.NotesPanel })),
 );
@@ -56,6 +62,7 @@ export const PANELS: Record<
   characters: { label: "Characters", Icon: IconCharacters },
   combat: { label: "Combat", Icon: IconCombat },
   libraries: { label: "Libraries", Icon: IconLibraries },
+  reference: { label: "Reference", Icon: IconReference },
   items: { label: "Items", Icon: IconItems },
   notes: { label: "Notes", Icon: IconNotes },
   members: { label: "Members", Icon: IconMembers },
@@ -85,6 +92,8 @@ export function PanelContent({
         <CharactersPanel campaign={campaign} />
       ) : id === "libraries" ? (
         <LibrariesPanel campaign={campaign} />
+      ) : id === "reference" ? (
+        <ReferencePanel campaign={campaign} />
       ) : id === "notes" ? (
         <NotesPanel campaign={campaign} />
       ) : id === "combat" ? (

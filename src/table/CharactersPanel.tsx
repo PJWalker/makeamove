@@ -1,6 +1,7 @@
 import { useSignal } from "@preact/signals-react";
 import { useEffect, useRef } from "react";
 import {
+  addItem,
   canEdit,
   createFolder,
   deleteFolder,
@@ -17,6 +18,7 @@ import {
   selectedCharacterId,
   systemOf,
 } from "../features/characters/api";
+import { setRelationship, setRelationshipDepth } from "../features/characters/relationships";
 import type { CharacterView } from "../features/characters/types";
 import type { Campaign } from "../campaign/campaign";
 import { useY } from "../ui/useY";
@@ -49,6 +51,8 @@ import { CharacterSheet } from "./sheets";
 import { showLink } from "./linkState";
 import { FolderTree } from "./FolderTree";
 import { charactersLayout } from "./panelLayouts";
+import { classCreationGuidance } from "../systems/dungeon-world-2/classGuidance";
+import { parseCommaList } from "../lib/list";
 
 
 export function CharactersPanel({ campaign }: { campaign: Campaign }) {
@@ -81,7 +85,7 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
       go("list");
     else if (seen.current !== selectedId && selectedId) go("detail");
     seen.current = selectedId;
-  }, [selectedId]);
+  }, [selectedId, campaign.characters, go]);
 
   return (
     <TwoPane
@@ -118,6 +122,7 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
               campaign={campaign}
               system={system}
               folders={folders}
+              existingCharacters={characters}
               isGm={isGm}
               initialFolder={creationFolder.value}
               onDone={() => {
@@ -135,6 +140,24 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
         </div>
       }
     />
+  );
+}
+
+function ClassCreationGuidance({ classId }: { classId: string }) {
+  const guidance = classCreationGuidance(classId);
+  if (!guidance) return null;
+  return (
+    <details className="field class-creation-guidance">
+      <summary>Class creation prompts</summary>
+      <h4>Origins</h4>
+      <p>{guidance.origins}</p>
+      <h4>Relationships</h4>
+      <p>{guidance.relationships}</p>
+      <h4>Equipment and appearance</h4>
+      <p>{guidance.equipment}</p>
+      <h4>Name and stats</h4>
+      <p>{guidance.namesAndStats}</p>
+    </details>
   );
 }
 
@@ -298,6 +321,7 @@ function NewCharacter({
   campaign,
   system,
   folders,
+  existingCharacters,
   isGm,
   initialFolder,
   onDone,
@@ -305,12 +329,20 @@ function NewCharacter({
   campaign: Campaign;
   system: GameSystem;
   folders: FolderView[];
+  existingCharacters: CharacterView[];
   isGm: boolean;
   initialFolder?: string | undefined;
   onDone: () => void;
 }) {
   const kind = useSignal<"pc" | "npc">("pc");
   const name = useSignal("");
+  const pronouns = useSignal("");
+  const ancestry = useSignal("");
+  const community = useSignal("");
+  const background = useSignal("");
+  const relationshipTo = useSignal("");
+  const relationshipText = useSignal("");
+  const relationshipDepth = useSignal("0");
   const folder = useSignal(initialFolder ?? "");
   // The guided flow: the system's choices at creation, then ability scores.
   const creation = system.creation;
@@ -348,10 +380,20 @@ function NewCharacter({
       .map((field) => [field.id, field.default]),
   );
   const choices = choicesAt(creation, "create", { ...defaults, ...choiceData });
+  const existingPcs = existingCharacters.filter((character) => character.kind === "pc");
+  const duplicateClass =
+    system.id === "dungeon-world-2" &&
+    !!choiceData.classId &&
+    existingPcs.some((character) => character.data.classId === choiceData.classId);
+  const creationChoicesReady =
+    !creation?.requireAllCreationChoicesAtCreate ||
+    choices.every((choice) => choice.optional || !!picks.value[choice.id]?.option);
   const ready =
     kind.value === "npc" ||
     !creation ||
-    scoresReady(creation.scores, method.value, scores.value);
+    (scoresReady(creation.scores, method.value, scores.value) &&
+      creationChoicesReady &&
+      (system.id !== "dungeon-world-2" || !existingPcs.length || !!relationshipTo.value));
   const submit = () => {
     if (!ready) return;
     if (kind.value === "npc")
@@ -360,12 +402,29 @@ function NewCharacter({
       const made = creation
         ? creationResult(system, scores.value, picks.value)
         : undefined;
+      if (made) {
+        made.data.pronouns = pronouns.value.trim();
+        made.data.ancestry = ancestry.value.trim();
+        made.data.community = community.value.trim();
+        made.data.background = background.value.trim();
+      }
       const id = newCharacter(
         campaign,
         name.value,
         String(choiceData.classId ?? ""),
         made,
       );
+      const startingItemsField = creation?.startingItemsField;
+      if (startingItemsField && made) {
+        for (const itemId of parseCommaList(String(made.data[startingItemsField] ?? ""))) {
+          const item = system.items.find((entry) => entry.id === itemId);
+          if (item) addItem(campaign, id, item, !!item.equippable);
+        }
+      }
+      if (system.id === "dungeon-world-2" && relationshipTo.value) {
+        setRelationship(campaign.characters, id, relationshipTo.value, relationshipText.value.trim());
+        setRelationshipDepth(campaign.characters, id, relationshipTo.value, Number(relationshipDepth.value));
+      }
       if (folder.value) moveToFolder(campaign, id, folder.value);
     }
     onDone();
@@ -402,6 +461,53 @@ function NewCharacter({
       </label>
       {kind.value === "pc" && creation && (
         <>
+          {system.id === "dungeon-world-2" && (
+            <fieldset className="form-section creation-identity">
+              <legend>Pronouns and Origins</legend>
+              <label className="field">Pronouns<input value={pronouns.value} onInput={(event) => (pronouns.value = event.currentTarget.value)} /></label>
+              <label className="field">Ancestry<input value={ancestry.value} onInput={(event) => (ancestry.value = event.currentTarget.value)} /></label>
+              <label className="field">Community<input value={community.value} onInput={(event) => (community.value = event.currentTarget.value)} /></label>
+              <label className="field">Background<input value={background.value} onInput={(event) => (background.value = event.currentTarget.value)} /></label>
+            </fieldset>
+          )}
+          {system.id === "dungeon-world-2" && existingPcs.length > 0 && (
+            <fieldset className="form-section creation-relationship">
+              <legend>Relationship</legend>
+              <label className="field">
+                PC
+                <select
+                  required
+                  value={relationshipTo.value}
+                  onChange={(event) => (relationshipTo.value = event.currentTarget.value)}
+                  onInput={(event) => (relationshipTo.value = event.currentTarget.value)}
+                >
+                  <option value="">Choose a PC</option>
+                  {existingPcs.map((character) => (
+                    <option key={character.id} value={character.id}>{character.name}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                Relationship
+                <textarea
+                  rows={2}
+                  value={relationshipText.value}
+                  onInput={(event) => (relationshipText.value = event.currentTarget.value)}
+                />
+              </label>
+              <label className="field">
+                Shared history
+                <select
+                  value={relationshipDepth.value}
+                  onChange={(event) => (relationshipDepth.value = event.currentTarget.value)}
+                >
+                  <option value="0">Just met</option>
+                  <option value="1">Adventured together</option>
+                  <option value="2">Grew up together</option>
+                </select>
+              </label>
+            </fieldset>
+          )}
           {choices.map((ch) => (
             <ChoiceField
               key={ch.id}
@@ -411,12 +517,24 @@ function NewCharacter({
               onChange={(p) => (picks.value = { ...picks.value, [ch.id]: p })}
             />
           ))}
+          {duplicateClass && (
+            <p className="muted" role="status">
+              Another PC already plays this Class. The group may prefer distinct Classes.
+            </p>
+          )}
+          {choiceData.classId && (
+            <ClassCreationGuidance classId={String(choiceData.classId)} />
+          )}
           {creation && (
             <ScoreFields
+              key={String(choiceData.classId ?? "generic")}
               system={system}
               methods={creation.scores}
               method={method}
               scores={scores}
+              {...(creation.classScoreAssignments?.[String(choiceData.classId ?? "")]
+                ? { assignments: creation.classScoreAssignments[String(choiceData.classId ?? "")] }
+                : {})}
             />
           )}
         </>

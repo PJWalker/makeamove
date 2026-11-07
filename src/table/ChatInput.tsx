@@ -71,6 +71,7 @@ export function ChatInput({
   handle: { current: ChatInputHandle | null };
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
+  const firstContent = useRef(initialContent);
   // Callbacks change every render; the editor reads the latest.
   const cb = useRef({ onChange, onEnter, onUp, onEscape });
   cb.current = { onChange, onEnter, onUp, onEscape };
@@ -121,9 +122,9 @@ export function ChatInput({
       onUpdate: ({ editor: ed }) => cb.current.onChange(ed.getJSON()),
     });
     const initial =
-      typeof initialContent === "string"
-        ? contentFromText(initialContent)
-        : (initialContent ?? emptyChatContent());
+      typeof firstContent.current === "string"
+        ? contentFromText(firstContent.current)
+        : (firstContent.current ?? emptyChatContent());
     editor.commands.setContent(initial);
     cb.current.onChange(editor.getJSON());
     handle.current = {
@@ -158,7 +159,7 @@ export function ChatInput({
       handle.current = null;
       editor.destroy();
     };
-  }, [campaign]);
+  }, [campaign, handle, label, placeholder]);
 
   return <div ref={hostRef} className={className} aria-invalid={invalid} />;
 }

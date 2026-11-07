@@ -1,6 +1,6 @@
 import type * as React from "react";
 import { useSignal } from '@preact/signals-react'
-import { useEffect, useLayoutEffect, useRef } from 'react'
+import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useRef } from 'react'
 import { lazy, Suspense } from "react";
 import { chatPopups, dismissPopup } from '../features/chat/notify'
 import type { ChatMessage } from '../features/chat/types'
@@ -62,7 +62,7 @@ export function ChatPopups({ campaign }: { campaign: Campaign }) {
     const onVisibility = () => (hidden.value = document.visibilityState === 'hidden')
     document.addEventListener('visibilitychange', onVisibility)
     return () => document.removeEventListener('visibilitychange', onVisibility)
-  }, [])
+  }, [hidden])
   const leavingAll = useSignal(false)
   const ref = useRef<HTMLDivElement>(null)
   const stack = useRef<HTMLDivElement>(null)
@@ -70,7 +70,7 @@ export function ChatPopups({ campaign }: { campaign: Campaign }) {
 
   // Beside the Chat tab, or in the corner without it.
   const placed = useRef('')
-  const place = () => {
+  const place = useCallback(() => {
     const el = ref.current
     const box = stack.current
     if (!el || !box) return
@@ -98,7 +98,7 @@ export function ChatPopups({ campaign }: { campaign: Campaign }) {
     el.style.right = next.right!
     el.style.top = next.top!
     el.style.setProperty('--tail-y', next.tail!)
-  }
+  }, [])
 
   // Follow the tab while anything is showing: it slides with its sidebar and with autohide.
   useLayoutEffect(() => {
@@ -113,14 +113,14 @@ export function ChatPopups({ campaign }: { campaign: Campaign }) {
     }
     follow()
     return () => cancelAnimationFrame(frame)
-  }, [any])
+  }, [any, place])
 
   useEffect(() => {
     if (!any) {
       held.value = false
       leavingAll.value = false
     }
-  }, [any])
+  }, [any, held, leavingAll])
 
   if (!any) return null
   return (
@@ -179,7 +179,7 @@ function Popup({
   const ref = useRef<HTMLDivElement>(null)
   const gone = useRef(false)
 
-  const leave = () => {
+  const leave = useEffectEvent(() => {
     const el = ref.current
     const box = stack.current?.getBoundingClientRect()
     if (gone.current) return
@@ -192,7 +192,7 @@ function Popup({
       () => dismissPopup(m.id),
       () => {},
     )
-  }
+  })
 
   useLayoutEffect(() => {
     // This runs before the stack's own layout effect places it, so place it now.
@@ -202,7 +202,7 @@ function Popup({
     if (el && box && !reducedMotion.matches) {
       el.animate([collapsed(box), { opacity: 1, offset: 0.4 }, { transform: 'none', opacity: 1 }], { duration: ENTER_MS, easing: EASE })
     }
-  }, [])
+  }, [place, stack])
 
   // Each waits its own time, all of them paused while the pointer is on the stack.
   useEffect(() => {

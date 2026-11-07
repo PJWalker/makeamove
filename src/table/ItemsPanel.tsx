@@ -1,4 +1,5 @@
 import { useSignal, type Signal } from '@preact/signals-react'
+import { plainText } from "../features/characters/trackers";
 import { addItem, canEdit, getCharacter, selectedCharacterId, startMove, systemOf } from '../features/characters/api'
 import { parseCommaList } from '../lib/list'
 import { toggleSetValue } from '../lib/set'
@@ -190,7 +191,7 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
                   name={e.move.name}
                   openLabel="Edit"
                   tag={rollTag(system, e.move)}
-                  tip={`${e.move.text}\n\nDrag onto a character to teach it to them.`}
+                  tip={`${plainText(e.move.text)}\n\nDrag onto a character to teach it to them.`}
                   onOpen={() => (editing.value = { kind: "move", id: e.id })}
                   onPointerDown={(ev) =>
                     dragEntity(ev, entity(campaign, "move", e.id, e.move.name))

@@ -6,11 +6,19 @@ import { bladesInTheDark as blades } from '../blades-in-the-dark'
 import { dungeonWorld2 as dw2 } from '../dungeon-world-2'
 import { daggerheart as dh } from '../daggerheart'
 import { testCharacter, testSystem } from './fixtures/testSystem'
-import { PATHS as DW2_PATHS } from '../dungeon-world-2/paths'
+import { PATHS as DW2_PATHS, sourceMoveOutcomes, sourceMoveRichText, sourceMoveText } from '../dungeon-world-2/paths'
+import { plainText } from '../../features/characters/trackers'
+import { BONDS as DW2_BONDS } from '../dungeon-world-2/bonds'
+import { STRUGGLES as DW2_STRUGGLES } from '../dungeon-world-2/struggles'
+import { addTreasureBoxes, purchaseAtWealth, wealthTierForBoxes } from '../dungeon-world-2/wealth'
+import { sourceEntries, systemLibrary, topLevelKeys, viewEntries } from '../../features/library'
+import { DW2_CLASS_SCORE_ASSIGNMENTS } from '../dungeon-world-2/stats'
+import { CLASS_CREATION_GUIDANCE } from '../dungeon-world-2/classGuidance'
 import { derive } from '../../features/characters/store'
 import type { CharacterView } from '../../features/characters/types'
 import { asksFirst, performMove, planMove } from '../../features/characters/moves'
-import { boostFrom, choicesAt } from '../../features/characters/creation'
+import { boostFrom, choicesAt, dataFrom } from '../../features/characters/creation'
+import { DW2_GEAR } from '../dungeon-world-2/gear'
 
 
 const bladesCharacter = (over: Partial<CharacterView> = {}): CharacterView => ({
@@ -146,6 +154,99 @@ describe('Blades in the Dark', () => {
 })
 
 describe('Dungeon World 2', () => {
+  it('uses the beta move text for every core and extra move', () => {
+    const sourceMoves = [
+      ['aid-a-pc', 'Aid a PC'],
+      ['cast-a-spell', 'Cast a Spell'],
+      ['comfort-or-support', 'Comfort or Support'],
+      ['defy-danger', 'Defy Danger'],
+      ['pull-strings', 'Pull Strings'],
+      ['sense-motive', 'Sense Motive'],
+      ['sneak-past', 'Sneak Past'],
+      ['spout-lore', 'Spout Lore'],
+      ['trade-blows', 'Trade Blows'],
+      ['unearth-secrets', 'Unearth Secrets'],
+      ['end-the-session', 'End the Session'],
+      ['face-death', 'Face Death'],
+      ['level-up', 'Level Up'],
+      ['make-camp', 'Make Camp'],
+      ['perform-a-ritual', 'Perform a Ritual'],
+      ['reach-your-limit', 'Reach Your Limit'],
+      ['perilous-journey', 'Undertake a Perilous Journey'],
+    ] as const
+
+    expect(sourceMoves).toHaveLength(17)
+    for (const [id, sourceName] of sourceMoves) {
+      const action = dw2.actions.find((entry) => entry.id === id)!
+      expect(action.text).toBe(sourceMoveRichText(sourceName))
+      expect(plainText(action.text).replace(/^- /gm, '').replace(/\s+/g, ' ')).toContain(sourceMoveText(sourceName).split(' ').slice(0, 6).join(' '))
+      const sourceOutcomes = sourceMoveOutcomes(sourceName)
+      if (sourceOutcomes) {
+        expect(action.steps[0]).toMatchObject({ outcomes: sourceOutcomes })
+      }
+    }
+    expect(plainText(dw2.actions.find((action) => action.id === 'aid-a-pc')!.text)).toContain(
+      'They frustrate you; erase 1 Depth with them',
+    )
+    expect(dw2.actions.find((action) => action.id === 'face-death')?.text).toContain(
+      'Go Out in a Blaze of Glory',
+    )
+    const classMoves = [
+      ['barbarian-rage', 'Rage!'],
+      ['bard-perform-art', 'Perform Your Art'],
+      ['cleric-invoke-divine', 'Invoke the Divine'],
+      ['druid-shapeshift', 'Shapeshift'],
+      ['fighter-signature-weapon', 'Signature Weapon'],
+      ['paladin-oaths', 'Oaths of Conviction'],
+      ['ranger-animal-companion', 'Animal Companion'],
+      ['rogue-tricks-trade', 'Tricks of the Trade'],
+      ['wizard-weave-arcane', 'Weave the Arcane'],
+    ] as const
+    for (const [id, sourceName] of classMoves) {
+      const action = dw2.actions.find((entry) => entry.id === id)!
+      expect(action.text).toBe(sourceMoveRichText(sourceName, 4))
+      const sourceOutcomes = sourceMoveOutcomes(sourceName, 4)
+      if (sourceOutcomes) {
+        expect(action.steps[0]).toMatchObject({ outcomes: sourceOutcomes })
+      }
+    }
+    const campaignMoves = [
+      ['enjoy-downtime', 'Enjoy Downtime'],
+      ['forge-a-bond', 'Forge a Bond'],
+      ['reveal-your-struggle', 'Reveal Your Struggle'],
+    ] as const
+    for (const [id, sourceName] of campaignMoves) {
+      expect(dw2.actions.find((entry) => entry.id === id)?.text).toBe(
+        sourceMoveRichText(sourceName, 4),
+      )
+    }
+    expect(dw2.actions.find((action) => action.id === 'barbarian-rage')?.text).toContain(
+      "You can't benefit from wearing armor",
+    )
+    expect(dw2.actions.find((action) => action.id === 'barbarian-rage')?.text).toContain(
+      'Trade Blows+STR',
+    )
+    expect(dw2.actions.find((action) => action.id === 'barbarian-rage')?.text).not.toContain(
+      'Trade Blows)+STR',
+    )
+    expect(dw2.actions.find((action) => action.id === 'bard-perform-art')?.text).toContain(
+      'marks 1 Depth with you',
+    )
+    for (const id of ['pull-strings', 'sneak-past', 'unearth-secrets']) {
+      expect(dw2.actions.find((action) => action.id === id)?.steps[0]).toMatchObject({
+        followUps: { miss: ['xp'] },
+      })
+    }
+    expect(dw2.actions.find((action) => action.id === 'face-death')?.steps[0]).not.toHaveProperty(
+      'followUps',
+    )
+    for (const action of dw2.actions.filter((entry) => entry.category === 'path')) {
+      const step = action.steps[0]
+      if (step?.kind !== 'check') continue
+      expect(Boolean(step.followUps?.miss)).toBe(/\bmark(?:s)?\s+(?:1\s+)?XP\b/i.test(step.outcomes['miss'] ?? ''))
+    }
+  })
+
   it('has valid data, five direct stats, and nine class options', () => {
     expect(checkSystem(dw2)).toEqual([])
     expect(dw2.stats.map((stat) => [stat.id, stat.min, stat.max])).toEqual([
@@ -153,6 +254,47 @@ describe('Dungeon World 2', () => {
     ])
     expect((dw2.creation?.choices ?? [])[0]!.options).toHaveLength(9)
     expect(dw2.creation?.scores.standardArray).toEqual([2, 1, 0, 0, -1])
+    expect(Object.keys(CLASS_CREATION_GUIDANCE)).toHaveLength(9)
+    expect(CLASS_CREATION_GUIDANCE.barbarian?.namesAndStats).toContain('STR is +2')
+    expect(CLASS_CREATION_GUIDANCE.bard?.equipment).toContain('artistic samples')
+    expect(CLASS_CREATION_GUIDANCE.wizard?.relationships).toContain('Relationship Examples')
+    const distributions: Record<string, string> = {
+      barbarian: '-1,0,0,2,2', bard: '-1,0,1,1,2',
+      cleric: '-1,0,1,1,2', druid: '-1,0,0,2,2',
+      fighter: '-1,0,1,1,2', paladin: '-1,0,0,2,2',
+      ranger: '-1,0,0,2,2', rogue: '-1,0,1,1,2', wizard: '-1,0,1,1,2',
+    }
+    for (const [classId, options] of Object.entries(DW2_CLASS_SCORE_ASSIGNMENTS)) {
+      expect(options.length).toBeGreaterThan(0)
+      expect(new Set(options.map((option) => option.id)).size).toBe(options.length)
+      expect(options.every((option) => Object.keys(option.scores).length === 5)).toBe(true)
+      expect(options.every((option) => Object.values(option.scores).sort((a, b) => a - b).join(',') === distributions[classId])).toBe(true)
+    }
+    expect(DW2_CLASS_SCORE_ASSIGNMENTS.fighter?.every((option) =>
+      option.scores.str === 2 && option.scores.dex === 1 ||
+      option.scores.dex === 2 && option.scores.str === 1,
+    )).toBe(true)
+    expect(dw2.tags.map((tag) => tag.id)).toEqual([
+      'ammo', 'area', 'close', 'concealed', 'distinctive', 'far', 'forceful',
+      'hand', 'holy', 'light', 'near', 'piercing', 'precise', 'reload',
+      'thrown', 'two-handed',
+    ])
+    expect(dw2.tags.find((tag) => tag.id === 'precise')?.text).toContain(
+      'Trade Blows +DEX instead of +STR',
+    )
+    expect(dw2.tags.find((tag) => tag.id === 'ammo')?.text).toContain(
+      'you might run out as a result of a GM Move',
+    )
+    expect(dw2.npcFields.map((field) => field.id)).toEqual([
+      'description', 'drive', 'resources', 'resists', 'damage', 'tags', 'conditions',
+    ])
+    expect(dw2.npcFields.filter((field) => field.type === 'longtext').map((field) => field.id)).toEqual([
+      'description', 'resources', 'resists', 'conditions',
+    ])
+    expect(DW2_BONDS).toHaveLength(7)
+    expect(DW2_BONDS.every((bond) => bond.text.length > 100)).toBe(true)
+    expect(DW2_STRUGGLES).toHaveLength(22)
+    expect(DW2_STRUGGLES.every((struggle) => struggle.text.length > 100)).toBe(true)
   })
 
   it('registers both systems for campaign selection', () => {
@@ -164,8 +306,46 @@ describe('Dungeon World 2', () => {
     const c = bladesCharacter({ scores: { dex: 1 }, conditions: ['frightened'] })
     const d = derive(c, dw2)
     expect(planMove(dw2, move, c, d).formula).toBe('3d6kl2+1[DEX]')
+    const locked = bladesCharacter({ scores: { dex: 1 }, lockedConditions: ['frightened'] })
+    expect(planMove(dw2, move, locked, derive(locked, dw2)).formula).toBe('3d6kl2+1[DEX]')
     expect(planMove(dw2, move, c, d, { mode: 'advantage' }).formula).toBe('2d6+1[DEX]')
     expect(planMove(dw2, move, bladesCharacter({ scores: { dex: -1 } }), derive(bladesCharacter({ scores: { dex: -1 } }), dw2), { mode: 'advantage' }).formula).toBe('3d6kh2-1[DEX]')
+  })
+
+  it('reduces damage with usable armor, keeps damage at one minimum, and ignores armor for piercing', () => {
+    const armored = bladesCharacter({ scores: { str: 2 }, data: { armor: 2 } })
+    const derived = derive(armored, dw2)
+    expect(dw2.resolveDamage!(armored, derived, 5, {})).toEqual({ hp: 3 })
+    expect(dw2.resolveDamage!(armored, derived, 1, {})).toEqual({ hp: 1 })
+    expect(dw2.resolveDamage!(armored, derived, 5, { type: 'piercing' })).toEqual({ hp: 5 })
+
+    const encumbered = bladesCharacter({ scores: { str: 1 }, data: { armor: 2 } })
+    expect(dw2.resolveDamage!(encumbered, derive(encumbered, dw2), 5, {})).toEqual({ hp: 5 })
+    expect(dw2.resolveDamage!(armored, derived, 0, {})).toEqual({ hp: 0 })
+  })
+
+  it('derives armor protection only from equipped armor items', () => {
+    const armor = dw2.items.find((item) => item.id === 'medium-armor')!
+    const equipped = bladesCharacter({
+      scores: { str: 2 },
+      inventory: [{
+        id: 'armor-instance', defId: armor.id, name: armor.name,
+        description: armor.description, weight: armor.weight, tags: armor.tags,
+        equipped: true, effects: armor.effects ?? [], active: 'equipped', order: '0',
+      }],
+    })
+    expect(derive(equipped, dw2).values.armor).toBe(2)
+    expect(dw2.resolveDamage!(equipped, derive(equipped, dw2), 5, {})).toEqual({ hp: 3 })
+
+    const carried = bladesCharacter({
+      scores: { str: 2 },
+      inventory: [{
+        id: 'armor-instance', defId: armor.id, name: armor.name,
+        description: armor.description, weight: armor.weight, tags: armor.tags,
+        equipped: false, effects: armor.effects ?? [], active: 'equipped', order: '0',
+      }],
+    })
+    expect(derive(carried, dw2).values.armor).toBe(0)
   })
 
   it('uses the Rogue mixed dice, including advantage and disadvantage', () => {
@@ -192,26 +372,26 @@ describe('Dungeon World 2', () => {
     expect(DW2_PATHS.every((path) => path.rules.length === 5 && path.rules.every((move) => move.text.length > 40))).toBe(true)
     expect(dw2.actions.find((action) => action.name === 'Forthright Speech')?.steps[0]).toMatchObject({ kind: 'check', stat: 'cha', outcomes: { strong: expect.stringContaining('clear a Condition') } })
     const path = DW2_PATHS.find((entry) => entry.id === 'barbarian-berserker')!
-    const choice = dw2.creation!.choices.find((entry) => entry.id === 'advancement-2')!
+    const choice = dw2.creation!.choices.find((entry) => entry.id === 'advancement')!
     expect(choice.options.some((option) => option.id === path.id)).toBe(true)
     const c = bladesCharacter({ data: { classId: 'barbarian', ownedPaths: path.id } })
     const ids = dw2.actionsFor(c, derive(c, dw2)).map((action) => action.id)
     expect(ids).toContain(`path-${path.id}-1`)
     expect(ids).not.toContain(`path-${path.id}-2`)
-    const moves = choicesAt(dw2.creation, 3, c.data).find((entry) => entry.id === 'advancement-3')!
+    const moves = choicesAt(dw2.creation, 3, c.data).find((entry) => entry.id === 'advancement')!
     expect(moves.options.some((option) => option.id === `path-move-${path.id}-2`)).toBe(true)
   })
 
   it('caps stat advancements at +2 before level 10 and allows +3 at level 10', () => {
-    const levelNine = choicesAt(dw2.creation, 9, {}, { str: 2 }).find((choice) => choice.id === 'advancement-9')!
-    expect(levelNine.options.some((option) => option.id === 'stat-str-9')).toBe(false)
-    const levelTen = choicesAt(dw2.creation, 10, {}, { str: 2 }).find((choice) => choice.id === 'advancement-10')!
-    expect(levelTen.options.some((option) => option.id === 'stat-str-10')).toBe(true)
+    const levelNine = choicesAt(dw2.creation, 9, {}, { str: 2 }).find((choice) => choice.id === 'advancement')!
+    expect(levelNine.options.some((option) => option.id === 'stat-str')).toBe(false)
+    const levelTen = choicesAt(dw2.creation, 10, {}, { str: 2 }).find((choice) => choice.id === 'advancement')!
+    expect(levelTen.options.some((option) => option.id === 'stat-str')).toBe(true)
     expect(derive(bladesCharacter({ scores: { str: 3 } }), dw2).mods.str).toBe(3)
   })
 
   it('limits tiered stat, Path, multiclass, and magic-item acquisitions', () => {
-    const data = { classId: 'barbarian', advancements: 'stat-str-2,stat-dex-3', ownedPaths: 'barbarian-berserker' }
+    const data = { classId: 'barbarian', advancements: 'stat-str,stat-dex', ownedPaths: 'barbarian-berserker' }
     const early = choicesAt(dw2.creation, 4, data).flatMap((choice) => choice.options)
     expect(early.some((option) => option.id.startsWith('stat-'))).toBe(false)
     expect(early.some((option) => option.id === 'barbarian-hedonist')).toBe(false)
@@ -223,6 +403,184 @@ describe('Dungeon World 2', () => {
     expect(choicesAt(dw2.creation, 9, secondMulticlass).flatMap((choice) => choice.options).some((option) => option.id.startsWith('multiclass-'))).toBe(false)
     expect(choicesAt(dw2.creation, 10, secondMulticlass).flatMap((choice) => choice.options).some((option) => option.id.startsWith('multiclass-'))).toBe(true)
     expect(choicesAt(dw2.creation, 10, { ...data, magicItemAward: true }).flatMap((choice) => choice.options).some((option) => option.id === 'magic-item')).toBe(false)
+  })
+
+  it('offers every source-backed Struggle once until the current one is resolved', () => {
+    const choices = choicesAt(dw2.creation, 2, { classId: 'barbarian' })
+    const options = choices.flatMap((choice) => choice.options)
+    expect(options.filter((option) => option.id.startsWith('reveal-struggle-'))).toHaveLength(22)
+    const reformed = options.find((option) => option.id === 'reveal-struggle-reformed')!
+    expect(reformed.text).toBe(DW2_STRUGGLES.find((struggle) => struggle.id === 'reformed')?.text)
+    expect(reformed.grants).toMatchObject({
+      struggleRevealed: true,
+      struggleId: 'reformed',
+      struggleTrack: 'Guilt',
+      struggleProgress: 2,
+      struggleMax: 3,
+    })
+    const alreadyRevealed = choicesAt(dw2.creation, 3, {
+      classId: 'barbarian', struggleRevealed: true,
+    }).flatMap((choice) => choice.options)
+    expect(alreadyRevealed.some((option) => option.id.startsWith('reveal-struggle-'))).toBe(false)
+  })
+
+  it('offers class-specific starting gear and gathers the selected item ids', () => {
+    const creation = dw2.creation!
+    const barbarianChoices = choicesAt(creation, 'create', { classId: 'barbarian' })
+    expect(barbarianChoices.map((choice) => choice.id)).toEqual(expect.arrayContaining([
+      'starting-weapon-barbarian',
+      'starting-item-one-barbarian',
+      'starting-item-two-barbarian',
+      'appearance-1-barbarian',
+      'appearance-2-barbarian',
+    ]))
+    expect(barbarianChoices.some((choice) => choice.id.endsWith('-bard'))).toBe(false)
+
+    const picks = {
+      class: { option: 'barbarian', pattern: 0, order: [] },
+      'starting-weapon-barbarian': { option: 'ancestral-longsword', pattern: 0, order: [] },
+      'starting-item-one-barbarian': { option: 'adventuring-gear', pattern: 0, order: [] },
+      'starting-item-two-barbarian': { option: 'hearty-feast', pattern: 0, order: [] },
+      'appearance-1-barbarian': { option: 'cultural-raiment', pattern: 0, order: [] },
+      'appearance-2-barbarian': { option: 'massive-stature', pattern: 0, order: [] },
+    }
+    const pickedOptions = Object.fromEntries(Object.entries(picks).map(([id, pick]) => [id, pick.option]))
+    const pickedData: Record<string, string | number | boolean> = {}
+    for (const choice of creation.choices) {
+      const option = choice.options.find((item) => item.id === pickedOptions[choice.id])
+      if (!option) continue
+      pickedData[choice.field] = option.id
+      Object.assign(pickedData, option.grants)
+    }
+    const made = dataFrom(
+      choicesAt(creation, 'create', pickedData),
+      pickedOptions,
+      creation.listFields,
+    )
+    expect(made.startingItems).toBe('ancestral-longsword,shield,adventuring-gear,hearty-feast')
+    expect(made.appearance1).toBe('Cultural raiment')
+    expect(made.appearance2).toBe('Massive stature')
+  })
+
+  it('tracks the beta Wealth thresholds and purchase costs', () => {
+    expect(wealthTierForBoxes(4).name).toBe('Poor')
+    expect(wealthTierForBoxes(10).name).toBe('Modest')
+    expect(wealthTierForBoxes(18).name).toBe('Comfortable')
+    expect(wealthTierForBoxes(28).name).toBe('Rich')
+    expect(wealthTierForBoxes(40).name).toBe('Aristocratic')
+    expect(purchaseAtWealth(10, 1)).toBe(10)
+    expect(purchaseAtWealth(10, 2)).toBe(9)
+    expect(purchaseAtWealth(10, 3)).toBeNull()
+    expect(addTreasureBoxes(38, 5)).toBe(40)
+  })
+
+  it('includes the common Beta v3 gear catalog and exposes typed Wealth costs', () => {
+    expect(DW2_GEAR).toHaveLength(41)
+    expect(dw2.items).toHaveLength(124)
+    const magicItems = dw2.items.filter((item) => item.tags.includes('magic'))
+    expect(magicItems).toHaveLength(61)
+    expect(magicItems.filter((item) => item.tags.includes('artifact'))).toHaveLength(6)
+    const artifacts = magicItems.filter((item) => item.tags.includes('artifact'))
+    expect(artifacts.every((item) => item.artifact?.capacity === 5 && item.artifact.unlocks.length > 0)).toBe(true)
+    expect(artifacts.find((item) => item.name === 'Alveric’s Soulstealer Blade')?.artifact?.unlocks[0]?.text).toContain('Gravity-Defying Menace')
+    expect(magicItems.find((item) => item.name === 'animated shield')).toMatchObject({
+      uses: 1,
+      tags: ['magic', 'magic-item'],
+    })
+    expect(magicItems.find((item) => item.name === 'Alveric’s Soulstealer Blade')?.description).toContain('Trapped Souls')
+    expect(dw2.items.find((item) => item.id === 'dagger')).toMatchObject({
+      wealthCost: { rank: 0, tier: 'Broke' },
+      tags: ['ammo', 'hand', 'close', 'light', 'precise', 'thrown'],
+      equippable: true,
+    })
+    expect(dw2.items.find((item) => item.id === 'potion-of-healing')).toMatchObject({
+      wealthCost: { rank: 4, tier: 'Rich' },
+      uses: 1,
+      itemUse: 'healing-potion',
+      tags: ['magic'],
+    })
+    const gearCollection = systemLibrary(dw2).collections.find((collection) => collection.id === 'gear-weapons')!
+    const dagger = gearCollection.entries.find((entry) => entry.id === 'dagger')!
+    expect(dagger.text).toContain('Cost: Broke (0)')
+  })
+
+  it('defines each advancement once, gated by level', () => {
+    const advancement = dw2.creation!.choices.filter((choice) => choice.field === 'advancements')
+    expect(advancement).toHaveLength(1)
+    const ids = advancement[0]!.options.map((option) => option.id)
+    expect(new Set(ids).size).toBe(ids.length)
+    const at = (level: number) => choicesAt(dw2.creation, level, { classId: 'barbarian' }).flatMap((choice) => choice.options).map((option) => option.id)
+    expect(at(4).some((id) => id.startsWith('multiclass-'))).toBe(false)
+    expect(at(5)).toContain('multiclass-wizard-evoker')
+    expect(at(5)).not.toContain('multiclass-barbarian-berserker')
+    expect(at(9)).not.toContain('artifact')
+    expect(at(10)).toContain('artifact')
+  })
+
+  it('nests class moves, Paths and starting kits inside classes in the Libraries', () => {
+    const lib = systemLibrary(dw2)
+    const all = sourceEntries(lib)
+    expect(all.filter((entry) => entry.kind === 'move').map((entry) => entry.id).sort()).toEqual(dw2.actions.map((action) => action.id).sort())
+    const barbarian = lib.collections.find((c) => c.id === 'classes')!.entries.find((entry) => entry.id === 'barbarian')!
+    expect(barbarian.groups?.map((group) => group.id)).toEqual(['starting-move', 'paths', 'weapon', 'equipment', 'appearance'])
+    const berserker = barbarian.groups!.find((group) => group.id === 'paths')!.entries.find((entry) => entry.id === 'barbarian-berserker')!
+    expect(berserker.groups?.[0]?.entries.map((entry) => entry.name)[0]).toBe('Trance-Like Fury')
+    expect(lib.collections.some((c) => c.name.startsWith('Advancement '))).toBe(false)
+    expect(lib.collections.find((c) => c.id === 'struggles')?.entries).toHaveLength(22)
+    const moves = viewEntries(lib.collections.find((c) => c.id === 'classes')!.entries, 'red nails')
+    expect(moves.map((view) => view.entry.id)).toEqual(['barbarian'])
+    expect(moves[0]!.reveal).toBe(true)
+    const classes = lib.collections.find((c) => c.id === 'classes')!.entries
+    expect(viewEntries(classes, 'potion of healing', 'all', topLevelKeys(lib))).toEqual([])
+  })
+
+  it('exposes source-backed GM agenda, principles, moves, and NPC guidance', () => {
+    expect(dw2.gmReference).toHaveLength(5)
+    expect(dw2.gmReference?.find((section) => section.title === 'Agenda')?.text).toContain('Portray a meaningful fantasy world')
+    expect(dw2.gmReference?.find((section) => section.title === 'Major NPCs')?.text).toContain('Drive')
+  })
+
+  it('unlocks Artifact moves and applies passive Artifact stat and HP effects', () => {
+    const soulstealer = dw2.items.find((item) => item.name === 'Alveric’s Soulstealer Blade')!
+    const caliburnus = dw2.items.find((item) => item.name === 'Caliburnus, The Sword That Heals')!
+    const mark = dw2.items.find((item) => item.name === 'Indelible Mark of Drakon')!
+    const inventoryItem = (definition: typeof soulstealer, unlocked: string[], equipped = true) => ({
+      id: `instance:${definition.id}`,
+      defId: definition.id,
+      name: definition.name,
+      description: definition.description,
+      weight: definition.weight,
+      tags: definition.tags,
+      equipped,
+      ...(definition.equippable ? { equippable: true } : {}),
+      effects: [],
+      active: 'carried' as const,
+      order: 'a0',
+      artifactProgress: 0,
+      artifactUnlocked: unlocked,
+    })
+    const soulMove = soulstealer.artifact!.unlocks[0]!
+    const armed = bladesCharacter({
+      scores: { str: -1, cha: 0 },
+      data: { classId: 'barbarian', level: 1 },
+      inventory: [inventoryItem(soulstealer, [soulMove.id])],
+    })
+    expect(derive(armed, dw2).mods.str).toBe(1)
+    expect(dw2.actionsFor(armed, derive(armed, dw2)).some((action) => action.name === soulMove.name)).toBe(true)
+    const carried = { ...armed, inventory: [inventoryItem(soulstealer, [soulMove.id], false)] }
+    expect(derive(carried, dw2).mods.str).toBe(-1)
+    expect(dw2.actionsFor(carried, derive(carried, dw2)).some((action) => action.name === soulMove.name)).toBe(false)
+
+    const healed = bladesCharacter({
+      data: { classId: 'barbarian', level: 1 },
+      inventory: [inventoryItem(caliburnus, caliburnus.artifact!.unlocks.slice(0, 3).map((move) => move.id))],
+    })
+    expect(derive(healed, dw2).mods.cha).toBe(3)
+    const marked = bladesCharacter({
+      data: { classId: 'barbarian', level: 1 },
+      inventory: [inventoryItem(mark, [])],
+    })
+    expect(derive(marked, dw2).values.maxHp).toBe(13)
   })
 })
 

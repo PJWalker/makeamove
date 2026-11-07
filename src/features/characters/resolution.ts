@@ -4,7 +4,7 @@ import type { MoveTarget, SaveRequest } from '../chat/types'
 import { describe, roll } from '../dice/notation'
 import type { Campaign } from '../../campaign/campaign'
 import { device } from '../../platform/device'
-import { bumpResource, canEdit, getCharacter, setData, setField, systemOf } from './api'
+import { bumpResource, canEdit, getCharacter, setData, setField, systemOf, updateItem } from './api'
 import { planMove, resolveDifficulty, rollModesFor } from './moves'
 import { derive } from './store'
 import type { CharacterView } from './types'
@@ -49,19 +49,31 @@ export function answerSave(campaign: Campaign, messageId: string, t: MoveTarget,
  * HP soak damage first, then hit points, never below zero or above the
  * maximum. Recorded on the card, so it shows what was done.
  */
-export function applyDamage(campaign: Campaign, messageId: string, t: MoveTarget, amount: number, healing: boolean, options: { armor?: boolean; type?: string } = {}) {
+export function applyDamage(campaign: Campaign, messageId: string, t: MoveTarget, amount: number, healing: boolean, options: { armor?: boolean; type?: string; shieldItemId?: string } = {}) {
   if (!campaign.isGm() || !Number.isFinite(amount) || amount < 0 || getState(campaign.messageState, messageId, appliedField(t.id)) !== undefined) return
   const system = systemOf(campaign)
   const c = getCharacter(campaign, t.characterId)
   if (!c) return
+  const shield = options.shieldItemId
+    ? c.inventory.find((item) => item.id === options.shieldItemId && item.equipped && item.resetUsesAtCamp && (item.usesLeft ?? 0) > 0)
+    : undefined;
+  if (
+    options.shieldItemId &&
+    (!shield || healing || options.type?.toLowerCase() === "piercing" || system.id !== "dungeon-world-2")
+  ) return;
   const derived = derive(c, system)
   const max = derived.values[system.resources.find((r) => r.id === 'hp')?.max ?? 'maxHp']
-  const damage = !healing && system.resolveDamage ? system.resolveDamage(c, derived, amount, options) : { hp: amount }
+  const damage = shield
+    ? { hp: 0 }
+    : !healing && system.resolveDamage
+      ? system.resolveDamage(c, derived, amount, options)
+      : { hp: amount }
   if (damage.resources?.some(({ id, by }) => (c.resources[id] ?? 0) + by < 0)) return
   const hpBefore = c.resources.hp ?? 0
   campaign.doc.transact(() => {
     if (healing) bumpResource(campaign, c.id, 'hp', amount, max)
     else {
+      if (shield) updateItem(campaign, c.id, shield.id, { usesLeft: (shield.usesLeft ?? 1) - 1 })
       let left = damage.hp
       if (system.tempHp) {
         const temp = Number(c.data[system.tempHp] ?? 0)
@@ -77,7 +89,7 @@ export function applyDamage(campaign: Campaign, messageId: string, t: MoveTarget
     }
     setState(campaign.messageState, messageId, appliedField(t.id), (getCharacter(campaign, c.id)?.resources.hp ?? hpBefore) - hpBefore)
   })
-  if (!healing && amount > 0) checkConcentration(campaign, c, amount)
+  if (!healing && damage.hp > 0) checkConcentration(campaign, c, damage.hp)
 }
 
 /** A concentrating character who takes damage is asked for the system's concentration save, on a card of its own. */

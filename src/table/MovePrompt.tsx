@@ -1,5 +1,6 @@
 import { useSignal, useSignalEffect } from '@preact/signals-react'
-import { useEffect, useLayoutEffect, useRef } from 'react'
+import { FormattedText } from "./FormattedText";
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { getCharacter, makeMove, moveRequest, startMove, systemOf, targetRequest } from '../features/characters/api'
 import { canPayMove, checkOf, needsChoice, planMove, rollModesFor, saveOf } from '../features/characters/moves'
 import { derive } from '../features/characters/store'
@@ -50,11 +51,18 @@ function anchorRect(el: Element | null): DOMRect | null {
 }
 
 export function MovePrompt({ campaign }: { campaign: Campaign }) {
-  const live: Request | null = targetRequest.value
-    ? { kind: 'target', ...targetRequest.value }
-    : moveRequest.value
-      ? { kind: 'ask', ...moveRequest.value }
-      : null
+  const target = targetRequest.value;
+  const requestedMove = moveRequest.value;
+  const live: Request | null = useMemo(
+    () =>
+      target
+        ? { kind: 'target', ...target }
+        : requestedMove
+          ? { kind: 'ask', ...requestedMove }
+          : null,
+    [target, requestedMove],
+  );
+  const hasLive = live !== null;
   // What's on screen: the live request, or the last one while it shrinks away.
   const shown = useSignal<Request | null>(null)
   const ref = useRef<HTMLDivElement>(null)
@@ -70,11 +78,11 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
     leaving.current?.cancel()
     leaving.current = null
     shown.value = live
-  }, [live?.kind, live?.moveId, live?.characterId])
+  }, [live, shown])
 
   // Shrink back into the button once the request is done or cancelled.
   useLayoutEffect(() => {
-    if (live || !shown.value) return
+    if (hasLive || !shown.value) return
     const el = ref.current
     if (!el || reducedMotion.matches) {
       shown.value = null
@@ -93,7 +101,7 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
       },
       () => {},
     )
-  }, [!!live])
+  }, [hasLive, shown])
 
   // Beside the button: to whichever side has room, or above it in the bottom band; without it, above the hotbar.
   const placed = useRef('')
@@ -168,7 +176,7 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
 
   // Escape backs out, before the canvas uses it to clear the selection.
   useEffect(() => {
-    if (!live) return
+    if (!hasLive) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || e.defaultPrevented) return
       e.preventDefault()
@@ -176,7 +184,7 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
-  }, [!!live])
+  }, [hasLive])
 
   const req = shown.value
   const move = req ? systemOf(campaign).actions.find((m) => m.id === req.moveId) : undefined
@@ -184,7 +192,7 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
   if (!req || !move || !c) return null
 
   return (
-    <div ref={ref} className="roll-prompt panel" role="dialog" aria-label={`${move.name} (${c.name})`} inert={!live}>
+    <div ref={ref} className="roll-prompt panel" role="dialog" aria-label={`${move.name} (${c.name})`} inert={!hasLive}>
       <div className="roll-prompt-head">
         <span className="eyebrow">
           {move.name} · {c.name}
@@ -193,7 +201,7 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
           <IconClose />
         </Button>
       </div>
-      <p className="roll-prompt-desc">{move.text}</p>
+      <FormattedText campaign={campaign} text={move.text} characterId={c.id} className="roll-prompt-desc" />
       {req.kind === 'target' ? (
         <TargetStep campaign={campaign} characterId={c.id} moveId={move.id} />
       ) : (
@@ -288,7 +296,7 @@ function AskStep({ campaign, characterId, moveId }: { campaign: Campaign; charac
   const counterMessageId = useSignal(counters[0]?.id ?? '')
   const rollBonuses = useSignal<string[]>([])
   const bond = useSignal(ask?.kind === 'number' ? ask.initial ?? 1 : 1)
-  const extra = useSignal(0)
+  const extra = useSignal(moveRequest.value?.choice?.extra ?? 0)
   const mode = useSignal('')
   const variant = useSignal('')
   const variants = move.variants?.(c, derive(c, system))

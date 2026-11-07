@@ -6,7 +6,7 @@ import {
   type Signal,
 } from "@preact/signals-react";
 import type { ReactNode } from "react";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { IconBack, IconLayoutSingle, IconLayoutSplit } from "./icons";
 import { getStorageJson, setStorageJson } from "../platform/localStorage";
 import { withTransition } from "./transition";
@@ -99,24 +99,27 @@ export function createPaneLayout(
  */
 export function usePaneLevel(layout: PaneLayout, initial: PaneLevel) {
   const level = useSignal<PaneLevel>(initial);
-  const go = (to: PaneLevel) => {
-    if (level.value === to) return;
-    if (layout.mode.peek() !== "stack") {
-      level.value = to;
-      return;
-    }
-    // Only this panel slides: it alone is named for the transition.
-    const el = layout.el;
-    if (el) el.dataset.sliding = "true";
-    void withTransition(
-      () => {
+  const go = useCallback(
+    (to: PaneLevel) => {
+      if (level.value === to) return;
+      if (layout.mode.peek() !== "stack") {
         level.value = to;
-      },
-      { rootClass: to === "detail" ? "vt-pane-fwd" : "vt-pane-back" },
-    ).finally(() => {
-      if (el) delete el.dataset.sliding;
-    });
-  };
+        return;
+      }
+      // Only this panel slides: it alone is named for the transition.
+      const el = layout.el;
+      if (el) el.dataset.sliding = "true";
+      void withTransition(
+        () => {
+          level.value = to;
+        },
+        { rootClass: to === "detail" ? "vt-pane-fwd" : "vt-pane-back" },
+      ).finally(() => {
+        if (el) delete el.dataset.sliding;
+      });
+    },
+    [layout, level],
+  );
   return { level, go };
 }
 

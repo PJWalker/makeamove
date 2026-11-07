@@ -62,7 +62,7 @@ export function SegmentedOrSelect<T extends string>(
     ro.observe(root);
     ro.observe(measure);
     return () => ro.disconnect();
-  }, []);
+  }, [fits]);
   return (
     <div className="segmented-or-select" ref={rootRef}>
       <div

@@ -9,7 +9,7 @@ describe('panel layout', () => {
   it('starts with characters on the left and chat on the right', () => {
     const l = defaultLayout(false)
     expect(l.left.panels).toEqual(['scene', 'characters', 'combat'])
-    expect(l.right.panels).toEqual(['chat', 'libraries', 'items', 'notes', 'members'])
+    expect(l.right.panels).toEqual(['chat', 'libraries', 'reference', 'items', 'notes', 'members'])
     expect(l.right.active).toBe('chat')
   })
 
@@ -64,15 +64,15 @@ describe('panel layout', () => {
 
   it('reorders tabs within a side without changing the open tab', () => {
     const l = reorder(defaultLayout(false), 'members', 0)
-    expect(l.right.panels).toEqual(['members', 'chat', 'libraries', 'items', 'notes'])
+    expect(l.right.panels).toEqual(['members', 'chat', 'libraries', 'reference', 'items', 'notes'])
     expect(l.right.active).toBe('chat')
-    expect(reorder(l, 'members', 99).right.panels).toEqual(['chat', 'libraries', 'items', 'notes', 'members'])
+    expect(reorder(l, 'members', 99).right.panels).toEqual(['chat', 'libraries', 'reference', 'items', 'notes', 'members'])
   })
 
   it('puts a panel missing from saved data back on its default side', () => {
     const l = normalise({ left: { panels: ['characters'] }, right: { panels: ['chat', 'notes', 'members'] } }, false)
     expect(l.left.panels).toEqual(['characters', 'scene', 'combat'])
-    expect(l.right.panels).toEqual(['chat', 'notes', 'members', 'libraries', 'items'])
+    expect(l.right.panels).toEqual(['chat', 'notes', 'members', 'libraries', 'reference', 'items'])
   })
 
   it('leaves out panels the campaign doesn’t have, as shown', () => {
@@ -116,7 +116,7 @@ describe('panel layout', () => {
     expect(l.left.panels).toEqual([id, 'characters', 'scene', 'combat'])
     expect(l.left.active).toBe(id)
     expect(locate(l, 'entity:link:note:page')).toBe('floating')
-    expect(l.right.panels).toEqual(['chat', 'libraries', 'items', 'notes', 'members'])
+    expect(l.right.panels).toEqual(['chat', 'libraries', 'reference', 'items', 'notes', 'members'])
   })
 })
 

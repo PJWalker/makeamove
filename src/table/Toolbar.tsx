@@ -3,7 +3,7 @@ import type {
   MouseEvent as ReactMouseEvent,
 } from "react";
 import type { ComponentType } from "react";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { signal, useSignal } from "@preact/signals-react";
 import { goToCampaign } from "../app/router";
 import { startReorder } from "../ui/reorder";
@@ -85,9 +85,14 @@ function inOrder(tools: typeof TOOLS, order: ToolId[]) {
 }
 
 export function Toolbar({ isGm }: { isGm: boolean }) {
-  const tools = inOrder(
-    TOOLS.filter((t) => !t.gmOnly || isGm),
-    toolOrder.value,
+  const order = toolOrder.value;
+  const tools = useMemo(
+    () =>
+      inOrder(
+        TOOLS.filter((t) => !t.gmOnly || isGm),
+        order,
+      ),
+    [isGm, order],
   );
 
   function dragTool(id: ToolId, e: ReactPointerEvent) {
@@ -125,7 +130,7 @@ export function Toolbar({ isGm }: { isGm: boolean }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [isGm]);
+  }, [tools]);
 
   return (
     <>
@@ -355,8 +360,8 @@ function LightGlyph({ mode }: { mode: LightToolMode }) {
           r="7.5"
           fill="none"
           stroke="#ffd27a"
-          stroke-opacity="0.5"
-          stroke-width="1.5"
+          strokeOpacity="0.5"
+          strokeWidth="1.5"
         />
         <circle cx="9" cy="9" r="3.5" fill="#ffd27a" />
       </svg>
@@ -368,9 +373,9 @@ function LightGlyph({ mode }: { mode: LightToolMode }) {
       <polygon
         points="2,5 11,2 16,10 9,16 3,12"
         fill={mode === "dark" ? "#000" : colour}
-        fill-opacity={mode === "dark" ? 0.6 : 0.35}
+        fillOpacity={mode === "dark" ? 0.6 : 0.35}
         stroke={colour}
-        stroke-width="1.5"
+        strokeWidth="1.5"
       />
     </svg>
   );

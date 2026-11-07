@@ -12,6 +12,7 @@ import {
 } from '../../features/characters/api'
 import { ensureSystemCounter } from '../../features/chat/send'
 import { actionsFor, derive } from '../../features/characters/store'
+import { sessionMoveUsed } from '../../features/characters/sessionMoves'
 import type { Campaign } from '../../campaign/campaign'
 import { browseLibrary } from '../../table/libraryView'
 import { showPanel } from '../../table/panelLayout'
@@ -36,7 +37,13 @@ export function systemActions(campaign: Campaign): Action[] {
       source: system.name,
       detail: m.trigger,
       mine: ownsIt,
-      available: reason !== true ? reason : ownsIt ? true : 'Not one of this character’s moves',
+      available: reason !== true
+        ? reason
+        : !ownsIt
+          ? 'Not one of this character’s moves'
+          : sessionMoveUsed(campaign, me!.id, m)
+            ? 'Already used this session'
+            : true,
       run: () => me && startMove(campaign, me.id, m),
     })
   }

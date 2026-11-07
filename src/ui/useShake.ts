@@ -7,8 +7,54 @@ export interface ShakeOptions {
   /** Leave presses on buttons and fields inside the element alone. */
   ignoreControls?: boolean;
   onTap?: (() => void) | undefined;
-  /** Called as the element is picked up; returns what to do when it's put down. */
-  onPickUp?: (element: HTMLElement, event: PointerEvent) => () => void;
+  /**
+   * Called as the element is picked up, with the copy of it that follows the
+   * pointer; returns what to do when it's put down.
+   */
+  onPickUp?: (element: HTMLElement, carrier: HTMLElement) => () => void;
+}
+
+/** Inherited text styles a lifted copy loses when it leaves its panel. */
+const INHERITED = [
+  "color",
+  "font-family",
+  "font-size",
+  "font-weight",
+  "line-height",
+  "letter-spacing",
+] as const;
+
+/**
+ * A copy of the element, over everything else on the page, that can be carried
+ * outside the panel the element sits in. The element keeps its place, unseen.
+ */
+function lift(element: HTMLElement) {
+  const box = element.getBoundingClientRect();
+  const computed = getComputedStyle(element);
+  const carrier = element.cloneNode(true) as HTMLElement;
+  carrier.removeAttribute("id");
+  carrier.removeAttribute("tabindex");
+  carrier.setAttribute("aria-hidden", "true");
+  carrier.inert = true;
+  carrier.classList.add("shake-carrier");
+  for (const property of INHERITED)
+    carrier.style.setProperty(property, computed.getPropertyValue(property));
+  Object.assign(carrier.style, {
+    left: `${box.left}px`,
+    top: `${box.top}px`,
+    width: `${box.width}px`,
+    height: `${box.height}px`,
+  });
+  document.body.append(carrier);
+  const opacity = element.style.opacity;
+  element.style.opacity = "0";
+  return {
+    carrier,
+    drop() {
+      carrier.remove();
+      element.style.opacity = opacity;
+    },
+  };
 }
 
 const REROLL_SPEED = 220;
@@ -37,9 +83,8 @@ export function useShake({
     vy: number;
     grabbed: string | undefined;
     element: HTMLElement;
-    translate: string;
-    position: string;
-    zIndex: string;
+    carrier: HTMLElement;
+    drop: () => void;
     cursor: string;
     putDown?: () => void;
   } | null>(null);
@@ -47,13 +92,11 @@ export function useShake({
     const current = gesture.current;
     if (!current) return;
     gesture.current = null;
-    current.element.style.translate = current.translate;
-    current.element.style.position = current.position;
-    current.element.style.zIndex = current.zIndex;
     current.element.style.cursor = current.cursor;
     if (current.grabbed === undefined) delete current.element.dataset.grabbed;
     else current.element.dataset.grabbed = current.grabbed;
     current.putDown?.();
+    current.drop();
     return current;
   };
   useEffect(() => {
@@ -82,6 +125,7 @@ export function useShake({
       const element = event.currentTarget;
       element.setPointerCapture(event.pointerId);
       element.focus({ preventScroll: true });
+      const { carrier, drop } = lift(element);
       gesture.current = {
         pointer: event.pointerId,
         originX: event.clientX,
@@ -98,16 +142,13 @@ export function useShake({
         vy: 0,
         grabbed: element.dataset.grabbed,
         element,
-        translate: element.style.translate,
-        position: element.style.position,
-        zIndex: element.style.zIndex,
+        carrier,
+        drop,
         cursor: element.style.cursor,
       };
       element.dataset.grabbed = "true";
-      element.style.position = "relative";
-      element.style.zIndex = "2";
       element.style.cursor = "grabbing";
-      const putDown = onPickUp?.(element, event.nativeEvent);
+      const putDown = onPickUp?.(element, carrier);
       if (putDown) gesture.current.putDown = putDown;
     },
     onPointerMove(event: React.PointerEvent<HTMLElement>) {
@@ -115,7 +156,7 @@ export function useShake({
       if (!current || current.pointer !== event.pointerId) return;
       const offsetX = event.clientX - current.originX;
       const offsetY = event.clientY - current.originY;
-      current.element.style.translate = `${offsetX}px ${offsetY}px`;
+      current.carrier.style.translate = `${offsetX}px ${offsetY}px`;
       current.moved ||= Math.hypot(offsetX, offsetY) >= 6;
       const dx = event.clientX - current.x;
       const dy = event.clientY - current.y;

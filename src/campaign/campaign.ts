@@ -1,5 +1,4 @@
 import { effect, signal } from "@preact/signals-react";
-import { generateKeyBetween } from "fractional-indexing";
 import * as Y from "yjs";
 import { IndexeddbPersistence } from "y-indexeddb";
 import { newId, newSecret } from "../lib/ids";
@@ -18,13 +17,35 @@ import {
 import { getSystem } from "../systems";
 import type { Invite } from "../sync/invite";
 import { CampaignConnection } from "./connection";
-import type { GridType } from "../scene/grid";
-import { sceneDbName } from "../scene/sceneDoc";
 import { noteDbName, noteGuid } from "../features/notes/noteDoc";
 import { Vault, vaultDbName, vaultNoteGuid } from "../features/notes/vault";
 import { ChatLog, deleteChatData } from "../features/chat/chatLog";
+import { sceneDbName } from "../scene/sceneDoc";
 import type { EntityGraphic } from "../graphics";
-import type { TokenStyle } from "../scene/types";
+import {
+  activeSceneId as activeSceneIdFromIndex,
+  createScene,
+  removeScene,
+  sceneGuid,
+  sceneSubdoc,
+  sceneViews,
+  updateScene,
+} from "./sceneIndex";
+import type {
+  CampaignDefaults,
+  MemberView,
+  RevokedView,
+  Role,
+  SceneView,
+} from "./types";
+export type {
+  CampaignDefaults,
+  MemberView,
+  RevokedView,
+  Role,
+  SceneView,
+  Visibility,
+} from "./types";
 
 /*
  * Campaign root document layout (see design doc, "Data model"):
@@ -48,16 +69,6 @@ import type { TokenStyle } from "../scene/types";
  * one, and from the canvas colour otherwise.
  */
 
-export type Role = "gm" | "player" | "observer";
-export type Visibility = "everyone" | "owners" | "gm";
-
-/** Someone the GM removed from the campaign. */
-export interface RevokedView {
-  id: string;
-  name: string;
-  at: number;
-}
-
 /**
  * How long a device the GM removed stays connected after rejoining by invite,
  * to hear whether the GM has let it back in.
@@ -67,36 +78,12 @@ const REJOIN_CHECK_MS = 5000;
 /** Campaigns being rejoined by invite link; see Campaign.connect. */
 const rejoining = new Set<string>();
 
-export interface MemberView {
-  id: string;
-  name: string;
-  role: Role;
-  activeSceneId: string | null;
-}
-
-export interface SceneView {
-  id: string;
-  name: string;
-  folder?: string;
-  /** A chosen canvas colour, or null for auto (from the map). */
-  canvasColour: string | null;
-  order: string;
-  visibility: Visibility;
-}
-
 /** The system an invite assumes until the campaign arrives from a peer. */
 const DEFAULT_SYSTEM = { id: "dungeon-world", version: "0.1.0" };
 /** Canvas colour for an auto scene with no map yet. */
 export const DEFAULT_CANVAS_COLOUR = "#2b3a55";
 
-export interface CampaignDefaults {
-  tokenStyle: TokenStyle;
-  gridType: GridType;
-}
-
 const dbName = (id: string) => dataName("campaign", id);
-const sceneGuid = (campaignId: string, sceneId: string) =>
-  `${campaignId}/${sceneId}`;
 
 export class Campaign {
   readonly id: string;
@@ -354,67 +341,28 @@ export class Campaign {
   // Scenes
 
   sceneViews(): SceneView[] {
-    return [...this.scenes.entries()]
-      .map(([id, s]) => ({
-        id,
-        name: s.get("name") ?? "Untitled scene",
-        folder: s.get("folder") ?? undefined,
-        canvasColour: s.get("canvasColour") ?? null,
-        order: s.get("order") ?? "a0",
-        visibility: s.get("visibility") ?? "everyone",
-      }))
-      .sort((a, b) => (a.order < b.order ? -1 : a.order > b.order ? 1 : 0));
+    return sceneViews(this.scenes);
   }
 
   addScene(name: string): string {
-    const id = newId();
-    const views = this.sceneViews();
-    const last = views.length ? (views)[views.length - 1]!.order : null;
-    const s = new Y.Map<any>();
-    s.set("name", name);
-    s.set("order", generateKeyBetween(last, null));
-    s.set("visibility", "everyone");
-    s.set("doc", new Y.Doc({ guid: sceneGuid(this.id, id) }));
-    this.scenes.set(id, s);
-    return id;
+    return createScene(this.id, this.scenes, name);
   }
 
   /** The scene's subdocument (not yet loaded). Scenes from M0 get one now. */
   sceneSubdoc(id: string): Y.Doc | null {
-    const s = this.scenes.get(id);
-    if (!s) return null;
-    let doc = s.get("doc");
-    if (!(doc instanceof Y.Doc)) {
-      // The guid is derived from the ids, so two peers doing this at once
-      // still end up pointing at the same document.
-      doc = new Y.Doc({ guid: sceneGuid(this.id, id) });
-      s.set("doc", doc);
-    }
-    return doc;
+    return sceneSubdoc(this.id, this.scenes, id);
   }
 
   updateScene(id: string, patch: Partial<Omit<SceneView, "id">>) {
-    const s = this.scenes.get(id);
-    if (!s) return;
-    this.doc.transact(() => {
-      for (const [k, v] of Object.entries(patch)) {
-        if (v === null) s.delete(k);
-        else s.set(k, v);
-      }
-    });
+    updateScene(this.doc, this.scenes, id, patch);
   }
 
   removeScene(id: string) {
-    this.scenes.delete(id);
-    // Drop this device's copy of the contents. Peers that still have the
-    // scene keep theirs.
-    indexedDB.deleteDatabase(sceneDbName(sceneGuid(this.id, id)));
+    removeScene(this.id, this.scenes, id);
   }
 
   activeSceneId(): string | null {
-    const mine = this.members.get(device.value.id)?.get("activeSceneId");
-    if (mine && this.scenes.has(mine)) return mine;
-    return this.sceneViews()[0]?.id ?? null;
+    return activeSceneIdFromIndex(this.members, this.scenes, device.value.id);
   }
 
   setActiveScene(sceneId: string) {
@@ -454,11 +402,11 @@ export class Campaign {
   /** Post "Scene changed to …" unless this scene was the last one announced. */
   private announceScene(force = false) {
     if (this.destroyed) return;
-    const id = this.activeSceneId();
+    const id = activeSceneIdFromIndex(this.members, this.scenes, device.value.id);
     if (!id || (!force && id === this.meta.get("tableScene"))) return;
     this.meta.set("tableScene", id);
     const name =
-      this.sceneViews().find((s) => s.id === id)?.name ?? "a new scene";
+      sceneViews(this.scenes).find((s) => s.id === id)?.name ?? "a new scene";
     const author = {
       id: device.value.id,
       name: this.members.get(device.value.id)?.get("name") ?? "GM",

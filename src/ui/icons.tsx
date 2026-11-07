@@ -23,6 +23,7 @@ import GiLanternFlame from '~icons/game-icons/lantern-flame'
 import GiHand from '~icons/game-icons/hand'
 import GiHelp from '~icons/game-icons/help'
 import GiBookshelf from '~icons/game-icons/bookshelf'
+import GiScrollUnfurled from '~icons/game-icons/scroll-unfurled'
 import GiMeasureTape from '~icons/game-icons/measure-tape'
 import GiOpenBook from '~icons/game-icons/open-book'
 import GiPadlock from "~icons/game-icons/padlock";
@@ -125,6 +126,7 @@ export const IconRedo = icon(MsRedo)
 export const IconChat = icon(GiTalk)
 export const IconCharacters = icon(GiVisoredHelm)
 export const IconLibraries = icon(GiBookshelf)
+export const IconReference = icon(GiScrollUnfurled)
 export const IconNotes = icon(GiOpenBook)
 /** A GM-only page. */
 export const IconSecret = icon(GiSecretBook)

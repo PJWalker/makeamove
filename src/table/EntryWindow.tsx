@@ -85,11 +85,14 @@ export function EntryWindow({
   graphicDefaultIcon,
   menuItems,
   windowId,
+  body,
   children,
 }: {
   entryKey: string;
   title: string;
   text: string;
+  /** Shown instead of the text, such as a move's formatted text and form. */
+  body?: ReactNode | undefined;
   tags?: string[] | undefined;
   onClose: () => void;
   /** The entry as a draggable icon in the title bar. */
@@ -118,12 +121,24 @@ export function EntryWindow({
       close: onClose,
       content: (
         <>
-          <p className="move-text move-window-text">{text}</p>
+          {body ?? <p className="move-text move-window-text">{text}</p>}
           {children && <div className="form-actions">{children}</div>}
         </>
       ),
     });
-  }, [id, title, text, tags, proxy, menuItems, onClose, children]);
+  }, [
+    id,
+    title,
+    text,
+    tags,
+    proxy,
+    graphicRef,
+    graphicDefaultIcon,
+    menuItems,
+    onClose,
+    body,
+    children,
+  ]);
   return null;
 }
 
@@ -143,9 +158,12 @@ export function EntryRow({
   onPointerDown,
   menuItems,
   dim,
+  before,
   children,
 }: {
   name: string;
+  /** Before the row's button, such as a toggle to show what it holds. */
+  before?: ReactNode;
   Icon?: Icon;
   lead?: ReactNode;
   tag?: string | null | undefined;
@@ -182,6 +200,7 @@ export function EntryRow({
         tag={tag}
         meta={meta}
         dim={dim}
+        before={before}
         onPick={(e) => onOpen(e.currentTarget.closest("li")!)}
         row={{
           "data-draggable": onPointerDown ? true : undefined,

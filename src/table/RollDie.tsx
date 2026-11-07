@@ -4,7 +4,7 @@ import { lastPointer } from "../ui/pointer";
 import { useShake } from "../ui/useShake";
 import type { DiceRenderer, Point } from "./diceRenderer";
 
-/** Waiting for the renderer, in the air, at rest, or drawn flat where there's no WebGPU. */
+/** Waiting for the renderer, in the air, at rest, or drawn flat where the browser can't draw 3D at all. */
 type Phase = "pending" | "flying" | "landed" | "flat";
 
 let renderer: Promise<DiceRenderer | null> | undefined;
@@ -18,8 +18,8 @@ const loadRenderer = () =>
     })
     .catch(() => null));
 
-export function pickUpRollCard(element: HTMLElement) {
-  return loadedRenderer?.pickUp(element) ?? (() => {});
+export function pickUpRollCard(element: HTMLElement, carrier: HTMLElement) {
+  return loadedRenderer?.pickUp(element, carrier) ?? (() => {});
 }
 
 /** Where a die thrown into this slot starts: the roller's pointer, or else above the log. */
@@ -34,6 +34,11 @@ function throwFrom(slot: HTMLElement, mine: boolean): Point {
     x: box.left + box.width / 2 + (Math.random() - 0.5) * 160,
     y: log.top - 40,
   };
+}
+
+/** A die's tooltip: the number it rolled, and whether it exploded or was dropped. */
+export function dieTitle(die: Die) {
+  return `${die.value}${die.exploded ? ", exploded" : ""}${die.kept ? "" : ", dropped"}`;
 }
 
 /** One die of a roll in chat; a roll that has just arrived is thrown into place. */
@@ -56,11 +61,20 @@ export function RollDie({
 }) {
   const slot = useRef<HTMLSpanElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
-  const [phase, setPhase] = useState<Phase>(
-    "gpu" in navigator ? "pending" : "flat",
-  );
+  const [phase, setPhase] = useState<Phase>("pending");
   const max = die.value === die.sides && die.sides > 1;
   const min = die.value === 1;
+  const initial = useRef({
+    phase,
+    arriving,
+    mine,
+    index,
+    max,
+    min,
+    sides: die.sides,
+    value: die.value,
+    seed,
+  });
   const interactive = !!onReroll && (phase === "landed" || phase === "flat");
   const shake = useShake({
     onShake: () => onReroll?.(),
@@ -70,6 +84,8 @@ export function RollDie({
   });
 
   useEffect(() => {
+    const { phase, arriving, mine, index, max, min, sides, value, seed } =
+      initial.current;
     if (phase === "flat") return;
     const thrown =
       arriving && !matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -85,7 +101,7 @@ export function RollDie({
         const mounted = dice.mount(
           canvas.current,
           slot.current,
-          { sides: die.sides, value: die.value, tone, seed },
+          { sides, value, tone, seed },
           thrown,
         );
         dispose = mounted.dispose;
@@ -121,7 +137,7 @@ export function RollDie({
       aria-pressed={onToggle ? !die.disabled : undefined}
       style={{ "--i": index }}
       aria-label={`d${die.sides}: ${die.value}${die.disabled ? ", disabled" : die.kept ? "" : ", dropped"}`}
-      title={`d${die.sides}${die.exploded ? ", exploded" : ""}${die.kept ? "" : ", dropped"}`}
+      title={dieTitle(die)}
       {...shake}
       onKeyDown={(event) => {
         if (interactive && event.shiftKey && event.key === "Enter") {

@@ -30,7 +30,7 @@ import { IconLock } from '../ui/icons'
 import { menuTrigger } from '../ui/menuTrigger'
 import { ContextMenu, type MenuItem } from './ContextMenu'
 import { CharacterText } from './CharacterText'
-import { AdvancementDialog } from './CreationParts'
+import { AdvancementDialog, ClassChangeDialog } from './CreationParts'
 import { Inventory } from './Inventory'
 import { Counter, MoveList, signedStr, TokenChip } from './sheetParts'
 
@@ -80,14 +80,17 @@ export function DeclarativeSheet({ layout, ...props }: Props) {
 
 type SectionProps = { campaign: Campaign; system: GameSystem; c: CharacterView; d: Derived; editable: boolean; section: SheetSection }
 
-function Advancement({ campaign, c, d, editable, section }: Omit<SectionProps, 'system' | 'section'> & { section: Extract<SheetSection, { kind: 'advancement' }> }) {
+function Advancement({ campaign, system, c, d, editable, section }: Omit<SectionProps, 'section'> & { section: Extract<SheetSection, { kind: 'advancement' }> }) {
   const open = useSignal(false)
+  const changeClassOpen = useSignal(false)
   const needed = d.values[section.needed]
   if (!editable || needed === undefined || !Number.isFinite(needed) || num(c.data[section.xp]) < needed) return null
   return <div className="sheet-advancement">
     <span>{section.label}</span>
     <Button size="sm" onClick={() => (open.value = true)}>{section.button}</Button>
+    {system.id === "dungeon-world-2" && <Button size="sm" variant="ghost" onClick={() => (changeClassOpen.value = true)}>Change Class</Button>}
     {open.value && <AdvancementDialog campaign={campaign} characterId={c.id} onClose={() => (open.value = false)} />}
+    {changeClassOpen.value && <ClassChangeDialog campaign={campaign} characterId={c.id} onClose={() => (changeClassOpen.value = false)} />}
   </div>
 }
 
@@ -219,7 +222,7 @@ export function SheetSectionView({ campaign, system, c, d, editable, section }: 
         </section>
       );
     case "advancement": {
-      return <Advancement campaign={campaign} c={c} d={d} editable={editable} section={section} />
+      return <Advancement campaign={campaign} system={system} c={c} d={d} editable={editable} section={section} />
     }
     case "derived":
       const derivedValue = (id: string) => v[id] ?? 0;

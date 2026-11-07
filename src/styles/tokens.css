@@ -18,6 +18,8 @@
      * Surfaces (low chroma so a vivid map never makes the chrome garish).
       * Neutral surfaces let the scene, not the chrome, carry the color.
       */
+
+      --shine: linear-gradient(to bottom right, #fff4, #fff2, #fff3) 1;
      --surface: oklch(18% 0.008 250 / 0.96);
      --surface-solid: oklch(15% 0.008 250);
      --surface-raised: oklch(22% 0.01 250);

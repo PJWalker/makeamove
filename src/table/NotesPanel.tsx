@@ -74,14 +74,14 @@ export function NotesPanel({ campaign }: { campaign: Campaign }) {
   useEffect(() => {
     if (requests !== seen.current && openNoteId.peek()) go("detail");
     seen.current = requests;
-  }, [requests]);
+  }, [requests, go]);
   // The open page was deleted: back to the list.
   useEffect(() => {
     if (openId && !open && !campaign.notes.has(openId)) {
       openNoteId.value = null;
       go("list");
     }
-  }, [openId, open]);
+  }, [openId, open, campaign.notes, go]);
 
   const folder = folders.find((f) => f.id === open?.folder);
   const revealingNote = revealing.value
@@ -296,7 +296,7 @@ function NotePage({
   useLayoutEffect(() => {
     if (!getNote(campaign, note.id)?.title || note.title === "Untitled")
       titleRef.current?.focus();
-  }, [note.id]);
+  }, [campaign, note.id, note.title]);
 
   return (
     <article className="note-page" aria-label={note.title}>

@@ -1,5 +1,12 @@
 import { useSignal } from "@preact/signals-react";
 import type { Campaign, SceneView } from "../campaign/campaign";
+import {
+  createSceneFolder,
+  deleteSceneFolder,
+  listSceneFolders,
+  moveSceneToFolder,
+  renameSceneFolder,
+} from "../campaign/sceneFolders";
 import { useY } from "../ui/useY";
 import { Button } from "../ui/Button";
 import {
@@ -18,18 +25,13 @@ import { FolderTree } from "./FolderTree";
 import { ContextMenu, type MenuItem } from "./ContextMenu";
 import { menuTrigger } from "../ui/menuTrigger";
 import { scenesLayout } from "./panelLayouts";
-import {
-  createSceneFolder,
-  deleteSceneFolder,
-  listSceneFolders,
-  moveSceneToFolder,
-  renameSceneFolder,
-} from "../scene/folders";
 
 /** The scene list, and the active scene's settings. (Campaign actions are in the tool strip's menu.) */
 export function ScenePanel({ campaign }: { campaign: Campaign }) {
   const scenes = useY(campaign.scenes, () => campaign.sceneViews());
-  const folders = useY(campaign.sceneFolders, () => listSceneFolders(campaign));
+  const folders = useY(campaign.sceneFolders, () =>
+    listSceneFolders(campaign.sceneFolders),
+  );
   const activeId =
     useY(campaign.members, () => campaign.activeSceneId()) ??
     scenes[0]?.id ??
@@ -62,7 +64,7 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
 
   function addScene(folderId?: string) {
     const id = campaign.addScene(`Scene ${scenes.length + 1}`);
-    if (folderId) moveSceneToFolder(campaign, id, folderId);
+    if (folderId) moveSceneToFolder(campaign.scenes, id, folderId);
     campaign.setActiveScene(id);
     go("detail");
   }
@@ -88,14 +90,15 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
             items.push({
               label: `Move to ${folder.name}`,
               Icon: IconFolder,
-              onSelect: () => moveSceneToFolder(campaign, s.id, folder.id),
+              onSelect: () =>
+                moveSceneToFolder(campaign.scenes, s.id, folder.id),
             });
           }
         }
         if (s.folder && folders.some((folder) => folder.id === s.folder)) {
           items.push({
             label: "Remove from folder",
-            onSelect: () => moveSceneToFolder(campaign, s.id),
+            onSelect: () => moveSceneToFolder(campaign.scenes, s.id),
           });
         }
         if (scenes.length > 1) {
@@ -200,13 +203,23 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
                       label: "Delete folder",
                       Icon: IconDelete,
                       danger: true,
-                      onSelect: () => deleteSceneFolder(campaign, folder.id),
+                      onSelect: () =>
+                        deleteSceneFolder(
+                          campaign.doc,
+                          campaign.scenes,
+                          campaign.sceneFolders,
+                          folder.id,
+                        ),
                     },
                   ]
                 : []),
             ]}
-            onCreateFolder={(name) => createSceneFolder(campaign, name)}
-            onRenameFolder={(id, name) => renameSceneFolder(campaign, id, name)}
+            onCreateFolder={(name) =>
+              createSceneFolder(campaign.sceneFolders, name)
+            }
+            onRenameFolder={(id, name) =>
+              renameSceneFolder(campaign.sceneFolders, id, name)
+            }
             emptyContent={
               !scenes.length && !folders.length ? (
                 <p className="empty-inline">No scenes yet.</p>

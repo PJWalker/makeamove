@@ -23,11 +23,13 @@ import { dragEntity, entity, registerLinkDrop } from './entityDrag'
 import { actionMenuItems } from "./actionMenu";
 import { CampaignEntityGraphic } from "./EntityGraphic";
 import { editEntityGraphic } from "./GraphicDialogs";
+import { trackerButtonExtension } from "./trackerButtons";
 
 /*
  * Rich text edited together: notes, and the long text on character sheets.
  * Markdown-style shortcuts format it (# for headings, ** for bold, - for
- * lists), and typing @ links a note, character, scene, item or move. Link
+ * lists), typing @ links a note, character, scene, item or move, and
+ * [[+1 XP]] makes a button that changes the selected character's XP. Link
  * chips can be clicked to follow them or dragged onto characters, the
  * hotbar or other text; anything dragged in becomes a link.
  */
@@ -261,6 +263,7 @@ export function mountRichText(host: HTMLElement, o: RichTextOptions): { editor: 
       Collaboration.configure({ fragment: o.fragment }),
       Placeholder.configure({ placeholder: o.placeholder }),
       linkExtension(campaign, o),
+      trackerButtonExtension(campaign),
       NoteImage,
       ...(o.carets ? [carets(o.carets.awareness, o.carets.name)] : []),
       ...(o.secrets ? [secretNode(vault ? (host, id) => mountSecret(host, id, vault) : null)] : []),

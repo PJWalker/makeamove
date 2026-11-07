@@ -1214,7 +1214,7 @@ export class SceneController {
     const under = this.hitTest(world, true);
     this.renderer.setHoverToken(
       under?.type === "token" ? under.id : null,
-      world,
+      screen,
     );
 
     // Share the cursor at about 20 Hz.

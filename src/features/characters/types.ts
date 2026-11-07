@@ -19,6 +19,10 @@ export interface ItemInstance {
   tags: string[]
   uses?: number
   usesLeft?: number
+  resetUsesAtCamp?: boolean
+  artifactProgress?: number
+  artifactUnlocked?: string[]
+  broken?: boolean
   equippable?: boolean
   equipped: boolean
   icon?: string

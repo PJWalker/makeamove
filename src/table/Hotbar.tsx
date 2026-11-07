@@ -1,6 +1,6 @@
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useSignal } from "@preact/signals-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useRef } from "react";
 import { selectedCharacterId } from "../features/characters/api";
 import {
   editHotbar,
@@ -50,8 +50,9 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
   const barRef = useRef<HTMLDivElement>(null);
   // Rebuilt on any change to characters or members so labels and availability stay current.
   const tick = useSignal(0);
+  const bumpTick = useEffectEvent(() => tick.value++);
   useEffect(() => {
-    const bump = () => tick.value++;
+    const bump = () => bumpTick();
     campaign.characters.observeDeep(bump);
     campaign.members.observeDeep(bump);
     return () => {
@@ -60,6 +61,8 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
     };
   }, [campaign]);
   void tick.value;
+  const sessionMessages = campaign.chat.messages.value;
+  void sessionMessages;
 
   const slots = hotbarSlots(campaign, charId);
   const index = new Map(buildIndex(campaign).map((a) => [a.id, a]));

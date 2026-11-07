@@ -39,9 +39,11 @@ import {
 } from "./diePhysics";
 
 /*
- * Dice in 3D (WebGPU only). One renderer draws each landed die into its own
- * canvas in the chat, so it scrolls and stacks with the message, and draws
- * dice still in the air on one canvas over the whole window.
+ * Dice in 3D. One renderer draws each landed die into its own canvas in the
+ * chat, so it scrolls and stacks with the message, and draws dice still in the
+ * air on one canvas over the whole window. Where there's no WebGPU, the same
+ * renderer runs on WebGL 2, and landed dice are drawn by a second, slot-sized
+ * renderer and copied into their canvases.
  */
 
 export type DieTone = "plain" | "max" | "min";
@@ -61,8 +63,12 @@ export interface DiceRenderer {
     die: { sides: number; value: number; tone: DieTone; seed: string },
     thrown?: { from: Point; delay: number },
   ): MountedDie;
-  /** Wakes the landed dice inside an element that's been picked up; the returned function puts them back. */
-  pickUp(element: HTMLElement): () => void;
+  /**
+   * Wakes the landed dice inside an element that's been picked up, carried by
+   * `carrier` (the element itself, or a copy of it lifted above the page).
+   * The returned function puts them back.
+   */
+  pickUp(element: HTMLElement, carrier?: HTMLElement): () => void;
 }
 
 /** A landed die's canvas, in CSS px; dice are drawn at SCALE px per unit. */
@@ -362,23 +368,37 @@ interface Hold {
   released: boolean;
 }
 
-export async function createDiceRenderer(): Promise<DiceRenderer | null> {
-  if (!("gpu" in navigator)) return null;
-  const renderer = new WebGPURenderer({ antialias: true, alpha: true });
-  await renderer.init();
-  if (
-    !(renderer.backend as unknown as { isWebGPUBackend?: boolean })
-      .isWebGPUBackend
-  ) {
-    renderer.dispose();
-    return null;
-  }
-  renderer.setClearColor(0x000000, 0);
+function reflectionsFor(renderer: WebGPURenderer) {
   const environmentScene = new RoomEnvironment();
   const reflections = new PMREMGenerator(renderer);
   const environment = reflections.fromScene(environmentScene, 0.02);
   environmentScene.dispose();
   reflections.dispose();
+  return environment;
+}
+
+/** A renderer with a transparent background: WebGPU where there is one, otherwise WebGL 2. */
+async function startRenderer(forceWebGL: boolean) {
+  const renderer = new WebGPURenderer({
+    antialias: true,
+    alpha: true,
+    forceWebGL,
+  });
+  await renderer.init();
+  renderer.setClearColor(0x000000, 0);
+  return renderer;
+}
+
+export async function createDiceRenderer(): Promise<DiceRenderer | null> {
+  const renderer = await startRenderer(!("gpu" in navigator));
+  const webgpu = !!(
+    renderer.backend as unknown as { isWebGPUBackend?: boolean }
+  ).isWebGPUBackend;
+  const environment = reflectionsFor(renderer);
+  // WebGL can't draw into other canvases, so landed dice get a renderer of their own.
+  const slotRenderer = webgpu ? undefined : await startRenderer(true);
+  slotRenderer?.setPixelRatio(devicePixelRatio);
+  slotRenderer?.setSize(SLOT, SLOT, false);
 
   const overlay = renderer.getCanvasTarget();
   const screen = overlay.domElement as HTMLCanvasElement;
@@ -416,7 +436,9 @@ export async function createDiceRenderer(): Promise<DiceRenderer | null> {
   });
 
   const still = new Scene();
-  still.environment = environment.texture;
+  still.environment = slotRenderer
+    ? reflectionsFor(slotRenderer).texture
+    : environment.texture;
   still.environmentIntensity = 0.8;
   const stillCamera = new OrthographicCamera(
     -SLOT / 2,
@@ -610,6 +632,7 @@ export async function createDiceRenderer(): Promise<DiceRenderer | null> {
   }
 
   function returnHome(held: Held, now: number) {
+    if (!held.slot.isConnected) return sleep(held);
     const from = held.returning!;
     const t = Math.min(1, (now - from.start) / RETURN_MS);
     const pull = t * t;
@@ -629,11 +652,11 @@ export async function createDiceRenderer(): Promise<DiceRenderer | null> {
   }
 
   function stepHold(hold: Hold, now: number) {
-    if (!hold.element.isConnected) return [...hold.dice].forEach(sleep);
     if (hold.released) {
       for (const held of [...hold.dice]) returnHome(held, now);
       return;
     }
+    if (!hold.element.isConnected) return [...hold.dice].forEach(sleep);
     const box = hold.element.getBoundingClientRect();
     const x = box.left + hold.offset.x;
     const y = box.top + hold.offset.y;
@@ -670,7 +693,7 @@ export async function createDiceRenderer(): Promise<DiceRenderer | null> {
     }
   }
 
-  function pickUp(element: HTMLElement) {
+  function pickUp(element: HTMLElement, carrier: HTMLElement = element) {
     const picked = [...resting].filter(([slot]) => element.contains(slot));
     if (!picked.length) return () => {};
     const box = element.getBoundingClientRect();
@@ -703,7 +726,7 @@ export async function createDiceRenderer(): Promise<DiceRenderer | null> {
       };
     });
     const hold: Hold = {
-      element,
+      element: carrier,
       offset,
       physics: new DiceHold(
         {
@@ -869,18 +892,30 @@ export async function createDiceRenderer(): Promise<DiceRenderer | null> {
       (_, index) =>
         materials[faceTone(faceValue(firstValue, index, die.sides), die.sides)],
     );
-    const target = new CanvasTarget(canvas);
-    target.setPixelRatio(devicePixelRatio);
-    target.setSize(SLOT, SLOT);
     stillDie.geometry = shape.geometry;
     stillDie.material = material;
     stillEdges.geometry = shape.edges;
     stillDie.quaternion.copy(rotation);
     const labels = numberFaces(stillDie, shape, firstValue, die.sides);
-    renderer.setCanvasTarget(target);
-    renderer.render(still, stillCamera);
+    let target: CanvasTarget | undefined;
+    if (slotRenderer) {
+      slotRenderer.render(still, stillCamera);
+      const source = slotRenderer.domElement;
+      canvas.width = source.width;
+      canvas.height = source.height;
+      canvas.style.width = canvas.style.height = `${SLOT}px`;
+      const context = canvas.getContext("2d");
+      context?.clearRect(0, 0, canvas.width, canvas.height);
+      context?.drawImage(source, 0, 0);
+    } else {
+      target = new CanvasTarget(canvas);
+      target.setPixelRatio(devicePixelRatio);
+      target.setSize(SLOT, SLOT);
+      renderer.setCanvasTarget(target);
+      renderer.render(still, stillCamera);
+      renderer.setCanvasTarget(overlay);
+    }
     labels.forEach((dispose) => dispose());
-    renderer.setCanvasTarget(overlay);
     const flight =
       thrown &&
       throwDie(
@@ -918,7 +953,7 @@ export async function createDiceRenderer(): Promise<DiceRenderer | null> {
         flight?.cancel();
         resting.delete(slot);
         if (rest.held) sleep(rest.held);
-        target.dispose();
+        target?.dispose();
       },
     };
   }

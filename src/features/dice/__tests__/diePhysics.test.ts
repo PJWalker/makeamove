@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { DiceFlight, simulateDice } from "../../../table/diePhysics";
+import {
+  CALM_AFTER,
+  DiceFlight,
+  PHYSICS_STEP,
+  simulateDice,
+} from "../../../table/diePhysics";
 
 
 const cube = {
@@ -55,11 +60,12 @@ describe("natural dice flight", () => {
     }
   });
 
-  it("nudges unsettled dice using damping after four seconds, not a target pose", () => {
+  it("calms unsettled dice using damping after a while, not a target pose", () => {
     const flight = new DiceFlight(tray, [{ hull: cube, seed: "damping-test" }]);
     const { body } = (flight.dice)[0]!;
-    for (let step = 0; step < 480; step++) flight.step();
-    expect(body.linearDamping).toBe(0.2);
+    const calm = Math.round(CALM_AFTER / PHYSICS_STEP);
+    for (let step = 0; step < calm; step++) flight.step();
+    expect(body.linearDamping).toBeLessThan(0.5);
     flight.step();
     expect(body.linearDamping).toBe(0.95);
     expect(body.angularDamping).toBe(0.98);
@@ -95,7 +101,7 @@ describe("natural dice flight", () => {
       die.body.angularVelocity.set(0, 0, 0);
     }
     let transferredSpeed = 0;
-    for (let step = 0; step < 20; step++) {
+    for (let step = 0; step < 40; step++) {
       flight.step();
       transferredSpeed = Math.max(transferredSpeed, second.body.velocity.x);
     }

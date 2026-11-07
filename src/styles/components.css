@@ -65,7 +65,7 @@
       filter 220ms var(--ease);
 
       border: 1px solid #fff4;
-      border-image: linear-gradient(to bottom right, #fff4, #fff2, #fff3) 1;
+      border-image: var(--shine);
       background-clip: padding-box;
 
   }
@@ -219,7 +219,7 @@
     box-shadow: inset 0 0 0 2px var(--accent);
   }
   &::placeholder {
-    color: var(--text-faint);
+    color: #fff5;
   }
 }
 
@@ -267,7 +267,7 @@
     gap: var(--space-2);
     padding-left: var(--space-2);
   }
-  .list-row:nth-child(even) {
+  .list-row:nth-child(even of .list-row) {
     background: color-mix(in oklab, var(--surface-raised) 65%, transparent);
   }
   .list-pick,
@@ -355,6 +355,29 @@
     padding-left: calc(var(--space-3) + var(--space-2));
   }
 
+  /* A row's toggle for what it holds; the same width empty, to align names. */
+  .list-expand {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 18px;
+    min-height: 32px;
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+    color: var(--text-muted);
+  }
+  button.list-expand {
+    cursor: pointer;
+  }
+  .list-expand:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+  .list-expand[aria-expanded='true'] .list-caret {
+    rotate: 45deg;
+  }
   .list-caret {
     flex: none;
     width: 6px;
@@ -1571,6 +1594,18 @@
   .die-value {
     position: relative;
   }
+  /* A roll card or die being carried: a copy above every panel, free to leave the chat. */
+  .shake-carrier {
+    position: fixed;
+    z-index: 10000;
+    margin: 0;
+    box-sizing: border-box;
+    pointer-events: none;
+    cursor: grabbing;
+    &.roll-card {
+      box-shadow: 0 12px 32px oklch(0% 0 0 / 0.45);
+    }
+  }
   /* Thrown dice cross the window on their way to the chat. */
   .dice-flight {
     position: fixed;
@@ -1733,7 +1768,7 @@
     content: attr(data-placeholder);
     float: left;
     height: 0;
-    color: var(--text-faint);
+    color: #fff5;
     pointer-events: none;
   }
   .chat[data-dropping='true'] {
@@ -2496,7 +2531,7 @@
     outline: none;
   }
   .title::placeholder {
-    color: var(--text-faint);
+    color: #fff5;
   }
   .note-editor[data-loading] {
     min-height: 6em;
@@ -2558,7 +2593,7 @@
     content: attr(data-placeholder);
     float: left;
     height: 0;
-    color: var(--text-faint);
+    color: #fff5;
     pointer-events: none;
   }
   /* A note opened from a link elsewhere, in a pop-up. */
@@ -3017,6 +3052,62 @@
     color: var(--text-muted);
     white-space: pre-wrap;
   }
+  /* Formatted text (move descriptions): paragraphs and lists, no pre-wrap. */
+  .formatted-text {
+    display: grid;
+    gap: var(--space-2);
+    white-space: normal;
+  }
+  .formatted-text > p,
+  .formatted-text > ul {
+    margin: 0;
+  }
+  .formatted-text > ul {
+    padding-left: var(--space-4);
+  }
+  .formatted-heading {
+    margin: var(--space-1) 0 0;
+    font-size: var(--text-md);
+    color: var(--text);
+  }
+  .formatted-text strong {
+    color: var(--text);
+  }
+  /* An inline button in text that adds to or spends a character's number. */
+  .tracker-button {
+    display: inline;
+    padding: 0 4px;
+    border: 1px solid color-mix(in oklab, var(--accent) 45%, transparent);
+    background: var(--accent-soft);
+    color: var(--accent);
+    font: inherit;
+    font-weight: 600;
+    line-height: inherit;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .tracker-button:hover:not([aria-disabled]) {
+    background: color-mix(in oklab, var(--accent) 25%, transparent);
+  }
+  .tracker-button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+  .tracker-button[aria-disabled],
+  .tracker-button[data-static] {
+    border-color: var(--hairline);
+    background: none;
+    color: var(--text-muted);
+    cursor: default;
+  }
+  /* A move's own form under its text (Comfort or Support, Downtime). */
+  .move-form-section {
+    display: grid;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--hairline);
+  }
   .move-form {
     display: grid;
     gap: var(--space-3);
@@ -3082,6 +3173,19 @@
   }
 
   /* Libraries */
+  .reference {
+    display: grid;
+    align-content: start;
+    gap: var(--space-2);
+  }
+  .reference-section > summary {
+    padding: var(--space-1) 0;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .reference-text {
+    padding-bottom: var(--space-2);
+  }
   .libraries {
     display: grid;
     align-content: start;
@@ -3101,6 +3205,31 @@
   }
   .library-source .eyebrow {
     margin: 0;
+  }
+  /* What an entry holds (a class's paths, a path's moves), indented under it. */
+  .library-nest {
+    display: grid;
+    gap: var(--space-1);
+    padding: 0 0 var(--space-2) calc(var(--space-3) + 10px);
+    list-style: none;
+  }
+  .library-nest-group {
+    display: grid;
+  }
+  .library-nest-name {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    margin: var(--space-1) 0 0;
+    color: var(--text-muted);
+    font-size: var(--text-2xs);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .library-nest-name .list-meta {
+    text-transform: none;
+    letter-spacing: 0;
   }
   .sheet-attribution {
     font-size: var(--text-xs);
@@ -3643,6 +3772,12 @@
       white-space: pre-line;
     }
   }
+  .filterable-menu-option .option-picker-group {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
   .option-picker-trigger,
   .option-picker-value {
     justify-self: start;
@@ -3696,13 +3831,13 @@
   }
   .popup-tabs {
     --tab-h: 34px;
-    --tab-rule: 2px;
+    --tab-rule: 1px;
     position: relative;
     display: flex;
     gap: var(--space-1);
     margin: calc(var(--space-3) * -1) calc(var(--space-4) * -1) 0;
     padding: var(--space-4) var(--space-4) 0;
-    border-bottom: var(--tab-rule) solid var(--accent);
+    border-bottom: var(--tab-rule) solid var(--hairline-strong);
     background: linear-gradient(to bottom, transparent, var(--surface-sunken));
   }
   .popup-tab {
@@ -3713,9 +3848,9 @@
     height: var(--tab-h);
     margin-bottom: calc(-1 * var(--tab-rule));
     padding: 0 var(--space-3);
-    border: 0;
-    border-bottom: var(--tab-rule) solid transparent;
-    background: var(--surface-raised);
+    border: 1px solid transparent;
+    border-bottom-width: 0;
+
     color: var(--text-muted);
     font-size: var(--text-base);
     font-weight: 600;
@@ -3725,14 +3860,13 @@
       color 140ms var(--ease);
   }
   .popup-tab:hover:not([aria-selected='true']) {
-    background: var(--surface-sunken-hover);
     color: var(--text);
   }
-  /* The selected tab meets the content below without a diagonal edge. */
   .popup-tab[aria-selected='true'] {
     z-index: 1;
-    border-bottom-color: var(--surface-sunken);
-    background: var(--surface-sunken);
+    border-image: var(--shine);
+
+    background: var(--surface);
     color: var(--accent);
   }
   .popup-tab:focus-visible {
@@ -4022,6 +4156,30 @@
     grid-template-columns: minmax(5em, auto) 1fr auto auto;
     align-items: center;
     gap: var(--space-2);
+  }
+  .relationship-row.has-depth {
+    grid-template-columns: minmax(4em, auto) minmax(0, 1fr) minmax(3.5em, 4.5em) auto auto;
+  }
+  .relationship-depth {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: var(--space-1);
+    font-size: var(--font-size-sm);
+  }
+  .relationship-depth input {
+    min-inline-size: 0;
+    inline-size: 100%;
+    text-align: center;
+  }
+  .relationship-bond-controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 12em), 1fr));
+    align-items: end;
+    gap: var(--space-2);
+  }
+  .relationship-bond-rules summary {
+    cursor: pointer;
   }
   .relationship-name {
     padding: 0;

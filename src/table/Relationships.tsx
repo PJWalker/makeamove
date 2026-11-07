@@ -1,12 +1,13 @@
 import { useSignal } from "@preact/signals-react";
 import type { RefObject } from "react";
 import { createPortal } from "react-dom";
-import { useEffect, useId, useMemo, useRef } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef } from "react";
 import {
   canEdit,
   getCharacter,
   listCharacters,
   selectCharacter,
+  systemOf,
 } from "../features/characters/api";
 import {
   layoutWeb,
@@ -14,7 +15,11 @@ import {
   relationshipsOf,
   relationshipWeb,
   removeRelationship,
+  advanceBond,
+  bondsFor,
+  forgeBond,
   setRelationship,
+  setRelationshipDepth,
   type NodePosition,
 } from "../features/characters/relationships";
 import type { CharacterView } from "../features/characters/types";
@@ -30,6 +35,7 @@ import { characterLinkTargets, matchingLinkTargets } from "../features/notes/tar
 import { useMenuOverlay } from "../ui/menuOverlay";
 import { CampaignEntityGraphic } from "./EntityGraphic";
 import { registerEntityDrop } from "./entityDrag";
+import { BONDS } from "../systems/dungeon-world-2/bonds";
 
 /*
  * Relationships (M9): a section on every character sheet listing how this
@@ -46,22 +52,76 @@ export function RelationshipsSection({
   c: CharacterView;
 }) {
   const editable = canEdit(campaign, c);
+  const tracksDepth = systemOf(campaign).id === "dungeon-world-2";
   const json = useY(campaign.characters, () =>
     JSON.stringify(relationshipsOf(campaign.characters, c.id)),
   );
-  const rels: { to: string; label: string }[] = JSON.parse(json);
-  const people = useY(campaign.characters, () =>
-    characterLinkTargets(campaign),
+  const rels = useMemo(
+    () => JSON.parse(json) as { to: string; label: string; depth?: number }[],
+    [json],
   );
-  const others = people.filter(
-    (other) =>
-      other.id !== c.id &&
-      !rels.some((relationship) => relationship.to === other.id),
+  const peopleJson = useY(campaign.characters, () =>
+    JSON.stringify(characterLinkTargets(campaign)),
+  );
+  const people = useMemo(
+    () =>
+      JSON.parse(peopleJson) as ReturnType<typeof characterLinkTargets>,
+    [peopleJson],
+  );
+  const depthWebJson = useY(campaign.characters, () =>
+    JSON.stringify(
+      relationshipWeb(
+        campaign.characters,
+        listCharacters(campaign).map((person) => person.id),
+      ),
+    ),
+  );
+  const depthWeb = useMemo(
+    () => JSON.parse(depthWebJson) as ReturnType<typeof relationshipWeb>,
+    [depthWebJson],
+  );
+  const bondsJson = useY(campaign.systemData, () =>
+    JSON.stringify(bondsFor(campaign.systemData, c.id)),
+  );
+  const bonds = useMemo(
+    () => JSON.parse(bondsJson) as ReturnType<typeof bondsFor>,
+    [bondsJson],
+  );
+  const eligibleBondmates = useMemo(
+    () =>
+      people.filter((person) => {
+        const other = getCharacter(campaign, person.id);
+        const ownDepth = depthWeb.find(
+          (relationship) => relationship.from === c.id && relationship.to === person.id,
+        )?.depth ?? 0;
+        const theirDepth = depthWeb.find(
+          (relationship) => relationship.from === person.id && relationship.to === c.id,
+        )?.depth ?? 0;
+        return (
+          person.id !== c.id &&
+          other?.kind === "pc" &&
+          ownDepth >= 3 &&
+          theirDepth >= 3
+        );
+      }),
+    [campaign, people, depthWeb, c.id],
+  );
+  const others = useMemo(
+    () =>
+      people.filter(
+        (other) =>
+          other.id !== c.id &&
+          !rels.some((relationship) => relationship.to === other.id),
+      ),
+    [people, c.id, rels],
   );
   const adding = useSignal("");
   const open = useSignal<string | null>(null);
   const suggesting = useSignal(false);
   const active = useSignal(0);
+  const bondmateId = useSignal("");
+  const bondType = useSignal("");
+  const bondMoveId = useSignal("");
   const section = useRef<HTMLElement>(null);
   const input = useRef<HTMLInputElement>(null);
   const panel = useRef<HTMLDivElement>(null);
@@ -70,24 +130,27 @@ export function RelationshipsSection({
   const expanded =
     editable && suggesting.value && adding.value.trim().length > 0;
   const index = Math.min(active.value, Math.max(0, matches.length - 1));
-  const add = (to: string) => {
-    const current = getCharacter(campaign, c.id);
-    if (
-      !current ||
-      !canEdit(campaign, current) ||
-      to === c.id ||
-      !getCharacter(campaign, to) ||
-      relationshipsOf(campaign.characters, c.id).some(
-        (relationship) => relationship.to === to,
+  const add = useCallback(
+    (to: string) => {
+      const current = getCharacter(campaign, c.id);
+      if (
+        !current ||
+        !canEdit(campaign, current) ||
+        to === c.id ||
+        !getCharacter(campaign, to) ||
+        relationshipsOf(campaign.characters, c.id).some(
+          (relationship) => relationship.to === to,
+        )
       )
-    )
-      return false;
-    setRelationship(campaign.characters, c.id, to, "");
-    adding.value = "";
-    suggesting.value = false;
-    open.value = null;
-    return true;
-  };
+        return false;
+      setRelationship(campaign.characters, c.id, to, "");
+      adding.value = "";
+      suggesting.value = false;
+      open.value = null;
+      return true;
+    },
+    [campaign, c.id, adding, open, suggesting],
+  );
 
   useEffect(() => {
     const element = section.current;
@@ -101,7 +164,7 @@ export function RelationshipsSection({
         return entity.link ? add(entity.link.id) : false;
       },
     );
-  }, [campaign, c.id, editable, people, json]);
+  }, [editable, others, add]);
 
   const bounds = input.current?.getBoundingClientRect();
   useMenuOverlay({
@@ -116,8 +179,15 @@ export function RelationshipsSection({
   });
 
   return (
-    <section ref={section} className="form-section sheet-section" aria-label="Relationships">
-      <h3 className="sheet-heading">Relationships</h3>
+    <section
+      ref={section}
+      className="form-section sheet-section"
+      aria-label="Relationships"
+    >
+      <h3 className="sheet-heading">Relationships</h3>{" "}
+      <Button size="sm" variant="ghost" onClick={() => openRelationshipWeb()}>
+        Web
+      </Button>
       {rels.length > 0 && (
         <ul className="relationships">
           {rels.map((r) => {
@@ -126,7 +196,9 @@ export function RelationshipsSection({
             const expanded = open.value === r.to;
             return (
               <li key={r.to} className="relationship">
-                <div className="relationship-row">
+                <div
+                  className={`relationship-row${tracksDepth ? " has-depth" : ""}`}
+                >
                   <button
                     type="button"
                     className="relationship-name"
@@ -148,6 +220,28 @@ export function RelationshipsSection({
                       )
                     }
                   />
+                  {tracksDepth && (
+                    <label className="relationship-depth">
+                      Depth
+                      <input
+                        type="number"
+                        min={0}
+                        max={3}
+                        step={1}
+                        value={r.depth ?? 0}
+                        disabled={!editable}
+                        aria-label={`Depth with ${other.name}`}
+                        onChange={(event) =>
+                          setRelationshipDepth(
+                            campaign.characters,
+                            c.id,
+                            r.to,
+                            Number(event.currentTarget.value),
+                          )
+                        }
+                      />
+                    </label>
+                  )}
                   <Button
                     variant="icon"
                     size="sm"
@@ -184,6 +278,154 @@ export function RelationshipsSection({
           })}
         </ul>
       )}
+      {tracksDepth && bonds.length > 0 && (
+        <ul className="relationships" aria-label="Bonds">
+          {bonds.map((bond) => {
+            const partnerId = bond.first === c.id ? bond.second : bond.first;
+            const partner = getCharacter(campaign, partnerId);
+            const definition = BONDS.find((entry) => entry.id === bond.type);
+            return (
+              <li key={`${bond.first}:${bond.second}`} className="relationship">
+                <div className="relationship-row">
+                  <span className="relationship-name">
+                    {partner?.name ?? "Former PC"}
+                  </span>
+                  <strong>{definition?.name ?? bond.type}</strong>
+                </div>
+                {definition && (
+                  <details className="relationship-bond-rules">
+                    <summary>Bond rules</summary>
+                    <p>{definition.text}</p>
+                    <ul aria-label={`${definition.name} moves`}>
+                      {definition.moves.map((move) => (
+                        <li key={move.id}>
+                          {move.name}:{" "}
+                          {move.starting
+                            ? "Starting move"
+                            : bond.advancedMoves.includes(move.id)
+                              ? "Unlocked"
+                              : "Locked"}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {tracksDepth &&
+        editable &&
+        eligibleBondmates.length > 0 &&
+        (() => {
+          const currentBond = bonds.find(
+            (bond) =>
+              (bond.first === c.id && bond.second === bondmateId.value) ||
+              (bond.second === c.id && bond.first === bondmateId.value),
+          );
+          const reinforcing = currentBond?.type === bondType.value;
+          const definition = BONDS.find((bond) => bond.id === bondType.value);
+          const availableMoves = reinforcing
+            ? (definition?.moves.slice(1) ?? []).filter(
+                (move) => !currentBond.advancedMoves.includes(move.id),
+              )
+            : [];
+          return (
+            <div className="relationship-bond-controls">
+              <label>
+                Bondmate
+                <select
+                  value={bondmateId.value}
+                  onChange={(event) => {
+                    bondmateId.value = event.currentTarget.value;
+                    bondMoveId.value = "";
+                  }}
+                >
+                  <option value="">Choose a PC</option>
+                  {eligibleBondmates.map((person) => (
+                    <option key={person.id} value={person.id}>
+                      {person.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Bond
+                <select
+                  aria-label="Bond type"
+                  value={bondType.value}
+                  onChange={(event) => {
+                    bondType.value = event.currentTarget.value;
+                    bondMoveId.value = "";
+                  }}
+                >
+                  <option value="">Choose a Bond</option>
+                  {BONDS.map((bond) => (
+                    <option key={bond.id} value={bond.id}>
+                      {bond.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {reinforcing && availableMoves.length > 0 && (
+                <label>
+                  Advanced move
+                  <select
+                    value={bondMoveId.value}
+                    onChange={(event) =>
+                      (bondMoveId.value = event.currentTarget.value)
+                    }
+                  >
+                    <option value="">Choose a move</option>
+                    {availableMoves.map((move) => (
+                      <option key={move.id} value={move.id}>
+                        {move.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              {reinforcing && availableMoves.length === 0 && (
+                <span className="muted">
+                  All advanced Bond moves are unlocked.
+                </span>
+              )}
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={
+                  !bondmateId.value ||
+                  !bondType.value ||
+                  (reinforcing && !bondMoveId.value)
+                }
+                onClick={() => {
+                  const changed = reinforcing
+                    ? advanceBond(
+                        campaign.systemData,
+                        campaign.characters,
+                        c.id,
+                        bondmateId.value,
+                        bondMoveId.value,
+                      )
+                    : forgeBond(
+                        campaign.systemData,
+                        campaign.characters,
+                        c.id,
+                        bondmateId.value,
+                        bondType.value,
+                      );
+                  if (changed) {
+                    bondmateId.value = "";
+                    bondMoveId.value = "";
+                  }
+                }}
+              >
+                {reinforcing ? "Reinforce Bond" : "Forge Bond"}
+              </Button>
+            </div>
+          );
+        })()}
       <div className="sheet-row">
         {editable && (
           <input
@@ -236,9 +478,6 @@ export function RelationshipsSection({
             }}
           />
         )}
-        <Button size="sm" variant="ghost" onClick={() => openRelationshipWeb()}>
-          Web
-        </Button>
       </div>
       {expanded &&
         createPortal(
@@ -307,18 +546,27 @@ export function RelationshipsDialog({
       edges: relationshipWeb(campaign.characters, ids),
     });
   });
-  const { people, edges } = JSON.parse(json) as {
-    people: { id: string; name: string; kind: string }[];
-    edges: { from: string; to: string; label: string }[];
-  };
+  const { people, edges } = useMemo(
+    () =>
+      JSON.parse(json) as {
+        people: { id: string; name: string; kind: string }[];
+        edges: { from: string; to: string; label: string }[];
+      },
+    [json],
+  );
   // Only characters in a relationship, unless there are none yet.
-  const linked = new Set(edges.flatMap((e) => [e.from, e.to]));
-  const shown = people.filter((p) => linked.has(p.id));
+  const shown = useMemo(
+    () => {
+      const linked = new Set(edges.flatMap((e) => [e.from, e.to]));
+      return people.filter((p) => linked.has(p.id));
+    },
+    [people, edges],
+  );
   const dragged = useSignal<Record<string, NodePosition>>({});
-  const ids = shown.map((p) => p.id);
+  const ids = useMemo(() => shown.map((p) => p.id), [shown]);
   const pos = useMemo(
     () => layoutWeb(ids, edges, { width: W, height: H, fixed: dragged.value }),
-    [json, dragged.value],
+    [ids, edges, dragged.value],
   );
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -403,14 +651,14 @@ export function RelationshipsDialog({
                 <path
                   className="relationship-edge"
                   d={`M${start.x},${start.y} Q${mx},${my} ${end.x},${end.y}`}
-                  marker-end="url(#rel-arrow)"
+                  markerEnd="url(#rel-arrow)"
                 />
                 {e.label && (
                   <text
                     className="relationship-label"
                     x={((start.x + end.x) / 2) * 0.5 + mx * 0.5}
                     y={((start.y + end.y) / 2) * 0.5 + my * 0.5 - 4}
-                    text-anchor="middle"
+                    textAnchor="middle"
                   >
                     {e.label}
                   </text>
@@ -432,14 +680,14 @@ export function RelationshipsDialog({
                 <circle r={NODE_R} />
                 <text
                   className="relationship-initial"
-                  text-anchor="middle"
+                  textAnchor="middle"
                   dy="0.35em"
                 >
                   {p.name.trim()[0]?.toUpperCase()}
                 </text>
                 <text
                   className="relationship-node-name"
-                  text-anchor="middle"
+                  textAnchor="middle"
                   y={NODE_R + 14}
                 >
                   {p.name}

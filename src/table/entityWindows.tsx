@@ -17,7 +17,7 @@ import {
 import { checkOf } from "../features/characters/moves";
 import { getStorageJson, setStorageJson } from "../platform/localStorage";
 import { useY } from "../ui/useY";
-import { librariesFor } from "../features/library";
+import { entryByKey, librariesFor } from "../features/library";
 import type { Icon } from "../ui/icons";
 import { IconOpenWindow } from "../ui/icons";
 import { IconPost, IconRoll, IconTarget } from "../ui/icons";
@@ -128,19 +128,8 @@ export function EntityWindowHost({ campaign }: { campaign: Campaign }) {
         if (!system.actions.some((move) => move.id === moveId))
           closeEntityWindow(id as DockItemId);
       } else if (key.startsWith("lib:")) {
-        const parts = key.slice("lib:".length).split(":");
-        const entryId = parts.pop();
-        const kind = parts.pop();
-        const sourceId = parts.join(":");
-        const source = sources.find((candidate) => candidate.id === sourceId);
-        if (
-          source &&
-          !source.collections.some((collection) =>
-            collection.entries.some(
-              (entry) => entry.id === entryId && entry.kind === kind,
-            ),
-          )
-        ) {
+        const found = entryByKey(sources, key);
+        if (found && !found.entry) {
           closeEntityWindow(id as DockItemId);
         }
       }
@@ -303,14 +292,7 @@ export function EntityWindowContent({
   }
 
   if (key.startsWith("lib:")) {
-    const parts = key.slice("lib:".length).split(":");
-    const entryId = parts.pop();
-    const kind = parts.pop();
-    const sourceId = parts.join(":");
-    const entry = librariesFor(baseSystemOf(campaign))
-      .find((source) => source.id === sourceId)
-      ?.collections.flatMap((collection) => collection.entries)
-      .find((candidate) => candidate.id === entryId && candidate.kind === kind);
+    const entry = entryByKey(librariesFor(baseSystemOf(campaign)), key)?.entry;
     if (!entry) return text;
     const editable =
       !!selectedCharacter && canEdit(campaign, selectedCharacter);

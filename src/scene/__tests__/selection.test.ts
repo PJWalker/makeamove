@@ -149,8 +149,14 @@ describe("SceneController", () => {
     expect(scene.update).not.toHaveBeenCalled();
   });
 
-  it("forwards screen hover positions outside tokens and clears them on leave", () => {
+  it("forwards screen hover positions after panning and zooming and clears them on leave", () => {
     const { renderer, fire } = setup([token("a", 100, 100)]);
+    renderer.camera = { x: 200, y: 120, zoom: 2 };
+    fire("pointermove", 400, 320);
+    expect(renderer.setHoverToken).toHaveBeenLastCalledWith("a", {
+      x: 400,
+      y: 320,
+    });
     fire("pointermove", 100, 60);
     expect(renderer.setHoverToken).toHaveBeenLastCalledWith(null, {
       x: 100,

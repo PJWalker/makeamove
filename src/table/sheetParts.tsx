@@ -1,4 +1,6 @@
 import { useSignal } from '@preact/signals-react'
+import { plainText } from "../features/characters/trackers";
+import { MoveBody } from "./MoveBody";
 import { useY } from "../ui/useY";
 import { setField } from "../features/characters/api";
 import type { EntityGraphic } from "../graphics";
@@ -34,6 +36,7 @@ import { dragToken } from './tokenDrag'
 import { getEntityGraphic, setEntityGraphic } from "./entityGraphics";
 import { actionMenuItems } from "./actionMenu";
 import { dragEntity, entity } from "./entityDrag";
+import { sessionMoveUsed, sessionUseSnapshot } from "../features/characters/sessionMoves";
 
 /*
  * Pieces every system's sheet can use: counters, the action list, and the
@@ -131,6 +134,11 @@ export function MoveList({
   );
   const filter = useSignal<string>(categories[0]?.id ?? "all");
   const windows = useEntryWindows();
+  const sessionMessages = campaign.chat.messages.value;
+  const sessionUsage = useY(campaign.systemData, () =>
+    sessionUseSnapshot(campaign, ownerId, moves, sessionMessages),
+  );
+  void sessionUsage;
   const shown =
     filter.value === "all"
       ? moves
@@ -147,30 +155,37 @@ export function MoveList({
         />
       )}
       <List>
-        {shown.map((m) => (
-          <EntryRow
-            key={m.id}
-            name={m.name}
-            Icon={entryIcon(
-              "move",
-              m.category === "class" ? "class-move" : undefined,
-            )}
-            tag={rollTag(system, m)}
-            tip={m.text}
-            onOpen={(row) => windows.show(`move:${ownerId}:${m.id}`, row)}
-            onPointerDown={(ev) =>
-              dragEntity(ev, entity(campaign, "move", m.id, m.name))
-            }
-            menuItems={[
-              { label: makeVerb(m).label, onSelect: () => onMake(m) },
-              ...actionMenuItems(campaign, [
-                { id: `move:${m.id}`, title: m.name },
-              ]),
-            ]}
-          >
-            <MakeButton m={m} onMake={onMake} />
-          </EntryRow>
-        ))}
+        {shown.map((m) => {
+          const used = sessionMoveUsed(campaign, ownerId, m, sessionMessages);
+          return (
+            <EntryRow
+              key={m.id}
+              name={m.name}
+              Icon={entryIcon(
+                "move",
+                m.category === "class" ? "class-move" : undefined,
+              )}
+              tag={rollTag(system, m)}
+              tip={plainText(m.text)}
+              onOpen={(row) => windows.show(`move:${ownerId}:${m.id}`, row)}
+              onPointerDown={(ev) =>
+                dragEntity(ev, entity(campaign, "move", m.id, m.name))
+              }
+              menuItems={[
+                {
+                  label: used ? "Already used this session" : makeVerb(m).label,
+                  disabled: used,
+                  onSelect: () => onMake(m),
+                },
+                ...actionMenuItems(campaign, [
+                  { id: `move:${m.id}`, title: m.name },
+                ]),
+              ]}
+            >
+              <MakeButton m={m} onMake={onMake} disabled={used} />
+            </EntryRow>
+          );
+        })}
       </List>
       {windows.keys.map((key) => {
         const prefix = `move:${ownerId}:`;
@@ -179,12 +194,14 @@ export function MoveList({
           : undefined;
         if (!m) return null;
         const tag = rollTag(system, m);
+        const used = sessionMoveUsed(campaign, ownerId, m, sessionMessages);
         return (
           <EntryWindow
             key={key}
             entryKey={key}
             title={m.name}
-            text={m.text}
+            text={plainText(m.text)}
+            body={<MoveBody campaign={campaign} move={m} characterId={ownerId} />}
             onClose={() => windows.close(key)}
             proxy={linkProxy(
               campaign,
@@ -194,7 +211,11 @@ export function MoveList({
               m.category === "class" ? "class-move" : undefined,
             )}
             menuItems={[
-              { label: makeVerb(m).label, onSelect: () => onMake(m) },
+              {
+                label: used ? "Already used this session" : makeVerb(m).label,
+                disabled: used,
+                onSelect: () => onMake(m),
+              },
               ...(onForget && learned.includes(m.id)
                 ? [
                     {
@@ -223,7 +244,7 @@ export function MoveList({
                 Forget
               </Button>
             )}
-            <MakeButton m={m} onMake={onMake} big />
+            <MakeButton m={m} onMake={onMake} big disabled={used} />
           </EntryWindow>
         );
       })}
@@ -383,11 +404,11 @@ export function makeVerb(m: ActionDef) {
 }
 
 /** The button that uses an action: an icon in a list row, or labelled in its window. */
-function MakeButton({ m, onMake, big }: { m: ActionDef; onMake: (m: ActionDef) => void; big?: boolean }) {
+function MakeButton({ m, onMake, big, disabled = false }: { m: ActionDef; onMake: (m: ActionDef) => void; big?: boolean; disabled?: boolean }) {
   const { label, Icon } = makeVerb(m)
   if (big) {
     return (
-      <Button variant="primary" onClick={() => onMake(m)}>
+      <Button variant="primary" disabled={disabled} onClick={() => onMake(m)}>
         <Icon size={22} /> {label}
       </Button>
     );
@@ -400,6 +421,8 @@ function MakeButton({ m, onMake, big }: { m: ActionDef; onMake: (m: ActionDef) =
       data-tip-side="right"
       label={`${label}: ${m.name}`}
       aria-label={`${label}: ${m.name}`}
+      disabled={disabled}
+      title={disabled ? "Already used this session" : undefined}
       onClick={() => onMake(m)}
     >
       <Icon size={22} />

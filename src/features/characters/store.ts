@@ -170,6 +170,8 @@ export function instanceOf(def: ItemDef, order: string): ItemInstance {
     weight: def.weight,
     tags: def.tags,
     ...(def.uses ? { uses: def.uses, usesLeft: def.uses } : {}),
+    ...(def.resetUsesAtCamp ? { resetUsesAtCamp: true } : {}),
+    ...(def.artifact ? { artifactProgress: 0, artifactUnlocked: [] } : {}),
     equippable: !!def.equippable,
     equipped: false,
     ...(def.icon ? { icon: def.icon } : {}),

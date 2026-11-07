@@ -41,11 +41,11 @@
                 - generic [ref=f33e257]:
                   - text: Description
                   - textbox "Description" [ref=f33e259]:
-                    - paragraph [ref=f33e260]: Type @ to link a note, character, gear or move.
+                    - paragraph [ref=f33e260]: Type @ to link
                 - generic [ref=f33e261]:
                   - text: GM Notes
                   - textbox "GM Notes" [ref=f33e263]:
-                    - paragraph [ref=f33e264]: Type @ to link a note, character, gear or move.
+                    - paragraph [ref=f33e264]: Type @ to link
               - region "Relationships" [ref=f33e265]:
                 - heading "Relationships" [level=3] [ref=f33e266]
                 - generic [ref=f33e267]:

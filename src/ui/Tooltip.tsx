@@ -142,7 +142,7 @@ export function Tooltip() {
       document.removeEventListener('keydown', dismiss, true)
       document.removeEventListener('scroll', dismiss, true)
     }
-  }, [])
+  }, [tip])
 
   const t = tip.value
   // Keep it on screen: open on the preferred side, or the opposite one if it

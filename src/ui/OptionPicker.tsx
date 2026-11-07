@@ -4,6 +4,8 @@ export interface PickerOption {
   id: string;
   name: string;
   text?: string;
+  /** A heading it sits under, shown with its name ("Gain a Path"). */
+  group?: string;
 }
 
 /**
@@ -28,7 +30,9 @@ export function OptionPicker({
 }) {
   const selected = options.find((option) => option.id === value);
   // A value from before the options changed shows as it is.
-  const name = selected?.name ?? (value || emptyLabel);
+  const name = selected
+    ? selected.group ? `${selected.group} · ${selected.name}` : selected.name
+    : value || emptyLabel;
   return (
     <div className="field option-picker">
       <span aria-hidden="true">{label}</span>
@@ -55,12 +59,17 @@ export function OptionPicker({
           }}
           searchLabel={`Search ${label}`}
           placeholder="Filter"
-          options={[{ id: "", name: emptyLabel }, ...options].map((option) => ({
+          options={[{ id: "", name: emptyLabel } as PickerOption, ...options].map((option) => ({
             id: option.id,
             label: option.name,
-            ...(option.text ? { keywords: option.text } : {}),
+            ...(option.text || option.group
+              ? { keywords: [option.group, option.text].filter(Boolean).join(" ") }
+              : {}),
             content: (
               <>
+                {option.group && (
+                  <span className="option-picker-group">{option.group}</span>
+                )}
                 <strong>{option.name}</strong>
                 {option.text && <span>{option.text}</span>}
               </>

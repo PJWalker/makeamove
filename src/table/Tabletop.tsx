@@ -10,6 +10,7 @@ import { CampaignDialogHost } from "./CampaignDialogHost";
 import { Sidebar } from "./Sidebar";
 import { dockInsets, unavailablePanels, windowDragging } from "./panelLayout";
 import { hasCombat } from "../features/combat/api";
+import { systemOf } from "../features/characters/api";
 import {
   activeMapColour,
   autohide,
@@ -33,12 +34,17 @@ export function Tabletop({ campaign }: { campaign: Campaign }) {
   const scenes = useY(campaign.scenes, () => campaign.sceneViews());
   // A system without initiative has no turn tracker.
   const combat = useY(campaign.meta, () => hasCombat(campaign));
+  // The Reference holds GM guidance, for systems that have it.
+  const reference = useY(campaign.members, () => campaign.isGm() && !!systemOf(campaign).gmReference?.length);
   useLayoutEffect(() => {
-    unavailablePanels.value = combat ? [] : ["combat"];
+    unavailablePanels.value = [
+      ...(combat ? [] : (["combat"] as const)),
+      ...(reference ? [] : (["reference"] as const)),
+    ];
     return () => {
       unavailablePanels.value = [];
     };
-  }, [combat]);
+  }, [combat, reference]);
   const activeId = useY(campaign.members, () => campaign.activeSceneId());
   const scene = scenes.find((s) => s.id === activeId) ?? scenes[0];
 
@@ -173,6 +179,6 @@ function useNearEdges(on: boolean) {
       document.documentElement.removeEventListener("pointerleave", onLeave);
       edges.value = "";
     };
-  }, [on]);
+  }, [on, edges]);
   return edges.value;
 }
