@@ -5,9 +5,9 @@ import { useEffect, useLayoutEffect, useRef, type RefObject } from "react";
 import { contentFromText, emptyChatContent, type ChatContent } from "../features/chat/content";
 import { LINK_NODE } from "../features/notes/links";
 import type { Campaign } from "../campaign/campaign";
-import { registerLinkDrop } from "./entityDrag";
-import { linkExtension } from "./richText";
-import { trackerButtonExtension } from "./trackerButtons";
+import { registerLinkDrop } from "../workspace/entityDrag";
+import { linkExtension } from "../workspace/richText";
+import { trackerButtonExtension } from "../workspace/trackerButtons";
 
 /*
  * The chat's message box stores Tiptap JSON. Enter sends; Shift+Enter starts

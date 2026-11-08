@@ -9,7 +9,7 @@ import type { Campaign } from "../campaign/campaign";
 import { device } from "../platform/device";
 import { useY } from "../ui/useY";
 import { IconDice, IconExpand } from "../ui/icons";
-import { usePanelVisible } from "./panelLayout";
+import { usePanelVisible } from "../workspace/panelLayout";
 import { Message } from "./ChatMessage";
 import { useValue } from "../ui/useValue";
 

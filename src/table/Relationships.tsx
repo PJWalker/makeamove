@@ -23,14 +23,14 @@ import type { Campaign } from "../campaign/campaign";
 import { useY } from "../ui/useY";
 import { Button } from "../ui/Button";
 import { IconDelete, IconExpand } from "../ui/icons";
-import { Dialog } from "./CampaignDialogs";
-import { CharacterText } from "./CharacterText";
-import { showPanel } from "./panelLayout";
-import { dialogRequest } from "./canvasState";
+import { Dialog } from "../workspace/CampaignDialogs";
+import { CharacterText } from "../workspace/CharacterText";
+import { showPanel } from "../workspace/panelLayout";
+import { dialogRequest } from "../workspace/canvasState";
 import { characterLinkTargets, matchingLinkTargets } from "../features/notes/targets";
 import { useMenuOverlay } from "../ui/menuOverlay";
-import { CampaignEntityGraphic } from "./EntityGraphic";
-import { registerEntityDrop } from "./entityDrag";
+import { CampaignEntityGraphic } from "../workspace/EntityGraphic";
+import { registerEntityDrop } from "../workspace/entityDrag";
 import { extensionOf } from "../systems/extensions";
 
 /*

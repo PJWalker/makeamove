@@ -75,7 +75,7 @@ export function registerEntityDrop(
   };
 }
 
-/** The hotbar action for a link target, so it can be pinned (see table/commands/). */
+/** The hotbar action for a link target, so it can be pinned (see commands/). */
 const ACTION_PREFIX: Partial<Record<LinkKind, string>> = {
   move: "move",
   item: "library",

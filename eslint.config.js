@@ -53,7 +53,7 @@ export default defineConfig([
   // everything below it; nothing below reaches back up. Tests compose freely.
   {
     files: [
-      "src/{lib,core,platform,sync,campaign,scene,features,ui}/**/*.{ts,tsx}",
+      "src/{lib,core,platform,sync,campaign,scene,features,ui,workspace,systems}/**/*.{ts,tsx}",
       "src/graphics.ts",
     ],
     ignores: ["**/__tests__/**"],
@@ -65,29 +65,6 @@ export default defineConfig([
             {
               regex: "^(\\.\\.?/)+(app|lobby|table)(/|$)",
               message: "Only composition (app, lobby, table) may import app, lobby or table.",
-            },
-          ],
-        },
-      ],
-    },
-  },
-  {
-    files: ["src/systems/**/*.{ts,tsx}"],
-    ignores: ["**/__tests__/**"],
-    rules: {
-      "no-restricted-imports": [
-        "error",
-        {
-          patterns: [
-            {
-              regex: "^(\\.\\./)+(app|lobby)(/|$)",
-              message: "Systems may not import app or lobby.",
-            },
-            {
-              // The shared sheet parts still live in table/ (TODO.md, Code health).
-              regex:
-                "^(\\.\\./)+table/(?!(DeclarativeSheet|sheetParts|Inventory|CharacterText|CreationParts|CampaignDialogs|usePopupDialog|entityDrag)$)",
-              message: "Systems may not import table.",
             },
           ],
         },

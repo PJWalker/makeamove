@@ -2,8 +2,8 @@ import { useEffect, useRef } from "react";
 import { watch } from "../lib/store";
 import type { Campaign } from "../campaign/campaign";
 import { openPopup } from "../ui/popup";
-import { dialogRequest } from "./canvasState";
-import { HelpDialog, SettingsDialog } from "./CampaignDialogs";
+import { dialogRequest } from "../workspace/canvasState";
+import { HelpDialog, SettingsDialog } from "../workspace/CampaignDialogs";
 import { RelationshipsDialog } from "./Relationships";
 
 /** Always mounted so campaign actions can open dialogs from any panel. */

@@ -1,5 +1,5 @@
 import { plainText } from "../features/characters/trackers";
-import { MoveBody } from "./MoveBody";
+import { MoveBody } from "../workspace/MoveBody";
 import {
   addItem,
   baseSystemOf,
@@ -29,15 +29,15 @@ import { Button } from "../ui/Button";
 import { Segmented } from "../ui/Segmented";
 import { IconGive, IconImage } from "../ui/icons";
 import { List, ListExpand, ListGroup, Tag } from "../ui/List";
-import { EntryRow, EntryWindow, rollTag, useEntryWindows } from "./EntryWindow";
-import { dragEntity, entity } from "./entityDrag";
-import { libraryView as view, openedLibraryEntries } from "./libraryView";
-import { linkProxy } from "./LinkChip";
-import { makeVerb } from "./sheetParts";
-import { actionMenuItems } from "./actionMenu";
-import { getEntityGraphic } from "./entityGraphics";
-import { CampaignEntityGraphic } from "./EntityGraphic";
-import { editEntityGraphic } from "./GraphicDialogs";
+import { EntryRow, EntryWindow, rollTag, useEntryWindows } from "../workspace/EntryWindow";
+import { dragEntity, entity } from "../workspace/entityDrag";
+import { libraryView as view, openedLibraryEntries } from "../workspace/libraryView";
+import { linkProxy } from "../workspace/LinkChip";
+import { makeVerb } from "../workspace/sheetParts";
+import { actionMenuItems } from "../workspace/actionMenu";
+import { getEntityGraphic } from "../workspace/entityGraphics";
+import { CampaignEntityGraphic } from "../workspace/EntityGraphic";
+import { editEntityGraphic } from "../workspace/GraphicDialogs";
 import type { ItemDef } from "../systems/types";
 import { useValue } from "../ui/useValue";
 

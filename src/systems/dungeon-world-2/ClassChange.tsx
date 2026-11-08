@@ -15,15 +15,15 @@ import type { ChoiceDef } from "../types";
 import { Button } from "../../ui/Button";
 import { OptionPicker } from "../../ui/OptionPicker";
 import { closePopup } from "../../ui/popup";
-import { usePopupDialog } from "../../table/usePopupDialog";
-import { Dialog } from "../../table/CampaignDialogs";
+import { usePopupDialog } from "../../workspace/usePopupDialog";
+import { Dialog } from "../../workspace/CampaignDialogs";
 import {
   ChoiceField,
   emptyPick,
   RuleScoreFields,
   scoreCapsOf,
   type Picked,
-} from "../../table/CreationParts";
+} from "../../workspace/CreationParts";
 import { applyClassChange } from "./campaign";
 
 /*

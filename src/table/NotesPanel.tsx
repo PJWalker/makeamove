@@ -18,7 +18,7 @@ import {
   type NoteFolderView,
   type NoteView,
 } from "../features/notes/api";
-import { noteOpened, noteSearchTarget, openNote, openNoteId } from "./linkNavigation";
+import { noteOpened, noteSearchTarget, openNote, openNoteId } from "../workspace/linkNavigation";
 import type { Campaign } from "../campaign/campaign";
 import { useY } from "../ui/useY";
 import { Button } from "../ui/Button";
@@ -37,8 +37,8 @@ import { List, ListRow } from "../ui/List";
 import { menuTrigger } from "../ui/menuTrigger";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
-import { dragEntity, entity } from "./entityDrag";
-import { editEntityGraphic } from "./GraphicDialogs";
+import { dragEntity, entity } from "../workspace/entityDrag";
+import { editEntityGraphic } from "../workspace/GraphicDialogs";
 import { NoteEditor } from "./NoteEditor";
 import { FolderTree } from "./FolderTree";
 import { notesLayout } from "./panelLayouts";

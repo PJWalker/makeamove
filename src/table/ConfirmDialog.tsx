@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import { closePopup } from "../ui/popup";
 import { Button } from "../ui/Button";
-import { Dialog } from "./CampaignDialogs";
-import { usePopupDialog } from "./usePopupDialog";
+import { Dialog } from "../workspace/CampaignDialogs";
+import { usePopupDialog } from "../workspace/usePopupDialog";
 
 export function ConfirmDialog({
   title,

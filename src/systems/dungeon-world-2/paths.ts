@@ -22,7 +22,7 @@ export interface Dw2Path {
 }
 
 /**
- * A rulebook cell as formatted text (see table/FormattedText): its emphasis
+ * A rulebook cell as formatted text (see workspace/FormattedText): its emphasis
  * kept, each result band and each listed option on its own line, and its
  * XP and Treasure costs as buttons.
  */

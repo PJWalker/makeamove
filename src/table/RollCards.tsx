@@ -1,4 +1,4 @@
-import { FormattedText } from "./FormattedText";
+import { FormattedText } from "../workspace/FormattedText";
 import { useState } from "react";
 import type { MoveMessage, RollMessage, RollVisibility } from "../features/chat/types";
 import { type Roll } from "../features/dice/notation";

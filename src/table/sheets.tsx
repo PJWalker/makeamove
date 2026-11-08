@@ -1,9 +1,9 @@
 import { canEdit } from "../features/characters/api";
 import { extensionOf, type SheetProps } from "../systems/extensions";
 import { CopyBanner, TemplateSettings } from "./TemplateSettings";
-import { DeclarativeSheet } from "./DeclarativeSheet";
+import { DeclarativeSheet } from "../workspace/DeclarativeSheet";
 import { RelationshipsSection } from "./Relationships";
-import { CharacterText, GMCharacterText } from "./CharacterText";
+import { CharacterText, GMCharacterText } from "../workspace/CharacterText";
 
 /** For systems with a layout: the core's declarative sheet. */
 const declarative = (kind: "pc" | "npc") =>

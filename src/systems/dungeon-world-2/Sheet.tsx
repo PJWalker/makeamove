@@ -5,14 +5,14 @@ import {
   useSheet,
   type SheetDrop,
   type SheetProps,
-} from "../../table/DeclarativeSheet";
-import { CharacterText } from "../../table/CharacterText";
-import type { DragEntity } from "../../table/entityDrag";
+} from "../../workspace/DeclarativeSheet";
+import { CharacterText } from "../../workspace/CharacterText";
+import type { DragEntity } from "../../workspace/entityDrag";
 import { addItem, setData } from "../../features/characters/api";
 import { resolveStruggle, revealStruggle } from "./campaign";
 import { STRUGGLES, struggleOfEntry } from "./struggles";
 import { Button } from "../../ui/Button";
-import { Counter } from "../../table/sheetParts";
+import { Counter } from "../../workspace/sheetParts";
 import { addTreasureBoxes, wealthTierForBoxes, MAX_TREASURE_BOXES } from "./wealth";
 import { DW2_GEAR, DW2_MAGIC_ITEMS } from "./gear";
 

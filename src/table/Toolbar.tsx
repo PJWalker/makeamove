@@ -1,5 +1,4 @@
 import type { PointerEvent as ReactPointerEvent, MouseEvent as ReactMouseEvent } from "react";
-import type { ComponentType } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { store } from "../lib/store";
 import { goToCampaign } from "../app/router";
@@ -22,48 +21,25 @@ import {
 import { AREA_COLOURS, SHAPES, type ShapeKind } from "../scene/types";
 import { Button } from "../ui/Button";
 import {
-  IconDraw,
-  IconEraser,
-  IconLight,
-  IconWall,
   IconHelp,
   IconRelationships,
   IconLeave,
-  IconMeasure,
   IconMenu,
   IconSettings,
-  IconPan,
-  IconPing,
   IconSelect,
-  IconShapes,
-  IconText,
-  type IconProps,
 } from "../ui/icons";
 import { isTyping } from "../ui/keys";
-import { dialogRequest } from "./canvasState";
-import { layout, PANEL_ORDER, setPanelClosed, unavailablePanels } from "./panelLayout";
-import { PANELS } from "./panels";
+import { dialogRequest } from "../workspace/canvasState";
+import {
+  layout,
+  PANEL_ORDER,
+  PANELS,
+  setPanelClosed,
+  unavailablePanels,
+} from "../workspace/panelLayout";
+import { TOOLS } from "../workspace/tools";
 import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
 import { useValue } from "../ui/useValue";
-
-export const TOOLS: {
-  id: ToolId;
-  label: string;
-  key: string;
-  Icon: ComponentType<IconProps>;
-  gmOnly?: boolean;
-}[] = [
-  { id: "select", label: "Select", key: "V", Icon: IconSelect },
-  { id: "pan", label: "Pan", key: "H", Icon: IconPan },
-  { id: "draw", label: "Draw", key: "P", Icon: IconDraw },
-  { id: "erase", label: "Erase", key: "E", Icon: IconEraser },
-  { id: "shape", label: "Shapes", key: "R", Icon: IconShapes },
-  { id: "text", label: "Text", key: "X", Icon: IconText },
-  { id: "ruler", label: "Measure", key: "M", Icon: IconMeasure },
-  { id: "ping", label: "Ping", key: "G", Icon: IconPing },
-  { id: "wall", label: "Walls", key: "W", Icon: IconWall, gmOnly: true },
-  { id: "light", label: "Lights", key: "L", Icon: IconLight, gmOnly: true },
-];
 
 const ORDER_KEY = "mam:tool-order";
 

@@ -1,5 +1,5 @@
 import { plainText } from "../features/characters/trackers";
-import { MoveBody } from "./MoveBody";
+import { MoveBody } from "../workspace/MoveBody";
 import type { ReactNode } from "react";
 import { useEffect, useLayoutEffect, useState } from "react";
 import {
@@ -12,15 +12,15 @@ import {
 } from "../features/characters/api";
 import { getNote } from "../features/notes/api";
 import { linkLabel } from "../features/notes/targets";
-import { followLink } from "./linkNavigation";
+import { followLink } from "../workspace/linkNavigation";
 import type { Campaign } from "../campaign/campaign";
 import { useY } from "../ui/useY";
 import { Button } from "../ui/Button";
 import { closePopup } from "../ui/popup";
-import { usePopupDialog } from "./usePopupDialog";
-import { Dialog } from "./CampaignDialogs";
+import { usePopupDialog } from "../workspace/usePopupDialog";
+import { Dialog } from "../workspace/CampaignDialogs";
 import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
-import { EntryWindow, rollTag } from "./EntryWindow";
+import { EntryWindow, rollTag } from "../workspace/EntryWindow";
 import {
   closeLink,
   linkActionItems,
@@ -29,15 +29,15 @@ import {
   linkRename,
   openLinks,
   type LinkRef,
-} from "./linkState";
+} from "../workspace/linkState";
 import { NoteEditor } from "./NoteEditor";
 import { CharacterSheet } from "./sheets";
-import { linkProxy } from "./LinkChip";
-import { makeVerb } from "./sheetParts";
-import { actionMenuItems } from "./actionMenu";
-import { entityTabId, registerEntityWindow } from "./entityWindows";
-import { closeEntityWindow } from "./entityWindows";
-import { layout } from "./panelLayout";
+import { linkProxy } from "../workspace/LinkChip";
+import { makeVerb } from "../workspace/sheetParts";
+import { actionMenuItems } from "../workspace/actionMenu";
+import { entityTabId, registerEntityWindow } from "../workspace/entityWindows";
+import { closeEntityWindow } from "../workspace/entityWindows";
+import { layout } from "../workspace/panelLayout";
 import { useValue } from "../ui/useValue";
 
 /*

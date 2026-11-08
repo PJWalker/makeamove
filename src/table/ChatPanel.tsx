@@ -7,7 +7,7 @@ import type { Campaign } from "../campaign/campaign";
 import { device } from "../platform/device";
 import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
 import { IconDelete, IconPin, IconRename } from "../ui/icons";
-import { registerLinkDrop } from "./entityDrag";
+import { registerLinkDrop } from "../workspace/entityDrag";
 import { editingMessage, isPinned, PinnedStrip, setPinned } from "./ChatExtras";
 import { ChatComposer } from "./ChatComposer";
 import { ChatLog } from "./ChatLog";

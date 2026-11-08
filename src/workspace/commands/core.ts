@@ -2,9 +2,8 @@ import { postRoll } from "../../features/chat/send";
 import type { Campaign } from "../../campaign/campaign";
 import { activeTool } from "../../scene/tools";
 import { autohide, canvasCommands, dialogRequest, setAutohide } from "../canvasState";
-import { PANEL_ORDER, showPanel, unavailablePanels } from "../panelLayout";
-import { PANELS } from "../panels";
-import { TOOLS } from "../Toolbar";
+import { PANEL_ORDER, PANELS, showPanel, unavailablePanels } from "../panelLayout";
+import { TOOLS } from "../tools";
 import {
   IconAdd,
   IconDice,

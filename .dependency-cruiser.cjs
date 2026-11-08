@@ -59,16 +59,17 @@ module.exports = {
     {
       name: "ui-is-presentational",
       comment:
-        "ui/ holds generic components. It must not depend on table/, features/, systems/, campaign/ or the scene.",
+        "ui/ holds generic components. It must not depend on table/, workspace/, features/, systems/, campaign/ or the scene.",
       severity: "error",
       from: { path: "^src/ui/", pathNot: TESTS },
-      to: { path: "^src/(table|features|systems|campaign|scene|lobby|sync|app)/" },
+      to: { path: "^src/(table|workspace|features|systems|campaign|scene|lobby|sync|app)/" },
     },
     {
-      name: "data-layers-not-importing-table",
-      comment: "Features, scene, campaign and sync are below table/ (the UI that composes them).",
+      name: "nothing-below-imports-the-table",
+      comment:
+        "Features, scene, campaign, sync, systems and workspace/ are below table/ (the UI that composes them).",
       severity: "error",
-      from: { path: "^src/(features|scene|campaign|sync)/", pathNot: TESTS },
+      from: { path: "^src/(features|scene|campaign|sync|systems|workspace)/", pathNot: TESTS },
       to: { path: "^src/(table|lobby)/" },
     },
 

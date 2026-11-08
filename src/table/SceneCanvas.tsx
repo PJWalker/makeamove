@@ -68,16 +68,16 @@ import {
 import { isTyping, MOD } from "../ui/keys";
 import { PopupTabs } from "../ui/PopupTabs";
 import { Segmented } from "../ui/Segmented";
-import { Dialog } from "./CampaignDialogs";
+import { Dialog } from "../workspace/CampaignDialogs";
 import { SceneSettingsFields } from "./SceneSettingsFields";
-import { showPanel } from "./panelLayout";
+import { showPanel } from "../workspace/panelLayout";
 import {
   dropOn,
   dropTargetAt,
   itemDefinitionForToken,
   itemTokenEntity,
   setDropCursor,
-} from "./entityDrag";
+} from "../workspace/entityDrag";
 import {
   activeMapColour,
   canvasCommands,
@@ -92,9 +92,9 @@ import {
   sceneCharacterAt,
   sceneDropFlash,
   sceneDropHighlight,
-} from "./canvasState";
+} from "../workspace/canvasState";
 import { formatDistance } from "../scene/measure";
-import { linkProxy } from "./LinkChip";
+import { linkProxy } from "../workspace/LinkChip";
 import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
 import { useValue } from "../ui/useValue";
 

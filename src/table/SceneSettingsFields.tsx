@@ -3,7 +3,7 @@ import type { SceneDoc } from "../scene/sceneDoc";
 import { DEFAULT_CANVAS_COLOUR, type Campaign } from "../campaign/campaign";
 import { useY } from "../ui/useY";
 import { Segmented } from "../ui/Segmented";
-import { activeMapColour, canvasColour } from "./canvasState";
+import { activeMapColour, canvasColour } from "../workspace/canvasState";
 import { useValue } from "../ui/useValue";
 
 export function SceneSettingsFields({

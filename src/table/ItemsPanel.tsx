@@ -33,12 +33,16 @@ import { PanelActions } from "./PanelActions";
 import { IconAdd, IconBack, IconDelete } from "../ui/icons";
 import { List, ListGroup } from "../ui/List";
 import { Segmented } from "../ui/Segmented";
-import { dragEntity, entity } from "./entityDrag";
-import { EntryRow, rollTag } from "./EntryWindow";
-import { actionMenuItems } from "./actionMenu";
-import { CampaignEntityGraphic } from "./EntityGraphic";
+import { dragEntity, entity } from "../workspace/entityDrag";
+import { EntryRow, rollTag } from "../workspace/EntryWindow";
+import { actionMenuItems } from "../workspace/actionMenu";
+import { CampaignEntityGraphic } from "../workspace/EntityGraphic";
 import { GraphicPicker } from "../ui/GraphicPicker";
-import { getDefaultEntityGraphic, getEntityGraphic, setEntityGraphic } from "./entityGraphics";
+import {
+  getDefaultEntityGraphic,
+  getEntityGraphic,
+  setEntityGraphic,
+} from "../workspace/entityGraphics";
 
 /*
  * Items: the table's own gear and moves (homebrew/homebrew.ts), with forms

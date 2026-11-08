@@ -352,7 +352,7 @@ export interface SceneDefaults {
 export interface NpcFieldDef {
   id: string;
   label: string;
-  /** 'longtext' is rich text, kept apart from the other fields (see table/CharacterText.tsx). */
+  /** 'longtext' is rich text, kept apart from the other fields (see workspace/CharacterText.tsx). */
   type: "text" | "number" | "longtext";
   default?: string | number;
   /** A text field holding dice, like "d8+2": the sheet offers to roll it. */

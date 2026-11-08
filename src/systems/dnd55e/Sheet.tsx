@@ -16,20 +16,26 @@ import type { CharacterView } from "../../features/characters/types";
 import { postRoll } from "../../features/chat/send";
 import type { Campaign } from "../../campaign/campaign";
 import { device } from "../../platform/device";
-import { CharacterText } from "../../table/CharacterText";
+import { CharacterText } from "../../workspace/CharacterText";
 import { commaListOf } from "../../lib/list";
-import { Inventory } from "../../table/Inventory";
-import { SheetSectionView } from "../../table/DeclarativeSheet";
-import { ConditionToggles, Counter, MoveList, signedStr, TokenChip } from "../../table/sheetParts";
+import { Inventory } from "../../workspace/Inventory";
+import { SheetSectionView } from "../../workspace/DeclarativeSheet";
+import {
+  ConditionToggles,
+  Counter,
+  MoveList,
+  signedStr,
+  TokenChip,
+} from "../../workspace/sheetParts";
 import { Button } from "../../ui/Button";
 import type { ActionDef, Derived, GameSystem } from "../types";
 import { SKILLS } from "./data";
-import { AdvancementDialog } from "../../table/CreationParts";
+import { AdvancementDialog } from "../../workspace/CreationParts";
 import { FEATS } from "./origins";
 import { useValue } from "../../ui/useValue";
 
 /*
- * D&D 5.5e's character sheets, from the shared parts in table/sheetParts.tsx.
+ * D&D 5.5e's character sheets, from the shared parts in workspace/sheetParts.tsx.
  * Every number that rolls is a button that makes its action, so advantage,
  * targets and the card work the same from the sheet, the hotbar and the palette.
  */

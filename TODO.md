@@ -15,7 +15,7 @@ What's left before Make a Move is a complete, publishable virtual tabletop. Draw
 
 ## 2. Core table features
 
-- [ ] Preserve panel order when hiding and showing panels (`table/panelLayout.ts`).
+- [ ] Preserve panel order when hiding and showing panels (`workspace/panelLayout.ts`).
 - [ ] GM-editable visibility and lock flags on notes, tokens, maps and characters (scene elements have `locked`; nothing else does, and nothing has visibility).
 - [ ] Claim a character as your player character: default subject for actions, own sidebar tab with its avatar as the icon.
 - [ ] Reroll entry in the roll card context menu (reroll exists as a card control in `RollCards.tsx`, not in the menu).
@@ -55,7 +55,6 @@ What's left before Make a Move is a complete, publishable virtual tabletop. Draw
 
 ## 6. Code health
 
-- [ ] Move the shared sheet parts below `table/`, then drop the allowlist in `eslint.config.js`. System sheets import `DeclarativeSheet`, `sheetParts`, `Inventory`, `CharacterText`, `CreationParts`, `CampaignDialogs` (`Dialog`), `usePopupDialog` and `entityDrag`, which together reach 31 `table/` files: `panelLayout`, `layoutModel`, `entityWindows`, `EntryWindow`, `LinkChip`, `linkState`, `libraryView`, `richText`, `noteExtensions`, `actionMenu` → `ActionDialogs` → `table/commands`, `GraphicDialogs`, `EntityGraphic`, `entityGraphics`, `tokenDrag`, `canvasState`, `MoveBody`, `FormattedText`, `trackerButtons`, `WindowControls`, `campaignSheets`. Choose between splitting `table/` into composition and a lower window/dialog/sheet layer, or a table-provided context for opening entries, links, action menus, the Libraries and rich text (design.md, "System sheets import `table/` parts").
 - [ ] Split large mixed-responsibility files: each system's `index.ts` (stats, actions, derive, catalog — as `dungeon-world-2/` started), `table/diceRenderer.ts` into its own dice module, `table/SceneCanvas.tsx`.
 - [ ] Move per-campaign module stores (16 modules, plus `setBlobFetcher`) onto the `Campaign` object or a context.
 - [ ] Fold `core/` and `src/graphics.ts` into existing modules.

@@ -10,10 +10,10 @@ import {
 import { useY } from "../ui/useY";
 import { Button } from "../ui/Button";
 import { IconAdd, IconDelete, IconFolder, IconMembers, IconRename } from "../ui/icons";
-import { canvasCommands } from "./canvasState";
+import { canvasCommands } from "../workspace/canvasState";
 import { TwoPane, usePaneLevel } from "../ui/TwoPane";
 import { GraphicPicker } from "../ui/GraphicPicker";
-import { getEntityGraphic, setEntityGraphic } from "./entityGraphics";
+import { getEntityGraphic, setEntityGraphic } from "../workspace/entityGraphics";
 import { SceneSettingsFields } from "./SceneSettingsFields";
 import { FolderTree } from "./FolderTree";
 import { ContextMenu, type MenuItem } from "../ui/ContextMenu";

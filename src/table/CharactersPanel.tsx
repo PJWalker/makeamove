@@ -37,18 +37,18 @@ import {
   startingScores,
   type Picked,
   type ScoreMethod,
-} from "./CreationParts";
+} from "../workspace/CreationParts";
 import { IconDelete, IconFolder, IconRename } from "../ui/icons";
 import { Segmented } from "../ui/Segmented";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { TwoPane, usePaneLevel } from "../ui/TwoPane";
 import { ListRow } from "../ui/List";
 import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
-import { dragEntity, entity } from "./entityDrag";
-import { CampaignEntityGraphic } from "./EntityGraphic";
-import { editEntityGraphic } from "./GraphicDialogs";
+import { dragEntity, entity } from "../workspace/entityDrag";
+import { CampaignEntityGraphic } from "../workspace/EntityGraphic";
+import { editEntityGraphic } from "../workspace/GraphicDialogs";
 import { CharacterSheet } from "./sheets";
-import { showLink } from "./linkState";
+import { showLink } from "../workspace/linkState";
 import { FolderTree } from "./FolderTree";
 import { charactersLayout } from "./panelLayouts";
 import { commaListOf } from "../lib/list";

@@ -8,7 +8,7 @@ import type { Campaign } from "../campaign/campaign";
 import { collapsedInto, reducedMotion } from "../ui/bubble";
 import { Button } from "../ui/Button";
 import { IconClose } from "../ui/icons";
-import { layout, panelVisible, showPanel } from "./panelLayout";
+import { layout, panelVisible, showPanel } from "../workspace/panelLayout";
 import { useValue } from "../ui/useValue";
 import { watch } from "../lib/store";
 

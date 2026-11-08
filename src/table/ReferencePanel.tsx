@@ -5,7 +5,7 @@ import { List, ListRow } from "../ui/List";
 import { TwoPane, usePaneLevel } from "../ui/TwoPane";
 import { useY } from "../ui/useY";
 import { useValue } from "../ui/useValue";
-import { FormattedText, SearchHighlight } from "./FormattedText";
+import { FormattedText, SearchHighlight } from "../workspace/FormattedText";
 import { referenceLayout } from "./panelLayouts";
 
 /**

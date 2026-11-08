@@ -19,7 +19,7 @@ import { usePopupDialog } from "./usePopupDialog";
 import { useValue } from "../ui/useValue";
 
 /*
- * Pop-ups for a player's own touches on an action (table/commands/custom.ts):
+ * Pop-ups for a player's own touches on an action (commands/custom.ts):
  * renaming a hotbar slot, giving it an icon, and binding a shortcut. The
  * hotbar's and the palette's menus open them.
  */

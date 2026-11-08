@@ -29,7 +29,8 @@ The code is grouped by responsibility. Imports should flow downward, toward doma
 | --- | --- | --- |
 | `app/` | Startup, hash routing (`#/c/<id>`), and the top-level `App` shell. | 2 |
 | `lobby/` | The campaign list, create and join forms, and the animated icon backdrop. | 4 |
-| `table/` | Composition for an open campaign: `Tabletop`, sidebars and floating windows, panels, sheets, dialogs, the hotbar, palette, drag-and-drop between panels, the 3D dice tray, and the action index behind the command palette and hotbar (`table/commands`). Each component has its own CSS file. | 123 |
+| `table/` | Composition for an open campaign: `Tabletop`, sidebars, panels, the toolbar, hotbar, palette, chat, the scene canvas and the 3D dice tray. Each component has its own CSS file. | 71 |
+| `workspace/` | The parts `table/` composes and system sheets reuse: panel layout and floating windows, dialogs, entry windows, links, rich text, entity graphics and drag, the shared sheet parts, and the action index behind the command palette and hotbar (`workspace/commands`). | 52 |
 | `features/` | Domain models and operations: characters, chat, notes, combat, dice notation and pools, library, homebrew. Mostly plain functions over a `Campaign` and its Yjs maps. | 41 |
 | `scene/` | The canvas engine: `SceneDoc` (scene subdocument and undo), `SceneController` with a gesture module per tool (`gestures/`), `SceneRenderer` with a module per layer (`render/`), grid, geometry, measuring, vision, lighting, presence, and an image worker. | 48 |
 | `systems/` | Game-system plugins. `types.ts` is the rules contract, `extensions.ts` the UI contract; each system folder exports a `GameSystem` and, where needed, a `SystemExtension` with its components. | 48 |
@@ -40,7 +41,7 @@ The code is grouped by responsibility. Imports should flow downward, toward doma
 | `lib/`, `core/` | Framework-neutral utilities: ids, hybrid logical clock, colour maths, list and set helpers, observable stores, and the shared `DataValue` type. | 7 |
 | `styles/` | Global CSS only: design tokens, primitives, base, transitions. | 5 |
 
-File counts exclude tests. ESLint enforces the direction; the one remaining exception is listed under Improvement opportunities.
+File counts exclude tests. ESLint and dependency-cruiser enforce the direction, with no exceptions.
 
 ## How an edit travels {#flow}
 
@@ -128,7 +129,6 @@ A system is a `GameSystem` object: stats, actions, results, items, conditions an
 #### Downsides
 
 - The contracts keep growing as each system needs a new hook (`types.ts` is 761 lines; `extensions.ts` has eight hooks).
-- Built-in sheets still reach into `table/` for parts (see below).
 - Rules text from the reference SRDs is bundled into the app; licensing must be checked per system.
 
 ### React with React Aria and stores; PixiJS and three.js outside React
@@ -203,14 +203,6 @@ With no server, a campaign's only copies are on players' devices, and scenes are
 
 High
 
-### System sheets import `table/` parts
-
-ESLint's `no-restricted-imports` (in `eslint.config.js`) now fails any upward import, with one allowance: system sheets may still import eight `table/` modules (`DeclarativeSheet`, `sheetParts`, `Inventory`, `CharacterText`, `CreationParts`, `CampaignDialogs`, `usePopupDialog`, `entityDrag`). Those eight reach 31 `table/` files between them, including `panelLayout`, `entityWindows`, `EntryWindow`, `LinkChip`, `linkState`, `libraryView`, `richText`, `actionMenu` and the action index in `table/commands`, so they can't move below `table/` on their own.
-
-**Consider:** either split `table/` into composition (Tabletop, panels, sidebar, toolbar, palette, hotbar, chat) and a lower layer holding window and panel layout, dialogs, entry windows, links, rich text, drag and the sheet parts; or move only the sheet parts and `Dialog` below `table/` and give them a context, provided by `table/`, for opening entries, links, action menus, the Libraries and rich text.
-
-Medium
-
 ### Bundled source text needs a licensing review
 
 `systems/dungeon-world-2/paths.ts` (589 lines) bundles the Dungeon World 2 beta text into the app, which needs a redistribution review before publishing. Git history still contains the `.playwright-mcp/` output, including `Dungeon-World-2-Beta-v3.docx`.
@@ -284,6 +276,7 @@ Low
 - `reference/` and `.playwright-mcp/` committed: untracked and ignored.
 - `design.md` out of date: removed; this document replaces it.
 - Upward imports outside the system sheets: `ContextMenu` and `resizeRect` moved to `ui/`, `CombatPanel` and the action index (`table/commands`) to `table/`, link following (`table/linkNavigation.ts`) out of `features/notes`, and chat notifications read a `chatInView` store the table keeps current. ESLint enforces the layering.
+- System sheets importing `table/` parts: the sheet parts and everything they reach moved to `workspace/`, below `table/`; panel labels (`PANELS`) and the tool list (`TOOLS`) moved out of `panels.tsx` and `Toolbar.tsx` so the action index no longer pulls in every panel.
 
 ## Product rules {#product}
 

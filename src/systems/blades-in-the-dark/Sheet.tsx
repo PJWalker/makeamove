@@ -11,8 +11,8 @@ import {
   SheetSectionView,
   useSheet,
   type SheetProps,
-} from "../../table/DeclarativeSheet";
-import { Counter } from "../../table/sheetParts";
+} from "../../workspace/DeclarativeSheet";
+import { Counter } from "../../workspace/sheetParts";
 import { Button } from "../../ui/Button";
 import { IconRoll } from "../../ui/icons";
 import { ATTRIBUTES, TRAUMAS } from "./index";

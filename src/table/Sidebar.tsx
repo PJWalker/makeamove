@@ -30,8 +30,9 @@ import {
   type DockItemId,
   type Side,
   showPanel,
-} from "./panelLayout";
-import { PanelContent, PANELS, PaneToggle } from "./panels";
+  PANELS,
+} from "../workspace/panelLayout";
+import { PanelContent, PaneToggle } from "./panels";
 import { PanelActionsProvider, PanelActionsSlot } from "./PanelActions";
 import {
   closeEntityWindow,
@@ -39,9 +40,9 @@ import {
   entityWindows,
   EntityWindowContent,
   isEntityTab,
-} from "./entityWindows";
-import { CampaignEntityGraphic } from "./EntityGraphic";
-import { keyedSideWidth, SIDEBAR_DEFAULT_W } from "./layoutModel";
+} from "../workspace/entityWindows";
+import { CampaignEntityGraphic } from "../workspace/EntityGraphic";
+import { keyedSideWidth, SIDEBAR_DEFAULT_W } from "../workspace/layoutModel";
 import { useValue } from "../ui/useValue";
 
 const DRAG_THRESHOLD = 10;

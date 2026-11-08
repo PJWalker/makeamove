@@ -4,7 +4,7 @@ import { type ChatContent } from "../features/chat/content";
 import type { ChatMessage, TextMessage } from "../features/chat/types";
 import { canEdit, getCharacter, selectedCharacterId } from "../features/characters/api";
 import { TRACKER_NODE, type TrackerButton } from "../features/characters/trackers";
-import { TrackerButtonView } from "./FormattedText";
+import { TrackerButtonView } from "../workspace/FormattedText";
 import { stampTime } from "../lib/hlc";
 import type { Campaign } from "../campaign/campaign";
 import { device } from "../platform/device";
@@ -15,7 +15,7 @@ import { menuTrigger } from "../ui/menuTrigger";
 import { chatContentExtensions } from "./ChatInput";
 import { LINK_NODE } from "../features/notes/links";
 import type { LinkKind } from "../features/notes/api";
-import { LinkChip } from "./LinkChip";
+import { LinkChip } from "../workspace/LinkChip";
 import {
   CounterCard,
   EditBox,

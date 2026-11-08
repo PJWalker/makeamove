@@ -1,24 +1,11 @@
 import { lazy, Suspense, useState } from "react";
-import {
-  IconAllowBack,
-  IconCharacters,
-  IconChat,
-  IconCombat,
-  IconItems,
-  IconLibraries,
-  IconReference,
-  IconMembers,
-  IconNotes,
-  IconRemoveMember,
-  IconMap,
-} from "../ui/icons";
+import { IconAllowBack, IconRemoveMember } from "../ui/icons";
 import type { Campaign, MemberView } from "../campaign/campaign";
 import { device } from "../platform/device";
 import { useY } from "../ui/useY";
 import { Avatar } from "../ui/Avatar";
 import { Button } from "../ui/Button";
-import type { Icon } from "../ui/icons";
-import type { PanelId } from "./panelLayout";
+import type { PanelId } from "../workspace/panelLayout";
 import { charactersLayout, notesLayout, scenesLayout } from "./panelLayouts";
 import { useValue } from "../ui/useValue";
 
@@ -52,18 +39,6 @@ const CombatPanel = lazy(() =>
 const ItemsPanel = lazy(() =>
   import("./ItemsPanel").then((module) => ({ default: module.ItemsPanel })),
 );
-
-export const PANELS: Record<PanelId, { label: string; Icon: Icon }> = {
-  scene: { label: "Scenes", Icon: IconMap },
-  chat: { label: "Chat", Icon: IconChat },
-  characters: { label: "Characters", Icon: IconCharacters },
-  combat: { label: "Combat", Icon: IconCombat },
-  libraries: { label: "Libraries", Icon: IconLibraries },
-  reference: { label: "Reference", Icon: IconReference },
-  items: { label: "Items", Icon: IconItems },
-  notes: { label: "Notes", Icon: IconNotes },
-  members: { label: "Members", Icon: IconMembers },
-};
 
 /** The body of a panel; the same component renders docked or floating. */
 export function PanelContent({ id, campaign }: { id: PanelId; campaign: Campaign }) {

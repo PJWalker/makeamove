@@ -1,10 +1,10 @@
 import "fake-indexeddb/auto";
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("../../table/panelLayout", () => ({ showPanel: () => {} }));
+vi.mock("../../workspace/panelLayout", () => ({ showPanel: () => {} }));
 import * as Y from "yjs";
 
-import { systemActions } from "../../table/commands/system";
+import { systemActions } from "../../workspace/commands/system";
 import { Campaign, createCampaign } from "../../campaign/campaign";
 import { device } from "../../platform/device";
 import {

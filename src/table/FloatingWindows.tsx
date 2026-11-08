@@ -14,10 +14,11 @@ import {
   useWindowRect,
   type FloatingWindow,
   type PanelId,
-} from "./panelLayout";
-import { PanelContent, PANELS, PaneToggle } from "./panels";
+  PANELS,
+} from "../workspace/panelLayout";
+import { PanelContent, PaneToggle } from "./panels";
 import { RESIZE_DIRS } from "../ui/resizeRect";
-import { WindowControls } from "./WindowControls";
+import { WindowControls } from "../workspace/WindowControls";
 import { PanelActionsProvider, PanelActionsSlot } from "./PanelActions";
 import { useValue } from "../ui/useValue";
 

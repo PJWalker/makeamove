@@ -6,7 +6,7 @@ import { ensureSystemCounter } from "../../features/chat/send";
 import { systemCampaignData, type Campaign } from "../../campaign/campaign";
 import { useY } from "../../ui/useY";
 import { Button } from "../../ui/Button";
-import { Counter } from "../../table/sheetParts";
+import { Counter } from "../../workspace/sheetParts";
 import { advanceCrew, advanceCrewTier, buyCrewUpgrade, crewTierCost } from "./progression";
 
 export function BladesCrewControls({ campaign }: { campaign: Campaign }) {

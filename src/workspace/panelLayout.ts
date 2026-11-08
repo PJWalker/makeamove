@@ -30,9 +30,33 @@ import {
   isPanelId,
 } from "./layoutModel";
 import { useValue } from "../ui/useValue";
+import {
+  IconCharacters,
+  IconChat,
+  IconCombat,
+  IconItems,
+  IconLibraries,
+  IconMap,
+  IconMembers,
+  IconNotes,
+  IconReference,
+  type Icon,
+} from "../ui/icons";
 
 export { PANEL_ORDER, SIDEBAR_MIN_W, otherSide, isPanelId, locate };
 export type { DockItemId, FloatingWindow, PanelId, Side };
+
+export const PANELS: Record<PanelId, { label: string; Icon: Icon }> = {
+  scene: { label: "Scenes", Icon: IconMap },
+  chat: { label: "Chat", Icon: IconChat },
+  characters: { label: "Characters", Icon: IconCharacters },
+  combat: { label: "Combat", Icon: IconCombat },
+  libraries: { label: "Libraries", Icon: IconLibraries },
+  reference: { label: "Reference", Icon: IconReference },
+  items: { label: "Items", Icon: IconItems },
+  notes: { label: "Notes", Icon: IconNotes },
+  members: { label: "Members", Icon: IconMembers },
+};
 
 /*
  * Where each panel lives: docked on the left or right, or floating in its own

@@ -1,4 +1,4 @@
-import { FormattedText } from "./FormattedText";
+import { FormattedText } from "../workspace/FormattedText";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { watch } from "../lib/store";
 import {
@@ -26,7 +26,13 @@ import { Button } from "../ui/Button";
 import { IconClose } from "../ui/icons";
 import { lastPressed } from "../ui/pressed";
 import { Segmented } from "../ui/Segmented";
-import { areaRequest, chosenTargets, placedArea, sceneDistance, targetPick } from "./canvasState";
+import {
+  areaRequest,
+  chosenTargets,
+  placedArea,
+  sceneDistance,
+  targetPick,
+} from "../workspace/canvasState";
 import { useValue } from "../ui/useValue";
 import type { ActionDef, AreaSpec } from "../systems/types";
 import type { MoveTarget } from "../features/chat/types";

@@ -3,7 +3,7 @@ import {
   SheetSectionView,
   useSheet,
   type SheetProps,
-} from "../../table/DeclarativeSheet";
+} from "../../workspace/DeclarativeSheet";
 
 export function DungeonWorldSheet(props: SheetProps) {
   const sheet = useSheet(props);

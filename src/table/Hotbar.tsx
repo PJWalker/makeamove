@@ -2,9 +2,9 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { selectedCharacterId } from "../features/characters/api";
 import { editHotbar, hotbarSlots, placeAt, shift, unpin } from "../features/characters/hotbar";
-import { shortcutFor, showCombo, slotLook } from "./commands/custom";
-import { buildIndex, pinnedRoll } from "./commands/registry";
-import { noteRecent } from "./commands/recent";
+import { shortcutFor, showCombo, slotLook } from "../workspace/commands/custom";
+import { buildIndex, pinnedRoll } from "../workspace/commands/registry";
+import { noteRecent } from "../workspace/commands/recent";
 import type { Campaign } from "../campaign/campaign";
 import { notePressed } from "../ui/pressed";
 import { useY } from "../ui/useY";
@@ -12,9 +12,15 @@ import { Button } from "../ui/Button";
 import { ENTRY_ICONS } from "../ui/entryIcons";
 import { IconDelete, IconImage, IconRename, IconSearch, IconShortcut } from "../ui/icons";
 import { menuTrigger } from "../ui/menuTrigger";
-import { editAction } from "./ActionDialogs";
+import { editAction } from "../workspace/ActionDialogs";
 import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
-import { actionEntity, dropMarker, dropOn, dropTargetAt, setDropCursor } from "./entityDrag";
+import {
+  actionEntity,
+  dropMarker,
+  dropOn,
+  dropTargetAt,
+  setDropCursor,
+} from "../workspace/entityDrag";
 import { paletteOpen } from "./Palette";
 import { isTyping } from "../ui/keys";
 import { startReorder } from "../ui/reorder";

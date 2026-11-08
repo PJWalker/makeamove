@@ -1,8 +1,8 @@
 import type { PointerEvent as ReactPointerEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
 import { store } from "../lib/store";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { noteRecent, recentActions } from "./commands/recent";
-import { rollAction } from "./commands/core";
+import { noteRecent, recentActions } from "../workspace/commands/recent";
+import { rollAction } from "../workspace/commands/core";
 import {
   actionForCombo,
   comboOf,
@@ -10,16 +10,16 @@ import {
   shortcutFor,
   shortcuts,
   showCombo,
-} from "./commands/custom";
-import { buildIndex, findAction } from "./commands/registry";
+} from "../workspace/commands/custom";
+import { buildIndex, findAction } from "../workspace/commands/registry";
 import { diceFormula } from "../features/chat/commands";
-import { rank } from "./commands/search";
-import type { Action } from "./commands/types";
+import { rank } from "../workspace/commands/search";
+import type { Action } from "../workspace/commands/types";
 import { editHotbar, insertAt, isPinned, pin, unpin } from "../features/characters/hotbar";
 import { isTyping } from "../ui/keys";
-import { RECORDER } from "./ActionDialogs";
-import { actionMenuItems } from "./actionMenu";
-import { actionEntity, dragEntity } from "./entityDrag";
+import { RECORDER } from "../workspace/ActionDialogs";
+import { actionMenuItems } from "../workspace/actionMenu";
+import { actionEntity, dragEntity } from "../workspace/entityDrag";
 import { menuTrigger } from "../ui/menuTrigger";
 import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
 import type { Campaign } from "../campaign/campaign";
