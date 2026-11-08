@@ -128,9 +128,7 @@ function Advancement({
   return (
     <div className="sheet-advancement">
       <span>{section.label}</span>
-      <Button size="sm" onClick={() => setOpen(true)}>
-        {section.button}…
-      </Button>
+      <Button onClick={() => setOpen(true)}>{section.button}…</Button>
       {Actions && <Actions campaign={campaign} characterId={c.id} />}
       {open && (
         <AdvancementDialog campaign={campaign} characterId={c.id} onClose={() => setOpen(false)} />

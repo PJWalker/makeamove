@@ -1,7 +1,9 @@
-import type { Container } from "pixi.js";
-import { LAYERS, type Layer } from "../types";
+import { ColorMatrixFilter, type Container } from "pixi.js";
+import { downFrame, type DownTurn } from "../downed";
+import { LAYERS, type Layer, type TokenElement } from "../types";
 import { buildView, contentKey, DESTROY_VIEW, type View } from "./elementViews";
 import type { RenderState } from "./state";
+import { reducedMotion } from "./style";
 
 /** The scene's elements: a view per element, kept in its layer and in order. */
 export class ElementLayer {
@@ -12,6 +14,11 @@ export class ElementLayer {
   private dropHighlightToken: string | null = null;
   private dropFlashFrames = new Map<string, number>();
   private destroyed = false;
+  /** Each token falling over, getting up, or lying down. */
+  private turns = new Map<string, DownTurn>();
+  private greys = new Map<string, ColorMatrixFilter>();
+  /** Whether a token's character is down. */
+  downed: (token: TokenElement) => boolean = () => false;
 
   constructor(
     private readonly state: RenderState,
@@ -22,6 +29,8 @@ export class ElementLayer {
     this.destroyed = true;
     for (const frame of this.dropFlashFrames.values()) cancelAnimationFrame(frame);
     this.dropFlashFrames.clear();
+    for (const grey of this.greys.values()) grey.destroy();
+    this.greys.clear();
   }
 
   /** Rebuild every view on the next sync, such as once missing images can be fetched. */
@@ -89,6 +98,54 @@ export class ElementLayer {
     }
     for (const [id, t] of s.previews) this.views.get(id)?.apply(t);
     this.previewed = new Set(s.previews.keys());
+  }
+
+  /**
+   * Turn down tokens upside down and grey them, playing out the fall (or
+   * getting back up) as it happens. Returns whether it needs more frames.
+   */
+  syncDowned(): boolean {
+    const s = this.state;
+    const now = performance.now();
+    const still = reducedMotion();
+    let animating = false;
+    for (const [id, view] of this.views) {
+      const el = s.byId.get(id);
+      if (!view.pose || el?.type !== "token") continue;
+      const down = this.downed(el);
+      let turn = this.turns.get(id);
+      if (!turn) {
+        // Already down when first drawn: no fall to play.
+        turn = { from: down ? 1 : 0, down, start: -Infinity };
+        this.turns.set(id, turn);
+      } else if (turn.down !== down) {
+        const showing = Math.min(1, Math.max(0, downFrame(turn, now - turn.start).turn));
+        turn = { from: still ? (down ? 1 : 0) : showing, down, start: still ? -Infinity : now };
+        this.turns.set(id, turn);
+      }
+      const frame = downFrame(turn, now - turn.start);
+      if (!frame.done) animating = true;
+      view.pose.rotation = Math.PI * frame.turn;
+      view.pose.scale.set(frame.scale);
+      let grey = this.greys.get(id);
+      if (frame.grey > 0) {
+        if (!grey) {
+          grey = new ColorMatrixFilter();
+          grey.desaturate();
+          grey.brightness(0.85, true);
+          this.greys.set(id, grey);
+        }
+        grey.alpha = frame.grey;
+        if (view.pose.filters?.[0] !== grey) view.pose.filters = grey;
+      } else if (view.pose.filters?.length) view.pose.filters = null;
+    }
+    for (const id of this.turns.keys()) {
+      if (this.views.has(id)) continue;
+      this.turns.delete(id);
+      this.greys.get(id)?.destroy();
+      this.greys.delete(id);
+    }
+    return animating;
   }
 
   setDropHighlight(tokenId: string | null) {

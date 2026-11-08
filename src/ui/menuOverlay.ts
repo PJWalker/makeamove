@@ -1,35 +1,31 @@
 import { useEffectEvent, useLayoutEffect } from "react";
 import type { RefObject } from "react";
-import { placeAnchored } from "./anchor";
+import { tether } from "./anchor";
 
 /**
- * Keep an open menu (`ref`) placed against the element it drops from
- * (`anchor`), and dismiss it on a press outside both.
+ * Keep an open menu (`ref`, styled `.drops-down`) tethered to the element it
+ * drops from (`anchor`), and dismiss it on a press outside both.
  */
 export function useMenuOverlay<T extends HTMLElement>({
   open,
   ref,
   anchor,
   onDismiss,
-  gap = 6,
 }: {
   open: boolean;
   ref: RefObject<T | null>;
   anchor: RefObject<HTMLElement | null>;
   onDismiss: () => void;
-  gap?: number;
 }) {
   const dismiss = useEffectEvent(onDismiss);
   const isInside = useEffectEvent(
     (target: Node) => !!ref.current?.contains(target) || !!anchor.current?.contains(target),
   );
 
-  // Every render, since what's in the menu (and so its size) may have changed.
   useLayoutEffect(() => {
-    const box = anchor.current?.getBoundingClientRect();
-    if (!open || !ref.current || !box) return;
-    placeAnchored(ref.current, { left: box.left, top: box.top, bottom: box.bottom }, gap);
-  });
+    if (!open || !ref.current || !anchor.current) return;
+    return tether(ref.current, anchor.current);
+  }, [open, ref, anchor]);
 
   useLayoutEffect(() => {
     if (!open) return;

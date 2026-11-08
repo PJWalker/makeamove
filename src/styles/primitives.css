@@ -26,17 +26,23 @@
     padding: 0 var(--space-3);
     background-color: var(--surface-sunken);
     border: 1px solid #fff1;
-    border-image: linear-gradient(#ffffff05, #fff3) 1;
-    box-shadow: inset 0 1px 1px 2px #000;
+    /* Sunken: shaded at the top left, catching light on the bottom-right edge. */
+    border-image: linear-gradient(to bottom right, #ffffff05, #fff3) 1;
+    box-shadow: inset 1px 1px 1px 2px #000;
     background-clip: padding-box;
     color: var(--text);
     font-size: var(--text-md);
+    transition:
+      background-color 120ms var(--ease),
+      box-shadow 160ms var(--ease);
     &:hover {
       background-color: var(--surface-sunken-hover);
     }
     &:focus-visible {
       outline: none;
-      box-shadow: inset 0 0 0 2px var(--accent);
+      box-shadow:
+        inset 1px 1px 1px 2px #000,
+        inset 0 0 0 2px var(--accent);
     }
     &::placeholder {
       color: #fff5;

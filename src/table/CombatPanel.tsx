@@ -57,29 +57,23 @@ export function CombatPanel({ campaign }: { campaign: Campaign }) {
           <span className="combat-controls">
             {round > 0 ? (
               <>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => previousTurn(combatMaps(campaign))}
-                >
+                <Button variant="ghost" onClick={() => previousTurn(combatMaps(campaign))}>
                   Back
                 </Button>
                 <Button
-                  size="sm"
                   variant="primary"
                   disabled={!all.length}
                   onClick={() => advanceTurn(campaign)}
                 >
                   Next Turn
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => finishCombat(campaign)}>
+                <Button variant="ghost" onClick={() => finishCombat(campaign)}>
                   End
                 </Button>
               </>
             ) : (
               <>
                 <Button
-                  size="sm"
                   variant="ghost"
                   disabled={!all.some((c) => c.init === null)}
                   onClick={() => void rollAllInitiative(campaign, { npcsOnly: true })}
@@ -87,7 +81,6 @@ export function CombatPanel({ campaign }: { campaign: Campaign }) {
                   Roll for NPCs
                 </Button>
                 <Button
-                  size="sm"
                   variant="primary"
                   disabled={!all.length}
                   onClick={() => beginCombat(campaign)}
@@ -187,7 +180,6 @@ function CombatRow({
         {c.init === null && (mine || gm) && (
           <Button
             variant="icon"
-            size="sm"
             label="Roll initiative"
             onClick={() => void rollInitiative(campaign, c.id)}
           >
@@ -198,7 +190,6 @@ function CombatRow({
           <>
             <Button
               variant="icon"
-              size="sm"
               label={c.hidden ? "Show to players" : "Hide from players"}
               onClick={() => updateCombatant(combatMaps(campaign), c.id, { hidden: !c.hidden })}
             >
@@ -206,7 +197,6 @@ function CombatRow({
             </Button>
             <Button
               variant="icon"
-              size="sm"
               label="Remove from combat"
               onClick={() => removeCombatant(combatMaps(campaign), c.id)}
             >
@@ -334,12 +324,11 @@ function ConditionForm({
           </option>
         ))}
       </select>
-      <Button size="sm" type="submit" variant="primary">
+      <Button type="submit" variant="primary">
         {has ? "Set Duration" : "Add"}
       </Button>
       {has && (
         <Button
-          size="sm"
           variant="ghost"
           onClick={() =>
             campaign.doc.transact(() => {

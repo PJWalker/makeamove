@@ -1,11 +1,19 @@
 import { Container, Graphics, Text } from "pixi.js";
 import { type Camera, type Rect, toScreen } from "../camera";
 import { conditionContains, conditionLayout, hoverSpring } from "../conditionLayout";
+import { pointerToward, unionRect } from "../edgePin";
 import type { Point } from "../grid";
 import type { TokenMarks } from "../tokenMarks";
 import type { Transform } from "../types";
 import type { RenderState } from "./state";
-import { INK, reducedMotion } from "./style";
+import {
+  drawPointer,
+  INK,
+  POINTER_ROOM,
+  reducedMotion,
+  screenViewport,
+  TOKEN_NAME_STYLE,
+} from "./style";
 
 const NO_MARKS: TokenMarks = { pips: [], turn: false };
 const PIP_MIN_R = 3;
@@ -37,6 +45,10 @@ export class ConditionLayer {
   readonly texts = new Container();
   private hover: { id: string; anchor: number; bounds: Rect } | null = null;
   private views = new Map<string, ConditionView>();
+  /** Names of off-screen tokens, over the conditions they've just had applied. */
+  private names = new Map<string, Text>();
+  /** Off-screen tokens whose names head their conditions out at the edge: which condition it rides on, and where. */
+  private pinnedNames = new Map<string, { view: ConditionView; offset: Point }>();
   /** Tokens drawn last frame: a condition new on one of these was just applied. */
   private drawnTokens = new Set<string>();
   /** Whose turn it was last frame, and when it became theirs, to ring it in. */
@@ -66,13 +78,7 @@ export class ConditionLayer {
       this.hover.bounds.y += cam.y - previousCamera.y;
     }
     this.camera = { ...cam };
-    const insets = s.insets();
-    const viewport: Rect = {
-      x: insets.left + 4,
-      y: insets.top + 4,
-      w: Math.max(1, s.size.width - insets.left - insets.right - 8),
-      h: Math.max(1, s.size.height - insets.top - 8),
-    };
+    const viewport = screenViewport(s);
     const tokens = s.elements.filter(
       (el) => el.type === "token" && !s.hidden.has(el.id) && !unseen(s.previews.get(el.id) ?? el),
     );
@@ -154,7 +160,8 @@ export class ConditionLayer {
         viewport,
         obstacles: [...boxes.entries()].filter(([id]) => id !== el.id).map(([, box]) => box),
       });
-      return { id: el.id, marks, views, layout, radius };
+      const name = el.type === "token" && !el.hideName ? el.name.trim() : "";
+      return { id: el.id, name, marks, views, layout, radius };
     });
     let hovered =
       this.hover && pointer && conditionContains(this.hover.bounds, pointer.x, pointer.y)
@@ -190,6 +197,7 @@ export class ConditionLayer {
       ...plans.filter((plan) => plan.id !== hovered?.id && announces(plan)),
       ...plans.filter((plan) => plan.id === hovered?.id),
     ];
+    const usedNames = new Set<string>();
     for (const plan of ordered) {
       const expanded = plan.layout.inline || plan.id === hovered?.id;
       let targets = plan.layout.inline ? plan.layout.horizontal : plan.layout.collapsed;
@@ -216,20 +224,41 @@ export class ConditionLayer {
       }
       // Newly applied conditions show their names for a moment, stacked over the token.
       const announced = expanded ? [] : plan.views.filter(announcing);
-      const announceTargets = announced.length
-        ? conditionLayout({
-            x: boxes.get(plan.id)!.x + boxes.get(plan.id)!.w / 2,
-            y: boxes.get(plan.id)!.y,
-            tokenWidth: boxes.get(plan.id)!.w,
-            radius: plan.radius,
-            labels: announced.map((view) => ({
-              w: view.text.width + 16,
-              h: view.text.height + 8,
-            })),
-            viewport,
-            obstacles: [],
-          }).vertical
-        : [];
+      // Off screen, they show at the edge, under the token's name, pointing toward it.
+      const box = boxes.get(plan.id)!;
+      const centre = { x: box.x + box.w / 2, y: box.y + box.h / 2 };
+      const offScreen = announced.length > 0 && !conditionContains(viewport, centre.x, centre.y);
+      const name = offScreen ? this.nameText(plan.id, plan.name) : null;
+      const stacked = conditionLayout({
+        x: centre.x,
+        y: box.y,
+        tokenWidth: box.w,
+        radius: plan.radius,
+        labels: [
+          ...(name ? [{ w: name.width, h: name.height }] : []),
+          ...announced.map((view) => ({ w: view.text.width + 16, h: view.text.height + 8 })),
+        ],
+        // Room around them for the pointer.
+        viewport: offScreen
+          ? {
+              x: viewport.x + POINTER_ROOM,
+              y: viewport.y + POINTER_ROOM,
+              w: Math.max(1, viewport.w - POINTER_ROOM * 2),
+              h: Math.max(1, viewport.h - POINTER_ROOM * 2),
+            }
+          : viewport,
+        obstacles: [],
+      }).vertical;
+      const announceTargets = name ? stacked.slice(1) : stacked;
+      // The name rides on the first condition, flying out to the edge and back with it.
+      if (name)
+        this.pinnedNames.set(plan.id, {
+          view: announced[0]!,
+          offset: {
+            x: stacked[0]!.x + stacked[0]!.w / 2 - announceTargets[0]!.x,
+            y: stacked[0]!.y - announceTargets[0]!.y,
+          },
+        });
       if (announced.length) this.animating = true;
       for (const [index, view] of plan.views.entries()) {
         const announceAt = announced.indexOf(view);
@@ -309,13 +338,64 @@ export class ConditionLayer {
         if (plan.id === hovered?.id || announceAt >= 0)
           this.texts.setChildIndex(view.text, this.texts.children.length - 1);
       }
+      this.drawPinnedName(plan, centre, now, usedNames);
     }
     this.drawnTokens = new Set(plans.map((plan) => plan.id));
+    for (const id of this.pinnedNames.keys())
+      if (!this.drawnTokens.has(id)) this.pinnedNames.delete(id);
+    for (const [id, text] of this.names) {
+      if (usedNames.has(id)) continue;
+      text.destroy();
+      this.names.delete(id);
+    }
     for (const [key, view] of this.views) {
       if (used.has(key)) continue;
       view.text.destroy();
       this.views.delete(key);
     }
+  }
+
+  /** The name over an off-screen token's conditions, and a pointer toward it, while they're out at the edge. */
+  private drawPinnedName(
+    plan: { id: string; name: string; views: ConditionView[] },
+    token: Point,
+    now: number,
+    used: Set<string>,
+  ) {
+    const pinned = this.pinnedNames.get(plan.id);
+    if (!pinned) return;
+    const { view, offset } = pinned;
+    const out =
+      plan.views.includes(view) && (view.open || now - view.start < 320) && view.text.alpha > 0;
+    const name = out && this.nameText(plan.id, plan.name);
+    if (!name) {
+      this.pinnedNames.delete(plan.id);
+      return;
+    }
+    used.add(plan.id);
+    name.alpha = view.text.alpha;
+    name.position.set(Math.round(view.current.x + offset.x), Math.round(view.current.y + offset.y));
+    const nameBox = { x: name.x - name.width / 2, y: name.y, w: name.width, h: name.height };
+    const pointer = pointerToward(unionRect([nameBox, view.current]), token);
+    if (pointer && name.alpha > 0.5) drawPointer(this.view, pointer, name.alpha);
+  }
+
+  /** A token's name, to head its conditions shown at the edge; none if it has no name to show. */
+  private nameText(tokenId: string, name: string): Text | null {
+    if (!name) return null;
+    let text = this.names.get(tokenId);
+    if (!text) {
+      text = new Text({
+        text: "",
+        style: TOKEN_NAME_STYLE,
+        anchor: { x: 0.5, y: 0 },
+        resolution: 2,
+      });
+      this.names.set(tokenId, text);
+      this.texts.addChild(text);
+    }
+    if (text.text !== name) text.text = name;
+    return text;
   }
 
   /** The ring on whoever's turn it is; it closes in on them as their turn starts. */

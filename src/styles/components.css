@@ -5,6 +5,7 @@
  */
 @import "../table/Toolbar.css";
 @import "../ui/Button.css";
+@import "../ui/sparkle.css";
 @import "../table/panels.css";
 @import "primitives.css";
 @import "../ui/List.css";

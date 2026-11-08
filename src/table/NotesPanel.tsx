@@ -275,12 +275,9 @@ function NoteList({
             renderItem={row}
             renderActions={(beginFolderNaming) => (
               <>
-                <Button size="sm" onClick={() => newPage()}>
-                  New Page
-                </Button>
+                <Button onClick={() => newPage()}>New Page</Button>
                 {isGm && (
                   <Button
-                    size="sm"
                     variant="ghost"
                     title="Only you can see it, until you reveal it"
                     onClick={() => newPage(undefined, true)}
@@ -288,7 +285,7 @@ function NoteList({
                     New GM Page
                   </Button>
                 )}
-                <Button size="sm" variant="ghost" onClick={beginFolderNaming}>
+                <Button variant="ghost" onClick={beginFolderNaming}>
                   New Folder
                 </Button>
               </>
@@ -358,7 +355,6 @@ function NotePage({
             <IconSecret size={22} />
             <span>Only you can see this page.</span>
             <Button
-              size="sm"
               variant="ghost"
               onClick={(e) => morphOpen(e.currentTarget, () => (revealing.value = note.id))}
             >

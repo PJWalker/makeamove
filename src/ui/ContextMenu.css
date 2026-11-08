@@ -7,7 +7,10 @@
     display: grid;
     min-width: 220px;
     padding: var(--space-1);
-    background: var(--surface-solid);
+    background: var(--window-sheen), var(--surface-solid);
+    border: 1px solid var(--hairline);
+    background-clip: padding-box;
+    box-shadow: var(--window-shadow), var(--window-rim);
   }
   .context-divider {
     height: var(--space-2);
@@ -22,7 +25,8 @@
   .context-menu .menu-item:focus:not(:disabled, [data-disabled]),
   .context-menu .menu-item[data-focused]:not([data-disabled]) {
     outline: none;
-    background: color-mix(in oklch, var(--accent) 40%, transparent);
+    background: var(--raised-sheen), color-mix(in oklch, var(--accent) 40%, transparent);
+    box-shadow: var(--edge-light);
     color: var(--text);
   }
   .menu-item:disabled,

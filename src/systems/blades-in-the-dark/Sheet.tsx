@@ -47,7 +47,6 @@ function AttributeAdvance({
         ))}
       </select>
       <Button
-        size="sm"
         disabled={!chosen}
         onClick={() => advanceAttribute(campaign, c.id, attribute.id, chosen)}
       >
@@ -115,7 +114,6 @@ export function BladesSheet(props: SheetProps) {
             <h3 className="sheet-heading">{name}</h3>
             <Button
               variant="secondary"
-              size="sm"
               label={`Resist with ${name}`}
               aria-label={`Resist with ${name}`}
               onClick={() => use(`resist-${id}`)}

@@ -61,7 +61,6 @@ export function FilterableMenu({
     <div className="filterable-menu">
       <Button
         ref={triggerRef}
-        size="sm"
         aria-haspopup="dialog"
         aria-expanded={open}
         {...triggerProps}

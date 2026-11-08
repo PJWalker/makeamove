@@ -86,7 +86,7 @@ export function CopyBanner({ campaign, c }: { campaign: Campaign; c: CharacterVi
         Derived From <strong>{template?.name ?? "a deleted template"}</strong>.
       </span>
       {template && canEdit(campaign, c) && (
-        <Button size="sm" variant="ghost" onClick={() => resetCopy(campaign, c.id)}>
+        <Button variant="ghost" onClick={() => resetCopy(campaign, c.id)}>
           Reset
         </Button>
       )}

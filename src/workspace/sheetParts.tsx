@@ -477,7 +477,6 @@ function MakeButton({
   }
   return (
     <Button
-      size="sm"
       variant="ghost"
       className="move-make"
       data-tip-side="right"
@@ -511,7 +510,6 @@ export function ConditionToggles({
       {conditions.map((condition) => (
         <li key={condition.id}>
           <Button
-            size="sm"
             className="condition-toggle"
             pressed={c.conditions.includes(condition.id)}
             disabled={!editable}

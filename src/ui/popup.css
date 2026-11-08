@@ -65,7 +65,8 @@
     transition:
       opacity 180ms var(--ease),
       translate 180ms var(--ease),
-      scale 180ms var(--ease);
+      scale 180ms var(--ease),
+      box-shadow 220ms var(--ease);
   }
   @starting-style {
     .dialog[open] {
@@ -118,6 +119,24 @@
   }
   .dialog-section a {
     color: var(--accent);
+  }
+}
+
+@layer components {
+  /*
+   * A menu or list tethered under what it drops from (ui/anchor.ts): left
+   * edges lined up, flipping above or leftward when there isn't room, and
+   * clear of the window's edges.
+   */
+  .drops-down {
+    position: fixed;
+    inset: auto;
+    margin: 6px 8px 8px 0;
+    position-area: block-end span-inline-end;
+    position-try-fallbacks:
+      flip-block,
+      flip-inline,
+      flip-block flip-inline;
   }
 }
 

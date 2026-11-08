@@ -77,7 +77,6 @@ export function SaveRequests({ campaign, m }: { campaign: Campaign; m: MoveMessa
               ) : gm || canAnswer(campaign, t) ? (
                 <span className="card-target-actions">
                   <Button
-                    size="sm"
                     variant="ghost"
                     onClick={() => answerSave(campaign, m.id, t, save, undefined, m.concentration)}
                   >
@@ -86,7 +85,6 @@ export function SaveRequests({ campaign, m }: { campaign: Campaign; m: MoveMessa
                   {modes.map((mode) => (
                     <Button
                       key={mode.id}
-                      size="sm"
                       variant="ghost"
                       onClick={() => answerSave(campaign, m.id, t, save, mode.id, m.concentration)}
                     >
@@ -146,21 +144,15 @@ export function DamageTargets({ campaign, m }: { campaign: Campaign; m: RollMess
               {gm && t.characterId && applied === undefined && (
                 <span className="card-target-actions">
                   {healing ? (
-                    <Button size="sm" variant="ghost" onClick={() => apply(t, total)}>
+                    <Button variant="ghost" onClick={() => apply(t, total)}>
                       Heal {total}
                     </Button>
                   ) : (
                     <>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        title="Apply"
-                        onClick={() => apply(t, total)}
-                      >
+                      <Button variant="ghost" title="Apply" onClick={() => apply(t, total)}>
                         {total}
                       </Button>
                       <Button
-                        size="sm"
                         variant="ghost"
                         title="Resistance: half"
                         onClick={() => apply(t, Math.floor(total / 2))}
@@ -168,7 +160,6 @@ export function DamageTargets({ campaign, m }: { campaign: Campaign; m: RollMess
                         ½
                       </Button>
                       <Button
-                        size="sm"
                         variant="ghost"
                         title="Vulnerability: double"
                         onClick={() => apply(t, total * 2)}
@@ -178,13 +169,12 @@ export function DamageTargets({ campaign, m }: { campaign: Campaign; m: RollMess
                       {armor &&
                         (getCharacter(campaign, t.characterId)?.resources[armor.resource] ?? 0) >
                           0 && (
-                          <Button size="sm" variant="ghost" onClick={() => apply(t, total, true)}>
+                          <Button variant="ghost" onClick={() => apply(t, total, true)}>
                             {armor.label}
                           </Button>
                         )}
                       {shield && (
                         <Button
-                          size="sm"
                           variant="ghost"
                           onClick={() =>
                             applyDamage(campaign, m.id, t, total, false, {

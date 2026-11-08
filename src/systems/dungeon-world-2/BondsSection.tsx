@@ -172,7 +172,6 @@ export function Dw2Bonds({
                 <span className="muted">All advanced Bond moves are unlocked.</span>
               )}
               <Button
-                size="sm"
                 variant="secondary"
                 disabled={!bondmateId || !bondType || (reinforcing && !bondMoveId)}
                 onClick={() => {

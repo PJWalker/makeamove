@@ -1,32 +1,38 @@
 /*
- * Where floating things go next to what they belong to (menus, lists that
- * drop down under text, pop-ups growing out of a button). The rule for all
- * of them: open below the anchor; if there isn't room below, open above it
- * (or wherever has more room); and stay wholly inside the window.
+ * Floating things tethered to what they belong to (menus, lists that drop
+ * down under text, the tooltip) with CSS anchor positioning: the browser
+ * keeps them against their anchor, flips them when they won't fit, and
+ * follows the anchor as it moves. Where each one goes is in its CSS
+ * (`position-area`, `position-try-fallbacks`); `.drops-down` in popup.css
+ * is the menu rule: below the anchor, left edges lined up, flipping above
+ * or leftward when there isn't room.
  */
 
-const MARGIN = 8;
+let count = 0;
 
-export interface Anchor {
-  left: number;
-  top: number;
-  bottom: number;
+function names(el: HTMLElement) {
+  return el.style
+    .getPropertyValue("anchor-name")
+    .split(",")
+    .map((n) => n.trim())
+    .filter(Boolean);
 }
 
 /**
- * Place `el` (position: fixed) against `anchor`: its left edge at the
- * anchor's, `gap` px below it, or above it when it won't fit below.
- * Returns the side it went to.
+ * Anchor `el` (position: fixed, later in the document than `anchor` or in
+ * the top layer) to `anchor`. Returns a function that lets go. An anchor
+ * can hold several things at once.
  */
-export function placeAnchored(el: HTMLElement, anchor: Anchor, gap = 6): "below" | "above" {
-  const w = el.offsetWidth;
-  const h = el.offsetHeight;
-  const below = innerHeight - MARGIN - (anchor.bottom + gap);
-  const above = anchor.top - gap - MARGIN;
-  const side = h <= below || below >= above ? "below" : "above";
-  const y = side === "below" ? anchor.bottom + gap : anchor.top - gap - h;
-  el.style.left = `${Math.round(Math.max(MARGIN, Math.min(anchor.left, innerWidth - w - MARGIN)))}px`;
-  el.style.top = `${Math.round(Math.max(MARGIN, Math.min(y, innerHeight - h - MARGIN)))}px`;
-  el.dataset.side = side;
-  return side;
+export function tether(el: HTMLElement, anchor: Element): () => void {
+  const name = `--anchor-${++count}`;
+  const target = anchor as HTMLElement;
+  target.style.setProperty("anchor-name", [...names(target), name].join(", "));
+  el.style.setProperty("position-anchor", name);
+  return () => {
+    const rest = names(target).filter((n) => n !== name);
+    if (rest.length) target.style.setProperty("anchor-name", rest.join(", "));
+    else target.style.removeProperty("anchor-name");
+    if (el.style.getPropertyValue("position-anchor") === name)
+      el.style.removeProperty("position-anchor");
+  };
 }

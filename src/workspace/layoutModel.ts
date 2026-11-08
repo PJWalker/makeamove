@@ -5,9 +5,14 @@
  *
  * Every panel is in exactly one place: docked on the left or the right,
  * floating in its own window, or closed (hidden until it's opened again).
- * `home` remembers the side a floating or closed panel came from, so
- * "dock" puts it back.
+ * `home` remembers the side a floating or closed panel came from, and
+ * `order` its place among that side's tabs, so "dock" puts it back where it
+ * was. Order keys are fractional indices: each side's tabs are sorted by
+ * them, and a panel placed between two tabs gets a key between theirs, so
+ * a hidden panel's key still sorts between the same neighbours later.
  */
+
+import { generateKeyBetween, generateNKeysBetween } from "fractional-indexing";
 
 export type PanelId =
   | "scene"
@@ -60,6 +65,8 @@ export interface Layout {
   /** Panels closed from the campaign menu or their tab, shown nowhere. */
   closed: DockItemId[];
   home: Partial<Record<DockItemId, Side>>;
+  /** Each panel's order key on its home side, kept while it is floating or closed. */
+  order: Partial<Record<DockItemId, string>>;
 }
 
 export const SIDEBAR_DEFAULT_W = 340;
@@ -98,23 +105,41 @@ function defaultSide(id: DockItemId): Side {
 }
 
 export function defaultLayout(narrow: boolean): Layout {
+  const left: DockItemId[] = ["scene", "characters", "combat"];
+  const right: DockItemId[] = ["chat", "libraries", "reference", "items", "notes", "members"];
   return {
-    left: {
-      active: "characters",
-      open: !narrow,
-      width: SIDEBAR_DEFAULT_W,
-      panels: ["scene", "characters", "combat"],
-    },
-    right: {
-      active: "chat",
-      open: !narrow,
-      width: SIDEBAR_DEFAULT_W,
-      panels: ["chat", "libraries", "reference", "items", "notes", "members"],
-    },
+    left: { active: "characters", open: !narrow, width: SIDEBAR_DEFAULT_W, panels: left },
+    right: { active: "chat", open: !narrow, width: SIDEBAR_DEFAULT_W, panels: right },
     floating: [],
     closed: [],
     home: {},
+    order: { ...orderKeys(left), ...orderKeys(right) },
   };
+}
+
+/** Fresh order keys for tabs in this order. */
+function orderKeys(panels: DockItemId[]): Layout["order"] {
+  const keys = generateNKeysBetween(null, null, panels.length);
+  return Object.fromEntries(panels.map((id, i) => [id, keys[i]]));
+}
+
+function isOrderKey(key: unknown): key is string {
+  if (typeof key !== "string") return false;
+  try {
+    generateKeyBetween(key, null);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Whether a side's tabs all have keys, sorted the way the tabs are. */
+function inOrder(panels: DockItemId[], order: Layout["order"]) {
+  const keys = panels.map((id) => order[id]);
+  return keys.every((key, i) => {
+    const prev = keys[i - 1];
+    return key !== undefined && (i === 0 || (prev !== undefined && prev < key));
+  });
 }
 
 export function locate(l: Layout, id: DockItemId): Side | "floating" | "closed" {
@@ -171,7 +196,17 @@ export function normalise(saved: unknown, narrow: boolean): Layout {
   for (const id of PANEL_ORDER) {
     if (!seen.has(id)) (DEFAULT_SIDE[id] === "left" ? left : right).panels.push(id);
   }
-  return { left: tidy(left), right: tidy(right), floating, closed, home: s.home ?? {} };
+  const savedOrder: unknown = s.order;
+  let order: Layout["order"] = Object.fromEntries(
+    Object.entries(savedOrder && typeof savedOrder === "object" ? savedOrder : {}).filter(
+      ([id, key]) => isDockItemId(id) && isOrderKey(key),
+    ),
+  );
+  // Keys that don't match the saved tab order (or are missing) are made afresh.
+  for (const { panels } of [left, right]) {
+    if (!inOrder(panels, order)) order = { ...order, ...orderKeys(panels) };
+  }
+  return { left: tidy(left), right: tidy(right), floating, closed, home: s.home ?? {}, order };
 }
 
 /** The layout as shown, leaving out panels this campaign doesn't have (Combat without initiative). */
@@ -293,10 +328,41 @@ export function detach(l: Layout, id: DockItemId, win: Omit<FloatingWindow, "id"
 }
 
 /**
+ * Place `id` among a side's tabs (which don't include it): at `index`, or
+ * where its order key sorts. Returns the tabs and the key it now has.
+ */
+function place(
+  l: Layout,
+  panels: DockItemId[],
+  id: DockItemId,
+  index: number | "remembered",
+): { panels: DockItemId[]; key: string } {
+  const keys = panels.map((p) => l.order[p] ?? null);
+  const remembered = l.order[id];
+  const at =
+    index !== "remembered"
+      ? Math.min(Math.max(index, 0), panels.length)
+      : remembered === undefined
+        ? panels.length
+        : keys.filter((k) => k !== null && k <= remembered).length;
+  const before = keys[at - 1] ?? null;
+  const after = keys[at] ?? null;
+  // The remembered key is kept unless a tab placed since has taken it.
+  const fits =
+    index === "remembered" &&
+    remembered !== undefined &&
+    (before === null || before < remembered) &&
+    (after === null || remembered < after);
+  const key = fits ? remembered : generateKeyBetween(before, after);
+  return { panels: panels.toSpliced(at, 0, id), key };
+}
+
+/**
  * Dock a panel on a side (its home side if none is given), from wherever it
- * is now, and show it. `index` places the tab; the default is the end. With
- * `reveal` false a closed sidebar stays closed, its new tab showing when it
- * next opens.
+ * is now, and show it. `index` places the tab; without one, a panel going
+ * back to its own side returns to the place it had there, and otherwise goes
+ * at the end. With `reveal` false a closed sidebar stays closed, its new tab
+ * showing when it next opens.
  */
 export function dock(
   l: Layout,
@@ -305,14 +371,22 @@ export function dock(
   index?: number,
   reveal = true,
 ): Layout {
+  const where = locate(l, id);
+  const from = where === "floating" || where === "closed" ? l.home[id] : where;
   const next = without(l, id);
-  const panels = [...next[side].panels];
-  panels.splice(index ?? panels.length, 0, id);
+  const target = next[side].panels;
+  const { panels, key } = place(
+    l,
+    target,
+    id,
+    index ?? (from === side ? "remembered" : target.length),
+  );
   const open = reveal || next[side].open;
   return {
     ...next,
     [side]: { ...next[side], panels, active: id, open },
     home: { ...l.home, [id]: side },
+    order: { ...l.order, [id]: key },
   };
 }
 
@@ -323,7 +397,11 @@ export const otherSide = (side: Side): Side => (side === "left" ? "right" : "lef
 export function reorder(l: Layout, id: DockItemId, index: number): Layout {
   const side = locate(l, id);
   if (side === "floating" || side === "closed") return l;
-  const panels = l[side].panels.filter((p) => p !== id);
-  panels.splice(Math.min(Math.max(index, 0), panels.length), 0, id);
-  return { ...l, [side]: { ...l[side], panels } };
+  const { panels, key } = place(
+    l,
+    l[side].panels.filter((p) => p !== id),
+    id,
+    index,
+  );
+  return { ...l, [side]: { ...l[side], panels }, order: { ...l.order, [id]: key } };
 }

@@ -374,7 +374,7 @@ const ruleFor = (name: string): Dw2PathMove => {
 
 const taglineFor = (name: string) => {
   const at = source.search(
-    new RegExp(`^### ${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "m"),
+    new RegExp(`^### ${RegExp.escape(name)}\\s*$`, "m"),
   );
   const line =
     at < 0

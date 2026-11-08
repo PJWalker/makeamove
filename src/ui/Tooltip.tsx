@@ -1,13 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { tether } from "./anchor";
 import { inTransition } from "./transition";
 
 const DELAY = 150;
-const GAP = 10;
-/** The closest a tooltip comes to the window's edge. */
-const EDGE = 4;
 
 type Dir = "down" | "up" | "left" | "right";
-const OPPOSITE: Record<Dir, Dir> = { down: "up", up: "down", left: "right", right: "left" };
 
 let hideNow: (() => void) | null = null;
 
@@ -24,16 +21,17 @@ export function hideTooltip() {
  * One tooltip for the whole app. It watches the pointer and keyboard focus
  * and, after a short delay, shows the `title` of whatever is under them. The
  * native tooltip would double up, so a title is moved into `data-tip` while
- * the element has one. It lives in the top layer, so it sits above dialogs.
+ * the element has one. It lives in the top layer, so it sits above dialogs,
+ * and is anchored to its element (see Tooltip.css for where it goes).
  * An element marked `data-tip-opens` keeps its tooltip through a press, for
  * a click that turns the tooltip into a window (hideTooltip ends it).
  */
 export function Tooltip() {
-  /** What to show, the element's box, and the side it would rather open on. */
+  /** What to show, the element it's for, and the side it would rather open on. */
   const [tip, setTip] = useState<{
     text: string;
     long?: boolean;
-    r: DOMRect;
+    el: Element;
     dir: Dir;
     instant?: boolean;
   } | null>(null);
@@ -45,11 +43,13 @@ export function Tooltip() {
     // Turned into something else; not shown again until the pointer leaves it.
     let suppressed: Element | null = null;
     let lastShown = 0;
+    let showing = false;
 
     const hide = () => {
       clearTimeout(timer);
       current = null;
-      if (tip) lastShown = performance.now();
+      if (showing) lastShown = performance.now();
+      showing = false;
       setTip(null);
     };
     // A press, key or scroll ends the "already browsing" state too.
@@ -99,7 +99,8 @@ export function Tooltip() {
           : cy < innerHeight / 2
             ? "down"
             : "up";
-      setTip({ text, long, r, dir, instant });
+      showing = true;
+      setTip({ text, long, el, dir, instant });
     }
 
     function consider(target: EventTarget | null, delay: number) {
@@ -149,47 +150,35 @@ export function Tooltip() {
       document.removeEventListener("keydown", dismiss, true);
       document.removeEventListener("scroll", dismiss, true);
     };
-  }, [tip]);
+    // Registered once: re-running on every tip change would hide each tip
+    // as soon as it showed.
+  }, []);
 
   const t = tip;
-  // Keep it on screen: open on the preferred side, or the opposite one if it
-  // wouldn't fit there; centre on the target, then clamp to the window.
-  useEffect(() => {
+  // CSS places it, flipping it to the other side if it won't fit; then point
+  // the arrow at the middle of the element from whichever side it went to.
+  useLayoutEffect(() => {
     const el = ref.current;
-    if (!el) return;
-    if (t) {
-      if (!el.matches(":popover-open")) el.showPopover();
-      const w = el.offsetWidth;
-      const h = el.offsetHeight;
-      const { r } = t;
-      const room: Record<Dir, number> = {
-        right: innerWidth - EDGE - (r.right + GAP),
-        left: r.left - GAP - EDGE,
-        down: innerHeight - EDGE - (r.bottom + GAP),
-        up: r.top - GAP - EDGE,
-      };
-      const need = t.dir === "left" || t.dir === "right" ? w : h;
-      const dir =
-        room[t.dir] < need && room[OPPOSITE[t.dir]] > room[t.dir] ? OPPOSITE[t.dir] : t.dir;
-      el.dataset.dir = dir;
-      const clamp = (v: number, size: number, max: number) =>
-        Math.min(Math.max(v, EDGE), max - size - EDGE);
-      if (dir === "left" || dir === "right") {
-        const y = r.top + r.height / 2;
-        el.style.left = `${dir === "right" ? r.right + GAP : r.left - GAP - w}px`;
-        const top = clamp(y - h / 2, h, innerHeight);
-        el.style.top = `${top}px`;
-        el.style.setProperty("--arrow", `${y - top}px`);
-      } else {
-        const x = r.left + r.width / 2;
-        const left = clamp(x - w / 2, w, innerWidth);
-        el.style.left = `${left}px`;
-        el.style.setProperty("--arrow", `${x - left}px`);
-        el.style.top = `${dir === "down" ? r.bottom + GAP : r.top - GAP - h}px`;
-      }
-    } else if (el.matches(":popover-open")) {
-      el.hidePopover();
-    }
+    if (!el || !t) return;
+    const untether = tether(el, t.el);
+    el.dataset.prefer = t.dir;
+    el.showPopover();
+    const r = t.el.getBoundingClientRect();
+    const box = el.getBoundingClientRect();
+    const across = t.dir === "left" || t.dir === "right";
+    el.dataset.dir = across
+      ? box.left >= r.right
+        ? "right"
+        : "left"
+      : box.top >= r.bottom
+        ? "down"
+        : "up";
+    const arrow = across ? r.top + r.height / 2 - box.top : r.left + r.width / 2 - box.left;
+    el.style.setProperty("--arrow", `${arrow}px`);
+    return () => {
+      if (el.matches(":popover-open")) el.hidePopover();
+      untether();
+    };
   }, [t]);
 
   return (

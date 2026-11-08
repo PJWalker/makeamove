@@ -21,10 +21,9 @@ const INLINE = /(\[\[[^\]]+\]\])|\*\*([^*]+)\*\*|\*([^*\n]+)\*/g;
 
 export function SearchHighlight({ text, term }: { text: string; term: string }) {
   if (!term) return text;
-  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return (
     <>
-      {text.split(new RegExp(`(${escaped})`, "ig")).map((part, i) =>
+      {text.split(new RegExp(`(${RegExp.escape(term)})`, "ig")).map((part, i) =>
         part.toLowerCase() === term.toLowerCase() ? (
           <mark key={i} className="search-hit">
             {part}

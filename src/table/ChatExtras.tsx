@@ -202,7 +202,6 @@ export function TimerCard({
       {can && !compact && (
         <div className="move-suggest">
           <Button
-            size="sm"
             variant="ghost"
             onClick={() =>
               campaign.doc.transact(() => {
@@ -216,7 +215,6 @@ export function TimerCard({
           {!done &&
             (stopped ? (
               <Button
-                size="sm"
                 variant="ghost"
                 onClick={() =>
                   campaign.doc.transact(() => {
@@ -235,7 +233,6 @@ export function TimerCard({
               </Button>
             ) : (
               <Button
-                size="sm"
                 variant="ghost"
                 onClick={() => setState(campaign.messageState, m.id, "stoppedAt", Date.now())}
               >
@@ -283,7 +280,6 @@ export function CounterCard({
           {can && (
             <Button
               variant="icon"
-              size="sm"
               label="Down one"
               disabled={m.max !== undefined && value <= 0}
               onClick={() => set(value - 1)}
@@ -296,13 +292,7 @@ export function CounterCard({
             {m.max !== undefined && <span className="muted">/{m.max}</span>}
           </span>
           {can && (
-            <Button
-              variant="icon"
-              size="sm"
-              label="Up one"
-              disabled={full}
-              onClick={() => set(value + 1)}
-            >
+            <Button variant="icon" label="Up one" disabled={full} onClick={() => set(value + 1)}>
               <IconAdd />
             </Button>
           )}

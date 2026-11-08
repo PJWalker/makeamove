@@ -82,11 +82,9 @@ export const ADJECTIVES = [
   "Zealous",
 ];
 
-const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
 /** `base` with the next number after any already taken: "Goblin 3". */
 function numbered(base: string, taken: string[]): string {
-  const re = new RegExp(`^${escape(base)} (\\d+)$`);
+  const re = new RegExp(`^${RegExp.escape(base)} (\\d+)$`);
   const used = taken.map((n) => Number(re.exec(n)?.[1] ?? 0));
   return `${base} ${Math.max(0, ...used) + 1}`;
 }

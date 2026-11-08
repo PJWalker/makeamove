@@ -95,7 +95,6 @@ function ArtifactTracker({
       )}
       <div className="sheet-row">
         <Button
-          size="sm"
           disabled={!editable || progress >= artifact.capacity || (needsChoice && !selected)}
           onClick={() =>
             markArtifactTrack(campaign, characterId, item.id, needsChoice ? selected : undefined)
@@ -104,7 +103,6 @@ function ArtifactTracker({
           Mark {artifact.track}
         </Button>
         <Button
-          size="sm"
           variant="ghost"
           disabled={!editable || progress === 0}
           onClick={() => clearArtifactTrack(campaign, characterId, item.id)}
@@ -134,7 +132,6 @@ function UseButton({ campaign, character, item, editable }: ItemUseProps) {
   const use = extensionOf(systemOf(campaign)).spendUse ?? spendItemUse;
   return (
     <Button
-      size="sm"
       disabled={!editable || (item.usesLeft ?? 0) <= 0}
       onClick={() => use(campaign, character.id, item.id)}
     >
@@ -220,7 +217,6 @@ export function Inventory({
     <>
       {i.equippable && (
         <Button
-          size="sm"
           pressed={i.equipped}
           disabled={!editable}
           onClick={() => patch(i, { equipped: !i.equipped })}
@@ -296,12 +292,7 @@ export function Inventory({
         </List>
       )}
       {editable && (
-        <Button
-          size="sm"
-          variant="ghost"
-          className="inventory-find"
-          onClick={() => browseLibrary("item")}
-        >
+        <Button variant="ghost" className="inventory-find" onClick={() => browseLibrary("item")}>
           Find Items in the Libraries…
         </Button>
       )}

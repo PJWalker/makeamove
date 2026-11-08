@@ -11,7 +11,12 @@ export interface BarChange {
   start: number;
   /** How grown the bar already was, when this change cut into another. */
   grownFrom: number;
+  /** Whether the bar empties for good (hit points to zero), and breaks apart and falls off. */
+  breaks?: boolean;
 }
+
+/** When, in ms into a change, a breaking bar snaps apart. */
+export const BAR_BREAK_AT = 480;
 
 /** One frame of a bar change. */
 export interface BarChangeFrame {
@@ -31,6 +36,12 @@ export interface BarChangeFrame {
   rise: number;
   pop: number;
   alpha: number;
+  /** A breaking bar's cracks, 0 to 1, as they spread before it snaps. */
+  crack: number;
+  /** Whether a breaking bar has snapped, and falls as shards. */
+  broken: boolean;
+  /** The room the bar takes among its token's bars, 0 to 1: a broken bar's closes up. */
+  slot: number;
   done: boolean;
 }
 
@@ -78,6 +89,9 @@ export function barChangeFrame(change: BarChange, elapsed: number): BarChangeFra
     rise: easeOut(span(t, 0, BAR_CHANGE_MS)),
     pop: 0.6 + 0.4 * spring(span(t, 0, 300)),
     alpha: 1 - span(t, 1000, BAR_CHANGE_MS),
+    crack: change.breaks ? easeOut(span(t, 260, BAR_BREAK_AT)) : 0,
+    broken: !!change.breaks && t >= BAR_BREAK_AT,
+    slot: change.breaks ? 1 - easeInOut(span(t, 1150, BAR_CHANGE_MS - 50)) : 1,
     done: t >= BAR_CHANGE_MS,
   };
 }

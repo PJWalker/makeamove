@@ -29,7 +29,6 @@ import { menuTrigger } from "../ui/menuTrigger";
 import type { MenuItem } from "../ui/ContextMenu";
 import { linkActionItems, linkMenu, renameLink, showLink } from "./linkState";
 import type { Campaign } from "../campaign/campaign";
-import { placeAnchored } from "../ui/anchor";
 import { IconOpenWindow, IconRename, IconSidebar } from "../ui/icons";
 import { dragEntity, entity, registerLinkDrop } from "./entityDrag";
 import { actionMenuItems } from "./actionMenu";
@@ -147,20 +146,18 @@ export function linkExtension(campaign: Campaign, o: Pick<RichTextOptions, "note
   });
 }
 
-/** The list that drops down after `@`: arrow keys move, Enter or Tab picks, Escape closes. */
+/**
+ * The list that drops down after `@`: arrow keys move, Enter or Tab picks,
+ * Escape closes. It's anchored to the `@` text being typed (richText.css).
+ */
 function suggestionList(campaign: Campaign) {
   const host = document.createElement("div");
   let root: Root | null = null;
-  host.className = "note-suggest context-menu panel";
+  host.className = "note-suggest mention-list context-menu panel drops-down";
   host.setAttribute("role", "listbox");
   let props: SuggestionProps<LinkTarget> | null = null;
   let index = 0;
 
-  // Under the text being typed, or over it near the bottom of the window.
-  const place = () => {
-    const r = props?.clientRect?.();
-    if (r) placeAnchored(host, r);
-  };
   const draw = () => {
     if (!props) return;
     const items = props.items;
@@ -190,7 +187,6 @@ function suggestionList(campaign: Campaign) {
         <p className="empty-inline note-suggest-empty">Nothing by that name.</p>
       ),
     );
-    place();
   };
 
   return {

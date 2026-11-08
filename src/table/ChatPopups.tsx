@@ -264,13 +264,7 @@ function Popup({
       <Suspense fallback={null}>
         <LoneMessage campaign={campaign} m={m} />
       </Suspense>
-      <Button
-        variant="icon"
-        size="sm"
-        className="chat-popup-close"
-        label="Dismiss"
-        onClick={onDismissAll}
-      >
+      <Button variant="icon" className="chat-popup-close" label="Dismiss" onClick={onDismissAll}>
         <IconClose />
       </Button>
     </div>

@@ -140,10 +140,10 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
               <>
                 {isGm && (
                   <>
-                    <Button variant="secondary" size="sm" onClick={() => addScene()}>
+                    <Button variant="secondary" onClick={() => addScene()}>
                       <IconAdd size={22} /> New Scene
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={beginFolderNaming}>
+                    <Button variant="ghost" onClick={beginFolderNaming}>
                       New Folder
                     </Button>
                   </>
@@ -210,11 +210,7 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
           )}
           {isGm && active && (
             <>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => campaign.pullPlayersToScene(active.id)}
-              >
+              <Button variant="secondary" onClick={() => campaign.pullPlayersToScene(active.id)}>
                 <IconMembers size={22} /> Pull players here
               </Button>
               {scene ? (

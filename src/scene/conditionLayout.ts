@@ -56,10 +56,11 @@ export function conditionLayout(input: ConditionLayoutInput) {
   const listHeight =
     labels.reduce((total, label) => total + label.h, 0) + gap * Math.max(0, labels.length - 1);
   const upward = y + radius - listHeight;
+  const lowest = viewport.y + viewport.h - listHeight;
   let top =
     upward >= viewport.y
-      ? upward
-      : Math.max(viewport.y, Math.min(y - radius, viewport.y + viewport.h - listHeight));
+      ? Math.max(viewport.y, Math.min(upward, lowest))
+      : Math.max(viewport.y, Math.min(y - radius, lowest));
   const listLeft = Math.max(viewport.x, Math.min(x - width / 2, viewport.x + viewport.w - width));
   const vertical = labels.map((label) => {
     const box = { x: listLeft, y: top, w: width, h: label.h };

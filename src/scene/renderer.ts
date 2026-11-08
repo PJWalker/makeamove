@@ -24,6 +24,7 @@ import { PresenceLayer } from "./render/presence";
 import type { RenderPart, RenderState } from "./render/state";
 import { releaseTextures } from "./render/textures";
 import { TokenLabelLayer } from "./render/tokenLabels";
+import { isDowned } from "./downed";
 
 // Skip drawing elements that are off screen.
 extensions.add(CullerPlugin);
@@ -238,6 +239,7 @@ export class SceneRenderer implements RenderState {
     if (d.elements) this.elementLayer.sync();
     else if (d.previews) this.elementLayer.syncPreviews();
     this.elementLayer.syncHidden(this.showHelpers, this.lightsShown);
+    const falling = this.elementLayer.syncDowned();
     if (d.camera) {
       this.world.position.set(this.camera.x, this.camera.y);
       this.world.scale.set(this.camera.zoom);
@@ -262,6 +264,7 @@ export class SceneRenderer implements RenderState {
     if (animating) this.invalidate("presence");
     if (this.conditions.animating) this.invalidate("overlay");
     if (this.tokenLabels.animating) this.invalidate("overlay");
+    if (falling) this.invalidate();
   }
 
   /** The size text takes when drawn on the map, in world px. */
@@ -280,6 +283,8 @@ export class SceneRenderer implements RenderState {
 
   setTokenStats(statsFor: (characterId: string) => TokenStat[]) {
     this.tokenLabels.statsFor = statsFor;
+    this.elementLayer.downed = (token) =>
+      !!token.characterId && isDowned(statsFor(token.characterId));
     this.invalidate("overlay");
   }
 

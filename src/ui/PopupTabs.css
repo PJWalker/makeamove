@@ -58,8 +58,9 @@
   .popup-tab[aria-selected="true"] {
     z-index: 1;
     border-image: var(--shine);
-
-    background: var(--surface);
+    background-color: var(--surface);
+    background-image: var(--window-sheen);
+    background-clip: padding-box;
     color: var(--accent);
   }
   .popup-tab:focus-visible {

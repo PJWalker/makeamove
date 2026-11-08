@@ -110,7 +110,6 @@ export const Message = memo(function Message({
         {canGo && (
           <Button
             variant="ghost"
-            size="sm"
             className="chat-go"
             onClick={() => campaign.setActiveScene(m.sceneId!)}
           >

@@ -311,9 +311,7 @@ export function DndSheet({ campaign, system, c }: Props) {
 
       {editable && level < 20 && xp >= valueOf(v, "xpNext") && (
         <div className="sheet-advancement">
-          <Button size="sm" onClick={() => setLevelling(true)}>
-            Level Up
-          </Button>
+          <Button onClick={() => setLevelling(true)}>Level Up</Button>
         </div>
       )}
       {levelling && (
@@ -344,7 +342,7 @@ export function DndSheet({ campaign, system, c }: Props) {
             />
           </div>
           <div className="sheet-row">
-            <Button size="sm" disabled={!editable} onClick={() => use("death-save")}>
+            <Button disabled={!editable} onClick={() => use("death-save")}>
               Death Save
             </Button>
           </div>
@@ -459,17 +457,13 @@ export function DndSheet({ campaign, system, c }: Props) {
       <section className="form-section sheet-section" aria-label="Rest">
         <h3 className="sheet-heading">Rest</h3>
         <div className="sheet-row">
-          <Button
-            size="sm"
-            disabled={!editable || !(c.resources.hitDice ?? 0)}
-            onClick={spendHitDie}
-          >
+          <Button disabled={!editable || !(c.resources.hitDice ?? 0)} onClick={spendHitDie}>
             Spend Hit Die
           </Button>
-          <Button size="sm" disabled={!editable} onClick={() => rest(campaign, c.id, "short-rest")}>
+          <Button disabled={!editable} onClick={() => rest(campaign, c.id, "short-rest")}>
             Short Rest
           </Button>
-          <Button size="sm" disabled={!editable} onClick={longRest}>
+          <Button disabled={!editable} onClick={longRest}>
             Long Rest
           </Button>
         </div>

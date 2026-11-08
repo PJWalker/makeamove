@@ -14,10 +14,15 @@
     pointer-events: auto;
   }
   .window {
-    background: var(--surface);
+    background: var(--window-sheen), var(--surface);
     border: 1px solid var(--hairline);
     background-clip: padding-box;
-    box-shadow: var(--window-shadow);
+    box-shadow: var(--window-shadow), var(--window-rim);
+    transition: box-shadow 220ms var(--ease);
+  }
+  /* Picked up by its title bar: it rises off the table while carried, and settles when dropped. */
+  .window[data-lifted="true"] {
+    box-shadow: var(--window-shadow-lifted), var(--window-rim);
   }
   .floating-window {
     position: absolute;

@@ -1,16 +1,29 @@
 @layer components {
-  /* Buttons */
+  /*
+   * Buttons come in four looks:
+   *  - raised (secondary): a dark key standing off the surface;
+   *  - quiet (ghost, icon, danger): flat on the surface until the pointer
+   *    finds them, then raised like secondary;
+   *  - primary: a gold key;
+   *  - selected (aria-pressed, and other chosen options): glossy, tinted
+   *    gold unless --selected-tint says otherwise.
+   * Backgrounds are set by longhand so each keeps its clip: dark buttons stop
+   * at the padding box and their translucent edge reads against the table;
+   * light ones run under the edge, which tints it.
+   */
   .btn,
   button {
     display: inline-flex;
-    box-shadow: 0 1px 2px black;
     align-items: center;
     justify-content: center;
     gap: var(--space-2);
     min-height: var(--control-height);
     padding: 0 var(--space-4);
-    border: 0;
+    border: 1px solid #fff4;
+    border-image: var(--shine);
     background-color: transparent;
+    background-clip: padding-box;
+    box-shadow: var(--raised-shadow);
     font-size: var(--text-sm);
     font-weight: 500;
     white-space: nowrap;
@@ -18,62 +31,63 @@
       background-color 120ms var(--ease),
       color 120ms var(--ease),
       box-shadow 220ms var(--ease),
+      translate 90ms var(--ease),
       filter 220ms var(--ease);
-
-    border: 1px solid #fff4;
-    border-image: var(--shine);
-    background-clip: padding-box;
   }
-
-  /* Flat button states keep the accent for primary and selected actions. */
-  .btn-primary,
-  .btn-secondary,
-  .btn:is(.btn-ghost, .btn-danger, .btn-icon):hover:not(:disabled, [aria-pressed="true"]) {
-    background: var(--surface-raised);
-  }
-  :is(.btn-primary, .btn-secondary, .btn-ghost, .btn-danger, .btn-icon):hover:not(
-      :disabled,
-      [aria-pressed="true"]
-    ) {
-    background-color: var(--surface-raised);
-  }
-  .btn:active:not(:disabled) {
-    background-color: var(--surface-sunken-hover);
-  }
-
   .btn:disabled {
     opacity: var(--disabled-opacity);
     cursor: not-allowed;
   }
-  .btn-primary {
-    background: var(--accent);
-    color: var(--accent-ink);
-    font-weight: 600;
+
+  /* Raised buttons catch more light under the pointer and sink when pressed. */
+  .btn:hover:not(:disabled, [aria-pressed="true"]) {
+    box-shadow: var(--raised-shadow-hover);
   }
-  .btn-secondary {
+  .btn:active:not(:disabled) {
+    translate: 0 var(--press-depth);
+    box-shadow: var(--pressed-shadow);
+    transition-duration: 40ms;
+  }
+
+  /* Raised */
+  .btn-secondary,
+  :is(.btn-ghost, .btn-icon):hover:not(:disabled, [aria-pressed="true"]) {
+    background-color: var(--surface-raised);
+    background-image: var(--raised-sheen);
     color: var(--text);
   }
-  .btn-ghost {
+  .btn:active:not(:disabled, .btn-primary, [aria-pressed="true"]) {
+    background-color: var(--surface-sunken-hover);
+    background-image: none;
+  }
+
+  /*
+   * Quiet. Kept at the lowest specificity so a component can still give one
+   * its own edge, as the sidebar's tabs do.
+   */
+  :is(.btn-ghost, .btn-icon, .btn-danger):where(:not([aria-pressed="true"])):where(
+      :disabled,
+      :not(:hover, :active)
+    ) {
+    border-color: transparent;
+    border-image: none;
+    box-shadow: none;
+  }
+  .btn-ghost,
+  .btn-icon {
     color: var(--text-muted);
-  }
-  .btn-ghost:hover:not(:disabled) {
-    color: var(--text);
-  }
-  .btn-danger {
-    color: var(--danger);
-  }
-  .btn-danger:hover:not(:disabled) {
-    background: var(--danger-soft);
-    color: var(--danger);
   }
   .btn-icon {
     width: 36px;
     min-height: 36px;
     padding: 0;
-    color: var(--text-muted);
   }
-  .btn-icon:hover:not(:disabled, [aria-pressed="true"]) {
-    color: var(--text);
+  .btn-danger {
+    color: var(--danger);
+  }
+  .btn-danger:hover:not(:disabled) {
+    background-color: var(--danger-soft);
+    background-image: var(--raised-sheen);
   }
   .btn.move-make {
     width: var(--control-height);
@@ -81,32 +95,56 @@
     padding: 0;
     color: var(--accent);
   }
-  .btn-primary:hover:not(:disabled) {
-    background: var(--accent-hover);
+
+  /* Primary: gold catches a brighter edge than the dark surfaces. */
+  .btn-primary {
+    background-color: var(--accent);
+    background-image: var(--raised-sheen);
+    background-clip: border-box;
+    color: var(--accent-ink);
+    font-weight: 600;
+  }
+  .btn-primary:not(:active) {
+    box-shadow: var(--edge-glow), var(--edge-shade), var(--raised-drop);
+  }
+  .btn-primary:hover:not(:disabled, :active) {
+    background-color: var(--accent-hover);
+    box-shadow: var(--edge-glow-strong), var(--edge-shade), var(--raised-drop-hover);
   }
   .btn-primary:active:not(:disabled) {
-    background: var(--accent-press);
+    background-color: var(--accent-press);
+    background-image: none;
   }
+
+  /* Selected */
   :is(
     .btn[aria-pressed="true"]:not([role="tab"]),
     .segment[data-selected],
     .pen-width[aria-checked="true"],
     .pen-layer[aria-pressed="true"]
   ) {
-    border-color: color-mix(in oklch, var(--accent-hover), white 30%);
-    border-image: none;
+    --tint: var(--selected-tint, var(--accent));
+    border-color: oklch(100% 0 0 / 0.35);
+    border-image: linear-gradient(to bottom right, #fff9, #fff3 50%, #0002) 1;
     background:
       linear-gradient(115deg, transparent 20%, #fff4 43%, transparent 65%),
-      linear-gradient(to bottom, var(--accent-hover), var(--accent) 48%, var(--accent-press));
+      linear-gradient(
+        to bottom right,
+        color-mix(in oklch, var(--tint), white 14%),
+        var(--tint) 48%,
+        color-mix(in oklch, var(--tint), black 12%)
+      );
+    background-clip: border-box;
     color: var(--accent-ink);
     box-shadow:
-      inset 0 1px 0 #fff6,
-      inset 0 -1px 0 #0003,
-      0 1px 3px #0005;
+      var(--edge-glow),
+      var(--edge-shade),
+      1px 1px 3px #0005;
   }
-  .btn-sm {
-    min-height: var(--control-height);
-    padding: 0 var(--space-3);
-    font-size: var(--text-sm);
+
+  @media (prefers-reduced-motion: reduce) {
+    .btn:active:not(:disabled) {
+      translate: none;
+    }
   }
 }

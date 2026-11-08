@@ -225,10 +225,8 @@ function CharacterList({
         renderItem={row}
         renderActions={(beginFolderNaming) => (
           <>
-            <Button size="sm" onClick={() => onNew()}>
-              New
-            </Button>
-            <Button size="sm" variant="ghost" onClick={beginFolderNaming}>
+            <Button onClick={() => onNew()}>New</Button>
+            <Button variant="ghost" onClick={beginFolderNaming}>
               New Folder
             </Button>
           </>
@@ -508,10 +506,10 @@ function NewCharacter({
         </label>
       )}
       <div className="form-actions">
-        <Button variant="ghost" size="sm" onClick={onDone}>
+        <Button variant="ghost" onClick={onDone}>
           Cancel
         </Button>
-        <Button variant="primary" size="sm" type="submit" disabled={!ready}>
+        <Button variant="primary" type="submit" disabled={!ready}>
           Create
         </Button>
       </div>

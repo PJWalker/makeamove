@@ -95,16 +95,8 @@
     flex: none;
     border-color: var(--condition-colour);
   }
-  .btn.condition-toggle[aria-pressed="true"]:not([role="tab"]) {
-    border-color: color-mix(in oklch, var(--condition-colour), white 30%);
-    background:
-      linear-gradient(115deg, transparent 20%, #fff4 43%, transparent 65%),
-      linear-gradient(
-        to bottom,
-        color-mix(in oklch, var(--condition-colour), white 14%),
-        var(--condition-colour) 48%,
-        color-mix(in oklch, var(--condition-colour), black 12%)
-      );
+  .btn.condition-toggle[aria-pressed="true"] {
+    --selected-tint: var(--condition-colour);
     color: #14161c;
     font-weight: 700;
   }

@@ -8,7 +8,6 @@ type Variant = "primary" | "secondary" | "ghost" | "danger" | "icon";
 type Props = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "size"> & {
   [attribute: `data-${string}`]: string | number | boolean | undefined;
   variant?: Variant;
-  size?: "sm" | "md";
   /** Accessible name; required for icon-only buttons and shown as a tooltip. */
   label?: string;
   pressed?: boolean;
@@ -16,15 +15,7 @@ type Props = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "size"> & {
 };
 
 export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
-  {
-    variant = "secondary",
-    size = "md",
-    label,
-    pressed,
-    className: className,
-    children,
-    ...rest
-  }: Props,
+  { variant = "secondary", label, pressed, className: className, children, ...rest }: Props,
   forwardedRef,
 ) {
   const ref = useObjectRef(forwardedRef);
@@ -35,9 +26,7 @@ export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
     },
     ref,
   );
-  const classes = ["btn", `btn-${variant}`, size === "sm" && "btn-sm", className]
-    .filter(Boolean)
-    .join(" ");
+  const classes = ["btn", `btn-${variant}`, className].filter(Boolean).join(" ");
   return (
     <button
       {...mergeProps(buttonProps, rest)}

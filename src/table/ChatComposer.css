@@ -52,25 +52,8 @@
     position: relative;
     /* Dragging out of a die button carries a new die off, rather than scrolling. */
     touch-action: none;
-    border-color: var(--hairline);
-    background: linear-gradient(
-      to bottom,
-      color-mix(in oklch, var(--surface-raised) 88%, white 12%),
-      var(--surface-raised)
-    );
-    box-shadow:
-      inset 0 1px 0 #fff4,
-      0 1px 2px #0004;
   }
-  .btn.dice-pick:hover:not(:disabled, [aria-pressed="true"]) {
-    background:
-      linear-gradient(115deg, transparent 24%, #fff3 48%, transparent 70%), var(--surface-raised);
-  }
-  .btn.dice-pick:active:not(:disabled) {
-    translate: 0 1px;
-    box-shadow: inset 0 1px 2px #0004;
-  }
-  .dice-pick[data-count]::after {
+  .dice-pick[data-count]::before {
     content: "×" attr(data-count);
     position: absolute;
     top: -6px;

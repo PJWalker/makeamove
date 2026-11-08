@@ -258,7 +258,6 @@ export function EntityWindowContent({
         {text}
         {item.equippable && (
           <Button
-            size="sm"
             pressed={item.equipped}
             disabled={!editable}
             onClick={() =>
@@ -272,7 +271,6 @@ export function EntityWindowContent({
         )}
         {item.uses !== undefined && (
           <Button
-            size="sm"
             disabled={!editable || !item.usesLeft}
             onClick={() =>
               updateItem(campaign, inventoryCharacter.id, item.id, {

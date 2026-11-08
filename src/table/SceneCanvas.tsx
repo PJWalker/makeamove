@@ -934,11 +934,11 @@ function TokenOptionsDialog({
             <span className="token-image-preview">
               <BlobImage image={image} fallback={<span className="muted">None</span>} />
             </span>
-            <Button size="sm" onClick={() => fileRef.current?.click()}>
+            <Button onClick={() => fileRef.current?.click()}>
               {image ? "Change…" : "Choose…"}
             </Button>
             {image && (
-              <Button size="sm" variant="ghost" onClick={() => setImage(undefined)}>
+              <Button variant="ghost" onClick={() => setImage(undefined)}>
                 Remove
               </Button>
             )}

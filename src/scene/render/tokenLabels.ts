@@ -1,17 +1,30 @@
 import { Container, Graphics, Text } from "pixi.js";
 import { toScreen } from "../camera";
+import type { Rect } from "../camera";
 import type { Point } from "../grid";
 import type { TokenStat } from "../../systems/types";
-import { barChangeFrame, type BarChange } from "../barChange";
+import { barShards, shardFrame, type BarShard } from "../barBreak";
+import { BAR_BREAK_AT, BAR_CHANGE_MS, barChangeFrame, type BarChange } from "../barChange";
+import { downs } from "../downed";
+import { pinInside, pointerToward, unionRect } from "../edgePin";
 import { hoverSpring } from "../conditionLayout";
 import { resolveTokenLabelLayout, zoomTokenBars } from "../tokenLabelLayout";
 import type { Transform } from "../types";
 import type { RenderState } from "./state";
-import { INK, reducedMotion } from "./style";
+import {
+  drawPointer,
+  INK,
+  POINTER_ROOM,
+  reducedMotion,
+  screenViewport,
+  TOKEN_NAME_STYLE,
+} from "./style";
 
 /** Token names never get smaller or bigger than this on screen, in px. */
 const NAME_MIN = 11;
-const NAME_MAX = 15;
+const NAME_MAX = TOKEN_NAME_STYLE.fontSize;
+/** The size, in px, a token's name grows to at least while one of its bars changes. */
+const NAME_GROWN = 20;
 
 /** Tokens smaller than this on screen, in px, only show their name and bars on hover. */
 const NAME_TOKEN_MIN = 24;
@@ -26,6 +39,8 @@ const BAR_MAX_H = 17;
 const BAR_GAP = 2;
 /** Bars narrower than this leave out their numbers. */
 const BAR_TEXT_MIN_W = 44;
+/** Room kept above a bar pinned to the edge, in px, for the number that rises off it. */
+const DELTA_ROOM = 68;
 
 /**
  * What sits under each token, in screen space so it stays readable at any
@@ -48,6 +63,8 @@ export class TokenLabelLayer {
   private barValues = new Map<string, number>();
   /** Bars playing out a change in value. */
   private barChanges = new Map<string, BarChange>();
+  /** Bars broken apart: where each snapped, and its pieces. */
+  private breaks = new Map<string, { at: Rect; shards: BarShard[] }>();
   /** The numbers that rise off bars as they change. */
   private deltaPool = new Map<string, Text>();
   /** Whether a bar is still zooming, and needs more frames. */
@@ -69,6 +86,7 @@ export class TokenLabelLayer {
     const g = this.bars.clear();
     const now = performance.now();
     const still = reducedMotion();
+    const viewport = screenViewport(s);
     const seen = new Set<string>();
     const usedNames = new Set<string>();
     const usedValues = new Set<string>();
@@ -91,12 +109,22 @@ export class TokenLabelLayer {
       // Out of sight: no name or bars to give it away.
       if (unseen(t)) continue;
       const screenW = t.w * cam.zoom;
-      const stats = !el.hideBars && el.characterId ? this.statsFor(el.characterId) : [];
-      for (const stat of stats) {
+      const allStats = !el.hideBars && el.characterId ? this.statsFor(el.characterId) : [];
+      for (const stat of allStats) {
         const key = `${el.id}:${stat.id}`;
         seen.add(key);
         this.noteValue(key, stat, now, still);
       }
+      // A down token's hit point bar has broken off: gone, once it's done falling.
+      const stats = allStats.filter((stat) => {
+        if (!downs(stat)) return true;
+        const key = `${el.id}:${stat.id}`;
+        const change = this.barChanges.get(key);
+        if (change && !barChangeFrame(change, now - change.start).done) return true;
+        this.barChanges.delete(key);
+        this.breaks.delete(key);
+        return false;
+      });
       const foot = toScreen(cam, { x: t.x, y: t.y + t.h / 2 });
       let y = foot.y + 3;
       let bars: Box | null = null;
@@ -124,13 +152,7 @@ export class TokenLabelLayer {
         if (!text) {
           text = new Text({
             text: "",
-            style: {
-              fontFamily: "Cabin, sans-serif",
-              fontSize: NAME_MAX,
-              fontWeight: "600",
-              fill: 0xffffff,
-              stroke: { color: INK, width: 4, join: "round" },
-            },
+            style: TOKEN_NAME_STYLE,
             anchor: { x: 0.5, y: 0 },
             resolution: 2,
           });
@@ -217,6 +239,7 @@ export class TokenLabelLayer {
         const frame = barChangeFrame(change, now - change.start);
         if (frame.done) {
           this.barChanges.delete(`${p.id}:${stat.id}`);
+          this.breaks.delete(`${p.id}:${stat.id}`);
           return null;
         }
         this.animating = true;
@@ -245,15 +268,37 @@ export class TokenLabelLayer {
         const grown = frame
           ? 1 + (Math.max(1.6, Math.min(2.4, 96 / barBox.w), 26 / p.barH) - 1) * frame.grow
           : 1;
-        return Math.max(zoom.scale, grown);
+        return Math.max(zoom.scale, grown) * (frame?.slot ?? 1);
       });
       const zoomed = zoomTokenBars(barBox, p.barH, BAR_GAP, scales);
-      if (p.name) p.name.text.y += zoomed.nameOffset;
+      if (p.name) {
+        const name = p.name.text;
+        name.y += zoomed.nameOffset;
+        // The name grows with a changing bar, so it's clear whose it is.
+        const grow = Math.max(0, ...frames.map((f) => f?.frame.grow ?? 0));
+        if (grow > 0) {
+          const base = name.scale.x;
+          const grown = Math.max(base * 1.35, NAME_GROWN / NAME_MAX);
+          name.scale.set(base + (grown - base) * grow);
+          name.visible = true;
+          this.names.setChildIndex(name, this.names.children.length - 1);
+        }
+      }
+      // It flies out to the edge as the bar grows, and back as it settles.
+      const fly = Math.max(0, ...frames.map((f) => f?.frame.grow ?? 0));
+      if (frames.some(Boolean)) this.pinToEdge(p, zoomed.bars, viewport, fly);
       p.stats.forEach((s, i) => {
         const changed = frames[i];
         const frame = changed?.frame;
         const { y, w, h: barH } = zoomed.bars[i]!;
         const x = zoomed.bars[i]!.x + (frame?.shakeX ?? 0);
+        const key = `${p.id}:${s.id}`;
+        if (frame?.broken && changed) {
+          this.drawShards(key, changed.change, { x, y, w, h: barH }, now);
+          this.drawDelta(key, changed.change.delta, frame, x + w / 2, y, barH);
+          usedDeltas.add(key);
+          return;
+        }
         const frac = frame ? frame.fill : fillOf(s);
         g.roundRect(x, y, w, barH, 3).fill({ color: INK, alpha: frame ? 0.95 : 0.85 });
         const inner = (from: number, to: number) =>
@@ -270,6 +315,31 @@ export class TokenLabelLayer {
         if (frame && changed) {
           if (frame.flash > 0)
             g.roundRect(x, y, w, barH, 3).fill({ color: 0xffffff, alpha: frame.flash * 0.7 });
+          // Cracks spread across a bar about to break.
+          if (frame.crack > 0) {
+            for (const shard of this.breakFor(key, changed.change, {
+              x,
+              y,
+              w,
+              h: barH,
+            }).shards.slice(1)) {
+              const [top, , , bottom, , mid] = shard.outline;
+              const at = (q: Point) => ({ x: x + q.x * w, y: y + q.y * barH });
+              const m = at(mid!);
+              const reach = frame.crack;
+              const a = at(top!);
+              const b = at(bottom!);
+              g.moveTo(m.x + (a.x - m.x) * reach, m.y + (a.y - m.y) * reach)
+                .lineTo(m.x, m.y)
+                .lineTo(m.x + (b.x - m.x) * reach, m.y + (b.y - m.y) * reach)
+                .stroke({
+                  color: 0xffffff,
+                  width: 1.5,
+                  alpha: 0.5 + 0.5 * frame.crack,
+                  join: "miter",
+                });
+            }
+          }
           // A rim that burns in the colour of the change, then fades.
           const hurt = changed.change.delta < 0;
           g.roundRect(x - 1, y - 1, w + 2, barH + 2, 4).stroke({
@@ -282,7 +352,6 @@ export class TokenLabelLayer {
         }
         // The value, when the bar is wide enough to read it.
         if (w < BAR_TEXT_MIN_W) return;
-        const key = `${p.id}:${s.id}`;
         let text = this.barTextPool.get(key);
         if (!text) {
           text = new Text({
@@ -318,6 +387,7 @@ export class TokenLabelLayer {
       if (seen.has(key)) continue;
       this.barValues.delete(key);
       this.barChanges.delete(key);
+      this.breaks.delete(key);
     }
     for (const key of this.barZoom.keys()) {
       if (!usedZooms.has(key)) this.barZoom.delete(key);
@@ -343,6 +413,8 @@ export class TokenLabelLayer {
     const last = this.barValues.get(key);
     this.barValues.set(key, stat.value);
     if (last === undefined || last === stat.value || still) return;
+    // Already down: nothing left to lose.
+    if (last <= 0 && downs(stat)) return;
     const running = this.barChanges.get(key);
     const frame = running && barChangeFrame(running, now - running.start);
     const live = running && frame && !frame.done;
@@ -360,7 +432,89 @@ export class TokenLabelLayer {
       delta: same ? running.delta + delta : delta,
       start: now,
       grownFrom: live ? frame.grow : 0,
+      breaks: downs(stat),
     });
+    this.breaks.delete(key);
+  }
+
+  /**
+   * A changing bar whose token is off screen flies out to the edge, with the
+   * token's name and a pointer toward it, so the change isn't missed; `fly`
+   * is how far out it is, 0 (at the token) to 1 (at the edge).
+   */
+  private pinToEdge(
+    plan: { t: Transform; name: { text: Text } | null },
+    bars: Rect[],
+    viewport: Rect,
+    fly: number,
+  ) {
+    const name = plan.name?.text;
+    const nameBox = name && {
+      x: name.x - name.width / 2,
+      y: name.y,
+      w: name.width,
+      h: name.height,
+    };
+    const group = unionRect([...bars, ...(nameBox ? [nameBox] : [])]);
+    // Room above for the number that rises off the bar.
+    const room = { ...group, y: group.y - DELTA_ROOM, h: group.h + DELTA_ROOM };
+    const pin = pinInside(
+      {
+        x: room.x - POINTER_ROOM,
+        y: room.y - POINTER_ROOM,
+        w: room.w + POINTER_ROOM * 2,
+        h: room.h + POINTER_ROOM * 2,
+      },
+      viewport,
+    );
+    if (!pin.x && !pin.y) return;
+    const shift = { x: pin.x * fly, y: pin.y * fly };
+    for (const bar of bars) {
+      bar.x += shift.x;
+      bar.y += shift.y;
+    }
+    name?.position.set(name.x + shift.x, name.y + shift.y);
+    const pinned = { ...group, x: group.x + shift.x, y: group.y + shift.y };
+    const pointer = pointerToward(pinned, toScreen(this.state.camera, plan.t));
+    if (pointer && fly > 0.5) drawPointer(this.bars, pointer, Math.min(1, (fly - 0.5) * 2));
+  }
+
+  /** How a breaking bar comes apart; where it is when it snaps holds it there as it falls. */
+  private breakFor(key: string, change: BarChange, bar: Rect) {
+    let broken = this.breaks.get(key);
+    if (!broken) {
+      broken = { at: bar, shards: barShards(`${key}:${change.start}`) };
+      this.breaks.set(key, broken);
+    }
+    if (performance.now() - change.start < BAR_BREAK_AT) broken.at = bar;
+    return broken;
+  }
+
+  /** A broken bar's pieces, thrown off and falling away. */
+  private drawShards(key: string, change: BarChange, bar: Rect, now: number) {
+    const g = this.bars;
+    const { at, shards } = this.breakFor(key, change, bar);
+    const since = now - change.start - BAR_BREAK_AT;
+    // What was lost was still hanging on, in red, when it snapped.
+    const lost = Math.max(change.from, 0);
+    for (const shard of shards) {
+      const f = shardFrame(shard, since, BAR_CHANGE_MS - BAR_BREAK_AT);
+      if (f.alpha <= 0) continue;
+      const cx = shard.centre.x * at.w;
+      const cy = shard.centre.y * at.h;
+      const cos = Math.cos(f.rotation);
+      const sin = Math.sin(f.rotation);
+      const place = (shrinkX: number, shrinkY: number) =>
+        shard.outline.flatMap((q) => {
+          const lx = (q.x * at.w - cx) * shrinkX;
+          const ly = (q.y * at.h - cy) * shrinkY;
+          return [at.x + cx + f.dx + lx * cos - ly * sin, at.y + cy + f.dy + lx * sin + ly * cos];
+        });
+      g.poly(place(1, 1)).fill({ color: INK, alpha: 0.95 * f.alpha });
+      if (shard.centre.x < lost)
+        g.poly(place(0.8, Math.max(0, 1 - 3 / at.h))).fill({ color: 0xff5c4d, alpha: f.alpha });
+      g.poly(place(1, 1)).stroke({ color: 0xff5c4d, width: 1.5, alpha: 0.8 * f.alpha });
+    }
   }
 
   /** The number that rises off a changing bar. */

@@ -44,3 +44,24 @@ test("Notes search opens a page at the matching text", async ({ page }) => {
     .poll(() => page.evaluate(() => window.getSelection()?.toString() ?? ""))
     .toBe("beneath the old bell tower");
 });
+
+test("the @ list drops from the text being typed", async ({ page }) => {
+  await createCampaign(page, "Notes links");
+  await page.getByRole("tab", { name: "Notes" }).click();
+  await page.getByRole("button", { name: "New Page" }).click();
+  await page.getByRole("textbox", { name: "Note text" }).fill("Ask @");
+
+  const list = page.locator(".note-suggest");
+  await expect(list).toBeVisible();
+  const typed = page.locator(".ProseMirror .suggestion");
+  await expect
+    .poll(async () => {
+      const at = await typed.boundingBox();
+      const box = await list.boundingBox();
+      if (!at || !box) return null;
+      // Under the text, or over it when there isn't room below.
+      return Math.round(box.y >= at.y ? box.y - (at.y + at.height) : at.y - (box.y + box.height));
+    })
+    .toBe(6);
+  expect((await list.boundingBox())!.x).toBeCloseTo((await typed.boundingBox())!.x, 0);
+});

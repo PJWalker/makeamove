@@ -15,7 +15,6 @@ What's left before Make a Move is a complete, publishable virtual tabletop. Draw
 
 ## 2. Core table features
 
-- [ ] Preserve panel order when hiding and showing panels (`workspace/panelLayout.ts`).
 - [ ] GM-editable visibility and lock flags on notes, tokens, maps and characters (scene elements have `locked`; nothing else does, and nothing has visibility).
 - [ ] Claim a character as your player character: default subject for actions, own sidebar tab with its avatar as the icon.
 - [ ] Reroll entry in the roll card context menu (reroll exists as a card control in `RollCards.tsx`, not in the menu).
@@ -58,7 +57,3 @@ What's left before Make a Move is a complete, publishable virtual tabletop. Draw
 - [ ] Split large mixed-responsibility files: each system's `index.ts` (stats, actions, derive, catalog — as `dungeon-world-2/` started), `table/diceRenderer.ts` into its own dice module, `table/SceneCanvas.tsx`.
 - [ ] Move per-campaign module stores (16 modules, plus `setBlobFetcher`) onto the `Campaign` object or a context.
 - [ ] Fold `core/` and `src/graphics.ts` into existing modules.
-
-## 7. Docs
-
-- [ ] Update `design.md`: React Compiler is now enabled in `vite.config.ts`; browser tests have moved to Vitest browser mode; note search and the invite change are no longer "uncommitted" once committed.

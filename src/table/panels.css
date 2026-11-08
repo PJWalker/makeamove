@@ -126,7 +126,8 @@
     color: var(--text-muted);
   }
   .role-badge[data-role="gm"] {
-    background: var(--accent);
+    background: var(--raised-sheen), var(--accent);
+    box-shadow: var(--edge-glow);
     color: var(--accent-ink);
   }
 }

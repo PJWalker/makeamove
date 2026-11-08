@@ -169,10 +169,10 @@ function MemberRow({
     return (
       <li className="member member-confirm">
         <span className="member-name">Remove {m.name} from the campaign?</span>
-        <Button variant="ghost" size="sm" onClick={() => setConfirming(false)}>
+        <Button variant="ghost" onClick={() => setConfirming(false)}>
           Cancel
         </Button>
-        <Button variant="danger" size="sm" onClick={() => campaign.revokeMember(m.id)}>
+        <Button variant="danger" onClick={() => campaign.revokeMember(m.id)}>
           Remove
         </Button>
       </li>

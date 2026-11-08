@@ -122,7 +122,7 @@ export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: C
     <section ref={section} className="form-section sheet-section" aria-label="Relationships">
       <header className="sheet-section-header">
         <h3 className="sheet-heading">Relationships</h3>
-        <Button size="sm" variant="ghost" onClick={() => openRelationshipWeb()}>
+        <Button variant="ghost" onClick={() => openRelationshipWeb()}>
           Web
         </Button>
       </header>
@@ -176,7 +176,6 @@ export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: C
                   )}
                   <Button
                     variant="icon"
-                    size="sm"
                     label={expanded ? "Hide notes" : "Notes"}
                     pressed={expanded}
                     onClick={() => setOpen(expanded ? null : r.to)}
@@ -186,7 +185,6 @@ export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: C
                   {editable && (
                     <Button
                       variant="icon"
-                      size="sm"
                       label="Remove"
                       onClick={() => removeRelationship(campaign.characters, c.id, r.to)}
                     >
@@ -265,7 +263,7 @@ export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: C
             id={listId}
             role="listbox"
             aria-label="Character matches"
-            className="note-suggest context-menu panel"
+            className="note-suggest context-menu panel drops-down"
           >
             {matches.length ? (
               matches.map((target, matchIndex) => (

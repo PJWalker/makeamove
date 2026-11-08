@@ -259,11 +259,7 @@ Sixteen modules export top-level stores, and `setBlobFetcher` in `scene/images.t
 
 Low
 
-### React Compiler installed but not enabled, and orphaned blobs
 
-`babel-plugin-react-compiler` is a dev dependency and `lib/store.ts` is written for it, but `vite.config.ts` doesn't enable it. OPFS blobs are never removed when no campaign references them.
-
-**Consider:** enable the compiler now that signals are gone, or remove it; add a blob sweep when a campaign is deleted from a device.
 
 ### Resolved since the first review
 

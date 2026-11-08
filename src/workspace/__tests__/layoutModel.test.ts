@@ -123,6 +123,74 @@ describe("panel layout", () => {
     expect(back.right.active).toBe("notes");
   });
 
+  it("reopens a closed panel in its place among the tabs", () => {
+    const l = close(defaultLayout(false), "reference");
+    expect(dock(l, "reference").right.panels).toEqual([
+      "chat",
+      "libraries",
+      "reference",
+      "items",
+      "notes",
+      "members",
+    ]);
+  });
+
+  it("keeps a hidden panel's place while the other tabs move", () => {
+    let l = close(defaultLayout(false), "items");
+    l = reorder(l, "members", 0);
+    l = reorder(l, "libraries", 99);
+    l = dock(l, "notes", "right", 2);
+    // The tabs are now members, chat, notes, reference, libraries; items sat after reference.
+    expect(dock(l, "items").right.panels).toEqual([
+      "members",
+      "chat",
+      "notes",
+      "reference",
+      "items",
+      "libraries",
+    ]);
+  });
+
+  it("docks a floating panel back in its place, through a reload", () => {
+    let l = detach(defaultLayout(false), "characters", win);
+    l = normalise(JSON.parse(JSON.stringify(l)), false);
+    expect(dock(l, "characters").left.panels).toEqual(["scene", "characters", "combat"]);
+  });
+
+  it("puts a panel at the end of a side it didn't come from", () => {
+    const l = close(defaultLayout(false), "scene");
+    expect(dock(l, "scene", "right").right.panels.at(-1)).toBe("scene");
+  });
+
+  it("gives a returning panel a fresh place when another took its key", () => {
+    let l = close(defaultLayout(false), "items");
+    // A tab placed in the same gap can land on the hidden panel's key.
+    l = dock(l, "scene", "right", 3);
+    l = dock(l, "items");
+    const keys = l.right.panels.map((id) => l.order[id]!);
+    expect(keys).toEqual([...keys].sort());
+    expect(new Set(keys).size).toBe(keys.length);
+    expect(l.right.panels).toEqual([
+      "chat",
+      "libraries",
+      "reference",
+      "scene",
+      "items",
+      "notes",
+      "members",
+    ]);
+  });
+
+  it("makes fresh order keys for saved data without them", () => {
+    const l = normalise(
+      { right: { panels: ["notes", "chat"] }, order: { notes: "b", chat: "a", bogus: 3 } },
+      false,
+    );
+    const keys = l.right.panels.map((id) => l.order[id]);
+    expect(keys).toEqual([...keys].sort());
+    expect(l.right.panels.slice(0, 2)).toEqual(["notes", "chat"]);
+  });
+
   it("docks entity windows alongside panels and preserves their home side", () => {
     const id = "entity:link:character:hero";
     let l = dock(defaultLayout(false), id, "left", 1);

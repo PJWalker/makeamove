@@ -51,7 +51,7 @@ export function GraphicPicker({
       {label}
       <div className="graphic-picker-row">
         <EntityGraphicView graphic={graphic} size={32} className="graphic-picker-preview" />
-        <Button size="sm" onClick={() => file.current?.click()}>
+        <Button onClick={() => file.current?.click()}>
           <IconImage size={22} /> Choose image…
         </Button>
         <FilterableMenu
@@ -73,7 +73,6 @@ export function GraphicPicker({
         />
         {onReset && (
           <Button
-            size="sm"
             variant="ghost"
             onClick={() => {
               importVersion.current++;

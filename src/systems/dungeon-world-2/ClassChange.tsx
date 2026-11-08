@@ -184,7 +184,7 @@ export function ChangeClassAction({
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>
+      <Button variant="ghost" onClick={() => setOpen(true)}>
         Change Class…
       </Button>
       {open && (

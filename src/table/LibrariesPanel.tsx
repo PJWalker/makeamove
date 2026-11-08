@@ -84,7 +84,6 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
     if (e.kind === "item" && inWindow) {
       return (
         <Button
-          size="sm"
           variant="primary"
           disabled={!canPurchase(e.item)}
           title={
@@ -119,7 +118,6 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
     if (e.kind === "monster" && inWindow) {
       return (
         <Button
-          size="sm"
           variant="primary"
           disabled={!campaign.isGm()}
           onClick={() => newNpcFromMonster(campaign, e.monster.id)}

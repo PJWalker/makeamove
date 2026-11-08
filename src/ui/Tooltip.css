@@ -1,20 +1,46 @@
 @layer components {
-  /* The app-wide tooltip (ui/Tooltip.tsx). */
+  /*
+   * The app-wide tooltip (ui/Tooltip.tsx), anchored to its element: centred
+   * on it, on the side in data-prefer, or the other side if it won't fit
+   * there, and kept clear of the window's edges.
+   */
   .tooltip {
+    --gap: 10px;
+    --edge: 4px;
     position: fixed;
     inset: auto;
-    margin: 0;
+    margin: var(--gap) var(--edge) var(--edge);
+    position-area: bottom;
+    position-try-fallbacks: flip-block;
     max-width: 260px;
     padding: var(--space-1) var(--space-3);
     background: var(--surface-raised, var(--surface));
     color: var(--text);
     border: 1px solid var(--hairline-strong);
+    background-clip: padding-box;
+    box-shadow:
+      3px 6px 16px -4px oklch(0% 0 0 / 0.5),
+      var(--window-rim);
     font-size: var(--text-base);
     line-height: 1.4;
     pointer-events: none;
     overflow: visible;
     opacity: 0;
     transition: opacity 100ms var(--ease);
+  }
+  .tooltip[data-prefer="up"] {
+    margin: var(--edge) var(--edge) var(--gap);
+    position-area: top;
+  }
+  .tooltip[data-prefer="right"] {
+    margin: var(--edge) var(--edge) var(--edge) var(--gap);
+    position-area: right;
+    position-try-fallbacks: flip-inline;
+  }
+  .tooltip[data-prefer="left"] {
+    margin: var(--edge) var(--gap) var(--edge) var(--edge);
+    position-area: left;
+    position-try-fallbacks: flip-inline;
   }
   /* The speech arrow: a rotated square pointing at the target. */
   .tooltip::before {

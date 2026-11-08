@@ -1,6 +1,5 @@
 import type * as React from "react";
 
-import { placeAnchored } from "./anchor";
 import { claimMorph, growFromOrigin, hasFreshOrigin, originRect, releaseMorph } from "./morph";
 import { nextZ } from "./windows";
 import { RESIZE_CURSORS, resizeRect, type ResizeDir } from "./resizeRect";
@@ -27,13 +26,23 @@ function place(el: HTMLElement, x: number, y: number) {
   el.style.top = `${whole(Math.min(innerHeight - 40, Math.max(0, y)))}px`;
 }
 
+/** How far a pop-up opening over its spawner keeps from the window's edges. */
+const MARGIN = 8;
+
 /**
  * Place a pop-up that is just opening over what spawned it, wholly on
  * screen: from the spawner's top edge down, or where that won't fit, from
- * its bottom edge up (see ui/anchor.ts).
+ * its bottom edge up. It's draggable from then on, so this sets plain
+ * coordinates rather than anchoring it (see ui/anchor.ts).
  */
 function placeOver(el: HTMLElement, from: DOMRect) {
-  placeAnchored(el, { left: from.left, top: from.bottom, bottom: from.top }, 0);
+  const w = el.offsetWidth;
+  const h = el.offsetHeight;
+  const down = innerHeight - MARGIN - from.top;
+  const up = from.bottom - MARGIN;
+  const y = h <= down || down >= up ? from.top : from.bottom - h;
+  el.style.left = `${whole(Math.max(MARGIN, Math.min(from.left, innerWidth - w - MARGIN)))}px`;
+  el.style.top = `${whole(Math.max(MARGIN, Math.min(y, innerHeight - h - MARGIN)))}px`;
 }
 
 /** Bring a pop-up in front of every other window. */
@@ -132,5 +141,10 @@ export function dragPopup(dialog: HTMLElement, e: PointerEvent | React.PointerEv
   // visual rect, but dragging writes untransformed left/top coordinates.
   const dx = e.clientX - dialog.offsetLeft;
   const dy = e.clientY - dialog.offsetTop;
-  trackPointer("grabbing", (ev) => place(dialog, ev.clientX - dx, ev.clientY - dy));
+  dialog.dataset.lifted = "true";
+  trackPointer(
+    "grabbing",
+    (ev) => place(dialog, ev.clientX - dx, ev.clientY - dy),
+    () => delete dialog.dataset.lifted,
+  );
 }

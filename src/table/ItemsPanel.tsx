@@ -96,7 +96,7 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
     return (
       <div className="panel-scroll items-panel">
         <div className="sheet-row">
-          <Button variant="ghost" size="sm" onClick={close}>
+          <Button variant="ghost" onClick={close}>
             <IconBack size={22} /> Items
           </Button>
         </div>
@@ -124,10 +124,10 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
   return (
     <div className="panel-scroll items-panel">
       <PanelActions>
-        <Button size="sm" onClick={() => setEditing({ kind: "gear", id: null })}>
+        <Button onClick={() => setEditing({ kind: "gear", id: null })}>
           <IconAdd size={22} /> New Gear
         </Button>
-        <Button size="sm" onClick={() => setEditing({ kind: "move", id: null })}>
+        <Button onClick={() => setEditing({ kind: "move", id: null })}>
           <IconAdd size={22} /> New Move
         </Button>
       </PanelActions>
@@ -166,7 +166,6 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
                   menuItems={menuItemsFor(e)}
                 >
                   <Button
-                    size="sm"
                     variant="secondary"
                     disabled={!canAct}
                     onClick={() => me && addItem(campaign, me.id, e.item)}
@@ -200,7 +199,6 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
                   menuItems={menuItemsFor(e)}
                 >
                   <Button
-                    size="sm"
                     variant="secondary"
                     disabled={!canAct}
                     onClick={() => me && startMove(campaign, me.id, e.move)}
@@ -431,7 +429,6 @@ function GearForm({
               />
               <Button
                 variant="icon"
-                size="sm"
                 label="Remove effect"
                 onClick={() => setEffects(effects.filter((_, j) => j !== i))}
               >
@@ -440,7 +437,6 @@ function GearForm({
             </div>
           ))}
           <Button
-            size="sm"
             variant="ghost"
             onClick={() => setEffects([...effects, { type: "rollBonus", stat: "", value: 1 }])}
           >

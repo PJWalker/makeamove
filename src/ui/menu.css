@@ -13,7 +13,7 @@
     cursor: pointer;
   }
   .menu-item:hover {
-    background: var(--surface-raised);
+    background: var(--raised-sheen), var(--surface-raised);
     color: var(--text);
   }
 }

@@ -2,12 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { instanceOf } from "../../features/characters/store";
 import { dungeonWorld } from "../dungeon-world";
-import {
-  librariesFor,
-  registerLibrary,
-  searchEntries,
-  systemLibrary,
-} from "../../features/library";
+import { librariesFor, registerLibrary, systemLibrary, viewEntries } from "../../features/library";
 
 describe("libraries", () => {
   it("collects a system's gear, moves by category, choices and tags", () => {
@@ -62,8 +57,17 @@ describe("libraries", () => {
       entry("b", "Kit", ["rope"], ""),
       entry("c", "Rope", [], ""),
     ];
-    expect(searchEntries(entries, "rope").map((e) => e.id)).toEqual(["c", "b", "a"]);
-    expect(searchEntries(entries, "sword")).toEqual([]);
-    expect(searchEntries(entries, "  ")).toBe(entries);
+    const ids = (query: string) => viewEntries(entries, query).map((v) => v.entry.id);
+    expect(ids("rope")).toEqual(["c", "b", "a"]);
+    expect(ids("sword")).toEqual([]);
+    expect(ids("  ")).toEqual(["a", "b", "c"]);
+  });
+
+  it("forgives a typo and needs every word", () => {
+    const entry = (id: string, name: string, text: string) =>
+      ({ kind: "tag", id, name, tags: [] as string[], text, tag: { id, name, text } }) as const;
+    const entries = [entry("a", "Lantern", "Light in a case"), entry("b", "Torch", "Light")];
+    expect(viewEntries(entries, "lantren").map((v) => v.entry.id)).toEqual(["a"]);
+    expect(viewEntries(entries, "light case").map((v) => v.entry.id)).toEqual(["a"]);
   });
 });

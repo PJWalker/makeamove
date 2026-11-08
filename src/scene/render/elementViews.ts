@@ -19,6 +19,8 @@ export interface View {
   apply: (t: Transform) => void;
   dropHighlight?: Graphics;
   dropFlash?: Graphics;
+  /** A token's body, turned over and greyed when it's down. */
+  pose?: Container;
 }
 
 /** Graphics only free their own geometry when told to destroy their context. */
@@ -202,13 +204,16 @@ export function buildView(
       const dropFlash = new Graphics().circle(0, 0, 50).stroke({ color: 0xffffff, width: 10 });
       dropFlash.visible = false;
       body.addChild(dropHighlight, dropFlash);
-      root.addChild(body);
+      const pose = new Container();
+      pose.addChild(body);
+      root.addChild(pose);
 
       return {
         root,
         key,
         dropHighlight,
         dropFlash,
+        pose,
         apply: (t) => {
           root.position.set(t.x, t.y);
           body.rotation = t.rot;

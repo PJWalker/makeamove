@@ -1,5 +1,11 @@
 @layer components {
-  /* The list after typing @ */
+  /* The list after typing @, anchored to the text being typed. */
+  .ProseMirror .suggestion {
+    anchor-name: --mention;
+  }
+  .mention-list {
+    position-anchor: --mention;
+  }
   .note-suggest {
     max-width: min(360px, calc(100vw - 16px));
   }

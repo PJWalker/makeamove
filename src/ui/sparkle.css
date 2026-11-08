@@ -1,0 +1,62 @@
+/*
+ * Edge sparkle: pressing a raised control sends a glint along its edge, from
+ * the lit top-left corner to the bottom right, then fades. ui/sparkle.ts sets
+ * data-sparkle on the click. Drawn on ::after over the border, so the control's
+ * own edge and background are untouched; ::after on these controls is the
+ * sparkle's, so badges go on ::before.
+ */
+@property --glint {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: -20%;
+}
+
+@layer components {
+  /* Dark controls take a faint glint; gold ones, already bright, need a stronger one to show. */
+  :root {
+    --glint-colour: oklch(100% 0 0 / 0.3);
+  }
+  :is(
+    .btn-primary,
+    .btn[aria-pressed="true"],
+    .segment[data-selected],
+    .pen-width[aria-checked="true"],
+    .pen-layer[aria-pressed="true"]
+  ) {
+    --glint-colour: oklch(100% 0 0 / 0.85);
+  }
+  :where(.btn, .popup-tab, .campaign-open, .segment, .pen-width, .pen-layer) {
+    position: relative;
+  }
+  :is(.btn, .popup-tab, .campaign-open, .segment, .pen-width, .pen-layer)::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border: 1px solid transparent;
+    border-image: linear-gradient(
+        to bottom right,
+        oklch(100% 0 0 / 0) calc(var(--glint) - 18%),
+        var(--glint-colour) var(--glint),
+        oklch(100% 0 0 / 0) calc(var(--glint) + 18%)
+      )
+      1;
+    opacity: 0;
+    pointer-events: none;
+  }
+  :is(.btn, .popup-tab, .campaign-open, .segment, .pen-width, .pen-layer)[data-sparkle]::after {
+    animation: edge-glint 750ms var(--ease) both;
+  }
+  @keyframes edge-glint {
+    from {
+      --glint: -20%;
+      opacity: 1;
+    }
+    65% {
+      opacity: 1;
+    }
+    to {
+      --glint: 120%;
+      opacity: 0;
+    }
+  }
+}

@@ -105,6 +105,7 @@ function Window({
         }}
         data-morph={morph}
         data-rolled={rolled}
+        data-lifted={pointer !== null}
         aria-label={label}
         tabIndex={-1}
         onPointerDown={() => raiseWindow(win.id)}

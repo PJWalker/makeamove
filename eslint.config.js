@@ -3,6 +3,7 @@ import { defineConfig } from "eslint/config";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 import react from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
+import storybook from "eslint-plugin-storybook";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
@@ -16,10 +17,11 @@ export default defineConfig([
       "reference/**",
       "reports/**",
       ".stryker-tmp/**",
+      "storybook-static/**",
     ],
   },
   {
-    files: ["src/**/*.{ts,tsx}"],
+    files: ["src/**/*.{ts,tsx}", ".storybook/preview.tsx"],
     extends: [
       js.configs.recommended,
       tseslint.configs.recommendedTypeChecked,
@@ -121,8 +123,9 @@ export default defineConfig([
       ],
     },
   },
+  ...storybook.configs["flat/recommended"],
   {
-    files: ["vite.config.ts"],
+    files: ["vite.config.ts", ".storybook/main.ts"],
     extends: [js.configs.recommended, tseslint.configs.recommended],
     languageOptions: {
       globals: globals.node,

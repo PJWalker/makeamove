@@ -43,7 +43,9 @@
     gap: var(--space-3);
     padding: var(--space-4) var(--space-5) var(--space-5);
     border: 1px solid var(--hairline);
+    background: var(--window-sheen), var(--surface);
     background-clip: padding-box;
+    box-shadow: var(--window-shadow), var(--window-rim);
   }
 
   .campaign-list {
@@ -70,7 +72,8 @@
     cursor: pointer;
   }
   .campaign-open:hover {
-    background: var(--surface-raised);
+    background: var(--raised-sheen), var(--surface-raised);
+    box-shadow: var(--raised-shadow-hover);
   }
   .campaign-open:hover .campaign-name {
     color: var(--accent);

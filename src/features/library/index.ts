@@ -1,3 +1,4 @@
+import Fuse, { type IFuseOptions } from "fuse.js";
 import { store } from "../../lib/store";
 import type {
   ActionDef,
@@ -260,35 +261,33 @@ export function useLibrariesFor(system: GameSystem): LibrarySource[] {
   return [systemLibrary(system), ...useValue(plugins)];
 }
 
-/** Each entry's search text, lower-cased once: name, tags, text. */
-const index = new WeakMap<LibraryEntry, [string, string, string]>();
-function indexed(e: LibraryEntry): [string, string, string] {
-  let k = index.get(e);
-  if (!k)
-    index.set(
-      e,
-      (k = [
-        e.name.toLowerCase(),
-        [...e.tags, e.note ?? ""].join(" ").toLowerCase(),
-        e.text.toLowerCase(),
-      ]),
-    );
-  return k;
-}
+const SEARCH: IFuseOptions<LibraryEntry> = {
+  keys: [
+    { name: "name", weight: 3 },
+    { name: "tags", getFn: (e) => [...e.tags, e.note ?? ""], weight: 2 },
+    { name: "text", weight: 1 },
+  ],
+  includeScore: true,
+  ignoreDiacritics: true,
+  ignoreLocation: true,
+  threshold: 0.3,
+  useTokenSearch: true,
+  tokenMatch: "all",
+};
 
-/** Entries matching a search: by name, tag or text, names first. */
-export function searchEntries(entries: LibraryEntry[], query: string): LibraryEntry[] {
-  const q = query.trim().toLowerCase();
-  if (!q) return entries;
-  const rank = (e: LibraryEntry) => {
-    const [name, tags, text] = indexed(e);
-    return name.includes(q) ? 0 : tags.includes(q) ? 1 : text.includes(q) ? 2 : -1;
-  };
-  return entries
-    .map((e) => [e, rank(e)] as const)
-    .filter(([, r]) => r >= 0)
-    .sort((a, b) => a[1] - b[1])
-    .map(([e]) => e);
+/** Above this a match is only a few scattered letters deep in long text. */
+const WEAKEST = 0.6;
+
+/** A Fuse index over a list's entries, nested ones included, built once per list. */
+const searchers = new WeakMap<LibraryEntry[], Fuse<LibraryEntry>>();
+
+/** How well each entry matches a search, 0 best: names count most, then tags, then text. */
+function searchScores(entries: LibraryEntry[], query: string): Map<LibraryEntry, number> {
+  let fuse = searchers.get(entries);
+  if (!fuse) searchers.set(entries, (fuse = new Fuse(flatEntries(entries), SEARCH)));
+  return new Map(
+    fuse.search(query).flatMap((r) => ((r.score ?? 1) <= WEAKEST ? [[r.item, r.score ?? 1]] : [])),
+  );
 }
 
 /** An entry and every entry it holds, depth first. */
@@ -330,13 +329,12 @@ export function viewEntries(
   kind: EntryKind | "all" = "all",
   listed: ReadonlySet<string> = new Set(),
 ): EntryView[] {
-  const q = query.trim().toLowerCase();
+  const q = query.trim();
   if (!q && kind === "all") return entries.map(fullView);
+  const scores = q ? searchScores(entries, q) : null;
   const rank = (e: LibraryEntry) => {
     if (kind !== "all" && e.kind !== kind) return -1;
-    if (!q) return 0;
-    const [name, tags, text] = indexed(e);
-    return name.includes(q) ? 0 : tags.includes(q) ? 1 : text.includes(q) ? 2 : -1;
+    return scores ? (scores.get(e) ?? -1) : 0;
   };
   const visit = (e: LibraryEntry, nested = false): [EntryView, number] | null => {
     const own = nested && listed.has(`${e.kind}:${e.id}`) ? -1 : rank(e);

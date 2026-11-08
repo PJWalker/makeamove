@@ -280,7 +280,6 @@ export function MoveCard({
             return (
               <Button
                 key={i}
-                size="sm"
                 variant="ghost"
                 disabled={!canAdvance}
                 onClick={() => applySuggestion(campaign, m.characterId, s)}

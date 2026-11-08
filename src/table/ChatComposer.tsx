@@ -184,8 +184,7 @@ export function ChatComposer({
     return (
       <Button
         key={name}
-        variant="ghost"
-        size="sm"
+        variant="secondary"
         className="dice-pick"
         data-count={n || undefined}
         label={
@@ -220,7 +219,6 @@ export function ChatComposer({
             <Button
               key={pool.map(pickName).join()}
               variant="secondary"
-              size="sm"
               className="dice-roll-now"
               style={{ "--pool-ms": `${POOL_MS}ms` }}
               label={`Roll ${poolFormula(pool)} now`}
@@ -231,7 +229,6 @@ export function ChatComposer({
           ) : (
             <Button
               variant="ghost"
-              size="sm"
               className="dice-visibility"
               label={vis.title}
               onClick={nextVisibility}
@@ -286,7 +283,7 @@ export function ChatComposer({
             setError(null);
           }}
         />
-        <Button variant="primary" size="sm" type="submit" label="Send" disabled={!typed.trim()}>
+        <Button variant="primary" type="submit" label="Send" disabled={!typed.trim()}>
           Send
         </Button>
       </form>

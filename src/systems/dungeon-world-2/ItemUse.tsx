@@ -53,7 +53,6 @@ export function Dw2ItemUse({ campaign, character, item, editable }: ItemUseProps
           </label>
         )}
         <Button
-          size="sm"
           disabled={
             !editable || outOfUses || (choice === "mark-condition" && !availableConditions.length)
           }
@@ -109,7 +108,6 @@ export function Dw2ItemUse({ campaign, character, item, editable }: ItemUseProps
           </label>
         )}
         <Button
-          size="sm"
           disabled={
             !editable || outOfUses || (choice === "clear-locked" ? !locked.length : !missingHp)
           }
@@ -131,7 +129,6 @@ export function Dw2ItemUse({ campaign, character, item, editable }: ItemUseProps
   }
   return (
     <Button
-      size="sm"
       disabled={!editable || outOfUses}
       onClick={() => consumeDungeonWorld2Item(campaign, character.id, item.id)}
     >

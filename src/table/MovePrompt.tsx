@@ -267,7 +267,7 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
         <span className="eyebrow">
           {move.name} · {c.name}
         </span>
-        <Button variant="icon" size="sm" label="Cancel" onClick={cancel}>
+        <Button variant="icon" label="Cancel" onClick={cancel}>
           <IconClose />
         </Button>
       </div>
@@ -336,12 +336,7 @@ function TargetStep({
     <div className="move-form">
       <p className="roll-prompt-text">{spec.prompt}</p>
       {area && (
-        <Button
-          size="sm"
-          variant={placed ? "ghost" : "secondary"}
-          pressed={placing}
-          onClick={placeArea}
-        >
+        <Button variant={placed ? "ghost" : "secondary"} pressed={placing} onClick={placeArea}>
           {placing
             ? "Click the map to place it"
             : placed

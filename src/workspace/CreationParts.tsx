@@ -213,7 +213,7 @@ export function ScoreFields({
         </span>
       )}
       {method === "roll" && (
-        <Button size="sm" variant="ghost" onClick={rollPool}>
+        <Button variant="ghost" onClick={rollPool}>
           Roll Again ({methods.roll})
         </Button>
       )}
