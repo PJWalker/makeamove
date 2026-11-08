@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
-import { getNote, type LinkKind } from "../features/notes/api";
+import { getNote } from "../features/notes/api";
+import type { LinkKind } from "../features/notes/links";
 import { linkLabel, linkTip } from "../features/notes/targets";
 import { openInSidebar } from "./linkNavigation";
 import type { Campaign } from "../campaign/campaign";

@@ -2,7 +2,7 @@ import { store, watch } from "../../lib/store";
 import { stampTime } from "../../lib/hlc";
 import { activeCampaign } from "../../campaign/campaign";
 import { device } from "../../platform/device";
-import type { LinkKind } from "../notes/api";
+import type { LinkKind } from "../notes/links";
 import { linkLabel } from "../notes/targets";
 import { plainText } from "./content";
 import { visibilityOf, type ChatMessage } from "./types";

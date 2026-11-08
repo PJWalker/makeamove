@@ -6,7 +6,9 @@ import { device } from "../../platform/device";
 import { IndexeddbPersistence } from "y-indexeddb";
 import { yXmlFragmentToProsemirrorJSON } from "@tiptap/y-tiptap";
 import { NoteDoc, noteDbName, noteGuid } from "./noteDoc";
-import { LINK_NODE } from "./links";
+import Fuse from "fuse.js";
+import type { LinkRef } from "./links";
+import { NoteTextIndex, type NoteNode, type TextMatch } from "./textIndex";
 import { vaultNoteGuid } from "./vault";
 
 /*
@@ -14,15 +16,12 @@ import { vaultNoteGuid } from "./vault";
  * order, outgoing links) lives in the campaign root so lists and backlinks
  * need no page loaded; each page's text is its own subdocument (noteDoc.ts).
  *
+ * Search reads an index of the text on this device (textIndex.ts).
+ *
  * GM-only pages live the same way in the GM vault (vault.ts), which only GM
  * devices have; they share the campaign's folders. Revealing one copies it
  * into the campaign under the same id, so links to it keep working.
  */
-
-/** What a link in a note points at. */
-export type LinkKind = "note" | "character" | "scene" | "item" | "move";
-/** A link target, as stored: `kind:id`. */
-export type LinkRef = `${LinkKind}:${string}`;
 
 export interface NoteView {
   id: string;
@@ -154,88 +153,85 @@ export function noteSubdoc(campaign: Campaign, id: string): Y.Doc | null {
   return created;
 }
 
-export interface NoteTextMatch {
-  from: number;
-  to: number;
+const textIndexes = new WeakMap<Campaign, Promise<NoteTextIndex>>();
+
+/** The campaign's note search index on this device, loaded once. */
+export function noteTextIndex(campaign: Campaign): Promise<NoteTextIndex> {
+  let index = textIndexes.get(campaign);
+  if (!index) textIndexes.set(campaign, (index = NoteTextIndex.load(campaign.id)));
+  return index;
+}
+
+/** Open a page's text, keeping this device's search index in step with it. */
+export async function openNotePage(campaign: Campaign, id: string): Promise<NoteDoc | null> {
+  const sub = noteSubdoc(campaign, id);
+  if (!sub) return null;
+  const index = await noteTextIndex(campaign);
+  return NoteDoc.open(sub, (body) =>
+    index.set(id, yXmlFragmentToProsemirrorJSON(body) as NoteNode),
+  );
+}
+
+/** Where a search found its text: a page, and the stretch of it that matched. */
+export interface NoteMatch {
+  note: NoteView;
+  from?: number;
+  to?: number;
   snippet: string;
 }
 
-type TextNode = {
-  type?: string;
-  text?: string;
-  attrs?: Record<string, unknown>;
-  content?: TextNode[];
-};
-const TEXT_BLOCKS = new Set(["paragraph", "heading", "codeBlock"]);
+const titleSearch = { keys: ["title"], includeScore: true, ignoreDiacritics: true, threshold: 0.3 };
 
-/** Search a page's rich text and return editor positions for every occurrence. */
-export async function searchNote(campaign: Campaign, id: string, query: string) {
-  const sub = noteSubdoc(campaign, id);
-  if (!sub || !query) return [] as NoteTextMatch[];
-  const searchDoc = sub.isLoaded ? null : new Y.Doc({ guid: sub.guid });
-  const page = searchDoc ? await NoteDoc.open(searchDoc) : null;
-  try {
-    if (searchDoc) Y.applyUpdate(searchDoc, Y.encodeStateAsUpdate(sub));
-    const root = yXmlFragmentToProsemirrorJSON(
-      (searchDoc ?? sub).getXmlFragment("body"),
-    ) as TextNode;
-    let text = "";
-    const positions: number[] = [];
-    let textBlocks = 0;
-    const append = (value: string, position: number) => {
-      text += value;
-      for (let offset = 0; offset < value.length; offset++) positions.push(position + offset);
-    };
-    const walk = (node: TextNode, position: number): number => {
-      if (node.type === "text") {
-        append(node.text ?? "", position);
-        return node.text?.length ?? 0;
-      }
-      if (node.type === LINK_NODE) {
-        const label = node.attrs?.text || node.attrs?.label || node.attrs?.id;
-        if (typeof label === "string" && label) append(`@${label}`, position);
-        return 1;
-      }
-      if (node.type === "doc") {
-        let next = position;
-        for (const child of node.content ?? []) next += walk(child, next);
-        return next - position;
-      }
-      if (node.type && TEXT_BLOCKS.has(node.type)) {
-        if (textBlocks++) {
-          text += "\n";
-          positions.push(-1);
-        }
-      }
-      const children = node.content ?? [];
-      if (!children.length) return 1;
-      let next = position + 1;
-      for (const child of children) next += walk(child, next);
-      return next - position + 1;
-    };
-    walk(root, 0);
-
-    const normalized = query.toLowerCase();
-    const matches: NoteTextMatch[] = [];
-    let offset = 0;
-    while ((offset = text.toLowerCase().indexOf(normalized, offset)) !== -1) {
-      const from = positions[offset];
-      const last = positions[offset + query.length - 1];
-      if (from !== undefined && from >= 0 && last !== undefined && last >= 0) {
-        const start = Math.max(0, offset - 42);
-        const end = Math.min(text.length, offset + query.length + 42);
-        matches.push({
-          from,
-          to: last + 1,
-          snippet: `${start ? "…" : ""}${text.slice(start, end).replace(/\s+/g, " ")}${end < text.length ? "…" : ""}`,
-        });
-      }
-      offset += Math.max(1, query.length);
-    }
-    return matches;
-  } finally {
-    page?.destroy();
+/**
+ * Search every page's title and text, best first. Text comes from this
+ * device's index; a page not in it yet is read once from this device and added.
+ */
+export async function searchNotes(
+  campaign: Campaign,
+  query: string,
+  cancelled: () => boolean = () => false,
+): Promise<NoteMatch[]> {
+  if (!query) return [];
+  const index = await noteTextIndex(campaign);
+  const notes = listNotes(campaign);
+  // A GM device's list is only whole once its vault is open.
+  if (campaign.vault.value || !campaign.isGm()) index.keepOnly(new Set(notes.map((n) => n.id)));
+  for (const note of notes) {
+    if (index.has(note.id)) continue;
+    const sub = noteSubdoc(campaign, note.id);
+    // Open in the editor already, so it's in the index.
+    if (!sub || sub.isLoaded) continue;
+    const copy = new Y.Doc({ guid: sub.guid });
+    (
+      await NoteDoc.open(copy, (body) =>
+        index.set(note.id, yXmlFragmentToProsemirrorJSON(body) as NoteNode),
+      )
+    ).destroy();
+    if (cancelled()) return [];
   }
+
+  const byId = new Map(notes.map((n) => [n.id, n]));
+  const found = new Map<string, { score: number; title?: true; text: TextMatch[] }>();
+  for (const { item, score } of new Fuse(notes, titleSearch).search(query))
+    found.set(item.id, { score: score ?? 1, title: true, text: [] });
+  for (const { id, score, matches } of index.search(query)) {
+    if (!byId.has(id)) continue;
+    const page = found.get(id);
+    if (page) page.text = matches;
+    else found.set(id, { score, text: matches });
+  }
+  return (
+    [...found.entries()]
+      // Pages named for what was searched first, then the rest, each best first.
+      .sort(([, a], [, b]) => Number(!a.title) - Number(!b.title) || a.score - b.score)
+      .flatMap(([id, page]) => {
+        const note = byId.get(id)!;
+        return [
+          ...(page.title ? [{ note, snippet: note.title }] : []),
+          ...page.text.map((match) => ({ note, ...match })),
+        ];
+      })
+  );
 }
 
 export function renameNote(campaign: Campaign, id: string, title: string) {
@@ -263,6 +259,7 @@ export function deleteNote(campaign: Campaign, id: string) {
   const at = locate(campaign, id);
   if (!at) return;
   at.map.delete(id);
+  void noteTextIndex(campaign).then((index) => index.delete(id));
   // This device's copy of the text; peers that have it keep theirs.
   indexedDB.deleteDatabase(noteDbName(guidOf(campaign, id, at.gmOnly)));
 }

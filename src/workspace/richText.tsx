@@ -20,7 +20,8 @@ import {
   secretNode,
   SECRET_NODE,
 } from "./noteExtensions";
-import { getNote, type LinkKind } from "../features/notes/api";
+import { getNote } from "../features/notes/api";
+import type { LinkKind } from "../features/notes/links";
 import { LINK_NODE } from "../features/notes/links";
 import { linkLabel, linkTargets, linkTip, type LinkTarget } from "../features/notes/targets";
 import { followLink, openInSidebar } from "./linkNavigation";

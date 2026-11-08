@@ -1,5 +1,5 @@
 import type { JSONContent } from "@tiptap/core";
-import type { LinkKind } from "../notes/api";
+import type { LinkKind } from "../notes/links";
 import { LINK_NODE } from "../notes/links";
 import { TRACKER_NODE, trackerToken, type TrackerButton } from "../characters/trackers";
 

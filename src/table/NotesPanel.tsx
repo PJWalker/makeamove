@@ -14,8 +14,9 @@ import {
   renameNote,
   renameNoteFolder,
   revealNote,
-  searchNote,
+  searchNotes,
   type NoteFolderView,
+  type NoteMatch,
   type NoteView,
 } from "../features/notes/api";
 import { noteOpened, noteSearchTarget, openNote, openNoteId } from "../workspace/linkNavigation";
@@ -58,9 +59,6 @@ function ago(at: number) {
  * Notes: pages filed in folders (Sessions and World to start with), written
  * together. The list and the open page sit side by side, or take turns.
  */
-/** Where a search found its text: a page, and the stretch of it that matched. */
-type NoteMatch = { note: NoteView; from?: number; to?: number; snippet: string };
-
 export function NotesPanel({ campaign }: { campaign: Campaign }) {
   // GM-only pages, on a GM device; watched too, so the list keeps up with them.
   const vault = useValue(campaign.vault);
@@ -156,16 +154,8 @@ function NoteList({
     if (!needle) return;
     let cancelled = false;
     const search = async () => {
-      const found: NoteMatch[] = [];
-      for (const note of notes) {
-        if (cancelled) return;
-        if (note.title.toLowerCase().includes(needle.toLowerCase()))
-          found.push({ note, snippet: note.title });
-        const noteMatches = await searchNote(campaign, note.id, needle);
-        if (cancelled) return;
-        for (const match of noteMatches) found.push({ note, ...match });
-      }
-      setResult({ needle, notes, matches: found });
+      const found = await searchNotes(campaign, needle, () => cancelled);
+      if (!cancelled) setResult({ needle, notes, matches: found });
     };
     const timer = window.setTimeout(() => void search(), 180);
     return () => {

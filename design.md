@@ -99,7 +99,7 @@ A thin `Transport` interface hides Trystero, so `SyncSession` runs over an in-me
 
 - A scene exists only on devices that have opened it, so data can be stranded on one laptop.
 - More moving parts: each subdocument has its own persistence, awareness and lifecycle to clean up.
-- Note search has to load every page's subdocument to read its text.
+- Note search can only search the pages a device has stored. It reads an on-device Fuse index of their text (`features/notes/textIndex.ts`), kept current by whichever pages are open, so it opens no pages.
 
 ### Permissions enforced in the UI, secrets in a separate vault
 

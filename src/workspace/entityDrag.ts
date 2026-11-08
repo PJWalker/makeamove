@@ -8,7 +8,7 @@ import {
 } from "../features/characters/api";
 import { editHotbar, insertAt } from "../features/characters/hotbar";
 import type { TokenElement } from "../scene/types";
-import type { LinkKind } from "../features/notes/api";
+import type { LinkKind } from "../features/notes/links";
 import { linkLabel } from "../features/notes/targets";
 import type { Campaign } from "../campaign/campaign";
 import type { ItemDef } from "../systems/types";

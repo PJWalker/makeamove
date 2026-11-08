@@ -1,6 +1,7 @@
 import { getCharacter, listCharacters, systemOf } from "../characters/api";
 import type { Campaign } from "../../campaign/campaign";
-import { listNotes, type LinkKind } from "./api";
+import { listNotes } from "./api";
+import type { LinkKind } from "./links";
 
 /** Something a note can link to, as offered after typing `@`. */
 export interface LinkTarget {

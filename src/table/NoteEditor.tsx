@@ -1,7 +1,7 @@
 import type { Editor } from "@tiptap/core";
 import { useEffect, useRef, useState } from "react";
-import { getNote, noteSubdoc, touchNote } from "../features/notes/api";
-import { NoteDoc } from "../features/notes/noteDoc";
+import { getNote, noteSubdoc, openNotePage, touchNote } from "../features/notes/api";
+import type { NoteDoc } from "../features/notes/noteDoc";
 import { linksIn } from "../features/notes/links";
 import { noteSearchTarget } from "../workspace/linkNavigation";
 import type { Campaign } from "../campaign/campaign";
@@ -39,7 +39,8 @@ export function NoteEditor({
     let timer = 0;
 
     let local: Awareness | null = null;
-    void NoteDoc.open(sub).then((n) => {
+    void openNotePage(campaign, noteId).then((n) => {
+      if (!n) return;
       if (cancelled) return n.destroy();
       note = n;
       const gmOnly = !!getNote(campaign, noteId)?.gmOnly;

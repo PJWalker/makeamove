@@ -1,7 +1,6 @@
 import * as Y from "yjs";
 import type { Campaign } from "../../campaign/campaign";
-import { createNote, listNotes, noteSubdoc } from "./api";
-import { NoteDoc } from "./noteDoc";
+import { createNote, listNotes, openNotePage } from "./api";
 
 /*
  * One page per session in the Sessions folder, made when the GM starts the
@@ -27,7 +26,7 @@ export async function makeSessionPage(campaign: Campaign, n: number): Promise<st
   const id = createNote(campaign, { title: `Session ${n}`, ...(folder ? { folder } : {}) });
   campaign.notes.get(id)!.set("session", n);
 
-  const page = await NoteDoc.open(noteSubdoc(campaign, id)!);
+  const page = (await openNotePage(campaign, id))!;
   page.doc.transact(() => {
     const blocks = SECTIONS.flatMap((title) => {
       // The editor reads a heading's level as a number.

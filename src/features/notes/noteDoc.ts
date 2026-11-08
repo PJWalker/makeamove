@@ -12,10 +12,15 @@ import { dataName } from "../../platform/dataEpoch";
 export const noteGuid = (campaignId: string, noteId: string) => `${campaignId}/note/${noteId}`;
 export const noteDbName = (guid: string) => dataName("note", guid);
 
+/** How long after the last change, from anyone, an open page reports its text. */
+const REPORT_MS = 800;
+
 export class NoteDoc {
   readonly doc: Y.Doc;
   readonly body: Y.XmlFragment;
   private persistence: IndexeddbPersistence;
+  private report: (() => void) | null = null;
+  private reportTimer: ReturnType<typeof setTimeout> | undefined;
 
   private constructor(doc: Y.Doc) {
     this.doc = doc;
@@ -23,15 +28,34 @@ export class NoteDoc {
     this.persistence = new IndexeddbPersistence(noteDbName(doc.guid), doc);
   }
 
-  static async open(doc: Y.Doc): Promise<NoteDoc> {
+  /**
+   * Load the note. `onText` hears its text as stored, then again shortly
+   * after each change and on closing, whoever made the change.
+   */
+  static async open(doc: Y.Doc, onText?: (body: Y.XmlFragment) => void): Promise<NoteDoc> {
     doc.load();
     const n = new NoteDoc(doc);
     await n.persistence.whenSynced;
+    if (onText) {
+      n.report = () => {
+        n.reportTimer = undefined;
+        onText(n.body);
+      };
+      n.report();
+      n.body.observeDeep(() => {
+        clearTimeout(n.reportTimer);
+        n.reportTimer = setTimeout(n.report!, REPORT_MS);
+      });
+    }
     return n;
   }
 
   /** Unload the note. Its subdocument is replaced by an unloaded stub. */
   destroy() {
+    if (this.reportTimer) {
+      clearTimeout(this.reportTimer);
+      this.report?.();
+    }
     void this.persistence.destroy();
     this.doc.destroy();
   }

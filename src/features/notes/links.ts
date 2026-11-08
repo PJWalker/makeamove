@@ -1,4 +1,7 @@
-import type { LinkKind, LinkRef } from "./api";
+/** What a link in a note points at. */
+export type LinkKind = "note" | "character" | "scene" | "item" | "move";
+/** A link target, as stored: `kind:id`. */
+export type LinkRef = `${LinkKind}:${string}`;
 
 /** The editor's node for a link chip: an inline atom pointing at something. */
 export const LINK_NODE = "entityLink";

@@ -1,7 +1,7 @@
 import { store } from "../lib/store";
 import { selectCharacter } from "../features/characters/api";
 import type { Campaign } from "../campaign/campaign";
-import type { LinkKind } from "../features/notes/api";
+import type { LinkKind } from "../features/notes/links";
 import { linkLabel } from "../features/notes/targets";
 import { libraryView } from "./libraryView";
 import { showPanel } from "./panelLayout";

@@ -14,7 +14,7 @@ import { Button } from "../ui/Button";
 import { menuTrigger } from "../ui/menuTrigger";
 import { chatContentExtensions } from "./ChatInput";
 import { LINK_NODE } from "../features/notes/links";
-import type { LinkKind } from "../features/notes/api";
+import type { LinkKind } from "../features/notes/links";
 import { LinkChip } from "../workspace/LinkChip";
 import {
   CounterCard,

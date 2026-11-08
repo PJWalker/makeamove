@@ -18,6 +18,7 @@ import { NO_SYSTEM_ID, getSystem } from "../systems";
 import type { Invite } from "../sync/invite";
 import { CampaignConnection } from "./connection";
 import { noteDbName, noteGuid } from "../features/notes/noteDoc";
+import { deleteNoteTextIndex } from "../features/notes/textIndex";
 import { Vault, vaultDbName, vaultNoteGuid } from "../features/notes/vault";
 import { ChatLog, deleteChatData } from "../features/chat/chatLog";
 import { sceneDbName } from "../scene/sceneDoc";
@@ -564,6 +565,7 @@ export async function deleteLocalCampaign(id: string) {
   for (const noteId of doc.getMap("notes").keys())
     indexedDB.deleteDatabase(noteDbName(noteGuid(id, noteId)));
   await deleteVault(id);
+  await deleteNoteTextIndex(id);
   deleteChatData(doc);
   await p.clearData();
   doc.destroy();
