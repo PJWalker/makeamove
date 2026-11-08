@@ -1,5 +1,5 @@
 import type { MenuItem } from "../../ui/ContextMenu";
-import type { SystemExtension } from "../extensions";
+import type { SystemExtension } from "../extensionTypes";
 import { Dw2Bonds } from "./BondsSection";
 import {
   breakDungeonWorld2Weapon,

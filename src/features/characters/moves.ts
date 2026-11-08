@@ -1,3 +1,4 @@
+import { emptyRichText, type RichText } from "../../core/richText";
 import { roll, type Roll } from "../dice/notation";
 
 import type { MoveSuggestion, MoveTarget, SaveRequest } from "../chat/types";
@@ -173,7 +174,7 @@ export interface MoveResult {
   roll?: Roll;
   /** The check's result id, as the system names them ("strong"). */
   result?: string;
-  outcome: string;
+  outcome: RichText;
   suggestions: MoveSuggestion[];
   /** Modifiers the roll used up, to clear on the character. */
   spent: string[];
@@ -337,8 +338,8 @@ export function performMove(
     const landed = rolled.filter((t) => t.hit !== false);
     const best = system.results.find((res) => landed.some((t) => t.result === res.id))?.id;
     const outcome = best
-      ? (check.outcomes[best] ?? "")
-      : (check.outcomes[rolled[0]!.result!] ?? "");
+      ? (check.outcomes[best] ?? emptyRichText())
+      : (check.outcomes[rolled[0]!.result!] ?? emptyRichText());
     return {
       targets: rolled,
       outcome,
@@ -368,7 +369,7 @@ export function performMove(
   return {
     roll: r,
     result,
-    outcome: check.outcomes[result] ?? "",
+    outcome: check.outcomes[result] ?? emptyRichText(),
     suggestions: offer(followUps, targets),
     spent: plan.spends,
     ...sharedResult,
@@ -435,7 +436,7 @@ export function readRollResult(
   });
   return {
     result,
-    outcome: check.outcomes[result] ?? "",
+    outcome: check.outcomes[result] ?? emptyRichText(),
     suggestions,
     spent: [],
     ...(targets ? { targets } : {}),

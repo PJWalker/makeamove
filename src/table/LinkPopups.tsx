@@ -1,4 +1,4 @@
-import { plainText } from "../features/characters/trackers";
+import { plainText } from "../core/richText";
 import { MoveBody } from "../workspace/MoveBody";
 import type { ReactNode } from "react";
 import { useEffect, useLayoutEffect, useState } from "react";
@@ -18,7 +18,7 @@ import { useY } from "../ui/useY";
 import { Button } from "../ui/Button";
 import { closePopup } from "../ui/popup";
 import { usePopupDialog } from "../workspace/usePopupDialog";
-import { Dialog } from "../workspace/CampaignDialogs";
+import { Dialog } from "../workspace/Dialog";
 import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
 import { EntryWindow, rollTag } from "../workspace/EntryWindow";
 import {

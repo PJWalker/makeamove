@@ -114,6 +114,11 @@
     color: var(--text-muted);
     font-size: var(--text-sm);
   }
+  /* Why something the user just asked for didn't work. */
+  .form-error {
+    color: var(--danger);
+    font-size: var(--text-sm);
+  }
   .loading {
     display: grid;
     place-items: center;

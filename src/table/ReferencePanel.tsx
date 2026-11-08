@@ -1,3 +1,5 @@
+import { plainText } from "../core/richText";
+import type { ReferenceSectionDef } from "../systems/types";
 import { useEffect, useRef, useState } from "react";
 import type { Campaign } from "../campaign/campaign";
 import { selectedCharacterId, systemOf } from "../features/characters/api";
@@ -5,7 +7,7 @@ import { List, ListRow } from "../ui/List";
 import { TwoPane, usePaneLevel } from "../ui/TwoPane";
 import { useY } from "../ui/useY";
 import { useValue } from "../ui/useValue";
-import { FormattedText, SearchHighlight } from "../workspace/FormattedText";
+import { RichTextView, SearchHighlight } from "../workspace/RichTextView";
 import { referenceLayout } from "./panelLayouts";
 
 /**
@@ -22,7 +24,8 @@ export function ReferencePanel({ campaign }: { campaign: Campaign }) {
   if (!gm || !reference.length) return <p className="empty">No reference for this game.</p>;
   const needle = query.trim().toLowerCase();
   const sections = reference.filter(
-    (section) => !needle || `${section.title}\n${section.text}`.toLowerCase().includes(needle),
+    (section) =>
+      !needle || `${section.title}\n${plainText(section.text)}`.toLowerCase().includes(needle),
   );
   const selected = sections.find((section) => section.id === selectedId) ?? sections[0];
   const search = (value: string) => {
@@ -97,7 +100,7 @@ function ReferenceEntry({
   query,
 }: {
   campaign: Campaign;
-  section: { id: string; title: string; text: string };
+  section: ReferenceSectionDef;
   query: string;
 }) {
   const entryRef = useRef<HTMLElement>(null);
@@ -113,7 +116,7 @@ function ReferenceEntry({
       <h2>
         <SearchHighlight text={section.title} term={query} />
       </h2>
-      <FormattedText
+      <RichTextView
         campaign={campaign}
         text={section.text}
         characterId={characterId}

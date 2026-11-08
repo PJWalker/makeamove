@@ -1,9 +1,20 @@
 import type { FormEvent } from "react";
 import type { ComponentType } from "react";
 import { useEffect, useRef, useState } from "react";
-import { IconAdd, IconCampaign, IconDelete } from "../ui/icons";
+import {
+  IconAdd,
+  IconBackupFolder,
+  IconCampaign,
+  IconDelete,
+  IconExport,
+  IconImport,
+} from "../ui/icons";
 import { goToCampaign, pendingInvite } from "../app/router";
+import { exportBackupFile, importBackupFile } from "../campaign/backup";
 import { createCampaign, deleteLocalCampaign, joinCampaign } from "../campaign/campaign";
+import { importFromFolder } from "../campaign/folderBackup";
+import { canUseFolders } from "../platform/files";
+import { store } from "../lib/store";
 import { device, setDeviceName } from "../platform/device";
 import { campaigns, registryReady, type CampaignSummary } from "../campaign/registry";
 import { getSystem, listSystems, NO_SYSTEM_ID } from "../systems";
@@ -39,10 +50,23 @@ function stableOrder(list: CampaignSummary[]): CampaignSummary[] {
   return list;
 }
 
+/** Why the last backup import or export failed. */
+const backupError = store<string | null>(null);
+
+async function runBackup(act: () => Promise<unknown>) {
+  backupError.value = null;
+  try {
+    await act();
+  } catch (e) {
+    backupError.value = e instanceof Error ? e.message : String(e);
+  }
+}
+
 export function Lobby({ error }: { error: string | null }) {
   const list = stableOrder(useValue(campaigns));
   const ready = useValue(registryReady);
   const invite = useValue(pendingInvite);
+  const failed = useValue(backupError);
 
   return (
     <main className="lobby">
@@ -74,6 +98,21 @@ export function Lobby({ error }: { error: string | null }) {
               ))}
             </ul>
           )}
+          {failed && (
+            <p className="form-error" role="alert">
+              {failed}
+            </p>
+          )}
+          <div className="form-actions">
+            <Button onClick={() => void runBackup(importBackupFile)}>
+              <IconImport size={20} /> Import Backup…
+            </Button>
+            {canUseFolders() && (
+              <Button onClick={() => void runBackup(importFromFolder)}>
+                <IconBackupFolder size={20} /> Import from Folder…
+              </Button>
+            )}
+          </div>
         </section>
 
         <NewCampaignForm />
@@ -119,6 +158,12 @@ function CampaignRow({ c }: { c: CampaignSummary }) {
           {...menu}
           label={`${c.name} actions`}
           items={[
+            {
+              label: "Export Backup…",
+              Icon: IconExport,
+              onSelect: () => void runBackup(() => exportBackupFile(c.id, c.name)),
+            },
+            "divider",
             {
               label: "Delete…",
               Icon: IconDelete,

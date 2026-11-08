@@ -7,6 +7,7 @@
  */
 
 import type { CharacterView, ItemInstance } from "../features/characters/types";
+import type { RichText } from "../core/richText";
 import type { DataValue } from "../core/types";
 import type { Roll } from "../features/dice/notation";
 import type { DiagonalRule } from "../scene/grid";
@@ -170,7 +171,7 @@ export interface CheckStep {
   /** Derived values added after the stat, each with its label: proficiency, a spell attack bonus. Zero adds nothing. */
   add?: { value: string; label: string }[];
   /** What each result means, by result id. */
-  outcomes: Record<string, string>;
+  outcomes: Record<string, RichText>;
   /** Follow-up buttons offered for each result, by follow-up id. On a check against targets, those of the best result that hit. */
   followUps?: Record<string, string[]>;
   followUpsFor?(roll: Roll, character: CharacterView, derived: Derived): string[];
@@ -239,7 +240,7 @@ export interface ActionDef {
   /** When it applies, in a line. */
   trigger: string;
   /** The full rules text. */
-  text: string;
+  text: RichText;
   /** What it's aimed at, if it asks for targets. */
   target?: TargetSpec;
   /** Lasts while the character concentrates: using it ends any other concentration. */
@@ -330,7 +331,7 @@ export interface TagDef {
 export interface ReferenceSectionDef {
   id: string;
   title: string;
-  text: string;
+  text: RichText;
 }
 
 /** A size a creature's token can be, in grid cells across: Large is 2. */

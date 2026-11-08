@@ -1,4 +1,4 @@
-import type { BlobRef } from "./scene/types";
+import type { BlobRef } from "./core/blob";
 
 export type EntityGraphic = { kind: "icon"; name: string } | { kind: "image"; image: BlobRef };
 

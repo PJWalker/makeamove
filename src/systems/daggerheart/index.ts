@@ -1,18 +1,12 @@
+import { md } from "../../macros/markdown.macro" with { type: "macro" };
 import { resolveEffects } from "../effects";
 import type { ActionDef, CheckStep, Derived, GameSystem, ItemDef, OptionDef } from "../types";
 import type { CharacterView } from "../../features/characters/types";
 import { commaListOf } from "../../lib/list";
+import { plainText, richTextFromPlain, type RichText } from "../../core/richText";
 
-import {
-  ANCESTRIES,
-  ARMOR,
-  CLASSES,
-  COMMUNITIES,
-  DOMAIN_CARDS,
-  slug,
-  SUBCLASSES,
-  WEAPONS,
-} from "./data";
+import { ANCESTRIES, ARMOR, CLASSES, COMMUNITIES, DOMAIN_CARDS, SUBCLASSES, WEAPONS } from "./data";
+import { slug } from "./slug";
 import { hpTokenStat } from "../tokenStats";
 
 const TRAITS = [
@@ -32,12 +26,12 @@ const RESULTS = [
   { id: "failure-fear", label: "Failure with Fear", tone: "bad" as const },
 ];
 
-const OUTCOMES = {
-  critical: "You succeed with a bonus. Gain Hope and clear 1 Stress.",
-  "success-hope": "You succeed and gain Hope.",
-  "success-fear": "You succeed with a cost or complication; the GM gains Fear.",
-  "failure-hope": "You fail with a minor consequence and gain Hope.",
-  "failure-fear": "You fail with a major consequence; the GM gains Fear.",
+const OUTCOMES: Record<string, RichText> = {
+  critical: md("You succeed with a bonus. Gain Hope and clear 1 Stress."),
+  "success-hope": md("You succeed and gain Hope."),
+  "success-fear": md("You succeed with a cost or complication; the GM gains Fear."),
+  "failure-hope": md("You fail with a minor consequence and gain Hope."),
+  "failure-fear": md("You fail with a major consequence; the GM gains Fear."),
 };
 
 const idOf = (prefix: string, value: string) => `${prefix}-${slug(value)}`;
@@ -72,9 +66,10 @@ const resultsFor = (
 });
 
 function rollStep(
-  text: string,
+  rules: RichText,
   options: { target?: boolean; prompt?: string } = {},
 ): CheckStep | undefined {
+  const text = plainText(rules);
   const spellcast = /spellcast roll/i.test(text);
   const traitMatch = /\b(Agility|Strength|Finesse|Instinct|Presence|Knowledge) Roll/i.exec(text);
   if (!spellcast && !traitMatch) return undefined;
@@ -116,7 +111,7 @@ function action(
   name: string,
   category: string,
   trigger: string,
-  text: string,
+  text: RichText,
   step?: CheckStep,
   target?: ActionDef["target"],
 ): ActionDef {
@@ -180,7 +175,9 @@ const classActions: ActionDef[] = CLASSES.flatMap((entry) => [
 
 const subclassActions = SUBCLASSES.flatMap((entry) =>
   entry.features.map((feature) => {
-    const isTargeted = /against (?:a|the) target|against all targets/i.test(feature.text);
+    const isTargeted = /against (?:a|the) target|against all targets/i.test(
+      plainText(feature.text),
+    );
     const target = isTargeted ? { prompt: "Target the creature or adversary", min: 1 } : undefined;
     return {
       action: action(
@@ -226,7 +223,7 @@ const communityActions = COMMUNITIES.map((entry) => ({
 
 const domainActions = DOMAIN_CARDS.map((card) => {
   const targeted = /against (?:a|the) target|against all targets|against each target/i.test(
-    card.text,
+    plainText(card.text),
   );
   const target = targeted ? { prompt: "Target the creature or adversary", min: 1 } : undefined;
   const step = rollStep(card.text, {
@@ -328,7 +325,9 @@ const weaponActions: ActionDef[] = WEAPONS.map((weapon) => {
     `Attack · ${weapon.name}`,
     "weapon",
     `${weapon.trait} · ${weapon.range}`,
-    `Make an attack roll against the target's Difficulty. On a hit, roll ${weapon.damage} damage using your Proficiency.`,
+    richTextFromPlain(
+      `Make an attack roll against the target's Difficulty. On a hit, roll ${weapon.damage} damage using your Proficiency.`,
+    ),
     check,
     { prompt: "Target the adversary you attack", min: 1, max: 1 },
   );
@@ -355,7 +354,7 @@ const CONDITIONS = [
 const DOMAIN_OPTIONS = DOMAIN_CARDS.map((card): OptionDef => ({
   id: card.id,
   name: card.name,
-  text: `Level ${card.level} ${card.type} · Recall ${card.recall}. ${card.text}`,
+  text: `Level ${card.level} ${card.type} · Recall ${card.recall}. ${plainText(card.text)}`,
   requiresAny: [{ domain1: card.domain }, { domain2: card.domain }],
   notIncludes: [{ field: "domainCards", value: card.id }],
   grants: { activeDomainCards: card.id },
@@ -428,7 +427,7 @@ function advancementOptionsAt(level: number): OptionDef[] {
         name: "Take a Specialization card",
         text: `${entry.name}: ${entry.features
           .filter((feature) => feature.tier === "Specialization")
-          .map((feature) => `${feature.name}: ${feature.text}`)
+          .map((feature) => `${feature.name}: ${plainText(feature.text)}`)
           .join(" ")}`,
         requires: { subclassId: entry.id },
         grants: {
@@ -448,7 +447,7 @@ function advancementOptionsAt(level: number): OptionDef[] {
         name: "Take a Mastery card",
         text: `${entry.name}: ${entry.features
           .filter((feature) => feature.tier === "Mastery")
-          .map((feature) => `${feature.name}: ${feature.text}`)
+          .map((feature) => `${feature.name}: ${plainText(feature.text)}`)
           .join(" ")}`,
         requires: { subclassId: entry.id, subclassSpecialization: true },
         grants: { subclassMastery: true, [`subclassUpgradeTier${tier}`]: true },
@@ -567,7 +566,9 @@ export const daggerheart: GameSystem = {
         `${trait.name} Roll`,
         "trait",
         `When you act using ${trait.name}`,
-        `Roll the Duality Dice, add ${trait.name}, and compare the total against the GM's Difficulty.`,
+        richTextFromPlain(
+          `Roll the Duality Dice, add ${trait.name}, and compare the total against the GM's Difficulty.`,
+        ),
         {
           kind: "check",
           stat: trait.id,
@@ -599,7 +600,9 @@ export const daggerheart: GameSystem = {
       "Level Up",
       "special",
       "When the GM reaches a narrative milestone",
-      "Gain a level with the group. Choose the next domain card and apply the advancement for the new tier.",
+      md(
+        "Gain a level with the group. Choose the next domain card and apply the advancement for the new tier.",
+      ),
     ),
   ],
   loadouts: [
@@ -890,7 +893,7 @@ export const daggerheart: GameSystem = {
         options: ANCESTRIES.map((entry) => ({
           id: entry.id,
           name: entry.name,
-          text: `${entry.description}\n${entry.features.map((feature) => `${feature.name}: ${feature.text}`).join("\n")}`,
+          text: `${entry.description}\n${entry.features.map((feature) => `${feature.name}: ${plainText(feature.text)}`).join("\n")}`,
         })),
       },
       {
@@ -901,7 +904,7 @@ export const daggerheart: GameSystem = {
         options: COMMUNITIES.map((entry) => ({
           id: entry.id,
           name: entry.name,
-          text: `${entry.description}\n${entry.feature.name}: ${entry.feature.text}`,
+          text: `${entry.description}\n${entry.feature.name}: ${plainText(entry.feature.text)}`,
         })),
       },
       ...[1, 2].map((index) => ({

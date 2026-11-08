@@ -4,14 +4,9 @@ import { Campaign, createCampaign } from "../../campaign/campaign";
 import { device } from "../../platform/device";
 import { dungeonWorld2 } from "../dungeon-world-2";
 import { getCharacter, newCharacter, setData } from "../../features/characters/api";
-import {
-  findTracker,
-  parseTrackerButton,
-  plainText,
-  pressTracker,
-  trackerBlock,
-  trackerToken,
-} from "../../features/characters/trackers";
+import { findTracker, pressTracker, trackerBlock } from "../../features/characters/trackers";
+import { parseTrackerButton, plainText, trackerToken } from "../../core/richText";
+import { md } from "../../macros/markdown.macro" with { type: "macro" };
 
 describe("inline resource buttons", () => {
   it("parses [[±N name]] with an optional label, and writes it back", () => {
@@ -23,7 +18,7 @@ describe("inline resource buttons", () => {
   });
 
   it("shows buttons as their labels in plain text", () => {
-    expect(plainText("**On a 6-,** [[+1 XP|mark 1 XP]] and *then*")).toBe(
+    expect(plainText(md("**On a 6-,** [[+1 XP|mark 1 XP]] and *then*"))).toBe(
       "On a 6-, mark 1 XP and then",
     );
   });

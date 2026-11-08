@@ -1,3 +1,5 @@
+import { md } from "../../macros/markdown.macro" with { type: "macro" };
+import type { RichText } from "../../core/richText";
 import type { AreaSpec, ConditionDef, ItemDef, TagDef, TargetSpec } from "../types";
 
 /*
@@ -221,7 +223,7 @@ export interface TextAction {
   id: string;
   name: string;
   trigger: string;
-  text: string;
+  text: RichText;
 }
 
 export const ACTIONS: TextAction[] = [
@@ -229,67 +231,83 @@ export const ACTIONS: TextAction[] = [
     id: "dash",
     name: "Dash",
     trigger: "Action",
-    text: "For the rest of the turn, gain extra movement equal to your Speed.",
+    text: md("For the rest of the turn, gain extra movement equal to your Speed."),
   },
   {
     id: "disengage",
     name: "Disengage",
     trigger: "Action",
-    text: "Your movement doesn’t provoke Opportunity Attacks for the rest of the turn.",
+    text: md("Your movement doesn’t provoke Opportunity Attacks for the rest of the turn."),
   },
   {
     id: "dodge",
     name: "Dodge",
     trigger: "Action",
-    text: "Until the start of your next turn, attack rolls against you have Disadvantage if you can see the attacker, and you make Dexterity saving throws with Advantage. You lose this if you’re Incapacitated or your Speed is 0.",
+    text: md(
+      "Until the start of your next turn, attack rolls against you have Disadvantage if you can see the attacker, and you make Dexterity saving throws with Advantage. You lose this if you’re Incapacitated or your Speed is 0.",
+    ),
   },
   {
     id: "help",
     name: "Help",
     trigger: "Action",
-    text: "Help an ally with an ability check (you must be proficient in the skill or tool), giving their next check Advantage, or distract an enemy within 5 feet so the next attack roll an ally makes against it has Advantage.",
+    text: md(
+      "Help an ally with an ability check (you must be proficient in the skill or tool), giving their next check Advantage, or distract an enemy within 5 feet so the next attack roll an ally makes against it has Advantage.",
+    ),
   },
   {
     id: "hide",
     name: "Hide",
     trigger: "Action",
-    text: "While heavily obscured or behind cover, out of any enemy’s line of sight, make a DC 15 Dexterity (Stealth) check. On a success you have the Invisible condition until you make noise, attack, cast a spell with a Verbal component, or an enemy finds you.",
+    text: md(
+      "While heavily obscured or behind cover, out of any enemy’s line of sight, make a DC 15 Dexterity (Stealth) check. On a success you have the Invisible condition until you make noise, attack, cast a spell with a Verbal component, or an enemy finds you.",
+    ),
   },
   {
     id: "influence",
     name: "Influence",
     trigger: "Action",
-    text: "Urge a creature to do something with a Charisma (Deception, Intimidation, Performance or Persuasion) or Wisdom (Animal Handling) check. The DM sets the DC from the creature’s attitude: usually 15, or the creature’s Intelligence score if higher.",
+    text: md(
+      "Urge a creature to do something with a Charisma (Deception, Intimidation, Performance or Persuasion) or Wisdom (Animal Handling) check. The DM sets the DC from the creature’s attitude: usually 15, or the creature’s Intelligence score if higher.",
+    ),
   },
   {
     id: "magic",
     name: "Magic",
     trigger: "Action",
-    text: "Cast a spell with a casting time of an action, use a magic item, or use a magical feature.",
+    text: md(
+      "Cast a spell with a casting time of an action, use a magic item, or use a magical feature.",
+    ),
   },
   {
     id: "ready",
     name: "Ready",
     trigger: "Action",
-    text: "Choose a trigger and an action (or your movement) to take in response, using your Reaction when the trigger happens before the start of your next turn. A readied spell needs Concentration until it’s released.",
+    text: md(
+      "Choose a trigger and an action (or your movement) to take in response, using your Reaction when the trigger happens before the start of your next turn. A readied spell needs Concentration until it’s released.",
+    ),
   },
   {
     id: "search",
     name: "Search",
     trigger: "Action",
-    text: "Make a Wisdom check to notice something: Insight to read a creature, Medicine to diagnose, Perception to spot something hidden, or Survival to follow tracks.",
+    text: md(
+      "Make a Wisdom check to notice something: Insight to read a creature, Medicine to diagnose, Perception to spot something hidden, or Survival to follow tracks.",
+    ),
   },
   {
     id: "study",
     name: "Study",
     trigger: "Action",
-    text: "Make an Intelligence check to recall or work something out: Arcana, History, Investigation, Nature or Religion.",
+    text: md(
+      "Make an Intelligence check to recall or work something out: Arcana, History, Investigation, Nature or Religion.",
+    ),
   },
   {
     id: "utilize",
     name: "Utilize",
     trigger: "Action",
-    text: "Use a nonmagical object, such as opening a door or lighting a torch.",
+    text: md("Use a nonmagical object, such as opening a door or lighting a torch."),
   },
 ];
 
@@ -302,7 +320,7 @@ export interface Feature {
   /** Which classes have it, and from what level. */
   classes: Record<string, number>;
   trigger: string;
-  text: string;
+  text: RichText;
   /** A follow-up to roll, by id (see FEATURE_ROLLS in index.ts). */
   roll?: string;
   target?: TargetSpec;
@@ -314,28 +332,34 @@ export const FEATURES: Feature[] = [
     name: "Rage",
     classes: { barbarian: 1 },
     trigger: "Bonus Action, while not wearing Heavy armour",
-    text: "Enter a Rage for up to 10 minutes. While raging you have Resistance to Bludgeoning, Piercing and Slashing damage; you add your Rage Damage bonus to Strength-based weapon damage; and you have Advantage on Strength checks and saving throws. You can’t cast or concentrate on spells. It ends early if you don Heavy armour or are Incapacitated, and you extend it each turn by attacking, forcing a save, or taking a Bonus Action. Uses: Rage, regaining one on a Short Rest and all on a Long Rest.",
+    text: md(
+      "Enter a Rage for up to 10 minutes. While raging you have Resistance to Bludgeoning, Piercing and Slashing damage; you add your Rage Damage bonus to Strength-based weapon damage; and you have Advantage on Strength checks and saving throws. You can’t cast or concentrate on spells. It ends early if you don Heavy armour or are Incapacitated, and you extend it each turn by attacking, forcing a save, or taking a Bonus Action. Uses: Rage, regaining one on a Short Rest and all on a Long Rest.",
+    ),
   },
   {
     id: "reckless-attack",
     name: "Reckless Attack",
     classes: { barbarian: 2 },
     trigger: "When you make your first attack roll on your turn",
-    text: "You gain Advantage on attack rolls using Strength until the start of your next turn, but attack rolls against you have Advantage too.",
+    text: md(
+      "You gain Advantage on attack rolls using Strength until the start of your next turn, but attack rolls against you have Advantage too.",
+    ),
   },
   {
     id: "danger-sense",
     name: "Danger Sense",
     classes: { barbarian: 2 },
     trigger: "Passive",
-    text: "You have Advantage on Dexterity saving throws unless you’re Incapacitated.",
+    text: md("You have Advantage on Dexterity saving throws unless you’re Incapacitated."),
   },
   {
     id: "bardic-inspiration",
     name: "Bardic Inspiration",
     classes: { bard: 1 },
     trigger: "Bonus Action, a creature within 60 feet who can see or hear you",
-    text: "Give a creature a Bardic Inspiration die. Once within the next hour, when it fails a d20 test, it can roll the die and add it, which might turn the failure into a success. Uses equal your Charisma modifier (at least one), regained on a Long Rest (and on a Short Rest from level 5).",
+    text: md(
+      "Give a creature a Bardic Inspiration die. Once within the next hour, when it fails a d20 test, it can roll the die and add it, which might turn the failure into a success. Uses equal your Charisma modifier (at least one), regained on a Long Rest (and on a Short Rest from level 5).",
+    ),
     roll: "bardic",
   },
   {
@@ -343,14 +367,18 @@ export const FEATURES: Feature[] = [
     name: "Jack of All Trades",
     classes: { bard: 2 },
     trigger: "Passive",
-    text: "You add half your Proficiency Bonus, rounded down, to any ability check that uses a skill you aren’t proficient in.",
+    text: md(
+      "You add half your Proficiency Bonus, rounded down, to any ability check that uses a skill you aren’t proficient in.",
+    ),
   },
   {
     id: "divine-spark",
     name: "Channel Divinity: Divine Spark",
     classes: { cleric: 2 },
     trigger: "Magic action, a creature within 30 feet",
-    text: "Point your Holy Symbol at a creature and roll 1d8, adding your Wisdom modifier. Either restore that many Hit Points to it, or it makes a Constitution saving throw and takes that much Necrotic or Radiant damage on a failure (half on a success). The die grows to 2d8 at level 7, 3d8 at 13 and 4d8 at 18.",
+    text: md(
+      "Point your Holy Symbol at a creature and roll 1d8, adding your Wisdom modifier. Either restore that many Hit Points to it, or it makes a Constitution saving throw and takes that much Necrotic or Radiant damage on a failure (half on a success). The die grows to 2d8 at level 7, 3d8 at 13 and 4d8 at 18.",
+    ),
     roll: "divine-spark",
     target: { prompt: "Target a creature within 30 feet", min: 1, max: 1, range: { normal: 30 } },
   },
@@ -359,21 +387,27 @@ export const FEATURES: Feature[] = [
     name: "Channel Divinity: Turn Undead",
     classes: { cleric: 2 },
     trigger: "Magic action",
-    text: "Each Undead of your choice within 30 feet makes a Wisdom saving throw. On a failure it has the Frightened and Incapacitated conditions for 1 minute, trying to move as far from you as it can. It ends if the creature takes damage.",
+    text: md(
+      "Each Undead of your choice within 30 feet makes a Wisdom saving throw. On a failure it has the Frightened and Incapacitated conditions for 1 minute, trying to move as far from you as it can. It ends if the creature takes damage.",
+    ),
   },
   {
     id: "wild-shape",
     name: "Wild Shape",
     classes: { druid: 2 },
     trigger: "Bonus Action",
-    text: "Shape-shift into a Beast form you have learned, for a number of hours equal to half your Druid level. You keep your personality, memories and mental scores, gain Temporary Hit Points equal to your Druid level, and can’t cast spells. Uses: Wild Shape, regaining one on a Short Rest and all on a Long Rest.",
+    text: md(
+      "Shape-shift into a Beast form you have learned, for a number of hours equal to half your Druid level. You keep your personality, memories and mental scores, gain Temporary Hit Points equal to your Druid level, and can’t cast spells. Uses: Wild Shape, regaining one on a Short Rest and all on a Long Rest.",
+    ),
   },
   {
     id: "second-wind",
     name: "Second Wind",
     classes: { fighter: 1 },
     trigger: "Bonus Action",
-    text: "Draw on a reserve of stamina to regain Hit Points equal to 1d10 plus your Fighter level. Uses: Second Wind, regaining one on a Short Rest and all on a Long Rest.",
+    text: md(
+      "Draw on a reserve of stamina to regain Hit Points equal to 1d10 plus your Fighter level. Uses: Second Wind, regaining one on a Short Rest and all on a Long Rest.",
+    ),
     roll: "second-wind",
   },
   {
@@ -381,21 +415,27 @@ export const FEATURES: Feature[] = [
     name: "Action Surge",
     classes: { fighter: 2 },
     trigger: "On your turn",
-    text: "Take one additional action, except the Magic action. Once per Short or Long Rest (twice from level 17, but only once on the same turn).",
+    text: md(
+      "Take one additional action, except the Magic action. Once per Short or Long Rest (twice from level 17, but only once on the same turn).",
+    ),
   },
   {
     id: "extra-attack",
     name: "Extra Attack",
     classes: { barbarian: 5, fighter: 5, monk: 5, paladin: 5, ranger: 5 },
     trigger: "When you take the Attack action",
-    text: "You can attack twice instead of once. (Fighters attack three times from level 11 and four times from level 20.)",
+    text: md(
+      "You can attack twice instead of once. (Fighters attack three times from level 11 and four times from level 20.)",
+    ),
   },
   {
     id: "martial-arts",
     name: "Martial Arts",
     classes: { monk: 1 },
     trigger: "While unarmed or wielding only Monk weapons, and unarmoured with no Shield",
-    text: "You can make an Unarmed Strike as a Bonus Action; you can use Dexterity instead of Strength for attack and damage rolls with Unarmed Strikes and Monk weapons; and you can roll your Martial Arts die in place of their normal damage.",
+    text: md(
+      "You can make an Unarmed Strike as a Bonus Action; you can use Dexterity instead of Strength for attack and damage rolls with Unarmed Strikes and Monk weapons; and you can roll your Martial Arts die in place of their normal damage.",
+    ),
     roll: "martial-arts",
   },
   {
@@ -403,49 +443,61 @@ export const FEATURES: Feature[] = [
     name: "Flurry of Blows",
     classes: { monk: 2 },
     trigger: "Bonus Action, spending 1 Focus Point",
-    text: "Make two Unarmed Strikes.",
+    text: md("Make two Unarmed Strikes."),
   },
   {
     id: "patient-defense",
     name: "Patient Defense",
     classes: { monk: 2 },
     trigger: "Bonus Action",
-    text: "Take the Disengage action; or spend 1 Focus Point to take both the Disengage and Dodge actions.",
+    text: md(
+      "Take the Disengage action; or spend 1 Focus Point to take both the Disengage and Dodge actions.",
+    ),
   },
   {
     id: "step-of-the-wind",
     name: "Step of the Wind",
     classes: { monk: 2 },
     trigger: "Bonus Action",
-    text: "Take the Dash action; or spend 1 Focus Point to take both the Disengage and Dash actions, with your jump distance doubled.",
+    text: md(
+      "Take the Dash action; or spend 1 Focus Point to take both the Disengage and Dash actions, with your jump distance doubled.",
+    ),
   },
   {
     id: "stunning-strike",
     name: "Stunning Strike",
     classes: { monk: 5 },
     trigger: "Once per turn, when you hit with a Monk weapon or Unarmed Strike",
-    text: "Spend 1 Focus Point. The target makes a Constitution saving throw against your Focus save DC (8 + Wisdom modifier + Proficiency Bonus). On a failure it has the Stunned condition until the start of your next turn; on a success its Speed is halved and the next attack roll against it has Advantage.",
+    text: md(
+      "Spend 1 Focus Point. The target makes a Constitution saving throw against your Focus save DC (8 + Wisdom modifier + Proficiency Bonus). On a failure it has the Stunned condition until the start of your next turn; on a success its Speed is halved and the next attack roll against it has Advantage.",
+    ),
   },
   {
     id: "lay-on-hands",
     name: "Lay on Hands",
     classes: { paladin: 1 },
     trigger: "Bonus Action, touching a creature",
-    text: "Draw from your pool of healing (five times your Paladin level, refilled on a Long Rest) to restore that many Hit Points, or spend 5 from the pool to remove the Poisoned condition.",
+    text: md(
+      "Draw from your pool of healing (five times your Paladin level, refilled on a Long Rest) to restore that many Hit Points, or spend 5 from the pool to remove the Poisoned condition.",
+    ),
   },
   {
     id: "favored-enemy",
     name: "Favored Enemy",
     classes: { ranger: 1 },
     trigger: "Passive",
-    text: "You always have Hunter’s Mark prepared, and can cast it twice without a spell slot, regaining these uses on a Long Rest.",
+    text: md(
+      "You always have Hunter’s Mark prepared, and can cast it twice without a spell slot, regaining these uses on a Long Rest.",
+    ),
   },
   {
     id: "sneak-attack",
     name: "Sneak Attack",
     classes: { rogue: 1 },
     trigger: "Once per turn, when you hit with a Finesse or Ranged weapon",
-    text: "Deal extra damage when you have Advantage on the attack roll, or when an ally of the target is within 5 feet of it and you don’t have Disadvantage. The extra damage is 1d6 per two Rogue levels, rounded up.",
+    text: md(
+      "Deal extra damage when you have Advantage on the attack roll, or when an ally of the target is within 5 feet of it and you don’t have Disadvantage. The extra damage is 1d6 per two Rogue levels, rounded up.",
+    ),
     roll: "sneak-attack",
   },
   {
@@ -453,56 +505,68 @@ export const FEATURES: Feature[] = [
     name: "Cunning Action",
     classes: { rogue: 2 },
     trigger: "Bonus Action",
-    text: "Take the Dash, Disengage or Hide action.",
+    text: md("Take the Dash, Disengage or Hide action."),
   },
   {
     id: "uncanny-dodge",
     name: "Uncanny Dodge",
     classes: { rogue: 5 },
     trigger: "Reaction, when an attacker you can see hits you",
-    text: "Halve the attack’s damage against you.",
+    text: md("Halve the attack’s damage against you."),
   },
   {
     id: "innate-sorcery",
     name: "Innate Sorcery",
     classes: { sorcerer: 1 },
     trigger: "Bonus Action",
-    text: "For 1 minute, your sorcerer spells’ save DC rises by 1 and you have Advantage on their attack rolls. Twice per Long Rest.",
+    text: md(
+      "For 1 minute, your sorcerer spells’ save DC rises by 1 and you have Advantage on their attack rolls. Twice per Long Rest.",
+    ),
   },
   {
     id: "font-of-magic",
     name: "Font of Magic",
     classes: { sorcerer: 2 },
     trigger: "Bonus Action",
-    text: "Turn an expended spell slot into Sorcery Points equal to its level, or spend Sorcery Points to make a slot: 2 for level 1, 3 for level 2, 5 for level 3, 6 for level 4, 7 for level 5.",
+    text: md(
+      "Turn an expended spell slot into Sorcery Points equal to its level, or spend Sorcery Points to make a slot: 2 for level 1, 3 for level 2, 5 for level 3, 6 for level 4, 7 for level 5.",
+    ),
   },
   {
     id: "metamagic",
     name: "Metamagic",
     classes: { sorcerer: 2 },
     trigger: "When you cast a spell",
-    text: "Spend Sorcery Points to twist the spell with one of your Metamagic options, such as Quickened Spell (2 points: cast it as a Bonus Action) or Twinned Spell (1 point: raise its effective level to add another target).",
+    text: md(
+      "Spend Sorcery Points to twist the spell with one of your Metamagic options, such as Quickened Spell (2 points: cast it as a Bonus Action) or Twinned Spell (1 point: raise its effective level to add another target).",
+    ),
   },
   {
     id: "eldritch-invocations",
     name: "Eldritch Invocations",
     classes: { warlock: 1 },
     trigger: "Passive",
-    text: "You know fragments of forbidden knowledge, such as Agonizing Blast (add your Charisma modifier to a cantrip’s damage) or Pact of the Blade.",
+    text: md(
+      "You know fragments of forbidden knowledge, such as Agonizing Blast (add your Charisma modifier to a cantrip’s damage) or Pact of the Blade.",
+    ),
   },
   {
     id: "magical-cunning",
     name: "Magical Cunning",
     classes: { warlock: 2 },
     trigger: "1 minute, once per Long Rest",
-    text: "Perform an esoteric rite to regain expended Pact Magic slots, up to half your maximum (rounded up).",
+    text: md(
+      "Perform an esoteric rite to regain expended Pact Magic slots, up to half your maximum (rounded up).",
+    ),
   },
   {
     id: "arcane-recovery",
     name: "Arcane Recovery",
     classes: { wizard: 1 },
     trigger: "When you finish a Short Rest, once per Long Rest",
-    text: "Recover expended spell slots whose combined level is up to half your Wizard level (rounded up), none of them level 6 or higher.",
+    text: md(
+      "Recover expended spell slots whose combined level is up to half your Wizard level (rounded up), none of them level 6 or higher.",
+    ),
   },
 ];
 
@@ -518,7 +582,7 @@ export interface Spell {
   classes: string[];
   /** Casting time, range and duration, in a line. */
   trigger: string;
-  text: string;
+  text: RichText;
   /** A spell attack, rolled against the target's AC. */
   attack?: boolean;
   /** Damage or healing dice: count per die (scaled for cantrips), and whether the spellcasting modifier adds. */
@@ -553,7 +617,9 @@ export const SPELLS: Spell[] = [
     level: 0,
     classes: ["sorcerer", "wizard"],
     trigger: "Action · 120 feet · Instantaneous",
-    text: "Hurl a mote of fire at a creature or object. Make a ranged spell attack; on a hit it takes 1d10 Fire damage, and a flammable object that isn’t worn or carried starts burning. The damage grows by 1d10 at levels 5, 11 and 17.",
+    text: md(
+      "Hurl a mote of fire at a creature or object. Make a ranged spell attack; on a hit it takes 1d10 Fire damage, and a flammable object that isn’t worn or carried starts burning. The damage grows by 1d10 at levels 5, 11 and 17.",
+    ),
     attack: true,
     roll: { label: "damage", type: "fire", count: 1, die: 10, scales: true },
     target: one("Target a creature within 120 feet", 120),
@@ -564,7 +630,9 @@ export const SPELLS: Spell[] = [
     level: 0,
     classes: ["sorcerer", "wizard"],
     trigger: "Action · 60 feet · Instantaneous",
-    text: "A frigid beam streaks toward a creature. Make a ranged spell attack; on a hit it takes 1d8 Cold damage and its Speed drops by 10 feet until the start of your next turn. The damage grows by 1d8 at levels 5, 11 and 17.",
+    text: md(
+      "A frigid beam streaks toward a creature. Make a ranged spell attack; on a hit it takes 1d8 Cold damage and its Speed drops by 10 feet until the start of your next turn. The damage grows by 1d8 at levels 5, 11 and 17.",
+    ),
     attack: true,
     roll: { label: "damage", type: "cold", count: 1, die: 8, scales: true },
     target: one("Target a creature within 60 feet", 60),
@@ -575,7 +643,9 @@ export const SPELLS: Spell[] = [
     level: 0,
     classes: ["sorcerer", "warlock", "wizard"],
     trigger: "Action · Touch · Instantaneous",
-    text: "Make a melee spell attack against a creature. On a hit it takes 1d10 Necrotic damage and can’t regain Hit Points until the end of your next turn. The damage grows by 1d10 at levels 5, 11 and 17.",
+    text: md(
+      "Make a melee spell attack against a creature. On a hit it takes 1d10 Necrotic damage and can’t regain Hit Points until the end of your next turn. The damage grows by 1d10 at levels 5, 11 and 17.",
+    ),
     attack: true,
     roll: { label: "damage", type: "necrotic", count: 1, die: 10, scales: true },
     target: one("Target the creature you touch", 5),
@@ -586,7 +656,9 @@ export const SPELLS: Spell[] = [
     level: 0,
     classes: ["warlock"],
     trigger: "Action · 120 feet · Instantaneous",
-    text: "A beam of crackling energy. Make a ranged spell attack; on a hit the target takes 1d10 Force damage. You make two beams at level 5, three at 11 and four at 17, aimed at one target or several, with a separate attack roll for each.",
+    text: md(
+      "A beam of crackling energy. Make a ranged spell attack; on a hit the target takes 1d10 Force damage. You make two beams at level 5, three at 11 and four at 17, aimed at one target or several, with a separate attack roll for each.",
+    ),
     attack: true,
     roll: { label: "damage", type: "force", count: 1, die: 10 },
     target: one("Target a creature within 120 feet", 120),
@@ -597,7 +669,9 @@ export const SPELLS: Spell[] = [
     level: 0,
     classes: ["druid"],
     trigger: "Bonus Action · Self · 10 minutes",
-    text: "A flame in your hand sheds Bright Light in a 20-foot radius. Until the spell ends, you can take a Magic action to hurl it at a creature within 60 feet: make a ranged spell attack, dealing 1d8 Fire damage on a hit. The damage grows by 1d8 at levels 5, 11 and 17.",
+    text: md(
+      "A flame in your hand sheds Bright Light in a 20-foot radius. Until the spell ends, you can take a Magic action to hurl it at a creature within 60 feet: make a ranged spell attack, dealing 1d8 Fire damage on a hit. The damage grows by 1d8 at levels 5, 11 and 17.",
+    ),
     attack: true,
     roll: { label: "damage", type: "fire", count: 1, die: 8, scales: true },
     target: one("Target a creature within 60 feet", 60),
@@ -608,7 +682,9 @@ export const SPELLS: Spell[] = [
     level: 0,
     classes: ["cleric"],
     trigger: "Action · 60 feet · Instantaneous",
-    text: "Flame-like radiance descends on a creature you can see. It makes a Dexterity saving throw against your spell save DC, taking 1d8 Radiant damage on a failure; it gains no benefit from Half Cover or Three-Quarters Cover for this save. The damage grows by 1d8 at levels 5, 11 and 17.",
+    text: md(
+      "Flame-like radiance descends on a creature you can see. It makes a Dexterity saving throw against your spell save DC, taking 1d8 Radiant damage on a failure; it gains no benefit from Half Cover or Three-Quarters Cover for this save. The damage grows by 1d8 at levels 5, 11 and 17.",
+    ),
     roll: { label: "damage", type: "radiant", count: 1, die: 8, scales: true },
     target: one("Target a creature within 60 feet", 60),
     save: "dex",
@@ -619,7 +695,9 @@ export const SPELLS: Spell[] = [
     level: 0,
     classes: ["bard"],
     trigger: "Action · 60 feet · Instantaneous",
-    text: "Unleash a string of insults laced with enchantment. The creature makes a Wisdom saving throw; on a failure it takes 1d6 Psychic damage and has Disadvantage on its next attack roll before the end of its next turn. The damage grows by 1d6 at levels 5, 11 and 17.",
+    text: md(
+      "Unleash a string of insults laced with enchantment. The creature makes a Wisdom saving throw; on a failure it takes 1d6 Psychic damage and has Disadvantage on its next attack roll before the end of its next turn. The damage grows by 1d6 at levels 5, 11 and 17.",
+    ),
     roll: { label: "damage", type: "psychic", count: 1, die: 6, scales: true },
     target: one("Target a creature within 60 feet", 60),
     save: "wis",
@@ -630,7 +708,9 @@ export const SPELLS: Spell[] = [
     level: 0,
     classes: ["cleric", "druid"],
     trigger: "Action · Touch · Concentration, up to 1 minute",
-    text: "Touch a willing creature and choose a skill. Until the spell ends, it adds 1d4 to any ability check using that skill.",
+    text: md(
+      "Touch a willing creature and choose a skill. Until the spell ends, it adds 1d4 to any ability check using that skill.",
+    ),
   },
   {
     id: "light",
@@ -638,7 +718,9 @@ export const SPELLS: Spell[] = [
     level: 0,
     classes: ["bard", "cleric", "sorcerer", "wizard"],
     trigger: "Action · Touch · 1 hour",
-    text: "An object you touch sheds Bright Light in a 20-foot radius and Dim Light for 20 feet beyond, in a colour you choose. Covering it blocks the light. Casting it again ends the earlier spell.",
+    text: md(
+      "An object you touch sheds Bright Light in a 20-foot radius and Dim Light for 20 feet beyond, in a colour you choose. Covering it blocks the light. Casting it again ends the earlier spell.",
+    ),
   },
   {
     id: "mage-hand",
@@ -646,7 +728,9 @@ export const SPELLS: Spell[] = [
     level: 0,
     classes: ["bard", "sorcerer", "warlock", "wizard"],
     trigger: "Action · 30 feet · 1 minute",
-    text: "A spectral hand appears within range. As a Magic action you can move it up to 30 feet and use it to manipulate an object, open an unlocked door or container, or stow or retrieve an item. It can’t attack, activate magic items or carry more than 10 pounds.",
+    text: md(
+      "A spectral hand appears within range. As a Magic action you can move it up to 30 feet and use it to manipulate an object, open an unlocked door or container, or stow or retrieve an item. It can’t attack, activate magic items or carry more than 10 pounds.",
+    ),
   },
   // Level 1
   {
@@ -655,7 +739,9 @@ export const SPELLS: Spell[] = [
     level: 1,
     classes: ["cleric", "paladin"],
     trigger: "Action · 30 feet · Concentration, up to 1 minute",
-    text: "Bless up to three creatures. Whenever one of them makes an attack roll or a saving throw before the spell ends, it adds 1d4. With a higher-level slot, bless one more creature per slot level above 1.",
+    text: md(
+      "Bless up to three creatures. Whenever one of them makes an attack roll or a saving throw before the spell ends, it adds 1d4. With a higher-level slot, bless one more creature per slot level above 1.",
+    ),
     target: {
       prompt: "Target up to three creatures within 30 feet",
       min: 1,
@@ -669,7 +755,9 @@ export const SPELLS: Spell[] = [
     level: 1,
     classes: ["sorcerer", "wizard"],
     trigger: "Action · Self (15-foot cone) · Instantaneous",
-    text: "Flames shoot from your fingertips. Each creature in a 15-foot cone makes a Dexterity saving throw, taking 3d6 Fire damage on a failure or half on a success. Flammable objects in the cone start burning. +1d6 per slot level above 1.",
+    text: md(
+      "Flames shoot from your fingertips. Each creature in a 15-foot cone makes a Dexterity saving throw, taking 3d6 Fire damage on a failure or half on a success. Flammable objects in the cone start burning. +1d6 per slot level above 1.",
+    ),
     roll: { label: "damage", type: "fire", count: 3, die: 6 },
     save: "dex",
     area: { shape: "cone", size: 15 },
@@ -680,7 +768,9 @@ export const SPELLS: Spell[] = [
     level: 1,
     classes: ["bard", "cleric", "druid", "paladin", "ranger"],
     trigger: "Action · Touch · Instantaneous",
-    text: "A creature you touch regains Hit Points equal to 2d8 plus your spellcasting ability modifier. +2d8 per slot level above 1.",
+    text: md(
+      "A creature you touch regains Hit Points equal to 2d8 plus your spellcasting ability modifier. +2d8 per slot level above 1.",
+    ),
     roll: { label: "healing", type: "healing", count: 2, die: 8, mod: true },
     target: one("Target the creature you touch", 5),
   },
@@ -690,7 +780,9 @@ export const SPELLS: Spell[] = [
     level: 1,
     classes: ["bard", "cleric", "druid", "paladin", "ranger", "sorcerer", "wizard"],
     trigger: "Action or Ritual · Self · Concentration, up to 10 minutes",
-    text: "You sense magic within 30 feet. While it lasts you can take a Magic action to see a faint aura around any visible creature or object there that bears magic, and learn its school of magic if any.",
+    text: md(
+      "You sense magic within 30 feet. While it lasts you can take a Magic action to see a faint aura around any visible creature or object there that bears magic, and learn its school of magic if any.",
+    ),
   },
   {
     id: "divine-smite",
@@ -698,7 +790,9 @@ export const SPELLS: Spell[] = [
     level: 1,
     classes: ["paladin"],
     trigger: "Bonus Action, right after you hit with a melee weapon or Unarmed Strike",
-    text: "The target takes an extra 2d8 Radiant damage, plus 1d8 if it’s a Fiend or Undead. +1d8 per slot level above 1.",
+    text: md(
+      "The target takes an extra 2d8 Radiant damage, plus 1d8 if it’s a Fiend or Undead. +1d8 per slot level above 1.",
+    ),
     roll: { label: "damage", type: "radiant", count: 2, die: 8 },
   },
   {
@@ -707,7 +801,9 @@ export const SPELLS: Spell[] = [
     level: 1,
     classes: ["cleric"],
     trigger: "Action · 120 feet · 1 round",
-    text: "A flash of light streaks toward a creature. Make a ranged spell attack; on a hit it takes 4d6 Radiant damage, and the next attack roll against it before the end of your next turn has Advantage. +1d6 per slot level above 1.",
+    text: md(
+      "A flash of light streaks toward a creature. Make a ranged spell attack; on a hit it takes 4d6 Radiant damage, and the next attack roll against it before the end of your next turn has Advantage. +1d6 per slot level above 1.",
+    ),
     attack: true,
     roll: { label: "damage", type: "radiant", count: 4, die: 6 },
     target: one("Target a creature within 120 feet", 120),
@@ -718,7 +814,9 @@ export const SPELLS: Spell[] = [
     level: 1,
     classes: ["bard", "cleric", "druid"],
     trigger: "Bonus Action · 60 feet · Instantaneous",
-    text: "A creature you can see regains Hit Points equal to 2d4 plus your spellcasting ability modifier. +2d4 per slot level above 1.",
+    text: md(
+      "A creature you can see regains Hit Points equal to 2d4 plus your spellcasting ability modifier. +2d4 per slot level above 1.",
+    ),
     roll: { label: "healing", type: "healing", count: 2, die: 4, mod: true },
     target: one("Target a creature within 60 feet", 60),
   },
@@ -728,7 +826,9 @@ export const SPELLS: Spell[] = [
     level: 1,
     classes: ["ranger"],
     trigger: "Bonus Action · 90 feet · Concentration, up to 1 hour",
-    text: "Magically mark a creature as your quarry. Until the spell ends, you deal an extra 1d6 Force damage whenever you hit it with an attack roll, and you have Advantage on Wisdom (Perception or Survival) checks to find it. If it drops to 0 Hit Points, you can move the mark to a new creature as a Bonus Action.",
+    text: md(
+      "Magically mark a creature as your quarry. Until the spell ends, you deal an extra 1d6 Force damage whenever you hit it with an attack roll, and you have Advantage on Wisdom (Perception or Survival) checks to find it. If it drops to 0 Hit Points, you can move the mark to a new creature as a Bonus Action.",
+    ),
     roll: { label: "damage", type: "force", count: 1, die: 6 },
     target: one("Target a creature within 90 feet", 90),
   },
@@ -738,7 +838,9 @@ export const SPELLS: Spell[] = [
     level: 1,
     classes: ["sorcerer", "wizard"],
     trigger: "Action · 120 feet · Instantaneous",
-    text: "Three glowing darts each hit a creature of your choice that you can see, for 1d4 + 1 Force damage each. The darts strike at once, at one creature or several. One more dart per slot level above 1.",
+    text: md(
+      "Three glowing darts each hit a creature of your choice that you can see, for 1d4 + 1 Force damage each. The darts strike at once, at one creature or several. One more dart per slot level above 1.",
+    ),
     roll: { label: "damage", type: "force", count: 3, die: 4, plus: 3 },
     target: {
       prompt: "Target up to three creatures within 120 feet",
@@ -753,7 +855,9 @@ export const SPELLS: Spell[] = [
     level: 1,
     classes: ["sorcerer", "wizard"],
     trigger: "Reaction, when you are hit by an attack or targeted by Magic Missile",
-    text: "An invisible barrier appears: until the start of your next turn you have +5 to AC, including against the triggering attack, and take no damage from Magic Missile.",
+    text: md(
+      "An invisible barrier appears: until the start of your next turn you have +5 to AC, including against the triggering attack, and take no damage from Magic Missile.",
+    ),
   },
   {
     id: "thunderwave",
@@ -761,7 +865,9 @@ export const SPELLS: Spell[] = [
     level: 1,
     classes: ["bard", "druid", "sorcerer", "wizard"],
     trigger: "Action · Self (15-foot cube) · Instantaneous",
-    text: "A wave of thunderous force. Each creature in a 15-foot cube from you makes a Constitution saving throw: on a failure it takes 2d8 Thunder damage and is pushed 10 feet away; on a success, half damage and no push. The boom is audible 300 feet away. +1d8 per slot level above 1.",
+    text: md(
+      "A wave of thunderous force. Each creature in a 15-foot cube from you makes a Constitution saving throw: on a failure it takes 2d8 Thunder damage and is pushed 10 feet away; on a success, half damage and no push. The boom is audible 300 feet away. +1d8 per slot level above 1.",
+    ),
     roll: { label: "damage", type: "thunder", count: 2, die: 8 },
     save: "con",
     area: { shape: "cube", size: 15 },
@@ -773,7 +879,9 @@ export const SPELLS: Spell[] = [
     level: 2,
     classes: ["bard", "cleric", "druid", "sorcerer", "warlock", "wizard"],
     trigger: "Action · 60 feet · Concentration, up to 1 minute",
-    text: "A Humanoid you can see makes a Wisdom saving throw or has the Paralyzed condition until the spell ends. It repeats the save at the end of each of its turns, ending the spell on a success. One more Humanoid per slot level above 2.",
+    text: md(
+      "A Humanoid you can see makes a Wisdom saving throw or has the Paralyzed condition until the spell ends. It repeats the save at the end of each of its turns, ending the spell on a success. One more Humanoid per slot level above 2.",
+    ),
     target: one("Target a Humanoid within 60 feet", 60),
     save: "wis",
   },
@@ -783,7 +891,9 @@ export const SPELLS: Spell[] = [
     level: 2,
     classes: ["sorcerer", "warlock", "wizard"],
     trigger: "Bonus Action · Self · Instantaneous",
-    text: "Briefly surrounded by silvery mist, you teleport up to 30 feet to an unoccupied space you can see.",
+    text: md(
+      "Briefly surrounded by silvery mist, you teleport up to 30 feet to an unoccupied space you can see.",
+    ),
   },
   {
     id: "scorching-ray",
@@ -791,7 +901,9 @@ export const SPELLS: Spell[] = [
     level: 2,
     classes: ["sorcerer", "wizard"],
     trigger: "Action · 120 feet · Instantaneous",
-    text: "Hurl three fiery rays at one target or several. Make a ranged spell attack for each; each ray that hits deals 2d6 Fire damage. One more ray per slot level above 2.",
+    text: md(
+      "Hurl three fiery rays at one target or several. Make a ranged spell attack for each; each ray that hits deals 2d6 Fire damage. One more ray per slot level above 2.",
+    ),
     attack: true,
     roll: { label: "damage", type: "fire", count: 2, die: 6 },
     target: one("Target a creature within 120 feet", 120),
@@ -802,7 +914,9 @@ export const SPELLS: Spell[] = [
     level: 2,
     classes: ["cleric"],
     trigger: "Bonus Action · 60 feet · Concentration, up to 1 minute",
-    text: "A floating spectral weapon appears within range. When you cast it, and as a Bonus Action on later turns, you can move it up to 20 feet and make a melee spell attack against a creature within 5 feet of it, dealing Force damage equal to 1d8 plus your spellcasting ability modifier. +1d8 per slot level above 2.",
+    text: md(
+      "A floating spectral weapon appears within range. When you cast it, and as a Bonus Action on later turns, you can move it up to 20 feet and make a melee spell attack against a creature within 5 feet of it, dealing Force damage equal to 1d8 plus your spellcasting ability modifier. +1d8 per slot level above 2.",
+    ),
     attack: true,
     roll: { label: "damage", type: "force", count: 1, die: 8, mod: true },
     target: one("Target a creature near your weapon", 60),
@@ -814,7 +928,9 @@ export const SPELLS: Spell[] = [
     level: 3,
     classes: ["sorcerer", "warlock", "wizard"],
     trigger: "Reaction, when you see a creature within 60 feet casting a spell",
-    text: "The caster makes a Constitution saving throw. On a failure the spell dissipates with no effect, and the action and slot it would have used aren’t spent.",
+    text: md(
+      "The caster makes a Constitution saving throw. On a failure the spell dissipates with no effect, and the action and slot it would have used aren’t spent.",
+    ),
   },
   {
     id: "fireball",
@@ -822,7 +938,9 @@ export const SPELLS: Spell[] = [
     level: 3,
     classes: ["sorcerer", "wizard"],
     trigger: "Action · 150 feet · Instantaneous",
-    text: "A bead of fire blossoms into a 20-foot-radius sphere of flame. Each creature in it makes a Dexterity saving throw, taking 8d6 Fire damage on a failure or half on a success. Flammable objects in the area that aren’t worn or carried start burning. +1d6 per slot level above 3.",
+    text: md(
+      "A bead of fire blossoms into a 20-foot-radius sphere of flame. Each creature in it makes a Dexterity saving throw, taking 8d6 Fire damage on a failure or half on a success. Flammable objects in the area that aren’t worn or carried start burning. +1d6 per slot level above 3.",
+    ),
     roll: { label: "damage", type: "fire", count: 8, die: 6 },
     save: "dex",
     area: { shape: "sphere", size: 20 },
@@ -833,7 +951,9 @@ export const SPELLS: Spell[] = [
     level: 3,
     classes: ["sorcerer", "wizard"],
     trigger: "Action · Self (100-foot line) · Instantaneous",
-    text: "A stroke of lightning 100 feet long and 5 feet wide blasts out from you. Each creature in the line makes a Dexterity saving throw, taking 8d6 Lightning damage on a failure or half on a success. +1d6 per slot level above 3.",
+    text: md(
+      "A stroke of lightning 100 feet long and 5 feet wide blasts out from you. Each creature in the line makes a Dexterity saving throw, taking 8d6 Lightning damage on a failure or half on a success. +1d6 per slot level above 3.",
+    ),
     roll: { label: "damage", type: "lightning", count: 8, die: 6 },
     save: "dex",
     area: { shape: "line", size: 100, width: 5 },
@@ -845,7 +965,9 @@ export const SPELLS: Spell[] = [
     level: 1,
     classes: ["bard", "cleric", "paladin"],
     trigger: "Action · 60 feet · Instantaneous",
-    text: "Speak a one-word command (Approach, Drop, Flee, Grovel or Halt) to a creature you can see. It makes a Wisdom saving throw or follows the command on its next turn. One more creature per slot level above 1.",
+    text: md(
+      "Speak a one-word command (Approach, Drop, Flee, Grovel or Halt) to a creature you can see. It makes a Wisdom saving throw or follows the command on its next turn. One more creature per slot level above 1.",
+    ),
     save: "wis",
     target: one("Target a creature within 60 feet", 60),
   },
@@ -855,7 +977,9 @@ export const SPELLS: Spell[] = [
     level: 1,
     classes: ["bard", "druid"],
     trigger: "Action · 60 feet · Concentration, up to 1 minute",
-    text: "Each creature in a 20-foot cube makes a Dexterity saving throw. On a failure it sheds dim light, can’t benefit from being Invisible, and attack rolls against it have Advantage.",
+    text: md(
+      "Each creature in a 20-foot cube makes a Dexterity saving throw. On a failure it sheds dim light, can’t benefit from being Invisible, and attack rolls against it have Advantage.",
+    ),
     save: "dex",
     area: { shape: "cube", size: 20 },
   },
@@ -865,7 +989,9 @@ export const SPELLS: Spell[] = [
     level: 1,
     classes: ["cleric"],
     trigger: "Action · Touch · Instantaneous",
-    text: "A creature you touch makes a Constitution saving throw, taking 2d10 Necrotic damage on a failure or half on a success. +1d10 per slot level above 1.",
+    text: md(
+      "A creature you touch makes a Constitution saving throw, taking 2d10 Necrotic damage on a failure or half on a success. +1d10 per slot level above 1.",
+    ),
     roll: { label: "damage", type: "necrotic", count: 2, die: 10 },
     save: "con",
     target: one("Target the creature you touch", 5),
@@ -876,7 +1002,9 @@ export const SPELLS: Spell[] = [
     level: 1,
     classes: ["sorcerer", "wizard"],
     trigger: "Action · Touch · 8 hours",
-    text: "A willing creature not wearing armour has a base AC of 13 + its Dexterity modifier until the spell ends.",
+    text: md(
+      "A willing creature not wearing armour has a base AC of 13 + its Dexterity modifier until the spell ends.",
+    ),
   },
   {
     id: "sanctuary",
@@ -884,7 +1012,9 @@ export const SPELLS: Spell[] = [
     level: 1,
     classes: ["cleric"],
     trigger: "Bonus Action · 30 feet · 1 minute",
-    text: "Ward a creature. Anyone targeting it with an attack or harmful spell must first make a Wisdom saving throw or choose a new target. It ends if the warded creature attacks, casts a spell that affects an enemy, or deals damage.",
+    text: md(
+      "Ward a creature. Anyone targeting it with an attack or harmful spell must first make a Wisdom saving throw or choose a new target. It ends if the warded creature attacks, casts a spell that affects an enemy, or deals damage.",
+    ),
   },
   {
     id: "shield-of-faith",
@@ -892,7 +1022,9 @@ export const SPELLS: Spell[] = [
     level: 1,
     classes: ["cleric", "paladin"],
     trigger: "Bonus Action · 60 feet · Concentration, up to 10 minutes",
-    text: "A shimmering field surrounds a creature of your choice, granting it a +2 bonus to AC for the duration.",
+    text: md(
+      "A shimmering field surrounds a creature of your choice, granting it a +2 bonus to AC for the duration.",
+    ),
   },
   {
     id: "sleep",
@@ -900,7 +1032,9 @@ export const SPELLS: Spell[] = [
     level: 1,
     classes: ["bard", "sorcerer", "wizard"],
     trigger: "Action · 60 feet · Concentration, up to 1 minute",
-    text: "Each creature of your choice in a 5-foot-radius sphere makes a Wisdom saving throw or has the Incapacitated condition until the end of its next turn, then makes the save again or has the Unconscious condition for the duration. Undead and creatures immune to Exhaustion are unaffected.",
+    text: md(
+      "Each creature of your choice in a 5-foot-radius sphere makes a Wisdom saving throw or has the Incapacitated condition until the end of its next turn, then makes the save again or has the Unconscious condition for the duration. Undead and creatures immune to Exhaustion are unaffected.",
+    ),
     save: "wis",
     area: { shape: "sphere", size: 5 },
   },
@@ -910,7 +1044,9 @@ export const SPELLS: Spell[] = [
     level: 1,
     classes: ["warlock"],
     trigger: "Reaction, when a creature within 60 feet damages you",
-    text: "The creature makes a Dexterity saving throw, taking 2d10 Fire damage on a failure or half on a success. +1d10 per slot level above 1.",
+    text: md(
+      "The creature makes a Dexterity saving throw, taking 2d10 Fire damage on a failure or half on a success. +1d10 per slot level above 1.",
+    ),
     roll: { label: "damage", type: "fire", count: 2, die: 10 },
     save: "dex",
     target: one("Target the creature that damaged you", 60),
@@ -921,7 +1057,9 @@ export const SPELLS: Spell[] = [
     level: 2,
     classes: ["bard", "cleric", "druid", "paladin", "ranger"],
     trigger: "Action · 30 feet · 8 hours",
-    text: "Up to three creatures each gain 5 to their current and maximum Hit Points for the duration. +5 per slot level above 2.",
+    text: md(
+      "Up to three creatures each gain 5 to their current and maximum Hit Points for the duration. +5 per slot level above 2.",
+    ),
   },
   {
     id: "invisibility",
@@ -929,7 +1067,9 @@ export const SPELLS: Spell[] = [
     level: 2,
     classes: ["bard", "sorcerer", "warlock", "wizard"],
     trigger: "Action · Touch · Concentration, up to 1 hour",
-    text: "A creature you touch has the Invisible condition until the spell ends. It ends early when the target attacks, deals damage or casts a spell. One more creature per slot level above 2.",
+    text: md(
+      "A creature you touch has the Invisible condition until the spell ends. It ends early when the target attacks, deals damage or casts a spell. One more creature per slot level above 2.",
+    ),
   },
   {
     id: "lesser-restoration",
@@ -937,7 +1077,9 @@ export const SPELLS: Spell[] = [
     level: 2,
     classes: ["bard", "cleric", "druid", "paladin", "ranger"],
     trigger: "Bonus Action · Touch · Instantaneous",
-    text: "End one condition on a creature you touch: Blinded, Deafened, Paralyzed or Poisoned.",
+    text: md(
+      "End one condition on a creature you touch: Blinded, Deafened, Paralyzed or Poisoned.",
+    ),
   },
   {
     id: "shatter",
@@ -945,7 +1087,9 @@ export const SPELLS: Spell[] = [
     level: 2,
     classes: ["bard", "sorcerer", "warlock", "wizard"],
     trigger: "Action · 60 feet · Instantaneous",
-    text: "A ringing noise bursts in a 10-foot-radius sphere. Each creature in it makes a Constitution saving throw, taking 3d8 Thunder damage on a failure or half on a success. +1d8 per slot level above 2.",
+    text: md(
+      "A ringing noise bursts in a 10-foot-radius sphere. Each creature in it makes a Constitution saving throw, taking 3d8 Thunder damage on a failure or half on a success. +1d8 per slot level above 2.",
+    ),
     roll: { label: "damage", type: "thunder", count: 3, die: 8 },
     save: "con",
     area: { shape: "sphere", size: 10 },
@@ -956,7 +1100,9 @@ export const SPELLS: Spell[] = [
     level: 2,
     classes: ["sorcerer", "wizard"],
     trigger: "Action · 60 feet · Concentration, up to 1 hour",
-    text: "Sticky webbing fills a 20-foot cube. It is Difficult Terrain and lightly obscures. A creature that starts its turn or enters it makes a Dexterity saving throw or has the Restrained condition while in the webs.",
+    text: md(
+      "Sticky webbing fills a 20-foot cube. It is Difficult Terrain and lightly obscures. A creature that starts its turn or enters it makes a Dexterity saving throw or has the Restrained condition while in the webs.",
+    ),
     save: "dex",
     area: { shape: "cube", size: 20 },
   },
@@ -966,7 +1112,9 @@ export const SPELLS: Spell[] = [
     level: 3,
     classes: ["bard", "cleric", "druid", "paladin", "ranger", "sorcerer", "warlock", "wizard"],
     trigger: "Action · 120 feet · Instantaneous",
-    text: "Choose a creature, object or magical effect. Any spell of level 3 or lower on it ends. For each higher-level spell, make an ability check with your spellcasting ability (DC 10 + its level); on a success it ends.",
+    text: md(
+      "Choose a creature, object or magical effect. Any spell of level 3 or lower on it ends. For each higher-level spell, make an ability check with your spellcasting ability (DC 10 + its level); on a success it ends.",
+    ),
   },
   {
     id: "haste",
@@ -974,7 +1122,9 @@ export const SPELLS: Spell[] = [
     level: 3,
     classes: ["sorcerer", "wizard"],
     trigger: "Action · 30 feet · Concentration, up to 1 minute",
-    text: "A willing creature’s Speed doubles, it gains +2 AC, Advantage on Dexterity saves, and an extra action each turn (Attack with one weapon attack, Dash, Disengage, Hide or Utilize). When the spell ends it can’t move or act until after its next turn.",
+    text: md(
+      "A willing creature’s Speed doubles, it gains +2 AC, Advantage on Dexterity saves, and an extra action each turn (Attack with one weapon attack, Dash, Disengage, Hide or Utilize). When the spell ends it can’t move or act until after its next turn.",
+    ),
   },
   {
     id: "mass-healing-word",
@@ -982,7 +1132,9 @@ export const SPELLS: Spell[] = [
     level: 3,
     classes: ["bard", "cleric"],
     trigger: "Bonus Action · 60 feet · Instantaneous",
-    text: "Up to six creatures you can see each regain Hit Points equal to 2d4 plus your spellcasting ability modifier. +1d4 per slot level above 3.",
+    text: md(
+      "Up to six creatures you can see each regain Hit Points equal to 2d4 plus your spellcasting ability modifier. +1d4 per slot level above 3.",
+    ),
     roll: { label: "healing", count: 2, die: 4, mod: true },
     target: {
       prompt: "Target up to six creatures within 60 feet",
@@ -997,7 +1149,9 @@ export const SPELLS: Spell[] = [
     level: 3,
     classes: ["cleric"],
     trigger: "Action · Self (15-foot emanation) · Concentration, up to 10 minutes",
-    text: "Spirits flit around you. Your Speed is halved for enemies in the emanation; whenever one enters it or ends its turn there it makes a Wisdom saving throw, taking 3d8 Radiant or Necrotic damage on a failure or half on a success. +1d8 per slot level above 3.",
+    text: md(
+      "Spirits flit around you. Your Speed is halved for enemies in the emanation; whenever one enters it or ends its turn there it makes a Wisdom saving throw, taking 3d8 Radiant or Necrotic damage on a failure or half on a success. +1d8 per slot level above 3.",
+    ),
     roll: { label: "damage", type: "radiant", count: 3, die: 8 },
     save: "wis",
     area: { shape: "emanation", size: 15 },
@@ -1008,7 +1162,9 @@ export const SPELLS: Spell[] = [
     level: 3,
     classes: ["cleric", "druid", "paladin", "ranger"],
     trigger: "Action · Touch · Instantaneous (a diamond worth 300+ GP, consumed)",
-    text: "Touch a creature that has died within the last minute. It returns to life with 1 Hit Point. This can’t revive a creature that died of old age, nor restore missing body parts.",
+    text: md(
+      "Touch a creature that has died within the last minute. It returns to life with 1 Hit Point. This can’t revive a creature that died of old age, nor restore missing body parts.",
+    ),
   },
 ];
 

@@ -1,3 +1,4 @@
+import { md } from "../../macros/markdown.macro" with { type: "macro" };
 import { describe, expect, it } from "vitest";
 import { dungeonWorld as dw } from "../dungeon-world";
 import { derive } from "../../features/characters/store";
@@ -168,7 +169,7 @@ describe("performMove", () => {
         {
           kind: "check" as const,
           difficulty: { kind: "prompt" as const, prompt: "Difficulty", initial: 13 },
-          outcomes: { strong: "Success.", miss: "Failure." },
+          outcomes: { strong: md("Success."), miss: md("Failure.") },
         },
       ],
     };
@@ -185,7 +186,7 @@ describe("performMove", () => {
         {
           kind: "check" as const,
           difficulty: { kind: "target" as const, value: "ac" },
-          outcomes: { strong: "Success.", weak: "Mixed.", miss: "Failure." },
+          outcomes: { strong: md("Success."), weak: md("Mixed."), miss: md("Failure.") },
         },
       ],
     };
@@ -226,7 +227,7 @@ describe("performMove", () => {
         {
           kind: "check" as const,
           difficulty: { kind: "prompt" as const, prompt: "Difficulty", initial: 13 },
-          outcomes: { strong: "Success.", weak: "Mixed.", miss: "Failure." },
+          outcomes: { strong: md("Success."), weak: md("Mixed."), miss: md("Failure.") },
         },
       ],
     };

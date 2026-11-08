@@ -1,4 +1,6 @@
+import { md } from "../../macros/markdown.macro" with { type: "macro" };
 import { describe, expect, it } from "vitest";
+import { plainText } from "../../core/richText";
 import * as Y from "yjs";
 import { dungeonWorld } from "../dungeon-world";
 import { performMove } from "../../features/characters/moves";
@@ -40,12 +42,12 @@ describe("homebrew", () => {
       name: "Sing the Old Song",
       category: "basic",
       trigger: "When you sing",
-      text: "Roll +CHA.",
+      text: md("Roll +CHA."),
       steps: [
         {
           kind: "check",
           stat: "cha",
-          outcomes: { strong: "They listen.", weak: "Some listen.", miss: "Silence." },
+          outcomes: { strong: md("They listen."), weak: md("Some listen."), miss: md("Silence.") },
         },
       ],
     });
@@ -65,6 +67,6 @@ describe("homebrew", () => {
     const move = actionsFor(c, system, derive(c, system)).find((a) => a.id === id)!;
     const r = performMove(system, move, c, derive(c, system), {}, () => 5);
     expect(r.roll?.total).toBe(12);
-    expect(r.outcome).toBe("They listen.");
+    expect(plainText(r.outcome)).toBe("They listen.");
   });
 });

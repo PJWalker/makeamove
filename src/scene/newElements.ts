@@ -1,5 +1,6 @@
 import { type Grid, type Point, snapPoint, snapSize } from "./grid";
-import type { BlobRef, NewElement, SceneElement, TokenStyle } from "./types";
+import type { BlobRef } from "../core/blob";
+import type { NewElement, SceneElement, TokenStyle } from "./types";
 
 /*
  * The elements new things become: tokens, and imported images.

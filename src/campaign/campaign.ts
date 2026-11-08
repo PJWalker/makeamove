@@ -2,7 +2,7 @@ import { store, watch } from "../lib/store";
 import * as Y from "yjs";
 import { IndexeddbPersistence } from "y-indexeddb";
 import { newId, newSecret } from "../lib/ids";
-import { dataName } from "../platform/dataEpoch";
+import { campaignDbName } from "./storage";
 
 import { commaListOf, formatCommaList } from "../lib/list";
 import { device } from "../platform/device";
@@ -73,8 +73,6 @@ const DEFAULT_SYSTEM = getSystem(NO_SYSTEM_ID);
 /** Canvas colour for an auto scene with no map yet. */
 export const DEFAULT_CANVAS_COLOUR = "#2b3a55";
 
-const dbName = (id: string) => dataName("campaign", id);
-
 export class Campaign {
   readonly id: string;
   readonly doc: Y.Doc;
@@ -143,7 +141,7 @@ export class Campaign {
     this.combatants = this.doc.getMap("combatants");
     this.homebrew = this.doc.getMap("homebrew");
     this.entityGraphics = this.doc.getMap("entityGraphics");
-    this.persistence = new IndexeddbPersistence(dbName(id), this.doc);
+    this.persistence = new IndexeddbPersistence(campaignDbName(id), this.doc);
     this.chat = new ChatLog(this.doc, id, device.value.id);
     this.connection = new CampaignConnection(id, this.doc);
   }
@@ -558,7 +556,7 @@ async function deleteVault(id: string) {
 export async function deleteLocalCampaign(id: string) {
   if (activeCampaign.value?.id === id) closeCampaign();
   const doc = new Y.Doc();
-  const p = new IndexeddbPersistence(dbName(id), doc);
+  const p = new IndexeddbPersistence(campaignDbName(id), doc);
   await p.whenSynced;
   for (const sceneId of doc.getMap("scenes").keys())
     indexedDB.deleteDatabase(sceneDbName(sceneGuid(id, sceneId)));

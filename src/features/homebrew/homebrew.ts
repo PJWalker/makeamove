@@ -1,4 +1,5 @@
 import type * as Y from "yjs";
+import { asRichText } from "../../core/richText";
 import { newId } from "../../lib/ids";
 import type { ActionDef, GameSystem, ItemDef } from "../../systems/types";
 
@@ -18,9 +19,25 @@ const PREFIX = "hb-";
 export const newHomebrewId = () => `${PREFIX}${newId()}`;
 export const isHomebrew = (id: string) => id.startsWith(PREFIX);
 
+/** A move as saved, its text rich text even if it was saved as a plain string. */
+const readMove = (move: ActionDef): ActionDef => ({
+  ...move,
+  text: asRichText(move.text),
+  steps: move.steps.map((step) =>
+    step.kind === "check"
+      ? {
+          ...step,
+          outcomes: Object.fromEntries(
+            Object.entries(step.outcomes).map(([id, text]) => [id, asRichText(text)]),
+          ),
+        }
+      : step,
+  ),
+});
+
 export function listHomebrew(map: Y.Map<HomebrewEntry>): (HomebrewEntry & { id: string })[] {
   return [...map.entries()]
-    .map(([id, e]) => ({ id, ...e }))
+    .map(([id, e]) => (e.kind === "move" ? { id, ...e, move: readMove(e.move) } : { id, ...e }))
     .sort((a, b) => nameOf(a).localeCompare(nameOf(b)));
 }
 

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { systemOf } from "../../features/characters/api";
 import { derive } from "../../features/characters/store";
 import { Button } from "../../ui/Button";
-import type { ItemUseProps } from "../extensions";
+import type { ItemUseProps } from "../extensionTypes";
 import { consumeDungeonWorld2Item } from "./campaign";
 
 /** Controls for Dungeon World 2's charged items: a potion's or a wand's choice of effect. */

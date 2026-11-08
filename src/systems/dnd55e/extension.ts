@@ -1,4 +1,4 @@
-import type { SystemExtension } from "../extensions";
+import type { SystemExtension } from "../extensionTypes";
 import { DndNpcSheet, DndSheet } from "./Sheet";
 
 export const dnd55eExtension: SystemExtension = {

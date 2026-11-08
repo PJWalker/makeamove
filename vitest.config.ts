@@ -1,6 +1,8 @@
 import { configDefaults, defineConfig } from "vitest/config";
+import { macroPlugins } from "./vite.config";
 
 export default defineConfig({
+  plugins: macroPlugins(),
   test: {
     exclude: [...configDefaults.exclude, "tests/**", ".claude/**", ".stryker-tmp/**"],
     coverage: {

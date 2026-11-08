@@ -22,7 +22,7 @@ import { IconOpenWindow } from "../ui/icons";
 import { IconPost, IconRoll, IconTarget } from "../ui/icons";
 import { Button } from "../ui/Button";
 import { usePopupDialog } from "./usePopupDialog";
-import { Dialog, type WindowProxy } from "./CampaignDialogs";
+import { Dialog, type WindowProxy } from "./Dialog";
 import { closeEntityTab, detachPanel, dockPanel, isFloating, layout } from "./panelLayout";
 import { locate } from "./layoutModel";
 import type { DockItemId } from "./panelLayout";

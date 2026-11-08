@@ -4,7 +4,7 @@ import { activeCampaign } from "../../campaign/campaign";
 import { device } from "../../platform/device";
 import type { LinkKind } from "../notes/links";
 import { linkLabel } from "../notes/targets";
-import { plainText } from "./content";
+import { messageText } from "./content";
 import { visibilityOf, type ChatMessage } from "./types";
 
 /*
@@ -27,7 +27,7 @@ export function describe(
 ): { title: string; body: string } | null {
   switch (m.kind) {
     case "text": {
-      const text = plainText(m.text, nameOf);
+      const text = messageText(m.text, nameOf);
       return {
         title: m.to ? `${m.name} (whisper)` : m.name,
         body: m.emote ? `${m.name} ${text}` : text,

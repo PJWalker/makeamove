@@ -1,11 +1,12 @@
+import { md } from "../../../macros/markdown.macro" with { type: "macro" };
 import type { CharacterView } from "../../../features/characters/types";
 import { resolveEffects } from "../../effects";
 import type { ActionDef, GameSystem } from "../../types";
 
 const outcomes = {
-  success: "The test succeeds.",
-  mixed: "The test succeeds with a complication.",
-  failure: "The test does not succeed.",
+  success: md("The test succeeds."),
+  mixed: md("The test succeeds with a complication."),
+  failure: md("The test does not succeed."),
 };
 
 const actions: ActionDef[] = [
@@ -14,7 +15,7 @@ const actions: ActionDef[] = [
     name: "Test Check",
     category: "checks",
     trigger: "When you make a test check",
-    text: "Resolve a generic check and choose its follow-up.",
+    text: md("Resolve a generic check and choose its follow-up."),
     steps: [
       {
         kind: "check",
@@ -42,7 +43,7 @@ const actions: ActionDef[] = [
     name: "Test Target",
     category: "checks",
     trigger: "When you test a target",
-    text: "Resolve a generic targeted check.",
+    text: md("Resolve a generic targeted check."),
     target: { prompt: "Choose a target", min: 1, max: 1 },
     steps: [
       {
@@ -58,7 +59,7 @@ const actions: ActionDef[] = [
     name: "Test Save",
     category: "checks",
     trigger: "When you test a save",
-    text: "Resolve a generic save.",
+    text: md("Resolve a generic save."),
     steps: [
       {
         kind: "save",
@@ -74,7 +75,7 @@ const actions: ActionDef[] = [
     name: "Test Note",
     category: "reference",
     trigger: "When you need a text-only action",
-    text: "This action has no automated steps.",
+    text: md("This action has no automated steps."),
     steps: [],
   },
   {
@@ -82,7 +83,7 @@ const actions: ActionDef[] = [
     name: "Test Learnable",
     category: "reference",
     trigger: "When you learn an action",
-    text: "A generic action that may be learned.",
+    text: md("A generic action that may be learned."),
     steps: [],
     tags: ["learnable"],
   },

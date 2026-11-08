@@ -30,7 +30,7 @@ import { OptionPicker } from "../ui/OptionPicker";
 import { closePopup } from "../ui/popup";
 import { usePopupDialog } from "./usePopupDialog";
 import { Segmented } from "../ui/Segmented";
-import { Dialog } from "./CampaignDialogs";
+import { Dialog } from "./Dialog";
 
 /*
  * The guided flow's parts (design: core change 14): a choice with its

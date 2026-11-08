@@ -23,7 +23,7 @@ import type { Campaign } from "../campaign/campaign";
 import { useY } from "../ui/useY";
 import { Button } from "../ui/Button";
 import { IconDelete, IconExpand } from "../ui/icons";
-import { Dialog } from "../workspace/CampaignDialogs";
+import { Dialog } from "../workspace/Dialog";
 import { CharacterText } from "../workspace/CharacterText";
 import { showPanel } from "../workspace/panelLayout";
 import { dialogRequest } from "../workspace/canvasState";

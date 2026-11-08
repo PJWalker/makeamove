@@ -1,4 +1,5 @@
-import { FormattedText } from "../workspace/FormattedText";
+import { asRichText, sameRichText } from "../core/richText";
+import { RichTextView } from "../workspace/RichTextView";
 import { useState } from "react";
 import type { MoveMessage, RollMessage, RollVisibility } from "../features/chat/types";
 import { type Roll } from "../features/dice/notation";
@@ -226,8 +227,12 @@ export function MoveCard({
         <span className="roll-formula">{m.moveName}</span>
         <span className="roll-comment">{m.characterName}</span>
       </div>
-      {m.text && m.text !== m.outcome && (
-        <FormattedText campaign={campaign} text={m.text} characterId={m.characterId ?? null} />
+      {m.text && !sameRichText(asRichText(m.text), asRichText(m.outcome)) && (
+        <RichTextView
+          campaign={campaign}
+          text={asRichText(m.text)}
+          characterId={m.characterId ?? null}
+        />
       )}
       {m.targets?.some((t) => t.roll) ? (
         <TargetRolls campaign={campaign} m={m} />
@@ -259,9 +264,9 @@ export function MoveCard({
         </div>
       )}
       {label && <div className="move-band">{label}</div>}
-      <FormattedText
+      <RichTextView
         campaign={campaign}
-        text={m.outcome}
+        text={asRichText(m.outcome)}
         characterId={m.characterId ?? null}
         className="move-outcome"
       />

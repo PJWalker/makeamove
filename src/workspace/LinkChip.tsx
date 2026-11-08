@@ -6,7 +6,7 @@ import { openInSidebar } from "./linkNavigation";
 import type { Campaign } from "../campaign/campaign";
 import { menuTrigger } from "../ui/menuTrigger";
 import { IconImage, IconOpenWindow, IconSidebar } from "../ui/icons";
-import type { WindowProxy } from "./CampaignDialogs";
+import type { WindowProxy } from "./Dialog";
 import { ContextMenu } from "../ui/ContextMenu";
 import { actionMenuItems } from "./actionMenu";
 import { dragEntity, entity } from "./entityDrag";

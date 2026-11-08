@@ -1,9 +1,12 @@
+import { md } from "../../macros/markdown.macro" with { type: "macro" };
 import { parse } from "../../features/dice/notation";
 import { commaListOf } from "../../lib/list";
 
 import { resolveEffects } from "../effects";
 import type { ActionDef, ChoiceDef, GameSystem, OptionDef } from "../types";
-import { PATHS, sourceGmReference, sourceMoveOutcomes, sourceMoveRichText } from "./paths";
+import { plainText, richTextFromPlain, type RichText } from "../../core/richText";
+import { PATHS } from "./paths";
+import { sourceGmReference, sourceMoves } from "./paths.macro" with { type: "macro" };
 import { revealedStruggleData, STRUGGLES } from "./struggles";
 import { INITIAL_TREASURE_BOXES, MAX_TREASURE_BOXES, purchaseAtWealth } from "./wealth";
 import { DW2_RELATIONSHIP_DEPTH } from "./bondStore";
@@ -21,10 +24,10 @@ type MoveSpec = {
   name: string;
   category: "basic" | "special" | "campaign" | "class";
   trigger: string;
-  text: string;
+  text: RichText;
   /** A stat id, "choose" or "none". */
   stat?: string;
-  outcomes?: Record<Band, string>;
+  outcomes?: Record<Band, RichText>;
   classId?: string;
   sessionUse?: "character" | "campaign";
 };
@@ -94,45 +97,16 @@ const CLASSES = [
   },
 ];
 
-const bands = (strong: string, weak: string, miss: string): Record<Band, string> => ({
+const bands = (strong: RichText, weak: RichText, miss: RichText): Record<Band, RichText> => ({
   strong,
   weak,
   miss,
 });
-const marksXp = (outcomes?: Record<Band, string>) =>
-  /\bmark(?:s)?\s+(?:1\s+)?XP\b/i.test(outcomes?.miss ?? "");
+const marksXp = (outcomes?: Record<Band, RichText>) =>
+  /\bmark(?:s)?\s+(?:1\s+)?XP\b/i.test(plainText(outcomes?.miss));
 
-const MOVE_SOURCE_NAMES: Record<string, string> = {
-  "aid-a-pc": "Aid a PC",
-  "cast-a-spell": "Cast a Spell",
-  "comfort-or-support": "Comfort or Support",
-  "defy-danger": "Defy Danger",
-  "pull-strings": "Pull Strings",
-  "sense-motive": "Sense Motive",
-  "sneak-past": "Sneak Past",
-  "spout-lore": "Spout Lore",
-  "trade-blows": "Trade Blows",
-  "unearth-secrets": "Unearth Secrets",
-  "end-the-session": "End the Session",
-  "enjoy-downtime": "Enjoy Downtime",
-  "forge-a-bond": "Forge a Bond",
-  "reveal-your-struggle": "Reveal Your Struggle",
-  "face-death": "Face Death",
-  "level-up": "Level Up",
-  "make-camp": "Make Camp",
-  "perform-a-ritual": "Perform a Ritual",
-  "reach-your-limit": "Reach Your Limit",
-  "perilous-journey": "Undertake a Perilous Journey",
-  "barbarian-rage": "Rage!",
-  "bard-perform-art": "Perform Your Art",
-  "cleric-invoke-divine": "Invoke the Divine",
-  "druid-shapeshift": "Shapeshift",
-  "fighter-signature-weapon": "Signature Weapon",
-  "paladin-oaths": "Oaths of Conviction",
-  "ranger-animal-companion": "Animal Companion",
-  "rogue-tricks-trade": "Tricks of the Trade",
-  "wizard-weave-arcane": "Weave the Arcane",
-};
+/** Core moves' text and outcomes as the rulebook writes them, read at build time. */
+const SOURCE_MOVES = sourceMoves();
 
 const MOVES: MoveSpec[] = (
   [
@@ -141,19 +115,23 @@ const MOVES: MoveSpec[] = (
       name: "Aid a PC",
       category: "basic",
       trigger: "When you help another PC",
-      text: "Before their roll, agree whether the help is risky, stressful, or emotionally difficult. They gain advantage; apply the agreed cost in the fiction.",
+      text: md(
+        "Before their roll, agree whether the help is risky, stressful, or emotionally difficult. They gain advantage; apply the agreed cost in the fiction.",
+      ),
     },
     {
       id: "cast-a-spell",
       name: "Cast a Spell",
       category: "basic",
       trigger: "When you invoke magic available to you",
-      text: "The GM sets magnitude. If it exceeds your casting stat, negotiate a lesser effect or use a ritual. Equal magnitude imposes disadvantage; lower magnitude is rolled normally. On a partial success, choose a source-specific cost, mark a Condition, or accept a twist.",
+      text: md(
+        "The GM sets magnitude. If it exceeds your casting stat, negotiate a lesser effect or use a ritual. Equal magnitude imposes disadvantage; lower magnitude is rolled normally. On a partial success, choose a source-specific cost, mark a Condition, or accept a twist.",
+      ),
       stat: "choose",
       outcomes: bands(
-        "The spell takes effect as intended.",
-        "The spell takes effect; choose a cost or complication.",
-        "The magic goes badly wrong. Mark XP; the GM makes a move.",
+        md("The spell takes effect as intended."),
+        md("The spell takes effect; choose a cost or complication."),
+        md("The magic goes badly wrong. Mark XP; the GM makes a move."),
       ),
     },
     {
@@ -162,19 +140,23 @@ const MOVES: MoveSpec[] = (
       category: "basic",
       trigger: "Once per session, when you comfort or support another PC",
       sessionUse: "character",
-      text: "Ask whether a relationship changed, the person opened up, or a Struggle was revealed. For each yes, the comforted PC chooses to clear a marked Condition, gain relationship Depth, or let the supporter clear a marked Condition.",
+      text: md(
+        "Ask whether a relationship changed, the person opened up, or a Struggle was revealed. For each yes, the comforted PC chooses to clear a marked Condition, gain relationship Depth, or let the supporter clear a marked Condition.",
+      ),
     },
     {
       id: "defy-danger",
       name: "Defy Danger",
       category: "basic",
       trigger: "When you contend with a risk or obstacle and no other move fits",
-      text: "Describe your approach and choose the matching stat. On a partial success, prevail at a cost: mark a Condition, attract attention, or sacrifice something. A miss marks XP and gives the GM a move.",
+      text: md(
+        "Describe your approach and choose the matching stat. On a partial success, prevail at a cost: mark a Condition, attract attention, or sacrifice something. A miss marks XP and gives the GM a move.",
+      ),
       stat: "choose",
       outcomes: bands(
-        "You overcome the danger cleanly.",
-        "You prevail, but choose a cost.",
-        "Your effort is thwarted or goes badly wrong. Mark XP; the GM makes a move.",
+        md("You overcome the danger cleanly."),
+        md("You prevail, but choose a cost."),
+        md("Your effort is thwarted or goes badly wrong. Mark XP; the GM makes a move."),
       ),
     },
     {
@@ -182,12 +164,14 @@ const MOVES: MoveSpec[] = (
       name: "Pull Strings",
       category: "basic",
       trigger: "When you influence an NPC to do what you want",
-      text: "Choose an approach such as deception, honest persuasion, or a threat, then roll Charisma. The GM uses that approach to shape the consequences.",
+      text: md(
+        "Choose an approach such as deception, honest persuasion, or a threat, then roll Charisma. The GM uses that approach to shape the consequences.",
+      ),
       stat: "cha",
       outcomes: bands(
-        "They do it as best they can.",
-        "They try, but the GM adds a fitting complication.",
-        "They make matters worse. Mark XP; the GM makes a move.",
+        md("They do it as best they can."),
+        md("They try, but the GM adds a fitting complication."),
+        md("They make matters worse. Mark XP; the GM makes a move."),
       ),
     },
     {
@@ -195,12 +179,14 @@ const MOVES: MoveSpec[] = (
       name: "Sense Motive",
       category: "basic",
       trigger: "When you scrutinize someone through a conversation",
-      text: "On a strong hit, ask two questions about their thoughts, feelings, or motives; on a partial hit, ask one. Answers are truthful. On a miss, an NPC may notice you; a PC may question you instead.",
+      text: md(
+        "On a strong hit, ask two questions about their thoughts, feelings, or motives; on a partial hit, ask one. Answers are truthful. On a miss, an NPC may notice you; a PC may question you instead.",
+      ),
       stat: "wis",
       outcomes: bands(
-        "Ask two questions.",
-        "Ask one question.",
-        "An NPC discovers or interrupts you; mark XP. A PC may ask you a question instead.",
+        md("Ask two questions."),
+        md("Ask one question."),
+        md("An NPC discovers or interrupts you; mark XP. A PC may ask you a question instead."),
       ),
     },
     {
@@ -208,12 +194,14 @@ const MOVES: MoveSpec[] = (
       name: "Sneak Past",
       category: "basic",
       trigger: "When you stealthily evade notice",
-      text: "On a partial success, the GM chooses a suspicion, a marked Condition, or a closing opportunity. A miss means you are spotted or expected; mark XP.",
+      text: md(
+        "On a partial success, the GM chooses a suspicion, a marked Condition, or a closing opportunity. A miss means you are spotted or expected; mark XP.",
+      ),
       stat: "dex",
       outcomes: bands(
-        "You remain undetected.",
-        "You succeed, but the GM chooses a complication.",
-        "You are spotted or expected. Mark XP; the GM makes a move.",
+        md("You remain undetected."),
+        md("You succeed, but the GM chooses a complication."),
+        md("You are spotted or expected. Mark XP; the GM makes a move."),
       ),
     },
     {
@@ -221,11 +209,13 @@ const MOVES: MoveSpec[] = (
       name: "Spout Lore",
       category: "basic",
       trigger: "When you rack your brain about a specific subject",
-      text: "Ask the GM one question. Add one for each yes: you can consult a record, the subject relates to your Origins, or it relates to your Struggle.",
+      text: md(
+        "Ask the GM one question. Add one for each yes: you can consult a record, the subject relates to your Origins, or it relates to your Struggle.",
+      ),
       outcomes: bands(
-        "The GM answers generously; the first ally acting on it gains advantage.",
-        "The GM gives a generous answer.",
-        "The GM reveals danger or an unwelcome truth. Mark XP; the GM makes a move.",
+        md("The GM answers generously; the first ally acting on it gains advantage."),
+        md("The GM gives a generous answer."),
+        md("The GM reveals danger or an unwelcome truth. Mark XP; the GM makes a move."),
       ),
     },
     {
@@ -233,12 +223,14 @@ const MOVES: MoveSpec[] = (
       name: "Trade Blows",
       category: "basic",
       trigger: "When you engage a foe in battle",
-      text: "Choose Strength for melee or Dexterity for ranged combat. On a strong hit, choose an ally’s opportunity, maximum damage, or minimum damage suffered. On a partial hit, choose a Condition, a foe’s opportunity, or lose something. On a miss, choose minimum damage dealt or maximum damage suffered; mark XP.",
+      text: md(
+        "Choose Strength for melee or Dexterity for ranged combat. On a strong hit, choose an ally’s opportunity, maximum damage, or minimum damage suffered. On a partial hit, choose a Condition, a foe’s opportunity, or lose something. On a miss, choose minimum damage dealt or maximum damage suffered; mark XP.",
+      ),
       stat: "choose",
       outcomes: bands(
-        "Choose one strong-hit benefit.",
-        "Choose one partial-hit cost.",
-        "Choose min damage dealt or max damage suffered. Mark XP; the GM makes a move.",
+        md("Choose one strong-hit benefit."),
+        md("Choose one partial-hit cost."),
+        md("Choose min damage dealt or max damage suffered. Mark XP; the GM makes a move."),
       ),
     },
     {
@@ -246,12 +238,14 @@ const MOVES: MoveSpec[] = (
       name: "Unearth Secrets",
       category: "basic",
       trigger: "When you investigate a mysterious situation and the GM confirms there is a secret",
-      text: "You always discover something. On a partial hit, choose an unclear clue, personal risk, or a marked Condition. A miss makes the discovery dangerous; mark XP.",
+      text: md(
+        "You always discover something. On a partial hit, choose an unclear clue, personal risk, or a marked Condition. A miss makes the discovery dangerous; mark XP.",
+      ),
       stat: "int",
       outcomes: bands(
-        "The discovery is clear and significant.",
-        "Choose a complication for the discovery.",
-        "The discovery is dangerous. Mark XP; the GM makes a move.",
+        md("The discovery is clear and significant."),
+        md("Choose a complication for the discovery."),
+        md("The discovery is dangerous. Mark XP; the GM makes a move."),
       ),
     },
     {
@@ -260,40 +254,48 @@ const MOVES: MoveSpec[] = (
       category: "special",
       trigger: "When the session ends",
       sessionUse: "campaign",
-      text: "As a group, answer the beta’s end-of-session questions. Everyone marks XP for each agreed yes.",
+      text: md(
+        "As a group, answer the beta’s end-of-session questions. Everyone marks XP for each agreed yes.",
+      ),
     },
     {
       id: "enjoy-downtime",
       name: "Enjoy Downtime",
       category: "campaign",
       trigger: "When you spend a few days resting in a safe place",
-      text: "Use the campaign move to recover, resupply, shop, or train.",
+      text: md("Use the campaign move to recover, resupply, shop, or train."),
     },
     {
       id: "forge-a-bond",
       name: "Forge a Bond",
       category: "campaign",
       trigger: "When two PCs have 3 Depth with each other",
-      text: "Clear both Relationship tracks and choose whether to establish a new Bond, reinforce an existing Bond, or ask each other how you really feel.",
+      text: md(
+        "Clear both Relationship tracks and choose whether to establish a new Bond, reinforce an existing Bond, or ask each other how you really feel.",
+      ),
     },
     {
       id: "reveal-your-struggle",
       name: "Reveal Your Struggle",
       category: "campaign",
       trigger: "When you Make Camp with a locked Condition, or when you Level Up",
-      text: "Confess a terrible truth about your Struggle, reveal or deepen it, and clear a locked Condition if you have one.",
+      text: md(
+        "Confess a terrible truth about your Struggle, reveal or deepen it, and clear a locked Condition if you have one.",
+      ),
     },
     {
       id: "face-death",
       name: "Face Death",
       category: "special",
       trigger: "When you are at 0 HP and take decisive action",
-      text: "While Helpless, choose to gamble with Death: roll without a stat. A strong hit restores half your maximum HP before the action; a partial hit costs you something or your life; a miss means death before the Scene ends. You may instead narrate a final deed and die.",
+      text: md(
+        "While Helpless, choose to gamble with Death: roll without a stat. A strong hit restores half your maximum HP before the action; a partial hit costs you something or your life; a miss means death before the Scene ends. You may instead narrate a final deed and die.",
+      ),
       stat: "none",
       outcomes: bands(
-        "Recover half your maximum HP, then act.",
-        "Accept a lasting loss and recover 1 HP, or die after acting.",
-        "You cannot act and will die before the Scene ends.",
+        md("Recover half your maximum HP, then act."),
+        md("Accept a lasting loss and recover 1 HP, or die after acting."),
+        md("You cannot act and will die before the Scene ends."),
       ),
     },
     {
@@ -301,7 +303,9 @@ const MOVES: MoveSpec[] = (
       name: "Level Up",
       category: "special",
       trigger: "When you mark the fifth XP",
-      text: "Clear XP, increase level and current and maximum HP by 1 (up to ten total increases), and take an advancement available at your new level or below.",
+      text: md(
+        "Clear XP, increase level and current and maximum HP by 1 (up to ten total increases), and take an advancement available at your new level or below.",
+      ),
     },
     {
       id: "make-camp",
@@ -309,33 +313,41 @@ const MOVES: MoveSpec[] = (
       category: "special",
       trigger: "Once per session, when the party rests for a few hours",
       sessionUse: "campaign",
-      text: "Describe the rest together. The world advances; each PC restores all HP and clears one marked Condition.",
+      text: md(
+        "Describe the rest together. The world advances; each PC restores all HP and clears one marked Condition.",
+      ),
     },
     {
       id: "perform-a-ritual",
       name: "Perform a Ritual",
       category: "special",
       trigger: "When you draw on a source of magical power for an effect",
-      text: "Describe the effect. The GM sets requirements based on its magnitude; the effect occurs once the requirements are fulfilled.",
+      text: md(
+        "Describe the effect. The GM sets requirements based on its magnitude; the effect occurs once the requirements are fulfilled.",
+      ),
     },
     {
       id: "reach-your-limit",
       name: "Reach Your Limit",
       category: "special",
       trigger: "When you mark your last Condition",
-      text: "Clear marked Conditions, act out an outburst associated with one, then lock that Condition.",
+      text: md(
+        "Clear marked Conditions, act out an outburst associated with one, then lock that Condition.",
+      ),
     },
     {
       id: "perilous-journey",
       name: "Undertake a Perilous Journey",
       category: "special",
       trigger: "When you travel through hostile territory to a known destination",
-      text: "Choose a leader and pace. A quick pace gives -1 and marks a Condition for everyone; a regular pace gives +1 and marks one for the leader; a careful pace gives +2. A strong hit brings a boon, a partial hit offers a complication, and a miss lets danger surprise you; everyone marks XP.",
+      text: md(
+        "Choose a leader and pace. A quick pace gives -1 and marks a Condition for everyone; a regular pace gives +1 and marks one for the leader; a careful pace gives +2. A strong hit brings a boon, a partial hit offers a complication, and a miss lets danger surprise you; everyone marks XP.",
+      ),
       stat: "choose",
       outcomes: bands(
-        "Arrive with a boon.",
-        "Arrive with a complication chosen from the move.",
-        "A danger surprises the party. Everyone marks XP; the GM makes a move.",
+        md("Arrive with a boon."),
+        md("Arrive with a complication chosen from the move."),
+        md("A danger surprises the party. Everyone marks XP; the GM makes a move."),
       ),
     },
     {
@@ -344,7 +356,9 @@ const MOVES: MoveSpec[] = (
       category: "class",
       classId: "barbarian",
       trigger: "When you enter a rage",
-      text: "Mark Angry. While raging, gain the move’s listed combat benefits and restrictions; calm down by accepting a different Condition to clear Angry.",
+      text: md(
+        "Mark Angry. While raging, gain the move’s listed combat benefits and restrictions; calm down by accepting a different Condition to clear Angry.",
+      ),
     },
     {
       id: "bard-perform-art",
@@ -352,12 +366,14 @@ const MOVES: MoveSpec[] = (
       category: "class",
       classId: "bard",
       trigger: "When you perform your art for an audience",
-      text: "On a strong hit, choose three audience effects; on a partial hit choose two; on a miss choose one and mark a Condition. Options can clear a marked Condition, deepen a PC relationship, restore an artistic resource, or win an NPC’s attention.",
+      text: md(
+        "On a strong hit, choose three audience effects; on a partial hit choose two; on a miss choose one and mark a Condition. Options can clear a marked Condition, deepen a PC relationship, restore an artistic resource, or win an NPC’s attention.",
+      ),
       stat: "cha",
       outcomes: bands(
-        "Choose three effects.",
-        "Choose two effects.",
-        "Choose one effect and mark a Condition.",
+        md("Choose three effects."),
+        md("Choose two effects."),
+        md("Choose one effect and mark a Condition."),
       ),
     },
     {
@@ -366,7 +382,9 @@ const MOVES: MoveSpec[] = (
       category: "class",
       classId: "cleric",
       trigger: "When you invoke your deity by name",
-      text: "Define a deity, domains, worshippers, and enemies. You may cast spells within the deity’s domains using Wisdom; disapproval on a partial hit reduces your relationship Depth.",
+      text: md(
+        "Define a deity, domains, worshippers, and enemies. You may cast spells within the deity’s domains using Wisdom; disapproval on a partial hit reduces your relationship Depth.",
+      ),
     },
     {
       id: "druid-shapeshift",
@@ -374,12 +392,14 @@ const MOVES: MoveSpec[] = (
       category: "class",
       classId: "druid",
       trigger: "When you transform into a previously encountered beast",
-      text: "Choose a fitting adaptation and roll Wisdom. A partial hit introduces an instinct to follow or resist; a miss limits your control. You cannot speak except with other PCs while transformed.",
+      text: md(
+        "Choose a fitting adaptation and roll Wisdom. A partial hit introduces an instinct to follow or resist; a miss limits your control. You cannot speak except with other PCs while transformed.",
+      ),
       stat: "wis",
       outcomes: bands(
-        "Transform and gain the adaptation.",
-        "Transform; the GM names an instinct.",
-        "Transform, but lose control for now. Mark XP; the GM makes a move.",
+        md("Transform and gain the adaptation."),
+        md("Transform; the GM names an instinct."),
+        md("Transform, but lose control for now. Mark XP; the GM makes a move."),
       ),
     },
     {
@@ -388,7 +408,9 @@ const MOVES: MoveSpec[] = (
       category: "class",
       classId: "fighter",
       trigger: "When you define your signature weapon",
-      text: "Choose a weapon base and two enhancements with the GM, then name it. Its range, tags, and damage are recorded in your inventory.",
+      text: md(
+        "Choose a weapon base and two enhancements with the GM, then name it. Its range, tags, and damage are recorded in your inventory.",
+      ),
     },
     {
       id: "paladin-oaths",
@@ -396,7 +418,9 @@ const MOVES: MoveSpec[] = (
       category: "class",
       classId: "paladin",
       trigger: "When you swear service to a liege",
-      text: "Name a liege and take the listed oaths. Each oath grants its stated benefit while upheld; breaking one locks a Condition, and atonement can clear it.",
+      text: md(
+        "Name a liege and take the listed oaths. Each oath grants its stated benefit while upheld; breaking one locks a Condition, and atonement can clear it.",
+      ),
     },
     {
       id: "ranger-animal-companion",
@@ -404,7 +428,9 @@ const MOVES: MoveSpec[] = (
       category: "class",
       classId: "ranger",
       trigger: "When your animal companion assists you",
-      text: "Choose the beast’s qualities and drawback. For each relevant quality, choose a benefit such as combat support, an opportunity, or advantage. Harm makes it leave or marks a Condition.",
+      text: md(
+        "Choose the beast’s qualities and drawback. For each relevant quality, choose a benefit such as combat support, an opportunity, or advantage. Harm makes it leave or marks a Condition.",
+      ),
     },
     {
       id: "rogue-tricks-trade",
@@ -412,12 +438,14 @@ const MOVES: MoveSpec[] = (
       category: "class",
       classId: "rogue",
       trigger: "When you use one of your Roguish Skills for danger or stealth",
-      text: "Use your trained skill to roll 1d8 + 1d6 instead of 2d6. Choose skills such as noticing sounds, handling traps, hiding, picking locks, or picking pockets.",
+      text: md(
+        "Use your trained skill to roll 1d8 + 1d6 instead of 2d6. Choose skills such as noticing sounds, handling traps, hiding, picking locks, or picking pockets.",
+      ),
       stat: "dex",
       outcomes: bands(
-        "Your specialized approach succeeds cleanly.",
-        "You succeed with a complication.",
-        "Your attempt goes badly. Mark XP; the GM makes a move.",
+        md("Your specialized approach succeeds cleanly."),
+        md("You succeed with a complication."),
+        md("Your attempt goes badly. Mark XP; the GM makes a move."),
       ),
     },
     {
@@ -426,21 +454,19 @@ const MOVES: MoveSpec[] = (
       category: "class",
       classId: "wizard",
       trigger: "When you prepare magical schools or combine their effects",
-      text: "Prepare three schools after camp. With your focus and hands free, combine a prepared verb and substance to cast using Intelligence. On a partial hit, you may forget a prepared school until camp.",
+      text: md(
+        "Prepare three schools after camp. With your focus and hands free, combine a prepared verb and substance to cast using Intelligence. On a partial hit, you may forget a prepared school until camp.",
+      ),
     },
   ] satisfies MoveSpec[]
 ).map((move) => {
-  const sourceName = MOVE_SOURCE_NAMES[move.id];
   const sourceLevel = move.category === "class" || move.category === "campaign" ? 4 : 3;
-  return sourceName
+  const source = SOURCE_MOVES[move.id]?.[sourceLevel];
+  return source
     ? {
         ...move,
-        text: sourceMoveRichText(sourceName, sourceLevel),
-        ...(move.outcomes
-          ? {
-              outcomes: sourceMoveOutcomes(sourceName, sourceLevel) ?? move.outcomes,
-            }
-          : {}),
+        text: source.text,
+        ...(move.outcomes ? { outcomes: source.outcomes ?? move.outcomes } : {}),
       }
     : move;
 });
@@ -494,7 +520,7 @@ const ARTIFACT_ACTIONS: ActionDef[] = DW2_MAGIC_ITEMS.flatMap(
       name: unlock.name,
       category: "artifact",
       trigger: `When you use ${unlock.name}`,
-      text: unlock.text ?? item.description,
+      text: richTextFromPlain(unlock.text ?? item.description),
       steps: [],
     })) ?? [],
 );

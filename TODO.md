@@ -4,7 +4,7 @@ What's left before Make a Move is a complete, publishable virtual tabletop. Draw
 
 ## 1. Before a public release (blockers)
 
-- [ ] **Campaign backup and restore.** Export the root doc, every subdocument (scenes, note pages, chat chunks, GM vault for GMs) and referenced OPFS blobs into one file with `Y.encodeStateAsUpdate`; matching import. Today a lost laptop can lose a scene for good.
+- [x] **Campaign backup and restore.** `.makeamove` export/import (Settings → Backup, lobby), plus a live backup folder via the File System API (Chromium only) in `campaign/folderBackup.ts`.
 - [ ] **Licensing review of bundled rules text**, per system (DW1, DW2 beta `paths.ts`, D&D 5.5e SRD, Blades SRD, Daggerheart SRD). Remove or gate anything not redistributable.
 - [ ] **Purge `Dungeon-World-2-Beta-v3.docx` from git history** if it must not ship with the repo.
 - [ ] **TURN fallback** for strict NATs (the Trystero transport has no ICE server config).

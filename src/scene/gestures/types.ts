@@ -4,9 +4,7 @@ import type { Point } from "../grid";
 import type { Presence } from "../presence";
 import type { SceneRenderer } from "../renderer";
 import type { SceneDoc } from "../sceneDoc";
-import type { SceneElement, TokenElement, Transform } from "../types";
-import type { AreaDraft } from "./light";
-import type { Placement } from "./shape";
+import type { AreaTone, SceneElement, ShapeKind, TokenElement, Transform } from "../types";
 
 /**
  * A drag in progress, from a press to its release. Moves update the
@@ -47,6 +45,22 @@ export interface Gesture {
   marqueeRect?(hover: Point): Rect;
 }
 
+/** An action's area waiting to be placed: its shape and size in world px, and who to tell. */
+export interface Placement {
+  shape: ShapeKind;
+  /** A radius, a side, or a length. */
+  length: number;
+  /** A line's width. */
+  width: number;
+  onPlaced: (placed: { id: string; covered: string[] } | null) => void;
+}
+
+/** An area of solid light or dark being placed, a click at a time. */
+export interface AreaPlacer {
+  /** A click while placing it: its next corner, or its first on a new tone. */
+  add(tone: AreaTone, world: Point, e: PointerEvent): void;
+}
+
 /** What the tools' gestures see of the controller. */
 export interface ToolContext {
   readonly renderer: SceneRenderer;
@@ -62,7 +76,7 @@ export interface ToolContext {
   readonly targetMode: Store<{ max?: number; actor?: string } | null>;
   readonly placing: Store<Placement | null>;
   /** An area of solid light or dark being placed, a click at a time. */
-  readonly area: AreaDraft;
+  readonly area: AreaPlacer;
   readonly onTextRequest:
     ((req: { at: Point; screen: Point; id?: string; text?: string }) => void) | null;
   readonly onItemTokenDragMove: ((token: TokenElement | null, event: PointerEvent) => void) | null;

@@ -2,6 +2,7 @@ import { lazy, Suspense, useState } from "react";
 import { useEffect, useLayoutEffect } from "react";
 import { sceneHueFromHex } from "../lib/colour";
 import type { Campaign } from "../campaign/campaign";
+import { runFolderBackup } from "../campaign/folderBackup";
 import { useY } from "../ui/useY";
 import { FloatingWindows } from "./FloatingWindows";
 import { windowLayer } from "../ui/windows";
@@ -21,12 +22,15 @@ import { GraphicDialogs } from "../workspace/GraphicDialogs";
 import { Palette } from "./Palette";
 import { Toolbar } from "./Toolbar";
 import { useValue } from "../ui/useValue";
+import { extensionOf } from "../systems/extensions";
+import { SystemExtensions } from "../workspace/systemExtensions";
 
 // PixiJS is big; load it only once someone opens a table.
 const SceneCanvas = lazy(() => import("./SceneCanvas"));
 
 export function Tabletop({ campaign }: { campaign: Campaign }) {
   const scenes = useY(campaign.scenes, () => campaign.sceneViews());
+  useEffect(() => runFolderBackup(campaign), [campaign]);
   // A system without initiative has no turn tracker.
   const combat = useY(campaign.meta, () => hasCombat(campaign));
   // The Reference holds GM guidance, for systems that have it.
@@ -80,45 +84,47 @@ export function Tabletop({ campaign }: { campaign: Campaign }) {
   const edges = useNearEdges(hiding);
 
   return (
-    <div
-      className="table"
-      data-autohide={hiding}
-      // Which edges' chrome autohide is showing; a dragged window needs both sidebars to drop on.
-      data-reveal={dragging ? "left right" : edges}
-      // How much each side's docked chrome covers, for the bars that sit between them.
-      style={{
-        "--dock-l": `${insets.left.total}px`,
-        "--dock-r": `${insets.right.total}px`,
-      }}
-      // Pulled-out panels and pop-ups render into this layer (ui/windows.ts).
-      ref={(el) => {
-        if (el && el.lastChild !== windowLayer) el.appendChild(windowLayer);
-      }}
-    >
+    <SystemExtensions value={extensionOf}>
       <div
-        className="canvas"
-        style={{ "--scene-colour": colour }}
-        aria-label={scene ? `Scene: ${scene.name}` : "No scene"}
+        className="table"
+        data-autohide={hiding}
+        // Which edges' chrome autohide is showing; a dragged window needs both sidebars to drop on.
+        data-reveal={dragging ? "left right" : edges}
+        // How much each side's docked chrome covers, for the bars that sit between them.
+        style={{
+          "--dock-l": `${insets.left.total}px`,
+          "--dock-r": `${insets.right.total}px`,
+        }}
+        // Pulled-out panels and pop-ups render into this layer (ui/windows.ts).
+        ref={(el) => {
+          if (el && el.lastChild !== windowLayer) el.appendChild(windowLayer);
+        }}
       >
-        <Suspense fallback={null}>
-          <SceneCanvas campaign={campaign} sceneId={scene?.id ?? null} />
-        </Suspense>
-      </div>
+        <div
+          className="canvas"
+          style={{ "--scene-colour": colour }}
+          aria-label={scene ? `Scene: ${scene.name}` : "No scene"}
+        >
+          <Suspense fallback={null}>
+            <SceneCanvas campaign={campaign} sceneId={scene?.id ?? null} />
+          </Suspense>
+        </div>
 
-      <CampaignDialogHost campaign={campaign} />
-      <Toolbar isGm={campaign.isGm()} />
-      <Sidebar side="left" campaign={campaign} />
-      <Sidebar side="right" campaign={campaign} />
-      <FloatingWindows campaign={campaign} />
-      <EntityWindowHost campaign={campaign} />
-      <Hotbar campaign={campaign} />
-      <Palette campaign={campaign} />
-      <MovePrompt campaign={campaign} />
-      <GraphicDialogs campaign={campaign} />
-      <LinkPopups campaign={campaign} />
-      <ActionDialogs campaign={campaign} />
-      <ChatPopups campaign={campaign} />
-    </div>
+        <CampaignDialogHost campaign={campaign} />
+        <Toolbar isGm={campaign.isGm()} />
+        <Sidebar side="left" campaign={campaign} />
+        <Sidebar side="right" campaign={campaign} />
+        <FloatingWindows campaign={campaign} />
+        <EntityWindowHost campaign={campaign} />
+        <Hotbar campaign={campaign} />
+        <Palette campaign={campaign} />
+        <MovePrompt campaign={campaign} />
+        <GraphicDialogs campaign={campaign} />
+        <LinkPopups campaign={campaign} />
+        <ActionDialogs campaign={campaign} />
+        <ChatPopups campaign={campaign} />
+      </div>
+    </SystemExtensions>
   );
 }
 

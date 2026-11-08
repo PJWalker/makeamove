@@ -1,69 +1,16 @@
 import { getBlob, putBlob } from "../platform/blobs";
-import {
-  type ImageWorkerRequest,
-  type ImageWorkerResponse,
-  type ImageWorkerResult,
-} from "./imageWorkerProtocol";
-import type { BlobRef } from "./types";
+import { workerClient } from "../lib/workerRpc";
+import type { ImageWorkerResult, ImageWorkerTask } from "./imageWorkerProtocol";
+import type { BlobRef } from "../core/blob";
 
-type PendingRequest = {
-  resolve: (result: ImageWorkerResult) => void;
-  reject: (error: Error) => void;
-};
-const pendingRequests = new Map<number, PendingRequest>();
-let imageWorker: Worker | null = null;
-let nextRequestId = 0;
-
-function failWorker(worker: Worker, error: Error) {
-  if (imageWorker === worker) imageWorker = null;
-  worker.terminate();
-  for (const pending of pendingRequests.values()) pending.reject(error);
-  pendingRequests.clear();
-}
-
-function getImageWorker() {
-  if (imageWorker) return imageWorker;
-  const worker = new Worker(new URL("./images.worker.ts", import.meta.url), {
-    type: "module",
-  });
-  worker.onmessage = ({ data }: MessageEvent<ImageWorkerResponse>) => {
-    const pending = pendingRequests.get(data.id);
-    if (!pending) {
-      if ("result" in data && data.result.type === "decode") data.result.bitmap.close();
-      return;
-    }
-    pendingRequests.delete(data.id);
-    if ("error" in data) pending.reject(new Error(data.error));
-    else pending.resolve(data.result);
-  };
-  worker.onerror = (event) => {
-    event.preventDefault();
-    failWorker(worker, new Error(event.message || "Image worker failed"));
-  };
-  worker.onmessageerror = () =>
-    failWorker(worker, new Error("Could not read image worker response"));
-  imageWorker = worker;
-  return worker;
-}
-
-function runImageTask<T extends ImageWorkerRequest["task"]["type"]>(
-  task: Extract<ImageWorkerRequest["task"], { type: T }>,
-): Promise<Extract<ImageWorkerResult, { type: T }>> {
-  const id = ++nextRequestId;
-  const worker = getImageWorker();
-  return new Promise((resolve, reject) => {
-    pendingRequests.set(id, {
-      resolve: (result) => resolve(result as Extract<ImageWorkerResult, { type: T }>),
-      reject,
-    });
-    try {
-      worker.postMessage({ id, task });
-    } catch (error) {
-      pendingRequests.delete(id);
-      reject(error instanceof Error ? error : new Error(String(error)));
-    }
-  });
-}
+const runImageTask = workerClient<ImageWorkerTask, ImageWorkerResult>(
+  () => new Worker(new URL("./images.worker.ts", import.meta.url), { type: "module" }),
+  "Image worker",
+  // A decoded image nobody wants any more still holds GPU memory.
+  (result) => {
+    if (result.type === "decode") result.bitmap.close();
+  },
+);
 
 /**
  * Import an image file: decode it, cap its size, re-encode it as WebP and

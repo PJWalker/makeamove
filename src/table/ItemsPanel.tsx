@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { plainText } from "../features/characters/trackers";
+import { emptyRichText, plainText, type RichText } from "../core/richText";
+import { RichTextField } from "../workspace/RichTextField";
 import {
   addItem,
   canEdit,
@@ -468,7 +469,7 @@ function MoveForm({
     initial?.category ?? system.actionCategories[0]?.id ?? "",
   );
   const [trigger, setTrigger] = useState(initial?.trigger ?? "");
-  const [text, setText] = useState(initial?.text ?? "");
+  const [text, setText] = useState<RichText>(initial?.text ?? emptyRichText());
   const [graphic, setGraphic] = useState<EntityGraphic | undefined>(
     initial?.id ? campaign.entityGraphics.get(`move:${initial.id}`) : undefined,
   );
@@ -477,7 +478,7 @@ function MoveForm({
     !check ? "none" : check.ask?.kind === "stat" ? "ask" : "stat",
   );
   const [stat, setStat] = useState(check?.stat ?? system.stats[0]?.id ?? "");
-  const [outcomes, setOutcomes] = useState<Record<string, string>>(check?.outcomes ?? {});
+  const [outcomes, setOutcomes] = useState<Record<string, RichText>>(check?.outcomes ?? {});
   const [targets, setTargets] = useState(
     initial?.target ? (initial.target.max === 1 ? "one" : "many") : "none",
   );
@@ -494,7 +495,7 @@ function MoveForm({
               kind: "check",
               ...(rolls === "stat" ? { stat: stat } : { ask: { kind: "stat" as const } }),
               outcomes: Object.fromEntries(
-                system.results.map((r) => [r.id, outcomes[r.id]?.trim() ?? ""]),
+                system.results.map((r) => [r.id, outcomes[r.id] ?? emptyRichText()]),
               ),
             },
           ];
@@ -512,7 +513,7 @@ function MoveForm({
       name: name.trim(),
       category: category,
       trigger: trigger.trim(),
-      text: text.trim(),
+      text,
       steps,
       ...(target ? { target } : {}),
       tags: ["homebrew"],
@@ -544,7 +545,7 @@ function MoveForm({
           </select>
         </label>
         <Text label="Trigger" value={trigger} onChange={setTrigger} placeholder="When you…" />
-        <Text label="Text" value={text} onChange={setText} multiline />
+        <RichTextField campaign={campaign} label="Text" value={text} onChange={setText} />
       </section>
       <section className="form-section">
         <h4 className="form-heading">Appearance</h4>
@@ -595,19 +596,13 @@ function MoveForm({
           </div>
           {rolls !== "none" &&
             system.results.map((r) => (
-              <label key={r.id} className="field">
-                {r.label || "Otherwise"}
-                <textarea
-                  rows={2}
-                  value={outcomes[r.id] ?? ""}
-                  onInput={(e) =>
-                    setOutcomes({
-                      ...outcomes,
-                      [r.id]: e.currentTarget.value,
-                    })
-                  }
-                />
-              </label>
+              <RichTextField
+                key={r.id}
+                campaign={campaign}
+                label={r.label || "Otherwise"}
+                value={outcomes[r.id]}
+                onChange={(value) => setOutcomes((current) => ({ ...current, [r.id]: value }))}
+              />
             ))}
         </div>
       </section>

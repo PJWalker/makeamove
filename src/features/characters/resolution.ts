@@ -1,3 +1,4 @@
+import { richTextFromPlain } from "../../core/richText";
 import { appliedField, getState, saveField, setState, type SaveAnswer } from "../chat/messageState";
 import { myName } from "../chat/send";
 import type { MoveTarget, SaveRequest } from "../chat/types";
@@ -148,7 +149,9 @@ function checkConcentration(campaign: Campaign, c: CharacterView, damage: number
       characterId: c.id,
       characterName: c.name,
       targets: [{ id: c.id, name: c.name, characterId: c.id }],
-      outcome: `${c.name} took ${damage} damage while concentrating on ${spell}.`,
+      outcome: richTextFromPlain(
+        `${c.name} took ${damage} damage while concentrating on ${spell}.`,
+      ),
       suggestions: [],
       save: {
         action,

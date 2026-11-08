@@ -1,8 +1,10 @@
+import { md } from "../../macros/markdown.macro" with { type: "macro" };
 import { parse } from "../../features/dice/notation";
 import { commaListOf } from "../../lib/list";
 import { resolveEffects } from "../effects";
 import type { ActionDef, CheckStep, GameSystem } from "../types";
 import { abilityRules, CREW_ABILITIES as CREW_RULES } from "./content";
+import { plainText, richTextFromPlain, type RichText } from "../../core/richText";
 
 const ACTIONS = [
   ["hunt", "Hunt", "Track a target or attack at range."],
@@ -48,31 +50,36 @@ const RESULTS = [
   { id: "miss-desperate", label: "1-3: desperate", tone: "bad" as const },
 ];
 
-const outcomes = (critical: string, strong: string, weak: string, miss: string) =>
-  Object.fromEntries(
+const outcomes = (critical: RichText, strong: RichText, weak: RichText, miss: RichText) =>
+  Object.fromEntries<RichText>(
     RESULTS.map(({ id }) => [
       id,
       id === "critical" ? critical : id === "strong" ? strong : id.startsWith("weak") ? weak : miss,
     ]),
   );
 
-const actionOutcomes = {
+const actionOutcomes: Record<string, RichText> = {
   ...outcomes(
-    "You achieve your goal with increased effect.",
-    "You achieve your goal.",
-    "You achieve your goal, but suffer a consequence such as harm, reduced effect, or a complication.",
-    "Things go badly: harm, a complication, a desperate position, or a lost opportunity.",
+    md("You achieve your goal with increased effect."),
+    md("You achieve your goal."),
+    md(
+      "You achieve your goal, but suffer a consequence such as harm, reduced effect, or a complication.",
+    ),
+    md("Things go badly: harm, a complication, a desperate position, or a lost opportunity."),
   ),
-  "weak-controlled":
+  "weak-controlled": md(
     "Withdraw and change approach, or succeed with a minor complication, reduced effect, lesser harm, or risky position.",
-  "miss-controlled": "Withdraw and change approach, or seize a risky opportunity.",
-  "weak-desperate":
+  ),
+  "miss-controlled": md("Withdraw and change approach, or seize a risky opportunity."),
+  "weak-desperate": md(
     "You achieve your goal but suffer severe harm, a serious complication, or reduced effect. Mark attribute XP.",
-  "miss-desperate":
+  ),
+  "miss-desperate": md(
     "Suffer severe harm, a serious complication, or lose the opportunity. Mark attribute XP.",
+  ),
 };
 
-const check = (outcomes: Record<string, string>, extra: Partial<CheckStep> = {}): CheckStep => ({
+const check = (outcomes: Record<string, RichText>, extra: Partial<CheckStep> = {}): CheckStep => ({
   kind: "check",
   outcomes,
   ...extra,
@@ -82,7 +89,7 @@ const defineAction = (
   name: string,
   category: string,
   trigger: string,
-  text: string,
+  text: RichText,
   step?: CheckStep,
 ): ActionDef => ({
   id,
@@ -94,16 +101,16 @@ const defineAction = (
 });
 
 const RESISTANCE = outcomes(
-  "Resistance works; clear 1 stress.",
-  "Resistance works without stress.",
-  "Resistance works; take stress equal to 6 minus the kept die.",
-  "Resistance works; take stress equal to 6 minus the kept die.",
+  md("Resistance works; clear 1 stress."),
+  md("Resistance works without stress."),
+  md("Resistance works; take stress equal to 6 minus the kept die."),
+  md("Resistance works; take stress equal to 6 minus the kept die."),
 );
 const CLOCK = outcomes(
-  "Mark 5 segments.",
-  "Mark 3 segments.",
-  "Mark 2 segments.",
-  "Mark 1 segment.",
+  md("Mark 5 segments."),
+  md("Mark 3 segments."),
+  md("Mark 2 segments."),
+  md("Mark 1 segment."),
 );
 const CLOCK_FOLLOWUPS = {
   critical: ["clock-5"],
@@ -134,7 +141,9 @@ const moveActions = ACTIONS.map(([id, name, description]) =>
     name,
     "action",
     `When you ${name.toLowerCase()} to overcome trouble`,
-    `${description} Establish position and effect with the GM. Assistance, pushing yourself, or a devil's bargain can add dice.`,
+    richTextFromPlain(
+      `${description} Establish position and effect with the GM. Assistance, pushing yourself, or a devil's bargain can add dice.`,
+    ),
     check(actionOutcomes, {
       stat: id,
       followUpsFor: (roll) =>
@@ -151,7 +160,9 @@ const resistanceActions = ATTRIBUTES.map(({ id, name }) =>
     `Resist with ${name}`,
     "resistance",
     `When you resist a consequence using ${name}`,
-    "Resistance succeeds; the GM decides whether the consequence is reduced or avoided. Roll one die for each action in this attribute with at least one dot. Stress cost is 6 minus the highest die; a critical clears 1 stress.",
+    md(
+      "Resistance succeeds; the GM decides whether the consequence is reduced or avoided. Roll one die for each action in this attribute with at least one dot. Stress cost is 6 minus the highest die; a critical clears 1 stress.",
+    ),
     check(RESISTANCE, {
       add: [{ value: id, label: "Resistance" }],
       followUps: { critical: ["clear-stress"] },
@@ -170,10 +181,10 @@ const resistanceActions = ATTRIBUTES.map(({ id, name }) =>
 );
 
 const VICE_ROLL = outcomes(
-  "Clear stress equal to the highest die; check for overindulgence.",
-  "Clear stress equal to the highest die; check for overindulgence.",
-  "Clear stress equal to the highest die; check for overindulgence.",
-  "Clear stress equal to the highest die; check for overindulgence.",
+  md("Clear stress equal to the highest die; check for overindulgence."),
+  md("Clear stress equal to the highest die; check for overindulgence."),
+  md("Clear stress equal to the highest die; check for overindulgence."),
+  md("Clear stress equal to the highest die; check for overindulgence."),
 );
 
 const PLAYBOOKS = [
@@ -474,7 +485,7 @@ const PLAYBOOK_ABILITIES = PLAYBOOKS.flatMap((playbook) =>
     id: `ability-${playbook.id}-${ability.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
     playbook: playbook.id,
     ...ability,
-    text: abilityRules(ability.name) ?? ability.text,
+    text: abilityRules(ability.name) ?? richTextFromPlain(ability.text),
   })),
 );
 const PLAYBOOK_ACTIONS: ActionDef[] = PLAYBOOK_ABILITIES.map((ability) => ({
@@ -719,23 +730,33 @@ export const bladesInTheDark: GameSystem = {
       "Fortune Roll",
       "special",
       "When uncertainty needs resolving without an action roll",
-      "Choose an appropriate pool and interpret the highest die.",
-      check(outcomes("Exceptional result.", "Good result.", "Limited result.", "Poor result."), {
-        ask: DICE,
-      }),
+      md("Choose an appropriate pool and interpret the highest die."),
+      check(
+        outcomes(
+          md("Exceptional result."),
+          md("Good result."),
+          md("Limited result."),
+          md("Poor result."),
+        ),
+        {
+          ask: DICE,
+        },
+      ),
     ),
     defineAction(
       "engagement",
       "Engagement Roll",
       "special",
       "When a score begins",
-      "Begin with one die and adjust for major advantages and disadvantages. The result establishes the crew’s starting position.",
+      md(
+        "Begin with one die and adjust for major advantages and disadvantages. The result establishes the crew’s starting position.",
+      ),
       check(
         outcomes(
-          "The first obstacle is overcome; begin controlled.",
-          "Begin controlled.",
-          "Begin risky.",
-          "Begin desperate.",
+          md("The first obstacle is overcome; begin controlled."),
+          md("Begin controlled."),
+          md("Begin risky."),
+          md("Begin desperate."),
         ),
         { ask: { ...DICE, prompt: "Net advantage dice", min: -10, max: 10 } },
       ),
@@ -745,9 +766,14 @@ export const bladesInTheDark: GameSystem = {
       "Acquire Asset",
       "downtime",
       "When you obtain temporary use of an asset",
-      "Roll crew tier; the result sets quality. Coin can improve the quality.",
+      md("Roll crew tier; the result sets quality. Coin can improve the quality."),
       check(
-        outcomes("Quality: tier +2.", "Quality: tier +1.", "Quality: tier.", "Quality: tier -1."),
+        outcomes(
+          md("Quality: tier +2."),
+          md("Quality: tier +1."),
+          md("Quality: tier."),
+          md("Quality: tier -1."),
+        ),
         { ask: { ...DICE, prompt: "Crew tier" } },
       ),
     ),
@@ -756,7 +782,7 @@ export const bladesInTheDark: GameSystem = {
       "Long-term Project",
       "downtime",
       "When you work toward a long-term goal",
-      "Describe your approach, choose a fitting action, and advance the project clock.",
+      md("Describe your approach, choose a fitting action, and advance the project clock."),
       check(CLOCK, {
         ask: { kind: "stat" },
         counter: { prompt: "Project clock" },
@@ -768,7 +794,9 @@ export const bladesInTheDark: GameSystem = {
       "Recover",
       "downtime",
       "When you receive treatment for harm",
-      "Roll healer quality (or Tinker for a PC with Physicker). A full healing clock reduces each harm by one level; excess segments carry over. New harm clears the healing clock.",
+      md(
+        "Roll healer quality (or Tinker for a PC with Physicker). A full healing clock reduces each harm by one level; excess segments carry over. New harm clears the healing clock.",
+      ),
       check(CLOCK, {
         ask: { ...DICE, prompt: "Healer quality" },
         counter: { prompt: "Healing clock" },
@@ -780,13 +808,13 @@ export const bladesInTheDark: GameSystem = {
       "Reduce Heat",
       "downtime",
       "When you conceal evidence or deflect attention",
-      "Describe your method and roll a fitting action.",
+      md("Describe your method and roll a fitting action."),
       check(
         outcomes(
-          "Reduce heat by 5.",
-          "Reduce heat by 3.",
-          "Reduce heat by 2.",
-          "Reduce heat by 1.",
+          md("Reduce heat by 5."),
+          md("Reduce heat by 3."),
+          md("Reduce heat by 2."),
+          md("Reduce heat by 1."),
         ),
         { ask: { kind: "stat" } },
       ),
@@ -796,7 +824,9 @@ export const bladesInTheDark: GameSystem = {
       "Indulge Vice",
       "downtime",
       "When you visit your vice purveyor",
-      "Roll your lowest attribute and clear stress equal to the highest die. Clearing more stress than marked causes overindulgence; skipping vice costs stress equal to trauma.",
+      md(
+        "Roll your lowest attribute and clear stress equal to the highest die. Clearing more stress than marked causes overindulgence; skipping vice costs stress equal to trauma.",
+      ),
       check(VICE_ROLL, {
         add: [{ value: "vice", label: "Vice" }],
         followUpsFor: (roll) => [`vice-clear-${roll.total}`],
@@ -807,35 +837,45 @@ export const bladesInTheDark: GameSystem = {
       "Train",
       "downtime",
       "When you practice during downtime",
-      "Mark 1 XP on one attribute or playbook track. Crew training can add another XP; each track is trained once per downtime.",
+      md(
+        "Mark 1 XP on one attribute or playbook track. Crew training can add another XP; each track is trained once per downtime.",
+      ),
     ),
     defineAction(
       "push-yourself",
       "Push Yourself",
       "special",
       "When you push beyond your limits",
-      "Take 2 stress to add a die, increase effect, or act while incapacitated. Each benefit may be chosen once.",
+      md(
+        "Take 2 stress to add a die, increase effect, or act while incapacitated. Each benefit may be chosen once.",
+      ),
     ),
     defineAction(
       "assist",
       "Assist",
       "special",
       "When you help another scoundrel",
-      "Take 1 stress to grant +1 die. You may share the consequences. Only one assistant grants a die.",
+      md(
+        "Take 1 stress to grant +1 die. You may share the consequences. Only one assistant grants a die.",
+      ),
     ),
     defineAction(
       "flashback",
       "Flashback",
       "special",
       "When preparation from the past matters during a score",
-      "The GM sets stress cost: zero for ordinary preparation, one for a complex opportunity, or two or more for an elaborate plan.",
+      md(
+        "The GM sets stress cost: zero for ordinary preparation, one for a complex opportunity, or two or more for an elaborate plan.",
+      ),
     ),
     defineAction(
       "end-session",
       "End of Session",
       "special",
       "When the session ends",
-      "Mark playbook XP for its trigger and for expressing beliefs, drives, heritage, or background; mark attribute XP for desperate actions. A trigger that happened repeatedly may be worth 2 XP.",
+      md(
+        "Mark playbook XP for its trigger and for expressing beliefs, drives, heritage, or background; mark attribute XP for desperate actions. A trigger that happened repeatedly may be worth 2 XP.",
+      ),
     ),
     ...PLAYBOOK_ACTIONS,
   ],
@@ -1033,7 +1073,7 @@ export const bladesInTheDark: GameSystem = {
         options: PLAYBOOK_ABILITIES.map((ability) => ({
           id: ability.id,
           name: ability.name,
-          text: ability.text,
+          text: plainText(ability.text),
           requires: { playbook: ability.playbook },
         })),
       },
@@ -1045,7 +1085,7 @@ export const bladesInTheDark: GameSystem = {
         options: PLAYBOOK_ABILITIES.map((ability) => ({
           id: ability.id,
           name: ability.name,
-          text: ability.text,
+          text: plainText(ability.text),
           notIncludes: [{ field: "specialAbilities", value: ability.id }],
         })),
       },

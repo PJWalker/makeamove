@@ -1,4 +1,4 @@
-import type { SystemExtension } from "../extensions";
+import type { SystemExtension } from "../extensionTypes";
 import { DungeonWorldNpcSheet, DungeonWorldSheet } from "./Sheet";
 
 export const dungeonWorldExtension: SystemExtension = {

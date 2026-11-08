@@ -7,6 +7,7 @@ import { clampZoom, fitCamera, toWorld, zoomAt } from "./camera";
 import { readSceneCamera, saveSceneCamera } from "./cameraMemory";
 import { bounds, hits } from "./geometry";
 import { type Point, snapPoint } from "./grid";
+import type { BlobRef } from "../core/blob";
 import { importImage, imageColour } from "./images";
 import { tokenDistance } from "./measure";
 import { conversion, imageElement, newToken, type TokenSpec } from "./newElements";
@@ -15,7 +16,6 @@ import type { SceneDoc } from "./sceneDoc";
 import { activeTool, ERASER_RADIUS, lightTool } from "./tools";
 import {
   LAYERS,
-  type BlobRef,
   type Layer,
   type AreaTone,
   type NewElement,
@@ -28,9 +28,9 @@ import { TOOL_PRESS } from "./gestures";
 import { AreaDraft } from "./gestures/light";
 import { pinch } from "./gestures/pan";
 import { hoverCursor } from "./gestures/select";
-import { dragShape, type Placement } from "./gestures/shape";
+import { dragShape } from "./gestures/shape";
 import { putText } from "./gestures/text";
-import type { Gesture, ToolContext } from "./gestures/types";
+import type { Gesture, Placement, ToolContext } from "./gestures/types";
 
 /** This member's token colour, from their device id. */
 /** How soon, and how near in screen px, a press must follow the last to count as a double click. */

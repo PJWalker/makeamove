@@ -1,6 +1,7 @@
 import { store } from "../lib/store";
 import type { SceneDoc } from "../scene/sceneDoc";
-import type { BlobRef, TokenStyle } from "../scene/types";
+import type { BlobRef } from "../core/blob";
+import type { TokenStyle } from "../scene/types";
 import type { EntityGraphic, EntityGraphicRef } from "../graphics";
 import type { AreaSpec } from "../systems/types";
 import { backdropColour } from "../lib/colour";

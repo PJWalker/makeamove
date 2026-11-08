@@ -8,7 +8,7 @@ import { raisePopup } from "../ui/popup";
 import type { Icon } from "../ui/icons";
 import { hideTooltip } from "../ui/Tooltip";
 import { ListRow } from "../ui/List";
-import type { WindowProxy } from "./CampaignDialogs";
+import type { WindowProxy } from "./Dialog";
 import { menuTrigger } from "../ui/menuTrigger";
 import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
 import { entityTabId, registerEntityWindow, closeEntityWindow, openEntries } from "./entityWindows";

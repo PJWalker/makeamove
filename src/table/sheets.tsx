@@ -1,5 +1,6 @@
 import { canEdit } from "../features/characters/api";
-import { extensionOf, type SheetProps } from "../systems/extensions";
+import { extensionOf } from "../systems/extensions";
+import type { SheetProps } from "../systems/extensionTypes";
 import { CopyBanner, TemplateSettings } from "./TemplateSettings";
 import { DeclarativeSheet } from "../workspace/DeclarativeSheet";
 import { RelationshipsSection } from "./Relationships";

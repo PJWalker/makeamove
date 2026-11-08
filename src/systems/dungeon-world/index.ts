@@ -1,3 +1,5 @@
+import { md } from "../../macros/markdown.macro" with { type: "macro" };
+import type { RichText } from "../../core/richText";
 import { resolveEffects } from "../effects";
 
 import type { ActionDef, GameSystem, TargetSpec } from "../types";
@@ -22,10 +24,10 @@ interface DwMove {
   category: "basic" | "special" | "class";
   classId?: string;
   trigger: string;
-  text: string;
+  text: RichText;
   /** A stat id, 'choose' to ask which, 'bond' to ask for the bond's bonus, or 'none' for a plain roll. */
   roll?: { stat: string };
-  outcomes?: Record<Band, string>;
+  outcomes?: Record<Band, RichText>;
   suggest?: Partial<Record<Band, ("xp" | "damage")[]>>;
   /** Who it's aimed at, when that's someone on the map. */
   target?: TargetSpec;
@@ -39,13 +41,16 @@ const BASIC: DwMove[] = [
     name: "Hack and Slash",
     category: "basic",
     trigger: "When you attack an enemy in melee",
-    text: "Roll +STR. On a 10+ you deal your damage and avoid their attack; you may instead choose to deal +1d6 damage and expose yourself to their attack. On a 7-9 you deal your damage and the enemy makes an attack against you.",
+    text: md(
+      "Roll +STR. On a 10+ you deal your damage and avoid their attack; you may instead choose to deal +1d6 damage and expose yourself to their attack. On a 7-9 you deal your damage and the enemy makes an attack against you.",
+    ),
     roll: { stat: "str" },
     outcomes: {
-      strong:
+      strong: md(
         "You deal your damage to the enemy and avoid their attack. You may choose to deal +1d6 damage, but then you expose yourself to the enemy’s attack.",
-      weak: "You deal your damage to the enemy and the enemy makes an attack against you.",
-      miss: "The GM makes a move.",
+      ),
+      weak: md("You deal your damage to the enemy and the enemy makes an attack against you."),
+      miss: md("The GM makes a move."),
     },
     suggest: { strong: ["damage"], weak: ["damage"], miss: ["xp"] },
     tags: ["melee", "attack", "fight"],
@@ -56,12 +61,16 @@ const BASIC: DwMove[] = [
     name: "Volley",
     category: "basic",
     trigger: "When you take aim and shoot at an enemy at range",
-    text: "Roll +DEX. On a 10+ you have a clear shot and deal your damage. On a 7-9 choose one: you have to move to get the shot, placing you in danger; you have to take what you can get, for -1d6 damage; or you have to take several shots, reducing your ammo by one.",
+    text: md(
+      "Roll +DEX. On a 10+ you have a clear shot and deal your damage. On a 7-9 choose one: you have to move to get the shot, placing you in danger; you have to take what you can get, for -1d6 damage; or you have to take several shots, reducing your ammo by one.",
+    ),
     roll: { stat: "dex" },
     outcomes: {
-      strong: "You have a clear shot: deal your damage.",
-      weak: "Choose one: you have to move to get the shot, placing you in danger as described by the GM; you have to take what you can get, for -1d6 damage; or you have to take several shots, reducing your ammo by one.",
-      miss: "The GM makes a move.",
+      strong: md("You have a clear shot: deal your damage."),
+      weak: md(
+        "Choose one: you have to move to get the shot, placing you in danger as described by the GM; you have to take what you can get, for -1d6 damage; or you have to take several shots, reducing your ammo by one.",
+      ),
+      miss: md("The GM makes a move."),
     },
     suggest: { strong: ["damage"], weak: ["damage"], miss: ["xp"] },
     tags: ["ranged", "attack", "shoot", "bow"],
@@ -71,12 +80,16 @@ const BASIC: DwMove[] = [
     name: "Defy Danger",
     category: "basic",
     trigger: "When you act despite an imminent threat or suffer a calamity",
-    text: "Say how you deal with it, then roll with the stat that fits: powering through is +STR, getting out of the way or acting fast +DEX, enduring +CON, using knowledge or expertise +INT, using intuition or resolve +WIS, charm and social grace +CHA. On a 10+ you do what you set out to, and the threat doesn’t come to bear. On a 7-9 you stumble, hesitate or flinch: the GM offers a worse outcome, a hard bargain or an ugly choice.",
+    text: md(
+      "Say how you deal with it, then roll with the stat that fits: powering through is +STR, getting out of the way or acting fast +DEX, enduring +CON, using knowledge or expertise +INT, using intuition or resolve +WIS, charm and social grace +CHA. On a 10+ you do what you set out to, and the threat doesn’t come to bear. On a 7-9 you stumble, hesitate or flinch: the GM offers a worse outcome, a hard bargain or an ugly choice.",
+    ),
     roll: { stat: "choose" },
     outcomes: {
-      strong: "You do what you set out to, and the threat doesn’t come to bear.",
-      weak: "You stumble, hesitate, or flinch: the GM will offer you a worse outcome, a hard bargain, or an ugly choice.",
-      miss: "The GM makes a move.",
+      strong: md("You do what you set out to, and the threat doesn’t come to bear."),
+      weak: md(
+        "You stumble, hesitate, or flinch: the GM will offer you a worse outcome, a hard bargain, or an ugly choice.",
+      ),
+      miss: md("The GM makes a move."),
     },
     suggest: { miss: ["xp"] },
     tags: ["danger", "save"],
@@ -87,13 +100,16 @@ const BASIC: DwMove[] = [
     name: "Defend",
     category: "basic",
     trigger: "When you stand in defence of a person, item or location under attack",
-    text: "Roll +CON. On a 10+ hold 3; on a 7-9 hold 1. While you stay in defence, when you or the thing you defend is attacked you may spend hold, 1 for 1: redirect an attack from the thing you defend to yourself; halve the attack’s effect or damage; open up the attacker to an ally, giving that ally +1 forward against them; or deal damage to the attacker equal to your level.",
+    text: md(
+      "Roll +CON. On a 10+ hold 3; on a 7-9 hold 1. While you stay in defence, when you or the thing you defend is attacked you may spend hold, 1 for 1: redirect an attack from the thing you defend to yourself; halve the attack’s effect or damage; open up the attacker to an ally, giving that ally +1 forward against them; or deal damage to the attacker equal to your level.",
+    ),
     roll: { stat: "con" },
     outcomes: {
-      strong:
+      strong: md(
         "Hold 3. Spend it, 1 for 1, to redirect an attack to yourself, halve its effect or damage, open the attacker to an ally (+1 forward for them), or deal your level in damage to the attacker.",
-      weak: "Hold 1. Spend it, 1 for 1, as above.",
-      miss: "The GM makes a move.",
+      ),
+      weak: md("Hold 1. Spend it, 1 for 1, as above."),
+      miss: md("The GM makes a move."),
     },
     suggest: { miss: ["xp"] },
     tags: ["protect", "guard"],
@@ -103,13 +119,16 @@ const BASIC: DwMove[] = [
     name: "Spout Lore",
     category: "basic",
     trigger: "When you consult your accumulated knowledge about something",
-    text: "Roll +INT. On a 10+ the GM tells you something interesting and useful about the subject relevant to your situation. On a 7-9 the GM tells you something interesting; it’s up to you to make it useful. The GM may ask how you know this.",
+    text: md(
+      "Roll +INT. On a 10+ the GM tells you something interesting and useful about the subject relevant to your situation. On a 7-9 the GM tells you something interesting; it’s up to you to make it useful. The GM may ask how you know this.",
+    ),
     roll: { stat: "int" },
     outcomes: {
-      strong:
+      strong: md(
         "The GM will tell you something interesting and useful about the subject relevant to your situation.",
-      weak: "The GM will only tell you something interesting; it’s on you to make it useful.",
-      miss: "The GM makes a move.",
+      ),
+      weak: md("The GM will only tell you something interesting; it’s on you to make it useful."),
+      miss: md("The GM makes a move."),
     },
     suggest: { miss: ["xp"] },
     tags: ["knowledge", "lore", "recall"],
@@ -119,13 +138,18 @@ const BASIC: DwMove[] = [
     name: "Discern Realities",
     category: "basic",
     trigger: "When you closely study a situation or person",
-    text: "Roll +WIS. On a 10+ hold 3; on a 7-9 hold 1. Spend hold, 1 for 1, to ask the GM questions: What happened here recently? What is about to happen? What should I be on the lookout for? What here is useful or valuable to me? Who’s really in control here? What here is not what it appears to be? Take +1 forward when acting on the answers.",
+    text: md(
+      "Roll +WIS. On a 10+ hold 3; on a 7-9 hold 1. Spend hold, 1 for 1, to ask the GM questions: What happened here recently? What is about to happen? What should I be on the lookout for? What here is useful or valuable to me? Who’s really in control here? What here is not what it appears to be? Take +1 forward when acting on the answers.",
+    ),
     roll: { stat: "wis" },
     outcomes: {
-      strong:
+      strong: md(
         "Hold 3. Spend it, 1 for 1, to ask the GM questions (see the move). Take +1 forward when acting on the answers.",
-      weak: "Hold 1. Spend it to ask one of the questions. Take +1 forward when acting on the answer.",
-      miss: "The GM makes a move.",
+      ),
+      weak: md(
+        "Hold 1. Spend it to ask one of the questions. Take +1 forward when acting on the answer.",
+      ),
+      miss: md("The GM makes a move."),
     },
     suggest: { miss: ["xp"] },
     tags: ["investigate", "search", "perception"],
@@ -136,12 +160,16 @@ const BASIC: DwMove[] = [
     name: "Parley",
     category: "basic",
     trigger: "When you have leverage on a GM character and manipulate them",
-    text: "Leverage is something they want or need. Roll +CHA. On a 10+ they do what you ask. On a 7-9 they will do what you ask, but need some concrete assurance first.",
+    text: md(
+      "Leverage is something they want or need. Roll +CHA. On a 10+ they do what you ask. On a 7-9 they will do what you ask, but need some concrete assurance first.",
+    ),
     roll: { stat: "cha" },
     outcomes: {
-      strong: "They do what you ask.",
-      weak: "They will do what you ask, but need some concrete assurance, proof or promise first.",
-      miss: "The GM makes a move.",
+      strong: md("They do what you ask."),
+      weak: md(
+        "They will do what you ask, but need some concrete assurance, proof or promise first.",
+      ),
+      miss: md("The GM makes a move."),
     },
     suggest: { miss: ["xp"] },
     tags: ["social", "persuade", "negotiate"],
@@ -156,12 +184,16 @@ const BASIC: DwMove[] = [
     name: "Aid or Interfere",
     category: "basic",
     trigger: "When you help or hinder someone else who is making a roll",
-    text: "Roll +Bond with them. On a 10+ they take +1 or -2, your choice. On a 7-9 you also expose yourself to danger, retribution or cost.",
+    text: md(
+      "Roll +Bond with them. On a 10+ they take +1 or -2, your choice. On a 7-9 you also expose yourself to danger, retribution or cost.",
+    ),
     roll: { stat: "bond" },
     outcomes: {
-      strong: "They take +1 or -2 to their roll, your choice.",
-      weak: "They take +1 or -2 to their roll, your choice, but you also expose yourself to danger, retribution or cost.",
-      miss: "The GM makes a move.",
+      strong: md("They take +1 or -2 to their roll, your choice."),
+      weak: md(
+        "They take +1 or -2 to their roll, your choice, but you also expose yourself to danger, retribution or cost.",
+      ),
+      miss: md("The GM makes a move."),
     },
     suggest: { miss: ["xp"] },
     tags: ["help", "bond", "hinder"],
@@ -174,12 +206,16 @@ const SPECIAL: DwMove[] = [
     name: "Last Breath",
     category: "special",
     trigger: "When you’re dying, you catch a glimpse of what lies beyond the Black Gates of Death",
-    text: "Roll, with no modifier. On a 10+ you’ve cheated death: you’re in a bad spot, but stable. On a 7-9 Death offers you a bargain; take it and stabilise, or refuse and pass beyond the Gates. On a 6- your fate is sealed.",
+    text: md(
+      "Roll, with no modifier. On a 10+ you’ve cheated death: you’re in a bad spot, but stable. On a 7-9 Death offers you a bargain; take it and stabilise, or refuse and pass beyond the Gates. On a 6- your fate is sealed.",
+    ),
     roll: { stat: "none" },
     outcomes: {
-      strong: "You’ve cheated death: you’re in a bad spot, but stable.",
-      weak: "Death offers you a bargain. Take it and stabilise, or refuse and pass beyond the Black Gates.",
-      miss: "Your fate is sealed. The GM tells you what happens next.",
+      strong: md("You’ve cheated death: you’re in a bad spot, but stable."),
+      weak: md(
+        "Death offers you a bargain. Take it and stabilise, or refuse and pass beyond the Black Gates.",
+      ),
+      miss: md("Your fate is sealed. The GM tells you what happens next."),
     },
     suggest: { miss: ["xp"] },
     tags: ["death", "dying"],
@@ -189,12 +225,14 @@ const SPECIAL: DwMove[] = [
     name: "Take Watch",
     category: "special",
     trigger: "When you’re on watch and something approaches the camp",
-    text: "Roll +WIS. On a 10+ you’re able to wake the camp and prepare a response; everyone takes +1 forward. On a 7-9 you get the alarm up, but the camp is not ready. On a 6- the GM makes a move.",
+    text: md(
+      "Roll +WIS. On a 10+ you’re able to wake the camp and prepare a response; everyone takes +1 forward. On a 7-9 you get the alarm up, but the camp is not ready. On a 6- the GM makes a move.",
+    ),
     roll: { stat: "wis" },
     outcomes: {
-      strong: "You wake the camp in time and prepare a response. Everyone takes +1 forward.",
-      weak: "You get the alarm up, but the camp is not ready for what comes.",
-      miss: "The GM makes a move.",
+      strong: md("You wake the camp in time and prepare a response. Everyone takes +1 forward."),
+      weak: md("You get the alarm up, but the camp is not ready for what comes."),
+      miss: md("The GM makes a move."),
     },
     suggest: { miss: ["xp"] },
     tags: ["camp", "watch"],
@@ -204,7 +242,9 @@ const SPECIAL: DwMove[] = [
     name: "Encumbrance",
     category: "special",
     trigger: "When you carry more than your Load",
-    text: "If you carry weight up to your Load you take no penalty. At more than Load, take -1 ongoing until you drop weight. At more than Load + 2 you must drop something or you can’t do anything but stagger.",
+    text: md(
+      "If you carry weight up to your Load you take no penalty. At more than Load, take -1 ongoing until you drop weight. At more than Load + 2 you must drop something or you can’t do anything but stagger.",
+    ),
     tags: ["load", "weight"],
   },
   {
@@ -212,7 +252,9 @@ const SPECIAL: DwMove[] = [
     name: "Make Camp",
     category: "special",
     trigger: "When you settle in to rest",
-    text: "Consume a ration. If you’re in a dangerous place, decide the watch order. If you have enough XP, you may level up. When you’ve rested, heal damage equal to half your max HP.",
+    text: md(
+      "Consume a ration. If you’re in a dangerous place, decide the watch order. If you have enough XP, you may level up. When you’ve rested, heal damage equal to half your max HP.",
+    ),
     tags: ["rest", "camp"],
   },
   {
@@ -220,7 +262,9 @@ const SPECIAL: DwMove[] = [
     name: "Undertake a Perilous Journey",
     category: "special",
     trigger: "When you travel through hostile territory",
-    text: "Choose a scout, a quartermaster and a trailblazer. The quartermaster rolls +CON to see that supplies hold out, the trailblazer +WIS to find the way, and the scout +WIS to spot danger. Each result is read as on a 10+, 7-9 or 6-; the GM describes the journey.",
+    text: md(
+      "Choose a scout, a quartermaster and a trailblazer. The quartermaster rolls +CON to see that supplies hold out, the trailblazer +WIS to find the way, and the scout +WIS to spot danger. Each result is read as on a 10+, 7-9 or 6-; the GM describes the journey.",
+    ),
     tags: ["travel", "journey"],
   },
   {
@@ -228,7 +272,9 @@ const SPECIAL: DwMove[] = [
     name: "Level Up",
     category: "special",
     trigger: "When you have downtime, an hour or two, and XP equal to your level + 7",
-    text: "Subtract your level + 7 from your XP and increase your level by one. Choose a new advanced move from your class. Increase one stat by 1 (to a maximum of 18), and update your modifier.",
+    text: md(
+      "Subtract your level + 7 from your XP and increase your level by one. Choose a new advanced move from your class. Increase one stat by 1 (to a maximum of 18), and update your modifier.",
+    ),
     tags: ["xp", "advance"],
   },
   {
@@ -236,7 +282,9 @@ const SPECIAL: DwMove[] = [
     name: "End of Session",
     category: "special",
     trigger: "When the session ends",
-    text: "Choose one of your bonds that you feel is resolved and mark XP. Then answer the questions as a group: Did we learn something new about the world? Did we overcome a notable monster or enemy? Did we loot a memorable treasure? Mark XP for each yes. Then update your bonds.",
+    text: md(
+      "Choose one of your bonds that you feel is resolved and mark XP. Then answer the questions as a group: Did we learn something new about the world? Did we overcome a notable monster or enemy? Did we loot a memorable treasure? Mark XP for each yes. Then update your bonds.",
+    ),
     tags: ["xp", "bonds"],
   },
   {
@@ -244,7 +292,9 @@ const SPECIAL: DwMove[] = [
     name: "Carouse",
     category: "special",
     trigger: "When you return triumphant and throw a big party",
-    text: "Spend some coin on revelry and see what the night brings. The GM tells you what you get from it; roll as the move directs.",
+    text: md(
+      "Spend some coin on revelry and see what the night brings. The GM tells you what you get from it; roll as the move directs.",
+    ),
     tags: ["party", "downtime"],
   },
   {
@@ -252,7 +302,9 @@ const SPECIAL: DwMove[] = [
     name: "Supply",
     category: "special",
     trigger: "When you go to buy something with coin on hand",
-    text: "If it’s something readily available, the GM tells you the price. If it’s something special or hard to find, you’ll have to hunt for it, and the GM will say what it takes.",
+    text: md(
+      "If it’s something readily available, the GM tells you the price. If it’s something special or hard to find, you’ll have to hunt for it, and the GM will say what it takes.",
+    ),
     tags: ["buy", "shop", "gear"],
   },
   {
@@ -260,7 +312,9 @@ const SPECIAL: DwMove[] = [
     name: "Recover",
     category: "special",
     trigger: "When you do nothing but rest in comfort and safety",
-    text: "After a full day of rest you recover all your HP. After three days of rest you remove one debility of your choice. If under a healer’s care, you heal as the healer’s moves say.",
+    text: md(
+      "After a full day of rest you recover all your HP. After three days of rest you remove one debility of your choice. If under a healer’s care, you heal as the healer’s moves say.",
+    ),
     tags: ["rest", "heal"],
   },
   {
@@ -268,7 +322,9 @@ const SPECIAL: DwMove[] = [
     name: "Recruit",
     category: "special",
     trigger: "When you put out word that you’re looking to hire help",
-    text: "Tell the GM what kind of help you’re after. They’ll tell you who’s available and what they want. Hirelings carry their own loyalty and cost.",
+    text: md(
+      "Tell the GM what kind of help you’re after. They’ll tell you who’s available and what they want. Hirelings carry their own loyalty and cost.",
+    ),
     tags: ["hire", "hireling"],
   },
   {
@@ -276,7 +332,9 @@ const SPECIAL: DwMove[] = [
     name: "Outstanding Warrants",
     category: "special",
     trigger: "When you return to a civilised place where you’ve caused trouble before",
-    text: "The GM tells you what trouble has caught up with you, and the price of making it right.",
+    text: md(
+      "The GM tells you what trouble has caught up with you, and the price of making it right.",
+    ),
     tags: ["reputation", "law"],
   },
   {
@@ -284,7 +342,7 @@ const SPECIAL: DwMove[] = [
     name: "Bolster",
     category: "special",
     trigger: "When you spend time with a hireling or follower to lift their spirits",
-    text: "Spend time and coin to raise their loyalty. The GM tells you how it lands.",
+    text: md("Spend time and coin to raise their loyalty. The GM tells you how it lands."),
     tags: ["hireling", "loyalty"],
   },
 ];
@@ -297,13 +355,16 @@ const CLASS_MOVES: DwMove[] = [
     category: "class",
     classId: "fighter",
     trigger: "When you use pure strength to destroy an inanimate obstacle",
-    text: "Roll +STR. On a 10+ choose 3; on a 7-9 choose 2: it doesn’t take a very long time; nothing of value is damaged; it doesn’t make an inordinate amount of noise; you can fix the thing again without too much effort.",
+    text: md(
+      "Roll +STR. On a 10+ choose 3; on a 7-9 choose 2: it doesn’t take a very long time; nothing of value is damaged; it doesn’t make an inordinate amount of noise; you can fix the thing again without too much effort.",
+    ),
     roll: { stat: "str" },
     outcomes: {
-      strong:
+      strong: md(
         "Choose 3: it doesn’t take long; nothing of value is damaged; it isn’t very noisy; you can fix it again easily.",
-      weak: "Choose 2 of those four.",
-      miss: "The GM makes a move.",
+      ),
+      weak: md("Choose 2 of those four."),
+      miss: md("The GM makes a move."),
     },
     suggest: { miss: ["xp"] },
   },
@@ -313,7 +374,7 @@ const CLASS_MOVES: DwMove[] = [
     category: "class",
     classId: "fighter",
     trigger: "Passive",
-    text: "You ignore the clumsy tag on armor you wear.",
+    text: md("You ignore the clumsy tag on armor you wear."),
   },
   {
     id: "cast-a-spell",
@@ -321,12 +382,16 @@ const CLASS_MOVES: DwMove[] = [
     category: "class",
     classId: "wizard",
     trigger: "When you release a spell you’ve prepared",
-    text: "Roll +INT. On a 10+ the spell is successfully cast and you don’t forget it. On a 7-9 the spell is cast, but choose one: you draw unwelcome attention or put yourself in a spot; the spell disturbs the fabric of reality (the GM chooses); or after it is cast, the spell is forgotten.",
+    text: md(
+      "Roll +INT. On a 10+ the spell is successfully cast and you don’t forget it. On a 7-9 the spell is cast, but choose one: you draw unwelcome attention or put yourself in a spot; the spell disturbs the fabric of reality (the GM chooses); or after it is cast, the spell is forgotten.",
+    ),
     roll: { stat: "int" },
     outcomes: {
-      strong: "The spell is successfully cast and you don’t forget it.",
-      weak: "The spell is cast, but choose one: you draw unwelcome attention or put yourself in a spot; the spell disturbs reality; or the spell is forgotten.",
-      miss: "The GM makes a move, and the spell is forgotten.",
+      strong: md("The spell is successfully cast and you don’t forget it."),
+      weak: md(
+        "The spell is cast, but choose one: you draw unwelcome attention or put yourself in a spot; the spell disturbs reality; or the spell is forgotten.",
+      ),
+      miss: md("The GM makes a move, and the spell is forgotten."),
     },
     suggest: { miss: ["xp"] },
   },
@@ -336,7 +401,9 @@ const CLASS_MOVES: DwMove[] = [
     category: "class",
     classId: "wizard",
     trigger: "Passive",
-    text: "You have mastered several spells and inscribed them in your spellbook. You can prepare spells from it, using your level + 1 in spell levels.",
+    text: md(
+      "You have mastered several spells and inscribed them in your spellbook. You can prepare spells from it, using your level + 1 in spell levels.",
+    ),
   },
   {
     id: "prepare-spells",
@@ -345,7 +412,9 @@ const CLASS_MOVES: DwMove[] = [
     classId: "wizard",
     trigger:
       "When you spend uninterrupted time (an hour or so) in quiet contemplation of your spellbook",
-    text: "Erase your prepared spells and prepare new ones from your spellbook, up to your level + 1 in total spell levels. You also always have the cantrips prepared.",
+    text: md(
+      "Erase your prepared spells and prepare new ones from your spellbook, up to your level + 1 in total spell levels. You also always have the cantrips prepared.",
+    ),
   },
   {
     id: "divine-guidance",
@@ -353,7 +422,9 @@ const CLASS_MOVES: DwMove[] = [
     category: "class",
     classId: "cleric",
     trigger: "When you petition your deity according to their precepts",
-    text: "Ask the GM what your deity would have you do, or what they would tell you, and the GM will answer honestly in the character of your god.",
+    text: md(
+      "Ask the GM what your deity would have you do, or what they would tell you, and the GM will answer honestly in the character of your god.",
+    ),
   },
   {
     id: "turn-undead",
@@ -362,12 +433,16 @@ const CLASS_MOVES: DwMove[] = [
     category: "class",
     classId: "cleric",
     trigger: "When you hold up your holy symbol and call on your deity for protection",
-    text: "Roll +WIS. On a 10+ the undead flee or are held at bay for a time. On a 7-9 they do, but they may return, or you attract attention. The GM will say how.",
+    text: md(
+      "Roll +WIS. On a 10+ the undead flee or are held at bay for a time. On a 7-9 they do, but they may return, or you attract attention. The GM will say how.",
+    ),
     roll: { stat: "wis" },
     outcomes: {
-      strong: "The undead are held at bay or flee while you call on your deity.",
-      weak: "The undead falter, but the GM chooses a cost: they may return, or something else notices you.",
-      miss: "The GM makes a move.",
+      strong: md("The undead are held at bay or flee while you call on your deity."),
+      weak: md(
+        "The undead falter, but the GM chooses a cost: they may return, or something else notices you.",
+      ),
+      miss: md("The GM makes a move."),
     },
     suggest: { miss: ["xp"] },
   },
@@ -377,12 +452,16 @@ const CLASS_MOVES: DwMove[] = [
     category: "class",
     classId: "cleric",
     trigger: "When you offer a prayer to your deity to cast a prepared spell",
-    text: "Roll +WIS. On a 10+ the spell is successfully cast and your deity does not revoke it. On a 7-9 the spell is cast, but choose one: you incur your deity’s disfavour (−1 ongoing to Cast a Spell until you earn it back), or the spell is revoked.",
+    text: md(
+      "Roll +WIS. On a 10+ the spell is successfully cast and your deity does not revoke it. On a 7-9 the spell is cast, but choose one: you incur your deity’s disfavour (−1 ongoing to Cast a Spell until you earn it back), or the spell is revoked.",
+    ),
     roll: { stat: "wis" },
     outcomes: {
-      strong: "The spell is successfully cast and your deity doesn’t revoke it.",
-      weak: "The spell is cast, but you incur disfavour (-1 ongoing to Cast a Spell until you atone) or the spell is revoked.",
-      miss: "The GM makes a move.",
+      strong: md("The spell is successfully cast and your deity doesn’t revoke it."),
+      weak: md(
+        "The spell is cast, but you incur disfavour (-1 ongoing to Cast a Spell until you atone) or the spell is revoked.",
+      ),
+      miss: md("The GM makes a move."),
     },
     suggest: { miss: ["xp"] },
   },
@@ -392,13 +471,16 @@ const CLASS_MOVES: DwMove[] = [
     category: "class",
     classId: "thief",
     trigger: "When you spend a moment to survey a dangerous area",
-    text: "Roll +DEX. On a 10+ hold 3; on a 7-9 hold 1. Spend hold, 1 for 1, to ask: Is there a trap here, and what activates it? What does it do when triggered? What else is hidden here? You take +1 forward when acting on the answers.",
+    text: md(
+      "Roll +DEX. On a 10+ hold 3; on a 7-9 hold 1. Spend hold, 1 for 1, to ask: Is there a trap here, and what activates it? What does it do when triggered? What else is hidden here? You take +1 forward when acting on the answers.",
+    ),
     roll: { stat: "dex" },
     outcomes: {
-      strong:
+      strong: md(
         "Hold 3. Spend it to ask about traps and hidden things here. Take +1 forward when acting on the answers.",
-      weak: "Hold 1. Spend it to ask one of those questions.",
-      miss: "The GM makes a move.",
+      ),
+      weak: md("Hold 1. Spend it to ask one of those questions."),
+      miss: md("The GM makes a move."),
     },
     suggest: { miss: ["xp"] },
   },
@@ -408,7 +490,9 @@ const CLASS_MOVES: DwMove[] = [
     category: "class",
     classId: "thief",
     trigger: "When you attack a surprised or defenceless enemy with a melee weapon",
-    text: "When you attack a surprised or defenceless enemy with a melee weapon, you get an advantage over an ordinary attack. See the SRD for the exact options.",
+    text: md(
+      "When you attack a surprised or defenceless enemy with a melee weapon, you get an advantage over an ordinary attack. See the SRD for the exact options.",
+    ),
   },
   {
     id: "tricks-of-the-trade",
@@ -416,12 +500,14 @@ const CLASS_MOVES: DwMove[] = [
     category: "class",
     classId: "thief",
     trigger: "When you pick locks or pockets or disable traps",
-    text: "Roll +DEX. On a 10+ you do it, no problem. On a 7-9 the GM will offer you a worse outcome, hard bargain, or ugly choice.",
+    text: md(
+      "Roll +DEX. On a 10+ you do it, no problem. On a 7-9 the GM will offer you a worse outcome, hard bargain, or ugly choice.",
+    ),
     roll: { stat: "dex" },
     outcomes: {
-      strong: "You do it, no problem.",
-      weak: "The GM will offer you a worse outcome, a hard bargain, or an ugly choice.",
-      miss: "The GM makes a move.",
+      strong: md("You do it, no problem."),
+      weak: md("The GM will offer you a worse outcome, a hard bargain, or an ugly choice."),
+      miss: md("The GM makes a move."),
     },
     suggest: { miss: ["xp"] },
   },
@@ -431,12 +517,16 @@ const CLASS_MOVES: DwMove[] = [
     category: "class",
     classId: "ranger",
     trigger: "When you attack a defenceless or surprised enemy at range",
-    text: "You may stop and deal your damage, or name a target on the enemy and roll +DEX. On a 10+ you deal your damage and the effect you wanted (disarm, hobble, blind…). On a 7-9 you deal damage and the effect, but choose one: you have to move to get the shot, or the enemy gets a response.",
+    text: md(
+      "You may stop and deal your damage, or name a target on the enemy and roll +DEX. On a 10+ you deal your damage and the effect you wanted (disarm, hobble, blind…). On a 7-9 you deal damage and the effect, but choose one: you have to move to get the shot, or the enemy gets a response.",
+    ),
     roll: { stat: "dex" },
     outcomes: {
-      strong: "You deal your damage and the effect you wanted.",
-      weak: "You deal your damage and get the effect, but choose one: you have to move, or the enemy gets a response.",
-      miss: "The GM makes a move.",
+      strong: md("You deal your damage and the effect you wanted."),
+      weak: md(
+        "You deal your damage and get the effect, but choose one: you have to move, or the enemy gets a response.",
+      ),
+      miss: md("The GM makes a move."),
     },
     suggest: { strong: ["damage"], weak: ["damage"], miss: ["xp"] },
   },
@@ -446,12 +536,16 @@ const CLASS_MOVES: DwMove[] = [
     category: "class",
     classId: "ranger",
     trigger: "When you follow a trail of clues left behind by passing creatures",
-    text: "Roll +WIS. On a 10+ you follow the creature’s trail until there’s a significant change in its direction or mode of travel, and you also choose 1. On a 7-9 you follow the trail, but the GM chooses 1 as well.",
+    text: md(
+      "Roll +WIS. On a 10+ you follow the creature’s trail until there’s a significant change in its direction or mode of travel, and you also choose 1. On a 7-9 you follow the trail, but the GM chooses 1 as well.",
+    ),
     roll: { stat: "wis" },
     outcomes: {
-      strong: "You follow the trail until something significant changes, and you choose one boon.",
-      weak: "You follow the trail, but the GM also chooses one to complicate it.",
-      miss: "The GM makes a move.",
+      strong: md(
+        "You follow the trail until something significant changes, and you choose one boon.",
+      ),
+      weak: md("You follow the trail, but the GM also chooses one to complicate it."),
+      miss: md("The GM makes a move."),
     },
     suggest: { miss: ["xp"] },
   },
@@ -462,12 +556,16 @@ const CLASS_MOVES: DwMove[] = [
     category: "class",
     classId: "paladin",
     trigger: "When you touch someone, skin to skin, and pray for their well-being",
-    text: "Roll +CHA. On a 10+ you heal them of 1d8 damage, or remove one disease or curse. On a 7-9 it works, but you also take the damage or effect, or your power is drawn through you.",
+    text: md(
+      "Roll +CHA. On a 10+ you heal them of 1d8 damage, or remove one disease or curse. On a 7-9 it works, but you also take the damage or effect, or your power is drawn through you.",
+    ),
     roll: { stat: "cha" },
     outcomes: {
-      strong: "It works: heal 1d8 damage, or remove one disease or curse.",
-      weak: "It works, but the GM chooses a cost: you take the damage or effect on yourself, or your power is drawn through you.",
-      miss: "The GM makes a move.",
+      strong: md("It works: heal 1d8 damage, or remove one disease or curse."),
+      weak: md(
+        "It works, but the GM chooses a cost: you take the damage or effect on yourself, or your power is drawn through you.",
+      ),
+      miss: md("The GM makes a move."),
     },
     suggest: { miss: ["xp"] },
   },
@@ -477,12 +575,14 @@ const CLASS_MOVES: DwMove[] = [
     category: "class",
     classId: "paladin",
     trigger: "When you give an NPC an order based on your divine authority",
-    text: "Roll +CHA. On a 10+ they choose to obey or to suffer the consequences. On a 7-9 they choose to obey, or to hold out for their own reasons, and make a move on you.",
+    text: md(
+      "Roll +CHA. On a 10+ they choose to obey or to suffer the consequences. On a 7-9 they choose to obey, or to hold out for their own reasons, and make a move on you.",
+    ),
     roll: { stat: "cha" },
     outcomes: {
-      strong: "They choose: obey, or suffer the consequences you name.",
-      weak: "They choose: obey, or hold out for their own reasons and make a move on you.",
-      miss: "The GM makes a move.",
+      strong: md("They choose: obey, or suffer the consequences you name."),
+      weak: md("They choose: obey, or hold out for their own reasons and make a move on you."),
+      miss: md("The GM makes a move."),
     },
     suggest: { miss: ["xp"] },
   },
@@ -493,12 +593,14 @@ const CLASS_MOVES: DwMove[] = [
     category: "class",
     classId: "bard",
     trigger: "When you weave a performance into a spell",
-    text: "Choose an ally and an effect (heal, grant +1d4 damage, or give +1 forward), then roll +CHA. On a 10+ it works; on a 7-9 it works, but you also attract unwelcome attention.",
+    text: md(
+      "Choose an ally and an effect (heal, grant +1d4 damage, or give +1 forward), then roll +CHA. On a 10+ it works; on a 7-9 it works, but you also attract unwelcome attention.",
+    ),
     roll: { stat: "cha" },
     outcomes: {
-      strong: "It works, no problem.",
-      weak: "It works, but you attract unwelcome attention or put yourself in a spot.",
-      miss: "The GM makes a move.",
+      strong: md("It works, no problem."),
+      weak: md("It works, but you attract unwelcome attention or put yourself in a spot."),
+      miss: md("The GM makes a move."),
     },
     suggest: { miss: ["xp"] },
   },
@@ -508,7 +610,9 @@ const CLASS_MOVES: DwMove[] = [
     category: "class",
     classId: "bard",
     trigger: "When you first encounter an important creature, location or thing",
-    text: "Ask the GM for any lore you’d have: tales, songs, rumours. The GM tells you what you know, and you may ask for more by rolling Spout Lore.",
+    text: md(
+      "Ask the GM for any lore you’d have: tales, songs, rumours. The GM tells you what you know, and you may ask for more by rolling Spout Lore.",
+    ),
   },
   {
     id: "spirit-tongue",
@@ -516,7 +620,9 @@ const CLASS_MOVES: DwMove[] = [
     category: "class",
     classId: "druid",
     trigger: "When you call to the spirits",
-    text: "You take the form of an animal you’ve studied, and can speak with and be understood by animals of that kind.",
+    text: md(
+      "You take the form of an animal you’ve studied, and can speak with and be understood by animals of that kind.",
+    ),
   },
   {
     id: "the-spirits-sing",
@@ -524,12 +630,14 @@ const CLASS_MOVES: DwMove[] = [
     category: "class",
     classId: "druid",
     trigger: "When you enter a new place and listen to the spirits",
-    text: "Roll +WIS. On a 10+ hold 3; on a 7-9 hold 1. Spend hold, 1 for 1, to ask the spirits a question about this place or the creatures in it.",
+    text: md(
+      "Roll +WIS. On a 10+ hold 3; on a 7-9 hold 1. Spend hold, 1 for 1, to ask the spirits a question about this place or the creatures in it.",
+    ),
     roll: { stat: "wis" },
     outcomes: {
-      strong: "Hold 3. Spend it to ask the spirits questions about this place.",
-      weak: "Hold 1. Spend it to ask one question.",
-      miss: "The GM makes a move.",
+      strong: md("Hold 3. Spend it to ask the spirits questions about this place."),
+      weak: md("Hold 1. Spend it to ask one question."),
+      miss: md("The GM makes a move."),
     },
     suggest: { miss: ["xp"] },
   },

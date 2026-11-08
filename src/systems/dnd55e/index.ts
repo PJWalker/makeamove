@@ -1,3 +1,5 @@
+import { md } from "../../macros/markdown.macro" with { type: "macro" };
+import { plainText, richTextFromPlain, type RichText } from "../../core/richText";
 import type { CharacterView } from "../../features/characters/types";
 import { commaListOf, formatCommaList } from "../../lib/list";
 
@@ -137,7 +139,7 @@ function spellList(character: CharacterView) {
 const spellOptions = SPELLS_ALL.map((spell) => ({
   id: spell.id,
   name: spell.name,
-  text: `${spell.level ? `Level ${spell.level}` : "Cantrip"} · ${spell.trigger}\n${spell.text}`,
+  text: `${spell.level ? `Level ${spell.level}` : "Cantrip"} · ${spell.trigger}\n${plainText(spell.text)}`,
 }));
 const selectedIds = (character: CharacterView, field: string, max = Infinity) =>
   commaListOf(character.data[field]).slice(0, max);
@@ -204,17 +206,20 @@ const results = [
   { id: "fumble", label: "Natural 1", tone: "bad" as const },
 ];
 
-const CHECK_OUTCOMES = {
-  crit: "Compare the total with the DC. (A natural 20 isn’t an automatic success on an ability check or saving throw.)",
-  rolled: "Compare the total with the DC: equal or higher succeeds.",
-  fumble:
+const CHECK_OUTCOMES: Record<string, RichText> = {
+  crit: md(
+    "Compare the total with the DC. (A natural 20 isn’t an automatic success on an ability check or saving throw.)",
+  ),
+  rolled: md("Compare the total with the DC: equal or higher succeeds."),
+  fumble: md(
     "Compare the total with the DC. (A natural 1 isn’t an automatic failure on an ability check or saving throw.)",
+  ),
 };
 
-const ATTACK_OUTCOMES = {
-  crit: "Critical Hit: it hits whatever the target’s AC, and the damage dice are rolled twice.",
-  rolled: "Hits if the total equals or beats the target’s AC.",
-  fumble: "A natural 1 always misses.",
+const ATTACK_OUTCOMES: Record<string, RichText> = {
+  crit: md("Critical Hit: it hits whatever the target’s AC, and the damage dice are rolled twice."),
+  rolled: md("Hits if the total equals or beats the target’s AC."),
+  fumble: md("A natural 1 always misses."),
 };
 
 const check = (
@@ -229,7 +234,7 @@ const ABILITY_CHECKS: ActionDef[] = ABILITIES.map((a) => ({
   name: `${a.name} Check`,
   category: "check",
   trigger: `When the DM calls for a ${a.name} check that no skill covers`,
-  text: `Roll 1d20 + your ${a.name} modifier against the DC.`,
+  text: richTextFromPlain(`Roll 1d20 + your ${a.name} modifier against the DC.`),
   steps: [check({ stat: a.id, add: [{ value: "jack", label: "Jack of All Trades" }] })],
 }));
 
@@ -238,7 +243,9 @@ const SAVES: ActionDef[] = ABILITIES.map((a) => ({
   name: `${a.name} Save`,
   category: "save",
   trigger: `When an effect calls for a ${a.name} saving throw`,
-  text: `Roll 1d20 + your ${a.name} modifier, plus your Proficiency Bonus if you’re proficient in ${a.name} saving throws, against the DC.`,
+  text: richTextFromPlain(
+    `Roll 1d20 + your ${a.name} modifier, plus your Proficiency Bonus if you’re proficient in ${a.name} saving throws, against the DC.`,
+  ),
   steps: [check({ stat: a.id, add: [{ value: `save:${a.id}`, label: "Prof" }] })],
 }));
 
@@ -247,7 +254,9 @@ const SKILL_CHECKS: ActionDef[] = SKILLS.map((s) => ({
   name: s.name,
   category: "skill",
   trigger: `${abilityName(s.ability)} (${s.name}) check`,
-  text: `Roll 1d20 + your ${abilityName(s.ability)} modifier, plus your Proficiency Bonus if you’re proficient in ${s.name} (twice it with Expertise), against the DC.`,
+  text: richTextFromPlain(
+    `Roll 1d20 + your ${abilityName(s.ability)} modifier, plus your Proficiency Bonus if you’re proficient in ${s.name} (twice it with Expertise), against the DC.`,
+  ),
   steps: [check({ stat: s.ability, add: [{ value: `skill:${s.id}`, label: "Prof" }] })],
 }));
 
@@ -257,14 +266,14 @@ const COMBAT: ActionDef[] = [
     name: "Initiative",
     category: "combat",
     trigger: "When combat starts",
-    text: "Roll a Dexterity check; everyone acts in order from the highest total down.",
+    text: md("Roll a Dexterity check; everyone acts in order from the highest total down."),
     steps: [
       check(
         { stat: "dex", add: [{ value: "initiativeBonus", label: "Initiative" }] },
         {
-          crit: "Your place in the turn order.",
-          rolled: "Your place in the turn order.",
-          fumble: "Your place in the turn order.",
+          crit: md("Your place in the turn order."),
+          rolled: md("Your place in the turn order."),
+          fumble: md("Your place in the turn order."),
         },
       ),
     ],
@@ -274,16 +283,18 @@ const COMBAT: ActionDef[] = [
     name: "Death Saving Throw",
     category: "combat",
     trigger: "At the start of your turn while you have 0 Hit Points",
-    text: "Roll 1d20: 10 or higher is a success, lower a failure. Three successes and you’re Stable; three failures and you die. A natural 20 brings you back with 1 Hit Point; a natural 1 counts as two failures. Taking damage at 0 Hit Points is a failure (two for a Critical Hit).",
+    text: md(
+      "Roll 1d20: 10 or higher is a success, lower a failure. Three successes and you’re Stable; three failures and you die. A natural 20 brings you back with 1 Hit Point; a natural 1 counts as two failures. Taking damage at 0 Hit Points is a failure (two for a Critical Hit).",
+    ),
     steps: [
       check(
         {
           followUps: { rolled: ["death-success", "death-failure"], fumble: ["death-failure-2"] },
         },
         {
-          crit: "You regain 1 Hit Point and wake.",
-          rolled: "10 or higher is a success; lower is a failure.",
-          fumble: "Two failures.",
+          crit: md("You regain 1 Hit Point and wake."),
+          rolled: md("10 or higher is a success; lower is a failure."),
+          fumble: md("Two failures."),
         },
       ),
     ],
@@ -296,7 +307,9 @@ const ATTACKS: ActionDef[] = [
     name: "Melee Attack",
     category: "attack",
     trigger: "Attack action, with a melee weapon or an Unarmed Strike",
-    text: "Roll 1d20 + your Strength modifier + your Proficiency Bonus against the target’s AC. On a hit, roll the weapon’s damage plus your Strength modifier; an Unarmed Strike deals 1 + your Strength modifier.",
+    text: md(
+      "Roll 1d20 + your Strength modifier + your Proficiency Bonus against the target’s AC. On a hit, roll the weapon’s damage plus your Strength modifier; an Unarmed Strike deals 1 + your Strength modifier.",
+    ),
     target: { prompt: "Target the creature you’re attacking", min: 1, max: 1 },
     steps: [
       check(
@@ -315,7 +328,9 @@ const ATTACKS: ActionDef[] = [
     name: "Finesse or Ranged Attack",
     category: "attack",
     trigger: "Attack action, with a Finesse or ranged weapon",
-    text: "Roll 1d20 + your Dexterity modifier + your Proficiency Bonus against the target’s AC. On a hit, roll the weapon’s damage plus your Dexterity modifier. Attacking at long range, or with a ranged weapon while an enemy is within 5 feet, has Disadvantage.",
+    text: md(
+      "Roll 1d20 + your Dexterity modifier + your Proficiency Bonus against the target’s AC. On a hit, roll the weapon’s damage plus your Dexterity modifier. Attacking at long range, or with a ranged weapon while an enemy is within 5 feet, has Disadvantage.",
+    ),
     target: { prompt: "Target the creature you’re attacking", min: 1, max: 1 },
     steps: [
       check(
@@ -419,7 +434,8 @@ const spellRoll = (s: Spell, crit: boolean): FollowUpDef => {
     formula: (c, d) => {
       const extraLevels = Math.max(0, (d.values.spellSlot ?? s.level) - s.level);
       const extraDice =
-        s.upcastDice ?? Number(s.text.match(/\+(\d+)d\d+ per slot level above/i)?.[1] ?? 0);
+        s.upcastDice ??
+        Number(plainText(s.text).match(/\+(\d+)d\d+ per slot level above/i)?.[1] ?? 0);
       const n =
         (r.count * (r.scales ? cantripDice(levelOf(c)) : 1) + extraLevels * extraDice) *
         (crit ? 2 : 1);
@@ -543,7 +559,7 @@ const SUBCLASS_ACTIONS: ActionDef[] = SUBCLASSES.map((k) => ({
   name: k.name,
   category: "class",
   trigger: `Level ${SUBCLASS_LEVEL} subclass`,
-  text: k.text,
+  text: richTextFromPlain(k.text),
   steps: [],
 }));
 

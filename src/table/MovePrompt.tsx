@@ -1,4 +1,5 @@
-import { FormattedText } from "../workspace/FormattedText";
+import { emptyRichText, plainText, type RichText } from "../core/richText";
+import { RichTextView } from "../workspace/RichTextView";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { watch } from "../lib/store";
 import {
@@ -271,7 +272,7 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
           <IconClose />
         </Button>
       </div>
-      <FormattedText
+      <RichTextView
         campaign={campaign}
         text={withoutAskedQuestions(move)}
         characterId={c.id}
@@ -381,16 +382,24 @@ const areaName = (a: AreaSpec) => `${sceneDistance.value(a.size)} ${a.shape}`;
 const bare = (formula: string) => formula.replace(/\[[^\]]*\]/g, "");
 
 /** A move's text without the list of questions the prompt asks as checkboxes below it. */
-function withoutAskedQuestions(move: ActionDef) {
+/** The move's text without the list items its form asks as questions. */
+function withoutAskedQuestions(move: ActionDef): RichText {
   const ask = needsChoice(move);
   if (ask?.kind !== "questions") return move.text;
-  return move.text
-    .split("\n")
-    .filter((line) => {
-      const item = /^\s*[-*]\s+(.*)$/.exec(line)?.[1];
-      return !item || !ask.questions.includes(item.replace(/[*_]/g, "").trim());
-    })
-    .join("\n");
+  const asked = new Set(ask.questions);
+  const prune = (node: RichText): RichText | null => {
+    if (node.type === "listItem" && asked.has(plainText({ content: node.content ?? [] }).trim()))
+      return null;
+    if (!node.content) return node;
+    const content = node.content.flatMap((child): RichText[] => {
+      const kept = prune(child);
+      return kept ? [kept] : [];
+    });
+    const emptyList =
+      (node.type === "bulletList" || node.type === "orderedList") && !content.length;
+    return emptyList ? null : { ...node, content };
+  };
+  return prune(move.text) ?? emptyRichText();
 }
 
 /** The stat or number the check needs and an extra bonus, then a Roll for each roll mode (disadvantage, roll, advantage). */

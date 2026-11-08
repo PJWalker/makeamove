@@ -1,3 +1,4 @@
+import { richTextFromPlain } from "../core/richText";
 import { useState } from "react";
 import { addItem, removeItem, updateItem, spendItemUse } from "../features/characters/api";
 import { clearArtifactTrack, markArtifactTrack, systemOf } from "../features/characters/api";
@@ -5,7 +6,7 @@ import type { CharacterView, ItemInstance } from "../features/characters/types";
 import type { Derived } from "../systems/types";
 import type { Campaign } from "../campaign/campaign";
 import { Button } from "../ui/Button";
-import { FormattedText } from "./FormattedText";
+import { RichTextView } from "./RichTextView";
 import { IconDelete, IconImage } from "../ui/icons";
 import { List } from "../ui/List";
 import { EntryRow, EntryWindow, useEntryWindows } from "./EntryWindow";
@@ -16,7 +17,8 @@ import { dragEntity, entity } from "./entityDrag";
 import { CampaignEntityGraphic } from "./EntityGraphic";
 import { editEntityGraphic } from "./GraphicDialogs";
 import { getEntityGraphic } from "./entityGraphics";
-import { extensionOf, type ItemUseProps } from "../systems/extensions";
+import { useExtension } from "./systemExtensions";
+import type { ItemUseProps } from "../systems/extensionTypes";
 
 const menuTargets = (i: ItemInstance) => [
   ...(i.uses !== undefined ? [{ id: `use:${i.id}`, title: `Use ${i.name}` }] : []),
@@ -117,7 +119,11 @@ function ArtifactTracker({
             <li key={move.id}>
               <strong>{move.name}</strong> {unlocked.has(move.id) ? "(unlocked)" : "(locked)"}
               {move.text && (
-                <FormattedText campaign={campaign} text={move.text} characterId={characterId} />
+                <RichTextView
+                  campaign={campaign}
+                  text={richTextFromPlain(move.text)}
+                  characterId={characterId}
+                />
               )}
             </li>
           ))}
@@ -129,7 +135,7 @@ function ArtifactTracker({
 
 /** The core's Use button: spends a use, or does what the system's extension says. */
 function UseButton({ campaign, character, item, editable }: ItemUseProps) {
-  const use = extensionOf(systemOf(campaign)).spendUse ?? spendItemUse;
+  const use = useExtension(systemOf(campaign)).spendUse ?? spendItemUse;
   return (
     <Button
       disabled={!editable || (item.usesLeft ?? 0) <= 0}
@@ -160,7 +166,7 @@ export function Inventory({
   const patch = (i: ItemInstance, p: Partial<ItemInstance>) => updateItem(campaign, c.id, i.id, p);
   const over = d && (d.values.load ?? 0) > (d.values.maxLoad ?? 0);
   const system = systemOf(campaign);
-  const extension = extensionOf(system);
+  const extension = useExtension(system);
   const usable = (i: ItemInstance) =>
     i.uses !== undefined &&
     (system.itemUsable?.(

@@ -5,16 +5,16 @@ import {
   contentForCommand,
   contentFromText,
   entityContent,
-  plainText,
+  messageText,
 } from "../content";
 import { LINK_NODE } from "../../notes/links";
-import { TRACKER_NODE } from "../../characters/trackers";
+import { TRACKER_NODE } from "../../../core/richText";
 
 describe("chat content", () => {
   it("stores plain text and line breaks as a Tiptap document", () => {
     const content = contentFromText("first\nsecond");
     expect(content.type).toBe("doc");
-    expect(plainText(content)).toBe("first\nsecond");
+    expect(messageText(content)).toBe("first\nsecond");
   });
 
   it("retains formatting and entity links when extracting a command body", () => {
@@ -53,8 +53,8 @@ describe("chat content", () => {
 
   it("uses the link label or target name for visible text", () => {
     const linked = entityContent("item", "potion", "Healing draught");
-    expect(plainText(linked)).toBe("Healing draught ");
-    expect(plainText(entityContent("item", "potion", ""), () => "Potion")).toBe("Potion ");
+    expect(messageText(linked)).toBe("Healing draught ");
+    expect(messageText(entityContent("item", "potion", ""), () => "Potion")).toBe("Potion ");
   });
 
   it("reads tracker buttons as their token in commands and their label as plain text", () => {
@@ -71,7 +71,7 @@ describe("chat content", () => {
       ],
     };
     expect(commandText(content)).toBe("/me earns [[+1 XP]]");
-    expect(plainText(content)).toBe("/me earns +1 XP");
+    expect(messageText(content)).toBe("/me earns +1 XP");
     expect(contentForCommand(content, "earns [[+1 XP]]").content?.[0]?.content?.[1]).toEqual(
       content.content[0]!.content[1],
     );

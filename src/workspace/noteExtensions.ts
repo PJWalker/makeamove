@@ -6,7 +6,7 @@ import * as Y from "yjs";
 import { newId } from "../lib/ids";
 import { colourOf } from "../scene/presence";
 import { importImage, loadBlob, onBlobFetcher } from "../scene/images";
-import type { BlobRef } from "../scene/types";
+import type { BlobRef } from "../core/blob";
 import { device } from "../platform/device";
 
 /*

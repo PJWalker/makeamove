@@ -1,5 +1,5 @@
 import type { ItemDef } from "../types";
-import { sourceMagicItems } from "./paths";
+import { sourceMagicItems } from "./paths.macro" with { type: "macro" };
 
 const WEALTH = ["Broke", "Poor", "Modest", "Comfortable", "Rich"];
 const parsedMagicItems = sourceMagicItems();

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contentFromText, plainText } from "../content";
+import { contentFromText, messageText } from "../content";
 import { logRows, splitSessions } from "../sessions";
 import { canDelete, type ChatMessage } from "../types";
 
@@ -74,7 +74,7 @@ describe("the rows the log shows", () => {
     rows.map((r) => {
       if (r.kind === "fold") return `fold ${r.title} (${r.count})${r.open ? " open" : ""}`;
       const text =
-        r.m.kind === "text" ? plainText(r.m.text) : r.m.kind === "system" ? r.m.text : "";
+        r.m.kind === "text" ? messageText(r.m.text) : r.m.kind === "system" ? r.m.text : "";
       return `${text}${r.header ? " *" : ""}`;
     });
 

@@ -11,12 +11,12 @@ import { dungeonWorld2 as dw2 } from "../dungeon-world-2";
 import { daggerheart as dh } from "../daggerheart";
 import { testCharacter, testSystem } from "./fixtures/testSystem";
 import {
-  PATHS as DW2_PATHS,
+  dw2Paths,
   sourceMoveOutcomes,
   sourceMoveRichText,
   sourceMoveText,
-} from "../dungeon-world-2/paths";
-import { plainText } from "../../features/characters/trackers";
+} from "../dungeon-world-2/paths.macro";
+import { emptyRichText, plainText } from "../../core/richText";
 import { BONDS as DW2_BONDS } from "../dungeon-world-2/bonds";
 import { STRUGGLES as DW2_STRUGGLES } from "../dungeon-world-2/struggles";
 import { addTreasureBoxes, purchaseAtWealth, wealthTierForBoxes } from "../dungeon-world-2/wealth";
@@ -136,9 +136,9 @@ describe("Blades in the Dark", () => {
         blades,
       ).values.maxLoad,
     ).toBe(5);
-    expect(blades.actions.find((action) => action.id === "ability-cutter-mule")?.text).toContain(
-      "Light: 5",
-    );
+    expect(
+      plainText(blades.actions.find((action) => action.id === "ability-cutter-mule")?.text),
+    ).toContain("Light: 5");
   });
 
   it("offers desperate XP, resistance Stress, and vice clearing from the actual dice result", () => {
@@ -208,10 +208,15 @@ describe("Blades in the Dark", () => {
   it("preserves selected action-roll position", () => {
     const c = bladesCharacter({ scores: { skirmish: 1 } });
     expect(
-      performMove(blades, skirmish, c, derive(c, blades), { mode: "controlled" }, dice(4)).outcome,
+      plainText(
+        performMove(blades, skirmish, c, derive(c, blades), { mode: "controlled" }, dice(4))
+          .outcome,
+      ),
     ).toContain("minor complication");
     expect(
-      performMove(blades, skirmish, c, derive(c, blades), { mode: "desperate" }, dice(4)).outcome,
+      plainText(
+        performMove(blades, skirmish, c, derive(c, blades), { mode: "desperate" }, dice(4)).outcome,
+      ),
     ).toContain("severe harm");
   });
 
@@ -222,7 +227,7 @@ describe("Blades in the Dark", () => {
     const resist = blades.actions.find((action) => action.id === "resist-prowess")!;
     const result = performMove(blades, resist, c, d, {}, dice(2, 5));
     expect(result.roll?.formula).toBe("2d6kh1[Resistance]");
-    expect(result.outcome).toContain("Resistance works");
+    expect(plainText(result.outcome)).toContain("Resistance works");
   });
 
   it("advances a selected core clock by the project result", () => {
@@ -275,8 +280,8 @@ describe("Dungeon World 2", () => {
     expect(sourceMoves).toHaveLength(17);
     for (const [id, sourceName] of sourceMoves) {
       const action = dw2.actions.find((entry) => entry.id === id)!;
-      expect(action.text).toBe(sourceMoveRichText(sourceName));
-      expect(plainText(action.text).replace(/^- /gm, "").replace(/\s+/g, " ")).toContain(
+      expect(action.text).toEqual(sourceMoveRichText(sourceName));
+      expect(plainText(action.text).replace(/^• /gm, "").replace(/\s+/g, " ")).toContain(
         sourceMoveText(sourceName).split(" ").slice(0, 6).join(" "),
       );
       const sourceOutcomes = sourceMoveOutcomes(sourceName);
@@ -287,7 +292,7 @@ describe("Dungeon World 2", () => {
     expect(plainText(dw2.actions.find((action) => action.id === "aid-a-pc")!.text)).toContain(
       "They frustrate you; erase 1 Depth with them",
     );
-    expect(dw2.actions.find((action) => action.id === "face-death")?.text).toContain(
+    expect(plainText(dw2.actions.find((action) => action.id === "face-death")?.text)).toContain(
       "Go Out in a Blaze of Glory",
     );
     const classMoves = [
@@ -303,7 +308,7 @@ describe("Dungeon World 2", () => {
     ] as const;
     for (const [id, sourceName] of classMoves) {
       const action = dw2.actions.find((entry) => entry.id === id)!;
-      expect(action.text).toBe(sourceMoveRichText(sourceName, 4));
+      expect(action.text).toEqual(sourceMoveRichText(sourceName, 4));
       const sourceOutcomes = sourceMoveOutcomes(sourceName, 4);
       if (sourceOutcomes) {
         expect(action.steps[0]).toMatchObject({ outcomes: sourceOutcomes });
@@ -315,22 +320,22 @@ describe("Dungeon World 2", () => {
       ["reveal-your-struggle", "Reveal Your Struggle"],
     ] as const;
     for (const [id, sourceName] of campaignMoves) {
-      expect(dw2.actions.find((entry) => entry.id === id)?.text).toBe(
+      expect(dw2.actions.find((entry) => entry.id === id)?.text).toEqual(
         sourceMoveRichText(sourceName, 4),
       );
     }
-    expect(dw2.actions.find((action) => action.id === "barbarian-rage")?.text).toContain(
+    expect(plainText(dw2.actions.find((action) => action.id === "barbarian-rage")?.text)).toContain(
       "You can't benefit from wearing armor",
     );
-    expect(dw2.actions.find((action) => action.id === "barbarian-rage")?.text).toContain(
+    expect(plainText(dw2.actions.find((action) => action.id === "barbarian-rage")?.text)).toContain(
       "Trade Blows+STR",
     );
     expect(dw2.actions.find((action) => action.id === "barbarian-rage")?.text).not.toContain(
       "Trade Blows)+STR",
     );
-    expect(dw2.actions.find((action) => action.id === "bard-perform-art")?.text).toContain(
-      "marks 1 Depth with you",
-    );
+    expect(
+      plainText(dw2.actions.find((action) => action.id === "bard-perform-art")?.text),
+    ).toContain("marks 1 Depth with you");
     for (const id of ["pull-strings", "sneak-past", "unearth-secrets"]) {
       expect(dw2.actions.find((action) => action.id === id)?.steps[0]).toMatchObject({
         followUps: { miss: ["xp"] },
@@ -343,7 +348,7 @@ describe("Dungeon World 2", () => {
       const step = action.steps[0];
       if (step?.kind !== "check") continue;
       expect(Boolean(step.followUps?.miss)).toBe(
-        /\bmark(?:s)?\s+(?:1\s+)?XP\b/i.test(step.outcomes["miss"] ?? ""),
+        /\bmark(?:s)?\s+(?:1\s+)?XP\b/i.test(plainText(step.outcomes["miss"])),
       );
     }
   });
@@ -546,21 +551,19 @@ describe("Dungeon World 2", () => {
   });
 
   it("offers all Paths and grants only the acquired starting move until a Path Move is selected", () => {
-    expect(DW2_PATHS).toHaveLength(27);
-    expect(DW2_PATHS.every((path) => path.moves.length === 5)).toBe(true);
+    expect(dw2Paths()).toHaveLength(27);
+    expect(dw2Paths().every((path) => path.moves.length === 5)).toBe(true);
     expect(
-      DW2_PATHS.every(
+      dw2Paths().every(
         (path) => path.rules.length === 5 && path.rules.every((move) => move.text.length > 40),
       ),
     ).toBe(true);
-    expect(
-      dw2.actions.find((action) => action.name === "Forthright Speech")?.steps[0],
-    ).toMatchObject({
-      kind: "check",
-      stat: "cha",
-      outcomes: { strong: expect.stringContaining("clear a Condition") as unknown },
-    });
-    const path = DW2_PATHS.find((entry) => entry.id === "barbarian-berserker")!;
+    const speech = dw2.actions.find((action) => action.name === "Forthright Speech")?.steps[0];
+    expect(speech).toMatchObject({ kind: "check", stat: "cha" });
+    expect(speech?.kind === "check" && plainText(speech.outcomes.strong)).toContain(
+      "clear a Condition",
+    );
+    const path = dw2Paths().find((entry) => entry.id === "barbarian-berserker")!;
     const choice = dw2.creation!.choices.find((entry) => entry.id === "advancement")!;
     expect(choice.options.some((option) => option.id === path.id)).toBe(true);
     const c = bladesCharacter({ data: { classId: "barbarian", ownedPaths: path.id } });
@@ -780,12 +783,12 @@ describe("Dungeon World 2", () => {
 
   it("exposes source-backed GM agenda, principles, moves, and NPC guidance", () => {
     expect(dw2.gmReference).toHaveLength(5);
-    expect(dw2.gmReference?.find((section) => section.title === "Agenda")?.text).toContain(
-      "Portray a meaningful fantasy world",
-    );
-    expect(dw2.gmReference?.find((section) => section.title === "Major NPCs")?.text).toContain(
-      "Drive",
-    );
+    expect(
+      plainText(dw2.gmReference?.find((section) => section.title === "Agenda")?.text),
+    ).toContain("Portray a meaningful fantasy world");
+    expect(
+      plainText(dw2.gmReference?.find((section) => section.title === "Major NPCs")?.text),
+    ).toContain("Drive");
   });
 
   it("unlocks Artifact moves and applies passive Artifact stat and HP effects", () => {
@@ -1156,7 +1159,7 @@ describe("checking a system", () => {
           name: "Odd",
           category: "nope",
           trigger: "",
-          text: "",
+          text: emptyRichText(),
           steps: [{ kind: "check" as const, stat: "luck", outcomes: {} }],
         },
       ],

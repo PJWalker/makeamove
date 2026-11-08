@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { plainText } from "../features/characters/trackers";
+import { plainText } from "../core/richText";
 import { MoveBody } from "./MoveBody";
 import { useY } from "../ui/useY";
 import { setField, toggleCondition } from "../features/characters/api";
@@ -29,7 +29,7 @@ import { List, Tag } from "../ui/List";
 import { menuTrigger } from "../ui/menuTrigger";
 import { usePopupDialog } from "./usePopupDialog";
 import { Segmented, SegmentedOrSelect } from "../ui/Segmented";
-import { Dialog } from "./CampaignDialogs";
+import { Dialog } from "./Dialog";
 import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
 import { EntryRow, EntryWindow, rollTag, useEntryWindows } from "./EntryWindow";
 import { linkProxy } from "./LinkChip";

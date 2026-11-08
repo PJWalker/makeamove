@@ -47,7 +47,7 @@
 @import "../systems/dnd55e/Sheet.css";
 @import "../workspace/DeclarativeSheet.css";
 @import "../workspace/MoveBody.css";
-@import "../workspace/FormattedText.css";
+@import "../workspace/RichTextView.css";
 @import "../systems/dungeon-world-2/MoveForms.css";
 @import "../workspace/entityWindows.css";
 @import "../workspace/entityDrag.css";

@@ -1,10 +1,10 @@
 import type { Campaign } from "../campaign/campaign";
 import { canEdit, getCharacter, systemOf } from "../features/characters/api";
 import type { CharacterView } from "../features/characters/types";
-import { extensionOf } from "../systems/extensions";
+import { useExtension } from "./systemExtensions";
 import type { ActionDef } from "../systems/types";
 import { useY } from "../ui/useY";
-import { FormattedText } from "./FormattedText";
+import { RichTextView } from "./RichTextView";
 
 /*
  * A move's text, formatted with buttons that change the character's numbers,
@@ -26,10 +26,10 @@ export function MoveBody({
     JSON.stringify(getCharacter(campaign, characterId ?? undefined) ?? null),
   );
   const c = JSON.parse(json) as CharacterView | null;
-  const Form = extensionOf(system).moveForms?.[move.id];
+  const Form = useExtension(system).moveForms?.[move.id];
   return (
     <>
-      <FormattedText
+      <RichTextView
         campaign={campaign}
         text={move.text}
         characterId={characterId}

@@ -1,7 +1,7 @@
 import type * as React from "react";
 import { useEffect, useState } from "react";
 import { loadBlob, onBlobFetcher } from "../scene/images";
-import type { BlobRef } from "../scene/types";
+import type { BlobRef } from "../core/blob";
 
 /** An image from the blob store, or `fallback` while it's missing from this device. */
 export function BlobImage({

@@ -14,7 +14,7 @@ import type { Campaign } from "../campaign/campaign";
 import { Button } from "../ui/Button";
 import { ENTRY_ICONS, type EntryIconName } from "../ui/entryIcons";
 import { closePopup } from "../ui/popup";
-import { Dialog } from "./CampaignDialogs";
+import { Dialog } from "./Dialog";
 import { usePopupDialog } from "./usePopupDialog";
 import { useValue } from "../ui/useValue";
 

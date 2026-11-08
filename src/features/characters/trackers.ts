@@ -3,6 +3,7 @@ import type { GameSystem, TrackerDef } from "../../systems/types";
 import { bumpData, bumpResource, canEdit, getCharacter, systemOf } from "./api";
 import { derive } from "./store";
 import type { CharacterView } from "./types";
+import type { TrackerButton } from "../../core/richText";
 
 /*
  * Inline buttons in text that add to or spend a character's numbers:
@@ -10,31 +11,6 @@ import type { CharacterView } from "./types";
  * its own label. Which numbers can be named is the system's (its trackers,
  * or failing those its resources).
  */
-
-/** The rich-text node a button is stored as in notes and chat. */
-export const TRACKER_NODE = "trackerButton";
-
-/** [[±N name]] or [[±N name|label]]. */
-export const TRACKER_TOKEN = /\[\[\s*([+-]\d+)\s+([^\]|]+?)\s*(?:\|\s*([^\]]+?)\s*)?\]\]/g;
-
-export interface TrackerButton {
-  by: number;
-  /** The number's name as written. */
-  name: string;
-  label: string;
-}
-
-export function parseTrackerButton(raw: string): TrackerButton | null {
-  const m = new RegExp(TRACKER_TOKEN.source).exec(raw);
-  if (!m) return null;
-  const by = Number(m[1]);
-  const name = m[2]!;
-  return { by, name, label: m[3] ?? `${by > 0 ? "+" : ""}${by} ${name}` };
-}
-
-/** The token for a button: what the editor writes back as text. */
-export const trackerToken = (b: TrackerButton) =>
-  `[[${b.by > 0 ? "+" : ""}${b.by} ${b.name}${b.label !== `${b.by > 0 ? "+" : ""}${b.by} ${b.name}` ? `|${b.label}` : ""}]]`;
 
 export function trackersOf(system: GameSystem): TrackerDef[] {
   return (
@@ -87,12 +63,4 @@ export function pressTracker(campaign: Campaign, characterId: string, b: Tracker
   if (t.resource) bumpResource(campaign, c.id, t.resource, b.by, max);
   else if (t.data) bumpData(campaign, c.id, t.data, b.by, max);
   return true;
-}
-
-/** Text with its buttons as their labels and its emphasis marks taken out: for tooltips and search. */
-export function plainText(text: string): string {
-  return text
-    .replace(TRACKER_TOKEN, (raw) => parseTrackerButton(raw)?.label ?? raw)
-    .replace(/\*\*([^*]+)\*\*/g, "$1")
-    .replace(/(^|[^*\w])\*([^*\n]+)\*(?!\w)/g, "$1$2");
 }

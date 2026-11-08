@@ -1,4 +1,3 @@
-import { plainText } from "../features/characters/trackers";
 import { MoveBody } from "../workspace/MoveBody";
 import {
   addItem,
@@ -257,7 +256,7 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
           e.kind === "item"
             ? `${e.text}\n\nDrag onto a character to give it to them, or into a note to link it.`
             : e.kind === "move"
-              ? `${plainText(e.text)}\n\nDrag onto a character to teach it to them, or into a note to link it.`
+              ? `${e.text}\n\nDrag onto a character to teach it to them, or into a note to link it.`
               : e.text
         }
         onOpen={(rowElement) => windows.show(libraryKey(sourceId, e), rowElement)}
@@ -373,7 +372,7 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
             key={key}
             entryKey={key}
             title={e.name}
-            text={plainText(textOf(e))}
+            text={textOf(e)}
             body={
               e.kind === "move" ? (
                 <MoveBody campaign={campaign} move={e.move} characterId={me?.id ?? null} />

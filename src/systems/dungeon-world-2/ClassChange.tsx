@@ -16,7 +16,7 @@ import { Button } from "../../ui/Button";
 import { OptionPicker } from "../../ui/OptionPicker";
 import { closePopup } from "../../ui/popup";
 import { usePopupDialog } from "../../workspace/usePopupDialog";
-import { Dialog } from "../../workspace/CampaignDialogs";
+import { Dialog } from "../../workspace/Dialog";
 import {
   ChoiceField,
   emptyPick,

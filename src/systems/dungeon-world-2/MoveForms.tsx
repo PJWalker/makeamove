@@ -21,7 +21,7 @@ import type { CharacterView } from "../../features/characters/types";
 import { Button } from "../../ui/Button";
 import { useY } from "../../ui/useY";
 import { derive } from "../../features/characters/store";
-import type { MoveFormProps } from "../extensions";
+import type { MoveFormProps } from "../extensionTypes";
 import { DW2_SERVICES, type ServiceRank } from "./wealth";
 import { useState } from "react";
 import { useValue } from "../../ui/useValue";

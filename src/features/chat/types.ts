@@ -1,3 +1,4 @@
+import type { RichText } from "../../core/richText";
 import type { Roll } from "../dice/notation";
 import type { ChatContent } from "./content";
 
@@ -114,7 +115,7 @@ export interface MoveMessage extends Base {
   moveName: string;
   trigger: string;
   /** The move's full description. */
-  text?: string;
+  text?: RichText;
   characterId: string;
   characterName: string;
   targets?: MoveTarget[];
@@ -127,7 +128,7 @@ export interface MoveMessage extends Base {
   /** Counter selected by a move that advances a shared clock. */
   counterMessageId?: string;
   /** The outcome for the result, or the move's text when it doesn't roll. */
-  outcome: string;
+  outcome: RichText;
   suggestions: MoveSuggestion[];
   /** Asks every target to roll; answers are kept in the campaign's message state. */
   save?: SaveRequest;

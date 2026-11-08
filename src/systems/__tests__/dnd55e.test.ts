@@ -1,3 +1,4 @@
+import { plainText } from "../../core/richText";
 import { SRD_SPELLS } from "../dnd55e/srdSpells";
 import { SRD_FEATS } from "../dnd55e/srdFeats";
 import { SRD_MONSTERS } from "../dnd55e/srdMonsters";
@@ -86,7 +87,8 @@ describe("D&D 5.5e", () => {
     expect(ids).toContain("feature-fighter-3-improved-critical");
     expect(ids).not.toContain("feature-fighter-15-superior-critical");
     expect(
-      dnd.actions.find((action) => action.id === "feature-wizard-18-spell-mastery")?.text.length,
+      plainText(dnd.actions.find((action) => action.id === "feature-wizard-18-spell-mastery")?.text)
+        .length,
     ).toBeGreaterThan(100);
     expect(
       performMove(

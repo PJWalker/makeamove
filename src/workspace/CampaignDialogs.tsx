@@ -1,192 +1,21 @@
-import { IconOpenWindow } from "../ui/icons";
-import type { ReactNode, RefObject } from "react";
+import type { RefObject } from "react";
+import { useState } from "react";
 import { setSystemCampaignData, systemCampaignData, type Campaign } from "../campaign/campaign";
-import { getSystem } from "../systems";
-import { colourOf } from "../scene/presence";
+import { commaListOf, formatCommaList } from "../lib/list";
 import { device, setDeviceColour, setDeviceName } from "../platform/device";
-import { useY } from "../ui/useY";
 import { GRID_TYPES } from "../scene/grid";
+import { colourOf } from "../scene/presence";
 import { TOKEN_STYLES } from "../scene/types";
+import { inviteUrl } from "../sync/invite";
+import { getSystem } from "../systems";
 import { Button } from "../ui/Button";
 import { Segmented } from "../ui/Segmented";
-import { inviteUrl } from "../sync/invite";
-import { createPortal } from "react-dom";
-import { useId, useLayoutEffect, useState } from "react";
-import { closePopup, dragPopup, raisePopup, resizePopup } from "../ui/popup";
-import { commaListOf, formatCommaList } from "../lib/list";
-import { autohide, setAutohide } from "./canvasState";
-import { RESIZE_DIRS, type ResizeDir } from "../ui/resizeRect";
-import { dragEntity, type DragEntity } from "./entityDrag";
-import type { Icon } from "../ui/icons";
-import type { menuTrigger } from "../ui/menuTrigger";
-import {
-  raiseWindow,
-  startWindowDrag,
-  startWindowResize,
-  layout,
-  useWindowRect,
-  type DockItemId,
-} from "./panelLayout";
-import { WindowControls } from "./WindowControls";
-import { CampaignEntityGraphic } from "./EntityGraphic";
-
-/** The icon in a window's title bar that stands for what it shows. */
-export interface WindowProxy {
-  campaign: Campaign;
-  kind: string;
-  id: string;
-  defaultIcon?: string | undefined;
-  entity: DragEntity;
-}
-import { windowLayer } from "../ui/windows";
-import { CampaignSystemSheet } from "./campaignSheets";
 import { useValue } from "../ui/useValue";
-
-export function Dialog({
-  dialogRef,
-  title,
-  onClose,
-  proxy,
-  graphicCampaign,
-  graphicRef,
-  graphicDefaultIcon,
-  contextMenu,
-  windowIcon,
-  dockId,
-  children,
-}: {
-  dialogRef: RefObject<HTMLDialogElement | null>;
-  title: string;
-  onClose?: () => void;
-  /**
-   * What the window shows, as an icon in its title bar that drags like a
-   * link: onto a character, the hotbar, a note or the chat.
-   */
-  proxy?: WindowProxy | undefined;
-  graphicCampaign?: Campaign | undefined;
-  graphicRef?: { kind: string; id: string } | undefined;
-  graphicDefaultIcon?: string | undefined;
-  contextMenu?: ReturnType<typeof menuTrigger> | undefined;
-  windowIcon?: Icon | undefined;
-  dockId?: DockItemId | undefined;
-  children: ReactNode;
-}) {
-  const [rolled, setRolled] = useState(false);
-  // Its own transition name, so two windows can animate at once.
-  const transitionName = `dialog-window-${useId().replace(/[^\w-]/g, "")}`;
-  useLayoutEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    const preventNativeCancel = (event: Event) => event.preventDefault();
-    dialog.addEventListener("cancel", preventNativeCancel);
-    return () => dialog.removeEventListener("cancel", preventNativeCancel);
-  }, [dialogRef]);
-  const floating = useValue(layout).floating;
-  const win = useWindowRect(dockId ? floating.find((item) => item.id === dockId) : undefined);
-  const windowStyle = {
-    ...(win ? { left: win.x, top: win.y, width: win.w, height: win.h, zIndex: win.z } : {}),
-    viewTransitionName: transitionName,
-  };
-  const close = () => closePopup(dialogRef.current, onClose);
-
-  function onResizePointerDown(e: PointerEvent, dir: ResizeDir) {
-    if (dockId && win) startWindowResize(dockId, e, dir);
-    else resizePopup(dialogRef.current!, e, dir);
-  }
-  // Rendered in the window layer with the other windows: a non-modal dialog
-  // would otherwise be clipped by the panel that opened it (the scene bar
-  // clips its contents).
-  return createPortal(
-    <dialog
-      ref={dialogRef}
-      className="dialog window panel"
-      closedby="none"
-      aria-label={title}
-      tabIndex={-1}
-      data-rolled={rolled}
-      data-window-id={dockId}
-      style={windowStyle}
-      onSubmit={(event) => {
-        if (event.target.method !== "dialog") return;
-        event.preventDefault();
-        close();
-      }}
-      onPointerDown={(e) => {
-        if (dockId) raiseWindow(dockId);
-        else raisePopup(e.currentTarget);
-        contextMenu?.onPointerDown(e);
-      }}
-      onContextMenu={(e) => contextMenu?.onContextMenu(e)}
-      onKeyDown={(e) => {
-        const expandedDialogTrigger = document.querySelector(
-          '[aria-haspopup="dialog"][aria-expanded="true"]',
-        );
-        if (e.key === "Escape" && !e.defaultPrevented && !expandedDialogTrigger) {
-          e.preventDefault();
-          close();
-        }
-      }}
-    >
-      <WindowControls
-        title={title}
-        Icon={windowIcon ?? IconOpenWindow}
-        iconContent={
-          proxy ? (
-            <span
-              className="window-proxy"
-              data-tip="Drag to link it, or onto a character or the hotbar"
-              onPointerDown={(e) => {
-                // Not a drag of the window itself.
-                e.stopPropagation();
-                dragEntity(e, proxy.entity, e.currentTarget.nextElementSibling as HTMLElement);
-              }}
-            >
-              <CampaignEntityGraphic
-                campaign={proxy.campaign}
-                kind={proxy.kind}
-                id={proxy.id}
-                defaultIcon={proxy.defaultIcon}
-                size={22}
-              />
-            </span>
-          ) : graphicCampaign && graphicRef ? (
-            <CampaignEntityGraphic
-              campaign={graphicCampaign}
-              kind={graphicRef.kind}
-              id={graphicRef.id}
-              defaultIcon={graphicDefaultIcon}
-              size={22}
-            />
-          ) : undefined
-        }
-        rolled={rolled}
-        onToggleRoll={() => setRolled(!rolled)}
-        onDragStart={(e) => {
-          if (dockId && win) {
-            const dialog = dialogRef.current!;
-            startWindowDrag(dockId, e, e.clientX - dialog.offsetLeft, e.clientY - dialog.offsetTop);
-          } else dragPopup(dialogRef.current!, e);
-        }}
-        onClose={close}
-      />
-      <div className="dialog-body" inert={rolled}>
-        {children}
-      </div>
-      {!rolled && <span className="resize-grip" aria-hidden="true" />}
-      {!rolled &&
-        RESIZE_DIRS.map((dir) => (
-          <span
-            key={dir}
-            className="win-resize"
-            data-dir={dir}
-            aria-hidden="true"
-            onPointerDown={(e) => onResizePointerDown(e.nativeEvent, dir)}
-          />
-        ))}
-    </dialog>,
-    windowLayer,
-  );
-}
+import { useY } from "../ui/useY";
+import { BackupSettings } from "./BackupSettings";
+import { CampaignSystemSheet } from "./campaignSheets";
+import { autohide, setAutohide } from "./canvasState";
+import { Dialog } from "./Dialog";
 
 /** Everything you can set: for you on this device, and (for the GM) for the campaign. */
 export function SettingsDialog({
@@ -254,6 +83,7 @@ export function SettingsDialog({
       {campaign.isGm() && <CampaignSettings campaign={campaign} />}
       <SystemCampaignFields campaign={campaign} />
       <CampaignSystemSheet campaign={campaign} />
+      <BackupSettings campaign={campaign} />
     </Dialog>
   );
 }

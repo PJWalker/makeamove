@@ -88,9 +88,10 @@ module.exports = {
     },
     {
       name: "not-to-dev-dependency",
-      comment: "Production code must not import packages listed only in devDependencies.",
+      comment:
+        "Production code must not import packages listed only in devDependencies. Build-time macros (*.macro.ts) run while bundling, not in the app.",
       severity: "error",
-      from: { path: "^src/", pathNot: TESTS },
+      from: { path: "^src/", pathNot: [TESTS, "\\.macro\\.ts$"] },
       to: { dependencyTypes: ["npm-dev"], pathNot: "^node_modules/(@types|unplugin-icons|vite)/" },
     },
     {

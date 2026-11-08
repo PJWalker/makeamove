@@ -13,7 +13,3 @@ export type ImageWorkerResult =
     }
   | { type: "decode"; bitmap: ImageBitmap }
   | { type: "colour"; colour: string };
-
-export type ImageWorkerRequest = { id: number; task: ImageWorkerTask };
-export type ImageWorkerResponse =
-  { id: number; result: ImageWorkerResult } | { id: number; error: string };

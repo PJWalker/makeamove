@@ -1,14 +1,13 @@
 import { InputRule, mergeAttributes, Node, PasteRule } from "@tiptap/core";
 import type { Campaign } from "../campaign/campaign";
 import { selectedCharacterId } from "../features/characters/api";
+import { pressTracker, trackerBlock } from "../features/characters/trackers";
 import {
   parseTrackerButton,
-  pressTracker,
   TRACKER_NODE,
-  trackerBlock,
   trackerToken,
   type TrackerButton,
-} from "../features/characters/trackers";
+} from "../core/richText";
 
 /*
  * Inline resource buttons in rich text: typing or pasting [[+1 XP]] (or

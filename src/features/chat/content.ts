@@ -1,9 +1,16 @@
 import type { JSONContent } from "@tiptap/core";
 import type { LinkKind } from "../notes/links";
 import { LINK_NODE } from "../notes/links";
-import { TRACKER_NODE, trackerToken, type TrackerButton } from "../characters/trackers";
+import {
+  plainText,
+  TRACKER_NODE,
+  trackerToken,
+  type RichText,
+  type TrackerButton,
+} from "../../core/richText";
 
-export type ChatContent = JSONContent;
+/** A chat message's text: rich text, as everywhere else. */
+export type ChatContent = RichText;
 
 type NameOf = (kind: LinkKind, id: string) => string | null;
 
@@ -71,18 +78,18 @@ export function commandText(content: ChatContent): string {
     .join("\n");
 }
 
-export function plainText(content: ChatContent, nameOf: NameOf = () => null): string {
-  const atomText = (node: JSONContent) => {
+/** A message as plain text, its links by name: for notifications. */
+export function messageText(content: ChatContent, nameOf: NameOf = () => null): string {
+  return plainText(content, (node) => {
+    if (node.type !== LINK_NODE) return null;
     const attrs = attrsOf(node);
-    if (node.type === TRACKER_NODE) return String(attrs.label ?? "");
     return (
       (typeof attrs.text === "string" && attrs.text) ||
       nameOf(attrs.kind as LinkKind, String(attrs.id ?? "")) ||
       (typeof attrs.label === "string" && attrs.label) ||
       "a link"
     );
-  };
-  return (content.content ?? []).map((block) => inlineText(block, atomText)).join("\n");
+  });
 }
 
 function nodeLength(node: JSONContent): number {

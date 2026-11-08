@@ -31,7 +31,7 @@ import { menuTrigger } from "../ui/menuTrigger";
 import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
 import { CharacterText } from "./CharacterText";
 import { AdvancementDialog } from "./CreationParts";
-import { extensionOf } from "../systems/extensions";
+import { useExtension } from "./systemExtensions";
 import { registerEntityDrop, type DragEntity } from "./entityDrag";
 import { Inventory } from "./Inventory";
 import { Counter, MoveList, signedStr, TokenChip } from "./sheetParts";
@@ -116,7 +116,7 @@ function Advancement({
   section,
 }: Omit<SectionProps, "section"> & { section: Extract<SheetSection, { kind: "advancement" }> }) {
   const [open, setOpen] = useState(false);
-  const Actions = extensionOf(system).advancementActions;
+  const Actions = useExtension(system).advancementActions;
   const needed = d.values[section.needed];
   if (
     !editable ||

@@ -1,7 +1,53 @@
 import react from "@vitejs/plugin-react";
 import Icons from "unplugin-icons/vite";
-import { defineConfig } from "vite";
+import { createJiti, type Jiti } from "jiti";
+import { fileURLToPath } from "node:url";
+import Macros from "unplugin-macros/vite";
+import { defineConfig, type Plugin } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
+
+/**
+ * Build-time macros (`import … with { type: "macro" }`), such as markdown
+ * rules text turned into rich text. A *.macro.ts module imported any other
+ * way would ship its build-only code to the browser, so that fails the build.
+ */
+export function macroPlugins(): Plugin[] {
+  // Macro modules are ordinary app TypeScript (extensionless imports and all),
+  // so jiti loads them. A change to any file drops the whole cache: macros
+  // re-run against fresh code.
+  const jiti: Jiti = createJiti(import.meta.url);
+  const loaded = new Set<string>();
+  return [
+    Macros({
+      runner: {
+        resolve: (source, importer) => fileURLToPath(jiti.esmResolve(source, importer)),
+        import: (resolved) => {
+          loaded.add(resolved);
+          return jiti.import<Record<string, unknown>>(resolved);
+        },
+        invalidate: () => {
+          for (const key of Object.keys(jiti.cache)) delete jiti.cache[key];
+          const stale = [...loaded];
+          loaded.clear();
+          return stale;
+        },
+      },
+    }),
+    {
+      name: "macros-only-at-build-time",
+      enforce: "pre",
+      // Tests run in Node, so they may call a macro's functions directly, and
+      // macro modules may use each other.
+      resolveId(source, importer) {
+        const buildTime = importer?.includes("/__tests__/") || /\.macro\.ts$/.test(importer ?? "");
+        if (/\.macro(\.ts)?$/.test(source) && !buildTime)
+          this.error(
+            `${source} is a build-time macro: import it with { type: "macro" } (${importer})`,
+          );
+      },
+    },
+  ];
+}
 
 export default defineConfig({
   build: {
@@ -9,38 +55,39 @@ export default defineConfig({
     rolldownOptions: {
       output: {
         codeSplitting: {
+          // Each rulebook's parsed rules (inlined at build time) in a chunk of its own.
           groups: [
             {
               name: "rules-dnd-classes",
-              test: /[/\\]reference[/\\]dnd-5\.5e-srd[/\\]classes\.md/,
+              test: /[/\\]dnd55e[/\\]srdClasses\.ts/,
             },
             {
               name: "rules-dnd-feats",
-              test: /[/\\]reference[/\\]dnd-5\.5e-srd[/\\]feats\.md/,
+              test: /[/\\]dnd55e[/\\]srdFeats\.ts/,
             },
             {
               name: "rules-dnd-items",
-              test: /[/\\]reference[/\\]dnd-5\.5e-srd[/\\]magic-items\.md/,
+              test: /[/\\]dnd55e[/\\]srdMagicItems\.ts/,
             },
             {
               name: "rules-dnd-monsters",
-              test: /[/\\]reference[/\\]dnd-5\.5e-srd[/\\]monsters-A-Z\.md/,
+              test: /[/\\]dnd55e[/\\]srdMonsters\.ts/,
             },
             {
               name: "rules-dnd-spells",
-              test: /[/\\]reference[/\\]dnd-5\.5e-srd[/\\]spells\.md/,
+              test: /[/\\]dnd55e[/\\]srdSpells\.ts/,
             },
             {
               name: "rules-daggerheart",
-              test: /[/\\]reference[/\\]daggerheart-srd-main[/\\]/,
+              test: /[/\\]daggerheart[/\\]data\.ts/,
             },
             {
               name: "rules-dungeon-world-2",
-              test: /[/\\]reference[/\\]Dungeon World 2 Beta v3\.md/,
+              test: /[/\\]dungeon-world-2[/\\](paths|creationHints|bonds|struggles)\.ts/,
             },
             {
               name: "rules-blades",
-              test: /[/\\]reference[/\\]Blades-in-the-Dark-SRD\.md/,
+              test: /[/\\]blades-in-the-dark[/\\]content\.ts/,
             },
           ],
         },
@@ -48,6 +95,7 @@ export default defineConfig({
     },
   },
   plugins: [
+    ...macroPlugins(),
     react({ babel: { plugins: ["babel-plugin-react-compiler"] } }),
     // Icons are compiled into the bundle from local Iconify data, so they work offline.
     Icons({ compiler: "jsx", jsx: "react", scale: 1 }),

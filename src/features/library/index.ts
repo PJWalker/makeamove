@@ -1,4 +1,5 @@
 import Fuse, { type IFuseOptions } from "fuse.js";
+import { plainText } from "../../core/richText";
 import { store } from "../../lib/store";
 import type {
   ActionDef,
@@ -91,7 +92,7 @@ export const moveEntry = (m: ActionDef): LibraryEntry => ({
   kind: "move",
   id: m.id,
   name: m.name,
-  text: m.text,
+  text: plainText(m.text),
   tags: m.tags ?? [],
   ...(m.category === "class" ? { icon: "class-move" } : {}),
   move: m,

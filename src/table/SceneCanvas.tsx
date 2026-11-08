@@ -20,11 +20,11 @@ import { SceneRenderer } from "../scene/renderer";
 import { activeTool } from "../scene/tools";
 import { SceneDoc } from "../scene/sceneDoc";
 import type { Point } from "../scene/grid";
+import type { BlobRef } from "../core/blob";
 import { importImage } from "../scene/images";
 import {
   isPlainToken,
   TOKEN_STYLES,
-  type BlobRef,
   type SceneElement,
   type TokenElement,
   type TokenStyle,
@@ -68,7 +68,7 @@ import {
 import { isTyping, MOD } from "../ui/keys";
 import { PopupTabs } from "../ui/PopupTabs";
 import { Segmented } from "../ui/Segmented";
-import { Dialog } from "../workspace/CampaignDialogs";
+import { Dialog } from "../workspace/Dialog";
 import { SceneSettingsFields } from "./SceneSettingsFields";
 import { showPanel } from "../workspace/panelLayout";
 import {

@@ -1,17 +1,10 @@
 import { dominantColour } from "../lib/colour";
+import { serveWorker } from "../lib/workerRpc";
 import {
   MAX_IMAGE_SIZE,
-  type ImageWorkerRequest,
-  type ImageWorkerResponse,
   type ImageWorkerResult,
+  type ImageWorkerTask,
 } from "./imageWorkerProtocol";
-
-type WorkerScope = {
-  onmessage: ((event: MessageEvent<ImageWorkerRequest>) => void) | null;
-  postMessage(message: ImageWorkerResponse, transfer?: Transferable[]): void;
-};
-
-const scope = globalThis as unknown as WorkerScope;
 
 function sampleColour(bitmap: ImageBitmap): string {
   const canvas = new OffscreenCanvas(64, 64);
@@ -21,7 +14,7 @@ function sampleColour(bitmap: ImageBitmap): string {
   return dominantColour(context.getImageData(0, 0, 64, 64).data);
 }
 
-async function runTask(task: ImageWorkerRequest["task"]): Promise<ImageWorkerResult> {
+async function runTask(task: ImageWorkerTask): Promise<ImageWorkerResult> {
   if (task.type === "decode") {
     return { type: "decode", bitmap: await createImageBitmap(task.blob) };
   }
@@ -45,14 +38,6 @@ async function runTask(task: ImageWorkerRequest["task"]): Promise<ImageWorkerRes
   }
 }
 
-scope.onmessage = ({ data }) => {
-  void runTask(data.task).then(
-    (result) =>
-      scope.postMessage({ id: data.id, result }, result.type === "decode" ? [result.bitmap] : []),
-    (error: unknown) =>
-      scope.postMessage({
-        id: data.id,
-        error: error instanceof Error ? error.message : String(error),
-      }),
-  );
-};
+serveWorker<ImageWorkerTask, ImageWorkerResult>(runTask, (result) =>
+  result.type === "decode" ? [result.bitmap] : [],
+);

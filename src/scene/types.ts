@@ -1,4 +1,5 @@
 import type { EntityGraphic, EntityGraphicRef } from "../graphics";
+import type { BlobRef } from "../core/blob";
 
 /*
  * Scene elements as plain values. Each is stored as a Y.Map of these fields
@@ -12,14 +13,6 @@ import type { EntityGraphic, EntityGraphicRef } from "../graphics";
 /** Bottom to top. Fog and presence layers arrive with M5 and M2. */
 export const LAYERS = ["map", "under", "token", "over"] as const;
 export type Layer = (typeof LAYERS)[number];
-
-/** An image in the blob store; the CRDT holds only this reference. */
-export interface BlobRef {
-  hash: string;
-  mime: string;
-  width: number;
-  height: number;
-}
 
 export interface Transform {
   x: number;

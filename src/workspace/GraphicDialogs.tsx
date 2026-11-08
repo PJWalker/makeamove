@@ -1,5 +1,5 @@
 import { store } from "../lib/store";
-import { Dialog } from "./CampaignDialogs";
+import { Dialog } from "./Dialog";
 import type { Campaign } from "../campaign/campaign";
 import { useY } from "../ui/useY";
 import { GraphicPicker } from "../ui/GraphicPicker";

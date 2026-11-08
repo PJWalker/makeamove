@@ -3,17 +3,7 @@ import type { Point } from "../grid";
 import { formatDistance } from "../measure";
 import { pen, SHAPE_WIDTH, shapeTool, TEMPLATE_STYLE } from "../tools";
 import type { ShapeKind, Transform } from "../types";
-import type { Gesture, ToolContext, ToolPress } from "./types";
-
-/** An action's area waiting to be placed: its shape and size in world px, and who to tell. */
-export interface Placement {
-  shape: ShapeKind;
-  /** A radius, a side, or a length. */
-  length: number;
-  /** A line's width. */
-  width: number;
-  onPlaced: (placed: { id: string; covered: string[] } | null) => void;
-}
+import type { Gesture, Placement, ToolContext, ToolPress } from "./types";
 
 type Keys = { shiftKey: boolean; altKey: boolean };
 

@@ -1,4 +1,4 @@
-import type { SystemExtension } from "../extensions";
+import type { SystemExtension } from "../extensionTypes";
 import { BladesCrewControls } from "./CrewSheet";
 import { BladesNpcSheet, BladesSheet } from "./Sheet";
 
