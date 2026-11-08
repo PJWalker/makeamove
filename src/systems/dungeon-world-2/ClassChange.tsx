@@ -1,6 +1,13 @@
 import { useState } from "react";
 import { getCharacter, systemOf } from "../../features/characters/api";
-import { boostFrom, choicesAt, dataFrom, raise } from "../../features/characters/creation";
+import {
+  boostFrom,
+  choicesAt,
+  dataFrom,
+  raise,
+  ruleStartingScores,
+  scoreRuleProblems,
+} from "../../features/characters/creation";
 import type { DataValue } from "../../core/types";
 import { commaListOf } from "../../lib/list";
 import type { Campaign } from "../../campaign/campaign";
@@ -10,7 +17,13 @@ import { OptionPicker } from "../../ui/OptionPicker";
 import { closePopup } from "../../ui/popup";
 import { usePopupDialog } from "../../table/usePopupDialog";
 import { Dialog } from "../../table/CampaignDialogs";
-import { ChoiceField, emptyPick, scoreCapsOf, type Picked } from "../../table/CreationParts";
+import {
+  ChoiceField,
+  emptyPick,
+  RuleScoreFields,
+  scoreCapsOf,
+  type Picked,
+} from "../../table/CreationParts";
 import { applyClassChange } from "./campaign";
 
 /*
@@ -45,11 +58,9 @@ function ClassChangeDialog({
   const creation = system.creation;
   const classChoice = creation?.choices.find((choice) => choice.id === "class");
   const [newClassId, setNewClassId] = useState("");
-  const [assignmentId, setAssignmentId] = useState("");
+  const [scores, setScores] = useState<Record<string, number>>({});
   const [picks, setPicks] = useState<Record<string, Picked>>({});
-  const assignmentOptions = creation?.classScoreAssignments?.[newClassId] ?? [];
-  const assignment =
-    assignmentOptions.find((option) => option.id === assignmentId) ?? assignmentOptions[0];
+  const scoreRule = creation?.classScoreRules?.[newClassId];
   const oldAdvancementCount = commaListOf(character.data.advancements).length;
   const stageData: Record<string, DataValue> = {
     ...character.data,
@@ -59,7 +70,7 @@ function ClassChangeDialog({
     ownedPathMoves: "",
     multiclassPaths: "",
   };
-  let stageScores = assignment?.scores ?? {};
+  let stageScores = scores;
   const listFields = creation?.listFields ?? [];
   const stages: { id: string; choice: ChoiceDef; display: ChoiceDef }[] = [];
 
@@ -86,7 +97,8 @@ function ClassChangeDialog({
 
   const ready =
     !!newClassId &&
-    !!assignment &&
+    !!scoreRule &&
+    scoreRuleProblems(scoreRule, system.stats, scores).length === 0 &&
     stages.length === oldAdvancementCount &&
     stages.every(
       ({ id, choice }) =>
@@ -120,29 +132,20 @@ function ClassChangeDialog({
           emptyLabel="Choose…"
           onChange={(id) => {
             setNewClassId(id);
-            setAssignmentId(creation?.classScoreAssignments?.[id]?.[0]?.id ?? "");
+            const rule = creation?.classScoreRules?.[id];
+            setScores(rule ? ruleStartingScores(rule, system.stats) : {});
             setPicks({});
           }}
         />
-        {assignmentOptions.length > 0 && (
-          <OptionPicker
-            label="New class stat assignment"
-            options={assignmentOptions}
-            value={assignment?.id ?? ""}
-            emptyLabel="Choose…"
-            onChange={(id) => {
-              setAssignmentId(id);
-            }}
-          />
-        )}
-        {assignment && (
-          <div className="creation-score-grid">
-            {system.stats.map((stat) => (
-              <label key={stat.id} className="creation-score">
-                <span className="stat-abbr">{stat.abbr}</span>
-                <output>{assignment.scores[stat.id] ?? 0}</output>
-              </label>
-            ))}
+        {scoreRule && (
+          <div className="field creation-scores">
+            <span>New Class stats</span>
+            <RuleScoreFields
+              system={system}
+              rule={scoreRule}
+              scores={scores}
+              onScores={setScores}
+            />
           </div>
         )}
         {stages.map(({ id, display }) => (
@@ -182,7 +185,7 @@ export function ChangeClassAction({
   return (
     <>
       <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>
-        Change Class
+        Change Class…
       </Button>
       {open && (
         <ClassChangeDialog

@@ -48,7 +48,7 @@ export default defineConfig({
     },
   },
   plugins: [
-    react(),
+    react({ babel: { plugins: ["babel-plugin-react-compiler"] } }),
     // Icons are compiled into the bundle from local Iconify data, so they work offline.
     Icons({ compiler: "jsx", jsx: "react", scale: 1 }),
     VitePWA({

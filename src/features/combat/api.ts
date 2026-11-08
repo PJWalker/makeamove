@@ -13,7 +13,7 @@ import { roll } from "../dice/notation";
 import type { Campaign } from "../../campaign/campaign";
 import { device } from "../../platform/device";
 import type { TokenMarks } from "../../scene/tokenMarks";
-import { conditionPipColour } from "./pipColours";
+import { activeResourceStatuses, conditionColour } from "./pipColours";
 import {
   addCombatant,
   endCombat,
@@ -215,14 +215,14 @@ export function tokenMarksSource(campaign: Campaign) {
     let p = characterId ? pips.get(characterId) : [];
     if (!p && characterId) {
       const c = getCharacter(campaign, characterId);
-      p = (c?.conditions ?? []).map((id) => {
-        const index = system.conditions.findIndex((condition) => condition.id === id);
-        return {
-          id,
-          name: system.conditions[index]?.name ?? id,
-          colour: conditionPipColour(index),
-        };
-      });
+      p = (c?.conditions ?? []).map((id) => ({
+        id,
+        name: system.conditions.find((condition) => condition.id === id)?.name ?? id,
+        colour: conditionColour(system, id),
+      }));
+      if (c)
+        for (const status of activeResourceStatuses(system, c, derive(c, system)))
+          p.push({ id: status.id, name: status.name, colour: status.colour });
       if (c?.concentration)
         p.push({
           id: "concentration",

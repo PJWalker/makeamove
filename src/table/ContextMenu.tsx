@@ -1,7 +1,7 @@
 import { morphOpen, setMorphOrigin } from "../ui/morph";
 import { withTransition } from "../ui/transition";
 import type { ComponentType } from "react";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from "react";
 import {
   Menu,
   MenuItem as AriaMenuItem,
@@ -79,6 +79,31 @@ export function ContextMenu({
       } else run();
     }
   };
+
+  // Press, drag and release with the right button chooses the item it's released on;
+  // React Aria only acts on the left button's release. It takes a drag inside the
+  // menu first, so a plain right-click doesn't choose whatever opened under it.
+  const dragged = useRef(false);
+  const onRightRelease = useEffectEvent((event: PointerEvent) => {
+    if (event.button !== 2 || !dragged.current) return;
+    const row = (event.target as Element).closest<HTMLElement>("[data-action-index]");
+    if (!row || !ref.current?.contains(row)) return;
+    const index = Number(row.dataset.actionIndex);
+    const item = items[index];
+    if (item && item !== "divider" && "onSelect" in item) choose(item, index);
+  });
+  useEffect(() => {
+    const onMove = (event: PointerEvent) => {
+      if (event.buttons & 2 && ref.current?.contains(event.target as Node)) dragged.current = true;
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onRightRelease);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onRightRelease);
+    };
+  }, []);
+
   return (
     <Popover
       ref={ref}

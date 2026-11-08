@@ -675,7 +675,7 @@ export const dungeonWorld: GameSystem = {
   // Ranges are fictional (hand, close, near, far), so feet are only a guide.
   scene: { unit: 5, unitName: "ft", diagonal: "one" },
   npcFields: [
-    { id: "damage", label: "Damage", type: "text" },
+    { id: "damage", label: "Damage", type: "text", rollable: true },
     { id: "armor", label: "Armor", type: "number" },
     { id: "tags", label: "Tags", type: "text" },
     { id: "instinct", label: "Instinct", type: "text" },

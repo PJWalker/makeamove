@@ -128,10 +128,10 @@ describe("planMove", () => {
     expect(planMove(dw, move("aid-or-interfere"), c, d, { ask: 1 }).formula).toBe("2d6+1[Bond]");
   });
 
-  it("skips zero modifiers", () => {
+  it("keeps the stat at +0, so the roll shows which stat it used", () => {
     const c = char();
     expect(planMove(dw, move("defy-danger"), c, derive(c, dw), { stat: "dex" }).formula).toBe(
-      "2d6",
+      "2d6+0[DEX]",
     );
   });
 });

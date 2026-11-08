@@ -40,8 +40,7 @@
     outline: 2px solid var(--accent);
     outline-offset: 1px;
   }
-  .tracker-button[aria-disabled],
-  .tracker-button[data-static] {
+  .tracker-button[aria-disabled] {
     border-color: var(--hairline);
     background: none;
     color: var(--text-muted);

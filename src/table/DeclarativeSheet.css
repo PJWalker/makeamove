@@ -7,13 +7,13 @@
     min-width: 0;
     width: 100%;
     max-width: 100%;
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
     color: var(--text-muted);
   }
   .condition-status {
     flex: none;
-    height: 28px;
-    min-height: 28px;
+    height: var(--control-height);
+    min-height: var(--control-height);
     padding: 0;
     color: var(--text-muted);
   }

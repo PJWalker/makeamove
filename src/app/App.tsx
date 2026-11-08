@@ -69,15 +69,18 @@ function Removed({ campaign }: { campaign: Campaign }) {
       <p>The GM removed you from {campaign.name}.</p>
       <p className="muted">If they let you back in, open their invite link again to rejoin.</p>
       <div className="form-actions">
-        <Button onClick={() => goToCampaign(null)}>Back to the lobby</Button>
         <Button
           variant="danger"
+          className="form-actions-start"
           onClick={async () => {
             await deleteLocalCampaign(campaign.id);
             goToCampaign(null);
           }}
         >
-          Delete from this device
+          Delete from This Device
+        </Button>
+        <Button variant="primary" onClick={() => goToCampaign(null)}>
+          Back to the Lobby
         </Button>
       </div>
     </main>
@@ -91,7 +94,7 @@ function Waiting({ campaign }: { campaign: Campaign }) {
     <main className="loading waiting">
       <p>Waiting for someone from this campaign to come online…</p>
       <p className="muted">{peers} connected</p>
-      <Button onClick={() => goToCampaign(null)}>Back to the lobby</Button>
+      <Button onClick={() => goToCampaign(null)}>Back to the Lobby</Button>
     </main>
   );
 }

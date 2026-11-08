@@ -6,7 +6,7 @@
     width: 28px;
     height: 28px;
     border-radius: 50%;
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
     font-weight: 600;
     color: oklch(18% 0.03 var(--avatar-hue, 250));
     background: oklch(78% 0.11 var(--avatar-hue, 250));

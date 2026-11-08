@@ -7,6 +7,9 @@ test("rapid panel changes settle on the last selected panel", async ({ page }) =
   const chat = page.getByRole("tab", { name: /^Chat/ });
 
   await settled(page);
+  // Start with the sidebar open, so each click switches panels by view transition.
+  if ((await chat.getAttribute("aria-selected")) !== "true") await chat.click();
+  await expect(chat).toHaveAttribute("aria-selected", "true");
   await page.addStyleTag({
     content: `
       ::view-transition-group(*),
@@ -33,16 +36,16 @@ test("rapid panel changes settle on the last selected panel", async ({ page }) =
 
   await expect(notes).toHaveAttribute("aria-selected", "true");
   await expect(page.getByText("No pages yet.")).toBeVisible();
-  await expect(page.getByRole("button", { name: "New page" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "New Page" })).toBeVisible();
 });
 
 test("panel creation actions share the title bar when docked and floating", async ({ page }) => {
   await createCampaign(page, "Inline panel actions", "dnd-5.5e");
   for (const [title, actions] of [
-    ["Characters", ["New", "New folder"]],
-    ["Scenes", ["New scene", "New folder"]],
-    ["Notes", ["New page", "New GM page", "New folder"]],
-    ["Items", ["New gear", "New move"]],
+    ["Characters", ["New", "New Folder"]],
+    ["Scenes", ["New Scene", "New Folder"]],
+    ["Notes", ["New Page", "New GM Page", "New Folder"]],
+    ["Items", ["New Gear", "New Move"]],
     ["Combat", ["Roll for NPCs", "Start"]],
   ] as const) {
     const tab = page.getByRole("tab", { name: title, exact: true });
@@ -53,33 +56,33 @@ test("panel creation actions share the title bar when docked and floating", asyn
     for (const action of actions) {
       await expect(header.getByRole("button", { name: action, exact: true })).toBeVisible();
     }
-    if (actions.some((action) => action === "New folder")) {
-      await header.getByRole("button", { name: "New folder", exact: true }).click();
+    if (actions.some((action) => action === "New Folder")) {
+      await header.getByRole("button", { name: "New Folder", exact: true }).click();
       const folderName = header.getByRole("textbox", { name: "Folder name" });
       await expect(folderName).toBeFocused();
       await folderName.fill(`${title} folder`);
       await folderName.press("Enter");
       await expect(folderName).toHaveCount(0);
-      await expect(header.getByRole("button", { name: "New folder", exact: true })).toBeVisible();
+      await expect(header.getByRole("button", { name: "New Folder", exact: true })).toBeVisible();
     }
   }
 
   const itemsTab = page.getByRole("tab", { name: "Items", exact: true });
   if ((await itemsTab.getAttribute("aria-selected")) !== "true") await itemsTab.click();
-  await page.getByRole("button", { name: "New gear", exact: true }).click();
+  await page.getByRole("button", { name: "New Gear", exact: true }).click();
   await expect(page.getByRole("heading", { name: "New gear", exact: true })).toBeVisible();
   await expect(
-    page.locator(".panel-actions").getByRole("button", { name: "New gear" }),
+    page.locator(".panel-actions").getByRole("button", { name: "New Gear" }),
   ).toHaveCount(0);
   await page.getByRole("button", { name: "Items", exact: true }).click();
   await page.getByRole("tab", { name: "Items", exact: true }).click({ button: "right" });
-  await page.getByRole("menuitem", { name: "Float in a window" }).click();
+  await page.getByRole("menuitem", { name: "Float in a Window" }).click();
   const itemsWindow = page.getByRole("region", { name: "Items", exact: true });
   const header = itemsWindow.locator(".panel-header");
   const title = header.getByRole("heading", { name: "Items", exact: true });
   for (const width of [1280, 390]) {
     await page.setViewportSize({ width, height: 800 });
-    for (const action of ["New gear", "New move"]) {
+    for (const action of ["New Gear", "New Move"]) {
       const button = header.getByRole("button", { name: action, exact: true });
       await expect(button).toBeVisible();
       const titleBox = (await title.boundingBox())!;
@@ -89,7 +92,7 @@ test("panel creation actions share the title bar when docked and floating", asyn
       expect(buttonBox.y + buttonBox.height).toBeGreaterThan(titleBox.y);
     }
   }
-  await header.getByRole("button", { name: "New move", exact: true }).click();
+  await header.getByRole("button", { name: "New Move", exact: true }).click();
   await expect(itemsWindow.getByRole("heading", { name: "New move", exact: true })).toBeVisible();
   await expect(itemsWindow).toHaveAttribute("data-rolled", "false");
 });
@@ -98,7 +101,7 @@ test("a panel can be floated and docked on the other sidebar", async ({ page }) 
   await createCampaign(page, "Window movement");
   const notesTab = page.getByRole("tab", { name: "Notes" });
   await notesTab.click({ button: "right" });
-  await page.getByRole("menuitem", { name: "Float in a window" }).click();
+  await page.getByRole("menuitem", { name: "Float in a Window" }).click();
   const notesWindow = page.getByRole("region", { name: "Notes" });
   await expect(notesWindow).toBeVisible();
   await expect(notesTab).toHaveCount(0);
@@ -122,11 +125,11 @@ test("a panel can be floated and docked on the other sidebar", async ({ page }) 
 test("a floating panel can be rolled up and restored", async ({ page }) => {
   await createCampaign(page, "Window animation");
   await page.getByRole("tab", { name: "Notes" }).click({ button: "right" });
-  await page.getByRole("menuitem", { name: "Float in a window" }).click();
+  await page.getByRole("menuitem", { name: "Float in a Window" }).click();
 
   const notesWindow = page.getByRole("region", { name: "Notes" });
   const title = notesWindow.getByRole("heading", { name: "Notes" });
-  const newPage = notesWindow.getByRole("button", { name: "New page" });
+  const newPage = notesWindow.getByRole("button", { name: "New Page" });
   await expect(newPage).toBeVisible();
   await title.dblclick();
   await expect(newPage).toBeHidden();

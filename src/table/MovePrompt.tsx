@@ -28,7 +28,7 @@ import { lastPressed } from "../ui/pressed";
 import { Segmented } from "../ui/Segmented";
 import { areaRequest, chosenTargets, placedArea, sceneDistance, targetPick } from "./canvasState";
 import { useValue } from "../ui/useValue";
-import type { AreaSpec } from "../systems/types";
+import type { ActionDef, AreaSpec } from "../systems/types";
 import type { MoveTarget } from "../features/chat/types";
 
 /*
@@ -252,7 +252,7 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
       </div>
       <FormattedText
         campaign={campaign}
-        text={move.text}
+        text={withoutAskedQuestions(move)}
         characterId={c.id}
         className="roll-prompt-desc"
       />
@@ -353,7 +353,7 @@ function TargetStep({
         </span>
       )}
       <Button variant="primary" disabled={!ready || blocked} onClick={go}>
-        {blocked ? "Out of range" : move.name}
+        {blocked ? "Out of Range" : move.name}
       </Button>
     </div>
   );
@@ -365,7 +365,20 @@ const areaName = (a: AreaSpec) => `${sceneDistance.value(a.size)} ${a.shape}`;
 /** A formula without its labels, as the Roll button reads: 1d20+2[Prof] → 1d20+2. */
 const bare = (formula: string) => formula.replace(/\[[^\]]*\]/g, "");
 
-/** The stat or number the check needs, the roll mode and an extra bonus, then Roll. */
+/** A move's text without the list of questions the prompt asks as checkboxes below it. */
+function withoutAskedQuestions(move: ActionDef) {
+  const ask = needsChoice(move);
+  if (ask?.kind !== "questions") return move.text;
+  return move.text
+    .split("\n")
+    .filter((line) => {
+      const item = /^\s*[-*]\s+(.*)$/.exec(line)?.[1];
+      return !item || !ask.questions.includes(item.replace(/[*_]/g, "").trim());
+    })
+    .join("\n");
+}
+
+/** The stat or number the check needs and an extra bonus, then a Roll for each roll mode (disadvantage, roll, advantage). */
 function AskStep({
   campaign,
   characterId,
@@ -401,9 +414,9 @@ function AskStep({
   const [difficulty, setDifficulty] = useState(String(difficultySpec?.initial ?? 10));
   const [counterMessageId, setCounterMessageId] = useState(counters[0]?.id ?? "");
   const [rollBonuses, setRollBonuses] = useState<string[]>([]);
-  const [bond, setBond] = useState(ask?.kind === "number" ? (ask.initial ?? 1) : 1);
+  const [askedNumber, setAskedNumber] = useState(ask?.kind === "number" ? (ask.initial ?? 1) : 1);
+  const [yeses, setYeses] = useState<string[]>([]);
   const [extra, setExtra] = useState(moveRequest.value?.choice?.extra ?? 0);
-  const [mode, setMode] = useState("");
   const [variant, setVariant] = useState("");
   const variants = move.variants?.(c, derive(c, system));
   const rollModes = check ? rollModesFor(system, move) : [];
@@ -424,27 +437,44 @@ function AskStep({
       Number.isFinite(chosenDifficulty) &&
       chosenDifficulty >= (difficultySpec.min ?? 0) &&
       chosenDifficulty <= (difficultySpec.max ?? 99));
-  const choice = {
+  const choiceWith = (mode: string) => ({
     stat: stat || undefined,
-    ask: bond,
+    ask: ask?.kind === "questions" ? yeses.length : askedNumber,
     extra: extra,
     mode: mode || undefined,
     difficulty: difficultySpec ? chosenDifficulty : undefined,
     counterMessageId: counterSpec ? counterMessageId : undefined,
     rollBonuses: rollBonuses,
     variant: variant || undefined,
+  });
+  const optionsReady =
+    (ask?.kind !== "stat" || !!stat) && (!counterSpec || !!counterMessageId) && difficultyReady;
+  const rollFor = (mode: string) => {
+    const plan = planMove(system, move, c, derive(c, system), choiceWith(mode));
+    return { formula: plan.formula, ready: optionsReady && canPayMove(c, plan) };
   };
-  const plan = planMove(system, move, c, derive(c, system), choice);
-  const ready =
-    (ask?.kind !== "stat" || !!stat) &&
-    (!counterSpec || !!counterMessageId) &&
-    difficultyReady &&
-    canPayMove(c, plan);
-  const formula = ready ? plan.formula : "";
-  const go = () => {
-    if (!ready) return;
-    void makeMove(campaign, c.id, move, choice, targets);
+  const go = (mode: string) => {
+    if (!rollFor(mode).ready) return;
+    void makeMove(campaign, c.id, move, choiceWith(mode), targets);
     moveRequest.value = null;
+  };
+  // The first half of the modes before the plain roll, the rest after: Disadvantage, Roll, Advantage.
+  const half = Math.floor(rollModes.length / 2);
+  const rollButton = (mode: string, label: string) => {
+    const { formula, ready } = rollFor(mode);
+    return (
+      <Button
+        key={mode}
+        variant={mode ? "secondary" : "primary"}
+        // The plain roll submits, so Enter makes it; the modes are clicked.
+        type={mode ? "button" : "submit"}
+        disabled={!ready}
+        title={ready ? bare(formula) : undefined}
+        onClick={mode ? () => go(mode) : undefined}
+      >
+        {label}
+      </Button>
+    );
   };
 
   return (
@@ -453,7 +483,7 @@ function AskStep({
       className="move-form"
       onSubmit={(e) => {
         e.preventDefault();
-        go();
+        go("");
       }}
     >
       {variants && (
@@ -474,21 +504,12 @@ function AskStep({
         </label>
       )}
       {ask?.kind === "stat" && (
-        <div className="field" role="radiogroup" aria-label="Stat to roll">
-          Roll which stat?
-          <div className="move-stats">
-            {system.stats.map((s) => (
-              <Button
-                key={s.id}
-                size="sm"
-                pressed={stat === s.id}
-                onClick={() => setStat(s.id)}
-              >
-                {s.abbr}
-              </Button>
-            ))}
-          </div>
-        </div>
+        <Segmented
+          label="Stat to roll"
+          value={stat}
+          options={system.stats.map((s) => ({ id: s.id, label: s.abbr, title: s.name }))}
+          onChange={setStat}
+        />
       )}
       {ask?.kind === "number" && (
         <label className="field">
@@ -498,10 +519,31 @@ function AskStep({
             required
             min={ask.min}
             max={ask.max}
-            value={bond}
-            onInput={(e) => setBond(Number(e.currentTarget.value) || 0)}
+            value={askedNumber}
+            onInput={(e) => setAskedNumber(Number(e.currentTarget.value) || 0)}
           />
         </label>
+      )}
+      {ask?.kind === "questions" && (
+        <fieldset className="move-questions">
+          <legend>{ask.prompt}</legend>
+          {ask.questions.map((question) => (
+            <label key={question} className="check-option">
+              <input
+                type="checkbox"
+                checked={yeses.includes(question)}
+                onChange={(e) =>
+                  setYeses(
+                    e.currentTarget.checked
+                      ? [...yeses, question]
+                      : yeses.filter((q) => q !== question),
+                  )
+                }
+              />
+              {question}
+            </label>
+          ))}
+        </fieldset>
       )}
       {difficultySpec && (
         <label className="field">
@@ -554,9 +596,11 @@ function AskStep({
                   (c.resources[bonus.cost.resource] ?? 0) < bonus.cost.by
                 }
                 onChange={() =>
-                  setRollBonuses(selected
-                    ? rollBonuses.filter((id) => id !== bonus.id)
-                    : [...rollBonuses, bonus.id])
+                  setRollBonuses(
+                    selected
+                      ? rollBonuses.filter((id) => id !== bonus.id)
+                      : [...rollBonuses, bonus.id],
+                  )
                 }
               />
               {bonus.nameField ? c.data[bonus.nameField] : bonus.label} (+
@@ -565,17 +609,6 @@ function AskStep({
             </label>
           );
         })}
-      {rollModes.length > 0 && (
-        <Segmented
-          label="Roll"
-          value={mode}
-          options={[
-            { id: "", label: system.defaultRollLabel ?? "Normal" },
-            ...rollModes.map((m) => ({ id: m.id, label: m.label })),
-          ]}
-          onChange={(v) => setMode(v)}
-        />
-      )}
       {check && (
         <label className="field roll-prompt-extra">
           Extra bonus
@@ -588,9 +621,17 @@ function AskStep({
           />
         </label>
       )}
-      <Button variant="primary" type="submit" disabled={!ready} title={formula || undefined}>
-        {ready ? (check ? `Roll ${bare(formula)}` : "Use") : "Roll"}
-      </Button>
+      {check ? (
+        <div className="roll-buttons">
+          {rollModes.slice(0, half).map((m) => rollButton(m.id, m.label))}
+          {rollButton("", system.defaultRollLabel ?? "Roll")}
+          {rollModes.slice(half).map((m) => rollButton(m.id, m.label))}
+        </div>
+      ) : (
+        <Button variant="primary" type="submit" disabled={!rollFor("").ready}>
+          Use
+        </Button>
+      )}
     </form>
   );
 }

@@ -124,10 +124,8 @@ export function planMove(
     rollModesFor(system, action).find((m) => m.id === choice.mode)?.roll ?? system.baseRoll;
   const stat = check?.ask?.kind === "stat" ? choice.stat : check?.stat;
   const def = stat ? system.stats.find((s) => s.id === stat) : undefined;
-  if (def) {
-    const mod = d.mods[def.id] ?? 0;
-    if (mod) formula += signed(mod, def.abbr);
-  }
+  // The stat goes in even at +0, so its chip shows which stat was rolled.
+  if (def) formula += signed(d.mods[def.id] ?? 0, def.abbr);
   for (const a of check?.add ?? []) {
     const n = d.values[a.value] ?? 0;
     if (n) formula += signed(n, a.label);
@@ -137,7 +135,8 @@ export function planMove(
   );
   // Bonuses tied to the stat come straight after it, then the asked-for number, then the rest.
   for (const b of bonuses) if (b.stat) formula += signed(b.value, b.source);
-  if (check?.ask?.kind === "number" && choice.ask) formula += signed(choice.ask, check.ask.label);
+  if ((check?.ask?.kind === "number" || check?.ask?.kind === "questions") && choice.ask)
+    formula += signed(choice.ask, check.ask.label);
   const selectedBonuses = (check?.rollBonuses ?? []).filter((bonus) =>
     choice.rollBonuses?.includes(bonus.id),
   );

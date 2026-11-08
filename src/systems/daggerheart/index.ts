@@ -499,15 +499,15 @@ export const daggerheart: GameSystem = {
   defaultRollLabel: "Duality Dice",
   rollModes: [
     {
-      id: "advantage",
-      label: "Advantage",
-      roll: "1d12[Hope]+1d12[Fear]+1d6[Advantage]",
-      categories: ROLL_CATEGORIES,
-    },
-    {
       id: "disadvantage",
       label: "Disadvantage",
       roll: "1d12[Hope]+1d12[Fear]-1d6[Disadvantage]",
+      categories: ROLL_CATEGORIES,
+    },
+    {
+      id: "advantage",
+      label: "Advantage",
+      roll: "1d12[Hope]+1d12[Fear]+1d6[Advantage]",
       categories: ROLL_CATEGORIES,
     },
   ],
@@ -736,7 +736,7 @@ export const daggerheart: GameSystem = {
       default: 10,
     },
     { id: "stress", label: "Stress", type: "number" },
-    { id: "damage", label: "Damage", type: "text" },
+    { id: "damage", label: "Damage", type: "text", rollable: true },
     { id: "features", label: "Features", type: "longtext" },
   ],
   derive(character, sources) {
@@ -942,7 +942,7 @@ export const daggerheart: GameSystem = {
       { kind: "header" },
       {
         kind: "choices",
-        choices: ["class", "subclass", "ancestry", "community"],
+        choices: ["subclass", "ancestry", "community"],
       },
       { kind: "loadout", loadout: "domain" },
       {
@@ -962,7 +962,7 @@ export const daggerheart: GameSystem = {
         needed: "milestoneNeeded",
         field: "level",
         label: "Milestone reached.",
-        button: "Level up",
+        button: "Level Up",
       },
       {
         kind: "derived",

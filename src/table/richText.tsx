@@ -344,26 +344,26 @@ export function mountRichText(
   const textMenu = menuTrigger((x, y) => {
     if (!editor.isEditable) return;
     const items: MenuItem[] = [
-      { label: "Insert image…", Icon: IconImage, onSelect: () => pickImages(editor) },
+      { label: "Insert Image…", Icon: IconImage, onSelect: () => pickImages(editor) },
     ];
     if (vault) {
       const secret = menuSecret;
       if (secret) {
         const pos = editor.view.posAtDOM(secret, 0);
         items.push("divider", {
-          label: "Reveal to players",
+          label: "Reveal to Players",
           Icon: IconReveal,
           onSelect: () => revealSecret(editor, vault, pos),
         });
         items.push({
-          label: "Delete secret",
+          label: "Delete Secret",
           Icon: IconDelete,
           danger: true,
           onSelect: () => deleteSecret(editor, vault, pos),
         });
       } else {
         items.push("divider", {
-          label: "Make secret",
+          label: "Make Secret",
           Icon: IconSecret,
           onSelect: () => makeSecret(editor, vault),
         });
@@ -393,7 +393,7 @@ export function mountRichText(
       if (!privateNote) {
         if (items.length) items.push("divider");
         items.push({
-          label: "Change graphic…",
+          label: "Change Graphic…",
           Icon: IconImage,
           onSelect: () =>
             editEntityGraphic(campaign, link.kind, link.id, chip.textContent ?? "Entity"),
@@ -401,13 +401,13 @@ export function mountRichText(
       }
       if (items.length) items.push("divider");
       items.push({
-        label: "Open in sidebar",
+        label: "Open in Sidebar",
         Icon: IconSidebar,
         onSelect: () => openInSidebar(campaign, link.kind, link.id),
       });
       if (followsInPlace(link.kind))
         items.push({
-          label: "Open in a window",
+          label: "Open in a Window",
           Icon: IconOpenWindow,
           onSelect: () => showLink(link, chip),
         });
@@ -416,7 +416,7 @@ export function mountRichText(
       const custom = !!found.node.attrs.text;
       if (items.length) items.push("divider");
       items.push({
-        label: "Edit link text…",
+        label: "Edit Link Text…",
         Icon: IconRename,
         onSelect: () =>
           renameLink({

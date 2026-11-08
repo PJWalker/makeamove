@@ -28,11 +28,14 @@ import { useValue } from "../ui/useValue";
  * Right-click a slot to rename it, give it an icon or a shortcut.
  */
 export function Hotbar({ campaign }: { campaign: Campaign }) {
+  // Rebuilt from the campaign's Yjs data on every change, which changes in place, so
+  // React Compiler's memoizing would keep the old slots.
+  "use no memo";
   const charId = useY(campaign.members, () => selectedCharacterId(campaign));
   const [dragging, setDragging] = useState<string | null>(null);
   const barRef = useRef<HTMLDivElement>(null);
   // Rebuilt on any change to characters or members so labels and availability stay current.
-  const [tick, setTick] = useState(0);
+  const [, setTick] = useState(0);
   const bumpTick = useEffectEvent(() => setTick((n) => n + 1));
   useEffect(() => {
     const bump = () => bumpTick();
@@ -43,7 +46,6 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
       campaign.members.unobserveDeep(bump);
     };
   }, [campaign]);
-  void tick;
   // Session-limited moves change with the chat.
   useValue(campaign.chat.messages);
 
@@ -91,12 +93,12 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
             ? [
                 "divider" as const,
                 {
-                  label: "Move earlier",
+                  label: "Move Earlier",
                   disabled: slots.indexOf(id) <= 0,
                   onSelect: () => edit((s) => shift(s, id, -1)),
                 },
                 {
-                  label: "Move later",
+                  label: "Move Later",
                   disabled: slots.indexOf(id) === slots.length - 1,
                   onSelect: () => edit((s) => shift(s, id, 1)),
                 },
@@ -109,18 +111,18 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
             onSelect: () => editAction("rename", id, title),
           },
           {
-            label: "Change icon…",
+            label: "Change Icon…",
             Icon: IconImage,
             onSelect: () => editAction("icon", id, title),
           },
           {
-            label: shortcutFor(campaign, id) ? "Change shortcut…" : "Add shortcut…",
+            label: shortcutFor(campaign, id) ? "Change Shortcut…" : "Add Shortcut…",
             Icon: IconShortcut,
             onSelect: () => editAction("shortcut", id, title),
           },
           "divider",
           {
-            label: "Remove from hotbar",
+            label: "Remove from Hotbar",
             Icon: IconDelete,
             danger: true,
             onSelect: () => edit((s) => unpin(s, id)),

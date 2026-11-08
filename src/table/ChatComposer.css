@@ -6,20 +6,43 @@
     padding: var(--space-3);
     background: var(--surface-sunken);
   }
+  /* Two rows: the dice and the roll's visibility (or the pool's roll button), then the chips. */
   .dice-quick {
+    display: grid;
+    gap: var(--space-1);
+  }
+  .tray-row {
     display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
     gap: 2px;
+    & > .dice-pick {
+      flex: 1 1 0;
+      min-width: 0;
+      padding-inline: 0;
+    }
   }
-  /* In a narrow window the toggle or roll button takes its own line. */
+  /* Without stats, the +1 and −1 chips keep a button's size rather than filling the row. */
+  .tray-chips:not(:has(.tray-divider)) > .dice-pick {
+    max-width: 56px;
+  }
+  /* Between the +1 and −1 chips and the stats. */
+  .tray-divider {
+    align-self: stretch;
+    width: 1px;
+    margin-inline: var(--space-1);
+    background: var(--hairline);
+  }
+  /* The same width either way, so nothing shifts when a pool starts or ends. */
   .dice-visibility,
   .dice-roll-now {
-    margin-left: auto;
+    flex: 0 0 64px;
+    min-width: 0;
+    margin-left: var(--space-1);
+    padding-inline: var(--space-1);
   }
-  .dice-visibility,
-  .dice-roll-now {
-    min-width: 58px;
+  .dice-roll-formula {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .dice-visibility {
     color: var(--private);
@@ -55,7 +78,7 @@
     padding: 0 4px;
     background: var(--accent);
     color: var(--accent-ink);
-    font-size: var(--text-2xs);
+    font-size: var(--text-badge);
     font-weight: 700;
     line-height: 15px;
   }
@@ -85,6 +108,7 @@
     }
   }
   .dice-entry {
+    position: relative;
     display: flex;
     align-items: flex-end;
     gap: var(--space-2);
@@ -93,24 +117,36 @@
   .chat-error {
     margin: 0;
     color: var(--danger);
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
   }
+  /* Command hints float over the quick dice, just above the message box. */
   .chat-hints {
+    position: absolute;
+    inset: auto 0 calc(100% + var(--space-1));
+    z-index: 2;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 2px;
+    max-height: 40vh;
     margin: 0;
-    padding: 0;
+    padding: var(--space-1);
+    overflow-y: auto;
+    border: 1px solid var(--hairline);
+    background: var(--surface-solid);
+    box-shadow: var(--window-shadow);
     list-style: none;
   }
   .chat-hint {
     display: flex;
+    align-items: baseline;
+    justify-content: flex-start;
     gap: var(--space-3);
     width: 100%;
     padding: var(--space-1) var(--space-2);
     border: 0;
     background: transparent;
     color: var(--text-muted);
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
     text-align: start;
     cursor: pointer;
   }
@@ -121,5 +157,9 @@
   .chat-hint code {
     color: var(--accent);
     white-space: nowrap;
+  }
+  .chat-hint span {
+    min-width: 0;
+    white-space: normal;
   }
 }

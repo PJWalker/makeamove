@@ -19,7 +19,7 @@ export function MoveBody({
   campaign: Campaign;
   move: ActionDef;
   /** Who is making it: their numbers for the buttons, their form. */
-  characterId: string | null | undefined;
+  characterId: string | null;
 }) {
   const system = systemOf(campaign);
   const json = useY(campaign.characters, () =>
@@ -32,7 +32,7 @@ export function MoveBody({
       <FormattedText
         campaign={campaign}
         text={move.text}
-        characterId={characterId ?? null}
+        characterId={characterId}
         className="move-text move-window-text"
       />
       {Form && c?.kind === "pc" && (

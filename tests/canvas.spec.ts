@@ -35,7 +35,7 @@ test("the canvas takes clicks once a campaign opens", async ({ page }) => {
 test("the canvas still takes clicks after the campaign is left and reopened", async ({ page }) => {
   await createCampaign(page, "Canvas reopen test");
   await page.getByRole("button", { name: "Campaign menu" }).click();
-  await page.getByRole("menuitem", { name: "Back to campaigns" }).click();
+  await page.getByRole("menuitem", { name: "Back to Campaigns" }).click();
   await page
     .getByRole("button", { name: /^Canvas reopen test/ })
     .last()

@@ -6,12 +6,25 @@
     font-size: var(--text-sm);
     color: var(--text-muted);
   }
+  /* A label on the left and its selector on the right, on one row; a hint takes the row below. */
+  .field-inline {
+    grid-template-columns: 1fr minmax(0, auto);
+    align-items: center;
+    column-gap: var(--space-3);
+  }
+  .field-hint {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: var(--text-faint);
+    font-size: var(--text-sm);
+  }
   .input,
   input,
+  select,
   textarea {
     min-height: 34px;
     padding: 0 var(--space-3);
-    background: var(--surface-sunken);
+    background-color: var(--surface-sunken);
     border: 1px solid #fff1;
     border-image: linear-gradient(#ffffff05, #fff3) 1;
     box-shadow: inset 0 1px 1px 2px #000;
@@ -19,7 +32,7 @@
     color: var(--text);
     font-size: var(--text-md);
     &:hover {
-      background: var(--surface-sunken-hover);
+      background-color: var(--surface-sunken-hover);
     }
     &:focus-visible {
       outline: none;
@@ -27,6 +40,41 @@
     }
     &::placeholder {
       color: #fff5;
+    }
+  }
+  /* A checkbox with its label beside it. */
+  .check-option {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    color: var(--text);
+    font-size: var(--text-md);
+    cursor: pointer;
+    input {
+      flex: none;
+      min-height: 0;
+      height: auto;
+      padding: 0;
+      box-shadow: none;
+      accent-color: var(--accent);
+      cursor: inherit;
+    }
+  }
+  select {
+    appearance: none;
+    padding-right: calc(var(--space-3) + 20px);
+    background-image: url("../ui/select-chevron.svg");
+    background-repeat: no-repeat;
+    background-position: right var(--space-2) center;
+    background-size: 18px;
+    cursor: pointer;
+    &:disabled {
+      opacity: var(--disabled-opacity);
+      cursor: not-allowed;
+    }
+    option {
+      background-color: var(--surface-solid);
+      color: var(--text);
     }
   }
 
@@ -113,6 +161,10 @@
     justify-content: flex-end;
     gap: var(--space-3);
     margin-top: var(--space-2);
+  }
+  /* An action that is neither Cancel nor the commit, such as Delete, sits apart on the left. */
+  .form-actions-start:not(:has(~ .form-actions-start)) {
+    margin-inline-end: auto;
   }
 
   .form-layout {

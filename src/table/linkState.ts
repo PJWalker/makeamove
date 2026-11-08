@@ -39,7 +39,7 @@ export function linkActionItems(campaign: Campaign, link: LinkRef): MenuItem[] {
     return item
       ? [
           {
-            label: me ? `Give to ${me.name}` : "Choose a character",
+            label: me ? `Give to ${me.name}` : "Choose a Character",
             disabled: !canAct,
             onSelect: () => {
               if (me && canAct) addItem(campaign, me.id, item);

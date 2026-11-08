@@ -1,5 +1,4 @@
 import type { PointerEvent as ReactPointerEvent } from "react";
-import { store } from "../lib/store";
 import type { ReactNode } from "react";
 import { useLayoutEffect, useRef, useState } from "react";
 import { checkOf } from "../features/characters/moves";
@@ -12,12 +11,7 @@ import { ListRow } from "../ui/List";
 import type { WindowProxy } from "./CampaignDialogs";
 import { menuTrigger } from "../ui/menuTrigger";
 import { ContextMenu, type MenuItem } from "./ContextMenu";
-import {
-  entityTabId,
-  registerEntityWindow,
-  closeEntityWindow,
-  entityWindows,
-} from "./entityWindows";
+import { entityTabId, registerEntityWindow, closeEntityWindow, openEntries } from "./entityWindows";
 import { layout, locate, showPanel } from "./panelLayout";
 import type { DockItemId } from "./panelLayout";
 import { useValue } from "../ui/useValue";
@@ -34,15 +28,10 @@ export function rollTag(system: GameSystem, m: ActionDef) {
   const check = checkOf(m);
   if (!check) return null;
   if (check.ask?.kind === "stat") return "any";
-  if (check.ask?.kind === "number") return check.ask.label.toLowerCase();
+  if (check.ask?.kind === "number" || check.ask?.kind === "questions")
+    return check.ask.label.toLowerCase();
   return system.stats.find((s) => s.id === check.stat)?.abbr ?? check.stat ?? null;
 }
-
-const openEntries = store<string[]>(
-  Object.keys(entityWindows.value)
-    .filter((id) => id.startsWith("entity:entry:"))
-    .map((id) => id.slice("entity:entry:".length)),
-);
 
 /** Which entries have windows open, and how to open one from its row. */
 export function useEntryWindows() {
@@ -66,7 +55,6 @@ export function useEntryWindows() {
       });
     },
     close(key: string) {
-      openEntries.value = openEntries.value.filter((k) => k !== key);
       closeEntityWindow(entityTabId(`entry:${key}`));
     },
   };
@@ -219,9 +207,7 @@ export function EntryRow({
       >
         {children}
       </ListRow>
-      {menu && (
-        <ContextMenu {...menu} items={items} onClose={() => setMenu(null)} />
-      )}
+      {menu && <ContextMenu {...menu} items={items} onClose={() => setMenu(null)} />}
     </>
   );
 }

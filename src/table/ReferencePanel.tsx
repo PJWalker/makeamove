@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Campaign } from "../campaign/campaign";
-import { systemOf } from "../features/characters/api";
+import { selectedCharacterId, systemOf } from "../features/characters/api";
 import { List, ListRow } from "../ui/List";
 import { TwoPane, usePaneLevel } from "../ui/TwoPane";
 import { useY } from "../ui/useY";
@@ -101,6 +101,7 @@ function ReferenceEntry({
   query: string;
 }) {
   const entryRef = useRef<HTMLElement>(null);
+  const characterId = useY(campaign.members, () => selectedCharacterId(campaign)) ?? null;
 
   useEffect(() => {
     if (!query) return;
@@ -115,6 +116,7 @@ function ReferenceEntry({
       <FormattedText
         campaign={campaign}
         text={section.text}
+        characterId={characterId}
         className="reference-text"
         searchTerm={query}
       />

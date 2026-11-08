@@ -38,7 +38,7 @@ export function SearchHighlight({ text, term }: { text: string; term: string }) 
 }
 
 /** A button in text, live for one character. */
-function TrackerButtonView({
+export function TrackerButtonView({
   campaign,
   characterId,
   b,
@@ -80,14 +80,10 @@ function inline(text: string, ctx: Ctx, key: string, searchTerm = ""): ReactNode
     if (m[1]) {
       const b = parseTrackerButton(m[1]);
       out.push(
-        !b ? (
-          m[1]
-        ) : ctx.characterId === undefined ? (
-          <span key={k} className="tracker-button" data-static="true">
-            {b.label}
-          </span>
-        ) : (
+        b ? (
           <TrackerButtonView key={k} campaign={ctx.campaign} characterId={ctx.characterId} b={b} />
+        ) : (
+          m[1]
         ),
       );
     } else if (m[2]) out.push(<strong key={k}>{inline(m[2], ctx, k, searchTerm)}</strong>);
@@ -100,8 +96,8 @@ function inline(text: string, ctx: Ctx, key: string, searchTerm = ""): ReactNode
 
 interface Ctx {
   campaign: Campaign;
-  /** Whose numbers the buttons change; null for nobody yet; undefined shows them as plain labels. */
-  characterId: string | null | undefined;
+  /** Whose numbers the buttons change; null for nobody yet. */
+  characterId: string | null;
 }
 
 export function FormattedText({
@@ -113,8 +109,8 @@ export function FormattedText({
 }: {
   campaign: Campaign;
   text: string;
-  /** Whose numbers its buttons change: null when no one is chosen; leave out to show buttons as labels. */
-  characterId?: string | null | undefined;
+  /** Whose numbers its buttons change: null when no one is chosen. Required so buttons always render live. */
+  characterId: string | null;
   className?: string;
   searchTerm?: string;
 }) {

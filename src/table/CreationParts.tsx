@@ -13,7 +13,10 @@ import {
   dataFrom,
   pointsSpent,
   raise,
+  ruleScoreValues,
+  ruleStartingScores,
   SCORE_CAP,
+  scoreRuleProblems,
   validBoost,
   previewChoices,
 } from "../features/characters/creation";
@@ -21,7 +24,7 @@ import { derive } from "../features/characters/store";
 import { roll } from "../features/dice/notation";
 import { commaListOf, formatCommaList } from "../lib/list";
 import type { Campaign } from "../campaign/campaign";
-import type { ChoiceDef, GameSystem, ScoreAssignmentOption, ScoreMethods } from "../systems/types";
+import type { ChoiceDef, GameSystem, ScoreMethods, ScoreRule } from "../systems/types";
 import { Button } from "../ui/Button";
 import { OptionPicker } from "../ui/OptionPicker";
 import { closePopup } from "../ui/popup";
@@ -156,7 +159,8 @@ export function ScoreFields({
   onMethod,
   scores,
   onScores,
-  assignments,
+  rule,
+  hint,
 }: {
   system: GameSystem;
   methods: ScoreMethods;
@@ -164,23 +168,20 @@ export function ScoreFields({
   onMethod: (method: ScoreMethod) => void;
   scores: Record<string, number>;
   onScores: (scores: Record<string, number>) => void;
-  assignments?: ScoreAssignmentOption[];
+  rule?: ScoreRule | undefined;
+  hint?: string | undefined;
 }) {
   const available = scoreMethods(methods);
   const [pool, setPool] = useState<number[]>(methods.standardArray ?? []);
-  const [assignmentId, setAssignmentId] = useState(assignments?.[0]?.id ?? "");
   const takePool = (next: number[]) => {
     setPool(next);
     onScores(assignInOrder(system, next));
   };
   useEffect(() => {
-    const initial = assignments?.[0];
-    if (!initial) return;
-    setAssignmentId(initial.id);
-    onScores({ ...initial.scores });
-    // Only a new set of assignments resets the choice.
+    if (rule) onScores(ruleStartingScores(rule, system.stats));
+    // Only a new rule resets the scores.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assignments]);
+  }, [rule]);
   const rollPool = () =>
     takePool(system.stats.map(() => roll(methods.roll!).total).sort((a, b) => b - a));
   const choose = (m: ScoreMethod) => {
@@ -192,37 +193,19 @@ export function ScoreFields({
   const spent = methods.pointBuy ? pointsSpent(scores, methods.pointBuy) : null;
   const buyable = methods.pointBuy ? Object.keys(methods.pointBuy.costs).map(Number) : [];
 
-  if (assignments?.length) {
-    const selected = assignments.find((option) => option.id === assignmentId) ?? assignments[0]!;
+  if (rule)
     return (
       <div className="field creation-scores">
         <span>Ability scores</span>
-        <OptionPicker
-          label="Class-guided assignment"
-          options={assignments}
-          value={selected.id}
-          onChange={(id) => {
-            const option = assignments.find((entry) => entry.id === id);
-            if (!option) return;
-            setAssignmentId(option.id);
-            onScores({ ...option.scores });
-          }}
-        />
-        <div className="creation-score-grid">
-          {system.stats.map((stat) => (
-            <label key={stat.id} className="creation-score">
-              <span className="stat-abbr">{stat.abbr}</span>
-              <output>{selected.scores[stat.id] ?? 0}</output>
-            </label>
-          ))}
-        </div>
+        {hint && <p className="field-hint">{hint}</p>}
+        <RuleScoreFields system={system} rule={rule} scores={scores} onScores={onScores} />
       </div>
     );
-  }
 
   return (
     <div className="field creation-scores">
       <span>Ability scores</span>
+      {hint && <p className="field-hint">{hint}</p>}
       <Segmented label="Method" value={method} options={available} onChange={choose} />
       {method === "buy" && methods.pointBuy && (
         <span className="muted" data-over={spent === null || spent > methods.pointBuy.budget}>
@@ -231,7 +214,7 @@ export function ScoreFields({
       )}
       {method === "roll" && (
         <Button size="sm" variant="ghost" onClick={rollPool}>
-          Roll again ({methods.roll})
+          Roll Again ({methods.roll})
         </Button>
       )}
       <div className="creation-score-grid">
@@ -265,12 +248,59 @@ export function ScoreFields({
   );
 }
 
-/** Whether the scores are ready: a point buy must be within budget. */
+/** A picker for each stat's score, checked against the class's required stat line. */
+export function RuleScoreFields({
+  system,
+  rule,
+  scores,
+  onScores,
+}: {
+  system: GameSystem;
+  rule: ScoreRule;
+  scores: Record<string, number>;
+  onScores: (scores: Record<string, number>) => void;
+}) {
+  const values = ruleScoreValues(rule);
+  const problems = scoreRuleProblems(rule, system.stats, scores);
+  return (
+    <>
+      <div className="creation-score-grid">
+        {system.stats.map((stat) => (
+          <label key={stat.id} className="creation-score">
+            <span className="stat-abbr">{stat.abbr}</span>
+            <select
+              value={scores[stat.id] ?? ""}
+              onChange={(event) =>
+                onScores({ ...scores, [stat.id]: Number(event.currentTarget.value) })
+              }
+            >
+              {values.map((value) => (
+                <option key={value} value={value}>
+                  {value > 0 ? `+${value}` : value}
+                </option>
+              ))}
+            </select>
+          </label>
+        ))}
+      </div>
+      <ul className="creation-score-problems" aria-live="polite">
+        {problems.map((problem) => (
+          <li key={problem}>{problem}</li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
+/** Whether the scores are ready: a class rule must be met, and a point buy must be within budget. */
 export function scoresReady(
+  system: GameSystem,
   methods: ScoreMethods,
   method: ScoreMethod,
   scores: Record<string, number>,
+  rule?: ScoreRule,
 ): boolean {
+  if (rule) return scoreRuleProblems(rule, system.stats, scores).length === 0;
   if (method !== "buy" || !methods.pointBuy) return true;
   const spent = pointsSpent(scores, methods.pointBuy);
   return spent !== null && spent <= methods.pointBuy.budget;
@@ -525,7 +555,7 @@ export function AdvancementDialog({
             Cancel
           </Button>
           <Button variant="primary" type="submit" disabled={!ready}>
-            Level up
+            Level Up
           </Button>
         </div>
       </form>

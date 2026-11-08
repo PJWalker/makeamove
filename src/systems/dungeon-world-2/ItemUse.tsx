@@ -7,7 +7,9 @@ import { consumeDungeonWorld2Item } from "./campaign";
 
 /** Controls for Dungeon World 2's charged items: a potion's or a wand's choice of effect. */
 export function Dw2ItemUse({ campaign, character, item, editable }: ItemUseProps) {
-  const [choice, setChoice] = useState<"heal" | "clear-locked" | "drain" | "mark-condition">("heal");
+  const [choice, setChoice] = useState<"heal" | "clear-locked" | "drain" | "mark-condition">(
+    "heal",
+  );
   const [condition, setCondition] = useState(character.lockedConditions?.[0] ?? "");
   const definition = systemOf(campaign).items.find((entry) => entry.id === item.defId);
   if (item.uses === undefined) return null;
@@ -26,9 +28,7 @@ export function Dw2ItemUse({ campaign, character, item, editable }: ItemUseProps
           <select
             value={choice === "mark-condition" ? "mark-condition" : "drain"}
             disabled={!editable || outOfUses}
-            onChange={(event) =>
-              setChoice(event.currentTarget.value as "drain" | "mark-condition")
-            }
+            onChange={(event) => setChoice(event.currentTarget.value as "drain" | "mark-condition")}
           >
             <option value="drain">Drain the wand until camp</option>
             <option value="mark-condition" disabled={!availableConditions.length}>
@@ -55,9 +55,7 @@ export function Dw2ItemUse({ campaign, character, item, editable }: ItemUseProps
         <Button
           size="sm"
           disabled={
-            !editable ||
-            outOfUses ||
-            (choice === "mark-condition" && !availableConditions.length)
+            !editable || outOfUses || (choice === "mark-condition" && !availableConditions.length)
           }
           onClick={() =>
             consumeDungeonWorld2Item(
@@ -86,9 +84,7 @@ export function Dw2ItemUse({ campaign, character, item, editable }: ItemUseProps
           <select
             value={choice}
             disabled={!editable || outOfUses}
-            onChange={(event) =>
-              setChoice(event.currentTarget.value as "heal" | "clear-locked")
-            }
+            onChange={(event) => setChoice(event.currentTarget.value as "heal" | "clear-locked")}
           >
             <option value="heal">Recover half lost HP</option>
             <option value="clear-locked" disabled={!locked.length}>
@@ -115,9 +111,7 @@ export function Dw2ItemUse({ campaign, character, item, editable }: ItemUseProps
         <Button
           size="sm"
           disabled={
-            !editable ||
-            outOfUses ||
-            (choice === "clear-locked" ? !locked.length : !missingHp)
+            !editable || outOfUses || (choice === "clear-locked" ? !locked.length : !missingHp)
           }
           onClick={() =>
             consumeDungeonWorld2Item(

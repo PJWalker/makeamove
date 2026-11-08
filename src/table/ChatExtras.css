@@ -89,7 +89,7 @@
     resize: vertical;
   }
   .chat-edited {
-    font-size: var(--text-xs, 0.75rem);
+    font-size: var(--text-sm);
   }
 
   /* Pins slide down into the strip with a gold flash, and fold away when unpinned. */

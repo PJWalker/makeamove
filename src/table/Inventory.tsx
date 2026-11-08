@@ -5,6 +5,7 @@ import type { CharacterView, ItemInstance } from "../features/characters/types";
 import type { Derived } from "../systems/types";
 import type { Campaign } from "../campaign/campaign";
 import { Button } from "../ui/Button";
+import { FormattedText } from "./FormattedText";
 import { IconDelete, IconImage } from "../ui/icons";
 import { List } from "../ui/List";
 import { EntryRow, EntryWindow, useEntryWindows } from "./EntryWindow";
@@ -62,9 +63,7 @@ function ArtifactTracker({
   const needsChoice =
     progress === artifact.capacity - 1 && available.length > 0 && artifact.unlockMode === "choose";
   const selected =
-    choice && available.some((move) => move.id === choice)
-      ? choice
-      : (available[0]?.id ?? "");
+    choice && available.some((move) => move.id === choice) ? choice : (available[0]?.id ?? "");
   return (
     <section className="inventory-artifact" aria-label={`${item.name} Artifact track`}>
       <h4>{artifact.track}</h4>
@@ -119,7 +118,9 @@ function ArtifactTracker({
           {artifact.unlocks.map((move) => (
             <li key={move.id}>
               <strong>{move.name}</strong> {unlocked.has(move.id) ? "(unlocked)" : "(locked)"}
-              {move.text && <p>{move.text}</p>}
+              {move.text && (
+                <FormattedText campaign={campaign} text={move.text} characterId={characterId} />
+              )}
             </li>
           ))}
         </ul>
@@ -208,7 +209,7 @@ export function Inventory({
         onSelect: () => removeItem(campaign, c.id, i.id),
       },
       {
-        label: "Change graphic…",
+        label: "Change Graphic…",
         Icon: IconImage,
         onSelect: () => editEntityGraphic(campaign, "item", i.defId ?? i.id, i.name, i.icon),
       },
@@ -301,7 +302,7 @@ export function Inventory({
           className="inventory-find"
           onClick={() => browseLibrary("item")}
         >
-          Find items in the Libraries…
+          Find Items in the Libraries…
         </Button>
       )}
       {windows.keys.map((key) => {

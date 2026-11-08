@@ -7,6 +7,7 @@ import { LINK_NODE } from "../features/notes/links";
 import type { Campaign } from "../campaign/campaign";
 import { registerLinkDrop } from "./entityDrag";
 import { linkExtension } from "./richText";
+import { trackerButtonExtension } from "./trackerButtons";
 
 /*
  * The chat's message box stores Tiptap JSON. Enter sends; Shift+Enter starts
@@ -30,6 +31,7 @@ export function chatContentExtensions(campaign: Campaign) {
       },
     }),
     linkExtension(campaign, { shared: true }),
+    trackerButtonExtension(campaign),
   ];
 }
 

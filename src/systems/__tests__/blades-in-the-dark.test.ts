@@ -4,7 +4,13 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("../../table/panelLayout", () => ({ showPanel: () => {} }));
 
 import { Campaign, createCampaign } from "../../campaign/campaign";
-import { getCharacter, makeMove, moveRequest, newCharacter, startMove } from "../../features/characters/api";
+import {
+  getCharacter,
+  makeMove,
+  moveRequest,
+  newCharacter,
+  startMove,
+} from "../../features/characters/api";
 import { actionsFor, derive } from "../../features/characters/store";
 import { device } from "../../platform/device";
 import { bladesInTheDark } from "../blades-in-the-dark";

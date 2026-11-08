@@ -5,6 +5,7 @@ import {
   openSheetMove,
   chooseCreationOptions,
   addRelationshipAtDepthThree,
+  drag,
 } from "./e2e-helpers";
 
 test("DW2 PCs forge and advance one shared Bond at mutual Depth three", async ({ page }) => {
@@ -83,11 +84,11 @@ test("DW2 Treasure boxes advance Wealth tiers", async ({ page }) => {
   const wealth = page.getByRole("region", { name: "Treasure & Wealth" });
   await expect(wealth).toContainText("Poor");
   const treasure = wealth.getByRole("group", { name: "Treasure" });
-  await expect(treasure.locator("output")).toContainText("4/40");
+  await expect(treasure.getByRole("textbox")).toHaveValue("4");
   const gain = treasure.getByRole("button").nth(1);
   for (let box = 0; box < 6; box++) await gain.click();
   await expect(wealth).toContainText("Modest");
-  await expect(treasure.locator("output")).toContainText("10/40");
+  await expect(treasure.getByRole("textbox")).toHaveValue("10");
 });
 
 test("DW2 Library purchases spend a Treasure box for equal-Wealth gear", async ({ page }) => {
@@ -109,8 +110,8 @@ test("DW2 Library purchases spend a Treasure box for equal-Wealth gear", async (
     page
       .getByRole("region", { name: "Treasure & Wealth" })
       .getByRole("group", { name: "Treasure" })
-      .locator("output"),
-  ).toContainText("3/40");
+      .getByRole("textbox"),
+  ).toHaveValue("3");
   await expect(page.getByRole("region", { name: "Inventory" })).toContainText("Shortspear");
 });
 
@@ -122,7 +123,7 @@ test("DW2 magic items are available to GMs as grants, not purchases", async ({ p
   await chooseCreationOptions(page, creation);
   await creation.getByRole("button", { name: "Create", exact: true }).click();
 
-  await page.getByRole("button", { name: "Find items in the Libraries…" }).click();
+  await page.getByRole("button", { name: "Find Items in the Libraries…" }).click();
   await page.getByRole("searchbox", { name: "Search the Libraries" }).fill("animated shield");
   await page.getByText("animated shield", { exact: true }).click();
   await page.getByRole("button", { name: "GM grant" }).click();
@@ -154,7 +155,7 @@ test("DW2 Artifact tracks unlock and expose a wielded move", async ({ page }) =>
   await chooseCreationOptions(page, creation);
   await creation.getByRole("button", { name: "Create", exact: true }).click();
 
-  await page.getByRole("button", { name: "Find items in the Libraries…" }).click();
+  await page.getByRole("button", { name: "Find Items in the Libraries…" }).click();
   await page
     .getByRole("searchbox", { name: "Search the Libraries" })
     .fill("Alveric’s Soulstealer Blade");
@@ -183,11 +184,11 @@ test("DW2 potion of healing applies its chosen effect and consumes a use", async
   const hp = page.getByRole("group", { name: "HP" });
   const decreaseHp = hp.locator(".counter-btn").first();
   await decreaseHp.click();
-  await expect(hp.locator("output")).toContainText("11/12");
+  await expect(hp.getByRole("textbox")).toHaveValue("11");
   await decreaseHp.click();
-  await expect(hp.locator("output")).toContainText("10/12");
+  await expect(hp.getByRole("textbox")).toHaveValue("10");
 
-  await page.getByRole("button", { name: "Find items in the Libraries…" }).click();
+  await page.getByRole("button", { name: "Find Items in the Libraries…" }).click();
   await page.getByRole("searchbox", { name: "Search the Libraries" }).fill("potion of healing");
   await page.getByText("Potion of healing", { exact: true }).click();
   await page.getByRole("button", { name: "GM grant" }).click();
@@ -197,8 +198,27 @@ test("DW2 potion of healing applies its chosen effect and consumes a use", async
   const potion = page.getByRole("dialog", { name: "Potion of healing" }).last();
   await potion.getByLabel("Effect").selectOption("heal");
   await potion.getByRole("button", { name: "Use", exact: true }).click();
-  await expect(hp.locator("output")).toContainText("11/12");
+  await expect(hp.getByRole("textbox")).toHaveValue("11");
   await expect(inventory).toContainText("0/1 uses");
+});
+
+test("DW2 HP shows Bloodied at half or less", async ({ page }) => {
+  await createCampaign(page, "Bloodied", "dungeon-world-2");
+  await openCharacters(page);
+  const creation = page.locator(".sheet-new");
+  await creation.getByRole("textbox", { name: "Name" }).fill("Ayla");
+  await chooseCreationOptions(page, creation);
+  await creation.getByRole("button", { name: "Create", exact: true }).click();
+  const hp = page.getByRole("group", { name: "HP" });
+  await expect(hp).not.toContainText("Bloodied");
+  const decreaseHp = hp.locator(".counter-btn").first();
+  for (let i = 0; i < 5; i++) await decreaseHp.click();
+  await expect(hp.getByRole("textbox")).toHaveValue("7");
+  await expect(hp).not.toContainText("Bloodied");
+  await decreaseHp.click();
+  await expect(hp.getByRole("textbox")).toHaveValue("6");
+  await expect(hp).toContainText("Bloodied");
+  await expect(page.getByRole("region", { name: "Combat" })).not.toContainText("Bloodied");
 });
 
 test("DW2 creation follows the selected class stat prompt", async ({ page }) => {
@@ -214,18 +234,22 @@ test("DW2 creation follows the selected class stat prompt", async ({ page }) => 
     .getByRole("option", { name: "The Bard" })
     .click();
 
-  await creation.getByText("Class creation prompts", { exact: true }).click();
-  await expect(creation.getByText(/What makes your art different/)).toBeVisible();
-  await expect(creation.getByText(/artistic samples/)).toBeVisible();
+  await expect(creation.getByRole("textbox", { name: "Ancestry" })).toHaveAccessibleDescription(
+    /What makes your art different/,
+  );
+  await expect(creation.getByText(/Your CHA is \+2/)).toBeVisible();
 
-  const assignments = creation.getByRole("button", { name: /Class-guided assignment/ });
-  await expect(assignments).toBeVisible();
-  await expect(creation.locator(".creation-score-grid .creation-score").nth(4)).toContainText("2");
-  await assignments.click();
-  const options = page.getByRole("dialog", { name: "Class-guided assignment" }).getByRole("option");
-  await expect(options).toHaveCount(11);
-  await options.nth(2).click();
-  await expect(creation.locator(".creation-score-grid .creation-score").nth(4)).toContainText("2");
+  const scores = creation.locator(".creation-scores");
+  await expect(scores.getByRole("combobox", { name: "CHA" })).toHaveValue("2");
+  await scores.getByRole("combobox", { name: "CHA" }).selectOption("0");
+  await expect(scores.getByRole("listitem")).toHaveText("CHA must be +2.");
+  await expect(creation.getByRole("button", { name: "Create", exact: true })).toBeDisabled();
+  await scores.getByRole("combobox", { name: "CHA" }).selectOption("2");
+  await scores.getByRole("combobox", { name: "DEX" }).selectOption("-1");
+  await scores.getByRole("combobox", { name: "INT" }).selectOption("1");
+  await scores.getByRole("combobox", { name: "STR" }).selectOption("1");
+  await scores.getByRole("combobox", { name: "WIS" }).selectOption("0");
+  await expect(scores.getByRole("listitem")).toHaveCount(0);
   await chooseCreationOptions(page, creation);
   await creation.getByRole("button", { name: "Create", exact: true }).click();
   await expect(
@@ -253,19 +277,19 @@ test("DW2 Class Change reassigns advancements and preserves campaign progress", 
   const increaseXp = xp.getByRole("button").nth(1);
   for (let mark = 1; mark <= 5; mark++) {
     await increaseXp.click();
-    await expect(xp.locator("output")).toContainText(String(mark));
+    await expect(xp.getByRole("textbox")).toHaveValue(String(mark));
   }
-  await page.getByRole("button", { name: "Level up", exact: true }).click();
+  await page.getByRole("button", { name: "Level Up…", exact: true }).click();
   const firstAdvancement = page.getByRole("dialog", { name: "Erinyette: advancement 2" });
   await firstAdvancement.getByRole("button", { name: /^Advancement 2:/ }).click();
   await page
     .getByRole("dialog", { name: "Advancement 2" })
     .getByRole("option", { name: /Increase a Stat\s*\+1 Dexterity/ })
     .click();
-  await firstAdvancement.getByRole("button", { name: "Level up", exact: true }).click();
+  await firstAdvancement.getByRole("button", { name: "Level Up", exact: true }).click();
 
   for (let mark = 1; mark <= 5; mark++) await increaseXp.click();
-  await page.getByRole("button", { name: "Change Class", exact: true }).click();
+  await page.getByRole("button", { name: "Change Class…", exact: true }).click();
   const change = page.getByRole("dialog", { name: "Erinyette: change Class" });
   await change.getByRole("button", { name: /^New Class:/ }).click();
   await page
@@ -281,9 +305,9 @@ test("DW2 Class Change reassigns advancements and preserves campaign progress", 
 
   await expect(page.locator(".sheet-name")).toHaveValue("Erinyette");
   await expect(page.getByRole("button", { name: "Class: The Bard" })).toBeVisible();
-  await expect(page.getByRole("group", { name: "Level" }).locator("output")).toHaveText("2");
-  await expect(xp.locator("output")).toContainText("5/5");
-  await expect(page.getByRole("group", { name: "HP" }).locator("output")).toContainText("9/9");
+  await expect(page.getByRole("group", { name: "Level" }).getByRole("textbox")).toHaveValue("2");
+  await expect(xp.getByRole("textbox")).toHaveValue("5");
+  await expect(page.getByRole("group", { name: "HP" }).getByRole("textbox")).toHaveValue("9");
   await expect(page.getByRole("region", { name: "Treasure & Wealth" })).toContainText("Poor");
 });
 
@@ -316,7 +340,7 @@ test("DW2 End the Session awards group XP from affirmative answers", async ({ pa
     .getByLabel("Did we learn something new and important about the world or NPCs?")
     .check();
   await session.getByRole("button", { name: "Award group XP" }).click();
-  await expect(page.getByRole("group", { name: "XP" }).locator("output")).toContainText("2/5");
+  await expect(page.getByRole("group", { name: "XP" }).getByRole("textbox")).toHaveValue("2");
   await expect(session.getByRole("button", { name: "Session ended" })).toBeDisabled();
 });
 
@@ -330,11 +354,11 @@ test("DW2 Make Camp restores HP and is limited to once per session", async ({ pa
 
   const hp = page.getByRole("group", { name: "HP" });
   await hp.getByRole("button", { name: "Decrease HP" }).click();
-  await expect(hp.locator("output")).toContainText("11/12");
+  await expect(hp.getByRole("textbox")).toHaveValue("11");
   await openSheetMove(page, "Make Camp");
   const camp = page.getByRole("region", { name: "Make Camp" });
   await camp.getByRole("button", { name: "Finish Making Camp" }).click();
-  await expect(hp.locator("output")).toContainText("12/12");
+  await expect(hp.getByRole("textbox")).toHaveValue("12");
   await expect(camp.getByRole("button", { name: "Camp completed" })).toBeDisabled();
 });
 
@@ -379,9 +403,12 @@ test("DW2 Perilous Journey prepares quick pace and its roll modifier", async ({ 
   const prompt = page.getByRole("dialog", { name: "Undertake a Perilous Journey (Brom)" });
   await prompt
     .getByRole("radiogroup", { name: "Stat to roll" })
-    .getByRole("button", { name: "STR" })
+    .getByRole("radio", { name: "STR" })
     .click();
-  await expect(prompt.getByRole("button", { name: /^Roll .*?-1/ })).toBeVisible();
+  // The formula is the Roll button's tooltip; quick pace takes 1 off it.
+  const roll = prompt.getByRole("button", { name: "Roll", exact: true });
+  await expect(roll).toBeVisible();
+  expect(await roll.getAttribute("title")).toMatch(/-1$/);
 });
 
 test("DW2 Downtime Train spends Treasure once per period", async ({ page }) => {
@@ -396,14 +423,12 @@ test("DW2 Downtime Train spends Treasure once per period", async ({ page }) => {
   const downtime = page.getByRole("region", { name: "Enjoy Downtime" });
   await downtime.getByRole("button", { name: "Begin Downtime" }).click();
   await downtime.getByRole("button", { name: "Train (1 Treasure for 1 XP)" }).click();
-  await expect(page.getByRole("group", { name: "XP" }).locator("output")).toContainText("1/5");
+  await expect(page.getByRole("group", { name: "XP" }).getByRole("textbox")).toHaveValue("1");
   await expect(downtime.getByRole("button", { name: "Trained this Downtime" })).toBeDisabled();
   await downtime.getByLabel("Shop service").selectOption("repair");
   await downtime.getByLabel("Service tier").selectOption("3");
   await downtime.getByRole("button", { name: "Shop (1 Treasure)" }).click();
-  await expect(page.getByRole("group", { name: "Treasure" }).locator("output")).toContainText(
-    "2/40",
-  );
+  await expect(page.getByRole("group", { name: "Treasure" }).getByRole("textbox")).toHaveValue("2");
   await expect(page.getByRole("log")).toContainText("spends 1 Treasure on Repair of");
   await downtime.getByRole("button", { name: "Begin Downtime" }).click();
   await expect(downtime.getByRole("button", { name: "Train (1 Treasure for 1 XP)" })).toBeEnabled();
@@ -421,9 +446,9 @@ test("DW2 advancement reveals a source-backed Struggle with its track", async ({
   const increaseXp = xp.getByRole("button").nth(1);
   for (let mark = 1; mark <= 5; mark++) {
     await increaseXp.click();
-    await expect(xp.locator("output")).toContainText(String(mark));
+    await expect(xp.getByRole("textbox")).toHaveValue(String(mark));
   }
-  await page.getByRole("button", { name: "Level up", exact: true }).click();
+  await page.getByRole("button", { name: "Level Up…", exact: true }).click();
 
   const advancement = page.getByRole("dialog", { name: "Vex: advancement 2" });
   await advancement.getByRole("button", { name: /^Advancement 2:/ }).click();
@@ -431,7 +456,7 @@ test("DW2 advancement reveals a source-backed Struggle with its track", async ({
     .getByRole("dialog", { name: "Advancement 2" })
     .getByRole("option", { name: /Reveal a Struggle\s*Reformed/ })
     .click();
-  await advancement.getByRole("button", { name: "Level up", exact: true }).click();
+  await advancement.getByRole("button", { name: "Level Up", exact: true }).click();
 
   const struggle = page.getByRole("region", { name: "Current Struggle" });
   await expect(struggle.getByRole("heading", { name: "Reformed" })).toBeVisible();
@@ -439,7 +464,54 @@ test("DW2 advancement reveals a source-backed Struggle with its track", async ({
   await struggle.getByText("Struggle rules", { exact: true }).click();
   await expect(struggle.getByText(/Haunted \(\+\-\)/)).toBeVisible();
   await struggle.getByRole("button", { name: "Resolve Struggle" }).click();
-  await expect(page.getByRole("group", { name: "Level" }).locator("output")).toHaveText("3");
-  await expect(page.getByRole("group", { name: "XP" }).locator("output")).toContainText("0");
+  await expect(page.getByRole("group", { name: "Level" }).getByRole("textbox")).toHaveValue("3");
+  await expect(page.getByRole("group", { name: "XP" }).getByRole("textbox")).toHaveValue("0");
   await expect(page.getByRole("region", { name: "Current Struggle" })).toHaveCount(0);
+});
+
+test("DW2 sheets reveal a Struggle dragged in from the Libraries", async ({ page }) => {
+  await createCampaign(page, "Struggle drop", "dungeon-world-2");
+  await openCharacters(page);
+  const creation = page.locator(".sheet-new");
+  await creation.getByRole("textbox", { name: "Name" }).fill("Vex");
+  await chooseCreationOptions(page, creation);
+  await creation.getByRole("button", { name: "Create", exact: true }).click();
+
+  const libraries = page.getByRole("tab", { name: "Libraries" });
+  if ((await libraries.getAttribute("aria-selected")) !== "true") await libraries.click();
+  await page.getByRole("searchbox", { name: "Search the Libraries" }).fill("Reformed");
+  const moves = await page.getByRole("region", { name: "Moves" }).boundingBox();
+  if (!moves) throw new Error("The sheet's moves are not shown.");
+  await drag(
+    page,
+    page.getByText("Reformed", { exact: true }),
+    moves.x + moves.width / 2,
+    moves.y + 10,
+  );
+
+  const struggle = page.getByRole("region", { name: "Current Struggle" });
+  await expect(struggle.getByRole("heading", { name: "Reformed" })).toBeVisible();
+  await expect(struggle.getByRole("spinbutton", { name: "Guilt" })).toHaveValue("2");
+});
+
+test("DW2 tracker buttons in chat change the selected character's numbers", async ({ page }) => {
+  await createCampaign(page, "Chat trackers", "dungeon-world-2");
+  await openCharacters(page);
+  const creation = page.locator(".sheet-new");
+  await creation.getByRole("textbox", { name: "Name" }).fill("Vex");
+  await chooseCreationOptions(page, creation);
+  await creation.getByRole("button", { name: "Create", exact: true }).click();
+
+  const chat = page.getByRole("tab", { name: "Chat" });
+  if ((await chat.getAttribute("aria-selected")) !== "true") await chat.click();
+  const message = page.getByRole("textbox", { name: "Message" });
+  await message.fill("Well fought [[+1 XP]]");
+  await page.getByRole("button", { name: "Send" }).click();
+
+  await page.getByRole("log").getByRole("button", { name: "+1 XP" }).click();
+  const characters = page.getByRole("tab", { name: "Characters" });
+  if ((await characters.getAttribute("aria-selected")) !== "true") await characters.click();
+  await expect(
+    page.getByRole("group", { name: "XP" }).getByRole("textbox", { name: "XP" }),
+  ).toHaveValue("1");
 });

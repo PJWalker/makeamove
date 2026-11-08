@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { COMMANDS, parseCommand, suggest } from "../features/chat/commands";
 import { commandText, emptyChatContent, type ChatContent } from "../features/chat/content";
-import { addDieToRoll, postRoll, runCommand } from "../features/chat/send";
+import { addToRoll, postRoll, runCommand } from "../features/chat/send";
 import type { RollVisibility } from "../features/chat/types";
 import { NotationError } from "../features/dice/notation";
-import { poolFormula } from "../features/dice/pool";
+import { pickName, poolFormula, samePick, signed, type TrayPick } from "../features/dice/pool";
+import { selectedCharacterId, selectedStatBonuses } from "../features/characters/api";
 import type { Campaign } from "../campaign/campaign";
 import { useY } from "../ui/useY";
 import { Button } from "../ui/Button";
 import { trackPointer } from "../ui/pointer";
 import { ChatInput, type ChatInputHandle } from "./ChatInput";
-import { holdNewDie } from "./RollDie";
+import { holdNewPick } from "./RollDie";
 
 const VISIBILITIES: { id: RollVisibility; label: string; title: string }[] = [
   { id: "public", label: "Public", title: "Everyone sees the roll" },
@@ -20,7 +21,11 @@ const VISIBILITIES: { id: RollVisibility; label: string; title: string }[] = [
     title: "Only you and the GM see the result",
   },
 ];
-const DICE = [4, 6, 8, 10, 12, 20];
+const DICE: TrayPick[] = [4, 6, 8, 10, 12, 20].map((sides) => ({ kind: "die", sides }));
+const TOKENS: TrayPick[] = [
+  { kind: "modifier", value: 1 },
+  { kind: "modifier", value: -1 },
+];
 /** How long after the last quick-dice click the pool rolls. */
 const POOL_MS = 1000;
 /** How far (CSS px) the pointer moves from a die button before it carries a die off. */
@@ -46,6 +51,15 @@ export function ChatComposer({
   const input = useRef<ChatInputHandle | null>(null);
   const isGm = useY(campaign.members, () => campaign.isGm());
   const members = useY(campaign.members, () => campaign.memberViews());
+  // The selected character's stats, as chips; read again as the character or the choice changes.
+  useY(campaign.members, () => selectedCharacterId(campaign));
+  const stats: TrayPick[] = JSON.parse(
+    useY(campaign.characters, () =>
+      JSON.stringify(
+        selectedStatBonuses(campaign).map(({ stat, value }) => ({ kind: "stat", stat, value })),
+      ),
+    ),
+  );
   const hints = suggest(typed, isGm);
 
   function send() {
@@ -74,50 +88,50 @@ export function ChatComposer({
 
   // Quick dice gather into a pool, rolled together once the clicks stop:
   // clicking the d20 twice rolls 2d20 as one entry.
-  const [pool, setPool] = useState<number[]>([]);
+  const [pool, setPool] = useState<TrayPick[]>([]);
   const poolTimer = useRef(0);
   const rollPoolRef = useRef<() => void>(() => {});
 
   function rollPool() {
     clearTimeout(poolTimer.current);
-    const picked = pool;
+    const formula = poolFormula(pool);
     setPool([]);
-    if (!picked.length) return;
+    if (!formula) return;
     try {
-      postRoll(campaign, poolFormula(picked), visibility);
+      postRoll(campaign, formula, visibility);
     } catch (e) {
       if (e instanceof NotationError) setError(e.message);
     }
   }
   rollPoolRef.current = rollPool;
 
-  function setPoolAndTimer(next: number[]) {
+  function setPoolAndTimer(next: TrayPick[]) {
     setPool(next);
     clearTimeout(poolTimer.current);
     if (next.length) poolTimer.current = window.setTimeout(() => rollPoolRef.current(), POOL_MS);
   }
 
-  function addDie(sides: number) {
-    setPoolAndTimer([...pool, sides]);
+  function addPick(pick: TrayPick) {
+    setPoolAndTimer([...pool, pick]);
   }
 
-  /** Right-click while pooling: take one of these dice back out. */
-  function removeDie(sides: number) {
-    const i = pool.lastIndexOf(sides);
+  /** Right-click while pooling: take one of these picks back out. */
+  function removePick(pick: TrayPick) {
+    const i = pool.findLastIndex((picked) => samePick(picked, pick));
     if (i < 0) return;
     setPoolAndTimer(pool.filter((_, j) => j !== i));
   }
   /**
-   * Dragging out of a die button carries off a new die: let go over a roll
-   * this device may change, it joins that roll; anywhere else but the tray,
-   * it's rolled on its own.
+   * Dragging out of a die or token button carries off a new one: let go over
+   * a roll this device may change, it joins that roll; a die let go anywhere
+   * else but the tray is rolled on its own.
    */
   const dragged = useRef(false);
-  function dragOut(event: React.PointerEvent<HTMLButtonElement>, sides: number) {
+  function dragOut(event: React.PointerEvent<HTMLButtonElement>, pick: TrayPick) {
     if (event.button !== 0) return;
     dragged.current = false;
     const origin = { x: event.clientX, y: event.clientY };
-    let held: ReturnType<typeof holdNewDie> | undefined;
+    let held: ReturnType<typeof holdNewPick> | undefined;
     let target: HTMLElement | null = null;
     const aim = (card: HTMLElement | null) => {
       if (card === target) return;
@@ -130,7 +144,7 @@ export function ChatComposer({
       (move) => {
         if (!held) {
           if (Math.hypot(move.clientX - origin.x, move.clientY - origin.y) < DRAG_START) return;
-          held = holdNewDie(sides);
+          held = holdNewPick(pick);
           dragged.current = true;
         }
         held.move(move.clientX, move.clientY);
@@ -142,9 +156,12 @@ export function ChatComposer({
         const card = target;
         aim(null);
         if (!(end instanceof PointerEvent) || end.type !== "pointerup") return;
-        if (card?.dataset.diceTarget) addDieToRoll(campaign, card.dataset.diceTarget, sides);
-        else if (!document.elementFromPoint(end.clientX, end.clientY)?.closest(".dice-tray"))
-          void postRoll(campaign, `d${sides}`, visibility);
+        if (card?.dataset.diceTarget) addToRoll(campaign, card.dataset.diceTarget, pick);
+        else if (
+          pick.kind === "die" &&
+          !document.elementFromPoint(end.clientX, end.clientY)?.closest(".dice-tray")
+        )
+          void postRoll(campaign, `d${pick.sides}`, visibility);
       },
     );
   }
@@ -158,80 +175,74 @@ export function ChatComposer({
   };
   const vis = VISIBILITIES.find((v) => v.id === visibility) ?? VISIBILITIES[0]!;
 
+  function pickButton(pick: TrayPick) {
+    const name = pickName(pick);
+    const n = pool.filter((picked) => samePick(picked, pick)).length;
+    return (
+      <Button
+        key={name}
+        variant="ghost"
+        size="sm"
+        className="dice-pick"
+        data-count={n || undefined}
+        label={
+          n
+            ? `Add another ${name} (${n} so far; right-click to remove one)`
+            : `${pick.kind === "die" ? "Roll a" : "Add"} ${pick.kind === "stat" ? `${name} (${signed(pick.value)})` : name} (click again for more, or drag onto a roll to add it)`
+        }
+        onPointerDown={(event) => dragOut(event, pick)}
+        onClick={() => {
+          // The click that ends a drag out of the button isn't a pick.
+          if (dragged.current) dragged.current = false;
+          else addPick(pick);
+        }}
+        onContextMenu={(e) => {
+          if (!pool.length) return;
+          e.preventDefault();
+          removePick(pick);
+        }}
+      >
+        {name}
+      </Button>
+    );
+  }
+
   return (
     <div className="dice-tray">
       <div className="dice-quick">
-        {DICE.map((sides) => {
-          const n = pool.filter((p) => p === sides).length;
-          return (
+        <div className="tray-row">
+          {DICE.map(pickButton)}
+          {poolFormula(pool) ? (
+            // Restarted on every change, so the fill shows time left before the roll.
             <Button
-              key={sides}
+              key={pool.map(pickName).join()}
+              variant="secondary"
+              size="sm"
+              className="dice-roll-now"
+              style={{ "--pool-ms": `${POOL_MS}ms` }}
+              label={`Roll ${poolFormula(pool)} now`}
+              onClick={rollPool}
+            >
+              <span className="dice-roll-formula">{poolFormula(pool).replace(/\b1d/g, "d")}</span>
+            </Button>
+          ) : (
+            <Button
               variant="ghost"
               size="sm"
-              className="dice-pick"
-              data-count={n || undefined}
-              label={
-                n
-                  ? `Add another d${sides} (${n} so far; right-click to remove one)`
-                  : `Roll a d${sides} (click again for more, or drag onto a roll to add it)`
-              }
-              onPointerDown={(event) => dragOut(event, sides)}
-              onClick={() => {
-                // The click that ends a drag out of the button isn't a pick.
-                if (dragged.current) dragged.current = false;
-                else addDie(sides);
-              }}
-              onContextMenu={(e) => {
-                if (!pool.length) return;
-                e.preventDefault();
-                removeDie(sides);
-              }}
+              className="dice-visibility"
+              label={vis.title}
+              onClick={nextVisibility}
             >
-              d{sides}
+              {vis.label}
             </Button>
-          );
-        })}
-        {pool.length ? (
-          // Restarted on every change, so the fill shows time left before the roll.
-          <Button
-            key={pool.join()}
-            variant="secondary"
-            size="sm"
-            className="dice-roll-now"
-            style={{ "--pool-ms": `${POOL_MS}ms` }}
-            label={`Roll ${poolFormula(pool)} now`}
-            onClick={rollPool}
-          >
-            {poolFormula(pool).replace(/\b1d/g, "d")}
-          </Button>
-        ) : (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="dice-visibility"
-            label={vis.title}
-            onClick={nextVisibility}
-          >
-            {vis.label}
-          </Button>
-        )}
+          )}
+        </div>
+        <div className="tray-row tray-chips">
+          {TOKENS.map(pickButton)}
+          {stats.length > 0 && <span className="tray-divider" aria-hidden="true" />}
+          {stats.map(pickButton)}
+        </div>
       </div>
-      {hints.length > 0 && (
-        <ul className="chat-hints" role="listbox" aria-label="Commands">
-          {hints.map((h) => (
-            <li key={h.names[0]}>
-              <button
-                type="button"
-                className="chat-hint"
-                onClick={() => input.current?.set(`/${h.names[0]} `)}
-              >
-                <code>{h.usage}</code>
-                <span>{h.help}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
       <form
         className="dice-entry"
         onSubmit={(e) => {
@@ -239,6 +250,22 @@ export function ChatComposer({
           send();
         }}
       >
+        {hints.length > 0 && (
+          <ul className="chat-hints" role="listbox" aria-label="Commands">
+            {hints.map((h) => (
+              <li key={h.names[0]}>
+                <button
+                  type="button"
+                  className="chat-hint"
+                  onClick={() => input.current?.set(`/${h.names[0]} `)}
+                >
+                  <code>{h.usage}</code>
+                  <span>{h.help}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
         <ChatInput
           campaign={campaign}
           handle={input}

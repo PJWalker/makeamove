@@ -678,8 +678,8 @@ export const dnd55e: GameSystem = {
   modifier: modifierOf,
   baseRoll: "1d20",
   rollModes: [
-    { id: "advantage", label: "Advantage", roll: "2d20kh1" },
     { id: "disadvantage", label: "Disadvantage", roll: "2d20kl1" },
+    { id: "advantage", label: "Advantage", roll: "2d20kh1" },
   ],
   results,
   result: (_total, natural, _roll, context) =>

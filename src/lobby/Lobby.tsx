@@ -184,7 +184,7 @@ function DeleteCampaignDialog({
             dialog.current?.close();
           }}
         >
-          Delete from this device
+          Delete from This Device
         </button>
       </div>
     </dialog>
@@ -237,11 +237,7 @@ function NewCampaignForm() {
       <div className="form-row">
         <label className="field">
           System
-          <select
-            value={systemId}
-            onChange={(e) => setSystemId(e.currentTarget.value)}
-            required
-          >
+          <select value={systemId} onChange={(e) => setSystemId(e.currentTarget.value)} required>
             <option value="" disabled>
               Choose a system
             </option>
@@ -255,7 +251,7 @@ function NewCampaignForm() {
       </div>
       <div className="form-actions">
         <Button type="submit" variant="primary" disabled={busy}>
-          <IconAdd size={22} /> Create campaign
+          <IconAdd size={22} /> Create Campaign
         </Button>
       </div>
     </form>

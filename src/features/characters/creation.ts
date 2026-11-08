@@ -5,6 +5,8 @@ import {
   type CreationDef,
   type OptionDef,
   type ScoreMethods,
+  type ScoreRule,
+  type StatDef,
 } from "../../systems/types";
 import { commaListOf } from "../../lib/list";
 
@@ -14,6 +16,9 @@ import { commaListOf } from "../../lib/list";
  * draft writes to the character. The system supplies the options as data
  * (see CreationDef).
  */
+
+/** The character data field holding a character's class. */
+export const CLASS_FIELD = "classId";
 
 /** Choices available at creation or a system-defined advancement point. */
 export function choicesAt(
@@ -94,6 +99,62 @@ export function pointsSpent(
     total += cost;
   }
   return total;
+}
+
+const signed = (n: number) => (n > 0 ? `+${n}` : String(n));
+const sortedKey = (values: number[]) => [...values].sort((a, b) => a - b).join(",");
+const listed = (items: string[], last: string) =>
+  items.length > 1 ? `${items.slice(0, -1).join(", ")} ${last} ${items.at(-1)}` : (items[0] ?? "");
+
+/** The alternatives a rule allows; one empty alternative when it has none. */
+const alternativesOf = (rule: ScoreRule) => (rule.oneOf.length ? rule.oneOf : [{}]);
+
+/** Scores that meet a rule: its set stats, its first alternative, then the remaining values in stat order. */
+export function ruleStartingScores(rule: ScoreRule, stats: StatDef[]): Record<string, number> {
+  const set = { ...rule.fixed, ...alternativesOf(rule)[0] };
+  const rest = [...rule.remaining];
+  return Object.fromEntries(
+    stats.map((stat) => [stat.id, set[stat.id] ?? rest.shift() ?? stat.default ?? 0]),
+  );
+}
+
+/** The scores a stat can take under a rule, highest first. */
+export function ruleScoreValues(rule: ScoreRule): number[] {
+  const values = [
+    ...Object.values(rule.fixed),
+    ...rule.oneOf.flatMap((alternative) => Object.values(alternative)),
+    ...rule.remaining,
+  ];
+  return [...new Set(values)].sort((a, b) => b - a);
+}
+
+/** What keeps scores from meeting a rule; empty when they meet it. */
+export function scoreRuleProblems(
+  rule: ScoreRule,
+  stats: StatDef[],
+  scores: Record<string, number>,
+): string[] {
+  const abbr = (id: string) => stats.find((stat) => stat.id === id)?.abbr ?? id;
+  const holds = (set: Record<string, number>) =>
+    Object.entries(set).every(([stat, value]) => scores[stat] === value);
+  const describe = (set: Record<string, number>) =>
+    Object.entries(set)
+      .map(([stat, value]) => `${abbr(stat)} ${signed(value)}`)
+      .join(" with ");
+  const problems = Object.entries(rule.fixed)
+    .filter(([stat, value]) => scores[stat] !== value)
+    .map(([stat, value]) => `${abbr(stat)} must be ${signed(value)}.`);
+  const alternatives = alternativesOf(rule).filter(holds);
+  if (!alternatives.length) problems.push(`Choose ${listed(rule.oneOf.map(describe), "or")}.`);
+  if (problems.length) return problems;
+  const remainingMet = alternatives.some((alternative) => {
+    const set = { ...rule.fixed, ...alternative };
+    const others = stats.filter((stat) => !(stat.id in set)).map((stat) => scores[stat.id] ?? 0);
+    return sortedKey(others) === sortedKey(rule.remaining);
+  });
+  return remainingMet
+    ? []
+    : [`The other stats must be ${listed(rule.remaining.map(signed), "and")}.`];
 }
 
 /** Stat increases from an option's boost: the chosen pattern of amounts, given to the chosen stats in order. */

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   bumpData,
   bumpResource,
@@ -16,12 +16,13 @@ import {
 } from "../features/characters/api";
 import { actionsFor, derive, statBonus } from "../features/characters/store";
 import type { CharacterView } from "../features/characters/types";
-import { conditionPipColour } from "../features/combat/pipColours";
+import { conditionColour } from "../features/combat/pipColours";
 import { postRoll } from "../features/chat/send";
+import { parse } from "../features/dice/notation";
 import type { Campaign } from "../campaign/campaign";
 import { device } from "../platform/device";
 import type { Derived, GameSystem, SheetCounter, SheetSection } from "../systems/types";
-import { choicesAt } from "../features/characters/creation";
+import { CLASS_FIELD, choicesAt } from "../features/characters/creation";
 import { commaListOf } from "../lib/list";
 import { Button } from "../ui/Button";
 import { OptionPicker } from "../ui/OptionPicker";
@@ -31,9 +32,9 @@ import { ContextMenu, type MenuItem } from "./ContextMenu";
 import { CharacterText } from "./CharacterText";
 import { AdvancementDialog } from "./CreationParts";
 import { extensionOf } from "../systems/extensions";
+import { registerEntityDrop, type DragEntity } from "./entityDrag";
 import { Inventory } from "./Inventory";
 import { Counter, MoveList, signedStr, TokenChip } from "./sheetParts";
-import { useState } from "react";
 import { useValue } from "../ui/useValue";
 
 /*
@@ -50,14 +51,28 @@ export function useSheet(props: SheetProps) {
   return { ...props, d: derive(props.c, props.system), editable: canEdit(props.campaign, props.c) };
 }
 
+/** What a sheet takes when dropped on it, beyond gear and moves: a rules entity from the Libraries, say. */
+export interface SheetDrop {
+  accepts: (entity: DragEntity) => boolean;
+  drop: (entity: DragEntity) => boolean | void;
+}
+
 export function SheetFrame({
   c,
   editable,
+  drop,
   children,
-}: SheetProps & { editable: boolean; children: ReactNode }) {
+}: SheetProps & { editable: boolean; drop?: SheetDrop | undefined; children: ReactNode }) {
   const me = useValue(device).id;
+  const frame = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const element = frame.current;
+    if (!element || !editable || !drop) return;
+    return registerEntityDrop(element, drop.accepts, drop.drop);
+  }, [editable, drop]);
   return (
     <div
+      ref={frame}
       className="sheet"
       data-item-drop={editable ? c.id : undefined}
       data-move-drop={editable ? c.id : undefined}
@@ -114,7 +129,7 @@ function Advancement({
     <div className="sheet-advancement">
       <span>{section.label}</span>
       <Button size="sm" onClick={() => setOpen(true)}>
-        {section.button}
+        {section.button}…
       </Button>
       {Actions && <Actions campaign={campaign} characterId={c.id} />}
       {open && (
@@ -208,6 +223,12 @@ export function SheetSectionView({ campaign, system, c, d, editable, section }: 
   const set = (key: string, value: unknown) => setField(campaign, c.id, key, value);
   switch (section.kind) {
     case "header": {
+      const classChoice =
+        c.kind === "pc"
+          ? choicesAt(system.creation, "create", c.data).find(
+              (choice) => choice.field === CLASS_FIELD,
+            )
+          : undefined;
       return (
         <header className="sheet-head">
           <TokenChip campaign={campaign} c={c} editable={editable} />
@@ -222,6 +243,15 @@ export function SheetSectionView({ campaign, system, c, d, editable, section }: 
               }
             />
             <span className="muted">{c.kind === "npc" ? "NPC" : "Player character"}</span>
+            {classChoice && (
+              <OptionPicker
+                label={classChoice.label}
+                options={classChoice.options}
+                value={String(c.data[CLASS_FIELD] ?? "")}
+                disabled={!editable}
+                onChange={(id) => setData(campaign, c.id, CLASS_FIELD, id)}
+              />
+            )}
           </div>
         </header>
       );
@@ -232,7 +262,11 @@ export function SheetSectionView({ campaign, system, c, d, editable, section }: 
       const choices = [
         ...choicesAt(system.creation, "create", c.data),
         ...Array.from({ length: rank }, (_, i) => choicesAt(system.creation, i + 1, c.data)).flat(),
-      ].filter((choice) => !section.choices || section.choices.includes(choice.id));
+      ].filter(
+        (choice) =>
+          choice.field !== CLASS_FIELD && (!section.choices || section.choices.includes(choice.id)),
+      );
+      if (!choices.length) return null;
       return (
         <section className="form-section sheet-section" aria-label="Character choices">
           <h3 className="sheet-heading">Character choices</h3>
@@ -302,6 +336,7 @@ export function SheetSectionView({ campaign, system, c, d, editable, section }: 
               <SheetNumber
                 key={item.label}
                 campaign={campaign}
+                system={system}
                 c={c}
                 d={d}
                 editable={editable}
@@ -337,11 +372,32 @@ export function SheetSectionView({ campaign, system, c, d, editable, section }: 
               >
                 <dt>{item.label}</dt>
                 <dd>
-                  {item.format === "die"
-                    ? `d${derivedValue(item.value)}`
-                    : derivedValue(item.value)}
-                  {item.plus && derivedValue(item.plus) ? signedStr(derivedValue(item.plus)) : ""}
-                  {item.max && `/${derivedValue(item.max)}`}
+                  {item.format === "die" ? (
+                    <button
+                      type="button"
+                      className="sheet-derived-roll"
+                      title={`Roll ${item.label}`}
+                      aria-label={`Roll ${item.label}`}
+                      onClick={() =>
+                        postRoll(
+                          campaign,
+                          `d${derivedValue(item.value)}${item.plus && derivedValue(item.plus) ? signedStr(derivedValue(item.plus)) : ""}`,
+                          "public",
+                          item.label,
+                        )
+                      }
+                    >
+                      d{derivedValue(item.value)}
+                      {item.plus && derivedValue(item.plus)
+                        ? signedStr(derivedValue(item.plus))
+                        : ""}
+                    </button>
+                  ) : (
+                    <>
+                      {derivedValue(item.value)}
+                      {item.max && `/${derivedValue(item.max)}`}
+                    </>
+                  )}
                 </dd>
               </div>
             ))}
@@ -426,21 +482,33 @@ export function SheetSectionView({ campaign, system, c, d, editable, section }: 
               ) : (
                 <label key={f.id} className="field">
                   {f.label}
-                  <input
-                    type={f.type === "number" ? "number" : "text"}
-                    value={c.fields[f.id]}
-                    disabled={!editable}
-                    onChange={(e) =>
-                      setNpcField(
-                        campaign,
-                        c.id,
-                        f.id,
-                        f.type === "number"
-                          ? Number(e.currentTarget.value) || 0
-                          : e.currentTarget.value,
-                      )
-                    }
-                  />
+                  <span className={f.rollable ? "sheet-rollable-field" : undefined}>
+                    <input
+                      type={f.type === "number" ? "number" : "text"}
+                      value={c.fields[f.id]}
+                      disabled={!editable}
+                      onChange={(e) =>
+                        setNpcField(
+                          campaign,
+                          c.id,
+                          f.id,
+                          f.type === "number"
+                            ? Number(e.currentTarget.value) || 0
+                            : e.currentTarget.value,
+                        )
+                      }
+                    />
+                    {f.rollable && isFormula(String(c.fields[f.id] ?? "")) && (
+                      <Button
+                        variant="secondary"
+                        onClick={() =>
+                          postRoll(campaign, String(c.fields[f.id]), "public", f.label)
+                        }
+                      >
+                        Roll
+                      </Button>
+                    )}
+                  </span>
                 </label>
               ),
             )}
@@ -472,12 +540,14 @@ export function SheetSectionView({ campaign, system, c, d, editable, section }: 
 /** One number: a resource, a data field or the level. */
 function SheetNumber({
   campaign,
+  system,
   c,
   d,
   editable,
   item,
 }: {
   campaign: Campaign;
+  system: GameSystem;
   c: CharacterView;
   d: Derived;
   editable: boolean;
@@ -485,13 +555,25 @@ function SheetNumber({
 }) {
   const max = "max" in item && item.max ? d.values[item.max] : undefined;
   if ("resource" in item) {
+    const value = c.resources[item.resource] ?? 0;
+    const status = system.resources.find((resource) => resource.id === item.resource)?.status;
+    const active = !!status && value <= (d.values[status.atOrBelow] ?? 0);
     return (
       <Counter
         label={item.label}
-        value={c.resources[item.resource] ?? 0}
+        value={value}
         max={max}
         disabled={!editable}
         onChange={(by) => bumpResource(campaign, c.id, item.resource, by, max)}
+        status={
+          status && active
+            ? {
+                name: status.name,
+                colour: status.colour,
+                title: `${status.name} at ${d.values[status.atOrBelow] ?? 0} ${item.label} or less`,
+              }
+            : undefined
+        }
       />
     );
   }
@@ -585,7 +667,13 @@ function Stats({
             });
           });
           return (
-            <li key={s.id} data-debilitated={has}>
+            <li
+              key={s.id}
+              data-debilitated={has}
+              style={
+                tied && has ? { "--condition-colour": conditionColour(system, tied.id) } : undefined
+              }
+            >
               <span className="stat-abbr" title={s.name}>
                 {s.abbr}
               </span>
@@ -625,9 +713,7 @@ function Stats({
                   className="stat-deb condition-status"
                   data-state={state}
                   style={{
-                    "--condition-colour": conditionPipColour(
-                      system.conditions.findIndex((condition) => condition.id === tied.id),
-                    ),
+                    "--condition-colour": conditionColour(system, tied.id),
                   }}
                   aria-label={`${tied.name}: ${state}. ${nextState === "clear" ? "Clear" : nextState === "marked" ? "Mark" : "Lock"} condition`}
                   title={`${tied.name}: ${state}`}
@@ -663,4 +749,14 @@ function Stats({
       {menu && <ContextMenu {...menu} onClose={() => setMenu(null)} />}
     </section>
   );
+}
+
+/** Whether the text is a dice formula the roller reads. */
+function isFormula(text: string) {
+  try {
+    parse(text);
+    return true;
+  } catch {
+    return false;
+  }
 }

@@ -25,7 +25,7 @@
     grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
     gap: var(--space-1);
-    font-size: var(--font-size-sm);
+    font-size: var(--text-sm);
   }
   .relationship-depth input {
     min-inline-size: 0;
@@ -75,7 +75,7 @@
   }
   .relationship-label {
     fill: var(--text);
-    font: 600 11px var(--font-ui);
+    font: 600 var(--text-sm) var(--font-ui);
     paint-order: stroke;
     stroke: var(--surface-raised);
     stroke-width: 4px;
@@ -101,7 +101,7 @@
   }
   .relationship-node-name {
     fill: var(--text);
-    font: 600 12px var(--font-ui);
+    font: 600 var(--text-sm) var(--font-ui);
     paint-order: stroke;
     stroke: var(--surface);
     stroke-width: 4px;

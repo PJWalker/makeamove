@@ -88,7 +88,7 @@ export function BladesSheet(props: SheetProps) {
           needed: "maxPlaybookXp",
           field: "advancementCount",
           label: "Playbook advance available.",
-          button: "Advance playbook",
+          button: "Advance Playbook",
         }}
       />
       <section className="form-section sheet-section" aria-label="Trauma">

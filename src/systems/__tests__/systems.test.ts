@@ -21,12 +21,18 @@ import { BONDS as DW2_BONDS } from "../dungeon-world-2/bonds";
 import { STRUGGLES as DW2_STRUGGLES } from "../dungeon-world-2/struggles";
 import { addTreasureBoxes, purchaseAtWealth, wealthTierForBoxes } from "../dungeon-world-2/wealth";
 import { sourceEntries, systemLibrary, topLevelKeys, viewEntries } from "../../features/library";
-import { DW2_CLASS_SCORE_ASSIGNMENTS } from "../dungeon-world-2/stats";
-import { CLASS_CREATION_GUIDANCE } from "../dungeon-world-2/classGuidance";
+import { DW2_CLASS_SCORE_RULES } from "../dungeon-world-2/stats";
+import { CLASS_CREATION_HINTS } from "../dungeon-world-2/creationHints";
 import { derive } from "../../features/characters/store";
 import type { CharacterView } from "../../features/characters/types";
 import { asksFirst, performMove, planMove } from "../../features/characters/moves";
-import { boostFrom, choicesAt, dataFrom } from "../../features/characters/creation";
+import {
+  boostFrom,
+  choicesAt,
+  dataFrom,
+  ruleStartingScores,
+  scoreRuleProblems,
+} from "../../features/characters/creation";
 import { DW2_GEAR } from "../dungeon-world-2/gear";
 
 const bladesCharacter = (over: Partial<CharacterView> = {}): CharacterView => ({
@@ -353,10 +359,21 @@ describe("Dungeon World 2", () => {
     ]);
     expect((dw2.creation?.choices ?? [])[0]!.options).toHaveLength(9);
     expect(dw2.creation?.scores.standardArray).toEqual([2, 1, 0, 0, -1]);
-    expect(Object.keys(CLASS_CREATION_GUIDANCE)).toHaveLength(9);
-    expect(CLASS_CREATION_GUIDANCE.barbarian?.namesAndStats).toContain("STR is +2");
-    expect(CLASS_CREATION_GUIDANCE.bard?.equipment).toContain("artistic samples");
-    expect(CLASS_CREATION_GUIDANCE.wizard?.relationships).toContain("Relationship Examples");
+    expect(Object.keys(CLASS_CREATION_HINTS)).toHaveLength(9);
+    for (const hints of Object.values(CLASS_CREATION_HINTS)) {
+      expect(Object.keys(hints.identity ?? {}).sort()).toEqual([
+        "ancestry",
+        "background",
+        "community",
+      ]);
+      expect(hints.name).toMatch(/^e\.g\. /);
+      expect(hints.relationship).toMatch(/^e\.g\. /);
+    }
+    expect(CLASS_CREATION_HINTS.barbarian?.identity?.ancestry).toBe(
+      "e.g. construct, minotaur, nephilim, etc. What makes your homeland so different from places here?",
+    );
+    expect(CLASS_CREATION_HINTS.barbarian?.scores).toContain("STR is +2");
+    expect(CLASS_CREATION_HINTS.bard?.relationship).toContain("We were an item");
     const distributions: Record<string, string> = {
       barbarian: "-1,0,0,2,2",
       bard: "-1,0,1,1,2",
@@ -368,26 +385,16 @@ describe("Dungeon World 2", () => {
       rogue: "-1,0,1,1,2",
       wizard: "-1,0,1,1,2",
     };
-    for (const [classId, options] of Object.entries(DW2_CLASS_SCORE_ASSIGNMENTS)) {
-      expect(options.length).toBeGreaterThan(0);
-      expect(new Set(options.map((option) => option.id)).size).toBe(options.length);
-      expect(options.every((option) => Object.keys(option.scores).length === 5)).toBe(true);
+    expect(Object.keys(DW2_CLASS_SCORE_RULES).sort()).toEqual(Object.keys(distributions).sort());
+    for (const [classId, rule] of Object.entries(DW2_CLASS_SCORE_RULES)) {
+      const scores = ruleStartingScores(rule, dw2.stats);
+      expect(scoreRuleProblems(rule, dw2.stats, scores)).toEqual([]);
       expect(
-        options.every(
-          (option) =>
-            Object.values(option.scores)
-              .sort((a, b) => a - b)
-              .join(",") === distributions[classId],
-        ),
-      ).toBe(true);
+        Object.values(scores)
+          .sort((a, b) => a - b)
+          .join(","),
+      ).toBe(distributions[classId]);
     }
-    expect(
-      DW2_CLASS_SCORE_ASSIGNMENTS.fighter?.every(
-        (option) =>
-          (option.scores.str === 2 && option.scores.dex === 1) ||
-          (option.scores.dex === 2 && option.scores.str === 1),
-      ),
-    ).toBe(true);
     expect(dw2.tags.map((tag) => tag.id)).toEqual([
       "ammo",
       "area",
@@ -453,6 +460,17 @@ describe("Dungeon World 2", () => {
         { mode: "advantage" },
       ).formula,
     ).toBe("3d6kh2-1[DEX]");
+  });
+
+  it("asks Spout Lore's questions and adds one for each yes", () => {
+    const move = dw2.actions.find((action) => action.id === "spout-lore")!;
+    const c = bladesCharacter();
+    const d = derive(c, dw2);
+    const check = move.steps.find((step) => step.kind === "check");
+    expect(check?.kind === "check" && check.ask?.kind).toBe("questions");
+    expect(asksFirst(dw2, move)).toBe(true);
+    expect(planMove(dw2, move, c, d, { ask: 0 }).formula).toBe("2d6");
+    expect(planMove(dw2, move, c, d, { ask: 2 }).formula).toBe("2d6+2[Yes]");
   });
 
   it("reduces damage with usable armor, keeps damage at one minimum, and ignores armor for piercing", () => {

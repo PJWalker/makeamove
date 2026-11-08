@@ -10,7 +10,7 @@ test("a campaign can be created, left, and reopened", async ({ page }) => {
   );
 
   await page.getByRole("button", { name: "Campaign menu" }).click();
-  await page.getByRole("menuitem", { name: "Back to campaigns" }).click();
+  await page.getByRole("menuitem", { name: "Back to Campaigns" }).click();
   const campaign = page.getByRole("button", { name: /^The Lost Barrows/ }).last();
   await expect(campaign).toBeVisible();
   await expect(campaign).toContainText("No system");
@@ -23,6 +23,20 @@ test("a campaign can be created, left, and reopened", async ({ page }) => {
 test("selected menu items fade after the menu closes", async ({ page }) => {
   await createCampaign(page, "Menu selection transition");
   await settled(page);
+  // Hold each transition's outgoing snapshot so the test can see it fading.
+  await page.evaluate(() => {
+    const start = document.startViewTransition.bind(document);
+    document.startViewTransition = ((update: () => void) => {
+      const transition = start(update);
+      void transition.ready.then(() => {
+        for (const animation of document.getAnimations()) {
+          if (animation instanceof CSSAnimation && animation.animationName === "vt-exit")
+            animation.pause();
+        }
+      });
+      return transition;
+    }) as typeof document.startViewTransition;
+  });
 
   for (const interaction of ["pointer", "keyboard", "reduced-motion"] as const) {
     await page.emulateMedia({
@@ -31,19 +45,6 @@ test("selected menu items fade after the menu closes", async ({ page }) => {
     await page.getByRole("button", { name: "Campaign menu" }).click();
     const item = page.getByRole("menuitemcheckbox").first();
     if (interaction === "keyboard") await item.focus();
-    await page.evaluate(() => {
-      const start = document.startViewTransition.bind(document);
-      document.startViewTransition = ((update: () => void) => {
-        const transition = start(update);
-        void transition.ready.then(() => {
-          for (const animation of document.getAnimations()) {
-            if (animation instanceof CSSAnimation && animation.animationName === "vt-exit")
-              animation.pause();
-          }
-        });
-        return transition;
-      }) as typeof document.startViewTransition;
-    });
     if (interaction === "keyboard") await item.press("Enter");
     else await item.click();
 
@@ -76,7 +77,7 @@ test("selected menu items fade after the menu closes", async ({ page }) => {
 test("right-drag menus select and close on release", async ({ page }) => {
   await createCampaign(page, "Right-drag menu");
   await page.getByRole("button", { name: "Campaign menu" }).click();
-  await page.getByRole("menuitem", { name: "Back to campaigns" }).click();
+  await page.getByRole("menuitem", { name: "Back to Campaigns" }).click();
   const campaign = page.getByRole("button", { name: /^Right-drag menu/ });
   await expect(campaign).toBeVisible();
   await settled(page);
@@ -93,7 +94,7 @@ test("right-drag menus select and close on release", async ({ page }) => {
 test("campaign deletion is available from the right-click menu and confirms", async ({ page }) => {
   await createCampaign(page, "Delete menu test");
   await page.getByRole("button", { name: "Campaign menu" }).click();
-  await page.getByRole("menuitem", { name: "Back to campaigns" }).click();
+  await page.getByRole("menuitem", { name: "Back to Campaigns" }).click();
 
   const campaign = page.getByRole("button", { name: /^Delete menu test/ });
   await expect(campaign).toBeVisible();
@@ -110,7 +111,7 @@ test("campaign deletion is available from the right-click menu and confirms", as
   await page.getByRole("menuitem", { name: "Delete…" }).click();
   await page
     .getByRole("dialog", { name: "Delete campaign?" })
-    .getByRole("button", { name: "Delete from this device" })
+    .getByRole("button", { name: "Delete from This Device" })
     .click();
   await expect(campaign).toHaveCount(0);
 });

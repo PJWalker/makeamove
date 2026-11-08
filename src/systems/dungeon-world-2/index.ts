@@ -4,15 +4,16 @@ import { commaListOf } from "../../lib/list";
 import { resolveEffects } from "../effects";
 import type { ActionDef, ChoiceDef, GameSystem, OptionDef } from "../types";
 import { PATHS, sourceGmReference, sourceMoveOutcomes, sourceMoveRichText } from "./paths";
-import { STRUGGLES } from "./struggles";
+import { revealedStruggleData, STRUGGLES } from "./struggles";
 import { INITIAL_TREASURE_BOXES, MAX_TREASURE_BOXES, purchaseAtWealth } from "./wealth";
 import { DW2_RELATIONSHIP_DEPTH } from "./bondStore";
-import { classCreationGuidance } from "./classGuidance";
+import { CLASS_CREATION_HINTS } from "./creationHints";
 import { DW2_CLASS_GEAR, DW2_GEAR, DW2_MAGIC_ITEMS } from "./gear";
-import { DW2_CLASS_SCORE_ASSIGNMENTS } from "./stats";
+import { DW2_CLASS_SCORE_RULES } from "./stats";
 import { CLASS_STARTING_CHOICES } from "./startingOptions";
 import { dw2Library } from "./library";
 import { hpTokenStat } from "../tokenStats";
+import { PIP_COLOURS } from "../../features/combat/pipColours";
 
 type Band = "strong" | "weak" | "miss";
 type MoveSpec = {
@@ -457,12 +458,14 @@ const ACTIONS: ActionDef[] = MOVES.map((move) => {
         ...(move.id === "spout-lore"
           ? {
               ask: {
-                kind: "number" as const,
+                kind: "questions" as const,
                 label: "Yes",
-                prompt: "Number of yes answers",
-                min: 0,
-                max: 3,
-                initial: 0,
+                prompt: "Add one for each yes",
+                questions: [
+                  "Do you have access to a book or equivalent record about this subject?",
+                  "Is this subject related to your Origins?",
+                  "Is this subject relevant to your Struggle?",
+                ],
               },
             }
           : {}),
@@ -564,14 +567,7 @@ const ADVANCEMENT: ChoiceDef = {
       name: struggle.name,
       text: struggle.text,
       group: "Reveal a Struggle",
-      grants: {
-        struggleRevealed: true,
-        struggleId: struggle.id,
-        struggleName: struggle.name,
-        struggleTrack: struggle.track?.name ?? "",
-        struggleProgress: struggle.track?.initial ?? 0,
-        struggleMax: struggle.track?.max ?? 0,
-      },
+      grants: revealedStruggleData(struggle),
       notRequires: { struggleRevealed: true },
     })),
     ...PATHS.map((path) => pathOption(path)),
@@ -617,6 +613,9 @@ const CONDITIONS = [
   ["insecure", "Insecure", "cha"],
 ] as const;
 
+/** Red is Bloodied's, so Angry takes purple. */
+const CONDITION_COLOURS: Partial<Record<string, string>> = { angry: PIP_COLOURS.purple };
+
 export const dungeonWorld2: GameSystem = {
   id: "dungeon-world-2",
   name: "Dungeon World 2",
@@ -631,10 +630,9 @@ export const dungeonWorld2: GameSystem = {
   })),
   modifier: (value) => Math.trunc(value),
   baseRoll: "2d6",
-  defaultRollLabel: "Normal",
   rollModes: [
-    { id: "advantage", label: "Advantage", roll: "3d6kh2" },
     { id: "disadvantage", label: "Disadvantage", roll: "3d6kl2" },
+    { id: "advantage", label: "Advantage", roll: "3d6kh2" },
   ],
   checkRoll(formula, stat, character, action) {
     const first = parse(formula)[0];
@@ -765,12 +763,25 @@ export const dungeonWorld2: GameSystem = {
     id,
     name,
     stat,
+    ...(CONDITION_COLOURS[id] && { colour: CONDITION_COLOURS[id] }),
     text: "When marked or locked, this Condition imposes disadvantage on rolls with its associated stat.",
     effects: [],
     lockable: true,
   })),
   modifiers: [],
-  resources: [{ id: "hp", name: "HP", max: "maxHp" }],
+  resources: [
+    {
+      id: "hp",
+      name: "HP",
+      max: "maxHp",
+      status: {
+        id: "bloodied",
+        name: "Bloodied",
+        atOrBelow: "bloodiedAt",
+        colour: PIP_COLOURS.red,
+      },
+    },
+  ],
   trackers: [
     { id: "hp", name: "HP", aliases: ["hit points"], resource: "hp", max: "maxHp" },
     { id: "xp", name: "XP", data: "xp", max: "xpNeeded" },
@@ -823,7 +834,7 @@ export const dungeonWorld2: GameSystem = {
     { id: "drive", label: "Drive", type: "text" },
     { id: "resources", label: "Resources", type: "longtext" },
     { id: "resists", label: "Resists", type: "longtext" },
-    { id: "damage", label: "Damage", type: "text" },
+    { id: "damage", label: "Damage", type: "text", rollable: true },
     { id: "tags", label: "Tags", type: "text" },
     { id: "conditions", label: "Conditions & Escalations", type: "longtext" },
   ],
@@ -920,7 +931,7 @@ export const dungeonWorld2: GameSystem = {
   creation: {
     advancementField: "level",
     advancementCounterField: "xp",
-    classScoreAssignments: DW2_CLASS_SCORE_ASSIGNMENTS,
+    classScoreRules: DW2_CLASS_SCORE_RULES,
     startingItemsField: "startingItems",
     requireAllCreationChoicesAtCreate: true,
     listFields: [
@@ -967,20 +978,7 @@ export const dungeonWorld2: GameSystem = {
         { value: 2, label: "Grew up together" },
       ],
     },
-    guidance(data) {
-      const guidance = classCreationGuidance(String(data.classId ?? ""));
-      return guidance
-        ? {
-            label: "Class creation prompts",
-            sections: [
-              { heading: "Origins", text: guidance.origins },
-              { heading: "Relationships", text: guidance.relationships },
-              { heading: "Equipment and appearance", text: guidance.equipment },
-              { heading: "Name and stats", text: guidance.namesAndStats },
-            ],
-          }
-        : undefined;
-    },
+    hints: (data) => CLASS_CREATION_HINTS[String(data.classId ?? "")] ?? {},
   },
   relationshipDepth: DW2_RELATIONSHIP_DEPTH,
   afterMove: (move, result) =>

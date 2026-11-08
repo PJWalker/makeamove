@@ -14,7 +14,7 @@
   .chat-msg-head .avatar {
     width: 24px;
     height: 24px;
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
   }
   .chat-author {
     font-weight: 600;
@@ -22,7 +22,7 @@
   }
   .chat-time {
     color: var(--text-faint);
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
   }
   .chat-text {
     font-size: var(--text-md);
@@ -61,14 +61,14 @@
   .chat-whisper-tag {
     display: block;
     color: var(--private);
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
     font-weight: 600;
   }
   .chat-system {
     align-self: center;
     margin-block: var(--space-2);
     color: var(--text-faint);
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
   }
   .chat-system:has(.chat-go) {
     display: flex;
@@ -76,7 +76,7 @@
     gap: var(--space-2);
   }
   .chat-go {
-    min-height: 24px;
+    min-height: var(--control-height);
     color: var(--accent);
   }
   /* Session markers span the log as a band of tone, not a rule. */

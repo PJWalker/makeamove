@@ -58,6 +58,13 @@
       text-shadow: 0 1px 0 oklch(0% 0 0 / 0.6);
     }
   }
+  /* A move with no dice is no tray: a plain card. */
+  .move-card:not([data-rolled]) {
+    border: 0;
+    border-radius: 0;
+    background: var(--surface-raised);
+    box-shadow: none;
+  }
   .move-band {
     font-weight: 700;
     font-size: var(--text-lg);
@@ -107,7 +114,7 @@
   }
   .roll-visibility {
     color: var(--private);
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
   }
   .roll-body {
     display: flex;
@@ -133,13 +140,10 @@
     color: var(--text-faint);
     padding-inline: 2px;
   }
-  .roll-flat {
-    font-weight: 600;
-  }
   .roll-label {
     margin-left: var(--space-1);
     color: var(--text-muted);
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
     font-weight: 500;
   }
   .roll-total {

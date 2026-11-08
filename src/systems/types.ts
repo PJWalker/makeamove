@@ -66,6 +66,17 @@ export interface ResourceDef {
   initial?: number;
   /** What refills it to its maximum. */
   resets?: ResetEvent[];
+  /** A state it puts the character in while it's at or below a derived value: "Bloodied". */
+  status?: ResourceStatus;
+}
+
+/** A state read from a resource, shown beside it on the sheet and as a pip on tokens. */
+export interface ResourceStatus {
+  id: string;
+  name: string;
+  /** The derived value it applies at or below. */
+  atOrBelow: string;
+  colour: string;
 }
 
 /**
@@ -94,6 +105,8 @@ export interface ConditionDef {
   lockable?: boolean;
   /** The stat it's shown beside on the sheet, if it belongs to one. */
   stat?: string;
+  /** Its pip colour; otherwise one by its place in the system's list. */
+  colour?: string;
 }
 
 /**
@@ -129,7 +142,9 @@ export type Ask =
   /** Which stat to add. */
   | { kind: "stat" }
   /** A number to add, such as a bond. `label` names it in the formula. */
-  | { kind: "number"; label: string; prompt: string; min: number; max: number; initial?: number };
+  | { kind: "number"; label: string; prompt: string; min: number; max: number; initial?: number }
+  /** Yes-or-no questions, adding one for each yes. `label` names the total in the formula. */
+  | { kind: "questions"; label: string; prompt: string; questions: string[] };
 
 /**
  * Roll the system's base roll plus a stat and every bonus that applies, and
@@ -340,6 +355,8 @@ export interface NpcFieldDef {
   /** 'longtext' is rich text, kept apart from the other fields (see table/CharacterText.tsx). */
   type: "text" | "number" | "longtext";
   default?: string | number;
+  /** A text field holding dice, like "d8+2": the sheet offers to roll it. */
+  rollable?: boolean;
 }
 
 /** A system-provided NPC/monster entry that can be copied into a campaign character. */
@@ -451,19 +468,25 @@ export interface ScoreMethods {
   roll?: string;
 }
 
-export interface ScoreAssignmentOption {
-  id: string;
-  name: string;
-  text: string;
-  scores: Record<string, number>;
+/**
+ * A class's required stat line: set stats, one of a few alternatives, and
+ * the values left for the other stats in any order.
+ */
+export interface ScoreRule {
+  /** Stats with a set score. */
+  fixed: Record<string, number>;
+  /** Exactly one of these must hold, e.g. WIS +2 or CHA +2. Empty when there is no alternative. */
+  oneOf: Record<string, number>[];
+  /** The scores the other stats take, in any order. */
+  remaining: number[];
 }
 
 /** Character creation and advancement, as data the core's guided flow walks through. */
 export interface CreationDef {
   choices: ChoiceDef[];
   scores: ScoreMethods;
-  /** Class-specific complete score assignments, when a class defines its own prompt. */
-  classScoreAssignments?: Record<string, ScoreAssignmentOption[]>;
+  /** Each class's required stat line, keyed by class id, when classes set their own. */
+  classScoreRules?: Record<string, ScoreRule>;
   /** Character-data field containing item ids to add to inventory after creation. */
   startingItemsField?: string;
   /** Require every non-optional creation choice to be selected before creating. */
@@ -490,13 +513,17 @@ export interface CreationDef {
   distinct?: { field: string; note: string };
   /** A new player character starts with a relationship to an existing one, with a starting depth. */
   startingRelationship?: { depths: { value: number; label: string }[] };
-  /** Prompts shown while creating a character, from the choices made so far. */
-  guidance?(data: Record<string, DataValue>): CreationGuidance | undefined;
+  /** Prompts shown under the creation inputs they belong to, from the choices made so far. */
+  hints?(data: Record<string, DataValue>): CreationHints;
 }
 
-export interface CreationGuidance {
-  label: string;
-  sections: { heading: string; text: string }[];
+/** Creation prompts, each shown under its input. */
+export interface CreationHints {
+  name?: string;
+  /** Keyed by identity field. */
+  identity?: Record<string, string>;
+  relationship?: string;
+  scores?: string;
 }
 
 export interface LoadoutDef {
@@ -544,7 +571,7 @@ export type SheetSection =
       label: string;
       button: string;
     }
-  /** Derived values, read-only, each with the effects that changed it as a tooltip. */
+  /** Derived values, read-only, each with the effects that changed it as a tooltip. A die rolls when clicked. */
   | {
       kind: "derived";
       items: {
@@ -626,6 +653,8 @@ export interface GameSystem {
   name: string;
   version: string;
   stats: StatDef[];
+  /** Whether a stat is a number added to rolls, offered as a chip in the dice tray; true if absent. */
+  statsAddToRolls?: boolean;
   /** The modifier a stat score gives. */
   modifier(score: number): number;
   /** The roll a check starts from, before modifiers. */
@@ -639,7 +668,10 @@ export interface GameSystem {
     character: CharacterView,
     action?: ActionDef,
   ): string;
-  /** Other base rolls the player can pick before a check (advantage, disadvantage); a check then always asks. */
+  /**
+   * Other base rolls the player can pick before a check; a check then always asks. The prompt
+   * shows the first half before the plain roll and the rest after: list disadvantage, then advantage.
+   */
   rollModes?: RollMode[];
   /** A check's possible results, best first. */
   results: ResultDef[];

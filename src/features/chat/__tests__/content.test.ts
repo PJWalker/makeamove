@@ -8,6 +8,7 @@ import {
   plainText,
 } from "../content";
 import { LINK_NODE } from "../../notes/links";
+import { TRACKER_NODE } from "../../characters/trackers";
 
 describe("chat content", () => {
   it("stores plain text and line breaks as a Tiptap document", () => {
@@ -54,5 +55,25 @@ describe("chat content", () => {
     const linked = entityContent("item", "potion", "Healing draught");
     expect(plainText(linked)).toBe("Healing draught ");
     expect(plainText(entityContent("item", "potion", ""), () => "Potion")).toBe("Potion ");
+  });
+
+  it("reads tracker buttons as their token in commands and their label as plain text", () => {
+    const content = {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            { type: "text", text: "/me earns " },
+            { type: TRACKER_NODE, attrs: { by: 1, name: "XP", label: "+1 XP" } },
+          ],
+        },
+      ],
+    };
+    expect(commandText(content)).toBe("/me earns [[+1 XP]]");
+    expect(plainText(content)).toBe("/me earns +1 XP");
+    expect(contentForCommand(content, "earns [[+1 XP]]").content?.[0]?.content?.[1]).toEqual(
+      content.content[0]!.content[1],
+    );
   });
 });

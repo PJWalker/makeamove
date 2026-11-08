@@ -177,7 +177,7 @@ function CampaignMenu() {
       onSelect: () => (dialogRequest.value = "relationships"),
     },
     {
-      label: "Help and shortcuts…",
+      label: "Help and Shortcuts…",
       Icon: IconHelp,
       onSelect: () => (dialogRequest.value = "help"),
     },
@@ -191,7 +191,7 @@ function CampaignMenu() {
     })),
     "divider",
     {
-      label: "Back to campaigns",
+      label: "Back to Campaigns",
       Icon: IconLeave,
       onSelect: () => goToCampaign(null),
     },
@@ -305,7 +305,7 @@ function PenOptions({ tool }: { tool: ToolId }) {
         title="Under or over tokens"
         onClick={() => setPen({ layer: layer === "under" ? "over" : "under" })}
       >
-        {layer === "under" ? "Under tokens" : "Over tokens"}
+        {layer === "under" ? "Under Tokens" : "Over Tokens"}
       </button>
     </div>
   );

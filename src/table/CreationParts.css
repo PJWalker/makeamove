@@ -33,6 +33,14 @@
       width: auto;
     }
   }
+  .creation-score-problems {
+    margin: 0;
+    padding-left: var(--space-4);
+    color: var(--danger);
+    &:empty {
+      display: none;
+    }
+  }
   .creation-scores [data-over="true"] {
     color: var(--danger);
   }

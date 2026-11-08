@@ -271,7 +271,7 @@ describe("D&D 5.5e", () => {
         c,
         d,
       ).formula,
-    ).toBe("1d20-4[Exhaustion]");
+    ).toBe("1d20+0[STR]-4[Exhaustion]");
     expect(d.values.speed).toBe(20);
   });
 

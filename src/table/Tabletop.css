@@ -19,7 +19,7 @@
       & .toolbar,
       & .pen-options,
       & .hotbar {
-        transition-property: transform, opacity, left, right;
+        transition-property: transform, translate, opacity, left, right;
         transition-duration: 200ms;
         transition-timing-function: var(--ease);
       }

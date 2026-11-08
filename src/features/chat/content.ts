@@ -1,6 +1,7 @@
 import type { JSONContent } from "@tiptap/core";
 import type { LinkKind } from "../notes/api";
 import { LINK_NODE } from "../notes/links";
+import { TRACKER_NODE, trackerToken, type TrackerButton } from "../characters/trackers";
 
 export type ChatContent = JSONContent;
 
@@ -50,20 +51,30 @@ function entityTokenOf(node: JSONContent): string {
   );
 }
 
-function inlineText(node: JSONContent, linkText: (node: JSONContent) => string): string {
+/** The text a link or tracker button stands for when typed. */
+function atomToken(node: JSONContent): string | null {
+  if (node.type === LINK_NODE) return entityTokenOf(node);
+  if (node.type === TRACKER_NODE) return trackerToken(attrsOf(node) as TrackerButton);
+  return null;
+}
+
+function inlineText(node: JSONContent, atomText: (node: JSONContent) => string): string {
   if (node.type === "text") return node.text ?? "";
-  if (node.type === LINK_NODE) return linkText(node);
+  if (node.type === LINK_NODE || node.type === TRACKER_NODE) return atomText(node);
   if (node.type === "hardBreak") return "\n";
-  return (node.content ?? []).map((child) => inlineText(child, linkText)).join("");
+  return (node.content ?? []).map((child) => inlineText(child, atomText)).join("");
 }
 
 export function commandText(content: ChatContent): string {
-  return (content.content ?? []).map((block) => inlineText(block, entityTokenOf)).join("\n");
+  return (content.content ?? [])
+    .map((block) => inlineText(block, (node) => atomToken(node) ?? ""))
+    .join("\n");
 }
 
 export function plainText(content: ChatContent, nameOf: NameOf = () => null): string {
-  const linkText = (node: JSONContent) => {
+  const atomText = (node: JSONContent) => {
     const attrs = attrsOf(node);
+    if (node.type === TRACKER_NODE) return String(attrs.label ?? "");
     return (
       (typeof attrs.text === "string" && attrs.text) ||
       nameOf(attrs.kind as LinkKind, String(attrs.id ?? "")) ||
@@ -71,12 +82,13 @@ export function plainText(content: ChatContent, nameOf: NameOf = () => null): st
       "a link"
     );
   };
-  return (content.content ?? []).map((block) => inlineText(block, linkText)).join("\n");
+  return (content.content ?? []).map((block) => inlineText(block, atomText)).join("\n");
 }
 
 function nodeLength(node: JSONContent): number {
   if (node.type === "text") return node.text?.length ?? 0;
-  if (node.type === LINK_NODE) return entityTokenOf(node).length;
+  const token = atomToken(node);
+  if (token !== null) return token.length;
   if (node.type === "hardBreak") return 1;
   return (node.content ?? []).reduce((length, child) => length + nodeLength(child), 0);
 }
@@ -94,12 +106,12 @@ function sliceInline(nodes: JSONContent[], start: number, end: number): JSONCont
           ...node,
           text: node.text!.slice(from - offset, to - offset),
         });
-      } else if (node.type === LINK_NODE) {
+      } else if (atomToken(node) !== null) {
         if (from === offset && to === offset + length) selected.push(node);
         else
           selected.push({
             type: "text",
-            text: entityTokenOf(node).slice(from - offset, to - offset),
+            text: atomToken(node)!.slice(from - offset, to - offset),
           });
       } else if (node.type === "hardBreak") {
         selected.push(node);

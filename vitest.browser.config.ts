@@ -6,6 +6,7 @@ export default mergeConfig(viteConfig, defineConfig({
     noDiscovery: true,
     include: [
       "react",
+      "react/compiler-runtime",
       "react-dom",
       "react-dom/client",
       "react-dom/server",
@@ -23,6 +24,7 @@ export default mergeConfig(viteConfig, defineConfig({
       "@tiptap/extension-placeholder",
       "@tiptap/starter-kit",
       "@tiptap/extension-collaboration-caret",
+      "@tiptap/static-renderer/pm/react",
       "lib0/decoding",
       "lib0/encoding",
       "y-protocols/awareness",

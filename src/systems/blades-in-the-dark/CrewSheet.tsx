@@ -74,7 +74,7 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
         disabled={!gm || xp < (counter.max ?? 10)}
         onClick={() => advanceCrew(campaign, reward)}
       >
-        Advance crew
+        Advance Crew
       </Button>
       <label className="field">
         Upgrade ({state.crewUpgradePoints} unspent)
@@ -97,7 +97,7 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
         disabled={!gm || !upgrade || Number(state.crewUpgradePoints ?? 0) < upgradeCost}
         onClick={() => buyCrewUpgrade(campaign, upgrade)}
       >
-        Buy upgrade ({upgradeCost})
+        Buy Upgrade ({upgradeCost})
       </Button>
       <Button
         disabled={

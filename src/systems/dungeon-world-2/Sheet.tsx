@@ -1,14 +1,16 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   SheetFrame,
   SheetSectionView,
   useSheet,
+  type SheetDrop,
   type SheetProps,
 } from "../../table/DeclarativeSheet";
 import { CharacterText } from "../../table/CharacterText";
+import type { DragEntity } from "../../table/entityDrag";
 import { addItem, setData } from "../../features/characters/api";
-import { resolveStruggle } from "./campaign";
-import { STRUGGLES } from "./struggles";
+import { resolveStruggle, revealStruggle } from "./campaign";
+import { STRUGGLES, struggleOfEntry } from "./struggles";
 import { Button } from "../../ui/Button";
 import { Counter } from "../../table/sheetParts";
 import { addTreasureBoxes, wealthTierForBoxes, MAX_TREASURE_BOXES } from "./wealth";
@@ -39,10 +41,26 @@ export function DungeonWorld2Sheet(props: SheetProps) {
   const struggle = sheet.c.data.struggleRevealed
     ? STRUGGLES.find((entry) => entry.id === sheet.c.data.struggleId)
     : undefined;
+  const revealed = sheet.c.data.struggleRevealed === true;
+  const { campaign } = sheet;
+  const characterId = sheet.c.id;
+  const isPc = sheet.c.kind === "pc";
+  // A Struggle from the Libraries reveals it, while the character has none.
+  const drop = useMemo<SheetDrop | undefined>(() => {
+    if (!isPc || revealed) return undefined;
+    const dropped = (entity: DragEntity) =>
+      entity.libraryEntry?.kind === "option" ? struggleOfEntry(entity.libraryEntry.id) : undefined;
+    return {
+      accepts: (entity) => !!dropped(entity),
+      drop: (entity) => {
+        const struggle = dropped(entity);
+        return !!struggle && revealStruggle(campaign, characterId, struggle.id);
+      },
+    };
+  }, [isPc, revealed, campaign, characterId]);
   return (
-    <SheetFrame {...sheet}>
+    <SheetFrame {...sheet} drop={drop}>
       <SheetSectionView {...sheet} section={{ kind: "header" }} />
-      <SheetSectionView {...sheet} section={{ kind: "choices", choices: ["class"] }} />
       <SheetSectionView
         {...sheet}
         section={{
@@ -104,7 +122,7 @@ export function DungeonWorld2Sheet(props: SheetProps) {
           needed: "xpNeeded",
           field: "level",
           label: "Ready to level up.",
-          button: "Level up",
+          button: "Level Up",
         }}
       />
       <SheetSectionView
@@ -119,7 +137,6 @@ export function DungeonWorld2Sheet(props: SheetProps) {
               format: "die",
               plus: "damageBonus",
             },
-            { label: "Bloodied at", value: "bloodiedAt" },
           ],
         }}
       />
@@ -193,10 +210,7 @@ function ItemAward({
       <h3 className="sheet-heading">{title}</h3>
       <label className="field">
         Choose an item
-        <select
-          value={selected}
-          onChange={(event) => setSelected(event.currentTarget.value)}
-        >
+        <select value={selected} onChange={(event) => setSelected(event.currentTarget.value)}>
           {options.map((item) => (
             <option key={item.id} value={item.id}>
               {item.name}

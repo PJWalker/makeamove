@@ -13,14 +13,20 @@ import { inviteUrl } from "../sync/invite";
 import { createPortal } from "react-dom";
 import { useLayoutEffect, useRef, useState } from "react";
 import { closePopup, dragPopup, raisePopup, resizePopup } from "../ui/popup";
-import { trackPointer } from "../ui/pointer";
 import { commaListOf, formatCommaList } from "../lib/list";
 import { autohide, setAutohide } from "./canvasState";
-import { RESIZE_CURSORS, RESIZE_DIRS, resizeRect, type ResizeDir } from "./resizeRect";
+import { RESIZE_DIRS, type ResizeDir } from "./resizeRect";
 import { dragEntity, type DragEntity } from "./entityDrag";
 import type { Icon } from "../ui/icons";
 import type { menuTrigger } from "../ui/menuTrigger";
-import { raiseWindow, startWindowDrag, updateWindow, layout, type DockItemId } from "./panelLayout";
+import {
+  raiseWindow,
+  startWindowDrag,
+  startWindowResize,
+  layout,
+  useWindowRect,
+  type DockItemId,
+} from "./panelLayout";
 import { WindowControls } from "./WindowControls";
 import { CampaignEntityGraphic } from "./EntityGraphic";
 
@@ -80,7 +86,7 @@ export function Dialog({
   }, [dialogRef]);
   if (!transitionName.current) transitionName.current = `dialog-window-${++dialogTransitionId}`;
   const floating = useValue(layout).floating;
-  const win = dockId ? floating.find((item) => item.id === dockId) : undefined;
+  const win = useWindowRect(dockId ? floating.find((item) => item.id === dockId) : undefined);
   const windowStyle = {
     ...(win ? { left: win.x, top: win.y, width: win.w, height: win.h, zIndex: win.z } : {}),
     viewTransitionName: transitionName.current,
@@ -88,18 +94,8 @@ export function Dialog({
   const close = () => closePopup(dialogRef.current, onCloseRef.current);
 
   function onResizePointerDown(e: PointerEvent, dir: ResizeDir) {
-    if (!dockId || !win) {
-      resizePopup(dialogRef.current!, e, dir);
-      return;
-    }
-    if (e.button !== 0) return;
-    e.preventDefault();
-    e.stopPropagation();
-    raiseWindow(dockId);
-    const start = { x: win.x, y: win.y, w: win.w, h: win.h };
-    trackPointer(RESIZE_CURSORS[dir], (ev) => {
-      updateWindow(dockId, resizeRect(start, dir, ev.clientX - e.clientX, ev.clientY - e.clientY));
-    });
+    if (dockId && win) startWindowResize(dockId, e, dir);
+    else resizePopup(dialogRef.current!, e, dir);
   }
   // Rendered in the window layer with the other windows: a non-modal dialog
   // would otherwise be clipped by the panel that opened it (the scene bar

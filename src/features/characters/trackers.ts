@@ -11,6 +11,9 @@ import type { CharacterView } from "./types";
  * or failing those its resources).
  */
 
+/** The rich-text node a button is stored as in notes and chat. */
+export const TRACKER_NODE = "trackerButton";
+
 /** [[±N name]] or [[±N name|label]]. */
 export const TRACKER_TOKEN = /\[\[\s*([+-]\d+)\s+([^\]|]+?)\s*(?:\|\s*([^\]]+?)\s*)?\]\]/g;
 

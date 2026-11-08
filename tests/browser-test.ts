@@ -12,6 +12,14 @@ import { expect as vitestExpect, test as vitestTest } from "vitest";
 import { App } from "../src/app/App";
 import { pendingInvite, routeCampaignId } from "../src/app/router";
 import { closeCampaign } from "../src/campaign/campaign";
+import { recentActions } from "../src/app/commands/recent";
+import { activeTool } from "../src/scene/tools";
+import { autohide } from "../src/table/canvasState";
+import { entityWindows } from "../src/table/entityWindows";
+import { normalise } from "../src/table/layoutModel";
+import { openLinks } from "../src/table/linkState";
+import { layout } from "../src/table/panelLayout";
+import { libraryView, openedLibraryEntries } from "../src/table/libraryView";
 import "../src/styles/base.css";
 import "../src/styles/tokens.css";
 import "../src/styles/components.css";
@@ -25,7 +33,10 @@ type ElementFinder = () => Element[];
 const modifiers = { Alt: 1, Control: 2, Meta: 4, Shift: 8 } as const;
 let mouseX = 0;
 let mouseY = 0;
-const pressedButtons = new Set<string>();
+const pressedButtons = new Set<"left" | "right" | "middle">();
+/** The held buttons as the bitmask that pointer events report: left 1, right 2, middle 4. */
+const BUTTON_BITS = { left: 1, right: 2, middle: 4 } as const;
+const heldButtons = () => [...pressedButtons].reduce((bits, b) => bits | BUTTON_BITS[b], 0);
 type TestAppContainer = HTMLDivElement & {
   __vitestAppRoot?: Root;
   __vitestAppReset?: () => void;
@@ -89,7 +100,7 @@ const mouse = {
     for (let step = 1; step <= steps; step++) {
       mouseX = startX + ((x - startX) * step) / steps;
       mouseY = startY + ((y - startY) * step) / steps;
-      await dispatchMouse("mouseMoved", { buttons: pressedButtons.size ? 1 : 0 });
+      await dispatchMouse("mouseMoved", { buttons: heldButtons() });
     }
   },
   async down(options?: { button?: "left" | "right" | "middle"; clickCount?: number }) {
@@ -97,7 +108,7 @@ const mouse = {
     pressedButtons.add(button);
     await dispatchMouse("mousePressed", {
       button,
-      buttons: pressedButtons.size,
+      buttons: heldButtons(),
       clickCount: options?.clickCount ?? 1,
     });
   },
@@ -106,7 +117,7 @@ const mouse = {
     pressedButtons.delete(button);
     await dispatchMouse("mouseReleased", {
       button,
-      buttons: pressedButtons.size,
+      buttons: heldButtons(),
       clickCount: options?.clickCount ?? 1,
     });
   },
@@ -158,7 +169,9 @@ export class Locator {
   }
 
   locator(selector: string) {
-    return new Locator(() => this.find().flatMap((element) => [...element.querySelectorAll(selector)]));
+    return new Locator(() =>
+      this.find().flatMap((element) => [...element.querySelectorAll(selector)]),
+    );
   }
 
   filter(options: { has?: Locator; hasText?: string | RegExp }) {
@@ -167,7 +180,9 @@ export class Locator {
         const text = element.textContent ?? "";
         if (options.hasText instanceof RegExp && !options.hasText.test(text)) return false;
         if (typeof options.hasText === "string" && !text.includes(options.hasText)) return false;
-        return options.has === undefined || options.has.find().some((child) => element.contains(child));
+        return (
+          options.has === undefined || options.has.find().some((child) => element.contains(child))
+        );
       }),
     );
   }
@@ -200,7 +215,7 @@ export class Locator {
     const target =
       element instanceof HTMLInputElement &&
       (element.type === "radio" || element.type === "checkbox")
-        ? element.closest("label") ?? element
+        ? (element.closest("label") ?? element)
         : element;
     await userEvent.click(target, options);
   }
@@ -301,12 +316,12 @@ async function mountApp(url = "/") {
   appContainer.__vitestAppReset?.();
   appContainer.__vitestAppRoot?.unmount();
 
+  // Clear the route first: the hash change below sets it again, for a campaign or an invite.
+  pendingInvite.value = null;
+  routeCampaignId.value = null;
   const target = new URL(url, location.href);
   history.replaceState(null, "", `${location.pathname}${location.search}${target.hash || "#/"}`);
   window.dispatchEvent(new HashChangeEvent("hashchange"));
-  pendingInvite.value = null;
-  routeCampaignId.value = null;
-  if (target.hash.startsWith("#join=")) window.dispatchEvent(new HashChangeEvent("hashchange"));
 
   const appRoot = createRoot(appContainer);
   appContainer.__vitestAppRoot = appRoot;
@@ -390,10 +405,10 @@ function locatorAssertion(locator: Locator, negated = false) {
                 const bounds = locator.elements()[0]?.getBoundingClientRect();
                 return Boolean(
                   bounds &&
-                    bounds.bottom > 0 &&
-                    bounds.right > 0 &&
-                    bounds.top < window.innerHeight &&
-                    bounds.left < window.innerWidth,
+                  bounds.bottom > 0 &&
+                  bounds.right > 0 &&
+                  bounds.top < window.innerHeight &&
+                  bounds.left < window.innerWidth,
                 );
               })
               .toBe(!negated);
@@ -417,6 +432,15 @@ function locatorAssertion(locator: Locator, negated = false) {
             vitestExpect
               .poll(() => textMatches(locator.elements()[0]?.textContent ?? "", text, false))
               .toBe(!negated);
+        if (property === "toHaveValue")
+          return (value: string | RegExp) =>
+            vitestExpect
+              .poll(() => {
+                const element = locator.elements()[0] as HTMLInputElement | undefined;
+                const actual = element?.value ?? "";
+                return value instanceof RegExp ? value.test(actual) : actual === value;
+              })
+              .toBe(!negated);
         if (property === "toBeVisible")
           return () => vitestExpect.poll(() => locator.elements().some(isVisible)).toBe(!negated);
         if (property === "toBeFocused")
@@ -425,11 +449,28 @@ function locatorAssertion(locator: Locator, negated = false) {
               .poll(() => document.activeElement === locator.elements()[0])
               .toBe(!negated);
         const matcher = property === "toContainText" ? "toHaveTextContent" : property;
-        return (...args: unknown[]) => {
-          const element = locator.element();
-          const assertion = vitestExpect.element(browserPage.elementLocator(element));
-          const target = negated ? assertion.not : assertion;
-          return (target as unknown as Record<string, (...values: unknown[]) => unknown>)[matcher](...args);
+        // Find the element afresh on every try: React may replace it while the assertion waits.
+        return async (...args: unknown[]) => {
+          let lastError: unknown = new Error("The locator did not match an element.");
+          const passes = () => {
+            const element = locator.elements()[0];
+            if (!element) return false;
+            const assertion = negated ? vitestExpect(element).not : vitestExpect(element);
+            try {
+              (assertion as unknown as Record<string, (...values: unknown[]) => void>)[matcher](
+                ...args,
+              );
+              return true;
+            } catch (error) {
+              lastError = error;
+              return false;
+            }
+          };
+          try {
+            await vitestExpect.poll(passes).toBe(true);
+          } catch {
+            throw lastError;
+          }
         };
       },
     },
@@ -491,11 +532,34 @@ interface BrowserLocatorAssertion {
 
 type BrowserTest = (name: string, callback: (fixtures: { page: Page }) => unknown) => void;
 
+/**
+ * Each test file shares one page, so per-device state that the app loaded from
+ * localStorage when its modules ran would otherwise carry over from the test
+ * before: the panel layout, open windows, autohide and so on. Put it back to
+ * what a first visit gets.
+ */
+const startViewTransition = document.startViewTransition;
+
+function resetDeviceState() {
+  // A test may wrap this to hold a transition's animations; don't let that outlive it.
+  document.startViewTransition = startViewTransition;
+  localStorage.clear();
+  sessionStorage.clear();
+  layout.value = normalise(null, false);
+  entityWindows.value = {};
+  openLinks.value = [];
+  libraryView.value = { kind: "all", query: "" };
+  openedLibraryEntries.value = new Set();
+  autohide.value = false;
+  activeTool.value = "select";
+  recentActions.value = [];
+}
+
 export const test = ((name: string, callback: (fixtures: { page: Page }) => unknown) =>
   vitestTest(name, async () => {
     await browserPage.viewport(1280, 800);
-    localStorage.clear();
-    sessionStorage.clear();
+    await testPage.emulateMedia({});
+    resetDeviceState();
     await mountApp();
     await callback({ page: testPage });
   })) as BrowserTest;

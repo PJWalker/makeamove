@@ -37,6 +37,7 @@ import { actionsFor, derive } from "../../features/characters/store";
 import { defaultHotbar, hotbarSlots } from "../../features/characters/hotbar";
 import { sessionMoveUsed } from "../../features/characters/sessionMoves";
 import { applyDamage } from "../../features/characters/resolution";
+import { tokenMarksSource } from "../../features/combat/api";
 import {
   applyClassChange,
   beginDungeonWorld2Downtime,
@@ -49,6 +50,7 @@ import {
   prepareDungeonWorld2Journey,
   resolveComfortOrSupport,
   resolveStruggle,
+  revealStruggle,
   resupplyDungeonWorld2,
   saleValueDungeonWorld2Item,
   sellDungeonWorld2Item,
@@ -75,6 +77,18 @@ describe("Dungeon World 2 campaign behavior", () => {
     expect(Object.keys(npc.fields)).toEqual(systemOf(campaign).npcFields.map((field) => field.id));
     setData(campaign, id, "maxHp", 12);
     expect(tokenStatsSource(campaign)(id)[0]).toMatchObject({ id: "hp", value: 6, max: 12 });
+    campaign.destroy();
+  });
+
+  it("marks Bloodied tokens at half HP or less, beside their conditions", async () => {
+    const campaign = await setUp();
+    const id = newCharacter(campaign, "Ayla", "fighter");
+    const pips = () => tokenMarksSource(campaign)("token", id).pips.map((pip) => pip.id);
+    setConditionState(campaign, id, "angry", "marked");
+    expect(pips()).toEqual(["angry"]);
+    const max = getCharacter(campaign, id)!.resources.hp!;
+    bumpResource(campaign, id, "hp", Math.floor(max / 2) - max);
+    expect(pips()).toEqual(["angry", "bloodied"]);
     campaign.destroy();
   });
 
@@ -599,6 +613,26 @@ describe("Dungeon World 2 campaign behavior", () => {
       resources: { hp: 6 },
     });
     expect(derive(getCharacter(campaign, characterId)!, systemOf(campaign)).values.maxHp).toBe(12);
+    campaign.destroy();
+  });
+
+  it("reveals a dropped DW2 Struggle with its starting track, one at a time", async () => {
+    const campaign = await Campaign.open(
+      await createCampaign("Struggle reveal", "Gwen", "dungeon-world-2"),
+    );
+    const characterId = newCharacter(campaign, "Ayla", "barbarian");
+
+    expect(revealStruggle(campaign, characterId, "reformed")).toBe(true);
+    expect(getCharacter(campaign, characterId)?.data).toMatchObject({
+      struggleRevealed: true,
+      struggleId: "reformed",
+      struggleName: "Reformed",
+      struggleTrack: "Guilt",
+      struggleProgress: 2,
+      struggleMax: 3,
+    });
+    expect(revealStruggle(campaign, characterId, "vengeful")).toBe(false);
+    expect(getCharacter(campaign, characterId)?.data.struggleId).toBe("reformed");
     campaign.destroy();
   });
 

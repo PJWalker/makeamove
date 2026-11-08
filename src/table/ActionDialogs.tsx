@@ -95,10 +95,13 @@ function RenameDialog({ campaign, id, title }: Props) {
         </label>
         <div className="form-actions">
           {custom && (
-            <Button variant="ghost" onClick={() => done(undefined)}>
-              Use its own name
+            <Button variant="ghost" className="form-actions-start" onClick={() => done(undefined)}>
+              Use Its Own Name
             </Button>
           )}
+          <Button variant="ghost" onClick={close}>
+            Cancel
+          </Button>
           <Button variant="primary" type="submit">
             Save
           </Button>
@@ -148,7 +151,7 @@ function IconDialog({ campaign, id, title }: Props) {
         </div>
         <div className="form-actions">
           <Button variant="ghost" disabled={!current} onClick={() => choose(undefined)}>
-            Use its own icon
+            Use Its Own Icon
           </Button>
         </div>
       </div>
@@ -216,10 +219,13 @@ function ShortcutDialog({ campaign, id, title }: Props) {
         </p>
         <div className="form-actions">
           {existing && (
-            <Button variant="ghost" onClick={() => save(null)}>
-              Remove shortcut
+            <Button variant="ghost" className="form-actions-start" onClick={() => save(null)}>
+              Remove Shortcut
             </Button>
           )}
+          <Button variant="ghost" onClick={close}>
+            Cancel
+          </Button>
           <Button variant="primary" type="submit" disabled={combo === existing}>
             Save
           </Button>

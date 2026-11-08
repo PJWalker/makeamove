@@ -3,7 +3,7 @@ import { addTokens, combatantForToken, hasCombat, tokenMarksSource } from "../fe
 import { bounds } from "../scene/geometry";
 import { toScreen } from "../scene/camera";
 import { setMorphOrigin } from "../ui/morph";
-import { openPopup } from "../ui/popup";
+import { closePopup, openPopup } from "../ui/popup";
 import { watch } from "../lib/store";
 import { device } from "../platform/device";
 import {
@@ -511,7 +511,7 @@ export default function SceneCanvas({
     const items: MenuItem[] = [];
     if (one?.type === "token") {
       items.push({
-        label: "Token options…",
+        label: "Token Options…",
         Icon: IconRename,
         onSelect: () => {
           setTokenTab("token");
@@ -523,7 +523,7 @@ export default function SceneCanvas({
     if (tokens.length && sceneId && hasCombat(campaign) && campaign.isGm()) {
       const out = tokens.filter((t) => !combatantForToken(campaign, t.id));
       items.push({
-        label: "Add to combat",
+        label: "Add to Combat",
         Icon: IconCombat,
         disabled: !out.length,
         onSelect: () => {
@@ -544,19 +544,19 @@ export default function SceneCanvas({
       items.push(
         one.door
           ? {
-              label: one.open ? "Close door" : "Open door",
+              label: one.open ? "Close Door" : "Open Door",
               Icon: IconWall,
               onSelect: () => ctl.setDoor(one.id, { open: !one.open }),
             }
           : {
-              label: "Make it a door",
+              label: "Make It a Door",
               Icon: IconWall,
               onSelect: () => ctl.setDoor(one.id, { door: true, open: false }),
             },
       );
       if (one.door)
         items.push({
-          label: "Make it a wall",
+          label: "Make It a Wall",
           Icon: IconWall,
           onSelect: () => ctl.setDoor(one.id, { door: false }),
         });
@@ -564,7 +564,7 @@ export default function SceneCanvas({
     if (one?.type === "light") {
       items.push(
         {
-          label: "Light colour",
+          label: "Light Colour",
           colour: one.colour,
           onPreview: (colour) => ctl.previewLightColour(one.id, colour),
           onPick: (colour) => ctl.setLight(one.id, { colour }),
@@ -580,20 +580,20 @@ export default function SceneCanvas({
     if (one?.type === "area") {
       const tone = one.tone === "light" ? "dark" : "light";
       items.push({
-        label: tone === "dark" ? "Make it dark" : "Make it light",
+        label: tone === "dark" ? "Make It Dark" : "Make It Light",
         Icon: IconLight,
         onSelect: () => ctl.setAreaTone(one.id, tone),
       });
     }
     if (one?.type === "map")
       items.push({
-        label: "Use as token",
+        label: "Use as Token",
         Icon: IconToken,
         onSelect: () => ctl.convert(one.id, "token"),
       });
     if (one?.type === "token" && one.image) {
       items.push({
-        label: "Use as map",
+        label: "Use as Map",
         Icon: IconMap,
         onSelect: () => ctl.convert(one.id, "map"),
       });
@@ -601,15 +601,15 @@ export default function SceneCanvas({
     if (sel.every((el) => el.type === "drawing")) {
       const under = sel.every((el) => el.layer === "under");
       items.push({
-        label: under ? "Move above tokens" : "Move below tokens",
+        label: under ? "Move Above Tokens" : "Move Below Tokens",
         Icon: IconLayers,
         onSelect: () => ctl.setLayer(ids, under ? "over" : "under"),
       });
     }
     if (items.length) items.push("divider");
     items.push(
-      { label: "Bring to front", Icon: IconToFront, onSelect: () => ctl.restack(ids, "front") },
-      { label: "Send to back", Icon: IconToBack, onSelect: () => ctl.restack(ids, "back") },
+      { label: "Bring to Front", Icon: IconToFront, onSelect: () => ctl.restack(ids, "front") },
+      { label: "Send to Back", Icon: IconToBack, onSelect: () => ctl.restack(ids, "back") },
       {
         label: "Duplicate",
         Icon: IconDuplicate,
@@ -635,12 +635,12 @@ export default function SceneCanvas({
   function canvasMenu(ctl: SceneController, at: Point): MenuItem[] {
     return [
       {
-        label: "Add token here",
+        label: "Add Token Here",
         Icon: IconAdd,
         onSelect: () => ctl.addToken(at),
       },
       {
-        label: "Add image here…",
+        label: "Add Image Here…",
         Icon: IconImage,
         onSelect: () => {
           importAt.current = at;
@@ -663,13 +663,13 @@ export default function SceneCanvas({
         onSelect: () => ctl.scene.undo.redo(),
       },
       {
-        label: "Fit to scene",
+        label: "Fit to Scene",
         Icon: IconFit,
         shortcut: "⇧1",
         onSelect: () => ctl.fit(),
       },
       {
-        label: "Scene settings…",
+        label: "Scene Settings…",
         Icon: IconGrid,
         onSelect: () => (sceneSettingsOpen.value = true),
       },
@@ -1011,6 +1011,9 @@ function TokenOptionsDialog({
           </span>
         </label>
         <div className="form-actions">
+          <Button variant="ghost" onClick={() => closePopup(ref.current)}>
+            Cancel
+          </Button>
           <Button variant="primary" type="submit">
             Save
           </Button>

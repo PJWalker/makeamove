@@ -1,7 +1,8 @@
 import { roll } from "../dice/notation";
 import { makeSessionPage } from "../notes/sessions";
 import { setState } from "./messageState";
-import { addRollDie } from "./rollState";
+import { addRollDie, addRollModifier } from "./rollState";
+import type { TrayPick } from "../dice/pool";
 import type { Campaign } from "../../campaign/campaign";
 import { device } from "../../platform/device";
 import type { Command } from "./commands";
@@ -59,12 +60,20 @@ export async function ensureSystemCounter(campaign: Campaign, counter: SystemCou
   return message;
 }
 
-/** Adds a new die to a roll in the chat, if it's one this device may change. */
-export function addDieToRoll(campaign: Campaign, messageId: string, sides: number) {
+/** Adds a new die or a modifier to a roll in the chat, if it's one this device may change. */
+export function addToRoll(campaign: Campaign, messageId: string, pick: TrayPick) {
   const message = campaign.chat.messages.value.find((candidate) => candidate.id === messageId);
   if (!message || (message.kind !== "roll" && message.kind !== "move") || !message.roll) return;
   if (!canWork(message, device.value.id, campaign.isGm())) return;
-  addRollDie(campaign.messageState, messageId, message.roll, sides);
+  if (pick.kind === "die") addRollDie(campaign.messageState, messageId, message.roll, pick.sides);
+  else
+    addRollModifier(
+      campaign.messageState,
+      messageId,
+      message.roll,
+      pick.value,
+      pick.kind === "stat" ? pick.stat : undefined,
+    );
 }
 
 /** Roll a formula and post the result. Throws NotationError for bad formulas. */

@@ -2,6 +2,7 @@ import { Container, Graphics, Text } from "pixi.js";
 import { toScreen } from "../camera";
 import type { Point } from "../grid";
 import type { TokenStat } from "../../systems/types";
+import { barChangeFrame, type BarChange } from "../barChange";
 import { hoverSpring } from "../conditionLayout";
 import { resolveTokenLabelLayout, zoomTokenBars } from "../tokenLabelLayout";
 import type { Transform } from "../types";
@@ -43,6 +44,12 @@ export class TokenLabelLayer {
     string,
     { scale: number; from: number; target: number; start: number }
   >();
+  /** Each bar's value when last drawn, to catch it changing. */
+  private barValues = new Map<string, number>();
+  /** Bars playing out a change in value. */
+  private barChanges = new Map<string, BarChange>();
+  /** The numbers that rise off bars as they change. */
+  private deltaPool = new Map<string, Text>();
   /** Whether a bar is still zooming, and needs more frames. */
   animating = false;
   /** What a linked token shows, from its character. */
@@ -60,6 +67,9 @@ export class TokenLabelLayer {
     const s = this.state;
     const cam = s.camera;
     const g = this.bars.clear();
+    const now = performance.now();
+    const still = reducedMotion();
+    const seen = new Set<string>();
     const usedNames = new Set<string>();
     const usedValues = new Set<string>();
     type Box = { id: string; x: number; y: number; w: number; h: number };
@@ -82,6 +92,11 @@ export class TokenLabelLayer {
       if (unseen(t)) continue;
       const screenW = t.w * cam.zoom;
       const stats = !el.hideBars && el.characterId ? this.statsFor(el.characterId) : [];
+      for (const stat of stats) {
+        const key = `${el.id}:${stat.id}`;
+        seen.add(key);
+        this.noteValue(key, stat, now, still);
+      }
       const foot = toScreen(cam, { x: t.x, y: t.y + t.h / 2 });
       let y = foot.y + 3;
       let bars: Box | null = null;
@@ -175,21 +190,39 @@ export class TokenLabelLayer {
     const hover = hoveredBar?.tokenId ?? hoverToken;
     const { bars, showBars, showName } =
       hover === hoverToken ? initialLayout : resolveTokenLabelLayout(plans, hover);
-    const now = performance.now();
-    const still = reducedMotion();
+    // A changing bar shows, and sits on top, whatever would hide it.
+    const changing = new Set(
+      plans
+        .filter((p) => p.stats.some((stat) => this.barChanges.has(`${p.id}:${stat.id}`)))
+        .map((p) => p.id),
+    );
+    for (const id of changing) showBars.add(id);
     const usedZooms = new Set<string>();
+    const usedDeltas = new Set<string>();
     this.animating = false;
 
     // Draw, the hovered token's last so it sits on top.
     const ordered = [
-      ...plans.filter((p) => p.id !== hover),
+      ...plans.filter((p) => p.id !== hover && !changing.has(p.id)),
+      ...plans.filter((p) => p.id !== hover && changing.has(p.id)),
       ...plans.filter((p) => p.id === hover),
     ];
     for (const p of ordered) {
       if (p.name) p.name.text.visible = showName.has(p.id);
       const barBox = bars.get(p.id);
       if (!barBox || !showBars.has(p.id)) continue;
-      const scales = p.stats.map((stat) => {
+      const frames = p.stats.map((stat) => {
+        const change = this.barChanges.get(`${p.id}:${stat.id}`);
+        if (!change) return null;
+        const frame = barChangeFrame(change, now - change.start);
+        if (frame.done) {
+          this.barChanges.delete(`${p.id}:${stat.id}`);
+          return null;
+        }
+        this.animating = true;
+        return { change, frame };
+      });
+      const scales = p.stats.map((stat, i) => {
         const key = `${p.id}:${stat.id}`;
         usedZooms.add(key);
         let zoom = this.barZoom.get(key);
@@ -207,18 +240,46 @@ export class TokenLabelLayer {
         const progress = still ? 1 : Math.min(1, (now - zoom.start) / 320);
         zoom.scale = Math.max(1, zoom.from + (zoom.target - zoom.from) * hoverSpring(progress));
         if (progress < 1) this.animating = true;
-        return zoom.scale;
+        const frame = frames[i]?.frame;
+        // A change grows the bar big enough to read, at least.
+        const grown = frame
+          ? 1 + (Math.max(1.6, Math.min(2.4, 96 / barBox.w), 26 / p.barH) - 1) * frame.grow
+          : 1;
+        return Math.max(zoom.scale, grown);
       });
       const zoomed = zoomTokenBars(barBox, p.barH, BAR_GAP, scales);
       if (p.name) p.name.text.y += zoomed.nameOffset;
       p.stats.forEach((s, i) => {
-        const { x, y, w, h: barH } = zoomed.bars[i]!;
-        const frac = s.max > 0 ? Math.min(1, Math.max(0, s.value / s.max)) : 0;
-        g.roundRect(x, y, w, barH, 3).fill({ color: INK, alpha: 0.85 });
-        if (frac > 0)
-          g.roundRect(x + 1.5, y + 1.5, (w - 3) * frac, barH - 3, 2).fill({
-            color: s.colour,
+        const changed = frames[i];
+        const frame = changed?.frame;
+        const { y, w, h: barH } = zoomed.bars[i]!;
+        const x = zoomed.bars[i]!.x + (frame?.shakeX ?? 0);
+        const frac = frame ? frame.fill : fillOf(s);
+        g.roundRect(x, y, w, barH, 3).fill({ color: INK, alpha: frame ? 0.95 : 0.85 });
+        const inner = (from: number, to: number) =>
+          g.roundRect(x + 1.5 + (w - 3) * from, y + 1.5, (w - 3) * (to - from), barH - 3, 2);
+        if (frame && changed && frame.ghost > frac) {
+          const hurt = changed.change.delta < 0;
+          inner(frac, frame.ghost).fill(
+            hurt
+              ? { color: frame.ghostHot ? 0xffffff : 0xff5c4d }
+              : { color: 0xb8f5c2, alpha: 0.75 },
+          );
+        }
+        if (frac > 0) inner(0, frac).fill({ color: s.colour });
+        if (frame && changed) {
+          if (frame.flash > 0)
+            g.roundRect(x, y, w, barH, 3).fill({ color: 0xffffff, alpha: frame.flash * 0.7 });
+          // A rim that burns in the colour of the change, then fades.
+          const hurt = changed.change.delta < 0;
+          g.roundRect(x - 1, y - 1, w + 2, barH + 2, 4).stroke({
+            color: hurt ? 0xff5c4d : 0x6ee07a,
+            width: 2,
+            alpha: Math.min(1, frame.alpha * 1.5) * (1 - frame.rise * 0.5),
           });
+          this.drawDelta(`${p.id}:${s.id}`, changed.change.delta, frame, x + w / 2, y, barH);
+          usedDeltas.add(`${p.id}:${s.id}`);
+        }
         // The value, when the bar is wide enough to read it.
         if (w < BAR_TEXT_MIN_W) return;
         const key = `${p.id}:${s.id}`;
@@ -248,6 +309,16 @@ export class TokenLabelLayer {
       });
     }
 
+    for (const [key, text] of this.deltaPool) {
+      if (usedDeltas.has(key)) continue;
+      text.destroy();
+      this.deltaPool.delete(key);
+    }
+    for (const key of this.barValues.keys()) {
+      if (seen.has(key)) continue;
+      this.barValues.delete(key);
+      this.barChanges.delete(key);
+    }
     for (const key of this.barZoom.keys()) {
       if (!usedZooms.has(key)) this.barZoom.delete(key);
     }
@@ -266,4 +337,69 @@ export class TokenLabelLayer {
       this.barTextPool.delete(key);
     }
   }
+
+  /** Starts a bar playing out its change, when its value isn't what it was. */
+  private noteValue(key: string, stat: TokenStat, now: number, still: boolean) {
+    const last = this.barValues.get(key);
+    this.barValues.set(key, stat.value);
+    if (last === undefined || last === stat.value || still) return;
+    const running = this.barChanges.get(key);
+    const frame = running && barChangeFrame(running, now - running.start);
+    const live = running && frame && !frame.done;
+    const delta = stat.value - last;
+    // Changed again mid-change: carry on from what's showing, still grown, and
+    // add up a run of hits (or heals).
+    const same = live && Math.sign(running.delta) === Math.sign(delta);
+    this.barChanges.set(key, {
+      from: live
+        ? same && delta < 0
+          ? frame.ghost
+          : frame.fill
+        : fillOf({ ...stat, value: last }),
+      to: fillOf(stat),
+      delta: same ? running.delta + delta : delta,
+      start: now,
+      grownFrom: live ? frame.grow : 0,
+    });
+  }
+
+  /** The number that rises off a changing bar. */
+  private drawDelta(
+    key: string,
+    delta: number,
+    frame: ReturnType<typeof barChangeFrame>,
+    x: number,
+    y: number,
+    barH: number,
+  ) {
+    let text = this.deltaPool.get(key);
+    if (!text) {
+      text = new Text({
+        text: "",
+        style: {
+          fontFamily: "Cabin, sans-serif",
+          fontSize: 36,
+          fontWeight: "800",
+          fill: 0xffffff,
+          stroke: { color: INK, width: 5, join: "round" },
+        },
+        anchor: { x: 0.5, y: 1 },
+        resolution: 2,
+      });
+      this.deltaPool.set(key, text);
+      this.barText.addChild(text);
+    }
+    const label = delta > 0 ? `+${delta}` : `${delta}`.replace("-", "\u2212");
+    if (text.text !== label) text.text = label;
+    text.style.fill = delta < 0 ? 0xff7a6b : 0x8cf09a;
+    const size = Math.max(26, Math.min(36, barH * 1.6));
+    text.scale.set((size / 36) * frame.pop);
+    text.alpha = frame.alpha;
+    text.position.set(Math.round(x), Math.round(y - 2 - frame.rise * 30));
+    this.barText.setChildIndex(text, this.barText.children.length - 1);
+  }
 }
+
+/** How full a stat's bar is, 0 to 1. */
+const fillOf = (stat: Pick<TokenStat, "value" | "max">) =>
+  stat.max > 0 ? Math.min(1, Math.max(0, stat.value / stat.max)) : 0;

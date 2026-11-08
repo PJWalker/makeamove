@@ -59,7 +59,7 @@ export function coreActions(campaign: Campaign): Action[] {
     {
       id: "cmd:fit",
       kind: "command",
-      title: "Fit to scene",
+      title: "Fit to Scene",
       aliases: ["zoom to fit", "reset view"],
       source: "Core",
       hint: "⇧1",
@@ -106,7 +106,7 @@ export function coreActions(campaign: Campaign): Action[] {
     out.push({
       id: "cmd:new-scene",
       kind: "command",
-      title: "New scene",
+      title: "New Scene",
       source: "Core",
       icon: IconAdd,
       available: true,
@@ -146,7 +146,7 @@ export function coreActions(campaign: Campaign): Action[] {
     {
       id: "setting:help",
       kind: "setting",
-      title: "Help and shortcuts",
+      title: "Help and Shortcuts",
       source: "Core",
       icon: IconHelp,
       available: true,

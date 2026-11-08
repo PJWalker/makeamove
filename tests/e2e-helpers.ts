@@ -4,7 +4,7 @@ export async function createCampaign(page: Page, name = "The Lost Barrows", syst
   await page.getByPlaceholder("The Lost Barrows").fill(name);
   await page.getByPlaceholder("Robin").first().fill("Tester");
   if (systemId) await page.getByLabel("System").selectOption(systemId);
-  await page.getByRole("button", { name: "Create campaign" }).click();
+  await page.getByRole("button", { name: "Create Campaign" }).click();
   await expect(page.locator('[aria-label="Scene: The Opening Scene"]')).toBeVisible();
 }
 

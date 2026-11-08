@@ -3,7 +3,7 @@ import type { Campaign } from "../../campaign/campaign";
 import { device } from "../../platform/device";
 import type { TokenStat } from "../../systems/types";
 import type { CharacterView } from "./types";
-import { canEditCharacter, characterView, derive } from "./store";
+import { canEditCharacter, characterView, derive, statBonus } from "./store";
 import { systemOf } from "./system";
 
 /*
@@ -65,4 +65,20 @@ export function selectedCharacterId(campaign: Campaign): string | undefined {
 
 export function canEdit(campaign: Campaign, c: CharacterView) {
   return canEditCharacter(c, device.value.id, campaign.isGm());
+}
+
+/**
+ * What each of the selected character's stats adds to a roll, by abbreviation,
+ * for the dice tray's stat chips. None without a character, or in a system
+ * whose stats aren't added to rolls.
+ */
+export function selectedStatBonuses(campaign: Campaign): { stat: string; value: number }[] {
+  const system = systemOf(campaign);
+  const c =
+    system.statsAddToRolls === false
+      ? undefined
+      : getCharacter(campaign, selectedCharacterId(campaign));
+  if (!c) return [];
+  const d = derive(c, system);
+  return system.stats.map((stat) => ({ stat: stat.abbr, value: statBonus(d, stat.id) }));
 }

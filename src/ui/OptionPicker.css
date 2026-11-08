@@ -1,7 +1,7 @@
 @layer components {
   .option-picker-trigger,
   .option-picker-value {
-    justify-self: start;
+    justify-self: end;
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -9,5 +9,10 @@
   }
   .option-picker-value {
     color: var(--text);
+  }
+  /* Block, not flex, so a long name ends in an ellipsis instead of clipping both ends. */
+  .option-picker .option-picker-trigger {
+    display: block;
+    text-align: start;
   }
 }

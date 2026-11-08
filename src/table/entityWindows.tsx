@@ -69,17 +69,31 @@ function load(): Record<string, EntityWindowRecord> {
 
 export const entityWindows = store<Record<string, EntityWindowRecord>>(load());
 
+const ENTRY_PREFIX = "entity:entry:";
+
+const entryKeysOf = (ids: Iterable<string>) =>
+  [...ids].filter((id) => id.startsWith(ENTRY_PREFIX)).map((id) => id.slice(ENTRY_PREFIX.length));
+
+/** Entries (rules, items, moves) with a window open, by entry key. */
+export const openEntries = store<string[]>(entryKeysOf(Object.keys(entityWindows.value)));
+
+// An entry stays open only while its window does, however that window was closed.
+let windowIds = new Set(Object.keys(entityWindows.value));
+entityWindows.subscribe(() => {
+  const closed = new Set(entryKeysOf([...windowIds].filter((id) => !(id in entityWindows.value))));
+  windowIds = new Set(Object.keys(entityWindows.value));
+  if (closed.size) openEntries.value = openEntries.value.filter((key) => !closed.has(key));
+});
+
 export const entityTabId = (key: string) => `entity:${key}` as const;
 
-function sameEntityWindow(a: EntityWindowRecord, b: EntityWindowRecord) {
+/** Whether the fields kept in localStorage (see `persist`) are unchanged. */
+function sameSavedFields(a: EntityWindowRecord, b: EntityWindowRecord) {
   return (
     a.title === b.title &&
     a.text === b.text &&
-    a.graphicDefaultIcon === b.graphicDefaultIcon &&
-    a.graphicRef?.kind === b.graphicRef?.kind &&
-    a.graphicRef?.id === b.graphicRef?.id &&
-    a.tags?.length === b.tags?.length &&
-    a.tags?.every((tag, index) => tag === b.tags?.[index])
+    (a.tags ?? []).length === (b.tags ?? []).length &&
+    (a.tags ?? []).every((tag, index) => tag === b.tags?.[index])
   );
 }
 
@@ -95,12 +109,10 @@ function persist(records: Record<string, EntityWindowRecord>) {
 
 export function registerEntityWindow(record: EntityWindowRecord) {
   const previous = entityWindows.value[record.id];
-  if (previous && sameEntityWindow(previous, record)) Object.assign(previous, record);
-  else {
-    const records = { ...entityWindows.value, [record.id]: { ...previous, ...record } };
-    entityWindows.value = records;
-    persist(records);
-  }
+  // Always a new record, so memoized windows see new content; only what's saved is persisted.
+  const records = { ...entityWindows.value, [record.id]: { ...previous, ...record } };
+  entityWindows.value = records;
+  if (!previous || !sameSavedFields(previous, record)) persist(records);
   if (locate(layout.value, record.id) === "closed") {
     detachPanel(record.id, Math.max(innerWidth / 2 - 190, 0), 96, 380, 440);
   }
@@ -165,11 +177,11 @@ function EntityPopup({ campaign, record }: { campaign: Campaign; record: EntityW
   };
   const items: MenuItem[] = [
     {
-      label: "Dock to left sidebar",
+      label: "Dock to Left Sidebar",
       onSelect: () => withTransition(() => dockPanel(record.id, "left")),
     },
     {
-      label: "Dock to right sidebar",
+      label: "Dock to Right Sidebar",
       onSelect: () => withTransition(() => dockPanel(record.id, "right")),
     },
     "divider",
@@ -195,9 +207,7 @@ function EntityPopup({ campaign, record }: { campaign: Campaign; record: EntityW
           <p className="muted item-tags">{record.tags.join(", ")}</p>
         )}
       </Dialog>
-      {menu && (
-        <ContextMenu {...menu} items={items} onClose={() => setMenu(null)} />
-      )}
+      {menu && <ContextMenu {...menu} items={items} onClose={() => setMenu(null)} />}
     </>
   );
 }
@@ -291,7 +301,7 @@ export function EntityWindowContent({
             disabled={!editable}
             onClick={() => selectedCharacter && addItem(campaign, selectedCharacter.id, entry.item)}
           >
-            {selectedCharacter ? `Give to ${selectedCharacter.name}` : "Choose a character"}
+            {selectedCharacter ? `Give to ${selectedCharacter.name}` : "Choose a Character"}
           </Button>
         </>
       );

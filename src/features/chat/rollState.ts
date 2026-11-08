@@ -1,4 +1,4 @@
-import { cryptoDie, roll, type Roll, type RolledDice } from "../dice/notation";
+import { cryptoDie, roll, type Roll, type RolledDice, type RolledFlat } from "../dice/notation";
 import { getState, setState, type MessageState } from "./messageState";
 
 export interface SharedRoll {
@@ -28,11 +28,13 @@ function recalculate(source: Roll): Roll {
   return { ...source, terms, total };
 }
 
+/** One seed per die, and one for each number term's chip. */
+const termSeeds = (term: Roll["terms"][number], seed: (index: number) => string) =>
+  term.kind === "dice" ? term.dice.map((_, index) => seed(index)) : [seed(0)];
+
 function seedsFor(messageId: string, source: Roll) {
   return source.terms.map((term, termIndex) =>
-    term.kind === "dice"
-      ? term.dice.map((_, dieIndex) => `${messageId}:${termIndex}:${dieIndex}`)
-      : [],
+    termSeeds(term, (index) => `${messageId}:${termIndex}:${index}`),
   );
 }
 
@@ -61,9 +63,7 @@ export function rerollMessage(state: MessageState, messageId: string, source: Ro
     messageId,
     next,
     next.terms.map((term, termIndex) =>
-      term.kind === "dice"
-        ? term.dice.map((_, dieIndex) => `${messageId}:${Date.now()}:${termIndex}:${dieIndex}`)
-        : [],
+      termSeeds(term, (index) => `${messageId}:${Date.now()}:${termIndex}:${index}`),
     ),
   );
 }
@@ -154,5 +154,44 @@ export function addRollDie(state: MessageState, messageId: string, source: Roll,
   }
   const row = seeds[termIndex] ?? [];
   seeds[termIndex] = [...row, `${messageId}:${Date.now()}:${termIndex}:${row.length}`];
+  storeRoll(state, messageId, recalculate({ ...current, terms, formula: formulaOf(terms) }), seeds);
+}
+
+/**
+ * Adds a number to a shared roll, thrown in as a chip of its own. A labelled
+ * one (a stat) is always a term of its own; a plain one is folded into the
+ * roll's first plain number, which is dropped if that brings it to zero.
+ */
+export function addRollModifier(
+  state: MessageState,
+  messageId: string,
+  source: Roll,
+  modifier: number,
+  label?: string,
+) {
+  const stored = getState<StoredRoll>(state, messageId, ROLL_FIELD);
+  const current = stored?.roll ?? source;
+  const seeds = [...(stored?.seeds ?? seedsFor(messageId, current))];
+  const terms = [...current.terms];
+  const termIndex = label ? -1 : terms.findIndex((term) => term.kind === "flat" && !term.label);
+  const term = terms[termIndex];
+  const value = (term?.kind === "flat" ? term.sign * term.value : 0) + modifier;
+  const next: RolledFlat = {
+    kind: "flat",
+    sign: value < 0 ? -1 : 1,
+    value: Math.abs(value),
+    ...(label ? { label } : {}),
+  };
+  const seed = [`${messageId}:${Date.now()}:${termIndex < 0 ? terms.length : termIndex}:0`];
+  if (termIndex < 0) {
+    terms.push(next);
+    seeds.push(seed);
+  } else if (value || terms.length === 1) {
+    terms[termIndex] = next;
+    seeds[termIndex] = seed;
+  } else {
+    terms.splice(termIndex, 1);
+    seeds.splice(termIndex, 1);
+  }
   storeRoll(state, messageId, recalculate({ ...current, terms, formula: formulaOf(terms) }), seeds);
 }

@@ -4,7 +4,9 @@ import { useEffect, useMemo, useRef } from "react";
 import { renderToReactElement } from "@tiptap/static-renderer/pm/react";
 import { type ChatContent } from "../features/chat/content";
 import type { ChatMessage, TextMessage } from "../features/chat/types";
-import { canEdit, getCharacter } from "../features/characters/api";
+import { canEdit, getCharacter, selectedCharacterId } from "../features/characters/api";
+import { TRACKER_NODE, type TrackerButton } from "../features/characters/trackers";
+import { TrackerButtonView } from "./FormattedText";
 import { stampTime } from "../lib/hlc";
 import type { Campaign } from "../campaign/campaign";
 import { device } from "../platform/device";
@@ -114,7 +116,7 @@ export const Message = memo(function Message({
             className="chat-go"
             onClick={() => campaign.setActiveScene(m.sceneId!)}
           >
-            Go there
+            Go There
           </Button>
         )}
       </div>
@@ -227,8 +229,17 @@ function Rich({ campaign, content }: { campaign: Campaign; content: ChatContent 
             />
           );
         },
+        [TRACKER_NODE]: ({ node }) => (
+          <ChatTrackerButton campaign={campaign} b={node.attrs as TrackerButton} />
+        ),
       },
     },
   });
   return rendered as unknown as ReactNode;
+}
+
+/** A button in a message changes the numbers of whichever character the viewer has selected. */
+function ChatTrackerButton({ campaign, b }: { campaign: Campaign; b: TrackerButton }) {
+  const characterId = useY(campaign.members, () => selectedCharacterId(campaign)) ?? null;
+  return <TrackerButtonView campaign={campaign} characterId={characterId} b={b} />;
 }

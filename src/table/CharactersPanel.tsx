@@ -21,11 +21,12 @@ import { setRelationship, setRelationshipDepth } from "../features/characters/re
 import type { CharacterView } from "../features/characters/types";
 import type { Campaign } from "../campaign/campaign";
 import { useY } from "../ui/useY";
-import type { CreationGuidance, GameSystem } from "../systems/types";
+import type { ChoiceDef, GameSystem } from "../systems/types";
+import { HintedField } from "../ui/HintedField";
 import { Button } from "../ui/Button";
 import { IconImage } from "../ui/icons";
 import { menuTrigger } from "../ui/menuTrigger";
-import { choicesAt } from "../features/characters/creation";
+import { CLASS_FIELD, choicesAt } from "../features/characters/creation";
 import {
   ChoiceField,
   creationResult,
@@ -125,21 +126,6 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
   );
 }
 
-/** The system's prompts for the choices made so far. */
-function CreationGuidanceView({ guidance }: { guidance: CreationGuidance }) {
-  return (
-    <details className="field class-creation-guidance">
-      <summary>{guidance.label}</summary>
-      {guidance.sections.map((section) => (
-        <Fragment key={section.heading}>
-          <h4>{section.heading}</h4>
-          <p>{section.text}</p>
-        </Fragment>
-      ))}
-    </details>
-  );
-}
-
 /** The left pane: characters, filed in folders. Drag a character onto a folder to file it. */
 function CharacterList({
   campaign,
@@ -167,7 +153,7 @@ function CharacterList({
     if (mine) dragged.folder = (folderId) => moveToFolder(campaign, c.id, folderId);
     else delete dragged.folder;
     const trigger = menuTrigger((x, y) => {
-      const items: MenuItem[] = [{ label: "Open character", onSelect: () => onPick(c.id) }];
+      const items: MenuItem[] = [{ label: "Open Character", onSelect: () => onPick(c.id) }];
       if (mine) {
         for (const f of folders) {
           if (f.id !== c.folder)
@@ -179,17 +165,17 @@ function CharacterList({
         }
         if (c.folder && known.has(c.folder))
           items.push({
-            label: "Remove from folder",
+            label: "Remove from Folder",
             onSelect: () => moveToFolder(campaign, c.id, undefined),
           });
         if (items.length) items.push("divider");
         items.push({
-          label: "Change graphic…",
+          label: "Change Graphic…",
           Icon: IconImage,
           onSelect: () => editEntityGraphic(campaign, "character", c.id, c.name),
         });
         items.push({
-          label: "Delete character…",
+          label: "Delete Character…",
           Icon: IconDelete,
           danger: true,
           onSelect: () => setDeleting(c.id),
@@ -243,20 +229,20 @@ function CharacterList({
               New
             </Button>
             <Button size="sm" variant="ghost" onClick={beginFolderNaming}>
-              New folder
+              New Folder
             </Button>
           </>
         )}
         folderMenuItems={(folder, { open, toggle, rename }) => [
-          { label: "New character here", onSelect: () => onNew(folder.id) },
+          { label: "New Character Here", onSelect: () => onNew(folder.id) },
           {
-            label: open ? "Collapse folder" : "Expand folder",
+            label: open ? "Collapse Folder" : "Expand Folder",
             onSelect: toggle,
           },
           "divider",
-          { label: "Rename folder", Icon: IconRename, onSelect: rename },
+          { label: "Rename Folder", Icon: IconRename, onSelect: rename },
           {
-            label: "Delete folder",
+            label: "Delete Folder",
             Icon: IconDelete,
             danger: true,
             onSelect: () => deleteFolder(campaign, folder.id),
@@ -337,16 +323,34 @@ function NewCharacter({
     existingPcs.some((character) => character.data[distinct.field] === choiceData[distinct.field]);
   const startingRelationship =
     kind === "pc" && existingPcs.length > 0 ? creation?.startingRelationship : undefined;
-  const guidance = creation?.guidance?.({ ...defaults, ...choiceData });
+  const scoreRule = creation?.classScoreRules?.[String(choiceData[CLASS_FIELD] ?? "")];
+  const hints = creation?.hints?.({ ...defaults, ...choiceData }) ?? {};
   const creationChoicesReady =
     !creation?.requireAllCreationChoicesAtCreate ||
     choices.every((choice) => choice.optional || !!picks[choice.id]?.option);
   const ready =
     kind === "npc" ||
     !creation ||
-    (scoresReady(creation.scores, method, scores) &&
+    (scoresReady(system, creation.scores, method, scores, scoreRule) &&
       creationChoicesReady &&
       (!startingRelationship || !!relationshipTo));
+  const classChoice = choices.find((choice) => choice.field === CLASS_FIELD);
+  const otherChoices = choices.filter((choice) => choice !== classChoice);
+  const choiceField = (choice: ChoiceDef) => (
+    <Fragment key={choice.id}>
+      <ChoiceField
+        system={system}
+        choice={choice}
+        value={picks[choice.id] ?? emptyPick()}
+        onChange={(p) => setPicks({ ...picks, [choice.id]: p })}
+      />
+      {repeatsChoice && distinct?.field === choice.field && (
+        <p className="muted" role="status">
+          {distinct.note}
+        </p>
+      )}
+    </Fragment>
+  );
   const submit = () => {
     if (!ready) return;
     if (kind === "npc") newNpc(campaign, name, folder || undefined);
@@ -355,7 +359,7 @@ function NewCharacter({
       if (made)
         for (const { field } of creation?.identity?.fields ?? [])
           made.data[field] = (identity[field] ?? "").trim();
-      const id = newCharacter(campaign, name, String(choiceData.classId ?? ""), made);
+      const id = newCharacter(campaign, name, String(choiceData[CLASS_FIELD] ?? ""), made);
       const startingItemsField = creation?.startingItemsField;
       if (startingItemsField && made) {
         for (const itemId of commaListOf(made.data[startingItemsField])) {
@@ -386,7 +390,7 @@ function NewCharacter({
       }}
     >
       {isGm && (
-        <div className="field">
+        <div className="field field-inline">
           Type
           <Segmented
             label="Character type"
@@ -399,32 +403,41 @@ function NewCharacter({
           />
         </div>
       )}
-      <label className="field">
-        Name
-        <input value={name} onInput={(e) => setName(e.currentTarget.value)} autoFocus />
-      </label>
+      {kind === "pc" && classChoice && choiceField(classChoice)}
+      <HintedField label="Name" hint={kind === "pc" ? hints.name : undefined}>
+        {(input) => (
+          <input
+            {...input}
+            value={name}
+            onInput={(e) => setName(e.currentTarget.value)}
+            autoFocus
+          />
+        )}
+      </HintedField>
       {kind === "pc" && creation && (
         <>
           {creation.identity && (
             <fieldset className="form-section creation-identity">
               <legend>{creation.identity.label}</legend>
               {creation.identity.fields.map(({ field, label }) => (
-                <label key={field} className="field">
-                  {label}
-                  <input
-                    value={identity[field] ?? ""}
-                    onInput={(event) =>
-                      setIdentity({ ...identity, [field]: event.currentTarget.value })
-                    }
-                  />
-                </label>
+                <HintedField key={field} label={label} hint={hints.identity?.[field]}>
+                  {(input) => (
+                    <input
+                      {...input}
+                      value={identity[field] ?? ""}
+                      onInput={(event) =>
+                        setIdentity({ ...identity, [field]: event.currentTarget.value })
+                      }
+                    />
+                  )}
+                </HintedField>
               ))}
             </fieldset>
           )}
           {startingRelationship && (
             <fieldset className="form-section creation-relationship">
               <legend>Relationship</legend>
-              <label className="field">
+              <label className="field field-inline">
                 PC
                 <select
                   required
@@ -440,15 +453,17 @@ function NewCharacter({
                   ))}
                 </select>
               </label>
-              <label className="field">
-                Relationship
-                <textarea
-                  rows={2}
-                  value={relationshipText}
-                  onInput={(event) => setRelationshipText(event.currentTarget.value)}
-                />
-              </label>
-              <label className="field">
+              <HintedField label="Relationship" hint={hints.relationship}>
+                {(input) => (
+                  <textarea
+                    {...input}
+                    rows={2}
+                    value={relationshipText}
+                    onInput={(event) => setRelationshipText(event.currentTarget.value)}
+                  />
+                )}
+              </HintedField>
+              <label className="field field-inline">
                 Shared history
                 <select
                   value={relationshipDepth}
@@ -463,39 +478,24 @@ function NewCharacter({
               </label>
             </fieldset>
           )}
-          {choices.map((ch) => (
-            <ChoiceField
-              key={ch.id}
-              system={system}
-              choice={ch}
-              value={picks[ch.id] ?? emptyPick()}
-              onChange={(p) => setPicks({ ...picks, [ch.id]: p })}
-            />
-          ))}
-          {repeatsChoice && distinct && (
-            <p className="muted" role="status">
-              {distinct.note}
-            </p>
-          )}
-          {guidance && <CreationGuidanceView guidance={guidance} />}
+          {otherChoices.map(choiceField)}
           {creation && (
             <ScoreFields
-              key={String(choiceData.classId ?? "generic")}
+              key={String(choiceData[CLASS_FIELD] ?? "generic")}
               system={system}
               methods={creation.scores}
               method={method}
               onMethod={setMethod}
               scores={scores}
               onScores={setScores}
-              {...(creation.classScoreAssignments?.[String(choiceData.classId ?? "")]
-                ? { assignments: creation.classScoreAssignments[String(choiceData.classId ?? "")] }
-                : {})}
+              hint={hints.scores}
+              rule={scoreRule}
             />
           )}
         </>
       )}
       {folders.length > 0 && (
-        <label className="field">
+        <label className="field field-inline">
           Folder
           <select value={folder} onChange={(e) => setFolder(e.currentTarget.value)}>
             <option value="">None</option>
@@ -507,12 +507,12 @@ function NewCharacter({
           </select>
         </label>
       )}
-      <div className="sheet-row">
-        <Button variant="primary" size="sm" type="submit" disabled={!ready}>
-          Create
-        </Button>
+      <div className="form-actions">
         <Button variant="ghost" size="sm" onClick={onDone}>
           Cancel
+        </Button>
+        <Button variant="primary" size="sm" type="submit" disabled={!ready}>
+          Create
         </Button>
       </div>
     </form>

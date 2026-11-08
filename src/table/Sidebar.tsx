@@ -19,7 +19,7 @@ import {
   layout,
   shownLayout,
   otherSide,
-  selectPanel,
+  setSideOpen,
   reorderPanel,
   setPanelClosed,
   setSideWidth,
@@ -132,11 +132,11 @@ function tabMenu(id: DockItemId, side: Side): MenuItem[] {
       { label: "Open", onSelect: () => showPanel(id) },
       "divider",
       {
-        label: `Move to ${other} sidebar`,
+        label: other === "left" ? "Move to Left Sidebar" : "Move to Right Sidebar",
         onSelect: () => withTransition(() => dockPanel(id, other)),
       },
       {
-        label: "Float in a window",
+        label: "Float in a Window",
         onSelect: () => detachPanel(id, Math.max(innerWidth / 2 - 190, 0), 96, 380, 440),
       },
       "divider",
@@ -151,11 +151,11 @@ function tabMenu(id: DockItemId, side: Side): MenuItem[] {
     { label: "Open", onSelect: () => showPanel(id) },
     "divider",
     {
-      label: `Move to ${other} sidebar`,
+      label: other === "left" ? "Move to Left Sidebar" : "Move to Right Sidebar",
       onSelect: () => withTransition(() => dockPanel(id, other)),
     },
     {
-      label: "Float in a window",
+      label: "Float in a Window",
       onSelect: () => detachPanel(id, Math.max(innerWidth / 2 - 170, 0), 120),
     },
     "divider",
@@ -289,18 +289,26 @@ function SidebarResizeHandle({ side }: { side: Side }) {
 }
 
 /**
- * Select a tab. When one docked panel replaces another, the content slides
- * the way the tabs are stacked: down the strip slides up, up the strip slides down.
+ * Click a tab: the open tab closes its sidebar; any other shows its panel.
+ * What a click does is decided from what was showing when it was clicked, so
+ * clicks made while an earlier switch is still animating apply in order.
+ * When one docked panel replaces another, the content slides the way the tabs
+ * are stacked: down the strip slides up, up the strip slides down.
  */
 function switchTo(id: DockItemId, side: Side) {
   const s = shownLayout.value[side];
   const from = s.active;
-  const replacing = s.open && from !== null && from !== id;
-  const direction =
-    from !== null && s.panels.indexOf(id) > s.panels.indexOf(from) ? "vt-tab-next" : "vt-tab-prev";
-  withTransition(() => selectPanel(id), {
-    ...(replacing ? { rootClass: direction } : {}),
-  });
+  if (s.open && from === id) {
+    setSideOpen(side, false);
+    return;
+  }
+  // Opening slides the sidebar by CSS transition, which keeps it clickable throughout.
+  if (!s.open || from === null) {
+    showPanel(id);
+    return;
+  }
+  const direction = s.panels.indexOf(id) > s.panels.indexOf(from) ? "vt-tab-next" : "vt-tab-prev";
+  withTransition(() => showPanel(id), { rootClass: direction });
 }
 
 /** How many members are online, counting this device. */
@@ -352,9 +360,7 @@ function RailTab({
       }
       aria-selected={selected}
       pressed={selected}
-      data-unread={
-        id === "chat" && unread > 0 ? Math.min(unread, 99) : undefined
-      }
+      data-unread={id === "chat" && unread > 0 ? Math.min(unread, 99) : undefined}
       data-online={id === "members" ? onlineCount : undefined}
       onClick={() => switchTo(id, side)}
       {...withPull(onPointerDown, onMenu)}

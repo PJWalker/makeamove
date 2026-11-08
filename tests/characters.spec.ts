@@ -17,7 +17,10 @@ test("a GM can create an NPC", async ({ page }) => {
 test("a GM can create a PC with common description and GM notes", async ({ page }) => {
   await createCampaign(page, "Character notes test");
   await openCharacters(page);
-  await page.locator('.sheet-new input:not([type="radio"]):not([type="checkbox"])').first().fill("Ayla");
+  await page
+    .locator('.sheet-new input:not([type="radio"]):not([type="checkbox"])')
+    .first()
+    .fill("Ayla");
   await page.getByRole("button", { name: "Create", exact: true }).click();
 
   await expect(page.getByRole("textbox", { name: "Description" })).toBeVisible();
@@ -28,11 +31,11 @@ test("the system-less default starts a usable campaign", async ({ page }) => {
   await page.locator('input[placeholder="The Lost Barrows"]').fill("Freeform Table");
   await page.locator('input[placeholder="Robin"]').first().fill("Tester");
   await expect(page.getByLabel("System")).toHaveValue("none");
-  await page.getByRole("button", { name: "Create campaign" }).click();
+  await page.getByRole("button", { name: "Create Campaign" }).click();
 
   await expect(page.locator('[aria-label="Scene: The Opening Scene"]')).toBeVisible();
   await page.getByRole("tab", { name: "Notes" }).click();
-  await expect(page.getByRole("button", { name: "New page" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "New Page" })).toBeVisible();
 
   await openCharacters(page);
   await page

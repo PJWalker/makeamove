@@ -69,7 +69,7 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
     const primary =
       e.kind === "gear"
         ? {
-            label: me ? `Add to ${me.name}` : "Choose a character",
+            label: me ? `Add to ${me.name}` : "Choose a Character",
             disabled: !canAct,
             onSelect: () => {
               if (me && canAct) addItem(campaign, me.id, e.item);
@@ -121,10 +121,10 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
     <div className="panel-scroll items-panel">
       <PanelActions>
         <Button size="sm" onClick={() => setEditing({ kind: "gear", id: null })}>
-          <IconAdd size={22} /> New gear
+          <IconAdd size={22} /> New Gear
         </Button>
         <Button size="sm" onClick={() => setEditing({ kind: "move", id: null })}>
-          <IconAdd size={22} /> New move
+          <IconAdd size={22} /> New Move
         </Button>
       </PanelActions>
       {!entries.length && <p className="empty">No gear or moves yet.</p>}
@@ -299,15 +299,19 @@ function GearForm({
   const [uses, setUses] = useState(initial?.uses ?? 0);
   const [tags, setTags] = useState((initial?.tags ?? []).join(", "));
   const [equippable, setEquippable] = useState(initial?.equippable ?? false);
-  const [graphic, setGraphic] = useState<EntityGraphic | undefined>(initial?.id ? campaign.entityGraphics.get(`item:${initial.id}`) : undefined);
+  const [graphic, setGraphic] = useState<EntityGraphic | undefined>(
+    initial?.id ? campaign.entityGraphics.get(`item:${initial.id}`) : undefined,
+  );
   const [resetGraphic, setResetGraphic] = useState(false);
-  const [effects, setEffects] = useState<EffectRow[]>((initial?.effects ?? []).flatMap((e): EffectRow[] =>
+  const [effects, setEffects] = useState<EffectRow[]>(
+    (initial?.effects ?? []).flatMap((e): EffectRow[] =>
       e.type === "rollBonus"
         ? [{ type: "rollBonus", stat: e.stat ?? "", value: e.value }]
         : e.type === "modify" && e.op === "add"
           ? [{ type: "modify", path: e.path, value: e.value }]
           : [],
-    ));
+    ),
+  );
   const ready = !!name.trim();
   const save = () => {
     if (!ready) return;
@@ -330,9 +334,7 @@ function GearForm({
     onDone();
   };
   const setEffect = (i: number, patch: Partial<EffectRow>) =>
-    setEffects(effects.map((e, j) =>
-      j === i ? ({ ...e, ...patch } as EffectRow) : e,
-    ));
+    setEffects(effects.map((e, j) => (j === i ? ({ ...e, ...patch } as EffectRow) : e)));
 
   return (
     <form
@@ -356,11 +358,7 @@ function GearForm({
       <section className="form-section">
         <h4 className="form-heading">Appearance and use</h4>
         <label className="stat-deb">
-          <input
-            type="checkbox"
-            checked={equippable}
-            onChange={() => setEquippable(!equippable)}
-          />
+          <input type="checkbox" checked={equippable} onChange={() => setEquippable(!equippable)} />
           Equippable
         </label>
         <GraphicPicker
@@ -440,9 +438,7 @@ function GearForm({
           <Button
             size="sm"
             variant="ghost"
-            onClick={() =>
-              setEffects([...effects, { type: "rollBonus", stat: "", value: 1 }])
-            }
+            onClick={() => setEffects([...effects, { type: "rollBonus", stat: "", value: 1 }])}
           >
             <IconAdd size={22} /> Add effect
           </Button>
@@ -468,15 +464,23 @@ function MoveForm({
 }) {
   const check = initial?.steps.find((s): s is CheckStep => s.kind === "check");
   const [name, setName] = useState(initial?.name ?? "");
-  const [category, setCategory] = useState(initial?.category ?? system.actionCategories[0]?.id ?? "");
+  const [category, setCategory] = useState(
+    initial?.category ?? system.actionCategories[0]?.id ?? "",
+  );
   const [trigger, setTrigger] = useState(initial?.trigger ?? "");
   const [text, setText] = useState(initial?.text ?? "");
-  const [graphic, setGraphic] = useState<EntityGraphic | undefined>(initial?.id ? campaign.entityGraphics.get(`move:${initial.id}`) : undefined);
+  const [graphic, setGraphic] = useState<EntityGraphic | undefined>(
+    initial?.id ? campaign.entityGraphics.get(`move:${initial.id}`) : undefined,
+  );
   const [resetGraphic, setResetGraphic] = useState(false);
-  const [rolls, setRolls] = useState<RollKind>(!check ? "none" : check.ask?.kind === "stat" ? "ask" : "stat");
+  const [rolls, setRolls] = useState<RollKind>(
+    !check ? "none" : check.ask?.kind === "stat" ? "ask" : "stat",
+  );
   const [stat, setStat] = useState(check?.stat ?? system.stats[0]?.id ?? "");
   const [outcomes, setOutcomes] = useState<Record<string, string>>(check?.outcomes ?? {});
-  const [targets, setTargets] = useState(initial?.target ? (initial.target.max === 1 ? "one" : "many") : "none");
+  const [targets, setTargets] = useState(
+    initial?.target ? (initial.target.max === 1 ? "one" : "many") : "none",
+  );
   const [range, setRange] = useState(initial?.target?.range?.normal ?? 0);
   const ready = !!name.trim();
 
@@ -488,9 +492,7 @@ function MoveForm({
         : [
             {
               kind: "check",
-              ...(rolls === "stat"
-                ? { stat: stat }
-                : { ask: { kind: "stat" as const } }),
+              ...(rolls === "stat" ? { stat: stat } : { ask: { kind: "stat" as const } }),
               outcomes: Object.fromEntries(
                 system.results.map((r) => [r.id, outcomes[r.id]?.trim() ?? ""]),
               ),
@@ -626,7 +628,8 @@ function MoveForm({
           {targets !== "none" && (
             <NumberFieldInline
               label={`Range (${system.scene.unitName}, 0 for any)`}
-              value={range} onChange={setRange}
+              value={range}
+              onChange={setRange}
             />
           )}
         </div>
@@ -675,6 +678,7 @@ function FormActions({
       {id && (
         <Button
           variant="danger"
+          className="form-actions-start"
           onClick={() => {
             deleteHomebrew(campaign.homebrew, id);
             onDone();

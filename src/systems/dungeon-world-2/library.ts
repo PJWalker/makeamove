@@ -1,7 +1,7 @@
 import type { ActionDef, ItemDef, LibraryLayoutCollection, LibraryNode } from "../types";
 import { PATHS } from "./paths";
 import { CLASS_STARTING } from "./startingOptions";
-import { STRUGGLES } from "./struggles";
+import { STRUGGLES, struggleEntryId } from "./struggles";
 
 /*
  * How Dungeon World 2 lays out its Libraries: moves by the rulebook's
@@ -188,7 +188,7 @@ export function dw2Library({
       name: "Struggles",
       kind: "option",
       entries: STRUGGLES.map((struggle) => ({
-        entity: { id: `struggle-${struggle.id}`, name: struggle.name, text: struggle.text },
+        entity: { id: struggleEntryId(struggle), name: struggle.name, text: struggle.text },
         ...(struggle.track ? { note: `${struggle.track.name} track (${struggle.track.max})` } : {}),
       })),
     },

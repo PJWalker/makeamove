@@ -27,6 +27,7 @@ import { actionsFor, derive } from "../../features/characters/store";
 import type { DataValue } from "../../core/types";
 import { commaListOf, formatCommaList } from "../../lib/list";
 import { DW2_RELATIONSHIP_DEPTH } from "./bondStore";
+import { revealedStruggleData, STRUGGLES } from "./struggles";
 import {
   addTreasureBoxes,
   DW2_SERVICES,
@@ -51,6 +52,19 @@ export const WEAPON_TAGS = new Set([
   "thrown",
   "piercing",
 ]);
+
+/** Reveal a DW2 Struggle on a PC with none revealed, as when they confess one while they Make Camp. */
+export function revealStruggle(campaign: Campaign, id: string, struggleId: string): boolean {
+  const character = getCharacter(campaign, id);
+  const struggle = STRUGGLES.find((entry) => entry.id === struggleId);
+  if (character?.kind !== "pc" || character.data.struggleRevealed === true || !struggle)
+    return false;
+  campaign.doc.transact(() => {
+    for (const [field, value] of Object.entries(revealedStruggleData(struggle)))
+      setData(campaign, id, field, value);
+  });
+  return true;
+}
 
 /** Resolve the active DW2 Struggle, level up without clearing XP, and remove its advancement marker. */
 export function resolveStruggle(campaign: Campaign, id: string): boolean {

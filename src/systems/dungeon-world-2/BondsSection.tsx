@@ -174,9 +174,7 @@ export function Dw2Bonds({
               <Button
                 size="sm"
                 variant="secondary"
-                disabled={
-                  !bondmateId || !bondType || (reinforcing && !bondMoveId)
-                }
+                disabled={!bondmateId || !bondType || (reinforcing && !bondMoveId)}
                 onClick={() => {
                   const changed = reinforcing
                     ? advanceBond(

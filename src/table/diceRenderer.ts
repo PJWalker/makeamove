@@ -2,6 +2,7 @@ import {
   BoxGeometry,
   BufferGeometry,
   CanvasTexture,
+  CylinderGeometry,
   DirectionalLight,
   DodecahedronGeometry,
   EdgesGeometry,
@@ -27,7 +28,7 @@ import {
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
 import { playDiceImpact } from "../ui/sounds";
-import { PHYSICS_STEP, simulateDice, type DieHull, type DiePose } from "./diePhysics";
+import { discHull, PHYSICS_STEP, simulateDice, type DieHull, type DiePose } from "./diePhysics";
 
 /*
  * Dice in 3D. One small renderer draws a die and the result is copied into the
@@ -40,11 +41,14 @@ export interface Point {
   x: number;
   y: number;
 }
+/** A die showing `value`, or a flat round chip with `chip` on both faces (lines split by \n). */
+export type Piece = { sides: number; value: number; seed: string } | { chip: string; seed: string };
+
 export interface DiceRenderer {
   mount(
     canvas: HTMLCanvasElement,
     slot: HTMLElement,
-    die: { sides: number; value: number; seed: string },
+    piece: Piece,
     thrown?: { from: Point; delay: number },
   ): { landed: Promise<void>; dispose(): void };
   /**
@@ -57,13 +61,28 @@ export interface DiceRenderer {
 /** A die's canvas, in CSS px; dice are drawn at SCALE px per unit. */
 const SLOT = 64;
 const SCALE = 24;
-/** Settled dice glide into their slots, starting this long before the roll ends. */
-const GLIDE_LEAD_MS = 800;
-const GLIDE_MS = 650;
+/**
+ * Settling dice are pulled into their slots, starting this long before the roll
+ * ends, and this much sooner for every px they'll come to rest from their slot.
+ */
+const PULL_LEAD_MS = 800;
+const PULL_LEAD_PER_PX_MS = 1.5;
+/** The pull's spring: its natural frequency (radians/s) and damping ratio, low enough to overshoot. */
+const PULL_STIFFNESS = 12;
+const PULL_DAMPING = 0.75;
+/** Seconds per step of the pull's spring, whatever the frame rate. */
+const PULL_STEP = 1 / 240;
+/** Close enough to its slot, in px and px/s, for a pulled die to drop into it. */
+const PULL_REST = 0.5;
+const PULL_REST_SPEED = 20;
 /** Radians per second a carried die tumbles at, and how long it takes to settle back. */
 const SPIN_SPEED = 12;
 const SETTLE_MS = 220;
 const Z = new Vector3(0, 0, 1);
+const Y = new Vector3(0, 1, 0);
+/** A chip's radius and thickness, in units. */
+const CHIP_RADIUS = 0.95;
+const CHIP_THICKNESS = 0.22;
 
 type Tone = "plain" | "max" | "min";
 const TONE_TOKEN: Record<Tone, string> = {
@@ -84,6 +103,11 @@ interface Face {
   size: number;
   points: Vector3[];
 }
+/** A die or token ready to draw; dispose() frees its labels. */
+interface Drawn {
+  die: Mesh;
+  dispose(): void;
+}
 interface Shape {
   geometry: BufferGeometry;
   edges: EdgesGeometry;
@@ -91,6 +115,8 @@ interface Shape {
   hull: DieHull;
   /** The pose that turns the first face to the viewer. */
   rest: Quaternion;
+  /** How each face's label is turned on the die: the first reads upright at rest. */
+  labelRotations: Quaternion[];
 }
 
 /** A d10: ten kites, which stay flat when the poles stand this far above the zig-zag rim. */
@@ -209,10 +235,37 @@ function shapeFor(sides: number): Shape {
     const tip = far.clone().sub(first.centre).applyQuaternion(rest);
     rest.premultiply(new Quaternion().setFromAxisAngle(Z, Math.PI / 2 - Math.atan2(tip.y, tip.x)));
   }
-  shape = { geometry, edges: new EdgesGeometry(geometry), faces, hull, rest };
+  const labelRotations = faces.map((face, index) =>
+    index === 0 ? rest.clone().invert() : face.rotation,
+  );
+  shape = {
+    geometry,
+    edges: new EdgesGeometry(geometry),
+    faces,
+    hull: {
+      ...hull,
+      labelUps: labelRotations.map((rotation) => Y.clone().applyQuaternion(rotation).toArray()),
+      faceUp: key === 4,
+    },
+    rest,
+    labelRotations,
+  };
   shapes.set(key, shape);
   return shape;
 }
+
+let chipGeometry: CylinderGeometry | undefined;
+/** A chip: a flat disc, its faces towards and away from the viewer. Groups: rim, front, back. */
+function chipShape() {
+  if (chipGeometry) return chipGeometry;
+  chipGeometry = new CylinderGeometry(CHIP_RADIUS, CHIP_RADIUS, CHIP_THICKNESS, 48);
+  chipGeometry.rotateX(Math.PI / 2);
+  return chipGeometry;
+}
+const chipHull = discHull(CHIP_RADIUS, CHIP_THICKNESS);
+// Both labels read upright with the chip unturned; the back's is flipped about Y.
+chipHull.labelUps = chipHull.faces.map(() => Y.toArray());
+const hullOf = (piece: Piece) => ("chip" in piece ? chipHull : shapeFor(piece.sides).hull);
 
 const probe = document.createElement("canvas").getContext("2d", { willReadFrequently: true })!;
 /** A colour token as rgb(), which three can read; the tokens are written in oklch. */
@@ -259,12 +312,73 @@ export function createDiceRenderer(): DiceRenderer {
     ]),
   ) as Record<Tone, MeshPhysicalMaterial>;
   const edgeMaterial = new LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 });
+  // Satin rather than glossy: a flat face turned to the light would shine its label away.
+  const chipFace = materials.plain.clone();
+  chipFace.flatShading = false;
+  chipFace.roughness = 0.55;
+  chipFace.clearcoat = 0.3;
+  chipFace.iridescence = 0;
+  const chipRim = chipFace.clone();
+
+  /**
+   * A face's number or text, drawn on a square `size` units across, facing +Z.
+   * Text of two lines puts a smaller caption over the main line.
+   */
+  function label(text: string, colour: string, size: number) {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 128;
+    const context = canvas.getContext("2d")!;
+    const font = (px: number) => `700 ${px}px ${getComputedStyle(document.body).fontFamily}`;
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillStyle = colour;
+    const [first, second] = text.split("\n");
+    if (second === undefined) {
+      context.font = font(104);
+      context.fillText(text, 64, 67, 120);
+    } else {
+      context.font = font(38);
+      context.fillText(first!, 64, 38, 96);
+      context.font = font(64);
+      context.fillText(second, 64, 84, 104);
+    }
+    const map = new CanvasTexture(canvas);
+    map.colorSpace = SRGBColorSpace;
+    return new Mesh(
+      new PlaneGeometry(size, size),
+      new MeshBasicMaterial({ map, transparent: true, depthWrite: false }),
+    );
+  }
+  const disposeLabels = (labels: ReturnType<typeof label>[]) => () => {
+    for (const mesh of labels) {
+      mesh.geometry.dispose();
+      mesh.material.map?.dispose();
+      mesh.material.dispose();
+    }
+  };
+
+  /** A chip with `text` on both faces, in the colour `--chip-face` has where `canvas` sits. */
+  function chipMesh(text: string, canvas: HTMLCanvasElement): Drawn {
+    const face = token("--chip-face", canvas);
+    chipFace.color.set(face);
+    chipRim.color.set(face).multiplyScalar(0.5);
+    const disc = new Mesh(chipShape(), [chipRim, chipFace, chipFace]);
+    disc.scale.setScalar(SCALE);
+    const labels = [1, -1].map((side) => {
+      const mesh = label(text, token("--text"), CHIP_RADIUS * 1.3);
+      mesh.position.z = side * (CHIP_THICKNESS / 2 + 0.003);
+      if (side < 0) mesh.rotation.y = Math.PI;
+      disc.add(mesh);
+      return mesh;
+    });
+    return { die: disc, dispose: disposeLabels(labels) };
+  }
 
   /**
    * A die showing `value` on its first face, with every face numbered, in the
    * colours of the slot `canvas` sits in; dispose() frees its labels.
    */
-  function dieMesh(shape: Shape, value: number, sides: number, canvas: HTMLCanvasElement) {
+  function dieMesh(shape: Shape, value: number, sides: number, canvas: HTMLCanvasElement): Drawn {
     for (const tone of ["plain", "max", "min"] as const)
       materials[tone].color.set(token(TONE_TOKEN[tone], canvas));
     const die = new Mesh(
@@ -273,36 +387,16 @@ export function createDiceRenderer(): DiceRenderer {
     );
     die.scale.setScalar(SCALE);
     die.add(new LineSegments(shape.edges, edgeMaterial));
-    const font = `700 104px ${getComputedStyle(document.body).fontFamily}`;
     const labels = shape.faces.map((face, index) => {
       const number = faceValue(value, index, sides);
-      const canvas = document.createElement("canvas");
-      canvas.width = canvas.height = 128;
-      const context = canvas.getContext("2d")!;
-      context.font = font;
-      context.textAlign = "center";
-      context.textBaseline = "middle";
-      context.fillStyle = token(toneOf(number, sides) === "max" ? "--accent-ink" : "--text");
-      context.fillText(String(number), 64, 67, 120);
-      const map = new CanvasTexture(canvas);
-      map.colorSpace = SRGBColorSpace;
-      const label = new Mesh(
-        new PlaneGeometry(face.size, face.size),
-        new MeshBasicMaterial({ map, transparent: true, depthWrite: false }),
-      );
-      label.position.copy(face.centre).addScaledVector(face.normal, 0.003);
-      label.quaternion.copy(index === 0 ? shape.rest.clone().invert() : face.rotation);
-      die.add(label);
-      return label;
+      const colour = token(toneOf(number, sides) === "max" ? "--accent-ink" : "--text");
+      const mesh = label(String(number), colour, face.size);
+      mesh.position.copy(face.centre).addScaledVector(face.normal, 0.003);
+      mesh.quaternion.copy(shape.labelRotations[index]!);
+      die.add(mesh);
+      return mesh;
     });
-    const dispose = () => {
-      for (const label of labels) {
-        label.geometry.dispose();
-        label.material.map?.dispose();
-        label.material.dispose();
-      }
-    };
-    return { die, dispose };
+    return { die, dispose: disposeLabels(labels) };
   }
 
   function draw(die: Mesh, canvas: HTMLCanvasElement) {
@@ -319,38 +413,55 @@ export function createDiceRenderer(): DiceRenderer {
     context.drawImage(source, 0, 0);
   }
 
-  /** How each landed die is drawn: its first face's number and its pose. */
+  /** How each landed die or token is drawn again, into another canvas, and its pose. */
   const posed = new WeakMap<
     HTMLCanvasElement,
-    { sides: number; value: number; rotation: Quaternion }
+    { build: (canvas: HTMLCanvasElement) => Drawn; rotation: Quaternion }
   >();
 
-  /** Draws a die at rest in its slot's canvas. */
-  function still(canvas: HTMLCanvasElement, sides: number, value: number) {
-    const shape = shapeFor(sides);
-    const { die, dispose } = dieMesh(shape, value, sides, canvas);
-    die.quaternion.copy(shape.rest);
+  /** Draws a die or token at rest in its slot's canvas. */
+  function still(
+    canvas: HTMLCanvasElement,
+    build: (canvas: HTMLCanvasElement) => Drawn,
+    rotation: Quaternion,
+  ) {
+    const { die, dispose } = build(canvas);
+    die.quaternion.copy(rotation);
     draw(die, canvas);
     dispose();
-    posed.set(canvas, { sides, value, rotation: shape.rest });
+    posed.set(canvas, { build, rotation });
+  }
+  const stillPiece = (canvas: HTMLCanvasElement, piece: Piece) =>
+    "chip" in piece
+      ? still(canvas, (into) => chipMesh(piece.chip, into), new Quaternion())
+      : still(
+          canvas,
+          (into) => dieMesh(shapeFor(piece.sides), piece.value, piece.sides, into),
+          shapeFor(piece.sides).rest,
+        );
+
+  /** How a landed piece is drawn: a die numbered so the face that lands up shows its roll. */
+  function landedAs(piece: Piece, final: Quaternion): (canvas: HTMLCanvasElement) => Drawn {
+    if ("chip" in piece) return (into) => chipMesh(piece.chip, into);
+    const shape = shapeFor(piece.sides);
+    const up = shape.faces.map((face) => face.normal.clone().applyQuaternion(final).z);
+    const top = up.indexOf(Math.max(...up));
+    const first = ((piece.value - 1 - top + piece.sides) % piece.sides) + 1;
+    return (into) => dieMesh(shape, first, piece.sides, into);
   }
 
   const quaternion = (q: DiePose["quaternion"]) => new Quaternion(q.x, q.y, q.z, q.w);
 
-  /** Plays one die's simulated flight over the window, from where it was thrown into its slot. */
+  /** Plays one piece's simulated flight over the window, from where it was thrown into its slot. */
   function fly(job: Job, tray: HTMLElement, frames: DiePose[], start: number) {
-    const { canvas, slot, die: roll, thrown } = job;
-    const shape = shapeFor(roll.sides);
+    const { canvas, slot, piece, thrown } = job;
     const rest = frames.at(-1)!;
     const final = quaternion(rest.quaternion);
-    // Number the faces so the one that lands facing up shows the roll.
-    const up = shape.faces.map((face) => face.normal.clone().applyQuaternion(final).z);
-    const top = up.indexOf(Math.max(...up));
-    const first = ((roll.value - 1 - top + roll.sides) % roll.sides) + 1;
-    const { die, dispose } = dieMesh(shape, first, roll.sides, canvas);
+    const build = landedAs(piece, final);
+    const { die, dispose } = build(canvas);
     die.quaternion.copy(final);
     draw(die, canvas);
-    posed.set(canvas, { sides: roll.sides, value: first, rotation: final });
+    posed.set(canvas, { build, rotation: final });
 
     const air = document.createElement("canvas");
     air.className = "dice-flight";
@@ -364,7 +475,14 @@ export function createDiceRenderer(): DiceRenderer {
       frames.findIndex((pose) => pose.captured),
     );
     const launch = thrown.delay / step;
-    const glide = start + (frames.length - 1) * step - GLIDE_LEAD_MS;
+    const end = start + (frames.length - 1) * step;
+    /**
+     * Once pulled, the die leaves its simulated path: it's drawn to its slot on a
+     * spring, as it turns on another into its final pose, overshooting both a little.
+     */
+    let pull:
+      | { x: number; y: number; vx: number; vy: number; turn: number; spin: number; time: number }
+      | undefined;
     let frame = 0;
     let sounded = -1;
     const finish = () => {
@@ -406,17 +524,59 @@ export function createDiceRenderer(): DiceRenderer {
         x = p.x + (q.x - p.x) * mix;
         y = p.y + (q.y - p.y) * mix;
       }
-      const g = Math.min(1, Math.max(0, (now - glide) / GLIDE_MS)) ** 2;
       const home = slot.getBoundingClientRect();
-      x += (home.left + home.width / 2 - x) * g;
-      y += (home.top + home.height / 2 - y) * g;
+      const homeX = home.left + home.width / 2;
+      const homeY = home.top + home.height / 2;
+      const resting = screen(rest);
+      const away = Math.hypot(homeX - resting.x, homeY - resting.y);
+      if (!pull && now >= end - PULL_LEAD_MS - away * PULL_LEAD_PER_PX_MS) {
+        // It sets off at the speed it was moving through the tray.
+        const p = screen(a);
+        const q = screen(b);
+        const perSecond = 1000 / step;
+        pull = {
+          x,
+          y,
+          vx: index < entry ? 0 : (q.x - p.x) * perSecond,
+          vy: index < entry ? 0 : (q.y - p.y) * perSecond,
+          turn: 0,
+          spin: 0,
+          time: now,
+        };
+      }
+      let turn = 0;
+      if (pull) {
+        const k = PULL_STIFFNESS ** 2;
+        const c = 2 * PULL_DAMPING * PULL_STIFFNESS;
+        for (; pull.time < now; pull.time += PULL_STEP * 1000) {
+          pull.vx += (k * (homeX - pull.x) - c * pull.vx) * PULL_STEP;
+          pull.vy += (k * (homeY - pull.y) - c * pull.vy) * PULL_STEP;
+          pull.spin += (k * (1 - pull.turn) - c * pull.spin) * PULL_STEP;
+          pull.x += pull.vx * PULL_STEP;
+          pull.y += pull.vy * PULL_STEP;
+          pull.turn += pull.spin * PULL_STEP;
+        }
+        x = pull.x;
+        y = pull.y;
+        turn = pull.turn;
+      }
       const lift = Math.max(0, a.z + (b.z - a.z) * mix - rest.z);
-      die.quaternion.copy(quaternion(a.quaternion).slerp(quaternion(b.quaternion), mix));
+      // It turns into its final pose as it's pulled, rather than snapping there on landing.
+      die.quaternion.copy(
+        quaternion(a.quaternion).slerp(quaternion(b.quaternion), mix).slerp(final, turn),
+      );
       draw(die, air);
       air.style.visibility = "";
       air.style.transform = `translate(${x - SLOT / 2}px, ${y - SLOT / 2}px) scale(${1 + lift * 0.05})`;
-      air.style.filter = `drop-shadow(${3 + lift * 2}px ${5 + lift * 3}px ${2 + lift * 2}px rgb(0 0 0 / 0.3))`;
-      if (g === 1) finish();
+      air.style.setProperty("--lift", String(lift));
+      const settled =
+        pull &&
+        at === frames.length - 1 &&
+        Math.hypot(homeX - pull.x, homeY - pull.y) < PULL_REST &&
+        Math.hypot(pull.vx, pull.vy) < PULL_REST_SPEED &&
+        Math.abs(1 - pull.turn) < 0.01 &&
+        Math.abs(pull.spin) < 0.1;
+      if (settled) finish();
     };
     frame = requestAnimationFrame(tick);
   }
@@ -424,13 +584,13 @@ export function createDiceRenderer(): DiceRenderer {
   interface Job {
     canvas: HTMLCanvasElement;
     slot: HTMLElement;
-    die: { sides: number; value: number; seed: string };
+    piece: Piece;
     thrown: { from: Point; delay: number };
     land: () => void;
     cancel?: () => void;
     cancelled: boolean;
   }
-  /** Dice thrown in the same task land in their roll card together, knocking into each other. */
+  /** Dice and chips thrown in the same task land in their roll card together, knocking into each other. */
   const pending = new Map<HTMLElement, Job[]>();
 
   function flush() {
@@ -442,11 +602,18 @@ export function createDiceRenderer(): DiceRenderer {
       try {
         frames = simulateDice(
           { left: 0, top: 0, right: box.width / SCALE, bottom: box.height / SCALE },
-          jobs.map(({ die, thrown }) => ({
-            hull: shapeFor(die.sides).hull,
-            seed: die.seed,
-            delay: thrown.delay,
-          })),
+          jobs.map(({ piece, thrown, slot }) => {
+            const home = slot.getBoundingClientRect();
+            return {
+              hull: hullOf(piece),
+              seed: piece.seed,
+              delay: thrown.delay,
+              target: {
+                x: (home.left + home.width / 2 - box.left) / SCALE,
+                y: (home.top + home.height / 2 - box.top) / SCALE,
+              },
+            };
+          }),
         );
       } catch {
         // Without a flight, the dice are simply there.
@@ -454,7 +621,7 @@ export function createDiceRenderer(): DiceRenderer {
       const start = performance.now();
       jobs.forEach((job, index) => {
         if (frames) return fly(job, tray, frames[index]!, start);
-        still(job.canvas, job.die.sides, job.die.value);
+        stillPiece(job.canvas, job.piece);
         job.land();
       });
     }
@@ -465,7 +632,7 @@ export function createDiceRenderer(): DiceRenderer {
     const dice = copies.flatMap((canvas, index) => {
       const pose = posed.get(originals[index]!);
       if (!pose) return [];
-      const { die, dispose } = dieMesh(shapeFor(pose.sides), pose.value, pose.sides, canvas);
+      const { die, dispose } = pose.build(canvas);
       die.quaternion.copy(pose.rotation);
       const axis = new Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
       return [{ canvas, die, dispose, rest: pose.rotation, axis: axis.normalize() }];
@@ -496,14 +663,14 @@ export function createDiceRenderer(): DiceRenderer {
 
   return {
     spin,
-    mount(canvas, slot, die, thrown) {
+    mount(canvas, slot, piece, thrown) {
       if (!thrown) {
-        still(canvas, die.sides, die.value);
+        stillPiece(canvas, piece);
         return { landed: Promise.resolve(), dispose() {} };
       }
       let land!: () => void;
       const landed = new Promise<void>((resolve) => (land = resolve));
-      const job: Job = { canvas, slot, die, thrown, land, cancelled: false };
+      const job: Job = { canvas, slot, piece, thrown, land, cancelled: false };
       const tray = slot.closest<HTMLElement>(".roll-card") ?? slot;
       if (!pending.size) queueMicrotask(flush);
       pending.set(tray, [...(pending.get(tray) ?? []), job]);

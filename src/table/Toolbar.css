@@ -62,8 +62,8 @@
   }
   /* The native colour picker, shown as a round swatch. */
   .pen-colour {
-    width: 28px;
-    height: 28px;
+    width: var(--control-height);
+    height: var(--control-height);
     padding: 0;
     border: 0;
     border-radius: 50%;
@@ -91,7 +91,7 @@
     display: grid;
     place-items: center;
     width: 32px;
-    height: 28px;
+    height: var(--control-height);
     padding: 0;
     border: 0;
     background: transparent;
@@ -109,7 +109,7 @@
     border: 0;
     background: var(--surface-sunken);
     color: var(--text-muted);
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
     line-height: 1.2;
     cursor: pointer;
   }

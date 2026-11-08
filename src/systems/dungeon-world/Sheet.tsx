@@ -10,7 +10,6 @@ export function DungeonWorldSheet(props: SheetProps) {
   return (
     <SheetFrame {...sheet}>
       <SheetSectionView {...sheet} section={{ kind: "header" }} />
-      <SheetSectionView {...sheet} section={{ kind: "choices", choices: ["class"] }} />
       <SheetSectionView
         {...sheet}
         section={{
@@ -31,7 +30,7 @@ export function DungeonWorldSheet(props: SheetProps) {
           needed: "xpNeeded",
           field: "level",
           label: "Ready to level up.",
-          button: "Level up",
+          button: "Level Up",
         }}
       />
       <SheetSectionView

@@ -1,4 +1,3 @@
-import { store } from "../lib/store";
 import { plainText } from "../features/characters/trackers";
 import { MoveBody } from "./MoveBody";
 import {
@@ -32,7 +31,7 @@ import { IconGive, IconImage } from "../ui/icons";
 import { List, ListExpand, ListGroup, Tag } from "../ui/List";
 import { EntryRow, EntryWindow, rollTag, useEntryWindows } from "./EntryWindow";
 import { dragEntity, entity } from "./entityDrag";
-import { libraryView as view, type KindFilter } from "./libraryView";
+import { libraryView as view, openedLibraryEntries, type KindFilter } from "./libraryView";
 import { linkProxy } from "./LinkChip";
 import { makeVerb } from "./sheetParts";
 import { actionMenuItems } from "./actionMenu";
@@ -41,9 +40,6 @@ import { CampaignEntityGraphic } from "./EntityGraphic";
 import { editEntityGraphic } from "./GraphicDialogs";
 import type { ItemDef } from "../systems/types";
 import { useValue } from "../ui/useValue";
-
-/** Collections and entries shown open, by "source/collection[/entry…]" (this device only). */
-const opened = store<Set<string>>(new Set());
 
 /**
  * The Libraries: everything the game system and plugins contribute (items,
@@ -59,7 +55,7 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
   const canAct = !!me && canEdit(campaign, me);
   const windows = useEntryWindows();
   const { kind, query } = useValue(view);
-  const openedIds = useValue(opened);
+  const openedIds = useValue(openedLibraryEntries);
   const searching = query.trim() !== "";
 
   const kinds = (Object.keys(KIND_LABEL) as EntryKind[]).filter((k) =>
@@ -80,7 +76,7 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
     });
   };
   const toggle = (id: string) => {
-    opened.value = toggleSetValue(opened.value, id);
+    openedLibraryEntries.value = toggleSetValue(openedLibraryEntries.value, id);
   };
 
   /** The buttons an entry offers, in its row or its window. */
@@ -103,7 +99,7 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
           }
           onClick={() => acquireItem(e.item)}
         >
-          {acquisition(e.item)?.label ?? (me ? `Give to ${me.name}` : "Choose a character")}
+          {acquisition(e.item)?.label ?? (me ? `Give to ${me.name}` : "Choose a Character")}
         </Button>
       );
     }
@@ -171,7 +167,7 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
         ? [
             {
               label:
-                acquisition(e.item)?.label ?? (me ? `Give to ${me.name}` : "Choose a character"),
+                acquisition(e.item)?.label ?? (me ? `Give to ${me.name}` : "Choose a Character"),
               Icon: IconGive,
               disabled: !canPurchase(e.item),
               onSelect: () => {
@@ -208,7 +204,7 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
       ...items,
       ...(items.length ? (["divider"] as const) : []),
       {
-        label: "Change graphic…",
+        label: "Change Graphic…",
         Icon: IconImage,
         onSelect: () => editEntityGraphic(campaign, e.kind, e.id, e.name, e.icon),
       },
@@ -278,6 +274,7 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
                     ? entity(campaign, e.kind, e.id, e.name)
                     : {
                         label: e.name,
+                        libraryEntry: { kind: e.kind, id: e.id },
                         token: {
                           name: e.name,
                           graphic: getEntityGraphic(campaign, e.kind, e.id, e.icon),

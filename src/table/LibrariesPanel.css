@@ -10,7 +10,7 @@
   }
   .libraries-target {
     margin: 0;
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
   }
   .library-source {
     display: grid;
@@ -35,7 +35,7 @@
     gap: var(--space-2);
     margin: var(--space-1) 0 0;
     color: var(--text-muted);
-    font-size: var(--text-2xs);
+    font-size: var(--text-sm);
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -45,6 +45,6 @@
     letter-spacing: 0;
   }
   .sheet-attribution {
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
   }
 }

@@ -39,6 +39,13 @@
       visibility: hidden;
     }
   }
+  /* A die's shadow falls further and softer the higher it's lifted off the table. */
+  :is(.die-canvas, .dice-flight) {
+    filter: drop-shadow(
+      calc(3px + var(--lift, 0) * 2px) calc(5px + var(--lift, 0) * 3px)
+        calc(2px + var(--lift, 0) * 2px) oklch(0% 0 0 / 0.3)
+    );
+  }
   .die-canvas {
     position: absolute;
     inset: 0;
@@ -61,13 +68,39 @@
     &.roll-card {
       box-shadow: 0 12px 32px oklch(0% 0 0 / 0.45);
     }
+    /* A die held up off the table: its shadow falls further. */
+    &.die {
+      --lift: 3;
+    }
   }
   /* A new die dragged out of the dice tray, under the pointer. */
   .die-ghost {
+    --lift: 3;
     position: fixed;
     z-index: 10001;
     translate: -50% -50%;
     pointer-events: none;
+  }
+  /* A chip: a number added to a roll, a flat disc thrown in with the dice. */
+  .chip {
+    /* Read by the 3D renderer for the disc's colour: dark enough to carry a light label, as dice are. */
+    --chip-face: color-mix(in oklch, var(--success) 45%, black);
+    &[data-sign="minus"] {
+      --chip-face: color-mix(in oklch, var(--danger) 45%, black);
+    }
+    /* Where the browser can't draw 3D: a flat disc. */
+    &[data-phase="flat"] .die-value {
+      display: grid;
+      place-items: center;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--chip-face);
+      font-size: var(--text-sm);
+      line-height: 1.1;
+      text-align: center;
+      white-space: pre-line;
+    }
   }
   /* Thrown dice cross the window on their way to the chat. */
   .dice-flight {

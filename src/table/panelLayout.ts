@@ -1,8 +1,11 @@
-import { derived, store, watch } from "../lib/store";
+import { batch, derived, store, watch, type ReadonlyStore } from "../lib/store";
+import { useSyncExternalStore } from "react";
 import { getStorageJson, setStorageJson } from "../platform/localStorage";
 import { dropLine, indexAmong } from "../ui/reorder";
 import { withTransition } from "../ui/transition";
 import { nextZ, noteZ } from "../ui/windows";
+import { trackPointer } from "../ui/pointer";
+import { RESIZE_CURSORS, resizeRect, type Rect, type ResizeDir } from "./resizeRect";
 import {
   PANEL_ORDER,
   SIDEBAR_MIN_W,
@@ -16,7 +19,7 @@ import {
   oneSideIfCramped,
   reorder,
   otherSide,
-  selectTab,
+  setOpen,
   showTab,
   type FloatingWindow,
   type DockItemId,
@@ -123,12 +126,8 @@ function topZ() {
   return nextZ();
 }
 
-export function selectPanel(id: DockItemId) {
-  if (isFloating(id)) {
-    raiseWindow(id);
-    return;
-  }
-  commit(selectTab(layout.value, id));
+export function setSideOpen(side: Side, open: boolean) {
+  commit(setOpen(layout.value, side, open));
 }
 
 /** Bring a panel into view without ever hiding it, unlike clicking its tab. */
@@ -180,6 +179,59 @@ function whole<T extends Record<string, number | undefined>>(geometry: T): T {
   return out;
 }
 
+/*
+ * A window being moved or resized shows its live geometry from `liveWindow`,
+ * which only that window reads. The layout takes the result once, on release,
+ * so the rest of the table doesn't re-render (and localStorage isn't written)
+ * on every pointer move.
+ */
+
+const liveWindow = store<FloatingWindow | null>(null);
+
+/** Read a store that holds one window's state, re-rendering only the window it's for. */
+function useFor<T extends { id: DockItemId }>(
+  s: ReadonlyStore<T | null>,
+  id: DockItemId | undefined,
+) {
+  return useSyncExternalStore(s.subscribe, () => (id && s.value?.id === id ? s.value : null));
+}
+
+/** A floating window as it shows: its live geometry while it's being moved or resized. */
+export function useWindowRect<W extends FloatingWindow | undefined>(win: W): W {
+  return (useFor(liveWindow, win?.id) as W | null) ?? win;
+}
+
+function setLiveRect(id: DockItemId, rect: Partial<Rect>) {
+  const from =
+    liveWindow.value?.id === id ? liveWindow.value : layout.value.floating.find((w) => w.id === id);
+  if (from) liveWindow.value = { ...from, ...whole(rect) };
+}
+
+/** Hand the live geometry to the layout. */
+function commitLiveRect() {
+  const live = liveWindow.value;
+  if (!live) return;
+  batch(() => {
+    updateWindow(live.id, { x: live.x, y: live.y, w: live.w, h: live.h });
+    liveWindow.value = null;
+  });
+}
+
+/** Resize a floating window from an edge or corner; call from a resize zone's pointerdown. */
+export function startWindowResize(id: DockItemId, e: PointerEvent, dir: ResizeDir) {
+  if (e.button !== 0) return;
+  e.preventDefault();
+  e.stopPropagation();
+  raiseWindow(id);
+  const start = layout.value.floating.find((w) => w.id === id);
+  if (!start) return;
+  trackPointer(
+    RESIZE_CURSORS[dir],
+    (ev) => setLiveRect(id, resizeRect(start, dir, ev.clientX - e.clientX, ev.clientY - e.clientY)),
+    commitLiveRect,
+  );
+}
+
 /* Dragging a floating window, including one just pulled out of a sidebar. */
 
 /** The side a dragged window is over, which it would dock on if dropped. */
@@ -189,7 +241,12 @@ export const windowDragging = store(false);
 /** Panels just pulled out of a tab, whose window should grow out of the tab icon. */
 export const spawnedFromTab = new Set<DockItemId>();
 /** The window being dragged and where its pointer is, so it can shrink to a tab over a sidebar. */
-export const windowPointer = store<{ id: DockItemId; x: number; y: number } | null>(null);
+const windowPointer = store<{ id: DockItemId; x: number; y: number } | null>(null);
+
+/** Where the pointer is while it drags window `id`, or null when it isn't. */
+export function useWindowPointer(id: DockItemId) {
+  return useFor(windowPointer, id);
+}
 
 function sideAt(x: number, y: number): Side | null {
   for (const side of SIDES) {
@@ -213,7 +270,7 @@ export function startWindowDrag(id: DockItemId, e: PointerEvent, grabX: number, 
   const move = (ev: PointerEvent) => {
     const x = Math.min(Math.max(ev.clientX - grabX, -200), innerWidth - 80);
     const y = Math.min(Math.max(ev.clientY - grabY, 0), innerHeight - 40);
-    updateWindow(id, { x, y });
+    setLiveRect(id, { x, y });
     const side = sideAt(ev.clientX, ev.clientY);
     dockTarget.value = side;
     windowPointer.value = { id, x: ev.clientX, y: ev.clientY };
@@ -226,6 +283,7 @@ export function startWindowDrag(id: DockItemId, e: PointerEvent, grabX: number, 
     window.removeEventListener("pointercancel", up);
     const side = sideAt(ev.clientX, ev.clientY);
     marker.hide();
+    commitLiveRect();
     if (side) {
       const index = indexAmong(tabsOf(side), "y", ev);
       // Dropped on a closed sidebar, it joins the tabs without opening it.

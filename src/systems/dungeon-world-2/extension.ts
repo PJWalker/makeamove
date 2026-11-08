@@ -25,7 +25,7 @@ export const dungeonWorld2Extension: SystemExtension = {
     const entries: MenuItem[] = [];
     if (item.equippable && !item.broken && item.tags.some((tag) => WEAPON_TAGS.has(tag)))
       entries.push({
-        label: `Mark ${item.name} broken`,
+        label: `Mark ${item.name} Broken`,
         disabled: !editable,
         onSelect: () => breakDungeonWorld2Weapon(campaign, character.id, item.id),
       });

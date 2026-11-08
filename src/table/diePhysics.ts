@@ -13,6 +13,30 @@ import {
 export interface DieHull {
   vertices: number[][];
   faces: number[][];
+  /** For each face, the way the top of its label points; a die at rest is turned so the face up reads upright. */
+  labelUps?: number[][];
+  /** Comes to rest balanced with a face turned up, as a d4 is turned base-up so its roll faces the player. */
+  faceUp?: boolean;
+}
+
+/** A flat round chip: a prism on a `sides`-gon, its faces towards +Z and −Z. */
+export function discHull(radius: number, thickness: number, sides = 16): DieHull {
+  const ring = (z: number) =>
+    Array.from({ length: sides }, (_, i) => {
+      const a = (i * 2 * Math.PI) / sides;
+      return [radius * Math.cos(a), radius * Math.sin(a), z];
+    });
+  const next = (i: number) => (i + 1) % sides;
+  return {
+    // The top ring, then the bottom ring.
+    vertices: [...ring(thickness / 2), ...ring(-thickness / 2)],
+    // Corners anticlockwise seen from outside, as the solver wants them.
+    faces: [
+      Array.from({ length: sides }, (_, i) => i),
+      Array.from({ length: sides }, (_, i) => 2 * sides - 1 - i),
+      ...Array.from({ length: sides }, (_, i) => [sides + i, sides + next(i), next(i), i]),
+    ],
+  };
 }
 
 export interface DieTray {
@@ -34,6 +58,14 @@ const MAX_APPROACH = 1.5;
 /** Times cocked dice are bumped before any still cocked are eased down onto a face. */
 const MAX_NUDGES = 1;
 const EASE_STEPS = 14;
+/** How much of its turn from upright the label on a resting die's top face keeps. */
+const LABEL_TURN_KEPT = 0.5;
+/**
+ * A faint pull towards where a die will be shown once it's landed: this much
+ * force per unit away from it, up to the most it can be, along the tray's floor.
+ */
+const TARGET_PULL = 0.5;
+const MAX_TARGET_PULL = 5;
 /** Seconds after the last die is thrown before the dice lose their bounce. */
 export const CALM_AFTER = 2.5;
 const MAX_STEPS = 3600;
@@ -52,11 +84,16 @@ export interface DieThrow {
   delay?: number;
   /** Already in the tray and moving like this, rather than thrown in over its edge. */
   state?: DieState;
+  /** Where it's drawn towards throughout its roll, in a pose's axes (y down). */
+  target?: { x: number; y: number };
 }
 
 interface FlightBody {
   body: Body;
   vertices: Vec3[];
+  target?: Vec3;
+  labelUps?: Vec3[];
+  faceUp: boolean;
   delay: number;
   active: boolean;
   captured: boolean;
@@ -188,16 +225,27 @@ class TrayWorld {
   }
 }
 
-/** The face of a die turned most nearly towards the floor, as a direction in the world. */
-function downFace(body: Body) {
-  const shape = body.shapes[0] as ConvexPolyhedron;
-  let down = new Vec3(0, 0, 1);
-  for (const normal of shape.faceNormals) {
-    const turned = body.quaternion.vmult(normal);
-    if (turned.z < down.z) down = turned;
+/** The index of the face whose normal, turned by `quaternion`, points most nearly along `sign` × Z. */
+function faceTowards(body: Body, quaternion: Quaternion, sign: 1 | -1) {
+  const { faceNormals } = body.shapes[0] as ConvexPolyhedron;
+  let best = 0;
+  let bestZ = -Infinity;
+  for (const [index, normal] of faceNormals.entries()) {
+    const z = sign * quaternion.vmult(normal).z;
+    if (z > bestZ) [best, bestZ] = [index, z];
   }
-  return down;
+  return best;
 }
+
+/** The face of a die turned most nearly towards the floor, as a direction in the world. */
+const downFace = (body: Body) =>
+  body.quaternion.vmult(
+    (body.shapes[0] as ConvexPolyhedron).faceNormals[faceTowards(body, body.quaternion, -1)]!,
+  );
+
+/** Whether two rotations are the same, to within rounding. */
+const sameRotation = (a: Quaternion, b: Quaternion) =>
+  Math.abs(a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w) > 1 - 1e-9;
 
 const lowestPoint = (quaternion: Quaternion, vertices: Vec3[]) =>
   Math.min(...vertices.map((vertex) => quaternion.vmult(vertex).z));
@@ -270,9 +318,12 @@ export class DiceFlight {
     const trayWorld = new TrayWorld(tray);
     this.trayWorld = trayWorld;
     const width = tray.right - tray.left;
-    this.dice = throws.map(({ hull, seed, delay = 0, state }, index) => {
+    this.dice = throws.map(({ hull, seed, delay = 0, state, target: toward }, index) => {
       const random = seededRandom(seed);
+      const target = toward && new Vec3(toward.x, -toward.y, 0);
       const vertices = hull.vertices.map(([x, y, z]) => new Vec3(x, y, z));
+      const labelUps = hull.labelUps?.map(([x, y, z]) => new Vec3(x, y, z));
+      const faceUp = hull.faceUp ?? false;
       const body = trayWorld.dieBody(hull, vertices);
       if (state) {
         body.position.set(...state.position);
@@ -283,6 +334,9 @@ export class DiceFlight {
         return {
           body,
           vertices,
+          target,
+          labelUps,
+          faceUp,
           delay: delay / 1000,
           active: false,
           captured: true,
@@ -300,6 +354,9 @@ export class DiceFlight {
       return {
         body,
         vertices,
+        target,
+        labelUps,
+        faceUp,
         delay: delay / 1000,
         active: false,
         captured: false,
@@ -334,12 +391,31 @@ export class DiceFlight {
   private nudges = 0;
   private easing?: { eases: Ease[]; step: number };
 
-  /** Tips a die still cocked after its nudges down onto the face it leans towards. */
-  private ease(die: FlightBody): Ease {
-    const { body, vertices } = die;
+  /**
+   * Eases a die into its final pose: down onto the face it leans towards (or a
+   * face-up die up onto its point), then turned about the vertical so its top
+   * label is turned only half as far from upright. Nothing for a die already there.
+   */
+  private ease(die: FlightBody): Ease | undefined {
+    const { body, vertices, labelUps, faceUp } = die;
+    const { faceNormals } = body.shapes[0] as ConvexPolyhedron;
     const from = body.quaternion.clone();
-    const to = new Quaternion().setFromVectors(downFace(body), new Vec3(0, 0, -1)).mult(from);
+    const sign = faceUp ? 1 : -1;
+    const lying = from.vmult(faceNormals[faceTowards(body, from, sign)]!);
+    const to = new Quaternion().setFromVectors(lying, new Vec3(0, 0, sign)).mult(from);
     to.normalize();
+    const labelUp = labelUps?.[faceTowards(body, to, 1)];
+    if (labelUp) {
+      const up = to.vmult(labelUp);
+      // Anticlockwise from upright, as the player sees it.
+      const turn = Math.atan2(-up.x, up.y);
+      const twist = new Quaternion().setFromAxisAngle(
+        new Vec3(0, 0, 1),
+        -turn * (1 - LABEL_TURN_KEPT),
+      );
+      to.copy(twist.mult(to)).normalize();
+    }
+    if (sameRotation(from, to)) return undefined;
     // Keep its lowest point where it is, so a die lying on another stays on it.
     const toZ = body.position.z + lowestPoint(from, vertices) - lowestPoint(to, vertices);
     body.collisionFilterMask = 0;
@@ -378,6 +454,15 @@ export class DiceFlight {
       3,
     );
     body.angularVelocity.set((random() - 0.5) * 12, (random() - 0.5) * 12, (random() - 0.5) * 4);
+  }
+
+  private drawTowardsTarget({ body, target }: FlightBody) {
+    if (!target) return;
+    const pull = new Vec3(target.x - body.position.x, target.y - body.position.y, 0);
+    pull.scale(TARGET_PULL, pull);
+    const size = pull.length();
+    if (size > MAX_TARGET_PULL) pull.scale(MAX_TARGET_PULL / size, pull);
+    body.applyForce(pull);
   }
 
   /** Catches a die that was knocked off course before it reached the tray. */
@@ -420,6 +505,7 @@ export class DiceFlight {
       }
       this.trayWorld.calm();
     }
+    for (const die of this.dice) if (die.active) this.drawTowardsTarget(die);
     const previous = this.dice.map(({ body }) => body.position.clone());
     const before = this.dice.map(({ body }) => body.velocity.clone());
     this.trayWorld.world.step(PHYSICS_STEP);
@@ -445,17 +531,15 @@ export class DiceFlight {
     const leaning = this.dice.filter(
       (die) => tilted(die.body) || (this.nudges < MAX_NUDGES && raised(die.body, die.vertices)),
     );
-    if (!leaning.length) return true;
-    if (this.nudges >= MAX_NUDGES) {
-      this.easing = {
-        eases: leaning.map((die) => this.ease(die)),
-        step: 0,
-      };
+    if (leaning.length && this.nudges < MAX_NUDGES) {
+      const random = seededRandom(`${this.nudges}:${this.elapsed}`);
+      this.nudges++;
+      for (const die of leaning) this.uncock(die, random);
       return false;
     }
-    const random = seededRandom(`${this.nudges}:${this.elapsed}`);
-    this.nudges++;
-    for (const die of leaning) this.uncock(die, random);
+    const eases = this.dice.flatMap((die) => this.ease(die) ?? []);
+    if (!eases.length) return true;
+    this.easing = { eases, step: 0 };
     return false;
   }
 

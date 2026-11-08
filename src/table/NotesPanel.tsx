@@ -185,27 +185,27 @@ function NoteList({
           Icon: IconFolder,
           onSelect: () => moveNote(campaign, n.id, f.id),
         }));
-      items.unshift({ label: "Open page", onSelect: () => openNote(n.id) });
+      items.unshift({ label: "Open Page", onSelect: () => openNote(n.id) });
       if (n.folder && known.has(n.folder))
         items.push({
-          label: "Remove from folder",
+          label: "Remove from Folder",
           onSelect: () => moveNote(campaign, n.id, undefined),
         });
       if (items.length) items.push("divider");
       if (n.gmOnly)
         items.push({
-          label: "Reveal to players…",
+          label: "Reveal to Players…",
           Icon: IconReveal,
           onSelect: () => (revealing.value = n.id),
         });
       else
         items.push({
-          label: "Change graphic…",
+          label: "Change Graphic…",
           Icon: IconImage,
           onSelect: () => editEntityGraphic(campaign, "note", n.id, n.title),
         });
       items.push({
-        label: "Delete page…",
+        label: "Delete Page…",
         Icon: IconDelete,
         danger: true,
         onSelect: () => setDeleting(n.id),
@@ -284,7 +284,7 @@ function NoteList({
             renderActions={(beginFolderNaming) => (
               <>
                 <Button size="sm" onClick={() => newPage()}>
-                  New page
+                  New Page
                 </Button>
                 {isGm && (
                   <Button
@@ -293,37 +293,37 @@ function NoteList({
                     title="Only you can see it, until you reveal it"
                     onClick={() => newPage(undefined, true)}
                   >
-                    New GM page
+                    New GM Page
                   </Button>
                 )}
                 <Button size="sm" variant="ghost" onClick={beginFolderNaming}>
-                  New folder
+                  New Folder
                 </Button>
               </>
             )}
             folderMenuItems={(folder, { open, toggle, rename }) => [
               {
-                label: open ? "Collapse folder" : "Expand folder",
+                label: open ? "Collapse Folder" : "Expand Folder",
                 onSelect: toggle,
               },
               "divider",
               {
-                label: "New page here",
+                label: "New Page Here",
                 Icon: IconNotes,
                 onSelect: () => newPage(folder.id),
               },
               ...(isGm
                 ? [
                     {
-                      label: "New GM page here",
+                      label: "New GM Page Here",
                       Icon: IconSecret,
                       onSelect: () => newPage(folder.id, true),
                     },
                   ]
                 : []),
-              { label: "Rename folder", Icon: IconRename, onSelect: rename },
+              { label: "Rename Folder", Icon: IconRename, onSelect: rename },
               {
-                label: "Delete folder",
+                label: "Delete Folder",
                 Icon: IconDelete,
                 danger: true,
                 onSelect: () => deleteNoteFolder(campaign, folder.id),
@@ -372,7 +372,7 @@ function NotePage({
                 morphOpen(e.currentTarget as Element, () => (revealing.value = note.id))
               }
             >
-              Reveal to players…
+              Reveal to Players…
             </Button>
           </p>
         )}

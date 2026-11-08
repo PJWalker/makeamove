@@ -8,7 +8,7 @@ import { device } from "../platform/device";
 import { useY } from "../ui/useY";
 import { Button } from "../ui/Button";
 import { DamageTargets, SaveRequests, TargetRolls } from "./CardParts";
-import { dieColour, rollCarriedDice, RollDie } from "./RollDie";
+import { dieColour, rollCarriedDice, RollChip, RollDie } from "./RollDie";
 import { colourOf } from "../scene/presence";
 import { canWork } from "../features/chat/types";
 import { readRollState, rerollDie, rerollMessage, toggleRollDie } from "../features/chat/rollState";
@@ -119,17 +119,26 @@ function RollTerms({
   interaction,
 }: { roll: Roll; colour: string; interaction: RollInteraction } & Thrown) {
   const seeds = interaction.snapshot!.seeds;
-  const initial = useRef(new Set(seeds.flat()));
+  const initial = useRef(new Set(seeds.flatMap((row, i) => (row.length ? row : [`flat:${i}`]))));
   return (
     <div className="roll-terms">
       {roll.terms.map((t, i) => (
         <span key={i} className="roll-term">
-          {(i > 0 || t.sign < 0) && <span className="roll-op">{t.sign < 0 ? "−" : "+"}</span>}
+          {/* A chip shows its own sign. */}
+          {t.kind === "dice" && (i > 0 || t.sign < 0) && (
+            <span className="roll-op">{t.sign < 0 ? "−" : "+"}</span>
+          )}
           {t.kind === "flat" ? (
-            <span className="roll-flat">
-              {t.value}
-              {t.label && <span className="roll-label">{t.label}</span>}
-            </span>
+            <RollChip
+              key={seeds[i]?.[0] ?? `flat:${i}`}
+              value={t.sign * t.value}
+              label={t.label}
+              index={i}
+              // Rolls edited before chips had seeds have none for them.
+              seed={seeds[i]?.[0] ?? `flat:${i}`}
+              arriving={arriving || !initial.current.has(seeds[i]?.[0] ?? `flat:${i}`)}
+              mine={mine}
+            />
           ) : (
             <>
               {t.dice.map((d, j) => {
@@ -204,6 +213,7 @@ export function MoveCard({
     <div
       className="roll-card move-card"
       data-band={result?.tone ?? "none"}
+      data-rolled={!!m.roll || undefined}
       data-throwable={(interaction.allowed && !!m.roll) || undefined}
       data-dice-target={interaction.allowed && m.roll ? m.id : undefined}
       // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable so the roll can be rerolled by keyboard
@@ -214,7 +224,9 @@ export function MoveCard({
         <span className="roll-formula">{m.moveName}</span>
         <span className="roll-comment">{m.characterName}</span>
       </div>
-      {m.text && m.text !== m.outcome && <FormattedText campaign={campaign} text={m.text} />}
+      {m.text && m.text !== m.outcome && (
+        <FormattedText campaign={campaign} text={m.text} characterId={m.characterId ?? null} />
+      )}
       {m.targets?.some((t) => t.roll) ? (
         <TargetRolls campaign={campaign} m={m} />
       ) : (

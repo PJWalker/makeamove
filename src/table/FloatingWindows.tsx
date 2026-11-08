@@ -1,5 +1,4 @@
 import type { Campaign } from "../campaign/campaign";
-import { trackPointer } from "../ui/pointer";
 import { windowLayer } from "../ui/windows";
 import { createPortal } from "react-dom";
 import { useRef, useState } from "react";
@@ -7,16 +6,17 @@ import {
   dockTarget,
   setPanelClosed,
   floatingWindows,
-  windowPointer,
   spawnedFromTab,
   raiseWindow,
   startWindowDrag,
-  updateWindow,
+  startWindowResize,
+  useWindowPointer,
+  useWindowRect,
   type FloatingWindow,
   type PanelId,
 } from "./panelLayout";
 import { PanelContent, PANELS, PaneToggle } from "./panels";
-import { RESIZE_CURSORS, RESIZE_DIRS, resizeRect, type ResizeDir } from "./resizeRect";
+import { RESIZE_DIRS } from "./resizeRect";
 import { WindowControls } from "./WindowControls";
 import { PanelActionsProvider, PanelActionsSlot } from "./PanelActions";
 import { useValue } from "../ui/useValue";
@@ -36,22 +36,18 @@ export function FloatingWindows({ campaign }: { campaign: Campaign }) {
   );
 }
 
-function Window({ win, campaign }: { win: FloatingWindow & { id: PanelId }; campaign: Campaign }) {
+function Window({
+  win: stored,
+  campaign,
+}: {
+  win: FloatingWindow & { id: PanelId };
+  campaign: Campaign;
+}) {
+  const win = useWindowRect(stored);
   const { label, Icon } = PANELS[win.id];
   const [rolled, setRolled] = useState(false);
-  const pointer = useValue(windowPointer);
+  const pointer = useWindowPointer(win.id);
   const target = useValue(dockTarget);
-
-  function onResizePointerDown(e: PointerEvent, dir: ResizeDir) {
-    if (e.button !== 0) return;
-    e.preventDefault();
-    e.stopPropagation();
-    raiseWindow(win.id);
-    const start = { x: win.x, y: win.y, w: win.w, h: win.h };
-    trackPointer(RESIZE_CURSORS[dir], (ev) => {
-      updateWindow(win.id, resizeRect(start, dir, ev.clientX - e.clientX, ev.clientY - e.clientY));
-    });
-  }
 
   function onHeaderPointerDown(e: PointerEvent) {
     if (e.button !== 0 || (e.target as HTMLElement).closest("button")) return;
@@ -60,13 +56,13 @@ function Window({ win, campaign }: { win: FloatingWindow & { id: PanelId }; camp
   }
 
   // Over a sidebar the window morphs into the tab it would become, and back out again.
-  const asTab = target !== null && pointer?.id === win.id ? pointer : null;
+  const asTab = target !== null ? pointer : null;
   // The phase sticks until the next change, so re-rendering on pointer moves doesn't cut an animation short.
   // A window pulled out of a tab starts as the tab ('hidden') and grows from it when it leaves the sidebar.
   const phase = useRef<"in" | "out" | "hidden" | undefined>(
     spawnedFromTab.delete(win.id) ? "hidden" : undefined,
   );
-  if (pointer?.id !== win.id) {
+  if (!pointer) {
     if (phase.current !== "hidden") phase.current = undefined;
   } else if (asTab) phase.current = phase.current === "hidden" ? "hidden" : "in";
   else if (phase.current) phase.current = "out";
@@ -126,7 +122,7 @@ function Window({ win, campaign }: { win: FloatingWindow & { id: PanelId }; camp
               className="win-resize"
               data-dir={dir}
               aria-hidden="true"
-              onPointerDown={(e) => onResizePointerDown(e.nativeEvent, dir)}
+              onPointerDown={(e) => startWindowResize(win.id, e.nativeEvent, dir)}
             />
           ))}
       </section>

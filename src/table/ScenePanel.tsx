@@ -61,10 +61,10 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
 
   function sceneRow(s: SceneView) {
     const trigger = menuTrigger((x, y) => {
-      const items: MenuItem[] = [{ label: "Open scene", onSelect: () => openScene(s.id) }];
+      const items: MenuItem[] = [{ label: "Open Scene", onSelect: () => openScene(s.id) }];
       if (isGm) {
         items.push("divider", {
-          label: "Pull players here",
+          label: "Pull Players Here",
           Icon: IconMembers,
           onSelect: () => campaign.pullPlayersToScene(s.id),
         });
@@ -79,13 +79,13 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
         }
         if (s.folder && folders.some((folder) => folder.id === s.folder)) {
           items.push({
-            label: "Remove from folder",
+            label: "Remove from Folder",
             onSelect: () => moveSceneToFolder(campaign.scenes, s.id),
           });
         }
         if (scenes.length > 1) {
           items.push("divider", {
-            label: "Delete scene",
+            label: "Delete Scene",
             Icon: IconDelete,
             danger: true,
             onSelect: () => campaign.removeScene(s.id),
@@ -141,10 +141,10 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
                 {isGm && (
                   <>
                     <Button variant="secondary" size="sm" onClick={() => addScene()}>
-                      <IconAdd size={22} /> New scene
+                      <IconAdd size={22} /> New Scene
                     </Button>
                     <Button size="sm" variant="ghost" onClick={beginFolderNaming}>
-                      New folder
+                      New Folder
                     </Button>
                   </>
                 )}
@@ -152,24 +152,24 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
             )}
             folderMenuItems={(folder, { open, toggle, rename }) => [
               {
-                label: open ? "Collapse folder" : "Expand folder",
+                label: open ? "Collapse Folder" : "Expand Folder",
                 onSelect: toggle,
               },
               ...(isGm
                 ? [
                     "divider" as const,
                     {
-                      label: "New scene here",
+                      label: "New Scene Here",
                       Icon: IconAdd,
                       onSelect: () => addScene(folder.id),
                     },
                     {
-                      label: "Rename folder",
+                      label: "Rename Folder",
                       Icon: IconRename,
                       onSelect: rename,
                     },
                     {
-                      label: "Delete folder",
+                      label: "Delete Folder",
                       Icon: IconDelete,
                       danger: true,
                       onSelect: () =>

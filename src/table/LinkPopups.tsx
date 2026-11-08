@@ -153,7 +153,7 @@ function LinkPopup({ campaign, link }: { campaign: Campaign; link: LinkRef }) {
             disabled={!canAct}
             onClick={() => me && addItem(campaign, me.id, item)}
           >
-            {me ? `Give to ${me.name}` : "Choose a character first"}
+            {me ? `Give to ${me.name}` : "Choose a Character First"}
           </Button>
         </EntryWindow>
       );
@@ -203,7 +203,7 @@ function LinkPopup({ campaign, link }: { campaign: Campaign; link: LinkRef }) {
           title={character.name}
           menuItems={[
             {
-              label: "Open in sidebar",
+              label: "Open in Sidebar",
               onSelect: () => followLink(campaign, "character", character.id),
             },
           ]}
@@ -221,7 +221,7 @@ function LinkPopup({ campaign, link }: { campaign: Campaign; link: LinkRef }) {
           title={scene.name}
           menuItems={[
             {
-              label: "Go to scene",
+              label: "Go to Scene",
               onSelect: () => followLink(campaign, "scene", scene.id),
             },
           ]}
@@ -229,7 +229,7 @@ function LinkPopup({ campaign, link }: { campaign: Campaign; link: LinkRef }) {
           <p className="muted">A scene in this campaign.</p>
           <div className="form-actions">
             <Button variant="primary" onClick={() => followLink(campaign, "scene", scene.id)}>
-              Go to scene
+              Go to Scene
             </Button>
           </div>
         </LinkDialog>
@@ -242,7 +242,7 @@ function LinkPopup({ campaign, link }: { campaign: Campaign; link: LinkRef }) {
           title={note.title || "Untitled"}
           menuItems={[
             {
-              label: "Open in sidebar",
+              label: "Open in Sidebar",
               onSelect: () => followLink(campaign, "note", note.id),
             },
           ]}
@@ -291,10 +291,13 @@ function RenameLinkDialog({ req }: { req: NonNullable<typeof linkRename.value> }
         </label>
         <div className="form-actions">
           {req.custom && (
-            <Button variant="ghost" onClick={() => done(null)}>
-              Use its own name
+            <Button variant="ghost" className="form-actions-start" onClick={() => done(null)}>
+              Use Its Own Name
             </Button>
           )}
+          <Button variant="ghost" onClick={() => closePopup(ref.current, onClose)}>
+            Cancel
+          </Button>
           <Button variant="primary" type="submit">
             Save
           </Button>

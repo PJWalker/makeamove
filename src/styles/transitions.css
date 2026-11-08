@@ -45,11 +45,6 @@
  * Switching sidebar tabs: old and new content slide together in the direction
  * the tabs are stacked, so the panels read as a vertical column like the tabs.
  */
-.vt-tab-next .sidebar,
-.vt-tab-prev .sidebar {
-  view-transition-name: none;
-}
-
 .vt-tab-next::view-transition-old(.sidebar-panel):only-child {
   animation: vt-slide-out-up 240ms var(--ease) both;
 }

@@ -36,7 +36,7 @@ export function OptionPicker({
       : selected.name
     : value || emptyLabel;
   return (
-    <div className="field option-picker">
+    <div className="field field-inline option-picker">
       <span aria-hidden="true">{label}</span>
       {disabled ? (
         <span

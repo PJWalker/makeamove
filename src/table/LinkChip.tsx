@@ -38,14 +38,14 @@ export function LinkChip({
   const canChangeGraphic = kind !== "note" || !getNote(campaign, id)?.gmOnly;
   const items = [
     {
-      label: "Open in a window",
+      label: "Open in a Window",
       Icon: IconOpenWindow,
       onSelect: () => {
         if (linkElement.current) showLink({ kind, id }, linkElement.current);
       },
     },
     {
-      label: "Open in sidebar",
+      label: "Open in Sidebar",
       Icon: IconSidebar,
       onSelect: () => openInSidebar(campaign, kind, id),
     },
@@ -57,7 +57,7 @@ export function LinkChip({
     ...(canChangeGraphic
       ? [
           {
-            label: "Change graphic…",
+            label: "Change Graphic…",
             Icon: IconImage,
             onSelect: () => editEntityGraphic(campaign, kind, id, name ?? text ?? "Entity"),
           },

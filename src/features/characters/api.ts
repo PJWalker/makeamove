@@ -8,6 +8,7 @@ export {
   tokenStatsSource,
   getCharacter,
   selectedCharacterId,
+  selectedStatBonuses,
   canEdit,
 } from "./queries";
 export {

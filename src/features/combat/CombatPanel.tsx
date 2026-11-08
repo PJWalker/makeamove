@@ -69,7 +69,7 @@ export function CombatPanel({ campaign }: { campaign: Campaign }) {
                   disabled={!all.length}
                   onClick={() => advanceTurn(campaign)}
                 >
-                  Next turn
+                  Next Turn
                 </Button>
                 <Button size="sm" variant="ghost" onClick={() => finishCombat(campaign)}>
                   End
@@ -277,9 +277,7 @@ function ConditionForm({
         campaign,
         characterId,
         condition,
-        rounds > 0 && of
-          ? { rounds: rounds, tick: tick, of: of }
-          : null,
+        rounds > 0 && of ? { rounds: rounds, tick: tick, of: of } : null,
       );
     });
   };
@@ -320,11 +318,7 @@ function ConditionForm({
         <option value="end">end</option>
         <option value="start">start</option>
       </select>
-      <select
-        aria-label="Of whose turn"
-        value={of}
-        onChange={(e) => setOf(e.currentTarget.value)}
-      >
+      <select aria-label="Of whose turn" value={of} onChange={(e) => setOf(e.currentTarget.value)}>
         {everyone.map((x) => (
           <option key={x.id} value={x.id}>
             of {x.name}’s turn
@@ -332,7 +326,7 @@ function ConditionForm({
         ))}
       </select>
       <Button size="sm" type="submit" variant="primary">
-        {has ? "Set duration" : "Add"}
+        {has ? "Set Duration" : "Add"}
       </Button>
       {has && (
         <Button

@@ -34,7 +34,7 @@ export function ChatPanel({ campaign }: { campaign: Campaign }) {
       const items: MenuItem[] = [];
       if (canEditMessage(m, device.value.id))
         items.push({
-          label: "Edit message",
+          label: "Edit Message",
           Icon: IconRename,
           onSelect: () => (editingMessage.value = id),
         });
@@ -49,7 +49,7 @@ export function ChatPanel({ campaign }: { campaign: Campaign }) {
       if (canDelete(m, device.value.id, gm)) {
         if (items.length) items.push("divider");
         items.push({
-          label: "Delete message",
+          label: "Delete Message",
           Icon: IconDelete,
           danger: true,
           onSelect: () => removeMessage(campaign, id),

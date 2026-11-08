@@ -25,14 +25,14 @@
     gap: 4px;
     flex: none;
     color: var(--text-muted);
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
     white-space: nowrap;
   }
   .scene-campaign-name {
     flex: 1 0 100%;
   }
   .scene-name-input,
-  /* Actions in the scene menu (View, Delete, New scene) are menu text too. */
+  /* Actions in the scene menu (View, Delete, New Scene) are menu text too. */
   .scene-panel button {
     font-size: var(--text-menu);
   }

@@ -325,7 +325,7 @@ export function DndSheet({ campaign, system, c }: Props) {
       {editable && level < 20 && xp >= valueOf(v, "xpNext") && (
         <div className="sheet-advancement">
           <Button size="sm" onClick={() => setLevelling(true)}>
-            Level up
+            Level Up
           </Button>
         </div>
       )}
@@ -358,7 +358,7 @@ export function DndSheet({ campaign, system, c }: Props) {
           </div>
           <div className="sheet-row">
             <Button size="sm" disabled={!editable} onClick={() => use("death-save")}>
-              Death save
+              Death Save
             </Button>
           </div>
         </section>
@@ -480,10 +480,10 @@ export function DndSheet({ campaign, system, c }: Props) {
             Spend Hit Die
           </Button>
           <Button size="sm" disabled={!editable} onClick={() => rest(campaign, c.id, "short-rest")}>
-            Short rest
+            Short Rest
           </Button>
           <Button size="sm" disabled={!editable} onClick={longRest}>
-            Long rest
+            Long Rest
           </Button>
         </div>
       </section>

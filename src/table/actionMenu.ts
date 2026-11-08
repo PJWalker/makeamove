@@ -45,7 +45,7 @@ export function actionMenuItems(
           editHotbar(campaign, (slots) => (pinned ? unpin(slots, id) : pin(slots, id))),
       },
       {
-        label: `${shortcut ? "Change" : "Add"} shortcut${multiple ? ` for ${title}` : ""}…`,
+        label: `${shortcut ? "Change" : "Add"} Shortcut${multiple ? ` for ${title}` : ""}…`,
         Icon: IconShortcut,
         ...(shortcut ? { shortcut: showCombo(shortcut) } : {}),
         onSelect: () => {

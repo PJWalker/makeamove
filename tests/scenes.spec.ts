@@ -16,7 +16,7 @@ test("a GM can add and rename a scene, and toggle its sidebar", async ({ page })
   await page.getByRole("button", { name: "Back to the scene list" }).click();
   const sceneRows = page.locator(".scene-item");
   await expect(sceneRows).toHaveCount(1);
-  await page.getByRole("button", { name: "New scene" }).click();
+  await page.getByRole("button", { name: "New Scene" }).click();
   await expect(sceneRows).toHaveCount(2);
   await sceneName.fill("The Ashen Keep");
   await expect(sceneName).toHaveValue("The Ashen Keep");
@@ -29,12 +29,12 @@ test("scenes can be filed and pulled or deleted from their context menu", async 
   const scenesTab = page.getByRole("tab", { name: "Scenes" });
   if ((await scenesTab.getAttribute("aria-selected")) !== "true") await scenesTab.click();
 
-  await expect(page.getByRole("button", { name: "Pull players here" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Pull Players Here" })).toBeVisible();
   await page.getByRole("button", { name: "Back to the scene list" }).click();
-  await page.getByRole("button", { name: "New scene" }).click();
+  await page.getByRole("button", { name: "New Scene" }).click();
   await page.getByRole("button", { name: "Back to the scene list" }).click();
 
-  await page.getByRole("button", { name: "New folder" }).click();
+  await page.getByRole("button", { name: "New Folder" }).click();
   const folderName = page.getByRole("textbox", { name: "Folder name" });
   await folderName.fill("Journeys");
   await folderName.press("Enter");
@@ -49,9 +49,9 @@ test("scenes can be filed and pulled or deleted from their context menu", async 
   const secondScene = page.getByRole("button", { name: "Scene 2" });
   await secondScene.click({ button: "right" });
   const sceneMenu = page.getByRole("menu");
-  await expect(sceneMenu.getByRole("menuitem", { name: "Pull players here" })).toBeVisible();
+  await expect(sceneMenu.getByRole("menuitem", { name: "Pull Players Here" })).toBeVisible();
   const pullItem = sceneMenu.getByRole("menuitem", {
-    name: "Pull players here",
+    name: "Pull Players Here",
   });
   const sceneChangeNotice = page.getByText("Scene changed to Scene 2", {
     exact: true,
@@ -66,9 +66,8 @@ test("scenes can be filed and pulled or deleted from their context menu", async 
   await expect(secondScene).toHaveAttribute("aria-current", "true");
   await expect(sceneChangeNotice).toHaveCount(noticesBeforePull + 1);
   await secondScene.click({ button: "right" });
-  await expect(sceneMenu.getByRole("menuitem", { name: "Delete scene" })).toBeVisible();
-  await expect(sceneMenu).toHaveAttribute("data-closing", "false");
-  await sceneMenu.getByRole("menuitem", { name: "Delete scene" }).click();
+  await expect(sceneMenu.getByRole("menuitem", { name: "Delete Scene" })).toBeVisible();
+  await sceneMenu.getByRole("menuitem", { name: "Delete Scene" }).click();
   await expect(page.locator(".scene-item")).toHaveCount(1);
 });
 

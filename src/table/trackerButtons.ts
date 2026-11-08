@@ -4,6 +4,7 @@ import { selectedCharacterId } from "../features/characters/api";
 import {
   parseTrackerButton,
   pressTracker,
+  TRACKER_NODE,
   trackerBlock,
   trackerToken,
   type TrackerButton,
@@ -14,8 +15,6 @@ import {
  * [[-1 Treasure|Spend 1 Treasure]]) makes a button that adds to, or spends
  * from, the selected character's number when pressed.
  */
-
-export const TRACKER_NODE = "trackerButton";
 
 /** A pressed button that can't act gives a small shake. */
 export function shake(el: Element) {

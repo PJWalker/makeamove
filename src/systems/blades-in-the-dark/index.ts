@@ -653,6 +653,8 @@ export const bladesInTheDark: GameSystem = {
     },
   ],
   counters: [{ id: "crew-xp", label: "Crew XP", start: 0, max: 10 }],
+  // Action ratings are dice pools, not numbers added to a roll.
+  statsAddToRolls: false,
   stats: ACTIONS.map(([id, name]) => ({
     id,
     name,

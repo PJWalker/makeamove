@@ -36,7 +36,7 @@ import { dragToken } from "./tokenDrag";
 import { getEntityGraphic, setEntityGraphic } from "./entityGraphics";
 import { actionMenuItems } from "./actionMenu";
 import { dragEntity, entity } from "./entityDrag";
-import { sessionMoveUsed, sessionUseSnapshot } from "../features/characters/sessionMoves";
+import { sessionUseSnapshot } from "../features/characters/sessionMoves";
 import { useValue } from "../ui/useValue";
 
 /*
@@ -51,12 +51,15 @@ export function Counter({
   max,
   onChange,
   disabled,
+  status,
 }: {
   label: string;
   value: number;
   max?: number | undefined;
   onChange: (by: number) => void;
   disabled: boolean;
+  /** A state it's in, shown beside the label and in the counter's colour: "Bloodied". */
+  status?: { name: string; colour: string; title: string } | undefined;
 }) {
   return (
     <div
@@ -65,15 +68,23 @@ export function Counter({
       aria-label={label}
       data-label={label}
       data-fill={max !== undefined}
-      style={
-        max !== undefined
-          ? {
-              "--fill": `${Math.max(0, Math.min(1, max > 0 ? value / max : 0)) * 100}%`,
-            }
-          : undefined
-      }
+      data-status={!!status}
+      style={{
+        ...(max !== undefined && {
+          "--fill": `${Math.max(0, Math.min(1, max > 0 ? value / max : 0)) * 100}%`,
+        }),
+        ...(status && { "--condition-colour": status.colour }),
+      }}
     >
-      <span className="eyebrow">{label}</span>
+      <span className="counter-label">
+        <span className="eyebrow">{label}</span>
+        {status && (
+          <span className="counter-status" title={status.title}>
+            <span className="condition-dot" aria-hidden="true" />
+            {status.name}
+          </span>
+        )}
+      </span>
       <div className="counter-row">
         <Button
           variant="secondary"
@@ -195,10 +206,14 @@ export function MoveList({
   const [filter, setFilter] = useState<string>(categories[0]?.id ?? "all");
   const windows = useEntryWindows();
   const sessionMessages = useValue(campaign.chat.messages);
-  const sessionUsage = useY(campaign.systemData, () =>
-    sessionUseSnapshot(campaign, ownerId, moves, sessionMessages),
+  // Read through useY, which re-reads on every change: the session's uses live in Yjs.
+  const usedIds = new Set(
+    JSON.parse(
+      useY(campaign.systemData, () =>
+        sessionUseSnapshot(campaign, ownerId, moves, sessionMessages),
+      ),
+    ) as string[],
   );
-  void sessionUsage;
   const shown = filter === "all" ? moves : moves.filter((m) => m.category === filter);
 
   return (
@@ -213,7 +228,7 @@ export function MoveList({
       )}
       <List>
         {shown.map((m) => {
-          const used = sessionMoveUsed(campaign, ownerId, m, sessionMessages);
+          const used = usedIds.has(m.id);
           return (
             <EntryRow
               key={m.id}
@@ -225,7 +240,7 @@ export function MoveList({
               onPointerDown={(ev) => dragEntity(ev, entity(campaign, "move", m.id, m.name))}
               menuItems={[
                 {
-                  label: used ? "Already used this session" : makeVerb(m).label,
+                  label: used ? "Already Used This Session" : makeVerb(m).label,
                   disabled: used,
                   onSelect: () => onMake(m),
                 },
@@ -244,7 +259,7 @@ export function MoveList({
           : undefined;
         if (!m) return null;
         const tag = rollTag(system, m);
-        const used = sessionMoveUsed(campaign, ownerId, m, sessionMessages);
+        const used = usedIds.has(m.id);
         return (
           <EntryWindow
             key={key}
@@ -262,7 +277,7 @@ export function MoveList({
             )}
             menuItems={[
               {
-                label: used ? "Already used this session" : makeVerb(m).label,
+                label: used ? "Already Used This Session" : makeVerb(m).label,
                 disabled: used,
                 onSelect: () => onMake(m),
               },
@@ -320,10 +335,10 @@ export function TokenChip({
   const items: MenuItem[] = [
     ...(editable
       ? [
-          { label: "Change graphic…", Icon: IconImage, onSelect: pick },
+          { label: "Change Graphic…", Icon: IconImage, onSelect: pick },
           "divider" as const,
           {
-            label: "Token settings…",
+            label: "Token Settings…",
             Icon: IconRename,
             onSelect: () => setSettings(true),
           },

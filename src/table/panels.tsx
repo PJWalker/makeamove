@@ -194,22 +194,18 @@ function MemberRow({
     return (
       <li className="member member-confirm">
         <span className="member-name">Remove {m.name} from the campaign?</span>
-        <Button variant="danger" size="sm" onClick={() => campaign.revokeMember(m.id)}>
-          Remove
-        </Button>
         <Button variant="ghost" size="sm" onClick={() => setConfirming(false)}>
           Cancel
+        </Button>
+        <Button variant="danger" size="sm" onClick={() => campaign.revokeMember(m.id)}>
+          Remove
         </Button>
       </li>
     );
   }
   return (
     <li className="member">
-      <Avatar
-        id={m.id}
-        name={m.name}
-        online={m.id === me || online.has(m.id)}
-      />
+      <Avatar id={m.id} name={m.name} online={m.id === me || online.has(m.id)} />
       <span className="member-name">
         {m.name}
         {m.id === me && <span className="muted"> (you)</span>}

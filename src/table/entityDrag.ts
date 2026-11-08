@@ -43,6 +43,8 @@ export interface DragEntity {
   };
   /** Place it on the map as a token. */
   token?: TokenSpec;
+  /** The Library entry it comes from, for drops that take rules entities (a struggle, a class). */
+  libraryEntry?: { kind: string; id: string };
   /** File it in a note or character folder. */
   folder?: (folderId: string | undefined) => void;
 }
@@ -235,13 +237,23 @@ export function overHotbar(x: number, y: number) {
   return !!r && x >= r.left && x <= r.right && y >= r.top - 12 && y <= r.bottom;
 }
 
+/** The innermost element under a point that registered a drop accepting the entity. */
+function registeredDropAt(el: Element | null, entity: DragEntity): HTMLElement | null {
+  for (let at = el; at; at = at.parentElement)
+    if (at instanceof HTMLElement && entityDrops.get(at)?.accepts(entity)) return at;
+  return null;
+}
+
 /**
- * Where an entity would land at a point, other than the hotbar: an editor
- * that links it, or a character that takes it (any element with
- * `data-item-drop` or `data-move-drop` holding the character's id).
+ * Where an entity would land at a point, other than the hotbar: an element
+ * registered to take it, an editor that links it, or a character that takes
+ * it (any element with `data-item-drop` or `data-move-drop` holding the
+ * character's id).
  */
 export function dropTargetAt(x: number, y: number, entity: DragEntity): DropTarget | null {
   const el = document.elementFromPoint(x, y);
+  const registered = registeredDropAt(el, entity);
+  if (registered) return { element: registered };
   const editor = el?.closest<HTMLElement>("[data-link-drop]");
   if (entity.link && editor && linkDrops.has(editor)) return { element: editor };
   const folder = entity.folder ? el?.closest<HTMLElement>("[data-folder-drop]") : null;
