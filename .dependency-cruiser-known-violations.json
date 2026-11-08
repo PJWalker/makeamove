@@ -1,0 +1,4679 @@
+[
+  {
+    "type": "cycle",
+    "from": "src/campaign/campaign.ts",
+    "to": "src/features/chat/chatLog.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/features/chat/chatLog.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/types.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/content.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/trackers.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/campaign/campaign.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/features/characters/api.ts",
+    "to": "src/features/characters/folders.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/features/characters/folders.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "src/campaign/campaign.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/chatLog.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/types.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/content.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/trackers.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/api.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/features/characters/api.ts",
+    "to": "src/features/characters/inventory.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/features/characters/inventory.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "src/campaign/campaign.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/chatLog.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/types.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/content.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/trackers.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/api.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/features/characters/api.ts",
+    "to": "src/features/characters/lifecycle.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/features/characters/lifecycle.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "src/campaign/campaign.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/chatLog.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/types.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/content.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/trackers.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/api.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/features/characters/api.ts",
+    "to": "src/features/characters/moveFlow.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/features/characters/moveFlow.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "src/campaign/campaign.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/chatLog.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/types.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/content.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/trackers.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/api.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/features/characters/api.ts",
+    "to": "src/features/characters/queries.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/features/characters/queries.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "src/campaign/campaign.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/chatLog.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/types.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/content.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/trackers.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/api.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/features/characters/api.ts",
+    "to": "src/features/characters/sheet.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/features/characters/sheet.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "src/campaign/campaign.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/chatLog.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/types.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/content.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/trackers.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/api.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/features/characters/api.ts",
+    "to": "src/features/characters/system.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/features/characters/system.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "src/campaign/campaign.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/chatLog.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/types.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/content.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/trackers.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/api.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/features/characters/inventory.ts",
+    "to": "src/features/characters/queries.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/features/characters/queries.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/campaign/campaign.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/chatLog.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/types.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/content.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/trackers.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/api.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/inventory.ts",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/features/characters/inventory.ts",
+    "to": "src/features/characters/system.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/features/characters/system.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/campaign/campaign.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/chatLog.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/types.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/content.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/trackers.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/api.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/inventory.ts",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/features/characters/lifecycle.ts",
+    "to": "src/features/characters/sheet.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/features/characters/sheet.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/campaign/campaign.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/chatLog.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/types.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/content.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/trackers.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/api.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/lifecycle.ts",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/features/characters/lifecycle.ts",
+    "to": "src/features/characters/system.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/features/characters/system.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/campaign/campaign.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/chatLog.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/types.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/content.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/trackers.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/api.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/lifecycle.ts",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/features/characters/moveFlow.ts",
+    "to": "src/features/characters/moves.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/features/characters/moves.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/types.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/content.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/trackers.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/api.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/moveFlow.ts",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/features/characters/moveFlow.ts",
+    "to": "src/features/characters/queries.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/features/characters/queries.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/campaign/campaign.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/chatLog.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/types.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/content.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/trackers.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/api.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/moveFlow.ts",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/features/characters/moveFlow.ts",
+    "to": "src/features/characters/sessionMoves.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/features/characters/sessionMoves.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/campaign/campaign.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/chatLog.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/types.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/content.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/trackers.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/api.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/moveFlow.ts",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/features/characters/moveFlow.ts",
+    "to": "src/features/characters/sheet.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/features/characters/sheet.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/campaign/campaign.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/chatLog.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/types.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/content.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/trackers.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/api.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/moveFlow.ts",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/features/characters/moveFlow.ts",
+    "to": "src/features/characters/system.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/features/characters/system.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/campaign/campaign.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/chatLog.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/types.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/content.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/trackers.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/api.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/moveFlow.ts",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/features/characters/moveFlow.ts",
+    "to": "src/features/chat/send.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/features/chat/send.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/campaign/campaign.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/chatLog.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/types.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/content.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/trackers.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/api.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/moveFlow.ts",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/features/characters/moveFlow.ts",
+    "to": "src/features/chat/types.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/features/chat/types.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/content.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/trackers.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/api.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/moveFlow.ts",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/features/characters/queries.ts",
+    "to": "src/features/characters/system.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/features/characters/system.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/campaign/campaign.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/chatLog.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/types.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/content.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/trackers.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/api.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/queries.ts",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/features/characters/sessionMoves.ts",
+    "to": "src/features/chat/sessions.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/features/chat/sessions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/types.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/content.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/trackers.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/api.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/moveFlow.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "src/features/characters/sessionMoves.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/features/characters/sessionMoves.ts",
+    "to": "src/features/chat/types.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/features/chat/types.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/content.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/trackers.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/api.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/moveFlow.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "src/features/characters/sessionMoves.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/features/characters/sheet.ts",
+    "to": "src/features/characters/queries.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/features/characters/queries.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/campaign/campaign.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/chatLog.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/types.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/content.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/trackers.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/api.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/sheet.ts",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/features/characters/sheet.ts",
+    "to": "src/features/characters/system.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/features/characters/system.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/campaign/campaign.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/chatLog.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/types.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/content.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/trackers.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/api.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/sheet.ts",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/features/chat/commands.ts",
+    "to": "src/features/chat/types.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/features/chat/types.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/content.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/trackers.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/api.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/moveFlow.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "src/features/chat/send.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/commands.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/features/chat/content.ts",
+    "to": "src/features/notes/api.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/features/notes/api.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/campaign/campaign.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/chatLog.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/types.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/content.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/features/chat/content.ts",
+    "to": "src/features/notes/links.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/features/notes/links.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/notes/api.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/campaign/campaign.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/chatLog.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/types.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/content.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/features/chat/send.ts",
+    "to": "src/features/chat/content.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/features/chat/content.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/trackers.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/api.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/moveFlow.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "src/features/chat/send.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/features/chat/send.ts",
+    "to": "src/features/chat/types.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/features/chat/types.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/content.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/trackers.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/api.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/moveFlow.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "src/features/chat/send.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/features/chat/send.ts",
+    "to": "src/features/notes/sessions.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/features/notes/sessions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/campaign/campaign.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/chatLog.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/types.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/content.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/trackers.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/api.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/moveFlow.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "src/features/chat/send.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/features/notes/api.ts",
+    "to": "src/features/notes/links.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/features/notes/links.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/notes/api.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/features/notes/sessions.ts",
+    "to": "src/features/notes/api.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/features/notes/api.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/campaign/campaign.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/chatLog.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/types.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/chat/content.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/trackers.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/api.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/characters/moveFlow.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "src/features/chat/send.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/features/notes/sessions.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/graphics.ts",
+    "to": "src/scene/types.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/scene/types.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/graphics.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/scene/gestures/light.ts",
+    "to": "src/scene/gestures/types.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/scene/gestures/types.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/scene/gestures/light.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/scene/gestures/light.ts",
+    "to": "src/scene/gestures/wall.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/scene/gestures/wall.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/scene/gestures/types.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/scene/gestures/light.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/scene/gestures/shape.ts",
+    "to": "src/scene/gestures/types.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/scene/gestures/types.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/scene/gestures/shape.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/systems/blades-in-the-dark/CrewSheet.tsx",
+    "to": "src/table/sheetParts.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/CrewSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/systems/blades-in-the-dark/extension.ts",
+    "to": "src/systems/blades-in-the-dark/Sheet.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/systems/blades-in-the-dark/Sheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/DeclarativeSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/systems/blades-in-the-dark/extension.ts",
+    "to": "src/systems/extensions.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/systems/blades-in-the-dark/Sheet.tsx",
+    "to": "src/table/sheetParts.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/Sheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/systems/dnd55e/extension.ts",
+    "to": "src/systems/dnd55e/Sheet.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/systems/dnd55e/Sheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CharacterText.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/richText.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/dnd55e/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/systems/dnd55e/extension.ts",
+    "to": "src/systems/extensions.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/dnd55e/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/systems/dnd55e/Sheet.tsx",
+    "to": "src/table/CreationParts.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/CreationParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/dnd55e/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/dnd55e/Sheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/systems/dnd55e/Sheet.tsx",
+    "to": "src/table/DeclarativeSheet.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/DeclarativeSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/dnd55e/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/dnd55e/Sheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/systems/dnd55e/Sheet.tsx",
+    "to": "src/table/Inventory.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/Inventory.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/dnd55e/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/dnd55e/Sheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/systems/dnd55e/Sheet.tsx",
+    "to": "src/table/sheetParts.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/dnd55e/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/dnd55e/Sheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/systems/dungeon-world-2/ClassChange.tsx",
+    "to": "src/table/CampaignDialogs.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/dungeon-world-2/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/dungeon-world-2/ClassChange.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/systems/dungeon-world-2/ClassChange.tsx",
+    "to": "src/table/CreationParts.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/CreationParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/dungeon-world-2/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/dungeon-world-2/ClassChange.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/systems/dungeon-world-2/extension.ts",
+    "to": "src/systems/dungeon-world-2/ItemUse.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/systems/dungeon-world-2/ItemUse.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/dungeon-world-2/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/systems/dungeon-world-2/extension.ts",
+    "to": "src/systems/dungeon-world-2/MoveForms.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/systems/dungeon-world-2/MoveForms.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/dungeon-world-2/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/systems/dungeon-world-2/extension.ts",
+    "to": "src/systems/dungeon-world-2/Sheet.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/systems/dungeon-world-2/Sheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CharacterText.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/richText.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/dungeon-world-2/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/systems/dungeon-world-2/extension.ts",
+    "to": "src/systems/extensions.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/dungeon-world-2/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/systems/dungeon-world-2/Sheet.tsx",
+    "to": "src/table/DeclarativeSheet.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/DeclarativeSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/dungeon-world-2/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/dungeon-world-2/Sheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/systems/dungeon-world-2/Sheet.tsx",
+    "to": "src/table/sheetParts.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/dungeon-world-2/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/dungeon-world-2/Sheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/systems/dungeon-world/extension.ts",
+    "to": "src/systems/dungeon-world/Sheet.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/systems/dungeon-world/Sheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/DeclarativeSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/dungeon-world/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/systems/dungeon-world/extension.ts",
+    "to": "src/systems/extensions.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/dungeon-world/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/ActionDialogs.tsx",
+    "to": "src/table/commands/registry.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CharactersPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "src/table/ConfirmDialog.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/CrewSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/actionMenu.ts",
+    "to": "src/table/commands/registry.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CharactersPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "src/table/ConfirmDialog.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/CrewSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/CampaignDialogs.tsx",
+    "to": "src/table/campaignSheets.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/CrewSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/CardParts.tsx",
+    "to": "src/table/ChatExtras.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/ChatExtras.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ChatInput.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/richText.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ChatPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "src/table/ChatLog.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ChatMessage.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/RollCards.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CardParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/CharactersPanel.tsx",
+    "to": "src/table/CreationParts.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/CreationParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/CrewSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CharactersPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/CharactersPanel.tsx",
+    "to": "src/table/GraphicDialogs.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/GraphicDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/CrewSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CharactersPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/CharactersPanel.tsx",
+    "to": "src/table/linkState.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/linkState.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/entityWindows.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/CrewSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CharactersPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/CharactersPanel.tsx",
+    "to": "src/table/sheets.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/sheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/CrewSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CharactersPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/CharacterText.tsx",
+    "to": "src/table/richText.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/richText.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/Sheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/DeclarativeSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CharacterText.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/ChatComposer.tsx",
+    "to": "src/table/ChatInput.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/ChatInput.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/richText.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ChatPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "src/table/ChatComposer.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/ChatExtras.tsx",
+    "to": "src/table/ChatInput.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/ChatInput.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/richText.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ChatPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "src/table/ChatExtras.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/ChatLog.tsx",
+    "to": "src/table/ChatMessage.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/ChatMessage.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ChatExtras.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ChatInput.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/richText.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ChatPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "src/table/ChatLog.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/ChatMessage.tsx",
+    "to": "src/table/ChatExtras.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/ChatExtras.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ChatInput.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/richText.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ChatPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "src/table/ChatMessage.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/ChatMessage.tsx",
+    "to": "src/table/ChatInput.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/ChatInput.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/richText.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ChatPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "src/table/ChatMessage.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/ChatMessage.tsx",
+    "to": "src/table/LinkChip.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/LinkChip.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ChatPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "src/table/ChatMessage.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/ChatMessage.tsx",
+    "to": "src/table/RollCards.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/RollCards.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CardParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ChatExtras.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ChatInput.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/richText.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ChatPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "src/table/ChatMessage.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/commands/core.ts",
+    "to": "src/table/Toolbar.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/Toolbar.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CharactersPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "src/table/ConfirmDialog.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/CrewSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/DeclarativeSheet.tsx",
+    "to": "src/table/CreationParts.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/CreationParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/CrewSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CharactersPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "src/table/sheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/DeclarativeSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/DeclarativeSheet.tsx",
+    "to": "src/table/Inventory.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/Inventory.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/CrewSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CharactersPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "src/table/sheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/DeclarativeSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/DeclarativeSheet.tsx",
+    "to": "src/table/sheetParts.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/Sheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/DeclarativeSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/EntryWindow.tsx",
+    "to": "src/table/CampaignDialogs.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/CrewSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/EntryWindow.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/EntryWindow.tsx",
+    "to": "src/table/entityWindows.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/entityWindows.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/CrewSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/EntryWindow.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/Inventory.tsx",
+    "to": "src/systems/extensions.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/dungeon-world-2/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/dungeon-world-2/Sheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CharacterText.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/richText.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CharactersPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "src/table/sheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/DeclarativeSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/Inventory.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/Inventory.tsx",
+    "to": "src/table/EntryWindow.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/EntryWindow.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/CrewSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CharactersPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "src/table/sheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/DeclarativeSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/Inventory.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/Inventory.tsx",
+    "to": "src/table/GraphicDialogs.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/GraphicDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/CrewSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CharactersPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "src/table/sheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/DeclarativeSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/Inventory.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/Inventory.tsx",
+    "to": "src/table/LinkChip.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/LinkChip.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/Sheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/DeclarativeSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/Inventory.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/ItemsPanel.tsx",
+    "to": "src/table/EntryWindow.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/EntryWindow.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/CrewSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ItemsPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/LibrariesPanel.tsx",
+    "to": "src/table/EntryWindow.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/EntryWindow.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/CrewSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/LibrariesPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/LibrariesPanel.tsx",
+    "to": "src/table/GraphicDialogs.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/GraphicDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/CrewSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/LibrariesPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/LibrariesPanel.tsx",
+    "to": "src/table/LinkChip.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/LinkChip.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/LibrariesPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/LibrariesPanel.tsx",
+    "to": "src/table/MoveBody.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/MoveBody.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/CrewSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/LibrariesPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/LibrariesPanel.tsx",
+    "to": "src/table/sheetParts.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/LibrariesPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/LinkChip.tsx",
+    "to": "src/table/actionMenu.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/CrewSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/LinkChip.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/LinkChip.tsx",
+    "to": "src/table/CampaignDialogs.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/CrewSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/LinkChip.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/LinkChip.tsx",
+    "to": "src/table/GraphicDialogs.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/GraphicDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/CrewSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/LinkChip.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/LinkChip.tsx",
+    "to": "src/table/linkState.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/linkState.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/entityWindows.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/CrewSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/LinkChip.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/NoteEditor.tsx",
+    "to": "src/table/richText.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/richText.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/NotesPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "src/table/NoteEditor.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/NotesPanel.tsx",
+    "to": "src/table/ConfirmDialog.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/ConfirmDialog.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/CrewSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/NotesPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/NotesPanel.tsx",
+    "to": "src/table/GraphicDialogs.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/GraphicDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/CrewSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/NotesPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/panels.tsx",
+    "to": "src/table/ItemsPanel.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/ItemsPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/panels.tsx",
+    "to": "src/table/LibrariesPanel.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/LibrariesPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/Relationships.tsx",
+    "to": "src/table/CampaignDialogs.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/CrewSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CharactersPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "src/table/sheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/Relationships.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/Relationships.tsx",
+    "to": "src/table/CharacterText.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/CharacterText.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/richText.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CharactersPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "src/table/sheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/Relationships.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/richText.tsx",
+    "to": "src/table/GraphicDialogs.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/GraphicDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/CrewSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CharactersPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "src/table/sheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CharacterText.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/richText.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/richText.tsx",
+    "to": "src/table/linkState.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/linkState.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/entityWindows.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CampaignDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/campaignSheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/CrewSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CharactersPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "src/table/sheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CharacterText.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/richText.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/sheetParts.tsx",
+    "to": "src/table/MoveBody.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/MoveBody.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/CrewSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/sheets.tsx",
+    "to": "src/table/CharacterText.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/CharacterText.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/richText.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CharactersPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "src/table/sheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/sheets.tsx",
+    "to": "src/table/DeclarativeSheet.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/DeclarativeSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/CrewSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CharactersPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "src/table/sheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/table/sheets.tsx",
+    "to": "src/table/Relationships.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/table/Relationships.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/extensions.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/extension.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/systems/blades-in-the-dark/CrewSheet.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/sheetParts.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/actionMenu.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/ActionDialogs.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/registry.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/commands/core.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/panels.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/table/CharactersPanel.tsx",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "src/table/sheets.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "dependency",
+    "from": "src/lobby/Lobby.tsx",
+    "to": "src/app/router.ts",
+    "rule": {
+      "severity": "error",
+      "name": "nothing-imports-the-app-shell"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/table/Toolbar.tsx",
+    "to": "src/app/router.ts",
+    "rule": {
+      "severity": "error",
+      "name": "nothing-imports-the-app-shell"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/ui/BlobImage.tsx",
+    "to": "src/scene/images.ts",
+    "rule": {
+      "severity": "error",
+      "name": "ui-is-presentational"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/ui/BlobImage.tsx",
+    "to": "src/scene/types.ts",
+    "rule": {
+      "severity": "error",
+      "name": "ui-is-presentational"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/ui/entryIcons.tsx",
+    "to": "src/features/library/index.ts",
+    "rule": {
+      "severity": "error",
+      "name": "ui-is-presentational"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/ui/GraphicPicker.tsx",
+    "to": "src/scene/images.ts",
+    "rule": {
+      "severity": "error",
+      "name": "ui-is-presentational"
+    }
+  }
+]

@@ -30,7 +30,7 @@ function refresh() {
 }
 
 list.observe(refresh);
-persistence.whenSynced.then(() => {
+void persistence.whenSynced.then(() => {
   refresh();
   registryReady.value = true;
 });

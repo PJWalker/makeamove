@@ -50,7 +50,7 @@ export interface DiceRenderer {
     slot: HTMLElement,
     piece: Piece,
     thrown?: { from: Point; delay: number },
-  ): { landed: Promise<void>; dispose(): void };
+  ): { landed: Promise<void>; dispose: () => void };
   /**
    * Tumbles the landed dice drawn in `originals` in the canvases at the same
    * places in `copies`; the returned function settles them back as they were.
@@ -106,7 +106,7 @@ interface Face {
 /** A die or token ready to draw; dispose() frees its labels. */
 interface Drawn {
   die: Mesh;
-  dispose(): void;
+  dispose: () => void;
 }
 interface Shape {
   geometry: BufferGeometry;

@@ -22,16 +22,10 @@ import {
 } from "./noteExtensions";
 import { getNote, type LinkKind } from "../features/notes/api";
 import { LINK_NODE } from "../features/notes/links";
-import {
-  followLink,
-  linkLabel,
-  linkTargets,
-  linkTip,
-  openInSidebar,
-  type LinkTarget,
-} from "../features/notes/targets";
+import { linkLabel, linkTargets, linkTip, type LinkTarget } from "../features/notes/targets";
+import { followLink, openInSidebar } from "./linkNavigation";
 import { menuTrigger } from "../ui/menuTrigger";
-import type { MenuItem } from "./ContextMenu";
+import type { MenuItem } from "../ui/ContextMenu";
 import { linkActionItems, linkMenu, renameLink, showLink } from "./linkState";
 import type { Campaign } from "../campaign/campaign";
 import { placeAnchored } from "../ui/anchor";
@@ -305,7 +299,8 @@ export function mountRichText(
     },
     onUpdate: ({ editor: ed, transaction }) => {
       // Edits that arrived from peers are theirs to record.
-      if (transaction.getMeta(ySyncPluginKey)?.isChangeOrigin) return;
+      const sync = transaction.getMeta(ySyncPluginKey) as { isChangeOrigin?: boolean } | undefined;
+      if (sync?.isChangeOrigin) return;
       o.onLocalEdit?.(ed);
     },
   });

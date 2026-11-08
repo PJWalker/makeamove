@@ -3,7 +3,7 @@ import type * as React from "react";
 import { placeAnchored } from "./anchor";
 import { claimMorph, growFromOrigin, hasFreshOrigin, originRect, releaseMorph } from "./morph";
 import { nextZ } from "./windows";
-import { RESIZE_CURSORS, resizeRect, type ResizeDir } from "../table/resizeRect";
+import { RESIZE_CURSORS, resizeRect, type ResizeDir } from "./resizeRect";
 import { trackPointer } from "./pointer";
 import { withTransition } from "./transition";
 

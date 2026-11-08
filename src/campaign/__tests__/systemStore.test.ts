@@ -4,7 +4,7 @@ import { pairKey, systemStore } from "../systemStore";
 
 describe("system data stores", () => {
   it("creates its map on the first write, never on a read", () => {
-    const systemData = new Y.Doc().getMap<any>("systemData");
+    const systemData = new Y.Doc().getMap<unknown>("systemData");
     const store = systemStore<number>(systemData, "test:store");
     expect(store.get("a")).toBeUndefined();
     expect(store.has("a")).toBe(false);

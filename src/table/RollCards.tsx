@@ -1,5 +1,5 @@
 import { FormattedText } from "./FormattedText";
-import { useRef } from "react";
+import { useState } from "react";
 import type { MoveMessage, RollMessage, RollVisibility } from "../features/chat/types";
 import { type Roll } from "../features/dice/notation";
 import { applySuggestion, getCharacter, systemOf } from "../features/characters/api";
@@ -119,7 +119,9 @@ function RollTerms({
   interaction,
 }: { roll: Roll; colour: string; interaction: RollInteraction } & Thrown) {
   const seeds = interaction.snapshot!.seeds;
-  const initial = useRef(new Set(seeds.flatMap((row, i) => (row.length ? row : [`flat:${i}`]))));
+  const [initial] = useState(
+    () => new Set(seeds.flatMap((row, i) => (row.length ? row : [`flat:${i}`]))),
+  );
   return (
     <div className="roll-terms">
       {roll.terms.map((t, i) => (
@@ -136,7 +138,7 @@ function RollTerms({
               index={i}
               // Rolls edited before chips had seeds have none for them.
               seed={seeds[i]?.[0] ?? `flat:${i}`}
-              arriving={arriving || !initial.current.has(seeds[i]?.[0] ?? `flat:${i}`)}
+              arriving={arriving || !initial.has(seeds[i]?.[0] ?? `flat:${i}`)}
               mine={mine}
             />
           ) : (
@@ -148,7 +150,7 @@ function RollTerms({
                     key={seed}
                     die={d}
                     index={j}
-                    arriving={arriving || !initial.current.has(seed)}
+                    arriving={arriving || !initial.has(seed)}
                     mine={mine}
                     seed={seed}
                     colour={colour}

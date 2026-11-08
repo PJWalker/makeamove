@@ -176,7 +176,7 @@ export class ChatLog {
     this.stopRoot();
     for (const c of this.loaded.values()) {
       c.stop();
-      c.persistence.destroy();
+      void c.persistence.destroy();
     }
     this.loaded.clear();
   }

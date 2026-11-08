@@ -1,6 +1,4 @@
-import type { ReactNode } from "react";
-import { memo } from "react";
-import { useEffect, useMemo, useRef } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { renderToReactElement } from "@tiptap/static-renderer/pm/react";
 import { type ChatContent } from "../features/chat/content";
 import type { ChatMessage, TextMessage } from "../features/chat/types";
@@ -90,8 +88,8 @@ export const Message = memo(function Message({
 }: MessageProps) {
   const menu = useMemo(() => onMenu && menuTrigger((x, y) => onMenu(x, y, m.id)), [onMenu, m.id]);
   // Fixed when it mounts, so a re-render mid-animation doesn't cut it short.
-  const arriving = useRef(fresh && !arrived.has(m.id)).current;
-  const arrival = useRef({ fresh, id: m.id, mine, arriving }).current;
+  const [arriving] = useState(() => fresh && !arrived.has(m.id));
+  const [arrival] = useState({ fresh, id: m.id, mine, arriving });
   useEffect(() => {
     if (!arrival.fresh) return;
     arrived.add(arrival.id);
@@ -235,7 +233,7 @@ function Rich({ campaign, content }: { campaign: Campaign; content: ChatContent 
       },
     },
   });
-  return rendered as unknown as ReactNode;
+  return rendered;
 }
 
 /** A button in a message changes the numbers of whichever character the viewer has selected. */

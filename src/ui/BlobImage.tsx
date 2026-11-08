@@ -15,7 +15,8 @@ export function BlobImage({
   className?: string;
   fallback?: React.ReactNode;
 }) {
-  const [url, setUrl] = useState<string | null>(null);
+  // Keyed by what was loaded, so a new image or retry never shows a stale URL.
+  const [loaded, setLoaded] = useState<{ hash: string; tries: number; url: string } | null>(null);
   const [tries, setTries] = useState(0);
   const hash = image?.hash;
 
@@ -26,14 +27,13 @@ export function BlobImage({
     };
   }, []);
   useEffect(() => {
-    setUrl(null);
     if (!hash) return;
     let made: string | null = null;
     let stale = false;
-    loadBlob(hash).then((blob) => {
+    void loadBlob(hash).then((blob) => {
       if (stale || !blob) return;
       made = URL.createObjectURL(blob);
-      setUrl(made);
+      setLoaded({ hash, tries, url: made });
     });
     return () => {
       stale = true;
@@ -41,5 +41,6 @@ export function BlobImage({
     };
   }, [hash, tries]);
 
+  const url = loaded && loaded.hash === hash && loaded.tries === tries ? loaded.url : null;
   return url ? <img className={cls} src={url} alt={alt} draggable={false} /> : <>{fallback}</>;
 }

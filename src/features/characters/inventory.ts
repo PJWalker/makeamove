@@ -18,7 +18,8 @@ import { systemOf } from "./system";
 function inventoryOf(campaign: Campaign, characterId: string): Y.Map<ItemInstance> | undefined {
   const m = campaign.characters.get(characterId);
   if (!m) return undefined;
-  if (m.get("inventory") instanceof Y.Map) return m.get("inventory");
+  const stored = m.get("inventory");
+  if (stored instanceof Y.Map) return stored as Y.Map<ItemInstance>;
   const base = baseOf(campaign, m)?.get("inventory") as Y.Map<ItemInstance> | undefined;
   if (!m.get("base")) return undefined;
   const own = new Y.Map<ItemInstance>();

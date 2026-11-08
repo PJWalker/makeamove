@@ -260,18 +260,18 @@ export const sourceClassSectionText = (classId: string, sectionName: string): st
   );
   if (!classHeading?.index) throw new Error(`Missing Dungeon World 2 class: ${classId}`);
   const nextClass = [...source.matchAll(/^## /gm)].find(
-    (heading) => (heading.index ?? 0) > classHeading.index!,
+    (heading) => (heading.index ?? 0) > classHeading.index,
   );
   const classEnd = nextClass?.index ?? source.length;
   const sectionHeading = moveHeadings.find(
     (heading) =>
-      (heading.index ?? 0) > classHeading.index! &&
+      (heading.index ?? 0) > classHeading.index &&
       (heading.index ?? 0) < classEnd &&
       key(heading[1] ?? "").startsWith(key(sectionName)),
   );
   if (!sectionHeading?.index || !sectionHeading[0])
     throw new Error(`Missing ${sectionName} prompt for ${classId}`);
-  const nextSection = moveHeadings.find((heading) => (heading.index ?? 0) > sectionHeading.index!);
+  const nextSection = moveHeadings.find((heading) => (heading.index ?? 0) > sectionHeading.index);
   const sectionEnd = Math.min(nextSection?.index ?? classEnd, classEnd);
   return plain(source.slice(sectionHeading.index + sectionHeading[0].length, sectionEnd));
 };

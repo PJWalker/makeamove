@@ -59,6 +59,15 @@ const cancel = () => {
   areaRequest.value = null;
 };
 
+const answered = () => {
+  moveRequest.value = null;
+};
+
+/** Start placing an action's area on the scene, or stop. */
+const toggleAreaRequest = (area: AreaSpec, actor: string) => {
+  areaRequest.value = areaRequest.value ? null : { area, actor, n: Date.now() };
+};
+
 /** The anchor's box, if it's still on screen. */
 function anchorRect(el: Element | null): DOMRect | null {
   const r = el?.isConnected ? el.getBoundingClientRect() : null;
@@ -86,28 +95,34 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
   );
   const hasLive = live !== null;
   // What's on screen: the live request, or the last one while it shrinks away.
-  const [shown, setShown] = useState<Request | null>(null);
+  const [last, setLast] = useState<Request | null>(null);
+  if (live && live !== last) setLast(live);
+  const shown = live ?? last;
   const ref = useRef<HTMLDivElement>(null);
   const anchor = useRef<Element | null>(null);
   const leaving = useRef<Animation | null>(null);
 
+  // Whether a request was on screen as of the last commit.
+  const wasShown = useRef(false);
   // A new request takes the button just pressed as its anchor, unless that was in the bubble (targets → roll).
   useLayoutEffect(() => {
     if (!live) return;
     const pressed = lastPressed();
     if (pressed && !ref.current?.contains(pressed)) anchor.current = pressed;
-    else if (!shown) anchor.current = null;
+    else if (!wasShown.current) anchor.current = null;
     leaving.current?.cancel();
     leaving.current = null;
-    setShown(live);
-  }, [live, shown]);
+  }, [live]);
+  useLayoutEffect(() => {
+    wasShown.current = shown !== null;
+  });
 
   // Shrink back into the button once the request is done or cancelled.
   useLayoutEffect(() => {
     if (hasLive || !shown) return;
     const el = ref.current;
     if (!el || reducedMotion.matches) {
-      setShown(null);
+      setLast(null);
       return;
     }
     const box = el.getBoundingClientRect();
@@ -125,7 +140,7 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
     leaving.current = a;
     a.finished.then(
       () => {
-        if (leaving.current === a) setShown(null);
+        if (leaving.current === a) setLast(null);
       },
       () => {},
     );
@@ -310,8 +325,7 @@ function TargetStep({
   const request = useValue(areaRequest);
   const placed = useValue(placedArea);
   const placing = !!request;
-  const placeArea = () =>
-    (areaRequest.value = placing ? null : { area: area!, actor: characterId, n: Date.now() });
+  const placeArea = () => toggleAreaRequest(area!, characterId);
   return (
     <div className="move-form">
       <p className="roll-prompt-text">{spec.prompt}</p>
@@ -456,7 +470,7 @@ function AskStep({
   const go = (mode: string) => {
     if (!rollFor(mode).ready) return;
     void makeMove(campaign, c.id, move, choiceWith(mode), targets);
-    moveRequest.value = null;
+    answered();
   };
   // The first half of the modes before the plain roll, the rest after: Disadvantage, Roll, Advantage.
   const half = Math.floor(rollModes.length / 2);

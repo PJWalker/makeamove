@@ -12,7 +12,7 @@
 @import "../lobby/Lobby.css";
 @import "../table/Tabletop.css";
 @import "../table/SceneCanvas.css";
-@import "../table/ContextMenu.css";
+@import "../ui/ContextMenu.css";
 @import "../table/ScenePanel.css";
 @import "../table/Sidebar.css";
 @import "../table/FloatingWindows.css";
@@ -66,7 +66,7 @@
 @import "../ui/FilterableMenu.css";
 @import "../ui/OptionPicker.css";
 @import "../ui/PopupTabs.css";
-@import "../features/combat/CombatPanel.css";
+@import "../table/CombatPanel.css";
 @import "../table/CreationParts.css";
 @import "../table/ItemsPanel.css";
 @import "../table/Relationships.css";

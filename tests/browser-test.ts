@@ -12,7 +12,7 @@ import { expect as vitestExpect, test as vitestTest } from "vitest";
 import { App } from "../src/app/App";
 import { pendingInvite, routeCampaignId } from "../src/app/router";
 import { closeCampaign } from "../src/campaign/campaign";
-import { recentActions } from "../src/app/commands/recent";
+import { recentActions } from "../src/table/commands/recent";
 import { activeTool } from "../src/scene/tools";
 import { autohide } from "../src/table/canvasState";
 import { entityWindows } from "../src/table/entityWindows";
@@ -369,6 +369,7 @@ const testPage: Page = {
   },
   async addStyleTag({ content }) {
     const style = document.createElement("style");
+    style.dataset.testStyle = "";
     style.textContent = content;
     document.head.append(style);
   },
@@ -543,6 +544,8 @@ const startViewTransition = document.startViewTransition;
 function resetDeviceState() {
   // A test may wrap this to hold a transition's animations; don't let that outlive it.
   document.startViewTransition = startViewTransition;
+  // Styles a test added (such as slowed-down transitions) are its own.
+  for (const style of document.querySelectorAll("style[data-test-style]")) style.remove();
   localStorage.clear();
   sessionStorage.clear();
   layout.value = normalise(null, false);

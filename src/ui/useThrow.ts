@@ -59,7 +59,7 @@ function lift(element: HTMLElement) {
   element.style.opacity = "0";
   return {
     carrier,
-    drop() {
+    drop: () => {
       carrier.remove();
       element.style.opacity = opacity;
     },

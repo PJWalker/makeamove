@@ -54,7 +54,7 @@ export function goToCampaign(id: string | null) {
     setZoomOrigin(row.getBoundingClientRect());
   }
 
-  withTransition(
+  void withTransition(
     async () => {
       location.hash = id ? `#/c/${id}` : "#/";
       await until(() => !!document.querySelector(id ? ".table" : ".lobby"));

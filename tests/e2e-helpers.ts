@@ -1,3 +1,4 @@
+import { inTransition } from "../src/ui/transition";
 import { expect, type Locator, type Page } from "./browser-test";
 
 export async function createCampaign(page: Page, name = "The Lost Barrows", systemId?: string) {
@@ -6,6 +7,8 @@ export async function createCampaign(page: Page, name = "The Lost Barrows", syst
   if (systemId) await page.getByLabel("System").selectOption(systemId);
   await page.getByRole("button", { name: "Create Campaign" }).click();
   await expect(page.locator('[aria-label="Scene: The Opening Scene"]')).toBeVisible();
+  // The table zooms in from the lobby; it takes clicks once that's over.
+  await settled(page);
 }
 
 export async function drag(page: Page, from: Locator, x: number, y: number) {
@@ -72,9 +75,12 @@ export async function addRelationshipAtDepthThree(page: Page, name: string) {
   await page.getByRole("spinbutton", { name: `Depth with ${name}` }).fill("3");
 }
 
-/** Wait for view transitions and other animations to finish. */
+/**
+ * Wait for view transitions and other animations to finish. A transition
+ * counts from when it starts, before its update has run and anything animates.
+ */
 export async function settled(page: Page) {
   await page.waitForFunction(
-    () => document.documentElement.getAnimations({ subtree: true }).length === 0,
+    () => !inTransition() && document.documentElement.getAnimations({ subtree: true }).length === 0,
   );
 }

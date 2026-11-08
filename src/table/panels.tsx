@@ -47,7 +47,7 @@ const NotesPanel = lazy(() =>
   import("./NotesPanel").then((module) => ({ default: module.NotesPanel })),
 );
 const CombatPanel = lazy(() =>
-  import("../features/combat/CombatPanel").then((module) => ({ default: module.CombatPanel })),
+  import("./CombatPanel").then((module) => ({ default: module.CombatPanel })),
 );
 const ItemsPanel = lazy(() =>
   import("./ItemsPanel").then((module) => ({ default: module.ItemsPanel })),

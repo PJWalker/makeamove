@@ -8,7 +8,7 @@ import { device, setDeviceName } from "../platform/device";
 import { campaigns, registryReady, type CampaignSummary } from "../campaign/registry";
 import { getSystem, listSystems, NO_SYSTEM_ID } from "../systems";
 import { Button } from "../ui/Button";
-import { ContextMenu } from "../table/ContextMenu";
+import { ContextMenu } from "../ui/ContextMenu";
 import { menuTrigger } from "../ui/menuTrigger";
 import { useValue } from "../ui/useValue";
 
@@ -88,7 +88,7 @@ export function Lobby({ error }: { error: string | null }) {
 function LazyBackdrop() {
   const [Backdrop, setBackdrop] = useState<ComponentType | null>(null);
   useEffect(() => {
-    import("./IconBackdrop").then((m) => setBackdrop(() => m.IconBackdrop));
+    void import("./IconBackdrop").then((m) => setBackdrop(() => m.IconBackdrop));
   }, []);
   return Backdrop ? <Backdrop /> : null;
 }
@@ -133,7 +133,7 @@ function CampaignRow({ c }: { c: CampaignSummary }) {
         <DeleteCampaignDialog
           campaignName={c.name}
           onClose={() => setConfirming(false)}
-          onConfirm={() => deleteLocalCampaign(c.id)}
+          onConfirm={() => void deleteLocalCampaign(c.id)}
         />
       )}
     </li>
@@ -209,7 +209,11 @@ function NewCampaignForm() {
   }
 
   return (
-    <form className="panel lobby-section" onSubmit={submit} aria-labelledby="new-campaign">
+    <form
+      className="panel lobby-section"
+      onSubmit={(e) => void submit(e)}
+      aria-labelledby="new-campaign"
+    >
       <h2 id="new-campaign" className="eyebrow">
         Start a campaign
       </h2>
@@ -286,7 +290,7 @@ function JoinInviteDialog({ invite }: { invite: NonNullable<typeof pendingInvite
         Join a campaign
       </h2>
       <p>You&apos;ve been invited to a campaign.</p>
-      <form onSubmit={submit}>
+      <form onSubmit={(e) => void submit(e)}>
         <label className="field">
           Your name
           <input

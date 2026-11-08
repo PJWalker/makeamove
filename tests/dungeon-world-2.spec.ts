@@ -6,6 +6,7 @@ import {
   chooseCreationOptions,
   addRelationshipAtDepthThree,
   drag,
+  settled,
 } from "./e2e-helpers";
 
 test("DW2 PCs forge and advance one shared Bond at mutual Depth three", async ({ page }) => {
@@ -479,6 +480,8 @@ test("DW2 sheets reveal a Struggle dragged in from the Libraries", async ({ page
 
   const libraries = page.getByRole("tab", { name: "Libraries" });
   if ((await libraries.getAttribute("aria-selected")) !== "true") await libraries.click();
+  // The sheet takes drops once the panel switch's transition is over.
+  await settled(page);
   await page.getByRole("searchbox", { name: "Search the Libraries" }).fill("Reformed");
   const moves = await page.getByRole("region", { name: "Moves" }).boundingBox();
   if (!moves) throw new Error("The sheet's moves are not shown.");

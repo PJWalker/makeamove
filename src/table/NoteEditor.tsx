@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { getNote, noteSubdoc, touchNote } from "../features/notes/api";
 import { NoteDoc } from "../features/notes/noteDoc";
 import { linksIn } from "../features/notes/links";
-import { noteSearchTarget } from "../features/notes/targets";
+import { noteSearchTarget } from "./linkNavigation";
 import type { Campaign } from "../campaign/campaign";
 import { mountRichText } from "./richText";
 import { Awareness } from "y-protocols/awareness";

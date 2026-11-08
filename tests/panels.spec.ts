@@ -50,6 +50,8 @@ test("panel creation actions share the title bar when docked and floating", asyn
   ] as const) {
     const tab = page.getByRole("tab", { name: title, exact: true });
     if ((await tab.getAttribute("aria-selected")) !== "true") await tab.click();
+    // The panel takes clicks once the switch's transition is over.
+    await settled(page);
     const header = page.locator(".sidebar-panel > .panel-header").filter({
       has: page.getByRole("heading", { name: title, exact: true }),
     });
@@ -105,6 +107,8 @@ test("a panel can be floated and docked on the other sidebar", async ({ page }) 
   const notesWindow = page.getByRole("region", { name: "Notes" });
   await expect(notesWindow).toBeVisible();
   await expect(notesTab).toHaveCount(0);
+  // The window takes clicks once its opening transition is over.
+  await settled(page);
 
   const title = notesWindow.getByRole("heading", { name: "Notes" });
   const leftSidebar = page.getByRole("complementary", { name: "Left sidebar" });
@@ -131,6 +135,7 @@ test("a floating panel can be rolled up and restored", async ({ page }) => {
   const title = notesWindow.getByRole("heading", { name: "Notes" });
   const newPage = notesWindow.getByRole("button", { name: "New Page" });
   await expect(newPage).toBeVisible();
+  await settled(page);
   await title.dblclick();
   await expect(newPage).toBeHidden();
   await title.dblclick();

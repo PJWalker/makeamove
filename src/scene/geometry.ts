@@ -205,7 +205,7 @@ export function resizeFromCorner(
   keepAspect: boolean,
   min = 8,
 ): Transform {
-  const sign = CORNER_SIGNS[corner]!;
+  const sign = CORNER_SIGNS[corner];
   const opposite = { x: (-sign.x * t.w) / 2, y: (-sign.y * t.h) / 2 };
   const l = toLocal(t, p);
   let w = Math.max(min, (l.x - opposite.x) * sign.x);

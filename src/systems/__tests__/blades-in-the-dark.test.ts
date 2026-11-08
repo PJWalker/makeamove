@@ -1,7 +1,5 @@
 import "fake-indexeddb/auto";
-import { describe, expect, it, vi } from "vitest";
-
-vi.mock("../../table/panelLayout", () => ({ showPanel: () => {} }));
+import { describe, expect, it } from "vitest";
 
 import { Campaign, createCampaign } from "../../campaign/campaign";
 import {

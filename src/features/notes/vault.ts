@@ -27,8 +27,8 @@ export const vaultNoteGuid = (campaignId: string, noteId: string) =>
 
 export class Vault {
   readonly doc: Y.Doc;
-  readonly meta: Y.Map<any>;
-  readonly notes: Y.Map<Y.Map<any>>;
+  readonly meta: Y.Map<unknown>;
+  readonly notes: Y.Map<Y.Map<unknown>>;
   readonly characterText: Y.Map<Y.XmlFragment>;
   private persistence: IndexeddbPersistence;
   private session: SyncSession | null = null;
@@ -51,7 +51,7 @@ export class Vault {
 
   /** The secret to the vault's room. */
   get key(): string {
-    return this.meta.get("key");
+    return this.meta.get("key") as string;
   }
 
   /** Sync with the campaign's other GM devices, if any are around. */
@@ -87,7 +87,7 @@ export class Vault {
   destroy() {
     this.destroyed = true;
     this.disconnect();
-    this.persistence.destroy();
+    void this.persistence.destroy();
     this.doc.destroy();
   }
 }

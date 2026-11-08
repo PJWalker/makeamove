@@ -1,5 +1,5 @@
-import { findAction } from "../app/commands/registry";
-import { shortcutFor, showCombo } from "../app/commands/custom";
+import { findAction } from "./commands/registry";
+import { shortcutFor, showCombo } from "./commands/custom";
 import {
   editHotbar,
   hotbarSlots,
@@ -11,7 +11,7 @@ import {
 import { selectedCharacterId } from "../features/characters/api";
 import type { Campaign } from "../campaign/campaign";
 import { IconAdd, IconDelete, IconShortcut } from "../ui/icons";
-import type { MenuItem } from "./ContextMenu";
+import type { MenuItem } from "../ui/ContextMenu";
 import { editAction } from "./ActionDialogs";
 
 export interface ActionMenuTarget {

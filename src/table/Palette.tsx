@@ -1,8 +1,8 @@
 import type { PointerEvent as ReactPointerEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
 import { store } from "../lib/store";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { noteRecent, recentActions } from "../app/commands/recent";
-import { rollAction } from "../app/commands/core";
+import { noteRecent, recentActions } from "./commands/recent";
+import { rollAction } from "./commands/core";
 import {
   actionForCombo,
   comboOf,
@@ -10,22 +10,25 @@ import {
   shortcutFor,
   shortcuts,
   showCombo,
-} from "../app/commands/custom";
-import { buildIndex, findAction } from "../app/commands/registry";
+} from "./commands/custom";
+import { buildIndex, findAction } from "./commands/registry";
 import { diceFormula } from "../features/chat/commands";
-import { rank } from "../app/commands/search";
-import type { Action } from "../app/commands/types";
+import { rank } from "./commands/search";
+import type { Action } from "./commands/types";
 import { editHotbar, insertAt, isPinned, pin, unpin } from "../features/characters/hotbar";
 import { isTyping } from "../ui/keys";
 import { RECORDER } from "./ActionDialogs";
 import { actionMenuItems } from "./actionMenu";
 import { actionEntity, dragEntity } from "./entityDrag";
 import { menuTrigger } from "../ui/menuTrigger";
-import { ContextMenu, type MenuItem } from "./ContextMenu";
+import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
 import type { Campaign } from "../campaign/campaign";
 import { useValue } from "../ui/useValue";
 
 export const paletteOpen = store(false);
+const closePalette = () => {
+  paletteOpen.value = false;
+};
 
 export function Palette({ campaign }: { campaign: Campaign }) {
   const open = useValue(paletteOpen);
@@ -54,7 +57,7 @@ export function Palette({ campaign }: { campaign: Campaign }) {
       if (a?.available !== true) return;
       e.preventDefault();
       e.stopPropagation();
-      paletteOpen.value = false;
+      closePalette();
       noteRecent(a.id);
       a.run();
     };
@@ -100,11 +103,7 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
         x,
         y,
         items: [
-          ...actionMenuItems(
-            campaign,
-            [{ id: a.id, title: a.title }],
-            () => (paletteOpen.value = false),
-          ),
+          ...actionMenuItems(campaign, [{ id: a.id, title: a.title }], closePalette),
           ...(a.available === true ? [{ label: "Run", onSelect: () => choose(a) }] : []),
         ],
       });
@@ -143,7 +142,7 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
     const onDown = (e: PointerEvent) => {
       const t = e.target as Element;
       if (!rootRef.current?.contains(t) && !t.closest?.(".context-menu, .hotbar-palette"))
-        paletteOpen.value = false;
+        closePalette();
     };
     document.addEventListener("pointerdown", onDown, true);
     return () => document.removeEventListener("pointerdown", onDown, true);
@@ -153,7 +152,7 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
     if (!a || a.available !== true) return;
     const fn = secondary ? a.open : a.run;
     if (!fn) return;
-    paletteOpen.value = false;
+    closePalette();
     noteRecent(a.id);
     // After the palette has closed and given focus back.
     queueMicrotask(fn);
@@ -163,7 +162,7 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
     if (e.key === "Escape" && menu) return;
     if (e.key === "Escape") {
       e.preventDefault();
-      paletteOpen.value = false;
+      closePalette();
     } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
       const n = results.length;

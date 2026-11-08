@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { COMMANDS, parseCommand, suggest } from "../features/chat/commands";
 import { commandText, emptyChatContent, type ChatContent } from "../features/chat/content";
 import { addToRoll, postRoll, runCommand } from "../features/chat/send";
@@ -53,13 +53,13 @@ export function ChatComposer({
   const members = useY(campaign.members, () => campaign.memberViews());
   // The selected character's stats, as chips; read again as the character or the choice changes.
   useY(campaign.members, () => selectedCharacterId(campaign));
-  const stats: TrayPick[] = JSON.parse(
+  const stats = JSON.parse(
     useY(campaign.characters, () =>
       JSON.stringify(
         selectedStatBonuses(campaign).map(({ stat, value }) => ({ kind: "stat", stat, value })),
       ),
     ),
-  );
+  ) as TrayPick[];
   const hints = suggest(typed, isGm);
 
   function send() {
@@ -98,12 +98,15 @@ export function ChatComposer({
     setPool([]);
     if (!formula) return;
     try {
-      postRoll(campaign, formula, visibility);
+      void postRoll(campaign, formula, visibility);
     } catch (e) {
       if (e instanceof NotationError) setError(e.message);
     }
   }
-  rollPoolRef.current = rollPool;
+  // The pool's timer rolls whatever is in it by then.
+  useLayoutEffect(() => {
+    rollPoolRef.current = rollPool;
+  });
 
   function setPoolAndTimer(next: TrayPick[]) {
     setPool(next);
@@ -268,7 +271,7 @@ export function ChatComposer({
         )}
         <ChatInput
           campaign={campaign}
-          handle={input}
+          handleRef={input}
           placeholder="Message, @ to link, or roll 2d6+1"
           label="Message"
           invalid={!!error}

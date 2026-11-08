@@ -32,7 +32,7 @@ export class NoteDoc {
 
   /** Unload the note. Its subdocument is replaced by an unloaded stub. */
   destroy() {
-    this.persistence.destroy();
+    void this.persistence.destroy();
     this.doc.destroy();
   }
 }

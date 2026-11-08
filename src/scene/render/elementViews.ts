@@ -92,7 +92,7 @@ export function buildView(
       let sprite: Sprite | null = null;
       let missing: Text | null = null;
       let size = { w: el.w, h: el.h };
-      textureFor(el.image.hash).then((tex) => {
+      void textureFor(el.image.hash).then((tex) => {
         if (root.destroyed) return;
         if (!tex) {
           // Not on this device; from M2 a peer will send it.
@@ -139,7 +139,7 @@ export function buildView(
       const iconName = el.graphic?.kind === "icon" ? el.graphic.name : undefined;
       if (isPlainToken(el)) {
         // The image as it is, fitted inside the token's square.
-        textureFor(image!.hash).then((tex) => {
+        void textureFor(image!.hash).then((tex) => {
           if (root.destroyed) return;
           if (!tex) {
             // Missing image: fall back to a plain disc so the token can be found.
@@ -176,7 +176,7 @@ export function buildView(
         }
         if (image) {
           // The initial stands in until the image loads, or if it's missing.
-          textureFor(image.hash).then((tex) => {
+          void textureFor(image.hash).then((tex) => {
             if (!tex || root.destroyed) return;
             initial.visible = false;
             // Fill a circle with the image, cropping its longer side. A

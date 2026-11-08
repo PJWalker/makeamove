@@ -1,7 +1,7 @@
 import type { Campaign } from "../campaign/campaign";
 import { windowLayer } from "../ui/windows";
 import { createPortal } from "react-dom";
-import { useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   dockTarget,
   setPanelClosed,
@@ -16,7 +16,7 @@ import {
   type PanelId,
 } from "./panelLayout";
 import { PanelContent, PANELS, PaneToggle } from "./panels";
-import { RESIZE_DIRS } from "./resizeRect";
+import { RESIZE_DIRS } from "../ui/resizeRect";
 import { WindowControls } from "./WindowControls";
 import { PanelActionsProvider, PanelActionsSlot } from "./PanelActions";
 import { useValue } from "../ui/useValue";
@@ -59,14 +59,24 @@ function Window({
   const asTab = target !== null ? pointer : null;
   // The phase sticks until the next change, so re-rendering on pointer moves doesn't cut an animation short.
   // A window pulled out of a tab starts as the tab ('hidden') and grows from it when it leaves the sidebar.
-  const phase = useRef<"in" | "out" | "hidden" | undefined>(
-    spawnedFromTab.delete(win.id) ? "hidden" : undefined,
+  const [phase, setPhase] = useState<"in" | "out" | "hidden" | undefined>(() =>
+    spawnedFromTab.has(win.id) ? "hidden" : undefined,
   );
-  if (!pointer) {
-    if (phase.current !== "hidden") phase.current = undefined;
-  } else if (asTab) phase.current = phase.current === "hidden" ? "hidden" : "in";
-  else if (phase.current) phase.current = "out";
-  const morph = phase.current;
+  useEffect(() => {
+    spawnedFromTab.delete(win.id);
+  }, [win.id]);
+  const morph = !pointer
+    ? phase === "hidden"
+      ? "hidden"
+      : undefined
+    : asTab
+      ? phase === "hidden"
+        ? "hidden"
+        : "in"
+      : phase
+        ? "out"
+        : undefined;
+  if (morph !== phase) setPhase(morph);
   const to = pointer ?? { x: win.x, y: win.y };
   const toTab = `translate(${to.x - TAB / 2 - win.x}px, ${to.y - TAB / 2 - win.y}px) scale(${TAB / win.w}, ${TAB / win.h})`;
 

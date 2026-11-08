@@ -22,8 +22,12 @@ jobs:
         run: npm run typecheck
       - name: Formatting
         run: npm run format:check
+      - name: Architecture rules
+        run: npm run deps
       - name: Unused files, exports and dependencies
         run: npm run knip
+      - name: Duplicated code
+        run: npm run dup
       - name: Unit tests
         run: npm run test:coverage
       - name: Build

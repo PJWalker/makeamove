@@ -5,10 +5,8 @@ import { bladesInTheDark } from "./blades-in-the-dark";
 import { daggerheart } from "./daggerheart";
 import { dnd55e } from "./dnd55e";
 
-export const NO_SYSTEM_ID = "none";
-
 /** The system for campaigns that don't say which they play. */
-export const DEFAULT_SYSTEM_ID = NO_SYSTEM_ID;
+export const NO_SYSTEM_ID = "none";
 
 const noSystem: GameSystem = {
   id: NO_SYSTEM_ID,
@@ -148,7 +146,7 @@ defineSystem(noSystem);
 
 /** The system with this id; the default system for campaigns that don't say. */
 export function getSystem(id: string | undefined): GameSystem {
-  return (id && SYSTEMS.get(id)) || SYSTEMS.get(DEFAULT_SYSTEM_ID)!;
+  return (id && SYSTEMS.get(id)) || SYSTEMS.get(NO_SYSTEM_ID)!;
 }
 
 /** Every system this app knows. */

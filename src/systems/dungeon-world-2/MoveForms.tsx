@@ -132,8 +132,8 @@ function ComfortOrSupport({ sheet }: MoveFormProps) {
     } else {
       const options = kind === "clear-comforted" ? receiverConditions : supporterConditions;
       const condition =
-        conditionPicks[index] && options.includes(conditionPicks[index]!)
-          ? conditionPicks[index]!
+        conditionPicks[index] && options.includes(conditionPicks[index])
+          ? conditionPicks[index]
           : options[0];
       if (!condition) ready = false;
       else benefits.push({ kind: kind as "clear-comforted" | "clear-supporter", condition });

@@ -95,7 +95,7 @@ export function EditBox({
         invalid={false}
         className="input chat-input"
         initialContent={text}
-        handle={input}
+        handleRef={input}
         onChange={(content) => setValue(content)}
         onEnter={() => done(true)}
         onUp={() => {}}
@@ -107,7 +107,7 @@ export function EditBox({
 
 /** The clock now, ticking every half second while something needs it. */
 function useNow(running: boolean): number {
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
   const updateNow = useEffectEvent(() => setNow(Date.now()));
   useEffect(() => {
     if (!running) return;
@@ -136,12 +136,11 @@ const RING_MS = 3600;
  */
 function useRinging(done: boolean): boolean {
   const [ringing, setRinging] = useState(false);
-  const was = useRef(done);
-  useEffect(() => {
-    if (done && !was.current) setRinging(true);
-    if (!done) setRinging(false);
-    was.current = done;
-  }, [done, ringing]);
+  const [was, setWas] = useState(done);
+  if (done !== was) {
+    setWas(done);
+    setRinging(done);
+  }
   useEffect(() => {
     if (!ringing) return;
     let timer = 0;
@@ -368,7 +367,7 @@ export function PinnedStrip({
     );
   }, [shownIds, leaving]);
   // Those here when the strip first drew came with it.
-  const initial = useRef(shown).current;
+  const [initial] = useState(shown);
 
   const rows = messages.filter((m) => shown.has(m.id) || leaving.has(m.id));
   if (!rows.length) return null;

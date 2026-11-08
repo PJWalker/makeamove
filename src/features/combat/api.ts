@@ -13,7 +13,7 @@ import { roll } from "../dice/notation";
 import type { Campaign } from "../../campaign/campaign";
 import { device } from "../../platform/device";
 import type { TokenMarks } from "../../scene/tokenMarks";
-import { activeResourceStatuses, conditionColour } from "./pipColours";
+import { activeResourceStatuses, CONCENTRATION_COLOUR, conditionColour } from "./pipColours";
 import {
   addCombatant,
   endCombat,
@@ -199,7 +199,6 @@ export function endConcentration(campaign: Campaign, characterId: string) {
 }
 
 /** Pip colours for conditions, by their order in the system's list. */
-const CONCENTRATION_PIP = "#ffffff";
 
 /**
  * What each token shows of the fight: a pip per condition (and one for
@@ -227,7 +226,7 @@ export function tokenMarksSource(campaign: Campaign) {
         p.push({
           id: "concentration",
           name: "Concentration",
-          colour: CONCENTRATION_PIP,
+          colour: CONCENTRATION_COLOUR,
         });
       pips.set(characterId, p);
     }

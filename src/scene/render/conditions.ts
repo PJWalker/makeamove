@@ -11,6 +11,10 @@ const NO_MARKS: TokenMarks = { pips: [], turn: false };
 const PIP_MIN_R = 3;
 const PIP_MAX_R = 6;
 const TURN_COLOUR = 0xf0c23b;
+/** How long a newly applied condition shows its name, in ms, before it closes to a pip. */
+const ANNOUNCE_MS = 1800;
+/** How long the ring that rings out from a newly applied condition takes, in ms. */
+const PULSE_MS = 700;
 
 interface ConditionView {
   text: Text;
@@ -18,7 +22,10 @@ interface ConditionView {
   from: Rect;
   target: Rect;
   start: number;
-  expanded: boolean;
+  /** Whether it's showing its name, rather than a pip. */
+  open: boolean;
+  /** When it was applied, if since the token was first drawn; it shows its name for a moment. */
+  appliedAt: number | null;
 }
 
 /**
@@ -30,6 +37,10 @@ export class ConditionLayer {
   readonly texts = new Container();
   private hover: { id: string; anchor: number; bounds: Rect } | null = null;
   private views = new Map<string, ConditionView>();
+  /** Tokens drawn last frame: a condition new on one of these was just applied. */
+  private drawnTokens = new Set<string>();
+  /** Whose turn it was last frame, and when it became theirs, to ring it in. */
+  private turn: { tokenId: string; since: number } | null = null;
   private camera: Camera | null = null;
   /** Whether a pip is still opening or closing, and needs more frames. */
   animating = false;
@@ -81,13 +92,13 @@ export class ConditionLayer {
       }),
     );
     const used = new Set<string>();
+    const turnTokens: { id: string; x: number; y: number; r: number }[] = [];
     const plans = tokens.map((el) => {
       const marks = this.marksFor(el.id, el.type === "token" ? el.characterId : undefined);
       const t = s.previews.get(el.id) ?? el;
       const c = toScreen(cam, t);
       const half = (Math.max(t.w, t.h) * cam.zoom) / 2;
-      if (marks.turn)
-        turns.circle(c.x, c.y, half + 5).stroke({ color: TURN_COLOUR, width: 3, alpha: 0.95 });
+      if (marks.turn) turnTokens.push({ id: el.id, x: c.x, y: c.y, r: half + 5 });
       const radius = Math.round(Math.min(PIP_MAX_R, Math.max(PIP_MIN_R, half * 0.12)));
       const views = marks.pips.map((pip) => {
         const key = `${el.id}:${pip.id}`;
@@ -107,19 +118,24 @@ export class ConditionLayer {
             },
             resolution: 2,
           });
-          const initial = {
-            x: c.x - radius,
-            y: boxes.get(el.id)!.y - radius,
-            w: radius * 2,
-            h: radius * 2,
-          };
+          const applied = this.drawnTokens.has(el.id) && !still;
+          // Just applied, it grows out of a point; otherwise it's simply there.
+          const initial = applied
+            ? { x: c.x, y: boxes.get(el.id)!.y, w: 0, h: 0 }
+            : {
+                x: c.x - radius,
+                y: boxes.get(el.id)!.y - radius,
+                w: radius * 2,
+                h: radius * 2,
+              };
           view = {
             text,
             current: initial,
             from: initial,
             target: initial,
             start: now,
-            expanded: false,
+            open: false,
+            appliedAt: applied ? now : null,
           };
           this.views.set(key, view);
           this.texts.addChild(text);
@@ -160,8 +176,18 @@ export class ConditionLayer {
     this.hover = hovered;
     this.view.clear();
     this.animating = false;
+    this.drawTurns(turns, turnTokens, now, still);
+    const announcing = (view: ConditionView) =>
+      view.appliedAt !== null && now - view.appliedAt < ANNOUNCE_MS;
+    for (const view of this.views.values()) {
+      if (view.appliedAt !== null && !announcing(view) && now - view.appliedAt >= PULSE_MS)
+        view.appliedAt = null;
+    }
+    const announces = (plan: (typeof plans)[number]) => plan.views.some(announcing);
+    // Hovered on top, then those announcing a new condition.
     const ordered = [
-      ...plans.filter((plan) => plan.id !== hovered?.id),
+      ...plans.filter((plan) => plan.id !== hovered?.id && !announces(plan)),
+      ...plans.filter((plan) => plan.id !== hovered?.id && announces(plan)),
       ...plans.filter((plan) => plan.id === hovered?.id),
     ];
     for (const plan of ordered) {
@@ -188,17 +214,39 @@ export class ConditionLayer {
           h: Math.max(...all.map((box) => box.y + box.h)) - top,
         };
       }
+      // Newly applied conditions show their names for a moment, stacked over the token.
+      const announced = expanded ? [] : plan.views.filter(announcing);
+      const announceTargets = announced.length
+        ? conditionLayout({
+            x: boxes.get(plan.id)!.x + boxes.get(plan.id)!.w / 2,
+            y: boxes.get(plan.id)!.y,
+            tokenWidth: boxes.get(plan.id)!.w,
+            radius: plan.radius,
+            labels: announced.map((view) => ({
+              w: view.text.width + 16,
+              h: view.text.height + 8,
+            })),
+            viewport,
+            obstacles: [],
+          }).vertical
+        : [];
+      if (announced.length) this.animating = true;
       for (const [index, view] of plan.views.entries()) {
-        const target = targets[index]!;
-        if (view.expanded !== expanded && !cameraChanged) {
+        const announceAt = announced.indexOf(view);
+        const open = expanded || announceAt >= 0;
+        const target = announceAt >= 0 ? announceTargets[announceAt]! : targets[index]!;
+        if (view.open !== open && !cameraChanged) {
           view.from = view.current;
           view.target = target;
-          view.expanded = expanded;
+          view.open = open;
           view.start =
-            now + (expanded ? Math.min(100, Math.abs(index - (hovered?.anchor ?? 0)) * 18) : 0);
-        } else if (view.expanded !== expanded) {
+            now +
+            (open && plan.id === hovered?.id
+              ? Math.min(100, Math.abs(index - hovered.anchor) * 18)
+              : 0);
+        } else if (view.open !== open) {
           view.from = view.current = view.target = target;
-          view.expanded = expanded;
+          view.open = open;
           view.start = now - 320;
         } else {
           const relocate = (box: Rect): Rect => ({
@@ -223,7 +271,7 @@ export class ConditionLayer {
         };
         view.current = current;
         if (progress < 1) this.animating = true;
-        if (!expanded && progress === 1)
+        if (!open && progress === 1)
           this.view.circle(current.x + current.w / 2, current.y + current.h / 2, current.w / 2);
         else
           this.view.roundRect(
@@ -231,11 +279,25 @@ export class ConditionLayer {
             current.y,
             current.w,
             current.h,
-            Math.min(expanded ? 4 : plan.radius, current.h / 2),
+            Math.min(open ? 4 : plan.radius, current.h / 2),
           );
-        this.view
-          .fill({ color: plan.marks.pips[index]!.colour })
-          .stroke({ color: INK, width: 1.5 });
+        const colour = plan.marks.pips[index]!.colour;
+        this.view.fill({ color: colour }).stroke({ color: INK, width: 1.5 });
+        // A ring rings out from a condition as it's applied.
+        const pulse = view.appliedAt === null ? 1 : (now - view.appliedAt) / PULSE_MS;
+        if (pulse < 1) {
+          this.animating = true;
+          const spread = 2 + 12 * (1 - (1 - pulse) ** 3);
+          this.view
+            .roundRect(
+              current.x - spread,
+              current.y - spread,
+              current.w + spread * 2,
+              current.h + spread * 2,
+              Math.min(open ? 4 : plan.radius, current.h / 2) + spread,
+            )
+            .stroke({ color: colour, width: 3 * (1 - pulse) + 1, alpha: (1 - pulse) * 0.9 });
+        }
         const scale = Math.max(
           0,
           Math.min(1, (current.w - 16) / view.text.width, (current.h - 8) / view.text.height),
@@ -244,14 +306,50 @@ export class ConditionLayer {
         view.text.alpha = Math.min(1, Math.max(0, (scale - 0.4) / 0.6));
         view.text.visible = view.text.alpha > 0;
         view.text.position.set(current.x + 8, current.y + (current.h - view.text.height) / 2);
-        if (plan.id === hovered?.id)
+        if (plan.id === hovered?.id || announceAt >= 0)
           this.texts.setChildIndex(view.text, this.texts.children.length - 1);
       }
     }
+    this.drawnTokens = new Set(plans.map((plan) => plan.id));
     for (const [key, view] of this.views) {
       if (used.has(key)) continue;
       view.text.destroy();
       this.views.delete(key);
+    }
+  }
+
+  /** The ring on whoever's turn it is; it closes in on them as their turn starts. */
+  private drawTurns(
+    turns: Graphics,
+    tokens: { id: string; x: number; y: number; r: number }[],
+    now: number,
+    still: boolean,
+  ) {
+    const current = tokens[0];
+    if (!current) this.turn = null;
+    else if (this.turn?.tokenId !== current.id)
+      // Only a turn that passes, not one already under way when the token's first drawn.
+      this.turn = {
+        tokenId: current.id,
+        since: this.drawnTokens.has(current.id) && !still ? now : -Infinity,
+      };
+    for (const token of tokens) {
+      const p = token.id === this.turn?.tokenId ? Math.min(1, (now - this.turn.since) / 600) : 1;
+      if (p < 1) {
+        this.animating = true;
+        const eased = 1 - (1 - p) ** 3;
+        // A wide ring that closes in, and a flash of the token's outline as it lands.
+        turns
+          .circle(token.x, token.y, token.r + 40 * (1 - eased))
+          .stroke({ color: TURN_COLOUR, width: 3 + 5 * (1 - eased), alpha: 0.3 + 0.65 * eased });
+        if (p > 0.6)
+          turns
+            .circle(token.x, token.y, token.r + 4 + 10 * ((p - 0.6) / 0.4))
+            .stroke({ color: TURN_COLOUR, width: 2, alpha: 1 - (p - 0.6) / 0.4 });
+      } else
+        turns
+          .circle(token.x, token.y, token.r)
+          .stroke({ color: TURN_COLOUR, width: 3, alpha: 0.95 });
     }
   }
 }

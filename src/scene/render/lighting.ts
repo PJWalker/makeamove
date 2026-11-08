@@ -82,7 +82,7 @@ export class LightingLayer {
       h: view.h + 2 * margin,
     };
     const at = (el: SceneElement) => s.previews.get(el.id) ?? el;
-    const walls = blockingSegments(s.elements.map((el) => ({ ...el, ...at(el) }) as SceneElement));
+    const walls = blockingSegments(s.elements.map((el) => ({ ...el, ...at(el) })));
 
     const lg = this.lightG.clear();
     const erase = this.lightErase.clear();

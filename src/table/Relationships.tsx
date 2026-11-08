@@ -111,22 +111,21 @@ export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: C
     );
   }, [editable, others, add]);
 
-  const bounds = input.current?.getBoundingClientRect();
   useMenuOverlay({
     open: expanded,
     ref: panel,
-    anchor: bounds ? { left: bounds.left, top: bounds.top, bottom: bounds.bottom } : null,
-    inside: [input.current],
+    anchor: input,
     onDismiss: () => setSuggesting(false),
-    positionKey: `${adding}:${matches.map((match) => match.id).join(",")}`,
   });
 
   return (
     <section ref={section} className="form-section sheet-section" aria-label="Relationships">
-      <h3 className="sheet-heading">Relationships</h3>{" "}
-      <Button size="sm" variant="ghost" onClick={() => openRelationshipWeb()}>
-        Web
-      </Button>
+      <header className="sheet-section-header">
+        <h3 className="sheet-heading">Relationships</h3>
+        <Button size="sm" variant="ghost" onClick={() => openRelationshipWeb()}>
+          Web
+        </Button>
+      </header>
       {rels.length > 0 && (
         <ul className="relationships">
           {rels.map((r) => {
@@ -244,7 +243,9 @@ export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: C
                 (event.key === "ArrowDown" || event.key === "ArrowUp")
               ) {
                 event.preventDefault();
-                setActive((index + (event.key === "ArrowDown" ? 1 : -1) + matches.length) % matches.length);
+                setActive(
+                  (index + (event.key === "ArrowDown" ? 1 : -1) + matches.length) % matches.length,
+                );
               } else if (
                 expanded &&
                 matches[index] &&

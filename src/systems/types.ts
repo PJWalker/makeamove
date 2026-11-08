@@ -656,7 +656,7 @@ export interface GameSystem {
   /** Whether a stat is a number added to rolls, offered as a chip in the dice tray; true if absent. */
   statsAddToRolls?: boolean;
   /** The modifier a stat score gives. */
-  modifier(score: number): number;
+  modifier: (score: number) => number;
   /** The roll a check starts from, before modifiers. */
   baseRoll: string;
   /** Label for the unselected base mode in the roll prompt. */

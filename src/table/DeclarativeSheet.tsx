@@ -28,7 +28,7 @@ import { Button } from "../ui/Button";
 import { OptionPicker } from "../ui/OptionPicker";
 import { IconLock } from "../ui/icons";
 import { menuTrigger } from "../ui/menuTrigger";
-import { ContextMenu, type MenuItem } from "./ContextMenu";
+import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
 import { CharacterText } from "./CharacterText";
 import { AdvancementDialog } from "./CreationParts";
 import { extensionOf } from "../systems/extensions";
@@ -379,7 +379,7 @@ export function SheetSectionView({ campaign, system, c, d, editable, section }: 
                       title={`Roll ${item.label}`}
                       aria-label={`Roll ${item.label}`}
                       onClick={() =>
-                        postRoll(
+                        void postRoll(
                           campaign,
                           `d${derivedValue(item.value)}${item.plus && derivedValue(item.plus) ? signedStr(derivedValue(item.plus)) : ""}`,
                           "public",
@@ -502,7 +502,7 @@ export function SheetSectionView({ campaign, system, c, d, editable, section }: 
                       <Button
                         variant="secondary"
                         onClick={() =>
-                          postRoll(campaign, String(c.fields[f.id]), "public", f.label)
+                          void postRoll(campaign, String(c.fields[f.id]), "public", f.label)
                         }
                       >
                         Roll
@@ -631,7 +631,7 @@ function Stats({
   const rollStat = (statId: string, abbr: string) => {
     const mod = statBonus(d, statId);
     const formula = `${system.baseRoll}${mod ? `${mod < 0 ? "-" : "+"}${Math.abs(mod)}` : ""}[${abbr}]`;
-    postRoll(campaign, system.checkRoll?.(formula, statId, c) ?? formula, "public", abbr);
+    void postRoll(campaign, system.checkRoll?.(formula, statId, c) ?? formula, "public", abbr);
   };
   return (
     <section className="form-section sheet-section" aria-label={label}>

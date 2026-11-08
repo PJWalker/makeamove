@@ -1,10 +1,10 @@
 import { postRoll } from "../../features/chat/send";
 import type { Campaign } from "../../campaign/campaign";
 import { activeTool } from "../../scene/tools";
-import { autohide, canvasCommands, dialogRequest, setAutohide } from "../../table/canvasState";
-import { PANEL_ORDER, showPanel, unavailablePanels } from "../../table/panelLayout";
-import { PANELS } from "../../table/panels";
-import { TOOLS } from "../../table/Toolbar";
+import { autohide, canvasCommands, dialogRequest, setAutohide } from "../canvasState";
+import { PANEL_ORDER, showPanel, unavailablePanels } from "../panelLayout";
+import { PANELS } from "../panels";
+import { TOOLS } from "../Toolbar";
 import {
   IconAdd,
   IconDice,
@@ -30,7 +30,7 @@ export function rollAction(campaign: Campaign, formula: string): Action {
     source: "Core",
     icon: IconDice,
     available: true,
-    run: () => postRoll(campaign, formula, "public"),
+    run: () => void postRoll(campaign, formula, "public"),
   };
 }
 

@@ -2,7 +2,6 @@ import { store, watch } from "../../lib/store";
 import { stampTime } from "../../lib/hlc";
 import { activeCampaign } from "../../campaign/campaign";
 import { device } from "../../platform/device";
-import { layout, panelVisible } from "../../table/panelLayout";
 import type { LinkKind } from "../notes/api";
 import { linkLabel } from "../notes/targets";
 import { plainText } from "./content";
@@ -76,6 +75,9 @@ const pageHidden = () => document.visibilityState === "hidden";
 /** The most popups shown at once; older ones give way. */
 const MAX_POPUPS = 3;
 
+/** Whether the Chat panel is on screen; the table keeps this current. */
+export const chatInView = store(false);
+
 /** Messages (by id) shown over the table while the Chat panel is out of view. */
 export const chatPopups = store<string[]>([]);
 
@@ -127,7 +129,7 @@ export function startChatNotifications() {
       // My own messages pop up too (a move from the hotbar should show its result), but never notify.
       // An open Chat panel in a hidden page isn't being read either, so that notifies.
       const how = delivery({
-        chatShowing: panelVisible("chat"),
+        chatShowing: chatInView.value,
         pageHidden: pageHidden(),
         mine: m.author === me,
         canNotify: canNotify && Notification.permission === "granted",
@@ -150,8 +152,8 @@ export function startChatNotifications() {
     stopMessages();
   };
   // Opening the chat, or leaving the campaign, clears what's popped up.
-  const clear = watch([activeCampaign, layout], () => {
-    if (panelVisible("chat") || !activeCampaign.value) chatPopups.value = [];
+  const clear = watch([activeCampaign, chatInView], () => {
+    if (chatInView.value || !activeCampaign.value) chatPopups.value = [];
   });
   return () => {
     stop();

@@ -11,8 +11,11 @@ import { systemOf } from "./system";
  */
 
 /** A copy's template's map, if it's a copy. */
-export const baseOf = (campaign: Campaign, m: Y.Map<any> | undefined): Y.Map<any> | undefined => {
-  const base = m?.get("base");
+export const baseOf = (
+  campaign: Campaign,
+  m: Y.Map<unknown> | undefined,
+): Y.Map<unknown> | undefined => {
+  const base = m?.get("base") as string | undefined;
   return base ? campaign.characters.get(base) : undefined;
 };
 
@@ -55,7 +58,7 @@ export function getCharacter(
 
 /** The character this device is playing: their choice, else the only one they own. */
 export function selectedCharacterId(campaign: Campaign): string | undefined {
-  const chosen: string | undefined = campaign.members.get(device.value.id)?.get("character");
+  const chosen = campaign.members.get(device.value.id)?.get("character") as string | undefined;
   if (chosen && campaign.characters.has(chosen)) return chosen;
   const mine = listCharacters(campaign).filter(
     (c) => c.kind === "pc" && c.owner === device.value.id,

@@ -1,1 +1,2 @@
 Prefer clean code to unchanging code - eg: something would make more sense with a different name, rename it using the typescript language server
+Animate changes on the scene canvas tokens - when something about a token changes (its stats, its conditions, its turn), play out the change so players notice it, rather than just redrawing the new state. Respect reduced motion. See src/scene/barChange.ts and src/scene/render/conditions.ts for the house style.

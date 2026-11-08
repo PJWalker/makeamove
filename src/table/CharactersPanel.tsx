@@ -43,7 +43,7 @@ import { Segmented } from "../ui/Segmented";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { TwoPane, usePaneLevel } from "../ui/TwoPane";
 import { ListRow } from "../ui/List";
-import { ContextMenu, type MenuItem } from "./ContextMenu";
+import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
 import { dragEntity, entity } from "./entityDrag";
 import { CampaignEntityGraphic } from "./EntityGraphic";
 import { editEntityGraphic } from "./GraphicDialogs";

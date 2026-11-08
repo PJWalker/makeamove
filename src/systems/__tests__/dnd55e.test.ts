@@ -4,7 +4,7 @@ import { SRD_MONSTERS } from "../dnd55e/srdMonsters";
 import { SRD_MAGIC_ITEMS } from "../dnd55e/srdMagicItems";
 import { SRD_CLASS_FEATURES } from "../dnd55e/srdClasses";
 import "fake-indexeddb/auto";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import * as Y from "yjs";
 import { checkSystem, getSystem } from "..";
 import { dnd55e as dnd, pactMagic, proficiencyAt, spellSlots } from "../dnd55e";
@@ -22,8 +22,6 @@ import { summaryOf } from "../../campaign/registry";
 import { device } from "../../platform/device";
 import { newCharacter, moveRequest, startMove, systemOf } from "../../features/characters/api";
 
-vi.mock("../../table/panelLayout", () => ({ showPanel: () => {} }));
-
 const fixed = (...values: number[]) => {
   if (!values.length) throw new RangeError("Dice fixture needs at least one result");
   let index = 0;
@@ -32,7 +30,7 @@ const fixed = (...values: number[]) => {
 
 function character(classId: string, scores: Record<string, number>, level = 1) {
   const doc = new Y.Doc();
-  const characters = doc.getMap<Y.Map<any>>("characters");
+  const characters = doc.getMap<Y.Map<unknown>>("characters");
   const id = createCharacter(characters, dnd, {
     name: "Vex",
     owner: "me",
@@ -43,8 +41,8 @@ function character(classId: string, scores: Record<string, number>, level = 1) {
   return { m, view: () => characterView(id, m, dnd) };
 }
 
-function equip(m: Y.Map<any>, itemId: string) {
-  const inv = m.get("inventory") as Y.Map<any>;
+function equip(m: Y.Map<unknown>, itemId: string) {
+  const inv = m.get("inventory") as Y.Map<unknown>;
   const item = {
     ...instanceOf(
       ITEMS.find((i) => i.id === itemId)!,
@@ -83,7 +81,7 @@ describe("D&D 5.5e", () => {
   it("imports level-gated class and subclass features from the complete SRD", () => {
     expect(SRD_CLASS_FEATURES.length).toBeGreaterThan(180);
     const { m, view } = character("fighter", {}, 3);
-    m.get("data").set("subclass", "champion");
+    (m.get("data") as Y.Map<unknown>).set("subclass", "champion");
     const ids = actionsFor(view(), dnd, derive(view(), dnd)).map((action) => action.id);
     expect(ids).toContain("feature-fighter-3-improved-critical");
     expect(ids).not.toContain("feature-fighter-15-superior-critical");
@@ -102,7 +100,7 @@ describe("D&D 5.5e", () => {
 
   it("uses Champion critical ranges only for weapon and unarmed attacks", () => {
     const { m, view } = character("fighter", { str: 16 }, 3);
-    m.get("data").set("subclass", "champion");
+    (m.get("data") as Y.Map<unknown>).set("subclass", "champion");
     const attack = dnd.actions.find((action) => action.id === "melee-attack")!;
     const aim = { targets: [{ id: "target", name: "Target" }], valueAt: () => 99 };
     expect(
@@ -118,7 +116,7 @@ describe("D&D 5.5e", () => {
         () => 19,
       ).result,
     ).toBe("rolled");
-    m.get("data").set("level", 15);
+    (m.get("data") as Y.Map<unknown>).set("level", 15);
     expect(
       performMove(dnd, attack, view(), derive(view(), dnd), {}, () => 18, aim).targets?.[0],
     ).toMatchObject({ result: "crit", hit: true });
@@ -181,7 +179,7 @@ describe("D&D 5.5e", () => {
 
   it("rolls skills with proficiency and Expertise, and attacks with the weapon in hand", () => {
     const { m, view } = character("rogue", { dex: 16 });
-    (m.get("data") as Y.Map<any>).set("skill:stealth", 2);
+    (m.get("data") as Y.Map<unknown>).set("skill:stealth", 2);
     const c = view();
     const d = derive(c, dnd);
     const stealth = dnd.actions.find((a) => a.id === "skill-stealth")!;
@@ -204,8 +202,8 @@ describe("D&D 5.5e", () => {
 
   it("offers prepared spells and known cantrips within class and level limits", () => {
     const { m, view } = character("wizard", { int: 16 }, 5);
-    m.get("data").set("preparedSpells", "fireball,cure-wounds");
-    m.get("data").set("knownCantrips", "fire-bolt");
+    (m.get("data") as Y.Map<unknown>).set("preparedSpells", "fireball,cure-wounds");
+    (m.get("data") as Y.Map<unknown>).set("knownCantrips", "fire-bolt");
     const c = view();
     const d = derive(c, dnd);
     const ids = actionsFor(c, dnd, d).map((a) => a.id);
@@ -230,7 +228,8 @@ describe("D&D 5.5e", () => {
     expect(result.resourcesSpent).toEqual([{ id: "slot4", by: -1 }]);
     expect(result.rollValues).toEqual({ spellSlot: 4 });
     expect(result.suggestions[0]!.roll?.formula).toBe("9d6");
-    for (let level = 1; level <= 9; level++) m.get("resources").set(`slot${level}`, 0);
+    for (let level = 1; level <= 9; level++)
+      (m.get("resources") as Y.Map<unknown>).set(`slot${level}`, 0);
     expect(() => performMove(dnd, fireball, view(), derive(view(), dnd))).toThrow(
       "Not enough resources",
     );
@@ -261,7 +260,7 @@ describe("D&D 5.5e", () => {
 
   it("takes 2 per level of Exhaustion from every d20 test", () => {
     const { m, view } = character("fighter", { str: 10 });
-    (m.get("data") as Y.Map<any>).set("exhaustion", 2);
+    (m.get("data") as Y.Map<unknown>).set("exhaustion", 2);
     const c = view();
     const d = derive(c, dnd);
     expect(

@@ -46,6 +46,7 @@ export async function withTransition(
       await nextRender();
     });
     // A newer transition skips this one; that's expected, not an error.
+    t.ready.catch(() => {});
     await t.finished.catch(() => {});
   } finally {
     running--;

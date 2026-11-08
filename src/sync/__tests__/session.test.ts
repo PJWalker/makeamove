@@ -3,6 +3,9 @@ import * as Y from "yjs";
 import { SyncSession } from "../session";
 import { MemoryRoom } from "./memoryRoom";
 
+const userName = (state: Record<string, unknown>) =>
+  (state.user as { name?: string } | undefined)?.name;
+
 const rootDoc = () => new Y.Doc({ guid: "camp" });
 
 describe("SyncSession", () => {
@@ -104,12 +107,12 @@ describe("SyncSession", () => {
 
     sb.awareness.setLocalStateField("user", { name: "Robin" });
     await room.settle();
-    const seen = [...sa.awareness.getStates().values()].map((s) => s.user?.name);
+    const seen = [...sa.awareness.getStates().values()].map(userName);
     expect(seen).toContain("Robin");
 
     sb.destroy();
     await room.settle();
-    expect([...sa.awareness.getStates().values()].map((s) => s.user?.name)).not.toContain("Robin");
+    expect([...sa.awareness.getStates().values()].map(userName)).not.toContain("Robin");
     sa.destroy();
   });
 
@@ -130,12 +133,12 @@ describe("SyncSession", () => {
     const bAware = sb.awarenessFor(theirs);
     bAware.setLocalStateField("user", { name: "Bo" });
     await room.settle();
-    const names = (x: typeof bAware) => [...x.getStates().values()].map((s) => s.user?.name).sort();
+    const names = (x: typeof bAware) => [...x.getStates().values()].map(userName).sort();
     // Bo hears Ann on joining the note, and Ann hears Bo.
     expect(names(bAware)).toEqual(["Ann", "Bo"]);
     expect(names(sa.awarenessFor(note))).toEqual(["Ann", "Bo"]);
     // The root's presence isn't touched.
-    expect([...sb.awareness.getStates().values()].map((s) => s.user?.name)).not.toContain("Ann");
+    expect([...sb.awareness.getStates().values()].map(userName)).not.toContain("Ann");
 
     theirs.destroy();
     await room.settle();

@@ -18,7 +18,7 @@ import {
   type NoteFolderView,
   type NoteView,
 } from "../features/notes/api";
-import { noteOpened, noteSearchTarget, openNote, openNoteId } from "../features/notes/targets";
+import { noteOpened, noteSearchTarget, openNote, openNoteId } from "./linkNavigation";
 import type { Campaign } from "../campaign/campaign";
 import { useY } from "../ui/useY";
 import { Button } from "../ui/Button";
@@ -36,7 +36,7 @@ import { TwoPane, usePaneLevel } from "../ui/TwoPane";
 import { List, ListRow } from "../ui/List";
 import { menuTrigger } from "../ui/menuTrigger";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { ContextMenu, type MenuItem } from "./ContextMenu";
+import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
 import { dragEntity, entity } from "./entityDrag";
 import { editEntityGraphic } from "./GraphicDialogs";
 import { NoteEditor } from "./NoteEditor";
@@ -58,6 +58,9 @@ function ago(at: number) {
  * Notes: pages filed in folders (Sessions and World to start with), written
  * together. The list and the open page sit side by side, or take turns.
  */
+/** Where a search found its text: a page, and the stretch of it that matched. */
+type NoteMatch = { note: NoteView; from?: number; to?: number; snippet: string };
+
 export function NotesPanel({ campaign }: { campaign: Campaign }) {
   // GM-only pages, on a GM device; watched too, so the list keeps up with them.
   const vault = useValue(campaign.vault);
@@ -137,24 +140,23 @@ function NoteList({
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [matches, setMatches] = useState<
-    { note: NoteView; from?: number; to?: number; snippet: string }[]
-  >([]);
-  const [searching, setSearching] = useState(false);
+  const needle = query.trim();
+  // The last search's results, for what it searched; anything else is still searching.
+  const [result, setResult] = useState<{
+    needle: string;
+    notes: NoteView[];
+    matches: NoteMatch[];
+  } | null>(null);
+  const fresh = !!needle && result?.needle === needle && result.notes === notes;
+  const matches = fresh ? result.matches : [];
+  const searching = !!needle && !fresh;
   const known = new Set(folders.map((f) => f.id));
   const isGm = !!useValue(campaign.vault);
   useEffect(() => {
-    const needle = query.trim();
-    if (!needle) {
-      setMatches([]);
-      setSearching(false);
-      return;
-    }
+    if (!needle) return;
     let cancelled = false;
-    setMatches([]);
-    setSearching(true);
-    const timer = window.setTimeout(async () => {
-      const found: { note: NoteView; from?: number; to?: number; snippet: string }[] = [];
+    const search = async () => {
+      const found: NoteMatch[] = [];
       for (const note of notes) {
         if (cancelled) return;
         if (note.title.toLowerCase().includes(needle.toLowerCase()))
@@ -163,14 +165,14 @@ function NoteList({
         if (cancelled) return;
         for (const match of noteMatches) found.push({ note, ...match });
       }
-      setMatches(found);
-      setSearching(false);
-    }, 180);
+      setResult({ needle, notes, matches: found });
+    };
+    const timer = window.setTimeout(() => void search(), 180);
     return () => {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [campaign, notes, query]);
+  }, [campaign, notes, needle]);
   const newPage = (folder?: string, gmOnly = false) =>
     openNote(createNote(campaign, { ...(folder ? { folder } : {}), gmOnly }));
 
@@ -270,7 +272,7 @@ function NoteList({
                 ))}
               </List>
             ) : (
-              <p className="empty">Nothing matches “{query.trim()}”.</p>
+              <p className="empty">Nothing matches “{needle}”.</p>
             )}
           </div>
         ) : (
@@ -368,9 +370,7 @@ function NotePage({
             <Button
               size="sm"
               variant="ghost"
-              onClick={(e) =>
-                morphOpen(e.currentTarget as Element, () => (revealing.value = note.id))
-              }
+              onClick={(e) => morphOpen(e.currentTarget, () => (revealing.value = note.id))}
             >
               Reveal to Players…
             </Button>

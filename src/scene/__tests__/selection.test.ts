@@ -10,17 +10,22 @@ vi.mock("../../platform/device", () => ({ device: { value: { id: "x" } } }));
 vi.mock("../images", () => ({ importImage: vi.fn(), imageColour: vi.fn() }));
 
 const { SceneController } = await import("../controller");
+type Controller = InstanceType<typeof SceneController>;
+type Args = ConstructorParameters<typeof SceneController>;
+type Preview = { x: number; y: number; rot: number };
+type Fire = (type: string, x: number, y: number, extra?: Record<string, unknown>) => void;
 
-function setup(els: any[]) {
-  const host: any = new EventTarget();
-  host.style = {};
-  host.getBoundingClientRect = () => ({ left: 0, top: 0 });
-  host.setPointerCapture = () => {};
-  const renderer: any = {
+function setup(els: object[]) {
+  const host = Object.assign(new EventTarget(), {
+    style: {},
+    getBoundingClientRect: () => ({ left: 0, top: 0 }),
+    setPointerCapture: () => {},
+  });
+  const renderer = {
     camera: { x: 0, y: 0, zoom: 1 },
-    previews: new Map(),
-    hidden: new Set(),
-    overlayState: {},
+    previews: new Map<string, Preview>(),
+    hidden: new Set<string>(),
+    overlayState: {} as { marquee?: unknown; group?: unknown },
     grid: { type: "none", size: 70, offsetX: 0, offsetY: 0 },
     size: { width: 800, height: 600 },
     invalidate: () => {},
@@ -29,23 +34,28 @@ function setup(els: any[]) {
     setGrid: () => {},
     setHoverToken: vi.fn(),
   };
-  const scene: any = {
+  const scene = {
     views: () => els,
     elements: { observeDeep() {}, unobserveDeep() {} },
     settings: { observe() {}, unobserve() {} },
     undo: { on() {}, off() {}, canUndo: () => false, canRedo: () => false },
     grid: () => renderer.grid,
-    update: vi.fn(),
+    update: vi.fn<(changes: [string, object][]) => void>(),
     remove: vi.fn(),
   };
-  const c = new SceneController(scene, renderer, host, "s", () => ({}) as any);
-  (c as any).restoreCamera = () => {};
+  const c: Controller = new SceneController(
+    scene as unknown as Args[0],
+    renderer as unknown as Args[1],
+    host as unknown as Args[2],
+    "s",
+    () => ({}) as ReturnType<Args[4]>,
+  );
+  (c as unknown as { restoreCamera: () => void }).restoreCamera = () => {};
   c.start();
-  const fire = (type: string, x: number, y: number, extra: Record<string, unknown> = {}) => {
-    const e: any = new Event(type);
+  const fire: Fire = (type, x, y, extra = {}) => {
+    const e = new Event(type);
     const { timeStamp, ...rest } = extra;
     if (timeStamp !== undefined) Object.defineProperty(e, "timeStamp", { value: timeStamp });
-    extra = rest;
     Object.assign(e, {
       pointerId: 1,
       button: 0,
@@ -53,7 +63,7 @@ function setup(els: any[]) {
       clientY: y,
       shiftKey: false,
       altKey: false,
-      ...extra,
+      ...rest,
     });
     host.dispatchEvent(e);
   };
@@ -86,7 +96,7 @@ describe("SceneController", () => {
       text: "Ford the river here",
     };
     // A pointer event's `detail` is always 0, so the controller counts clicks itself.
-    const click = (fire: (...args: any[]) => void, x: number, y: number, timeStamp: number) => {
+    const click = (fire: Fire, x: number, y: number, timeStamp: number) => {
       fire("pointerdown", x, y, { detail: 0, timeStamp });
       fire("pointerup", x, y, { detail: 0, timeStamp });
     };
@@ -193,7 +203,7 @@ describe("SceneController", () => {
     fire("pointerup", 300, 300);
     expect(c.onTokenDragMove).not.toHaveBeenCalled();
     expect(c.onTokenDrop).not.toHaveBeenCalled();
-    expect(scene.update.mock.calls[0][0]).toHaveLength(2);
+    expect(scene.update.mock.calls[0]?.[0]).toHaveLength(2);
   });
 
   it("does not drag locked tokens to external targets", () => {
@@ -256,13 +266,13 @@ describe("SceneController", () => {
     fire("pointerdown", 250, 100);
     handles.knob = { x: -999, y: -999 };
     fire("pointermove", 150, 200);
-    const a = renderer.previews.get("a");
+    const a = renderer.previews.get("a")!;
     expect(a.x).toBeCloseTo(150);
     expect(a.y).toBeCloseTo(50);
     expect(a.rot).toBeCloseTo(Math.PI / 2);
     fire("pointerup", 150, 200);
     expect(scene.update).toHaveBeenCalledTimes(1);
-    expect(scene.update.mock.calls[0][0]).toHaveLength(2);
+    expect(scene.update.mock.calls[0]?.[0]).toHaveLength(2);
   });
 
   it("removes only unlocked elements and clears them from selection", () => {

@@ -15,7 +15,7 @@ export interface SystemStore<T> {
 }
 
 /** The store kept under `name` in this system data. */
-export function systemStore<T>(systemData: Y.Map<any>, name: string): SystemStore<T> {
+export function systemStore<T>(systemData: Y.Map<unknown>, name: string): SystemStore<T> {
   const read = (): Y.Map<T> | undefined => {
     const map = systemData.get(name);
     return map instanceof Y.Map ? (map as Y.Map<T>) : undefined;

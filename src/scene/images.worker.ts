@@ -13,7 +13,7 @@ type WorkerScope = {
 
 const scope = globalThis as unknown as WorkerScope;
 
-async function sampleColour(bitmap: ImageBitmap): Promise<string> {
+function sampleColour(bitmap: ImageBitmap): string {
   const canvas = new OffscreenCanvas(64, 64);
   const context = canvas.getContext("2d", { willReadFrequently: true });
   if (!context) throw new Error("Could not create image sampling canvas");
@@ -28,7 +28,7 @@ async function runTask(task: ImageWorkerRequest["task"]): Promise<ImageWorkerRes
 
   const bitmap = await createImageBitmap(task.blob);
   try {
-    if (task.type === "colour") return { type: "colour", colour: await sampleColour(bitmap) };
+    if (task.type === "colour") return { type: "colour", colour: sampleColour(bitmap) };
 
     const scale = Math.min(1, MAX_IMAGE_SIZE / Math.max(bitmap.width, bitmap.height));
     const width = Math.max(1, Math.round(bitmap.width * scale));
@@ -37,24 +37,22 @@ async function runTask(task: ImageWorkerRequest["task"]): Promise<ImageWorkerRes
     const context = canvas.getContext("2d");
     if (!context) throw new Error("Could not create image encoding canvas");
     context.drawImage(bitmap, 0, 0, width, height);
-    const [blob, colour] = await Promise.all([
-      canvas.convertToBlob({ type: "image/webp", quality: 0.9 }),
-      sampleColour(bitmap),
-    ]);
+    const colour = sampleColour(bitmap);
+    const blob = await canvas.convertToBlob({ type: "image/webp", quality: 0.9 });
     return { type: "import", blob, width, height, colour };
   } finally {
     bitmap.close();
   }
 }
 
-scope.onmessage = async ({ data }) => {
-  try {
-    const result = await runTask(data.task);
-    scope.postMessage({ id: data.id, result }, result.type === "decode" ? [result.bitmap] : []);
-  } catch (error) {
-    scope.postMessage({
-      id: data.id,
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
+scope.onmessage = ({ data }) => {
+  void runTask(data.task).then(
+    (result) =>
+      scope.postMessage({ id: data.id, result }, result.type === "decode" ? [result.bitmap] : []),
+    (error: unknown) =>
+      scope.postMessage({
+        id: data.id,
+        error: error instanceof Error ? error.message : String(error),
+      }),
+  );
 };

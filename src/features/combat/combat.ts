@@ -37,7 +37,7 @@ export interface CombatantView extends Combatant {
 }
 
 export interface CombatMaps {
-  combat: Y.Map<any>;
+  combat: Y.Map<unknown>;
   combatants: Y.Map<Combatant>;
 }
 
@@ -52,8 +52,10 @@ export function turnOrder(combatants: Y.Map<Combatant>): CombatantView[] {
     });
 }
 
-export const roundOf = (m: CombatMaps): number => m.combat.get("round") ?? 0;
-export const turnOf = (m: CombatMaps): string | null => m.combat.get("turn") ?? null;
+export const roundOf = (m: CombatMaps): number =>
+  (m.combat.get("round") as number | undefined) ?? 0;
+export const turnOf = (m: CombatMaps): string | null =>
+  (m.combat.get("turn") as string | undefined) ?? null;
 
 export function addCombatant(m: CombatMaps, c: Combatant): string {
   const id = newId();

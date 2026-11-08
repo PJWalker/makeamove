@@ -18,7 +18,7 @@ import { systemOf } from "./system";
  */
 export function createCopy(campaign: Campaign, templateId: string, name: string): string {
   const id = newId();
-  const m = new Y.Map<any>();
+  const m = new Y.Map<unknown>();
   campaign.doc.transact(() => {
     campaign.characters.set(id, m);
     m.set("base", templateId);

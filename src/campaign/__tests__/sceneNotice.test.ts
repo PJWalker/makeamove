@@ -12,7 +12,7 @@ Campaign.sceneNoticeDelay = 30;
 async function setUp() {
   as("gm", "Gwen");
   const c = await Campaign.open(await createCampaign("The Lost Barrows", "Gwen"));
-  const pat = new Y.Map<any>();
+  const pat = new Y.Map<unknown>();
   pat.set("name", "Pat");
   pat.set("role", "player");
   c.members.set("pat", pat);

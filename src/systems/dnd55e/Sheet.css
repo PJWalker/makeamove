@@ -90,11 +90,6 @@
     font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
-  .dnd-conditions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-1) var(--space-3);
-  }
 }
 
 @layer layout {

@@ -17,6 +17,9 @@ import { useValue } from "../ui/useValue";
 
 /** Earlier sessions the reader has opened, as "campaignId:key", for this visit. */
 const openSessions = store<Set<string>>(new Set());
+const toggleSession = (key: string) => {
+  openSessions.value = toggleSetValue(openSessions.value, key);
+};
 
 /*
  * A log can run to thousands of messages, so only a window of rows is
@@ -77,8 +80,7 @@ export function ChatLog({
   const editable = useY(campaign.characters, () => editableIds(campaign));
   const me = useValue(device).id;
   // Messages already here when the panel opened don't animate in.
-  const initial = useRef<Set<string> | null>(null);
-  initial.current ??= new Set(messages.map((m) => m.id));
+  const [initial] = useState(() => new Set(messages.map((m) => m.id)));
 
   // In view means read.
   const visible = usePanelVisible("chat");
@@ -99,10 +101,7 @@ export function ChatLog({
       ),
     [messages, me, isGm, opened, campaign],
   );
-  const toggle = (key: string) => {
-    const k = `${campaign.id}:${key}`;
-    openSessions.value = toggleSetValue(openSessions.value, k);
-  };
+  const toggle = (key: string) => toggleSession(`${campaign.id}:${key}`);
 
   // The window, as indices into rows.
   const [span, setSpanKeys] = useState<Span>({ start: null, end: null });
@@ -119,11 +118,7 @@ export function ChatLog({
   const shown = rows.slice(startIdx, endIdx);
 
   // Row heights (with the gap after them), measured as rows render; kept for this view.
-  const heights = useRef(new Map<string, number>());
-  const measured = heights.current;
-  // Re-render once new rows are measured, so the spacers use the better average.
-  const [measuredCount, setMeasuredCount] = useState(0);
-  void measuredCount;
+  const [measured, setMeasured] = useState<ReadonlyMap<string, number>>(() => new Map());
   let total = 0;
   for (const h of measured.values()) total += h;
   const guess = measured.size ? total / measured.size : ROW_GUESS;
@@ -194,13 +189,20 @@ export function ChatLog({
     }
   };
   const slideRef = useRef(slide);
-  slideRef.current = slide;
+  useLayoutEffect(() => {
+    slideRef.current = slide;
+  });
 
   // Keep what's on screen where it is while rows come and go around it: note
-  // where a row in view sits before rendering, and put it back after.
+  // where a row in view sits as things settle (after each render and scroll),
+  // and put it back after the next render.
   const anchor = useRef<{ key: string; top: number } | null>(null);
-  const el = ref.current;
-  if (el && !stick.current && !jumped.current) {
+  const noteAnchor = () => {
+    const el = ref.current;
+    if (!el || stick.current) {
+      anchor.current = null;
+      return;
+    }
     const { top, bottom } = el.getBoundingClientRect();
     // Only a row actually in view. Over a spacer there is none, and the scroll position stays put for slide() to fill.
     const row = [...(list.current?.children ?? [])].find((r) => {
@@ -210,18 +212,28 @@ export function ChatLog({
     anchor.current = row?.dataset.key
       ? { key: row.dataset.key, top: row.getBoundingClientRect().top - top }
       : null;
-  } else anchor.current = null;
+  };
+  const noteAnchorRef = useRef(noteAnchor);
+  useLayoutEffect(() => {
+    noteAnchorRef.current = noteAnchor;
+  });
 
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
+    // Re-render once rows are measured anew, so the spacers use the better average.
+    let next: Map<string, number> | null = null;
     for (const row of list.current?.children ?? []) {
       const key = (row as HTMLElement).dataset.key;
-      if (key) measured.set(key, (row as HTMLElement).offsetHeight + ROW_GAP);
+      if (!key) continue;
+      const height = (row as HTMLElement).offsetHeight + ROW_GAP;
+      if (measured.get(key) === height) continue;
+      next ??= new Map(measured);
+      next.set(key, height);
     }
-    if (measured.size !== measuredCount) setMeasuredCount(measured.size);
+    if (next) setMeasured(next);
     if (stick.current) el.scrollTop = el.scrollHeight;
-    else if (anchor.current) {
+    else if (anchor.current && !jumped.current) {
       const row = list.current?.querySelector<HTMLElement>(
         `[data-key="${CSS.escape(anchor.current.key)}"]`,
       );
@@ -232,17 +244,23 @@ export function ChatLog({
     jumped.current = false;
     // The window may still not reach far enough (a short window, rows just loaded, or a jump into unloaded chunks).
     slideRef.current();
-  }, [measured, measuredCount, rows, startIdx, endIdx, earlierCount, loading, editable, notes]);
+    noteAnchorRef.current();
+  }, [measured, rows, startIdx, endIdx, earlierCount, loading, editable, notes]);
 
   // My own new message scrolls to the bottom even when I'd scrolled up.
   const newest = messages.at(-1);
-  const seenNewest = useRef(newest?.id);
+  const [newestSeen, setNewestSeen] = useState(newest?.id);
+  const myNewest = newest?.id !== newestSeen && newest?.author === me;
+  if (newest?.id !== newestSeen) {
+    setNewestSeen(newest?.id);
+    if (myNewest) setSpanKeys({ start: null, end: null });
+  }
+  const scrolledFor = useRef(newest?.id);
   useLayoutEffect(() => {
-    if (newest?.id === seenNewest.current) return;
-    seenNewest.current = newest?.id;
+    if (newest?.id === scrolledFor.current) return;
+    scrolledFor.current = newest?.id;
     if (newest?.author !== me) return;
     stick.current = true;
-    setSpanKeys({ start: null, end: null });
     const el = ref.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [newest?.id, newest?.author, me]);
@@ -253,6 +271,7 @@ export function ChatLog({
     if (!el || !list.current) return;
     const ro = new ResizeObserver(() => {
       if (stick.current) el.scrollTop = el.scrollHeight;
+      else noteAnchorRef.current();
     });
     ro.observe(list.current);
     return () => ro.disconnect();
@@ -267,6 +286,7 @@ export function ChatLog({
       onScroll={(e) => {
         const el = e.currentTarget;
         stick.current = atNewest && el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+        noteAnchor();
         slide();
       }}
     >
@@ -300,7 +320,7 @@ export function ChatLog({
               campaign={campaign}
               m={row.m}
               header={row.header}
-              fresh={!initial.current!.has(row.m.id)}
+              fresh={!initial.has(row.m.id)}
               masked={visibilityOf(row.m, me, isGm) === "masked"}
               mine={row.m.author === me}
               canAct={row.m.kind === "move" && editable.split(" ").includes(row.m.characterId)}

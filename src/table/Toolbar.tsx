@@ -43,7 +43,7 @@ import { isTyping } from "../ui/keys";
 import { dialogRequest } from "./canvasState";
 import { layout, PANEL_ORDER, setPanelClosed, unavailablePanels } from "./panelLayout";
 import { PANELS } from "./panels";
-import { ContextMenu, type MenuItem } from "./ContextMenu";
+import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
 import { useValue } from "../ui/useValue";
 
 export const TOOLS: {

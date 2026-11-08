@@ -4,7 +4,7 @@ import type { GameSystem } from "../../systems/types";
 import { listHomebrew, withHomebrew } from "../homebrew/homebrew";
 
 /** The campaign's system as published, without the table's homebrew: for the Libraries. */
-export const baseSystemOf = (campaign: Campaign) => getSystem(campaign.meta.get("systemId"));
+export const baseSystemOf = (campaign: Campaign) => getSystem(campaign.systemId);
 
 /** The merged system, rebuilt only when the system or homebrew changes. */
 const merged = new WeakMap<Campaign, { base: GameSystem; version: number; system: GameSystem }>();

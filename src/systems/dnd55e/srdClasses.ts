@@ -34,7 +34,7 @@ export function parseSrdClassFeatures(markdown: string): Feature[] {
         .slice(index + 1)
         .find((candidate) => (candidate[1]?.length ?? Infinity) <= 4);
       const text = section
-        .slice(heading.index! + heading[0].length, next?.index ?? section.length)
+        .slice(heading.index + heading[0].length, next?.index ?? section.length)
         .trim();
       features.push({
         id: `feature-${classId}-${level}-${slug(name)}`,

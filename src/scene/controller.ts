@@ -45,6 +45,14 @@ const memberColour = () => colourOf(device.value);
  * the selection, camera and cursor, routes input to the tool in use, and
  * offers the edits menus and shortcuts make.
  */
+/** A request for text to put on the map at `at`, or to change element `id`'s. */
+export interface TextRequest {
+  at: Point;
+  screen: Point;
+  id?: string;
+  text?: string;
+}
+
 export class SceneController implements ToolContext {
   readonly selection = store<string[]>([]);
   /** Dominant colour of the scene's largest map, for the UI tint. */
@@ -72,9 +80,20 @@ export class SceneController implements ToolContext {
   /** Whether this device is the GM's: only the GM sees and edits walls and lights. */
   gm = false;
 
+  setGm(gm: boolean) {
+    this.gm = gm;
+  }
+
   /** Asks the canvas for text to put on the map, or to change: set by SceneCanvas. */
-  onTextRequest: ((req: { at: Point; screen: Point; id?: string; text?: string }) => void) | null =
-    null;
+  onTextRequest: ((req: TextRequest) => void) | null = null;
+
+  /** Send text requests to `handler` until the returned function is called. */
+  handleTextRequests(handler: (req: TextRequest) => void): () => void {
+    this.onTextRequest = handler;
+    return () => {
+      if (this.onTextRequest === handler) this.onTextRequest = null;
+    };
+  }
   /** Lets the table show eligible destinations while dragging a scene item token. */
   onItemTokenDragMove: ((token: TokenElement | null, event: PointerEvent) => void) | null = null;
   /** Handles transferring an item token out of the scene on pointer release. */
@@ -190,9 +209,7 @@ export class SceneController implements ToolContext {
         () => presence.setScene(null),
         () => this.renderer.setPresence([]),
       );
-      this.disposers.push(
-        watch([device], show),
-      );
+      this.disposers.push(watch([device], show));
       show();
     }
     regrid();
@@ -257,7 +274,11 @@ export class SceneController implements ToolContext {
       this.mapColour.value = null;
       return;
     }
-    imageColour(main.image.hash).then((c) => (this.mapColour.value = c));
+    void imageColour(main.image.hash).then((c) => (this.mapColour.value = c));
+  }
+
+  select(ids: string[]) {
+    this.selection.value = ids;
   }
 
   selected(): SceneElement[] {
@@ -789,7 +810,7 @@ export class SceneController implements ToolContext {
   /** Turn an area of light into one of dark, or back. */
   setAreaTone(id: string, tone: AreaTone) {
     if (this.byId.get(id)?.type !== "area") return;
-    this.scene.update([[id, { tone } as Partial<SceneElement>]]);
+    this.scene.update([[id, { tone }]]);
   }
 
   /** Show a light in another colour, without changing it yet; null to stop. */
@@ -804,7 +825,7 @@ export class SceneController implements ToolContext {
   /** Change a light's colour, or whether it flickers. */
   setLight(id: string, patch: { colour?: string; flicker?: boolean }) {
     if (this.byId.get(id)?.type !== "light") return;
-    this.scene.update([[id, patch as Partial<SceneElement>]]);
+    this.scene.update([[id, patch]]);
   }
 
   /**

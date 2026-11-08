@@ -1,7 +1,7 @@
 import { Editor, Extension } from "@tiptap/core";
 import Placeholder from "@tiptap/extension-placeholder";
 import StarterKit from "@tiptap/starter-kit";
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, type RefObject } from "react";
 import { contentFromText, emptyChatContent, type ChatContent } from "../features/chat/content";
 import { LINK_NODE } from "../features/notes/links";
 import type { Campaign } from "../campaign/campaign";
@@ -52,7 +52,7 @@ export function ChatInput({
   onEnter,
   onUp,
   onEscape,
-  handle,
+  handleRef,
 }: {
   campaign: Campaign;
   placeholder: string;
@@ -66,13 +66,15 @@ export function ChatInput({
   /** Up arrow in an empty box. */
   onUp: () => void;
   onEscape: () => void;
-  handle: { current: ChatInputHandle | null };
+  handleRef: RefObject<ChatInputHandle | null>;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const firstContent = useRef(initialContent);
   // Callbacks change every render; the editor reads the latest.
   const cb = useRef({ onChange, onEnter, onUp, onEscape });
-  cb.current = { onChange, onEnter, onUp, onEscape };
+  useLayoutEffect(() => {
+    cb.current = { onChange, onEnter, onUp, onEscape };
+  });
 
   useEffect(() => {
     const host = hostRef.current;
@@ -125,7 +127,7 @@ export function ChatInput({
         : (firstContent.current ?? emptyChatContent());
     editor.commands.setContent(initial);
     cb.current.onChange(editor.getJSON());
-    handle.current = {
+    handleRef.current = {
       set: (content) => {
         editor.commands.setContent(
           typeof content === "string" ? contentFromText(content) : content,
@@ -153,10 +155,10 @@ export function ChatInput({
     });
     return () => {
       stop();
-      handle.current = null;
+      handleRef.current = null;
       editor.destroy();
     };
-  }, [campaign, handle, label, placeholder]);
+  }, [campaign, handleRef, label, placeholder]);
 
   return <div ref={hostRef} className={className} aria-invalid={invalid} />;
 }

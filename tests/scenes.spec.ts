@@ -89,8 +89,12 @@ test("filterable graphics float above windows and support keyboard dismissal", a
   await expect(options).toHaveCount(2);
   await expect(options.nth(0)).toHaveAccessibleName("bow");
   await expect(options.nth(1)).toHaveAccessibleName("crossbow");
-  await page.keyboard.press("ArrowDown");
-  await expect(options.nth(0)).toBeFocused();
+  // Focus stays in the search box; the arrow keys move a highlight across the grid.
+  await page.keyboard.press("ArrowRight");
+  await expect(options.nth(1)).toHaveAttribute("data-focused", "true");
+  await page.keyboard.press("ArrowLeft");
+  await expect(options.nth(0)).toHaveAttribute("data-focused", "true");
+  await expect(search).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(menu).toHaveCount(0);
   await expect(trigger).toBeFocused();

@@ -7,10 +7,7 @@ import type { ActionDef } from "../../systems/types";
 
 /** Kept in the campaign's system data, under the system's own id. */
 const usesOf = (campaign: Campaign) =>
-  systemStore<true>(
-    campaign.systemData,
-    `${getSystem(campaign.meta.get("systemId")).id}:session-move-uses`,
-  );
+  systemStore<true>(campaign.systemData, `${getSystem(campaign.systemId).id}:session-move-uses`);
 
 function sessionUseKey(
   characterId: string,

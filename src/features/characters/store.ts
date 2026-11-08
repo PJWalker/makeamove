@@ -35,10 +35,10 @@ import type { CharacterKind, CharacterView, Duration, ItemInstance } from "./typ
  * the copy's own once it has any, else the template's.
  */
 
-export type CharacterMap = Y.Map<any>;
+export type CharacterMap = Y.Map<unknown>;
 
-const subMap = (m: CharacterMap, key: string): Y.Map<any> | undefined =>
-  m.get(key) as Y.Map<any> | undefined;
+const subMap = <T = unknown>(m: CharacterMap, key: string): Y.Map<T> | undefined =>
+  m.get(key) as Y.Map<T> | undefined;
 const entries = <T>(m: Y.Map<T> | undefined): Record<string, T> =>
   m ? Object.fromEntries(m.entries()) : {};
 
@@ -57,7 +57,7 @@ export function createCharacter(
 ): string {
   const id = newId();
   const kind = init.kind ?? "pc";
-  const m = new Y.Map<any>();
+  const m = new Y.Map<unknown>();
   characters.doc!.transact(() => {
     characters.set(id, m);
     m.set("name", init.name);
@@ -99,8 +99,8 @@ export function characterView(
   const get = (key: string) => (m.has(key) ? m.get(key) : base?.get(key));
   /** A sub-map's keys, the copy's over the template's. */
   const merged = <T>(key: string): Record<string, T> => ({
-    ...entries<T>(base && subMap(base, key)),
-    ...entries<T>(subMap(m, key)),
+    ...entries(base && subMap<T>(base, key)),
+    ...entries(subMap<T>(m, key)),
   });
   const kind: CharacterKind = get("kind") === "npc" ? "npc" : "pc";
   const storedScores = merged<number>("scores");
@@ -114,32 +114,32 @@ export function characterView(
   const fields: Record<string, string | number> = {};
   for (const f of system.npcFields)
     fields[f.id] = storedFields[f.id] ?? f.default ?? (f.type === "number" ? 0 : "");
-  const inv = (subMap(m, "inventory") ?? (base && subMap(base, "inventory"))) as
-    Y.Map<ItemInstance> | undefined;
+  const inv =
+    subMap<ItemInstance>(m, "inventory") ?? (base && subMap<ItemInstance>(base, "inventory"));
   const inventory = inv
     ? [...inv.values()].sort((a, b) => (a.order < b.order ? -1 : a.order > b.order ? 1 : 0))
     : [];
   return {
     id,
     kind,
-    folder: m.get("folder"),
-    name: get("name") ?? "Unnamed",
-    owner: get("owner") ?? "",
+    folder: m.get("folder") as string | undefined,
+    name: (get("name") as string | undefined) ?? "Unnamed",
+    owner: (get("owner") as string | undefined) ?? "",
     scores,
     data,
     resources: merged<number>("resources"),
     conditions: (get("conditions") as string[] | undefined) ?? [],
     lockedConditions: (get("lockedConditions") as string[] | undefined) ?? [],
     durations: (get("durations") as Record<string, Duration> | undefined) ?? {},
-    concentration: get("concentration"),
+    concentration: get("concentration") as string | undefined,
     modifiers: merged<number>("modifiers"),
     fields,
     inventory,
-    tokenStyle: get("tokenStyle"),
-    tokenColour: get("tokenColour"),
+    tokenStyle: get("tokenStyle") as CharacterView["tokenStyle"],
+    tokenColour: get("tokenColour") as string | undefined,
     // A copy is never a template itself.
-    template: m.get("template"),
-    base: m.get("base"),
+    template: m.get("template") as CharacterView["template"],
+    base: m.get("base") as string | undefined,
     learned: (get("learned") as string[] | undefined) ?? [],
   };
 }

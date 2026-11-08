@@ -26,9 +26,9 @@ import { Dialog, type WindowProxy } from "./CampaignDialogs";
 import { closeEntityTab, detachPanel, dockPanel, isFloating, layout } from "./panelLayout";
 import { locate } from "./layoutModel";
 import type { DockItemId } from "./panelLayout";
-import type { MenuItem } from "./ContextMenu";
+import type { MenuItem } from "../ui/ContextMenu";
 import { menuTrigger } from "../ui/menuTrigger";
-import { ContextMenu } from "./ContextMenu";
+import { ContextMenu } from "../ui/ContextMenu";
 import { withTransition } from "../ui/transition";
 import { useValue } from "../ui/useValue";
 
@@ -141,15 +141,14 @@ export function EntityWindowHost({ campaign }: { campaign: Campaign }) {
       if (key.startsWith("inventory:")) {
         const parts = key.slice("inventory:".length).split(":");
         const character = parts.length === 2 ? getCharacter(campaign, parts[0]) : undefined;
-        if (!character?.inventory.some((item) => item.id === parts[1]))
-          closeEntityWindow(id as DockItemId);
+        if (!character?.inventory.some((item) => item.id === parts[1])) closeEntityWindow(id);
       } else if (key.startsWith("move:")) {
         const moveId = key.split(":").at(-1);
-        if (!system.actions.some((move) => move.id === moveId)) closeEntityWindow(id as DockItemId);
+        if (!system.actions.some((move) => move.id === moveId)) closeEntityWindow(id);
       } else if (key.startsWith("lib:")) {
         const found = entryByKey(sources, key);
         if (found && !found.entry) {
-          closeEntityWindow(id as DockItemId);
+          closeEntityWindow(id);
         }
       }
     }
@@ -178,11 +177,11 @@ function EntityPopup({ campaign, record }: { campaign: Campaign; record: EntityW
   const items: MenuItem[] = [
     {
       label: "Dock to Left Sidebar",
-      onSelect: () => withTransition(() => dockPanel(record.id, "left")),
+      onSelect: () => void withTransition(() => dockPanel(record.id, "left")),
     },
     {
       label: "Dock to Right Sidebar",
-      onSelect: () => withTransition(() => dockPanel(record.id, "right")),
+      onSelect: () => void withTransition(() => dockPanel(record.id, "right")),
     },
     "divider",
     { label: "Close", onSelect: close },

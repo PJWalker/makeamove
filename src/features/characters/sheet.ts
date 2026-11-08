@@ -2,6 +2,7 @@ import * as Y from "yjs";
 import type { Campaign } from "../../campaign/campaign";
 import type { ResetEvent } from "../../systems/types";
 import type { DataValue } from "../../core/types";
+import type { Duration } from "./types";
 import { baseOf, getCharacter } from "./queries";
 import { derive } from "./store";
 import { systemOf } from "./system";
@@ -21,9 +22,9 @@ export function setField(campaign: Campaign, id: string, key: string, value: unk
 /** A sub-map value as the character has it: its own, or for a copy, its template's. */
 function current(campaign: Campaign, id: string, key: string, field: string): unknown {
   const m = campaign.characters.get(id);
-  const own = m?.get(key) as Y.Map<any> | undefined;
+  const own = m?.get(key) as Y.Map<unknown> | undefined;
   if (own?.has(field)) return own.get(field);
-  return (baseOf(campaign, m)?.get(key) as Y.Map<any> | undefined)?.get(field);
+  return (baseOf(campaign, m)?.get(key) as Y.Map<unknown> | undefined)?.get(field);
 }
 
 /** One of the character's sub-maps (data, scores, resources…), made if it's missing. A copy's writes land here, over its template. */
@@ -31,10 +32,10 @@ function part(
   campaign: Campaign,
   id: string,
   key: "data" | "scores" | "resources" | "modifiers" | "fields",
-): Y.Map<any> | undefined {
+): Y.Map<unknown> | undefined {
   const m = campaign.characters.get(id);
   if (!m) return undefined;
-  let map = m.get(key) as Y.Map<any> | undefined;
+  let map = m.get(key) as Y.Map<unknown> | undefined;
   if (!(map instanceof Y.Map)) {
     map = new Y.Map();
     m.set(key, map);
@@ -95,8 +96,9 @@ export function setModifier(campaign: Campaign, id: string, modifier: string, va
 export function toggleCondition(campaign: Campaign, id: string, condition: string) {
   const m = campaign.characters.get(id);
   if (!m) return;
-  const now: string[] =
-    (m.has("conditions") ? m.get("conditions") : baseOf(campaign, m)?.get("conditions")) ?? [];
+  const now =
+    ((m.has("conditions") ? m.get("conditions") : baseOf(campaign, m)?.get("conditions")) as
+      string[] | undefined) ?? [];
   m.set(
     "conditions",
     now.includes(condition) ? now.filter((x) => x !== condition) : [...now, condition],
@@ -115,13 +117,10 @@ export function setConditionState(
   const m = campaign.characters.get(id);
   if (!m) return;
   const inherited = baseOf(campaign, m);
-  const conditions = new Set<string>(
-    (m.has("conditions") ? m.get("conditions") : inherited?.get("conditions")) ?? [],
-  );
-  const locked = new Set<string>(
-    (m.has("lockedConditions") ? m.get("lockedConditions") : inherited?.get("lockedConditions")) ??
-      [],
-  );
+  const list = (key: string) =>
+    ((m.has(key) ? m.get(key) : inherited?.get(key)) as string[] | undefined) ?? [];
+  const conditions = new Set(list("conditions"));
+  const locked = new Set(list("lockedConditions"));
   if (state === "clear") conditions.delete(condition);
   else conditions.add(condition);
   if (state === "locked") locked.add(condition);
@@ -129,7 +128,7 @@ export function setConditionState(
   m.set("conditions", [...conditions]);
   m.set("lockedConditions", [...locked]);
   if (state === "clear") {
-    const durations = { ...(m.get("durations") ?? {}) };
+    const durations = { ...(m.get("durations") as Record<string, Duration> | undefined) };
     delete durations[condition];
     m.set("durations", durations);
   }
@@ -144,8 +143,9 @@ export function clearCondition(campaign: Campaign, id: string, condition: string
 export function setLearned(campaign: Campaign, id: string, actionId: string, known: boolean) {
   const m = campaign.characters.get(id);
   if (!m) return;
-  const now: string[] =
-    (m.has("learned") ? m.get("learned") : baseOf(campaign, m)?.get("learned")) ?? [];
+  const now =
+    ((m.has("learned") ? m.get("learned") : baseOf(campaign, m)?.get("learned")) as
+      string[] | undefined) ?? [];
   if (known === now.includes(actionId)) return;
   m.set("learned", known ? [...now, actionId] : now.filter((x) => x !== actionId));
 }

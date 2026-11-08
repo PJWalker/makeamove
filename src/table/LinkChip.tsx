@@ -1,11 +1,12 @@
 import { useRef, useState } from "react";
 import { getNote, type LinkKind } from "../features/notes/api";
-import { linkLabel, linkTip, openInSidebar } from "../features/notes/targets";
+import { linkLabel, linkTip } from "../features/notes/targets";
+import { openInSidebar } from "./linkNavigation";
 import type { Campaign } from "../campaign/campaign";
 import { menuTrigger } from "../ui/menuTrigger";
 import { IconImage, IconOpenWindow, IconSidebar } from "../ui/icons";
 import type { WindowProxy } from "./CampaignDialogs";
-import { ContextMenu } from "./ContextMenu";
+import { ContextMenu } from "../ui/ContextMenu";
 import { actionMenuItems } from "./actionMenu";
 import { dragEntity, entity } from "./entityDrag";
 import { linkActionItems, showLink } from "./linkState";

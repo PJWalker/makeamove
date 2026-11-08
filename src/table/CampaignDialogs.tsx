@@ -11,11 +11,11 @@ import { Button } from "../ui/Button";
 import { Segmented } from "../ui/Segmented";
 import { inviteUrl } from "../sync/invite";
 import { createPortal } from "react-dom";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useId, useLayoutEffect, useState } from "react";
 import { closePopup, dragPopup, raisePopup, resizePopup } from "../ui/popup";
 import { commaListOf, formatCommaList } from "../lib/list";
 import { autohide, setAutohide } from "./canvasState";
-import { RESIZE_DIRS, type ResizeDir } from "./resizeRect";
+import { RESIZE_DIRS, type ResizeDir } from "../ui/resizeRect";
 import { dragEntity, type DragEntity } from "./entityDrag";
 import type { Icon } from "../ui/icons";
 import type { menuTrigger } from "../ui/menuTrigger";
@@ -41,8 +41,6 @@ export interface WindowProxy {
 import { windowLayer } from "../ui/windows";
 import { CampaignSystemSheet } from "./campaignSheets";
 import { useValue } from "../ui/useValue";
-
-let dialogTransitionId = 0;
 
 export function Dialog({
   dialogRef,
@@ -74,9 +72,8 @@ export function Dialog({
   children: ReactNode;
 }) {
   const [rolled, setRolled] = useState(false);
-  const transitionName = useRef<string | null>(null);
-  const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
+  // Its own transition name, so two windows can animate at once.
+  const transitionName = `dialog-window-${useId().replace(/[^\w-]/g, "")}`;
   useLayoutEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
@@ -84,14 +81,13 @@ export function Dialog({
     dialog.addEventListener("cancel", preventNativeCancel);
     return () => dialog.removeEventListener("cancel", preventNativeCancel);
   }, [dialogRef]);
-  if (!transitionName.current) transitionName.current = `dialog-window-${++dialogTransitionId}`;
   const floating = useValue(layout).floating;
   const win = useWindowRect(dockId ? floating.find((item) => item.id === dockId) : undefined);
   const windowStyle = {
     ...(win ? { left: win.x, top: win.y, width: win.w, height: win.h, zIndex: win.z } : {}),
-    viewTransitionName: transitionName.current,
+    viewTransitionName: transitionName,
   };
-  const close = () => closePopup(dialogRef.current, onCloseRef.current);
+  const close = () => closePopup(dialogRef.current, onClose);
 
   function onResizePointerDown(e: PointerEvent, dir: ResizeDir) {
     if (dockId && win) startWindowResize(dockId, e, dir);
@@ -111,7 +107,7 @@ export function Dialog({
       data-window-id={dockId}
       style={windowStyle}
       onSubmit={(event) => {
-        if ((event.target as HTMLFormElement).method !== "dialog") return;
+        if (event.target.method !== "dialog") return;
         event.preventDefault();
         close();
       }}
@@ -202,7 +198,10 @@ export function SettingsDialog({
 }) {
   const me = useValue(device);
   const hiding = useValue(autohide);
-  const myName = useY(campaign.members, () => campaign.members.get(me.id)?.get("name") ?? "");
+  const myName = useY(
+    campaign.members,
+    () => (campaign.members.get(me.id)?.get("name") as string | undefined) ?? "",
+  );
   const colour = colourOf(me);
   return (
     <Dialog dialogRef={dialogRef} title="Settings">
@@ -279,7 +278,7 @@ function CampaignSettings({ campaign }: { campaign: Campaign }) {
         </label>
         <div className="field">
           Game system
-          <span className="dialog-value">{getSystem(campaign.meta.get("systemId")).name}</span>
+          <span className="dialog-value">{getSystem(campaign.systemId).name}</span>
         </div>
       </div>
       <div className="dialog-subsection form-subsection">
@@ -309,7 +308,7 @@ function CampaignSettings({ campaign }: { campaign: Campaign }) {
 }
 
 function SystemCampaignFields({ campaign }: { campaign: Campaign }) {
-  const system = getSystem(campaign.meta.get("systemId"));
+  const system = getSystem(campaign.systemId);
   const fields = system.campaignFields ?? [];
   const values = useY(campaign.systemData, () => systemCampaignData(campaign));
   if (!fields.length) return null;
@@ -473,10 +472,11 @@ function InviteField({ campaign }: { campaign: Campaign }) {
           <input readOnly value={url} onFocus={(e) => e.currentTarget.select()} />
           <Button
             variant="secondary"
-            onClick={async () => {
-              await navigator.clipboard.writeText(url);
-              setCopied(true);
-              setTimeout(() => setCopied(false), 1500);
+            onClick={() => {
+              void navigator.clipboard.writeText(url).then(() => {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1500);
+              });
             }}
           >
             {copied ? "Copied" : "Copy"}

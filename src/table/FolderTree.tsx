@@ -3,7 +3,7 @@ import { IconFolder } from "../ui/icons";
 import { FolderName } from "../ui/FolderName";
 import { List, ListGroup } from "../ui/List";
 import { menuTrigger } from "../ui/menuTrigger";
-import { ContextMenu, type MenuItem } from "./ContextMenu";
+import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
 import { PanelActions } from "./PanelActions";
 import { useState } from "react";
 

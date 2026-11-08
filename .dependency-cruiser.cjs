@@ -1,0 +1,121 @@
+/**
+ * Architectural rules, enforced by `npm run deps`.
+ *
+ * Existing violations are recorded in .dependency-cruiser-known-violations.json
+ * so the rules apply to new code straight away. Fix one, then regenerate the
+ * baseline with `npm run deps:baseline` to ratchet it down.
+ *
+ * dependency-cruiser does not support TypeScript 6 yet, so it parses with swc
+ * (a dev dependency). Imports in src are relative, so no tsconfig is needed.
+ */
+
+const SYSTEM = "^src/systems/(?!__tests__/)([^/]+)/";
+const TESTS = "(^|/)__tests__/|\\.test\\.tsx?$";
+
+/** @type {import('dependency-cruiser').IConfiguration} */
+module.exports = {
+  forbidden: [
+    // ── Systems ────────────────────────────────────────────────────────────
+    {
+      name: "system-not-imported-from-outside",
+      comment:
+        "A rule system is a plugin. The rest of the app reaches it only through the registry in src/systems (index.ts), never by importing a system’s own files.",
+      severity: "error",
+      from: { pathNot: ["^src/systems/", TESTS] },
+      to: { path: SYSTEM },
+    },
+    {
+      name: "system-not-imported-by-another-system",
+      comment:
+        "Systems are independent of each other. Share code through src/systems/*.ts or the app, not between systems.",
+      severity: "error",
+      from: { path: SYSTEM },
+      to: { path: SYSTEM, pathNot: "^src/systems/$1/" },
+    },
+
+    // ── Layering ───────────────────────────────────────────────────────────
+    {
+      name: "leaf-layers-stay-leaves",
+      comment:
+        "lib/ and core/ are foundations and import nothing else from the app. platform/ may use only lib/.",
+      severity: "error",
+      from: { path: "^src/(lib|core)/", pathNot: TESTS },
+      to: { path: "^src/", pathNot: "^src/(lib|core)/" },
+    },
+    {
+      name: "platform-only-uses-lib",
+      severity: "error",
+      from: { path: "^src/platform/", pathNot: TESTS },
+      to: { path: "^src/", pathNot: "^src/(lib|platform)/" },
+    },
+    {
+      name: "nothing-imports-the-app-shell",
+      comment:
+        "src/app wires everything together and src/main.tsx starts it. Nothing below imports back up into it.",
+      severity: "error",
+      from: { path: "^src/", pathNot: ["^src/(app|main\\.tsx)", TESTS] },
+      to: { path: "^src/app/" },
+    },
+    {
+      name: "ui-is-presentational",
+      comment:
+        "ui/ holds generic components. It must not depend on table/, features/, systems/, campaign/ or the scene.",
+      severity: "error",
+      from: { path: "^src/ui/", pathNot: TESTS },
+      to: { path: "^src/(table|features|systems|campaign|scene|lobby|sync|app)/" },
+    },
+    {
+      name: "data-layers-not-importing-table",
+      comment: "Features, scene, campaign and sync are below table/ (the UI that composes them).",
+      severity: "error",
+      from: { path: "^src/(features|scene|campaign|sync)/", pathNot: TESTS },
+      to: { path: "^src/(table|lobby)/" },
+    },
+
+    // ── Hygiene ────────────────────────────────────────────────────────────
+    {
+      name: "no-circular",
+      severity: "error",
+      from: { pathNot: TESTS },
+      to: { circular: true, viaOnly: { pathNot: TESTS } },
+    },
+    {
+      name: "no-test-code-in-production",
+      severity: "error",
+      from: { pathNot: TESTS },
+      to: { path: TESTS },
+    },
+    {
+      name: "not-to-dev-dependency",
+      comment: "Production code must not import packages listed only in devDependencies.",
+      severity: "error",
+      from: { path: "^src/", pathNot: TESTS },
+      to: { dependencyTypes: ["npm-dev"], pathNot: "^node_modules/(@types|unplugin-icons|vite)/" },
+    },
+    {
+      name: "not-to-unresolvable",
+      severity: "error",
+      from: {},
+      comment:
+        "Only relative imports are checked: package subpath exports are not resolved by this parser.",
+      to: { couldNotResolve: true, path: "^\\." },
+    },
+    {
+      name: "no-deprecated-core",
+      severity: "warn",
+      from: {},
+      to: {
+        dependencyTypes: ["core"],
+        path: "^(punycode|domain|constants|sys|_linklist|_stream_wrap)$",
+      },
+    },
+  ],
+  options: {
+    doNotFollow: { path: "node_modules" },
+    exclude: { path: "\\.(css|svg)$" },
+    moduleSystems: ["es6"],
+    tsPreCompilationDeps: true,
+    skipAnalysisNotInRules: true,
+    reporterOptions: { text: { highlightFocused: true } },
+  },
+};

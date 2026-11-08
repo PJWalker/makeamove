@@ -15,7 +15,7 @@ import {
   type DragEvent as ReactDragEvent,
   type MouseEvent as ReactMouseEvent,
 } from "react";
-import { SceneController } from "../scene/controller";
+import { SceneController, type TextRequest } from "../scene/controller";
 import { SceneRenderer } from "../scene/renderer";
 import { activeTool } from "../scene/tools";
 import { SceneDoc } from "../scene/sceneDoc";
@@ -26,6 +26,7 @@ import {
   TOKEN_STYLES,
   type BlobRef,
   type SceneElement,
+  type TokenElement,
   type TokenStyle,
 } from "../scene/types";
 import type { Campaign } from "../campaign/campaign";
@@ -94,7 +95,7 @@ import {
 } from "./canvasState";
 import { formatDistance } from "../scene/measure";
 import { linkProxy } from "./LinkChip";
-import { ContextMenu, type MenuItem } from "./ContextMenu";
+import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
 import { useValue } from "../ui/useValue";
 
 /**
@@ -154,7 +155,7 @@ export default function SceneCanvas({
   }, [controller, campaign]);
 
   useEffect(() => {
-    renderer.init(hostRef.current!).then(() => setReady(true));
+    void renderer.init(hostRef.current!).then(() => setReady(true));
     return () => renderer.destroy();
   }, [renderer]);
 
@@ -174,7 +175,7 @@ export default function SceneCanvas({
     if (!ctl) return;
     const push = () => {
       const gm = campaign.isGm();
-      ctl.gm = gm;
+      ctl.setGm(gm);
       const lighting = ctl.scene.lighting();
       const mine = new Set(
         listCharacters(campaign)
@@ -224,106 +225,107 @@ export default function SceneCanvas({
     let cancelled = false;
     let scene: SceneDoc | null = null;
     let ctl: SceneController | null = null;
-    SceneDoc.open(subdoc, { type: campaign.defaults().gridType, ...systemOf(campaign).scene }).then(
-      (s) => {
-        scene = s;
-        if (cancelled) return s.destroy();
-        ctl = new SceneController(
-          s,
-          renderer,
-          hostRef.current!,
-          sceneId,
-          () => campaign.defaults(),
-          campaign.presence,
-        );
-        ctl.start();
-        setController(ctl);
-        tokenDrop.value = (x, y, spec) => {
-          // A template's token is a new copy of it, with a name of its own.
-          if (spec.characterId) {
-            const c = getCharacter(campaign, spec.characterId);
-            if (c?.template) {
-              const name = tokenName(c, c.template, ctl!.tokenNames());
-              spec = { ...spec, name, characterId: createCopy(campaign, c.id, name) };
-            }
-            ctl!.addCharacterToken(
-              ctl!.toWorld(x, y),
-              spec as Required<Pick<typeof spec, "characterId" | "name">> & typeof spec,
-            );
-          } else {
-            ctl!.addToken(ctl!.toWorld(x, y), spec.name, spec);
+    void SceneDoc.open(subdoc, {
+      type: campaign.defaults().gridType,
+      ...systemOf(campaign).scene,
+    }).then((s) => {
+      scene = s;
+      if (cancelled) return s.destroy();
+      ctl = new SceneController(
+        s,
+        renderer,
+        hostRef.current!,
+        sceneId,
+        () => campaign.defaults(),
+        campaign.presence,
+      );
+      ctl.start();
+      setController(ctl);
+      tokenDrop.value = (x, y, spec) => {
+        // A template's token is a new copy of it, with a name of its own.
+        if (spec.characterId) {
+          const c = getCharacter(campaign, spec.characterId);
+          if (c?.template) {
+            const name = tokenName(c, c.template, ctl!.tokenNames());
+            spec = { ...spec, name, characterId: createCopy(campaign, c.id, name) };
           }
-          return true;
+          ctl!.addCharacterToken(
+            ctl!.toWorld(x, y),
+            spec as Required<Pick<typeof spec, "characterId" | "name">> & typeof spec,
+          );
+        } else {
+          ctl!.addToken(ctl!.toWorld(x, y), spec.name, spec);
+        }
+        return true;
+      };
+      sceneCharacterAt.value = (x, y) => {
+        const hit = ctl!.hitTest(ctl!.toWorld(x, y), true, true);
+        if (hit?.type !== "token" || !hit.characterId) return null;
+        const character = getCharacter(campaign, hit.characterId);
+        const bounds = hostRef.current!.getBoundingClientRect();
+        const screen = toScreen(renderer.camera, hit);
+        return {
+          characterId: hit.characterId,
+          tokenId: hit.id,
+          editable: !!character && canEdit(campaign, character),
+          center: { x: bounds.left + screen.x, y: bounds.top + screen.y },
         };
-        sceneCharacterAt.value = (x, y) => {
-          const hit = ctl!.hitTest(ctl!.toWorld(x, y), true, true);
-          if (hit?.type !== "token" || !hit.characterId) return null;
-          const character = getCharacter(campaign, hit.characterId);
-          const bounds = hostRef.current!.getBoundingClientRect();
-          const screen = toScreen(renderer.camera, hit);
-          return {
-            characterId: hit.characterId,
-            tokenId: hit.id,
-            editable: !!character && canEdit(campaign, character),
-            center: { x: bounds.left + screen.x, y: bounds.top + screen.y },
-          };
-        };
-        ctl.onItemTokenDragMove = (token, event) => {
-          if (!token) {
-            document.documentElement.classList.remove("is-reordering");
-            setDropCursor(null);
-            sceneDropHighlight.value = null;
-            return;
-          }
-          const dragged = itemTokenEntity(campaign, token);
-          const target = dragged ? dropTargetAt(event.clientX, event.clientY, dragged) : null;
-          document.documentElement.classList.add("is-reordering");
-          setDropCursor(!!target);
-          sceneDropHighlight.value = target?.tokenId ?? null;
-        };
-        ctl.onItemTokenDrop = (token, event) => {
-          const dragged = itemTokenEntity(campaign, token);
-          const target = dragged ? dropTargetAt(event.clientX, event.clientY, dragged) : null;
+      };
+      ctl.onItemTokenDragMove = (token, event) => {
+        if (!token) {
           document.documentElement.classList.remove("is-reordering");
           setDropCursor(null);
           sceneDropHighlight.value = null;
-          if (!target) {
-            const overCanvas =
-              hostRef.current?.contains(document.elementFromPoint(event.clientX, event.clientY)) ??
-              false;
-            if (!overCanvas) {
-              ctl!.renderer.previews.delete(token.id);
-              ctl!.renderer.invalidate("previews", "overlay");
-              return true;
-            }
-            return false;
+          return;
+        }
+        const dragged = itemTokenEntity(campaign, token);
+        const target = dragged ? dropTargetAt(event.clientX, event.clientY, dragged) : null;
+        document.documentElement.classList.add("is-reordering");
+        setDropCursor(!!target);
+        sceneDropHighlight.value = target?.tokenId ?? null;
+      };
+      ctl.onItemTokenDrop = (token, event) => {
+        const dragged = itemTokenEntity(campaign, token);
+        const target = dragged ? dropTargetAt(event.clientX, event.clientY, dragged) : null;
+        document.documentElement.classList.remove("is-reordering");
+        setDropCursor(null);
+        sceneDropHighlight.value = null;
+        if (!target) {
+          const overCanvas =
+            hostRef.current?.contains(document.elementFromPoint(event.clientX, event.clientY)) ??
+            false;
+          if (!overCanvas) {
+            ctl!.renderer.previews.delete(token.id);
+            ctl!.renderer.invalidate("previews", "overlay");
+            return true;
           }
-          if (target.element.matches(".scene-canvas") && !target.tokenId) return false;
-          const destination = target.tokenCenter ?? { x: event.clientX, y: event.clientY };
-          ctl!.animateItemTokenDrop(token.id, destination.x, destination.y, () => {
-            dropOn(target, dragged!, event.clientX, event.clientY);
-            ctl!.scene.remove([token.id]);
-            ctl!.selection.value = ctl!.selection.value.filter((id) => id !== token.id);
-          });
-          return true;
-        };
-        // A duplicated copy's token gets a copy of its own, from the same template.
-        ctl.afterDuplicate = (ids) => {
-          const patches: [string, Partial<SceneElement>][] = [];
-          for (const id of ids) {
-            const el = s.get(id);
-            const copy = el?.type === "token" ? getCharacter(campaign, el.characterId) : undefined;
-            const template = copy?.base ? getCharacter(campaign, copy.base) : undefined;
-            if (!template?.template) continue;
-            const name = tokenName(template, template.template, ctl!.tokenNames());
-            patches.push([id, { name, characterId: createCopy(campaign, template.id, name) }]);
-          }
-          if (patches.length) s.update(patches);
-        };
-        // Handy for poking at the scene from the console while developing.
-        if (import.meta.env.DEV) Object.assign(window, { mamScene: ctl });
-      },
-    );
+          return false;
+        }
+        if (target.element.matches(".scene-canvas") && !target.tokenId) return false;
+        const destination = target.tokenCenter ?? { x: event.clientX, y: event.clientY };
+        ctl!.animateItemTokenDrop(token.id, destination.x, destination.y, () => {
+          dropOn(target, dragged!, event.clientX, event.clientY);
+          ctl!.scene.remove([token.id]);
+          ctl!.selection.value = ctl!.selection.value.filter((id) => id !== token.id);
+        });
+        return true;
+      };
+      // A duplicated copy's token gets a copy of its own, from the same template.
+      ctl.afterDuplicate = (ids) => {
+        const patches: [string, Partial<SceneElement>][] = [];
+        for (const id of ids) {
+          const el = s.get(id);
+          const copy = el?.type === "token" ? getCharacter(campaign, el.characterId) : undefined;
+          const template = copy?.base ? getCharacter(campaign, copy.base) : undefined;
+          if (!template?.template) continue;
+          const name = tokenName(template, template.template, ctl!.tokenNames());
+          patches.push([id, { name, characterId: createCopy(campaign, template.id, name) }]);
+        }
+        if (patches.length) s.update(patches);
+      };
+      // Handy for poking at the scene from the console while developing.
+      if (import.meta.env.DEV) Object.assign(window, { mamScene: ctl });
+    });
     return () => {
       cancelled = true;
       ctl?.stop();
@@ -420,7 +422,7 @@ export default function SceneCanvas({
           );
           const covered = placed.covered.filter((id) => !(fromActor && actorTokens.has(id)));
           controller.setTargets(
-            targetPick.value?.max ? covered.slice(0, targetPick.value!.max) : covered,
+            targetPick.value?.max ? covered.slice(0, targetPick.value.max) : covered,
           );
         },
       });
@@ -428,21 +430,8 @@ export default function SceneCanvas({
   }, [controller]);
 
   // Text: typed in a box where it goes on the map.
-  const [textEdit, setTextEdit] = useState<{
-    at: Point;
-    screen: Point;
-    id?: string;
-    text?: string;
-  } | null>(null);
-  const onTextRequest = useEffectEvent((req: NonNullable<typeof textEdit>) => {
-    setTextEdit(req);
-  });
-  useEffect(() => {
-    const ctl = controller;
-    if (!ctl) return;
-    ctl.onTextRequest = onTextRequest;
-    return () => void (ctl.onTextRequest = null);
-  }, [controller]);
+  const [textEdit, setTextEdit] = useState<TextRequest | null>(null);
+  useEffect(() => controller?.handleTextRequests(setTextEdit), [controller]);
   const commitText = (value: string) => {
     const req = textEdit;
     setTextEdit(null);
@@ -466,7 +455,7 @@ export default function SceneCanvas({
     const files = [...(e.clipboardData?.files ?? [])].filter((f) => f.type.startsWith("image/"));
     if (!ctl || !files.length || isTyping(e.target)) return;
     e.preventDefault();
-    ctl.importFiles(files, ctl.centre());
+    void ctl.importFiles(files, ctl.centre());
   });
   useEffect(() => {
     const onDownListener = (e: KeyboardEvent) => {
@@ -496,8 +485,8 @@ export default function SceneCanvas({
     ctl.cancelGesture();
     const at = ctl.toWorld(x, y);
     const hit = ctl.hitTest(at, true);
-    if (hit && !ctl.selection.value.includes(hit.id)) ctl.selection.value = [hit.id];
-    if (!hit) ctl.selection.value = [];
+    if (hit && !ctl.selection.value.includes(hit.id)) ctl.select([hit.id]);
+    if (!hit) ctl.select([]);
     setMenu({ x, y, items: hit ? selectionMenu(ctl) : canvasMenu(ctl, at) });
   }
   // Opens on the right-button press on every platform (see ui/menuTrigger.ts).
@@ -711,7 +700,7 @@ export default function SceneCanvas({
     const ctl = controller;
     if (!ctl || !e.dataTransfer?.files.length) return;
     e.preventDefault();
-    ctl.importFiles(e.dataTransfer.files, ctl.toWorld(e.clientX, e.clientY));
+    void ctl.importFiles(e.dataTransfer.files, ctl.toWorld(e.clientX, e.clientY));
   }
 
   return (
@@ -736,7 +725,8 @@ export default function SceneCanvas({
         onChange={(e) => {
           const ctl = controller;
           const files = e.currentTarget.files;
-          if (ctl && files?.length) ctl.importFiles([...files], importAt.current ?? ctl.centre());
+          if (ctl && files?.length)
+            void ctl.importFiles([...files], importAt.current ?? ctl.centre());
           e.currentTarget.value = "";
         }}
       />
@@ -812,8 +802,13 @@ function TokenOptionsDialog({
   // The character this token stands for, as saved (not the unsaved choice below).
   const linked = useY(campaign.characters, () => getCharacter(campaign, token?.characterId));
 
-  const initializeTokenOptions = useEffectEvent(() => {
-    if (!token) return;
+  // Fill the form from the token each time one opens.
+  const [formFor, setFormFor] = useState<string | null>(null);
+  if (id !== formFor) {
+    setFormFor(id);
+    if (token) initializeTokenOptions(token);
+  }
+  function initializeTokenOptions(token: TokenElement) {
     setName(token.name);
     setStyle(isPlainToken(token) ? "plain" : "disc");
     setColour(token.colour);
@@ -825,12 +820,10 @@ function TokenOptionsDialog({
     // The first size as wide as the token, or none if it's been resized by hand.
     const cells = Math.max(token.w, token.h) / grid.size;
     setSize(system.sizes.find((z) => Math.abs(z.cells - cells) < 0.01)?.id ?? "");
-  });
+  }
 
   useEffect(() => {
-    if (!id) return;
-    initializeTokenOptions();
-    openPopup(ref.current);
+    if (id) openPopup(ref.current);
   }, [id]);
 
   // The table stays usable while this is open, so the token may be deleted.
@@ -955,10 +948,10 @@ function TokenOptionsDialog({
             type="file"
             accept="image/*"
             hidden
-            onChange={async (e) => {
+            onChange={(e) => {
               const file = e.currentTarget.files?.[0];
               e.currentTarget.value = "";
-              if (file) setImage(await importImage(file).catch(() => image));
+              if (file) void importImage(file).then(setImage, () => {});
             }}
           />
         </div>

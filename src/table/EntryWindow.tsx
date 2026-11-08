@@ -10,7 +10,7 @@ import { hideTooltip } from "../ui/Tooltip";
 import { ListRow } from "../ui/List";
 import type { WindowProxy } from "./CampaignDialogs";
 import { menuTrigger } from "../ui/menuTrigger";
-import { ContextMenu, type MenuItem } from "./ContextMenu";
+import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
 import { entityTabId, registerEntityWindow, closeEntityWindow, openEntries } from "./entityWindows";
 import { layout, locate, showPanel } from "./panelLayout";
 import type { DockItemId } from "./panelLayout";

@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useReducer, useRef } from "react";
+import { useEffect, useEffectEvent, useReducer } from "react";
 import type * as Y from "yjs";
 
 /**
@@ -19,13 +19,10 @@ export function useY<T, EventType>(
 ): T {
   "use no memo";
   const [, rerender] = useReducer((n: number) => n + 1, 0);
-  const latest = useRef(read);
-  latest.current = read;
   const value = read();
-  const shown = useRef(value);
-  shown.current = value;
+  // An effect event sees the latest render's `read` and `value`.
   const bump = useEffectEvent(() => {
-    if (!Object.is(latest.current(), shown.current)) rerender();
+    if (!Object.is(read(), value)) rerender();
   });
 
   useEffect(() => {

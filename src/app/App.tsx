@@ -72,10 +72,7 @@ function Removed({ campaign }: { campaign: Campaign }) {
         <Button
           variant="danger"
           className="form-actions-start"
-          onClick={async () => {
-            await deleteLocalCampaign(campaign.id);
-            goToCampaign(null);
-          }}
+          onClick={() => void deleteLocalCampaign(campaign.id).then(() => goToCampaign(null))}
         >
           Delete from This Device
         </Button>

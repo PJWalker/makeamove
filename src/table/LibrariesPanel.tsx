@@ -31,7 +31,7 @@ import { IconGive, IconImage } from "../ui/icons";
 import { List, ListExpand, ListGroup, Tag } from "../ui/List";
 import { EntryRow, EntryWindow, rollTag, useEntryWindows } from "./EntryWindow";
 import { dragEntity, entity } from "./entityDrag";
-import { libraryView as view, openedLibraryEntries, type KindFilter } from "./libraryView";
+import { libraryView as view, openedLibraryEntries } from "./libraryView";
 import { linkProxy } from "./LinkChip";
 import { makeVerb } from "./sheetParts";
 import { actionMenuItems } from "./actionMenu";
@@ -327,8 +327,8 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
             label="Show"
             value={kind}
             options={[
-              { id: "all" as KindFilter, label: "All" },
-              ...kinds.map((k) => ({ id: k as KindFilter, label: KIND_LABEL[k] })),
+              { id: "all", label: "All" },
+              ...kinds.map((k) => ({ id: k, label: KIND_LABEL[k] })),
             ]}
             onChange={(k) => (view.value = { ...view.value, kind: k })}
           />

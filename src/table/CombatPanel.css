@@ -80,6 +80,11 @@
     gap: var(--space-1);
     padding-inline-start: calc(3.5em + var(--space-2));
   }
+  /* Coloured as the condition's pip on the token. */
+  .combat-condition {
+    color: #14161c;
+    background: var(--condition-colour);
+  }
   .combat-chip-x {
     margin-inline-start: 4px;
     padding: 0;

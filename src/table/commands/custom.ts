@@ -1,4 +1,5 @@
 import type { Campaign } from "../../campaign/campaign";
+import type * as Y from "yjs";
 import { device } from "../../platform/device";
 import type { EntryIconName } from "../../ui/entryIcons";
 
@@ -17,17 +18,18 @@ const LOOKS = "hotbarLooks";
 const SHORTCUTS = "shortcuts";
 
 const mine = (campaign: Campaign) => campaign.members.get(device.value.id);
+const looksOf = (entry: Y.Map<unknown> | undefined) =>
+  entry?.get(LOOKS) as Record<string, SlotLook> | undefined;
 
 export function slotLook(campaign: Campaign, id: string): SlotLook {
-  const looks: Record<string, SlotLook> | undefined = mine(campaign)?.get(LOOKS);
-  return looks?.[id] ?? {};
+  return looksOf(mine(campaign))?.[id] ?? {};
 }
 
 /** Change a slot's name or icon; `undefined` puts the action's own back. */
 export function setSlotLook(campaign: Campaign, id: string, patch: SlotLook) {
   const entry = mine(campaign);
   if (!entry) return;
-  const looks: Record<string, SlotLook> = { ...entry.get(LOOKS) };
+  const looks = { ...looksOf(entry) };
   const next: SlotLook = { ...looks[id], ...patch };
   for (const k of Object.keys(next) as (keyof SlotLook)[]) if (!next[k]) delete next[k];
   if (Object.keys(next).length) looks[id] = next;
@@ -37,7 +39,7 @@ export function setSlotLook(campaign: Campaign, id: string, patch: SlotLook) {
 
 /** Action id to key combo, as `comboOf` writes it. */
 export function shortcuts(campaign: Campaign): Record<string, string> {
-  return mine(campaign)?.get(SHORTCUTS) ?? {};
+  return (mine(campaign)?.get(SHORTCUTS) as Record<string, string> | undefined) ?? {};
 }
 
 export const shortcutFor = (campaign: Campaign, id: string): string | undefined =>

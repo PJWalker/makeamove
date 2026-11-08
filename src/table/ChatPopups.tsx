@@ -1,15 +1,16 @@
 import type * as React from "react";
 import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from "react";
 import { lazy, Suspense } from "react";
-import { chatPopups, dismissPopup } from "../features/chat/notify";
+import { chatInView, chatPopups, dismissPopup } from "../features/chat/notify";
 import type { ChatMessage } from "../features/chat/types";
 import { markRead } from "../features/chat/unread";
 import type { Campaign } from "../campaign/campaign";
 import { collapsedInto, reducedMotion } from "../ui/bubble";
 import { Button } from "../ui/Button";
 import { IconClose } from "../ui/icons";
-import { showPanel } from "./panelLayout";
+import { layout, panelVisible, showPanel } from "./panelLayout";
 import { useValue } from "../ui/useValue";
+import { watch } from "../lib/store";
 
 const LoneMessage = lazy(() =>
   import("./ChatMessage").then((module) => ({ default: module.LoneMessage })),
@@ -60,9 +61,19 @@ function tabRect() {
 const collapsed = (box: DOMRect): Keyframe => collapsedInto(box, tabRect());
 
 export function ChatPopups({ campaign }: { campaign: Campaign }) {
+  // Tell chat/notify.ts whether new messages can be read where they land.
+  useEffect(
+    () =>
+      watch([layout], () => {
+        chatInView.value = panelVisible("chat");
+      }),
+    [],
+  );
   const messages = useValue(campaign.chat.messages);
   // Looked up live, so a deleted message takes its popup with it.
-  const shown = useValue(chatPopups).map((id) => messages.find((m) => m.id === id)).filter((m) => !!m);
+  const shown = useValue(chatPopups)
+    .map((id) => messages.find((m) => m.id === id))
+    .filter((m) => !!m);
   const [held, setHeld] = useState(false);
   const [hidden, setHidden] = useState(document.visibilityState === "hidden");
   useEffect(() => {
@@ -122,12 +133,15 @@ export function ChatPopups({ campaign }: { campaign: Campaign }) {
     return () => cancelAnimationFrame(frame);
   }, [any, place]);
 
-  useEffect(() => {
+  // Once nothing shows, start afresh.
+  const [wasAny, setWasAny] = useState(any);
+  if (any !== wasAny) {
+    setWasAny(any);
     if (!any) {
       setHeld(false);
       setLeavingAll(false);
     }
-  }, [any]);
+  }
 
   if (!any) return null;
   return (

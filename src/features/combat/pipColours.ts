@@ -12,6 +12,9 @@ export const PIP_COLOURS = {
   pink: "#d46fb0",
 };
 
+/** Concentration's pip colour. */
+export const CONCENTRATION_COLOUR = "#ffffff";
+
 const CONDITION_PIP_COLOURS = Object.values(PIP_COLOURS);
 
 export function conditionPipColour(index: number): string {

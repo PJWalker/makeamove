@@ -39,8 +39,10 @@ export class CampaignConnection {
     const refresh = () => {
       this.peerCount.value = session.peerIds().length;
       const ids = new Set<string>([device.value.id]);
-      for (const state of session.awareness.getStates().values())
-        if (state.user?.id) ids.add(state.user.id);
+      for (const state of session.awareness.getStates().values()) {
+        const user = state.user as { id?: string } | undefined;
+        if (user?.id) ids.add(user.id);
+      }
       this.online.value = ids;
     };
     this.blobs = new BlobExchange(session, { get: getBlob, put: putBlob });

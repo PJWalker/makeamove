@@ -30,7 +30,7 @@ describe("guided creation", () => {
       ],
     };
     const doc = new Y.Doc();
-    const characters = doc.getMap<Y.Map<any>>("characters");
+    const characters = doc.getMap<Y.Map<unknown>>("characters");
     const id = createCharacter(characters, system, { name: "Test", owner: "me" });
     expect(characterView(id, characters.get(id)!, system).scores).toEqual({
       rating: 0,
@@ -155,7 +155,7 @@ describe("guided creation", () => {
 describe("5.5e origins in the numbers", () => {
   function make(data: Record<string, string | number>, level = 1, classId = "fighter") {
     const doc = new Y.Doc();
-    const characters = doc.getMap<Y.Map<any>>("characters");
+    const characters = doc.getMap<Y.Map<unknown>>("characters");
     const id = createCharacter(characters, dnd, {
       name: "Brom",
       owner: "me",

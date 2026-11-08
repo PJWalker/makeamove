@@ -88,7 +88,7 @@ export function conversion(
       w: size,
       h: size,
       rot: 0,
-    } as Partial<SceneElement>;
+    };
   }
   const k = el.w / Math.max(image.width, image.height);
   return {

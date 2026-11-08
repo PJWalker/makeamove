@@ -27,7 +27,7 @@ export function renameSceneFolder(folders: Y.Map<{ name: string }>, id: string, 
 /** Deleting a folder files its scenes back at the top level. */
 export function deleteSceneFolder(
   doc: Y.Doc,
-  scenes: Y.Map<Y.Map<any>>,
+  scenes: Y.Map<Y.Map<unknown>>,
   folders: Y.Map<{ name: string }>,
   id: string,
 ) {
@@ -39,7 +39,11 @@ export function deleteSceneFolder(
   });
 }
 
-export function moveSceneToFolder(scenes: Y.Map<Y.Map<any>>, sceneId: string, folderId?: string) {
+export function moveSceneToFolder(
+  scenes: Y.Map<Y.Map<unknown>>,
+  sceneId: string,
+  folderId?: string,
+) {
   const scene = scenes.get(sceneId);
   if (!scene) return;
   if (folderId) scene.set("folder", folderId);

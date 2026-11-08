@@ -1,7 +1,5 @@
 import "fake-indexeddb/auto";
-import { describe, expect, it, vi } from "vitest";
-
-vi.mock("../../../table/panelLayout", () => ({ showPanel: () => {} }));
+import { describe, expect, it } from "vitest";
 
 import * as Y from "yjs";
 import { Campaign, createCampaign } from "../../../campaign/campaign";
@@ -34,7 +32,7 @@ import {
 async function setUp() {
   device.value = { id: "gm", name: "Gwen" };
   const campaign = await Campaign.open(await createCampaign("Barrows", "Gwen"));
-  const player = new Y.Map<any>();
+  const player = new Y.Map<unknown>();
   player.set("name", "Pat");
   player.set("role", "player");
   campaign.members.set("pat", player);

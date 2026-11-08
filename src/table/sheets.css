@@ -70,6 +70,48 @@
     border-color: var(--condition-colour);
     background: var(--condition-colour);
   }
+  /* Conditions to toggle: a grid of chips, lit in their pip's colour while on. */
+  .condition-toggles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 124px), 1fr));
+    gap: var(--space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .btn.condition-toggle {
+    width: 100%;
+    justify-content: flex-start;
+    gap: var(--space-2);
+    padding-inline: var(--space-2);
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .btn.condition-toggle:hover:not(:disabled) {
+    color: var(--text);
+  }
+  .condition-toggle .condition-dot {
+    flex: none;
+    border-color: var(--condition-colour);
+  }
+  .btn.condition-toggle[aria-pressed="true"]:not([role="tab"]) {
+    border-color: color-mix(in oklch, var(--condition-colour), white 30%);
+    background:
+      linear-gradient(115deg, transparent 20%, #fff4 43%, transparent 65%),
+      linear-gradient(
+        to bottom,
+        color-mix(in oklch, var(--condition-colour), white 14%),
+        var(--condition-colour) 48%,
+        color-mix(in oklch, var(--condition-colour), black 12%)
+      );
+    color: #14161c;
+    font-weight: 700;
+  }
+  .condition-toggle[aria-pressed="true"] .condition-dot {
+    border-color: currentColor;
+    background: currentColor;
+  }
   .counter-row {
     display: flex;
     align-items: center;

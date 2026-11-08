@@ -1,5 +1,5 @@
-import { morphOpen, setMorphOrigin } from "../ui/morph";
-import { withTransition } from "../ui/transition";
+import { morphOpen, setMorphOrigin } from "./morph";
+import { withTransition } from "./transition";
 import type { ComponentType } from "react";
 import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from "react";
 import {
@@ -9,8 +9,8 @@ import {
   Popover,
   Separator,
 } from "react-aria-components";
-import { IconCheck } from "../ui/icons";
-import type { IconProps } from "../ui/icons";
+import { IconCheck } from "./icons";
+import type { IconProps } from "./icons";
 
 export type MenuItem =
   | {
@@ -172,21 +172,20 @@ function MenuColour({ item }: { item: Extract<MenuItem, { colour: string }> }) {
   const [shown, setShown] = useState(item.colour);
   const inputRef = useRef<HTMLInputElement>(null);
   const pending = useRef<string | null>(null);
-  const latest = useRef(item);
-  latest.current = item;
-  const keep = () => {
+  const keep = useEffectEvent(() => {
     const colour = pending.current;
     if (!colour) return;
     pending.current = null;
-    latest.current.onPick(colour);
-    latest.current.onPreview(null);
-  };
+    item.onPick(colour);
+    item.onPreview(null);
+  });
   useEffect(() => {
     const input = inputRef.current;
     if (!input) return;
-    input.addEventListener("change", keep);
+    const onChange = () => keep();
+    input.addEventListener("change", onChange);
     return () => {
-      input.removeEventListener("change", keep);
+      input.removeEventListener("change", onChange);
       keep();
     };
   }, []);

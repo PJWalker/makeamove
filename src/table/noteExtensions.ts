@@ -31,7 +31,8 @@ export function carets(awareness: Awareness, name: string) {
   return CollaborationCaret.configure({
     provider: { awareness },
     user: { name, color: colourOf(d) },
-    render: (user) => {
+    render: (state) => {
+      const user = state as { name: string; color: string };
       const caret = document.createElement("span");
       caret.className = "note-caret";
       caret.style.setProperty("--caret", user.color);
@@ -143,7 +144,7 @@ export function secretNode(mountSecret: ((host: HTMLElement, id: string) => () =
       return ({ node }) => {
         const dom = document.createElement("div");
         dom.dataset.type = SECRET_NODE;
-        dom.dataset.id = node.attrs.id;
+        dom.dataset.id = node.attrs.id as string;
         if (!mountSecret) {
           dom.hidden = true;
           return { dom };
@@ -156,7 +157,7 @@ export function secretNode(mountSecret: ((host: HTMLElement, id: string) => () =
         const body = document.createElement("div");
         body.className = "note-secret-body";
         dom.append(label, body);
-        const unmount = mountSecret(body, node.attrs.id);
+        const unmount = mountSecret(body, node.attrs.id as string);
         return {
           dom,
           // The nested editor handles its own typing and selection.
@@ -202,7 +203,7 @@ export function makeSecret(editor: Editor, vault: Y.Doc): boolean {
 export function revealSecret(editor: Editor, vault: Y.Doc, pos: number) {
   const node = editor.state.doc.nodeAt(pos);
   if (node?.type.name !== SECRET_NODE) return;
-  const fragment = secretFragment(vault, node.attrs.id);
+  const fragment = secretFragment(vault, node.attrs.id as string);
   const json = yXmlFragmentToProsemirrorJSON(fragment) as JSONContent;
   const content = json.content?.length ? json.content : [{ type: "paragraph" }];
   editor
@@ -217,7 +218,7 @@ export function revealSecret(editor: Editor, vault: Y.Doc, pos: number) {
 export function deleteSecret(editor: Editor, vault: Y.Doc, pos: number) {
   const node = editor.state.doc.nodeAt(pos);
   if (node?.type.name !== SECRET_NODE) return;
-  const fragment = secretFragment(vault, node.attrs.id);
+  const fragment = secretFragment(vault, node.attrs.id as string);
   editor
     .chain()
     .focus()

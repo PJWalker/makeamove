@@ -1,4 +1,4 @@
-import type { MenuItem } from "../../table/ContextMenu";
+import type { MenuItem } from "../../ui/ContextMenu";
 import type { SystemExtension } from "../extensions";
 import { Dw2Bonds } from "./BondsSection";
 import {

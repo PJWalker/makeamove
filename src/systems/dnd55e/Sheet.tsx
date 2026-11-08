@@ -10,7 +10,6 @@ import {
   setNpcField,
   setScore,
   startMove,
-  toggleCondition,
 } from "../../features/characters/api";
 import { actionsFor, derive } from "../../features/characters/store";
 import type { CharacterView } from "../../features/characters/types";
@@ -21,7 +20,7 @@ import { CharacterText } from "../../table/CharacterText";
 import { commaListOf } from "../../lib/list";
 import { Inventory } from "../../table/Inventory";
 import { SheetSectionView } from "../../table/DeclarativeSheet";
-import { Counter, MoveList, signedStr, TokenChip } from "../../table/sheetParts";
+import { ConditionToggles, Counter, MoveList, signedStr, TokenChip } from "../../table/sheetParts";
 import { Button } from "../../ui/Button";
 import type { ActionDef, Derived, GameSystem } from "../types";
 import { SKILLS } from "./data";
@@ -131,24 +130,6 @@ function Abilities({
   );
 }
 
-function Conditions({ campaign, system, c, editable }: Props & { editable: boolean }) {
-  return (
-    <div className="dnd-conditions">
-      {system.conditions.map((k) => (
-        <label key={k.id} className="stat-deb" title={k.text}>
-          <input
-            type="checkbox"
-            checked={c.conditions.includes(k.id)}
-            disabled={!editable}
-            onChange={() => toggleCondition(campaign, c.id, k.id)}
-          />
-          {k.name}
-        </label>
-      ))}
-    </div>
-  );
-}
-
 /** A player character's sheet. */
 export function DndSheet({ campaign, system, c }: Props) {
   const d = derive(c, system);
@@ -173,7 +154,7 @@ export function DndSheet({ campaign, system, c }: Props) {
   const [levelling, setLevelling] = useState(false);
   const spendHitDie = () => {
     bumpResource(campaign, c.id, "hitDice", -1);
-    postRoll(
+    void postRoll(
       campaign,
       `1d${v.hitDie}${conMod ? `${conMod < 0 ? "-" : "+"}${Math.abs(conMod)}[CON]` : ""}`,
       "public",
@@ -499,7 +480,7 @@ export function DndSheet({ campaign, system, c }: Props) {
             onChange={(by) => bumpData(campaign, c.id, "exhaustion", by, 6)}
           />
         </div>
-        <Conditions campaign={campaign} system={system} c={c} editable={editable} />
+        <ConditionToggles campaign={campaign} system={system} c={c} editable={editable} />
       </section>
 
       <section
@@ -666,7 +647,7 @@ export function DndNpcSheet({ campaign, system, c }: Props) {
       </section>
       <section className="form-section sheet-section" aria-label="Conditions">
         <h3 className="sheet-heading">Conditions</h3>
-        <Conditions campaign={campaign} system={system} c={c} editable={editable} />
+        <ConditionToggles campaign={campaign} system={system} c={c} editable={editable} />
       </section>
       <Inventory campaign={campaign} c={c} editable={editable} />
       <CharacterText campaign={campaign} c={c} field="notes" label="Notes" editable={editable} />

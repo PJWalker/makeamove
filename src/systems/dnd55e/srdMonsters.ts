@@ -15,7 +15,7 @@ function sectionText(block: string, name: string) {
   const headings = [...block.matchAll(/^#### (.+)$/gm)];
   const heading = headings.find((entry) => entry[1]?.trim().toLowerCase() === name.toLowerCase());
   if (!heading || heading.index === undefined) return "";
-  const end = headings.find((entry) => (entry.index ?? -1) > heading.index!)?.index ?? block.length;
+  const end = headings.find((entry) => (entry.index ?? -1) > heading.index)?.index ?? block.length;
   return block
     .slice(heading.index + (heading[0]?.length ?? 0), end)
     .replace(/<[^>]+>/g, " ")

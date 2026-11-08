@@ -50,7 +50,7 @@ type Editing = { kind: "gear" | "move"; id: string | null } | null;
 
 export function ItemsPanel({ campaign }: { campaign: Campaign }) {
   const json = useY(campaign.homebrew, () => JSON.stringify(listHomebrew(campaign.homebrew)));
-  const entries: (HomebrewEntry & { id: string })[] = JSON.parse(json);
+  const entries = JSON.parse(json) as (HomebrewEntry & { id: string })[];
   const system = systemOf(campaign);
   const [editing, setEditing] = useState<Editing>(null);
   const [folded, setFolded] = useState<Set<string>>(new Set());

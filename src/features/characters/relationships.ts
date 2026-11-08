@@ -25,7 +25,7 @@ export interface RelationshipEdge extends Relationship {
 export const relationshipNotes = (to: string) => `rel:${to}`;
 
 function mapOf(
-  characters: Y.Map<Y.Map<any>>,
+  characters: Y.Map<Y.Map<unknown>>,
   id: string,
   create: boolean,
 ): Y.Map<{ label: string; depth?: number }> | undefined {
@@ -39,7 +39,7 @@ function mapOf(
   return rel instanceof Y.Map ? rel : undefined;
 }
 
-export function relationshipsOf(characters: Y.Map<Y.Map<any>>, id: string): Relationship[] {
+export function relationshipsOf(characters: Y.Map<Y.Map<unknown>>, id: string): Relationship[] {
   const rel = mapOf(characters, id, false);
   return rel
     ? [...rel.entries()]
@@ -49,7 +49,7 @@ export function relationshipsOf(characters: Y.Map<Y.Map<any>>, id: string): Rela
 }
 
 export function setRelationship(
-  characters: Y.Map<Y.Map<any>>,
+  characters: Y.Map<Y.Map<unknown>>,
   from: string,
   to: string,
   label: string,
@@ -61,7 +61,7 @@ export function setRelationship(
 
 /** Set a relationship's depth, from 0 to the system's maximum. */
 export function setRelationshipDepth(
-  characters: Y.Map<Y.Map<any>>,
+  characters: Y.Map<Y.Map<unknown>>,
   from: string,
   to: string,
   depth: number,
@@ -73,7 +73,7 @@ export function setRelationshipDepth(
   rel?.set(to, { ...current, depth: Math.max(0, Math.min(max, Math.trunc(depth))) });
 }
 
-export function removeRelationship(characters: Y.Map<Y.Map<any>>, from: string, to: string) {
+export function removeRelationship(characters: Y.Map<Y.Map<unknown>>, from: string, to: string) {
   const m = characters.get(from);
   characters.doc!.transact(() => {
     mapOf(characters, from, false)?.delete(to);
@@ -82,7 +82,10 @@ export function removeRelationship(characters: Y.Map<Y.Map<any>>, from: string, 
 }
 
 /** Every relationship between characters in `ids`, for the graph. */
-export function relationshipWeb(characters: Y.Map<Y.Map<any>>, ids: string[]): RelationshipEdge[] {
+export function relationshipWeb(
+  characters: Y.Map<Y.Map<unknown>>,
+  ids: string[],
+): RelationshipEdge[] {
   const known = new Set(ids);
   return ids.flatMap((from) =>
     relationshipsOf(characters, from)
@@ -105,7 +108,12 @@ export interface NodePosition {
 export function layoutWeb(
   ids: string[],
   edges: RelationshipEdge[],
-  { width = 600, height = 400, fixed = {} as Record<string, NodePosition>, steps = 300 } = {},
+  {
+    width = 600,
+    height = 400,
+    fixed = {},
+    steps = 300,
+  }: { width?: number; height?: number; fixed?: Record<string, NodePosition>; steps?: number } = {},
 ): Record<string, NodePosition> {
   const pos: Record<string, NodePosition> = {};
   const point = (positions: Record<string, NodePosition>, id: string) => {

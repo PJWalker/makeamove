@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { getCharacter, systemOf, toggleCondition } from "../characters/api";
-import { derive } from "../characters/store";
+import { getCharacter, systemOf, toggleCondition } from "../features/characters/api";
+import { derive } from "../features/characters/store";
 import {
   roundOf,
   removeCombatant,
@@ -9,7 +9,7 @@ import {
   updateCombatant,
   previousTurn,
   type CombatantView,
-} from "./combat";
+} from "../features/combat/combat";
 import {
   advanceTurn,
   beginCombat,
@@ -19,14 +19,15 @@ import {
   rollAllInitiative,
   rollInitiative,
   setDuration,
-} from "./api";
-import type { Campaign } from "../../campaign/campaign";
-import { device } from "../../platform/device";
-import { useY } from "../../ui/useY";
-import { Button } from "../../ui/Button";
-import { PanelActions } from "../../table/PanelActions";
-import { IconClose, IconDice, IconReveal, IconSecret } from "../../ui/icons";
-import { useValue } from "../../ui/useValue";
+} from "../features/combat/api";
+import type { Campaign } from "../campaign/campaign";
+import { device } from "../platform/device";
+import { useY } from "../ui/useY";
+import { Button } from "../ui/Button";
+import { PanelActions } from "./PanelActions";
+import { IconClose, IconDice, IconReveal, IconSecret } from "../ui/icons";
+import { useValue } from "../ui/useValue";
+import { CONCENTRATION_COLOUR, conditionColour } from "../features/combat/pipColours";
 
 /*
  * The turn tracker: who's in the fight, in initiative order, whose turn it
@@ -44,7 +45,7 @@ export function CombatPanel({ campaign }: { campaign: Campaign }) {
   const [roundText, turn] = state.split("|");
   const round = Number(roundText);
   const order = useY(campaign.combatants, () => JSON.stringify(turnOrder(campaign.combatants)));
-  const all: CombatantView[] = JSON.parse(order);
+  const all = JSON.parse(order) as CombatantView[];
   const shown = gm ? all : all.filter((c) => !c.hidden);
   const [open, setOpen] = useState<string | null>(null);
 
@@ -220,14 +221,22 @@ function CombatRow({
             const def = system.conditions.find((k) => k.id === id);
             const d = ch.durations[id];
             return (
-              <span key={id} className="list-tag" title={def?.text}>
+              <span
+                key={id}
+                className="list-tag combat-condition"
+                title={def?.text}
+                style={{ "--condition-colour": conditionColour(system, id) }}
+              >
                 {def?.name ?? id}
                 {d && ` ${d.rounds}`}
               </span>
             );
           })}
           {concentration && (
-            <span className="list-tag combat-concentration">
+            <span
+              className="list-tag combat-condition"
+              style={{ "--condition-colour": CONCENTRATION_COLOUR }}
+            >
               {concentration}
               {mine && (
                 <button

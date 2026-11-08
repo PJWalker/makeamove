@@ -53,7 +53,7 @@ describe("homebrew", () => {
     expect(system.actions.at(-1)?.id).toBe(id);
     expect(withHomebrew(dungeonWorld, [])).toBe(dungeonWorld);
 
-    const chars = new Y.Doc().getMap<Y.Map<any>>("characters");
+    const chars = new Y.Doc().getMap<Y.Map<unknown>>("characters");
     const cid = createCharacter(chars, system, {
       name: "Lux",
       owner: "me",

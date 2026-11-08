@@ -1,5 +1,5 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "ignoreExportsUsedInFile": true,
-  "ignoreDependencies": ["@svgr/plugin-jsx"]
+  "ignoreDependencies": ["@svgr/plugin-jsx", "@swc/core"]
 }

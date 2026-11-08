@@ -27,12 +27,12 @@ export type LinkRef = `${LinkKind}:${string}`;
 export interface NoteView {
   id: string;
   title: string;
-  folder?: string;
+  folder?: string | undefined;
   order: string;
   /** What this page links to. */
   links: LinkRef[];
   updatedAt: number;
-  updatedBy?: string;
+  updatedBy?: string | undefined;
   /** In the GM vault: only GM devices have it. */
   gmOnly: boolean;
 }
@@ -70,7 +70,7 @@ export function listNoteFolders(campaign: Campaign): NoteFolderView[] {
 }
 
 /** The page maps this device has: the campaign's, and the vault's on a GM device. */
-function noteMaps(campaign: Campaign): { map: Y.Map<Y.Map<any>>; gmOnly: boolean }[] {
+function noteMaps(campaign: Campaign): { map: Y.Map<Y.Map<unknown>>; gmOnly: boolean }[] {
   const vault = campaign.vault.value;
   return [
     { map: campaign.notes, gmOnly: false },
@@ -101,15 +101,15 @@ export function getNote(campaign: Campaign, id: string | null | undefined): Note
   return at && id ? noteView(id, at.m, at.gmOnly) : undefined;
 }
 
-function noteView(id: string, m: Y.Map<any>, gmOnly: boolean): NoteView {
+function noteView(id: string, m: Y.Map<unknown>, gmOnly: boolean): NoteView {
   return {
     id,
-    title: m.get("title") || "Untitled",
-    folder: m.get("folder") ?? undefined,
-    order: m.get("order") ?? "a0",
-    links: m.get("links") ?? [],
-    updatedAt: m.get("updatedAt") ?? 0,
-    updatedBy: m.get("updatedBy") ?? undefined,
+    title: (m.get("title") as string | undefined) || "Untitled",
+    folder: m.get("folder") as string | undefined,
+    order: (m.get("order") as string | undefined) ?? "a0",
+    links: (m.get("links") as LinkRef[] | undefined) ?? [],
+    updatedAt: (m.get("updatedAt") as number | undefined) ?? 0,
+    updatedBy: m.get("updatedBy") as string | undefined,
     gmOnly,
   };
 }
@@ -130,7 +130,7 @@ export function createNote(
     listNotes(campaign)
       .filter((n) => n.folder === folder)
       .at(-1)?.order ?? null;
-  const m = new Y.Map<any>();
+  const m = new Y.Map<unknown>();
   m.set("title", title.trim());
   if (folder) m.set("folder", folder);
   m.set("order", generateKeyBetween(last, null));
@@ -146,13 +146,12 @@ export function createNote(
 export function noteSubdoc(campaign: Campaign, id: string): Y.Doc | null {
   const at = locate(campaign, id);
   if (!at) return null;
-  let doc = at.m.get("doc");
-  if (!(doc instanceof Y.Doc)) {
-    // Derived from the ids, so peers doing this at once agree.
-    doc = new Y.Doc({ guid: guidOf(campaign, id, at.gmOnly) });
-    at.m.set("doc", doc);
-  }
-  return doc;
+  const doc = at.m.get("doc");
+  if (doc instanceof Y.Doc) return doc;
+  // Derived from the ids, so peers doing this at once agree.
+  const created = new Y.Doc({ guid: guidOf(campaign, id, at.gmOnly) });
+  at.m.set("doc", created);
+  return created;
 }
 
 export interface NoteTextMatch {
@@ -282,7 +281,7 @@ export async function revealNote(campaign: Campaign, id: string) {
   const read = new IndexeddbPersistence(noteDbName(vaultNoteGuid(campaign.id, id)), from);
   await read.whenSynced;
   const text = Y.encodeStateAsUpdate(from);
-  read.destroy();
+  void read.destroy();
   from.destroy();
 
   // Saved first, then filled, so the copy is kept even before anyone opens it.
@@ -291,7 +290,7 @@ export async function revealNote(campaign: Campaign, id: string) {
   await save.whenSynced;
   Y.applyUpdate(to, text);
 
-  const shared = new Y.Map<any>();
+  const shared = new Y.Map<unknown>();
   for (const key of ["title", "folder", "order", "links", "updatedAt", "updatedBy"]) {
     const v = m.get(key);
     if (v !== undefined) shared.set(key, v);
@@ -301,14 +300,14 @@ export async function revealNote(campaign: Campaign, id: string) {
   vault.notes.delete(id);
   indexedDB.deleteDatabase(noteDbName(vaultNoteGuid(campaign.id, id)));
   // Let the stored copy settle before letting go of it.
-  setTimeout(() => save.destroy(), 1000);
+  setTimeout(() => void save.destroy(), 1000);
 }
 
 /** Record that the page was just edited, and what it links to now. */
 export function touchNote(campaign: Campaign, id: string, links: LinkRef[]) {
   const m = locate(campaign, id)?.m;
   if (!m) return;
-  const before: LinkRef[] = m.get("links") ?? [];
+  const before = (m.get("links") as LinkRef[] | undefined) ?? [];
   const same = before.length === links.length && before.every((l, i) => l === links[i]);
   m.doc!.transact(() => {
     if (!same) m.set("links", links);

@@ -15,7 +15,7 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
   const system = systemOf(campaign);
   const state = useY(campaign.systemData, () => systemCampaignData(campaign));
   const counter = system.counters!.find((entry) => entry.id === "crew-xp")!;
-  const messageId = String(campaign.systemData.get("counter:crew-xp") ?? "");
+  const messageId = (campaign.systemData.get("counter:crew-xp") as string | undefined) ?? "";
   const xp = useY(
     campaign.messageState,
     () => getState<number>(campaign.messageState, messageId, "value") ?? 0,

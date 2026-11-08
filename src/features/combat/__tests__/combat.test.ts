@@ -17,7 +17,10 @@ import {
 
 function fight(...people: Partial<Combatant>[]) {
   const doc = new Y.Doc();
-  const m = { combat: doc.getMap<any>("combat"), combatants: doc.getMap<Combatant>("combatants") };
+  const m = {
+    combat: doc.getMap<unknown>("combat"),
+    combatants: doc.getMap<Combatant>("combatants"),
+  };
   const ids = people.map((p, i) => addCombatant(m, { name: `C${i}`, init: null, tie: 0, ...p }));
   return { m, ids };
 }

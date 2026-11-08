@@ -13,9 +13,7 @@ function memoryStore(): BlobStore & { blobs: Map<string, Blob> } {
   const blobs = new Map<string, Blob>();
   return {
     blobs,
-    async get(h) {
-      return blobs.get(h) ?? null;
-    },
+    get: (h) => Promise.resolve(blobs.get(h) ?? null),
     async put(b) {
       const h = await hashOf(b);
       blobs.set(h, b);
@@ -59,9 +57,7 @@ describe("blob exchange", () => {
     const blob = new Blob([bytes]);
     const hash = await storeA.put(blob);
     const failingStore: BlobStore = {
-      async get() {
-        return null;
-      },
+      get: () => Promise.resolve(null),
       put() {
         throw new Error("storage unavailable");
       },
@@ -94,7 +90,7 @@ describe("blob exchange", () => {
     const exB = new BlobExchange(b, storeB);
 
     let settled = false;
-    exB.fetch(hash).then(() => (settled = true));
+    void exB.fetch(hash).then(() => (settled = true));
     for (let i = 0; i < 4; i++) {
       await room.settle();
       await tick();

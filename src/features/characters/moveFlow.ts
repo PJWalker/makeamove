@@ -112,7 +112,7 @@ export function applySuggestion(campaign: Campaign, characterId: string, s: Move
   if (s.bump) bumpData(campaign, characterId, s.bump.field, s.bump.by);
   else if (s.roll) {
     const { formula, comment, damage, targets } = s.roll;
-    postRoll(
+    void postRoll(
       campaign,
       formula,
       "public",

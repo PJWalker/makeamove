@@ -8,8 +8,8 @@ import {
   shortcuts,
   showCombo,
   slotLook,
-} from "../app/commands/custom";
-import { findAction } from "../app/commands/registry";
+} from "./commands/custom";
+import { findAction } from "./commands/registry";
 import type { Campaign } from "../campaign/campaign";
 import { Button } from "../ui/Button";
 import { ENTRY_ICONS, type EntryIconName } from "../ui/entryIcons";
@@ -19,7 +19,7 @@ import { usePopupDialog } from "./usePopupDialog";
 import { useValue } from "../ui/useValue";
 
 /*
- * Pop-ups for a player's own touches on an action (app/commands/custom.ts):
+ * Pop-ups for a player's own touches on an action (table/commands/custom.ts):
  * renaming a hotbar slot, giving it an icon, and binding a shortcut. The
  * hotbar's and the palette's menus open them.
  */

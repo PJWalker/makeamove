@@ -91,8 +91,8 @@ export interface DieThrow {
 interface FlightBody {
   body: Body;
   vertices: Vec3[];
-  target?: Vec3;
-  labelUps?: Vec3[];
+  target?: Vec3 | undefined;
+  labelUps?: Vec3[] | undefined;
   faceUp: boolean;
   delay: number;
   active: boolean;

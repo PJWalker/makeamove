@@ -43,8 +43,8 @@ const byOrder = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 
 export class SceneDoc {
   readonly doc: Y.Doc;
-  readonly elements: Y.Map<Y.Map<any>>;
-  readonly settings: Y.Map<any>;
+  readonly elements: Y.Map<Y.Map<unknown>>;
+  readonly settings: Y.Map<unknown>;
   readonly undo: Y.UndoManager;
   /** Marks this user's own edits, so undo never reverts anyone else's. */
   readonly origin = { local: true };
@@ -84,7 +84,7 @@ export class SceneDoc {
   /** Unload the scene. Its subdocument is replaced by an unloaded stub. */
   destroy() {
     this.undo.destroy();
-    this.persistence.destroy();
+    void this.persistence.destroy();
     this.doc.destroy();
   }
 
@@ -109,7 +109,7 @@ export class SceneDoc {
     const s = this.settings;
     return {
       enabled: !!s.get("lighting"),
-      darkness: s.get("darkness") ?? 0.75,
+      darkness: (s.get("darkness") as number | undefined) ?? 0.75,
       vision: !!s.get("vision"),
     };
   }
@@ -150,7 +150,7 @@ export class SceneDoc {
   private topZ(layer: Layer): string | null {
     let top: string | null = null;
     for (const m of this.elements.values()) {
-      const z = m.get("z");
+      const z = m.get("z") as string;
       if (m.get("layer") === layer && (top === null || z > top)) top = z;
     }
     return top;
@@ -159,7 +159,7 @@ export class SceneDoc {
   private bottomZ(layer: Layer): string | null {
     let bottom: string | null = null;
     for (const m of this.elements.values()) {
-      const z = m.get("z");
+      const z = m.get("z") as string;
       if (m.get("layer") === layer && (bottom === null || z < bottom)) bottom = z;
     }
     return bottom;
@@ -170,7 +170,7 @@ export class SceneDoc {
     this.transact(() => {
       for (const el of els) {
         const id = newId();
-        const m = new Y.Map<any>();
+        const m = new Y.Map<unknown>();
         const full = {
           locked: false,
           ...el,

@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("../../table/panelLayout", () => ({ showPanel: () => {} }));
 import * as Y from "yjs";
 
-import { systemActions } from "../../app/commands/system";
+import { systemActions } from "../../table/commands/system";
 import { Campaign, createCampaign } from "../../campaign/campaign";
 import { device } from "../../platform/device";
 import {

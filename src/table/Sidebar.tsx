@@ -10,7 +10,7 @@ import { menuTrigger } from "../ui/menuTrigger";
 import { trackPointer } from "../ui/pointer";
 import { startReorder } from "../ui/reorder";
 import { withTransition } from "../ui/transition";
-import { ContextMenu, type MenuItem } from "./ContextMenu";
+import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
 import {
   detachPanel,
   dockPanel,
@@ -133,7 +133,7 @@ function tabMenu(id: DockItemId, side: Side): MenuItem[] {
       "divider",
       {
         label: other === "left" ? "Move to Left Sidebar" : "Move to Right Sidebar",
-        onSelect: () => withTransition(() => dockPanel(id, other)),
+        onSelect: () => void withTransition(() => dockPanel(id, other)),
       },
       {
         label: "Float in a Window",
@@ -152,7 +152,7 @@ function tabMenu(id: DockItemId, side: Side): MenuItem[] {
     "divider",
     {
       label: other === "left" ? "Move to Left Sidebar" : "Move to Right Sidebar",
-      onSelect: () => withTransition(() => dockPanel(id, other)),
+      onSelect: () => void withTransition(() => dockPanel(id, other)),
     },
     {
       label: "Float in a Window",
@@ -163,7 +163,7 @@ function tabMenu(id: DockItemId, side: Side): MenuItem[] {
     {
       label: "Close",
       Icon: IconClose,
-      onSelect: () => withTransition(() => setPanelClosed(id, true)),
+      onSelect: () => void withTransition(() => setPanelClosed(id, true)),
     },
   ];
 }
@@ -308,7 +308,7 @@ function switchTo(id: DockItemId, side: Side) {
     return;
   }
   const direction = s.panels.indexOf(id) > s.panels.indexOf(from) ? "vt-tab-next" : "vt-tab-prev";
-  withTransition(() => showPanel(id), { rootClass: direction });
+  void withTransition(() => showPanel(id), { rootClass: direction });
 }
 
 /** How many members are online, counting this device. */

@@ -5,7 +5,7 @@ import { canDelete, canEditMessage } from "../features/chat/types";
 import { clearState } from "../features/chat/messageState";
 import type { Campaign } from "../campaign/campaign";
 import { device } from "../platform/device";
-import { ContextMenu, type MenuItem } from "./ContextMenu";
+import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
 import { IconDelete, IconPin, IconRename } from "../ui/icons";
 import { registerLinkDrop } from "./entityDrag";
 import { editingMessage, isPinned, PinnedStrip, setPinned } from "./ChatExtras";

@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { plainText } from "../features/characters/trackers";
 import { MoveBody } from "./MoveBody";
 import { useY } from "../ui/useY";
-import { setField } from "../features/characters/api";
+import { setField, toggleCondition } from "../features/characters/api";
 import type { EntityGraphic } from "../graphics";
 import { checkOf } from "../features/characters/moves";
 import type { CharacterView } from "../features/characters/types";
@@ -10,7 +10,8 @@ import { colourOf } from "../scene/presence";
 import { TOKEN_STYLES } from "../scene/types";
 import type { Campaign } from "../campaign/campaign";
 import { device } from "../platform/device";
-import type { ActionDef, GameSystem } from "../systems/types";
+import type { ActionDef, ConditionDef, GameSystem } from "../systems/types";
+import { conditionColour } from "../features/combat/pipColours";
 import { Button } from "../ui/Button";
 import { EntityGraphicView } from "../ui/EntityGraphic";
 import { GraphicPicker } from "../ui/GraphicPicker";
@@ -29,7 +30,7 @@ import { menuTrigger } from "../ui/menuTrigger";
 import { usePopupDialog } from "./usePopupDialog";
 import { Segmented, SegmentedOrSelect } from "../ui/Segmented";
 import { Dialog } from "./CampaignDialogs";
-import { ContextMenu, type MenuItem } from "./ContextMenu";
+import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
 import { EntryRow, EntryWindow, rollTag, useEntryWindows } from "./EntryWindow";
 import { linkProxy } from "./LinkChip";
 import { dragToken } from "./tokenDrag";
@@ -488,5 +489,41 @@ function MakeButton({
     >
       <Icon size={22} />
     </Button>
+  );
+}
+
+/** Conditions to put on and take off, each a chip in the colour of its pip on the token. */
+export function ConditionToggles({
+  campaign,
+  system,
+  c,
+  conditions = system.conditions,
+  editable,
+}: {
+  campaign: Campaign;
+  system: GameSystem;
+  c: CharacterView;
+  conditions?: ConditionDef[];
+  editable: boolean;
+}) {
+  return (
+    <ul className="condition-toggles">
+      {conditions.map((condition) => (
+        <li key={condition.id}>
+          <Button
+            size="sm"
+            className="condition-toggle"
+            pressed={c.conditions.includes(condition.id)}
+            disabled={!editable}
+            title={condition.text}
+            style={{ "--condition-colour": conditionColour(system, condition.id) }}
+            onClick={() => toggleCondition(campaign, c.id, condition.id)}
+          >
+            <span className="condition-dot" aria-hidden="true" />
+            {condition.name}
+          </Button>
+        </li>
+      ))}
+    </ul>
   );
 }

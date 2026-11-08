@@ -13,7 +13,10 @@ import { getSystem } from "../../systems";
 
 /** This device's name in the campaign, as other players see it. */
 export function myName(campaign: Campaign): string {
-  return campaign.members.get(device.value.id)?.get("name") ?? (device.value.name || "Player");
+  return (
+    (campaign.members.get(device.value.id)?.get("name") as string | undefined) ??
+    (device.value.name || "Player")
+  );
 }
 
 const me = (campaign: Campaign) => ({ id: device.value.id, name: myName(campaign) });
@@ -43,7 +46,7 @@ export async function ensureSystemCounter(campaign: Campaign, counter: SystemCou
     if (existing.id !== id) campaign.systemData.set(field, existing.id);
     return existing;
   }
-  const system = getSystem(campaign.meta.get("systemId"));
+  const system = getSystem(campaign.systemId);
   if (!system.counters?.some((candidate) => candidate.id === counter.id)) return undefined;
   const message = await campaign.chat.post(
     {
@@ -105,19 +108,19 @@ export function runCommand(campaign: Campaign, cmd: Command, content?: ChatConte
   const author = me(campaign);
   switch (cmd.kind) {
     case "text":
-      if (cmd.text) postText(campaign, messageContent(content, cmd.text));
+      if (cmd.text) void postText(campaign, messageContent(content, cmd.text));
       return true;
     case "emote":
-      postText(campaign, messageContent(content, cmd.text), { emote: true });
+      void postText(campaign, messageContent(content, cmd.text), { emote: true });
       return true;
     case "whisper":
-      postText(campaign, messageContent(content, cmd.text), {
+      void postText(campaign, messageContent(content, cmd.text), {
         to: cmd.to.map((m) => m.id),
         toNames: cmd.to.map((m) => m.name),
       });
       return true;
     case "roll":
-      postRoll(campaign, cmd.formula, cmd.visibility, cmd.comment);
+      void postRoll(campaign, cmd.formula, cmd.visibility, cmd.comment);
       return true;
     case "pin":
       void postText(campaign, messageContent(content, cmd.text)).then((m) =>
@@ -152,10 +155,10 @@ export function runCommand(campaign: Campaign, cmd: Command, content?: ChatConte
       return true;
     case "session": {
       // Sessions are numbered in the campaign itself, so every peer agrees.
-      const count: number = campaign.meta.get("sessions") ?? 0;
+      const count = (campaign.meta.get("sessions") as number | undefined) ?? 0;
       const session = cmd.action === "start" ? count + 1 : count;
       if (cmd.action === "start") campaign.meta.set("sessions", session);
-      campaign.chat.post(
+      void campaign.chat.post(
         {
           kind: "system",
           text: cmd.action === "start" ? `Session ${session} begins` : `Session ${session} ends`,

@@ -1,32 +1,6 @@
-Contributor guide · architecture review · updated Nov 7
-
 # How Make a Move is built
 
 Make a Move is a virtual tabletop with no game server. Every player's browser runs the whole app against its own copy of the campaign, stored locally and merged with the other players over peer-to-peer connections. This page explains the parts, why they were chosen, what those choices cost, where the code has drifted from its own rules, and what is still to be built.
-
-**\~57k** lines of TypeScript, TSX and CSS in `src/`
-
-**0** servers holding game state
-
-**5** game systems built in: Dungeon World, Dungeon World 2, D&D 5.5e, Blades in the Dark, Daggerheart
-
-**392** unit tests in 55 files, all passing (about 4.5 s)
-
-[Runtime](#runtime) [Data and documents](#documents) [Source modules](#modules) [How an edit travels](#flow) [Key decisions](#decisions) [Conventions](#conventions) [Testing and tooling](#testing) [Improvement opportunities](#improvements) [Product rules](#product) [Roadmap and TODO](#roadmap)
-
-## Changes since the first review
-
-- **System rules moved out of core.** `features/characters/api.ts` went from 1,300 lines to a 54-line barrel over focused modules (`moves`, `inventory`, `templates`, `relationships`, `trackers`, `sessionMoves`, …). Core code under `features/`, `table/`, `scene/`, `app/` and `campaign/` no longer names any system.
-- **System UI goes through `systems/extensions.ts`.** A `SystemExtension` supplies sheets, a campaign sheet (Blades' crew), move forms, advancement actions, relationship extras, item-use controls and item menu entries. `table/sheets.tsx` asks `extensionOf(system)` and falls back to the declarative sheet; it no longer maps system ids.
-- **Large modules split.** `scene/controller.ts` is 931 lines with one gesture module per tool in `scene/gestures/`; `scene/renderer.ts` is 315 lines over per-layer modules in `scene/render/`; `ChatPanel.tsx` is 91 lines over `ChatLog`, `ChatMessage`, `ChatComposer`, `ChatPopups` and `ChatExtras`; `styles/components.css` is 73 lines, with styles in CSS files beside their components.
-- **Signals replaced by explicit stores.** `@preact/signals-react` and its Babel transform are gone. `lib/store.ts` provides observable values read in React through `ui/useValue.ts` (`useSyncExternalStore`) and outside React through `watch`.
-- **3D dice.** `table/diceRenderer.ts` (three.js, WebGPU with a WebGL 2 fallback) and `table/diePhysics.ts` (cannon-es) draw dice thrown into the chat; landed dice sit in their message's canvas and can be picked up and shaken.
-- **CI runs every check.** `.github/workflows/ci.yml` runs lint, typecheck, Prettier, knip, unit tests with coverage and the build; `playwright.yml` runs the browser suite; `audit.yml` checks runtime dependencies weekly and on lockfile changes.
-- **Browser tests split by feature** into `tests/campaign`, `characters`, `chat`, `notes`, `panels`, `scenes` and `dungeon-world-2` specs, with shared helpers in `tests/e2e-helpers.ts`. A Vitest browser-mode smoke test (`vitest.browser.config.ts`, `tests/browser-smoke.spec.ts`) is in progress.
-- **System tests moved beside systems.** Creation, relationships, trackers, homebrew, library and moves tests now sit in `systems/__tests__/` under the system they exercise, alongside new per-system suites.
-- **Reference materials untracked.** `reference/` is ignored and removed from the index.
-- **Test output untracked.** `.playwright-mcp/` is now ignored and removed from the index.
-- **In the working tree, not yet committed:** full-text search across note pages (`searchNote` in `features/notes/api.ts`, results in `NotesPanel.tsx`), and invite links that no longer carry the data epoch (`#join=<id>.<key>`).
 
 ## The runtime: browsers, not servers {#runtime}
 
@@ -38,14 +12,12 @@ A consequence to keep in mind: someone must be online to share the campaign. A p
 
 ## Data lives in Yjs documents {#documents}
 
-All shared state is a set of [Yjs](https://docs.yjs.dev/) CRDT documents. A CRDT lets two people edit the same data while offline and merge later without a conflict. The campaign is split into one root document plus many subdocuments that load only when needed, so a long campaign doesn't have to sit in memory.
+All shared state is a set of [Yjs](https://docs.yjs.dev/) CRDT documents. The campaign is split into one root document plus many subdocuments that load only when needed, so a long campaign doesn't have to sit in memory.
 
 - **Campaign root:** settings and defaults, members (name, colour, role, chosen character, hotbars), the scene index, the note index (titles, folders, outgoing links), character folders, entity graphic overrides, and the characters.
 - **Subdocuments:** one per scene, per note page and per chat chunk (500 messages), each in its own IndexedDB database.
 - **GM vault:** a separate document only GM devices hold, synced over its own room whose key lives in the vault. It holds GM-only note pages.
 - **Presence:** cursors, pings, rulers, laser trails and targets go over Yjs awareness and are never stored.
-
-Every document has its own IndexedDB database, named by `dataName()` in `src/platform/dataEpoch.ts`. Changing `DATA_EPOCH` (currently 2) moves every device onto fresh database names.
 
 Core code owns the generic shape of a record (a character's name, owner and inventory). Each game system owns sub-maps it alone writes, such as `scores`, `data` and `resources`. Because these are separate Yjs maps, two players editing different fields never overwrite each other. Values that can be calculated, like maximum HP after item bonuses, are never stored; every device derives them.
 
@@ -55,20 +27,20 @@ The code is grouped by responsibility. Imports should flow downward, toward doma
 
 | Folder | Purpose | Files |
 | --- | --- | --- |
-| `app/` | Startup, hash routing (`#/c/<id>`), the top-level `App` shell, and the action index behind the command palette and hotbar (`app/commands`). | 9 |
+| `app/` | Startup, hash routing (`#/c/<id>`), and the top-level `App` shell. | 2 |
 | `lobby/` | The campaign list, create and join forms, and the animated icon backdrop. | 4 |
-| `table/` | Composition for an open campaign: `Tabletop`, sidebars and floating windows, panels, sheets, dialogs, the hotbar, palette, drag-and-drop between panels, and the 3D dice tray. Each component has its own CSS file. | 115 |
-| `features/` | Domain models and operations: characters, chat, notes, combat, dice notation and pools, library, homebrew. Mostly plain functions over a `Campaign` and its Yjs maps. | 43 |
+| `table/` | Composition for an open campaign: `Tabletop`, sidebars and floating windows, panels, sheets, dialogs, the hotbar, palette, drag-and-drop between panels, the 3D dice tray, and the action index behind the command palette and hotbar (`table/commands`). Each component has its own CSS file. | 123 |
+| `features/` | Domain models and operations: characters, chat, notes, combat, dice notation and pools, library, homebrew. Mostly plain functions over a `Campaign` and its Yjs maps. | 41 |
 | `scene/` | The canvas engine: `SceneDoc` (scene subdocument and undo), `SceneController` with a gesture module per tool (`gestures/`), `SceneRenderer` with a module per layer (`render/`), grid, geometry, measuring, vision, lighting, presence, and an image worker. | 48 |
 | `systems/` | Game-system plugins. `types.ts` is the rules contract, `extensions.ts` the UI contract; each system folder exports a `GameSystem` and, where needed, a `SystemExtension` with its components. | 48 |
 | `campaign/` | The `Campaign` class: root document lifecycle, members and removal, scene index and folders, plus the device-local campaign registry and the peer connection. | 6 |
 | `sync/` | Networking: `SyncSession` (Yjs sync protocol over many docs), the `Transport` interface and its Trystero implementation, peer-to-peer blob exchange, and invite links. | 5 |
 | `platform/` | Browser services: device identity, safe `localStorage`, OPFS blob store, database naming. | 4 |
-| `ui/` | Shared presentation: buttons, lists, pickers, tooltips, icons, popups, morphing, view transitions, `useY` (React over Yjs) and `useValue` (React over stores). | 49 |
+| `ui/` | Shared presentation: buttons, lists, pickers, tooltips, icons, popups, morphing, view transitions, `useY` (React over Yjs) and `useValue` (React over stores). | 56 |
 | `lib/`, `core/` | Framework-neutral utilities: ids, hybrid logical clock, colour maths, list and set helpers, observable stores, and the shared `DataValue` type. | 7 |
 | `styles/` | Global CSS only: design tokens, primitives, base, transitions. | 5 |
 
-File counts exclude tests. The remaining upward imports are listed under Improvement opportunities.
+File counts exclude tests. ESLint enforces the direction; the one remaining exception is listed under Improvement opportunities.
 
 ## How an edit travels {#flow}
 
@@ -231,18 +203,11 @@ With no server, a campaign's only copies are on players' devices, and scenes are
 
 High
 
-### Imports still point upward between layers
+### System sheets import `table/` parts
 
-Fewer than before, but the rule isn't enforced, so it will drift again:
+ESLint's `no-restricted-imports` (in `eslint.config.js`) now fails any upward import, with one allowance: system sheets may still import eight `table/` modules (`DeclarativeSheet`, `sheetParts`, `Inventory`, `CharacterText`, `CreationParts`, `CampaignDialogs`, `usePopupDialog`, `entityDrag`). Those eight reach 31 `table/` files between them, including `panelLayout`, `entityWindows`, `EntryWindow`, `LinkChip`, `linkState`, `libraryView`, `richText`, `actionMenu` and the action index in `table/commands`, so they can't move below `table/` on their own.
 
-- System sheets import `table/` parts: `dnd55e/Sheet.tsx` (5), `dungeon-world-2/Sheet.tsx` and `ClassChange.tsx` (3 each), `blades-in-the-dark/Sheet.tsx` (2), `CrewSheet.tsx`, `dungeon-world/Sheet.tsx`, `dungeon-world-2/extension.ts`.
-- `systems/extensions.ts` imports the `MenuItem` type from `table/ContextMenu`.
-- `features/notes/targets.ts` imports `table/libraryView` and `table/panelLayout`; `features/chat/notify.ts` imports `table/panelLayout`.
-- `features/combat/CombatPanel.tsx` is a panel inside `features/` that imports `table/PanelActions`.
-- `ui/popup.ts` imports `table/resizeRect`.
-- `table/` imports the action index from `app/commands` in five files.
-
-**Consider:** move shared sheet parts (`DeclarativeSheet`, `sheetParts`, `Inventory`, `CharacterText`, `CreationParts`) and the `MenuItem` type to a module below both table and systems (for example `ui/sheet/`); move `resizeRect` into `ui/`; move `CombatPanel` into `table/`; have features raise store changes the table listens to instead of calling panel layout; move `app/commands` to `features/commands`. Then add ESLint `no-restricted-imports` patterns so drift fails CI.
+**Consider:** either split `table/` into composition (Tabletop, panels, sidebar, toolbar, palette, hotbar, chat) and a lower layer holding window and panel layout, dialogs, entry windows, links, rich text, drag and the sheet parts; or move only the sheet parts and `Dialog` below `table/` and give them a context, provided by `table/`, for opening entries, links, action menus, the Libraries and rich text.
 
 Medium
 
@@ -318,6 +283,7 @@ Low
 - Signals Babel transform blocking React Compiler: replaced by explicit stores.
 - `reference/` and `.playwright-mcp/` committed: untracked and ignored.
 - `design.md` out of date: removed; this document replaces it.
+- Upward imports outside the system sheets: `ContextMenu` and `resizeRect` moved to `ui/`, `CombatPanel` and the action index (`table/commands`) to `table/`, link following (`table/linkNavigation.ts`) out of `features/notes`, and chat notifications read a `chatInView` store the table keeps current. ESLint enforces the layering.
 
 ## Product rules {#product}
 
@@ -335,48 +301,6 @@ These govern behaviour more than code.
 - Motion is about 280 ms and switches off under reduced motion. View transitions animate state changes that can briefly be snapshots; anything the user may reach into mid-animation animates live with CSS.
 - Interface text is succinct and functional: no commentary, reassurances, parentheticals or asides. System rules text is content and exempt.
 
-### Permissions
-
-- Roles are GM, Player and Observer. Character owners and the GM edit a character; other players view it.
-- Edit permissions are enforced by the client UI, not by a peer-level write filter. Only GM-only notes are secret.
-- Only the campaign's creator is a GM so far.
-- Scene elements can be locked. Wall and light tools are GM-only.
-
-### Dice
-
-- The roller decides results locally with `crypto.getRandomValues` and records them in chat; every peer sees the same result.
-- Visibility is public or secret (the roller and the GM). There are no blind rolls.
-- Whispers are hidden from everyone but sender and recipients, including the GM.
-
-## Roadmap and TODO {#roadmap}
-
-### TODO
-
-- [ ] Preserve panel order when hiding and showing panels.
-- [ ] Add visibility and lock flags to entities (notes, tokens, maps, characters) that the GM can edit.
-- [ ] Let a player claim a character as their player character: it becomes the default subject for actions and gets its own sidebar tab with its avatar as the icon.
-- [ ] Add a Reroll entry to the context menu for roll cards.
-
-### Planned core features
-
-- Monsters and areas of effect (M5 step 6): stat blocks in the Libraries, unlinked tokens, and area templates (cone, line, cube, sphere, cylinder) that list the tokens they cover.
-- Plugin data migrations keyed by each plugin's schema version, and loading third-party systems from a URL or file.
-- Plugin-provided dice syntax and slash commands; the `script` effect type.
-- A GM "pull everyone to this scene" control.
-- Dragging items between characters, and item tokens on the canvas.
-- Pinning a note page to a scene location; exporting a session's log into its page.
-- Dungeon World Fronts, Dangers and Steadings as note templates; "choose N" move options as checkboxes.
-- Homebrew and monsters as Library sources.
-
-### Open systems work
-
-- [ ] DW1: complete starting and advanced class moves, level-up move selection, spell preparation, and Fronts/Dangers. Needs a local licensed source to verify against the SRD.
-- [ ] DW2: automate remaining class/Path passive interactions, Struggles, class-change reassignment, and magic-item/Artifact selection. Review redistribution terms for the beta before publishing its content.
-- [ ] Daggerheart: tier-specific advancement slot quotas, equipment restrictions, downtime/death workflows, and feature-use tracking.
-- [ ] Blades: named crew/playbook catalogs beyond the SRD toolkit, structured claims/factions/cohorts, creation dot constraints, and score/downtime bookkeeping.
-- [ ] D&D: multiclass progression, feature/condition automation, monster actions and legendary/recharge workflows, and remaining spell-specific behaviour.
-- [ ] Triangle Agency: Agency/Anomaly character model, d4 resolution, and campaign rules.
-- [ ] PF2e: evaluate rules coverage and action, proficiency and condition support.
 
 ### Open questions (M5)
 

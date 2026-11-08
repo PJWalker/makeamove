@@ -113,7 +113,7 @@ export function loadBitmap(hash: string): Promise<ImageBitmap | null> {
       .then(async (blob) => (blob ? (await runImageTask({ type: "decode", blob })).bitmap : null));
     bitmaps.set(hash, p);
     // A miss isn't final: a peer may have it later.
-    p.then((b) => b || bitmaps.delete(hash));
+    void p.then((b) => b || bitmaps.delete(hash));
   }
   return p;
 }

@@ -5,32 +5,23 @@ const dependencies = vi.hoisted(() => ({
   getCharacter: vi.fn(),
   listCharacters: vi.fn(),
   listNotes: vi.fn(),
-  selectCharacter: vi.fn(),
-  showPanel: vi.fn(),
   systemOf: vi.fn(),
 }));
 
 vi.mock("../../characters/api", () => ({
   getCharacter: dependencies.getCharacter,
   listCharacters: dependencies.listCharacters,
-  selectCharacter: dependencies.selectCharacter,
   systemOf: dependencies.systemOf,
 }));
 vi.mock("../api", () => ({ listNotes: dependencies.listNotes }));
-vi.mock("../../../table/panelLayout", () => ({ showPanel: dependencies.showPanel }));
 
 import {
   characterLinkTargets,
-  followLink,
   linkLabel,
   linkTargets,
   linkTip,
   matchingLinkTargets,
-  noteOpened,
-  openInSidebar,
-  openNoteId,
 } from "../targets";
-import { libraryView } from "../../../table/libraryView";
 
 const notes = [
   { id: "current", title: "Current Page", gmOnly: false },
@@ -52,7 +43,6 @@ const actions = [
 
 const campaign = {
   sceneViews: () => scenes,
-  setActiveScene: vi.fn(),
 } as unknown as Campaign;
 
 beforeEach(() => {
@@ -63,9 +53,6 @@ beforeEach(() => {
     characters.find((character) => character.id === id),
   );
   dependencies.systemOf.mockReturnValue({ items, actions });
-  openNoteId.value = null;
-  noteOpened.value = 0;
-  libraryView.value = { kind: "all", query: "" };
 });
 
 describe("note link targets", () => {
@@ -132,30 +119,5 @@ describe("note link targets", () => {
       expect(linkLabel(campaign, kind, "missing")).toBeNull();
       expect(linkTip(campaign, kind, "missing")).toBeNull();
     }
-  });
-
-  it("opens each link in its corresponding panel or scene", () => {
-    followLink(campaign, "note", "current");
-    expect(openNoteId.value).toBe("current");
-    expect(noteOpened.value).toBe(1);
-    expect(dependencies.showPanel).toHaveBeenLastCalledWith("notes");
-
-    followLink(campaign, "character", "ayla");
-    expect(dependencies.selectCharacter).toHaveBeenCalledWith(campaign, "ayla");
-    expect(dependencies.showPanel).toHaveBeenLastCalledWith("characters");
-
-    followLink(campaign, "scene", "keep");
-    expect(campaign.setActiveScene).toHaveBeenCalledWith("keep");
-
-    followLink(campaign, "item", "sword");
-    expect(libraryView.value).toEqual({ kind: "item", query: "Longsword" });
-    expect(dependencies.showPanel).toHaveBeenLastCalledWith("libraries");
-
-    followLink(campaign, "move", "strike");
-    expect(libraryView.value).toEqual({ kind: "move", query: "Strike" });
-
-    openInSidebar(campaign, "scene", "keep");
-    expect(dependencies.showPanel).toHaveBeenLastCalledWith("scene");
-    expect(campaign.setActiveScene).toHaveBeenCalledOnce();
   });
 });

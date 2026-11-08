@@ -12,7 +12,7 @@ import type { LinkKind } from "../features/notes/api";
 import { morphOpen } from "../ui/morph";
 import { raisePopup } from "../ui/popup";
 import { hideTooltip } from "../ui/Tooltip";
-import type { MenuItem } from "./ContextMenu";
+import type { MenuItem } from "../ui/ContextMenu";
 import { entityTabId } from "./entityWindows";
 import { layout, locate, showPanel } from "./panelLayout";
 

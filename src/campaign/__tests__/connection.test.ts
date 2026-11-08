@@ -58,7 +58,9 @@ describe("CampaignConnection", () => {
 
     expect(alice.peerCount.value).toBe(0);
     expect(
-      [...alice.sync!.awareness.getStates().values()].map((state) => state.user?.id),
+      [...alice.sync!.awareness.getStates().values()].map(
+        (state) => (state.user as { id?: string } | undefined)?.id,
+      ),
     ).not.toContain("bob");
     device.value = { id: "alice", name: "Alice" };
     expect([...alice.online.value]).toEqual(["alice"]);

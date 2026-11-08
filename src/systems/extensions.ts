@@ -1,7 +1,7 @@
 import type { ComponentType } from "react";
 import type { Campaign } from "../campaign/campaign";
 import type { CharacterView, ItemInstance } from "../features/characters/types";
-import type { MenuItem } from "../table/ContextMenu";
+import type { MenuItem } from "../ui/ContextMenu";
 import type { GameSystem } from "./types";
 import { dnd55eExtension } from "./dnd55e/extension";
 import { dungeonWorldExtension } from "./dungeon-world/extension";
@@ -53,7 +53,7 @@ export interface SystemExtension {
   /** Controls for using an item with uses, instead of the core's Use button. */
   ItemUse?: ComponentType<ItemUseProps>;
   /** What the item menu's Use does, instead of spending one use. */
-  spendUse?(campaign: Campaign, characterId: string, itemId: string): boolean;
+  spendUse?: (campaign: Campaign, characterId: string, itemId: string) => boolean;
   /** Extra entries for an item's menu. */
   itemMenu?(
     campaign: Campaign,

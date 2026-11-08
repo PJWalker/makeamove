@@ -12,7 +12,7 @@ import {
 } from "../../features/characters/relationships";
 
 function cast(...ids: string[]) {
-  const characters = new Y.Doc().getMap<Y.Map<any>>("characters");
+  const characters = new Y.Doc().getMap<Y.Map<unknown>>("characters");
   for (const id of ids) characters.set(id, new Y.Map());
   return characters;
 }
@@ -77,7 +77,7 @@ describe("relationships", () => {
     const chars = cast("ayla", "brom");
     const systemData = chars.doc!.getMap("systemData");
     for (const id of ["ayla", "brom"]) {
-      const data = new Y.Map<any>();
+      const data = new Y.Map<unknown>();
       data.set("xp", 0);
       chars.get(id)!.set("data", data);
     }
@@ -105,8 +105,8 @@ describe("relationships", () => {
     setRelationshipDepth(chars, "brom", "ayla", 3, 3);
     expect(forgeBond(systemData, chars, "ayla", "brom", "rivals")).toBe(true);
     expect(bondBetween(systemData, "ayla", "brom")?.advancedMoves).toEqual([]);
-    expect(chars.get("ayla")!.get("data").get("xp")).toBe(1);
-    expect(chars.get("brom")!.get("data").get("xp")).toBe(1);
+    expect((chars.get("ayla")!.get("data") as Y.Map<unknown>).get("xp")).toBe(1);
+    expect((chars.get("brom")!.get("data") as Y.Map<unknown>).get("xp")).toBe(1);
   });
 
   it("leave out characters that are gone or not shown", () => {

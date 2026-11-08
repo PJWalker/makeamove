@@ -22,7 +22,8 @@ type MoveSpec = {
   category: "basic" | "special" | "campaign" | "class";
   trigger: string;
   text: string;
-  stat?: string | "choose" | "none";
+  /** A stat id, "choose" or "none". */
+  stat?: string;
   outcomes?: Record<Band, string>;
   classId?: string;
   sessionUse?: "character" | "campaign";
@@ -499,7 +500,7 @@ const ARTIFACT_ACTIONS: ActionDef[] = DW2_MAGIC_ITEMS.flatMap(
 );
 
 const CLASS_ACTIONS = new Map(
-  MOVES.filter((move) => move.classId).map((move) => [move.id, move.classId]),
+  MOVES.flatMap((move) => (move.classId ? [[move.id, move.classId] as const] : [])),
 );
 const PATH_ACTIONS: ActionDef[] = PATHS.flatMap((path) =>
   path.rules.map((move, index) => ({

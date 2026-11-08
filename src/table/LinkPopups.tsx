@@ -11,14 +11,15 @@ import {
   systemOf,
 } from "../features/characters/api";
 import { getNote } from "../features/notes/api";
-import { followLink, linkLabel } from "../features/notes/targets";
+import { linkLabel } from "../features/notes/targets";
+import { followLink } from "./linkNavigation";
 import type { Campaign } from "../campaign/campaign";
 import { useY } from "../ui/useY";
 import { Button } from "../ui/Button";
 import { closePopup } from "../ui/popup";
 import { usePopupDialog } from "./usePopupDialog";
 import { Dialog } from "./CampaignDialogs";
-import { ContextMenu, type MenuItem } from "./ContextMenu";
+import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
 import { EntryWindow, rollTag } from "./EntryWindow";
 import {
   closeLink,

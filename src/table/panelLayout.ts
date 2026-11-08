@@ -5,7 +5,7 @@ import { dropLine, indexAmong } from "../ui/reorder";
 import { withTransition } from "../ui/transition";
 import { nextZ, noteZ } from "../ui/windows";
 import { trackPointer } from "../ui/pointer";
-import { RESIZE_CURSORS, resizeRect, type Rect, type ResizeDir } from "./resizeRect";
+import { RESIZE_CURSORS, resizeRect, type Rect, type ResizeDir } from "../ui/resizeRect";
 import {
   PANEL_ORDER,
   SIDEBAR_MIN_W,
@@ -174,8 +174,7 @@ export function updateWindow(id: DockItemId, patch: Partial<Omit<FloatingWindow,
  */
 function whole<T extends Record<string, number | undefined>>(geometry: T): T {
   const out = { ...geometry };
-  for (const k in out)
-    if (typeof out[k] === "number") out[k] = Math.round(out[k] as number) as T[typeof k];
+  for (const k in out) if (typeof out[k] === "number") out[k] = Math.round(out[k]) as T[typeof k];
   return out;
 }
 
@@ -287,7 +286,7 @@ export function startWindowDrag(id: DockItemId, e: PointerEvent, grabX: number, 
     if (side) {
       const index = indexAmong(tabsOf(side), "y", ev);
       // Dropped on a closed sidebar, it joins the tabs without opening it.
-      withTransition(() => dockPanel(id, side, index, false));
+      void withTransition(() => dockPanel(id, side, index, false));
     }
     dockTarget.value = null;
     windowDragging.value = false;

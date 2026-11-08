@@ -31,8 +31,12 @@ export interface PaneLayout {
   /** What actually shows. */
   mode: ReadonlyStore<PaneLayoutMode>;
   save(): void;
+  /** Put the list back to its default width. */
+  resetWidth(): void;
   /** The panel's two-pane element, while it's on screen. */
   el: HTMLElement | null;
+  /** Record the panel's two-pane element (a ref callback). */
+  attach(el: HTMLElement | null): void;
   /** The layout switch for the panel's title bar. */
   Toggle: () => React.JSX.Element;
 }
@@ -81,7 +85,24 @@ export function createPaneLayout(key: string, names: { list: string; detail: str
     );
   }
 
-  return { key, listWidth, chosen, tooNarrow, mode, save, Toggle, el: null };
+  const layout: PaneLayout = {
+    key,
+    listWidth,
+    chosen,
+    tooNarrow,
+    mode,
+    save,
+    resetWidth: () => {
+      listWidth.value = DEFAULT_LIST_W;
+      save();
+    },
+    el: null,
+    attach: (el) => {
+      layout.el = el;
+    },
+    Toggle,
+  };
+  return layout;
 }
 
 /**
@@ -98,20 +119,24 @@ export function usePaneLevel(layout: PaneLayout, initial: PaneLevel) {
         return;
       }
       // Only this panel slides: it alone is named for the transition.
-      const el = layout.el;
-      if (el) el.dataset.sliding = "true";
+      const done = markSliding(layout.el);
       void withTransition(
         () => {
           setLevel(to);
         },
         { rootClass: to === "detail" ? "vt-pane-fwd" : "vt-pane-back" },
-      ).finally(() => {
-        if (el) delete el.dataset.sliding;
-      });
+      ).finally(done);
     },
     [layout, level],
   );
   return { level, go };
+}
+
+/** Name the element for a sliding transition; the returned function un-names it. */
+function markSliding(el: HTMLElement | null): () => void {
+  if (!el) return () => {};
+  el.dataset.sliding = "true";
+  return () => delete el.dataset.sliding;
 }
 
 function dragSplit(layout: PaneLayout, e: React.PointerEvent) {
@@ -169,9 +194,7 @@ export function TwoPane({
     <div className="panes-root" ref={rootRef}>
       <div
         className="panes"
-        ref={(el) => {
-          layout.el = el;
-        }}
+        ref={(el) => layout.attach(el)}
         data-layout={mode}
         data-level={level}
         // Its own transition name, so two panels can slide at once.
@@ -187,10 +210,7 @@ export function TwoPane({
           aria-orientation="vertical"
           aria-label={resizeLabel}
           onPointerDown={(e) => dragSplit(layout, e)}
-          onDoubleClick={() => {
-            layout.listWidth.value = DEFAULT_LIST_W;
-            layout.save();
-          }}
+          onDoubleClick={() => layout.resetWidth()}
         />
         <div className="panes-detail">
           <div className="panes-back">

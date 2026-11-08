@@ -14,7 +14,7 @@ import {
   updateCampaignEntry,
   upsertCampaign,
 } from "./registry";
-import { DEFAULT_SYSTEM_ID, getSystem } from "../systems";
+import { NO_SYSTEM_ID, getSystem } from "../systems";
 import type { Invite } from "../sync/invite";
 import { CampaignConnection } from "./connection";
 import { noteDbName, noteGuid } from "../features/notes/noteDoc";
@@ -22,6 +22,8 @@ import { Vault, vaultDbName, vaultNoteGuid } from "../features/notes/vault";
 import { ChatLog, deleteChatData } from "../features/chat/chatLog";
 import { sceneDbName } from "../scene/sceneDoc";
 import type { EntityGraphic } from "../graphics";
+import type { Combatant } from "../features/combat/combat";
+import type { HomebrewEntry } from "../features/homebrew/homebrew";
 import {
   activeSceneId as activeSceneIdFromIndex,
   createScene,
@@ -66,7 +68,7 @@ const REJOIN_CHECK_MS = 5000;
 const rejoining = new Set<string>();
 
 /** The system an invite assumes until the campaign arrives from a peer. */
-const DEFAULT_SYSTEM = getSystem(DEFAULT_SYSTEM_ID);
+const DEFAULT_SYSTEM = getSystem(NO_SYSTEM_ID);
 /** Canvas colour for an auto scene with no map yet. */
 export const DEFAULT_CANVAS_COLOUR = "#2b3a55";
 
@@ -75,30 +77,30 @@ const dbName = (id: string) => dataName("campaign", id);
 export class Campaign {
   readonly id: string;
   readonly doc: Y.Doc;
-  readonly meta: Y.Map<any>;
+  readonly meta: Y.Map<unknown>;
   /** System-owned campaign-wide state, shared with every campaign member. */
-  readonly systemData: Y.Map<any>;
-  readonly members: Y.Map<Y.Map<any>>;
+  readonly systemData: Y.Map<unknown>;
+  readonly members: Y.Map<Y.Map<unknown>>;
   /** deviceId -> { name, at, by } for each player the GM removed. */
   readonly revoked: Y.Map<{ name: string; at: number; by: string }>;
-  readonly scenes: Y.Map<Y.Map<any>>;
+  readonly scenes: Y.Map<Y.Map<unknown>>;
   /** id -> folder that scenes are filed in. */
   readonly sceneFolders: Y.Map<{ name: string }>;
   /** id -> character (see characters/store.ts). */
-  readonly characters: Y.Map<Y.Map<any>>;
+  readonly characters: Y.Map<Y.Map<unknown>>;
   /** id -> folder that characters can be filed in. */
   readonly characterFolders: Y.Map<{ name: string }>;
   /** id -> note page; its text is in a subdocument (see notes/noteDoc.ts). */
-  readonly notes: Y.Map<Y.Map<any>>;
+  readonly notes: Y.Map<Y.Map<unknown>>;
   /** id -> folder that notes are filed in. */
   readonly noteFolders: Y.Map<{ name: string; order: string }>;
   /** Roll-request answers, applied damage, edits and pins, by message (see chat/messageState.ts). */
-  readonly messageState: Y.Map<any>;
+  readonly messageState: Y.Map<unknown>;
   /** The turn tracker: round and whose turn, and who's in the fight (see combat/combat.ts). */
-  readonly combat: Y.Map<any>;
-  readonly combatants: Y.Map<any>;
+  readonly combat: Y.Map<unknown>;
+  readonly combatants: Y.Map<Combatant>;
   /** Gear and moves made at the table (see homebrew/homebrew.ts). */
-  readonly homebrew: Y.Map<any>;
+  readonly homebrew: Y.Map<HomebrewEntry>;
   /** One custom graphic per entity, shared by lists, windows and scene drops. */
   readonly entityGraphics: Y.Map<EntityGraphic>;
   /** GM-only pages, on GM devices only (see notes/vault.ts). */
@@ -166,7 +168,7 @@ export class Campaign {
       if (named && !removed && !this.members.has(device.value.id)) {
         const name = device.value.name || "Player";
         this.ensureMember(name);
-        this.chat.post(
+        void this.chat.post(
           { kind: "system", text: `${name} joined`, event: "join" },
           { id: device.value.id, name },
         );
@@ -174,7 +176,7 @@ export class Campaign {
       if (named)
         updateCampaignEntry(this.id, {
           name: this.name,
-          systemId: this.meta.get("systemId") ?? DEFAULT_SYSTEM.id,
+          systemId: this.systemId,
         });
       this.ready.value = named;
       this.removed.value = removed;
@@ -236,12 +238,17 @@ export class Campaign {
     this.disconnect();
     this.chat.destroy();
     this.vault.value?.destroy();
-    this.persistence.destroy();
+    void this.persistence.destroy();
     this.doc.destroy();
   }
 
+  /** The id of the system this campaign plays. */
+  get systemId(): string {
+    return (this.meta.get("systemId") as string | undefined) ?? DEFAULT_SYSTEM.id;
+  }
+
   get name(): string {
-    return this.meta.get("name") ?? "Untitled campaign";
+    return (this.meta.get("name") as string | undefined) ?? "Untitled campaign";
   }
 
   rename(name: string) {
@@ -252,8 +259,11 @@ export class Campaign {
   /** What the GM has chosen for new tokens and scenes. */
   defaults(): CampaignDefaults {
     return {
-      tokenStyle: this.meta.get("defaultTokenStyle") ?? "disc",
-      gridType: this.meta.get("defaultGridType") ?? "square",
+      tokenStyle:
+        (this.meta.get("defaultTokenStyle") as CampaignDefaults["tokenStyle"] | undefined) ??
+        "disc",
+      gridType:
+        (this.meta.get("defaultGridType") as CampaignDefaults["gridType"] | undefined) ?? "square",
     };
   }
 
@@ -273,9 +283,9 @@ export class Campaign {
   memberViews(): MemberView[] {
     return [...this.members.entries()].map(([id, m]) => ({
       id,
-      name: m.get("name") ?? "Unnamed",
-      role: m.get("role") ?? "player",
-      activeSceneId: m.get("activeSceneId") ?? null,
+      name: (m.get("name") as string | undefined) ?? "Unnamed",
+      role: (m.get("role") as Role | undefined) ?? "player",
+      activeSceneId: (m.get("activeSceneId") as string | undefined) ?? null,
     }));
   }
 
@@ -296,7 +306,7 @@ export class Campaign {
     if (!this.isGm() || id === device.value.id || !m || m.get("role") === "gm") return;
     this.doc.transact(() => {
       this.revoked.set(id, {
-        name: m.get("name") ?? "Unnamed",
+        name: (m.get("name") as string | undefined) ?? "Unnamed",
         at: Date.now(),
         by: device.value.id,
       });
@@ -389,9 +399,9 @@ export class Campaign {
     const name = sceneViews(this.scenes).find((s) => s.id === id)?.name ?? "a new scene";
     const author = {
       id: device.value.id,
-      name: this.members.get(device.value.id)?.get("name") ?? "GM",
+      name: (this.members.get(device.value.id)?.get("name") as string | undefined) ?? "GM",
     };
-    this.chat.post(
+    void this.chat.post(
       {
         kind: "system",
         text: `Scene changed to ${name}`,
@@ -446,11 +456,11 @@ export async function createCampaign(
 
 /** Resolve a system's campaign-level values, falling back for older stored campaigns. */
 export function systemCampaignData(campaign: Campaign): Record<string, string | number | boolean> {
-  const system = getSystem(campaign.meta.get("systemId"));
+  const system = getSystem(campaign.systemId);
   return Object.fromEntries(
     (system.campaignFields ?? []).map((field) => [
       field.id,
-      campaign.systemData.get(field.id) ?? field.default,
+      (campaign.systemData.get(field.id) as string | number | boolean | undefined) ?? field.default,
     ]),
   );
 }
@@ -462,7 +472,7 @@ export function setSystemCampaignData(
   value: string | number | boolean,
 ) {
   if (!campaign.isGm()) return;
-  const field = getSystem(campaign.meta.get("systemId")).campaignFields?.find(
+  const field = getSystem(campaign.systemId).campaignFields?.find(
     (candidate) => candidate.id === fieldId,
   );
   if (!field) return;
@@ -493,7 +503,7 @@ export async function openCampaign(id: string) {
   if (activeCampaign.value?.id === id) return;
   closeCampaign();
   const c = await Campaign.open(id);
-  const roomKey: string | undefined = summaryOf(id)?.roomKey ?? c.meta.get("roomKey");
+  const roomKey = summaryOf(id)?.roomKey ?? (c.meta.get("roomKey") as string | undefined);
   if (!c.meta.has("name") && !roomKey) {
     // Nothing stored locally and no invite to fetch it with.
     c.destroy();
@@ -502,7 +512,7 @@ export async function openCampaign(id: string) {
   }
   touchCampaign(id);
   activeCampaign.value = c;
-  if (roomKey) c.connect(roomKey, { rejoin: rejoining.delete(id) });
+  if (roomKey) void c.connect(roomKey, { rejoin: rejoining.delete(id) });
 }
 
 /**

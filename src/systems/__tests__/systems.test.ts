@@ -558,7 +558,7 @@ describe("Dungeon World 2", () => {
     ).toMatchObject({
       kind: "check",
       stat: "cha",
-      outcomes: { strong: expect.stringContaining("clear a Condition") },
+      outcomes: { strong: expect.stringContaining("clear a Condition") as unknown },
     });
     const path = DW2_PATHS.find((entry) => entry.id === "barbarian-berserker")!;
     const choice = dw2.creation!.choices.find((entry) => entry.id === "advancement")!;

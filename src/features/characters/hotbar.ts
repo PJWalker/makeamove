@@ -52,7 +52,8 @@ export function defaultHotbar(campaign: Campaign, characterId: string): string[]
 }
 
 export function hotbarSlots(campaign: Campaign, characterId: string | undefined): string[] {
-  const saved: string[] | undefined = campaign.members.get(device.value.id)?.get(key(characterId));
+  const saved = campaign.members.get(device.value.id)?.get(key(characterId)) as
+    string[] | undefined;
   return (
     saved ?? (characterId ? defaultHotbar(campaign, characterId) : ["tool:ping", "tool:ruler"])
   );

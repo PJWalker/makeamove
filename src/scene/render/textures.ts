@@ -6,7 +6,7 @@ const textures = new Map<string, Promise<Texture | null>>();
 
 /** Free every texture; call when the last renderer goes away. */
 export function releaseTextures() {
-  for (const p of textures.values()) p.then((t) => t?.destroy(true));
+  for (const p of textures.values()) void p.then((t) => t?.destroy(true));
   textures.clear();
   forgetBitmaps();
 }
@@ -27,7 +27,7 @@ export function textureFor(hash: string): Promise<Texture | null> {
     );
     textures.set(hash, p);
     // A miss isn't final; a peer may supply it later.
-    p.then((t) => t || textures.get(hash) !== p || textures.delete(hash));
+    void p.then((t) => t || textures.get(hash) !== p || textures.delete(hash));
   }
   return p;
 }

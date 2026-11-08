@@ -18,11 +18,11 @@ export interface SharedBond {
   advancedMoves: string[];
 }
 
-const bondsOf = (systemData: Y.Map<any>) =>
+const bondsOf = (systemData: Y.Map<unknown>) =>
   systemStore<SharedBond>(systemData, "dungeon-world-2:bonds");
 
 export function bondBetween(
-  systemData: Y.Map<any>,
+  systemData: Y.Map<unknown>,
   first: string,
   second: string,
 ): SharedBond | undefined {
@@ -30,7 +30,7 @@ export function bondBetween(
   return bond ? { ...bond, advancedMoves: [...bond.advancedMoves] } : undefined;
 }
 
-export function bondsFor(systemData: Y.Map<any>, characterId: string): SharedBond[] {
+export function bondsFor(systemData: Y.Map<unknown>, characterId: string): SharedBond[] {
   return bondsOf(systemData)
     .values()
     .filter((bond) => bond.first === characterId || bond.second === characterId)
@@ -39,8 +39,8 @@ export function bondsFor(systemData: Y.Map<any>, characterId: string): SharedBon
 
 /** Forge or reinforce the shared Bond after both PCs reach full Depth. */
 export function forgeBond(
-  systemData: Y.Map<any>,
-  characters: Y.Map<Y.Map<any>>,
+  systemData: Y.Map<unknown>,
+  characters: Y.Map<Y.Map<unknown>>,
   first: string,
   second: string,
   type: string,
@@ -65,7 +65,7 @@ export function forgeBond(
     removeRelationship(characters, second, first);
     if (existing && existing.type !== type) {
       for (const id of [first, second]) {
-        const data = characters.get(id)?.get("data") as Y.Map<any> | undefined;
+        const data = characters.get(id)?.get("data") as Y.Map<unknown> | undefined;
         if (data && existing.advancedMoves.length) {
           data.set("xp", Number(data.get("xp") ?? 0) + existing.advancedMoves.length);
         }
@@ -76,8 +76,8 @@ export function forgeBond(
 }
 
 export function advanceBond(
-  systemData: Y.Map<any>,
-  characters: Y.Map<Y.Map<any>>,
+  systemData: Y.Map<unknown>,
+  characters: Y.Map<Y.Map<unknown>>,
   first: string,
   second: string,
   moveId: string,

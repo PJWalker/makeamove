@@ -92,7 +92,7 @@ describe("session pages", () => {
     expect(sessionPageId(c, 3)).toBe(id);
     expect(getNote(c, id)).toMatchObject({ title: "Session 3", folder: "sessions", gmOnly: false });
     const page = await NoteDoc.open(noteSubdoc(c, id)!);
-    const text = page.body.toString();
+    const text = page.body.toJSON();
     expect(text).toContain('<heading level="2">Recap</heading>');
     expect(text).toContain("Loose threads");
     page.destroy();
@@ -134,7 +134,7 @@ describe("the GM vault", () => {
     expect(c.vault.value!.notes.has(id)).toBe(false);
     expect(getNote(c, id)).toMatchObject({ title: "Prophecy", gmOnly: false });
     const shown = await NoteDoc.open(noteSubdoc(c, id)!);
-    expect(shown.body.toString()).toContain("The tower falls at midwinter.");
+    expect(shown.body.toJSON()).toContain("The tower falls at midwinter.");
     shown.destroy();
     c.destroy();
   });

@@ -16,7 +16,7 @@ import { GraphicPicker } from "../ui/GraphicPicker";
 import { getEntityGraphic, setEntityGraphic } from "./entityGraphics";
 import { SceneSettingsFields } from "./SceneSettingsFields";
 import { FolderTree } from "./FolderTree";
-import { ContextMenu, type MenuItem } from "./ContextMenu";
+import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
 import { menuTrigger } from "../ui/menuTrigger";
 import { scenesLayout } from "./panelLayouts";
 import { useValue } from "../ui/useValue";

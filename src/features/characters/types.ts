@@ -34,7 +34,7 @@ export interface ItemInstance {
 export interface CharacterView {
   id: string;
   kind: CharacterKind;
-  folder?: string;
+  folder?: string | undefined;
   name: string;
   owner: string;
   scores: Record<string, number>;
@@ -43,14 +43,14 @@ export interface CharacterView {
   conditions: string[];
   lockedConditions?: string[];
   durations: Record<string, Duration>;
-  concentration?: string;
+  concentration?: string | undefined;
   modifiers: Record<string, number>;
   fields: Record<string, string | number>;
   inventory: ItemInstance[];
-  tokenStyle?: TokenStyle;
-  tokenColour?: string;
-  template?: TemplateSettings;
-  base?: string;
+  tokenStyle?: TokenStyle | undefined;
+  tokenColour?: string | undefined;
+  template?: TemplateSettings | undefined;
+  base?: string | undefined;
   learned: string[];
 }
 

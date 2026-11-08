@@ -31,12 +31,13 @@ export async function makeSessionPage(campaign: Campaign, n: number): Promise<st
   page.doc.transact(() => {
     const blocks = SECTIONS.flatMap((title) => {
       // The editor reads a heading's level as a number.
-      const heading = new Y.XmlElement<Record<string, any>>("heading");
+      const heading = new Y.XmlElement<{ level: number }>("heading");
       heading.setAttribute("level", 2);
       heading.insert(0, [new Y.XmlText(title)]);
       return [heading, new Y.XmlElement("paragraph")];
     });
-    page.body.insert(0, blocks);
+    // Yjs types every element's attributes as strings; the heading's level isn't.
+    page.body.insert(0, blocks as unknown as Y.XmlElement[]);
   });
   page.destroy();
   return id;

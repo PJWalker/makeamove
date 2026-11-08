@@ -1,50 +1,42 @@
-import { useLayoutEffect, useRef } from "react";
+import { useEffectEvent, useLayoutEffect } from "react";
 import type { RefObject } from "react";
-import { placeAnchored, type Anchor } from "./anchor";
+import { placeAnchored } from "./anchor";
 
+/**
+ * Keep an open menu (`ref`) placed against the element it drops from
+ * (`anchor`), and dismiss it on a press outside both.
+ */
 export function useMenuOverlay<T extends HTMLElement>({
   open,
   ref,
   anchor,
   onDismiss,
-  inside = [],
   gap = 6,
-  positionKey,
 }: {
   open: boolean;
   ref: RefObject<T | null>;
-  anchor: Anchor | null;
+  anchor: RefObject<HTMLElement | null>;
   onDismiss: () => void;
-  inside?: (Node | null)[];
   gap?: number;
-  positionKey?: unknown;
 }) {
-  const dismiss = useRef(onDismiss);
-  const insideRefs = useRef(inside);
-  dismiss.current = onDismiss;
-  insideRefs.current = inside;
-  const left = anchor?.left;
-  const top = anchor?.top;
-  const bottom = anchor?.bottom;
+  const dismiss = useEffectEvent(onDismiss);
+  const isInside = useEffectEvent(
+    (target: Node) => !!ref.current?.contains(target) || !!anchor.current?.contains(target),
+  );
 
+  // Every render, since what's in the menu (and so its size) may have changed.
   useLayoutEffect(() => {
-    if (!open || !ref.current || left === undefined || top === undefined || bottom === undefined)
-      return;
-    placeAnchored(ref.current, { left, top, bottom }, gap);
-  }, [open, ref, left, top, bottom, gap, positionKey]);
+    const box = anchor.current?.getBoundingClientRect();
+    if (!open || !ref.current || !box) return;
+    placeAnchored(ref.current, { left: box.left, top: box.top, bottom: box.bottom }, gap);
+  });
 
   useLayoutEffect(() => {
     if (!open) return;
     const onOutside = (event: Event) => {
-      const target = event.target as Node;
-      if (
-        ref.current?.contains(target) ||
-        insideRefs.current.some((node) => node?.contains(target))
-      )
-        return;
-      dismiss.current();
+      if (!isInside(event.target as Node)) dismiss();
     };
-    const onAway = () => dismiss.current();
+    const onAway = () => dismiss();
     document.addEventListener("pointerdown", onOutside, true);
     window.addEventListener("wheel", onOutside, { passive: true });
     window.addEventListener("blur", onAway);

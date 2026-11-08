@@ -168,7 +168,7 @@ function light(c: ToolContext, el: LightElement, part: LightPart): Gesture {
               h: light.h,
               bright: light.bright,
               dim: light.dim,
-            } as Partial<SceneElement>,
+            },
           ],
         ]);
       c.renderer.invalidate("elements", "overlay");
