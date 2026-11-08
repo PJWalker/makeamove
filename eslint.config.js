@@ -8,7 +8,15 @@ import tseslint from "typescript-eslint";
 
 export default defineConfig([
   {
-    ignores: ["dist/**", "coverage/**", "playwright-report/**", "test-results/**", "reference/**"],
+    ignores: [
+      "dist/**",
+      "coverage/**",
+      "playwright-report/**",
+      "test-results/**",
+      "reference/**",
+      "reports/**",
+      ".stryker-tmp/**",
+    ],
   },
   {
     files: ["src/**/*.{ts,tsx}"],

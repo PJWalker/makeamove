@@ -13,3 +13,5 @@ skills-lock.json
 .claude
 .playwright*
 .vscode
+reports
+.stryker-tmp

@@ -39,3 +39,7 @@ dist-ssr
 
 # Vitest browser mode failure screenshots
 /tests/__screenshots__/
+
+# Stryker mutation testing
+/reports/
+.stryker-tmp/

@@ -17,7 +17,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:browser": "vitest run --config vitest.browser.config.ts"
+    "test:browser": "vitest run --config vitest.browser.config.ts",
+    "mutate": "stryker run"
   },
   "dependencies": {
     "@tiptap/core": "3.32.0",
@@ -52,6 +53,9 @@
     "@iconify-json/game-icons": "^1.2.4",
     "@iconify-json/material-symbols": "^1.2.96",
     "@playwright/test": "^1.64.1",
+    "@stryker-mutator/core": "^10.1.1",
+    "@stryker-mutator/typescript-checker": "^10.1.1",
+    "@stryker-mutator/vitest-runner": "^10.1.1",
     "@svgr/core": "^8.1.0",
     "@svgr/plugin-jsx": "^8.1.0",
     "@swc/core": "^1.16.22",
