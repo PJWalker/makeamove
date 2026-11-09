@@ -21,7 +21,7 @@ import { activeTool } from "../scene/tools";
 import { SceneDoc } from "../scene/sceneDoc";
 import type { Point } from "../scene/grid";
 import type { BlobRef } from "../core/blob";
-import { importImage } from "../scene/images";
+import { importImage } from "../media/images";
 import {
   isPlainToken,
   TOKEN_STYLES,

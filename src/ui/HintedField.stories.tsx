@@ -23,7 +23,6 @@ export const Select: Story = {
       <select {...input} defaultValue="dw2">
         <option value="dw2">Dungeon World 2</option>
         <option value="dnd">D&amp;D 5.5e</option>
-        <option value="daggerheart">Daggerheart</option>
       </select>
     ),
   },

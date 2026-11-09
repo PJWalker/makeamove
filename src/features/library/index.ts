@@ -1,6 +1,8 @@
 import Fuse, { type IFuseOptions } from "fuse.js";
 import { plainText } from "../../core/richText";
 import { store } from "../../lib/store";
+import type { EntryKind } from "../../core/types";
+export type { EntryKind };
 import type {
   ActionDef,
   ChoiceDef,
@@ -22,8 +24,6 @@ import { useValue } from "../../ui/useValue";
  * homebrew); it holds named collections, each of one kind of entry. An entry
  * can hold others under headings: a class its paths, a path its moves.
  */
-
-export type EntryKind = "item" | "move" | "tag" | "option" | "monster";
 
 interface EntryBase {
   id: string;

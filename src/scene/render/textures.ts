@@ -1,6 +1,6 @@
 import { Graphics, ImageSource, Texture } from "pixi.js";
 import { entryIconSvg } from "../../ui/entryIcons";
-import { forgetBitmaps, loadBitmap } from "../images";
+import { forgetBitmaps, loadBitmap } from "../../media/images";
 
 const textures = new Map<string, Promise<Texture | null>>();
 

@@ -1,7 +1,7 @@
 import type { PointerEvent as ReactPointerEvent, MouseEvent as ReactMouseEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { store } from "../lib/store";
-import { goToCampaign } from "../app/router";
+import { goToCampaign } from "../navigation/router";
 import { startReorder } from "../ui/reorder";
 import { scrollSideways } from "../ui/wheel";
 import { createPortal } from "react-dom";

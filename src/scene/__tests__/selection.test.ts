@@ -7,7 +7,7 @@ vi.mock("../render/handles", () => ({
   lightHandles: () => [],
 }));
 vi.mock("../../platform/device", () => ({ device: { value: { id: "x" } } }));
-vi.mock("../images", () => ({ importImage: vi.fn(), imageColour: vi.fn() }));
+vi.mock("../../media/images", () => ({ importImage: vi.fn(), imageColour: vi.fn() }));
 
 const { SceneController } = await import("../controller");
 type Controller = InstanceType<typeof SceneController>;

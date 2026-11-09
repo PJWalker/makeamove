@@ -8,7 +8,7 @@ import {
 } from "pixi.js";
 import type { Camera } from "./camera";
 import { type Grid, DEFAULT_GRID, type Point } from "./grid";
-import { onBlobFetcher } from "./images";
+import { onBlobFetcher } from "../media/images";
 import type { PresenceMark } from "./presence";
 import type { TokenStat } from "../systems/types";
 import type { TokenMarks } from "./tokenMarks";

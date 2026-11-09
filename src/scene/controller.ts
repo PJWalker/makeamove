@@ -8,7 +8,7 @@ import { readSceneCamera, saveSceneCamera } from "./cameraMemory";
 import { bounds, hits } from "./geometry";
 import { type Point, snapPoint } from "./grid";
 import type { BlobRef } from "../core/blob";
-import { importImage, imageColour } from "./images";
+import { importImage, imageColour } from "../media/images";
 import { tokenDistance } from "./measure";
 import { conversion, imageElement, newToken, type TokenSpec } from "./newElements";
 import type { SceneRenderer } from "./renderer";

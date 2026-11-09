@@ -10,7 +10,7 @@ import { createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { expect as vitestExpect, test as vitestTest } from "vitest";
 import { App } from "../src/app/App";
-import { pendingInvite, routeCampaignId } from "../src/app/router";
+import { pendingInvite, routeCampaignId } from "../src/navigation/router";
 import { closeCampaign } from "../src/campaign/campaign";
 import { recentActions } from "../src/workspace/commands/recent";
 import { activeTool } from "../src/scene/tools";

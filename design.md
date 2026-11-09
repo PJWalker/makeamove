@@ -123,7 +123,7 @@ A system is a `GameSystem` object: stats, actions, results, items, conditions an
 
 - The core owns sheets, dice, chat, effects and targeting once; systems describe rules.
 - Pure functions are easy to unit test; each system has its own suite in `systems/__tests__`.
-- A declarative sheet layout is the fallback, so a new system needs no React (Daggerheart has no extension).
+- A declarative sheet layout is the fallback, so a new system needs no React.
 - Core code asks for hooks, never for system ids.
 
 #### Downsides
@@ -253,7 +253,7 @@ Low
 
 ### Hidden global state
 
-Sixteen modules export top-level stores, and `setBlobFetcher` in `scene/images.ts` is a global set by `campaign/connection.ts`. This works because one campaign is open at a time, but the dependency is invisible.
+Sixteen modules export top-level stores, and `setBlobFetcher` in `media/images.ts` is a global set by `campaign/connection.ts`. This works because one campaign is open at a time, but the dependency is invisible.
 
 **Consider:** hang per-campaign state off the `Campaign` object or a context, and keep module stores for true device-wide state.
 

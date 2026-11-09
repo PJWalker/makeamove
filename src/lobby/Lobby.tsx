@@ -9,7 +9,7 @@ import {
   IconExport,
   IconImport,
 } from "../ui/icons";
-import { goToCampaign, pendingInvite } from "../app/router";
+import { goToCampaign, pendingInvite } from "../navigation/router";
 import { exportBackupFile, importBackupFile } from "../campaign/backup";
 import { createCampaign, deleteLocalCampaign, joinCampaign } from "../campaign/campaign";
 import { importFromFolder } from "../campaign/folderBackup";

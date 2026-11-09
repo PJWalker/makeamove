@@ -12,5 +12,6 @@ type ExtensionLookup = (system: Pick<GameSystem, "id"> | string | undefined) => 
 export const SystemExtensions = createContext<ExtensionLookup>(() => ({}));
 
 /** What a system adds to the table; nothing outside a table that provides extensions. */
-export const useExtension = (system: Pick<GameSystem, "id"> | string | undefined): SystemExtension =>
-  useContext(SystemExtensions)(system);
+export const useExtension = (
+  system: Pick<GameSystem, "id"> | string | undefined,
+): SystemExtension => useContext(SystemExtensions)(system);

@@ -1,7 +1,7 @@
 import { store, watch } from "../lib/store";
 import * as Y from "yjs";
 import { colourOf, Presence } from "../scene/presence";
-import { setBlobFetcher } from "../scene/images";
+import { setBlobFetcher } from "../media/images";
 import { BlobExchange } from "../sync/blobs";
 import { SyncSession } from "../sync/session";
 import { device } from "../platform/device";

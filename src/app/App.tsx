@@ -2,7 +2,7 @@ import { store } from "../lib/store";
 import { lazy, Suspense, useEffect } from "react";
 import { startChatNotifications } from "../features/chat/notify";
 import { Lobby } from "../lobby/Lobby";
-import { goToCampaign, routeCampaignId } from "./router";
+import { goToCampaign, routeCampaignId } from "../navigation/router";
 import {
   activeCampaign,
   type Campaign,

@@ -2,7 +2,6 @@ import type { GameSystem } from "./types";
 import { dungeonWorld } from "./dungeon-world";
 import { dungeonWorld2 } from "./dungeon-world-2";
 import { bladesInTheDark } from "./blades-in-the-dark";
-import { daggerheart } from "./daggerheart";
 import { dnd55e } from "./dnd55e";
 
 /** The system for campaigns that don't say which they play. */
@@ -140,7 +139,6 @@ export function defineSystem(system: GameSystem): GameSystem {
 defineSystem(dungeonWorld);
 defineSystem(dungeonWorld2);
 defineSystem(bladesInTheDark);
-defineSystem(daggerheart);
 defineSystem(dnd55e);
 defineSystem(noSystem);
 

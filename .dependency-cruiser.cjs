@@ -1,10 +1,6 @@
 /**
  * Architectural rules, enforced by `npm run deps`.
  *
- * Existing violations are recorded in .dependency-cruiser-known-violations.json
- * so the rules apply to new code straight away. Fix one, then regenerate the
- * baseline with `npm run deps:baseline` to ratchet it down.
- *
  * dependency-cruiser does not support TypeScript 6 yet, so it parses with swc
  * (a dev dependency). Imports in src are relative, so no tsconfig is needed.
  */
@@ -47,6 +43,22 @@ module.exports = {
       severity: "error",
       from: { path: "^src/platform/", pathNot: TESTS },
       to: { path: "^src/", pathNot: "^src/(lib|platform)/" },
+    },
+    {
+      name: "media-only-uses-foundations",
+      comment:
+        "media/ is the image blob store, shared by the scene, notes and ui/. It may use only lib/, core/ and platform/.",
+      severity: "error",
+      from: { path: "^src/media/", pathNot: TESTS },
+      to: { path: "^src/", pathNot: "^src/(lib|core|platform|media)/" },
+    },
+    {
+      name: "extensions-come-from-context",
+      comment:
+        "The extension registry imports every system's UI, which imports workspace/. Workspace parts and features ask for extensions with useExtension (workspace/systemExtensions.ts) instead.",
+      severity: "error",
+      from: { path: "^src/(workspace|features)/", pathNot: TESTS },
+      to: { path: "^src/systems/extensions\\.ts$" },
     },
     {
       name: "nothing-imports-the-app-shell",

@@ -50,6 +50,7 @@ export function macroPlugins(): Plugin[] {
 }
 
 export default defineConfig({
+  base: process.env.PAGES_BASE_PATH || "/",
   build: {
     chunkSizeWarningLimit: 1000,
     rolldownOptions: {
@@ -76,10 +77,6 @@ export default defineConfig({
             {
               name: "rules-dnd-spells",
               test: /[/\\]dnd55e[/\\]srdSpells\.ts/,
-            },
-            {
-              name: "rules-daggerheart",
-              test: /[/\\]daggerheart[/\\]data\.ts/,
             },
             {
               name: "rules-dungeon-world-2",

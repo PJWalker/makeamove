@@ -1,4 +1,4 @@
-import type { EntryKind } from "../features/library";
+import type { EntryKind } from "../core/types";
 import { icon, type Icon } from "./icons";
 import { renderToStaticMarkup } from "react-dom/server";
 

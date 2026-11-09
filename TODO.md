@@ -4,13 +4,12 @@ What's left before Make a Move is a complete, publishable virtual tabletop. Draw
 
 ## 1. Before a public release (blockers)
 
-- [x] **Campaign backup and restore.** `.makeamove` export/import (Settings → Backup, lobby), plus a live backup folder via the File System API (Chromium only) in `campaign/folderBackup.ts`.
-- [ ] **Licensing review of bundled rules text**, per system (DW1, DW2 beta `paths.ts`, D&D 5.5e SRD, Blades SRD, Daggerheart SRD). Remove or gate anything not redistributable.
-- [ ] **Purge `Dungeon-World-2-Beta-v3.docx` from git history** if it must not ship with the repo.
+
+- [x] **Licensing review of bundled rules text**, per system (DW1, DW2 beta `paths.ts`, D&D 5.5e SRD, Blades SRD). Remove or gate anything not redistributable.
+- [x] **Keep `Dungeon-World-2-Beta-v3.docx` out of the working tree.** Generated `.playwright-mcp/` output is ignored.
 - [ ] **TURN fallback** for strict NATs (the Trystero transport has no ICE server config).
 - [ ] **Clear message for stale or dead invites.** With the epoch dropped from invite links, an old invite opens an empty campaign and waits forever; show a timeout state that explains no peer has the campaign.
-- [ ] **Commit or finish the current working tree** (combat panel, condition animations in `scene/render/conditions.ts`, `sheetParts`, D&D sheet, panel tests; `tests/zz-probe.spec.ts` deleted).
-- [ ] **Deploy pipeline.** CI has no deploy job; add one for the static PWA (e.g. GitHub Pages) once licensing is settled.
+- [x] **Deploy pipeline.** GitHub Pages workflow is ready; publishing remains gated until `PAGES_LICENSES_CLEARED=true` after the licensing review.
 - [ ] **README** with what the app is, how to run it, and how to join a campaign. Only `design.md` exists.
 
 ## 2. Core table features
@@ -40,7 +39,6 @@ What's left before Make a Move is a complete, publishable virtual tabletop. Draw
 
 - [ ] **Dungeon World:** complete starting and advanced class moves, level-up move selection, spell preparation; Fronts, Dangers and Steadings as note templates; "choose N" move options as checkboxes.
 - [ ] **Dungeon World 2:** automate remaining class/Path passives, Struggles, class-change reassignment, magic item and Artifact selection.
-- [ ] **Daggerheart:** tier-specific advancement slot quotas, equipment restrictions, downtime and death workflows, feature-use tracking.
 - [ ] **Blades in the Dark:** named crew and playbook catalogs beyond the SRD toolkit, structured claims/factions/cohorts, creation dot constraints, score and downtime bookkeeping.
 - [ ] **D&D 5.5e:** multiclass progression, feature and condition automation, monster actions, legendary and recharge workflows, remaining spell-specific behaviour.
 - [ ] **Triangle Agency** (new): Agency/Anomaly character model, d4 resolution, campaign rules.

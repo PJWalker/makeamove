@@ -90,8 +90,8 @@ export default defineConfig([
         {
           patterns: [
             {
-              regex: "^(\\.\\./)+app/(?!router$)",
-              message: "Only app/router is shared with the lobby and the table.",
+              regex: "^(\\.\\./)+app(/|$)",
+              message: "The app shell wires the lobby and the table; neither imports it.",
             },
             {
               regex: "^(\\.\\./)+lobby(/|$)",
@@ -111,8 +111,8 @@ export default defineConfig([
         {
           patterns: [
             {
-              regex: "^(\\.\\./)+app/(?!router$)",
-              message: "Only app/router is shared with the lobby and the table.",
+              regex: "^(\\.\\./)+app(/|$)",
+              message: "The app shell wires the lobby and the table; neither imports it.",
             },
             {
               regex: "^(\\.\\./)+table(/|$)",
