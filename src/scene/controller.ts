@@ -855,15 +855,17 @@ export class SceneController implements ToolContext {
   updateToken(
     id: string,
     patch: {
-      [K in
-        | "name"
-        | "style"
-        | "colour"
-        | "characterId"
-        | "image"
-        | "itemDefId"
-        | "hideName"
-        | "hideBars"]?: TokenElement[K] | undefined;
+      [
+        K in
+          | "name"
+          | "style"
+          | "colour"
+          | "characterId"
+          | "image"
+          | "itemDefId"
+          | "hideName"
+          | "hideBars"
+      ]?: TokenElement[K] | undefined;
     },
     cells?: number,
   ) {
