@@ -5,6 +5,8 @@
     grid-template-rows: auto 1fr;
     min-height: 0;
     overflow: auto;
+    padding-top: var(--header-inset, 0px);
+    scroll-padding-top: var(--header-inset, 0px);
   }
   .combat-bar {
     display: flex;

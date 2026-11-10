@@ -17,6 +17,7 @@ import { generateKeyBetween, generateNKeysBetween } from "fractional-indexing";
 export type PanelId =
   | "scene"
   | "chat"
+  | "pc"
   | "characters"
   | "combat"
   | "libraries"
@@ -30,6 +31,7 @@ export type Side = "left" | "right";
 export const PANEL_ORDER: PanelId[] = [
   "scene",
   "chat",
+  "pc",
   "characters",
   "combat",
   "libraries",
@@ -81,6 +83,7 @@ const DEFAULT_SIDE: Record<PanelId, Side> = {
   chat: "right",
   notes: "right",
   members: "right",
+  pc: "left",
   characters: "left",
   combat: "left",
   libraries: "right",
@@ -105,7 +108,7 @@ function defaultSide(id: DockItemId): Side {
 }
 
 export function defaultLayout(narrow: boolean): Layout {
-  const left: DockItemId[] = ["scene", "characters", "combat"];
+  const left: DockItemId[] = ["scene", "pc", "characters", "combat"];
   const right: DockItemId[] = ["chat", "libraries", "reference", "items", "notes", "members"];
   return {
     left: { active: "characters", open: !narrow, width: SIDEBAR_DEFAULT_W, panels: left },

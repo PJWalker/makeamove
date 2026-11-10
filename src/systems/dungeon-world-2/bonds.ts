@@ -1,7 +1,7 @@
+import { BOND_TEXTS } from "./rulebook";
 import { BOND_SPECS } from "./bondSpecs";
-import { bondTexts } from "./paths.macro" with { type: "macro" };
 
-const TEXTS = bondTexts();
+const TEXTS = BOND_TEXTS;
 
 export const BONDS = BOND_SPECS.map((bond) => ({
   ...bond,

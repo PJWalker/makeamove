@@ -123,6 +123,27 @@ export default defineConfig([
       ],
     },
   },
+  // reference/ holds the source rulebooks (not committed). Only the rules generator reads
+  // them, through scripts/rules/readReference.ts; nothing else may name the folder, whether
+  // by import, ?raw, import.meta.glob or the filesystem (which dependency-cruiser can't see).
+  {
+    files: ["src/**/*.{ts,tsx}", "scripts/**/*.ts", "vite.config.ts", ".storybook/**/*.{ts,tsx}"],
+    ignores: ["scripts/rules/readReference.ts"],
+    languageOptions: { parser: tseslint.parser },
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "Literal[value=/(^|[/\\\\])reference[/\\\\]/]",
+          message: "reference/ is read only by scripts/rules/readReference.ts.",
+        },
+        {
+          selector: "TemplateElement[value.raw=/(^|[/\\\\])reference[/\\\\]/]",
+          message: "reference/ is read only by scripts/rules/readReference.ts.",
+        },
+      ],
+    },
+  },
   ...storybook.configs["flat/recommended"],
   {
     files: ["vite.config.ts", ".storybook/main.ts"],

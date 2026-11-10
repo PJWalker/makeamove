@@ -28,6 +28,8 @@
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+    padding-top: var(--header-inset, 0px);
+    scroll-padding-top: var(--header-inset, 0px);
   }
   /* Sized by hand (ui/popup.ts): keep that size rather than fit the content. */
   .dialog[data-sized="true"] {
@@ -48,9 +50,6 @@
   .dialog[data-rolled="true"] .resize-grip,
   .dialog[data-rolled="true"] .win-resize {
     display: none;
-  }
-  .dialog[data-rolled="true"] .panel-title {
-    white-space: nowrap;
   }
   /* Pop-ups enter with CSS; closing transitions animate their captured view. */
   .dialog {

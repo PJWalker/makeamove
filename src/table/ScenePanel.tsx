@@ -9,7 +9,14 @@ import {
 } from "../campaign/sceneFolders";
 import { useY } from "../ui/useY";
 import { Button } from "../ui/Button";
-import { IconAdd, IconDelete, IconFolder, IconMembers, IconRename } from "../ui/icons";
+import {
+  IconAdd,
+  IconDelete,
+  IconFolder,
+  IconMembers,
+  IconNewFolder,
+  IconRename,
+} from "../ui/icons";
 import { canvasCommands } from "../workspace/canvasState";
 import { TwoPane, usePaneLevel } from "../ui/TwoPane";
 import { GraphicPicker } from "../ui/GraphicPicker";
@@ -140,10 +147,10 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
               <>
                 {isGm && (
                   <>
-                    <Button variant="secondary" onClick={() => addScene()}>
-                      <IconAdd size={22} /> New Scene
+                    <Button variant="secondary" icon={IconAdd} onClick={() => addScene()}>
+                      New Scene
                     </Button>
-                    <Button variant="ghost" onClick={beginFolderNaming}>
+                    <Button variant="ghost" icon={IconNewFolder} onClick={beginFolderNaming}>
                       New Folder
                     </Button>
                   </>

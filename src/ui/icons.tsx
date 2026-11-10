@@ -37,6 +37,9 @@ import GiThreeFriends from "~icons/game-icons/three-friends";
 import GiTrashCan from "~icons/game-icons/trash-can";
 import GiTreasureMap from "~icons/game-icons/treasure-map";
 import GiVisoredHelm from "~icons/game-icons/visored-helm";
+import GiCharacter from "~icons/game-icons/character";
+import GiKnapsack from "~icons/game-icons/knapsack";
+import GiSprint from "~icons/game-icons/sprint";
 
 // Material Symbols Rounded (filled)
 import MsSearch from "~icons/material-symbols/search-rounded";
@@ -71,6 +74,11 @@ import MsVerticalSplit from "~icons/material-symbols/vertical-split-rounded";
 import MsPanelClose from "~icons/material-symbols/right-panel-close-rounded";
 import MsOpenInNew from "~icons/material-symbols/open-in-new-rounded";
 import MsCheck from "~icons/material-symbols/check-rounded";
+import MsCreateNewFolder from "~icons/material-symbols/create-new-folder-rounded";
+import MsPlayArrow from "~icons/material-symbols/play-arrow-rounded";
+import MsSkipNext from "~icons/material-symbols/skip-next-rounded";
+import MsSkipPrevious from "~icons/material-symbols/skip-previous-rounded";
+import MsStop from "~icons/material-symbols/stop-rounded";
 import MsPersonAdd from "~icons/material-symbols/person-add-rounded";
 import MsPersonRemove from "~icons/material-symbols/person-remove-rounded";
 import MsRemove from "~icons/material-symbols/remove-rounded";
@@ -111,6 +119,7 @@ export const IconUnlock = icon(GiPadlockOpen);
 export const IconImage = icon(MsImage);
 export const IconBack = icon(MsChevronLeft);
 export const IconFolder = icon(MsFolder);
+export const IconNewFolder = icon(MsCreateNewFolder);
 /** Campaign backups: save one to a file, bring one in, keep one in a folder. */
 export const IconExport = icon(MsDownload);
 export const IconImport = icon(MsUpload);
@@ -130,6 +139,7 @@ export const IconRedo = icon(MsRedo);
 // Sidebar panels
 export const IconChat = icon(GiTalk);
 export const IconCharacters = icon(GiVisoredHelm);
+export const IconPlayerCharacter = icon(GiCharacter);
 export const IconLibraries = icon(GiBookshelf);
 export const IconReference = icon(GiScrollUnfurled);
 export const IconNotes = icon(GiOpenBook);
@@ -143,6 +153,12 @@ export const IconDice = icon(GiRollingDices);
 export const IconCampaign = icon(GiCrossedSwords);
 export const IconCombat = icon(GiSwordClash);
 export const IconItems = icon(GiAnvilImpact);
+export const IconNewGear = icon(GiKnapsack);
+export const IconNewMove = icon(GiSprint);
+export const IconStartCombat = icon(MsPlayArrow);
+export const IconEndCombat = icon(MsStop);
+export const IconNextTurn = icon(MsSkipNext);
+export const IconPreviousTurn = icon(MsSkipPrevious);
 export const IconRelationships = icon(GiFamilyTree);
 export const IconPin = icon(MsPushPin);
 

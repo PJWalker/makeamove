@@ -1,4 +1,5 @@
-import { srdMonsters } from "./srdMonsters.macro" with { type: "macro" };
+import data from "./srd/monsters.json";
+import type { MonsterDef } from "../types";
 
-/** The SRD's monsters, parsed from reference/dnd-5.5e-srd/monsters-A-Z.md at build time. */
-export const SRD_MONSTERS = srdMonsters();
+/** The SRD's monsters, generated from the rulebook by `npm run generate:rules`. */
+export const SRD_MONSTERS = data as unknown as MonsterDef[];

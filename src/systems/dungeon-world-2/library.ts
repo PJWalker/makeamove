@@ -1,5 +1,5 @@
 import type { ActionDef, ItemDef, LibraryLayoutCollection, LibraryNode } from "../types";
-import { PATHS } from "./paths";
+import { PATHS } from "./rulebook";
 import { CLASS_STARTING } from "./startingOptions";
 import { STRUGGLES, struggleEntryId } from "./struggles";
 

@@ -3,7 +3,7 @@ import { addTokens, combatantForToken, hasCombat, tokenMarksSource } from "../fe
 import { bounds } from "../scene/geometry";
 import { toScreen } from "../scene/camera";
 import { setMorphOrigin } from "../ui/morph";
-import { closePopup, openPopup } from "../ui/popup";
+import { openPopup } from "../ui/popup";
 import { watch } from "../lib/store";
 import { device } from "../platform/device";
 import {
@@ -20,29 +20,23 @@ import { SceneRenderer } from "../scene/renderer";
 import { activeTool } from "../scene/tools";
 import { SceneDoc } from "../scene/sceneDoc";
 import type { Point } from "../scene/grid";
-import type { BlobRef } from "../core/blob";
 import { importImage } from "../media/images";
-import {
-  isPlainToken,
-  TOKEN_STYLES,
-  type SceneElement,
-  type TokenElement,
-  type TokenStyle,
-} from "../scene/types";
+import { TOKEN_STYLES, type SceneElement } from "../scene/types";
 import type { Campaign } from "../campaign/campaign";
 import {
   canEdit,
   createCopy,
   getCharacter,
   listCharacters,
-  selectCharacter,
   systemOf,
   tokenStatsSource,
 } from "../features/characters/api";
 import { tokenName } from "../features/characters/templates";
 import { CharacterSheet } from "./sheets";
 import { useY } from "../ui/useY";
-import { BlobImage } from "../ui/BlobImage";
+import { getEntityGraphic } from "../workspace/entityGraphics";
+import { EntityGraphicView } from "../ui/EntityGraphic";
+import type { EntityGraphic } from "../graphics";
 import { Button } from "../ui/Button";
 import {
   IconAdd,
@@ -71,6 +65,7 @@ import { Segmented } from "../ui/Segmented";
 import { Dialog } from "../workspace/Dialog";
 import { SceneSettingsFields } from "./SceneSettingsFields";
 import { showPanel } from "../workspace/panelLayout";
+import { openCharacter } from "../workspace/linkNavigation";
 import {
   dropOn,
   dropTargetAt,
@@ -149,8 +144,7 @@ export default function SceneCanvas({
       last = sel[0] ?? "";
       first = false;
       if (!fresh) return;
-      selectCharacter(campaign, id);
-      showPanel("characters");
+      openCharacter(campaign, id);
     });
   }, [controller, campaign]);
 
@@ -767,7 +761,7 @@ export default function SceneCanvas({
   );
 }
 
-/** Name, style and colour of a token, applied together as one undo step. */
+/** Name, style and colour of a token. Each change applies as soon as it's made. */
 function TokenOptionsDialog({
   campaign,
   controller,
@@ -784,71 +778,62 @@ function TokenOptionsDialog({
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
-  const el = id ? controller.element(id) : null;
+  const scene = controller.scene;
+  // The table stays usable while this is open, so the token may change or be deleted.
+  const tokenMap = useY(scene.elements, () => (id ? scene.elements.get(id) : undefined));
+  const el = useY(tokenMap, () => (id && tokenMap ? scene.get(id) : null));
   const token = el?.type === "token" ? el : null;
   const system = systemOf(campaign);
   const item = token ? itemDefinitionForToken(campaign, token) : undefined;
   const itemToken = !!item;
-  const [name, setName] = useState("");
-  const [style, setStyle] = useState<TokenStyle>("disc");
-  const [colour, setColour] = useState("#000000");
-  const [characterId, setCharacterId] = useState("");
-  const [image, setImage] = useState<BlobRef | undefined>(undefined);
-  const [size, setSize] = useState("");
-  const [showName, setShowName] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
   const grid = controller.renderer.grid;
   const characters = useY(campaign.characters, () => listCharacters(campaign));
-  // The character this token stands for, as saved (not the unsaved choice below).
   const linked = useY(campaign.characters, () => getCharacter(campaign, token?.characterId));
-
-  // Fill the form from the token each time one opens.
-  const [formFor, setFormFor] = useState<string | null>(null);
-  if (id !== formFor) {
-    setFormFor(id);
-    if (token) initializeTokenOptions(token);
-  }
-  function initializeTokenOptions(token: TokenElement) {
-    setName(token.name);
-    setStyle(isPlainToken(token) ? "plain" : "disc");
-    setColour(token.colour);
-    // A template's token shows the template it's a copy of.
-    const c = getCharacter(campaign, token.characterId);
-    setCharacterId(c?.base ?? token.characterId ?? "");
-    setImage(token.image);
-    setShowName(!token.hideName);
-    // The first size as wide as the token, or none if it's been resized by hand.
-    const cells = Math.max(token.w, token.h) / grid.size;
-    setSize(system.sizes.find((z) => Math.abs(z.cells - cells) < 0.01)?.id ?? "");
-  }
 
   useEffect(() => {
     if (id) openPopup(ref.current);
   }, [id]);
-
-  // The table stays usable while this is open, so the token may be deleted.
-  const exists = useY(
-    controller.scene.elements,
-    () => !!id && controller.scene.get(id)?.type === "token",
-  );
-  /**
-   * The character a token links to when `chosen` is picked: a template makes
-   * it a new copy, unless it's already a copy of that template.
-   */
-  const linkTo = (chosen: string): { characterId?: string; name?: string } => {
-    if (!chosen) return {};
-    if (linked?.base === chosen) return { characterId: linked.id };
-    const c = characters.find((k) => k.id === chosen);
-    if (!c?.template) return { characterId: chosen };
-    const copyName = name.trim() || tokenName(c, c.template, controller.tokenNames());
-    return {
-      characterId: createCopy(campaign, chosen, copyName),
-      name: copyName,
-    };
-  };
   useEffect(() => {
-    if (id && !exists) ref.current?.close();
-  }, [id, exists]);
+    if (id && !token) ref.current?.close();
+  }, [id, token]);
+
+  const update = (patch: Parameters<SceneController["updateToken"]>[1], cells?: number) => {
+    if (id) controller.updateToken(id, patch, cells);
+  };
+
+  // A template's token shows the template it's a copy of.
+  const characterId = linked?.base ?? token?.characterId ?? "";
+  const style = token?.style ?? "disc";
+  const colour = token?.colour ?? "#000000";
+  const image = token?.image;
+  // What the token shows: its own image, else its character's graphic.
+  const inherited = !itemToken && !!characterId;
+  const sheetGraphic = inherited ? getEntityGraphic(campaign, "character", characterId) : undefined;
+  const previewGraphic: EntityGraphic | undefined = image
+    ? { kind: "image", image }
+    : (sheetGraphic ?? token?.graphic);
+  const plainLook = style === "plain" && previewGraphic?.kind === "image";
+  // The first size as wide as the token, or none if it's been resized by hand.
+  const cells = token ? Math.max(token.w, token.h) / grid.size : 0;
+  const size = system.sizes.find((z) => Math.abs(z.cells - cells) < 0.01)?.id ?? "";
+
+  /**
+   * Link the token to `chosen`: a template makes it a new copy, unless it's
+   * already a copy of that template. Linking an unnamed token names it after
+   * the character.
+   */
+  const link = (chosen: string) => {
+    if (!token) return;
+    if (!chosen) return update({ characterId: undefined });
+    if (linked?.base === chosen) return update({ characterId: linked.id });
+    const c = characters.find((k) => k.id === chosen);
+    if (!c) return;
+    const name = token.name.trim();
+    if (!c.template) return update({ characterId: chosen, ...(name ? {} : { name: c.name }) });
+    const copyName = name || tokenName(c, c.template, controller.tokenNames());
+    update({ characterId: createCopy(campaign, chosen, copyName), name: copyName });
+  };
 
   return (
     <Dialog
@@ -872,147 +857,159 @@ function TokenOptionsDialog({
           <CharacterSheet campaign={campaign} system={system} c={linked} />
         </div>
       )}
-      <form
-        hidden={!!linked && tab === "character"}
-        method="dialog"
-        className="dialog-form"
-        onSubmit={() => {
-          if (id)
-            controller.updateToken(
-              id,
-              {
-                name: name.trim(),
-                style: style === "plain" && !image ? "disc" : style,
-                colour: colour,
-                ...(image ? { image: image } : {}),
-                ...(item ? { itemDefId: item.id } : {}),
-                ...(!itemToken ? linkTo(characterId) : {}),
-                ...(!showName ? { hideName: true } : {}),
-              },
-              system.sizes.find((z) => z.id === size)?.cells,
-            );
-        }}
-      >
-        <label className="field">
-          Name
-          <input
-            className="input"
-            value={name}
-            onInput={(e) => setName(e.currentTarget.value)}
-            autoFocus
-            autoComplete="off"
-          />
-        </label>
-        {!itemToken && (
+      {token && (
+        <div hidden={!!linked && tab === "character"} className="dialog-form">
+          <NameField key={token.id} value={token.name} onCommit={(name) => update({ name })} />
+          {!itemToken && (
+            <label className="field">
+              Character
+              <select
+                className="input"
+                value={characterId}
+                onChange={(e) => link(e.currentTarget.value)}
+              >
+                <option value="">None</option>
+                {characters.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              <span className="muted">
+                The game system decides which of its stats show on the token.
+              </span>
+            </label>
+          )}
+          <div className="field">
+            Image
+            <span className="token-image-row">
+              <span
+                className="token-image-preview"
+                data-style={previewGraphic?.kind === "image" ? style : "disc"}
+                style={{ "--token-colour": colour }}
+              >
+                <EntityGraphicView graphic={previewGraphic} size={64} />
+              </span>
+              <Button onClick={() => fileRef.current?.click()}>
+                {inherited ? "Override…" : image ? "Change…" : "Choose…"}
+              </Button>
+              {image && (
+                <Button variant="ghost" onClick={() => update({ image: undefined })}>
+                  {inherited ? "Clear Override" : "Remove"}
+                </Button>
+              )}
+            </span>
+            {inherited && (
+              <span className="muted">
+                Uses the graphic from the character sheet unless overridden here.
+              </span>
+            )}
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={(e) => {
+                const file = e.currentTarget.files?.[0];
+                e.currentTarget.value = "";
+                if (file)
+                  void importImage(file).then(
+                    (image) => update({ image }),
+                    () => {},
+                  );
+              }}
+            />
+          </div>
           <label className="field">
-            Character
+            Size
             <select
               className="input"
-              value={characterId}
-              onChange={(e) => {
-                setCharacterId(e.currentTarget.value);
-                // Linking an unnamed token names it after the character.
-                const c = characters.find((k) => k.id === characterId);
-                if (c && !name.trim()) setName(c.name);
-              }}
+              value={size}
+              onChange={(e) =>
+                update({}, system.sizes.find((z) => z.id === e.currentTarget.value)?.cells)
+              }
             >
-              <option value="">None</option>
-              {characters.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
+              {!size && <option value="">As drawn</option>}
+              {system.sizes.map((z) => (
+                <option key={z.id} value={z.id}>
+                  {z.name} ({z.cells === 0.5 ? "½" : z.cells} {z.cells > 1 ? "cells" : "cell"})
                 </option>
               ))}
             </select>
-            <span className="muted">
-              The game system decides which of its stats show on the token.
+          </label>
+          <div className="field">
+            Show
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={!token.hideName}
+                onChange={(e) => update({ hideName: e.currentTarget.checked ? undefined : true })}
+              />
+              Name under the token
+            </label>
+          </div>
+          <div className="field">
+            Style
+            <Segmented
+              label="Token style"
+              value={style}
+              options={TOKEN_STYLES}
+              onChange={(style) => update({ style })}
+            />
+          </div>
+          <label className="field colour-field" data-disabled={plainLook}>
+            Background and border
+            <span className="colour-row">
+              <input
+                type="color"
+                className="colour-input"
+                value={colour}
+                disabled={plainLook}
+                onInput={(e) => update({ colour: e.currentTarget.value })}
+              />
+              <span className="colour-hex">{colour}</span>
             </span>
           </label>
-        )}
-        <div className="field">
-          Image
-          <span className="token-image-row">
-            <span className="token-image-preview">
-              <BlobImage image={image} fallback={<span className="muted">None</span>} />
-            </span>
-            <Button onClick={() => fileRef.current?.click()}>
-              {image ? "Change…" : "Choose…"}
-            </Button>
-            {image && (
-              <Button variant="ghost" onClick={() => setImage(undefined)}>
-                Remove
-              </Button>
-            )}
-          </span>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            hidden
-            onChange={(e) => {
-              const file = e.currentTarget.files?.[0];
-              e.currentTarget.value = "";
-              if (file) void importImage(file).then(setImage, () => {});
-            }}
-          />
         </div>
-        <label className="field">
-          Size
-          <select className="input" value={size} onChange={(e) => setSize(e.currentTarget.value)}>
-            {!size && <option value="">As drawn</option>}
-            {system.sizes.map((z) => (
-              <option key={z.id} value={z.id}>
-                {z.name} ({z.cells === 0.5 ? "½" : z.cells} {z.cells > 1 ? "cells" : "cell"})
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="field">
-          Show
-          <label className="check">
-            <input
-              type="checkbox"
-              checked={showName}
-              onChange={(e) => setShowName(e.currentTarget.checked)}
-            />
-            Name under the token
-          </label>
-        </div>
-        <div className="field">
-          Style
-          <Segmented
-            label="Token style"
-            value={style}
-            options={TOKEN_STYLES.map((s) => ({
-              ...s,
-              disabled: s.id === "plain" && !image,
-              title: s.id === "plain" && !image ? "Needs an image" : undefined,
-            }))}
-            onChange={(v) => setStyle(v)}
-          />
-        </div>
-        <label className="field colour-field" data-disabled={style === "plain"}>
-          Background and border
-          <span className="colour-row">
-            <input
-              type="color"
-              className="colour-input"
-              value={colour}
-              disabled={style === "plain"}
-              onInput={(e) => setColour(e.currentTarget.value)}
-            />
-            <span className="colour-hex">{colour}</span>
-          </span>
-        </label>
-        <div className="form-actions">
-          <Button variant="ghost" onClick={() => closePopup(ref.current)}>
-            Cancel
-          </Button>
-          <Button variant="primary" type="submit">
-            Save
-          </Button>
-        </div>
-      </form>
+      )}
     </Dialog>
+  );
+}
+
+/**
+ * A token's name field. It commits when it loses focus or on Enter when it loses focus or on Enter,, so a
+ * rename is one change rather than one per keystroke. Escape puts it back.
+ */
+function NameField({ value, onCommit }: { value: string; onCommit: (value: string) => void }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const cancelled = useRef(false);
+  return (
+    <label className="field">
+      Name
+      <input
+        className="input"
+        value={draft ?? value}
+        autoFocus
+        autoComplete="off"
+        onFocus={() => setDraft(value)}
+        onChange={(e) => setDraft(e.currentTarget.value)}
+        onBlur={() => {
+          const next = draft?.trim();
+          setDraft(null);
+          if (!cancelled.current && next !== undefined && next !== value) onCommit(next);
+          cancelled.current = false;
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") e.currentTarget.blur();
+          else if (e.key === "Escape" && draft !== null && draft !== value) {
+            e.stopPropagation();
+            e.preventDefault();
+            cancelled.current = true;
+            e.currentTarget.blur();
+          }
+        }}
+      />
+    </label>
   );
 }
 

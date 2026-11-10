@@ -1,8 +1,8 @@
 import type { ItemDef } from "../types";
-import { sourceMagicItems } from "./paths.macro" with { type: "macro" };
+import { SOURCE_MAGIC_ITEMS } from "./rulebook";
 
 const WEALTH = ["Broke", "Poor", "Modest", "Comfortable", "Rich"];
-const parsedMagicItems = sourceMagicItems();
+const parsedMagicItems = SOURCE_MAGIC_ITEMS;
 const sourceHealingPotion = parsedMagicItems.find((item) => item.name === "potion of healing")!;
 
 function gearItem(

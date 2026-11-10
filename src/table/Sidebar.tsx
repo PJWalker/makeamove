@@ -30,9 +30,9 @@ import {
   type DockItemId,
   type Side,
   showPanel,
-  PANELS,
+  type PanelId,
 } from "../workspace/panelLayout";
-import { PanelContent, PaneToggle } from "./panels";
+import { PanelContent, PanelIcon, PaneToggle, usePanelLabel } from "./panels";
 import { PanelActionsProvider, PanelActionsSlot } from "./PanelActions";
 import {
   closeEntityWindow,
@@ -335,11 +335,11 @@ function RailTab({
   selected: boolean;
   onMenu: (x: number, y: number) => void;
 }) {
-  const panel = isPanelId(id) ? PANELS[id] : undefined;
+  const panel = isPanelId(id) ? id : undefined;
   const records = useValue(entityWindows);
   const record = isEntityTab(id) ? entityRecord(id, records) : undefined;
-  const label = panel?.label ?? record?.title ?? id.slice("entity:".length);
-  const Icon = panel?.Icon ?? record?.icon ?? (record?.graphicRef ? undefined : IconOpenWindow);
+  const label = usePanelLabel(id, campaign) ?? record?.title ?? id.slice("entity:".length);
+  const Icon = record?.icon ?? (record?.graphicRef ? undefined : IconOpenWindow);
   const onlineCount = useOnlineCount(campaign);
   const unread = useUnreadCount();
 
@@ -366,7 +366,9 @@ function RailTab({
       onClick={() => switchTo(id, side)}
       {...withPull(onPointerDown, onMenu)}
     >
-      {record?.graphicRef ? (
+      {panel ? (
+        <PanelIcon id={panel} campaign={campaign} />
+      ) : record?.graphicRef ? (
         <CampaignEntityGraphic
           campaign={campaign}
           kind={record.graphicRef.kind}
@@ -400,12 +402,12 @@ function ActiveTab({
             {...withPull((e) => pullOut(id, e), onMenu)}
           >
             <PaneToggle id={id} />
-            <h2 className="panel-title" tabIndex={-1}>
-              {PANELS[id].label}
-            </h2>
+            <PanelTitle id={id} campaign={campaign} />
             <PanelActionsSlot />
           </header>
-          <PanelContent id={id} campaign={campaign} />
+          <div className="panel-body panel-content">
+            <PanelContent id={id} campaign={campaign} />
+          </div>
         </div>
       </PanelActionsProvider>
     );
@@ -438,7 +440,7 @@ function ActiveTab({
           <IconClose size={22} />
         </Button>
       </header>
-      <div className="entity-docked-body">
+      <div className="panel-body entity-docked-body">
         {record ? (
           <EntityWindowContent campaign={campaign} record={record} />
         ) : (
@@ -449,6 +451,14 @@ function ActiveTab({
         )}
       </div>
     </div>
+  );
+}
+
+function PanelTitle({ id, campaign }: { id: PanelId; campaign: Campaign }) {
+  return (
+    <h2 className="panel-title" tabIndex={-1}>
+      {usePanelLabel(id, campaign)}
+    </h2>
   );
 }
 

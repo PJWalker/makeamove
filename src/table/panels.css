@@ -11,6 +11,7 @@
   .panel-loading {
     display: grid;
     min-height: 48px;
+    padding-top: var(--header-inset, 0px);
     place-items: center;
     color: var(--text-muted);
   }
@@ -51,38 +52,142 @@
     }
   }
 
-  /* Panels, docked or floating */
+  /*
+   * Panels, docked or floating. The title bar floats over the panel's top
+   * edge, so the content scrolls up underneath its translucent gradient.
+   */
   .panel-header {
+    position: absolute;
+    inset: 0 0 auto;
+    z-index: 1;
+    height: var(--panel-header-h);
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: var(--space-2);
     padding: var(--space-3) var(--space-2) var(--space-1) var(--space-4);
+    background: linear-gradient(
+      oklch(from var(--surface) l c h / 0.92),
+      oklch(from var(--surface) l c h / 0.55)
+    );
   }
   .panel-title {
+    min-width: 0;
+    overflow: hidden;
     font-size: var(--text-lg);
     line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  /*
+   * A panel's content fills it from the very top. --header-inset carries the
+   * title bar's height down the first-child chain to whatever reaches the top
+   * edge; that element pads by it (padding-top: calc(var(--header-inset, 0px)
+   * + …)) and everything else sees 0.
+   */
+  .panel-body {
+    --header-inset: var(--panel-header-h);
+  }
+  /* A panel's content area, docked or floating. */
+  .panel-content {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .panel-body :not(:first-child) {
+    --header-inset: 0px;
+  }
+  /* Children that sit side by side or overlaid all reach the top. */
+  .panel-body :is(.panes, .panes-detail, .chat) > * {
+    --header-inset: inherit;
+  }
+  .panel-body :is(.panel-scroll, .panel-bar, .combat-panel) *,
+  .panel-body:is(.entity-docked-body, .dialog-body) * {
+    --header-inset: 0px;
+  }
+
+  /*
+   * Bars along the top of a panel's content (search, filters, back), on a
+   * translucent ground the content scrolls under. Inside a scroller a bar
+   * sticks under the title bar; above one it floats over it like the title
+   * bar does, and what follows is inset by its height too.
+   */
+  .panel-bar {
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    background: oklch(from var(--surface) l c h / 0.8);
+    > input {
+      flex: 1;
+    }
+  }
+  .panel-scroll > .panel-bar {
+    position: sticky;
+    /* Sticky offsets count from inside the scroller's padding, which already clears the title bar. */
+    top: calc(-1 * var(--space-4));
+    flex-wrap: wrap;
+    margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-4)) 0;
+    padding: var(--space-2) var(--space-4);
+  }
+  .panel-body :not(.panel-scroll) > .panel-bar {
+    position: absolute;
+    top: var(--header-inset, 0px);
+    inset-inline: 0;
+    height: var(--panel-bar-h);
+    padding-inline: var(--space-3);
+  }
+  .panel-body :has(> .panel-bar) {
+    --above-bar: var(--header-inset, 0px);
+    position: relative;
+  }
+  .panel-body :not(.panel-scroll) > .panel-bar ~ * {
+    --header-inset: calc(var(--above-bar) + var(--panel-bar-h));
+  }
+  /* A second bar stacks under the first (a pane's back bar, then its search). */
+  .panel-body :not(.panel-scroll) > .panel-bar + .panel-bar ~ * {
+    --header-inset: calc(var(--above-bar) + 2 * var(--panel-bar-h));
+  }
+  /* Side by side, the panes' back bar is hidden. */
+  .panel-body .panes:not([data-layout="stack"]) .panes-back ~ * {
+    --header-inset: inherit;
   }
   .panel-header:has(> .panel-actions) {
     justify-content: flex-start;
   }
   .panel-header:has(> .panel-actions) > .panel-title {
-    min-width: 0;
     margin-right: 0;
   }
+  /*
+   * The actions take the room the title leaves. Short of it, they drop their
+   * labels (PanelActionsSlot) and hold on to their icons; then the title
+   * truncates.
+   */
   .panel-actions {
     display: flex;
-    align-items: center;
     justify-content: flex-end;
     flex: 1;
-    flex-wrap: wrap;
-    gap: var(--space-1);
     min-width: 0;
   }
-  .panel-actions > .btn {
-    white-space: nowrap;
+  .panel-actions[data-compact] {
+    min-width: auto;
   }
-  .panel-header:has(> .panel-actions) > .btn {
+  .panel-actions-row {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: var(--space-1);
+  }
+  .panel-actions[data-compact] .btn-label {
+    display: none;
+  }
+  .panel-actions[data-compact] .btn:has(> .btn-label) {
+    min-width: var(--control-height);
+    padding-inline: var(--space-1);
+  }
+  /* Out of room, the title truncates; everything else stays whole. */
+  .panel-header > :not(.panel-title) {
     flex-shrink: 0;
   }
   .panel-scroll {
@@ -90,6 +195,8 @@
     min-height: 0;
     overflow-y: auto;
     padding: var(--space-4);
+    padding-top: calc(var(--header-inset, 0px) + var(--space-4));
+    scroll-padding-top: var(--header-inset, 0px);
   }
 
   .member-list {

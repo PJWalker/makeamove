@@ -1,20 +1,28 @@
 import type { Graphics } from "pixi.js";
 import type { Rect } from "../camera";
 import type { Point } from "../grid";
+import type { SdfFontSpec } from "./sdfFont";
+import type { SdfTextOptions } from "./sdfText";
 import type { RenderState } from "./state";
 
 /** The UI accent, oklch(82% 0.15 85), as sRGB for the canvas. */
 export const ACCENT = 0xf0bb3b;
 export const INK = 0x14161c;
 
+/** The canvas fonts, loaded from index.html. */
+export const cabin = (weight: number): SdfFontSpec => ({ family: "Cabin, sans-serif", weight });
+export const fraunces = (weight: number): SdfFontSpec => ({ family: "Fraunces, serif", weight });
+
+/** Every font the canvas draws, to load before any glyphs are drawn. */
+export const CANVAS_FONTS = [cabin(600), cabin(700), cabin(800), fraunces(600)];
+
 /** Token names, white with a dark outline to read over any map. */
-export const TOKEN_NAME_STYLE = {
-  fontFamily: "Cabin, sans-serif",
-  fontSize: 15,
-  fontWeight: "600",
+export const TOKEN_NAME: SdfTextOptions = {
+  font: cabin(600),
+  size: 15,
   fill: 0xffffff,
-  stroke: { color: INK, width: 4, join: "round" },
-} as const;
+  outline: { color: INK, width: 4 },
+};
 
 /** Points as Pixi's flat [x, y, x, y…]. */
 export const flat = (pts: Point[]) => pts.flatMap((p) => [p.x, p.y]);

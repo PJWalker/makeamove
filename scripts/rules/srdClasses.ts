@@ -1,7 +1,7 @@
-import { markdownToRichText } from "../../macros/markdown.macro";
-import { readReference } from "../../macros/reference.macro";
-import type { Feature } from "./data";
-import { SUBCLASSES } from "./origins";
+import { markdownToRichText } from "../../src/macros/markdown.macro";
+import { readReference } from "./readReference";
+import type { Feature } from "../../src/systems/dnd55e/data";
+import { SUBCLASSES } from "../../src/systems/dnd55e/origins";
 
 const slug = (value: string) =>
   value

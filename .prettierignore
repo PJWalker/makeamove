@@ -16,3 +16,6 @@ skills-lock.json
 reports
 .stryker-tmp
 storybook-static
+src/systems/dnd55e/srd
+src/systems/blades-in-the-dark/abilities.json
+src/systems/dungeon-world-2/rulebook.json

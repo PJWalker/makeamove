@@ -6,7 +6,7 @@ vi.mock("../../features/characters/api", () => ({
   addItem: vi.fn(),
   canEdit: vi.fn(() => true),
   getCharacter: () => ({ name: "Character" }),
-  selectedCharacterId: () => "character",
+  actingCharacterId: () => "character",
   setLearned: vi.fn(),
   systemOf: () => ({ items: [{ id: "item", name: "Sword" }] }),
 }));

@@ -117,6 +117,25 @@ function wholeWords(text: string, start: number, end: number): [number, number] 
   return [start, end];
 }
 
+/** Space or punctuation within a line, which a phrase's words may be split by. */
+const BETWEEN_WORDS = /^[^\p{L}\p{N}\n]*$/u;
+
+/**
+ * Join word matches that sit next to each other in the text, since each word
+ * of the query matches on its own, and put the longest (the most of the query)
+ * first.
+ */
+function spans(text: string, ranges: [number, number][]) {
+  const joined: [number, number][] = [];
+  for (const [start, end] of ranges.toSorted((a, b) => a[0] - b[0])) {
+    const last = joined.at(-1);
+    if (last && (start <= last[1] + 1 || BETWEEN_WORDS.test(text.slice(last[1] + 1, start))))
+      last[1] = Math.max(last[1], end);
+    else joined.push([start, end]);
+  }
+  return joined.sort((a, b) => b[1] - b[0] - (a[1] - a[0]));
+}
+
 function snippet(text: string, start: number, end: number) {
   const from = Math.max(0, start - 42);
   const to = Math.min(text.length, end + 42);
@@ -177,16 +196,20 @@ export class NoteTextIndex {
     return this.fuse.search(query).map(({ item, score, matches }) => ({
       id: item.id,
       score: score ?? 1,
-      matches: (matches ?? []).flatMap(({ indices }) =>
-        indices.flatMap(([matchStart, matchEnd]) => {
-          const [start, end] = wholeWords(item.text, matchStart, matchEnd);
-          const from = positionOf(item.runs, start);
-          const last = positionOf(item.runs, end);
-          return matchEnd - matchStart + 1 >= shortest && from >= 0 && last >= 0
-            ? [{ from, to: last + 1, snippet: snippet(item.text, start, end + 1) }]
-            : [];
-        }),
-      ),
+      matches: spans(
+        item.text,
+        (matches ?? []).flatMap(({ indices }) =>
+          indices
+            .filter(([start, end]) => end - start + 1 >= shortest)
+            .map(([start, end]) => wholeWords(item.text, start, end)),
+        ),
+      ).flatMap(([start, end]) => {
+        const from = positionOf(item.runs, start);
+        const last = positionOf(item.runs, end);
+        return from >= 0 && last >= 0
+          ? [{ from, to: last + 1, snippet: snippet(item.text, start, end + 1) }]
+          : [];
+      }),
     }));
   }
 

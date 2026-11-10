@@ -1,5 +1,5 @@
 import { store } from "../lib/store";
-import { selectCharacter } from "../features/characters/api";
+import { playedCharacterId, viewCharacter } from "../features/characters/api";
 import type { Campaign } from "../campaign/campaign";
 import type { LinkKind } from "../features/notes/links";
 import { linkLabel } from "../features/notes/targets";
@@ -14,6 +14,13 @@ export const noteSearchTarget = store<{ noteId: string; from: number; to: number
 
 /** Counts each request to open a page, even the one already chosen, so the panel shows it. */
 export const noteOpened = store(0);
+
+/** Show a character's sheet: in My Character for this device's own, else in Characters. */
+export function openCharacter(campaign: Campaign, id: string) {
+  if (id === playedCharacterId(campaign)) return showPanel("pc");
+  viewCharacter(campaign, id);
+  showPanel("characters");
+}
 
 /** Open a note's page in the Notes panel. */
 export function openNote(id: string) {
@@ -34,8 +41,7 @@ export function followLink(campaign: Campaign, kind: LinkKind, id: string) {
     case "note":
       return openNote(id);
     case "character":
-      selectCharacter(campaign, id);
-      return showPanel("characters");
+      return openCharacter(campaign, id);
     case "scene":
       return campaign.setActiveScene(id);
     case "item":

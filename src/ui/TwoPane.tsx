@@ -213,7 +213,7 @@ export function TwoPane({
           onDoubleClick={() => layout.resetWidth()}
         />
         <div className="panes-detail">
-          <div className="panes-back">
+          <div className="panes-back panel-bar">
             <button
               type="button"
               className="panes-back-btn"

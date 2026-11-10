@@ -1,4 +1,5 @@
-import { srdClassFeatures } from "./srdClasses.macro" with { type: "macro" };
+import data from "./srd/classFeatures.json";
+import type { Feature } from "./data";
 
-/** The SRD's class features, parsed from reference/dnd-5.5e-srd/classes.md at build time. */
-export const SRD_CLASS_FEATURES = srdClassFeatures();
+/** The SRD's class features, generated from the rulebook by `npm run generate:rules`. */
+export const SRD_CLASS_FEATURES = data as unknown as Feature[];

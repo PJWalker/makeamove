@@ -25,7 +25,16 @@ import { device } from "../platform/device";
 import { useY } from "../ui/useY";
 import { Button } from "../ui/Button";
 import { PanelActions } from "./PanelActions";
-import { IconClose, IconDice, IconReveal, IconSecret } from "../ui/icons";
+import {
+  IconClose,
+  IconDice,
+  IconEndCombat,
+  IconNextTurn,
+  IconPreviousTurn,
+  IconReveal,
+  IconSecret,
+  IconStartCombat,
+} from "../ui/icons";
 import { useValue } from "../ui/useValue";
 import { CONCENTRATION_COLOUR, conditionColour } from "../features/combat/pipColours";
 
@@ -57,17 +66,22 @@ export function CombatPanel({ campaign }: { campaign: Campaign }) {
           <span className="combat-controls">
             {round > 0 ? (
               <>
-                <Button variant="ghost" onClick={() => previousTurn(combatMaps(campaign))}>
+                <Button
+                  variant="ghost"
+                  icon={IconPreviousTurn}
+                  onClick={() => previousTurn(combatMaps(campaign))}
+                >
                   Back
                 </Button>
                 <Button
                   variant="primary"
+                  icon={IconNextTurn}
                   disabled={!all.length}
                   onClick={() => advanceTurn(campaign)}
                 >
                   Next Turn
                 </Button>
-                <Button variant="ghost" onClick={() => finishCombat(campaign)}>
+                <Button variant="ghost" icon={IconEndCombat} onClick={() => finishCombat(campaign)}>
                   End
                 </Button>
               </>
@@ -75,6 +89,7 @@ export function CombatPanel({ campaign }: { campaign: Campaign }) {
               <>
                 <Button
                   variant="ghost"
+                  icon={IconDice}
                   disabled={!all.some((c) => c.init === null)}
                   onClick={() => void rollAllInitiative(campaign, { npcsOnly: true })}
                 >
@@ -82,6 +97,7 @@ export function CombatPanel({ campaign }: { campaign: Campaign }) {
                 </Button>
                 <Button
                   variant="primary"
+                  icon={IconStartCombat}
                   disabled={!all.length}
                   onClick={() => beginCombat(campaign)}
                 >

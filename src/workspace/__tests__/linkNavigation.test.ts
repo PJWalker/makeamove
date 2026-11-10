@@ -3,12 +3,14 @@ import type { Campaign } from "../../campaign/campaign";
 
 const dependencies = vi.hoisted(() => ({
   linkLabel: vi.fn(),
-  selectCharacter: vi.fn(),
+  viewCharacter: vi.fn(),
+  playedCharacterId: vi.fn(),
   showPanel: vi.fn(),
 }));
 
 vi.mock("../../features/characters/api", () => ({
-  selectCharacter: dependencies.selectCharacter,
+  viewCharacter: dependencies.viewCharacter,
+  playedCharacterId: dependencies.playedCharacterId,
 }));
 vi.mock("../../features/notes/targets", () => ({ linkLabel: dependencies.linkLabel }));
 vi.mock("../panelLayout", () => ({ showPanel: dependencies.showPanel }));
@@ -37,8 +39,14 @@ describe("link navigation", () => {
     expect(dependencies.showPanel).toHaveBeenLastCalledWith("notes");
 
     followLink(campaign, "character", "ayla");
-    expect(dependencies.selectCharacter).toHaveBeenCalledWith(campaign, "ayla");
+    expect(dependencies.viewCharacter).toHaveBeenCalledWith(campaign, "ayla");
     expect(dependencies.showPanel).toHaveBeenLastCalledWith("characters");
+
+    // The character this device plays has its own panel.
+    dependencies.playedCharacterId.mockReturnValue("brom");
+    followLink(campaign, "character", "brom");
+    expect(dependencies.viewCharacter).not.toHaveBeenCalledWith(campaign, "brom");
+    expect(dependencies.showPanel).toHaveBeenLastCalledWith("pc");
 
     followLink(campaign, "scene", "keep");
     expect(setActiveScene).toHaveBeenCalledWith("keep");

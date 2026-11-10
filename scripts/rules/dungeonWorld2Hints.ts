@@ -1,5 +1,5 @@
-import type { CreationHints } from "../types";
-import { sourceClassSectionText } from "./paths.macro";
+import type { CreationHints } from "../../src/systems/types";
+import { sourceClassSectionText } from "./dungeonWorld2";
 
 const CLASS_IDS = [
   "barbarian",

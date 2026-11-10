@@ -5,7 +5,7 @@ import {
   canEdit,
   getCharacter,
   newNpcFromMonster,
-  selectedCharacterId,
+  actingCharacterId,
   setData,
   startMove,
   systemOf,
@@ -49,7 +49,7 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
   const system = systemOf(campaign);
   // The Libraries are the system's own; homebrew is in the Items panel.
   const sources = useLibrariesFor(baseSystemOf(campaign));
-  const meId = useY(campaign.members, () => selectedCharacterId(campaign));
+  const meId = useY(campaign.members, () => actingCharacterId(campaign));
   const me = useY(campaign.characters, () => getCharacter(campaign, meId));
   const canAct = !!me && canEdit(campaign, me);
   const windows = useEntryWindows();
@@ -311,7 +311,7 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
 
   return (
     <div className="panel-scroll libraries">
-      <div className="libraries-tools">
+      <div className="panel-bar libraries-tools">
         <input
           type="search"
           placeholder="Search the Libraries…"
@@ -330,14 +330,14 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
             onChange={(k) => (view.value = { ...view.value, kind: k })}
           />
         )}
-        <p className="muted libraries-target">
-          {me
-            ? canAct
-              ? `Adding to ${me.name}`
-              : `${me.name} isn’t yours to change`
-            : "Choose a character to add things to"}
-        </p>
       </div>
+      <p className="muted libraries-target">
+        {me
+          ? canAct
+            ? `Adding to ${me.name}`
+            : `${me.name} isn’t yours to change`
+          : "Choose a character to add things to"}
+      </p>
 
       {shown.map(({ s, collections }) => (
         <section key={s.id} className="library-source" aria-label={s.name}>

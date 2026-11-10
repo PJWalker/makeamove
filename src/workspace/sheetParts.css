@@ -11,7 +11,8 @@
     block-size: 100%;
     object-fit: cover;
   }
-  .token-chip .entity-graphic-image {
+  .token-chip .entity-graphic-image,
+  .token-image-preview .entity-graphic-image {
     object-fit: cover;
   }
   .portrait-initial {
@@ -31,12 +32,14 @@
     border: 3px solid var(--token-colour, var(--text-muted));
     flex: none;
   }
-  .token-chip[data-style="plain"] {
+  .token-chip[data-style="plain"],
+  .token-image-preview[data-style="plain"] {
     border: 0;
     border-radius: 0;
     background: none;
   }
-  .token-chip[data-style="plain"] .entity-graphic-image {
+  .token-chip[data-style="plain"] .entity-graphic-image,
+  .token-image-preview[data-style="plain"] .entity-graphic-image {
     object-fit: contain;
   }
   .token-chip {

@@ -10,7 +10,7 @@ import { CampaignDialogHost } from "./CampaignDialogHost";
 import { Sidebar } from "./Sidebar";
 import { dockInsets, unavailablePanels, windowDragging } from "../workspace/panelLayout";
 import { hasCombat } from "../features/combat/api";
-import { systemOf } from "../features/characters/api";
+import { playedCharacterId, systemOf } from "../features/characters/api";
 import { activeMapColour, autohide, canvasColour, setAutohide } from "../workspace/canvasState";
 import { ActionDialogs } from "../workspace/ActionDialogs";
 import { ChatPopups } from "./ChatPopups";
@@ -38,15 +38,18 @@ export function Tabletop({ campaign }: { campaign: Campaign }) {
     campaign.members,
     () => campaign.isGm() && !!systemOf(campaign).gmReference?.length,
   );
+  // My Character is there once this device has claimed one.
+  const playing = useY(campaign.members, () => !!playedCharacterId(campaign));
   useLayoutEffect(() => {
     unavailablePanels.value = [
+      ...(playing ? [] : (["pc"] as const)),
       ...(combat ? [] : (["combat"] as const)),
       ...(reference ? [] : (["reference"] as const)),
     ];
     return () => {
       unavailablePanels.value = [];
     };
-  }, [combat, reference]);
+  }, [playing, combat, reference]);
   const activeId = useY(campaign.members, () => campaign.activeSceneId());
   const scene = scenes.find((s) => s.id === activeId) ?? scenes[0];
 

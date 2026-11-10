@@ -13,13 +13,18 @@ import {
   renameFolder,
   type FolderView,
   getCharacter,
-  selectCharacter,
-  selectedCharacterId,
+  viewCharacter,
+  viewedCharacterId,
+  canClaim,
+  claimCharacter,
+  releaseCharacter,
   systemOf,
 } from "../features/characters/api";
 import { setRelationship, setRelationshipDepth } from "../features/characters/relationships";
 import type { CharacterView } from "../features/characters/types";
-import type { Campaign } from "../campaign/campaign";
+import type { Campaign, MemberView } from "../campaign/campaign";
+import { device } from "../platform/device";
+import { useValue } from "../ui/useValue";
 import { useY } from "../ui/useY";
 import type { ChoiceDef, GameSystem } from "../systems/types";
 import { HintedField } from "../ui/HintedField";
@@ -38,7 +43,7 @@ import {
   type Picked,
   type ScoreMethod,
 } from "../workspace/CreationParts";
-import { IconDelete, IconFolder, IconRename } from "../ui/icons";
+import { IconAdd, IconDelete, IconFolder, IconNewFolder, IconRename } from "../ui/icons";
 import { Segmented } from "../ui/Segmented";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { TwoPane, usePaneLevel } from "../ui/TwoPane";
@@ -57,7 +62,7 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
   const system = systemOf(campaign);
   const characters = useY(campaign.characters, () => listCharacters(campaign));
   const folders = useY(campaign.characterFolders, () => listFolders(campaign));
-  const selectedId = useY(campaign.members, () => selectedCharacterId(campaign));
+  const selectedId = useY(campaign.members, () => viewedCharacterId(campaign));
   const isGm = useY(campaign.members, () => campaign.isGm());
   const [creating, setCreating] = useState(false);
   const [creationFolder, setCreationFolder] = useState<string | undefined>(undefined);
@@ -96,7 +101,7 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
           onPick={(id) => {
             setCreating(false);
             go("detail");
-            selectCharacter(campaign, id);
+            viewCharacter(campaign, id);
           }}
         />
       }
@@ -126,6 +131,12 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
   );
 }
 
+/** Who plays a character, as the list shows it. */
+function tagFor(player: MemberView | undefined) {
+  if (!player) return undefined;
+  return player.id === device.value.id ? "You" : player.name;
+}
+
 /** The left pane: characters, filed in folders. Drag a character onto a folder to file it. */
 function CharacterList({
   campaign,
@@ -146,6 +157,9 @@ function CharacterList({
   // A character waiting for its deletion to be confirmed.
   const [deleting, setDeleting] = useState<string | null>(null);
   const known = new Set(folders.map((f) => f.id));
+  const me = useValue(device).id;
+  const members = useY(campaign.members, () => campaign.memberViews());
+  const playedBy = new Map(members.flatMap((m) => (m.playing ? [[m.playing, m] as const] : [])));
 
   const row = (c: CharacterView) => {
     const mine = canEdit(campaign, c);
@@ -153,46 +167,61 @@ function CharacterList({
     if (mine) dragged.folder = (folderId) => moveToFolder(campaign, c.id, folderId);
     else delete dragged.folder;
     const trigger = menuTrigger((x, y) => {
-      const items: MenuItem[] = [{ label: "Open Character", onSelect: () => onPick(c.id) }];
+      const open: MenuItem[] = [{ label: "Open Character", onSelect: () => onPick(c.id) }];
+      if (playedBy.get(c.id)?.id === me)
+        open.push({ label: "Stop Playing", onSelect: () => releaseCharacter(campaign) });
+      else if (canClaim(campaign, c))
+        open.push({ label: "Play This Character", onSelect: () => claimCharacter(campaign, c.id) });
+      const filing: MenuItem[] = [];
+      const editing: MenuItem[] = [];
       if (mine) {
         for (const f of folders) {
           if (f.id !== c.folder)
-            items.push({
+            filing.push({
               label: `Move to ${f.name}`,
               Icon: IconFolder,
               onSelect: () => moveToFolder(campaign, c.id, f.id),
             });
         }
         if (c.folder && known.has(c.folder))
-          items.push({
+          filing.push({
             label: "Remove from Folder",
             onSelect: () => moveToFolder(campaign, c.id, undefined),
           });
-        if (items.length) items.push("divider");
-        items.push({
-          label: "Change Graphic…",
-          Icon: IconImage,
-          onSelect: () => editEntityGraphic(campaign, "character", c.id, c.name),
-        });
-        items.push({
-          label: "Delete Character…",
-          Icon: IconDelete,
-          danger: true,
-          onSelect: () => setDeleting(c.id),
-        });
+        editing.push(
+          {
+            label: "Change Graphic…",
+            Icon: IconImage,
+            onSelect: () => editEntityGraphic(campaign, "character", c.id, c.name),
+          },
+          {
+            label: "Delete Character…",
+            Icon: IconDelete,
+            danger: true,
+            onSelect: () => setDeleting(c.id),
+          },
+        );
       }
-      if (items.length) setMenu({ x, y, items });
+      const items = [open, filing, editing]
+        .filter((group) => group.length)
+        .flatMap((group, i): MenuItem[] => (i ? ["divider", ...group] : group));
+      setMenu({ x, y, items });
     });
     return (
       <ListRow
         key={c.id}
         lead={<CampaignEntityGraphic campaign={campaign} kind="character" id={c.id} size={22} />}
         name={c.name}
-        tag={c.kind === "npc" ? "NPC" : null}
+        tag={c.kind === "npc" ? "NPC" : (tagFor(playedBy.get(c.id)) ?? null)}
         selected={c.id === selectedId}
         onPick={() => onPick(c.id)}
         row={{
-          "data-tip": c.kind === "npc" ? `${c.name} (NPC)` : c.name,
+          "data-tip":
+            c.kind === "npc"
+              ? `${c.name} (NPC)`
+              : playedBy.has(c.id)
+                ? `${c.name}, played by ${tagFor(playedBy.get(c.id))}`
+                : c.name,
           "data-tip-side": true,
         }}
         pick={{
@@ -225,8 +254,10 @@ function CharacterList({
         renderItem={row}
         renderActions={(beginFolderNaming) => (
           <>
-            <Button onClick={() => onNew()}>New</Button>
-            <Button variant="ghost" onClick={beginFolderNaming}>
+            <Button icon={IconAdd} onClick={() => onNew()}>
+              New
+            </Button>
+            <Button variant="ghost" icon={IconNewFolder} onClick={beginFolderNaming}>
               New Folder
             </Button>
           </>

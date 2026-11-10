@@ -102,6 +102,10 @@
     --space-6: 32px;
     /* The shortest a button, field or other control gets, outside dense strips. */
     --control-height: 30px;
+    /* Panel and window title bars: one line, the same height everywhere. */
+    --panel-header-h: 52px;
+    /* Search and back bars along a panel's top, under the title bar. */
+    --panel-bar-h: 44px;
     --font-ui: "Cabin", system-ui, sans-serif;
     --font-display: var(--font-ui);
     /* Count badges pinned to a control's corner, the one place text goes below --text-sm. */

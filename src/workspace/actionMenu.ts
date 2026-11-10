@@ -8,7 +8,7 @@ import {
   pin,
   unpin,
 } from "../features/characters/hotbar";
-import { selectedCharacterId } from "../features/characters/api";
+import { actingCharacterId } from "../features/characters/api";
 import type { Campaign } from "../campaign/campaign";
 import { IconAdd, IconDelete, IconShortcut } from "../ui/icons";
 import type { MenuItem } from "../ui/ContextMenu";
@@ -39,8 +39,7 @@ export function actionMenuItems(
       {
         label: pinned ? `Remove${name} from hotbar` : `Add${name} to hotbar`,
         Icon: pinned ? IconDelete : IconAdd,
-        disabled:
-          !pinned && hotbarSlots(campaign, selectedCharacterId(campaign)).length >= MAX_SLOTS,
+        disabled: !pinned && hotbarSlots(campaign, actingCharacterId(campaign)).length >= MAX_SLOTS,
         onSelect: () =>
           editHotbar(campaign, (slots) => (pinned ? unpin(slots, id) : pin(slots, id))),
       },

@@ -1,3 +1,4 @@
+import type { EntityGraphic, EntityGraphicRef } from "../graphics";
 import { store, watch } from "../lib/store";
 import type { CampaignDefaults } from "../campaign/campaign";
 import { device } from "../platform/device";
@@ -10,7 +11,13 @@ import { type Point, snapPoint } from "./grid";
 import type { BlobRef } from "../core/blob";
 import { importImage, imageColour } from "../media/images";
 import { tokenDistance } from "./measure";
-import { conversion, imageElement, newToken, type TokenSpec } from "./newElements";
+import {
+  conversion,
+  imageElement,
+  newToken,
+  randomTokenColour,
+  type TokenSpec,
+} from "./newElements";
 import type { SceneRenderer } from "./renderer";
 import type { SceneDoc } from "./sceneDoc";
 import { activeTool, ERASER_RADIUS, lightTool } from "./tools";
@@ -32,12 +39,9 @@ import { dragShape } from "./gestures/shape";
 import { putText } from "./gestures/text";
 import type { Gesture, Placement, ToolContext } from "./gestures/types";
 
-/** This member's token colour, from their device id. */
 /** How soon, and how near in screen px, a press must follow the last to count as a double click. */
 const MULTI_CLICK_MS = 500;
 const MULTI_CLICK_SLOP = 6;
-
-const memberColour = () => colourOf(device.value);
 
 /**
  * Turns pointer, wheel and keyboard input into camera moves and scene edits.
@@ -802,7 +806,7 @@ export class SceneController implements ToolContext {
         {
           ...patch,
           ...(patch.door === false ? { open: undefined } : {}),
-        } as Partial<SceneElement>,
+        },
       ],
     ]);
   }
@@ -850,9 +854,8 @@ export class SceneController implements ToolContext {
    */
   updateToken(
     id: string,
-    patch: Partial<
-      Pick<
-        TokenElement,
+    patch: {
+      [K in
         | "name"
         | "style"
         | "colour"
@@ -860,9 +863,8 @@ export class SceneController implements ToolContext {
         | "image"
         | "itemDefId"
         | "hideName"
-        | "hideBars"
-      >
-    >,
+        | "hideBars"]?: TokenElement[K] | undefined;
+    },
     cells?: number,
   ) {
     const el = this.byId.get(id);
@@ -891,7 +893,7 @@ export class SceneController implements ToolContext {
   /** A new token's colour and style, unless told otherwise: an image token takes the campaign's style. */
   private newTokenLook(image: boolean, look: { colour?: string; style?: TokenStyle } = {}) {
     return {
-      colour: look.colour ?? memberColour(),
+      colour: look.colour ?? randomTokenColour(),
       style: look.style ?? (image ? this.defaults().tokenStyle : ("disc" as const)),
     };
   }
@@ -905,6 +907,8 @@ export class SceneController implements ToolContext {
       itemDefId?: string;
       style?: TokenStyle;
       colour?: string;
+      graphic?: EntityGraphic;
+      entityRef?: EntityGraphicRef;
     } = {},
   ) {
     return this.placeToken(at, { ...options, name });
@@ -919,6 +923,8 @@ export class SceneController implements ToolContext {
       image?: BlobRef;
       style?: TokenStyle;
       colour?: string;
+      graphic?: EntityGraphic;
+      entityRef?: EntityGraphicRef;
     },
   ) {
     return this.placeToken(at, spec);
@@ -928,7 +934,7 @@ export class SceneController implements ToolContext {
     at: Point,
     spec: Omit<TokenSpec, "colour" | "style"> & { colour?: string; style?: TokenStyle },
   ) {
-    const look = this.newTokenLook(!!spec.image, spec);
+    const look = this.newTokenLook(!!spec.image || spec.graphic?.kind === "image", spec);
     const id = this.scene.add(newToken(this.renderer.grid, at, { ...spec, ...look }))[0]!;
     activeTool.value = "select";
     this.selection.value = [id];

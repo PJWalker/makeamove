@@ -10,18 +10,16 @@ import { bladesInTheDark as blades } from "../blades-in-the-dark";
 import { dungeonWorld2 as dw2 } from "../dungeon-world-2";
 import { testCharacter, testSystem } from "./fixtures/testSystem";
 import {
-  dw2Paths,
-  sourceMoveOutcomes,
-  sourceMoveRichText,
-  sourceMoveText,
-} from "../dungeon-world-2/paths.macro";
+  PATHS as DW2_PATHS,
+  SOURCE_MOVES,
+  CLASS_CREATION_HINTS,
+} from "../dungeon-world-2/rulebook";
 import { emptyRichText, plainText } from "../../core/richText";
 import { BONDS as DW2_BONDS } from "../dungeon-world-2/bonds";
 import { STRUGGLES as DW2_STRUGGLES } from "../dungeon-world-2/struggles";
 import { addTreasureBoxes, purchaseAtWealth, wealthTierForBoxes } from "../dungeon-world-2/wealth";
 import { sourceEntries, systemLibrary, topLevelKeys, viewEntries } from "../../features/library";
 import { DW2_CLASS_SCORE_RULES } from "../dungeon-world-2/stats";
-import { CLASS_CREATION_HINTS } from "../dungeon-world-2/creationHints";
 import { derive } from "../../features/characters/store";
 import type { CharacterView } from "../../features/characters/types";
 import { asksFirst, performMove, planMove } from "../../features/characters/moves";
@@ -277,13 +275,11 @@ describe("Dungeon World 2", () => {
     ] as const;
 
     expect(sourceMoves).toHaveLength(17);
-    for (const [id, sourceName] of sourceMoves) {
+    for (const [id] of sourceMoves) {
       const action = dw2.actions.find((entry) => entry.id === id)!;
-      expect(action.text).toEqual(sourceMoveRichText(sourceName));
-      expect(plainText(action.text).replace(/^• /gm, "").replace(/\s+/g, " ")).toContain(
-        sourceMoveText(sourceName).split(" ").slice(0, 6).join(" "),
-      );
-      const sourceOutcomes = sourceMoveOutcomes(sourceName);
+      const source = SOURCE_MOVES[id]![3]!;
+      expect(action.text).toEqual(source.text);
+      const sourceOutcomes = source.outcomes;
       if (sourceOutcomes) {
         expect(action.steps[0]).toMatchObject({ outcomes: sourceOutcomes });
       }
@@ -305,10 +301,11 @@ describe("Dungeon World 2", () => {
       ["rogue-tricks-trade", "Tricks of the Trade"],
       ["wizard-weave-arcane", "Weave the Arcane"],
     ] as const;
-    for (const [id, sourceName] of classMoves) {
+    for (const [id] of classMoves) {
       const action = dw2.actions.find((entry) => entry.id === id)!;
-      expect(action.text).toEqual(sourceMoveRichText(sourceName, 4));
-      const sourceOutcomes = sourceMoveOutcomes(sourceName, 4);
+      const source = SOURCE_MOVES[id]![4]!;
+      expect(action.text).toEqual(source.text);
+      const sourceOutcomes = source.outcomes;
       if (sourceOutcomes) {
         expect(action.steps[0]).toMatchObject({ outcomes: sourceOutcomes });
       }
@@ -318,9 +315,9 @@ describe("Dungeon World 2", () => {
       ["forge-a-bond", "Forge a Bond"],
       ["reveal-your-struggle", "Reveal Your Struggle"],
     ] as const;
-    for (const [id, sourceName] of campaignMoves) {
+    for (const [id] of campaignMoves) {
       expect(dw2.actions.find((entry) => entry.id === id)?.text).toEqual(
-        sourceMoveRichText(sourceName, 4),
+        SOURCE_MOVES[id]![4]!.text,
       );
     }
     expect(plainText(dw2.actions.find((action) => action.id === "barbarian-rage")?.text)).toContain(
@@ -550,10 +547,10 @@ describe("Dungeon World 2", () => {
   });
 
   it("offers all Paths and grants only the acquired starting move until a Path Move is selected", () => {
-    expect(dw2Paths()).toHaveLength(27);
-    expect(dw2Paths().every((path) => path.moves.length === 5)).toBe(true);
+    expect(DW2_PATHS).toHaveLength(27);
+    expect(DW2_PATHS.every((path) => path.moves.length === 5)).toBe(true);
     expect(
-      dw2Paths().every(
+      DW2_PATHS.every(
         (path) => path.rules.length === 5 && path.rules.every((move) => move.text.length > 40),
       ),
     ).toBe(true);
@@ -562,7 +559,7 @@ describe("Dungeon World 2", () => {
     expect(speech?.kind === "check" && plainText(speech.outcomes.strong)).toContain(
       "clear a Condition",
     );
-    const path = dw2Paths().find((entry) => entry.id === "barbarian-berserker")!;
+    const path = DW2_PATHS.find((entry) => entry.id === "barbarian-berserker")!;
     const choice = dw2.creation!.choices.find((entry) => entry.id === "advancement")!;
     expect(choice.options.some((option) => option.id === path.id)).toBe(true);
     const c = bladesCharacter({ data: { classId: "barbarian", ownedPaths: path.id } });

@@ -1,6 +1,6 @@
-import type { RichText } from "../../core/richText";
-import { markdownToRichText } from "../../macros/markdown.macro";
-import { readReference } from "../../macros/reference.macro";
+import type { RichText } from "../../src/core/richText";
+import { markdownToRichText } from "../../src/macros/markdown.macro";
+import { readReference } from "./readReference";
 
 const source = readReference("Blades-in-the-Dark-SRD.md");
 
@@ -33,7 +33,7 @@ function abilities(title: string): { id: string; name: string; text: RichText }[
   });
 }
 
-/** The SRD's special abilities, playbook and crew, read at build time. */
+/** The SRD's special abilities, playbook and crew, parsed from the rulebook. */
 export const bladesAbilities = () => ({
   pc: abilities("## Special abilities"),
   crew: abilities("## Crew special abilities"),

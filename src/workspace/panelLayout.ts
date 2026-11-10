@@ -39,6 +39,7 @@ import {
   IconMap,
   IconMembers,
   IconNotes,
+  IconPlayerCharacter,
   IconReference,
   type Icon,
 } from "../ui/icons";
@@ -49,6 +50,7 @@ export type { DockItemId, FloatingWindow, PanelId, Side };
 export const PANELS: Record<PanelId, { label: string; Icon: Icon }> = {
   scene: { label: "Scenes", Icon: IconMap },
   chat: { label: "Chat", Icon: IconChat },
+  pc: { label: "My Character", Icon: IconPlayerCharacter },
   characters: { label: "Characters", Icon: IconCharacters },
   combat: { label: "Combat", Icon: IconCombat },
   libraries: { label: "Libraries", Icon: IconLibraries },

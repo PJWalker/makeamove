@@ -2,7 +2,7 @@ import { memo, useEffect, useMemo, useState } from "react";
 import { renderToReactElement } from "@tiptap/static-renderer/pm/react";
 import { type ChatContent } from "../features/chat/content";
 import type { ChatMessage, TextMessage } from "../features/chat/types";
-import { canEdit, getCharacter, selectedCharacterId } from "../features/characters/api";
+import { canEdit, getCharacter, actingCharacterId } from "../features/characters/api";
 import { TRACKER_NODE, type TrackerButton } from "../core/richText";
 import { TrackerButtonView } from "../workspace/RichTextView";
 import { stampTime } from "../lib/hlc";
@@ -237,6 +237,6 @@ function Rich({ campaign, content }: { campaign: Campaign; content: ChatContent 
 
 /** A button in a message changes the numbers of whichever character the viewer has selected. */
 function ChatTrackerButton({ campaign, b }: { campaign: Campaign; b: TrackerButton }) {
-  const characterId = useY(campaign.members, () => selectedCharacterId(campaign)) ?? null;
+  const characterId = useY(campaign.members, () => actingCharacterId(campaign)) ?? null;
   return <TrackerButtonView campaign={campaign} characterId={characterId} b={b} />;
 }

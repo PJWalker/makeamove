@@ -20,6 +20,7 @@
   }
   .chars-tree {
     padding: var(--space-1) var(--space-2) var(--space-2);
+    padding-top: calc(var(--header-inset, 0px) + var(--space-1));
   }
   .chars-sheet {
     min-width: 0;

@@ -123,11 +123,11 @@ export function Lobby({ error }: { error: string | null }) {
   );
 }
 
-/** The icon backdrop is decorative and fairly heavy, so it loads after the lobby. */
+/** The fog backdrop is decorative and fairly heavy, so it loads after the lobby. */
 function LazyBackdrop() {
   const [Backdrop, setBackdrop] = useState<ComponentType | null>(null);
   useEffect(() => {
-    void import("./IconBackdrop").then((m) => setBackdrop(() => m.IconBackdrop));
+    void import("./FogBackdrop").then((m) => setBackdrop(() => m.FogBackdrop));
   }, []);
   return Backdrop ? <Backdrop /> : null;
 }

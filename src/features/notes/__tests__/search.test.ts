@@ -59,6 +59,17 @@ describe("note search", () => {
     c.destroy();
   });
 
+  it("matches a phrase as one span, ahead of its words found elsewhere", async () => {
+    const c = await setUp();
+    const inn = createNote(c, { title: "Inn" });
+    write(await openNotePage(c, inn), paragraph("The council meets beneath the old bell tower."));
+    expect(await searchNotes(c, "beneath the old bell tower")).toMatchObject([
+      { from: 19, to: 45 },
+      { from: 1, to: 4 },
+    ]);
+    c.destroy();
+  });
+
   it("places matches in a link chip's label on the chip", async () => {
     const c = await setUp();
     const inn = createNote(c, { title: "Inn" });

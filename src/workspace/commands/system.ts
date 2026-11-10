@@ -1,8 +1,7 @@
 import {
   getCharacter,
   listCharacters,
-  selectCharacter,
-  selectedCharacterId,
+  actingCharacterId,
   startMove,
   systemOf,
   addItem,
@@ -15,13 +14,13 @@ import { actionsFor, derive } from "../../features/characters/store";
 import { sessionMoveUsed } from "../../features/characters/sessionMoves";
 import type { Campaign } from "../../campaign/campaign";
 import { browseLibrary } from "../libraryView";
-import { showPanel } from "../panelLayout";
+import { openCharacter } from "../linkNavigation";
 import type { Action } from "./types";
 
 export function systemActions(campaign: Campaign): Action[] {
   const system = systemOf(campaign);
   const out: Action[] = [];
-  const selectedId = selectedCharacterId(campaign);
+  const selectedId = actingCharacterId(campaign);
   const me = getCharacter(campaign, selectedId);
   const mine = me
     ? new Set(actionsFor(me, system, derive(me, system)).map((m) => m.id))
@@ -64,10 +63,7 @@ export function systemActions(campaign: Campaign): Action[] {
       source: "Characters",
       detail: c.kind === "npc" ? "NPC" : "Character",
       available: true,
-      run: () => {
-        selectCharacter(campaign, c.id);
-        showPanel("characters");
-      },
+      run: () => openCharacter(campaign, c.id),
     });
   }
 

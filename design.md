@@ -1,6 +1,6 @@
 # How Make a Move is built
 
-Make a Move is a virtual tabletop with no game server. Every player's browser runs the whole app against its own copy of the campaign, stored locally and merged with the other players over peer-to-peer connections. This page explains the parts, why they were chosen, what those choices cost, where the code has drifted from its own rules, and what is still to be built.
+Make a Move is a virtual tabletop with no game server. Every player's browser runs the whole app against its own copy of the campaign, stored locally and merged with the other players over peer-to-peer connections. This page explains the parts, why they were chosen and what those choices cost. Outstanding work is in `TODO.md`.
 
 ## The runtime: browsers, not servers {#runtime}
 
@@ -189,91 +189,6 @@ Images are re-encoded to WebP in a worker, stored in OPFS under their SHA-256 ha
 
 To start: `npm install`, `npm run dev`, then open two browser profiles and join one from the other's invite link to see sync working.
 
-## Improvement opportunities {#improvements}
-
-Ordered by how much each one affects the codebase's coherence or the safety of players' data. Resolved items from the first review are listed at the end.
-
-High
-
-### No way to back up or export a campaign
-
-With no server, a campaign's only copies are on players' devices, and scenes are only on devices that opened them. Clearing site data or losing a laptop can lose a scene for good.
-
-**Consider:** an export that loads the root, every subdocument and the referenced blobs, writes them with `Y.encodeStateAsUpdate` into one file, and a matching import. It also helps with bug reports.
-
-High
-
-### Bundled source text needs a licensing review
-
-`systems/dungeon-world-2/paths.ts` (589 lines) bundles the Dungeon World 2 beta text into the app, which needs a redistribution review before publishing. Git history still contains the `.playwright-mcp/` output, including `Dungeon-World-2-Beta-v3.docx`.
-
-**Consider:** settle licensing for each bundled source before the first public deploy; rewrite history if the beta document must not stay in the repository.
-
-Medium
-
-### Old invites no longer fail clearly
-
-The uncommitted change to `sync/invite.ts` drops the epoch from invite links. After a `DATA_EPOCH` bump, an old invite opens an empty campaign under the new database names and waits for a peer.
-
-**Consider:** keep the epoch out, but show a clear message when no peer has the campaign.
-
-Low
-
-### Stray top-level modules
-
-`core/` holds one type, and `src/graphics.ts` sits at the top level.
-
-**Consider:** fold both into an existing module.
-
-Medium
-
-### Removing a player doesn't rotate the room key
-
-The room key sits in the campaign's `meta` map, which every member holds. A removed player stays out only because their client cooperates.
-
-**Consider:** on removal, the GM mints a new key and gives it to remaining members, for example through a short-lived message encrypted per member. This only matters if removal needs to resist a modified client.
-
-Medium
-
-### Remaining large files
-
-`systems/dnd55e/data.ts` (1,640) is data and fine. `systems/dnd55e/index.ts` (1,170), `table/diceRenderer.ts` (1,089), `table/SceneCanvas.tsx` (1,057), and each system's `index.ts` (about 1,000) mix several responsibilities.
-
-**Consider:** split system `index.ts` files into stats, actions, derive and catalog modules, as `dungeon-world-2/` has started; move dice rendering out of `table/` into its own module.
-
-Low
-
-### Unknown system ids fall back silently
-
-`getSystem()` returns Dungeon World for any id it doesn't know, so a typo or a removed system shows the wrong rules without an error. `extensionOf()` keeps a hand-written id map in `systems/extensions.ts`.
-
-**Consider:** fall back to the "No system" plugin and show a notice, or throw during development; register extensions alongside their systems.
-
-Low
-
-### Hidden global state
-
-Sixteen modules export top-level stores, and `setBlobFetcher` in `media/images.ts` is a global set by `campaign/connection.ts`. This works because one campaign is open at a time, but the dependency is invisible.
-
-**Consider:** hang per-campaign state off the `Campaign` object or a context, and keep module stores for true device-wide state.
-
-Low
-
-
-
-### Resolved since the first review
-
-- Game-system rules leaking into core feature code: moved into systems behind hooks.
-- Sheet registration hard-coding system ids in `table/`: replaced by `SystemExtension.sheets`.
-- CI not running lint, type-check or unit tests: `ci.yml` runs them all.
-- Very large controller, renderer, character API, chat panel and global CSS: split.
-- Single end-to-end test file: split by feature.
-- Signals Babel transform blocking React Compiler: replaced by explicit stores.
-- `reference/` and `.playwright-mcp/` committed: untracked and ignored.
-- `design.md` out of date: removed; this document replaces it.
-- Upward imports outside the system sheets: `ContextMenu` and `resizeRect` moved to `ui/`, `CombatPanel` and the action index (`table/commands`) to `table/`, link following (`table/linkNavigation.ts`) out of `features/notes`, and chat notifications read a `chatInView` store the table keeps current. ESLint enforces the layering.
-- System sheets importing `table/` parts: the sheet parts and everything they reach moved to `workspace/`, below `table/`; panel labels (`PANELS`) and the tool list (`TOOLS`) moved out of `panels.tsx` and `Toolbar.tsx` so the action index no longer pulls in every panel.
-
 ## Product rules {#product}
 
 These govern behaviour more than code.
@@ -286,13 +201,7 @@ These govern behaviour more than code.
 - Edge-docked elements sit flush; icon strips end in full diagonals.
 - Icons: Game-icons first, Material Symbols Rounded (filled) where no game icon fits; compiled at build time, named by meaning, never smaller than 22×22 px.
 - Context menus expose every action available for their object, including ones otherwise reached through row buttons, hover controls or shortcuts, using the same handlers and permission rules.
+- Options apply as soon as they change, with undo as the way back; Save/Cancel only where a change can't apply piecemeal.
 - Pop-ups emerge from the thing that spawned them and open there; menu items ending in "…" morph into their dialog.
 - Motion is about 280 ms and switches off under reduced motion. View transitions animate state changes that can briefly be snapshots; anything the user may reach into mid-animation animates live with CSS.
 - Interface text is succinct and functional: no commentary, reassurances, parentheticals or asides. System rules text is content and exempt.
-
-
-### Open questions (M5)
-
-- [ ] **Automation:** attacks and saves resolve against targets automatically, but the GM applies damage and conditions from the card? *Default: yes.*
-- [ ] **Movement:** track movement per turn and opportunity attacks? *Default: leave them to the table for now.*
-- [ ] **Multiclassing** in the first version? *Default: later.*

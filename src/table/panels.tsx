@@ -5,7 +5,9 @@ import { device } from "../platform/device";
 import { useY } from "../ui/useY";
 import { Avatar } from "../ui/Avatar";
 import { Button } from "../ui/Button";
-import type { PanelId } from "../workspace/panelLayout";
+import { isPanelId, PANELS, type DockItemId, type PanelId } from "../workspace/panelLayout";
+import { getCharacter, playedCharacterId } from "../features/characters/api";
+import { CampaignEntityGraphic } from "../workspace/EntityGraphic";
 import { charactersLayout, notesLayout, scenesLayout } from "./panelLayouts";
 import { useValue } from "../ui/useValue";
 
@@ -14,6 +16,11 @@ const ScenePanel = lazy(() =>
 );
 const ChatPanel = lazy(() =>
   import("./ChatPanel").then((module) => ({ default: module.ChatPanel })),
+);
+const PlayerCharacterPanel = lazy(() =>
+  import("./PlayerCharacterPanel").then((module) => ({
+    default: module.PlayerCharacterPanel,
+  })),
 );
 const CharactersPanel = lazy(() =>
   import("./CharactersPanel").then((module) => ({
@@ -54,6 +61,8 @@ export function PanelContent({ id, campaign }: { id: PanelId; campaign: Campaign
         <ScenePanel campaign={campaign} />
       ) : id === "chat" ? (
         <ChatPanel campaign={campaign} />
+      ) : id === "pc" ? (
+        <PlayerCharacterPanel campaign={campaign} />
       ) : id === "characters" ? (
         <CharactersPanel campaign={campaign} />
       ) : id === "libraries" ? (
@@ -71,6 +80,44 @@ export function PanelContent({ id, campaign }: { id: PanelId; campaign: Campaign
       )}
     </Suspense>
   );
+}
+
+/** A panel's name, none for an entity tab: My Character goes by the character's. */
+export function usePanelLabel(id: PanelId, campaign: Campaign): string;
+export function usePanelLabel(id: DockItemId, campaign: Campaign): string | undefined;
+export function usePanelLabel(id: DockItemId, campaign: Campaign) {
+  const played = useY(campaign.members, () =>
+    id === "pc" ? playedCharacterId(campaign) : undefined,
+  );
+  const name = useY(campaign.characters, () => getCharacter(campaign, played)?.name);
+  return name ?? (isPanelId(id) ? PANELS[id].label : undefined);
+}
+
+/** A panel's icon: My Character shows the character's graphic. */
+export function PanelIcon({
+  id,
+  campaign,
+  className,
+}: {
+  id: PanelId;
+  campaign: Campaign;
+  className?: string;
+}) {
+  const played = useY(campaign.members, () =>
+    id === "pc" ? playedCharacterId(campaign) : undefined,
+  );
+  if (played)
+    return (
+      <CampaignEntityGraphic
+        campaign={campaign}
+        kind="character"
+        id={played}
+        size={22}
+        className={className}
+      />
+    );
+  const { Icon } = PANELS[id];
+  return <Icon size={22} {...(className ? { className } : {})} />;
 }
 
 /** Panels that are a list and a detail have a layout switch in their title bar. */

@@ -1,7 +1,7 @@
-import { markdownToRichText } from "../../macros/markdown.macro";
-import { readReference } from "../../macros/reference.macro";
-import type { Ability, Spell } from "./data";
-import { parseCommaList } from "../../lib/list";
+import { markdownToRichText } from "../../src/macros/markdown.macro";
+import { readReference } from "./readReference";
+import type { Ability, Spell } from "../../src/systems/dnd55e/data";
+import { parseCommaList } from "../../src/lib/list";
 
 const ABILITIES: Record<string, Ability> = {
   strength: "str",

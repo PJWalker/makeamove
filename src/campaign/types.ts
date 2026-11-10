@@ -15,6 +15,8 @@ export interface MemberView {
   name: string;
   role: Role;
   activeSceneId: string | null;
+  /** The player character they've claimed. */
+  playing: string | null;
 }
 
 export interface SceneView {

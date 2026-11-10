@@ -1,4 +1,5 @@
-import { srdSpells } from "./srdSpells.macro" with { type: "macro" };
+import data from "./srd/spells.json";
+import type { Spell } from "./data";
 
-/** The SRD's spells, parsed from reference/dnd-5.5e-srd/spells.md at build time. */
-export const SRD_SPELLS = srdSpells();
+/** The SRD's spells, generated from the rulebook by `npm run generate:rules`. */
+export const SRD_SPELLS = data as unknown as Spell[];

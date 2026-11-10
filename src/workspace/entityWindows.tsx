@@ -7,7 +7,7 @@ import {
   baseSystemOf,
   canEdit,
   getCharacter,
-  selectedCharacterId,
+  actingCharacterId,
   setLearned,
   startMove,
   systemOf,
@@ -232,7 +232,7 @@ export function EntityWindowContent({
   const moveOwnerId = moveParts.length > 1 ? moveParts[0] : undefined;
   const moveId = moveParts.length > 1 ? moveParts.slice(1).join(":") : moveParts[0];
   const system = useY(campaign.homebrew, () => systemOf(campaign));
-  const selectedId = useY(campaign.members, () => selectedCharacterId(campaign));
+  const selectedId = useY(campaign.members, () => actingCharacterId(campaign));
   const selectedCharacter = useY(campaign.characters, () => getCharacter(campaign, selectedId));
   const inventoryCharacter = useY(campaign.characters, () =>
     getCharacter(campaign, inventoryCharacterId),

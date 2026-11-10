@@ -1,13 +1,7 @@
 import type { RefObject } from "react";
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import {
-  canEdit,
-  getCharacter,
-  listCharacters,
-  selectCharacter,
-  systemOf,
-} from "../features/characters/api";
+import { canEdit, getCharacter, listCharacters, systemOf } from "../features/characters/api";
 import {
   layoutWeb,
   relationshipNotes,
@@ -25,7 +19,7 @@ import { Button } from "../ui/Button";
 import { IconDelete, IconExpand } from "../ui/icons";
 import { Dialog } from "../workspace/Dialog";
 import { CharacterText } from "../workspace/CharacterText";
-import { showPanel } from "../workspace/panelLayout";
+import { openCharacter } from "../workspace/linkNavigation";
 import { dialogRequest } from "../workspace/canvasState";
 import { characterLinkTargets, matchingLinkTargets } from "../features/notes/targets";
 import { useMenuOverlay } from "../ui/menuOverlay";
@@ -138,7 +132,7 @@ export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: C
                   <button
                     type="button"
                     className="relationship-name"
-                    onClick={() => selectCharacter(campaign, other.id)}
+                    onClick={() => openCharacter(campaign, other.id)}
                   >
                     {other.name}
                   </button>
@@ -363,8 +357,7 @@ export function RelationshipsDialog({
       window.removeEventListener("pointerup", up);
       // A click opens the character's sheet.
       if (!moved) {
-        selectCharacter(campaign, id);
-        showPanel("characters");
+        openCharacter(campaign, id);
       }
     };
     window.addEventListener("pointermove", move);

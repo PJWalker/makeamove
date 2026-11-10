@@ -2,7 +2,7 @@ import type { Campaign } from "../../campaign/campaign";
 import { device } from "../../platform/device";
 
 import { actionsFor, derive, itemActive } from "./store";
-import { getCharacter, selectedCharacterId, systemOf } from "./api";
+import { getCharacter, actingCharacterId, systemOf } from "./api";
 
 /*
  * The hotbar is a list of action ids per player and character, kept in the
@@ -74,14 +74,14 @@ export function moveTo(slots: string[], id: string, index: number): string[] {
 
 /** Edit the selected character's hotbar (or the shared one with no character). */
 export function editHotbar(campaign: Campaign, edit: (slots: string[]) => string[]): boolean {
-  const id = selectedCharacterId(campaign);
+  const id = actingCharacterId(campaign);
   if (!campaign.members.get(device.value.id)) return false;
   setHotbar(campaign, id, edit(hotbarSlots(campaign, id)));
   return true;
 }
 
 export const isPinned = (campaign: Campaign, id: string) =>
-  hotbarSlots(campaign, selectedCharacterId(campaign)).includes(id);
+  hotbarSlots(campaign, actingCharacterId(campaign)).includes(id);
 
 /** Pin an action at a position, or move it there if it is already pinned. */
 export function insertAt(slots: string[], id: string, index: number): string[] {

@@ -14,9 +14,8 @@ import {
   useWindowRect,
   type FloatingWindow,
   type PanelId,
-  PANELS,
 } from "../workspace/panelLayout";
-import { PanelContent, PaneToggle } from "./panels";
+import { PanelContent, PanelIcon, PaneToggle, usePanelLabel } from "./panels";
 import { RESIZE_DIRS } from "../ui/resizeRect";
 import { WindowControls } from "../workspace/WindowControls";
 import { PanelActionsProvider, PanelActionsSlot } from "./PanelActions";
@@ -45,7 +44,7 @@ function Window({
   campaign: Campaign;
 }) {
   const win = useWindowRect(stored);
-  const { label, Icon } = PANELS[win.id];
+  const label = usePanelLabel(win.id, campaign);
   const [rolled, setRolled] = useState(false);
   const pointer = useWindowPointer(win.id);
   const target = useValue(dockTarget);
@@ -89,7 +88,7 @@ function Window({
           style={{ left: asTab.x - TAB / 2, top: asTab.y - TAB / 2 }}
           aria-hidden="true"
         >
-          <Icon size={22} />
+          <PanelIcon id={win.id} campaign={campaign} />
         </div>
       )}
       <section
@@ -112,7 +111,11 @@ function Window({
       >
         <WindowControls
           title={label}
-          Icon={Icon}
+          iconContent={
+            <span className="window-icon" aria-hidden="true">
+              <PanelIcon id={win.id} campaign={campaign} />
+            </span>
+          }
           beforeTitle={<PaneToggle id={win.id} />}
           afterTitle={!rolled && <PanelActionsSlot />}
           rolled={rolled}
@@ -122,7 +125,7 @@ function Window({
           closeLabel="Close (reopen from the campaign menu)"
         />
         {!rolled && (
-          <div className="floating-window-content">
+          <div className="panel-body panel-content">
             <PanelContent id={win.id} campaign={campaign} />
           </div>
         )}

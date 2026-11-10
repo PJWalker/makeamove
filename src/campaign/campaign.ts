@@ -42,7 +42,8 @@ export type { CampaignDefaults, MemberView, RevokedView, Role, SceneView } from 
  *
  *   meta     Y.Map   name, systemId, systemVersion, roomKey, createdAt, createdBy,
  *                    defaultTokenStyle, defaultGridType
- *   members  Y.Map   deviceId -> Y.Map { name, role, joinedAt, activeSceneId }
+ *   members  Y.Map   deviceId -> Y.Map { name, role, joinedAt, activeSceneId,
+ *                    character (sheet open), playing (claimed player character) }
  *   scenes   Y.Map   sceneId  -> Y.Map { name, folder, canvasColour, order, doc }
  *   sceneFolders Y.Map folderId -> { name }
  *   notes    Y.Map   noteId   -> Y.Map { title, folder, order, links, updatedAt, updatedBy, doc }
@@ -285,6 +286,7 @@ export class Campaign {
       name: (m.get("name") as string | undefined) ?? "Unnamed",
       role: (m.get("role") as Role | undefined) ?? "player",
       activeSceneId: (m.get("activeSceneId") as string | undefined) ?? null,
+      playing: (m.get("playing") as string | undefined) ?? null,
     }));
   }
 

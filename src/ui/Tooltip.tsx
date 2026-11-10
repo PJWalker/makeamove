@@ -23,6 +23,8 @@ export function hideTooltip() {
  * native tooltip would double up, so a title is moved into `data-tip` while
  * the element has one. It lives in the top layer, so it sits above dialogs,
  * and is anchored to its element (see Tooltip.css for where it goes).
+ * A tip that matches the element's visible text is skipped, so a button
+ * whose label can be hidden (Button's icon) has its tooltip only then.
  * An element marked `data-tip-opens` keeps its tooltip through a press, for
  * a click that turns the tooltip into a window (hideTooltip ends it).
  */
@@ -80,6 +82,8 @@ export function Tooltip() {
     function show(el: Element, instant = false) {
       const text = el.getAttribute("data-tip");
       if (!text || !el.isConnected) return;
+      // A tip that only repeats the label in view adds nothing; it shows once the label is hidden.
+      if (el instanceof HTMLElement && el.innerText.trim() === text) return;
       const long = el.hasAttribute("data-tip-long");
       const r = el.getBoundingClientRect();
       // Centred on the item and pointing toward the middle of the screen: sideways for

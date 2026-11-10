@@ -5,7 +5,7 @@ import {
   addItem,
   canEdit,
   getCharacter,
-  selectedCharacterId,
+  actingCharacterId,
   startMove,
   systemOf,
 } from "../features/characters/api";
@@ -31,7 +31,7 @@ import type {
 } from "../systems/types";
 import { Button } from "../ui/Button";
 import { PanelActions } from "./PanelActions";
-import { IconAdd, IconBack, IconDelete } from "../ui/icons";
+import { IconAdd, IconBack, IconDelete, IconNewGear, IconNewMove } from "../ui/icons";
 import { List, ListGroup } from "../ui/List";
 import { Segmented } from "../ui/Segmented";
 import { dragEntity, entity } from "../workspace/entityDrag";
@@ -63,7 +63,7 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
     open: !folded.has(id),
     onToggle: () => setFolded(toggleSetValue(folded, id)),
   });
-  const meId = useY(campaign.members, () => selectedCharacterId(campaign));
+  const meId = useY(campaign.members, () => actingCharacterId(campaign));
   const me = useY(campaign.characters, () => getCharacter(campaign, meId));
   const canAct = !!me && canEdit(campaign, me);
   const menuItemsFor = (e: HomebrewEntry & { id: string }) => {
@@ -125,11 +125,11 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
   return (
     <div className="panel-scroll items-panel">
       <PanelActions>
-        <Button onClick={() => setEditing({ kind: "gear", id: null })}>
-          <IconAdd size={22} /> New Gear
+        <Button icon={IconNewGear} onClick={() => setEditing({ kind: "gear", id: null })}>
+          New Gear
         </Button>
-        <Button onClick={() => setEditing({ kind: "move", id: null })}>
-          <IconAdd size={22} /> New Move
+        <Button icon={IconNewMove} onClick={() => setEditing({ kind: "move", id: null })}>
+          New Move
         </Button>
       </PanelActions>
       {!entries.length && <p className="empty">No gear or moves yet.</p>}

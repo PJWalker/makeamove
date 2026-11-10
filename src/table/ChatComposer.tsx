@@ -5,7 +5,7 @@ import { addToRoll, postRoll, runCommand } from "../features/chat/send";
 import type { RollVisibility } from "../features/chat/types";
 import { NotationError } from "../features/dice/notation";
 import { pickName, poolFormula, samePick, signed, type TrayPick } from "../features/dice/pool";
-import { selectedCharacterId, selectedStatBonuses } from "../features/characters/api";
+import { actingCharacterId, actingStatBonuses } from "../features/characters/api";
 import type { Campaign } from "../campaign/campaign";
 import { useY } from "../ui/useY";
 import { Button } from "../ui/Button";
@@ -52,11 +52,11 @@ export function ChatComposer({
   const isGm = useY(campaign.members, () => campaign.isGm());
   const members = useY(campaign.members, () => campaign.memberViews());
   // The selected character's stats, as chips; read again as the character or the choice changes.
-  useY(campaign.members, () => selectedCharacterId(campaign));
+  useY(campaign.members, () => actingCharacterId(campaign));
   const stats = JSON.parse(
     useY(campaign.characters, () =>
       JSON.stringify(
-        selectedStatBonuses(campaign).map(({ stat, value }) => ({ kind: "stat", stat, value })),
+        actingStatBonuses(campaign).map(({ stat, value }) => ({ kind: "stat", stat, value })),
       ),
     ),
   ) as TrayPick[];

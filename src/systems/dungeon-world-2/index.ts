@@ -5,12 +5,10 @@ import { commaListOf } from "../../lib/list";
 import { resolveEffects } from "../effects";
 import type { ActionDef, ChoiceDef, GameSystem, OptionDef } from "../types";
 import { plainText, richTextFromPlain, type RichText } from "../../core/richText";
-import { PATHS } from "./paths";
-import { sourceGmReference, sourceMoves } from "./paths.macro" with { type: "macro" };
+import { CLASS_CREATION_HINTS, GM_REFERENCE, PATHS, SOURCE_MOVES } from "./rulebook";
 import { revealedStruggleData, STRUGGLES } from "./struggles";
 import { INITIAL_TREASURE_BOXES, MAX_TREASURE_BOXES, purchaseAtWealth } from "./wealth";
 import { DW2_RELATIONSHIP_DEPTH } from "./bondStore";
-import { CLASS_CREATION_HINTS } from "./creationHints";
 import { DW2_CLASS_GEAR, DW2_GEAR, DW2_MAGIC_ITEMS } from "./gear";
 import { DW2_CLASS_SCORE_RULES } from "./stats";
 import { CLASS_STARTING_CHOICES } from "./startingOptions";
@@ -104,9 +102,6 @@ const bands = (strong: RichText, weak: RichText, miss: RichText): Record<Band, R
 });
 const marksXp = (outcomes?: Record<Band, RichText>) =>
   /\bmark(?:s)?\s+(?:1\s+)?XP\b/i.test(plainText(outcomes?.miss));
-
-/** Core moves' text and outcomes as the rulebook writes them, read at build time. */
-const SOURCE_MOVES = sourceMoves();
 
 const MOVES: MoveSpec[] = (
   [
@@ -1033,5 +1028,5 @@ export const dungeonWorld2: GameSystem = {
   itemUsable: (item, definition) => !item.resetUsesAtCamp || !!definition?.itemUse,
   attribution:
     "Dungeon World 2 Beta v3 (October 2026). System moves and class options are concise original summaries; consult the supplied beta for full rules and advancement details.",
-  gmReference: sourceGmReference(),
+  gmReference: GM_REFERENCE,
 };

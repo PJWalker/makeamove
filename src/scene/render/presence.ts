@@ -1,12 +1,13 @@
-import { Container, Graphics, Text } from "pixi.js";
+import { Container, Graphics } from "pixi.js";
 import { toScreen } from "../camera";
 import { fromLocal as fromLocalPoint } from "../geometry";
 import type { Point } from "../grid";
 import { formatDistance, measure, tokenDistance } from "../measure";
 import { PING_MS, TRAIL_MS, type PresenceMark } from "../presence";
 import type { Draft } from "./draft";
+import { SdfText } from "./sdfText";
 import type { RenderState } from "./state";
-import { INK } from "./style";
+import { cabin, INK } from "./style";
 
 /** A remote cursor travelling from one reported position to the next. */
 interface CursorMove {
@@ -33,7 +34,7 @@ function cursorAt(m: CursorMove, now: number): Point {
 export class PresenceLayer {
   readonly view = new Graphics();
   readonly labels = new Container();
-  private labelPool = new Map<string, Text>();
+  private labelPool = new Map<string, SdfText>();
   private marks: PresenceMark[] = [];
   private cursors = new Map<string, CursorMove>();
 
@@ -72,21 +73,18 @@ export class PresenceLayer {
   ) {
     let t = this.labelPool.get(key);
     if (!t) {
-      t = new Text({
+      t = new SdfText({
         text,
-        style: {
-          fontFamily: "Cabin, sans-serif",
-          fontSize: 13,
-          fontWeight: "600",
-          fill: colour,
-          stroke: { color: INK, width: 3 },
-        },
+        font: cabin(600),
+        size: 13,
+        fill: colour,
+        outline: { color: INK, width: 3 },
       });
       this.labelPool.set(key, t);
       this.labels.addChild(t);
     }
     if (t.text !== text) t.text = text;
-    if (t.style.fill !== colour) t.style.fill = colour;
+    t.fill = colour;
     t.position.set(x, y);
     t.alpha = alpha;
     used.add(key);

@@ -1,8 +1,9 @@
+import { getEntityGraphic } from "./entityGraphics";
 import {
   addItem,
   canEdit,
   getCharacter,
-  selectedCharacterId,
+  actingCharacterId,
   setLearned,
   systemOf,
 } from "../features/characters/api";
@@ -109,6 +110,8 @@ export function entity(
       out.token = {
         characterId: id,
         name: character.name,
+        graphic: getEntityGraphic(campaign, "character", id),
+        entityRef: { kind: "character", id },
         ...(character.tokenStyle ? { style: character.tokenStyle } : {}),
         ...(character.tokenColour ? { colour: character.tokenColour } : {}),
       };
@@ -177,7 +180,7 @@ export function actionEntity(campaign: Campaign, actionId: string, label: string
   const pin = (index: number) =>
     void editHotbar(campaign, (slots) => insertAt(slots, actionId, index));
   if (prefix === "use" || prefix === "equip") {
-    const character = getCharacter(campaign, selectedCharacterId(campaign));
+    const character = getCharacter(campaign, actingCharacterId(campaign));
     const item = character?.inventory.find((entry) => entry.id === actionId.slice(i + 1));
     if (item) {
       return {

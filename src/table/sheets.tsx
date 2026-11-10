@@ -1,4 +1,8 @@
-import { canEdit } from "../features/characters/api";
+import { canClaim, canEdit, claimCharacter, playerOf } from "../features/characters/api";
+import type { CharacterView } from "../features/characters/types";
+import type { Campaign } from "../campaign/campaign";
+import { useY } from "../ui/useY";
+import { Button } from "../ui/Button";
 import { extensionOf } from "../systems/extensions";
 import type { SheetProps } from "../systems/extensionTypes";
 import { CopyBanner, TemplateSettings } from "./TemplateSettings";
@@ -25,6 +29,7 @@ export function CharacterSheet({ campaign, system, c }: SheetProps) {
       data-move-drop={editable ? c.id : undefined}
     >
       {c.base && <CopyBanner campaign={campaign} c={c} />}
+      <ClaimBanner campaign={campaign} c={c} />
       <Sheet key={c.id} campaign={campaign} system={system} c={c} />
       <section className="form-section sheet-section" aria-label="Character notes">
         <h3 className="sheet-heading">Notes</h3>
@@ -41,6 +46,23 @@ export function CharacterSheet({ campaign, system, c }: SheetProps) {
       </section>
       <RelationshipsSection key={`rel-${c.id}`} campaign={campaign} c={c} />
       {c.kind === "npc" && !c.base && <TemplateSettings campaign={campaign} c={c} />}
+    </div>
+  );
+}
+
+/** Above a player character no one plays yet: a player's way to claim it (the GM's is the list's menu). */
+function ClaimBanner({ campaign, c }: { campaign: Campaign; c: CharacterView }) {
+  const open = useY(
+    campaign.members,
+    () => !campaign.isGm() && playerOf(campaign, c.id) === undefined && canClaim(campaign, c),
+  );
+  if (!open) return null;
+  return (
+    <div className="sheet-banner">
+      <span>No one plays {c.name}.</span>
+      <Button variant="ghost" onClick={() => claimCharacter(campaign, c.id)}>
+        Play This Character
+      </Button>
     </div>
   );
 }

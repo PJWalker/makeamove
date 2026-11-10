@@ -85,6 +85,15 @@ module.exports = {
       to: { path: "^src/(table|lobby)/" },
     },
 
+    {
+      name: "nothing-imports-reference",
+      comment:
+        "reference/ holds the source rulebooks, which are not committed. They are read by scripts/generateRules.ts to produce the JSON the app imports; no module may import from them.",
+      severity: "error",
+      from: {},
+      to: { path: "^reference/" },
+    },
+
     // ── Hygiene ────────────────────────────────────────────────────────────
     {
       name: "no-circular",

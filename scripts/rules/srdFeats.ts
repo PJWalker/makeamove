@@ -1,5 +1,5 @@
-import { readReference } from "../../macros/reference.macro";
-import type { OptionDef } from "../types";
+import { readReference } from "./readReference";
+import type { OptionDef } from "../../src/systems/types";
 
 export type SrdFeat = OptionDef & {
   category: "origin" | "general" | "fighting-style" | "epic";

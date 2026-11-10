@@ -1,6 +1,6 @@
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
-import { selectedCharacterId } from "../features/characters/api";
+import { actingCharacterId } from "../features/characters/api";
 import { editHotbar, hotbarSlots, placeAt, shift, unpin } from "../features/characters/hotbar";
 import { shortcutFor, showCombo, slotLook } from "../workspace/commands/custom";
 import { buildIndex, pinnedRoll } from "../workspace/commands/registry";
@@ -37,7 +37,7 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
   // Rebuilt from the campaign's Yjs data on every change, which changes in place, so
   // React Compiler's memoizing would keep the old slots.
   "use no memo";
-  const charId = useY(campaign.members, () => selectedCharacterId(campaign));
+  const charId = useY(campaign.members, () => actingCharacterId(campaign));
   const [dragging, setDragging] = useState<string | null>(null);
   const barRef = useRef<HTMLDivElement>(null);
   // Rebuilt on any change to characters or members so labels and availability stay current.

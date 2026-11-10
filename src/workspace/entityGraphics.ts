@@ -4,7 +4,7 @@ import { getCharacter, systemOf } from "../features/characters/api";
 import type { Campaign } from "../campaign/campaign";
 
 const DEFAULT_ICON: Record<string, string> = {
-  character: "character",
+  character: "rapier",
   item: "bag",
   move: "move",
   note: "note",

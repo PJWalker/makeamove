@@ -56,15 +56,45 @@ export function getCharacter(
   return m && id ? characterView(id, m, systemOf(campaign), baseOf(campaign, m)) : undefined;
 }
 
-/** The character this device is playing: their choice, else the only one they own. */
-export function selectedCharacterId(campaign: Campaign): string | undefined {
-  const chosen = campaign.members.get(device.value.id)?.get("character") as string | undefined;
-  if (chosen && campaign.characters.has(chosen)) return chosen;
-  const mine = listCharacters(campaign).filter(
-    (c) => c.kind === "pc" && c.owner === device.value.id,
-  );
-  return mine.length === 1 ? mine[0]!.id : undefined;
+/** A member's character id under `key`, if that character still exists. */
+function memberCharacter(campaign: Campaign, memberId: string, key: "character" | "playing") {
+  const id = campaign.members.get(memberId)?.get(key) as string | undefined;
+  return id && campaign.characters.has(id) ? id : undefined;
 }
+
+/** The character whose sheet this device has open in the Characters panel. */
+export const viewedCharacterId = (campaign: Campaign) =>
+  memberCharacter(campaign, device.value.id, "character");
+
+/** The player character a member has claimed; this device's by default. */
+export const playedCharacterId = (campaign: Campaign, memberId = device.value.id) =>
+  memberCharacter(campaign, memberId, "playing");
+
+/** The member playing a character, if anyone has claimed it. */
+export function playerOf(campaign: Campaign, characterId: string): string | undefined {
+  for (const [memberId, m] of campaign.members.entries())
+    if (m.get("playing") === characterId) return memberId;
+  return undefined;
+}
+
+/** Whether this device can claim a character as its player character. */
+export function canClaim(campaign: Campaign, c: CharacterView) {
+  const player = playerOf(campaign, c.id);
+  return (
+    c.kind === "pc" &&
+    !c.base &&
+    !c.template &&
+    campaign.members.get(device.value.id)?.get("role") !== "observer" &&
+    (player === undefined || player === device.value.id)
+  );
+}
+
+/**
+ * Who actions are made as: the claimed player character, else the character
+ * whose sheet is open (how a GM acts as an NPC).
+ */
+export const actingCharacterId = (campaign: Campaign) =>
+  playedCharacterId(campaign) ?? viewedCharacterId(campaign);
 
 export function canEdit(campaign: Campaign, c: CharacterView) {
   return canEditCharacter(c, device.value.id, campaign.isGm());
@@ -75,12 +105,12 @@ export function canEdit(campaign: Campaign, c: CharacterView) {
  * for the dice tray's stat chips. None without a character, or in a system
  * whose stats aren't added to rolls.
  */
-export function selectedStatBonuses(campaign: Campaign): { stat: string; value: number }[] {
+export function actingStatBonuses(campaign: Campaign): { stat: string; value: number }[] {
   const system = systemOf(campaign);
   const c =
     system.statsAddToRolls === false
       ? undefined
-      : getCharacter(campaign, selectedCharacterId(campaign));
+      : getCharacter(campaign, actingCharacterId(campaign));
   if (!c) return [];
   const d = derive(c, system);
   return system.stats.map((stat) => ({ stat: stat.abbr, value: statBonus(d, stat.id) }));

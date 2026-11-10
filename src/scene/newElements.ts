@@ -1,5 +1,6 @@
 import { type Grid, type Point, snapPoint, snapSize } from "./grid";
 import type { BlobRef } from "../core/blob";
+import type { EntityGraphic, EntityGraphicRef } from "../graphics";
 import type { NewElement, SceneElement, TokenStyle } from "./types";
 
 /*
@@ -15,7 +16,29 @@ export interface TokenSpec {
   icon?: string | undefined;
   itemDefId?: string | undefined;
   characterId?: string | undefined;
+  graphic?: EntityGraphic | undefined;
+  entityRef?: EntityGraphicRef | undefined;
 }
+
+/** Muted, mid-tone colours that sit well behind white text and over any map. */
+const TOKEN_PALETTE = [
+  "#c8553d",
+  "#d98324",
+  "#c9a227",
+  "#7a9e3c",
+  "#2f9e77",
+  "#2a9db0",
+  "#3d7dca",
+  "#6c5fc7",
+  "#a455b6",
+  "#c94f84",
+  "#8a6f5a",
+  "#5f7183",
+];
+
+/** A random colour from the palette, for a token that hasn't been given one. */
+export const randomTokenColour = () =>
+  TOKEN_PALETTE[Math.floor(Math.random() * TOKEN_PALETTE.length)]!;
 
 /** A token's side for a grid: a cell, or 70 px without one. */
 const tokenSize = (grid: Grid) => (grid.type === "none" ? 70 : grid.size);
@@ -31,6 +54,8 @@ export function newToken(grid: Grid, at: Point, spec: TokenSpec): NewElement {
     ...(spec.image ? { image: spec.image } : {}),
     ...(spec.icon ? { icon: spec.icon } : {}),
     ...(spec.itemDefId ? { itemDefId: spec.itemDefId } : {}),
+    ...(spec.graphic ? { graphic: spec.graphic } : {}),
+    ...(spec.entityRef ? { entityRef: spec.entityRef } : {}),
     colour: spec.colour,
     style: spec.style,
     ...snapPoint(grid, at),

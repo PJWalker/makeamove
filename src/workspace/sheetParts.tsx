@@ -405,7 +405,8 @@ function TokenSettings({
   onClose: () => void;
 }) {
   const ref = usePopupDialog();
-  const style = graphic.kind === "image" ? (c.tokenStyle ?? "disc") : "disc";
+  const style = c.tokenStyle ?? "disc";
+  const plain = style === "plain" && graphic.kind === "image";
   const me = useValue(device);
   const colour = c.tokenColour ?? colourOf(me);
   return (
@@ -420,22 +421,18 @@ function TokenSettings({
         <Segmented
           label="Token style"
           value={style}
-          options={TOKEN_STYLES.map((s) => ({
-            ...s,
-            disabled: s.id === "plain" && graphic.kind !== "image",
-            title: s.id === "plain" && graphic.kind !== "image" ? "Needs an image" : undefined,
-          }))}
+          options={TOKEN_STYLES}
           onChange={(v) => setField(campaign, c.id, "tokenStyle", v)}
         />
       </div>
-      <label className="field colour-field" data-disabled={style === "plain"}>
+      <label className="field colour-field" data-disabled={plain}>
         Background and border
         <span className="colour-row">
           <input
             type="color"
             className="colour-input"
             value={colour}
-            disabled={style === "plain"}
+            disabled={plain}
             onInput={(e) => setField(campaign, c.id, "tokenColour", e.currentTarget.value)}
           />
           <span className="colour-hex">{colour}</span>

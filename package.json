@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "vite",
     "build": "npm run lint && tsc -b && vite build",
-    "lint": "eslint src vite.config.ts .storybook --max-warnings 0",
+    "lint": "eslint src scripts vite.config.ts .storybook --max-warnings 0",
     "typecheck": "tsc -b",
     "knip": "knip",
     "dup": "jscpd",
@@ -21,10 +21,12 @@
     "test:coverage": "vitest run --coverage",
     "test:browser": "vitest run --config vitest.browser.config.ts",
     "mutate": "stryker run",
+    "generate:rules": "jiti scripts/generateRules.ts",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },
   "dependencies": {
+    "@mapbox/tiny-sdf": "^2.3.0",
     "@tiptap/core": "3.32.0",
     "@tiptap/extension-collaboration": "3.32.0",
     "@tiptap/extension-collaboration-caret": "3.32.0",

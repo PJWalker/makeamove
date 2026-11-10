@@ -28,5 +28,5 @@
     "exactOptionalPropertyTypes": true,
     "noImplicitReturns": true
   },
-  "include": ["src", ".storybook/preview.tsx"]
+  "include": ["src", "scripts", ".storybook/preview.tsx"]
 }

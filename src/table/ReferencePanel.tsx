@@ -2,7 +2,7 @@ import { plainText } from "../core/richText";
 import type { ReferenceSectionDef } from "../systems/types";
 import { useEffect, useRef, useState } from "react";
 import type { Campaign } from "../campaign/campaign";
-import { selectedCharacterId, systemOf } from "../features/characters/api";
+import { actingCharacterId, systemOf } from "../features/characters/api";
 import { List, ListRow } from "../ui/List";
 import { TwoPane, usePaneLevel } from "../ui/TwoPane";
 import { useY } from "../ui/useY";
@@ -43,13 +43,15 @@ export function ReferencePanel({ campaign }: { campaign: Campaign }) {
       resizeLabel="Resize the Reference list"
       list={
         <nav className="panel-scroll reference-list" aria-label="GM Reference">
-          <input
-            type="search"
-            placeholder="Search the Reference…"
-            aria-label="Search the Reference"
-            value={query}
-            onChange={(event) => search(event.currentTarget.value)}
-          />
+          <div className="panel-bar">
+            <input
+              type="search"
+              placeholder="Search the Reference…"
+              aria-label="Search the Reference"
+              value={query}
+              onChange={(event) => search(event.currentTarget.value)}
+            />
+          </div>
           {sections.length ? (
             <List>
               {sections.map((section) => (
@@ -70,25 +72,28 @@ export function ReferencePanel({ campaign }: { campaign: Campaign }) {
         </nav>
       }
       detail={
-        <div className="reference-detail">
+        <>
           {stacked && (
-            <input
-              className="reference-search"
-              type="search"
-              placeholder="Search the Reference…"
-              aria-label="Search the Reference"
-              value={query}
-              onChange={(event) => search(event.currentTarget.value)}
-            />
+            <div className="panel-bar">
+              <input
+                type="search"
+                placeholder="Search the Reference…"
+                aria-label="Search the Reference"
+                value={query}
+                onChange={(event) => search(event.currentTarget.value)}
+              />
+            </div>
           )}
           {selected ? (
             <ReferenceEntry campaign={campaign} section={selected} query={needle} />
           ) : (
-            <p className="empty">
-              {needle ? `Nothing matches “${query.trim()}”.` : "Choose a reference entry."}
-            </p>
+            <div className="panel-scroll">
+              <p className="empty">
+                {needle ? `Nothing matches “${query.trim()}”.` : "Choose a reference entry."}
+              </p>
+            </div>
           )}
-        </div>
+        </>
       }
     />
   );
@@ -104,7 +109,7 @@ function ReferenceEntry({
   query: string;
 }) {
   const entryRef = useRef<HTMLElement>(null);
-  const characterId = useY(campaign.members, () => selectedCharacterId(campaign)) ?? null;
+  const characterId = useY(campaign.members, () => actingCharacterId(campaign)) ?? null;
 
   useEffect(() => {
     if (!query) return;

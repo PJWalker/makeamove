@@ -7,6 +7,7 @@ import type { TemplateSettings } from "./types";
 import { setNpcField } from "./sheet";
 import { createCharacter } from "./store";
 import { systemOf } from "./system";
+import { canClaim, getCharacter, playedCharacterId } from "./queries";
 
 /*
  * Making, copying, choosing and deleting characters.
@@ -44,11 +45,31 @@ export function setTemplate(campaign: Campaign, id: string, settings: TemplateSe
   else m.delete("template");
 }
 
-export function selectCharacter(campaign: Campaign, id: string | undefined) {
+/** Open a character's sheet in the Characters panel, or none with undefined. */
+export function viewCharacter(campaign: Campaign, id: string | undefined) {
   const m = campaign.members.get(device.value.id);
   if (!m) return;
   if (id) m.set("character", id);
   else m.delete("character");
+}
+
+/**
+ * Claim a character as this device's player character, making it theirs to
+ * edit. A member plays one character at a time, and a character has one player.
+ */
+export function claimCharacter(campaign: Campaign, id: string) {
+  const m = campaign.members.get(device.value.id);
+  const c = getCharacter(campaign, id);
+  if (!m || !c || !canClaim(campaign, c)) return;
+  campaign.doc.transact(() => {
+    m.set("playing", id);
+    campaign.characters.get(id)!.set("owner", device.value.id);
+  });
+}
+
+/** Stop playing a character; it stays this device's to edit. */
+export function releaseCharacter(campaign: Campaign) {
+  campaign.members.get(device.value.id)?.delete("playing");
 }
 
 /** A new player character, with the scores and data the guided creation flow worked out, if any. */
@@ -64,7 +85,9 @@ export function newCharacter(
     ...(made ? { scores: made.scores } : {}),
     data: { classId, ...made?.data },
   });
-  selectCharacter(campaign, id);
+  viewCharacter(campaign, id);
+  // A player's first character is the one they play; the GM's are pregenerated.
+  if (!campaign.isGm() && !playedCharacterId(campaign)) claimCharacter(campaign, id);
   return id;
 }
 
@@ -76,7 +99,7 @@ export function newNpc(campaign: Campaign, name: string, folder?: string) {
     kind: "npc",
     ...(folder ? { folder } : {}),
   });
-  selectCharacter(campaign, id);
+  viewCharacter(campaign, id);
   return id;
 }
 
@@ -105,7 +128,10 @@ export function newNpcFromMonster(campaign: Campaign, monsterId: string) {
 /** Delete a character (and a template's copies), and stop anyone playing it from pointing at it. */
 export function deleteCharacter(campaign: Campaign, id: string) {
   campaign.doc.transact(() => {
-    for (const m of campaign.members.values()) if (m.get("character") === id) m.delete("character");
+    for (const m of campaign.members.values()) {
+      if (m.get("character") === id) m.delete("character");
+      if (m.get("playing") === id) m.delete("playing");
+    }
     for (const [copy, m] of [...campaign.characters.entries()])
       if (m.get("base") === id) campaign.characters.delete(copy);
     campaign.characters.delete(id);

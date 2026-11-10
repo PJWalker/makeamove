@@ -41,6 +41,10 @@ const GRID_KEYS: Record<keyof Grid, string> = {
 
 const byOrder = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 
+/** Fields to set on an element; `undefined` removes one. */
+export type ElementPatch = Patch<SceneElement>;
+type Patch<T> = { [K in keyof T]?: T[K] | undefined };
+
 export class SceneDoc {
   readonly doc: Y.Doc;
   readonly elements: Y.Map<Y.Map<unknown>>;
@@ -185,8 +189,8 @@ export class SceneDoc {
     return ids;
   }
 
-  /** Apply several patches as one undo step. */
-  update(patches: Map<string, Partial<SceneElement>> | [string, Partial<SceneElement>][]) {
+  /** Apply several patches as one undo step; an `undefined` value clears that field. */
+  update(patches: Map<string, ElementPatch> | [string, ElementPatch][]) {
     this.transact(() => {
       for (const [id, patch] of patches) {
         const m = this.elements.get(id);

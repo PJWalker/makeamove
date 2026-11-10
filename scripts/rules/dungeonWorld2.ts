@@ -1,39 +1,18 @@
-import type { RichText } from "../../core/richText";
-import { markdownToRichText } from "../../macros/markdown.macro";
-import { readReference } from "../../macros/reference.macro";
-import type { ArtifactDef, ItemDef, ReferenceSectionDef } from "../types";
-import { BOND_SPECS } from "./bondSpecs";
-import { MOVE_SOURCE_NAMES } from "./sourceMoveNames";
-import { STRUGGLE_SPECS } from "./struggleSpecs";
+import type { RichText } from "../../src/core/richText";
+import type { Band, Dw2Path, Dw2PathMove } from "../../src/systems/dungeon-world-2/rulebook";
+import { markdownToRichText } from "../../src/macros/markdown.macro";
+import { readReference } from "./readReference";
+import type { ArtifactDef, ItemDef, ReferenceSectionDef } from "../../src/systems/types";
+import { BOND_SPECS } from "../../src/systems/dungeon-world-2/bondSpecs";
+import { MOVE_SOURCE_NAMES } from "../../src/systems/dungeon-world-2/sourceMoveNames";
+import { STRUGGLE_SPECS } from "../../src/systems/dungeon-world-2/struggleSpecs";
 
 /*
- * The Dungeon World 2 rulebook, read at build time: modules call these with
- * `with { type: "macro" }` and get the parsed rules inlined (see paths.ts).
+ * The Dungeon World 2 rulebook, parsed by scripts/generateRules.ts into
+ * src/systems/dungeon-world-2/rulebook.json (see rulebook.ts).
  */
 
 const source = readReference("Dungeon World 2 Beta v3.md");
-
-type Band = "strong" | "weak" | "miss";
-
-export interface Dw2PathMove {
-  name: string;
-  text: string;
-  /** The text formatted, with buttons for its costs. */
-  rich: RichText;
-  trigger: string;
-  stat?: string;
-  outcomes?: Record<Band, RichText>;
-}
-
-export interface Dw2Path {
-  id: string;
-  classId: string;
-  name: string;
-  /** The line under the Path's heading. */
-  tagline: string;
-  moves: string[];
-  rules: Dw2PathMove[];
-}
 
 /**
  * A rulebook cell as markdown for rich text: its emphasis kept, each result
@@ -417,7 +396,8 @@ const path = (classId: string, name: string, moves: string[]): Dw2Path => ({
   rules: moves.map(ruleFor),
 });
 
-const PATHS: Dw2Path[] = [
+/** The 27 Paths, each with its five moves' rules. */
+export const PATHS: Dw2Path[] = [
   path("barbarian", "Berserker", [
     "Trance-Like Fury",
     "Red Nails",
@@ -608,9 +588,6 @@ const PATHS: Dw2Path[] = [
     "Shed This Mortal Coil",
   ]),
 ];
-
-/** The 27 Paths, each with its five moves' rules. */
-export const dw2Paths = () => PATHS;
 
 /** Each Bond's rules text, by bond id. */
 export const bondTexts = () =>

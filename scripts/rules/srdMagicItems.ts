@@ -1,5 +1,5 @@
-import { readReference } from "../../macros/reference.macro";
-import type { ItemDef } from "../types";
+import { readReference } from "./readReference";
+import type { ItemDef } from "../../src/systems/types";
 
 const slug = (value: string) =>
   value

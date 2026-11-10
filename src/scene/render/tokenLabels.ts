@@ -1,4 +1,4 @@
-import { Container, Graphics, Text } from "pixi.js";
+import { Container, Graphics } from "pixi.js";
 import { toScreen } from "../camera";
 import type { Rect } from "../camera";
 import type { Point } from "../grid";
@@ -10,6 +10,7 @@ import { pinInside, pointerToward, unionRect } from "../edgePin";
 import { hoverSpring } from "../conditionLayout";
 import { resolveTokenLabelLayout, zoomTokenBars } from "../tokenLabelLayout";
 import type { Transform } from "../types";
+import { SdfText } from "./sdfText";
 import type { RenderState } from "./state";
 import {
   drawPointer,
@@ -17,12 +18,13 @@ import {
   POINTER_ROOM,
   reducedMotion,
   screenViewport,
-  TOKEN_NAME_STYLE,
+  TOKEN_NAME,
+  cabin,
 } from "./style";
 
 /** Token names never get smaller or bigger than this on screen, in px. */
 const NAME_MIN = 11;
-const NAME_MAX = TOKEN_NAME_STYLE.fontSize;
+const NAME_MAX = TOKEN_NAME.size;
 /** The size, in px, a token's name grows to at least while one of its bars changes. */
 const NAME_GROWN = 20;
 
@@ -52,8 +54,8 @@ export class TokenLabelLayer {
   readonly barText = new Container();
   /** Token names. */
   readonly names = new Container();
-  private namePool = new Map<string, Text>();
-  private barTextPool = new Map<string, Text>();
+  private namePool = new Map<string, SdfText>();
+  private barTextPool = new Map<string, SdfText>();
   private barHover: { tokenId: string; statId: string } | null = null;
   private barZoom = new Map<
     string,
@@ -66,7 +68,7 @@ export class TokenLabelLayer {
   /** Bars broken apart: where each snapped, and its pieces. */
   private breaks = new Map<string, { at: Rect; shards: BarShard[] }>();
   /** The numbers that rise off bars as they change. */
-  private deltaPool = new Map<string, Text>();
+  private deltaPool = new Map<string, SdfText>();
   /** Whether a bar is still zooming, and needs more frames. */
   animating = false;
   /** What a linked token shows, from its character. */
@@ -99,7 +101,7 @@ export class TokenLabelLayer {
       /** The bars half again as wide as the token, used where they clear every other token's. */
       wideBars: Box | null;
       barH: number;
-      name: (Box & { text: Text }) | null;
+      name: (Box & { text: SdfText }) | null;
       small: boolean;
     }[] = [];
 
@@ -145,17 +147,12 @@ export class TokenLabelLayer {
         wideBars = box(Math.max(BAR_MIN_W, screenW * 1.5));
         y = top + h + 2;
       }
-      let name: (Box & { text: Text }) | null = null;
+      let name: (Box & { text: SdfText }) | null = null;
       const label = el.hideName ? "" : el.name.trim();
       if (label) {
         let text = this.namePool.get(el.id);
         if (!text) {
-          text = new Text({
-            text: "",
-            style: TOKEN_NAME_STYLE,
-            anchor: { x: 0.5, y: 0 },
-            resolution: 2,
-          });
+          text = new SdfText({ ...TOKEN_NAME, anchor: { x: 0.5, y: 0 } });
           this.namePool.set(el.id, text);
           this.names.addChild(text);
         }
@@ -354,16 +351,11 @@ export class TokenLabelLayer {
         if (w < BAR_TEXT_MIN_W) return;
         let text = this.barTextPool.get(key);
         if (!text) {
-          text = new Text({
-            text: "",
-            style: {
-              fontFamily: "Cabin, sans-serif",
-              fontSize: BAR_MAX_H - 2,
-              fontWeight: "700",
-              fill: 0xffffff,
-            },
+          text = new SdfText({
+            font: cabin(700),
+            size: BAR_MAX_H - 2,
+            fill: 0xffffff,
             anchor: 0.5,
-            resolution: 2,
           });
           this.barTextPool.set(key, text);
           this.barText.addChild(text);
@@ -443,7 +435,7 @@ export class TokenLabelLayer {
    * is how far out it is, 0 (at the token) to 1 (at the edge).
    */
   private pinToEdge(
-    plan: { t: Transform; name: { text: Text } | null },
+    plan: { t: Transform; name: { text: SdfText } | null },
     bars: Rect[],
     viewport: Rect,
     fly: number,
@@ -528,24 +520,19 @@ export class TokenLabelLayer {
   ) {
     let text = this.deltaPool.get(key);
     if (!text) {
-      text = new Text({
-        text: "",
-        style: {
-          fontFamily: "Cabin, sans-serif",
-          fontSize: 36,
-          fontWeight: "800",
-          fill: 0xffffff,
-          stroke: { color: INK, width: 5, join: "round" },
-        },
+      text = new SdfText({
+        font: cabin(800),
+        size: 36,
+        fill: 0xffffff,
+        outline: { color: INK, width: 5 },
         anchor: { x: 0.5, y: 1 },
-        resolution: 2,
       });
       this.deltaPool.set(key, text);
       this.barText.addChild(text);
     }
     const label = delta > 0 ? `+${delta}` : `${delta}`.replace("-", "\u2212");
     if (text.text !== label) text.text = label;
-    text.style.fill = delta < 0 ? 0xff7a6b : 0x8cf09a;
+    text.fill = delta < 0 ? 0xff7a6b : 0x8cf09a;
     const size = Math.max(26, Math.min(36, barH * 1.6));
     text.scale.set((size / 36) * frame.pop);
     text.alpha = frame.alpha;

@@ -1,4 +1,4 @@
-import { Container, Graphics, Matrix, Sprite, Text } from "pixi.js";
+import { Container, Graphics, Matrix, Sprite } from "pixi.js";
 import { shapeOutline } from "../geometry";
 import { strokeOutline, hasRealPressure } from "../stroke";
 import {
@@ -8,7 +8,9 @@ import {
   type ShapeKind,
   type Transform,
 } from "../types";
-import { ACCENT, INK } from "./style";
+import { SdfText } from "./sdfText";
+import type { SdfTextOptions } from "./sdfText";
+import { ACCENT, cabin, fraunces, INK } from "./style";
 import { iconGraphicFor, textureFor } from "./textures";
 
 /** An element's drawing: its root in a layer, and how to move it to a transform. */
@@ -65,13 +67,12 @@ export function drawShape(
 }
 
 /** Text on the map: a light outline keeps it readable over any map. */
-export const textStyle = (colour: string, size: number) => ({
-  fontFamily: "Cabin, sans-serif",
-  fontSize: size,
-  fontWeight: "700" as const,
+export const mapText = (colour: string, size: number): SdfTextOptions => ({
+  font: cabin(700),
+  size,
   fill: colour,
-  stroke: { color: INK, width: Math.max(2, size / 8), join: "round" as const },
-  align: "center" as const,
+  outline: { color: INK, width: Math.max(2, size / 8) },
+  align: "center",
 });
 
 /**
@@ -92,23 +93,21 @@ export function buildView(
         .fill({ color: 0xffffff, alpha: 0.06 });
       root.addChild(placeholder);
       let sprite: Sprite | null = null;
-      let missing: Text | null = null;
+      let missing: SdfText | null = null;
       let size = { w: el.w, h: el.h };
       void textureFor(el.image.hash).then((tex) => {
         if (root.destroyed) return;
         if (!tex) {
           // Not on this device; from M2 a peer will send it.
           placeholder.clear().rect(-0.5, -0.5, 1, 1).fill({ color: 0xffffff, alpha: 0.12 });
-          missing = new Text({
+          missing = new SdfText({
             text: "Image not on this device",
-            style: {
-              fontFamily: "Cabin, sans-serif",
-              fontSize: 28,
-              fill: 0xffffff,
-            },
+            font: cabin(400),
+            size: 28,
+            fill: 0xffffff,
             anchor: 0.5,
-            alpha: 0.7,
           });
+          missing.alpha = 0.7;
           missing.scale.set(Math.min(size.w, size.h) / 900);
           root.addChild(missing);
           invalidate();
@@ -158,14 +157,11 @@ export function buildView(
         // A disc: coloured background, the image or an initial, and a ring.
         const ring = new Graphics().circle(0, 0, 48).stroke({ color: el.colour, width: 5 });
         body.addChild(new Graphics().circle(0, 0, 50).fill({ color: el.colour }), ring);
-        const initial = new Text({
+        const initial = new SdfText({
           text: (el.name.trim()[0] ?? "").toUpperCase(),
-          style: {
-            fontFamily: "Fraunces, serif",
-            fontSize: 52,
-            fontWeight: "600",
-            fill: 0xffffff,
-          },
+          font: fraunces(600),
+          size: 52,
+          fill: 0xffffff,
           anchor: 0.5,
         });
         body.addChildAt(initial, 1);
@@ -334,12 +330,7 @@ export function buildView(
     }
 
     case "text": {
-      const text = new Text({
-        text: el.text,
-        style: textStyle(el.colour, el.size),
-        anchor: 0.5,
-        resolution: 2,
-      });
+      const text = new SdfText({ ...mapText(el.colour, el.size), text: el.text, anchor: 0.5 });
       root.addChild(text);
       return {
         root,

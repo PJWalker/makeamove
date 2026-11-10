@@ -3,7 +3,7 @@ import {
   addItem,
   canEdit,
   getCharacter,
-  selectedCharacterId,
+  actingCharacterId,
   startMove,
   systemOf,
 } from "../features/characters/api";
@@ -31,7 +31,7 @@ export interface LinkRef {
 /** The primary action exposed by a linked item or move. */
 export function linkActionItems(campaign: Campaign, link: LinkRef): MenuItem[] {
   if (link.kind !== "item" && link.kind !== "move") return [];
-  const me = getCharacter(campaign, selectedCharacterId(campaign));
+  const me = getCharacter(campaign, actingCharacterId(campaign));
   const canAct = !!me && canEdit(campaign, me);
   const system = systemOf(campaign);
   if (link.kind === "item") {

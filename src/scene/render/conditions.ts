@@ -1,10 +1,11 @@
-import { Container, Graphics, Text } from "pixi.js";
+import { Container, Graphics } from "pixi.js";
 import { type Camera, type Rect, toScreen } from "../camera";
 import { conditionContains, conditionLayout, hoverSpring } from "../conditionLayout";
 import { pointerToward, unionRect } from "../edgePin";
 import type { Point } from "../grid";
 import type { TokenMarks } from "../tokenMarks";
 import type { Transform } from "../types";
+import { SdfText } from "./sdfText";
 import type { RenderState } from "./state";
 import {
   drawPointer,
@@ -12,7 +13,8 @@ import {
   POINTER_ROOM,
   reducedMotion,
   screenViewport,
-  TOKEN_NAME_STYLE,
+  TOKEN_NAME,
+  cabin,
 } from "./style";
 
 const NO_MARKS: TokenMarks = { pips: [], turn: false };
@@ -25,7 +27,7 @@ const ANNOUNCE_MS = 1800;
 const PULSE_MS = 700;
 
 interface ConditionView {
-  text: Text;
+  text: SdfText;
   current: Rect;
   from: Rect;
   target: Rect;
@@ -46,7 +48,7 @@ export class ConditionLayer {
   private hover: { id: string; anchor: number; bounds: Rect } | null = null;
   private views = new Map<string, ConditionView>();
   /** Names of off-screen tokens, over the conditions they've just had applied. */
-  private names = new Map<string, Text>();
+  private names = new Map<string, SdfText>();
   /** Off-screen tokens whose names head their conditions out at the edge: which condition it rides on, and where. */
   private pinnedNames = new Map<string, { view: ConditionView; offset: Point }>();
   /** Tokens drawn last frame: a condition new on one of these was just applied. */
@@ -111,18 +113,12 @@ export class ConditionLayer {
         used.add(key);
         let view = this.views.get(key);
         if (!view) {
-          const text = new Text({
+          const text = new SdfText({
             text: pip.name,
-            style: {
-              fontFamily: "Cabin, sans-serif",
-              fontSize: 12,
-              fontWeight: "700",
-              fill: INK,
-              wordWrap: true,
-              breakWords: true,
-              wordWrapWidth: Math.max(1, viewport.w - 16),
-            },
-            resolution: 2,
+            font: cabin(700),
+            size: 12,
+            fill: INK,
+            wrapWidth: Math.max(1, viewport.w - 16),
           });
           const applied = this.drawnTokens.has(el.id) && !still;
           // Just applied, it grows out of a point; otherwise it's simply there.
@@ -147,7 +143,7 @@ export class ConditionLayer {
           this.texts.addChild(text);
         }
         if (view.text.text !== pip.name) view.text.text = pip.name;
-        view.text.style.wordWrapWidth = Math.max(1, viewport.w - 16);
+        view.text.wrapWidth = Math.max(1, viewport.w - 16);
         view.text.scale.set(1);
         return view;
       });
@@ -381,16 +377,11 @@ export class ConditionLayer {
   }
 
   /** A token's name, to head its conditions shown at the edge; none if it has no name to show. */
-  private nameText(tokenId: string, name: string): Text | null {
+  private nameText(tokenId: string, name: string): SdfText | null {
     if (!name) return null;
     let text = this.names.get(tokenId);
     if (!text) {
-      text = new Text({
-        text: "",
-        style: TOKEN_NAME_STYLE,
-        anchor: { x: 0.5, y: 0 },
-        resolution: 2,
-      });
+      text = new SdfText({ ...TOKEN_NAME, anchor: { x: 0.5, y: 0 } });
       this.names.set(tokenId, text);
       this.texts.addChild(text);
     }

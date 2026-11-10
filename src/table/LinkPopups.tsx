@@ -6,7 +6,7 @@ import {
   addItem,
   canEdit,
   getCharacter,
-  selectedCharacterId,
+  actingCharacterId,
   startMove,
   systemOf,
 } from "../features/characters/api";
@@ -119,7 +119,7 @@ function LinkPopup({ campaign, link }: { campaign: Campaign; link: LinkRef }) {
   const close = () => closeLink(link);
   const entryKey = `link:${linkKey(link)}`;
   // Gear and moves go to the character this device is playing, if they can change it.
-  const me = useY(campaign.characters, () => getCharacter(campaign, selectedCharacterId(campaign)));
+  const me = useY(campaign.characters, () => getCharacter(campaign, actingCharacterId(campaign)));
   const canAct = !!me && canEdit(campaign, me);
   const character = useY(campaign.characters, () =>
     link.kind === "character" ? getCharacter(campaign, link.id) : undefined,

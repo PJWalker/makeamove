@@ -1,11 +1,4 @@
-import {
-  Application,
-  CanvasTextMetrics,
-  Container,
-  CullerPlugin,
-  extensions,
-  TextStyle,
-} from "pixi.js";
+import { Application, Container, CullerPlugin, extensions } from "pixi.js";
 import type { Camera } from "./camera";
 import { type Grid, DEFAULT_GRID, type Point } from "./grid";
 import { onBlobFetcher } from "../media/images";
@@ -15,7 +8,10 @@ import type { TokenMarks } from "./tokenMarks";
 import { LAYERS, type Layer, type SceneElement, type Transform } from "./types";
 import { ConditionLayer } from "./render/conditions";
 import { type Draft, DraftLayer } from "./render/draft";
-import { textStyle } from "./render/elementViews";
+import { mapText } from "./render/elementViews";
+import { loadSdfFonts } from "./render/sdfFont";
+import { measureSdfText } from "./render/sdfText";
+import { CANVAS_FONTS } from "./render/style";
 import { ElementLayer } from "./render/elements";
 import { GridLayer } from "./render/grid";
 import { type Lighting, LightingLayer } from "./render/lighting";
@@ -120,6 +116,7 @@ export class SceneRenderer implements RenderState {
   onCameraChange: ((cam: Camera) => void) | null = null;
 
   async init(host: HTMLElement) {
+    await loadSdfFonts(CANVAS_FONTS);
     await this.app.init({
       width: host.clientWidth,
       height: host.clientHeight,
@@ -269,8 +266,8 @@ export class SceneRenderer implements RenderState {
 
   /** The size text takes when drawn on the map, in world px. */
   measureText(text: string, colour: string, size: number): { w: number; h: number } {
-    const m = CanvasTextMetrics.measureText(text, new TextStyle(textStyle(colour, size)));
-    return { w: Math.ceil(m.width), h: Math.ceil(m.height) };
+    const m = measureSdfText(text, mapText(colour, size));
+    return { w: Math.ceil(m.w), h: Math.ceil(m.h) };
   }
 
   // Elements

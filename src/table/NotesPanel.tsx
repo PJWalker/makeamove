@@ -25,8 +25,10 @@ import { useY } from "../ui/useY";
 import { Button } from "../ui/Button";
 import {
   IconDelete,
+  IconAdd,
   IconFolder,
   IconImage,
+  IconNewFolder,
   IconNotes,
   IconRename,
   IconReveal,
@@ -229,14 +231,15 @@ function NoteList({
     <>
       {doomed && <DeletePage campaign={campaign} note={doomed} onClose={() => setDeleting(null)} />}
       <div className="notes-browser">
-        <input
-          className="notes-search"
-          type="search"
-          aria-label="Search Notes"
-          placeholder="Search Notes…"
-          value={query}
-          onChange={(event) => setQuery(event.currentTarget.value)}
-        />
+        <div className="panel-bar">
+          <input
+            type="search"
+            aria-label="Search Notes"
+            placeholder="Search Notes…"
+            value={query}
+            onChange={(event) => setQuery(event.currentTarget.value)}
+          />
+        </div>
         {query.trim() ? (
           <div className="panel-scroll notes-search-results">
             {searching ? (
@@ -275,17 +278,20 @@ function NoteList({
             renderItem={row}
             renderActions={(beginFolderNaming) => (
               <>
-                <Button onClick={() => newPage()}>New Page</Button>
+                <Button icon={IconAdd} onClick={() => newPage()}>
+                  New Page
+                </Button>
                 {isGm && (
                   <Button
                     variant="ghost"
+                    icon={IconSecret}
                     title="Only you can see it, until you reveal it"
                     onClick={() => newPage(undefined, true)}
                   >
                     New GM Page
                   </Button>
                 )}
-                <Button variant="ghost" onClick={beginFolderNaming}>
+                <Button variant="ghost" icon={IconNewFolder} onClick={beginFolderNaming}>
                   New Folder
                 </Button>
               </>

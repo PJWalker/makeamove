@@ -1,4 +1,5 @@
-import { srdFeats } from "./srdFeats.macro" with { type: "macro" };
+import data from "./srd/feats.json";
+import type { OptionDef } from "../types";
 
-/** The SRD's feats, parsed from reference/dnd-5.5e-srd/feats.md at build time. */
-export const SRD_FEATS = srdFeats();
+/** The SRD's feats, generated from the rulebook by `npm run generate:rules`. */
+export const SRD_FEATS = data as unknown as OptionDef[];

@@ -81,7 +81,7 @@ export function TemplateSettings({ campaign, c }: { campaign: Campaign; c: Chara
 export function CopyBanner({ campaign, c }: { campaign: Campaign; c: CharacterView }) {
   const template = getCharacter(campaign, c.base);
   return (
-    <div className="copy-banner">
+    <div className="sheet-banner">
       <span>
         Derived From <strong>{template?.name ?? "a deleted template"}</strong>.
       </span>

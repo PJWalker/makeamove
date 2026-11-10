@@ -17,8 +17,8 @@ import {
   moveRequest,
   newCharacter,
   newNpc,
-  selectCharacter,
-  selectedCharacterId,
+  viewCharacter,
+  actingCharacterId,
   setConditionState,
   setData,
   targetRequest,
@@ -96,7 +96,7 @@ describe("Dungeon World 2 campaign behavior", () => {
     const campaign = await setUp();
     const id = newCharacter(campaign, "Ayla", "fighter");
     expect(systemOf(campaign).id).toBe("dungeon-world-2");
-    expect(selectedCharacterId(campaign)).toBe(id);
+    expect(actingCharacterId(campaign)).toBe(id);
     expect(getCharacter(campaign, id)).toMatchObject({
       name: "Ayla",
       data: { classId: "fighter", level: 1 },
@@ -538,12 +538,12 @@ describe("Dungeon World 2 campaign behavior", () => {
     expect(await makeMove(campaign, ayla, comfort)).toBeDefined();
     expect(sessionMoveUsed(campaign, ayla, comfort)).toBe(true);
     expect(sessionMoveUsed(campaign, brom, comfort)).toBe(false);
-    selectCharacter(campaign, ayla);
+    viewCharacter(campaign, ayla);
     expect(
       systemActions(campaign).find((action) => action.id === "move:comfort-or-support")?.available,
     ).toBe("Already used this session");
     expect(await makeMove(campaign, ayla, comfort)).toBeUndefined();
-    selectCharacter(campaign, brom);
+    viewCharacter(campaign, brom);
     expect(
       systemActions(campaign).find((action) => action.id === "move:comfort-or-support")?.available,
     ).toBe(true);

@@ -1,21 +1,16 @@
 # Make a Move — TODO
 
-What's left before Make a Move is a complete, publishable virtual tabletop. Drawn from `design.md` (roadmap, improvement opportunities, open questions) and checked against the code on 2026-11-08. Ordered by priority within each section.
+What's left before Make a Move is a complete, publishable virtual tabletop. Checked against the code on 2026-11-09. Ordered by priority within each section.
 
 ## 1. Before a public release (blockers)
 
-
-- [x] **Licensing review of bundled rules text**, per system (DW1, DW2 beta `paths.ts`, D&D 5.5e SRD, Blades SRD). Remove or gate anything not redistributable.
-- [x] **Keep `Dungeon-World-2-Beta-v3.docx` out of the working tree.** Generated `.playwright-mcp/` output is ignored.
 - [ ] **TURN fallback** for strict NATs (the Trystero transport has no ICE server config).
 - [ ] **Clear message for stale or dead invites.** With the epoch dropped from invite links, an old invite opens an empty campaign and waits forever; show a timeout state that explains no peer has the campaign.
-- [x] **Deploy pipeline.** GitHub Pages workflow is ready; publishing remains gated until `PAGES_LICENSES_CLEARED=true` after the licensing review.
 - [ ] **README** with what the app is, how to run it, and how to join a campaign. Only `design.md` exists.
 
 ## 2. Core table features
 
 - [ ] GM-editable visibility and lock flags on notes, tokens, maps and characters (scene elements have `locked`; nothing else does, and nothing has visibility).
-- [ ] Claim a character as your player character: default subject for actions, own sidebar tab with its avatar as the icon.
 - [ ] Reroll entry in the roll card context menu (reroll exists as a card control in `RollCards.tsx`, not in the menu).
 - [ ] GM "pull everyone to this scene" control.
 - [ ] More than one GM: promote a member to GM and share the vault key with them (only the creator can be GM today).

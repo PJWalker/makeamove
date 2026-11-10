@@ -1,7 +1,11 @@
-import { bladesAbilities } from "./content.macro" with { type: "macro" };
+import type { RichText } from "../../core/richText";
+import abilities from "./abilities.json";
 
-/** The SRD's special abilities, parsed from reference/Blades-in-the-Dark-SRD.md at build time. */
-const { pc: PC_ABILITIES, crew } = bladesAbilities();
+/** The SRD's special abilities, generated from the rulebook by `npm run generate:rules`. */
+const { pc: PC_ABILITIES, crew } = abilities as unknown as Record<
+  "pc" | "crew",
+  { id: string; name: string; text: RichText }[]
+>;
 
 export const CREW_ABILITIES = crew;
 

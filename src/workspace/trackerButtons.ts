@@ -1,6 +1,6 @@
 import { InputRule, mergeAttributes, Node, PasteRule } from "@tiptap/core";
 import type { Campaign } from "../campaign/campaign";
-import { selectedCharacterId } from "../features/characters/api";
+import { actingCharacterId } from "../features/characters/api";
 import { pressTracker, trackerBlock } from "../features/characters/trackers";
 import {
   parseTrackerButton,
@@ -113,13 +113,13 @@ export function trackerButtonExtension(campaign: Campaign) {
       // Hovering shows what pressing would do for the selected character, or why it can't.
       dom.addEventListener("pointerover", (e) => {
         const el = buttonAt(e);
-        if (el) el.dataset.tip = trackerTip(campaign, selectedCharacterId(campaign), toButton(el));
+        if (el) el.dataset.tip = trackerTip(campaign, actingCharacterId(campaign), toButton(el));
       });
       dom.addEventListener("click", (e) => {
         const el = buttonAt(e);
         if (!el) return;
         e.preventDefault();
-        const id = selectedCharacterId(campaign);
+        const id = actingCharacterId(campaign);
         if (!id || !pressTracker(campaign, id, toButton(el))) shake(el);
       });
     },

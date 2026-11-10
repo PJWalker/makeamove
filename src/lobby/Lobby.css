@@ -6,8 +6,13 @@
     overflow-y: auto;
     background: var(--canvas-bg);
   }
-  .icon-backdrop {
-    display: none;
+  .fog-backdrop {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .fog-backdrop canvas {
+    display: block;
   }
   .lobby-inner {
     position: relative;

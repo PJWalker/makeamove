@@ -156,7 +156,7 @@ export function Dialog({
         }}
         onClose={close}
       />
-      <div className="dialog-body" inert={rolled}>
+      <div className="panel-body dialog-body" inert={rolled}>
         {children}
       </div>
       {!rolled && <span className="resize-grip" aria-hidden="true" />}

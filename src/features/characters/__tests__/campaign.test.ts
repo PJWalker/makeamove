@@ -14,8 +14,12 @@ import {
   newCharacter,
   newNpc,
   renameFolder,
-  selectCharacter,
-  selectedCharacterId,
+  viewCharacter,
+  actingCharacterId,
+  claimCharacter,
+  playedCharacterId,
+  playerOf,
+  releaseCharacter,
 } from "../api";
 import {
   editHotbar,
@@ -46,9 +50,46 @@ describe("characters in a campaign", () => {
     campaign.members.get("pat")!.set("character", id);
     deleteCharacter(campaign, id);
     expect(getCharacter(campaign, id)).toBeUndefined();
-    expect(selectedCharacterId(campaign)).toBeUndefined();
+    expect(actingCharacterId(campaign)).toBeUndefined();
     device.value = { id: "pat", name: "Pat" };
-    expect(selectedCharacterId(campaign)).toBeUndefined();
+    expect(actingCharacterId(campaign)).toBeUndefined();
+    campaign.destroy();
+  });
+});
+
+describe("player characters", () => {
+  it("claims a character, takes it over, and acts as it over the open sheet", async () => {
+    const campaign = await setUp();
+    // The GM's characters are pregenerated: no one plays them yet.
+    const ayla = newCharacter(campaign, "Ayla", "fighter");
+    const brom = newCharacter(campaign, "Brom", "wizard");
+    expect(playerOf(campaign, ayla)).toBeUndefined();
+    device.value = { id: "pat", name: "Pat" };
+    claimCharacter(campaign, ayla);
+    expect(playedCharacterId(campaign)).toBe(ayla);
+    expect(getCharacter(campaign, ayla)!.owner).toBe("pat");
+    viewCharacter(campaign, brom);
+    expect(actingCharacterId(campaign)).toBe(ayla);
+    // Another player can't claim it from under them.
+    campaign.members.set("sam", new Y.Map());
+    campaign.members.get("sam")!.set("role", "player");
+    device.value = { id: "sam", name: "Sam" };
+    claimCharacter(campaign, ayla);
+    expect(playedCharacterId(campaign)).toBeUndefined();
+    device.value = { id: "pat", name: "Pat" };
+    releaseCharacter(campaign);
+    expect(actingCharacterId(campaign)).toBe(brom);
+    campaign.destroy();
+  });
+
+  it("plays a player's first character, and stops when it's deleted", async () => {
+    const campaign = await setUp();
+    device.value = { id: "pat", name: "Pat" };
+    const ayla = newCharacter(campaign, "Ayla", "fighter");
+    newCharacter(campaign, "Brom", "wizard");
+    expect(playedCharacterId(campaign)).toBe(ayla);
+    deleteCharacter(campaign, ayla);
+    expect(campaign.members.get("pat")!.has("playing")).toBe(false);
     campaign.destroy();
   });
 });
@@ -90,8 +131,8 @@ describe("NPCs and folders", () => {
   it("does not auto-select an NPC as the only character a player owns", async () => {
     const campaign = await setUp();
     newNpc(campaign, "Goblin");
-    selectCharacter(campaign, undefined);
-    expect(selectedCharacterId(campaign)).toBeUndefined();
+    viewCharacter(campaign, undefined);
+    expect(actingCharacterId(campaign)).toBeUndefined();
     campaign.destroy();
   });
 

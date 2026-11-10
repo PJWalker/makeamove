@@ -1,7 +1,7 @@
+import { STRUGGLE_TEXTS } from "./rulebook";
 import { STRUGGLE_SPECS } from "./struggleSpecs";
-import { struggleTexts } from "./paths.macro" with { type: "macro" };
 
-const TEXTS = struggleTexts();
+const TEXTS = STRUGGLE_TEXTS;
 
 export const STRUGGLES = STRUGGLE_SPECS.map((struggle) => ({
   ...struggle,
