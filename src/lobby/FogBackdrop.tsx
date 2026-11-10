@@ -80,16 +80,33 @@ void main() {
 `;
 
 /**
+ * Whether WebGL here runs in software (no GPU, or a blocklisted one), where
+ * animating the full-screen fog would starve the page of time.
+ */
+function softwareWebGL() {
+  const canvas = document.createElement("canvas");
+  const gl = canvas.getContext("webgl2", { failIfMajorPerformanceCaveat: true });
+  if (!gl) return true;
+  // Chromium doesn't count its own SwiftShader as a caveat, so ask by name too.
+  const info = gl.getExtension("WEBGL_debug_renderer_info");
+  const renderer = String(gl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER));
+  gl.getExtension("WEBGL_lose_context")?.loseContext();
+  return SOFTWARE_RENDERERS.test(renderer);
+}
+
+const SOFTWARE_RENDERERS = /swiftshader|llvmpipe|softpipe|software|basic render/i;
+
+/**
  * The lobby's backdrop: swirling fog, threaded with faint magical
- * traces along which sparks run. A still frame
- * under reduced motion.
+ * traces along which sparks run. A still frame under reduced motion,
+ * or where WebGL runs in software.
  */
 export function FogBackdrop() {
   const host = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const el = host.current!;
-    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches || softwareWebGL();
     const app = new Application();
     let destroyed = false;
 
@@ -141,7 +158,7 @@ export function FogBackdrop() {
         fit();
         app.renderer.on("resize", fit);
 
-        if (reduced) {
+        if (still) {
           uniforms.uTime = 20;
           group.update();
           app.render();
