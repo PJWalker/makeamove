@@ -86,9 +86,15 @@ void main() {
 function softwareWebGL() {
   const canvas = document.createElement("canvas");
   const gl = canvas.getContext("webgl2", { failIfMajorPerformanceCaveat: true });
-  gl?.getExtension("WEBGL_lose_context")?.loseContext();
-  return !gl;
+  if (!gl) return true;
+  // Chromium doesn't count its own SwiftShader as a caveat, so ask by name too.
+  const info = gl.getExtension("WEBGL_debug_renderer_info");
+  const renderer = String(gl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER));
+  gl.getExtension("WEBGL_lose_context")?.loseContext();
+  return SOFTWARE_RENDERERS.test(renderer);
 }
+
+const SOFTWARE_RENDERERS = /swiftshader|llvmpipe|softpipe|software|basic render/i;
 
 /**
  * The lobby's backdrop: swirling fog, threaded with faint magical
