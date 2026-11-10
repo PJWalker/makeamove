@@ -80,16 +80,27 @@ void main() {
 `;
 
 /**
+ * Whether WebGL here runs in software (no GPU, or a blocklisted one), where
+ * animating the full-screen fog would starve the page of time.
+ */
+function softwareWebGL() {
+  const canvas = document.createElement("canvas");
+  const gl = canvas.getContext("webgl2", { failIfMajorPerformanceCaveat: true });
+  gl?.getExtension("WEBGL_lose_context")?.loseContext();
+  return !gl;
+}
+
+/**
  * The lobby's backdrop: swirling fog, threaded with faint magical
- * traces along which sparks run. A still frame
- * under reduced motion.
+ * traces along which sparks run. A still frame under reduced motion,
+ * or where WebGL runs in software.
  */
 export function FogBackdrop() {
   const host = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const el = host.current!;
-    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches || softwareWebGL();
     const app = new Application();
     let destroyed = false;
 
@@ -141,7 +152,7 @@ export function FogBackdrop() {
         fit();
         app.renderer.on("resize", fit);
 
-        if (reduced) {
+        if (still) {
           uniforms.uTime = 20;
           group.update();
           app.render();
