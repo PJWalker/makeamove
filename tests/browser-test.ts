@@ -531,7 +531,11 @@ interface BrowserLocatorAssertion {
   toHaveAccessibleName(name: string | RegExp): Promise<unknown>;
 }
 
-type BrowserTest = (name: string, callback: (fixtures: { page: Page }) => unknown) => void;
+type BrowserTest = (
+  name: string,
+  callback: (fixtures: { page: Page }) => unknown,
+  timeout?: number,
+) => void;
 
 /**
  * Each test file shares one page, so per-device state that the app loaded from
@@ -558,11 +562,19 @@ function resetDeviceState() {
   recentActions.value = [];
 }
 
-export const test = ((name: string, callback: (fixtures: { page: Page }) => unknown) =>
-  vitestTest(name, async () => {
-    await browserPage.viewport(1280, 800);
-    await testPage.emulateMedia({});
-    resetDeviceState();
-    await mountApp();
-    await callback({ page: testPage });
-  })) as BrowserTest;
+export const test = ((
+  name: string,
+  callback: (fixtures: { page: Page }) => unknown,
+  timeout?: number,
+) =>
+  vitestTest(
+    name,
+    async () => {
+      await browserPage.viewport(1280, 800);
+      await testPage.emulateMedia({});
+      resetDeviceState();
+      await mountApp();
+      await callback({ page: testPage });
+    },
+    timeout,
+  )) as BrowserTest;

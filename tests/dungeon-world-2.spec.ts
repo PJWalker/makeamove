@@ -9,6 +9,7 @@ import {
   settled,
 } from "./e2e-helpers";
 
+// Two characters made in full, then two rounds of Depth: longer than most.
 test("DW2 PCs forge and advance one shared Bond at mutual Depth three", async ({ page }) => {
   await createCampaign(page, "Bond progression", "dungeon-world-2");
   for (const name of ["Ayla", "Brom"]) {
@@ -44,7 +45,7 @@ test("DW2 PCs forge and advance one shared Bond at mutual Depth three", async ({
   await page.getByRole("button", { name: "Reinforce Bond" }).click();
   await page.getByText("Bond rules", { exact: true }).click();
   await expect(page.getByText("Return the Favor: Unlocked")).toBeVisible();
-});
+}, 30_000);
 
 test("DW2 character creation establishes a first Relationship", async ({ page }) => {
   await createCampaign(page, "First relationship", "dungeon-world-2");
