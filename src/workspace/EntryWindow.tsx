@@ -8,13 +8,14 @@ import { raisePopup } from "../ui/popup";
 import type { Icon } from "../ui/icons";
 import { hideTooltip } from "../ui/Tooltip";
 import { ListRow } from "../ui/List";
-import type { WindowProxy } from "./Dialog";
+import type { WindowProxy } from "./entityWindowState";
 import { menuTrigger } from "../ui/menuTrigger";
 import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
-import { entityTabId, registerEntityWindow, closeEntityWindow, openEntries } from "./entityWindows";
-import { layout, locate, showPanel } from "./panelLayout";
+import { entityTabId } from "./entityWindowState";
+import { locate } from "./layoutModel";
 import type { DockItemId } from "./panelLayout";
-import { useValue } from "../ui/useValue";
+import { useQuery } from "../ui/useQuery";
+import { useCampaign } from "./campaignContext";
 
 /*
  * Rows that show their rules in a tooltip beside them and, when clicked,
@@ -35,13 +36,14 @@ export function rollTag(system: GameSystem, m: ActionDef) {
 
 /** Which entries have windows open, and how to open one from its row. */
 export function useEntryWindows() {
+  const ctx = useCampaign();
   return {
-    keys: useValue(openEntries),
+    keys: useQuery(ctx.windows.openEntries),
     /** Open the window for `key`, morphing it out of the row's tooltip (or the row). */
     show(key: string, row: Element) {
       const id = entityTabId(`entry:${key}`);
-      if (locate(layout.value, id) !== "closed") {
-        showPanel(id);
+      if (locate(ctx.panels.layout.value, id) !== "closed") {
+        ctx.panels.showPanel(id);
         return;
       }
       const already = document.querySelector<HTMLElement>(
@@ -51,11 +53,11 @@ export function useEntryWindows() {
       const tip = document.querySelector(".tooltip:popover-open");
       morphOpen(tip ?? row, () => {
         hideTooltip();
-        openEntries.value = [...new Set([...openEntries.value, key])];
+        ctx.windows.openEntries.set([...new Set([...ctx.windows.openEntries.value, key])]);
       });
     },
     close(key: string) {
-      closeEntityWindow(entityTabId(`entry:${key}`));
+      ctx.windows.close(entityTabId(`entry:${key}`));
     },
   };
 }
@@ -93,9 +95,10 @@ export function EntryWindow({
   /** The actions along the bottom. */
   children?: ReactNode | undefined;
 }) {
+  const ctx = useCampaign();
   const id = windowId ?? entityTabId(`entry:${entryKey}`);
   useLayoutEffect(() => {
-    registerEntityWindow({
+    ctx.windows.register({
       id,
       title,
       text,
@@ -113,6 +116,7 @@ export function EntryWindow({
       ),
     });
   }, [
+    ctx,
     id,
     title,
     text,

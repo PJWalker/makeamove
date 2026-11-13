@@ -1,10 +1,10 @@
-import * as Y from "yjs";
+import type { Characters } from "../../campaign/schema";
 
 /*
- * Relationships between characters: each character keeps a `relationships`
- * map of other character id -> how they see them ("Owes a debt to"), with
- * notes in a rich-text field of its own (`text:rel:<id>`). They're one-way,
- * as people see each other: Ayla can trust Brom while Brom resents Ayla.
+ * Relationships between characters: each character keeps `relationships`,
+ * other character id -> how they see them ("Owes a debt to"), with notes in
+ * a rich-text field of its own (`rel:<id>`). They're one-way, as people see
+ * each other: Ayla can trust Brom while Brom resents Ayla.
  */
 
 export interface Relationship {
@@ -24,68 +24,42 @@ export interface RelationshipEdge extends Relationship {
 /** The notes field for one relationship. */
 export const relationshipNotes = (to: string) => `rel:${to}`;
 
-function mapOf(
-  characters: Y.Map<Y.Map<unknown>>,
-  id: string,
-  create: boolean,
-): Y.Map<{ label: string; depth?: number }> | undefined {
-  const m = characters.get(id);
-  if (!m) return undefined;
-  let rel = m.get("relationships") as Y.Map<{ label: string; depth?: number }> | undefined;
-  if (!(rel instanceof Y.Map) && create) {
-    rel = new Y.Map();
-    m.set("relationships", rel);
-  }
-  return rel instanceof Y.Map ? rel : undefined;
+export function relationshipsOf(characters: Characters, id: string): Relationship[] {
+  return (characters.get(id)?.get("relationships")?.entries() ?? [])
+    .filter(([to]) => characters.has(to))
+    .map(([to, r]) => ({ to, label: r.label, depth: r.depth ?? 0 }));
 }
 
-export function relationshipsOf(characters: Y.Map<Y.Map<unknown>>, id: string): Relationship[] {
-  const rel = mapOf(characters, id, false);
-  return rel
-    ? [...rel.entries()]
-        .filter(([to]) => characters.has(to))
-        .map(([to, r]) => ({ to, label: r.label, depth: r.depth ?? 0 }))
-    : [];
-}
-
-export function setRelationship(
-  characters: Y.Map<Y.Map<unknown>>,
-  from: string,
-  to: string,
-  label: string,
-) {
+export function setRelationship(characters: Characters, from: string, to: string, label: string) {
   if (from === to) return;
-  const rel = mapOf(characters, from, true);
+  const rel = characters.get(from)?.ensure("relationships");
   rel?.set(to, { label, depth: rel.get(to)?.depth ?? 0 });
 }
 
 /** Set a relationship's depth, from 0 to the system's maximum. */
 export function setRelationshipDepth(
-  characters: Y.Map<Y.Map<unknown>>,
+  characters: Characters,
   from: string,
   to: string,
   depth: number,
   max: number,
 ) {
-  const rel = mapOf(characters, from, false);
+  const rel = characters.get(from)?.get("relationships");
   const current = rel?.get(to);
   if (!current) return;
   rel?.set(to, { ...current, depth: Math.max(0, Math.min(max, Math.trunc(depth))) });
 }
 
-export function removeRelationship(characters: Y.Map<Y.Map<unknown>>, from: string, to: string) {
+export function removeRelationship(characters: Characters, from: string, to: string) {
   const m = characters.get(from);
-  characters.doc!.transact(() => {
-    mapOf(characters, from, false)?.delete(to);
-    m?.delete(`text:${relationshipNotes(to)}`);
+  characters.transact(() => {
+    m?.get("relationships")?.delete(to);
+    m?.get("texts")?.delete(relationshipNotes(to));
   });
 }
 
 /** Every relationship between characters in `ids`, for the graph. */
-export function relationshipWeb(
-  characters: Y.Map<Y.Map<unknown>>,
-  ids: string[],
-): RelationshipEdge[] {
+export function relationshipWeb(characters: Characters, ids: string[]): RelationshipEdge[] {
   const known = new Set(ids);
   return ids.flatMap((from) =>
     relationshipsOf(characters, from)

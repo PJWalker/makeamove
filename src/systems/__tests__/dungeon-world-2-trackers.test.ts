@@ -1,11 +1,11 @@
 import "fake-indexeddb/auto";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { Campaign, createCampaign } from "../../campaign/campaign";
 import { device } from "../../platform/device";
 import { dungeonWorld2 } from "../dungeon-world-2";
 import { getCharacter, newCharacter, setData } from "../../features/characters/api";
 import { findTracker, pressTracker, trackerBlock } from "../../features/characters/trackers";
-import { parseTrackerButton, plainText, trackerToken } from "../../core/richText";
+import { parseTrackerButton, plainText, trackerToken } from "../../data/richText";
 import { md } from "../../macros/markdown.macro" with { type: "macro" };
 
 describe("inline resource buttons", () => {

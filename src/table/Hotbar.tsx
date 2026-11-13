@@ -1,31 +1,24 @@
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { actingCharacterId } from "../features/characters/api";
-import { editHotbar, hotbarSlots, placeAt, shift, unpin } from "../features/characters/hotbar";
+import { hotbarSlots, placeAt, shift, unpin } from "../features/characters/hotbar";
 import { shortcutFor, showCombo, slotLook } from "../workspace/commands/custom";
-import { buildIndex, pinnedRoll } from "../workspace/commands/registry";
-import { noteRecent } from "../workspace/commands/recent";
+import { setSlots } from "../workspace/commands/campaign";
+import { findAction } from "../workspace/commands/views";
 import type { Campaign } from "../campaign/campaign";
 import { notePressed } from "../ui/pressed";
-import { useY } from "../ui/useY";
+import { useQuery } from "../ui/useQuery";
 import { Button } from "../ui/Button";
 import { ENTRY_ICONS } from "../ui/entryIcons";
 import { IconDelete, IconImage, IconRename, IconSearch, IconShortcut } from "../ui/icons";
 import { menuTrigger } from "../ui/menuTrigger";
-import { editAction } from "../workspace/ActionDialogs";
 import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
-import {
-  actionEntity,
-  dropMarker,
-  dropOn,
-  dropTargetAt,
-  setDropCursor,
-} from "../workspace/entityDrag";
-import { paletteOpen } from "./Palette";
+import { dropMarker, dropOn, dropTargetAt, setDropCursor } from "../workspace/entityDrag";
+import { actionEntity } from "../workspace/dragEntities";
 import { isTyping } from "../ui/keys";
 import { startReorder } from "../ui/reorder";
 import { scrollSideways } from "../ui/wheel";
-import { useValue } from "../ui/useValue";
+import { useCampaign } from "../workspace/campaignContext";
 
 /**
  * Pinned actions for the selected character, docked at the bottom centre.
@@ -37,7 +30,8 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
   // Rebuilt from the campaign's Yjs data on every change, which changes in place, so
   // React Compiler's memoizing would keep the old slots.
   "use no memo";
-  const charId = useY(campaign.members, () => actingCharacterId(campaign));
+  const ctx = useCampaign();
+  const charId = useQuery(campaign.members, () => actingCharacterId(campaign));
   const [dragging, setDragging] = useState<string | null>(null);
   const barRef = useRef<HTMLDivElement>(null);
   // Rebuilt on any change to characters or members so labels and availability stay current.
@@ -45,23 +39,22 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
   const bumpTick = useEffectEvent(() => setTick((n) => n + 1));
   useEffect(() => {
     const bump = () => bumpTick();
-    campaign.characters.observeDeep(bump);
-    campaign.members.observeDeep(bump);
+    const stopCharacters = campaign.characters.observe(bump);
+    const stopMembers = campaign.members.observe(bump);
     return () => {
-      campaign.characters.unobserveDeep(bump);
-      campaign.members.unobserveDeep(bump);
+      stopCharacters();
+      stopMembers();
     };
   }, [campaign]);
   // Session-limited moves change with the chat.
-  useValue(campaign.chat.messages);
+  useQuery(campaign.chat.messages);
 
   const slots = hotbarSlots(campaign, charId);
-  const index = new Map(buildIndex(campaign).map((a) => [a.id, a]));
-  const find = (id: string) => index.get(id) ?? pinnedRoll(campaign, id);
+  const find = (id: string) => findAction(ctx, id);
   const run = (id: string) => {
     const a = find(id);
     if (a?.available !== true) return;
-    noteRecent(a.id);
+    ctx.recent.note(a.id);
     a.run();
   };
 
@@ -82,7 +75,7 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
     return () => window.removeEventListener("keydown", onKey);
   });
 
-  const edit = (fn: (s: string[]) => string[]) => editHotbar(campaign, fn);
+  const edit = (fn: (s: string[]) => string[]) => ctx.execute(setSlots, { slots: fn(slots) });
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const slotMenu = (id: string, title: string) =>
     menuTrigger((x, y) => {
@@ -114,17 +107,17 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
           {
             label: "Rename…",
             Icon: IconRename,
-            onSelect: () => editAction("rename", id, title),
+            onSelect: () => ctx.table.editAction("rename", id, title),
           },
           {
             label: "Change Icon…",
             Icon: IconImage,
-            onSelect: () => editAction("icon", id, title),
+            onSelect: () => ctx.table.editAction("icon", id, title),
           },
           {
             label: shortcutFor(campaign, id) ? "Change Shortcut…" : "Add Shortcut…",
             Icon: IconShortcut,
-            onSelect: () => editAction("shortcut", id, title),
+            onSelect: () => ctx.table.editAction("shortcut", id, title),
           },
           "divider",
           {
@@ -141,8 +134,8 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
   };
   const dragSlot = (id: string, e: ReactPointerEvent) => {
     // Off the bar, a slot can land on a character or in a note, like a palette result; anywhere else unpins it.
-    const what = actionEntity(campaign, id, find(id)?.title ?? id);
-    const mark = dropMarker();
+    const what = actionEntity(ctx, id, find(id)?.title ?? id);
+    const mark = dropMarker(ctx.canvas);
     startReorder({
       event: e,
       axis: "x",
@@ -150,7 +143,7 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
       items: () => [...barRef.current!.querySelectorAll<HTMLElement>(".hotbar-slot")],
       onLift: () => setDragging(id),
       onMove: (ev, inside) => {
-        const target = inside ? null : dropTargetAt(ev.clientX, ev.clientY, what);
+        const target = inside ? null : dropTargetAt(ctx.canvas, ev.clientX, ev.clientY, what);
         mark(target);
         setDropCursor(inside ? null : !!target);
       },
@@ -163,8 +156,8 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
       outside: {
         when: "release",
         run: (ev) => {
-          const target = dropTargetAt(ev.clientX, ev.clientY, what);
-          if (target) dropOn(target, what, ev.clientX, ev.clientY);
+          const target = dropTargetAt(ctx.canvas, ev.clientX, ev.clientY, what);
+          if (target) dropOn(ctx.canvas, target, what, ev.clientX, ev.clientY);
           else edit((s) => unpin(s, id));
         },
       },
@@ -203,18 +196,14 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
               }}
               onContextMenu={trigger.onContextMenu}
             >
-              <div
-                role="button"
-                tabIndex={0}
+              <button
+                type="button"
                 className="btn btn-ghost"
                 aria-disabled={off}
                 title={combo ? `${tip} (${showCombo(combo)})` : tip}
                 onClick={() => run(id)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    run(id);
-                  } else if (e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+                  if (e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
                     e.preventDefault();
                     edit((s) => shift(s, id, e.key === "ArrowLeft" ? -1 : 1));
                   } else if (e.key === "Delete" || e.key === "Backspace") {
@@ -225,7 +214,7 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
               >
                 {Icon && <Icon size={22} />}
                 <span>{label}</span>
-              </div>
+              </button>
             </div>
           );
         })}
@@ -233,7 +222,7 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
           variant="icon"
           className="hotbar-palette"
           label="Command palette (Ctrl/Cmd+K)"
-          onClick={() => (paletteOpen.value = !paletteOpen.value)}
+          onClick={() => ctx.table.togglePalette()}
         >
           <IconSearch size={22} />
         </Button>

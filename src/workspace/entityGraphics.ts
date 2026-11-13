@@ -1,7 +1,9 @@
-import type { EntityGraphic } from "../graphics";
-import { entityGraphicKey } from "../graphics";
+import type { EntityGraphic } from "../media/images";
 import { getCharacter, systemOf } from "../features/characters/api";
 import type { Campaign } from "../campaign/campaign";
+
+/** Where an entity's graphic is kept in the campaign's `entityGraphics`. */
+export const entityGraphicKey = (kind: string, id: string) => `${kind}:${id}`;
 
 const DEFAULT_ICON: Record<string, string> = {
   character: "rapier",

@@ -1,5 +1,5 @@
 import { md } from "../../macros/markdown.macro" with { type: "macro" };
-import { plainText, richTextFromPlain, type RichText } from "../../core/richText";
+import { plainText, richTextFromPlain, type RichText } from "../../data/richText";
 import type { CharacterView } from "../../features/characters/types";
 import { commaListOf, formatCommaList } from "../../lib/list";
 
@@ -128,10 +128,11 @@ function spellList(character: CharacterView) {
   const cls = classOf(character);
   const level = levelOf(character);
   const lists = cls.id === "bard" && level >= 10 ? ["bard", "cleric", "druid", "wizard"] : [cls.id];
+  const listIds = new Set(lists);
   return character.kind === "pc" && cls.casting
     ? SPELLS_ALL.filter(
         (spell) =>
-          spell.classes.some((id) => lists.includes(id)) && spell.level <= highestSlot(cls, level),
+          spell.classes.some((id) => listIds.has(id)) && spell.level <= highestSlot(cls, level),
       )
     : [];
 }
@@ -227,7 +228,7 @@ const check = (
   outcomes = CHECK_OUTCOMES,
 ): CheckStep => ({ kind: "check", outcomes, ...step });
 
-const abilityName = (a: Ability) => ABILITIES.find((x) => x.id === a)!.name;
+const abilityName = (a: Ability) => ABILITIES.find((x) => x.id === a)?.name ?? a;
 
 const ABILITY_CHECKS: ActionDef[] = ABILITIES.map((a) => ({
   id: `check-${a.id}`,
@@ -751,15 +752,15 @@ export const dnd55e: GameSystem = {
       activeField: "preparedSpells",
       max: "preparedMax",
       options: spellOptions,
-      available: (character) =>
-        spellList(character)
+      available: (character) => {
+        const spellbook = new Set(selectedIds(character, "spellbook"));
+        return spellList(character)
           .filter(
             (spell) =>
-              spell.level > 0 &&
-              (classOf(character).id !== "wizard" ||
-                selectedIds(character, "spellbook").includes(spell.id)),
+              spell.level > 0 && (classOf(character).id !== "wizard" || spellbook.has(spell.id)),
           )
-          .map((spell) => spell.id),
+          .map((spell) => spell.id);
+      },
     },
   ],
   learnedActionAllowed: (action, character, derived) =>
@@ -1068,18 +1069,18 @@ export const dnd55e: GameSystem = {
           (f.classes[cls.id] ?? 99) <= level && (!f.subclassId || f.subclassId === c.data.subclass),
       ).map((f) => f.id),
     );
+    const prepared = new Set(selectedIds(c, "preparedSpells", d.values.preparedMax));
+    const cantrips = new Set(selectedIds(c, "knownCantrips", d.values.cantripsMax));
     const spells = new Set(
       spellList(c)
-        .filter((spell) =>
-          spell.level
-            ? selectedIds(c, "preparedSpells", d.values.preparedMax).includes(spell.id)
-            : selectedIds(c, "knownCantrips", d.values.cantripsMax).includes(spell.id),
-        )
+        .filter((spell) => (spell.level ? prepared.has(spell.id) : cantrips.has(spell.id)))
         .map((spell) => spell.id),
     );
-    if (cls.id === "wizard")
+    if (cls.id === "wizard") {
+      const spellbook = new Set(selectedIds(c, "spellbook"));
       for (const spell of spellList(c))
-        if (spell.ritual && selectedIds(c, "spellbook").includes(spell.id)) spells.add(spell.id);
+        if (spell.ritual && spellbook.has(spell.id)) spells.add(spell.id);
+    }
     // Favored Enemy: Rangers always have Hunter's Mark.
     if (cls.id === "ranger") spells.add("hunters-mark");
     if (c.data.subclass && level >= SUBCLASS_LEVEL) features.add(`subclass-${c.data.subclass}`);

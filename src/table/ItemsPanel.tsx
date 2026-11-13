@@ -1,26 +1,21 @@
 import { useState } from "react";
-import { emptyRichText, plainText, type RichText } from "../core/richText";
+import { emptyRichText, plainText, type RichText } from "../data/richText";
 import { RichTextField } from "../workspace/RichTextField";
-import {
-  addItem,
-  canEdit,
-  getCharacter,
-  actingCharacterId,
-  startMove,
-  systemOf,
-} from "../features/characters/api";
+import { canEdit, getCharacter, actingCharacterId, systemOf } from "../features/characters/api";
 import { parseCommaList } from "../lib/list";
 import { toggleSetValue } from "../lib/set";
+import { listHomebrew, type HomebrewEntry } from "../features/homebrew/homebrew";
 import {
-  deleteHomebrew,
-  listHomebrew,
-  saveGear,
-  saveMove,
-  type HomebrewEntry,
-} from "../features/homebrew/homebrew";
+  deleteHomebrewEntry,
+  saveHomebrewGear,
+  saveHomebrewMove,
+} from "../workspace/commands/campaign";
 import type { Campaign } from "../campaign/campaign";
-import type { EntityGraphic } from "../graphics";
-import { useY } from "../ui/useY";
+import type { EntityGraphic } from "../media/images";
+import { useQuery } from "../ui/useQuery";
+import { closePopup } from "../ui/popup";
+import { Dialog } from "../workspace/Dialog";
+import { usePopupDialog } from "../workspace/usePopupDialog";
 import type {
   ActionDef,
   CheckStep,
@@ -31,30 +26,30 @@ import type {
 } from "../systems/types";
 import { Button } from "../ui/Button";
 import { PanelActions } from "./PanelActions";
-import { IconAdd, IconBack, IconDelete, IconNewGear, IconNewMove } from "../ui/icons";
+import { IconAdd, IconDelete, IconNewGear, IconNewMove } from "../ui/icons";
 import { List, ListGroup } from "../ui/List";
 import { Segmented } from "../ui/Segmented";
-import { dragEntity, entity } from "../workspace/entityDrag";
+import { dragEntity } from "../workspace/entityDrag";
+import { entity } from "../workspace/dragEntities";
 import { EntryRow, rollTag } from "../workspace/EntryWindow";
 import { actionMenuItems } from "../workspace/actionMenu";
 import { CampaignEntityGraphic } from "../workspace/EntityGraphic";
 import { GraphicPicker } from "../ui/GraphicPicker";
-import {
-  getDefaultEntityGraphic,
-  getEntityGraphic,
-  setEntityGraphic,
-} from "../workspace/entityGraphics";
+import { getDefaultEntityGraphic, getEntityGraphic } from "../workspace/entityGraphics";
+import { useCampaign } from "../workspace/campaignContext";
+import { giveItem, startMove } from "../workspace/commands/characters";
 
 /*
- * Items: the table's own gear and moves (homebrew/homebrew.ts), with forms
- * to make and change them. They're used like the system's: dragged onto a
+ * Items: the table's own gear and moves (homebrew/homebrew.ts), with
+ * dialogs to make and change them. They're used like the system's: dragged onto a
  * character, given from here, or made from a character's sheet once learned.
  */
 
 type Editing = { kind: "gear" | "move"; id: string | null } | null;
 
 export function ItemsPanel({ campaign }: { campaign: Campaign }) {
-  const json = useY(campaign.homebrew, () => JSON.stringify(listHomebrew(campaign.homebrew)));
+  const ctx = useCampaign();
+  const json = useQuery(campaign.homebrew, () => JSON.stringify(listHomebrew(campaign.homebrew)));
   const entries = JSON.parse(json) as (HomebrewEntry & { id: string })[];
   const system = systemOf(campaign);
   const [editing, setEditing] = useState<Editing>(null);
@@ -63,67 +58,47 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
     open: !folded.has(id),
     onToggle: () => setFolded(toggleSetValue(folded, id)),
   });
-  const meId = useY(campaign.members, () => actingCharacterId(campaign));
-  const me = useY(campaign.characters, () => getCharacter(campaign, meId));
+  const meId = useQuery(campaign.members, () => actingCharacterId(campaign));
+  const me = useQuery(campaign.characters, () => getCharacter(campaign, meId));
   const canAct = !!me && canEdit(campaign, me);
   const menuItemsFor = (e: HomebrewEntry & { id: string }) => {
     const actions =
       e.kind === "gear"
-        ? actionMenuItems(campaign, [{ id: `library:${e.id}`, title: e.item.name }])
-        : actionMenuItems(campaign, [{ id: `move:${e.id}`, title: e.move.name }]);
+        ? actionMenuItems(ctx, [{ id: `library:${e.id}`, title: e.item.name }])
+        : actionMenuItems(ctx, [{ id: `move:${e.id}`, title: e.move.name }]);
     const primary =
       e.kind === "gear"
         ? {
             label: me ? `Add to ${me.name}` : "Choose a Character",
             disabled: !canAct,
             onSelect: () => {
-              if (me && canAct) addItem(campaign, me.id, e.item);
+              if (me && canAct) ctx.execute(giveItem, { characterId: me.id, item: e.item });
             },
           }
         : {
             label: `Make ${e.move.name}`,
             disabled: !canAct,
             onSelect: () => {
-              if (me && canAct) startMove(campaign, me.id, e.move);
+              if (me && canAct) ctx.execute(startMove, { characterId: me.id, move: e.move.id });
             },
           };
     return [primary, ...(actions.length ? (["divider"] as const) : []), ...actions];
   };
 
-  if (editing) {
-    const { kind, id } = editing;
-    const found = id ? entries.find((e) => e.id === id) : undefined;
-    const close = () => setEditing(null);
-    return (
-      <div className="panel-scroll items-panel">
-        <div className="sheet-row">
-          <Button variant="ghost" onClick={close}>
-            <IconBack size={22} /> Items
-          </Button>
-        </div>
-        {kind === "gear" ? (
-          <GearForm
-            campaign={campaign}
-            system={system}
-            {...(found?.kind === "gear" ? { initial: found.item } : {})}
-            onDone={close}
-          />
-        ) : (
-          <MoveForm
-            campaign={campaign}
-            system={system}
-            {...(found?.kind === "move" ? { initial: found.move } : {})}
-            onDone={close}
-          />
-        )}
-      </div>
-    );
-  }
-
   const gear = entries.filter((e) => e.kind === "gear");
   const moves = entries.filter((e) => e.kind === "move");
   return (
     <div className="panel-scroll items-panel">
+      {editing && (
+        <ItemDialog
+          key={`${editing.kind}:${editing.id ?? "new"}`}
+          campaign={campaign}
+          system={system}
+          editing={editing}
+          entry={editing.id ? entries.find((e) => e.id === editing.id) : undefined}
+          onClose={() => setEditing(null)}
+        />
+      )}
       <PanelActions>
         <Button icon={IconNewGear} onClick={() => setEditing({ kind: "gear", id: null })}>
           New Gear
@@ -162,14 +137,16 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
                   tip={e.item.description}
                   onOpen={() => setEditing({ kind: "gear", id: e.id })}
                   onPointerDown={(ev) =>
-                    dragEntity(ev, entity(campaign, "item", e.id, e.item.name))
+                    dragEntity(ctx.canvas, ev, entity(ctx, "item", e.id, e.item.name))
                   }
                   menuItems={menuItemsFor(e)}
                 >
                   <Button
                     variant="secondary"
                     disabled={!canAct}
-                    onClick={() => me && addItem(campaign, me.id, e.item)}
+                    onClick={() =>
+                      me && ctx.execute(giveItem, { characterId: me.id, item: e.item })
+                    }
                   >
                     Add
                   </Button>
@@ -195,14 +172,16 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
                   tip={`${plainText(e.move.text)}\n\nDrag onto a character to teach it to them.`}
                   onOpen={() => setEditing({ kind: "move", id: e.id })}
                   onPointerDown={(ev) =>
-                    dragEntity(ev, entity(campaign, "move", e.id, e.move.name))
+                    dragEntity(ctx.canvas, ev, entity(ctx, "move", e.id, e.move.name))
                   }
                   menuItems={menuItemsFor(e)}
                 >
                   <Button
                     variant="secondary"
                     disabled={!canAct}
-                    onClick={() => me && startMove(campaign, me.id, e.move)}
+                    onClick={() =>
+                      me && ctx.execute(startMove, { characterId: me.id, move: e.move.id })
+                    }
                   >
                     Make
                   </Button>
@@ -213,6 +192,44 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
         </ListGroup>
       )}
     </div>
+  );
+}
+
+/** Makes or changes one of the table's gear or moves. */
+function ItemDialog({
+  campaign,
+  system,
+  editing: { kind, id },
+  entry,
+  onClose,
+}: {
+  campaign: Campaign;
+  system: GameSystem;
+  editing: NonNullable<Editing>;
+  entry: (HomebrewEntry & { id: string }) | undefined;
+  onClose: () => void;
+}) {
+  const ref = usePopupDialog();
+  const done = () => closePopup(ref.current, onClose);
+  const title = `${id ? "Edit" : "New"} ${kind === "gear" ? "Gear" : "Move"}`;
+  return (
+    <Dialog dialogRef={ref} title={title} onClose={onClose}>
+      {kind === "gear" ? (
+        <GearForm
+          campaign={campaign}
+          system={system}
+          {...(entry?.kind === "gear" ? { initial: entry.item } : {})}
+          onDone={done}
+        />
+      ) : (
+        <MoveForm
+          campaign={campaign}
+          system={system}
+          {...(entry?.kind === "move" ? { initial: entry.move } : {})}
+          onDone={done}
+        />
+      )}
+    </Dialog>
   );
 }
 
@@ -296,17 +313,18 @@ function GearForm({
   initial?: ItemDef;
   onDone: () => void;
 }) {
+  const ctx = useCampaign();
   const [name, setName] = useState(initial?.name ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [weight, setWeight] = useState(initial?.weight ?? 0);
   const [uses, setUses] = useState(initial?.uses ?? 0);
-  const [tags, setTags] = useState((initial?.tags ?? []).join(", "));
+  const [tags, setTags] = useState(() => (initial?.tags ?? []).join(", "));
   const [equippable, setEquippable] = useState(initial?.equippable ?? false);
   const [graphic, setGraphic] = useState<EntityGraphic | undefined>(
     initial?.id ? campaign.entityGraphics.get(`item:${initial.id}`) : undefined,
   );
   const [resetGraphic, setResetGraphic] = useState(false);
-  const [effects, setEffects] = useState<EffectRow[]>(
+  const [effects, setEffects] = useState<EffectRow[]>(() =>
     (initial?.effects ?? []).flatMap((e): EffectRow[] =>
       e.type === "rollBonus"
         ? [{ type: "rollBonus", stat: e.stat ?? "", value: e.value }]
@@ -323,17 +341,19 @@ function GearForm({
         ? { type: "rollBonus", ...(e.stat ? { stat: e.stat } : {}), value: e.value }
         : { type: "modify", path: e.path, op: "add", value: e.value },
     );
-    const id = saveGear(campaign.homebrew, {
-      id: initial?.id ?? "",
-      name: name.trim(),
-      description: description.trim(),
-      weight: weight,
-      ...(uses ? { uses: uses } : {}),
-      tags: splitTags(tags),
-      ...(out.length ? { effects: out } : {}),
-      ...(equippable ? { equippable: true, active: "equipped" as const } : {}),
+    ctx.execute(saveHomebrewGear, {
+      graphic: resetGraphic ? null : graphic,
+      item: {
+        id: initial?.id ?? "",
+        name: name.trim(),
+        description: description.trim(),
+        weight: weight,
+        ...(uses ? { uses: uses } : {}),
+        tags: splitTags(tags),
+        ...(out.length ? { effects: out } : {}),
+        ...(equippable ? { equippable: true, active: "equipped" as const } : {}),
+      },
     });
-    setEntityGraphic(campaign, "item", id, resetGraphic ? undefined : graphic);
     onDone();
   };
   const setEffect = (i: number, patch: Partial<EffectRow>) =>
@@ -341,13 +361,12 @@ function GearForm({
 
   return (
     <form
-      className="creation-form homebrew-form form-layout"
+      className="creation-form form-layout"
       onSubmit={(e) => {
         e.preventDefault();
         save();
       }}
     >
-      <h3 className="form-title">{initial ? "Edit gear" : "New gear"}</h3>
       <section className="form-section">
         <h4 className="form-heading">Details</h4>
         <Text label="Name" value={name} onChange={setName} />
@@ -384,7 +403,10 @@ function GearForm({
         <h4 className="form-heading">Effects</h4>
         <div className="form-fields">
           {effects.map((e, i) => (
-            <div key={i} className="sheet-row homebrew-effect">
+            <div
+              key={`${e.type}:${e.type === "rollBonus" ? e.stat : e.path}`}
+              className="sheet-row homebrew-effect"
+            >
               <select
                 aria-label="Effect"
                 value={e.type}
@@ -463,6 +485,7 @@ function MoveForm({
   initial?: ActionDef;
   onDone: () => void;
 }) {
+  const ctx = useCampaign();
   const check = initial?.steps.find((s): s is CheckStep => s.kind === "check");
   const [name, setName] = useState(initial?.name ?? "");
   const [category, setCategory] = useState(
@@ -508,29 +531,30 @@ function MoveForm({
             ...(targets === "one" ? { max: 1 } : {}),
             ...(range ? { range: { normal: range } } : {}),
           };
-    const id = saveMove(campaign.homebrew, {
-      id: initial?.id ?? "",
-      name: name.trim(),
-      category: category,
-      trigger: trigger.trim(),
-      text,
-      steps,
-      ...(target ? { target } : {}),
-      tags: ["homebrew"],
+    ctx.execute(saveHomebrewMove, {
+      graphic: resetGraphic ? null : graphic,
+      move: {
+        id: initial?.id ?? "",
+        name: name.trim(),
+        category: category,
+        trigger: trigger.trim(),
+        text,
+        steps,
+        ...(target ? { target } : {}),
+        tags: ["homebrew"],
+      },
     });
-    setEntityGraphic(campaign, "move", id, resetGraphic ? undefined : graphic);
     onDone();
   };
 
   return (
     <form
-      className="creation-form homebrew-form form-layout"
+      className="creation-form form-layout"
       onSubmit={(e) => {
         e.preventDefault();
         save();
       }}
     >
-      <h3 className="form-title">{initial ? "Edit move" : "New move"}</h3>
       <section className="form-section">
         <h4 className="form-heading">Details</h4>
         <Text label="Name" value={name} onChange={setName} />
@@ -658,7 +682,6 @@ function NumberFieldInline({
 }
 
 function FormActions({
-  campaign,
   id,
   ready,
   onDone,
@@ -668,6 +691,7 @@ function FormActions({
   ready: boolean;
   onDone: () => void;
 }) {
+  const ctx = useCampaign();
   return (
     <div className="form-actions">
       {id && (
@@ -675,7 +699,7 @@ function FormActions({
           variant="danger"
           className="form-actions-start"
           onClick={() => {
-            deleteHomebrew(campaign.homebrew, id);
+            ctx.execute(deleteHomebrewEntry, { id });
             onDone();
           }}
         >

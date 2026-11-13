@@ -12,7 +12,16 @@
  *    its top (the title, usually the item's label), and grows into its own
  *    box (FLIP on the dialog). For openers that can't use a transition.
  *
+ * Any button, link or menu item that's clicked sets itself as the origin,
+ * so a pop-up opened from a click grows out of what was clicked without its
+ * opener doing anything. Openers with a better origin (a token, a tooltip)
+ * set it after the click.
+ *
  * Either way openPopup() places the dialog at the origin's top left.
+ *
+ * Going away is the reverse, as a view transition: leave() shrinks a pop-up
+ * back into what opened it, if that's still on screen, or else fades it out,
+ * shrinking slightly.
  */
 
 import { until, withTransition } from "./transition";
@@ -26,7 +35,7 @@ const DURATION_MS = 240;
 const SHADOW_ROOM = 48;
 const EASE = "cubic-bezier(0.2, 0.8, 0.2, 1)";
 
-let origin: { rect: DOMRect; at: number } | null = null;
+let origin: { rect: DOMRect; el: Element | null; at: number } | null = null;
 
 /** Remember where the next pop-up is being opened from. */
 export function setMorphOrigin(from: Element | DOMRect | null | undefined) {
@@ -34,8 +43,8 @@ export function setMorphOrigin(from: Element | DOMRect | null | undefined) {
     origin = null;
     return;
   }
-  const rect = from instanceof DOMRect ? from : from.getBoundingClientRect();
-  origin = { rect, at: performance.now() };
+  const el = from instanceof DOMRect ? null : from;
+  origin = { rect: el?.getBoundingClientRect() ?? (from as DOMRect), el, at: performance.now() };
 }
 
 /** Where the next pop-up should open: over the thing that spawned it, if that was just now. */
@@ -43,6 +52,18 @@ export function originRect(): DOMRect | null {
   if (!origin || performance.now() - origin.at > ORIGIN_TTL_MS) return null;
   return origin.rect;
 }
+
+/** The controls that count as having spawned what opens from their click. */
+const CONTROL = "button, a[href], [role=button], [role=menuitem], [role=option], [role=tab]";
+
+document.addEventListener(
+  "click",
+  (e) => {
+    const control = (e.target as Element | null)?.closest?.(CONTROL);
+    if (control?.isConnected) setMorphOrigin(control);
+  },
+  { capture: true },
+);
 
 const MORPH_NAME = "popup-morph";
 /** A shared-element morph is under way, waiting for its dialog to open. */
@@ -80,10 +101,10 @@ export function morphOpen(from: Element, open: () => void) {
 }
 
 /**
- * Called by openPopup(): if a morph is waiting for a dialog, this is it.
+ * Called as a dialog shows: if a morph is waiting for a dialog, this is it.
  * Returns whether the transition will animate it.
  */
-export function claimMorph(dialog: HTMLElement): boolean {
+function claimMorph(dialog: HTMLElement): boolean {
   if (!morphing || morphing.target) return false;
   morphing.target = dialog;
   dialog.style.viewTransitionName = MORPH_NAME;
@@ -98,8 +119,29 @@ export function releaseMorph() {
   if (morphing && !morphing.target) morphing.target = document.documentElement;
 }
 
+/** What each pop-up was opened from, to go back into when it closes. */
+const spawners = new WeakMap<Element, Element>();
+
+/**
+ * Show a dialog out of where it was opened from: as the target of a
+ * waiting shared-element morph, or else growing from a fresh origin.
+ * `show` opens it and may place it before it grows.
+ */
+export function showFromOrigin(dialog: HTMLElement, show: () => void) {
+  const from = hasFreshOrigin() || morphing ? origin?.el : null;
+  if (from) spawners.set(dialog, from);
+  else spawners.delete(dialog);
+  const viewMorph = claimMorph(dialog);
+  // Mark it before showing, so its own fade-in doesn't start underneath.
+  if (hasFreshOrigin()) dialog.dataset.morph = "true";
+  show();
+  if (viewMorph) return;
+  if (hasFreshOrigin()) growFrom(dialog, origin!.rect);
+  origin = null;
+}
+
 /** Whether an element shown now would grow from an origin. */
-export function hasFreshOrigin(): boolean {
+function hasFreshOrigin(): boolean {
   return (
     !!origin &&
     performance.now() - origin.at <= ORIGIN_TTL_MS &&
@@ -108,43 +150,80 @@ export function hasFreshOrigin(): boolean {
   );
 }
 
-/**
- * Grow an element that has just appeared out of the remembered origin, if
- * there is a fresh one. Returns whether it animated.
- */
-export function growFromOrigin(el: HTMLElement): boolean {
-  if (!hasFreshOrigin()) {
-    origin = null;
-    return false;
-  }
-  const o = origin!;
-  origin = null;
+/** The transform that lays `el` (at `d`) over `to`, showing only as much as fits. */
+function overKeyframe(d: DOMRect, to: DOMRect): Keyframe {
+  const scale = to.width / d.width;
+  // Show only as much of the element as fits the target's height, at that scale.
+  const hidden = Math.max(0, d.height - to.height / scale);
+  return {
+    transformOrigin: "0 0",
+    transform: `translate(${to.left - d.left}px, ${to.top - d.top}px) scale(${scale})`,
+    // Crop the element's bottom, but not its shadow.
+    clipPath: `inset(${-SHADOW_ROOM}px ${-SHADOW_ROOM}px ${hidden}px ${-SHADOW_ROOM}px)`,
+  };
+}
+const AT_REST: Keyframe = {
+  transformOrigin: "0 0",
+  transform: "none",
+  clipPath: `inset(${-SHADOW_ROOM}px)`,
+};
 
-  const d = el.getBoundingClientRect();
-  const scale = o.rect.width / d.width;
-  // Show only as much of the element as fits the origin's height, at that scale.
-  const hidden = Math.max(0, d.height - o.rect.height / scale);
+/** Grow an element that has just appeared out of `from` (FLIP on the element). */
+export function growFrom(el: HTMLElement, from: Element | DOMRect) {
+  if (reducedMotion.matches) return;
+  const rect = from instanceof DOMRect ? from : from.getBoundingClientRect();
+  if (rect.width < 1) return;
   // Skip the element's own fade-and-rise; this animation replaces it.
   el.dataset.morph = "true";
   const anim = el.animate(
     [
-      {
-        transformOrigin: "0 0",
-        transform: `translate(${o.rect.left - d.left}px, ${o.rect.top - d.top}px) scale(${scale})`,
-        // Crop the dialog's bottom, but not its shadow.
-        clipPath: `inset(${-SHADOW_ROOM}px ${-SHADOW_ROOM}px ${hidden}px ${-SHADOW_ROOM}px)`,
-        opacity: 0.5,
-      },
+      { ...overKeyframe(el.getBoundingClientRect(), rect), opacity: 0.5 },
       { opacity: 1, offset: 0.35 },
-      {
-        transformOrigin: "0 0",
-        transform: "none",
-        clipPath: `inset(${-SHADOW_ROOM}px)`,
-        opacity: 1,
-      },
+      { ...AT_REST, opacity: 1 },
     ],
     { duration: DURATION_MS, easing: EASE },
   );
   anim.finished.catch(() => {}).finally(() => delete el.dataset.morph);
-  return true;
+}
+
+/** Whether `el` is on screen to morph into. */
+function onScreen(el: Element | undefined): el is Element {
+  if (!el?.isConnected || !el.checkVisibility({ opacityProperty: true, visibilityProperty: true }))
+    return false;
+  const r = el.getBoundingClientRect();
+  return r.width >= 1 && r.bottom > 0 && r.right > 0 && r.top < innerHeight && r.left < innerWidth;
+}
+
+/** What `el` was opened from, if it's still on screen to go back into. */
+function spawnerOf(el: Element): Element | null {
+  const s = spawners.get(el);
+  return onScreen(s) ? s : null;
+}
+
+const LEAVE_NAME = "popup-leave";
+
+/**
+ * Take `el` away with a view transition: `finish` closes or removes it, and
+ * its snapshot shrinks into `into` (by default what opened it) if that's on
+ * screen, or else fades out, shrinking slightly. The change itself is
+ * immediate; only the snapshot animates. Ignored while `el` is already leaving.
+ */
+export async function leave(
+  el: HTMLElement,
+  finish: () => void,
+  into: Element | null = spawnerOf(el),
+): Promise<void> {
+  if (el.style.viewTransitionName === LEAVE_NAME) return;
+  const target = onScreen(into ?? undefined) ? into : null;
+  const ownName = el.style.viewTransitionName;
+  el.style.viewTransitionName = LEAVE_NAME;
+  await withTransition(
+    async () => {
+      el.style.viewTransitionName = ownName;
+      finish();
+      // Pop-ups close at once; React unmounts others on its next render.
+      await until(() => !el.isConnected || !el.checkVisibility(), 300);
+    },
+    { rootClass: target ? "vt-leave-into" : "vt-leave", home: target },
+  );
 }

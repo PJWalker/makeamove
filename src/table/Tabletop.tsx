@@ -2,16 +2,15 @@ import { lazy, Suspense, useState } from "react";
 import { useEffect, useLayoutEffect } from "react";
 import { sceneHueFromHex } from "../lib/colour";
 import type { Campaign } from "../campaign/campaign";
-import { runFolderBackup } from "../campaign/folderBackup";
-import { useY } from "../ui/useY";
+import { useQuery } from "../ui/useQuery";
 import { FloatingWindows } from "./FloatingWindows";
 import { windowLayer } from "../ui/windows";
 import { CampaignDialogHost } from "./CampaignDialogHost";
 import { Sidebar } from "./Sidebar";
-import { dockInsets, unavailablePanels, windowDragging } from "../workspace/panelLayout";
 import { hasCombat } from "../features/combat/api";
 import { playedCharacterId, systemOf } from "../features/characters/api";
-import { activeMapColour, autohide, canvasColour, setAutohide } from "../workspace/canvasState";
+import { canvasColour } from "../workspace/canvasState";
+import { autohide } from "../workspace/autohide";
 import { ActionDialogs } from "../workspace/ActionDialogs";
 import { ChatPopups } from "./ChatPopups";
 import { Hotbar } from "./Hotbar";
@@ -21,39 +20,40 @@ import { MovePrompt } from "./MovePrompt";
 import { GraphicDialogs } from "../workspace/GraphicDialogs";
 import { Palette } from "./Palette";
 import { Toolbar } from "./Toolbar";
-import { useValue } from "../ui/useValue";
 import { extensionOf } from "../systems/extensions";
 import { SystemExtensions } from "../workspace/systemExtensions";
+import { useCommandKeys } from "../workspace/commands/keys";
+import { useCampaign } from "../workspace/campaignContext";
 
 // PixiJS is big; load it only once someone opens a table.
 const SceneCanvas = lazy(() => import("./SceneCanvas"));
 
 export function Tabletop({ campaign }: { campaign: Campaign }) {
-  const scenes = useY(campaign.scenes, () => campaign.sceneViews());
-  useEffect(() => runFolderBackup(campaign), [campaign]);
+  const ctx = useCampaign();
+  const scenes = useQuery(campaign.scenes, () => campaign.sceneViews());
   // A system without initiative has no turn tracker.
-  const combat = useY(campaign.meta, () => hasCombat(campaign));
+  const combat = useQuery(campaign.meta, () => hasCombat(campaign));
   // The Reference holds GM guidance, for systems that have it.
-  const reference = useY(
+  const reference = useQuery(
     campaign.members,
     () => campaign.isGm() && !!systemOf(campaign).gmReference?.length,
   );
   // My Character is there once this device has claimed one.
-  const playing = useY(campaign.members, () => !!playedCharacterId(campaign));
+  const playing = useQuery(campaign.members, () => !!playedCharacterId(campaign));
   useLayoutEffect(() => {
-    unavailablePanels.value = [
+    ctx.panels.unavailablePanels.set([
       ...(playing ? [] : (["pc"] as const)),
       ...(combat ? [] : (["combat"] as const)),
       ...(reference ? [] : (["reference"] as const)),
-    ];
+    ]);
     return () => {
-      unavailablePanels.value = [];
+      ctx.panels.unavailablePanels.set([]);
     };
-  }, [playing, combat, reference]);
-  const activeId = useY(campaign.members, () => campaign.activeSceneId());
+  }, [ctx, playing, combat, reference]);
+  const activeId = useQuery(campaign.members, () => campaign.activeSceneId());
   const scene = scenes.find((s) => s.id === activeId) ?? scenes[0];
 
-  const mapColour = useValue(activeMapColour);
+  const mapColour = useQuery(ctx.canvas.activeMapColour);
   const colour = scene ? canvasColour(scene, mapColour) : null;
 
   // Tint the whole UI from the scene's custom colour, else from the map, else from the canvas.
@@ -69,21 +69,12 @@ export function Tabletop({ campaign }: { campaign: Campaign }) {
     [],
   );
 
-  // Ctrl/Cmd + \ toggles autohide, like hiding the interface in most canvas tools.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "\\" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        setAutohide(!autohide.value);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  // Every command's shortcuts, built-in and the player's own.
+  useCommandKeys(ctx);
 
-  const hiding = useValue(autohide);
-  const dragging = useValue(windowDragging);
-  const insets = useValue(dockInsets);
+  const hiding = useQuery(autohide);
+  const dragging = useQuery(ctx.panels.windowDragging);
+  const insets = useQuery(ctx.panels.dockInsets);
   const edges = useNearEdges(hiding);
 
   return (

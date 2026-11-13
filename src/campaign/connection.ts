@@ -1,31 +1,35 @@
-import { store, watch } from "../lib/store";
+import { store, watch, type ReadonlyStore } from "../lib/store";
 import * as Y from "yjs";
 import { colourOf, Presence } from "../scene/presence";
-import { setBlobFetcher } from "../media/images";
+import { PeerBlobs } from "../media/images";
 import { BlobExchange } from "../sync/blobs";
 import { SyncSession } from "../sync/session";
-import { device } from "../platform/device";
+import type { Device } from "../platform/device";
+import type { JoinRoom } from "../sync/transport";
 import { getBlob, putBlob } from "../platform/blobs";
 
 export class CampaignConnection {
   readonly presence = new Presence();
   readonly peerCount = store(0);
   readonly online = store<ReadonlySet<string>>(new Set());
+  /** Images this device lacks, fetched from peers while connected. */
+  readonly peerBlobs = new PeerBlobs();
   private cleanups: (() => void)[] = [];
   private session: SyncSession | null = null;
   private blobs: BlobExchange | null = null;
-  private fetcher: ((hash: string) => Promise<Blob | null>) | null = null;
 
   constructor(
     private readonly id: string,
     private readonly doc: Y.Doc,
+    private readonly device: ReadonlyStore<Device>,
+    private readonly joinRoom: JoinRoom,
   ) {}
 
   async connect(roomKey: string, isDestroyed: () => boolean): Promise<boolean> {
     if (this.session) return false;
     let transport;
     try {
-      transport = (await import("../sync/trystero")).trysteroTransport(this.id, roomKey);
+      transport = await this.joinRoom(this.id, roomKey);
     } catch {
       return false;
     }
@@ -38,7 +42,7 @@ export class CampaignConnection {
     this.session = session;
     const refresh = () => {
       this.peerCount.value = session.peerIds().length;
-      const ids = new Set<string>([device.value.id]);
+      const ids = new Set<string>([this.device.value.id]);
       for (const state of session.awareness.getStates().values()) {
         const user = state.user as { id?: string } | undefined;
         if (user?.id) ids.add(user.id);
@@ -47,12 +51,11 @@ export class CampaignConnection {
     };
     this.blobs = new BlobExchange(session, { get: getBlob, put: putBlob });
     const exchange = this.blobs;
-    this.fetcher = (hash) => exchange.fetch(hash);
-    setBlobFetcher(this.fetcher);
+    this.peerBlobs.connect((hash) => exchange.fetch(hash));
     this.presence.attach(session.awareness);
     session.onChange = refresh;
-    const stopIdentity = watch([device], () => {
-      const currentDevice = device.value;
+    const stopIdentity = watch([this.device], () => {
+      const currentDevice = this.device.value;
       session.awareness.setLocalStateField("user", {
         id: currentDevice.id,
         name: currentDevice.name,
@@ -71,14 +74,13 @@ export class CampaignConnection {
   disconnect() {
     for (const cleanup of this.cleanups) cleanup();
     this.cleanups = [];
-    if (this.fetcher) setBlobFetcher(null, this.fetcher);
-    this.fetcher = null;
+    this.peerBlobs.connect(null);
     this.presence.detach();
     this.blobs?.close();
     this.blobs = null;
     this.session?.destroy();
     this.session = null;
     this.peerCount.value = 0;
-    this.online.value = new Set([device.value.id]);
+    this.online.value = new Set([this.device.value.id]);
   }
 }

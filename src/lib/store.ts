@@ -1,7 +1,9 @@
 /**
- * Observable values for state that lives outside React: app-wide settings,
- * the open campaign, a scene's selection. Reading `.value` returns the
- * current value and never subscribes; components read through `useValue`,
+ * Observable values for ephemeral state that lives outside React and isn't
+ * persisted: a scene's selection, what a drag is over, the route. Anything
+ * kept between visits lives in a Yjs document (shared, or the campaign's
+ * local one). Reading `.value` returns the current value and never
+ * subscribes; components read through `useQuery`,
  * and non-React code reacts with `watch`. Every dependency is explicit, so
  * React Compiler can memoize components that read these.
  */
@@ -24,7 +26,7 @@ function notify(listeners: Iterable<Listener>) {
     for (const l of listeners) pending.add(l);
     return;
   }
-  for (const l of [...listeners]) l();
+  for (const listener of Array.from(listeners)) listener();
 }
 
 /** Run `fn`, holding notifications until it returns so listeners see one change. */
@@ -66,6 +68,11 @@ export class Store<T> implements ReadonlyStore<T> {
   get version(): number {
     return this.#version;
   }
+
+  /** The same as setting `value`, as a call: what components use, since React Compiler won't let them assign. */
+  readonly set = (next: T) => {
+    this.value = next;
+  };
 
   readonly subscribe = (listener: Listener) => {
     this.#listeners.add(listener);

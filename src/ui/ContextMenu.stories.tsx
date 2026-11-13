@@ -10,6 +10,7 @@ type Props = ComponentProps<typeof ContextMenu>;
 function Demo(props: Props) {
   const [at, setAt] = useState<{ x: number; y: number } | null>({ x: props.x, y: props.y });
   return (
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- This story demonstrates opening a context menu with the pointer.
     <div
       role="application"
       aria-label="Right-click to open the menu"

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import {
   PANEL_ORDER,
   SIDEBAR_DEFAULT_W,
@@ -115,7 +115,7 @@ describe("panel layout", () => {
     const l = close(defaultLayout(false), "notes");
     expect(l.right.panels).not.toContain("notes");
     expect(locate(l, "notes")).toBe("closed");
-    expect(normalise(JSON.parse(JSON.stringify(l)), false).closed).toEqual(["notes"]);
+    expect(normalise(structuredClone(l), false).closed).toEqual(["notes"]);
     // Showing it (a link to a page, say) opens it again on its own side.
     const back = showTab(l, "notes");
     expect(back.right.panels).toContain("notes");
@@ -153,7 +153,7 @@ describe("panel layout", () => {
 
   it("docks a floating panel back in its place, through a reload", () => {
     let l = detach(defaultLayout(false), "characters", win);
-    l = normalise(JSON.parse(JSON.stringify(l)), false);
+    l = normalise(structuredClone(l), false);
     expect(dock(l, "characters").left.panels).toEqual(["scene", "pc", "characters", "combat"]);
   });
 
@@ -168,7 +168,9 @@ describe("panel layout", () => {
     l = dock(l, "scene", "right", 3);
     l = dock(l, "items");
     const keys = l.right.panels.map((id) => l.order[id]!);
-    expect(keys).toEqual([...keys].sort());
+    expect(keys).toEqual(
+      [...keys].sort((left, right) => String(left).localeCompare(String(right))),
+    );
     expect(new Set(keys).size).toBe(keys.length);
     expect(l.right.panels).toEqual([
       "chat",
@@ -187,7 +189,9 @@ describe("panel layout", () => {
       false,
     );
     const keys = l.right.panels.map((id) => l.order[id]);
-    expect(keys).toEqual([...keys].sort());
+    expect(keys).toEqual(
+      [...keys].sort((left, right) => String(left).localeCompare(String(right))),
+    );
     expect(l.right.panels.slice(0, 2)).toEqual(["notes", "chat"]);
   });
 

@@ -7,15 +7,17 @@
  */
 
 import type { CharacterView, ItemInstance } from "../features/characters/types";
-import type { RichText } from "../core/richText";
-import type { DataValue } from "../core/types";
+import type { RichText } from "../data/richText";
+import type { DataValue } from "../data/types";
+import type { Migrate } from "../data/migrate";
+import type { SystemCampaignRec, SystemCharacterRec } from "./schema";
 import type { Roll } from "../features/dice/notation";
 import type { DiagonalRule } from "../scene/grid";
 import type { Range } from "../scene/measure";
 import type { EffectSource, Resolved } from "./effects";
 import type { Effect, EffectActive } from "./effectTypes";
 
-export type { DataValue } from "../core/types";
+export type { DataValue } from "../data/types";
 export type { Effect, EffectActive } from "./effectTypes";
 
 export interface StatDef {
@@ -653,6 +655,15 @@ export interface GameSystem {
   id: string;
   name: string;
   version: string;
+  /**
+   * The version of the data the system keeps on characters and campaign-wide
+   * (systems/schema.ts); raise it when that changes, with migrations to match.
+   */
+  schemaVersion?: number;
+  /** Bring a character's data for this system up to `schemaVersion` (data/migrate.ts). */
+  migrateCharacter?: Migrate<SystemCharacterRec>;
+  /** Bring the campaign's data for this system up to `schemaVersion`. */
+  migrateCampaign?: Migrate<SystemCampaignRec>;
   stats: StatDef[];
   /** Whether a stat is a number added to rolls, offered as a chip in the dice tray; true if absent. */
   statsAddToRolls?: boolean;

@@ -1,9 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import * as Y from "yjs";
 import { roll } from "../../dice/notation";
 import { addRollDie, addRollModifier, readRollState, rerollMessage } from "../rollState";
+import { rootOf } from "../../../data/schema";
+import { campaignShape } from "../../../campaign/schema";
 
-const shared = () => new Y.Doc().getMap<unknown>("state");
+const shared = () => rootOf(new Y.Doc(), campaignShape).messageState;
 
 describe("adding a die to a roll", () => {
   it("joins a plain term with the same dice", () => {

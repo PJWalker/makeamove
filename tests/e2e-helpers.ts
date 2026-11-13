@@ -1,7 +1,13 @@
 import { inTransition } from "../src/ui/transition";
 import { expect, type Locator, type Page } from "./browser-test";
 
+/** Opens the new campaign dialog from the lobby, empty or not. */
+export async function openNewCampaign(page: Page) {
+  await page.getByRole("button", { name: /^(Create a|New) Campaign$/ }).click();
+}
+
 export async function createCampaign(page: Page, name = "The Lost Barrows", systemId?: string) {
+  await openNewCampaign(page);
   await page.getByPlaceholder("The Lost Barrows").fill(name);
   await page.getByPlaceholder("Robin").first().fill("Tester");
   if (systemId) await page.getByLabel("System").selectOption(systemId);

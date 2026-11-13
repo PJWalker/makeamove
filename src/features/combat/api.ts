@@ -109,10 +109,12 @@ export async function rollInitiative(campaign: Campaign, id: string) {
 
 /** Roll for everyone who hasn't rolled yet. */
 export async function rollAllInitiative(campaign: Campaign, { npcsOnly = false } = {}) {
+  // Each roll commits in turn order so the resulting chat history stays ordered.
   for (const c of turnOrder(campaign.combatants)) {
     if (c.init !== null) continue;
     const char = getCharacter(campaign, c.characterId);
     if (npcsOnly && char?.kind === "pc") continue;
+    // oxlint-disable-next-line react-doctor/async-await-in-loop -- Keep each result in turn order.
     await rollInitiative(campaign, c.id);
   }
 }
@@ -121,7 +123,7 @@ export async function rollAllInitiative(campaign: Campaign, { npcsOnly = false }
 function tick(campaign: Campaign, combatant: string | null, point: "start" | "end") {
   if (!combatant) return;
   for (const [id, m] of campaign.characters.entries()) {
-    const durations = m.get("durations") as Record<string, Duration> | undefined;
+    const durations = m.get("durations");
     if (!durations || !Object.keys(durations).length) continue;
     const { left, expired } = tickDurations(durations, combatant, point);
     if (!expired.length && JSON.stringify(left) === JSON.stringify(durations)) continue;
@@ -187,7 +189,7 @@ export function setDuration(
 ) {
   const m = campaign.characters.get(characterId);
   if (!m) return;
-  const now: Record<string, Duration> = { ...(m.get("durations") ?? {}) };
+  const now: Record<string, Duration> = { ...m.get("durations") };
   if (duration) now[condition] = duration;
   else delete now[condition];
   m.set("durations", now);

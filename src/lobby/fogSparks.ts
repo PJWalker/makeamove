@@ -178,7 +178,7 @@ export class Sparks {
       // Most random points are nowhere near a trace, so try a few.
       for (let tries = 0; tries < 8 && !this.spawn(t); tries++);
     }
-    for (const s of [...this.live]) {
+    for (const s of Array.from(this.live)) {
       if (s.depth < MAX_DEPTH && s.stoppedAt === null && Math.random() < dt * SPARKS.branchRate) {
         this.branch(s);
       }

@@ -1,6 +1,5 @@
 import "fake-indexeddb/auto";
-import { describe, expect, it } from "vitest";
-import * as Y from "yjs";
+import { describe, expect, it } from "vite-plus/test";
 import { Campaign, createCampaign } from "../campaign";
 import { device } from "../../platform/device";
 
@@ -11,10 +10,7 @@ async function setUp() {
   as("gm", "Gwen");
   const id = await createCampaign("The Lost Barrows", "Gwen");
   const c = await Campaign.open(id);
-  const pat = new Y.Map<unknown>();
-  pat.set("name", "Pat");
-  pat.set("role", "player");
-  c.members.set("pat", pat);
+  c.members.set("pat", { name: "Pat", role: "player" });
   return c;
 }
 
@@ -52,7 +48,7 @@ describe("revoking a player", () => {
     as("gm", "Gwen");
     theirs.allowBack("pat");
     as("pat", "Pat");
-    theirs.meta.set("touched", 1);
+    theirs.meta.set("sessions", 1);
     expect(theirs.memberViews().map((member) => member.id)).toContain("pat");
     expect(theirs.revokedViews()).toEqual([]);
     theirs.destroy();

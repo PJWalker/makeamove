@@ -5,8 +5,8 @@ import type { Awareness } from "y-protocols/awareness";
 import * as Y from "yjs";
 import { newId } from "../lib/ids";
 import { colourOf } from "../scene/presence";
-import { importImage, loadBlob, onBlobFetcher } from "../media/images";
-import type { BlobRef } from "../core/blob";
+import { importImage, loadBlob, type PeerBlobs } from "../media/images";
+import type { BlobRef } from "../media/images";
 import { device } from "../platform/device";
 
 /*
@@ -46,8 +46,11 @@ export function carets(awareness: Awareness, name: string) {
 }
 
 /** An image in a note: its blob reference as attributes, drawn from the blob store. */
-export const NoteImage = Node.create({
+export const NoteImage = Node.create<{ peers: PeerBlobs | null }>({
   name: IMAGE_NODE,
+  addOptions() {
+    return { peers: null };
+  },
   group: "block",
   atom: true,
   draggable: true,
@@ -69,6 +72,7 @@ export const NoteImage = Node.create({
     ];
   },
   addNodeView() {
+    const { peers } = this.options;
     return ({ node }) => {
       const dom = document.createElement("figure");
       dom.className = "note-image";
@@ -85,20 +89,21 @@ export const NoteImage = Node.create({
       let url: string | null = null;
       let gone = false;
       const load = () =>
-        loadBlob(hash).then((blob) => {
+        loadBlob(hash, peers).then((blob) => {
           if (gone || !blob || url) return;
+          // oxlint-disable-next-line react-doctor/no-create-object-url-without-revoke -- The node view revokes this URL in destroy().
           url = URL.createObjectURL(blob);
           img.src = url;
           dom.append(img);
           dom.dataset.loaded = "true";
         });
       void load();
-      const stop = onBlobFetcher(() => void load());
+      const stop = peers?.onAvailable(() => void load());
       return {
         dom,
         destroy() {
           gone = true;
-          stop();
+          stop?.();
           if (url) URL.revokeObjectURL(url);
         },
       };
@@ -109,8 +114,8 @@ export const NoteImage = Node.create({
 /** Store image files and put them in the note at a position, in order. */
 export async function insertImages(editor: Editor, files: File[], pos?: number) {
   const images = files.filter((f) => f.type.startsWith("image/"));
-  for (const file of images) {
-    const ref = await importImage(file);
+  const refs = await Promise.all(images.map(importImage));
+  for (const ref of refs) {
     if (editor.isDestroyed) return;
     const at = pos ?? editor.state.selection.to;
     editor.chain().focus().insertContentAt(at, { type: IMAGE_NODE, attrs: ref }).run();

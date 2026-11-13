@@ -1,46 +1,43 @@
 import { useState } from "react";
 import type { Campaign, SceneView } from "../campaign/campaign";
-import {
-  createSceneFolder,
-  deleteSceneFolder,
-  listSceneFolders,
-  moveSceneToFolder,
-  renameSceneFolder,
-} from "../campaign/sceneFolders";
-import { useY } from "../ui/useY";
+import { listSceneFolders } from "../campaign/sceneFolders";
+import { useQuery } from "../ui/useQuery";
 import { Button } from "../ui/Button";
-import {
-  IconAdd,
-  IconDelete,
-  IconFolder,
-  IconMembers,
-  IconNewFolder,
-  IconRename,
-} from "../ui/icons";
-import { canvasCommands } from "../workspace/canvasState";
+import { IconAdd, IconMembers, IconNewFolder } from "../ui/icons";
 import { TwoPane, usePaneLevel } from "../ui/TwoPane";
 import { GraphicPicker } from "../ui/GraphicPicker";
-import { getEntityGraphic, setEntityGraphic } from "../workspace/entityGraphics";
+import { getEntityGraphic } from "../workspace/entityGraphics";
 import { SceneSettingsFields } from "./SceneSettingsFields";
 import { FolderTree } from "./FolderTree";
 import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
 import { menuTrigger } from "../ui/menuTrigger";
 import { scenesLayout } from "./panelLayouts";
-import { useValue } from "../ui/useValue";
+import { useCampaign } from "../workspace/campaignContext";
+import { chooseGraphic } from "../workspace/commands/campaign";
+import {
+  newScene,
+  openScene,
+  pullPlayers,
+  sceneFolders,
+  updateScene,
+} from "../workspace/commands/scenes";
+import { can, menuFor } from "../workspace/commands/views";
 
 /** The scene list, and the active scene's settings. (Campaign actions are in the tool strip's menu.) */
 export function ScenePanel({ campaign }: { campaign: Campaign }) {
-  const scenes = useY(campaign.scenes, () => campaign.sceneViews());
-  const folders = useY(campaign.sceneFolders, () => listSceneFolders(campaign.sceneFolders));
-  const activeId = useY(campaign.members, () => campaign.activeSceneId()) ?? scenes[0]?.id ?? null;
-  const members = useY(campaign.members, () => campaign.memberViews());
-  const isGm = campaign.isGm();
+  const ctx = useCampaign();
+  const scenes = useQuery(campaign.scenes, () => campaign.sceneViews());
+  const folders = useQuery(campaign.sceneFolders, () => listSceneFolders(campaign.sceneFolders));
+  const activeId =
+    useQuery(campaign.members, () => campaign.activeSceneId()) ?? scenes[0]?.id ?? null;
+  const members = useQuery(campaign.members, () => campaign.memberViews());
   const active = scenes.find((s) => s.id === activeId);
-  const { level, go } = usePaneLevel(scenesLayout, active ? "detail" : "list");
+  const editable = !!active && can(ctx, updateScene, { id: active.id, patch: {} });
+  const { level, go, show } = usePaneLevel(scenesLayout, active ? "detail" : "list");
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
-  const commands = useValue(canvasCommands);
+  const commands = useQuery(ctx.canvas.canvasCommands);
   const scene = active && commands?.sceneId === active.id ? commands.scene : null;
-  const graphic = useY(campaign.entityGraphics, () =>
+  const graphic = useQuery(campaign.entityGraphics, () =>
     active ? getEntityGraphic(campaign, "scene", active.id, "map") : undefined,
   );
   const knownScenes = new Set(scenes.map((s) => s.id));
@@ -54,53 +51,19 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
     if (sceneId) playerCounts.set(sceneId, (playerCounts.get(sceneId) ?? 0) + 1);
   }
 
-  function addScene(folderId?: string) {
-    const id = campaign.addScene(`Scene ${scenes.length + 1}`);
-    if (folderId) moveSceneToFolder(campaign.scenes, id, folderId);
-    campaign.setActiveScene(id);
-    go("detail");
+  function addScene() {
+    if (ctx.execute(newScene, {})) go("detail");
   }
 
-  function openScene(id: string) {
-    campaign.setActiveScene(id);
+  function open(id: string) {
+    ctx.execute(openScene, { id });
     go("detail");
   }
 
   function sceneRow(s: SceneView) {
-    const trigger = menuTrigger((x, y) => {
-      const items: MenuItem[] = [{ label: "Open Scene", onSelect: () => openScene(s.id) }];
-      if (isGm) {
-        items.push("divider", {
-          label: "Pull Players Here",
-          Icon: IconMembers,
-          onSelect: () => campaign.pullPlayersToScene(s.id),
-        });
-        for (const folder of folders) {
-          if (folder.id !== s.folder) {
-            items.push({
-              label: `Move to ${folder.name}`,
-              Icon: IconFolder,
-              onSelect: () => moveSceneToFolder(campaign.scenes, s.id, folder.id),
-            });
-          }
-        }
-        if (s.folder && folders.some((folder) => folder.id === s.folder)) {
-          items.push({
-            label: "Remove from Folder",
-            onSelect: () => moveSceneToFolder(campaign.scenes, s.id),
-          });
-        }
-        if (scenes.length > 1) {
-          items.push("divider", {
-            label: "Delete Scene",
-            Icon: IconDelete,
-            danger: true,
-            onSelect: () => campaign.removeScene(s.id),
-          });
-        }
-      }
-      setMenu({ x, y, items });
-    });
+    const trigger = menuTrigger((x, y) =>
+      setMenu({ x, y, items: menuFor(ctx, { kind: "scene", id: s.id }) }),
+    );
     const playerCount = playerCounts.get(s.id) ?? 0;
     return (
       <li key={s.id} className="scene-item" data-active={s.id === activeId} data-scene-id={s.id}>
@@ -108,7 +71,7 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
           type="button"
           className="scene-name-button"
           aria-current={s.id === activeId ? "true" : undefined}
-          onClick={() => openScene(s.id)}
+          onClick={() => open(s.id)}
           onPointerDown={trigger.onPointerDown}
           onContextMenu={trigger.onContextMenu}
         >
@@ -143,55 +106,23 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
             items={scenes}
             folderOf={(s) => s.folder}
             renderItem={sceneRow}
-            renderActions={(beginFolderNaming) => (
+            renderActions={(newFolder) => (
               <>
-                {isGm && (
+                {can(ctx, newScene, {}) && (
                   <>
                     <Button variant="secondary" icon={IconAdd} onClick={() => addScene()}>
                       New Scene
                     </Button>
-                    <Button variant="ghost" icon={IconNewFolder} onClick={beginFolderNaming}>
+                    <Button variant="ghost" icon={IconNewFolder} onClick={newFolder}>
                       New Folder
                     </Button>
                   </>
                 )}
               </>
             )}
-            folderMenuItems={(folder, { open, toggle, rename }) => [
-              {
-                label: open ? "Collapse Folder" : "Expand Folder",
-                onSelect: toggle,
-              },
-              ...(isGm
-                ? [
-                    "divider" as const,
-                    {
-                      label: "New Scene Here",
-                      Icon: IconAdd,
-                      onSelect: () => addScene(folder.id),
-                    },
-                    {
-                      label: "Rename Folder",
-                      Icon: IconRename,
-                      onSelect: rename,
-                    },
-                    {
-                      label: "Delete Folder",
-                      Icon: IconDelete,
-                      danger: true,
-                      onSelect: () =>
-                        deleteSceneFolder(
-                          campaign.doc,
-                          campaign.scenes,
-                          campaign.sceneFolders,
-                          folder.id,
-                        ),
-                    },
-                  ]
-                : []),
-            ]}
-            onCreateFolder={(name) => createSceneFolder(campaign.sceneFolders, name)}
-            onRenameFolder={(id, name) => renameSceneFolder(campaign.sceneFolders, id, name)}
+            tree="scene"
+            folderCommands={sceneFolders}
+            showList={() => show("list")}
             emptyContent={
               !scenes.length && !folders.length ? (
                 <p className="empty-inline">No scenes yet.</p>
@@ -203,21 +134,25 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
       }
       detail={
         <div className="panel-scroll scene-panel">
-          {isGm && active && (
+          {editable && (
             <input
               className="title"
               value={active.name}
               aria-label="Scene name"
               onChange={(e) =>
-                campaign.updateScene(active.id, {
-                  name: e.currentTarget.value || "Untitled scene",
+                ctx.execute(updateScene, {
+                  id: active.id,
+                  patch: { name: e.currentTarget.value || "Untitled scene" },
                 })
               }
             />
           )}
-          {isGm && active && (
+          {editable && (
             <>
-              <Button variant="secondary" onClick={() => campaign.pullPlayersToScene(active.id)}>
+              <Button
+                variant="secondary"
+                onClick={() => ctx.execute(pullPlayers, { id: active.id })}
+              >
                 <IconMembers size={22} /> Pull players here
               </Button>
               {scene ? (
@@ -228,8 +163,10 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
               <GraphicPicker
                 label="Scene graphic"
                 graphic={graphic}
-                onChange={(next) => setEntityGraphic(campaign, "scene", active.id, next)}
-                onReset={() => setEntityGraphic(campaign, "scene", active.id)}
+                onChange={(graphic) =>
+                  ctx.execute(chooseGraphic, { kind: "scene", id: active.id, graphic })
+                }
+                onReset={() => ctx.execute(chooseGraphic, { kind: "scene", id: active.id })}
               />
             </>
           )}

@@ -1,18 +1,25 @@
-import { store } from "../../lib/store";
-import { getStorageJson, setStorageJson } from "../../platform/localStorage";
+import type { LocalDoc, LocalValue } from "../../data/localDoc";
 
-/** Recently run actions, newest first, remembered on this device. */
-const KEY = "mam:recent-actions";
 const MAX = 12;
 
-function load(): string[] {
-  const v = getStorageJson<unknown>(KEY, []);
-  return Array.isArray(v) ? v.filter((x) => typeof x === "string").slice(0, MAX) : [];
+function read(stored: unknown): string[] {
+  if (stored === undefined) return [];
+  if (!Array.isArray(stored)) {
+    console.warn("Ignoring stored recent actions: not a list", stored);
+    return [];
+  }
+  return stored.filter((x): x is string => typeof x === "string").slice(0, MAX);
 }
 
-export const recentActions = store<string[]>(load());
+/** Recently run actions, newest first, remembered in the campaign's local document. */
+export class RecentActions {
+  readonly ids: LocalValue<string[]>;
 
-export function noteRecent(id: string) {
-  recentActions.value = [id, ...recentActions.value.filter((x) => x !== id)].slice(0, MAX);
-  setStorageJson(KEY, recentActions.value);
+  constructor(local: LocalDoc) {
+    this.ids = local.value("recentActions", read);
+  }
+
+  note(id: string) {
+    this.ids.value = [id, ...this.ids.value.filter((x) => x !== id)].slice(0, MAX);
+  }
 }

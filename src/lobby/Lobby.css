@@ -29,7 +29,9 @@
     text-align: center;
   }
   .lobby-header h1 {
-    font-size: var(--text-xl);
+    font-family: var(--font-display);
+    font-size: var(--text-display);
+    letter-spacing: -0.01em;
     font-weight: 700;
     color: var(--accent);
   }
@@ -51,6 +53,111 @@
     background: var(--window-sheen), var(--surface);
     background-clip: padding-box;
     box-shadow: var(--window-shadow), var(--window-rim);
+  }
+  .lobby-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+  }
+  .lobby-imports {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-2);
+  }
+
+  /* The empty lobby: an emblem, what the table offers, and one way in. */
+  .lobby-welcome {
+    justify-items: center;
+    gap: var(--space-5);
+    padding: var(--space-6) var(--space-5);
+    text-align: center;
+  }
+  .welcome-emblem {
+    display: grid;
+    place-items: center;
+    width: 112px;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    color: var(--accent);
+    background: radial-gradient(circle, var(--accent-soft), transparent 70%);
+    animation: welcome-float 5s ease-in-out infinite;
+  }
+  .welcome-emblem svg {
+    filter: drop-shadow(0 0 12px oklch(80% 0.12 82 / 0.45));
+  }
+  .welcome-title {
+    font-family: var(--font-display);
+    font-size: var(--text-xl);
+    font-weight: 700;
+  }
+  .welcome-features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: var(--space-3);
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .welcome-features li {
+    display: grid;
+    justify-items: center;
+    gap: var(--space-2);
+    padding: var(--space-4) var(--space-3);
+    border: 1px solid var(--hairline);
+    background: var(--raised-sheen), var(--surface-raised);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    animation: welcome-rise 600ms var(--ease) both;
+    transition:
+      translate 200ms var(--ease),
+      color 200ms var(--ease);
+  }
+  .welcome-features li:nth-child(2) {
+    animation-delay: 90ms;
+  }
+  .welcome-features li:nth-child(3) {
+    animation-delay: 180ms;
+  }
+  .welcome-features li svg {
+    color: var(--accent);
+    transition: rotate 300ms var(--ease);
+  }
+  .welcome-features li:hover {
+    translate: 0 -2px;
+    color: var(--text);
+  }
+  .welcome-features li:hover svg {
+    rotate: -8deg;
+  }
+  .welcome-cta {
+    font-size: var(--text-lg);
+    padding-inline: var(--space-5);
+    min-height: 44px;
+  }
+  @keyframes welcome-float {
+    50% {
+      translate: 0 -6px;
+    }
+  }
+  @keyframes welcome-rise {
+    from {
+      opacity: 0;
+      translate: 0 8px;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .welcome-emblem,
+    .welcome-features li {
+      animation: none;
+    }
+    .welcome-features li,
+    .welcome-features li svg {
+      transition: none;
+    }
   }
 
   .campaign-list {
@@ -99,9 +206,13 @@
     color: var(--text);
     border: 1px solid var(--hairline);
   }
+  /* Grows out of what opened it (ui/morph.ts), or else fades and rises. */
   .lobby-modal[open] {
     display: grid;
     gap: var(--space-3);
+    transition:
+      opacity 160ms var(--ease),
+      translate 160ms var(--ease);
   }
   .lobby-modal form {
     display: grid;
@@ -114,5 +225,21 @@
     overflow: hidden;
     overscroll-behavior: contain;
     background: #0009;
+    transition: opacity 160ms var(--ease);
+  }
+  @starting-style {
+    .lobby-modal[open]:not([data-morph="true"]) {
+      opacity: 0;
+      translate: 0 8px;
+    }
+    .lobby-modal[open]::backdrop {
+      opacity: 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .lobby-modal[open],
+    .lobby-modal::backdrop {
+      transition: none;
+    }
   }
 }

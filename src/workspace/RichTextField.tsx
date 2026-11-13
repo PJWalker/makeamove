@@ -2,8 +2,9 @@ import { Editor } from "@tiptap/core";
 import Placeholder from "@tiptap/extension-placeholder";
 import { useEffect, useLayoutEffect, useRef } from "react";
 import type { Campaign } from "../campaign/campaign";
-import type { RichText } from "../core/richText";
+import type { RichText } from "../data/richText";
 import { ruleTextExtensions } from "./RichTextView";
+import { useCampaign } from "./campaignContext";
 
 /**
  * A form field for rules text (a homebrew move's text, its outcomes): rich
@@ -23,6 +24,7 @@ export function RichTextField({
   onChange: (value: RichText) => void;
   placeholder?: string;
 }) {
+  const ctx = useCampaign();
   const hostRef = useRef<HTMLDivElement>(null);
   const initial = useRef(value);
   // The editor reads the latest callback.
@@ -36,13 +38,13 @@ export function RichTextField({
     if (!host) return;
     const editor = new Editor({
       element: host,
-      extensions: [...ruleTextExtensions(campaign), Placeholder.configure({ placeholder })],
+      extensions: [...ruleTextExtensions(ctx), Placeholder.configure({ placeholder })],
       ...(initial.current ? { content: initial.current } : {}),
       editorProps: { attributes: { class: "note-body", "aria-label": label } },
       onUpdate: ({ editor: ed }) => change.current(ed.getJSON()),
     });
     return () => editor.destroy();
-  }, [campaign, label, placeholder]);
+  }, [campaign, ctx, label, placeholder]);
 
   return (
     <div className="field">

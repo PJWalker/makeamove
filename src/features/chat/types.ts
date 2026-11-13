@@ -1,4 +1,4 @@
-import type { RichText } from "../../core/richText";
+import type { RichText } from "../../data/richText";
 import type { Roll } from "../dice/notation";
 import type { ChatContent } from "./content";
 
@@ -157,7 +157,12 @@ export interface CounterMessage extends Base {
 }
 
 export type ChatMessage =
-  TextMessage | RollMessage | SystemMessage | MoveMessage | TimerMessage | CounterMessage;
+  | TextMessage
+  | RollMessage
+  | SystemMessage
+  | MoveMessage
+  | TimerMessage
+  | CounterMessage;
 
 /** What someone sees of a message: all of it, a placeholder, or nothing. */
 export type Visibility = "full" | "masked" | "hidden";

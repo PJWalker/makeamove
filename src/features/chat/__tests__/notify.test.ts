@@ -1,9 +1,6 @@
-import { describe as suite, expect, it, vi } from "vitest";
+import { describe as suite, expect, it } from "vite-plus/test";
 import { contentFromText } from "../content";
-
-vi.mock("../../../campaign/campaign", () => ({ activeCampaign: { value: null } }));
-
-const { delivery, describe } = await import("../notify");
+import { delivery, describe } from "../notify";
 
 const base = { id: "1", hlc: "x", author: "a", name: "Ana" };
 

@@ -4,7 +4,9 @@ import * as Y from "yjs";
 import { IndexeddbPersistence, storeState } from "y-indexeddb";
 import { chatDbName } from "../features/chat/chatLog";
 import { noteDbName } from "../features/notes/noteDoc";
-import { vaultDbName, vaultGuid } from "../features/notes/vault";
+import { vaultDbName, vaultGuid, vaultShape } from "../features/notes/vault";
+import { rootOf } from "../data/schema";
+import { campaignShape } from "./schema";
 import { getBlob } from "../platform/blobs";
 import type { FileKind } from "../platform/files";
 import { sceneDbName } from "../scene/sceneDoc";
@@ -88,21 +90,20 @@ function belongs(campaignId: string, { kind, guid }: { kind: string; guid: strin
 
 /** The subdocuments a root or vault document lists, by kind. */
 export function subdocsOf(kind: BackupDocKind, doc: Y.Doc): { kind: BackupDocKind; doc: Y.Doc }[] {
-  const docsIn = (map: Y.Map<Y.Map<unknown>>, as: BackupDocKind) =>
-    [...map.values()].flatMap((entry) => {
+  const docsIn = (entries: { get(key: "doc"): Y.Doc | undefined }[], as: BackupDocKind) =>
+    entries.flatMap((entry) => {
       const sub = entry.get("doc");
-      return sub instanceof Y.Doc ? [{ kind: as, doc: sub }] : [];
+      return sub ? [{ kind: as, doc: sub }] : [];
     });
-  if (kind === "campaign")
+  if (kind === "campaign") {
+    const root = rootOf(doc, campaignShape);
     return [
-      ...docsIn(doc.getMap("scenes"), "scene"),
-      ...docsIn(doc.getMap("notes"), "note"),
-      ...doc
-        .getArray<Y.Doc>("chat")
-        .toArray()
-        .map((chunk) => ({ kind: "chat" as const, doc: chunk })),
+      ...docsIn(root.scenes.values(), "scene"),
+      ...docsIn(root.notes.values(), "note"),
+      ...root.chat.toArray().map((chunk) => ({ kind: "chat" as const, doc: chunk })),
     ];
-  if (kind === "vault") return docsIn(doc.getMap("notes"), "vault-note");
+  }
+  if (kind === "vault") return docsIn(rootOf(doc, vaultShape).notes.values(), "vault-note");
   return [];
 }
 
@@ -172,39 +173,48 @@ export async function snapshotCampaign(
   reuse: (guid: string) => DocSnapshot | undefined = () => undefined,
 ): Promise<DocSnapshot[]> {
   const out: DocSnapshot[] = [];
-  const visit = async (kind: BackupDocKind, guid: string) => {
+  const visit = async (kind: BackupDocKind, guid: string): Promise<DocSnapshot | undefined> => {
     const kept = reuse(guid);
-    if (kept) {
-      out.push(kept);
-      return;
-    }
+    if (kept) return kept;
     const doc = await readStoredDoc(kind, guid);
-    if (!isEmpty(doc)) out.push(snapshotDoc(kind, doc));
+    const snapshot = isEmpty(doc) ? undefined : snapshotDoc(kind, doc);
     doc.destroy();
+    return snapshot;
   };
   // A root is always read, to find its subdocuments.
   const walk = async (kind: BackupDocKind, guid: string) => {
     const root = await readStoredDoc(kind, guid);
     if (!isEmpty(root)) out.push(reuse(guid) ?? snapshotDoc(kind, root));
-    for (const sub of subdocsOf(kind, root)) await visit(sub.kind, sub.doc.guid);
+    const subdocs = await Promise.all(
+      subdocsOf(kind, root).map((sub) => visit(sub.kind, sub.doc.guid)),
+    );
+    out.push(...subdocs.filter((doc) => doc !== undefined));
     return root;
   };
 
   const root = await walk("campaign", campaignId);
-  const member = root.getMap<Y.Map<unknown>>("members").get(device.id);
+  const memberRole = rootOf(root, campaignShape).members.get(device.id)?.get("role");
   root.destroy();
   // Only GM devices have a vault; don't make an empty one on a player's.
-  if (((member?.get("role") as string | undefined) ?? role) === "gm")
-    (await walk("vault", vaultGuid(campaignId))).destroy();
+  if ((memberRole ?? role) === "gm") (await walk("vault", vaultGuid(campaignId))).destroy();
   return out;
 }
 
 /** Read images from the blob store. Ones this device hasn't got yet are left out. */
 export async function readBlobs(hashes: Iterable<string>): Promise<BackupBlob[]> {
   const out: BackupBlob[] = [];
-  for (const hash of hashes) {
-    const blob = await getBlob(hash);
-    if (blob) out.push({ hash, type: blob.type, data: new Uint8Array(await blob.arrayBuffer()) });
+  const hashList = [...hashes];
+  for (let offset = 0; offset < hashList.length; offset += 4) {
+    // oxlint-disable-next-line react-doctor/async-await-in-loop -- Keep blob reads bounded to four at a time.
+    const batch = await Promise.all(
+      hashList.slice(offset, offset + 4).map(async (hash): Promise<BackupBlob | null> => {
+        const blob = await getBlob(hash);
+        return blob
+          ? { hash, type: blob.type, data: new Uint8Array(await blob.arrayBuffer()) }
+          : null;
+      }),
+    );
+    out.push(...batch.filter((blob) => blob !== null));
   }
   return out;
 }
@@ -214,14 +224,15 @@ export function metaOf(docs: BackupDoc[], campaignId: string) {
   const doc = new Y.Doc();
   const root = docs.find((d) => d.kind === "campaign" && d.guid === campaignId);
   if (root) Y.applyUpdate(doc, root.update);
-  const meta = doc.getMap("meta").toJSON() as Record<string, unknown>;
-  doc.destroy();
-  return {
-    name: typeof meta.name === "string" ? meta.name : "Untitled campaign",
-    systemId: typeof meta.systemId === "string" ? meta.systemId : "",
-    roomKey: typeof meta.roomKey === "string" ? meta.roomKey : undefined,
-    createdAt: typeof meta.createdAt === "number" ? meta.createdAt : undefined,
+  const meta = rootOf(doc, campaignShape).meta;
+  const out = {
+    name: meta.get("name") ?? "Untitled campaign",
+    systemId: meta.get("systemId") ?? "",
+    roomKey: meta.get("roomKey"),
+    createdAt: meta.get("createdAt"),
   };
+  doc.destroy();
+  return out;
 }
 
 export function assembleBackup(
@@ -335,19 +346,12 @@ export function backupFileName(name: string, at = new Date()): string {
  * device a GM too, under the name the backup was made under.
  */
 export function claimGm(root: Y.Doc, device: BackupDevice, exportedBy: string) {
-  const members = root.getMap<Y.Map<unknown>>("members");
+  const { members } = rootOf(root, campaignShape);
   const me = members.get(device.id);
   if (me?.get("role") === "gm") return;
-  const name = device.name || (members.get(exportedBy)?.get("name") as string | undefined) || "GM";
-  root.transact(() => {
-    const m = me ?? new Y.Map<unknown>();
-    m.set("role", "gm");
-    if (!me) {
-      m.set("joinedAt", Date.now());
-      m.set("name", name);
-      members.set(device.id, m);
-    }
-  });
+  const name = device.name || members.get(exportedBy)?.get("name") || "GM";
+  if (me) me.set("role", "gm");
+  else members.set(device.id, { role: "gm", joinedAt: Date.now(), name });
 }
 
 export const isGmBackup = (backup: CampaignBackup) => backup.docs.some((d) => d.kind === "vault");

@@ -1,29 +1,15 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import {
-  bumpData,
-  bumpResource,
-  canEdit,
-  setData,
-  setField,
-  setLearned,
-  setLoadout,
-  setModifier,
-  setNpcField,
-  setScore,
-  setConditionState,
-  startMove,
-  toggleCondition,
-} from "../features/characters/api";
+import { canEdit } from "../features/characters/api";
 import { actionsFor, derive, statBonus } from "../features/characters/store";
 import type { CharacterView } from "../features/characters/types";
 import { conditionColour } from "../features/combat/pipColours";
-import { postRoll } from "../features/chat/send";
 import { parse } from "../features/dice/notation";
 import type { Campaign } from "../campaign/campaign";
 import { device } from "../platform/device";
 import type { Derived, GameSystem, SheetCounter, SheetSection } from "../systems/types";
 import { CLASS_FIELD, choicesAt } from "../features/characters/creation";
 import { commaListOf } from "../lib/list";
+import { parseInputNumber } from "../lib/number";
 import { Button } from "../ui/Button";
 import { OptionPicker } from "../ui/OptionPicker";
 import { IconLock } from "../ui/icons";
@@ -35,7 +21,23 @@ import { useExtension } from "./systemExtensions";
 import { registerEntityDrop, type DragEntity } from "./entityDrag";
 import { Inventory } from "./Inventory";
 import { Counter, MoveList, signedStr, TokenChip } from "./sheetParts";
-import { useValue } from "../ui/useValue";
+import { useQuery } from "../ui/useQuery";
+import {
+  bumpData,
+  bumpResource,
+  setCondition,
+  setData,
+  setField,
+  setLearned,
+  setLoadout,
+  setModifier,
+  setNpcField,
+  setScore,
+  startMove,
+  toggleCondition,
+} from "./commands/characters";
+import { useCampaign } from "./campaignContext";
+import { roll } from "./commands/chat";
 
 /*
  * Shared sections for system-owned sheet components, and a declarative
@@ -63,7 +65,7 @@ export function SheetFrame({
   drop,
   children,
 }: SheetProps & { editable: boolean; drop?: SheetDrop | undefined; children: ReactNode }) {
-  const me = useValue(device).id;
+  const me = useQuery(device).id;
   const frame = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const element = frame.current;
@@ -91,8 +93,12 @@ export function DeclarativeSheet({ layout, ...props }: Props) {
   const sheet = useSheet(props);
   return (
     <SheetFrame {...sheet}>
-      {layout.map((section, index) => (
-        <SheetSectionView key={index} {...sheet} section={section} />
+      {layout.map((section) => (
+        <SheetSectionView
+          key={`${section.kind}:${JSON.stringify(section)}`}
+          {...sheet}
+          section={section}
+        />
       ))}
     </SheetFrame>
   );
@@ -137,22 +143,18 @@ function Advancement({
   );
 }
 
-function Loadout({
-  campaign,
-  system,
-  c,
-  d,
-  editable,
-  id,
-}: Omit<SectionProps, "section"> & { id: string }) {
+function Loadout({ system, c, d, editable, id }: Omit<SectionProps, "section"> & { id: string }) {
+  const ctx = useCampaign();
   const [free, setFree] = useState(false);
   const [query, setQuery] = useState("");
   const definition = system.loadouts?.find((entry) => entry.id === id);
   if (!definition) return null;
   const max = typeof definition.max === "number" ? definition.max : (d.values[definition.max] ?? 0);
   const owned = definition.available?.(c, d) ?? commaListOf(c.data[definition.ownedField]);
+  const ownedIds = new Set(owned);
   const active = commaListOf(c.data[definition.activeField]).slice(0, max);
-  const options = definition.options.filter((option) => owned.includes(option.id));
+  const activeIds = new Set(active);
+  const options = definition.options.filter((option) => ownedIds.has(option.id));
   if (!options.length || max <= 0) return null;
   return (
     <section className="form-section sheet-section" aria-label={definition.label}>
@@ -181,7 +183,7 @@ function Loadout({
       {options
         .filter((option) => option.name.toLowerCase().includes(query.trim().toLowerCase()))
         .map((option) => {
-          const selected = active.includes(option.id);
+          const selected = activeIds.has(option.id);
           const cost = definition.costs?.[option.id];
           const resource = cost && system.resources.find((entry) => entry.id === cost.resource);
           const affordable =
@@ -197,15 +199,14 @@ function Loadout({
                 checked={selected}
                 disabled={!editable || (!selected && (active.length >= max || !affordable))}
                 onChange={() =>
-                  setLoadout(
-                    campaign,
-                    c.id,
-                    id,
-                    selected
+                  ctx.execute(setLoadout, {
+                    id: c.id,
+                    loadout: id,
+                    options: selected
                       ? active.filter((entry) => entry !== option.id)
                       : [...active, option.id],
                     free,
-                  )
+                  })
                 }
               />
               {option.name}
@@ -217,8 +218,8 @@ function Loadout({
 }
 
 export function SheetSectionView({ campaign, system, c, d, editable, section }: SectionProps) {
+  const ctx = useCampaign();
   const v = d.values;
-  const set = (key: string, value: unknown) => setField(campaign, c.id, key, value);
   switch (section.kind) {
     case "header": {
       const classChoice =
@@ -237,7 +238,12 @@ export function SheetSectionView({ campaign, system, c, d, editable, section }: 
               value={c.name}
               disabled={!editable}
               onChange={(e) =>
-                e.currentTarget.value.trim() && set("name", e.currentTarget.value.trim())
+                e.currentTarget.value.trim() &&
+                ctx.execute(setField, {
+                  id: c.id,
+                  key: "name",
+                  value: e.currentTarget.value.trim(),
+                })
               }
             />
             <span className="muted">{c.kind === "npc" ? "NPC" : "Player character"}</span>
@@ -247,7 +253,7 @@ export function SheetSectionView({ campaign, system, c, d, editable, section }: 
                 options={classChoice.options}
                 value={String(c.data[CLASS_FIELD] ?? "")}
                 disabled={!editable}
-                onChange={(id) => setData(campaign, c.id, CLASS_FIELD, id)}
+                onChange={(id) => ctx.execute(setData, { id: c.id, key: CLASS_FIELD, value: id })}
               />
             )}
           </div>
@@ -257,12 +263,13 @@ export function SheetSectionView({ campaign, system, c, d, editable, section }: 
     case "choices": {
       const field = system.creation?.advancementField;
       const rank = Number(field ? c.data[field] : 0);
+      const sectionChoices = section.choices ? new Set(section.choices) : undefined;
       const choices = [
         ...choicesAt(system.creation, "create", c.data),
         ...Array.from({ length: rank }, (_, i) => choicesAt(system.creation, i + 1, c.data)).flat(),
       ].filter(
         (choice) =>
-          choice.field !== CLASS_FIELD && (!section.choices || section.choices.includes(choice.id)),
+          choice.field !== CLASS_FIELD && (!sectionChoices || sectionChoices.has(choice.id)),
       );
       if (!choices.length) return null;
       return (
@@ -275,7 +282,7 @@ export function SheetSectionView({ campaign, system, c, d, editable, section }: 
               options={choice.options}
               value={String(c.data[choice.field] ?? "")}
               disabled={!editable}
-              onChange={(id) => setData(campaign, c.id, choice.field, id)}
+              onChange={(id) => ctx.execute(setData, { id: c.id, key: choice.field, value: id })}
             />
           ))}
         </section>
@@ -299,15 +306,20 @@ export function SheetSectionView({ campaign, system, c, d, editable, section }: 
                 disabled={!editable}
                 onChange={(event) => {
                   if (item.type === "number") {
-                    const value = Number(event.currentTarget.value);
+                    const value = parseInputNumber(event.currentTarget.value);
                     if (
-                      !Number.isFinite(value) ||
+                      value === undefined ||
                       (item.min !== undefined && value < item.min) ||
                       (item.max !== undefined && value > item.max)
                     )
                       return;
-                    setData(campaign, c.id, item.field, value);
-                  } else setData(campaign, c.id, item.field, event.currentTarget.value);
+                    ctx.execute(setData, { id: c.id, key: item.field, value });
+                  } else
+                    ctx.execute(setData, {
+                      id: c.id,
+                      key: item.field,
+                      value: event.currentTarget.value,
+                    });
                 }}
               />
             </label>
@@ -377,12 +389,11 @@ export function SheetSectionView({ campaign, system, c, d, editable, section }: 
                       title={`Roll ${item.label}`}
                       aria-label={`Roll ${item.label}`}
                       onClick={() =>
-                        void postRoll(
-                          campaign,
-                          `d${derivedValue(item.value)}${item.plus && derivedValue(item.plus) ? signedStr(derivedValue(item.plus)) : ""}`,
-                          "public",
-                          item.label,
-                        )
+                        void ctx.execute(roll, {
+                          formula: `d${derivedValue(item.value)}${item.plus && derivedValue(item.plus) ? signedStr(derivedValue(item.plus)) : ""}`,
+                          visibility: "public",
+                          comment: item.label,
+                        })
                       }
                     >
                       d{derivedValue(item.value)}
@@ -427,7 +438,13 @@ export function SheetSectionView({ campaign, system, c, d, editable, section }: 
                 label={m.label}
                 value={c.modifiers[m.id] ?? 0}
                 disabled={!editable}
-                onChange={(by) => setModifier(campaign, c.id, m.id, (c.modifiers[m.id] ?? 0) + by)}
+                onChange={(by) =>
+                  ctx.execute(setModifier, {
+                    id: c.id,
+                    modifier: m.id,
+                    value: (c.modifiers[m.id] ?? 0) + by,
+                  })
+                }
               />
             ))}
           </div>
@@ -446,9 +463,13 @@ export function SheetSectionView({ campaign, system, c, d, editable, section }: 
             system={system}
             moves={actionsFor(c, system, d)}
             ownerId={c.id}
-            onMake={(m) => startMove(campaign, c.id, m)}
+            onMake={(m) => ctx.execute(startMove, { characterId: c.id, move: m.id })}
             learned={c.learned}
-            onForget={editable ? (m) => setLearned(campaign, c.id, m.id, false) : undefined}
+            onForget={
+              editable
+                ? (m) => ctx.execute(setLearned, { id: c.id, action: m.id, known: false })
+                : undefined
+            }
           />
         </section>
       );
@@ -461,12 +482,13 @@ export function SheetSectionView({ campaign, system, c, d, editable, section }: 
           editable={editable}
         />
       );
-    case "npcFields":
+    case "npcFields": {
+      const sectionFields = section.fields ? new Set(section.fields) : undefined;
       return (
         <section className="form-section sheet-section" aria-label="Details">
           <h3 className="sheet-heading">Details</h3>
           {system.npcFields
-            .filter((field) => !section.fields || section.fields.includes(field.id))
+            .filter((field) => !sectionFields || sectionFields.has(field.id))
             .map((f) =>
               f.type === "longtext" ? (
                 <CharacterText
@@ -486,21 +508,25 @@ export function SheetSectionView({ campaign, system, c, d, editable, section }: 
                       value={c.fields[f.id]}
                       disabled={!editable}
                       onChange={(e) =>
-                        setNpcField(
-                          campaign,
-                          c.id,
-                          f.id,
-                          f.type === "number"
-                            ? Number(e.currentTarget.value) || 0
-                            : e.currentTarget.value,
-                        )
+                        ctx.execute(setNpcField, {
+                          id: c.id,
+                          field: f.id,
+                          value:
+                            f.type === "number"
+                              ? Number(e.currentTarget.value) || 0
+                              : e.currentTarget.value,
+                        })
                       }
                     />
                     {f.rollable && isFormula(String(c.fields[f.id] ?? "")) && (
                       <Button
                         variant="secondary"
                         onClick={() =>
-                          void postRoll(campaign, String(c.fields[f.id]), "public", f.label)
+                          void ctx.execute(roll, {
+                            formula: String(c.fields[f.id]),
+                            visibility: "public",
+                            comment: f.label,
+                          })
                         }
                       >
                         Roll
@@ -512,6 +538,7 @@ export function SheetSectionView({ campaign, system, c, d, editable, section }: 
             )}
         </section>
       );
+    }
     case "text": {
       const fields = section.fields.map((f) => (
         <CharacterText
@@ -537,7 +564,6 @@ export function SheetSectionView({ campaign, system, c, d, editable, section }: 
 
 /** One number: a resource, a data field or the level. */
 function SheetNumber({
-  campaign,
   system,
   c,
   d,
@@ -551,6 +577,7 @@ function SheetNumber({
   editable: boolean;
   item: SheetCounter;
 }) {
+  const ctx = useCampaign();
   const max = "max" in item && item.max ? d.values[item.max] : undefined;
   if ("resource" in item) {
     const value = c.resources[item.resource] ?? 0;
@@ -562,7 +589,7 @@ function SheetNumber({
         value={value}
         max={max}
         disabled={!editable}
-        onChange={(by) => bumpResource(campaign, c.id, item.resource, by, max)}
+        onChange={(by) => ctx.execute(bumpResource, { id: c.id, resource: item.resource, by, max })}
         status={
           status && active
             ? {
@@ -587,8 +614,9 @@ function SheetNumber({
           value={value}
           disabled={!editable}
           onChange={(e) => {
-            const n = Math.floor(Number(e.currentTarget.value));
-            if (n >= 1) setData(campaign, c.id, item.data, n);
+            const value = parseInputNumber(e.currentTarget.value);
+            if (value !== undefined && value >= 1)
+              ctx.execute(setData, { id: c.id, key: item.data, value: Math.floor(value) });
           }}
         />
       </label>
@@ -600,14 +628,13 @@ function SheetNumber({
       value={value}
       max={max}
       disabled={!editable}
-      onChange={(by) => bumpData(campaign, c.id, item.data, by)}
+      onChange={(by) => ctx.execute(bumpData, { id: c.id, key: item.data, by })}
     />
   );
 }
 
 /** Each stat: its modifier (click to roll), its score, and the condition tied to it, if any. */
 function Stats({
-  campaign,
   system,
   c,
   d,
@@ -620,6 +647,7 @@ function Stats({
   hint?: string | undefined;
   showScore: boolean;
 }) {
+  const ctx = useCampaign();
   const [menu, setMenu] = useState<{
     x: number;
     y: number;
@@ -629,8 +657,14 @@ function Stats({
   const rollStat = (statId: string, abbr: string) => {
     const mod = statBonus(d, statId);
     const formula = `${system.baseRoll}${mod ? `${mod < 0 ? "-" : "+"}${Math.abs(mod)}` : ""}[${abbr}]`;
-    void postRoll(campaign, system.checkRoll?.(formula, statId, c) ?? formula, "public", abbr);
+    void ctx.execute(roll, {
+      formula: system.checkRoll?.(formula, statId, c) ?? formula,
+      visibility: "public",
+      comment: abbr,
+    });
   };
+  const conditionIds = new Set(c.conditions);
+  const lockedConditionIds = new Set(c.lockedConditions ?? []);
   return (
     <section className="form-section sheet-section" aria-label={label}>
       <h3 className="sheet-heading">
@@ -642,9 +676,9 @@ function Stats({
       >
         {system.stats.map((s) => {
           const tied = system.conditions.find((x) => x.stat === s.id);
-          const has = !!tied && c.conditions.includes(tied.id);
+          const has = !!tied && conditionIds.has(tied.id);
           const state =
-            tied && c.lockedConditions?.includes(tied.id) ? "locked" : has ? "marked" : "clear";
+            tied && lockedConditionIds.has(tied.id) ? "locked" : has ? "marked" : "clear";
           const nextState = state === "clear" ? "marked" : state === "marked" ? "locked" : "clear";
           const trigger = menuTrigger((x, y) => {
             if (!editable) return;
@@ -659,7 +693,7 @@ function Stats({
                 return {
                   label: `Set ${s.name} to ${showScore ? value : signedStr(value)}`,
                   checked: c.scores[s.id] === value,
-                  onSelect: () => setScore(campaign, c.id, s.id, value),
+                  onSelect: () => ctx.execute(setScore, { id: c.id, stat: s.id, score: value }),
                 };
               }),
             });
@@ -698,9 +732,14 @@ function Stats({
                     value={c.scores[s.id]}
                     disabled={!editable}
                     onChange={(e) => {
-                      const n = Number(e.currentTarget.value);
-                      if (Number.isInteger(n) && n >= (s.min ?? 1) && n <= (s.max ?? 20))
-                        setScore(campaign, c.id, s.id, n);
+                      const value = parseInputNumber(e.currentTarget.value);
+                      if (
+                        value !== undefined &&
+                        Number.isInteger(value) &&
+                        value >= (s.min ?? 1) &&
+                        value <= (s.max ?? 20)
+                      )
+                        ctx.execute(setScore, { id: c.id, stat: s.id, score: value });
                     }}
                   />
                 </label>
@@ -716,7 +755,9 @@ function Stats({
                   aria-label={`${tied.name}: ${state}. ${nextState === "clear" ? "Clear" : nextState === "marked" ? "Mark" : "Lock"} condition`}
                   title={`${tied.name}: ${state}`}
                   disabled={!editable}
-                  onClick={() => setConditionState(campaign, c.id, tied.id, nextState)}
+                  onClick={() =>
+                    ctx.execute(setCondition, { id: c.id, condition: tied.id, state: nextState })
+                  }
                 >
                   <span className="condition-symbol" aria-hidden="true">
                     {state === "locked" ? (
@@ -734,7 +775,9 @@ function Stats({
                       type="checkbox"
                       checked={has}
                       disabled={!editable}
-                      onChange={() => toggleCondition(campaign, c.id, tied.id)}
+                      onChange={() =>
+                        ctx.execute(toggleCondition, { id: c.id, condition: tied.id })
+                      }
                     />
                     {tied.name}
                   </label>

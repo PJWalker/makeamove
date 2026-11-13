@@ -1,22 +1,17 @@
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- The icon grid is a keyboard-selectable listbox, not a native select. */
 import { useState } from "react";
-import { store } from "../lib/store";
-import {
-  actionForCombo,
-  comboOf,
-  setShortcut,
-  setSlotLook,
-  shortcuts,
-  showCombo,
-  slotLook,
-} from "./commands/custom";
-import { findAction } from "./commands/registry";
+import { actionForCombo, comboOf, shortcuts, showCombo, slotLook } from "./commands/custom";
+import { bindKey, lookOfSlot } from "./commands/campaign";
+import { RECORDER } from "./commands/keys";
+import { findAction } from "./commands/views";
 import type { Campaign } from "../campaign/campaign";
 import { Button } from "../ui/Button";
 import { ENTRY_ICONS, type EntryIconName } from "../ui/entryIcons";
 import { closePopup } from "../ui/popup";
 import { Dialog } from "./Dialog";
 import { usePopupDialog } from "./usePopupDialog";
-import { useValue } from "../ui/useValue";
+import { useQuery } from "../ui/useQuery";
+import { useCampaign } from "./campaignContext";
 
 /*
  * Pop-ups for a player's own touches on an action (commands/custom.ts):
@@ -24,25 +19,9 @@ import { useValue } from "../ui/useValue";
  * hotbar's and the palette's menus open them.
  */
 
-type Kind = "rename" | "icon" | "shortcut";
-
-const request = store<{
-  n: number;
-  kind: Kind;
-  id: string;
-  title: string;
-} | null>(null);
-let requests = 0;
-
-export function editAction(kind: Kind, id: string, title: string) {
-  request.value = { n: ++requests, kind, id, title };
-}
-
-/** The recorder's class: global shortcuts stand aside while it has focus. */
-export const RECORDER = "shortcut-recorder";
-
 export function ActionDialogs({ campaign }: { campaign: Campaign }) {
-  const req = useValue(request);
+  const ctx = useCampaign();
+  const req = useQuery(ctx.table.actionEdit);
   if (!req) return null;
   // A new pop-up for each request, opened as it mounts so the menu item's morph catches it.
   const props = { key: req.n, campaign, id: req.id, title: req.title };
@@ -58,8 +37,9 @@ interface Props {
 }
 
 function usePopup() {
+  const ctx = useCampaign();
   const ref = usePopupDialog();
-  const onClose = () => (request.value = null);
+  const onClose = () => ctx.table.actionEdit.set(null);
   return {
     ref,
     close: () => closePopup(ref.current, onClose),
@@ -68,11 +48,12 @@ function usePopup() {
 }
 
 function RenameDialog({ campaign, id, title }: Props) {
+  const ctx = useCampaign();
   const { ref, close, onClose } = usePopup();
   const custom = slotLook(campaign, id).label;
   const [text, setText] = useState(custom ?? title);
   const done = (label: string | undefined) => {
-    setSlotLook(campaign, id, { label: label?.trim() || undefined });
+    ctx.execute(lookOfSlot, { key: id, look: { label: label?.trim() || undefined } });
     close();
   };
   return (
@@ -117,10 +98,11 @@ const CHOICES = (Object.keys(ENTRY_ICONS) as EntryIconName[]).filter(
 );
 
 function IconDialog({ campaign, id, title }: Props) {
+  const ctx = useCampaign();
   const { ref, close, onClose } = usePopup();
   const current = slotLook(campaign, id).icon;
   const choose = (icon: EntryIconName | undefined) => {
-    setSlotLook(campaign, id, { icon });
+    ctx.execute(lookOfSlot, { key: id, look: { icon } });
     close();
   };
   return (
@@ -160,16 +142,17 @@ function IconDialog({ campaign, id, title }: Props) {
 }
 
 function ShortcutDialog({ campaign, id, title }: Props) {
+  const ctx = useCampaign();
   const { ref, close, onClose } = usePopup();
   const existing = shortcuts(campaign)[id] ?? null;
   const [combo, setCombo] = useState<string | null>(existing);
   const other = combo ? actionForCombo(shortcuts(campaign), combo) : undefined;
   const taken =
     other && other !== id
-      ? (slotLook(campaign, other).label ?? findAction(campaign, other)?.title ?? "another action")
+      ? (slotLook(campaign, other).label ?? findAction(ctx, other)?.title ?? "another action")
       : null;
   const save = (value: string | null) => {
-    setShortcut(campaign, id, value);
+    ctx.execute(bindKey, { key: id, combo: value });
     close();
   };
   return (
@@ -214,9 +197,9 @@ function ShortcutDialog({ campaign, id, title }: Props) {
             }}
           />
         </label>
-        <p className="muted" role="status">
+        <output className="muted">
           {taken ? `Now on ${taken}. Saving moves it here.` : "Backspace clears it."}
-        </p>
+        </output>
         <div className="form-actions">
           {existing && (
             <Button variant="ghost" className="form-actions-start" onClick={() => save(null)}>

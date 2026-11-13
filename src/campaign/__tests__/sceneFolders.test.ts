@@ -1,5 +1,5 @@
 import "fake-indexeddb/auto";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { Campaign, createCampaign } from "../campaign";
 import { device } from "../../platform/device";
 import {
@@ -23,7 +23,7 @@ describe("scene folders", () => {
     renameSceneFolder(campaign.sceneFolders, folderId, "Locations");
     expect(listSceneFolders(campaign.sceneFolders)).toEqual([{ id: folderId, name: "Locations" }]);
 
-    deleteSceneFolder(campaign.doc, campaign.scenes, campaign.sceneFolders, folderId);
+    deleteSceneFolder(campaign.scenes, campaign.sceneFolders, folderId);
     expect(campaign.sceneViews().find((scene) => scene.id === sceneId)?.folder).toBeUndefined();
     expect(listSceneFolders(campaign.sceneFolders)).toEqual([]);
     campaign.destroy();

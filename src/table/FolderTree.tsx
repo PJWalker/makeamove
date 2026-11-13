@@ -1,19 +1,17 @@
-import type { ReactNode } from "react";
-import { IconFolder } from "../ui/icons";
+import { useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
+import { IconFolder, IconRename } from "../ui/icons";
 import { FolderName } from "../ui/FolderName";
 import { List, ListGroup } from "../ui/List";
 import { menuTrigger } from "../ui/menuTrigger";
 import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
+import { growFrom } from "../ui/morph";
 import { PanelActions } from "./PanelActions";
-import { useState } from "react";
+import { useCampaign } from "../workspace/campaignContext";
+import type { FolderCommands } from "../workspace/commands/folders";
+import type { FolderTreeKind } from "../workspace/commands/types";
+import { joinSections, menuFor } from "../workspace/commands/views";
 
 type FolderRecord = { id: string; name: string };
-
-type FolderMenuState = {
-  open: boolean;
-  toggle: () => void;
-  rename: () => void;
-};
 
 export function FolderTree<Item, Folder extends FolderRecord>({
   ariaLabel,
@@ -23,9 +21,10 @@ export function FolderTree<Item, Folder extends FolderRecord>({
   folderOf,
   renderItem,
   renderActions,
+  tree,
+  folderCommands,
   folderMenuItems,
-  onCreateFolder,
-  onRenameFolder,
+  showList,
   emptyContent,
 }: {
   ariaLabel: string;
@@ -34,15 +33,24 @@ export function FolderTree<Item, Folder extends FolderRecord>({
   items: Item[];
   folderOf: (item: Item) => string | undefined;
   renderItem: (item: Item) => ReactNode;
-  renderActions: (beginFolderNaming: () => void) => ReactNode;
-  folderMenuItems: (folder: Folder, state: FolderMenuState) => MenuItem[];
-  onCreateFolder: (name: string) => void;
-  onRenameFolder: (id: string, name: string) => void;
+  /** The panel's creation buttons; `newFolder` is for a New Folder button's click. */
+  renderActions: (newFolder: (e: MouseEvent<HTMLElement>) => void) => ReactNode;
+  /** Which list's folders these are, for their menus' commands. */
+  tree: FolderTreeKind;
+  /** Making, naming and deleting the folders (commands/folders.ts). */
+  folderCommands: FolderCommands;
+  /** The panel's own entries for a folder's menu, beside the commands for it. */
+  folderMenuItems?: (folder: Folder) => MenuItem[];
+  /** Bring the tree into view, when the panel is showing something else in its place. */
+  showList: () => Promise<void>;
   emptyContent?: ReactNode;
 }) {
+  const ctx = useCampaign();
   const [folded, setFolded] = useState<Set<string>>(new Set());
-  const [naming, setNaming] = useState<string | null>(null);
+  // The folder being named, and for one just made, the button it grows out of.
+  const [naming, setNaming] = useState<{ id: string; from?: DOMRect } | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
+  const navRef = useRef<HTMLElement>(null);
   const known = new Set(folders.map((folder) => folder.id));
   const loose = items.filter((item) => {
     const folderId = folderOf(item);
@@ -55,19 +63,27 @@ export function FolderTree<Item, Folder extends FolderRecord>({
     setFolded(next);
   };
 
+  const newFolder = (e: MouseEvent<HTMLElement>) => {
+    const from = e.currentTarget.getBoundingClientRect();
+    void showList().then(() => {
+      const id = ctx.execute(folderCommands.create, {});
+      if (id) setNaming({ id, from });
+    });
+  };
+
+  useLayoutEffect(() => {
+    if (!naming?.from) return;
+    const group = navRef.current?.querySelector<HTMLElement>(
+      `[data-folder-drop="${CSS.escape(naming.id)}"]`,
+    );
+    if (!group) return;
+    group.scrollIntoView({ block: "nearest" });
+    growFrom(group, naming.from);
+  }, [naming]);
+
   return (
-    <nav className={className} aria-label={ariaLabel}>
-      <PanelActions>
-        {naming === "new" && (
-          <FolderName
-            onDone={(name) => {
-              if (name) onCreateFolder(name);
-              setNaming(null);
-            }}
-          />
-        )}
-        {naming !== "new" && renderActions(() => setNaming("new"))}
-      </PanelActions>
+    <nav ref={navRef} className={className} aria-label={ariaLabel}>
+      <PanelActions>{renderActions(newFolder)}</PanelActions>
       <div className="chars-tree panel-scroll" data-folder-drop="">
         {folders.map((folder) => {
           const children = items.filter((item) => folderOf(item) === folder.id);
@@ -76,11 +92,26 @@ export function FolderTree<Item, Folder extends FolderRecord>({
             setMenu({
               x,
               y,
-              items: folderMenuItems(folder, {
-                open,
-                toggle: () => toggle(folder.id),
-                rename: () => setNaming(folder.id),
-              }),
+              items: joinSections([
+                [
+                  {
+                    label: open ? "Collapse Folder" : "Expand Folder",
+                    onSelect: () => toggle(folder.id),
+                  },
+                  ...(ctx.commands.permits(folderCommands.rename, { id: folder.id, name: "" }) ===
+                  true
+                    ? [
+                        {
+                          label: "Rename Folder",
+                          Icon: IconRename,
+                          onSelect: () => setNaming({ id: folder.id }),
+                        },
+                      ]
+                    : []),
+                ],
+                folderMenuItems?.(folder) ?? [],
+                menuFor(ctx, { kind: "folder", tree, id: folder.id }),
+              ]),
             });
           });
 
@@ -98,11 +129,11 @@ export function FolderTree<Item, Folder extends FolderRecord>({
               }}
               group={{ "data-folder-drop": folder.id }}
               replaceHead={
-                naming === folder.id ? (
+                naming?.id === folder.id ? (
                   <FolderName
                     initial={folder.name}
                     onDone={(name) => {
-                      if (name) onRenameFolder(folder.id, name);
+                      if (name) ctx.execute(folderCommands.rename, { id: folder.id, name });
                       setNaming(null);
                     }}
                   />

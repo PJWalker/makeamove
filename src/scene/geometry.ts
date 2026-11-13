@@ -1,8 +1,8 @@
 import type { Rect } from "./camera";
 
 import type { Point } from "./grid";
-import { distanceToStroke } from "./stroke";
-import { isPlainToken, type SceneElement, type ShapeKind, type Transform } from "./types";
+import { distanceToSegment, distanceToStroke } from "./stroke";
+import { isPlainToken, type SceneElement, type ShapeGeometry, type Transform } from "./types";
 
 /** p in the element's own frame: origin at its centre, unrotated, unscaled. */
 export function toLocal(t: Transform, p: Point): Point {
@@ -32,7 +32,7 @@ export function corners(t: Transform): Point[] {
 }
 
 /** Axis-aligned bounds of one or more elements. */
-export function bounds(ts: Transform[]): Rect | null {
+export function bounds(ts: readonly Transform[]): Rect | null {
   if (!ts.length) return null;
   let x0 = Infinity;
   let y0 = Infinity;
@@ -55,11 +55,11 @@ export const contains = (outer: Rect, inner: Rect) =>
   inner.x + inner.w <= outer.x + outer.w &&
   inner.y + inner.h <= outer.y + outer.h;
 
-/** A shape's outline in its own frame (see ShapeKind), as points around it. */
-export function shapeOutline(shape: ShapeKind, w: number, h: number): Point[] {
+/** A shape's outline in its own frame (see ShapeKind) at the size w × h, as points around it. */
+export function shapeOutline(geo: ShapeGeometry, w: number, h: number): Point[] {
   const hw = w / 2;
   const hh = h / 2;
-  switch (shape) {
+  switch (geo.shape) {
     case "rect":
     case "line":
       return [
@@ -81,11 +81,19 @@ export function shapeOutline(shape: ShapeKind, w: number, h: number): Point[] {
         y: hh * Math.sin((i / n) * Math.PI * 2),
       }));
     }
+    case "polygon": {
+      const sx = w / geo.bw;
+      const sy = h / geo.bh;
+      const out: Point[] = [];
+      for (let i = 0; i < geo.points.length; i += 2)
+        out.push({ x: geo.points[i]! * sx, y: geo.points[i + 1]! * sy });
+      return out;
+    }
   }
 }
 
 /** Whether world point p is inside a shape, grown by `margin` world px (a circle's or a cone's edge counts as in). */
-export function shapeCovers(el: Transform & { shape: ShapeKind }, p: Point, margin = 0): boolean {
+export function shapeCovers(el: Transform & ShapeGeometry, p: Point, margin = 0): boolean {
   const l = toLocal(el, p);
   if (el.shape === "circle") {
     const rx = el.w / 2 + margin;
@@ -101,6 +109,16 @@ export function shapeCovers(el: Transform & { shape: ShapeKind }, p: Point, marg
       Math.abs(l.y) <= (el.h / 2) * Math.max(0, t) + margin
     );
   }
+  if (el.shape === "polygon") {
+    const poly = shapeOutline(el, el.w, el.h);
+    return (
+      insidePolygon(poly, l) ||
+      poly.some((a, i) => {
+        const b = poly[(i + 1) % poly.length]!;
+        return distanceToSegment(l.x, l.y, a.x, a.y, b.x, b.y) <= margin;
+      })
+    );
+  }
   return Math.abs(l.x) <= el.w / 2 + margin && Math.abs(l.y) <= el.h / 2 + margin;
 }
 
@@ -109,7 +127,7 @@ export function shapeCovers(el: Transform & { shape: ShapeKind }, p: Point, marg
  * edge within it (a token half in a cone is caught).
  */
 export function tokensCovered(
-  area: Transform & { shape: ShapeKind },
+  area: Transform & ShapeGeometry,
   tokens: (Transform & { id: string })[],
 ): string[] {
   return tokens
@@ -150,6 +168,8 @@ export function hits(el: SceneElement, p: Point, tolerance = 0): boolean {
     }
     case "shape":
       return shapeCovers(el, p, tolerance + el.width / 2);
+    case "effect":
+      return shapeCovers(el, p, tolerance);
     case "text":
       return Math.abs(l.x) <= hw + tolerance && Math.abs(l.y) <= hh + tolerance;
     case "wall":
@@ -173,6 +193,11 @@ export function insidePolygon(poly: Point[], p: Point): boolean {
       inside = !inside;
   }
   return inside;
+}
+
+/** A shape's outline in the world, at its size and rotation. */
+export function shapePolygon(el: Transform & ShapeGeometry): Point[] {
+  return shapeOutline(el, el.w, el.h).map((p) => fromLocal(el, p));
 }
 
 /** An area's corners in the world, at its size and rotation. */

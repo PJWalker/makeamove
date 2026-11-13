@@ -1,5 +1,4 @@
 import { generateKeyBetween } from "fractional-indexing";
-import * as Y from "yjs";
 import type { Campaign } from "../../campaign/campaign";
 import type { ItemDef } from "../../systems/types";
 import type { ItemInstance } from "./types";
@@ -15,24 +14,21 @@ import { systemOf } from "./system";
  * A character's inventory, to change. A copy that's still carrying its
  * template's gear gets its own copy of it first.
  */
-function inventoryOf(campaign: Campaign, characterId: string): Y.Map<ItemInstance> | undefined {
+function inventoryOf(campaign: Campaign, characterId: string) {
   const m = campaign.characters.get(characterId);
   if (!m) return undefined;
   const stored = m.get("inventory");
-  if (stored instanceof Y.Map) return stored as Y.Map<ItemInstance>;
-  const base = baseOf(campaign, m)?.get("inventory") as Y.Map<ItemInstance> | undefined;
-  if (!m.get("base")) return undefined;
-  const own = new Y.Map<ItemInstance>();
-  m.set("inventory", own);
-  for (const [id, item] of base?.entries() ?? []) own.set(id, item);
-  return own;
+  if (stored || !m.get("base")) return stored;
+  m.set("inventory", baseOf(campaign, m)?.get("inventory")?.read() ?? {});
+  return m.get("inventory");
 }
 
 export function addItem(campaign: Campaign, characterId: string, def: ItemDef, equip = false) {
   const inv = inventoryOf(campaign, characterId);
   if (!inv) return;
   const last =
-    [...inv.values()]
+    inv
+      .values()
       .map((i) => i.order)
       .sort()
       .at(-1) ?? null;
@@ -74,7 +70,8 @@ export function markArtifactTrack(
   }
 
   const unlocked = item.artifactUnlocked ?? [];
-  const available = artifact.unlocks.filter((move) => !unlocked.includes(move.id));
+  const unlockedMoves = new Set(unlocked);
+  const available = artifact.unlocks.filter((move) => !unlockedMoves.has(move.id));
   if (!available.length) {
     updateItem(campaign, characterId, itemId, { artifactProgress: artifact.capacity });
     return true;

@@ -5,45 +5,46 @@ import { addRollDie, addRollModifier } from "./rollState";
 import type { TrayPick } from "../dice/pool";
 import type { Campaign } from "../../campaign/campaign";
 import { device } from "../../platform/device";
-import type { Command } from "./commands";
-import { contentForCommand, contentFromText, type ChatContent } from "./content";
+import type { ChatContent } from "./content";
 import { canWork, type RollMessage, type RollVisibility, type TextMessage } from "./types";
 import type { SystemCounterDef } from "../../systems/types";
 import { getSystem } from "../../systems";
 
 /** This device's name in the campaign, as other players see it. */
 export function myName(campaign: Campaign): string {
-  return (
-    (campaign.members.get(device.value.id)?.get("name") as string | undefined) ??
-    (device.value.name || "Player")
-  );
+  return campaign.members.get(device.value.id)?.get("name") ?? (device.value.name || "Player");
 }
 
 const me = (campaign: Campaign) => ({ id: device.value.id, name: myName(campaign) });
 
-function messageContent(content: ChatContent | undefined, text: string): ChatContent {
-  return content ? contentForCommand(content, text) : contentFromText(text);
-}
-
 export function postText(
   campaign: Campaign,
   content: ChatContent,
-  options: Pick<TextMessage, "emote" | "to" | "toNames"> = {},
+  { emote, to, toNames }: { [K in "emote" | "to" | "toNames"]?: TextMessage[K] | undefined } = {},
 ) {
-  return campaign.chat.post({ kind: "text", text: content, ...options }, me(campaign));
+  return campaign.chat.post(
+    {
+      kind: "text",
+      text: content,
+      ...(emote ? { emote } : {}),
+      ...(to ? { to } : {}),
+      ...(toNames ? { toNames } : {}),
+    },
+    me(campaign),
+  );
 }
 
 /** Create a system-owned count once; its live value remains the core counter card state. */
 export async function ensureSystemCounter(campaign: Campaign, counter: SystemCounterDef) {
-  if (!campaign.isGm()) return undefined;
   const field = `counter:${counter.id}`;
-  const id = campaign.systemData.get(field) as string | undefined;
+  const stored = campaign.systemData.value(field);
+  const id = typeof stored === "string" ? stored : undefined;
   const existing = campaign.chat.messages.value.find(
     (message) =>
       message.kind === "counter" && (message.id === id || message.systemCounter === counter.id),
   );
   if (existing) {
-    if (existing.id !== id) campaign.systemData.set(field, existing.id);
+    if (existing.id !== id) campaign.systemData.setValue(field, existing.id);
     return existing;
   }
   const system = getSystem(campaign.systemId);
@@ -58,7 +59,7 @@ export async function ensureSystemCounter(campaign: Campaign, counter: SystemCou
     },
     me(campaign),
   );
-  campaign.systemData.set(field, message.id);
+  campaign.systemData.setValue(field, message.id);
   setState(campaign.messageState, message.id, "pinned", true);
   return message;
 }
@@ -100,78 +101,47 @@ export function postRoll(
   );
 }
 
-/**
- * Carry out a chat command. Returns false for commands that only show
- * something locally (help, errors), which the panel handles itself.
- */
-export function runCommand(campaign: Campaign, cmd: Command, content?: ChatContent): boolean {
-  const author = me(campaign);
-  switch (cmd.kind) {
-    case "text":
-      if (cmd.text) void postText(campaign, messageContent(content, cmd.text));
-      return true;
-    case "emote":
-      void postText(campaign, messageContent(content, cmd.text), { emote: true });
-      return true;
-    case "whisper":
-      void postText(campaign, messageContent(content, cmd.text), {
-        to: cmd.to.map((m) => m.id),
-        toNames: cmd.to.map((m) => m.name),
-      });
-      return true;
-    case "roll":
-      void postRoll(campaign, cmd.formula, cmd.visibility, cmd.comment);
-      return true;
-    case "pin":
-      void postText(campaign, messageContent(content, cmd.text)).then((m) =>
-        setState(campaign.messageState, m.id, "pinned", true),
-      );
-      return true;
-    case "timer":
-      void campaign.chat
-        .post(
-          {
-            kind: "timer",
-            label: cmd.label,
-            seconds: cmd.seconds,
-            endsAt: Date.now() + cmd.seconds * 1000,
-          },
-          author,
-        )
-        .then((m) => setState(campaign.messageState, m.id, "pinned", true));
-      return true;
-    case "counter":
-      void campaign.chat
-        .post(
-          {
-            kind: "counter",
-            label: cmd.label,
-            start: cmd.start,
-            ...(cmd.max !== undefined ? { max: cmd.max } : {}),
-          },
-          author,
-        )
-        .then((m) => setState(campaign.messageState, m.id, "pinned", true));
-      return true;
-    case "session": {
-      // Sessions are numbered in the campaign itself, so every peer agrees.
-      const count = (campaign.meta.get("sessions") as number | undefined) ?? 0;
-      const session = cmd.action === "start" ? count + 1 : count;
-      if (cmd.action === "start") campaign.meta.set("sessions", session);
-      void campaign.chat.post(
-        {
-          kind: "system",
-          text: cmd.action === "start" ? `Session ${session} begins` : `Session ${session} ends`,
-          event: cmd.action === "start" ? "session-start" : "session-end",
-          session,
-        },
-        author,
-      );
-      // Its page in the Sessions folder, ready for notes.
-      if (cmd.action === "start") void makeSessionPage(campaign, session);
-      return true;
-    }
-    default:
-      return false;
-  }
+/** Post a message and pin it. */
+export async function postPinned(campaign: Campaign, content: ChatContent) {
+  const m = await postText(campaign, content);
+  setState(campaign.messageState, m.id, "pinned", true);
+  return m;
+}
+
+/** A pinned countdown. */
+export async function postTimer(campaign: Campaign, seconds: number, label: string) {
+  const m = await campaign.chat.post(
+    { kind: "timer", label, seconds, endsAt: Date.now() + seconds * 1000 },
+    me(campaign),
+  );
+  setState(campaign.messageState, m.id, "pinned", true);
+  return m;
+}
+
+/** A pinned counter, moved by hand; with a maximum, a clock. */
+export async function postCounter(campaign: Campaign, start: number, label: string, max?: number) {
+  const m = await campaign.chat.post(
+    { kind: "counter", label, start, ...(max !== undefined ? { max } : {}) },
+    me(campaign),
+  );
+  setState(campaign.messageState, m.id, "pinned", true);
+  return m;
+}
+
+/** Mark the start or end of a session. Sessions are numbered in the campaign itself, so every peer agrees. */
+export function markSession(campaign: Campaign, action: "start" | "end") {
+  const count = (campaign.meta.get("sessions") as number | undefined) ?? 0;
+  const session = action === "start" ? count + 1 : count;
+  if (action === "start") campaign.meta.set("sessions", session);
+  void campaign.chat.post(
+    {
+      kind: "system",
+      text: action === "start" ? `Session ${session} begins` : `Session ${session} ends`,
+      event: action === "start" ? "session-start" : "session-end",
+      session,
+    },
+    me(campaign),
+  );
+  // Its page in the Sessions folder, ready for notes.
+  if (action === "start") void makeSessionPage(campaign, session);
 }

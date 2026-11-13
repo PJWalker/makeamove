@@ -1,3 +1,4 @@
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- The relationship picker is an active-descendant listbox and its web is an SVG image. */
 import type { RefObject } from "react";
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
@@ -7,25 +8,27 @@ import {
   relationshipNotes,
   relationshipsOf,
   relationshipWeb,
-  removeRelationship,
-  setRelationship,
-  setRelationshipDepth,
   type NodePosition,
 } from "../features/characters/relationships";
 import type { CharacterView } from "../features/characters/types";
 import type { Campaign } from "../campaign/campaign";
-import { useY } from "../ui/useY";
+import { useQuery } from "../ui/useQuery";
 import { Button } from "../ui/Button";
 import { IconDelete, IconExpand } from "../ui/icons";
 import { Dialog } from "../workspace/Dialog";
 import { CharacterText } from "../workspace/CharacterText";
-import { openCharacter } from "../workspace/linkNavigation";
-import { dialogRequest } from "../workspace/canvasState";
 import { characterLinkTargets, matchingLinkTargets } from "../features/notes/targets";
 import { useMenuOverlay } from "../ui/menuOverlay";
 import { CampaignEntityGraphic } from "../workspace/EntityGraphic";
 import { registerEntityDrop } from "../workspace/entityDrag";
 import { extensionOf } from "../systems/extensions";
+import { useCampaign } from "../workspace/campaignContext";
+import { parseInputNumber } from "../lib/number";
+import {
+  removeRelationship,
+  setRelationship,
+  setRelationshipDepth,
+} from "../workspace/commands/characters";
 
 /*
  * Relationships (M9): a section on every character sheet listing how this
@@ -35,19 +38,20 @@ import { extensionOf } from "../systems/extensions";
 
 /** The Relationships section of a sheet. */
 export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: CharacterView }) {
+  const ctx = useCampaign();
   const editable = canEdit(campaign, c);
   const system = systemOf(campaign);
   const depth = system.relationshipDepth;
   const tracksDepth = !!depth;
   const Extra = extensionOf(system).relationshipsExtra;
-  const json = useY(campaign.characters, () =>
+  const json = useQuery(campaign.characters, () =>
     JSON.stringify(relationshipsOf(campaign.characters, c.id)),
   );
   const rels = useMemo(
     () => JSON.parse(json) as { to: string; label: string; depth?: number }[],
     [json],
   );
-  const peopleJson = useY(campaign.characters, () =>
+  const peopleJson = useQuery(campaign.characters, () =>
     JSON.stringify(characterLinkTargets(campaign)),
   );
   const people = useMemo(
@@ -83,13 +87,13 @@ export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: C
         relationshipsOf(campaign.characters, c.id).some((relationship) => relationship.to === to)
       )
         return false;
-      setRelationship(campaign.characters, c.id, to, "");
+      ctx.execute(setRelationship, { from: c.id, to, label: "" });
       setAdding("");
       setSuggesting(false);
       setOpen(null);
       return true;
     },
-    [campaign, c.id],
+    [ctx, campaign, c.id],
   );
 
   useEffect(() => {
@@ -116,7 +120,7 @@ export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: C
     <section ref={section} className="form-section sheet-section" aria-label="Relationships">
       <header className="sheet-section-header">
         <h3 className="sheet-heading">Relationships</h3>
-        <Button variant="ghost" onClick={() => openRelationshipWeb()}>
+        <Button variant="ghost" onClick={() => ctx.canvas.dialogRequest.set("relationships")}>
           Web
         </Button>
       </header>
@@ -132,7 +136,7 @@ export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: C
                   <button
                     type="button"
                     className="relationship-name"
-                    onClick={() => openCharacter(campaign, other.id)}
+                    onClick={() => ctx.links.openCharacter(other.id)}
                   >
                     {other.name}
                   </button>
@@ -142,7 +146,11 @@ export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: C
                     value={r.label}
                     disabled={!editable}
                     onChange={(e) =>
-                      setRelationship(campaign.characters, c.id, r.to, e.currentTarget.value.trim())
+                      ctx.execute(setRelationship, {
+                        from: c.id,
+                        to: r.to,
+                        label: e.currentTarget.value.trim(),
+                      })
                     }
                   />
                   {depth && (
@@ -156,15 +164,16 @@ export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: C
                         value={r.depth ?? 0}
                         disabled={!editable}
                         aria-label={`${depth.label} with ${other.name}`}
-                        onChange={(event) =>
-                          setRelationshipDepth(
-                            campaign.characters,
-                            c.id,
-                            r.to,
-                            Number(event.currentTarget.value),
-                            depth.max,
-                          )
-                        }
+                        onChange={(event) => {
+                          const value = parseInputNumber(event.currentTarget.value);
+                          if (value === undefined) return;
+                          ctx.execute(setRelationshipDepth, {
+                            from: c.id,
+                            to: r.to,
+                            depth: value,
+                            max: depth.max,
+                          });
+                        }}
                       />
                     </label>
                   )}
@@ -180,7 +189,7 @@ export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: C
                     <Button
                       variant="icon"
                       label="Remove"
-                      onClick={() => removeRelationship(campaign.characters, c.id, r.to)}
+                      onClick={() => ctx.execute(removeRelationship, { from: c.id, to: r.to })}
                     >
                       <IconDelete />
                     </Button>
@@ -292,9 +301,6 @@ export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: C
   );
 }
 
-/** Open the web, from anywhere (the campaign's dialog host has it). */
-export const openRelationshipWeb = () => (dialogRequest.value = "relationships");
-
 const W = 640;
 const H = 440;
 
@@ -306,7 +312,8 @@ export function RelationshipsDialog({
   campaign: Campaign;
   dialogRef: RefObject<HTMLDialogElement | null>;
 }) {
-  const json = useY(campaign.characters, () => {
+  const ctx = useCampaign();
+  const json = useQuery(campaign.characters, () => {
     const people = listCharacters(campaign);
     const ids = people.map((p) => p.id);
     return JSON.stringify({
@@ -357,7 +364,7 @@ export function RelationshipsDialog({
       window.removeEventListener("pointerup", up);
       // A click opens the character's sheet.
       if (!moved) {
-        openCharacter(campaign, id);
+        ctx.links.openCharacter(id);
       }
     };
     window.addEventListener("pointermove", move);

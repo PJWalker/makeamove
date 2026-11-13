@@ -1,9 +1,12 @@
-import * as Y from "yjs";
+import type { Guard, Observable } from "../data/schema";
+import type { DataValue } from "../data/types";
+import type { CampaignRoot } from "./schema";
 
 /*
- * A keyed collection inside a campaign's system data: one nested Y.Map
- * under a single key, created on the first write. Reads never create it,
- * so looking something up doesn't change the document.
+ * What the campaign's game system keeps campaign-wide (`ext[systemId]`, see
+ * systems/schema.ts): single values, and keyed collections of its own
+ * records. Reads never create anything, so looking something up doesn't
+ * change the document; the system's part is made on the first write.
  */
 
 export interface SystemStore<T> {
@@ -14,27 +17,46 @@ export interface SystemStore<T> {
   values(): T[];
 }
 
-/** The store kept under `name` in this system data. */
-export function systemStore<T>(systemData: Y.Map<unknown>, name: string): SystemStore<T> {
-  const read = (): Y.Map<T> | undefined => {
-    const map = systemData.get(name);
-    return map instanceof Y.Map ? (map as Y.Map<T>) : undefined;
-  };
-  const write = (): Y.Map<T> => {
-    let map = read();
-    if (!map) {
-      map = new Y.Map<T>();
-      systemData.set(name, map);
-    }
-    return map;
-  };
-  return {
-    get: (key) => read()?.get(key),
-    has: (key) => !!read()?.has(key),
-    set: (key, value) => write().set(key, value),
-    delete: (key) => read()?.delete(key),
-    values: () => [...(read()?.values() ?? [])],
-  };
+export class SystemData implements Observable {
+  constructor(
+    private readonly ext: CampaignRoot["ext"],
+    private readonly systemId: () => string,
+  ) {}
+
+  /** Changes to any system's data, for useQuery. */
+  get y() {
+    return this.ext.y;
+  }
+
+  private read() {
+    return this.ext.get(this.systemId());
+  }
+
+  private write() {
+    return this.ext.ensure(this.systemId());
+  }
+
+  value(key: string): DataValue | undefined {
+    return this.read()?.get("values")?.get(key);
+  }
+
+  setValue(key: string, value: DataValue) {
+    this.write().ensure("values").set(key, value);
+  }
+
+  /** The records kept under `name`; anything stored there that isn't `is` reads as missing. */
+  store<T>(name: string, is: Guard<T>): SystemStore<T> {
+    const read = () => this.read()?.get("stores")?.get(name);
+    const write = () => this.write().ensure("stores").ensure(name);
+    const checked = (v: unknown) => (is(v) ? v : undefined);
+    return {
+      get: (key) => checked(read()?.get(key)),
+      has: (key) => checked(read()?.get(key)) !== undefined,
+      set: (key, value) => write().set(key, value),
+      delete: (key) => read()?.delete(key),
+      values: () => (read()?.values() ?? []).filter(is),
+    };
+  }
 }
 
 /** One key for a pair of ids, the same whichever comes first. */

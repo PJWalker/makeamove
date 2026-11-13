@@ -1,7 +1,7 @@
-import { canClaim, canEdit, claimCharacter, playerOf } from "../features/characters/api";
+import { canClaim, canEdit, playerOf } from "../features/characters/api";
 import type { CharacterView } from "../features/characters/types";
 import type { Campaign } from "../campaign/campaign";
-import { useY } from "../ui/useY";
+import { useQuery } from "../ui/useQuery";
 import { Button } from "../ui/Button";
 import { extensionOf } from "../systems/extensions";
 import type { SheetProps } from "../systems/extensionTypes";
@@ -9,6 +9,8 @@ import { CopyBanner, TemplateSettings } from "./TemplateSettings";
 import { DeclarativeSheet } from "../workspace/DeclarativeSheet";
 import { RelationshipsSection } from "./Relationships";
 import { CharacterText, GMCharacterText } from "../workspace/CharacterText";
+import { claim } from "../workspace/commands/characters";
+import { useCampaign } from "../workspace/campaignContext";
 
 /** For systems with a layout: the core's declarative sheet. */
 const declarative = (kind: "pc" | "npc") =>
@@ -52,7 +54,8 @@ export function CharacterSheet({ campaign, system, c }: SheetProps) {
 
 /** Above a player character no one plays yet: a player's way to claim it (the GM's is the list's menu). */
 function ClaimBanner({ campaign, c }: { campaign: Campaign; c: CharacterView }) {
-  const open = useY(
+  const ctx = useCampaign();
+  const open = useQuery(
     campaign.members,
     () => !campaign.isGm() && playerOf(campaign, c.id) === undefined && canClaim(campaign, c),
   );
@@ -60,7 +63,7 @@ function ClaimBanner({ campaign, c }: { campaign: Campaign; c: CharacterView }) 
   return (
     <div className="sheet-banner">
       <span>No one plays {c.name}.</span>
-      <Button variant="ghost" onClick={() => claimCharacter(campaign, c.id)}>
+      <Button variant="ghost" onClick={() => ctx.execute(claim, { id: c.id })}>
         Play This Character
       </Button>
     </div>

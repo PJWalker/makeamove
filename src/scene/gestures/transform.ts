@@ -17,7 +17,9 @@ import type { Gesture, ToolContext } from "./types";
  */
 
 export type Handle =
-  { kind: "corner"; corner: Corner } | { kind: "rotate" } | { kind: "light"; part: LightPart };
+  | { kind: "corner"; corner: Corner }
+  | { kind: "rotate" }
+  | { kind: "light"; part: LightPart };
 
 const RESIZE_CURSORS = ["nwse-resize", "nesw-resize", "nwse-resize", "nesw-resize"];
 

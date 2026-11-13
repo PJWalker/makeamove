@@ -1,15 +1,16 @@
-import { AlphaFilter, Container, Graphics } from "pixi.js";
+import { AlphaFilter, Color, Container, Graphics } from "pixi.js";
 import { visibleWorld } from "../camera";
-import { areaPolygon } from "../geometry";
+import { areaPolygon, fromLocal, shapeOutline } from "../geometry";
 import type { Point } from "../grid";
 import { type Blocker, Lamp } from "../lampShader";
-import type { SceneElement, Transform } from "../types";
+import type { EffectElement, SceneElement, Transform } from "../types";
 import {
   blocked,
   blockingSegments,
   distanceToSegment,
   lightReach,
   type Segment,
+  sightSegments,
   TOKEN_SHADE,
   tokenBlocker,
 } from "../vision";
@@ -21,6 +22,9 @@ export interface Lighting {
   enabled: boolean;
   darkness: number;
 }
+
+/** The sizes of a glowing effect's nested rings, which soften its edge. */
+const GLOW_RINGS = Array.from({ length: 10 }, (_, i) => 1 - i * 0.05);
 
 /** An angle from an id, so each flickering light keeps its own rhythm. */
 function hashPhase(id: string): number {
@@ -47,7 +51,9 @@ export class LightingLayer {
   private tints = new Map<string, Lamp>();
   /** The lights that flicker, with an offset so no two waver together. */
   private flickering: { lamps: Lamp[]; phase: number }[] = [];
-  /** Areas of solid light, erased from the darkness. */
+  /** Glowing effects' colour, washed over them. */
+  private glowTint = new Graphics();
+  /** Areas of solid light, and glowing effects, erased from the darkness. */
   private lightErase = new Graphics({ blendMode: "erase" });
   /** Areas of solid dark, over everything else. */
   private lightDark = new Graphics();
@@ -61,6 +67,7 @@ export class LightingLayer {
     // renders it apart, so the erasing only cuts its own darkness.
     this.lightLayer.addChild(this.lightG, this.lampLayer, this.lightErase, this.lightDark);
     this.lightLayer.filters = [new AlphaFilter()];
+    this.tintLayer.addChild(this.glowTint);
     this.fogLayer.addChild(this.fogG);
     this.fogLayer.filters = [new AlphaFilter()];
   }
@@ -82,11 +89,14 @@ export class LightingLayer {
       h: view.h + 2 * margin,
     };
     const at = (el: SceneElement) => s.previews.get(el.id) ?? el;
-    const walls = blockingSegments(s.elements.map((el) => ({ ...el, ...at(el) })));
+    const placed: SceneElement[] = s.elements.map((el) => ({ ...el, ...at(el) }));
+    const walls = blockingSegments(placed);
+    const sightWalls = sightSegments(placed.filter((el) => !s.hidden.has(el.id)));
 
     const lg = this.lightG.clear();
     const erase = this.lightErase.clear();
     const dark = this.lightDark.clear();
+    const glowTint = this.glowTint.clear();
     const { enabled, darkness } = lighting;
     const strength = viewerIds ? 1 : 0.5;
     const areas = s.elements.filter((el) => el.type === "area" && !s.hidden.has(el.id));
@@ -139,6 +149,10 @@ export class LightingLayer {
         if (el.tone === "light") erase.poly(poly).fill({ color: 0xffffff, alpha: 1 });
         else dark.poly(poly).fill({ color: 0x000000, alpha: strength });
       }
+      for (const el of placed) {
+        if (el.type !== "effect" || !el.glow || s.hidden.has(el.id)) continue;
+        this.glow(el, this.lightLayer.visible ? erase : null, glowTint);
+      }
     }
     this.dropLamps(this.lamps, lit);
     this.dropLamps(this.tints, tinted);
@@ -154,7 +168,7 @@ export class LightingLayer {
         const t = at(el);
         return { id: el.id, at: { x: t.x, y: t.y } };
       });
-      this.sight = { from: from.map((v) => v.at), walls };
+      this.sight = { from: from.map((v) => v.at), walls: sightWalls };
       for (const v of from) {
         seeing.add(v.id);
         // An eye a pixel across, so the edge of sight is smooth but sharp.
@@ -163,11 +177,27 @@ export class LightingLayer {
           radius: 0.75 / s.camera.zoom,
           falloff: null,
           box,
-          walls,
+          walls: sightWalls,
         });
       }
     }
     this.dropLamps(this.sights, seeing);
+  }
+
+  /**
+   * A glowing effect: dim light through it, in its colour, at its strength
+   * (its colour's opacity), softening towards its edge in nested rings.
+   */
+  private glow(el: EffectElement, erase: Graphics | null, tint: Graphics) {
+    const colour = new Color(el.colour);
+    const rings = GLOW_RINGS.length;
+    // Rings that together lift the dark by half (dim light) in the middle.
+    const lift = 1 - (1 - 0.5 * colour.alpha) ** (1 / rings);
+    for (const k of GLOW_RINGS) {
+      const poly = flat(shapeOutline(el, el.w * k, el.h * k).map((p) => fromLocal(el, p)));
+      erase?.poly(poly).fill({ color: 0xffffff, alpha: lift });
+      tint.poly(poly).fill({ color: colour.toNumber(), alpha: (0.14 * colour.alpha) / rings });
+    }
   }
 
   /** The lamp drawn for a light or a viewer, made the first time it's needed. */

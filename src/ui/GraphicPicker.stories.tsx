@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState, type ComponentProps } from "react";
 import { fn } from "storybook/test";
-import type { EntityGraphic } from "../graphics";
+import type { EntityGraphic } from "../media/images";
 import { GraphicPicker } from "./GraphicPicker";
 
 type Props = ComponentProps<typeof GraphicPicker>;

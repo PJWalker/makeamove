@@ -1,4 +1,4 @@
-import type * as Y from "yjs";
+import type { CampaignRoot } from "../../campaign/schema";
 
 /*
  * Chat messages never change, but some things about them do: a target's
@@ -7,7 +7,7 @@ import type * as Y from "yjs";
  * different targets never conflict, and deleting a message drops its keys.
  */
 
-export type MessageState = Y.Map<unknown>;
+export type MessageState = CampaignRoot["messageState"];
 
 const key = (messageId: string, field: string) => `${messageId}/${field}`;
 
@@ -45,7 +45,7 @@ export function withField(state: MessageState, field: string): string[] {
 
 export function clearState(state: MessageState, messageId: string) {
   const prefix = `${messageId}/`;
-  for (const k of [...state.keys()]) if (k.startsWith(prefix)) state.delete(k);
+  for (const k of state.keys()) if (k.startsWith(prefix)) state.delete(k);
 }
 
 /** A target's answer to a roll request: its total, and whether it met the DC. */

@@ -14,7 +14,10 @@ import { trackerButtonExtension } from "../workspace/trackerButtons";
  * a new line.
  */
 
-export function chatContentExtensions(campaign: Campaign) {
+import type { CampaignContext } from "../workspace/campaignContext";
+import { useCampaign } from "../workspace/campaignContext";
+export function chatContentExtensions(ctx: CampaignContext) {
+  const { campaign } = ctx;
   return [
     StarterKit.configure({
       heading: false,
@@ -31,7 +34,7 @@ export function chatContentExtensions(campaign: Campaign) {
       },
     }),
     linkExtension(campaign, { shared: true }),
-    trackerButtonExtension(campaign),
+    trackerButtonExtension(ctx),
   ];
 }
 
@@ -68,6 +71,7 @@ export function ChatInput({
   onEscape: () => void;
   handleRef: RefObject<ChatInputHandle | null>;
 }) {
+  const ctx = useCampaign();
   const hostRef = useRef<HTMLDivElement>(null);
   const firstContent = useRef(initialContent);
   // Callbacks change every render; the editor reads the latest.
@@ -106,11 +110,7 @@ export function ChatInput({
     });
     const editor = new Editor({
       element: host,
-      extensions: [
-        ...chatContentExtensions(campaign),
-        Placeholder.configure({ placeholder }),
-        keys,
-      ],
+      extensions: [...chatContentExtensions(ctx), Placeholder.configure({ placeholder }), keys],
       editorProps: {
         attributes: {
           class: "chat-input-body",
@@ -158,7 +158,7 @@ export function ChatInput({
       handleRef.current = null;
       editor.destroy();
     };
-  }, [campaign, handleRef, label, placeholder]);
+  }, [campaign, ctx, handleRef, label, placeholder]);
 
   return <div ref={hostRef} className={className} aria-invalid={invalid} />;
 }

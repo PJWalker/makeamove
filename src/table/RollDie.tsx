@@ -1,3 +1,4 @@
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- The die's accessible image is canvas-rendered and has no img source. */
 import { useEffect, useRef, useState } from "react";
 import type { Die } from "../features/dice/notation";
 import { lastPointer } from "../ui/pointer";
@@ -219,6 +220,7 @@ export function RollDie({
   });
 
   return (
+    // oxlint-disable-next-line jsx-a11y/no-static-element-interactions -- The role is button when rerolling is enabled.
     <span
       ref={slot}
       className="die"
@@ -230,7 +232,7 @@ export function RollDie({
       data-min={min}
       data-exploded={die.exploded}
       data-disabled={die.disabled || undefined}
-      role={onReroll ? "button" : undefined}
+      role={onReroll ? "button" : "img"}
       tabIndex={onReroll ? 0 : undefined}
       aria-pressed={onToggle ? !die.disabled : undefined}
       style={{ "--i": index, "--die-colour": colour }}

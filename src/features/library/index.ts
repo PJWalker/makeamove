@@ -1,7 +1,7 @@
 import Fuse, { type IFuseOptions } from "fuse.js";
-import { plainText } from "../../core/richText";
+import { plainText } from "../../data/richText";
 import { store } from "../../lib/store";
-import type { EntryKind } from "../../core/types";
+import type { EntryKind } from "../../ui/entryIcons";
 export type { EntryKind };
 import type {
   ActionDef,
@@ -13,7 +13,7 @@ import type {
   OptionDef,
   TagDef,
 } from "../../systems/types";
-import { useValue } from "../../ui/useValue";
+import { useQuery } from "../../ui/useQuery";
 
 /*
  * Libraries: collections of things to look up and use (items, moves,
@@ -259,7 +259,7 @@ export function librariesFor(system: GameSystem): LibrarySource[] {
 
 /** `librariesFor`, re-rendering when a plugin's library comes or goes. */
 export function useLibrariesFor(system: GameSystem): LibrarySource[] {
-  return [systemLibrary(system), ...useValue(plugins)];
+  return [systemLibrary(system), ...useQuery(plugins)];
 }
 
 const SEARCH: IFuseOptions<LibraryEntry> = {

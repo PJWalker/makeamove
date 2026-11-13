@@ -1,32 +1,40 @@
 import { useState } from "react";
 import { commaListOf } from "../../lib/list";
 import { systemOf } from "../../features/characters/api";
-import { getState, setState } from "../../features/chat/messageState";
-import { ensureSystemCounter } from "../../features/chat/send";
+import { getState } from "../../features/chat/messageState";
 import { systemCampaignData, type Campaign } from "../../campaign/campaign";
-import { useY } from "../../ui/useY";
+import { useQuery } from "../../ui/useQuery";
 import { Button } from "../../ui/Button";
 import { Counter } from "../../workspace/sheetParts";
-import { advanceCrew, advanceCrewTier, buyCrewUpgrade, crewTierCost } from "./progression";
+import { crewTierCost } from "./progression";
+import { advanceCrew, advanceTier, buyUpgrade } from "./commands";
+import { useCampaign } from "../../workspace/campaignContext";
+import { bumpSystemCounter } from "../../workspace/commands/chat";
+import { can } from "../../workspace/commands/views";
 
 export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
+  const ctx = useCampaign();
   const [reward, setReward] = useState("upgrades");
   const [upgrade, setUpgrade] = useState("");
   const system = systemOf(campaign);
-  const state = useY(campaign.systemData, () => systemCampaignData(campaign));
-  const counter = system.counters!.find((entry) => entry.id === "crew-xp")!;
-  const messageId = (campaign.systemData.get("counter:crew-xp") as string | undefined) ?? "";
-  const xp = useY(
+  const state = useQuery(campaign.systemData, () => systemCampaignData(campaign));
+  const counter = system.counters?.find((entry) => entry.id === "crew-xp");
+  const abilities = system.campaignFields?.find((field) => field.id === "crewAbilities")?.options;
+  const upgrades = system.campaignFields?.find((field) => field.id === "crewUpgrades")?.options;
+  const messageId = String(campaign.systemData.value("counter:crew-xp") ?? "");
+  const xp = useQuery(
     campaign.messageState,
     () => getState<number>(campaign.messageState, messageId, "value") ?? 0,
   );
-  const abilities = system.campaignFields!.find((field) => field.id === "crewAbilities")!.options!;
-  const upgrades = system.campaignFields!.find((field) => field.id === "crewUpgrades")!.options!;
+  if (!counter || !abilities || !upgrades) return null;
   const ownedAbilities = commaListOf(state.crewAbilities);
   const ownedUpgrades = commaListOf(state.crewUpgrades);
+  const ownedAbilityIds = new Set(ownedAbilities);
+  const ownedUpgradeIds = new Set(ownedUpgrades);
   const cost = crewTierCost(campaign);
   const upgradeCost = upgrade === "mastery" ? 4 : upgrade === "cohort" ? 2 : 1;
-  const gm = campaign.isGm();
+  // The crew is the GM's to advance.
+  const gm = can(ctx, advanceTier, undefined);
   return (
     <section className="dialog-section" aria-label="Crew advancement">
       <h3 className="dialog-heading">Crew advancement</h3>
@@ -35,23 +43,7 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
         value={xp}
         max={counter.max}
         disabled={!gm}
-        onChange={(by) => {
-          void ensureSystemCounter(campaign, counter).then((message) => {
-            if (message && campaign.isGm())
-              setState(
-                campaign.messageState,
-                message.id,
-                "value",
-                Math.max(
-                  0,
-                  Math.min(
-                    counter.max ?? Infinity,
-                    (getState<number>(campaign.messageState, message.id, "value") ?? 0) + by,
-                  ),
-                ),
-              );
-          });
-        }}
+        onChange={(by) => void ctx.execute(bumpSystemCounter, { counter: counter.id, by })}
       />
       <label className="field">
         Crew advance
@@ -62,7 +54,7 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
         >
           <option value="upgrades">Two crew upgrades</option>
           {abilities
-            .filter((ability) => !ownedAbilities.includes(ability.id))
+            .filter((ability) => !ownedAbilityIds.has(ability.id))
             .map((ability) => (
               <option key={ability.id} value={ability.id}>
                 {ability.label}
@@ -72,7 +64,7 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
       </label>
       <Button
         disabled={!gm || xp < (counter.max ?? 10)}
-        onClick={() => advanceCrew(campaign, reward)}
+        onClick={() => ctx.execute(advanceCrew, { reward })}
       >
         Advance Crew
       </Button>
@@ -85,7 +77,7 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
         >
           <option value="">Choose an upgrade</option>
           {upgrades
-            .filter((entry) => !ownedUpgrades.includes(entry.id))
+            .filter((entry) => !ownedUpgradeIds.has(entry.id))
             .map((entry) => (
               <option key={entry.id} value={entry.id}>
                 {entry.label}
@@ -95,7 +87,7 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
       </label>
       <Button
         disabled={!gm || !upgrade || Number(state.crewUpgradePoints ?? 0) < upgradeCost}
-        onClick={() => buyCrewUpgrade(campaign, upgrade)}
+        onClick={() => ctx.execute(buyUpgrade, { upgrade })}
       >
         Buy Upgrade ({upgradeCost})
       </Button>
@@ -106,7 +98,7 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
           (state.crewHold !== "weak" &&
             (Number(state.crewCoin ?? 0) < cost.coin || Number(state.crewTier ?? 0) >= 4))
         }
-        onClick={() => advanceCrewTier(campaign)}
+        onClick={() => ctx.execute(advanceTier, undefined)}
       >
         {state.crewHold === "weak"
           ? `Strengthen hold (${cost.rep} rep)`

@@ -1,11 +1,43 @@
+import { createContext, useContext, type ReactNode } from "react";
 import StarterKit from "@tiptap/starter-kit";
+import type { Node } from "@tiptap/pm/model";
 import { renderToReactElement } from "@tiptap/static-renderer/pm/react";
 import type { Campaign } from "../campaign/campaign";
-import { TRACKER_NODE, type RichText, type TrackerButton } from "../core/richText";
+import { TRACKER_NODE, type RichText, type TrackerButton } from "../data/richText";
 import { getCharacter } from "../features/characters/api";
-import { pressTracker, trackerBlock } from "../features/characters/trackers";
-import { useY } from "../ui/useY";
+import { trackerBlock } from "../features/characters/trackers";
+import { useQuery } from "../ui/useQuery";
 import { shake, trackerButtonExtension, trackerTip } from "./trackerButtons";
+import { pressTrackerButton } from "./commands/characters";
+import { useCampaign, type CampaignContext } from "./campaignContext";
+
+const RichTextContext = createContext<{
+  campaign: Campaign;
+  characterId: string | null;
+  searchTerm: string;
+} | null>(null);
+
+type RichTextNode = Node;
+
+function TextNode({ node }: { node: RichTextNode }) {
+  const { searchTerm } = useContext(RichTextContext)!;
+  return searchTerm ? <SearchHighlight text={node.text ?? ""} term={searchTerm} /> : node.text;
+}
+
+function HeadingNode({ children }: { children?: ReactNode }) {
+  return <h4 className="formatted-heading">{children}</h4>;
+}
+
+function TrackerNode({ node }: { node: RichTextNode }) {
+  const { campaign, characterId } = useContext(RichTextContext)!;
+  return (
+    <TrackerButtonView
+      campaign={campaign}
+      characterId={characterId}
+      b={node.attrs as unknown as TrackerButton}
+    />
+  );
+}
 
 /*
  * Read-only rich text, for rules text (moves, outcomes, reference sections):
@@ -40,8 +72,9 @@ export function TrackerButtonView({
   characterId: string | null;
   b: TrackerButton;
 }) {
+  const ctx = useCampaign();
   // Pressable or not follows the character's numbers as they change.
-  const blocked = useY(campaign.characters, () => {
+  const blocked = useQuery(campaign.characters, () => {
     void getCharacter(campaign, characterId ?? undefined);
     return trackerBlock(campaign, characterId, b);
   });
@@ -52,7 +85,7 @@ export function TrackerButtonView({
       aria-disabled={blocked ? true : undefined}
       data-tip={trackerTip(campaign, characterId, b)}
       onClick={(e) => {
-        if (blocked || !characterId || !pressTracker(campaign, characterId, b))
+        if (blocked || !characterId || !ctx.execute(pressTrackerButton, { characterId, button: b }))
           shake(e.currentTarget);
       }}
     >
@@ -62,9 +95,9 @@ export function TrackerButtonView({
 }
 
 /** What rules text can hold: StarterKit's formatting and tracker buttons. */
-export const ruleTextExtensions = (campaign: Campaign) => [
+export const ruleTextExtensions = (ctx: CampaignContext) => [
   StarterKit.configure({ link: false }),
-  trackerButtonExtension(campaign),
+  trackerButtonExtension(ctx),
 ];
 
 export function RichTextView({
@@ -81,23 +114,21 @@ export function RichTextView({
   className?: string;
   searchTerm?: string;
 }) {
+  const ctx = useCampaign();
   const rendered = renderToReactElement({
-    extensions: ruleTextExtensions(campaign),
+    extensions: ruleTextExtensions(ctx),
     content: text,
     options: {
       nodeMapping: {
-        text: ({ node }) =>
-          searchTerm ? <SearchHighlight text={node.text ?? ""} term={searchTerm} /> : node.text,
-        heading: ({ children }) => <h4 className="formatted-heading">{children}</h4>,
-        [TRACKER_NODE]: ({ node }) => (
-          <TrackerButtonView
-            campaign={campaign}
-            characterId={characterId}
-            b={node.attrs as TrackerButton}
-          />
-        ),
+        text: TextNode,
+        heading: HeadingNode,
+        [TRACKER_NODE]: TrackerNode,
       },
     },
   });
-  return <div className={`formatted-text ${className}`}>{rendered}</div>;
+  return (
+    <RichTextContext.Provider value={{ campaign, characterId, searchTerm }}>
+      <div className={`formatted-text ${className}`}>{rendered}</div>
+    </RichTextContext.Provider>
+  );
 }

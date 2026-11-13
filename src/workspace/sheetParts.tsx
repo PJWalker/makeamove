@@ -1,9 +1,9 @@
 import { useRef, useState } from "react";
-import { plainText } from "../core/richText";
+import { plainText } from "../data/richText";
+import { ColourPicker } from "../ui/ColourPicker";
 import { MoveBody } from "./MoveBody";
-import { useY } from "../ui/useY";
-import { setField, toggleCondition } from "../features/characters/api";
-import type { EntityGraphic } from "../graphics";
+import { useQuery } from "../ui/useQuery";
+import type { EntityGraphic } from "../media/images";
 import { checkOf } from "../features/characters/moves";
 import type { CharacterView } from "../features/characters/types";
 import { colourOf } from "../scene/presence";
@@ -34,11 +34,14 @@ import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
 import { EntryRow, EntryWindow, rollTag, useEntryWindows } from "./EntryWindow";
 import { linkProxy } from "./LinkChip";
 import { dragToken } from "./tokenDrag";
-import { getEntityGraphic, setEntityGraphic } from "./entityGraphics";
+import { getEntityGraphic } from "./entityGraphics";
 import { actionMenuItems } from "./actionMenu";
-import { dragEntity, entity } from "./entityDrag";
+import { dragEntity } from "./entityDrag";
+import { entity } from "./dragEntities";
 import { sessionUseSnapshot } from "../features/characters/sessionMoves";
-import { useValue } from "../ui/useValue";
+import { useCampaign } from "./campaignContext";
+import { chooseGraphic } from "./commands/campaign";
+import { setField, toggleCondition } from "./commands/characters";
 
 /*
  * Pieces every system's sheet can use: counters, the action list, and the
@@ -63,10 +66,8 @@ export function Counter({
   status?: { name: string; colour: string; title: string } | undefined;
 }) {
   return (
-    <div
+    <fieldset
       className="counter"
-      role="group"
-      aria-label={label}
       data-label={label}
       data-fill={max !== undefined}
       data-status={!!status}
@@ -77,7 +78,7 @@ export function Counter({
         ...(status && { "--condition-colour": status.colour }),
       }}
     >
-      <span className="counter-label">
+      <legend className="counter-label">
         <span className="eyebrow">{label}</span>
         {status && (
           <span className="counter-status" title={status.title}>
@@ -85,7 +86,7 @@ export function Counter({
             {status.name}
           </span>
         )}
-      </span>
+      </legend>
       <div className="counter-row">
         <Button
           variant="secondary"
@@ -110,7 +111,7 @@ export function Counter({
           <IconAdd size={22} />
         </Button>
       </div>
-    </div>
+    </fieldset>
   );
 }
 
@@ -202,19 +203,21 @@ export function MoveList({
   learned?: string[];
   onForget?: ((m: ActionDef) => void) | undefined;
 }) {
+  const ctx = useCampaign();
   // The system's groupings that this character has any of, in the system's order; the first is shown to start.
   const categories = system.actionCategories.filter((k) => moves.some((m) => m.category === k.id));
   const [filter, setFilter] = useState<string>(categories[0]?.id ?? "all");
   const windows = useEntryWindows();
-  const sessionMessages = useValue(campaign.chat.messages);
-  // Read through useY, which re-reads on every change: the session's uses live in Yjs.
+  const sessionMessages = useQuery(campaign.chat.messages);
+  // Read through useQuery, which re-reads on every change: the session's uses live in Yjs.
   const usedIds = new Set(
     JSON.parse(
-      useY(campaign.systemData, () =>
+      useQuery(campaign.systemData, () =>
         sessionUseSnapshot(campaign, ownerId, moves, sessionMessages),
       ),
     ) as string[],
   );
+  const learnedIds = new Set(learned);
   const shown = filter === "all" ? moves : moves.filter((m) => m.category === filter);
 
   return (
@@ -238,14 +241,14 @@ export function MoveList({
               tag={rollTag(system, m)}
               tip={plainText(m.text)}
               onOpen={(row) => windows.show(`move:${ownerId}:${m.id}`, row)}
-              onPointerDown={(ev) => dragEntity(ev, entity(campaign, "move", m.id, m.name))}
+              onPointerDown={(ev) => dragEntity(ctx.canvas, ev, entity(ctx, "move", m.id, m.name))}
               menuItems={[
                 {
                   label: used ? "Already Used This Session" : makeVerb(m).label,
                   disabled: used,
                   onSelect: () => onMake(m),
                 },
-                ...actionMenuItems(campaign, [{ id: `move:${m.id}`, title: m.name }]),
+                ...actionMenuItems(ctx, [{ id: `move:${m.id}`, title: m.name }]),
               ]}
             >
               <MakeButton m={m} onMake={onMake} disabled={used} />
@@ -270,7 +273,7 @@ export function MoveList({
             body={<MoveBody campaign={campaign} move={m} characterId={ownerId} />}
             onClose={() => windows.close(key)}
             proxy={linkProxy(
-              campaign,
+              ctx,
               "move",
               m.id,
               m.name,
@@ -282,7 +285,7 @@ export function MoveList({
                 disabled: used,
                 onSelect: () => onMake(m),
               },
-              ...(onForget && learned.includes(m.id)
+              ...(onForget && learnedIds.has(m.id)
                 ? [
                     {
                       label: "Forget",
@@ -293,11 +296,11 @@ export function MoveList({
                     },
                   ]
                 : []),
-              ...actionMenuItems(campaign, [{ id: `move:${m.id}`, title: m.name }]),
+              ...actionMenuItems(ctx, [{ id: `move:${m.id}`, title: m.name }]),
             ]}
           >
             {tag && <Tag>{tag}</Tag>}
-            {onForget && learned.includes(m.id) && (
+            {onForget && learnedIds.has(m.id) && (
               <Button
                 variant="ghost"
                 onClick={() => {
@@ -326,32 +329,30 @@ export function TokenChip({
   c: CharacterView;
   editable: boolean;
 }) {
+  const ctx = useCampaign();
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const [settings, setSettings] = useState(false);
-  const graphic = useY(campaign.entityGraphics, () =>
+  const graphic = useQuery(campaign.entityGraphics, () =>
     getEntityGraphic(campaign, "character", c.id),
   );
   const pick = () => setSettings(true);
   const trigger = menuTrigger((x, y) => setMenu({ x, y }));
-  const items: MenuItem[] = [
-    ...(editable
-      ? [
-          { label: "Change Graphic…", Icon: IconImage, onSelect: pick },
-          "divider" as const,
-          {
-            label: "Token Settings…",
-            Icon: IconRename,
-            onSelect: () => setSettings(true),
-          },
-        ]
-      : []),
-  ];
+  const items: MenuItem[] = editable
+    ? [
+        { label: "Change Graphic…", Icon: IconImage, onSelect: pick },
+        "divider" as const,
+        {
+          label: "Token Settings…",
+          Icon: IconRename,
+          onSelect: () => setSettings(true),
+        },
+      ]
+    : [];
   return (
     <div className="sheet-graphic">
-      <div
+      <button
+        type="button"
         className="token-chip"
-        role="button"
-        tabIndex={0}
         title={
           editable
             ? "Click to change the graphic; drag onto the map to place a token"
@@ -361,7 +362,7 @@ export function TokenChip({
         style={{ "--token-colour": c.tokenColour ?? "" }}
         onPointerDown={(e) => {
           trigger.onPointerDown(e);
-          dragToken(e, {
+          dragToken(ctx.canvas, e, {
             characterId: c.id,
             name: c.name,
             graphic,
@@ -372,12 +373,9 @@ export function TokenChip({
         }}
         onContextMenu={trigger.onContextMenu}
         onClick={() => editable && pick()}
-        onKeyDown={(e) =>
-          editable && (e.key === "Enter" || e.key === " ") && (e.preventDefault(), pick())
-        }
       >
         <EntityGraphicView graphic={graphic} size={58} />
-      </div>
+      </button>
       {menu && items.length > 0 && (
         <ContextMenu {...menu} items={items} onClose={() => setMenu(null)} />
       )}
@@ -394,7 +392,6 @@ export function TokenChip({
 }
 
 function TokenSettings({
-  campaign,
   c,
   graphic,
   onClose,
@@ -404,17 +401,20 @@ function TokenSettings({
   graphic: EntityGraphic;
   onClose: () => void;
 }) {
+  const ctx = useCampaign();
   const ref = usePopupDialog();
   const style = c.tokenStyle ?? "disc";
   const plain = style === "plain" && graphic.kind === "image";
-  const me = useValue(device);
+  const me = useQuery(device);
   const colour = c.tokenColour ?? colourOf(me);
   return (
     <Dialog dialogRef={ref} title="Token settings" onClose={onClose}>
       <GraphicPicker
         graphic={graphic}
-        onChange={(next) => setEntityGraphic(campaign, "character", c.id, next)}
-        onReset={() => setEntityGraphic(campaign, "character", c.id)}
+        onChange={(next) =>
+          ctx.execute(chooseGraphic, { kind: "character", id: c.id, graphic: next })
+        }
+        onReset={() => ctx.execute(chooseGraphic, { kind: "character", id: c.id })}
       />
       <div className="field">
         Style
@@ -422,22 +422,24 @@ function TokenSettings({
           label="Token style"
           value={style}
           options={TOKEN_STYLES}
-          onChange={(v) => setField(campaign, c.id, "tokenStyle", v)}
+          onChange={(v) => ctx.execute(setField, { id: c.id, key: "tokenStyle", value: v })}
         />
       </div>
-      <label className="field colour-field" data-disabled={plain}>
+      <div className="field colour-field" data-disabled={plain}>
         Background and border
         <span className="colour-row">
-          <input
-            type="color"
-            className="colour-input"
+          <ColourPicker
+            label="Background and border"
+            alpha
             value={colour}
             disabled={plain}
-            onInput={(e) => setField(campaign, c.id, "tokenColour", e.currentTarget.value)}
+            onChange={(next) =>
+              ctx.execute(setField, { id: c.id, key: "tokenColour", value: next })
+            }
           />
           <span className="colour-hex">{colour}</span>
         </span>
-      </label>
+      </div>
       <p className="muted">Applies wherever this character appears.</p>
     </Dialog>
   );
@@ -490,7 +492,6 @@ function MakeButton({
 
 /** Conditions to put on and take off, each a chip in the colour of its pip on the token. */
 export function ConditionToggles({
-  campaign,
   system,
   c,
   conditions = system.conditions,
@@ -502,17 +503,19 @@ export function ConditionToggles({
   conditions?: ConditionDef[];
   editable: boolean;
 }) {
+  const ctx = useCampaign();
+  const conditionIds = new Set(c.conditions);
   return (
     <ul className="condition-toggles">
       {conditions.map((condition) => (
         <li key={condition.id}>
           <Button
             className="condition-toggle"
-            pressed={c.conditions.includes(condition.id)}
+            pressed={conditionIds.has(condition.id)}
             disabled={!editable}
             title={condition.text}
             style={{ "--condition-colour": conditionColour(system, condition.id) }}
-            onClick={() => toggleCondition(campaign, c.id, condition.id)}
+            onClick={() => ctx.execute(toggleCondition, { id: c.id, condition: condition.id })}
           >
             <span className="condition-dot" aria-hidden="true" />
             {condition.name}

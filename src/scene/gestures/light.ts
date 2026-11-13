@@ -1,9 +1,6 @@
-import { snapPoint, type Point } from "../grid";
-import { HANDLE_SIZE } from "../render/handles";
-import { lightTool } from "../tools";
+import { snapPoint } from "../grid";
 import { AREA_COLOURS, type AreaTone } from "../types";
-import type { ToolContext, ToolPress } from "./types";
-import { snapWallPoint } from "./wall";
+import type { PolygonPlan, ToolContext, ToolPress } from "./types";
 
 /** A new lamp's size, in cells: its shadows' softness. Resizing the lamp makes them softer or sharper. */
 const LAMP_SIZE = 0.6;
@@ -16,14 +13,14 @@ const LIGHT_DEFAULT = (cell: number) => ({
 });
 
 /**
- * The Lights tool (the GM's), placing: a click puts down a lamp, or the next
- * corner of an area of solid light or dark. Its select mode is the Select tool's.
+ * The Lights tool (the GM's): a click puts down a lamp, or the next corner of
+ * an area of solid light or dark. The Select tool picks them, with Lights on.
  */
 export const light: ToolPress = (c, e, world) => {
   if (!c.gm) return null;
-  const mode = lightTool.value;
-  if (mode === "light" || mode === "dark") {
-    c.area.add(mode, world, e);
+  const mode = c.tools.lightTool.value;
+  if (mode !== "lamp") {
+    c.polygon.add(areaPlan(c, mode), world, e);
     return null;
   }
   const grid = c.renderer.grid;
@@ -41,84 +38,15 @@ export const light: ToolPress = (c, e, world) => {
   return null;
 };
 
-/** The corners of an area of solid light or dark being placed, a click at a time. */
-export class AreaDraft {
-  private draft: { tone: AreaTone; points: Point[] } | null = null;
-
-  constructor(private readonly c: ToolContext) {}
-
-  get active() {
-    return !!this.draft;
-  }
-
-  /**
-   * A click while placing an area: its next corner, snapped like a wall's end.
-   * A click on its first corner, or a double click, closes it.
-   */
-  add(tone: AreaTone, world: Point, e: PointerEvent) {
-    const p = snapWallPoint(this.c, world, e);
-    if (this.draft?.tone !== tone) this.draft = { tone, points: [] };
-    const pts = this.draft.points;
-    const first = pts[0];
-    const cam = this.c.renderer.camera;
-    const onFirst =
-      first && Math.hypot((first.x - p.x) * cam.zoom, (first.y - p.y) * cam.zoom) <= HANDLE_SIZE;
-    if (pts.length >= 3 && (onFirst || this.c.pressCount >= 2)) {
-      this.finish();
-      return;
-    }
-    const last = pts[pts.length - 1];
-    if (!last || last.x !== p.x || last.y !== p.y) pts.push(p);
-    this.preview(world, e);
-  }
-
-  /** Show the area so far, with its next corner at the pointer. */
-  preview(p: Point, e: { altKey: boolean }) {
-    if (!this.draft) return;
-    const r = this.c.renderer;
-    r.draft = {
-      kind: "polygon",
-      points: [...this.draft.points, snapWallPoint(this.c, p, e)],
-      colour: AREA_COLOURS[this.draft.tone],
-      layer: "over",
-    };
-    r.invalidate("overlay");
-  }
-
-  /** Stop placing the area, without putting it down. */
-  cancel() {
-    if (!this.draft) return;
-    this.draft = null;
-    this.c.renderer.draft = null;
-    this.c.renderer.invalidate("overlay");
-  }
-
-  /** Put down the area being placed, if it has at least three corners. */
-  finish() {
-    const area = this.draft;
-    this.draft = null;
-    this.c.renderer.draft = null;
-    this.c.renderer.invalidate("overlay");
-    if (!area || area.points.length < 3) return;
-    const xs = area.points.map((p) => p.x);
-    const ys = area.points.map((p) => p.y);
-    const x = (Math.min(...xs) + Math.max(...xs)) / 2;
-    const y = (Math.min(...ys) + Math.max(...ys)) / 2;
-    const w = Math.max(1, Math.max(...xs) - Math.min(...xs));
-    const h = Math.max(1, Math.max(...ys) - Math.min(...ys));
-    const points = area.points.flatMap((p) => [p.x - x, p.y - y]);
-    this.c.scene.add({
-      type: "area",
-      layer: "over",
-      x,
-      y,
-      w,
-      h,
-      rot: 0,
-      tone: area.tone,
-      points,
-      bw: w,
-      bh: h,
-    });
-  }
+/** An area of solid light or dark, placed a corner at a time. */
+function areaPlan(c: ToolContext, tone: AreaTone): PolygonPlan {
+  const colour = AREA_COLOURS[tone];
+  return {
+    key: `area:${tone}`,
+    // The inside at 15% opacity.
+    paint: { stroke: colour, fill: `${colour}26` },
+    width: 2,
+    layer: "over",
+    place: (frame) => c.scene.add({ type: "area", layer: "over", tone, ...frame }),
+  };
 }

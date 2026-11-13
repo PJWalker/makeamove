@@ -4,7 +4,7 @@
  * second click restarts the glint rather than waiting for the first to end.
  */
 
-const SPARKLING = ".btn, .popup-tab, .campaign-open, .segment, .pen-width, .pen-layer";
+const SPARKLING = ".btn, .popup-tab, .campaign-open, .segment";
 const GLINT = "edge-glint";
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 

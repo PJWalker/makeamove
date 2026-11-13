@@ -1,10 +1,15 @@
 import { DEFAULT_GRID, DIAGONAL_RULES, GRID_TYPES, MIN_GRID_SIZE } from "../scene/grid";
 import type { SceneDoc } from "../scene/sceneDoc";
 import { DEFAULT_CANVAS_COLOUR, type Campaign } from "../campaign/campaign";
-import { useY } from "../ui/useY";
+import { useQuery } from "../ui/useQuery";
+import { ColourPicker } from "../ui/ColourPicker";
 import { Segmented } from "../ui/Segmented";
-import { activeMapColour, canvasColour } from "../workspace/canvasState";
-import { useValue } from "../ui/useValue";
+import { canvasColour } from "../workspace/canvasState";
+import { useCampaign } from "../workspace/campaignContext";
+import { setGrid, setLighting, updateScene } from "../workspace/commands/scenes";
+import { can } from "../workspace/commands/views";
+import type { SceneLighting } from "../scene/sceneDoc";
+import type { Grid } from "../scene/grid";
 
 export function SceneSettingsFields({
   campaign,
@@ -17,11 +22,15 @@ export function SceneSettingsFields({
   scene: SceneDoc;
   showHeading?: boolean;
 }) {
-  const grid = useY(scene.settings, () => scene.grid());
-  const lighting = useY(scene.settings, () => scene.lighting());
-  const view = useY(campaign.scenes, () => campaign.sceneViews().find((s) => s.id === sceneId));
-  const isGm = campaign.isGm();
-  const mapColour = useValue(activeMapColour);
+  const ctx = useCampaign();
+  const grid = useQuery(scene.settings, () => scene.grid());
+  const lighting = useQuery(scene.settings, () => scene.lighting());
+  const view = useQuery(campaign.scenes, () => campaign.sceneViews().find((s) => s.id === sceneId));
+  const editable = can(ctx, setGrid, { id: sceneId, patch: {} });
+  const setGridOf = (patch: Partial<Grid>) => ctx.execute(setGrid, { id: sceneId, patch });
+  const setLightingOf = (patch: Partial<SceneLighting>) =>
+    ctx.execute(setLighting, { id: sceneId, patch });
+  const mapColour = useQuery(ctx.canvas.activeMapColour);
   const shown = view ? canvasColour(view, mapColour) : DEFAULT_CANVAS_COLOUR;
   const auto = !view?.canvasColour;
   const num = (v: string, fallback: number) =>
@@ -38,8 +47,8 @@ export function SceneSettingsFields({
             label="Grid type"
             value={grid.type}
             options={GRID_TYPES}
-            disabled={!isGm}
-            onChange={(type) => scene.setGrid({ type })}
+            disabled={!editable}
+            onChange={(type) => setGridOf({ type })}
           />
         </div>
         <div className="field-row">
@@ -50,9 +59,9 @@ export function SceneSettingsFields({
               min={MIN_GRID_SIZE}
               step={1}
               value={grid.size}
-              disabled={!isGm || grid.type === "none"}
+              disabled={!editable || grid.type === "none"}
               onChange={(e) =>
-                scene.setGrid({
+                setGridOf({
                   size: Math.max(MIN_GRID_SIZE, num(e.currentTarget.value, DEFAULT_GRID.size)),
                 })
               }
@@ -64,8 +73,8 @@ export function SceneSettingsFields({
               type="number"
               step={1}
               value={grid.offsetX}
-              disabled={!isGm || grid.type === "none"}
-              onChange={(e) => scene.setGrid({ offsetX: num(e.currentTarget.value, 0) })}
+              disabled={!editable || grid.type === "none"}
+              onChange={(e) => setGridOf({ offsetX: num(e.currentTarget.value, 0) })}
             />
           </label>
           <label className="field">
@@ -74,8 +83,8 @@ export function SceneSettingsFields({
               type="number"
               step={1}
               value={grid.offsetY}
-              disabled={!isGm || grid.type === "none"}
-              onChange={(e) => scene.setGrid({ offsetY: num(e.currentTarget.value, 0) })}
+              disabled={!editable || grid.type === "none"}
+              onChange={(e) => setGridOf({ offsetY: num(e.currentTarget.value, 0) })}
             />
           </label>
         </div>
@@ -87,9 +96,9 @@ export function SceneSettingsFields({
               min={0}
               step="any"
               value={grid.unit}
-              disabled={!isGm}
+              disabled={!editable}
               onChange={(e) =>
-                scene.setGrid({
+                setGridOf({
                   unit: Math.max(0, num(e.currentTarget.value, DEFAULT_GRID.unit)),
                 })
               }
@@ -99,9 +108,9 @@ export function SceneSettingsFields({
             Unit
             <input
               value={grid.unitName}
-              disabled={!isGm}
+              disabled={!editable}
               autoComplete="off"
-              onChange={(e) => scene.setGrid({ unitName: e.currentTarget.value.trim() })}
+              onChange={(e) => setGridOf({ unitName: e.currentTarget.value.trim() })}
             />
           </label>
         </div>
@@ -112,8 +121,8 @@ export function SceneSettingsFields({
               label="Diagonal steps"
               value={grid.diagonal}
               options={DIAGONAL_RULES}
-              disabled={!isGm}
-              onChange={(diagonal) => scene.setGrid({ diagonal })}
+              disabled={!editable}
+              onChange={(diagonal) => setGridOf({ diagonal })}
             />
           </div>
         )}
@@ -134,23 +143,20 @@ export function SceneSettingsFields({
                 },
                 { id: "custom", label: "Custom" },
               ]}
-              disabled={!isGm}
+              disabled={!editable}
               onChange={(v) =>
-                campaign.updateScene(sceneId, {
-                  canvasColour: v === "auto" ? null : shown,
+                ctx.execute(updateScene, {
+                  id: sceneId,
+                  patch: { canvasColour: v === "auto" ? null : shown },
                 })
               }
             />
-            <input
-              type="color"
-              className="colour-input"
+            <ColourPicker
+              label="Pick a canvas colour"
               value={shown}
-              aria-label="Pick a canvas colour"
-              disabled={!isGm}
-              onInput={(e) =>
-                campaign.updateScene(sceneId, {
-                  canvasColour: e.currentTarget.value,
-                })
+              disabled={!editable}
+              onChange={(next) =>
+                ctx.execute(updateScene, { id: sceneId, patch: { canvasColour: next } })
               }
             />
           </span>
@@ -167,8 +173,8 @@ export function SceneSettingsFields({
               { id: "off", label: "Off" },
               { id: "on", label: "Dynamic" },
             ]}
-            disabled={!isGm}
-            onChange={(v) => scene.setLighting({ enabled: v === "on" })}
+            disabled={!editable}
+            onChange={(v) => setLightingOf({ enabled: v === "on" })}
           />
           {lighting.enabled && (
             <label className="field">
@@ -178,9 +184,9 @@ export function SceneSettingsFields({
                 min={0}
                 max={100}
                 value={Math.round(lighting.darkness * 100)}
-                disabled={!isGm}
+                disabled={!editable}
                 onChange={(e) =>
-                  scene.setLighting({
+                  setLightingOf({
                     darkness: Number(e.currentTarget.value) / 100,
                   })
                 }
@@ -197,12 +203,12 @@ export function SceneSettingsFields({
               { id: "all", label: "Everything" },
               { id: "sight", label: "What their tokens see" },
             ]}
-            disabled={!isGm}
-            onChange={(v) => scene.setLighting({ vision: v === "sight" })}
+            disabled={!editable}
+            onChange={(v) => setLightingOf({ vision: v === "sight" })}
           />
         </div>
       </section>
-      {!isGm && <p className="muted">Only the GM can change scene settings.</p>}
+      {!editable && <p className="muted">Only the GM can change scene settings.</p>}
     </section>
   );
 }

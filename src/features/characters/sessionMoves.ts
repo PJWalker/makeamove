@@ -1,13 +1,11 @@
 import type { Campaign } from "../../campaign/campaign";
-import { systemStore } from "../../campaign/systemStore";
 import type { ChatMessage } from "../chat/types";
 import { splitSessions } from "../chat/sessions";
-import { getSystem } from "../../systems";
 import type { ActionDef } from "../../systems/types";
 
-/** Kept in the campaign's system data, under the system's own id. */
+/** Kept in the campaign's system data. */
 const usesOf = (campaign: Campaign) =>
-  systemStore<true>(campaign.systemData, `${getSystem(campaign.systemId).id}:session-move-uses`);
+  campaign.systemData.store("session-move-uses", (v): v is true => v === true);
 
 function sessionUseKey(
   characterId: string,

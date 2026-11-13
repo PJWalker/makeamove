@@ -1,5 +1,5 @@
-import type { EntityGraphic, EntityGraphicRef } from "../graphics";
-import type { BlobRef } from "../core/blob";
+import type { EntityGraphic, EntityGraphicRef } from "../media/images";
+import type { BlobRef } from "../media/images";
 
 /*
  * Scene elements as plain values. Each is stored as a Y.Map of these fields
@@ -85,20 +85,38 @@ export interface DrawingElement extends Base {
 
 /**
  * A shape's outline in its own frame, w × h about its centre: a rectangle,
- * an ellipse, a line along its length (w) as thick as h, or a cone opening
- * from the middle of its left edge to its right edge.
+ * an ellipse, a line along its length (w) as thick as h, a cone opening
+ * from the middle of its left edge to its right edge, or a polygon through
+ * its own corners.
  */
-export type ShapeKind = "rect" | "circle" | "line" | "cone";
+export type ShapeKind = "rect" | "circle" | "line" | "cone" | "polygon";
 
-export interface ShapeElement extends Base {
-  type: "shape";
-  shape: ShapeKind;
-  colour: string;
-  /** Outline width; the inside is tinted with the colour. */
-  width: number;
-  /** Set when placed as an action's area of effect: who placed it, for clearing. */
-  template?: boolean;
+/**
+ * The outline a shape kind makes. A polygon carries its corners, flat
+ * [x, y, …] relative to the centre at the size bw × bh.
+ */
+/** The shapes dragged out corner to corner or from an origin: every kind but the polygon, placed a corner at a time. */
+export type DraggedShapeKind = Exclude<ShapeKind, "polygon">;
+
+export type ShapeGeometry =
+  | { shape: DraggedShapeKind }
+  | { shape: "polygon"; points: number[]; bw: number; bh: number };
+
+/** How a shape is painted: its outline and its inside, each a colour with its opacity, #rrggbbaa. */
+export interface ShapePaint {
+  stroke: string;
+  fill: string;
 }
+
+export type ShapeElement = Base &
+  ShapePaint &
+  ShapeGeometry & {
+    type: "shape";
+    /** Outline width. */
+    width: number;
+    /** Set when placed as an action's area of effect: who placed it, for clearing. */
+    template?: boolean;
+  };
 
 export interface TextElement extends Base {
   type: "text";
@@ -153,6 +171,39 @@ export interface AreaElement extends Base {
   bh: number;
 }
 
+/** What fills an effect zone. */
+export type EffectKind = "rain" | "snow" | "fog" | "embers" | "magic";
+
+/** Whether an effect gives off light, and whether it blocks sight. */
+export interface EffectSight {
+  /** Lifts the dark in it to dim light, in its colour. */
+  glow?: boolean;
+  /** Can't be seen into, out of or through. */
+  obscures?: boolean;
+}
+
+/** The effects a zone can have, each with the colour, light and sight a new one starts with. */
+export const EFFECTS: ({ id: EffectKind; label: string; colour: string } & EffectSight)[] = [
+  { id: "rain", label: "Rain", colour: "#a9c4e8" },
+  { id: "snow", label: "Snow", colour: "#ffffff" },
+  { id: "fog", label: "Fog", colour: "#c8ced6", obscures: true },
+  { id: "embers", label: "Embers", colour: "#ff8a3d", glow: true },
+  { id: "magic", label: "Magic", colour: "#b68cff", glow: true },
+];
+
+/**
+ * A zone of weather, cloud or magic (rain, fog, motes of light), in any
+ * shape the Shapes tool draws. Everyone sees the effect; only the GM sees
+ * its outline. It may glow, and it may block sight, as fog does.
+ */
+export type EffectElement = Base &
+  ShapeGeometry &
+  EffectSight & {
+    type: "effect";
+    effect: EffectKind;
+    colour: string;
+  };
+
 export type SceneElement =
   | MapElement
   | TokenElement
@@ -161,7 +212,8 @@ export type SceneElement =
   | TextElement
   | WallElement
   | LightElement
-  | AreaElement;
+  | AreaElement
+  | EffectElement;
 
 /** What callers supply when adding an element; the store fills in the rest. */
 export type NewElement = DistributiveOmit<SceneElement, "id" | "z" | "createdBy" | "locked"> & {
@@ -175,4 +227,5 @@ export const SHAPES: { id: ShapeKind; label: string }[] = [
   { id: "circle", label: "Circle" },
   { id: "line", label: "Line" },
   { id: "cone", label: "Cone" },
+  { id: "polygon", label: "Polygon" },
 ];

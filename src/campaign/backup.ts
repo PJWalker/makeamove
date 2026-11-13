@@ -4,7 +4,7 @@ import { openFile, saveFile } from "../platform/files";
 import { BACKUP_FILE, backupFileName, claimGm, type BackupDevice } from "./backupFormat";
 import { runInBackupWorker } from "./backupWorker";
 import type { ImportSummary } from "./backupWorkerProtocol";
-import { activeCampaign, type Campaign } from "./campaign";
+import { openCampaigns, type Campaign } from "./campaign";
 import { summaryOf, upsertCampaign } from "./registry";
 
 /*
@@ -18,16 +18,19 @@ export const thisDevice = (): BackupDevice => ({ id: device.value.id, name: devi
 
 /** This device's role in a campaign, as far as it knows without opening it. */
 export const roleIn = (campaignId: string): string | undefined => {
-  const open = activeCampaign.value;
-  if (open?.id === campaignId) return open.isGm() ? "gm" : "player";
+  const open = openOne(campaignId);
+  if (open) return open.isGm() ? "gm" : "player";
   return summaryOf(campaignId)?.role;
 };
+
+const openOne = (campaignId: string): Campaign | undefined =>
+  [...openCampaigns].find((c) => c.id === campaignId);
 
 /** The campaign's documents open in memory right now, by guid. */
 function liveDocs(campaignId: string): Map<string, Y.Doc> {
   const live = new Map<string, Y.Doc>();
-  const campaign: Campaign | null = activeCampaign.value;
-  if (campaign?.id !== campaignId) return live;
+  const campaign = openOne(campaignId);
+  if (!campaign) return live;
   const add = (doc: Y.Doc) => {
     live.set(doc.guid, doc);
     // `shouldLoad` is what load() sets; Yjs sets `isLoaded` only once a provider says so.
@@ -43,10 +46,7 @@ function liveDocs(campaignId: string): Map<string, Y.Doc> {
  * The open documents a merge must leave to the main thread. A backup names
  * its campaign inside, so this lists every open one; only its campaign's match.
  */
-export const openGuids = () => {
-  const open = activeCampaign.value;
-  return open ? [...liveDocs(open.id).keys()] : [];
-};
+export const openGuids = () => [...openCampaigns].flatMap((c) => [...liveDocs(c.id).keys()]);
 
 /**
  * Finish an import the worker has merged into storage: merge what's open

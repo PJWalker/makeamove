@@ -2,6 +2,9 @@
   /* Command palette (Ctrl/Cmd + K) */
   .palette {
     position: fixed;
+    margin: 0;
+    max-width: none;
+    max-height: none;
     z-index: 10002;
     top: max(48px, 14vh);
     left: 50%;
@@ -24,10 +27,15 @@
       inset 1px 1px 0 var(--surface-rim),
       inset -1px -1px 0 color-mix(in oklch, var(--surface-rim) 45%, transparent);
     color: var(--text);
-    animation: palette-in 280ms var(--ease) both;
   }
-  @keyframes palette-in {
-    from {
+  /* Grows out of the button that opened it (ui/morph.ts), or else fades and rises. */
+  .palette {
+    transition:
+      opacity 180ms var(--ease),
+      translate 180ms var(--ease);
+  }
+  @starting-style {
+    .palette:not([data-morph="true"]) {
       opacity: 0;
       translate: -50% 8px;
     }
@@ -115,7 +123,7 @@
   }
   @media (prefers-reduced-motion: reduce) {
     .palette {
-      animation: none;
+      transition: none;
     }
   }
 }

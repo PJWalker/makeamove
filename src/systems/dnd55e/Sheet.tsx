@@ -1,23 +1,12 @@
 import { useState } from "react";
-import {
-  bumpData,
-  bumpResource,
-  canEdit,
-  rest,
-  setData,
-  setField,
-  setLearned,
-  setNpcField,
-  setScore,
-  startMove,
-} from "../../features/characters/api";
+import { canEdit } from "../../features/characters/api";
 import { actionsFor, derive } from "../../features/characters/store";
 import type { CharacterView } from "../../features/characters/types";
-import { postRoll } from "../../features/chat/send";
 import type { Campaign } from "../../campaign/campaign";
 import { device } from "../../platform/device";
 import { CharacterText } from "../../workspace/CharacterText";
 import { commaListOf } from "../../lib/list";
+import { parseInputNumber } from "../../lib/number";
 import { Inventory } from "../../workspace/Inventory";
 import { SheetSectionView } from "../../workspace/DeclarativeSheet";
 import {
@@ -32,7 +21,20 @@ import type { ActionDef, Derived, GameSystem } from "../types";
 import { SKILLS } from "./data";
 import { AdvancementDialog } from "../../workspace/CreationParts";
 import { FEATS } from "./origins";
-import { useValue } from "../../ui/useValue";
+import { useQuery } from "../../ui/useQuery";
+import {
+  bumpData,
+  bumpResource,
+  rest,
+  setData,
+  setField,
+  setLearned,
+  setNpcField,
+  setScore,
+  startMove,
+} from "../../workspace/commands/characters";
+import { useCampaign } from "../../workspace/campaignContext";
+import { roll } from "../../workspace/commands/chat";
 
 /*
  * D&D 5.5e's character sheets, from the shared parts in workspace/sheetParts.tsx.
@@ -57,6 +59,7 @@ function Name({
   editable: boolean;
   detail: string;
 }) {
+  const ctx = useCampaign();
   return (
     <header className="sheet-head">
       <TokenChip campaign={campaign} c={c} editable={editable} />
@@ -68,7 +71,7 @@ function Name({
           disabled={!editable}
           onChange={(e) =>
             e.currentTarget.value.trim() &&
-            setField(campaign, c.id, "name", e.currentTarget.value.trim())
+            ctx.execute(setField, { id: c.id, key: "name", value: e.currentTarget.value.trim() })
           }
         />
         <span className="muted">{detail}</span>
@@ -79,13 +82,13 @@ function Name({
 
 /** Ability scores, each with its check and saving throw. */
 function Abilities({
-  campaign,
   system,
   c,
   d,
   editable,
   use,
 }: Props & { d: Derived; editable: boolean; use: (id: string) => void }) {
+  const ctx = useCampaign();
   return (
     <ul className="sheet-stats dnd-abilities">
       {system.stats.map((s) => {
@@ -116,8 +119,9 @@ function Abilities({
               value={c.scores[s.id]}
               disabled={!editable}
               onChange={(e) => {
-                const n = Number(e.currentTarget.value);
-                if (n >= 1 && n <= 30) setScore(campaign, c.id, s.id, n);
+                const value = parseInputNumber(e.currentTarget.value);
+                if (value !== undefined && value >= 1 && value <= 30)
+                  ctx.execute(setScore, { id: c.id, stat: s.id, score: value });
               }}
             />
             <button
@@ -138,17 +142,18 @@ function Abilities({
 
 /** A player character's sheet. */
 export function DndSheet({ campaign, system, c }: Props) {
+  const ctx = useCampaign();
   const d = derive(c, system);
   const v = d.values;
   const level = Math.min(20, Math.max(1, num(c.data.level) || 1));
   const classChoice = system.creation?.choices.find((choice) => choice.field === "classId");
   const cls = classChoice?.options.find((option) => option.id === c.data.classId);
   const editable = canEdit(campaign, c);
-  const me = useValue(device).id;
+  const me = useQuery(device).id;
   const actions = actionsFor(c, system, d);
   const use = (id: string) => {
     const a = system.actions.find((x) => x.id === id);
-    if (a) startMove(campaign, c.id, a);
+    if (a) ctx.execute(startMove, { characterId: c.id, move: a.id });
   };
   const hp = c.resources.hp ?? 0;
   const xp = num(c.data.xp);
@@ -159,21 +164,21 @@ export function DndSheet({ campaign, system, c }: Props) {
 
   const [levelling, setLevelling] = useState(false);
   const spendHitDie = () => {
-    bumpResource(campaign, c.id, "hitDice", -1);
-    void postRoll(
-      campaign,
-      `1d${v.hitDie}${conMod ? `${conMod < 0 ? "-" : "+"}${Math.abs(conMod)}[CON]` : ""}`,
-      "public",
-      "Hit Die",
-    );
+    ctx.execute(bumpResource, { id: c.id, resource: "hitDice", by: -1 });
+    void ctx.execute(roll, {
+      formula: `1d${v.hitDie}${conMod ? `${conMod < 0 ? "-" : "+"}${Math.abs(conMod)}[CON]` : ""}`,
+      visibility: "public",
+      comment: "Hit Die",
+    });
   };
   const longRest = () => {
-    campaign.doc.transact(() => {
-      rest(campaign, c.id, "long-rest");
-      setData(campaign, c.id, "tempHp", 0);
-      setData(campaign, c.id, "deathSuccesses", 0);
-      setData(campaign, c.id, "deathFailures", 0);
-      if (v.exhaustion) setData(campaign, c.id, "exhaustion", v.exhaustion - 1);
+    ctx.commands.batch(() => {
+      ctx.execute(rest, { characterId: c.id, event: "long-rest" });
+      ctx.execute(setData, { id: c.id, key: "tempHp", value: 0 });
+      ctx.execute(setData, { id: c.id, key: "deathSuccesses", value: 0 });
+      ctx.execute(setData, { id: c.id, key: "deathFailures", value: 0 });
+      if (v.exhaustion)
+        ctx.execute(setData, { id: c.id, key: "exhaustion", value: v.exhaustion - 1 });
     });
   };
 
@@ -206,7 +211,13 @@ export function DndSheet({ campaign, system, c }: Props) {
                   <select
                     value={value}
                     disabled={!editable}
-                    onChange={(e) => setData(campaign, c.id, ch.field, e.currentTarget.value)}
+                    onChange={(e) =>
+                      ctx.execute(setData, {
+                        id: c.id,
+                        key: ch.field,
+                        value: e.currentTarget.value,
+                      })
+                    }
                   >
                     <option value="">None</option>
                     {/* A value typed before species and backgrounds were data. */}
@@ -247,27 +258,35 @@ export function DndSheet({ campaign, system, c }: Props) {
             value={hp}
             max={v.maxHp}
             disabled={!editable}
-            onChange={(by) => bumpResource(campaign, c.id, "hp", by, v.maxHp)}
+            onChange={(by) =>
+              ctx.execute(bumpResource, { id: c.id, resource: "hp", by, max: v.maxHp })
+            }
           />
           <Counter
             label="Temp HP"
             value={num(c.data.tempHp)}
             disabled={!editable}
-            onChange={(by) => bumpData(campaign, c.id, "tempHp", by)}
+            onChange={(by) => ctx.execute(bumpData, { id: c.id, key: "tempHp", by })}
           />
           <Counter
             label={`Hit Dice (d${v.hitDie})`}
             value={c.resources.hitDice ?? 0}
             max={v.hitDiceMax}
             disabled={!editable}
-            onChange={(by) => bumpResource(campaign, c.id, "hitDice", by, v.hitDiceMax)}
+            onChange={(by) =>
+              ctx.execute(bumpResource, { id: c.id, resource: "hitDice", by, max: v.hitDiceMax })
+            }
           />
           <Counter
             label="Level"
             value={level}
             disabled={!editable}
             onChange={(by) =>
-              setData(campaign, c.id, "level", Math.min(20, Math.max(1, level + by)))
+              ctx.execute(setData, {
+                id: c.id,
+                key: "level",
+                value: Math.min(20, Math.max(1, level + by)),
+              })
             }
           />
           <label className="counter">
@@ -280,12 +299,11 @@ export function DndSheet({ campaign, system, c }: Props) {
               value={xp}
               disabled={!editable}
               onChange={(e) =>
-                setData(
-                  campaign,
-                  c.id,
-                  "xp",
-                  Math.max(0, Math.floor(Number(e.currentTarget.value) || 0)),
-                )
+                ctx.execute(setData, {
+                  id: c.id,
+                  key: "xp",
+                  value: Math.max(0, Math.floor(Number(e.currentTarget.value) || 0)),
+                })
               }
             />
           </label>
@@ -293,7 +311,7 @@ export function DndSheet({ campaign, system, c }: Props) {
             label="GP"
             value={num(c.data.gp)}
             disabled={!editable}
-            onChange={(by) => bumpData(campaign, c.id, "gp", by)}
+            onChange={(by) => ctx.execute(bumpData, { id: c.id, key: "gp", by })}
           />
         </div>
         <div className="sheet-row">
@@ -302,7 +320,9 @@ export function DndSheet({ campaign, system, c }: Props) {
               type="checkbox"
               checked={!!c.data.inspiration}
               disabled={!editable}
-              onChange={() => setData(campaign, c.id, "inspiration", !c.data.inspiration)}
+              onChange={() =>
+                ctx.execute(setData, { id: c.id, key: "inspiration", value: !c.data.inspiration })
+              }
             />
             Heroic Inspiration
           </label>
@@ -331,14 +351,18 @@ export function DndSheet({ campaign, system, c }: Props) {
               value={num(c.data.deathSuccesses)}
               max={3}
               disabled={!editable}
-              onChange={(by) => bumpData(campaign, c.id, "deathSuccesses", by, 3)}
+              onChange={(by) =>
+                ctx.execute(bumpData, { id: c.id, key: "deathSuccesses", by, max: 3 })
+              }
             />
             <Counter
               label="Failures"
               value={num(c.data.deathFailures)}
               max={3}
               disabled={!editable}
-              onChange={(by) => bumpData(campaign, c.id, "deathFailures", by, 3)}
+              onChange={(by) =>
+                ctx.execute(bumpData, { id: c.id, key: "deathFailures", by, max: 3 })
+              }
             />
           </div>
           <div className="sheet-row">
@@ -421,7 +445,9 @@ export function DndSheet({ campaign, system, c }: Props) {
                   aria-label={`${s.name}: ${RANK[rank]}`}
                   title={RANK[rank]}
                   disabled={!editable}
-                  onClick={() => setData(campaign, c.id, `skill:${s.id}`, (rank + 1) % 3)}
+                  onClick={() =>
+                    ctx.execute(setData, { id: c.id, key: `skill:${s.id}`, value: (rank + 1) % 3 })
+                  }
                 />
                 <button type="button" className="dnd-skill" onClick={() => use(`skill-${s.id}`)}>
                   <span>{s.name}</span>
@@ -447,7 +473,14 @@ export function DndSheet({ campaign, system, c }: Props) {
                 value={Math.min(c.resources[r.id] ?? 0, valueOf(v, r.max))}
                 max={valueOf(v, r.max)}
                 disabled={!editable}
-                onChange={(by) => bumpResource(campaign, c.id, r.id, by, valueOf(v, r.max))}
+                onChange={(by) =>
+                  ctx.execute(bumpResource, {
+                    id: c.id,
+                    resource: r.id,
+                    by,
+                    max: valueOf(v, r.max),
+                  })
+                }
               />
             ))}
           </div>
@@ -460,7 +493,10 @@ export function DndSheet({ campaign, system, c }: Props) {
           <Button disabled={!editable || !(c.resources.hitDice ?? 0)} onClick={spendHitDie}>
             Spend Hit Die
           </Button>
-          <Button disabled={!editable} onClick={() => rest(campaign, c.id, "short-rest")}>
+          <Button
+            disabled={!editable}
+            onClick={() => ctx.execute(rest, { characterId: c.id, event: "short-rest" })}
+          >
             Short Rest
           </Button>
           <Button disabled={!editable} onClick={longRest}>
@@ -477,7 +513,7 @@ export function DndSheet({ campaign, system, c }: Props) {
             value={valueOf(v, "exhaustion")}
             max={6}
             disabled={!editable}
-            onChange={(by) => bumpData(campaign, c.id, "exhaustion", by, 6)}
+            onChange={(by) => ctx.execute(bumpData, { id: c.id, key: "exhaustion", by, max: 6 })}
           />
         </div>
         <ConditionToggles campaign={campaign} system={system} c={c} editable={editable} />
@@ -494,9 +530,13 @@ export function DndSheet({ campaign, system, c }: Props) {
           system={system}
           moves={actions}
           ownerId={c.id}
-          onMake={(m: ActionDef) => startMove(campaign, c.id, m)}
+          onMake={(m: ActionDef) => ctx.execute(startMove, { characterId: c.id, move: m.id })}
           learned={c.learned}
-          onForget={editable ? (m) => setLearned(campaign, c.id, m.id, false) : undefined}
+          onForget={
+            editable
+              ? (m) => ctx.execute(setLearned, { id: c.id, action: m.id, known: false })
+              : undefined
+          }
         />
       </section>
 
@@ -533,12 +573,13 @@ export function DndSheet({ campaign, system, c }: Props) {
 
 /** An NPC or monster: a stat block's numbers and text. */
 export function DndNpcSheet({ campaign, system, c }: Props) {
+  const ctx = useCampaign();
   const d = derive(c, system);
   const editable = canEdit(campaign, c);
   const maxHp = num(c.data.maxHp);
   const use = (id: string) => {
     const a = system.actions.find((x) => x.id === id);
-    if (a) startMove(campaign, c.id, a);
+    if (a) ctx.execute(startMove, { characterId: c.id, move: a.id });
   };
   const field = (id: string) => system.npcFields.find((f) => f.id === id)!;
   const text = (f: { id: string; label: string; type: string }) =>
@@ -559,12 +600,12 @@ export function DndNpcSheet({ campaign, system, c }: Props) {
           value={c.fields[f.id]}
           disabled={!editable}
           onChange={(e) =>
-            setNpcField(
-              campaign,
-              c.id,
-              f.id,
-              f.type === "number" ? Number(e.currentTarget.value) || 0 : e.currentTarget.value,
-            )
+            ctx.execute(setNpcField, {
+              id: c.id,
+              field: f.id,
+              value:
+                f.type === "number" ? Number(e.currentTarget.value) || 0 : e.currentTarget.value,
+            })
           }
         />
       </label>
@@ -584,7 +625,9 @@ export function DndNpcSheet({ campaign, system, c }: Props) {
             value={c.resources.hp ?? 0}
             max={maxHp}
             disabled={!editable}
-            onChange={(by) => bumpResource(campaign, c.id, "hp", by, maxHp)}
+            onChange={(by) =>
+              ctx.execute(bumpResource, { id: c.id, resource: "hp", by, max: maxHp })
+            }
           />
           <label className="counter">
             <span className="eyebrow">Max HP</span>
@@ -595,8 +638,9 @@ export function DndNpcSheet({ campaign, system, c }: Props) {
               value={maxHp}
               disabled={!editable}
               onChange={(e) => {
-                const n = Math.floor(Number(e.currentTarget.value));
-                if (n >= 1) setData(campaign, c.id, "maxHp", n);
+                const value = parseInputNumber(e.currentTarget.value);
+                if (value !== undefined && value >= 1)
+                  ctx.execute(setData, { id: c.id, key: "maxHp", value: Math.floor(value) });
               }}
             />
           </label>
@@ -604,7 +648,7 @@ export function DndNpcSheet({ campaign, system, c }: Props) {
             label="Temp HP"
             value={num(c.data.tempHp)}
             disabled={!editable}
-            onChange={(by) => bumpData(campaign, c.id, "tempHp", by)}
+            onChange={(by) => ctx.execute(bumpData, { id: c.id, key: "tempHp", by })}
           />
         </div>
       </section>

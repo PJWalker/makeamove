@@ -1,3 +1,4 @@
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- Completion options belong to a custom keyboard listbox. */
 import { Editor, mergeAttributes } from "@tiptap/core";
 import Collaboration from "@tiptap/extension-collaboration";
 import Mention from "@tiptap/extension-mention";
@@ -24,16 +25,16 @@ import { getNote } from "../features/notes/api";
 import type { LinkKind } from "../features/notes/links";
 import { LINK_NODE } from "../features/notes/links";
 import { linkLabel, linkTargets, linkTip, type LinkTarget } from "../features/notes/targets";
-import { followLink, openInSidebar } from "./linkNavigation";
 import { menuTrigger } from "../ui/menuTrigger";
 import type { MenuItem } from "../ui/ContextMenu";
-import { linkActionItems, linkMenu, renameLink, showLink } from "./linkState";
+import { linkActionItems } from "./linkState";
 import type { Campaign } from "../campaign/campaign";
+import type { CampaignContext } from "./campaignContext";
 import { IconOpenWindow, IconRename, IconSidebar } from "../ui/icons";
-import { dragEntity, entity, registerLinkDrop } from "./entityDrag";
+import { dragEntity, registerLinkDrop } from "./entityDrag";
+import { entity } from "./dragEntities";
 import { actionMenuItems } from "./actionMenu";
 import { CampaignEntityGraphic } from "./EntityGraphic";
-import { editEntityGraphic } from "./GraphicDialogs";
 import { trackerButtonExtension } from "./trackerButtons";
 
 /*
@@ -46,7 +47,7 @@ import { trackerButtonExtension } from "./trackerButtons";
  */
 
 export interface RichTextOptions {
-  campaign: Campaign;
+  ctx: CampaignContext;
   /** The Yjs fragment holding the text. */
   fragment: Y.XmlFragment;
   placeholder: string;
@@ -242,12 +243,13 @@ export function mountRichText(
   host: HTMLElement,
   o: RichTextOptions,
 ): { editor: Editor; destroy: () => void } {
-  const { campaign } = o;
+  const { ctx } = o;
+  const { campaign } = ctx;
   const vault = o.secrets?.vault ?? null;
   /** A secret's own text, edited in place inside the note (GM only). */
   const mountSecret = (body: HTMLElement, id: string, doc: Y.Doc): (() => void) => {
     const nested = mountRichText(body, {
-      campaign,
+      ctx,
       fragment: secretFragment(doc, id),
       placeholder: "Only you can see this.",
       label: "Secret text",
@@ -266,8 +268,8 @@ export function mountRichText(
       Collaboration.configure({ fragment: o.fragment }),
       Placeholder.configure({ placeholder: o.placeholder }),
       linkExtension(campaign, o),
-      trackerButtonExtension(campaign),
-      NoteImage,
+      trackerButtonExtension(ctx),
+      NoteImage.configure({ peers: ctx.blobs }),
       ...(o.carets ? [carets(o.carets.awareness, o.carets.name)] : []),
       ...(o.secrets ? [secretNode(vault ? (host, id) => mountSecret(host, id, vault) : null)] : []),
     ],
@@ -317,8 +319,8 @@ export function mountRichText(
     if (!chip || chip.dataset.missing) return;
     e.preventDefault();
     const link = refOf(chip);
-    if (followsInPlace(link.kind)) followLink(campaign, link.kind, link.id);
-    else showLink(link, chip);
+    if (followsInPlace(link.kind)) ctx.links.followLink(link.kind, link.id);
+    else ctx.linkPopups.show(link, chip);
   };
   host.addEventListener("click", onClick);
 
@@ -361,7 +363,7 @@ export function mountRichText(
         });
       }
     }
-    linkMenu.value = { x, y, items };
+    ctx.linkPopups.linkMenu.set({ x, y, items });
   });
   let menuSecret: HTMLElement | null = null;
 
@@ -375,8 +377,8 @@ export function mountRichText(
     const actionId =
       link.kind === "move" ? `move:${link.id}` : link.kind === "item" ? `library:${link.id}` : null;
     if (actionId) {
-      items.push(...linkActionItems(campaign, link));
-      const actions = actionMenuItems(campaign, [{ id: actionId }]);
+      items.push(...linkActionItems(ctx, link));
+      const actions = actionMenuItems(ctx, [{ id: actionId }]);
       if (items.length && actions.length) items.push("divider");
       items.push(...actions);
     }
@@ -387,21 +389,20 @@ export function mountRichText(
         items.push({
           label: "Change Graphic…",
           Icon: IconImage,
-          onSelect: () =>
-            editEntityGraphic(campaign, link.kind, link.id, chip.textContent ?? "Entity"),
+          onSelect: () => ctx.table.editGraphic(link.kind, link.id, chip.textContent ?? "Entity"),
         });
       }
       if (items.length) items.push("divider");
       items.push({
         label: "Open in Sidebar",
         Icon: IconSidebar,
-        onSelect: () => openInSidebar(campaign, link.kind, link.id),
+        onSelect: () => ctx.links.openInSidebar(link.kind, link.id),
       });
       if (followsInPlace(link.kind))
         items.push({
           label: "Open in a Window",
           Icon: IconOpenWindow,
-          onSelect: () => showLink(link, chip),
+          onSelect: () => ctx.linkPopups.show(link, chip),
         });
     }
     if (found && editor.isEditable) {
@@ -411,7 +412,7 @@ export function mountRichText(
         label: "Edit Link Text…",
         Icon: IconRename,
         onSelect: () =>
-          renameLink({
+          ctx.linkPopups.rename({
             text: chip.textContent ?? "",
             custom,
             save: (text) => {
@@ -426,7 +427,7 @@ export function mountRichText(
           }),
       });
     }
-    if (items.length) linkMenu.value = { x, y, items };
+    if (items.length) ctx.linkPopups.linkMenu.set({ x, y, items });
   });
   let menuChip: HTMLElement | null = null;
   /** Whether a press is for the text menu: in this editor's own text, not a nested secret's, with notes' extras on. */
@@ -458,13 +459,9 @@ export function mountRichText(
     // Keep the editor from starting a text selection; a click still follows the link.
     e.preventDefault();
     dragEntity(
+      ctx.canvas,
       e,
-      entity(
-        campaign,
-        chip.dataset.kind as LinkKind,
-        chip.dataset.id ?? "",
-        chip.textContent ?? "",
-      ),
+      entity(ctx, chip.dataset.kind as LinkKind, chip.dataset.id ?? "", chip.textContent ?? ""),
       chip,
     );
   };

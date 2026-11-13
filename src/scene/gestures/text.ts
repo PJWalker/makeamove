@@ -1,5 +1,4 @@
 import type { Point } from "../grid";
-import { pen } from "../tools";
 import type { ToolContext, ToolPress } from "./types";
 
 /** The Text tool: a click asks for text to put there. */
@@ -18,7 +17,7 @@ export function putText(c: ToolContext, at: Point, text: string, id?: string) {
     return;
   }
   const size = old?.size ?? Math.round(c.renderer.grid.size * 0.5);
-  const colour = old?.colour ?? pen.value.colour;
+  const colour = old?.colour ?? c.tools.pen.value.colour;
   const m = c.renderer.measureText(clean, colour, size);
   if (old) {
     const k = old.w / old.bw;
@@ -26,7 +25,7 @@ export function putText(c: ToolContext, at: Point, text: string, id?: string) {
   } else {
     c.scene.add({
       type: "text",
-      layer: pen.value.layer,
+      layer: c.tools.pen.value.layer,
       text: clean,
       colour,
       size,

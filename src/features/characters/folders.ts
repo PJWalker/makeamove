@@ -1,5 +1,6 @@
 import type { Campaign } from "../../campaign/campaign";
 import { newId } from "../../lib/ids";
+import { UNTITLED_FOLDER } from "../../campaign/folders";
 
 export interface FolderView {
   id: string;
@@ -7,14 +8,15 @@ export interface FolderView {
 }
 
 export function listFolders(campaign: Campaign): FolderView[] {
-  return [...campaign.characterFolders.entries()]
+  return campaign.characterFolders
+    .entries()
     .map(([id, f]) => ({ id, name: f.name }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export function createFolder(campaign: Campaign, name: string) {
+export function createFolder(campaign: Campaign, name = UNTITLED_FOLDER) {
   const id = newId();
-  campaign.characterFolders.set(id, { name: name.trim() || "New folder" });
+  campaign.characterFolders.set(id, { name: name.trim() || UNTITLED_FOLDER });
   return id;
 }
 
@@ -36,8 +38,5 @@ export function moveToFolder(
   characterId: string,
   folderId: string | undefined,
 ) {
-  const m = campaign.characters.get(characterId);
-  if (!m) return;
-  if (folderId) m.set("folder", folderId);
-  else m.delete("folder");
+  campaign.characters.get(characterId)?.patch({ folder: folderId });
 }

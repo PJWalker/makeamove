@@ -1,16 +1,7 @@
 import type { ComponentType } from "react";
 import { getCharacter, listCharacters } from "../../features/characters/api";
 import {
-  beginDungeonWorld2Downtime,
-  carouseDungeonWorld2,
   dungeonWorld2DowntimeEpoch,
-  endDungeonWorld2Session,
-  makeDungeonWorld2Camp,
-  prepareDungeonWorld2Journey,
-  resupplyDungeonWorld2,
-  resolveComfortOrSupport,
-  shopDungeonWorld2Service,
-  trainDungeonWorld2,
   trainedDuringDungeonWorld2Downtime,
   type ComfortBenefit,
   type JourneyPace,
@@ -19,12 +10,24 @@ import { sessionMoveUsed } from "../../features/characters/sessionMoves";
 import { relationshipsOf } from "../../features/characters/relationships";
 import type { CharacterView } from "../../features/characters/types";
 import { Button } from "../../ui/Button";
-import { useY } from "../../ui/useY";
+import { useQuery } from "../../ui/useQuery";
 import { derive } from "../../features/characters/store";
 import type { MoveFormProps } from "../extensionTypes";
 import { DW2_SERVICES, type ServiceRank } from "./wealth";
 import { useState } from "react";
-import { useValue } from "../../ui/useValue";
+import {
+  beginDowntime,
+  carouse,
+  comfort,
+  endSession,
+  makeCamp,
+  prepareJourney,
+  resupply,
+  shop,
+  train,
+} from "./commands";
+import { useCampaign } from "../../workspace/campaignContext";
+import { can } from "../../workspace/commands/views";
 
 /*
  * What some Dungeon World 2 moves ask for and do, shown with the move's text
@@ -46,20 +49,21 @@ const COMFORT_QUESTIONS = [
 
 /*
  * Campaign state lives in Yjs, which changes in place, so these forms read it
- * through useY: a read made directly in render would be memoized by React
+ * through useQuery: a read made directly in render would be memoized by React
  * Compiler and go stale.
  */
 
 /** Whether the sheet's character has already used move `moveId` this session. */
 function useUsedThisSession(sheet: MoveFormProps["sheet"], moveId: string) {
   const move = sheet.system.actions.find((action) => action.id === moveId);
-  const sessionMessages = useValue(sheet.campaign.chat.messages);
-  return useY(sheet.campaign.systemData, () =>
+  const sessionMessages = useQuery(sheet.campaign.chat.messages);
+  return useQuery(sheet.campaign.systemData, () =>
     move ? sessionMoveUsed(sheet.campaign, sheet.c.id, move, sessionMessages) : false,
   );
 }
 
 function EndSession({ sheet }: MoveFormProps) {
+  const ctx = useCampaign();
   const [answers, setAnswers] = useState<boolean[]>([false, false, false]);
   const used = useUsedThisSession(sheet, "end-the-session");
   return (
@@ -83,11 +87,10 @@ function EndSession({ sheet }: MoveFormProps) {
         variant="secondary"
         disabled={!sheet.editable || used}
         onClick={() =>
-          void endDungeonWorld2Session(sheet.campaign, sheet.c.id, [
-            answers[0] ?? false,
-            answers[1] ?? false,
-            answers[2] ?? false,
-          ])
+          void ctx.execute(endSession, {
+            characterId: sheet.c.id,
+            answers: [answers[0] ?? false, answers[1] ?? false, answers[2] ?? false],
+          })
         }
       >
         {used ? "Session ended" : "Award group XP"}
@@ -97,17 +100,18 @@ function EndSession({ sheet }: MoveFormProps) {
 }
 
 function ComfortOrSupport({ sheet }: MoveFormProps) {
+  const ctx = useCampaign();
   const [comfortedId, setComfortedId] = useState("");
   const [answers, setAnswers] = useState<boolean[]>([false, false, false]);
   const [benefitKinds, setBenefitKinds] = useState<Record<number, string>>({});
   const [conditionPicks, setConditionPicks] = useState<Record<number, string>>({});
   const used = useUsedThisSession(sheet, "comfort-or-support");
-  const partyJson = useY(sheet.campaign.characters, () =>
+  const partyJson = useQuery(sheet.campaign.characters, () =>
     JSON.stringify(listCharacters(sheet.campaign).filter((character) => character.kind === "pc")),
   );
   const party = JSON.parse(partyJson) as CharacterView[];
   const comforted = party.find((character) => character.id === comfortedId);
-  const receiverDepth = useY(sheet.campaign.characters, () =>
+  const receiverDepth = useQuery(sheet.campaign.characters, () =>
     comforted
       ? (relationshipsOf(sheet.campaign.characters, comforted.id).find(
           (relationship) => relationship.to === sheet.c.id,
@@ -115,11 +119,12 @@ function ComfortOrSupport({ sheet }: MoveFormProps) {
       : 0,
   );
   const canGainDepth = receiverDepth < 3;
+  const receiverLocked = new Set(comforted?.lockedConditions ?? []);
+  const supporterLocked = new Set(sheet.c.lockedConditions ?? []);
   const receiverConditions =
-    comforted?.conditions.filter((condition) => !comforted.lockedConditions?.includes(condition)) ??
-    [];
+    comforted?.conditions.filter((condition) => !receiverLocked.has(condition)) ?? [];
   const supporterConditions = sheet.c.conditions.filter(
-    (condition) => !sheet.c.lockedConditions?.includes(condition),
+    (condition) => !supporterLocked.has(condition),
   );
   const benefits: ComfortBenefit[] = [];
   let ready = !!comforted && comforted.id !== sheet.c.id;
@@ -236,7 +241,7 @@ function ComfortOrSupport({ sheet }: MoveFormProps) {
         disabled={!sheet.editable || used || !ready}
         onClick={() =>
           comforted &&
-          void resolveComfortOrSupport(sheet.campaign, sheet.c.id, comforted.id, benefits)
+          void ctx.execute(comfort, { characterId: sheet.c.id, comforted: comforted.id, benefits })
         }
       >
         {used ? "Used this session" : "Resolve Comfort or Support"}
@@ -246,13 +251,15 @@ function ComfortOrSupport({ sheet }: MoveFormProps) {
 }
 
 function PerilousJourney({ sheet }: MoveFormProps) {
+  const ctx = useCampaign();
   const [pace, setPace] = useState<JourneyPace>("regular");
-  const [leaderId, setLeaderId] = useState(sheet.c.id);
+  const [chosenLeaderId, setChosenLeaderId] = useState<string | null>(null);
   const [conditions, setConditions] = useState<Record<string, string>>({});
-  const partyJson = useY(sheet.campaign.characters, () =>
+  const partyJson = useQuery(sheet.campaign.characters, () =>
     JSON.stringify(listCharacters(sheet.campaign).filter((character) => character.kind === "pc")),
   );
   const party = JSON.parse(partyJson) as CharacterView[];
+  const leaderId = chosenLeaderId ?? sheet.c.id;
   const leader = party.find((character) => character.id === leaderId);
   const affected = pace === "quick" ? party : pace === "regular" && leader ? [leader] : [];
   const conditionPicks = Object.fromEntries(
@@ -274,7 +281,7 @@ function PerilousJourney({ sheet }: MoveFormProps) {
     <section className="move-form-section" aria-label="Undertake a Perilous Journey">
       <label className="field">
         Leader
-        <select value={leaderId} onChange={(event) => setLeaderId(event.currentTarget.value)}>
+        <select value={leaderId} onChange={(event) => setChosenLeaderId(event.currentTarget.value)}>
           {party.map((character) => (
             <option key={character.id} value={character.id}>
               {character.name}
@@ -323,7 +330,8 @@ function PerilousJourney({ sheet }: MoveFormProps) {
         variant="secondary"
         disabled={!sheet.editable || !ready || !leader}
         onClick={() =>
-          leader && prepareDungeonWorld2Journey(sheet.campaign, leader.id, pace, conditionPicks)
+          leader &&
+          ctx.execute(prepareJourney, { characterId: leader.id, pace, conditions: conditionPicks })
         }
       >
         Prepare Journey
@@ -333,6 +341,7 @@ function PerilousJourney({ sheet }: MoveFormProps) {
 }
 
 function Downtime({ sheet }: MoveFormProps) {
+  const ctx = useCampaign();
   const [benefit, setBenefit] = useState<"clear-locked" | "gain-depth">(
     sheet.c.lockedConditions?.length ? "clear-locked" : "gain-depth",
   );
@@ -340,21 +349,23 @@ function Downtime({ sheet }: MoveFormProps) {
   const [partyId, setPartyId] = useState("");
   const [serviceId, setServiceId] = useState(DW2_SERVICES[0]!.id);
   const [serviceRank, setServiceRank] = useState<ServiceRank>(2);
-  const epoch = useY(sheet.campaign.systemData, () => dungeonWorld2DowntimeEpoch(sheet.campaign));
-  const trained = useY(sheet.campaign.systemData, () =>
+  const epoch = useQuery(sheet.campaign.systemData, () =>
+    dungeonWorld2DowntimeEpoch(sheet.campaign),
+  );
+  const trained = useQuery(sheet.campaign.systemData, () =>
     trainedDuringDungeonWorld2Downtime(sheet.campaign, sheet.c.id),
   );
-  const partyJson = useY(sheet.campaign.characters, () =>
+  const partyJson = useQuery(sheet.campaign.characters, () =>
     JSON.stringify(listCharacters(sheet.campaign).filter((character) => character.kind === "pc")),
   );
-  const boxes = useY(sheet.campaign.characters, () =>
+  const boxes = useQuery(sheet.campaign.characters, () =>
     Number(getCharacter(sheet.campaign, sheet.c.id)?.data.treasureBoxes ?? 0),
   );
   const party = JSON.parse(partyJson) as CharacterView[];
   const others = party.filter((character) => character.id !== sheet.c.id);
   const selectedPartyId = partyId || others[0]?.id;
   const canClearLocked = (sheet.c.lockedConditions?.length ?? 0) > 0;
-  const canGainDepth = useY(
+  const canGainDepth = useQuery(
     sheet.campaign.characters,
     () =>
       !!selectedPartyId &&
@@ -364,8 +375,8 @@ function Downtime({ sheet }: MoveFormProps) {
   );
   return (
     <section className="move-form-section" aria-label="Enjoy Downtime">
-      {sheet.campaign.isGm() && (
-        <Button variant="secondary" onClick={() => beginDungeonWorld2Downtime(sheet.campaign)}>
+      {can(ctx, beginDowntime, undefined) && (
+        <Button variant="secondary" onClick={() => ctx.execute(beginDowntime, undefined)}>
           Begin Downtime
         </Button>
       )}
@@ -421,13 +432,12 @@ function Downtime({ sheet }: MoveFormProps) {
           (benefit === "clear-locked" ? !canClearLocked : !canGainDepth)
         }
         onClick={() =>
-          carouseDungeonWorld2(
-            sheet.campaign,
-            sheet.c.id,
+          ctx.execute(carouse, {
+            characterId: sheet.c.id,
             benefit,
-            partyId || others[0]?.id,
+            target: partyId || others[0]?.id,
             condition,
-          )
+          })
         }
       >
         Carouse
@@ -435,7 +445,7 @@ function Downtime({ sheet }: MoveFormProps) {
       <Button
         variant="secondary"
         disabled={!sheet.editable || epoch === 0 || boxes < 1}
-        onClick={() => resupplyDungeonWorld2(sheet.campaign, sheet.c.id)}
+        onClick={() => ctx.execute(resupply, { characterId: sheet.c.id })}
       >
         Resupply (1 Treasure)
       </Button>
@@ -464,7 +474,7 @@ function Downtime({ sheet }: MoveFormProps) {
         variant="secondary"
         disabled={!sheet.editable || epoch === 0 || boxes < 1}
         onClick={() =>
-          void shopDungeonWorld2Service(sheet.campaign, sheet.c.id, serviceId, serviceRank)
+          void ctx.execute(shop, { characterId: sheet.c.id, service: serviceId, rank: serviceRank })
         }
       >
         Shop (1 Treasure)
@@ -472,7 +482,7 @@ function Downtime({ sheet }: MoveFormProps) {
       <Button
         variant="secondary"
         disabled={!sheet.editable || boxes < 1 || epoch === 0 || trained}
-        onClick={() => trainDungeonWorld2(sheet.campaign, sheet.c.id)}
+        onClick={() => ctx.execute(train, { characterId: sheet.c.id })}
       >
         {trained ? "Trained this Downtime" : "Train (1 Treasure for 1 XP)"}
       </Button>
@@ -481,10 +491,11 @@ function Downtime({ sheet }: MoveFormProps) {
 }
 
 function MakeCamp({ sheet }: MoveFormProps) {
+  const ctx = useCampaign();
   const [selections, setSelections] = useState<Record<string, string>>({});
   const [repairs, setRepairs] = useState<Record<string, string>>({});
   const used = useUsedThisSession(sheet, "make-camp");
-  const partyJson = useY(sheet.campaign.characters, () =>
+  const partyJson = useQuery(sheet.campaign.characters, () =>
     JSON.stringify(listCharacters(sheet.campaign).filter((character) => character.kind === "pc")),
   );
   const party = JSON.parse(partyJson) as CharacterView[];
@@ -571,7 +582,11 @@ function MakeCamp({ sheet }: MoveFormProps) {
         variant="secondary"
         disabled={!sheet.editable || used}
         onClick={() =>
-          void makeDungeonWorld2Camp(sheet.campaign, sheet.c.id, choices, repairChoices)
+          void ctx.execute(makeCamp, {
+            characterId: sheet.c.id,
+            clear: choices,
+            repair: repairChoices,
+          })
         }
       >
         {used ? "Camp completed" : "Finish Making Camp"}

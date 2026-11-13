@@ -1,10 +1,12 @@
 import "fake-indexeddb/auto";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { commandText, contentFromText } from "../content";
 import * as Y from "yjs";
 import { SyncSession } from "../../../sync/session";
 import { MemoryRoom } from "../../../sync/__tests__/memoryRoom";
 import { ChatLog, CHUNK_SIZE } from "../chatLog";
+import { rootOf } from "../../../data/schema";
+import { campaignShape } from "../../../campaign/schema";
 
 let n = 0;
 /** Two peers with their own copy of a campaign, connected. */
@@ -13,7 +15,7 @@ async function pair() {
   const room = new MemoryRoom();
   const make = (who: string) => {
     const root = new Y.Doc({ guid: id });
-    const log = new ChatLog(root, id, who);
+    const log = new ChatLog(rootOf(root, campaignShape).chat, id, who);
     const session = new SyncSession(root, room.join(who));
     return { root, log, session, who };
   };

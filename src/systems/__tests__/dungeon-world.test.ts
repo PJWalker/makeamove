@@ -1,5 +1,5 @@
 import "fake-indexeddb/auto";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import { Campaign, createCampaign } from "../../campaign/campaign";
 import {
@@ -10,7 +10,6 @@ import {
   getCharacter,
   listCharacters,
   makeMove,
-  moveRequest,
   newCharacter,
   newNpc,
   removeItem,
@@ -20,7 +19,6 @@ import {
   setTemplate,
   startMove,
   systemOf,
-  targetRequest,
   toggleCondition,
   tokenStatsSource,
 } from "../../features/characters/api";
@@ -60,9 +58,9 @@ describe("Dungeon World campaign behavior", () => {
     const move = dungeonWorld.actions.find((action) => action.id === "defy-danger")!;
 
     startMove(campaign, id, move);
-    expect(moveRequest.value).toEqual({ moveId: "defy-danger", characterId: id });
-    expect(targetRequest.value).toBeNull();
-    moveRequest.value = null;
+    expect(campaign.moves.ask.value).toEqual({ moveId: "defy-danger", characterId: id });
+    expect(campaign.moves.targets.value).toBeNull();
+    campaign.moves.ask.value = null;
 
     const message = await makeMove(campaign, id, move, { stat: "str" });
     expect(message).toMatchObject({ kind: "move", moveId: "defy-danger", characterName: "Ayla" });

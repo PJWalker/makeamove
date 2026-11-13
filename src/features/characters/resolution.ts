@@ -1,4 +1,4 @@
-import { richTextFromPlain } from "../../core/richText";
+import { richTextFromPlain } from "../../data/richText";
 import { appliedField, getState, saveField, setState, type SaveAnswer } from "../chat/messageState";
 import { myName } from "../chat/send";
 import type { MoveTarget, SaveRequest } from "../chat/types";
@@ -119,8 +119,11 @@ export function applyDamage(
         left -= soaked;
       }
       if (left) bumpResource(campaign, c.id, "hp", -left);
+      const resourcesById = new Map<string, (typeof system.resources)[number]>();
+      for (const resource of system.resources)
+        if (!resourcesById.has(resource.id)) resourcesById.set(resource.id, resource);
       for (const { id, by } of damage.resources ?? []) {
-        const resource = system.resources.find((candidate) => candidate.id === id);
+        const resource = resourcesById.get(id);
         if (resource) bumpResource(campaign, c.id, id, by, derived.values[resource.max]);
       }
     }

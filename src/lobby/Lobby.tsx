@@ -1,13 +1,15 @@
-import type { FormEvent } from "react";
-import type { ComponentType } from "react";
-import { useEffect, useRef, useState } from "react";
+import type { ComponentType, FormEvent, ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import {
   IconAdd,
   IconBackupFolder,
   IconCampaign,
   IconDelete,
+  IconDice,
   IconExport,
   IconImport,
+  IconMap,
+  IconMembers,
 } from "../ui/icons";
 import { goToCampaign, pendingInvite } from "../navigation/router";
 import { exportBackupFile, importBackupFile } from "../campaign/backup";
@@ -21,7 +23,8 @@ import { getSystem, listSystems, NO_SYSTEM_ID } from "../systems";
 import { Button } from "../ui/Button";
 import { ContextMenu } from "../ui/ContextMenu";
 import { menuTrigger } from "../ui/menuTrigger";
-import { useValue } from "../ui/useValue";
+import { leave, showFromOrigin } from "../ui/morph";
+import { useQuery } from "../ui/useQuery";
 
 const relative = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
 
@@ -63,10 +66,12 @@ async function runBackup(act: () => Promise<unknown>) {
 }
 
 export function Lobby({ error }: { error: string | null }) {
-  const list = stableOrder(useValue(campaigns));
-  const ready = useValue(registryReady);
-  const invite = useValue(pendingInvite);
-  const failed = useValue(backupError);
+  const list = stableOrder(useQuery(campaigns));
+  const ready = useQuery(registryReady);
+  const invite = useQuery(pendingInvite);
+  const failed = useQuery(backupError);
+  const [creating, setCreating] = useState(false);
+  const create = () => setCreating(true);
 
   return (
     <main className="lobby">
@@ -82,52 +87,143 @@ export function Lobby({ error }: { error: string | null }) {
           </p>
         )}
 
-        <section className="panel lobby-section" aria-labelledby="your-campaigns">
-          <h2 id="your-campaigns" className="eyebrow">
-            Your campaigns
-          </h2>
-          {!ready ? null : list.length === 0 ? (
-            <div className="empty">
-              <IconCampaign size={28} />
-              No campaigns yet.
+        {!ready ? null : list.length === 0 ? (
+          <Welcome onCreate={create} />
+        ) : (
+          <section className="panel lobby-section" aria-labelledby="your-campaigns">
+            <div className="lobby-section-header">
+              <h2 id="your-campaigns" className="eyebrow">
+                Your Campaigns
+              </h2>
+              <Button variant="primary" icon={IconAdd} onClick={create}>
+                New Campaign
+              </Button>
             </div>
-          ) : (
             <ul className="campaign-list">
               {list.map((c) => (
                 <CampaignRow key={c.id} c={c} />
               ))}
             </ul>
-          )}
-          {failed && (
-            <p className="form-error" role="alert">
-              {failed}
-            </p>
-          )}
-          <div className="form-actions">
-            <Button onClick={() => void runBackup(importBackupFile)}>
-              <IconImport size={20} /> Import Backup…
-            </Button>
-            {canUseFolders() && (
-              <Button onClick={() => void runBackup(importFromFolder)}>
-                <IconBackupFolder size={20} /> Import from Folder…
-              </Button>
-            )}
-          </div>
-        </section>
+          </section>
+        )}
 
-        <NewCampaignForm />
+        {failed && (
+          <p className="lobby-error" role="alert">
+            {failed}
+          </p>
+        )}
+        {ready && <ImportActions />}
 
+        {creating && <NewCampaignDialog onClose={() => setCreating(false)} />}
         {invite && <JoinInviteDialog invite={invite} />}
       </div>
     </main>
   );
 }
 
+const FEATURES = [
+  { Icon: IconMap, label: "Maps & Tokens" },
+  { Icon: IconDice, label: "Dice & Combat" },
+  { Icon: IconMembers, label: "Play Together" },
+];
+
+/** The lobby with no campaigns: what the table offers and the way in. */
+function Welcome({ onCreate }: { onCreate: () => void }) {
+  return (
+    <section className="panel lobby-section lobby-welcome" aria-labelledby="welcome-title">
+      <div className="welcome-emblem" aria-hidden="true">
+        <IconCampaign size={56} />
+      </div>
+      <h2 id="welcome-title" className="welcome-title">
+        Start Your First Campaign
+      </h2>
+      <ul className="welcome-features">
+        {FEATURES.map(({ Icon, label }) => (
+          <li key={label}>
+            <Icon size={28} />
+            {label}
+          </li>
+        ))}
+      </ul>
+      <Button variant="primary" className="welcome-cta" icon={IconAdd} onClick={onCreate} autoFocus>
+        Create a Campaign
+      </Button>
+    </section>
+  );
+}
+
+function ImportActions() {
+  return (
+    <div className="lobby-imports">
+      <Button variant="ghost" icon={IconImport} onClick={() => void runBackup(importBackupFile)}>
+        Import Backup…
+      </Button>
+      {canUseFolders() && (
+        <Button
+          variant="ghost"
+          icon={IconBackupFolder}
+          onClick={() => void runBackup(importFromFolder)}
+        >
+          Import from Folder…
+        </Button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * A lobby modal, shown as soon as it mounts. The parent unmounts it on
+ * onClose, which the dialog fires however it closes.
+ */
+function LobbyModal({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+  // In a layout effect, so a menu item's morph catches it (ui/morph.ts).
+  useLayoutEffect(() => {
+    const d = dialog.current;
+    if (d) showFromOrigin(d, () => d.showModal());
+  }, []);
+
+  return (
+    <dialog
+      ref={dialog}
+      className="lobby-modal panel"
+      aria-labelledby={titleId}
+      onCancel={(e) => {
+        e.preventDefault();
+        closeModal(e);
+      }}
+      onClose={onClose}
+    >
+      <h2 id={titleId} className="eyebrow">
+        {title}
+      </h2>
+      {children}
+    </dialog>
+  );
+}
+
+/** Closes the modal the event's control sits in, shrinking it back into what opened it. */
+function closeModal(e: { currentTarget: Element }) {
+  const d = e.currentTarget.closest("dialog");
+  if (d) void leave(d, () => d.close());
+}
+
 /** The fog backdrop is decorative and fairly heavy, so it loads after the lobby. */
 function LazyBackdrop() {
   const [Backdrop, setBackdrop] = useState<ComponentType | null>(null);
   useEffect(() => {
-    void import("./FogBackdrop").then((m) => setBackdrop(() => m.FogBackdrop));
+    void import("./FogBackdrop")
+      .then((m) => setBackdrop(() => m.FogBackdrop))
+      .catch((error: unknown) => console.error("Could not load the lobby backdrop", error));
   }, []);
   return Backdrop ? <Backdrop /> : null;
 }
@@ -194,49 +290,32 @@ function DeleteCampaignDialog({
   onClose: () => void;
   onConfirm: () => void;
 }) {
-  const dialog = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    dialog.current?.showModal();
-  }, []);
-
   return (
-    <dialog
-      ref={dialog}
-      className="lobby-modal panel"
-      aria-labelledby="delete-campaign-title"
-      onClose={onClose}
-    >
-      <h2 id="delete-campaign-title" className="eyebrow">
-        Delete campaign?
-      </h2>
-      <p>
-        Remove <strong>{campaignName}</strong> from this device? This cannot be undone.
-      </p>
-      <div className="form-actions">
-        <button
-          className="btn btn-ghost"
-          type="button"
-          autoFocus
-          onClick={() => dialog.current?.close()}
-        >
-          Cancel
-        </button>
-        <button
-          className="btn btn-danger"
-          type="button"
-          onClick={() => {
-            onConfirm();
-            dialog.current?.close();
-          }}
-        >
-          Delete from This Device
-        </button>
-      </div>
-    </dialog>
+    <LobbyModal title="Delete Campaign?" onClose={onClose}>
+      <>
+        <p>
+          Remove <strong>{campaignName}</strong> from this device? This cannot be undone.
+        </p>
+        <div className="form-actions">
+          <Button variant="ghost" autoFocus onClick={closeModal}>
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            onClick={(e) => {
+              onConfirm();
+              closeModal(e);
+            }}
+          >
+            Delete from This Device
+          </Button>
+        </div>
+      </>
+    </LobbyModal>
   );
 }
 
-function NewCampaignForm() {
+function NewCampaignDialog({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState("");
   const [yourName, setYourName] = useState(device.value.name);
   const [systemId, setSystemId] = useState(NO_SYSTEM_ID);
@@ -249,26 +328,19 @@ function NewCampaignForm() {
     setBusy(true);
     setDeviceName(yourName.trim());
     const id = await createCampaign(name.trim(), yourName.trim(), system.id);
-    setBusy(false);
     goToCampaign(id);
   }
 
   return (
-    <form
-      className="panel lobby-section"
-      onSubmit={(e) => void submit(e)}
-      aria-labelledby="new-campaign"
-    >
-      <h2 id="new-campaign" className="eyebrow">
-        Start a campaign
-      </h2>
-      <div className="form-row">
+    <LobbyModal title="New Campaign" onClose={onClose}>
+      <form onSubmit={(e) => void submit(e)}>
         <label className="field">
           Campaign name
           <input
             value={name}
             onInput={(e) => setName(e.currentTarget.value)}
             placeholder="The Lost Barrows"
+            autoFocus
             required
           />
         </label>
@@ -278,12 +350,10 @@ function NewCampaignForm() {
             value={yourName}
             onInput={(e) => setYourName(e.currentTarget.value)}
             placeholder="Robin"
-            autoComplete="nickname"
+            autoComplete="name"
             required
           />
         </label>
-      </div>
-      <div className="form-row">
         <label className="field">
           System
           <select value={systemId} onChange={(e) => setSystemId(e.currentTarget.value)} required>
@@ -297,65 +367,61 @@ function NewCampaignForm() {
             ))}
           </select>
         </label>
-      </div>
-      <div className="form-actions">
-        <Button type="submit" variant="primary" disabled={busy}>
-          <IconAdd size={22} /> Create Campaign
-        </Button>
-      </div>
-    </form>
+        <div className="form-actions">
+          <Button variant="ghost" onClick={closeModal}>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={busy || !name.trim() || !yourName.trim()}
+          >
+            Create Campaign
+          </Button>
+        </div>
+      </form>
+    </LobbyModal>
   );
 }
 
 function JoinInviteDialog({ invite }: { invite: NonNullable<typeof pendingInvite.value> }) {
-  const dialog = useRef<HTMLDialogElement>(null);
   const [yourName, setYourName] = useState(device.value.name);
-  useEffect(() => {
-    dialog.current?.showModal();
-  }, []);
 
   function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!yourName.trim()) return;
     setDeviceName(yourName.trim());
     const id = joinCampaign(invite);
-    dialog.current?.close();
     pendingInvite.value = null;
     goToCampaign(id);
   }
 
   return (
-    <dialog
-      ref={dialog}
-      className="lobby-modal panel"
-      aria-labelledby="join-campaign-title"
-      onClose={() => (pendingInvite.value = null)}
-    >
-      <h2 id="join-campaign-title" className="eyebrow">
-        Join a campaign
-      </h2>
-      <p>You&apos;ve been invited to a campaign.</p>
-      <form onSubmit={(e) => void submit(e)}>
-        <label className="field">
-          Your name
-          <input
-            value={yourName}
-            onInput={(e) => setYourName(e.currentTarget.value)}
-            placeholder="Robin"
-            autoComplete="nickname"
-            autoFocus
-            required
-          />
-        </label>
-        <div className="form-actions">
-          <button className="btn btn-ghost" type="button" onClick={() => dialog.current?.close()}>
-            Cancel
-          </button>
-          <Button type="submit" disabled={!yourName.trim()}>
-            Join
-          </Button>
-        </div>
-      </form>
-    </dialog>
+    <LobbyModal title="Join a Campaign" onClose={() => (pendingInvite.value = null)}>
+      <>
+        <p>You&apos;ve been invited to a campaign.</p>
+        <form onSubmit={(e) => submit(e)}>
+          <label className="field">
+            Your name
+            <input
+              value={yourName}
+              onInput={(e) => setYourName(e.currentTarget.value)}
+              placeholder="Robin"
+              autoComplete="name"
+              autoFocus
+              required
+            />
+          </label>
+          <div className="form-actions">
+            <Button variant="ghost" onClick={closeModal}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" disabled={!yourName.trim()}>
+              Join
+            </Button>
+          </div>
+        </form>
+      </>
+    </LobbyModal>
   );
 }

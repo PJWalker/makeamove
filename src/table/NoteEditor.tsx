@@ -3,12 +3,12 @@ import { useEffect, useRef, useState } from "react";
 import { getNote, noteSubdoc, openNotePage, touchNote } from "../features/notes/api";
 import type { NoteDoc } from "../features/notes/noteDoc";
 import { linksIn } from "../features/notes/links";
-import { noteSearchTarget } from "../workspace/linkNavigation";
 import type { Campaign } from "../campaign/campaign";
 import { mountRichText } from "../workspace/richText";
 import { Awareness } from "y-protocols/awareness";
 import { myName } from "../features/chat/send";
-import { useValue } from "../ui/useValue";
+import { useQuery } from "../ui/useQuery";
+import { useCampaign } from "../workspace/campaignContext";
 
 /** How long after the last keystroke a page records its links and edit time. */
 const TOUCH_MS = 800;
@@ -23,10 +23,11 @@ export function NoteEditor({
   noteId: string;
   active: boolean;
 }) {
+  const ctx = useCampaign();
   const hostRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<Editor | null>(null);
   const [loading, setLoading] = useState(true);
-  const searchTarget = useValue(noteSearchTarget);
+  const searchTarget = useQuery(ctx.links.noteSearchTarget);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -53,7 +54,7 @@ export function NoteEditor({
         ...(gmOnly
           ? {}
           : { secrets: { vault: campaign.isGm() ? (campaign.vault.value?.doc ?? null) : null } }),
-        campaign,
+        ctx,
         fragment: n.body,
         placeholder: "Write here. Type @ to link a note, character, scene, gear or move.",
         label: "Note text",
@@ -84,7 +85,7 @@ export function NoteEditor({
       local?.destroy();
       note?.destroy();
     };
-  }, [campaign, noteId]);
+  }, [ctx, campaign, noteId]);
 
   useEffect(() => {
     const target = searchTarget;
@@ -93,8 +94,8 @@ export function NoteEditor({
     const from = Math.max(1, Math.min(target.from, editor.state.doc.content.size));
     const to = Math.max(from, Math.min(target.to, editor.state.doc.content.size));
     editor.chain().setTextSelection({ from, to }).scrollIntoView().focus().run();
-    noteSearchTarget.value = null;
-  }, [active, loading, noteId, searchTarget]);
+    ctx.links.noteSearchTarget.set(null);
+  }, [ctx, active, loading, noteId, searchTarget]);
 
   return (
     <div className="note-editor" data-loading={loading || undefined}>

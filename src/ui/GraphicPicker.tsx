@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { importImage } from "../media/images";
-import type { EntityGraphic } from "../graphics";
+import type { EntityGraphic } from "../media/images";
 import { Button } from "./Button";
 import { EntityGraphicView } from "./EntityGraphic";
 import { ENTRY_ICONS } from "./entryIcons";

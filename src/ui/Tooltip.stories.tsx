@@ -18,7 +18,7 @@ const meta = {
         Side tip
       </Button>
       <span
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable so its tooltip is reachable by keyboard
+        // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable so its tooltip is reachable by keyboard
         tabIndex={0}
         data-tip="A long tooltip wraps across several lines rather than running off the edge of the window, so a move's full text can be read in place."
         data-tip-long

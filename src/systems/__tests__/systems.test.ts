@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import "fake-indexeddb/auto";
 import { dungeonWorld as dw } from "../dungeon-world";
 import { checkSystem, defineSystem, getSystem, listSystems, NO_SYSTEM_ID } from "..";
@@ -14,7 +14,7 @@ import {
   SOURCE_MOVES,
   CLASS_CREATION_HINTS,
 } from "../dungeon-world-2/rulebook";
-import { emptyRichText, plainText } from "../../core/richText";
+import { emptyRichText, plainText } from "../../data/richText";
 import { BONDS as DW2_BONDS } from "../dungeon-world-2/bonds";
 import { STRUGGLES as DW2_STRUGGLES } from "../dungeon-world-2/struggles";
 import { addTreasureBoxes, purchaseAtWealth, wealthTierForBoxes } from "../dungeon-world-2/wealth";

@@ -4,7 +4,15 @@ import type { Point } from "../grid";
 import type { Presence } from "../presence";
 import type { SceneRenderer } from "../renderer";
 import type { SceneDoc } from "../sceneDoc";
-import type { AreaTone, SceneElement, ShapeKind, TokenElement, Transform } from "../types";
+import type { SceneTools } from "../tools";
+import type {
+  DraggedShapeKind,
+  Layer,
+  SceneElement,
+  ShapePaint,
+  TokenElement,
+  Transform,
+} from "../types";
 
 /**
  * A drag in progress, from a press to its release. Moves update the
@@ -47,7 +55,7 @@ export interface Gesture {
 
 /** An action's area waiting to be placed: its shape and size in world px, and who to tell. */
 export interface Placement {
-  shape: ShapeKind;
+  shape: DraggedShapeKind;
   /** A radius, a side, or a length. */
   length: number;
   /** A line's width. */
@@ -55,16 +63,33 @@ export interface Placement {
   onPlaced: (placed: { id: string; covered: string[] } | null) => void;
 }
 
-/** An area of solid light or dark being placed, a click at a time. */
-export interface AreaPlacer {
-  /** A click while placing it: its next corner, or its first on a new tone. */
-  add(tone: AreaTone, world: Point, e: PointerEvent): void;
+/** A polygon's frame: its centre and size, and its corners flat [x, y, …] relative to the centre at the size bw × bh. */
+export type PolygonFrame = Transform & { points: number[]; bw: number; bh: number };
+
+/** What a polygon placed a corner at a time becomes, and how it shows while it's placed. */
+export interface PolygonPlan {
+  /** Which sort of polygon this is: a click for another sort starts afresh. */
+  key: string;
+  paint: ShapePaint;
+  /** Outline width, in world px. */
+  width: number;
+  layer: Layer;
+  /** Put it down. */
+  place(frame: PolygonFrame): void;
+}
+
+/** A polygon being placed, a click at a time. */
+export interface PolygonPlacer {
+  /** A click while placing it: its next corner, or the first of a new one if the plan's key differs. */
+  add(plan: PolygonPlan, world: Point, e: PointerEvent): void;
 }
 
 /** What the tools' gestures see of the controller. */
 export interface ToolContext {
   readonly renderer: SceneRenderer;
   readonly scene: SceneDoc;
+  /** The tools and their settings on this device. */
+  readonly tools: SceneTools;
   /** Whether this device is the GM's: only the GM sees and edits walls and lights. */
   readonly gm: boolean;
   readonly presence: Presence | null;
@@ -75,10 +100,11 @@ export interface ToolContext {
   readonly selection: Store<string[]>;
   readonly targetMode: Store<{ max?: number; actor?: string } | null>;
   readonly placing: Store<Placement | null>;
-  /** An area of solid light or dark being placed, a click at a time. */
-  readonly area: AreaPlacer;
+  /** A polygon (a shape, or an area of solid light or dark) being placed, a click at a time. */
+  readonly polygon: PolygonPlacer;
   readonly onTextRequest:
-    ((req: { at: Point; screen: Point; id?: string; text?: string }) => void) | null;
+    | ((req: { at: Point; screen: Point; id?: string; text?: string }) => void)
+    | null;
   readonly onItemTokenDragMove: ((token: TokenElement | null, event: PointerEvent) => void) | null;
   readonly onItemTokenDrop: ((token: TokenElement, event: PointerEvent) => boolean) | null;
   readonly onTokenClick: ((token: TokenElement) => void) | null;

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { pinInside, pointerToward, unionRect } from "../edgePin";
 
 const viewport = { x: 0, y: 0, w: 100, h: 100 };

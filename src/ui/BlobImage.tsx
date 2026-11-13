@@ -1,7 +1,10 @@
 import type * as React from "react";
-import { useEffect, useState } from "react";
-import { loadBlob, onBlobFetcher } from "../media/images";
-import type { BlobRef } from "../core/blob";
+import { createContext, use, useEffect, useState } from "react";
+import { loadBlob, type PeerBlobs } from "../media/images";
+import type { BlobRef } from "../media/images";
+
+/** Where images missing from this device come from: the open campaign's peers. */
+export const PeerBlobsContext = createContext<PeerBlobs | null>(null);
 
 /** An image from the blob store, or `fallback` while it's missing from this device. */
 export function BlobImage({
@@ -19,18 +22,14 @@ export function BlobImage({
   const [loaded, setLoaded] = useState<{ hash: string; tries: number; url: string } | null>(null);
   const [tries, setTries] = useState(0);
   const hash = image?.hash;
+  const peers = use(PeerBlobsContext);
 
-  useEffect(() => {
-    const unsubscribe = onBlobFetcher(() => setTries((n) => n + 1));
-    return () => {
-      unsubscribe();
-    };
-  }, []);
+  useEffect(() => peers?.onAvailable(() => setTries((n) => n + 1)), [peers]);
   useEffect(() => {
     if (!hash) return;
     let made: string | null = null;
     let stale = false;
-    void loadBlob(hash).then((blob) => {
+    void loadBlob(hash, peers).then((blob) => {
       if (stale || !blob) return;
       made = URL.createObjectURL(blob);
       setLoaded({ hash, tries, url: made });
@@ -39,7 +38,7 @@ export function BlobImage({
       stale = true;
       if (made) URL.revokeObjectURL(made);
     };
-  }, [hash, tries]);
+  }, [hash, tries, peers]);
 
   const url = loaded && loaded.hash === hash && loaded.tries === tries ? loaded.url : null;
   return url ? <img className={cls} src={url} alt={alt} draggable={false} /> : <>{fallback}</>;

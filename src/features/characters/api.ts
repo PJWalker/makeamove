@@ -41,6 +41,7 @@ export {
   bumpData,
   setScore,
   bumpResource,
+  setResource,
   rest,
   setModifier,
   toggleCondition,
@@ -50,7 +51,7 @@ export {
   setNpcField,
   setLoadout,
 } from "./sheet";
-export { moveRequest, targetRequest, startMove, makeMove, applySuggestion } from "./moveFlow";
+export { startMove, makeMove, applySuggestion } from "./moveFlow";
 export {
   addItem,
   updateItem,

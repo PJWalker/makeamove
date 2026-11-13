@@ -1,5 +1,4 @@
 import {
-  canEdit,
   getCharacter,
   listCharacters,
   setData,
@@ -24,7 +23,6 @@ export function advanceAttribute(
   if (
     systemOf(campaign).id !== "blades-in-the-dark" ||
     !character ||
-    !canEdit(campaign, character) ||
     !attribute?.actions.includes(actionId) ||
     Number(character.data[`${attributeId}Xp`] ?? 0) < 6 ||
     (character.scores[actionId] ?? 0) >= cap
@@ -39,8 +37,8 @@ export function advanceAttribute(
 
 export function advanceCrew(campaign: Campaign, reward: string): boolean {
   const system = systemOf(campaign);
-  if (system.id !== "blades-in-the-dark" || !campaign.isGm()) return false;
-  const counterId = campaign.systemData.get("counter:crew-xp");
+  if (system.id !== "blades-in-the-dark") return false;
+  const counterId = campaign.systemData.value("counter:crew-xp");
   const counter = campaign.chat.messages.value.find(
     (message) => message.id === counterId && message.kind === "counter",
   );
@@ -84,7 +82,6 @@ export function buyCrewUpgrade(campaign: Campaign, upgrade: string): boolean {
   const cost = upgrade === "mastery" ? 4 : upgrade === "cohort" ? 2 : 1;
   if (
     system.id !== "blades-in-the-dark" ||
-    !campaign.isGm() ||
     !allowed ||
     owned.includes(upgrade) ||
     Number(state.crewUpgradePoints ?? 0) < cost
@@ -112,7 +109,7 @@ export function crewTierCost(campaign: Campaign) {
 }
 
 export function advanceCrewTier(campaign: Campaign): boolean {
-  if (systemOf(campaign).id !== "blades-in-the-dark" || !campaign.isGm()) return false;
+  if (systemOf(campaign).id !== "blades-in-the-dark") return false;
   const state = systemCampaignData(campaign);
   const cost = crewTierCost(campaign);
   const weak = state.crewHold === "weak";

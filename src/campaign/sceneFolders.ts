@@ -1,51 +1,41 @@
-import * as Y from "yjs";
 import { newId } from "../lib/ids";
+import { UNTITLED_FOLDER } from "./folders";
+import type { CampaignRoot, Scenes } from "./schema";
 
 export interface SceneFolderView {
   id: string;
   name: string;
 }
 
-export function listSceneFolders(folders: Y.Map<{ name: string }>): SceneFolderView[] {
-  return [...folders.entries()]
+type SceneFolders = CampaignRoot["sceneFolders"];
+
+export function listSceneFolders(folders: SceneFolders): SceneFolderView[] {
+  return folders
+    .entries()
     .map(([id, folder]) => ({ id, name: folder.name }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export function createSceneFolder(folders: Y.Map<{ name: string }>, name: string) {
+export function createSceneFolder(folders: SceneFolders, name = UNTITLED_FOLDER) {
   const id = newId();
-  folders.set(id, { name: name.trim() || "New folder" });
+  folders.set(id, { name: name.trim() || UNTITLED_FOLDER });
   return id;
 }
 
-export function renameSceneFolder(folders: Y.Map<{ name: string }>, id: string, name: string) {
+export function renameSceneFolder(folders: SceneFolders, id: string, name: string) {
   if (folders.has(id) && name.trim()) {
     folders.set(id, { name: name.trim() });
   }
 }
 
 /** Deleting a folder files its scenes back at the top level. */
-export function deleteSceneFolder(
-  doc: Y.Doc,
-  scenes: Y.Map<Y.Map<unknown>>,
-  folders: Y.Map<{ name: string }>,
-  id: string,
-) {
-  doc.transact(() => {
-    for (const scene of scenes.values()) {
-      if (scene.get("folder") === id) scene.delete("folder");
-    }
+export function deleteSceneFolder(scenes: Scenes, folders: SceneFolders, id: string) {
+  folders.transact(() => {
+    for (const scene of scenes.values()) if (scene.get("folder") === id) scene.delete("folder");
     folders.delete(id);
   });
 }
 
-export function moveSceneToFolder(
-  scenes: Y.Map<Y.Map<unknown>>,
-  sceneId: string,
-  folderId?: string,
-) {
-  const scene = scenes.get(sceneId);
-  if (!scene) return;
-  if (folderId) scene.set("folder", folderId);
-  else scene.delete("folder");
+export function moveSceneToFolder(scenes: Scenes, sceneId: string, folderId?: string) {
+  scenes.get(sceneId)?.patch({ folder: folderId });
 }

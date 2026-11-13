@@ -305,7 +305,7 @@ export function createDiceRenderer(): DiceRenderer {
         metalness: 0.12,
         clearcoat: 1,
         clearcoatRoughness: 0.06,
-        specularIntensity: 1.3,
+        specularIntensity: 1,
         iridescence: 0.12,
         flatShading: true,
       }),
@@ -457,6 +457,9 @@ export function createDiceRenderer(): DiceRenderer {
     const { canvas, slot, piece, thrown } = job;
     const rest = frames.at(-1)!;
     const final = quaternion(rest.quaternion);
+    const from = new Quaternion();
+    const to = new Quaternion();
+    const interpolated = new Quaternion();
     const build = landedAs(piece, final);
     const { die, dispose } = build(canvas);
     die.quaternion.copy(final);
@@ -493,6 +496,7 @@ export function createDiceRenderer(): DiceRenderer {
     };
     job.cancel = finish;
     const tick = (now: number) => {
+      // oxlint-disable-next-line react-doctor/three-prefer-set-animation-loop -- Concurrent dice use independent DOM-positioned flights.
       frame = requestAnimationFrame(tick);
       if (now < start + thrown.delay) return;
       if (!slot.isConnected) return finish();
@@ -562,9 +566,9 @@ export function createDiceRenderer(): DiceRenderer {
       }
       const lift = Math.max(0, a.z + (b.z - a.z) * mix - rest.z);
       // It turns into its final pose as it's pulled, rather than snapping there on landing.
-      die.quaternion.copy(
-        quaternion(a.quaternion).slerp(quaternion(b.quaternion), mix).slerp(final, turn),
-      );
+      from.set(a.quaternion.x, a.quaternion.y, a.quaternion.z, a.quaternion.w);
+      to.set(b.quaternion.x, b.quaternion.y, b.quaternion.z, b.quaternion.w);
+      die.quaternion.copy(interpolated.copy(from).slerp(to, mix).slerp(final, turn));
       draw(die, air);
       air.style.visibility = "";
       air.style.transform = `translate(${x - SLOT / 2}px, ${y - SLOT / 2}px) scale(${1 + lift * 0.05})`;
@@ -639,13 +643,14 @@ export function createDiceRenderer(): DiceRenderer {
     });
     let settling: { start: number; from: Quaternion[] } | undefined;
     let last = performance.now();
+    const spin = new Quaternion();
     let frame = requestAnimationFrame(function tick(now) {
       const turn = (SPIN_SPEED * (now - last)) / 1000;
       last = now;
       const t = settling ? Math.min(1, (now - settling.start) / SETTLE_MS) : 0;
       dice.forEach(({ canvas, die, rest, axis }, index) => {
         if (settling) die.quaternion.copy(settling.from[index]!).slerp(rest, t * t * (3 - 2 * t));
-        else die.quaternion.premultiply(new Quaternion().setFromAxisAngle(axis, turn));
+        else die.quaternion.premultiply(spin.setFromAxisAngle(axis, turn));
         draw(die, canvas);
       });
       if (t === 1 || !dice.every(({ canvas }) => canvas.isConnected)) {

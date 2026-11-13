@@ -21,26 +21,74 @@
   .colour-row .segmented {
     flex: 1;
   }
-  .colour-input {
+  /* Shows through a colour's transparency. */
+  :root {
+    --checkerboard: repeating-conic-gradient(#8a8a8a 0 25%, #c8c8c8 0 50%) 0 0 / 8px 8px;
+  }
+  /* A colour picker's swatch: the colour over a checkerboard, so its opacity shows. */
+  .colour-picker-trigger {
+    display: flex;
     width: 48px;
     height: 34px;
     padding: 4px;
     border: 0;
     background: var(--surface-sunken);
+    box-shadow: var(--sunken-shadow);
     cursor: pointer;
+    outline: none;
   }
-  .colour-input::-webkit-color-swatch-wrapper {
-    padding: 0;
+  .colour-picker-trigger[data-focus-visible] {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
   }
-  .colour-input::-webkit-color-swatch {
-    border: 0;
-  }
-  .colour-input::-moz-color-swatch {
-    border: 0;
-  }
-  .colour-input:disabled {
+  .colour-picker-trigger[data-disabled] {
     opacity: var(--disabled-opacity);
     cursor: default;
+  }
+  .colour-picker-swatch {
+    flex: 1;
+    align-self: stretch;
+  }
+  .colour-picker-panel {
+    min-width: 0;
+    padding: var(--space-3);
+  }
+  .colour-picker-dialog {
+    display: grid;
+    gap: var(--space-3);
+    width: 200px;
+    outline: none;
+  }
+  .colour-picker-area {
+    width: 100%;
+    aspect-ratio: 1;
+  }
+  .colour-picker-track {
+    height: 16px;
+  }
+  /* The opacity slider's track fades out over a checkerboard. */
+  .colour-picker-alpha {
+    background: var(--checkerboard);
+  }
+  .colour-picker-thumb {
+    width: 18px;
+    height: 18px;
+    border: 2px solid white;
+    border-radius: 50%;
+    box-shadow:
+      0 0 0 1px black,
+      inset 0 0 0 1px black;
+  }
+  .colour-picker-track .colour-picker-thumb {
+    top: 50%;
+  }
+  .colour-picker-thumb[data-focus-visible] {
+    width: 24px;
+    height: 24px;
+  }
+  .colour-picker-hex input {
+    width: 100%;
+    font-variant-numeric: tabular-nums;
   }
   .colour-field[data-disabled="true"] {
     color: var(--text-faint);

@@ -1,7 +1,10 @@
-import { useLayoutEffect, useRef, useState } from "react";
-import { Radio, RadioGroup } from "react-aria-components";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { Radio, RadioGroup, ToggleButton, ToggleButtonGroup } from "react-aria-components";
 
-/** A row of mutually exclusive choices, like a set of radio buttons. */
+/**
+ * A row of mutually exclusive choices, like a set of radio buttons. An option
+ * with an icon shows just the icon, with its label as its name and tooltip.
+ */
 export function Segmented<T extends string>({
   label,
   value,
@@ -11,7 +14,13 @@ export function Segmented<T extends string>({
 }: {
   label: string;
   value: T;
-  options: { id: T; label: string; disabled?: boolean | undefined; title?: string | undefined }[];
+  options: {
+    id: T;
+    label: string;
+    icon?: ReactNode;
+    disabled?: boolean | undefined;
+    title?: string | undefined;
+  }[];
   onChange: (id: T) => void;
   disabled?: boolean | undefined;
 }) {
@@ -30,9 +39,12 @@ export function Segmented<T extends string>({
           value={o.id}
           className="segment"
           {...(o.disabled !== undefined ? { isDisabled: o.disabled } : {})}
-          {...(o.title !== undefined ? { "data-tip": o.title } : {})}
+          {...(o.icon ? { "aria-label": o.label, "data-icon": true } : {})}
+          {...((o.title ?? (o.icon ? o.label : undefined)) !== undefined
+            ? { "data-tip": o.title ?? o.label }
+            : {})}
         >
-          {o.label}
+          {o.icon ?? o.label}
         </Radio>
       ))}
     </RadioGroup>
@@ -82,5 +94,48 @@ export function SegmentedOrSelect<T extends string>(props: Parameters<typeof Seg
         </select>
       )}
     </div>
+  );
+}
+
+/**
+ * A row of choices that each turn on or off, any number at once: Segmented's
+ * look, for a set of switches. Options show their icon, with the label as
+ * name and tooltip.
+ */
+export function ToggleGroup<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: readonly T[];
+  options: { id: T; label: string; icon: ReactNode }[];
+  onChange: (ids: T[]) => void;
+}) {
+  return (
+    <ToggleButtonGroup
+      className="segmented"
+      aria-label={label}
+      selectionMode="multiple"
+      selectedKeys={value}
+      onSelectionChange={(keys) =>
+        // In the options' order, whatever order they were turned on in.
+        onChange(options.map((o) => o.id).filter((id) => keys.has(id)))
+      }
+    >
+      {options.map((o) => (
+        <ToggleButton
+          key={o.id}
+          id={o.id}
+          className="segment"
+          aria-label={o.label}
+          data-icon
+          data-tip={o.label}
+        >
+          {o.icon}
+        </ToggleButton>
+      ))}
+    </ToggleButtonGroup>
   );
 }

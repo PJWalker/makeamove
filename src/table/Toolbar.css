@@ -39,76 +39,59 @@
     bottom: 0;
   }
 
-  /* Pen settings, beside the tool strip */
+  /*
+   * A tool's options, in a row under the tool strip: centred on the tool where
+   * there's room between the sidebars, else lined up with its edge. Tethered
+   * to the tool's button in Toolbar.tsx.
+   */
   .pen-options {
+    min-width: 0;
+    margin: 0;
+    border: 0;
     position: absolute;
-    top: calc(48px + var(--space-2)); /* below the tool strip */
-    left: calc(var(--dock-l, 0px) + (100% - var(--dock-l, 0px) - var(--dock-r, 0px)) / 2);
-    translate: -50% 0;
+    top: calc(anchor(bottom) + var(--space-2));
+    left: calc(var(--dock-l, 0px) + var(--space-2));
+    right: calc(var(--dock-r, 0px) + var(--space-2));
+    justify-self: anchor-center;
+    position-try-fallbacks: --tool-options-from-left, --tool-options-from-right;
     display: flex;
+    /* Onto another line where the canvas is too narrow for it. */
+    flex-wrap: wrap;
+    justify-content: center;
     align-items: center;
     gap: var(--space-3);
     padding: var(--space-2) var(--space-3);
+    background: var(--raised-sheen), var(--toolbar);
   }
-  .pen-widths {
-    display: flex;
-    gap: var(--space-1);
+  /* Named only for the toolbar's own transitions, so other transitions leave it be. */
+  :root.vt-tool .pen-options {
+    view-transition-name: tool-options;
   }
-  /* The native colour picker, shown as a round swatch. */
-  .pen-colour {
-    width: var(--control-height);
-    height: var(--control-height);
-    padding: 0;
-    border: 0;
-    border-radius: 50%;
-    background: none;
-    cursor: pointer;
+  @position-try --tool-options-from-left {
+    left: anchor(left);
+    justify-self: start;
   }
-  .pen-colour::-webkit-color-swatch-wrapper {
-    padding: 0;
+  @position-try --tool-options-from-right {
+    right: anchor(right);
+    justify-self: end;
   }
-  .pen-colour::-webkit-color-swatch {
-    border: 0;
-    border-radius: 50%;
-  }
-  .pen-colour::-moz-color-swatch {
-    border: 0;
-    border-radius: 50%;
-  }
-  .pen-colour:focus-visible {
-    outline: none;
-    box-shadow:
-      0 0 0 2px var(--surface-solid),
-      0 0 0 4px var(--accent);
-  }
+  /* The pen width slider, with a dot of that size in the pen's colour beside it. */
   .pen-width {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    input {
+      width: 120px;
+    }
+  }
+  .pen-width-preview {
     display: grid;
     place-items: center;
-    width: 32px;
-    height: var(--control-height);
-    padding: 0;
-    border: 0;
-    background: transparent;
-    cursor: pointer;
+    width: 24px;
+    height: 24px;
   }
-  .pen-width span {
+  .pen-dot {
     border-radius: 50%;
-  }
-  .pen-width:hover {
-    background: var(--surface-raised);
-  }
-  .pen-layer {
-    width: 56px;
-    padding: var(--space-1);
-    border: 0;
-    background: var(--surface-sunken);
-    color: var(--text-muted);
-    font-size: var(--text-sm);
-    line-height: 1.2;
-    cursor: pointer;
-  }
-  .pen-layer:hover {
-    color: var(--text);
   }
 
   /* The campaign menu stands a little apart from the tools after it. */

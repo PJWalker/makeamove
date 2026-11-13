@@ -1,6 +1,8 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import "fake-indexeddb/auto";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import type { TokenElement } from "../../scene/types";
 import type { Campaign } from "../../campaign/campaign";
+import type { CampaignContext } from "../campaignContext";
 
 vi.mock("../../features/characters/api", () => ({
   addItem: vi.fn(),
@@ -13,6 +15,8 @@ vi.mock("../../features/characters/api", () => ({
 vi.mock("../../features/characters/hotbar", () => ({
   editHotbar: vi.fn(),
   insertAt: vi.fn(),
+  librarySlot: (id: string) => `item:${id}`,
+  moveSlot: (id: string) => `move:${id}`,
 }));
 vi.mock("../../features/notes/targets", () => ({
   linkLabel: (_campaign: unknown, _kind: string, id: string) => (id === "missing" ? null : id),
@@ -20,16 +24,26 @@ vi.mock("../../features/notes/targets", () => ({
 vi.mock("../entityGraphics", () => ({
   getEntityGraphic: () => ({ kind: "icon", name: "sword" }),
 }));
-vi.mock("../canvasState", () => ({
-  flashSceneDrop: vi.fn(),
-  sceneCharacterAt: { value: null },
-  sceneDropHighlight: { value: null },
-  tokenDrop: { value: null },
-}));
 vi.mock("../../ui/Tooltip", () => ({ hideTooltip: vi.fn() }));
+vi.mock("../commands/campaign", () => ({ pinToHotbar: { id: "hotbar.pin" } }));
+vi.mock("../commands/characters", () => ({
+  addItem: { id: "item.add" },
+  equipItem: { id: "item.equip" },
+  giveItem: { id: "item.give" },
+  openCharacter: { id: "character.open" },
+  setLearned: { id: "character.learn" },
+  startMove: { id: "move.start" },
+  useItem: { id: "item.use" },
+}));
+vi.mock("../commands/scenes", () => ({ openScene: { id: "scene.open" } }));
 
-const { dropOn, registerEntityDrop, registerLinkDrop, tokenEntity } = await import("../entityDrag");
+const { dropOn, registerEntityDrop, registerLinkDrop } = await import("../entityDrag");
+const { tokenEntity } = await import("../dragEntities");
+const { CanvasState } = await import("../canvasState");
+const canvas = new CanvasState();
 const campaign = {} as Campaign;
+const execute = vi.fn();
+const context = { campaign, execute } as unknown as CampaignContext;
 const token = (patch: Partial<TokenElement> = {}): TokenElement => ({
   id: "token",
   type: "token",
@@ -69,7 +83,7 @@ describe("dropOn", () => {
     const element = receiver();
     const drop = vi.fn();
     const unregister = registerEntityDrop(element, () => true, drop);
-    expect(dropOn({ element }, { label: "Entity" }, 0, 0)).toBe(true);
+    expect(dropOn(canvas, { element }, { label: "Entity" }, 0, 0)).toBe(true);
     expect(drop).toHaveBeenCalledOnce();
     expect(element.dataset.dropped).toBe("true");
     vi.runAllTimers();
@@ -82,10 +96,10 @@ describe("dropOn", () => {
     const drop = vi.fn(() => false);
     let accepts = true;
     const unregister = registerEntityDrop(element, () => accepts, drop);
-    expect(dropOn({ element }, { label: "Entity" }, 0, 0)).toBe(false);
+    expect(dropOn(canvas, { element }, { label: "Entity" }, 0, 0)).toBe(false);
     expect(element.dataset.dropped).toBeUndefined();
     accepts = false;
-    expect(dropOn({ element }, { label: "Entity" }, 0, 0)).toBe(false);
+    expect(dropOn(canvas, { element }, { label: "Entity" }, 0, 0)).toBe(false);
     expect(drop).toHaveBeenCalledOnce();
     unregister();
   });
@@ -98,39 +112,38 @@ describe("dropOn", () => {
       value: false,
       configurable: true,
     });
-    expect(dropOn({ element }, { label: "Entity" }, 0, 0)).toBe(false);
+    expect(dropOn(canvas, { element }, { label: "Entity" }, 0, 0)).toBe(false);
     Object.defineProperty(element, "isConnected", { value: true });
     unregister();
-    expect(dropOn({ element }, { label: "Entity" }, 0, 0)).toBe(false);
+    expect(dropOn(canvas, { element }, { label: "Entity" }, 0, 0)).toBe(false);
     expect(drop).not.toHaveBeenCalled();
   });
 
   it("propagates a rejected editor insertion", () => {
     const element = receiver();
     const unregister = registerLinkDrop(element, () => false);
-    expect(dropOn({ element }, { label: "Entity", link: { kind: "note", id: "note" } }, 0, 0)).toBe(
-      false,
-    );
+    expect(
+      dropOn(canvas, { element }, { label: "Entity", link: { kind: "note", id: "note" } }, 0, 0),
+    ).toBe(false);
     expect(element.dataset.dropped).toBeUndefined();
     unregister();
   });
 
-  it("propagates a rejected canvas drop", async () => {
-    const { tokenDrop } = await import("../canvasState");
-    tokenDrop.value = vi.fn(() => false);
-    expect(dropOn({ element: receiver({}, true) }, { label: "Entity" }, 0, 0)).toBe(false);
-    tokenDrop.value = null;
+  it("propagates a rejected canvas drop", () => {
+    canvas.tokenDrop.value = vi.fn(() => false);
+    expect(dropOn(canvas, { element: receiver({}, true) }, { label: "Entity" }, 0, 0)).toBe(false);
+    canvas.tokenDrop.value = null;
   });
 
   it("rechecks inventory target identity and editability", async () => {
-    const { canEdit, addItem } = await import("../../features/characters/api");
+    const { canEdit } = await import("../../features/characters/api");
     const element = receiver({ itemDrop: "recipient" });
-    const dragged = tokenEntity(campaign, token({ itemDefId: "item" }))!;
+    const dragged = tokenEntity(context, token({ itemDefId: "item" }))!;
     vi.mocked(canEdit).mockReturnValueOnce(false);
-    expect(dropOn({ element, characterId: "recipient" }, dragged, 0, 0)).toBe(false);
+    expect(dropOn(canvas, { element, characterId: "recipient" }, dragged, 0, 0)).toBe(false);
     element.dataset.itemDrop = "another";
-    expect(dropOn({ element, characterId: "recipient" }, dragged, 0, 0)).toBe(false);
-    expect(addItem).not.toHaveBeenCalled();
+    expect(dropOn(canvas, { element, characterId: "recipient" }, dragged, 0, 0)).toBe(false);
+    expect(execute).not.toHaveBeenCalled();
   });
 });
 
@@ -138,7 +151,7 @@ describe("tokenEntity", () => {
   it.each(["character", "item", "move", "note", "scene"] as const)(
     "resolves a linked %s token",
     (kind) => {
-      const dragged = tokenEntity(campaign, token({ entityRef: { kind, id: kind } }))!;
+      const dragged = tokenEntity(context, token({ entityRef: { kind, id: kind } }))!;
       expect(dragged.link).toEqual({ kind, id: kind });
       expect(dragged.label).toBe("Scene name");
       expect(!!dragged.pin).toBe(kind !== "note");
@@ -146,9 +159,9 @@ describe("tokenEntity", () => {
     },
   );
 
-  it("preserves item identity and token appearance", async () => {
+  it("preserves item identity and token appearance", () => {
     const graphic = { kind: "icon", name: "gem" } as const;
-    const dragged = tokenEntity(campaign, token({ itemDefId: "item", graphic }))!;
+    const dragged = tokenEntity(context, token({ itemDefId: "item", graphic }))!;
     expect(dragged.token).toMatchObject({
       name: "Scene name",
       itemDefId: "item",
@@ -157,19 +170,17 @@ describe("tokenEntity", () => {
       colour: "#fff",
     });
     dragged.give!.to("recipient");
-    const { addItem } = await import("../../features/characters/api");
-    expect(addItem).toHaveBeenCalledWith(
-      campaign,
-      "recipient",
-      { id: "item", name: "Sword" },
-      true,
-    );
+    expect(execute).toHaveBeenCalledWith(expect.objectContaining({ id: "item.give" }), {
+      characterId: "recipient",
+      item: { id: "item", name: "Sword" },
+      equip: true,
+    });
   });
 
   it("prefers specialized character identity over a generic reference", () => {
     expect(
       tokenEntity(
-        campaign,
+        context,
         token({
           characterId: "character",
           entityRef: { kind: "item", id: "item" },
@@ -179,8 +190,8 @@ describe("tokenEntity", () => {
   });
 
   it("rejects unlinked, unknown and missing entities", () => {
-    expect(tokenEntity(campaign, token())).toBeNull();
-    expect(tokenEntity(campaign, token({ entityRef: { kind: "unknown", id: "item" } }))).toBeNull();
-    expect(tokenEntity(campaign, token({ itemDefId: "missing" }))).toBeNull();
+    expect(tokenEntity(context, token())).toBeNull();
+    expect(tokenEntity(context, token({ entityRef: { kind: "unknown", id: "item" } }))).toBeNull();
+    expect(tokenEntity(context, token({ itemDefId: "missing" }))).toBeNull();
   });
 });

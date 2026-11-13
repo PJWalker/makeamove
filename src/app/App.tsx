@@ -1,61 +1,82 @@
 import { store } from "../lib/store";
-import { lazy, Suspense, useEffect } from "react";
-import { startChatNotifications } from "../features/chat/notify";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Lobby } from "../lobby/Lobby";
 import { goToCampaign, routeCampaignId } from "../navigation/router";
-import {
-  activeCampaign,
-  type Campaign,
-  closeCampaign,
-  deleteLocalCampaign,
-  openCampaign,
-} from "../campaign/campaign";
+import { type Campaign, deleteLocalCampaign, openCampaign } from "../campaign/campaign";
+import { tableCommands } from "../workspace/commands/all";
+import { extensionOf } from "../systems/extensions";
+import { CampaignContext, CampaignReactContext } from "../workspace/campaignContext";
 import { Button } from "../ui/Button";
+import { PeerBlobsContext } from "../ui/BlobImage";
 import { Tooltip } from "../ui/Tooltip";
-import { useValue } from "../ui/useValue";
+import { withTransition } from "../ui/transition";
+import { useQuery } from "../ui/useQuery";
 
 // The table loads when a campaign opens, so the lobby comes up quickly.
 const Tabletop = lazy(() => import("../table/Tabletop").then((m) => ({ default: m.Tabletop })));
 
 const openError = store<string | null>(null);
 
-export function App() {
-  const id = useValue(routeCampaignId);
-
-  useEffect(() => startChatNotifications(), []);
-
+/** The campaign the route names, open for as long as the route names it. */
+function useOpenCampaign(id: string | null): CampaignContext | null {
+  const [open, setOpen] = useState<CampaignContext | null>(null);
   useEffect(() => {
-    if (!id) {
-      closeCampaign();
-      return;
-    }
+    if (!id) return;
     openError.value = null;
-    openCampaign(id).catch((e) => {
-      openError.value = `Couldn't open that campaign: ${e}`;
-      goToCampaign(null);
-    });
+    let ctx: CampaignContext | null = null;
+    let left = false;
+    openCampaign(id)
+      .then((campaign) =>
+        CampaignContext.open(campaign, () => [
+          ...tableCommands,
+          ...(extensionOf(campaign.systemId).commands ?? []),
+        ]),
+      )
+      .then((c) => {
+        if (left) return c.dispose();
+        ctx = c;
+        setOpen(c);
+      })
+      .catch((e) => {
+        if (left) return;
+        openError.value = `Couldn't open that campaign: ${e}`;
+        goToCampaign(null);
+      });
+    return () => {
+      left = true;
+      ctx?.dispose();
+    };
   }, [id]);
+  return open && !open.disposed && open.campaign.id === id ? open : null;
+}
 
+export function App() {
+  const id = useQuery(routeCampaignId);
+  const ctx = useOpenCampaign(id);
   return (
     <>
-      <Screen id={id} />
+      <Screen id={id} ctx={ctx} />
       <Tooltip />
     </>
   );
 }
 
-function Screen({ id }: { id: string | null }) {
-  const campaign = useValue(activeCampaign);
-  const removed = useValue(campaign?.removed);
-  const ready = useValue(campaign?.ready);
-  const error = useValue(openError);
-  if (id && campaign?.id === id) {
+function Screen({ id, ctx }: { id: string | null; ctx: CampaignContext | null }) {
+  const campaign = ctx?.campaign;
+  const removed = useQuery(campaign?.removed);
+  const ready = useQuery(campaign?.ready);
+  const error = useQuery(openError);
+  if (ctx && campaign) {
     if (removed) return <Removed campaign={campaign} />;
     if (!ready) return <Waiting campaign={campaign} />;
     return (
-      <Suspense fallback={<div className="loading">Opening campaign…</div>}>
-        <Tabletop campaign={campaign} />
-      </Suspense>
+      <CampaignReactContext value={ctx}>
+        <PeerBlobsContext value={ctx.blobs}>
+          <Suspense fallback={<div className="loading">Opening campaign…</div>}>
+            <Tabletop campaign={campaign} />
+          </Suspense>
+        </PeerBlobsContext>
+      </CampaignReactContext>
     );
   }
   if (id) return <div className="loading">Opening campaign…</div>;
@@ -84,14 +105,49 @@ function Removed({ campaign }: { campaign: Campaign }) {
   );
 }
 
-/** A joined campaign is empty until the first peer sends it over. */
+/** How long a joined campaign waits for a peer before saying none has it. */
+const WAIT_TIMEOUT_MS = 20_000;
+
+/**
+ * A joined campaign is empty until the first peer sends it over. It keeps
+ * waiting after the timeout; the message changes so a stale invite doesn't
+ * look like it's still loading.
+ */
 function Waiting({ campaign }: { campaign: Campaign }) {
-  const peers = useValue(campaign.peerCount);
+  const peers = useQuery(campaign.peerCount);
+  const [timedOut, setTimedOut] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => void withTransition(() => setTimedOut(true)), WAIT_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, []);
   return (
     <main className="loading waiting">
-      <p>Waiting for someone from this campaign to come online…</p>
+      {timedOut ? (
+        <>
+          <p>No one online has this campaign.</p>
+          <p className="muted">
+            The invite may be out of date, or everyone who has the campaign is offline. It opens as
+            soon as one of them comes online.
+          </p>
+        </>
+      ) : (
+        <p>Waiting for someone from this campaign to come online…</p>
+      )}
       <p className="muted">{peers} connected</p>
-      <Button onClick={() => goToCampaign(null)}>Back to the Lobby</Button>
+      <div className="form-actions">
+        {timedOut && (
+          <Button
+            variant="danger"
+            className="form-actions-start"
+            onClick={() => void deleteLocalCampaign(campaign.id).then(() => goToCampaign(null))}
+          >
+            Delete from This Device
+          </Button>
+        )}
+        <Button variant={timedOut ? "primary" : "secondary"} onClick={() => goToCampaign(null)}>
+          Back to the Lobby
+        </Button>
+      </div>
     </main>
   );
 }

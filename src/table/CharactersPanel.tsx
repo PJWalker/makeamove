@@ -1,35 +1,20 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import {
-  addItem,
   canEdit,
-  createFolder,
-  deleteFolder,
   listCharacters,
   listFolders,
-  moveToFolder,
-  deleteCharacter,
-  newCharacter,
-  newNpc,
-  renameFolder,
   type FolderView,
   getCharacter,
-  viewCharacter,
   viewedCharacterId,
-  canClaim,
-  claimCharacter,
-  releaseCharacter,
   systemOf,
 } from "../features/characters/api";
-import { setRelationship, setRelationshipDepth } from "../features/characters/relationships";
 import type { CharacterView } from "../features/characters/types";
 import type { Campaign, MemberView } from "../campaign/campaign";
 import { device } from "../platform/device";
-import { useValue } from "../ui/useValue";
-import { useY } from "../ui/useY";
+import { useQuery } from "../ui/useQuery";
 import type { ChoiceDef, GameSystem } from "../systems/types";
 import { HintedField } from "../ui/HintedField";
 import { Button } from "../ui/Button";
-import { IconImage } from "../ui/icons";
 import { menuTrigger } from "../ui/menuTrigger";
 import { CLASS_FIELD, choicesAt } from "../features/characters/creation";
 import {
@@ -43,33 +28,39 @@ import {
   type Picked,
   type ScoreMethod,
 } from "../workspace/CreationParts";
-import { IconAdd, IconDelete, IconFolder, IconNewFolder, IconRename } from "../ui/icons";
+import { IconAdd, IconNewFolder } from "../ui/icons";
 import { Segmented } from "../ui/Segmented";
-import { ConfirmDialog } from "./ConfirmDialog";
 import { TwoPane, usePaneLevel } from "../ui/TwoPane";
 import { ListRow } from "../ui/List";
 import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
-import { dragEntity, entity } from "../workspace/entityDrag";
+import { dragEntity } from "../workspace/entityDrag";
+import { entity } from "../workspace/dragEntities";
 import { CampaignEntityGraphic } from "../workspace/EntityGraphic";
-import { editEntityGraphic } from "../workspace/GraphicDialogs";
 import { CharacterSheet } from "./sheets";
-import { showLink } from "../workspace/linkState";
 import { FolderTree } from "./FolderTree";
 import { charactersLayout } from "./panelLayouts";
-import { commaListOf } from "../lib/list";
+import { useCampaign } from "../workspace/campaignContext";
+import {
+  characterFolders,
+  fileCharacter,
+  newCharacter,
+  newNpc,
+  viewSheet,
+} from "../workspace/commands/characters";
+import { menuFor } from "../workspace/commands/views";
 
 export function CharactersPanel({ campaign }: { campaign: Campaign }) {
+  const ctx = useCampaign();
   const system = systemOf(campaign);
-  const characters = useY(campaign.characters, () => listCharacters(campaign));
-  const folders = useY(campaign.characterFolders, () => listFolders(campaign));
-  const selectedId = useY(campaign.members, () => viewedCharacterId(campaign));
-  const isGm = useY(campaign.members, () => campaign.isGm());
+  const characters = useQuery(campaign.characters, () => listCharacters(campaign));
+  const folders = useQuery(campaign.characterFolders, () => listFolders(campaign));
+  const selectedId = useQuery(campaign.members, () => viewedCharacterId(campaign));
   const [creating, setCreating] = useState(false);
   const [creationFolder, setCreationFolder] = useState<string | undefined>(undefined);
   // Copies (a template's tokens) aren't listed, but selecting one's token opens its sheet.
-  const selected = useY(campaign.characters, () => getCharacter(campaign, selectedId));
+  const selected = useQuery(campaign.characters, () => getCharacter(campaign, selectedId));
   // One at a time: which level shows, the list or the sheet.
-  const { level, go } = usePaneLevel(charactersLayout, selectedId ? "detail" : "list");
+  const { level, go, show } = usePaneLevel(charactersLayout, selectedId ? "detail" : "list");
   const seen = useRef(selectedId);
   useEffect(() => {
     // The open character was deleted: back to the list, not on to another sheet.
@@ -101,19 +92,18 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
           onPick={(id) => {
             setCreating(false);
             go("detail");
-            viewCharacter(campaign, id);
+            ctx.execute(viewSheet, { id });
           }}
+          showList={() => show("list")}
         />
       }
       detail={
         <div className="chars-sheet panel-scroll sheet-panel">
           {creating ? (
             <NewCharacter
-              campaign={campaign}
               system={system}
               folders={folders}
               existingCharacters={characters}
-              isGm={isGm}
               initialFolder={creationFolder}
               onDone={() => {
                 setCreating(false);
@@ -145,6 +135,7 @@ function CharacterList({
   selectedId,
   onNew,
   onPick,
+  showList,
 }: {
   campaign: Campaign;
   characters: CharacterView[];
@@ -152,61 +143,21 @@ function CharacterList({
   selectedId: string | undefined;
   onNew: (folderId?: string) => void;
   onPick: (id: string) => void;
+  showList: () => Promise<void>;
 }) {
+  const ctx = useCampaign();
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
-  // A character waiting for its deletion to be confirmed.
-  const [deleting, setDeleting] = useState<string | null>(null);
-  const known = new Set(folders.map((f) => f.id));
-  const me = useValue(device).id;
-  const members = useY(campaign.members, () => campaign.memberViews());
+  const members = useQuery(campaign.members, () => campaign.memberViews());
   const playedBy = new Map(members.flatMap((m) => (m.playing ? [[m.playing, m] as const] : [])));
 
   const row = (c: CharacterView) => {
     const mine = canEdit(campaign, c);
-    const dragged = entity(campaign, "character", c.id, c.name);
-    if (mine) dragged.folder = (folderId) => moveToFolder(campaign, c.id, folderId);
+    const dragged = entity(ctx, "character", c.id, c.name);
+    if (mine) dragged.folder = (folder) => void ctx.execute(fileCharacter, { id: c.id, folder });
     else delete dragged.folder;
-    const trigger = menuTrigger((x, y) => {
-      const open: MenuItem[] = [{ label: "Open Character", onSelect: () => onPick(c.id) }];
-      if (playedBy.get(c.id)?.id === me)
-        open.push({ label: "Stop Playing", onSelect: () => releaseCharacter(campaign) });
-      else if (canClaim(campaign, c))
-        open.push({ label: "Play This Character", onSelect: () => claimCharacter(campaign, c.id) });
-      const filing: MenuItem[] = [];
-      const editing: MenuItem[] = [];
-      if (mine) {
-        for (const f of folders) {
-          if (f.id !== c.folder)
-            filing.push({
-              label: `Move to ${f.name}`,
-              Icon: IconFolder,
-              onSelect: () => moveToFolder(campaign, c.id, f.id),
-            });
-        }
-        if (c.folder && known.has(c.folder))
-          filing.push({
-            label: "Remove from Folder",
-            onSelect: () => moveToFolder(campaign, c.id, undefined),
-          });
-        editing.push(
-          {
-            label: "Change Graphic…",
-            Icon: IconImage,
-            onSelect: () => editEntityGraphic(campaign, "character", c.id, c.name),
-          },
-          {
-            label: "Delete Character…",
-            Icon: IconDelete,
-            danger: true,
-            onSelect: () => setDeleting(c.id),
-          },
-        );
-      }
-      const items = [open, filing, editing]
-        .filter((group) => group.length)
-        .flatMap((group, i): MenuItem[] => (i ? ["divider", ...group] : group));
-      setMenu({ x, y, items });
-    });
+    const trigger = menuTrigger((x, y) =>
+      setMenu({ x, y, items: menuFor(ctx, { kind: "character", id: c.id }) }),
+    );
     return (
       <ListRow
         key={c.id}
@@ -225,13 +176,14 @@ function CharacterList({
           "data-tip-side": true,
         }}
         pick={{
-          onDoubleClick: (e) => showLink({ kind: "character", id: c.id }, e.currentTarget),
+          onDoubleClick: (e) =>
+            ctx.linkPopups.show({ kind: "character", id: c.id }, e.currentTarget),
           "data-kind": c.kind,
           "data-item-drop": mine ? c.id : undefined,
           "data-move-drop": mine ? c.id : undefined,
           onPointerDown: (e) => {
             trigger.onPointerDown(e);
-            dragEntity(e, dragged);
+            dragEntity(ctx.canvas, e, dragged);
           },
           onContextMenu: trigger.onContextMenu,
         }}
@@ -239,12 +191,8 @@ function CharacterList({
     );
   };
 
-  const doomed = deleting ? characters.find((c) => c.id === deleting) : undefined;
   return (
     <>
-      {doomed && (
-        <DeleteCharacter campaign={campaign} c={doomed} onClose={() => setDeleting(null)} />
-      )}
       <FolderTree
         ariaLabel="Characters"
         className="chars-list"
@@ -252,33 +200,22 @@ function CharacterList({
         items={characters}
         folderOf={(character) => character.folder}
         renderItem={row}
-        renderActions={(beginFolderNaming) => (
+        renderActions={(newFolder) => (
           <>
             <Button icon={IconAdd} onClick={() => onNew()}>
               New
             </Button>
-            <Button variant="ghost" icon={IconNewFolder} onClick={beginFolderNaming}>
+            <Button variant="ghost" icon={IconNewFolder} onClick={newFolder}>
               New Folder
             </Button>
           </>
         )}
-        folderMenuItems={(folder, { open, toggle, rename }) => [
+        tree="character"
+        folderCommands={characterFolders}
+        folderMenuItems={(folder) => [
           { label: "New Character Here", onSelect: () => onNew(folder.id) },
-          {
-            label: open ? "Collapse Folder" : "Expand Folder",
-            onSelect: toggle,
-          },
-          "divider",
-          { label: "Rename Folder", Icon: IconRename, onSelect: rename },
-          {
-            label: "Delete Folder",
-            Icon: IconDelete,
-            danger: true,
-            onSelect: () => deleteFolder(campaign, folder.id),
-          },
         ]}
-        onCreateFolder={(name) => createFolder(campaign, name)}
-        onRenameFolder={(id, name) => renameFolder(campaign, id, name)}
+        showList={showList}
         emptyContent={
           !characters.length && !folders.length ? (
             <p className="empty-inline">No characters yet.</p>
@@ -291,22 +228,19 @@ function CharacterList({
 }
 
 function NewCharacter({
-  campaign,
   system,
   folders,
   existingCharacters,
-  isGm,
   initialFolder,
   onDone,
 }: {
-  campaign: Campaign;
   system: GameSystem;
   folders: FolderView[];
   existingCharacters: CharacterView[];
-  isGm: boolean;
   initialFolder?: string | undefined;
   onDone: () => void;
 }) {
+  const ctx = useCampaign();
   const [kind, setKind] = useState<"pc" | "npc">("pc");
   const [name, setName] = useState("");
   const [identity, setIdentity] = useState<Record<string, string>>({});
@@ -316,7 +250,7 @@ function NewCharacter({
   const [folder, setFolder] = useState(initialFolder ?? "");
   // The guided flow: the system's choices at creation, then ability scores.
   const creation = system.creation;
-  const [picks, setPicks] = useState<Record<string, Picked>>(
+  const [picks, setPicks] = useState<Record<string, Picked>>(() =>
     Object.fromEntries(
       (creation?.choices ?? []).flatMap((choice) => {
         const value = system.characterData.find((field) => field.id === choice.field)?.default;
@@ -374,39 +308,28 @@ function NewCharacter({
         onChange={(p) => setPicks({ ...picks, [choice.id]: p })}
       />
       {repeatsChoice && distinct?.field === choice.field && (
-        <p className="muted" role="status">
-          {distinct.note}
-        </p>
+        <output className="muted">{distinct.note}</output>
       )}
     </Fragment>
   );
   const submit = () => {
     if (!ready) return;
-    if (kind === "npc") newNpc(campaign, name, folder || undefined);
+    if (kind === "npc") ctx.execute(newNpc, { name, folder: folder || undefined });
     else {
       const made = creation ? creationResult(system, scores, picks) : undefined;
       if (made)
         for (const { field } of creation?.identity?.fields ?? [])
           made.data[field] = (identity[field] ?? "").trim();
-      const id = newCharacter(campaign, name, String(choiceData[CLASS_FIELD] ?? ""), made);
-      const startingItemsField = creation?.startingItemsField;
-      if (startingItemsField && made) {
-        for (const itemId of commaListOf(made.data[startingItemsField])) {
-          const item = system.items.find((entry) => entry.id === itemId);
-          if (item) addItem(campaign, id, item, !!item.equippable);
-        }
-      }
-      if (startingRelationship && relationshipTo) {
-        setRelationship(campaign.characters, id, relationshipTo, relationshipText.trim());
-        setRelationshipDepth(
-          campaign.characters,
-          id,
-          relationshipTo,
-          Number(relationshipDepth),
-          system.relationshipDepth?.max ?? 0,
-        );
-      }
-      if (folder) moveToFolder(campaign, id, folder);
+      ctx.execute(newCharacter, {
+        name,
+        classId: String(choiceData[CLASS_FIELD] ?? ""),
+        made,
+        folder: folder || undefined,
+        relationship:
+          startingRelationship && relationshipTo
+            ? { to: relationshipTo, label: relationshipText, depth: Number(relationshipDepth) }
+            : undefined,
+      });
     }
     onDone();
   };
@@ -418,7 +341,7 @@ function NewCharacter({
         submit();
       }}
     >
-      {isGm && (
+      {ctx.commands.permits(newNpc, {}) === true && (
         <div className="field field-inline">
           Type
           <Segmented
@@ -545,31 +468,5 @@ function NewCharacter({
         </Button>
       </div>
     </form>
-  );
-}
-
-/** Asks before deleting a character: it can't be undone. */
-function DeleteCharacter({
-  campaign,
-  c,
-  onClose,
-}: {
-  campaign: Campaign;
-  c: CharacterView;
-  onClose: () => void;
-}) {
-  return (
-    <ConfirmDialog
-      title="Delete character"
-      confirmLabel="Delete"
-      confirmVariant="danger"
-      onClose={onClose}
-      onConfirm={() => deleteCharacter(campaign, c.id)}
-    >
-      <p>
-        Delete <strong>{c.name}</strong>? Their sheet is gone for everyone, and tokens on the map
-        stop being linked to them. This can&apos;t be undone.
-      </p>
-    </ConfirmDialog>
   );
 }

@@ -88,7 +88,7 @@ test("right-drag menus select and close on release", async ({ page }) => {
   await item.hover();
   await page.mouse.up({ button: "right" });
   await expect(page.getByRole("menu")).toHaveCount(0);
-  await expect(page.getByRole("dialog", { name: "Delete campaign?" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Delete Campaign?" })).toBeVisible();
 });
 
 test("campaign deletion is available from the right-click menu and confirms", async ({ page }) => {
@@ -102,7 +102,7 @@ test("campaign deletion is available from the right-click menu and confirms", as
   await campaign.click({ button: "right" });
   await page.getByRole("menuitem", { name: "Delete…" }).click();
 
-  const confirmation = page.getByRole("dialog", { name: "Delete campaign?" });
+  const confirmation = page.getByRole("dialog", { name: "Delete Campaign?" });
   await expect(confirmation).toBeVisible();
   await confirmation.getByRole("button", { name: "Cancel" }).click();
   await expect(confirmation).toBeHidden();
@@ -110,7 +110,7 @@ test("campaign deletion is available from the right-click menu and confirms", as
   await campaign.click({ button: "right" });
   await page.getByRole("menuitem", { name: "Delete…" }).click();
   await page
-    .getByRole("dialog", { name: "Delete campaign?" })
+    .getByRole("dialog", { name: "Delete Campaign?" })
     .getByRole("button", { name: "Delete from This Device" })
     .click();
   await expect(campaign).toHaveCount(0);
@@ -120,7 +120,7 @@ test("opening an invite link presents a join modal, not a lobby section", async 
   await page.goto("/#join=abc.1234567890abcdef");
   await settled(page);
 
-  const invitation = page.getByRole("dialog", { name: "Join a campaign" });
+  const invitation = page.getByRole("dialog", { name: "Join a Campaign" });
   await expect(invitation).toBeVisible();
   await expect(invitation.getByLabel("Your name")).toBeFocused();
   await expect(page.locator(".lobby-join")).toHaveCount(0);

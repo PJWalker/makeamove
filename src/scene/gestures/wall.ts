@@ -17,7 +17,7 @@ export const wall: ToolPress = (c, e, world) => {
       kind: "shape",
       shape: "line",
       t: { ...t, h: 3 / c.renderer.camera.zoom },
-      colour: "#d8e0ff",
+      paint: { stroke: "#d8e0ffff", fill: "#d8e0ff38" },
       width: 2,
       layer: "over",
       label: formatDistance(grid, (t.w / grid.size) * grid.unit),

@@ -7,7 +7,7 @@ import {
   trackerToken,
   type RichText,
   type TrackerButton,
-} from "../../core/richText";
+} from "../../data/richText";
 
 /** A chat message's text: rich text, as everywhere else. */
 export type ChatContent = RichText;

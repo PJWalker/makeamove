@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import {
   commandText,
@@ -8,7 +8,7 @@ import {
   messageText,
 } from "../content";
 import { LINK_NODE } from "../../notes/links";
-import { TRACKER_NODE } from "../../../core/richText";
+import { TRACKER_NODE } from "../../../data/richText";
 
 describe("chat content", () => {
   it("stores plain text and line breaks as a Tiptap document", () => {

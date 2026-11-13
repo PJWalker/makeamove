@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 
 const handles = vi.hoisted(() => ({ knob: { x: -999, y: -999 } }));
 vi.mock("../render/handles", () => ({
@@ -10,6 +10,8 @@ vi.mock("../../platform/device", () => ({ device: { value: { id: "x" } } }));
 vi.mock("../../media/images", () => ({ importImage: vi.fn(), imageColour: vi.fn() }));
 
 const { SceneController } = await import("../controller");
+const { SceneTools } = await import("../tools");
+const { LocalDoc } = await import("../../data/localDoc");
 type Controller = InstanceType<typeof SceneController>;
 type Args = ConstructorParameters<typeof SceneController>;
 type Preview = { x: number; y: number; rot: number };
@@ -36,8 +38,8 @@ function setup(els: object[]) {
   };
   const scene = {
     views: () => els,
-    elements: { observeDeep() {}, unobserveDeep() {} },
-    settings: { observe() {}, unobserve() {} },
+    elements: { observe: () => () => {} },
+    settings: { observe: () => () => {} },
     undo: { on() {}, off() {}, canUndo: () => false, canRedo: () => false },
     grid: () => renderer.grid,
     update: vi.fn<(changes: [string, object][]) => void>(),
@@ -48,7 +50,8 @@ function setup(els: object[]) {
     renderer as unknown as Args[1],
     host as unknown as Args[2],
     "s",
-    () => ({}) as ReturnType<Args[4]>,
+    new SceneTools(LocalDoc.inMemory()),
+    () => ({}) as ReturnType<Args[5]>,
   );
   (c as unknown as { restoreCamera: () => void }).restoreCamera = () => {};
   c.start();

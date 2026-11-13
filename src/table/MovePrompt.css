@@ -7,6 +7,8 @@
    */
   .roll-prompt {
     position: fixed;
+    margin: 0;
+    border: 0;
     /* With the chat popups: above floating windows, pointing at its button. */
     z-index: 11;
     /* As tall as the move's description, unless the window is shorter: then the description scrolls. */
@@ -99,6 +101,15 @@
       height: 12px;
       translate: -50% 0;
       clip-path: polygon(0 0, 100% 0, 50% 100%);
+    }
+    [data-side="below"] > & {
+      display: block;
+      top: -12px;
+      left: clamp(var(--space-4), var(--tail), calc(100% - var(--space-4)));
+      width: 24px;
+      height: 12px;
+      translate: -50% 0;
+      clip-path: polygon(50% 0, 0 100%, 100% 100%);
     }
   }
   .roll-prompt-targets {

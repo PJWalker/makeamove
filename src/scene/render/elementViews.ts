@@ -1,16 +1,19 @@
-import { Container, Graphics, Matrix, Sprite } from "pixi.js";
+import { Color, type ColorSource, Container, Graphics, Matrix, Sprite } from "pixi.js";
 import { shapeOutline } from "../geometry";
 import { strokeOutline, hasRealPressure } from "../stroke";
 import {
   AREA_COLOURS,
   isPlainToken,
   type SceneElement,
-  type ShapeKind,
+  type ShapeGeometry,
+  type ShapePaint,
   type Transform,
 } from "../types";
+import { EffectView } from "./effects";
 import { SdfText } from "./sdfText";
 import type { SdfTextOptions } from "./sdfText";
 import { ACCENT, cabin, fraunces, INK } from "./style";
+import type { PeerBlobs } from "../../media/images";
 import { iconGraphicFor, textureFor } from "./textures";
 
 /** An element's drawing: its root in a layer, and how to move it to a transform. */
@@ -23,6 +26,10 @@ export interface View {
   dropFlash?: Graphics;
   /** A token's body, turned over and greyed when it's down. */
   pose?: Container;
+  /** What only the GM sees: a wall, a lamp or area, an effect's outline. */
+  helper?: Container;
+  /** Play out a moving effect as it is at `time`, in seconds. */
+  animate?: (time: number) => void;
 }
 
 /** Graphics only free their own geometry when told to destroy their context. */
@@ -38,7 +45,7 @@ export function contentKey(el: SceneElement): string {
     case "drawing":
       return `drawing:${el.points.length}:${el.points[0]}:${el.points[1]}:${el.colour}:${el.width}:${el.bw}:${el.bh}`;
     case "shape":
-      return `shape:${el.shape}:${el.colour}:${el.width}`;
+      return `shape:${el.shape}:${el.shape === "polygon" ? `${el.points.join(",")}:${el.bw}:${el.bh}` : ""}:${el.stroke}:${el.fill}:${el.width}`;
     case "text":
       return `text:${el.text}:${el.colour}:${el.size}:${el.bw}:${el.bh}`;
     case "wall":
@@ -47,27 +54,29 @@ export function contentKey(el: SceneElement): string {
       return `light:${el.bright}:${el.dim}:${el.colour}`;
     case "area":
       return `area:${el.tone}:${el.points.join(",")}:${el.bw}:${el.bh}`;
+    case "effect":
+      return `effect:${el.effect}:${el.colour}:${el.shape}:${el.shape === "polygon" ? `${el.points.join(",")}:${el.bw}:${el.bh}` : ""}`;
   }
 }
 
-/** A shape's outline and tinted inside, drawn in its own frame at its size. */
+/** A shape's outline and inside, painted and drawn in its own frame at its size. */
 export function drawShape(
   g: Graphics,
-  shape: ShapeKind,
+  geo: ShapeGeometry,
   w: number,
   h: number,
-  colour: string,
+  paint: ShapePaint,
   width: number,
 ) {
-  const pts = shapeOutline(shape, w, h).flatMap((p) => [p.x, p.y]);
+  const pts = shapeOutline(geo, w, h).flatMap((p) => [p.x, p.y]);
   g.clear()
     .poly(pts)
-    .fill({ color: colour, alpha: 0.22 })
-    .stroke({ color: colour, width, join: "round" });
+    .fill({ color: paint.fill })
+    .stroke({ color: paint.stroke, width, join: "round" });
 }
 
 /** Text on the map: a light outline keeps it readable over any map. */
-export const mapText = (colour: string, size: number): SdfTextOptions => ({
+export const mapText = (colour: ColorSource, size: number): SdfTextOptions => ({
   font: cabin(700),
   size,
   fill: colour,
@@ -77,13 +86,15 @@ export const mapText = (colour: string, size: number): SdfTextOptions => ({
 
 /**
  * Build an element's view. `invalidate` asks for a redraw once an image
- * loads; `highlighted` is the token showing as a drop target, if any.
+ * loads; `highlighted` is the token showing as a drop target, if any;
+ * `peers` supplies images this device lacks.
  */
 export function buildView(
   el: SceneElement,
   key: string,
   invalidate: () => void,
   highlighted: string | null,
+  peers: PeerBlobs | null,
 ): View {
   const root = new Container({ cullable: true });
   switch (el.type) {
@@ -95,7 +106,7 @@ export function buildView(
       let sprite: Sprite | null = null;
       let missing: SdfText | null = null;
       let size = { w: el.w, h: el.h };
-      void textureFor(el.image.hash).then((tex) => {
+      void textureFor(el.image.hash, peers).then((tex) => {
         if (root.destroyed) return;
         if (!tex) {
           // Not on this device; from M2 a peer will send it.
@@ -140,7 +151,7 @@ export function buildView(
       const iconName = el.graphic?.kind === "icon" ? el.graphic.name : undefined;
       if (isPlainToken(el)) {
         // The image as it is, fitted inside the token's square.
-        void textureFor(image!.hash).then((tex) => {
+        void textureFor(image!.hash, peers).then((tex) => {
           if (root.destroyed) return;
           if (!tex) {
             // Missing image: fall back to a plain disc so the token can be found.
@@ -155,8 +166,9 @@ export function buildView(
         });
       } else {
         // A disc: coloured background, the image or an initial, and a ring.
+        // The background stops at the ring, so a see-through colour doesn't show darker under it.
         const ring = new Graphics().circle(0, 0, 48).stroke({ color: el.colour, width: 5 });
-        body.addChild(new Graphics().circle(0, 0, 50).fill({ color: el.colour }), ring);
+        body.addChild(new Graphics().circle(0, 0, 45.5).fill({ color: el.colour }), ring);
         const initial = new SdfText({
           text: (el.name.trim()[0] ?? "").toUpperCase(),
           font: fraunces(600),
@@ -174,7 +186,7 @@ export function buildView(
         }
         if (image) {
           // The initial stands in until the image loads, or if it's missing.
-          void textureFor(image.hash).then((tex) => {
+          void textureFor(image.hash, peers).then((tex) => {
             if (!tex || root.destroyed) return;
             initial.visible = false;
             // Fill a circle with the image, cropping its longer side. A
@@ -248,7 +260,7 @@ export function buildView(
           const next = `${t.w}x${t.h}`;
           if (next !== size) {
             size = next;
-            drawShape(g, el.shape, t.w, t.h, el.colour, el.width);
+            drawShape(g, el, t.w, t.h, el, el.width);
           }
         },
       };
@@ -262,6 +274,7 @@ export function buildView(
       return {
         root,
         key,
+        helper: g,
         apply: (t) => {
           root.position.set(t.x, t.y);
           root.rotation = t.rot;
@@ -291,6 +304,7 @@ export function buildView(
       return {
         root,
         key,
+        helper: g,
         apply: (t) => {
           root.position.set(t.x, t.y);
           const r = Math.min(t.w, t.h) / 2;
@@ -316,6 +330,7 @@ export function buildView(
       return {
         root,
         key,
+        helper: g,
         apply: (t) => {
           root.position.set(t.x, t.y);
           root.rotation = t.rot;
@@ -329,8 +344,26 @@ export function buildView(
       };
     }
 
+    case "effect": {
+      const view = new EffectView(el);
+      return {
+        root: view.root,
+        key,
+        helper: view.outline,
+        apply: (t) => view.apply(t),
+        animate: (time) => view.animate(time),
+      };
+    }
+
     case "text": {
-      const text = new SdfText({ ...mapText(el.colour, el.size), text: el.text, anchor: 0.5 });
+      // A see-through colour fades the text and its outline together.
+      const colour = new Color(el.colour);
+      const text = new SdfText({
+        ...mapText(colour.toNumber(), el.size),
+        text: el.text,
+        anchor: 0.5,
+      });
+      text.alpha = colour.alpha;
       root.addChild(text);
       return {
         root,

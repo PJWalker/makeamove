@@ -1,98 +1,64 @@
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- The command list is a searchable active-descendant listbox, not a native select. */
 import type { PointerEvent as ReactPointerEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
-import { store } from "../lib/store";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { noteRecent, recentActions } from "../workspace/commands/recent";
-import { rollAction } from "../workspace/commands/core";
-import {
-  actionForCombo,
-  comboOf,
-  firesWhileTyping,
-  shortcutFor,
-  shortcuts,
-  showCombo,
-} from "../workspace/commands/custom";
-import { buildIndex, findAction } from "../workspace/commands/registry";
-import { diceFormula } from "../features/chat/commands";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { callKey } from "../kernel/commands";
+import { diceFormula } from "../features/chat/slash";
+import { isPinned } from "../features/characters/hotbar";
+import { pinToHotbar, unpinFromHotbar } from "../workspace/commands/campaign";
+import { roll } from "../workspace/commands/chat";
 import { rank } from "../workspace/commands/search";
 import type { Action } from "../workspace/commands/types";
-import { editHotbar, insertAt, isPinned, pin, unpin } from "../features/characters/hotbar";
-import { isTyping } from "../ui/keys";
-import { RECORDER } from "../workspace/ActionDialogs";
+import { findAction, listActions } from "../workspace/commands/views";
 import { actionMenuItems } from "../workspace/actionMenu";
-import { actionEntity, dragEntity } from "../workspace/entityDrag";
+import { dragEntity } from "../workspace/entityDrag";
+import { actionEntity } from "../workspace/dragEntities";
 import { menuTrigger } from "../ui/menuTrigger";
+import { showFromOrigin } from "../ui/morph";
 import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
 import type { Campaign } from "../campaign/campaign";
-import { useValue } from "../ui/useValue";
+import { useQuery } from "../ui/useQuery";
+import { useCampaign } from "../workspace/campaignContext";
 
-export const paletteOpen = store(false);
-const closePalette = () => {
-  paletteOpen.value = false;
-};
-
+/** The command palette: searches every call the registry offers (commands/views.ts). */
 export function Palette({ campaign }: { campaign: Campaign }) {
-  const open = useValue(paletteOpen);
-
-  // Ctrl/Cmd + K toggles, even from a text field, as in most apps.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() === "k" && (e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey) {
-        e.preventDefault();
-        paletteOpen.value = !paletteOpen.value;
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-
-  // The player's own shortcuts, ahead of the app's (captured, so a tool key bound to something else stays bound).
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.repeat || (e.target as Element | null)?.closest?.(`.${RECORDER}`)) return;
-      const combo = comboOf(e);
-      if (!combo) return;
-      const id = actionForCombo(shortcuts(campaign), combo);
-      if (!id || (isTyping(e.target) && !firesWhileTyping(combo))) return;
-      const a = findAction(campaign, id);
-      if (a?.available !== true) return;
-      e.preventDefault();
-      e.stopPropagation();
-      closePalette();
-      noteRecent(a.id);
-      a.run();
-    };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [campaign]);
-
+  const ctx = useCampaign();
+  const open = useQuery(ctx.table.paletteOpen);
   return open ? <PaletteBody campaign={campaign} /> : null;
 }
 
 function PaletteBody({ campaign }: { campaign: Campaign }) {
+  const ctx = useCampaign();
   const [query, setQuery] = useState("");
   const [cursor, setCursor] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
-  const rootRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDialogElement>(null);
 
   // The index is built once per opening, from whatever is current then.
-  const index = useMemo(() => buildIndex(campaign), [campaign]);
-  const recent = useValue(recentActions);
+  const index = useMemo(() => listActions(ctx), [ctx]);
+  const recent = useQuery(ctx.recent.ids);
   const ranked = rank(index, query, { recent });
   // A dice formula typed on its own rolls it, first in the list.
   const formula = diceFormula(query);
-  const roll = formula ? rollAction(campaign, formula) : null;
-  const results = roll ? [roll, ...ranked.filter((a) => a.id !== roll.id)] : ranked;
+  const typedRoll = formula ? findAction(ctx, callKey(roll.id, { formula })) : undefined;
+  const results = typedRoll ? [typedRoll, ...ranked.filter((a) => a.id !== typedRoll.id)] : ranked;
   const active = Math.min(cursor, Math.max(0, results.length - 1));
   const returnTo = useRef<Element | null>(document.activeElement);
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const [note, setNote] = useState("");
+  // Grow out of the button that opened it, if a button did (ui/morph.ts).
+  useLayoutEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    showFromOrigin(el, () => {});
+    return ctx.table.showingPalette(el);
+  }, [ctx]);
 
   function togglePin(a: Action) {
     const pinned = isPinned(campaign, a.id);
-    if (editHotbar(campaign, (slots) => (pinned ? unpin(slots, a.id) : pin(slots, a.id)))) {
-      setNote(pinned ? `Removed ${a.title} from the hotbar` : `Added ${a.title} to the hotbar`);
-    }
+    if (pinned) ctx.execute(unpinFromHotbar, { key: a.id });
+    else ctx.execute(pinToHotbar, { key: a.id });
+    setNote(pinned ? `Removed ${a.title} from the hotbar` : `Added ${a.title} to the hotbar`);
   }
 
   /** Right-click for a menu; press and drag to pin the action onto the hotbar. */
@@ -103,7 +69,7 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
         x,
         y,
         items: [
-          ...actionMenuItems(campaign, [{ id: a.id, title: a.title }], closePalette),
+          ...actionMenuItems(ctx, [{ id: a.id, title: a.title }], () => ctx.table.closePalette()),
           ...(a.available === true ? [{ label: "Run", onSelect: () => choose(a) }] : []),
         ],
       });
@@ -113,12 +79,12 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
       onPointerDown(e: ReactPointerEvent) {
         trigger.onPointerDown(e);
         // Onto the hotbar, a character or a note.
-        const what = actionEntity(campaign, a.id, a.title);
-        dragEntity(e, {
+        const what = actionEntity(ctx, a.id, a.title);
+        dragEntity(ctx.canvas, e, {
           ...what,
           pin: (index) => {
-            if (editHotbar(campaign, (slots) => insertAt(slots, a.id, index)))
-              setNote(`Added ${a.title} to the hotbar`);
+            ctx.execute(pinToHotbar, { key: a.id, at: index });
+            setNote(`Added ${a.title} to the hotbar`);
           },
         });
       },
@@ -142,18 +108,18 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
     const onDown = (e: PointerEvent) => {
       const t = e.target as Element;
       if (!rootRef.current?.contains(t) && !t.closest?.(".context-menu, .hotbar-palette"))
-        closePalette();
+        ctx.table.closePalette();
     };
     document.addEventListener("pointerdown", onDown, true);
     return () => document.removeEventListener("pointerdown", onDown, true);
-  }, []);
+  }, [ctx]);
 
   function choose(a: Action | undefined, secondary = false) {
     if (!a || a.available !== true) return;
     const fn = secondary ? a.open : a.run;
     if (!fn) return;
-    closePalette();
-    noteRecent(a.id);
+    ctx.table.closePalette();
+    ctx.recent.note(a.id);
     // After the palette has closed and given focus back.
     queueMicrotask(fn);
   }
@@ -162,7 +128,7 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
     if (e.key === "Escape" && menu) return;
     if (e.key === "Escape") {
       e.preventDefault();
-      closePalette();
+      ctx.table.closePalette();
     } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
       const n = results.length;
@@ -180,10 +146,10 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
   const empty = !query;
   return (
     // Arrow/Enter handling for the whole palette lives on the dialog.
-    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
-    <div
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
+    <dialog
+      open
       className="palette panel"
-      role="dialog"
       aria-label="Command palette"
       ref={rootRef}
       onKeyDown={onKeyDown}
@@ -209,11 +175,10 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
       <ul id="palette-list" className="palette-list" role="listbox" ref={listRef}>
         {results.map((a, i) => {
           const off = a.available !== true;
-          const combo = shortcutFor(campaign, a.id);
-          const hint = combo ? showCombo(combo) : a.hint;
+          const hint = a.hint;
           return (
             // Options are chosen by keyboard through the dialog's onKeyDown.
-            // eslint-disable-next-line jsx-a11y/click-events-have-key-events
+            // oxlint-disable-next-line jsx-a11y/click-events-have-key-events
             <li
               key={a.id}
               id={`palette-${i}`}
@@ -242,9 +207,7 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
         )}
       </ul>
       {menu && <ContextMenu {...menu} onClose={() => setMenu(null)} />}
-      <p className="palette-note" role="status">
-        {note}
-      </p>
-    </div>
+      <output className="palette-note">{note}</output>
+    </dialog>
   );
 }

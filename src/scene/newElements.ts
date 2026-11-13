@@ -1,6 +1,6 @@
 import { type Grid, type Point, snapPoint, snapSize } from "./grid";
-import type { BlobRef } from "../core/blob";
-import type { EntityGraphic, EntityGraphicRef } from "../graphics";
+import type { BlobRef } from "../media/images";
+import type { EntityGraphic, EntityGraphicRef } from "../media/images";
 import type { NewElement, SceneElement, TokenStyle } from "./types";
 
 /*
@@ -37,6 +37,7 @@ const TOKEN_PALETTE = [
 ];
 
 /** A random colour from the palette, for a token that hasn't been given one. */
+// react-doctor-disable-next-line react-doctor/insecure-crypto-risk
 export const randomTokenColour = () =>
   TOKEN_PALETTE[Math.floor(Math.random() * TOKEN_PALETTE.length)]!;
 

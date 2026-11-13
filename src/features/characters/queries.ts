@@ -1,9 +1,8 @@
-import type * as Y from "yjs";
 import type { Campaign } from "../../campaign/campaign";
 import { device } from "../../platform/device";
 import type { TokenStat } from "../../systems/types";
 import type { CharacterView } from "./types";
-import { canEditCharacter, characterView, derive, statBonus } from "./store";
+import { canEditCharacter, characterView, derive, statBonus, type CharacterRec } from "./store";
 import { systemOf } from "./system";
 
 /*
@@ -13,9 +12,9 @@ import { systemOf } from "./system";
 /** A copy's template's map, if it's a copy. */
 export const baseOf = (
   campaign: Campaign,
-  m: Y.Map<unknown> | undefined,
-): Y.Map<unknown> | undefined => {
-  const base = m?.get("base") as string | undefined;
+  m: CharacterRec | undefined,
+): CharacterRec | undefined => {
+  const base = m?.get("base");
   return base ? campaign.characters.get(base) : undefined;
 };
 
@@ -25,7 +24,8 @@ export const baseOf = (
  */
 export function listCharacters(campaign: Campaign, { copies = false } = {}): CharacterView[] {
   const system = systemOf(campaign);
-  return [...campaign.characters.entries()]
+  return campaign.characters
+    .entries()
     .filter(([, m]) => copies || !m.get("base"))
     .map(([id, m]) => characterView(id, m, system, baseOf(campaign, m)))
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -58,7 +58,7 @@ export function getCharacter(
 
 /** A member's character id under `key`, if that character still exists. */
 function memberCharacter(campaign: Campaign, memberId: string, key: "character" | "playing") {
-  const id = campaign.members.get(memberId)?.get(key) as string | undefined;
+  const id = campaign.members.get(memberId)?.get(key);
   return id && campaign.characters.has(id) ? id : undefined;
 }
 

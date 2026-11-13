@@ -1,3 +1,4 @@
+import { callKey } from "../../kernel/commands";
 import type { Campaign } from "../../campaign/campaign";
 import { device } from "../../platform/device";
 
@@ -12,8 +13,26 @@ import { getCharacter, actingCharacterId, systemOf } from "./api";
 
 export const MAX_SLOTS = 12;
 
+/*
+ * Slots hold command calls by key (kernel/commands.ts). These build the keys
+ * for what a fresh bar holds; the commands themselves are in
+ * workspace/commands, under the same ids.
+ */
+export const SLOT_COMMANDS = {
+  move: "move.start",
+  use: "item.use",
+  tool: "tool.select",
+  library: "item.add",
+} as const;
+export const moveSlot = (move: string) => callKey(SLOT_COMMANDS.move, { move });
+export const useSlot = (itemId: string) => callKey(SLOT_COMMANDS.use, { itemId });
+/** Adding a library item to the acting character's inventory. */
+export const librarySlot = (item: string) => callKey(SLOT_COMMANDS.library, { item });
+export const toolSlot = (tool: string) => callKey(SLOT_COMMANDS.tool, { tool });
+const BASIC_SLOTS = [toolSlot("ping"), toolSlot("ruler")];
+
 /** Without a character there is one shared bar, so pinning always works. */
-const key = (characterId?: string) => `hotbar:${characterId ?? "global"}`;
+const key = (characterId?: string) => characterId ?? "global";
 
 /** Pin to the end; already-pinned ids stay where they are. */
 export function pin(slots: string[], id: string): string[] {
@@ -39,28 +58,25 @@ export function shift(slots: string[], id: string, by: -1 | 1): string[] {
 export function defaultHotbar(campaign: Campaign, characterId: string): string[] {
   const system = systemOf(campaign);
   const c = getCharacter(campaign, characterId);
-  if (!c) return ["tool:ping", "tool:ruler"];
+  if (!c) return BASIC_SLOTS;
   const d = derive(c, system);
   const skip = new Set(
     system.actionCategories.filter((k) => k.onHotbar === false).map((k) => k.id),
   );
   const moves = actionsFor(c, system, d)
     .filter((m) => !skip.has(m.category))
-    .map((m) => `move:${m.id}`);
-  const gear = c.inventory.filter((i) => i.uses && itemActive(i)).map((i) => `use:${i.id}`);
-  return [...moves, ...gear, "tool:ping", "tool:ruler"].slice(0, MAX_SLOTS);
+    .map((m) => moveSlot(m.id));
+  const gear = c.inventory.filter((i) => i.uses && itemActive(i)).map((i) => useSlot(i.id));
+  return [...moves, ...gear, ...BASIC_SLOTS].slice(0, MAX_SLOTS);
 }
 
 export function hotbarSlots(campaign: Campaign, characterId: string | undefined): string[] {
-  const saved = campaign.members.get(device.value.id)?.get(key(characterId)) as
-    string[] | undefined;
-  return (
-    saved ?? (characterId ? defaultHotbar(campaign, characterId) : ["tool:ping", "tool:ruler"])
-  );
+  const saved = campaign.members.get(device.value.id)?.get("hotbars")?.get(key(characterId));
+  return saved ?? (characterId ? defaultHotbar(campaign, characterId) : BASIC_SLOTS);
 }
 
 export function setHotbar(campaign: Campaign, characterId: string | undefined, slots: string[]) {
-  campaign.members.get(device.value.id)?.set(key(characterId), slots);
+  campaign.members.get(device.value.id)?.ensure("hotbars").set(key(characterId), slots);
 }
 
 /** Move a slot to a position (as counted before it was lifted out). */

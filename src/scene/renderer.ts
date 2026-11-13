@@ -1,10 +1,11 @@
 import { Application, Container, CullerPlugin, extensions } from "pixi.js";
 import type { Camera } from "./camera";
 import { type Grid, DEFAULT_GRID, type Point } from "./grid";
-import { onBlobFetcher } from "../media/images";
+import type { PeerBlobs } from "../media/images";
 import type { PresenceMark } from "./presence";
 import type { TokenStat } from "../systems/types";
 import type { TokenMarks } from "./tokenMarks";
+import type { SelectKind } from "./tools";
 import { LAYERS, type Layer, type SceneElement, type Transform } from "./types";
 import { ConditionLayer } from "./render/conditions";
 import { type Draft, DraftLayer } from "./render/draft";
@@ -44,6 +45,10 @@ const CLEAN: Record<RenderPart, boolean> = {
  */
 export class SceneRenderer implements RenderState {
   readonly app = new Application();
+
+  /** `peers` supplies the images this device lacks. */
+  constructor(readonly peers: PeerBlobs | null = null) {}
+
   // A render group, so panning and zooming is one GPU transform.
   readonly world = new Container({ isRenderGroup: true });
   readonly layers = Object.fromEntries(LAYERS.map((l) => [l, new Container()])) as Record<
@@ -98,8 +103,8 @@ export class SceneRenderer implements RenderState {
   draft: Draft | null = null;
   /** Show the GM's walls and lights (only the GM sees them). */
   showHelpers = false;
-  /** Whether the Lights tool is in use: only then do the GM's lamps and areas show. */
-  lightsShown = false;
+  /** The sorts of things whose GM helpers (lamps, areas, effect outlines) show: those the active tool can pick. */
+  helpersShown: ReadonlySet<SelectKind> = new Set();
   /** The scene's lighting: off, or how dark it is where no light reaches (0 to 1). */
   lighting: Lighting = { enabled: false, darkness: 0 };
   /**
@@ -168,10 +173,11 @@ export class SceneRenderer implements RenderState {
     });
     this.resizeObserver.observe(host);
     // Images missing before peers connected get another go once they can be fetched.
-    this.stopFetcherWatch = onBlobFetcher(() => {
-      this.elementLayer.rebuildAll();
-      this.invalidate("elements");
-    });
+    this.stopFetcherWatch =
+      this.peers?.onAvailable(() => {
+        this.elementLayer.rebuildAll();
+        this.invalidate("elements");
+      }) ?? null;
     this.invalidate("camera");
   }
 
@@ -235,8 +241,9 @@ export class SceneRenderer implements RenderState {
     const d = this.dirty;
     if (d.elements) this.elementLayer.sync();
     else if (d.previews) this.elementLayer.syncPreviews();
-    this.elementLayer.syncHidden(this.showHelpers, this.lightsShown);
+    this.elementLayer.syncHidden(this.showHelpers, this.helpersShown);
     const falling = this.elementLayer.syncDowned();
+    const effects = this.elementLayer.animate();
     if (d.camera) {
       this.world.position.set(this.camera.x, this.camera.y);
       this.world.scale.set(this.camera.zoom);
@@ -261,7 +268,7 @@ export class SceneRenderer implements RenderState {
     if (animating) this.invalidate("presence");
     if (this.conditions.animating) this.invalidate("overlay");
     if (this.tokenLabels.animating) this.invalidate("overlay");
-    if (falling) this.invalidate();
+    if (falling || effects) this.invalidate();
   }
 
   /** The size text takes when drawn on the map, in world px. */

@@ -1,5 +1,5 @@
 import { md } from "../../macros/markdown.macro" with { type: "macro" };
-import type { RichText } from "../../core/richText";
+import type { RichText } from "../../data/richText";
 import type { Effect, OptionDef, TargetSpec } from "../types";
 import type { Ability } from "./data";
 import { SRD_FEATS } from "./srdFeats";

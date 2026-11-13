@@ -5,9 +5,11 @@ import { relationshipWeb } from "../../features/characters/relationships";
 import type { CharacterView } from "../../features/characters/types";
 import { characterLinkTargets } from "../../features/notes/targets";
 import { Button } from "../../ui/Button";
-import { useY } from "../../ui/useY";
+import { useQuery } from "../../ui/useQuery";
 import { BONDS } from "./bonds";
 import { advanceBond, bondsFor, DW2_RELATIONSHIP_DEPTH, forgeBond } from "./bondStore";
+import { bumpData } from "../../workspace/commands/characters";
+import { useCampaign } from "../../workspace/campaignContext";
 
 const FULL = DW2_RELATIONSHIP_DEPTH.max;
 
@@ -21,14 +23,15 @@ export function Dw2Bonds({
   c: CharacterView;
   editable: boolean;
 }) {
-  const peopleJson = useY(campaign.characters, () =>
+  const ctx = useCampaign();
+  const peopleJson = useQuery(campaign.characters, () =>
     JSON.stringify(characterLinkTargets(campaign)),
   );
   const people = useMemo(
     () => JSON.parse(peopleJson) as ReturnType<typeof characterLinkTargets>,
     [peopleJson],
   );
-  const depthWebJson = useY(campaign.characters, () =>
+  const depthWebJson = useQuery(campaign.characters, () =>
     JSON.stringify(
       relationshipWeb(
         campaign.characters,
@@ -40,7 +43,7 @@ export function Dw2Bonds({
     () => JSON.parse(depthWebJson) as ReturnType<typeof relationshipWeb>,
     [depthWebJson],
   );
-  const bondsJson = useY(campaign.systemData, () =>
+  const bondsJson = useQuery(campaign.systemData, () =>
     JSON.stringify(bondsFor(campaign.systemData, c.id)),
   );
   const bonds = useMemo(() => JSON.parse(bondsJson) as ReturnType<typeof bondsFor>, [bondsJson]);
@@ -70,6 +73,7 @@ export function Dw2Bonds({
           {bonds.map((bond) => {
             const partnerId = bond.first === c.id ? bond.second : bond.first;
             const partner = getCharacter(campaign, partnerId);
+            const advancedMoveIds = new Set(bond.advancedMoves);
             const definition = BONDS.find((entry) => entry.id === bond.type);
             return (
               <li key={`${bond.first}:${bond.second}`} className="relationship">
@@ -87,7 +91,7 @@ export function Dw2Bonds({
                           {move.name}:{" "}
                           {move.starting
                             ? "Starting move"
-                            : bond.advancedMoves.includes(move.id)
+                            : advancedMoveIds.has(move.id)
                               ? "Unlocked"
                               : "Locked"}
                         </li>
@@ -109,11 +113,10 @@ export function Dw2Bonds({
               (bond.second === c.id && bond.first === bondmateId),
           );
           const reinforcing = currentBond?.type === bondType;
+          const advancedMoveIds = new Set(currentBond?.advancedMoves ?? []);
           const definition = BONDS.find((bond) => bond.id === bondType);
           const availableMoves = reinforcing
-            ? (definition?.moves.slice(1) ?? []).filter(
-                (move) => !currentBond.advancedMoves.includes(move.id),
-              )
+            ? (definition?.moves.slice(1) ?? []).filter((move) => !advancedMoveIds.has(move.id))
             : [];
           return (
             <div className="relationship-bond-controls">
@@ -189,6 +192,7 @@ export function Dw2Bonds({
                         c.id,
                         bondmateId,
                         bondType,
+                        (id, xp) => ctx.execute(bumpData, { id, key: "xp", by: xp }),
                       );
                   if (changed) {
                     setBondmateId("");

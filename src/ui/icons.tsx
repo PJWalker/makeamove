@@ -20,6 +20,12 @@ import MsPushPin from "~icons/material-symbols/push-pin";
 import GiExitDoor from "~icons/game-icons/exit-door";
 import GiStoneWall from "~icons/game-icons/stone-wall";
 import GiLanternFlame from "~icons/game-icons/lantern-flame";
+import GiMagicSwirl from "~icons/game-icons/magic-swirl";
+import GiRaining from "~icons/game-icons/raining";
+import GiSnowing from "~icons/game-icons/snowing";
+import GiFog from "~icons/game-icons/fog";
+import GiBurningEmbers from "~icons/game-icons/burning-embers";
+import GiSparkles from "~icons/game-icons/sparkles";
 import GiHand from "~icons/game-icons/hand";
 import GiHelp from "~icons/game-icons/help";
 import GiBookshelf from "~icons/game-icons/bookshelf";
@@ -51,6 +57,7 @@ import MsSend from "~icons/material-symbols/send-rounded";
 import MsClose from "~icons/material-symbols/close-rounded";
 import MsMenu from "~icons/material-symbols/menu-rounded";
 import MsVisibility from "~icons/material-symbols/visibility-rounded";
+import MsVisibilityOff from "~icons/material-symbols/visibility-off-rounded";
 import MsContentCopy from "~icons/material-symbols/content-copy-rounded";
 import MsDockToRight from "~icons/material-symbols/dock-to-right-rounded";
 import MsEdit from "~icons/material-symbols/edit-rounded";
@@ -106,6 +113,12 @@ export const IconMeasure = icon(GiMeasureTape);
 export const IconPing = icon(GiBullseye);
 export const IconWall = icon(GiStoneWall);
 export const IconLight = icon(GiLanternFlame);
+export const IconEffects = icon(GiMagicSwirl);
+export const IconRain = icon(GiRaining);
+export const IconSnow = icon(GiSnowing);
+export const IconFog = icon(GiFog);
+export const IconEmbers = icon(GiBurningEmbers);
+export const IconMagic = icon(GiSparkles);
 
 // Scene elements and canvas actions
 export const IconToken = icon(GiPawn);
@@ -146,6 +159,7 @@ export const IconNotes = icon(GiOpenBook);
 /** A GM-only page. */
 export const IconSecret = icon(GiSecretBook);
 export const IconReveal = icon(MsVisibility);
+export const IconObscure = icon(MsVisibilityOff);
 export const IconMembers = icon(GiThreeFriends);
 
 // Game actions

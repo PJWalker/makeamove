@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import * as Y from "yjs";
 import { SyncSession } from "../session";
 import { MemoryRoom } from "./memoryRoom";
@@ -116,6 +116,25 @@ describe("SyncSession", () => {
     sa.destroy();
   });
 
+  it("shows a peer's presence again when it reconnects with a fresh session", async () => {
+    const room = new MemoryRoom();
+    const a = rootDoc();
+    const b = rootDoc();
+    const sa = new SyncSession(a, room.join("a"));
+    let sb = new SyncSession(b, room.join("b"));
+    sb.awareness.setLocalStateField("user", { name: "Robin" });
+    await room.settle();
+
+    sb.destroy();
+    await room.settle();
+    sb = new SyncSession(b, room.join("b"));
+    sb.awareness.setLocalStateField("user", { name: "Robin" });
+    await room.settle();
+    expect([...sa.awareness.getStates().values()].map(userName)).toContain("Robin");
+    sa.destroy();
+    sb.destroy();
+  });
+
   it("shares a subdocument’s own awareness only between peers who have it open", async () => {
     const room = new MemoryRoom();
     const a = rootDoc();
@@ -133,7 +152,10 @@ describe("SyncSession", () => {
     const bAware = sb.awarenessFor(theirs);
     bAware.setLocalStateField("user", { name: "Bo" });
     await room.settle();
-    const names = (x: typeof bAware) => [...x.getStates().values()].map(userName).sort();
+    const names = (x: typeof bAware) =>
+      [...x.getStates().values()]
+        .map(userName)
+        .sort((left, right) => String(left).localeCompare(String(right)));
     // Bo hears Ann on joining the note, and Ann hears Bo.
     expect(names(bAware)).toEqual(["Ann", "Bo"]);
     expect(names(sa.awarenessFor(note))).toEqual(["Ann", "Bo"]);

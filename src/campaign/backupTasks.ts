@@ -38,18 +38,24 @@ async function importBackup(
   live: string[],
 ): Promise<ImportSummary> {
   const gm = isGmBackup(backup);
-  for (const blob of backup.blobs)
-    await putBlob(new Blob([blob.data as Uint8Array<ArrayBuffer>], { type: blob.type }));
+  await Promise.all(
+    backup.blobs.map((blob) =>
+      putBlob(new Blob([blob.data as Uint8Array<ArrayBuffer>], { type: blob.type })),
+    ),
+  );
   const open = new Set(live);
-  for (const doc of backup.docs) {
-    if (open.has(doc.guid)) continue;
-    await mergeStoredDoc(
-      doc,
-      doc.kind === "campaign" && gm
-        ? (root) => claimGm(root, device, backup.exportedBy)
-        : undefined,
-    );
-  }
+  await Promise.all(
+    backup.docs
+      .filter((doc) => !open.has(doc.guid))
+      .map((doc) =>
+        mergeStoredDoc(
+          doc,
+          doc.kind === "campaign" && gm
+            ? (root) => claimGm(root, device, backup.exportedBy)
+            : undefined,
+        ),
+      ),
+  );
   const { roomKey, createdAt } = metaOf(backup.docs, backup.campaignId);
   return {
     campaignId: backup.campaignId,
@@ -81,10 +87,12 @@ async function mergeFolder(
     // A folder without images yet.
   }
   if (images)
-    for (const name of await fileNamesIn(images)) {
-      const blob = await readFileIn(images, name);
-      if (blob) await putBlob(blob);
-    }
+    await Promise.all(
+      (await fileNamesIn(images)).map(async (name) => {
+        const blob = await readFileIn(images, name);
+        if (blob) await putBlob(blob);
+      }),
+    );
   return importBackup(backup, device, live);
 }
 
@@ -116,14 +124,18 @@ async function saveFolder(task: Extract<BackupTask, { type: "saveFolder" }>) {
 
   const images = await dir.getDirectoryHandle(IMAGES, { create: true });
   if (fresh) for (const name of await fileNamesIn(images)) state.onDisk.add(name);
-  for (const hash of new Set(docs.flatMap((d) => [...d.hashes]))) {
-    if (state.onDisk.has(hash)) continue;
-    // Not here yet (a peer still has to send it); it's tried again next save.
-    const blob = await getBlob(hash);
-    if (!blob) continue;
-    await writeFileIn(images, hash, blob);
-    state.onDisk.add(hash);
-  }
+  const missing = [...new Set(docs.flatMap((d) => [...d.hashes]))].filter(
+    (hash) => !state.onDisk.has(hash),
+  );
+  await Promise.all(
+    missing.map(async (hash) => {
+      // Not here yet (a peer still has to send it); it's tried again next save.
+      const blob = await getBlob(hash);
+      if (!blob) return;
+      await writeFileIn(images, hash, blob);
+      state.onDisk.add(hash);
+    }),
+  );
 }
 
 export async function runBackupTask(task: BackupTask): Promise<BackupResult> {

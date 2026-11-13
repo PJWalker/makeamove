@@ -1,15 +1,9 @@
-import { emptyRichText, plainText, type RichText } from "../core/richText";
+import { emptyRichText, plainText, type RichText } from "../data/richText";
 import { RichTextView } from "../workspace/RichTextView";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { arrow, autoUpdate, computePosition, flip, offset, shift } from "@floating-ui/dom";
 import { watch } from "../lib/store";
-import {
-  getCharacter,
-  makeMove,
-  moveRequest,
-  startMove,
-  systemOf,
-  targetRequest,
-} from "../features/characters/api";
+import { getCharacter, systemOf } from "../features/characters/api";
 import {
   canPayMove,
   checkOf,
@@ -20,23 +14,19 @@ import {
 } from "../features/characters/moves";
 import { derive } from "../features/characters/store";
 import { inRange } from "../scene/measure";
-import { activeTool } from "../scene/tools";
 import type { Campaign } from "../campaign/campaign";
 import { collapsedInto, reducedMotion } from "../ui/bubble";
 import { Button } from "../ui/Button";
 import { IconClose } from "../ui/icons";
 import { lastPressed } from "../ui/pressed";
 import { Segmented } from "../ui/Segmented";
-import {
-  areaRequest,
-  chosenTargets,
-  placedArea,
-  sceneDistance,
-  targetPick,
-} from "../workspace/canvasState";
-import { useValue } from "../ui/useValue";
+import { useQuery } from "../ui/useQuery";
 import type { ActionDef, AreaSpec } from "../systems/types";
 import type { MoveTarget } from "../features/chat/types";
+import { useCampaign } from "../workspace/campaignContext";
+import type { CanvasState } from "../workspace/canvasState";
+import type { CampaignContext } from "../workspace/campaignContext";
+import { makeMove, startMove } from "../workspace/commands/characters";
 
 /*
  * What a move asks before it rolls, in a speech bubble beside the button that
@@ -60,19 +50,14 @@ const BOTTOM_BAND = 120;
 
 type Request = { kind: "target" | "ask"; moveId: string; characterId: string };
 
-const cancel = () => {
-  targetRequest.value = null;
-  moveRequest.value = null;
-  areaRequest.value = null;
-};
-
-const answered = () => {
-  moveRequest.value = null;
+const cancel = (ctx: CampaignContext) => {
+  ctx.campaign.moves.clear();
+  ctx.canvas.areaRequest.set(null);
 };
 
 /** Start placing an action's area on the scene, or stop. */
-const toggleAreaRequest = (area: AreaSpec, actor: string) => {
-  areaRequest.value = areaRequest.value ? null : { area, actor, n: Date.now() };
+const toggleAreaRequest = (canvas: CanvasState, area: AreaSpec, actor: string) => {
+  canvas.areaRequest.set(canvas.areaRequest.value ? null : { area, actor, n: Date.now() });
 };
 
 /** The anchor's box, if it's still on screen. */
@@ -89,8 +74,9 @@ function anchorRect(el: Element | null): DOMRect | null {
 }
 
 export function MovePrompt({ campaign }: { campaign: Campaign }) {
-  const target = useValue(targetRequest);
-  const requestedMove = useValue(moveRequest);
+  const ctx = useCampaign();
+  const target = useQuery(ctx.campaign.moves.targets);
+  const requestedMove = useQuery(ctx.campaign.moves.ask);
   const live: Request | null = useMemo(
     () =>
       target
@@ -105,7 +91,7 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
   const [last, setLast] = useState<Request | null>(null);
   if (live && live !== last) setLast(live);
   const shown = live ?? last;
-  const ref = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLDialogElement>(null);
   const anchor = useRef<Element | null>(null);
   const leaving = useRef<Animation | null>(null);
 
@@ -153,56 +139,18 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
     );
   }, [hasLive, shown]);
 
-  // Beside the button: to whichever side has room, or above it in the bottom band; without it, above the hotbar.
-  const placed = useRef("");
-  const place = () => {
+  const open = !!shown;
+  // Follow the button as its sidebar moves; use the hotbar fallback if it leaves the viewport.
+  useLayoutEffect(() => {
+    if (!open) return;
     const el = ref.current;
     if (!el) return;
-    const w = el.offsetWidth;
-    const h = el.offsetHeight;
-    const a = anchorRect(anchor.current);
-    const clampX = (x: number) =>
-      Math.round(Math.min(Math.max(x, MARGIN), innerWidth - w - MARGIN));
-    const clampY = (y: number) =>
-      Math.round(Math.min(Math.max(y, MARGIN), innerHeight - h - MARGIN));
-    let side: string, left: number, top: number, tail: number;
-    if (!a) {
-      side = "none";
-      left = clampX((innerWidth - w) / 2);
-      top = clampY(innerHeight - h - 60);
-      tail = 0;
-    } else if (a.top > innerHeight - BOTTOM_BAND) {
-      side = "above";
-      left = clampX(a.left + a.width / 2 - w / 2);
-      top = clampY(a.top - GAP - h);
-      tail = Math.round(a.left + a.width / 2 - left);
-    } else {
-      const right =
-        innerWidth - a.right - GAP - MARGIN >= w || a.left + a.width / 2 < innerWidth / 2;
-      side = right ? "right" : "left";
-      left = clampX(right ? a.right + GAP : a.left - GAP - w);
-      top = clampY(a.top + a.height / 2 - h / 2);
-      tail = Math.round(a.top + a.height / 2 - top);
-    }
-    const key = `${side},${left},${top},${tail}`;
-    if (key === placed.current) return;
-    placed.current = key;
-    el.dataset.side = side;
-    el.style.left = `${left}px`;
-    el.style.top = `${top}px`;
-    el.style.setProperty("--tail", `${tail}px`);
-  };
-
-  const open = !!shown;
-  // Grow out of the button, then follow it while open: it slides with its sidebar and with autohide.
-  useLayoutEffect(() => {
-    if (!open) {
-      placed.current = "";
-      return;
-    }
-    place();
-    const el = ref.current;
-    if (el && !reducedMotion.matches) {
+    let active = true;
+    let revision = 0;
+    let entered = false;
+    const enter = () => {
+      if (entered || reducedMotion.matches) return;
+      entered = true;
       const box = el.getBoundingClientRect();
       el.animate(
         [
@@ -215,29 +163,84 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
           easing: EASE,
         },
       );
-    }
-    let frame = 0;
-    const follow = () => {
-      place();
-      frame = requestAnimationFrame(follow);
     };
-    frame = requestAnimationFrame(follow);
-    return () => cancelAnimationFrame(frame);
-  }, [open]);
+    const place = async () => {
+      const currentRevision = ++revision;
+      const source = anchor.current;
+      const a = anchorRect(source);
+      if (!a || !source) {
+        const w = el.offsetWidth;
+        const h = el.offsetHeight;
+        el.dataset.side = "none";
+        el.style.left = `${Math.round(Math.min(Math.max((innerWidth - w) / 2, MARGIN), innerWidth - w - MARGIN))}px`;
+        el.style.top = `${Math.round(Math.min(Math.max(innerHeight - h - 60, MARGIN), innerHeight - h - MARGIN))}px`;
+        el.style.setProperty("--tail", "0px");
+        enter();
+        return;
+      }
+
+      const side =
+        a.top > innerHeight - BOTTOM_BAND
+          ? "top"
+          : innerWidth - a.right - GAP - MARGIN >= el.offsetWidth ||
+              a.left + a.width / 2 < innerWidth / 2
+            ? "right"
+            : "left";
+      el.dataset.side = side === "top" ? "above" : side;
+      const tail = el.querySelector<HTMLElement>(".roll-prompt-tail");
+      const result = await computePosition(source, el, {
+        strategy: "fixed",
+        placement: side,
+        middleware: [
+          offset(GAP),
+          flip({ padding: MARGIN }),
+          shift({ padding: MARGIN }),
+          ...(tail ? [arrow({ element: tail, padding: 16 })] : []),
+        ],
+      });
+      if (!active || currentRevision !== revision) return;
+      const placement = result.placement.split("-")[0];
+      el.dataset.side =
+        placement === "top" ? "above" : placement === "bottom" ? "below" : placement;
+      el.style.left = `${Math.round(result.x)}px`;
+      el.style.top = `${Math.round(result.y)}px`;
+      const arrowOffset = result.middlewareData.arrow;
+      const along = placement === "left" || placement === "right" ? arrowOffset?.y : arrowOffset?.x;
+      if (along !== undefined) el.style.setProperty("--tail", `${along + 12}px`);
+      enter();
+    };
+
+    const source = anchor.current;
+    if (source) {
+      const cleanup = autoUpdate(source, el, () => void place(), { animationFrame: true });
+      return () => {
+        active = false;
+        cleanup();
+      };
+    }
+    void place();
+    const onResize = () => void place();
+    window.addEventListener("resize", onResize);
+    return () => {
+      active = false;
+      window.removeEventListener("resize", onResize);
+    };
+  }, [open, live]);
 
   // Hand a targeting request to the scene, so clicks on tokens target it.
   useEffect(
     () =>
-      watch([targetRequest], () => {
-        const r = targetRequest.value;
+      watch([ctx.campaign.moves.targets], () => {
+        const r = ctx.campaign.moves.targets.value;
         const s = r && systemOf(campaign).actions.find((m) => m.id === r.moveId)?.target;
-        targetPick.value =
-          r && s ? { ...(s.max !== undefined ? { max: s.max } : {}), actor: r.characterId } : null;
-        if (r) activeTool.value = "select";
+        ctx.canvas.targetPick.set(
+          r && s ? { ...(s.max !== undefined ? { max: s.max } : {}), actor: r.characterId } : null,
+        );
+        if (r) ctx.tools.activeTool.set("select");
       }),
-    [campaign],
+    [ctx, campaign],
   );
-  useEffect(() => () => cancel(), []);
+  useEffect(() => () => cancel(ctx), [ctx]);
 
   // Escape backs out, before the canvas uses it to clear the selection.
   useEffect(() => {
@@ -245,11 +248,11 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape" || e.defaultPrevented) return;
       e.preventDefault();
-      cancel();
+      cancel(ctx);
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [hasLive]);
+  }, [ctx, hasLive]);
 
   const req = shown;
   const move = req ? systemOf(campaign).actions.find((m) => m.id === req.moveId) : undefined;
@@ -257,10 +260,10 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
   if (!req || !move || !c) return null;
 
   return (
-    <div
+    <dialog
+      open
       ref={ref}
       className="roll-prompt panel"
-      role="dialog"
       aria-label={`${move.name} (${c.name})`}
       inert={!hasLive}
     >
@@ -268,7 +271,7 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
         <span className="eyebrow">
           {move.name} · {c.name}
         </span>
-        <Button variant="icon" label="Cancel" onClick={cancel}>
+        <Button variant="icon" label="Cancel" onClick={() => cancel(ctx)}>
           <IconClose />
         </Button>
       </div>
@@ -289,7 +292,7 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
         />
       )}
       <span className="roll-prompt-tail" aria-hidden="true" />
-    </div>
+    </dialog>
   );
 }
 
@@ -303,11 +306,12 @@ function TargetStep({
   characterId: string;
   moveId: string;
 }) {
+  const ctx = useCampaign();
   const move = systemOf(campaign).actions.find((m) => m.id === moveId)!;
   const spec = move.target!;
-  const targets = useValue(chosenTargets);
+  const targets = useQuery(ctx.canvas.chosenTargets);
   const ready = targets.length >= spec.min;
-  const fmt = useValue(sceneDistance);
+  const fmt = useQuery(ctx.canvas.sceneDistance);
   const wanted =
     spec.max === 1
       ? "one target"
@@ -326,13 +330,13 @@ function TargetStep({
       ...(t.distance !== null ? { distance: fmt(t.distance) } : {}),
       ...(reach(t.distance) === "long" ? { long: true } : {}),
     }));
-    startMove(campaign, characterId, move, picked);
+    ctx.execute(startMove, { characterId, move: move.id, targets: picked });
   };
   const area = spec.area;
-  const request = useValue(areaRequest);
-  const placed = useValue(placedArea);
+  const request = useQuery(ctx.canvas.areaRequest);
+  const placed = useQuery(ctx.canvas.placedArea);
   const placing = !!request;
-  const placeArea = () => toggleAreaRequest(area!, characterId);
+  const placeArea = () => toggleAreaRequest(ctx.canvas, area!, characterId);
   return (
     <div className="move-form">
       <p className="roll-prompt-text">{spec.prompt}</p>
@@ -342,7 +346,7 @@ function TargetStep({
             ? "Click the map to place it"
             : placed
               ? "Place the area again"
-              : `Place the ${areaName(area)}`}
+              : `Place the ${areaName(fmt, area)}`}
         </Button>
       )}
       {targets.length ? (
@@ -376,7 +380,7 @@ function TargetStep({
 }
 
 /** An area as the button names it: "20 ft sphere". */
-const areaName = (a: AreaSpec) => `${sceneDistance.value(a.size)} ${a.shape}`;
+const areaName = (fmt: (d: number) => string, a: AreaSpec) => `${fmt(a.size)} ${a.shape}`;
 
 /** A formula without its labels, as the Roll button reads: 1d20+2[Prof] → 1d20+2. */
 const bare = (formula: string) => formula.replace(/\[[^\]]*\]/g, "");
@@ -412,10 +416,11 @@ function AskStep({
   characterId: string;
   moveId: string;
 }) {
+  const ctx = useCampaign();
   const system = systemOf(campaign);
   const move = system.actions.find((m) => m.id === moveId)!;
   const c = getCharacter(campaign, characterId)!;
-  const targets = moveRequest.value?.targets;
+  const targets = campaign.moves.ask.value?.targets;
   const [stat, setStat] = useState("");
   const ask = needsChoice(move);
   const check = checkOf(move);
@@ -440,8 +445,10 @@ function AskStep({
   const [rollBonuses, setRollBonuses] = useState<string[]>([]);
   const [askedNumber, setAskedNumber] = useState(ask?.kind === "number" ? (ask.initial ?? 1) : 1);
   const [yeses, setYeses] = useState<string[]>([]);
-  const [extra, setExtra] = useState(moveRequest.value?.choice?.extra ?? 0);
+  const [extra, setExtra] = useState(campaign.moves.ask.value?.choice?.extra ?? 0);
   const [variant, setVariant] = useState("");
+  const yesesSet = new Set(yeses);
+  const rollBonusesSet = new Set(rollBonuses);
   const variants = move.variants?.(c, derive(c, system));
   const rollModes = check ? rollModesFor(system, move) : [];
   const formRef = useRef<HTMLFormElement>(null);
@@ -479,8 +486,8 @@ function AskStep({
   };
   const go = (mode: string) => {
     if (!rollFor(mode).ready) return;
-    void makeMove(campaign, c.id, move, choiceWith(mode), targets);
-    answered();
+    void ctx.execute(makeMove, { characterId: c.id, move, choice: choiceWith(mode), targets });
+    campaign.moves.ask.set(null);
   };
   // The first half of the modes before the plain roll, the rest after: Disadvantage, Roll, Advantage.
   const half = Math.floor(rollModes.length / 2);
@@ -555,7 +562,7 @@ function AskStep({
             <label key={question} className="check-option">
               <input
                 type="checkbox"
-                checked={yeses.includes(question)}
+                checked={yesesSet.has(question)}
                 onChange={(e) =>
                   setYeses(
                     e.currentTarget.checked
@@ -608,7 +615,7 @@ function AskStep({
       {rollBonusSpecs
         .filter((bonus) => !bonus.nameField || String(c.data[bonus.nameField] ?? "").trim())
         .map((bonus) => {
-          const selected = rollBonuses.includes(bonus.id);
+          const selected = rollBonusesSet.has(bonus.id);
           return (
             <label key={bonus.id} className="check-option">
               <input

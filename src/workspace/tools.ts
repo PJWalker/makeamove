@@ -2,6 +2,7 @@ import type { ComponentType } from "react";
 import type { ToolId } from "../scene/tools";
 import {
   IconDraw,
+  IconEffects,
   IconEraser,
   IconLight,
   IconMeasure,
@@ -32,4 +33,5 @@ export const TOOLS: {
   { id: "ping", label: "Ping", key: "G", Icon: IconPing },
   { id: "wall", label: "Walls", key: "W", Icon: IconWall, gmOnly: true },
   { id: "light", label: "Lights", key: "L", Icon: IconLight, gmOnly: true },
+  { id: "effect", label: "Effects", key: "F", Icon: IconEffects, gmOnly: true },
 ];

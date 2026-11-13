@@ -1,4 +1,3 @@
-import { store } from "../lib/store";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { canDelete, canEditMessage, visibilityOf } from "../features/chat/types";
 import { logRows, type LogRow } from "../features/chat/sessions";
@@ -7,19 +6,13 @@ import { toggleSetValue } from "../lib/set";
 import { canEdit, getCharacter } from "../features/characters/api";
 import type { Campaign } from "../campaign/campaign";
 import { device } from "../platform/device";
-import { useY } from "../ui/useY";
+import { useQuery } from "../ui/useQuery";
 import { IconDice, IconExpand } from "../ui/icons";
 import { usePanelVisible } from "../workspace/panelLayout";
+import { useCampaign } from "../workspace/campaignContext";
 import { Message } from "./ChatMessage";
-import { useValue } from "../ui/useValue";
 
 /* The chat log: every message and roll, rendered a window at a time. */
-
-/** Earlier sessions the reader has opened, as "campaignId:key", for this visit. */
-const openSessions = store<Set<string>>(new Set());
-const toggleSession = (key: string) => {
-  openSessions.value = toggleSetValue(openSessions.value, key);
-};
 
 /*
  * A log can run to thousands of messages, so only a window of rows is
@@ -68,40 +61,43 @@ export function ChatLog({
   notes: { id: number; text: string; error?: boolean }[];
   onMenu: (x: number, y: number, id: string) => void;
 }) {
+  const ctx = useCampaign();
   const ref = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLDivElement>(null);
   /** Following the newest message at the bottom. */
   const stick = useRef(true);
-  const messages = useValue(campaign.chat.messages);
-  const isGm = useY(campaign.members, () => campaign.isGm());
-  const here = useY(campaign.members, () => campaign.activeSceneId());
-  const sceneIds = useY(campaign.scenes, () => [...campaign.scenes.keys()].join());
+  const messages = useQuery(campaign.chat.messages);
+  const isGm = useQuery(campaign.members, () => campaign.isGm());
+  const here = useQuery(campaign.members, () => campaign.activeSceneId());
+  const sceneIds = useQuery(campaign.scenes, () => [...campaign.scenes.keys()].join());
   // One subscription for every move card's follow-up buttons, rather than one per card.
-  const editable = useY(campaign.characters, () => editableIds(campaign));
-  const me = useValue(device).id;
+  const editable = useQuery(campaign.characters, () => editableIds(campaign));
+  const me = useQuery(device).id;
   // Messages already here when the panel opened don't animate in.
   const [initial] = useState(() => new Set(messages.map((m) => m.id)));
 
   // In view means read.
-  const visible = usePanelVisible("chat");
+  const visible = usePanelVisible(ctx.panels, "chat");
   useEffect(() => {
-    if (visible && document.hasFocus()) markRead();
-  }, [messages, visible]);
+    if (visible && document.hasFocus()) markRead(campaign);
+  }, [campaign, messages, visible]);
   useEffect(() => {
-    window.addEventListener("focus", markRead);
-    return () => window.removeEventListener("focus", markRead);
-  }, []);
+    const read = () => markRead(campaign);
+    window.addEventListener("focus", read);
+    return () => window.removeEventListener("focus", read);
+  }, [campaign]);
 
-  const opened = useValue(openSessions);
+  const opened = useQuery(ctx.table.openSessions);
   const rows = useMemo(
     () =>
       logRows(
         messages.filter((m) => visibilityOf(m, me, isGm) !== "hidden"),
-        (key) => opened.has(`${campaign.id}:${key}`),
+        (key) => opened.has(key),
       ),
-    [messages, me, isGm, opened, campaign],
+    [messages, me, isGm, opened],
   );
-  const toggle = (key: string) => toggleSession(`${campaign.id}:${key}`);
+  const toggle = (key: string) =>
+    ctx.table.openSessions.set(toggleSetValue(ctx.table.openSessions.value, key));
 
   // The window, as indices into rows.
   const [span, setSpanKeys] = useState<Span>({ start: null, end: null });
@@ -123,7 +119,7 @@ export function ChatLog({
   for (const h of measured.values()) total += h;
   const guess = measured.size ? total / measured.size : ROW_GUESS;
   const heightOf = (r: LogRow) => measured.get(r.key) ?? guess;
-  const earlierCount = useValue(campaign.chat.earlierCount);
+  const earlierCount = useQuery(campaign.chat.earlierCount);
   const unloaded = earlierCount * guess;
   let above = unloaded;
   for (let i = 0; i < startIdx; i++) above += heightOf(rows[i]!);
@@ -277,6 +273,9 @@ export function ChatLog({
     return () => ro.disconnect();
   }, []);
 
+  const editableCharacters = new Set(editable.split(" "));
+  const sceneIdSet = new Set(sceneIds);
+
   return (
     <div
       ref={ref}
@@ -323,13 +322,13 @@ export function ChatLog({
               fresh={!initial.has(row.m.id)}
               masked={visibilityOf(row.m, me, isGm) === "masked"}
               mine={row.m.author === me}
-              canAct={row.m.kind === "move" && editable.split(" ").includes(row.m.characterId)}
+              canAct={row.m.kind === "move" && editableCharacters.has(row.m.characterId)}
               canGo={
                 row.m.kind === "system" &&
                 row.m.event === "scene-change" &&
                 !!row.m.sceneId &&
                 row.m.sceneId !== here &&
-                sceneIds.includes(row.m.sceneId)
+                sceneIdSet.has(row.m.sceneId)
               }
               onMenu={
                 canDelete(row.m, me, isGm) ||

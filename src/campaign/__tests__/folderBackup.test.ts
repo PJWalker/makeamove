@@ -1,5 +1,5 @@
 import "fake-indexeddb/auto";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 
 const mocks = vi.hoisted(() => ({
   blobs: new Map<string, Blob>(),
@@ -36,14 +36,7 @@ import { device } from "../../platform/device";
 import { SceneDoc } from "../../scene/sceneDoc";
 import { decodeBackup } from "../backupFormat";
 import { Campaign, createCampaign, deleteLocalCampaign } from "../campaign";
-import {
-  folderBackup,
-  folderSaveDelay,
-  importFromFolder,
-  linkBackupFolder,
-  runFolderBackup,
-  unlinkBackupFolder,
-} from "../folderBackup";
+import { FolderBackup, folderSaveDelay, importFromFolder } from "../folderBackup";
 import { summaryOf } from "../registry";
 
 /** A folder in memory, shaped like the File System API's. */
@@ -82,11 +75,19 @@ class FakeFolder {
   }
 }
 
+/** Each campaign's folder backup, made on first use. */
+const backups = new Map<Campaign, FolderBackup>();
+const backupOf = (c: Campaign) => {
+  let b = backups.get(c);
+  if (!b) backups.set(c, (b = new FolderBackup(c)));
+  return b;
+};
+
 /** The next time the folder is brought up to date. */
-const saved = () =>
+const saved = (backup: FolderBackup) =>
   new Promise<void>((resolve) => {
-    const stop = folderBackup.subscribe(() => {
-      if (folderBackup.value.state === "saved") {
+    const stop = backup.status.subscribe(() => {
+      if (backup.status.value.state === "saved") {
         stop();
         resolve();
       }
@@ -120,15 +121,15 @@ describe("backing up to a folder", () => {
     const { c, scene, hash } = await setUp();
     const folder = new FakeFolder("Dropbox");
     mocks.picked = folder;
-    const first = saved();
-    await linkBackupFolder(c);
+    const first = saved(backupOf(c));
+    await backupOf(c).link();
     await first;
-    expect(folderBackup.value).toMatchObject({ state: "saved", folder: "Dropbox" });
+    expect(backupOf(c).status.value).toMatchObject({ state: "saved", folder: "Dropbox" });
     expect((await backupIn(folder)).name).toBe("Barrows");
     expect(folder.folders.get("images")!.files.has(hash)).toBe(true);
 
     // An edit to the open scene reaches the folder too.
-    const next = saved();
+    const next = saved(backupOf(c));
     scene.add({
       type: "text",
       layer: "over",
@@ -147,9 +148,10 @@ describe("backing up to a folder", () => {
     const sceneDoc = (await backupIn(folder)).docs.find((d) => d.kind === "scene")!;
     expect(new TextDecoder().decode(sceneDoc.update)).toContain("Here");
 
-    await unlinkBackupFolder(c);
-    expect(folderBackup.value).toEqual({ state: "off" });
+    await backupOf(c).unlink();
+    expect(backupOf(c).status.value).toEqual({ state: "off" });
     scene.destroy();
+    backups.get(c)?.dispose();
     c.destroy();
   });
 
@@ -157,18 +159,19 @@ describe("backing up to a folder", () => {
     const { c, scene, hash } = await setUp();
     const folder = new FakeFolder("Dropbox");
     mocks.picked = folder;
-    const first = saved();
-    await linkBackupFolder(c);
+    const first = saved(backupOf(c));
+    await backupOf(c).link();
     await first;
     scene.destroy();
+    backups.get(c)?.dispose();
     c.destroy();
 
     // Opening the campaign again picks the folder back up.
     const again = await Campaign.open(c.id);
-    const resumed = saved();
-    const stop = runFolderBackup(again);
+    const resuming = new FolderBackup(again);
+    const resumed = saved(resuming);
     await resumed;
-    stop();
+    resuming.dispose();
     again.destroy();
 
     await deleteLocalCampaign(c.id);
@@ -186,15 +189,17 @@ describe("backing up to a folder", () => {
     const { c, scene } = await setUp();
     const folder = new FakeFolder("Shared");
     mocks.picked = folder;
-    const first = saved();
-    await linkBackupFolder(c);
+    const first = saved(backupOf(c));
+    await backupOf(c).link();
     await first;
-    await unlinkBackupFolder(c);
+    await backupOf(c).unlink();
     scene.destroy();
 
     const other = await Campaign.open(await createCampaign("Other", "Gwen"));
-    await expect(linkBackupFolder(other)).rejects.toThrow("another campaign, Barrows");
+    await expect(backupOf(other).link()).rejects.toThrow("another campaign, Barrows");
+    backups.get(other)?.dispose();
     other.destroy();
+    backups.get(c)?.dispose();
     c.destroy();
   });
 });

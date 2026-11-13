@@ -1,13 +1,9 @@
 import { MoveBody } from "../workspace/MoveBody";
 import {
-  addItem,
   baseSystemOf,
   canEdit,
   getCharacter,
-  newNpcFromMonster,
   actingCharacterId,
-  setData,
-  startMove,
   systemOf,
 } from "../features/characters/api";
 import {
@@ -23,22 +19,23 @@ import {
 } from "../features/library";
 import { toggleSetValue } from "../lib/set";
 import type { Campaign } from "../campaign/campaign";
-import { useY } from "../ui/useY";
+import { useQuery } from "../ui/useQuery";
 import { Button } from "../ui/Button";
 import { Segmented } from "../ui/Segmented";
 import { IconGive, IconImage } from "../ui/icons";
 import { List, ListExpand, ListGroup, Tag } from "../ui/List";
 import { EntryRow, EntryWindow, rollTag, useEntryWindows } from "../workspace/EntryWindow";
-import { dragEntity, entity } from "../workspace/entityDrag";
-import { libraryView as view, openedLibraryEntries } from "../workspace/libraryView";
+import { dragEntity } from "../workspace/entityDrag";
+import { entity } from "../workspace/dragEntities";
 import { linkProxy } from "../workspace/LinkChip";
 import { makeVerb } from "../workspace/sheetParts";
 import { actionMenuItems } from "../workspace/actionMenu";
 import { getEntityGraphic } from "../workspace/entityGraphics";
 import { CampaignEntityGraphic } from "../workspace/EntityGraphic";
-import { editEntityGraphic } from "../workspace/GraphicDialogs";
 import type { ItemDef } from "../systems/types";
-import { useValue } from "../ui/useValue";
+import { useCampaign } from "../workspace/campaignContext";
+import { acquireItem, npcFromMonster, startMove } from "../workspace/commands/characters";
+import { can } from "../workspace/commands/views";
 
 /**
  * The Libraries: everything the game system and plugins contribute (items,
@@ -46,36 +43,32 @@ import { useValue } from "../ui/useValue";
  * to the selected character, and moves made by them.
  */
 export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
+  const ctx = useCampaign();
   const system = systemOf(campaign);
   // The Libraries are the system's own; homebrew is in the Items panel.
   const sources = useLibrariesFor(baseSystemOf(campaign));
-  const meId = useY(campaign.members, () => actingCharacterId(campaign));
-  const me = useY(campaign.characters, () => getCharacter(campaign, meId));
+  const meId = useQuery(campaign.members, () => actingCharacterId(campaign));
+  const me = useQuery(campaign.characters, () => getCharacter(campaign, meId));
   const canAct = !!me && canEdit(campaign, me);
   const windows = useEntryWindows();
-  const { kind, query } = useValue(view);
-  const openedIds = useValue(openedLibraryEntries);
+  const { kind, query } = useQuery(ctx.library.view);
+  const openedIds = useQuery(ctx.library.openedEntries);
   const searching = query.trim() !== "";
 
   const kinds = (Object.keys(KIND_LABEL) as EntryKind[]).filter((k) =>
     sources.some((s) => s.collections.some((c) => c.kind === k)),
   );
   const acquisition = (item: ItemDef) => system.acquireItem?.(item, me);
-  const canPurchase = (item: ItemDef) => {
-    const how = acquisition(item);
-    return canAct && (!how?.gmOnly || campaign.isGm()) && !how?.blocked;
-  };
-  const acquireItem = (item: ItemDef) => {
-    if (!me || !canPurchase(item)) return;
-    const how = acquisition(item);
-    campaign.doc.transact(() => {
-      for (const [field, value] of Object.entries(how?.data ?? {}))
-        setData(campaign, me.id, field, value);
-      addItem(campaign, me.id, item);
-    });
-  };
+  /** True, or why the acting character can't get it. */
+  const purchase = (item: ItemDef) =>
+    me
+      ? ctx.commands.check(acquireItem, { characterId: me.id, item: item.id })
+      : "Choose a character first";
+  const canPurchase = (item: ItemDef) => purchase(item) === true;
+  const acquire = (item: ItemDef) =>
+    me && ctx.execute(acquireItem, { characterId: me.id, item: item.id });
   const toggle = (id: string) => {
-    openedLibraryEntries.value = toggleSetValue(openedLibraryEntries.value, id);
+    ctx.library.openedEntries.set(toggleSetValue(ctx.library.openedEntries.value, id));
   };
 
   /** The buttons an entry offers, in its row or its window. */
@@ -85,17 +78,8 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
         <Button
           variant="primary"
           disabled={!canPurchase(e.item)}
-          title={
-            canPurchase(e.item)
-              ? undefined
-              : !me
-                ? "Choose a character first"
-                : !canAct
-                  ? "Not your character"
-                  : (acquisition(e.item)?.blocked ??
-                    (acquisition(e.item)?.gmOnly ? "Only the GM can grant this" : undefined))
-          }
-          onClick={() => acquireItem(e.item)}
+          title={canPurchase(e.item) ? undefined : String(purchase(e.item))}
+          onClick={() => acquire(e.item)}
         >
           {acquisition(e.item)?.label ?? (me ? `Give to ${me.name}` : "Choose a Character")}
         </Button>
@@ -107,7 +91,7 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
         <Button
           variant="primary"
           disabled={!canAct}
-          onClick={() => me && startMove(campaign, me.id, e.move)}
+          onClick={() => me && ctx.execute(startMove, { characterId: me.id, move: e.move.id })}
         >
           <Icon size={22} /> {label}
           {me ? ` as ${me.name}` : ""}
@@ -118,8 +102,8 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
       return (
         <Button
           variant="primary"
-          disabled={!campaign.isGm()}
-          onClick={() => newNpcFromMonster(campaign, e.monster.id)}
+          disabled={!can(ctx, npcFromMonster, { monster: e.monster.id })}
+          onClick={() => ctx.execute(npcFromMonster, { monster: e.monster.id })}
         >
           Create NPC
         </Button>
@@ -155,9 +139,9 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
   const menuItemsFor = (e: LibraryEntry) => {
     const actions =
       e.kind === "item"
-        ? actionMenuItems(campaign, [{ id: `library:${e.id}`, title: e.name }])
+        ? actionMenuItems(ctx, [{ id: `library:${e.id}`, title: e.name }])
         : e.kind === "move"
-          ? actionMenuItems(campaign, [{ id: `move:${e.id}`, title: e.name }])
+          ? actionMenuItems(ctx, [{ id: `move:${e.id}`, title: e.name }])
           : [];
     const items =
       e.kind === "item"
@@ -168,7 +152,7 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
               Icon: IconGive,
               disabled: !canPurchase(e.item),
               onSelect: () => {
-                acquireItem(e.item);
+                acquire(e.item);
               },
             },
             ...(actions.length ? (["divider"] as const) : []),
@@ -180,7 +164,7 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
                 label: "Make",
                 disabled: !canAct,
                 onSelect: () => {
-                  if (me && canAct) startMove(campaign, me.id, e.move);
+                  if (me && canAct) ctx.execute(startMove, { characterId: me.id, move: e.move.id });
                 },
               },
               ...(actions.length ? (["divider"] as const) : []),
@@ -190,10 +174,8 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
             ? [
                 {
                   label: "Create NPC",
-                  disabled: !campaign.isGm(),
-                  onSelect: () => {
-                    if (campaign.isGm()) newNpcFromMonster(campaign, e.monster.id);
-                  },
+                  disabled: !can(ctx, npcFromMonster, { monster: e.monster.id }),
+                  onSelect: () => ctx.execute(npcFromMonster, { monster: e.monster.id }),
                 },
               ]
             : actions;
@@ -203,7 +185,7 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
       {
         label: "Change Graphic…",
         Icon: IconImage,
-        onSelect: () => editEntityGraphic(campaign, e.kind, e.id, e.name, e.icon),
+        onSelect: () => ctx.table.editGraphic(e.kind, e.id, e.name, e.icon),
       },
     ];
   };
@@ -266,9 +248,10 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
             ? undefined
             : (ev) =>
                 dragEntity(
+                  ctx.canvas,
                   ev,
                   e.kind === "item" || e.kind === "move"
-                    ? entity(campaign, e.kind, e.id, e.name)
+                    ? entity(ctx, e.kind, e.id, e.name)
                     : {
                         label: e.name,
                         libraryEntry: { kind: e.kind, id: e.id },
@@ -317,7 +300,9 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
           placeholder="Search the Libraries…"
           aria-label="Search the Libraries"
           value={query}
-          onInput={(e) => (view.value = { ...view.value, query: e.currentTarget.value })}
+          onInput={(e) =>
+            ctx.library.view.set({ ...ctx.library.view.value, query: e.currentTarget.value })
+          }
         />
         {kinds.length > 1 && (
           <Segmented
@@ -327,7 +312,7 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
               { id: "all", label: "All" },
               ...kinds.map((k) => ({ id: k, label: KIND_LABEL[k] })),
             ]}
-            onChange={(k) => (view.value = { ...view.value, kind: k })}
+            onChange={(k) => ctx.library.view.set({ ...ctx.library.view.value, kind: k })}
           />
         )}
       </div>
@@ -384,7 +369,7 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
             graphicDefaultIcon={e.icon}
             proxy={
               e.kind === "item" || e.kind === "move"
-                ? linkProxy(campaign, e.kind, e.id, e.name, e.icon)
+                ? linkProxy(ctx, e.kind, e.id, e.name, e.icon)
                 : undefined
             }
             menuItems={menuItemsFor(e)}

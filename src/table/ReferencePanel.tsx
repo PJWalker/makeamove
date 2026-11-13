@@ -1,12 +1,11 @@
-import { plainText } from "../core/richText";
+import { plainText } from "../data/richText";
 import type { ReferenceSectionDef } from "../systems/types";
 import { useEffect, useRef, useState } from "react";
 import type { Campaign } from "../campaign/campaign";
 import { actingCharacterId, systemOf } from "../features/characters/api";
 import { List, ListRow } from "../ui/List";
 import { TwoPane, usePaneLevel } from "../ui/TwoPane";
-import { useY } from "../ui/useY";
-import { useValue } from "../ui/useValue";
+import { useQuery } from "../ui/useQuery";
 import { RichTextView, SearchHighlight } from "../workspace/RichTextView";
 import { referenceLayout } from "./panelLayouts";
 
@@ -17,9 +16,9 @@ import { referenceLayout } from "./panelLayouts";
 export function ReferencePanel({ campaign }: { campaign: Campaign }) {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const gm = useY(campaign.members, () => campaign.isGm());
+  const gm = useQuery(campaign.members, () => campaign.isGm());
   const reference = systemOf(campaign).gmReference ?? [];
-  const stacked = useValue(referenceLayout.mode) === "stack";
+  const stacked = useQuery(referenceLayout.mode) === "stack";
   const { level, go } = usePaneLevel(referenceLayout, "list");
   if (!gm || !reference.length) return <p className="empty">No reference for this game.</p>;
   const needle = query.trim().toLowerCase();
@@ -109,7 +108,7 @@ function ReferenceEntry({
   query: string;
 }) {
   const entryRef = useRef<HTMLElement>(null);
-  const characterId = useY(campaign.members, () => actingCharacterId(campaign)) ?? null;
+  const characterId = useQuery(campaign.members, () => actingCharacterId(campaign)) ?? null;
 
   useEffect(() => {
     if (!query) return;

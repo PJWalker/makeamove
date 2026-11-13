@@ -1,10 +1,20 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import { rank, scoreAction } from "../search";
 import type { Action } from "../types";
+import { command } from "../types";
+
+const testCommand = command({
+  id: "test.action",
+  params: (value): value is undefined => value === undefined,
+  title: "Test",
+  run: () => {},
+});
 
 const act = (id: string, title: string, extra: Partial<Action> = {}): Action => ({
   id,
+  command: testCommand,
+  params: undefined,
   kind: "command",
   title,
   source: "Core",

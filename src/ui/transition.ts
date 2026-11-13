@@ -12,6 +12,15 @@ export const inTransition = () => running > 0;
 /** Let React flush the renders queued by a state change. */
 const nextRender = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
+interface ViewTransition {
+  ready: Promise<void>;
+  finished: Promise<void>;
+}
+
+interface ViewTransitionHost {
+  startViewTransition?: (callback: () => void | Promise<void>) => ViewTransition;
+}
+
 /**
  * Apply a UI state change as a view transition. Elements with a
  * `view-transition-name` morph between their old and new geometry; the rest
@@ -22,13 +31,23 @@ const nextRender = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
  */
 export async function withTransition(
   update: () => void | Promise<void>,
-  { rootClass, scope }: { rootClass?: string | string[]; scope?: HTMLElement } = {},
+  {
+    rootClass,
+    scope,
+    home,
+  }: {
+    rootClass?: string | string[];
+    scope?: HTMLElement;
+    /**
+     * Something a snapshot grows from or shrinks into without itself being
+     * captured, so it stays in place: its box is --vt-home-x/y/w/h on <html>
+     * for the transition's keyframes (vt-from-home, vt-to-home).
+     */
+    home?: Element | null;
+  } = {},
 ): Promise<void> {
-  const scoped = scope as
-    (HTMLElement & { startViewTransition?: typeof document.startViewTransition }) | undefined;
-  const startViewTransition = scope
-    ? scoped?.startViewTransition?.bind(scope)
-    : document.startViewTransition?.bind(document);
+  const host = (scope ?? document) as ViewTransitionHost;
+  const startViewTransition = host.startViewTransition?.bind(host);
   if (!startViewTransition || reducedMotion.matches) {
     await update();
     await nextRender();
@@ -39,6 +58,13 @@ export async function withTransition(
   const root = document.documentElement;
   const classes = rootClass ? [rootClass].flat() : [];
   root.classList.add(...classes);
+  const box = home?.getBoundingClientRect();
+  if (box) {
+    root.style.setProperty("--vt-home-x", `${box.left}px`);
+    root.style.setProperty("--vt-home-y", `${box.top}px`);
+    root.style.setProperty("--vt-home-w", `${box.width}px`);
+    root.style.setProperty("--vt-home-h", `${box.height}px`);
+  }
   running++;
   try {
     const t = startViewTransition(async () => {
@@ -51,6 +77,7 @@ export async function withTransition(
   } finally {
     running--;
     root.classList.remove(...classes);
+    if (box) for (const v of ["x", "y", "w", "h"]) root.style.removeProperty(`--vt-home-${v}`);
   }
 }
 

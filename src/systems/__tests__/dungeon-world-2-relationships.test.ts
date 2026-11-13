@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import * as Y from "yjs";
 import { advanceBond, bondBetween, bondsFor, forgeBond } from "../dungeon-world-2/bondStore";
 import {
@@ -10,14 +10,31 @@ import {
   setRelationship,
   setRelationshipDepth,
 } from "../../features/characters/relationships";
+import { rootOf } from "../../data/schema";
+import { campaignShape } from "../../campaign/schema";
+import { SystemData } from "../../campaign/systemStore";
 
 function cast(...ids: string[]) {
-  const characters = new Y.Doc().getMap<Y.Map<unknown>>("characters");
-  for (const id of ids) characters.set(id, new Y.Map());
-  return characters;
+  const root = rootOf(new Y.Doc(), campaignShape);
+  for (const id of ids) root.characters.set(id, {});
+  return root.characters;
 }
 
-const relationshipNoteField = (to: string) => `text:${relationshipNotes(to)}`;
+/** A campaign's system data, in the same document as the characters. */
+const systemDataOf = (chars: ReturnType<typeof cast>) =>
+  new SystemData(rootOf(chars.y.doc!, campaignShape).ext, () => "dungeon-world-2");
+
+/** Give a character the rich-text notes for one relationship. */
+const writeNotes = (chars: ReturnType<typeof cast>, from: string, to: string) =>
+  chars.get(from)!.ensure("texts").ensure(relationshipNotes(to));
+const notesOf = (chars: ReturnType<typeof cast>, from: string, to: string) =>
+  chars.get(from)!.get("texts")?.get(relationshipNotes(to));
+const xpOf = (chars: ReturnType<typeof cast>, id: string) =>
+  chars.get(id)!.get("ext")?.get("dungeon-world-2")?.get("data")?.get("xp");
+const awardXp = (chars: ReturnType<typeof cast>) => (id: string, xp: number) => {
+  const data = chars.get(id)!.ensure("ext").ensure("dungeon-world-2").ensure("data");
+  data.set("xp", Number(data.get("xp") ?? 0) + xp);
+};
 
 describe("relationships", () => {
   it("are one-way, labelled, and gone with their notes when removed", () => {
@@ -31,10 +48,10 @@ describe("relationships", () => {
     expect(relationshipsOf(chars, "ayla")).toEqual([
       { to: "brom", label: "Trusts deeply", depth: 2 },
     ]);
-    chars.get("ayla")!.set(relationshipNoteField("brom"), new Y.XmlFragment());
+    writeNotes(chars, "ayla", "brom");
     removeRelationship(chars, "ayla", "brom");
     expect(relationshipsOf(chars, "ayla")).toEqual([]);
-    expect(chars.get("ayla")!.get(relationshipNoteField("brom"))).toBeUndefined();
+    expect(notesOf(chars, "ayla", "brom")).toBeUndefined();
   });
 
   it("keeps relationship Depth directional and clamps it to the beta track", () => {
@@ -50,16 +67,16 @@ describe("relationships", () => {
 
   it("forges a shared Bond only after both Depth tracks reach three", () => {
     const chars = cast("ayla", "brom");
-    const systemData = chars.doc!.getMap("systemData");
+    const systemData = systemDataOf(chars);
     setRelationship(chars, "ayla", "brom", "Trusts");
     setRelationship(chars, "brom", "ayla", "Respects");
     setRelationshipDepth(chars, "ayla", "brom", 3, 3);
-    expect(forgeBond(systemData, chars, "ayla", "brom", "comrades")).toBe(false);
+    expect(forgeBond(systemData, chars, "ayla", "brom", "comrades", awardXp(chars))).toBe(false);
     setRelationshipDepth(chars, "brom", "ayla", 3, 3);
-    chars.get("ayla")!.set(relationshipNoteField("brom"), new Y.XmlFragment());
-    chars.get("brom")!.set(relationshipNoteField("ayla"), new Y.XmlFragment());
+    writeNotes(chars, "ayla", "brom");
+    writeNotes(chars, "brom", "ayla");
 
-    expect(forgeBond(systemData, chars, "brom", "ayla", "comrades")).toBe(true);
+    expect(forgeBond(systemData, chars, "brom", "ayla", "comrades", awardXp(chars))).toBe(true);
     expect(bondBetween(systemData, "brom", "ayla")).toEqual({
       first: "ayla",
       second: "brom",
@@ -69,44 +86,39 @@ describe("relationships", () => {
     expect(bondsFor(systemData, "ayla")).toHaveLength(1);
     expect(relationshipsOf(chars, "ayla")).toEqual([]);
     expect(relationshipsOf(chars, "brom")).toEqual([]);
-    expect(chars.get("ayla")!.get(relationshipNoteField("brom"))).toBeUndefined();
-    expect(chars.get("brom")!.get(relationshipNoteField("ayla"))).toBeUndefined();
+    expect(notesOf(chars, "ayla", "brom")).toBeUndefined();
+    expect(notesOf(chars, "brom", "ayla")).toBeUndefined();
   });
 
   it("tracks Bond advances once and resets them when a pair forges a different Bond", () => {
     const chars = cast("ayla", "brom");
-    const systemData = chars.doc!.getMap("systemData");
-    for (const id of ["ayla", "brom"]) {
-      const data = new Y.Map<unknown>();
-      data.set("xp", 0);
-      chars.get(id)!.set("data", data);
-    }
+    const systemData = systemDataOf(chars);
     setRelationship(chars, "ayla", "brom", "Trusts");
     setRelationship(chars, "brom", "ayla", "Respects");
     setRelationshipDepth(chars, "ayla", "brom", 3, 3);
     setRelationshipDepth(chars, "brom", "ayla", 3, 3);
-    expect(forgeBond(systemData, chars, "ayla", "brom", "comrades")).toBe(true);
+    expect(forgeBond(systemData, chars, "ayla", "brom", "comrades", awardXp(chars))).toBe(true);
     setRelationship(chars, "ayla", "brom", "Trusts");
     setRelationship(chars, "brom", "ayla", "Respects");
     setRelationshipDepth(chars, "ayla", "brom", 3, 3);
     expect(advanceBond(systemData, chars, "brom", "ayla", "back-to-back")).toBe(false);
     setRelationshipDepth(chars, "brom", "ayla", 3, 3);
-    chars.get("ayla")!.set(relationshipNoteField("brom"), new Y.XmlFragment());
-    chars.get("brom")!.set(relationshipNoteField("ayla"), new Y.XmlFragment());
+    writeNotes(chars, "ayla", "brom");
+    writeNotes(chars, "brom", "ayla");
     expect(advanceBond(systemData, chars, "brom", "ayla", "back-to-back")).toBe(true);
     expect(advanceBond(systemData, chars, "ayla", "brom", "back-to-back")).toBe(false);
     expect(bondBetween(systemData, "ayla", "brom")?.advancedMoves).toEqual(["back-to-back"]);
     expect(relationshipsOf(chars, "ayla")).toEqual([]);
-    expect(chars.get("ayla")!.get(relationshipNoteField("brom"))).toBeUndefined();
+    expect(notesOf(chars, "ayla", "brom")).toBeUndefined();
 
     setRelationship(chars, "ayla", "brom", "Trusts");
     setRelationship(chars, "brom", "ayla", "Respects");
     setRelationshipDepth(chars, "ayla", "brom", 3, 3);
     setRelationshipDepth(chars, "brom", "ayla", 3, 3);
-    expect(forgeBond(systemData, chars, "ayla", "brom", "rivals")).toBe(true);
+    expect(forgeBond(systemData, chars, "ayla", "brom", "rivals", awardXp(chars))).toBe(true);
     expect(bondBetween(systemData, "ayla", "brom")?.advancedMoves).toEqual([]);
-    expect((chars.get("ayla")!.get("data") as Y.Map<unknown>).get("xp")).toBe(1);
-    expect((chars.get("brom")!.get("data") as Y.Map<unknown>).get("xp")).toBe(1);
+    expect(xpOf(chars, "ayla")).toBe(1);
+    expect(xpOf(chars, "brom")).toBe(1);
   });
 
   it("leave out characters that are gone or not shown", () => {

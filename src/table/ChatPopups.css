@@ -9,6 +9,10 @@
     /* Above floating windows: it's brief, and points at the tab. */
     z-index: 11;
     width: min(360px, calc(100vw - var(--dock-l, 0px) - var(--dock-r, 0px) - 2 * var(--space-3)));
+    &[data-anchor="left"],
+    &[data-anchor="right"] {
+      inset: auto;
+    }
     &[data-anchor="corner"],
     &:not([data-anchor]) {
       right: calc(var(--dock-r, 0px) + var(--space-3));

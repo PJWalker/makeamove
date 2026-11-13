@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import { instanceOf } from "../../features/characters/store";
 import { dungeonWorld } from "../dungeon-world";

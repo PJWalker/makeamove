@@ -1,137 +1,36 @@
-import { store } from "../lib/store";
-import type { ReactNode } from "react";
 import { useLayoutEffect, useState } from "react";
 import type { Campaign } from "../campaign/campaign";
 import {
-  addItem,
   baseSystemOf,
   canEdit,
   getCharacter,
   actingCharacterId,
-  setLearned,
-  startMove,
   systemOf,
-  updateItem,
 } from "../features/characters/api";
 import { checkOf } from "../features/characters/moves";
-import { getStorageJson, setStorageJson } from "../platform/localStorage";
-import { useY } from "../ui/useY";
+import { useQuery } from "../ui/useQuery";
 import { entryByKey, librariesFor, useLibrariesFor } from "../features/library";
-import type { Icon } from "../ui/icons";
-import { IconOpenWindow } from "../ui/icons";
+import { IconOpenWindow, type Icon } from "../ui/icons";
 import { IconPost, IconRoll, IconTarget } from "../ui/icons";
 import { Button } from "../ui/Button";
 import { usePopupDialog } from "./usePopupDialog";
-import { Dialog, type WindowProxy } from "./Dialog";
-import { closeEntityTab, detachPanel, dockPanel, isFloating, layout } from "./panelLayout";
-import { locate } from "./layoutModel";
+import { Dialog } from "./Dialog";
 import type { DockItemId } from "./panelLayout";
+import type { EntityWindowRecord } from "./entityWindowState";
 import type { MenuItem } from "../ui/ContextMenu";
 import { menuTrigger } from "../ui/menuTrigger";
 import { ContextMenu } from "../ui/ContextMenu";
 import { withTransition } from "../ui/transition";
-import { useValue } from "../ui/useValue";
-
-export interface EntityWindowRecord {
-  id: DockItemId;
-  title: string;
-  icon?: Icon | undefined;
-  graphicRef?: { kind: string; id: string } | undefined;
-  graphicDefaultIcon?: string | undefined;
-  content?: ReactNode | undefined;
-  text?: string | undefined;
-  tags?: string[] | undefined;
-  proxy?: WindowProxy | undefined;
-  menuItems?: MenuItem[] | undefined;
-  close?: (() => void) | undefined;
-}
-
-interface SavedEntityWindow {
-  id: string;
-  title: string;
-  text?: string | undefined;
-  tags?: string[] | undefined;
-}
-
-const META_KEY = "mam:entity-windows-1";
-
-function load(): Record<string, EntityWindowRecord> {
-  const saved = getStorageJson<unknown>(META_KEY, []);
-  if (!Array.isArray(saved)) return {};
-  const records: Record<string, EntityWindowRecord> = {};
-  for (const item of saved as SavedEntityWindow[]) {
-    if (!item?.id?.startsWith("entity:") || typeof item.title !== "string") continue;
-    const id = item.id as DockItemId;
-    records[id] = { id, title: item.title, text: item.text, tags: item.tags };
-  }
-  return records;
-}
-
-export const entityWindows = store<Record<string, EntityWindowRecord>>(load());
-
-const ENTRY_PREFIX = "entity:entry:";
-
-const entryKeysOf = (ids: Iterable<string>) =>
-  [...ids].filter((id) => id.startsWith(ENTRY_PREFIX)).map((id) => id.slice(ENTRY_PREFIX.length));
-
-/** Entries (rules, items, moves) with a window open, by entry key. */
-export const openEntries = store<string[]>(entryKeysOf(Object.keys(entityWindows.value)));
-
-// An entry stays open only while its window does, however that window was closed.
-let windowIds = new Set(Object.keys(entityWindows.value));
-entityWindows.subscribe(() => {
-  const closed = new Set(entryKeysOf([...windowIds].filter((id) => !(id in entityWindows.value))));
-  windowIds = new Set(Object.keys(entityWindows.value));
-  if (closed.size) openEntries.value = openEntries.value.filter((key) => !closed.has(key));
-});
-
-export const entityTabId = (key: string) => `entity:${key}` as const;
-
-/** Whether the fields kept in localStorage (see `persist`) are unchanged. */
-function sameSavedFields(a: EntityWindowRecord, b: EntityWindowRecord) {
-  return (
-    a.title === b.title &&
-    a.text === b.text &&
-    (a.tags ?? []).length === (b.tags ?? []).length &&
-    (a.tags ?? []).every((tag, index) => tag === b.tags?.[index])
-  );
-}
-
-function persist(records: Record<string, EntityWindowRecord>) {
-  const saved: SavedEntityWindow[] = Object.values(records).map(({ id, title, text, tags }) => ({
-    id,
-    title,
-    text,
-    tags,
-  }));
-  setStorageJson(META_KEY, saved);
-}
-
-export function registerEntityWindow(record: EntityWindowRecord) {
-  const previous = entityWindows.value[record.id];
-  // Always a new record, so memoized windows see new content; only what's saved is persisted.
-  const records = { ...entityWindows.value, [record.id]: { ...previous, ...record } };
-  entityWindows.value = records;
-  if (!previous || !sameSavedFields(previous, record)) persist(records);
-  if (locate(layout.value, record.id) === "closed") {
-    detachPanel(record.id, Math.max(innerWidth / 2 - 190, 0), 96, 380, 440);
-  }
-}
-
-export function closeEntityWindow(id: DockItemId) {
-  const records = { ...entityWindows.value };
-  delete records[id];
-  entityWindows.value = records;
-  persist(records);
-  closeEntityTab(id);
-}
+import { useCampaign } from "./campaignContext";
+import { giveItem, setLearned, startMove, updateItem } from "./commands/characters";
 
 export function EntityWindowHost({ campaign }: { campaign: Campaign }) {
+  const ctx = useCampaign();
   useLayoutEffect(() => {
     const ids = [
-      ...layout.value.left.panels,
-      ...layout.value.right.panels,
-      ...layout.value.floating.map((win) => win.id),
+      ...ctx.panels.layout.value.left.panels,
+      ...ctx.panels.layout.value.right.panels,
+      ...ctx.panels.layout.value.floating.map((win) => win.id),
     ];
     const system = systemOf(campaign);
     const sources = librariesFor(system);
@@ -141,24 +40,24 @@ export function EntityWindowHost({ campaign }: { campaign: Campaign }) {
       if (key.startsWith("inventory:")) {
         const parts = key.slice("inventory:".length).split(":");
         const character = parts.length === 2 ? getCharacter(campaign, parts[0]) : undefined;
-        if (!character?.inventory.some((item) => item.id === parts[1])) closeEntityWindow(id);
+        if (!character?.inventory.some((item) => item.id === parts[1])) ctx.windows.close(id);
       } else if (key.startsWith("move:")) {
         const moveId = key.split(":").at(-1);
-        if (!system.actions.some((move) => move.id === moveId)) closeEntityWindow(id);
+        if (!system.actions.some((move) => move.id === moveId)) ctx.windows.close(id);
       } else if (key.startsWith("lib:")) {
         const found = entryByKey(sources, key);
         if (found && !found.entry) {
-          closeEntityWindow(id);
+          ctx.windows.close(id);
         }
       }
     }
-  }, [campaign]);
-  const records = useValue(entityWindows);
-  const shown = useValue(layout);
+  }, [ctx, campaign]);
+  const records = useQuery(ctx.windows.records);
+  const shown = useQuery(ctx.panels.layout);
   return (
     <>
       {Object.values(records)
-        .filter((record) => isFloating(record.id, shown))
+        .filter((record) => ctx.panels.isFloating(record.id, shown))
         .map((record) => (
           <EntityPopup key={record.id} campaign={campaign} record={record} />
         ))}
@@ -167,21 +66,22 @@ export function EntityWindowHost({ campaign }: { campaign: Campaign }) {
 }
 
 function EntityPopup({ campaign, record }: { campaign: Campaign; record: EntityWindowRecord }) {
+  const ctx = useCampaign();
   const ref = usePopupDialog();
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const trigger = menuTrigger((x, y) => setMenu({ x, y }));
   const close = () => {
     record.close?.();
-    closeEntityWindow(record.id);
+    ctx.windows.close(record.id);
   };
   const items: MenuItem[] = [
     {
       label: "Dock to Left Sidebar",
-      onSelect: () => void withTransition(() => dockPanel(record.id, "left")),
+      onSelect: () => void withTransition(() => ctx.panels.dockPanel(record.id, "left")),
     },
     {
       label: "Dock to Right Sidebar",
-      onSelect: () => void withTransition(() => dockPanel(record.id, "right")),
+      onSelect: () => void withTransition(() => ctx.panels.dockPanel(record.id, "right")),
     },
     "divider",
     { label: "Close", onSelect: close },
@@ -211,11 +111,6 @@ function EntityPopup({ campaign, record }: { campaign: Campaign; record: EntityW
   );
 }
 
-/** An entity window's record; components pass the records they read. */
-export function entityRecord(id: DockItemId, records = entityWindows.value) {
-  return records[id];
-}
-
 export function EntityWindowContent({
   campaign,
   record,
@@ -223,6 +118,7 @@ export function EntityWindowContent({
   campaign: Campaign;
   record: EntityWindowRecord;
 }) {
+  const ctx = useCampaign();
   const key = record.id.startsWith("entity:entry:") ? record.id.slice("entity:entry:".length) : "";
   const inventoryParts = key.startsWith("inventory:")
     ? key.slice("inventory:".length).split(":")
@@ -231,13 +127,13 @@ export function EntityWindowContent({
   const moveParts = key.startsWith("move:") ? key.slice("move:".length).split(":") : [];
   const moveOwnerId = moveParts.length > 1 ? moveParts[0] : undefined;
   const moveId = moveParts.length > 1 ? moveParts.slice(1).join(":") : moveParts[0];
-  const system = useY(campaign.homebrew, () => systemOf(campaign));
-  const selectedId = useY(campaign.members, () => actingCharacterId(campaign));
-  const selectedCharacter = useY(campaign.characters, () => getCharacter(campaign, selectedId));
-  const inventoryCharacter = useY(campaign.characters, () =>
+  const system = useQuery(campaign.homebrew, () => systemOf(campaign));
+  const selectedId = useQuery(campaign.members, () => actingCharacterId(campaign));
+  const selectedCharacter = useQuery(campaign.characters, () => getCharacter(campaign, selectedId));
+  const inventoryCharacter = useQuery(campaign.characters, () =>
     getCharacter(campaign, inventoryCharacterId),
   );
-  const moveCharacter = useY(campaign.characters, () =>
+  const moveCharacter = useQuery(campaign.characters, () =>
     getCharacter(campaign, moveOwnerId ?? selectedId),
   );
   const libraries = useLibrariesFor(baseSystemOf(campaign));
@@ -261,8 +157,12 @@ export function EntityWindowContent({
             pressed={item.equipped}
             disabled={!editable}
             onClick={() =>
-              updateItem(campaign, inventoryCharacter.id, item.id, {
-                equipped: !item.equipped,
+              ctx.execute(updateItem, {
+                characterId: inventoryCharacter.id,
+                itemId: item.id,
+                patch: {
+                  equipped: !item.equipped,
+                },
               })
             }
           >
@@ -273,8 +173,12 @@ export function EntityWindowContent({
           <Button
             disabled={!editable || !item.usesLeft}
             onClick={() =>
-              updateItem(campaign, inventoryCharacter.id, item.id, {
-                usesLeft: Math.max(0, (item.usesLeft ?? 0) - 1),
+              ctx.execute(updateItem, {
+                characterId: inventoryCharacter.id,
+                itemId: item.id,
+                patch: {
+                  usesLeft: Math.max(0, (item.usesLeft ?? 0) - 1),
+                },
               })
             }
           >
@@ -296,7 +200,10 @@ export function EntityWindowContent({
           <Button
             variant="primary"
             disabled={!editable}
-            onClick={() => selectedCharacter && addItem(campaign, selectedCharacter.id, entry.item)}
+            onClick={() =>
+              selectedCharacter &&
+              ctx.execute(giveItem, { characterId: selectedCharacter.id, item: entry.item })
+            }
           >
             {selectedCharacter ? `Give to ${selectedCharacter.name}` : "Choose a Character"}
           </Button>
@@ -334,7 +241,9 @@ export function EntityWindowContent({
         {moveCharacter.learned.includes(move.id) && editable && (
           <Button
             variant="ghost"
-            onClick={() => setLearned(campaign, moveCharacter.id, move.id, false)}
+            onClick={() =>
+              ctx.execute(setLearned, { id: moveCharacter.id, action: move.id, known: false })
+            }
           >
             Forget
           </Button>
@@ -355,7 +264,6 @@ export function EntityWindowContent({
 }
 
 function MoveAction({
-  campaign,
   move,
   character,
   enabled,
@@ -369,6 +277,7 @@ function MoveAction({
   label?: string;
   Icon?: Icon;
 }) {
+  const ctx = useCampaign();
   const action =
     label && Icon
       ? { label, Icon }
@@ -381,7 +290,9 @@ function MoveAction({
     <Button
       variant="primary"
       disabled={!character || !enabled}
-      onClick={() => character && startMove(campaign, character.id, move)}
+      onClick={() =>
+        character && ctx.execute(startMove, { characterId: character.id, move: move.id })
+      }
     >
       <action.Icon size={22} /> {action.label}
       {character ? ` as ${character.name}` : ""}

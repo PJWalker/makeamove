@@ -1,7 +1,6 @@
 import "fake-indexeddb/auto";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
-import * as Y from "yjs";
 import { Campaign, createCampaign } from "../../../campaign/campaign";
 import { device } from "../../../platform/device";
 import {
@@ -36,10 +35,7 @@ import {
 async function setUp() {
   device.value = { id: "gm", name: "Gwen" };
   const campaign = await Campaign.open(await createCampaign("Barrows", "Gwen"));
-  const player = new Y.Map<unknown>();
-  player.set("name", "Pat");
-  player.set("role", "player");
-  campaign.members.set("pat", player);
+  campaign.members.set("pat", { name: "Pat", role: "player" });
   return campaign;
 }
 
@@ -71,8 +67,7 @@ describe("player characters", () => {
     viewCharacter(campaign, brom);
     expect(actingCharacterId(campaign)).toBe(ayla);
     // Another player can't claim it from under them.
-    campaign.members.set("sam", new Y.Map());
-    campaign.members.get("sam")!.set("role", "player");
+    campaign.members.set("sam", { role: "player" });
     device.value = { id: "sam", name: "Sam" };
     claimCharacter(campaign, ayla);
     expect(playedCharacterId(campaign)).toBeUndefined();

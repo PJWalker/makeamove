@@ -1,7 +1,6 @@
 import { store, watch } from "../../lib/store";
 import { stampTime } from "../../lib/hlc";
-import { activeCampaign } from "../../campaign/campaign";
-import { device } from "../../platform/device";
+import type { Campaign } from "../../campaign/campaign";
 import type { LinkKind } from "../notes/links";
 import { linkLabel } from "../notes/targets";
 import { messageText } from "./content";
@@ -75,20 +74,6 @@ const pageHidden = () => document.visibilityState === "hidden";
 /** The most popups shown at once; older ones give way. */
 const MAX_POPUPS = 3;
 
-/** Whether the Chat panel is on screen; the table keeps this current. */
-export const chatInView = store(false);
-
-/** Messages (by id) shown over the table while the Chat panel is out of view. */
-export const chatPopups = store<string[]>([]);
-
-export function dismissPopup(id: string) {
-  chatPopups.value = chatPopups.value.filter((p) => p !== id);
-}
-
-function popUp(id: string) {
-  chatPopups.value = [...chatPopups.value, id].slice(-MAX_POPUPS);
-}
-
 async function show(title: string, body: string, tag: string) {
   const options: NotificationOptions = { body, tag, icon: "/icon-192.png" };
   const reg = await navigator.serviceWorker?.getRegistration().catch(() => undefined);
@@ -110,54 +95,62 @@ function askPermission() {
   window.addEventListener("pointerdown", ask, { once: true });
 }
 
-/** Start watching the open campaign's chat. Returns a stop function. */
-export function startChatNotifications() {
-  const canNotify = typeof Notification !== "undefined";
-  if (canNotify) askPermission();
-  const started = Date.now();
-  const told = new Set<string>();
-  const check = (c: NonNullable<typeof activeCampaign.value>) => {
-    const messages = c.chat.messages.value;
-    const me = device.value.id;
-    const isGm = c.isGm();
-    for (const m of messages) {
-      if (told.has(m.id)) continue;
-      // History loaded at start-up, or synced from before this page opened, isn't news.
-      if (stampTime(m.hlc) < started) continue;
-      told.add(m.id);
-      if (m.kind === "system" || visibilityOf(m, me, isGm) !== "full") continue;
-      // My own messages pop up too (a move from the hotbar should show its result), but never notify.
-      // An open Chat panel in a hidden page isn't being read either, so that notifies.
-      const how = delivery({
-        chatShowing: chatInView.value,
-        pageHidden: pageHidden(),
-        mine: m.author === me,
-        canNotify: canNotify && Notification.permission === "granted",
-      });
-      if (how.popup) popUp(m.id);
-      if (how.notify) {
-        const text = describe(m, (kind, id) => linkLabel(c, kind, id));
-        if (text) void show(text.title, text.body, m.id).catch(() => {});
+/** Pops up and notifies the chat messages of one open campaign that arrive while no one's reading. */
+export class ChatNotifications {
+  /** Whether the Chat panel is on screen; the table keeps this current. */
+  readonly chatInView = store(false);
+  /** Messages (by id) shown over the table while the Chat panel is out of view. */
+  readonly chatPopups = store<string[]>([]);
+  readonly #stops: (() => void)[];
+
+  constructor(campaign: Campaign) {
+    const canNotify = typeof Notification !== "undefined";
+    if (canNotify) askPermission();
+    const started = Date.now();
+    const told = new Set<string>();
+    const check = () => {
+      const me = campaign.device.value.id;
+      const isGm = campaign.isGm();
+      for (const m of campaign.chat.messages.value) {
+        if (told.has(m.id)) continue;
+        // History loaded at start-up, or synced from before this page opened, isn't news.
+        if (stampTime(m.hlc) < started) continue;
+        told.add(m.id);
+        if (m.kind === "system" || visibilityOf(m, me, isGm) !== "full") continue;
+        // My own messages pop up too (a move from the hotbar should show its result), but never notify.
+        // An open Chat panel in a hidden page isn't being read either, so that notifies.
+        const how = delivery({
+          chatShowing: this.chatInView.value,
+          pageHidden: pageHidden(),
+          mine: m.author === me,
+          canNotify: canNotify && Notification.permission === "granted",
+        });
+        if (how.popup) this.#popUp(m.id);
+        if (how.notify) {
+          const text = describe(m, (kind, id) => linkLabel(campaign, kind, id));
+          if (text) void show(text.title, text.body, m.id).catch(() => {});
+        }
       }
-    }
-  };
-  let stopMessages = () => {};
-  const stopCampaign = watch([activeCampaign], () => {
-    stopMessages();
-    const c = activeCampaign.value;
-    stopMessages = c ? watch([c.chat.messages], () => check(c)) : () => {};
-  });
-  const stop = () => {
-    stopCampaign();
-    stopMessages();
-  };
-  // Opening the chat, or leaving the campaign, clears what's popped up.
-  const clear = watch([activeCampaign, chatInView], () => {
-    if (chatInView.value || !activeCampaign.value) chatPopups.value = [];
-  });
-  return () => {
-    stop();
-    clear();
-    chatPopups.value = [];
-  };
+    };
+    this.#stops = [
+      watch([campaign.chat.messages], check),
+      // Opening the chat clears what's popped up.
+      watch([this.chatInView], () => {
+        if (this.chatInView.value) this.chatPopups.value = [];
+      }),
+    ];
+  }
+
+  dismissPopup(id: string) {
+    this.chatPopups.value = this.chatPopups.value.filter((p) => p !== id);
+  }
+
+  #popUp(id: string) {
+    this.chatPopups.value = [...this.chatPopups.value, id].slice(-MAX_POPUPS);
+  }
+
+  dispose() {
+    for (const stop of this.#stops.splice(0)) stop();
+    this.chatPopups.value = [];
+  }
 }

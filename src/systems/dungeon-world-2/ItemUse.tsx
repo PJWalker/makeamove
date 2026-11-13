@@ -3,10 +3,12 @@ import { systemOf } from "../../features/characters/api";
 import { derive } from "../../features/characters/store";
 import { Button } from "../../ui/Button";
 import type { ItemUseProps } from "../extensionTypes";
-import { consumeDungeonWorld2Item } from "./campaign";
+import { useGear } from "./commands";
+import { useCampaign } from "../../workspace/campaignContext";
 
 /** Controls for Dungeon World 2's charged items: a potion's or a wand's choice of effect. */
 export function Dw2ItemUse({ campaign, character, item, editable }: ItemUseProps) {
+  const ctx = useCampaign();
   const [choice, setChoice] = useState<"heal" | "clear-locked" | "drain" | "mark-condition">(
     "heal",
   );
@@ -14,12 +16,13 @@ export function Dw2ItemUse({ campaign, character, item, editable }: ItemUseProps
   const definition = systemOf(campaign).items.find((entry) => entry.id === item.defId);
   if (item.uses === undefined) return null;
   const locked = character.lockedConditions ?? [];
+  const lockedConditions = new Set(locked);
   const missingHp =
     (derive(character, systemOf(campaign)).values.maxHp ?? 0) > (character.resources.hp ?? 0);
   const outOfUses = (item.usesLeft ?? 0) <= 0;
   if (definition?.itemUse === "magic-wand") {
     const availableConditions = systemOf(campaign).conditions.filter(
-      (entry) => !locked.includes(entry.id),
+      (entry) => !lockedConditions.has(entry.id),
     );
     return (
       <div className="inventory-item-use">
@@ -57,17 +60,17 @@ export function Dw2ItemUse({ campaign, character, item, editable }: ItemUseProps
             !editable || outOfUses || (choice === "mark-condition" && !availableConditions.length)
           }
           onClick={() =>
-            consumeDungeonWorld2Item(
-              campaign,
-              character.id,
-              item.id,
-              choice === "mark-condition"
-                ? {
-                    kind: "mark-condition",
-                    condition: condition || availableConditions[0]!.id,
-                  }
-                : { kind: "drain" },
-            )
+            ctx.execute(useGear, {
+              characterId: character.id,
+              itemId: item.id,
+              choice:
+                choice === "mark-condition"
+                  ? {
+                      kind: "mark-condition",
+                      condition: condition || availableConditions[0]!.id,
+                    }
+                  : { kind: "drain" },
+            })
           }
         >
           Use
@@ -112,14 +115,14 @@ export function Dw2ItemUse({ campaign, character, item, editable }: ItemUseProps
             !editable || outOfUses || (choice === "clear-locked" ? !locked.length : !missingHp)
           }
           onClick={() =>
-            consumeDungeonWorld2Item(
-              campaign,
-              character.id,
-              item.id,
-              choice === "heal"
-                ? { kind: "heal-half-lost" }
-                : { kind: "clear-locked", condition: condition || locked[0]! },
-            )
+            ctx.execute(useGear, {
+              characterId: character.id,
+              itemId: item.id,
+              choice:
+                choice === "heal"
+                  ? { kind: "heal-half-lost" }
+                  : { kind: "clear-locked", condition: condition || locked[0]! },
+            })
           }
         >
           Use
@@ -130,7 +133,7 @@ export function Dw2ItemUse({ campaign, character, item, editable }: ItemUseProps
   return (
     <Button
       disabled={!editable || outOfUses}
-      onClick={() => consumeDungeonWorld2Item(campaign, character.id, item.id)}
+      onClick={() => ctx.execute(useGear, { characterId: character.id, itemId: item.id })}
     >
       Use
     </Button>

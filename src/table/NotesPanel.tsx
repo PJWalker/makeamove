@@ -1,51 +1,39 @@
-import { store } from "../lib/store";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   backlinks,
-  createNote,
-  createNoteFolder,
-  deleteNote,
-  deleteNoteFolder,
-  ensureNoteFolders,
   getNote,
   listNoteFolders,
   listNotes,
-  moveNote,
-  renameNote,
-  renameNoteFolder,
-  revealNote,
   searchNotes,
   type NoteFolderView,
   type NoteMatch,
   type NoteView,
 } from "../features/notes/api";
-import { noteOpened, noteSearchTarget, openNote, openNoteId } from "../workspace/linkNavigation";
 import type { Campaign } from "../campaign/campaign";
-import { useY } from "../ui/useY";
+import { useQuery } from "../ui/useQuery";
 import { Button } from "../ui/Button";
-import {
-  IconDelete,
-  IconAdd,
-  IconFolder,
-  IconImage,
-  IconNewFolder,
-  IconNotes,
-  IconRename,
-  IconReveal,
-  IconSecret,
-} from "../ui/icons";
+import { IconAdd, IconNewFolder, IconNotes, IconSecret } from "../ui/icons";
 import { morphOpen } from "../ui/morph";
 import { TwoPane, usePaneLevel } from "../ui/TwoPane";
 import { List, ListRow } from "../ui/List";
 import { menuTrigger } from "../ui/menuTrigger";
-import { ConfirmDialog } from "./ConfirmDialog";
 import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
-import { dragEntity, entity } from "../workspace/entityDrag";
-import { editEntityGraphic } from "../workspace/GraphicDialogs";
+import { dragEntity } from "../workspace/entityDrag";
+import { entity } from "../workspace/dragEntities";
 import { NoteEditor } from "./NoteEditor";
 import { FolderTree } from "./FolderTree";
 import { notesLayout } from "./panelLayouts";
-import { useValue } from "../ui/useValue";
+import { useCampaign } from "../workspace/campaignContext";
+import {
+  ensureDefaultNoteFolders,
+  filePage,
+  newGmPage,
+  newPage,
+  noteFolders,
+  renamePage,
+  revealPage,
+} from "../workspace/commands/notes";
+import { invoke, menuFor } from "../workspace/commands/views";
 
 /** How long ago, roughly, for a page's last edit. */
 function ago(at: number) {
@@ -62,36 +50,35 @@ function ago(at: number) {
  * together. The list and the open page sit side by side, or take turns.
  */
 export function NotesPanel({ campaign }: { campaign: Campaign }) {
+  const ctx = useCampaign();
   // GM-only pages, on a GM device; watched too, so the list keeps up with them.
-  const vault = useValue(campaign.vault);
-  useY(vault?.notes, () => null);
-  const notes = useY(campaign.notes, () => listNotes(campaign));
-  const folders = useY(campaign.noteFolders, () => listNoteFolders(campaign));
-  // After useY, so it is already watching when the folders appear.
-  useEffect(() => ensureNoteFolders(campaign), [campaign]);
-  const openId = useValue(openNoteId);
+  const vault = useQuery(campaign.vault);
+  useQuery(vault?.notes, () => null);
+  const notes = useQuery(campaign.notes, () => listNotes(campaign));
+  const folders = useQuery(campaign.noteFolders, () => listNoteFolders(campaign));
+  // After useQuery, so it is already watching when the folders appear.
+  useEffect(() => ctx.execute(ensureDefaultNoteFolders, undefined), [ctx]);
+  const openId = useQuery(ctx.links.openNoteId);
   const open = openId ? notes.find((n) => n.id === openId) : undefined;
-  const split = useValue(notesLayout.mode) === "split";
-  const { level, go } = usePaneLevel(notesLayout, open ? "detail" : "list");
+  const split = useQuery(notesLayout.mode) === "split";
+  const { level, go, show } = usePaneLevel(notesLayout, open ? "detail" : "list");
 
   // Asked to open a page (from the list, a link or elsewhere): show it.
-  const requests = useValue(noteOpened);
+  const requests = useQuery(ctx.links.noteOpened);
   const seen = useRef(requests);
   useEffect(() => {
-    if (requests !== seen.current && openNoteId.value) go("detail");
+    if (requests !== seen.current && ctx.links.openNoteId.value) go("detail");
     seen.current = requests;
-  }, [requests, go]);
+  }, [ctx, requests, go]);
   // The open page was deleted: back to the list.
   useEffect(() => {
     if (openId && !open && !campaign.notes.has(openId)) {
-      openNoteId.value = null;
+      ctx.links.openNoteId.set(null);
       go("list");
     }
-  }, [openId, open, campaign.notes, go]);
+  }, [ctx, openId, open, campaign.notes, go]);
 
   const folder = folders.find((f) => f.id === open?.folder);
-  const revealingId = useValue(revealing);
-  const revealingNote = revealingId ? notes.find((n) => n.id === revealingId) : undefined;
   return (
     <TwoPane
       layout={notesLayout}
@@ -100,27 +87,26 @@ export function NotesPanel({ campaign }: { campaign: Campaign }) {
       backLabel="Back to the notes"
       onBack={() => go("list")}
       resizeLabel="Resize the notes list"
-      list={<NoteList campaign={campaign} notes={notes} folders={folders} openId={openId} />}
+      list={
+        <NoteList
+          campaign={campaign}
+          notes={notes}
+          folders={folders}
+          openId={openId}
+          showList={() => show("list")}
+        />
+      }
       detail={
-        <>
-          {open ? (
-            <NotePage
-              campaign={campaign}
-              note={open}
-              notes={notes}
-              active={level === "detail" || split}
-            />
-          ) : (
-            <p className="empty">Pick a page, or make a new one.</p>
-          )}
-          {revealingNote && (
-            <RevealPage
-              campaign={campaign}
-              note={revealingNote}
-              onClose={() => (revealing.value = null)}
-            />
-          )}
-        </>
+        open ? (
+          <NotePage
+            campaign={campaign}
+            note={open}
+            notes={notes}
+            active={level === "detail" || split}
+          />
+        ) : (
+          <p className="empty">Pick a page, or make a new one.</p>
+        )
       }
     />
   );
@@ -131,14 +117,16 @@ function NoteList({
   notes,
   folders,
   openId,
+  showList,
 }: {
   campaign: Campaign;
   notes: NoteView[];
   folders: NoteFolderView[];
   openId: string | null;
+  showList: () => Promise<void>;
 }) {
+  const ctx = useCampaign();
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
-  const [deleting, setDeleting] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const needle = query.trim();
   // The last search's results, for what it searched; anything else is still searching.
@@ -150,8 +138,8 @@ function NoteList({
   const fresh = !!needle && result?.needle === needle && result.notes === notes;
   const matches = fresh ? result.matches : [];
   const searching = !!needle && !fresh;
-  const known = new Set(folders.map((f) => f.id));
-  const isGm = !!useValue(campaign.vault);
+  // GM pages need the vault, which a GM device opens once the campaign has loaded.
+  const gmPages = useQuery(campaign.vault, () => ctx.commands.check(newGmPage, {}) === true);
   useEffect(() => {
     if (!needle) return;
     let cancelled = false;
@@ -165,47 +153,13 @@ function NoteList({
       clearTimeout(timer);
     };
   }, [campaign, notes, needle]);
-  const newPage = (folder?: string, gmOnly = false) =>
-    openNote(createNote(campaign, { ...(folder ? { folder } : {}), gmOnly }));
 
   const row = (n: NoteView) => {
-    const dragged = entity(campaign, "note", n.id, n.title);
-    dragged.folder = (folderId) => moveNote(campaign, n.id, folderId);
-    const trigger = menuTrigger((x, y) => {
-      const items: MenuItem[] = folders
-        .filter((f) => f.id !== n.folder)
-        .map((f) => ({
-          label: `Move to ${f.name}`,
-          Icon: IconFolder,
-          onSelect: () => moveNote(campaign, n.id, f.id),
-        }));
-      items.unshift({ label: "Open Page", onSelect: () => openNote(n.id) });
-      if (n.folder && known.has(n.folder))
-        items.push({
-          label: "Remove from Folder",
-          onSelect: () => moveNote(campaign, n.id, undefined),
-        });
-      if (items.length) items.push("divider");
-      if (n.gmOnly)
-        items.push({
-          label: "Reveal to Players…",
-          Icon: IconReveal,
-          onSelect: () => (revealing.value = n.id),
-        });
-      else
-        items.push({
-          label: "Change Graphic…",
-          Icon: IconImage,
-          onSelect: () => editEntityGraphic(campaign, "note", n.id, n.title),
-        });
-      items.push({
-        label: "Delete Page…",
-        Icon: IconDelete,
-        danger: true,
-        onSelect: () => setDeleting(n.id),
-      });
-      setMenu({ x, y, items });
-    });
+    const dragged = entity(ctx, "note", n.id, n.title);
+    dragged.folder = (folder) => void ctx.execute(filePage, { id: n.id, folder });
+    const trigger = menuTrigger((x, y) =>
+      setMenu({ x, y, items: menuFor(ctx, { kind: "note", id: n.id }) }),
+    );
     return (
       <ListRow
         key={n.id}
@@ -214,11 +168,11 @@ function NoteList({
         tag={n.gmOnly ? "GM" : null}
         meta={ago(n.updatedAt)}
         selected={n.id === openId}
-        onPick={() => openNote(n.id)}
+        onPick={() => ctx.links.openNote(n.id)}
         pick={{
           onPointerDown: (e) => {
             trigger.onPointerDown(e);
-            dragEntity(e, dragged);
+            dragEntity(ctx.canvas, e, dragged);
           },
           onContextMenu: trigger.onContextMenu,
         }}
@@ -226,10 +180,8 @@ function NoteList({
     );
   };
 
-  const doomed = deleting ? notes.find((n) => n.id === deleting) : undefined;
   return (
     <>
-      {doomed && <DeletePage campaign={campaign} note={doomed} onClose={() => setDeleting(null)} />}
       <div className="notes-browser">
         <div className="panel-bar">
           <input
@@ -246,20 +198,21 @@ function NoteList({
               <p className="empty">Searching notes…</p>
             ) : matches.length ? (
               <List>
-                {matches.map((match, index) => (
+                {matches.map((match) => (
                   <ListRow
-                    key={`${match.note.id}:${match.from ?? "title"}:${index}`}
+                    key={`${match.note.id}:${match.from ?? "title"}`}
                     lead={match.note.gmOnly ? <IconSecret size={22} /> : <IconNotes size={22} />}
                     name={match.note.title}
                     meta={match.snippet}
                     tag={match.note.gmOnly ? "GM" : null}
                     selected={match.note.id === openId}
                     onPick={() => {
-                      noteSearchTarget.value =
+                      ctx.links.noteSearchTarget.set(
                         match.from === undefined
                           ? null
-                          : { noteId: match.note.id, from: match.from, to: match.to! };
-                      openNote(match.note.id);
+                          : { noteId: match.note.id, from: match.from, to: match.to! },
+                      );
+                      ctx.links.openNote(match.note.id);
                     }}
                   />
                 ))}
@@ -276,56 +229,29 @@ function NoteList({
             items={notes}
             folderOf={(note) => note.folder}
             renderItem={row}
-            renderActions={(beginFolderNaming) => (
+            renderActions={(newFolder) => (
               <>
-                <Button icon={IconAdd} onClick={() => newPage()}>
+                <Button icon={IconAdd} onClick={() => ctx.execute(newPage, {})}>
                   New Page
                 </Button>
-                {isGm && (
+                {gmPages && (
                   <Button
                     variant="ghost"
                     icon={IconSecret}
                     title="Only you can see it, until you reveal it"
-                    onClick={() => newPage(undefined, true)}
+                    onClick={() => ctx.execute(newGmPage, {})}
                   >
                     New GM Page
                   </Button>
                 )}
-                <Button variant="ghost" icon={IconNewFolder} onClick={beginFolderNaming}>
+                <Button variant="ghost" icon={IconNewFolder} onClick={newFolder}>
                   New Folder
                 </Button>
               </>
             )}
-            folderMenuItems={(folder, { open, toggle, rename }) => [
-              {
-                label: open ? "Collapse Folder" : "Expand Folder",
-                onSelect: toggle,
-              },
-              "divider",
-              {
-                label: "New Page Here",
-                Icon: IconNotes,
-                onSelect: () => newPage(folder.id),
-              },
-              ...(isGm
-                ? [
-                    {
-                      label: "New GM Page Here",
-                      Icon: IconSecret,
-                      onSelect: () => newPage(folder.id, true),
-                    },
-                  ]
-                : []),
-              { label: "Rename Folder", Icon: IconRename, onSelect: rename },
-              {
-                label: "Delete Folder",
-                Icon: IconDelete,
-                danger: true,
-                onSelect: () => deleteNoteFolder(campaign, folder.id),
-              },
-            ]}
-            onCreateFolder={(name) => createNoteFolder(campaign, name)}
-            onRenameFolder={(id, name) => renameNoteFolder(campaign, id, name)}
+            tree="note"
+            folderCommands={noteFolders}
+            showList={showList}
             emptyContent={!notes.length ? <p className="empty-inline">No pages yet.</p> : null}
           />
         )}
@@ -346,6 +272,7 @@ function NotePage({
   notes: NoteView[];
   active: boolean;
 }) {
+  const ctx = useCampaign();
   const linkedFrom = backlinks(campaign, `note:${note.id}`);
   const titleRef = useRef<HTMLInputElement>(null);
   // A brand-new page starts with its title ready to type.
@@ -362,7 +289,9 @@ function NotePage({
             <span>Only you can see this page.</span>
             <Button
               variant="ghost"
-              onClick={(e) => morphOpen(e.currentTarget, () => (revealing.value = note.id))}
+              onClick={(e) =>
+                morphOpen(e.currentTarget, () => invoke(ctx, revealPage, { id: note.id }))
+              }
             >
               Reveal to Players…
             </Button>
@@ -374,7 +303,7 @@ function NotePage({
           aria-label="Title"
           placeholder="Untitled"
           value={note.title === "Untitled" ? "" : note.title}
-          onChange={(e) => renameNote(campaign, note.id, e.currentTarget.value)}
+          onChange={(e) => ctx.execute(renamePage, { id: note.id, title: e.currentTarget.value })}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
@@ -397,7 +326,7 @@ function NotePage({
                   key={n.id}
                   lead={<IconNotes size={22} />}
                   name={notes.find((k) => k.id === n.id)?.title ?? n.title}
-                  onPick={() => openNote(n.id)}
+                  onPick={() => ctx.links.openNote(n.id)}
                 />
               ))}
             </List>
@@ -405,60 +334,5 @@ function NotePage({
         )}
       </div>
     </article>
-  );
-}
-
-/** A page waiting for the GM to confirm revealing it. */
-const revealing = store<string | null>(null);
-
-/** Asks before revealing a GM-only page: players keep it once they have it. */
-function RevealPage({
-  campaign,
-  note,
-  onClose,
-}: {
-  campaign: Campaign;
-  note: NoteView;
-  onClose: () => void;
-}) {
-  return (
-    <ConfirmDialog
-      title="Reveal page"
-      confirmLabel="Reveal"
-      confirmVariant="primary"
-      onClose={onClose}
-      onConfirm={() => void revealNote(campaign, note.id)}
-    >
-      <p>
-        Show <strong>{note.title}</strong> to everyone? Players get their own copy, so it can&apos;t
-        be hidden again.
-      </p>
-    </ConfirmDialog>
-  );
-}
-
-/** Asks before deleting a page: it can't be undone. */
-function DeletePage({
-  campaign,
-  note,
-  onClose,
-}: {
-  campaign: Campaign;
-  note: NoteView;
-  onClose: () => void;
-}) {
-  return (
-    <ConfirmDialog
-      title="Delete page"
-      confirmLabel="Delete"
-      confirmVariant="danger"
-      onClose={onClose}
-      onConfirm={() => deleteNote(campaign, note.id)}
-    >
-      <p>
-        Delete <strong>{note.title}</strong>? It&apos;s gone for everyone, and links to it stop
-        working. This can&apos;t be undone.
-      </p>
-    </ConfirmDialog>
   );
 }

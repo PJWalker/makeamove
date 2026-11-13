@@ -216,6 +216,7 @@ export class DualKawaseBloom extends Filter {
     composite.update();
     this.resources.uBloom = glow.source;
     filterManager.applyFilter(this, input, output, clearMode);
+    this.resources.uBloom = Texture.EMPTY.source;
 
     for (const texture of chain) TexturePool.returnTexture(texture);
   }

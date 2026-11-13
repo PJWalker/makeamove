@@ -3,7 +3,7 @@ import { canEdit, getCharacter, systemOf } from "../features/characters/api";
 import type { CharacterView } from "../features/characters/types";
 import { useExtension } from "./systemExtensions";
 import type { ActionDef } from "../systems/types";
-import { useY } from "../ui/useY";
+import { useQuery } from "../ui/useQuery";
 import { RichTextView } from "./RichTextView";
 
 /*
@@ -22,7 +22,7 @@ export function MoveBody({
   characterId: string | null;
 }) {
   const system = systemOf(campaign);
-  const json = useY(campaign.characters, () =>
+  const json = useQuery(campaign.characters, () =>
     JSON.stringify(getCharacter(campaign, characterId ?? undefined) ?? null),
   );
   const c = JSON.parse(json) as CharacterView | null;

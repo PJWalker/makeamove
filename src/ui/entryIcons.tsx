@@ -1,6 +1,8 @@
-import type { EntryKind } from "../core/types";
 import { icon, type Icon } from "./icons";
 import { renderToStaticMarkup } from "react-dom/server";
+
+/** The kinds of entry a library holds. */
+export type EntryKind = "item" | "move" | "tag" | "option" | "monster";
 
 /*
  * Icons for library entries and inventory items. Icons are bundled at build

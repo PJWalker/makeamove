@@ -1,5 +1,6 @@
 import type { ToolId } from "../tools";
 import { draw } from "./draw";
+import { effect } from "./effect";
 import { erase } from "./erase";
 import { light } from "./light";
 import { pan } from "./pan";
@@ -23,4 +24,5 @@ export const TOOL_PRESS: Record<ToolId, ToolPress> = {
   ping,
   wall,
   light,
+  effect,
 };

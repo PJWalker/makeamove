@@ -1,14 +1,14 @@
-import type { EntityGraphic, EntityGraphicRef } from "../graphics";
+import type { EntityGraphic, EntityGraphicRef } from "../media/images";
 import { store, watch } from "../lib/store";
 import type { CampaignDefaults } from "../campaign/campaign";
 import { device } from "../platform/device";
 
 import { colourOf, type Presence } from "./presence";
-import { clampZoom, fitCamera, toWorld, zoomAt } from "./camera";
+import { type Camera, clampZoom, fitCamera, toWorld, zoomAt } from "./camera";
 import { readSceneCamera, saveSceneCamera } from "./cameraMemory";
 import { bounds, hits } from "./geometry";
 import { type Point, snapPoint } from "./grid";
-import type { BlobRef } from "../core/blob";
+import type { BlobRef } from "../media/images";
 import { importImage, imageColour } from "../media/images";
 import { tokenDistance } from "./measure";
 import {
@@ -19,12 +19,11 @@ import {
   type TokenSpec,
 } from "./newElements";
 import type { SceneRenderer } from "./renderer";
-import type { SceneDoc } from "./sceneDoc";
-import { activeTool, ERASER_RADIUS, lightTool } from "./tools";
+import type { ElementPatch, SceneDoc } from "./sceneDoc";
+import { ERASER_RADIUS, GM_KINDS, kindOf, type SceneTools } from "./tools";
 import {
   LAYERS,
   type Layer,
-  type AreaTone,
   type NewElement,
   type SceneElement,
   type TokenElement,
@@ -32,10 +31,10 @@ import {
   type Transform,
 } from "./types";
 import { TOOL_PRESS } from "./gestures";
-import { AreaDraft } from "./gestures/light";
+import { PolygonDraft } from "./gestures/polygon";
 import { pinch } from "./gestures/pan";
 import { hoverCursor } from "./gestures/select";
-import { dragShape } from "./gestures/shape";
+import { dragShape, placementPlan } from "./gestures/shape";
 import { putText } from "./gestures/text";
 import type { Gesture, Placement, ToolContext } from "./gestures/types";
 
@@ -59,10 +58,10 @@ export interface TextRequest {
 
 export class SceneController implements ToolContext {
   readonly selection = store<string[]>([]);
+  /** The selected elements as they are now, kept current as they change. */
+  readonly selectedElements = store<readonly SceneElement[]>([]);
   /** Dominant colour of the scene's largest map, for the UI tint. */
   readonly mapColour = store<string | null>(null);
-  readonly canUndo = store(false);
-  readonly canRedo = store(false);
   /**
    * While an action asks for targets: clicking a token targets it (or stops
    * targeting it) instead of selecting it. `max` caps how many; past it the
@@ -78,8 +77,8 @@ export class SceneController implements ToolContext {
   /** An area to place for an action: the next drag on the map puts it down (see placeArea). */
   readonly placing = store<Placement | null>(null);
 
-  /** The corners of an area of solid light or dark being placed, a click at a time. */
-  readonly area: AreaDraft = new AreaDraft(this);
+  /** The corners of a polygon (a shape, or an area of solid light or dark) being placed, a click at a time. */
+  readonly polygon: PolygonDraft = new PolygonDraft(this);
 
   /** Whether this device is the GM's: only the GM sees and edits walls and lights. */
   gm = false;
@@ -112,7 +111,19 @@ export class SceneController implements ToolContext {
     return this.elements;
   }
   private byId = new Map<string, SceneElement>();
-  private gesture: Gesture | null = null;
+  private current: Gesture | null = null;
+  /** What a press is doing: a drag, a marquee, a pinch. */
+  private get gesture() {
+    return this.current;
+  }
+  private set gesture(g: Gesture | null) {
+    this.current = g;
+    this.pressing.value = !!g;
+  }
+  /** Whether a press is under way, so chrome over the scene can keep out of its way. */
+  readonly pressing = store(false);
+  /** Where the camera is, for chrome that follows things on the scene. */
+  readonly camera = store<Camera>({ x: 0, y: 0, zoom: 1 });
   readonly pointers = new Map<number, Point>();
   /**
    * Which press in a quick run of them this is: 2 for a double click.
@@ -130,6 +141,7 @@ export class SceneController implements ToolContext {
   readonly renderer: SceneRenderer;
   readonly host: HTMLElement;
   readonly sceneId: string;
+  readonly tools: SceneTools;
   /** The campaign's current defaults for new things. */
   readonly defaults: () => CampaignDefaults;
   readonly presence: Presence | null;
@@ -140,9 +152,11 @@ export class SceneController implements ToolContext {
     renderer: SceneRenderer,
     host: HTMLElement,
     sceneId: string,
+    tools: SceneTools,
     defaults: () => CampaignDefaults,
     presence: Presence | null = null,
   ) {
+    this.tools = tools;
     this.presence = presence;
     this.scene = scene;
     this.renderer = renderer;
@@ -157,34 +171,36 @@ export class SceneController implements ToolContext {
       this.renderer.setGrid(this.scene.grid());
       this.renderer.invalidate("overlay");
     };
-    const history = () => {
-      this.canUndo.value = this.scene.undo.canUndo();
-      this.canRedo.value = this.scene.undo.canRedo();
-    };
-    this.scene.elements.observeDeep(refresh);
-    this.scene.settings.observe(regrid);
-    this.scene.undo.on("stack-item-added", history);
-    this.scene.undo.on("stack-item-popped", history);
     this.disposers.push(
-      () => this.scene.elements.unobserveDeep(refresh),
-      () => this.scene.settings.unobserve(regrid),
-      () => this.scene.undo.off("stack-item-added", history),
-      () => this.scene.undo.off("stack-item-popped", history),
-      watch([this.selection], () => this.updateOverlay()),
-      // Only a tool change should cancel a gesture, not the selection
-      // changes that a marquee makes as it goes.
-      watch([activeTool, lightTool], () => {
-        // Lamps and areas show, and stay selected, only in the Lights tool.
-        this.renderer.lightsShown = activeTool.value === "light";
-        const keep = this.selection.value.filter((id) => {
-          const el = this.byId.get(id);
-          return el && this.pickable(el);
-        });
-        if (keep.length !== this.selection.value.length) this.selection.value = keep;
-        this.cancelGesture();
-        this.updateCursor();
+      this.scene.elements.observe(refresh),
+      this.scene.settings.observe(regrid),
+      watch([this.selection], () => {
+        this.selectedElements.value = this.selected();
         this.updateOverlay();
       }),
+      // Only a tool change should cancel a gesture, not the selection
+      // changes that a marquee makes as it goes.
+      watch(
+        [
+          this.tools.activeTool,
+          this.tools.lightTool,
+          this.tools.shapeTool,
+          this.tools.effectTool,
+          this.tools.selectable,
+        ],
+        () => {
+          // The GM's lamps, areas and effect outlines show wherever they can be picked.
+          this.renderer.helpersShown = new Set(this.tools.pickingKinds());
+          const keep = this.selection.value.filter((id) => {
+            const el = this.byId.get(id);
+            return el && this.pickable(el);
+          });
+          if (keep.length !== this.selection.value.length) this.selection.value = keep;
+          this.cancelGesture();
+          this.updateCursor();
+          this.updateOverlay();
+        },
+      ),
     );
     this.renderer.insets = () => {
       const host = this.host.getBoundingClientRect();
@@ -219,7 +235,11 @@ export class SceneController implements ToolContext {
     regrid();
     this.refresh();
     this.restoreCamera();
-    this.renderer.onCameraChange = () => this.scheduleSaveCamera();
+    this.camera.value = this.renderer.camera;
+    this.renderer.onCameraChange = (cam) => {
+      this.camera.value = cam;
+      this.scheduleSaveCamera();
+    };
 
     const el = this.host;
     const listen = <K extends keyof HTMLElementEventMap>(
@@ -266,7 +286,10 @@ export class SceneController implements ToolContext {
     if (targets.length !== this.targets.value.length) this.setTargets(targets);
     const sel = this.selection.value.filter((id) => this.byId.has(id));
     if (sel.length !== this.selection.value.length) this.selection.value = sel;
-    else this.updateOverlay();
+    else {
+      this.selectedElements.value = this.selected();
+      this.updateOverlay();
+    }
     this.updateMapColour();
   }
 
@@ -278,7 +301,7 @@ export class SceneController implements ToolContext {
       this.mapColour.value = null;
       return;
     }
-    void imageColour(main.image.hash).then((c) => (this.mapColour.value = c));
+    void imageColour(main.image.hash, this.renderer.peers).then((c) => (this.mapColour.value = c));
   }
 
   select(ids: string[]) {
@@ -296,7 +319,7 @@ export class SceneController implements ToolContext {
   }
 
   updateOverlay() {
-    const tool = activeTool.value;
+    const tool = this.tools.activeTool.value;
     const selected = this.selecting() ? this.selected() : [];
     const g = this.gesture;
     const movable = selected.filter((el) => !el.locked);
@@ -376,7 +399,7 @@ export class SceneController implements ToolContext {
   }
 
   private updateCursor(cursor?: string) {
-    const tool = activeTool.value;
+    const tool = this.tools.activeTool.value;
     this.host.style.cursor =
       cursor ??
       this.gesture?.cursor ??
@@ -386,7 +409,8 @@ export class SceneController implements ToolContext {
             tool === "draw" ||
             tool === "shape" ||
             tool === "wall" ||
-            (tool === "light" && !this.selecting()) ||
+            tool === "light" ||
+            tool === "effect" ||
             tool === "ruler" ||
             tool === "ping" ||
             (tool === "select" && this.targetMode.value)
@@ -456,20 +480,20 @@ export class SceneController implements ToolContext {
 
   // Hit testing
 
-  /** Whether the tool in use selects: the Select tool, or the Lights tool's own. */
+  /** Whether the tool in use selects. */
   private selecting(): boolean {
-    const tool = activeTool.value;
-    return tool === "select" || (tool === "light" && lightTool.value === "select");
+    return this.tools.activeTool.value === "select";
   }
 
   /**
-   * Whether an element can be picked with the tool in use: in the Lights tool
-   * only lamps and areas, which nothing else can pick. Only the GM picks walls.
+   * Whether an element can be picked with the tool in use: the sorts the
+   * Select tool's options turn on, or in the Lights or Effects tool what it
+   * makes. Only the GM picks walls, lights and effects.
    */
   pickable(el: SceneElement): boolean {
-    const lamp = el.type === "light" || el.type === "area";
-    if (activeTool.value === "light") return lamp && this.gm;
-    return !lamp && (el.type !== "wall" || this.gm);
+    const kind = kindOf(el);
+    if (GM_KINDS.includes(kind) && !this.gm) return false;
+    return this.tools.pickingKinds().includes(kind);
   }
 
   /** Topmost element under p. Locked elements only count when asked. */
@@ -507,13 +531,17 @@ export class SceneController implements ToolContext {
     // Placing an action's area: the press is its origin (or centre), the drag aims it.
     const placing = this.placing.value;
     if (placing && e.button === 0 && !this.spaceHeld) {
-      this.gesture = dragShape(this, e, world, placing.shape, placing);
+      this.gesture = dragShape(this, e, world, placing.shape, placementPlan(this, placing));
       this.updateCursor();
       return;
     }
 
     const tool =
-      e.button === 1 || this.spaceHeld ? "pan" : this.selecting() ? "select" : activeTool.value;
+      e.button === 1 || this.spaceHeld
+        ? "pan"
+        : this.selecting()
+          ? "select"
+          : this.tools.activeTool.value;
     this.gesture = TOOL_PRESS[tool](this, e, world, screen);
     this.updateCursor();
     this.updateOverlay();
@@ -549,8 +577,8 @@ export class SceneController implements ToolContext {
       return;
     }
     if (this.selecting() && !this.spaceHeld) this.updateCursor(hoverCursor(this, world, screen));
-    if (activeTool.value === "erase") this.updateOverlay();
-    this.area.preview(world, e);
+    if (this.tools.activeTool.value === "erase") this.updateOverlay();
+    this.polygon.preview(world, e);
   }
 
   private onPointerUp(e: PointerEvent, cancelled = false) {
@@ -632,7 +660,7 @@ export class SceneController implements ToolContext {
 
   /** Drop an in-progress gesture without changing the scene; `e` is the pointercancel, if that's why. */
   cancelGesture(e?: PointerEvent) {
-    this.area.cancel();
+    this.polygon.cancel();
     const g = this.gesture;
     if (!g) return;
     g.cancel?.(e);
@@ -669,7 +697,10 @@ export class SceneController implements ToolContext {
 
   // Keyboard
 
-  /** Handle a key press aimed at the canvas; returns true if it was used. */
+  /**
+   * Handle a key press aimed at the canvas; returns true if it was used.
+   * Undo, Duplicate, Delete and Fit are commands, with their own keys (workspace/commands).
+   */
   onKeyDown(e: KeyboardEvent): boolean {
     const mod = e.metaKey || e.ctrlKey;
     const key = e.key.toLowerCase();
@@ -682,41 +713,23 @@ export class SceneController implements ToolContext {
       }
       return true;
     }
-    if (mod && key === "z") {
-      this.cancelGesture();
-      if (e.shiftKey) this.scene.undo.redo();
-      else this.scene.undo.undo();
-      return true;
-    }
-    if (mod && key === "y") {
-      this.scene.undo.redo();
-      return true;
-    }
     if (mod && key === "a") {
-      if (!this.selecting()) activeTool.value = "select";
+      if (!this.selecting()) this.tools.activeTool.value = "select";
       this.selection.value = this.elements
         .filter((el) => !el.locked && this.pickable(el))
         .map((el) => el.id);
-      return true;
-    }
-    if (mod && key === "d") {
-      this.duplicate(this.selection.value);
       return true;
     }
     if (mod) return false;
 
     switch (e.key) {
       case "Enter":
-        if (!this.area.active) return false;
-        this.area.finish();
+        if (!this.polygon.active) return false;
+        this.polygon.finish();
         return true;
       case "Escape":
-        if (this.gesture || this.area.active) this.cancelGesture();
+        if (this.gesture || this.polygon.active) this.cancelGesture();
         else this.selection.value = [];
-        return true;
-      case "Delete":
-      case "Backspace":
-        this.remove(this.selection.value);
         return true;
       case "ArrowUp":
       case "ArrowDown":
@@ -740,10 +753,6 @@ export class SceneController implements ToolContext {
         return true;
     }
     // By key position, so Shift + digit works on any keyboard layout.
-    if (e.shiftKey && e.code === "Digit1") {
-      this.fit();
-      return true;
-    }
     if (e.shiftKey && e.code === "Digit0") {
       this.zoomTo(1);
       return true;
@@ -770,7 +779,8 @@ export class SceneController implements ToolContext {
     const removable = ids.filter((id) => this.byId.get(id) && !this.byId.get(id)!.locked);
     if (!removable.length) return;
     this.scene.remove(removable);
-    this.selection.value = this.selection.value.filter((id) => !removable.includes(id));
+    const removableIds = new Set(removable);
+    this.selection.value = this.selection.value.filter((id) => !removableIds.has(id));
   }
 
   duplicate(ids: string[]) {
@@ -796,40 +806,21 @@ export class SceneController implements ToolContext {
     this.scene.setLayer(ids, layer);
   }
 
-  /** Open or close a door; turn a wall into a door or back. */
-  setDoor(id: string, patch: { door?: boolean; open?: boolean }) {
-    const el = this.byId.get(id);
-    if (el?.type !== "wall") return;
-    this.scene.update([
-      [
-        id,
-        {
-          ...patch,
-          ...(patch.door === false ? { open: undefined } : {}),
-        },
-      ],
-    ]);
+  /** Change elements' properties as one undo step. Turning a door back into a wall forgets whether it was open. */
+  setProps(ids: string[], patch: ElementPatch) {
+    const fixed = "door" in patch && patch.door === false ? { ...patch, open: undefined } : patch;
+    this.scene.update(ids.filter((id) => this.byId.has(id)).map((id) => [id, fixed]));
   }
 
-  /** Turn an area of light into one of dark, or back. */
-  setAreaTone(id: string, tone: AreaTone) {
-    if (this.byId.get(id)?.type !== "area") return;
-    this.scene.update([[id, { tone }]]);
-  }
-
-  /** Show a light in another colour, without changing it yet; null to stop. */
-  previewLightColour(id: string, colour: string | null) {
-    const el = this.byId.get(id);
-    if (el?.type !== "light") return;
-    if (colour) this.renderer.previews.set(id, { ...el, colour } as Transform);
-    else this.renderer.previews.delete(id);
+  /** Show elements with changed properties without changing them yet; null to stop. */
+  previewProps(ids: string[], patch: ElementPatch | null) {
+    for (const id of ids) {
+      const el = this.byId.get(id);
+      if (!el) continue;
+      if (patch) this.renderer.previews.set(id, { ...el, ...patch } as Transform);
+      else this.renderer.previews.delete(id);
+    }
     this.renderer.invalidate("previews");
-  }
-
-  /** Change a light's colour, or whether it flickers. */
-  setLight(id: string, patch: { colour?: string; flicker?: boolean }) {
-    if (this.byId.get(id)?.type !== "light") return;
-    this.scene.update([[id, patch]]);
   }
 
   /**
@@ -938,7 +929,7 @@ export class SceneController implements ToolContext {
   ) {
     const look = this.newTokenLook(!!spec.image || spec.graphic?.kind === "image", spec);
     const id = this.scene.add(newToken(this.renderer.grid, at, { ...spec, ...look }))[0]!;
-    activeTool.value = "select";
+    this.tools.activeTool.value = "select";
     this.selection.value = [id];
     return id;
   }
@@ -954,14 +945,19 @@ export class SceneController implements ToolContext {
     const grid = this.renderer.grid;
     const added: NewElement[] = [];
     try {
-      for (const [i, file] of images.entries()) {
-        let image: BlobRef;
-        try {
-          image = await importImage(file);
-        } catch (err) {
-          console.warn(`Couldn't import ${file.name}`, err);
-          continue;
-        }
+      const imported = await Promise.all(
+        images.map(async (file) => {
+          try {
+            return await importImage(file);
+          } catch (err) {
+            console.warn(`Couldn't import ${file.name}`, err);
+            return null;
+          }
+        }),
+      );
+      for (const [i, image] of imported.entries()) {
+        if (!image) continue;
+        const file = images[i]!;
         const shift = i * (grid.type === "none" ? 40 : grid.size);
         const p = { x: at.x + shift, y: at.y + shift };
         added.push(imageElement(grid, image, file.name, p, this.newTokenLook(true)));
@@ -970,7 +966,7 @@ export class SceneController implements ToolContext {
       this.updateCursor();
     }
     if (!added.length) return;
-    activeTool.value = "select";
+    this.tools.activeTool.value = "select";
     this.selection.value = this.scene.add(...added);
   }
 

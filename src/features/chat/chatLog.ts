@@ -6,6 +6,7 @@ import { newId } from "../../lib/ids";
 import { dataName } from "../../platform/dataEpoch";
 import { device } from "../../platform/device";
 import { colourOf } from "../../scene/presence";
+import { list, rootOf, type List } from "../../data/schema";
 import type { ChatMessage } from "./types";
 
 /*
@@ -25,15 +26,17 @@ const INITIAL_CHUNKS = 2;
 
 export const chatDbName = (guid: string) => dataName("chat", guid);
 
-/** Remove this device's copy of every chunk listed in a campaign's root doc. */
-export function deleteChatData(root: Y.Doc) {
-  for (const chunk of root.getArray<Y.Doc>("chat").toArray())
-    indexedDB.deleteDatabase(chatDbName(chunk.guid));
+/** Remove this device's copy of every chunk listed in a campaign's chat log. */
+export function deleteChatData(chunks: List<Y.Doc>) {
+  for (const chunk of chunks.toArray()) indexedDB.deleteDatabase(chatDbName(chunk.guid));
 }
+
+/** A chunk of the log: up to CHUNK_SIZE messages, in the order they were posted. */
+const chunkShape = { messages: list<ChatMessage>() };
 
 interface LoadedChunk {
   doc: Y.Doc;
-  messages: Y.Array<ChatMessage>;
+  messages: List<ChatMessage>;
   persistence: IndexeddbPersistence;
   stop: () => void;
 }
@@ -52,7 +55,7 @@ export class ChatLog {
   /** About how many messages those hold: chunks fill before the next starts, so CHUNK_SIZE each. */
   readonly earlierCount = store(0);
 
-  private readonly chunks: Y.Array<Y.Doc>;
+  private readonly chunks: List<Y.Doc>;
   private readonly loaded = new Map<string, LoadedChunk>();
   private readonly clock: HybridClock;
   private readonly campaignId: string;
@@ -61,15 +64,14 @@ export class ChatLog {
   private destroyed = false;
   private stopRoot: () => void;
 
-  constructor(root: Y.Doc, campaignId: string, deviceId: string) {
-    this.chunks = root.getArray("chat");
+  constructor(chunks: List<Y.Doc>, campaignId: string, deviceId: string) {
+    this.chunks = chunks;
     this.campaignId = campaignId;
     this.clock = new HybridClock(deviceId);
     // New chunks (ours or a peer's) are always loaded; they're the newest.
     const onChunks = () =>
       void this.loadFrom(Math.min(this.from, Math.max(0, this.chunks.length - INITIAL_CHUNKS)));
-    this.chunks.observe(onChunks);
-    this.stopRoot = () => this.chunks.unobserve(onChunks);
+    this.stopRoot = this.chunks.observe(onChunks);
   }
 
   /** Load the newest chunks. */
@@ -87,7 +89,7 @@ export class ChatLog {
     this.hasEarlier.value = this.from > 0;
     this.earlierCount.value = this.from * CHUNK_SIZE;
     const waits: Promise<unknown>[] = [];
-    this.chunks.forEach((doc, i) => {
+    this.chunks.toArray().forEach((doc, i) => {
       if (i >= this.from && !this.loaded.has(doc.guid)) waits.push(this.loadChunk(doc));
     });
     await Promise.all(waits);
@@ -96,15 +98,13 @@ export class ChatLog {
   private async loadChunk(doc: Y.Doc) {
     if (this.destroyed) return;
     doc.load();
-    const messages = doc.getArray<ChatMessage>("messages");
+    const { messages } = rootOf(doc, chunkShape);
     const persistence = new IndexeddbPersistence(chatDbName(doc.guid), doc);
-    const onChange = () => this.refresh();
-    messages.observe(onChange);
     this.loaded.set(doc.guid, {
       doc,
       messages,
       persistence,
-      stop: () => messages.unobserve(onChange),
+      stop: messages.observe(() => this.refresh()),
     });
     await persistence.whenSynced;
     this.refresh();
@@ -122,14 +122,14 @@ export class ChatLog {
 
   /** The chunk new messages go into, starting one if needed. */
   private async currentChunk(): Promise<LoadedChunk> {
-    const last = this.chunks.length ? this.chunks.get(this.chunks.length - 1) : null;
+    const last = this.chunks.at(this.chunks.length - 1) ?? null;
     if (last) {
       if (!this.loaded.has(last.guid)) await this.loadChunk(last);
       const chunk = this.loaded.get(last.guid)!;
       if (chunk.messages.length < CHUNK_SIZE) return chunk;
     }
     const doc = new Y.Doc({ guid: `${this.campaignId}/chat/${newId()}` });
-    this.chunks.push([doc]);
+    this.chunks.push(doc);
     // The chunks observer starts loading it; wait for that to finish.
     await this.loadFrom(this.chunks.length - 1);
     return this.loaded.get(doc.guid)!;
@@ -147,7 +147,7 @@ export class ChatLog {
         name: author.name,
         colour: colourOf(device.value),
       } as ChatMessage;
-      chunk.messages.push([full]);
+      chunk.messages.push(full);
       return full;
     });
     this.queue = next.catch(() => {});
@@ -164,7 +164,7 @@ export class ChatLog {
     for (const { messages } of this.loaded.values()) {
       const i = messages.toArray().findIndex((m) => m.id === id);
       if (i >= 0) {
-        messages.delete(i, 1);
+        messages.delete(i);
         return true;
       }
     }

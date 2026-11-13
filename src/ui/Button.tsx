@@ -22,15 +22,7 @@ type Props = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "size"> & {
 };
 
 export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
-  {
-    variant = "secondary",
-    label,
-    pressed,
-    icon: ButtonIcon,
-    className: className,
-    children,
-    ...rest
-  }: Props,
+  { variant = "secondary", label, pressed, icon: ButtonIcon, className, children, ...rest }: Props,
   forwardedRef,
 ) {
   const ref = useObjectRef(forwardedRef);

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import {
   bounds,
@@ -155,7 +155,8 @@ describe("areas", () => {
       id: "s",
       type: "shape" as const,
       shape: "rect" as const,
-      colour: "#fff",
+      stroke: "#ffffffff",
+      fill: "#ffffff33",
       width: 4,
       x: 0,
       y: 0,
@@ -169,5 +170,24 @@ describe("areas", () => {
     };
     expect(hits(shape, { x: 51, y: 0 })).toBe(true);
     expect(hits(shape, { x: 60, y: 0 })).toBe(false);
+  });
+
+  it("covers a polygon inside or near its edges, at its size", () => {
+    // A triangle drawn 100 × 100, shown at twice that.
+    const triangle = {
+      shape: "polygon" as const,
+      points: [-50, 50, 50, 50, 0, -50],
+      bw: 100,
+      bh: 100,
+      x: 0,
+      y: 0,
+      w: 200,
+      h: 200,
+      rot: 0,
+    };
+    expect(shapeCovers(triangle, { x: 0, y: 0 })).toBe(true);
+    expect(shapeCovers(triangle, { x: -90, y: -90 })).toBe(false);
+    expect(shapeCovers(triangle, { x: 0, y: 103 })).toBe(false);
+    expect(shapeCovers(triangle, { x: 0, y: 103 }, 4)).toBe(true);
   });
 });

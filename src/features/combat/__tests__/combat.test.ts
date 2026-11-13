@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import * as Y from "yjs";
 import {
@@ -14,13 +14,11 @@ import {
   turnOrder,
   type Combatant,
 } from "../combat";
+import { rootOf } from "../../../data/schema";
+import { campaignShape } from "../../../campaign/schema";
 
 function fight(...people: Partial<Combatant>[]) {
-  const doc = new Y.Doc();
-  const m = {
-    combat: doc.getMap<unknown>("combat"),
-    combatants: doc.getMap<Combatant>("combatants"),
-  };
+  const m = rootOf(new Y.Doc(), campaignShape);
   const ids = people.map((p, i) => addCombatant(m, { name: `C${i}`, init: null, tie: 0, ...p }));
   return { m, ids };
 }

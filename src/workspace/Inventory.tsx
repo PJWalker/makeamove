@@ -1,36 +1,33 @@
-import { richTextFromPlain } from "../core/richText";
+import { richTextFromPlain } from "../data/richText";
 import { useState } from "react";
-import { addItem, removeItem, updateItem, spendItemUse } from "../features/characters/api";
-import { clearArtifactTrack, markArtifactTrack, systemOf } from "../features/characters/api";
+import { systemOf } from "../features/characters/api";
 import type { CharacterView, ItemInstance } from "../features/characters/types";
 import type { Derived } from "../systems/types";
 import type { Campaign } from "../campaign/campaign";
 import { Button } from "../ui/Button";
 import { RichTextView } from "./RichTextView";
-import { IconDelete, IconImage } from "../ui/icons";
 import { List } from "../ui/List";
 import { EntryRow, EntryWindow, useEntryWindows } from "./EntryWindow";
 import { linkProxy } from "./LinkChip";
-import { browseLibrary } from "./libraryView";
 import { actionMenuItems } from "./actionMenu";
-import { dragEntity, entity } from "./entityDrag";
+import { dragEntity } from "./entityDrag";
+import { entity } from "./dragEntities";
 import { CampaignEntityGraphic } from "./EntityGraphic";
-import { editEntityGraphic } from "./GraphicDialogs";
 import { getEntityGraphic } from "./entityGraphics";
 import { useExtension } from "./systemExtensions";
 import type { ItemUseProps } from "../systems/extensionTypes";
-
-const menuTargets = (i: ItemInstance) => [
-  ...(i.uses !== undefined ? [{ id: `use:${i.id}`, title: `Use ${i.name}` }] : []),
-  ...(i.equippable
-    ? [
-        {
-          id: `equip:${i.id}`,
-          title: `${i.equipped ? "Unequip" : "Equip"} ${i.name}`,
-        },
-      ]
-    : []),
-];
+import { useCampaign } from "./campaignContext";
+import {
+  clearItemTrack,
+  equipItem,
+  giveItem,
+  itemUsable,
+  markItemTrack,
+  updateItem,
+  useItem,
+} from "./commands/characters";
+import { callKey } from "../kernel/commands";
+import { findAction, joinSections, menuFor } from "./commands/views";
 
 const metaOf = (i: ItemInstance) =>
   [
@@ -55,6 +52,7 @@ function ArtifactTracker({
   item: ItemInstance;
   editable: boolean;
 }) {
+  const ctx = useCampaign();
   const [choice, setChoice] = useState("");
   const definition = systemOf(campaign).items.find((entry) => entry.id === item.defId);
   const artifact = definition?.artifact;
@@ -99,7 +97,11 @@ function ArtifactTracker({
         <Button
           disabled={!editable || progress >= artifact.capacity || (needsChoice && !selected)}
           onClick={() =>
-            markArtifactTrack(campaign, characterId, item.id, needsChoice ? selected : undefined)
+            ctx.execute(markItemTrack, {
+              characterId,
+              itemId: item.id,
+              unlock: needsChoice ? selected : undefined,
+            })
           }
         >
           Mark {artifact.track}
@@ -107,7 +109,7 @@ function ArtifactTracker({
         <Button
           variant="ghost"
           disabled={!editable || progress === 0}
-          onClick={() => clearArtifactTrack(campaign, characterId, item.id)}
+          onClick={() => ctx.execute(clearItemTrack, { characterId, itemId: item.id })}
         >
           Clear 1
         </Button>
@@ -133,13 +135,13 @@ function ArtifactTracker({
   );
 }
 
-/** The core's Use button: spends a use, or does what the system's extension says. */
-function UseButton({ campaign, character, item, editable }: ItemUseProps) {
-  const use = useExtension(systemOf(campaign)).spendUse ?? spendItemUse;
+/** The core's Use button: spends a use, or does whatever the system's command for it does. */
+function UseButton({ character, item, editable }: ItemUseProps) {
+  const ctx = useCampaign();
   return (
     <Button
       disabled={!editable || (item.usesLeft ?? 0) <= 0}
-      onClick={() => use(campaign, character.id, item.id)}
+      onClick={() => ctx.execute(useItem, { characterId: character.id, itemId: item.id })}
     >
       Use
     </Button>
@@ -162,61 +164,25 @@ export function Inventory({
   d?: Derived;
   editable: boolean;
 }) {
+  const ctx = useCampaign();
   const windows = useEntryWindows();
-  const patch = (i: ItemInstance, p: Partial<ItemInstance>) => updateItem(campaign, c.id, i.id, p);
+  const patch = (i: ItemInstance, p: Partial<ItemInstance>) =>
+    ctx.execute(updateItem, { characterId: c.id, itemId: i.id, patch: p });
   const over = d && (d.values.load ?? 0) > (d.values.maxLoad ?? 0);
   const system = systemOf(campaign);
   const extension = useExtension(system);
-  const usable = (i: ItemInstance) =>
-    i.uses !== undefined &&
-    (system.itemUsable?.(
-      i,
-      system.items.find((entry) => entry.id === i.defId),
-    ) ??
-      true);
   const ItemUse = extension.ItemUse ?? UseButton;
+  /** Its commands, then pinning its use or equipping to the hotbar. */
   const itemMenu = (i: ItemInstance) => {
-    const items = actionMenuItems(
-      campaign,
-      menuTargets(i).filter((target) => usable(i) || !target.id.startsWith(`use:${i.id}`)),
-    );
-    const extra = extension.itemMenu?.(campaign, c, i, editable) ?? [];
-    return [
-      ...(i.equippable
-        ? [
-            {
-              label: i.equipped ? `Unequip ${i.name}` : `Equip ${i.name}`,
-              disabled: !editable,
-              onSelect: () => patch(i, { equipped: !i.equipped }),
-            },
-          ]
-        : []),
-      ...(usable(i)
-        ? [
-            {
-              label: `Use ${i.name}`,
-              disabled: !editable || !i.usesLeft,
-              onSelect: () => (extension.spendUse ?? spendItemUse)(campaign, c.id, i.id),
-            },
-          ]
-        : []),
-      ...extra,
-      ...(items.length ? (["divider"] as const) : []),
-      ...items,
-      ...(items.length ? (["divider"] as const) : []),
-      {
-        label: `Remove ${i.name}`,
-        Icon: IconDelete,
-        danger: true,
-        disabled: !editable,
-        onSelect: () => removeItem(campaign, c.id, i.id),
-      },
-      {
-        label: "Change Graphic…",
-        Icon: IconImage,
-        onSelect: () => editEntityGraphic(campaign, "item", i.defId ?? i.id, i.name, i.icon),
-      },
-    ];
+    const target = { characterId: c.id, itemId: i.id };
+    const pinnable = [useItem, equipItem]
+      .filter((command) => command.menu?.item?.(ctx, target).length)
+      .flatMap((command) => findAction(ctx, callKey(command.id, { itemId: i.id })) ?? [])
+      .map((a) => ({ id: a.id, title: a.title }));
+    return joinSections([
+      menuFor(ctx, { kind: "item", ...target }),
+      actionMenuItems(ctx, pinnable),
+    ]);
   };
 
   const actions = (i: ItemInstance) => (
@@ -230,7 +196,9 @@ export function Inventory({
           {i.equipped ? "Equipped" : "Equip"}
         </Button>
       )}
-      {usable(i) && <ItemUse campaign={campaign} character={c} item={i} editable={editable} />}
+      {itemUsable(ctx, i) && (
+        <ItemUse campaign={campaign} character={c} item={i} editable={editable} />
+      )}
     </>
   );
 
@@ -275,7 +243,7 @@ export function Inventory({
               onOpen={(row) => windows.show(`inventory:${c.id}:${i.id}`, row)}
               onPointerDown={(ev) => {
                 const source = i.defId
-                  ? entity(campaign, "item", i.defId, i.name)
+                  ? entity(ctx, "item", i.defId, i.name)
                   : {
                       label: i.name,
                       token: {
@@ -285,10 +253,11 @@ export function Inventory({
                       },
                       give: {
                         kind: "item" as const,
-                        to: (characterId: string) => addItem(campaign, characterId, i),
+                        to: (characterId: string) =>
+                          ctx.execute(giveItem, { characterId, item: i }),
                       },
                     };
-                dragEntity(ev, source);
+                dragEntity(ctx.canvas, ev, source);
               }}
               menuItems={itemMenu(i)}
             >
@@ -298,7 +267,11 @@ export function Inventory({
         </List>
       )}
       {editable && (
-        <Button variant="ghost" className="inventory-find" onClick={() => browseLibrary("item")}>
+        <Button
+          variant="ghost"
+          className="inventory-find"
+          onClick={() => ctx.library.browse("item")}
+        >
           Find Items in the Libraries…
         </Button>
       )}
@@ -317,7 +290,7 @@ export function Inventory({
             graphicRef={{ kind: "item", id: i.defId ?? i.id }}
             graphicDefaultIcon={i.icon}
             // Gear from the Libraries stands for its entry there.
-            proxy={i.defId ? linkProxy(campaign, "item", i.defId, i.name, i.icon) : undefined}
+            proxy={i.defId ? linkProxy(ctx, "item", i.defId, i.name, i.icon) : undefined}
           >
             {metaOf(i) && <span className="muted">{metaOf(i)}</span>}
             <ArtifactTracker campaign={campaign} characterId={c.id} item={i} editable={editable} />

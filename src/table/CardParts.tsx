@@ -1,12 +1,14 @@
 import { getCharacter, systemOf } from "../features/characters/api";
-import { answerSave, applyDamage, canAnswer } from "../features/characters/resolution";
 import { rollModesFor } from "../features/characters/moves";
 import { appliedField, saveField, type SaveAnswer } from "../features/chat/messageState";
 import { useMessageState } from "./ChatExtras";
 import type { MoveMessage, MoveTarget, RollMessage } from "../features/chat/types";
 import type { Campaign } from "../campaign/campaign";
-import { useY } from "../ui/useY";
+import { useQuery } from "../ui/useQuery";
 import { Button } from "../ui/Button";
+import { answerRollRequest, applyCardDamage } from "../workspace/commands/characters";
+import { can } from "../workspace/commands/views";
+import { useCampaign } from "../workspace/campaignContext";
 
 /*
  * The parts of move and roll cards that resolve against targets: a roll per
@@ -55,7 +57,9 @@ export function SaveRequests({ campaign, m }: { campaign: Campaign; m: MoveMessa
   const system = systemOf(campaign);
   const saveAction = system.actions.find((action) => action.id === save.action);
   const modes = saveAction ? rollModesFor(system, saveAction) : [];
-  const gm = useY(campaign.members, () => campaign.isGm());
+  const ctx = useCampaign();
+  // Re-read as roles change.
+  useQuery(campaign.members, () => campaign.isGm());
   return (
     <div className="card-save">
       <p className="card-save-head">
@@ -74,11 +78,18 @@ export function SaveRequests({ campaign, m }: { campaign: Campaign; m: MoveMessa
                   </span>
                   <span className="card-target-verdict">{answer.success ? "Saved" : "Failed"}</span>
                 </>
-              ) : gm || canAnswer(campaign, t) ? (
+              ) : can(ctx, answerRollRequest, { messageId: m.id, target: t, save }) ? (
                 <span className="card-target-actions">
                   <Button
                     variant="ghost"
-                    onClick={() => answerSave(campaign, m.id, t, save, undefined, m.concentration)}
+                    onClick={() =>
+                      ctx.execute(answerRollRequest, {
+                        messageId: m.id,
+                        target: t,
+                        save,
+                        concentration: m.concentration,
+                      })
+                    }
                   >
                     Roll
                   </Button>
@@ -86,7 +97,15 @@ export function SaveRequests({ campaign, m }: { campaign: Campaign; m: MoveMessa
                     <Button
                       key={mode.id}
                       variant="ghost"
-                      onClick={() => answerSave(campaign, m.id, t, save, mode.id, m.concentration)}
+                      onClick={() =>
+                        ctx.execute(answerRollRequest, {
+                          messageId: m.id,
+                          target: t,
+                          save,
+                          mode: mode.id,
+                          concentration: m.concentration,
+                        })
+                      }
                     >
                       {mode.label}
                     </Button>
@@ -114,14 +133,23 @@ export function DamageTargets({ campaign, m }: { campaign: Campaign; m: RollMess
     m.id,
     damage.targets.map((t) => appliedField(t.id)),
   );
-  const gm = useY(campaign.members, () => campaign.isGm());
+  const ctx = useCampaign();
+  // Re-read as roles change.
+  useQuery(campaign.members, () => campaign.isGm());
   const healing = damage.type === "healing";
   const typeName =
     systemOf(campaign).damageTypes?.find((d) => d.id === damage.type)?.name ?? damage.type;
   const total = m.roll.total;
   const armor = systemOf(campaign).damageArmor;
   const apply = (t: MoveTarget, n: number, useArmor = false) =>
-    applyDamage(campaign, m.id, t, n, healing, { armor: useArmor, type: damage.type });
+    ctx.execute(applyCardDamage, {
+      messageId: m.id,
+      target: t,
+      amount: n,
+      healing,
+      armor: useArmor,
+      type: damage.type,
+    });
   return (
     <div className="card-damage">
       <p className="card-save-head">{typeName}</p>
@@ -141,55 +169,66 @@ export function DamageTargets({ campaign, m }: { campaign: Campaign; m: RollMess
                   {applied} HP
                 </span>
               )}
-              {gm && t.characterId && applied === undefined && (
-                <span className="card-target-actions">
-                  {healing ? (
-                    <Button variant="ghost" onClick={() => apply(t, total)}>
-                      Heal {total}
-                    </Button>
-                  ) : (
-                    <>
-                      <Button variant="ghost" title="Apply" onClick={() => apply(t, total)}>
-                        {total}
+              {t.characterId &&
+                applied === undefined &&
+                can(ctx, applyCardDamage, {
+                  messageId: m.id,
+                  target: t,
+                  amount: total,
+                  healing,
+                }) && (
+                  <span className="card-target-actions">
+                    {healing ? (
+                      <Button variant="ghost" onClick={() => apply(t, total)}>
+                        Heal {total}
                       </Button>
-                      <Button
-                        variant="ghost"
-                        title="Resistance: half"
-                        onClick={() => apply(t, Math.floor(total / 2))}
-                      >
-                        ½
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        title="Vulnerability: double"
-                        onClick={() => apply(t, total * 2)}
-                      >
-                        ×2
-                      </Button>
-                      {armor &&
-                        (getCharacter(campaign, t.characterId)?.resources[armor.resource] ?? 0) >
-                          0 && (
-                          <Button variant="ghost" onClick={() => apply(t, total, true)}>
-                            {armor.label}
-                          </Button>
-                        )}
-                      {shield && (
+                    ) : (
+                      <>
+                        <Button variant="ghost" title="Apply" onClick={() => apply(t, total)}>
+                          {total}
+                        </Button>
                         <Button
                           variant="ghost"
-                          onClick={() =>
-                            applyDamage(campaign, m.id, t, total, false, {
-                              type: damage.type,
-                              shieldItemId: shield.id,
-                            })
-                          }
+                          title="Resistance: half"
+                          onClick={() => apply(t, Math.floor(total / 2))}
                         >
-                          Block with {shield.name}
+                          ½
                         </Button>
-                      )}
-                    </>
-                  )}
-                </span>
-              )}
+                        <Button
+                          variant="ghost"
+                          title="Vulnerability: double"
+                          onClick={() => apply(t, total * 2)}
+                        >
+                          ×2
+                        </Button>
+                        {armor &&
+                          (getCharacter(campaign, t.characterId)?.resources[armor.resource] ?? 0) >
+                            0 && (
+                            <Button variant="ghost" onClick={() => apply(t, total, true)}>
+                              {armor.label}
+                            </Button>
+                          )}
+                        {shield && (
+                          <Button
+                            variant="ghost"
+                            onClick={() =>
+                              ctx.execute(applyCardDamage, {
+                                messageId: m.id,
+                                target: t,
+                                amount: total,
+                                healing: false,
+                                type: damage.type,
+                                shieldItemId: shield.id,
+                              })
+                            }
+                          >
+                            Block with {shield.name}
+                          </Button>
+                        )}
+                      </>
+                    )}
+                  </span>
+                )}
             </li>
           );
         })}

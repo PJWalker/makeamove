@@ -2,6 +2,8 @@ import { store } from "../lib/store";
 import * as Y from "yjs";
 import { IndexeddbPersistence } from "y-indexeddb";
 import { dataName } from "../platform/dataEpoch";
+import { isObject } from "../data/guards";
+import { collection, lww, rootOf } from "../data/schema";
 
 /**
  * The local list of campaigns on this device. It never syncs to peers: each
@@ -19,14 +21,16 @@ export interface CampaignSummary {
 }
 
 const doc = new Y.Doc();
-const list = doc.getMap<CampaignSummary>("campaigns");
+const { campaigns: list } = rootOf(doc, {
+  campaigns: collection(lww(isObject<CampaignSummary>), "campaign entry"),
+});
 const persistence = new IndexeddbPersistence(dataName("registry"), doc);
 
 export const campaigns = store<CampaignSummary[]>([]);
 export const registryReady = store(false);
 
 function refresh() {
-  campaigns.value = [...list.values()].sort((a, b) => b.lastOpenedAt - a.lastOpenedAt);
+  campaigns.value = list.values().sort((a, b) => b.lastOpenedAt - a.lastOpenedAt);
 }
 
 list.observe(refresh);

@@ -1,5 +1,6 @@
 import { ColorMatrixFilter, type Container } from "pixi.js";
 import { downFrame, type DownTurn } from "../downed";
+import { kindOf, type SelectKind } from "../tools";
 import { LAYERS, type Layer, type TokenElement } from "../types";
 import { buildView, contentKey, DESTROY_VIEW, type View } from "./elementViews";
 import type { RenderState } from "./state";
@@ -38,19 +39,33 @@ export class ElementLayer {
     for (const view of this.views.values()) view.key = "";
   }
 
-  /** Hide what's hidden for now (erased strokes), the GM's walls from everyone else, and lamps and areas outside the Lights tool. */
-  syncHidden(showHelpers: boolean, lightsShown: boolean) {
+  /**
+   * Hide what's hidden for now (erased strokes), and the GM's helpers from
+   * everyone else: walls always show to the GM, lamps, areas and effect
+   * outlines only while they can be picked (`shown`).
+   */
+  syncHidden(showHelpers: boolean, shown: ReadonlySet<SelectKind>) {
     const s = this.state;
     for (const [id, view] of this.views) {
-      const type = s.byId.get(id)?.type;
-      const helper =
-        type === "wall"
-          ? showHelpers
-          : type === "light" || type === "area"
-            ? showHelpers && lightsShown
-            : true;
-      view.root.visible = !s.hidden.has(id) && helper;
+      view.root.visible = !s.hidden.has(id);
+      const el = s.byId.get(id);
+      if (!view.helper || !el) continue;
+      const kind = kindOf(el);
+      view.helper.visible = showHelpers && (kind === "wall" || shown.has(kind));
     }
+  }
+
+  /** Play out the moving effects; whether they need more frames (not under reduced motion). */
+  animate(): boolean {
+    const still = reducedMotion();
+    const time = still ? 0 : performance.now() / 1000;
+    let animating = false;
+    for (const view of this.views.values()) {
+      if (!view.animate || !view.root.visible) continue;
+      view.animate(time);
+      animating = !still;
+    }
+    return animating;
   }
 
   sync() {
@@ -65,7 +80,7 @@ export class ElementLayer {
         view = undefined;
       }
       if (!view) {
-        view = buildView(el, key, () => s.invalidate(), this.dropHighlightToken);
+        view = buildView(el, key, () => s.invalidate(), this.dropHighlightToken, s.peers);
         this.views.set(el.id, view);
         // A new view isn't in a layer yet, so force a restack.
         this.order = "";

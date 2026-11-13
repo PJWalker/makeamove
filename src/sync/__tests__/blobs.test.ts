@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import * as Y from "yjs";
 import { BlobExchange, type BlobStore } from "../blobs";
 import { SyncSession } from "../session";

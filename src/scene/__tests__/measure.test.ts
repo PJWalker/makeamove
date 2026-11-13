@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { DEFAULT_GRID, hexCentre, type Grid } from "../grid";
 import { formatDistance, inRange, measure, steps, tokenCells, tokenDistance } from "../measure";
 

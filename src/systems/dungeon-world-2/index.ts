@@ -4,7 +4,7 @@ import { commaListOf } from "../../lib/list";
 
 import { resolveEffects } from "../effects";
 import type { ActionDef, ChoiceDef, GameSystem, OptionDef } from "../types";
-import { plainText, richTextFromPlain, type RichText } from "../../core/richText";
+import { plainText, richTextFromPlain, type RichText } from "../../data/richText";
 import { CLASS_CREATION_HINTS, GM_REFERENCE, PATHS, SOURCE_MOVES } from "./rulebook";
 import { revealedStruggleData, STRUGGLES } from "./struggles";
 import { INITIAL_TREASURE_BOXES, MAX_TREASURE_BOXES, purchaseAtWealth } from "./wealth";

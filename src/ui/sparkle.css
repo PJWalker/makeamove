@@ -16,19 +16,13 @@
   :root {
     --glint-colour: oklch(100% 0 0 / 0.3);
   }
-  :is(
-    .btn-primary,
-    .btn[aria-pressed="true"],
-    .segment[data-selected],
-    .pen-width[aria-checked="true"],
-    .pen-layer[aria-pressed="true"]
-  ) {
+  :is(.btn-primary, .btn[aria-pressed="true"], .segment[data-selected]) {
     --glint-colour: oklch(100% 0 0 / 0.85);
   }
-  :where(.btn, .popup-tab, .campaign-open, .segment, .pen-width, .pen-layer) {
+  :where(.btn, .popup-tab, .campaign-open, .segment) {
     position: relative;
   }
-  :is(.btn, .popup-tab, .campaign-open, .segment, .pen-width, .pen-layer)::after {
+  :is(.btn, .popup-tab, .campaign-open, .segment)::after {
     content: "";
     position: absolute;
     inset: -1px;
@@ -43,7 +37,7 @@
     opacity: 0;
     pointer-events: none;
   }
-  :is(.btn, .popup-tab, .campaign-open, .segment, .pen-width, .pen-layer)[data-sparkle]::after {
+  :is(.btn, .popup-tab, .campaign-open, .segment)[data-sparkle]::after {
     animation: edge-glint 750ms var(--ease) both;
   }
   @keyframes edge-glint {

@@ -1,25 +1,19 @@
-import "@vitest/browser/matchers";
+/// <reference types="vite/client" />
+
+import "vite-plus/test/matchers";
 import {
   cdp,
   page as browserPage,
   userEvent,
   type Locator as BrowserLocator,
   type UserEventClickOptions,
-} from "@vitest/browser/context";
+} from "vite-plus/test/browser/context";
 import { createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { expect as vitestExpect, test as vitestTest } from "vitest";
+import { expect as vitestExpect, test as vitestTest, type Assertion } from "vite-plus/test";
 import { App } from "../src/app/App";
 import { pendingInvite, routeCampaignId } from "../src/navigation/router";
-import { closeCampaign } from "../src/campaign/campaign";
-import { recentActions } from "../src/workspace/commands/recent";
-import { activeTool } from "../src/scene/tools";
-import { autohide } from "../src/workspace/canvasState";
-import { entityWindows } from "../src/workspace/entityWindows";
-import { normalise } from "../src/workspace/layoutModel";
-import { openLinks } from "../src/workspace/linkState";
-import { layout } from "../src/workspace/panelLayout";
-import { libraryView, openedLibraryEntries } from "../src/workspace/libraryView";
+import { autohide } from "../src/workspace/autohide";
 import "../src/styles/base.css";
 import "../src/styles/tokens.css";
 import "../src/styles/components.css";
@@ -83,7 +77,7 @@ function toInputPoint(x: number, y: number) {
 
 async function dispatchMouse(
   type: "mouseMoved" | "mousePressed" | "mouseReleased",
-  options: { button?: string; buttons: number; clickCount?: number },
+  options: { button?: "left" | "right" | "middle"; buttons: number; clickCount?: number },
 ) {
   await cdp().send("Input.dispatchMouseEvent", {
     type,
@@ -210,6 +204,14 @@ export class Locator {
     return this.element();
   }
 
+  private async waitForFocusableElement() {
+    const element = await this.waitForElement();
+    if (!("focus" in element) || typeof element.focus !== "function") {
+      throw new Error("The locator did not match a focusable element.");
+    }
+    return element as Element & { focus(options?: FocusOptions): void };
+  }
+
   async click(options?: UserEventClickOptions) {
     const element = await this.waitForElement();
     const target =
@@ -249,11 +251,11 @@ export class Locator {
   }
 
   async focus() {
-    (await this.waitForElement()).focus();
+    (await this.waitForFocusableElement()).focus();
   }
 
   async press(key: string) {
-    (await this.waitForElement()).focus();
+    (await this.waitForFocusableElement()).focus();
     await dispatchKey(key);
   }
 
@@ -326,12 +328,11 @@ async function mountApp(url = "/") {
   const appRoot = createRoot(appContainer);
   appContainer.__vitestAppRoot = appRoot;
   appContainer.__vitestAppReset = () => {
-    closeCampaign();
     pendingInvite.value = null;
     routeCampaignId.value = null;
   };
   appRoot.render(createElement(App));
-  const isCampaign = /^#\/c\//.test(location.hash);
+  const isCampaign = location.hash.startsWith("#/c/");
   await vitestExpect
     .poll(() => Boolean(document.querySelector(isCampaign ? ".table" : ".lobby")))
     .toBe(true);
@@ -509,7 +510,7 @@ export const expect = Object.assign(
 
 type BrowserExpect = {
   (actual: Locator): BrowserLocatorAssertion;
-  <T>(actual: T): ReturnType<typeof vitestExpect>;
+  <T>(actual: T): Assertion<void, T>;
   poll: typeof vitestExpect.poll;
 };
 
@@ -538,12 +539,12 @@ type BrowserTest = (
 ) => void;
 
 /**
- * Each test file shares one page, so per-device state that the app loaded from
- * localStorage when its modules ran would otherwise carry over from the test
- * before: the panel layout, open windows, autohide and so on. Put it back to
- * what a first visit gets.
+ * Each test file shares one page, so device preferences that the app loaded
+ * from localStorage when its modules ran would otherwise carry over from the
+ * test before. Everything kept per campaign goes with its campaign, which
+ * closes when the app unmounts.
  */
-const startViewTransition = document.startViewTransition;
+const startViewTransition = document.startViewTransition.bind(document);
 
 function resetDeviceState() {
   // A test may wrap this to hold a transition's animations; don't let that outlive it.
@@ -552,14 +553,7 @@ function resetDeviceState() {
   for (const style of document.querySelectorAll("style[data-test-style]")) style.remove();
   localStorage.clear();
   sessionStorage.clear();
-  layout.value = normalise(null, false);
-  entityWindows.value = {};
-  openLinks.value = [];
-  libraryView.value = { kind: "all", query: "" };
-  openedLibraryEntries.value = new Set();
   autohide.value = false;
-  activeTool.value = "select";
-  recentActions.value = [];
 }
 
 export const test = ((

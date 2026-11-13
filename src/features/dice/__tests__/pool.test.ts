@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { roll } from "../notation";
 import { chipText, poolFormula, type TrayPick } from "../pool";
 

@@ -60,23 +60,30 @@ test("panel creation actions share the title bar when docked and floating", asyn
     }
     if (actions.some((action) => action === "New Folder")) {
       await header.getByRole("button", { name: "New Folder", exact: true }).click();
-      const folderName = header.getByRole("textbox", { name: "Folder name" });
+      const panel = page.locator(".sidebar-panel").filter({ has: header });
+      const folderName = panel.getByRole("textbox", { name: "Folder name" });
       await expect(folderName).toBeFocused();
+      await expect(folderName).toHaveValue("Untitled folder");
+      await expect(header.getByRole("button", { name: "New Folder", exact: true })).toBeVisible();
       await folderName.fill(`${title} folder`);
       await folderName.press("Enter");
       await expect(folderName).toHaveCount(0);
-      await expect(header.getByRole("button", { name: "New Folder", exact: true })).toBeVisible();
+      await expect(
+        panel.locator(".list-group").filter({ hasText: `${title} folder` }),
+      ).toBeVisible();
     }
   }
 
   const itemsTab = page.getByRole("tab", { name: "Items", exact: true });
   if ((await itemsTab.getAttribute("aria-selected")) !== "true") await itemsTab.click();
   await page.getByRole("button", { name: "New Gear", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "New gear", exact: true })).toBeVisible();
+  const gearDialog = page.getByRole("dialog", { name: "New Gear", exact: true });
+  await expect(gearDialog).toBeVisible();
   await expect(
     page.locator(".panel-actions").getByRole("button", { name: "New Gear" }),
-  ).toHaveCount(0);
-  await page.getByRole("button", { name: "Items", exact: true }).click();
+  ).toBeVisible();
+  await gearDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(gearDialog).toHaveCount(0);
   await page.getByRole("tab", { name: "Items", exact: true }).click({ button: "right" });
   await page.getByRole("menuitem", { name: "Float in a Window" }).click();
   const itemsWindow = page.getByRole("region", { name: "Items", exact: true });
@@ -95,7 +102,7 @@ test("panel creation actions share the title bar when docked and floating", asyn
     }
   }
   await header.getByRole("button", { name: "New Move", exact: true }).click();
-  await expect(itemsWindow.getByRole("heading", { name: "New move", exact: true })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "New Move", exact: true })).toBeVisible();
   await expect(itemsWindow).toHaveAttribute("data-rolled", "false");
 });
 

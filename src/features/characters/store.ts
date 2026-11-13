@@ -1,49 +1,37 @@
-import * as Y from "yjs";
+import type { Characters } from "../../campaign/schema";
+import type { Item, Plain } from "../../data/schema";
+import type { SystemCharacterRec } from "../../systems/schema";
 import { newId } from "../../lib/ids";
 import type { EffectSource } from "../../systems/effects";
 import type { ActionDef, Derived, GameSystem, ItemDef } from "../../systems/types";
-import type { DataValue } from "../../core/types";
-import type { CharacterKind, CharacterView, Duration, ItemInstance } from "./types";
+import type { DataValue } from "../../data/types";
+import type { characterEntry } from "./schema";
+import type { CharacterKind, CharacterView, ItemInstance } from "./types";
 
 /*
- * Characters live in the campaign's root document as `characters`, a Y.Map
- * of id -> Y.Map. The core keeps what every system has; the rest is the
- * system's, in maps of its own so two players editing different fields
- * never overwrite each other:
- *
- *   name, owner, kind, folder,
- *   tokenStyle, tokenColour, template, base     plain fields
- *   learned     array  action ids learned beyond the system's
- *   text:*      Y.XmlFragment  rich text: notes, bonds, an NPC's long fields
- *   scores      Y.Map  stat id -> score
- *   data        Y.Map  the system's own fields (characterData)
- *   resources   Y.Map  resource id -> current value (HP, spell slots…)
- *   modifiers   Y.Map  modifier id -> value (Dungeon World's forward, ongoing)
- *   conditions  array  condition ids
- *   durations   object condition id -> how long it lasts in combat (combat/combat.ts)
- *   concentration      the action id the character is concentrating on
- *   fields      Y.Map  an NPC's system-defined fields
- *   inventory   Y.Map  item instances
- *
- * Effective values (armour, load, maximum HP) are worked out by the system
- * on read and never stored.
- *
- * A copy (a template's token, see characters/templates.ts) is a character
- * with `base` set to its template. It stores only what's been changed on it;
- * every field, and every key of every sub-map, it doesn't have comes from
- * the template, like a subclass. Conditions and inventory are taken whole:
- * the copy's own once it has any, else the template's.
+ * Making and reading characters; their layout is declared in schema.ts.
  */
 
-export type CharacterMap = Y.Map<unknown>;
+export type CharacterRec = Item<typeof characterEntry>;
+/** The parts of a system's data kept as id -> value. */
+export type SystemPart = "data" | "scores" | "resources" | "modifiers" | "fields";
 
-const subMap = <T = unknown>(m: CharacterMap, key: string): Y.Map<T> | undefined =>
-  m.get(key) as Y.Map<T> | undefined;
-const entries = <T>(m: Y.Map<T> | undefined): Record<string, T> =>
-  m ? Object.fromEntries(m.entries()) : {};
+const readPart = (data: SystemCharacterRec | undefined, part: SystemPart) =>
+  data?.get(part)?.read();
+
+/** The character's data for this system, if it has any of its own. */
+export const systemPartOf = (m: CharacterRec | undefined, system: GameSystem) =>
+  m?.get("ext")?.get(system.id);
+
+/** One of the system's parts of a character (data, scores…), made if it's missing. */
+export const ensureSystemPart = <P extends SystemPart>(
+  m: CharacterRec,
+  system: GameSystem,
+  part: P,
+) => m.ensure("ext").ensure(system.id).ensure(part);
 
 export function createCharacter(
-  characters: Y.Map<CharacterMap>,
+  characters: Characters,
   system: GameSystem,
   init: {
     name: string;
@@ -57,30 +45,35 @@ export function createCharacter(
 ): string {
   const id = newId();
   const kind = init.kind ?? "pc";
-  const m = new Y.Map<unknown>();
-  characters.doc!.transact(() => {
-    characters.set(id, m);
-    m.set("name", init.name);
-    m.set("owner", init.owner);
-    if (kind === "npc") m.set("kind", "npc");
-    if (init.folder) m.set("folder", init.folder);
-    const scores = new Y.Map<number>();
-    for (const s of system.stats) scores.set(s.id, init.scores?.[s.id] ?? s.default ?? 10);
-    m.set("scores", scores);
-    const data = new Y.Map<DataValue>();
-    for (const f of system.characterData)
-      if (!f.for || f.for === kind) data.set(f.id, init.data?.[f.id] ?? f.default);
-    m.set("data", data);
-    m.set("modifiers", new Y.Map<number>());
-    m.set("fields", new Y.Map<string | number>());
-    m.set("conditions", []);
-    m.set("lockedConditions", []);
-    m.set("inventory", new Y.Map());
+  const scores: Record<string, number> = {};
+  for (const s of system.stats) scores[s.id] = init.scores?.[s.id] ?? s.default ?? 10;
+  const data: Record<string, DataValue> = {};
+  for (const f of system.characterData)
+    if (!f.for || f.for === kind) data[f.id] = init.data?.[f.id] ?? f.default;
+  characters.transact(() => {
+    characters.set(id, {
+      name: init.name,
+      owner: init.owner,
+      ...(kind === "npc" && { kind }),
+      ...(init.folder && { folder: init.folder }),
+      conditions: [],
+      lockedConditions: [],
+      inventory: {},
+      ext: {
+        [system.id]: {
+          schemaVersion: system.schemaVersion ?? 1,
+          scores,
+          data,
+          modifiers: {},
+          fields: {},
+          resources: {},
+        },
+      },
+    });
     // Every resource starts full.
-    const resources = new Y.Map<number>();
-    m.set("resources", resources);
-    const c = characterView(id, m, system);
+    const c = characterView(id, characters.get(id)!, system);
     const d = derive(c, system);
+    const resources = systemPartOf(characters.get(id), system)!.ensure("resources");
     for (const r of system.resources) resources.set(r.id, r.initial ?? d.values[r.max] ?? 0);
   });
   return id;
@@ -92,55 +85,58 @@ export function createCharacter(
  */
 export function characterView(
   id: string,
-  m: CharacterMap,
+  m: CharacterRec,
   system: GameSystem,
-  base?: CharacterMap,
+  base?: CharacterRec,
 ): CharacterView {
-  const get = (key: string) => (m.has(key) ? m.get(key) : base?.get(key));
-  /** A sub-map's keys, the copy's over the template's. */
-  const merged = <T>(key: string): Record<string, T> => ({
-    ...entries(base && subMap<T>(base, key)),
-    ...entries(subMap<T>(m, key)),
-  });
+  const get = <K extends keyof CharacterRec["shape"]>(key: K) =>
+    m.has(key) ? m.get(key) : base?.get(key);
+  const own = systemPartOf(m, system);
+  const inherited = systemPartOf(base, system);
+  /** One of the system's parts, the copy's keys over the template's. */
+  const merged = <P extends SystemPart>(part: P) =>
+    ({
+      ...readPart(inherited, part),
+      ...readPart(own, part),
+    }) as Plain<SystemCharacterRec["shape"][P]>;
   const kind: CharacterKind = get("kind") === "npc" ? "npc" : "pc";
-  const storedScores = merged<number>("scores");
+  const storedScores = merged("scores");
   const scores: Record<string, number> = {};
   for (const s of system.stats) scores[s.id] = storedScores[s.id] ?? s.default ?? 10;
-  const storedData = merged<DataValue>("data");
+  const storedData = merged("data");
   const data: Record<string, DataValue> = {};
   for (const f of system.characterData)
     if (!f.for || f.for === kind) data[f.id] = storedData[f.id] ?? f.default;
-  const storedFields = merged<string | number>("fields");
+  const storedFields = merged("fields");
   const fields: Record<string, string | number> = {};
   for (const f of system.npcFields)
     fields[f.id] = storedFields[f.id] ?? f.default ?? (f.type === "number" ? 0 : "");
-  const inv =
-    subMap<ItemInstance>(m, "inventory") ?? (base && subMap<ItemInstance>(base, "inventory"));
+  const inv = m.get("inventory") ?? base?.get("inventory");
   const inventory = inv
-    ? [...inv.values()].sort((a, b) => (a.order < b.order ? -1 : a.order > b.order ? 1 : 0))
+    ? inv.values().sort((a, b) => (a.order < b.order ? -1 : a.order > b.order ? 1 : 0))
     : [];
   return {
     id,
     kind,
-    folder: m.get("folder") as string | undefined,
-    name: (get("name") as string | undefined) ?? "Unnamed",
-    owner: (get("owner") as string | undefined) ?? "",
+    folder: m.get("folder"),
+    name: get("name") ?? "Unnamed",
+    owner: get("owner") ?? "",
     scores,
     data,
-    resources: merged<number>("resources"),
-    conditions: (get("conditions") as string[] | undefined) ?? [],
-    lockedConditions: (get("lockedConditions") as string[] | undefined) ?? [],
-    durations: (get("durations") as Record<string, Duration> | undefined) ?? {},
-    concentration: get("concentration") as string | undefined,
-    modifiers: merged<number>("modifiers"),
+    resources: merged("resources"),
+    conditions: get("conditions") ?? [],
+    lockedConditions: get("lockedConditions") ?? [],
+    durations: get("durations") ?? {},
+    concentration: get("concentration"),
+    modifiers: merged("modifiers"),
     fields,
     inventory,
-    tokenStyle: get("tokenStyle") as CharacterView["tokenStyle"],
-    tokenColour: get("tokenColour") as string | undefined,
+    tokenStyle: get("tokenStyle"),
+    tokenColour: get("tokenColour"),
     // A copy is never a template itself.
-    template: m.get("template") as CharacterView["template"],
-    base: m.get("base") as string | undefined,
-    learned: (get("learned") as string[] | undefined) ?? [],
+    template: m.get("template"),
+    base: m.get("base"),
+    learned: get("learned") ?? [],
   };
 }
 
@@ -151,8 +147,9 @@ export function itemActive(item: ItemInstance): boolean {
 
 /** Everything changing a character's numbers: their conditions, then their active items. */
 export function effectSources(c: CharacterView, system: GameSystem): EffectSource[] {
+  const activeConditions = new Set(c.conditions);
   const conditions = system.conditions
-    .filter((k) => c.conditions.includes(k.id) && k.effects.length)
+    .filter((k) => activeConditions.has(k.id) && k.effects.length)
     .map((k) => ({ name: k.name, effects: k.effects }));
   const items = c.inventory
     .filter((i) => i.effects.length && itemActive(i))
@@ -168,11 +165,12 @@ export function derive(c: CharacterView, system: GameSystem): Derived {
 /** The actions a character has, as their system decides. */
 export function actionsFor(c: CharacterView, system: GameSystem, d: Derived): ActionDef[] {
   const own = system.actionsFor(c, d);
+  const ownSet = new Set(own);
   const learned = c.learned.flatMap((id) =>
     system.actions.filter(
       (a) =>
         a.id === id &&
-        !own.includes(a) &&
+        !ownSet.has(a) &&
         (!system.learnedActionAllowed || system.learnedActionAllowed(a, c, d)),
     ),
   );

@@ -1,5 +1,5 @@
 import { md } from "../../macros/markdown.macro" with { type: "macro" };
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { dungeonWorld as dw } from "../dungeon-world";
 import { derive } from "../../features/characters/store";
 import type { CharacterView } from "../../features/characters/types";

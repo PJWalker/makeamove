@@ -3,12 +3,12 @@ import { renderToReactElement } from "@tiptap/static-renderer/pm/react";
 import { type ChatContent } from "../features/chat/content";
 import type { ChatMessage, TextMessage } from "../features/chat/types";
 import { canEdit, getCharacter, actingCharacterId } from "../features/characters/api";
-import { TRACKER_NODE, type TrackerButton } from "../core/richText";
+import { TRACKER_NODE, type TrackerButton } from "../data/richText";
 import { TrackerButtonView } from "../workspace/RichTextView";
 import { stampTime } from "../lib/hlc";
 import type { Campaign } from "../campaign/campaign";
 import { device } from "../platform/device";
-import { useY } from "../ui/useY";
+import { useQuery } from "../ui/useQuery";
 import { Avatar } from "../ui/Avatar";
 import { Button } from "../ui/Button";
 import { menuTrigger } from "../ui/menuTrigger";
@@ -16,18 +16,11 @@ import { chatContentExtensions } from "./ChatInput";
 import { LINK_NODE } from "../features/notes/links";
 import type { LinkKind } from "../features/notes/links";
 import { LinkChip } from "../workspace/LinkChip";
-import {
-  CounterCard,
-  EditBox,
-  editedText,
-  editingMessage,
-  isPinned,
-  TimerCard,
-  useTextState,
-} from "./ChatExtras";
+import { CounterCard, EditBox, editedText, TimerCard, useTextState } from "./ChatExtras";
+import { isPinned } from "../features/chat/messages";
 import { playUiSound } from "../ui/sounds";
 import { MoveCard, RollCard } from "./RollCards";
-import { useValue } from "../ui/useValue";
+import { useCampaign } from "../workspace/campaignContext";
 
 /* One message in the chat, as the log and the pinned strip show it. */
 
@@ -38,11 +31,11 @@ const time = new Intl.DateTimeFormat(undefined, {
 
 /** One message on its own, as it shows in the log: for chat popping up outside the panel. */
 export function LoneMessage({ campaign, m }: { campaign: Campaign; m: ChatMessage }) {
-  const canAct = useY(campaign.characters, () => {
+  const canAct = useQuery(campaign.characters, () => {
     const c = m.kind === "move" ? getCharacter(campaign, m.characterId) : undefined;
     return !!c && canEdit(campaign, c);
   });
-  const me = useValue(device).id;
+  const me = useQuery(device).id;
   return (
     <Message
       campaign={campaign}
@@ -95,7 +88,7 @@ export const Message = memo(function Message({
     arrived.add(arrival.id);
     if (arrival.arriving && !arrival.mine) playUiSound("message");
   }, [arrival]);
-  const pinned = useY(campaign.messageState, () => isPinned(campaign, m.id));
+  const pinned = useQuery(campaign.messageState, () => isPinned(campaign, m.id));
   if (m.kind === "system") {
     const session = m.event === "session-start" || m.event === "session-end";
     return (
@@ -155,9 +148,10 @@ export const Message = memo(function Message({
 });
 
 function TextBody({ campaign, m, mine }: { campaign: Campaign; m: TextMessage; mine: boolean }) {
+  const ctx = useCampaign();
   const state = useTextState(campaign, m.id);
   const text = editedText(state, m.text);
-  const editing = useValue(editingMessage);
+  const editing = useQuery(ctx.table.editingMessage);
   if (editing === m.id) return <EditBox campaign={campaign} id={m.id} text={text} />;
   return (
     <div className="chat-text" data-emote={m.emote}>
@@ -206,8 +200,9 @@ function PinnedText({ campaign, m }: { campaign: Campaign; m: TextMessage }) {
 }
 
 function Rich({ campaign, content }: { campaign: Campaign; content: ChatContent }) {
+  const ctx = useCampaign();
   const rendered = renderToReactElement({
-    extensions: chatContentExtensions(campaign),
+    extensions: chatContentExtensions(ctx),
     content,
     options: {
       nodeMapping: {
@@ -237,6 +232,6 @@ function Rich({ campaign, content }: { campaign: Campaign; content: ChatContent 
 
 /** A button in a message changes the numbers of whichever character the viewer has selected. */
 function ChatTrackerButton({ campaign, b }: { campaign: Campaign; b: TrackerButton }) {
-  const characterId = useY(campaign.members, () => actingCharacterId(campaign)) ?? null;
+  const characterId = useQuery(campaign.members, () => actingCharacterId(campaign)) ?? null;
   return <TrackerButtonView campaign={campaign} characterId={characterId} b={b} />;
 }

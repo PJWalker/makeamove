@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import * as Y from "yjs";
 import {
@@ -17,6 +17,8 @@ import {
   actionsFor,
 } from "../../features/characters/store";
 import { dnd55e as dnd } from "../dnd55e";
+import { rootOf } from "../../data/schema";
+import { campaignShape } from "../../campaign/schema";
 
 describe("guided creation", () => {
   const creation = dnd.creation!;
@@ -30,7 +32,7 @@ describe("guided creation", () => {
       ],
     };
     const doc = new Y.Doc();
-    const characters = doc.getMap<Y.Map<unknown>>("characters");
+    const characters = rootOf(doc, campaignShape).characters;
     const id = createCharacter(characters, system, { name: "Test", owner: "me" });
     expect(characterView(id, characters.get(id)!, system).scores).toEqual({
       rating: 0,
@@ -155,7 +157,7 @@ describe("guided creation", () => {
 describe("5.5e origins in the numbers", () => {
   function make(data: Record<string, string | number>, level = 1, classId = "fighter") {
     const doc = new Y.Doc();
-    const characters = doc.getMap<Y.Map<unknown>>("characters");
+    const characters = rootOf(doc, campaignShape).characters;
     const id = createCharacter(characters, dnd, {
       name: "Brom",
       owner: "me",

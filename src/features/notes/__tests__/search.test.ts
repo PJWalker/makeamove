@@ -1,5 +1,5 @@
 import "fake-indexeddb/auto";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import * as Y from "yjs";
 import { Campaign, createCampaign } from "../../../campaign/campaign";
 import { device } from "../../../platform/device";

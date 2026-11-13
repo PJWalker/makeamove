@@ -261,3 +261,102 @@
     box-shadow: 0 0 0 transparent;
   }
 }
+
+/*
+ * A tool's options row (Toolbar.tsx) growing out of its tool's button,
+ * shrinking back into it, or sliding to the next tool's row. Both snapshots
+ * keep their size, centred and cropped by the moving box, so the row is
+ * revealed rather than stretched.
+ */
+::view-transition-group(tool-options) {
+  animation-duration: 180ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+::view-transition-image-pair(tool-options) {
+  overflow: clip;
+}
+::view-transition-old(tool-options),
+::view-transition-new(tool-options) {
+  width: 100%;
+  height: 100%;
+  object-fit: none;
+}
+/* The old snapshot drops out at once, so two rows' contents never overlap. */
+::view-transition-old(tool-options) {
+  animation: vt-exit 50ms linear both;
+}
+::view-transition-new(tool-options) {
+  animation: vt-fade-in 120ms ease-out both;
+}
+/* Growing out of the tool's button, and shrinking back into it, from under the strip. */
+.vt-tool-in .toolbar,
+.vt-tool-out .toolbar {
+  view-transition-name: toolbar;
+}
+::view-transition-group(toolbar) {
+  z-index: 1;
+  animation-duration: 120ms;
+}
+.vt-tool-in::view-transition-group(tool-options) {
+  animation-name: vt-from-home;
+  animation-fill-mode: both;
+}
+.vt-tool-in::view-transition-new(tool-options) {
+  animation: vt-fade-in 120ms ease-out both;
+}
+.vt-tool-out::view-transition-group(tool-options) {
+  animation-name: vt-to-home;
+  animation-fill-mode: both;
+}
+.vt-tool-out::view-transition-old(tool-options) {
+  animation: vt-exit 180ms ease-in both;
+}
+
+/* A box growing from, or shrinking into, a transition's home (withTransition). */
+@keyframes vt-from-home {
+  from {
+    transform: translate(var(--vt-home-x), var(--vt-home-y));
+    width: var(--vt-home-w);
+    height: var(--vt-home-h);
+  }
+}
+@keyframes vt-to-home {
+  to {
+    transform: translate(var(--vt-home-x), var(--vt-home-y));
+    width: var(--vt-home-w);
+    height: var(--vt-home-h);
+  }
+}
+
+/*
+ * A pop-up leaving (morph.ts leave()): back into what opened it, its box
+ * shrinking onto it with the snapshot pinned top left (the reverse of
+ * popup-morph) as it fades, or else fading out, shrinking slightly.
+ */
+::view-transition-group(popup-leave) {
+  z-index: 10;
+  animation-duration: 200ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+::view-transition-image-pair(popup-leave) {
+  overflow: clip;
+}
+::view-transition-old(popup-leave) {
+  height: auto;
+}
+.vt-leave-into::view-transition-group(popup-leave) {
+  animation-name: vt-to-home;
+  animation-fill-mode: both;
+}
+.vt-leave-into::view-transition-old(popup-leave) {
+  animation: vt-exit 200ms ease-in both;
+}
+.vt-leave::view-transition-old(popup-leave) {
+  animation: vt-fade-shrink 120ms ease-in both;
+}
+@keyframes vt-fade-shrink {
+  to {
+    opacity: 0;
+    scale: 0.96;
+  }
+}

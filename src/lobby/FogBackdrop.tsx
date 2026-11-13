@@ -79,6 +79,70 @@ void main() {
 }
 `;
 
+function createFogScene(app: Application, reduced: boolean) {
+  const group = new UniformGroup({
+    uTime: { value: 0, type: "f32" },
+    uAspect: { value: 1, type: "f32" },
+  });
+  const uniforms = group.uniforms as { uTime: number; uAspect: number };
+  app.stage.filters = [new DualKawaseBloom(BLOOM)];
+  const shader = Shader.from({
+    gl: { vertex, fragment },
+    resources: { fog: group },
+  });
+  const quad = new Geometry({
+    attributes: { aPosition: new Float32Array([-1, -1, 1, -1, 1, 1, -1, 1]) },
+    indexBuffer: [0, 1, 2, 0, 2, 3],
+  });
+  const mesh = new Mesh({ geometry: quad, shader });
+  mesh.setSize(1, 1);
+  app.stage.addChild(mesh);
+
+  const sparks = new Sparks();
+  app.stage.addChild(sparks.mesh);
+
+  const fit = () => {
+    const { width, height } = app.screen;
+    mesh.width = width;
+    mesh.height = height;
+    app.stage.filterArea = app.screen;
+    uniforms.uAspect = width / height;
+    group.update();
+    const unit = (FOG.scale / 2.2) * height;
+    sparks.view = { halfW: width / 2 / unit, halfH: height / 2 / unit, unit, width, height };
+  };
+  const render = () => app.render();
+  fit();
+  app.renderer.on("resize", fit);
+
+  if (reduced) {
+    uniforms.uTime = 20;
+    group.update();
+    app.render();
+    app.renderer.on("resize", render);
+  }
+
+  let time = 0;
+  const animate = (ticker: { deltaMS: number }) => {
+    if (document.hidden) return;
+    const dt = Math.min(ticker.deltaMS, 100) / 1000;
+    time += dt;
+    uniforms.uTime = time;
+    group.update();
+    sparks.update(dt, time * FOG.speed);
+  };
+  if (!reduced) {
+    app.ticker.add(animate);
+    app.start();
+  }
+
+  return () => {
+    app.renderer.off("resize", fit);
+    if (reduced) app.renderer.off("resize", render);
+    else app.ticker.remove(animate);
+  };
+}
+
 /**
  * Whether WebGL here runs in software (no GPU, or a blocklisted one), where
  * animating the full-screen fog would starve the page of time.
@@ -106,9 +170,10 @@ export function FogBackdrop() {
 
   useEffect(() => {
     const el = host.current!;
-    const still = matchMedia("(prefers-reduced-motion: reduce)").matches || softwareWebGL();
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches || softwareWebGL();
     const app = new Application();
     let destroyed = false;
+    let disposeScene = () => {};
 
     void app
       .init({
@@ -122,67 +187,16 @@ export function FogBackdrop() {
       .then(() => {
         if (destroyed) return app.destroy(true, { children: true });
         el.appendChild(app.canvas);
-
-        const group = new UniformGroup({
-          uTime: { value: 0, type: "f32" },
-          uAspect: { value: 1, type: "f32" },
-        });
-        const uniforms = group.uniforms as { uTime: number; uAspect: number };
-        app.stage.filters = [new DualKawaseBloom(BLOOM)];
-        const shader = Shader.from({
-          gl: { vertex, fragment },
-          resources: { fog: group },
-        });
-        const quad = new Geometry({
-          attributes: { aPosition: new Float32Array([-1, -1, 1, -1, 1, 1, -1, 1]) },
-          indexBuffer: [0, 1, 2, 0, 2, 3],
-        });
-        const mesh = new Mesh({ geometry: quad, shader });
-        mesh.setSize(1, 1);
-        app.stage.addChild(mesh);
-
-        const sparks = new Sparks();
-        app.stage.addChild(sparks.mesh);
-
-        // Fog space spans 2.2 / scale across the screen's height, centred, with y up.
-        const fit = () => {
-          const { width, height } = app.screen;
-          mesh.width = width;
-          mesh.height = height;
-          app.stage.filterArea = app.screen;
-          uniforms.uAspect = width / height;
-          group.update();
-          const unit = (FOG.scale / 2.2) * height;
-          sparks.view = { halfW: width / 2 / unit, halfH: height / 2 / unit, unit, width, height };
-        };
-        fit();
-        app.renderer.on("resize", fit);
-
-        if (still) {
-          uniforms.uTime = 20;
-          group.update();
-          app.render();
-          app.renderer.on("resize", () => app.render());
-          return;
-        }
-
-        let time = 0;
-        app.ticker.add((ticker) => {
-          if (document.hidden) return;
-          const dt = Math.min(ticker.deltaMS, 100) / 1000;
-          time += dt;
-          uniforms.uTime = time;
-          group.update();
-          sparks.update(dt, time * FOG.speed);
-        });
-        app.start();
+        disposeScene = createFogScene(app, reduced);
+      })
+      .catch((error: unknown) => {
+        if (!destroyed) console.error("Could not initialize the lobby backdrop", error);
       });
-
     return () => {
       destroyed = true;
+      disposeScene();
       if (app.renderer) app.destroy(true, { children: true });
     };
   }, []);
-
   return <div ref={host} className="fog-backdrop" aria-hidden="true" />;
 }

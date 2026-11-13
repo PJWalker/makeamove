@@ -1,13 +1,22 @@
+import type { PeerBlobs } from "../../media/images";
 import type { Camera } from "../camera";
 import type { Grid } from "../grid";
 import type { SceneElement, Transform } from "../types";
 
 /** The parts of the picture that can be marked for redrawing (see SceneRenderer.invalidate). */
 export type RenderPart =
-  "elements" | "previews" | "camera" | "grid" | "overlay" | "presence" | "lighting";
+  | "elements"
+  | "previews"
+  | "camera"
+  | "grid"
+  | "overlay"
+  | "presence"
+  | "lighting";
 
 /** What every layer reads to draw a frame: the renderer, seen read-only. */
 export interface RenderState {
+  /** Where to fetch images this device lacks. */
+  readonly peers: PeerBlobs | null;
   readonly camera: Camera;
   readonly grid: Grid;
   readonly size: { width: number; height: number };

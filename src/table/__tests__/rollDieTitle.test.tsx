@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import type { Die } from "../../features/dice/notation";
 import { RollDie, dieTitle } from "../RollDie";
 

@@ -1,5 +1,5 @@
 import "fake-indexeddb/auto";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import * as Y from "yjs";
 
 const blobs = vi.hoisted(() => new Map<string, Blob>());
@@ -31,7 +31,7 @@ import {
   decodeBackup,
   encodeBackup,
 } from "../backupFormat";
-import { activeCampaign, Campaign, createCampaign, deleteLocalCampaign } from "../campaign";
+import { Campaign, createCampaign, deleteLocalCampaign } from "../campaign";
 import { campaigns, summaryOf } from "../registry";
 
 const image = async (text: string) => {
@@ -121,7 +121,6 @@ describe("campaign backups", () => {
 
   it("merges into the open campaign, keeping what changed on both sides", async () => {
     const { c } = await setUp();
-    activeCampaign.value = c;
     const backup = await decodeBackup(await backUpCampaign(c.id));
     // The backup gains a scene the open copy hasn't got, and the open copy one the backup hasn't.
     const elsewhere = new Y.Doc({ guid: c.id });
@@ -141,7 +140,6 @@ describe("campaign backups", () => {
       "From the backup",
     ]);
     expect(campaigns.value.filter((s) => s.id === c.id)).toHaveLength(1);
-    activeCampaign.value = null;
     c.destroy();
   });
 

@@ -90,7 +90,8 @@ export function distanceToStroke(points: number[], x: number, y: number): number
   return best;
 }
 
-function distanceToSegment(
+/** Shortest distance from (px, py) to the segment from (ax, ay) to (bx, by). */
+export function distanceToSegment(
   px: number,
   py: number,
   ax: number,

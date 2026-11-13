@@ -1,7 +1,9 @@
 export const MAX_IMAGE_SIZE = 8192;
 
 export type ImageWorkerTask =
-  { type: "import"; blob: Blob } | { type: "decode"; blob: Blob } | { type: "colour"; blob: Blob };
+  | { type: "import"; blob: Blob }
+  | { type: "decode"; blob: Blob }
+  | { type: "colour"; blob: Blob };
 
 export type ImageWorkerResult =
   | {

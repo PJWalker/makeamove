@@ -1,4 +1,5 @@
-import { configDefaults, defineConfig, mergeConfig } from "vitest/config";
+import { configDefaults, defineConfig, mergeConfig } from "vite-plus";
+import { playwright } from "vite-plus/test/browser-playwright";
 import viteConfig from "./vite.config";
 
 export default mergeConfig(
@@ -33,6 +34,7 @@ export default mergeConfig(
         "y-protocols/sync",
         "trystero",
         "fuse.js",
+        "@floating-ui/dom",
       ],
     },
     test: {
@@ -44,7 +46,7 @@ export default mergeConfig(
       browser: {
         enabled: true,
         headless: true,
-        provider: "playwright",
+        provider: playwright(),
         instances: [
           {
             browser: "chromium",

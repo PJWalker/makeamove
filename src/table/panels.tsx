@@ -1,15 +1,17 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useState, type ComponentType } from "react";
 import { IconAllowBack, IconRemoveMember } from "../ui/icons";
 import type { Campaign, MemberView } from "../campaign/campaign";
 import { device } from "../platform/device";
-import { useY } from "../ui/useY";
+import { useQuery } from "../ui/useQuery";
 import { Avatar } from "../ui/Avatar";
 import { Button } from "../ui/Button";
 import { isPanelId, PANELS, type DockItemId, type PanelId } from "../workspace/panelLayout";
 import { getCharacter, playedCharacterId } from "../features/characters/api";
 import { CampaignEntityGraphic } from "../workspace/EntityGraphic";
 import { charactersLayout, notesLayout, scenesLayout } from "./panelLayouts";
-import { useValue } from "../ui/useValue";
+import { allowBack, removeMember } from "../workspace/commands/campaign";
+import { can } from "../workspace/commands/views";
+import { useCampaign } from "../workspace/campaignContext";
 
 const ScenePanel = lazy(() =>
   import("./ScenePanel").then((module) => ({ default: module.ScenePanel })),
@@ -47,37 +49,25 @@ const ItemsPanel = lazy(() =>
   import("./ItemsPanel").then((module) => ({ default: module.ItemsPanel })),
 );
 
+const PANEL_COMPONENTS: Record<PanelId, ComponentType<{ campaign: Campaign }>> = {
+  scene: ScenePanel,
+  chat: ChatPanel,
+  pc: PlayerCharacterPanel,
+  characters: CharactersPanel,
+  libraries: LibrariesPanel,
+  reference: ReferencePanel,
+  notes: NotesPanel,
+  combat: CombatPanel,
+  items: ItemsPanel,
+  members: MemberList,
+};
+
 /** The body of a panel; the same component renders docked or floating. */
 export function PanelContent({ id, campaign }: { id: PanelId; campaign: Campaign }) {
+  const Panel = PANEL_COMPONENTS[id];
   return (
-    <Suspense
-      fallback={
-        <div className="panel-loading" role="status">
-          Loading…
-        </div>
-      }
-    >
-      {id === "scene" ? (
-        <ScenePanel campaign={campaign} />
-      ) : id === "chat" ? (
-        <ChatPanel campaign={campaign} />
-      ) : id === "pc" ? (
-        <PlayerCharacterPanel campaign={campaign} />
-      ) : id === "characters" ? (
-        <CharactersPanel campaign={campaign} />
-      ) : id === "libraries" ? (
-        <LibrariesPanel campaign={campaign} />
-      ) : id === "reference" ? (
-        <ReferencePanel campaign={campaign} />
-      ) : id === "notes" ? (
-        <NotesPanel campaign={campaign} />
-      ) : id === "combat" ? (
-        <CombatPanel campaign={campaign} />
-      ) : id === "items" ? (
-        <ItemsPanel campaign={campaign} />
-      ) : (
-        <MemberList campaign={campaign} />
-      )}
+    <Suspense fallback={<output className="panel-loading">Loading…</output>}>
+      <Panel campaign={campaign} />
     </Suspense>
   );
 }
@@ -86,10 +76,10 @@ export function PanelContent({ id, campaign }: { id: PanelId; campaign: Campaign
 export function usePanelLabel(id: PanelId, campaign: Campaign): string;
 export function usePanelLabel(id: DockItemId, campaign: Campaign): string | undefined;
 export function usePanelLabel(id: DockItemId, campaign: Campaign) {
-  const played = useY(campaign.members, () =>
+  const played = useQuery(campaign.members, () =>
     id === "pc" ? playedCharacterId(campaign) : undefined,
   );
-  const name = useY(campaign.characters, () => getCharacter(campaign, played)?.name);
+  const name = useQuery(campaign.characters, () => getCharacter(campaign, played)?.name);
   return name ?? (isPanelId(id) ? PANELS[id].label : undefined);
 }
 
@@ -103,7 +93,7 @@ export function PanelIcon({
   campaign: Campaign;
   className?: string;
 }) {
-  const played = useY(campaign.members, () =>
+  const played = useQuery(campaign.members, () =>
     id === "pc" ? playedCharacterId(campaign) : undefined,
   );
   if (played)
@@ -130,10 +120,10 @@ export function PaneToggle({ id }: { id: PanelId }) {
 
 /** Who's at the table, and who's online right now. */
 function Presence({ campaign }: { campaign: Campaign }) {
-  const members = useY(campaign.members, () => campaign.memberViews());
-  const me = useValue(device).id;
-  const online = useValue(campaign.online);
-  const peers = useValue(campaign.peerCount);
+  const members = useQuery(campaign.members, () => campaign.memberViews());
+  const me = useQuery(device).id;
+  const online = useQuery(campaign.online);
+  const peers = useQuery(campaign.peerCount);
   const sorted = [...members].sort((a, b) => Number(b.id === me) - Number(a.id === me));
   return (
     <div className="chat-presence">
@@ -156,10 +146,11 @@ function Presence({ campaign }: { campaign: Campaign }) {
 }
 
 function MemberList({ campaign }: { campaign: Campaign }) {
-  const members = useY(campaign.members, () => campaign.memberViews());
-  const revoked = useY(campaign.revoked, () => campaign.revokedViews());
-  const isGm = useY(campaign.members, () => campaign.isGm());
-  const me = useValue(device).id;
+  const ctx = useCampaign();
+  const members = useQuery(campaign.members, () => campaign.memberViews());
+  const revoked = useQuery(campaign.revoked, () => campaign.revokedViews());
+  // Re-read as roles change.
+  useQuery(campaign.members, () => campaign.isGm());
   return (
     <div className="panel-scroll">
       <Presence campaign={campaign} />
@@ -169,11 +160,11 @@ function MemberList({ campaign }: { campaign: Campaign }) {
             key={m.id}
             campaign={campaign}
             m={m}
-            canRemove={isGm && m.id !== me && m.role !== "gm"}
+            canRemove={can(ctx, removeMember, { id: m.id })}
           />
         ))}
       </ul>
-      {isGm && revoked.length > 0 && (
+      {revoked.length > 0 && can(ctx, allowBack, { id: revoked[0]!.id }) && (
         <section className="member-section" aria-labelledby="removed-members">
           <h3 id="removed-members" className="eyebrow">
             Removed
@@ -186,7 +177,7 @@ function MemberList({ campaign }: { campaign: Campaign }) {
                 <Button
                   variant="icon"
                   label={`Let ${r.name} back in (they rejoin with the invite link)`}
-                  onClick={() => campaign.allowBack(r.id)}
+                  onClick={() => ctx.execute(allowBack, { id: r.id })}
                 >
                   <IconAllowBack size={22} />
                 </Button>
@@ -209,8 +200,9 @@ function MemberRow({
   m: MemberView;
   canRemove: boolean;
 }) {
-  const me = useValue(device).id;
-  const online = useValue(campaign.online);
+  const ctx = useCampaign();
+  const me = useQuery(device).id;
+  const online = useQuery(campaign.online);
   const [confirming, setConfirming] = useState(false);
   if (confirming) {
     return (
@@ -219,7 +211,7 @@ function MemberRow({
         <Button variant="ghost" onClick={() => setConfirming(false)}>
           Cancel
         </Button>
-        <Button variant="danger" onClick={() => campaign.revokeMember(m.id)}>
+        <Button variant="danger" onClick={() => ctx.execute(removeMember, { id: m.id })}>
           Remove
         </Button>
       </li>

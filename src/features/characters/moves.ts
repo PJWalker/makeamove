@@ -1,4 +1,4 @@
-import { emptyRichText, type RichText } from "../../core/richText";
+import { emptyRichText, type RichText } from "../../data/richText";
 import { roll, type Roll } from "../dice/notation";
 
 import type { MoveSuggestion, MoveTarget, SaveRequest } from "../chat/types";
@@ -138,8 +138,9 @@ export function planMove(
   for (const b of bonuses) if (b.stat) formula += signed(b.value, b.source);
   if ((check?.ask?.kind === "number" || check?.ask?.kind === "questions") && choice.ask)
     formula += signed(choice.ask, check.ask.label);
+  const selectedBonusIds = new Set(choice.rollBonuses ?? []);
   const selectedBonuses = (check?.rollBonuses ?? []).filter((bonus) =>
-    choice.rollBonuses?.includes(bonus.id),
+    selectedBonusIds.has(bonus.id),
   );
   const bonusCosts: { resource: string; by: number }[] = [];
   for (const bonus of selectedBonuses) {

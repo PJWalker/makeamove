@@ -1,13 +1,15 @@
 import { InputRule, mergeAttributes, Node, PasteRule } from "@tiptap/core";
 import type { Campaign } from "../campaign/campaign";
 import { actingCharacterId } from "../features/characters/api";
-import { pressTracker, trackerBlock } from "../features/characters/trackers";
+import { trackerBlock } from "../features/characters/trackers";
 import {
   parseTrackerButton,
   TRACKER_NODE,
   trackerToken,
   type TrackerButton,
-} from "../core/richText";
+} from "../data/richText";
+import { pressTrackerButton } from "./commands/characters";
+import type { CampaignContext } from "./campaignContext";
 
 /*
  * Inline resource buttons in rich text: typing or pasting [[+1 XP]] (or
@@ -34,7 +36,8 @@ export function trackerTip(
   return `${b.by > 0 ? "Add" : "Spend"} ${Math.abs(b.by)} ${b.name}`;
 }
 
-export function trackerButtonExtension(campaign: Campaign) {
+export function trackerButtonExtension(ctx: CampaignContext) {
+  const { campaign } = ctx;
   const TOKEN = /\[\[\s*[+-]\d+\s+[^\]|]+?(?:\|[^\]]+?)?\]\]/;
   const attrsOf = (raw: string) => {
     const b = parseTrackerButton(raw);
@@ -120,7 +123,8 @@ export function trackerButtonExtension(campaign: Campaign) {
         if (!el) return;
         e.preventDefault();
         const id = actingCharacterId(campaign);
-        if (!id || !pressTracker(campaign, id, toButton(el))) shake(el);
+        if (!id || !ctx.execute(pressTrackerButton, { characterId: id, button: toButton(el) }))
+          shake(el);
       });
     },
   });

@@ -24,6 +24,15 @@
       color 120ms var(--ease),
       translate 90ms var(--ease);
   }
+  /* Coloured icons switch to the selected ink, to stand out on the highlight. */
+  .segment[data-selected] {
+    --glyph-ink: currentColor;
+  }
+  /* An icon-only choice is square. */
+  .segment[data-icon] {
+    min-width: var(--control-height);
+    padding: 2px;
+  }
   .segment[data-pressed]:not([data-disabled]) {
     translate: 0 var(--press-depth);
   }

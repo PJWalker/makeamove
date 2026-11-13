@@ -1,6 +1,6 @@
 import { Graphics, ImageSource, Texture } from "pixi.js";
 import { entryIconSvg } from "../../ui/entryIcons";
-import { forgetBitmaps, loadBitmap } from "../../media/images";
+import { forgetBitmaps, loadBitmap, type PeerBlobs } from "../../media/images";
 
 const textures = new Map<string, Promise<Texture | null>>();
 
@@ -12,10 +12,10 @@ export function releaseTextures() {
 }
 
 /** An image's texture, loaded once and shared; null if it isn't on this device yet. */
-export function textureFor(hash: string): Promise<Texture | null> {
+export function textureFor(hash: string, peers: PeerBlobs | null): Promise<Texture | null> {
   let p = textures.get(hash);
   if (!p) {
-    p = loadBitmap(hash).then((bitmap) =>
+    p = loadBitmap(hash, peers).then((bitmap) =>
       bitmap
         ? new Texture({
             source: new ImageSource({

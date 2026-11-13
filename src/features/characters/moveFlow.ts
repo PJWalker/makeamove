@@ -1,4 +1,4 @@
-import { batch, store } from "../../lib/store";
+import { batch } from "../../lib/store";
 import type { Campaign } from "../../campaign/campaign";
 import { device } from "../../platform/device";
 import type { ActionDef } from "../../systems/types";
@@ -15,20 +15,6 @@ import { systemOf } from "./system";
  * Making a move at the table: asking for what it needs, rolling, and posting it.
  */
 
-/** Set by Characters/Palette to ask for a stat or bond before a move rolls. */
-export const moveRequest = store<{
-  moveId: string;
-  characterId: string;
-  targets?: MoveTarget[];
-  choice?: Pick<MoveChoice, "extra">;
-} | null>(null);
-
-/** A move waiting for its targets to be picked on the scene (see table/MovePrompt.tsx). */
-export const targetRequest = store<{
-  moveId: string;
-  characterId: string;
-} | null>(null);
-
 /**
  * Use a move: first ask for targets if it's aimed at someone, then for any
  * stat or number it needs, then roll.
@@ -43,20 +29,20 @@ export function startMove(
   if (sessionMoveUsed(campaign, characterId, move)) return;
   batch(() => {
     if (move.target && !targets) {
-      moveRequest.value = null;
-      targetRequest.value = { moveId: move.id, characterId };
+      campaign.moves.ask.value = null;
+      campaign.moves.targets.value = { moveId: move.id, characterId };
       return;
     }
-    targetRequest.value = null;
+    campaign.moves.targets.value = null;
     if (asksFirst(systemOf(campaign), move))
-      moveRequest.value = {
+      campaign.moves.ask.value = {
         moveId: move.id,
         characterId,
         ...(targets ? { targets } : {}),
         ...(initialChoice ? { choice: initialChoice } : {}),
       };
     else {
-      moveRequest.value = null;
+      campaign.moves.ask.value = null;
       void makeMove(campaign, characterId, move, {}, targets);
     }
   });

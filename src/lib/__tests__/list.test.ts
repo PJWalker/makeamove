@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { commaListOf, formatCommaList, parseCommaList } from "../list";
 
 describe("comma-list encoding", () => {

@@ -8,7 +8,7 @@ import {
   ruleStartingScores,
   scoreRuleProblems,
 } from "../../features/characters/creation";
-import type { DataValue } from "../../core/types";
+import type { DataValue } from "../../data/types";
 import { commaListOf } from "../../lib/list";
 import type { Campaign } from "../../campaign/campaign";
 import type { ChoiceDef } from "../types";
@@ -24,7 +24,8 @@ import {
   scoreCapsOf,
   type Picked,
 } from "../../workspace/CreationParts";
-import { applyClassChange } from "./campaign";
+import { changeClass } from "./commands";
+import { useCampaign } from "../../workspace/campaignContext";
 
 /*
  * Dungeon World 2's Class Change: pick a new Class and its stat line, then
@@ -37,8 +38,9 @@ function appendChoiceData(
   listFields: string[],
 ): Record<string, DataValue> {
   const next = { ...current };
+  const listFieldSet = new Set(listFields);
   for (const [field, value] of Object.entries(changes)) {
-    next[field] = listFields.includes(field) && next[field] ? `${next[field]},${value}` : value;
+    next[field] = listFieldSet.has(field) && next[field] ? `${next[field]},${value}` : value;
   }
   return next;
 }
@@ -52,6 +54,7 @@ function ClassChangeDialog({
   characterId: string;
   onClose: () => void;
 }) {
+  const ctx = useCampaign();
   const ref = usePopupDialog();
   const system = systemOf(campaign);
   const character = getCharacter(campaign, characterId)!;
@@ -108,7 +111,14 @@ function ClassChangeDialog({
     classChoice?.options.filter((option) => option.id !== character.data.classId) ?? [];
   const apply = () => {
     if (!ready) return;
-    if (applyClassChange(campaign, characterId, newClassId, stageScores, stageData))
+    if (
+      ctx.execute(changeClass, {
+        characterId,
+        classId: newClassId,
+        scores: stageScores,
+        data: stageData,
+      })
+    )
       closePopup(ref.current, onClose);
   };
 

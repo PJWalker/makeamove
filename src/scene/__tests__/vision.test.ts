@@ -1,10 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import {
   blocked,
   blockingSegments,
   lampHidden,
   lightAlpha,
   lightReach,
+  sightSegments,
   tokenBlocker,
   wallEnds,
 } from "../vision";
@@ -51,6 +52,32 @@ describe("line of sight", () => {
     expect(
       blocked(o, { x: 60, y: 0 }, blockingSegments([wall(50, -200, 50, 200, { open: false })])),
     ).toBe(true);
+  });
+
+  it("can't see into or through an effect that obscures, but can through one that doesn't", () => {
+    const fog = (obscures: boolean): SceneElement => ({
+      id: "fog",
+      type: "effect",
+      effect: "fog",
+      colour: "#ffffff",
+      shape: "circle",
+      x: 200,
+      y: 0,
+      w: 100,
+      h: 100,
+      rot: 0,
+      layer: "over",
+      z: "a",
+      locked: false,
+      createdBy: "gm",
+      ...(obscures ? { obscures } : {}),
+    });
+    const o = { x: 0, y: 0 };
+    const walls = sightSegments([fog(true)]);
+    expect(blocked(o, { x: 200, y: 0 }, walls)).toBe(true);
+    expect(blocked(o, { x: 400, y: 0 }, walls)).toBe(true);
+    expect(blocked(o, { x: 0, y: 200 }, walls)).toBe(false);
+    expect(blocked(o, { x: 400, y: 0 }, sightSegments([fog(false)]))).toBe(false);
   });
 
   it("sees through a gap between two walls", () => {
@@ -125,6 +152,32 @@ describe("soft shadows", () => {
   it("casts one unbroken shadow from walls that meet end to end", () => {
     const walls = blockingSegments([wall(50, -200, 50, 0), wall(50, 0, 50, 200)]);
     for (const y of [-20, -5, 0, 5, 20]) expect(hidden({ x: 250, y }, walls)).toBeCloseTo(1);
+  });
+
+  it("can't see into or through an effect that obscures, but can through one that doesn't", () => {
+    const fog = (obscures: boolean): SceneElement => ({
+      id: "fog",
+      type: "effect",
+      effect: "fog",
+      colour: "#ffffff",
+      shape: "circle",
+      x: 200,
+      y: 0,
+      w: 100,
+      h: 100,
+      rot: 0,
+      layer: "over",
+      z: "a",
+      locked: false,
+      createdBy: "gm",
+      ...(obscures ? { obscures } : {}),
+    });
+    const o = { x: 0, y: 0 };
+    const walls = sightSegments([fog(true)]);
+    expect(blocked(o, { x: 200, y: 0 }, walls)).toBe(true);
+    expect(blocked(o, { x: 400, y: 0 }, walls)).toBe(true);
+    expect(blocked(o, { x: 0, y: 200 }, walls)).toBe(false);
+    expect(blocked(o, { x: 400, y: 0 }, sightSegments([fog(false)]))).toBe(false);
   });
 
   it("sees through a gap between two walls", () => {

@@ -4,7 +4,7 @@ import type { Point } from "../grid";
 import type { Transform } from "../types";
 
 /** Screen px between a selection's top edge and its rotate handle. */
-const ROTATE_HANDLE_GAP = 28;
+export const ROTATE_HANDLE_GAP = 28;
 export const HANDLE_SIZE = 10;
 
 export type LightPart = "lamp" | "bright" | "dim";

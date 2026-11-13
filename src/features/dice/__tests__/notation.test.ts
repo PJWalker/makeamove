@@ -1,4 +1,4 @@
-import { describe as group, expect, it } from "vitest";
+import { describe as group, expect, it } from "vite-plus/test";
 import { cryptoDie, describe, NotationError, parse, roll } from "../notation";
 
 /** A die that returns these values in order. */
@@ -80,8 +80,11 @@ group("rolling", () => {
     expect(roll("d2!", () => 2).terms[0]!).toMatchObject({ dice: { length: 51 } });
   });
   it("rolls fairly with the crypto source", () => {
-    const counts = new Array(7).fill(0);
-    for (let i = 0; i < 6000; i++) counts[cryptoDie(6)]++;
+    const counts = Array.from({ length: 7 }, () => 0);
+    for (let i = 0; i < 6000; i++) {
+      const face = cryptoDie(6);
+      counts[face] = (counts[face] ?? 0) + 1;
+    }
     expect(counts[0]).toBe(0);
     for (let f = 1; f <= 6; f++) expect(counts[f]).toBeGreaterThan(800);
   });

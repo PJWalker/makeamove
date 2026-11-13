@@ -1,5 +1,6 @@
-import type * as Y from "yjs";
-import { asRichText } from "../../core/richText";
+import type { Homebrew, HomebrewEntry } from "./schema";
+export type { HomebrewEntry } from "./schema";
+import { asRichText } from "../../data/richText";
 import { newId } from "../../lib/ids";
 import type { ActionDef, GameSystem, ItemDef } from "../../systems/types";
 
@@ -10,8 +11,6 @@ import type { ActionDef, GameSystem, ItemDef } from "../../systems/types";
  * go in inventories, are learned by dropping them on a character, and roll
  * like any other move. The Items panel lists and edits them.
  */
-
-export type HomebrewEntry = { kind: "gear"; item: ItemDef } | { kind: "move"; move: ActionDef };
 
 /** Homebrew ids are prefixed so they never collide with a system's. */
 const PREFIX = "hb-";
@@ -35,8 +34,9 @@ const readMove = (move: ActionDef): ActionDef => ({
   ),
 });
 
-export function listHomebrew(map: Y.Map<HomebrewEntry>): (HomebrewEntry & { id: string })[] {
-  return [...map.entries()]
+export function listHomebrew(map: Homebrew): (HomebrewEntry & { id: string })[] {
+  return map
+    .entries()
     .map(([id, e]) => (e.kind === "move" ? { id, ...e, move: readMove(e.move) } : { id, ...e }))
     .sort((a, b) => nameOf(a).localeCompare(nameOf(b)));
 }
@@ -44,19 +44,19 @@ export function listHomebrew(map: Y.Map<HomebrewEntry>): (HomebrewEntry & { id: 
 const nameOf = (e: HomebrewEntry) => (e.kind === "gear" ? e.item.name : e.move.name);
 
 /** Save gear: a new id when it has none yet. Returns the id. */
-export function saveGear(map: Y.Map<HomebrewEntry>, item: ItemDef): string {
+export function saveGear(map: Homebrew, item: ItemDef): string {
   const id = item.id || newHomebrewId();
   map.set(id, { kind: "gear", item: { ...item, id } });
   return id;
 }
 
-export function saveMove(map: Y.Map<HomebrewEntry>, move: ActionDef): string {
+export function saveMove(map: Homebrew, move: ActionDef): string {
   const id = move.id || newHomebrewId();
   map.set(id, { kind: "move", move: { ...move, id } });
   return id;
 }
 
-export function deleteHomebrew(map: Y.Map<HomebrewEntry>, id: string) {
+export function deleteHomebrew(map: Homebrew, id: string) {
   map.delete(id);
 }
 

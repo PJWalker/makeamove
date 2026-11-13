@@ -1,14 +1,8 @@
 import "fake-indexeddb/auto";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import { Campaign, createCampaign } from "../../campaign/campaign";
-import {
-  getCharacter,
-  makeMove,
-  moveRequest,
-  newCharacter,
-  startMove,
-} from "../../features/characters/api";
+import { getCharacter, makeMove, newCharacter, startMove } from "../../features/characters/api";
 import { actionsFor, derive } from "../../features/characters/store";
 import { device } from "../../platform/device";
 import { bladesInTheDark } from "../blades-in-the-dark";
@@ -44,8 +38,8 @@ describe("Blades in the Dark campaign behavior", () => {
     const hunt = bladesInTheDark.actions.find((action) => action.id === "hunt")!;
 
     startMove(campaign, id, hunt);
-    expect(moveRequest.value).toEqual({ moveId: "hunt", characterId: id });
-    moveRequest.value = null;
+    expect(campaign.moves.ask.value).toEqual({ moveId: "hunt", characterId: id });
+    campaign.moves.ask.value = null;
     const message = await makeMove(campaign, id, hunt, { mode: "desperate" });
 
     expect(message).toMatchObject({ kind: "move", moveId: "hunt", characterName: "Vex" });

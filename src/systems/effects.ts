@@ -29,6 +29,8 @@ export function resolveEffects(base: Record<string, number>, sources: EffectSour
   const values = { ...base };
   const why: Record<string, string[]> = {};
   const out: Resolved = { values, why, moves: [], tags: [], bonuses: [] };
+  const moves = new Set<string>();
+  const tags = new Set<string>();
 
   type Mod = Extract<Effect, { type: "modify" }> & { from: string; order: number };
   const mods: Mod[] = [];
@@ -36,9 +38,15 @@ export function resolveEffects(base: Record<string, number>, sources: EffectSour
     for (const e of s.effects) {
       if (e.type === "modify") mods.push({ ...e, from: s.name, order: mods.length });
       else if (e.type === "grantMove") {
-        if (!out.moves.includes(e.move)) out.moves.push(e.move);
+        if (!moves.has(e.move)) {
+          moves.add(e.move);
+          out.moves.push(e.move);
+        }
       } else if (e.type === "grantTag") {
-        if (!out.tags.includes(e.tag)) out.tags.push(e.tag);
+        if (!tags.has(e.tag)) {
+          tags.add(e.tag);
+          out.tags.push(e.tag);
+        }
       } else
         out.bonuses.push({
           source: s.name,

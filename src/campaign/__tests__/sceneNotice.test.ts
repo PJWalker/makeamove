@@ -1,7 +1,6 @@
 import "fake-indexeddb/auto";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
-import * as Y from "yjs";
 import { Campaign, createCampaign } from "../campaign";
 import { device } from "../../platform/device";
 
@@ -12,10 +11,7 @@ Campaign.sceneNoticeDelay = 30;
 async function setUp() {
   as("gm", "Gwen");
   const c = await Campaign.open(await createCampaign("The Lost Barrows", "Gwen"));
-  const pat = new Y.Map<unknown>();
-  pat.set("name", "Pat");
-  pat.set("role", "player");
-  c.members.set("pat", pat);
+  c.members.set("pat", { name: "Pat", role: "player" });
   const bog = c.addScene("The Bog");
   const keep = c.addScene("The Keep");
   return { c, bog, keep, first: c.sceneViews()[0]!.id };

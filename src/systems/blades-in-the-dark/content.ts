@@ -1,4 +1,4 @@
-import type { RichText } from "../../core/richText";
+import type { RichText } from "../../data/richText";
 import abilities from "./abilities.json";
 
 /** The SRD's special abilities, generated from the rulebook by `npm run generate:rules`. */

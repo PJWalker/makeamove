@@ -1,21 +1,24 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import * as Y from "yjs";
-import { pairKey, systemStore } from "../systemStore";
+import { isNumber } from "../../data/guards";
+import { rootOf } from "../../data/schema";
+import { campaignShape } from "../schema";
+import { pairKey, SystemData } from "../systemStore";
 
 describe("system data stores", () => {
   it("creates its map on the first write, never on a read", () => {
-    const systemData = new Y.Doc().getMap<unknown>("systemData");
-    const store = systemStore<number>(systemData, "test:store");
+    const { ext } = rootOf(new Y.Doc(), campaignShape);
+    const store = new SystemData(ext, () => "test").store("store", isNumber);
     expect(store.get("a")).toBeUndefined();
     expect(store.has("a")).toBe(false);
     expect(store.values()).toEqual([]);
-    expect(systemData.has("test:store")).toBe(false);
+    expect(ext.has("test")).toBe(false);
 
     store.set("a", 1);
     store.set("b", 2);
-    expect(systemData.get("test:store")).toBeInstanceOf(Y.Map);
+    expect(ext.get("test")?.get("stores")?.has("store")).toBe(true);
     expect(store.get("a")).toBe(1);
-    expect(store.values().sort()).toEqual([1, 2]);
+    expect(store.values().sort((left, right) => left - right)).toEqual([1, 2]);
     store.delete("a");
     expect(store.has("a")).toBe(false);
   });

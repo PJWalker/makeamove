@@ -1,3 +1,4 @@
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- The panel's interactive splitter cannot be an hr. */
 import type * as React from "react";
 import { derived, store, type ReadonlyStore, type Store } from "../lib/store";
 import type { ReactNode } from "react";
@@ -5,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { IconBack, IconLayoutSingle, IconLayoutSplit } from "./icons";
 import { getStorageJson, setStorageJson } from "../platform/localStorage";
 import { withTransition } from "./transition";
-import { useValue } from "./useValue";
+import { useQuery } from "./useQuery";
 
 /*
  * A panel that is a list and a detail (characters and their sheets, notes
@@ -59,8 +60,8 @@ export function createPaneLayout(key: string, names: { list: string; detail: str
   };
 
   function Toggle() {
-    const split = useValue(mode) === "split";
-    const narrow = useValue(tooNarrow);
+    const split = useQuery(mode) === "split";
+    const narrow = useQuery(tooNarrow);
     const label = narrow
       ? `One at a time (widen the panel to see the ${names.list} and ${names.detail} side by side)`
       : split
@@ -107,12 +108,13 @@ export function createPaneLayout(key: string, names: { list: string; detail: str
 
 /**
  * Which level shows when they take turns, and how to move between them:
- * one at a time, the move slides; side by side, both already show.
+ * one at a time, the move slides; side by side, both already show. `show`
+ * is `go` for callers that need to wait until the level is showing.
  */
 export function usePaneLevel(layout: PaneLayout, initial: PaneLevel) {
   const [level, setLevel] = useState<PaneLevel>(initial);
-  const go = useCallback(
-    (to: PaneLevel) => {
+  const show = useCallback(
+    async (to: PaneLevel): Promise<void> => {
       if (level === to) return;
       if (layout.mode.value !== "stack") {
         setLevel(to);
@@ -120,7 +122,7 @@ export function usePaneLevel(layout: PaneLayout, initial: PaneLevel) {
       }
       // Only this panel slides: it alone is named for the transition.
       const done = markSliding(layout.el);
-      void withTransition(
+      await withTransition(
         () => {
           setLevel(to);
         },
@@ -129,7 +131,8 @@ export function usePaneLevel(layout: PaneLayout, initial: PaneLevel) {
     },
     [layout, level],
   );
-  return { level, go };
+  const go = useCallback((to: PaneLevel) => void show(to), [show]);
+  return { level, go, show };
 }
 
 /** Name the element for a sliding transition; the returned function un-names it. */
@@ -157,6 +160,12 @@ function dragSplit(layout: PaneLayout, e: React.PointerEvent) {
   split.addEventListener("pointerup", up);
 }
 
+function resizeSplit(layout: PaneLayout, direction: -1 | 1) {
+  const max = Math.max(100, (layout.el?.clientWidth ?? 260) - 160);
+  layout.listWidth.value = Math.max(100, Math.min(max, layout.listWidth.value + direction * 10));
+  layout.save();
+}
+
 export function TwoPane({
   layout,
   level,
@@ -180,8 +189,8 @@ export function TwoPane({
   resizeLabel: string;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
-  const mode = useValue(layout.mode);
-  const listWidth = useValue(layout.listWidth);
+  const mode = useQuery(layout.mode);
+  const listWidth = useQuery(layout.listWidth);
   useEffect(() => {
     const el = rootRef.current;
     if (!el) return;
@@ -209,7 +218,16 @@ export function TwoPane({
           role="separator"
           aria-orientation="vertical"
           aria-label={resizeLabel}
+          aria-valuemin={100}
+          aria-valuemax={Math.max(100, (layout.el?.clientWidth ?? 260) - 160)}
+          aria-valuenow={layout.listWidth.value}
+          tabIndex={0}
           onPointerDown={(e) => dragSplit(layout, e)}
+          onKeyDown={(e) => {
+            if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+            e.preventDefault();
+            resizeSplit(layout, e.key === "ArrowLeft" ? -1 : 1);
+          }}
           onDoubleClick={() => layout.resetWidth()}
         />
         <div className="panes-detail">

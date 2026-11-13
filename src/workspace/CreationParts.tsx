@@ -1,12 +1,6 @@
 import { useEffect, useState } from "react";
 
-import {
-  bumpResource,
-  getCharacter,
-  setData,
-  setScore,
-  systemOf,
-} from "../features/characters/api";
+import { getCharacter, systemOf } from "../features/characters/api";
 import {
   boostFrom,
   choicesAt,
@@ -31,6 +25,8 @@ import { closePopup } from "../ui/popup";
 import { usePopupDialog } from "./usePopupDialog";
 import { Segmented } from "../ui/Segmented";
 import { Dialog } from "./Dialog";
+import { bumpResource, setData, setScore } from "./commands/characters";
+import { useCampaign } from "./campaignContext";
 
 /*
  * The guided flow's parts (design: core change 14): a choice with its
@@ -68,6 +64,7 @@ export function ChoiceField({
   const boost = option?.boost;
   const amounts = boost?.amounts[value.pattern] ?? [];
   const statName = (id: string) => system.stats.find((s) => s.id === id)?.abbr ?? id;
+  const blockedStatSet = new Set(blockedStats);
   return (
     <div className="field creation-choice">
       <OptionPicker
@@ -100,7 +97,7 @@ export function ChoiceField({
           />
           {amounts.map((n, i) =>
             n ? (
-              <label key={i} className="creation-boost-pick">
+              <label key={n} className="creation-boost-pick">
                 +{n}
                 <select
                   value={value.order[i] ?? ""}
@@ -114,7 +111,7 @@ export function ChoiceField({
                   }}
                 >
                   {boost.stats.map((s) => (
-                    <option key={s} value={s} disabled={blockedStats.includes(s)}>
+                    <option key={s} value={s} disabled={blockedStatSet.has(s)}>
                       {statName(s)}
                     </option>
                   ))}
@@ -180,7 +177,7 @@ export function ScoreFields({
   useEffect(() => {
     if (rule) onScores(ruleStartingScores(rule, system.stats));
     // Only a new rule resets the scores.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [rule]);
   const rollPool = () =>
     takePool(system.stats.map(() => roll(methods.roll!).total).sort((a, b) => b - a));
@@ -226,8 +223,8 @@ export function ScoreFields({
                 value={scores[s.id]}
                 onChange={(e) => onScores(swapScore(scores, s.id, Number(e.currentTarget.value)))}
               >
-                {pool.map((n, i) => (
-                  <option key={i} value={n}>
+                {pool.map((n) => (
+                  <option key={n} value={n}>
                     {n}
                   </option>
                 ))}
@@ -379,6 +376,7 @@ export function AdvancementDialog({
   characterId: string;
   onClose: () => void;
 }) {
+  const ctx = useCampaign();
   const ref = usePopupDialog();
   const system = systemOf(campaign);
   const c = getCharacter(campaign, characterId)!;
@@ -428,8 +426,8 @@ export function AdvancementDialog({
 
   const apply = () => {
     const before = derive(c, system).values.maxHp ?? 0;
-    campaign.doc.transact(() => {
-      if (field) setData(campaign, c.id, field, rank);
+    ctx.commands.batch(() => {
+      if (field) ctx.execute(setData, { id: c.id, key: field, value: rank });
       let advancedScores = c.scores;
       const markedStats = new Set(resetsMarks ? [] : blockedStats);
       for (const choice of choices) {
@@ -448,38 +446,49 @@ export function AdvancementDialog({
           });
         }
       }
+      const listFields = listFieldsOf(system);
+      const listFieldSet = new Set(listFields);
       const data = dataFrom(
         choices,
         Object.fromEntries(Object.entries(picks).map(([k, p]) => [k, p.option])),
-        listFieldsOf(system),
+        listFields,
         c.data,
       );
       for (const [k, v] of Object.entries(data)) {
-        const value = listFieldsOf(system).includes(k) && c.data[k] ? `${c.data[k]},${v}` : v;
-        setData(campaign, c.id, k, value);
+        const value = listFieldSet.has(k) && c.data[k] ? `${c.data[k]},${v}` : v;
+        ctx.execute(setData, { id: c.id, key: k, value });
       }
       if (system.creation?.advancementCounterField)
-        setData(campaign, c.id, system.creation.advancementCounterField, 0);
+        ctx.execute(setData, { id: c.id, key: system.creation.advancementCounterField, value: 0 });
       if (improves) {
         if (improvement === "feat" && featChoice) {
           const now = String(c.data[featChoice.field] ?? "");
-          setData(campaign, c.id, featChoice.field, now ? `${now},${feat}` : feat);
+          ctx.execute(setData, {
+            id: c.id,
+            key: featChoice.field,
+            value: now ? `${now},${feat}` : feat,
+          });
         } else {
           const by = improvement === "two" ? { [first]: 2 } : { [first]: 1, [second]: 1 };
           advancedScores = raise(advancedScores, by, scoreCapsOf(system));
         }
       }
       for (const [k, v] of Object.entries(advancedScores))
-        if (v !== c.scores[k]) setScore(campaign, c.id, k, v);
+        if (v !== c.scores[k]) ctx.execute(setScore, { id: c.id, stat: k, score: v });
       if (markedStatsField)
-        setData(campaign, c.id, markedStatsField, formatCommaList([...markedStats]));
+        ctx.execute(setData, {
+          id: c.id,
+          key: markedStatsField,
+          value: formatCommaList([...markedStats]),
+        });
     });
     const after = getCharacter(campaign, c.id)!;
     const d = derive(after, system);
     const gained = (d.values.maxHp ?? 0) - before;
-    if (gained > 0) bumpResource(campaign, c.id, "hp", gained, d.values.maxHp);
+    if (gained > 0)
+      ctx.execute(bumpResource, { id: c.id, resource: "hp", by: gained, max: d.values.maxHp });
     if (system.resources.some((r) => r.id === "hitDice"))
-      bumpResource(campaign, c.id, "hitDice", 1, d.values.hitDiceMax);
+      ctx.execute(bumpResource, { id: c.id, resource: "hitDice", by: 1, max: d.values.hitDiceMax });
     closePopup(ref.current, onClose);
   };
 

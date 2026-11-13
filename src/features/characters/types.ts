@@ -1,6 +1,6 @@
 import type { TokenStyle } from "../../scene/types";
 import type { Effect, EffectActive } from "../../systems/effectTypes";
-import type { DataValue } from "../../core/types";
+import type { DataValue } from "../../data/types";
 
 export type CharacterKind = "pc" | "npc";
 export type Naming = "number" | "list" | "adjective";

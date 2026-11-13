@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { contentFromText, messageText } from "../content";
 import { logRows, splitSessions } from "../sessions";
 import { canDelete, type ChatMessage } from "../types";

@@ -1,7 +1,7 @@
 import type { ComponentType } from "react";
 import type { Campaign } from "../campaign/campaign";
 import type { CharacterView, ItemInstance } from "../features/characters/types";
-import type { MenuItem } from "../ui/ContextMenu";
+import type { AnyTableCommand } from "../workspace/commands/types";
 import type { GameSystem } from "./types";
 
 /*
@@ -46,13 +46,6 @@ export interface SystemExtension {
   relationshipsExtra?: ComponentType<{ campaign: Campaign; c: CharacterView; editable: boolean }>;
   /** Controls for using an item with uses, instead of the core's Use button. */
   ItemUse?: ComponentType<ItemUseProps>;
-  /** What the item menu's Use does, instead of spending one use. */
-  spendUse?: (campaign: Campaign, characterId: string, itemId: string) => boolean;
-  /** Extra entries for an item's menu. */
-  itemMenu?(
-    campaign: Campaign,
-    character: CharacterView,
-    item: ItemInstance,
-    editable: boolean,
-  ): MenuItem[];
+  /** The system's own commands: its moves' bookkeeping, its entries in menus, and stand-ins for the core's. */
+  commands?: readonly AnyTableCommand[];
 }

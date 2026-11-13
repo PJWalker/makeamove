@@ -33,10 +33,10 @@ module.exports = {
     {
       name: "leaf-layers-stay-leaves",
       comment:
-        "lib/ and core/ are foundations and import nothing else from the app. platform/ may use only lib/.",
+        "lib/ is the foundation and imports nothing else from the app. platform/ may use only lib/.",
       severity: "error",
-      from: { path: "^src/(lib|core)/", pathNot: TESTS },
-      to: { path: "^src/", pathNot: "^src/(lib|core)/" },
+      from: { path: "^src/lib/", pathNot: TESTS },
+      to: { path: "^src/", pathNot: "^src/lib/" },
     },
     {
       name: "platform-only-uses-lib",
@@ -47,10 +47,38 @@ module.exports = {
     {
       name: "media-only-uses-foundations",
       comment:
-        "media/ is the image blob store, shared by the scene, notes and ui/. It may use only lib/, core/ and platform/.",
+        "media/ is the image blob store, shared by the scene, notes and ui/. It may use only lib/ and platform/.",
       severity: "error",
       from: { path: "^src/media/", pathNot: TESTS },
-      to: { path: "^src/", pathNot: "^src/(lib|core|platform|media)/" },
+      to: { path: "^src/", pathNot: "^src/(lib|platform|media)/" },
+    },
+    // ── 2.0 foundations (TRANSITION.md) ────────────────────────────────────
+    // data/ → kernel/ → api/ sit above lib/ and platform/ and below
+    // everything else. Each may use only the layers listed for it, so the
+    // folders start inside their boundaries before any code lands in them.
+    {
+      name: "data-only-uses-foundations",
+      comment:
+        "data/ is the typed schema layer over Yjs. It may use only lib/: persistence, sync and features build on it, never the reverse.",
+      severity: "error",
+      from: { path: "^src/data/", pathNot: TESTS },
+      to: { path: "^src/", pathNot: "^src/(lib|data)/" },
+    },
+    {
+      name: "kernel-only-uses-foundations",
+      comment:
+        "kernel/ holds the campaign context, the command bus and the extension registries. It may use lib/, platform/, sync/ and data/; features, systems, the scene and the UI register with it rather than being imported by it.",
+      severity: "error",
+      from: { path: "^src/kernel/", pathNot: TESTS },
+      to: { path: "^src/", pathNot: "^src/(lib|platform|sync|data|kernel)/" },
+    },
+    {
+      name: "api-only-uses-foundations",
+      comment:
+        "api/ is the public surface extensions build on. It re-exports from data/, kernel/ and the shared components in ui/, and must not expose features, systems or composition code.",
+      severity: "error",
+      from: { path: "^src/api/", pathNot: TESTS },
+      to: { path: "^src/", pathNot: "^src/(lib|data|kernel|ui|api)/" },
     },
     {
       name: "extensions-come-from-context",
@@ -71,10 +99,12 @@ module.exports = {
     {
       name: "ui-is-presentational",
       comment:
-        "ui/ holds generic components. It must not depend on table/, workspace/, features/, systems/, campaign/ or the scene.",
+        "ui/ holds generic components. It must not depend on table/, workspace/, features/, systems/, campaign/, the scene, or the kernel, data and api layers (api/ re-exports ui/).",
       severity: "error",
       from: { path: "^src/ui/", pathNot: TESTS },
-      to: { path: "^src/(table|workspace|features|systems|campaign|scene|lobby|sync|app)/" },
+      to: {
+        path: "^src/(table|workspace|features|systems|campaign|scene|lobby|sync|app|kernel|data|api)/",
+      },
     },
     {
       name: "nothing-below-imports-the-table",

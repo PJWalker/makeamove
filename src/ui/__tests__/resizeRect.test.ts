@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { MIN_H, MIN_W, resizeRect } from "../resizeRect";
 
 const start = { x: 100, y: 100, w: 400, h: 300 };

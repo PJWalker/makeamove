@@ -1,4 +1,4 @@
-import { fromLocal } from "./geometry";
+import { fromLocal, shapePolygon } from "./geometry";
 import type { Point } from "./grid";
 import type { SceneElement } from "./types";
 
@@ -25,6 +25,21 @@ export function blockingSegments(elements: readonly SceneElement[]): Segment[] {
   return elements.flatMap((el) =>
     el.type === "wall" && !(el.door && el.open) ? [wallEnds(el)] : [],
   );
+}
+
+/**
+ * The segments that block sight but not light: walls, and the edges of
+ * effects that obscure (fog), which can't be seen into, out of or through.
+ */
+export function sightSegments(elements: readonly SceneElement[]): Segment[] {
+  return [
+    ...blockingSegments(elements),
+    ...elements.flatMap((el) => {
+      if (el.type !== "effect" || !el.obscures) return [];
+      const poly = shapePolygon(el);
+      return poly.map((a, i) => ({ a, b: poly[(i + 1) % poly.length]! }));
+    }),
+  ];
 }
 
 /** Whether anything in `segments` stands between a and b. */

@@ -3,7 +3,7 @@ import type { GameSystem, TrackerDef } from "../../systems/types";
 import { bumpData, bumpResource, canEdit, getCharacter, systemOf } from "./api";
 import { derive } from "./store";
 import type { CharacterView } from "./types";
-import type { TrackerButton } from "../../core/richText";
+import type { TrackerButton } from "../../data/richText";
 
 /*
  * Inline buttons in text that add to or spend a character's numbers:

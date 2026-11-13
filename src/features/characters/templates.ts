@@ -100,6 +100,7 @@ export function tokenName(
   taken: string[],
   random = Math.random,
 ): string {
+  const takenSet = new Set(taken);
   const pick = <T>(xs: T[]) => {
     if (!xs.length) throw new RangeError("Cannot choose from an empty list");
     return xs[Math.floor(random() * xs.length)]!;
@@ -107,12 +108,12 @@ export function tokenName(
   const base = c.name.trim() || "Unnamed";
   if (t.naming === "list") {
     const names = t.names.map((n) => n.trim()).filter(Boolean);
-    const free = names.filter((n) => !taken.includes(n));
+    const free = names.filter((n) => !takenSet.has(n));
     if (free.length) return pick(free);
     if (names.length) return numbered(pick(names), taken);
   }
   if (t.naming === "adjective") {
-    const free = ADJECTIVES.map((a) => `${a} ${base}`).filter((n) => !taken.includes(n));
+    const free = ADJECTIVES.map((a) => `${a} ${base}`).filter((n) => !takenSet.has(n));
     if (free.length) return pick(free);
   }
   return numbered(base, taken);

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { contentFromText } from "../content";
 import { roll } from "../../dice/notation";
 import { visibilityOf, type ChatMessage, type RollVisibility } from "../types";

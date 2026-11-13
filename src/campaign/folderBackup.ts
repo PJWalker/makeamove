@@ -1,5 +1,5 @@
 import * as Y from "yjs";
-import { store } from "../lib/store";
+import { store, type Store } from "../lib/store";
 import { canWrite, pickFolder } from "../platform/files";
 import { deleteValue, readValue, writeValue } from "../platform/keyval";
 import { finishImport, openGuids, roleIn, thisDevice } from "./backup";
@@ -38,11 +38,6 @@ export type FolderBackupState =
   | { state: "saved"; folder: string; savedAt: number }
   | { state: "failed"; folder: string; error: string };
 
-/** The open campaign's folder backup. */
-export const folderBackup = store<FolderBackupState>({ state: "off" });
-
-let running: FolderSync | null = null;
-
 class FolderSync {
   /** Documents changed since the last save; all of them until the first. */
   private dirty = new Set<string>();
@@ -56,6 +51,7 @@ class FolderSync {
   constructor(
     private readonly campaign: Campaign,
     private readonly dir: FileSystemDirectoryHandle,
+    private readonly status: Store<FolderBackupState>,
   ) {}
 
   start() {
@@ -113,21 +109,21 @@ class FolderSync {
       return this.saving;
     }
     const folder = this.dir.name;
-    const last = folderBackup.value;
-    folderBackup.value = {
+    const last = this.status.value;
+    this.status.value = {
       state: "saving",
       folder,
       ...("savedAt" in last && { savedAt: last.savedAt }),
     };
     this.saving = this.write()
       .then(() => {
-        if (!this.stopped) folderBackup.value = { state: "saved", folder, savedAt: Date.now() };
+        if (!this.stopped) this.status.value = { state: "saved", folder, savedAt: Date.now() };
       })
       .catch((e: unknown) => {
         if (this.stopped) return;
         // Permission can lapse while open; wait for a click.
         const lost = e instanceof DOMException && e.name === "NotAllowedError";
-        folderBackup.value = lost
+        this.status.value = lost
           ? { state: "paused", folder }
           : { state: "failed", folder, error: e instanceof Error ? e.message : String(e) };
       })
@@ -183,60 +179,65 @@ async function mergeFolder(dir: FileSystemDirectoryHandle, campaignId?: string) 
   return imported && finishImport(imported);
 }
 
-function begin(campaign: Campaign, dir: FileSystemDirectoryHandle) {
-  running?.stop();
-  running = new FolderSync(campaign, dir);
-  running.start();
-}
-
 /**
- * Keep the campaign's linked folder up to date while it's open. Returns the
- * function that stops it.
+ * A campaign's backup to a folder on this device: kept up to date while the
+ * campaign is open, once it's linked. One per open campaign; `dispose` stops it.
  */
-export function runFolderBackup(campaign: Campaign): () => void {
-  let cancelled = false;
-  void (async () => {
-    const dir = await readValue<FileSystemDirectoryHandle>(handleKey(campaign.id));
-    if (cancelled) return;
-    if (!dir) {
-      folderBackup.value = { state: "off" };
-      return;
-    }
-    if (await canWrite(dir)) {
-      if (!cancelled) begin(campaign, dir);
-    } else if (!cancelled) folderBackup.value = { state: "paused", folder: dir.name };
-  })();
-  return () => {
-    cancelled = true;
-    running?.stop();
-    running = null;
-    folderBackup.value = { state: "off" };
-  };
-}
+export class FolderBackup {
+  readonly status = store<FolderBackupState>({ state: "off" });
+  #running: FolderSync | null = null;
+  #disposed = false;
 
-/** Choose a folder and start backing the campaign up to it. False if the user cancels. */
-export async function linkBackupFolder(campaign: Campaign): Promise<boolean> {
-  const dir = await pickFolder(`backup-${campaign.id}`);
-  if (!dir) return false;
-  await mergeFolder(dir, campaign.id);
-  await writeValue(handleKey(campaign.id), dir);
-  begin(campaign, dir);
-  return true;
-}
-
-/** Ask again for access to the linked folder (needs a click), and carry on. */
-export async function resumeFolderBackup(campaign: Campaign) {
-  const dir = await readValue<FileSystemDirectoryHandle>(handleKey(campaign.id));
-  if (dir && (await canWrite(dir, true))) begin(campaign, dir);
-}
-
-export async function unlinkBackupFolder(campaign: Campaign) {
-  if (running) {
-    running.stop();
-    running = null;
+  /** Start backing up to the campaign's linked folder, if it has one. */
+  constructor(private readonly campaign: Campaign) {
+    void (async () => {
+      const dir = await readValue<FileSystemDirectoryHandle>(handleKey(campaign.id));
+      if (this.#disposed || !dir) return;
+      if (await canWrite(dir)) {
+        if (!this.#disposed) this.#begin(dir);
+      } else if (!this.#disposed) this.status.value = { state: "paused", folder: dir.name };
+    })();
   }
-  await deleteValue(handleKey(campaign.id));
-  folderBackup.value = { state: "off" };
+
+  #begin(dir: FileSystemDirectoryHandle) {
+    this.#running?.stop();
+    this.#running = new FolderSync(this.campaign, dir, this.status);
+    this.#running.start();
+  }
+
+  #stop() {
+    this.#running?.stop();
+    this.#running = null;
+    this.status.value = { state: "off" };
+  }
+
+  /** Choose a folder and start backing the campaign up to it. False if the user cancels. */
+  async link(): Promise<boolean> {
+    const id = this.campaign.id;
+    const dir = await pickFolder(`backup-${id}`);
+    if (!dir) return false;
+    await mergeFolder(dir, id);
+    await writeValue(handleKey(id), dir);
+    this.#begin(dir);
+    return true;
+  }
+
+  /** Ask again for access to the linked folder (needs a click), and carry on. */
+  async resume() {
+    const dir = await readValue<FileSystemDirectoryHandle>(handleKey(this.campaign.id));
+    if (dir && (await canWrite(dir, true))) this.#begin(dir);
+  }
+
+  async unlink() {
+    this.#stop();
+    await deleteValue(handleKey(this.campaign.id));
+  }
+
+  /** Save what's waiting and stop. */
+  dispose() {
+    this.#disposed = true;
+    this.#stop();
+  }
 }
 
 /**

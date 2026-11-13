@@ -1,10 +1,8 @@
 import type * as React from "react";
-import { store } from "../lib/store";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
-import { fieldsOf, getState, setState, withField } from "../features/chat/messageState";
+import { fieldsOf, withField } from "../features/chat/messageState";
 import { commandText, contentForCommand, type ChatContent } from "../features/chat/content";
 import {
-  canWork,
   visibilityOf,
   type ChatMessage,
   type CounterMessage,
@@ -12,12 +10,13 @@ import {
 } from "../features/chat/types";
 import type { Campaign } from "../campaign/campaign";
 import { device } from "../platform/device";
-import { useY } from "../ui/useY";
+import { useQuery } from "../ui/useQuery";
 import { Button } from "../ui/Button";
 import { menuTrigger } from "../ui/menuTrigger";
 import { IconRemove, IconAdd } from "../ui/icons";
 import { ChatInput, type ChatInputHandle } from "./ChatInput";
-import { useValue } from "../ui/useValue";
+import { useCampaign } from "../workspace/campaignContext";
+import { saveMessageEdit, setCounterValue, timerControl } from "../workspace/commands/chat";
 
 /*
  * What chat messages gained in M10, all kept in the campaign's message state
@@ -26,9 +25,6 @@ import { useValue } from "../ui/useValue";
  * and counters.
  */
 
-/** The message being edited in place, on this device. */
-export const editingMessage = store<string | null>(null);
-
 /** Some of a message's state, re-read when it changes. */
 export function useMessageState<T = unknown>(
   campaign: Campaign,
@@ -36,7 +32,9 @@ export function useMessageState<T = unknown>(
   fields: string[],
 ): Record<string, T> {
   return JSON.parse(
-    useY(campaign.messageState, () => JSON.stringify(fieldsOf(campaign.messageState, id, fields))),
+    useQuery(campaign.messageState, () =>
+      JSON.stringify(fieldsOf(campaign.messageState, id, fields)),
+    ),
   ) as Record<string, T>;
 }
 
@@ -49,18 +47,6 @@ export const useTextState = (campaign: Campaign, id: string) =>
 export const editedText = (state: Record<string, unknown>, text: ChatContent): ChatContent =>
   (state.text as ChatContent | undefined) ?? text;
 
-export function saveEdit(campaign: Campaign, id: string, text: ChatContent) {
-  campaign.doc.transact(() => {
-    setState(campaign.messageState, id, "text", text);
-    setState(campaign.messageState, id, "editedAt", Date.now());
-  });
-}
-
-export const isPinned = (campaign: Campaign, id: string) =>
-  !!getState<boolean>(campaign.messageState, id, "pinned");
-export const setPinned = (campaign: Campaign, id: string, on: boolean) =>
-  setState(campaign.messageState, id, "pinned", on || undefined);
-
 /** The box a message is edited in: Enter saves, Escape leaves it as it was. */
 export function EditBox({
   campaign,
@@ -71,14 +57,15 @@ export function EditBox({
   id: string;
   text: ChatContent;
 }) {
-  const [value, setValue] = useState<ChatContent>(text);
+  const ctx = useCampaign();
+  const value = useRef(text);
   const input = useRef<ChatInputHandle | null>(null);
   const done = (save: boolean) => {
-    const body = commandText(value).trim();
-    const content = contentForCommand(value, body);
+    const body = commandText(value.current).trim();
+    const content = contentForCommand(value.current, body);
     if (save && body && JSON.stringify(content) !== JSON.stringify(text))
-      saveEdit(campaign, id, content);
-    editingMessage.value = null;
+      ctx.execute(saveMessageEdit, { id, content });
+    ctx.table.editingMessage.set(null);
   };
   return (
     <div
@@ -96,7 +83,9 @@ export function EditBox({
         className="input chat-input"
         initialContent={text}
         handleRef={input}
-        onChange={(content) => setValue(content)}
+        onChange={(content) => {
+          value.current = content;
+        }}
         onEnter={() => done(true)}
         onUp={() => {}}
         onEscape={() => done(false)}
@@ -175,9 +164,11 @@ export function TimerCard({
   const now = useNow(!stopped);
   const left = (((stopped ?? now) - endsAt) * -1) / 1000;
   const done = left <= 0;
-  const gm = useY(campaign.members, () => campaign.isGm());
-  const me = useValue(device).id;
-  const can = canWork(m, me, gm);
+  const ctx = useCampaign();
+  const can = useQuery(
+    campaign.members,
+    () => ctx.commands.permits(timerControl, { id: m.id, action: "stop" }) === true,
+  );
   const ringing = useRinging(done);
   return (
     <div
@@ -203,12 +194,7 @@ export function TimerCard({
         <div className="move-suggest">
           <Button
             variant="ghost"
-            onClick={() =>
-              campaign.doc.transact(() => {
-                setState(campaign.messageState, m.id, "endsAt", Date.now() + m.seconds * 1000);
-                setState(campaign.messageState, m.id, "stoppedAt", undefined);
-              })
-            }
+            onClick={() => ctx.execute(timerControl, { id: m.id, action: "restart" })}
           >
             Restart
           </Button>
@@ -216,25 +202,14 @@ export function TimerCard({
             (stopped ? (
               <Button
                 variant="ghost"
-                onClick={() =>
-                  campaign.doc.transact(() => {
-                    // Carry on from where it was stopped.
-                    setState(
-                      campaign.messageState,
-                      m.id,
-                      "endsAt",
-                      Date.now() + (endsAt - stopped),
-                    );
-                    setState(campaign.messageState, m.id, "stoppedAt", undefined);
-                  })
-                }
+                onClick={() => ctx.execute(timerControl, { id: m.id, action: "resume" })}
               >
                 Resume
               </Button>
             ) : (
               <Button
                 variant="ghost"
-                onClick={() => setState(campaign.messageState, m.id, "stoppedAt", Date.now())}
+                onClick={() => ctx.execute(timerControl, { id: m.id, action: "stop" })}
               >
                 Stop
               </Button>
@@ -257,16 +232,12 @@ export function CounterCard({
 }) {
   const state = useMessageState<number>(campaign, m.id, ["value"]);
   const value: number = state.value ?? m.start;
-  const gm = useY(campaign.members, () => campaign.isGm());
-  const me = useValue(device).id;
-  const can = canWork(m, me, gm);
-  const set = (n: number) =>
-    setState(
-      campaign.messageState,
-      m.id,
-      "value",
-      m.max !== undefined ? Math.min(m.max, Math.max(0, n)) : n,
-    );
+  const ctx = useCampaign();
+  const can = useQuery(
+    campaign.members,
+    () => ctx.commands.permits(setCounterValue, { id: m.id, value: 0 }) === true,
+  );
+  const set = (value: number) => ctx.execute(setCounterValue, { id: m.id, value });
   const full = m.max !== undefined && value >= m.max;
   return (
     <div
@@ -331,12 +302,12 @@ export function PinnedStrip({
   render: (m: ChatMessage) => React.ReactNode;
   onMenu: (x: number, y: number, id: string) => void;
 }) {
-  const pinnedIds = useY(campaign.messageState, () =>
+  const pinnedIds = useQuery(campaign.messageState, () =>
     withField(campaign.messageState, "pinned").join(" "),
   );
-  const messages = useValue(campaign.chat.messages);
-  const gm = useY(campaign.members, () => campaign.isGm());
-  const me = useValue(device).id;
+  const messages = useQuery(campaign.chat.messages);
+  const gm = useQuery(campaign.members, () => campaign.isGm());
+  const me = useQuery(device).id;
   const ids = new Set(pinnedIds.split(" ").filter(Boolean));
   const pinned = messages.filter((m) => ids.has(m.id) && visibilityOf(m, me, gm) === "full");
   const shownIds = pinned.map((m) => m.id).join(" ");
@@ -348,14 +319,16 @@ export function PinnedStrip({
   useEffect(() => {
     const currentShown = new Set(shownIds.split(" ").filter(Boolean));
     const gone = [...before.current].filter((id) => !currentShown.has(id));
+    const goneIds = new Set(gone);
     before.current = currentShown;
     if (!gone.length) return;
-    setLeaving(new Set([...leaving, ...gone]));
-    window.setTimeout(
-      () => setLeaving(new Set([...leaving].filter((id) => !gone.includes(id)))),
+    setLeaving((current) => new Set([...current, ...gone]));
+    const timeout = window.setTimeout(
+      () => setLeaving((current) => new Set([...current].filter((id) => !goneIds.has(id)))),
       PIN_LEAVE_MS,
     );
-  }, [shownIds, leaving]);
+    return () => window.clearTimeout(timeout);
+  }, [shownIds]);
   // Those here when the strip first drew came with it.
   const [initial] = useState(shown);
 
@@ -370,7 +343,7 @@ export function PinnedStrip({
             className="chat-pin"
             data-new={!initial.has(m.id) || undefined}
             data-leaving={!shown.has(m.id) || undefined}
-            // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable so the GM can open its menu by keyboard
+            // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable so the GM can open its menu by keyboard
             tabIndex={gm && shown.has(m.id) ? 0 : undefined}
             aria-label={gm && shown.has(m.id) ? `Pinned message from ${m.name}` : undefined}
             {...(gm && shown.has(m.id) ? menuTrigger((x, y) => onMenu(x, y, m.id)) : {})}

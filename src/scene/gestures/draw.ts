@@ -1,10 +1,11 @@
 import { finishStroke, STRIDE } from "../stroke";
-import { pen } from "../tools";
 import { coalesced, type ToolPress } from "./types";
 
 /** The Pen: a freehand stroke, pressure-sensitive with a stylus, in the pen's colour, width and layer. */
 export const draw: ToolPress = (c, e, world) => {
-  const { colour, width, layer } = pen.value;
+  const { colour, layer } = c.tools.pen.value;
+  // The pen's width is in screen px; the stroke keeps the world width it had when drawn.
+  const width = c.tools.pen.value.width / c.renderer.camera.zoom;
   const points: number[] = [];
   const add = (e: PointerEvent, p: { x: number; y: number }) => {
     const n = points.length;

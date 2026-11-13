@@ -1,8 +1,10 @@
 import { md } from "../../macros/markdown.macro" with { type: "macro" };
-import { describe, expect, it } from "vitest";
-import { plainText } from "../../core/richText";
+import { describe, expect, it } from "vite-plus/test";
+import { plainText } from "../../data/richText";
 import * as Y from "yjs";
 import { dungeonWorld } from "../dungeon-world";
+import { rootOf } from "../../data/schema";
+import { campaignShape } from "../../campaign/schema";
 import { performMove } from "../../features/characters/moves";
 import {
   characterView,
@@ -17,11 +19,10 @@ import {
   saveGear,
   saveMove,
   withHomebrew,
-  type HomebrewEntry,
 } from "../../features/homebrew/homebrew";
 
 describe("homebrew", () => {
-  const doc = () => new Y.Doc().getMap<HomebrewEntry>("homebrew");
+  const doc = () => rootOf(new Y.Doc(), campaignShape).homebrew;
 
   it("saves gear and moves under their own ids, and edits in place", () => {
     const map = doc();
@@ -55,7 +56,7 @@ describe("homebrew", () => {
     expect(system.actions.at(-1)?.id).toBe(id);
     expect(withHomebrew(dungeonWorld, [])).toBe(dungeonWorld);
 
-    const chars = new Y.Doc().getMap<Y.Map<unknown>>("characters");
+    const chars = rootOf(new Y.Doc(), campaignShape).characters;
     const cid = createCharacter(chars, system, {
       name: "Lux",
       owner: "me",

@@ -1,13 +1,14 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { COMMANDS, parseCommand, suggest } from "../features/chat/commands";
 import { commandText, emptyChatContent, type ChatContent } from "../features/chat/content";
-import { addToRoll, postRoll, runCommand } from "../features/chat/send";
+import { useCampaign } from "../workspace/campaignContext";
+import { addToChatRoll, chatCall, roll, suggestSlash } from "../workspace/commands/chat";
+import { invoke } from "../workspace/commands/views";
 import type { RollVisibility } from "../features/chat/types";
 import { NotationError } from "../features/dice/notation";
 import { pickName, poolFormula, samePick, signed, type TrayPick } from "../features/dice/pool";
 import { actingCharacterId, actingStatBonuses } from "../features/characters/api";
 import type { Campaign } from "../campaign/campaign";
-import { useY } from "../ui/useY";
+import { useQuery } from "../ui/useQuery";
 import { Button } from "../ui/Button";
 import { trackPointer } from "../ui/pointer";
 import { ChatInput, type ChatInputHandle } from "./ChatInput";
@@ -36,51 +37,38 @@ const rollAt = (x: number, y: number) =>
   document.elementFromPoint(x, y)?.closest<HTMLElement>("[data-dice-target]") ?? null;
 
 /** The message box, its command hints, and the quick dice bar above it. */
-export function ChatComposer({
-  campaign,
-  onNote,
-}: {
-  campaign: Campaign;
-  onNote: (text: string, error?: boolean) => void;
-}) {
-  const [content, setContent] = useState<ChatContent>(emptyChatContent());
+export function ChatComposer({ campaign }: { campaign: Campaign }) {
+  const ctx = useCampaign();
+  const [content, setContent] = useState<ChatContent>(() => emptyChatContent());
   const typed = commandText(content);
   const [error, setError] = useState<string | null>(null);
   const [visibility, setVisibility] = useState<RollVisibility>("public");
   const last = useRef("");
   const input = useRef<ChatInputHandle | null>(null);
-  const isGm = useY(campaign.members, () => campaign.isGm());
-  const members = useY(campaign.members, () => campaign.memberViews());
+  // Which commands are offered follows the player's role.
+  useQuery(campaign.members, () => campaign.isGm());
   // The selected character's stats, as chips; read again as the character or the choice changes.
-  useY(campaign.members, () => actingCharacterId(campaign));
+  useQuery(campaign.members, () => actingCharacterId(campaign));
   const stats = JSON.parse(
-    useY(campaign.characters, () =>
+    useQuery(campaign.characters, () =>
       JSON.stringify(
         actingStatBonuses(campaign).map(({ stat, value }) => ({ kind: "stat", stat, value })),
       ),
     ),
   ) as TrayPick[];
-  const hints = suggest(typed, isGm);
+  const hints = suggestSlash(ctx, typed);
 
   function send() {
     const message = content;
     const source = commandText(message);
     if (!source.trim()) return;
-    const cmd = parseCommand(source, members, isGm);
-    if (cmd.kind === "error") {
-      setError(cmd.message);
+    // Quick dice and a bare formula use the toggle's visibility; /r and /sr their own.
+    const call = chatCall(ctx, message, visibility);
+    if ("error" in call) {
+      setError(call.error);
       return;
     }
-    if (cmd.kind === "help") {
-      const lines = COMMANDS.filter((c) => isGm || !c.gmOnly).map((c) => `${c.usage}  ${c.help}`);
-      onNote(
-        ["Commands:", ...lines, "Formulas: 2d6+1, 4d6kh3, 2d20kl1, d6!, 1d8+2[STR]"].join("\n"),
-      );
-    } else {
-      // A roll typed with /r or /sr uses its own visibility; quick dice and a bare formula use the toggle.
-      const bare = cmd.kind === "roll" && !source.trim().startsWith("/");
-      runCommand(campaign, bare ? { ...cmd, visibility: visibility } : cmd, message);
-    }
+    invoke(ctx, call.command, call.params);
     last.current = source;
     input.current?.set("");
     setError(null);
@@ -98,7 +86,7 @@ export function ChatComposer({
     setPool([]);
     if (!formula) return;
     try {
-      void postRoll(campaign, formula, visibility);
+      ctx.execute(roll, { formula, visibility });
     } catch (e) {
       if (e instanceof NotationError) setError(e.message);
     }
@@ -159,12 +147,13 @@ export function ChatComposer({
         const card = target;
         aim(null);
         if (!(end instanceof PointerEvent) || end.type !== "pointerup") return;
-        if (card?.dataset.diceTarget) addToRoll(campaign, card.dataset.diceTarget, pick);
+        if (card?.dataset.diceTarget)
+          ctx.execute(addToChatRoll, { id: card.dataset.diceTarget, pick });
         else if (
           pick.kind === "die" &&
           !document.elementFromPoint(end.clientX, end.clientY)?.closest(".dice-tray")
         )
-          void postRoll(campaign, `d${pick.sides}`, visibility);
+          ctx.execute(roll, { formula: `d${pick.sides}`, visibility });
       },
     );
   }
@@ -251,7 +240,7 @@ export function ChatComposer({
         }}
       >
         {hints.length > 0 && (
-          <ul className="chat-hints" role="listbox" aria-label="Commands">
+          <ul className="chat-hints" aria-label="Commands">
             {hints.map((h) => (
               <li key={h.names[0]}>
                 <button

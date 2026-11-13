@@ -1,7 +1,9 @@
+import { ColourPicker } from "../ui/ColourPicker";
 import type { RefObject } from "react";
 import { useState } from "react";
-import { setSystemCampaignData, systemCampaignData, type Campaign } from "../campaign/campaign";
+import { systemCampaignData, type Campaign } from "../campaign/campaign";
 import { commaListOf, formatCommaList } from "../lib/list";
+import { parseInputNumber } from "../lib/number";
 import { device, setDeviceColour, setDeviceName } from "../platform/device";
 import { GRID_TYPES } from "../scene/grid";
 import { colourOf } from "../scene/presence";
@@ -10,12 +12,15 @@ import { inviteUrl } from "../sync/invite";
 import { getSystem } from "../systems";
 import { Button } from "../ui/Button";
 import { Segmented } from "../ui/Segmented";
-import { useValue } from "../ui/useValue";
-import { useY } from "../ui/useY";
+import { useQuery } from "../ui/useQuery";
 import { BackupSettings } from "./BackupSettings";
 import { CampaignSystemSheet } from "./campaignSheets";
-import { autohide, setAutohide } from "./canvasState";
+
+import { autohide, setAutohide } from "./autohide";
 import { Dialog } from "./Dialog";
+import { useCampaign } from "./campaignContext";
+import { renameCampaign, setCampaignField, setDefaults, setMyName } from "./commands/campaign";
+import { can } from "./commands/views";
 
 /** Everything you can set: for you on this device, and (for the GM) for the campaign. */
 export function SettingsDialog({
@@ -25,12 +30,10 @@ export function SettingsDialog({
   campaign: Campaign;
   dialogRef: RefObject<HTMLDialogElement | null>;
 }) {
-  const me = useValue(device);
-  const hiding = useValue(autohide);
-  const myName = useY(
-    campaign.members,
-    () => (campaign.members.get(me.id)?.get("name") as string | undefined) ?? "",
-  );
+  const ctx = useCampaign();
+  const me = useQuery(device);
+  const hiding = useQuery(autohide);
+  const myName = useQuery(campaign.members, () => campaign.members.get(me.id)?.get("name") ?? "");
   const colour = colourOf(me);
   return (
     <Dialog dialogRef={dialogRef} title="Settings">
@@ -46,19 +49,14 @@ export function SettingsDialog({
                 const v = e.currentTarget.value.trim();
                 if (!v) return;
                 setDeviceName(v);
-                campaign.ensureMember(v);
+                ctx.execute(setMyName, { name: v });
               }}
             />
           </label>
-          <label className="field">
+          <div className="field">
             Your colour
-            <input
-              type="color"
-              value={colour}
-              onInput={(e) => setDeviceColour(e.currentTarget.value)}
-              aria-label="Your colour"
-            />
-          </label>
+            <ColourPicker label="Your colour" value={colour} onChange={setDeviceColour} />
+          </div>
           <p className="muted">Used for your cursor, pings, and new tokens.</p>
         </div>
         <div className="dialog-subsection form-subsection">
@@ -80,7 +78,7 @@ export function SettingsDialog({
           </div>
         </div>
       </section>
-      {campaign.isGm() && <CampaignSettings campaign={campaign} />}
+      {can(ctx, renameCampaign, { name: "" }) && <CampaignSettings campaign={campaign} />}
       <SystemCampaignFields campaign={campaign} />
       <CampaignSystemSheet campaign={campaign} />
       <BackupSettings campaign={campaign} />
@@ -89,8 +87,9 @@ export function SettingsDialog({
 }
 
 function CampaignSettings({ campaign }: { campaign: Campaign }) {
-  const name = useY(campaign.meta, () => campaign.name);
-  const defaults = useY(campaign.meta, () => campaign.defaults());
+  const ctx = useCampaign();
+  const name = useQuery(campaign.meta, () => campaign.name);
+  const defaults = useQuery(campaign.meta, () => campaign.defaults());
   return (
     <section className="dialog-section form-layout">
       <h3 className="dialog-heading form-title">Campaign</h3>
@@ -102,7 +101,7 @@ function CampaignSettings({ campaign }: { campaign: Campaign }) {
             value={name}
             onChange={(e) => {
               const v = e.currentTarget.value.trim();
-              if (v) campaign.rename(v);
+              if (v) ctx.execute(renameCampaign, { name: v });
             }}
           />
         </label>
@@ -119,7 +118,7 @@ function CampaignSettings({ campaign }: { campaign: Campaign }) {
             label="Default token style"
             value={defaults.tokenStyle}
             options={TOKEN_STYLES}
-            onChange={(tokenStyle) => campaign.setDefaults({ tokenStyle })}
+            onChange={(tokenStyle) => ctx.execute(setDefaults, { patch: { tokenStyle } })}
           />
         </div>
         <div className="field">
@@ -128,7 +127,7 @@ function CampaignSettings({ campaign }: { campaign: Campaign }) {
             label="Default grid"
             value={defaults.gridType}
             options={GRID_TYPES}
-            onChange={(gridType) => campaign.setDefaults({ gridType })}
+            onChange={(gridType) => ctx.execute(setDefaults, { patch: { gridType } })}
           />
         </div>
       </div>
@@ -138,9 +137,11 @@ function CampaignSettings({ campaign }: { campaign: Campaign }) {
 }
 
 function SystemCampaignFields({ campaign }: { campaign: Campaign }) {
+  const ctx = useCampaign();
   const system = getSystem(campaign.systemId);
   const fields = system.campaignFields ?? [];
-  const values = useY(campaign.systemData, () => systemCampaignData(campaign));
+  const values = useQuery(campaign.systemData, () => systemCampaignData(campaign));
+  const editable = can(ctx, setCampaignField, { field: "", value: "" });
   if (!fields.length) return null;
   return (
     <section
@@ -154,9 +155,9 @@ function SystemCampaignFields({ campaign }: { campaign: Campaign }) {
           {field.type === "select" ? (
             <select
               value={String(values[field.id] ?? field.default)}
-              disabled={!campaign.isGm()}
+              disabled={!editable}
               onChange={(event) =>
-                setSystemCampaignData(campaign, field.id, event.currentTarget.value)
+                ctx.execute(setCampaignField, { field: field.id, value: event.currentTarget.value })
               }
             >
               {field.options?.map((option) => (
@@ -171,15 +172,15 @@ function SystemCampaignFields({ campaign }: { campaign: Campaign }) {
               return (
                 <select
                   multiple
-                  disabled={!campaign.isGm()}
+                  aria-label={field.label}
+                  disabled={!editable}
                   onChange={(event) =>
-                    setSystemCampaignData(
-                      campaign,
-                      field.id,
-                      formatCommaList(
+                    ctx.execute(setCampaignField, {
+                      field: field.id,
+                      value: formatCommaList(
                         [...event.currentTarget.selectedOptions].map((option) => option.value),
                       ),
-                    )
+                    })
                   }
                 >
                   {field.options?.map((option) => (
@@ -196,16 +197,13 @@ function SystemCampaignFields({ campaign }: { campaign: Campaign }) {
               min={field.type === "number" ? field.min : undefined}
               max={field.type === "number" ? field.max : undefined}
               value={String(values[field.id] ?? field.default)}
-              disabled={!campaign.isGm()}
-              onChange={(event) =>
-                setSystemCampaignData(
-                  campaign,
-                  field.id,
-                  field.type === "number"
-                    ? Number(event.currentTarget.value)
-                    : event.currentTarget.value,
-                )
-              }
+              disabled={!editable}
+              onChange={(event) => {
+                const input = event.currentTarget.value;
+                const value = field.type === "number" ? parseInputNumber(input) : input;
+                if (value === undefined) return;
+                ctx.execute(setCampaignField, { field: field.id, value });
+              }}
             />
           )}
         </label>
@@ -290,7 +288,7 @@ export function HelpDialog({ dialogRef }: { dialogRef: RefObject<HTMLDialogEleme
 
 function InviteField({ campaign }: { campaign: Campaign }) {
   const [copied, setCopied] = useState(false);
-  const roomKey = useY(campaign.meta, () => campaign.meta.get("roomKey") as string | undefined);
+  const roomKey = useQuery(campaign.meta, () => campaign.meta.get("roomKey"));
   if (!roomKey) return null;
   const url = inviteUrl({ campaignId: campaign.id, roomKey });
   return (
@@ -299,7 +297,12 @@ function InviteField({ campaign }: { campaign: Campaign }) {
       <div className="field">
         Invite link
         <div className="form-row">
-          <input readOnly value={url} onFocus={(e) => e.currentTarget.select()} />
+          <input
+            aria-label="Invite link"
+            readOnly
+            value={url}
+            onFocus={(e) => e.currentTarget.select()}
+          />
           <Button
             variant="secondary"
             onClick={() => {

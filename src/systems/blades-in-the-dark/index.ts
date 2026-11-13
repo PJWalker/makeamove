@@ -4,7 +4,7 @@ import { commaListOf } from "../../lib/list";
 import { resolveEffects } from "../effects";
 import type { ActionDef, CheckStep, GameSystem } from "../types";
 import { abilityRules, CREW_ABILITIES as CREW_RULES } from "./content";
-import { plainText, richTextFromPlain, type RichText } from "../../core/richText";
+import { plainText, richTextFromPlain, type RichText } from "../../data/richText";
 
 const ACTIONS = [
   ["hunt", "Hunt", "Track a target or attack at range."],
@@ -148,7 +148,9 @@ const moveActions = ACTIONS.map(([id, name, description]) =>
       stat: id,
       followUpsFor: (roll) =>
         roll.terms[0]?.label?.toLowerCase() === "desperate"
-          ? [`xp-${ATTRIBUTES.find((attribute) => attribute.actions.includes(id))!.id}`]
+          ? ATTRIBUTES.flatMap((attribute) =>
+              attribute.actions.includes(id) ? [`xp-${attribute.id}`] : [],
+            )
           : [],
     }),
   ),

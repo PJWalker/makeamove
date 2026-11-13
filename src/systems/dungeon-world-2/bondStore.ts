@@ -1,5 +1,6 @@
-import type * as Y from "yjs";
-import { pairKey, systemStore } from "../../campaign/systemStore";
+import type { Characters } from "../../campaign/schema";
+import { pairKey, type SystemData } from "../../campaign/systemStore";
+import { isObject } from "../../data/guards";
 import { relationshipsOf, removeRelationship } from "../../features/characters/relationships";
 import type { RelationshipDepthDef } from "../types";
 
@@ -18,11 +19,12 @@ export interface SharedBond {
   advancedMoves: string[];
 }
 
-const bondsOf = (systemData: Y.Map<unknown>) =>
-  systemStore<SharedBond>(systemData, "dungeon-world-2:bonds");
+const isBond = (v: unknown): v is SharedBond =>
+  isObject<SharedBond>(v) && Array.isArray(v.advancedMoves);
+const bondsOf = (systemData: SystemData) => systemData.store("bonds", isBond);
 
 export function bondBetween(
-  systemData: Y.Map<unknown>,
+  systemData: SystemData,
   first: string,
   second: string,
 ): SharedBond | undefined {
@@ -30,7 +32,7 @@ export function bondBetween(
   return bond ? { ...bond, advancedMoves: [...bond.advancedMoves] } : undefined;
 }
 
-export function bondsFor(systemData: Y.Map<unknown>, characterId: string): SharedBond[] {
+export function bondsFor(systemData: SystemData, characterId: string): SharedBond[] {
   return bondsOf(systemData)
     .values()
     .filter((bond) => bond.first === characterId || bond.second === characterId)
@@ -39,11 +41,13 @@ export function bondsFor(systemData: Y.Map<unknown>, characterId: string): Share
 
 /** Forge or reinforce the shared Bond after both PCs reach full Depth. */
 export function forgeBond(
-  systemData: Y.Map<unknown>,
-  characters: Y.Map<Y.Map<unknown>>,
+  systemData: SystemData,
+  characters: Characters,
   first: string,
   second: string,
   type: string,
+  /** Give a character XP: for each advanced move the old Bond loses. */
+  awardXp: (characterId: string, xp: number) => void,
 ): boolean {
   if (first === second || !characters.has(first) || !characters.has(second)) return false;
   const firstDepth = relationshipsOf(characters, first).find((r) => r.to === second)?.depth ?? 0;
@@ -59,25 +63,19 @@ export function forgeBond(
     advancedMoves: existing?.type === type ? existing.advancedMoves : [],
   };
   const bonds = bondsOf(systemData);
-  characters.doc!.transact(() => {
+  characters.transact(() => {
     bonds.set(pairKey(first, second), bond);
     removeRelationship(characters, first, second);
     removeRelationship(characters, second, first);
-    if (existing && existing.type !== type) {
-      for (const id of [first, second]) {
-        const data = characters.get(id)?.get("data") as Y.Map<unknown> | undefined;
-        if (data && existing.advancedMoves.length) {
-          data.set("xp", Number(data.get("xp") ?? 0) + existing.advancedMoves.length);
-        }
-      }
-    }
+    if (existing && existing.type !== type && existing.advancedMoves.length)
+      for (const id of [first, second]) awardXp(id, existing.advancedMoves.length);
   });
   return true;
 }
 
 export function advanceBond(
-  systemData: Y.Map<unknown>,
-  characters: Y.Map<Y.Map<unknown>>,
+  systemData: SystemData,
+  characters: Characters,
   first: string,
   second: string,
   moveId: string,

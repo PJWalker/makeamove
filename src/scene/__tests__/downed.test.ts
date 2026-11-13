@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { BAR_BREAK_AT } from "../barChange";
 import { DOWN_MS, downFrame, downs, isDowned } from "../downed";
 

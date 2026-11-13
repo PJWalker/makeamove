@@ -1,4 +1,4 @@
-import type { RichText } from "../../src/core/richText";
+import type { RichText } from "../../src/data/richText";
 import type { Band, Dw2Path, Dw2PathMove } from "../../src/systems/dungeon-world-2/rulebook";
 import { markdownToRichText } from "../../src/macros/markdown.macro";
 import { readReference } from "./readReference";

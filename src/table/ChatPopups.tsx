@@ -1,16 +1,16 @@
 import type * as React from "react";
 import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from "react";
 import { lazy, Suspense } from "react";
-import { chatInView, chatPopups, dismissPopup } from "../features/chat/notify";
+import { arrow, autoUpdate, computePosition, flip, offset, shift } from "@floating-ui/dom";
 import type { ChatMessage } from "../features/chat/types";
 import { markRead } from "../features/chat/unread";
 import type { Campaign } from "../campaign/campaign";
 import { collapsedInto, reducedMotion } from "../ui/bubble";
 import { Button } from "../ui/Button";
 import { IconClose } from "../ui/icons";
-import { layout, panelVisible, showPanel } from "../workspace/panelLayout";
-import { useValue } from "../ui/useValue";
+import { useQuery } from "../ui/useQuery";
 import { watch } from "../lib/store";
+import { useCampaign } from "../workspace/campaignContext";
 
 const LoneMessage = lazy(() =>
   import("./ChatMessage").then((module) => ({ default: module.LoneMessage })),
@@ -61,17 +61,19 @@ function tabRect() {
 const collapsed = (box: DOMRect): Keyframe => collapsedInto(box, tabRect());
 
 export function ChatPopups({ campaign }: { campaign: Campaign }) {
+  const ctx = useCampaign();
   // Tell chat/notify.ts whether new messages can be read where they land.
   useEffect(
     () =>
-      watch([layout], () => {
-        chatInView.value = panelVisible("chat");
+      watch([ctx.panels.layout], () => {
+        ctx.chat.chatInView.set(ctx.panels.panelVisible("chat"));
       }),
-    [],
+    [ctx],
   );
-  const messages = useValue(campaign.chat.messages);
+  const messages = useQuery(campaign.chat.messages);
+  const panelLayout = useQuery(ctx.panels.layout);
   // Looked up live, so a deleted message takes its popup with it.
-  const shown = useValue(chatPopups)
+  const shown = useQuery(ctx.chat.chatPopups)
     .map((id) => messages.find((m) => m.id === id))
     .filter((m) => !!m);
   const [held, setHeld] = useState(false);
@@ -82,56 +84,95 @@ export function ChatPopups({ campaign }: { campaign: Campaign }) {
     return () => document.removeEventListener("visibilitychange", onVisibility);
   }, []);
   const [leavingAll, setLeavingAll] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLOutputElement>(null);
   const stack = useRef<HTMLDivElement>(null);
   const any = shown.length > 0;
 
   // Beside the Chat tab, or in the corner without it.
-  const placed = useRef("");
+  const placementRevision = useRef(0);
+  const placementInFlight = useRef<Promise<void> | null>(null);
   const place = useCallback(() => {
+    if (placementInFlight.current) return placementInFlight.current;
     const el = ref.current;
     const box = stack.current;
-    if (!el || !box) return;
+    if (!el || !box) return Promise.resolve();
+    const revision = ++placementRevision.current;
+    const tabElement = chatTab();
     const tab = tabRect();
-    const h = box.offsetHeight;
-    let next: Record<string, string>;
-    if (!tab) next = { anchor: "corner", left: "", right: "", top: "", tail: "" };
-    else {
-      const right = tab.left + tab.width / 2 > innerWidth / 2;
-      const mid = tab.top + tab.height / 2;
-      const top = Math.round(Math.min(Math.max(mid - h / 2, MARGIN), innerHeight - h - MARGIN));
-      next = {
-        anchor: right ? "right" : "left",
-        left: right ? "" : `${Math.round(tab.right + GAP)}px`,
-        right: right ? `${Math.round(innerWidth - tab.left + GAP)}px` : "",
-        top: `${top}px`,
-        tail: `${Math.round(mid - top)}px`,
-      };
+    const corner = () => {
+      if (revision !== placementRevision.current) return;
+      el.dataset.anchor = "corner";
+      el.style.removeProperty("left");
+      el.style.removeProperty("top");
+      el.style.removeProperty("right");
+      el.style.removeProperty("bottom");
+      el.style.removeProperty("--tail-y");
+      const tail = el.querySelector<HTMLElement>(".chat-popup-tail");
+      tail?.style.removeProperty("display");
+      tail?.style.removeProperty("visibility");
+    };
+    if (!tab || !tabElement) {
+      corner();
+      return Promise.resolve();
     }
-    const key = Object.values(next).join();
-    if (key === placed.current) return;
-    placed.current = key;
-    el.dataset.anchor = next.anchor;
-    el.style.left = next.left!;
-    el.style.right = next.right!;
-    el.style.top = next.top!;
-    el.style.setProperty("--tail-y", next.tail!);
+
+    const tail = el.querySelector<HTMLElement>(".chat-popup-tail");
+    if (tail) {
+      tail.style.display = "block";
+      tail.style.visibility = "hidden";
+    }
+    const preferred = tab.left + tab.width / 2 > innerWidth / 2 ? "left" : "right";
+    const positioning = computePosition(tabElement, el, {
+      strategy: "fixed",
+      placement: preferred,
+      middleware: [
+        offset(GAP),
+        flip({
+          fallbackPlacements: [preferred === "left" ? "right" : "left"],
+          padding: MARGIN,
+        }),
+        shift({ padding: MARGIN }),
+        ...(tail ? [arrow({ element: tail, padding: 16 })] : []),
+      ],
+    }).then((result) => {
+      if (revision === placementRevision.current && el.isConnected) {
+        if (tabRect()) {
+          const placement = result.placement.split("-")[0];
+          el.dataset.anchor = placement === "left" ? "right" : "left";
+          tail?.style.removeProperty("display");
+          tail?.style.removeProperty("visibility");
+          el.style.left = `${Math.round(result.x)}px`;
+          el.style.top = `${Math.round(result.y)}px`;
+          el.style.removeProperty("right");
+          el.style.removeProperty("bottom");
+          const arrowOffset = result.middlewareData.arrow?.y;
+          if (arrowOffset !== undefined) el.style.setProperty("--tail-y", `${arrowOffset + 12}px`);
+        } else corner();
+      }
+    });
+    placementInFlight.current = positioning;
+    void positioning.then(
+      () => {
+        if (placementInFlight.current === positioning) placementInFlight.current = null;
+      },
+      () => {
+        if (placementInFlight.current === positioning) placementInFlight.current = null;
+      },
+    );
+    return positioning;
   }, []);
 
-  // Follow the tab while anything is showing: it slides with its sidebar and with autohide.
+  // Follow the tab as its sidebar moves, and rebind if the panel layout changes.
   useLayoutEffect(() => {
-    if (!any) {
-      placed.current = "";
+    if (!any) return;
+    const tab = chatTab();
+    const el = ref.current;
+    if (!tab || !el) {
+      void place();
       return;
     }
-    let frame = 0;
-    const follow = () => {
-      place();
-      frame = requestAnimationFrame(follow);
-    };
-    follow();
-    return () => cancelAnimationFrame(frame);
-  }, [any, place]);
+    return autoUpdate(tab, el, () => void place(), { animationFrame: true });
+  }, [any, panelLayout, place]);
 
   // Once nothing shows, start afresh.
   const [wasAny, setWasAny] = useState(any);
@@ -145,14 +186,13 @@ export function ChatPopups({ campaign }: { campaign: Campaign }) {
 
   if (!any) return null;
   return (
-    <div
+    <output
       ref={ref}
       className="chat-popups"
-      role="status"
       aria-live="polite"
       onPointerEnter={() => setHeld(true)}
       onPointerLeave={() => setHeld(false)}
-      onPointerDown={markRead}
+      onPointerDown={() => markRead(campaign)}
     >
       <div ref={stack} className="chat-popup-stack">
         {shown.map((m, i) => (
@@ -170,7 +210,7 @@ export function ChatPopups({ campaign }: { campaign: Campaign }) {
         ))}
       </div>
       <span className="chat-popup-tail" aria-hidden="true" />
-    </div>
+    </output>
   );
 }
 
@@ -194,9 +234,10 @@ function Popup({
   /** Every popup shares the stack's box; the ones behind are only shifted by their depth. */
   stack: { current: HTMLDivElement | null };
   /** Puts the stack beside the tab; it must be there before a popup measures where to grow from. */
-  place: () => void;
+  place: () => Promise<void>;
   onDismissAll: () => void;
 }) {
+  const ctx = useCampaign();
   const ref = useRef<HTMLDivElement>(null);
   const gone = useRef(false);
 
@@ -205,7 +246,7 @@ function Popup({
     const box = stack.current?.getBoundingClientRect();
     if (gone.current) return;
     gone.current = true;
-    if (!el || !box || reducedMotion.matches) return dismissPopup(m.id);
+    if (!el || !box || reducedMotion.matches) return ctx.chat.dismissPopup(m.id);
     // Start from wherever it is now: at rest, part-way in, or set back in the stack.
     const from = getComputedStyle(el).transform;
     el.getAnimations().forEach((a) => a.cancel());
@@ -214,22 +255,30 @@ function Popup({
       easing: "ease-in",
       fill: "forwards",
     }).finished.then(
-      () => dismissPopup(m.id),
+      () => ctx.chat.dismissPopup(m.id),
       () => {},
     );
   });
 
   useLayoutEffect(() => {
     // This runs before the stack's own layout effect places it, so place it now.
-    place();
-    const el = ref.current;
-    const box = stack.current?.getBoundingClientRect();
-    if (el && box && !reducedMotion.matches) {
-      el.animate([collapsed(box), { opacity: 1, offset: 0.4 }, { transform: "none", opacity: 1 }], {
-        duration: ENTER_MS,
-        easing: EASE,
-      });
-    }
+    let active = true;
+    void place().then(() => {
+      const el = ref.current;
+      const box = stack.current?.getBoundingClientRect();
+      if (active && el && box && !reducedMotion.matches) {
+        el.animate(
+          [collapsed(box), { opacity: 1, offset: 0.4 }, { transform: "none", opacity: 1 }],
+          {
+            duration: ENTER_MS,
+            easing: EASE,
+          },
+        );
+      }
+    });
+    return () => {
+      active = false;
+    };
   }, [place, stack]);
 
   // Each waits its own time, all of them paused while the pointer is on the stack.
@@ -245,13 +294,13 @@ function Popup({
 
   const open = (e: React.MouseEvent<HTMLDivElement>) => {
     if ((e.target as Element).closest("button, a")) return;
-    showPanel("chat");
+    ctx.panels.showPanel("chat");
   };
 
   const front = depth === 0;
   return (
     // Clicking the popup is a mouse shortcut; the chat panel is reachable by keyboard.
-    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
+    // oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions, react-doctor/no-static-element-interactions -- The mouse shortcut is optional; the Chat tab remains keyboard accessible.
     <div
       ref={ref}
       className="chat-popup panel"

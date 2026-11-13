@@ -1,17 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { entityContent } from "../features/chat/content";
-import { postText } from "../features/chat/send";
-import { canDelete, canEditMessage } from "../features/chat/types";
-import { clearState } from "../features/chat/messageState";
 import type { Campaign } from "../campaign/campaign";
-import { device } from "../platform/device";
 import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
-import { IconDelete, IconPin, IconRename } from "../ui/icons";
 import { registerLinkDrop } from "../workspace/entityDrag";
-import { editingMessage, isPinned, PinnedStrip, setPinned } from "./ChatExtras";
+import { PinnedStrip } from "./ChatExtras";
 import { ChatComposer } from "./ChatComposer";
 import { ChatLog } from "./ChatLog";
 import { PinnedMessage } from "./ChatMessage";
+import { useCampaign } from "../workspace/campaignContext";
+import { useQuery } from "../ui/useQuery";
+import { say } from "../workspace/commands/chat";
+import { menuFor } from "../workspace/commands/views";
 
 /*
  * The chat panel: who's here, the log of chat and rolls, the message box
@@ -19,54 +18,27 @@ import { PinnedMessage } from "./ChatMessage";
  */
 
 export function ChatPanel({ campaign }: { campaign: Campaign }) {
+  const ctx = useCampaign();
   /** Replies only this device sees: /help, and errors. */
-  const [notes, setNotes] = useState<{ id: number; text: string; error?: boolean }[]>([]);
-  const note = (text: string, error = false) =>
-    setNotes([...notes, { id: Date.now(), text, error }]);
+  const notes = useQuery(ctx.table.chatNotes);
   const ref = useRef<HTMLDivElement>(null);
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const closeMenu = useCallback(() => setMenu(null), []);
   const openMenu = useCallback(
     (x: number, y: number, id: string) => {
-      const m = campaign.chat.messages.value.find((message) => message.id === id);
-      if (!m) return;
-      const gm = campaign.isGm();
-      const items: MenuItem[] = [];
-      if (canEditMessage(m, device.value.id))
-        items.push({
-          label: "Edit Message",
-          Icon: IconRename,
-          onSelect: () => (editingMessage.value = id),
-        });
-      if (gm && m.kind !== "system") {
-        const pinned = isPinned(campaign, id);
-        items.push({
-          label: pinned ? "Unpin message" : "Pin message",
-          Icon: IconPin,
-          onSelect: () => setPinned(campaign, id, !pinned),
-        });
-      }
-      if (canDelete(m, device.value.id, gm)) {
-        if (items.length) items.push("divider");
-        items.push({
-          label: "Delete Message",
-          Icon: IconDelete,
-          danger: true,
-          onSelect: () => removeMessage(campaign, id),
-        });
-      }
+      const items = menuFor(ctx, { kind: "chatMessage", id });
       if (items.length) setMenu({ x, y, items });
     },
-    [campaign],
+    [ctx],
   );
 
   // Something dragged onto the chat is sent as a link (into the message box, it joins the message instead).
   useEffect(() => {
     if (!ref.current) return;
     return registerLinkDrop(ref.current, (link) => {
-      void postText(campaign, entityContent(link.kind, link.id, link.label));
+      ctx.execute(say, { content: entityContent(link.kind, link.id, link.label) });
     });
-  }, [campaign]);
+  }, [ctx]);
 
   return (
     <div className="chat" ref={ref}>
@@ -76,16 +48,8 @@ export function ChatPanel({ campaign }: { campaign: Campaign }) {
         onMenu={openMenu}
       />
       <ChatLog campaign={campaign} notes={notes} onMenu={openMenu} />
-      <ChatComposer campaign={campaign} onNote={note} />
+      <ChatComposer campaign={campaign} />
       {menu && <ContextMenu {...menu} onClose={closeMenu} />}
     </div>
   );
-}
-
-/** Delete a message and whatever was recorded about it. */
-function removeMessage(campaign: Campaign, id: string) {
-  campaign.doc.transact(() => {
-    campaign.chat.remove(id);
-    clearState(campaign.messageState, id);
-  });
 }

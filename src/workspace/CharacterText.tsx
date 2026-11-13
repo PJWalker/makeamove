@@ -1,13 +1,10 @@
 import { useEffect, useRef } from "react";
-import * as Y from "yjs";
+import { copyText } from "../data/schema";
 import type { CharacterView } from "../features/characters/types";
 import type { Campaign } from "../campaign/campaign";
-import { useY } from "../ui/useY";
+import { useQuery } from "../ui/useQuery";
 import { mountRichText } from "./richText";
-import { useValue } from "../ui/useValue";
-
-/** Where a character keeps one of its rich-text fields: `text:notes`, `text:bonds`, `text:field:moves`. */
-export const textKey = (field: string) => `text:${field}`;
+import { useCampaign } from "./campaignContext";
 
 /**
  * A long text field on a character sheet (notes, bonds, an NPC's moves),
@@ -30,28 +27,25 @@ export function CharacterText({
   editable: boolean;
   placeholder?: string;
 }) {
+  const ctx = useCampaign();
   const hostRef = useRef<HTMLDivElement>(null);
-  const key = textKey(field);
-  const own = useY(
-    campaign.characters,
-    () => campaign.characters.get(c.id)?.get(key) as Y.XmlFragment | undefined,
-  );
-  const inherited = useY(campaign.characters, () =>
-    c.base ? (campaign.characters.get(c.base)?.get(key) as Y.XmlFragment | undefined) : undefined,
-  );
+  const textOf = (id: string | undefined) =>
+    id ? campaign.characters.get(id)?.get("texts")?.get(field) : undefined;
+  const own = useQuery(campaign.characters, () => textOf(c.id));
+  const inherited = useQuery(campaign.characters, () => textOf(c.base));
   const shown = own ?? inherited;
 
   // A field nobody has written in yet gets its text when someone can write.
   useEffect(() => {
     if (shown || !editable) return;
-    campaign.characters.get(c.id)?.set(key, new Y.XmlFragment());
-  }, [shown, editable, c.id, key, campaign.characters]);
+    campaign.characters.get(c.id)?.ensure("texts").ensure(field);
+  }, [shown, editable, c.id, field, campaign.characters]);
 
   useEffect(() => {
     const host = hostRef.current;
     if (!host || !shown) return;
     const rich = mountRichText(host, {
-      campaign,
+      ctx,
       fragment: shown,
       placeholder,
       label,
@@ -60,21 +54,13 @@ export function CharacterText({
       shared: true,
     });
     return () => rich.destroy();
-  }, [shown, editable, campaign, label, own, placeholder]);
+  }, [ctx, shown, editable, campaign, label, own, placeholder]);
 
   /** A copy's first press: its own text, starting from the template's. */
   const fork = () => {
     if (!editable || own || !inherited) return;
     const m = campaign.characters.get(c.id);
-    if (!m) return;
-    campaign.doc.transact(() => {
-      const mine = new Y.XmlFragment();
-      m.set(key, mine);
-      mine.insert(
-        0,
-        inherited.toArray().map((n) => (n as Y.XmlElement | Y.XmlText).clone()),
-      );
-    });
+    m?.transact(() => copyText(m.ensure("texts").ensure(field), inherited));
   };
 
   return (
@@ -106,7 +92,7 @@ export function GMCharacterText({
   editable: boolean;
   placeholder?: string;
 }) {
-  const vault = useValue(campaign.vault);
+  const vault = useQuery(campaign.vault);
   return vault ? (
     <VaultCharacterText
       vault={vault}
@@ -137,24 +123,25 @@ function VaultCharacterText({
   editable: boolean;
   placeholder: string;
 }) {
+  const ctx = useCampaign();
   const hostRef = useRef<HTMLDivElement>(null);
   const key = `${c.id}/${field}`;
-  const own = useY(vault.characterText, () => vault.characterText.get(key));
-  const inherited = useY(vault.characterText, () =>
+  const own = useQuery(vault.characterText, () => vault.characterText.get(key));
+  const inherited = useQuery(vault.characterText, () =>
     c.base ? vault.characterText.get(`${c.base}/${field}`) : undefined,
   );
   const shown = own ?? inherited;
 
   useEffect(() => {
     if (shown || !editable) return;
-    vault.characterText.set(key, new Y.XmlFragment());
+    vault.characterText.ensure(key);
   }, [shown, editable, key, vault]);
 
   useEffect(() => {
     const host = hostRef.current;
     if (!host || !shown) return;
     const rich = mountRichText(host, {
-      campaign,
+      ctx,
       fragment: shown,
       placeholder,
       label,
@@ -162,16 +149,11 @@ function VaultCharacterText({
       shared: false,
     });
     return () => rich.destroy();
-  }, [shown, editable, label, placeholder, campaign, own]);
+  }, [ctx, shown, editable, label, placeholder, campaign, own]);
 
   const fork = () => {
     if (!editable || own || !inherited) return;
-    const mine = new Y.XmlFragment();
-    vault.characterText.set(key, mine);
-    mine.insert(
-      0,
-      inherited.toArray().map((node) => (node as Y.XmlElement | Y.XmlText).clone()),
-    );
+    vault.characterText.transact(() => copyText(vault.characterText.ensure(key), inherited));
   };
 
   return (

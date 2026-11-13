@@ -6,29 +6,16 @@ import { IconOpenWindow, type Icon } from "../ui/icons";
 import type { menuTrigger } from "../ui/menuTrigger";
 import { closePopup, dragPopup, raisePopup, resizePopup } from "../ui/popup";
 import { RESIZE_DIRS, type ResizeDir } from "../ui/resizeRect";
-import { useValue } from "../ui/useValue";
+import { useQuery } from "../ui/useQuery";
 import { windowLayer } from "../ui/windows";
-import { dragEntity, type DragEntity } from "./entityDrag";
+import { dragEntity } from "./entityDrag";
+import type { WindowProxy } from "./entityWindowState";
 import { CampaignEntityGraphic } from "./EntityGraphic";
-import {
-  raiseWindow,
-  startWindowDrag,
-  startWindowResize,
-  layout,
-  useWindowRect,
-  type DockItemId,
-} from "./panelLayout";
+import { useWindowRect, type DockItemId } from "./panelLayout";
 import { WindowControls } from "./WindowControls";
+import { useCampaign } from "./campaignContext";
 
 /** The icon in a window's title bar that stands for what it shows. */
-export interface WindowProxy {
-  campaign: Campaign;
-  kind: string;
-  id: string;
-  defaultIcon?: string | undefined;
-  entity: DragEntity;
-}
-
 export function Dialog({
   dialogRef,
   title,
@@ -58,6 +45,7 @@ export function Dialog({
   dockId?: DockItemId | undefined;
   children: ReactNode;
 }) {
+  const ctx = useCampaign();
   const [rolled, setRolled] = useState(false);
   // Its own transition name, so two windows can animate at once.
   const transitionName = `dialog-window-${useId().replace(/[^\w-]/g, "")}`;
@@ -68,8 +56,11 @@ export function Dialog({
     dialog.addEventListener("cancel", preventNativeCancel);
     return () => dialog.removeEventListener("cancel", preventNativeCancel);
   }, [dialogRef]);
-  const floating = useValue(layout).floating;
-  const win = useWindowRect(dockId ? floating.find((item) => item.id === dockId) : undefined);
+  const floating = useQuery(ctx.panels.layout).floating;
+  const win = useWindowRect(
+    ctx.panels,
+    dockId ? floating.find((item) => item.id === dockId) : undefined,
+  );
   const windowStyle = {
     ...(win ? { left: win.x, top: win.y, width: win.w, height: win.h, zIndex: win.z } : {}),
     viewTransitionName: transitionName,
@@ -77,13 +68,14 @@ export function Dialog({
   const close = () => closePopup(dialogRef.current, onClose);
 
   function onResizePointerDown(e: PointerEvent, dir: ResizeDir) {
-    if (dockId && win) startWindowResize(dockId, e, dir);
+    if (dockId && win) ctx.panels.startWindowResize(dockId, e, dir);
     else resizePopup(dialogRef.current!, e, dir);
   }
   // Rendered in the window layer with the other windows: a non-modal dialog
   // would otherwise be clipped by the panel that opened it (the scene bar
   // clips its contents).
   return createPortal(
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- Native dialog handles backdrop clicks to close.
     <dialog
       ref={dialogRef}
       className="dialog window panel"
@@ -99,7 +91,7 @@ export function Dialog({
         close();
       }}
       onPointerDown={(e) => {
-        if (dockId) raiseWindow(dockId);
+        if (dockId) ctx.panels.raiseWindow(dockId);
         else raisePopup(e.currentTarget);
         contextMenu?.onPointerDown(e);
       }}
@@ -125,7 +117,12 @@ export function Dialog({
               onPointerDown={(e) => {
                 // Not a drag of the window itself.
                 e.stopPropagation();
-                dragEntity(e, proxy.entity, e.currentTarget.nextElementSibling as HTMLElement);
+                dragEntity(
+                  ctx.canvas,
+                  e,
+                  proxy.entity,
+                  e.currentTarget.nextElementSibling as HTMLElement,
+                );
               }}
             >
               <CampaignEntityGraphic
@@ -151,7 +148,12 @@ export function Dialog({
         onDragStart={(e) => {
           if (dockId && win) {
             const dialog = dialogRef.current!;
-            startWindowDrag(dockId, e, e.clientX - dialog.offsetLeft, e.clientY - dialog.offsetTop);
+            ctx.panels.startWindowDrag(
+              dockId,
+              e,
+              e.clientX - dialog.offsetLeft,
+              e.clientY - dialog.offsetTop,
+            );
           } else dragPopup(dialogRef.current!, e);
         }}
         onClose={close}

@@ -1,6 +1,6 @@
 import type { Campaign } from "../campaign/campaign";
-import type { EntityGraphic } from "../graphics";
-import { useY } from "../ui/useY";
+import type { EntityGraphic } from "../media/images";
+import { useQuery } from "../ui/useQuery";
 import { EntityGraphicView } from "../ui/EntityGraphic";
 import { getEntityGraphic } from "./entityGraphics";
 
@@ -10,7 +10,7 @@ export function CampaignEntityGraphic({
   id,
   defaultIcon,
   size = 22,
-  className: className,
+  className,
 }: {
   campaign: Campaign;
   kind: string;
@@ -19,10 +19,10 @@ export function CampaignEntityGraphic({
   size?: number;
   className?: string | undefined;
 }) {
-  const savedGraphic = useY(campaign.entityGraphics, () =>
+  const savedGraphic = useQuery(campaign.entityGraphics, () =>
     JSON.stringify(getEntityGraphic(campaign, kind, id, defaultIcon)),
   );
-  useY(kind === "character" ? campaign.characters : null, () =>
+  useQuery(kind === "character" ? campaign.characters : null, () =>
     JSON.stringify(getEntityGraphic(campaign, kind, id, defaultIcon)),
   );
   const graphic = JSON.parse(savedGraphic) as EntityGraphic;

@@ -1,12 +1,5 @@
 import { useState } from "react";
 import {
-  bumpData,
-  setData,
-  setScore,
-  startMove,
-  toggleCondition,
-} from "../../features/characters/api";
-import {
   SheetFrame,
   SheetSectionView,
   useSheet,
@@ -17,8 +10,17 @@ import { Button } from "../../ui/Button";
 import { IconRoll } from "../../ui/icons";
 import { ATTRIBUTES, TRAUMAS } from "./index";
 import { commaListOf } from "../../lib/list";
+import { parseInputNumber } from "../../lib/number";
 import { systemCampaignData } from "../../campaign/campaign";
-import { advanceAttribute } from "./progression";
+import {
+  bumpData,
+  setData,
+  setScore,
+  startMove,
+  toggleCondition,
+} from "../../workspace/commands/characters";
+import { useCampaign } from "../../workspace/campaignContext";
+import { advanceAction } from "./commands";
 
 function AttributeAdvance({
   sheet,
@@ -27,6 +29,7 @@ function AttributeAdvance({
   sheet: ReturnType<typeof useSheet>;
   attribute: (typeof ATTRIBUTES)[number];
 }) {
+  const ctx = useCampaign();
   const [selected, setSelected] = useState(attribute.actions[0] ?? "");
   const { campaign, c, editable } = sheet;
   const cap = commaListOf(systemCampaignData(campaign).crewUpgrades).includes("mastery") ? 4 : 3;
@@ -48,7 +51,9 @@ function AttributeAdvance({
       </select>
       <Button
         disabled={!chosen}
-        onClick={() => advanceAttribute(campaign, c.id, attribute.id, chosen)}
+        onClick={() =>
+          ctx.execute(advanceAction, { characterId: c.id, attribute: attribute.id, action: chosen })
+        }
       >
         Advance {attribute.name}
       </Button>
@@ -57,12 +62,14 @@ function AttributeAdvance({
 }
 
 export function BladesSheet(props: SheetProps) {
+  const ctx = useCampaign();
   const sheet = useSheet(props);
-  const { campaign, system, c, d, editable } = sheet;
+  const { system, c, d, editable } = sheet;
   const use = (id: string) => {
     const action = system.actions.find((entry) => entry.id === id);
-    if (action) startMove(campaign, c.id, action);
+    if (action) ctx.execute(startMove, { characterId: c.id, move: action.id });
   };
+  const conditionIds = new Set(c.conditions);
   return (
     <SheetFrame {...sheet}>
       <SheetSectionView {...sheet} section={{ kind: "header" }} />
@@ -99,9 +106,9 @@ export function BladesSheet(props: SheetProps) {
             <label key={id} className="stat-deb">
               <input
                 type="checkbox"
-                checked={c.conditions.includes(id)}
+                checked={conditionIds.has(id)}
                 disabled={!editable}
-                onChange={() => toggleCondition(campaign, c.id, id)}
+                onChange={() => ctx.execute(toggleCondition, { id: c.id, condition: id })}
               />
               {name}
             </label>
@@ -144,13 +151,14 @@ export function BladesSheet(props: SheetProps) {
                     value={c.scores[actionId] ?? 0}
                     disabled={!editable}
                     onChange={(event) => {
-                      const value = Number(event.currentTarget.value);
+                      const value = parseInputNumber(event.currentTarget.value);
                       if (
+                        value !== undefined &&
                         Number.isInteger(value) &&
                         value >= (stat.min ?? 0) &&
                         value <= (stat.max ?? 4)
                       )
-                        setScore(campaign, c.id, actionId, value);
+                        ctx.execute(setScore, { id: c.id, stat: actionId, score: value });
                     }}
                   />
                 </div>
@@ -162,7 +170,7 @@ export function BladesSheet(props: SheetProps) {
             value={Number(c.data[`${id}Xp`] ?? 0)}
             max={d.values.maxAttributeXp}
             disabled={!editable}
-            onChange={(by) => bumpData(campaign, c.id, `${id}Xp`, by)}
+            onChange={(by) => ctx.execute(bumpData, { id: c.id, key: `${id}Xp`, by })}
           />
           <AttributeAdvance sheet={sheet} attribute={{ id, name, actions }} />
         </section>
@@ -177,9 +185,11 @@ export function BladesSheet(props: SheetProps) {
               <label key={condition.id} className="stat-deb" title={condition.text}>
                 <input
                   type="checkbox"
-                  checked={c.conditions.includes(condition.id)}
+                  checked={conditionIds.has(condition.id)}
                   disabled={!editable}
-                  onChange={() => toggleCondition(campaign, c.id, condition.id)}
+                  onChange={() =>
+                    ctx.execute(toggleCondition, { id: c.id, condition: condition.id })
+                  }
                 />
                 {condition.name}
               </label>
@@ -197,7 +207,7 @@ export function BladesSheet(props: SheetProps) {
           value={Number(c.data.healing ?? 0)}
           max={d.values.maxHealing}
           disabled={!editable}
-          onChange={(by) => bumpData(campaign, c.id, "healing", by)}
+          onChange={(by) => ctx.execute(bumpData, { id: c.id, key: "healing", by })}
         />
         <div className="blades-toggles">
           {(
@@ -213,7 +223,11 @@ export function BladesSheet(props: SheetProps) {
                 checked={Number(c.data[field] ?? 0) > 0}
                 disabled={!editable}
                 onChange={(event) =>
-                  setData(campaign, c.id, field, event.currentTarget.checked ? 1 : 0)
+                  ctx.execute(setData, {
+                    id: c.id,
+                    key: field,
+                    value: event.currentTarget.checked ? 1 : 0,
+                  })
                 }
               />
               {label}
@@ -228,7 +242,13 @@ export function BladesSheet(props: SheetProps) {
           <select
             value={String(c.data.load ?? 5)}
             disabled={!editable}
-            onChange={(event) => setData(campaign, c.id, "load", Number(event.currentTarget.value))}
+            onChange={(event) =>
+              ctx.execute(setData, {
+                id: c.id,
+                key: "load",
+                value: Number(event.currentTarget.value),
+              })
+            }
           >
             <option value="3">Light (3)</option>
             <option value="5">Normal (5)</option>

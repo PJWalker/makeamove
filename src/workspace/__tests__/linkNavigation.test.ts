@@ -1,11 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { Campaign } from "../../campaign/campaign";
+import type { PanelLayout } from "../panelLayout";
 
 const dependencies = vi.hoisted(() => ({
   linkLabel: vi.fn(),
   viewCharacter: vi.fn(),
   playedCharacterId: vi.fn(),
-  showPanel: vi.fn(),
 }));
 
 vi.mock("../../features/characters/api", () => ({
@@ -13,53 +13,55 @@ vi.mock("../../features/characters/api", () => ({
   playedCharacterId: dependencies.playedCharacterId,
 }));
 vi.mock("../../features/notes/targets", () => ({ linkLabel: dependencies.linkLabel }));
-vi.mock("../panelLayout", () => ({ showPanel: dependencies.showPanel }));
 
-import { followLink, noteOpened, openInSidebar, openNoteId } from "../linkNavigation";
-import { libraryView } from "../libraryView";
+import { LinkNavigation } from "../linkNavigation";
+import { LibraryView } from "../libraryView";
 
 const labels: Record<string, string> = { sword: "Longsword", strike: "Strike" };
 
 const setActiveScene = vi.fn();
 const campaign = { setActiveScene } as unknown as Campaign;
+const showPanel = vi.fn();
+const panels = { showPanel } as unknown as PanelLayout;
+let library: LibraryView;
+let links: LinkNavigation;
 
 beforeEach(() => {
   vi.clearAllMocks();
   dependencies.linkLabel.mockImplementation((_, _kind, id: string) => labels[id] ?? null);
-  openNoteId.value = null;
-  noteOpened.value = 0;
-  libraryView.value = { kind: "all", query: "" };
+  library = new LibraryView(panels);
+  links = new LinkNavigation(campaign, panels, library);
 });
 
 describe("link navigation", () => {
   it("opens each link in its corresponding panel or scene", () => {
-    followLink(campaign, "note", "current");
-    expect(openNoteId.value).toBe("current");
-    expect(noteOpened.value).toBe(1);
-    expect(dependencies.showPanel).toHaveBeenLastCalledWith("notes");
+    links.followLink("note", "current");
+    expect(links.openNoteId.value).toBe("current");
+    expect(links.noteOpened.value).toBe(1);
+    expect(showPanel).toHaveBeenLastCalledWith("notes");
 
-    followLink(campaign, "character", "ayla");
+    links.followLink("character", "ayla");
     expect(dependencies.viewCharacter).toHaveBeenCalledWith(campaign, "ayla");
-    expect(dependencies.showPanel).toHaveBeenLastCalledWith("characters");
+    expect(showPanel).toHaveBeenLastCalledWith("characters");
 
     // The character this device plays has its own panel.
     dependencies.playedCharacterId.mockReturnValue("brom");
-    followLink(campaign, "character", "brom");
+    links.followLink("character", "brom");
     expect(dependencies.viewCharacter).not.toHaveBeenCalledWith(campaign, "brom");
-    expect(dependencies.showPanel).toHaveBeenLastCalledWith("pc");
+    expect(showPanel).toHaveBeenLastCalledWith("pc");
 
-    followLink(campaign, "scene", "keep");
+    links.followLink("scene", "keep");
     expect(setActiveScene).toHaveBeenCalledWith("keep");
 
-    followLink(campaign, "item", "sword");
-    expect(libraryView.value).toEqual({ kind: "item", query: "Longsword" });
-    expect(dependencies.showPanel).toHaveBeenLastCalledWith("libraries");
+    links.followLink("item", "sword");
+    expect(library.view.value).toEqual({ kind: "item", query: "Longsword" });
+    expect(showPanel).toHaveBeenLastCalledWith("libraries");
 
-    followLink(campaign, "move", "strike");
-    expect(libraryView.value).toEqual({ kind: "move", query: "Strike" });
+    links.followLink("move", "strike");
+    expect(library.view.value).toEqual({ kind: "move", query: "Strike" });
 
-    openInSidebar(campaign, "scene", "keep");
-    expect(dependencies.showPanel).toHaveBeenLastCalledWith("scene");
+    links.openInSidebar("scene", "keep");
+    expect(showPanel).toHaveBeenLastCalledWith("scene");
     expect(setActiveScene).toHaveBeenCalledOnce();
   });
 });

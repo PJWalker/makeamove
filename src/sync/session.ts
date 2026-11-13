@@ -89,7 +89,11 @@ export class SyncSession {
       for (const [awareness, byPeer] of this.clients) {
         const ids = byPeer.get(peer);
         byPeer.delete(peer);
-        if (ids?.size) awarenessProtocol.removeAwarenessStates(awareness, [...ids], REMOTE);
+        if (!ids?.size) continue;
+        awarenessProtocol.removeAwarenessStates(awareness, [...ids], REMOTE);
+        // Forget their clocks too: if the device comes back with a fresh
+        // session, its awareness starts counting again from zero.
+        for (const id of ids) awareness.meta.delete(id);
       }
       for (const a of this.docAwareness.values()) a.heard.delete(peer);
       this.onChange?.();
@@ -235,7 +239,7 @@ export class SyncSession {
   }
 
   destroy() {
-    for (const guid of [...this.docAwareness.keys()]) this.dropAwareness(guid);
+    for (const guid of this.docAwareness.keys()) this.dropAwareness(guid);
     this.stopRoot();
     for (const c of this.cleanups.values()) c();
     this.cleanups.clear();

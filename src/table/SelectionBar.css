@@ -1,0 +1,58 @@
+@layer components {
+  /*
+   * The selection's properties, floating over it (SelectionBar.tsx places it
+   * with `translate`). It looks like the tool options under the tool strip.
+   */
+  .selection-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2);
+    background: var(--raised-sheen), var(--toolbar);
+    box-shadow: var(--raised-shadow);
+    color: var(--text);
+    white-space: nowrap;
+    /* Grows up out of the selection, or down out of it when it sits below. */
+    transform-origin: 50% 100%;
+    transition:
+      opacity 160ms var(--ease),
+      scale 160ms var(--ease);
+  }
+  .selection-bar[data-below="true"] {
+    transform-origin: 50% 0;
+  }
+  .selection-bar[data-shown="false"] {
+    opacity: 0;
+    scale: 0.96;
+    pointer-events: none;
+  }
+  @starting-style {
+    .selection-bar {
+      opacity: 0;
+      scale: 0.96;
+    }
+  }
+  .selection-bar-name {
+    width: 12em;
+  }
+  .selection-bar-number {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    input {
+      width: 5em;
+    }
+  }
+  .selection-bar-width {
+    width: 100px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .selection-bar {
+      transition: none;
+    }
+  }
+}

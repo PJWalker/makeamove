@@ -1,11 +1,14 @@
 import { type Container, Graphics } from "pixi.js";
 import type { Point } from "../grid";
 import { strokeOutline, hasRealPressure } from "../stroke";
-import type { Layer, ShapeKind, Transform } from "../types";
+import type { DraggedShapeKind, Layer, ShapePaint, Transform } from "../types";
 import { drawShape } from "./elementViews";
 import { flat } from "./style";
 
-/** What's being drawn, before it's added: a pen stroke, or a shape being dragged out (with its size to show). */
+/**
+ * What's being drawn, before it's added: a pen stroke, a polygon placed a
+ * corner at a time, or a shape being dragged out (with its size to show).
+ */
 export type Draft =
   | {
       kind?: "stroke";
@@ -14,12 +17,20 @@ export type Draft =
       width: number;
       layer: Layer;
     }
-  | { kind: "polygon"; points: Point[]; colour: string; layer: Layer }
+  | {
+      kind: "polygon";
+      points: Point[];
+      paint: ShapePaint;
+      /** Outline width, in world px. */
+      width: number;
+      layer: Layer;
+    }
   | {
       kind: "shape";
-      shape: ShapeKind;
+      shape: DraggedShapeKind;
       t: Transform;
-      colour: string;
+      paint: ShapePaint;
+      /** Outline width, in screen px. */
       width: number;
       layer: Layer;
       label?: string;
@@ -39,19 +50,20 @@ export class DraftLayer {
     if (d.kind === "polygon") {
       g.position.set(0, 0);
       g.rotation = 0;
-      const width = 2 / zoom;
+      const { paint } = d;
       if (!d.points.length) return;
-      if (d.points.length > 2) g.poly(flat(d.points)).fill({ color: d.colour, alpha: 0.15 });
+      if (d.points.length > 2) g.poly(flat(d.points)).fill({ color: paint.fill });
       const first = d.points[0]!;
       g.moveTo(first.x, first.y);
       for (const p of d.points.slice(1)) g.lineTo(p.x, p.y);
-      g.stroke({ color: d.colour, width });
+      g.stroke({ color: paint.stroke, width: d.width, join: "round" });
+      // The corners so far, solid so they show whatever the paint.
       for (const p of d.points.slice(0, -1)) g.circle(p.x, p.y, 4 / zoom);
-      g.fill({ color: d.colour });
+      g.fill({ color: paint.stroke });
       return;
     }
     if (d.kind === "shape") {
-      drawShape(g, d.shape, d.t.w, d.t.h, d.colour, d.width / zoom);
+      drawShape(g, d, d.t.w, d.t.h, d.paint, d.width / zoom);
       g.position.set(d.t.x, d.t.y);
       g.rotation = d.t.rot;
       return;

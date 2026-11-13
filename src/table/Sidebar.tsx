@@ -1,10 +1,11 @@
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- The sidebar's interactive splitter cannot be an hr. */
 import type { PointerEvent as ReactPointerEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useState } from "react";
 import { useUnreadCount } from "../features/chat/unread";
 import { IconClose, IconOpenWindow } from "../ui/icons";
 import type { Campaign } from "../campaign/campaign";
 import { device } from "../platform/device";
-import { useY } from "../ui/useY";
+import { useQuery } from "../ui/useQuery";
 import { Button } from "../ui/Button";
 import { menuTrigger } from "../ui/menuTrigger";
 import { trackPointer } from "../ui/pointer";
@@ -12,38 +13,19 @@ import { startReorder } from "../ui/reorder";
 import { withTransition } from "../ui/transition";
 import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
 import {
-  detachPanel,
-  dockPanel,
-  dockTarget,
   isPanelId,
-  layout,
-  shownLayout,
   otherSide,
-  setSideOpen,
-  reorderPanel,
-  setPanelClosed,
-  setSideWidth,
   sidebarMaxWidth,
-  spawnedFromTab,
-  startWindowDrag,
-  windowDragging,
   type DockItemId,
   type Side,
-  showPanel,
   type PanelId,
 } from "../workspace/panelLayout";
 import { PanelContent, PanelIcon, PaneToggle, usePanelLabel } from "./panels";
 import { PanelActionsProvider, PanelActionsSlot } from "./PanelActions";
-import {
-  closeEntityWindow,
-  entityRecord,
-  entityWindows,
-  EntityWindowContent,
-  isEntityTab,
-} from "../workspace/entityWindows";
+import { EntityWindowContent, isEntityTab } from "../workspace/entityWindows";
 import { CampaignEntityGraphic } from "../workspace/EntityGraphic";
 import { keyedSideWidth, SIDEBAR_DEFAULT_W } from "../workspace/layoutModel";
-import { useValue } from "../ui/useValue";
+import { type CampaignContext, useCampaign } from "../workspace/campaignContext";
 
 const DRAG_THRESHOLD = 10;
 
@@ -54,9 +36,10 @@ const DRAG_THRESHOLD = 10;
  * being dragged, when it shows as a place to drop it.
  */
 export function Sidebar({ side, campaign }: { side: Side; campaign: Campaign }) {
-  const s = useValue(shownLayout)[side];
-  const dragging = useValue(windowDragging);
-  const target = useValue(dockTarget);
+  const ctx = useCampaign();
+  const s = useQuery(ctx.panels.shownLayout)[side];
+  const dragging = useQuery(ctx.panels.windowDragging);
+  const target = useQuery(ctx.panels.dockTarget);
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const empty = s.panels.length === 0;
   if (empty && !dragging) return null;
@@ -82,7 +65,7 @@ export function Sidebar({ side, campaign }: { side: Side; campaign: Campaign }) 
               id={id}
               side={side}
               selected={open && active === id}
-              onMenu={(x, y) => setMenu({ x, y, items: tabMenu(id, side) })}
+              onMenu={(x, y) => setMenu({ x, y, items: tabMenu(ctx, id, side) })}
             />
           ))}
         </div>
@@ -98,13 +81,13 @@ export function Sidebar({ side, campaign }: { side: Side; campaign: Campaign }) 
         <div
           className="sidebar-body-resize"
           aria-hidden="true"
-          onPointerDown={(e) => dragSideWidth(side, e)}
+          onPointerDown={(e) => dragSideWidth(ctx, side, e)}
         />
         {active && (
           <ActiveTab
             campaign={campaign}
             id={active}
-            onMenu={(x, y) => setMenu({ x, y, items: tabMenu(active, side) })}
+            onMenu={(x, y) => setMenu({ x, y, items: tabMenu(ctx, active, side) })}
           />
         )}
       </section>
@@ -126,45 +109,45 @@ function withPull(onPress: (e: ReactPointerEvent) => void, open: (x: number, y: 
 }
 
 /** Right-click menu for a tab: the keyboard-friendly way to rearrange panels. */
-function tabMenu(id: DockItemId, side: Side): MenuItem[] {
+function tabMenu(ctx: CampaignContext, id: DockItemId, side: Side): MenuItem[] {
   const other = otherSide(side);
   if (isEntityTab(id)) {
     return [
-      { label: "Open", onSelect: () => showPanel(id) },
+      { label: "Open", onSelect: () => ctx.panels.showPanel(id) },
       "divider",
       {
         label: other === "left" ? "Move to Left Sidebar" : "Move to Right Sidebar",
-        onSelect: () => void withTransition(() => dockPanel(id, other)),
+        onSelect: () => void withTransition(() => ctx.panels.dockPanel(id, other)),
       },
       {
         label: "Float in a Window",
-        onSelect: () => detachPanel(id, Math.max(innerWidth / 2 - 190, 0), 96, 380, 440),
+        onSelect: () => ctx.panels.detachPanel(id, Math.max(innerWidth / 2 - 190, 0), 96, 380, 440),
       },
       "divider",
       {
         label: "Close",
         Icon: IconClose,
-        onSelect: () => closeDockedEntity(id),
+        onSelect: () => closeDockedEntity(ctx, id),
       },
     ];
   }
   return [
-    { label: "Open", onSelect: () => showPanel(id) },
+    { label: "Open", onSelect: () => ctx.panels.showPanel(id) },
     "divider",
     {
       label: other === "left" ? "Move to Left Sidebar" : "Move to Right Sidebar",
-      onSelect: () => void withTransition(() => dockPanel(id, other)),
+      onSelect: () => void withTransition(() => ctx.panels.dockPanel(id, other)),
     },
     {
       label: "Float in a Window",
-      onSelect: () => detachPanel(id, Math.max(innerWidth / 2 - 170, 0), 120),
+      onSelect: () => ctx.panels.detachPanel(id, Math.max(innerWidth / 2 - 170, 0), 120),
     },
     "divider",
     // Back from the campaign menu, where each panel can be ticked again.
     {
       label: "Close",
       Icon: IconClose,
-      onSelect: () => void withTransition(() => setPanelClosed(id, true)),
+      onSelect: () => void withTransition(() => ctx.panels.setPanelClosed(id, true)),
     },
   ];
 }
@@ -174,7 +157,7 @@ function tabMenu(id: DockItemId, side: Side): MenuItem[] {
  * past a small threshold, the panel pops out into a floating window that
  * follows the pointer; a release before that is an ordinary click.
  */
-function pullOut(id: DockItemId, e: ReactPointerEvent) {
+function pullOut(ctx: CampaignContext, id: DockItemId, e: ReactPointerEvent) {
   if (e.button !== 0) return;
   const startX = e.clientX;
   const startY = e.clientY;
@@ -185,8 +168,8 @@ function pullOut(id: DockItemId, e: ReactPointerEvent) {
   const move = (ev: PointerEvent) => {
     if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < DRAG_THRESHOLD) return;
     cleanup();
-    detachPanel(id, ev.clientX - grabX, ev.clientY - grabY);
-    startWindowDrag(id, ev, grabX, grabY);
+    ctx.panels.detachPanel(id, ev.clientX - grabX, ev.clientY - grabY);
+    ctx.panels.startWindowDrag(id, ev, grabX, grabY);
   };
   const cleanup = () => {
     window.removeEventListener("pointermove", move);
@@ -202,7 +185,7 @@ function pullOut(id: DockItemId, e: ReactPointerEvent) {
  * A tab is picked up at once: dragging along the strip reorders it, and
  * dragging away from the strip floats the panel in a window.
  */
-function dragTab(id: DockItemId, e: ReactPointerEvent) {
+function dragTab(ctx: CampaignContext, id: DockItemId, e: ReactPointerEvent) {
   const tab = e.currentTarget as HTMLElement;
   const rail = tab.closest<HTMLElement>(".sidebar-rail")!;
   startReorder({
@@ -210,13 +193,13 @@ function dragTab(id: DockItemId, e: ReactPointerEvent) {
     axis: "y",
     container: rail,
     items: () => [...rail.querySelectorAll<HTMLElement>(".rail-tab")],
-    onDrop: (index) => reorderPanel(id, index),
+    onDrop: (index) => ctx.panels.reorderPanel(id, index),
     outside: {
       when: "move",
       run: (ev) => {
-        spawnedFromTab.add(id);
-        detachPanel(id, ev.clientX - 120, ev.clientY - 18);
-        startWindowDrag(id, ev, 120, 18);
+        ctx.panels.spawnedFromTab.add(id);
+        ctx.panels.detachPanel(id, ev.clientX - 120, ev.clientY - 18);
+        ctx.panels.startWindowDrag(id, ev, 120, 18);
       },
     },
   });
@@ -230,18 +213,18 @@ const growDirection = (side: Side) => (side === "left" ? 1 : -1);
  * from where it was grabbed, so any edge (the rail's or the body's) works, and
  * a shut sidebar counts as zero wide: dragging out far enough reopens it.
  */
-function dragSideWidth(side: Side, e: ReactPointerEvent) {
+function dragSideWidth(ctx: CampaignContext, side: Side, e: ReactPointerEvent) {
   if (e.button !== 0) return;
   e.preventDefault();
   e.stopPropagation();
-  const s = layout.value[side];
+  const s = ctx.panels.layout.value[side];
   const start = s.open ? s.width : 0;
   const grow = growDirection(side);
   const handle = e.currentTarget as HTMLElement;
   handle.dataset.dragging = "true";
   trackPointer(
     "ew-resize",
-    (ev) => setSideWidth(side, start + grow * (ev.clientX - e.clientX)),
+    (ev) => ctx.panels.setSideWidth(side, start + grow * (ev.clientX - e.clientX)),
     () => delete handle.dataset.dragging,
   );
 }
@@ -252,12 +235,13 @@ function dragSideWidth(side: Side, e: ReactPointerEvent) {
  * widen it fully, and Enter (or a double-click) for the default width.
  */
 function SidebarResizeHandle({ side }: { side: Side }) {
-  const s = useValue(layout)[side];
+  const ctx = useCampaign();
+  const s = useQuery(ctx.panels.layout)[side];
   const max = sidebarMaxWidth();
 
   function onKeyDown(e: ReactKeyboardEvent) {
     const width = keyedSideWidth(
-      layout.value[side],
+      ctx.panels.layout.value[side],
       e.key,
       e.shiftKey,
       growDirection(side),
@@ -265,12 +249,12 @@ function SidebarResizeHandle({ side }: { side: Side }) {
     );
     if (width === null) return;
     e.preventDefault();
-    setSideWidth(side, width);
+    ctx.panels.setSideWidth(side, width);
   }
 
   return (
     // A focusable separator is an interactive widget (ARIA window splitter).
-    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
     <div
       className="sidebar-resize"
       role="separator"
@@ -280,10 +264,10 @@ function SidebarResizeHandle({ side }: { side: Side }) {
       aria-valuemax={max}
       aria-valuenow={s.open ? s.width : 0}
       aria-valuetext={s.open ? `${s.width} pixels wide` : "Collapsed"}
-      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+      // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex
       tabIndex={0}
-      onPointerDown={(e) => dragSideWidth(side, e)}
-      onDoubleClick={() => setSideWidth(side, SIDEBAR_DEFAULT_W)}
+      onPointerDown={(e) => dragSideWidth(ctx, side, e)}
+      onDoubleClick={() => ctx.panels.setSideWidth(side, SIDEBAR_DEFAULT_W)}
       onKeyDown={onKeyDown}
     />
   );
@@ -296,27 +280,27 @@ function SidebarResizeHandle({ side }: { side: Side }) {
  * When one docked panel replaces another, the content slides the way the tabs
  * are stacked: down the strip slides up, up the strip slides down.
  */
-function switchTo(id: DockItemId, side: Side) {
-  const s = shownLayout.value[side];
+function switchTo(ctx: CampaignContext, id: DockItemId, side: Side) {
+  const s = ctx.panels.shownLayout.value[side];
   const from = s.active;
   if (s.open && from === id) {
-    setSideOpen(side, false);
+    ctx.panels.setSideOpen(side, false);
     return;
   }
   // Opening slides the sidebar by CSS transition, which keeps it clickable throughout.
   if (!s.open || from === null) {
-    showPanel(id);
+    ctx.panels.showPanel(id);
     return;
   }
   const direction = s.panels.indexOf(id) > s.panels.indexOf(from) ? "vt-tab-next" : "vt-tab-prev";
-  void withTransition(() => showPanel(id), { rootClass: direction });
+  void withTransition(() => ctx.panels.showPanel(id), { rootClass: direction });
 }
 
 /** How many members are online, counting this device. */
 function useOnlineCount(campaign: Campaign) {
-  const me = useValue(device).id;
-  const online = useValue(campaign.online);
-  return useY(campaign.members, () => campaign.memberViews()).filter(
+  const me = useQuery(device).id;
+  const online = useQuery(campaign.online);
+  return useQuery(campaign.members, () => campaign.memberViews()).filter(
     (m) => m.id === me || online.has(m.id),
   ).length;
 }
@@ -335,16 +319,17 @@ function RailTab({
   selected: boolean;
   onMenu: (x: number, y: number) => void;
 }) {
+  const ctx = useCampaign();
   const panel = isPanelId(id) ? id : undefined;
-  const records = useValue(entityWindows);
-  const record = isEntityTab(id) ? entityRecord(id, records) : undefined;
+  const records = useQuery(ctx.windows.records);
+  const record = isEntityTab(id) ? ctx.windows.record(id, records) : undefined;
   const label = usePanelLabel(id, campaign) ?? record?.title ?? id.slice("entity:".length);
   const Icon = record?.icon ?? (record?.graphicRef ? undefined : IconOpenWindow);
   const onlineCount = useOnlineCount(campaign);
-  const unread = useUnreadCount();
+  const unread = useUnreadCount(campaign);
 
   function onPointerDown(e: ReactPointerEvent) {
-    dragTab(id, e);
+    dragTab(ctx, id, e);
   }
 
   return (
@@ -363,7 +348,7 @@ function RailTab({
       pressed={selected}
       data-unread={id === "chat" && unread > 0 ? Math.min(unread, 99) : undefined}
       data-online={id === "members" ? onlineCount : undefined}
-      onClick={() => switchTo(id, side)}
+      onClick={() => switchTo(ctx, id, side)}
       {...withPull(onPointerDown, onMenu)}
     >
       {panel ? (
@@ -392,14 +377,15 @@ function ActiveTab({
   id: DockItemId;
   onMenu: (x: number, y: number) => void;
 }) {
-  const records = useValue(entityWindows);
+  const ctx = useCampaign();
+  const records = useQuery(ctx.windows.records);
   if (isPanelId(id)) {
     return (
       <PanelActionsProvider key={id}>
         <div className="sidebar-panel" style={{ viewTransitionName: `panel-${id}` }}>
           <header
             className="panel-header docked-header"
-            {...withPull((e) => pullOut(id, e), onMenu)}
+            {...withPull((e) => pullOut(ctx, id, e), onMenu)}
           >
             <PaneToggle id={id} />
             <PanelTitle id={id} campaign={campaign} />
@@ -413,14 +399,17 @@ function ActiveTab({
     );
   }
 
-  const record = entityRecord(id, records);
+  const record = ctx.windows.record(id, records);
   const Icon = record?.icon ?? (record?.graphicRef ? undefined : IconOpenWindow);
   return (
     <div
       className="sidebar-panel entity-sidebar-panel"
       style={{ viewTransitionName: `panel-${id}` }}
     >
-      <header className="panel-header docked-header" {...withPull((e) => pullOut(id, e), onMenu)}>
+      <header
+        className="panel-header docked-header"
+        {...withPull((e) => pullOut(ctx, id, e), onMenu)}
+      >
         {record?.graphicRef ? (
           <CampaignEntityGraphic
             campaign={campaign}
@@ -436,7 +425,7 @@ function ActiveTab({
         <h2 className="panel-title" tabIndex={-1}>
           {record?.title ?? id.slice("entity:".length)}
         </h2>
-        <Button variant="icon" label="Close window" onClick={() => closeDockedEntity(id)}>
+        <Button variant="icon" label="Close window" onClick={() => closeDockedEntity(ctx, id)}>
           <IconClose size={22} />
         </Button>
       </header>
@@ -462,8 +451,8 @@ function PanelTitle({ id, campaign }: { id: PanelId; campaign: Campaign }) {
   );
 }
 
-function closeDockedEntity(id: DockItemId) {
-  const record = entityRecord(id);
+function closeDockedEntity(ctx: CampaignContext, id: DockItemId) {
+  const record = ctx.windows.record(id);
   record?.close?.();
-  closeEntityWindow(id);
+  ctx.windows.close(id);
 }

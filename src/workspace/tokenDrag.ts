@@ -1,6 +1,7 @@
 import type { PointerEvent as ReactPointerEvent } from "react";
-import { tokenDrop, type TokenSpec } from "./canvasState";
+import { type TokenSpec } from "./canvasState";
 import { suppressNextClick } from "../ui/suppressClick";
+import type { CanvasState } from "./canvasState";
 
 const THRESHOLD = 5;
 
@@ -9,7 +10,11 @@ const THRESHOLD = 5;
  * the pointer; releasing over the scene places a token for the character.
  * A press that never travels stays an ordinary click.
  */
-export function dragToken(e: PointerEvent | ReactPointerEvent, spec: TokenSpec) {
+export function dragToken(
+  canvas: CanvasState,
+  e: PointerEvent | ReactPointerEvent,
+  spec: TokenSpec,
+) {
   if (e.button !== 0) return;
   const src = e.currentTarget as HTMLElement;
   const startX = e.clientX;
@@ -29,7 +34,7 @@ export function dragToken(e: PointerEvent | ReactPointerEvent, spec: TokenSpec) 
     }
     const overScene =
       !!document.elementFromPoint(ev.clientX, ev.clientY)?.closest(".scene-canvas") &&
-      !!tokenDrop.value;
+      !!canvas.tokenDrop.value;
     document.documentElement.dataset.dropValid = String(overScene);
     ghost.style.left = `${ev.clientX - box.width / 2}px`;
     ghost.style.top = `${ev.clientY - box.height / 2}px`;
@@ -45,7 +50,7 @@ export function dragToken(e: PointerEvent | ReactPointerEvent, spec: TokenSpec) 
     document.documentElement.classList.remove("is-reordering");
     suppressNextClick();
     if (commit && document.elementFromPoint(ev.clientX, ev.clientY)?.closest(".scene-canvas")) {
-      tokenDrop.value?.(ev.clientX, ev.clientY, spec);
+      canvas.tokenDrop.value?.(ev.clientX, ev.clientY, spec);
     }
   }
   const up = (ev: PointerEvent) => end(ev, true);

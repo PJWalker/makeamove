@@ -1,5 +1,5 @@
 import { md } from "../../macros/markdown.macro" with { type: "macro" };
-import type { RichText } from "../../core/richText";
+import type { RichText } from "../../data/richText";
 import type { AreaSpec, ConditionDef, ItemDef, TagDef, TargetSpec } from "../types";
 
 /*

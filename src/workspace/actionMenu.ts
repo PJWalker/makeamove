@@ -1,32 +1,27 @@
-import { findAction } from "./commands/registry";
 import { shortcutFor, showCombo } from "./commands/custom";
-import {
-  editHotbar,
-  hotbarSlots,
-  isPinned,
-  MAX_SLOTS,
-  pin,
-  unpin,
-} from "../features/characters/hotbar";
+import { hotbarSlots, isPinned, MAX_SLOTS } from "../features/characters/hotbar";
 import { actingCharacterId } from "../features/characters/api";
-import type { Campaign } from "../campaign/campaign";
+import type { CampaignContext } from "./campaignContext";
+import { pinToHotbar, unpinFromHotbar } from "./commands/campaign";
+import { findAction } from "./commands/views";
 import { IconAdd, IconDelete, IconShortcut } from "../ui/icons";
 import type { MenuItem } from "../ui/ContextMenu";
-import { editAction } from "./ActionDialogs";
 
 export interface ActionMenuTarget {
+  /** The call's key. */
   id: string;
   title?: string | undefined;
 }
 
-/** Context-menu actions for entries that can be pinned or assigned a shortcut. */
+/** Context-menu entries for calls that can be pinned or given a shortcut. */
 export function actionMenuItems(
-  campaign: Campaign,
+  ctx: CampaignContext,
   targets: ActionMenuTarget[],
   beforeShortcut?: () => void,
 ): MenuItem[] {
+  const { campaign } = ctx;
   const resolved = targets.flatMap(({ id, title }) => {
-    const action = findAction(campaign, id);
+    const action = findAction(ctx, id);
     return action ? [{ id, title: title ?? action.title }] : [];
   });
   const multiple = resolved.length > 1;
@@ -37,11 +32,13 @@ export function actionMenuItems(
     const name = multiple ? ` ${title}` : "";
     return [
       {
-        label: pinned ? `Remove${name} from hotbar` : `Add${name} to hotbar`,
+        label: pinned ? `Remove${name} from Hotbar` : `Add${name} to Hotbar`,
         Icon: pinned ? IconDelete : IconAdd,
         disabled: !pinned && hotbarSlots(campaign, actingCharacterId(campaign)).length >= MAX_SLOTS,
         onSelect: () =>
-          editHotbar(campaign, (slots) => (pinned ? unpin(slots, id) : pin(slots, id))),
+          void (pinned
+            ? ctx.execute(unpinFromHotbar, { key: id })
+            : ctx.execute(pinToHotbar, { key: id })),
       },
       {
         label: `${shortcut ? "Change" : "Add"} Shortcut${multiple ? ` for ${title}` : ""}…`,
@@ -49,7 +46,7 @@ export function actionMenuItems(
         ...(shortcut ? { shortcut: showCombo(shortcut) } : {}),
         onSelect: () => {
           beforeShortcut?.();
-          editAction("shortcut", id, title);
+          ctx.table.editAction("shortcut", id, title);
         },
       },
     ] satisfies MenuItem[];

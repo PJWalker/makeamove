@@ -1,4 +1,4 @@
-import type { EntityGraphic } from "../graphics";
+import type { EntityGraphic } from "../media/images";
 import { BlobImage } from "./BlobImage";
 import { ENTRY_ICONS, type EntryIconName } from "./entryIcons";
 
@@ -7,7 +7,7 @@ const Fallback = ENTRY_ICONS.bag;
 export function EntityGraphicView({
   graphic,
   size = 22,
-  className: className,
+  className,
 }: {
   graphic?: EntityGraphic | undefined;
   size?: number;

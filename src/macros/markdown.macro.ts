@@ -1,7 +1,7 @@
 import type { JSONContent } from "@tiptap/core";
 import { MarkdownManager } from "@tiptap/markdown";
 import StarterKit from "@tiptap/starter-kit";
-import { parseTrackerButton, TRACKER_NODE, TRACKER_TOKEN, type RichText } from "../core/richText";
+import { parseTrackerButton, TRACKER_NODE, TRACKER_TOKEN, type RichText } from "../data/richText";
 
 /*
  * Build-time only. Import it with `with { type: "macro" }` and each call runs

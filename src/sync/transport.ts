@@ -16,3 +16,10 @@ export interface Transport {
   onPeerLeave: ((peerId: string) => void) | null;
   close(): void;
 }
+
+/** Join the room `roomId`, which only holders of `roomKey` can enter. */
+export type JoinRoom = (roomId: string, roomKey: string) => Promise<Transport>;
+
+/** The app's network: rooms on public signalling relays (see trystero.ts). */
+export const joinPublicRoom: JoinRoom = async (roomId, roomKey) =>
+  (await import("./trystero")).trysteroTransport(roomId, roomKey);

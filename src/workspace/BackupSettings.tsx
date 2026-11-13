@@ -1,17 +1,12 @@
 import { useState } from "react";
 import { exportBackupFile } from "../campaign/backup";
 import type { Campaign } from "../campaign/campaign";
-import {
-  folderBackup,
-  linkBackupFolder,
-  resumeFolderBackup,
-  unlinkBackupFolder,
-  type FolderBackupState,
-} from "../campaign/folderBackup";
+import type { FolderBackupState } from "../campaign/folderBackup";
+import { useCampaign } from "./campaignContext";
 import { canUseFolders } from "../platform/files";
 import { Button } from "../ui/Button";
 import { IconBackupFolder, IconExport } from "../ui/icons";
-import { useValue } from "../ui/useValue";
+import { useQuery } from "../ui/useQuery";
 
 const time = new Intl.DateTimeFormat(undefined, { timeStyle: "short" });
 
@@ -32,7 +27,8 @@ function folderStatus(s: FolderBackupState): string {
 
 /** Saving the campaign off this device: a one-off file, or a folder kept up to date. */
 export function BackupSettings({ campaign }: { campaign: Campaign }) {
-  const status = useValue(folderBackup);
+  const { backup } = useCampaign();
+  const status = useQuery(backup.status);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const run = (act: () => Promise<unknown>) => async () => {
@@ -79,16 +75,13 @@ export function BackupSettings({ campaign }: { campaign: Campaign }) {
                 <Button
                   variant="primary"
                   disabled={busy}
-                  onClick={() => void run(() => resumeFolderBackup(campaign))()}
+                  onClick={() => void run(() => backup.resume())()}
                 >
                   Resume
                 </Button>
               )}
               {(status.state === "off" || status.state === "failed") && (
-                <Button
-                  disabled={busy}
-                  onClick={() => void run(() => linkBackupFolder(campaign))()}
-                >
+                <Button disabled={busy} onClick={() => void run(() => backup.link())()}>
                   <IconBackupFolder size={20} /> Back Up to Folder…
                 </Button>
               )}
@@ -96,7 +89,7 @@ export function BackupSettings({ campaign }: { campaign: Campaign }) {
                 <Button
                   variant="ghost"
                   disabled={busy}
-                  onClick={() => void run(() => unlinkBackupFolder(campaign))()}
+                  onClick={() => void run(() => backup.unlink())()}
                 >
                   Stop Backing Up
                 </Button>

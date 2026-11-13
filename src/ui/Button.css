@@ -117,12 +117,7 @@
   }
 
   /* Selected */
-  :is(
-    .btn[aria-pressed="true"]:not([role="tab"]),
-    .segment[data-selected],
-    .pen-width[aria-checked="true"],
-    .pen-layer[aria-pressed="true"]
-  ) {
+  :is(.btn[aria-pressed="true"]:not([role="tab"]), .segment[data-selected]) {
     --tint: var(--selected-tint, var(--accent));
     border-color: oklch(100% 0 0 / 0.35);
     border-image: linear-gradient(to bottom right, #fff9, #fff3 50%, #0002) 1;

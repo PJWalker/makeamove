@@ -1,4 +1,4 @@
-import type { RichText } from "../../core/richText";
+import type { RichText } from "../../data/richText";
 import type { CreationHints, ItemDef, ReferenceSectionDef } from "../types";
 import rulebook from "./rulebook.json";
 

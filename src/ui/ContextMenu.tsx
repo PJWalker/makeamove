@@ -1,4 +1,4 @@
-import { morphOpen, setMorphOrigin } from "./morph";
+import { leave, morphOpen, setMorphOrigin } from "./morph";
 import { withTransition } from "./transition";
 import type { ComponentType } from "react";
 import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from "react";
@@ -9,6 +9,7 @@ import {
   Popover,
   Separator,
 } from "react-aria-components";
+import { ColourPicker } from "./ColourPicker";
 import { IconCheck } from "./icons";
 import type { IconProps } from "./icons";
 
@@ -26,11 +27,13 @@ export type MenuItem =
   | {
       /**
        * A colour picker. While a colour is being picked, onPreview shows it
-       * (null: stop showing it); onPick keeps it, once per drag, or when the
-       * menu closes after picking by keyboard.
+       * (null: stop showing it); onPick keeps it when the picker or the menu
+       * closes.
        */
       label: string;
       colour: string;
+      /** Whether the colour has an opacity to pick. */
+      alpha?: boolean;
       onPreview: (colour: string | null) => void;
       onPick: (colour: string) => void;
     }
@@ -55,10 +58,12 @@ export function ContextMenu({
   useLayoutEffect(() => {
     closed.current = false;
   }, [items, x, y]);
+  /** Dismissed without choosing: fade out, since there's nothing to go back into. */
   const dismiss = () => {
     if (closed.current) return;
     closed.current = true;
-    onClose();
+    if (ref.current) void leave(ref.current, onClose, null);
+    else onClose();
   };
   const choose = (item: Extract<MenuItem, { onSelect: () => void }>, index: number) => {
     if (closed.current || item.disabled) return;
@@ -118,16 +123,21 @@ export function ContextMenu({
       maxHeight={innerHeight - 16}
       aria-label={label ?? "Actions"}
       className="context-menu panel"
+      data-context-menu
       onContextMenu={(e) => e.preventDefault()}
     >
       <Menu aria-label={label ?? "Actions"} className="context-menu-actions" autoFocus="first">
         {items.map((item, index) => {
-          if (item === "divider") return <Separator key={index} className="context-divider" />;
+          if (item === "divider")
+            return (
+              // oxlint-disable-next-line react-doctor/no-array-index-as-key -- Dividers are stateless structural markers.
+              <Separator key={index} className="context-divider" />
+            );
           if ("colour" in item) return null;
           const action = (
             <AriaMenuItem
-              key={index}
-              id={String(index)}
+              key={item.label}
+              id={item.label}
               textValue={item.label}
               {...(item.disabled !== undefined ? { isDisabled: item.disabled } : {})}
               className="menu-item"
@@ -150,60 +160,54 @@ export function ContextMenu({
             action
           ) : (
             <MenuSection
-              key={index}
+              key={item.label}
               aria-label={item.label}
               selectionMode="multiple"
-              selectedKeys={item.checked ? [String(index)] : []}
+              selectedKeys={item.checked ? [item.label] : []}
             >
               {action}
             </MenuSection>
           );
         })}
       </Menu>
-      {items.map((item, index) =>
-        item !== "divider" && "colour" in item ? <MenuColour key={index} item={item} /> : null,
+      {items.map((item) =>
+        item !== "divider" && "colour" in item ? (
+          <MenuColour key={`${item.label}:${item.colour}`} item={item} />
+        ) : null,
       )}
     </Popover>
   );
 }
 
-/** A colour input embedded in a menu. */
+/** A colour picker embedded in a menu. */
 function MenuColour({ item }: { item: Extract<MenuItem, { colour: string }> }) {
-  const [shown, setShown] = useState(item.colour);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const shown = preview ?? item.colour;
   const pending = useRef<string | null>(null);
-  const keep = useEffectEvent(() => {
+  const keep = () => {
     const colour = pending.current;
     if (!colour) return;
     pending.current = null;
     item.onPick(colour);
     item.onPreview(null);
-  });
-  useEffect(() => {
-    const input = inputRef.current;
-    if (!input) return;
-    const onChange = () => keep();
-    input.addEventListener("change", onChange);
-    return () => {
-      input.removeEventListener("change", onChange);
-      keep();
-    };
-  }, []);
+  };
+  // Closing the menu keeps what was picked, as putting the picker away does.
+  const keepOnClose = useEffectEvent(keep);
+  useEffect(() => () => keepOnClose(), []);
   return (
-    <div className="menu-colour" role="group" aria-label={item.label}>
-      <span className="menu-label">{item.label}</span>
-      <input
-        ref={inputRef}
-        type="color"
-        aria-label={item.label}
+    <fieldset className="menu-colour">
+      <legend className="menu-label">{item.label}</legend>
+      <ColourPicker
+        label={item.label}
+        alpha={item.alpha ?? false}
         value={shown}
-        onInput={(event) => {
-          const colour = event.currentTarget.value;
-          setShown(colour);
+        onChange={(colour) => {
+          setPreview(colour);
           pending.current = colour;
           item.onPreview(colour);
         }}
+        onClose={keep}
       />
-    </div>
+    </fieldset>
   );
 }

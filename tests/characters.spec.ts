@@ -1,5 +1,5 @@
 import { expect, test } from "./browser-test";
-import { createCampaign, openCharacters } from "./e2e-helpers";
+import { createCampaign, openCharacters, openNewCampaign } from "./e2e-helpers";
 
 test("a GM can create an NPC", async ({ page }) => {
   await createCampaign(page);
@@ -28,6 +28,7 @@ test("a GM can create a PC with common description and GM notes", async ({ page 
 });
 
 test("the system-less default starts a usable campaign", async ({ page }) => {
+  await openNewCampaign(page);
   await page.locator('input[placeholder="The Lost Barrows"]').fill("Freeform Table");
   await page.locator('input[placeholder="Robin"]').first().fill("Tester");
   await expect(page.getByLabel("System")).toHaveValue("none");

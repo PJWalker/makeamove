@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { barShards, shardFrame } from "../barBreak";
 import { BAR_BREAK_AT, BAR_CHANGE_MS, barChangeFrame } from "../barChange";
 

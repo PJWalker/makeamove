@@ -144,7 +144,7 @@ test("DW2 GM Reference searches source NPC guidance", async ({ page }) => {
   await page.getByRole("tab", { name: "Reference" }).click();
   await page.getByRole("searchbox", { name: "Search the Reference" }).fill("Drive");
   await page.getByRole("button", { name: "Major NPCs" }).click();
-  const npcs = page.locator(".reference-section", { hasText: "Major NPCs" });
+  const npcs = page.locator(".reference-section").filter({ hasText: "Major NPCs" });
   await expect(npcs).toContainText("A Non-Player Character (NPC)");
   await expect(npcs.locator(".search-hit").first()).toBeVisible();
 });
@@ -236,9 +236,10 @@ test("DW2 creation follows the selected class stat prompt", async ({ page }) => 
     .getByRole("option", { name: "The Bard" })
     .click();
 
-  await expect(creation.getByRole("textbox", { name: "Ancestry" })).toHaveAccessibleDescription(
-    /What makes your art different/,
-  );
+  const ancestry = creation.getByRole("textbox", { name: "Ancestry" });
+  const hintId = await ancestry.getAttribute("aria-describedby");
+  expect(hintId).toBeTruthy();
+  await expect(page.locator(`[id="${hintId}"]`)).toContainText(/What makes your art different/);
   await expect(creation.getByText(/Your CHA is \+2/)).toBeVisible();
 
   const scores = creation.locator(".creation-scores");
@@ -464,7 +465,7 @@ test("DW2 advancement reveals a source-backed Struggle with its track", async ({
   await expect(struggle.getByRole("heading", { name: "Reformed" })).toBeVisible();
   await expect(struggle.getByRole("spinbutton", { name: "Guilt" })).toHaveValue("2");
   await struggle.getByText("Struggle rules", { exact: true }).click();
-  await expect(struggle.getByText(/Haunted \(\+\-\)/)).toBeVisible();
+  await expect(struggle.getByText(/Haunted \(\+-\)/)).toBeVisible();
   await struggle.getByRole("button", { name: "Resolve Struggle" }).click();
   await expect(page.getByRole("group", { name: "Level" }).getByRole("textbox")).toHaveValue("3");
   await expect(page.getByRole("group", { name: "XP" }).getByRole("textbox")).toHaveValue("0");

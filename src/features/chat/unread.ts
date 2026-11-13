@@ -1,8 +1,7 @@
 import { store } from "../../lib/store";
-import { useValue } from "../../ui/useValue";
-import { activeCampaign } from "../../campaign/campaign";
+import { useQuery } from "../../ui/useQuery";
+import type { Campaign } from "../../campaign/campaign";
 import { dataName } from "../../platform/dataEpoch";
-import { device } from "../../platform/device";
 import { getStorageItem, setStorageItem } from "../../platform/localStorage";
 import { visibilityOf } from "./types";
 
@@ -28,14 +27,12 @@ function seenStamp(campaignId: string): string {
   return stamps.get(campaignId)!;
 }
 
-/** How many messages in the open campaign's chat this device hasn't seen. */
-export function useUnreadCount(): number {
-  const c = useValue(activeCampaign);
-  const messages = useValue(c?.chat.messages) ?? [];
-  useValue(version);
-  if (!c) return 0;
+/** How many messages in a campaign's chat this device hasn't seen. */
+export function useUnreadCount(c: Campaign): number {
+  const messages = useQuery(c.chat.messages);
+  useQuery(version);
   const since = seenStamp(c.id);
-  const me = device.value.id;
+  const me = c.device.value.id;
   const isGm = c.isGm();
   let n = 0;
   for (const m of messages) {
@@ -50,11 +47,10 @@ export function useUnreadCount(): number {
   return n;
 }
 
-/** The chat is in view: everything up to now is read. */
-export function markRead() {
-  const c = activeCampaign.value;
-  const last = c?.chat.messages.value.at(-1);
-  if (!c || !last || last.hlc <= seenStamp(c.id)) return;
+/** A campaign's chat is in view: everything up to now is read. */
+export function markRead(c: Campaign) {
+  const last = c.chat.messages.value.at(-1);
+  if (!last || last.hlc <= seenStamp(c.id)) return;
   stamps.set(c.id, last.hlc);
   version.value++;
   setStorageItem(key(c.id), last.hlc);

@@ -3,13 +3,6 @@ import { windowLayer } from "../ui/windows";
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
 import {
-  dockTarget,
-  setPanelClosed,
-  floatingWindows,
-  spawnedFromTab,
-  raiseWindow,
-  startWindowDrag,
-  startWindowResize,
   useWindowPointer,
   useWindowRect,
   type FloatingWindow,
@@ -19,13 +12,15 @@ import { PanelContent, PanelIcon, PaneToggle, usePanelLabel } from "./panels";
 import { RESIZE_DIRS } from "../ui/resizeRect";
 import { WindowControls } from "../workspace/WindowControls";
 import { PanelActionsProvider, PanelActionsSlot } from "./PanelActions";
-import { useValue } from "../ui/useValue";
+import { useQuery } from "../ui/useQuery";
+import { useCampaign } from "../workspace/campaignContext";
 
 /** Size of the tab a window morphs into. */
 const TAB = 44;
 
 export function FloatingWindows({ campaign }: { campaign: Campaign }) {
-  const windows = useValue(floatingWindows);
+  const ctx = useCampaign();
+  const windows = useQuery(ctx.panels.floatingWindows);
   return createPortal(
     <>
       {windows.map((w) => (
@@ -43,16 +38,17 @@ function Window({
   win: FloatingWindow & { id: PanelId };
   campaign: Campaign;
 }) {
-  const win = useWindowRect(stored);
+  const ctx = useCampaign();
+  const win = useWindowRect(ctx.panels, stored);
   const label = usePanelLabel(win.id, campaign);
   const [rolled, setRolled] = useState(false);
-  const pointer = useWindowPointer(win.id);
-  const target = useValue(dockTarget);
+  const pointer = useWindowPointer(ctx.panels, win.id);
+  const target = useQuery(ctx.panels.dockTarget);
 
   function onHeaderPointerDown(e: PointerEvent) {
     if (e.button !== 0 || (e.target as HTMLElement).closest("button")) return;
     e.preventDefault();
-    startWindowDrag(win.id, e, e.clientX - win.x, e.clientY - win.y);
+    ctx.panels.startWindowDrag(win.id, e, e.clientX - win.x, e.clientY - win.y);
   }
 
   // Over a sidebar the window morphs into the tab it would become, and back out again.
@@ -60,11 +56,11 @@ function Window({
   // The phase sticks until the next change, so re-rendering on pointer moves doesn't cut an animation short.
   // A window pulled out of a tab starts as the tab ('hidden') and grows from it when it leaves the sidebar.
   const [phase, setPhase] = useState<"in" | "out" | "hidden" | undefined>(() =>
-    spawnedFromTab.has(win.id) ? "hidden" : undefined,
+    ctx.panels.spawnedFromTab.has(win.id) ? "hidden" : undefined,
   );
   useEffect(() => {
-    spawnedFromTab.delete(win.id);
-  }, [win.id]);
+    ctx.panels.spawnedFromTab.delete(win.id);
+  }, [ctx, win.id]);
   const morph = !pointer
     ? phase === "hidden"
       ? "hidden"
@@ -107,7 +103,7 @@ function Window({
         data-lifted={pointer !== null}
         aria-label={label}
         tabIndex={-1}
-        onPointerDown={() => raiseWindow(win.id)}
+        onPointerDown={() => ctx.panels.raiseWindow(win.id)}
       >
         <WindowControls
           title={label}
@@ -121,7 +117,7 @@ function Window({
           rolled={rolled}
           onToggleRoll={() => setRolled(!rolled)}
           onDragStart={onHeaderPointerDown}
-          onClose={() => setPanelClosed(win.id, true)}
+          onClose={() => ctx.panels.setPanelClosed(win.id, true)}
           closeLabel="Close (reopen from the campaign menu)"
         />
         {!rolled && (
@@ -137,7 +133,7 @@ function Window({
               className="win-resize"
               data-dir={dir}
               aria-hidden="true"
-              onPointerDown={(e) => startWindowResize(win.id, e.nativeEvent, dir)}
+              onPointerDown={(e) => ctx.panels.startWindowResize(win.id, e.nativeEvent, dir)}
             />
           ))}
       </section>

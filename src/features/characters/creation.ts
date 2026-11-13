@@ -1,4 +1,4 @@
-import type { DataValue } from "../../core/types";
+import type { DataValue } from "../../data/types";
 import {
   atLevel,
   type ChoiceDef,
@@ -28,6 +28,15 @@ export function choicesAt(
   scores: Record<string, number> = {},
 ): ChoiceDef[] {
   const level = typeof at === "number" ? at : 1;
+  const listValues = new Map<string, Set<string>>();
+  const listHas = (field: string, value: string) => {
+    let values = listValues.get(field);
+    if (!values) {
+      values = new Set(commaListOf(data[field]));
+      listValues.set(field, values);
+    }
+    return values.has(value);
+  };
   return (creation?.choices ?? [])
     .filter((c) => c.at === at || (c.at === "advance" && typeof at === "number"))
     .map((c) => ({
@@ -51,12 +60,8 @@ export function choicesAt(
                 (value) => value && (!prefix || value.startsWith(prefix)),
               ).length < atLevel(max, level),
           ) &&
-          (o.requiresIncludes ?? []).every(({ field, value }) =>
-            commaListOf(data[field]).includes(value),
-          ) &&
-          (o.notIncludes ?? []).every(
-            ({ field, value }) => !commaListOf(data[field]).includes(value),
-          ),
+          (o.requiresIncludes ?? []).every(({ field, value }) => listHas(field, value)) &&
+          (o.notIncludes ?? []).every(({ field, value }) => !listHas(field, value)),
       ),
     }))
     .filter((c) => c.options.length > 0);
@@ -184,6 +189,8 @@ export function validBoost(
   if (!option?.boost) return !!option;
   const amounts = option.boost.amounts[pattern];
   if (!amounts) return false;
+  const allowedStats = new Set(option.boost.stats);
+  const blockedStats = new Set(blocked);
   const picked = order.filter((_, index) => (amounts[index] ?? 0) > 0);
   return (
     new Set(picked).size === picked.length &&
@@ -192,8 +199,8 @@ export function validBoost(
       const stat = order[index];
       return (
         !!stat &&
-        option.boost!.stats.includes(stat) &&
-        !blocked.includes(stat) &&
+        allowedStats.has(stat) &&
+        !blockedStats.has(stat) &&
         (scores[stat] ?? 0) < (caps[stat] ?? SCORE_CAP)
       );
     })

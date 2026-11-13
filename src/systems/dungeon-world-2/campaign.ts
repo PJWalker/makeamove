@@ -1,6 +1,5 @@
-import * as Y from "yjs";
+import { isNumber } from "../../data/guards";
 import type { Campaign } from "../../campaign/campaign";
-import { systemStore } from "../../campaign/systemStore";
 import { contentFromText } from "../../features/chat/content";
 import { postText } from "../../features/chat/send";
 import {
@@ -14,6 +13,7 @@ import {
   setConditionState,
   setData,
   setScore,
+  setResource,
   startMove,
   systemOf,
   updateItem,
@@ -24,7 +24,7 @@ import {
   setRelationshipDepth,
 } from "../../features/characters/relationships";
 import { actionsFor, derive } from "../../features/characters/store";
-import type { DataValue } from "../../core/types";
+import type { DataValue } from "../../data/types";
 import { commaListOf, formatCommaList } from "../../lib/list";
 import { DW2_RELATIONSHIP_DEPTH } from "./bondStore";
 import { revealedStruggleData, STRUGGLES } from "./struggles";
@@ -131,8 +131,12 @@ export function applyClassChange(
   const newMaxHp =
     changed && hpResource ? (derive(changed, system).values[hpResource.max] ?? 0) : 0;
   if (changed && hpResource) {
-    const resources = campaign.characters.get(id)?.get("resources") as Y.Map<number> | undefined;
-    resources?.set(hpResource.id, Math.max(1, Math.min(newMaxHp, oldHp + newMaxHp - oldMaxHp)));
+    setResource(
+      campaign,
+      id,
+      hpResource.id,
+      Math.max(1, Math.min(newMaxHp, oldHp + newMaxHp - oldMaxHp)),
+    );
   }
   return true;
 }
@@ -279,20 +283,18 @@ export function prepareDungeonWorld2Journey(
   return true;
 }
 
-const DW2_DOWNTIME_KEY = "dungeon-world-2:downtime";
+const DW2_DOWNTIME_KEY = "downtime";
 /** Each PC's id -> the Downtime epoch they last trained in. */
-const trainedIn = (campaign: Campaign) =>
-  systemStore<number>(campaign.systemData, "dungeon-world-2:downtime-trained");
+const trainedIn = (campaign: Campaign) => campaign.systemData.store("downtime-trained", isNumber);
 
 export function dungeonWorld2DowntimeEpoch(campaign: Campaign): number {
-  return Number(campaign.systemData.get(DW2_DOWNTIME_KEY) ?? 0);
+  return Number(campaign.systemData.value(DW2_DOWNTIME_KEY) ?? 0);
 }
 
 /** Start a fresh Downtime period so each PC can Train once during it. */
-export function beginDungeonWorld2Downtime(campaign: Campaign): number | undefined {
-  if (!campaign.isGm()) return;
+export function beginDungeonWorld2Downtime(campaign: Campaign): number {
   const epoch = dungeonWorld2DowntimeEpoch(campaign) + 1;
-  campaign.systemData.set(DW2_DOWNTIME_KEY, epoch);
+  campaign.systemData.setValue(DW2_DOWNTIME_KEY, epoch);
   return epoch;
 }
 

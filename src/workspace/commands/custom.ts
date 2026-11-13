@@ -1,7 +1,7 @@
 import type { Campaign } from "../../campaign/campaign";
-import type * as Y from "yjs";
+import type { SlotLook } from "../../campaign/schema";
 import { device } from "../../platform/device";
-import type { EntryIconName } from "../../ui/entryIcons";
+export type { SlotLook } from "../../campaign/schema";
 
 /*
  * A player's own touches on actions: what a hotbar slot is called and shows,
@@ -9,47 +9,45 @@ import type { EntryIconName } from "../../ui/entryIcons";
  * itself, so they follow the player between devices and touch no one else's.
  */
 
-export interface SlotLook {
-  label?: string | undefined;
-  icon?: EntryIconName | undefined;
-}
-
-const LOOKS = "hotbarLooks";
-const SHORTCUTS = "shortcuts";
-
 const mine = (campaign: Campaign) => campaign.members.get(device.value.id);
-const looksOf = (entry: Y.Map<unknown> | undefined) =>
-  entry?.get(LOOKS) as Record<string, SlotLook> | undefined;
 
 export function slotLook(campaign: Campaign, id: string): SlotLook {
-  return looksOf(mine(campaign))?.[id] ?? {};
+  return mine(campaign)?.get("hotbarLooks")?.get(id) ?? {};
 }
 
 /** Change a slot's name or icon; `undefined` puts the action's own back. */
 export function setSlotLook(campaign: Campaign, id: string, patch: SlotLook) {
   const entry = mine(campaign);
   if (!entry) return;
-  const looks = { ...looksOf(entry) };
-  const next: SlotLook = { ...looks[id], ...patch };
+  const next: SlotLook = { ...slotLook(campaign, id), ...patch };
   for (const k of Object.keys(next) as (keyof SlotLook)[]) if (!next[k]) delete next[k];
-  if (Object.keys(next).length) looks[id] = next;
-  else delete looks[id];
-  entry.set(LOOKS, looks);
+  if (Object.keys(next).length) entry.ensure("hotbarLooks").set(id, next);
+  else entry.get("hotbarLooks")?.delete(id);
 }
 
 /** Action id to key combo, as `comboOf` writes it. */
 export function shortcuts(campaign: Campaign): Record<string, string> {
-  return (mine(campaign)?.get(SHORTCUTS) as Record<string, string> | undefined) ?? {};
+  return mine(campaign)?.get("shortcuts")?.read() ?? {};
 }
 
 export const shortcutFor = (campaign: Campaign, id: string): string | undefined =>
   shortcuts(campaign)[id];
 
-/** Bind a combo to an action, taking it from any other action that had it; null unbinds. */
+/**
+ * Bind a combo to an action, taking it from any other action that had it; null unbinds.
+ * Only the actions whose combo changes are written, so edits to others from another device are kept.
+ */
 export function setShortcut(campaign: Campaign, id: string, combo: string | null) {
   const entry = mine(campaign);
   if (!entry) return;
-  entry.set(SHORTCUTS, rebind(shortcuts(campaign), id, combo));
+  const before = shortcuts(campaign);
+  const after = rebind(before, id, combo);
+  const stored = entry.ensure("shortcuts");
+  stored.transact(() => {
+    for (const action of Object.keys(before)) if (!(action in after)) stored.delete(action);
+    for (const [action, keys] of Object.entries(after))
+      if (before[action] !== keys) stored.set(action, keys);
+  });
 }
 
 export function rebind(
@@ -97,6 +95,15 @@ export function comboOf(
 export const firesWhileTyping = (combo: string) => /(^|\+)(Ctrl|Meta)\+/.test(combo);
 
 const MAC = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
+
+/** A built-in combo for this platform: `Mod` is Cmd on a Mac and Ctrl elsewhere, kept in `comboOf`'s order. */
+export function platformCombo(combo: string, mac = MAC): string {
+  if (!combo.includes("Mod+")) return combo;
+  const parts = combo.split("+");
+  const key = parts.at(-1)!;
+  const mods = new Set(parts.slice(0, -1).map((m) => (m === "Mod" ? (mac ? "Meta" : "Ctrl") : m)));
+  return [...["Ctrl", "Alt", "Shift", "Meta"].filter((m) => mods.has(m)), key].join("+");
+}
 const MAC_GLYPHS: Record<string, string> = { Ctrl: "⌃", Alt: "⌥", Shift: "⇧", Meta: "⌘" };
 const ARROWS: Record<string, string> = { Up: "↑", Down: "↓", Left: "←", Right: "→" };
 

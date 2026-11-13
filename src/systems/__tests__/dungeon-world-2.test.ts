@@ -1,10 +1,15 @@
 import "fake-indexeddb/auto";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 
 vi.mock("../../workspace/panelLayout", () => ({ showPanel: () => {} }));
-import * as Y from "yjs";
+vi.mock("../../ui/icons", () => ({
+  IconDelete: () => null,
+  IconFolder: () => null,
+  IconImage: () => null,
+}));
 
-import { systemActions } from "../../workspace/commands/system";
+import { openCharacter, startMove as startMoveCommand } from "../../workspace/commands/characters";
+import type { CampaignContext } from "../../workspace/campaignContext";
 import { Campaign, createCampaign } from "../../campaign/campaign";
 import { device } from "../../platform/device";
 import {
@@ -14,19 +19,18 @@ import {
   getCharacter,
   markArtifactTrack,
   makeMove,
-  moveRequest,
   newCharacter,
   newNpc,
   viewCharacter,
   actingCharacterId,
   setConditionState,
   setData,
-  targetRequest,
   setLearned,
   startMove,
   systemOf,
   tokenStatsSource,
   updateItem,
+  setResource,
 } from "../../features/characters/api";
 import {
   relationshipsOf,
@@ -153,15 +157,15 @@ describe("Dungeon World 2 campaign behavior", () => {
     const id = newCharacter(campaign, "Ayla", "fighter");
     const tradeBlows = systemOf(campaign).actions.find((move) => move.id === "trade-blows")!;
     startMove(campaign, id, tradeBlows);
-    expect(moveRequest.value).toEqual({ moveId: "trade-blows", characterId: id });
-    expect(targetRequest.value).toBeNull();
-    moveRequest.value = null;
+    expect(campaign.moves.ask.value).toEqual({ moveId: "trade-blows", characterId: id });
+    expect(campaign.moves.targets.value).toBeNull();
+    campaign.moves.ask.value = null;
     const message = await makeMove(campaign, id, tradeBlows, { stat: "str" });
     expect(message).toMatchObject({ kind: "move", moveId: "trade-blows", characterName: "Ayla" });
     campaign.destroy();
   });
 
-  it("equips armor and keeps the DW2 move in the hotbar and index", async () => {
+  it("equips armor and keeps the DW2 move in the index", async () => {
     const campaign = await setUp();
     const id = newCharacter(campaign, "Ayla", "fighter");
     const armor = systemOf(campaign).items.find((item) =>
@@ -172,10 +176,11 @@ describe("Dungeon World 2 campaign behavior", () => {
     updateItem(campaign, id, item.id, { equipped: true });
     expect(getCharacter(campaign, id)!.inventory[0]!.equipped).toBe(true);
     expect(derive(getCharacter(campaign, id)!, systemOf(campaign)).values.armor).toBe(1);
-    const ids = systemActions(campaign).map((action) => action.id);
-    expect(ids).toContain("move:trade-blows");
-    expect(ids).toContain(`character:${id}`);
-    expect(defaultHotbar(campaign, id)).toContain("move:trade-blows");
+    const context = { campaign } as CampaignContext;
+    expect(startMoveCommand.offers!(context).map(({ params }) => params.move)).toContain(
+      "trade-blows",
+    );
+    expect(openCharacter.offers!(context).map(({ params }) => params.id)).toContain(id);
     expect(hotbarSlots(campaign, id)).toEqual(defaultHotbar(campaign, id));
     campaign.destroy();
   });
@@ -400,12 +405,12 @@ describe("Dungeon World 2 campaign behavior", () => {
     ).toBe(true);
     expect(getCharacter(campaign, ayla)?.conditions).toContain("angry");
     expect(getCharacter(campaign, brom)?.conditions).toContain("frightened");
-    expect(moveRequest.value).toMatchObject({
+    expect(campaign.moves.ask.value).toMatchObject({
       moveId: "perilous-journey",
       characterId: ayla,
       choice: { extra: -1 },
     });
-    moveRequest.value = null;
+    campaign.moves.ask.value = null;
     campaign.destroy();
   });
 
@@ -534,29 +539,23 @@ describe("Dungeon World 2 campaign behavior", () => {
       (action) => action.id === "comfort-or-support",
     )!;
     const camp = systemOf(campaign).actions.find((action) => action.id === "make-camp")!;
+    const availability = (characterId: string, move: string) =>
+      startMoveCommand.available!({ campaign } as CampaignContext, { characterId, move });
 
     expect(await makeMove(campaign, ayla, comfort)).toBeDefined();
     expect(sessionMoveUsed(campaign, ayla, comfort)).toBe(true);
     expect(sessionMoveUsed(campaign, brom, comfort)).toBe(false);
     viewCharacter(campaign, ayla);
-    expect(
-      systemActions(campaign).find((action) => action.id === "move:comfort-or-support")?.available,
-    ).toBe("Already used this session");
+    expect(availability(ayla, comfort.id)).toBe("Already used this session");
     expect(await makeMove(campaign, ayla, comfort)).toBeUndefined();
     viewCharacter(campaign, brom);
-    expect(
-      systemActions(campaign).find((action) => action.id === "move:comfort-or-support")?.available,
-    ).toBe(true);
+    expect(availability(brom, comfort.id)).toBe(true);
     expect(await makeMove(campaign, brom, comfort)).toBeDefined();
-    expect(
-      systemActions(campaign).find((action) => action.id === "move:comfort-or-support")?.available,
-    ).toBe("Already used this session");
+    expect(availability(brom, comfort.id)).toBe("Already used this session");
 
     expect(await makeMove(campaign, ayla, camp)).toBeDefined();
     expect(sessionMoveUsed(campaign, brom, camp)).toBe(true);
-    expect(
-      systemActions(campaign).find((action) => action.id === "move:make-camp")?.available,
-    ).toBe("Already used this session");
+    expect(availability(brom, camp.id)).toBe("Already used this session");
     expect(await makeMove(campaign, brom, camp)).toBeUndefined();
 
     await campaign.chat.post(
@@ -565,9 +564,7 @@ describe("Dungeon World 2 campaign behavior", () => {
     );
     expect(sessionMoveUsed(campaign, ayla, comfort)).toBe(false);
     expect(sessionMoveUsed(campaign, brom, camp)).toBe(false);
-    expect(
-      systemActions(campaign).find((action) => action.id === "move:make-camp")?.available,
-    ).toBe(true);
+    expect(availability(brom, camp.id)).toBe(true);
     campaign.destroy();
   });
 
@@ -576,13 +573,12 @@ describe("Dungeon World 2 campaign behavior", () => {
       await createCampaign("Class change", "Gwen", "dungeon-world-2"),
     );
     const characterId = newCharacter(campaign, "Erinyette", "barbarian");
-    const character = campaign.characters.get(characterId)!;
     campaign.doc.transact(() => {
       setData(campaign, characterId, "level", 5);
       setData(campaign, characterId, "xp", 3);
       setData(campaign, characterId, "advancements", "stat-dex-2,stat-wis-3,path-rogue-burglar");
       setData(campaign, characterId, "treasureBoxes", 7);
-      (character.get("resources") as Y.Map<number>).set("hp", 10);
+      setResource(campaign, characterId, "hp", 10);
     });
 
     expect(
@@ -651,7 +647,7 @@ describe("Dungeon World 2 campaign behavior", () => {
       setData(campaign, characterId, "struggleTrack", "Guilt");
       setData(campaign, characterId, "struggleProgress", 2);
       setData(campaign, characterId, "struggleMax", 3);
-      (campaign.characters.get(characterId)!.get("resources") as Y.Map<number>).set("hp", 4);
+      setResource(campaign, characterId, "hp", 4);
     });
 
     expect(resolveStruggle(campaign, characterId)).toBe(true);

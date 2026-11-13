@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import type { ScoreRule, StatDef } from "../../../systems/types";
 import { ruleScoreValues, ruleStartingScores, scoreRuleProblems } from "../creation";

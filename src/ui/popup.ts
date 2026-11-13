@@ -1,10 +1,9 @@
 import type * as React from "react";
 
-import { claimMorph, growFromOrigin, hasFreshOrigin, originRect, releaseMorph } from "./morph";
+import { leave, originRect, releaseMorph, showFromOrigin } from "./morph";
 import { nextZ } from "./windows";
 import { RESIZE_CURSORS, resizeRect, type ResizeDir } from "./resizeRect";
 import { trackPointer } from "./pointer";
-import { withTransition } from "./transition";
 
 /*
  * Pop-up panels: non-modal <dialog>s that float above the table, open
@@ -50,10 +49,13 @@ export function raisePopup(dialog: HTMLElement) {
   dialog.style.zIndex = String(nextZ());
 }
 
-/** Close a window and update its owner from the captured open state. */
+/**
+ * Close a window, shrinking it back into what opened it (see morph.ts), and
+ * update its owner from the captured open state.
+ */
 export function closePopup(dialog: HTMLDialogElement | null | undefined, onClose?: () => void) {
   if (!dialog?.open) return;
-  void withTransition(() => {
+  void leave(dialog, () => {
     dialog.close();
     onClose?.();
   });
@@ -68,33 +70,33 @@ export function openPopup(dialog: HTMLDialogElement | null | undefined) {
     return;
   }
   const at = originRect();
-  const viewMorph = claimMorph(dialog);
-  // Mark it before showing, so its own fade-in doesn't start underneath.
-  if (hasFreshOrigin()) dialog.dataset.morph = "true";
-  dialog.show();
+  showFromOrigin(dialog, () => {
+    dialog.show();
+    if (at) placeOver(dialog, at);
+    else placeFresh(dialog);
+  });
+}
+
+/** Place a pop-up opening with no origin: where it was left, or else centred. */
+function placeFresh(dialog: HTMLDialogElement) {
   const r = dialog.getBoundingClientRect();
-  if (at) {
-    // Open over the thing that spawned it.
-    placeOver(dialog, at);
-  } else if (!dialog.style.left) {
-    // Centred, stepping down and right past any pop-up already there.
-    let x = (innerWidth - r.width) / 2;
-    let y = Math.max(48, (innerHeight - r.height) / 3);
-    const others = [...document.querySelectorAll<HTMLElement>("dialog[open]")].filter(
-      (d) => d !== dialog,
-    );
-    const taken = (x: number, y: number) =>
-      others.some((d) => Math.abs(d.offsetLeft - x) < 8 && Math.abs(d.offsetTop - y) < 48);
-    while (taken(whole(x), whole(y))) {
-      x += CASCADE;
-      y += CASCADE;
-    }
-    place(dialog, x, y);
-  } else {
+  if (dialog.style.left) {
     place(dialog, r.left, r.top);
+    return;
   }
-  // A view transition animates it; otherwise grow it here.
-  if (!viewMorph) growFromOrigin(dialog);
+  // Centred, stepping down and right past any pop-up already there.
+  let x = (innerWidth - r.width) / 2;
+  let y = Math.max(48, (innerHeight - r.height) / 3);
+  const others = [...document.querySelectorAll<HTMLElement>("dialog[open]")].filter(
+    (d) => d !== dialog,
+  );
+  const taken = (x: number, y: number) =>
+    others.some((d) => Math.abs(d.offsetLeft - x) < 8 && Math.abs(d.offsetTop - y) < 48);
+  while (taken(whole(x), whole(y))) {
+    x += CASCADE;
+    y += CASCADE;
+  }
+  place(dialog, x, y);
 }
 
 /**

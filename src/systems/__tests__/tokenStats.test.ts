@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { HP_COLOURS, hpColour } from "../tokenStats";
 
 describe("hit point bars", () => {

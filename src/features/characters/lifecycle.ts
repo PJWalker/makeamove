@@ -1,10 +1,9 @@
-import * as Y from "yjs";
 import type { Campaign } from "../../campaign/campaign";
 import { newId } from "../../lib/ids";
 import { device } from "../../platform/device";
-import type { DataValue } from "../../core/types";
+import type { DataValue } from "../../data/types";
 import type { TemplateSettings } from "./types";
-import { setNpcField } from "./sheet";
+import { setNpcField, setResource, setScore } from "./sheet";
 import { createCharacter } from "./store";
 import { systemOf } from "./system";
 import { canClaim, getCharacter, playedCharacterId } from "./queries";
@@ -19,12 +18,7 @@ import { canClaim, getCharacter, playedCharacterId } from "./queries";
  */
 export function createCopy(campaign: Campaign, templateId: string, name: string): string {
   const id = newId();
-  const m = new Y.Map<unknown>();
-  campaign.doc.transact(() => {
-    campaign.characters.set(id, m);
-    m.set("base", templateId);
-    m.set("name", name);
-  });
+  campaign.characters.set(id, { base: templateId, name });
   return id;
 }
 
@@ -32,25 +26,20 @@ export function createCopy(campaign: Campaign, templateId: string, name: string)
 export function resetCopy(campaign: Campaign, id: string) {
   const m = campaign.characters.get(id);
   if (!m?.get("base")) return;
-  campaign.doc.transact(() => {
-    for (const key of [...m.keys()]) if (key !== "base" && key !== "name") m.delete(key);
+  m.transact(() => {
+    for (const key of m.keys()) if (key !== "base" && key !== "name") m.delete(key);
   });
 }
 
 /** Make a character a template (its tokens keep their own state), or an individual again with null. */
 export function setTemplate(campaign: Campaign, id: string, settings: TemplateSettings | null) {
   const m = campaign.characters.get(id);
-  if (!m) return;
-  if (settings) m.set("template", settings);
-  else m.delete("template");
+  m?.patch({ template: settings ?? undefined });
 }
 
 /** Open a character's sheet in the Characters panel, or none with undefined. */
 export function viewCharacter(campaign: Campaign, id: string | undefined) {
-  const m = campaign.members.get(device.value.id);
-  if (!m) return;
-  if (id) m.set("character", id);
-  else m.delete("character");
+  campaign.members.get(device.value.id)?.patch({ character: id });
 }
 
 /**
@@ -109,14 +98,10 @@ export function newNpcFromMonster(campaign: Campaign, monsterId: string) {
   const monster = system.monsters?.find((entry) => entry.id === monsterId);
   if (!monster) return undefined;
   const id = newNpc(campaign, monster.name);
-  const character = campaign.characters.get(id)!;
-  if (monster.scores) {
-    const scores = character.get("scores") as Y.Map<number>;
-    for (const [stat, value] of Object.entries(monster.scores))
-      if (system.stats.some((entry) => entry.id === stat)) scores.set(stat, value);
-  }
+  for (const [stat, value] of Object.entries(monster.scores ?? {}))
+    if (system.stats.some((entry) => entry.id === stat)) setScore(campaign, id, stat, value);
   const hp = system.resources.find((resource) => resource.id === "hp");
-  if (hp) (character.get("resources") as Y.Map<number>).set(hp.id, monster.hp);
+  if (hp) setResource(campaign, id, hp.id, monster.hp);
   for (const [field, value] of Object.entries(monster.fields))
     if (system.npcFields.some((entry) => entry.id === field))
       setNpcField(campaign, id, field, value);
@@ -132,7 +117,7 @@ export function deleteCharacter(campaign: Campaign, id: string) {
       if (m.get("character") === id) m.delete("character");
       if (m.get("playing") === id) m.delete("playing");
     }
-    for (const [copy, m] of [...campaign.characters.entries()])
+    for (const [copy, m] of campaign.characters.entries())
       if (m.get("base") === id) campaign.characters.delete(copy);
     campaign.characters.delete(id);
   });

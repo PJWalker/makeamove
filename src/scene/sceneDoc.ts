@@ -4,20 +4,12 @@ import { IndexeddbPersistence } from "y-indexeddb";
 import { newId } from "../lib/ids";
 import { dataName } from "../platform/dataEpoch";
 import { device } from "../platform/device";
-import { DEFAULT_GRID, type Grid } from "./grid";
+import type { Grid } from "./grid";
 import { LAYERS, type Layer, type NewElement, type SceneElement } from "./types";
+import { rootOf, type Patch, type Root } from "../data/schema";
+import { sceneShape } from "./schema";
 
-/*
- * Scene subdocument layout (see design doc, "Data model"):
- *
- *   settings  Y.Map  lighting, darkness, vision (M12),
- *                    gridType, gridSize, gridOffsetX, gridOffsetY,
- *                    gridUnit, gridUnitName, gridDiagonal
- *   elements  Y.Map  elementId -> Y.Map of SceneElement fields
- *
- * Each scene is a Yjs subdocument of the campaign root, persisted in its own
- * IndexedDB database and loaded only while someone is looking at it.
- */
+/* A scene subdocument and how it's edited; its layout is declared in schema.ts. */
 
 export const sceneDbName = (guid: string) => dataName("scene", guid);
 
@@ -29,7 +21,7 @@ export interface SceneLighting {
 }
 
 /** Where each grid setting is kept in a scene's settings. */
-const GRID_KEYS: Record<keyof Grid, string> = {
+const GRID_KEYS = {
   type: "gridType",
   size: "gridSize",
   offsetX: "gridOffsetX",
@@ -37,18 +29,19 @@ const GRID_KEYS: Record<keyof Grid, string> = {
   unit: "gridUnit",
   unitName: "gridUnitName",
   diagonal: "gridDiagonal",
-};
+} as const satisfies Record<keyof Grid, string>;
 
 const byOrder = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 
 /** Fields to set on an element; `undefined` removes one. */
-export type ElementPatch = Patch<SceneElement>;
-type Patch<T> = { [K in keyof T]?: T[K] | undefined };
+export type ElementPatch = Unset<SceneElement>;
+/** Optional fields that can be unset; spread over each kind of element. */
+type Unset<T> = { [K in keyof T]?: T[K] | undefined };
 
 export class SceneDoc {
   readonly doc: Y.Doc;
-  readonly elements: Y.Map<Y.Map<unknown>>;
-  readonly settings: Y.Map<unknown>;
+  readonly elements: Root<typeof sceneShape>["elements"];
+  readonly settings: Root<typeof sceneShape>["settings"];
   readonly undo: Y.UndoManager;
   /** Marks this user's own edits, so undo never reverts anyone else's. */
   readonly origin = { local: true };
@@ -56,10 +49,11 @@ export class SceneDoc {
 
   private constructor(doc: Y.Doc) {
     this.doc = doc;
-    this.elements = doc.getMap("elements");
-    this.settings = doc.getMap("settings");
+    const root = rootOf(doc, sceneShape);
+    this.elements = root.elements;
+    this.settings = root.settings;
     this.persistence = new IndexeddbPersistence(sceneDbName(doc.guid), doc);
-    this.undo = new Y.UndoManager([this.elements, this.settings], {
+    this.undo = new Y.UndoManager([this.elements.y, this.settings.y], {
       trackedOrigins: new Set([this.origin]),
       // Every committed action is its own undo step.
       captureTimeout: 0,
@@ -75,13 +69,11 @@ export class SceneDoc {
     doc.load();
     const s = new SceneDoc(doc);
     await s.persistence.whenSynced;
-    const missing = Object.entries(defaults).filter(
-      ([k, v]) => v !== undefined && !s.settings.has(GRID_KEYS[k as keyof Grid]),
+    const missing = (Object.keys(defaults) as (keyof Grid)[]).filter(
+      (k) => defaults[k] !== undefined && !s.settings.has(GRID_KEYS[k]),
     );
     if (missing.length)
-      doc.transact(() => {
-        for (const [k, v] of missing) s.settings.set(GRID_KEYS[k as keyof Grid], v);
-      });
+      s.settings.patch(gridSettings(Object.fromEntries(missing.map((k) => [k, defaults[k]]))));
     return s;
   }
 
@@ -99,62 +91,55 @@ export class SceneDoc {
   // Settings
 
   grid(): Grid {
-    const s = this.settings;
-    const grid = { ...DEFAULT_GRID };
-    for (const k of Object.keys(GRID_KEYS) as (keyof Grid)[]) {
-      const v = s.get(GRID_KEYS[k]);
-      if (v !== undefined) (grid as Record<string, unknown>)[k] = v;
-    }
-    return grid;
+    const grid = {} as Record<keyof Grid, unknown>;
+    for (const [k, key] of Object.entries(GRID_KEYS))
+      grid[k as keyof Grid] = this.settings.get(key);
+    return grid as Grid;
   }
 
   /** The scene's lighting, and whether players see only what their tokens do (M12). */
   lighting(): SceneLighting {
     const s = this.settings;
-    return {
-      enabled: !!s.get("lighting"),
-      darkness: (s.get("darkness") as number | undefined) ?? 0.75,
-      vision: !!s.get("vision"),
-    };
+    return { enabled: s.get("lighting"), darkness: s.get("darkness"), vision: s.get("vision") };
   }
 
   setLighting(patch: Partial<SceneLighting>) {
-    this.transact(() => {
-      if (patch.enabled !== undefined) this.settings.set("lighting", patch.enabled);
-      if (patch.darkness !== undefined) this.settings.set("darkness", patch.darkness);
-      if (patch.vision !== undefined) this.settings.set("vision", patch.vision);
-    });
+    this.transact(() =>
+      this.settings.patch({
+        lighting: patch.enabled,
+        darkness: patch.darkness,
+        vision: patch.vision,
+      }),
+    );
   }
 
   setGrid(patch: Partial<Grid>) {
-    this.transact(() => {
-      for (const [k, v] of Object.entries(patch)) this.settings.set(GRID_KEYS[k as keyof Grid], v);
-    });
+    this.transact(() => this.settings.patch(gridSettings(patch)));
   }
 
   // Elements
 
   get(id: string): SceneElement | null {
-    const m = this.elements.get(id);
-    return m ? ({ id, ...m.toJSON() } as SceneElement) : null;
+    return this.elements.view(id) ?? null;
   }
 
-  /** Every element, bottom to top. */
+  /** Every element that can be drawn, bottom to top. */
   views(): SceneElement[] {
-    const out: SceneElement[] = [];
-    for (const [id, m] of this.elements) out.push({ id, ...m.toJSON() } as SceneElement);
-    return out.sort(
-      (a, b) =>
-        LAYERS.indexOf(a.layer) - LAYERS.indexOf(b.layer) ||
-        byOrder(a.z, b.z) ||
-        byOrder(a.id, b.id),
-    );
+    return this.elements
+      .views()
+      .map(([, el]) => el)
+      .sort(
+        (a, b) =>
+          LAYERS.indexOf(a.layer) - LAYERS.indexOf(b.layer) ||
+          byOrder(a.z, b.z) ||
+          byOrder(a.id, b.id),
+      );
   }
 
   private topZ(layer: Layer): string | null {
     let top: string | null = null;
     for (const m of this.elements.values()) {
-      const z = m.get("z") as string;
+      const z = m.get("z");
       if (m.get("layer") === layer && (top === null || z > top)) top = z;
     }
     return top;
@@ -163,7 +148,7 @@ export class SceneDoc {
   private bottomZ(layer: Layer): string | null {
     let bottom: string | null = null;
     for (const m of this.elements.values()) {
-      const z = m.get("z") as string;
+      const z = m.get("z");
       if (m.get("layer") === layer && (bottom === null || z < bottom)) bottom = z;
     }
     return bottom;
@@ -174,15 +159,12 @@ export class SceneDoc {
     this.transact(() => {
       for (const el of els) {
         const id = newId();
-        const m = new Y.Map<unknown>();
-        const full = {
+        this.elements.set(id, {
           locked: false,
           ...el,
           z: generateKeyBetween(this.topZ(el.layer), null),
           createdBy: device.value.id,
-        };
-        for (const [k, v] of Object.entries(full)) if (v !== undefined) m.set(k, v);
-        this.elements.set(id, m);
+        });
         ids.push(id);
       }
     });
@@ -192,14 +174,7 @@ export class SceneDoc {
   /** Apply several patches as one undo step; an `undefined` value clears that field. */
   update(patches: Map<string, ElementPatch> | [string, ElementPatch][]) {
     this.transact(() => {
-      for (const [id, patch] of patches) {
-        const m = this.elements.get(id);
-        if (!m) continue;
-        for (const [k, v] of Object.entries(patch)) {
-          if (v === undefined) m.delete(k);
-          else m.set(k, v);
-        }
-      }
+      for (const [id, patch] of patches) this.elements.get(id)?.patchCase(patch);
     });
   }
 
@@ -228,10 +203,10 @@ export class SceneDoc {
     this.transact(() => {
       if (to === "front") {
         for (const el of els)
-          this.elements.get(el.id)!.set("z", generateKeyBetween(this.topZ(el.layer), null));
+          this.elements.get(el.id)!.patch({ z: generateKeyBetween(this.topZ(el.layer), null) });
       } else {
         for (const el of els.reverse())
-          this.elements.get(el.id)!.set("z", generateKeyBetween(null, this.bottomZ(el.layer)));
+          this.elements.get(el.id)!.patch({ z: generateKeyBetween(null, this.bottomZ(el.layer)) });
       }
     });
   }
@@ -242,9 +217,15 @@ export class SceneDoc {
       for (const id of ids) {
         const m = this.elements.get(id);
         if (!m || m.get("layer") === layer) continue;
-        m.set("z", generateKeyBetween(this.topZ(layer), null));
-        m.set("layer", layer);
+        m.patch({ z: generateKeyBetween(this.topZ(layer), null), layer });
       }
     });
   }
+}
+
+/** Grid settings as they're kept in a scene's settings. */
+function gridSettings(grid: Partial<Grid>) {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(grid)) out[GRID_KEYS[k as keyof Grid]] = v;
+  return out as Patch<(typeof sceneShape)["settings"]["shape"]>;
 }
