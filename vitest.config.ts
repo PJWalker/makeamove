@@ -21,10 +21,10 @@ export default defineConfig({
       reporter: ["text-summary", "html"],
       // A floor just under current coverage; raise it as coverage grows.
       thresholds: {
-        statements: 38,
+        statements: 40,
         branches: 78,
         functions: 66,
-        lines: 38,
+        lines: 40,
       },
     },
   },
