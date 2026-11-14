@@ -1,39 +1,41 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { actionsFor, statBonus } from "../features/characters/store";
+import { useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
+import { statBonus } from "../features/characters/store";
 import type { CharacterView } from "../features/characters/types";
 import { conditionColour } from "../features/combat/pipColours";
-import { parse } from "../features/dice/notation";
 import type { Campaign } from "../campaign/campaign";
 import { device } from "../platform/device";
 import type { Derived, GameSystem, SheetCounter, SheetSection } from "../systems/types";
-import { CLASS_FIELD, choicesAt } from "../features/characters/creation";
 import { commaListOf } from "../lib/list";
 import { parseInputNumber } from "../lib/number";
 import { Button } from "../ui/Button";
-import { OptionPicker } from "../ui/OptionPicker";
 import { IconLock } from "../ui/icons";
 import { menuTrigger } from "../ui/menuTrigger";
 import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
-import { CharacterText } from "./CharacterText";
 import { AdvancementDialog } from "./CreationParts";
 import { useExtension } from "./systemExtensions";
 import { registerEntityDrop, type DragEntity } from "./entityDrag";
 import { Inventory } from "./Inventory";
-import { Counter, MoveList, TokenChip } from "./sheetParts";
+import { Counter } from "./sheetParts";
 import { signedStr } from "./actionPresentation";
 import { useQuery } from "../ui/useQuery";
+import {
+  ActionsSection,
+  ChoicesSection,
+  DerivedSection,
+  FieldsSection,
+  HeaderSection,
+  ModifiersSection,
+  NpcFieldsSection,
+  TextSection,
+  type SectionContext,
+} from "./sheetSections";
 import {
   bumpData,
   bumpResource,
   setCondition,
   setData,
-  setField,
-  setLearned,
   setLoadout,
-  setModifier,
-  setNpcField,
   setScore,
-  startMove,
   toggleCondition,
 } from "./commands/characters";
 import { useCampaign } from "./campaignContext";
@@ -101,23 +103,7 @@ export function DeclarativeSheet({ layout, ...props }: Props) {
   );
 }
 
-type SectionProps = {
-  campaign: Campaign;
-  system: GameSystem;
-  c: CharacterView;
-  d: Derived;
-  editable: boolean;
-  section: SheetSection;
-};
-
-function Advancement({
-  campaign,
-  system,
-  c,
-  d,
-  editable,
-  section,
-}: Omit<SectionProps, "section"> & { section: Extract<SheetSection, { kind: "advancement" }> }) {
+function Advancement({ campaign, system, c, d, editable, section }: SectionOf<"advancement">) {
   const [open, setOpen] = useState(false);
   const Actions = useExtension(system).advancementActions;
   const needed = d.values[section.needed];
@@ -140,7 +126,7 @@ function Advancement({
   );
 }
 
-function Loadout({ system, c, d, editable, id }: Omit<SectionProps, "section"> & { id: string }) {
+function Loadout({ system, c, d, editable, id }: SectionContext & { id: string }) {
   const ctx = useCampaign();
   const [free, setFree] = useState(false);
   const [query, setQuery] = useState("");
@@ -213,351 +199,71 @@ function Loadout({ system, c, d, editable, id }: Omit<SectionProps, "section"> &
   );
 }
 
-export function SheetSectionView({ campaign, system, c, d, editable, section }: SectionProps) {
-  const ctx = useCampaign();
-  const v = d.values;
-  switch (section.kind) {
-    case "header": {
-      const classChoice =
-        c.kind === "pc"
-          ? choicesAt(system.creation, "create", c.data).find(
-              (choice) => choice.field === CLASS_FIELD,
-            )
-          : undefined;
-      return (
-        <header className="sheet-head">
-          <TokenChip campaign={campaign} c={c} editable={editable} />
-          <div className="sheet-title">
-            <input
-              className="sheet-name"
-              aria-label="Name"
-              value={c.name}
-              disabled={!editable}
-              onChange={(e) =>
-                e.currentTarget.value.trim() &&
-                ctx.execute(setField, {
-                  id: c.id,
-                  key: "name",
-                  value: e.currentTarget.value.trim(),
-                })
-              }
-            />
-            <span className="muted">{c.kind === "npc" ? "NPC" : "Player character"}</span>
-            {classChoice && (
-              <OptionPicker
-                label={classChoice.label}
-                options={classChoice.options}
-                value={String(c.data[CLASS_FIELD] ?? "")}
-                disabled={!editable}
-                onChange={(id) => ctx.execute(setData, { id: c.id, key: CLASS_FIELD, value: id })}
-              />
-            )}
-          </div>
-        </header>
-      );
-    }
-    case "choices": {
-      const field = system.creation?.advancementField;
-      const rank = Number(field ? c.data[field] : 0);
-      const sectionChoices = section.choices ? new Set(section.choices) : undefined;
-      const choices = [
-        ...choicesAt(system.creation, "create", c.data),
-        ...Array.from({ length: rank }, (_, i) => choicesAt(system.creation, i + 1, c.data)).flat(),
-      ].filter(
-        (choice) =>
-          choice.field !== CLASS_FIELD && (!sectionChoices || sectionChoices.has(choice.id)),
-      );
-      if (!choices.length) return null;
-      return (
-        <section className="form-section sheet-section" aria-label="Character choices">
-          <h3 className="sheet-heading">Character choices</h3>
-          {choices.map((choice) => (
-            <OptionPicker
-              key={choice.id}
-              label={choice.label}
-              options={choice.options}
-              value={String(c.data[choice.field] ?? "")}
-              disabled={!editable}
-              onChange={(id) => ctx.execute(setData, { id: c.id, key: choice.field, value: id })}
-            />
-          ))}
-        </section>
-      );
-    }
-    case "fields":
-      return (
-        <section
-          className="form-section sheet-section"
-          aria-label={section.label ?? "Character details"}
-        >
-          <h3 className="sheet-heading">{section.label ?? "Details"}</h3>
-          {section.items.map((item) => (
-            <label key={item.field} className="field">
-              {item.label}
-              <input
-                type={item.type}
-                min={item.type === "number" ? item.min : undefined}
-                max={item.type === "number" ? item.max : undefined}
-                value={String(c.data[item.field] ?? (item.type === "number" ? 0 : ""))}
-                disabled={!editable}
-                onChange={(event) => {
-                  if (item.type === "number") {
-                    const value = parseInputNumber(event.currentTarget.value);
-                    if (
-                      value === undefined ||
-                      (item.min !== undefined && value < item.min) ||
-                      (item.max !== undefined && value > item.max)
-                    )
-                      return;
-                    ctx.execute(setData, { id: c.id, key: item.field, value });
-                  } else
-                    ctx.execute(setData, {
-                      id: c.id,
-                      key: item.field,
-                      value: event.currentTarget.value,
-                    });
-                }}
-              />
-            </label>
-          ))}
-        </section>
-      );
-    case "loadout":
-      return (
-        <Loadout
-          campaign={campaign}
-          system={system}
-          c={c}
-          d={d}
-          editable={editable}
-          id={section.loadout}
-        />
-      );
-    case "counters":
-      return (
-        <section className="form-section sheet-section" aria-label="Vitals">
-          <h3 className="sheet-heading">Vitals</h3>
-          <div className="sheet-vitals">
-            {section.items.map((item) => (
-              <SheetNumber
-                key={item.label}
-                campaign={campaign}
-                system={system}
-                c={c}
-                d={d}
-                editable={editable}
-                item={item}
-              />
-            ))}
-          </div>
-        </section>
-      );
-    case "advancement": {
-      return (
-        <Advancement
-          campaign={campaign}
-          system={system}
-          c={c}
-          d={d}
-          editable={editable}
-          section={section}
-        />
-      );
-    }
-    case "derived": {
-      const derivedValue = (id: string) => v[id] ?? 0;
-      return (
-        <section className="form-section sheet-derived-group" aria-label="Combat">
-          <h3 className="sheet-heading">Combat</h3>
-          <dl className="sheet-derived">
-            {section.items.map((item) => (
-              <div
-                key={item.label}
-                title={d.resolved.why[item.value]?.join("\n")}
-                data-over={item.max ? derivedValue(item.value) > derivedValue(item.max) : undefined}
-              >
-                <dt>{item.label}</dt>
-                <dd>
-                  {item.format === "die" ? (
-                    <button
-                      type="button"
-                      className="sheet-derived-roll"
-                      title={`Roll ${item.label}`}
-                      aria-label={`Roll ${item.label}`}
-                      onClick={() =>
-                        void ctx.execute(roll, {
-                          formula: `d${derivedValue(item.value)}${item.plus && derivedValue(item.plus) ? signedStr(derivedValue(item.plus)) : ""}`,
-                          visibility: "public",
-                          comment: item.label,
-                        })
-                      }
-                    >
-                      d{derivedValue(item.value)}
-                      {item.plus && derivedValue(item.plus)
-                        ? signedStr(derivedValue(item.plus))
-                        : ""}
-                    </button>
-                  ) : (
-                    <>
-                      {derivedValue(item.value)}
-                      {item.max && `/${derivedValue(item.max)}`}
-                    </>
-                  )}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-      );
-    }
-    case "stats":
-      return (
-        <Stats
-          campaign={campaign}
-          system={system}
-          c={c}
-          d={d}
-          editable={editable}
-          label={section.label}
-          hint={section.hint}
-          showScore={section.showScore !== false}
-        />
-      );
-    case "modifiers":
-      return (
-        <section className="form-section sheet-section" aria-label={section.label}>
-          <h3 className="sheet-heading">{section.label}</h3>
-          <div className="sheet-vitals">
-            {system.modifiers.map((m) => (
-              <Counter
-                key={m.id}
-                label={m.label}
-                value={c.modifiers[m.id] ?? 0}
-                disabled={!editable}
-                onChange={(by) =>
-                  ctx.execute(setModifier, {
-                    id: c.id,
-                    modifier: m.id,
-                    value: (c.modifiers[m.id] ?? 0) + by,
-                  })
-                }
-              />
-            ))}
-          </div>
-        </section>
-      );
-    case "actions":
-      return (
-        <section
-          className="form-section sheet-section"
-          aria-label={section.label}
-          data-move-drop={editable ? c.id : undefined}
-        >
-          <h3 className="sheet-heading">{section.label}</h3>
-          <MoveList
-            campaign={campaign}
-            system={system}
-            moves={actionsFor(c, system, d)}
-            ownerId={c.id}
-            onMake={(m) => ctx.execute(startMove, { characterId: c.id, move: m.id })}
-            learned={c.learned}
-            onForget={
-              editable
-                ? (m) => ctx.execute(setLearned, { id: c.id, action: m.id, known: false })
-                : undefined
-            }
-          />
-        </section>
-      );
-    case "inventory":
-      return (
-        <Inventory
-          campaign={campaign}
-          c={c}
-          {...(c.kind === "pc" ? { d } : {})}
-          editable={editable}
-        />
-      );
-    case "npcFields": {
-      const sectionFields = section.fields ? new Set(section.fields) : undefined;
-      return (
-        <section className="form-section sheet-section" aria-label="Details">
-          <h3 className="sheet-heading">Details</h3>
-          {system.npcFields.flatMap((f) =>
-            sectionFields && !sectionFields.has(f.id)
-              ? []
-              : [
-                  f.type === "longtext" ? (
-                    <CharacterText
-                      key={f.id}
-                      campaign={campaign}
-                      c={c}
-                      field={`field:${f.id}`}
-                      label={f.label}
-                      editable={editable}
-                    />
-                  ) : (
-                    <label key={f.id} className="field">
-                      {f.label}
-                      <span className={f.rollable ? "sheet-rollable-field" : undefined}>
-                        <input
-                          type={f.type === "number" ? "number" : "text"}
-                          value={c.fields[f.id]}
-                          disabled={!editable}
-                          onChange={(e) =>
-                            ctx.execute(setNpcField, {
-                              id: c.id,
-                              field: f.id,
-                              value:
-                                f.type === "number"
-                                  ? Number(e.currentTarget.value) || 0
-                                  : e.currentTarget.value,
-                            })
-                          }
-                        />
-                        {f.rollable && isFormula(String(c.fields[f.id] ?? "")) && (
-                          <Button
-                            variant="secondary"
-                            onClick={() =>
-                              void ctx.execute(roll, {
-                                formula: String(c.fields[f.id]),
-                                visibility: "public",
-                                comment: f.label,
-                              })
-                            }
-                          >
-                            Roll
-                          </Button>
-                        )}
-                      </span>
-                    </label>
-                  ),
-                ],
-          )}
-        </section>
-      );
-    }
-    case "text": {
-      const fields = section.fields.map((f) => (
-        <CharacterText
-          key={f.field}
-          campaign={campaign}
-          c={c}
-          field={f.field}
-          label={f.label}
-          editable={editable}
-          {...(f.placeholder ? { placeholder: f.placeholder } : {})}
-        />
-      ));
-      if (!section.label) return fields;
-      return (
-        <section className="form-section sheet-section" aria-label={section.label}>
-          <h3 className="sheet-heading">{section.label}</h3>
-          {fields}
-        </section>
-      );
-    }
-  }
+type SectionOf<K extends SheetSection["kind"]> = SectionContext & {
+  section: Extract<SheetSection, { kind: K }>;
+};
+
+function LoadoutSection({ section, ...context }: SectionOf<"loadout">) {
+  return <Loadout {...context} id={section.loadout} />;
+}
+
+function CountersSection({ section, ...context }: SectionOf<"counters">) {
+  return (
+    <section className="form-section sheet-section" aria-label="Vitals">
+      <h3 className="sheet-heading">Vitals</h3>
+      <div className="sheet-vitals">
+        {section.items.map((item) => (
+          <SheetNumber key={item.label} {...context} item={item} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function StatsSection({ section, ...context }: SectionOf<"stats">) {
+  return (
+    <Stats
+      {...context}
+      label={section.label}
+      hint={section.hint}
+      showScore={section.showScore !== false}
+    />
+  );
+}
+
+function InventorySection({ campaign, c, d, editable }: SectionOf<"inventory">) {
+  return (
+    <Inventory campaign={campaign} c={c} {...(c.kind === "pc" ? { d } : {})} editable={editable} />
+  );
+}
+
+/** The view for each kind of section. */
+const SECTION_VIEWS: {
+  [K in SheetSection["kind"]]: ComponentType<SectionOf<K>>;
+} = {
+  header: HeaderSection,
+  choices: ChoicesSection,
+  fields: FieldsSection,
+  loadout: LoadoutSection,
+  counters: CountersSection,
+  advancement: Advancement,
+  derived: DerivedSection,
+  stats: StatsSection,
+  modifiers: ModifiersSection,
+  actions: ActionsSection,
+  inventory: InventorySection,
+  npcFields: NpcFieldsSection,
+  text: TextSection,
+};
+
+export function SheetSectionView({
+  section,
+  ...context
+}: SectionContext & { section: SheetSection }) {
+  const View = SECTION_VIEWS[section.kind] as ComponentType<
+    SectionContext & { section: SheetSection }
+  >;
+  return <View {...context} section={section} />;
 }
 
 /** One number: a resource, a data field or the level. */
@@ -640,7 +346,7 @@ function Stats({
   label,
   hint,
   showScore,
-}: Omit<SectionProps, "section"> & {
+}: SectionContext & {
   label: string;
   hint?: string | undefined;
   showScore: boolean;
@@ -788,14 +494,4 @@ function Stats({
       {menu && <ContextMenu {...menu} onClose={() => setMenu(null)} />}
     </section>
   );
-}
-
-/** Whether the text is a dice formula the roller reads. */
-function isFormula(text: string) {
-  try {
-    parse(text);
-    return true;
-  } catch {
-    return false;
-  }
 }
