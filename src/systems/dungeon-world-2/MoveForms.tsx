@@ -13,7 +13,7 @@ import { useQuery } from "../../ui/useQuery";
 import { derive } from "../../features/characters/store";
 import type { MoveFormProps } from "../extensionTypes";
 import { DW2_SERVICES, type ServiceRank } from "./wealth";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   beginDowntime,
   carouse,
@@ -104,10 +104,7 @@ export function ComfortOrSupport({ sheet }: MoveFormProps) {
   const [benefitKinds, setBenefitKinds] = useState<Record<number, string>>({});
   const [conditionPicks, setConditionPicks] = useState<Record<number, string>>({});
   const used = useUsedThisSession(sheet, "comfort-or-support");
-  const partyJson = useQuery(sheet.campaign.characters, () =>
-    JSON.stringify(listCharacters(sheet.campaign).filter((character) => character.kind === "pc")),
-  );
-  const party = JSON.parse(partyJson) as CharacterView[];
+  const party = usePlayerCharacters(sheet.campaign);
   const comforted = party.find((character) => character.id === comfortedId);
   const receiverDepth = useQuery(sheet.campaign.characters, () =>
     comforted
@@ -255,10 +252,7 @@ export function PerilousJourney({ sheet }: MoveFormProps) {
   const [pace, setPace] = useState<JourneyPace>("regular");
   const [chosenLeaderId, setChosenLeaderId] = useState<string | null>(null);
   const [conditions, setConditions] = useState<Record<string, string>>({});
-  const partyJson = useQuery(sheet.campaign.characters, () =>
-    JSON.stringify(listCharacters(sheet.campaign).filter((character) => character.kind === "pc")),
-  );
-  const party = JSON.parse(partyJson) as CharacterView[];
+  const party = usePlayerCharacters(sheet.campaign);
   const leaderId = chosenLeaderId ?? sheet.c.id;
   const leader = party.find((character) => character.id === leaderId);
   const affected = pace === "quick" ? party : pace === "regular" && leader ? [leader] : [];
@@ -340,28 +334,34 @@ export function PerilousJourney({ sheet }: MoveFormProps) {
   );
 }
 
-export function Downtime({ sheet }: MoveFormProps) {
+/** The campaign's player characters, kept current as they change. */
+function usePlayerCharacters(campaign: MoveFormProps["sheet"]["campaign"]): CharacterView[] {
+  const json = useQuery(campaign.characters, () =>
+    JSON.stringify(listCharacters(campaign).filter((character) => character.kind === "pc")),
+  );
+  return useMemo(() => JSON.parse(json) as CharacterView[], [json]);
+}
+
+/** Whether Downtime is open and the character has a Treasure to spend. */
+function useCanSpendTreasure(sheet: MoveFormProps["sheet"]) {
+  const epoch = useQuery(sheet.campaign.systemData, () =>
+    dungeonWorld2DowntimeEpoch(sheet.campaign),
+  );
+  const boxes = useQuery(sheet.campaign.characters, () =>
+    Number(getCharacter(sheet.campaign, sheet.c.id)?.data.treasureBoxes ?? 0),
+  );
+  return sheet.editable && epoch !== 0 && boxes >= 1;
+}
+
+function Carouse({ sheet }: MoveFormProps) {
   const ctx = useCampaign();
+  const canSpend = useCanSpendTreasure(sheet);
   const [benefit, setBenefit] = useState<"clear-locked" | "gain-depth">(
     sheet.c.lockedConditions?.length ? "clear-locked" : "gain-depth",
   );
   const [condition, setCondition] = useState(sheet.c.lockedConditions?.[0] ?? "");
   const [partyId, setPartyId] = useState("");
-  const [serviceId, setServiceId] = useState(DW2_SERVICES[0]!.id);
-  const [serviceRank, setServiceRank] = useState<ServiceRank>(2);
-  const epoch = useQuery(sheet.campaign.systemData, () =>
-    dungeonWorld2DowntimeEpoch(sheet.campaign),
-  );
-  const trained = useQuery(sheet.campaign.systemData, () =>
-    trainedDuringDungeonWorld2Downtime(sheet.campaign, sheet.c.id),
-  );
-  const partyJson = useQuery(sheet.campaign.characters, () =>
-    JSON.stringify(listCharacters(sheet.campaign).filter((character) => character.kind === "pc")),
-  );
-  const boxes = useQuery(sheet.campaign.characters, () =>
-    Number(getCharacter(sheet.campaign, sheet.c.id)?.data.treasureBoxes ?? 0),
-  );
-  const party = JSON.parse(partyJson) as CharacterView[];
+  const party = usePlayerCharacters(sheet.campaign);
   const others = party.filter((character) => character.id !== sheet.c.id);
   const selectedPartyId = partyId || others[0]?.id;
   const canClearLocked = (sheet.c.lockedConditions?.length ?? 0) > 0;
@@ -373,13 +373,9 @@ export function Downtime({ sheet }: MoveFormProps) {
         (entry) => entry.to === selectedPartyId,
       )?.depth ?? 0) < 3,
   );
+  const canCarouse = benefit === "clear-locked" ? canClearLocked : canGainDepth;
   return (
-    <section className="move-form-section" aria-label="Enjoy Downtime">
-      {can(ctx, beginDowntime, undefined) && (
-        <Button variant="secondary" onClick={() => ctx.execute(beginDowntime, undefined)}>
-          Begin Downtime
-        </Button>
-      )}
+    <>
       <label className="field">
         Carouse
         <select
@@ -412,7 +408,7 @@ export function Downtime({ sheet }: MoveFormProps) {
         <label className="field">
           PC
           <select
-            value={partyId || others[0]?.id || ""}
+            value={selectedPartyId ?? ""}
             onChange={(event) => setPartyId(event.currentTarget.value)}
           >
             {others.map((character) => (
@@ -425,30 +421,29 @@ export function Downtime({ sheet }: MoveFormProps) {
       )}
       <Button
         variant="secondary"
-        disabled={
-          !sheet.editable ||
-          epoch === 0 ||
-          boxes < 1 ||
-          (benefit === "clear-locked" ? !canClearLocked : !canGainDepth)
-        }
+        disabled={!canSpend || !canCarouse}
         onClick={() =>
           ctx.execute(carouse, {
             characterId: sheet.c.id,
             benefit,
-            target: partyId || others[0]?.id,
+            target: selectedPartyId,
             condition,
           })
         }
       >
         Carouse
       </Button>
-      <Button
-        variant="secondary"
-        disabled={!sheet.editable || epoch === 0 || boxes < 1}
-        onClick={() => ctx.execute(resupply, { characterId: sheet.c.id })}
-      >
-        Resupply (1 Treasure)
-      </Button>
+    </>
+  );
+}
+
+function ShopService({ sheet }: MoveFormProps) {
+  const ctx = useCampaign();
+  const canSpend = useCanSpendTreasure(sheet);
+  const [serviceId, setServiceId] = useState(DW2_SERVICES[0]!.id);
+  const [serviceRank, setServiceRank] = useState<ServiceRank>(2);
+  return (
+    <>
       <label className="field">
         Shop service
         <select value={serviceId} onChange={(event) => setServiceId(event.currentTarget.value)}>
@@ -472,16 +467,42 @@ export function Downtime({ sheet }: MoveFormProps) {
       </label>
       <Button
         variant="secondary"
-        disabled={!sheet.editable || epoch === 0 || boxes < 1}
+        disabled={!canSpend}
         onClick={() =>
           void ctx.execute(shop, { characterId: sheet.c.id, service: serviceId, rank: serviceRank })
         }
       >
         Shop (1 Treasure)
       </Button>
+    </>
+  );
+}
+
+export function Downtime({ sheet }: MoveFormProps) {
+  const ctx = useCampaign();
+  const canSpend = useCanSpendTreasure(sheet);
+  const trained = useQuery(sheet.campaign.systemData, () =>
+    trainedDuringDungeonWorld2Downtime(sheet.campaign, sheet.c.id),
+  );
+  return (
+    <section className="move-form-section" aria-label="Enjoy Downtime">
+      {can(ctx, beginDowntime, undefined) && (
+        <Button variant="secondary" onClick={() => ctx.execute(beginDowntime, undefined)}>
+          Begin Downtime
+        </Button>
+      )}
+      <Carouse sheet={sheet} />
       <Button
         variant="secondary"
-        disabled={!sheet.editable || boxes < 1 || epoch === 0 || trained}
+        disabled={!canSpend}
+        onClick={() => ctx.execute(resupply, { characterId: sheet.c.id })}
+      >
+        Resupply (1 Treasure)
+      </Button>
+      <ShopService sheet={sheet} />
+      <Button
+        variant="secondary"
+        disabled={!canSpend || trained}
         onClick={() => ctx.execute(train, { characterId: sheet.c.id })}
       >
         {trained ? "Trained this Downtime" : "Train (1 Treasure for 1 XP)"}
@@ -495,10 +516,7 @@ export function MakeCamp({ sheet }: MoveFormProps) {
   const [selections, setSelections] = useState<Record<string, string>>({});
   const [repairs, setRepairs] = useState<Record<string, string>>({});
   const used = useUsedThisSession(sheet, "make-camp");
-  const partyJson = useQuery(sheet.campaign.characters, () =>
-    JSON.stringify(listCharacters(sheet.campaign).filter((character) => character.kind === "pc")),
-  );
-  const party = JSON.parse(partyJson) as CharacterView[];
+  const party = usePlayerCharacters(sheet.campaign);
   const choices = Object.fromEntries(
     party.map((character) => {
       const marked = character.conditions.filter(

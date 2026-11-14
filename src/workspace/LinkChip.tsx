@@ -1,15 +1,13 @@
-import { useRef, useState } from "react";
-import { getNote } from "../features/notes/api";
+import { useState } from "react";
 import type { LinkKind } from "../features/notes/links";
 import { linkLabel, linkTip } from "../features/notes/targets";
 import type { Campaign } from "../campaign/campaign";
 import { menuTrigger } from "../ui/menuTrigger";
-import { IconImage, IconOpenWindow, IconSidebar } from "../ui/icons";
-import { ContextMenu } from "../ui/ContextMenu";
-import { actionMenuItems } from "./actionMenu";
+import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
 import { dragEntity } from "./entityDrag";
 import { entity } from "./dragEntities";
-import { linkActionItems } from "./linkActions";
+import { linkMenuSections } from "./linkActions";
+import { joinSections } from "./commands/views";
 import { useCampaign } from "./campaignContext";
 
 /**
@@ -28,55 +26,48 @@ export function LinkChip({
   id: string;
   text?: string | undefined;
 }) {
-  const ctx = useCampaign();
   const name = linkLabel(campaign, kind, id);
-  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
-  const linkElement = useRef<HTMLSpanElement>(null);
-  const actionId = kind === "move" ? `move:${id}` : kind === "item" ? `library:${id}` : null;
-  const actionItems = actionId
-    ? actionMenuItems(ctx, [{ id: actionId, title: text || name || undefined }])
-    : [];
-  const primaryItems = linkActionItems(ctx, { kind, id });
-  const canChangeGraphic = kind !== "note" || !getNote(campaign, id)?.gmOnly;
-  const items = [
-    {
-      label: "Open in a Window",
-      Icon: IconOpenWindow,
-      onSelect: () => {
-        if (linkElement.current) ctx.linkPopups.show({ kind, id }, linkElement.current);
-      },
-    },
-    {
-      label: "Open in Sidebar",
-      Icon: IconSidebar,
-      onSelect: () => ctx.links.openInSidebar(kind, id),
-    },
-    ...(primaryItems.length ? (["divider"] as const) : []),
-    ...primaryItems,
-    ...(actionItems.length ? (["divider"] as const) : []),
-    ...actionItems,
-    ...(actionItems.length && canChangeGraphic ? (["divider"] as const) : []),
-    ...(canChangeGraphic
-      ? [
-          {
-            label: "Change Graphic…",
-            Icon: IconImage,
-            onSelect: () => ctx.table.editGraphic(kind, id, name ?? text ?? "Entity"),
-          },
-        ]
-      : []),
-  ];
-  const trigger = menuTrigger((x, y) => setMenu({ x, y }));
   if (name === null)
     return (
-      <span ref={linkElement} className="note-link" data-missing="true" data-tip="Not available">
+      <span className="note-link" data-missing="true" data-tip="Not available">
         {text || "Unavailable"}
       </span>
     );
-  const shown = text || name;
+  return <LiveLinkChip campaign={campaign} kind={kind} id={id} shown={text || name} />;
+}
+
+function LiveLinkChip({
+  campaign,
+  kind,
+  id,
+  shown,
+}: {
+  campaign: Campaign;
+  kind: LinkKind;
+  id: string;
+  shown: string;
+}) {
+  const ctx = useCampaign();
+  const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
+  const [button, setButton] = useState<HTMLButtonElement | null>(null);
+  // The menu is built as it opens, from where the chip is then.
+  const trigger = menuTrigger((x, y) =>
+    setMenu({
+      x,
+      y,
+      items: joinSections(
+        linkMenuSections(
+          ctx,
+          { kind, id },
+          { title: shown, openInWindow: () => button && ctx.linkPopups.show({ kind, id }, button) },
+        ),
+      ),
+    }),
+  );
   return (
     <>
       <button
+        ref={setButton}
         type="button"
         className="note-link"
         data-kind={kind}
@@ -85,16 +76,14 @@ export function LinkChip({
         data-tip-opens="true"
         onClick={(e) => ctx.linkPopups.show({ kind, id }, e.currentTarget)}
         onPointerDown={(e) => {
-          if (items.length) trigger.onPointerDown(e);
+          trigger.onPointerDown(e);
           dragEntity(ctx.canvas, e, entity(ctx, kind, id, shown));
         }}
-        onContextMenu={items.length ? trigger.onContextMenu : undefined}
+        onContextMenu={(e) => trigger.onContextMenu(e)}
       >
         {shown}
       </button>
-      {menu && items.length > 0 && (
-        <ContextMenu {...menu} items={items} onClose={() => setMenu(null)} />
-      )}
+      {menu && <ContextMenu {...menu} onClose={() => setMenu(null)} />}
     </>
   );
 }

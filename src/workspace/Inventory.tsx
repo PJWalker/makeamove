@@ -9,6 +9,7 @@ import { RichTextView } from "./RichTextView";
 import { List } from "../ui/List";
 import { EntryRow, EntryWindow } from "./EntryWindow";
 import { useEntryWindows } from "./entryWindowState";
+import { inventoryKey } from "./entryKeys";
 import { linkProxy } from "./linkProxy";
 import { actionMenuItems } from "./actionMenu";
 import { dragEntity } from "./entityDrag";
@@ -241,7 +242,7 @@ export function Inventory({
               meta={metaOf(i)}
               tip={tipOf(i)}
               dim={(i.equippable && !i.equipped) || i.broken}
-              onOpen={(row) => windows.show(`inventory:${c.id}:${i.id}`, row)}
+              onOpen={(row) => windows.show(inventoryKey(c.id, i.id), row)}
               onPointerDown={(ev) => {
                 const source = i.defId
                   ? entity(ctx, "item", i.defId, i.name)
@@ -277,7 +278,7 @@ export function Inventory({
         </Button>
       )}
       {windows.keys.map((key) => {
-        const i = c.inventory.find((k) => `inventory:${c.id}:${k.id}` === key);
+        const i = c.inventory.find((k) => inventoryKey(c.id, k.id) === key);
         if (!i) return null;
         return (
           <EntryWindow

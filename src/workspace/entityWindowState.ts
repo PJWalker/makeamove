@@ -60,8 +60,11 @@ function readSaved(stored: unknown): SavedEntityWindow[] {
 
 const ENTRY_PREFIX = "entity:entry:";
 
-const entryKeysOf = (ids: Iterable<string>) =>
-  [...ids].flatMap((id) => (id.startsWith(ENTRY_PREFIX) ? [id.slice(ENTRY_PREFIX.length)] : []));
+/** The entry key inside an entry window's id, if it is one. */
+export const entryKeyOf = (id: string) =>
+  id.startsWith(ENTRY_PREFIX) ? id.slice(ENTRY_PREFIX.length) : undefined;
+
+const entryKeysOf = (ids: Iterable<string>) => [...ids].flatMap((id) => entryKeyOf(id) ?? []);
 
 export const entityTabId = (key: string) => `entity:${key}` as const;
 

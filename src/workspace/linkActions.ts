@@ -1,5 +1,8 @@
 import { actingCharacterId, canEdit, getCharacter, systemOf } from "../features/characters/api";
+import { getNote } from "../features/notes/api";
 import type { MenuItem } from "../ui/ContextMenu";
+import { IconImage, IconOpenWindow, IconSidebar } from "../ui/icons";
+import { actionMenuItems } from "./actionMenu";
 import type { CampaignContext } from "./campaignContext";
 import { giveItem, startMove } from "./commands/characters";
 import type { LinkRef } from "./linkState";
@@ -40,4 +43,42 @@ export function linkActionItems(ctx: CampaignContext, link: LinkRef): MenuItem[]
       : [];
   }
   return [];
+}
+
+/**
+ * The right-click menu sections for a link, wherever it appears: its primary
+ * action, pinning, changing its graphic, and opening it elsewhere. `title` is
+ * what the link says; `openInWindow` is absent where a click already does that.
+ */
+export function linkMenuSections(
+  ctx: CampaignContext,
+  link: LinkRef,
+  { title, openInWindow }: { title: string | undefined; openInWindow?: () => void },
+): MenuItem[][] {
+  const { kind, id } = link;
+  const actionId = kind === "move" ? `move:${id}` : kind === "item" ? `library:${id}` : null;
+  const canChangeGraphic = kind !== "note" || !getNote(ctx.campaign, id)?.gmOnly;
+  return [
+    linkActionItems(ctx, link),
+    actionId ? actionMenuItems(ctx, [{ id: actionId, title }]) : [],
+    canChangeGraphic
+      ? [
+          {
+            label: "Change Graphic…",
+            Icon: IconImage,
+            onSelect: () => ctx.table.editGraphic(kind, id, title ?? "Entity"),
+          },
+        ]
+      : [],
+    [
+      {
+        label: "Open in Sidebar",
+        Icon: IconSidebar,
+        onSelect: () => ctx.links.openInSidebar(kind, id),
+      },
+      ...(openInWindow
+        ? [{ label: "Open in a Window", Icon: IconOpenWindow, onSelect: openInWindow }]
+        : []),
+    ],
+  ];
 }

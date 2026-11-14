@@ -7,15 +7,17 @@ import {
   actingCharacterId,
   systemOf,
 } from "../features/characters/api";
+import type { ItemInstance } from "../features/characters/types";
 import { checkOf } from "../features/characters/moves";
 import { useQuery } from "../ui/useQuery";
 import { entryByKey, librariesFor, useLibrariesFor } from "../features/library";
-import { IconOpenWindow, type Icon } from "../ui/icons";
+import { IconOpenWindow } from "../ui/icons";
 import { IconPost, IconRoll, IconTarget } from "../ui/icons";
 import { Button } from "../ui/Button";
 import { usePopupDialog } from "./usePopupDialog";
 import { Dialog } from "./Dialog";
-import type { EntityWindowRecord } from "./entityWindowState";
+import { entryKeyOf, type EntityWindowRecord } from "./entityWindowState";
+import { parseEntryKey, type EntryRef } from "./entryKeys";
 import type { MenuItem } from "../ui/ContextMenu";
 import { menuTrigger } from "../ui/menuTrigger";
 import { ContextMenu } from "../ui/ContextMenu";
@@ -31,24 +33,10 @@ export function EntityWindowHost({ campaign }: { campaign: Campaign }) {
       ...ctx.panels.layout.value.right.panels,
       ...ctx.panels.layout.value.floating.map((win) => win.id),
     ];
-    const system = systemOf(campaign);
-    const sources = librariesFor(system);
     for (const id of ids) {
-      if (!id.startsWith("entity:entry:")) continue;
-      const key = id.slice("entity:entry:".length);
-      if (key.startsWith("inventory:")) {
-        const parts = key.slice("inventory:".length).split(":");
-        const character = parts.length === 2 ? getCharacter(campaign, parts[0]) : undefined;
-        if (!character?.inventory.some((item) => item.id === parts[1])) ctx.windows.close(id);
-      } else if (key.startsWith("move:")) {
-        const moveId = key.split(":").at(-1);
-        if (!system.actions.some((move) => move.id === moveId)) ctx.windows.close(id);
-      } else if (key.startsWith("lib:")) {
-        const found = entryByKey(sources, key);
-        if (found && !found.entry) {
-          ctx.windows.close(id);
-        }
-      }
+      const key = entryKeyOf(id);
+      const ref = key === undefined ? undefined : parseEntryKey(key);
+      if (ref && !entryExists(campaign, ref)) ctx.windows.close(id);
     }
   }, [ctx, campaign]);
   const records = useQuery(ctx.windows.records);
@@ -116,174 +104,144 @@ export function EntityWindowContent({
   campaign: Campaign;
   record: EntityWindowRecord;
 }) {
-  const ctx = useCampaign();
-  const key = record.id.startsWith("entity:entry:") ? record.id.slice("entity:entry:".length) : "";
-  const inventoryParts = key.startsWith("inventory:")
-    ? key.slice("inventory:".length).split(":")
-    : [];
-  const inventoryCharacterId = inventoryParts.length === 2 ? inventoryParts[0] : undefined;
-  const moveParts = key.startsWith("move:") ? key.slice("move:".length).split(":") : [];
-  const moveOwnerId = moveParts.length > 1 ? moveParts[0] : undefined;
-  const moveId = moveParts.length > 1 ? moveParts.slice(1).join(":") : moveParts[0];
-  const system = useQuery(campaign.homebrew, () => systemOf(campaign));
-  const selectedId = useQuery(campaign.members, () => actingCharacterId(campaign));
-  const selectedCharacter = useQuery(campaign.characters, () => getCharacter(campaign, selectedId));
-  const inventoryCharacter = useQuery(campaign.characters, () =>
-    getCharacter(campaign, inventoryCharacterId),
-  );
-  const moveCharacter = useQuery(campaign.characters, () =>
-    getCharacter(campaign, moveOwnerId ?? selectedId),
-  );
-  const libraries = useLibrariesFor(baseSystemOf(campaign));
-
   if (record.content) return record.content;
-
+  const key = entryKeyOf(record.id);
+  const ref = key === undefined ? undefined : parseEntryKey(key);
   const text = (
     <p className="move-text move-window-text">{record.text ?? "This window is not available."}</p>
   );
-  if (inventoryCharacter && inventoryParts.length === 2) {
-    const item = inventoryCharacter.inventory.find(
-      (candidate) => candidate.id === inventoryParts[1],
-    );
-    if (!item) return text;
-    const editable = canEdit(campaign, inventoryCharacter);
-    return (
-      <>
-        {text}
-        {item.equippable && (
-          <Button
-            pressed={item.equipped}
-            disabled={!editable}
-            onClick={() =>
-              ctx.execute(updateItem, {
-                characterId: inventoryCharacter.id,
-                itemId: item.id,
-                patch: {
-                  equipped: !item.equipped,
-                },
-              })
-            }
-          >
-            {item.equipped ? "Equipped" : "Equip"}
-          </Button>
-        )}
-        {item.uses !== undefined && (
-          <Button
-            disabled={!editable || !item.usesLeft}
-            onClick={() =>
-              ctx.execute(updateItem, {
-                characterId: inventoryCharacter.id,
-                itemId: item.id,
-                patch: {
-                  usesLeft: Math.max(0, (item.usesLeft ?? 0) - 1),
-                },
-              })
-            }
-          >
-            Use
-          </Button>
-        )}
-      </>
-    );
-  }
-
-  if (key.startsWith("lib:")) {
-    const entry = entryByKey(libraries, key)?.entry;
-    if (!entry) return text;
-    const editable = !!selectedCharacter && canEdit(campaign, selectedCharacter);
-    if (entry.kind === "item") {
-      return (
-        <>
-          {text}
-          <Button
-            variant="primary"
-            disabled={!editable}
-            onClick={() =>
-              selectedCharacter &&
-              ctx.execute(giveItem, { characterId: selectedCharacter.id, item: entry.item })
-            }
-          >
-            {selectedCharacter ? `Give to ${selectedCharacter.name}` : "Choose a Character"}
-          </Button>
-        </>
-      );
-    }
-    if (entry.kind === "move") {
-      return (
-        <>
-          {text}
-          <MoveAction
-            campaign={campaign}
-            move={entry.move}
-            character={selectedCharacter}
-            enabled={editable}
-          />
-        </>
-      );
-    }
-    return text;
-  }
-
-  if (moveParts.length && moveCharacter) {
-    const move = system.actions.find((candidate) => candidate.id === moveId);
-    if (!move) return text;
-    const editable = canEdit(campaign, moveCharacter);
-    const action = move.target
-      ? { label: "Target", Icon: IconTarget }
-      : checkOf(move)
-        ? { label: "Roll", Icon: IconRoll }
-        : { label: "Post", Icon: IconPost };
-    return (
-      <>
-        {text}
-        {moveCharacter.learned.includes(move.id) && editable && (
-          <Button
-            variant="ghost"
-            onClick={() =>
-              ctx.execute(setLearned, { id: moveCharacter.id, action: move.id, known: false })
-            }
-          >
-            Forget
-          </Button>
-        )}
-        <MoveAction
-          campaign={campaign}
-          move={move}
-          character={moveCharacter}
-          enabled={editable}
-          label={action.label}
-          Icon={action.Icon}
-        />
-      </>
-    );
-  }
-
-  return text;
+  return (
+    <>
+      {text}
+      {ref?.kind === "inventory" && <InventoryActions campaign={campaign} entry={ref} />}
+      {ref?.kind === "lib" && <LibraryActions campaign={campaign} entry={ref} />}
+      {ref?.kind === "move" && <MoveActions campaign={campaign} entry={ref} />}
+    </>
+  );
 }
 
+/** Whether what an entry window shows still exists. */
+function entryExists(campaign: Campaign, ref: EntryRef) {
+  if (ref.kind === "inventory")
+    return !!getCharacter(campaign, ref.characterId)?.inventory.some((i) => i.id === ref.itemId);
+  if (ref.kind === "move") return systemOf(campaign).actions.some((m) => m.id === ref.moveId);
+  const found = entryByKey(librariesFor(systemOf(campaign)), ref.key);
+  return !found || !!found.entry;
+}
+
+function InventoryActions({
+  campaign,
+  entry: { characterId, itemId },
+}: {
+  campaign: Campaign;
+  entry: Extract<EntryRef, { kind: "inventory" }>;
+}) {
+  const ctx = useCampaign();
+  const character = useQuery(campaign.characters, () => getCharacter(campaign, characterId));
+  const item = character?.inventory.find((candidate) => candidate.id === itemId);
+  if (!character || !item) return null;
+  const editable = canEdit(campaign, character);
+  const patch = (changes: Partial<ItemInstance>) =>
+    ctx.execute(updateItem, { characterId, itemId, patch: changes });
+  return (
+    <>
+      {item.equippable && (
+        <Button
+          pressed={item.equipped}
+          disabled={!editable}
+          onClick={() => patch({ equipped: !item.equipped })}
+        >
+          {item.equipped ? "Equipped" : "Equip"}
+        </Button>
+      )}
+      {item.uses !== undefined && (
+        <Button
+          disabled={!editable || !item.usesLeft}
+          onClick={() => patch({ usesLeft: Math.max(0, (item.usesLeft ?? 0) - 1) })}
+        >
+          Use
+        </Button>
+      )}
+    </>
+  );
+}
+
+function LibraryActions({
+  campaign,
+  entry: ref,
+}: {
+  campaign: Campaign;
+  entry: Extract<EntryRef, { kind: "lib" }>;
+}) {
+  const ctx = useCampaign();
+  const libraries = useLibrariesFor(baseSystemOf(campaign));
+  const selectedId = useQuery(campaign.members, () => actingCharacterId(campaign));
+  const character = useQuery(campaign.characters, () => getCharacter(campaign, selectedId));
+  const entry = entryByKey(libraries, ref.key)?.entry;
+  const editable = !!character && canEdit(campaign, character);
+  if (entry?.kind === "item")
+    return (
+      <Button
+        variant="primary"
+        disabled={!editable}
+        onClick={() =>
+          character && ctx.execute(giveItem, { characterId: character.id, item: entry.item })
+        }
+      >
+        {character ? `Give to ${character.name}` : "Choose a Character"}
+      </Button>
+    );
+  if (entry?.kind === "move")
+    return <MoveAction move={entry.move} character={character} enabled={editable} />;
+  return null;
+}
+
+function MoveActions({
+  campaign,
+  entry: { ownerId, moveId },
+}: {
+  campaign: Campaign;
+  entry: Extract<EntryRef, { kind: "move" }>;
+}) {
+  const ctx = useCampaign();
+  const system = useQuery(campaign.homebrew, () => systemOf(campaign));
+  const character = useQuery(campaign.characters, () => getCharacter(campaign, ownerId));
+  const move = system.actions.find((candidate) => candidate.id === moveId);
+  if (!character || !move) return null;
+  const editable = canEdit(campaign, character);
+  return (
+    <>
+      {character.learned.includes(move.id) && editable && (
+        <Button
+          variant="ghost"
+          onClick={() =>
+            ctx.execute(setLearned, { id: character.id, action: move.id, known: false })
+          }
+        >
+          Forget
+        </Button>
+      )}
+      <MoveAction move={move} character={character} enabled={editable} />
+    </>
+  );
+}
+
+/** The button that starts a move as a character: it targets, rolls or posts, by what the move does. */
 function MoveAction({
   move,
   character,
   enabled,
-  label,
-  Icon,
 }: {
-  campaign: Campaign;
   move: ReturnType<typeof systemOf>["actions"][number];
   character: ReturnType<typeof getCharacter>;
   enabled: boolean;
-  label?: string;
-  Icon?: Icon;
 }) {
   const ctx = useCampaign();
-  const action =
-    label && Icon
-      ? { label, Icon }
-      : move.target
-        ? { label: "Target", Icon: IconTarget }
-        : checkOf(move)
-          ? { label: "Roll", Icon: IconRoll }
-          : { label: "Post", Icon: IconPost };
+  const { label, Icon } = move.target
+    ? { label: "Target", Icon: IconTarget }
+    : checkOf(move)
+      ? { label: "Roll", Icon: IconRoll }
+      : { label: "Post", Icon: IconPost };
   return (
     <Button
       variant="primary"
@@ -292,7 +250,7 @@ function MoveAction({
         character && ctx.execute(startMove, { characterId: character.id, move: move.id })
       }
     >
-      <action.Icon size={22} /> {action.label}
+      <Icon size={22} /> {label}
       {character ? ` as ${character.name}` : ""}
     </Button>
   );

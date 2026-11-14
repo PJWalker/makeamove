@@ -1,7 +1,7 @@
 import { plainText } from "../data/richText";
 import { MoveBody } from "../workspace/MoveBody";
 import type { ReactNode } from "react";
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { canEdit, getCharacter, actingCharacterId, systemOf } from "../features/characters/api";
 import { getNote } from "../features/notes/api";
 import { linkLabel } from "../features/notes/targets";
@@ -14,6 +14,7 @@ import { Dialog } from "../workspace/Dialog";
 import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
 import { EntryWindow } from "../workspace/EntryWindow";
 import { linkKey, type LinkRef } from "../workspace/linkState";
+import { joinSections } from "../workspace/commands/views";
 import { linkActionItems } from "../workspace/linkActions";
 import { NoteEditor } from "./NoteEditor";
 import { CharacterSheet } from "./sheets";
@@ -104,149 +105,175 @@ function LinkDialog({
   return null;
 }
 
-function LinkPopup({ campaign, link }: { campaign: Campaign; link: LinkRef }) {
-  const ctx = useCampaign();
-  const system = systemOf(campaign);
-  const close = () => ctx.linkPopups.close(link);
-  const entryKey = `link:${linkKey(link)}`;
-  // Gear and moves go to the character this device is playing, if they can change it.
+type PopupProps = { campaign: Campaign; link: LinkRef };
+
+/** The character this device is playing, if they can change it: gear and moves go to them. */
+function useActingCharacter(campaign: Campaign) {
   const me = useQuery(campaign.characters, () =>
     getCharacter(campaign, actingCharacterId(campaign)),
   );
-  const canAct = !!me && canEdit(campaign, me);
-  const character = useQuery(campaign.characters, () =>
-    link.kind === "character" ? getCharacter(campaign, link.id) : undefined,
-  );
-  const scene = useQuery(campaign.scenes, () =>
-    link.kind === "scene" ? campaign.sceneViews().find((s) => s.id === link.id) : undefined,
-  );
-  const note = useQuery(campaign.notes, () =>
-    link.kind === "note" ? getNote(campaign, link.id) : undefined,
-  );
+  return { me, canAct: !!me && canEdit(campaign, me) };
+}
 
-  switch (link.kind) {
-    case "item": {
-      const item = system.items.find((i) => i.id === link.id);
-      if (!item) return null;
-      return (
-        <EntryWindow
-          entryKey={entryKey}
-          windowId={entityTabId(`link:${linkKey(link)}`)}
-          title={item.name}
-          text={item.description}
-          tags={item.tags}
-          onClose={close}
-          proxy={linkProxy(ctx, "item", item.id, item.name, item.icon)}
-          menuItems={[
-            ...linkActionItems(ctx, link),
-            ...actionMenuItems(ctx, [{ id: `library:${item.id}`, title: item.name }]),
-          ]}
-        >
-          <Button
-            variant="primary"
-            disabled={!canAct}
-            onClick={() => me && ctx.execute(giveItem, { characterId: me.id, item })}
-          >
-            {me ? `Give to ${me.name}` : "Choose a Character First"}
-          </Button>
-        </EntryWindow>
-      );
-    }
-    case "move": {
-      const move = system.actions.find((m) => m.id === link.id);
-      if (!move) return null;
-      const { label, Icon } = makeVerb(move);
-      const tag = rollTag(system, move);
-      return (
-        <EntryWindow
-          entryKey={entryKey}
-          windowId={entityTabId(`link:${linkKey(link)}`)}
-          title={move.name}
-          text={plainText(move.text)}
-          body={<MoveBody campaign={campaign} move={move} characterId={me?.id ?? null} />}
-          tags={tag ? [tag] : undefined}
-          onClose={close}
-          proxy={linkProxy(
-            ctx,
-            "move",
-            move.id,
-            move.name,
-            move.category === "class" ? "class-move" : undefined,
-          )}
-          menuItems={[
-            ...linkActionItems(ctx, link),
-            ...actionMenuItems(ctx, [{ id: `move:${move.id}`, title: move.name }]),
-          ]}
-        >
-          <Button
-            variant="primary"
-            disabled={!canAct}
-            onClick={() => me && ctx.execute(startMove, { characterId: me.id, move: move.id })}
-          >
-            <Icon size={22} /> {label}
-            {me ? ` as ${me.name}` : ""}
-          </Button>
-        </EntryWindow>
-      );
-    }
-    case "character":
-      return character ? (
-        <LinkDialog
-          campaign={campaign}
-          link={link}
-          title={character.name}
-          menuItems={[
-            {
-              label: "Open in Sidebar",
-              onSelect: () => ctx.links.followLink("character", character.id),
-            },
-          ]}
-        >
-          <div className="popup-sheet sheet-panel">
-            <CharacterSheet campaign={campaign} system={system} c={character} />
-          </div>
-        </LinkDialog>
-      ) : null;
-    case "scene":
-      return scene ? (
-        <LinkDialog
-          campaign={campaign}
-          link={link}
-          title={scene.name}
-          menuItems={[
-            {
-              label: "Go to Scene",
-              onSelect: () => ctx.links.followLink("scene", scene.id),
-            },
-          ]}
-        >
-          <p className="muted">A scene in this campaign.</p>
-          <div className="form-actions">
-            <Button variant="primary" onClick={() => ctx.links.followLink("scene", scene.id)}>
-              Go to Scene
-            </Button>
-          </div>
-        </LinkDialog>
-      ) : null;
-    case "note":
-      return note ? (
-        <LinkDialog
-          campaign={campaign}
-          link={link}
-          title={note.title || "Untitled"}
-          menuItems={[
-            {
-              label: "Open in Sidebar",
-              onSelect: () => ctx.links.followLink("note", note.id),
-            },
-          ]}
-        >
-          <div className="link-note">
-            <NoteEditor campaign={campaign} noteId={note.id} active />
-          </div>
-        </LinkDialog>
-      ) : null;
-  }
+/** What a link to a gear item or move offers from its menu: its action, and pinning it. */
+function useEntryMenu(link: LinkRef, actionId: string, title: string) {
+  const ctx = useCampaign();
+  return joinSections([
+    linkActionItems(ctx, link),
+    actionMenuItems(ctx, [{ id: actionId, title }]),
+  ]);
+}
+
+function ItemPopup({ campaign, link }: PopupProps) {
+  const ctx = useCampaign();
+  const { me, canAct } = useActingCharacter(campaign);
+  const item = systemOf(campaign).items.find((i) => i.id === link.id);
+  const menuItems = useEntryMenu(link, `library:${link.id}`, item?.name ?? "");
+  if (!item) return null;
+  return (
+    <EntryWindow
+      entryKey={`link:${linkKey(link)}`}
+      windowId={entityTabId(`link:${linkKey(link)}`)}
+      title={item.name}
+      text={item.description}
+      tags={item.tags}
+      onClose={() => ctx.linkPopups.close(link)}
+      proxy={linkProxy(ctx, "item", item.id, item.name, item.icon)}
+      menuItems={menuItems}
+    >
+      <Button
+        variant="primary"
+        disabled={!canAct}
+        onClick={() => me && ctx.execute(giveItem, { characterId: me.id, item })}
+      >
+        {me ? `Give to ${me.name}` : "Choose a Character First"}
+      </Button>
+    </EntryWindow>
+  );
+}
+
+function MovePopup({ campaign, link }: PopupProps) {
+  const ctx = useCampaign();
+  const system = systemOf(campaign);
+  const { me, canAct } = useActingCharacter(campaign);
+  const move = system.actions.find((m) => m.id === link.id);
+  const menuItems = useEntryMenu(link, `move:${link.id}`, move?.name ?? "");
+  if (!move) return null;
+  const { label, Icon } = makeVerb(move);
+  const tag = rollTag(system, move);
+  return (
+    <EntryWindow
+      entryKey={`link:${linkKey(link)}`}
+      windowId={entityTabId(`link:${linkKey(link)}`)}
+      title={move.name}
+      text={plainText(move.text)}
+      body={<MoveBody campaign={campaign} move={move} characterId={me?.id ?? null} />}
+      tags={tag ? [tag] : undefined}
+      onClose={() => ctx.linkPopups.close(link)}
+      proxy={linkProxy(
+        ctx,
+        "move",
+        move.id,
+        move.name,
+        move.category === "class" ? "class-move" : undefined,
+      )}
+      menuItems={menuItems}
+    >
+      <Button
+        variant="primary"
+        disabled={!canAct}
+        onClick={() => me && ctx.execute(startMove, { characterId: me.id, move: move.id })}
+      >
+        <Icon size={22} /> {label}
+        {me ? ` as ${me.name}` : ""}
+      </Button>
+    </EntryWindow>
+  );
+}
+
+/** A pop-up for a link to something with a place in the sidebar or table: one menu item takes you there. */
+function FollowDialog({
+  campaign,
+  link,
+  title,
+  followLabel,
+  children,
+}: PopupProps & { title: string; followLabel: string; children: ReactNode }) {
+  const ctx = useCampaign();
+  const menuItems = useMemo<MenuItem[]>(
+    () => [{ label: followLabel, onSelect: () => ctx.links.followLink(link.kind, link.id) }],
+    [ctx, link, followLabel],
+  );
+  return (
+    <LinkDialog campaign={campaign} link={link} title={title} menuItems={menuItems}>
+      {children}
+    </LinkDialog>
+  );
+}
+
+function CharacterPopup({ campaign, link }: PopupProps) {
+  const character = useQuery(campaign.characters, () => getCharacter(campaign, link.id));
+  if (!character) return null;
+  return (
+    <FollowDialog
+      campaign={campaign}
+      link={link}
+      title={character.name}
+      followLabel="Open in Sidebar"
+    >
+      <div className="popup-sheet sheet-panel">
+        <CharacterSheet campaign={campaign} system={systemOf(campaign)} c={character} />
+      </div>
+    </FollowDialog>
+  );
+}
+
+function ScenePopup({ campaign, link }: PopupProps) {
+  const ctx = useCampaign();
+  const scene = useQuery(campaign.scenes, () =>
+    campaign.sceneViews().find((s) => s.id === link.id),
+  );
+  if (!scene) return null;
+  return (
+    <FollowDialog campaign={campaign} link={link} title={scene.name} followLabel="Go to Scene">
+      <p className="muted">A scene in this campaign.</p>
+      <div className="form-actions">
+        <Button variant="primary" onClick={() => ctx.links.followLink("scene", scene.id)}>
+          Go to Scene
+        </Button>
+      </div>
+    </FollowDialog>
+  );
+}
+
+function NotePopup({ campaign, link }: PopupProps) {
+  const note = useQuery(campaign.notes, () => getNote(campaign, link.id));
+  if (!note) return null;
+  return (
+    <FollowDialog
+      campaign={campaign}
+      link={link}
+      title={note.title || "Untitled"}
+      followLabel="Open in Sidebar"
+    >
+      <div className="link-note">
+        <NoteEditor campaign={campaign} noteId={note.id} active />
+      </div>
+    </FollowDialog>
+  );
+}
+
+const POPUPS: Record<LinkRef["kind"], (props: PopupProps) => ReactNode> = {
+  item: ItemPopup,
+  move: MovePopup,
+  character: CharacterPopup,
+  scene: ScenePopup,
+  note: NotePopup,
+};
+
+function LinkPopup(props: PopupProps) {
+  const Popup = POPUPS[props.link.kind];
+  return <Popup {...props} />;
 }
 
 /** Change what a link says, or put its target's own name back. */

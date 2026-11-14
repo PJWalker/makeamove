@@ -4,6 +4,8 @@ import { derive } from "../features/characters/store";
 import { roundOf, turnOf, turnOrder, type CombatantView } from "../features/combat/combat";
 import { combatMaps } from "../features/combat/api";
 import type { Campaign } from "../campaign/campaign";
+import type { GameSystem } from "../systems/types";
+import type { CharacterView } from "../features/characters/types";
 import { useQuery } from "../ui/useQuery";
 import { Button } from "../ui/Button";
 import { PanelActions } from "./PanelActions";
@@ -136,6 +138,115 @@ export function CombatPanel({ campaign }: { campaign: Campaign }) {
   );
 }
 
+/** The conditions on a combatant, and the spell they're concentrating on. */
+function CombatantConditions({
+  system,
+  character: ch,
+  concentration,
+  mine,
+}: {
+  system: GameSystem;
+  character: CharacterView;
+  concentration: string | undefined;
+  mine: boolean;
+}) {
+  const ctx = useCampaign();
+  if (ch.conditions.length === 0 && !concentration) return null;
+  return (
+    <div className="combat-conditions">
+      {ch.conditions.map((id) => {
+        const def = system.conditions.find((k) => k.id === id);
+        const d = ch.durations[id];
+        return (
+          <span
+            key={id}
+            className="list-tag combat-condition"
+            title={def?.text}
+            style={{ "--condition-colour": conditionColour(system, id) }}
+          >
+            {def?.name ?? id}
+            {d && ` ${d.rounds}`}
+          </span>
+        );
+      })}
+      {concentration && (
+        <span
+          className="list-tag combat-condition"
+          style={{ "--condition-colour": CONCENTRATION_COLOUR }}
+        >
+          {concentration}
+          {mine && (
+            <button
+              type="button"
+              className="combat-chip-x"
+              aria-label="End concentration"
+              onClick={() => ctx.execute(stopConcentrating, { characterId: ch.id })}
+            >
+              ×
+            </button>
+          )}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/** A combatant's initiative: editable by whoever may change it. */
+function Initiative({ c, mine }: { c: CombatantView; mine: boolean }) {
+  const ctx = useCampaign();
+  if (!mine) return <span className="combat-init">{c.init ?? "–"}</span>;
+  return (
+    <input
+      className="combat-init"
+      type="number"
+      aria-label={`${c.name} initiative`}
+      value={c.init ?? ""}
+      onChange={(e) =>
+        ctx.execute(setInitiative, {
+          id: c.id,
+          init: e.currentTarget.value === "" ? null : Number(e.currentTarget.value),
+        })
+      }
+    />
+  );
+}
+
+/** Roll initiative, or (for the GM) hide or remove a combatant. */
+function CombatantActions({ c, gm, mine }: { c: CombatantView; gm: boolean; mine: boolean }) {
+  const ctx = useCampaign();
+  return (
+    <>
+      {c.init === null && mine && (
+        <Button
+          variant="icon"
+          label="Roll initiative"
+          onClick={() => ctx.execute(rollCombatantInitiative, { id: c.id })}
+        >
+          <IconDice />
+        </Button>
+      )}
+      {gm && (
+        <>
+          <Button
+            variant="icon"
+            label={c.hidden ? "Show to players" : "Hide from players"}
+            onClick={() => ctx.execute(hideCombatant, { id: c.id, hidden: !c.hidden })}
+          >
+            {c.hidden ? <IconSecret /> : <IconReveal />}
+          </Button>
+          <Button
+            variant="icon"
+            label="Remove from combat"
+            onClick={() => ctx.execute(removeFromCombat, { id: c.id })}
+          >
+            <IconClose />
+          </Button>
+        </>
+      )}
+    </>
+  );
+}
+
 function CombatRow({
   campaign,
   c,
@@ -169,8 +280,6 @@ function CombatRow({
   const concentration = ch?.concentration
     ? system.actions.find((a) => a.id === ch.concentration)?.name
     : undefined;
-  const setInit = (v: string) =>
-    ctx.execute(setInitiative, { id: c.id, init: v === "" ? null : Number(v) });
 
   return (
     <li
@@ -179,17 +288,7 @@ function CombatRow({
       data-hidden={c.hidden || undefined}
     >
       <div className="combat-main">
-        {mine ? (
-          <input
-            className="combat-init"
-            type="number"
-            aria-label={`${c.name} initiative`}
-            value={c.init ?? ""}
-            onChange={(e) => setInit(e.currentTarget.value)}
-          />
-        ) : (
-          <span className="combat-init">{c.init ?? "–"}</span>
-        )}
+        <Initiative c={c} mine={mine} />
         <button type="button" className="combat-name" onClick={onToggle} aria-expanded={open}>
           {c.name}
           {hp !== null && gm && (
@@ -199,70 +298,15 @@ function CombatRow({
             </span>
           )}
         </button>
-        {c.init === null && mine && (
-          <Button
-            variant="icon"
-            label="Roll initiative"
-            onClick={() => ctx.execute(rollCombatantInitiative, { id: c.id })}
-          >
-            <IconDice />
-          </Button>
-        )}
-        {gm && (
-          <>
-            <Button
-              variant="icon"
-              label={c.hidden ? "Show to players" : "Hide from players"}
-              onClick={() => ctx.execute(hideCombatant, { id: c.id, hidden: !c.hidden })}
-            >
-              {c.hidden ? <IconSecret /> : <IconReveal />}
-            </Button>
-            <Button
-              variant="icon"
-              label="Remove from combat"
-              onClick={() => ctx.execute(removeFromCombat, { id: c.id })}
-            >
-              <IconClose />
-            </Button>
-          </>
-        )}
+        <CombatantActions c={c} gm={gm} mine={mine} />
       </div>
-      {ch && (ch.conditions.length > 0 || concentration) && (
-        <div className="combat-conditions">
-          {ch.conditions.map((id) => {
-            const def = system.conditions.find((k) => k.id === id);
-            const d = ch.durations[id];
-            return (
-              <span
-                key={id}
-                className="list-tag combat-condition"
-                title={def?.text}
-                style={{ "--condition-colour": conditionColour(system, id) }}
-              >
-                {def?.name ?? id}
-                {d && ` ${d.rounds}`}
-              </span>
-            );
-          })}
-          {concentration && (
-            <span
-              className="list-tag combat-condition"
-              style={{ "--condition-colour": CONCENTRATION_COLOUR }}
-            >
-              {concentration}
-              {mine && (
-                <button
-                  type="button"
-                  className="combat-chip-x"
-                  aria-label="End concentration"
-                  onClick={() => ctx.execute(stopConcentrating, { characterId: ch.id })}
-                >
-                  ×
-                </button>
-              )}
-            </span>
-          )}
-        </div>
+      {ch && (
+        <CombatantConditions
+          system={system}
+          character={ch}
+          concentration={concentration}
+          mine={mine}
+        />
       )}
       {open && ch && mine && (
         <ConditionForm campaign={campaign} characterId={ch.id} turn={turn} everyone={everyone} />

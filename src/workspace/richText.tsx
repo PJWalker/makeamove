@@ -27,13 +27,13 @@ import { LINK_NODE } from "../features/notes/links";
 import { linkLabel, linkTargets, linkTip, type LinkTarget } from "../features/notes/targets";
 import { menuTrigger } from "../ui/menuTrigger";
 import type { MenuItem } from "../ui/ContextMenu";
-import { linkActionItems } from "./linkActions";
+import { linkMenuSections } from "./linkActions";
+import { joinSections } from "./commands/views";
 import type { Campaign } from "../campaign/campaign";
 import type { CampaignContext } from "./campaignContext";
-import { IconOpenWindow, IconRename, IconSidebar } from "../ui/icons";
+import { IconRename } from "../ui/icons";
 import { dragEntity, registerLinkDrop } from "./entityDrag";
 import { entity } from "./dragEntities";
-import { actionMenuItems } from "./actionMenu";
 import { CampaignEntityGraphic } from "./EntityGraphic";
 import { trackerButtonExtension } from "./trackerButtons";
 
@@ -373,60 +373,38 @@ export function mountRichText(
     if (!chip) return;
     const link = refOf(chip);
     const found = nodeOf(chip);
-    const items: MenuItem[] = [];
-    const actionId =
-      link.kind === "move" ? `move:${link.id}` : link.kind === "item" ? `library:${link.id}` : null;
-    if (actionId) {
-      items.push(...linkActionItems(ctx, link));
-      const actions = actionMenuItems(ctx, [{ id: actionId }]);
-      if (items.length && actions.length) items.push("divider");
-      items.push(...actions);
-    }
-    if (!chip.dataset.missing) {
-      const privateNote = link.kind === "note" && getNote(campaign, link.id)?.gmOnly;
-      if (!privateNote) {
-        if (items.length) items.push("divider");
-        items.push({
-          label: "Change Graphic…",
-          Icon: IconImage,
-          onSelect: () => ctx.table.editGraphic(link.kind, link.id, chip.textContent ?? "Entity"),
+    const sections = chip.dataset.missing
+      ? []
+      : linkMenuSections(ctx, link, {
+          title: chip.textContent ?? undefined,
+          ...(followsInPlace(link.kind)
+            ? { openInWindow: () => ctx.linkPopups.show(link, chip) }
+            : {}),
         });
-      }
-      if (items.length) items.push("divider");
-      items.push({
-        label: "Open in Sidebar",
-        Icon: IconSidebar,
-        onSelect: () => ctx.links.openInSidebar(link.kind, link.id),
-      });
-      if (followsInPlace(link.kind))
-        items.push({
-          label: "Open in a Window",
-          Icon: IconOpenWindow,
-          onSelect: () => ctx.linkPopups.show(link, chip),
-        });
-    }
     if (found && editor.isEditable) {
       const custom = !!found.node.attrs.text;
-      if (items.length) items.push("divider");
-      items.push({
-        label: "Edit Link Text…",
-        Icon: IconRename,
-        onSelect: () =>
-          ctx.linkPopups.rename({
-            text: chip.textContent ?? "",
-            custom,
-            save: (text) => {
-              const now = nodeOf(chip) ?? found;
-              editor.view.dispatch(
-                editor.state.tr.setNodeMarkup(now.pos, undefined, {
-                  ...now.node.attrs,
-                  text: text?.trim() || null,
-                }),
-              );
-            },
-          }),
-      });
+      sections.push([
+        {
+          label: "Edit Link Text…",
+          Icon: IconRename,
+          onSelect: () =>
+            ctx.linkPopups.rename({
+              text: chip.textContent ?? "",
+              custom,
+              save: (text) => {
+                const now = nodeOf(chip) ?? found;
+                editor.view.dispatch(
+                  editor.state.tr.setNodeMarkup(now.pos, undefined, {
+                    ...now.node.attrs,
+                    text: text?.trim() || null,
+                  }),
+                );
+              },
+            }),
+        },
+      ]);
     }
+    const items = joinSections(sections);
     if (items.length) ctx.linkPopups.linkMenu.set({ x, y, items });
   });
   let menuChip: HTMLElement | null = null;

@@ -12,6 +12,30 @@ import { useCampaign } from "../../workspace/campaignContext";
 import { bumpSystemCounter } from "../../workspace/commands/chat";
 import { can } from "../../workspace/commands/views";
 
+type Choice = { id: string; label: string };
+
+/** The `<option>`s the crew doesn't own yet. */
+function UnownedOptions({ options, owned }: { options: readonly Choice[]; owned: Set<string> }) {
+  return options.flatMap((option) =>
+    owned.has(option.id)
+      ? []
+      : [
+          <option key={option.id} value={option.id}>
+            {option.label}
+          </option>,
+        ],
+  );
+}
+
+const UPGRADE_COSTS: Record<string, number> = { mastery: 4, cohort: 2 };
+
+/** Whether the crew can pay for its next tier. */
+function canAdvanceTier(state: Record<string, unknown>, cost: { rep: number; coin: number }) {
+  if (Number(state.crewRep ?? 0) < cost.rep) return false;
+  if (state.crewHold === "weak") return true;
+  return Number(state.crewCoin ?? 0) >= cost.coin && Number(state.crewTier ?? 0) < 4;
+}
+
 export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
   const ctx = useCampaign();
   const [reward, setReward] = useState("upgrades");
@@ -27,12 +51,10 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
     () => getState<number>(campaign.messageState, messageId, "value") ?? 0,
   );
   if (!counter || !abilities || !upgrades) return null;
-  const ownedAbilities = commaListOf(state.crewAbilities);
-  const ownedUpgrades = commaListOf(state.crewUpgrades);
-  const ownedAbilityIds = new Set(ownedAbilities);
-  const ownedUpgradeIds = new Set(ownedUpgrades);
+  const ownedAbilityIds = new Set(commaListOf(state.crewAbilities));
+  const ownedUpgradeIds = new Set(commaListOf(state.crewUpgrades));
   const cost = crewTierCost(campaign);
-  const upgradeCost = upgrade === "mastery" ? 4 : upgrade === "cohort" ? 2 : 1;
+  const upgradeCost = UPGRADE_COSTS[upgrade] ?? 1;
   // The crew is the GM's to advance.
   const gm = can(ctx, advanceTier, undefined);
   return (
@@ -53,15 +75,7 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
           onChange={(event) => setReward(event.currentTarget.value)}
         >
           <option value="upgrades">Two crew upgrades</option>
-          {abilities.flatMap((ability) =>
-            ownedAbilityIds.has(ability.id)
-              ? []
-              : [
-                  <option key={ability.id} value={ability.id}>
-                    {ability.label}
-                  </option>,
-                ],
-          )}
+          <UnownedOptions options={abilities} owned={ownedAbilityIds} />
         </select>
       </label>
       <Button
@@ -78,15 +92,7 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
           onChange={(event) => setUpgrade(event.currentTarget.value)}
         >
           <option value="">Choose an upgrade</option>
-          {upgrades.flatMap((entry) =>
-            ownedUpgradeIds.has(entry.id)
-              ? []
-              : [
-                  <option key={entry.id} value={entry.id}>
-                    {entry.label}
-                  </option>,
-                ],
-          )}
+          <UnownedOptions options={upgrades} owned={ownedUpgradeIds} />
         </select>
       </label>
       <Button
@@ -96,12 +102,7 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
         Buy Upgrade ({upgradeCost})
       </Button>
       <Button
-        disabled={
-          !gm ||
-          Number(state.crewRep ?? 0) < cost.rep ||
-          (state.crewHold !== "weak" &&
-            (Number(state.crewCoin ?? 0) < cost.coin || Number(state.crewTier ?? 0) >= 4))
-        }
+        disabled={!gm || !canAdvanceTier(state, cost)}
         onClick={() => ctx.execute(advanceTier, undefined)}
       >
         {state.crewHold === "weak"

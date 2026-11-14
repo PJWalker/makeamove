@@ -24,6 +24,7 @@ import { Dialog } from "./Dialog";
 import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
 import { EntryRow, EntryWindow } from "./EntryWindow";
 import { useEntryWindows } from "./entryWindowState";
+import { moveKey, parseEntryKey } from "./entryKeys";
 import { linkProxy } from "./linkProxy";
 import { makeVerb, rollTag } from "./actionPresentation";
 import { dragToken } from "./tokenDrag";
@@ -230,7 +231,7 @@ export function MoveList({
               Icon={entryIcon("move", m.category === "class" ? "class-move" : undefined)}
               tag={rollTag(system, m)}
               tip={plainText(m.text)}
-              onOpen={(row) => windows.show(`move:${ownerId}:${m.id}`, row)}
+              onOpen={(row) => windows.show(moveKey(ownerId, m.id), row)}
               onPointerDown={(ev) => dragEntity(ctx.canvas, ev, entity(ctx, "move", m.id, m.name))}
               menuItems={[
                 {
@@ -247,10 +248,11 @@ export function MoveList({
         })}
       </List>
       {windows.keys.map((key) => {
-        const prefix = `move:${ownerId}:`;
-        const m = key.startsWith(prefix)
-          ? moves.find((k) => k.id === key.slice(prefix.length))
-          : undefined;
+        const ref = parseEntryKey(key);
+        const m =
+          ref?.kind === "move" && ref.ownerId === ownerId
+            ? moves.find((k) => k.id === ref.moveId)
+            : undefined;
         if (!m) return null;
         const tag = rollTag(system, m);
         const used = usedIds.has(m.id);
