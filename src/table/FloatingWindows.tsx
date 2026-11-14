@@ -32,6 +32,54 @@ export function FloatingWindows({ campaign }: { campaign: Campaign }) {
   );
 }
 
+type Morph = "in" | "out" | "hidden" | undefined;
+
+/** The next phase of a window's morph, from the last: lifted and over a sidebar it becomes a tab; lifted elsewhere it grows back out. */
+function nextMorph(phase: Morph, lifted: boolean, overTab: boolean): Morph {
+  if (!lifted) return phase === "hidden" ? "hidden" : undefined;
+  if (overTab) return phase === "hidden" ? "hidden" : "in";
+  return phase ? "out" : undefined;
+}
+
+/**
+ * A window's morph phase. It sticks until the next change, so re-rendering on pointer moves doesn't cut an
+ * animation short. A window pulled out of a tab starts as the tab ('hidden') and grows from it when it leaves the sidebar.
+ */
+function useDockMorph(id: PanelId, lifted: boolean, overTab: boolean) {
+  const ctx = useCampaign();
+  const [phase, setPhase] = useState<Morph>(() =>
+    ctx.panels.spawnedFromTab.has(id) ? "hidden" : undefined,
+  );
+  useEffect(() => {
+    ctx.panels.spawnedFromTab.delete(id);
+  }, [ctx, id]);
+  const morph = nextMorph(phase, lifted, overTab);
+  if (morph !== phase) setPhase(morph);
+  return morph;
+}
+
+/** What a window shows below its title bar, unless it's rolled up: its panel, and the grips to resize it. */
+function WindowBody({ win, campaign }: { win: { id: PanelId }; campaign: Campaign }) {
+  const ctx = useCampaign();
+  return (
+    <>
+      <div className="panel-body panel-content">
+        <PanelContent id={win.id} campaign={campaign} />
+      </div>
+      <span className="resize-grip" aria-hidden="true" />
+      {RESIZE_DIRS.map((dir) => (
+        <span
+          key={dir}
+          className="win-resize"
+          data-dir={dir}
+          aria-hidden="true"
+          onPointerDown={(e) => ctx.panels.startWindowResize(win.id, e.nativeEvent, dir)}
+        />
+      ))}
+    </>
+  );
+}
+
 function Window({
   win: stored,
   campaign,
@@ -54,26 +102,7 @@ function Window({
 
   // Over a sidebar the window morphs into the tab it would become, and back out again.
   const asTab = target !== null ? pointer : null;
-  // The phase sticks until the next change, so re-rendering on pointer moves doesn't cut an animation short.
-  // A window pulled out of a tab starts as the tab ('hidden') and grows from it when it leaves the sidebar.
-  const [phase, setPhase] = useState<"in" | "out" | "hidden" | undefined>(() =>
-    ctx.panels.spawnedFromTab.has(win.id) ? "hidden" : undefined,
-  );
-  useEffect(() => {
-    ctx.panels.spawnedFromTab.delete(win.id);
-  }, [ctx, win.id]);
-  const morph = !pointer
-    ? phase === "hidden"
-      ? "hidden"
-      : undefined
-    : asTab
-      ? phase === "hidden"
-        ? "hidden"
-        : "in"
-      : phase
-        ? "out"
-        : undefined;
-  if (morph !== phase) setPhase(morph);
+  const morph = useDockMorph(win.id, pointer !== null, asTab !== null);
   const to = pointer ?? { x: win.x, y: win.y };
   const toTab = `translate(${to.x - TAB / 2 - win.x}px, ${to.y - TAB / 2 - win.y}px) scale(${TAB / win.w}, ${TAB / win.h})`;
 
@@ -121,22 +150,7 @@ function Window({
           onClose={() => ctx.panels.setPanelClosed(win.id, true)}
           closeLabel="Close (reopen from the campaign menu)"
         />
-        {!rolled && (
-          <div className="panel-body panel-content">
-            <PanelContent id={win.id} campaign={campaign} />
-          </div>
-        )}
-        {!rolled && <span className="resize-grip" aria-hidden="true" />}
-        {!rolled &&
-          RESIZE_DIRS.map((dir) => (
-            <span
-              key={dir}
-              className="win-resize"
-              data-dir={dir}
-              aria-hidden="true"
-              onPointerDown={(e) => ctx.panels.startWindowResize(win.id, e.nativeEvent, dir)}
-            />
-          ))}
+        {!rolled && <WindowBody win={win} campaign={campaign} />}
       </section>
     </PanelActionsProvider>
   );

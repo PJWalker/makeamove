@@ -44,7 +44,4 @@ dist-ssr
 /reports/
 .stryker-tmp/
 
-# Storybook
-/storybook-static/
-*storybook.log
 .vitest/

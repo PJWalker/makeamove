@@ -471,6 +471,213 @@ function GearForm({
 }
 
 type RollKind = "none" | "stat" | "ask";
+type TargetKind = "none" | "one" | "many";
+
+/** What the move form edits, before it's a move. */
+type MoveDraft = {
+  name: string;
+  category: string;
+  trigger: string;
+  text: RichText;
+  graphic: EntityGraphic | undefined;
+  resetGraphic: boolean;
+  rolls: RollKind;
+  stat: string;
+  outcomes: Record<string, RichText>;
+  targets: TargetKind;
+  range: number;
+};
+
+function draftOf(
+  campaign: Campaign,
+  system: GameSystem,
+  initial: ActionDef | undefined,
+): MoveDraft {
+  const check = initial?.steps.find((s): s is CheckStep => s.kind === "check");
+  return {
+    name: initial?.name ?? "",
+    category: initial?.category ?? system.actionCategories[0]?.id ?? "",
+    trigger: initial?.trigger ?? "",
+    text: initial?.text ?? emptyRichText(),
+    graphic: initial?.id ? campaign.entityGraphics.get(`move:${initial.id}`) : undefined,
+    resetGraphic: false,
+    rolls: !check ? "none" : check.ask?.kind === "stat" ? "ask" : "stat",
+    stat: check?.stat ?? system.stats[0]?.id ?? "",
+    outcomes: check?.outcomes ?? {},
+    targets: initial?.target ? (initial.target.max === 1 ? "one" : "many") : "none",
+    range: initial?.target?.range?.normal ?? 0,
+  };
+}
+
+/** The move a draft describes. */
+function moveFromDraft(system: GameSystem, draft: MoveDraft, id: string): ActionDef {
+  const { rolls, targets } = draft;
+  const steps: CheckStep[] =
+    rolls === "none"
+      ? []
+      : [
+          {
+            kind: "check",
+            ...(rolls === "stat" ? { stat: draft.stat } : { ask: { kind: "stat" as const } }),
+            outcomes: Object.fromEntries(
+              system.results.map((r) => [r.id, draft.outcomes[r.id] ?? emptyRichText()]),
+            ),
+          },
+        ];
+  const target: TargetSpec | undefined =
+    targets === "none"
+      ? undefined
+      : {
+          prompt: targets === "one" ? "Choose a target" : "Choose targets",
+          min: 1,
+          ...(targets === "one" ? { max: 1 } : {}),
+          ...(draft.range ? { range: { normal: draft.range } } : {}),
+        };
+  return {
+    id,
+    name: draft.name.trim(),
+    category: draft.category,
+    trigger: draft.trigger.trim(),
+    text: draft.text,
+    steps,
+    ...(target ? { target } : {}),
+    tags: ["homebrew"],
+  };
+}
+
+type SectionProps = {
+  campaign: Campaign;
+  system: GameSystem;
+  draft: MoveDraft;
+  patch: (changes: Partial<MoveDraft>) => void;
+};
+
+function MoveDetails({ campaign, system, draft, patch }: SectionProps) {
+  return (
+    <section className="form-section">
+      <h4 className="form-heading">Details</h4>
+      <Text label="Name" value={draft.name} onChange={(name) => patch({ name })} />
+      <label className="field">
+        Kind
+        <select value={draft.category} onChange={(e) => patch({ category: e.currentTarget.value })}>
+          {system.actionCategories.map((k) => (
+            <option key={k.id} value={k.id}>
+              {k.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <Text
+        label="Trigger"
+        value={draft.trigger}
+        onChange={(trigger) => patch({ trigger })}
+        placeholder="When you…"
+      />
+      <RichTextField
+        campaign={campaign}
+        label="Text"
+        value={draft.text}
+        onChange={(text) => patch({ text })}
+      />
+    </section>
+  );
+}
+
+function MoveAppearance({
+  campaign,
+  id,
+  draft,
+  patch,
+}: Pick<SectionProps, "campaign" | "draft" | "patch"> & { id: string }) {
+  return (
+    <section className="form-section">
+      <h4 className="form-heading">Appearance</h4>
+      <GraphicPicker
+        graphic={
+          draft.resetGraphic
+            ? getDefaultEntityGraphic(campaign, "move", id)
+            : (draft.graphic ?? getEntityGraphic(campaign, "move", id))
+        }
+        onChange={(graphic) => patch({ graphic, resetGraphic: false })}
+        onReset={() => patch({ graphic: undefined, resetGraphic: true })}
+      />
+    </section>
+  );
+}
+
+function MoveRoll({ campaign, system, draft, patch }: SectionProps) {
+  return (
+    <section className="form-section">
+      <h4 className="form-heading">Roll</h4>
+      <div className="form-fields">
+        <div className="field">
+          Type
+          <Segmented
+            label="Roll type"
+            value={draft.rolls}
+            options={[
+              { id: "none", label: "No roll" },
+              { id: "stat", label: "With a stat" },
+              { id: "ask", label: "Stat chosen when made" },
+            ]}
+            onChange={(rolls) => patch({ rolls })}
+          />
+          {draft.rolls === "stat" && (
+            <select
+              aria-label="Stat"
+              value={draft.stat}
+              onChange={(e) => patch({ stat: e.currentTarget.value })}
+            >
+              {system.stats.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {system.baseRoll} + {s.name}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+        {draft.rolls !== "none" &&
+          system.results.map((r) => (
+            <RichTextField
+              key={r.id}
+              campaign={campaign}
+              label={r.label || "Otherwise"}
+              value={draft.outcomes[r.id]}
+              onChange={(value) => patch({ outcomes: { ...draft.outcomes, [r.id]: value } })}
+            />
+          ))}
+      </div>
+    </section>
+  );
+}
+
+function MoveTargeting({ system, draft, patch }: Omit<SectionProps, "campaign">) {
+  return (
+    <section className="form-section">
+      <h4 className="form-heading">Targets</h4>
+      <div className="field">
+        Selection
+        <Segmented
+          label="Target selection"
+          value={draft.targets}
+          options={[
+            { id: "none", label: "None" },
+            { id: "one", label: "One" },
+            { id: "many", label: "Any number" },
+          ]}
+          onChange={(targets) => patch({ targets })}
+        />
+        {draft.targets !== "none" && (
+          <NumberFieldInline
+            label={`Range (${system.scene.unitName}, 0 for any)`}
+            value={draft.range}
+            onChange={(range) => patch({ range })}
+          />
+        )}
+      </div>
+    </section>
+  );
+}
 
 function MoveForm({
   campaign,
@@ -484,63 +691,15 @@ function MoveForm({
   onDone: () => void;
 }) {
   const ctx = useCampaign();
-  const check = initial?.steps.find((s): s is CheckStep => s.kind === "check");
-  const [name, setName] = useState(initial?.name ?? "");
-  const [category, setCategory] = useState(
-    initial?.category ?? system.actionCategories[0]?.id ?? "",
-  );
-  const [trigger, setTrigger] = useState(initial?.trigger ?? "");
-  const [text, setText] = useState<RichText>(initial?.text ?? emptyRichText());
-  const [graphic, setGraphic] = useState<EntityGraphic | undefined>(
-    initial?.id ? campaign.entityGraphics.get(`move:${initial.id}`) : undefined,
-  );
-  const [resetGraphic, setResetGraphic] = useState(false);
-  const [rolls, setRolls] = useState<RollKind>(
-    !check ? "none" : check.ask?.kind === "stat" ? "ask" : "stat",
-  );
-  const [stat, setStat] = useState(check?.stat ?? system.stats[0]?.id ?? "");
-  const [outcomes, setOutcomes] = useState<Record<string, RichText>>(check?.outcomes ?? {});
-  const [targets, setTargets] = useState(
-    initial?.target ? (initial.target.max === 1 ? "one" : "many") : "none",
-  );
-  const [range, setRange] = useState(initial?.target?.range?.normal ?? 0);
-  const ready = !!name.trim();
-
+  const [draft, setDraft] = useState(() => draftOf(campaign, system, initial));
+  const patch = (changes: Partial<MoveDraft>) => setDraft((now) => ({ ...now, ...changes }));
+  const ready = !!draft.name.trim();
+  const sections = { campaign, system, draft, patch };
   const save = () => {
     if (!ready) return;
-    const steps: CheckStep[] =
-      rolls === "none"
-        ? []
-        : [
-            {
-              kind: "check",
-              ...(rolls === "stat" ? { stat: stat } : { ask: { kind: "stat" as const } }),
-              outcomes: Object.fromEntries(
-                system.results.map((r) => [r.id, outcomes[r.id] ?? emptyRichText()]),
-              ),
-            },
-          ];
-    const target: TargetSpec | undefined =
-      targets === "none"
-        ? undefined
-        : {
-            prompt: targets === "one" ? "Choose a target" : "Choose targets",
-            min: 1,
-            ...(targets === "one" ? { max: 1 } : {}),
-            ...(range ? { range: { normal: range } } : {}),
-          };
     ctx.execute(saveHomebrewMove, {
-      graphic: resetGraphic ? null : graphic,
-      move: {
-        id: initial?.id ?? "",
-        name: name.trim(),
-        category: category,
-        trigger: trigger.trim(),
-        text,
-        steps,
-        ...(target ? { target } : {}),
-        tags: ["homebrew"],
-      },
+      graphic: draft.resetGraphic ? null : draft.graphic,
+      move: moveFromDraft(system, draft, initial?.id ?? ""),
     });
     onDone();
   };
@@ -553,104 +712,10 @@ function MoveForm({
         save();
       }}
     >
-      <section className="form-section">
-        <h4 className="form-heading">Details</h4>
-        <Text label="Name" value={name} onChange={setName} />
-        <label className="field">
-          Kind
-          <select value={category} onChange={(e) => setCategory(e.currentTarget.value)}>
-            {system.actionCategories.map((k) => (
-              <option key={k.id} value={k.id}>
-                {k.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <Text label="Trigger" value={trigger} onChange={setTrigger} placeholder="When you…" />
-        <RichTextField campaign={campaign} label="Text" value={text} onChange={setText} />
-      </section>
-      <section className="form-section">
-        <h4 className="form-heading">Appearance</h4>
-        <GraphicPicker
-          graphic={
-            resetGraphic
-              ? getDefaultEntityGraphic(campaign, "move", initial?.id ?? "")
-              : (graphic ?? getEntityGraphic(campaign, "move", initial?.id ?? ""))
-          }
-          onChange={(next) => {
-            setGraphic(next);
-            setResetGraphic(false);
-          }}
-          onReset={() => {
-            setGraphic(undefined);
-            setResetGraphic(true);
-          }}
-        />
-      </section>
-      <section className="form-section">
-        <h4 className="form-heading">Roll</h4>
-        <div className="form-fields">
-          <div className="field">
-            Type
-            <Segmented
-              label="Roll type"
-              value={rolls}
-              options={[
-                { id: "none", label: "No roll" },
-                { id: "stat", label: "With a stat" },
-                { id: "ask", label: "Stat chosen when made" },
-              ]}
-              onChange={(v) => setRolls(v)}
-            />
-            {rolls === "stat" && (
-              <select
-                aria-label="Stat"
-                value={stat}
-                onChange={(e) => setStat(e.currentTarget.value)}
-              >
-                {system.stats.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {system.baseRoll} + {s.name}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-          {rolls !== "none" &&
-            system.results.map((r) => (
-              <RichTextField
-                key={r.id}
-                campaign={campaign}
-                label={r.label || "Otherwise"}
-                value={outcomes[r.id]}
-                onChange={(value) => setOutcomes((current) => ({ ...current, [r.id]: value }))}
-              />
-            ))}
-        </div>
-      </section>
-      <section className="form-section">
-        <h4 className="form-heading">Targets</h4>
-        <div className="field">
-          Selection
-          <Segmented
-            label="Target selection"
-            value={targets}
-            options={[
-              { id: "none", label: "None" },
-              { id: "one", label: "One" },
-              { id: "many", label: "Any number" },
-            ]}
-            onChange={(v) => setTargets(v)}
-          />
-          {targets !== "none" && (
-            <NumberFieldInline
-              label={`Range (${system.scene.unitName}, 0 for any)`}
-              value={range}
-              onChange={setRange}
-            />
-          )}
-        </div>
-      </section>
+      <MoveDetails {...sections} />
+      <MoveAppearance campaign={campaign} id={initial?.id ?? ""} draft={draft} patch={patch} />
+      <MoveRoll {...sections} />
+      <MoveTargeting system={system} draft={draft} patch={patch} />
       <FormActions campaign={campaign} id={initial?.id} ready={ready} onDone={onDone} />
     </form>
   );

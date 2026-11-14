@@ -13,12 +13,11 @@ export default defineConfig([
       "reference/**",
       "reports/**",
       ".stryker-tmp/**",
-      "storybook-static/**",
     ],
   },
   {
     files: ["src/**/*.{ts,tsx}"],
-    ignores: ["src/data/**", "**/__tests__/**", "**/*.stories.tsx"],
+    ignores: ["src/data/**", "**/__tests__/**"],
     languageOptions: {
       parser: tseslint.parser,
       parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
@@ -27,7 +26,7 @@ export default defineConfig([
     rules: { "data/no-raw-yjs": "error" },
   },
   {
-    files: ["src/**/*.{ts,tsx}", "scripts/**/*.ts", "vite.config.ts", ".storybook/**/*.{ts,tsx}"],
+    files: ["src/**/*.{ts,tsx}", "scripts/**/*.ts", "vite.config.ts"],
     ignores: ["scripts/rules/readReference.ts"],
     languageOptions: { parser: tseslint.parser },
     rules: {

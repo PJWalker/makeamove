@@ -72,11 +72,10 @@ export default defineConfig({
       "reference/**",
       "reports/**",
       ".stryker-tmp/**",
-      "storybook-static/**",
     ],
     overrides: [
       {
-        files: ["src/**/*.{ts,tsx}", ".storybook/preview.tsx"],
+        files: ["src/**/*.{ts,tsx}"],
         rules: {
           "no-empty": [
             "error",
@@ -582,7 +581,7 @@ export default defineConfig({
       },
       {
         files: ["src/**/*.tsx"],
-        excludeFiles: ["**/__tests__/**", "**/*.stories.tsx"],
+        excludeFiles: ["**/__tests__/**"],
         rules: {
           complexity: ["warn", 57],
           "max-depth": ["warn", 3],
@@ -656,33 +655,7 @@ export default defineConfig({
         rules: { "no-restricted-imports": "off" },
       },
       {
-        files: ["**/*.stories.@(ts|tsx|js|jsx|mjs|cjs)", "**/*.story.@(ts|tsx|js|jsx|mjs|cjs)"],
-        rules: {
-          "storybook/await-interactions": "error",
-          "storybook/context-in-play-function": "error",
-          "storybook/default-exports": "error",
-          "storybook/hierarchy-separator": "warn",
-          "storybook/no-redundant-story-name": "warn",
-          "storybook/no-renderer-packages": "error",
-          "storybook/prefer-pascal-case": "warn",
-          "storybook/story-exports": "error",
-          "storybook/use-storybook-expect": "error",
-          "storybook/use-storybook-testing-library": "error",
-          "import/no-anonymous-default-export": "off",
-          "react/rules-of-hooks": "off",
-        },
-        jsPlugins: ["eslint-plugin-storybook"],
-        plugins: ["react", "import"],
-      },
-      {
-        files: [".storybook/main.@(js|cjs|mjs|ts)"],
-        rules: {
-          "storybook/no-uninstalled-addons": "error",
-        },
-        jsPlugins: ["eslint-plugin-storybook"],
-      },
-      {
-        files: ["vite.config.ts", ".storybook/main.ts"],
+        files: ["vite.config.ts"],
         rules: {
           "typescript/ban-ts-comment": "error",
           "typescript/no-empty-object-type": "error",
@@ -732,13 +705,15 @@ export default defineConfig({
       ".vscode",
       "reports",
       ".stryker-tmp",
-      "storybook-static",
       "src/systems/dnd55e/srd",
       "src/systems/blades-in-the-dark/abilities.json",
       "src/systems/dungeon-world-2/rulebook.json",
     ],
   },
   base: process.env.PAGES_BASE_PATH || "/",
+  server: {
+    hmr: false,
+  },
   build: {
     chunkSizeWarningLimit: 1000,
     rolldownOptions: {

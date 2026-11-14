@@ -17,7 +17,7 @@ api	Public extension API: defineExtension, context and registry types; re-export
 shell	Panel layout/docking, windows, dialogs, pop-ups, menus, command palette, hotbar, toolbar and context menus. It displays registered contributions.
 scene	PixiJS canvas engine: tool host and gesture state machines, selection, camera, element and render-pass registries, change animator and React overlay slots.
 rules	Framework-neutral action pipeline, derivation graph and registries for stats, resources, conditions, tags, items, effects, sheet sections and creation steps.
-ui	React Aria-based design system, icons, tokens, motion helpers and useQuery; every control has a Storybook story.
+ui	React Aria-based design system, icons, tokens, motion helpers and useQuery.
 kernel	CampaignContext, extension lifecycle, command bus, registries, undo and permissions.
 sync	Multi-document Yjs SyncSession, Transport interface and Trystero implementation, background replication, blob exchange, invites and signing.
 data	Yjs schema layer: field builders, typed readers/writers, read validation, schema versions and migrations. The only package that accesses Yjs types directly.
@@ -139,7 +139,6 @@ Testing and tooling {#testing}
 - Multi-peer harness runs N campaigns over the in-memory transport, executes commands and asserts convergence; it covers sync, permissions and extension behaviour.
 - Extension conformance suite tests every extension's schema round-trip, malformed-record validation, command availability/permissions and migrations.
 - Scene services are tested headlessly; Playwright runs real UI flows in Chromium and WebKit, with one spec per feature in tests/.
-- Storybook includes every design-system control.
 - knip, Prettier and dependency-cruiser check unused files/exports/dependencies, formatting and package boundaries.
 - CI: ci.yml runs lint, typecheck, format, knip, unit tests and build; playwright.yml runs browser tests; audit.yml audits dependencies.
 To run locally: npm install, npm run dev, then open two browser profiles and join one from the other's invite link to test sync.

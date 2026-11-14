@@ -37,6 +37,46 @@ type Thrown = { arriving: boolean; mine: boolean };
 const rollerDiceColour = (m: RollMessage | MoveMessage) =>
   colourOf({ id: m.author, ...(m.colour ? { colour: m.colour } : {}) });
 
+/** What a queued roll shows, in order: its dice by size, then its modifier, then its stats. */
+type PendingEntry =
+  | { kind: "die"; sides: number; dieIndex: number }
+  | { kind: "modifier"; value: number }
+  | { kind: "stat"; value: number; stat: string; statIndex: number };
+
+function pendingEntries(picks: TrayPick[]): PendingEntry[] {
+  const counts = new Map<number, number>();
+  let modifier = 0;
+  const stats: PendingEntry[] = [];
+  for (const pick of picks) {
+    if (pick.kind === "die") counts.set(pick.sides, (counts.get(pick.sides) ?? 0) + 1);
+    else if (pick.kind === "modifier") modifier += pick.value;
+    else stats.push({ kind: "stat", value: pick.value, stat: pick.stat, statIndex: stats.length });
+  }
+  return [
+    ...[...counts].flatMap(([sides, count]) =>
+      Array.from({ length: count }, (_, dieIndex): PendingEntry => ({
+        kind: "die",
+        sides,
+        dieIndex,
+      })),
+    ),
+    ...(modifier ? [{ kind: "modifier", value: modifier } satisfies PendingEntry] : []),
+    ...stats,
+  ];
+}
+
+/** The values each size of die landed on in a released roll, exploded dice left out. */
+function landedValues(roll: Roll | undefined) {
+  const values = new Map<number, number[]>();
+  for (const term of roll?.terms ?? [])
+    if (term.kind === "dice" && term.dice[0])
+      values.set(
+        term.dice[0].sides,
+        term.dice.flatMap((die) => (die.exploded ? [] : [die.value])),
+      );
+  return values;
+}
+
 export function PendingRollCard({
   picks,
   visibility,
@@ -53,75 +93,40 @@ export function PendingRollCard({
   onDieEntered: (key: string) => void;
 }) {
   const formula = poolFormula(picks);
-  const dice = new Map<number, number>();
-  const stats: Extract<TrayPick, { kind: "stat" }>[] = [];
-  let modifier = 0;
-  for (const pick of picks) {
-    if (pick.kind === "die") dice.set(pick.sides, (dice.get(pick.sides) ?? 0) + 1);
-    else if (pick.kind === "modifier") modifier += pick.value;
-    else stats.push(pick);
-  }
-  const rolledValues = new Map<number, number[]>();
-  if (releasedRoll)
-    for (const term of releasedRoll.roll.terms)
-      if (term.kind === "dice" && term.dice[0])
-        rolledValues.set(
-          term.dice[0].sides,
-          term.dice.flatMap((die) => (die.exploded ? [] : [die.value])),
-        );
   if (!formula) return null;
-
-  let index = 0;
-  const diceViews = [...dice].flatMap(([sides, count]) =>
-    Array.from({ length: count }, (_, dieIndex) => {
-      const current = index++;
-      const entryKey = `${sides}:${dieIndex}`;
+  const landed = landedValues(releasedRoll?.roll);
+  const views = pendingEntries(picks).map((entry, index) => {
+    if (entry.kind === "die") {
+      const entryKey = `${entry.sides}:${entry.dieIndex}`;
       return (
         <PendingDie
           key={entryKey}
-          sides={sides}
-          index={current}
-          seed={`pending:${sides}:${dieIndex}`}
+          sides={entry.sides}
+          index={index}
+          seed={`pending:${entryKey}`}
           entryKey={entryKey}
-          releaseValue={rolledValues.get(sides)?.[dieIndex]}
-          releaseSeed={releasedRoll ? `${releasedRoll.seed}:${current}` : undefined}
+          releaseValue={landed.get(entry.sides)?.[entry.dieIndex]}
+          releaseSeed={releasedRoll ? `${releasedRoll.seed}:${index}` : undefined}
           trayVelocity={releasedRoll?.trayVelocity}
-          onLanded={() => onDieLanded(current)}
+          onLanded={() => onDieLanded(index)}
           onEntered={onDieEntered}
         />
       );
-    }),
-  );
-  const chipViews = [
-    ...(modifier
-      ? [
-          <RollChip
-            key="modifier"
-            value={modifier}
-            index={index}
-            pendingIndex={index++}
-            seed="pending:modifier"
-            arriving={false}
-            mine
-          />,
-        ]
-      : []),
-    ...stats.map((pick, statIndex) => {
-      const current = index++;
-      return (
-        <RollChip
-          key={`stat:${statIndex}`}
-          value={pick.value}
-          label={pick.stat}
-          index={current}
-          pendingIndex={current}
-          seed={`pending:stat:${statIndex}`}
-          arriving={false}
-          mine
-        />
-      );
-    }),
-  ];
+    }
+    const stat = entry.kind === "stat";
+    return (
+      <RollChip
+        key={stat ? `stat:${entry.statIndex}` : "modifier"}
+        value={entry.value}
+        {...(stat ? { label: entry.stat } : {})}
+        index={index}
+        pendingIndex={index}
+        seed={stat ? `pending:stat:${entry.statIndex}` : "pending:modifier"}
+        arriving={false}
+        mine
+      />
+    );
+  });
 
   return (
     <output ref={cardRef} className="roll-card pending-roll" aria-label={`Queued roll: ${formula}`}>
@@ -132,10 +137,7 @@ export function PendingRollCard({
         )}
       </div>
       <div className="roll-body">
-        <div className="roll-terms">
-          {diceViews}
-          {chipViews}
-        </div>
+        <div className="roll-terms">{views}</div>
         <span className="roll-total pending-roll-total" aria-hidden="true">
           ?
         </span>
@@ -293,6 +295,116 @@ function RollTerms({
   );
 }
 
+/** A move as it reads now: after a roll is edited, its result is worked out again from the new dice. */
+function displayedMove(
+  campaign: Campaign,
+  original: MoveMessage,
+  edited: Roll | undefined,
+): MoveMessage {
+  if (!edited || !original.roll) return original;
+  const system = systemOf(campaign);
+  const character = getCharacter(campaign, original.characterId);
+  const action = system.actions.find((candidate) => candidate.id === original.moveId);
+  if (!character || !action) return original;
+  const derived = derive(character, system);
+  return {
+    ...original,
+    roll: edited,
+    ...readRollResult(
+      system,
+      action,
+      character,
+      { ...derived, values: { ...derived.values, ...original.rollValues } },
+      edited,
+      original.targets,
+      original.difficulty,
+      original.counterMessageId,
+    ),
+  };
+}
+
+/** What happened to a move's targets: their rolls, or who it was aimed at. */
+function MoveTargets({ campaign, m }: { campaign: Campaign; m: MoveMessage }) {
+  if (m.targets?.some((t) => t.roll)) return <TargetRolls campaign={campaign} m={m} />;
+  if (!m.targets || m.save) return null;
+  return (
+    <p className="move-targets">
+      <span className="muted">Targeting</span>{" "}
+      {m.targets.map((t, i) => (
+        <span key={t.id}>
+          {i > 0 && ", "}
+          {t.name}
+          {t.distance && <span className="muted"> ({t.distance})</span>}
+        </span>
+      ))}
+    </p>
+  );
+}
+
+/** The result a move got, if the system names it. */
+const resultOf = (campaign: Campaign, m: MoveMessage) =>
+  m.result ? systemOf(campaign).results.find((r) => r.id === m.result) : undefined;
+
+/** How the move turned out: its band, what happened, and any saves it asks of targets. */
+function MoveOutcome({ campaign, m }: { campaign: Campaign; m: MoveMessage }) {
+  const label = resultOf(campaign, m)?.label ?? m.result;
+  return (
+    <>
+      {label && <div className="move-band">{label}</div>}
+      <RichTextView
+        campaign={campaign}
+        text={asRichText(m.outcome)}
+        characterId={m.characterId ?? null}
+        className="move-outcome"
+      />
+      {m.save && <SaveRequests campaign={campaign} m={m} />}
+    </>
+  );
+}
+
+/** The move's own text, unless the outcome says the same. */
+function MoveText({ campaign, m }: { campaign: Campaign; m: MoveMessage }) {
+  if (!m.text || sameRichText(asRichText(m.text), asRichText(m.outcome))) return null;
+  return (
+    <RichTextView
+      campaign={campaign}
+      text={asRichText(m.text)}
+      characterId={m.characterId ?? null}
+    />
+  );
+}
+
+/** The follow-ups a move suggests, each a button unless a counter it moves can't be worked by this player. */
+function MoveSuggestions({ m }: { m: MoveMessage }) {
+  const ctx = useCampaign();
+  const messages = useQuery(ctx.campaign.chat.messages);
+  const gm = useQuery(ctx.campaign.members, () => ctx.campaign.isGm());
+  const me = useQuery(device).id;
+  if (m.suggestions.length === 0) return null;
+  const canAdvance = (s: MoveMessage["suggestions"][number]) => {
+    if (!s.count) return true;
+    if (s.count.systemCounter) return gm;
+    const count = messages.find((message) => message.id === s.count!.messageId);
+    return !!count && count.kind === "counter" && canWork(count, me, gm);
+  };
+  return (
+    <div className="move-suggest">
+      {m.suggestions.map((s) => (
+        <Button
+          key={s.label}
+          variant="ghost"
+          disabled={!canAdvance(s)}
+          onClick={() =>
+            ctx.execute(applySuggestion, { characterId: m.characterId, suggestion: s })
+          }
+        >
+          {s.label}
+        </Button>
+      ))}
+    </div>
+  );
+}
+
 /** A move: its name, the roll behind it, the outcome, and follow-up buttons. */
 export function MoveCard({
   campaign,
@@ -301,81 +413,37 @@ export function MoveCard({
   arriving,
   mine,
 }: { campaign: Campaign; m: MoveMessage; canAct: boolean } & Thrown) {
-  const ctx = useCampaign();
   const interaction = useSharedRoll(campaign, original);
-  const messages = useQuery(campaign.chat.messages);
-  const gm = useQuery(campaign.members, () => campaign.isGm());
-  const me = useQuery(device).id;
   const gesture = useThrow({
     onThrow: interaction.rerollAll,
     onAway: rollCarriedDice,
     enabled: interaction.allowed && !!original.roll,
     ignoreControls: true,
   });
-  let m = original;
-  if (interaction.snapshot?.edited && original.roll) {
-    const system = systemOf(campaign);
-    const character = getCharacter(campaign, original.characterId);
-    const action = system.actions.find((candidate) => candidate.id === original.moveId);
-    if (character && action) {
-      const derived = derive(character, system);
-      m = {
-        ...original,
-        roll: interaction.snapshot.roll,
-        ...readRollResult(
-          system,
-          action,
-          character,
-          { ...derived, values: { ...derived.values, ...original.rollValues } },
-          interaction.snapshot.roll,
-          original.targets,
-          original.difficulty,
-          original.counterMessageId,
-        ),
-      };
-    }
-  }
-  const result = m.result ? systemOf(campaign).results.find((r) => r.id === m.result) : undefined;
-  const label = result ? result.label : m.result;
+  const m = displayedMove(
+    campaign,
+    original,
+    interaction.snapshot?.edited ? interaction.snapshot.roll : undefined,
+  );
+  const result = resultOf(campaign, m);
+  const throwable = interaction.allowed && !!m.roll;
   return (
     <div
       className="roll-card move-card"
       data-band={result?.tone ?? "none"}
       data-rolled={!!m.roll || undefined}
-      data-throwable={(interaction.allowed && !!m.roll) || undefined}
-      data-dice-target={interaction.allowed && m.roll ? m.id : undefined}
+      data-throwable={throwable || undefined}
+      data-dice-target={throwable ? m.id : undefined}
       // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable so the roll can be rerolled by keyboard
-      tabIndex={interaction.allowed && m.roll ? 0 : undefined}
+      tabIndex={throwable ? 0 : undefined}
       {...gesture}
     >
       <div className="roll-head">
         <span className="roll-formula">{m.moveName}</span>
         <span className="roll-comment">{m.characterName}</span>
       </div>
-      {m.text && !sameRichText(asRichText(m.text), asRichText(m.outcome)) && (
-        <RichTextView
-          campaign={campaign}
-          text={asRichText(m.text)}
-          characterId={m.characterId ?? null}
-        />
-      )}
-      {m.targets?.some((t) => t.roll) ? (
-        <TargetRolls campaign={campaign} m={m} />
-      ) : (
-        m.targets &&
-        !m.save && (
-          <p className="move-targets">
-            <span className="muted">Targeting</span>{" "}
-            {m.targets.map((t, i) => (
-              <span key={t.id}>
-                {i > 0 && ", "}
-                {t.name}
-                {t.distance && <span className="muted"> ({t.distance})</span>}
-              </span>
-            ))}
-          </p>
-        )
-      )}
+      <MoveText campaign={campaign} m={m} />
+      <MoveTargets campaign={campaign} m={m} />
       {m.roll && (
         <div className="roll-body">
           <RollTerms
@@ -388,40 +456,8 @@ export function MoveCard({
           <span className="roll-total">{interaction.snapshot!.roll.total}</span>
         </div>
       )}
-      {label && <div className="move-band">{label}</div>}
-      <RichTextView
-        campaign={campaign}
-        text={asRichText(m.outcome)}
-        characterId={m.characterId ?? null}
-        className="move-outcome"
-      />
-      {m.save && <SaveRequests campaign={campaign} m={m} />}
-      {canAct && m.suggestions.length > 0 && (
-        <div className="move-suggest">
-          {m.suggestions.map((s) => {
-            const count = s.count?.messageId
-              ? messages.find((message) => message.id === s.count!.messageId)
-              : undefined;
-            const canAdvance =
-              !s.count ||
-              (s.count.systemCounter
-                ? gm
-                : !!count && count.kind === "counter" && canWork(count, me, gm));
-            return (
-              <Button
-                key={s.label}
-                variant="ghost"
-                disabled={!canAdvance}
-                onClick={() =>
-                  ctx.execute(applySuggestion, { characterId: m.characterId, suggestion: s })
-                }
-              >
-                {s.label}
-              </Button>
-            );
-          })}
-        </div>
-      )}
+      <MoveOutcome campaign={campaign} m={m} />
+      {canAct && <MoveSuggestions m={m} />}
     </div>
   );
 }

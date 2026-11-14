@@ -72,60 +72,117 @@ type MessageProps = {
 /** Messages that have played their arrival, so scrolling the log's window back over them doesn't replay it. */
 const arrived = new Set<string>();
 
-/** Memoised: the log re-renders as messages arrive, but a message only when its own props change. */
-export const Message = memo(function Message({
-  campaign,
-  m,
-  header,
-  fresh,
-  masked,
-  mine,
-  canAct,
-  canGo,
-  quickRoll = false,
-  quickRollActive = false,
-  onMenu,
-}: MessageProps) {
-  const menu = useMemo(() => onMenu && menuTrigger((x, y) => onMenu(x, y, m.id)), [onMenu, m.id]);
-  // Fixed when it mounts, so a re-render mid-animation doesn't cut it short.
-  const arriving = useConstant(() => fresh && !arrived.has(m.id) && !quickRoll);
-  const arrival = useConstant(() => ({ fresh, id: m.id, mine, arriving }));
+/**
+ * Whether a message is playing its arrival. Fixed when it mounts, so a re-render
+ * mid-animation doesn't cut it short; it plays its sound once, for others' messages.
+ */
+function useArrival(id: string, fresh: boolean, mine: boolean, quickRoll: boolean) {
+  const arriving = useConstant(() => fresh && !arrived.has(id) && !quickRoll);
+  const arrival = useConstant(() => ({ fresh, id, mine, arriving }));
   useEffect(() => {
     if (!arrival.fresh) return;
     arrived.add(arrival.id);
     if (arrival.arriving && !arrival.mine) playUiSound("message");
   }, [arrival]);
-  const pinned = useQuery(campaign.messageState, () => isPinned(campaign, m.id));
-  if (m.kind === "system") {
-    const session = m.event === "session-start" || m.event === "session-end";
-    return (
-      <div
-        className="chat-system"
-        data-key={m.id}
-        data-session={session}
-        data-fresh={arriving}
-        {...menu}
-      >
-        <span>{m.text}</span>
-        {canGo && (
-          <Button
-            variant="ghost"
-            className="chat-go"
-            onClick={() => campaign.setActiveScene(m.sceneId!)}
-          >
-            Go There
-          </Button>
-        )}
-      </div>
-    );
+  return arriving;
+}
+
+/** What a message says, in the card for its kind. */
+function MessageBody({
+  m,
+  ...props
+}: Pick<
+  MessageProps,
+  "campaign" | "masked" | "mine" | "canAct" | "quickRoll" | "quickRollActive"
+> & {
+  m: Exclude<ChatMessage, { kind: "system" }>;
+  arriving: boolean;
+}) {
+  const { campaign, mine, arriving } = props;
+  switch (m.kind) {
+    case "roll":
+      return (
+        <RollCard
+          campaign={campaign}
+          m={m}
+          masked={props.masked}
+          arriving={arriving}
+          mine={mine}
+          quickRoll={props.quickRoll ?? false}
+          quickRollActive={props.quickRollActive ?? false}
+        />
+      );
+    case "move":
+      return (
+        <MoveCard campaign={campaign} m={m} canAct={props.canAct} arriving={arriving} mine={mine} />
+      );
+    case "timer":
+      return <TimerCard campaign={campaign} m={m} />;
+    case "counter":
+      return <CounterCard campaign={campaign} m={m} />;
+    case "text":
+      return <TextBody campaign={campaign} m={m} mine={mine} />;
   }
-  const whisper = m.kind === "text" && m.to;
+}
+
+/** A line of the log that isn't a person speaking: a session starting, or the scene changing. */
+function SystemNotice({
+  campaign,
+  m,
+  canGo,
+  arriving,
+  menu,
+}: {
+  campaign: Campaign;
+  m: Extract<ChatMessage, { kind: "system" }>;
+  canGo: boolean;
+  arriving: boolean;
+  menu: ReturnType<typeof menuTrigger> | undefined;
+}) {
+  return (
+    <div
+      className="chat-system"
+      data-key={m.id}
+      data-session={m.event === "session-start" || m.event === "session-end"}
+      data-fresh={arriving}
+      {...menu}
+    >
+      <span>{m.text}</span>
+      {canGo && (
+        <Button
+          variant="ghost"
+          className="chat-go"
+          onClick={() => campaign.setActiveScene(m.sceneId!)}
+        >
+          Go There
+        </Button>
+      )}
+    </div>
+  );
+}
+
+/** Memoised: the log re-renders as messages arrive, but a message only when its own props change. */
+export const Message = memo(function Message({
+  m,
+  header,
+  fresh,
+  canGo = false,
+  quickRoll = false,
+  onMenu,
+  ...props
+}: MessageProps) {
+  const { campaign, mine } = props;
+  const menu = useMemo(() => onMenu && menuTrigger((x, y) => onMenu(x, y, m.id)), [onMenu, m.id]);
+  const arriving = useArrival(m.id, fresh, mine, quickRoll);
+  const pinned = useQuery(campaign.messageState, () => isPinned(campaign, m.id));
+  if (m.kind === "system")
+    return <SystemNotice campaign={campaign} m={m} canGo={canGo} arriving={arriving} menu={menu} />;
   return (
     <article
       className="chat-msg"
       data-key={m.id}
       data-header={header}
-      data-whisper={!!whisper}
+      data-whisper={m.kind === "text" && !!m.to}
       data-fresh={arriving}
       data-pinned={pinned || undefined}
       {...menu}
@@ -139,25 +196,7 @@ export const Message = memo(function Message({
           </time>
         </header>
       )}
-      {m.kind === "roll" ? (
-        <RollCard
-          campaign={campaign}
-          m={m}
-          masked={masked}
-          arriving={arriving}
-          mine={mine}
-          quickRoll={quickRoll}
-          quickRollActive={quickRollActive}
-        />
-      ) : m.kind === "move" ? (
-        <MoveCard campaign={campaign} m={m} canAct={canAct} arriving={arriving} mine={mine} />
-      ) : m.kind === "timer" ? (
-        <TimerCard campaign={campaign} m={m} />
-      ) : m.kind === "counter" ? (
-        <CounterCard campaign={campaign} m={m} />
-      ) : (
-        <TextBody campaign={campaign} m={m} mine={mine} />
-      )}
+      <MessageBody m={m} arriving={arriving} quickRoll={quickRoll} {...props} />
     </article>
   );
 });

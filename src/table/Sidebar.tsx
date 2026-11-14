@@ -25,6 +25,7 @@ import { usePanelLabel } from "./panelLabels";
 import { PanelActionsProvider, PanelActionsSlot } from "./PanelActions";
 import { EntityWindowContent } from "../workspace/entityWindows";
 import { isEntityTab } from "../workspace/entityWindowState";
+import type { EntityWindowRecord } from "../workspace/entityWindowState";
 import { CampaignEntityGraphic } from "../workspace/EntityGraphic";
 import { keyedSideWidth, SIDEBAR_DEFAULT_W } from "../workspace/layoutModel";
 import { type CampaignContext, useCampaign } from "../workspace/campaignContext";
@@ -307,6 +308,45 @@ function useOnlineCount(campaign: Campaign) {
   ).length;
 }
 
+/** The unread and online counts a tab carries: the chat's unread messages, the members' online players. */
+function useTabBadge(campaign: Campaign, id: DockItemId) {
+  const online = useOnlineCount(campaign);
+  const unread = useUnreadCount(campaign);
+  if (id === "chat")
+    return {
+      description: unread ? `, ${unread} unread` : "",
+      unread: unread > 0 ? Math.min(unread, 99) : undefined,
+      online: undefined,
+    };
+  if (id === "members") return { description: `, ${online} online`, unread: undefined, online };
+  return { description: "", unread: undefined, online: undefined };
+}
+
+/** The icon of a window docked in the sidebar: its entity's graphic, or its own icon. */
+function EntityTabIcon({
+  campaign,
+  record,
+  className,
+}: {
+  campaign: Campaign;
+  record: EntityWindowRecord | undefined;
+  className?: string;
+}) {
+  if (record?.graphicRef)
+    return (
+      <CampaignEntityGraphic
+        campaign={campaign}
+        kind={record.graphicRef.kind}
+        id={record.graphicRef.id}
+        defaultIcon={record.graphicDefaultIcon}
+        size={22}
+        {...(className ? { className } : {})}
+      />
+    );
+  const Icon = record?.icon ?? IconOpenWindow;
+  return <Icon size={22} {...(className ? { className } : {})} />;
+}
+
 /** A tab that selects its panel on click, or pulls it out into a window when dragged. */
 function RailTab({
   campaign,
@@ -326,9 +366,7 @@ function RailTab({
   const records = useQuery(ctx.windows.records);
   const record = isEntityTab(id) ? ctx.windows.record(id, records) : undefined;
   const label = usePanelLabel(id, campaign) ?? record?.title ?? id.slice("entity:".length);
-  const Icon = record?.icon ?? (record?.graphicRef ? undefined : IconOpenWindow);
-  const onlineCount = useOnlineCount(campaign);
-  const unread = useUnreadCount(campaign);
+  const badge = useTabBadge(campaign, id);
 
   function onPointerDown(e: ReactPointerEvent) {
     dragTab(ctx, id, e);
@@ -341,31 +379,19 @@ function RailTab({
       className="rail-tab"
       data-panel={panel ? id : undefined}
       data-entity-window={record ? id : undefined}
-      label={
-        label +
-        (id === "chat" && unread ? `, ${unread} unread` : "") +
-        (id === "members" ? `, ${onlineCount} online` : "")
-      }
+      label={label + badge.description}
       aria-selected={selected}
       pressed={selected}
-      data-unread={id === "chat" && unread > 0 ? Math.min(unread, 99) : undefined}
-      data-online={id === "members" ? onlineCount : undefined}
+      data-unread={badge.unread}
+      data-online={badge.online}
       onClick={() => switchTo(ctx, id, side)}
       {...withPull(onPointerDown, onMenu)}
     >
       {panel ? (
         <PanelIcon id={panel} campaign={campaign} />
-      ) : record?.graphicRef ? (
-        <CampaignEntityGraphic
-          campaign={campaign}
-          kind={record.graphicRef.kind}
-          id={record.graphicRef.id}
-          defaultIcon={record.graphicDefaultIcon}
-          size={22}
-        />
-      ) : Icon ? (
-        <Icon size={22} />
-      ) : null}
+      ) : (
+        <EntityTabIcon campaign={campaign} record={record} />
+      )}
     </Button>
   );
 }
@@ -402,7 +428,6 @@ function ActiveTab({
   }
 
   const record = ctx.windows.record(id, records);
-  const Icon = record?.icon ?? (record?.graphicRef ? undefined : IconOpenWindow);
   return (
     <div
       className="sidebar-panel entity-sidebar-panel"
@@ -412,18 +437,7 @@ function ActiveTab({
         className="panel-header docked-header"
         {...withPull((e) => pullOut(ctx, id, e), onMenu)}
       >
-        {record?.graphicRef ? (
-          <CampaignEntityGraphic
-            campaign={campaign}
-            kind={record.graphicRef.kind}
-            id={record.graphicRef.id}
-            defaultIcon={record.graphicDefaultIcon}
-            size={22}
-            className="window-icon"
-          />
-        ) : Icon ? (
-          <Icon size={22} className="window-icon" />
-        ) : null}
+        <EntityTabIcon campaign={campaign} record={record} className="window-icon" />
         <h2 className="panel-title" tabIndex={-1}>
           {record?.title ?? id.slice("entity:".length)}
         </h2>

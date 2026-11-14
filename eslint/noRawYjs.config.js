@@ -6,7 +6,7 @@ import dataLayer from "./noRawYjs.js";
 export default defineConfig([
   {
     files: ["src/**/*.{ts,tsx}"],
-    ignores: ["src/data/**", "**/__tests__/**", "**/*.stories.tsx"],
+    ignores: ["src/data/**", "**/__tests__/**"],
     languageOptions: {
       parser: tseslint.parser,
       parserOptions: {

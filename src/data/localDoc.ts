@@ -34,7 +34,7 @@ export class LocalDoc {
     return d;
   }
 
-  /** A local document kept only in memory, for stories and tests. */
+  /** A local document kept only in memory, for tests. */
   static inMemory(): LocalDoc {
     return new LocalDoc(null);
   }
