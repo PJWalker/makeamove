@@ -1,5 +1,38 @@
 import { describe, expect, it } from "vite-plus/test";
+import config, { macroPlugins } from "../../../vite.config";
 import { md } from "../markdown.macro.ts" with { type: "macro" };
+
+describe("macro dependency scanning", () => {
+  const source = "../../macros/markdown.macro";
+  const importer = "/src/systems/dungeon-world/index.ts";
+
+  function resolveMacro(scan: boolean): unknown {
+    const guard = macroPlugins().find((plugin) => plugin.name === "macros-only-at-build-time")!;
+    const hook = guard.resolveId!;
+    const resolveId = typeof hook === "function" ? hook : hook.handler;
+    return Reflect.apply(
+      resolveId,
+      {
+        error(message: string) {
+          throw new Error(message);
+        },
+      },
+      [source, importer, { scan }],
+    );
+  }
+
+  it("only scans the application HTML entry, not developer reference pages", () => {
+    expect(config).toHaveProperty("optimizeDeps.entries", ["index.html"]);
+  });
+
+  it("excludes build-time macros from dependency scanning", () => {
+    expect(resolveMacro(true)).toEqual({ id: source, external: true });
+  });
+
+  it("still rejects runtime macro imports outside dependency scanning", () => {
+    expect(() => resolveMacro(false)).toThrow("is a build-time macro");
+  });
+});
 
 describe("md macro", () => {
   it("inlines markdown as rich text at build time", () => {

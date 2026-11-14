@@ -38,12 +38,15 @@ export function macroPlugins(): Plugin[] {
       enforce: "pre",
       // Tests run in Node, so they may call a macro's functions directly, and
       // macro modules may use each other.
-      resolveId(source, importer) {
+      resolveId(source, importer, options) {
         const buildTime = importer?.includes("/__tests__/") || importer?.endsWith(".macro.ts");
-        if ((source.endsWith(".macro") || source.endsWith(".macro.ts")) && !buildTime)
-          this.error(
-            `${source} is a build-time macro: import it with { type: "macro" } (${importer})`,
-          );
+        if (source.endsWith(".macro") || source.endsWith(".macro.ts")) {
+          if ("scan" in options && options.scan) return { id: source, external: true };
+          if (!buildTime)
+            this.error(
+              `${source} is a build-time macro: import it with { type: "macro" } (${importer})`,
+            );
+        }
       },
     },
   ];
@@ -713,6 +716,9 @@ export default defineConfig({
   base: process.env.PAGES_BASE_PATH || "/",
   server: {
     hmr: false,
+  },
+  optimizeDeps: {
+    entries: ["index.html"],
   },
   build: {
     chunkSizeWarningLimit: 1000,
