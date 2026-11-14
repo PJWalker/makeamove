@@ -27,17 +27,5 @@
       ],
       "port": 5180
     },
-    {
-      "name": "storybook",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": [
-        "run",
-        "storybook",
-        "--",
-        "--no-open",
-        "--ci"
-      ],
-      "port": 6006
-    }
   ]
 }
