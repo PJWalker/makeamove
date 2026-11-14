@@ -1,11 +1,6 @@
 import { MoveBody } from "../workspace/MoveBody";
-import {
-  baseSystemOf,
-  canEdit,
-  getCharacter,
-  actingCharacterId,
-  systemOf,
-} from "../features/characters/api";
+import { baseSystemOf, systemOf } from "../features/characters/api";
+import type { CharacterView } from "../features/characters/types";
 import {
   KIND_LABEL,
   useLibrariesFor,
@@ -16,27 +11,27 @@ import {
   type EntryKind,
   type EntryView,
   type LibraryEntry,
+  type LibrarySource,
 } from "../features/library";
 import { toggleSetValue } from "../lib/set";
 import type { Campaign } from "../campaign/campaign";
 import { useQuery } from "../ui/useQuery";
-import { Button } from "../ui/Button";
 import { Segmented } from "../ui/Segmented";
-import { IconGive, IconImage } from "../ui/icons";
+import { IconImage } from "../ui/icons";
 import { List, ListExpand, ListGroup, Tag } from "../ui/List";
 import { EntryRow, EntryWindow } from "../workspace/EntryWindow";
 import { useEntryWindows } from "../workspace/entryWindowState";
 import { dragEntity } from "../workspace/entityDrag";
 import { entity } from "../workspace/dragEntities";
 import { linkProxy } from "../workspace/linkProxy";
-import { makeVerb, rollTag } from "../workspace/actionPresentation";
+import { rollTag } from "../workspace/actionPresentation";
 import { actionMenuItems } from "../workspace/actionMenu";
 import { getEntityGraphic } from "../workspace/entityGraphics";
 import { CampaignEntityGraphic } from "../workspace/EntityGraphic";
-import type { ItemDef } from "../systems/types";
-import { useCampaign } from "../workspace/campaignContext";
-import { acquireItem, npcFromMonster, startMove } from "../workspace/commands/characters";
-import { can } from "../workspace/commands/views";
+import { useCampaign, type CampaignContext } from "../workspace/campaignContext";
+import { joinSections } from "../workspace/commands/views";
+import { EntryActionButtons } from "../workspace/EntryActionButtons";
+import { entryActionMenu, useLibraryActions, type EntryAction } from "../workspace/libraryActions";
 
 const metaOf = (e: LibraryEntry) =>
   [
@@ -61,159 +56,83 @@ const textOf = (e: LibraryEntry) =>
     ),
   ].join("\n\n");
 
-/**
- * The Libraries: everything the game system and plugins contribute (items,
- * moves, options, tags), grouped by where it comes from. Gear can be added
- * to the selected character, and moves made by them.
- */
-export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
+type Browsing = {
+  campaign: Campaign;
+  actionsFor: (e: LibraryEntry) => EntryAction[];
+  windows: ReturnType<typeof useEntryWindows>;
+  openedIds: ReadonlySet<string>;
+  searching: boolean;
+  toggle: (id: string) => void;
+};
+
+/** An entry's context menu: what it offers, pinning it, and changing its graphic. */
+function useEntryMenu({ actionsFor }: Pick<Browsing, "actionsFor">) {
   const ctx = useCampaign();
-  const system = systemOf(campaign);
-  // The Libraries are the system's own; homebrew is in the Items panel.
-  const sources = useLibrariesFor(baseSystemOf(campaign));
-  const meId = useQuery(campaign.members, () => actingCharacterId(campaign));
-  const me = useQuery(campaign.characters, () => getCharacter(campaign, meId));
-  const canAct = !!me && canEdit(campaign, me);
-  const windows = useEntryWindows();
-  const { kind, query } = useQuery(ctx.library.view);
-  const openedIds = useQuery(ctx.library.openedEntries);
-  const searching = query.trim() !== "";
-
-  const kinds = (Object.keys(KIND_LABEL) as EntryKind[]).filter((k) =>
-    sources.some((s) => s.collections.some((c) => c.kind === k)),
-  );
-  const acquisition = (item: ItemDef) => system.acquireItem?.(item, me);
-  /** True, or why the acting character can't get it. */
-  const purchase = (item: ItemDef) =>
-    me
-      ? ctx.commands.check(acquireItem, { characterId: me.id, item: item.id })
-      : "Choose a character first";
-  const canPurchase = (item: ItemDef) => purchase(item) === true;
-  const acquire = (item: ItemDef) =>
-    me && ctx.execute(acquireItem, { characterId: me.id, item: item.id });
-  const toggle = (id: string) => {
-    ctx.library.openedEntries.set(toggleSetValue(ctx.library.openedEntries.value, id));
-  };
-
-  /** The buttons an entry offers, in its row or its window. */
-  const actions = (e: LibraryEntry, inWindow = false) => {
-    if (e.kind === "item" && inWindow) {
-      return (
-        <Button
-          variant="primary"
-          disabled={!canPurchase(e.item)}
-          title={canPurchase(e.item) ? undefined : String(purchase(e.item))}
-          onClick={() => acquire(e.item)}
-        >
-          {acquisition(e.item)?.label ?? (me ? `Give to ${me.name}` : "Choose a Character")}
-        </Button>
-      );
-    }
-    if (e.kind === "move" && inWindow) {
-      const { label, Icon } = makeVerb(e.move);
-      return (
-        <Button
-          variant="primary"
-          disabled={!canAct}
-          onClick={() => me && ctx.execute(startMove, { characterId: me.id, move: e.move.id })}
-        >
-          <Icon size={22} /> {label}
-          {me ? ` as ${me.name}` : ""}
-        </Button>
-      );
-    }
-    if (e.kind === "monster" && inWindow) {
-      return (
-        <Button
-          variant="primary"
-          disabled={!can(ctx, npcFromMonster, { monster: e.monster.id })}
-          onClick={() => ctx.execute(npcFromMonster, { monster: e.monster.id })}
-        >
-          Create NPC
-        </Button>
-      );
-    }
-    return null;
-  };
-
-  const tagOf = (e: LibraryEntry) => (e.kind === "move" ? rollTag(system, e.move) : null);
-
-  const menuItemsFor = (e: LibraryEntry) => {
-    const actions =
+  return (e: LibraryEntry) =>
+    joinSections([
+      entryActionMenu(actionsFor(e)),
       e.kind === "item"
         ? actionMenuItems(ctx, [{ id: `library:${e.id}`, title: e.name }])
         : e.kind === "move"
           ? actionMenuItems(ctx, [{ id: `move:${e.id}`, title: e.name }])
-          : [];
-    const items =
-      e.kind === "item"
-        ? [
-            {
-              label:
-                acquisition(e.item)?.label ?? (me ? `Give to ${me.name}` : "Choose a Character"),
-              Icon: IconGive,
-              disabled: !canPurchase(e.item),
-              onSelect: () => {
-                acquire(e.item);
-              },
-            },
-            ...(actions.length ? (["divider"] as const) : []),
-            ...actions,
-          ]
-        : e.kind === "move"
-          ? [
-              {
-                label: "Make",
-                disabled: !canAct,
-                onSelect: () => {
-                  if (me && canAct) ctx.execute(startMove, { characterId: me.id, move: e.move.id });
-                },
-              },
-              ...(actions.length ? (["divider"] as const) : []),
-              ...actions,
-            ]
-          : e.kind === "monster"
-            ? [
-                {
-                  label: "Create NPC",
-                  disabled: !can(ctx, npcFromMonster, { monster: e.monster.id }),
-                  onSelect: () => ctx.execute(npcFromMonster, { monster: e.monster.id }),
-                },
-              ]
-            : actions;
-    return [
-      ...items,
-      ...(items.length ? (["divider"] as const) : []),
-      {
-        label: "Change Graphic…",
-        Icon: IconImage,
-        onSelect: () => ctx.table.editGraphic(e.kind, e.id, e.name, e.icon),
-      },
-    ];
+          : [],
+      [
+        {
+          label: "Change Graphic…",
+          Icon: IconImage,
+          onSelect: () => ctx.table.editGraphic(e.kind, e.id, e.name, e.icon),
+        },
+      ],
+    ]);
+}
+
+/** What dragging an entry's row carries: an item or move to link, or any other entry as a token. */
+function dragPayload(ctx: CampaignContext, campaign: Campaign, e: LibraryEntry) {
+  if (e.kind === "item" || e.kind === "move") return entity(ctx, e.kind, e.id, e.name);
+  return {
+    label: e.name,
+    libraryEntry: { kind: e.kind, id: e.id },
+    token: {
+      name: e.name,
+      graphic: getEntityGraphic(campaign, e.kind, e.id, e.icon),
+      entityRef: { kind: e.kind, id: e.id },
+    },
   };
+}
 
-  const all: (readonly [string, ReturnType<typeof sourceEntries>[number]])[] = [];
-  for (const s of sources) for (const e of sourceEntries(s)) all.push([s.id, e]);
-  const shown = sources.flatMap((s) => {
-    const listed = topLevelKeys(s);
-    const collections = s.collections.flatMap((c) => {
-      const views = viewEntries(c.entries, query, kind, listed);
-      return views.length > 0 ? [{ c, views }] : [];
-    });
-    return collections.length > 0 ? [{ s, collections }] : [];
-  });
+const TIP_HINT: Partial<Record<EntryKind, string>> = {
+  item: "Drag onto a character to give it to them, or into a note to link it.",
+  move: "Drag onto a character to teach it to them, or into a note to link it.",
+};
 
-  const row = (sourceId: string, path: string, v: EntryView, aligned: boolean) => {
-    const e = v.entry;
-    const id = `${path}/${e.id}`;
-    const open =
-      v.groups.length > 0 && (searching ? v.reveal || openedIds.has(id) : openedIds.has(id));
-    return [
+/** One entry: its row, and what it holds underneath when opened. */
+function LibraryRow({
+  browsing,
+  sourceId,
+  path,
+  view: v,
+  aligned,
+}: {
+  browsing: Browsing;
+  sourceId: string;
+  path: string;
+  view: EntryView;
+  aligned: boolean;
+}) {
+  const ctx = useCampaign();
+  const menuFor = useEntryMenu(browsing);
+  const { campaign, windows, openedIds, searching, toggle } = browsing;
+  const e = v.entry;
+  const id = `${path}/${e.id}`;
+  const holds = v.groups.length > 0;
+  const open = holds && (searching ? v.reveal || openedIds.has(id) : openedIds.has(id));
+  const hint = TIP_HINT[e.kind];
+  return (
+    <>
       <EntryRow
-        key={e.id}
         name={e.name}
         before={
-          v.groups.length ? (
+          holds ? (
             <ListExpand
               open={open}
               onToggle={() => toggle(id)}
@@ -232,42 +151,19 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
             size={22}
           />
         }
-        tag={tagOf(e)}
+        tag={e.kind === "move" ? rollTag(systemOf(campaign), e.move) : null}
         meta={metaOf(e)}
-        tip={
-          e.kind === "item"
-            ? `${e.text}\n\nDrag onto a character to give it to them, or into a note to link it.`
-            : e.kind === "move"
-              ? `${e.text}\n\nDrag onto a character to teach it to them, or into a note to link it.`
-              : e.text
-        }
+        tip={hint ? `${e.text}\n\n${hint}` : e.text}
         onOpen={(rowElement) => windows.show(libraryKey(sourceId, e), rowElement)}
-        menuItems={menuItemsFor(e)}
+        menuItems={menuFor(e)}
         onPointerDown={
           e.kind === "monster"
             ? undefined
-            : (ev) =>
-                dragEntity(
-                  ctx.canvas,
-                  ev,
-                  e.kind === "item" || e.kind === "move"
-                    ? entity(ctx, e.kind, e.id, e.name)
-                    : {
-                        label: e.name,
-                        libraryEntry: { kind: e.kind, id: e.id },
-                        token: {
-                          name: e.name,
-                          graphic: getEntityGraphic(campaign, e.kind, e.id, e.icon),
-                          entityRef: { kind: e.kind, id: e.id },
-                        },
-                      },
-                )
+            : (ev) => dragEntity(ctx.canvas, ev, dragPayload(ctx, campaign, e))
         }
-      >
-        {actions(e)}
-      </EntryRow>,
-      open && (
-        <li key={`${e.id}/held`} className="library-nest">
+      />
+      {open && (
+        <li className="library-nest">
           {v.groups.map(({ group, entries }) => (
             <section
               key={group.id}
@@ -280,42 +176,167 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
                   {group.note && <span className="list-meta">{group.note}</span>}
                 </h4>
               )}
-              {rows(sourceId, `${id}/${group.id}`, entries)}
+              <LibraryRows
+                browsing={browsing}
+                sourceId={sourceId}
+                path={`${id}/${group.id}`}
+                views={entries}
+              />
             </section>
           ))}
         </li>
-      ),
-    ];
+      )}
+    </>
+  );
+}
+
+function LibraryRows({
+  browsing,
+  sourceId,
+  path,
+  views,
+}: {
+  browsing: Browsing;
+  sourceId: string;
+  path: string;
+  views: EntryView[];
+}) {
+  const aligned = views.some((v) => v.groups.length > 0);
+  return (
+    <List>
+      {views.map((v) => (
+        <LibraryRow
+          key={v.entry.id}
+          browsing={browsing}
+          sourceId={sourceId}
+          path={path}
+          view={v}
+          aligned={aligned}
+        />
+      ))}
+    </List>
+  );
+}
+
+/** The windows open on library entries. */
+function LibraryEntryWindows({
+  browsing,
+  sources,
+  me,
+}: {
+  browsing: Browsing;
+  sources: LibrarySource[];
+  me: CharacterView | undefined;
+}) {
+  const ctx = useCampaign();
+  const menuFor = useEntryMenu(browsing);
+  const { campaign, windows, actionsFor } = browsing;
+  const entries = sources.flatMap((s) =>
+    sourceEntries(s).map((e) => [libraryKey(s.id, e), e] as const),
+  );
+  return windows.keys.map((key) => {
+    const e = entries.find(([k]) => k === key)?.[1];
+    if (!e) return null;
+    const tag = e.kind === "move" ? rollTag(systemOf(campaign), e.move) : null;
+    return (
+      <EntryWindow
+        key={key}
+        entryKey={key}
+        title={e.name}
+        text={textOf(e)}
+        body={
+          e.kind === "move" ? (
+            <MoveBody campaign={campaign} move={e.move} characterId={me?.id ?? null} />
+          ) : undefined
+        }
+        tags={e.tags}
+        onClose={() => windows.close(key)}
+        graphicRef={{ kind: e.kind, id: e.id }}
+        graphicDefaultIcon={e.icon}
+        proxy={
+          e.kind === "item" || e.kind === "move"
+            ? linkProxy(ctx, e.kind, e.id, e.name, e.icon)
+            : undefined
+        }
+        menuItems={menuFor(e)}
+      >
+        {tag && <Tag>{tag}</Tag>}
+        {metaOf(e) && <span className="muted">{metaOf(e)}</span>}
+        <EntryActionButtons actions={actionsFor(e)} />
+      </EntryWindow>
+    );
+  });
+}
+
+/** The search box, and a filter by kind when the libraries hold more than one. */
+function LibraryTools({ kinds }: { kinds: EntryKind[] }) {
+  const ctx = useCampaign();
+  const { kind, query } = useQuery(ctx.library.view);
+  return (
+    <div className="panel-bar libraries-tools">
+      <input
+        type="search"
+        placeholder="Search the Libraries…"
+        aria-label="Search the Libraries"
+        value={query}
+        onInput={(e) =>
+          ctx.library.view.set({ ...ctx.library.view.value, query: e.currentTarget.value })
+        }
+      />
+      {kinds.length > 1 && (
+        <Segmented
+          label="Show"
+          value={kind}
+          options={[
+            { id: "all", label: "All" },
+            ...kinds.map((k) => ({ id: k, label: KIND_LABEL[k] })),
+          ]}
+          onChange={(k) => ctx.library.view.set({ ...ctx.library.view.value, kind: k })}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * The Libraries: everything the game system and plugins contribute (items,
+ * moves, options, tags), grouped by where it comes from. Gear can be added
+ * to the selected character, and moves made by them.
+ */
+export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
+  const ctx = useCampaign();
+  // The Libraries are the system's own; homebrew is in the Items panel.
+  const sources = useLibrariesFor(baseSystemOf(campaign));
+  const { me, canAct, actionsFor } = useLibraryActions(campaign);
+  const windows = useEntryWindows();
+  const { kind, query } = useQuery(ctx.library.view);
+  const openedIds = useQuery(ctx.library.openedEntries);
+  const searching = query.trim() !== "";
+  const browsing: Browsing = {
+    campaign,
+    actionsFor,
+    windows,
+    openedIds,
+    searching,
+    toggle: (id) =>
+      ctx.library.openedEntries.set(toggleSetValue(ctx.library.openedEntries.value, id)),
   };
-  const rows = (sourceId: string, path: string, views: EntryView[]) => {
-    const aligned = views.some((v) => v.groups.length > 0);
-    return <List>{views.flatMap((v) => row(sourceId, path, v, aligned))}</List>;
-  };
+
+  const kinds = (Object.keys(KIND_LABEL) as EntryKind[]).filter((k) =>
+    sources.some((s) => s.collections.some((c) => c.kind === k)),
+  );
+  const shown = sources.flatMap((s) => {
+    const listed = topLevelKeys(s);
+    const collections = s.collections.flatMap((c) => {
+      const views = viewEntries(c.entries, query, kind, listed);
+      return views.length > 0 ? [{ c, views }] : [];
+    });
+    return collections.length > 0 ? [{ s, collections }] : [];
+  });
 
   return (
     <div className="panel-scroll libraries">
-      <div className="panel-bar libraries-tools">
-        <input
-          type="search"
-          placeholder="Search the Libraries…"
-          aria-label="Search the Libraries"
-          value={query}
-          onInput={(e) =>
-            ctx.library.view.set({ ...ctx.library.view.value, query: e.currentTarget.value })
-          }
-        />
-        {kinds.length > 1 && (
-          <Segmented
-            label="Show"
-            value={kind}
-            options={[
-              { id: "all", label: "All" },
-              ...kinds.map((k) => ({ id: k, label: KIND_LABEL[k] })),
-            ]}
-            onChange={(k) => ctx.library.view.set({ ...ctx.library.view.value, kind: k })}
-          />
-        )}
-      </div>
+      <LibraryTools kinds={kinds} />
       <p className="muted libraries-target">
         {me
           ? canAct
@@ -329,16 +350,15 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
           <h3 className="eyebrow">{s.name}</h3>
           {collections.map(({ c, views }) => {
             const id = `${s.id}/${c.id}`;
-            const open = searching || openedIds.has(id);
             return (
               <ListGroup
                 key={c.id}
                 label={c.name}
                 count={views.length}
-                open={open}
-                onToggle={() => toggle(id)}
+                open={searching || openedIds.has(id)}
+                onToggle={() => browsing.toggle(id)}
               >
-                {rows(s.id, id, views)}
+                <LibraryRows browsing={browsing} sourceId={s.id} path={id} views={views} />
               </ListGroup>
             );
           })}
@@ -346,40 +366,7 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
         </section>
       ))}
       {searching && !shown.length && <p className="empty">Nothing matches “{query.trim()}”.</p>}
-
-      {windows.keys.map((key) => {
-        const found = all.find(([sid, e]) => libraryKey(sid, e) === key);
-        if (!found) return null;
-        const e = found[1];
-        const tag = tagOf(e);
-        return (
-          <EntryWindow
-            key={key}
-            entryKey={key}
-            title={e.name}
-            text={textOf(e)}
-            body={
-              e.kind === "move" ? (
-                <MoveBody campaign={campaign} move={e.move} characterId={me?.id ?? null} />
-              ) : undefined
-            }
-            tags={e.tags}
-            onClose={() => windows.close(key)}
-            graphicRef={{ kind: e.kind, id: e.id }}
-            graphicDefaultIcon={e.icon}
-            proxy={
-              e.kind === "item" || e.kind === "move"
-                ? linkProxy(ctx, e.kind, e.id, e.name, e.icon)
-                : undefined
-            }
-            menuItems={menuItemsFor(e)}
-          >
-            {tag && <Tag>{tag}</Tag>}
-            {metaOf(e) && <span className="muted">{metaOf(e)}</span>}
-            {actions(e, true)}
-          </EntryWindow>
-        );
-      })}
+      <LibraryEntryWindows browsing={browsing} sources={sources} me={me} />
     </div>
   );
 }

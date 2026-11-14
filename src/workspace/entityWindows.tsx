@@ -1,12 +1,6 @@
 import { useLayoutEffect, useState } from "react";
 import type { Campaign } from "../campaign/campaign";
-import {
-  baseSystemOf,
-  canEdit,
-  getCharacter,
-  actingCharacterId,
-  systemOf,
-} from "../features/characters/api";
+import { baseSystemOf, canEdit, getCharacter, systemOf } from "../features/characters/api";
 import type { ItemInstance } from "../features/characters/types";
 import { checkOf } from "../features/characters/moves";
 import { useQuery } from "../ui/useQuery";
@@ -18,12 +12,14 @@ import { usePopupDialog } from "./usePopupDialog";
 import { Dialog } from "./Dialog";
 import { entryKeyOf, type EntityWindowRecord } from "./entityWindowState";
 import { parseEntryKey, type EntryRef } from "./entryKeys";
+import { EntryActionButtons } from "./EntryActionButtons";
+import { useLibraryActions } from "./libraryActions";
 import type { MenuItem } from "../ui/ContextMenu";
 import { menuTrigger } from "../ui/menuTrigger";
 import { ContextMenu } from "../ui/ContextMenu";
 import { withTransition } from "../ui/transition";
 import { useCampaign } from "./campaignContext";
-import { giveItem, setLearned, startMove, updateItem } from "./commands/characters";
+import { setLearned, startMove, updateItem } from "./commands/characters";
 
 export function EntityWindowHost({ campaign }: { campaign: Campaign }) {
   const ctx = useCampaign();
@@ -173,27 +169,10 @@ function LibraryActions({
   campaign: Campaign;
   entry: Extract<EntryRef, { kind: "lib" }>;
 }) {
-  const ctx = useCampaign();
   const libraries = useLibrariesFor(baseSystemOf(campaign));
-  const selectedId = useQuery(campaign.members, () => actingCharacterId(campaign));
-  const character = useQuery(campaign.characters, () => getCharacter(campaign, selectedId));
+  const { actionsFor } = useLibraryActions(campaign);
   const entry = entryByKey(libraries, ref.key)?.entry;
-  const editable = !!character && canEdit(campaign, character);
-  if (entry?.kind === "item")
-    return (
-      <Button
-        variant="primary"
-        disabled={!editable}
-        onClick={() =>
-          character && ctx.execute(giveItem, { characterId: character.id, item: entry.item })
-        }
-      >
-        {character ? `Give to ${character.name}` : "Choose a Character"}
-      </Button>
-    );
-  if (entry?.kind === "move")
-    return <MoveAction move={entry.move} character={character} enabled={editable} />;
-  return null;
+  return entry ? <EntryActionButtons actions={actionsFor(entry)} /> : null;
 }
 
 function MoveActions({
