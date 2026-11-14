@@ -29,6 +29,7 @@ import { useQuery } from "../ui/useQuery";
 import { withTransition } from "../ui/transition";
 import { EffectSightToggles } from "./effectOptions";
 import { EFFECT_OPTIONS } from "./effectOptionsData";
+import { TextStyleFields } from "./TextStyleFields";
 import { useCampaign } from "../workspace/campaignContext";
 import { selectTool } from "../workspace/commands/core";
 import { menuFor } from "../workspace/commands/views";
@@ -216,6 +217,7 @@ function PenOptions({ tool }: { tool: ToolId }) {
   const { colour, width, layer } = useQuery(ctx.tools.pen);
   const shape = useQuery(ctx.tools.shapeTool);
   const paint = useQuery(ctx.tools.shapePaint);
+  const textStyle = useQuery(ctx.tools.textStyle);
   return (
     <fieldset className="tool-settings" aria-label="Pen">
       {tool === "shape" ? (
@@ -246,6 +248,9 @@ function PenOptions({ tool }: { tool: ToolId }) {
           value={colour}
           onChange={(c) => ctx.tools.setPen({ colour: c })}
         />
+      )}
+      {tool === "text" && (
+        <TextStyleFields value={textStyle} onChange={(patch) => ctx.tools.setTextStyle(patch)} />
       )}
       {tool === "draw" && (
         <label className="pen-width" data-tip="Pen width">

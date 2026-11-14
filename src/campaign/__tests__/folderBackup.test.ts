@@ -141,6 +141,9 @@ describe("backing up to a folder", () => {
       text: "Here",
       colour: "#fff",
       size: 1,
+      font: "sans",
+      bold: true,
+      italic: false,
       bw: 1,
       bh: 1,
     });

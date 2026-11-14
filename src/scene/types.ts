@@ -118,7 +118,40 @@ export type ShapeElement = Base &
     template?: boolean;
   };
 
-export interface TextElement extends Base {
+/** The fonts text on the map can be set in, each a CSS font family. */
+export const TEXT_FONTS = [
+  { id: "sans", label: "Sans", family: "Cabin, sans-serif" },
+  { id: "serif", label: "Serif", family: "Fraunces, serif" },
+  { id: "display", label: "Display", family: "Cinzel, serif" },
+  { id: "hand", label: "Handwriting", family: "Caveat, cursive" },
+] as const;
+export type TextFont = (typeof TEXT_FONTS)[number]["id"];
+
+/** The CSS font family of a text font. */
+export const fontFamily = (font: TextFont) =>
+  (TEXT_FONTS.find((f) => f.id === font) ?? TEXT_FONTS[0]).family;
+
+/** How text on the map is set. */
+export interface TextStyle {
+  font: TextFont;
+  bold: boolean;
+  italic: boolean;
+}
+
+/** What `els` share of their text style: their font if they're all in one, and bold or italic if all are. */
+export function sharedTextStyle(els: readonly TextStyle[]): Partial<TextStyle> {
+  const font = els[0]?.font;
+  return {
+    ...(font && els.every((el) => el.font === font) && { font }),
+    bold: els.every((el) => el.bold),
+    italic: els.every((el) => el.italic),
+  };
+}
+
+/** All that decides how big text is drawn. */
+export type TextLook = TextStyle & { text: string; colour: string; size: number };
+
+export interface TextElement extends Base, TextStyle {
   type: "text";
   text: string;
   colour: string;

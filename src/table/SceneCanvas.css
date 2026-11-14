@@ -27,11 +27,20 @@
 }
 
 @layer layout {
-  /* Text typed onto the map */
-  .scene-text-input {
+  /* Text typed straight onto the map, set as the map draws it (see TextEditor). */
+  .scene-text-editor {
     position: fixed;
     z-index: 30;
-    width: 16em;
     translate: -50% -50%;
+    min-width: 0.5em;
+    padding: 0 0.1em;
+    line-height: normal;
+    text-align: center;
+    white-space: pre;
+    paint-order: stroke fill;
+    caret-color: var(--accent);
+    outline: 1px dashed var(--accent);
+    outline-offset: 4px;
+    cursor: text;
   }
 }

@@ -35,8 +35,8 @@ import { PolygonDraft } from "./gestures/polygon";
 import { pinch } from "./gestures/pan";
 import { hoverCursor } from "./gestures/select";
 import { dragShape, placementPlan } from "./gestures/shape";
-import { putText } from "./gestures/text";
-import type { Gesture, Placement, ToolContext } from "./gestures/types";
+import { fitPatch, newTextLook, putText } from "./gestures/text";
+import type { Gesture, Placement, TextRequest, ToolContext } from "./gestures/types";
 
 /** How soon, and how near in screen px, a press must follow the last to count as a double click. */
 const MULTI_CLICK_MS = 500;
@@ -48,14 +48,6 @@ const MULTI_CLICK_SLOP = 6;
  * the selection, camera and cursor, routes input to the tool in use, and
  * offers the edits menus and shortcuts make.
  */
-/** A request for text to put on the map at `at`, or to change element `id`'s. */
-export interface TextRequest {
-  at: Point;
-  screen: Point;
-  id?: string;
-  text?: string;
-}
-
 export class SceneController implements ToolContext {
   readonly selection = store<string[]>([]);
   /** The selected elements as they are now, kept current as they change. */
@@ -320,7 +312,10 @@ export class SceneController implements ToolContext {
 
   updateOverlay() {
     const tool = this.tools.activeTool.value;
-    const selected = this.selecting() ? this.selected() : [];
+    // What's hidden, such as text being edited, has no outline or handles.
+    const selected = this.selecting()
+      ? this.selected().filter((el) => !this.renderer.hidden.has(el.id))
+      : [];
     const g = this.gesture;
     const movable = selected.filter((el) => !el.locked);
     const groupBounds = movable.length > 1 && !g ? bounds(movable) : null;
@@ -666,7 +661,6 @@ export class SceneController implements ToolContext {
     g.cancel?.(e);
     this.gesture = null;
     this.renderer.previews.clear();
-    this.renderer.hidden.clear();
     this.renderer.draft = null;
     this.renderer.invalidate("elements", "overlay");
     this.updateCursor();
@@ -807,10 +801,14 @@ export class SceneController implements ToolContext {
   }
 
   /** Change elements' properties as one undo step. Turning a door back into a wall forgets whether it was open. */
+  /** Change elements' properties; text is resized to fit. */
   setProps(ids: string[], patch: ElementPatch) {
     const fixed = "door" in patch && patch.door === false ? { ...patch, open: undefined } : patch;
     this.scene.update(
-      ids.flatMap((id) => (this.byId.has(id) ? [[id, fixed] as [string, typeof fixed]] : [])),
+      ids.flatMap((id) => {
+        const el = this.byId.get(id);
+        return el ? [[id, fitPatch(this, el, fixed)] as [string, ElementPatch]] : [];
+      }),
     );
   }
 
@@ -836,7 +834,22 @@ export class SceneController implements ToolContext {
     this.updateCursor();
   }
 
-  /** Put text on the map, or change existing text, measured at the size it's drawn. */
+  /** How new text with these words would look. */
+  newTextLook(text: string) {
+    return newTextLook(this, text);
+  }
+
+  /** Leave an element undrawn, such as text while it's edited, until the returned function is called. */
+  hide(id: string): () => void {
+    this.renderer.hidden.add(id);
+    this.updateOverlay();
+    return () => {
+      this.renderer.hidden.delete(id);
+      this.updateOverlay();
+    };
+  }
+
+  /** Put text on the map, or change existing text's words, measured at the size it's drawn. */
   putText(at: Point, text: string, id?: string) {
     putText(this, at, text, id);
   }

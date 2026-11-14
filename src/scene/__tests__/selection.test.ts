@@ -35,6 +35,11 @@ function setup(els: object[]) {
     setCamera: () => {},
     setGrid: () => {},
     setHoverToken: vi.fn(),
+    // Ten px a letter, twenty high; bold and italic each widen it, to tell the styles apart.
+    measureText: vi.fn((t: { text: string; bold: boolean; italic: boolean }) => ({
+      w: t.text.length * 10 + (t.bold ? 5 : 0) + (t.italic ? 3 : 0),
+      h: 20,
+    })),
   };
   const scene = {
     views: () => els,
@@ -43,6 +48,7 @@ function setup(els: object[]) {
     undo: { on() {}, off() {}, canUndo: () => false, canRedo: () => false },
     grid: () => renderer.grid,
     update: vi.fn<(changes: [string, object][]) => void>(),
+    add: vi.fn(),
     remove: vi.fn(),
   };
   const c: Controller = new SceneController(
@@ -110,9 +116,7 @@ describe("SceneController", () => {
       click(fire, 140, 110, 1000);
       expect(c.onTextRequest).not.toHaveBeenCalled();
       click(fire, 141, 111, 1200);
-      expect(c.onTextRequest).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "words", text: "Ford the river here" }),
-      );
+      expect(c.onTextRequest).toHaveBeenCalledWith({ at: { x: 100, y: 100 }, id: "words" });
     });
 
     it("needs both clicks close together in time", () => {
@@ -129,6 +133,80 @@ describe("SceneController", () => {
       click(fire, 140, 110, 1000);
       click(fire, 240, 110, 1100);
       expect(c.onTextRequest).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("the Text tool", () => {
+    const words = {
+      ...token("words", 100, 100),
+      type: "text",
+      layer: "over",
+      w: 120,
+      h: 30,
+      bw: 60,
+      bh: 15,
+      size: 12,
+      text: "Ford",
+      font: "sans",
+      bold: true,
+      italic: false,
+    };
+
+    it("asks for new text where it's pressed", () => {
+      const { c, fire } = setup([]);
+      c.tools.activeTool.set("text");
+      c.onTextRequest = vi.fn();
+      fire("pointerdown", 300, 300);
+      expect(c.onTextRequest).toHaveBeenCalledWith({ at: { x: 300, y: 300 } });
+    });
+
+    it("edits text it's pressed on", () => {
+      const { c, fire } = setup([words]);
+      c.tools.activeTool.set("text");
+      c.onTextRequest = vi.fn();
+      fire("pointerdown", 110, 105);
+      expect(c.onTextRequest).toHaveBeenCalledWith({ at: { x: 100, y: 100 }, id: "words" });
+    });
+
+    it("puts new text in the tool's font and style", () => {
+      const { c, scene } = setup([]);
+      c.tools.setTextStyle({ font: "serif", bold: false, italic: true });
+      c.putText({ x: 5, y: 6 }, " Here ");
+      expect(scene.add).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "text",
+          text: "Here",
+          font: "serif",
+          bold: false,
+          italic: true,
+          x: 5,
+          y: 6,
+          bw: 43,
+          bh: 20,
+        }),
+      );
+    });
+
+    it("resizes text to fit as its style changes, keeping its scale", () => {
+      const { c, scene } = setup([words]);
+      c.setProps(["words"], { italic: true });
+      expect(scene.update).toHaveBeenCalledWith([
+        ["words", { italic: true, bw: 48, bh: 20, w: 96, h: 40 }],
+      ]);
+    });
+
+    it("resizes text to fit as it changes", () => {
+      const { c, scene } = setup([words]);
+      c.putText({ x: 0, y: 0 }, "Ford here", "words");
+      expect(scene.update).toHaveBeenCalledWith([
+        ["words", { text: "Ford here", bw: 95, bh: 20, w: 190, h: 40 }],
+      ]);
+    });
+
+    it("removes text emptied of words", () => {
+      const { c, scene } = setup([words]);
+      c.putText({ x: 0, y: 0 }, "  ", "words");
+      expect(scene.remove).toHaveBeenCalledWith(["words"]);
     });
   });
 

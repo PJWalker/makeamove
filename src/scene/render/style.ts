@@ -4,6 +4,7 @@ import type { Point } from "../grid";
 import type { SdfFontSpec } from "./sdfFont";
 import type { SdfTextOptions } from "./sdfText";
 import type { RenderState } from "./state";
+import { fontFamily, TEXT_FONTS, type TextStyle } from "../types";
 
 /** The UI accent, oklch(82% 0.15 85), as sRGB for the canvas. */
 export const ACCENT = 0xf0bb3b;
@@ -13,8 +14,27 @@ export const INK = 0x14161c;
 export const cabin = (weight: number): SdfFontSpec => ({ family: "Cabin, sans-serif", weight });
 export const fraunces = (weight: number): SdfFontSpec => ({ family: "Fraunces, serif", weight });
 
+/** The weight of text on the map, plain or bold. */
+export const textWeight = (bold: boolean) => (bold ? 700 : 400);
+
+/** The font text on the map is drawn in. */
+export const textFont = ({ font, bold, italic }: TextStyle): SdfFontSpec => ({
+  family: fontFamily(font),
+  weight: textWeight(bold),
+  style: italic ? "italic" : "normal",
+});
+
 /** Every font the canvas draws, to load before any glyphs are drawn. */
-export const CANVAS_FONTS = [cabin(600), cabin(700), cabin(800), fraunces(600)];
+export const CANVAS_FONTS = [
+  cabin(600),
+  cabin(800),
+  fraunces(600),
+  ...TEXT_FONTS.flatMap(({ id: font }) =>
+    [false, true].flatMap((bold) =>
+      [false, true].map((italic) => textFont({ font, bold, italic })),
+    ),
+  ),
+];
 
 /** Token names, white with a dark outline to read over any map. */
 export const TOKEN_NAME: SdfTextOptions = {

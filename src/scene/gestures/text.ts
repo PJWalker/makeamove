@@ -1,41 +1,60 @@
 import type { Point } from "../grid";
+import type { SceneElement, TextElement, TextLook } from "../types";
 import type { ToolContext, ToolPress } from "./types";
 
-/** The Text tool: a click asks for text to put there. */
-export const text: ToolPress = (c, _e, at, screen) => {
-  c.onTextRequest?.({ at, screen });
+/** The Text tool: a press on text edits it, and anywhere else asks for new text there. */
+export const text: ToolPress = (c, _e, at) => {
+  const under = c.hitTest(at);
+  c.onTextRequest?.(under?.type === "text" ? editRequest(under) : { at });
   return null;
 };
 
-/** Put text on the map, or change existing text, measured at the size it's drawn. */
+/** A request to edit text that's on the map. */
+export const editRequest = (el: TextElement) => ({ at: { x: el.x, y: el.y }, id: el.id });
+
+/** Text's size laid out as it looks, scaled as it is now. */
+export function fitText(c: ToolContext, el: TextElement & Partial<TextLook>) {
+  const m = c.renderer.measureText(el);
+  const k = el.w / el.bw;
+  return { bw: m.w, bh: m.h, w: m.w * k, h: m.h * k };
+}
+
+/** A patch for `el`, with its size fitted to its words and style when it's text. */
+export function fitPatch<P extends object>(c: ToolContext, el: SceneElement, patch: P) {
+  return el.type === "text" ? { ...patch, ...fitText(c, { ...el, ...patch }) } : patch;
+}
+
+/** How new text looks: in the Text tool's style and the pen's colour, sized to the grid. */
+export const newTextLook = (c: ToolContext, text: string): TextLook => ({
+  ...c.tools.textStyle.value,
+  text,
+  colour: c.tools.pen.value.colour,
+  size: Math.round(c.renderer.grid.size * 0.5),
+});
+
+/** Put text on the map in the Text tool's style, or change existing text's words. */
 export function putText(c: ToolContext, at: Point, text: string, id?: string) {
   const clean = text.trim();
   const old = id ? (c.element(id) ?? undefined) : undefined;
   if (old && old.type !== "text") return;
-  if (!clean) {
-    if (old) c.scene.remove([old.id]);
+  if (old) {
+    if (clean) c.scene.update([[old.id, fitPatch(c, old, { text: clean })]]);
+    else c.scene.remove([old.id]);
     return;
   }
-  const size = old?.size ?? Math.round(c.renderer.grid.size * 0.5);
-  const colour = old?.colour ?? c.tools.pen.value.colour;
-  const m = c.renderer.measureText(clean, colour, size);
-  if (old) {
-    const k = old.w / old.bw;
-    c.scene.update([[old.id, { text: clean, bw: m.w, bh: m.h, w: m.w * k, h: m.h * k }]]);
-  } else {
-    c.scene.add({
-      type: "text",
-      layer: c.tools.pen.value.layer,
-      text: clean,
-      colour,
-      size,
-      x: at.x,
-      y: at.y,
-      w: m.w,
-      h: m.h,
-      bw: m.w,
-      bh: m.h,
-      rot: 0,
-    });
-  }
+  if (!clean) return;
+  const look = newTextLook(c, clean);
+  const m = c.renderer.measureText(look);
+  c.scene.add({
+    type: "text",
+    layer: c.tools.pen.value.layer,
+    ...look,
+    x: at.x,
+    y: at.y,
+    w: m.w,
+    h: m.h,
+    bw: m.w,
+    bh: m.h,
+    rot: 0,
+  });
 }

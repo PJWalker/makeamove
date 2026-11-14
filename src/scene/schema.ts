@@ -2,7 +2,7 @@ import { arrayOf, isBoolean, isNumber, isObject, isString, oneOf } from "../data
 import { Invalid, collection, lww, record, variant, type Item, type Shape } from "../data/schema";
 import type { BlobRef, EntityGraphic, EntityGraphicRef } from "../media/images";
 import { DEFAULT_GRID } from "./grid";
-import { EFFECTS, LAYERS, SHAPES, TOKEN_STYLES, type SceneElement } from "./types";
+import { EFFECTS, LAYERS, SHAPES, TEXT_FONTS, TOKEN_STYLES, type SceneElement } from "./types";
 
 /*
  * A scene subdocument (see design doc, "Data model"):
@@ -64,7 +64,16 @@ const elementCases = {
     width: num(2),
     template: lww(isBoolean),
   },
-  text: { text: lww(isString).or(""), colour, size: num(24), bw: num(1), bh: num(1) },
+  text: {
+    text: lww(isString).or(""),
+    colour,
+    size: num(24),
+    bw: num(1),
+    bh: num(1),
+    font: lww(oneOf(...TEXT_FONTS.map((f) => f.id))).or("sans"),
+    bold: lww(isBoolean).or(true),
+    italic: lww(isBoolean).or(false),
+  },
   wall: { door: lww(isBoolean), open: lww(isBoolean) },
   light: { bright: num(0), dim: num(0), colour, flicker: lww(isBoolean) },
   area: { ...outline, tone: lww(oneOf("light", "dark")).or("light") },

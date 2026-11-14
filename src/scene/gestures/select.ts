@@ -1,6 +1,7 @@
 import { bounds, contains } from "../geometry";
 import type { Point } from "../grid";
 import { moveSelection } from "./move";
+import { editRequest } from "./text";
 import { handleAt, handleCursor, startHandleDrag } from "./transform";
 import { dragged, type Gesture, type ToolContext, type ToolPress } from "./types";
 
@@ -14,12 +15,7 @@ export const select: ToolPress = (c, e, world, screen) => {
   if (c.pressCount === 2) {
     const under = c.hitTest(world);
     if (under?.type === "text") {
-      c.onTextRequest?.({
-        at: { x: under.x, y: under.y },
-        screen,
-        id: under.id,
-        text: under.text,
-      });
+      c.onTextRequest?.(editRequest(under));
       return null;
     }
   }

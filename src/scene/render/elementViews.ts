@@ -7,12 +7,13 @@ import {
   type SceneElement,
   type ShapeGeometry,
   type ShapePaint,
+  type TextStyle,
   type Transform,
 } from "../types";
 import { EffectView } from "./effects";
 import { SdfText } from "./sdfText";
 import type { SdfTextOptions } from "./sdfText";
-import { ACCENT, cabin, fraunces, INK } from "./style";
+import { ACCENT, cabin, fraunces, INK, textFont } from "./style";
 import type { PeerBlobs } from "../../media/images";
 import { iconGraphicFor, textureFor } from "./textures";
 
@@ -47,7 +48,7 @@ export function contentKey(el: SceneElement): string {
     case "shape":
       return `shape:${el.shape}:${el.shape === "polygon" ? `${el.points.join(",")}:${el.bw}:${el.bh}` : ""}:${el.stroke}:${el.fill}:${el.width}`;
     case "text":
-      return `text:${el.text}:${el.colour}:${el.size}:${el.bw}:${el.bh}`;
+      return `text:${el.text}:${el.colour}:${el.size}:${el.font}:${el.bold}:${el.italic}:${el.bw}:${el.bh}`;
     case "wall":
       return `wall:${!!el.door}:${!!el.open}`;
     case "light":
@@ -75,12 +76,18 @@ export function drawShape(
     .stroke({ color: paint.stroke, width, join: "round" });
 }
 
-/** Text on the map: a light outline keeps it readable over any map. */
-export const mapText = (colour: ColorSource, size: number): SdfTextOptions => ({
-  font: cabin(700),
-  size,
+/** The width of the dark outline that keeps text on the map readable over any map, at its size. */
+export const mapTextOutline = (size: number) => Math.max(2, size / 8);
+
+/** Text on the map: a dark outline keeps it readable over any map. */
+export const mapText = (
+  look: TextStyle & { size: number },
+  colour: ColorSource,
+): SdfTextOptions => ({
+  font: textFont(look),
+  size: look.size,
   fill: colour,
-  outline: { color: INK, width: Math.max(2, size / 8) },
+  outline: { color: INK, width: mapTextOutline(look.size) },
   align: "center",
 });
 
@@ -359,7 +366,7 @@ export function buildView(
       // A see-through colour fades the text and its outline together.
       const colour = new Color(el.colour);
       const text = new SdfText({
-        ...mapText(colour.toNumber(), el.size),
+        ...mapText(el, colour.toNumber()),
         text: el.text,
         anchor: 0.5,
       });

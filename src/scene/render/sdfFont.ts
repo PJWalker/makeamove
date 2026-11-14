@@ -17,15 +17,20 @@ const PAGE_SIZE = 2048;
 export interface SdfFontSpec {
   family: string;
   weight: number;
+  style?: "normal" | "italic";
 }
+
+/** The spec as a CSS font shorthand, at `size` px. */
+const cssFont = (spec: SdfFontSpec, size: number) =>
+  `${spec.style ?? "normal"} ${spec.weight} ${size}px ${spec.family}`;
 
 /** The registry name of an SDF font; BitmapText finds the font by its `fontFamily`. */
 export const sdfFontName = (spec: SdfFontSpec, haloRatio: number) =>
-  `sdf:${spec.family}:${spec.weight}:${haloRatio.toFixed(2)}`;
+  `sdf:${spec.family}:${spec.weight}:${spec.style ?? "normal"}:${haloRatio.toFixed(2)}`;
 
 /** Wait for the web fonts glyphs are drawn from, so no fallback glyphs get baked into an atlas. */
 export const loadSdfFonts = (specs: SdfFontSpec[]) =>
-  Promise.all(specs.map((s) => document.fonts.load(`${s.weight} ${GLYPH_SIZE}px ${s.family}`)));
+  Promise.all(specs.map((s) => document.fonts.load(cssFont(s, GLYPH_SIZE))));
 
 /**
  * A bitmap font whose glyphs are signed distance fields, drawn on demand.
@@ -55,10 +60,9 @@ export class SdfFont extends AbstractBitmapFont<SdfFont> {
       cutoff,
       fontFamily: spec.family,
       fontWeight: String(spec.weight),
+      fontStyle: spec.style ?? "normal",
     });
-    const fontMetrics = CanvasTextMetrics.measureFont(
-      `${spec.weight} ${GLYPH_SIZE}px ${spec.family}`,
-    );
+    const fontMetrics = CanvasTextMetrics.measureFont(cssFont(spec, GLYPH_SIZE));
     // Pixi declares these readonly: they're set once, by the font itself.
     Object.assign(this, {
       fontFamily: sdfFontName(spec, halo / GLYPH_SIZE),

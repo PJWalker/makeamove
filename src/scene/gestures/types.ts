@@ -85,6 +85,12 @@ export interface PolygonPlacer {
 }
 
 /** What the tools' gestures see of the controller. */
+/** A request for new text on the map at `at`, or to edit text `id`, which is centred there. */
+export interface TextRequest {
+  at: Point;
+  id?: string;
+}
+
 export interface ToolContext {
   readonly renderer: SceneRenderer;
   readonly scene: SceneDoc;
@@ -102,9 +108,9 @@ export interface ToolContext {
   readonly placing: Store<Placement | null>;
   /** A polygon (a shape, or an area of solid light or dark) being placed, a click at a time. */
   readonly polygon: PolygonPlacer;
-  readonly onTextRequest:
-    | ((req: { at: Point; screen: Point; id?: string; text?: string }) => void)
-    | null;
+  readonly onTextRequest: ((req: TextRequest) => void) | null;
+  /** Leave an element undrawn until the returned function is called. */
+  hide(id: string): () => void;
   readonly onItemTokenDragMove: ((token: TokenElement | null, event: PointerEvent) => void) | null;
   readonly onItemTokenDrop: ((token: TokenElement, event: PointerEvent) => boolean) | null;
   readonly onTokenClick: ((token: TokenElement) => void) | null;

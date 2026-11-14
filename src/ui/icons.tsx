@@ -91,6 +91,8 @@ import MsPersonRemove from "~icons/material-symbols/person-remove-rounded";
 import MsRemove from "~icons/material-symbols/remove-rounded";
 import MsRedo from "~icons/material-symbols/redo-rounded";
 import MsTitle from "~icons/material-symbols/title-rounded";
+import MsFormatBold from "~icons/material-symbols/format-bold";
+import MsFormatItalic from "~icons/material-symbols/format-italic";
 import MsUndo from "~icons/material-symbols/undo-rounded";
 
 export type IconProps = Omit<React.SVGProps<SVGSVGElement>, "size"> & { size?: number };
@@ -109,6 +111,8 @@ export const IconDraw = icon(GiQuillInk);
 export const IconEraser = icon(MsInkEraser);
 export const IconShapes = icon(MsCategory);
 export const IconText = icon(MsTitle);
+export const IconBold = icon(MsFormatBold);
+export const IconItalic = icon(MsFormatItalic);
 export const IconMeasure = icon(GiMeasureTape);
 export const IconPing = icon(GiBullseye);
 export const IconWall = icon(GiStoneWall);

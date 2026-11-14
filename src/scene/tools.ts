@@ -9,6 +9,8 @@ import {
   type SceneElement,
   type ShapeKind,
   type ShapePaint,
+  type TextStyle,
+  TEXT_FONTS,
 } from "./types";
 
 export type ToolId =
@@ -101,6 +103,8 @@ export class SceneTools {
   readonly shapeTool: LocalValue<ShapeKind>;
   /** How the Shapes tool paints what it draws. */
   readonly shapePaint: LocalValue<ShapePaint>;
+  /** How the Text tool sets new text. */
+  readonly textStyle: LocalValue<TextStyle>;
   readonly lightTool: LocalValue<LightToolMode>;
   readonly effectTool: LocalValue<EffectSettings>;
   /** The sorts of things the Select tool picks. Lights and effects are off until asked for. */
@@ -134,6 +138,14 @@ export class SceneTools {
       "shapePaint",
       settingsOver<ShapePaint>({ stroke: "#f0bb3bff", fill: "#f0bb3b38" }, "shape paint"),
     );
+    const textRead = settingsOver<TextStyle>(
+      { font: "sans", bold: true, italic: false },
+      "text style",
+    );
+    this.textStyle = local.value("textStyle", (v) => {
+      const style = textRead(v);
+      return TEXT_FONTS.some((f) => f.id === style.font) ? style : { ...style, font: "sans" };
+    });
     this.lightTool = local.value(
       "lightTool",
       oneOf(["lamp", "light", "dark"], "lamp", "light tool"),
@@ -157,6 +169,10 @@ export class SceneTools {
 
   setPen(patch: Partial<PenSettings>) {
     this.pen.value = { ...this.pen.value, ...patch };
+  }
+
+  setTextStyle(patch: Partial<TextStyle>) {
+    this.textStyle.value = { ...this.textStyle.value, ...patch };
   }
 
   setShapePaint(patch: Partial<ShapePaint>) {

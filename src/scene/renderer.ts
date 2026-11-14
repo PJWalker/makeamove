@@ -6,7 +6,7 @@ import type { PresenceMark } from "./presence";
 import type { TokenStat } from "../systems/types";
 import type { TokenMarks } from "./tokenMarks";
 import type { SelectKind } from "./tools";
-import { LAYERS, type Layer, type SceneElement, type Transform } from "./types";
+import { LAYERS, type Layer, type SceneElement, type TextLook, type Transform } from "./types";
 import { ConditionLayer } from "./render/conditions";
 import { type Draft, DraftLayer } from "./render/draft";
 import { mapText } from "./render/elementViews";
@@ -272,8 +272,9 @@ export class SceneRenderer implements RenderState {
   }
 
   /** The size text takes when drawn on the map, in world px. */
-  measureText(text: string, colour: string, size: number): { w: number; h: number } {
-    const m = measureSdfText(text, mapText(colour, size));
+  /** The size text on the map is drawn at, unscaled. */
+  measureText(look: TextLook): { w: number; h: number } {
+    const m = measureSdfText(look.text, mapText(look, look.colour));
     return { w: Math.ceil(m.w), h: Math.ceil(m.h) };
   }
 

@@ -15,7 +15,9 @@ import {
   type DragEvent as ReactDragEvent,
   type MouseEvent as ReactMouseEvent,
 } from "react";
-import { SceneController, type TextRequest } from "../scene/controller";
+import { TextEditor } from "./TextEditor";
+import { SceneController } from "../scene/controller";
+import type { TextRequest } from "../scene/gestures/types";
 import { SceneRenderer } from "../scene/renderer";
 import { SceneDoc } from "../scene/sceneDoc";
 import type { Point } from "../scene/grid";
@@ -408,14 +410,9 @@ export default function SceneCanvas({
     });
   }, [ctx, controller]);
 
-  // Text: typed in a box where it goes on the map.
+  // Text: typed straight onto the map.
   const [textEdit, setTextEdit] = useState<TextRequest | null>(null);
   useEffect(() => controller?.handleTextRequests(setTextEdit), [controller]);
-  const commitText = (value: string) => {
-    const req = textEdit;
-    setTextEdit(null);
-    if (req) controller?.putText(req.at, value, req.id);
-  };
 
   // Keyboard shortcuts, unless a field or dialog has the keyboard.
   const onDown = useEffectEvent((e: KeyboardEvent) => {
@@ -545,23 +542,12 @@ export default function SceneCanvas({
         }}
       />
       {menu && <ContextMenu {...menu} onClose={closeMenu} />}
-      {textEdit && (
-        <input
-          key={`${textEdit.screen.x},${textEdit.screen.y}`}
-          className="input scene-text-input"
-          style={{
-            left: `${textEdit.screen.x}px`,
-            top: `${textEdit.screen.y}px`,
-          }}
-          aria-label="Text"
-          defaultValue={textEdit.text ?? ""}
-          ref={(el) => void (el && requestAnimationFrame(() => el.focus()))}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") commitText(e.currentTarget.value);
-            else if (e.key === "Escape") setTextEdit(null);
-            e.stopPropagation();
-          }}
-          onBlur={(e) => textEdit && commitText(e.currentTarget.value)}
+      {textEdit && controller && (
+        <TextEditor
+          key={textEdit.id ?? `${textEdit.at.x},${textEdit.at.y}`}
+          controller={controller}
+          request={textEdit}
+          onDone={() => setTextEdit(null)}
         />
       )}
       {controller && (

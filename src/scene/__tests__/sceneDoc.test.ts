@@ -60,4 +60,17 @@ describe("reading scene elements", () => {
       "shape",
     );
   });
+
+  it("reads text in the plain sans, bold, upright, when it has no style of its own", () => {
+    expect(readElement("e", stored({ ...base, type: "text", text: "Here" }))).toMatchObject({
+      font: "sans",
+      bold: true,
+      italic: false,
+    });
+  });
+
+  it("reads text in its own font, weight and slant", () => {
+    const el = { ...base, type: "text", text: "Here", font: "hand", bold: false, italic: true };
+    expect(readElement("e", stored(el))).toMatchObject({ font: "hand", bold: false, italic: true });
+  });
 });

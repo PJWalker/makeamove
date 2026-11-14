@@ -1,0 +1,6 @@
+@layer components {
+  /* The fields sit in the row of whatever bar holds them. */
+  .text-style-fields {
+    display: contents;
+  }
+}
