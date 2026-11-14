@@ -1,9 +1,8 @@
 import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import { seededRandom } from "../lib/seededRandom";
+import { PARTY, type PartyMember } from "./caveParty";
 import { daubPath, paintRock, VIEW } from "./caveRock";
 
-const TORCHLIGHT = "#f2a04e";
-const WISPLIGHT = "#a8d2ff";
 const DARK = "#04050a";
 
 /** Where something sits in the scene, from the picture's coordinates. */
@@ -89,9 +88,9 @@ function BrushFilter({
 }
 
 /**
- * One of the party, seen from behind. Its shape is drawn a hundred units tall
- * with the feet at the origin, twice over: nudged towards the light in the
- * light's colour, then in its own dark cloth, which leaves a lit rim.
+ * One of the party (caveParty.tsx). Its shape is painted twice over: nudged
+ * towards the light in the light's colour, then in its own dark cloth, which
+ * leaves a lit rim. Its detail goes on top.
  */
 function AdventurerLayer({
   paint,
@@ -118,84 +117,20 @@ function Adventurer({
   light,
   rim: [dx, dy],
   shape,
-  children,
-}: {
-  name: "ranger" | "dwarf" | "warrior" | "wizard";
-  x: number;
-  feet: number;
-  height: number;
-  cloth: string;
-  light: string;
-  rim: [number, number];
-  shape: ReactNode;
-  children?: ReactNode;
-}) {
+  detail,
+}: PartyMember) {
   return (
     <g className={`cave-depth cave-${name}`}>
       <g className="cave-adventurer" transform={`translate(${x} ${feet}) scale(${height / 100})`}>
         <AdventurerLayer paint={light} shape={shape} transform={`translate(${dx} ${dy})`} />
         <AdventurerLayer paint={cloth} shape={shape} />
         <g fill="none" strokeLinecap="round">
-          {children}
+          {detail}
         </g>
       </g>
     </g>
   );
 }
-
-const limb = { fill: "none", strokeLinecap: "round", strokeLinejoin: "round" } as const;
-
-const warrior = (
-  <>
-    <path d="M-16-79C-17-84-9-86-5-87L5-87C9-86 17-84 16-79C19-58 21-32 23-4L-22-4C-21-32-19-58-16-79Z" />
-    <ellipse cx="-14.5" cy="-80.5" rx="6.5" ry="4.6" />
-    <ellipse cx="14.5" cy="-80.5" rx="6.5" ry="4.6" />
-    <path d="M-6.2-91C-6.5-97-3.5-100.5 0-100.5S6.5-97 6.2-91L6.8-85-6.8-85Z" />
-    <path d="M15-80L24-85 27-97" strokeWidth="6.5" {...limb} />
-    <path d="M26.3-93L28.6-108" strokeWidth="2.2" {...limb} />
-    <ellipse cx="28.7" cy="-109.5" rx="2.2" ry="2.6" />
-  </>
-);
-
-const dwarf = (
-  <>
-    <path d="M-21-70C-22-76-12-80 0-80S22-76 21-70C24-50 24-25 22-5L-22-5C-24-25-24-50-21-70Z" />
-    <ellipse cx="0" cy="-87" rx="9" ry="8.5" />
-    <path d="M-7.5-91C-14-92-16.5-97-14.5-102C-12.5-97.5-10-95.5-6.5-94.5Z" />
-    <path d="M7.5-91C14-92 16.5-97 14.5-102C12.5-97.5 10-95.5 6.5-94.5Z" />
-    <path d="M13-52L27-103" strokeWidth="2.6" {...limb} />
-    <path d="M23.5-95C32-105 41-101 42-89C36-93 31-93 27.5-89Z" />
-  </>
-);
-
-const ranger = (
-  <>
-    <path d="M-11-80C-12-84-6-86 0-86S12-84 11-80C14-62 16-45 17-30C10-27-8-27-16-30C-15-45-13-62-11-80Z" />
-    <path d="M-7-88C-7-96-4-101 0-101S7-96 7-88C7-84 4-82 0-82S-7-84-7-88Z" />
-    <path d="M-5-31L-6-3M5-31L6-3" strokeWidth="5.5" {...limb} />
-    <path d="M-11-78L-19-72-22-82" strokeWidth="4.6" {...limb} />
-    <path d="M-21.6-79L-23.5-95" strokeWidth="1.8" {...limb} />
-    <ellipse cx="-23.6" cy="-96.5" rx="1.9" ry="2.3" />
-  </>
-);
-
-const wizard = (
-  <>
-    <path d="M-13-80C-14-85-7-87 0-87S14-85 13-80C17-60 21-40 24-20L-23-20C-20-40-16-60-13-80Z" />
-    <path d="M-6-96L6-96 7.5-83-7.5-83Z" />
-    <ellipse cx="0" cy="-96" rx="15.5" ry="3.6" />
-    <path d="M-8.5-97C-6-108-2-118 3-126C6-128.5 9.5-126 8-123C5-120.5 6-110 8.5-97Z" />
-    <path d="M-12-83L-30-91-27-74-13-69Z" />
-    <path d="M-12-79L-22-78-29-87" strokeWidth="5.5" {...limb} />
-    <path d="M12-79L19.5-69" strokeWidth="5.5" {...limb} />
-    <path d="M21-22L19.5-116" strokeWidth="2" {...limb} />
-    <path
-      d="M19.5-116C19-124 27-125 27-118.5C27-115 23.5-114 22.5-116.5"
-      strokeWidth="1.8"
-      {...limb}
-    />
-  </>
-);
 
 /** The static picture: rock, the dark, and the party. */
 function Painting({ children }: { children: ReactNode }) {
@@ -330,111 +265,9 @@ function Painting({ children }: { children: ReactNode }) {
             />
           </g>
           <g filter="url(#cave-brush-fine)">
-            <Adventurer
-              name="ranger"
-              x={1075}
-              feet={882}
-              height={396}
-              cloth="#121a16"
-              light={TORCHLIGHT}
-              rim={[-0.9, -0.5]}
-              shape={ranger}
-            >
-              <path d="M-10-38C8-52 12-82 4-100" stroke="#6b5236" strokeWidth="1.3" />
-              <path d="M4-84L9-62" stroke="#33261a" strokeWidth="5" />
-              <path
-                d="M3-87L1.5-92M5.5-87L5.5-92.5M8-86L9.5-91"
-                stroke="#b9a37c"
-                strokeWidth="0.8"
-              />
-              <path
-                d="M-9-72C-10-58-12-46-13-34"
-                stroke={TORCHLIGHT}
-                strokeWidth="0.9"
-                opacity="0.45"
-              />
-            </Adventurer>
-            <Adventurer
-              name="dwarf"
-              x={480}
-              feet={1113}
-              height={416}
-              cloth="#1c1712"
-              light={TORCHLIGHT}
-              rim={[-0.9, -0.8]}
-              shape={dwarf}
-            >
-              <rect x="-14" y="-70" width="28" height="40" rx="5" fill="#33261a" />
-              <path d="M-14-56L14-56" stroke="#1a130d" strokeWidth="1.4" />
-              <path d="M-13.5-66L-13.5-34" stroke={TORCHLIGHT} strokeWidth="1" opacity="0.5" />
-              <ellipse cx="0" cy="-73" rx="18" ry="5.2" fill="#4c3b28" />
-              <path
-                d="M-17-74.5C-9-78 6-78.5 15-76.5"
-                stroke="#c98a48"
-                strokeWidth="1"
-                opacity="0.6"
-              />
-              <path d="M-8-77.5L-8-68.5M8-77.5L8-68.5" stroke="#1a130d" strokeWidth="1.5" />
-              <path d="M-5.5-93.5C-3-95.5 3-95.5 5.5-93.5" stroke="#5a4a3c" strokeWidth="1.2" />
-            </Adventurer>
-            <Adventurer
-              name="warrior"
-              x={170}
-              feet={1302}
-              height={756}
-              cloth="#24141a"
-              light={TORCHLIGHT}
-              rim={[0.7, -0.6]}
-              shape={warrior}
-            >
-              <circle cx="-2" cy="-60" r="13.5" fill="#2b2220" stroke="#120d0e" strokeWidth="1" />
-              <path
-                d="M-11.5-69.5L7.5-50.5M-11.5-50.5L7.5-69.5"
-                stroke="#1a1413"
-                strokeWidth="0.8"
-              />
-              <path
-                d="M-2-73.5A13.5 13.5 0 0 1 11.5-60"
-                stroke="#d98a45"
-                strokeWidth="1.1"
-                opacity="0.8"
-              />
-              <circle cx="-2" cy="-60" r="3" fill="#7a5a3a" />
-              <path
-                d="M2-99.6C4.6-98 5.8-95 5.6-91"
-                stroke={TORCHLIGHT}
-                strokeWidth="0.8"
-                opacity="0.8"
-              />
-              <path
-                d="M-12-44C-13-30-14-18-15-6"
-                stroke="#0e080a"
-                strokeWidth="1.2"
-                opacity="0.6"
-              />
-              <path d="M14-46C15-32 17-18 18-6" stroke="#6a3426" strokeWidth="1" opacity="0.6" />
-            </Adventurer>
-            <Adventurer
-              name="wizard"
-              x={1410}
-              feet={1260}
-              height={720}
-              cloth="#161a30"
-              light={WISPLIGHT}
-              rim={[-0.8, -0.4]}
-              shape={wizard}
-            >
-              <path d="M-8.2-98.6C-3-96.8 3-96.8 8.2-98.6" stroke="#7a6aa0" strokeWidth="1.5" />
-              <path
-                d="M-9-66C-11-52-14-38-17-22"
-                stroke="#7fa6d8"
-                strokeWidth="0.9"
-                opacity="0.45"
-              />
-              <path d="M3-70C4-54 6-38 8-22" stroke="#0b0d1c" strokeWidth="1.2" opacity="0.7" />
-              <path d="M12-62C14-48 17-34 20-22" stroke="#0b0d1c" strokeWidth="1" opacity="0.6" />
-              <path d="M18.6-112L20-30" stroke="#8fb4de" strokeWidth="0.5" opacity="0.6" />
-            </Adventurer>
+            {PARTY.map((member) => (
+              <Adventurer key={member.name} {...member} />
+            ))}
           </g>
         </svg>
         {children}
