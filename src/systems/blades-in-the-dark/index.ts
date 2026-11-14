@@ -1032,6 +1032,7 @@ export const bladesInTheDark: GameSystem = {
             value: Number(character.data.stress ?? 0),
             max: derived.values.maxStress ?? 0,
             colour: "#b84b42",
+            source: { data: "stress" },
           },
         ],
   creation: {

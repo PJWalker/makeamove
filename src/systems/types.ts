@@ -382,6 +382,8 @@ export interface TokenStat {
   max: number;
   /** CSS colour of the filled part. */
   colour: string;
+  /** Where on the character the value is kept: a resource (HP) or a field of the system's (stress). */
+  source: { resource: string } | { data: string };
 }
 
 /** A kind of damage, which a creature may resist (half), be vulnerable to (double) or be immune to. */

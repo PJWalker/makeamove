@@ -5,16 +5,22 @@ import { bounds } from "../scene/geometry";
 import { toScreen } from "../scene/camera";
 import { HANDLE_SIZE, ROTATE_HANDLE_GAP } from "../scene/render/handles";
 import { PEN_WIDTH_RANGE } from "../scene/tools";
-import { isPlainToken, type EffectKind, type SceneElement } from "../scene/types";
+import { isPlainToken, sharedTextStyle, type EffectKind, type SceneElement } from "../scene/types";
 import { ColourPicker } from "../ui/ColourPicker";
 import { CommitInput } from "../ui/CommitInput";
 import { Button } from "../ui/Button";
 import { Segmented } from "../ui/Segmented";
-import { IconLight, IconLock, IconReveal, IconUnlock } from "../ui/icons";
+import { IconLight, IconLock, IconReveal, IconSettings, IconUnlock } from "../ui/icons";
 import { useQuery } from "../ui/useQuery";
 import { EffectSightToggles } from "./effectOptions";
 import { EFFECT_OPTIONS } from "./effectOptionsData";
+import { TextStyleFields } from "./TextStyleFields";
 import { useCampaign } from "../workspace/campaignContext";
+import { Counter } from "../workspace/sheetParts";
+import { bumpData, bumpResource } from "../workspace/commands/characters";
+import { canEdit, getCharacter, systemOf } from "../features/characters/api";
+import { derive } from "../features/characters/store";
+import type { TokenStat } from "../systems/types";
 import "./SelectionBar.css";
 
 /** Screen px between the selection (and its rotate handle) and the bar. */
@@ -101,6 +107,7 @@ function Fields({
   sel: readonly SceneElement[];
   onTokenOptions: (id: string, from: Element) => void;
 }) {
+  const ctx = useCampaign();
   const ids = sel.map((el) => el.id);
   const first = sel[0]!;
   const set = (patch: ElementPatch) => controller.setProps(ids, patch);
@@ -108,17 +115,8 @@ function Fields({
   const grid = controller.renderer.grid;
   const fields: ReactNode[] = [];
 
-  if (one?.type === "token")
-    fields.push(
-      <CommitInput
-        key="name"
-        className="input selection-bar-name"
-        aria-label="Name"
-        placeholder="Name"
-        value={one.name}
-        onCommit={(name) => set({ name })}
-      />,
-    );
+  if (one?.type === "token" && one.characterId)
+    fields.push(<TokenStats key="stats" characterId={one.characterId} hidden={!!one.hideBars} />);
   if (every(sel, "effect")) {
     const effect = sel[0]!.effect;
     fields.push(
@@ -140,6 +138,18 @@ function Fields({
       />,
     );
   }
+  if (every(sel, "text"))
+    fields.push(
+      <TextStyleFields
+        key="text-style"
+        value={sharedTextStyle(sel)}
+        onChange={(patch) => {
+          set(patch);
+          // New text follows, as does text being edited (see TextEditor).
+          ctx.tools.setTextStyle(patch);
+        }}
+      />,
+    );
   if (every(sel, "token", "drawing", "text", "light", "effect"))
     fields.push(
       <PaintField
@@ -293,13 +303,45 @@ function Fields({
     fields.push(
       <Button
         key="options"
-        variant="ghost"
+        variant="icon"
+        icon={IconSettings}
+        label="Token Options"
         onClick={(e) => onTokenOptions(one.id, e.currentTarget)}
-      >
-        Options…
-      </Button>,
+      />,
     );
   return fields;
+}
+
+/**
+ * What changes about a token's character in play (HP, stress), as its system
+ * shows them on the token, to change from the token. Bars hidden from the
+ * table only show to those who can change them.
+ */
+function TokenStats({ characterId, hidden }: { characterId: string; hidden: boolean }) {
+  const ctx = useCampaign();
+  const { campaign } = ctx;
+  const character = useQuery(campaign.characters, () => getCharacter(campaign, characterId));
+  if (!character) return null;
+  const system = systemOf(campaign);
+  const editable = canEdit(campaign, character);
+  if (hidden && !editable) return null;
+  const change = ({ source, max }: TokenStat, by: number) => {
+    const id = character.id;
+    if ("resource" in source) ctx.execute(bumpResource, { id, resource: source.resource, by, max });
+    else ctx.execute(bumpData, { id, key: source.data, by, max });
+  };
+  return system
+    .tokenStats(character, derive(character, system))
+    .map((stat) => (
+      <Counter
+        key={stat.id}
+        label={stat.label}
+        value={stat.value}
+        max={stat.max}
+        disabled={!editable}
+        onChange={(by) => change(stat, by)}
+      />
+    ));
 }
 
 /**

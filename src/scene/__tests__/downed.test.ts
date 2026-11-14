@@ -2,7 +2,14 @@ import { describe, expect, it } from "vite-plus/test";
 import { BAR_BREAK_AT } from "../barChange";
 import { DOWN_MS, downFrame, downs, isDowned } from "../downed";
 
-const hp = (value: number, max = 10) => ({ id: "hp", label: "HP", value, max, colour: "#000" });
+const hp = (value: number, max = 10) => ({
+  id: "hp",
+  label: "HP",
+  value,
+  max,
+  colour: "#000",
+  source: { resource: "hp" },
+});
 
 describe("downs", () => {
   it("puts a token down at zero hit points, and only for hit points", () => {

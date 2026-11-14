@@ -292,6 +292,7 @@ export const testSystem: GameSystem = {
       value: character.resources.hp ?? 0,
       max: derived.values.maxHp ?? 0,
       colour: "#4a9b70",
+      source: { resource: "hp" },
     },
   ],
   creation: {

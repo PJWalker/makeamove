@@ -11,5 +11,21 @@ export const hpColour = (hp: number, max: number): string =>
 /** A token's hit point bar, from the character's `hp` resource. */
 export function hpTokenStat(character: CharacterView, max: number): TokenStat {
   const hp = character.resources.hp ?? 0;
-  return { id: "hp", label: "HP", value: hp, max, colour: hpColour(hp, max) };
+  return {
+    id: "hp",
+    label: "HP",
+    value: hp,
+    max,
+    colour: hpColour(hp, max),
+    source: { resource: "hp" },
+  };
 }
+
+/** A token stat's value as the character has it now, read from where the stat says it's kept. */
+export const tokenStatValue = (
+  character: Pick<CharacterView, "resources" | "data">,
+  stat: Pick<TokenStat, "source">,
+): number =>
+  "resource" in stat.source
+    ? (character.resources[stat.source.resource] ?? 0)
+    : Number(character.data[stat.source.data] ?? 0);

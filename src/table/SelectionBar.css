@@ -36,8 +36,16 @@
       scale: 0.96;
     }
   }
-  .selection-bar-name {
-    width: 12em;
+  /* A token's stats, as on its sheet, laid out in a line to fit the bar. */
+  .selection-bar .counter {
+    grid-auto-flow: column;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 2px var(--space-2);
+  }
+  .selection-bar .counter-btn {
+    width: 26px;
+    min-height: 26px;
   }
   .selection-bar-number {
     display: flex;

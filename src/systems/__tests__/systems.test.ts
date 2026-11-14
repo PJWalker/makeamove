@@ -112,7 +112,14 @@ describe("Test system", () => {
     expect(followUp.kind === "roll" && followUp.formula(character, derived)).toBe("d6");
     expect(testSystem.actionsFor(character, derived)).toContain(check);
     expect(testSystem.tokenStats(character, derived)).toEqual([
-      { id: "hp", label: "HP", value: 12, max: 12, colour: "#4a9b70" },
+      {
+        id: "hp",
+        label: "HP",
+        value: 12,
+        max: 12,
+        colour: "#4a9b70",
+        source: { resource: "hp" },
+      },
     ]);
     expect(testSystem.actions.find((action) => action.id === "test-save")?.steps[0]).toMatchObject({
       kind: "save",
