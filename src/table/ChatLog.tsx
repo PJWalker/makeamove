@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useConstant } from "../ui/useConstant";
 import { canDelete, canEditMessage, visibilityOf } from "../features/chat/types";
 import { logRows, type LogRow } from "../features/chat/sessions";
@@ -13,37 +13,9 @@ import { usePanelVisible } from "../workspace/panelLayout";
 import { useCampaign } from "../workspace/campaignContext";
 import { Message } from "./ChatMessage";
 import { wasTrayRolled } from "./quickRolls";
+import { useLogWindow } from "./useLogWindow";
 
 /* The chat log: every message and roll, rendered a window at a time. */
-
-/*
- * A log can run to thousands of messages, so only a window of rows is
- * rendered: the newest WINDOW to begin with. Scrolling near either end of
- * what's rendered slides the window that way, a STEP at a time, trimming the
- * other end once it holds MAX_ROWS; reaching the oldest loaded message loads
- * the chunk before it. The window is kept by row keys, so rows arriving or
- * loading outside it don't move it.
- *
- * Spacers above and below stand in for the rows that aren't rendered, so the
- * scrollbar is sized to the whole history: rows that have been on screen
- * count at their measured height, others (and chunks not loaded yet) at the
- * average. Dragging the scrollbar past what's rendered moves the window to
- * where it lands, loading older chunks if that's where it is.
- */
-const WINDOW = 100;
-const STEP = 50;
-const MAX_ROWS = 250;
-/** How close to the end of what's rendered (in px) before more is rendered. */
-const NEAR_PX = 800;
-/** The space between rows (--space-1). */
-const ROW_GAP = 4;
-/** A row's height before it has been measured, until there's an average. */
-const ROW_GUESS = 64;
-/** Rows rendered above the one a jump lands on. */
-const JUMP_LEAD = 20;
-
-/** Where the window starts and ends: null means "WINDOW rows before the end" and "the newest row". */
-type Span = { start: string | null; end: string | null };
 
 /** The ids of the characters this device may change, as one string (so it compares by value). */
 const editableIds = (campaign: Campaign) =>
@@ -66,10 +38,6 @@ export function ChatLog({
   quickRollMessage: string | null;
 }) {
   const ctx = useCampaign();
-  const ref = useRef<HTMLDivElement>(null);
-  const list = useRef<HTMLDivElement>(null);
-  /** Following the newest message at the bottom. */
-  const stick = useRef(true);
   const messages = useQuery(campaign.chat.messages);
   const isGm = useQuery(campaign.members, () => campaign.isGm());
   const here = useQuery(campaign.members, () => campaign.activeSceneId());
@@ -79,17 +47,7 @@ export function ChatLog({
   const me = useQuery(device).id;
   // Messages already here when the panel opened don't animate in.
   const initial = useConstant(() => new Set(messages.map((m) => m.id)));
-
-  // In view means read.
-  const visible = usePanelVisible(ctx.panels, "chat");
-  useEffect(() => {
-    if (visible && document.hasFocus()) markRead(campaign);
-  }, [campaign, messages, visible]);
-  useEffect(() => {
-    const read = () => markRead(campaign);
-    window.addEventListener("focus", read);
-    return () => window.removeEventListener("focus", read);
-  }, [campaign]);
+  useMarkRead(campaign, messages);
 
   const opened = useQuery(ctx.table.openSessions);
   const rows = useMemo(
@@ -100,185 +58,20 @@ export function ChatLog({
       ),
     [messages, me, isGm, opened],
   );
-  const toggle = (key: string) =>
-    ctx.table.openSessions.set(toggleSetValue(ctx.table.openSessions.value, key));
-
-  // The window, as indices into rows.
-  const [span, setSpan] = useState<Span>({ start: null, end: null });
-  const indexOf = (key: string | null) =>
-    key === null ? -1 : rows.findIndex((r) => r.key === key);
-  const endKeyAt = indexOf(span.end);
-  const endIdx = span.end === null || endKeyAt < 0 ? rows.length : endKeyAt + 1;
-  const startKeyAt = indexOf(span.start);
-  const startIdx =
-    span.start === null || startKeyAt < 0 || startKeyAt >= endIdx
-      ? Math.max(0, endIdx - WINDOW)
-      : startKeyAt;
-  const atNewest = endIdx === rows.length;
-  const shown = rows.slice(startIdx, endIdx);
-
-  // Row heights (with the gap after them), measured as rows render; kept for this view.
-  const [measured, setMeasured] = useState<ReadonlyMap<string, number>>(() => new Map());
-  let total = 0;
-  for (const h of measured.values()) total += h;
-  const guess = measured.size ? total / measured.size : ROW_GUESS;
-  const heightOf = (r: LogRow) => measured.get(r.key) ?? guess;
-  const earlierCount = useQuery(campaign.chat.earlierCount);
-  const unloaded = earlierCount * guess;
-  let above = unloaded;
-  for (let i = 0; i < startIdx; i++) above += heightOf(rows[i]!);
-  let below = 0;
-  for (let i = endIdx; i < rows.length; i++) below += heightOf(rows[i]!);
-
-  const showRows = (from: number, to: number) => {
-    const next = {
-      start: rows[from]?.key ?? null,
-      end: to >= rows.length ? null : rows[to - 1]!.key,
-    };
-    // Unchanged, it mustn't re-render: slide() runs after every render.
-    if (next.start !== span.start || next.end !== span.end) setSpan(next);
-  };
-  const [loading, setLoading] = useState(false);
-  // Read so finishing a load re-renders, and slide() can ask for the next chunk.
-  void loading;
-  const loadEarlier = () => {
-    if (!campaign.chat.hasEarlier.value || loading) return;
-    setLoading(true);
-    void campaign.chat.loadEarlier().finally(() => setLoading(false));
-  };
-  /** Set when the window moves to where the scrollbar was dragged: the spacers place it, so no anchoring. */
-  const jumped = useRef(false);
-  /** Render the rows around a point in the log, `y` px below the top of everything above the rows. */
-  const jumpTo = (y: number) => {
-    jumped.current = true;
-    if (y < unloaded) {
-      // Into chunks that aren't loaded: load the next one back; this runs again once it's in.
-      showRows(0, Math.min(rows.length, WINDOW));
-      loadEarlier();
-      return;
-    }
-    let i = 0;
-    for (let acc = unloaded; i < rows.length - 1 && acc + heightOf(rows[i]!) <= y; i++)
-      acc += heightOf(rows[i]!);
-    const from = Math.max(0, i - JUMP_LEAD);
-    showRows(from, Math.min(rows.length, from + WINDOW));
-  };
-  const slide = () => {
-    const el = ref.current;
-    const rowsEl = list.current;
-    if (!el || !rowsEl) return;
-    const box = el.getBoundingClientRect();
-    const top = el.scrollTop;
-    const bottom = top + el.clientHeight;
-    // Where the rendered rows are, in the log's scrolled content.
-    const rowsTop = rowsEl.getBoundingClientRect().top - box.top + top;
-    const rowsBottom = rowsTop + rowsEl.offsetHeight;
-    const origin = rowsTop - above;
-    if (bottom < rowsTop || top > rowsBottom) jumpTo(top - origin);
-    else if (top - rowsTop < NEAR_PX && (startIdx > 0 || earlierCount > 0)) {
-      if (startIdx > 0) {
-        const from = Math.max(0, startIdx - STEP);
-        showRows(from, Math.min(endIdx, from + MAX_ROWS));
-      } else loadEarlier();
-    } else if (rowsBottom - bottom < NEAR_PX && !atNewest) {
-      const to = Math.min(rows.length, endIdx + STEP);
-      showRows(Math.max(startIdx, to - MAX_ROWS), to);
-    } else if (stick.current && endIdx - startIdx > MAX_ROWS) {
-      // Back at the newest after reading far up: let go of the old rows.
-      setSpan({ start: null, end: null });
-    }
-  };
-  const slideRef = useRef(slide);
-  useLayoutEffect(() => {
-    slideRef.current = slide;
+  const { ref, list, shown, above, below, atNewest, onScroll } = useLogWindow({
+    campaign,
+    rows,
+    newest: messages.at(-1),
+    me,
+    settleOn: { editable, notes },
   });
-
-  // Keep what's on screen where it is while rows come and go around it: note
-  // where a row in view sits as things settle (after each render and scroll),
-  // and put it back after the next render.
-  const anchor = useRef<{ key: string; top: number } | null>(null);
-  const noteAnchor = () => {
-    const el = ref.current;
-    if (!el || stick.current) {
-      anchor.current = null;
-      return;
-    }
-    const { top, bottom } = el.getBoundingClientRect();
-    // Only a row actually in view. Over a spacer there is none, and the scroll position stays put for slide() to fill.
-    const row = [...(list.current?.children ?? [])].find((r) => {
-      const box = r.getBoundingClientRect();
-      return box.bottom > top && box.top < bottom;
-    }) as HTMLElement | undefined;
-    anchor.current = row?.dataset.key
-      ? { key: row.dataset.key, top: row.getBoundingClientRect().top - top }
-      : null;
+  const viewer = {
+    me,
+    isGm,
+    here,
+    editableCharacters: new Set(editable.split(" ")),
+    sceneIds: new Set(sceneIds),
   };
-  const noteAnchorRef = useRef(noteAnchor);
-  useLayoutEffect(() => {
-    noteAnchorRef.current = noteAnchor;
-  });
-
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    // Re-render once rows are measured anew, so the spacers use the better average.
-    let next: Map<string, number> | null = null;
-    for (const row of list.current?.children ?? []) {
-      const key = (row as HTMLElement).dataset.key;
-      if (!key) continue;
-      const height = (row as HTMLElement).offsetHeight + ROW_GAP;
-      if (measured.get(key) === height) continue;
-      next ??= new Map(measured);
-      next.set(key, height);
-    }
-    if (next) setMeasured(next);
-    if (stick.current) el.scrollTop = el.scrollHeight;
-    else if (anchor.current && !jumped.current) {
-      const row = list.current?.querySelector<HTMLElement>(
-        `[data-key="${CSS.escape(anchor.current.key)}"]`,
-      );
-      if (row)
-        el.scrollTop +=
-          row.getBoundingClientRect().top - el.getBoundingClientRect().top - anchor.current.top;
-    }
-    jumped.current = false;
-    // The window may still not reach far enough (a short window, rows just loaded, or a jump into unloaded chunks).
-    slideRef.current();
-    noteAnchorRef.current();
-  }, [measured, rows, startIdx, endIdx, earlierCount, loading, editable, notes]);
-
-  // My own new message scrolls to the bottom even when I'd scrolled up.
-  const newest = messages.at(-1);
-  const [newestSeen, setNewestSeen] = useState(newest?.id);
-  const myNewest = newest?.id !== newestSeen && newest?.author === me;
-  if (newest?.id !== newestSeen) {
-    setNewestSeen(newest?.id);
-    if (myNewest) setSpan({ start: null, end: null });
-  }
-  const scrolledFor = useRef(newest?.id);
-  useLayoutEffect(() => {
-    if (newest?.id === scrolledFor.current) return;
-    scrolledFor.current = newest?.id;
-    if (newest?.author !== me) return;
-    stick.current = true;
-    const el = ref.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [newest?.id, newest?.author, me]);
-
-  // Rows change size after they render (dice settling, fonts, images): stay at the bottom.
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || !list.current) return;
-    const ro = new ResizeObserver(() => {
-      if (stick.current) el.scrollTop = el.scrollHeight;
-      else noteAnchorRef.current();
-    });
-    ro.observe(list.current);
-    return () => ro.disconnect();
-  }, []);
-
-  const editableCharacters = new Set(editable.split(" "));
-  const sceneIdSet = new Set(sceneIds);
 
   return (
     <div
@@ -286,12 +79,7 @@ export function ChatLog({
       className="panel-scroll chat-log"
       role="log"
       aria-live="polite"
-      onScroll={(e) => {
-        const el = e.currentTarget;
-        stick.current = atNewest && el.scrollHeight - el.scrollTop - el.clientHeight < 40;
-        noteAnchor();
-        slide();
-      }}
+      onScroll={onScroll}
     >
       {rows.length === 0 && notes.length === 0 && (
         <div className="empty">
@@ -301,51 +89,17 @@ export function ChatLog({
       )}
       <div className="chat-space" style={{ height: `${Math.round(above)}px` }} aria-hidden="true" />
       <div ref={list} className="chat-rows">
-        {shown.map((row) =>
-          row.kind === "fold" ? (
-            <button
-              key={row.key}
-              data-key={row.key}
-              type="button"
-              className="chat-session-fold"
-              aria-expanded={row.open}
-              onClick={() => toggle(row.part)}
-            >
-              <IconExpand size={22} className="chat-session-chevron" />
-              <span className="chat-session-title">{row.title}</span>
-              <span className="chat-session-count">
-                {row.count} {row.count === 1 ? "message" : "messages"}
-              </span>
-            </button>
-          ) : (
-            <Message
-              key={row.key}
-              campaign={campaign}
-              m={row.m}
-              header={row.header}
-              fresh={!initial.has(row.m.id)}
-              masked={visibilityOf(row.m, me, isGm) === "masked"}
-              mine={row.m.author === me}
-              canAct={row.m.kind === "move" && editableCharacters.has(row.m.characterId)}
-              canGo={
-                row.m.kind === "system" &&
-                row.m.event === "scene-change" &&
-                !!row.m.sceneId &&
-                row.m.sceneId !== here &&
-                sceneIdSet.has(row.m.sceneId)
-              }
-              quickRoll={row.m.id === quickRollMessage || wasTrayRolled(row.m.id)}
-              quickRollActive={row.m.id === quickRollMessage}
-              onMenu={
-                canDelete(row.m, me, isGm) ||
-                canEditMessage(row.m, me) ||
-                (isGm && row.m.kind !== "system")
-                  ? onMenu
-                  : undefined
-              }
-            />
-          ),
-        )}
+        {shown.map((row) => (
+          <ChatRow
+            key={row.key}
+            campaign={campaign}
+            row={row}
+            viewer={viewer}
+            fresh={row.kind === "message" && !initial.has(row.m.id)}
+            quickRollMessage={quickRollMessage}
+            onMenu={onMenu}
+          />
+        ))}
       </div>
       <div className="chat-space" style={{ height: `${Math.round(below)}px` }} aria-hidden="true" />
       {atNewest &&
@@ -355,5 +109,89 @@ export function ChatLog({
           </p>
         ))}
     </div>
+  );
+}
+
+/** In view means read: when the panel is showing and the window has focus, and again on regaining focus. */
+function useMarkRead(campaign: Campaign, messages: readonly unknown[]) {
+  const ctx = useCampaign();
+  const visible = usePanelVisible(ctx.panels, "chat");
+  useEffect(() => {
+    if (visible && document.hasFocus()) markRead(campaign);
+  }, [campaign, messages, visible]);
+  useEffect(() => {
+    const read = () => markRead(campaign);
+    window.addEventListener("focus", read);
+    return () => window.removeEventListener("focus", read);
+  }, [campaign]);
+}
+
+/** Who is looking at the log, and what they may reach from it. */
+type Viewer = {
+  me: string;
+  isGm: boolean;
+  here: string | null | undefined;
+  editableCharacters: Set<string>;
+  sceneIds: Set<string>;
+};
+
+/** A row of the log: a folded session's heading, or a message. */
+function ChatRow({
+  campaign,
+  row,
+  viewer,
+  fresh,
+  quickRollMessage,
+  onMenu,
+}: {
+  campaign: Campaign;
+  row: LogRow;
+  viewer: Viewer;
+  fresh: boolean;
+  quickRollMessage: string | null;
+  onMenu: (x: number, y: number, id: string) => void;
+}) {
+  const ctx = useCampaign();
+  const { me, isGm } = viewer;
+  if (row.kind === "fold")
+    return (
+      <button
+        data-key={row.key}
+        type="button"
+        className="chat-session-fold"
+        aria-expanded={row.open}
+        onClick={() =>
+          ctx.table.openSessions.set(toggleSetValue(ctx.table.openSessions.value, row.part))
+        }
+      >
+        <IconExpand size={22} className="chat-session-chevron" />
+        <span className="chat-session-title">{row.title}</span>
+        <span className="chat-session-count">
+          {row.count} {row.count === 1 ? "message" : "messages"}
+        </span>
+      </button>
+    );
+  const { m } = row;
+  const hasMenu = canDelete(m, me, isGm) || canEditMessage(m, me) || (isGm && m.kind !== "system");
+  return (
+    <Message
+      campaign={campaign}
+      m={m}
+      header={row.header}
+      fresh={fresh}
+      masked={visibilityOf(m, me, isGm) === "masked"}
+      mine={m.author === me}
+      canAct={m.kind === "move" && viewer.editableCharacters.has(m.characterId)}
+      canGo={
+        m.kind === "system" &&
+        m.event === "scene-change" &&
+        !!m.sceneId &&
+        m.sceneId !== viewer.here &&
+        viewer.sceneIds.has(m.sceneId)
+      }
+      quickRoll={m.id === quickRollMessage || wasTrayRolled(m.id)}
+      quickRollActive={m.id === quickRollMessage}
+      onMenu={hasMenu ? onMenu : undefined}
+    />
   );
 }
