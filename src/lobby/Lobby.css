@@ -59,30 +59,25 @@
     gap: var(--space-2);
   }
 
-  /* The empty lobby: an emblem, what the table offers, and one way in. */
+  /*
+   * The empty lobby: no panel, so the cave and its party stay in view. The
+   * words sit in the dark above them, lit by the torches below.
+   */
   .lobby-welcome {
+    display: grid;
     justify-items: center;
     gap: var(--space-5);
-    padding: var(--space-6) var(--space-5);
     text-align: center;
-  }
-  .welcome-emblem {
-    display: grid;
-    place-items: center;
-    width: 112px;
-    aspect-ratio: 1;
-    border-radius: 50%;
-    color: var(--accent);
-    background: radial-gradient(circle, var(--accent-soft), transparent 70%);
-    animation: welcome-float 5s ease-in-out infinite;
-  }
-  .welcome-emblem svg {
-    filter: drop-shadow(0 0 12px oklch(80% 0.12 82 / 0.45));
   }
   .welcome-title {
     font-family: var(--font-display);
     font-size: var(--text-xl);
     font-weight: 700;
+    color: var(--text);
+    text-shadow:
+      0 2px 12px #000,
+      0 0 24px oklch(80% 0.12 82 / 0.35);
+    animation: welcome-rise 600ms var(--ease) both;
   }
   .welcome-features {
     display: grid;
@@ -98,9 +93,10 @@
     justify-items: center;
     gap: var(--space-2);
     padding: var(--space-4) var(--space-3);
-    border: 1px solid var(--hairline);
-    background: var(--raised-sheen), var(--surface-raised);
-    color: var(--text-muted);
+    border: 1px solid oklch(80% 0.12 82 / 0.22);
+    background: rgb(8 9 16 / 0.55);
+    backdrop-filter: blur(6px);
+    color: var(--text);
     font-size: var(--text-sm);
     font-weight: 600;
     animation: welcome-rise 600ms var(--ease) both;
@@ -126,14 +122,10 @@
     rotate: -8deg;
   }
   .welcome-cta {
+    box-shadow: 0 4px 24px #000a;
     font-size: var(--text-lg);
     padding-inline: var(--space-5);
     min-height: 44px;
-  }
-  @keyframes welcome-float {
-    50% {
-      translate: 0 -6px;
-    }
   }
   @keyframes welcome-rise {
     from {
@@ -142,7 +134,7 @@
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    .welcome-emblem,
+    .welcome-title,
     .welcome-features li {
       animation: none;
     }

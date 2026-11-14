@@ -3,7 +3,6 @@ import { useId, useLayoutEffect, useRef, useState } from "react";
 import {
   IconAdd,
   IconBackupFolder,
-  IconCampaign,
   IconDelete,
   IconDice,
   IconExport,
@@ -131,10 +130,7 @@ const FEATURES = [
 /** The lobby with no campaigns: what the table offers and the way in. */
 function Welcome({ onCreate }: { onCreate: () => void }) {
   return (
-    <section className="panel lobby-section lobby-welcome" aria-labelledby="welcome-title">
-      <div className="welcome-emblem" aria-hidden="true">
-        <IconCampaign size={56} />
-      </div>
+    <section className="lobby-welcome" aria-labelledby="welcome-title">
       <h2 id="welcome-title" className="welcome-title">
         Start Your First Campaign
       </h2>
