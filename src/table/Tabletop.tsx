@@ -127,7 +127,7 @@ export function Tabletop({ campaign }: { campaign: Campaign }) {
 }
 
 /** How close to an edge of the window the pointer must come to show that edge's chrome. */
-const EDGE_ZONE = 24;
+const EDGE_ZONE = 8;
 
 /** The chrome each edge reveals, which then stays while the pointer is over it. */
 const EDGE_CHROME = {
@@ -157,10 +157,10 @@ function useNearEdges(on: boolean) {
       if (e.pointerType !== "mouse") return;
       const { clientX: x, clientY: y } = e;
       const near: Record<Edge, boolean> = {
-        left: x < EDGE_ZONE,
-        right: x > innerWidth - EDGE_ZONE,
-        top: y < EDGE_ZONE,
-        bottom: y > innerHeight - EDGE_ZONE,
+        left: x <= EDGE_ZONE,
+        right: x >= innerWidth - EDGE_ZONE,
+        top: y <= EDGE_ZONE,
+        bottom: y >= innerHeight - EDGE_ZONE,
       };
       shown = new Set(
         (Object.keys(EDGE_CHROME) as Edge[]).filter(
@@ -181,6 +181,6 @@ function useNearEdges(on: boolean) {
       document.documentElement.removeEventListener("pointerleave", onLeave);
       setEdges("");
     };
-  }, [on, edges]);
+  }, [on]);
   return edges;
 }

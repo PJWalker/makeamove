@@ -1,6 +1,60 @@
 import { expect, test, type Page } from "./browser-test";
 import { createCampaign, settled } from "./e2e-helpers";
 import { hexToOklch } from "../src/lib/colour";
+import { setAutohide } from "../src/workspace/autohide";
+
+test("autohide reveals each edge within 8px and stays open over its panel", async ({ page }) => {
+  await createCampaign(page, "Autohide edge test");
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const table = page.locator(".table");
+  const center = { x: innerWidth / 2, y: innerHeight / 2 };
+  await page.mouse.click(center.x, center.y);
+  setAutohide(true);
+  await expect(table).toHaveAttribute("data-autohide", "true");
+  await settled(page);
+
+  const edges = [
+    { name: "left", selector: '.sidebar[data-side="left"]', x: 8, y: center.y, dx: 1, dy: 0 },
+    {
+      name: "right",
+      selector: '.sidebar[data-side="right"]',
+      x: innerWidth - 8,
+      y: center.y,
+      dx: -1,
+      dy: 0,
+    },
+    { name: "top", selector: ".toolbar", x: center.x, y: 8, dx: 0, dy: 1 },
+    { name: "bottom", selector: ".hotbar", x: center.x, y: innerHeight - 8, dx: 0, dy: -1 },
+  ];
+  for (const edge of edges) {
+    await page.mouse.move(edge.x + edge.dx, edge.y + edge.dy);
+    await expect(table).toHaveAttribute("data-reveal", "");
+    await page.mouse.move(edge.x, edge.y);
+    await expect(table).toHaveAttribute("data-reveal", edge.name);
+    await settled(page);
+    await expect(table).toHaveAttribute("data-reveal", edge.name);
+    const panel = page.locator(edge.selector);
+    expect(getComputedStyle(panel.element()).pointerEvents).not.toBe("none");
+    const bounds = await panel.boundingBox();
+    expect(bounds).not.toBeNull();
+    await page.mouse.move(bounds!.x + bounds!.width / 2, bounds!.y + bounds!.height / 2);
+    await expect(table).toHaveAttribute("data-reveal", edge.name);
+    await page.mouse.move(center.x, center.y);
+    await expect(table).toHaveAttribute("data-reveal", "");
+    await settled(page);
+  }
+
+  await page.mouse.move(8, center.y);
+  await expect(table).toHaveAttribute("data-reveal", "left");
+  document.documentElement.dispatchEvent(new PointerEvent("pointerleave"));
+  await expect(table).toHaveAttribute("data-reveal", "");
+  setAutohide(false);
+  await expect(table).toHaveAttribute("data-autohide", "false");
+  setAutohide(true);
+  await expect(table).toHaveAttribute("data-autohide", "true");
+  await page.mouse.move(innerWidth - 8, center.y);
+  await expect(table).toHaveAttribute("data-reveal", "right");
+}, 30_000);
 
 /** Where on the screen the canvas's middle is, give or take an offset. */
 async function canvasPoint(page: Page, dx = 0, dy = 0) {
