@@ -11,8 +11,6 @@ export default defineConfig([
       "playwright-report/**",
       "test-results/**",
       "reference/**",
-      "reports/**",
-      ".stryker-tmp/**",
     ],
   },
   {

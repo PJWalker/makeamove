@@ -6,7 +6,8 @@ import { campaignDbName, campaignUiDbName } from "./storage";
 
 import { commaListOf, formatCommaList } from "../lib/list";
 import { device, type Device } from "../platform/device";
-import { joinPublicRoom, type JoinRoom } from "../sync/transport";
+import type { JoinRoom } from "../sync/transport";
+import { joinPublicRoom } from "../sync/publicRoom";
 import type { ReadonlyStore } from "../lib/store";
 import {
   forgetCampaign,

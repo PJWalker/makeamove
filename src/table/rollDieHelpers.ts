@@ -14,13 +14,11 @@ export const loadDiceRenderer = () =>
     .then((module) => (loaded = module.createDiceRenderer()))
     .catch(() => null));
 
-const currentDiceRenderer = () => loaded;
-
 /** Tumbles the dice in a carried copy of `element`; the returned function settles them back. */
 export function rollCarriedDice(element: HTMLElement, carrier: HTMLElement) {
   if (!threeDimensionalDice.value) return () => {};
   return (
-    currentDiceRenderer()?.spin(
+    loaded?.spin(
       [...element.querySelectorAll("canvas")],
       [...carrier.querySelectorAll("canvas")],
     ) ?? (() => {})
@@ -84,5 +82,3 @@ export function holdNewPick(pick: TrayPick) {
 export function dieTitle(die: Die) {
   return `${die.value}${die.exploded ? ", exploded" : ""}${die.kept ? "" : ", dropped"}`;
 }
-
-export { currentDiceRenderer };

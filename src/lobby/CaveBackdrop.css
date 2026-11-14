@@ -32,6 +32,49 @@
     width: 100%;
     height: 100%;
   }
+  .cave-effects,
+  .cave-light,
+  .cave-wisp-travel {
+    inset: 0;
+  }
+  .cave-effects > *,
+  .cave-light > *,
+  .cave-wisp-travel > * {
+    position: absolute;
+  }
+  .cave-ranger {
+    --cave-depth: -0.5;
+  }
+  .cave-dwarf {
+    --cave-depth: -0.2;
+  }
+  .cave-warrior {
+    --cave-depth: 0.2;
+  }
+  .cave-wizard {
+    --cave-depth: 0.4;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .cave-background {
+      transform: translate(calc(var(--cave-x, 0px) * 0.4), calc(var(--cave-y, 0px) * 0.4));
+    }
+    .cave-effects {
+      transform: translate(var(--cave-x, 0px), var(--cave-y, 0px));
+    }
+    .cave-depth,
+    .cave-arch {
+      transform: translate(
+        calc(var(--cave-svg-x, 0px) * var(--cave-depth)),
+        calc(var(--cave-svg-y, 0px) * var(--cave-depth))
+      );
+    }
+    .cave-light {
+      transform: translate(
+        calc(var(--cave-x, 0px) * var(--cave-depth)),
+        calc(var(--cave-y, 0px) * var(--cave-depth))
+      );
+    }
+  }
   .cave-tint {
     mix-blend-mode: color;
   }
@@ -102,10 +145,11 @@
     animation-duration: 3.6s;
   }
 
+  .cave-wisp-travel {
+    animation: cave-drift 18s ease-in-out 20s infinite;
+  }
   .cave-wisp {
     overflow: visible;
-    animation: cave-drift 11s ease-in-out infinite;
-    will-change: translate;
   }
   .cave-tail {
     fill: #9fd0ff;
@@ -232,13 +276,13 @@
       translate: 0 0;
     }
     25% {
-      translate: 9% -12%;
+      translate: -3% -6%;
     }
     50% {
-      translate: 2% -4%;
+      translate: 3% -12%;
     }
     75% {
-      translate: -8% -14%;
+      translate: 5% -3%;
     }
   }
   @keyframes cave-sway {

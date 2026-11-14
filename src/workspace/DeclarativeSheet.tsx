@@ -5,6 +5,7 @@ import { conditionColour } from "../features/combat/pipColours";
 import type { Campaign } from "../campaign/campaign";
 import { device } from "../platform/device";
 import type { Derived, GameSystem, SheetCounter, SheetSection } from "../systems/types";
+import type { SheetProps } from "../systems/extensionTypes";
 import { commaListOf } from "../lib/list";
 import { parseInputNumber } from "../lib/number";
 import { Button } from "../ui/Button";
@@ -47,7 +48,7 @@ import { useSheet } from "./sheetModel";
  * fallback for systems that supply layout data instead of components.
  */
 
-export type SheetProps = { campaign: Campaign; system: GameSystem; c: CharacterView };
+export type { SheetProps } from "../systems/extensionTypes";
 type Props = SheetProps & { layout: SheetSection[] };
 
 const num = (v: unknown) => Number(v ?? 0);

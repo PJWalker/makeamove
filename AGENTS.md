@@ -1,9 +1,9 @@
 # Project Instructions
 
-- Port 5173 is reserved for the user's `Start dev server (port 5173)` VS Code task. When you need your own dev server, use another available port, keep track of the process, and stop it when finished, including after errors or interrupted work. Never stop the user's server or other processes you did not start.
-- This project is in active development, not a production system. Prefer improving the underlying design over preserving historical implementation decisions.
-- Use test-driven development for new features and bug fixes. First write tests that define the expected behaviour, run them and confirm they fail for the right reason, then implement until they pass. For bug fixes, the test reproduces the bug before the fix.
-- Commit your changes when you complete a substantial new feature or bug fix. Include only changes made for that task; never commit unrelated pre-existing work, and ask how to proceed if the task changes cannot be isolated safely.
+- Port 5173 is reserved for the user's `Start dev server (port 5173)` VS Code task. When you need your own dev server, use another available port, keep track of the process, and stop it when finished, including after errors or interrupted work. Never stop the user's server.
+- This project is in active development, not a production system. Prefer improving the underlying design over preserving historical implementations, and do not write migration code.
+- Use test-driven development for new features and bug fixes. First write tests that define the behaviour the user has requested - asking for clarification if needed. Then, run them and confirm they fail for the right reason, then implement until they pass. For bug fixes, write a test that reproduces the bug before the fix.
+- Commit your changes when you complete a substantial new feature or bug fix. Include only changes made for that task, and ask how to proceed if the task changes cannot be isolated safely.
 - Do not consider backwards compatibility. Breaking changes are good if they improve the design. It is ok if existing campaigns break. Don't write migration code.
 - A broken or incompatible item (a scene element, character, item, note, etc.) must never break the whole app. Log the problem to the console once, naming the item and what's wrong with it, and leave that one item out (or show it as unavailable) while everything else carries on. Leave its stored data untouched. Check it once, where it's read from storage or a peer, by declaring it in the schema layer (src/data/schema.ts: field guards, and a collection's `parse`, as `parseElement` in src/scene/schema.ts does), rather than scattering guards through the code that uses it.
 - Prefer clean code to unchanging code. When changing functionality, consider whether the current name still reflects its purpose; if not, rename it across the codebase using the TypeScript language server.
@@ -14,10 +14,8 @@
 - Prefer composition over inheritance and favor small, reusable components and functions.
 - Avoid duplicating logic; extract shared functionality into utilities or hooks.
 - Keep components focused on a single responsibility and avoid bloated components.
-- Minimise ad-hoc guards and band-aid solutions.
 - When something needs to expand to cover a new use case, look to generalise the overall behaviour where possible, rather than switching between multiple branches / implementations.
-- Always look for chances to simplify code, including code next to what you're working on. Where you see special cases, look for the general rule that covers them all, and replace the special cases with that rule. If a simplification is larger than the task at hand, point it out.
-- When requirements are ambiguous, make reasonable assumptions for minor details and ask about consequential decisions.
+- When requirements are ambiguous, report on the minor assumptions you make, and stop & ask about significant decision points.
 - Explain significant design trade-offs concisely, and ask the user for input.
 - Animate UI that appears and disappears. Dialogs, pop-ups, menus and option rows grow out of the control that spawned them and shrink back into it when they close; where there's nothing to go back into (a context menu that has closed, a keyboard shortcut), fade out while shrinking slightly. Keep it snappy (roughly 120–240 ms, easing out) and respect reduced motion. Prefer view transitions (src/ui/transition.ts) that share a `view-transition-name` between the spawner and what it spawns, over hand-rolled animation. Use the shared helpers rather than one-off animations: openPopup/closePopup for pop-up windows, and showFromOrigin and leave in src/ui/morph.ts for anything else.
 - Animate changes on the scene canvas tokens - when something about a token changes (its stats, its conditions, its turn), play out the change so players notice it, rather than just redrawing the new state. Respect reduced motion. See src/scene/barChange.ts and src/scene/render/conditions.ts for the house style.

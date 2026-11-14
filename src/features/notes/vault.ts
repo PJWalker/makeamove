@@ -6,7 +6,8 @@ import { newSecret } from "../../lib/ids";
 import { noteEntry } from "./schema";
 import { dataName } from "../../platform/dataEpoch";
 import { SyncSession } from "../../sync/session";
-import { joinPublicRoom, type JoinRoom } from "../../sync/transport";
+import type { JoinRoom } from "../../sync/transport";
+import { joinPublicRoom } from "../../sync/publicRoom";
 
 /*
  * The GM vault: a document of its own for GM-only pages, kept apart from the
