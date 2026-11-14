@@ -1,5 +1,5 @@
-import type { ComponentType, FormEvent, ReactNode } from "react";
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import type { FormEvent, ReactNode } from "react";
+import { useId, useLayoutEffect, useRef, useState } from "react";
 import {
   IconAdd,
   IconBackupFolder,
@@ -25,6 +25,7 @@ import { ContextMenu } from "../ui/ContextMenu";
 import { menuTrigger } from "../ui/menuTrigger";
 import { leave, showFromOrigin } from "../ui/morph";
 import { useQuery } from "../ui/useQuery";
+import { CaveBackdrop } from "./CaveBackdrop";
 
 const relative = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
 
@@ -75,7 +76,7 @@ export function Lobby({ error }: { error: string | null }) {
 
   return (
     <main className="lobby">
-      <LazyBackdrop />
+      <CaveBackdrop />
       <div className="lobby-inner">
         <header className="lobby-header">
           <h1>Make a Move</h1>
@@ -215,18 +216,6 @@ function LobbyModal({
 function closeModal(e: { currentTarget: Element }) {
   const d = e.currentTarget.closest("dialog");
   if (d) void leave(d, () => d.close());
-}
-
-/** The fog backdrop is decorative and fairly heavy, so it loads after the lobby. */
-function LazyBackdrop() {
-  const [backdrop, setBackdrop] = useState<ComponentType | null>(null);
-  useEffect(() => {
-    void import("./FogBackdrop")
-      .then((m) => setBackdrop(() => m.FogBackdrop))
-      .catch((error: unknown) => console.error("Could not load the lobby backdrop", error));
-  }, []);
-  const Backdrop = backdrop;
-  return Backdrop ? <Backdrop /> : null;
 }
 
 function CampaignRow({ c }: { c: CampaignSummary }) {

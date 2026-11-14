@@ -9,6 +9,7 @@ import {
   Vec3,
   World,
 } from "cannon-es";
+import { seededRandom } from "../lib/seededRandom";
 
 export interface DieHull {
   vertices: number[][];
@@ -287,17 +288,6 @@ function impactOf(before: Vec3, body: Body) {
   change.z += GRAVITY * PHYSICS_STEP;
   const size = change.length();
   return size > 1 ? size : 0;
-}
-
-function seededRandom(seed: string) {
-  let state = 2166136261;
-  for (const character of seed) state = Math.imul(state ^ character.charCodeAt(0), 16777619);
-  return () => {
-    state += 0x6d2b79f5;
-    let mixed = Math.imul(state ^ (state >>> 15), state | 1);
-    mixed ^= mixed + Math.imul(mixed ^ (mixed >>> 7), mixed | 61);
-    return ((mixed ^ (mixed >>> 14)) >>> 0) / 4294967296;
-  };
 }
 
 /**

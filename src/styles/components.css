@@ -10,6 +10,7 @@
 @import "primitives.css";
 @import "../ui/List.css";
 @import "../ui/Avatar.css";
+@import "../lobby/CaveBackdrop.css";
 @import "../lobby/Lobby.css";
 @import "../table/Tabletop.css";
 @import "../table/SceneCanvas.css";
