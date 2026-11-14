@@ -1,5 +1,4 @@
-import { createContext, useContext, type ReactNode } from "react";
-import StarterKit from "@tiptap/starter-kit";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
 import type { Node } from "@tiptap/pm/model";
 import { renderToReactElement } from "@tiptap/static-renderer/pm/react";
 import type { Campaign } from "../campaign/campaign";
@@ -7,9 +6,10 @@ import { TRACKER_NODE, type RichText, type TrackerButton } from "../data/richTex
 import { getCharacter } from "../features/characters/api";
 import { trackerBlock } from "../features/characters/trackers";
 import { useQuery } from "../ui/useQuery";
-import { shake, trackerButtonExtension, trackerTip } from "./trackerButtons";
+import { shake, trackerTip } from "./trackerButtons";
 import { pressTrackerButton } from "./commands/characters";
-import { useCampaign, type CampaignContext } from "./campaignContext";
+import { useCampaign } from "./campaignContext";
+import { ruleTextExtensions } from "./richTextExtensions";
 
 const RichTextContext = createContext<{
   campaign: Campaign;
@@ -94,12 +94,6 @@ export function TrackerButtonView({
   );
 }
 
-/** What rules text can hold: StarterKit's formatting and tracker buttons. */
-export const ruleTextExtensions = (ctx: CampaignContext) => [
-  StarterKit.configure({ link: false }),
-  trackerButtonExtension(ctx),
-];
-
 export function RichTextView({
   campaign,
   text,
@@ -115,6 +109,10 @@ export function RichTextView({
   searchTerm?: string;
 }) {
   const ctx = useCampaign();
+  const context = useMemo(
+    () => ({ campaign, characterId, searchTerm }),
+    [campaign, characterId, searchTerm],
+  );
   const rendered = renderToReactElement({
     extensions: ruleTextExtensions(ctx),
     content: text,
@@ -127,7 +125,7 @@ export function RichTextView({
     },
   });
   return (
-    <RichTextContext.Provider value={{ campaign, characterId, searchTerm }}>
+    <RichTextContext.Provider value={context}>
       <div className={`formatted-text ${className}`}>{rendered}</div>
     </RichTextContext.Provider>
   );

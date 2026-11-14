@@ -24,7 +24,7 @@ vi.mock("../../features/notes/targets", () => ({
 vi.mock("../entityGraphics", () => ({
   getEntityGraphic: () => ({ kind: "icon", name: "sword" }),
 }));
-vi.mock("../../ui/Tooltip", () => ({ hideTooltip: vi.fn() }));
+vi.mock("../../ui/tooltipController", () => ({ hideTooltip: vi.fn() }));
 vi.mock("../commands/campaign", () => ({ pinToHotbar: { id: "hotbar.pin" } }));
 vi.mock("../commands/characters", () => ({
   addItem: { id: "item.add" },

@@ -17,13 +17,8 @@ import { OptionPicker } from "../../ui/OptionPicker";
 import { closePopup } from "../../ui/popup";
 import { usePopupDialog } from "../../workspace/usePopupDialog";
 import { Dialog } from "../../workspace/Dialog";
-import {
-  ChoiceField,
-  emptyPick,
-  RuleScoreFields,
-  scoreCapsOf,
-  type Picked,
-} from "../../workspace/CreationParts";
+import { ChoiceField, RuleScoreFields, type Picked } from "../../workspace/CreationParts";
+import { emptyPick, scoreCapsOf } from "../../workspace/creationModel";
 import { changeClass } from "./commands";
 import { useCampaign } from "../../workspace/campaignContext";
 

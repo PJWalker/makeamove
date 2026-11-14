@@ -148,12 +148,12 @@ export function itemActive(item: ItemInstance): boolean {
 /** Everything changing a character's numbers: their conditions, then their active items. */
 export function effectSources(c: CharacterView, system: GameSystem): EffectSource[] {
   const activeConditions = new Set(c.conditions);
-  const conditions = system.conditions
-    .filter((k) => activeConditions.has(k.id) && k.effects.length)
-    .map((k) => ({ name: k.name, effects: k.effects }));
-  const items = c.inventory
-    .filter((i) => i.effects.length && itemActive(i))
-    .map((i) => ({ name: i.name, effects: i.effects }));
+  const conditions = system.conditions.flatMap((k) =>
+    activeConditions.has(k.id) && k.effects.length ? [{ name: k.name, effects: k.effects }] : [],
+  );
+  const items = c.inventory.flatMap((i) =>
+    i.effects.length && itemActive(i) ? [{ name: i.name, effects: i.effects }] : [],
+  );
   return [...conditions, ...items];
 }
 

@@ -99,5 +99,5 @@ export function useQuery<R extends Queryable, T>(
     cache.current = { version, read, value };
     return value;
   };
-  return useSyncExternalStore(source?.subscribe ?? noSubscribe, snapshot);
+  return useSyncExternalStore(source?.subscribe ?? noSubscribe, snapshot, snapshot);
 }

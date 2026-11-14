@@ -1,10 +1,12 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { commandText, emptyChatContent, type ChatContent } from "../features/chat/content";
+import { newId } from "../lib/ids";
 import { useCampaign } from "../workspace/campaignContext";
 import { addToChatRoll, chatCall, roll, suggestSlash } from "../workspace/commands/chat";
 import { invoke } from "../workspace/commands/views";
 import type { RollVisibility } from "../features/chat/types";
-import { NotationError } from "../features/dice/notation";
+import { NotationError, roll as rollDice, seededDie, type Roll } from "../features/dice/notation";
 import { pickName, poolFormula, samePick, signed, type TrayPick } from "../features/dice/pool";
 import { actingCharacterId, actingStatBonuses } from "../features/characters/api";
 import type { Campaign } from "../campaign/campaign";
@@ -12,7 +14,9 @@ import { useQuery } from "../ui/useQuery";
 import { Button } from "../ui/Button";
 import { trackPointer } from "../ui/pointer";
 import { ChatInput, type ChatInputHandle } from "./ChatInput";
-import { holdNewPick } from "./RollDie";
+import { holdNewPick } from "./rollDieHelpers";
+import { PendingRollCard } from "./RollCards";
+import { markTrayRolled, unmarkTrayRolled } from "./quickRolls";
 
 const VISIBILITIES: { id: RollVisibility; label: string; title: string }[] = [
   { id: "public", label: "Public", title: "Everyone sees the roll" },
@@ -27,6 +31,17 @@ const TOKENS: TrayPick[] = [
   { kind: "modifier", value: 1 },
   { kind: "modifier", value: -1 },
 ];
+const dieEntryKeys = (picks: TrayPick[]) => {
+  const counts = new Map<number, number>();
+  const keys = new Set<string>();
+  for (const pick of picks) {
+    if (pick.kind !== "die") continue;
+    const index = counts.get(pick.sides) ?? 0;
+    counts.set(pick.sides, index + 1);
+    keys.add(`${pick.sides}:${index}`);
+  }
+  return keys;
+};
 /** How long after the last quick-dice click the pool rolls. */
 const POOL_MS = 1000;
 /** How far (CSS px) the pointer moves from a die button before it carries a die off. */
@@ -37,7 +52,15 @@ const rollAt = (x: number, y: number) =>
   document.elementFromPoint(x, y)?.closest<HTMLElement>("[data-dice-target]") ?? null;
 
 /** The message box, its command hints, and the quick dice bar above it. */
-export function ChatComposer({ campaign }: { campaign: Campaign }) {
+export function ChatComposer({
+  campaign,
+  onQuickRollMessage,
+  rollOverlay,
+}: {
+  campaign: Campaign;
+  onQuickRollMessage: (id: string | null) => void;
+  rollOverlay: HTMLElement | null;
+}) {
   const ctx = useCampaign();
   const [content, setContent] = useState<ChatContent>(() => emptyChatContent());
   const typed = commandText(content);
@@ -77,18 +100,143 @@ export function ChatComposer({ campaign }: { campaign: Campaign }) {
   // Quick dice gather into a pool, rolled together once the clicks stop:
   // clicking the d20 twice rolls 2d20 as one entry.
   const [pool, setPool] = useState<TrayPick[]>([]);
+  const [releasedRoll, setReleasedRoll] = useState<{
+    roll: Roll;
+    seed: string;
+    trayVelocity: { x: number; y: number };
+  } | null>(null);
+  const diceTray = useRef<HTMLDivElement | null>(null);
+  const pendingRollCard = useRef<HTMLOutputElement | null>(null);
+  const enteredDice = useRef(new Set<string>());
+  const entryWait = useRef<{ keys: Set<string>; resolve: () => void } | null>(null);
+  const releaseLanded = useRef<{
+    seed: string;
+    count: number;
+    landed: Set<number>;
+    resolve: () => void;
+  } | null>(null);
   const poolTimer = useRef(0);
-  const rollPoolRef = useRef<() => void>(() => {});
+  const rollPoolRef = useRef<(transition?: boolean) => Promise<void>>(async () => {});
 
-  function rollPool() {
+  function pendingDieLanded(index: number) {
+    const release = releaseLanded.current;
+    if (!release || release.landed.has(index)) return;
+    release.landed.add(index);
+    if (release.landed.size < release.count) return;
+    releaseLanded.current = null;
+    release.resolve();
+  }
+
+  function pendingDieEntered(key: string) {
+    enteredDice.current.add(key);
+    const wait = entryWait.current;
+    if (!wait || ![...wait.keys].every((entryKey) => enteredDice.current.has(entryKey))) return;
+    entryWait.current = null;
+    wait.resolve();
+  }
+
+  function waitForEntry(keys: Set<string>) {
+    if ([...keys].every((key) => enteredDice.current.has(key))) return Promise.resolve();
+    return new Promise<void>((resolve) => {
+      entryWait.current = { keys, resolve };
+    });
+  }
+
+  useLayoutEffect(() => {
+    if (!pool.length || releasedRoll) return;
+    const tray = diceTray.current;
+    const card = pendingRollCard.current;
+    if (!tray || !card) return;
+    const trayBounds = tray.getBoundingClientRect();
+    const width = Math.max(0, trayBounds.width - 2 * 12);
+    card.style.width = `${width}px`;
+    const height = card.getBoundingClientRect().height;
+    card.style.left = `${trayBounds.left + 12}px`;
+    card.style.top = `${trayBounds.top - height + 6}px`;
+  }, [pool, releasedRoll]);
+
+  async function rollPool(transition = true) {
     clearTimeout(poolTimer.current);
     const formula = poolFormula(pool);
-    setPool([]);
-    if (!formula) return;
+    if (!formula) {
+      setPool([]);
+      return;
+    }
+    const entryKeys = dieEntryKeys(pool);
+    if (transition) {
+      const timer = poolTimer.current;
+      await waitForEntry(entryKeys);
+      if (timer !== poolTimer.current) return;
+    }
+    const seed = crypto.randomUUID();
+    const messageId = newId();
+    let messagePosted = false;
     try {
-      ctx.execute(roll, { formula, visibility });
+      const result = rollDice(formula, seededDie(seed));
+      if (!transition) {
+        await ctx.execute(roll, { formula, visibility, seed });
+        setPool([]);
+        return;
+      }
+      markTrayRolled(messageId);
+      onQuickRollMessage(messageId);
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      const message = await ctx.execute(roll, { formula, visibility, seed, messageId });
+      if (!message) {
+        unmarkTrayRolled(messageId);
+        return;
+      }
+      messagePosted = true;
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      const card = pendingRollCard.current;
+      const destination = document.querySelector<HTMLElement>(
+        ".chat-log .roll-card[data-quick-roll-active]",
+      );
+      if (!card || !destination) return;
+      const start = card.getBoundingClientRect();
+      const end = destination.getBoundingClientRect();
+      const dx = end.left - start.left;
+      const dy = end.top - start.top;
+      const duration = 360;
+      const diceCount = entryKeys.size;
+      const landed =
+        diceCount > 0
+          ? new Promise<void>((resolve) => {
+              releaseLanded.current = { seed, count: diceCount, landed: new Set(), resolve };
+            })
+          : Promise.resolve();
+      setReleasedRoll({
+        roll: result,
+        seed,
+        trayVelocity: { x: (dx * 1000) / duration, y: (dy * 1000) / duration },
+      });
+      const flight = card.animate(
+        [{ transform: "translate(0, 0)" }, { transform: `translate(${dx}px, ${dy}px)` }],
+        { duration, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)", fill: "forwards" },
+      );
+      await flight.finished.catch(() => {});
+      const currentDestination = destination.getBoundingClientRect();
+      const currentCard = card.getBoundingClientRect();
+      card.style.left = `${Number.parseFloat(card.style.left) + currentDestination.left - currentCard.left}px`;
+      card.style.top = `${Number.parseFloat(card.style.top) + currentDestination.top - currentCard.top}px`;
+      flight.cancel();
+      const settledCard = card.getBoundingClientRect();
+      const settledDestination = destination.getBoundingClientRect();
+      card.style.left = `${Number.parseFloat(card.style.left) + settledDestination.left - settledCard.left}px`;
+      card.style.top = `${Number.parseFloat(card.style.top) + settledDestination.top - settledCard.top}px`;
+      card.dataset.inFeed = "true";
+      await landed;
+      setPool([]);
     } catch (e) {
       if (e instanceof NotationError) setError(e.message);
+    } finally {
+      entryWait.current = null;
+      if (!messagePosted) unmarkTrayRolled(messageId);
+      releaseLanded.current = null;
+      setReleasedRoll(null);
+      setPool([]);
+      onQuickRollMessage(null);
     }
   }
   // The pool's timer rolls whatever is in it by then.
@@ -97,9 +245,17 @@ export function ChatComposer({ campaign }: { campaign: Campaign }) {
   });
 
   function setPoolAndTimer(next: TrayPick[]) {
+    entryWait.current?.resolve();
+    entryWait.current = null;
     setPool(next);
+    const activeKeys = dieEntryKeys(next);
+    enteredDice.current = new Set([...enteredDice.current].filter((key) => activeKeys.has(key)));
     clearTimeout(poolTimer.current);
-    if (next.length) poolTimer.current = window.setTimeout(() => rollPoolRef.current(), POOL_MS);
+    poolTimer.current = 0;
+    if (next.length)
+      poolTimer.current = window.setTimeout(() => {
+        void rollPoolRef.current();
+      }, POOL_MS);
   }
 
   function addPick(pick: TrayPick) {
@@ -153,13 +309,22 @@ export function ChatComposer({ campaign }: { campaign: Campaign }) {
           pick.kind === "die" &&
           !document.elementFromPoint(end.clientX, end.clientY)?.closest(".dice-tray")
         )
-          ctx.execute(roll, { formula: `d${pick.sides}`, visibility });
+          void ctx.execute(roll, { formula: `d${pick.sides}`, visibility });
       },
     );
   }
 
   // Dice picked just before the panel closes still get rolled.
-  useEffect(() => () => rollPoolRef.current(), []);
+  useEffect(
+    () => () => {
+      clearTimeout(poolTimer.current);
+      poolTimer.current = 0;
+      entryWait.current?.resolve();
+      entryWait.current = null;
+      void rollPoolRef.current(false);
+    },
+    [],
+  );
 
   const nextVisibility = () => {
     const options = VISIBILITIES.map((v) => v.id);
@@ -199,23 +364,19 @@ export function ChatComposer({ campaign }: { campaign: Campaign }) {
   }
 
   return (
-    <div className="dice-tray">
-      <div className="dice-quick">
-        <div className="tray-row">
-          {DICE.map(pickButton)}
-          {poolFormula(pool) ? (
-            // Restarted on every change, so the fill shows time left before the roll.
-            <Button
-              key={pool.map(pickName).join()}
-              variant="secondary"
-              className="dice-roll-now"
-              style={{ "--pool-ms": `${POOL_MS}ms` }}
-              label={`Roll ${poolFormula(pool)} now`}
-              onClick={rollPool}
-            >
-              <span className="dice-roll-formula">{poolFormula(pool).replace(/\b1d/g, "d")}</span>
-            </Button>
-          ) : (
+    <>
+      <div className="dice-tray" ref={diceTray}>
+        {pool.length > 0 && (
+          <span
+            key={`progress:${pool.map((pick, index) => `${index}:${pickName(pick)}`).join("|")}`}
+            className="dice-pool-progress"
+            style={{ "--pool-ms": `${POOL_MS}ms` }}
+            aria-hidden="true"
+          />
+        )}
+        <div className="dice-quick">
+          <div className="tray-row">
+            {DICE.map(pickButton)}
             <Button
               variant="ghost"
               className="dice-visibility"
@@ -224,63 +385,77 @@ export function ChatComposer({ campaign }: { campaign: Campaign }) {
             >
               {vis.label}
             </Button>
+          </div>
+          <div className="tray-row tray-chips">
+            {TOKENS.map(pickButton)}
+            {stats.length > 0 && <span className="tray-divider" aria-hidden="true" />}
+            {stats.map(pickButton)}
+          </div>
+        </div>
+        <form
+          className="dice-entry"
+          onSubmit={(e) => {
+            e.preventDefault();
+            send();
+          }}
+        >
+          {hints.length > 0 && (
+            <ul className="chat-hints" aria-label="Commands">
+              {hints.map((h) => (
+                <li key={h.names[0]}>
+                  <button
+                    type="button"
+                    className="chat-hint"
+                    onClick={() => input.current?.set(`/${h.names[0]} `)}
+                  >
+                    <code>{h.usage}</code>
+                    <span>{h.help}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
           )}
-        </div>
-        <div className="tray-row tray-chips">
-          {TOKENS.map(pickButton)}
-          {stats.length > 0 && <span className="tray-divider" aria-hidden="true" />}
-          {stats.map(pickButton)}
-        </div>
-      </div>
-      <form
-        className="dice-entry"
-        onSubmit={(e) => {
-          e.preventDefault();
-          send();
-        }}
-      >
-        {hints.length > 0 && (
-          <ul className="chat-hints" aria-label="Commands">
-            {hints.map((h) => (
-              <li key={h.names[0]}>
-                <button
-                  type="button"
-                  className="chat-hint"
-                  onClick={() => input.current?.set(`/${h.names[0]} `)}
-                >
-                  <code>{h.usage}</code>
-                  <span>{h.help}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
+          <ChatInput
+            campaign={campaign}
+            handleRef={input}
+            placeholder="Message, @ to link, or roll 2d6+1"
+            label="Message"
+            invalid={!!error}
+            onChange={(next) => {
+              setContent(next);
+              setError(null);
+            }}
+            onEnter={send}
+            onUp={() => last.current && input.current?.set(last.current)}
+            onEscape={() => {
+              input.current?.set("");
+              setError(null);
+            }}
+          />
+          <Button variant="primary" type="submit" label="Send" disabled={!typed.trim()}>
+            Send
+          </Button>
+        </form>
+        {error && (
+          <p className="chat-error" role="alert">
+            {error}
+          </p>
         )}
-        <ChatInput
-          campaign={campaign}
-          handleRef={input}
-          placeholder="Message, @ to link, or roll 2d6+1"
-          label="Message"
-          invalid={!!error}
-          onChange={(next) => {
-            setContent(next);
-            setError(null);
-          }}
-          onEnter={send}
-          onUp={() => last.current && input.current?.set(last.current)}
-          onEscape={() => {
-            input.current?.set("");
-            setError(null);
-          }}
-        />
-        <Button variant="primary" type="submit" label="Send" disabled={!typed.trim()}>
-          Send
-        </Button>
-      </form>
-      {error && (
-        <p className="chat-error" role="alert">
-          {error}
-        </p>
-      )}
-    </div>
+      </div>
+      {pool.length > 0 && rollOverlay
+        ? createPortal(
+            <PendingRollCard
+              key="pending"
+              cardRef={pendingRollCard}
+              picks={pool}
+              visibility={visibility}
+              releasedRoll={releasedRoll}
+              onDieLanded={pendingDieLanded}
+              onDieEntered={pendingDieEntered}
+            />,
+            rollOverlay,
+          )
+        : null}
+    </>
   );
 }

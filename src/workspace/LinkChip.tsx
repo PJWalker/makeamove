@@ -5,13 +5,12 @@ import { linkLabel, linkTip } from "../features/notes/targets";
 import type { Campaign } from "../campaign/campaign";
 import { menuTrigger } from "../ui/menuTrigger";
 import { IconImage, IconOpenWindow, IconSidebar } from "../ui/icons";
-import type { WindowProxy } from "./entityWindowState";
 import { ContextMenu } from "../ui/ContextMenu";
 import { actionMenuItems } from "./actionMenu";
 import { dragEntity } from "./entityDrag";
 import { entity } from "./dragEntities";
-import { linkActionItems } from "./linkState";
-import { useCampaign, type CampaignContext } from "./campaignContext";
+import { linkActionItems } from "./linkActions";
+import { useCampaign } from "./campaignContext";
 
 /**
  * A link outside the editors (in a chat message): it looks and behaves like
@@ -98,21 +97,4 @@ export function LinkChip({
       )}
     </>
   );
-}
-
-/** A window's title-bar icon for a link target, dragging like a link to it. */
-export function linkProxy(
-  ctx: CampaignContext,
-  kind: LinkKind,
-  id: string,
-  label: string,
-  icon?: string,
-): WindowProxy {
-  return {
-    campaign: ctx.campaign,
-    kind,
-    id,
-    defaultIcon: icon,
-    entity: entity(ctx, kind, id, label),
-  };
 }

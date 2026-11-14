@@ -5,86 +5,20 @@ import { lastPointer } from "../ui/pointer";
 import { useThrow } from "../ui/useThrow";
 import { whenNear } from "../ui/whenNear";
 import type { DiceRenderer, Piece, Point } from "./diceRenderer";
-import { backdropColour } from "../lib/colour";
+import { contrastingTextColour } from "../lib/colour";
 import { colourOf } from "../scene/presence";
 import { device } from "../platform/device";
-import { chipText, signed, type TrayPick } from "../features/dice/pool";
+import { chipText, signed } from "../features/dice/pool";
+import { useQuery } from "../ui/useQuery";
+import { threeDimensionalDice } from "../workspace/diceRendering";
+import { chipSign, dieTitle, loadDiceRenderer, rollCarriedDice } from "./rollDieHelpers";
 
-/** Waiting for the renderer, in the air, at rest, or drawn flat where the browser can't draw 3D at all. */
-type Phase = "pending" | "flying" | "landed" | "flat";
-
-let renderer: Promise<DiceRenderer | null> | undefined;
-let loaded: DiceRenderer | undefined;
-const loadRenderer = () =>
-  (renderer ??= import("./diceRenderer")
-    .then((m) => (loaded = m.createDiceRenderer()))
-    .catch(() => null));
-
-/** A player's colour as a die's body: dark and muted enough to carry light numbers. */
-export const dieColour = (player: string) => backdropColour(player, 0.42, 0.1);
-
-/** Tumbles the dice in a carried copy of `element`; the returned function settles them back. */
-export function rollCarriedDice(element: HTMLElement, carrier: HTMLElement) {
-  return (
-    loaded?.spin(
-      [...element.querySelectorAll("canvas")],
-      [...carrier.querySelectorAll("canvas")],
-    ) ?? (() => {})
-  );
-}
-
-/** Which way a chip's number goes, for its colour. */
-const chipSign = (value: number) => (value < 0 ? "minus" : "plus");
-
-/** A new die or chip held under the pointer, tumbling, until it's let go of. */
-export function holdNewPick(pick: TrayPick) {
-  const piece: Piece =
-    pick.kind === "die"
-      ? { sides: pick.sides, value: pick.sides, seed: "" }
-      : { chip: chipText(pick.value, pick.kind === "stat" ? pick.stat : undefined), seed: "" };
-  const ghost = document.createElement("span");
-  ghost.className = "die die-ghost";
-  ghost.dataset.phase = "flat";
-  ghost.setAttribute("aria-hidden", "true");
-  if ("chip" in piece) {
-    ghost.classList.add("chip");
-    ghost.dataset.sign = chipSign(pick.kind === "die" ? 0 : pick.value);
-  } else {
-    ghost.dataset.sides = [4, 6, 8, 10, 12, 20].includes(piece.sides) ? String(piece.sides) : "n";
-    ghost.style.setProperty("--die-colour", dieColour(colourOf(device.value)));
-  }
-  const value = document.createElement("span");
-  value.className = "die-value";
-  value.textContent = "chip" in piece ? piece.chip : String(piece.value);
-  ghost.append(value);
-  document.body.append(ghost);
-  let settle: (() => void) | undefined;
-  let gone = false;
-  void loadRenderer().then((dice) => {
-    if (!dice || gone) return;
-    const canvas = document.createElement("canvas");
-    canvas.className = "die-canvas";
-    // In place before it's drawn, so it's drawn in the ghost's colours.
-    ghost.replaceChildren(canvas);
-    dice.mount(canvas, ghost, piece);
-    ghost.dataset.phase = "landed";
-    settle = dice.spin([canvas], [canvas]);
-  });
-  return {
-    move(x: number, y: number) {
-      ghost.style.left = `${x}px`;
-      ghost.style.top = `${y}px`;
-    },
-    remove() {
-      gone = true;
-      settle?.();
-      ghost.remove();
-    },
-  };
-}
+/** Waiting for the renderer, in the air, at rest, drawn flat, or disabled by the player. */
+type Phase = "pending" | "flying" | "landed" | "flat" | "disabled";
 
 /** Where a die thrown into this slot starts: the roller's pointer, or else above the log. */
-function throwFrom(slot: HTMLElement, mine: boolean): Point {
+function throwFrom(slot: HTMLElement, mine: boolean, origin?: Point): Point {
+  if (origin) return origin;
   const pointer = mine ? lastPointer() : null;
   if (pointer) return pointer;
   const box = slot.getBoundingClientRect();
@@ -95,57 +29,167 @@ function throwFrom(slot: HTMLElement, mine: boolean): Point {
   };
 }
 
-/** A die's tooltip: the number it rolled, and whether it exploded or was dropped. */
-export function dieTitle(die: Die) {
-  return `${die.value}${die.exploded ? ", exploded" : ""}${die.kept ? "" : ", dropped"}`;
-}
-
 /**
  * Draws a die or chip of a roll in chat into its slot's canvas: thrown in if
  * the roll has just arrived, else drawn at rest once it's scrolled near.
  */
-function useLanding(piece: Piece, { arriving, mine, index }: Thrown & { index: number }) {
+function useLanding(
+  piece: Piece,
+  {
+    arriving,
+    mine,
+    index,
+    origin,
+    releaseValue,
+    releaseSeed,
+    trayVelocity,
+    onLanded,
+    entryKey,
+    onEntered,
+    eager,
+  }: Thrown & {
+    index: number;
+    origin?: Point | undefined;
+    releaseValue?: number | undefined;
+    releaseSeed?: string | undefined;
+    trayVelocity?: Point | undefined;
+    onLanded?: (() => void) | undefined;
+    entryKey?: string | undefined;
+    onEntered?: ((key: string) => void) | undefined;
+    eager?: boolean | undefined;
+  },
+) {
   const slot = useRef<HTMLSpanElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
-  const [phase, setPhase] = useState<Phase>("pending");
-  const initial = useRef({ piece, arriving, mine, index });
+  const use3dDice = useQuery(threeDimensionalDice);
+  const [phase, setPhase] = useState<Phase>(use3dDice ? "pending" : "disabled");
+  const [previousUse3dDice, setPreviousUse3dDice] = useState(use3dDice);
+  if (previousUse3dDice !== use3dDice) {
+    setPreviousUse3dDice(use3dDice);
+    setPhase(use3dDice ? "pending" : "disabled");
+  }
+  const [arrivalOrigin, setArrivalOrigin] = useState(origin);
+  if (origin && !arrivalOrigin) setArrivalOrigin(origin);
+  const initial = useRef({ piece, arriving, mine, index, entryKey });
+  const onLandedRef = useRef(onLanded);
+  const onEnteredRef = useRef(onEntered);
+  const releaseRef = useRef<{ value: number; seed: string; trayVelocity: Point } | null>(null);
+  const startReleaseRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    onLandedRef.current = onLanded;
+    onEnteredRef.current = onEntered;
+    releaseRef.current =
+      releaseValue === undefined
+        ? null
+        : {
+            value: releaseValue,
+            seed: releaseSeed ?? piece.seed,
+            trayVelocity: trayVelocity ?? { x: 0, y: 0 },
+          };
+    if (releaseValue !== undefined) {
+      if (!use3dDice) onLandedRef.current?.();
+      else startReleaseRef.current();
+    }
+  }, [onLanded, onEntered, releaseValue, releaseSeed, trayVelocity, piece.seed, use3dDice]);
 
   useEffect(() => {
-    const { piece, arriving, mine, index } = initial.current;
+    const { piece, arriving: wasArriving, mine, index, entryKey: pendingKey } = initial.current;
+    if (!use3dDice) {
+      if (wasArriving && pendingKey) onEnteredRef.current?.(pendingKey);
+      return;
+    }
     const thrown =
-      arriving && !matchMedia("(prefers-reduced-motion: reduce)").matches
-        ? { from: throwFrom(slot.current!, mine), delay: index * 90 }
+      wasArriving && !matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? { from: throwFrom(slot.current!, mine, arrivalOrigin), delay: index * 90 }
         : undefined;
     let gone = false;
     let dispose: (() => void) | undefined;
+    let diceRenderer: DiceRenderer | undefined;
+    let entryComplete = false;
+    let releaseStarted = false;
+    const startRelease = () => {
+      const release = releaseRef.current;
+      if (gone || !entryComplete || releaseStarted || !release || !diceRenderer) return;
+      if (!slot.current || !canvas.current || !("sides" in piece)) {
+        onLandedRef.current?.();
+        return;
+      }
+      releaseStarted = true;
+      const mounted = diceRenderer.rollInTray(
+        canvas.current,
+        slot.current,
+        { sides: piece.sides, value: release.value, seed: release.seed },
+        index * 90,
+        release.trayVelocity,
+      );
+      if (!mounted) {
+        onLandedRef.current?.();
+        return;
+      }
+      dispose = mounted.dispose;
+      void mounted.started.then(() => !gone && setPhase("flying"));
+      void mounted.landed.then(() => {
+        if (gone) return;
+        setPhase("landed");
+        onLandedRef.current?.();
+      });
+    };
+    startReleaseRef.current = startRelease;
     const draw = () =>
-      void loadRenderer()
-        .then((dice) => {
+      void loadDiceRenderer()
+        .then((loadedDice) => {
           if (gone) return;
-          if (!dice || !slot.current || !canvas.current) return setPhase("flat");
-          const mounted = dice.mount(canvas.current, slot.current, piece, thrown);
+          if (!loadedDice || !slot.current || !canvas.current) {
+            setPhase("flat");
+            entryComplete = true;
+            if (wasArriving && pendingKey) onEnteredRef.current?.(pendingKey);
+            if (releaseRef.current) onLandedRef.current?.();
+            return;
+          }
+          diceRenderer = loadedDice;
+          const mounted =
+            wasArriving && pendingKey && thrown
+              ? loadedDice.glideIn(canvas.current, slot.current, piece, thrown.from, thrown.delay)
+              : loadedDice.mount(canvas.current, slot.current, piece, thrown);
           dispose = mounted.dispose;
-          setPhase(thrown ? "flying" : "landed");
-          void mounted.landed.then(() => !gone && setPhase("landed"));
+          if (thrown) void mounted.started.then(() => !gone && setPhase("flying"));
+          else setPhase("landed");
+          void mounted.landed.then(() => {
+            if (gone) return;
+            setPhase("landed");
+            entryComplete = true;
+            if (wasArriving && pendingKey) onEnteredRef.current?.(pendingKey);
+            startRelease();
+          });
         })
         .catch(() => {
-          if (!gone) setPhase("flat");
+          if (!gone) {
+            setPhase("flat");
+            entryComplete = true;
+            if (wasArriving && pendingKey) onEnteredRef.current?.(pendingKey);
+            if (releaseRef.current) onLandedRef.current?.();
+          }
         });
     // A roll that has just arrived is drawn now; older ones wait until they're scrolled near.
     let stopWaiting: (() => void) | undefined;
-    if (arriving) draw();
+    if (wasArriving || eager) draw();
     else {
-      void loadRenderer();
+      void loadDiceRenderer();
       stopWaiting = whenNear(slot.current!, draw);
     }
     return () => {
       gone = true;
+      startReleaseRef.current = () => {};
       stopWaiting?.();
       dispose?.();
     };
-  }, []);
+  }, [use3dDice, arrivalOrigin, eager]);
 
-  return { slot, canvas, phase };
+  return {
+    slot,
+    canvas,
+    phase: !use3dDice ? "flat" : phase === "disabled" ? "pending" : phase,
+  };
 }
 
 /** Whether a piece is thrown in as its roll arrives, and whether by this device. */
@@ -162,15 +206,28 @@ export function RollChip({
   arriving,
   mine,
   seed,
-}: { value: number; label?: string | undefined; index: number; seed: string } & Thrown) {
+  origin,
+  pendingIndex,
+}: {
+  value: number;
+  label?: string | undefined;
+  index: number;
+  seed: string;
+  origin?: Point | undefined;
+  pendingIndex?: number | undefined;
+} & Thrown) {
   const text = chipText(value, label);
-  const { slot, canvas, phase } = useLanding({ chip: text, seed }, { arriving, mine, index });
+  const { slot, canvas, phase } = useLanding(
+    { chip: text, seed },
+    { arriving, mine, index, origin },
+  );
   return (
     <span
       ref={slot}
       className="die chip"
       data-phase={phase}
       data-sign={chipSign(value)}
+      data-pending-index={pendingIndex}
       role="img"
       aria-label={label ? `${label} ${signed(value)}` : signed(value)}
     >
@@ -178,6 +235,71 @@ export function RollChip({
       {phase === "flat" && (
         <span className="die-value" aria-hidden="true">
           {text}
+        </span>
+      )}
+    </span>
+  );
+}
+
+/** A die in the pending quick-roll tray, rolled in place when released. */
+export function PendingDie({
+  sides,
+  index,
+  seed,
+  entryKey,
+  releaseValue,
+  releaseSeed,
+  trayVelocity,
+  onLanded,
+  onEntered,
+  eager = true,
+}: {
+  sides: number;
+  index: number;
+  seed: string;
+  entryKey: string;
+  releaseValue?: number | undefined;
+  releaseSeed?: string | undefined;
+  trayVelocity?: Point | undefined;
+  onLanded?: (() => void) | undefined;
+  onEntered?: (key: string) => void;
+  eager?: boolean | undefined;
+}) {
+  const piece = { sides, value: Math.ceil(sides / 2), seed };
+  const { slot, canvas, phase } = useLanding(piece, {
+    arriving: true,
+    mine: true,
+    index,
+    entryKey,
+    releaseValue,
+    releaseSeed,
+    trayVelocity,
+    onLanded,
+    onEntered,
+    eager,
+  });
+  const colour = colourOf(device.value);
+  return (
+    <span
+      ref={slot}
+      className="die pending-die"
+      data-phase={phase}
+      data-sides={[4, 6, 8, 10, 12, 20].includes(sides) ? sides : "n"}
+      data-pending-index={index}
+      style={{
+        "--i": index,
+        "--die-colour": colour,
+        "--die-label-colour": contrastingTextColour(colour),
+      }}
+      role="img"
+      aria-label={
+        releaseValue === undefined ? `d${sides}, waiting to roll` : `d${sides}: ${releaseValue}`
+      }
+    >
+      {phase !== "flat" && <canvas ref={canvas} className="die-canvas" aria-hidden="true" />}
+      {phase === "flat" && (
+        <span className="die-value" aria-hidden="true">
+          d{sides}
         </span>
       )}
     </span>
@@ -192,25 +314,25 @@ export function RollDie({
   mine,
   seed,
   colour,
+  origin,
   onReroll,
   onToggle,
 }: {
   die: Die;
   index: number;
-  /** The die's body colour (see dieColour). */
+  /** The user's colour, clamped to the shared user-colour range. */
   colour: string;
   arriving: boolean;
   mine: boolean;
   seed: string;
+  origin?: Point | undefined;
   onReroll?: (() => void) | undefined;
   onToggle?: (() => void) | undefined;
 }) {
   const { slot, canvas, phase } = useLanding(
     { sides: die.sides, value: die.value, seed },
-    { arriving, mine, index },
+    { arriving, mine, index, origin },
   );
-  const max = die.value === die.sides && die.sides > 1;
-  const min = die.value === 1;
   const interactive = !!onReroll && (phase === "landed" || phase === "flat");
   const gesture = useThrow({
     onThrow: () => onReroll?.(),
@@ -228,14 +350,16 @@ export function RollDie({
       data-roll-seed={seed}
       data-sides={[4, 6, 8, 10, 12, 20].includes(die.sides) ? die.sides : "n"}
       data-kept={die.kept}
-      data-max={max}
-      data-min={min}
       data-exploded={die.exploded}
       data-disabled={die.disabled || undefined}
       role={onReroll ? "button" : "img"}
       tabIndex={onReroll ? 0 : undefined}
       aria-pressed={onToggle ? !die.disabled : undefined}
-      style={{ "--i": index, "--die-colour": colour }}
+      style={{
+        "--i": index,
+        "--die-colour": colour,
+        "--die-label-colour": contrastingTextColour(colour),
+      }}
       aria-label={`d${die.sides}: ${die.value}${die.disabled ? ", disabled" : die.kept ? "" : ", dropped"}`}
       title={dieTitle(die)}
       {...gesture}

@@ -4,7 +4,6 @@ import { ColourPicker } from "../ui/ColourPicker";
 import { MoveBody } from "./MoveBody";
 import { useQuery } from "../ui/useQuery";
 import type { EntityGraphic } from "../media/images";
-import { checkOf } from "../features/characters/moves";
 import type { CharacterView } from "../features/characters/types";
 import { colourOf } from "../scene/presence";
 import { TOKEN_STYLES } from "../scene/types";
@@ -16,23 +15,17 @@ import { Button } from "../ui/Button";
 import { EntityGraphicView } from "../ui/EntityGraphic";
 import { GraphicPicker } from "../ui/GraphicPicker";
 import { entryIcon } from "../ui/entryIcons";
-import {
-  IconAdd,
-  IconImage,
-  IconPost,
-  IconRemove,
-  IconRename,
-  IconRoll,
-  IconTarget,
-} from "../ui/icons";
+import { IconAdd, IconImage, IconRemove, IconRename } from "../ui/icons";
 import { List, Tag } from "../ui/List";
 import { menuTrigger } from "../ui/menuTrigger";
 import { usePopupDialog } from "./usePopupDialog";
 import { Segmented, SegmentedOrSelect } from "../ui/Segmented";
 import { Dialog } from "./Dialog";
 import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
-import { EntryRow, EntryWindow, rollTag, useEntryWindows } from "./EntryWindow";
-import { linkProxy } from "./LinkChip";
+import { EntryRow, EntryWindow } from "./EntryWindow";
+import { useEntryWindows } from "./entryWindowState";
+import { linkProxy } from "./linkProxy";
+import { makeVerb, rollTag } from "./actionPresentation";
 import { dragToken } from "./tokenDrag";
 import { getEntityGraphic } from "./entityGraphics";
 import { actionMenuItems } from "./actionMenu";
@@ -176,9 +169,6 @@ function CounterInput({
     />
   );
 }
-
-/** A signed number as the sheet shows it: +2, −1. */
-export const signedStr = (n: number) => (n < 0 ? `−${-n}` : `+${n}`);
 
 /**
  * Moves as a filterable list: one row each, with the move's rules in a
@@ -360,6 +350,7 @@ export function TokenChip({
         }
         data-style={graphic.kind === "image" ? (c.tokenStyle ?? "disc") : "disc"}
         style={{ "--token-colour": c.tokenColour ?? "" }}
+        {...trigger}
         onPointerDown={(e) => {
           trigger.onPointerDown(e);
           dragToken(ctx.canvas, e, {
@@ -371,7 +362,6 @@ export function TokenChip({
             ...(c.tokenColour ? { colour: c.tokenColour } : {}),
           });
         }}
-        onContextMenu={trigger.onContextMenu}
         onClick={() => editable && pick()}
       >
         <EntityGraphicView graphic={graphic} size={58} />
@@ -443,15 +433,6 @@ function TokenSettings({
       <p className="muted">Applies wherever this character appears.</p>
     </Dialog>
   );
-}
-
-/** What using an action does first: pick targets, roll, or just post it. */
-export function makeVerb(m: ActionDef) {
-  return m.target
-    ? { label: "Target", Icon: IconTarget }
-    : checkOf(m)
-      ? { label: "Roll", Icon: IconRoll }
-      : { label: "Post", Icon: IconPost };
 }
 
 /** The button that uses an action: an icon in a list row, or labelled in its window. */

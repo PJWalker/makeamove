@@ -45,16 +45,18 @@ async function importBackup(
   );
   const open = new Set(live);
   await Promise.all(
-    backup.docs
-      .filter((doc) => !open.has(doc.guid))
-      .map((doc) =>
-        mergeStoredDoc(
-          doc,
-          doc.kind === "campaign" && gm
-            ? (root) => claimGm(root, device, backup.exportedBy)
-            : undefined,
-        ),
-      ),
+    backup.docs.flatMap((doc) =>
+      open.has(doc.guid)
+        ? []
+        : [
+            mergeStoredDoc(
+              doc,
+              doc.kind === "campaign" && gm
+                ? (root) => claimGm(root, device, backup.exportedBy)
+                : undefined,
+            ),
+          ],
+    ),
   );
   const { roomKey, createdAt } = metaOf(backup.docs, backup.campaignId);
   return {

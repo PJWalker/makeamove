@@ -32,6 +32,7 @@ import {
 import { tokenName } from "../features/characters/templates";
 import { CharacterSheet } from "./sheets";
 import { useQuery } from "../ui/useQuery";
+import { useConstant } from "../ui/useConstant";
 import { getEntityGraphic } from "../workspace/entityGraphics";
 import { EntityGraphicView } from "../ui/EntityGraphic";
 import type { EntityGraphic } from "../media/images";
@@ -47,7 +48,7 @@ import { SceneSettingsFields } from "./SceneSettingsFields";
 import { dropOn, dropTargetAt, setDropCursor } from "../workspace/entityDrag";
 import { itemDefinitionForToken, itemTokenEntity } from "../workspace/dragEntities";
 import { formatDistance } from "../scene/measure";
-import { linkProxy } from "../workspace/LinkChip";
+import { linkProxy } from "../workspace/linkProxy";
 import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
 import { useCampaign } from "../workspace/campaignContext";
 import { copyCharacter } from "../workspace/commands/characters";
@@ -68,7 +69,7 @@ export default function SceneCanvas({
   const hostRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const importAt = useRef<Point | null>(null);
-  const [renderer] = useState(() => new SceneRenderer(ctx.blobs));
+  const renderer = useConstant(() => new SceneRenderer(ctx.blobs));
   const [ready, setReady] = useState(false);
   const [controller, setController] = useState<SceneController | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
@@ -133,14 +134,13 @@ export default function SceneCanvas({
       ctl.setGm(gm);
       const lighting = ctl.scene.lighting();
       const mine = new Set(
-        listCharacters(campaign)
-          .filter((c) => c.kind === "pc" && c.owner === device.value.id)
-          .map((c) => c.id),
+        listCharacters(campaign).flatMap((c) =>
+          c.kind === "pc" && c.owner === device.value.id ? [c.id] : [],
+        ),
       );
       const eyes = ctl
         .allElements()
-        .filter((el) => el.type === "token" && !!el.characterId && mine.has(el.characterId))
-        .map((el) => el.id);
+        .flatMap((el) => (el.type === "token" && mine.has(el.characterId ?? "") ? [el.id] : []));
       // A player with no tokens here sees the whole scene, rather than nothing.
       renderer.setLighting(lighting, !gm && lighting.vision && eyes.length ? eyes : null, gm);
     };
@@ -393,8 +393,9 @@ export default function SceneCanvas({
           const actorTokens = new Set(
             controller
               .allElements()
-              .filter((el) => el.type === "token" && req.actor && el.characterId === req.actor)
-              .map((el) => el.id),
+              .flatMap((el) =>
+                el.type === "token" && req.actor && el.characterId === req.actor ? [el.id] : [],
+              ),
           );
           const covered = placed.covered.filter((id) => !(fromActor && actorTokens.has(id)));
           controller.setTargets(
@@ -523,8 +524,7 @@ export default function SceneCanvas({
         ref={hostRef}
         className="scene-canvas"
         data-drop={dropping}
-        onPointerDown={menuOpener.onPointerDown}
-        onContextMenu={menuOpener.onContextMenu}
+        {...menuOpener}
         onDoubleClick={onDoubleClick}
         onDragOver={onDragOver}
         onDragLeave={() => setDropping(false)}

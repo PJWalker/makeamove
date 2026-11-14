@@ -1,7 +1,7 @@
 import { getCharacter, systemOf } from "../features/characters/api";
 import { rollModesFor } from "../features/characters/moves";
 import { appliedField, saveField, type SaveAnswer } from "../features/chat/messageState";
-import { useMessageState } from "./ChatExtras";
+import { useMessageState } from "../features/chat/messageState";
 import type { MoveMessage, MoveTarget, RollMessage } from "../features/chat/types";
 import type { Campaign } from "../campaign/campaign";
 import { useQuery } from "../ui/useQuery";

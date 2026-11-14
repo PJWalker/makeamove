@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 
 const PanelActionsContext = createContext<{
@@ -8,7 +16,8 @@ const PanelActionsContext = createContext<{
 
 export function PanelActionsProvider({ children }: { children: ReactNode }) {
   const [target, setTarget] = useState<HTMLDivElement | null>(null);
-  return <PanelActionsContext value={{ target, setTarget }}>{children}</PanelActionsContext>;
+  const value = useMemo(() => ({ target, setTarget }), [target]);
+  return <PanelActionsContext value={value}>{children}</PanelActionsContext>;
 }
 
 /**

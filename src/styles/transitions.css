@@ -262,12 +262,6 @@
   }
 }
 
-/*
- * A tool's options row (Toolbar.tsx) growing out of its tool's button,
- * shrinking back into it, or sliding to the next tool's row. Both snapshots
- * keep their size, centred and cropped by the moving box, so the row is
- * revealed rather than stretched.
- */
 ::view-transition-group(tool-options) {
   animation-duration: 180ms;
   animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
@@ -288,38 +282,8 @@
 ::view-transition-new(tool-options) {
   animation: vt-fade-in 120ms ease-out both;
 }
-/* Growing out of the tool's button, and shrinking back into it, from under the strip. */
-.vt-tool-in .toolbar,
-.vt-tool-out .toolbar {
-  view-transition-name: toolbar;
-}
-::view-transition-group(toolbar) {
-  z-index: 1;
-  animation-duration: 120ms;
-}
-.vt-tool-in::view-transition-group(tool-options) {
-  animation-name: vt-from-home;
-  animation-fill-mode: both;
-}
-.vt-tool-in::view-transition-new(tool-options) {
-  animation: vt-fade-in 120ms ease-out both;
-}
-.vt-tool-out::view-transition-group(tool-options) {
-  animation-name: vt-to-home;
-  animation-fill-mode: both;
-}
-.vt-tool-out::view-transition-old(tool-options) {
-  animation: vt-exit 180ms ease-in both;
-}
 
 /* A box growing from, or shrinking into, a transition's home (withTransition). */
-@keyframes vt-from-home {
-  from {
-    transform: translate(var(--vt-home-x), var(--vt-home-y));
-    width: var(--vt-home-w);
-    height: var(--vt-home-h);
-  }
-}
 @keyframes vt-to-home {
   to {
     transform: translate(var(--vt-home-x), var(--vt-home-y));

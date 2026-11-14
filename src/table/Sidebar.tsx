@@ -20,9 +20,11 @@ import {
   type Side,
   type PanelId,
 } from "../workspace/panelLayout";
-import { PanelContent, PanelIcon, PaneToggle, usePanelLabel } from "./panels";
+import { PanelContent, PanelIcon, PaneToggle } from "./panels";
+import { usePanelLabel } from "./panelLabels";
 import { PanelActionsProvider, PanelActionsSlot } from "./PanelActions";
-import { EntityWindowContent, isEntityTab } from "../workspace/entityWindows";
+import { EntityWindowContent } from "../workspace/entityWindows";
+import { isEntityTab } from "../workspace/entityWindowState";
 import { CampaignEntityGraphic } from "../workspace/EntityGraphic";
 import { keyedSideWidth, SIDEBAR_DEFAULT_W } from "../workspace/layoutModel";
 import { type CampaignContext, useCampaign } from "../workspace/campaignContext";

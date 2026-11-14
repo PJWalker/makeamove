@@ -11,6 +11,9 @@ import { can } from "../workspace/commands/views";
 import type { SceneLighting } from "../scene/sceneDoc";
 import type { Grid } from "../scene/grid";
 
+const num = (v: string, fallback: number) =>
+  Number.isFinite(parseFloat(v)) ? parseFloat(v) : fallback;
+
 export function SceneSettingsFields({
   campaign,
   sceneId,
@@ -33,8 +36,6 @@ export function SceneSettingsFields({
   const mapColour = useQuery(ctx.canvas.activeMapColour);
   const shown = view ? canvasColour(view, mapColour) : DEFAULT_CANVAS_COLOUR;
   const auto = !view?.canvasColour;
-  const num = (v: string, fallback: number) =>
-    Number.isFinite(parseFloat(v)) ? parseFloat(v) : fallback;
 
   return (
     <section className="form-layout" aria-label="Scene settings">

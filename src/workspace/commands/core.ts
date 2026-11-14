@@ -137,11 +137,17 @@ export const showPanel = command<{ panel: PanelId }>({
   available: (ctx, { panel }) =>
     !ctx.panels.unavailablePanels.value.includes(panel) || "Not in this campaign",
   offers: (ctx) =>
-    PANEL_ORDER.filter((id) => !ctx.panels.unavailablePanels.value.includes(id)).map((id) => ({
-      params: { panel: id },
-      aliases: [PANELS[id].label],
-      icon: PANELS[id].Icon,
-    })),
+    PANEL_ORDER.flatMap((id) =>
+      ctx.panels.unavailablePanels.value.includes(id)
+        ? []
+        : [
+            {
+              params: { panel: id },
+              aliases: [PANELS[id].label],
+              icon: PANELS[id].Icon,
+            },
+          ],
+    ),
   run: (ctx, { panel }) => ctx.panels.showPanel(panel),
 });
 
@@ -155,10 +161,11 @@ export const togglePanel = command<{ panel: PanelId }>({
   checked: (ctx, { panel }) => !ctx.panels.layout.value.closed.includes(panel),
   menu: {
     campaign: (ctx) =>
-      PANEL_ORDER.filter((id) => !ctx.panels.unavailablePanels.value.includes(id)).map((id) => ({
-        params: { panel: id },
-        icon: PANELS[id].Icon,
-      })),
+      PANEL_ORDER.flatMap((id) =>
+        ctx.panels.unavailablePanels.value.includes(id)
+          ? []
+          : [{ params: { panel: id }, icon: PANELS[id].Icon }],
+      ),
   },
   run: (ctx, { panel }) =>
     ctx.panels.setPanelClosed(panel, !ctx.panels.layout.value.closed.includes(panel)),

@@ -465,14 +465,18 @@ const saveStep = (s: Spell): SaveStep => ({
 });
 
 function spellVariants(spell: Spell, character: CharacterView, derived: Derived) {
-  const slots = Array.from({ length: 9 }, (_, index) => index + 1)
-    .filter((level) => level >= spell.level && (character.resources[`slot${level}`] ?? 0) > 0)
-    .map((level) => ({
-      id: `slot-${level}`,
-      label: `Level ${level} spell slot`,
-      costs: [{ resource: `slot${level}`, by: -1 }],
-      values: { spellSlot: level },
-    }));
+  const slots = Array.from({ length: 9 }, (_, index) => index + 1).flatMap((level) =>
+    level >= spell.level && (character.resources[`slot${level}`] ?? 0) > 0
+      ? [
+          {
+            id: `slot-${level}`,
+            label: `Level ${level} spell slot`,
+            costs: [{ resource: `slot${level}`, by: -1 }],
+            values: { spellSlot: level },
+          },
+        ]
+      : [],
+  );
   const pactLevel = valueOf(derived.values, "pactLevel");
   if (pactLevel >= spell.level && (character.resources.pact ?? 0) > 0)
     slots.push({
@@ -728,9 +732,7 @@ export const dnd55e: GameSystem = {
       options: spellOptions,
       available: (character) =>
         classOf(character).id === "wizard"
-          ? spellList(character)
-              .filter((spell) => spell.level > 0)
-              .map((spell) => spell.id)
+          ? spellList(character).flatMap((spell) => (spell.level > 0 ? [spell.id] : []))
           : [],
     },
     {
@@ -741,9 +743,7 @@ export const dnd55e: GameSystem = {
       max: "cantripsMax",
       options: spellOptions,
       available: (character) =>
-        spellList(character)
-          .filter((spell) => spell.level === 0)
-          .map((spell) => spell.id),
+        spellList(character).flatMap((spell) => (spell.level === 0 ? [spell.id] : [])),
     },
     {
       id: "prepared",
@@ -754,12 +754,11 @@ export const dnd55e: GameSystem = {
       options: spellOptions,
       available: (character) => {
         const spellbook = new Set(selectedIds(character, "spellbook"));
-        return spellList(character)
-          .filter(
-            (spell) =>
-              spell.level > 0 && (classOf(character).id !== "wizard" || spellbook.has(spell.id)),
-          )
-          .map((spell) => spell.id);
+        return spellList(character).flatMap((spell) =>
+          spell.level > 0 && (classOf(character).id !== "wizard" || spellbook.has(spell.id))
+            ? [spell.id]
+            : [],
+        );
       },
     },
   ],
@@ -1064,17 +1063,18 @@ export const dnd55e: GameSystem = {
     const level = levelOf(c);
     const granted = new Set(d.resolved.moves);
     const features = new Set(
-      FEATURES_ALL.filter(
-        (f) =>
-          (f.classes[cls.id] ?? 99) <= level && (!f.subclassId || f.subclassId === c.data.subclass),
-      ).map((f) => f.id),
+      FEATURES_ALL.flatMap((f) =>
+        (f.classes[cls.id] ?? 99) <= level && (!f.subclassId || f.subclassId === c.data.subclass)
+          ? [f.id]
+          : [],
+      ),
     );
     const prepared = new Set(selectedIds(c, "preparedSpells", d.values.preparedMax));
     const cantrips = new Set(selectedIds(c, "knownCantrips", d.values.cantripsMax));
     const spells = new Set(
-      spellList(c)
-        .filter((spell) => (spell.level ? prepared.has(spell.id) : cantrips.has(spell.id)))
-        .map((spell) => spell.id),
+      spellList(c).flatMap((spell) =>
+        (spell.level ? prepared.has(spell.id) : cantrips.has(spell.id)) ? [spell.id] : [],
+      ),
     );
     if (cls.id === "wizard") {
       const spellbook = new Set(selectedIds(c, "spellbook"));
@@ -1085,7 +1085,7 @@ export const dnd55e: GameSystem = {
     if (cls.id === "ranger") spells.add("hunters-mark");
     if (c.data.subclass && level >= SUBCLASS_LEVEL) features.add(`subclass-${c.data.subclass}`);
     const traits = new Set(
-      SPECIES_ACTIONS.filter((a) => a.species === c.data.species).map((a) => a.id),
+      SPECIES_ACTIONS.flatMap((a) => (a.species === c.data.species ? [a.id] : [])),
     );
     const has = (a: ActionDef) =>
       a.category === "class"

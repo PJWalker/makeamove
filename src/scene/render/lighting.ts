@@ -111,7 +111,9 @@ export class LightingLayer {
         color: 0x000000,
         alpha: darkness * strength,
       });
-      const tokens = s.elements.filter((el) => el.type === "token" && !s.hidden.has(el.id)).map(at);
+      const tokens = s.elements.flatMap((el) =>
+        el.type === "token" && !s.hidden.has(el.id) ? [at(el)] : [],
+      );
       for (const el of s.elements) {
         if (el.type !== "light" || s.hidden.has(el.id)) continue;
         const t = at(el);

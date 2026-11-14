@@ -8,7 +8,8 @@ import {
   type FloatingWindow,
   type PanelId,
 } from "../workspace/panelLayout";
-import { PanelContent, PanelIcon, PaneToggle, usePanelLabel } from "./panels";
+import { PanelContent, PanelIcon, PaneToggle } from "./panels";
+import { usePanelLabel } from "./panelLabels";
 import { RESIZE_DIRS } from "../ui/resizeRect";
 import { WindowControls } from "../workspace/WindowControls";
 import { PanelActionsProvider, PanelActionsSlot } from "./PanelActions";

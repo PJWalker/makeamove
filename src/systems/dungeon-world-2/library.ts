@@ -83,7 +83,7 @@ export function dw2Library({
   const itemIds = new Set([...gear, ...classGear, ...magicItems].map((item) => item.id));
   const items = new Map([...gear, ...classGear].map((item) => [item.id, item]));
   const movesIn = (category: string): LibraryNode[] =>
-    actions.filter((move) => move.category === category).map((move) => ({ move: move.id }));
+    actions.flatMap((move) => (move.category === category ? [{ move: move.id }] : []));
   /** A starting-kit choice: the item it gives, or the choice itself if it isn't one. */
   const kitEntry = (
     classId: string,
@@ -205,31 +205,31 @@ export function dw2Library({
       id: "gear-armor",
       name: "Armor & shields",
       kind: "item",
-      entries: gear.filter((i) => ARMOR.has(i.id)).map((i) => ({ item: i.id })),
+      entries: gear.flatMap((i) => (ARMOR.has(i.id) ? [{ item: i.id }] : [])),
     },
     {
       id: "gear-weapons",
       name: "Weapons",
       kind: "item",
-      entries: gear.filter((i) => !ARMOR.has(i.id) && i.equippable).map((i) => ({ item: i.id })),
+      entries: gear.flatMap((i) => (!ARMOR.has(i.id) && i.equippable ? [{ item: i.id }] : [])),
     },
     {
       id: "gear-supplies",
       name: "Supplies",
       kind: "item",
-      entries: gear.filter((i) => !ARMOR.has(i.id) && !i.equippable).map((i) => ({ item: i.id })),
+      entries: gear.flatMap((i) => (!ARMOR.has(i.id) && !i.equippable ? [{ item: i.id }] : [])),
     },
     {
       id: "gear-magic",
       name: "Magic items",
       kind: "item",
-      entries: magicItems.filter((i) => !i.artifact).map((i) => ({ item: i.id })),
+      entries: magicItems.flatMap((i) => (i.artifact ? [] : [{ item: i.id }])),
     },
     {
       id: "gear-artifacts",
       name: "Artifacts",
       kind: "item",
-      entries: magicItems.filter((i) => i.artifact).map(artifactEntry),
+      entries: magicItems.flatMap((i) => (i.artifact ? [artifactEntry(i)] : [])),
     },
   ];
 }

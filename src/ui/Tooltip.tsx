@@ -1,21 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { tether } from "./anchor";
 import { inTransition } from "./transition";
+import { setTooltipHider } from "./tooltipController";
 
 const DELAY = 150;
 
 type Dir = "down" | "up" | "left" | "right";
-
-let hideNow: (() => void) | null = null;
-
-/**
- * Take the tooltip away at once, without waiting for a render (for a
- * transition that morphs it into something else), and keep it away until
- * the pointer leaves the element it belongs to.
- */
-export function hideTooltip() {
-  hideNow?.();
-}
 
 /**
  * One tooltip for the whole app. It watches the pointer and keyboard focus
@@ -64,11 +54,11 @@ export function Tooltip() {
       if (opens && opens === current) return;
       dismiss();
     };
-    hideNow = () => {
+    setTooltipHider(() => {
       suppressed = current;
       dismiss();
       if (ref.current?.matches(":popover-open")) ref.current.hidePopover();
-    };
+    });
 
     function textOf(el: Element) {
       const title = el.getAttribute("title");
@@ -149,7 +139,7 @@ export function Tooltip() {
       document.removeEventListener("pointerout", onOut);
       document.removeEventListener("focusin", onFocus);
       document.removeEventListener("focusout", onBlur);
-      hideNow = null;
+      setTooltipHider(null);
       document.removeEventListener("pointerdown", onPress, true);
       document.removeEventListener("keydown", dismiss, true);
       document.removeEventListener("scroll", dismiss, true);

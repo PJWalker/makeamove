@@ -186,9 +186,10 @@ export class PresenceLayer {
       }
 
       if (m.trail?.length) {
-        const pts = m.trail
-          .map((q) => ({ ...toScreen(cam, q), f: 1 - (now - q.t) / TRAIL_MS }))
-          .filter((q) => q.f > 0);
+        const pts = m.trail.flatMap((q) => {
+          const f = 1 - (now - q.t) / TRAIL_MS;
+          return f > 0 ? [{ ...toScreen(cam, q), f }] : [];
+        });
         if (pts.length) animating = true;
         for (let i = 1; i < pts.length; i++) {
           const previous = pts[i - 1]!;

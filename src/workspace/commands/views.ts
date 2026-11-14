@@ -137,9 +137,13 @@ export function menuFor(ctx: CampaignContext, target: Target): MenuItem[] {
 
 /** Menu sections in order, with a divider between each non-empty one. */
 export function joinSections(sections: MenuItem[][]): MenuItem[] {
-  return sections
-    .filter((s) => s.length)
-    .flatMap((s, i): MenuItem[] => (i ? ["divider", ...s] : s));
+  const joined: MenuItem[] = [];
+  for (const s of sections) {
+    if (!s.length) continue;
+    if (joined.length) joined.push("divider");
+    joined.push(...s);
+  }
+  return joined;
 }
 
 /** Whether the player may run a call at all: what components ask instead of checking roles. */

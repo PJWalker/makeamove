@@ -17,6 +17,7 @@ import { BackupSettings } from "./BackupSettings";
 import { CampaignSystemSheet } from "./campaignSheets";
 
 import { autohide, setAutohide } from "./autohide";
+import { setThreeDimensionalDice, threeDimensionalDice } from "./diceRendering";
 import { Dialog } from "./Dialog";
 import { useCampaign } from "./campaignContext";
 import { renameCampaign, setCampaignField, setDefaults, setMyName } from "./commands/campaign";
@@ -33,6 +34,7 @@ export function SettingsDialog({
   const ctx = useCampaign();
   const me = useQuery(device);
   const hiding = useQuery(autohide);
+  const use3dDice = useQuery(threeDimensionalDice);
   const myName = useQuery(campaign.members, () => campaign.members.get(me.id)?.get("name") ?? "");
   const colour = colourOf(me);
   return (
@@ -55,7 +57,12 @@ export function SettingsDialog({
           </label>
           <div className="field">
             Your colour
-            <ColourPicker label="Your colour" value={colour} onChange={setDeviceColour} />
+            <ColourPicker
+              label="Your colour"
+              value={colour}
+              onChange={setDeviceColour}
+              constrainUserColour
+            />
           </div>
           <p className="muted">Used for your cursor, pings, and new tokens.</p>
         </div>
@@ -75,6 +82,18 @@ export function SettingsDialog({
             <span className="muted">
               Autohide hides them until your pointer nears a window edge.
             </span>
+          </div>
+          <div className="field">
+            Dice rendering
+            <Segmented
+              label="Dice rendering"
+              value={use3dDice ? "3d" : "flat"}
+              options={[
+                { id: "3d", label: "3D" },
+                { id: "flat", label: "Flat" },
+              ]}
+              onChange={(v) => setThreeDimensionalDice(v === "3d")}
+            />
           </div>
         </div>
       </section>

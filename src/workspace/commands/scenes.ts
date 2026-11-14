@@ -86,9 +86,9 @@ export const moveScene = command<{ id: string; folder?: string | undefined }>({
       const s = scene(ctx, id);
       const folders = listSceneFolders(ctx.campaign.sceneFolders);
       return [
-        ...folders
-          .filter((f) => f.id !== s?.folder)
-          .map((f) => ({ params: { id, folder: f.id }, title: `Move to ${f.name}` })),
+        ...folders.flatMap((f) =>
+          f.id === s?.folder ? [] : [{ params: { id, folder: f.id }, title: `Move to ${f.name}` }],
+        ),
         ...(s?.folder && folders.some((f) => f.id === s.folder)
           ? [{ params: { id }, title: "Remove from Folder" }]
           : []),

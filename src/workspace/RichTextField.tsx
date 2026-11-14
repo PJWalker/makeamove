@@ -3,7 +3,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { useEffect, useLayoutEffect, useRef } from "react";
 import type { Campaign } from "../campaign/campaign";
 import type { RichText } from "../data/richText";
-import { ruleTextExtensions } from "./RichTextView";
+import { ruleTextExtensions } from "./richTextExtensions";
 import { useCampaign } from "./campaignContext";
 
 /**

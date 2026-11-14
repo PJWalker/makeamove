@@ -17,20 +17,19 @@ import { HintedField } from "../ui/HintedField";
 import { Button } from "../ui/Button";
 import { menuTrigger } from "../ui/menuTrigger";
 import { CLASS_FIELD, choicesAt } from "../features/characters/creation";
+import { ChoiceField, ScoreFields, type Picked } from "../workspace/CreationParts";
 import {
-  ChoiceField,
   creationResult,
   emptyPick,
-  ScoreFields,
   scoreMethods,
   scoresReady,
   startingScores,
-  type Picked,
   type ScoreMethod,
-} from "../workspace/CreationParts";
+} from "../workspace/creationModel";
 import { IconAdd, IconNewFolder } from "../ui/icons";
 import { Segmented } from "../ui/Segmented";
-import { TwoPane, usePaneLevel } from "../ui/TwoPane";
+import { TwoPane } from "../ui/TwoPane";
+import { usePaneLevel } from "../ui/paneLevel";
 import { ListRow } from "../ui/List";
 import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
 import { dragEntity } from "../workspace/entityDrag";
@@ -246,7 +245,7 @@ function NewCharacter({
   const [identity, setIdentity] = useState<Record<string, string>>({});
   const [relationshipTo, setRelationshipTo] = useState("");
   const [relationshipText, setRelationshipText] = useState("");
-  const [relationshipDepth, setDepth] = useState("0");
+  const [relationshipDepth, setRelationshipDepth] = useState("0");
   const [folder, setFolder] = useState(initialFolder ?? "");
   // The guided flow: the system's choices at creation, then ability scores.
   const creation = system.creation;
@@ -273,9 +272,9 @@ function NewCharacter({
     }),
   );
   const defaults = Object.fromEntries(
-    system.characterData
-      .filter((field) => !field.for || field.for === kind)
-      .map((field) => [field.id, field.default]),
+    system.characterData.flatMap((field) =>
+      !field.for || field.for === kind ? [[field.id, field.default]] : [],
+    ),
   );
   const choices = choicesAt(creation, "create", { ...defaults, ...choiceData });
   const existingPcs = existingCharacters.filter((character) => character.kind === "pc");
@@ -362,6 +361,8 @@ function NewCharacter({
             {...input}
             value={name}
             onInput={(e) => setName(e.currentTarget.value)}
+            // The field is the dialog's one input.
+            // react-doctor-disable-next-line react-doctor/no-autofocus
             autoFocus
           />
         )}
@@ -419,7 +420,7 @@ function NewCharacter({
                 Shared history
                 <select
                   value={relationshipDepth}
-                  onChange={(event) => setDepth(event.currentTarget.value)}
+                  onChange={(event) => setRelationshipDepth(event.currentTarget.value)}
                 >
                   {startingRelationship.depths.map((depth) => (
                     <option key={depth.value} value={String(depth.value)}>

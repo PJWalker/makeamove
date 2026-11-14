@@ -2,10 +2,10 @@ import { useMemo, useState } from "react";
 import {
   SheetFrame,
   SheetSectionView,
-  useSheet,
   type SheetDrop,
   type SheetProps,
 } from "../../workspace/DeclarativeSheet";
+import { useSheet } from "../../workspace/sheetModel";
 import { CharacterText } from "../../workspace/CharacterText";
 import type { DragEntity } from "../../workspace/entityDrag";
 import { STRUGGLES, struggleOfEntry } from "./struggles";

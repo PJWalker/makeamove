@@ -12,12 +12,13 @@ import { closePopup } from "../ui/popup";
 import { usePopupDialog } from "../workspace/usePopupDialog";
 import { Dialog } from "../workspace/Dialog";
 import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
-import { EntryWindow, rollTag } from "../workspace/EntryWindow";
-import { linkActionItems, linkKey, type LinkRef } from "../workspace/linkState";
+import { EntryWindow } from "../workspace/EntryWindow";
+import { linkKey, type LinkRef } from "../workspace/linkState";
+import { linkActionItems } from "../workspace/linkActions";
 import { NoteEditor } from "./NoteEditor";
 import { CharacterSheet } from "./sheets";
-import { linkProxy } from "../workspace/LinkChip";
-import { makeVerb } from "../workspace/sheetParts";
+import { linkProxy } from "../workspace/linkProxy";
+import { makeVerb, rollTag } from "../workspace/actionPresentation";
 import { actionMenuItems } from "../workspace/actionMenu";
 import { entityTabId } from "../workspace/entityWindowState";
 import type { LinkPopups as LinkPopupState } from "../workspace/linkState";
@@ -279,6 +280,8 @@ function RenameLinkDialog({ req }: { req: NonNullable<LinkPopupState["linkRename
           Show this link as
           <input
             value={text}
+            // The popup opens on a click, for this one field.
+            // react-doctor-disable-next-line react-doctor/no-autofocus
             autoFocus
             // Typing replaces it.
             onFocus={(e) => e.currentTarget.select()}

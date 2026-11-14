@@ -1,10 +1,8 @@
 import type * as React from "react";
-import { createContext, use, useEffect, useState } from "react";
-import { loadBlob, type PeerBlobs } from "../media/images";
+import { use, useEffect, useState } from "react";
+import { loadBlob } from "../media/images";
 import type { BlobRef } from "../media/images";
-
-/** Where images missing from this device come from: the open campaign's peers. */
-export const PeerBlobsContext = createContext<PeerBlobs | null>(null);
+import { PeerBlobsContext } from "./blobImageContext";
 
 /** An image from the blob store, or `fallback` while it's missing from this device. */
 export function BlobImage({
@@ -41,5 +39,5 @@ export function BlobImage({
   }, [hash, tries, peers]);
 
   const url = loaded && loaded.hash === hash && loaded.tries === tries ? loaded.url : null;
-  return url ? <img className={cls} src={url} alt={alt} draggable={false} /> : <>{fallback}</>;
+  return url ? <img className={cls} src={url} alt={alt} draggable={false} /> : fallback;
 }

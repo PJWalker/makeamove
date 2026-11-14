@@ -199,9 +199,9 @@ export class NoteTextIndex {
       matches: spans(
         item.text,
         (matches ?? []).flatMap(({ indices }) =>
-          indices
-            .filter(([start, end]) => end - start + 1 >= shortest)
-            .map(([start, end]) => wholeWords(item.text, start, end)),
+          indices.flatMap(([start, end]) =>
+            end - start + 1 >= shortest ? [wholeWords(item.text, start, end)] : [],
+          ),
         ),
       ).flatMap(([start, end]) => {
         const from = positionOf(item.runs, start);

@@ -188,14 +188,12 @@ function laidOut(system: GameSystem): LibraryCollection[] {
               option: node.entity,
             };
     if (!base) return [];
-    const groups = (node.groups ?? [])
-      .map((g) => ({
-        id: g.id,
-        name: g.name,
-        ...(g.note ? { note: g.note } : {}),
-        entries: g.entries.flatMap(resolve),
-      }))
-      .filter((g) => g.entries.length);
+    const groups = (node.groups ?? []).flatMap((g) => {
+      const entries = g.entries.flatMap(resolve);
+      return entries.length
+        ? [{ id: g.id, name: g.name, ...(g.note ? { note: g.note } : {}), entries }]
+        : [];
+    });
     return [
       { ...base, ...(node.note ? { note: node.note } : {}), ...(groups.length ? { groups } : {}) },
     ];

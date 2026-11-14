@@ -25,9 +25,9 @@ export interface RelationshipEdge extends Relationship {
 export const relationshipNotes = (to: string) => `rel:${to}`;
 
 export function relationshipsOf(characters: Characters, id: string): Relationship[] {
-  return (characters.get(id)?.get("relationships")?.entries() ?? [])
-    .filter(([to]) => characters.has(to))
-    .map(([to, r]) => ({ to, label: r.label, depth: r.depth ?? 0 }));
+  return (characters.get(id)?.get("relationships")?.entries() ?? []).flatMap(([to, r]) =>
+    characters.has(to) ? [{ to, label: r.label, depth: r.depth ?? 0 }] : [],
+  );
 }
 
 export function setRelationship(characters: Characters, from: string, to: string, label: string) {
@@ -62,9 +62,7 @@ export function removeRelationship(characters: Characters, from: string, to: str
 export function relationshipWeb(characters: Characters, ids: string[]): RelationshipEdge[] {
   const known = new Set(ids);
   return ids.flatMap((from) =>
-    relationshipsOf(characters, from)
-      .filter((r) => known.has(r.to))
-      .map((r) => ({ from, ...r })),
+    relationshipsOf(characters, from).flatMap((r) => (known.has(r.to) ? [{ from, ...r }] : [])),
   );
 }
 

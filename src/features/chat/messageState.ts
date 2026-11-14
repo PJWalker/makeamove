@@ -1,4 +1,7 @@
 import type { CampaignRoot } from "../../campaign/schema";
+import type { ChatContent } from "./content";
+import type { Campaign } from "../../campaign/campaign";
+import { useQuery } from "../../ui/useQuery";
 
 /*
  * Chat messages never change, but some things about them do: a target's
@@ -8,6 +11,27 @@ import type { CampaignRoot } from "../../campaign/schema";
  */
 
 export type MessageState = CampaignRoot["messageState"];
+
+export function useMessageState<T = unknown>(
+  campaign: Campaign,
+  id: string,
+  fields: string[],
+): Record<string, T> {
+  return JSON.parse(
+    useQuery(campaign.messageState, () =>
+      JSON.stringify(fieldsOf(campaign.messageState, id, fields)),
+    ),
+  ) as Record<string, T>;
+}
+
+const TEXT_FIELDS = ["text", "editedAt"];
+
+export const useTextState = (campaign: Campaign, id: string) =>
+  useMessageState<ChatContent | number>(campaign, id, TEXT_FIELDS);
+
+/** Text as last edited, or as sent. */
+export const editedText = (state: Record<string, unknown>, text: ChatContent): ChatContent =>
+  (state.text as ChatContent | undefined) ?? text;
 
 const key = (messageId: string, field: string) => `${messageId}/${field}`;
 

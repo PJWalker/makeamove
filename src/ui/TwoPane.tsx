@@ -1,11 +1,9 @@
 /* oxlint-disable jsx-a11y/prefer-tag-over-role -- The panel's interactive splitter cannot be an hr. */
 import type * as React from "react";
-import { derived, store, type ReadonlyStore, type Store } from "../lib/store";
+import type { ReadonlyStore, Store } from "../lib/store";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { IconBack, IconLayoutSingle, IconLayoutSplit } from "./icons";
-import { getStorageJson, setStorageJson } from "../platform/localStorage";
-import { withTransition } from "./transition";
+import { useEffect, useRef } from "react";
+import { IconBack } from "./icons";
 import { useQuery } from "./useQuery";
 
 /*
@@ -22,8 +20,6 @@ export type PaneLevel = "list" | "detail";
 
 /** Narrower than this, the list and detail take turns. */
 const SPLIT_MIN_W = 381;
-const DEFAULT_LIST_W = 200;
-
 export interface PaneLayout {
   key: string;
   listWidth: Store<number>;
@@ -43,105 +39,10 @@ export interface PaneLayout {
 }
 
 /**
- * One panel's layout, kept in localStorage under `key`. `names` words the
- * switch's label: what the list and detail are ("list", "sheet").
- */
-export function createPaneLayout(key: string, names: { list: string; detail: string }): PaneLayout {
-  const storeKey = `makeamove.${key}`;
-  const saved = getStorageJson<{ w?: number; layout?: PaneLayoutMode }>(storeKey, {});
-  const listWidth = store(saved.w ?? DEFAULT_LIST_W);
-  const chosen = store<PaneLayoutMode>(saved.layout ?? "split");
-  const tooNarrow = store(false);
-  const mode = derived<PaneLayoutMode>([tooNarrow, chosen], () =>
-    tooNarrow.value ? "stack" : chosen.value,
-  );
-  const save = () => {
-    setStorageJson(storeKey, { w: listWidth.value, layout: chosen.value });
-  };
-
-  function Toggle() {
-    const split = useQuery(mode) === "split";
-    const narrow = useQuery(tooNarrow);
-    const label = narrow
-      ? `One at a time (widen the panel to see the ${names.list} and ${names.detail} side by side)`
-      : split
-        ? "Side by side: click to show one at a time"
-        : `One at a time: click to show the ${names.list} and ${names.detail} side by side`;
-    return (
-      <button
-        type="button"
-        className="pane-toggle"
-        aria-label={label}
-        title={label}
-        aria-pressed={split}
-        disabled={narrow}
-        onPointerDown={(e) => e.stopPropagation()}
-        onClick={() => {
-          chosen.value = split ? "stack" : "split";
-          save();
-        }}
-      >
-        {split ? <IconLayoutSplit size={22} /> : <IconLayoutSingle size={22} />}
-      </button>
-    );
-  }
-
-  const layout: PaneLayout = {
-    key,
-    listWidth,
-    chosen,
-    tooNarrow,
-    mode,
-    save,
-    resetWidth: () => {
-      listWidth.value = DEFAULT_LIST_W;
-      save();
-    },
-    el: null,
-    attach: (el) => {
-      layout.el = el;
-    },
-    Toggle,
-  };
-  return layout;
-}
-
-/**
  * Which level shows when they take turns, and how to move between them:
  * one at a time, the move slides; side by side, both already show. `show`
  * is `go` for callers that need to wait until the level is showing.
  */
-export function usePaneLevel(layout: PaneLayout, initial: PaneLevel) {
-  const [level, setLevel] = useState<PaneLevel>(initial);
-  const show = useCallback(
-    async (to: PaneLevel): Promise<void> => {
-      if (level === to) return;
-      if (layout.mode.value !== "stack") {
-        setLevel(to);
-        return;
-      }
-      // Only this panel slides: it alone is named for the transition.
-      const done = markSliding(layout.el);
-      await withTransition(
-        () => {
-          setLevel(to);
-        },
-        { rootClass: to === "detail" ? "vt-pane-fwd" : "vt-pane-back" },
-      ).finally(done);
-    },
-    [layout, level],
-  );
-  const go = useCallback((to: PaneLevel) => void show(to), [show]);
-  return { level, go, show };
-}
-
-/** Name the element for a sliding transition; the returned function un-names it. */
-function markSliding(el: HTMLElement | null): () => void {
-  if (!el) return () => {};
-  el.dataset.sliding = "true";
-  return () => delete el.dataset.sliding;
-}
-
 function dragSplit(layout: PaneLayout, e: React.PointerEvent) {
   if (e.button !== 0) return;
   const split = e.currentTarget as HTMLElement;

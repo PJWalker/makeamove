@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useConstant } from "../ui/useConstant";
 import { canDelete, canEditMessage, visibilityOf } from "../features/chat/types";
 import { logRows, type LogRow } from "../features/chat/sessions";
 import { markRead } from "../features/chat/unread";
@@ -11,6 +12,7 @@ import { IconDice, IconExpand } from "../ui/icons";
 import { usePanelVisible } from "../workspace/panelLayout";
 import { useCampaign } from "../workspace/campaignContext";
 import { Message } from "./ChatMessage";
+import { wasTrayRolled } from "./quickRolls";
 
 /* The chat log: every message and roll, rendered a window at a time. */
 
@@ -56,10 +58,12 @@ export function ChatLog({
   campaign,
   notes,
   onMenu,
+  quickRollMessage,
 }: {
   campaign: Campaign;
   notes: { id: number; text: string; error?: boolean }[];
   onMenu: (x: number, y: number, id: string) => void;
+  quickRollMessage: string | null;
 }) {
   const ctx = useCampaign();
   const ref = useRef<HTMLDivElement>(null);
@@ -74,7 +78,7 @@ export function ChatLog({
   const editable = useQuery(campaign.characters, () => editableIds(campaign));
   const me = useQuery(device).id;
   // Messages already here when the panel opened don't animate in.
-  const [initial] = useState(() => new Set(messages.map((m) => m.id)));
+  const initial = useConstant(() => new Set(messages.map((m) => m.id)));
 
   // In view means read.
   const visible = usePanelVisible(ctx.panels, "chat");
@@ -100,7 +104,7 @@ export function ChatLog({
     ctx.table.openSessions.set(toggleSetValue(ctx.table.openSessions.value, key));
 
   // The window, as indices into rows.
-  const [span, setSpanKeys] = useState<Span>({ start: null, end: null });
+  const [span, setSpan] = useState<Span>({ start: null, end: null });
   const indexOf = (key: string | null) =>
     key === null ? -1 : rows.findIndex((r) => r.key === key);
   const endKeyAt = indexOf(span.end);
@@ -126,13 +130,13 @@ export function ChatLog({
   let below = 0;
   for (let i = endIdx; i < rows.length; i++) below += heightOf(rows[i]!);
 
-  const setSpan = (from: number, to: number) => {
+  const showRows = (from: number, to: number) => {
     const next = {
       start: rows[from]?.key ?? null,
       end: to >= rows.length ? null : rows[to - 1]!.key,
     };
     // Unchanged, it mustn't re-render: slide() runs after every render.
-    if (next.start !== span.start || next.end !== span.end) setSpanKeys(next);
+    if (next.start !== span.start || next.end !== span.end) setSpan(next);
   };
   const [loading, setLoading] = useState(false);
   // Read so finishing a load re-renders, and slide() can ask for the next chunk.
@@ -149,7 +153,7 @@ export function ChatLog({
     jumped.current = true;
     if (y < unloaded) {
       // Into chunks that aren't loaded: load the next one back; this runs again once it's in.
-      setSpan(0, Math.min(rows.length, WINDOW));
+      showRows(0, Math.min(rows.length, WINDOW));
       loadEarlier();
       return;
     }
@@ -157,7 +161,7 @@ export function ChatLog({
     for (let acc = unloaded; i < rows.length - 1 && acc + heightOf(rows[i]!) <= y; i++)
       acc += heightOf(rows[i]!);
     const from = Math.max(0, i - JUMP_LEAD);
-    setSpan(from, Math.min(rows.length, from + WINDOW));
+    showRows(from, Math.min(rows.length, from + WINDOW));
   };
   const slide = () => {
     const el = ref.current;
@@ -174,14 +178,14 @@ export function ChatLog({
     else if (top - rowsTop < NEAR_PX && (startIdx > 0 || earlierCount > 0)) {
       if (startIdx > 0) {
         const from = Math.max(0, startIdx - STEP);
-        setSpan(from, Math.min(endIdx, from + MAX_ROWS));
+        showRows(from, Math.min(endIdx, from + MAX_ROWS));
       } else loadEarlier();
     } else if (rowsBottom - bottom < NEAR_PX && !atNewest) {
       const to = Math.min(rows.length, endIdx + STEP);
-      setSpan(Math.max(startIdx, to - MAX_ROWS), to);
+      showRows(Math.max(startIdx, to - MAX_ROWS), to);
     } else if (stick.current && endIdx - startIdx > MAX_ROWS) {
       // Back at the newest after reading far up: let go of the old rows.
-      setSpanKeys({ start: null, end: null });
+      setSpan({ start: null, end: null });
     }
   };
   const slideRef = useRef(slide);
@@ -249,7 +253,7 @@ export function ChatLog({
   const myNewest = newest?.id !== newestSeen && newest?.author === me;
   if (newest?.id !== newestSeen) {
     setNewestSeen(newest?.id);
-    if (myNewest) setSpanKeys({ start: null, end: null });
+    if (myNewest) setSpan({ start: null, end: null });
   }
   const scrolledFor = useRef(newest?.id);
   useLayoutEffect(() => {
@@ -330,6 +334,8 @@ export function ChatLog({
                 row.m.sceneId !== here &&
                 sceneIdSet.has(row.m.sceneId)
               }
+              quickRoll={row.m.id === quickRollMessage || wasTrayRolled(row.m.id)}
+              quickRollActive={row.m.id === quickRollMessage}
               onMenu={
                 canDelete(row.m, me, isGm) ||
                 canEditMessage(row.m, me) ||

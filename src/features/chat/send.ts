@@ -87,8 +87,10 @@ export function postRoll(
   visibility: RollVisibility,
   comment?: string,
   damage?: RollMessage["damage"],
+  die?: (sides: number) => number,
+  messageId?: string,
 ) {
-  const r = roll(formula);
+  const r = roll(formula, die);
   return campaign.chat.post(
     {
       kind: "roll",
@@ -98,6 +100,7 @@ export function postRoll(
       ...(damage ? { damage } : {}),
     },
     me(campaign),
+    messageId,
   );
 }
 

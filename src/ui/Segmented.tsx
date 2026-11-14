@@ -121,7 +121,7 @@ export function ToggleGroup<T extends string>({
       selectedKeys={value}
       onSelectionChange={(keys) =>
         // In the options' order, whatever order they were turned on in.
-        onChange(options.map((o) => o.id).filter((id) => keys.has(id)))
+        onChange(options.flatMap((o) => (keys.has(o.id) ? [o.id] : [])))
       }
     >
       {options.map((o) => (

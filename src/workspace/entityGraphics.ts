@@ -43,9 +43,9 @@ export function getDefaultEntityGraphic(
     name =
       system.creation?.choices
         .flatMap((choice) =>
-          choice.options
-            .filter((option) => option.id === character?.data[choice.field])
-            .map((option) => option.icon),
+          choice.options.flatMap((option) =>
+            option.id === character?.data[choice.field] ? [option.icon] : [],
+          ),
         )
         .find((icon) => !!icon) ?? name;
   } else if (kind === "item") {

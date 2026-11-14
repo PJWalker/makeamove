@@ -37,15 +37,14 @@ export function resolveTokenLabelLayout(plans: TokenLabelPlan[], hover: string |
     a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
   const shown = plans.filter((plan) => !plan.small);
   const wide = new Set(
-    shown
-      .filter(
-        (plan) =>
-          plan.wideBars &&
-          !shown.some(
-            (other) => other !== plan && other.wideBars && overlaps(plan.wideBars!, other.wideBars),
-          ),
+    shown.flatMap((plan) =>
+      plan.wideBars &&
+      !shown.some(
+        (other) => other !== plan && other.wideBars && overlaps(plan.wideBars!, other.wideBars),
       )
-      .map((plan) => plan.id),
+        ? [plan.id]
+        : [],
+    ),
   );
   const bars = new Map(
     plans.map((plan) => [plan.id, wide.has(plan.id) ? plan.wideBars : plan.bars]),

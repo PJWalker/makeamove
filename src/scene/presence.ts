@@ -1,6 +1,6 @@
 import type { Awareness } from "y-protocols/awareness";
 
-import { oklabToHex } from "../lib/colour";
+import { clampUserColour, oklabToHex } from "../lib/colour";
 import type { Point } from "./grid";
 
 /** A member's colour, derived from their device id so every peer agrees on it. */
@@ -12,7 +12,8 @@ export function colourFor(id: string): string {
 }
 
 /** The colour a device shows as: its own choice, else one derived from its id. */
-export const colourOf = (d: { id: string; colour?: string }) => d.colour ?? colourFor(d.id);
+export const colourOf = (d: { id: string; colour?: string }) =>
+  d.colour ? clampUserColour(d.colour) : colourFor(d.id);
 
 /** How long a ping ripples, in ms. */
 export const PING_MS = 2600;

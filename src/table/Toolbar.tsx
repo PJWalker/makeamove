@@ -1,10 +1,6 @@
-import type {
-  PointerEvent as ReactPointerEvent,
-  MouseEvent as ReactMouseEvent,
-  RefObject,
-} from "react";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-// oxlint-disable-next-line react-doctor/no-flush-sync -- View transitions need the rendered options row in their capture callback.
+import type { PointerEvent as ReactPointerEvent, MouseEvent as ReactMouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+// oxlint-disable-next-line react-doctor/no-flush-sync -- View transitions need the rendered tool settings in their capture callback.
 import { flushSync } from "react-dom";
 import type { Store } from "../lib/store";
 import { startReorder } from "../ui/reorder";
@@ -31,11 +27,27 @@ import { TOOLS } from "../workspace/tools";
 import { ContextMenu } from "../ui/ContextMenu";
 import { useQuery } from "../ui/useQuery";
 import { withTransition } from "../ui/transition";
-import { tether } from "../ui/anchor";
-import { EFFECT_OPTIONS, EffectSightToggles } from "./effectOptions";
+import { EffectSightToggles } from "./effectOptions";
+import { EFFECT_OPTIONS } from "./effectOptionsData";
 import { useCampaign } from "../workspace/campaignContext";
 import { selectTool } from "../workspace/commands/core";
 import { menuFor } from "../workspace/commands/views";
+import { useDockStripLayout } from "./dockStrip";
+
+function measureToolbar(toolbar: HTMLElement) {
+  const strip = toolbar.querySelector<HTMLElement>(".toolbar-tools")!;
+  const style = getComputedStyle(toolbar);
+  const padding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+  const optionsWidth = parseFloat(style.getPropertyValue("--toolbar-options-width"));
+  const optionsInset =
+    parseFloat(style.getPropertyValue("--space-3")) +
+    parseFloat(style.getPropertyValue("--space-2")) +
+    1;
+  return {
+    width: strip.scrollWidth + padding + optionsWidth + optionsInset,
+    elements: [strip],
+  };
+}
 
 /** Tools in the player's order; any not mentioned keep their default place after the others. */
 function inOrder(tools: typeof TOOLS, order: ToolId[]) {
@@ -44,8 +56,7 @@ function inOrder(tools: typeof TOOLS, order: ToolId[]) {
   return [...tools].sort((a, b) => rank(a.id) - rank(b.id));
 }
 
-/** The tools with an options row, by which row: the pen's tools share one. */
-const OPTIONS_ROW: Partial<Record<ToolId, "select" | "pen" | "light" | "effect">> = {
+const TOOL_OPTIONS: Partial<Record<ToolId, "select" | "pen" | "light" | "effect">> = {
   select: "select",
   draw: "pen",
   shape: "pen",
@@ -54,13 +65,7 @@ const OPTIONS_ROW: Partial<Record<ToolId, "select" | "pen" | "light" | "effect">
   effect: "effect",
 };
 
-/**
- * The active tool, shown with a view transition: a tool's options row grows
- * out of its button, shrinks back into it, and slides from one tool's row to
- * the next (the row is named `tool-options` under `.vt-tool` in Toolbar.css). The button
- * itself stays put; only the row's box moves.
- */
-function useShownTool(activeTool: Store<ToolId>, strip: RefObject<HTMLElement | null>): ToolId {
+function useShownTool(activeTool: Store<ToolId>): ToolId {
   const [tool, setTool] = useState(activeTool.value);
   const shown = useRef(tool);
   useEffect(
@@ -71,18 +76,10 @@ function useShownTool(activeTool: Store<ToolId>, strip: RefObject<HTMLElement | 
         if (prev === next) return;
         shown.current = next;
         const show = () => flushSync(() => setTool(next));
-        if (!OPTIONS_ROW[prev] && !OPTIONS_ROW[next]) return show();
-        const button = (id: ToolId) =>
-          strip.current?.querySelector<HTMLElement>(`[data-tool="${id}"]`) ?? null;
-        // Without a row on one side, the row grows from or shrinks into its tool's button.
-        const growing = !OPTIONS_ROW[prev];
-        const shrinking = !OPTIONS_ROW[next];
-        void withTransition(show, {
-          rootClass: ["vt-tool", ...(growing ? ["vt-tool-in"] : shrinking ? ["vt-tool-out"] : [])],
-          home: growing ? button(next) : shrinking ? button(prev) : null,
-        });
+        if (!TOOL_OPTIONS[prev] && !TOOL_OPTIONS[next]) return show();
+        void withTransition(show, { rootClass: "vt-tool" });
       }),
-    [activeTool, strip],
+    [activeTool],
   );
   return tool;
 }
@@ -90,15 +87,9 @@ function useShownTool(activeTool: Store<ToolId>, strip: RefObject<HTMLElement | 
 export function Toolbar({ isGm }: { isGm: boolean }) {
   const ctx = useCampaign();
   const order = useQuery(ctx.tools.toolOrder);
-  const strip = useRef<HTMLElement>(null);
-  const tool = useShownTool(ctx.tools.activeTool, strip);
-  // The options row sits under its tool (Toolbar.css), tethered so it shares the
-  // button with the tool's tooltip, which anchors to it too.
-  const optionsRow = useRef<HTMLFieldSetElement>(null);
-  useLayoutEffect(() => {
-    const button = strip.current?.querySelector(`[data-tool="${tool}"]`);
-    return optionsRow.current && button ? tether(optionsRow.current, button) : undefined;
-  }, [tool]);
+  const tool = useShownTool(ctx.tools.activeTool);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  useDockStripLayout(toolbarRef, "top", measureToolbar);
   const tools = useMemo(
     () =>
       inOrder(
@@ -109,31 +100,26 @@ export function Toolbar({ isGm }: { isGm: boolean }) {
   );
 
   function dragTool(id: ToolId, e: ReactPointerEvent) {
-    const bar = (e.currentTarget as HTMLElement).closest<HTMLElement>(".toolbar")!;
+    const bar = (e.currentTarget as HTMLElement).closest<HTMLElement>(".toolbar-tools")!;
     startReorder({
       event: e,
       axis: "x",
       container: bar,
       items: () => [...bar.querySelectorAll<HTMLElement>("[data-tool]")],
       onDrop: (index) => {
-        const ids = tools.map((t) => t.id).filter((t) => t !== id);
+        const ids = tools.flatMap((t) => (t.id === id ? [] : [t.id]));
         ids.splice(index, 0, id);
         // Hidden (GM-only) tools keep their place among the rest.
         const ordered = new Set(ids);
-        const hidden = TOOLS.map((t) => t.id).filter((t) => !ordered.has(t));
+        const hidden = TOOLS.flatMap((t) => (ordered.has(t.id) ? [] : [t.id]));
         ctx.tools.toolOrder.set([...ids, ...hidden]);
       },
     });
   }
 
   return (
-    <>
-      <nav
-        ref={strip}
-        className="dock-strip toolbar strip across dock-top"
-        aria-label="Canvas tools"
-        onWheel={scrollSideways}
-      >
+    <div ref={toolbarRef} className="dock-strip toolbar dock-top">
+      <nav className="toolbar-tools" aria-label="Canvas tools" onWheel={scrollSideways}>
         <CampaignMenu />
         {tools.map(({ id, label, key, Icon }) => (
           <Button
@@ -149,11 +135,13 @@ export function Toolbar({ isGm }: { isGm: boolean }) {
           </Button>
         ))}
       </nav>
-      {OPTIONS_ROW[tool] === "select" && <SelectOptions isGm={isGm} rowRef={optionsRow} />}
-      {OPTIONS_ROW[tool] === "pen" && <PenOptions tool={tool} rowRef={optionsRow} />}
-      {OPTIONS_ROW[tool] === "light" && <LightOptions rowRef={optionsRow} />}
-      {OPTIONS_ROW[tool] === "effect" && <EffectOptions rowRef={optionsRow} />}
-    </>
+      <div className="toolbar-options">
+        {TOOL_OPTIONS[tool] === "select" && <SelectOptions isGm={isGm} />}
+        {TOOL_OPTIONS[tool] === "pen" && <PenOptions tool={tool} />}
+        {TOOL_OPTIONS[tool] === "light" && <LightOptions />}
+        {TOOL_OPTIONS[tool] === "effect" && <EffectOptions />}
+      </div>
+    </div>
   );
 }
 
@@ -220,22 +208,16 @@ function CampaignMenu() {
 }
 
 /**
- * The pen's colour, width and layer, beside the tool strip. The Shapes tool
+ * The pen's colour, width and layer, within the toolbar. The Shapes tool
  * has the shape to draw and its outline and fill instead of the pen's colour.
  */
-function PenOptions({
-  tool,
-  rowRef,
-}: {
-  tool: ToolId;
-  rowRef: RefObject<HTMLFieldSetElement | null>;
-}) {
+function PenOptions({ tool }: { tool: ToolId }) {
   const ctx = useCampaign();
   const { colour, width, layer } = useQuery(ctx.tools.pen);
   const shape = useQuery(ctx.tools.shapeTool);
   const paint = useQuery(ctx.tools.shapePaint);
   return (
-    <fieldset ref={rowRef} className="pen-options" aria-label="Pen">
+    <fieldset className="tool-settings" aria-label="Pen">
       {tool === "shape" ? (
         <>
           <Segmented
@@ -309,19 +291,13 @@ const SELECT_KINDS: { id: SelectKind; label: string; Icon: Icon; gmOnly?: boolea
 ];
 
 /** Which sorts of things the Select tool picks. */
-function SelectOptions({
-  isGm,
-  rowRef,
-}: {
-  isGm: boolean;
-  rowRef: RefObject<HTMLFieldSetElement | null>;
-}) {
+function SelectOptions({ isGm }: { isGm: boolean }) {
   const ctx = useCampaign();
   const kinds = useQuery(ctx.tools.selectable);
   const options = SELECT_KINDS.filter((k) => isGm || !k.gmOnly);
   const shown = new Set(options.map((k) => k.id));
   return (
-    <fieldset ref={rowRef} className="pen-options" aria-label="Select">
+    <fieldset className="tool-settings" aria-label="Select">
       <ToggleGroup
         label="Selects"
         value={kinds}
@@ -345,12 +321,12 @@ const LIGHT_MODES: { id: LightToolMode; label: string }[] = [
   { id: "dark", label: "Area of dark" },
 ];
 
-/** What the Lights tool places, beside the tool strip. */
-function LightOptions({ rowRef }: { rowRef: RefObject<HTMLFieldSetElement | null> }) {
+/** What the Lights tool places. */
+function LightOptions() {
   const ctx = useCampaign();
   const mode = useQuery(ctx.tools.lightTool);
   return (
-    <fieldset ref={rowRef} className="pen-options" aria-label="Lights">
+    <fieldset className="tool-settings" aria-label="Lights">
       <Segmented
         label="Place"
         value={mode}
@@ -362,11 +338,11 @@ function LightOptions({ rowRef }: { rowRef: RefObject<HTMLFieldSetElement | null
 }
 
 /** What the Effects tool puts down: the effect, its colour, light and sight, and the shape of its zone. */
-function EffectOptions({ rowRef }: { rowRef: RefObject<HTMLFieldSetElement | null> }) {
+function EffectOptions() {
   const ctx = useCampaign();
   const { effect, colour, glow, obscures, shape } = useQuery(ctx.tools.effectTool);
   return (
-    <fieldset ref={rowRef} className="pen-options" aria-label="Effects">
+    <fieldset className="tool-settings" aria-label="Effects">
       <Segmented
         label="Effect"
         value={effect}
@@ -393,12 +369,13 @@ function EffectOptions({ rowRef }: { rowRef: RefObject<HTMLFieldSetElement | nul
   );
 }
 
+const ink = (colour: string) => `var(--glyph-ink, ${colour})`;
+
 /**
  * A small picture of what the Lights tool places, for its button. Drawn in its
  * own colours, or the selected segment's ink when chosen (--glyph-ink, Segmented.css).
  */
 function LightGlyph({ mode }: { mode: LightToolMode }) {
-  const ink = (colour: string) => `var(--glyph-ink, ${colour})`;
   if (mode === "lamp") {
     return (
       <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
@@ -434,25 +411,26 @@ const SHAPE_OPTIONS = SHAPES.map((s) => ({
   icon: <ShapeGlyph shape={s.id} />,
 }));
 
+const SHAPE_PAINT = {
+  fill: "currentColor",
+  fillOpacity: 0.3,
+  stroke: "currentColor",
+  strokeWidth: 2,
+  strokeLinejoin: "round",
+} as const;
+
 /**
  * A small picture of a shape for its button, in the segment's own ink so it
  * stands out whether chosen or not, whatever the shape's paint.
  */
 function ShapeGlyph({ shape }: { shape: ShapeKind }) {
-  const common = {
-    fill: "currentColor",
-    fillOpacity: 0.3,
-    stroke: "currentColor",
-    strokeWidth: 2,
-    strokeLinejoin: "round",
-  } as const;
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
-      {shape === "rect" && <rect x="3" y="3" width="12" height="12" {...common} />}
-      {shape === "circle" && <circle cx="9" cy="9" r="6.5" {...common} />}
-      {shape === "line" && <rect x="1" y="7" width="16" height="4" {...common} />}
-      {shape === "cone" && <polygon points="2,9 16,2 16,16" {...common} />}
-      {shape === "polygon" && <polygon points="2,6 9,2 16,6 14,15 5,16" {...common} />}
+      {shape === "rect" && <rect x="3" y="3" width="12" height="12" {...SHAPE_PAINT} />}
+      {shape === "circle" && <circle cx="9" cy="9" r="6.5" {...SHAPE_PAINT} />}
+      {shape === "line" && <rect x="1" y="7" width="16" height="4" {...SHAPE_PAINT} />}
+      {shape === "cone" && <polygon points="2,9 16,2 16,16" {...SHAPE_PAINT} />}
+      {shape === "polygon" && <polygon points="2,6 9,2 16,6 14,15 5,16" {...SHAPE_PAINT} />}
     </svg>
   );
 }

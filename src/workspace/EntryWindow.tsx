@@ -1,20 +1,13 @@
 import type { PointerEvent as ReactPointerEvent } from "react";
 import type { ReactNode } from "react";
 import { useLayoutEffect, useRef, useState } from "react";
-import { checkOf } from "../features/characters/moves";
-import type { ActionDef, GameSystem } from "../systems/types";
-import { morphOpen } from "../ui/morph";
-import { raisePopup } from "../ui/popup";
 import type { Icon } from "../ui/icons";
-import { hideTooltip } from "../ui/Tooltip";
 import { ListRow } from "../ui/List";
 import type { WindowProxy } from "./entityWindowState";
 import { menuTrigger } from "../ui/menuTrigger";
 import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
-import { entityTabId } from "./entityWindowState";
-import { locate } from "./layoutModel";
 import type { DockItemId } from "./panelLayout";
-import { useQuery } from "../ui/useQuery";
+import { entityTabId } from "./entityWindowState";
 import { useCampaign } from "./campaignContext";
 
 /*
@@ -23,44 +16,6 @@ import { useCampaign } from "./campaignContext";
  * inventory, entries in the Libraries. One window per entry; clicking the
  * row again brings it forward.
  */
-
-/** What an action rolls, as a short tag for its row: a stat, "any", or what it asks for. */
-export function rollTag(system: GameSystem, m: ActionDef) {
-  const check = checkOf(m);
-  if (!check) return null;
-  if (check.ask?.kind === "stat") return "any";
-  if (check.ask?.kind === "number" || check.ask?.kind === "questions")
-    return check.ask.label.toLowerCase();
-  return system.stats.find((s) => s.id === check.stat)?.abbr ?? check.stat ?? null;
-}
-
-/** Which entries have windows open, and how to open one from its row. */
-export function useEntryWindows() {
-  const ctx = useCampaign();
-  return {
-    keys: useQuery(ctx.windows.openEntries),
-    /** Open the window for `key`, morphing it out of the row's tooltip (or the row). */
-    show(key: string, row: Element) {
-      const id = entityTabId(`entry:${key}`);
-      if (locate(ctx.panels.layout.value, id) !== "closed") {
-        ctx.panels.showPanel(id);
-        return;
-      }
-      const already = document.querySelector<HTMLElement>(
-        `dialog[data-window-id="${CSS.escape(id)}"]`,
-      );
-      if (already) return raisePopup(already);
-      const tip = document.querySelector(".tooltip:popover-open");
-      morphOpen(tip ?? row, () => {
-        hideTooltip();
-        ctx.windows.openEntries.set([...new Set([...ctx.windows.openEntries.value, key])]);
-      });
-    },
-    close(key: string) {
-      ctx.windows.close(entityTabId(`entry:${key}`));
-    },
-  };
-}
 
 /** An entry's rules in a window of its own. */
 export function EntryWindow({

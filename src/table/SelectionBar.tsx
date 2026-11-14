@@ -12,7 +12,8 @@ import { Button } from "../ui/Button";
 import { Segmented } from "../ui/Segmented";
 import { IconLight, IconLock, IconReveal, IconUnlock } from "../ui/icons";
 import { useQuery } from "../ui/useQuery";
-import { EFFECT_OPTIONS, EffectSightToggles } from "./effectOptions";
+import { EffectSightToggles } from "./effectOptions";
+import { EFFECT_OPTIONS } from "./effectOptionsData";
 import { useCampaign } from "../workspace/campaignContext";
 import "./SelectionBar.css";
 

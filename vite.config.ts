@@ -330,7 +330,7 @@ export default defineConfig({
           "react-doctor/no-whole-object-default-losing-per-key-defaults": "warn",
           "react-doctor/no-whole-object-dep-with-member-reads": "warn",
           "react-doctor/no-will-update-set-state": "warn",
-          "react-doctor/only-export-components": "off",
+          "react-doctor/only-export-components": "error",
           "react-doctor/pointer-capture-needs-cancel-handler": "warn",
           "react-doctor/prefer-dynamic-import": "warn",
           "react-doctor/prefer-html-dialog": "warn",

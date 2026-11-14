@@ -28,7 +28,15 @@ import {
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
 import { playDiceImpact } from "../ui/sounds";
-import { discHull, PHYSICS_STEP, simulateDice, type DieHull, type DiePose } from "./diePhysics";
+import { contrastingTextColour } from "../lib/colour";
+import {
+  discHull,
+  PHYSICS_STEP,
+  simulateDice,
+  type DieHull,
+  type DiePose,
+  type DieState,
+} from "./diePhysics";
 
 /*
  * Dice in 3D. One small renderer draws a die and the result is copied into the
@@ -45,17 +53,41 @@ export interface Point {
 export type Piece = { sides: number; value: number; seed: string } | { chip: string; seed: string };
 
 export interface DiceRenderer {
+  /** Renders the unnumbered resting die as a WebP data URL for the flat fallback. */
+  renderBlank(sides: number): string;
   mount(
     canvas: HTMLCanvasElement,
     slot: HTMLElement,
     piece: Piece,
-    thrown?: { from: Point; delay: number },
-  ): { landed: Promise<void>; dispose: () => void };
+    thrown?: { from: Point; delay: number; state?: DieState; target?: Point },
+  ): DiceMount;
+  /** Moves a resting die from the pointer into its slot without simulating a roll. */
+  glideIn(
+    canvas: HTMLCanvasElement,
+    slot: HTMLElement,
+    piece: Piece,
+    from: Point,
+    delay: number,
+  ): DiceMount;
+  /** Rolls an already-drawn die in its current slot, preserving its canvas and position. */
+  rollInTray(
+    canvas: HTMLCanvasElement,
+    slot: HTMLElement,
+    piece: { sides: number; value: number; seed: string },
+    delay: number,
+    trayVelocity: Point,
+  ): DiceMount | null;
   /**
    * Tumbles the landed dice drawn in `originals` in the canvases at the same
    * places in `copies`; the returned function settles them back as they were.
    */
   spin(originals: HTMLCanvasElement[], copies: HTMLCanvasElement[]): () => void;
+}
+
+export interface DiceMount {
+  landed: Promise<void>;
+  started: Promise<void>;
+  dispose: () => void;
 }
 
 /** A die's canvas, in CSS px; dice are drawn at SCALE px per unit. */
@@ -84,14 +116,6 @@ const Y = new Vector3(0, 1, 0);
 const CHIP_RADIUS = 0.95;
 const CHIP_THICKNESS = 0.22;
 
-type Tone = "plain" | "max" | "min";
-const TONE_TOKEN: Record<Tone, string> = {
-  plain: "--die-colour",
-  max: "--accent",
-  min: "--gem-danger",
-};
-const toneOf = (value: number, sides: number): Tone =>
-  value === sides && sides > 1 ? "max" : value === 1 ? "min" : "plain";
 /** The number on each face, counting on from the one turned to the viewer. */
 const faceValue = (value: number, index: number, sides: number) =>
   ((value - 1 + index) % sides) + 1;
@@ -287,33 +311,28 @@ export function createDiceRenderer(): DiceRenderer {
   const reflections = new PMREMGenerator(renderer);
   const room = new RoomEnvironment();
   scene.environment = reflections.fromScene(room, 0.02).texture;
-  scene.environmentIntensity = 0.8;
+  scene.environmentIntensity = 0.3;
   room.dispose();
   reflections.dispose();
-  const key = new DirectionalLight(0xffffff, 2.4);
+  const key = new DirectionalLight(0xffffff, 1.1);
   key.position.set(-2, 3, 4);
-  const rim = new DirectionalLight(0xc8e8ff, 1.8);
+  const rim = new DirectionalLight(0xffffff, 0.6);
   rim.position.set(3, -1, 2);
-  scene.add(new HemisphereLight(0xffffff, 0x334055, 1.6), key, rim);
+  scene.add(new HemisphereLight(0xffffff, 0x334055, 0.85), key, rim);
   const camera = new OrthographicCamera(-SLOT / 2, SLOT / 2, SLOT / 2, -SLOT / 2, -100, 100);
 
-  const materials = Object.fromEntries(
-    (["plain", "max", "min"] as const).map((tone) => [
-      tone,
-      new MeshPhysicalMaterial({
-        roughness: 0.2,
-        metalness: 0.12,
-        clearcoat: 1,
-        clearcoatRoughness: 0.06,
-        specularIntensity: 1,
-        iridescence: 0.12,
-        flatShading: true,
-      }),
-    ]),
-  ) as Record<Tone, MeshPhysicalMaterial>;
+  const dieMaterial = new MeshPhysicalMaterial({
+    roughness: 0.2,
+    metalness: 0.12,
+    clearcoat: 1,
+    clearcoatRoughness: 0.06,
+    specularIntensity: 1,
+    iridescence: 0.12,
+    flatShading: true,
+  });
   const edgeMaterial = new LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 });
   // Satin rather than glossy: a flat face turned to the light would shine its label away.
-  const chipFace = materials.plain.clone();
+  const chipFace = dieMaterial.clone();
   chipFace.flatShading = false;
   chipFace.roughness = 0.55;
   chipFace.clearcoat = 0.3;
@@ -379,18 +398,15 @@ export function createDiceRenderer(): DiceRenderer {
    * colours of the slot `canvas` sits in; dispose() frees its labels.
    */
   function dieMesh(shape: Shape, value: number, sides: number, canvas: HTMLCanvasElement): Drawn {
-    for (const tone of ["plain", "max", "min"] as const)
-      materials[tone].color.set(token(TONE_TOKEN[tone], canvas));
-    const die = new Mesh(
-      shape.geometry,
-      shape.faces.map((_, i) => materials[toneOf(faceValue(value, i, sides), sides)]),
-    );
+    const bodyColour = getComputedStyle(canvas).getPropertyValue("--die-colour").trim();
+    dieMaterial.color.set(token("--die-colour", canvas));
+    const labelColour = contrastingTextColour(bodyColour);
+    const die = new Mesh(shape.geometry, dieMaterial);
     die.scale.setScalar(SCALE);
     die.add(new LineSegments(shape.edges, edgeMaterial));
     const labels = shape.faces.map((face, index) => {
       const number = faceValue(value, index, sides);
-      const colour = token(toneOf(number, sides) === "max" ? "--accent-ink" : "--text");
-      const mesh = label(String(number), colour, face.size);
+      const mesh = label(String(number), labelColour, face.size);
       mesh.position.copy(face.centre).addScaledVector(face.normal, 0.003);
       mesh.quaternion.copy(shape.labelRotations[index]!);
       die.add(mesh);
@@ -411,6 +427,18 @@ export function createDiceRenderer(): DiceRenderer {
     const context = canvas.getContext("2d")!;
     context.clearRect(0, 0, canvas.width, canvas.height);
     context.drawImage(source, 0, 0);
+  }
+
+  function renderBlank(sides: number) {
+    const shape = shapeFor(sides);
+    const canvas = document.createElement("canvas");
+    dieMaterial.color.set(0x808080);
+    const die = new Mesh(shape.geometry, dieMaterial);
+    die.quaternion.copy(shape.rest);
+    die.scale.setScalar(SCALE);
+    die.add(new LineSegments(shape.edges, edgeMaterial));
+    draw(die, canvas);
+    return canvas.toDataURL("image/webp", 0.9);
   }
 
   /** How each landed die or token is drawn again, into another canvas, and its pose. */
@@ -465,13 +493,18 @@ export function createDiceRenderer(): DiceRenderer {
     die.quaternion.copy(final);
     draw(die, canvas);
     posed.set(canvas, { build, rotation: final });
+    const visibility = canvas.style.visibility;
+    canvas.style.visibility = "hidden";
 
     const air = document.createElement("canvas");
     air.className = "dice-flight";
     air.setAttribute("aria-hidden", "true");
     air.style.width = air.style.height = `${SLOT}px`;
-    air.style.visibility = "hidden";
+    air.style.transform = `translate(${thrown.from.x - SLOT / 2}px, ${thrown.from.y - SLOT / 2}px)`;
     document.body.append(air);
+    die.quaternion.copy(quaternion(frames[0]!.quaternion));
+    draw(die, air);
+    job.start();
     const step = PHYSICS_STEP * 1000;
     const entry = Math.max(
       0,
@@ -491,6 +524,7 @@ export function createDiceRenderer(): DiceRenderer {
     const finish = () => {
       cancelAnimationFrame(frame);
       air.remove();
+      canvas.style.visibility = visibility;
       dispose();
       job.land();
     };
@@ -585,12 +619,19 @@ export function createDiceRenderer(): DiceRenderer {
     frame = requestAnimationFrame(tick);
   }
 
+  interface Thrown {
+    from: Point;
+    delay: number;
+    state?: DieState;
+    target?: Point;
+  }
   interface Job {
     canvas: HTMLCanvasElement;
     slot: HTMLElement;
     piece: Piece;
-    thrown: { from: Point; delay: number };
+    thrown: Thrown;
     land: () => void;
+    start: () => void;
     cancel?: () => void;
     cancelled: boolean;
   }
@@ -612,10 +653,13 @@ export function createDiceRenderer(): DiceRenderer {
               hull: hullOf(piece),
               seed: piece.seed,
               delay: thrown.delay,
-              target: {
-                x: (home.left + home.width / 2 - box.left) / SCALE,
-                y: (home.top + home.height / 2 - box.top) / SCALE,
-              },
+              ...(thrown.state ? { state: thrown.state } : {}),
+              target: thrown.target
+                ? { x: thrown.target.x, y: thrown.target.y }
+                : {
+                    x: (home.left + home.width / 2 - box.left) / SCALE,
+                    y: (home.top + home.height / 2 - box.top) / SCALE,
+                  },
             };
           }),
         );
@@ -626,6 +670,7 @@ export function createDiceRenderer(): DiceRenderer {
       jobs.forEach((job, index) => {
         if (frames) return fly(job, tray, frames[index]!, start);
         stillPiece(job.canvas, job.piece);
+        job.start();
         job.land();
       });
     }
@@ -666,27 +711,147 @@ export function createDiceRenderer(): DiceRenderer {
     };
   }
 
-  return {
-    spin,
-    mount(canvas, slot, piece, thrown) {
-      if (!thrown) {
-        stillPiece(canvas, piece);
-        return { landed: Promise.resolve(), dispose() {} };
-      }
-      let land!: () => void;
-      const landed = new Promise<void>((resolve) => (land = resolve));
-      const job: Job = { canvas, slot, piece, thrown, land, cancelled: false };
-      const tray = slot.closest<HTMLElement>(".roll-card") ?? slot;
-      if (!pending.size) queueMicrotask(flush);
-      pending.set(tray, [...(pending.get(tray) ?? []), job]);
-      return {
-        landed,
-        dispose() {
-          job.cancelled = true;
-          job.cancel?.();
-          land();
-        },
-      };
-    },
-  };
+  function mount(
+    canvas: HTMLCanvasElement,
+    slot: HTMLElement,
+    piece: Piece,
+    thrown?: Thrown,
+  ): DiceMount {
+    if (!thrown) {
+      stillPiece(canvas, piece);
+      return { landed: Promise.resolve(), started: Promise.resolve(), dispose() {} };
+    }
+    let land!: () => void;
+    let start!: () => void;
+    const landed = new Promise<void>((resolve) => (land = resolve));
+    const started = new Promise<void>((resolve) => (start = resolve));
+    const job: Job = { canvas, slot, piece, thrown, land, start, cancelled: false };
+    const tray = slot.closest<HTMLElement>(".roll-card") ?? slot;
+    if (!pending.size) queueMicrotask(flush);
+    pending.set(tray, [...(pending.get(tray) ?? []), job]);
+    return {
+      landed,
+      started,
+      dispose() {
+        job.cancelled = true;
+        job.cancel?.();
+        start();
+        land();
+      },
+    };
+  }
+
+  function glideIn(
+    canvas: HTMLCanvasElement,
+    slot: HTMLElement,
+    piece: Piece,
+    from: Point,
+    delay: number,
+  ): DiceMount {
+    stillPiece(canvas, piece);
+    const visibility = canvas.style.visibility;
+    const air = document.createElement("canvas");
+    air.className = "dice-flight";
+    air.setAttribute("aria-hidden", "true");
+    air.style.width = air.style.height = `${SLOT}px`;
+    air.style.transform = `translate(${from.x - SLOT / 2}px, ${from.y - SLOT / 2}px)`;
+    const pose = posed.get(canvas)!;
+    const { die, dispose } = pose.build(air);
+    die.quaternion.copy(pose.rotation);
+    draw(die, air);
+    document.body.append(air);
+    canvas.style.visibility = "hidden";
+
+    let start!: () => void;
+    let land!: () => void;
+    const started = new Promise<void>((resolve) => (start = resolve));
+    const landed = new Promise<void>((resolve) => (land = resolve));
+    let timer = 0;
+    let animation: Animation | undefined;
+    let gone = false;
+    const finish = () => {
+      if (gone) return;
+      gone = true;
+      clearTimeout(timer);
+      canvas.style.visibility = visibility;
+      air.remove();
+      dispose();
+      land();
+    };
+    const fly = () => {
+      if (gone) return;
+      start();
+      const bounds = slot.getBoundingClientRect();
+      const target = { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 };
+      animation = air.animate(
+        [
+          { transform: `translate(${from.x - SLOT / 2}px, ${from.y - SLOT / 2}px)` },
+          { transform: `translate(${target.x - SLOT / 2}px, ${target.y - SLOT / 2}px)` },
+        ],
+        { duration: 220, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)", fill: "forwards" },
+      );
+      void animation.finished.then(finish, finish);
+    };
+    if (delay > 0) timer = window.setTimeout(fly, delay);
+    else fly();
+    return {
+      started,
+      landed,
+      dispose() {
+        animation?.cancel();
+        start();
+        finish();
+      },
+    };
+  }
+
+  function rollInTray(
+    canvas: HTMLCanvasElement,
+    slot: HTMLElement,
+    piece: { sides: number; value: number; seed: string },
+    delay: number,
+    trayVelocity: Point,
+  ): DiceMount | null {
+    let pose = posed.get(canvas);
+    if (!pose) {
+      stillPiece(canvas, {
+        sides: piece.sides,
+        value: Math.ceil(piece.sides / 2),
+        seed: piece.seed,
+      });
+      pose = posed.get(canvas);
+    }
+    const tray = slot.closest<HTMLElement>(".roll-card");
+    if (!pose || !tray) return null;
+    const trayBox = tray.getBoundingClientRect();
+    const slotBox = slot.getBoundingClientRect();
+    const point = { x: slotBox.left + slotBox.width / 2, y: slotBox.top + slotBox.height / 2 };
+    const x = (point.x - trayBox.left) / SCALE;
+    const y = (point.y - trayBox.top) / SCALE;
+    const shape = shapeFor(piece.sides);
+    const lowest = Math.min(
+      ...shape.hull.vertices.map(
+        ([vx, vy, vz]) => new Vector3(vx, vy, vz).applyQuaternion(pose.rotation).z,
+      ),
+    );
+    const randomVelocity = () => (Math.random() - 0.5) * 8;
+    const state: DieState = {
+      position: [x, -y, -lowest + 0.02],
+      quaternion: {
+        x: pose.rotation.x,
+        y: pose.rotation.y,
+        z: pose.rotation.z,
+        w: pose.rotation.w,
+      },
+      velocity: [
+        randomVelocity() - trayVelocity.x / SCALE,
+        randomVelocity() + trayVelocity.y / SCALE,
+        2 + Math.random() * 2,
+      ],
+      angularVelocity: [randomVelocity() * 4, randomVelocity() * 4, randomVelocity() * 4],
+    };
+    return mount(canvas, slot, piece, { from: point, delay, state, target: { x, y } });
+  }
+
+  return { spin, renderBlank, mount, glideIn, rollInTray };
 }

@@ -136,12 +136,16 @@ export class ChatLog {
   }
 
   /** Append a message from this device. Posts go one at a time, in order. */
-  post(message: NewMessage, author: { id: string; name: string }): Promise<ChatMessage> {
+  post(
+    message: NewMessage,
+    author: { id: string; name: string },
+    id?: string,
+  ): Promise<ChatMessage> {
     const next = this.queue.then(async () => {
       const chunk = await this.currentChunk();
       const full = {
         ...message,
-        id: newId(),
+        id: id ?? newId(),
         hlc: this.clock.tick(),
         author: author.id,
         name: author.name,

@@ -54,8 +54,9 @@ export function sessionUseSnapshot(
 ): string {
   return JSON.stringify(
     actions
-      .filter((action) => sessionMoveUsed(campaign, characterId, action, messages))
-      .map((action) => action.id)
+      .flatMap((action) =>
+        sessionMoveUsed(campaign, characterId, action, messages) ? [action.id] : [],
+      )
       .sort(),
   );
 }

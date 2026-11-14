@@ -1,6 +1,7 @@
 import type { AnyCommand, Availability, Command } from "../../kernel/commands";
 import type { ChatContent } from "../../features/chat/content";
 import type { Icon } from "../../ui/icons";
+import type { Confirmation } from "../tableState";
 import type { CampaignContext } from "../campaignContext";
 
 /*
@@ -56,15 +57,6 @@ export interface Offer<P> {
   mine?: boolean;
   /** A secondary action, usually showing full text without running it. */
   open?: () => void;
-}
-
-export interface Confirmation {
-  title: string;
-  /** What's asked; `subject`, where it appears, is shown in bold. */
-  body: string;
-  subject?: string;
-  confirmLabel: string;
-  danger?: boolean;
 }
 
 type Shown<P, T> = T | ((ctx: CampaignContext, params: P) => T);

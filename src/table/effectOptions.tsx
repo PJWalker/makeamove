@@ -1,29 +1,6 @@
-import { EFFECTS, type EffectKind, type EffectSight } from "../scene/types";
+import type { EffectSight } from "../scene/types";
 import { ToggleGroup } from "../ui/Segmented";
-import {
-  IconEmbers,
-  IconFog,
-  IconLight,
-  IconMagic,
-  IconObscure,
-  IconRain,
-  IconSnow,
-  type Icon,
-} from "../ui/icons";
-
-const EFFECT_ICONS: Record<EffectKind, Icon> = {
-  rain: IconRain,
-  snow: IconSnow,
-  fog: IconFog,
-  embers: IconEmbers,
-  magic: IconMagic,
-};
-
-/** The effects a zone can have, as Segmented options with their icons. */
-export const EFFECT_OPTIONS = EFFECTS.map(({ id, label }) => {
-  const Icon = EFFECT_ICONS[id];
-  return { id, label, icon: <Icon size={20} /> };
-});
+import { IconLight, IconObscure } from "../ui/icons";
 
 type SightFlag = keyof EffectSight;
 

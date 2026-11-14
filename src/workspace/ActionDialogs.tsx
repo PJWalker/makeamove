@@ -69,6 +69,8 @@ function RenameDialog({ campaign, id, title }: Props) {
           Show on the hotbar as
           <input
             value={text}
+            // The field is the dialog's one input.
+            // react-doctor-disable-next-line react-doctor/no-autofocus
             autoFocus
             onFocus={(e) => e.currentTarget.select()}
             onInput={(e) => setText(e.currentTarget.value)}
@@ -169,6 +171,8 @@ function ShortcutDialog({ campaign, id, title }: Props) {
           <input
             className={`input ${RECORDER}`}
             readOnly
+            // The field is the dialog's one input.
+            // react-doctor-disable-next-line react-doctor/no-autofocus
             autoFocus
             placeholder="Press a key…"
             value={combo ? showCombo(combo) : ""}

@@ -37,8 +37,9 @@ const TOKEN_PALETTE = [
 ];
 
 /** A random colour from the palette, for a token that hasn't been given one. */
-// react-doctor-disable-next-line react-doctor/insecure-crypto-risk
 export const randomTokenColour = () =>
+  // Cosmetic pick, not a security token.
+  // react-doctor-disable-next-line react-doctor/insecure-crypto-risk
   TOKEN_PALETTE[Math.floor(Math.random() * TOKEN_PALETTE.length)]!;
 
 /** A token's side for a grid: a cell, or 70 px without one. */

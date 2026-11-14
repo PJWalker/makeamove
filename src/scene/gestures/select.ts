@@ -87,8 +87,9 @@ function marquee(c: ToolContext, start: Point, base: string[], pick: string | nu
       };
       const inside = c
         .allElements()
-        .filter((el) => !el.locked && c.pickable(el) && contains(rect, bounds([el])!))
-        .map((el) => el.id);
+        .flatMap((el) =>
+          !el.locked && c.pickable(el) && contains(rect, bounds([el])!) ? [el.id] : [],
+        );
       c.selection.value = [...new Set([...base, ...inside])];
       c.updateOverlay();
     },

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useConstant } from "../ui/useConstant";
 import { entityContent } from "../features/chat/content";
 import type { Campaign } from "../campaign/campaign";
 import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
@@ -23,6 +24,12 @@ export function ChatPanel({ campaign }: { campaign: Campaign }) {
   const notes = useQuery(ctx.table.chatNotes);
   const ref = useRef<HTMLDivElement>(null);
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
+  const [quickRollMessage, setQuickRollMessage] = useState<string | null>(null);
+  const rollOverlay = useConstant(() => {
+    const host = document.createElement("div");
+    host.className = "chat-roll-overlay-host";
+    return host;
+  });
   const closeMenu = useCallback(() => setMenu(null), []);
   const openMenu = useCallback(
     (x: number, y: number, id: string) => {
@@ -39,6 +46,10 @@ export function ChatPanel({ campaign }: { campaign: Campaign }) {
       ctx.execute(say, { content: entityContent(link.kind, link.id, link.label) });
     });
   }, [ctx]);
+  useEffect(() => {
+    document.body.append(rollOverlay);
+    return () => rollOverlay.remove();
+  }, [rollOverlay]);
 
   return (
     <div className="chat" ref={ref}>
@@ -47,8 +58,17 @@ export function ChatPanel({ campaign }: { campaign: Campaign }) {
         render={(m) => <PinnedMessage campaign={campaign} m={m} />}
         onMenu={openMenu}
       />
-      <ChatLog campaign={campaign} notes={notes} onMenu={openMenu} />
-      <ChatComposer campaign={campaign} />
+      <ChatLog
+        campaign={campaign}
+        notes={notes}
+        onMenu={openMenu}
+        quickRollMessage={quickRollMessage}
+      />
+      <ChatComposer
+        campaign={campaign}
+        onQuickRollMessage={setQuickRollMessage}
+        rollOverlay={rollOverlay}
+      />
       {menu && <ContextMenu {...menu} onClose={closeMenu} />}
     </div>
   );

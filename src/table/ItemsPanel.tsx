@@ -31,7 +31,8 @@ import { List, ListGroup } from "../ui/List";
 import { Segmented } from "../ui/Segmented";
 import { dragEntity } from "../workspace/entityDrag";
 import { entity } from "../workspace/dragEntities";
-import { EntryRow, rollTag } from "../workspace/EntryWindow";
+import { EntryRow } from "../workspace/EntryWindow";
+import { rollTag } from "../workspace/actionPresentation";
 import { actionMenuItems } from "../workspace/actionMenu";
 import { CampaignEntityGraphic } from "../workspace/EntityGraphic";
 import { GraphicPicker } from "../ui/GraphicPicker";
@@ -292,10 +293,7 @@ function NumberField({
   );
 }
 
-const splitTags = (s: string) =>
-  parseCommaList(s)
-    .map((t) => t.trim())
-    .filter(Boolean);
+const splitTags = (s: string) => parseCommaList(s).flatMap((t) => t.trim() || []);
 
 /** An effect row in the gear form: a bonus to rolls with a stat, or a change to a derived value. */
 type EffectRow =

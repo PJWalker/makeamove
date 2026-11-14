@@ -1,6 +1,8 @@
 # Project Instructions
 
+- Port 5173 is reserved for the user's `Start dev server (port 5173)` VS Code task. When you need your own dev server, use another available port, keep track of the process, and stop it when finished, including after errors or interrupted work. Never stop the user's server or other processes you did not start.
 - This project is in active development, not a production system. Prefer improving the underlying design over preserving historical implementation decisions.
+- Commit your changes when you complete a substantial new feature or bug fix. Include only changes made for that task; never commit unrelated pre-existing work, and ask how to proceed if the task changes cannot be isolated safely.
 - Do not consider backwards compatibility. Breaking changes are good if they improve the design. It is ok if existing campaigns break. Don't write migration code.
 - A broken or incompatible item (a scene element, character, item, note, etc.) must never break the whole app. Log the problem to the console once, naming the item and what's wrong with it, and leave that one item out (or show it as unavailable) while everything else carries on. Leave its stored data untouched. Check it once, where it's read from storage or a peer, by declaring it in the schema layer (src/data/schema.ts: field guards, and a collection's `parse`, as `parseElement` in src/scene/schema.ts does), rather than scattering guards through the code that uses it.
 - Prefer clean code to unchanging code. When changing functionality, consider whether the current name still reflects its purpose; if not, rename it across the codebase using the TypeScript language server.

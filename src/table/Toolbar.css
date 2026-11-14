@@ -13,7 +13,7 @@
   .strip.across {
     grid-auto-flow: column;
     align-items: center;
-    width: auto;
+    width: max-content;
     height: var(--strip-w);
     padding-block: 0;
     padding-inline: var(--space-2);
@@ -21,10 +21,10 @@
 
   .dock-strip {
     position: absolute;
-    left: calc(var(--dock-l, 0px) + (100% - var(--dock-l, 0px) - var(--dock-r, 0px)) / 2);
+    left: calc(var(--panel-l, 0px) + (100% - var(--panel-l, 0px) - var(--panel-r, 0px)) / 2);
     translate: -50% 0;
     z-index: 4;
-    max-width: calc(100% - var(--dock-l, 0px) - var(--dock-r, 0px));
+    max-width: calc(100% - var(--panel-l, 0px) - var(--panel-r, 0px));
     /* Too many items for the space between the sidebars: clip them and scroll sideways. */
     overflow-x: auto;
     overflow-y: hidden;
@@ -38,42 +38,84 @@
   .dock-strip.dock-bottom {
     bottom: 0;
   }
+  .dock-strip[data-full-width="true"] {
+    left: 0;
+    translate: none;
+    width: 100%;
+    max-width: none;
+  }
 
-  /*
-   * A tool's options, in a row under the tool strip: centred on the tool where
-   * there's room between the sidebars, else lined up with its edge. Tethered
-   * to the tool's button in Toolbar.tsx.
-   */
-  .pen-options {
+  .toolbar {
+    --toolbar-row-height: 54px;
+    --toolbar-options-width: 280px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    left: var(--panel-l, 0px);
+    translate: none;
+    width: calc(100% - var(--panel-l, 0px) - var(--panel-r, 0px));
+    max-width: none;
+    padding-inline: var(--space-2);
+    background: var(--toolbar);
+    overflow: visible;
+    container: canvas-toolbar / inline-size;
+  }
+  .toolbar-tools {
+    display: flex;
+    align-items: center;
+    flex: 0 1 auto;
     min-width: 0;
+    max-width: 100%;
+    min-height: var(--toolbar-row-height);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+  .toolbar-tools > button {
+    flex-shrink: 0;
+  }
+  .toolbar-options {
+    flex: 1 1 var(--toolbar-options-width);
+    min-width: 0;
+    min-height: var(--toolbar-row-height);
+    padding-inline-start: var(--space-3);
+    margin-inline-start: var(--space-2);
+    border-inline-start: 1px solid var(--hairline-strong);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+  .tool-settings {
+    width: max-content;
+    min-width: 100%;
+    min-height: var(--toolbar-row-height);
     margin: 0;
     border: 0;
-    position: absolute;
-    top: calc(anchor(bottom) + var(--space-2));
-    left: calc(var(--dock-l, 0px) + var(--space-2));
-    right: calc(var(--dock-r, 0px) + var(--space-2));
-    justify-self: anchor-center;
-    position-try-fallbacks: --tool-options-from-left, --tool-options-from-right;
     display: flex;
-    /* Onto another line where the canvas is too narrow for it. */
-    flex-wrap: wrap;
-    justify-content: center;
     align-items: center;
-    gap: var(--space-3);
-    padding: var(--space-2) var(--space-3);
-    background: var(--raised-sheen), var(--toolbar);
+    gap: var(--space-2);
+    padding: var(--space-2) 0;
+    white-space: nowrap;
   }
-  /* Named only for the toolbar's own transitions, so other transitions leave it be. */
-  :root.vt-tool .pen-options {
+  .tool-settings > * {
+    flex-shrink: 0;
+  }
+  :root.vt-tool .toolbar-options {
     view-transition-name: tool-options;
   }
-  @position-try --tool-options-from-left {
-    left: anchor(left);
-    justify-self: start;
+  .tool-settings .segmented {
+    background: transparent;
+    box-shadow: none;
   }
-  @position-try --tool-options-from-right {
-    right: anchor(right);
-    justify-self: end;
+  @container canvas-toolbar (width < 700px) {
+    .toolbar-options {
+      flex-basis: 100%;
+      min-height: calc(var(--toolbar-row-height) + 1px);
+      padding-inline-start: 0;
+      margin-inline-start: 0;
+      border-inline-start: 0;
+      border-block-start: 1px solid var(--hairline-strong);
+    }
   }
   /* The pen width slider, with a dot of that size in the pen's colour beside it. */
   .pen-width {

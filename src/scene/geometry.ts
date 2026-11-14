@@ -130,20 +130,18 @@ export function tokensCovered(
   area: Transform & ShapeGeometry,
   tokens: (Transform & { id: string })[],
 ): string[] {
-  return tokens
-    .filter((t) => {
-      const r = Math.min(t.w, t.h) / 2;
-      // The centre, and eight points just inside the token's edge.
-      const samples = [
-        { x: t.x, y: t.y },
-        ...Array.from({ length: 8 }, (_, i) => ({
-          x: t.x + r * 0.8 * Math.cos((i * Math.PI) / 4),
-          y: t.y + r * 0.8 * Math.sin((i * Math.PI) / 4),
-        })),
-      ];
-      return samples.some((p) => shapeCovers(area, p));
-    })
-    .map((t) => t.id);
+  return tokens.flatMap((t) => {
+    const r = Math.min(t.w, t.h) / 2;
+    // The centre, and eight points just inside the token's edge.
+    const samples = [
+      { x: t.x, y: t.y },
+      ...Array.from({ length: 8 }, (_, i) => ({
+        x: t.x + r * 0.8 * Math.cos((i * Math.PI) / 4),
+        y: t.y + r * 0.8 * Math.sin((i * Math.PI) / 4),
+      })),
+    ];
+    return samples.some((p) => shapeCovers(area, p)) ? [t.id] : [];
+  });
 }
 
 /** Whether world point p touches the element, within `tolerance` world px. */

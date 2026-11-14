@@ -17,7 +17,6 @@
       --autohide-sliver: 4px;
       & .sidebar,
       & .toolbar,
-      & .pen-options,
       & .hotbar {
         transition-property: transform, translate, opacity, left, right;
         transition-duration: 200ms;
@@ -33,12 +32,6 @@
       }
       &:not([data-reveal~="top"]) .toolbar:not(:has(:focus-visible)) {
         transform: translateY(calc(var(--autohide-sliver) - 100%));
-        pointer-events: none;
-      }
-      /* Below the strip, so it leaves the screen entirely. */
-      &:not([data-reveal~="top"]) .pen-options:not(:has(:focus-visible)) {
-        transform: translateY(calc(-100% - 48px - var(--space-2)));
-        opacity: 0;
         pointer-events: none;
       }
       &:not([data-reveal~="bottom"]) .hotbar:not(:has(:focus-visible), [data-dragging="true"]) {

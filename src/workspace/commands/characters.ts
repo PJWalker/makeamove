@@ -174,9 +174,9 @@ export const fileCharacter = command<{ id: string; folder?: string | undefined }
       const c = getCharacter(ctx.campaign, id);
       const folders = listFolders(ctx.campaign);
       return [
-        ...folders
-          .filter((f) => f.id !== c?.folder)
-          .map((f) => ({ params: { id, folder: f.id }, title: `Move to ${f.name}` })),
+        ...folders.flatMap((f) =>
+          f.id === c?.folder ? [] : [{ params: { id, folder: f.id }, title: `Move to ${f.name}` }],
+        ),
         ...(c?.folder && folders.some((f) => f.id === c.folder)
           ? [{ params: { id }, title: "Remove from Folder" }]
           : []),
@@ -757,9 +757,9 @@ export const useItem = command<{ itemId: string; characterId?: string | undefine
   },
   section: "act",
   offers: (ctx) =>
-    (getCharacter(ctx.campaign, actingCharacterId(ctx.campaign))?.inventory ?? [])
-      .filter((i) => itemUsable(ctx, i))
-      .map((i) => ({ params: { itemId: i.id }, mine: true })),
+    (getCharacter(ctx.campaign, actingCharacterId(ctx.campaign))?.inventory ?? []).flatMap((i) =>
+      itemUsable(ctx, i) ? [{ params: { itemId: i.id }, mine: true }] : [],
+    ),
   menu: {
     item: (ctx, { characterId, itemId }) => {
       const i = itemOf(ctx, characterId, itemId);
@@ -786,9 +786,9 @@ export const equipItem = command<{ itemId: string; characterId?: string | undefi
     itemOf(ctx, p.characterId, p.itemId) ? holder(ctx, p) : "Not in this character’s gear",
   section: "act",
   offers: (ctx) =>
-    (getCharacter(ctx.campaign, actingCharacterId(ctx.campaign))?.inventory ?? [])
-      .filter((i) => i.equippable)
-      .map((i) => ({ params: { itemId: i.id }, mine: true })),
+    (getCharacter(ctx.campaign, actingCharacterId(ctx.campaign))?.inventory ?? []).flatMap((i) =>
+      i.equippable ? [{ params: { itemId: i.id }, mine: true }] : [],
+    ),
   menu: {
     item: (ctx, { characterId, itemId }) =>
       itemOf(ctx, characterId, itemId)?.equippable ? [{ params: { characterId, itemId } }] : [],

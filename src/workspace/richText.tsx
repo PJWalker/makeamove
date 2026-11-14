@@ -27,7 +27,7 @@ import { LINK_NODE } from "../features/notes/links";
 import { linkLabel, linkTargets, linkTip, type LinkTarget } from "../features/notes/targets";
 import { menuTrigger } from "../ui/menuTrigger";
 import type { MenuItem } from "../ui/ContextMenu";
-import { linkActionItems } from "./linkState";
+import { linkActionItems } from "./linkActions";
 import type { Campaign } from "../campaign/campaign";
 import type { CampaignContext } from "./campaignContext";
 import { IconOpenWindow, IconRename, IconSidebar } from "../ui/icons";

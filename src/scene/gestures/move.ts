@@ -9,10 +9,7 @@ import { dragged, type Gesture, type ToolContext } from "./types";
  */
 export function moveSelection(c: ToolContext, start: Point): Gesture {
   const originals = new Map<string, SceneElement>(
-    c
-      .selected()
-      .filter((s) => !s.locked)
-      .map((s) => [s.id, s]),
+    c.selected().flatMap((s) => (s.locked ? [] : [[s.id, s] as const])),
   );
   let moved = false;
   const lone = originals.size === 1 ? [...originals.values()][0]! : null;

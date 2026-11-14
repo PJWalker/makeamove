@@ -101,7 +101,7 @@ function resourcesFor(
   const totals = new Map<string, number>();
   for (const { resource, by } of [...(action.costs ?? []), ...variantCosts, ...bonusCosts])
     totals.set(resource, (totals.get(resource) ?? 0) + by);
-  return [...totals].filter(([, by]) => by !== 0).map(([id, by]) => ({ id, by }));
+  return [...totals].flatMap(([id, by]) => (by !== 0 ? [{ id, by }] : []));
 }
 
 /**
@@ -198,7 +198,7 @@ export interface TargetContext {
 /** The kept dice of a roll's first term: the natural roll (a d20's 20). */
 function naturalOf(r: Roll): number[] {
   const first = r.terms[0];
-  return first?.kind === "dice" ? first.dice.filter((x) => x.kept).map((x) => x.value) : [];
+  return first?.kind === "dice" ? first.dice.flatMap((x) => (x.kept ? [x.value] : [])) : [];
 }
 
 /** The roll mode for one target: at long range the system's mode, unless the player's choice cancels it. */

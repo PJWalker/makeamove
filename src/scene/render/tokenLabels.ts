@@ -211,9 +211,9 @@ export class TokenLabelLayer {
       hover === hoverToken ? initialLayout : resolveTokenLabelLayout(plans, hover);
     // A changing bar shows, and sits on top, whatever would hide it.
     const changing = new Set(
-      plans
-        .filter((p) => p.stats.some((stat) => this.barChanges.has(`${p.id}:${stat.id}`)))
-        .map((p) => p.id),
+      plans.flatMap((p) =>
+        p.stats.some((stat) => this.barChanges.has(`${p.id}:${stat.id}`)) ? [p.id] : [],
+      ),
     );
     for (const id of changing) showBars.add(id);
     const usedZooms = new Set<string>();

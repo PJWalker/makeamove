@@ -1,4 +1,5 @@
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo } from "react";
+import { useConstant } from "../ui/useConstant";
 import { renderToReactElement } from "@tiptap/static-renderer/pm/react";
 import { type ChatContent } from "../features/chat/content";
 import type { ChatMessage, TextMessage } from "../features/chat/types";
@@ -12,11 +13,12 @@ import { useQuery } from "../ui/useQuery";
 import { Avatar } from "../ui/Avatar";
 import { Button } from "../ui/Button";
 import { menuTrigger } from "../ui/menuTrigger";
-import { chatContentExtensions } from "./ChatInput";
+import { chatContentExtensions } from "./chatContentExtensions";
 import { LINK_NODE } from "../features/notes/links";
 import type { LinkKind } from "../features/notes/links";
 import { LinkChip } from "../workspace/LinkChip";
-import { CounterCard, EditBox, editedText, TimerCard, useTextState } from "./ChatExtras";
+import { editedText, useTextState } from "../features/chat/messageState";
+import { CounterCard, EditBox, TimerCard } from "./ChatExtras";
 import { isPinned } from "../features/chat/messages";
 import { playUiSound } from "../ui/sounds";
 import { MoveCard, RollCard } from "./RollCards";
@@ -60,6 +62,9 @@ type MessageProps = {
   canAct: boolean;
   /** For a scene change: offer to join the GM on that scene. */
   canGo?: boolean;
+  /** This roll is the destination of the pending quick-roll card transition. */
+  quickRoll?: boolean;
+  quickRollActive?: boolean;
   /** Opens the message's menu; present when there's something in it. */
   onMenu?: ((x: number, y: number, id: string) => void) | undefined;
 };
@@ -77,12 +82,14 @@ export const Message = memo(function Message({
   mine,
   canAct,
   canGo,
+  quickRoll = false,
+  quickRollActive = false,
   onMenu,
 }: MessageProps) {
   const menu = useMemo(() => onMenu && menuTrigger((x, y) => onMenu(x, y, m.id)), [onMenu, m.id]);
   // Fixed when it mounts, so a re-render mid-animation doesn't cut it short.
-  const [arriving] = useState(() => fresh && !arrived.has(m.id));
-  const [arrival] = useState({ fresh, id: m.id, mine, arriving });
+  const arriving = useConstant(() => fresh && !arrived.has(m.id) && !quickRoll);
+  const arrival = useConstant(() => ({ fresh, id: m.id, mine, arriving }));
   useEffect(() => {
     if (!arrival.fresh) return;
     arrived.add(arrival.id);
@@ -133,7 +140,15 @@ export const Message = memo(function Message({
         </header>
       )}
       {m.kind === "roll" ? (
-        <RollCard campaign={campaign} m={m} masked={masked} arriving={arriving} mine={mine} />
+        <RollCard
+          campaign={campaign}
+          m={m}
+          masked={masked}
+          arriving={arriving}
+          mine={mine}
+          quickRoll={quickRoll}
+          quickRollActive={quickRollActive}
+        />
       ) : m.kind === "move" ? (
         <MoveCard campaign={campaign} m={m} canAct={canAct} arriving={arriving} mine={mine} />
       ) : m.kind === "timer" ? (

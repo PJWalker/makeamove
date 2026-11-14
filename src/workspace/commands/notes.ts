@@ -98,9 +98,9 @@ export const filePage = command<{ id: string; folder?: string | undefined }>({
       const n = note(ctx, id);
       const folders = listNoteFolders(ctx.campaign);
       return [
-        ...folders
-          .filter((f) => f.id !== n?.folder)
-          .map((f) => ({ params: { id, folder: f.id }, title: `Move to ${f.name}` })),
+        ...folders.flatMap((f) =>
+          f.id === n?.folder ? [] : [{ params: { id, folder: f.id }, title: `Move to ${f.name}` }],
+        ),
         ...(n?.folder && folders.some((f) => f.id === n.folder)
           ? [{ params: { id }, title: "Remove from Folder" }]
           : []),

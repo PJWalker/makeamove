@@ -219,12 +219,13 @@ function closeModal(e: { currentTarget: Element }) {
 
 /** The fog backdrop is decorative and fairly heavy, so it loads after the lobby. */
 function LazyBackdrop() {
-  const [Backdrop, setBackdrop] = useState<ComponentType | null>(null);
+  const [backdrop, setBackdrop] = useState<ComponentType | null>(null);
   useEffect(() => {
     void import("./FogBackdrop")
       .then((m) => setBackdrop(() => m.FogBackdrop))
       .catch((error: unknown) => console.error("Could not load the lobby backdrop", error));
   }, []);
+  const Backdrop = backdrop;
   return Backdrop ? <Backdrop /> : null;
 }
 
@@ -240,8 +241,7 @@ function CampaignRow({ c }: { c: CampaignSummary }) {
         className="campaign-open"
         data-campaign-id={c.id}
         onClick={() => goToCampaign(c.id)}
-        onPointerDown={trigger.onPointerDown}
-        onContextMenu={trigger.onContextMenu}
+        {...trigger}
       >
         <span className="campaign-name">{c.name}</span>
         <span className="campaign-meta">
@@ -340,6 +340,8 @@ function NewCampaignDialog({ onClose }: { onClose: () => void }) {
             value={name}
             onInput={(e) => setName(e.currentTarget.value)}
             placeholder="The Lost Barrows"
+            // The field is the dialog's one input.
+            // react-doctor-disable-next-line react-doctor/no-autofocus
             autoFocus
             required
           />
@@ -408,6 +410,8 @@ function JoinInviteDialog({ invite }: { invite: NonNullable<typeof pendingInvite
               onInput={(e) => setYourName(e.currentTarget.value)}
               placeholder="Robin"
               autoComplete="name"
+              // The field is the dialog's one input.
+              // react-doctor-disable-next-line react-doctor/no-autofocus
               autoFocus
               required
             />

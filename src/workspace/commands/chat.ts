@@ -34,6 +34,7 @@ import {
   type ChatMessage,
   type RollVisibility,
 } from "../../features/chat/types";
+import { seededDie } from "../../features/dice/notation";
 import type { TrayPick } from "../../features/dice/pool";
 import { systemOf } from "../../features/characters/api";
 import {
@@ -114,16 +115,23 @@ export const say = command<{
   run: ({ campaign }, { content, ...options }) => postText(campaign, content, options),
 });
 
-export const roll = command<{
-  formula: string;
-  visibility?: RollVisibility | undefined;
-  comment?: string | undefined;
-}>({
+export const roll = command<
+  {
+    formula: string;
+    visibility?: RollVisibility | undefined;
+    comment?: string | undefined;
+    seed?: string | undefined;
+    messageId?: string | undefined;
+  },
+  Promise<ChatMessage>
+>({
   id: "dice.roll",
   params: objectOf({
     formula: isString,
     visibility: optional(isVisibility),
     comment: optional(isString),
+    seed: optional(isString),
+    messageId: optional(isString),
   }),
   title: (_, { formula, visibility }) =>
     `${visibility === "private" ? "Secret Roll" : "Roll"} ${formula}`,
@@ -144,8 +152,16 @@ export const roll = command<{
       },
     }),
   ),
-  run: ({ campaign }, { formula, visibility, comment }) =>
-    postRoll(campaign, formula, visibility ?? "public", comment),
+  run: ({ campaign }, { formula, visibility, comment, seed, messageId }) =>
+    postRoll(
+      campaign,
+      formula,
+      visibility ?? "public",
+      comment,
+      undefined,
+      seed ? seededDie(seed) : undefined,
+      messageId,
+    ),
 });
 
 export const pinMessage = command<{ content: ChatContent }>({
@@ -278,9 +294,9 @@ export function suggestSlash(ctx: CampaignContext, input: string): SlashForm<unk
   const m = /^\/(\S*)$/.exec(input);
   if (!m) return [];
   const typed = (m[1] ?? "").toLowerCase();
-  return slashForms(ctx)
-    .filter(({ form }) => form.names.some((n) => n.startsWith(typed)))
-    .map(({ form }) => form);
+  return slashForms(ctx).flatMap(({ form }) =>
+    form.names.some((n) => n.startsWith(typed)) ? [form] : [],
+  );
 }
 
 /**

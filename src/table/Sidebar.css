@@ -9,6 +9,8 @@
     bottom: 0;
     display: flex;
     align-items: center;
+    --rail-top-clearance: var(--dock-top-height, 48px);
+    --rail-bottom-clearance: var(--dock-bottom-height, 48px);
     --sidebar-w: min(var(--sidebar-user-w, 340px), 100vw - 48px);
     /*
      * Slides by CSS transition, not view transition: Chromium doesn't hit-test
@@ -22,6 +24,14 @@
   .sidebar[data-side="right"] {
     right: 0;
     translate: var(--sidebar-w) 0;
+  }
+  .table:has(.dock-top[data-full-width="true"]) .sidebar {
+    top: var(--dock-top-height, 48px);
+    --rail-top-clearance: 0px;
+  }
+  .table:has(.dock-bottom[data-full-width="true"]) .sidebar {
+    bottom: var(--dock-bottom-height, 48px);
+    --rail-bottom-clearance: 0px;
   }
   .sidebar[data-side="left"] {
     left: 0;
@@ -37,16 +47,27 @@
     width: 0;
   }
   .sidebar[data-empty="true"] .sidebar-rail {
-    min-height: 160px;
+    height: 160px;
   }
   .sidebar-rail-edge {
     position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    max-height: max(0px, calc(100% - var(--rail-top-clearance) - var(--rail-bottom-clearance)));
+    margin-block: var(--rail-top-clearance) var(--rail-bottom-clearance);
   }
   .sidebar-rail {
     position: relative;
+    min-height: 0;
+    grid-auto-rows: max-content;
     justify-items: end;
     padding-block: 4px;
     background: transparent;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scrollbar-width: none;
   }
   .rail-tab {
     position: relative;

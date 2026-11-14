@@ -61,12 +61,12 @@ export function defaultHotbar(campaign: Campaign, characterId: string): string[]
   if (!c) return BASIC_SLOTS;
   const d = derive(c, system);
   const skip = new Set(
-    system.actionCategories.filter((k) => k.onHotbar === false).map((k) => k.id),
+    system.actionCategories.flatMap((k) => (k.onHotbar === false ? [k.id] : [])),
   );
-  const moves = actionsFor(c, system, d)
-    .filter((m) => !skip.has(m.category))
-    .map((m) => moveSlot(m.id));
-  const gear = c.inventory.filter((i) => i.uses && itemActive(i)).map((i) => useSlot(i.id));
+  const moves = actionsFor(c, system, d).flatMap((m) =>
+    skip.has(m.category) ? [] : [moveSlot(m.id)],
+  );
+  const gear = c.inventory.flatMap((i) => (i.uses && itemActive(i) ? [useSlot(i.id)] : []));
   return [...moves, ...gear, ...BASIC_SLOTS].slice(0, MAX_SLOTS);
 }
 

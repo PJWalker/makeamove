@@ -1,5 +1,5 @@
 import { describe as group, expect, it } from "vite-plus/test";
-import { cryptoDie, describe, NotationError, parse, roll } from "../notation";
+import { cryptoDie, describe, NotationError, parse, roll, seededDie } from "../notation";
 
 /** A die that returns these values in order. */
 const fixed = (...values: number[]) => {
@@ -87,5 +87,10 @@ group("rolling", () => {
     }
     expect(counts[0]).toBe(0);
     for (let f = 1; f <= 6; f++) expect(counts[f]).toBeGreaterThan(800);
+  });
+  it("repeats a roll from the same seed", () => {
+    expect(roll("4d20+2d6", seededDie("quick-roll"))).toEqual(
+      roll("4d20+2d6", seededDie("quick-roll")),
+    );
   });
 });

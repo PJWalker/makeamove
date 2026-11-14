@@ -107,13 +107,16 @@ export function tokenName(
   };
   const base = c.name.trim() || "Unnamed";
   if (t.naming === "list") {
-    const names = t.names.map((n) => n.trim()).filter(Boolean);
+    const names = t.names.flatMap((n) => n.trim() || []);
     const free = names.filter((n) => !takenSet.has(n));
     if (free.length) return pick(free);
     if (names.length) return numbered(pick(names), taken);
   }
   if (t.naming === "adjective") {
-    const free = ADJECTIVES.map((a) => `${a} ${base}`).filter((n) => !takenSet.has(n));
+    const free = ADJECTIVES.flatMap((a) => {
+      const name = `${a} ${base}`;
+      return takenSet.has(name) ? [] : [name];
+    });
     if (free.length) return pick(free);
   }
   return numbered(base, taken);

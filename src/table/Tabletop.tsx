@@ -1,6 +1,6 @@
 import { lazy, Suspense, useState } from "react";
 import { useEffect, useLayoutEffect } from "react";
-import { sceneHueFromHex } from "../lib/colour";
+import { sceneOklchFromHex } from "../lib/colour";
 import type { Campaign } from "../campaign/campaign";
 import { useQuery } from "../ui/useQuery";
 import { FloatingWindows } from "./FloatingWindows";
@@ -59,12 +59,14 @@ export function Tabletop({ campaign }: { campaign: Campaign }) {
   // Tint the whole UI from the scene's custom colour, else from the map, else from the canvas.
   const tint = scene?.canvasColour ?? mapColour ?? colour;
   useEffect(() => {
-    if (tint)
-      document.documentElement.style.setProperty("--scene-hue", String(sceneHueFromHex(tint)));
+    if (tint) {
+      const { l, c, h } = sceneOklchFromHex(tint);
+      document.documentElement.style.setProperty("--scene-oklch", `oklch(${l} ${c} ${h})`);
+    }
   }, [tint]);
   useEffect(
     () => () => {
-      document.documentElement.style.removeProperty("--scene-hue");
+      document.documentElement.style.removeProperty("--scene-oklch");
     },
     [],
   );
@@ -88,6 +90,8 @@ export function Tabletop({ campaign }: { campaign: Campaign }) {
         style={{
           "--dock-l": `${insets.left.total}px`,
           "--dock-r": `${insets.right.total}px`,
+          "--panel-l": `${insets.left.body}px`,
+          "--panel-r": `${insets.right.body}px`,
         }}
         // Pulled-out panels and pop-ups render into this layer (ui/windows.ts).
         ref={(el) => {
@@ -129,7 +133,7 @@ const EDGE_ZONE = 24;
 const EDGE_CHROME = {
   left: '.sidebar[data-side="left"]',
   right: '.sidebar[data-side="right"]',
-  top: ".toolbar, .pen-options",
+  top: ".toolbar",
   bottom: ".hotbar",
 } as const;
 type Edge = keyof typeof EDGE_CHROME;

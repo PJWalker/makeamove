@@ -2,10 +2,19 @@ import { store } from "../lib/store";
 import type { Campaign } from "../campaign/campaign";
 import { getNote } from "../features/notes/api";
 import { leave } from "../ui/morph";
-import type { Confirmation } from "./commands/types";
 
 /** What can be changed about an action from its menu (see ActionDialogs.tsx and commands/custom.ts). */
 export type ActionEditKind = "rename" | "icon" | "shortcut";
+
+/** What a command asks before it runs (commands/views.ts `invoke`). */
+export interface Confirmation {
+  title: string;
+  /** What's asked; `subject`, where it appears, is shown in bold. */
+  body: string;
+  subject?: string;
+  confirmLabel: string;
+  danger?: boolean;
+}
 
 /**
  * What the table has open for the moment, per campaign and never kept: the

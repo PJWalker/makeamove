@@ -1,9 +1,5 @@
-import {
-  SheetFrame,
-  SheetSectionView,
-  useSheet,
-  type SheetProps,
-} from "../../workspace/DeclarativeSheet";
+import { SheetFrame, SheetSectionView, type SheetProps } from "../../workspace/DeclarativeSheet";
+import { useSheet } from "../../workspace/sheetModel";
 
 export function DungeonWorldSheet(props: SheetProps) {
   const sheet = useSheet(props);

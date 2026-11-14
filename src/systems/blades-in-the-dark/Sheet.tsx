@@ -1,10 +1,6 @@
 import { useState } from "react";
-import {
-  SheetFrame,
-  SheetSectionView,
-  useSheet,
-  type SheetProps,
-} from "../../workspace/DeclarativeSheet";
+import { SheetFrame, SheetSectionView, type SheetProps } from "../../workspace/DeclarativeSheet";
+import { useSheet } from "../../workspace/sheetModel";
 import { Counter } from "../../workspace/sheetParts";
 import { Button } from "../../ui/Button";
 import { IconRoll } from "../../ui/icons";
@@ -179,21 +175,23 @@ export function BladesSheet(props: SheetProps) {
       <section className="form-section sheet-section" aria-label="Harm & recovery">
         <h3 className="sheet-heading">Harm & recovery</h3>
         <div className="blades-toggles">
-          {system.conditions
-            .filter((condition) => condition.id.startsWith("harm-"))
-            .map((condition) => (
-              <label key={condition.id} className="stat-deb" title={condition.text}>
-                <input
-                  type="checkbox"
-                  checked={conditionIds.has(condition.id)}
-                  disabled={!editable}
-                  onChange={() =>
-                    ctx.execute(toggleCondition, { id: c.id, condition: condition.id })
-                  }
-                />
-                {condition.name}
-              </label>
-            ))}
+          {system.conditions.flatMap((condition) =>
+            condition.id.startsWith("harm-")
+              ? [
+                  <label key={condition.id} className="stat-deb" title={condition.text}>
+                    <input
+                      type="checkbox"
+                      checked={conditionIds.has(condition.id)}
+                      disabled={!editable}
+                      onChange={() =>
+                        ctx.execute(toggleCondition, { id: c.id, condition: condition.id })
+                      }
+                    />
+                    {condition.name}
+                  </label>,
+                ]
+              : [],
+          )}
         </div>
         <SheetSectionView
           {...sheet}

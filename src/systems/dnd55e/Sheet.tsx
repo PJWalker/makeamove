@@ -9,13 +9,8 @@ import { commaListOf } from "../../lib/list";
 import { parseInputNumber } from "../../lib/number";
 import { Inventory } from "../../workspace/Inventory";
 import { SheetSectionView } from "../../workspace/DeclarativeSheet";
-import {
-  ConditionToggles,
-  Counter,
-  MoveList,
-  signedStr,
-  TokenChip,
-} from "../../workspace/sheetParts";
+import { ConditionToggles, Counter, MoveList, TokenChip } from "../../workspace/sheetParts";
+import { signedStr } from "../../workspace/actionPresentation";
 import { Button } from "../../ui/Button";
 import type { ActionDef, Derived, GameSystem } from "../types";
 import { SKILLS } from "./data";
@@ -198,41 +193,40 @@ export function DndSheet({ campaign, system, c }: Props) {
       <section className="form-section sheet-section" aria-label="Character details">
         <h3 className="sheet-heading">Character details</h3>
         <div className="dnd-fields">
-          {(system.creation?.choices ?? [])
-            .filter((ch) => ch.at === "create" || (typeof ch.at === "number" && ch.at <= level))
-            .map((ch) => {
-              const options = ch.options.filter((o) =>
-                Object.entries(o.requires ?? {}).every(([field, value]) => c.data[field] === value),
-              );
-              const value = String(c.data[ch.field] ?? "");
-              return (
-                <label key={ch.id} className="field">
-                  {ch.label}
-                  <select
-                    value={value}
-                    disabled={!editable}
-                    onChange={(e) =>
-                      ctx.execute(setData, {
-                        id: c.id,
-                        key: ch.field,
-                        value: e.currentTarget.value,
-                      })
-                    }
-                  >
-                    <option value="">None</option>
-                    {/* A value typed before species and backgrounds were data. */}
-                    {value && !options.some((o) => o.id === value) && (
-                      <option value={value}>{value}</option>
-                    )}
-                    {options.map((o) => (
-                      <option key={o.id} value={o.id} title={o.text}>
-                        {o.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              );
-            })}
+          {(system.creation?.choices ?? []).flatMap((ch) => {
+            if (!(ch.at === "create" || (typeof ch.at === "number" && ch.at <= level))) return [];
+            const options = ch.options.filter((o) =>
+              Object.entries(o.requires ?? {}).every(([field, value]) => c.data[field] === value),
+            );
+            const value = String(c.data[ch.field] ?? "");
+            return [
+              <label key={ch.id} className="field">
+                {ch.label}
+                <select
+                  value={value}
+                  disabled={!editable}
+                  onChange={(e) =>
+                    ctx.execute(setData, {
+                      id: c.id,
+                      key: ch.field,
+                      value: e.currentTarget.value,
+                    })
+                  }
+                >
+                  <option value="">None</option>
+                  {/* A value typed before species and backgrounds were data. */}
+                  {value && !options.some((o) => o.id === value) && (
+                    <option value={value}>{value}</option>
+                  )}
+                  {options.map((o) => (
+                    <option key={o.id} value={o.id} title={o.text}>
+                      {o.name}
+                    </option>
+                  ))}
+                </select>
+              </label>,
+            ];
+          })}
         </div>
       </section>
       {!!c.data.feats && (

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { canEdit } from "../features/characters/api";
-import { actionsFor, derive, statBonus } from "../features/characters/store";
+import { actionsFor, statBonus } from "../features/characters/store";
 import type { CharacterView } from "../features/characters/types";
 import { conditionColour } from "../features/combat/pipColours";
 import { parse } from "../features/dice/notation";
@@ -20,7 +19,8 @@ import { AdvancementDialog } from "./CreationParts";
 import { useExtension } from "./systemExtensions";
 import { registerEntityDrop, type DragEntity } from "./entityDrag";
 import { Inventory } from "./Inventory";
-import { Counter, MoveList, signedStr, TokenChip } from "./sheetParts";
+import { Counter, MoveList, TokenChip } from "./sheetParts";
+import { signedStr } from "./actionPresentation";
 import { useQuery } from "../ui/useQuery";
 import {
   bumpData,
@@ -38,6 +38,7 @@ import {
 } from "./commands/characters";
 import { useCampaign } from "./campaignContext";
 import { roll } from "./commands/chat";
+import { useSheet } from "./sheetModel";
 
 /*
  * Shared sections for system-owned sheet components, and a declarative
@@ -48,10 +49,6 @@ export type SheetProps = { campaign: Campaign; system: GameSystem; c: CharacterV
 type Props = SheetProps & { layout: SheetSection[] };
 
 const num = (v: unknown) => Number(v ?? 0);
-
-export function useSheet(props: SheetProps) {
-  return { ...props, d: derive(props.c, props.system), editable: canEdit(props.campaign, props.c) };
-}
 
 /** What a sheet takes when dropped on it, beyond gear and moves: a rules entity from the Libraries, say. */
 export interface SheetDrop {
@@ -180,39 +177,38 @@ function Loadout({ system, c, d, editable, id }: Omit<SectionProps, "section"> &
           onInput={(event) => setQuery(event.currentTarget.value)}
         />
       )}
-      {options
-        .filter((option) => option.name.toLowerCase().includes(query.trim().toLowerCase()))
-        .map((option) => {
-          const selected = activeIds.has(option.id);
-          const cost = definition.costs?.[option.id];
-          const resource = cost && system.resources.find((entry) => entry.id === cost.resource);
-          const affordable =
-            !cost ||
-            free ||
-            (!!resource &&
-              (c.resources[cost.resource] ?? 0) + cost.by <= (d.values[resource.max] ?? 0) &&
-              (c.resources[cost.resource] ?? 0) + cost.by >= 0);
-          return (
-            <label key={option.id} className="check-option" title={option.text}>
-              <input
-                type="checkbox"
-                checked={selected}
-                disabled={!editable || (!selected && (active.length >= max || !affordable))}
-                onChange={() =>
-                  ctx.execute(setLoadout, {
-                    id: c.id,
-                    loadout: id,
-                    options: selected
-                      ? active.filter((entry) => entry !== option.id)
-                      : [...active, option.id],
-                    free,
-                  })
-                }
-              />
-              {option.name}
-            </label>
-          );
-        })}
+      {options.flatMap((option) => {
+        if (!option.name.toLowerCase().includes(query.trim().toLowerCase())) return [];
+        const selected = activeIds.has(option.id);
+        const cost = definition.costs?.[option.id];
+        const resource = cost && system.resources.find((entry) => entry.id === cost.resource);
+        const affordable =
+          !cost ||
+          free ||
+          (!!resource &&
+            (c.resources[cost.resource] ?? 0) + cost.by <= (d.values[resource.max] ?? 0) &&
+            (c.resources[cost.resource] ?? 0) + cost.by >= 0);
+        return [
+          <label key={option.id} className="check-option" title={option.text}>
+            <input
+              type="checkbox"
+              checked={selected}
+              disabled={!editable || (!selected && (active.length >= max || !affordable))}
+              onChange={() =>
+                ctx.execute(setLoadout, {
+                  id: c.id,
+                  loadout: id,
+                  options: selected
+                    ? active.filter((entry) => entry !== option.id)
+                    : [...active, option.id],
+                  free,
+                })
+              }
+            />
+            {option.name}
+          </label>,
+        ];
+      })}
     </section>
   );
 }
@@ -487,55 +483,57 @@ export function SheetSectionView({ campaign, system, c, d, editable, section }: 
       return (
         <section className="form-section sheet-section" aria-label="Details">
           <h3 className="sheet-heading">Details</h3>
-          {system.npcFields
-            .filter((field) => !sectionFields || sectionFields.has(field.id))
-            .map((f) =>
-              f.type === "longtext" ? (
-                <CharacterText
-                  key={f.id}
-                  campaign={campaign}
-                  c={c}
-                  field={`field:${f.id}`}
-                  label={f.label}
-                  editable={editable}
-                />
-              ) : (
-                <label key={f.id} className="field">
-                  {f.label}
-                  <span className={f.rollable ? "sheet-rollable-field" : undefined}>
-                    <input
-                      type={f.type === "number" ? "number" : "text"}
-                      value={c.fields[f.id]}
-                      disabled={!editable}
-                      onChange={(e) =>
-                        ctx.execute(setNpcField, {
-                          id: c.id,
-                          field: f.id,
-                          value:
-                            f.type === "number"
-                              ? Number(e.currentTarget.value) || 0
-                              : e.currentTarget.value,
-                        })
-                      }
+          {system.npcFields.flatMap((f) =>
+            sectionFields && !sectionFields.has(f.id)
+              ? []
+              : [
+                  f.type === "longtext" ? (
+                    <CharacterText
+                      key={f.id}
+                      campaign={campaign}
+                      c={c}
+                      field={`field:${f.id}`}
+                      label={f.label}
+                      editable={editable}
                     />
-                    {f.rollable && isFormula(String(c.fields[f.id] ?? "")) && (
-                      <Button
-                        variant="secondary"
-                        onClick={() =>
-                          void ctx.execute(roll, {
-                            formula: String(c.fields[f.id]),
-                            visibility: "public",
-                            comment: f.label,
-                          })
-                        }
-                      >
-                        Roll
-                      </Button>
-                    )}
-                  </span>
-                </label>
-              ),
-            )}
+                  ) : (
+                    <label key={f.id} className="field">
+                      {f.label}
+                      <span className={f.rollable ? "sheet-rollable-field" : undefined}>
+                        <input
+                          type={f.type === "number" ? "number" : "text"}
+                          value={c.fields[f.id]}
+                          disabled={!editable}
+                          onChange={(e) =>
+                            ctx.execute(setNpcField, {
+                              id: c.id,
+                              field: f.id,
+                              value:
+                                f.type === "number"
+                                  ? Number(e.currentTarget.value) || 0
+                                  : e.currentTarget.value,
+                            })
+                          }
+                        />
+                        {f.rollable && isFormula(String(c.fields[f.id] ?? "")) && (
+                          <Button
+                            variant="secondary"
+                            onClick={() =>
+                              void ctx.execute(roll, {
+                                formula: String(c.fields[f.id]),
+                                visibility: "public",
+                                comment: f.label,
+                              })
+                            }
+                          >
+                            Roll
+                          </Button>
+                        )}
+                      </span>
+                    </label>
+                  ),
+                ],
+          )}
         </section>
       );
     }
@@ -551,7 +549,7 @@ export function SheetSectionView({ campaign, system, c, d, editable, section }: 
           {...(f.placeholder ? { placeholder: f.placeholder } : {})}
         />
       ));
-      if (!section.label) return <>{fields}</>;
+      if (!section.label) return fields;
       return (
         <section className="form-section sheet-section" aria-label={section.label}>
           <h3 className="sheet-heading">{section.label}</h3>

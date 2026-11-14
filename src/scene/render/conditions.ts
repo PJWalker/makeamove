@@ -154,7 +154,7 @@ export class ConditionLayer {
         radius,
         labels: views.map((view) => ({ w: view.text.width + 16, h: view.text.height + 8 })),
         viewport,
-        obstacles: [...boxes.entries()].filter(([id]) => id !== el.id).map(([, box]) => box),
+        obstacles: [...boxes.entries()].flatMap(([id, box]) => (id === el.id ? [] : [box])),
       });
       const name = el.type === "token" && !el.hideName ? el.name.trim() : "";
       return { id: el.id, name, marks, views, layout, radius };
@@ -195,9 +195,10 @@ export class ConditionLayer {
     ];
     const usedNames = new Set<string>();
     for (const plan of ordered) {
-      const expanded = plan.layout.inline || plan.id === hovered?.id;
-      let targets = plan.layout.inline ? plan.layout.horizontal : plan.layout.collapsed;
-      if (!plan.layout.inline && plan.id === hovered?.id) {
+      const { layout } = plan;
+      const expanded = layout.inline || plan.id === hovered?.id;
+      let targets = layout.inline ? layout.horizontal : layout.collapsed;
+      if (!layout.inline && plan.id === hovered?.id) {
         const box = boxes.get(plan.id)!;
         targets = conditionLayout({
           x: box.x + box.w / 2,
@@ -208,7 +209,7 @@ export class ConditionLayer {
           viewport,
           obstacles: [],
         }).vertical;
-        const all = [...targets, ...plan.layout.collapsed];
+        const all = [...targets, ...layout.collapsed];
         const left = Math.min(...all.map((box) => box.x));
         const top = Math.min(...all.map((box) => box.y));
         hovered.bounds = {

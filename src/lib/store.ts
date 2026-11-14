@@ -96,7 +96,12 @@ class Derived<T> implements ReadonlyStore<T> {
 
   #refresh() {
     const versions = this.sources.map((s) => s.version);
-    if (this.#seen && versions.every((v, i) => v === this.#seen![i])) return;
+    if (
+      this.#seen &&
+      versions.length === this.#seen.length &&
+      versions.every((v, i) => v === this.#seen![i])
+    )
+      return;
     this.#seen = versions;
     const next = this.compute();
     if (this.#version > 0 && Object.is(next, this.#value)) return;

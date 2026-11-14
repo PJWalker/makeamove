@@ -1,12 +1,15 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { List, ListRow } from "./List";
-import { createPaneLayout, TwoPane, usePaneLevel, type PaneLayoutMode } from "./TwoPane";
+import { createPaneLayout } from "./paneLayout";
+import { TwoPane, type PaneLayoutMode } from "./TwoPane";
+import { usePaneLevel } from "./paneLevel";
+import { useConstant } from "./useConstant";
 
 const characters = ["Aria Stormwind", "Brother Tuck", "Grim"];
 
 function Demo({ width, mode }: { width: number; mode: PaneLayoutMode }) {
-  const [layout] = useState(() => {
+  const layout = useConstant(() => {
     const made = createPaneLayout(`storybook-two-pane-${mode}`, { list: "list", detail: "sheet" });
     made.chosen.value = mode;
     return made;

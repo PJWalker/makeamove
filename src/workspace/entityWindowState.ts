@@ -61,17 +61,23 @@ function readSaved(stored: unknown): SavedEntityWindow[] {
 const ENTRY_PREFIX = "entity:entry:";
 
 const entryKeysOf = (ids: Iterable<string>) =>
-  [...ids].filter((id) => id.startsWith(ENTRY_PREFIX)).map((id) => id.slice(ENTRY_PREFIX.length));
+  [...ids].flatMap((id) => (id.startsWith(ENTRY_PREFIX) ? [id.slice(ENTRY_PREFIX.length)] : []));
 
 export const entityTabId = (key: string) => `entity:${key}` as const;
 
+export function isEntityTab(id: DockItemId): boolean {
+  return id.startsWith("entity:");
+}
+
 /** Whether the fields kept in the local document are unchanged. */
 function sameSavedFields(a: EntityWindowRecord, b: EntityWindowRecord) {
+  const aTags = a.tags ?? [];
+  const bTags = b.tags ?? [];
   return (
     a.title === b.title &&
     a.text === b.text &&
-    (a.tags ?? []).length === (b.tags ?? []).length &&
-    (a.tags ?? []).every((tag, index) => tag === b.tags?.[index])
+    aTags.length === bTags.length &&
+    aTags.every((tag, index) => tag === bTags[index])
   );
 }
 

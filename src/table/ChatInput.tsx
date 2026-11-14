@@ -1,42 +1,18 @@
 import { Editor, Extension } from "@tiptap/core";
 import Placeholder from "@tiptap/extension-placeholder";
-import StarterKit from "@tiptap/starter-kit";
 import { useEffect, useLayoutEffect, useRef, type RefObject } from "react";
 import { contentFromText, emptyChatContent, type ChatContent } from "../features/chat/content";
 import { LINK_NODE } from "../features/notes/links";
 import type { Campaign } from "../campaign/campaign";
 import { registerLinkDrop } from "../workspace/entityDrag";
-import { linkExtension } from "../workspace/richText";
-import { trackerButtonExtension } from "../workspace/trackerButtons";
+import { chatContentExtensions } from "./chatContentExtensions";
 
 /*
  * The chat's message box stores Tiptap JSON. Enter sends; Shift+Enter starts
  * a new line.
  */
 
-import type { CampaignContext } from "../workspace/campaignContext";
 import { useCampaign } from "../workspace/campaignContext";
-export function chatContentExtensions(ctx: CampaignContext) {
-  const { campaign } = ctx;
-  return [
-    StarterKit.configure({
-      heading: false,
-      blockquote: false,
-      codeBlock: false,
-      bulletList: false,
-      orderedList: false,
-      listItem: false,
-      listKeymap: false,
-      horizontalRule: false,
-      link: {
-        openOnClick: false,
-        HTMLAttributes: { target: "_blank", rel: "noopener noreferrer" },
-      },
-    }),
-    linkExtension(campaign, { shared: true }),
-    trackerButtonExtension(ctx),
-  ];
-}
 
 export interface ChatInputHandle {
   /** Replace the current document with text or Tiptap JSON. */

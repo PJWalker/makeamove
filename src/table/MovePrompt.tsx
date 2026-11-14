@@ -612,34 +612,31 @@ function AskStep({
           )}
         </label>
       )}
-      {rollBonusSpecs
-        .filter((bonus) => !bonus.nameField || String(c.data[bonus.nameField] ?? "").trim())
-        .map((bonus) => {
-          const selected = rollBonusesSet.has(bonus.id);
-          return (
-            <label key={bonus.id} className="check-option">
-              <input
-                type="checkbox"
-                checked={selected}
-                disabled={
-                  !selected &&
-                  !!bonus.cost &&
-                  (c.resources[bonus.cost.resource] ?? 0) < bonus.cost.by
-                }
-                onChange={() =>
-                  setRollBonuses(
-                    selected
-                      ? rollBonuses.filter((id) => id !== bonus.id)
-                      : [...rollBonuses, bonus.id],
-                  )
-                }
-              />
-              {bonus.nameField ? c.data[bonus.nameField] : bonus.label} (+
-              {Number(c.data[bonus.valueField] ?? 0)};{" "}
-              {bonus.cost ? `spend ${bonus.cost.by} ${bonus.cost.resource}` : "no cost"})
-            </label>
-          );
-        })}
+      {rollBonusSpecs.flatMap((bonus) => {
+        if (bonus.nameField && !String(c.data[bonus.nameField] ?? "").trim()) return [];
+        const selected = rollBonusesSet.has(bonus.id);
+        return [
+          <label key={bonus.id} className="check-option">
+            <input
+              type="checkbox"
+              checked={selected}
+              disabled={
+                !selected && !!bonus.cost && (c.resources[bonus.cost.resource] ?? 0) < bonus.cost.by
+              }
+              onChange={() =>
+                setRollBonuses(
+                  selected
+                    ? rollBonuses.filter((id) => id !== bonus.id)
+                    : [...rollBonuses, bonus.id],
+                )
+              }
+            />
+            {bonus.nameField ? c.data[bonus.nameField] : bonus.label} (+
+            {Number(c.data[bonus.valueField] ?? 0)};{" "}
+            {bonus.cost ? `spend ${bonus.cost.by} ${bonus.cost.resource}` : "no cost"})
+          </label>,
+        ];
+      })}
       {check && (
         <label className="field roll-prompt-extra">
           Extra bonus

@@ -1,15 +1,12 @@
 import { store } from "../lib/store";
-import { canEdit, getCharacter, actingCharacterId, systemOf } from "../features/characters/api";
+import type { MenuItem } from "../ui/ContextMenu";
 import type { LinkKind } from "../features/notes/links";
 import { morphOpen } from "../ui/morph";
 import { raisePopup } from "../ui/popup";
-import { hideTooltip } from "../ui/Tooltip";
-import type { MenuItem } from "../ui/ContextMenu";
+import { hideTooltip } from "../ui/tooltipController";
 import { entityTabId } from "./entityWindowState";
 import { locate } from "./layoutModel";
 import type { PanelLayout } from "./panelLayout";
-import { giveItem, startMove } from "./commands/characters";
-import type { CampaignContext } from "./campaignContext";
 
 /*
  * What links in rich text have open: pop-ups showing what they point at,
@@ -21,44 +18,6 @@ import type { CampaignContext } from "./campaignContext";
 export interface LinkRef {
   kind: LinkKind;
   id: string;
-}
-
-/** The primary action exposed by a linked item or move. */
-export function linkActionItems(ctx: CampaignContext, link: LinkRef): MenuItem[] {
-  const { campaign } = ctx;
-  if (link.kind !== "item" && link.kind !== "move") return [];
-  const me = getCharacter(campaign, actingCharacterId(campaign));
-  const canAct = !!me && canEdit(campaign, me);
-  const system = systemOf(campaign);
-  if (link.kind === "item") {
-    const item = system.items.find((candidate) => candidate.id === link.id);
-    return item
-      ? [
-          {
-            label: me ? `Give to ${me.name}` : "Choose a Character",
-            disabled: !canAct,
-            onSelect: () => {
-              if (me && canAct) ctx.execute(giveItem, { characterId: me.id, item });
-            },
-          },
-        ]
-      : [];
-  }
-  if (link.kind === "move") {
-    const move = system.actions.find((candidate) => candidate.id === link.id);
-    return move
-      ? [
-          {
-            label: `Make ${move.name}`,
-            disabled: !canAct,
-            onSelect: () => {
-              if (me && canAct) ctx.execute(startMove, { characterId: me.id, move: move.id });
-            },
-          },
-        ]
-      : [];
-  }
-  return [];
 }
 
 export const linkKey = (l: LinkRef) => `${l.kind}:${l.id}`;

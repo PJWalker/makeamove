@@ -53,13 +53,15 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
           onChange={(event) => setReward(event.currentTarget.value)}
         >
           <option value="upgrades">Two crew upgrades</option>
-          {abilities
-            .filter((ability) => !ownedAbilityIds.has(ability.id))
-            .map((ability) => (
-              <option key={ability.id} value={ability.id}>
-                {ability.label}
-              </option>
-            ))}
+          {abilities.flatMap((ability) =>
+            ownedAbilityIds.has(ability.id)
+              ? []
+              : [
+                  <option key={ability.id} value={ability.id}>
+                    {ability.label}
+                  </option>,
+                ],
+          )}
         </select>
       </label>
       <Button
@@ -76,13 +78,15 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
           onChange={(event) => setUpgrade(event.currentTarget.value)}
         >
           <option value="">Choose an upgrade</option>
-          {upgrades
-            .filter((entry) => !ownedUpgradeIds.has(entry.id))
-            .map((entry) => (
-              <option key={entry.id} value={entry.id}>
-                {entry.label}
-              </option>
-            ))}
+          {upgrades.flatMap((entry) =>
+            ownedUpgradeIds.has(entry.id)
+              ? []
+              : [
+                  <option key={entry.id} value={entry.id}>
+                    {entry.label}
+                  </option>,
+                ],
+          )}
         </select>
       </label>
       <Button

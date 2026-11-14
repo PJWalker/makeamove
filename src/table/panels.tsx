@@ -5,8 +5,8 @@ import { device } from "../platform/device";
 import { useQuery } from "../ui/useQuery";
 import { Avatar } from "../ui/Avatar";
 import { Button } from "../ui/Button";
-import { isPanelId, PANELS, type DockItemId, type PanelId } from "../workspace/panelLayout";
-import { getCharacter, playedCharacterId } from "../features/characters/api";
+import { PANELS, type PanelId } from "../workspace/panelLayout";
+import { playedCharacterId } from "../features/characters/api";
 import { CampaignEntityGraphic } from "../workspace/EntityGraphic";
 import { charactersLayout, notesLayout, scenesLayout } from "./panelLayouts";
 import { allowBack, removeMember } from "../workspace/commands/campaign";
@@ -70,17 +70,6 @@ export function PanelContent({ id, campaign }: { id: PanelId; campaign: Campaign
       <Panel campaign={campaign} />
     </Suspense>
   );
-}
-
-/** A panel's name, none for an entity tab: My Character goes by the character's. */
-export function usePanelLabel(id: PanelId, campaign: Campaign): string;
-export function usePanelLabel(id: DockItemId, campaign: Campaign): string | undefined;
-export function usePanelLabel(id: DockItemId, campaign: Campaign) {
-  const played = useQuery(campaign.members, () =>
-    id === "pc" ? playedCharacterId(campaign) : undefined,
-  );
-  const name = useQuery(campaign.characters, () => getCharacter(campaign, played)?.name);
-  return name ?? (isPanelId(id) ? PANELS[id].label : undefined);
 }
 
 /** A panel's icon: My Character shows the character's graphic. */

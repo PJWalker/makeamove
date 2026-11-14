@@ -4,7 +4,8 @@ import { listSceneFolders } from "../campaign/sceneFolders";
 import { useQuery } from "../ui/useQuery";
 import { Button } from "../ui/Button";
 import { IconAdd, IconMembers, IconNewFolder } from "../ui/icons";
-import { TwoPane, usePaneLevel } from "../ui/TwoPane";
+import { TwoPane } from "../ui/TwoPane";
+import { usePaneLevel } from "../ui/paneLevel";
 import { GraphicPicker } from "../ui/GraphicPicker";
 import { getEntityGraphic } from "../workspace/entityGraphics";
 import { SceneSettingsFields } from "./SceneSettingsFields";
@@ -72,8 +73,7 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
           className="scene-name-button"
           aria-current={s.id === activeId ? "true" : undefined}
           onClick={() => open(s.id)}
-          onPointerDown={trigger.onPointerDown}
-          onContextMenu={trigger.onContextMenu}
+          {...trigger}
         >
           {s.name}
         </button>
@@ -106,20 +106,18 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
             items={scenes}
             folderOf={(s) => s.folder}
             renderItem={sceneRow}
-            renderActions={(newFolder) => (
-              <>
-                {can(ctx, newScene, {}) && (
-                  <>
-                    <Button variant="secondary" icon={IconAdd} onClick={() => addScene()}>
-                      New Scene
-                    </Button>
-                    <Button variant="ghost" icon={IconNewFolder} onClick={newFolder}>
-                      New Folder
-                    </Button>
-                  </>
-                )}
-              </>
-            )}
+            renderActions={(newFolder) =>
+              can(ctx, newScene, {}) && (
+                <>
+                  <Button variant="secondary" icon={IconAdd} onClick={() => addScene()}>
+                    New Scene
+                  </Button>
+                  <Button variant="ghost" icon={IconNewFolder} onClick={newFolder}>
+                    New Folder
+                  </Button>
+                </>
+              )
+            }
             tree="scene"
             folderCommands={sceneFolders}
             showList={() => show("list")}

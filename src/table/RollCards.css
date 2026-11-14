@@ -4,9 +4,13 @@
     --tray-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.012 0.42' numOctaves='3' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1.4 -0.45'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
     --tray-fibres: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='9' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.4 -0.16'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
     /* Warm wood stained toward the scene; felt dyed in it. */
-    --tray-wood: color-mix(in oklab, oklch(34% 0.055 52) 55%, oklch(34% 0.07 var(--scene-hue)));
+    --tray-wood: color-mix(
+      in oklab,
+      oklch(34% 0.055 52) 55%,
+      oklch(from var(--scene-oklch) 34% min(c, 0.07) h)
+    );
     --tray-edge: oklch(from var(--tray-wood) calc(l - 0.16) c h);
-    --tray-felt: oklch(26% 0.06 var(--scene-hue));
+    --tray-felt: oklch(from var(--scene-oklch) 26% min(c, 0.06) h);
     display: grid;
     gap: var(--space-2);
     padding: var(--space-2) var(--space-3);

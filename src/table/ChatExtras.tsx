@@ -1,6 +1,7 @@
 import type * as React from "react";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
-import { fieldsOf, withField } from "../features/chat/messageState";
+import { useConstant } from "../ui/useConstant";
+import { withField, useMessageState } from "../features/chat/messageState";
 import { commandText, contentForCommand, type ChatContent } from "../features/chat/content";
 import {
   visibilityOf,
@@ -24,28 +25,6 @@ import { saveMessageEdit, setCounterValue, timerControl } from "../workspace/com
  * text, pins (shown in a strip above the log), and the live parts of timers
  * and counters.
  */
-
-/** Some of a message's state, re-read when it changes. */
-export function useMessageState<T = unknown>(
-  campaign: Campaign,
-  id: string,
-  fields: string[],
-): Record<string, T> {
-  return JSON.parse(
-    useQuery(campaign.messageState, () =>
-      JSON.stringify(fieldsOf(campaign.messageState, id, fields)),
-    ),
-  ) as Record<string, T>;
-}
-
-const TEXT_FIELDS = ["text", "editedAt"];
-/** An edited text message's state. */
-export const useTextState = (campaign: Campaign, id: string) =>
-  useMessageState<ChatContent | number>(campaign, id, TEXT_FIELDS);
-
-/** Text as last edited, or as sent. */
-export const editedText = (state: Record<string, unknown>, text: ChatContent): ChatContent =>
-  (state.text as ChatContent | undefined) ?? text;
 
 /** The box a message is edited in: Enter saves, Escape leaves it as it was. */
 export function EditBox({
@@ -330,7 +309,7 @@ export function PinnedStrip({
     return () => window.clearTimeout(timeout);
   }, [shownIds]);
   // Those here when the strip first drew came with it.
-  const [initial] = useState(shown);
+  const initial = useConstant(() => shown);
 
   const rows = messages.filter((m) => shown.has(m.id) || leaving.has(m.id));
   if (!rows.length) return null;

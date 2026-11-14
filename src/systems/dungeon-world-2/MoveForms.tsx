@@ -1,4 +1,3 @@
-import type { ComponentType } from "react";
 import { getCharacter, listCharacters } from "../../features/characters/api";
 import {
   dungeonWorld2DowntimeEpoch,
@@ -61,8 +60,7 @@ function useUsedThisSession(sheet: MoveFormProps["sheet"], moveId: string) {
     move ? sessionMoveUsed(sheet.campaign, sheet.c.id, move, sessionMessages) : false,
   );
 }
-
-function EndSession({ sheet }: MoveFormProps) {
+export function EndSession({ sheet }: MoveFormProps) {
   const ctx = useCampaign();
   const [answers, setAnswers] = useState<boolean[]>([false, false, false]);
   const used = useUsedThisSession(sheet, "end-the-session");
@@ -99,7 +97,7 @@ function EndSession({ sheet }: MoveFormProps) {
   );
 }
 
-function ComfortOrSupport({ sheet }: MoveFormProps) {
+export function ComfortOrSupport({ sheet }: MoveFormProps) {
   const ctx = useCampaign();
   const [comfortedId, setComfortedId] = useState("");
   const [answers, setAnswers] = useState<boolean[]>([false, false, false]);
@@ -155,13 +153,15 @@ function ComfortOrSupport({ sheet }: MoveFormProps) {
           onInput={(event) => setComfortedId(event.currentTarget.value)}
         >
           <option value="">Choose a PC</option>
-          {party
-            .filter((character) => character.id !== sheet.c.id)
-            .map((character) => (
-              <option key={character.id} value={character.id}>
-                {character.name}
-              </option>
-            ))}
+          {party.flatMap((character) =>
+            character.id === sheet.c.id
+              ? []
+              : [
+                  <option key={character.id} value={character.id}>
+                    {character.name}
+                  </option>,
+                ],
+          )}
         </select>
       </label>
       {COMFORT_QUESTIONS.map((question, index) => (
@@ -250,7 +250,7 @@ function ComfortOrSupport({ sheet }: MoveFormProps) {
   );
 }
 
-function PerilousJourney({ sheet }: MoveFormProps) {
+export function PerilousJourney({ sheet }: MoveFormProps) {
   const ctx = useCampaign();
   const [pace, setPace] = useState<JourneyPace>("regular");
   const [chosenLeaderId, setChosenLeaderId] = useState<string | null>(null);
@@ -340,7 +340,7 @@ function PerilousJourney({ sheet }: MoveFormProps) {
   );
 }
 
-function Downtime({ sheet }: MoveFormProps) {
+export function Downtime({ sheet }: MoveFormProps) {
   const ctx = useCampaign();
   const [benefit, setBenefit] = useState<"clear-locked" | "gain-depth">(
     sheet.c.lockedConditions?.length ? "clear-locked" : "gain-depth",
@@ -490,7 +490,7 @@ function Downtime({ sheet }: MoveFormProps) {
   );
 }
 
-function MakeCamp({ sheet }: MoveFormProps) {
+export function MakeCamp({ sheet }: MoveFormProps) {
   const ctx = useCampaign();
   const [selections, setSelections] = useState<Record<string, string>>({});
   const [repairs, setRepairs] = useState<Record<string, string>>({});
@@ -594,12 +594,3 @@ function MakeCamp({ sheet }: MoveFormProps) {
     </section>
   );
 }
-
-/** Each move's form, by move id. */
-export const DW2_MOVE_FORMS: Record<string, ComponentType<MoveFormProps>> = {
-  "comfort-or-support": ComfortOrSupport,
-  "perilous-journey": PerilousJourney,
-  "enjoy-downtime": Downtime,
-  "end-the-session": EndSession,
-  "make-camp": MakeCamp,
-};

@@ -3,9 +3,7 @@ import { useEffect, useState } from "react";
 import { getCharacter, systemOf } from "../features/characters/api";
 import {
   boostFrom,
-  choicesAt,
   dataFrom,
-  pointsSpent,
   raise,
   ruleScoreValues,
   ruleStartingScores,
@@ -27,6 +25,17 @@ import { Segmented } from "../ui/Segmented";
 import { Dialog } from "./Dialog";
 import { bumpResource, setData, setScore } from "./commands/characters";
 import { useCampaign } from "./campaignContext";
+import {
+  assignInOrder,
+  emptyPick,
+  listFieldsOf,
+  pointsSpent,
+  scoreCapsOf,
+  scoreMethods,
+  startingScores,
+} from "./creationModel";
+import type { Picked, ScoreMethod } from "./creationModel";
+export type { Picked, ScoreMethod } from "./creationModel";
 
 /*
  * The guided flow's parts (design: core change 14): a choice with its
@@ -34,17 +43,6 @@ import { useCampaign } from "./campaignContext";
  * array, point buy or roll; and the advancement dialog, which asks for the
  * choices and improvements at the next system-defined rank.
  */
-
-/** What's been picked for one choice, and how its boost is placed. */
-export interface Picked {
-  option: string;
-  /** Index into the option's boost amounts. */
-  pattern: number;
-  /** Stats in the order the pattern's amounts go to. */
-  order: string[];
-}
-
-export const emptyPick = (): Picked => ({ option: "", pattern: 0, order: [] });
 
 /** One choice: a select of its options, the chosen one's text, and where its boost goes. */
 export function ChoiceField({
@@ -124,29 +122,6 @@ export function ChoiceField({
     </div>
   );
 }
-
-export type ScoreMethod = "array" | "buy" | "roll" | "manual";
-
-/** The methods a system offers, first the one to start with. */
-export const scoreMethods = (methods: ScoreMethods): { id: ScoreMethod; label: string }[] => [
-  ...(methods.standardArray ? [{ id: "array" as const, label: "Standard array" }] : []),
-  ...(methods.pointBuy ? [{ id: "buy" as const, label: "Point buy" }] : []),
-  ...(methods.roll ? [{ id: "roll" as const, label: "Roll" }] : []),
-  { id: "manual", label: "Manual" },
-];
-
-/** The scores a method starts from. */
-export const startingScores = (system: GameSystem, methods: ScoreMethods, method: ScoreMethod) =>
-  method === "array" && methods.standardArray
-    ? assignInOrder(system, methods.standardArray)
-    : Object.fromEntries(
-        system.stats.map((stat) => [
-          stat.id,
-          method === "buy" && methods.pointBuy
-            ? Math.min(...Object.keys(methods.pointBuy.costs).map(Number))
-            : (stat.default ?? 10),
-        ]),
-      );
 
 /** Ability scores: assign a standard array or rolled set, spend a point buy, or type them in. */
 export function ScoreFields({
@@ -289,24 +264,6 @@ export function RuleScoreFields({
   );
 }
 
-/** Whether the scores are ready: a class rule must be met, and a point buy must be within budget. */
-export function scoresReady(
-  system: GameSystem,
-  methods: ScoreMethods,
-  method: ScoreMethod,
-  scores: Record<string, number>,
-  rule?: ScoreRule,
-): boolean {
-  if (rule) return scoreRuleProblems(rule, system.stats, scores).length === 0;
-  if (method !== "buy" || !methods.pointBuy) return true;
-  const spent = pointsSpent(scores, methods.pointBuy);
-  return spent !== null && spent <= methods.pointBuy.budget;
-}
-
-/** The pool's values to the stats in order, best first. */
-const assignInOrder = (system: GameSystem, pool: number[]) =>
-  Object.fromEntries(system.stats.map((s, i) => [s.id, pool[i] ?? 10]));
-
 /** Give a stat a value from the pool, swapping with the stat that had it. */
 function swapScore(
   scores: Record<string, number>,
@@ -320,51 +277,6 @@ function swapScore(
     ...(other ? { [other]: scores[stat] ?? value } : {}),
   };
 }
-
-/** What the guided creation form hands to newCharacter: scores with boosts, and the data its choices write. */
-export function creationResult(
-  system: GameSystem,
-  scores: Record<string, number>,
-  picks: Record<string, Picked>,
-) {
-  const pickedOptions = Object.fromEntries(
-    Object.entries(picks).map(([id, pick]) => [id, pick.option]),
-  );
-  const pickedData: Record<string, string | number | boolean> = {};
-  for (const choice of system.creation?.choices ?? []) {
-    const option = choice.options.find((item) => item.id === pickedOptions[choice.id]);
-    if (!option) continue;
-    pickedData[choice.field] = option.id;
-    Object.assign(pickedData, option.grants);
-  }
-  const choices = choicesAt(system.creation, "create", pickedData);
-  let raised = scores;
-  for (const c of choices) {
-    const p = picks[c.id];
-    if (p)
-      raised = raise(
-        raised,
-        boostFrom(
-          c.options.find((o) => o.id === p.option),
-          p.pattern,
-          p.order,
-        ),
-        Object.fromEntries(system.stats.map((stat) => [stat.id, stat.max ?? SCORE_CAP])),
-      );
-  }
-  const data = dataFrom(choices, pickedOptions, listFieldsOf(system));
-  return { scores: raised, data };
-}
-
-/** Data fields that gather several picks (5.5e's feats). */
-const listFieldsOf = (system: GameSystem) => [
-  ...(system.creation?.listFields ?? []),
-  ...(system.creation?.feats ? [system.creation.feats.field] : []),
-];
-
-/** Each stat's highest score. */
-export const scoreCapsOf = (system: GameSystem) =>
-  Object.fromEntries(system.stats.map((stat) => [stat.id, stat.max ?? SCORE_CAP]));
 
 /** Choices and improvements at the next system-defined advancement point. */
 export function AdvancementDialog({

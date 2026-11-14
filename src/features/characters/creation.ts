@@ -37,9 +37,9 @@ export function choicesAt(
     }
     return values.has(value);
   };
-  return (creation?.choices ?? [])
-    .filter((c) => c.at === at || (c.at === "advance" && typeof at === "number"))
-    .map((c) => ({
+  return (creation?.choices ?? []).flatMap((c) => {
+    if (!(c.at === at || (c.at === "advance" && typeof at === "number"))) return [];
+    const choice = {
       ...c,
       options: c.options.filter(
         (o) =>
@@ -63,8 +63,9 @@ export function choicesAt(
           (o.requiresIncludes ?? []).every(({ field, value }) => listHas(field, value)) &&
           (o.notIncludes ?? []).every(({ field, value }) => !listHas(field, value)),
       ),
-    }))
-    .filter((c) => c.options.length > 0);
+    };
+    return choice.options.length > 0 ? [choice] : [];
+  });
 }
 
 export function previewChoices(
@@ -81,15 +82,15 @@ export function previewChoices(
     if (option) Object.assign(preview, option.grants);
   }
   const after = choicesAt(creation, at, preview, scores);
-  return before
-    .map((choice) => {
-      const updated = after.find((entry) => entry.id === choice.id) ?? { ...choice, options: [] };
-      const selected = choice.options.find((entry) => entry.id === picked[choice.id]);
-      return selected && !updated.options.some((entry) => entry.id === selected.id)
+  return before.flatMap((choice) => {
+    const updated = after.find((entry) => entry.id === choice.id) ?? { ...choice, options: [] };
+    const selected = choice.options.find((entry) => entry.id === picked[choice.id]);
+    const result =
+      selected && !updated.options.some((entry) => entry.id === selected.id)
         ? { ...updated, options: [...updated.options, selected] }
         : updated;
-    })
-    .filter((choice) => choice.options.length > 0);
+    return result.options.length > 0 ? [result] : [];
+  });
 }
 
 /** Points spent on a point-buy, or null if a score is outside what it can buy. */
@@ -146,15 +147,15 @@ export function scoreRuleProblems(
     Object.entries(set)
       .map(([stat, value]) => `${abbr(stat)} ${signed(value)}`)
       .join(" with ");
-  const problems = Object.entries(rule.fixed)
-    .filter(([stat, value]) => scores[stat] !== value)
-    .map(([stat, value]) => `${abbr(stat)} must be ${signed(value)}.`);
+  const problems = Object.entries(rule.fixed).flatMap(([stat, value]) =>
+    scores[stat] !== value ? [`${abbr(stat)} must be ${signed(value)}.`] : [],
+  );
   const alternatives = alternativesOf(rule).filter(holds);
   if (!alternatives.length) problems.push(`Choose ${listed(rule.oneOf.map(describe), "or")}.`);
   if (problems.length) return problems;
   const remainingMet = alternatives.some((alternative) => {
     const set = { ...rule.fixed, ...alternative };
-    const others = stats.filter((stat) => !(stat.id in set)).map((stat) => scores[stat.id] ?? 0);
+    const others = stats.flatMap((stat) => (stat.id in set ? [] : [scores[stat.id] ?? 0]));
     return sortedKey(others) === sortedKey(rule.remaining);
   });
   return remainingMet

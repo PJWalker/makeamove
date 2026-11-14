@@ -1,6 +1,7 @@
 import { asRichText, sameRichText } from "../data/richText";
 import { RichTextView } from "../workspace/RichTextView";
-import { useState } from "react";
+import { type Ref } from "react";
+import { useConstant } from "../ui/useConstant";
 import type { MoveMessage, RollMessage, RollVisibility } from "../features/chat/types";
 import { type Roll } from "../features/dice/notation";
 import { getCharacter, systemOf } from "../features/characters/api";
@@ -9,7 +10,9 @@ import { device } from "../platform/device";
 import { useQuery } from "../ui/useQuery";
 import { Button } from "../ui/Button";
 import { DamageTargets, SaveRequests, TargetRolls } from "./CardParts";
-import { dieColour, rollCarriedDice, RollChip, RollDie } from "./RollDie";
+import { poolFormula, type TrayPick } from "../features/dice/pool";
+import { PendingDie, RollChip, RollDie } from "./RollDie";
+import { rollCarriedDice } from "./rollDieHelpers";
 import { colourOf } from "../scene/presence";
 import { canWork } from "../features/chat/types";
 import { readRollState } from "../features/chat/rollState";
@@ -32,7 +35,114 @@ type Thrown = { arriving: boolean; mine: boolean };
 
 /** The dice of a roll take the colour of the player who rolled them. */
 const rollerDiceColour = (m: RollMessage | MoveMessage) =>
-  dieColour(colourOf({ id: m.author, ...(m.colour ? { colour: m.colour } : {}) }));
+  colourOf({ id: m.author, ...(m.colour ? { colour: m.colour } : {}) });
+
+export function PendingRollCard({
+  picks,
+  visibility,
+  cardRef,
+  releasedRoll,
+  onDieLanded,
+  onDieEntered,
+}: {
+  picks: TrayPick[];
+  visibility: RollVisibility;
+  cardRef: Ref<HTMLOutputElement>;
+  releasedRoll: { roll: Roll; seed: string; trayVelocity: { x: number; y: number } } | null;
+  onDieLanded: (index: number) => void;
+  onDieEntered: (key: string) => void;
+}) {
+  const formula = poolFormula(picks);
+  const dice = new Map<number, number>();
+  const stats: Extract<TrayPick, { kind: "stat" }>[] = [];
+  let modifier = 0;
+  for (const pick of picks) {
+    if (pick.kind === "die") dice.set(pick.sides, (dice.get(pick.sides) ?? 0) + 1);
+    else if (pick.kind === "modifier") modifier += pick.value;
+    else stats.push(pick);
+  }
+  const rolledValues = new Map<number, number[]>();
+  if (releasedRoll)
+    for (const term of releasedRoll.roll.terms)
+      if (term.kind === "dice" && term.dice[0])
+        rolledValues.set(
+          term.dice[0].sides,
+          term.dice.flatMap((die) => (die.exploded ? [] : [die.value])),
+        );
+  if (!formula) return null;
+
+  let index = 0;
+  const diceViews = [...dice].flatMap(([sides, count]) =>
+    Array.from({ length: count }, (_, dieIndex) => {
+      const current = index++;
+      const entryKey = `${sides}:${dieIndex}`;
+      return (
+        <PendingDie
+          key={entryKey}
+          sides={sides}
+          index={current}
+          seed={`pending:${sides}:${dieIndex}`}
+          entryKey={entryKey}
+          releaseValue={rolledValues.get(sides)?.[dieIndex]}
+          releaseSeed={releasedRoll ? `${releasedRoll.seed}:${current}` : undefined}
+          trayVelocity={releasedRoll?.trayVelocity}
+          onLanded={() => onDieLanded(current)}
+          onEntered={onDieEntered}
+        />
+      );
+    }),
+  );
+  const chipViews = [
+    ...(modifier
+      ? [
+          <RollChip
+            key="modifier"
+            value={modifier}
+            index={index}
+            pendingIndex={index++}
+            seed="pending:modifier"
+            arriving={false}
+            mine
+          />,
+        ]
+      : []),
+    ...stats.map((pick, statIndex) => {
+      const current = index++;
+      return (
+        <RollChip
+          key={`stat:${statIndex}`}
+          value={pick.value}
+          label={pick.stat}
+          index={current}
+          pendingIndex={current}
+          seed={`pending:stat:${statIndex}`}
+          arriving={false}
+          mine
+        />
+      );
+    }),
+  ];
+
+  return (
+    <output ref={cardRef} className="roll-card pending-roll" aria-label={`Queued roll: ${formula}`}>
+      <div className="roll-head">
+        <span className="roll-formula">{formula}</span>
+        {visibility === "private" && (
+          <span className="roll-visibility">{VISIBILITY_LABEL.private}</span>
+        )}
+      </div>
+      <div className="roll-body">
+        <div className="roll-terms">
+          {diceViews}
+          {chipViews}
+        </div>
+        <span className="roll-total pending-roll-total" aria-hidden="true">
+          ?
+        </span>
+      </div>
+    </output>
+  );
+}
 
 function useSharedRoll(campaign: Campaign, message: RollMessage | MoveMessage) {
   const ctx = useCampaign();
@@ -60,7 +170,15 @@ export function RollCard({
   masked,
   arriving,
   mine,
-}: { campaign: Campaign; m: RollMessage; masked: boolean } & Thrown) {
+  quickRoll = false,
+  quickRollActive = false,
+}: {
+  campaign: Campaign;
+  m: RollMessage;
+  masked: boolean;
+  quickRoll?: boolean;
+  quickRollActive?: boolean;
+} & Thrown) {
   const interaction = useSharedRoll(campaign, m);
   const gesture = useThrow({
     onThrow: interaction.rerollAll,
@@ -80,6 +198,8 @@ export function RollCard({
     <div
       className="roll-card"
       aria-label={`${r.formula}${m.comment ? `, ${m.comment}` : ""}: ${r.total}`}
+      data-quick-roll={quickRoll || undefined}
+      data-quick-roll-active={quickRollActive || undefined}
       data-throwable={interaction.allowed || undefined}
       data-dice-target={interaction.allowed ? m.id : undefined}
       // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable so the roll can be rerolled by keyboard
@@ -97,7 +217,7 @@ export function RollCard({
         <RollTerms
           roll={r}
           colour={rollerDiceColour(m)}
-          arriving={arriving}
+          arriving={arriving && !quickRoll}
           mine={mine}
           interaction={interaction}
         />
@@ -113,9 +233,13 @@ function RollTerms({
   arriving,
   mine,
   interaction,
-}: { roll: Roll; colour: string; interaction: RollInteraction } & Thrown) {
+}: {
+  roll: Roll;
+  colour: string;
+  interaction: RollInteraction;
+} & Thrown) {
   const seeds = interaction.snapshot!.seeds;
-  const [initial] = useState(
+  const initial = useConstant(
     () => new Set(seeds.flatMap((row, i) => (row.length ? row : [`flat:${i}`]))),
   );
   return (

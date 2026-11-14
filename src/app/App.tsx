@@ -7,7 +7,7 @@ import { tableCommands } from "../workspace/commands/all";
 import { extensionOf } from "../systems/extensions";
 import { CampaignContext, CampaignReactContext } from "../workspace/campaignContext";
 import { Button } from "../ui/Button";
-import { PeerBlobsContext } from "../ui/BlobImage";
+import { PeerBlobsContext } from "../ui/blobImageContext";
 import { Tooltip } from "../ui/Tooltip";
 import { withTransition } from "../ui/transition";
 import { useQuery } from "../ui/useQuery";

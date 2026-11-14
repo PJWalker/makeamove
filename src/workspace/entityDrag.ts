@@ -1,6 +1,6 @@
 import type { LinkKind } from "../features/notes/links";
 import { dropLine, indexAmong } from "../ui/reorder";
-import { hideTooltip } from "../ui/Tooltip";
+import { hideTooltip } from "../ui/tooltipController";
 import type { CanvasState, TokenSpec } from "./canvasState";
 
 const THRESHOLD = 5;

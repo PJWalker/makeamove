@@ -22,13 +22,25 @@ type Props = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "size"> & {
 };
 
 export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
-  { variant = "secondary", label, pressed, icon: ButtonIcon, className, children, ...rest }: Props,
+  {
+    variant = "secondary",
+    label,
+    pressed,
+    icon: ButtonIcon,
+    className,
+    children,
+    onClick,
+    ...rest
+  }: Props,
   forwardedRef,
 ) {
   const ref = useObjectRef(forwardedRef);
   const { buttonProps } = useButton(
     {
       type: rest.type ?? "button",
+      ...(onClick
+        ? { onClick: (event) => onClick(event as React.MouseEvent<HTMLButtonElement>) }
+        : {}),
       ...(rest.disabled !== undefined ? { isDisabled: rest.disabled } : {}),
     },
     ref,

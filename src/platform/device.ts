@@ -1,5 +1,6 @@
 import { store } from "../lib/store";
 import { newId } from "../lib/ids";
+import { clampUserColour } from "../lib/colour";
 import { getStorageJson, setStorageJson } from "./localStorage";
 
 /**
@@ -35,6 +36,6 @@ export function setDeviceName(name: string) {
 }
 
 export function setDeviceColour(colour: string) {
-  device.value = { ...device.value, colour };
+  device.value = { ...device.value, colour: clampUserColour(colour) };
   save(device.value);
 }

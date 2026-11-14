@@ -178,6 +178,22 @@ export function cryptoDie(sides: number): number {
   }
 }
 
+/** A reproducible die source for a roll that is previewed before it is posted. */
+export function seededDie(seed: string) {
+  let state = 2166136261;
+  for (const character of seed) state = Math.imul(state ^ character.charCodeAt(0), 16777619);
+  return (sides: number) => {
+    const limit = Math.floor(0x1_0000_0000 / sides) * sides;
+    for (;;) {
+      state += 0x6d2b79f5;
+      let mixed = Math.imul(state ^ (state >>> 15), state | 1);
+      mixed ^= mixed + Math.imul(mixed ^ (mixed >>> 7), mixed | 61);
+      const sample = (mixed ^ (mixed >>> 14)) >>> 0;
+      if (sample < limit) return (sample % sides) + 1;
+    }
+  };
+}
+
 const notationOf = (t: DiceTerm) =>
   `${t.count}d${t.sides === 100 ? "%" : t.sides}` +
   (t.keep ? `k${t.keep.which === "high" ? "h" : "l"}${t.keep.n}` : "") +

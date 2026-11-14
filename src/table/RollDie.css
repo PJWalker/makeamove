@@ -1,15 +1,14 @@
 @layer components {
   /* Dice: solids drawn in 3D (table/diceRenderer.ts), the result written on the face turned to you. */
   .die {
-    /* The body of a die that isn't a max or min: the roller's colour, set inline. */
+    /* The roller's colour, set inline. */
     --die-colour: var(--gem-smoky);
-    --gem: var(--die-colour);
     position: relative;
     display: inline-grid;
     place-items: center;
     width: 64px;
     height: 64px;
-    color: oklch(97% 0.01 var(--scene-hue));
+    color: oklch(from var(--scene-oklch) 97% min(c, 0.01) h);
     font-size: var(--text-md);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
@@ -17,13 +16,6 @@
       cursor: grab;
       touch-action: none;
       user-select: none;
-    }
-    &[data-max="true"] {
-      --gem: var(--accent);
-      color: var(--accent-ink);
-    }
-    &[data-min="true"] {
-      --gem: var(--gem-danger);
     }
     &[data-disabled] {
       opacity: var(--disabled-opacity);
@@ -109,43 +101,54 @@
     z-index: 10001;
     pointer-events: none;
   }
-  /* Without WebGL: a flat chip shaped like the die, cut from the same stones as buttons. */
+  /* Without WebGL: the rendered die, tinted to match the roller, with its number overlaid. */
   .die[data-phase="flat"] {
     width: 64px;
     height: 64px;
-    background:
-      radial-gradient(ellipse 60% 70% at 30% 0%, oklch(100% 0 0 / 0.28), transparent 70%),
-      radial-gradient(
-        ellipse 85% 70% at 50% 120%,
-        oklch(from var(--gem) calc(l + 0.08) calc(c * 1.3) h / 0.9),
-        transparent 75%
-      ),
-      var(--gem);
-    .die-value {
-      translate: none;
-      text-shadow: 0 1px 1px color-mix(in oklch, var(--gem) 65%, black);
+    isolation: isolate;
+    &[data-sides]::before,
+    &[data-sides]::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: 100% 100%;
+    }
+    &[data-sides]::before {
+      background: var(--die-colour);
+      mask-image: var(--die-image);
+      mask-mode: alpha;
+      mask-size: 100% 100%;
+      mask-repeat: no-repeat;
+    }
+    &[data-sides]::after {
+      background-image: var(--die-image);
+      mix-blend-mode: hard-light;
     }
     &[data-sides="4"] {
-      clip-path: polygon(50% 2%, 98% 94%, 2% 94%);
-      /* Optical centre of the triangle, not its box. */
-      padding-top: 9px;
+      --die-image: url("./dice-fallbacks/d4.webp");
     }
     &[data-sides="6"] {
-      clip-path: polygon(14% 0, 86% 0, 100% 14%, 100% 86%, 86% 100%, 14% 100%, 0 86%, 0 14%);
+      --die-image: url("./dice-fallbacks/d6.webp");
     }
     &[data-sides="8"] {
-      clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+      --die-image: url("./dice-fallbacks/d8.webp");
     }
     &[data-sides="10"] {
-      clip-path: polygon(50% 0, 100% 42%, 50% 100%, 0 42%);
-      padding-bottom: 4px;
+      --die-image: url("./dice-fallbacks/d10.webp");
     }
     &[data-sides="12"] {
-      clip-path: polygon(50% 0, 98% 36%, 80% 96%, 20% 96%, 2% 36%);
-      padding-top: 3px;
+      --die-image: url("./dice-fallbacks/d12.webp");
     }
     &:is([data-sides="20"], [data-sides="n"]) {
-      clip-path: polygon(50% 0, 96% 25%, 96% 75%, 50% 100%, 4% 75%, 4% 25%);
+      --die-image: url("./dice-fallbacks/d20.webp");
+    }
+    .die-value {
+      color: var(--die-label-colour, inherit);
+      translate: none;
+      z-index: 1;
     }
   }
 }

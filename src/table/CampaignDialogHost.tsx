@@ -7,7 +7,7 @@ import { RelationshipsDialog } from "./Relationships";
 import { useCampaign } from "../workspace/campaignContext";
 import { useQuery } from "../ui/useQuery";
 import { ConfirmDialog } from "./ConfirmDialog";
-import type { Confirmation } from "../workspace/commands/types";
+import type { Confirmation } from "../workspace/tableState";
 
 /** Always mounted so campaign actions can open dialogs from any panel. */
 export function CampaignDialogHost({ campaign }: { campaign: Campaign }) {
@@ -55,7 +55,7 @@ function CommandConfirmation() {
       confirmLabel={confirmLabel}
       confirmVariant={danger ? "danger" : "primary"}
       onClose={() => ctx.table.confirming.set(null)}
-      onConfirm={asking.run}
+      onConfirm={() => asking.run()}
     >
       <p>
         <Emphasised {...asking.confirmation} />

@@ -715,9 +715,9 @@ export class SceneController implements ToolContext {
     }
     if (mod && key === "a") {
       if (!this.selecting()) this.tools.activeTool.value = "select";
-      this.selection.value = this.elements
-        .filter((el) => !el.locked && this.pickable(el))
-        .map((el) => el.id);
+      this.selection.value = this.elements.flatMap((el) =>
+        !el.locked && this.pickable(el) ? [el.id] : [],
+      );
       return true;
     }
     if (mod) return false;
@@ -809,7 +809,9 @@ export class SceneController implements ToolContext {
   /** Change elements' properties as one undo step. Turning a door back into a wall forgets whether it was open. */
   setProps(ids: string[], patch: ElementPatch) {
     const fixed = "door" in patch && patch.door === false ? { ...patch, open: undefined } : patch;
-    this.scene.update(ids.filter((id) => this.byId.has(id)).map((id) => [id, fixed]));
+    this.scene.update(
+      ids.flatMap((id) => (this.byId.has(id) ? [[id, fixed] as [string, typeof fixed]] : [])),
+    );
   }
 
   /** Show elements with changed properties without changing them yet; null to stop. */

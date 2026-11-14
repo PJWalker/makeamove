@@ -19,6 +19,7 @@ import { isTyping } from "../ui/keys";
 import { startReorder } from "../ui/reorder";
 import { scrollSideways } from "../ui/wheel";
 import { useCampaign } from "../workspace/campaignContext";
+import { useDockStripLayout } from "./dockStrip";
 
 /**
  * Pinned actions for the selected character, docked at the bottom centre.
@@ -34,6 +35,7 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
   const charId = useQuery(campaign.members, () => actingCharacterId(campaign));
   const [dragging, setDragging] = useState<string | null>(null);
   const barRef = useRef<HTMLDivElement>(null);
+  useDockStripLayout(barRef, "bottom");
   // Rebuilt on any change to characters or members so labels and availability stay current.
   const [, setTick] = useState(0);
   const bumpTick = useEffectEvent(() => setTick((n) => n + 1));
@@ -190,11 +192,11 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
               className="hotbar-slot"
               data-unavailable={off}
               data-dragging={dragging === id}
+              {...trigger}
               onPointerDown={(e) => {
                 trigger.onPointerDown(e);
                 dragSlot(id, e);
               }}
-              onContextMenu={trigger.onContextMenu}
             >
               <button
                 type="button"

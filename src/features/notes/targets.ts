@@ -54,15 +54,19 @@ export function linkTargets(
 ): LinkTarget[] {
   const system = systemOf(campaign);
   const all: LinkTarget[] = [
-    ...listNotes(campaign)
-      .filter((n) => n.id !== exceptNote)
-      .map((n) => ({
-        kind: "note" as const,
-        id: n.id,
-        label: n.title,
-        detail: n.gmOnly ? "GM page" : KIND_DETAIL.note,
-        gmOnly: n.gmOnly,
-      })),
+    ...listNotes(campaign).flatMap((n) =>
+      n.id === exceptNote
+        ? []
+        : [
+            {
+              kind: "note" as const,
+              id: n.id,
+              label: n.title,
+              detail: n.gmOnly ? "GM page" : KIND_DETAIL.note,
+              gmOnly: n.gmOnly,
+            },
+          ],
+    ),
     ...characterLinkTargets(campaign),
     ...campaign
       .sceneViews()

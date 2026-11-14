@@ -22,5 +22,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["vite.config.ts", ".storybook/main.ts"]
+  "include": ["vite.config.ts", "scripts/generateDiceFallbacks.ts", ".storybook/main.ts"]
 }

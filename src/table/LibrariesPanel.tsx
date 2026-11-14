@@ -24,11 +24,12 @@ import { Button } from "../ui/Button";
 import { Segmented } from "../ui/Segmented";
 import { IconGive, IconImage } from "../ui/icons";
 import { List, ListExpand, ListGroup, Tag } from "../ui/List";
-import { EntryRow, EntryWindow, rollTag, useEntryWindows } from "../workspace/EntryWindow";
+import { EntryRow, EntryWindow } from "../workspace/EntryWindow";
+import { useEntryWindows } from "../workspace/entryWindowState";
 import { dragEntity } from "../workspace/entityDrag";
 import { entity } from "../workspace/dragEntities";
-import { linkProxy } from "../workspace/LinkChip";
-import { makeVerb } from "../workspace/sheetParts";
+import { linkProxy } from "../workspace/linkProxy";
+import { makeVerb, rollTag } from "../workspace/actionPresentation";
 import { actionMenuItems } from "../workspace/actionMenu";
 import { getEntityGraphic } from "../workspace/entityGraphics";
 import { CampaignEntityGraphic } from "../workspace/EntityGraphic";
@@ -36,6 +37,29 @@ import type { ItemDef } from "../systems/types";
 import { useCampaign } from "../workspace/campaignContext";
 import { acquireItem, npcFromMonster, startMove } from "../workspace/commands/characters";
 import { can } from "../workspace/commands/views";
+
+const metaOf = (e: LibraryEntry) =>
+  [
+    e.note ?? "",
+    ...(e.kind === "item"
+      ? [
+          e.item.weight ? `${e.item.weight} wt` : "",
+          e.item.uses ? `${e.item.uses} ${e.item.uses === 1 ? "use" : "uses"}` : "",
+          e.item.wealthCost ? `${e.item.wealthCost.tier} (${e.item.wealthCost.rank})` : "",
+        ]
+      : []),
+  ]
+    .filter(Boolean)
+    .join(" · ") || undefined;
+
+/** An entry's text, with what it holds listed after. */
+const textOf = (e: LibraryEntry) =>
+  [
+    e.text,
+    ...(e.groups ?? []).map(
+      (g) => `${g.name}${g.note ? ` (${g.note})` : ""}: ${g.entries.map((c) => c.name).join(", ")}`,
+    ),
+  ].join("\n\n");
 
 /**
  * The Libraries: everything the game system and plugins contribute (items,
@@ -113,28 +137,6 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
   };
 
   const tagOf = (e: LibraryEntry) => (e.kind === "move" ? rollTag(system, e.move) : null);
-  const metaOf = (e: LibraryEntry) =>
-    [
-      e.note ?? "",
-      ...(e.kind === "item"
-        ? [
-            e.item.weight ? `${e.item.weight} wt` : "",
-            e.item.uses ? `${e.item.uses} ${e.item.uses === 1 ? "use" : "uses"}` : "",
-            e.item.wealthCost ? `${e.item.wealthCost.tier} (${e.item.wealthCost.rank})` : "",
-          ]
-        : []),
-    ]
-      .filter(Boolean)
-      .join(" · ") || undefined;
-  /** An entry's text, with what it holds listed after. */
-  const textOf = (e: LibraryEntry) =>
-    [
-      e.text,
-      ...(e.groups ?? []).map(
-        (g) =>
-          `${g.name}${g.note ? ` (${g.note})` : ""}: ${g.entries.map((c) => c.name).join(", ")}`,
-      ),
-    ].join("\n\n");
 
   const menuItemsFor = (e: LibraryEntry) => {
     const actions =
@@ -190,18 +192,16 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
     ];
   };
 
-  const all = sources.flatMap((s) => sourceEntries(s).map((e) => [s.id, e] as const));
-  const shown = sources
-    .map((s) => {
-      const listed = topLevelKeys(s);
-      return {
-        s,
-        collections: s.collections
-          .map((c) => ({ c, views: viewEntries(c.entries, query, kind, listed) }))
-          .filter(({ views }) => views.length > 0),
-      };
-    })
-    .filter(({ collections }) => collections.length > 0);
+  const all: (readonly [string, ReturnType<typeof sourceEntries>[number]])[] = [];
+  for (const s of sources) for (const e of sourceEntries(s)) all.push([s.id, e]);
+  const shown = sources.flatMap((s) => {
+    const listed = topLevelKeys(s);
+    const collections = s.collections.flatMap((c) => {
+      const views = viewEntries(c.entries, query, kind, listed);
+      return views.length > 0 ? [{ c, views }] : [];
+    });
+    return collections.length > 0 ? [{ s, collections }] : [];
+  });
 
   const row = (sourceId: string, path: string, v: EntryView, aligned: boolean) => {
     const e = v.entry;

@@ -15,7 +15,6 @@ import { IconPost, IconRoll, IconTarget } from "../ui/icons";
 import { Button } from "../ui/Button";
 import { usePopupDialog } from "./usePopupDialog";
 import { Dialog } from "./Dialog";
-import type { DockItemId } from "./panelLayout";
 import type { EntityWindowRecord } from "./entityWindowState";
 import type { MenuItem } from "../ui/ContextMenu";
 import { menuTrigger } from "../ui/menuTrigger";
@@ -56,15 +55,14 @@ export function EntityWindowHost({ campaign }: { campaign: Campaign }) {
   const shown = useQuery(ctx.panels.layout);
   return (
     <>
-      {Object.values(records)
-        .filter((record) => ctx.panels.isFloating(record.id, shown))
-        .map((record) => (
-          <EntityPopup key={record.id} campaign={campaign} record={record} />
-        ))}
+      {Object.values(records).flatMap((record) =>
+        ctx.panels.isFloating(record.id, shown)
+          ? [<EntityPopup key={record.id} campaign={campaign} record={record} />]
+          : [],
+      )}
     </>
   );
 }
-
 function EntityPopup({ campaign, record }: { campaign: Campaign; record: EntityWindowRecord }) {
   const ctx = useCampaign();
   const ref = usePopupDialog();
@@ -138,7 +136,7 @@ export function EntityWindowContent({
   );
   const libraries = useLibrariesFor(baseSystemOf(campaign));
 
-  if (record.content) return <>{record.content}</>;
+  if (record.content) return record.content;
 
   const text = (
     <p className="move-text move-window-text">{record.text ?? "This window is not available."}</p>
@@ -298,8 +296,4 @@ function MoveAction({
       {character ? ` as ${character.name}` : ""}
     </Button>
   );
-}
-
-export function isEntityTab(id: DockItemId): boolean {
-  return id.startsWith("entity:");
 }

@@ -1,6 +1,8 @@
 @layer components {
   .hotbar {
+    display: flex;
     pointer-events: auto;
+    background: var(--toolbar);
   }
   .hotbar-slot {
     flex: none;
@@ -17,6 +19,7 @@
     padding-inline: var(--space-3);
     cursor: grab;
     user-select: none;
+    white-space: nowrap;
   }
   .hotbar-slot {
     position: relative;
