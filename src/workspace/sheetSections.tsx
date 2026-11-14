@@ -167,43 +167,61 @@ export function FieldsSection({ c, editable, section }: SectionProps<"fields">) 
   );
 }
 
+/** One entry of a sheet's list of derived numbers: its name, then its value. */
+export function DerivedEntry({
+  label,
+  title,
+  over,
+  children,
+}: {
+  label: string;
+  title?: string | undefined;
+  over?: boolean | undefined;
+  children: React.ReactNode;
+}) {
+  return (
+    <div title={title} data-over={over}>
+      <dt>{label}</dt>
+      <dd>{children}</dd>
+    </div>
+  );
+}
+
 /** A derived value, or a die to roll when it is one. */
 function DerivedStat({ item, d }: { item: Of<"derived">["items"][number]; d: Derived }) {
   const ctx = useCampaign();
   const value = (id: string) => d.values[id] ?? 0;
   const plus = item.plus && value(item.plus) ? signedStr(value(item.plus)) : "";
   return (
-    <div
+    <DerivedEntry
+      label={item.label}
       title={d.resolved.why[item.value]?.join("\n")}
-      data-over={item.max ? value(item.value) > value(item.max) : undefined}
+      over={item.max ? value(item.value) > value(item.max) : undefined}
     >
-      <dt>{item.label}</dt>
-      <dd>
-        {item.format === "die" ? (
-          <button
-            type="button"
-            className="sheet-derived-roll"
-            title={`Roll ${item.label}`}
-            aria-label={`Roll ${item.label}`}
-            onClick={() =>
-              void ctx.execute(roll, {
-                formula: `d${value(item.value)}${plus}`,
-                visibility: "public",
-                comment: item.label,
-              })
-            }
-          >
-            d{value(item.value)}
-            {plus}
-          </button>
-        ) : (
-          <>
-            {value(item.value)}
-            {item.max && `/${value(item.max)}`}
-          </>
-        )}
-      </dd>
-    </div>
+      {item.format === "die" ? (
+        <button
+          type="button"
+          className="sheet-derived-roll"
+          title={`Roll ${item.label}`}
+          aria-label={`Roll ${item.label}`}
+          onClick={() =>
+            void ctx.execute(roll, {
+              formula: `d${value(item.value)}${plus}`,
+              visibility: "public",
+              comment: item.label,
+            })
+          }
+        >
+          d{value(item.value)}
+          {plus}
+        </button>
+      ) : (
+        <>
+          {value(item.value)}
+          {item.max && `/${value(item.max)}`}
+        </>
+      )}
+    </DerivedEntry>
   );
 }
 
@@ -284,7 +302,7 @@ function isFormula(text: string) {
 }
 
 /** One of an NPC's own fields: long text, or a line that may be a formula to roll. */
-function NpcField({
+export function NpcField({
   campaign,
   c,
   field: f,
