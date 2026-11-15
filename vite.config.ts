@@ -387,7 +387,7 @@ export default defineConfig({
       "src/systems/dungeon-world-2/rulebook.json",
     ],
   },
-  base: process.env.PAGES_BASE_PATH || "/",
+  base: process.env["PAGES_BASE_PATH"] || "/",
   server: {
     hmr: false,
   },

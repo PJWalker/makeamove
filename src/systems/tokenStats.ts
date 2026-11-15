@@ -10,7 +10,7 @@ export const hpColour = (hp: number, max: number): string =>
 
 /** A token's hit point bar, from the character's `hp` resource. */
 export function hpTokenStat(character: CharacterView, max: number): TokenStat {
-  const hp = character.resources.hp ?? 0;
+  const hp = character.resources["hp"] ?? 0;
   return {
     id: "hp",
     label: "HP",

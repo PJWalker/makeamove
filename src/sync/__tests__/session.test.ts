@@ -4,7 +4,7 @@ import { SyncSession } from "../session";
 import { MemoryRoom } from "./memoryRoom";
 
 const userName = (state: Record<string, unknown>) =>
-  (state.user as { name?: string } | undefined)?.name;
+  (state["user"] as { name?: string } | undefined)?.name;
 
 const rootDoc = () => new Y.Doc({ guid: "camp" });
 

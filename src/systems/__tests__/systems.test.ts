@@ -138,7 +138,7 @@ describe("Blades in the Dark", () => {
       derive(
         bladesCharacter({ data: { specialAbilities: "ability-cutter-mule", load: 3 } }),
         blades,
-      ).values.maxLoad,
+      ).values["maxLoad"],
     ).toBe(5);
     expect(
       plainText(blades.actions.find((action) => action.id === "ability-cutter-mule")?.text),
@@ -350,7 +350,7 @@ describe("Dungeon World 2", () => {
     for (const action of dw2.actions.filter((entry) => entry.category === "path")) {
       const step = action.steps[0];
       if (step?.kind !== "check") continue;
-      expect(Boolean(step.followUps?.miss)).toBe(
+      expect(Boolean(step.followUps?.["miss"])).toBe(
         /\bmark(?:s)?\s+(?:1\s+)?XP\b/i.test(plainText(step.outcomes["miss"])),
       );
     }
@@ -377,11 +377,11 @@ describe("Dungeon World 2", () => {
       expect(hints.name).toMatch(/^e\.g\. /);
       expect(hints.relationship).toMatch(/^e\.g\. /);
     }
-    expect(CLASS_CREATION_HINTS.barbarian?.identity?.ancestry).toBe(
+    expect(CLASS_CREATION_HINTS["barbarian"]?.identity?.["ancestry"]).toBe(
       "e.g. construct, minotaur, nephilim, etc. What makes your homeland so different from places here?",
     );
-    expect(CLASS_CREATION_HINTS.barbarian?.scores).toContain("STR is +2");
-    expect(CLASS_CREATION_HINTS.bard?.relationship).toContain("We were an item");
+    expect(CLASS_CREATION_HINTS["barbarian"]?.scores).toContain("STR is +2");
+    expect(CLASS_CREATION_HINTS["bard"]?.relationship).toContain("We were an item");
     const distributions: Record<string, string> = {
       barbarian: "-1,0,0,2,2",
       bard: "-1,0,1,1,2",
@@ -512,7 +512,7 @@ describe("Dungeon World 2", () => {
         },
       ],
     });
-    expect(derive(equipped, dw2).values.armor).toBe(2);
+    expect(derive(equipped, dw2).values["armor"]).toBe(2);
     expect(dw2.resolveDamage!(equipped, derive(equipped, dw2), 5, {})).toEqual({ hp: 3 });
 
     const carried = bladesCharacter({
@@ -532,7 +532,7 @@ describe("Dungeon World 2", () => {
         },
       ],
     });
-    expect(derive(carried, dw2).values.armor).toBe(0);
+    expect(derive(carried, dw2).values["armor"]).toBe(0);
   });
 
   it("uses the Rogue mixed dice, including advantage and disadvantage", () => {
@@ -547,7 +547,7 @@ describe("Dungeon World 2", () => {
   it("derives class HP and grants only the selected class starting move", () => {
     const c = bladesCharacter({ data: { classId: "wizard", level: 4 } });
     const d = derive(c, dw2);
-    expect(d.values.maxHp).toBe(9);
+    expect(d.values["maxHp"]).toBe(9);
     const actions = dw2.actionsFor(c, d).map((action) => action.id);
     expect(actions).toContain("wizard-weave-arcane");
     expect(actions).not.toContain("barbarian-rage");
@@ -563,7 +563,7 @@ describe("Dungeon World 2", () => {
     ).toBe(true);
     const speech = dw2.actions.find((action) => action.name === "Forthright Speech")?.steps[0];
     expect(speech).toMatchObject({ kind: "check", stat: "cha" });
-    expect(speech?.kind === "check" && plainText(speech.outcomes.strong)).toContain(
+    expect(speech?.kind === "check" && plainText(speech.outcomes["strong"])).toContain(
       "clear a Condition",
     );
     const path = DW2_PATHS.find((entry) => entry.id === "barbarian-berserker")!;
@@ -586,7 +586,7 @@ describe("Dungeon World 2", () => {
       (choice) => choice.id === "advancement",
     )!;
     expect(levelTen.options.some((option) => option.id === "stat-str")).toBe(true);
-    expect(derive(bladesCharacter({ scores: { str: 3 } }), dw2).mods.str).toBe(3);
+    expect(derive(bladesCharacter({ scores: { str: 3 } }), dw2).mods["str"]).toBe(3);
   });
 
   it("limits tiered stat, Path, multiclass, and magic-item acquisitions", () => {
@@ -677,9 +677,9 @@ describe("Dungeon World 2", () => {
       pickedOptions,
       creation.listFields,
     );
-    expect(made.startingItems).toBe("ancestral-longsword,shield,adventuring-gear,hearty-feast");
-    expect(made.appearance1).toBe("Cultural raiment");
-    expect(made.appearance2).toBe("Massive stature");
+    expect(made["startingItems"]).toBe("ancestral-longsword,shield,adventuring-gear,hearty-feast");
+    expect(made["appearance1"]).toBe("Cultural raiment");
+    expect(made["appearance2"]).toBe("Massive stature");
   });
 
   it("tracks the beta Wealth thresholds and purchase costs", () => {
@@ -823,12 +823,12 @@ describe("Dungeon World 2", () => {
       data: { classId: "barbarian", level: 1 },
       inventory: [inventoryItem(soulstealer, [soulMove.id])],
     });
-    expect(derive(armed, dw2).mods.str).toBe(1);
+    expect(derive(armed, dw2).mods["str"]).toBe(1);
     expect(
       dw2.actionsFor(armed, derive(armed, dw2)).some((action) => action.name === soulMove.name),
     ).toBe(true);
     const carried = { ...armed, inventory: [inventoryItem(soulstealer, [soulMove.id], false)] };
-    expect(derive(carried, dw2).mods.str).toBe(-1);
+    expect(derive(carried, dw2).mods["str"]).toBe(-1);
     expect(
       dw2.actionsFor(carried, derive(carried, dw2)).some((action) => action.name === soulMove.name),
     ).toBe(false);
@@ -842,12 +842,12 @@ describe("Dungeon World 2", () => {
         ),
       ],
     });
-    expect(derive(healed, dw2).mods.cha).toBe(3);
+    expect(derive(healed, dw2).mods["cha"]).toBe(3);
     const marked = bladesCharacter({
       data: { classId: "barbarian", level: 1 },
       inventory: [inventoryItem(mark, [])],
     });
-    expect(derive(marked, dw2).values.maxHp).toBe(13);
+    expect(derive(marked, dw2).values["maxHp"]).toBe(13);
   });
 });
 
@@ -860,8 +860,8 @@ describe("resolveEffects", () => {
       { name: "Base", effects: [{ type: "modify", path: "armor", op: "set", value: 1 }] },
     ]);
     // set 1, add 2 → 3, multiply 2 → 6, max 5 → 5
-    expect(r.values.armor).toBe(5);
-    expect(r.why.armor).toEqual(["Base: 0 → 1", "Mail: 1 → 3", "Double: 3 → 6", "Cap: 6 → 5"]);
+    expect(r.values["armor"]).toBe(5);
+    expect(r.why["armor"]).toEqual(["Base: 0 → 1", "Mail: 1 → 3", "Double: 3 → 6", "Cap: 6 → 5"]);
   });
 
   it("orders by priority before phase", () => {
@@ -869,7 +869,7 @@ describe("resolveEffects", () => {
       { name: "late", effects: [{ type: "modify", path: "x", op: "set", value: 9, priority: 1 }] },
       { name: "early", effects: [{ type: "modify", path: "x", op: "add", value: 1 }] },
     ]);
-    expect(r.values.x).toBe(9);
+    expect(r.values["x"]).toBe(9);
   });
 
   it("collects granted moves, tags and roll bonuses once", () => {
@@ -897,8 +897,8 @@ describe("resolveEffects", () => {
       name: "B",
       effects: [{ type: "modify", path: "x", op: "multiply", value: 3 } as const],
     };
-    expect(resolveEffects({ x: 1 }, [a, b]).values.x).toBe(
-      resolveEffects({ x: 1 }, [b, a]).values.x,
+    expect(resolveEffects({ x: 1 }, [a, b]).values["x"]).toBe(
+      resolveEffects({ x: 1 }, [b, a]).values["x"],
     );
   });
 });

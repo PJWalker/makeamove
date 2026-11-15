@@ -90,7 +90,7 @@ describe("Dungeon World 2 campaign behavior", () => {
     const pips = () => tokenMarksSource(campaign)("token", id).pips.map((pip) => pip.id);
     setConditionState(campaign, id, "angry", "marked");
     expect(pips()).toEqual(["angry"]);
-    const max = getCharacter(campaign, id)!.resources.hp!;
+    const max = getCharacter(campaign, id)!.resources["hp"]!;
     bumpResource(campaign, id, "hp", Math.floor(max / 2) - max);
     expect(pips()).toEqual(["angry", "bloodied"]);
     campaign.destroy();
@@ -175,7 +175,7 @@ describe("Dungeon World 2 campaign behavior", () => {
     const item = getCharacter(campaign, id)!.inventory[0]!;
     updateItem(campaign, id, item.id, { equipped: true });
     expect(getCharacter(campaign, id)!.inventory[0]!.equipped).toBe(true);
-    expect(derive(getCharacter(campaign, id)!, systemOf(campaign)).values.armor).toBe(1);
+    expect(derive(getCharacter(campaign, id)!, systemOf(campaign)).values["armor"]).toBe(1);
     const context = { campaign } as CampaignContext;
     expect(startMoveCommand.offers!(context).map(({ params }) => params.move)).toContain(
       "trade-blows",
@@ -191,10 +191,10 @@ describe("Dungeon World 2 campaign behavior", () => {
     const brom = newCharacter(campaign, "Brom", "bard");
 
     expect(await endDungeonWorld2Session(campaign, ayla, [true, false, true])).toBe(true);
-    expect(getCharacter(campaign, ayla)?.data.xp).toBe(2);
-    expect(getCharacter(campaign, brom)?.data.xp).toBe(2);
+    expect(getCharacter(campaign, ayla)?.data["xp"]).toBe(2);
+    expect(getCharacter(campaign, brom)?.data["xp"]).toBe(2);
     expect(await endDungeonWorld2Session(campaign, ayla, [true, true, true])).toBe(false);
-    expect(getCharacter(campaign, ayla)?.data.xp).toBe(2);
+    expect(getCharacter(campaign, ayla)?.data["xp"]).toBe(2);
     campaign.destroy();
   });
 
@@ -218,7 +218,7 @@ describe("Dungeon World 2 campaign behavior", () => {
     ).toBe(true);
     for (const id of [ayla, brom]) {
       const character = getCharacter(campaign, id)!;
-      expect(character.resources.hp).toBe(derive(character, systemOf(campaign)).values.maxHp);
+      expect(character.resources["hp"]).toBe(derive(character, systemOf(campaign)).values["maxHp"]);
     }
     expect(getCharacter(campaign, ayla)?.conditions).not.toContain("angry");
     expect(getCharacter(campaign, brom)?.conditions).toContain("frightened");
@@ -266,7 +266,7 @@ describe("Dungeon World 2 campaign behavior", () => {
     expect(
       consumeDungeonWorld2Item(campaign, ayla, healingPotion.id, { kind: "heal-half-lost" }),
     ).toBe(true);
-    expect(getCharacter(campaign, ayla)?.resources.hp).toBe(9);
+    expect(getCharacter(campaign, ayla)?.resources["hp"]).toBe(9);
     expect(
       getCharacter(campaign, ayla)?.inventory.find((item) => item.id === healingPotion.id)
         ?.usesLeft,
@@ -295,8 +295,8 @@ describe("Dungeon World 2 campaign behavior", () => {
     bumpResource(campaign, ayla, "hp", -6);
     bumpResource(campaign, brom, "hp", -4);
     expect(consumeDungeonWorld2Item(campaign, ayla, heartyFeast.id)).toBe(true);
-    expect(getCharacter(campaign, ayla)?.resources.hp).toBe(9);
-    expect(getCharacter(campaign, brom)?.resources.hp).toBe(8);
+    expect(getCharacter(campaign, ayla)?.resources["hp"]).toBe(9);
+    expect(getCharacter(campaign, brom)?.resources["hp"]).toBe(8);
     expect(
       getCharacter(campaign, ayla)?.inventory.find((item) => item.id === heartyFeast.id)?.usesLeft,
     ).toBe(0);
@@ -348,7 +348,7 @@ describe("Dungeon World 2 campaign behavior", () => {
       type: "physical",
       shieldItemId: shieldInstance.id,
     });
-    expect(getCharacter(campaign, ayla)?.resources.hp).toBe(9);
+    expect(getCharacter(campaign, ayla)?.resources["hp"]).toBe(9);
     expect(
       getCharacter(campaign, ayla)?.inventory.find((item) => item.id === shieldInstance.id)
         ?.usesLeft,
@@ -359,7 +359,7 @@ describe("Dungeon World 2 campaign behavior", () => {
       (item) => item.defId === shield.id && item.usesLeft === 1,
     )!;
     applyDamage(campaign, "piercing-attack", target, 2, false, { type: "piercing" });
-    expect(getCharacter(campaign, ayla)?.resources.hp).toBe(7);
+    expect(getCharacter(campaign, ayla)?.resources["hp"]).toBe(7);
     expect(
       getCharacter(campaign, ayla)?.inventory.find((item) => item.id === replacement.id)?.usesLeft,
     ).toBe(1);
@@ -424,7 +424,7 @@ describe("Dungeon World 2 campaign behavior", () => {
     expect(beginDungeonWorld2Downtime(campaign)).toBe(1);
     expect(trainDungeonWorld2(campaign, ayla)).toBe(true);
     expect(trainDungeonWorld2(campaign, ayla)).toBe(false);
-    expect(getCharacter(campaign, ayla)?.data.xp).toBe(1);
+    expect(getCharacter(campaign, ayla)?.data["xp"]).toBe(1);
     expect(carouseDungeonWorld2(campaign, ayla, "clear-locked", undefined, "angry")).toBe(true);
     expect(getCharacter(campaign, ayla)?.lockedConditions).not.toContain("angry");
     expect(carouseDungeonWorld2(campaign, ayla, "gain-depth", brom)).toBe(true);
@@ -461,7 +461,7 @@ describe("Dungeon World 2 campaign behavior", () => {
     setData(campaign, ayla, "treasureBoxes", 2);
     expect(beginDungeonWorld2Downtime(campaign)).toBe(2);
     expect(await shopDungeonWorld2Service(campaign, ayla, "repair", 3)).toBe(true);
-    expect(getCharacter(campaign, ayla)?.data.treasureBoxes).toBe(1);
+    expect(getCharacter(campaign, ayla)?.data["treasureBoxes"]).toBe(1);
     expect(trainDungeonWorld2(campaign, ayla)).toBe(true);
     campaign.destroy();
   });
@@ -480,10 +480,10 @@ describe("Dungeon World 2 campaign behavior", () => {
 
     expect(saleValueDungeonWorld2Item(campaign, ayla, cheap.id)).toBe(0);
     expect(sellDungeonWorld2Item(campaign, ayla, cheap.id)).toBe(true);
-    expect(getCharacter(campaign, ayla)?.data.treasureBoxes).toBe(4);
+    expect(getCharacter(campaign, ayla)?.data["treasureBoxes"]).toBe(4);
     expect(saleValueDungeonWorld2Item(campaign, ayla, better.id)).toBe(1);
     expect(sellDungeonWorld2Item(campaign, ayla, better.id)).toBe(true);
-    expect(getCharacter(campaign, ayla)?.data.treasureBoxes).toBe(5);
+    expect(getCharacter(campaign, ayla)?.data["treasureBoxes"]).toBe(5);
     campaign.destroy();
   });
 
@@ -608,7 +608,9 @@ describe("Dungeon World 2 campaign behavior", () => {
       scores: { str: 0, dex: 1, int: 1, wis: -1, cha: 2 },
       resources: { hp: 6 },
     });
-    expect(derive(getCharacter(campaign, characterId)!, systemOf(campaign)).values.maxHp).toBe(12);
+    expect(derive(getCharacter(campaign, characterId)!, systemOf(campaign)).values["maxHp"]).toBe(
+      12,
+    );
     campaign.destroy();
   });
 
@@ -628,7 +630,7 @@ describe("Dungeon World 2 campaign behavior", () => {
       struggleMax: 3,
     });
     expect(revealStruggle(campaign, characterId, "vengeful")).toBe(false);
-    expect(getCharacter(campaign, characterId)?.data.struggleId).toBe("reformed");
+    expect(getCharacter(campaign, characterId)?.data["struggleId"]).toBe("reformed");
     campaign.destroy();
   });
 

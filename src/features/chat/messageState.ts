@@ -31,7 +31,7 @@ export const useTextState = (campaign: Campaign, id: string) =>
 
 /** Text as last edited, or as sent. */
 export const editedText = (state: Record<string, unknown>, text: ChatContent): ChatContent =>
-  (state.text as ChatContent | undefined) ?? text;
+  (state["text"] as ChatContent | undefined) ?? text;
 
 const key = (messageId: string, field: string) => `${messageId}/${field}`;
 

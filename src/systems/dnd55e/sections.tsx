@@ -78,7 +78,7 @@ export function CharacterDetails({ system, c, editable }: SectionContext) {
 }
 
 export function FeatsLine({ c }: Pick<SectionContext, "c">) {
-  const feats = commaListOf(c.data.feats).flatMap((id) => FEATS.find((f) => f.id === id) ?? []);
+  const feats = commaListOf(c.data["feats"]).flatMap((id) => FEATS.find((f) => f.id === id) ?? []);
   if (!feats.length) return null;
   return (
     <p className="dnd-feats">
@@ -98,32 +98,32 @@ export function VitalsSection({ c, d, editable }: SectionContext) {
   const ctx = useCampaign();
   const v = d.values;
   const level = levelOf(c.data);
-  const xp = num(c.data.xp);
+  const xp = num(c.data["xp"]);
   return (
     <Block label="Vitals">
       <div className="sheet-vitals">
         <Counter
           label="HP"
-          value={c.resources.hp ?? 0}
-          max={v.maxHp}
+          value={c.resources["hp"] ?? 0}
+          max={v["maxHp"]}
           disabled={!editable}
           onChange={(by) =>
-            ctx.execute(bumpResource, { id: c.id, resource: "hp", by, max: v.maxHp })
+            ctx.execute(bumpResource, { id: c.id, resource: "hp", by, max: v["maxHp"] })
           }
         />
         <Counter
           label="Temp HP"
-          value={num(c.data.tempHp)}
+          value={num(c.data["tempHp"])}
           disabled={!editable}
           onChange={(by) => ctx.execute(bumpData, { id: c.id, key: "tempHp", by })}
         />
         <Counter
-          label={`Hit Dice (d${v.hitDie})`}
-          value={c.resources.hitDice ?? 0}
-          max={v.hitDiceMax}
+          label={`Hit Dice (d${v["hitDie"]})`}
+          value={c.resources["hitDice"] ?? 0}
+          max={v["hitDiceMax"]}
           disabled={!editable}
           onChange={(by) =>
-            ctx.execute(bumpResource, { id: c.id, resource: "hitDice", by, max: v.hitDiceMax })
+            ctx.execute(bumpResource, { id: c.id, resource: "hitDice", by, max: v["hitDiceMax"] })
           }
         />
         <Counter
@@ -140,7 +140,7 @@ export function VitalsSection({ c, d, editable }: SectionContext) {
         />
         <label className="counter">
           <span className="eyebrow">
-            XP{level < 20 && <span className="muted"> / {v.xpNext}</span>}
+            XP{level < 20 && <span className="muted"> / {v["xpNext"]}</span>}
           </span>
           <input
             type="number"
@@ -158,7 +158,7 @@ export function VitalsSection({ c, d, editable }: SectionContext) {
         </label>
         <Counter
           label="GP"
-          value={num(c.data.gp)}
+          value={num(c.data["gp"])}
           disabled={!editable}
           onChange={(by) => ctx.execute(bumpData, { id: c.id, key: "gp", by })}
         />
@@ -167,10 +167,10 @@ export function VitalsSection({ c, d, editable }: SectionContext) {
         <label className="stat-deb">
           <input
             type="checkbox"
-            checked={!!c.data.inspiration}
+            checked={!!c.data["inspiration"]}
             disabled={!editable}
             onChange={() =>
-              ctx.execute(setData, { id: c.id, key: "inspiration", value: !c.data.inspiration })
+              ctx.execute(setData, { id: c.id, key: "inspiration", value: !c.data["inspiration"] })
             }
           />
           Heroic Inspiration
@@ -183,7 +183,8 @@ export function VitalsSection({ c, d, editable }: SectionContext) {
 /** Offered once enough experience is earned: Level Up opens the advancement. */
 export function LevelUp({ campaign, c, d, editable }: SectionContext) {
   const [levelling, setLevelling] = useState(false);
-  const ready = editable && levelOf(c.data) < 20 && num(c.data.xp) >= valueOf(d.values, "xpNext");
+  const ready =
+    editable && levelOf(c.data) < 20 && num(c.data["xp"]) >= valueOf(d.values, "xpNext");
   return (
     <>
       {ready && (
@@ -205,7 +206,7 @@ export function LevelUp({ campaign, c, d, editable }: SectionContext) {
 /** Successes and failures, while at 0 hit points. */
 export function DeathSaves({ c, editable, use }: Sections) {
   const ctx = useCampaign();
-  if ((c.resources.hp ?? 0) !== 0) return null;
+  if ((c.resources["hp"] ?? 0) !== 0) return null;
   const counter = (label: string, key: "deathSuccesses" | "deathFailures") => (
     <Counter
       label={label}
@@ -240,9 +241,9 @@ export function CombatStats({ d, editable, use }: Pick<Sections, "d" | "editable
       <dl className="sheet-derived">
         <DerivedEntry
           label="AC"
-          title={[...(why.armorBase ?? []), ...(why.acBonus ?? [])].join("\n") || undefined}
+          title={[...(why["armorBase"] ?? []), ...(why["acBonus"] ?? [])].join("\n") || undefined}
         >
-          {v.ac}
+          {v["ac"]}
         </DerivedEntry>
         <DerivedEntry label="Initiative">
           <button
@@ -254,11 +255,11 @@ export function CombatStats({ d, editable, use }: Pick<Sections, "d" | "editable
             {signedStr(valueOf(v, "initiative"))}
           </button>
         </DerivedEntry>
-        <DerivedEntry label="Speed" title={why.speed?.join("\n")}>
-          {v.speed} ft
+        <DerivedEntry label="Speed" title={why["speed"]?.join("\n")}>
+          {v["speed"]} ft
         </DerivedEntry>
         <DerivedEntry label="Proficiency">{signedStr(valueOf(v, "prof"))}</DerivedEntry>
-        <DerivedEntry label="Passive Perception">{v.passivePerception}</DerivedEntry>
+        <DerivedEntry label="Passive Perception">{v["passivePerception"]}</DerivedEntry>
         {valueOf(v, "spellDc") > 0 && (
           <>
             <DerivedEntry label="Spell save DC">{valueOf(v, "spellDc")}</DerivedEntry>
@@ -342,11 +343,11 @@ export function ResourcePools({ system, c, d, editable }: SectionContext) {
 export function RestSection({ c, d, editable }: SectionContext) {
   const ctx = useCampaign();
   const v = d.values;
-  const conMod = d.mods.con;
+  const conMod = d.mods["con"];
   const spendHitDie = () => {
     ctx.execute(bumpResource, { id: c.id, resource: "hitDice", by: -1 });
     void ctx.execute(roll, {
-      formula: `1d${v.hitDie}${conMod ? `${conMod < 0 ? "-" : "+"}${Math.abs(conMod)}[CON]` : ""}`,
+      formula: `1d${v["hitDie"]}${conMod ? `${conMod < 0 ? "-" : "+"}${Math.abs(conMod)}[CON]` : ""}`,
       visibility: "public",
       comment: "Hit Die",
     });
@@ -357,14 +358,14 @@ export function RestSection({ c, d, editable }: SectionContext) {
       ctx.execute(setData, { id: c.id, key: "tempHp", value: 0 });
       ctx.execute(setData, { id: c.id, key: "deathSuccesses", value: 0 });
       ctx.execute(setData, { id: c.id, key: "deathFailures", value: 0 });
-      if (v.exhaustion)
-        ctx.execute(setData, { id: c.id, key: "exhaustion", value: v.exhaustion - 1 });
+      if (v["exhaustion"])
+        ctx.execute(setData, { id: c.id, key: "exhaustion", value: v["exhaustion"] - 1 });
     });
   };
   return (
     <Block label="Rest">
       <div className="sheet-row">
-        <Button disabled={!editable || !(c.resources.hitDice ?? 0)} onClick={spendHitDie}>
+        <Button disabled={!editable || !(c.resources["hitDice"] ?? 0)} onClick={spendHitDie}>
           Spend Hit Die
         </Button>
         <Button

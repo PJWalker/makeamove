@@ -20,7 +20,7 @@ import { parseInputNumber } from "../../lib/number";
 
 function TreasureWealth({ sheet }: { sheet: ReturnType<typeof useSheet> }) {
   const ctx = useCampaign();
-  const boxes = Number(sheet.c.data.treasureBoxes ?? 4);
+  const boxes = Number(sheet.c.data["treasureBoxes"] ?? 4);
   const wealth = wealthTierForBoxes(boxes);
   return (
     <section className="form-section sheet-section" aria-label="Treasure & Wealth">
@@ -46,10 +46,10 @@ function TreasureWealth({ sheet }: { sheet: ReturnType<typeof useSheet> }) {
 export function DungeonWorld2Sheet(props: SheetProps) {
   const ctx = useCampaign();
   const sheet = useSheet(props);
-  const struggle = sheet.c.data.struggleRevealed
-    ? STRUGGLES.find((entry) => entry.id === sheet.c.data.struggleId)
+  const struggle = sheet.c.data["struggleRevealed"]
+    ? STRUGGLES.find((entry) => entry.id === sheet.c.data["struggleId"])
     : undefined;
-  const revealed = sheet.c.data.struggleRevealed === true;
+  const revealed = sheet.c.data["struggleRevealed"] === true;
   const characterId = sheet.c.id;
   const isPc = sheet.c.kind === "pc";
   // A Struggle from the Libraries reveals it, while the character has none.
@@ -97,7 +97,7 @@ export function DungeonWorld2Sheet(props: SheetProps) {
                 min={0}
                 max={struggle.track.max}
                 step={1}
-                value={Number(sheet.c.data.struggleProgress ?? struggle.track.initial ?? 0)}
+                value={Number(sheet.c.data["struggleProgress"] ?? struggle.track.initial ?? 0)}
                 disabled={!sheet.editable}
                 onChange={(event) => {
                   const value = parseInputNumber(event.currentTarget.value);
@@ -211,14 +211,12 @@ function ItemAward({
   tag: "magic-item" | "artifact";
   title: string;
 }) {
-  const ctx = useCampaign();
-  const options =
-    tag === "magic-item"
-      ? [...DW2_GEAR.filter((item) => item.tags.includes("magic")), ...DW2_MAGIC_ITEMS]
-      : DW2_MAGIC_ITEMS.filter((item) => item.tags.includes(tag));
-  const [selected, setSelected] = useState(options[0]?.id ?? "");
-  const pending =
-    sheet.c.kind === "pc" && sheet.c.data[field] === true && sheet.c.data[claimedField] !== true;
+  const { options, selected, setSelected, pending, award } = useItemAward(
+    sheet,
+    field,
+    claimedField,
+    tag,
+  );
   if (!pending) return null;
   return (
     <section className="form-section sheet-section" aria-label={title}>
@@ -233,22 +231,36 @@ function ItemAward({
           ))}
         </select>
       </label>
-      <Button
-        variant="secondary"
-        disabled={!sheet.editable || !selected}
-        onClick={() => {
-          const item = options.find((entry) => entry.id === selected);
-          if (!item) return;
-          ctx.commands.batch(() => {
-            ctx.execute(giveItem, { characterId: sheet.c.id, item });
-            ctx.execute(setData, { id: sheet.c.id, key: claimedField, value: true });
-          });
-        }}
-      >
+      <Button variant="secondary" disabled={!sheet.editable || !selected} onClick={award}>
         Add to Inventory
       </Button>
     </section>
   );
+}
+
+function useItemAward(
+  sheet: ReturnType<typeof useSheet>,
+  field: "magicItemAward" | "artifactAward",
+  claimedField: "magicItemClaimed" | "artifactClaimed",
+  tag: "magic-item" | "artifact",
+) {
+  const ctx = useCampaign();
+  const options =
+    tag === "magic-item"
+      ? [...DW2_GEAR.filter((item) => item.tags.includes("magic")), ...DW2_MAGIC_ITEMS]
+      : DW2_MAGIC_ITEMS.filter((item) => item.tags.includes(tag));
+  const [selected, setSelected] = useState(options[0]?.id ?? "");
+  const pending =
+    sheet.c.kind === "pc" && sheet.c.data[field] === true && sheet.c.data[claimedField] !== true;
+  const award = () => {
+    const item = options.find((entry) => entry.id === selected);
+    if (!item) return;
+    ctx.commands.batch(() => {
+      ctx.execute(giveItem, { characterId: sheet.c.id, item });
+      ctx.execute(setData, { id: sheet.c.id, key: claimedField, value: true });
+    });
+  };
+  return { options, selected, setSelected, pending, award };
 }
 
 export function DungeonWorld2NpcSheet(props: SheetProps) {

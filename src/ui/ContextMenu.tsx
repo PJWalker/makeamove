@@ -52,63 +52,7 @@ export function ContextMenu({
   onClose: () => void;
   label?: string;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef(document.activeElement as HTMLElement);
-  const closed = useRef(false);
-  useLayoutEffect(() => {
-    closed.current = false;
-  }, [items, x, y]);
-  /** Dismissed without choosing: fade out, since there's nothing to go back into. */
-  const dismiss = () => {
-    if (closed.current) return;
-    closed.current = true;
-    if (ref.current) void leave(ref.current, onClose, null);
-    else onClose();
-  };
-  const choose = (item: Extract<MenuItem, { onSelect: () => void }>, index: number) => {
-    if (closed.current || item.disabled) return;
-    closed.current = true;
-    const origin = ref.current?.querySelector<HTMLElement>(`[data-action-index="${index}"]`);
-    const run = () => {
-      onClose();
-      item.onSelect();
-    };
-    if (origin && item.label.endsWith("…")) morphOpen(origin, run);
-    else {
-      if (origin) {
-        setMorphOrigin(origin);
-        origin.style.viewTransitionName = `menu-selection-${crypto.randomUUID()}`;
-        void withTransition(run).finally(() => {
-          origin.style.removeProperty("view-transition-name");
-        });
-      } else run();
-    }
-  };
-
-  // Press, drag and release with the right button chooses the item it's released on;
-  // React Aria only acts on the left button's release. It takes a drag inside the
-  // menu first, so a plain right-click doesn't choose whatever opened under it.
-  const dragged = useRef(false);
-  const onRightRelease = useEffectEvent((event: PointerEvent) => {
-    if (event.button !== 2 || !dragged.current) return;
-    const row = (event.target as Element).closest<HTMLElement>("[data-action-index]");
-    if (!row || !ref.current?.contains(row)) return;
-    const index = Number(row.dataset.actionIndex);
-    const item = items[index];
-    if (item && item !== "divider" && "onSelect" in item) choose(item, index);
-  });
-  useEffect(() => {
-    const onMove = (event: PointerEvent) => {
-      if (event.buttons & 2 && ref.current?.contains(event.target as Node)) dragged.current = true;
-    };
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onRightRelease);
-    return () => {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onRightRelease);
-    };
-  }, []);
-
+  const { ref, triggerRef, dismiss, choose } = useContextMenuActions(x, y, items, onClose);
   return (
     <Popover
       ref={ref}
@@ -124,7 +68,7 @@ export function ContextMenu({
       aria-label={label ?? "Actions"}
       className="context-menu panel"
       data-context-menu
-      onContextMenu={(e) => e.preventDefault()}
+      onContextMenu={(event) => event.preventDefault()}
     >
       <Menu aria-label={label ?? "Actions"} className="context-menu-actions" autoFocus="first">
         {items.map((item, index) => {
@@ -177,6 +121,64 @@ export function ContextMenu({
       )}
     </Popover>
   );
+}
+
+function useContextMenuActions(x: number, y: number, items: MenuItem[], onClose: () => void) {
+  const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef(document.activeElement as HTMLElement);
+  const closed = useRef(false);
+  useLayoutEffect(() => {
+    closed.current = false;
+  }, [items, x, y]);
+  /** Dismissed without choosing: fade out, since there's nothing to go back into. */
+  const dismiss = () => {
+    if (closed.current) return;
+    closed.current = true;
+    if (ref.current) void leave(ref.current, onClose, null);
+    else onClose();
+  };
+  const choose = (item: Extract<MenuItem, { onSelect: () => void }>, index: number) => {
+    if (closed.current || item.disabled) return;
+    closed.current = true;
+    const origin = ref.current?.querySelector<HTMLElement>(`[data-action-index="${index}"]`);
+    const run = () => {
+      onClose();
+      item.onSelect();
+    };
+    if (origin && item.label.endsWith("…")) morphOpen(origin, run);
+    else {
+      if (origin) {
+        setMorphOrigin(origin);
+        origin.style.viewTransitionName = `menu-selection-${crypto.randomUUID()}`;
+        void withTransition(run).finally(() => {
+          origin.style.removeProperty("view-transition-name");
+        });
+      } else run();
+    }
+  };
+
+  const dragged = useRef(false);
+  const onRightRelease = useEffectEvent((event: PointerEvent) => {
+    if (event.button !== 2 || !dragged.current) return;
+    const row = (event.target as Element).closest<HTMLElement>("[data-action-index]");
+    if (!row || !ref.current?.contains(row)) return;
+    const index = Number(row.dataset["actionIndex"]);
+    const item = items[index];
+    if (item && item !== "divider" && "onSelect" in item) choose(item, index);
+  });
+  useEffect(() => {
+    const onMove = (event: PointerEvent) => {
+      if (event.buttons & 2 && ref.current?.contains(event.target as Node)) dragged.current = true;
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onRightRelease);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onRightRelease);
+    };
+  }, []);
+
+  return { ref, triggerRef, dismiss, choose };
 }
 
 /** A colour picker embedded in a menu. */

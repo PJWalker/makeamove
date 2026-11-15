@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { getCharacter, systemOf } from "../features/characters/api";
 import { derive } from "../features/characters/store";
 import { roundOf, turnOf, turnOrder, type CombatantView } from "../features/combat/combat";
@@ -54,65 +54,14 @@ export function CombatPanel({ campaign }: { campaign: Campaign }) {
   );
   const [roundText, turn] = state.split("|");
   const round = Number(roundText);
-  const order = useQuery(campaign.combatants, () => JSON.stringify(turnOrder(campaign.combatants)));
-  const all = JSON.parse(order) as CombatantView[];
+  const readTurnOrder = useCallback(() => turnOrder(campaign.combatants), [campaign.combatants]);
+  const all = useQuery(campaign.combatants, readTurnOrder);
   const shown = gm ? all : all.filter((c) => !c.hidden);
   const [open, setOpen] = useState<string | null>(null);
 
   return (
     <div className="combat-panel">
-      <PanelActions>
-        <span className="combat-round">{round ? `Round ${round}` : "Not started"}</span>
-        {gm && (
-          <span className="combat-controls">
-            {round > 0 ? (
-              <>
-                <Button
-                  variant="ghost"
-                  icon={IconPreviousTurn}
-                  onClick={() => ctx.execute(previousCombatTurn, undefined)}
-                >
-                  Back
-                </Button>
-                <Button
-                  variant="primary"
-                  icon={IconNextTurn}
-                  disabled={!all.length}
-                  onClick={() => ctx.execute(nextTurn, undefined)}
-                >
-                  Next Turn
-                </Button>
-                <Button
-                  variant="ghost"
-                  icon={IconEndCombat}
-                  onClick={() => ctx.execute(endCombat, undefined)}
-                >
-                  End
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button
-                  variant="ghost"
-                  icon={IconDice}
-                  disabled={!all.some((c) => c.init === null)}
-                  onClick={() => void ctx.execute(rollForNpcs, undefined)}
-                >
-                  Roll for NPCs
-                </Button>
-                <Button
-                  variant="primary"
-                  icon={IconStartCombat}
-                  disabled={!all.length}
-                  onClick={() => ctx.execute(startCombat, undefined)}
-                >
-                  Start
-                </Button>
-              </>
-            )}
-          </span>
-        )}
-      </PanelActions>
+      <CombatControls gm={gm} round={round} combatants={all} />
       {shown.length ? (
         <ol className="combat-list">
           {shown.map((c) => (
@@ -135,6 +84,72 @@ export function CombatPanel({ campaign }: { campaign: Campaign }) {
         </p>
       )}
     </div>
+  );
+}
+
+function CombatControls({
+  gm,
+  round,
+  combatants,
+}: {
+  gm: boolean;
+  round: number;
+  combatants: CombatantView[];
+}) {
+  const ctx = useCampaign();
+  return (
+    <PanelActions>
+      <span className="combat-round">{round ? `Round ${round}` : "Not started"}</span>
+      {gm && (
+        <span className="combat-controls">
+          {round > 0 ? (
+            <>
+              <Button
+                variant="ghost"
+                icon={IconPreviousTurn}
+                onClick={() => ctx.execute(previousCombatTurn, undefined)}
+              >
+                Back
+              </Button>
+              <Button
+                variant="primary"
+                icon={IconNextTurn}
+                disabled={!combatants.length}
+                onClick={() => ctx.execute(nextTurn, undefined)}
+              >
+                Next Turn
+              </Button>
+              <Button
+                variant="ghost"
+                icon={IconEndCombat}
+                onClick={() => ctx.execute(endCombat, undefined)}
+              >
+                End
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="ghost"
+                icon={IconDice}
+                disabled={!combatants.some((combatant) => combatant.init === null)}
+                onClick={() => void ctx.execute(rollForNpcs, undefined)}
+              >
+                Roll for NPCs
+              </Button>
+              <Button
+                variant="primary"
+                icon={IconStartCombat}
+                disabled={!combatants.length}
+                onClick={() => ctx.execute(startCombat, undefined)}
+              >
+                Start
+              </Button>
+            </>
+          )}
+        </span>
+      )}
+    </PanelActions>
   );
 }
 
@@ -269,14 +284,15 @@ function CombatRow({
   const ctx = useCampaign();
   const system = systemOf(campaign);
   // Re-render when the character changes (HP, conditions).
-  useQuery(campaign.characters, () =>
-    JSON.stringify(getCharacter(campaign, c.characterId) ?? null),
+  const readCharacter = useCallback(
+    () => getCharacter(campaign, c.characterId) ?? null,
+    [campaign, c.characterId],
   );
-  const ch = getCharacter(campaign, c.characterId);
+  const ch = useQuery(campaign.characters, readCharacter);
   // Their player or the GM: whoever may change their initiative.
   const mine = can(ctx, setInitiative, { id: c.id, init: null });
-  const hp = ch ? (ch.resources.hp ?? 0) : null;
-  const maxHp = ch ? derive(ch, system).values.maxHp : null;
+  const hp = ch ? (ch.resources["hp"] ?? 0) : null;
+  const maxHp = ch ? derive(ch, system).values["maxHp"] : null;
   const concentration = ch?.concentration
     ? system.actions.find((a) => a.id === ch.concentration)?.name
     : undefined;
@@ -327,6 +343,86 @@ function ConditionForm({
   turn: string | null;
   everyone: CombatantView[];
 }) {
+  const {
+    system,
+    condition,
+    setCondition,
+    rounds,
+    setRounds,
+    of,
+    setOf,
+    tick,
+    setTick,
+    has,
+    add,
+    remove,
+  } = useConditionForm(campaign, characterId, turn, everyone);
+  return (
+    <form
+      className="combat-form"
+      onSubmit={(event) => {
+        event.preventDefault();
+        add();
+      }}
+    >
+      <select
+        aria-label="Condition"
+        value={condition}
+        onChange={(event) => setCondition(event.currentTarget.value)}
+      >
+        {system.conditions.map((entry) => (
+          <option key={entry.id} value={entry.id}>
+            {entry.name}
+          </option>
+        ))}
+      </select>
+      <label className="combat-form-rounds">
+        <input
+          type="number"
+          min={0}
+          max={100}
+          value={rounds}
+          onInput={(event) => setRounds(Number(event.currentTarget.value) || 0)}
+        />
+        rounds, to the
+      </label>
+      <select
+        aria-label="Counted at"
+        value={tick}
+        onChange={(event) => setTick(event.currentTarget.value as "start" | "end")}
+      >
+        <option value="end">end</option>
+        <option value="start">start</option>
+      </select>
+      <select
+        aria-label="Of whose turn"
+        value={of}
+        onChange={(event) => setOf(event.currentTarget.value)}
+      >
+        {everyone.map((combatant) => (
+          <option key={combatant.id} value={combatant.id}>
+            of {combatant.name}’s turn
+          </option>
+        ))}
+      </select>
+      <Button type="submit" variant="primary">
+        {has ? "Set Duration" : "Add"}
+      </Button>
+      {has && (
+        <Button variant="ghost" onClick={remove}>
+          Remove
+        </Button>
+      )}
+    </form>
+  );
+}
+
+function useConditionForm(
+  campaign: Campaign,
+  characterId: string,
+  turn: string | null,
+  everyone: CombatantView[],
+) {
   const ctx = useCampaign();
   const system = systemOf(campaign);
   const [condition, setCondition] = useState(system.conditions[0]?.id ?? "");
@@ -343,61 +439,19 @@ function ConditionForm({
       duration: rounds > 0 && of ? { rounds, tick, of } : undefined,
     });
   };
-  return (
-    <form
-      className="combat-form"
-      onSubmit={(e) => {
-        e.preventDefault();
-        add();
-      }}
-    >
-      <select
-        aria-label="Condition"
-        value={condition}
-        onChange={(e) => setCondition(e.currentTarget.value)}
-      >
-        {system.conditions.map((k) => (
-          <option key={k.id} value={k.id}>
-            {k.name}
-          </option>
-        ))}
-      </select>
-      <label className="combat-form-rounds">
-        <input
-          type="number"
-          min={0}
-          max={100}
-          value={rounds}
-          onInput={(e) => setRounds(Number(e.currentTarget.value) || 0)}
-        />
-        rounds, to the
-      </label>
-      <select
-        aria-label="Counted at"
-        value={tick}
-        onChange={(e) => setTick(e.currentTarget.value as "start" | "end")}
-      >
-        <option value="end">end</option>
-        <option value="start">start</option>
-      </select>
-      <select aria-label="Of whose turn" value={of} onChange={(e) => setOf(e.currentTarget.value)}>
-        {everyone.map((x) => (
-          <option key={x.id} value={x.id}>
-            of {x.name}’s turn
-          </option>
-        ))}
-      </select>
-      <Button type="submit" variant="primary">
-        {has ? "Set Duration" : "Add"}
-      </Button>
-      {has && (
-        <Button
-          variant="ghost"
-          onClick={() => ctx.execute(removeTimedCondition, { characterId, condition })}
-        >
-          Remove
-        </Button>
-      )}
-    </form>
-  );
+  const remove = () => ctx.execute(removeTimedCondition, { characterId, condition });
+  return {
+    system,
+    condition,
+    setCondition,
+    rounds,
+    setRounds,
+    of,
+    setOf,
+    tick,
+    setTick,
+    has,
+    add,
+    remove,
+  };
 }

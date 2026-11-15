@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from "react";
 import { statBonus } from "../features/characters/store";
 import type { CharacterView } from "../features/characters/types";
 import { conditionColour } from "../features/combat/pipColours";
@@ -52,6 +52,7 @@ export type { SheetProps } from "../systems/extensionTypes";
 type Props = SheetProps & { layout: SheetSection[] };
 
 const num = (v: unknown) => Number(v ?? 0);
+const sectionKey = (section: SheetSection) => `${section.kind}:${JSON.stringify(section)}`;
 
 /** What a sheet takes when dropped on it, beyond gear and moves: a rules entity from the Libraries, say. */
 export interface SheetDrop {
@@ -91,14 +92,11 @@ export function SheetFrame({
 
 export function DeclarativeSheet({ layout, ...props }: Props) {
   const sheet = useSheet(props);
+  const keys = useMemo(() => layout.map(sectionKey), [layout]);
   return (
     <SheetFrame {...sheet}>
-      {layout.map((section) => (
-        <SheetSectionView
-          key={`${section.kind}:${JSON.stringify(section)}`}
-          {...sheet}
-          section={section}
-        />
+      {layout.map((section, index) => (
+        <SheetSectionView key={keys[index]} {...sheet} section={section} />
       ))}
     </SheetFrame>
   );
@@ -128,18 +126,10 @@ function Advancement({ campaign, system, c, d, editable, section }: SectionOf<"a
 }
 
 function Loadout({ system, c, d, editable, id }: SectionContext & { id: string }) {
-  const ctx = useCampaign();
-  const [free, setFree] = useState(false);
-  const [query, setQuery] = useState("");
-  const definition = system.loadouts?.find((entry) => entry.id === id);
-  if (!definition) return null;
-  const max = typeof definition.max === "number" ? definition.max : (d.values[definition.max] ?? 0);
-  const owned = definition.available?.(c, d) ?? commaListOf(c.data[definition.ownedField]);
-  const ownedIds = new Set(owned);
-  const active = commaListOf(c.data[definition.activeField]).slice(0, max);
-  const activeIds = new Set(active);
-  const options = definition.options.filter((option) => ownedIds.has(option.id));
-  if (!options.length || max <= 0) return null;
+  const loadout = useLoadout({ system, c, d, id });
+  if (!loadout) return null;
+  const { definition, max, active, options, free, setFree, query, setQuery, toggleOption } =
+    loadout;
   return (
     <section className="form-section sheet-section" aria-label={definition.label}>
       <h3 className="sheet-heading">
@@ -164,40 +154,61 @@ function Loadout({ system, c, d, editable, id }: SectionContext & { id: string }
           onInput={(event) => setQuery(event.currentTarget.value)}
         />
       )}
-      {options.flatMap((option) => {
-        if (!option.name.toLowerCase().includes(query.trim().toLowerCase())) return [];
-        const selected = activeIds.has(option.id);
-        const cost = definition.costs?.[option.id];
-        const resource = cost && system.resources.find((entry) => entry.id === cost.resource);
-        const affordable =
-          !cost ||
-          free ||
-          (!!resource &&
-            (c.resources[cost.resource] ?? 0) + cost.by <= (d.values[resource.max] ?? 0) &&
-            (c.resources[cost.resource] ?? 0) + cost.by >= 0);
-        return [
-          <label key={option.id} className="check-option" title={option.text}>
-            <input
-              type="checkbox"
-              checked={selected}
-              disabled={!editable || (!selected && (active.length >= max || !affordable))}
-              onChange={() =>
-                ctx.execute(setLoadout, {
-                  id: c.id,
-                  loadout: id,
-                  options: selected
-                    ? active.filter((entry) => entry !== option.id)
-                    : [...active, option.id],
-                  free,
-                })
-              }
-            />
-            {option.name}
-          </label>,
-        ];
-      })}
+      {options.map(({ option, selected, affordable }) => (
+        <label key={option.id} className="check-option" title={option.text}>
+          <input
+            type="checkbox"
+            checked={selected}
+            disabled={!editable || (!selected && (active.length >= max || !affordable))}
+            onChange={() => toggleOption(option.id)}
+          />
+          {option.name}
+        </label>
+      ))}
     </section>
   );
+}
+
+function useLoadout({
+  system,
+  c,
+  d,
+  id,
+}: Pick<SectionContext, "system" | "c" | "d"> & { id: string }) {
+  const ctx = useCampaign();
+  const [free, setFree] = useState(false);
+  const [query, setQuery] = useState("");
+  const definition = system.loadouts?.find((entry) => entry.id === id);
+  if (!definition) return null;
+  const max = typeof definition.max === "number" ? definition.max : (d.values[definition.max] ?? 0);
+  const owned = definition.available?.(c, d) ?? commaListOf(c.data[definition.ownedField]);
+  const ownedIds = new Set(owned);
+  const active = commaListOf(c.data[definition.activeField]).slice(0, max);
+  const activeIds = new Set(active);
+  const options = definition.options.flatMap((option) => {
+    if (!ownedIds.has(option.id) || !option.name.toLowerCase().includes(query.trim().toLowerCase()))
+      return [];
+    const cost = definition.costs?.[option.id];
+    const resource = cost && system.resources.find((entry) => entry.id === cost.resource);
+    const affordable =
+      !cost ||
+      free ||
+      (!!resource &&
+        (c.resources[cost.resource] ?? 0) + cost.by <= (d.values[resource.max] ?? 0) &&
+        (c.resources[cost.resource] ?? 0) + cost.by >= 0);
+    return [{ option, affordable, selected: activeIds.has(option.id) }];
+  });
+  if (!options.length || max <= 0) return null;
+  const toggleOption = (optionId: string) => {
+    const selected = activeIds.has(optionId);
+    ctx.execute(setLoadout, {
+      id: c.id,
+      loadout: id,
+      options: selected ? active.filter((entry) => entry !== optionId) : [...active, optionId],
+      free,
+    });
+  };
+  return { definition, max, active, options, free, setFree, query, setQuery, toggleOption };
 }
 
 type SectionOf<K extends SheetSection["kind"]> = SectionContext & {
@@ -352,6 +363,103 @@ function Stats({
   hint?: string | undefined;
   showScore: boolean;
 }) {
+  const {
+    menu,
+    setMenu,
+    lockable,
+    rows,
+    rollStat,
+    updateScore,
+    cycleCondition,
+    toggleConditionState,
+  } = useStats({ system, c, d, editable, showScore });
+  return (
+    <section className="form-section sheet-section" aria-label={label}>
+      <h3 className="sheet-heading">
+        {label} {hint && <span className="muted">· {hint}</span>}
+      </h3>
+      <ul className="sheet-stats" data-lockable={lockable}>
+        {rows.map(({ stat, tied, has, state, nextState, trigger }) => (
+          <li
+            key={stat.id}
+            data-debilitated={has}
+            style={
+              tied && has ? { "--condition-colour": conditionColour(system, tied.id) } : undefined
+            }
+          >
+            <span className="stat-abbr" title={stat.name}>
+              {stat.abbr}
+            </span>
+            <button
+              type="button"
+              className="stat-mod"
+              title={`Roll +${stat.name}`}
+              aria-label={`Roll +${stat.name}`}
+              onClick={() => rollStat(stat.id, stat.abbr)}
+              onPointerDown={editable ? trigger.onPointerDown : undefined}
+              onContextMenu={editable ? trigger.onContextMenu : undefined}
+            >
+              {signedStr(statBonus(d, stat.id))}
+            </button>
+            {showScore && (
+              <label className="stat-score-label">
+                <span className="muted">Score</span>
+                <input
+                  className="stat-score"
+                  type="number"
+                  min={stat.min ?? 1}
+                  max={stat.max ?? 20}
+                  aria-label={`${stat.name} score`}
+                  value={c.scores[stat.id]}
+                  disabled={!editable}
+                  onChange={(event) => updateScore(stat, event.currentTarget.value)}
+                />
+              </label>
+            )}
+            {tied?.lockable ? (
+              <button
+                type="button"
+                className="stat-deb condition-status"
+                data-state={state}
+                style={{ "--condition-colour": conditionColour(system, tied.id) }}
+                aria-label={`${tied.name}: ${state}. ${nextState === "clear" ? "Clear" : nextState === "marked" ? "Mark" : "Lock"} condition`}
+                title={`${tied.name}: ${state}`}
+                disabled={!editable}
+                onClick={() => cycleCondition(tied.id, nextState)}
+              >
+                <span className="condition-symbol" aria-hidden="true">
+                  {state === "locked" ? <IconLock size={16} /> : <span className="condition-dot" />}
+                </span>
+                <span className="condition-name">{tied.name}</span>
+              </button>
+            ) : (
+              tied && (
+                <label className="stat-deb">
+                  <input
+                    type="checkbox"
+                    checked={has}
+                    disabled={!editable}
+                    onChange={() => toggleConditionState(tied.id)}
+                  />
+                  {tied.name}
+                </label>
+              )
+            )}
+          </li>
+        ))}
+      </ul>
+      {menu && <ContextMenu {...menu} onClose={() => setMenu(null)} />}
+    </section>
+  );
+}
+
+function useStats({
+  system,
+  c,
+  d,
+  editable,
+  showScore,
+}: Pick<SectionContext, "system" | "c" | "d" | "editable"> & { showScore: boolean }) {
   const ctx = useCampaign();
   const [menu, setMenu] = useState<{
     x: number;
@@ -370,129 +478,53 @@ function Stats({
   };
   const conditionIds = new Set(c.conditions);
   const lockedConditionIds = new Set(c.lockedConditions ?? []);
-  return (
-    <section className="form-section sheet-section" aria-label={label}>
-      <h3 className="sheet-heading">
-        {label} {hint && <span className="muted">· {hint}</span>}
-      </h3>
-      <ul
-        className="sheet-stats"
-        data-lockable={system.conditions.some((condition) => condition.lockable)}
-      >
-        {system.stats.map((s) => {
-          const tied = system.conditions.find((x) => x.stat === s.id);
-          const has = !!tied && conditionIds.has(tied.id);
-          const state =
-            tied && lockedConditionIds.has(tied.id) ? "locked" : has ? "marked" : "clear";
-          const nextState = state === "clear" ? "marked" : state === "marked" ? "locked" : "clear";
-          const trigger = menuTrigger((x, y) => {
-            if (!editable) return;
-            const min = s.min ?? 1;
-            const max = s.max ?? 20;
-            setMenu({
-              x,
-              y,
-              label: `Edit ${s.name}`,
-              items: Array.from({ length: max - min + 1 }, (_, index) => {
-                const value = min + index;
-                return {
-                  label: `Set ${s.name} to ${showScore ? value : signedStr(value)}`,
-                  checked: c.scores[s.id] === value,
-                  onSelect: () => ctx.execute(setScore, { id: c.id, stat: s.id, score: value }),
-                };
-              }),
-            });
-          });
-          return (
-            <li
-              key={s.id}
-              data-debilitated={has}
-              style={
-                tied && has ? { "--condition-colour": conditionColour(system, tied.id) } : undefined
-              }
-            >
-              <span className="stat-abbr" title={s.name}>
-                {s.abbr}
-              </span>
-              <button
-                type="button"
-                className="stat-mod"
-                title={`Roll +${s.name}`}
-                aria-label={`Roll +${s.name}`}
-                onClick={() => rollStat(s.id, s.abbr)}
-                onPointerDown={editable ? trigger.onPointerDown : undefined}
-                onContextMenu={editable ? trigger.onContextMenu : undefined}
-              >
-                {signedStr(statBonus(d, s.id))}
-              </button>
-              {showScore && (
-                <label className="stat-score-label">
-                  <span className="muted">Score</span>
-                  <input
-                    className="stat-score"
-                    type="number"
-                    min={s.min ?? 1}
-                    max={s.max ?? 20}
-                    aria-label={`${s.name} score`}
-                    value={c.scores[s.id]}
-                    disabled={!editable}
-                    onChange={(e) => {
-                      const value = parseInputNumber(e.currentTarget.value);
-                      if (
-                        value !== undefined &&
-                        Number.isInteger(value) &&
-                        value >= (s.min ?? 1) &&
-                        value <= (s.max ?? 20)
-                      )
-                        ctx.execute(setScore, { id: c.id, stat: s.id, score: value });
-                    }}
-                  />
-                </label>
-              )}
-              {tied?.lockable ? (
-                <button
-                  type="button"
-                  className="stat-deb condition-status"
-                  data-state={state}
-                  style={{
-                    "--condition-colour": conditionColour(system, tied.id),
-                  }}
-                  aria-label={`${tied.name}: ${state}. ${nextState === "clear" ? "Clear" : nextState === "marked" ? "Mark" : "Lock"} condition`}
-                  title={`${tied.name}: ${state}`}
-                  disabled={!editable}
-                  onClick={() =>
-                    ctx.execute(setCondition, { id: c.id, condition: tied.id, state: nextState })
-                  }
-                >
-                  <span className="condition-symbol" aria-hidden="true">
-                    {state === "locked" ? (
-                      <IconLock size={16} />
-                    ) : (
-                      <span className="condition-dot" />
-                    )}
-                  </span>
-                  <span className="condition-name">{tied.name}</span>
-                </button>
-              ) : (
-                tied && (
-                  <label className="stat-deb">
-                    <input
-                      type="checkbox"
-                      checked={has}
-                      disabled={!editable}
-                      onChange={() =>
-                        ctx.execute(toggleCondition, { id: c.id, condition: tied.id })
-                      }
-                    />
-                    {tied.name}
-                  </label>
-                )
-              )}
-            </li>
-          );
-        })}
-      </ul>
-      {menu && <ContextMenu {...menu} onClose={() => setMenu(null)} />}
-    </section>
-  );
+  const rows = system.stats.map((stat) => {
+    const tied = system.conditions.find((condition) => condition.stat === stat.id);
+    const has = !!tied && conditionIds.has(tied.id);
+    const state: "clear" | "marked" | "locked" =
+      tied && lockedConditionIds.has(tied.id) ? "locked" : has ? "marked" : "clear";
+    const nextState: "clear" | "marked" | "locked" =
+      state === "clear" ? "marked" : state === "marked" ? "locked" : "clear";
+    const trigger = menuTrigger((x, y) => {
+      if (!editable) return;
+      const min = stat.min ?? 1;
+      const max = stat.max ?? 20;
+      setMenu({
+        x,
+        y,
+        label: `Edit ${stat.name}`,
+        items: Array.from({ length: max - min + 1 }, (_, index) => {
+          const value = min + index;
+          return {
+            label: `Set ${stat.name} to ${showScore ? value : signedStr(value)}`,
+            checked: c.scores[stat.id] === value,
+            onSelect: () => ctx.execute(setScore, { id: c.id, stat: stat.id, score: value }),
+          };
+        }),
+      });
+    });
+    return { stat, tied, has, state, nextState, trigger };
+  });
+  const updateScore = (stat: GameSystem["stats"][number], typed: string) => {
+    const value = parseInputNumber(typed);
+    if (
+      value !== undefined &&
+      Number.isInteger(value) &&
+      value >= (stat.min ?? 1) &&
+      value <= (stat.max ?? 20)
+    )
+      ctx.execute(setScore, { id: c.id, stat: stat.id, score: value });
+  };
+  return {
+    menu,
+    setMenu,
+    lockable: system.conditions.some((condition) => condition.lockable),
+    rows,
+    rollStat,
+    updateScore,
+    cycleCondition: (condition: string, state: "clear" | "marked" | "locked") =>
+      ctx.execute(setCondition, { id: c.id, condition, state }),
+    toggleConditionState: (condition: string) =>
+      ctx.execute(toggleCondition, { id: c.id, condition }),
+  };
 }

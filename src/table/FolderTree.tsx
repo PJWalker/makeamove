@@ -45,75 +45,28 @@ export function FolderTree<Item, Folder extends FolderRecord>({
   showList: () => Promise<void>;
   emptyContent?: ReactNode;
 }) {
-  const ctx = useCampaign();
-  const [folded, setFolded] = useState<Set<string>>(new Set());
-  // The folder being named, and for one just made, the button it grows out of.
-  const [naming, setNaming] = useState<{ id: string; from?: DOMRect } | null>(null);
-  const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
-  const navRef = useRef<HTMLElement>(null);
-  const known = new Set(folders.map((folder) => folder.id));
-  const loose = items.filter((item) => {
-    const folderId = folderOf(item);
-    return !folderId || !known.has(folderId);
-  });
-
-  const toggle = (id: string) => {
-    const next = new Set(folded);
-    if (!next.delete(id)) next.add(id);
-    setFolded(next);
-  };
-
-  const newFolder = (e: MouseEvent<HTMLElement>) => {
-    const from = e.currentTarget.getBoundingClientRect();
-    void showList().then(() => {
-      const id = ctx.execute(folderCommands.create, {});
-      if (id) setNaming({ id, from });
-    });
-  };
-
-  useLayoutEffect(() => {
-    if (!naming?.from) return;
-    const group = navRef.current?.querySelector<HTMLElement>(
-      `[data-folder-drop="${CSS.escape(naming.id)}"]`,
-    );
-    if (!group) return;
-    group.scrollIntoView({ block: "nearest" });
-    growFrom(group, naming.from);
-  }, [naming]);
+  const {
+    folded,
+    naming,
+    menu,
+    navRef,
+    loose,
+    newFolder,
+    toggle,
+    folderChildren,
+    folderTrigger,
+    finishRename,
+    closeMenu,
+  } = useFolderTree({ folders, items, folderOf, tree, folderCommands, folderMenuItems, showList });
 
   return (
     <nav ref={navRef} className={className} aria-label={ariaLabel}>
       <PanelActions>{renderActions(newFolder)}</PanelActions>
       <div className="chars-tree panel-scroll" data-folder-drop="">
         {folders.map((folder) => {
-          const children = items.filter((item) => folderOf(item) === folder.id);
+          const children = folderChildren(folder);
           const open = !folded.has(folder.id);
-          const trigger = menuTrigger((x, y) => {
-            setMenu({
-              x,
-              y,
-              items: joinSections([
-                [
-                  {
-                    label: open ? "Collapse Folder" : "Expand Folder",
-                    onSelect: () => toggle(folder.id),
-                  },
-                  ...(ctx.commands.permits(folderCommands.rename, { id: folder.id, name: "" }) ===
-                  true
-                    ? [
-                        {
-                          label: "Rename Folder",
-                          Icon: IconRename,
-                          onSelect: () => setNaming({ id: folder.id }),
-                        },
-                      ]
-                    : []),
-                ],
-                folderMenuItems?.(folder) ?? [],
-                menuFor(ctx, { kind: "folder", tree, id: folder.id }),
-              ]),
-            });
-          });
+          const trigger = folderTrigger(folder, open);
 
           return (
             <ListGroup
@@ -130,13 +83,7 @@ export function FolderTree<Item, Folder extends FolderRecord>({
               group={{ "data-folder-drop": folder.id }}
               replaceHead={
                 naming?.id === folder.id ? (
-                  <FolderName
-                    initial={folder.name}
-                    onDone={(name) => {
-                      if (name) ctx.execute(folderCommands.rename, { id: folder.id, name });
-                      setNaming(null);
-                    }}
-                  />
+                  <FolderName initial={folder.name} onDone={(name) => finishRename(folder, name)} />
                 ) : undefined
               }
             >
@@ -147,7 +94,102 @@ export function FolderTree<Item, Folder extends FolderRecord>({
         <List>{loose.map(renderItem)}</List>
         {emptyContent}
       </div>
-      {menu && <ContextMenu {...menu} onClose={() => setMenu(null)} />}
+      {menu && <ContextMenu {...menu} onClose={closeMenu} />}
     </nav>
   );
+}
+
+function useFolderTree<Item, Folder extends FolderRecord>({
+  folders,
+  items,
+  folderOf,
+  tree,
+  folderCommands,
+  folderMenuItems,
+  showList,
+}: {
+  folders: Folder[];
+  items: Item[];
+  folderOf: (item: Item) => string | undefined;
+  tree: FolderTreeKind;
+  folderCommands: FolderCommands;
+  folderMenuItems: ((folder: Folder) => MenuItem[]) | undefined;
+  showList: () => Promise<void>;
+}) {
+  const ctx = useCampaign();
+  const [folded, setFolded] = useState<Set<string>>(new Set());
+  const [naming, setNaming] = useState<{ id: string; from?: DOMRect } | null>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
+  const navRef = useRef<HTMLElement>(null);
+  const known = new Set(folders.map((folder) => folder.id));
+  const loose = items.filter((item) => {
+    const folderId = folderOf(item);
+    return !folderId || !known.has(folderId);
+  });
+  const toggle = (id: string) =>
+    setFolded((current) => {
+      const next = new Set(current);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+  const newFolder = (event: MouseEvent<HTMLElement>) => {
+    const from = event.currentTarget.getBoundingClientRect();
+    void showList().then(() => {
+      const id = ctx.execute(folderCommands.create, {});
+      if (id) setNaming({ id, from });
+    });
+  };
+  const folderChildren = (folder: Folder) => items.filter((item) => folderOf(item) === folder.id);
+  const folderTrigger = (folder: Folder, open: boolean) =>
+    menuTrigger((x, y) => {
+      setMenu({
+        x,
+        y,
+        items: joinSections([
+          [
+            {
+              label: open ? "Collapse Folder" : "Expand Folder",
+              onSelect: () => toggle(folder.id),
+            },
+            ...(ctx.commands.permits(folderCommands.rename, { id: folder.id, name: "" }) === true
+              ? [
+                  {
+                    label: "Rename Folder",
+                    Icon: IconRename,
+                    onSelect: () => setNaming({ id: folder.id }),
+                  },
+                ]
+              : []),
+          ],
+          folderMenuItems?.(folder) ?? [],
+          menuFor(ctx, { kind: "folder", tree, id: folder.id }),
+        ]),
+      });
+    });
+  const finishRename = (folder: Folder, name: string | null) => {
+    if (name) ctx.execute(folderCommands.rename, { id: folder.id, name });
+    setNaming(null);
+  };
+  useLayoutEffect(() => {
+    if (!naming?.from) return;
+    const group = navRef.current?.querySelector<HTMLElement>(
+      `[data-folder-drop="${CSS.escape(naming.id)}"]`,
+    );
+    if (!group) return;
+    group.scrollIntoView({ block: "nearest" });
+    growFrom(group, naming.from);
+  }, [naming]);
+  return {
+    folded,
+    naming,
+    menu,
+    navRef,
+    loose,
+    newFolder,
+    toggle,
+    folderChildren,
+    folderTrigger,
+    finishRename,
+    closeMenu: () => setMenu(null),
+  };
 }

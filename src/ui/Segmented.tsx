@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Radio, RadioGroup, ToggleButton, ToggleButtonGroup } from "react-aria-components";
 
 /**
@@ -60,18 +60,7 @@ export function SegmentedOrSelect<T extends string>(props: Parameters<typeof Seg
   const { label, value, options, onChange, disabled } = props;
   const rootRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
-  const [fits, setFits] = useState(true);
-  useLayoutEffect(() => {
-    const root = rootRef.current;
-    const measure = measureRef.current;
-    if (!root || !measure) return;
-    const check = () => setFits(measure.offsetWidth <= root.clientWidth);
-    check();
-    const ro = new ResizeObserver(check);
-    ro.observe(root);
-    ro.observe(measure);
-    return () => ro.disconnect();
-  }, [fits]);
+  const fits = useSegmentedFit(rootRef, measureRef);
   return (
     <div className="segmented-or-select" ref={rootRef}>
       <div className="segmented-measure" ref={measureRef} aria-hidden="true" inert>
@@ -84,17 +73,36 @@ export function SegmentedOrSelect<T extends string>(props: Parameters<typeof Seg
           aria-label={label}
           value={value}
           disabled={disabled}
-          onChange={(e) => onChange(e.currentTarget.value as T)}
+          onChange={(event) => onChange(event.currentTarget.value as T)}
         >
-          {options.map((o) => (
-            <option key={o.id} value={o.id} disabled={o.disabled}>
-              {o.label}
+          {options.map((option) => (
+            <option key={option.id} value={option.id} disabled={option.disabled}>
+              {option.label}
             </option>
           ))}
         </select>
       )}
     </div>
   );
+}
+
+function useSegmentedFit(
+  rootRef: RefObject<HTMLDivElement | null>,
+  measureRef: RefObject<HTMLDivElement | null>,
+) {
+  const [fits, setFits] = useState(true);
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    const measure = measureRef.current;
+    if (!root || !measure) return;
+    const check = () => setFits(measure.offsetWidth <= root.clientWidth);
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(root);
+    ro.observe(measure);
+    return () => ro.disconnect();
+  }, [fits, measureRef, rootRef]);
+  return fits;
 }
 
 /**

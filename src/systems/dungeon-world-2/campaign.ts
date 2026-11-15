@@ -57,7 +57,7 @@ export const WEAPON_TAGS = new Set([
 export function revealStruggle(campaign: Campaign, id: string, struggleId: string): boolean {
   const character = getCharacter(campaign, id);
   const struggle = STRUGGLES.find((entry) => entry.id === struggleId);
-  if (character?.kind !== "pc" || character.data.struggleRevealed === true || !struggle)
+  if (character?.kind !== "pc" || character.data["struggleRevealed"] === true || !struggle)
     return false;
   campaign.doc.transact(() => {
     for (const [field, value] of Object.entries(revealedStruggleData(struggle)))
@@ -70,13 +70,13 @@ export function revealStruggle(campaign: Campaign, id: string, struggleId: strin
 export function resolveStruggle(campaign: Campaign, id: string): boolean {
   const system = systemOf(campaign);
   const character = getCharacter(campaign, id);
-  if (character?.kind !== "pc" || character.data.struggleRevealed !== true) return false;
+  if (character?.kind !== "pc" || character.data["struggleRevealed"] !== true) return false;
 
-  const level = Number(character.data.level ?? 1) + 1;
-  const previousMaxHp = derive(character, system).values.maxHp ?? 0;
-  const struggleId = String(character.data.struggleId ?? "");
+  const level = Number(character.data["level"] ?? 1) + 1;
+  const previousMaxHp = derive(character, system).values["maxHp"] ?? 0;
+  const struggleId = String(character.data["struggleId"] ?? "");
   const revealed = `reveal-struggle-${struggleId}`;
-  const advancements = commaListOf(character.data.advancements).filter(
+  const advancements = commaListOf(character.data["advancements"]).filter(
     (entry) => entry !== revealed,
   );
 
@@ -92,7 +92,7 @@ export function resolveStruggle(campaign: Campaign, id: string): boolean {
   });
 
   const resolved = getCharacter(campaign, id)!;
-  const maxHp = derive(resolved, system).values.maxHp ?? 0;
+  const maxHp = derive(resolved, system).values["maxHp"] ?? 0;
   const hpGain = maxHp - previousMaxHp;
   if (hpGain > 0) bumpResource(campaign, id, "hp", hpGain, maxHp);
   return true;
@@ -111,7 +111,7 @@ export function applyClassChange(
   const classChoice = system.creation?.choices.find((choice) => choice.id === "class");
   if (
     character?.kind !== "pc" ||
-    character.data.classId === classId ||
+    character.data["classId"] === classId ||
     !classChoice?.options.some((option) => option.id === classId)
   )
     return false;
@@ -179,8 +179,8 @@ export async function makeDungeonWorld2Camp(
   if (!card) return false;
   for (const character of listCharacters(campaign)) {
     if (character.kind !== "pc") continue;
-    const maxHp = derive(character, system).values.maxHp ?? 0;
-    bumpResource(campaign, character.id, "hp", maxHp - (character.resources.hp ?? 0), maxHp);
+    const maxHp = derive(character, system).values["maxHp"] ?? 0;
+    bumpResource(campaign, character.id, "hp", maxHp - (character.resources["hp"] ?? 0), maxHp);
     for (const item of character.inventory)
       if (item.resetUsesAtCamp && item.uses !== undefined && item.usesLeft !== item.uses)
         updateItem(campaign, character.id, item.id, { usesLeft: item.uses });
@@ -308,7 +308,7 @@ export function trainedDuringDungeonWorld2Downtime(
 
 function spendTreasure(campaign: Campaign, characterId: string): boolean {
   const character = getCharacter(campaign, characterId);
-  const boxes = Number(character?.data.treasureBoxes ?? 0);
+  const boxes = Number(character?.data["treasureBoxes"] ?? 0);
   if (character?.kind !== "pc" || boxes < 1) return false;
   setData(campaign, characterId, "treasureBoxes", boxes - 1);
   return true;
@@ -359,7 +359,7 @@ export function resupplyDungeonWorld2(campaign: Campaign, characterId: string): 
   if (
     character?.kind !== "pc" ||
     dungeonWorld2DowntimeEpoch(campaign) === 0 ||
-    Number(character.data.treasureBoxes ?? 0) < 1
+    Number(character.data["treasureBoxes"] ?? 0) < 1
   )
     return false;
   const replenishable = character.inventory.filter(
@@ -392,11 +392,11 @@ export async function shopDungeonWorld2Service(
     !service ||
     !tier ||
     !example ||
-    Number(character.data.treasureBoxes ?? 0) < 1
+    Number(character.data["treasureBoxes"] ?? 0) < 1
   )
     return false;
 
-  setData(campaign, characterId, "treasureBoxes", Number(character.data.treasureBoxes ?? 0) - 1);
+  setData(campaign, characterId, "treasureBoxes", Number(character.data["treasureBoxes"] ?? 0) - 1);
   await postText(
     campaign,
     contentFromText(
@@ -422,7 +422,7 @@ export function saleValueDungeonWorld2Item(
   )
     return null;
   return definition.wealthCost.rank >
-    wealthTierForBoxes(Number(character.data.treasureBoxes ?? 0)).rank
+    wealthTierForBoxes(Number(character.data["treasureBoxes"] ?? 0)).rank
     ? 1
     : 0;
 }
@@ -436,7 +436,7 @@ export function sellDungeonWorld2Item(
   const value = saleValueDungeonWorld2Item(campaign, characterId, itemId);
   if (value === null) return false;
   const character = getCharacter(campaign, characterId)!;
-  const boxes = Number(character.data.treasureBoxes ?? 0);
+  const boxes = Number(character.data["treasureBoxes"] ?? 0);
   removeItem(campaign, characterId, itemId);
   if (value > 0) setData(campaign, characterId, "treasureBoxes", addTreasureBoxes(boxes, value));
   return true;
@@ -449,7 +449,7 @@ export function trainDungeonWorld2(campaign: Campaign, characterId: string): boo
     character?.kind !== "pc" ||
     epoch === 0 ||
     trainedDuringDungeonWorld2Downtime(campaign, characterId) ||
-    Number(character.data.treasureBoxes ?? 0) < 1
+    Number(character.data["treasureBoxes"] ?? 0) < 1
   )
     return false;
 
@@ -517,7 +517,7 @@ export function consumeDungeonWorld2Item(
       return false;
     if (
       resolvedChoice.kind === "heal-half-lost" &&
-      (derive(character, system).values.maxHp ?? 0) <= (character.resources.hp ?? 0)
+      (derive(character, system).values["maxHp"] ?? 0) <= (character.resources["hp"] ?? 0)
     )
       return false;
   }
@@ -539,14 +539,14 @@ export function consumeDungeonWorld2Item(
     if (resolvedChoice?.kind === "clear-locked")
       clearCondition(campaign, characterId, resolvedChoice.condition);
     else if (resolvedChoice?.kind === "heal-half-lost") {
-      const maxHp = derive(character, system).values.maxHp ?? 0;
-      const lostHp = Math.max(0, maxHp - (character.resources.hp ?? 0));
+      const maxHp = derive(character, system).values["maxHp"] ?? 0;
+      const lostHp = Math.max(0, maxHp - (character.resources["hp"] ?? 0));
       bumpResource(campaign, characterId, "hp", Math.floor(lostHp / 2), maxHp);
     }
   } else if (definition?.itemUse === "hearty-feast") {
     for (const ally of listCharacters(campaign)) {
       if (ally.kind !== "pc") continue;
-      const maxHp = derive(ally, system).values.maxHp ?? 0;
+      const maxHp = derive(ally, system).values["maxHp"] ?? 0;
       bumpResource(campaign, ally.id, "hp", Math.floor(maxHp / 2), maxHp);
     }
   } else if (definition?.itemUse === "magic-wand" && resolvedChoice?.kind === "mark-condition") {

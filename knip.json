@@ -1,5 +1,10 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
+  "ignoreFiles": [
+    ".claude/hooks/react-doctor.mjs",
+    "eslint/noRawYjs.config.js",
+    "vitest.browser.config.ts"
+  ],
   "ignoreExportsUsedInFile": true,
   "ignoreDependencies": ["@svgr/plugin-jsx", "@swc/core"]
 }

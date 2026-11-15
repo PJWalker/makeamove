@@ -76,7 +76,7 @@ export const NoteImage = Node.create<{ peers: PeerBlobs | null }>({
     return ({ node }) => {
       const dom = document.createElement("figure");
       dom.className = "note-image";
-      dom.dataset.type = IMAGE_NODE;
+      dom.dataset["type"] = IMAGE_NODE;
       const { hash, width, height } = node.attrs as BlobRef;
       // Hold the space while it loads, so text doesn't jump.
       if (width && height) {
@@ -95,7 +95,7 @@ export const NoteImage = Node.create<{ peers: PeerBlobs | null }>({
           url = URL.createObjectURL(blob);
           img.src = url;
           dom.append(img);
-          dom.dataset.loaded = "true";
+          dom.dataset["loaded"] = "true";
         });
       void load();
       const stop = peers?.onAvailable(() => void load());
@@ -148,8 +148,8 @@ export function secretNode(mountSecret: ((host: HTMLElement, id: string) => () =
     addNodeView() {
       return ({ node }) => {
         const dom = document.createElement("div");
-        dom.dataset.type = SECRET_NODE;
-        dom.dataset.id = node.attrs.id as string;
+        dom.dataset["type"] = SECRET_NODE;
+        dom.dataset["id"] = node.attrs["id"] as string;
         if (!mountSecret) {
           dom.hidden = true;
           return { dom };
@@ -162,7 +162,7 @@ export function secretNode(mountSecret: ((host: HTMLElement, id: string) => () =
         const body = document.createElement("div");
         body.className = "note-secret-body";
         dom.append(label, body);
-        const unmount = mountSecret(body, node.attrs.id as string);
+        const unmount = mountSecret(body, node.attrs["id"] as string);
         return {
           dom,
           // The nested editor handles its own typing and selection.
@@ -208,7 +208,7 @@ export function makeSecret(editor: Editor, vault: Y.Doc): boolean {
 export function revealSecret(editor: Editor, vault: Y.Doc, pos: number) {
   const node = editor.state.doc.nodeAt(pos);
   if (node?.type.name !== SECRET_NODE) return;
-  const fragment = secretFragment(vault, node.attrs.id as string);
+  const fragment = secretFragment(vault, node.attrs["id"] as string);
   const json = yXmlFragmentToProsemirrorJSON(fragment) as JSONContent;
   const content = json.content?.length ? json.content : [{ type: "paragraph" }];
   editor
@@ -223,7 +223,7 @@ export function revealSecret(editor: Editor, vault: Y.Doc, pos: number) {
 export function deleteSecret(editor: Editor, vault: Y.Doc, pos: number) {
   const node = editor.state.doc.nodeAt(pos);
   if (node?.type.name !== SECRET_NODE) return;
-  const fragment = secretFragment(vault, node.attrs.id as string);
+  const fragment = secretFragment(vault, node.attrs["id"] as string);
   editor
     .chain()
     .focus()

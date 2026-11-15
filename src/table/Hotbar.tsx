@@ -28,6 +28,77 @@ import { useDockStripLayout } from "./dockStrip";
  * Right-click a slot to rename it, give it an icon or a shortcut.
  */
 export function Hotbar({ campaign }: { campaign: Campaign }) {
+  const { ctx, dragging, barRef, slots, find, run, edit, menu, setMenu, slotMenu, dragSlot } =
+    useHotbar(campaign);
+  return (
+    <>
+      <div
+        ref={barRef}
+        className="dock-strip hotbar strip across dock-bottom"
+        role="toolbar"
+        aria-label="Hotbar"
+        data-dragging={dragging !== null}
+        onWheel={scrollSideways}
+      >
+        {slots.map((id) => {
+          const action = find(id);
+          if (!action) return null;
+          const off = action.available !== true;
+          const look = slotLook(campaign, id);
+          const Icon = (look.icon && ENTRY_ICONS[look.icon]) || action.icon;
+          const label = look.label ?? action.title;
+          const combo = shortcutFor(campaign, id);
+          const tip = off ? `${label}: ${action.available}` : (action.detail ?? label);
+          const trigger = slotMenu(id, label);
+          return (
+            <div
+              key={id}
+              className="hotbar-slot"
+              data-unavailable={off}
+              data-dragging={dragging === id}
+              {...trigger}
+              onPointerDown={(event) => {
+                trigger.onPointerDown(event);
+                dragSlot(id, event);
+              }}
+            >
+              <button
+                type="button"
+                className="btn btn-ghost"
+                aria-disabled={off}
+                title={combo ? `${tip} (${showCombo(combo)})` : tip}
+                onClick={() => run(id)}
+                onKeyDown={(event) => {
+                  if (event.altKey && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
+                    event.preventDefault();
+                    edit((current) => shift(current, id, event.key === "ArrowLeft" ? -1 : 1));
+                  } else if (event.key === "Delete" || event.key === "Backspace") {
+                    event.preventDefault();
+                    edit((current) => unpin(current, id));
+                  }
+                }}
+              >
+                {Icon && <Icon size={22} />}
+                <span>{label}</span>
+              </button>
+            </div>
+          );
+        })}
+        <Button
+          variant="icon"
+          className="hotbar-palette"
+          label="Command palette (Ctrl/Cmd+K)"
+          onClick={() => ctx.table.togglePalette()}
+        >
+          <IconSearch size={22} />
+        </Button>
+      </div>
+      {menu && <ContextMenu {...menu} onClose={() => setMenu(null)} />}
+    </>
+  );
+}
+
+function useHotbar(campaign: Campaign) {
   // Rebuilt from the campaign's Yjs data on every change, which changes in place, so
   // React Compiler's memoizing would keep the old slots.
   "use no memo";
@@ -166,70 +237,5 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
     });
   };
 
-  return (
-    <>
-      <div
-        ref={barRef}
-        className="dock-strip hotbar strip across dock-bottom"
-        role="toolbar"
-        aria-label="Hotbar"
-        data-dragging={dragging !== null}
-        onWheel={scrollSideways}
-      >
-        {slots.map((id) => {
-          const a = find(id);
-          if (!a) return null;
-          const off = a.available !== true;
-          const look = slotLook(campaign, id);
-          const Icon = (look.icon && ENTRY_ICONS[look.icon]) || a.icon;
-          const label = look.label ?? a.title;
-          const combo = shortcutFor(campaign, id);
-          const tip = off ? `${label}: ${a.available}` : (a.detail ?? label);
-          const trigger = slotMenu(id, label);
-          return (
-            <div
-              key={id}
-              className="hotbar-slot"
-              data-unavailable={off}
-              data-dragging={dragging === id}
-              {...trigger}
-              onPointerDown={(e) => {
-                trigger.onPointerDown(e);
-                dragSlot(id, e);
-              }}
-            >
-              <button
-                type="button"
-                className="btn btn-ghost"
-                aria-disabled={off}
-                title={combo ? `${tip} (${showCombo(combo)})` : tip}
-                onClick={() => run(id)}
-                onKeyDown={(e) => {
-                  if (e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
-                    e.preventDefault();
-                    edit((s) => shift(s, id, e.key === "ArrowLeft" ? -1 : 1));
-                  } else if (e.key === "Delete" || e.key === "Backspace") {
-                    e.preventDefault();
-                    edit((s) => unpin(s, id));
-                  }
-                }}
-              >
-                {Icon && <Icon size={22} />}
-                <span>{label}</span>
-              </button>
-            </div>
-          );
-        })}
-        <Button
-          variant="icon"
-          className="hotbar-palette"
-          label="Command palette (Ctrl/Cmd+K)"
-          onClick={() => ctx.table.togglePalette()}
-        >
-          <IconSearch size={22} />
-        </Button>
-      </div>
-      {menu && <ContextMenu {...menu} onClose={() => setMenu(null)} />}
-    </>
-  );
+  return { ctx, dragging, barRef, slots, find, run, edit, menu, setMenu, slotMenu, dragSlot };
 }

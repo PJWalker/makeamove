@@ -18,7 +18,7 @@ export function advanceAttribute(
 ): boolean {
   const character = getCharacter(campaign, characterId);
   const attribute = ATTRIBUTES.find((entry) => entry.id === attributeId);
-  const mastery = commaListOf(systemCampaignData(campaign).crewUpgrades).includes("mastery");
+  const mastery = commaListOf(systemCampaignData(campaign)["crewUpgrades"]).includes("mastery");
   const cap = mastery ? 4 : 3;
   if (
     systemOf(campaign).id !== "blades-in-the-dark" ||
@@ -46,7 +46,7 @@ export function advanceCrew(campaign: Campaign, reward: string): boolean {
   const needed = counter.max ?? 10;
   const xp = getState<number>(campaign.messageState, counter.id, "value") ?? counter.start;
   const state = systemCampaignData(campaign);
-  const abilities = commaListOf(state.crewAbilities);
+  const abilities = commaListOf(state["crewAbilities"]);
   const allowed = system.campaignFields
     ?.find((field) => field.id === "crewAbilities")
     ?.options?.some((option) => option.id === reward);
@@ -57,7 +57,7 @@ export function advanceCrew(campaign: Campaign, reward: string): boolean {
       setSystemCampaignData(
         campaign,
         "crewUpgradePoints",
-        Number(state.crewUpgradePoints ?? 0) + 2,
+        Number(state["crewUpgradePoints"] ?? 0) + 2,
       );
     else setSystemCampaignData(campaign, "crewAbilities", formatCommaList([...abilities, reward]));
     setState(campaign.messageState, counter.id, "value", 0);
@@ -66,7 +66,7 @@ export function advanceCrew(campaign: Campaign, reward: string): boolean {
         campaign,
         character.id,
         "stash",
-        Number(character.data.stash ?? 0) + Number(state.crewTier ?? 0) + 2,
+        Number(character.data["stash"] ?? 0) + Number(state["crewTier"] ?? 0) + 2,
       );
   });
   return true;
@@ -78,33 +78,33 @@ export function buyCrewUpgrade(campaign: Campaign, upgrade: string): boolean {
     ?.find((field) => field.id === "crewUpgrades")
     ?.options?.some((option) => option.id === upgrade);
   const state = systemCampaignData(campaign);
-  const owned = commaListOf(state.crewUpgrades);
+  const owned = commaListOf(state["crewUpgrades"]);
   const cost = upgrade === "mastery" ? 4 : upgrade === "cohort" ? 2 : 1;
   if (
     system.id !== "blades-in-the-dark" ||
     !allowed ||
     owned.includes(upgrade) ||
-    Number(state.crewUpgradePoints ?? 0) < cost
+    Number(state["crewUpgradePoints"] ?? 0) < cost
   )
     return false;
   campaign.doc.transact(() => {
     setSystemCampaignData(campaign, "crewUpgrades", formatCommaList([...owned, upgrade]));
-    setSystemCampaignData(campaign, "crewUpgradePoints", Number(state.crewUpgradePoints) - cost);
+    setSystemCampaignData(campaign, "crewUpgradePoints", Number(state["crewUpgradePoints"]) - cost);
   });
   return true;
 }
 
 export function crewTierCost(campaign: Campaign) {
   const state = systemCampaignData(campaign);
-  const abilities = commaListOf(state.crewAbilities);
+  const abilities = commaListOf(state["crewAbilities"]);
   return {
     rep: Math.max(
       6,
       12 -
-        Number(state.crewTurf ?? 0) -
-        (abilities.includes("fiends") ? Number(state.crewWanted ?? 0) : 0),
+        Number(state["crewTurf"] ?? 0) -
+        (abilities.includes("fiends") ? Number(state["crewWanted"] ?? 0) : 0),
     ),
-    coin: (Number(state.crewTier ?? 0) + 1) * (abilities.includes("patron") ? 4 : 8),
+    coin: (Number(state["crewTier"] ?? 0) + 1) * (abilities.includes("patron") ? 4 : 8),
   };
 }
 
@@ -112,18 +112,18 @@ export function advanceCrewTier(campaign: Campaign): boolean {
   if (systemOf(campaign).id !== "blades-in-the-dark") return false;
   const state = systemCampaignData(campaign);
   const cost = crewTierCost(campaign);
-  const weak = state.crewHold === "weak";
+  const weak = state["crewHold"] === "weak";
   if (
-    Number(state.crewRep ?? 0) < cost.rep ||
-    (!weak && (Number(state.crewCoin ?? 0) < cost.coin || Number(state.crewTier ?? 0) >= 4))
+    Number(state["crewRep"] ?? 0) < cost.rep ||
+    (!weak && (Number(state["crewCoin"] ?? 0) < cost.coin || Number(state["crewTier"] ?? 0) >= 4))
   )
     return false;
   campaign.doc.transact(() => {
     setSystemCampaignData(campaign, "crewRep", 0);
     setSystemCampaignData(campaign, "crewHold", weak ? "strong" : "weak");
     if (!weak) {
-      setSystemCampaignData(campaign, "crewTier", Number(state.crewTier) + 1);
-      setSystemCampaignData(campaign, "crewCoin", Number(state.crewCoin) - cost.coin);
+      setSystemCampaignData(campaign, "crewTier", Number(state["crewTier"]) + 1);
+      setSystemCampaignData(campaign, "crewCoin", Number(state["crewCoin"]) - cost.coin);
     }
   });
   return true;

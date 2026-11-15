@@ -154,7 +154,7 @@ export function DndSheet({ campaign, system, c }: Props) {
   const use = useAction({ system, c });
   const section = { campaign, system, c, d, editable };
   const classChoice = system.creation?.choices.find((choice) => choice.field === "classId");
-  const cls = classChoice?.options.find((option) => option.id === c.data.classId);
+  const cls = classChoice?.options.find((option) => option.id === c.data["classId"]);
 
   return (
     <div
@@ -166,7 +166,7 @@ export function DndSheet({ campaign, system, c }: Props) {
         campaign={campaign}
         c={c}
         editable={editable}
-        detail={`${cls?.name ?? c.data.classId} ${levelOf(c.data)}`}
+        detail={`${cls?.name ?? c.data["classId"]} ${levelOf(c.data)}`}
       />
       <CharacterDetails {...section} />
       <FeatsLine c={c} />
@@ -207,7 +207,7 @@ export function DndNpcSheet({ campaign, system, c }: Props) {
   const ctx = useCampaign();
   const d = derive(c, system);
   const editable = canEdit(campaign, c);
-  const maxHp = num(c.data.maxHp);
+  const maxHp = num(c.data["maxHp"]);
   const use = useAction({ system, c });
   const section = { campaign, system, c, d, editable };
   const field = (id: string) => (
@@ -230,7 +230,7 @@ export function DndNpcSheet({ campaign, system, c }: Props) {
         <div className="sheet-vitals">
           <Counter
             label="HP"
-            value={c.resources.hp ?? 0}
+            value={c.resources["hp"] ?? 0}
             max={maxHp}
             disabled={!editable}
             onChange={(by) =>
@@ -254,7 +254,7 @@ export function DndNpcSheet({ campaign, system, c }: Props) {
           </label>
           <Counter
             label="Temp HP"
-            value={num(c.data.tempHp)}
+            value={num(c.data["tempHp"])}
             disabled={!editable}
             onChange={(by) => ctx.execute(bumpData, { id: c.id, key: "tempHp", by })}
           />

@@ -64,6 +64,6 @@ describe("the turn tracker", () => {
       left: { prone: durations.prone, blinded: durations.blinded },
       expired: ["stunned"],
     });
-    expect(tickDurations(durations, "a", "end").left.prone?.rounds).toBe(1);
+    expect(tickDurations(durations, "a", "end").left["prone"]?.rounds).toBe(1);
   });
 });

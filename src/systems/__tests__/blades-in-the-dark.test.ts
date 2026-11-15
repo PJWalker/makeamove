@@ -24,7 +24,7 @@ describe("Blades in the Dark campaign behavior", () => {
     const character = getCharacter(campaign, id)!;
     const derived = derive(character, bladesInTheDark);
 
-    expect(character.data.playbook).toBe("cutter");
+    expect(character.data["playbook"]).toBe("cutter");
     expect(derived.values).toMatchObject({ prowess: 1, maxLoad: 7 });
     expect(actionsFor(character, bladesInTheDark, derived).map((action) => action.id)).toContain(
       "ability-cutter-mule",

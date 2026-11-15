@@ -51,11 +51,11 @@ export function trackerButtonExtension(ctx: CampaignContext) {
     selectable: true,
     addAttributes() {
       return {
-        by: { default: 1, parseHTML: (el: HTMLElement) => Number(el.dataset.by ?? 1) },
-        name: { default: "", parseHTML: (el: HTMLElement) => el.dataset.name ?? "" },
+        by: { default: 1, parseHTML: (el: HTMLElement) => Number(el.dataset["by"] ?? 1) },
+        name: { default: "", parseHTML: (el: HTMLElement) => el.dataset["name"] ?? "" },
         label: {
           default: "",
-          parseHTML: (el: HTMLElement) => el.dataset.label ?? el.textContent ?? "",
+          parseHTML: (el: HTMLElement) => el.dataset["label"] ?? el.textContent ?? "",
         },
       };
     },
@@ -109,14 +109,14 @@ export function trackerButtonExtension(ctx: CampaignContext) {
       const buttonAt = (e: Event) =>
         (e.target as Element).closest<HTMLElement>(`[data-type="${TRACKER_NODE}"]`);
       const toButton = (el: HTMLElement): TrackerButton => ({
-        by: Number(el.dataset.by ?? 0),
-        name: el.dataset.name ?? "",
-        label: el.dataset.label ?? "",
+        by: Number(el.dataset["by"] ?? 0),
+        name: el.dataset["name"] ?? "",
+        label: el.dataset["label"] ?? "",
       });
       // Hovering shows what pressing would do for the selected character, or why it can't.
       dom.addEventListener("pointerover", (e) => {
         const el = buttonAt(e);
-        if (el) el.dataset.tip = trackerTip(campaign, actingCharacterId(campaign), toButton(el));
+        if (el) el.dataset["tip"] = trackerTip(campaign, actingCharacterId(campaign), toButton(el));
       });
       dom.addEventListener("click", (e) => {
         const el = buttonAt(e);

@@ -1,32 +1,15 @@
 {
+  "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
-    "target": "es2023",
     "module": "esnext",
     "lib": ["ES2023", "ES2025.RegExp", "DOM"],
     "types": ["vite/client", "unplugin-icons/types/react"],
     "allowArbitraryExtensions": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "noImplicitOverride": true,
-    "noUncheckedIndexedAccess": true,
 
     /* Bundler mode */
     "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "verbatimModuleSyntax": true,
-    "moduleDetection": "force",
-    "noEmit": true,
-    "jsx": "react-jsx",
-
-    /* Linting */
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "allowUnreachableCode": false,
-    "allowUnusedLabels": false,
-    "exactOptionalPropertyTypes": true,
-    "noImplicitReturns": true
+    "jsx": "react-jsx"
   },
   "include": ["src", "scripts"]
 }

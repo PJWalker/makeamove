@@ -224,11 +224,11 @@ function dragSideWidth(ctx: CampaignContext, side: Side, e: ReactPointerEvent) {
   const start = s.open ? s.width : 0;
   const grow = growDirection(side);
   const handle = e.currentTarget as HTMLElement;
-  handle.dataset.dragging = "true";
+  handle.dataset["dragging"] = "true";
   trackPointer(
     "ew-resize",
     (ev) => ctx.panels.setSideWidth(side, start + grow * (ev.clientX - e.clientX)),
-    () => delete handle.dataset.dragging,
+    () => delete handle.dataset["dragging"],
   );
 }
 

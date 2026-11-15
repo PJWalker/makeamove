@@ -21,10 +21,10 @@ export function linksIn(doc: DocNode): LinkRef[] {
   const walk = (n: DocNode) => {
     if (
       n.type === LINK_NODE &&
-      LINK_KINDS.includes(n.attrs?.kind as LinkKind) &&
-      typeof n.attrs?.id === "string"
+      LINK_KINDS.includes(n.attrs?.["kind"] as LinkKind) &&
+      typeof n.attrs?.["id"] === "string"
     ) {
-      seen.add(`${n.attrs.kind as LinkKind}:${n.attrs.id}`);
+      seen.add(`${n.attrs["kind"] as LinkKind}:${n.attrs["id"]}`);
     }
     n.content?.forEach(walk);
   };

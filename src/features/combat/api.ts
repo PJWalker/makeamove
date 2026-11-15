@@ -52,7 +52,7 @@ export function combatantForToken(campaign: Campaign, tokenId: string): string |
 /** Tie-breaker for a character: the system's initiative bonus. */
 function tieOf(campaign: Campaign, characterId?: string): number {
   const c = getCharacter(campaign, characterId);
-  return c ? (derive(c, systemOf(campaign)).values.initiative ?? 0) : 0;
+  return c ? (derive(c, systemOf(campaign)).values["initiative"] ?? 0) : 0;
 }
 
 /** Put tokens into the fight (those already in it are skipped). NPCs join hidden. */

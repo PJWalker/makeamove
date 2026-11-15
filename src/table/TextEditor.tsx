@@ -26,6 +26,65 @@ export function TextEditor({
   request: TextRequest;
   onDone: () => void;
 }) {
+  const { ref, el, look, scale, at, host, colour, finish, restyle } = useTextEditor(
+    controller,
+    request,
+    onDone,
+  );
+  return (
+    <div
+      ref={ref}
+      // A textarea can't size itself to its words in Safari, nor set its text as the map does.
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
+      role="textbox"
+      aria-multiline
+      tabIndex={0}
+      className="scene-text-editor"
+      contentEditable="plaintext-only"
+      suppressContentEditableWarning
+      aria-label="Text"
+      spellCheck={false}
+      style={{
+        left: `${host.left + at.x}px`,
+        top: `${host.top + at.y}px`,
+        rotate: `${el?.rot ?? 0}rad`,
+        fontFamily: fontFamily(look.font),
+        fontWeight: textWeight(look.bold),
+        fontStyle: look.italic ? "italic" : "normal",
+        fontSize: `${look.size * scale}px`,
+        color: colour.toHex(),
+        opacity: colour.alpha,
+        WebkitTextStroke: `${mapTextOutline(look.size) * scale}px ${OUTLINE}`,
+      }}
+      onKeyDown={(event) => {
+        event.stopPropagation();
+        const mod = event.metaKey || event.ctrlKey;
+        if (event.key === "Escape" || (mod && event.key === "Enter")) {
+          event.preventDefault();
+          finish();
+        } else if (mod && event.key.toLowerCase() === "b") {
+          event.preventDefault();
+          restyle({ bold: !look.bold });
+        } else if (mod && event.key.toLowerCase() === "i") {
+          event.preventDefault();
+          restyle({ italic: !look.italic });
+        }
+      }}
+      onBlur={(event) => {
+        if (event.relatedTarget?.closest("[data-text-style]")) {
+          const node = event.currentTarget;
+          addEventListener("pointerup", () => requestAnimationFrame(() => node.focus()), {
+            once: true,
+          });
+          return;
+        }
+        finish();
+      }}
+    />
+  );
+}
+
+function useTextEditor(controller: SceneController, request: TextRequest, onDone: () => void) {
   const ctx = useCampaign();
   const cam = useQuery(controller.camera);
   useQuery(controller.revision);
@@ -86,56 +145,5 @@ export function TextEditor({
   /** Text is styled through the Text tool's style, which text being edited follows. */
   const restyle = (patch: Partial<TextStyle>) => ctx.tools.setTextStyle(patch);
 
-  return (
-    <div
-      ref={ref}
-      // A textarea can't size itself to its words in Safari, nor set its text as the map does.
-      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
-      role="textbox"
-      aria-multiline
-      tabIndex={0}
-      className="scene-text-editor"
-      contentEditable="plaintext-only"
-      suppressContentEditableWarning
-      aria-label="Text"
-      spellCheck={false}
-      style={{
-        left: `${host.left + at.x}px`,
-        top: `${host.top + at.y}px`,
-        rotate: `${el?.rot ?? 0}rad`,
-        fontFamily: fontFamily(look.font),
-        fontWeight: textWeight(look.bold),
-        fontStyle: look.italic ? "italic" : "normal",
-        fontSize: `${look.size * scale}px`,
-        color: colour.toHex(),
-        opacity: colour.alpha,
-        WebkitTextStroke: `${mapTextOutline(look.size) * scale}px ${OUTLINE}`,
-      }}
-      onKeyDown={(e) => {
-        e.stopPropagation();
-        const mod = e.metaKey || e.ctrlKey;
-        if (e.key === "Escape" || (mod && e.key === "Enter")) {
-          e.preventDefault();
-          finish();
-        } else if (mod && e.key.toLowerCase() === "b") {
-          e.preventDefault();
-          restyle({ bold: !look.bold });
-        } else if (mod && e.key.toLowerCase() === "i") {
-          e.preventDefault();
-          restyle({ italic: !look.italic });
-        }
-      }}
-      onBlur={(e) => {
-        // Styling it keeps it in edit: focus comes back once the click is done.
-        if (e.relatedTarget?.closest("[data-text-style]")) {
-          const node = e.currentTarget;
-          addEventListener("pointerup", () => requestAnimationFrame(() => node.focus()), {
-            once: true,
-          });
-          return;
-        }
-        finish();
-      }}
-    />
-  );
+  return { ref, el, look, scale, at, host, colour, finish, restyle };
 }

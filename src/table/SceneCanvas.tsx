@@ -85,95 +85,33 @@ export default function SceneCanvas({
   campaign: Campaign;
   sceneId: string | null;
 }) {
-  const ctx = useCampaign();
   const hostRef = useRef<HTMLDivElement>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
-  const importAt = useRef<Point | null>(null);
-  const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
-  const [tokenOptions, setTokenOptions] = useState<string | null>(null);
-  /** Which tab the token pop-up opens on. */
-  const [tokenTab, setTokenTab] = useState<"character" | "token">("token");
-  const [dropping, setDropping] = useState(false);
-
   const { renderer, ready } = useSceneRenderer(campaign, hostRef);
   const controller = useSceneController(campaign, renderer, ready, sceneId, hostRef);
   useSheetOnTokenSelect(campaign, controller);
   useLighting(campaign, controller);
+  const {
+    ctx,
+    fileRef,
+    importAt,
+    dropping,
+    setDropping,
+    menu,
+    tokenOptions,
+    tokenTab,
+    textEdit,
+    setTextEdit,
+    menuOpener,
+    closeMenu,
+    onDoubleClick,
+    onDragOver,
+    onDrop,
+    onSelectionTokenOptions,
+    setTokenTab,
+    setTokenOptions,
+  } = useSceneCanvasInteractions(controller, hostRef);
   useSceneTargeting(ctx, controller);
   useSceneShortcuts(controller);
-  const [textEdit, setTextEdit] = useTextRequests(controller);
-  const openTokenOptions = useCallback((id: string, tab: "character" | "token") => {
-    setTokenTab(tab);
-    setTokenOptions(id);
-  }, []);
-  const importImagesAt = useCallback((at: Point) => {
-    importAt.current = at;
-    fileRef.current?.click();
-  }, []);
-  useCanvasCommands(controller, { openTokenOptions, importImagesAt });
-
-  const closeMenu = useCallback(() => setMenu(null), []);
-
-  /** Open the right-click menu for whatever is at a client point. */
-  function openMenuAt(x: number, y: number) {
-    const ctl = controller;
-    if (!ctl) return;
-    ctl.cancelGesture();
-    const at = ctl.toWorld(x, y);
-    const hit = ctl.hitTest(at, true);
-    if (hit && !ctl.selection.value.includes(hit.id)) ctl.select([hit.id]);
-    if (!hit) ctl.select([]);
-    setMenu({
-      x,
-      y,
-      items: menuFor(
-        ctx,
-        hit
-          ? { kind: "selection", sceneId: ctl.sceneId, ids: ctl.selection.value }
-          : { kind: "canvas", sceneId: ctl.sceneId, at },
-      ),
-    });
-  }
-  // Opens on the right-button press on every platform (see ui/menuTrigger.ts).
-  const menuOpener = menuTrigger(openMenuAt);
-
-  /** Double-clicking a token opens its options. */
-  function onDoubleClick(e: ReactMouseEvent<HTMLDivElement>) {
-    const ctl = controller;
-    if (!ctl || ctx.tools.activeTool.value !== "select") return;
-    const hit = ctl.hitTest(ctl.toWorld(e.clientX, e.clientY));
-    if (hit?.type !== "token") return;
-    // Grow the options out of the token itself.
-    const b = bounds([hit])!;
-    const cam = ctl.renderer.camera;
-    const host = hostRef.current!.getBoundingClientRect();
-    setMorphOrigin(
-      new DOMRect(
-        host.left + b.x * cam.zoom + cam.x,
-        host.top + b.y * cam.zoom + cam.y,
-        b.w * cam.zoom,
-        b.h * cam.zoom,
-      ),
-    );
-    // A token with a character opens on its sheet.
-    setTokenTab(hit.characterId ? "character" : "token");
-    setTokenOptions(hit.id);
-  }
-
-  function onDragOver(e: ReactDragEvent) {
-    if (!e.dataTransfer?.types.includes("Files")) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "copy";
-    setDropping(true);
-  }
-
-  function onDrop(e: ReactDragEvent) {
-    setDropping(false);
-    const ctl = controller;
-    if (!ctl || !e.dataTransfer?.files.length) return;
-    e.preventDefault();
-    void ctl.importFiles(e.dataTransfer.files, ctl.toWorld(e.clientX, e.clientY));
-  }
 
   return (
     <>
@@ -212,14 +150,7 @@ export default function SceneCanvas({
       )}
       {controller && (
         <>
-          <SelectionBar
-            controller={controller}
-            onTokenOptions={(id, from) => {
-              setMorphOrigin(from);
-              setTokenTab("token");
-              setTokenOptions(id);
-            }}
-          />
+          <SelectionBar controller={controller} onTokenOptions={onSelectionTokenOptions} />
           <TokenOptionsDialog
             campaign={campaign}
             controller={controller}
@@ -233,6 +164,113 @@ export default function SceneCanvas({
       )}
     </>
   );
+}
+
+function useSceneCanvasInteractions(
+  controller: SceneController | null,
+  hostRef: React.RefObject<HTMLDivElement | null>,
+) {
+  const ctx = useCampaign();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const importAt = useRef<Point | null>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
+  const [tokenOptions, setTokenOptions] = useState<string | null>(null);
+  const [tokenTab, setTokenTab] = useState<"character" | "token">("token");
+  const [dropping, setDropping] = useState(false);
+  const [textEdit, setTextEdit] = useTextRequests(controller);
+  const openTokenOptions = useCallback((id: string, tab: "character" | "token") => {
+    setTokenTab(tab);
+    setTokenOptions(id);
+  }, []);
+  const importImagesAt = useCallback((at: Point) => {
+    importAt.current = at;
+    fileRef.current?.click();
+  }, []);
+  useCanvasCommands(controller, { openTokenOptions, importImagesAt });
+  const closeMenu = useCallback(() => setMenu(null), []);
+
+  function openMenuAt(x: number, y: number) {
+    if (!controller) return;
+    controller.cancelGesture();
+    const at = controller.toWorld(x, y);
+    const hit = controller.hitTest(at, true);
+    if (hit && !controller.selection.value.includes(hit.id)) controller.select([hit.id]);
+    if (!hit) controller.select([]);
+    setMenu({
+      x,
+      y,
+      items: menuFor(
+        ctx,
+        hit
+          ? { kind: "selection", sceneId: controller.sceneId, ids: controller.selection.value }
+          : { kind: "canvas", sceneId: controller.sceneId, at },
+      ),
+    });
+  }
+  const menuOpener = menuTrigger(openMenuAt);
+
+  function onDoubleClick(event: ReactMouseEvent<HTMLDivElement>) {
+    if (!controller || ctx.tools.activeTool.value !== "select") return;
+    const hit = controller.hitTest(controller.toWorld(event.clientX, event.clientY));
+    if (hit?.type !== "token") return;
+    const box = bounds([hit])!;
+    const camera = controller.renderer.camera;
+    const host = hostRef.current!.getBoundingClientRect();
+    setMorphOrigin(
+      new DOMRect(
+        host.left + box.x * camera.zoom + camera.x,
+        host.top + box.y * camera.zoom + camera.y,
+        box.w * camera.zoom,
+        box.h * camera.zoom,
+      ),
+    );
+    setTokenTab(hit.characterId ? "character" : "token");
+    setTokenOptions(hit.id);
+  }
+
+  function onDragOver(event: ReactDragEvent) {
+    if (!event.dataTransfer?.types.includes("Files")) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+    setDropping(true);
+  }
+
+  function onDrop(event: ReactDragEvent) {
+    setDropping(false);
+    if (!controller || !event.dataTransfer?.files.length) return;
+    event.preventDefault();
+    void controller.importFiles(
+      event.dataTransfer.files,
+      controller.toWorld(event.clientX, event.clientY),
+    );
+  }
+
+  const onSelectionTokenOptions = (id: string, from: Element) => {
+    setMorphOrigin(from);
+    setTokenTab("token");
+    setTokenOptions(id);
+  };
+
+  return {
+    ctx,
+    fileRef,
+    importAt,
+    dropping,
+    setDropping,
+    menu,
+    tokenOptions,
+    tokenTab,
+    textEdit,
+    setTextEdit,
+    menuOpener,
+    closeMenu,
+    onDoubleClick,
+    onDragOver,
+    onDrop,
+    onSelectionTokenOptions,
+    setTokenTab,
+    setTokenOptions,
+  };
 }
 
 function SceneSettingsDialog({

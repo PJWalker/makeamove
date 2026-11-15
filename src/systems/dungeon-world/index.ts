@@ -736,7 +736,7 @@ export const dungeonWorld: GameSystem = {
       label: "Roll damage",
       comment: "Damage",
       formula: (_c, d) =>
-        `d${d.values.damage}${d.values.damageBonus ? signed(d.values.damageBonus, "Gear") : ""}`,
+        `d${d.values["damage"]}${d.values["damageBonus"] ? signed(d.values["damageBonus"], "Gear") : ""}`,
     },
   ],
   items: ITEMS,
@@ -790,20 +790,20 @@ export const dungeonWorld: GameSystem = {
     { id: "moves", label: "Moves", type: "longtext" },
   ],
   derive(c, sources) {
-    const cls = CLASSES.find((k) => k.id === c.data.classId) ?? CLASSES[0]!;
-    const level = Number(c.data.level ?? 1);
+    const cls = CLASSES.find((k) => k.id === c.data["classId"]) ?? CLASSES[0]!;
+    const level = Number(c.data["level"] ?? 1);
     const mods: Record<string, number> = {};
     for (const s of STATS) mods[s.id] = modifierOf(c.scores[s.id] ?? 10);
     const resolved = resolveEffects(
       {
         maxHp:
           c.kind === "npc"
-            ? Number(c.data.maxHp ?? NPC_HP)
-            : cls.baseHp + (c.scores.con ?? 10) + Number(c.data.hpBonus ?? 0),
+            ? Number(c.data["maxHp"] ?? NPC_HP)
+            : cls.baseHp + (c.scores["con"] ?? 10) + Number(c.data["hpBonus"] ?? 0),
         armor: 0,
         damage: cls.damage,
         damageBonus: 0,
-        maxLoad: cls.load + (mods.str ?? 0),
+        maxLoad: cls.load + (mods["str"] ?? 0),
       },
       sources,
     );
@@ -823,10 +823,12 @@ export const dungeonWorld: GameSystem = {
     const granted = new Set(d.resolved.moves);
     return ACTIONS.filter(
       (m) =>
-        m.category !== "class" || CLASS_ACTIONS.get(m.id) === c.data.classId || granted.has(m.id),
+        m.category !== "class" ||
+        CLASS_ACTIONS.get(m.id) === c.data["classId"] ||
+        granted.has(m.id),
     );
   },
-  tokenStats: (c, d) => [hpTokenStat(c, d.values.maxHp ?? 0)],
+  tokenStats: (c, d) => [hpTokenStat(c, d.values["maxHp"] ?? 0)],
   creation: {
     advancementField: "level",
     choices: [

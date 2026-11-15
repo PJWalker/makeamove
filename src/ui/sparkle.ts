@@ -14,10 +14,10 @@ document.addEventListener(
     if (reducedMotion.matches || !(event.target instanceof Element)) return;
     const control = event.target.closest<HTMLElement>(SPARKLING);
     if (!control || control.matches(":disabled, [data-disabled], [aria-disabled='true']")) return;
-    delete control.dataset.sparkle;
+    delete control.dataset["sparkle"];
     // Flush the style so re-adding the attribute starts the animation over.
     void control.offsetWidth;
-    control.dataset.sparkle = "";
+    control.dataset["sparkle"] = "";
   },
   { capture: true },
 );
@@ -26,7 +26,7 @@ document.addEventListener(
   "animationend",
   (event) => {
     if (event.animationName === GLINT && event.target instanceof HTMLElement)
-      delete event.target.dataset.sparkle;
+      delete event.target.dataset["sparkle"];
   },
   { capture: true },
 );

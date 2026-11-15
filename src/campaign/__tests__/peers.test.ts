@@ -37,7 +37,7 @@ describe("peers sharing a campaign", () => {
       ["sam", "Sam"],
     ]);
     const state = h.expectConverged();
-    expect(state.meta).toMatchObject({ name: "The Lost Barrows" });
+    expect(state["meta"]).toMatchObject({ name: "The Lost Barrows" });
     for (const p of [gm, ...players]) expect(memberIds(p)).toEqual(["gm", "pat", "sam"]);
     expect([...gm.campaign.online.value].sort()).toEqual(["gm", "pat", "sam"]);
     expect(players[0]!.do((c) => c.isGm())).toBe(false);
@@ -49,7 +49,7 @@ describe("peers sharing a campaign", () => {
     gm.disconnect();
     const pat = await h.join("pat", "Pat");
     expect(pat.campaign.ready.value).toBe(false);
-    expect(pat.state().meta).toEqual({});
+    expect(pat.state()["meta"]).toEqual({});
   });
 
   it("merges concurrent edits from every peer", async () => {
@@ -65,7 +65,7 @@ describe("peers sharing a campaign", () => {
     await h.settle();
 
     const state = h.expectConverged();
-    expect(state.meta).toMatchObject({ name: "The Barrows Below" });
+    expect(state["meta"]).toMatchObject({ name: "The Barrows Below" });
     expect(sam.do((c) => c.sceneViews()).map((s) => s.name)).toContain("The Bog");
     expect(gm.do((c) => c.memberViews())).toEqual(
       expect.arrayContaining([

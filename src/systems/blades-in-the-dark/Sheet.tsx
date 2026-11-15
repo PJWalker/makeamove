@@ -25,12 +25,25 @@ function AttributeAdvance({
   sheet: ReturnType<typeof useSheet>;
   attribute: (typeof ATTRIBUTES)[number];
 }) {
-  const ctx = useCampaign();
-  const [selected, setSelected] = useState(attribute.actions[0] ?? "");
   const { campaign, c, editable } = sheet;
-  const cap = commaListOf(systemCampaignData(campaign).crewUpgrades).includes("mastery") ? 4 : 3;
+  const cap = commaListOf(systemCampaignData(campaign)["crewUpgrades"]).includes("mastery") ? 4 : 3;
   if (Number(c.data[`${attribute.id}Xp`] ?? 0) < 6 || !editable) return null;
   const eligible = attribute.actions.filter((id) => (c.scores[id] ?? 0) < cap);
+  return <AttributeAdvanceControl sheet={sheet} attribute={attribute} eligible={eligible} />;
+}
+
+function AttributeAdvanceControl({
+  sheet,
+  attribute,
+  eligible,
+}: {
+  sheet: ReturnType<typeof useSheet>;
+  attribute: (typeof ATTRIBUTES)[number];
+  eligible: string[];
+}) {
+  const ctx = useCampaign();
+  const { c } = sheet;
+  const [selected, setSelected] = useState(attribute.actions[0] ?? "");
   const chosen = eligible.includes(selected) ? selected : (eligible[0] ?? "");
   return (
     <div className="sheet-row">
@@ -58,14 +71,7 @@ function AttributeAdvance({
 }
 
 export function BladesSheet(props: SheetProps) {
-  const ctx = useCampaign();
   const sheet = useSheet(props);
-  const { system, c, d, editable } = sheet;
-  const use = (id: string) => {
-    const action = system.actions.find((entry) => entry.id === id);
-    if (action) ctx.execute(startMove, { characterId: c.id, move: action.id });
-  };
-  const conditionIds = new Set(c.conditions);
   return (
     <SheetFrame {...sheet}>
       <SheetSectionView {...sheet} section={{ kind: "header" }} />
@@ -93,174 +99,13 @@ export function BladesSheet(props: SheetProps) {
           button: "Advance Playbook",
         }}
       />
-      <section className="form-section sheet-section" aria-label="Trauma">
-        <h3 className="sheet-heading">
-          Trauma <span className="muted">{d.values.trauma}/4</span>
-        </h3>
-        <div className="blades-toggles">
-          {TRAUMAS.map(([id, name]) => (
-            <label key={id} className="stat-deb">
-              <input
-                type="checkbox"
-                checked={conditionIds.has(id)}
-                disabled={!editable}
-                onChange={() => ctx.execute(toggleCondition, { id: c.id, condition: id })}
-              />
-              {name}
-            </label>
-          ))}
-        </div>
-      </section>
-      {ATTRIBUTES.map(({ id, name, actions }) => (
-        <section key={id} className="form-section sheet-section" aria-label={name}>
-          <div className="blades-attribute-head">
-            <h3 className="sheet-heading">{name}</h3>
-            <Button
-              variant="secondary"
-              label={`Resist with ${name}`}
-              aria-label={`Resist with ${name}`}
-              onClick={() => use(`resist-${id}`)}
-            >
-              <IconRoll size={18} /> {d.values[id]}d
-            </Button>
-          </div>
-          <div className="blades-actions">
-            {actions.map((actionId) => {
-              const stat = system.stats.find((entry) => entry.id === actionId);
-              if (!stat) return null;
-              return (
-                <div key={actionId} className="blades-action">
-                  <Button
-                    variant="secondary"
-                    label={`Roll ${stat.name}`}
-                    aria-label={`Roll ${stat.name}`}
-                    onClick={() => use(actionId)}
-                  >
-                    <IconRoll size={18} /> {stat.name}
-                  </Button>
-                  <input
-                    className="stat-score"
-                    type="number"
-                    min={stat.min ?? 0}
-                    max={stat.max ?? 4}
-                    aria-label={`${stat.name} rating`}
-                    value={c.scores[actionId] ?? 0}
-                    disabled={!editable}
-                    onChange={(event) => {
-                      const value = parseInputNumber(event.currentTarget.value);
-                      if (
-                        value !== undefined &&
-                        Number.isInteger(value) &&
-                        value >= (stat.min ?? 0) &&
-                        value <= (stat.max ?? 4)
-                      )
-                        ctx.execute(setScore, { id: c.id, stat: actionId, score: value });
-                    }}
-                  />
-                </div>
-              );
-            })}
-          </div>
-          <Counter
-            label={`${name} XP`}
-            value={Number(c.data[`${id}Xp`] ?? 0)}
-            max={d.values.maxAttributeXp}
-            disabled={!editable}
-            onChange={(by) => ctx.execute(bumpData, { id: c.id, key: `${id}Xp`, by })}
-          />
-          <AttributeAdvance sheet={sheet} attribute={{ id, name, actions }} />
-        </section>
+      <TraumaSection sheet={sheet} />
+      {ATTRIBUTES.map((attribute) => (
+        <AttributeSection key={attribute.id} sheet={sheet} attribute={attribute} />
       ))}
       <SheetSectionView {...sheet} section={{ kind: "modifiers", label: "Bonus dice" }} />
-      <section className="form-section sheet-section" aria-label="Harm & recovery">
-        <h3 className="sheet-heading">Harm & recovery</h3>
-        <div className="blades-toggles">
-          {system.conditions.flatMap((condition) =>
-            condition.id.startsWith("harm-")
-              ? [
-                  <label key={condition.id} className="stat-deb" title={condition.text}>
-                    <input
-                      type="checkbox"
-                      checked={conditionIds.has(condition.id)}
-                      disabled={!editable}
-                      onChange={() =>
-                        ctx.execute(toggleCondition, { id: c.id, condition: condition.id })
-                      }
-                    />
-                    {condition.name}
-                  </label>,
-                ]
-              : [],
-          )}
-        </div>
-        <SheetSectionView
-          {...sheet}
-          section={{
-            kind: "text",
-            fields: [{ field: "harm", label: "Injuries" }],
-          }}
-        />
-        <Counter
-          label="Healing clock"
-          value={Number(c.data.healing ?? 0)}
-          max={d.values.maxHealing}
-          disabled={!editable}
-          onChange={(by) => ctx.execute(bumpData, { id: c.id, key: "healing", by })}
-        />
-        <div className="blades-toggles">
-          {(
-            [
-              ["armorUsed", "Armor used"],
-              ["heavyArmorUsed", "Heavy armor used"],
-              ["specialArmorUsed", "Special armor used"],
-            ] as const
-          ).map(([field, label]) => (
-            <label key={field} className="stat-deb">
-              <input
-                type="checkbox"
-                checked={Number(c.data[field] ?? 0) > 0}
-                disabled={!editable}
-                onChange={(event) =>
-                  ctx.execute(setData, {
-                    id: c.id,
-                    key: field,
-                    value: event.currentTarget.checked ? 1 : 0,
-                  })
-                }
-              />
-              {label}
-            </label>
-          ))}
-        </div>
-      </section>
-      <section className="form-section sheet-section" aria-label="Load">
-        <h3 className="sheet-heading">Load</h3>
-        <label className="field">
-          Load
-          <select
-            value={String(c.data.load ?? 5)}
-            disabled={!editable}
-            onChange={(event) =>
-              ctx.execute(setData, {
-                id: c.id,
-                key: "load",
-                value: Number(event.currentTarget.value),
-              })
-            }
-          >
-            <option value="3">Light (3)</option>
-            <option value="5">Normal (5)</option>
-            <option value="6">Heavy (6)</option>
-          </select>
-        </label>
-        <SheetSectionView
-          {...sheet}
-          section={{
-            kind: "derived",
-            items: [{ label: "Carried load", value: "load", max: "maxLoad" }],
-          }}
-        />
-      </section>
+      <HarmRecoverySection sheet={sheet} />
+      <LoadSection sheet={sheet} />
       <SheetSectionView {...sheet} section={{ kind: "inventory" }} />
       <SheetSectionView {...sheet} section={{ kind: "actions", label: "Abilities & downtime" }} />
       <SheetSectionView
@@ -280,6 +125,208 @@ export function BladesSheet(props: SheetProps) {
         }}
       />
     </SheetFrame>
+  );
+}
+
+function TraumaSection({ sheet }: { sheet: ReturnType<typeof useSheet> }) {
+  const ctx = useCampaign();
+  const { c, d, editable } = sheet;
+  const conditionIds = new Set(c.conditions);
+  return (
+    <section className="form-section sheet-section" aria-label="Trauma">
+      <h3 className="sheet-heading">
+        Trauma <span className="muted">{d.values["trauma"]}/4</span>
+      </h3>
+      <div className="blades-toggles">
+        {TRAUMAS.map(([id, name]) => (
+          <label key={id} className="stat-deb">
+            <input
+              type="checkbox"
+              checked={conditionIds.has(id)}
+              disabled={!editable}
+              onChange={() => ctx.execute(toggleCondition, { id: c.id, condition: id })}
+            />
+            {name}
+          </label>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function AttributeSection({
+  sheet,
+  attribute,
+}: {
+  sheet: ReturnType<typeof useSheet>;
+  attribute: (typeof ATTRIBUTES)[number];
+}) {
+  const ctx = useCampaign();
+  const { system, c, d, editable } = sheet;
+  const use = (id: string) => {
+    const action = system.actions.find((entry) => entry.id === id);
+    if (action) ctx.execute(startMove, { characterId: c.id, move: action.id });
+  };
+  return (
+    <section className="form-section sheet-section" aria-label={attribute.name}>
+      <div className="blades-attribute-head">
+        <h3 className="sheet-heading">{attribute.name}</h3>
+        <Button
+          variant="secondary"
+          label={`Resist with ${attribute.name}`}
+          aria-label={`Resist with ${attribute.name}`}
+          onClick={() => use(`resist-${attribute.id}`)}
+        >
+          <IconRoll size={18} /> {d.values[attribute.id]}d
+        </Button>
+      </div>
+      <div className="blades-actions">
+        {attribute.actions.map((actionId) => {
+          const stat = system.stats.find((entry) => entry.id === actionId);
+          if (!stat) return null;
+          return (
+            <div key={actionId} className="blades-action">
+              <Button
+                variant="secondary"
+                label={`Roll ${stat.name}`}
+                aria-label={`Roll ${stat.name}`}
+                onClick={() => use(actionId)}
+              >
+                <IconRoll size={18} /> {stat.name}
+              </Button>
+              <input
+                className="stat-score"
+                type="number"
+                min={stat.min ?? 0}
+                max={stat.max ?? 4}
+                aria-label={`${stat.name} rating`}
+                value={c.scores[actionId] ?? 0}
+                disabled={!editable}
+                onChange={(event) => {
+                  const value = parseInputNumber(event.currentTarget.value);
+                  if (
+                    value !== undefined &&
+                    Number.isInteger(value) &&
+                    value >= (stat.min ?? 0) &&
+                    value <= (stat.max ?? 4)
+                  )
+                    ctx.execute(setScore, { id: c.id, stat: actionId, score: value });
+                }}
+              />
+            </div>
+          );
+        })}
+      </div>
+      <Counter
+        label={`${attribute.name} XP`}
+        value={Number(c.data[`${attribute.id}Xp`] ?? 0)}
+        max={d.values["maxAttributeXp"]}
+        disabled={!editable}
+        onChange={(by) => ctx.execute(bumpData, { id: c.id, key: `${attribute.id}Xp`, by })}
+      />
+      <AttributeAdvance sheet={sheet} attribute={attribute} />
+    </section>
+  );
+}
+
+function HarmRecoverySection({ sheet }: { sheet: ReturnType<typeof useSheet> }) {
+  const ctx = useCampaign();
+  const { system, c, d, editable } = sheet;
+  const conditionIds = new Set(c.conditions);
+  return (
+    <section className="form-section sheet-section" aria-label="Harm & recovery">
+      <h3 className="sheet-heading">Harm & recovery</h3>
+      <div className="blades-toggles">
+        {system.conditions.flatMap((condition) =>
+          condition.id.startsWith("harm-")
+            ? [
+                <label key={condition.id} className="stat-deb" title={condition.text}>
+                  <input
+                    type="checkbox"
+                    checked={conditionIds.has(condition.id)}
+                    disabled={!editable}
+                    onChange={() =>
+                      ctx.execute(toggleCondition, { id: c.id, condition: condition.id })
+                    }
+                  />
+                  {condition.name}
+                </label>,
+              ]
+            : [],
+        )}
+      </div>
+      <SheetSectionView
+        {...sheet}
+        section={{ kind: "text", fields: [{ field: "harm", label: "Injuries" }] }}
+      />
+      <Counter
+        label="Healing clock"
+        value={Number(c.data["healing"] ?? 0)}
+        max={d.values["maxHealing"]}
+        disabled={!editable}
+        onChange={(by) => ctx.execute(bumpData, { id: c.id, key: "healing", by })}
+      />
+      <div className="blades-toggles">
+        {(
+          [
+            ["armorUsed", "Armor used"],
+            ["heavyArmorUsed", "Heavy armor used"],
+            ["specialArmorUsed", "Special armor used"],
+          ] as const
+        ).map(([field, label]) => (
+          <label key={field} className="stat-deb">
+            <input
+              type="checkbox"
+              checked={Number(c.data[field] ?? 0) > 0}
+              disabled={!editable}
+              onChange={(event) =>
+                ctx.execute(setData, {
+                  id: c.id,
+                  key: field,
+                  value: event.currentTarget.checked ? 1 : 0,
+                })
+              }
+            />
+            {label}
+          </label>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function LoadSection({ sheet }: { sheet: ReturnType<typeof useSheet> }) {
+  const ctx = useCampaign();
+  const { c, editable } = sheet;
+  return (
+    <section className="form-section sheet-section" aria-label="Load">
+      <h3 className="sheet-heading">Load</h3>
+      <label className="field">
+        Load
+        <select
+          value={String(c.data["load"] ?? 5)}
+          disabled={!editable}
+          onChange={(event) =>
+            ctx.execute(setData, {
+              id: c.id,
+              key: "load",
+              value: Number(event.currentTarget.value),
+            })
+          }
+        >
+          <option value="3">Light (3)</option>
+          <option value="5">Normal (5)</option>
+          <option value="6">Heavy (6)</option>
+        </select>
+      </label>
+      <SheetSectionView
+        {...sheet}
+        section={{
+          kind: "derived",
+          items: [{ label: "Carried load", value: "load", max: "maxLoad" }],
+        }}
+      />
+    </section>
   );
 }
 

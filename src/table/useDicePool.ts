@@ -170,7 +170,7 @@ export function useDicePool({
       const settledDestination = destination.getBoundingClientRect();
       card.style.left = `${Number.parseFloat(card.style.left) + settledDestination.left - settledCard.left}px`;
       card.style.top = `${Number.parseFloat(card.style.top) + settledDestination.top - settledCard.top}px`;
-      card.dataset.inFeed = "true";
+      card.dataset["inFeed"] = "true";
       await landed;
       setPool([]);
     } catch (e) {
@@ -248,8 +248,8 @@ export function useDicePool({
         const card = target;
         aim(null);
         if (!(end instanceof PointerEvent) || end.type !== "pointerup") return;
-        if (card?.dataset.diceTarget)
-          ctx.execute(addToChatRoll, { id: card.dataset.diceTarget, pick });
+        if (card?.dataset["diceTarget"])
+          ctx.execute(addToChatRoll, { id: card.dataset["diceTarget"], pick });
         else if (
           pick.kind === "die" &&
           !document.elementFromPoint(end.clientX, end.clientY)?.closest(".dice-tray")

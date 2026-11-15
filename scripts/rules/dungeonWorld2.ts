@@ -353,9 +353,9 @@ const ruleFor = (name: string): Dw2PathMove => {
   );
   const statName = text.match(/roll\s*\+\s*(STR|DEX|INT|WIS|CHA)/i)?.[1];
   const stat = statName?.toLowerCase();
-  const strong = outcomes.strong;
-  const weak = outcomes.weak;
-  const miss = outcomes.miss;
+  const strong = outcomes["strong"];
+  const weak = outcomes["weak"];
+  const miss = outcomes["miss"];
   return {
     name,
     text,

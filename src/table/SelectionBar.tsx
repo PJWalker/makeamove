@@ -50,6 +50,23 @@ export function SelectionBar({
   /** Open the full options for a token, growing out of `from`. */
   onTokenOptions: (id: string, from: Element) => void;
 }) {
+  const { ref, els, shown } = useSelectionBar(controller);
+  if (!els.length) return null;
+  return (
+    <div
+      ref={ref}
+      className="selection-bar"
+      role="toolbar"
+      aria-label="Selection"
+      data-shown={shown}
+      inert={!shown}
+    >
+      <Fields controller={controller} sel={els} onTokenOptions={onTokenOptions} />
+    </div>
+  );
+}
+
+function useSelectionBar(controller: SceneController) {
   const ctx = useCampaign();
   const sel = useQuery(controller.selectedElements);
   const cam = useQuery(controller.camera);
@@ -79,22 +96,10 @@ export function SelectionBar({
     const maxX = host.right - inset.right - MARGIN - w;
     const x = Math.max(minX, Math.min(maxX, host.left + top.x - w / 2));
     bar.style.translate = `${Math.round(x)}px ${Math.round(y)}px`;
-    bar.dataset.below = String(above < minY);
+    bar.dataset["below"] = String(above < minY);
   });
 
-  if (!els.length) return null;
-  return (
-    <div
-      ref={ref}
-      className="selection-bar"
-      role="toolbar"
-      aria-label="Selection"
-      data-shown={shown}
-      inert={!shown}
-    >
-      <Fields controller={controller} sel={els} onTokenOptions={onTokenOptions} />
-    </div>
-  );
+  return { ref, els, shown };
 }
 
 /** What can be changed about everything in `sel`. */
@@ -107,6 +112,14 @@ function Fields({
   sel: readonly SceneElement[];
   onTokenOptions: (id: string, from: Element) => void;
 }) {
+  return <>{useSelectionFields(controller, sel, onTokenOptions)}</>;
+}
+
+function useSelectionFields(
+  controller: SceneController,
+  sel: readonly SceneElement[],
+  onTokenOptions: (id: string, from: Element) => void,
+) {
   const ctx = useCampaign();
   const ids = sel.map((el) => el.id);
   const first = sel[0]!;

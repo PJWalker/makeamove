@@ -123,7 +123,7 @@ function PotionUse({ campaign, character, item, editable }: ItemUseProps) {
   const [condition, setCondition] = useState(character.lockedConditions?.[0] ?? "");
   const locked = character.lockedConditions ?? [];
   const missingHp =
-    (derive(character, systemOf(campaign)).values.maxHp ?? 0) > (character.resources.hp ?? 0);
+    (derive(character, systemOf(campaign)).values["maxHp"] ?? 0) > (character.resources["hp"] ?? 0);
   const disabled = !editable || (item.usesLeft ?? 0) <= 0;
   const chosen = condition || locked[0] || "";
   return (

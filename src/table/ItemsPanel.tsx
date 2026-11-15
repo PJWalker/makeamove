@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { emptyRichText, plainText, type RichText } from "../data/richText";
 import { RichTextField } from "../workspace/RichTextField";
 import { canEdit, getCharacter, actingCharacterId, systemOf } from "../features/characters/api";
@@ -49,9 +49,125 @@ import { giveItem, startMove } from "../workspace/commands/characters";
 type Editing = { kind: "gear" | "move"; id: string | null } | null;
 
 export function ItemsPanel({ campaign }: { campaign: Campaign }) {
+  const { ctx, entries, system, editing, setEditing, fold, me, canAct, menuItemsFor, gear, moves } =
+    useItemsPanel(campaign);
+  return (
+    <div className="panel-scroll items-panel">
+      {editing && (
+        <ItemDialog
+          key={`${editing.kind}:${editing.id ?? "new"}`}
+          campaign={campaign}
+          system={system}
+          editing={editing}
+          entry={editing.id ? entries.find((entry) => entry.id === editing.id) : undefined}
+          onClose={() => setEditing(null)}
+        />
+      )}
+      <PanelActions>
+        <Button icon={IconNewGear} onClick={() => setEditing({ kind: "gear", id: null })}>
+          New Gear
+        </Button>
+        <Button icon={IconNewMove} onClick={() => setEditing({ kind: "move", id: null })}>
+          New Move
+        </Button>
+      </PanelActions>
+      {!entries.length && <p className="empty">No gear or moves yet.</p>}
+      {gear.length > 0 && (
+        <ListGroup label="Gear" count={gear.length} {...fold("gear")}>
+          <List>
+            {gear.map((entry) =>
+              entry.kind === "gear" ? (
+                <EntryRow
+                  key={entry.id}
+                  lead={
+                    <CampaignEntityGraphic
+                      campaign={campaign}
+                      kind="item"
+                      id={entry.id}
+                      defaultIcon={entry.item.icon}
+                      size={22}
+                    />
+                  }
+                  name={entry.item.name}
+                  openLabel="Edit"
+                  meta={
+                    [
+                      entry.item.weight ? `${entry.item.weight} wt` : "",
+                      entry.item.uses ? `${entry.item.uses} uses` : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" · ") || undefined
+                  }
+                  tip={entry.item.description}
+                  onOpen={() => setEditing({ kind: "gear", id: entry.id })}
+                  onPointerDown={(event) =>
+                    dragEntity(ctx.canvas, event, entity(ctx, "item", entry.id, entry.item.name))
+                  }
+                  menuItems={menuItemsFor(entry)}
+                >
+                  <Button
+                    variant="secondary"
+                    disabled={!canAct}
+                    onClick={() =>
+                      me && ctx.execute(giveItem, { characterId: me.id, item: entry.item })
+                    }
+                  >
+                    Add
+                  </Button>
+                </EntryRow>
+              ) : null,
+            )}
+          </List>
+        </ListGroup>
+      )}
+      {moves.length > 0 && (
+        <ListGroup label="Moves" count={moves.length} {...fold("moves")}>
+          <List>
+            {moves.map((entry) =>
+              entry.kind === "move" ? (
+                <EntryRow
+                  key={entry.id}
+                  lead={
+                    <CampaignEntityGraphic
+                      campaign={campaign}
+                      kind="move"
+                      id={entry.id}
+                      size={22}
+                    />
+                  }
+                  name={entry.move.name}
+                  openLabel="Edit"
+                  tag={rollTag(system, entry.move)}
+                  tip={`${plainText(entry.move.text)}\n\nDrag onto a character to teach it to them.`}
+                  onOpen={() => setEditing({ kind: "move", id: entry.id })}
+                  onPointerDown={(event) =>
+                    dragEntity(ctx.canvas, event, entity(ctx, "move", entry.id, entry.move.name))
+                  }
+                  menuItems={menuItemsFor(entry)}
+                >
+                  <Button
+                    variant="secondary"
+                    disabled={!canAct}
+                    onClick={() =>
+                      me && ctx.execute(startMove, { characterId: me.id, move: entry.move.id })
+                    }
+                  >
+                    Make
+                  </Button>
+                </EntryRow>
+              ) : null,
+            )}
+          </List>
+        </ListGroup>
+      )}
+    </div>
+  );
+}
+
+function useItemsPanel(campaign: Campaign) {
   const ctx = useCampaign();
-  const json = useQuery(campaign.homebrew, () => JSON.stringify(listHomebrew(campaign.homebrew)));
-  const entries = JSON.parse(json) as (HomebrewEntry & { id: string })[];
+  const readEntries = useCallback(() => listHomebrew(campaign.homebrew), [campaign.homebrew]);
+  const entries = useQuery(campaign.homebrew, readEntries);
   const system = systemOf(campaign);
   const [editing, setEditing] = useState<Editing>(null);
   const [folded, setFolded] = useState<Set<string>>(new Set());
@@ -88,112 +204,7 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
 
   const gear = entries.filter((e) => e.kind === "gear");
   const moves = entries.filter((e) => e.kind === "move");
-  return (
-    <div className="panel-scroll items-panel">
-      {editing && (
-        <ItemDialog
-          key={`${editing.kind}:${editing.id ?? "new"}`}
-          campaign={campaign}
-          system={system}
-          editing={editing}
-          entry={editing.id ? entries.find((e) => e.id === editing.id) : undefined}
-          onClose={() => setEditing(null)}
-        />
-      )}
-      <PanelActions>
-        <Button icon={IconNewGear} onClick={() => setEditing({ kind: "gear", id: null })}>
-          New Gear
-        </Button>
-        <Button icon={IconNewMove} onClick={() => setEditing({ kind: "move", id: null })}>
-          New Move
-        </Button>
-      </PanelActions>
-      {!entries.length && <p className="empty">No gear or moves yet.</p>}
-      {gear.length > 0 && (
-        <ListGroup label="Gear" count={gear.length} {...fold("gear")}>
-          <List>
-            {gear.map((e) =>
-              e.kind === "gear" ? (
-                <EntryRow
-                  key={e.id}
-                  lead={
-                    <CampaignEntityGraphic
-                      campaign={campaign}
-                      kind="item"
-                      id={e.id}
-                      defaultIcon={e.item.icon}
-                      size={22}
-                    />
-                  }
-                  name={e.item.name}
-                  openLabel="Edit"
-                  meta={
-                    [
-                      e.item.weight ? `${e.item.weight} wt` : "",
-                      e.item.uses ? `${e.item.uses} uses` : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" · ") || undefined
-                  }
-                  tip={e.item.description}
-                  onOpen={() => setEditing({ kind: "gear", id: e.id })}
-                  onPointerDown={(ev) =>
-                    dragEntity(ctx.canvas, ev, entity(ctx, "item", e.id, e.item.name))
-                  }
-                  menuItems={menuItemsFor(e)}
-                >
-                  <Button
-                    variant="secondary"
-                    disabled={!canAct}
-                    onClick={() =>
-                      me && ctx.execute(giveItem, { characterId: me.id, item: e.item })
-                    }
-                  >
-                    Add
-                  </Button>
-                </EntryRow>
-              ) : null,
-            )}
-          </List>
-        </ListGroup>
-      )}
-      {moves.length > 0 && (
-        <ListGroup label="Moves" count={moves.length} {...fold("moves")}>
-          <List>
-            {moves.map((e) =>
-              e.kind === "move" ? (
-                <EntryRow
-                  key={e.id}
-                  lead={
-                    <CampaignEntityGraphic campaign={campaign} kind="move" id={e.id} size={22} />
-                  }
-                  name={e.move.name}
-                  openLabel="Edit"
-                  tag={rollTag(system, e.move)}
-                  tip={`${plainText(e.move.text)}\n\nDrag onto a character to teach it to them.`}
-                  onOpen={() => setEditing({ kind: "move", id: e.id })}
-                  onPointerDown={(ev) =>
-                    dragEntity(ctx.canvas, ev, entity(ctx, "move", e.id, e.move.name))
-                  }
-                  menuItems={menuItemsFor(e)}
-                >
-                  <Button
-                    variant="secondary"
-                    disabled={!canAct}
-                    onClick={() =>
-                      me && ctx.execute(startMove, { characterId: me.id, move: e.move.id })
-                    }
-                  >
-                    Make
-                  </Button>
-                </EntryRow>
-              ) : null,
-            )}
-          </List>
-        </ListGroup>
-      )}
-    </div>
-  );
+  return { ctx, entries, system, editing, setEditing, fold, me, canAct, menuItemsFor, gear, moves };
 }
 
 /** Makes or changes one of the table's gear or moves. */
@@ -311,6 +322,148 @@ function GearForm({
   initial?: ItemDef;
   onDone: () => void;
 }) {
+  const {
+    name,
+    setName,
+    description,
+    setDescription,
+    weight,
+    setWeight,
+    uses,
+    setUses,
+    tags,
+    setTags,
+    equippable,
+    setEquippable,
+    graphic,
+    setGraphic,
+    resetGraphic,
+    setResetGraphic,
+    effects,
+    setEffects,
+    ready,
+    save,
+    setEffect,
+  } = useGearForm(campaign, initial, onDone);
+
+  return (
+    <form
+      className="creation-form form-layout"
+      onSubmit={(event) => {
+        event.preventDefault();
+        save();
+      }}
+    >
+      <section className="form-section">
+        <h4 className="form-heading">Details</h4>
+        <Text label="Name" value={name} onChange={setName} />
+        <Text label="Description" value={description} onChange={setDescription} multiline />
+        <div className="sheet-row">
+          <NumberField label="Weight" value={weight} onChange={setWeight} />
+          <NumberField label="Uses" value={uses} onChange={setUses} />
+        </div>
+        <Text label="Tags" value={tags} onChange={setTags} placeholder="close, +1 armor" />
+      </section>
+      <section className="form-section">
+        <h4 className="form-heading">Appearance and use</h4>
+        <label className="stat-deb">
+          <input type="checkbox" checked={equippable} onChange={() => setEquippable(!equippable)} />
+          Equippable
+        </label>
+        <GraphicPicker
+          graphic={
+            resetGraphic
+              ? getDefaultEntityGraphic(campaign, "item", initial?.id ?? "")
+              : (graphic ?? getEntityGraphic(campaign, "item", initial?.id ?? ""))
+          }
+          onChange={(next) => {
+            setGraphic(next);
+            setResetGraphic(false);
+          }}
+          onReset={() => {
+            setGraphic(undefined);
+            setResetGraphic(true);
+          }}
+        />
+      </section>
+      <section className="form-section">
+        <h4 className="form-heading">Effects</h4>
+        <div className="form-fields">
+          {effects.map((effect, index) => (
+            <div
+              key={`${effect.type}:${effect.type === "rollBonus" ? effect.stat : effect.path}`}
+              className="sheet-row homebrew-effect"
+            >
+              <select
+                aria-label="Effect"
+                value={effect.type}
+                onChange={(event) =>
+                  setEffect(
+                    index,
+                    event.currentTarget.value === "rollBonus"
+                      ? { type: "rollBonus", stat: "" }
+                      : ({ type: "modify", path: "" } as never),
+                  )
+                }
+              >
+                <option value="rollBonus">Bonus to rolls</option>
+                <option value="modify">Add to a value</option>
+              </select>
+              {effect.type === "rollBonus" ? (
+                <select
+                  aria-label="With stat"
+                  value={effect.stat}
+                  onChange={(event) => setEffect(index, { stat: event.currentTarget.value })}
+                >
+                  <option value="">Every roll</option>
+                  {system.stats.map((stat) => (
+                    <option key={stat.id} value={stat.id}>
+                      with {stat.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  aria-label="Value name"
+                  placeholder="armor, ac, speed"
+                  value={effect.path}
+                  onInput={(event) => setEffect(index, { path: event.currentTarget.value.trim() })}
+                />
+              )}
+              <input
+                className="homebrew-num"
+                type="number"
+                aria-label="Amount"
+                value={effect.value}
+                onInput={(event) =>
+                  setEffect(index, { value: Number(event.currentTarget.value) || 0 })
+                }
+              />
+              <Button
+                variant="icon"
+                label="Remove effect"
+                onClick={() =>
+                  setEffects(effects.filter((_, effectIndex) => effectIndex !== index))
+                }
+              >
+                <IconDelete />
+              </Button>
+            </div>
+          ))}
+          <Button
+            variant="ghost"
+            onClick={() => setEffects([...effects, { type: "rollBonus", stat: "", value: 1 }])}
+          >
+            <IconAdd size={22} /> Add effect
+          </Button>
+        </div>
+      </section>
+      <FormActions campaign={campaign} id={initial?.id} ready={ready} onDone={onDone} />
+    </form>
+  );
+}
+
+function useGearForm(campaign: Campaign, initial: ItemDef | undefined, onDone: () => void) {
   const ctx = useCampaign();
   const [name, setName] = useState(initial?.name ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
@@ -356,118 +509,29 @@ function GearForm({
   };
   const setEffect = (i: number, patch: Partial<EffectRow>) =>
     setEffects(effects.map((e, j) => (j === i ? ({ ...e, ...patch } as EffectRow) : e)));
-
-  return (
-    <form
-      className="creation-form form-layout"
-      onSubmit={(e) => {
-        e.preventDefault();
-        save();
-      }}
-    >
-      <section className="form-section">
-        <h4 className="form-heading">Details</h4>
-        <Text label="Name" value={name} onChange={setName} />
-        <Text label="Description" value={description} onChange={setDescription} multiline />
-        <div className="sheet-row">
-          <NumberField label="Weight" value={weight} onChange={setWeight} />
-          <NumberField label="Uses" value={uses} onChange={setUses} />
-        </div>
-        <Text label="Tags" value={tags} onChange={setTags} placeholder="close, +1 armor" />
-      </section>
-      <section className="form-section">
-        <h4 className="form-heading">Appearance and use</h4>
-        <label className="stat-deb">
-          <input type="checkbox" checked={equippable} onChange={() => setEquippable(!equippable)} />
-          Equippable
-        </label>
-        <GraphicPicker
-          graphic={
-            resetGraphic
-              ? getDefaultEntityGraphic(campaign, "item", initial?.id ?? "")
-              : (graphic ?? getEntityGraphic(campaign, "item", initial?.id ?? ""))
-          }
-          onChange={(next) => {
-            setGraphic(next);
-            setResetGraphic(false);
-          }}
-          onReset={() => {
-            setGraphic(undefined);
-            setResetGraphic(true);
-          }}
-        />
-      </section>
-      <section className="form-section">
-        <h4 className="form-heading">Effects</h4>
-        <div className="form-fields">
-          {effects.map((e, i) => (
-            <div
-              key={`${e.type}:${e.type === "rollBonus" ? e.stat : e.path}`}
-              className="sheet-row homebrew-effect"
-            >
-              <select
-                aria-label="Effect"
-                value={e.type}
-                onChange={(ev) =>
-                  setEffect(
-                    i,
-                    ev.currentTarget.value === "rollBonus"
-                      ? { type: "rollBonus", stat: "" }
-                      : ({ type: "modify", path: "" } as never),
-                  )
-                }
-              >
-                <option value="rollBonus">Bonus to rolls</option>
-                <option value="modify">Add to a value</option>
-              </select>
-              {e.type === "rollBonus" ? (
-                <select
-                  aria-label="With stat"
-                  value={e.stat}
-                  onChange={(ev) => setEffect(i, { stat: ev.currentTarget.value })}
-                >
-                  <option value="">Every roll</option>
-                  {system.stats.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      with {s.name}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  aria-label="Value name"
-                  placeholder="armor, ac, speed"
-                  value={e.path}
-                  onInput={(ev) => setEffect(i, { path: ev.currentTarget.value.trim() })}
-                />
-              )}
-              <input
-                className="homebrew-num"
-                type="number"
-                aria-label="Amount"
-                value={e.value}
-                onInput={(ev) => setEffect(i, { value: Number(ev.currentTarget.value) || 0 })}
-              />
-              <Button
-                variant="icon"
-                label="Remove effect"
-                onClick={() => setEffects(effects.filter((_, j) => j !== i))}
-              >
-                <IconDelete />
-              </Button>
-            </div>
-          ))}
-          <Button
-            variant="ghost"
-            onClick={() => setEffects([...effects, { type: "rollBonus", stat: "", value: 1 }])}
-          >
-            <IconAdd size={22} /> Add effect
-          </Button>
-        </div>
-      </section>
-      <FormActions campaign={campaign} id={initial?.id} ready={ready} onDone={onDone} />
-    </form>
-  );
+  return {
+    name,
+    setName,
+    description,
+    setDescription,
+    weight,
+    setWeight,
+    uses,
+    setUses,
+    tags,
+    setTags,
+    equippable,
+    setEquippable,
+    graphic,
+    setGraphic,
+    resetGraphic,
+    setResetGraphic,
+    effects,
+    setEffects,
+    ready,
+    save,
+    setEffect,
+  };
 }
 
 type RollKind = "none" | "stat" | "ask";

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { Campaign } from "../../campaign/campaign";
 import { getCharacter, listCharacters } from "../../features/characters/api";
 import { relationshipWeb } from "../../features/characters/relationships";
@@ -23,30 +23,22 @@ export function Dw2Bonds({
   c: CharacterView;
   editable: boolean;
 }) {
-  const ctx = useCampaign();
-  const peopleJson = useQuery(campaign.characters, () =>
-    JSON.stringify(characterLinkTargets(campaign)),
-  );
-  const people = useMemo(
-    () => JSON.parse(peopleJson) as ReturnType<typeof characterLinkTargets>,
-    [peopleJson],
-  );
-  const depthWebJson = useQuery(campaign.characters, () =>
-    JSON.stringify(
+  const readPeople = useCallback(() => characterLinkTargets(campaign), [campaign]);
+  const people = useQuery(campaign.characters, readPeople);
+  const readDepthWeb = useCallback(
+    () =>
       relationshipWeb(
         campaign.characters,
         listCharacters(campaign).map((person) => person.id),
       ),
-    ),
+    [campaign],
   );
-  const depthWeb = useMemo(
-    () => JSON.parse(depthWebJson) as ReturnType<typeof relationshipWeb>,
-    [depthWebJson],
+  const depthWeb = useQuery(campaign.characters, readDepthWeb);
+  const readBonds = useCallback(
+    () => bondsFor(campaign.systemData, c.id),
+    [campaign.systemData, c.id],
   );
-  const bondsJson = useQuery(campaign.systemData, () =>
-    JSON.stringify(bondsFor(campaign.systemData, c.id)),
-  );
-  const bonds = useMemo(() => JSON.parse(bondsJson) as ReturnType<typeof bondsFor>, [bondsJson]);
+  const bonds = useQuery(campaign.systemData, readBonds);
   const eligibleBondmates = useMemo(
     () =>
       people.filter((person) => {
@@ -63,9 +55,6 @@ export function Dw2Bonds({
       }),
     [campaign, people, depthWeb, c.id],
   );
-  const [bondmateId, setBondmateId] = useState("");
-  const [bondType, setBondType] = useState("");
-  const [bondMoveId, setBondMoveId] = useState("");
   return (
     <>
       {bonds.length > 0 && (
@@ -104,107 +93,121 @@ export function Dw2Bonds({
           })}
         </ul>
       )}
-      {editable &&
-        eligibleBondmates.length > 0 &&
-        (() => {
-          const currentBond = bonds.find(
-            (bond) =>
-              (bond.first === c.id && bond.second === bondmateId) ||
-              (bond.second === c.id && bond.first === bondmateId),
-          );
-          const reinforcing = currentBond?.type === bondType;
-          const advancedMoveIds = new Set(currentBond?.advancedMoves ?? []);
-          const definition = BONDS.find((bond) => bond.id === bondType);
-          const availableMoves = reinforcing
-            ? (definition?.moves.slice(1) ?? []).filter((move) => !advancedMoveIds.has(move.id))
-            : [];
-          return (
-            <div className="relationship-bond-controls">
-              <label>
-                Bondmate
-                <select
-                  value={bondmateId}
-                  onChange={(event) => {
-                    setBondmateId(event.currentTarget.value);
-                    setBondMoveId("");
-                  }}
-                >
-                  <option value="">Choose a PC</option>
-                  {eligibleBondmates.map((person) => (
-                    <option key={person.id} value={person.id}>
-                      {person.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Bond
-                <select
-                  aria-label="Bond type"
-                  value={bondType}
-                  onChange={(event) => {
-                    setBondType(event.currentTarget.value);
-                    setBondMoveId("");
-                  }}
-                >
-                  <option value="">Choose a Bond</option>
-                  {BONDS.map((bond) => (
-                    <option key={bond.id} value={bond.id}>
-                      {bond.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {reinforcing && availableMoves.length > 0 && (
-                <label>
-                  Advanced move
-                  <select
-                    value={bondMoveId}
-                    onChange={(event) => setBondMoveId(event.currentTarget.value)}
-                  >
-                    <option value="">Choose a move</option>
-                    {availableMoves.map((move) => (
-                      <option key={move.id} value={move.id}>
-                        {move.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
-              {reinforcing && availableMoves.length === 0 && (
-                <span className="muted">All advanced Bond moves are unlocked.</span>
-              )}
-              <Button
-                variant="secondary"
-                disabled={!bondmateId || !bondType || (reinforcing && !bondMoveId)}
-                onClick={() => {
-                  const changed = reinforcing
-                    ? advanceBond(
-                        campaign.systemData,
-                        campaign.characters,
-                        c.id,
-                        bondmateId,
-                        bondMoveId,
-                      )
-                    : forgeBond(
-                        campaign.systemData,
-                        campaign.characters,
-                        c.id,
-                        bondmateId,
-                        bondType,
-                        (id, xp) => ctx.execute(bumpData, { id, key: "xp", by: xp }),
-                      );
-                  if (changed) {
-                    setBondmateId("");
-                    setBondMoveId("");
-                  }
-                }}
-              >
-                {reinforcing ? "Reinforce Bond" : "Forge Bond"}
-              </Button>
-            </div>
-          );
-        })()}
+      {editable && eligibleBondmates.length > 0 && (
+        <BondForgeForm
+          campaign={campaign}
+          character={c}
+          eligibleBondmates={eligibleBondmates}
+          bonds={bonds}
+        />
+      )}
     </>
+  );
+}
+
+function BondForgeForm({
+  campaign,
+  character,
+  eligibleBondmates,
+  bonds,
+}: {
+  campaign: Campaign;
+  character: CharacterView;
+  eligibleBondmates: ReturnType<typeof characterLinkTargets>;
+  bonds: ReturnType<typeof bondsFor>;
+}) {
+  const ctx = useCampaign();
+  const [bondmateId, setBondmateId] = useState("");
+  const [bondType, setBondType] = useState("");
+  const [bondMoveId, setBondMoveId] = useState("");
+  const currentBond = bonds.find(
+    (bond) =>
+      (bond.first === character.id && bond.second === bondmateId) ||
+      (bond.second === character.id && bond.first === bondmateId),
+  );
+  const reinforcing = currentBond?.type === bondType;
+  const advancedMoveIds = new Set(currentBond?.advancedMoves ?? []);
+  const definition = BONDS.find((bond) => bond.id === bondType);
+  const availableMoves = reinforcing
+    ? (definition?.moves.slice(1) ?? []).filter((move) => !advancedMoveIds.has(move.id))
+    : [];
+  const submit = () => {
+    const changed = reinforcing
+      ? advanceBond(campaign.systemData, campaign.characters, character.id, bondmateId, bondMoveId)
+      : forgeBond(
+          campaign.systemData,
+          campaign.characters,
+          character.id,
+          bondmateId,
+          bondType,
+          (id, xp) => ctx.execute(bumpData, { id, key: "xp", by: xp }),
+        );
+    if (changed) {
+      setBondmateId("");
+      setBondMoveId("");
+    }
+  };
+
+  return (
+    <div className="relationship-bond-controls">
+      <label>
+        Bondmate
+        <select
+          value={bondmateId}
+          onChange={(event) => {
+            setBondmateId(event.currentTarget.value);
+            setBondMoveId("");
+          }}
+        >
+          <option value="">Choose a PC</option>
+          {eligibleBondmates.map((person) => (
+            <option key={person.id} value={person.id}>
+              {person.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        Bond
+        <select
+          aria-label="Bond type"
+          value={bondType}
+          onChange={(event) => {
+            setBondType(event.currentTarget.value);
+            setBondMoveId("");
+          }}
+        >
+          <option value="">Choose a Bond</option>
+          {BONDS.map((bond) => (
+            <option key={bond.id} value={bond.id}>
+              {bond.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      {reinforcing && availableMoves.length > 0 && (
+        <label>
+          Advanced move
+          <select value={bondMoveId} onChange={(event) => setBondMoveId(event.currentTarget.value)}>
+            <option value="">Choose a move</option>
+            {availableMoves.map((move) => (
+              <option key={move.id} value={move.id}>
+                {move.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      {reinforcing && availableMoves.length === 0 && (
+        <span className="muted">All advanced Bond moves are unlocked.</span>
+      )}
+      <Button
+        variant="secondary"
+        disabled={!bondmateId || !bondType || (reinforcing && !bondMoveId)}
+        onClick={submit}
+      >
+        {reinforcing ? "Reinforce Bond" : "Forge Bond"}
+      </Button>
+    </div>
   );
 }

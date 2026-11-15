@@ -61,6 +61,39 @@ function tabRect() {
 const collapsed = (box: DOMRect): Keyframe => collapsedInto(box, tabRect());
 
 export function ChatPopups({ campaign }: { campaign: Campaign }) {
+  const { shown, held, hidden, leavingAll, setHeld, setLeavingAll, ref, stack, place } =
+    useChatPopupStack(campaign);
+  if (!shown.length) return null;
+  return (
+    <output
+      ref={ref}
+      className="chat-popups"
+      aria-live="polite"
+      onPointerEnter={() => setHeld(true)}
+      onPointerLeave={() => setHeld(false)}
+      onPointerDown={() => markRead(campaign)}
+    >
+      <div ref={stack} className="chat-popup-stack">
+        {shown.map((message, index) => (
+          <Popup
+            key={message.id}
+            campaign={campaign}
+            m={message}
+            depth={shown.length - 1 - index}
+            held={held || hidden}
+            leaving={leavingAll}
+            stack={stack}
+            place={place}
+            onDismissAll={() => setLeavingAll(true)}
+          />
+        ))}
+      </div>
+      <span className="chat-popup-tail" aria-hidden="true" />
+    </output>
+  );
+}
+
+function useChatPopupStack(campaign: Campaign) {
   const ctx = useCampaign();
   // Tell chat/notify.ts whether new messages can be read where they land.
   useEffect(
@@ -101,7 +134,7 @@ export function ChatPopups({ campaign }: { campaign: Campaign }) {
     const tab = tabRect();
     const corner = () => {
       if (revision !== placementRevision.current) return;
-      el.dataset.anchor = "corner";
+      el.dataset["anchor"] = "corner";
       el.style.removeProperty("left");
       el.style.removeProperty("top");
       el.style.removeProperty("right");
@@ -138,7 +171,7 @@ export function ChatPopups({ campaign }: { campaign: Campaign }) {
       if (revision === placementRevision.current && el.isConnected) {
         if (tabRect()) {
           const placement = result.placement.split("-")[0];
-          el.dataset.anchor = placement === "left" ? "right" : "left";
+          el.dataset["anchor"] = placement === "left" ? "right" : "left";
           tail?.style.removeProperty("display");
           tail?.style.removeProperty("visibility");
           el.style.left = `${Math.round(result.x)}px`;
@@ -184,34 +217,7 @@ export function ChatPopups({ campaign }: { campaign: Campaign }) {
     }
   }
 
-  if (!any) return null;
-  return (
-    <output
-      ref={ref}
-      className="chat-popups"
-      aria-live="polite"
-      onPointerEnter={() => setHeld(true)}
-      onPointerLeave={() => setHeld(false)}
-      onPointerDown={() => markRead(campaign)}
-    >
-      <div ref={stack} className="chat-popup-stack">
-        {shown.map((m, i) => (
-          <Popup
-            key={m.id}
-            campaign={campaign}
-            m={m}
-            depth={shown.length - 1 - i}
-            held={held || hidden}
-            leaving={leavingAll}
-            stack={stack}
-            place={place}
-            onDismissAll={() => setLeavingAll(true)}
-          />
-        ))}
-      </div>
-      <span className="chat-popup-tail" aria-hidden="true" />
-    </output>
-  );
+  return { shown, held, hidden, leavingAll, setHeld, setLeavingAll, ref, stack, place };
 }
 
 function Popup({

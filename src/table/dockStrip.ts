@@ -29,7 +29,7 @@ export function useDockStripLayout(
     const heightProperty = `--dock-${edge}-height`;
     const measure = () => {
       const available = table.clientWidth - insets.left.body - insets.right.body;
-      bar.dataset.fullWidth = String(measureContent(bar).width > available);
+      bar.dataset["fullWidth"] = String(measureContent(bar).width > available);
       table.style.setProperty(heightProperty, `${bar.offsetHeight}px`);
     };
     measure();

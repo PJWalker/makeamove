@@ -474,6 +474,108 @@ function NewCharacter({
   initialFolder?: string | undefined;
   onDone: () => void;
 }) {
+  const {
+    kind,
+    setKind,
+    name,
+    setName,
+    identity,
+    setIdentity,
+    relationship,
+    setRelationship,
+    folder,
+    setFolder,
+    creation,
+    choiceData,
+    existingPcs,
+    startingRelationship,
+    scoreRule,
+    hints,
+    ready,
+    classChoice,
+    otherChoices,
+    scores,
+    method,
+    setMethod,
+    setScores,
+    choiceField,
+    submit,
+  } = useNewCharacter(system, existingCharacters, initialFolder, onDone);
+
+  return (
+    <form
+      className="sheet-new"
+      onSubmit={(event) => {
+        event.preventDefault();
+        submit();
+      }}
+    >
+      <KindField kind={kind} onChange={setKind} />
+      {kind === "pc" && classChoice && choiceField(classChoice)}
+      <HintedField label="Name" hint={kind === "pc" ? hints.name : undefined}>
+        {(input) => (
+          <input
+            {...input}
+            value={name}
+            onInput={(event) => setName(event.currentTarget.value)}
+            // The field is the dialog's one input.
+            // react-doctor-disable-next-line react-doctor/no-autofocus
+            autoFocus
+          />
+        )}
+      </HintedField>
+      {kind === "pc" && creation && (
+        <>
+          {creation.identity && (
+            <IdentityFields
+              identity={creation.identity}
+              hints={hints.identity}
+              values={identity}
+              onChange={setIdentity}
+            />
+          )}
+          {startingRelationship && (
+            <RelationshipFields
+              depths={startingRelationship.depths}
+              pcs={existingPcs}
+              hint={hints.relationship}
+              value={relationship}
+              onChange={setRelationship}
+            />
+          )}
+          {otherChoices.map(choiceField)}
+          <ScoreFields
+            key={String(choiceData[CLASS_FIELD] ?? "generic")}
+            system={system}
+            methods={creation.scores}
+            method={method}
+            onMethod={setMethod}
+            scores={scores}
+            onScores={setScores}
+            hint={hints.scores}
+            rule={scoreRule}
+          />
+        </>
+      )}
+      <FolderField folders={folders} value={folder} onChange={setFolder} />
+      <div className="form-actions">
+        <Button variant="ghost" onClick={onDone}>
+          Cancel
+        </Button>
+        <Button variant="primary" type="submit" disabled={!ready}>
+          Create
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+function useNewCharacter(
+  system: GameSystem,
+  existingCharacters: CharacterView[],
+  initialFolder: string | undefined,
+  onDone: () => void,
+) {
   const ctx = useCampaign();
   const [kind, setKind] = useState<"pc" | "npc">("pc");
   const [name, setName] = useState("");
@@ -535,70 +637,33 @@ function NewCharacter({
     }
     onDone();
   };
-  return (
-    <form
-      className="sheet-new"
-      onSubmit={(e) => {
-        e.preventDefault();
-        submit();
-      }}
-    >
-      <KindField kind={kind} onChange={setKind} />
-      {kind === "pc" && classChoice && choiceField(classChoice)}
-      <HintedField label="Name" hint={kind === "pc" ? hints.name : undefined}>
-        {(input) => (
-          <input
-            {...input}
-            value={name}
-            onInput={(e) => setName(e.currentTarget.value)}
-            // The field is the dialog's one input.
-            // react-doctor-disable-next-line react-doctor/no-autofocus
-            autoFocus
-          />
-        )}
-      </HintedField>
-      {kind === "pc" && creation && (
-        <>
-          {creation.identity && (
-            <IdentityFields
-              identity={creation.identity}
-              hints={hints.identity}
-              values={identity}
-              onChange={setIdentity}
-            />
-          )}
-          {startingRelationship && (
-            <RelationshipFields
-              depths={startingRelationship.depths}
-              pcs={existingPcs}
-              hint={hints.relationship}
-              value={relationship}
-              onChange={setRelationship}
-            />
-          )}
-          {otherChoices.map(choiceField)}
-          <ScoreFields
-            key={String(choiceData[CLASS_FIELD] ?? "generic")}
-            system={system}
-            methods={creation.scores}
-            method={method}
-            onMethod={setMethod}
-            scores={scores}
-            onScores={setScores}
-            hint={hints.scores}
-            rule={scoreRule}
-          />
-        </>
-      )}
-      <FolderField folders={folders} value={folder} onChange={setFolder} />
-      <div className="form-actions">
-        <Button variant="ghost" onClick={onDone}>
-          Cancel
-        </Button>
-        <Button variant="primary" type="submit" disabled={!ready}>
-          Create
-        </Button>
-      </div>
-    </form>
-  );
+  return {
+    kind,
+    setKind,
+    name,
+    setName,
+    identity,
+    setIdentity,
+    relationship,
+    setRelationship,
+    folder,
+    setFolder,
+    creation,
+    choiceData,
+    choices,
+    existingPcs,
+    repeat,
+    startingRelationship,
+    scoreRule,
+    hints,
+    ready,
+    classChoice,
+    otherChoices,
+    scores,
+    method,
+    setMethod,
+    setScores,
+    choiceField,
+    submit,
+  };
 }

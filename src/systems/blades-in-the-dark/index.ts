@@ -988,7 +988,7 @@ export const bladesInTheDark: GameSystem = {
         actions.filter((actionId) => (mods[actionId] ?? 0) > 0).length,
       ]),
     );
-    const abilities = commaListOf(character.data.specialAbilities);
+    const abilities = commaListOf(character.data["specialAbilities"]);
     const resolved = resolveEffects(
       {
         ...attributes,
@@ -1010,13 +1010,13 @@ export const bladesInTheDark: GameSystem = {
         trauma,
         load: character.inventory.reduce((sum, item) => sum + item.weight, 0),
         maxLoad:
-          Number(character.data.load ?? 5) + (abilities.includes("ability-cutter-mule") ? 2 : 0),
+          Number(character.data["load"] ?? 5) + (abilities.includes("ability-cutter-mule") ? 2 : 0),
       },
     };
   },
   actionsFor(character) {
     if (character.kind === "npc") return [];
-    const abilities = commaListOf(character.data.specialAbilities);
+    const abilities = commaListOf(character.data["specialAbilities"]);
     return [
       ...bladesInTheDark.actions.filter((action) => action.category !== "ability"),
       ...PLAYBOOK_ACTIONS.filter((action) => abilities.includes(action.id)),
@@ -1029,8 +1029,8 @@ export const bladesInTheDark: GameSystem = {
           {
             id: "stress",
             label: "Stress",
-            value: Number(character.data.stress ?? 0),
-            max: derived.values.maxStress ?? 0,
+            value: Number(character.data["stress"] ?? 0),
+            max: derived.values["maxStress"] ?? 0,
             colour: "#b84b42",
             source: { data: "stress" },
           },

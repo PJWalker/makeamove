@@ -124,7 +124,7 @@ export function linkExtension(campaign: Campaign, o: Pick<RichTextOptions, "note
         text || current || label || "Unavailable",
       ];
     },
-    renderText: ({ node }) => `@${node.attrs.text || node.attrs.label || node.attrs.id}`,
+    renderText: ({ node }) => `@${node.attrs["text"] || node.attrs["label"] || node.attrs["id"]}`,
     suggestion: {
       char: "@",
       allowSpaces: true,
@@ -307,8 +307,8 @@ export function mountRichText(
   const chipAt = (e: Event) =>
     (e.target as Element).closest<HTMLElement>(`[data-type="${LINK_NODE}"]`);
   const refOf = (chip: HTMLElement) => ({
-    kind: chip.dataset.kind as LinkKind,
-    id: chip.dataset.id ?? "",
+    kind: chip.dataset["kind"] as LinkKind,
+    id: chip.dataset["id"] ?? "",
   });
   /** Opening a link: a note links on to another page in the Notes panel; anything else opens a pop-up. */
   const followsInPlace = (kind: LinkKind) => kind === "note" && !!o.noteId;
@@ -316,7 +316,7 @@ export function mountRichText(
   // Clicking a link chip.
   const onClick = (e: MouseEvent) => {
     const chip = chipAt(e);
-    if (!chip || chip.dataset.missing) return;
+    if (!chip || chip.dataset["missing"]) return;
     e.preventDefault();
     const link = refOf(chip);
     if (followsInPlace(link.kind)) ctx.links.followLink(link.kind, link.id);
@@ -373,7 +373,7 @@ export function mountRichText(
     if (!chip) return;
     const link = refOf(chip);
     const found = nodeOf(chip);
-    const sections = chip.dataset.missing
+    const sections = chip.dataset["missing"]
       ? []
       : linkMenuSections(ctx, link, {
           title: chip.textContent ?? undefined,
@@ -382,7 +382,7 @@ export function mountRichText(
             : {}),
         });
     if (found && editor.isEditable) {
-      const custom = !!found.node.attrs.text;
+      const custom = !!found.node.attrs["text"];
       sections.push([
         {
           label: "Edit Link Text…",
@@ -433,13 +433,18 @@ export function mountRichText(
   // Dragging a link chip out: onto a character (gear and moves), the hotbar or other text.
   const onPointerDown = (e: PointerEvent) => {
     const chip = (e.target as Element).closest<HTMLElement>(`[data-type="${LINK_NODE}"]`);
-    if (!chip || chip.dataset.missing || e.button !== 0) return;
+    if (!chip || chip.dataset["missing"] || e.button !== 0) return;
     // Keep the editor from starting a text selection; a click still follows the link.
     e.preventDefault();
     dragEntity(
       ctx.canvas,
       e,
-      entity(ctx, chip.dataset.kind as LinkKind, chip.dataset.id ?? "", chip.textContent ?? ""),
+      entity(
+        ctx,
+        chip.dataset["kind"] as LinkKind,
+        chip.dataset["id"] ?? "",
+        chip.textContent ?? "",
+      ),
       chip,
     );
   };

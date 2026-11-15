@@ -87,25 +87,8 @@ function Window({
   win: FloatingWindow & { id: PanelId };
   campaign: Campaign;
 }) {
-  const ctx = useCampaign();
-  const win = useWindowRect(ctx.panels, stored);
-  const label = usePanelLabel(win.id, campaign);
-  const [rolled, setRolled] = useState(false);
-  const pointer = useWindowPointer(ctx.panels, win.id);
-  const target = useQuery(ctx.panels.dockTarget);
-
-  function onHeaderPointerDown(e: PointerEvent) {
-    if (e.button !== 0 || (e.target as HTMLElement).closest("button")) return;
-    e.preventDefault();
-    ctx.panels.startWindowDrag(win.id, e, e.clientX - win.x, e.clientY - win.y);
-  }
-
-  // Over a sidebar the window morphs into the tab it would become, and back out again.
-  const asTab = target !== null ? pointer : null;
-  const morph = useDockMorph(win.id, pointer !== null, asTab !== null);
-  const to = pointer ?? { x: win.x, y: win.y };
-  const toTab = `translate(${to.x - TAB / 2 - win.x}px, ${to.y - TAB / 2 - win.y}px) scale(${TAB / win.w}, ${TAB / win.h})`;
-
+  const { ctx, win, label, rolled, setRolled, pointer, asTab, morph, toTab, onHeaderPointerDown } =
+    useWindowPresentation(stored, campaign);
   return (
     <PanelActionsProvider>
       {asTab && (
@@ -154,4 +137,26 @@ function Window({
       </section>
     </PanelActionsProvider>
   );
+}
+
+function useWindowPresentation(stored: FloatingWindow & { id: PanelId }, campaign: Campaign) {
+  const ctx = useCampaign();
+  const win = useWindowRect(ctx.panels, stored);
+  const label = usePanelLabel(win.id, campaign);
+  const [rolled, setRolled] = useState(false);
+  const pointer = useWindowPointer(ctx.panels, win.id);
+  const target = useQuery(ctx.panels.dockTarget);
+
+  function onHeaderPointerDown(e: PointerEvent) {
+    if (e.button !== 0 || (e.target as HTMLElement).closest("button")) return;
+    e.preventDefault();
+    ctx.panels.startWindowDrag(win.id, e, e.clientX - win.x, e.clientY - win.y);
+  }
+
+  // Over a sidebar the window morphs into the tab it would become, and back out again.
+  const asTab = target !== null ? pointer : null;
+  const morph = useDockMorph(win.id, pointer !== null, asTab !== null);
+  const to = pointer ?? { x: win.x, y: win.y };
+  const toTab = `translate(${to.x - TAB / 2 - win.x}px, ${to.y - TAB / 2 - win.y}px) scale(${TAB / win.w}, ${TAB / win.h})`;
+  return { ctx, win, label, rolled, setRolled, pointer, asTab, morph, toTab, onHeaderPointerDown };
 }

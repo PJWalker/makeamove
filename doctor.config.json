@@ -26,7 +26,7 @@
     "react-doctor/design-no-three-period-ellipsis": "warn",
     "react-doctor/empty-table-header": "warn",
     "react-doctor/fieldset-requires-legend": "warn",
-    "react-doctor/forbid-component-props": "warn",
+    "react-doctor/forbid-component-props": "off",
     "react-doctor/form-control-requires-name": "warn",
     "react-doctor/forwarded-set-state-in-effect": "warn",
     "react-doctor/hook-use-state": "warn",

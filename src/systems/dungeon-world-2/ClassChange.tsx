@@ -49,8 +49,85 @@ function ClassChangeDialog({
   characterId: string;
   onClose: () => void;
 }) {
-  const ctx = useCampaign();
   const ref = usePopupDialog();
+  const {
+    system,
+    character,
+    classOptions,
+    newClassId,
+    setNewClassId,
+    scores,
+    setScores,
+    scoreRule,
+    stages,
+    picks,
+    setPicks,
+    oldAdvancementCount,
+    ready,
+    apply,
+  } = useClassChange(campaign, characterId);
+  const submit = () => {
+    if (apply()) closePopup(ref.current, onClose);
+  };
+
+  return (
+    <Dialog dialogRef={ref} title={`${character.name}: change Class`} onClose={onClose}>
+      <form
+        className="creation-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          submit();
+        }}
+      >
+        <p>
+          Reassign existing advancements under the new Class. Level, XP, and Treasure remain
+          unchanged.
+        </p>
+        <OptionPicker
+          label="New Class"
+          options={classOptions}
+          value={newClassId}
+          emptyLabel="Choose…"
+          onChange={setNewClassId}
+        />
+        {scoreRule && (
+          <div className="field creation-scores">
+            <span>New Class stats</span>
+            <RuleScoreFields
+              system={system}
+              rule={scoreRule}
+              scores={scores}
+              onScores={setScores}
+            />
+          </div>
+        )}
+        {stages.map(({ id, display }) => (
+          <ChoiceField
+            key={id}
+            system={system}
+            choice={display}
+            value={picks[id] ?? emptyPick()}
+            onChange={(pick) => setPicks({ ...picks, [id]: pick })}
+          />
+        ))}
+        {!oldAdvancementCount && newClassId && (
+          <p className="muted">This character has no advancements to reassign.</p>
+        )}
+        <div className="form-actions">
+          <Button variant="ghost" onClick={() => closePopup(ref.current, onClose)}>
+            Cancel
+          </Button>
+          <Button variant="primary" type="submit" disabled={!ready}>
+            Change Class
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+}
+
+function useClassChange(campaign: Campaign, characterId: string) {
+  const ctx = useCampaign();
   const system = systemOf(campaign);
   const character = getCharacter(campaign, characterId)!;
   const creation = system.creation;
@@ -59,7 +136,7 @@ function ClassChangeDialog({
   const [scores, setScores] = useState<Record<string, number>>({});
   const [picks, setPicks] = useState<Record<string, Picked>>({});
   const scoreRule = creation?.classScoreRules?.[newClassId];
-  const oldAdvancementCount = commaListOf(character.data.advancements).length;
+  const oldAdvancementCount = commaListOf(character.data["advancements"]).length;
   const stageData: Record<string, DataValue> = {
     ...character.data,
     classId: newClassId,
@@ -103,79 +180,38 @@ function ClassChangeDialog({
         !!picks[id]?.option && choice.options.some((option) => option.id === picks[id]?.option),
     );
   const classOptions =
-    classChoice?.options.filter((option) => option.id !== character.data.classId) ?? [];
-  const apply = () => {
-    if (!ready) return;
-    if (
-      ctx.execute(changeClass, {
-        characterId,
-        classId: newClassId,
-        scores: stageScores,
-        data: stageData,
-      })
-    )
-      closePopup(ref.current, onClose);
+    classChoice?.options.filter((option) => option.id !== character.data["classId"]) ?? [];
+  const apply = () =>
+    ready &&
+    ctx.execute(changeClass, {
+      characterId,
+      classId: newClassId,
+      scores: stageScores,
+      data: stageData,
+    });
+  const changeClassSelection = (id: string) => {
+    setNewClassId(id);
+    const rule = creation?.classScoreRules?.[id];
+    setScores(rule ? ruleStartingScores(rule, system.stats) : {});
+    setPicks({});
   };
 
-  return (
-    <Dialog dialogRef={ref} title={`${character.name}: change Class`} onClose={onClose}>
-      <form
-        className="creation-form"
-        onSubmit={(event) => {
-          event.preventDefault();
-          apply();
-        }}
-      >
-        <p>
-          Reassign existing advancements under the new Class. Level, XP, and Treasure remain
-          unchanged.
-        </p>
-        <OptionPicker
-          label="New Class"
-          options={classOptions}
-          value={newClassId}
-          emptyLabel="Choose…"
-          onChange={(id) => {
-            setNewClassId(id);
-            const rule = creation?.classScoreRules?.[id];
-            setScores(rule ? ruleStartingScores(rule, system.stats) : {});
-            setPicks({});
-          }}
-        />
-        {scoreRule && (
-          <div className="field creation-scores">
-            <span>New Class stats</span>
-            <RuleScoreFields
-              system={system}
-              rule={scoreRule}
-              scores={scores}
-              onScores={setScores}
-            />
-          </div>
-        )}
-        {stages.map(({ id, display }) => (
-          <ChoiceField
-            key={id}
-            system={system}
-            choice={display}
-            value={picks[id] ?? emptyPick()}
-            onChange={(pick) => setPicks({ ...picks, [id]: pick })}
-          />
-        ))}
-        {!oldAdvancementCount && newClassId && (
-          <p className="muted">This character has no advancements to reassign.</p>
-        )}
-        <div className="form-actions">
-          <Button variant="ghost" onClick={() => closePopup(ref.current, onClose)}>
-            Cancel
-          </Button>
-          <Button variant="primary" type="submit" disabled={!ready}>
-            Change Class
-          </Button>
-        </div>
-      </form>
-    </Dialog>
-  );
+  return {
+    system,
+    character,
+    classOptions,
+    newClassId,
+    setNewClassId: changeClassSelection,
+    scores,
+    setScores,
+    scoreRule,
+    stages,
+    picks,
+    setPicks,
+    oldAdvancementCount,
+    ready,
+    apply,
+  };
 }
 
 /** The Change Class button beside the sheet's advancement banner. */

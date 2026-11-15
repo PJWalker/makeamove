@@ -66,6 +66,46 @@ function anchorRect(el: Element | null): DOMRect | null {
 }
 
 export function MovePrompt({ campaign }: { campaign: Campaign }) {
+  const { ctx, hasLive, ref, req, move, character } = useMovePrompt(campaign);
+  if (!req || !move || !character) return null;
+  return (
+    <dialog
+      open
+      ref={ref}
+      className="roll-prompt panel"
+      aria-label={`${move.name} (${character.name})`}
+      inert={!hasLive}
+    >
+      <div className="roll-prompt-head">
+        <span className="eyebrow">
+          {move.name} · {character.name}
+        </span>
+        <Button variant="icon" label="Cancel" onClick={() => cancel(ctx)}>
+          <IconClose />
+        </Button>
+      </div>
+      <RichTextView
+        campaign={campaign}
+        text={withoutAskedQuestions(move)}
+        characterId={character.id}
+        className="roll-prompt-desc"
+      />
+      {req.kind === "target" ? (
+        <TargetStep campaign={campaign} characterId={character.id} moveId={move.id} />
+      ) : (
+        <AskStep
+          key={`${character.id}:${move.id}`}
+          campaign={campaign}
+          characterId={character.id}
+          moveId={move.id}
+        />
+      )}
+      <span className="roll-prompt-tail" aria-hidden="true" />
+    </dialog>
+  );
+}
+
+function useMovePrompt(campaign: Campaign) {
   const ctx = useCampaign();
   const target = useQuery(ctx.campaign.moves.targets);
   const requestedMove = useQuery(ctx.campaign.moves.ask);
@@ -163,7 +203,7 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
       if (!a || !source) {
         const w = el.offsetWidth;
         const h = el.offsetHeight;
-        el.dataset.side = "none";
+        el.dataset["side"] = "none";
         el.style.left = `${Math.round(Math.min(Math.max((innerWidth - w) / 2, MARGIN), innerWidth - w - MARGIN))}px`;
         el.style.top = `${Math.round(Math.min(Math.max(innerHeight - h - 60, MARGIN), innerHeight - h - MARGIN))}px`;
         el.style.setProperty("--tail", "0px");
@@ -178,7 +218,7 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
               a.left + a.width / 2 < innerWidth / 2
             ? "right"
             : "left";
-      el.dataset.side = side === "top" ? "above" : side;
+      el.dataset["side"] = side === "top" ? "above" : side;
       const tail = el.querySelector<HTMLElement>(".roll-prompt-tail");
       const result = await computePosition(source, el, {
         strategy: "fixed",
@@ -192,7 +232,7 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
       });
       if (!active || currentRevision !== revision) return;
       const placement = result.placement.split("-")[0];
-      el.dataset.side =
+      el.dataset["side"] =
         placement === "top" ? "above" : placement === "bottom" ? "below" : placement;
       el.style.left = `${Math.round(result.x)}px`;
       el.style.top = `${Math.round(result.y)}px`;
@@ -248,44 +288,8 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
 
   const req = shown;
   const move = req ? systemOf(campaign).actions.find((m) => m.id === req.moveId) : undefined;
-  const c = req ? getCharacter(campaign, req.characterId) : undefined;
-  if (!req || !move || !c) return null;
-
-  return (
-    <dialog
-      open
-      ref={ref}
-      className="roll-prompt panel"
-      aria-label={`${move.name} (${c.name})`}
-      inert={!hasLive}
-    >
-      <div className="roll-prompt-head">
-        <span className="eyebrow">
-          {move.name} · {c.name}
-        </span>
-        <Button variant="icon" label="Cancel" onClick={() => cancel(ctx)}>
-          <IconClose />
-        </Button>
-      </div>
-      <RichTextView
-        campaign={campaign}
-        text={withoutAskedQuestions(move)}
-        characterId={c.id}
-        className="roll-prompt-desc"
-      />
-      {req.kind === "target" ? (
-        <TargetStep campaign={campaign} characterId={c.id} moveId={move.id} />
-      ) : (
-        <AskStep
-          key={`${c.id}:${move.id}`}
-          campaign={campaign}
-          characterId={c.id}
-          moveId={move.id}
-        />
-      )}
-      <span className="roll-prompt-tail" aria-hidden="true" />
-    </dialog>
-  );
+  const character = req ? getCharacter(campaign, req.characterId) : undefined;
+  return { ctx, hasLive, ref, req, move, character };
 }
 
 /** Targets, picked by clicking tokens on the map. */

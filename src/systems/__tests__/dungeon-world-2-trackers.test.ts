@@ -39,7 +39,7 @@ describe("inline resource buttons", () => {
     setData(campaign, id, "xp", 4);
     const spend = { by: -1, name: "Treasure", label: "Spend 1 Treasure" };
     expect(pressTracker(campaign, id, spend)).toBe(true);
-    expect(getCharacter(campaign, id)?.data.treasureBoxes).toBe(0);
+    expect(getCharacter(campaign, id)?.data["treasureBoxes"]).toBe(0);
     expect(trackerBlock(campaign, id, spend)).toContain("only 0");
     expect(pressTracker(campaign, id, spend)).toBe(false);
     const xp = { by: 1, name: "XP", label: "+1 XP" };

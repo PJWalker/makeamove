@@ -137,28 +137,14 @@ export function ScoreFields({
   rule?: ScoreRule | undefined;
   hint?: string | undefined;
 }) {
-  const available = scoreMethods(methods);
-  const [pool, setPool] = useState<number[]>(methods.standardArray ?? []);
-  const takePool = (next: number[]) => {
-    setPool(next);
-    onScores(assignInOrder(system, next));
-  };
-  useEffect(() => {
-    if (rule) onScores(ruleStartingScores(rule, system.stats));
-    // Only a new rule resets the scores.
-    // oxlint-disable-next-line react-hooks/exhaustive-deps
-  }, [rule]);
-  const rollPool = () =>
-    takePool(system.stats.map(() => roll(methods.roll!).total).sort((a, b) => b - a));
-  const choose = (m: ScoreMethod) => {
-    onMethod(m);
-    if (m === "array") takePool(methods.standardArray!);
-    else if (m === "buy") onScores(startingScores(system, methods, m));
-    else if (m === "roll") rollPool();
-  };
-  const spent = methods.pointBuy ? pointsSpent(scores, methods.pointBuy) : null;
-  const buyable = methods.pointBuy ? Object.keys(methods.pointBuy.costs).map(Number) : [];
-
+  const { available, pool, choose, rollPool, spent, buyable } = useScoreFields(
+    system,
+    methods,
+    onMethod,
+    scores,
+    onScores,
+    rule,
+  );
   if (rule)
     return (
       <div className="field creation-scores">
@@ -184,27 +170,31 @@ export function ScoreFields({
         </Button>
       )}
       <div className="creation-score-grid">
-        {system.stats.map((s) => (
-          <label key={s.id} className="creation-score">
-            <span className="stat-abbr">{s.abbr}</span>
+        {system.stats.map((stat) => (
+          <label key={stat.id} className="creation-score">
+            <span className="stat-abbr">{stat.abbr}</span>
             {method === "array" || method === "roll" ? (
               <select
-                value={scores[s.id]}
-                onChange={(e) => onScores(swapScore(scores, s.id, Number(e.currentTarget.value)))}
+                value={scores[stat.id]}
+                onChange={(event) =>
+                  onScores(swapScore(scores, stat.id, Number(event.currentTarget.value)))
+                }
               >
-                {pool.map((n) => (
-                  <option key={n} value={n}>
-                    {n}
+                {pool.map((score) => (
+                  <option key={score} value={score}>
+                    {score}
                   </option>
                 ))}
               </select>
             ) : (
               <input
                 type="number"
-                min={method === "buy" ? Math.min(...buyable) : (s.min ?? 1)}
-                max={method === "buy" ? Math.max(...buyable) : (s.max ?? SCORE_CAP)}
-                value={scores[s.id]}
-                onInput={(e) => onScores({ ...scores, [s.id]: Number(e.currentTarget.value) || 0 })}
+                min={method === "buy" ? Math.min(...buyable) : (stat.min ?? 1)}
+                max={method === "buy" ? Math.max(...buyable) : (stat.max ?? SCORE_CAP)}
+                value={scores[stat.id]}
+                onInput={(event) =>
+                  onScores({ ...scores, [stat.id]: Number(event.currentTarget.value) || 0 })
+                }
               />
             )}
           </label>
@@ -212,6 +202,38 @@ export function ScoreFields({
       </div>
     </div>
   );
+}
+
+function useScoreFields(
+  system: GameSystem,
+  methods: ScoreMethods,
+  onMethod: (method: ScoreMethod) => void,
+  scores: Record<string, number>,
+  onScores: (scores: Record<string, number>) => void,
+  rule: ScoreRule | undefined,
+) {
+  const available = scoreMethods(methods);
+  const [pool, setPool] = useState<number[]>(methods.standardArray ?? []);
+  const takePool = (next: number[]) => {
+    setPool(next);
+    onScores(assignInOrder(system, next));
+  };
+  useEffect(() => {
+    if (rule) onScores(ruleStartingScores(rule, system.stats));
+    // Only a new rule resets the scores.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [rule]);
+  const rollPool = () =>
+    takePool(system.stats.map(() => roll(methods.roll!).total).sort((a, b) => b - a));
+  const choose = (m: ScoreMethod) => {
+    onMethod(m);
+    if (m === "array") takePool(methods.standardArray!);
+    else if (m === "buy") onScores(startingScores(system, methods, m));
+    else if (m === "roll") rollPool();
+  };
+  const spent = methods.pointBuy ? pointsSpent(scores, methods.pointBuy) : null;
+  const buyable = methods.pointBuy ? Object.keys(methods.pointBuy.costs).map(Number) : [];
+  return { available, pool, choose, rollPool, spent, buyable };
 }
 
 /** A picker for each stat's score, checked against the class's required stat line. */
@@ -296,17 +318,22 @@ export function AdvancementDialog({
   const plan = planAdvancement(system, c, picks, improvement);
 
   const apply = () => {
-    const before = derive(c, system).values.maxHp ?? 0;
+    const before = derive(c, system).values["maxHp"] ?? 0;
     ctx.commands.batch(() => {
       for (const [key, value] of plan.data) ctx.execute(setData, { id: c.id, key, value });
       for (const [stat, score] of plan.scores) ctx.execute(setScore, { id: c.id, stat, score });
     });
     const d = derive(getCharacter(campaign, c.id)!, system);
-    const gained = (d.values.maxHp ?? 0) - before;
+    const gained = (d.values["maxHp"] ?? 0) - before;
     if (gained > 0)
-      ctx.execute(bumpResource, { id: c.id, resource: "hp", by: gained, max: d.values.maxHp });
+      ctx.execute(bumpResource, { id: c.id, resource: "hp", by: gained, max: d.values["maxHp"] });
     if (system.resources.some((r) => r.id === "hitDice"))
-      ctx.execute(bumpResource, { id: c.id, resource: "hitDice", by: 1, max: d.values.hitDiceMax });
+      ctx.execute(bumpResource, {
+        id: c.id,
+        resource: "hitDice",
+        by: 1,
+        max: d.values["hitDiceMax"],
+      });
     closePopup(ref.current, onClose);
   };
 

@@ -151,6 +151,86 @@ export function ColourPicker({
   onClose?: () => void;
 }) {
   const range = constrainUserColour ? USER_COLOUR_LIMITS : GENERAL_COLOUR_LIMITS;
+  const { userColour, opacity, visibleHex, shownColour, emitColour, changeHex } = useColourPicker(
+    value,
+    alpha,
+    range,
+    onChange,
+  );
+  return (
+    <DialogTrigger onOpenChange={(open) => !open && onClose?.()}>
+      <Button
+        className="colour-picker-trigger"
+        aria-label={label}
+        data-tip={label}
+        isDisabled={disabled}
+      >
+        <ColorSwatch
+          className="colour-picker-swatch"
+          color={shownColour}
+          style={{
+            background: `linear-gradient(${shownColour}, ${shownColour}), var(--checkerboard)`,
+          }}
+        />
+      </Button>
+      <Popover placement="bottom start" offset={6} className="colour-picker-panel context-menu">
+        <Dialog className="colour-picker-dialog" aria-label={label}>
+          <OklchGamutArea colour={userColour} range={range} onChange={emitColour} />
+          <Slider
+            className="colour-picker-slider"
+            aria-label="Hue"
+            minValue={0}
+            maxValue={360}
+            step={1}
+            value={userColour.h}
+            onChange={(hue) => emitColour({ ...userColour, h: hue })}
+          >
+            <SliderTrack
+              className="colour-picker-track"
+              style={{ background: hueSpectrum(userColour) }}
+            >
+              <SliderThumb className="colour-picker-thumb" style={{ background: visibleHex }} />
+            </SliderTrack>
+          </Slider>
+          {alpha && (
+            <Slider
+              className="colour-picker-slider colour-picker-alpha"
+              aria-label="Opacity"
+              minValue={0}
+              maxValue={1}
+              step={0.01}
+              value={opacity}
+              formatOptions={{ style: "percent" }}
+              onChange={(next) => emitColour(userColour, next)}
+            >
+              <SliderTrack
+                className="colour-picker-track"
+                style={{ background: `linear-gradient(90deg, ${visibleHex}00, ${visibleHex})` }}
+              >
+                <SliderThumb className="colour-picker-thumb" style={{ background: shownColour }} />
+              </SliderTrack>
+            </Slider>
+          )}
+          <ColorField
+            className="colour-picker-hex"
+            aria-label="Hex"
+            value={parseColor(shownColour).toFormat("hsb")}
+            onChange={(typed) => typed && changeHex(typed)}
+          >
+            <Input />
+          </ColorField>
+        </Dialog>
+      </Popover>
+    </DialogTrigger>
+  );
+}
+
+function useColourPicker(
+  value: string,
+  alpha: boolean,
+  range: typeof USER_COLOUR_LIMITS | typeof GENERAL_COLOUR_LIMITS,
+  onChange: (colour: string) => void,
+) {
   const incoming = parseColor(value);
   const [userColour, setUserColour] = useState(() =>
     clampOklch(hexToOklch(format(incoming, false)), range),
@@ -192,71 +272,5 @@ export function ColourPicker({
   const changeHex = (typed: Color) => {
     emitColour(clampOklch(hexToOklch(format(typed, false)), range), typed.getChannelValue("alpha"));
   };
-
-  return (
-    <DialogTrigger onOpenChange={(open) => !open && onClose?.()}>
-      <Button
-        className="colour-picker-trigger"
-        aria-label={label}
-        data-tip={label}
-        isDisabled={disabled}
-      >
-        <ColorSwatch
-          className="colour-picker-swatch"
-          color={shownColour}
-          style={{
-            background: `linear-gradient(${shownColour}, ${shownColour}), var(--checkerboard)`,
-          }}
-        />
-      </Button>
-      <Popover placement="bottom start" offset={6} className="colour-picker-panel context-menu">
-        <Dialog className="colour-picker-dialog" aria-label={label}>
-          <OklchGamutArea colour={userColour} range={range} onChange={emitColour} />
-          <Slider
-            className="colour-picker-slider"
-            aria-label="Hue"
-            minValue={0}
-            maxValue={360}
-            step={1}
-            value={userColour.h}
-            onChange={(h) => emitColour({ ...userColour, h })}
-          >
-            <SliderTrack
-              className="colour-picker-track"
-              style={{ background: hueSpectrum(userColour) }}
-            >
-              <SliderThumb className="colour-picker-thumb" style={{ background: visibleHex }} />
-            </SliderTrack>
-          </Slider>
-          {alpha && (
-            <Slider
-              className="colour-picker-slider colour-picker-alpha"
-              aria-label="Opacity"
-              minValue={0}
-              maxValue={1}
-              step={0.01}
-              value={opacity}
-              formatOptions={{ style: "percent" }}
-              onChange={(next) => emitColour(userColour, next)}
-            >
-              <SliderTrack
-                className="colour-picker-track"
-                style={{ background: `linear-gradient(90deg, ${visibleHex}00, ${visibleHex})` }}
-              >
-                <SliderThumb className="colour-picker-thumb" style={{ background: shownColour }} />
-              </SliderTrack>
-            </Slider>
-          )}
-          <ColorField
-            className="colour-picker-hex"
-            aria-label="Hex"
-            value={parseColor(shownColour).toFormat("hsb")}
-            onChange={(typed) => typed && changeHex(typed)}
-          >
-            <Input />
-          </ColorField>
-        </Dialog>
-      </Popover>
-    </DialogTrigger>
-  );
+  return { userColour, opacity, visibleHex, shownColour, emitColour, changeHex };
 }

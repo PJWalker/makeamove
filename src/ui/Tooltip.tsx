@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { tether } from "./anchor";
 import { inTransition } from "./transition";
 import { setTooltipHider } from "./tooltipController";
@@ -6,6 +6,7 @@ import { setTooltipHider } from "./tooltipController";
 const DELAY = 150;
 
 type Dir = "down" | "up" | "left" | "right";
+type Tip = { text: string; long?: boolean; el: Element; dir: Dir; instant?: boolean } | null;
 
 /**
  * One tooltip for the whole app. It watches the pointer and keyboard focus
@@ -19,16 +20,31 @@ type Dir = "down" | "up" | "left" | "right";
  * a click that turns the tooltip into a window (hideTooltip ends it).
  */
 export function Tooltip() {
-  /** What to show, the element it's for, and the side it would rather open on. */
-  const [tip, setTip] = useState<{
-    text: string;
-    long?: boolean;
-    el: Element;
-    dir: Dir;
-    instant?: boolean;
-  } | null>(null);
-  const ref = useRef<HTMLDivElement>(null);
+  const { tip, ref } = useTooltip();
+  const t = tip;
+  return (
+    <div
+      ref={ref}
+      className="tooltip"
+      data-instant={t?.instant || undefined}
+      data-long={t?.long || undefined}
+      popover="manual"
+      role="tooltip"
+    >
+      {t?.text}
+    </div>
+  );
+}
 
+function useTooltip() {
+  const [tip, setTip] = useState<Tip>(null);
+  const ref = useRef<HTMLDivElement>(null);
+  useTooltipTracking(setTip, ref);
+  useTooltipPosition(ref, tip);
+  return { tip, ref };
+}
+
+function useTooltipTracking(setTip: (tip: Tip) => void, ref: RefObject<HTMLDivElement | null>) {
   useEffect(() => {
     let timer = 0;
     let current: Element | null = null;
@@ -146,21 +162,22 @@ export function Tooltip() {
     };
     // Registered once: re-running on every tip change would hide each tip
     // as soon as it showed.
-  }, []);
+  }, [ref, setTip]);
+}
 
-  const t = tip;
+function useTooltipPosition(ref: RefObject<HTMLDivElement | null>, tip: Tip) {
   // CSS places it, flipping it to the other side if it won't fit; then point
   // the arrow at the middle of the element from whichever side it went to.
   useLayoutEffect(() => {
     const el = ref.current;
-    if (!el || !t) return;
-    const untether = tether(el, t.el);
-    el.dataset.prefer = t.dir;
+    if (!el || !tip) return;
+    const untether = tether(el, tip.el);
+    el.dataset["prefer"] = tip.dir;
     el.showPopover();
-    const r = t.el.getBoundingClientRect();
+    const r = tip.el.getBoundingClientRect();
     const box = el.getBoundingClientRect();
-    const across = t.dir === "left" || t.dir === "right";
-    el.dataset.dir = across
+    const across = tip.dir === "left" || tip.dir === "right";
+    el.dataset["dir"] = across
       ? box.left >= r.right
         ? "right"
         : "left"
@@ -173,18 +190,5 @@ export function Tooltip() {
       if (el.matches(":popover-open")) el.hidePopover();
       untether();
     };
-  }, [t]);
-
-  return (
-    <div
-      ref={ref}
-      className="tooltip"
-      data-instant={t?.instant || undefined}
-      data-long={t?.long || undefined}
-      popover="manual"
-      role="tooltip"
-    >
-      {t?.text}
-    </div>
-  );
+  }, [ref, tip]);
 }

@@ -94,8 +94,8 @@ export function useThrow({
     if (!current) return;
     gesture.current = null;
     current.element.style.cursor = current.cursor;
-    if (current.grabbed === undefined) delete current.element.dataset.grabbed;
-    else current.element.dataset.grabbed = current.grabbed;
+    if (current.grabbed === undefined) delete current.element.dataset["grabbed"];
+    else current.element.dataset["grabbed"] = current.grabbed;
     current.back?.();
     current.drop();
     return current;
@@ -130,13 +130,13 @@ export function useThrow({
         originX: event.clientX,
         originY: event.clientY,
         moved: false,
-        grabbed: element.dataset.grabbed,
+        grabbed: element.dataset["grabbed"],
         element,
         carrier,
         drop,
         cursor: element.style.cursor,
       };
-      element.dataset.grabbed = "true";
+      element.dataset["grabbed"] = "true";
       element.style.cursor = "grabbing";
     },
     onPointerMove(event: React.PointerEvent<HTMLElement>) {

@@ -1,5 +1,6 @@
+import { useCallback, useMemo } from "react";
 import type { Campaign } from "../campaign/campaign";
-import type { EntityGraphic } from "../media/images";
+import { getCharacter } from "../features/characters/api";
 import { useQuery } from "../ui/useQuery";
 import { EntityGraphicView } from "../ui/EntityGraphic";
 import { getEntityGraphic } from "./entityGraphics";
@@ -19,12 +20,16 @@ export function CampaignEntityGraphic({
   size?: number;
   className?: string | undefined;
 }) {
-  const savedGraphic = useQuery(campaign.entityGraphics, () =>
-    JSON.stringify(getEntityGraphic(campaign, kind, id, defaultIcon)),
+  const readGraphic = useCallback(
+    () => getEntityGraphic(campaign, kind, id, defaultIcon),
+    [campaign, kind, id, defaultIcon],
   );
-  useQuery(kind === "character" ? campaign.characters : null, () =>
-    JSON.stringify(getEntityGraphic(campaign, kind, id, defaultIcon)),
+  const savedGraphic = useQuery(campaign.entityGraphics, readGraphic);
+  const readCharacter = useCallback(() => getCharacter(campaign, id) ?? null, [campaign, id]);
+  const character = useQuery(kind === "character" ? campaign.characters : null, readCharacter);
+  const graphic = useMemo(
+    () => (kind === "character" ? getEntityGraphic(campaign, kind, id, defaultIcon) : savedGraphic),
+    [campaign, kind, id, defaultIcon, savedGraphic, character],
   );
-  const graphic = JSON.parse(savedGraphic) as EntityGraphic;
   return <EntityGraphicView graphic={graphic} size={size} className={className} />;
 }

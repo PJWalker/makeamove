@@ -44,7 +44,7 @@ export class CampaignConnection {
       this.peerCount.value = session.peerIds().length;
       const ids = new Set<string>([this.device.value.id]);
       for (const state of session.awareness.getStates().values()) {
-        const user = state.user as { id?: string } | undefined;
+        const user = state["user"] as { id?: string } | undefined;
         if (user?.id) ids.add(user.id);
       }
       this.online.value = ids;

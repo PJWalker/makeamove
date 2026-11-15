@@ -54,18 +54,10 @@ function ArtifactTracker({
   item: ItemInstance;
   editable: boolean;
 }) {
-  const ctx = useCampaign();
-  const [choice, setChoice] = useState("");
-  const definition = systemOf(campaign).items.find((entry) => entry.id === item.defId);
-  const artifact = definition?.artifact;
-  if (!artifact) return null;
-  const progress = item.artifactProgress ?? 0;
-  const unlocked = new Set(item.artifactUnlocked ?? []);
-  const available = artifact.unlocks.filter((move) => !unlocked.has(move.id));
-  const needsChoice =
-    progress === artifact.capacity - 1 && available.length > 0 && artifact.unlockMode === "choose";
-  const selected =
-    choice && available.some((move) => move.id === choice) ? choice : (available[0]?.id ?? "");
+  const tracker = useArtifactTracker(campaign, characterId, item);
+  if (!tracker) return null;
+  const { artifact, progress, unlocked, available, needsChoice, selected, setChoice, mark, clear } =
+    tracker;
   return (
     <section className="inventory-artifact" aria-label={`${item.name} Artifact track`}>
       <h4>{artifact.track}</h4>
@@ -98,21 +90,11 @@ function ArtifactTracker({
       <div className="sheet-row">
         <Button
           disabled={!editable || progress >= artifact.capacity || (needsChoice && !selected)}
-          onClick={() =>
-            ctx.execute(markItemTrack, {
-              characterId,
-              itemId: item.id,
-              unlock: needsChoice ? selected : undefined,
-            })
-          }
+          onClick={mark}
         >
           Mark {artifact.track}
         </Button>
-        <Button
-          variant="ghost"
-          disabled={!editable || progress === 0}
-          onClick={() => ctx.execute(clearItemTrack, { characterId, itemId: item.id })}
-        >
+        <Button variant="ghost" disabled={!editable || progress === 0} onClick={clear}>
           Clear 1
         </Button>
       </div>
@@ -135,6 +117,29 @@ function ArtifactTracker({
       </details>
     </section>
   );
+}
+
+function useArtifactTracker(campaign: Campaign, characterId: string, item: ItemInstance) {
+  const ctx = useCampaign();
+  const [choice, setChoice] = useState("");
+  const definition = systemOf(campaign).items.find((entry) => entry.id === item.defId);
+  const artifact = definition?.artifact;
+  if (!artifact) return null;
+  const progress = item.artifactProgress ?? 0;
+  const unlocked = new Set(item.artifactUnlocked ?? []);
+  const available = artifact.unlocks.filter((move) => !unlocked.has(move.id));
+  const needsChoice =
+    progress === artifact.capacity - 1 && available.length > 0 && artifact.unlockMode === "choose";
+  const selected =
+    choice && available.some((move) => move.id === choice) ? choice : (available[0]?.id ?? "");
+  const mark = () =>
+    ctx.execute(markItemTrack, {
+      characterId,
+      itemId: item.id,
+      unlock: needsChoice ? selected : undefined,
+    });
+  const clear = () => ctx.execute(clearItemTrack, { characterId, itemId: item.id });
+  return { artifact, progress, unlocked, available, needsChoice, selected, setChoice, mark, clear };
 }
 
 /** The core's Use button: spends a use, or does whatever the system's command for it does. */
@@ -170,7 +175,7 @@ export function Inventory({
   const windows = useEntryWindows();
   const patch = (i: ItemInstance, p: Partial<ItemInstance>) =>
     ctx.execute(updateItem, { characterId: c.id, itemId: i.id, patch: p });
-  const over = d && (d.values.load ?? 0) > (d.values.maxLoad ?? 0);
+  const over = d && (d.values["load"] ?? 0) > (d.values["maxLoad"] ?? 0);
   const system = systemOf(campaign);
   const extension = useExtension(system);
   const ItemUse = extension.ItemUse ?? UseButton;
@@ -212,9 +217,9 @@ export function Inventory({
     >
       <h3 className="sheet-heading">
         Inventory{" "}
-        {d?.values.load !== undefined && d.values.maxLoad !== undefined && (
+        {d?.values["load"] !== undefined && d.values["maxLoad"] !== undefined && (
           <span className="muted" data-over={over}>
-            Load {d.values.load}/{d.values.maxLoad}
+            Load {d.values["load"]}/{d.values["maxLoad"]}
             {over && " · overloaded"}
           </span>
         )}

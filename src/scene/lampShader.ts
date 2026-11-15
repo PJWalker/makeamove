@@ -309,9 +309,9 @@ export class Lamp {
     this.mesh.geometry.getBuffer("aPosition").update();
 
     const u = this.uniforms.uniforms;
-    const lamp = u.uLamp as Float32Array;
+    const lamp = u["uLamp"] as Float32Array;
     lamp.set([s.at.x, s.at.y, s.radius, this.tint ? 2 : s.falloff ? 0 : 1]);
-    const colour = u.uColour as Float32Array;
+    const colour = u["uColour"] as Float32Array;
     // A see-through colour tints less: towards white, which doesn't tint at all.
     const c = new Color(s.colour ?? 0xffffff);
     const toWhite = (v: number) => 1 - c.alpha * (1 - v);
@@ -323,17 +323,17 @@ export class Lamp {
             .sort((a, b) => distanceToSegment(s.at, a) - distanceToSegment(s.at, b))
             .slice(0, MAX_WALLS)
         : s.walls;
-    const wallData = u.uWalls as Float32Array;
+    const wallData = u["uWalls"] as Float32Array;
     walls.forEach((seg, i) => wallData.set([seg.a.x, seg.a.y, seg.b.x, seg.b.y], i * 4));
     const blockers = (s.blockers ?? []).slice(0, MAX_BLOCKERS);
-    const blockerData = u.uBlockers as Float32Array;
+    const blockerData = u["uBlockers"] as Float32Array;
     blockers.forEach((b, i) =>
       blockerData.set(
         [b.seg.a.x, b.seg.a.y, b.seg.b.x, b.seg.b.y, b.strength, b.fade[0], b.fade[1], 0],
         i * 8,
       ),
     );
-    (u.uFalloff as Float32Array).set([
+    (u["uFalloff"] as Float32Array).set([
       s.falloff?.bright ?? 0,
       s.falloff?.dim ?? 0,
       walls.length,
@@ -344,7 +344,7 @@ export class Lamp {
 
   /** How far through a flicker the lamp is: 1 at full strength and reach. */
   setFlicker(n: number) {
-    (this.uniforms.uniforms.uColour as Float32Array)[3] = n;
+    (this.uniforms.uniforms["uColour"] as Float32Array)[3] = n;
     this.uniforms.update();
   }
 

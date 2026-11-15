@@ -115,6 +115,68 @@ export function AskStep({
   characterId: string;
   moveId: string;
 }) {
+  const {
+    system,
+    move,
+    c,
+    ask,
+    check,
+    difficultySpec,
+    counters,
+    draft,
+    patch,
+    formRef,
+    rollBonuses,
+    rollFor,
+    go,
+  } = useAskStep(campaign, characterId, moveId);
+  return (
+    <form
+      ref={formRef}
+      className="move-form"
+      onSubmit={(event) => {
+        event.preventDefault();
+        go("");
+      }}
+    >
+      <VariantField
+        variants={move.variants?.(c, derive(c, system))}
+        value={draft.variant}
+        onChange={(variant) => patch({ variant })}
+      />
+      <AskedField ask={ask} system={system} draft={draft} patch={patch} />
+      <DifficultyField
+        spec={difficultySpec}
+        value={draft.difficulty}
+        onChange={(value) => patch({ difficulty: value })}
+      />
+      <CounterField
+        spec={check?.counter}
+        counters={counters}
+        value={draft.counterMessageId}
+        onChange={(counterMessageId) => patch({ counterMessageId })}
+      />
+      {(check?.rollBonuses ?? []).map((bonus) => (
+        <RollBonusField
+          key={bonus.id}
+          bonus={bonus}
+          character={c}
+          selected={rollBonuses.has(bonus.id)}
+          onChange={(on) => patch({ rollBonuses: toggled(draft.rollBonuses, bonus.id, on) })}
+        />
+      ))}
+      <ExtraBonusField shown={!!check} value={draft.extra} onChange={(extra) => patch({ extra })} />
+      <RollActions
+        modes={check ? rollModesFor(system, move) : undefined}
+        defaultLabel={system.defaultRollLabel ?? "Roll"}
+        rollFor={rollFor}
+        onRoll={go}
+      />
+    </form>
+  );
+}
+
+function useAskStep(campaign: Campaign, characterId: string, moveId: string) {
   const ctx = useCampaign();
   const system = systemOf(campaign);
   const move = system.actions.find((m) => m.id === moveId)!;
@@ -164,51 +226,21 @@ export function AskStep({
     campaign.moves.ask.set(null);
   };
   const rollBonuses = new Set(draft.rollBonuses);
-
-  return (
-    <form
-      ref={formRef}
-      className="move-form"
-      onSubmit={(e) => {
-        e.preventDefault();
-        go("");
-      }}
-    >
-      <VariantField
-        variants={move.variants?.(c, derive(c, system))}
-        value={draft.variant}
-        onChange={(variant) => patch({ variant })}
-      />
-      <AskedField ask={ask} system={system} draft={draft} patch={patch} />
-      <DifficultyField
-        spec={difficultySpec}
-        value={draft.difficulty}
-        onChange={(value) => patch({ difficulty: value })}
-      />
-      <CounterField
-        spec={check?.counter}
-        counters={counters}
-        value={draft.counterMessageId}
-        onChange={(counterMessageId) => patch({ counterMessageId })}
-      />
-      {(check?.rollBonuses ?? []).map((bonus) => (
-        <RollBonusField
-          key={bonus.id}
-          bonus={bonus}
-          character={c}
-          selected={rollBonuses.has(bonus.id)}
-          onChange={(on) => patch({ rollBonuses: toggled(draft.rollBonuses, bonus.id, on) })}
-        />
-      ))}
-      <ExtraBonusField shown={!!check} value={draft.extra} onChange={(extra) => patch({ extra })} />
-      <RollActions
-        modes={check ? rollModesFor(system, move) : undefined}
-        defaultLabel={system.defaultRollLabel ?? "Roll"}
-        rollFor={rollFor}
-        onRoll={go}
-      />
-    </form>
-  );
+  return {
+    system,
+    move,
+    c,
+    ask,
+    check,
+    difficultySpec,
+    counters,
+    draft,
+    patch,
+    formRef,
+    rollBonuses,
+    rollFor,
+    go,
+  };
 }
 
 function VariantField({

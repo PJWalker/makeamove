@@ -165,21 +165,21 @@ describe("D&D 5.5e", () => {
     const { m, view } = character("fighter", { str: 16, dex: 14, con: 14 }, 3);
     let d = derive(view(), dnd);
     // d10 + 2, then 6 + 2 per level.
-    expect(d.values.maxHp).toBe(12 + 2 * 8);
-    expect(d.values.ac).toBe(12);
+    expect(d.values["maxHp"]).toBe(12 + 2 * 8);
+    expect(d.values["ac"]).toBe(12);
     expect(d.values["save:str"]).toBe(2);
     expect(d.values["save:dex"]).toBe(0);
     equip(m, "chain-shirt");
     equip(m, "shield");
     d = derive(view(), dnd);
-    expect(d.values.ac).toBe(13 + 2 + 2);
+    expect(d.values["ac"]).toBe(13 + 2 + 2);
     equip(m, "gauntlets-of-ogre-power");
-    expect(derive(view(), dnd).mods.str).toBe(4);
+    expect(derive(view(), dnd).mods["str"]).toBe(4);
   });
 
   it("gives Barbarians and Monks Unarmored Defense", () => {
-    expect(derive(character("barbarian", { dex: 14, con: 16 }).view(), dnd).values.ac).toBe(15);
-    expect(derive(character("monk", { dex: 16, wis: 14 }).view(), dnd).values.ac).toBe(15);
+    expect(derive(character("barbarian", { dex: 14, con: 16 }).view(), dnd).values["ac"]).toBe(15);
+    expect(derive(character("monk", { dex: 16, wis: 14 }).view(), dnd).values["ac"]).toBe(15);
   });
 
   it("rolls skills with proficiency and Expertise, and attacks with the weapon in hand", () => {
@@ -215,9 +215,9 @@ describe("D&D 5.5e", () => {
     expect(ids).toContain("fireball");
     expect(ids).not.toContain("cure-wounds");
     expect(ids).not.toContain("magic-missile");
-    expect(d.values.preparedMax).toBe(9);
-    expect(d.values.cantripsMax).toBe(4);
-    expect(d.values.spellDc).toBe(8 + 3 + 3);
+    expect(d.values["preparedMax"]).toBe(9);
+    expect(d.values["cantripsMax"]).toBe(4);
+    expect(d.values["spellDc"]).toBe(8 + 3 + 3);
     const bolt = dnd.actions.find((a) => a.id === "fire-bolt")!;
     expect(performMove(dnd, bolt, c, d, {}, () => 10).suggestions[0]!.roll?.formula).toBe("2d10");
     const fighter = character("fighter", {}).view();
@@ -276,7 +276,7 @@ describe("D&D 5.5e", () => {
         d,
       ).formula,
     ).toBe("1d20+0[STR]-4[Exhaustion]");
-    expect(d.values.speed).toBe(20);
+    expect(d.values["speed"]).toBe(20);
   });
 
   describe("actions against targets", () => {

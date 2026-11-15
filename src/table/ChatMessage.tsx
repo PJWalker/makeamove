@@ -216,7 +216,7 @@ function TextBody({ campaign, m, mine }: { campaign: Campaign; m: TextMessage; m
       )}
       {m.emote && <span className="chat-emote-name">{m.name} </span>}
       <Rich campaign={campaign} content={text} />
-      {typeof state.editedAt === "number" && state.editedAt > 0 && (
+      {typeof state["editedAt"] === "number" && state["editedAt"] > 0 && (
         <span className="chat-edited muted"> (edited)</span>
       )}
     </div>

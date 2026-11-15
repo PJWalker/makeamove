@@ -85,9 +85,9 @@ describe("dropOn", () => {
     const unregister = registerEntityDrop(element, () => true, drop);
     expect(dropOn(canvas, { element }, { label: "Entity" }, 0, 0)).toBe(true);
     expect(drop).toHaveBeenCalledOnce();
-    expect(element.dataset.dropped).toBe("true");
+    expect(element.dataset["dropped"]).toBe("true");
     vi.runAllTimers();
-    expect(element.dataset.dropped).toBeUndefined();
+    expect(element.dataset["dropped"]).toBeUndefined();
     unregister();
   });
 
@@ -97,7 +97,7 @@ describe("dropOn", () => {
     let accepts = true;
     const unregister = registerEntityDrop(element, () => accepts, drop);
     expect(dropOn(canvas, { element }, { label: "Entity" }, 0, 0)).toBe(false);
-    expect(element.dataset.dropped).toBeUndefined();
+    expect(element.dataset["dropped"]).toBeUndefined();
     accepts = false;
     expect(dropOn(canvas, { element }, { label: "Entity" }, 0, 0)).toBe(false);
     expect(drop).toHaveBeenCalledOnce();
@@ -125,7 +125,7 @@ describe("dropOn", () => {
     expect(
       dropOn(canvas, { element }, { label: "Entity", link: { kind: "note", id: "note" } }, 0, 0),
     ).toBe(false);
-    expect(element.dataset.dropped).toBeUndefined();
+    expect(element.dataset["dropped"]).toBeUndefined();
     unregister();
   });
 
@@ -141,7 +141,7 @@ describe("dropOn", () => {
     const dragged = tokenEntity(context, token({ itemDefId: "item" }))!;
     vi.mocked(canEdit).mockReturnValueOnce(false);
     expect(dropOn(canvas, { element, characterId: "recipient" }, dragged, 0, 0)).toBe(false);
-    element.dataset.itemDrop = "another";
+    element.dataset["itemDrop"] = "another";
     expect(dropOn(canvas, { element, characterId: "recipient" }, dragged, 0, 0)).toBe(false);
     expect(execute).not.toHaveBeenCalled();
   });

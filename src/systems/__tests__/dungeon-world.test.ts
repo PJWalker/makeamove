@@ -45,7 +45,7 @@ describe("Dungeon World campaign behavior", () => {
       (action) => action.id,
     );
 
-    expect(character.resources.hp).toBe(derive(character, dungeonWorld).values.maxHp);
+    expect(character.resources["hp"]).toBe(derive(character, dungeonWorld).values["maxHp"]);
     expect(available).toContain("hack-and-slash");
     expect(available).toContain("bend-bars");
     expect(available).not.toContain("cast-a-spell");
@@ -90,15 +90,15 @@ describe("Dungeon World campaign behavior", () => {
     expect(getCharacter(campaign, first)!.inventory).toHaveLength(1);
 
     bumpResource(campaign, first, "hp", -4, 7);
-    expect(getCharacter(campaign, first)!.resources.hp).toBe(2);
-    expect(getCharacter(campaign, second)!.resources.hp).toBe(6);
-    expect(getCharacter(campaign, id)!.resources.hp).toBe(6);
+    expect(getCharacter(campaign, first)!.resources["hp"]).toBe(2);
+    expect(getCharacter(campaign, second)!.resources["hp"]).toBe(6);
+    expect(getCharacter(campaign, id)!.resources["hp"]).toBe(6);
     expect(tokenStatsSource(campaign)(first)[0]!).toMatchObject({ value: 2, max: 7 });
 
     setNpcField(campaign, second, "armor", 3);
     setNpcField(campaign, id, "armor", 2);
-    expect(getCharacter(campaign, first)!.fields.armor).toBe(2);
-    expect(getCharacter(campaign, second)!.fields.armor).toBe(3);
+    expect(getCharacter(campaign, first)!.fields["armor"]).toBe(2);
+    expect(getCharacter(campaign, second)!.fields["armor"]).toBe(3);
 
     toggleCondition(campaign, first, systemOf(campaign).conditions[0]!.id);
     expect(getCharacter(campaign, first)!.conditions).toHaveLength(1);

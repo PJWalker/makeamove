@@ -36,13 +36,15 @@ export function holdNewPick(pick: TrayPick) {
       : { chip: chipText(pick.value, pick.kind === "stat" ? pick.stat : undefined), seed: "" };
   const ghost = document.createElement("span");
   ghost.className = "die die-ghost";
-  ghost.dataset.phase = "flat";
+  ghost.dataset["phase"] = "flat";
   ghost.setAttribute("aria-hidden", "true");
   if ("chip" in piece) {
     ghost.classList.add("chip");
-    ghost.dataset.sign = chipSign(pick.kind === "die" ? 0 : pick.value);
+    ghost.dataset["sign"] = chipSign(pick.kind === "die" ? 0 : pick.value);
   } else {
-    ghost.dataset.sides = [4, 6, 8, 10, 12, 20].includes(piece.sides) ? String(piece.sides) : "n";
+    ghost.dataset["sides"] = [4, 6, 8, 10, 12, 20].includes(piece.sides)
+      ? String(piece.sides)
+      : "n";
     const colour = colourOf(device.value);
     ghost.style.setProperty("--die-colour", colour);
     ghost.style.setProperty("--die-label-colour", contrastingTextColour(colour));
@@ -62,7 +64,7 @@ export function holdNewPick(pick: TrayPick) {
       canvas.className = "die-canvas";
       ghost.replaceChildren(canvas);
       dice.mount(canvas, ghost, piece);
-      ghost.dataset.phase = "landed";
+      ghost.dataset["phase"] = "landed";
       settle = dice.spin([canvas], [canvas]);
     });
   return {

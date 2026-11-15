@@ -23,8 +23,8 @@ const actions: ActionDef[] = [
         outcomes,
         followUps: { success: ["mark-check"] },
         followUpsFor: (roll, character, derived) =>
-          roll.total >= (derived.values.followUpThreshold ?? 0) &&
-          character.data.originId === "curious"
+          roll.total >= (derived.values["followUpThreshold"] ?? 0) &&
+          character.data["originId"] === "curious"
             ? ["mark-check"]
             : [],
       },
@@ -34,7 +34,7 @@ const actions: ActionDef[] = [
         id: "steady",
         label: "Steady",
         costs: [],
-        values: { bonus: (character.scores.might ?? 0) + (derived.values.armor ?? 0) },
+        values: { bonus: (character.scores["might"] ?? 0) + (derived.values["armor"] ?? 0) },
       },
     ],
   },
@@ -128,7 +128,8 @@ export const testSystem: GameSystem = {
       id: "test-loadout",
       label: "Test options",
       ownedField: "testOptions",
-      available: (character) => (character.data.originId === "curious" ? ["curious-option"] : []),
+      available: (character) =>
+        character.data["originId"] === "curious" ? ["curious-option"] : [],
       activeField: "activeTestOption",
       max: 1,
       options: [
@@ -173,7 +174,7 @@ export const testSystem: GameSystem = {
       kind: "roll",
       label: "Roll test damage",
       comment: "Roll the generic damage formula.",
-      formula: (_character, derived) => `d${derived.values.damageDie}`,
+      formula: (_character, derived) => `d${derived.values["damageDie"]}`,
       damage: "test-damage",
     },
   ],
@@ -262,9 +263,9 @@ export const testSystem: GameSystem = {
   derive: (character, sources) => {
     const resolved = resolveEffects(
       {
-        maxHp: Number(character.kind === "npc" ? (character.data.maxHp ?? 6) : 12),
+        maxHp: Number(character.kind === "npc" ? (character.data["maxHp"] ?? 6) : 12),
         maxFocus: 3,
-        armor: Number(character.fields.armor ?? 0),
+        armor: Number(character.fields["armor"] ?? 0),
         guard: 10,
         followUpThreshold: 10,
         damageDie: 6,
@@ -289,8 +290,8 @@ export const testSystem: GameSystem = {
     {
       id: "hp",
       label: "HP",
-      value: character.resources.hp ?? 0,
-      max: derived.values.maxHp ?? 0,
+      value: character.resources["hp"] ?? 0,
+      max: derived.values["maxHp"] ?? 0,
       colour: "#4a9b70",
       source: { resource: "hp" },
     },

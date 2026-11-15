@@ -46,17 +46,15 @@ export function claimSessionMove(
   return claimed;
 }
 
-export function sessionUseSnapshot(
+export function sessionUseIds(
   campaign: Campaign,
   characterId: string,
   actions: ActionDef[],
   messages: ChatMessage[],
-): string {
-  return JSON.stringify(
-    actions
-      .flatMap((action) =>
-        sessionMoveUsed(campaign, characterId, action, messages) ? [action.id] : [],
-      )
-      .sort(),
-  );
+): string[] {
+  return actions
+    .flatMap((action) =>
+      sessionMoveUsed(campaign, characterId, action, messages) ? [action.id] : [],
+    )
+    .sort();
 }

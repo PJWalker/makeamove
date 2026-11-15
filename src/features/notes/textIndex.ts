@@ -74,7 +74,7 @@ export function flattenNote(root: NoteNode): { text: string; runs: Run[] } {
       return node.text?.length ?? 0;
     }
     if (node.type === LINK_NODE) {
-      const label = node.attrs?.text || node.attrs?.label || node.attrs?.id;
+      const label = node.attrs?.["text"] || node.attrs?.["label"] || node.attrs?.["id"];
       if (typeof label === "string") append(`@${label}`, position, 1);
       return 1;
     }

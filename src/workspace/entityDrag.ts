@@ -71,10 +71,10 @@ export function registerLinkDrop(
     y: number,
   ) => boolean | void,
 ) {
-  el.dataset.linkDrop = "true";
+  el.dataset["linkDrop"] = "true";
   linkDrops.set(el, insert);
   return () => {
-    delete el.dataset.linkDrop;
+    delete el.dataset["linkDrop"];
     linkDrops.delete(el);
   };
 }
@@ -155,7 +155,7 @@ export function dropOn(
     if (link && entity.link) {
       if (link({ ...entity.link, label: entity.label }, x, y) === false) return false;
     } else if (entity.folder && target.element.hasAttribute("data-folder-drop")) {
-      entity.folder(target.element.dataset.folderDrop || undefined);
+      entity.folder(target.element.dataset["folderDrop"] || undefined);
     } else if (entity.give && target.characterId) {
       const key = entity.give.kind === "item" ? "itemDrop" : "moveDrop";
       if (target.element.dataset[key] !== target.characterId) return false;
@@ -166,8 +166,8 @@ export function dropOn(
       if (!canvas.tokenDrop.value?.(x, y, entity.token ?? { name: entity.label })) return false;
     } else return false;
   }
-  target.element.dataset.dropped = "true";
-  setTimeout(() => delete target.element.dataset.dropped, 600);
+  target.element.dataset["dropped"] = "true";
+  setTimeout(() => delete target.element.dataset["dropped"], 600);
   return true;
 }
 
@@ -176,16 +176,16 @@ export function dropMarker(canvas: CanvasState) {
   let target: DropTarget | null = null;
   return (next: DropTarget | null) => {
     if (next?.element === target?.element && next?.tokenId === target?.tokenId) return;
-    delete target?.element.dataset.dropping;
+    delete target?.element.dataset["dropping"];
     target = next;
     canvas.sceneDropHighlight.value = next?.tokenId ?? null;
-    if (target) target.element.dataset.dropping = "true";
+    if (target) target.element.dataset["dropping"] = "true";
   };
 }
 
 export function setDropCursor(valid: boolean | null) {
-  if (valid === null) delete document.documentElement.dataset.dropValid;
-  else document.documentElement.dataset.dropValid = String(valid);
+  if (valid === null) delete document.documentElement.dataset["dropValid"];
+  else document.documentElement.dataset["dropValid"] = String(valid);
 }
 
 function sendGhostToToken(
@@ -250,11 +250,11 @@ export function dragEntity(
     const onHotbar = onBar(ev);
     let target: DropTarget | null = null;
     if (onHotbar) {
-      if (bar) bar.dataset.dropping = "true";
+      if (bar) bar.dataset["dropping"] = "true";
       line.show(hotbarSlots(), indexAmong(hotbarSlots(), "x", ev));
       mark(null);
     } else {
-      if (bar) delete bar.dataset.dropping;
+      if (bar) delete bar.dataset["dropping"];
       line.hide();
       target = dropTargetAt(canvas, ev.clientX, ev.clientY, entity);
       mark(target);
@@ -271,7 +271,7 @@ export function dragEntity(
     setDropCursor(null);
     canvas.sceneDropHighlight.value = null;
     const bar = hotbar();
-    if (bar) delete bar.dataset.dropping;
+    if (bar) delete bar.dataset["dropping"];
     if (!ghost) return;
     const target =
       commit && !onBar(ev) ? dropTargetAt(canvas, ev.clientX, ev.clientY, entity) : null;

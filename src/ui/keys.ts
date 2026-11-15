@@ -5,6 +5,3 @@ export function isTyping(target: EventTarget | null) {
     (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))
   );
 }
-
-/** The platform's shortcut modifier, as shown in menus. */
-export const MOD = /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl+";

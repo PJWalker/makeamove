@@ -99,46 +99,24 @@ export function EndSession({ sheet }: MoveFormProps) {
 
 export function ComfortOrSupport({ sheet }: MoveFormProps) {
   const ctx = useCampaign();
-  const [comfortedId, setComfortedId] = useState("");
-  const [answers, setAnswers] = useState<boolean[]>([false, false, false]);
-  const [benefitKinds, setBenefitKinds] = useState<Record<number, string>>({});
-  const [conditionPicks, setConditionPicks] = useState<Record<number, string>>({});
-  const used = useUsedThisSession(sheet, "comfort-or-support");
-  const party = usePlayerCharacters(sheet.campaign);
-  const comforted = party.find((character) => character.id === comfortedId);
-  const receiverDepth = useQuery(sheet.campaign.characters, () =>
-    comforted
-      ? (relationshipsOf(sheet.campaign.characters, comforted.id).find(
-          (relationship) => relationship.to === sheet.c.id,
-        )?.depth ?? 0)
-      : 0,
-  );
-  const canGainDepth = receiverDepth < 3;
-  const receiverLocked = new Set(comforted?.lockedConditions ?? []);
-  const supporterLocked = new Set(sheet.c.lockedConditions ?? []);
-  const receiverConditions =
-    comforted?.conditions.filter((condition) => !receiverLocked.has(condition)) ?? [];
-  const supporterConditions = sheet.c.conditions.filter(
-    (condition) => !supporterLocked.has(condition),
-  );
-  const benefits: ComfortBenefit[] = [];
-  let ready = !!comforted && comforted.id !== sheet.c.id;
-  answers.forEach((yes, index) => {
-    if (!yes) return;
-    const kind = benefitKinds[index] ?? "clear-comforted";
-    if (kind === "gain-depth") {
-      if (canGainDepth) benefits.push({ kind });
-      else ready = false;
-    } else {
-      const options = kind === "clear-comforted" ? receiverConditions : supporterConditions;
-      const condition =
-        conditionPicks[index] && options.includes(conditionPicks[index])
-          ? conditionPicks[index]
-          : options[0];
-      if (!condition) ready = false;
-      else benefits.push({ kind: kind as "clear-comforted" | "clear-supporter", condition });
-    }
-  });
+  const {
+    comfortedId,
+    setComfortedId,
+    answers,
+    setAnswers,
+    benefitKinds,
+    setBenefitKinds,
+    conditionPicks,
+    setConditionPicks,
+    used,
+    party,
+    comforted,
+    canGainDepth,
+    receiverConditions,
+    supporterConditions,
+    benefits,
+    ready,
+  } = useComfortOrSupport(sheet);
   return (
     <section className="move-form-section" aria-label="Comfort or Support">
       <label className="field">
@@ -247,30 +225,81 @@ export function ComfortOrSupport({ sheet }: MoveFormProps) {
   );
 }
 
+function useComfortOrSupport(sheet: MoveFormProps["sheet"]) {
+  const [comfortedId, setComfortedId] = useState("");
+  const [answers, setAnswers] = useState<boolean[]>([false, false, false]);
+  const [benefitKinds, setBenefitKinds] = useState<Record<number, string>>({});
+  const [conditionPicks, setConditionPicks] = useState<Record<number, string>>({});
+  const used = useUsedThisSession(sheet, "comfort-or-support");
+  const party = usePlayerCharacters(sheet.campaign);
+  const comforted = party.find((character) => character.id === comfortedId);
+  const receiverDepth = useQuery(sheet.campaign.characters, () =>
+    comforted
+      ? (relationshipsOf(sheet.campaign.characters, comforted.id).find(
+          (relationship) => relationship.to === sheet.c.id,
+        )?.depth ?? 0)
+      : 0,
+  );
+  const canGainDepth = receiverDepth < 3;
+  const receiverLocked = new Set(comforted?.lockedConditions ?? []);
+  const supporterLocked = new Set(sheet.c.lockedConditions ?? []);
+  const receiverConditions =
+    comforted?.conditions.filter((condition) => !receiverLocked.has(condition)) ?? [];
+  const supporterConditions = sheet.c.conditions.filter(
+    (condition) => !supporterLocked.has(condition),
+  );
+  const benefits: ComfortBenefit[] = [];
+  let ready = !!comforted && comforted.id !== sheet.c.id;
+  answers.forEach((yes, index) => {
+    if (!yes) return;
+    const kind = benefitKinds[index] ?? "clear-comforted";
+    if (kind === "gain-depth") {
+      if (canGainDepth) benefits.push({ kind });
+      else ready = false;
+    } else {
+      const options = kind === "clear-comforted" ? receiverConditions : supporterConditions;
+      const condition =
+        conditionPicks[index] && options.includes(conditionPicks[index])
+          ? conditionPicks[index]
+          : options[0];
+      if (!condition) ready = false;
+      else benefits.push({ kind: kind as "clear-comforted" | "clear-supporter", condition });
+    }
+  });
+  return {
+    comfortedId,
+    setComfortedId,
+    answers,
+    setAnswers,
+    benefitKinds,
+    setBenefitKinds,
+    conditionPicks,
+    setConditionPicks,
+    used,
+    party,
+    comforted,
+    canGainDepth,
+    receiverConditions,
+    supporterConditions,
+    benefits,
+    ready,
+  };
+}
+
 export function PerilousJourney({ sheet }: MoveFormProps) {
   const ctx = useCampaign();
-  const [pace, setPace] = useState<JourneyPace>("regular");
-  const [chosenLeaderId, setChosenLeaderId] = useState<string | null>(null);
-  const [conditions, setConditions] = useState<Record<string, string>>({});
-  const party = usePlayerCharacters(sheet.campaign);
-  const leaderId = chosenLeaderId ?? sheet.c.id;
-  const leader = party.find((character) => character.id === leaderId);
-  const affected = pace === "quick" ? party : pace === "regular" && leader ? [leader] : [];
-  const conditionPicks = Object.fromEntries(
-    affected.map((character) => {
-      const available = sheet.system.conditions.filter(
-        (condition) => !character.conditions.includes(condition.id),
-      );
-      const selected = conditions[character.id];
-      return [
-        character.id,
-        selected && available.some((condition) => condition.id === selected)
-          ? selected
-          : (available[0]?.id ?? ""),
-      ];
-    }),
-  );
-  const ready = affected.every((character) => !!conditionPicks[character.id]);
+  const {
+    pace,
+    setPace,
+    leaderId,
+    setChosenLeaderId,
+    leader,
+    party,
+    affected,
+    conditionPicks,
+    setConditions,
+    ready,
+  } = usePerilousJourney(sheet);
   return (
     <section className="move-form-section" aria-label="Undertake a Perilous Journey">
       <label className="field">
@@ -305,10 +334,10 @@ export function PerilousJourney({ sheet }: MoveFormProps) {
               value={conditionPicks[character.id]}
               disabled={!sheet.editable}
               onChange={(event) =>
-                setConditions({
-                  ...conditions,
+                setConditions((current) => ({
+                  ...current,
                   [character.id]: event.currentTarget.value,
-                })
+                }))
               }
             >
               {available.map((condition) => (
@@ -334,6 +363,42 @@ export function PerilousJourney({ sheet }: MoveFormProps) {
   );
 }
 
+function usePerilousJourney(sheet: MoveFormProps["sheet"]) {
+  const [pace, setPace] = useState<JourneyPace>("regular");
+  const [chosenLeaderId, setChosenLeaderId] = useState<string | null>(null);
+  const [conditions, setConditions] = useState<Record<string, string>>({});
+  const party = usePlayerCharacters(sheet.campaign);
+  const leaderId = chosenLeaderId ?? sheet.c.id;
+  const leader = party.find((character) => character.id === leaderId);
+  const affected = pace === "quick" ? party : pace === "regular" && leader ? [leader] : [];
+  const conditionPicks = Object.fromEntries(
+    affected.map((character) => {
+      const available = sheet.system.conditions.filter(
+        (condition) => !character.conditions.includes(condition.id),
+      );
+      const selected = conditions[character.id];
+      return [
+        character.id,
+        selected && available.some((condition) => condition.id === selected)
+          ? selected
+          : (available[0]?.id ?? ""),
+      ];
+    }),
+  );
+  return {
+    pace,
+    setPace,
+    setChosenLeaderId,
+    leaderId,
+    leader,
+    party,
+    affected,
+    conditionPicks,
+    setConditions,
+    ready: affected.every((character) => !!conditionPicks[character.id]),
+  };
+}
+
 /** The campaign's player characters, kept current as they change. */
 function usePlayerCharacters(campaign: MoveFormProps["sheet"]["campaign"]): CharacterView[] {
   const json = useQuery(campaign.characters, () =>
@@ -348,32 +413,26 @@ function useCanSpendTreasure(sheet: MoveFormProps["sheet"]) {
     dungeonWorld2DowntimeEpoch(sheet.campaign),
   );
   const boxes = useQuery(sheet.campaign.characters, () =>
-    Number(getCharacter(sheet.campaign, sheet.c.id)?.data.treasureBoxes ?? 0),
+    Number(getCharacter(sheet.campaign, sheet.c.id)?.data["treasureBoxes"] ?? 0),
   );
   return sheet.editable && epoch !== 0 && boxes >= 1;
 }
 
 function Carouse({ sheet }: MoveFormProps) {
   const ctx = useCampaign();
-  const canSpend = useCanSpendTreasure(sheet);
-  const [benefit, setBenefit] = useState<"clear-locked" | "gain-depth">(
-    sheet.c.lockedConditions?.length ? "clear-locked" : "gain-depth",
-  );
-  const [condition, setCondition] = useState(sheet.c.lockedConditions?.[0] ?? "");
-  const [partyId, setPartyId] = useState("");
-  const party = usePlayerCharacters(sheet.campaign);
-  const others = party.filter((character) => character.id !== sheet.c.id);
-  const selectedPartyId = partyId || others[0]?.id;
-  const canClearLocked = (sheet.c.lockedConditions?.length ?? 0) > 0;
-  const canGainDepth = useQuery(
-    sheet.campaign.characters,
-    () =>
-      !!selectedPartyId &&
-      (relationshipsOf(sheet.campaign.characters, sheet.c.id).find(
-        (entry) => entry.to === selectedPartyId,
-      )?.depth ?? 0) < 3,
-  );
-  const canCarouse = benefit === "clear-locked" ? canClearLocked : canGainDepth;
+  const {
+    canSpend,
+    benefit,
+    setBenefit,
+    condition,
+    setCondition,
+    others,
+    setPartyId,
+    selectedPartyId,
+    canClearLocked,
+    canGainDepth,
+    canCarouse,
+  } = useCarouse(sheet);
   return (
     <>
       <label className="field">
@@ -435,6 +494,41 @@ function Carouse({ sheet }: MoveFormProps) {
       </Button>
     </>
   );
+}
+
+function useCarouse(sheet: MoveFormProps["sheet"]) {
+  const canSpend = useCanSpendTreasure(sheet);
+  const [benefit, setBenefit] = useState<"clear-locked" | "gain-depth">(
+    sheet.c.lockedConditions?.length ? "clear-locked" : "gain-depth",
+  );
+  const [condition, setCondition] = useState(sheet.c.lockedConditions?.[0] ?? "");
+  const [partyId, setPartyId] = useState("");
+  const party = usePlayerCharacters(sheet.campaign);
+  const others = party.filter((character) => character.id !== sheet.c.id);
+  const selectedPartyId = partyId || others[0]?.id;
+  const canClearLocked = (sheet.c.lockedConditions?.length ?? 0) > 0;
+  const canGainDepth = useQuery(
+    sheet.campaign.characters,
+    () =>
+      !!selectedPartyId &&
+      (relationshipsOf(sheet.campaign.characters, sheet.c.id).find(
+        (entry) => entry.to === selectedPartyId,
+      )?.depth ?? 0) < 3,
+  );
+  const canCarouse = benefit === "clear-locked" ? canClearLocked : canGainDepth;
+  return {
+    canSpend,
+    benefit,
+    setBenefit,
+    condition,
+    setCondition,
+    others,
+    setPartyId,
+    selectedPartyId,
+    canClearLocked,
+    canGainDepth,
+    canCarouse,
+  };
 }
 
 function ShopService({ sheet }: MoveFormProps) {
@@ -513,41 +607,17 @@ export function Downtime({ sheet }: MoveFormProps) {
 
 export function MakeCamp({ sheet }: MoveFormProps) {
   const ctx = useCampaign();
-  const [selections, setSelections] = useState<Record<string, string>>({});
-  const [repairs, setRepairs] = useState<Record<string, string>>({});
-  const used = useUsedThisSession(sheet, "make-camp");
-  const party = usePlayerCharacters(sheet.campaign);
-  const choices = Object.fromEntries(
-    party.map((character) => {
-      const marked = character.conditions.filter(
-        (condition) => !character.lockedConditions?.includes(condition),
-      );
-      const selected = selections[character.id];
-      return [character.id, selected && marked.includes(selected) ? selected : (marked[0] ?? "")];
-    }),
-  );
-  const repairOptions = party.map((character) => {
-    const hasSnapTheBlade = sheet.system
-      .actionsFor(character, derive(character, sheet.system))
-      .some((action) => action.name === "Snap the Blade");
-    return [
-      character,
-      hasSnapTheBlade
-        ? character.inventory.filter((item) => item.broken && !item.tags.includes("magic"))
-        : [],
-    ] as const;
-  });
-  const repairChoices = Object.fromEntries(
-    repairOptions.map(([character, options]) => {
-      const selected = repairs[character.id];
-      return [
-        character.id,
-        selected && options.some((item) => item.id === selected)
-          ? selected
-          : (options[0]?.id ?? ""),
-      ];
-    }),
-  );
+  const {
+    selections,
+    setSelections,
+    repairs,
+    setRepairs,
+    used,
+    party,
+    choices,
+    repairOptions,
+    repairChoices,
+  } = useMakeCamp(sheet);
   return (
     <section className="move-form-section" aria-label="Make Camp">
       {party.map((character) => {
@@ -611,4 +681,53 @@ export function MakeCamp({ sheet }: MoveFormProps) {
       </Button>
     </section>
   );
+}
+
+function useMakeCamp(sheet: MoveFormProps["sheet"]) {
+  const [selections, setSelections] = useState<Record<string, string>>({});
+  const [repairs, setRepairs] = useState<Record<string, string>>({});
+  const used = useUsedThisSession(sheet, "make-camp");
+  const party = usePlayerCharacters(sheet.campaign);
+  const choices = Object.fromEntries(
+    party.map((character) => {
+      const marked = character.conditions.filter(
+        (condition) => !character.lockedConditions?.includes(condition),
+      );
+      const selected = selections[character.id];
+      return [character.id, selected && marked.includes(selected) ? selected : (marked[0] ?? "")];
+    }),
+  );
+  const repairOptions = party.map((character) => {
+    const hasSnapTheBlade = sheet.system
+      .actionsFor(character, derive(character, sheet.system))
+      .some((action) => action.name === "Snap the Blade");
+    return [
+      character,
+      hasSnapTheBlade
+        ? character.inventory.filter((item) => item.broken && !item.tags.includes("magic"))
+        : [],
+    ] as const;
+  });
+  const repairChoices = Object.fromEntries(
+    repairOptions.map(([character, options]) => {
+      const selected = repairs[character.id];
+      return [
+        character.id,
+        selected && options.some((item) => item.id === selected)
+          ? selected
+          : (options[0]?.id ?? ""),
+      ];
+    }),
+  );
+  return {
+    selections,
+    setSelections,
+    repairs,
+    setRepairs,
+    used,
+    party,
+    choices,
+    repairOptions,
+    repairChoices,
+  };
 }

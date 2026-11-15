@@ -281,8 +281,8 @@ describe("spending modifiers", () => {
 describe("derive", () => {
   it("computes HP, load and damage from class and scores", () => {
     const d = derive(char(), dw);
-    expect(d.values.maxHp).toBe(22);
-    expect(d.values.maxLoad).toBe(14);
-    expect(d.values.damage).toBe(10);
+    expect(d.values["maxHp"]).toBe(22);
+    expect(d.values["maxLoad"]).toBe(14);
+    expect(d.values["damage"]).toBe(10);
   });
 });

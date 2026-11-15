@@ -31,9 +31,9 @@ const UPGRADE_COSTS: Record<string, number> = { mastery: 4, cohort: 2 };
 
 /** Whether the crew can pay for its next tier. */
 function canAdvanceTier(state: Record<string, unknown>, cost: { rep: number; coin: number }) {
-  if (Number(state.crewRep ?? 0) < cost.rep) return false;
-  if (state.crewHold === "weak") return true;
-  return Number(state.crewCoin ?? 0) >= cost.coin && Number(state.crewTier ?? 0) < 4;
+  if (Number(state["crewRep"] ?? 0) < cost.rep) return false;
+  if (state["crewHold"] === "weak") return true;
+  return Number(state["crewCoin"] ?? 0) >= cost.coin && Number(state["crewTier"] ?? 0) < 4;
 }
 
 export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
@@ -51,8 +51,8 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
     () => getState<number>(campaign.messageState, messageId, "value") ?? 0,
   );
   if (!counter || !abilities || !upgrades) return null;
-  const ownedAbilityIds = new Set(commaListOf(state.crewAbilities));
-  const ownedUpgradeIds = new Set(commaListOf(state.crewUpgrades));
+  const ownedAbilityIds = new Set(commaListOf(state["crewAbilities"]));
+  const ownedUpgradeIds = new Set(commaListOf(state["crewUpgrades"]));
   const cost = crewTierCost(campaign);
   const upgradeCost = UPGRADE_COSTS[upgrade] ?? 1;
   // The crew is the GM's to advance.
@@ -85,7 +85,7 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
         Advance Crew
       </Button>
       <label className="field">
-        Upgrade ({state.crewUpgradePoints} unspent)
+        Upgrade ({state["crewUpgradePoints"]} unspent)
         <select
           disabled={!gm}
           value={upgrade}
@@ -96,7 +96,7 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
         </select>
       </label>
       <Button
-        disabled={!gm || !upgrade || Number(state.crewUpgradePoints ?? 0) < upgradeCost}
+        disabled={!gm || !upgrade || Number(state["crewUpgradePoints"] ?? 0) < upgradeCost}
         onClick={() => ctx.execute(buyUpgrade, { upgrade })}
       >
         Buy Upgrade ({upgradeCost})
@@ -105,7 +105,7 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
         disabled={!gm || !canAdvanceTier(state, cost)}
         onClick={() => ctx.execute(advanceTier, undefined)}
       >
-        {state.crewHold === "weak"
+        {state["crewHold"] === "weak"
           ? `Strengthen hold (${cost.rep} rep)`
           : `Increase Tier (${cost.rep} rep, ${cost.coin} coin)`}
       </Button>

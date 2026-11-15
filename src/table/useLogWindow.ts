@@ -162,8 +162,8 @@ export function useLogWindow({
       const box = r.getBoundingClientRect();
       return box.bottom > top && box.top < bottom;
     }) as HTMLElement | undefined;
-    anchor.current = row?.dataset.key
-      ? { key: row.dataset.key, top: row.getBoundingClientRect().top - top }
+    anchor.current = row?.dataset["key"]
+      ? { key: row.dataset["key"], top: row.getBoundingClientRect().top - top }
       : null;
   };
   const noteAnchorRef = useRef(noteAnchor);
@@ -177,7 +177,7 @@ export function useLogWindow({
     // Re-render once rows are measured anew, so the spacers use the better average.
     let next: Map<string, number> | null = null;
     for (const row of list.current?.children ?? []) {
-      const key = (row as HTMLElement).dataset.key;
+      const key = (row as HTMLElement).dataset["key"];
       if (!key) continue;
       const height = (row as HTMLElement).offsetHeight + ROW_GAP;
       if (measured.get(key) === height) continue;

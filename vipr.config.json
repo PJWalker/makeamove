@@ -1,0 +1,59 @@
+{
+  "$schema": "https://vipr.dev/schemas/vipr-config.schema.json",
+  "include": ["**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts}"],
+  "exclude": [
+    "**/*.test.{ts,tsx,js,jsx}",
+    "**/*.spec.{ts,tsx,js,jsx}",
+    "**/node_modules/**",
+    "**/.git/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/.next/**",
+    "**/coverage/**",
+    "**/.turbo/**",
+    "**/out/**",
+    "**/.vite/**",
+    "**/.storybook/**",
+    "**/.vercel/**",
+    "**/.changeset/**",
+    "**/.husky/**",
+    "**/storybook-static/**",
+    "**/.svelte-kit/**",
+    "**/.output/**",
+    "**/__mocks__/**",
+    "**/reference/**",
+    "**/mock/**",
+    "**/mocks/**",
+    "**/__tests__/**",
+    "**/e2e/**",
+    "**/tests/**",
+    "**/fixtures/**",
+    "**/docs/**",
+    "**/public/**",
+    "**/generated/**",
+    "**/migrations/**",
+    "**/.claude/**",
+    "**/.codex/**",
+    "**/.cursor/**"
+  ],
+  "global": {
+    "cache": true,
+    "gradeBoundaries": {
+      "A": 25,
+      "B": 45,
+      "C": 65,
+      "D": 80
+    }
+  },
+  "analyses": {
+    "core-documentation": {
+      "enabled": false
+    }
+  },
+  "output": {
+    "format": "cli",
+    "minSeverity": "critical",
+    "failThreshold": 60,
+    "failOnCritical": false
+  }
+}

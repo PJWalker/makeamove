@@ -34,6 +34,22 @@ import { giveItem, startMove } from "../workspace/commands/characters";
 
 export function LinkPopups({ campaign }: { campaign: Campaign }) {
   const ctx = useCampaign();
+  useRestoreLinkPopups(campaign);
+  const links = useQuery(ctx.linkPopups.openLinks);
+  const menu = useQuery(ctx.linkPopups.linkMenu);
+  return (
+    <>
+      {links.map((l) => (
+        <LinkPopup key={linkKey(l)} campaign={campaign} link={l} />
+      ))}
+      {menu && <ContextMenu {...menu} onClose={() => ctx.linkPopups.linkMenu.set(null)} />}
+      <RenameLink />
+    </>
+  );
+}
+
+function useRestoreLinkPopups(campaign: Campaign) {
+  const ctx = useCampaign();
   useEffect(() => {
     const ids = [
       ...ctx.panels.layout.value.left.panels,
@@ -60,17 +76,6 @@ export function LinkPopups({ campaign }: { campaign: Campaign }) {
       ...restored.filter((link) => !known.has(linkKey(link))),
     ]);
   }, [ctx, campaign]);
-  const links = useQuery(ctx.linkPopups.openLinks);
-  const menu = useQuery(ctx.linkPopups.linkMenu);
-  return (
-    <>
-      {links.map((l) => (
-        <LinkPopup key={linkKey(l)} campaign={campaign} link={l} />
-      ))}
-      {menu && <ContextMenu {...menu} onClose={() => ctx.linkPopups.linkMenu.set(null)} />}
-      <RenameLink />
-    </>
-  );
 }
 
 /** A pop-up for one link, marked so clicking the link again brings it forward. */

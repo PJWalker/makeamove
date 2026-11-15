@@ -134,7 +134,7 @@ describe("relationships", () => {
     const ids = ["a", "b", "c", "d"];
     const edges = [{ from: "a", to: "b", label: "" }];
     const pos = layoutWeb(ids, edges, { width: 500, height: 300, fixed: { d: { x: 50, y: 50 } } });
-    expect(pos.d).toEqual({ x: 50, y: 50 });
+    expect(pos["d"]).toEqual({ x: 50, y: 50 });
     const point = (id: string) => {
       const value = pos[id];
       if (!value) throw new Error(`Missing test position ${id}`);

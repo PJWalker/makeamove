@@ -93,7 +93,7 @@ describe("guided creation", () => {
     expect(
       dataFrom(choices, { "pick-1": "improve", "pick-2": "improve" }, ["advancements"], {
         experience: 2,
-      }).experience,
+      })["experience"],
     ).toBe(4);
   });
 
@@ -170,8 +170,8 @@ describe("5.5e origins in the numbers", () => {
   it("adds Dwarven Toughness and Tough per level, and Alert to initiative", () => {
     const plain = derive(make({}, 4), dnd).values;
     const tough = derive(make({ species: "dwarf", feats: "tough,alert" }, 4), dnd).values;
-    expect((tough.maxHp ?? 0) - (plain.maxHp ?? 0)).toBe(3 * 4);
-    expect((tough.initiative ?? 0) - (plain.initiative ?? 0)).toBe(plain.prof ?? 0);
+    expect((tough["maxHp"] ?? 0) - (plain["maxHp"] ?? 0)).toBe(3 * 4);
+    expect((tough["initiative"] ?? 0) - (plain["initiative"] ?? 0)).toBe(plain["prof"] ?? 0);
   });
 
   it("gives the subclass from level 3 and species actions to their species", () => {

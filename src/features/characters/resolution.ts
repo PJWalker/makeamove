@@ -106,7 +106,7 @@ export function applyDamage(
       ? system.resolveDamage(c, derived, amount, options)
       : { hp: amount };
   if (damage.resources?.some(({ id, by }) => (c.resources[id] ?? 0) + by < 0)) return;
-  const hpBefore = c.resources.hp ?? 0;
+  const hpBefore = c.resources["hp"] ?? 0;
   campaign.doc.transact(() => {
     if (healing) bumpResource(campaign, c.id, "hp", amount, max);
     else {
@@ -131,7 +131,7 @@ export function applyDamage(
       campaign.messageState,
       messageId,
       appliedField(t.id),
-      (getCharacter(campaign, c.id)?.resources.hp ?? hpBefore) - hpBefore,
+      (getCharacter(campaign, c.id)?.resources["hp"] ?? hpBefore) - hpBefore,
     );
   });
   if (!healing && damage.hp > 0) checkConcentration(campaign, c, damage.hp);

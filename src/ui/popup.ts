@@ -121,7 +121,7 @@ export function resizePopup(
     w: dialog.offsetWidth,
     h: dialog.offsetHeight,
   };
-  dialog.dataset.sized = "true";
+  dialog.dataset["sized"] = "true";
   trackPointer(RESIZE_CURSORS[dir], (ev) => {
     const next = resizeRect(start, dir, ev.clientX - e.clientX, ev.clientY - e.clientY);
     Object.assign(dialog.style, {
@@ -143,10 +143,10 @@ export function dragPopup(dialog: HTMLElement, e: PointerEvent | React.PointerEv
   // visual rect, but dragging writes untransformed left/top coordinates.
   const dx = e.clientX - dialog.offsetLeft;
   const dy = e.clientY - dialog.offsetTop;
-  dialog.dataset.lifted = "true";
+  dialog.dataset["lifted"] = "true";
   trackPointer(
     "grabbing",
     (ev) => place(dialog, ev.clientX - dx, ev.clientY - dy),
-    () => delete dialog.dataset.lifted,
+    () => delete dialog.dataset["lifted"],
   );
 }

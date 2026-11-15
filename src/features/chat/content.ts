@@ -52,9 +52,9 @@ function attrsOf(node: JSONContent) {
 function entityTokenOf(node: JSONContent): string {
   const attrs = attrsOf(node);
   return entityToken(
-    attrs.kind as LinkKind,
-    String(attrs.id ?? ""),
-    typeof attrs.text === "string" ? attrs.text : "",
+    attrs["kind"] as LinkKind,
+    String(attrs["id"] ?? ""),
+    typeof attrs["text"] === "string" ? attrs["text"] : "",
   );
 }
 
@@ -84,9 +84,9 @@ export function messageText(content: ChatContent, nameOf: NameOf = () => null): 
     if (node.type !== LINK_NODE) return null;
     const attrs = attrsOf(node);
     return (
-      (typeof attrs.text === "string" && attrs.text) ||
-      nameOf(attrs.kind as LinkKind, String(attrs.id ?? "")) ||
-      (typeof attrs.label === "string" && attrs.label) ||
+      (typeof attrs["text"] === "string" && attrs["text"]) ||
+      nameOf(attrs["kind"] as LinkKind, String(attrs["id"] ?? "")) ||
+      (typeof attrs["label"] === "string" && attrs["label"]) ||
       "a link"
     );
   });

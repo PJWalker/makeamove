@@ -8,7 +8,7 @@ export const RANK = ["Not proficient", "Proficient", "Expertise"];
 
 /** A character's level, within the 1 to 20 the rules allow. */
 export const levelOf = (data: Record<string, unknown>) =>
-  Math.min(20, Math.max(1, num(data.level) || 1));
+  Math.min(20, Math.max(1, num(data["level"]) || 1));
 
 /** Make the action with this id as the character, when the system has one. */
 export function useAction({ system, c }: Pick<SectionContext, "system" | "c">) {

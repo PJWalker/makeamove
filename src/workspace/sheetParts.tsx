@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { plainText } from "../data/richText";
 import { ColourPicker } from "../ui/ColourPicker";
 import { MoveBody } from "./MoveBody";
@@ -32,7 +32,7 @@ import { getEntityGraphic } from "./entityGraphics";
 import { actionMenuItems } from "./actionMenu";
 import { dragEntity } from "./entityDrag";
 import { entity } from "./dragEntities";
-import { sessionUseSnapshot } from "../features/characters/sessionMoves";
+import { sessionUseIds } from "../features/characters/sessionMoves";
 import { useCampaign } from "./campaignContext";
 import { chooseGraphic } from "./commands/campaign";
 import { setField, toggleCondition } from "./commands/characters";
@@ -194,22 +194,13 @@ export function MoveList({
   learned?: string[];
   onForget?: ((m: ActionDef) => void) | undefined;
 }) {
-  const ctx = useCampaign();
-  // The system's groupings that this character has any of, in the system's order; the first is shown to start.
-  const categories = system.actionCategories.filter((k) => moves.some((m) => m.category === k.id));
-  const [filter, setFilter] = useState<string>(categories[0]?.id ?? "all");
-  const windows = useEntryWindows();
-  const sessionMessages = useQuery(campaign.chat.messages);
-  // Read through useQuery, which re-reads on every change: the session's uses live in Yjs.
-  const usedIds = new Set(
-    JSON.parse(
-      useQuery(campaign.systemData, () =>
-        sessionUseSnapshot(campaign, ownerId, moves, sessionMessages),
-      ),
-    ) as string[],
+  const { ctx, categories, filter, setFilter, windows, usedIds, learnedIds, shown } = useMoveList(
+    campaign,
+    system,
+    moves,
+    ownerId,
+    learned,
   );
-  const learnedIds = new Set(learned);
-  const shown = filter === "all" ? moves : moves.filter((m) => m.category === filter);
 
   return (
     <div className="moves">
@@ -309,6 +300,30 @@ export function MoveList({
       })}
     </div>
   );
+}
+
+function useMoveList(
+  campaign: Campaign,
+  system: GameSystem,
+  moves: ActionDef[],
+  ownerId: string,
+  learned: string[],
+) {
+  const ctx = useCampaign();
+  const categories = system.actionCategories.filter((category) =>
+    moves.some((move) => move.category === category.id),
+  );
+  const [filter, setFilter] = useState<string>(categories[0]?.id ?? "all");
+  const windows = useEntryWindows();
+  const sessionMessages = useQuery(campaign.chat.messages);
+  const readUsedIds = useCallback(
+    () => sessionUseIds(campaign, ownerId, moves, sessionMessages),
+    [campaign, ownerId, moves, sessionMessages],
+  );
+  const usedIds = new Set(useQuery(campaign.systemData, readUsedIds));
+  const learnedIds = new Set(learned);
+  const shown = filter === "all" ? moves : moves.filter((move) => move.category === filter);
+  return { ctx, categories, filter, setFilter, windows, usedIds, learnedIds, shown };
 }
 
 /** The character's stand-in token: drag it onto the map, click it to change its image. */

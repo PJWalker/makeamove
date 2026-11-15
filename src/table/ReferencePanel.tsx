@@ -15,23 +15,9 @@ import { referenceLayout } from "./panelLayouts";
  * the like, searchable, each section folded until opened.
  */
 export function ReferencePanel({ campaign }: { campaign: Campaign }) {
-  const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const gm = useQuery(campaign.members, () => campaign.isGm());
-  const reference = systemOf(campaign).gmReference ?? [];
-  const stacked = useQuery(referenceLayout.mode) === "stack";
-  const { level, go } = usePaneLevel(referenceLayout, "list");
-  if (!gm || !reference.length) return <p className="empty">No reference for this game.</p>;
-  const needle = query.trim().toLowerCase();
-  const sections = reference.filter(
-    (section) =>
-      !needle || `${section.title}\n${plainText(section.text)}`.toLowerCase().includes(needle),
-  );
-  const selected = sections.find((section) => section.id === selectedId) ?? sections[0];
-  const search = (value: string) => {
-    setQuery(value);
-    if (!value.trim()) go("list");
-  };
+  const { gm, stacked, level, go, query, sections, selected, needle, search, select } =
+    useReferencePanel(campaign);
+  if (!gm || !sections.length) return <p className="empty">No reference for this game.</p>;
 
   return (
     <TwoPane
@@ -59,10 +45,7 @@ export function ReferencePanel({ campaign }: { campaign: Campaign }) {
                   key={section.id}
                   name={section.title}
                   selected={section.id === selected?.id}
-                  onPick={() => {
-                    setSelectedId(section.id);
-                    go("detail");
-                  }}
+                  onPick={() => select(section.id)}
                 />
               ))}
             </List>
@@ -97,6 +80,31 @@ export function ReferencePanel({ campaign }: { campaign: Campaign }) {
       }
     />
   );
+}
+
+function useReferencePanel(campaign: Campaign) {
+  const [query, setQuery] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const gm = useQuery(campaign.members, () => campaign.isGm());
+  const reference = systemOf(campaign).gmReference ?? [];
+  const stacked = useQuery(referenceLayout.mode) === "stack";
+  const { level, go } = usePaneLevel(referenceLayout, "list");
+  const needle = query.trim().toLowerCase();
+  const sections = reference.filter(
+    (section) =>
+      !needle || `${section.title}\n${plainText(section.text)}`.toLowerCase().includes(needle),
+  );
+  const selected = sections.find((section) => section.id === selectedId) ?? sections[0];
+  const search = (value: string) => {
+    setQuery(value);
+    if (!value.trim()) go("list");
+  };
+  const select = (id: string) => {
+    setSelectedId(id);
+    go("detail");
+  };
+
+  return { gm, stacked, level, go, query, sections, selected, needle, search, select };
 }
 
 function ReferenceEntry({

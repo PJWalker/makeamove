@@ -70,7 +70,7 @@ const stepped = (level: number, steps: [number, number][]) =>
   steps.reduce((v, [from, n]) => (level >= from ? n : v), 0);
 
 const classOf = (c: CharacterView): DndClass =>
-  CLASSES.find((k) => k.id === c.data.classId) ?? CLASSES[0]!;
+  CLASSES.find((k) => k.id === c.data["classId"]) ?? CLASSES[0]!;
 
 const SPELLS_ALL: Spell[] = [
   ...new Map(
@@ -96,7 +96,7 @@ const FEATURES_ALL = [
 ];
 
 const clampLevel = (level: number) => Math.min(20, Math.max(1, level));
-const levelOf = (c: CharacterView) => clampLevel(Number(c.data.level ?? 1));
+const levelOf = (c: CharacterView) => clampLevel(Number(c.data["level"] ?? 1));
 
 /** Spell slots by spell level (1–9) for a class at a level; Pact Magic is apart. */
 export function spellSlots(cls: DndClass, level: number): number[] {
@@ -147,7 +147,7 @@ const selectedIds = (character: CharacterView, field: string, max = Infinity) =>
 
 const criticalThreshold = (context?: RollContext) =>
   context?.action.category === "attack" &&
-  context.character?.data.subclass === "champion" &&
+  context.character?.data["subclass"] === "champion" &&
   levelOf(context.character) >= 3
     ? levelOf(context.character) >= 15
       ? 18
@@ -363,7 +363,7 @@ const FEATURE_ROLLS: FollowUpDef[] = [
     kind: "roll",
     label: "Roll the die",
     comment: "Bardic Inspiration",
-    formula: (_c, d) => `1d${d.values.bardicDie}`,
+    formula: (_c, d) => `1d${d.values["bardicDie"]}`,
   },
   {
     id: "divine-spark",
@@ -433,7 +433,7 @@ const spellRoll = (s: Spell, crit: boolean): FollowUpDef => {
     label: crit ? "Roll critical damage" : r.label === "healing" ? "Roll healing" : "Roll damage",
     comment: s.name,
     formula: (c, d) => {
-      const extraLevels = Math.max(0, (d.values.spellSlot ?? s.level) - s.level);
+      const extraLevels = Math.max(0, (d.values["spellSlot"] ?? s.level) - s.level);
       const extraDice =
         s.upcastDice ??
         Number(plainText(s.text).match(/\+(\d+)d\d+ per slot level above/i)?.[1] ?? 0);
@@ -478,7 +478,7 @@ function spellVariants(spell: Spell, character: CharacterView, derived: Derived)
       : [],
   );
   const pactLevel = valueOf(derived.values, "pactLevel");
-  if (pactLevel >= spell.level && (character.resources.pact ?? 0) > 0)
+  if (pactLevel >= spell.level && (character.resources["pact"] ?? 0) > 0)
     slots.push({
       id: "pact",
       label: `Level ${pactLevel} Pact Magic slot`,
@@ -610,7 +610,7 @@ const SPECIES_ROLLS: FollowUpDef[] = [
 
 /** The character's feats, from the comma-separated data field. */
 const featsOf = (c: CharacterView) =>
-  commaListOf(c.data.feats)
+  commaListOf(c.data["feats"])
     .map((id) => FEATS.find((f) => f.id === id))
     .filter((f) => !!f);
 
@@ -764,8 +764,8 @@ export const dnd55e: GameSystem = {
   ],
   learnedActionAllowed: (action, character, derived) =>
     action.category !== "spell" ||
-    selectedIds(character, "preparedSpells", derived.values.preparedMax).includes(action.id) ||
-    selectedIds(character, "knownCantrips", derived.values.cantripsMax).includes(action.id),
+    selectedIds(character, "preparedSpells", derived.values["preparedMax"]).includes(action.id) ||
+    selectedIds(character, "knownCantrips", derived.values["cantripsMax"]).includes(action.id),
   actionCategories: [
     { id: "attack", label: "Attacks" },
     { id: "class", label: "Class" },
@@ -865,7 +865,7 @@ export const dnd55e: GameSystem = {
     const npc = c.kind === "npc";
     const cls = classOf(c);
     const level = levelOf(c);
-    const exhaustion = Math.min(6, Number(c.data.exhaustion ?? 0));
+    const exhaustion = Math.min(6, Number(c.data["exhaustion"] ?? 0));
     // Exhaustion: −2 to every d20 test and −5 feet of Speed per level.
     const all: EffectSource[] = exhaustion
       ? [
@@ -893,7 +893,7 @@ export const dnd55e: GameSystem = {
         dexCap: 99,
         shieldWorn: 0,
         acBonus: 0,
-        speed: npc ? 0 : Number(c.data.speed ?? 30),
+        speed: npc ? 0 : Number(c.data["speed"] ?? 30),
         weaponDice: 1,
         weaponDie: 0,
         weaponBonus: 0,
@@ -910,7 +910,7 @@ export const dnd55e: GameSystem = {
 
     // Armour Class: worn armour, or a class's Unarmored Defense, or 10 + Dexterity.
     let ac: number;
-    if (npc) ac = Number(c.fields.ac) || 10 + mod("dex");
+    if (npc) ac = Number(c.fields["ac"]) || 10 + mod("dex");
     else if (value("armorWorn")) ac = value("armorBase") + Math.min(mod("dex"), value("dexCap"));
     else if (cls.id === "barbarian") ac = 10 + mod("dex") + mod("con");
     else if (cls.id === "monk" && !value("shieldWorn")) ac = 10 + mod("dex") + mod("wis");
@@ -920,25 +920,25 @@ export const dnd55e: GameSystem = {
     // Hit points: the full Hit Die at level 1, then its average (rounded up) per level, plus Constitution each level.
     // Some species, feats and subclasses add to it per level (Dwarven Toughness, Tough, Draconic Resilience).
     const perLevel = cls.hitDie / 2 + 1 + mod("con");
-    const species = SPECIES.find((x) => x.id === c.data.species);
+    const species = SPECIES.find((x) => x.id === c.data["species"]);
     const feats = npc ? [] : featsOf(c);
     const extraPerLevel =
       (species?.hpPerLevel ?? 0) +
       feats.reduce((n, f) => n + (f.hpPerLevel ?? 0), 0) +
-      (c.data.subclass === "draconic" && level >= SUBCLASS_LEVEL ? 1 : 0);
+      (c.data["subclass"] === "draconic" && level >= SUBCLASS_LEVEL ? 1 : 0);
     const maxHp = npc
-      ? Number(c.data.maxHp ?? NPC_HP)
+      ? Number(c.data["maxHp"] ?? NPC_HP)
       : Math.max(
           1,
           cls.hitDie +
             mod("con") +
             (level - 1) * perLevel +
             extraPerLevel * level +
-            Number(c.data.hpBonus ?? 0),
+            Number(c.data["hpBonus"] ?? 0),
         );
     const alert = feats.some((f) => f.initiativeProf) ? prof : 0;
     // Defense: +1 AC in armour.
-    if (r.armorWorn && feats.some((f) => f.id === "defense")) ac += 1;
+    if (r["armorWorn"] && feats.some((f) => f.id === "defense")) ac += 1;
 
     // Jack of All Trades: half proficiency on checks without it.
     const jack = !npc && cls.id === "bard" && level >= 2 ? Math.floor(prof / 2) : 0;
@@ -1064,13 +1064,13 @@ export const dnd55e: GameSystem = {
     const granted = new Set(d.resolved.moves);
     const features = new Set(
       FEATURES_ALL.flatMap((f) =>
-        (f.classes[cls.id] ?? 99) <= level && (!f.subclassId || f.subclassId === c.data.subclass)
+        (f.classes[cls.id] ?? 99) <= level && (!f.subclassId || f.subclassId === c.data["subclass"])
           ? [f.id]
           : [],
       ),
     );
-    const prepared = new Set(selectedIds(c, "preparedSpells", d.values.preparedMax));
-    const cantrips = new Set(selectedIds(c, "knownCantrips", d.values.cantripsMax));
+    const prepared = new Set(selectedIds(c, "preparedSpells", d.values["preparedMax"]));
+    const cantrips = new Set(selectedIds(c, "knownCantrips", d.values["cantripsMax"]));
     const spells = new Set(
       spellList(c).flatMap((spell) =>
         (spell.level ? prepared.has(spell.id) : cantrips.has(spell.id)) ? [spell.id] : [],
@@ -1083,9 +1083,10 @@ export const dnd55e: GameSystem = {
     }
     // Favored Enemy: Rangers always have Hunter's Mark.
     if (cls.id === "ranger") spells.add("hunters-mark");
-    if (c.data.subclass && level >= SUBCLASS_LEVEL) features.add(`subclass-${c.data.subclass}`);
+    if (c.data["subclass"] && level >= SUBCLASS_LEVEL)
+      features.add(`subclass-${c.data["subclass"]}`);
     const traits = new Set(
-      SPECIES_ACTIONS.flatMap((a) => (a.species === c.data.species ? [a.id] : [])),
+      SPECIES_ACTIONS.flatMap((a) => (a.species === c.data["species"] ? [a.id] : [])),
     );
     const has = (a: ActionDef) =>
       a.category === "class"

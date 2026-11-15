@@ -27,123 +27,24 @@ export function Palette({ campaign }: { campaign: Campaign }) {
 }
 
 function PaletteBody({ campaign }: { campaign: Campaign }) {
-  const ctx = useCampaign();
-  const [query, setQuery] = useState("");
-  const [cursor, setCursor] = useState(0);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const listRef = useRef<HTMLUListElement>(null);
-  const rootRef = useRef<HTMLDialogElement>(null);
-
-  // The index is built once per opening, from whatever is current then.
-  const index = useMemo(() => listActions(ctx), [ctx]);
-  const recent = useQuery(ctx.recent.ids);
-  const ranked = rank(index, query, { recent });
-  // A dice formula typed on its own rolls it, first in the list.
-  const formula = diceFormula(query);
-  const typedRoll = formula ? findAction(ctx, callKey(roll.id, { formula })) : undefined;
-  const results = typedRoll ? [typedRoll, ...ranked.filter((a) => a.id !== typedRoll.id)] : ranked;
-  const active = Math.min(cursor, Math.max(0, results.length - 1));
-  const returnTo = useRef<Element | null>(document.activeElement);
-  const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
-  const [note, setNote] = useState("");
-  // Grow out of the button that opened it, if a button did (ui/morph.ts).
-  useLayoutEffect(() => {
-    const el = rootRef.current;
-    if (!el) return;
-    showFromOrigin(el, () => {});
-    return ctx.table.showingPalette(el);
-  }, [ctx]);
-
-  function togglePin(a: Action) {
-    const pinned = isPinned(campaign, a.id);
-    if (pinned) ctx.execute(unpinFromHotbar, { key: a.id });
-    else ctx.execute(pinToHotbar, { key: a.id });
-    setNote(pinned ? `Removed ${a.title} from the hotbar` : `Added ${a.title} to the hotbar`);
-  }
-
-  /** Right-click for a menu; press and drag to pin the action onto the hotbar. */
-  function rowTriggers(a: Action, i: number) {
-    const trigger = menuTrigger((x, y) => {
-      setCursor(i);
-      setMenu({
-        x,
-        y,
-        items: [
-          ...actionMenuItems(ctx, [{ id: a.id, title: a.title }], () => ctx.table.closePalette()),
-          ...(a.available === true ? [{ label: "Run", onSelect: () => choose(a) }] : []),
-        ],
-      });
-    });
-    return {
-      onContextMenu: trigger.onContextMenu,
-      onPointerDown(e: ReactPointerEvent) {
-        trigger.onPointerDown(e);
-        // Onto the hotbar, a character or a note.
-        const what = actionEntity(ctx, a.id, a.title);
-        dragEntity(ctx.canvas, e, {
-          ...what,
-          pin: (index) => {
-            ctx.execute(pinToHotbar, { key: a.id, at: index });
-            setNote(`Added ${a.title} to the hotbar`);
-          },
-        });
-      },
-    };
-  }
-
-  useEffect(() => {
-    inputRef.current?.focus();
-    const target = returnTo.current;
-    return () => {
-      if (target instanceof HTMLElement && target.isConnected) target.focus();
-    };
-  }, []);
-
-  useEffect(() => {
-    listRef.current?.children[active]?.scrollIntoView({ block: "nearest" });
-  }, [active, results.length]);
-
-  // A press outside closes it.
-  useEffect(() => {
-    const onDown = (e: PointerEvent) => {
-      const t = e.target as Element;
-      if (!rootRef.current?.contains(t) && !t.closest?.(".context-menu, .hotbar-palette"))
-        ctx.table.closePalette();
-    };
-    document.addEventListener("pointerdown", onDown, true);
-    return () => document.removeEventListener("pointerdown", onDown, true);
-  }, [ctx]);
-
-  function choose(a: Action | undefined, secondary = false) {
-    if (!a || a.available !== true) return;
-    const fn = secondary ? a.open : a.run;
-    if (!fn) return;
-    ctx.table.closePalette();
-    ctx.recent.note(a.id);
-    // After the palette has closed and given focus back.
-    queueMicrotask(fn);
-  }
-
-  function onKeyDown(e: ReactKeyboardEvent) {
-    if (e.key === "Escape" && menu) return;
-    if (e.key === "Escape") {
-      e.preventDefault();
-      ctx.table.closePalette();
-    } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-      e.preventDefault();
-      const n = results.length;
-      if (n) setCursor((active + (e.key === "ArrowDown" ? 1 : -1) + n) % n);
-    } else if (e.key === "Enter" && e.altKey) {
-      e.preventDefault();
-      const a = results[active];
-      if (a) togglePin(a);
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      choose(results[active], e.shiftKey);
-    }
-  }
-
-  const empty = !query;
+  const {
+    query,
+    setQuery,
+    cursor,
+    setCursor,
+    inputRef,
+    listRef,
+    rootRef,
+    results,
+    active,
+    menu,
+    setMenu,
+    note,
+    empty,
+    rowTriggers,
+    choose,
+    onKeyDown,
+  } = usePalette(campaign);
   return (
     // Arrow/Enter handling for the whole palette lives on the dialog.
     // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
@@ -210,4 +111,138 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
       <output className="palette-note">{note}</output>
     </dialog>
   );
+}
+
+function usePalette(campaign: Campaign) {
+  const ctx = useCampaign();
+  const [query, setQuery] = useState("");
+  const [cursor, setCursor] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+  const rootRef = useRef<HTMLDialogElement>(null);
+  const index = useMemo(() => listActions(ctx), [ctx]);
+  const recent = useQuery(ctx.recent.ids);
+  const ranked = rank(index, query, { recent });
+  const formula = diceFormula(query);
+  const typedRoll = formula ? findAction(ctx, callKey(roll.id, { formula })) : undefined;
+  const results = typedRoll
+    ? [typedRoll, ...ranked.filter((action) => action.id !== typedRoll.id)]
+    : ranked;
+  const active = Math.min(cursor, Math.max(0, results.length - 1));
+  const returnTo = useRef<Element | null>(document.activeElement);
+  const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
+  const [note, setNote] = useState("");
+  useLayoutEffect(() => {
+    const element = rootRef.current;
+    if (!element) return;
+    showFromOrigin(element, () => {});
+    return ctx.table.showingPalette(element);
+  }, [ctx]);
+
+  function togglePin(action: Action) {
+    const pinned = isPinned(campaign, action.id);
+    if (pinned) ctx.execute(unpinFromHotbar, { key: action.id });
+    else ctx.execute(pinToHotbar, { key: action.id });
+    setNote(
+      pinned ? `Removed ${action.title} from the hotbar` : `Added ${action.title} to the hotbar`,
+    );
+  }
+
+  function rowTriggers(action: Action, index: number) {
+    const trigger = menuTrigger((x, y) => {
+      setCursor(index);
+      setMenu({
+        x,
+        y,
+        items: [
+          ...actionMenuItems(ctx, [{ id: action.id, title: action.title }], () =>
+            ctx.table.closePalette(),
+          ),
+          ...(action.available === true ? [{ label: "Run", onSelect: () => choose(action) }] : []),
+        ],
+      });
+    });
+    return {
+      onContextMenu: trigger.onContextMenu,
+      onPointerDown(event: ReactPointerEvent) {
+        trigger.onPointerDown(event);
+        const what = actionEntity(ctx, action.id, action.title);
+        dragEntity(ctx.canvas, event, {
+          ...what,
+          pin: (slot) => {
+            ctx.execute(pinToHotbar, { key: action.id, at: slot });
+            setNote(`Added ${action.title} to the hotbar`);
+          },
+        });
+      },
+    };
+  }
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    const target = returnTo.current;
+    return () => {
+      if (target instanceof HTMLElement && target.isConnected) target.focus();
+    };
+  }, []);
+  useEffect(() => {
+    listRef.current?.children[active]?.scrollIntoView({ block: "nearest" });
+  }, [active, results.length]);
+  useEffect(() => {
+    const onDown = (event: PointerEvent) => {
+      const target = event.target as Element;
+      if (!rootRef.current?.contains(target) && !target.closest?.(".context-menu, .hotbar-palette"))
+        ctx.table.closePalette();
+    };
+    document.addEventListener("pointerdown", onDown, true);
+    return () => document.removeEventListener("pointerdown", onDown, true);
+  }, [ctx]);
+
+  function choose(action: Action | undefined, secondary = false) {
+    if (!action || action.available !== true) return;
+    const callback = secondary ? action.open : action.run;
+    if (!callback) return;
+    ctx.table.closePalette();
+    ctx.recent.note(action.id);
+    queueMicrotask(callback);
+  }
+
+  function onKeyDown(event: ReactKeyboardEvent) {
+    if (event.key === "Escape" && menu) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      ctx.table.closePalette();
+    } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      const count = results.length;
+      if (count) setCursor((active + (event.key === "ArrowDown" ? 1 : -1) + count) % count);
+    } else if (event.key === "Enter" && event.altKey) {
+      event.preventDefault();
+      const action = results[active];
+      if (action) togglePin(action);
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      choose(results[active], event.shiftKey);
+    }
+  }
+
+  return {
+    ctx,
+    query,
+    setQuery,
+    cursor,
+    setCursor,
+    inputRef,
+    listRef,
+    rootRef,
+    results,
+    active,
+    menu,
+    setMenu,
+    note,
+    empty: !query,
+    rowTriggers,
+    choose,
+    onKeyDown,
+  };
 }

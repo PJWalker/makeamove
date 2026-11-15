@@ -861,8 +861,9 @@ export const dungeonWorld2: GameSystem = {
     { id: "conditions", label: "Conditions & Escalations", type: "longtext" },
   ],
   derive(character, sources) {
-    const classData = CLASSES.find((entry) => entry.id === character.data.classId) ?? CLASSES[0]!;
-    const level = Math.max(1, Number(character.data.level ?? 1));
+    const classData =
+      CLASSES.find((entry) => entry.id === character.data["classId"]) ?? CLASSES[0]!;
+    const level = Math.max(1, Number(character.data["level"] ?? 1));
     const mods = Object.fromEntries(
       STATS.map(({ id }) => [id, Math.max(-1, Math.min(3, Math.trunc(character.scores[id] ?? 0)))]),
     );
@@ -875,10 +876,10 @@ export const dungeonWorld2: GameSystem = {
     };
     const soulstealer = equippedArtifact("Alveric’s Soulstealer Blade");
     if (soulstealer && (soulstealer.artifactUnlocked?.length ?? 0) > 0)
-      mods.str = Math.max(1, Math.min(4, soulstealer.artifactUnlocked!.length));
+      mods["str"] = Math.max(1, Math.min(4, soulstealer.artifactUnlocked!.length));
     const caliburnus = equippedArtifact("Caliburnus, The Sword That Heals");
     if (caliburnus && (caliburnus.artifactUnlocked?.length ?? 0) > 0)
-      mods.cha = Math.max(1, Math.min(4, caliburnus.artifactUnlocked!.length));
+      mods["cha"] = Math.max(1, Math.min(4, caliburnus.artifactUnlocked!.length));
     const markDefinition = DW2_MAGIC_ITEMS.find((item) => item.name === "Indelible Mark of Drakon");
     const indelibleMark = character.inventory.find((item) => item.defId === markDefinition?.id);
     const artifactHp = indelibleMark
@@ -888,9 +889,9 @@ export const dungeonWorld2: GameSystem = {
       {
         maxHp:
           character.kind === "npc"
-            ? Number(character.data.maxHp ?? 6)
+            ? Number(character.data["maxHp"] ?? 6)
             : classData.hp + Math.min(level - 1, 10) + artifactHp,
-        armor: Number(character.data.armor ?? 0),
+        armor: Number(character.data["armor"] ?? 0),
         damage: 6,
         damageBonus: 0,
       },
@@ -901,7 +902,7 @@ export const dungeonWorld2: GameSystem = {
       resolved,
       values: {
         ...resolved.values,
-        bloodiedAt: Math.floor((resolved.values.maxHp ?? 0) / 2),
+        bloodiedAt: Math.floor((resolved.values["maxHp"] ?? 0) / 2),
         xpNeeded: 5,
       },
     };
@@ -911,8 +912,8 @@ export const dungeonWorld2: GameSystem = {
     const armor =
       options.type?.toLowerCase() === "piercing"
         ? 0
-        : Math.max(0, Number(derived.values.armor ?? 0));
-    const armorUsable = (character.scores.str ?? 0) >= armor;
+        : Math.max(0, Number(derived.values["armor"] ?? 0));
+    const armorUsable = (character.scores["str"] ?? 0) >= armor;
     return {
       hp: armorUsable ? Math.max(1, amount - armor) : amount,
     };
@@ -920,10 +921,10 @@ export const dungeonWorld2: GameSystem = {
   actionsFor(character) {
     if (character.kind === "npc") return [];
     const ownClassMoves = ACTIONS.filter(
-      (move) => CLASS_ACTIONS.get(move.id) === character.data.classId,
+      (move) => CLASS_ACTIONS.get(move.id) === character.data["classId"],
     );
-    const ownedPaths = commaListOf(character.data.ownedPaths);
-    const ownedPathMoves = commaListOf(character.data.ownedPathMoves);
+    const ownedPaths = commaListOf(character.data["ownedPaths"]);
+    const ownedPathMoves = commaListOf(character.data["ownedPathMoves"]);
     const pathMoves = PATH_ACTIONS.filter((move) => {
       const path = PATHS.find(
         (entry) => entry.id === move.id.replace(/^path-/, "").replace(/-\d+$/, ""),
@@ -949,7 +950,7 @@ export const dungeonWorld2: GameSystem = {
       ...artifactMoves,
     ];
   },
-  tokenStats: (character, derived) => [hpTokenStat(character, derived.values.maxHp ?? 0)],
+  tokenStats: (character, derived) => [hpTokenStat(character, derived.values["maxHp"] ?? 0)],
   creation: {
     advancementField: "level",
     advancementCounterField: "xp",
@@ -1000,7 +1001,7 @@ export const dungeonWorld2: GameSystem = {
         { value: 2, label: "Grew up together" },
       ],
     },
-    hints: (data) => CLASS_CREATION_HINTS[String(data.classId ?? "")] ?? {},
+    hints: (data) => CLASS_CREATION_HINTS[String(data["classId"] ?? "")] ?? {},
   },
   relationshipDepth: DW2_RELATIONSHIP_DEPTH,
   afterMove: (move, result) =>
@@ -1018,7 +1019,7 @@ export const dungeonWorld2: GameSystem = {
     if (!item.wealthCost) return undefined;
     if (!character) return { label: "Purchase" };
     const remaining = purchaseAtWealth(
-      Number(character.data.treasureBoxes ?? INITIAL_TREASURE_BOXES),
+      Number(character.data["treasureBoxes"] ?? INITIAL_TREASURE_BOXES),
       item.wealthCost.rank,
     );
     return remaining === null

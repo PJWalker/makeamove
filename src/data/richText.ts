@@ -85,12 +85,12 @@ export function plainText(
   const inline = (node: JSONContent): string => {
     if (node.type === "text") return node.text ?? "";
     if (node.type === "hardBreak") return "\n";
-    if (node.type === TRACKER_NODE) return String(node.attrs?.label ?? "");
+    if (node.type === TRACKER_NODE) return String(node.attrs?.["label"] ?? "");
     if (!node.content) {
       const named = atomText(node);
       if (named !== null) return named;
       const attrs = node.attrs ?? {};
-      return String(attrs.text || attrs.label || "");
+      return String(attrs["text"] || attrs["label"] || "");
     }
     return node.content.map(inline).join("");
   };

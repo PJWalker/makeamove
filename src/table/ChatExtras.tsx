@@ -3,6 +3,7 @@ import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { useConstant } from "../ui/useConstant";
 import { withField, useMessageState } from "../features/chat/messageState";
 import { commandText, contentForCommand, type ChatContent } from "../features/chat/content";
+import { sameRichText } from "../data/richText";
 import {
   visibilityOf,
   type ChatMessage,
@@ -42,8 +43,7 @@ export function EditBox({
   const done = (save: boolean) => {
     const body = commandText(value.current).trim();
     const content = contentForCommand(value.current, body);
-    if (save && body && JSON.stringify(content) !== JSON.stringify(text))
-      ctx.execute(saveMessageEdit, { id, content });
+    if (save && body && !sameRichText(content, text)) ctx.execute(saveMessageEdit, { id, content });
     ctx.table.editingMessage.set(null);
   };
   return (
@@ -138,8 +138,8 @@ export function TimerCard({
   compact?: boolean;
 }) {
   const state = useMessageState<number>(campaign, m.id, ["endsAt", "stoppedAt"]);
-  const endsAt: number = state.endsAt ?? m.endsAt;
-  const stopped: number | undefined = state.stoppedAt;
+  const endsAt: number = state["endsAt"] ?? m.endsAt;
+  const stopped: number | undefined = state["stoppedAt"];
   const now = useNow(!stopped);
   const left = (((stopped ?? now) - endsAt) * -1) / 1000;
   const done = left <= 0;
@@ -210,7 +210,7 @@ export function CounterCard({
   compact?: boolean;
 }) {
   const state = useMessageState<number>(campaign, m.id, ["value"]);
-  const value: number = state.value ?? m.start;
+  const value: number = state["value"] ?? m.start;
   const ctx = useCampaign();
   const can = useQuery(
     campaign.members,
@@ -281,6 +281,35 @@ export function PinnedStrip({
   render: (m: ChatMessage) => React.ReactNode;
   onMenu: (x: number, y: number, id: string) => void;
 }) {
+  const { gm, shown, initial, rows } = usePinnedMessages(campaign);
+  if (!rows.length) return null;
+  return (
+    <section className="chat-pinned" aria-label="Pinned">
+      <div className="chat-pin-stack">
+        {rows.map((message) => (
+          <div
+            key={message.id}
+            className="chat-pin"
+            data-new={!initial.has(message.id) || undefined}
+            data-leaving={!shown.has(message.id) || undefined}
+            // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable so the GM can open its menu by keyboard
+            tabIndex={gm && shown.has(message.id) ? 0 : undefined}
+            aria-label={
+              gm && shown.has(message.id) ? `Pinned message from ${message.name}` : undefined
+            }
+            {...(gm && shown.has(message.id)
+              ? menuTrigger((x, y) => onMenu(x, y, message.id))
+              : {})}
+          >
+            <div className="chat-pin-body">{render(message)}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function usePinnedMessages(campaign: Campaign) {
   const pinnedIds = useQuery(campaign.messageState, () =>
     withField(campaign.messageState, "pinned").join(" "),
   );
@@ -312,25 +341,5 @@ export function PinnedStrip({
   const initial = useConstant(() => shown);
 
   const rows = messages.filter((m) => shown.has(m.id) || leaving.has(m.id));
-  if (!rows.length) return null;
-  return (
-    <section className="chat-pinned" aria-label="Pinned">
-      <div className="chat-pin-stack">
-        {rows.map((m) => (
-          <div
-            key={m.id}
-            className="chat-pin"
-            data-new={!initial.has(m.id) || undefined}
-            data-leaving={!shown.has(m.id) || undefined}
-            // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable so the GM can open its menu by keyboard
-            tabIndex={gm && shown.has(m.id) ? 0 : undefined}
-            aria-label={gm && shown.has(m.id) ? `Pinned message from ${m.name}` : undefined}
-            {...(gm && shown.has(m.id) ? menuTrigger((x, y) => onMenu(x, y, m.id)) : {})}
-          >
-            <div className="chat-pin-body">{render(m)}</div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
+  return { gm, shown, initial, rows };
 }

@@ -94,7 +94,7 @@ export function morphOpen(from: Element, open: () => void) {
   ).finally(() => {
     if (m.target && m.target !== document.documentElement) {
       m.target.style.removeProperty("view-transition-name");
-      delete m.target.dataset.morph;
+      delete m.target.dataset["morph"];
     }
     if (morphing === m) morphing = null;
   });
@@ -109,7 +109,7 @@ function claimMorph(dialog: HTMLElement): boolean {
   morphing.target = dialog;
   dialog.style.viewTransitionName = MORPH_NAME;
   // Skip the dialog's own fade-and-rise; the transition replaces it.
-  dialog.dataset.morph = "true";
+  dialog.dataset["morph"] = "true";
   origin = null;
   return true;
 }
@@ -133,7 +133,7 @@ export function showFromOrigin(dialog: HTMLElement, show: () => void) {
   else spawners.delete(dialog);
   const viewMorph = claimMorph(dialog);
   // Mark it before showing, so its own fade-in doesn't start underneath.
-  if (hasFreshOrigin()) dialog.dataset.morph = "true";
+  if (hasFreshOrigin()) dialog.dataset["morph"] = "true";
   show();
   if (viewMorph) return;
   if (hasFreshOrigin()) growFrom(dialog, origin!.rect);
@@ -174,7 +174,7 @@ export function growFrom(el: HTMLElement, from: Element | DOMRect) {
   const rect = from instanceof DOMRect ? from : from.getBoundingClientRect();
   if (rect.width < 1) return;
   // Skip the element's own fade-and-rise; this animation replaces it.
-  el.dataset.morph = "true";
+  el.dataset["morph"] = "true";
   const anim = el.animate(
     [
       { ...overKeyframe(el.getBoundingClientRect(), rect), opacity: 0.5 },
@@ -183,7 +183,7 @@ export function growFrom(el: HTMLElement, from: Element | DOMRect) {
     ],
     { duration: DURATION_MS, easing: EASE },
   );
-  anim.finished.catch(() => {}).finally(() => delete el.dataset.morph);
+  anim.finished.catch(() => {}).finally(() => delete el.dataset["morph"]);
 }
 
 /** Whether `el` is on screen to morph into. */
