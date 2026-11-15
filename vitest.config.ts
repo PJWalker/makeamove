@@ -5,6 +5,8 @@ import { macroPlugins } from "./vite.config";
 export default defineConfig({
   plugins: macroPlugins(),
   test: {
+    isolate: false,
+    environment: "happy-dom",
     exclude: [...configDefaults.exclude, "tests/**", ".claude/**"],
     browser: {
       provider: playwright(),
