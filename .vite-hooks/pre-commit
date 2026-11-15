@@ -1,1 +1,3 @@
+git diff --cached --quiet -- src/table/diceRenderer.ts || npm run generate:dice
+
 vp staged
