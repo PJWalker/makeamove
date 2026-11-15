@@ -8,18 +8,11 @@ import { parseInputNumber } from "../lib/number";
 import { Button } from "../ui/Button";
 import { OptionPicker } from "../ui/OptionPicker";
 import { CharacterText } from "./CharacterText";
-import { Counter, MoveList, TokenChip } from "./sheetParts";
+import { CharacterName, Counter, MoveList, TokenChip } from "./sheetParts";
 import { signedStr } from "./actionPresentation";
 import { useCampaign } from "./campaignContext";
 import { roll } from "./commands/chat";
-import {
-  setData,
-  setField,
-  setLearned,
-  setModifier,
-  setNpcField,
-  startMove,
-} from "./commands/characters";
+import { setData, setLearned, setModifier, setNpcField, startMove } from "./commands/characters";
 
 /* The sheet sections that are only fields, lists and buttons over a character, one component for each kind. */
 
@@ -65,16 +58,7 @@ export function HeaderSection({ campaign, system, c, editable }: SectionContext)
     <header className="sheet-head">
       <TokenChip campaign={campaign} c={c} editable={editable} />
       <div className="sheet-title">
-        <input
-          className="sheet-name"
-          aria-label="Name"
-          value={c.name}
-          disabled={!editable}
-          onChange={(e) =>
-            e.currentTarget.value.trim() &&
-            ctx.execute(setField, { id: c.id, key: "name", value: e.currentTarget.value.trim() })
-          }
-        />
+        <CharacterName c={c} editable={editable} />
         <span className="muted">{c.kind === "npc" ? "NPC" : "Player character"}</span>
         {classChoice && (
           <OptionPicker

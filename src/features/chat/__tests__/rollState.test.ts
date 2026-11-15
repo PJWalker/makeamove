@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vite-plus/test";
 import * as Y from "yjs";
 import { roll } from "../../dice/notation";
-import { addRollDie, addRollModifier, readRollState, rerollMessage } from "../rollState";
+import {
+  addRollDie,
+  addRollModifier,
+  readRollState,
+  rerollDie,
+  rerollMessage,
+  toggleRollDie,
+} from "../rollState";
 import { rootOf } from "../../../data/schema";
 import { campaignShape } from "../../../campaign/schema";
 
@@ -93,6 +100,36 @@ describe("adding a modifier to a roll", () => {
     addRollDie(state, "m", source, 4);
     rerollMessage(state, "m", source);
     expect(read(state, source).roll.formula).toBe("d20+1+d4");
+  });
+});
+
+describe("editing a die in a shared roll", () => {
+  it("toggles a die out of and back into the total", () => {
+    const state = shared();
+    const source = roll("d6");
+
+    toggleRollDie(state, "m", source, 0, 0);
+    const disabled = readRollState(state, "m", source).roll;
+    expect(disabled.terms[0]?.kind === "dice" && disabled.terms[0].dice[0]?.disabled).toBe(true);
+    expect(disabled.total).toBe(0);
+
+    toggleRollDie(state, "m", source, 0, 0);
+    const restored = readRollState(state, "m", source).roll;
+    expect(restored.terms[0]?.kind === "dice" && restored.terms[0].dice[0]?.disabled).toBe(false);
+    expect(restored.total).toBe(source.total);
+  });
+
+  it("rerolls a disabled die with a fresh seed and enables it", () => {
+    const state = shared();
+    const source = roll("d6");
+    const originalSeed = readRollState(state, "m", source).seeds[0]?.[0];
+    toggleRollDie(state, "m", source, 0, 0);
+
+    rerollDie(state, "m", source, 0, 0);
+    const { roll: next, seeds } = readRollState(state, "m", source);
+    expect(next.terms[0]?.kind === "dice" && next.terms[0].dice[0]?.disabled).toBe(false);
+    expect(seeds[0]?.[0]).not.toBe(originalSeed);
+    expect(next.total).toBe(next.terms[0]?.kind === "dice" ? next.terms[0].dice[0]?.value : 0);
   });
 });
 

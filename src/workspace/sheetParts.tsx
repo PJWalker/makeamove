@@ -326,6 +326,22 @@ function useMoveList(
   return { ctx, categories, filter, setFilter, windows, usedIds, learnedIds, shown };
 }
 
+export function CharacterName({ c, editable }: { c: CharacterView; editable: boolean }) {
+  const ctx = useCampaign();
+  return (
+    <input
+      className="sheet-name"
+      aria-label="Name"
+      value={c.name}
+      disabled={!editable}
+      onChange={(e) =>
+        e.currentTarget.value.trim() &&
+        ctx.execute(setField, { id: c.id, key: "name", value: e.currentTarget.value.trim() })
+      }
+    />
+  );
+}
+
 /** The character's stand-in token: drag it onto the map, click it to change its image. */
 export function TokenChip({
   campaign,

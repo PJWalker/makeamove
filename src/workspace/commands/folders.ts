@@ -3,7 +3,7 @@ import { isString, objectOf, optional } from "../../data/guards";
 import type { Permission } from "../../kernel/commands";
 import { IconDelete } from "../../ui/icons";
 import type { CampaignContext } from "../campaignContext";
-import { command, type FolderTreeKind, type TableCommand } from "./types";
+import { command, type FolderTreeKind, type Offer, type TableCommand } from "./types";
 
 /*
  * Folders work the same in every list that has them: make one, name it,
@@ -21,6 +21,23 @@ interface FolderOps {
 }
 
 export type FolderCommands = ReturnType<typeof folderCommands>;
+
+export function moveFolderOffers(
+  id: string,
+  currentFolder: string | undefined,
+  folders: readonly { id: string; name: string }[],
+): Offer<{ id: string; folder?: string | undefined }>[] {
+  return [
+    ...folders.flatMap((folder) =>
+      folder.id === currentFolder
+        ? []
+        : [{ params: { id, folder: folder.id }, title: `Move to ${folder.name}` }],
+    ),
+    ...(currentFolder && folders.some((folder) => folder.id === currentFolder)
+      ? [{ params: { id }, title: "Remove from Folder" }]
+      : []),
+  ];
+}
 
 export function folderCommands(tree: FolderTreeKind, ops: FolderOps) {
   const permission = ops.permission ?? "anyone";

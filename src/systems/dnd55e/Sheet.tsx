@@ -8,17 +8,11 @@ import { parseInputNumber } from "../../lib/number";
 import { Inventory } from "../../workspace/Inventory";
 import { SheetSectionView } from "../../workspace/DeclarativeSheet";
 import { ActionsSection, NpcField, TextSection } from "../../workspace/sheetSections";
-import { Counter, TokenChip } from "../../workspace/sheetParts";
+import { CharacterName, Counter, TokenChip } from "../../workspace/sheetParts";
 import { signedStr } from "../../workspace/actionPresentation";
 import type { Derived, GameSystem } from "../types";
 import { useQuery } from "../../ui/useQuery";
-import {
-  bumpData,
-  bumpResource,
-  setData,
-  setField,
-  setScore,
-} from "../../workspace/commands/characters";
+import { bumpData, bumpResource, setData, setScore } from "../../workspace/commands/characters";
 import { useCampaign } from "../../workspace/campaignContext";
 import {
   CharacterDetails,
@@ -53,21 +47,11 @@ function Name({
   editable: boolean;
   detail: string;
 }) {
-  const ctx = useCampaign();
   return (
     <header className="sheet-head">
       <TokenChip campaign={campaign} c={c} editable={editable} />
       <div className="sheet-title">
-        <input
-          className="sheet-name"
-          aria-label="Name"
-          value={c.name}
-          disabled={!editable}
-          onChange={(e) =>
-            e.currentTarget.value.trim() &&
-            ctx.execute(setField, { id: c.id, key: "name", value: e.currentTarget.value.trim() })
-          }
-        />
+        <CharacterName c={c} editable={editable} />
         <span className="muted">{detail}</span>
       </div>
     </header>

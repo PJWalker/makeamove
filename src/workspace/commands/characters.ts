@@ -75,7 +75,7 @@ import type { Availability } from "../../kernel/commands";
 import type { ActionDef, ItemDef, ResetEvent } from "../../systems/types";
 import { IconDelete, IconFolder, IconImage } from "../../ui/icons";
 import type { CampaignContext } from "../campaignContext";
-import { folderCommands } from "./folders";
+import { folderCommands, moveFolderOffers } from "./folders";
 import { command, type TableCommand } from "./types";
 
 /* Characters: making, playing, filing and changing them, their moves and their gear. */
@@ -172,15 +172,7 @@ export const fileCharacter = command<{ id: string; folder?: string | undefined }
   menu: {
     character: (ctx, { id }) => {
       const c = getCharacter(ctx.campaign, id);
-      const folders = listFolders(ctx.campaign);
-      return [
-        ...folders.flatMap((f) =>
-          f.id === c?.folder ? [] : [{ params: { id, folder: f.id }, title: `Move to ${f.name}` }],
-        ),
-        ...(c?.folder && folders.some((f) => f.id === c.folder)
-          ? [{ params: { id }, title: "Remove from Folder" }]
-          : []),
-      ];
+      return moveFolderOffers(id, c?.folder, listFolders(ctx.campaign));
     },
   },
   run: ({ campaign }, { id, folder }) => moveToFolder(campaign, id, folder),

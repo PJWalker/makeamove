@@ -23,7 +23,7 @@ import {
   IconSecret,
 } from "../../ui/icons";
 import type { CampaignContext } from "../campaignContext";
-import { folderCommands } from "./folders";
+import { folderCommands, moveFolderOffers } from "./folders";
 import { command } from "./types";
 
 /* Notes: pages, their folders, and revealing the GM's own pages to the players. */
@@ -96,15 +96,7 @@ export const filePage = command<{ id: string; folder?: string | undefined }>({
   menu: {
     note: (ctx, { id }) => {
       const n = note(ctx, id);
-      const folders = listNoteFolders(ctx.campaign);
-      return [
-        ...folders.flatMap((f) =>
-          f.id === n?.folder ? [] : [{ params: { id, folder: f.id }, title: `Move to ${f.name}` }],
-        ),
-        ...(n?.folder && folders.some((f) => f.id === n.folder)
-          ? [{ params: { id }, title: "Remove from Folder" }]
-          : []),
-      ];
+      return moveFolderOffers(id, n?.folder, listNoteFolders(ctx.campaign));
     },
   },
   run: ({ campaign }, { id, folder }) => moveNote(campaign, id, folder),

@@ -1,4 +1,11 @@
-import { cryptoDie, roll, type Roll, type RolledDice, type RolledFlat } from "../dice/notation";
+import {
+  cryptoDie,
+  roll,
+  type Die,
+  type Roll,
+  type RolledDice,
+  type RolledFlat,
+} from "../dice/notation";
 import { getState, setState, type MessageState } from "./messageState";
 
 export interface SharedRoll {
@@ -68,6 +75,32 @@ export function rerollMessage(state: MessageState, messageId: string, source: Ro
   );
 }
 
+function updateRollDie(
+  state: MessageState,
+  messageId: string,
+  source: Roll,
+  termIndex: number,
+  dieIndex: number,
+  update: (die: Die) => Die,
+  newSeed?: () => string,
+) {
+  const stored = getState<StoredRoll>(state, messageId, ROLL_FIELD);
+  const current = stored?.roll ?? source;
+  const term = current.terms[termIndex];
+  if (term?.kind !== "dice" || !term.dice[dieIndex]) return;
+  const dice = term.dice.map((die, index) => (index === dieIndex ? update(die) : die));
+  const terms = current.terms.map((entry, index) =>
+    index === termIndex ? ({ ...entry, dice } as RolledDice) : entry,
+  );
+  const seeds = (stored?.seeds ?? seedsFor(messageId, current)).map((row) => [...row]);
+  if (newSeed) {
+    const seedRow = [...(seeds[termIndex] ?? [])];
+    seedRow[dieIndex] = newSeed();
+    seeds[termIndex] = seedRow;
+  }
+  storeRoll(state, messageId, recalculate({ ...current, terms }), seeds);
+}
+
 export function rerollDie(
   state: MessageState,
   messageId: string,
@@ -75,22 +108,15 @@ export function rerollDie(
   termIndex: number,
   dieIndex: number,
 ) {
-  const stored = getState<StoredRoll>(state, messageId, ROLL_FIELD);
-  const current = stored?.roll ?? source;
-  const term = current.terms[termIndex];
-  if (term?.kind !== "dice" || !term.dice[dieIndex]) return;
-  const dice = term.dice.map((die, index) =>
-    index === dieIndex ? { ...die, value: cryptoDie(die.sides), disabled: false } : die,
+  updateRollDie(
+    state,
+    messageId,
+    source,
+    termIndex,
+    dieIndex,
+    (die) => ({ ...die, value: cryptoDie(die.sides), disabled: false }),
+    () => `${messageId}:${Date.now()}:${termIndex}:${dieIndex}`,
   );
-  const terms = current.terms.map((entry, index) =>
-    index === termIndex ? ({ ...entry, dice } as RolledDice) : entry,
-  );
-  const next = recalculate({ ...current, terms });
-  const seeds = stored?.seeds ?? seedsFor(messageId, current);
-  const seedRow = [...(seeds[termIndex] ?? [])];
-  seedRow[dieIndex] = `${messageId}:${Date.now()}:${termIndex}:${dieIndex}`;
-  seeds[termIndex] = seedRow;
-  storeRoll(state, messageId, next, seeds);
 }
 
 export function toggleRollDie(
@@ -100,22 +126,10 @@ export function toggleRollDie(
   termIndex: number,
   dieIndex: number,
 ) {
-  const stored = getState<StoredRoll>(state, messageId, ROLL_FIELD);
-  const current = stored?.roll ?? source;
-  const term = current.terms[termIndex];
-  if (term?.kind !== "dice" || !term.dice[dieIndex]) return;
-  const dice = term.dice.map((die, index) =>
-    index === dieIndex ? { ...die, disabled: !die.disabled } : die,
-  );
-  const terms = current.terms.map((entry, index) =>
-    index === termIndex ? ({ ...entry, dice } as RolledDice) : entry,
-  );
-  storeRoll(
-    state,
-    messageId,
-    recalculate({ ...current, terms }),
-    stored?.seeds ?? seedsFor(messageId, current),
-  );
+  updateRollDie(state, messageId, source, termIndex, dieIndex, (die) => ({
+    ...die,
+    disabled: !die.disabled,
+  }));
 }
 
 /** A roll's terms written back out as a formula, as it would be typed. */
