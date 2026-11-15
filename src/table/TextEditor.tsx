@@ -116,7 +116,7 @@ function useTextEditor(controller: SceneController, request: TextRequest, onDone
       cancelAnimationFrame(frame);
       show?.();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, as editing starts
+     
   }, []);
 
   // Text being edited takes on the Text tool's style as it changes, starting from its own.
@@ -131,7 +131,7 @@ function useTextEditor(controller: SceneController, request: TextRequest, onDone
       if (changed.length)
         controller.setProps([id], Object.fromEntries(changed.map((k) => [k, next[k]])));
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, as editing starts
+     
   }, []);
 
   /** Put it down, once. */
