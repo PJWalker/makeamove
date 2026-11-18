@@ -36,6 +36,7 @@ import { sessionUseIds } from "../features/characters/sessionMoves";
 import { useCampaign } from "./campaignContext";
 import { chooseGraphic } from "./commands/campaign";
 import { setField, toggleCondition } from "./commands/characters";
+import { moveSlot } from "../features/characters/hotbar";
 
 /*
  * Pieces every system's sheet can use: counters, the action list, and the
@@ -230,7 +231,7 @@ export function MoveList({
                   disabled: used,
                   onSelect: () => onMake(m),
                 },
-                ...actionMenuItems(ctx, [{ id: `move:${m.id}`, title: m.name }]),
+                ...actionMenuItems(ctx, [{ id: moveSlot(m.id), title: m.name }]),
               ]}
             >
               <MakeButton m={m} onMake={onMake} disabled={used} />
@@ -279,7 +280,7 @@ export function MoveList({
                     },
                   ]
                 : []),
-              ...actionMenuItems(ctx, [{ id: `move:${m.id}`, title: m.name }]),
+              ...actionMenuItems(ctx, [{ id: moveSlot(m.id), title: m.name }]),
             ]}
           >
             {tag && <Tag>{tag}</Tag>}

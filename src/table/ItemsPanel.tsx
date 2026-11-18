@@ -13,6 +13,7 @@ import {
 import type { Campaign } from "../campaign/campaign";
 import type { EntityGraphic } from "../media/images";
 import { useQuery } from "../ui/useQuery";
+import { librarySlot, moveSlot } from "../features/characters/hotbar";
 import { closePopup } from "../ui/popup";
 import { Dialog } from "../workspace/Dialog";
 import { usePopupDialog } from "../workspace/usePopupDialog";
@@ -181,8 +182,8 @@ function useItemsPanel(campaign: Campaign) {
   const menuItemsFor = (e: HomebrewEntry & { id: string }) => {
     const actions =
       e.kind === "gear"
-        ? actionMenuItems(ctx, [{ id: `library:${e.id}`, title: e.item.name }])
-        : actionMenuItems(ctx, [{ id: `move:${e.id}`, title: e.move.name }]);
+        ? actionMenuItems(ctx, [{ id: librarySlot(e.id), title: e.item.name }])
+        : actionMenuItems(ctx, [{ id: moveSlot(e.id), title: e.move.name }]);
     const primary =
       e.kind === "gear"
         ? {

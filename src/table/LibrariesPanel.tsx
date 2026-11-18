@@ -26,6 +26,7 @@ import { entity } from "../workspace/dragEntities";
 import { linkProxy } from "../workspace/linkProxy";
 import { rollTag } from "../workspace/actionPresentation";
 import { actionMenuItems } from "../workspace/actionMenu";
+import { librarySlot, moveSlot } from "../features/characters/hotbar";
 import { getEntityGraphic } from "../workspace/entityGraphics";
 import { CampaignEntityGraphic } from "../workspace/EntityGraphic";
 import { useCampaign, type CampaignContext } from "../workspace/campaignContext";
@@ -72,9 +73,9 @@ function useEntryMenu({ actionsFor }: Pick<Browsing, "actionsFor">) {
     joinSections([
       entryActionMenu(actionsFor(e)),
       e.kind === "item"
-        ? actionMenuItems(ctx, [{ id: `library:${e.id}`, title: e.name }])
+        ? actionMenuItems(ctx, [{ id: librarySlot(e.id), title: e.name }])
         : e.kind === "move"
-          ? actionMenuItems(ctx, [{ id: `move:${e.id}`, title: e.name }])
+          ? actionMenuItems(ctx, [{ id: moveSlot(e.id), title: e.name }])
           : [],
       [
         {
