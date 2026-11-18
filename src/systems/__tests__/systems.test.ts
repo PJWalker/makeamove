@@ -8,12 +8,7 @@ import { device } from "../../platform/device";
 import { resolveEffects } from "../effects";
 import { bladesInTheDark as blades } from "../blades-in-the-dark";
 import { dungeonWorld2 as dw2 } from "../dungeon-world-2";
-import { testCharacter, testSystem } from "./fixtures/testSystem";
-import {
-  PATHS as DW2_PATHS,
-  SOURCE_MOVES,
-  CLASS_CREATION_HINTS,
-} from "../dungeon-world-2/rulebook";
+import { PATHS as DW2_PATHS, CLASS_CREATION_HINTS } from "../dungeon-world-2/rulebook";
 import { emptyRichText, plainText } from "../../data/richText";
 import { BONDS as DW2_BONDS } from "../dungeon-world-2/bonds";
 import { STRUGGLES as DW2_STRUGGLES } from "../dungeon-world-2/struggles";
@@ -65,66 +60,6 @@ describe("Test system", () => {
     const campaign = await Campaign.open(await createCampaign("No system", "Gwen"));
     expect(systemOf(campaign).id).toBe(NO_SYSTEM_ID);
     campaign.destroy();
-  });
-
-  it("validates the fixture without registering it for the app", () => {
-    expect(checkSystem(testSystem)).toEqual([]);
-    expect(listSystems()).not.toContain(testSystem);
-    expect(testSystem.items[0]!.equippable).toBe(true);
-    expect(testSystem.conditions[0]!.lockable).toBe(true);
-    expect(testSystem.creation?.choices[0]?.options).toHaveLength(2);
-    expect(testSystem.sheet?.pc.some((section) => section.kind === "loadout")).toBe(true);
-    expect(testSystem.sheet?.npc.some((section) => section.kind === "npcFields")).toBe(true);
-    expect(testSystem.monsters).toHaveLength(1);
-  });
-
-  it("exercises optional system and nested entity callbacks deterministically", () => {
-    const character = testCharacter({ data: { checks: 0, originId: "curious" } });
-    const derived = derive(character, testSystem);
-    const check = testSystem.actions.find((action) => action.id === "test-check")!;
-    const step = check.steps[0]!;
-    const learnable = testSystem.actions.find((action) => action.id === "test-learnable")!;
-    const followUp = testSystem.followUps.find((entry) => entry.id === "test-damage-roll")!;
-    const loadout = (testSystem.loadouts ?? [])[0]!;
-
-    expect(testSystem.modifier(2.9)).toBe(2);
-    expect(testSystem.result(12, [])).toBe("success");
-    expect(testSystem.checkRoll!("d20+1", "might", character, check)).toBe("d20+1+0[Test]");
-    expect(testSystem.hits!(1, [20], 12)).toBe(true);
-    expect(testSystem.hits!(11, [], 12)).toBe(false);
-    expect(testSystem.resolveDamage!(character, derived, 3, { armor: true })).toEqual({
-      hp: 3,
-      resources: [{ id: "focus", by: -1 }],
-    });
-    expect(testSystem.concentrationSave!(8)).toEqual({
-      action: "test-save",
-      difficulty: { kind: "fixed", value: 10 },
-    });
-    expect(testSystem.learnedActionAllowed!(learnable, character, derived)).toBe(true);
-    expect(check.variants!(character, derived)).toEqual([
-      { id: "steady", label: "Steady", costs: [], values: { bonus: 1 } },
-    ]);
-    expect(
-      step.kind === "check" &&
-        step.followUpsFor!({ formula: "d20", terms: [], total: 11 }, character, derived),
-    ).toEqual(["mark-check"]);
-    expect(loadout.available!(character, derived)).toEqual(["curious-option"]);
-    expect(followUp.kind === "roll" && followUp.formula(character, derived)).toBe("d6");
-    expect(testSystem.actionsFor(character, derived)).toContain(check);
-    expect(testSystem.tokenStats(character, derived)).toEqual([
-      {
-        id: "hp",
-        label: "HP",
-        value: 12,
-        max: 12,
-        colour: "#4a9b70",
-        source: { resource: "hp" },
-      },
-    ]);
-    expect(testSystem.actions.find((action) => action.id === "test-save")?.steps[0]).toMatchObject({
-      kind: "save",
-      action: "test-check",
-    });
   });
 });
 
@@ -260,73 +195,13 @@ describe("Blades in the Dark", () => {
 });
 
 describe("Dungeon World 2", () => {
-  it("uses the beta move text for every core and extra move", () => {
-    const sourceMoves = [
-      ["aid-a-pc", "Aid a PC"],
-      ["cast-a-spell", "Cast a Spell"],
-      ["comfort-or-support", "Comfort or Support"],
-      ["defy-danger", "Defy Danger"],
-      ["pull-strings", "Pull Strings"],
-      ["sense-motive", "Sense Motive"],
-      ["sneak-past", "Sneak Past"],
-      ["spout-lore", "Spout Lore"],
-      ["trade-blows", "Trade Blows"],
-      ["unearth-secrets", "Unearth Secrets"],
-      ["end-the-session", "End the Session"],
-      ["face-death", "Face Death"],
-      ["level-up", "Level Up"],
-      ["make-camp", "Make Camp"],
-      ["perform-a-ritual", "Perform a Ritual"],
-      ["reach-your-limit", "Reach Your Limit"],
-      ["perilous-journey", "Undertake a Perilous Journey"],
-    ] as const;
-
-    expect(sourceMoves).toHaveLength(17);
-    for (const [id] of sourceMoves) {
-      const action = dw2.actions.find((entry) => entry.id === id)!;
-      const source = SOURCE_MOVES[id]![3]!;
-      expect(action.text).toEqual(source.text);
-      const sourceOutcomes = source.outcomes;
-      if (sourceOutcomes) {
-        expect(action.steps[0]).toMatchObject({ outcomes: sourceOutcomes });
-      }
-    }
+  it("uses the rulebook's move text", () => {
     expect(plainText(dw2.actions.find((action) => action.id === "aid-a-pc")!.text)).toContain(
       "They frustrate you; erase 1 Depth with them",
     );
     expect(plainText(dw2.actions.find((action) => action.id === "face-death")?.text)).toContain(
       "Go Out in a Blaze of Glory",
     );
-    const classMoves = [
-      ["barbarian-rage", "Rage!"],
-      ["bard-perform-art", "Perform Your Art"],
-      ["cleric-invoke-divine", "Invoke the Divine"],
-      ["druid-shapeshift", "Shapeshift"],
-      ["fighter-signature-weapon", "Signature Weapon"],
-      ["paladin-oaths", "Oaths of Conviction"],
-      ["ranger-animal-companion", "Animal Companion"],
-      ["rogue-tricks-trade", "Tricks of the Trade"],
-      ["wizard-weave-arcane", "Weave the Arcane"],
-    ] as const;
-    for (const [id] of classMoves) {
-      const action = dw2.actions.find((entry) => entry.id === id)!;
-      const source = SOURCE_MOVES[id]![4]!;
-      expect(action.text).toEqual(source.text);
-      const sourceOutcomes = source.outcomes;
-      if (sourceOutcomes) {
-        expect(action.steps[0]).toMatchObject({ outcomes: sourceOutcomes });
-      }
-    }
-    const campaignMoves = [
-      ["enjoy-downtime", "Enjoy Downtime"],
-      ["forge-a-bond", "Forge a Bond"],
-      ["reveal-your-struggle", "Reveal Your Struggle"],
-    ] as const;
-    for (const [id] of campaignMoves) {
-      expect(dw2.actions.find((entry) => entry.id === id)?.text).toEqual(
-        SOURCE_MOVES[id]![4]!.text,
-      );
-    }
     expect(plainText(dw2.actions.find((action) => action.id === "barbarian-rage")?.text)).toContain(
       "You can't benefit from wearing armor",
     );

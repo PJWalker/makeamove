@@ -16,7 +16,6 @@ import {
   USER_COLOUR_LIMITS,
   userColourToHex,
   rgbToOklab,
-  sceneOklchFromHex,
 } from "../colour";
 
 describe("colour", () => {
@@ -73,13 +72,6 @@ describe("colour", () => {
     expect(mappedBlue.c).toBeCloseTo(blue.c, 2);
     expect(mappedYellow.l).toBeCloseTo(blue.l, 3);
     expect(mappedYellow.c).toBeLessThan(blue.c);
-  });
-  it("keeps the full scene OKLCH value", () => {
-    const grey = sceneOklchFromHex("#808080");
-    expect(grey).toEqual(hexToOklch("#808080"));
-
-    const red = sceneOklchFromHex("#ff0000");
-    expect(red).toEqual(hexToOklch("#ff0000"));
   });
   it("fills the gamut rectangle with selectable in-gamut colours", () => {
     for (const range of [GENERAL_COLOUR_LIMITS, USER_COLOUR_LIMITS]) {

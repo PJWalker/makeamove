@@ -84,7 +84,7 @@ describe("player characters", () => {
     newCharacter(campaign, "Brom", "wizard");
     expect(playedCharacterId(campaign)).toBe(ayla);
     deleteCharacter(campaign, ayla);
-    expect(campaign.members.get("pat")!.has("playing")).toBe(false);
+    expect(playedCharacterId(campaign)).toBeUndefined();
     campaign.destroy();
   });
 });

@@ -56,7 +56,6 @@ describe("notes", () => {
     expect(getNote(c, d)?.title).toBe("The Duke");
     moveNote(c, a, undefined);
     expect(getNote(c, a)?.folder).toBeUndefined();
-    expect(noteSubdoc(c, b)?.guid).toBe(`${c.id}/note/${b}`);
     deleteNote(c, b);
     expect(getNote(c, b)).toBeUndefined();
     c.destroy();

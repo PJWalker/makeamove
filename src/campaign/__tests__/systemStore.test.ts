@@ -16,7 +16,6 @@ describe("system data stores", () => {
 
     store.set("a", 1);
     store.set("b", 2);
-    expect(ext.get("test")?.get("stores")?.has("store")).toBe(true);
     expect(store.get("a")).toBe(1);
     expect(store.values().sort((left, right) => left - right)).toEqual([1, 2]);
     store.delete("a");

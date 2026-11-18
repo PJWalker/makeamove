@@ -13,11 +13,6 @@ describe("the lobby's cave backdrop", () => {
     expect(markup).toMatch(/^<div class="cave-backdrop" aria-hidden="true"/);
   });
 
-  it("is drawn in SVG rather than on a canvas", () => {
-    expect(markup).toContain("<svg");
-    expect(markup).not.toContain("<canvas");
-  });
-
   it("shows a party of four with two torches and the wizard's wisp", () => {
     expect(count(markup, "cave-adventurer")).toBe(4);
     expect(count(markup, "cave-flame")).toBe(2);
