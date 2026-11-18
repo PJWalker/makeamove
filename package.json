@@ -25,7 +25,8 @@
     "test:browser": "vp test run --config vitest.browser.config.ts",
     "generate:rules": "jiti scripts/generateRules.ts",
     "doctor": "npx react-doctor@latest",
-    "prepare": "vp config"
+    "prepare": "vp config",
+    "generate:icons": "jiti scripts/generateIcons.ts"
   },
   "dependencies": {
     "@floating-ui/dom": "^1.8.0",

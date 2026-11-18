@@ -73,6 +73,8 @@
   }
   .toolbar-tools > button {
     flex-shrink: 0;
+    width: 44px;
+    min-height: 44px;
   }
   .toolbar-options {
     flex: 1 1 var(--toolbar-options-width);

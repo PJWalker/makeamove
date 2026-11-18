@@ -2,7 +2,7 @@
 import type { PointerEvent as ReactPointerEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useState } from "react";
 import { useUnreadCount } from "../features/chat/unread";
-import { IconClose, IconOpenWindow } from "../ui/icons";
+import { IconClose, IconOpenWindow, PROMINENT_ICON_SIZE } from "../ui/icons";
 import type { Campaign } from "../campaign/campaign";
 import { device } from "../platform/device";
 import { useQuery } from "../ui/useQuery";
@@ -314,10 +314,12 @@ function EntityTabIcon({
   campaign,
   record,
   className,
+  size = 22,
 }: {
   campaign: Campaign;
   record: EntityWindowRecord | undefined;
   className?: string;
+  size?: number;
 }) {
   if (record?.graphicRef)
     return (
@@ -326,12 +328,12 @@ function EntityTabIcon({
         kind={record.graphicRef.kind}
         id={record.graphicRef.id}
         defaultIcon={record.graphicDefaultIcon}
-        size={22}
+        size={size}
         {...(className ? { className } : {})}
       />
     );
   const Icon = record?.icon ?? IconOpenWindow;
-  return <Icon size={22} {...(className ? { className } : {})} />;
+  return <Icon size={size} {...(className ? { className } : {})} />;
 }
 
 /** A tab that selects its panel on click, or pulls it out into a window when dragged. */
@@ -371,9 +373,9 @@ function RailTab({
       {...withPull((e) => dragTab(ctx, id, e), onMenu)}
     >
       {panel ? (
-        <PanelIcon id={panel} campaign={campaign} />
+        <PanelIcon id={panel} campaign={campaign} size={PROMINENT_ICON_SIZE} />
       ) : (
-        <EntityTabIcon campaign={campaign} record={record} />
+        <EntityTabIcon campaign={campaign} record={record} size={PROMINENT_ICON_SIZE} />
       )}
     </Button>
   );

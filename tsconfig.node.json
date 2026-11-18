@@ -11,5 +11,5 @@
     /* Linting */
     "erasableSyntaxOnly": true
   },
-  "include": ["vite.config.ts", "scripts/generateDiceFallbacks.ts"]
+  "include": ["vite.config.ts", "scripts/generateDiceFallbacks.ts", "scripts/generateIcons.ts"]
 }

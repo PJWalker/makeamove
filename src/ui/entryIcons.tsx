@@ -1,5 +1,13 @@
-import { icon, type Icon } from "./icons";
+import type { ComponentType, SVGProps } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import type { Icon } from "./icons";
+
+/** A bundled SVG glyph as an Icon, tinted by the text colour. */
+function icon(Svg: ComponentType<SVGProps<SVGSVGElement>>): Icon {
+  return function GlyphIcon({ size = 22, className }) {
+    return <Svg width={size} height={size} className={className} aria-hidden="true" />;
+  };
+}
 
 /** The kinds of entry a library holds. */
 export type EntryKind = "item" | "move" | "tag" | "option" | "monster";

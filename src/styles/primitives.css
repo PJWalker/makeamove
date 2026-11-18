@@ -101,6 +101,17 @@
   .empty svg {
     color: var(--text-faint);
   }
+  /* Rendered icons sit in a line like glyphs and fade with their control. */
+  .icon-art {
+    flex-shrink: 0;
+    vertical-align: middle;
+    user-select: none;
+  }
+  :disabled .icon-art,
+  [aria-disabled="true"] .icon-art {
+    opacity: 0.45;
+    filter: saturate(0.3);
+  }
   /* The same message inside a list or menu, where a centred block is too much. */
   .empty-inline {
     padding: var(--space-2);

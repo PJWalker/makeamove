@@ -22,6 +22,7 @@ import {
   IconToken,
   IconWall,
   type Icon,
+  PROMINENT_ICON_SIZE,
 } from "../ui/icons";
 import { TOOLS } from "../workspace/tools";
 import { ContextMenu } from "../ui/ContextMenu";
@@ -132,7 +133,7 @@ export function Toolbar({ isGm }: { isGm: boolean }) {
             onPointerDown={(e) => dragTool(id, e)}
             onClick={() => ctx.execute(selectTool, { tool: id })}
           >
-            <Icon size={22} />
+            <Icon size={PROMINENT_ICON_SIZE} />
           </Button>
         ))}
       </nav>
@@ -191,7 +192,7 @@ function CampaignMenu() {
           if (e.detail === 0 && !menu) openBelow(e.currentTarget as HTMLElement);
         }}
       >
-        <IconMenu size={22} />
+        <IconMenu size={PROMINENT_ICON_SIZE} />
       </Button>
       {/* Out of the strip, which would clip it. */}
       {menu &&

@@ -78,10 +78,12 @@ export function PanelIcon({
   id,
   campaign,
   className,
+  size = 22,
 }: {
   id: PanelId;
   campaign: Campaign;
   className?: string;
+  size?: number;
 }) {
   const played = useQuery(campaign.members, () =>
     id === "pc" ? playedCharacterId(campaign) : undefined,
@@ -92,12 +94,12 @@ export function PanelIcon({
         campaign={campaign}
         kind="character"
         id={played}
-        size={22}
+        size={size}
         className={className}
       />
     );
   const { Icon } = PANELS[id];
-  return <Icon size={22} {...(className ? { className } : {})} />;
+  return <Icon size={size} {...(className ? { className } : {})} />;
 }
 
 /** Panels that are a list and a detail have a layout switch in their title bar. */

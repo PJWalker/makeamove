@@ -110,7 +110,7 @@
   .welcome-features li:nth-child(3) {
     animation-delay: 180ms;
   }
-  .welcome-features li svg {
+  .welcome-features li :is(svg, .icon-art) {
     color: var(--accent);
     transition: rotate 300ms var(--ease);
   }
@@ -118,7 +118,7 @@
     translate: 0 -2px;
     color: var(--text);
   }
-  .welcome-features li:hover svg {
+  .welcome-features li:hover :is(svg, .icon-art) {
     rotate: -8deg;
   }
   .welcome-cta {
@@ -139,7 +139,7 @@
       animation: none;
     }
     .welcome-features li,
-    .welcome-features li svg {
+    .welcome-features li :is(svg, .icon-art) {
       transition: none;
     }
   }
