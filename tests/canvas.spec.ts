@@ -175,6 +175,7 @@ test("scene-tinted surfaces follow scene chroma and lightness", async ({ page })
     });
   const toolbarColours = colours(pixels.toolbar);
   const surfaceColours = colours(pixels.surface);
+  expect(pixels.surface).toEqual(pixels.toolbar);
   expect(toolbarColours[0]!.c).toBeLessThanOrEqual(0.025);
   expect(toolbarColours[1]!.c).toBeLessThanOrEqual(0.075);
   expect(toolbarColours[1]!.c).toBeGreaterThan(0.055);
