@@ -47,7 +47,6 @@ export function Sidebar({ side, campaign }: { side: Side; campaign: Campaign }) 
   const empty = s.panels.length === 0;
   if (empty && !dragging) return null;
   const { open, active } = s;
-  const outer = side === "left" ? "dock-left" : "dock-right";
 
   return (
     <aside
@@ -60,7 +59,11 @@ export function Sidebar({ side, campaign }: { side: Side; campaign: Campaign }) 
       aria-label={side === "left" ? "Left sidebar" : "Right sidebar"}
     >
       <div className="sidebar-rail-edge">
-        <div className={`sidebar-rail strip ${outer}`} role="tablist" aria-orientation="vertical">
+        <div
+          className={`sidebar-rail strip dock-${side}`}
+          role="tablist"
+          aria-orientation="vertical"
+        >
           {s.panels.map((id) => (
             <RailTab
               key={id}
@@ -76,7 +79,7 @@ export function Sidebar({ side, campaign }: { side: Side; campaign: Campaign }) 
       </div>
 
       <section
-        className={`sidebar-body panel dock-${side === "left" ? "left" : "right"} dock-top dock-bottom`}
+        className={`sidebar-body panel dock-${side} dock-top dock-bottom`}
         role="tabpanel"
         inert={!open}
       >
@@ -114,26 +117,6 @@ function withPull(onPress: (e: ReactPointerEvent) => void, open: (x: number, y: 
 /** Right-click menu for a tab: the keyboard-friendly way to rearrange panels. */
 function tabMenu(ctx: CampaignContext, id: DockItemId, side: Side): MenuItem[] {
   const other = otherSide(side);
-  if (isEntityTab(id)) {
-    return [
-      { label: "Open", onSelect: () => ctx.panels.showPanel(id) },
-      "divider",
-      {
-        label: other === "left" ? "Move to Left Sidebar" : "Move to Right Sidebar",
-        onSelect: () => void withTransition(() => ctx.panels.dockPanel(id, other)),
-      },
-      {
-        label: "Float in a Window",
-        onSelect: () => ctx.panels.detachPanel(id, Math.max(innerWidth / 2 - 190, 0), 96, 380, 440),
-      },
-      "divider",
-      {
-        label: "Close",
-        Icon: IconClose,
-        onSelect: () => closeDockedEntity(ctx, id),
-      },
-    ];
-  }
   return [
     { label: "Open", onSelect: () => ctx.panels.showPanel(id) },
     "divider",
@@ -141,18 +124,22 @@ function tabMenu(ctx: CampaignContext, id: DockItemId, side: Side): MenuItem[] {
       label: other === "left" ? "Move to Left Sidebar" : "Move to Right Sidebar",
       onSelect: () => void withTransition(() => ctx.panels.dockPanel(id, other)),
     },
-    {
-      label: "Float in a Window",
-      onSelect: () => ctx.panels.detachPanel(id, Math.max(innerWidth / 2 - 170, 0), 120),
-    },
+    { label: "Float in a Window", onSelect: () => floatTab(ctx, id) },
     "divider",
-    // Back from the campaign menu, where each panel can be ticked again.
-    {
-      label: "Close",
-      Icon: IconClose,
-      onSelect: () => void withTransition(() => ctx.panels.setPanelClosed(id, true)),
-    },
+    { label: "Close", Icon: IconClose, onSelect: () => closeTab(ctx, id) },
   ];
+}
+
+/** Floats a tab in a window near the top middle; an entity's window has its own size. */
+function floatTab(ctx: CampaignContext, id: DockItemId) {
+  if (isEntityTab(id)) ctx.panels.detachPanel(id, Math.max(innerWidth / 2 - 190, 0), 96, 380, 440);
+  else ctx.panels.detachPanel(id, Math.max(innerWidth / 2 - 170, 0), 120);
+}
+
+/** Closes a tab. A closed panel comes back from the campaign menu, where each panel can be ticked again. */
+function closeTab(ctx: CampaignContext, id: DockItemId) {
+  if (isEntityTab(id)) closeDockedEntity(ctx, id);
+  else void withTransition(() => ctx.panels.setPanelClosed(id, true));
 }
 
 /**
@@ -365,12 +352,8 @@ function RailTab({
   const panel = isPanelId(id) ? id : undefined;
   const records = useQuery(ctx.windows.records);
   const record = isEntityTab(id) ? ctx.windows.record(id, records) : undefined;
-  const label = usePanelLabel(id, campaign) ?? record?.title ?? id.slice("entity:".length);
+  const label = usePanelLabel(id, campaign) ?? entityTitle(id, record);
   const badge = useTabBadge(campaign, id);
-
-  function onPointerDown(e: ReactPointerEvent) {
-    dragTab(ctx, id, e);
-  }
 
   return (
     <Button
@@ -385,7 +368,7 @@ function RailTab({
       data-unread={badge.unread}
       data-online={badge.online}
       onClick={() => switchTo(ctx, id, side)}
-      {...withPull(onPointerDown, onMenu)}
+      {...withPull((e) => dragTab(ctx, id, e), onMenu)}
     >
       {panel ? (
         <PanelIcon id={panel} campaign={campaign} />
@@ -439,7 +422,7 @@ function ActiveTab({
       >
         <EntityTabIcon campaign={campaign} record={record} className="window-icon" />
         <h2 className="panel-title" tabIndex={-1}>
-          {record?.title ?? id.slice("entity:".length)}
+          {entityTitle(id, record)}
         </h2>
         <Button variant="icon" label="Close window" onClick={() => closeDockedEntity(ctx, id)}>
           <IconClose size={22} />
@@ -465,6 +448,11 @@ function PanelTitle({ id, campaign }: { id: PanelId; campaign: Campaign }) {
       {usePanelLabel(id, campaign)}
     </h2>
   );
+}
+
+/** A docked entity window's title, or its id when its record is gone. */
+function entityTitle(id: DockItemId, record: EntityWindowRecord | undefined) {
+  return record?.title ?? id.slice("entity:".length);
 }
 
 function closeDockedEntity(ctx: CampaignContext, id: DockItemId) {

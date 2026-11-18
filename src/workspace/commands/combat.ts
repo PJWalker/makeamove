@@ -55,6 +55,8 @@ const owns = (ctx: CampaignContext, characterId: string | undefined): Availabili
 };
 const ownsCombatant = (ctx: CampaignContext, { id }: { id: string }) =>
   owns(ctx, ctx.campaign.combatants.get(id)?.characterId);
+const ownsCharacter = (ctx: CampaignContext, { characterId }: { characterId: string }) =>
+  owns(ctx, characterId);
 
 /** Tokens in the open scene's selection, as combatants. */
 function selectedTokens(ctx: CampaignContext, sceneId: string, ids: string[]) {
@@ -68,6 +70,10 @@ function selectedTokens(ctx: CampaignContext, sceneId: string, ids: string[]) {
   });
 }
 
+/** The selected tokens that aren't in the fight yet. */
+const newToCombat = (ctx: CampaignContext, sceneId: string, ids: string[]) =>
+  selectedTokens(ctx, sceneId, ids).filter((t) => !combatantForToken(ctx.campaign, t.id));
+
 export const addToCombat = command<{ sceneId: string; ids: string[] }>({
   id: "combat.addTokens",
   params: objectOf({ sceneId: isString, ids: (v): v is string[] => Array.isArray(v) }),
@@ -78,17 +84,13 @@ export const addToCombat = command<{ sceneId: string; ids: string[] }>({
     return ok !== true ? ok : ctx.isGm() || GM_ONLY;
   },
   available: (ctx, { sceneId, ids }) =>
-    selectedTokens(ctx, sceneId, ids).some((t) => !combatantForToken(ctx.campaign, t.id)) ||
-    "Already in the fight",
+    newToCombat(ctx, sceneId, ids).length > 0 || "Already in the fight",
   menu: {
     selection: (ctx, { sceneId, ids }) =>
       selectedTokens(ctx, sceneId, ids).length ? [{ params: { sceneId, ids } }] : [],
   },
   run: (ctx, { sceneId, ids }) => {
-    const out = selectedTokens(ctx, sceneId, ids).filter(
-      (t) => !combatantForToken(ctx.campaign, t.id),
-    );
-    addTokens(ctx.campaign, sceneId, out);
+    addTokens(ctx.campaign, sceneId, newToCombat(ctx, sceneId, ids));
     ctx.panels.showPanel("combat");
   },
 });
@@ -107,7 +109,10 @@ export const nextTurn = command({
   params: isNothing,
   title: "Next Turn",
   permission: "gm",
-  available: (ctx) => (running(ctx) === true ? anyone(ctx) : running(ctx)),
+  available: (ctx) => {
+    const fight = running(ctx);
+    return fight === true ? anyone(ctx) : fight;
+  },
   run: ({ campaign }) => advanceTurn(campaign),
 });
 
@@ -187,7 +192,7 @@ export const timeCondition = command<{
     duration: optional((v): v is Duration => isObject(v)),
   }),
   title: "Set Duration",
-  permission: (ctx, { characterId }) => owns(ctx, characterId),
+  permission: ownsCharacter,
   run: ({ campaign }, { characterId, condition, duration }) => {
     if (!getCharacter(campaign, characterId)?.conditions.includes(condition))
       toggleCondition(campaign, characterId, condition);
@@ -199,7 +204,7 @@ export const removeTimedCondition = command<{ characterId: string; condition: st
   id: "character.removeTimedCondition",
   params: objectOf({ characterId: isString, condition: isString }),
   title: "Remove Condition",
-  permission: (ctx, { characterId }) => owns(ctx, characterId),
+  permission: ownsCharacter,
   run: ({ campaign }, { characterId, condition }) => {
     if (getCharacter(campaign, characterId)?.conditions.includes(condition))
       toggleCondition(campaign, characterId, condition);
@@ -211,7 +216,7 @@ export const stopConcentrating = command<{ characterId: string }>({
   id: "character.endConcentration",
   params: objectOf({ characterId: isString }),
   title: "End Concentration",
-  permission: (ctx, { characterId }) => owns(ctx, characterId),
+  permission: ownsCharacter,
   run: ({ campaign }, { characterId }) => endConcentration(campaign, characterId),
 });
 

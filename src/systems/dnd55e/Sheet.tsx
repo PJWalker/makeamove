@@ -130,6 +130,12 @@ function AbilitiesSection(
   );
 }
 
+/** Whose sheet this is, as the viewer sees it. */
+function ownership(mine: boolean, editable: boolean): string {
+  if (mine) return "Yours";
+  return editable ? "Editing as GM" : "View only";
+}
+
 /** A player character's sheet. */
 export function DndSheet({ campaign, system, c }: Props) {
   const d = derive(c, system);
@@ -179,9 +185,7 @@ export function DndSheet({ campaign, system, c }: Props) {
           ],
         }}
       />
-      <p className="muted sheet-owner">
-        {c.owner === me ? "Yours" : editable ? "Editing as GM" : "View only"}
-      </p>
+      <p className="muted sheet-owner">{ownership(c.owner === me, editable)}</p>
     </div>
   );
 }

@@ -1,4 +1,3 @@
-import type { EntityGraphic, EntityGraphicRef } from "../media/images";
 import { store, watch } from "../lib/store";
 import type { CampaignDefaults } from "../campaign/campaign";
 import { device } from "../platform/device";
@@ -7,9 +6,14 @@ import { colourOf, type Presence } from "./presence";
 import { type Camera, clampZoom, fitCamera, toWorld, zoomAt } from "./camera";
 import { readSceneCamera, saveSceneCamera } from "./cameraMemory";
 import { bounds, hits } from "./geometry";
-import { type Point, snapPoint } from "./grid";
-import type { BlobRef } from "../media/images";
-import { importImage, imageColour } from "../media/images";
+import { cellOr, type Point, snapPoint } from "./grid";
+import {
+  type BlobRef,
+  type EntityGraphic,
+  type EntityGraphicRef,
+  importImage,
+  imageColour,
+} from "../media/images";
 import { tokenDistance } from "./measure";
 import {
   conversion,
@@ -20,16 +24,8 @@ import {
 } from "./newElements";
 import type { SceneRenderer } from "./renderer";
 import type { ElementPatch, SceneDoc } from "./sceneDoc";
-import { ERASER_RADIUS, GM_KINDS, kindOf, type SceneTools } from "./tools";
-import {
-  LAYERS,
-  type Layer,
-  type NewElement,
-  type SceneElement,
-  type TokenElement,
-  type TokenStyle,
-  type Transform,
-} from "./types";
+import { ERASER_RADIUS, GM_KINDS, kindOf, type SceneTools, type ToolId } from "./tools";
+import type { Layer, NewElement, SceneElement, TokenElement, TokenStyle, Transform } from "./types";
 import { TOOL_PRESS } from "./gestures";
 import { PolygonDraft } from "./gestures/polygon";
 import { pinch } from "./gestures/pan";
@@ -41,6 +37,30 @@ import type { Gesture, Placement, TextRequest, ToolContext } from "./gestures/ty
 /** How soon, and how near in screen px, a press must follow the last to count as a double click. */
 const MULTI_CLICK_MS = 500;
 const MULTI_CLICK_SLOP = 6;
+
+/** Tools that aim at a point on the map. */
+const CROSSHAIR_TOOLS: ReadonlySet<ToolId> = new Set([
+  "draw",
+  "shape",
+  "wall",
+  "light",
+  "effect",
+  "ruler",
+  "ping",
+]);
+
+/** Which way each arrow key nudges the selection. */
+const ARROW_NUDGES: Record<string, Point> = {
+  ArrowUp: { x: 0, y: -1 },
+  ArrowDown: { x: 0, y: 1 },
+  ArrowLeft: { x: -1, y: 0 },
+  ArrowRight: { x: 1, y: 0 },
+};
+
+/** Just the place, size and rotation of `t`, without the rest of what it holds. */
+function transformOf(t: Transform): Transform {
+  return { x: t.x, y: t.y, w: t.w, h: t.h, rot: t.rot };
+}
 
 /**
  * Turns pointer, wheel and keyboard input into camera moves and scene edits.
@@ -394,27 +414,18 @@ export class SceneController implements ToolContext {
   }
 
   private updateCursor(cursor?: string) {
+    this.host.style.cursor = cursor ?? this.gesture?.cursor ?? this.toolCursor();
+  }
+
+  /** The cursor for the tool in use, between gestures. */
+  private toolCursor(): string {
     const tool = this.tools.activeTool.value;
-    this.host.style.cursor =
-      cursor ??
-      this.gesture?.cursor ??
-      (this.spaceHeld || tool === "pan"
-        ? "grab"
-        : this.placing.value ||
-            tool === "draw" ||
-            tool === "shape" ||
-            tool === "wall" ||
-            tool === "light" ||
-            tool === "effect" ||
-            tool === "ruler" ||
-            tool === "ping" ||
-            (tool === "select" && this.targetMode.value)
-          ? "crosshair"
-          : tool === "text"
-            ? "text"
-            : tool === "erase"
-              ? "none"
-              : "default");
+    if (this.spaceHeld || tool === "pan") return "grab";
+    if (this.placing.value || CROSSHAIR_TOOLS.has(tool)) return "crosshair";
+    if (tool === "select" && this.targetMode.value) return "crosshair";
+    if (tool === "text") return "text";
+    if (tool === "erase") return "none";
+    return "default";
   }
 
   // Camera
@@ -531,12 +542,7 @@ export class SceneController implements ToolContext {
       return;
     }
 
-    const tool =
-      e.button === 1 || this.spaceHeld
-        ? "pan"
-        : this.selecting()
-          ? "select"
-          : this.tools.activeTool.value;
+    const tool = e.button === 1 || this.spaceHeld ? "pan" : this.tools.activeTool.value;
     this.gesture = TOOL_PRESS[tool](this, e, world, screen);
     this.updateCursor();
     this.updateOverlay();
@@ -599,10 +605,7 @@ export class SceneController implements ToolContext {
   commitPreviews() {
     const previews = this.renderer.previews;
     if (!previews.size) return;
-    const patches = [...previews].map(
-      ([id, t]) => [id, { x: t.x, y: t.y, w: t.w, h: t.h, rot: t.rot }] as [string, Transform],
-    );
-    this.scene.update(patches);
+    this.scene.update([...previews].map(([id, t]) => [id, transformOf(t)]));
     previews.clear();
     this.renderer.invalidate("elements", "overlay");
   }
@@ -613,13 +616,7 @@ export class SceneController implements ToolContext {
     if (original?.type !== "token") return complete();
     const current = this.renderer.previews.get(id) ?? original;
     cancelAnimationFrame(this.itemTokenDropFrame);
-    const from = {
-      x: current.x,
-      y: current.y,
-      w: current.w,
-      h: current.h,
-      rot: current.rot,
-    };
+    const from = transformOf(current);
     const point = this.toWorld(clientX, clientY);
     const to = {
       ...from,
@@ -698,7 +695,6 @@ export class SceneController implements ToolContext {
   onKeyDown(e: KeyboardEvent): boolean {
     const mod = e.metaKey || e.ctrlKey;
     const key = e.key.toLowerCase();
-    const grid = this.renderer.grid;
 
     if (key === " " && !mod) {
       if (!this.spaceHeld) {
@@ -729,12 +725,13 @@ export class SceneController implements ToolContext {
       case "ArrowDown":
       case "ArrowLeft":
       case "ArrowRight": {
-        const step = e.shiftKey ? (grid.type === "none" ? 10 : grid.size) : 1;
-        const dx = e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0;
-        const dy = e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0;
+        const step = e.shiftKey ? cellOr(this.renderer.grid, 10) : 1;
+        const nudge = ARROW_NUDGES[e.key]!;
         const sel = this.selected().filter((el) => !el.locked);
         if (!sel.length) return false;
-        this.scene.update(sel.map((el) => [el.id, { x: el.x + dx, y: el.y + dy }]));
+        this.scene.update(
+          sel.map((el) => [el.id, { x: el.x + nudge.x * step, y: el.y + nudge.y * step }]),
+        );
         return true;
       }
       case "=":
@@ -770,7 +767,7 @@ export class SceneController implements ToolContext {
   // Edits, for menus and shortcuts
 
   remove(ids: string[]) {
-    const removable = ids.filter((id) => this.byId.get(id) && !this.byId.get(id)!.locked);
+    const removable = ids.filter((id) => this.byId.get(id)?.locked === false);
     if (!removable.length) return;
     this.scene.remove(removable);
     const removableIds = new Set(removable);
@@ -779,8 +776,7 @@ export class SceneController implements ToolContext {
 
   duplicate(ids: string[]) {
     if (!ids.length) return;
-    const grid = this.renderer.grid;
-    const copies = this.scene.duplicate(ids, grid.type === "none" ? 20 : grid.size);
+    const copies = this.scene.duplicate(ids, cellOr(this.renderer.grid, 20));
     this.afterDuplicate(copies);
     this.selection.value = copies;
   }
@@ -800,8 +796,10 @@ export class SceneController implements ToolContext {
     this.scene.setLayer(ids, layer);
   }
 
-  /** Change elements' properties as one undo step. Turning a door back into a wall forgets whether it was open. */
-  /** Change elements' properties; text is resized to fit. */
+  /**
+   * Change elements' properties as one undo step; text is resized to fit.
+   * Turning a door back into a wall forgets whether it was open.
+   */
   setProps(ids: string[], patch: ElementPatch) {
     const fixed = "door" in patch && patch.door === false ? { ...patch, open: undefined } : patch;
     this.scene.update(
@@ -973,7 +971,7 @@ export class SceneController implements ToolContext {
       for (const [i, image] of imported.entries()) {
         if (!image) continue;
         const file = images[i]!;
-        const shift = i * (grid.type === "none" ? 40 : grid.size);
+        const shift = i * cellOr(grid, 40);
         const p = { x: at.x + shift, y: at.y + shift };
         added.push(imageElement(grid, image, file.name, p, this.newTokenLook(true)));
       }
@@ -983,9 +981,5 @@ export class SceneController implements ToolContext {
     if (!added.length) return;
     this.tools.activeTool.value = "select";
     this.selection.value = this.scene.add(...added);
-  }
-
-  layers() {
-    return LAYERS;
   }
 }

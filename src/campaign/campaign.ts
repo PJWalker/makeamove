@@ -96,15 +96,27 @@ export class Campaign {
   readonly systemData: SystemData;
   /** GM-only pages, on GM devices only (see notes/vault.ts). */
   readonly vault = store<Vault | null>(null);
+  /** Chat, rolls and the move log (see chat/chatLog.ts). */
+  readonly chat: ChatLog;
+  /** The move this device is part-way through making (see characters/moveFlow.ts). */
+  readonly moves = new MoveRequests();
+  readonly connection: CampaignConnection;
+  /** The device this campaign is open on. */
+  readonly device: ReadonlyStore<Device>;
+  private readonly joinRoom: JoinRoom;
   private persistence: IndexeddbPersistence;
   private destroyed = false;
   private rejoinCleanups: (() => void)[] = [];
-  readonly connection: CampaignConnection;
 
   /** False while joining by invite, until the first peer has sent the campaign. */
-  /** Cursors, pings and rulers; live only while peers are connected. */
   readonly ready = store(false);
+  /** True once the GM has removed this device from the campaign. */
+  readonly removed = store(false);
+  /** Connected despite being removed, to learn whether the GM allowed us back. */
+  private checkingRejoin = false;
+  private checkMembership: () => void = () => {};
 
+  /** Cursors, pings and rulers; live only while peers are connected. */
   get presence() {
     return this.connection.presence;
   }
@@ -114,10 +126,6 @@ export class Campaign {
   get online() {
     return this.connection.online;
   }
-
-  /** The device this campaign is open on. */
-  readonly device: ReadonlyStore<Device>;
-  private readonly joinRoom: JoinRoom;
 
   private constructor(id: string, host: CampaignHost) {
     this.id = id;
@@ -146,11 +154,6 @@ export class Campaign {
     this.chat = new ChatLog(this.root.chat, id, this.device.value.id);
     this.connection = new CampaignConnection(id, this.doc, this.device, this.joinRoom);
   }
-
-  /** Chat, rolls and the move log (see chat/chatLog.ts). */
-  readonly chat: ChatLog;
-  /** The move this device is part-way through making (see characters/moveFlow.ts). */
-  readonly moves = new MoveRequests();
 
   static async open(id: string, host: CampaignHost = {}): Promise<Campaign> {
     const c = new Campaign(id, host);
@@ -202,13 +205,6 @@ export class Campaign {
     this.revoked.observe(this.checkMembership);
     this.checkMembership();
   }
-
-  private checkMembership: () => void = () => {};
-
-  /** True once the GM has removed this device from the campaign. */
-  readonly removed = store(false);
-  /** Connected despite being removed, to learn whether the GM allowed us back. */
-  private checkingRejoin = false;
 
   /**
    * Join the campaign's room and start syncing with whoever else is in it.
@@ -407,7 +403,7 @@ export class Campaign {
   /** Post "Scene changed to …" unless this scene was the last one announced. */
   private announceScene(force = false) {
     if (this.destroyed) return;
-    const id = activeSceneIdFromIndex(this.members, this.scenes, this.device.value.id);
+    const id = this.activeSceneId();
     if (!id || (!force && id === this.meta.get("tableScene"))) return;
     this.meta.set("tableScene", id);
     const name = sceneViews(this.scenes).find((s) => s.id === id)?.name ?? "a new scene";
@@ -495,7 +491,6 @@ export function setSystemCampaignData(
   if (field.type === "number") {
     const number = Number(value);
     if (
-      !Number.isFinite(number) ||
       !Number.isInteger(number) ||
       (field.min !== undefined && number < field.min) ||
       (field.max !== undefined && number > field.max)
@@ -552,33 +547,37 @@ export function joinCampaign({ campaignId, roomKey }: Invite): string {
   return campaignId;
 }
 
-/** Drop this device's GM vault for a campaign, and its pages' text. */
-async function deleteVault(id: string) {
+/** Load a stored document, let `clear` delete what it points to, then delete the document. */
+async function clearStoredDoc(dbName: string, clear: (doc: Y.Doc) => void | Promise<void>) {
   const doc = new Y.Doc();
-  const p = new IndexeddbPersistence(vaultDbName(id), doc);
+  const p = new IndexeddbPersistence(dbName, doc);
   await p.whenSynced;
-  for (const noteId of rootOf(doc, vaultShape).notes.keys())
-    indexedDB.deleteDatabase(noteDbName(vaultNoteGuid(id, noteId)));
+  await clear(doc);
   await p.clearData();
   doc.destroy();
+}
+
+/** Drop this device's GM vault for a campaign, and its pages' text. */
+function deleteVault(id: string) {
+  return clearStoredDoc(vaultDbName(id), (doc) => {
+    for (const noteId of rootOf(doc, vaultShape).notes.keys())
+      indexedDB.deleteDatabase(noteDbName(vaultNoteGuid(id, noteId)));
+  });
 }
 
 /** Remove a campaign from this device only. Peers keep their copies. */
 export async function deleteLocalCampaign(id: string) {
   for (const c of open) if (c.id === id) c.destroy();
-  const doc = new Y.Doc();
-  const p = new IndexeddbPersistence(campaignDbName(id), doc);
-  await p.whenSynced;
-  const root = rootOf(doc, campaignShape);
-  for (const sceneId of root.scenes.keys())
-    indexedDB.deleteDatabase(sceneDbName(sceneGuid(id, sceneId)));
-  for (const noteId of root.notes.keys())
-    indexedDB.deleteDatabase(noteDbName(noteGuid(id, noteId)));
-  await deleteVault(id);
-  await deleteNoteTextIndex(id);
-  indexedDB.deleteDatabase(campaignUiDbName(id));
-  deleteChatData(root.chat);
-  await p.clearData();
-  doc.destroy();
+  await clearStoredDoc(campaignDbName(id), async (doc) => {
+    const root = rootOf(doc, campaignShape);
+    for (const sceneId of root.scenes.keys())
+      indexedDB.deleteDatabase(sceneDbName(sceneGuid(id, sceneId)));
+    for (const noteId of root.notes.keys())
+      indexedDB.deleteDatabase(noteDbName(noteGuid(id, noteId)));
+    await deleteVault(id);
+    await deleteNoteTextIndex(id);
+    indexedDB.deleteDatabase(campaignUiDbName(id));
+    deleteChatData(root.chat);
+  });
   forgetCampaign(id);
 }

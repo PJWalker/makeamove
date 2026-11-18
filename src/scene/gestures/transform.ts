@@ -1,3 +1,4 @@
+import { toScreen } from "../camera";
 import { snapSize, type Point } from "../grid";
 import {
   CORNER_SIGNS,
@@ -35,33 +36,19 @@ export function handleAt(c: ToolContext, screen: Point): Handle | null {
   const { selected, handles, group } = c.renderer.overlayState;
   const cam = c.renderer.camera;
   const reach = HANDLE_SIZE / 2 + 4;
-  if (group) {
-    const knob = rotateHandlePosition(group, cam);
-    return Math.hypot(screen.x - knob.x, screen.y - knob.y) <= reach ? { kind: "rotate" } : null;
-  }
+  const near = (p: Point) => Math.hypot(screen.x - p.x, screen.y - p.y) <= reach;
+  if (group) return near(rotateHandlePosition(group, cam)) ? { kind: "rotate" } : null;
   if (!handles || selected.length !== 1) return null;
   const el = selected[0]!;
   if (el.type === "light") {
-    const near = lightHandles(el, cam).filter(
-      (h) => Math.hypot(screen.x - h.at.x, screen.y - h.at.y) <= reach,
-    );
+    const under = lightHandles(el, cam).filter((h) => near(h.at));
     // The lamp's own handle can sit under a ring's when the light is small; the rings win.
-    const h = near.find((h) => h.part !== "lamp") ?? near[0];
+    const h = under.find((h) => h.part !== "lamp") ?? under[0];
     return h ? { kind: "light", part: h.part } : null;
   }
-  const knob = rotateHandlePosition(el, cam);
-  if (Math.hypot(screen.x - knob.x, screen.y - knob.y) <= reach) return { kind: "rotate" };
-  const cs = corners(el);
-  for (let i = 0; i < 4; i++) {
-    const corner = cs[i]!;
-    const p = {
-      x: corner.x * cam.zoom + cam.x,
-      y: corner.y * cam.zoom + cam.y,
-    };
-    if (Math.hypot(screen.x - p.x, screen.y - p.y) <= reach)
-      return { kind: "corner", corner: i as Corner };
-  }
-  return null;
+  if (near(rotateHandlePosition(el, cam))) return { kind: "rotate" };
+  const corner = corners(el).findIndex((p) => near(toScreen(cam, p)));
+  return corner >= 0 ? { kind: "corner", corner: corner as Corner } : null;
 }
 
 /** The cursor over a handle of `el`. */
@@ -161,18 +148,10 @@ function light(c: ToolContext, el: LightElement, part: LightPart): Gesture {
     end() {
       const light = c.renderer.previews.get(el.id) as LightElement | undefined;
       c.renderer.previews.clear();
-      if (light)
-        c.scene.update([
-          [
-            light.id,
-            {
-              w: light.w,
-              h: light.h,
-              bright: light.bright,
-              dim: light.dim,
-            },
-          ],
-        ]);
+      if (light) {
+        const { w, h, bright, dim } = light;
+        c.scene.update([[light.id, { w, h, bright, dim }]]);
+      }
       c.renderer.invalidate("elements", "overlay");
     },
   };
@@ -207,19 +186,7 @@ function dragLight(
 /** Resize to exactly w × h, keeping the corner opposite `corner` fixed. */
 function resizeToSize(t: Transform, corner: Corner, w: number, h: number): Transform {
   const sign = CORNER_SIGNS[corner];
-  const anchor = fromLocal(t, {
-    x: (-sign.x * t.w) / 2,
-    y: (-sign.y * t.h) / 2,
-  });
-  const c = Math.cos(t.rot);
-  const s = Math.sin(t.rot);
-  const lx = (sign.x * w) / 2;
-  const ly = (sign.y * h) / 2;
-  return {
-    ...t,
-    x: anchor.x + lx * c - ly * s,
-    y: anchor.y + lx * s + ly * c,
-    w,
-    h,
-  };
+  const anchor = fromLocal(t, { x: (-sign.x * t.w) / 2, y: (-sign.y * t.h) / 2 });
+  const centre = fromLocal({ ...t, ...anchor }, { x: (sign.x * w) / 2, y: (sign.y * h) / 2 });
+  return { ...t, ...centre, w, h };
 }

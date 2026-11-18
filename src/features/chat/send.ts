@@ -1,12 +1,18 @@
 import { roll } from "../dice/notation";
 import { makeSessionPage } from "../notes/sessions";
-import { setState } from "./messageState";
+import { setPinned } from "./messages";
 import { addRollDie, addRollModifier } from "./rollState";
 import type { TrayPick } from "../dice/pool";
 import type { Campaign } from "../../campaign/campaign";
 import { device } from "../../platform/device";
 import type { ChatContent } from "./content";
-import { canWork, type RollMessage, type RollVisibility, type TextMessage } from "./types";
+import {
+  canWork,
+  type ChatMessage,
+  type RollMessage,
+  type RollVisibility,
+  type TextMessage,
+} from "./types";
 import type { SystemCounterDef } from "../../systems/types";
 import { getSystem } from "../../systems";
 
@@ -49,18 +55,20 @@ export async function ensureSystemCounter(campaign: Campaign, counter: SystemCou
   }
   const system = getSystem(campaign.systemId);
   if (!system.counters?.some((candidate) => candidate.id === counter.id)) return undefined;
-  const message = await campaign.chat.post(
-    {
-      kind: "counter",
-      label: counter.label,
-      start: counter.start,
-      ...(counter.max !== undefined ? { max: counter.max } : {}),
-      systemCounter: counter.id,
-    },
-    me(campaign),
+  const message = await pinWhenPosted(
+    campaign,
+    campaign.chat.post(
+      {
+        kind: "counter",
+        label: counter.label,
+        start: counter.start,
+        ...(counter.max !== undefined ? { max: counter.max } : {}),
+        systemCounter: counter.id,
+      },
+      me(campaign),
+    ),
   );
   campaign.systemData.setValue(field, message.id);
-  setState(campaign.messageState, message.id, "pinned", true);
   return message;
 }
 
@@ -104,36 +112,43 @@ export function postRoll(
   );
 }
 
-/** Post a message and pin it. */
-export async function postPinned(campaign: Campaign, content: ChatContent) {
-  const m = await postText(campaign, content);
-  setState(campaign.messageState, m.id, "pinned", true);
+/** Pin a message once it's posted. */
+async function pinWhenPosted<M extends ChatMessage>(campaign: Campaign, posting: Promise<M>) {
+  const m = await posting;
+  setPinned(campaign, m.id, true);
   return m;
+}
+
+/** Post a message and pin it. */
+export function postPinned(campaign: Campaign, content: ChatContent) {
+  return pinWhenPosted(campaign, postText(campaign, content));
 }
 
 /** A pinned countdown. */
-export async function postTimer(campaign: Campaign, seconds: number, label: string) {
-  const m = await campaign.chat.post(
-    { kind: "timer", label, seconds, endsAt: Date.now() + seconds * 1000 },
-    me(campaign),
+export function postTimer(campaign: Campaign, seconds: number, label: string) {
+  return pinWhenPosted(
+    campaign,
+    campaign.chat.post(
+      { kind: "timer", label, seconds, endsAt: Date.now() + seconds * 1000 },
+      me(campaign),
+    ),
   );
-  setState(campaign.messageState, m.id, "pinned", true);
-  return m;
 }
 
 /** A pinned counter, moved by hand; with a maximum, a clock. */
-export async function postCounter(campaign: Campaign, start: number, label: string, max?: number) {
-  const m = await campaign.chat.post(
-    { kind: "counter", label, start, ...(max !== undefined ? { max } : {}) },
-    me(campaign),
+export function postCounter(campaign: Campaign, start: number, label: string, max?: number) {
+  return pinWhenPosted(
+    campaign,
+    campaign.chat.post(
+      { kind: "counter", label, start, ...(max !== undefined ? { max } : {}) },
+      me(campaign),
+    ),
   );
-  setState(campaign.messageState, m.id, "pinned", true);
-  return m;
 }
 
 /** Mark the start or end of a session. Sessions are numbered in the campaign itself, so every peer agrees. */
 export function markSession(campaign: Campaign, action: "start" | "end") {
-  const count = (campaign.meta.get("sessions") as number | undefined) ?? 0;
+  const count = campaign.meta.get("sessions");
   const session = action === "start" ? count + 1 : count;
   if (action === "start") campaign.meta.set("sessions", session);
   void campaign.chat.post(

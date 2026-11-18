@@ -16,6 +16,9 @@ export interface LintResult {
   stderr: string;
 }
 
+/** Where jscpd keeps the clones it found before, to fail only on new ones. */
+const JSCPD_BASELINE = join(tmpdir(), `makeamove-jscpd-${process.pid}.json`);
+
 const CODE_FILE = /\.(?:[cm]?[jt]sx?|css)$/i;
 const ESLINT_FILE = /\.(?:[cm]?[jt]sx?)$/i;
 
@@ -78,13 +81,7 @@ export function createLintAnalyses(files: string[]): LintCheck[] {
   checks.push({
     name: "jscpd",
     command: "npx",
-    args: [
-      "jscpd",
-      "--changed",
-      "--baseline",
-      join(tmpdir(), `makeamove-jscpd-${process.pid}.json`),
-      "--fail-on-new-clones",
-    ],
+    args: ["jscpd", "--changed", "--baseline", JSCPD_BASELINE, "--fail-on-new-clones"],
   });
 
   if (sourceFiles.length > 0) {
@@ -189,7 +186,7 @@ function main(): void {
     console.log,
   );
 
-  rmSync(join(tmpdir(), `makeamove-jscpd-${process.pid}.json`), { force: true });
+  rmSync(JSCPD_BASELINE, { force: true });
   process.exitCode = fixFailures || analysisFailures ? 1 : 0;
 }
 

@@ -1,4 +1,4 @@
-import { setSystemCampaignData } from "../../campaign/campaign";
+import { setSystemCampaignData, type Campaign } from "../../campaign/campaign";
 import type { CampaignDefaults } from "../../campaign/types";
 import { isNumber, isObject, isString, objectOf, optional } from "../../data/guards";
 import { actingCharacterId } from "../../features/characters/api";
@@ -61,12 +61,11 @@ export const removeMember = command<{ id: string }>({
   params: objectOf({ id: isString }),
   title: "Remove from Campaign",
   danger: true,
-  permission: (ctx, { id }) =>
-    !ctx.isGm()
-      ? "GM only"
-      : id === device.value.id || ctx.campaign.members.get(id)?.get("role") === "gm"
-        ? "The GM stays"
-        : true,
+  permission: (ctx, { id }) => {
+    if (!ctx.isGm()) return "GM only";
+    const gm = id === device.value.id || ctx.campaign.members.get(id)?.get("role") === "gm";
+    return !gm || "The GM stays";
+  },
   // Their device has been told to leave.
   undoGroup: false,
   run: ({ campaign }, { id }) => campaign.revokeMember(id),
@@ -137,6 +136,8 @@ export const deleteHomebrewEntry = command<{ id: string }>({
 
 // This player's hotbar (for the acting character) and shortcuts
 
+const myHotbar = (campaign: Campaign) => hotbarSlots(campaign, actingCharacterId(campaign));
+
 export const setSlots = command<{ slots: string[] }>({
   id: "hotbar.set",
   params: objectOf({ slots: (v): v is string[] => Array.isArray(v) && v.every(isString) }),
@@ -149,10 +150,10 @@ export const pinToHotbar = command<{ key: string; at?: number | undefined }>({
   id: "hotbar.pin",
   params: objectOf({ key: isString, at: optional(isNumber) }),
   title: "Add to Hotbar",
-  available: (ctx, { key }) =>
-    hotbarSlots(ctx.campaign, actingCharacterId(ctx.campaign)).includes(key) ||
-    hotbarSlots(ctx.campaign, actingCharacterId(ctx.campaign)).length < MAX_SLOTS ||
-    "The hotbar is full",
+  available: (ctx, { key }) => {
+    const slots = myHotbar(ctx.campaign);
+    return slots.includes(key) || slots.length < MAX_SLOTS || "The hotbar is full";
+  },
   run: ({ campaign }, { key, at }) => {
     const character = actingCharacterId(campaign);
     const rest = hotbarSlots(campaign, character).filter((s) => s !== key);

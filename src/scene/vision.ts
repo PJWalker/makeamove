@@ -1,5 +1,6 @@
 import { fromLocal, shapePolygon } from "./geometry";
 import type { Point } from "./grid";
+import { distanceToSegment } from "./stroke";
 import type { SceneElement } from "./types";
 
 /*
@@ -51,12 +52,9 @@ export function blocked(a: Point, b: Point, segments: Segment[]): boolean {
   );
 }
 
-export function distanceToSegment(p: Point, s: Segment): number {
-  const ex = s.b.x - s.a.x;
-  const ey = s.b.y - s.a.y;
-  const len2 = ex * ex + ey * ey;
-  const t = len2 ? Math.max(0, Math.min(1, ((p.x - s.a.x) * ex + (p.y - s.a.y) * ey) / len2)) : 0;
-  return Math.hypot(p.x - (s.a.x + ex * t), p.y - (s.a.y + ey * t));
+/** Shortest distance from p to a segment. */
+export function segmentDistance(p: Point, s: Segment): number {
+  return distanceToSegment(p.x, p.y, s.a.x, s.a.y, s.b.x, s.b.y);
 }
 
 /**

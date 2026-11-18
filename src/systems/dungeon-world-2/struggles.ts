@@ -1,14 +1,12 @@
 import { STRUGGLE_TEXTS } from "./rulebook";
 import { STRUGGLE_SPECS } from "./struggleSpecs";
 
-const TEXTS = STRUGGLE_TEXTS;
-
 export const STRUGGLES = STRUGGLE_SPECS.map((struggle) => ({
   ...struggle,
-  text: TEXTS[struggle.id] ?? "",
+  text: STRUGGLE_TEXTS[struggle.id] ?? "",
 }));
 
-type Struggle = (typeof STRUGGLES)[number];
+export type Struggle = (typeof STRUGGLES)[number];
 
 /** A Struggle's id in the Libraries. */
 export const struggleEntryId = (struggle: Struggle) => `struggle-${struggle.id}`;

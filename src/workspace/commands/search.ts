@@ -50,19 +50,14 @@ export function rank(
     return out.slice(0, limit);
   }
 
-  const matches = typed
-    ? new Fuse(actions, fuseOptions).search(typed)
-    : actions.map((item) => ({ item, score: 0 }));
   const registrationOrder = new Map(actions.map((action, index) => [action, index]));
-  const scored: { a: Action; s: number; i: number }[] = [];
-  matches.forEach(({ item: a, score }) => {
-    const base = 100 * (1 - (score ?? 0));
-    let s = base;
+  const scored = new Fuse(actions, fuseOptions).search(typed).map(({ item: a, score }) => {
+    let s = 100 * (1 - (score ?? 0));
     if (a.mine) s += 15;
     const r = recent.indexOf(a.id);
     if (r >= 0) s += Math.max(2, 12 - r);
     if (a.available !== true) s -= 30;
-    scored.push({ a, s, i: registrationOrder.get(a) ?? 0 });
+    return { a, s, i: registrationOrder.get(a) ?? 0 };
   });
   // Stable: equal scores keep the order they were registered in.
   scored.sort((x, y) => y.s - x.s || x.i - y.i);

@@ -1,7 +1,7 @@
 import type { PointerEvent as ReactPointerEvent } from "react";
-import { type TokenSpec } from "./canvasState";
+import { followPress } from "../ui/pointer";
 import { suppressNextClick } from "../ui/suppressClick";
-import type { CanvasState } from "./canvasState";
+import type { CanvasState, TokenSpec } from "./canvasState";
 
 const THRESHOLD = 5;
 
@@ -17,46 +17,34 @@ export function dragToken(
 ) {
   if (e.button !== 0) return;
   const src = e.currentTarget as HTMLElement;
-  const startX = e.clientX;
-  const startY = e.clientY;
   const box = src.getBoundingClientRect();
-  let ghost: HTMLElement | null = null;
+  let ghost: HTMLElement;
+  const overScene = (ev: PointerEvent) =>
+    !!document.elementFromPoint(ev.clientX, ev.clientY)?.closest(".scene-canvas");
 
-  function move(ev: PointerEvent) {
-    if (!ghost) {
-      if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < THRESHOLD) return;
+  followPress(e, THRESHOLD, {
+    lift() {
       ghost = src.cloneNode(true) as HTMLElement;
       ghost.classList.add("drag-ghost");
       ghost.style.width = `${box.width}px`;
       ghost.style.height = `${box.height}px`;
       document.body.appendChild(ghost);
       document.documentElement.classList.add("is-reordering");
-    }
-    const overScene =
-      !!document.elementFromPoint(ev.clientX, ev.clientY)?.closest(".scene-canvas") &&
-      !!canvas.tokenDrop.value;
-    document.documentElement.dataset["dropValid"] = String(overScene);
-    ghost.style.left = `${ev.clientX - box.width / 2}px`;
-    ghost.style.top = `${ev.clientY - box.height / 2}px`;
-  }
-
-  function end(ev: PointerEvent, commit: boolean) {
-    window.removeEventListener("pointermove", move);
-    window.removeEventListener("pointerup", up);
-    window.removeEventListener("pointercancel", cancel);
-    delete document.documentElement.dataset["dropValid"];
-    if (!ghost) return;
-    ghost.remove();
-    document.documentElement.classList.remove("is-reordering");
-    suppressNextClick();
-    if (commit && document.elementFromPoint(ev.clientX, ev.clientY)?.closest(".scene-canvas")) {
-      canvas.tokenDrop.value?.(ev.clientX, ev.clientY, spec);
-    }
-  }
-  const up = (ev: PointerEvent) => end(ev, true);
-  const cancel = (ev: PointerEvent) => end(ev, false);
-
-  window.addEventListener("pointermove", move);
-  window.addEventListener("pointerup", up);
-  window.addEventListener("pointercancel", cancel);
+    },
+    move(ev) {
+      document.documentElement.dataset["dropValid"] = String(
+        overScene(ev) && !!canvas.tokenDrop.value,
+      );
+      ghost.style.left = `${ev.clientX - box.width / 2}px`;
+      ghost.style.top = `${ev.clientY - box.height / 2}px`;
+    },
+    end(ev, commit, lifted) {
+      delete document.documentElement.dataset["dropValid"];
+      if (!lifted) return;
+      ghost.remove();
+      document.documentElement.classList.remove("is-reordering");
+      suppressNextClick();
+      if (commit && overScene(ev)) canvas.tokenDrop.value?.(ev.clientX, ev.clientY, spec);
+    },
+  });
 }

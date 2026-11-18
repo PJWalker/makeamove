@@ -67,7 +67,7 @@ export function measure(grid: Grid, a: Point, b: Point): Measure {
       b: hexCentre(grid, hb.q, hb.r),
     };
   }
-  return { distance: (Math.hypot(b.x - a.x, b.y - a.y) / grid.size) * grid.unit, a, b };
+  return { distance: toUnits(grid, Math.hypot(b.x - a.x, b.y - a.y)), a, b };
 }
 
 /**
@@ -107,7 +107,12 @@ export function tokenDistance(grid: Grid, a: Transform, b: Transform): number {
     return Math.max(d, 0) * grid.unit;
   }
   const gap = Math.hypot(b.x - a.x, b.y - a.y) - Math.max(a.w, a.h) / 2 - Math.max(b.w, b.h) / 2;
-  return (Math.max(0, gap) / grid.size) * grid.unit;
+  return toUnits(grid, Math.max(0, gap));
+}
+
+/** A length in world px, in the scene's units. */
+export function toUnits(grid: Grid, px: number): number {
+  return (px / grid.size) * grid.unit;
 }
 
 /** "30 ft"; a decimal place only when the distance isn't whole. */

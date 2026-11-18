@@ -1,7 +1,8 @@
 import { generateKeyBetween } from "fractional-indexing";
 import * as Y from "yjs";
 import { newId } from "../../lib/ids";
-import { UNTITLED_FOLDER } from "../../campaign/folders";
+import { byOrder } from "../../lib/order";
+import { folderName, renameFolderIn, UNTITLED_FOLDER, unfile } from "../../campaign/folders";
 import type { Campaign } from "../../campaign/campaign";
 import type { NotesIndex } from "../../campaign/schema";
 import type { Item } from "../../data/schema";
@@ -51,9 +52,6 @@ export const DEFAULT_NOTE_FOLDERS: NoteFolderView[] = [
   { id: "sessions", name: "Sessions", order: "a0" },
   { id: "world", name: "World", order: "a1" },
 ];
-
-const byOrder = (a: { order: string }, b: { order: string }) =>
-  a.order < b.order ? -1 : a.order > b.order ? 1 : 0;
 
 /** Add the default folders, if this campaign has never had them. */
 export function ensureNoteFolders(campaign: Campaign) {
@@ -311,25 +309,22 @@ export function createNoteFolder(campaign: Campaign, name = UNTITLED_FOLDER): st
   const id = newId();
   const last = listNoteFolders(campaign).at(-1)?.order ?? null;
   campaign.noteFolders.set(id, {
-    name: name.trim() || UNTITLED_FOLDER,
+    name: folderName(name),
     order: generateKeyBetween(last, null),
   });
   return id;
 }
 
 export function renameNoteFolder(campaign: Campaign, id: string, name: string) {
-  const f = campaign.noteFolders.get(id);
-  if (f && name.trim()) campaign.noteFolders.set(id, { ...f, name: name.trim() });
+  renameFolderIn(campaign.noteFolders, id, name);
 }
 
 /** Deleting a folder files its pages back at the top. */
 export function deleteNoteFolder(campaign: Campaign, id: string) {
   campaign.doc.transact(() => {
-    for (const m of campaign.notes.values()) if (m.get("folder") === id) m.delete("folder");
+    unfile(campaign.notes.values(), id);
     campaign.noteFolders.delete(id);
   });
   const vault = campaign.vault.value;
-  vault?.notes.transact(() => {
-    for (const m of vault.notes.values()) if (m.get("folder") === id) m.delete("folder");
-  });
+  vault?.notes.transact(() => unfile(vault.notes.values(), id));
 }

@@ -1,4 +1,5 @@
-const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+/** The player's reduced-motion preference, live: check `.matches` when animating. */
+export const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 
 let running = 0;
 

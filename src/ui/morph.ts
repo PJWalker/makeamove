@@ -24,9 +24,7 @@
  * shrinking slightly.
  */
 
-import { until, withTransition } from "./transition";
-
-const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+import { reducedMotion, until, withTransition } from "./transition";
 
 /** An origin is only used by a dialog that opens soon after it was set. */
 const ORIGIN_TTL_MS = 800;

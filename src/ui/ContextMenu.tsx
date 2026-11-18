@@ -145,16 +145,14 @@ function useContextMenuActions(x: number, y: number, items: MenuItem[], onClose:
       onClose();
       item.onSelect();
     };
-    if (origin && item.label.endsWith("…")) morphOpen(origin, run);
-    else {
-      if (origin) {
-        setMorphOrigin(origin);
-        origin.style.viewTransitionName = `menu-selection-${crypto.randomUUID()}`;
-        void withTransition(run).finally(() => {
-          origin.style.removeProperty("view-transition-name");
-        });
-      } else run();
-    }
+    if (!origin) return run();
+    // An item that opens a window ("…") grows into it.
+    if (item.label.endsWith("…")) return morphOpen(origin, run);
+    setMorphOrigin(origin);
+    origin.style.viewTransitionName = `menu-selection-${crypto.randomUUID()}`;
+    void withTransition(run).finally(() => {
+      origin.style.removeProperty("view-transition-name");
+    });
   };
 
   const dragged = useRef(false);

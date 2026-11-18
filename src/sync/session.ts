@@ -68,10 +68,7 @@ export class SyncSession {
     // provider emits 'sync', which IndexedDB persistence never does.
     for (const d of root.getSubdocs()) if (d.shouldLoad) this.attach(d);
 
-    const onAwareness = ({ added, updated, removed }: AwarenessChange, origin: unknown) => {
-      if (origin === REMOTE) return;
-      this.sendAwareness(this.awareness, root.guid, [...added, ...updated, ...removed]);
-    };
+    const onAwareness = this.relayAwareness(this.awareness, root.guid);
     this.awareness.on("update", onAwareness);
     const changed = () => this.onChange?.();
     this.awareness.on("change", changed);
@@ -138,10 +135,7 @@ export class SyncSession {
     const known = this.docAwareness.get(doc.guid);
     if (known) return known.awareness;
     const awareness = new awarenessProtocol.Awareness(doc);
-    const onUpdate = ({ added, updated, removed }: AwarenessChange, origin: unknown) => {
-      if (origin === REMOTE) return;
-      this.sendAwareness(awareness, doc.guid, [...added, ...updated, ...removed]);
-    };
+    const onUpdate = this.relayAwareness(awareness, doc.guid);
     awareness.on("update", onUpdate);
     this.docAwareness.set(doc.guid, {
       awareness,
@@ -149,6 +143,14 @@ export class SyncSession {
       stop: () => awareness.off("update", onUpdate),
     });
     return awareness;
+  }
+
+  /** A listener that sends this device's own changes to an awareness on to peers. */
+  private relayAwareness(awareness: awarenessProtocol.Awareness, guid: string) {
+    return ({ added, updated, removed }: AwarenessChange, origin: unknown) => {
+      if (origin === REMOTE) return;
+      this.sendAwareness(awareness, guid, [...added, ...updated, ...removed]);
+    };
   }
 
   private dropAwareness(guid: string) {

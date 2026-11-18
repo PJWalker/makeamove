@@ -106,19 +106,21 @@ export const monsterEntry = (m: MonsterDef): LibraryEntry => ({
   monster: m,
 });
 
+const optionEntry = (o: OptionDef): LibraryEntry => ({
+  kind: "option",
+  id: o.id,
+  name: o.name,
+  text: o.text,
+  tags: [],
+  ...(o.icon ? { icon: o.icon } : {}),
+  option: o,
+});
+
 const optionCollection = (c: ChoiceDef): LibraryCollection => ({
   id: `options-${c.id}`,
   name: c.plural ?? c.label,
   kind: "option",
-  entries: c.options.map((o) => ({
-    kind: "option",
-    id: o.id,
-    name: o.name,
-    text: o.text,
-    tags: [],
-    ...(o.icon ? { icon: o.icon } : {}),
-    option: o,
-  })),
+  entries: c.options.map(optionEntry),
 });
 
 /** Built once per system: a system's data never changes while the app runs. */
@@ -168,25 +170,20 @@ function buildSystemLibrary(system: GameSystem): LibrarySource {
 function laidOut(system: GameSystem): LibraryCollection[] {
   const items = new Map(system.items.map((i) => [i.id, i]));
   const moves = new Map(system.actions.map((m) => [m.id, m]));
+  /** The entry a node names, if the system has it. */
+  const entryOf = (node: LibraryNode): LibraryEntry | undefined => {
+    if ("item" in node) {
+      const item = items.get(node.item);
+      return item && itemEntry(item);
+    }
+    if ("move" in node) {
+      const move = moves.get(node.move);
+      return move && moveEntry(move);
+    }
+    return optionEntry(node.entity);
+  };
   const resolve = (node: LibraryNode): LibraryEntry[] => {
-    const base: LibraryEntry | undefined =
-      "item" in node
-        ? items.has(node.item)
-          ? itemEntry(items.get(node.item)!)
-          : undefined
-        : "move" in node
-          ? moves.has(node.move)
-            ? moveEntry(moves.get(node.move)!)
-            : undefined
-          : {
-              kind: "option",
-              id: node.entity.id,
-              name: node.entity.name,
-              text: node.entity.text,
-              tags: [],
-              ...(node.entity.icon ? { icon: node.entity.icon } : {}),
-              option: node.entity,
-            };
+    const base = entryOf(node);
     if (!base) return [];
     const groups = (node.groups ?? []).flatMap((g) => {
       const entries = g.entries.flatMap(resolve);

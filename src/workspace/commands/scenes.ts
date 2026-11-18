@@ -11,7 +11,7 @@ import type { Grid } from "../../scene/grid";
 import type { SceneLighting } from "../../scene/sceneDoc";
 import { IconAdd, IconDelete, IconFolder, IconMap, IconMembers } from "../../ui/icons";
 import type { CampaignContext } from "../campaignContext";
-import { folderCommands } from "./folders";
+import { folderCommands, moveFolderOffers } from "./folders";
 import { command } from "./types";
 
 /* Scenes: making them, going to them, filing and deleting them. Only the GM changes them. */
@@ -82,18 +82,8 @@ export const moveScene = command<{ id: string; folder?: string | undefined }>({
   available: exists,
   section: "file",
   menu: {
-    scene: (ctx, { id }) => {
-      const s = scene(ctx, id);
-      const folders = listSceneFolders(ctx.campaign.sceneFolders);
-      return [
-        ...folders.flatMap((f) =>
-          f.id === s?.folder ? [] : [{ params: { id, folder: f.id }, title: `Move to ${f.name}` }],
-        ),
-        ...(s?.folder && folders.some((f) => f.id === s.folder)
-          ? [{ params: { id }, title: "Remove from Folder" }]
-          : []),
-      ];
-    },
+    scene: (ctx, { id }) =>
+      moveFolderOffers(id, scene(ctx, id)?.folder, listSceneFolders(ctx.campaign.sceneFolders)),
   },
   run: ({ campaign }, { id, folder }) => moveSceneToFolder(campaign.scenes, id, folder),
 });
@@ -114,13 +104,15 @@ const sceneDocOf = (ctx: CampaignContext, id: string) => {
   const o = ctx.canvas.canvasCommands.value;
   return o?.sceneId === id ? o.scene : null;
 };
+const sceneOpen = (ctx: CampaignContext, { id }: { id: string }) =>
+  !!sceneDocOf(ctx, id) || "Open the scene first";
 
 export const setGrid = command<{ id: string; patch: Partial<Grid> }>({
   id: "scene.setGrid",
   params: objectOf({ id: isString, patch: isObject<Partial<Grid>> }),
   title: "Change Grid",
   permission: "gm",
-  available: (ctx, { id }) => !!sceneDocOf(ctx, id) || "Open the scene first",
+  available: sceneOpen,
   transact: false,
   run: (ctx, { id, patch }) => sceneDocOf(ctx, id)?.setGrid(patch),
 });
@@ -130,7 +122,7 @@ export const setLighting = command<{ id: string; patch: Partial<SceneLighting> }
   params: objectOf({ id: isString, patch: isObject<Partial<SceneLighting>> }),
   title: "Change Lighting",
   permission: "gm",
-  available: (ctx, { id }) => !!sceneDocOf(ctx, id) || "Open the scene first",
+  available: sceneOpen,
   transact: false,
   run: (ctx, { id, patch }) => sceneDocOf(ctx, id)?.setLighting(patch),
 });

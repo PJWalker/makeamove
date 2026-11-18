@@ -358,6 +358,29 @@ function TokenStats({ characterId, hidden }: { characterId: string; hidden: bool
 }
 
 /**
+ * A property of the selection's being changed: it shows on the scene as it's
+ * changed, and is set when committed, as one undo step.
+ */
+function usePreviewedProp<T>(
+  controller: SceneController,
+  ids: string[],
+  prop: "colour" | "stroke" | "fill" | "width",
+) {
+  const [draft, setDraft] = useState<T | null>(null);
+  const preview = (value: T) => {
+    setDraft(value);
+    controller.previewProps(ids, { [prop]: value });
+  };
+  const commit = () => {
+    if (draft === null) return;
+    controller.previewProps(ids, null);
+    controller.setProps(ids, { [prop]: draft });
+    setDraft(null);
+  };
+  return { draft, preview, commit };
+}
+
+/**
  * A colour of the selection's. It shows on the scene as it's picked, and
  * changes when the picker is put away, as one undo step.
  */
@@ -376,23 +399,15 @@ function PaintField({
   prop: "colour" | "stroke" | "fill";
   disabled?: boolean;
 }) {
-  const [draft, setDraft] = useState<string | null>(null);
+  const { draft, preview, commit } = usePreviewedProp<string>(controller, ids, prop);
   return (
     <ColourPicker
       label={label}
       alpha
       value={draft ?? value}
       disabled={disabled ?? false}
-      onChange={(colour) => {
-        setDraft(colour);
-        controller.previewProps(ids, { [prop]: colour });
-      }}
-      onClose={() => {
-        if (draft === null) return;
-        controller.previewProps(ids, null);
-        controller.setProps(ids, { [prop]: draft });
-        setDraft(null);
-      }}
+      onChange={preview}
+      onClose={commit}
     />
   );
 }
@@ -407,13 +422,7 @@ function WidthField({
   ids: string[];
   value: number;
 }) {
-  const [draft, setDraft] = useState<number | null>(null);
-  const commit = () => {
-    if (draft === null) return;
-    controller.previewProps(ids, null);
-    controller.setProps(ids, { width: draft });
-    setDraft(null);
-  };
+  const { draft, preview, commit } = usePreviewedProp<number>(controller, ids, "width");
   return (
     <input
       type="range"
@@ -423,11 +432,7 @@ function WidthField({
       value={draft ?? value}
       aria-label="Outline Width"
       data-tip="Outline Width"
-      onChange={(e) => {
-        const width = Number(e.currentTarget.value);
-        setDraft(width);
-        controller.previewProps(ids, { width });
-      }}
+      onChange={(e) => preview(Number(e.currentTarget.value))}
       onPointerUp={commit}
       onKeyUp={commit}
       onBlur={commit}

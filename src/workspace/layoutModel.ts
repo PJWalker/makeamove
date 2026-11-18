@@ -273,6 +273,8 @@ export function resizeSide(l: Layout, side: Side, width: number, max: number): L
   return w !== s.width || !s.open ? { ...l, [side]: { ...s, width: w, open: true } } : l;
 }
 
+const ARROW_DIRECTION: Record<string, 1 | -1> = { ArrowRight: 1, ArrowLeft: -1 };
+
 /**
  * The width a key asks of a side's resize separator, or null for keys it
  * doesn't handle. A shut side counts as zero wide: growing reopens it at its
@@ -287,7 +289,7 @@ export function keyedSideWidth(
   max: number,
 ): number | null {
   const step = shift ? SIDEBAR_KEY_STEP_LARGE : SIDEBAR_KEY_STEP;
-  const delta = key === "ArrowRight" ? grow * step : key === "ArrowLeft" ? -grow * step : 0;
+  const delta = (ARROW_DIRECTION[key] ?? 0) * grow * step;
   if (delta > 0) return s.open ? s.width + delta : s.width;
   if (delta < 0) return s.open ? Math.max(SIDEBAR_MIN_W, s.width + delta) : null;
   if (key === "Home") return 0;

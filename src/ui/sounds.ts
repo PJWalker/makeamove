@@ -3,8 +3,44 @@ type UiSound = "press" | "open" | "close" | "message" | "critical" | "failure";
 let context: AudioContext | undefined;
 let noise: AudioBuffer | undefined;
 let lastImpact = -Infinity;
-let lastTransition: { sound: "open" | "close"; time: number } | undefined;
-let lastCritical: { sound: "critical" | "failure"; time: number } | undefined;
+
+/** Each sound's tone: start and end frequency (Hz), duration (s) and volume. */
+const TONES: Record<UiSound, [number, number, number, number]> = {
+  press: [760, 620, 0.035, 0.008],
+  open: [460, 690, 0.09, 0.015],
+  close: [620, 430, 0.075, 0.013],
+  message: [690, 820, 0.11, 0.018],
+  critical: [760, 1120, 0.15, 0.025],
+  failure: [330, 175, 0.16, 0.02],
+};
+
+/** A second tone some sounds add: start and end frequency, delay, duration, and volume relative to the first. */
+const ECHOES: Partial<Record<UiSound, [number, number, number, number, number]>> = {
+  message: [920, 1040, 0.07, 0.1, 0.65],
+  critical: [1140, 1520, 0.04, 0.12, 0.55],
+  failure: [230, 120, 0.03, 0.14, 0.7],
+};
+
+/**
+ * Sounds that skip a repeat of themselves within `gap` seconds; sounds in a
+ * group share one record, so a different sound of the group plays at once.
+ */
+const REPEATS: Partial<Record<UiSound, { group: string; gap: number }>> = {
+  open: { group: "transition", gap: 0.08 },
+  close: { group: "transition", gap: 0.08 },
+  critical: { group: "critical", gap: 0.12 },
+  failure: { group: "critical", gap: 0.12 },
+};
+const lastInGroup = new Map<string, { sound: UiSound; time: number }>();
+
+function repeatedTooSoon(sound: UiSound, now: number): boolean {
+  const repeat = REPEATS[sound];
+  if (!repeat) return false;
+  const last = lastInGroup.get(repeat.group);
+  if (last?.sound === sound && now - last.time < repeat.gap) return true;
+  lastInGroup.set(repeat.group, { sound, time: now });
+  return false;
+}
 
 function audio() {
   if (!("AudioContext" in window)) return;
@@ -50,30 +86,13 @@ export function playUiSound(sound: UiSound) {
   const current = audio();
   if (!current) return;
   const now = current.currentTime;
-  const sounds: Record<UiSound, [number, number, number, number]> = {
-    press: [760, 620, 0.035, 0.008],
-    open: [460, 690, 0.09, 0.015],
-    close: [620, 430, 0.075, 0.013],
-    message: [690, 820, 0.11, 0.018],
-    critical: [760, 1120, 0.15, 0.025],
-    failure: [330, 175, 0.16, 0.02],
-  };
-  if (sound === "open" || sound === "close") {
-    if (lastTransition?.sound === sound && now - lastTransition.time < 0.08) return;
-    lastTransition = { sound, time: now };
-  }
-  if (sound === "critical" || sound === "failure") {
-    if (lastCritical?.sound === sound && now - lastCritical.time < 0.12) return;
-    lastCritical = { sound, time: now };
-  }
-  const [startFrequency, endFrequency, duration, volume] = sounds[sound];
+  if (repeatedTooSoon(sound, now)) return;
+  const [startFrequency, endFrequency, duration, volume] = TONES[sound];
   tone(sound, startFrequency, endFrequency, now, duration, volume);
-  if (sound === "message") {
-    tone(sound, 920, 1040, now + 0.07, 0.1, volume * 0.65);
-  } else if (sound === "critical") {
-    tone(sound, 1140, 1520, now + 0.04, 0.12, volume * 0.55);
-  } else if (sound === "failure") {
-    tone(sound, 230, 120, now + 0.03, 0.14, volume * 0.7);
+  const echo = ECHOES[sound];
+  if (echo) {
+    const [echoStart, echoEnd, delay, echoDuration, scale] = echo;
+    tone(sound, echoStart, echoEnd, now + delay, echoDuration, volume * scale);
   }
 }
 

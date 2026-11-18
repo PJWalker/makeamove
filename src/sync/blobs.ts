@@ -1,5 +1,6 @@
 import * as decoding from "lib0/decoding";
 import * as encoding from "lib0/encoding";
+import { sha256 } from "../lib/hash";
 
 /*
  * Peer-to-peer image transfer. A device that lacks an image asks its peers for
@@ -78,10 +79,7 @@ export class BlobExchange {
     const p = this.pending.get(hash);
     if (p?.asked.has(peer)) return;
     p?.asked.add(peer);
-    const enc = encoding.createEncoder();
-    encoding.writeVarUint(enc, REQUEST);
-    encoding.writeVarString(enc, hash);
-    this.link.sendBlob(encoding.toUint8Array(enc), peer);
+    this.link.sendBlob(encoding.toUint8Array(message(REQUEST, hash)), peer);
   }
 
   private receive(data: Uint8Array, from: string) {
@@ -95,16 +93,9 @@ export class BlobExchange {
 
   private async serve(hash: string, peer: string) {
     const blob = await this.store.get(hash);
-    const enc = encoding.createEncoder();
-    if (!blob) {
-      encoding.writeVarUint(enc, MISSING);
-      encoding.writeVarString(enc, hash);
-    } else {
-      // The transport splits large messages itself.
-      encoding.writeVarUint(enc, DATA);
-      encoding.writeVarString(enc, hash);
-      encoding.writeVarUint8Array(enc, new Uint8Array(await blob.arrayBuffer()));
-    }
+    const enc = message(blob ? DATA : MISSING, hash);
+    // The transport splits large messages itself.
+    if (blob) encoding.writeVarUint8Array(enc, new Uint8Array(await blob.arrayBuffer()));
     this.link.sendBlob(encoding.toUint8Array(enc), peer);
   }
 
@@ -113,7 +104,7 @@ export class BlobExchange {
     if (!pending) return;
     const blob = new Blob([decoding.readVarUint8Array(dec).slice()]);
     // A bad copy is dropped and we keep waiting for another peer.
-    if ((await sha256Hex(blob)) !== hash) return;
+    if ((await sha256(await blob.arrayBuffer())) !== hash) return;
     if (!this.pending.delete(hash)) return;
     clearInterval(pending.retry);
     await Promise.resolve()
@@ -123,7 +114,10 @@ export class BlobExchange {
   }
 }
 
-async function sha256Hex(blob: Blob): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", await blob.arrayBuffer());
-  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+/** A message's type and the hash it's about; DATA goes on to add the bytes. */
+function message(type: number, hash: string): encoding.Encoder {
+  const enc = encoding.createEncoder();
+  encoding.writeVarUint(enc, type);
+  encoding.writeVarString(enc, hash);
+  return enc;
 }

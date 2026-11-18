@@ -106,6 +106,15 @@ export function layoutWeb(
     const force: Record<string, NodePosition> = Object.fromEntries(
       ids.map((id) => [id, { x: 0, y: 0 }]),
     );
+    /** Push `a` by (x, y) and `b` the opposite way. */
+    const pushApart = (a: string, b: string, x: number, y: number) => {
+      const fa = point(force, a);
+      const fb = point(force, b);
+      fa.x += x;
+      fa.y += y;
+      fb.x -= x;
+      fb.y -= y;
+    };
     for (let i = 0; i < ids.length; i++) {
       for (let j = i + 1; j < ids.length; j++) {
         const fromId = ids[i]!;
@@ -121,10 +130,7 @@ export function layoutWeb(
           d = Math.hypot(dx, dy);
         }
         const push = (ideal * ideal) / d;
-        point(force, fromId).x += (dx / d) * push;
-        point(force, fromId).y += (dy / d) * push;
-        point(force, toId).x -= (dx / d) * push;
-        point(force, toId).y -= (dy / d) * push;
+        pushApart(fromId, toId, (dx / d) * push, (dy / d) * push);
       }
     }
     for (const e of edges) {
@@ -135,10 +141,7 @@ export function layoutWeb(
       const dy = a.y - b.y;
       const d = Math.max(0.01, Math.hypot(dx, dy));
       const pull = (d * d) / ideal;
-      point(force, e.from).x -= (dx / d) * pull;
-      point(force, e.from).y -= (dy / d) * pull;
-      point(force, e.to).x += (dx / d) * pull;
-      point(force, e.to).y += (dy / d) * pull;
+      pushApart(e.from, e.to, -(dx / d) * pull, -(dy / d) * pull);
     }
     for (const id of ids) {
       if (fixed[id]) continue;

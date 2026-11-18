@@ -8,7 +8,7 @@ import {
 import { useSheet } from "../../workspace/sheetModel";
 import { CharacterText } from "../../workspace/CharacterText";
 import type { DragEntity } from "../../workspace/entityDrag";
-import { STRUGGLES, struggleOfEntry } from "./struggles";
+import { STRUGGLES, struggleOfEntry, type Struggle } from "./struggles";
 import { Button } from "../../ui/Button";
 import { Counter } from "../../workspace/sheetParts";
 import { addTreasureBoxes, wealthTierForBoxes, MAX_TREASURE_BOXES } from "./wealth";
@@ -43,13 +43,71 @@ function TreasureWealth({ sheet }: { sheet: ReturnType<typeof useSheet> }) {
   );
 }
 
+/** The character's revealed Struggle: its rules, its track, and notes on it. */
+function StruggleSection({
+  sheet,
+  struggle,
+}: {
+  sheet: ReturnType<typeof useSheet>;
+  struggle: Struggle;
+}) {
+  const ctx = useCampaign();
+  const track = struggle.track;
+  return (
+    <section className="form-section sheet-section" aria-label="Current Struggle">
+      <h3 className="sheet-heading">{struggle.name}</h3>
+      <details>
+        <summary>Struggle rules</summary>
+        <p>{struggle.text}</p>
+      </details>
+      {track && (
+        <label className="field">
+          {track.name}
+          <input
+            type="number"
+            min={0}
+            max={track.max}
+            step={1}
+            value={Number(sheet.c.data["struggleProgress"] ?? track.initial ?? 0)}
+            disabled={!sheet.editable}
+            onChange={(event) => {
+              const value = parseInputNumber(event.currentTarget.value);
+              if (
+                value !== undefined &&
+                Number.isInteger(value) &&
+                value >= 0 &&
+                value <= track.max
+              )
+                ctx.execute(setData, { id: sheet.c.id, key: "struggleProgress", value });
+            }}
+          />
+        </label>
+      )}
+      <CharacterText
+        campaign={sheet.campaign}
+        c={sheet.c}
+        field={`struggle:${struggle.id}`}
+        label="Struggle prompts and notes"
+        editable={sheet.editable}
+      />
+      <Button
+        variant="secondary"
+        disabled={!sheet.editable}
+        onClick={() => ctx.execute(resolveCharacterStruggle, { characterId: sheet.c.id })}
+      >
+        Resolve Struggle
+      </Button>
+    </section>
+  );
+}
+
 export function DungeonWorld2Sheet(props: SheetProps) {
   const ctx = useCampaign();
   const sheet = useSheet(props);
-  const struggle = sheet.c.data["struggleRevealed"]
+  const revealed = sheet.c.data["struggleRevealed"] === true;
+  const struggle = revealed
     ? STRUGGLES.find((entry) => entry.id === sheet.c.data["struggleId"])
     : undefined;
-  const revealed = sheet.c.data["struggleRevealed"] === true;
   const characterId = sheet.c.id;
   const isPc = sheet.c.kind === "pc";
   // A Struggle from the Libraries reveals it, while the character has none.
@@ -82,52 +140,7 @@ export function DungeonWorld2Sheet(props: SheetProps) {
           ],
         }}
       />
-      {struggle && (
-        <section className="form-section sheet-section" aria-label="Current Struggle">
-          <h3 className="sheet-heading">{struggle.name}</h3>
-          <details>
-            <summary>Struggle rules</summary>
-            <p>{struggle.text}</p>
-          </details>
-          {struggle.track && (
-            <label className="field">
-              {struggle.track.name}
-              <input
-                type="number"
-                min={0}
-                max={struggle.track.max}
-                step={1}
-                value={Number(sheet.c.data["struggleProgress"] ?? struggle.track.initial ?? 0)}
-                disabled={!sheet.editable}
-                onChange={(event) => {
-                  const value = parseInputNumber(event.currentTarget.value);
-                  if (
-                    value !== undefined &&
-                    Number.isInteger(value) &&
-                    value >= 0 &&
-                    value <= struggle.track!.max
-                  )
-                    ctx.execute(setData, { id: sheet.c.id, key: "struggleProgress", value });
-                }}
-              />
-            </label>
-          )}
-          <CharacterText
-            campaign={sheet.campaign}
-            c={sheet.c}
-            field={`struggle:${struggle.id}`}
-            label="Struggle prompts and notes"
-            editable={sheet.editable}
-          />
-          <Button
-            variant="secondary"
-            disabled={!sheet.editable}
-            onClick={() => ctx.execute(resolveCharacterStruggle, { characterId: sheet.c.id })}
-          >
-            Resolve Struggle
-          </Button>
-        </section>
-      )}
+      {struggle && <StruggleSection sheet={sheet} struggle={struggle} />}
       <SheetSectionView
         {...sheet}
         section={{

@@ -96,12 +96,8 @@ class Derived<T> implements ReadonlyStore<T> {
 
   #refresh() {
     const versions = this.sources.map((s) => s.version);
-    if (
-      this.#seen &&
-      versions.length === this.#seen.length &&
-      versions.every((v, i) => v === this.#seen![i])
-    )
-      return;
+    const seen = this.#seen;
+    if (seen && seen.length === versions.length && versions.every((v, i) => v === seen[i])) return;
     this.#seen = versions;
     const next = this.compute();
     if (this.#version > 0 && Object.is(next, this.#value)) return;
@@ -119,10 +115,7 @@ class Derived<T> implements ReadonlyStore<T> {
     return this.#version;
   }
 
-  readonly subscribe = (listener: Listener) => {
-    const stops = this.sources.map((s) => s.subscribe(listener));
-    return () => stops.forEach((stop) => stop());
-  };
+  readonly subscribe = (listener: Listener) => subscribeAll(this.sources, listener);
 }
 
 /**
@@ -139,6 +132,10 @@ export function derived<T>(
 /** Run `fn` now and after each change to any of `sources`. Returns the stop function. */
 export function watch(sources: readonly ReadonlyStore<unknown>[], fn: () => void): () => void {
   fn();
-  const stops = sources.map((s) => s.subscribe(fn));
+  return subscribeAll(sources, fn);
+}
+
+function subscribeAll(sources: readonly ReadonlyStore<unknown>[], listener: Listener) {
+  const stops = sources.map((s) => s.subscribe(listener));
   return () => stops.forEach((stop) => stop());
 }

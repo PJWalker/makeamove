@@ -1,5 +1,5 @@
-import type { Point } from "../grid";
-import { formatDistance } from "../measure";
+import { snapToLattice, type Point } from "../grid";
+import { formatDistance, toUnits } from "../measure";
 import type { Transform } from "../types";
 import { wallEnds } from "../vision";
 import type { ToolContext, ToolPress } from "./types";
@@ -20,7 +20,7 @@ export const wall: ToolPress = (c, e, world) => {
       paint: { stroke: "#d8e0ffff", fill: "#d8e0ff38" },
       width: 2,
       layer: "over",
-      label: formatDistance(grid, (t.w / grid.size) * grid.unit),
+      label: formatDistance(grid, toUnits(grid, t.w)),
     };
     c.renderer.invalidate("overlay", "presence");
   };
@@ -56,11 +56,7 @@ export function snapWallPoint(c: ToolContext, p: Point, e: Keys): Point {
   }
   if (best) return best;
   const grid = c.renderer.grid;
-  if (grid.type !== "square") return p;
-  return {
-    x: grid.offsetX + Math.round((p.x - grid.offsetX) / grid.size) * grid.size,
-    y: grid.offsetY + Math.round((p.y - grid.offsetY) / grid.size) * grid.size,
-  };
+  return grid.type === "square" ? snapToLattice(grid, p, grid.size) : p;
 }
 
 /** A wall from where the drag started to (snapped) p. */

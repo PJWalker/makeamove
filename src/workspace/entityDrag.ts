@@ -1,6 +1,9 @@
 import type { LinkKind } from "../features/notes/links";
 import { dropLine, indexAmong } from "../ui/reorder";
+import { followPress } from "../ui/pointer";
+import { suppressNextClick } from "../ui/suppressClick";
 import { hideTooltip } from "../ui/tooltipController";
+import { reducedMotion } from "../ui/transition";
 import type { CanvasState, TokenSpec } from "./canvasState";
 
 const THRESHOLD = 5;
@@ -193,7 +196,7 @@ function sendGhostToToken(
   center: { x: number; y: number },
   complete: () => void,
 ) {
-  if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  if (reducedMotion.matches) {
     ghost.remove();
     complete();
     return;
@@ -224,25 +227,23 @@ export function dragEntity(
   source = e.currentTarget as HTMLElement,
 ) {
   if (e.button !== 0) return;
-  const startX = e.clientX;
-  const startY = e.clientY;
-  let ghost: HTMLElement | null = null;
+  let ghost: HTMLElement;
   const mark = dropMarker(canvas);
   const line = dropLine("x");
   const onBar = (ev: PointerEvent) => !!entity.pin && overHotbar(ev.clientX, ev.clientY);
 
+  function lift() {
+    // Just the name and icon, not the row's buttons or details.
+    const pick = source.querySelector(".list-pick, .palette-title") ?? source;
+    ghost = pick.cloneNode(true) as HTMLElement;
+    ghost.removeAttribute("id");
+    ghost.className = "drag-ghost item-ghost";
+    document.body.appendChild(ghost);
+    document.documentElement.classList.add("is-reordering");
+    hideTooltip();
+  }
+
   function move(ev: PointerEvent) {
-    if (!ghost) {
-      if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < THRESHOLD) return;
-      // Just the name and icon, not the row's buttons or details.
-      const pick = source.querySelector(".list-pick, .palette-title") ?? source;
-      ghost = pick.cloneNode(true) as HTMLElement;
-      ghost.removeAttribute("id");
-      ghost.className = "drag-ghost item-ghost";
-      document.body.appendChild(ghost);
-      document.documentElement.classList.add("is-reordering");
-      hideTooltip();
-    }
     // Beside the pointer, so it doesn't hide what it's over.
     ghost.style.left = `${ev.clientX + 12}px`;
     ghost.style.top = `${ev.clientY + 8}px`;
@@ -262,24 +263,19 @@ export function dragEntity(
     setDropCursor(onHotbar || !!target);
   }
 
-  function end(ev: PointerEvent, commit: boolean) {
-    window.removeEventListener("pointermove", move);
-    window.removeEventListener("pointerup", up);
-    window.removeEventListener("pointercancel", cancel);
+  function end(ev: PointerEvent, commit: boolean, lifted: boolean) {
     mark(null);
     line.hide();
     setDropCursor(null);
     canvas.sceneDropHighlight.value = null;
     const bar = hotbar();
     if (bar) delete bar.dataset["dropping"];
-    if (!ghost) return;
+    if (!lifted) return;
     const target =
       commit && !onBar(ev) ? dropTargetAt(canvas, ev.clientX, ev.clientY, entity) : null;
     document.documentElement.classList.remove("is-reordering");
     // The click that ends a drag is not a press on the row.
-    const swallow = (c: Event) => c.stopPropagation();
-    window.addEventListener("click", swallow, { capture: true, once: true });
-    setTimeout(() => window.removeEventListener("click", swallow, { capture: true }), 0);
+    suppressNextClick();
     if (!commit) return ghost.remove();
     if (onBar(ev)) {
       ghost.remove();
@@ -293,10 +289,6 @@ export function dragEntity(
     ghost.remove();
     if (target) dropOn(canvas, target, entity, ev.clientX, ev.clientY);
   }
-  const up = (ev: PointerEvent) => end(ev, true);
-  const cancel = (ev: PointerEvent) => end(ev, false);
 
-  window.addEventListener("pointermove", move);
-  window.addEventListener("pointerup", up);
-  window.addEventListener("pointercancel", cancel);
+  followPress(e, THRESHOLD, { lift, move, end });
 }

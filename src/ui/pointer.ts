@@ -14,6 +14,46 @@ export function lastPointer() {
 }
 
 /**
+ * Follow a press that may become a drag. Once the pointer has travelled
+ * `threshold` px, `lift` runs, then `move` on every move (the lifting one
+ * included). Releasing ends it with `commit`, a cancelled pointer without;
+ * `lifted` says whether it ever became a drag, so a press that stayed put
+ * can be left to click.
+ */
+export function followPress(
+  down: Pick<PointerEvent, "clientX" | "clientY">,
+  threshold: number,
+  on: {
+    lift: (e: PointerEvent) => void;
+    move: (e: PointerEvent) => void;
+    end: (e: PointerEvent, commit: boolean, lifted: boolean) => void;
+  },
+) {
+  const startX = down.clientX;
+  const startY = down.clientY;
+  let lifted = false;
+  const move = (e: PointerEvent) => {
+    if (!lifted) {
+      if (Math.hypot(e.clientX - startX, e.clientY - startY) < threshold) return;
+      lifted = true;
+      on.lift(e);
+    }
+    on.move(e);
+  };
+  const end = (e: PointerEvent, commit: boolean) => {
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", up);
+    window.removeEventListener("pointercancel", cancel);
+    on.end(e, commit, lifted);
+  };
+  const up = (e: PointerEvent) => end(e, true);
+  const cancel = (e: PointerEvent) => end(e, false);
+  window.addEventListener("pointermove", move);
+  window.addEventListener("pointerup", up);
+  window.addEventListener("pointercancel", cancel);
+}
+
+/**
  * Follow the pointer for a drag that resizes or moves something. While it
  * runs, the whole page shows `cursor` (so it doesn't flicker when the pointer
  * outruns the handle) and text selection is off. It ends on release, on a

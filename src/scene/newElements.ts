@@ -1,6 +1,5 @@
-import { type Grid, type Point, snapPoint, snapSize } from "./grid";
-import type { BlobRef } from "../media/images";
-import type { EntityGraphic, EntityGraphicRef } from "../media/images";
+import { cellOr, type Grid, type Point, snapPoint, snapSize } from "./grid";
+import type { BlobRef, EntityGraphic, EntityGraphicRef } from "../media/images";
 import type { NewElement, SceneElement, TokenStyle } from "./types";
 
 /*
@@ -43,7 +42,7 @@ export const randomTokenColour = () =>
   TOKEN_PALETTE[Math.floor(Math.random() * TOKEN_PALETTE.length)]!;
 
 /** A token's side for a grid: a cell, or 70 px without one. */
-const tokenSize = (grid: Grid) => (grid.type === "none" ? 70 : grid.size);
+const tokenSize = (grid: Grid) => cellOr(grid, 70);
 
 /** A new token a cell across, snapped to the grid at `at`. */
 export function newToken(grid: Grid, at: Point, spec: TokenSpec): NewElement {

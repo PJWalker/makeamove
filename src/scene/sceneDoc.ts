@@ -136,22 +136,20 @@ export class SceneDoc {
       );
   }
 
-  private topZ(layer: Layer): string | null {
-    let top: string | null = null;
+  /** The order of the topmost (or bottommost) element in a layer; null if it's empty. */
+  private edgeZ(layer: Layer, edge: "top" | "bottom"): string | null {
+    let found: string | null = null;
     for (const m of this.elements.values()) {
+      if (m.get("layer") !== layer) continue;
       const z = m.get("z");
-      if (m.get("layer") === layer && (top === null || z > top)) top = z;
+      if (found === null || (edge === "top" ? z > found : z < found)) found = z;
     }
-    return top;
+    return found;
   }
 
-  private bottomZ(layer: Layer): string | null {
-    let bottom: string | null = null;
-    for (const m of this.elements.values()) {
-      const z = m.get("z");
-      if (m.get("layer") === layer && (bottom === null || z < bottom)) bottom = z;
-    }
-    return bottom;
+  /** An order above everything in a layer. */
+  private zOnTop(layer: Layer): string {
+    return generateKeyBetween(this.edgeZ(layer, "top"), null);
   }
 
   add(...els: NewElement[]): string[] {
@@ -162,7 +160,7 @@ export class SceneDoc {
         this.elements.set(id, {
           locked: false,
           ...el,
-          z: generateKeyBetween(this.topZ(el.layer), null),
+          z: this.zOnTop(el.layer),
           createdBy: device.value.id,
         });
         ids.push(id);
@@ -202,11 +200,12 @@ export class SceneDoc {
     els.sort((a, b) => byOrder(a.z, b.z));
     this.transact(() => {
       if (to === "front") {
-        for (const el of els)
-          this.elements.get(el.id)!.patch({ z: generateKeyBetween(this.topZ(el.layer), null) });
+        for (const el of els) this.elements.get(el.id)!.patch({ z: this.zOnTop(el.layer) });
       } else {
         for (const el of els.reverse())
-          this.elements.get(el.id)!.patch({ z: generateKeyBetween(null, this.bottomZ(el.layer)) });
+          this.elements
+            .get(el.id)!
+            .patch({ z: generateKeyBetween(null, this.edgeZ(el.layer, "bottom")) });
       }
     });
   }
@@ -217,7 +216,7 @@ export class SceneDoc {
       for (const id of ids) {
         const m = this.elements.get(id);
         if (!m || m.get("layer") === layer) continue;
-        m.patch({ z: generateKeyBetween(this.topZ(layer), null), layer });
+        m.patch({ z: this.zOnTop(layer), layer });
       }
     });
   }

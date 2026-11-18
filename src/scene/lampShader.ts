@@ -10,7 +10,7 @@ import {
   UniformGroup,
 } from "pixi.js";
 import type { Point } from "./grid";
-import { distanceToSegment, type Segment } from "./vision";
+import { segmentDistance, type Segment } from "./vision";
 
 /*
  * A lamp's light, or a viewer's sight, worked out per pixel (M12). One quad
@@ -320,7 +320,7 @@ export class Lamp {
     const walls =
       s.walls.length > MAX_WALLS
         ? [...s.walls]
-            .sort((a, b) => distanceToSegment(s.at, a) - distanceToSegment(s.at, b))
+            .sort((a, b) => segmentDistance(s.at, a) - segmentDistance(s.at, b))
             .slice(0, MAX_WALLS)
         : s.walls;
     const wallData = u["uWalls"] as Float32Array;

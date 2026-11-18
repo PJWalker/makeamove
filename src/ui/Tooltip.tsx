@@ -21,19 +21,39 @@ type Tip = { text: string; long?: boolean; el: Element; dir: Dir; instant?: bool
  */
 export function Tooltip() {
   const { tip, ref } = useTooltip();
-  const t = tip;
   return (
     <div
       ref={ref}
       className="tooltip"
-      data-instant={t?.instant || undefined}
-      data-long={t?.long || undefined}
+      data-instant={tip?.instant || undefined}
+      data-long={tip?.long || undefined}
       popover="manual"
       role="tooltip"
     >
-      {t?.text}
+      {tip?.text}
     </div>
   );
+}
+
+/**
+ * Where a tip prefers to go: toward the middle of the screen, sideways for
+ * sidebar tabs and anything marked data-tip-side, else down from the top half
+ * and up from the bottom. data-tip-side="left" or "right" picks a side; it
+ * still flips if it wouldn't fit.
+ */
+function preferredDir(el: Element): Dir {
+  const r = el.getBoundingClientRect();
+  const side = el.getAttribute("data-tip-side");
+  if (side === "left" || side === "right") return side;
+  if (el.closest(".sidebar-rail") || side !== null)
+    return r.left + r.width / 2 < innerWidth / 2 ? "right" : "left";
+  return r.top + r.height / 2 < innerHeight / 2 ? "down" : "up";
+}
+
+/** The side of its element a placed tip ended up on, from the tip's box and the element's. */
+function placedDir(box: DOMRect, r: DOMRect, across: boolean): Dir {
+  if (across) return box.left >= r.right ? "right" : "left";
+  return box.top >= r.bottom ? "down" : "up";
 }
 
 function useTooltip() {
@@ -91,26 +111,8 @@ function useTooltipTracking(setTip: (tip: Tip) => void, ref: RefObject<HTMLDivEl
       // A tip that only repeats the label in view adds nothing; it shows once the label is hidden.
       if (el instanceof HTMLElement && el.innerText.trim() === text) return;
       const long = el.hasAttribute("data-tip-long");
-      const r = el.getBoundingClientRect();
-      // Centred on the item and pointing toward the middle of the screen: sideways for
-      // sidebar tabs and anything marked data-tip-side, down from the top edge, up
-      // from the bottom.
-      const cx = r.left + r.width / 2;
-      const cy = r.top + r.height / 2;
-      // data-tip-side="left" or "right" prefers a side; it still flips if it wouldn't fit.
-      const side = el.getAttribute("data-tip-side");
-      const dir: Dir =
-        el.closest(".sidebar-rail") || side !== null
-          ? side === "left" || side === "right"
-            ? side
-            : cx < innerWidth / 2
-              ? "right"
-              : "left"
-          : cy < innerHeight / 2
-            ? "down"
-            : "up";
       showing = true;
-      setTip({ text, long, el, dir, instant });
+      setTip({ text, long, el, dir: preferredDir(el), instant });
     }
 
     function consider(target: EventTarget | null, delay: number) {
@@ -177,13 +179,7 @@ function useTooltipPosition(ref: RefObject<HTMLDivElement | null>, tip: Tip) {
     const r = tip.el.getBoundingClientRect();
     const box = el.getBoundingClientRect();
     const across = tip.dir === "left" || tip.dir === "right";
-    el.dataset["dir"] = across
-      ? box.left >= r.right
-        ? "right"
-        : "left"
-      : box.top >= r.bottom
-        ? "down"
-        : "up";
+    el.dataset["dir"] = placedDir(box, r, across);
     const arrow = across ? r.top + r.height / 2 - box.top : r.left + r.width / 2 - box.left;
     el.style.setProperty("--arrow", `${arrow}px`);
     return () => {

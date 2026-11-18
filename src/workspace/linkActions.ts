@@ -13,36 +13,29 @@ export function linkActionItems(ctx: CampaignContext, link: LinkRef): MenuItem[]
   if (link.kind !== "item" && link.kind !== "move") return [];
   const me = getCharacter(campaign, actingCharacterId(campaign));
   const canAct = !!me && canEdit(campaign, me);
+  /** One entry that acts for the acting character, dimmed when they can't. */
+  const actAs = (label: string, act: (characterId: string) => void): MenuItem[] => [
+    {
+      label,
+      disabled: !canAct,
+      onSelect: () => {
+        if (me && canAct) act(me.id);
+      },
+    },
+  ];
   const system = systemOf(campaign);
   if (link.kind === "item") {
     const item = system.items.find((candidate) => candidate.id === link.id);
-    return item
-      ? [
-          {
-            label: me ? `Give to ${me.name}` : "Choose a Character",
-            disabled: !canAct,
-            onSelect: () => {
-              if (me && canAct) ctx.execute(giveItem, { characterId: me.id, item });
-            },
-          },
-        ]
-      : [];
+    if (!item) return [];
+    return actAs(me ? `Give to ${me.name}` : "Choose a Character", (characterId) =>
+      ctx.execute(giveItem, { characterId, item }),
+    );
   }
-  if (link.kind === "move") {
-    const move = system.actions.find((candidate) => candidate.id === link.id);
-    return move
-      ? [
-          {
-            label: `Make ${move.name}`,
-            disabled: !canAct,
-            onSelect: () => {
-              if (me && canAct) ctx.execute(startMove, { characterId: me.id, move: move.id });
-            },
-          },
-        ]
-      : [];
-  }
-  return [];
+  const move = system.actions.find((candidate) => candidate.id === link.id);
+  if (!move) return [];
+  return actAs(`Make ${move.name}`, (characterId) =>
+    ctx.execute(startMove, { characterId, move: move.id }),
+  );
 }
 
 /**

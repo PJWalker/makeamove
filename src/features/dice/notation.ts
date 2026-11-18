@@ -1,3 +1,5 @@
+import { seededRandom } from "../../lib/seededRandom";
+
 /*
  * Dice notation: a small parser and roller for the usual tabletop syntax.
  *
@@ -166,32 +168,28 @@ export function parse(formula: string): Term[] {
   return terms;
 }
 
-/** A uniform integer in [1, sides] from a cryptographic source. */
-export function cryptoDie(sides: number): number {
+const UINT32_RANGE = 0x1_0000_0000;
+
+/** A uniform face in [1, sides], from a source of uniform 32-bit integers. */
+function faceFrom(sides: number, sample: () => number): number {
   // Reject the top sliver of the range so every face is equally likely.
-  const limit = Math.floor(0x1_0000_0000 / sides) * sides;
-  const buf = new Uint32Array(1);
+  const limit = Math.floor(UINT32_RANGE / sides) * sides;
   for (;;) {
-    crypto.getRandomValues(buf);
-    const value = buf[0]!;
+    const value = sample();
     if (value < limit) return (value % sides) + 1;
   }
 }
 
+/** A uniform integer in [1, sides] from a cryptographic source. */
+export function cryptoDie(sides: number): number {
+  const buf = new Uint32Array(1);
+  return faceFrom(sides, () => crypto.getRandomValues(buf)[0]!);
+}
+
 /** A reproducible die source for a roll that is previewed before it is posted. */
 export function seededDie(seed: string) {
-  let state = 2166136261;
-  for (const character of seed) state = Math.imul(state ^ character.charCodeAt(0), 16777619);
-  return (sides: number) => {
-    const limit = Math.floor(0x1_0000_0000 / sides) * sides;
-    for (;;) {
-      state += 0x6d2b79f5;
-      let mixed = Math.imul(state ^ (state >>> 15), state | 1);
-      mixed ^= mixed + Math.imul(mixed ^ (mixed >>> 7), mixed | 61);
-      const sample = (mixed ^ (mixed >>> 14)) >>> 0;
-      if (sample < limit) return (sample % sides) + 1;
-    }
-  };
+  const random = seededRandom(seed);
+  return (sides: number) => faceFrom(sides, () => random() * UINT32_RANGE);
 }
 
 const notationOf = (t: DiceTerm) =>

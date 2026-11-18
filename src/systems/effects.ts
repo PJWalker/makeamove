@@ -28,27 +28,19 @@ const PHASE = { set: 0, add: 1, multiply: 2, min: 3, max: 3 } as const;
 export function resolveEffects(base: Record<string, number>, sources: EffectSource[]): Resolved {
   const values = { ...base };
   const why: Record<string, string[]> = {};
-  const out: Resolved = { values, why, moves: [], tags: [], bonuses: [] };
   const moves = new Set<string>();
   const tags = new Set<string>();
+  const bonuses: Resolved["bonuses"] = [];
 
   type Mod = Extract<Effect, { type: "modify" }> & { from: string; order: number };
   const mods: Mod[] = [];
   for (const s of sources) {
     for (const e of s.effects) {
       if (e.type === "modify") mods.push({ ...e, from: s.name, order: mods.length });
-      else if (e.type === "grantMove") {
-        if (!moves.has(e.move)) {
-          moves.add(e.move);
-          out.moves.push(e.move);
-        }
-      } else if (e.type === "grantTag") {
-        if (!tags.has(e.tag)) {
-          tags.add(e.tag);
-          out.tags.push(e.tag);
-        }
-      } else
-        out.bonuses.push({
+      else if (e.type === "grantMove") moves.add(e.move);
+      else if (e.type === "grantTag") tags.add(e.tag);
+      else
+        bonuses.push({
           source: s.name,
           ...(e.stat ? { stat: e.stat } : {}),
           ...(e.moves ? { moves: e.moves } : {}),
@@ -84,5 +76,5 @@ export function resolveEffects(base: Record<string, number>, sources: EffectSour
     values[m.path] = after;
     if (after !== before) (why[m.path] ??= []).push(`${m.from}: ${before} → ${after}`);
   }
-  return out;
+  return { values, why, moves: [...moves], tags: [...tags], bonuses };
 }

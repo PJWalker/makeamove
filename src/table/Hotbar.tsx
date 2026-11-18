@@ -202,9 +202,6 @@ function useHotbar(campaign: Campaign) {
         ],
       });
     });
-  const endDrag = () => {
-    setDragging(null);
-  };
   const dragSlot = (id: string, e: ReactPointerEvent) => {
     // Off the bar, a slot can land on a character or in a note, like a palette result; anywhere else unpins it.
     const what = actionEntity(ctx, id, find(id)?.title ?? id);
@@ -223,7 +220,7 @@ function useHotbar(campaign: Campaign) {
       onEnd: () => {
         mark(null);
         setDropCursor(null);
-        endDrag();
+        setDragging(null);
       },
       onDrop: (index) => edit((s) => placeAt(s, id, index)),
       outside: {

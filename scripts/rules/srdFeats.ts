@@ -1,8 +1,16 @@
 import { readReference } from "./readReference";
+import { slug } from "./slug";
 import type { OptionDef } from "../../src/systems/types";
 
 export type SrdFeat = OptionDef & {
   category: "origin" | "general" | "fighting-style" | "epic";
+};
+
+const CATEGORIES: Record<string, SrdFeat["category"]> = {
+  Origin: "origin",
+  General: "general",
+  "Fighting Style": "fighting-style",
+  "Epic Boon": "epic",
 };
 
 /** Parse the local SRD's feat headings and category labels without duplicating its catalog in code. */
@@ -17,12 +25,8 @@ export function parseSrdFeats(markdown: string): SrdFeat[] {
     const sectionTitle = section[1];
     const sectionBody = section[2];
     if (!sectionTitle || !sectionBody) continue;
-    const category =
-      sectionTitle === "Fighting Style"
-        ? "fighting-style"
-        : sectionTitle === "Epic Boon"
-          ? "epic"
-          : (sectionTitle.toLowerCase() as "origin" | "general");
+    const category = CATEGORIES[sectionTitle];
+    if (!category) continue;
     for (const block of sectionBody.split(/^#### /m).slice(1)) {
       const [heading, ...lines] = block.split(/\r?\n/);
       const name = heading?.trim();
@@ -32,10 +36,7 @@ export function parseSrdFeats(markdown: string): SrdFeat[] {
         .join("\n")
         .trim();
       feats.push({
-        id: name
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-|-$/g, ""),
+        id: slug(name),
         name,
         category,
         text,

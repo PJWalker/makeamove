@@ -55,7 +55,11 @@ import {
 import type { ConditionState, CoreField } from "../../features/characters/sheet";
 import { sessionMoveUsed } from "../../features/characters/sessionMoves";
 import { actionsFor, derive } from "../../features/characters/store";
-import type { ItemInstance, TemplateSettings } from "../../features/characters/types";
+import type {
+  CharacterView,
+  ItemInstance,
+  TemplateSettings,
+} from "../../features/characters/types";
 import type { MoveChoice } from "../../features/characters/moves";
 import type { MoveSuggestion, MoveTarget, SaveRequest } from "../../features/chat/types";
 import type { TrackerButton } from "../../data/richText";
@@ -94,6 +98,11 @@ const mayEdit = (ctx: CampaignContext, { id }: { id: string }) => editable(ctx, 
 /** For calls about the acting character unless they name one. */
 const actor = (ctx: CampaignContext, characterId: string | undefined) =>
   characterId ?? actingCharacterId(ctx.campaign);
+/** For relationships: only the player of the character they're from, or the GM, changes them. */
+const mayEditFrom = (ctx: CampaignContext, { from }: { from: string }) => editable(ctx, from);
+/** A library item (homebrew included) by id. */
+const libraryItem = (ctx: CampaignContext, id: string) =>
+  systemOf(ctx.campaign).items.find((i) => i.id === id);
 
 /**
  * A change to one character, as a command: only their player or the GM
@@ -484,16 +493,21 @@ export const pressTrackerButton = command<{ characterId: string; button: Tracker
 
 // Moves
 
+/** The moves a character has: their class's, their own and those they've learned. */
+function movesOf(ctx: CampaignContext, c: CharacterView | undefined): ActionDef[] {
+  if (!c) return [];
+  const system = systemOf(ctx.campaign);
+  return actionsFor(c, system, derive(c, system));
+}
+
 /** A move the character can make: their own, one they've learned, or any of the system's (homebrew included). */
 function moveFor(
   ctx: CampaignContext,
   characterId: string | undefined,
   id: string,
 ): ActionDef | undefined {
-  const system = systemOf(ctx.campaign);
-  const c = getCharacter(ctx.campaign, characterId);
-  const own = c ? actionsFor(c, system, derive(c, system)) : [];
-  return own.find((m) => m.id === id) ?? system.actions.find((m) => m.id === id);
+  const own = movesOf(ctx, getCharacter(ctx.campaign, characterId));
+  return own.find((m) => m.id === id) ?? systemOf(ctx.campaign).actions.find((m) => m.id === id);
 }
 
 /** Start making a move: it asks for targets and choices first if it needs them. */
@@ -521,16 +535,14 @@ export const startMove = command<{
     const can = editable(ctx, id);
     if (can !== true) return can;
     const c = getCharacter(ctx.campaign, id)!;
-    const system = systemOf(ctx.campaign);
-    const m = actionsFor(c, system, derive(c, system)).find((a) => a.id === move);
+    const m = movesOf(ctx, c).find((a) => a.id === move);
     if (!m) return "Not one of this character’s moves";
     return !sessionMoveUsed(ctx.campaign, c.id, m) || "Already used this session";
   },
   offers: (ctx) => {
-    const system = systemOf(ctx.campaign);
     const me = getCharacter(ctx.campaign, actingCharacterId(ctx.campaign));
-    const mine = new Set(me ? actionsFor(me, system, derive(me, system)).map((m) => m.id) : []);
-    return system.actions.map((m) => ({
+    const mine = new Set(movesOf(ctx, me).map((m) => m.id));
+    return systemOf(ctx.campaign).actions.map((m) => ({
       params: { move: m.id },
       mine: mine.has(m.id),
       ...(m.tags ? { tags: m.tags } : {}),
@@ -639,6 +651,12 @@ const holder = (ctx: CampaignContext, { characterId }: { characterId?: string | 
   editable(ctx, actor(ctx, characterId));
 const itemOf = (ctx: CampaignContext, characterId: string | undefined, itemId: string) =>
   getCharacter(ctx.campaign, actor(ctx, characterId))?.inventory.find((i) => i.id === itemId);
+/** Whose gear it is, for the palette: the character's name. */
+const gearSource = (ctx: CampaignContext, { characterId }: { characterId?: string | undefined }) =>
+  getCharacter(ctx.campaign, actor(ctx, characterId))?.name ?? "Gear";
+/** The acting character's gear, for the palette. */
+const actingInventory = (ctx: CampaignContext) =>
+  getCharacter(ctx.campaign, actingCharacterId(ctx.campaign))?.inventory ?? [];
 
 /** Add a library item (homebrew included) to a character's inventory: the acting character's, unless named. */
 export const addItem = command<{
@@ -649,18 +667,15 @@ export const addItem = command<{
   id: SLOT_COMMANDS.library,
   params: objectOf({ item: isString, characterId: optional(isString), equip: optional(isBoolean) }),
   kind: "entry",
-  title: (ctx, { item }) => systemOf(ctx.campaign).items.find((i) => i.id === item)?.name ?? "Item",
+  title: (ctx, { item }) => libraryItem(ctx, item)?.name ?? "Item",
   source: (ctx) => systemOf(ctx.campaign).name,
   detail: (ctx, { item, characterId }) => {
     const me = getCharacter(ctx.campaign, actor(ctx, characterId));
     return me
       ? `Add to ${me.name}’s inventory. Shift+Enter shows it in the Libraries.`
-      : systemOf(ctx.campaign).items.find((i) => i.id === item)?.description;
+      : libraryItem(ctx, item)?.description;
   },
-  available: (ctx, p) =>
-    !systemOf(ctx.campaign).items.some((i) => i.id === p.item)
-      ? "Not in the library"
-      : holder(ctx, p),
+  available: (ctx, p) => (libraryItem(ctx, p.item) ? holder(ctx, p) : "Not in the library"),
   offers: (ctx) =>
     systemOf(ctx.campaign).items.map((i) => ({
       params: { item: i.id },
@@ -670,7 +685,7 @@ export const addItem = command<{
     })),
   run: (ctx, { item, characterId, equip }) => {
     const id = actor(ctx, characterId);
-    const def = systemOf(ctx.campaign).items.find((i) => i.id === item);
+    const def = libraryItem(ctx, item);
     if (id && def) addItemTo(ctx.campaign, id, def, equip);
   },
 });
@@ -682,21 +697,19 @@ export const addItem = command<{
 export const acquireItem = characterCommand<{ characterId: string; item: string }>({
   id: "item.acquire",
   params: objectOf({ characterId: isString, item: isString }),
-  title: (ctx, { item }) =>
-    `Get ${systemOf(ctx.campaign).items.find((i) => i.id === item)?.name ?? "Item"}`,
+  title: (ctx, { item }) => `Get ${libraryItem(ctx, item)?.name ?? "Item"}`,
   available: (ctx, { characterId, item }) => {
-    const system = systemOf(ctx.campaign);
-    const def = system.items.find((i) => i.id === item);
+    const def = libraryItem(ctx, item);
     if (!def) return "Not in the library";
-    const how = system.acquireItem?.(def, getCharacter(ctx.campaign, characterId));
+    const how = systemOf(ctx.campaign).acquireItem?.(def, getCharacter(ctx.campaign, characterId));
     if (how?.gmOnly && !ctx.isGm()) return "Only the GM can grant this";
     return how?.blocked ?? true;
   },
-  run: ({ campaign }, { characterId, item }) => {
-    const system = systemOf(campaign);
-    const def = system.items.find((i) => i.id === item);
+  run: (ctx, { characterId, item }) => {
+    const { campaign } = ctx;
+    const def = libraryItem(ctx, item);
     if (!def) return;
-    const how = system.acquireItem?.(def, getCharacter(campaign, characterId));
+    const how = systemOf(campaign).acquireItem?.(def, getCharacter(campaign, characterId));
     for (const [field, value] of Object.entries(how?.data ?? {}))
       setCharacterData(campaign, characterId, field, value);
     addItemTo(campaign, characterId, def);
@@ -736,8 +749,7 @@ export const useItem = command<{ itemId: string; characterId?: string | undefine
   kind: "item",
   title: (ctx, { itemId, characterId }) =>
     `Use ${itemOf(ctx, characterId, itemId)?.name ?? "Item"}`,
-  source: (ctx, { characterId }) =>
-    getCharacter(ctx.campaign, actor(ctx, characterId))?.name ?? "Gear",
+  source: gearSource,
   detail: (ctx, { itemId, characterId }) => {
     const i = itemOf(ctx, characterId, itemId);
     return i?.uses !== undefined ? `${i.usesLeft ?? 0}/${i.uses} uses left` : undefined;
@@ -749,7 +761,7 @@ export const useItem = command<{ itemId: string; characterId?: string | undefine
   },
   section: "act",
   offers: (ctx) =>
-    (getCharacter(ctx.campaign, actingCharacterId(ctx.campaign))?.inventory ?? []).flatMap((i) =>
+    actingInventory(ctx).flatMap((i) =>
       itemUsable(ctx, i) ? [{ params: { itemId: i.id }, mine: true }] : [],
     ),
   menu: {
@@ -772,13 +784,12 @@ export const equipItem = command<{ itemId: string; characterId?: string | undefi
     const i = itemOf(ctx, characterId, itemId);
     return `${i?.equipped ? "Unequip" : "Equip"} ${i?.name ?? "Item"}`;
   },
-  source: (ctx, { characterId }) =>
-    getCharacter(ctx.campaign, actor(ctx, characterId))?.name ?? "Gear",
+  source: gearSource,
   available: (ctx, p) =>
     itemOf(ctx, p.characterId, p.itemId) ? holder(ctx, p) : "Not in this character’s gear",
   section: "act",
   offers: (ctx) =>
-    (getCharacter(ctx.campaign, actingCharacterId(ctx.campaign))?.inventory ?? []).flatMap((i) =>
+    actingInventory(ctx).flatMap((i) =>
       i.equippable ? [{ params: { itemId: i.id }, mine: true }] : [],
     ),
   menu: {
@@ -864,7 +875,7 @@ export const setRelationship = command<{ from: string; to: string; label: string
   id: "relationship.set",
   params: objectOf({ from: isString, to: isString, label: isString }),
   title: "Change Relationship",
-  permission: (ctx, { from }) => editable(ctx, from),
+  permission: mayEditFrom,
   undoGroup: ({ from, to }) => `relationship ${from} ${to}`,
   run: ({ campaign }, { from, to, label }) => relate(campaign.characters, from, to, label),
 });
@@ -878,7 +889,7 @@ export const setRelationshipDepth = command<{
   id: "relationship.setDepth",
   params: objectOf({ from: isString, to: isString, depth: isNumber, max: isNumber }),
   title: "Change Relationship",
-  permission: (ctx, { from }) => editable(ctx, from),
+  permission: mayEditFrom,
   run: ({ campaign }, { from, to, depth, max }) =>
     setDepth(campaign.characters, from, to, depth, max),
 });
@@ -887,7 +898,7 @@ export const removeRelationship = command<{ from: string; to: string }>({
   id: "relationship.remove",
   params: objectOf({ from: isString, to: isString }),
   title: "Remove Relationship",
-  permission: (ctx, { from }) => editable(ctx, from),
+  permission: mayEditFrom,
   run: ({ campaign }, { from, to }) => unrelate(campaign.characters, from, to),
 });
 

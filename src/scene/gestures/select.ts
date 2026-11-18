@@ -1,3 +1,4 @@
+import type { Rect } from "../camera";
 import { bounds, contains } from "../geometry";
 import type { Point } from "../grid";
 import { moveSelection } from "./move";
@@ -56,6 +57,16 @@ export function hoverCursor(c: ToolContext, world: Point, screen: Point): string
   return c.hitTest(world) ? "move" : undefined;
 }
 
+/** The rectangle with corners at a and b. */
+function rectBetween(a: Point, b: Point): Rect {
+  return {
+    x: Math.min(a.x, b.x),
+    y: Math.min(a.y, b.y),
+    w: Math.abs(b.x - a.x),
+    h: Math.abs(b.y - a.y),
+  };
+}
+
 /**
  * Selecting everything inside a dragged rectangle, added to `base`. A press
  * on an unselected map (`pick`) that doesn't become a drag selects the map.
@@ -64,23 +75,13 @@ function marquee(c: ToolContext, start: Point, base: string[], pick: string | nu
   let moved = !pick;
   return {
     kind: "marquee",
-    marqueeRect: (hover) => ({
-      x: Math.min(start.x, hover.x),
-      y: Math.min(start.y, hover.y),
-      w: Math.abs(hover.x - start.x),
-      h: Math.abs(hover.y - start.y),
-    }),
+    marqueeRect: (hover) => rectBetween(start, hover),
     move(_e, world) {
       if (!moved) {
         if (!dragged(c, start, world)) return;
         moved = true;
       }
-      const rect = {
-        x: Math.min(start.x, world.x),
-        y: Math.min(start.y, world.y),
-        w: Math.abs(world.x - start.x),
-        h: Math.abs(world.y - start.y),
-      };
+      const rect = rectBetween(start, world);
       const inside = c
         .allElements()
         .flatMap((el) =>

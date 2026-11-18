@@ -1,6 +1,6 @@
-import { putBlob } from "../platform/blobs";
+import type * as Y from "yjs";
+import { getBlob, putBlob } from "../platform/blobs";
 import { fileNamesIn, readFileIn, writeFileIn } from "../platform/files";
-import { getBlob } from "../platform/blobs";
 import {
   assembleBackup,
   BackupFileError,
@@ -44,20 +44,12 @@ async function importBackup(
     ),
   );
   const open = new Set(live);
-  await Promise.all(
-    backup.docs.flatMap((doc) =>
-      open.has(doc.guid)
-        ? []
-        : [
-            mergeStoredDoc(
-              doc,
-              doc.kind === "campaign" && gm
-                ? (root) => claimGm(root, device, backup.exportedBy)
-                : undefined,
-            ),
-          ],
-    ),
-  );
+  const claim = gm ? (root: Y.Doc) => claimGm(root, device, backup.exportedBy) : undefined;
+  const merges: Promise<void>[] = [];
+  for (const doc of backup.docs)
+    if (!open.has(doc.guid))
+      merges.push(mergeStoredDoc(doc, doc.kind === "campaign" ? claim : undefined));
+  await Promise.all(merges);
   const { roomKey, createdAt } = metaOf(backup.docs, backup.campaignId);
   return {
     campaignId: backup.campaignId,
@@ -106,12 +98,14 @@ interface FolderState {
 }
 const folders = new Map<string, FolderState>();
 
+/** Every image the documents use. */
+const hashesOf = (docs: DocSnapshot[]) => new Set(docs.flatMap((d) => [...d.hashes]));
+
 async function saveFolder(task: Extract<BackupTask, { type: "saveFolder" }>) {
   const { dir, campaignId, device, role, changed } = task;
-  let state = folders.get(campaignId);
-  const fresh = !state || changed === "all";
-  if (!state || fresh)
-    folders.set(campaignId, (state = { snapshots: new Map(), onDisk: new Set() }));
+  const fresh = !folders.has(campaignId) || changed === "all";
+  if (fresh) folders.set(campaignId, { snapshots: new Map(), onDisk: new Set() });
+  const state = folders.get(campaignId)!;
   const stale = new Set(changed === "all" ? [] : changed);
   const known = state.snapshots;
   const docs = await snapshotCampaign(campaignId, device, role, (guid) =>
@@ -126,9 +120,7 @@ async function saveFolder(task: Extract<BackupTask, { type: "saveFolder" }>) {
 
   const images = await dir.getDirectoryHandle(IMAGES, { create: true });
   if (fresh) for (const name of await fileNamesIn(images)) state.onDisk.add(name);
-  const missing = [...new Set(docs.flatMap((d) => [...d.hashes]))].filter(
-    (hash) => !state.onDisk.has(hash),
-  );
+  const missing = [...hashesOf(docs)].filter((hash) => !state.onDisk.has(hash));
   await Promise.all(
     missing.map(async (hash) => {
       // Not here yet (a peer still has to send it); it's tried again next save.
@@ -144,7 +136,7 @@ export async function runBackupTask(task: BackupTask): Promise<BackupResult> {
   switch (task.type) {
     case "export": {
       const docs = await snapshotCampaign(task.campaignId, task.device, task.role);
-      const blobs = await readBlobs(new Set(docs.flatMap((d) => [...d.hashes])));
+      const blobs = await readBlobs(hashesOf(docs));
       const backup = assembleBackup(task.campaignId, task.device, docs, blobs);
       return { type: "export", file: await encodeBackup(backup) };
     }

@@ -2,6 +2,7 @@ import type { JSONContent } from "@tiptap/core";
 import type { LinkKind } from "../notes/links";
 import { LINK_NODE } from "../notes/links";
 import {
+  plainParagraph,
   plainText,
   TRACKER_NODE,
   trackerToken,
@@ -21,13 +22,9 @@ export function emptyChatContent(): ChatContent {
   return { type: "doc", content: [{ type: "paragraph" }] };
 }
 
+/** Typed text as a message: one paragraph, its line breaks kept. */
 export function contentFromText(text: string): ChatContent {
-  const content: JSONContent[] = [];
-  for (const [index, line] of text.split("\n").entries()) {
-    if (index) content.push({ type: "hardBreak" });
-    if (line) content.push({ type: "text", text: line });
-  }
-  return { type: "doc", content: [{ type: "paragraph", content }] };
+  return { type: "doc", content: [plainParagraph(text)] };
 }
 
 export function entityContent(kind: LinkKind, id: string, label: string): ChatContent {

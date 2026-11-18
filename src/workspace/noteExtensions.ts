@@ -204,30 +204,32 @@ export function makeSecret(editor: Editor, vault: Y.Doc): boolean {
   return true;
 }
 
+/** The secret at `pos` in the note: where it sits, and its text in the vault. */
+function secretAt(editor: Editor, vault: Y.Doc, pos: number) {
+  const node = editor.state.doc.nodeAt(pos);
+  if (node?.type.name !== SECRET_NODE) return null;
+  return {
+    range: { from: pos, to: pos + node.nodeSize },
+    fragment: secretFragment(vault, node.attrs["id"] as string),
+  };
+}
+
 /** Reveal a secret: its text goes into the note where it was, for everyone, and leaves the vault. */
 export function revealSecret(editor: Editor, vault: Y.Doc, pos: number) {
-  const node = editor.state.doc.nodeAt(pos);
-  if (node?.type.name !== SECRET_NODE) return;
-  const fragment = secretFragment(vault, node.attrs["id"] as string);
+  const secret = secretAt(editor, vault, pos);
+  if (!secret) return;
+  const { range, fragment } = secret;
   const json = yXmlFragmentToProsemirrorJSON(fragment) as JSONContent;
   const content = json.content?.length ? json.content : [{ type: "paragraph" }];
-  editor
-    .chain()
-    .focus()
-    .insertContentAt({ from: pos, to: pos + node.nodeSize }, content)
-    .run();
+  editor.chain().focus().insertContentAt(range, content).run();
   vault.transact(() => fragment.delete(0, fragment.length));
 }
 
 /** Delete a secret from the note and the vault. */
 export function deleteSecret(editor: Editor, vault: Y.Doc, pos: number) {
-  const node = editor.state.doc.nodeAt(pos);
-  if (node?.type.name !== SECRET_NODE) return;
-  const fragment = secretFragment(vault, node.attrs["id"] as string);
-  editor
-    .chain()
-    .focus()
-    .deleteRange({ from: pos, to: pos + node.nodeSize })
-    .run();
+  const secret = secretAt(editor, vault, pos);
+  if (!secret) return;
+  const { range, fragment } = secret;
+  editor.chain().focus().deleteRange(range).run();
   vault.transact(() => fragment.delete(0, fragment.length));
 }

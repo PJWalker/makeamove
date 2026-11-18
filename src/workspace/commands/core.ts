@@ -14,6 +14,7 @@ import { goToCampaign } from "../../navigation/router";
 import { autohide, setAutohide } from "../autohide";
 import { PANEL_ORDER, PANELS } from "../panelLayout";
 import type { PanelId } from "../layoutModel";
+import type { CampaignContext } from "../campaignContext";
 import { TOOLS } from "../tools";
 import { command, type TableCommand } from "./types";
 
@@ -33,38 +34,33 @@ export const selectTool = command<{ tool: ToolId }>({
   run: (ctx, { tool }) => ctx.tools.activeTool.set(tool),
 });
 
-export const undo = command({
-  id: "history.undo",
-  params: isNothing,
-  title: "Undo",
-  keys: ["Mod+Z"],
-  icon: IconUndo,
-  transact: false,
-  available: (ctx) => ctx.history.canUndo.value || "Nothing to undo",
-  offers: () => [{ params: undefined }],
-  section: "arrange",
-  menu: { canvas: () => [{ params: undefined }] },
-  run: (ctx) => {
-    ctx.canvas.canvasCommands.value?.controller.cancelGesture();
-    ctx.history.undo();
-  },
-});
+/** Undo or Redo: a gesture under way is dropped first, so it doesn't land on the restored state. */
+const historyCommand = (
+  step: "undo" | "redo",
+  look: Pick<TableCommand, "title" | "icon" | "keys">,
+) =>
+  command({
+    id: `history.${step}`,
+    params: isNothing,
+    ...look,
+    transact: false,
+    available: (ctx) =>
+      (step === "undo" ? ctx.history.canUndo.value : ctx.history.canRedo.value) ||
+      `Nothing to ${step}`,
+    offers: () => [{ params: undefined }],
+    section: "arrange",
+    menu: { canvas: () => [{ params: undefined }] },
+    run: (ctx) => {
+      ctx.canvas.canvasCommands.value?.controller.cancelGesture();
+      ctx.history[step]();
+    },
+  });
 
-export const redo = command({
-  id: "history.redo",
-  params: isNothing,
+export const undo = historyCommand("undo", { title: "Undo", keys: ["Mod+Z"], icon: IconUndo });
+export const redo = historyCommand("redo", {
   title: "Redo",
   keys: ["Shift+Mod+Z", "Mod+Y"],
   icon: IconRedo,
-  transact: false,
-  available: (ctx) => ctx.history.canRedo.value || "Nothing to redo",
-  offers: () => [{ params: undefined }],
-  section: "arrange",
-  menu: { canvas: () => [{ params: undefined }] },
-  run: (ctx) => {
-    ctx.canvas.canvasCommands.value?.controller.cancelGesture();
-    ctx.history.redo();
-  },
 });
 
 export const fitToScene = command({
@@ -128,6 +124,9 @@ export const openHelp = dialog("help", {
 });
 
 const isPanel = oneOf(...PANEL_ORDER);
+/** The panels this campaign has, in order. */
+const campaignPanels = (ctx: CampaignContext) =>
+  PANEL_ORDER.filter((id) => !ctx.panels.unavailablePanels.value.includes(id));
 
 export const showPanel = command<{ panel: PanelId }>({
   id: "panel.show",
@@ -137,17 +136,11 @@ export const showPanel = command<{ panel: PanelId }>({
   available: (ctx, { panel }) =>
     !ctx.panels.unavailablePanels.value.includes(panel) || "Not in this campaign",
   offers: (ctx) =>
-    PANEL_ORDER.flatMap((id) =>
-      ctx.panels.unavailablePanels.value.includes(id)
-        ? []
-        : [
-            {
-              params: { panel: id },
-              aliases: [PANELS[id].label],
-              icon: PANELS[id].Icon,
-            },
-          ],
-    ),
+    campaignPanels(ctx).map((id) => ({
+      params: { panel: id },
+      aliases: [PANELS[id].label],
+      icon: PANELS[id].Icon,
+    })),
   run: (ctx, { panel }) => ctx.panels.showPanel(panel),
 });
 
@@ -161,11 +154,7 @@ export const togglePanel = command<{ panel: PanelId }>({
   checked: (ctx, { panel }) => !ctx.panels.layout.value.closed.includes(panel),
   menu: {
     campaign: (ctx) =>
-      PANEL_ORDER.flatMap((id) =>
-        ctx.panels.unavailablePanels.value.includes(id)
-          ? []
-          : [{ params: { panel: id }, icon: PANELS[id].Icon }],
-      ),
+      campaignPanels(ctx).map((id) => ({ params: { panel: id }, icon: PANELS[id].Icon })),
   },
   run: (ctx, { panel }) =>
     ctx.panels.setPanelClosed(panel, !ctx.panels.layout.value.closed.includes(panel)),

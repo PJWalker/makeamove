@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
+import { useDraft } from "./useDraft";
 import { getCharacter, systemOf } from "../features/characters/api";
 import {
   canPayMove,
@@ -96,11 +97,6 @@ function choiceOf(
   };
 }
 
-function useDraft(initial: Draft) {
-  const [draft, setDraft] = useState(initial);
-  return [draft, (changes: Partial<Draft>) => setDraft((now) => ({ ...now, ...changes }))] as const;
-}
-
 function toggled(list: string[], id: string, on: boolean) {
   return on ? [...list, id] : list.filter((entry) => entry !== id);
 }
@@ -187,7 +183,7 @@ function useAskStep(campaign: Campaign, characterId: string, moveId: string) {
   const check = checkOf(move);
   const difficultySpec = difficultyAsked(campaign, system, move, targets);
   const counters = campaign.chat.messages.value.flatMap((m) => (m.kind === "counter" ? [m] : []));
-  const [draft, patch] = useDraft({
+  const [draft, patch] = useDraft<Draft>({
     stat: "",
     difficulty: String(difficultySpec?.initial ?? 10),
     counterMessageId: counters[0]?.id ?? "",

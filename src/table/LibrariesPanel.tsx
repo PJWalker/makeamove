@@ -71,11 +71,7 @@ function useEntryMenu({ actionsFor }: Pick<Browsing, "actionsFor">) {
   return (e: LibraryEntry) =>
     joinSections([
       entryActionMenu(actionsFor(e)),
-      e.kind === "item"
-        ? actionMenuItems(ctx, [{ id: `library:${e.id}`, title: e.name }])
-        : e.kind === "move"
-          ? actionMenuItems(ctx, [{ id: `move:${e.id}`, title: e.name }])
-          : [],
+      hotbarMenu(ctx, e),
       [
         {
           label: "Change Graphic…",
@@ -84,6 +80,13 @@ function useEntryMenu({ actionsFor }: Pick<Browsing, "actionsFor">) {
         },
       ],
     ]);
+}
+
+/** Pinning an item or move to the hotbar, or giving it a shortcut. */
+function hotbarMenu(ctx: CampaignContext, e: LibraryEntry) {
+  if (e.kind === "item") return actionMenuItems(ctx, [{ id: `library:${e.id}`, title: e.name }]);
+  if (e.kind === "move") return actionMenuItems(ctx, [{ id: `move:${e.id}`, title: e.name }]);
+  return [];
 }
 
 /** What dragging an entry's row carries: an item or move to link, or any other entry as a token. */
@@ -238,6 +241,7 @@ function LibraryEntryWindows({
     const e = entries.find(([k]) => k === key)?.[1];
     if (!e) return null;
     const tag = e.kind === "move" ? rollTag(systemOf(campaign), e.move) : null;
+    const meta = metaOf(e);
     return (
       <EntryWindow
         key={key}
@@ -261,7 +265,7 @@ function LibraryEntryWindows({
         menuItems={menuFor(e)}
       >
         {tag && <Tag>{tag}</Tag>}
-        {metaOf(e) && <span className="muted">{metaOf(e)}</span>}
+        {meta && <span className="muted">{meta}</span>}
         <EntryActionButtons actions={actionsFor(e)} />
       </EntryWindow>
     );
@@ -296,6 +300,12 @@ function LibraryTools({ kinds }: { kinds: EntryKind[] }) {
       )}
     </div>
   );
+}
+
+/** Who the Libraries add things to. */
+function targetNote(me: CharacterView | undefined, canAct: boolean) {
+  if (!me) return "Choose a character to add things to";
+  return canAct ? `Adding to ${me.name}` : `${me.name} isn’t yours to change`;
 }
 
 /**
@@ -337,13 +347,7 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
   return (
     <div className="panel-scroll libraries">
       <LibraryTools kinds={kinds} />
-      <p className="muted libraries-target">
-        {me
-          ? canAct
-            ? `Adding to ${me.name}`
-            : `${me.name} isn’t yours to change`
-          : "Choose a character to add things to"}
-      </p>
+      <p className="muted libraries-target">{targetNote(me, canAct)}</p>
 
       {shown.map(({ s, collections }) => (
         <section key={s.id} className="library-source" aria-label={s.name}>

@@ -4,6 +4,15 @@ import type { Point } from "./grid";
 import { distanceToSegment, distanceToStroke } from "./stroke";
 import { isPlainToken, type SceneElement, type ShapeGeometry, type Transform } from "./types";
 
+/** A rectangle's corners, clockwise from the top left, as which way each lies from its centre. */
+export type Corner = 0 | 1 | 2 | 3;
+export const CORNER_SIGNS: readonly [Point, Point, Point, Point] = [
+  { x: -1, y: -1 },
+  { x: 1, y: -1 },
+  { x: 1, y: 1 },
+  { x: -1, y: 1 },
+];
+
 /** p in the element's own frame: origin at its centre, unrotated, unscaled. */
 export function toLocal(t: Transform, p: Point): Point {
   const dx = p.x - t.x;
@@ -21,14 +30,7 @@ export function fromLocal(t: Transform, p: Point): Point {
 
 /** Corners in world space: top-left, top-right, bottom-right, bottom-left. */
 export function corners(t: Transform): Point[] {
-  const hw = t.w / 2;
-  const hh = t.h / 2;
-  return [
-    { x: -hw, y: -hh },
-    { x: hw, y: -hh },
-    { x: hw, y: hh },
-    { x: -hw, y: hh },
-  ].map((p) => fromLocal(t, p));
+  return shapePolygon({ ...t, shape: "rect" });
 }
 
 /** Axis-aligned bounds of one or more elements. */
@@ -62,12 +64,7 @@ export function shapeOutline(geo: ShapeGeometry, w: number, h: number): Point[] 
   switch (geo.shape) {
     case "rect":
     case "line":
-      return [
-        { x: -hw, y: -hh },
-        { x: hw, y: -hh },
-        { x: hw, y: hh },
-        { x: -hw, y: hh },
-      ];
+      return CORNER_SIGNS.map((sign) => ({ x: sign.x * hw, y: sign.y * hh }));
     case "cone":
       return [
         { x: -hw, y: 0 },
@@ -119,7 +116,12 @@ export function shapeCovers(el: Transform & ShapeGeometry, p: Point, margin = 0)
       })
     );
   }
-  return Math.abs(l.x) <= el.w / 2 + margin && Math.abs(l.y) <= el.h / 2 + margin;
+  return inBox(l, el.w / 2 + margin, el.h / 2 + margin);
+}
+
+/** Whether a point in an element's own frame is within half-width hw and half-height hh of its centre. */
+function inBox(l: Point, hw: number, hh: number): boolean {
+  return Math.abs(l.x) <= hw && Math.abs(l.y) <= hh;
 }
 
 /**
@@ -151,13 +153,13 @@ export function hits(el: SceneElement, p: Point, tolerance = 0): boolean {
   const hh = el.h / 2;
   switch (el.type) {
     case "map":
-      return Math.abs(l.x) <= hw + tolerance && Math.abs(l.y) <= hh + tolerance;
+    case "text":
+      return inBox(l, hw + tolerance, hh + tolerance);
     case "token":
-      if (isPlainToken(el))
-        return Math.abs(l.x) <= hw + tolerance && Math.abs(l.y) <= hh + tolerance;
+      if (isPlainToken(el)) return inBox(l, hw + tolerance, hh + tolerance);
       return Math.hypot(l.x, l.y) <= Math.min(hw, hh) + tolerance;
     case "drawing": {
-      if (Math.abs(l.x) > hw + tolerance || Math.abs(l.y) > hh + tolerance) return false;
+      if (!inBox(l, hw + tolerance, hh + tolerance)) return false;
       const sx = el.w / el.bw;
       const sy = el.h / el.bh;
       const scale = (sx + sy) / 2;
@@ -168,11 +170,9 @@ export function hits(el: SceneElement, p: Point, tolerance = 0): boolean {
       return shapeCovers(el, p, tolerance + el.width / 2);
     case "effect":
       return shapeCovers(el, p, tolerance);
-    case "text":
-      return Math.abs(l.x) <= hw + tolerance && Math.abs(l.y) <= hh + tolerance;
     case "wall":
       // Along its length, within a few px of the line.
-      return Math.abs(l.x) <= hw + tolerance && Math.abs(l.y) <= Math.max(hh, 4) + tolerance;
+      return inBox(l, hw + tolerance, Math.max(hh, 4) + tolerance);
     case "light":
       return Math.hypot(l.x, l.y) <= Math.min(hw, hh) + tolerance;
     case "area":
@@ -200,22 +200,8 @@ export function shapePolygon(el: Transform & ShapeGeometry): Point[] {
 
 /** An area's corners in the world, at its size and rotation. */
 export function areaPolygon(el: Transform & { points: number[]; bw: number; bh: number }): Point[] {
-  if (el.points.length % 2 !== 0) throw new RangeError("Area points must be coordinate pairs");
-  const sx = el.w / el.bw;
-  const sy = el.h / el.bh;
-  const out: Point[] = [];
-  for (let i = 0; i < el.points.length; i += 2)
-    out.push(fromLocal(el, { x: el.points[i]! * sx, y: el.points[i + 1]! * sy }));
-  return out;
+  return shapePolygon({ ...el, shape: "polygon" });
 }
-
-export type Corner = 0 | 1 | 2 | 3;
-export const CORNER_SIGNS: readonly [Point, Point, Point, Point] = [
-  { x: -1, y: -1 },
-  { x: 1, y: -1 },
-  { x: 1, y: 1 },
-  { x: -1, y: 1 },
-];
 
 /**
  * Resize by dragging `corner` to world point p, keeping the opposite corner

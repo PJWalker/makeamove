@@ -1,7 +1,9 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, type ReactNode } from "react";
+import { useDraft } from "./useDraft";
 import { emptyRichText, plainText, type RichText } from "../data/richText";
 import { RichTextField } from "../workspace/RichTextField";
-import { canEdit, getCharacter, actingCharacterId, systemOf } from "../features/characters/api";
+import { systemOf } from "../features/characters/api";
+import { useActingCharacter } from "./useActingCharacter";
 import { parseCommaList } from "../lib/list";
 import { toggleSetValue } from "../lib/set";
 import { listHomebrew, type HomebrewEntry } from "../features/homebrew/homebrew";
@@ -27,6 +29,7 @@ import type {
 import { Button } from "../ui/Button";
 import { PanelActions } from "./PanelActions";
 import { IconAdd, IconDelete, IconNewGear, IconNewMove } from "../ui/icons";
+import type { MenuItem } from "../ui/ContextMenu";
 import { List, ListGroup } from "../ui/List";
 import { Segmented } from "../ui/Segmented";
 import { dragEntity } from "../workspace/entityDrag";
@@ -47,10 +50,15 @@ import { giveItem, startMove } from "../workspace/commands/characters";
  */
 
 type Editing = { kind: "gear" | "move"; id: string | null } | null;
+type Entry = HomebrewEntry & { id: string };
+type GearEntry = Extract<Entry, { kind: "gear" }>;
+type MoveEntry = Extract<Entry, { kind: "move" }>;
 
 export function ItemsPanel({ campaign }: { campaign: Campaign }) {
-  const { ctx, entries, system, editing, setEditing, fold, me, canAct, menuItemsFor, gear, moves } =
+  const { ctx, entries, system, editing, setEditing, fold, canAct, actOn, menuItemsFor } =
     useItemsPanel(campaign);
+  const gear = entries.filter((entry): entry is GearEntry => entry.kind === "gear");
+  const moves = entries.filter((entry): entry is MoveEntry => entry.kind === "move");
   return (
     <div className="panel-scroll items-panel">
       {editing && (
@@ -75,93 +83,71 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
       {gear.length > 0 && (
         <ListGroup label="Gear" count={gear.length} {...fold("gear")}>
           <List>
-            {gear.map((entry) =>
-              entry.kind === "gear" ? (
-                <EntryRow
-                  key={entry.id}
-                  lead={
-                    <CampaignEntityGraphic
-                      campaign={campaign}
-                      kind="item"
-                      id={entry.id}
-                      defaultIcon={entry.item.icon}
-                      size={22}
-                    />
-                  }
-                  name={entry.item.name}
-                  openLabel="Edit"
-                  meta={
-                    [
-                      entry.item.weight ? `${entry.item.weight} wt` : "",
-                      entry.item.uses ? `${entry.item.uses} uses` : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" · ") || undefined
-                  }
-                  tip={entry.item.description}
-                  onOpen={() => setEditing({ kind: "gear", id: entry.id })}
-                  onPointerDown={(event) =>
-                    dragEntity(ctx.canvas, event, entity(ctx, "item", entry.id, entry.item.name))
-                  }
-                  menuItems={menuItemsFor(entry)}
-                >
-                  <Button
-                    variant="secondary"
-                    disabled={!canAct}
-                    onClick={() =>
-                      me && ctx.execute(giveItem, { characterId: me.id, item: entry.item })
-                    }
-                  >
-                    Add
-                  </Button>
-                </EntryRow>
-              ) : null,
-            )}
+            {gear.map((entry) => (
+              <EntryRow
+                key={entry.id}
+                lead={
+                  <CampaignEntityGraphic
+                    campaign={campaign}
+                    kind="item"
+                    id={entry.id}
+                    defaultIcon={entry.item.icon}
+                    size={22}
+                  />
+                }
+                name={entry.item.name}
+                openLabel="Edit"
+                meta={gearMeta(entry.item)}
+                tip={entry.item.description}
+                onOpen={() => setEditing({ kind: "gear", id: entry.id })}
+                onPointerDown={(event) =>
+                  dragEntity(ctx.canvas, event, entity(ctx, "item", entry.id, entry.item.name))
+                }
+                menuItems={menuItemsFor(entry)}
+              >
+                <Button variant="secondary" disabled={!canAct} onClick={() => actOn(entry)}>
+                  Add
+                </Button>
+              </EntryRow>
+            ))}
           </List>
         </ListGroup>
       )}
       {moves.length > 0 && (
         <ListGroup label="Moves" count={moves.length} {...fold("moves")}>
           <List>
-            {moves.map((entry) =>
-              entry.kind === "move" ? (
-                <EntryRow
-                  key={entry.id}
-                  lead={
-                    <CampaignEntityGraphic
-                      campaign={campaign}
-                      kind="move"
-                      id={entry.id}
-                      size={22}
-                    />
-                  }
-                  name={entry.move.name}
-                  openLabel="Edit"
-                  tag={rollTag(system, entry.move)}
-                  tip={`${plainText(entry.move.text)}\n\nDrag onto a character to teach it to them.`}
-                  onOpen={() => setEditing({ kind: "move", id: entry.id })}
-                  onPointerDown={(event) =>
-                    dragEntity(ctx.canvas, event, entity(ctx, "move", entry.id, entry.move.name))
-                  }
-                  menuItems={menuItemsFor(entry)}
-                >
-                  <Button
-                    variant="secondary"
-                    disabled={!canAct}
-                    onClick={() =>
-                      me && ctx.execute(startMove, { characterId: me.id, move: entry.move.id })
-                    }
-                  >
-                    Make
-                  </Button>
-                </EntryRow>
-              ) : null,
-            )}
+            {moves.map((entry) => (
+              <EntryRow
+                key={entry.id}
+                lead={
+                  <CampaignEntityGraphic campaign={campaign} kind="move" id={entry.id} size={22} />
+                }
+                name={entry.move.name}
+                openLabel="Edit"
+                tag={rollTag(system, entry.move)}
+                tip={`${plainText(entry.move.text)}\n\nDrag onto a character to teach it to them.`}
+                onOpen={() => setEditing({ kind: "move", id: entry.id })}
+                onPointerDown={(event) =>
+                  dragEntity(ctx.canvas, event, entity(ctx, "move", entry.id, entry.move.name))
+                }
+                menuItems={menuItemsFor(entry)}
+              >
+                <Button variant="secondary" disabled={!canAct} onClick={() => actOn(entry)}>
+                  Make
+                </Button>
+              </EntryRow>
+            ))}
           </List>
         </ListGroup>
       )}
     </div>
   );
+}
+
+/** A gear row's weight and uses, when it has either. */
+function gearMeta(item: ItemDef): string | undefined {
+  const parts = [item.weight ? `${item.weight} wt` : "", item.uses ? `${item.uses} uses` : ""];
+  return parts.filter(Boolean).join(" · ") || undefined;
 }
 
 function useItemsPanel(campaign: Campaign) {
@@ -175,36 +161,33 @@ function useItemsPanel(campaign: Campaign) {
     open: !folded.has(id),
     onToggle: () => setFolded(toggleSetValue(folded, id)),
   });
-  const meId = useQuery(campaign.members, () => actingCharacterId(campaign));
-  const me = useQuery(campaign.characters, () => getCharacter(campaign, meId));
-  const canAct = !!me && canEdit(campaign, me);
-  const menuItemsFor = (e: HomebrewEntry & { id: string }) => {
-    const actions =
-      e.kind === "gear"
-        ? actionMenuItems(ctx, [{ id: `library:${e.id}`, title: e.item.name }])
-        : actionMenuItems(ctx, [{ id: `move:${e.id}`, title: e.move.name }]);
-    const primary =
-      e.kind === "gear"
-        ? {
-            label: me ? `Add to ${me.name}` : "Choose a Character",
-            disabled: !canAct,
-            onSelect: () => {
-              if (me && canAct) ctx.execute(giveItem, { characterId: me.id, item: e.item });
-            },
-          }
-        : {
-            label: `Make ${e.move.name}`,
-            disabled: !canAct,
-            onSelect: () => {
-              if (me && canAct) ctx.execute(startMove, { characterId: me.id, move: e.move.id });
-            },
-          };
-    return [primary, ...(actions.length ? (["divider"] as const) : []), ...actions];
+  const { me, canAct } = useActingCharacter(campaign);
+
+  /** Gives the acting character this gear, or has them make this move. */
+  const actOn = (entry: Entry) => {
+    if (!me || !canAct) return;
+    if (entry.kind === "gear") ctx.execute(giveItem, { characterId: me.id, item: entry.item });
+    else ctx.execute(startMove, { characterId: me.id, move: entry.move.id });
   };
 
-  const gear = entries.filter((e) => e.kind === "gear");
-  const moves = entries.filter((e) => e.kind === "move");
-  return { ctx, entries, system, editing, setEditing, fold, me, canAct, menuItemsFor, gear, moves };
+  const actionLabel = (entry: Entry) => {
+    if (entry.kind === "move") return `Make ${entry.move.name}`;
+    return me ? `Add to ${me.name}` : "Choose a Character";
+  };
+
+  const menuItemsFor = (entry: Entry): MenuItem[] => {
+    const actions =
+      entry.kind === "gear"
+        ? actionMenuItems(ctx, [{ id: `library:${entry.id}`, title: entry.item.name }])
+        : actionMenuItems(ctx, [{ id: `move:${entry.id}`, title: entry.move.name }]);
+    return [
+      { label: actionLabel(entry), disabled: !canAct, onSelect: () => actOn(entry) },
+      ...(actions.length ? (["divider"] as const) : []),
+      ...actions,
+    ];
+  };
+
+  return { ctx, entries, system, editing, setEditing, fold, canAct, actOn, menuItemsFor };
 }
 
 /** Makes or changes one of the table's gear or moves. */
@@ -218,7 +201,7 @@ function ItemDialog({
   campaign: Campaign;
   system: GameSystem;
   editing: NonNullable<Editing>;
-  entry: (HomebrewEntry & { id: string }) | undefined;
+  entry: Entry | undefined;
   onClose: () => void;
 }) {
   const ref = usePopupDialog();
@@ -245,7 +228,7 @@ function ItemDialog({
   );
 }
 
-/** A text input bound to a signal. */
+/** A labelled text input or textarea. */
 function Text({
   label,
   value,
@@ -311,6 +294,75 @@ type EffectRow =
   | { type: "rollBonus"; stat: string; value: number }
   | { type: "modify"; path: string; value: number };
 
+/** A form's choice of picture: its own, or reset to the default (`resetGraphic`). */
+type GraphicDraft = { graphic: EntityGraphic | undefined; resetGraphic: boolean };
+
+function graphicDraftOf(campaign: Campaign, kind: "item" | "move", id: string | undefined) {
+  return {
+    graphic: id ? campaign.entityGraphics.get(`${kind}:${id}`) : undefined,
+    resetGraphic: false,
+  };
+}
+
+/** The picture to save: null resets it to the default. */
+function savedGraphic({ graphic, resetGraphic }: GraphicDraft) {
+  return resetGraphic ? null : graphic;
+}
+
+/** What the gear form edits, before it's an item. */
+type GearDraft = GraphicDraft & {
+  name: string;
+  description: string;
+  weight: number;
+  uses: number;
+  tags: string;
+  equippable: boolean;
+  effects: EffectRow[];
+};
+
+function gearDraftOf(campaign: Campaign, initial: ItemDef | undefined): GearDraft {
+  return {
+    name: initial?.name ?? "",
+    description: initial?.description ?? "",
+    weight: initial?.weight ?? 0,
+    uses: initial?.uses ?? 0,
+    tags: (initial?.tags ?? []).join(", "),
+    equippable: initial?.equippable ?? false,
+    ...graphicDraftOf(campaign, "item", initial?.id),
+    effects: (initial?.effects ?? []).flatMap(effectRowOf),
+  };
+}
+
+/** The row that edits an effect, for the effects the form can edit. */
+function effectRowOf(effect: Effect): EffectRow[] {
+  if (effect.type === "rollBonus")
+    return [{ type: "rollBonus", stat: effect.stat ?? "", value: effect.value }];
+  if (effect.type === "modify" && effect.op === "add")
+    return [{ type: "modify", path: effect.path, value: effect.value }];
+  return [];
+}
+
+function effectOf(row: EffectRow): Effect {
+  if (row.type === "rollBonus")
+    return { type: "rollBonus", ...(row.stat ? { stat: row.stat } : {}), value: row.value };
+  return { type: "modify", path: row.path, op: "add", value: row.value };
+}
+
+/** The item a draft describes. */
+function itemFromDraft(draft: GearDraft, id: string): ItemDef {
+  const effects = draft.effects.map(effectOf);
+  return {
+    id,
+    name: draft.name.trim(),
+    description: draft.description.trim(),
+    weight: draft.weight,
+    ...(draft.uses ? { uses: draft.uses } : {}),
+    tags: splitTags(draft.tags),
+    ...(effects.length ? { effects } : {}),
+    ...(draft.equippable ? { equippable: true, active: "equipped" as const } : {}),
+  };
+}
+
 function GearForm({
   campaign,
   system,
@@ -322,68 +374,65 @@ function GearForm({
   initial?: ItemDef;
   onDone: () => void;
 }) {
-  const {
-    name,
-    setName,
-    description,
-    setDescription,
-    weight,
-    setWeight,
-    uses,
-    setUses,
-    tags,
-    setTags,
-    equippable,
-    setEquippable,
-    graphic,
-    setGraphic,
-    resetGraphic,
-    setResetGraphic,
-    effects,
-    setEffects,
-    ready,
-    save,
-    setEffect,
-  } = useGearForm(campaign, initial, onDone);
-
+  const ctx = useCampaign();
+  const [draft, patch] = useDraft(() => gearDraftOf(campaign, initial));
+  const { effects } = draft;
+  const setEffect = (index: number, changes: Partial<EffectRow>) =>
+    patch({
+      effects: effects.map((row, i) => (i === index ? ({ ...row, ...changes } as EffectRow) : row)),
+    });
   return (
-    <form
-      className="creation-form form-layout"
-      onSubmit={(event) => {
-        event.preventDefault();
-        save();
-      }}
+    <HomebrewForm
+      id={initial?.id}
+      ready={!!draft.name.trim()}
+      onSave={() =>
+        ctx.execute(saveHomebrewGear, {
+          graphic: savedGraphic(draft),
+          item: itemFromDraft(draft, initial?.id ?? ""),
+        })
+      }
+      onDone={onDone}
     >
       <section className="form-section">
         <h4 className="form-heading">Details</h4>
-        <Text label="Name" value={name} onChange={setName} />
-        <Text label="Description" value={description} onChange={setDescription} multiline />
+        <Text label="Name" value={draft.name} onChange={(name) => patch({ name })} />
+        <Text
+          label="Description"
+          value={draft.description}
+          onChange={(description) => patch({ description })}
+          multiline
+        />
         <div className="sheet-row">
-          <NumberField label="Weight" value={weight} onChange={setWeight} />
-          <NumberField label="Uses" value={uses} onChange={setUses} />
+          <NumberField
+            label="Weight"
+            value={draft.weight}
+            onChange={(weight) => patch({ weight })}
+          />
+          <NumberField label="Uses" value={draft.uses} onChange={(uses) => patch({ uses })} />
         </div>
-        <Text label="Tags" value={tags} onChange={setTags} placeholder="close, +1 armor" />
+        <Text
+          label="Tags"
+          value={draft.tags}
+          onChange={(tags) => patch({ tags })}
+          placeholder="close, +1 armor"
+        />
       </section>
       <section className="form-section">
         <h4 className="form-heading">Appearance and use</h4>
         <label className="stat-deb">
-          <input type="checkbox" checked={equippable} onChange={() => setEquippable(!equippable)} />
+          <input
+            type="checkbox"
+            checked={draft.equippable}
+            onChange={() => patch({ equippable: !draft.equippable })}
+          />
           Equippable
         </label>
-        <GraphicPicker
-          graphic={
-            resetGraphic
-              ? getDefaultEntityGraphic(campaign, "item", initial?.id ?? "")
-              : (graphic ?? getEntityGraphic(campaign, "item", initial?.id ?? ""))
-          }
-          onChange={(next) => {
-            setGraphic(next);
-            setResetGraphic(false);
-          }}
-          onReset={() => {
-            setGraphic(undefined);
-            setResetGraphic(true);
-          }}
+        <DraftGraphicPicker
+          campaign={campaign}
+          kind="item"
+          id={initial?.id ?? ""}
+          draft={draft}
+          patch={patch}
         />
       </section>
       <section className="form-section">
@@ -442,9 +491,7 @@ function GearForm({
               <Button
                 variant="icon"
                 label="Remove effect"
-                onClick={() =>
-                  setEffects(effects.filter((_, effectIndex) => effectIndex !== index))
-                }
+                onClick={() => patch({ effects: effects.filter((_, i) => i !== index) })}
               >
                 <IconDelete />
               </Button>
@@ -452,99 +499,54 @@ function GearForm({
           ))}
           <Button
             variant="ghost"
-            onClick={() => setEffects([...effects, { type: "rollBonus", stat: "", value: 1 }])}
+            onClick={() =>
+              patch({ effects: [...effects, { type: "rollBonus", stat: "", value: 1 }] })
+            }
           >
             <IconAdd size={22} /> Add effect
           </Button>
         </div>
       </section>
-      <FormActions campaign={campaign} id={initial?.id} ready={ready} onDone={onDone} />
-    </form>
+    </HomebrewForm>
   );
 }
 
-function useGearForm(campaign: Campaign, initial: ItemDef | undefined, onDone: () => void) {
-  const ctx = useCampaign();
-  const [name, setName] = useState(initial?.name ?? "");
-  const [description, setDescription] = useState(initial?.description ?? "");
-  const [weight, setWeight] = useState(initial?.weight ?? 0);
-  const [uses, setUses] = useState(initial?.uses ?? 0);
-  const [tags, setTags] = useState(() => (initial?.tags ?? []).join(", "));
-  const [equippable, setEquippable] = useState(initial?.equippable ?? false);
-  const [graphic, setGraphic] = useState<EntityGraphic | undefined>(
-    initial?.id ? campaign.entityGraphics.get(`item:${initial.id}`) : undefined,
+/** The picture picker for a draft, showing the default once it's been reset. */
+function DraftGraphicPicker({
+  campaign,
+  kind,
+  id,
+  draft,
+  patch,
+}: {
+  campaign: Campaign;
+  kind: "item" | "move";
+  id: string;
+  draft: GraphicDraft;
+  patch: (changes: GraphicDraft) => void;
+}) {
+  return (
+    <GraphicPicker
+      graphic={
+        draft.resetGraphic
+          ? getDefaultEntityGraphic(campaign, kind, id)
+          : (draft.graphic ?? getEntityGraphic(campaign, kind, id))
+      }
+      onChange={(graphic) => patch({ graphic, resetGraphic: false })}
+      onReset={() => patch({ graphic: undefined, resetGraphic: true })}
+    />
   );
-  const [resetGraphic, setResetGraphic] = useState(false);
-  const [effects, setEffects] = useState<EffectRow[]>(() =>
-    (initial?.effects ?? []).flatMap((e): EffectRow[] =>
-      e.type === "rollBonus"
-        ? [{ type: "rollBonus", stat: e.stat ?? "", value: e.value }]
-        : e.type === "modify" && e.op === "add"
-          ? [{ type: "modify", path: e.path, value: e.value }]
-          : [],
-    ),
-  );
-  const ready = !!name.trim();
-  const save = () => {
-    if (!ready) return;
-    const out: Effect[] = effects.map((e) =>
-      e.type === "rollBonus"
-        ? { type: "rollBonus", ...(e.stat ? { stat: e.stat } : {}), value: e.value }
-        : { type: "modify", path: e.path, op: "add", value: e.value },
-    );
-    ctx.execute(saveHomebrewGear, {
-      graphic: resetGraphic ? null : graphic,
-      item: {
-        id: initial?.id ?? "",
-        name: name.trim(),
-        description: description.trim(),
-        weight: weight,
-        ...(uses ? { uses: uses } : {}),
-        tags: splitTags(tags),
-        ...(out.length ? { effects: out } : {}),
-        ...(equippable ? { equippable: true, active: "equipped" as const } : {}),
-      },
-    });
-    onDone();
-  };
-  const setEffect = (i: number, patch: Partial<EffectRow>) =>
-    setEffects(effects.map((e, j) => (j === i ? ({ ...e, ...patch } as EffectRow) : e)));
-  return {
-    name,
-    setName,
-    description,
-    setDescription,
-    weight,
-    setWeight,
-    uses,
-    setUses,
-    tags,
-    setTags,
-    equippable,
-    setEquippable,
-    graphic,
-    setGraphic,
-    resetGraphic,
-    setResetGraphic,
-    effects,
-    setEffects,
-    ready,
-    save,
-    setEffect,
-  };
 }
 
 type RollKind = "none" | "stat" | "ask";
 type TargetKind = "none" | "one" | "many";
 
 /** What the move form edits, before it's a move. */
-type MoveDraft = {
+type MoveDraft = GraphicDraft & {
   name: string;
   category: string;
   trigger: string;
   text: RichText;
-  graphic: EntityGraphic | undefined;
-  resetGraphic: boolean;
   rolls: RollKind;
   stat: string;
   outcomes: Record<string, RichText>;
@@ -552,7 +554,7 @@ type MoveDraft = {
   range: number;
 };
 
-function draftOf(
+function moveDraftOf(
   campaign: Campaign,
   system: GameSystem,
   initial: ActionDef | undefined,
@@ -563,14 +565,23 @@ function draftOf(
     category: initial?.category ?? system.actionCategories[0]?.id ?? "",
     trigger: initial?.trigger ?? "",
     text: initial?.text ?? emptyRichText(),
-    graphic: initial?.id ? campaign.entityGraphics.get(`move:${initial.id}`) : undefined,
-    resetGraphic: false,
-    rolls: !check ? "none" : check.ask?.kind === "stat" ? "ask" : "stat",
+    ...graphicDraftOf(campaign, "move", initial?.id),
+    rolls: rollKindOf(check),
     stat: check?.stat ?? system.stats[0]?.id ?? "",
     outcomes: check?.outcomes ?? {},
-    targets: initial?.target ? (initial.target.max === 1 ? "one" : "many") : "none",
+    targets: targetKindOf(initial?.target),
     range: initial?.target?.range?.normal ?? 0,
   };
+}
+
+function rollKindOf(check: CheckStep | undefined): RollKind {
+  if (!check) return "none";
+  return check.ask?.kind === "stat" ? "ask" : "stat";
+}
+
+function targetKindOf(target: TargetSpec | undefined): TargetKind {
+  if (!target) return "none";
+  return target.max === 1 ? "one" : "many";
 }
 
 /** The move a draft describes. */
@@ -656,15 +667,7 @@ function MoveAppearance({
   return (
     <section className="form-section">
       <h4 className="form-heading">Appearance</h4>
-      <GraphicPicker
-        graphic={
-          draft.resetGraphic
-            ? getDefaultEntityGraphic(campaign, "move", id)
-            : (draft.graphic ?? getEntityGraphic(campaign, "move", id))
-        }
-        onChange={(graphic) => patch({ graphic, resetGraphic: false })}
-        onReset={() => patch({ graphic: undefined, resetGraphic: true })}
-      />
+      <DraftGraphicPicker campaign={campaign} kind="move" id={id} draft={draft} patch={patch} />
     </section>
   );
 }
@@ -755,33 +758,25 @@ function MoveForm({
   onDone: () => void;
 }) {
   const ctx = useCampaign();
-  const [draft, setDraft] = useState(() => draftOf(campaign, system, initial));
-  const patch = (changes: Partial<MoveDraft>) => setDraft((now) => ({ ...now, ...changes }));
-  const ready = !!draft.name.trim();
+  const [draft, patch] = useDraft(() => moveDraftOf(campaign, system, initial));
   const sections = { campaign, system, draft, patch };
-  const save = () => {
-    if (!ready) return;
-    ctx.execute(saveHomebrewMove, {
-      graphic: draft.resetGraphic ? null : draft.graphic,
-      move: moveFromDraft(system, draft, initial?.id ?? ""),
-    });
-    onDone();
-  };
-
   return (
-    <form
-      className="creation-form form-layout"
-      onSubmit={(e) => {
-        e.preventDefault();
-        save();
-      }}
+    <HomebrewForm
+      id={initial?.id}
+      ready={!!draft.name.trim()}
+      onSave={() =>
+        ctx.execute(saveHomebrewMove, {
+          graphic: savedGraphic(draft),
+          move: moveFromDraft(system, draft, initial?.id ?? ""),
+        })
+      }
+      onDone={onDone}
     >
       <MoveDetails {...sections} />
       <MoveAppearance campaign={campaign} id={initial?.id ?? ""} draft={draft} patch={patch} />
       <MoveRoll {...sections} />
       <MoveTargeting system={system} draft={draft} patch={patch} />
-      <FormActions campaign={campaign} id={initial?.id} ready={ready} onDone={onDone} />
-    </form>
+    </HomebrewForm>
   );
 }
 
@@ -808,37 +803,52 @@ function NumberFieldInline({
   );
 }
 
-function FormActions({
+/** A gear or move form, saved on submit, with the entry's delete button once it exists. */
+function HomebrewForm({
   id,
   ready,
+  onSave,
   onDone,
+  children,
 }: {
-  campaign: Campaign;
-  id?: string | undefined;
+  id: string | undefined;
   ready: boolean;
+  onSave: () => void;
   onDone: () => void;
+  children: ReactNode;
 }) {
   const ctx = useCampaign();
   return (
-    <div className="form-actions">
-      {id && (
-        <Button
-          variant="danger"
-          className="form-actions-start"
-          onClick={() => {
-            ctx.execute(deleteHomebrewEntry, { id });
-            onDone();
-          }}
-        >
-          Delete
+    <form
+      className="creation-form form-layout"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!ready) return;
+        onSave();
+        onDone();
+      }}
+    >
+      {children}
+      <div className="form-actions">
+        {id && (
+          <Button
+            variant="danger"
+            className="form-actions-start"
+            onClick={() => {
+              ctx.execute(deleteHomebrewEntry, { id });
+              onDone();
+            }}
+          >
+            Delete
+          </Button>
+        )}
+        <Button variant="ghost" onClick={onDone}>
+          Cancel
         </Button>
-      )}
-      <Button variant="ghost" onClick={onDone}>
-        Cancel
-      </Button>
-      <Button variant="primary" type="submit" disabled={!ready}>
-        Save
-      </Button>
-    </div>
+        <Button variant="primary" type="submit" disabled={!ready}>
+          Save
+        </Button>
+      </div>
+    </form>
   );
 }

@@ -1,5 +1,6 @@
 import * as Y from "yjs";
 import { IndexeddbPersistence } from "y-indexeddb";
+import { isObject } from "./guards";
 import { collection, lww, rootOf } from "./schema";
 import { store, type ReadonlyStore, type Store } from "../lib/store";
 
@@ -83,13 +84,13 @@ export class LocalDoc {
 export function settingsOver<T extends object>(defaults: T, name: string) {
   return (stored: unknown): T => {
     if (stored === undefined) return defaults;
-    if (!stored || typeof stored !== "object" || Array.isArray(stored)) {
+    if (!isObject<Partial<T>>(stored)) {
       console.warn(`Ignoring stored ${name}: not an object`, stored);
       return defaults;
     }
     const out = { ...defaults };
     for (const k of Object.keys(defaults) as (keyof T)[]) {
-      const v = (stored as T)[k];
+      const v = stored[k];
       if (v !== undefined && typeof v === typeof defaults[k]) out[k] = v;
     }
     return out;

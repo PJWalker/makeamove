@@ -126,6 +126,13 @@ function tagFor(player: MemberView | undefined) {
   return player.id === device.value.id ? "You" : player.name;
 }
 
+/** A character row's tooltip: its name, and who plays it or that it's an NPC. */
+function tipFor(character: CharacterView, player: MemberView | undefined) {
+  if (character.kind === "npc") return `${character.name} (NPC)`;
+  if (player) return `${character.name}, played by ${tagFor(player)}`;
+  return character.name;
+}
+
 /** The left pane: characters, filed in folders. Drag a character onto a folder to file it. */
 function CharacterList({
   campaign,
@@ -154,6 +161,7 @@ function CharacterList({
     const dragged = entity(ctx, "character", c.id, c.name);
     if (mine) dragged.folder = (folder) => void ctx.execute(fileCharacter, { id: c.id, folder });
     else delete dragged.folder;
+    const player = playedBy.get(c.id);
     const trigger = menuTrigger((x, y) =>
       setMenu({ x, y, items: menuFor(ctx, { kind: "character", id: c.id }) }),
     );
@@ -162,16 +170,11 @@ function CharacterList({
         key={c.id}
         lead={<CampaignEntityGraphic campaign={campaign} kind="character" id={c.id} size={22} />}
         name={c.name}
-        tag={c.kind === "npc" ? "NPC" : (tagFor(playedBy.get(c.id)) ?? null)}
+        tag={c.kind === "npc" ? "NPC" : (tagFor(player) ?? null)}
         selected={c.id === selectedId}
         onPick={() => onPick(c.id)}
         row={{
-          "data-tip":
-            c.kind === "npc"
-              ? `${c.name} (NPC)`
-              : playedBy.has(c.id)
-                ? `${c.name}, played by ${tagFor(playedBy.get(c.id))}`
-                : c.name,
+          "data-tip": tipFor(c, player),
           "data-tip-side": true,
         }}
         pick={{
@@ -650,9 +653,7 @@ function useNewCharacter(
     setFolder,
     creation,
     choiceData,
-    choices,
     existingPcs,
-    repeat,
     startingRelationship,
     scoreRule,
     hints,

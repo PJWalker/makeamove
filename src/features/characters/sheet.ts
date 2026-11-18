@@ -3,7 +3,13 @@ import type { Init } from "../../data/schema";
 import type { ResetEvent } from "../../systems/types";
 import type { DataValue } from "../../data/types";
 import { baseOf, getCharacter } from "./queries";
-import { derive, ensureSystemPart, systemPartOf, type SystemPart } from "./store";
+import {
+  derive,
+  ensureSystemPart,
+  systemPartOf,
+  type CharacterRec,
+  type SystemPart,
+} from "./store";
 import type { characterEntry } from "./schema";
 import { systemOf } from "./system";
 
@@ -41,6 +47,13 @@ function current(campaign: Campaign, id: string, key: SystemPart, field: string)
   const own = systemPartOf(m, system)?.get(key);
   if (own?.has(field)) return own.get(field);
   return systemPartOf(baseOf(campaign, m), system)?.get(key)?.get(field);
+}
+
+type ListField = "conditions" | "lockedConditions" | "learned";
+
+/** One of a character's lists as it has it: its own, or for a copy without one, its template's. */
+function listOf(campaign: Campaign, m: CharacterRec, key: ListField): string[] {
+  return (m.has(key) ? m.get(key) : baseOf(campaign, m)?.get(key)) ?? [];
 }
 
 /** Set one of the system's own fields. */
@@ -107,8 +120,7 @@ export function setModifier(campaign: Campaign, id: string, modifier: string, va
 export function toggleCondition(campaign: Campaign, id: string, condition: string) {
   const m = campaign.characters.get(id);
   if (!m) return;
-  const now =
-    (m.has("conditions") ? m.get("conditions") : baseOf(campaign, m)?.get("conditions")) ?? [];
+  const now = listOf(campaign, m, "conditions");
   m.set(
     "conditions",
     now.includes(condition) ? now.filter((x) => x !== condition) : [...now, condition],
@@ -126,11 +138,8 @@ export function setConditionState(
 ) {
   const m = campaign.characters.get(id);
   if (!m) return;
-  const inherited = baseOf(campaign, m);
-  const list = (key: "conditions" | "lockedConditions") =>
-    (m.has(key) ? m.get(key) : inherited?.get(key)) ?? [];
-  const conditions = new Set(list("conditions"));
-  const locked = new Set(list("lockedConditions"));
+  const conditions = new Set(listOf(campaign, m, "conditions"));
+  const locked = new Set(listOf(campaign, m, "lockedConditions"));
   if (state === "clear") conditions.delete(condition);
   else conditions.add(condition);
   if (state === "locked") locked.add(condition);
@@ -154,7 +163,7 @@ export function clearCondition(campaign: Campaign, id: string, condition: string
 export function setLearned(campaign: Campaign, id: string, actionId: string, known: boolean) {
   const m = campaign.characters.get(id);
   if (!m) return;
-  const now = (m.has("learned") ? m.get("learned") : baseOf(campaign, m)?.get("learned")) ?? [];
+  const now = listOf(campaign, m, "learned");
   if (known === now.includes(actionId)) return;
   m.set("learned", known ? [...now, actionId] : now.filter((x) => x !== actionId));
 }
@@ -202,23 +211,16 @@ export function setLoadout(
         if (cost) costs.set(cost.resource, (costs.get(cost.resource) ?? 0) + cost.by);
       }
   }
-  const resourcesById = new Map<string, (typeof system.resources)[number]>();
-  for (const resource of system.resources)
-    if (!resourcesById.has(resource.id)) resourcesById.set(resource.id, resource);
+  const maxOf = (resource: string) =>
+    derived.values[system.resources.find((r) => r.id === resource)?.max ?? ""];
   for (const [resource, by] of costs) {
     const currentValue = character.resources[resource] ?? 0;
-    const max = derived.values[resourcesById.get(resource)?.max ?? ""];
+    const max = maxOf(resource);
     if (max === undefined || currentValue + by < 0 || currentValue + by > max) return;
   }
   campaign.doc.transact(() => {
     setData(campaign, characterId, definition.activeField, next.join(","));
     for (const [resource, by] of costs)
-      bumpResource(
-        campaign,
-        characterId,
-        resource,
-        by,
-        derived.values[resourcesById.get(resource)?.max ?? ""],
-      );
+      bumpResource(campaign, characterId, resource, by, maxOf(resource));
   });
 }

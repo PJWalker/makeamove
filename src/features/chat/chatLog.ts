@@ -3,6 +3,7 @@ import * as Y from "yjs";
 import { IndexeddbPersistence } from "y-indexeddb";
 import { HybridClock } from "../../lib/hlc";
 import { newId } from "../../lib/ids";
+import { compareCodeUnits } from "../../lib/order";
 import { dataName } from "../../platform/dataEpoch";
 import { device } from "../../platform/device";
 import { colourOf } from "../../scene/presence";
@@ -63,6 +64,8 @@ export class ChatLog {
   private from = Infinity;
   private destroyed = false;
   private stopRoot: () => void;
+  /** Posts not yet written, so they go in one at a time, in order. */
+  private queue: Promise<unknown> = Promise.resolve();
 
   constructor(chunks: List<Y.Doc>, campaignId: string, deviceId: string) {
     this.chunks = chunks;
@@ -113,9 +116,9 @@ export class ChatLog {
   private refresh() {
     const all: ChatMessage[] = [];
     for (const { messages } of this.loaded.values()) all.push(...messages.toArray());
-    all.sort((a, b) => (a.hlc < b.hlc ? -1 : a.hlc > b.hlc ? 1 : 0));
+    all.sort((a, b) => compareCodeUnits(a.hlc, b.hlc));
     // Later local stamps must sort after everything seen.
-    const last = all[all.length - 1];
+    const last = all.at(-1);
     if (last) this.clock.receive(last.hlc);
     this.messages.value = all;
   }
@@ -157,8 +160,6 @@ export class ChatLog {
     this.queue = next.catch(() => {});
     return next;
   }
-
-  private queue: Promise<unknown> = Promise.resolve();
 
   /**
    * Delete a message from the shared log, for everyone. Callers check who may

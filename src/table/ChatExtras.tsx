@@ -93,6 +93,12 @@ const clock = (seconds: number) => {
   return h ? `${h}:${pad(m)}:${pad(s % 60)}` : `${m}:${pad(s % 60)}`;
 };
 
+/** What a timer's clock reads: the time left, or that it's up. */
+function timerText(left: number, stopped: boolean) {
+  if (left <= 0) return "Time’s up";
+  return stopped ? `${clock(left)} stopped` : clock(left);
+}
+
 /** How long a timer's bar flashes when it runs out, while the page is in view. */
 const RING_MS = 3600;
 
@@ -149,6 +155,8 @@ export function TimerCard({
     () => ctx.commands.permits(timerControl, { id: m.id, action: "stop" }) === true,
   );
   const ringing = useRinging(done);
+  const control = (action: "restart" | "resume" | "stop") =>
+    ctx.execute(timerControl, { id: m.id, action });
   return (
     <div
       className="roll-card chat-timer"
@@ -159,7 +167,7 @@ export function TimerCard({
       <div className="roll-head">
         <span className="roll-formula">{m.label || "Timer"}</span>
         <span className="chat-timer-clock" aria-live={done ? "polite" : "off"}>
-          {done ? "Time’s up" : stopped ? `${clock(left)} stopped` : clock(left)}
+          {timerText(left, !!stopped)}
         </span>
       </div>
       <div className="chat-bar" aria-hidden="true">
@@ -171,28 +179,14 @@ export function TimerCard({
       </div>
       {can && !compact && (
         <div className="move-suggest">
-          <Button
-            variant="ghost"
-            onClick={() => ctx.execute(timerControl, { id: m.id, action: "restart" })}
-          >
+          <Button variant="ghost" onClick={() => control("restart")}>
             Restart
           </Button>
-          {!done &&
-            (stopped ? (
-              <Button
-                variant="ghost"
-                onClick={() => ctx.execute(timerControl, { id: m.id, action: "resume" })}
-              >
-                Resume
-              </Button>
-            ) : (
-              <Button
-                variant="ghost"
-                onClick={() => ctx.execute(timerControl, { id: m.id, action: "stop" })}
-              >
-                Stop
-              </Button>
-            ))}
+          {!done && (
+            <Button variant="ghost" onClick={() => control(stopped ? "resume" : "stop")}>
+              {stopped ? "Resume" : "Stop"}
+            </Button>
+          )}
         </div>
       )}
     </div>
@@ -286,24 +280,24 @@ export function PinnedStrip({
   return (
     <section className="chat-pinned" aria-label="Pinned">
       <div className="chat-pin-stack">
-        {rows.map((message) => (
-          <div
-            key={message.id}
-            className="chat-pin"
-            data-new={!initial.has(message.id) || undefined}
-            data-leaving={!shown.has(message.id) || undefined}
-            // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable so the GM can open its menu by keyboard
-            tabIndex={gm && shown.has(message.id) ? 0 : undefined}
-            aria-label={
-              gm && shown.has(message.id) ? `Pinned message from ${message.name}` : undefined
-            }
-            {...(gm && shown.has(message.id)
-              ? menuTrigger((x, y) => onMenu(x, y, message.id))
-              : {})}
-          >
-            <div className="chat-pin-body">{render(message)}</div>
-          </div>
-        ))}
+        {rows.map((message) => {
+          // The GM can unpin it, unless it's already on its way out.
+          const unpinnable = gm && shown.has(message.id);
+          return (
+            <div
+              key={message.id}
+              className="chat-pin"
+              data-new={!initial.has(message.id) || undefined}
+              data-leaving={!shown.has(message.id) || undefined}
+              // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable so the GM can open its menu by keyboard
+              tabIndex={unpinnable ? 0 : undefined}
+              aria-label={unpinnable ? `Pinned message from ${message.name}` : undefined}
+              {...(unpinnable ? menuTrigger((x, y) => onMenu(x, y, message.id)) : {})}
+            >
+              <div className="chat-pin-body">{render(message)}</div>
+            </div>
+          );
+        })}
       </div>
     </section>
   );

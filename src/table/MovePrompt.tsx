@@ -1,5 +1,6 @@
 import { emptyRichText, plainText, type RichText } from "../data/richText";
 import { AskStep } from "./MoveAskForm";
+import { onScreenRect } from "./onScreenRect";
 import { RichTextView } from "../workspace/RichTextView";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { arrow, autoUpdate, computePosition, flip, offset, shift } from "@floating-ui/dom";
@@ -52,17 +53,18 @@ const toggleAreaRequest = (canvas: CanvasState, area: AreaSpec, actor: string) =
   canvas.areaRequest.set(canvas.areaRequest.value ? null : { area, actor, n: Date.now() });
 };
 
-/** The anchor's box, if it's still on screen. */
-function anchorRect(el: Element | null): DOMRect | null {
-  const r = el?.isConnected ? el.getBoundingClientRect() : null;
-  return r &&
-    r.width > 0 &&
-    r.right > 0 &&
-    r.left < innerWidth &&
-    r.bottom > 0 &&
-    r.top < innerHeight
-    ? r
-    : null;
+/** Where the bubble goes: above a button near the bottom (the hotbar), else beside it, to the right where there's room. */
+function preferredSide(anchor: DOMRect, width: number): "top" | "right" | "left" {
+  if (anchor.top > innerHeight - BOTTOM_BAND) return "top";
+  const roomRight = innerWidth - anchor.right - GAP - MARGIN >= width;
+  return roomRight || anchor.left + anchor.width / 2 < innerWidth / 2 ? "right" : "left";
+}
+
+/** A placement as the bubble's `data-side` names it. */
+function sideName(placement: string | undefined) {
+  if (placement === "top") return "above";
+  if (placement === "bottom") return "below";
+  return placement;
 }
 
 export function MovePrompt({ campaign }: { campaign: Campaign }) {
@@ -109,15 +111,11 @@ function useMovePrompt(campaign: Campaign) {
   const ctx = useCampaign();
   const target = useQuery(ctx.campaign.moves.targets);
   const requestedMove = useQuery(ctx.campaign.moves.ask);
-  const live: Request | null = useMemo(
-    () =>
-      target
-        ? { kind: "target", ...target }
-        : requestedMove
-          ? { kind: "ask", ...requestedMove }
-          : null,
-    [target, requestedMove],
-  );
+  const live = useMemo((): Request | null => {
+    if (target) return { kind: "target", ...target };
+    if (requestedMove) return { kind: "ask", ...requestedMove };
+    return null;
+  }, [target, requestedMove]);
   const hasLive = live !== null;
   // What's on screen: the live request, or the last one while it shrinks away.
   const [last, setLast] = useState<Request | null>(null);
@@ -154,7 +152,7 @@ function useMovePrompt(campaign: Campaign) {
     const a = el.animate(
       [
         { transform: getComputedStyle(el).transform, opacity: 1 },
-        collapsedInto(box, anchorRect(anchor.current)),
+        collapsedInto(box, onScreenRect(anchor.current)),
       ],
       {
         duration: LEAVE_MS,
@@ -186,7 +184,7 @@ function useMovePrompt(campaign: Campaign) {
       const box = el.getBoundingClientRect();
       el.animate(
         [
-          collapsedInto(box, anchorRect(anchor.current)),
+          collapsedInto(box, onScreenRect(anchor.current)),
           { opacity: 1, offset: 0.4 },
           { transform: "none", opacity: 1 },
         ],
@@ -199,7 +197,7 @@ function useMovePrompt(campaign: Campaign) {
     const place = async () => {
       const currentRevision = ++revision;
       const source = anchor.current;
-      const a = anchorRect(source);
+      const a = onScreenRect(source);
       if (!a || !source) {
         const w = el.offsetWidth;
         const h = el.offsetHeight;
@@ -211,14 +209,8 @@ function useMovePrompt(campaign: Campaign) {
         return;
       }
 
-      const side =
-        a.top > innerHeight - BOTTOM_BAND
-          ? "top"
-          : innerWidth - a.right - GAP - MARGIN >= el.offsetWidth ||
-              a.left + a.width / 2 < innerWidth / 2
-            ? "right"
-            : "left";
-      el.dataset["side"] = side === "top" ? "above" : side;
+      const side = preferredSide(a, el.offsetWidth);
+      el.dataset["side"] = sideName(side);
       const tail = el.querySelector<HTMLElement>(".roll-prompt-tail");
       const result = await computePosition(source, el, {
         strategy: "fixed",
@@ -232,8 +224,7 @@ function useMovePrompt(campaign: Campaign) {
       });
       if (!active || currentRevision !== revision) return;
       const placement = result.placement.split("-")[0];
-      el.dataset["side"] =
-        placement === "top" ? "above" : placement === "bottom" ? "below" : placement;
+      el.dataset["side"] = sideName(placement);
       el.style.left = `${Math.round(result.x)}px`;
       el.style.top = `${Math.round(result.y)}px`;
       const arrowOffset = result.middlewareData.arrow;
@@ -308,12 +299,7 @@ function TargetStep({
   const targets = useQuery(ctx.canvas.chosenTargets);
   const ready = targets.length >= spec.min;
   const fmt = useQuery(ctx.canvas.sceneDistance);
-  const wanted =
-    spec.max === 1
-      ? "one target"
-      : spec.max
-        ? `up to ${spec.max} targets`
-        : "any number of targets";
+  const wanted = wantedTargets(spec.max);
   const reach = (d: number | null) =>
     spec.range && d !== null ? inRange(d, spec.range) : "normal";
   const blocked = targets.some((t) => reach(t.distance) === "out");
@@ -338,11 +324,7 @@ function TargetStep({
       <p className="roll-prompt-text">{spec.prompt}</p>
       {area && (
         <Button variant={placed ? "ghost" : "secondary"} pressed={placing} onClick={placeArea}>
-          {placing
-            ? "Click the map to place it"
-            : placed
-              ? "Place the area again"
-              : `Place the ${areaName(fmt, area)}`}
+          {areaButtonLabel(placing, !!placed, areaName(fmt, area))}
         </Button>
       )}
       {targets.length ? (
@@ -355,7 +337,7 @@ function TargetStep({
                 key={t.id}
                 className="target-chip"
                 data-out={out || undefined}
-                title={out ? "Out of range" : r === "long" ? "Long range" : undefined}
+                title={RANGE_TITLES[r]}
               >
                 {t.name}
                 {t.distance !== null && <span className="muted"> {fmt(t.distance)}</span>}
@@ -375,10 +357,27 @@ function TargetStep({
   );
 }
 
+/** How many targets a move wants, as the prompt asks for them. */
+function wantedTargets(max: number | undefined) {
+  if (max === 1) return "one target";
+  return max ? `up to ${max} targets` : "any number of targets";
+}
+
+function areaButtonLabel(placing: boolean, placed: boolean, name: string) {
+  if (placing) return "Click the map to place it";
+  return placed ? "Place the area again" : `Place the ${name}`;
+}
+
+/** A target chip's tooltip, for a target that isn't in normal range. */
+const RANGE_TITLES: Record<ReturnType<typeof inRange>, string | undefined> = {
+  normal: undefined,
+  long: "Long range",
+  out: "Out of range",
+};
+
 /** An area as the button names it: "20 ft sphere". */
 const areaName = (fmt: (d: number) => string, a: AreaSpec) => `${fmt(a.size)} ${a.shape}`;
 
-/** A move's text without the list of questions the prompt asks as checkboxes below it. */
 /** The move's text without the list items its form asks as questions. */
 function withoutAskedQuestions(move: ActionDef): RichText {
   const ask = needsChoice(move);

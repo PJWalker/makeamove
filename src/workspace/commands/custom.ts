@@ -77,10 +77,7 @@ export function comboOf(
   e: Pick<KeyboardEvent, "key" | "code" | "ctrlKey" | "altKey" | "shiftKey" | "metaKey">,
 ): string | null {
   if (MODIFIERS.includes(e.key)) return null;
-  const letter = /^Key([A-Z])$/.exec(e.code)?.[1];
-  const digit = /^(?:Digit|Numpad)(\d)$/.exec(e.code)?.[1];
-  let key =
-    letter ?? digit ?? (e.key === " " ? "Space" : e.key.length === 1 ? e.key.toUpperCase() : e.key);
+  let key = keyName(e);
   if (!key || key === "Unidentified" || key === "Dead") return null;
   if (key.startsWith("Arrow")) key = key.slice(5);
   const parts = [];
@@ -89,6 +86,14 @@ export function comboOf(
   if (e.shiftKey) parts.push("Shift");
   if (e.metaKey) parts.push("Meta");
   return [...parts, key].join("+");
+}
+
+/** The key of a press, without modifiers: letters and digits by physical key. */
+function keyName(e: Pick<KeyboardEvent, "key" | "code">): string {
+  const physical = /^Key([A-Z])$/.exec(e.code)?.[1] ?? /^(?:Digit|Numpad)(\d)$/.exec(e.code)?.[1];
+  if (physical) return physical;
+  if (e.key === " ") return "Space";
+  return e.key.length === 1 ? e.key.toUpperCase() : e.key;
 }
 
 /** Whether a combo should still fire while typing in a field: only with Ctrl or Cmd held. */

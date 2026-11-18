@@ -21,11 +21,12 @@ import {
 /** The table's commands. Everything registered on a table's context is one. */
 const commands = (ctx: CampaignContext) => ctx.commands.all() as AnyTableCommand[];
 
-const shown = <T>(
-  v: T | ((ctx: CampaignContext, params: unknown) => T),
+/** What a command shows (its title, source, detail) for a call: fixed, or worked out from it. */
+export const shown = <T, P>(
+  v: T | ((ctx: CampaignContext, params: P) => T),
   ctx: CampaignContext,
-  p: unknown,
-): T => (typeof v === "function" ? (v as (ctx: CampaignContext, params: unknown) => T)(ctx, p) : v);
+  p: P,
+): T => (typeof v === "function" ? (v as (ctx: CampaignContext, params: P) => T)(ctx, p) : v);
 
 /** Run a call from a view, asking first if its command wants confirming. */
 export function invoke(ctx: CampaignContext, command: AnyTableCommand, params: unknown) {

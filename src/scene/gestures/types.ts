@@ -84,13 +84,13 @@ export interface PolygonPlacer {
   add(plan: PolygonPlan, world: Point, e: PointerEvent): void;
 }
 
-/** What the tools' gestures see of the controller. */
 /** A request for new text on the map at `at`, or to edit text `id`, which is centred there. */
 export interface TextRequest {
   at: Point;
   id?: string;
 }
 
+/** What the tools' gestures see of the controller. */
 export interface ToolContext {
   readonly renderer: SceneRenderer;
   readonly scene: SceneDoc;

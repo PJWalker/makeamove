@@ -11,6 +11,7 @@ import { IconClose } from "../ui/icons";
 import { useQuery } from "../ui/useQuery";
 import { watch } from "../lib/store";
 import { useCampaign } from "../workspace/campaignContext";
+import { onScreenRect } from "./onScreenRect";
 
 const LoneMessage = lazy(() =>
   import("./ChatMessage").then((module) => ({ default: module.LoneMessage })),
@@ -45,17 +46,7 @@ const MARGIN = 8;
 const chatTab = () => document.querySelector('.rail-tab[data-panel="chat"]');
 
 /** The Chat tab's box, if it's on screen. */
-function tabRect() {
-  const r = chatTab()?.getBoundingClientRect();
-  return r &&
-    r.width > 0 &&
-    r.right > 0 &&
-    r.left < innerWidth &&
-    r.bottom > 0 &&
-    r.top < innerHeight
-    ? r
-    : null;
-}
+const tabRect = () => onScreenRect(chatTab());
 
 /** A popup squeezed into the Chat tab, or a little below itself when the tab isn't showing. */
 const collapsed = (box: DOMRect): Keyframe => collapsedInto(box, tabRect());
@@ -184,14 +175,10 @@ function useChatPopupStack(campaign: Campaign) {
       }
     });
     placementInFlight.current = positioning;
-    void positioning.then(
-      () => {
-        if (placementInFlight.current === positioning) placementInFlight.current = null;
-      },
-      () => {
-        if (placementInFlight.current === positioning) placementInFlight.current = null;
-      },
-    );
+    const settle = () => {
+      if (placementInFlight.current === positioning) placementInFlight.current = null;
+    };
+    void positioning.then(settle, settle);
     return positioning;
   }, []);
 

@@ -45,6 +45,10 @@ function seedsFor(messageId: string, source: Roll) {
   );
 }
 
+/** A seed for a die or chip thrown in now, so it animates afresh. */
+const freshSeed = (messageId: string, termIndex: number, index: number) =>
+  `${messageId}:${Date.now()}:${termIndex}:${index}`;
+
 function storeRoll(state: MessageState, messageId: string, source: Roll, seeds: string[][]) {
   setState(state, messageId, ROLL_FIELD, {
     roll: source,
@@ -63,14 +67,13 @@ export function readRollState(state: MessageState, messageId: string, source: Ro
 }
 
 export function rerollMessage(state: MessageState, messageId: string, source: Roll) {
-  const current = getState<StoredRoll>(state, messageId, ROLL_FIELD)?.roll ?? source;
-  const next = roll(current.formula);
+  const next = roll(readRollState(state, messageId, source).roll.formula);
   storeRoll(
     state,
     messageId,
     next,
     next.terms.map((term, termIndex) =>
-      termSeeds(term, (index) => `${messageId}:${Date.now()}:${termIndex}:${index}`),
+      termSeeds(term, (index) => freshSeed(messageId, termIndex, index)),
     ),
   );
 }
@@ -84,15 +87,14 @@ function updateRollDie(
   update: (die: Die) => Die,
   newSeed?: () => string,
 ) {
-  const stored = getState<StoredRoll>(state, messageId, ROLL_FIELD);
-  const current = stored?.roll ?? source;
+  const { roll: current, seeds: storedSeeds } = readRollState(state, messageId, source);
   const term = current.terms[termIndex];
   if (term?.kind !== "dice" || !term.dice[dieIndex]) return;
   const dice = term.dice.map((die, index) => (index === dieIndex ? update(die) : die));
   const terms = current.terms.map((entry, index) =>
     index === termIndex ? ({ ...entry, dice } as RolledDice) : entry,
   );
-  const seeds = (stored?.seeds ?? seedsFor(messageId, current)).map((row) => [...row]);
+  const seeds = storedSeeds.map((row) => [...row]);
   if (newSeed) {
     const seedRow = [...(seeds[termIndex] ?? [])];
     seedRow[dieIndex] = newSeed();
@@ -115,7 +117,7 @@ export function rerollDie(
     termIndex,
     dieIndex,
     (die) => ({ ...die, value: cryptoDie(die.sides), disabled: false }),
-    () => `${messageId}:${Date.now()}:${termIndex}:${dieIndex}`,
+    () => freshSeed(messageId, termIndex, dieIndex),
   );
 }
 
@@ -146,9 +148,8 @@ function formulaOf(terms: Roll["terms"]) {
 
 /** Adds a freshly rolled die to a shared roll: one more of a plain term with the same dice, or a term of its own. */
 export function addRollDie(state: MessageState, messageId: string, source: Roll, sides: number) {
-  const stored = getState<StoredRoll>(state, messageId, ROLL_FIELD);
-  const current = stored?.roll ?? source;
-  const seeds = stored?.seeds ?? seedsFor(messageId, current);
+  const { roll: current, seeds: storedSeeds } = readRollState(state, messageId, source);
+  const seeds = [...storedSeeds];
   const die = { sides, value: cryptoDie(sides), kept: true };
   const face = sides === 100 ? "%" : String(sides);
   const plain = (term: Roll["terms"][number]): term is RolledDice =>
@@ -167,7 +168,7 @@ export function addRollDie(state: MessageState, messageId: string, source: Roll,
     terms.push({ kind: "dice", sign: 1, notation: `1d${face}`, dice: [die], subtotal: 0 });
   }
   const row = seeds[termIndex] ?? [];
-  seeds[termIndex] = [...row, `${messageId}:${Date.now()}:${termIndex}:${row.length}`];
+  seeds[termIndex] = [...row, freshSeed(messageId, termIndex, row.length)];
   storeRoll(state, messageId, recalculate({ ...current, terms, formula: formulaOf(terms) }), seeds);
 }
 
@@ -183,9 +184,8 @@ export function addRollModifier(
   modifier: number,
   label?: string,
 ) {
-  const stored = getState<StoredRoll>(state, messageId, ROLL_FIELD);
-  const current = stored?.roll ?? source;
-  const seeds = [...(stored?.seeds ?? seedsFor(messageId, current))];
+  const { roll: current, seeds: storedSeeds } = readRollState(state, messageId, source);
+  const seeds = [...storedSeeds];
   const terms = [...current.terms];
   const termIndex = label ? -1 : terms.findIndex((term) => term.kind === "flat" && !term.label);
   const term = terms[termIndex];
@@ -196,7 +196,7 @@ export function addRollModifier(
     value: Math.abs(value),
     ...(label ? { label } : {}),
   };
-  const seed = [`${messageId}:${Date.now()}:${termIndex < 0 ? terms.length : termIndex}:0`];
+  const seed = [freshSeed(messageId, termIndex < 0 ? terms.length : termIndex, 0)];
   if (termIndex < 0) {
     terms.push(next);
     seeds.push(seed);

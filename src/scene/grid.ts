@@ -42,6 +42,11 @@ export interface Point {
 
 const SQRT3 = Math.sqrt(3);
 
+/** One cell's size, or `fallback` px on a scene without a grid. */
+export function cellOr(grid: Grid, fallback: number): number {
+  return grid.type === "none" ? fallback : grid.size;
+}
+
 /** Circumradius of a hex whose width is `size`. */
 export const hexRadius = (size: number) => size / SQRT3;
 
@@ -95,6 +100,14 @@ export function snapPoint(grid: Grid, p: Point, cells = 1): Point {
   const snap = (v: number, offset: number) =>
     offset + half + Math.round((v - offset - half) / grid.size) * grid.size;
   return { x: snap(p.x, grid.offsetX), y: snap(p.y, grid.offsetY) };
+}
+
+/** The nearest point to p on a lattice `step` px apart, lined up with the grid's corners. */
+export function snapToLattice(grid: Grid, p: Point, step: number): Point {
+  return {
+    x: grid.offsetX + Math.round((p.x - grid.offsetX) / step) * step,
+    y: grid.offsetY + Math.round((p.y - grid.offsetY) / step) * step,
+  };
 }
 
 /** Round a token's size to a whole number of cells (at least one). */

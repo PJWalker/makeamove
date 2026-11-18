@@ -36,12 +36,13 @@ export function characterLinkTargets(campaign: Campaign): LinkTarget[] {
 export function matchingLinkTargets(targets: LinkTarget[], query: string, limit = 8): LinkTarget[] {
   const normalized = query.trim().toLowerCase();
   if (!normalized) return targets.slice(0, limit);
-  const starts = targets.filter((target) => target.label.toLowerCase().startsWith(normalized));
-  const contains = targets.filter(
-    (target) =>
-      !target.label.toLowerCase().startsWith(normalized) &&
-      target.label.toLowerCase().includes(normalized),
-  );
+  const starts: LinkTarget[] = [];
+  const contains: LinkTarget[] = [];
+  for (const target of targets) {
+    const label = target.label.toLowerCase();
+    if (label.startsWith(normalized)) starts.push(target);
+    else if (label.includes(normalized)) contains.push(target);
+  }
   return [...starts, ...contains].slice(0, limit);
 }
 
@@ -112,12 +113,13 @@ export function linkTip(campaign: Campaign, kind: LinkKind, id: string): string 
   switch (kind) {
     case "note": {
       const n = listNotes(campaign).find((x) => x.id === id);
-      return n ? `${n.title}\n${n.gmOnly ? "GM page" : "Note"}` : null;
+      return n ? `${n.title}\n${n.gmOnly ? "GM page" : KIND_DETAIL.note}` : null;
     }
     case "character": {
       const c = getCharacter(campaign, id);
       if (!c) return null;
-      const what = c.kind === "npc" ? (c.template ? "NPC template" : "NPC") : "Character";
+      let what = KIND_DETAIL.character;
+      if (c.kind === "npc") what = c.template ? "NPC template" : "NPC";
       return `${c.name}\n${what}`;
     }
     case "scene": {

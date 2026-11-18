@@ -3,7 +3,7 @@
  * (chat popups out of the Chat tab, a roll's prompt out of its button).
  */
 
-export const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+export { reducedMotion } from "./transition";
 
 /** A bubble whose box is `box`, squeezed into `into`; without it, faded a little below itself. */
 export function collapsedInto(box: DOMRect, into: DOMRect | null): Keyframe {

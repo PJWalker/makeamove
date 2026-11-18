@@ -4,6 +4,7 @@ import type { Permission } from "../../kernel/commands";
 import { IconDelete } from "../../ui/icons";
 import type { CampaignContext } from "../campaignContext";
 import { command, type FolderTreeKind, type Offer, type TableCommand } from "./types";
+import { shown } from "./views";
 
 /*
  * Folders work the same in every list that has them: make one, name it,
@@ -70,7 +71,7 @@ export function folderCommands(tree: FolderTreeKind, ops: FolderOps) {
     command<{ folder: string }>({
       id: `${tree}Folder.${make.id}Here`,
       params: objectOf({ folder: isString }),
-      title: (ctx, p) => `${titleOf(ctx, make, p)} Here`,
+      title: (ctx, p) => `${shown(make.title, ctx, p)} Here`,
       ...(make.icon ? { icon: make.icon } : {}),
       permission: (ctx, p) => ctx.commands.permits(make, p),
       section: "open",
@@ -80,6 +81,3 @@ export function folderCommands(tree: FolderTreeKind, ops: FolderOps) {
   );
   return { create, rename, remove, all: [create, rename, remove, ...newHere] };
 }
-
-const titleOf = <P>(ctx: CampaignContext, c: TableCommand<P, unknown>, p: P) =>
-  typeof c.title === "function" ? c.title(ctx, p) : c.title;

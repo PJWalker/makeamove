@@ -25,6 +25,15 @@ export function rollCarriedDice(element: HTMLElement, carrier: HTMLElement) {
   );
 }
 
+/** The shape a die is drawn as: its own for the standard dice, else a generic one ("n"). */
+export const dieShape = (sides: number) => ([4, 6, 8, 10, 12, 20].includes(sides) ? sides : "n");
+
+/** The custom properties that colour a die: its body, and a label that reads on it. */
+export const dieColours = (colour: string) => ({
+  "--die-colour": colour,
+  "--die-label-colour": contrastingTextColour(colour),
+});
+
 /** Which way a chip's number goes, for its colour. */
 export const chipSign = (value: number) => (value < 0 ? "minus" : "plus");
 
@@ -42,12 +51,9 @@ export function holdNewPick(pick: TrayPick) {
     ghost.classList.add("chip");
     ghost.dataset["sign"] = chipSign(pick.kind === "die" ? 0 : pick.value);
   } else {
-    ghost.dataset["sides"] = [4, 6, 8, 10, 12, 20].includes(piece.sides)
-      ? String(piece.sides)
-      : "n";
-    const colour = colourOf(device.value);
-    ghost.style.setProperty("--die-colour", colour);
-    ghost.style.setProperty("--die-label-colour", contrastingTextColour(colour));
+    ghost.dataset["sides"] = String(dieShape(piece.sides));
+    for (const [property, value] of Object.entries(dieColours(colourOf(device.value))))
+      ghost.style.setProperty(property, value);
   }
   const value = document.createElement("span");
   value.className = "die-value";

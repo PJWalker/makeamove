@@ -100,11 +100,11 @@ export function applyDamage(
   if (options.shieldItemId && (!shield || healing)) return;
   const derived = derive(c, system);
   const max = derived.values[system.resources.find((r) => r.id === "hp")?.max ?? "maxHp"];
-  const damage = shield
-    ? { hp: 0 }
-    : !healing && system.resolveDamage
-      ? system.resolveDamage(c, derived, amount, options)
-      : { hp: amount };
+  let damage: { hp: number; resources?: { id: string; by: number }[] } = { hp: amount };
+  // A shield takes the whole blow; otherwise the system may soften it.
+  if (shield) damage = { hp: 0 };
+  else if (!healing && system.resolveDamage)
+    damage = system.resolveDamage(c, derived, amount, options);
   if (damage.resources?.some(({ id, by }) => (c.resources[id] ?? 0) + by < 0)) return;
   const hpBefore = c.resources["hp"] ?? 0;
   campaign.doc.transact(() => {
@@ -119,12 +119,10 @@ export function applyDamage(
         left -= soaked;
       }
       if (left) bumpResource(campaign, c.id, "hp", -left);
-      const resourcesById = new Map<string, (typeof system.resources)[number]>();
-      for (const resource of system.resources)
-        if (!resourcesById.has(resource.id)) resourcesById.set(resource.id, resource);
+      const maxOf = new Map(system.resources.map((r) => [r.id, r.max]));
       for (const { id, by } of damage.resources ?? []) {
-        const resource = resourcesById.get(id);
-        if (resource) bumpResource(campaign, c.id, id, by, derived.values[resource.max]);
+        const max = maxOf.get(id);
+        if (max) bumpResource(campaign, c.id, id, by, derived.values[max]);
       }
     }
     setState(

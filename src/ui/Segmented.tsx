@@ -33,20 +33,22 @@ export function Segmented<T extends string>({
       onChange={(next) => onChange(next as T)}
       {...(disabled !== undefined ? { isDisabled: disabled } : {})}
     >
-      {options.map((o) => (
-        <Radio
-          key={o.id}
-          value={o.id}
-          className="segment"
-          {...(o.disabled !== undefined ? { isDisabled: o.disabled } : {})}
-          {...(o.icon ? { "aria-label": o.label, "data-icon": true } : {})}
-          {...((o.title ?? (o.icon ? o.label : undefined)) !== undefined
-            ? { "data-tip": o.title ?? o.label }
-            : {})}
-        >
-          {o.icon ?? o.label}
-        </Radio>
-      ))}
+      {options.map((o) => {
+        // An icon shows no label, so its tooltip names it.
+        const tip = o.title ?? (o.icon ? o.label : undefined);
+        return (
+          <Radio
+            key={o.id}
+            value={o.id}
+            className="segment"
+            {...(o.disabled !== undefined ? { isDisabled: o.disabled } : {})}
+            {...(o.icon ? { "aria-label": o.label, "data-icon": true } : {})}
+            {...(tip !== undefined ? { "data-tip": tip } : {})}
+          >
+            {o.icon ?? o.label}
+          </Radio>
+        );
+      })}
     </RadioGroup>
   );
 }

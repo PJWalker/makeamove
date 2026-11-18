@@ -166,6 +166,23 @@ function useSharedRoll(campaign: Campaign, message: RollMessage | MoveMessage) {
 
 type RollInteraction = ReturnType<typeof useSharedRoll>;
 
+/** A shared roll that, when `throwable` and this player may reroll it, is thrown again by flicking its card. */
+function useThrowableRoll(
+  campaign: Campaign,
+  message: RollMessage | MoveMessage,
+  throwable: boolean,
+) {
+  const interaction = useSharedRoll(campaign, message);
+  const canThrow = interaction.allowed && throwable;
+  const gesture = useThrow({
+    onThrow: interaction.rerollAll,
+    onAway: rollCarriedDice,
+    enabled: canThrow,
+    ignoreControls: true,
+  });
+  return { interaction, canThrow, gesture };
+}
+
 export function RollCard({
   campaign,
   m,
@@ -181,13 +198,7 @@ export function RollCard({
   quickRoll?: boolean;
   quickRollActive?: boolean;
 } & Thrown) {
-  const interaction = useSharedRoll(campaign, m);
-  const gesture = useThrow({
-    onThrow: interaction.rerollAll,
-    onAway: rollCarriedDice,
-    enabled: interaction.allowed && !masked,
-    ignoreControls: true,
-  });
+  const { interaction, canThrow, gesture } = useThrowableRoll(campaign, m, !masked);
   if (masked) {
     return (
       <div className="roll-card" data-masked="true">
@@ -202,10 +213,10 @@ export function RollCard({
       aria-label={`${r.formula}${m.comment ? `, ${m.comment}` : ""}: ${r.total}`}
       data-quick-roll={quickRoll || undefined}
       data-quick-roll-active={quickRollActive || undefined}
-      data-throwable={interaction.allowed || undefined}
-      data-dice-target={interaction.allowed ? m.id : undefined}
+      data-throwable={canThrow || undefined}
+      data-dice-target={canThrow ? m.id : undefined}
       // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable so the roll can be rerolled by keyboard
-      tabIndex={interaction.allowed ? 0 : undefined}
+      tabIndex={canThrow ? 0 : undefined}
       {...gesture}
     >
       <div className="roll-head">
@@ -229,6 +240,7 @@ export function RollCard({
     </div>
   );
 }
+
 function RollTerms({
   roll,
   colour,
@@ -413,20 +425,17 @@ export function MoveCard({
   arriving,
   mine,
 }: { campaign: Campaign; m: MoveMessage; canAct: boolean } & Thrown) {
-  const interaction = useSharedRoll(campaign, original);
-  const gesture = useThrow({
-    onThrow: interaction.rerollAll,
-    onAway: rollCarriedDice,
-    enabled: interaction.allowed && !!original.roll,
-    ignoreControls: true,
-  });
+  const {
+    interaction,
+    canThrow: throwable,
+    gesture,
+  } = useThrowableRoll(campaign, original, !!original.roll);
   const m = displayedMove(
     campaign,
     original,
     interaction.snapshot?.edited ? interaction.snapshot.roll : undefined,
   );
   const result = resultOf(campaign, m);
-  const throwable = interaction.allowed && !!m.roll;
   return (
     <div
       className="roll-card move-card"

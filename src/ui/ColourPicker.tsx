@@ -28,9 +28,19 @@ import {
   type Oklch,
 } from "../lib/colour";
 
+type ColourRange = typeof USER_COLOUR_LIMITS | typeof GENERAL_COLOUR_LIMITS;
+
+/** A picked colour as OKLCH, ignoring its opacity, kept within `range`. */
+const oklchOf = (colour: Color, range: ColourRange) =>
+  clampOklch(hexToOklch(colour.toString("hex").toLowerCase()), range);
+
 /** A colour as the app stores it: #rrggbb, or #rrggbbaa with an opacity. */
-const format = (colour: Color, alpha: boolean) =>
-  colour.toString(alpha ? "hexa" : "hex").toLowerCase();
+const withOpacity = (hex: string, opacity: number, alpha: boolean) =>
+  alpha
+    ? `${hex}${Math.round(opacity * 255)
+        .toString(16)
+        .padStart(2, "0")}`
+    : hex;
 
 const hueStops = [0, 60, 120, 180, 240, 300, 360];
 
@@ -44,21 +54,13 @@ function hueSpectrum(colour: Oklch) {
   return `linear-gradient(90deg in oklch, ${stops.join(", ")})`;
 }
 
-function areaProxyColour(
-  colour: Oklch,
-  range: typeof USER_COLOUR_LIMITS | typeof GENERAL_COLOUR_LIMITS,
-  lastX: number,
-): Color {
+function areaProxyColour(colour: Oklch, range: ColourRange, lastX: number): Color {
   const { x, y } = oklchToGamutPosition(colour, range);
   const horizontal = maxSrgbChroma(colour.l, colour.h, range.maxChroma) === 0 ? lastX : x;
   return parseColor(`hsb(0, ${horizontal * 100}%, ${y * 100}%)`);
 }
 
-function drawGamut(
-  canvas: HTMLCanvasElement,
-  hue: number,
-  range: typeof USER_COLOUR_LIMITS | typeof GENERAL_COLOUR_LIMITS,
-) {
+function drawGamut(canvas: HTMLCanvasElement, hue: number, range: ColourRange) {
   const size = 192;
   canvas.width = canvas.height = size;
   const context = canvas.getContext("2d");
@@ -90,7 +92,7 @@ function OklchGamutArea({
   onChange,
 }: {
   colour: Oklch;
-  range: typeof USER_COLOUR_LIMITS | typeof GENERAL_COLOUR_LIMITS;
+  range: ColourRange;
   onChange: (colour: Oklch) => void;
 }) {
   const hue = colour.h;
@@ -228,13 +230,11 @@ export function ColourPicker({
 function useColourPicker(
   value: string,
   alpha: boolean,
-  range: typeof USER_COLOUR_LIMITS | typeof GENERAL_COLOUR_LIMITS,
+  range: ColourRange,
   onChange: (colour: string) => void,
 ) {
   const incoming = parseColor(value);
-  const [userColour, setUserColour] = useState(() =>
-    clampOklch(hexToOklch(format(incoming, false)), range),
-  );
+  const [userColour, setUserColour] = useState(() => oklchOf(incoming, range));
   const [opacity, setOpacity] = useState(() => incoming.getChannelValue("alpha"));
   const [lastIncoming, setLastIncoming] = useState(value);
   const [lastEmitted, setLastEmitted] = useState(value);
@@ -243,34 +243,29 @@ function useColourPicker(
     setLastIncoming(value);
     if (value === lastEmitted) setLastEmitted("");
     else {
-      setUserColour(clampOklch(hexToOklch(format(incoming, false)), range));
+      setUserColour(oklchOf(incoming, range));
       setOpacity(incoming.getChannelValue("alpha"));
     }
   }
 
   const visibleHex = oklchToSrgbHex(gamutMappedOklch(userColour, range));
-  const shownColour = alpha
-    ? `${visibleHex}${Math.round(opacity * 255)
-        .toString(16)
-        .padStart(2, "0")}`
-    : visibleHex;
+  const shownColour = withOpacity(visibleHex, opacity, alpha);
 
   const emitColour = (next: Oklch, nextOpacity = opacity) => {
     const limited = clampOklch(next, range);
     setUserColour(limited);
     setOpacity(nextOpacity);
-    const hex = oklchToSrgbHex(gamutMappedOklch(limited, range));
-    const output = alpha
-      ? `${hex}${Math.round(nextOpacity * 255)
-          .toString(16)
-          .padStart(2, "0")}`
-      : hex;
+    const output = withOpacity(
+      oklchToSrgbHex(gamutMappedOklch(limited, range)),
+      nextOpacity,
+      alpha,
+    );
     setLastEmitted(output);
     if (output !== value) onChange(output);
   };
 
   const changeHex = (typed: Color) => {
-    emitColour(clampOklch(hexToOklch(format(typed, false)), range), typed.getChannelValue("alpha"));
+    emitColour(oklchOf(typed, range), typed.getChannelValue("alpha"));
   };
   return { userColour, opacity, visibleHex, shownColour, emitColour, changeHex };
 }

@@ -134,7 +134,7 @@ export function entryIcon(kind: EntryKind, name?: string): Icon {
 
 /** SVG markup for the same bundled icon used in lists, ready for a canvas texture. */
 export function entryIconSvg(name?: string): string {
-  const Icon = (name && ENTRY_ICONS[name as EntryIconName]) || ENTRY_ICONS.bag;
+  const Icon = entryIcon("item", name);
   const host = document.createElement("span");
   host.innerHTML = renderToStaticMarkup(<Icon size={128} />);
   const svg = host.querySelector("svg");
@@ -146,6 +146,5 @@ export function entryIconSvg(name?: string): string {
   svg.style.color = "#ffffff";
   for (const shape of svg.querySelectorAll('[fill="currentColor"]'))
     shape.setAttribute("fill", "#ffffff");
-  const markup = svg.outerHTML;
-  return markup;
+  return svg.outerHTML;
 }

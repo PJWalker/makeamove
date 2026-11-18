@@ -1,5 +1,4 @@
-import type { EntityGraphic, EntityGraphicRef } from "../media/images";
-import type { BlobRef } from "../media/images";
+import type { BlobRef, EntityGraphic, EntityGraphicRef } from "../media/images";
 
 /*
  * Scene elements as plain values. Each is stored as a Y.Map of these fields
@@ -91,13 +90,13 @@ export interface DrawingElement extends Base {
  */
 export type ShapeKind = "rect" | "circle" | "line" | "cone" | "polygon";
 
+/** The shapes dragged out corner to corner or from an origin: every kind but the polygon, placed a corner at a time. */
+export type DraggedShapeKind = Exclude<ShapeKind, "polygon">;
+
 /**
  * The outline a shape kind makes. A polygon carries its corners, flat
  * [x, y, …] relative to the centre at the size bw × bh.
  */
-/** The shapes dragged out corner to corner or from an origin: every kind but the polygon, placed a corner at a time. */
-export type DraggedShapeKind = Exclude<ShapeKind, "polygon">;
-
 export type ShapeGeometry =
   | { shape: DraggedShapeKind }
   | { shape: "polygon"; points: number[]; bw: number; bh: number };

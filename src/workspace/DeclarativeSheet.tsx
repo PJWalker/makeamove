@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from "react";
 import { statBonus } from "../features/characters/store";
+import type { ConditionState } from "../features/characters/sheet";
 import type { CharacterView } from "../features/characters/types";
 import { conditionColour } from "../features/combat/pipColours";
 import type { Campaign } from "../campaign/campaign";
@@ -422,7 +423,7 @@ function Stats({
                 className="stat-deb condition-status"
                 data-state={state}
                 style={{ "--condition-colour": conditionColour(system, tied.id) }}
-                aria-label={`${tied.name}: ${state}. ${nextState === "clear" ? "Clear" : nextState === "marked" ? "Mark" : "Lock"} condition`}
+                aria-label={`${tied.name}: ${state}. ${CONDITION_VERB[nextState]} condition`}
                 title={`${tied.name}: ${state}`}
                 disabled={!editable}
                 onClick={() => cycleCondition(tied.id, nextState)}
@@ -453,6 +454,19 @@ function Stats({
   );
 }
 
+/** A lockable condition cycles clear, marked, locked, and back. */
+const NEXT_CONDITION_STATE: Record<ConditionState, ConditionState> = {
+  clear: "marked",
+  marked: "locked",
+  locked: "clear",
+};
+/** What pressing a condition does, by the state it moves to. */
+const CONDITION_VERB: Record<ConditionState, string> = {
+  clear: "Clear",
+  marked: "Mark",
+  locked: "Lock",
+};
+
 function useStats({
   system,
   c,
@@ -481,10 +495,9 @@ function useStats({
   const rows = system.stats.map((stat) => {
     const tied = system.conditions.find((condition) => condition.stat === stat.id);
     const has = !!tied && conditionIds.has(tied.id);
-    const state: "clear" | "marked" | "locked" =
-      tied && lockedConditionIds.has(tied.id) ? "locked" : has ? "marked" : "clear";
-    const nextState: "clear" | "marked" | "locked" =
-      state === "clear" ? "marked" : state === "marked" ? "locked" : "clear";
+    let state: ConditionState = has ? "marked" : "clear";
+    if (tied && lockedConditionIds.has(tied.id)) state = "locked";
+    const nextState = NEXT_CONDITION_STATE[state];
     const trigger = menuTrigger((x, y) => {
       if (!editable) return;
       const min = stat.min ?? 1;

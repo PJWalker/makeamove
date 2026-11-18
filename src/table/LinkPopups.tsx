@@ -2,7 +2,8 @@ import { plainText } from "../data/richText";
 import { MoveBody } from "../workspace/MoveBody";
 import type { ReactNode } from "react";
 import { useEffect, useLayoutEffect, useMemo, useState } from "react";
-import { canEdit, getCharacter, actingCharacterId, systemOf } from "../features/characters/api";
+import { getCharacter, systemOf } from "../features/characters/api";
+import { useActingCharacter } from "./useActingCharacter";
 import { getNote } from "../features/notes/api";
 import { linkLabel } from "../features/notes/targets";
 import type { Campaign } from "../campaign/campaign";
@@ -111,14 +112,6 @@ function LinkDialog({
 }
 
 type PopupProps = { campaign: Campaign; link: LinkRef };
-
-/** The character this device is playing, if they can change it: gear and moves go to them. */
-function useActingCharacter(campaign: Campaign) {
-  const me = useQuery(campaign.characters, () =>
-    getCharacter(campaign, actingCharacterId(campaign)),
-  );
-  return { me, canAct: !!me && canEdit(campaign, me) };
-}
 
 /** What a link to a gear item or move offers from its menu: its action, and pinning it. */
 function useEntryMenu(link: LinkRef, actionId: string, title: string) {

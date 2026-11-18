@@ -68,6 +68,8 @@ function lift(element: HTMLElement) {
 
 /** How far (CSS px) a picked-up element must be carried for letting go to throw it. */
 const THROW_DISTANCE = 128;
+/** How far (CSS px) a press may wander and still count as a tap. */
+const TAP_SLOP = 6;
 
 export function useThrow({
   onThrow,
@@ -101,9 +103,7 @@ export function useThrow({
     return current;
   };
   useEffect(() => {
-    const cancel = () => {
-      release();
-    };
+    const cancel = () => void release();
     window.addEventListener("blur", cancel);
     return () => {
       window.removeEventListener("blur", cancel);
@@ -146,7 +146,7 @@ export function useThrow({
       const offsetY = event.clientY - current.originY;
       current.carrier.style.translate = `${offsetX}px ${offsetY}px`;
       const distance = Math.hypot(offsetX, offsetY);
-      current.moved ||= distance >= 6;
+      current.moved ||= distance >= TAP_SLOP;
       const away = distance >= THROW_DISTANCE;
       if (away && !current.back)
         current.back = onAway?.(current.element, current.carrier) ?? (() => {});
@@ -162,7 +162,7 @@ export function useThrow({
       release();
       event.stopPropagation();
       if (enabled && distance >= THROW_DISTANCE) onThrow();
-      else if (enabled && !current.moved && distance < 6) onTap?.();
+      else if (enabled && !current.moved && distance < TAP_SLOP) onTap?.();
     },
     onPointerCancel() {
       release();

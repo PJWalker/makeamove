@@ -335,10 +335,17 @@ const isId = objectOf({ id: isString });
 const message = (ctx: CampaignContext, id: string): ChatMessage | undefined =>
   ctx.campaign.chat.messages.value.find((m) => m.id === id);
 const me = () => device.value.id;
-const works = (ctx: CampaignContext, id: string): Availability => {
+/** Whether the player may work a message's controls: its dice, timer or counter. */
+const works = (ctx: CampaignContext, { id }: { id: string }): Availability => {
   const m = message(ctx, id);
   return (!!m && canWork(m, me(), ctx.isGm())) || "Not yours to change";
 };
+const ownMessage = (ctx: CampaignContext, { id }: { id: string }): Availability => {
+  const m = message(ctx, id);
+  return (!!m && canEditMessage(m, me())) || "Not your message";
+};
+const systemCounter = (ctx: CampaignContext, id: string) =>
+  systemOf(ctx.campaign).counters?.find((c) => c.id === id);
 
 export const editMessage = command<{ id: string }>({
   id: "message.edit",
@@ -347,10 +354,7 @@ export const editMessage = command<{ id: string }>({
   icon: IconRename,
   section: "edit",
   transact: false,
-  permission: (ctx, { id }) => {
-    const m = message(ctx, id);
-    return (!!m && canEditMessage(m, me())) || "Not your message";
-  },
+  permission: ownMessage,
   menu: { chatMessage: (_, { id }) => [{ params: { id } }] },
   run: (ctx, { id }) => ctx.table.editingMessage.set(id),
 });
@@ -359,10 +363,7 @@ export const saveMessageEdit = command<{ id: string; content: ChatContent }>({
   id: "message.saveEdit",
   params: objectOf({ id: isString, content: isContent }),
   title: "Save Edit",
-  permission: (ctx, { id }) => {
-    const m = message(ctx, id);
-    return (!!m && canEditMessage(m, me())) || "Not your message";
-  },
+  permission: ownMessage,
   run: ({ campaign }, { id, content }) => saveEdit(campaign, id, content),
 });
 
@@ -400,7 +401,7 @@ export const timerControl = command<{ id: string; action: TimerAction }>({
   id: "message.timer",
   params: objectOf({ id: isString, action: oneOf("restart", "stop", "resume") }),
   title: (_, { action }) => ({ restart: "Restart", stop: "Stop", resume: "Resume" })[action],
-  permission: (ctx, { id }) => works(ctx, id),
+  permission: works,
   run: (ctx, { id, action }) => {
     const m = message(ctx, id);
     if (m?.kind === "timer") workTimer(ctx.campaign, m, action);
@@ -411,7 +412,7 @@ export const setCounterValue = command<{ id: string; value: number }>({
   id: "message.setCounter",
   params: objectOf({ id: isString, value: isNumber }),
   title: "Change Counter",
-  permission: (ctx, { id }) => works(ctx, id),
+  permission: works,
   undoGroup: ({ id }) => `counter ${id}`,
   run: (ctx, { id, value }) => {
     const m = message(ctx, id);
@@ -423,8 +424,7 @@ export const setCounterValue = command<{ id: string; value: number }>({
 export const showSystemCounter = command<{ counter: string }>({
   id: "systemCounter.show",
   params: objectOf({ counter: isString }),
-  title: (ctx, { counter }) =>
-    `Show ${systemOf(ctx.campaign).counters?.find((c) => c.id === counter)?.label ?? "Counter"}`,
+  title: (ctx, { counter }) => `Show ${systemCounter(ctx, counter)?.label ?? "Counter"}`,
   aliases: ["count"],
   source: (ctx) => systemOf(ctx.campaign).name,
   permission: "gm",
@@ -435,7 +435,7 @@ export const showSystemCounter = command<{ counter: string }>({
       aliases: [c.label.toLowerCase()],
     })),
   run: (ctx, { counter }) => {
-    const def = systemOf(ctx.campaign).counters?.find((c) => c.id === counter);
+    const def = systemCounter(ctx, counter);
     return def && ensureSystemCounter(ctx.campaign, def);
   },
 });
@@ -448,7 +448,7 @@ export const bumpSystemCounter = command<{ counter: string; by: number }>({
   permission: "gm",
   undoGroup: false,
   run: async (ctx, { counter, by }) => {
-    const def = systemOf(ctx.campaign).counters?.find((c) => c.id === counter);
+    const def = systemCounter(ctx, counter);
     const m = def && (await ensureSystemCounter(ctx.campaign, def));
     if (m?.kind === "counter") setCounter(ctx.campaign, m, counterValue(ctx.campaign, m) + by);
   },
@@ -464,7 +464,7 @@ export const reroll = command<{ id: string; term?: number | undefined; die?: num
   id: "roll.reroll",
   params: objectOf({ id: isString, term: optional(isNumber), die: optional(isNumber) }),
   title: (_, { die }) => (die === undefined ? "Reroll All" : "Reroll"),
-  permission: (ctx, { id }) => works(ctx, id),
+  permission: works,
   undoGroup: false,
   menu: { chatMessage: (ctx, { id }) => (rollOf(ctx, id) ? [{ params: { id } }] : []) },
   run: (ctx, { id, term, die }) => {
@@ -480,7 +480,7 @@ export const toggleDie = command<{ id: string; term: number; die: number }>({
   id: "roll.toggleDie",
   params: objectOf({ id: isString, term: isNumber, die: isNumber }),
   title: "Keep or Drop Die",
-  permission: (ctx, { id }) => works(ctx, id),
+  permission: works,
   run: (ctx, { id, term, die }) => {
     const source = rollOf(ctx, id);
     if (source) toggleRollDie(ctx.campaign.messageState, id, source, term, die);
@@ -492,7 +492,7 @@ export const addToChatRoll = command<{ id: string; pick: TrayPick }>({
   id: "roll.add",
   params: objectOf({ id: isString, pick: (v): v is TrayPick => isObject(v) }),
   title: "Add to Roll",
-  permission: (ctx, { id }) => works(ctx, id),
+  permission: works,
   undoGroup: false,
   run: ({ campaign }, { id, pick }) => addToRoll(campaign, id, pick),
 });

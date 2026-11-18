@@ -54,8 +54,10 @@ interface LocalState {
   trailN?: number;
 }
 
-interface RemoteState extends LocalState {
+/** A peer's awareness state: who they are, and what they're doing. */
+interface PeerState {
   user?: { id: string; name: string; colour?: string };
+  presence?: LocalState;
 }
 
 /**
@@ -177,46 +179,49 @@ export class Presence {
     if (!states) return marks;
     for (const [client, raw] of states) {
       if (client === this.awareness!.clientID) continue;
-      const user = (raw as { user?: RemoteState["user"] }).user;
-      const p = (raw as { presence?: LocalState }).presence;
+      const { user, presence: p } = raw as PeerState;
       if (!user || !p || p.scene !== scene) continue;
-      let ping: PresenceMark["ping"] = null;
-      if (p.ping) {
-        const key = String(client);
-        let s = this.seen.get(key);
-        if (!s || s.n !== p.ping.n) {
-          s = { n: p.ping.n, startedAt: now };
-          this.seen.set(key, s);
-        }
-        if (now - s.startedAt < PING_MS)
-          ping = { p: { x: p.ping.x, y: p.ping.y }, startedAt: s.startedAt };
-      }
-      let trail: PresenceMark["trail"] = null;
-      if (p.trail?.length) {
-        const key = String(client);
-        let seen = this.trailSeen.get(key);
-        if (!seen || seen.n !== p.trailN) {
-          seen = { n: p.trailN, at: now };
-          this.trailSeen.set(key, seen);
-        }
-        trail = [];
-        for (let i = 0; i + 2 < p.trail.length; i += 3) {
-          const t = seen.at - p.trail[i + 2]!;
-          if (now - t < TRAIL_MS) trail.push({ x: p.trail[i]!, y: p.trail[i + 1]!, t });
-        }
-      }
+      const key = String(client);
       marks.push({
         id: user.id,
         name: user.name,
         colour: user.colour ?? colourFor(user.id),
         self: false,
         cursor: p.cursor,
-        ping,
+        ping: this.remotePing(key, p, now),
         ruler: p.ruler,
         targets: p.targets ?? [],
-        trail,
+        trail: this.remoteTrail(key, p, now),
       });
     }
     return marks;
+  }
+
+  /** A peer's ping while it ripples, timed from when it first reached us. */
+  private remotePing(key: string, p: LocalState, now: number): PresenceMark["ping"] {
+    if (!p.ping) return null;
+    let seen = this.seen.get(key);
+    if (!seen || seen.n !== p.ping.n) {
+      seen = { n: p.ping.n, startedAt: now };
+      this.seen.set(key, seen);
+    }
+    if (now - seen.startedAt >= PING_MS) return null;
+    return { p: { x: p.ping.x, y: p.ping.y }, startedAt: seen.startedAt };
+  }
+
+  /** A peer's laser trail, its points aged from when the latest update reached us. */
+  private remoteTrail(key: string, p: LocalState, now: number): PresenceMark["trail"] {
+    if (!p.trail?.length) return null;
+    let seen = this.trailSeen.get(key);
+    if (!seen || seen.n !== p.trailN) {
+      seen = { n: p.trailN, at: now };
+      this.trailSeen.set(key, seen);
+    }
+    const trail: { x: number; y: number; t: number }[] = [];
+    for (let i = 0; i + 2 < p.trail.length; i += 3) {
+      const t = seen.at - p.trail[i + 2]!;
+      if (now - t < TRAIL_MS) trail.push({ x: p.trail[i]!, y: p.trail[i + 1]!, t });
+    }
+    return trail;
   }
 }

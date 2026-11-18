@@ -200,8 +200,6 @@ export function endConcentration(campaign: Campaign, characterId: string) {
   setField(campaign, characterId, "concentration", undefined);
 }
 
-/** Pip colours for conditions, by their order in the system's list. */
-
 /**
  * What each token shows of the fight: a pip per condition (and one for
  * concentration) on a linked token, and a ring on the token whose turn it

@@ -7,7 +7,7 @@ import type { EffectElement, SceneElement, Transform } from "../types";
 import {
   blocked,
   blockingSegments,
-  distanceToSegment,
+  segmentDistance,
   lightReach,
   type Segment,
   sightSegments,
@@ -131,7 +131,7 @@ export class LightingLayer {
           radius: Math.min(t.w, t.h) / 2,
           falloff: { bright: el.bright, dim: el.dim },
           box: { x: t.x - reach, y: t.y - reach, w: reach * 2, h: reach * 2 },
-          walls: walls.filter((w) => distanceToSegment(centre, w) < reach),
+          walls: walls.filter((w) => segmentDistance(centre, w) < reach),
           blockers,
           colour: ({ ...el, ...t } as typeof el).colour,
         };

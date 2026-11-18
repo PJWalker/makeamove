@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState, type ComponentType } from "react";
 import { IconAllowBack, IconRemoveMember } from "../ui/icons";
 import type { Campaign, MemberView } from "../campaign/campaign";
+import type { Role } from "../campaign/types";
 import { device } from "../platform/device";
 import { useQuery } from "../ui/useQuery";
 import { Avatar } from "../ui/Avatar";
@@ -179,6 +180,8 @@ function MemberList({ campaign }: { campaign: Campaign }) {
   );
 }
 
+const ROLE_LABELS: Record<Role, string> = { gm: "GM", player: "Player", observer: "Observer" };
+
 /** One member, with the GM's remove control and its confirmation. */
 function MemberRow({
   campaign,
@@ -214,7 +217,7 @@ function MemberRow({
         {m.id === me && <span className="muted"> (you)</span>}
       </span>
       <span className="role-badge" data-role={m.role}>
-        {m.role === "gm" ? "GM" : m.role === "observer" ? "Observer" : "Player"}
+        {ROLE_LABELS[m.role]}
       </span>
       {canRemove && (
         <Button variant="icon" label={`Remove ${m.name}`} onClick={() => setConfirming(true)}>

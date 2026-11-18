@@ -31,8 +31,11 @@ function UseControls({
   );
 }
 
+/** Whether an item has no uses left. */
+const usedUp = (item: ItemUseProps["item"]) => (item.usesLeft ?? 0) <= 0;
+
 /** A labelled selector over a list of ids. */
-function ConditionSelect({
+function OptionSelect({
   label,
   value,
   options,
@@ -41,7 +44,7 @@ function ConditionSelect({
 }: {
   label: string;
   value: string;
-  options: readonly { id: string; label: string }[];
+  options: readonly { id: string; label: string; disabled?: boolean }[];
   disabled: boolean;
   onChange: (id: string) => void;
 }) {
@@ -54,7 +57,7 @@ function ConditionSelect({
         onChange={(event) => onChange(event.currentTarget.value)}
       >
         {options.map((entry) => (
-          <option key={entry.id} value={entry.id}>
+          <option key={entry.id} value={entry.id} disabled={entry.disabled}>
             {entry.label}
           </option>
         ))}
@@ -72,7 +75,7 @@ function WandUse({ campaign, character, item, editable }: ItemUseProps) {
   const available = systemOf(campaign).conditions.flatMap((entry) =>
     locked.has(entry.id) ? [] : [{ id: entry.id, label: entry.name }],
   );
-  const disabled = !editable || (item.usesLeft ?? 0) <= 0;
+  const disabled = !editable || usedUp(item);
   const markCondition = marking && available.length > 0;
   const chosen = condition || available[0]?.id || "";
   return (
@@ -80,23 +83,24 @@ function WandUse({ campaign, character, item, editable }: ItemUseProps) {
       disabled={disabled}
       canUse={!marking || available.length > 0}
       effect={
-        <label className="field">
-          Effect
-          <select
-            value={marking ? "mark-condition" : "drain"}
-            disabled={disabled}
-            onChange={(event) => setMarking(event.currentTarget.value === "mark-condition")}
-          >
-            <option value="drain">Drain the wand until camp</option>
-            <option value="mark-condition" disabled={!available.length}>
-              Mark or lock a Condition instead
-            </option>
-          </select>
-        </label>
+        <OptionSelect
+          label="Effect"
+          value={marking ? "mark-condition" : "drain"}
+          options={[
+            { id: "drain", label: "Drain the wand until camp" },
+            {
+              id: "mark-condition",
+              label: "Mark or lock a Condition instead",
+              disabled: !available.length,
+            },
+          ]}
+          disabled={disabled}
+          onChange={(id) => setMarking(id === "mark-condition")}
+        />
       }
       extra={
         markCondition && (
-          <ConditionSelect
+          <OptionSelect
             label="Condition"
             value={chosen}
             options={available}
@@ -124,31 +128,28 @@ function PotionUse({ campaign, character, item, editable }: ItemUseProps) {
   const locked = character.lockedConditions ?? [];
   const missingHp =
     (derive(character, systemOf(campaign)).values["maxHp"] ?? 0) > (character.resources["hp"] ?? 0);
-  const disabled = !editable || (item.usesLeft ?? 0) <= 0;
+  const disabled = !editable || usedUp(item);
   const chosen = condition || locked[0] || "";
   return (
     <UseControls
       disabled={disabled}
       canUse={clearing ? locked.length > 0 : missingHp}
       effect={
-        <label className="field">
-          Effect
-          <select
-            value={clearing ? "clear-locked" : "heal"}
-            disabled={disabled}
-            onChange={(event) => setClearing(event.currentTarget.value === "clear-locked")}
-          >
-            <option value="heal">Recover half lost HP</option>
-            <option value="clear-locked" disabled={!locked.length}>
-              Clear a locked Condition
-            </option>
-          </select>
-        </label>
+        <OptionSelect
+          label="Effect"
+          value={clearing ? "clear-locked" : "heal"}
+          options={[
+            { id: "heal", label: "Recover half lost HP" },
+            { id: "clear-locked", label: "Clear a locked Condition", disabled: !locked.length },
+          ]}
+          disabled={disabled}
+          onChange={(id) => setClearing(id === "clear-locked")}
+        />
       }
       extra={
         clearing &&
         locked.length > 0 && (
-          <ConditionSelect
+          <OptionSelect
             label="Locked Condition"
             value={chosen}
             options={locked.map((id) => ({ id, label: id }))}
@@ -180,7 +181,7 @@ export function Dw2ItemUse(props: ItemUseProps) {
   if (use === "healing-potion") return <PotionUse {...props} />;
   return (
     <Button
-      disabled={!editable || (item.usesLeft ?? 0) <= 0}
+      disabled={!editable || usedUp(item)}
       onClick={() => ctx.execute(useGear, { characterId: character.id, itemId: item.id })}
     >
       Use

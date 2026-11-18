@@ -54,34 +54,20 @@ export function checkSystem(s: GameSystem): string[] {
       seen.add(id);
     }
   };
-  unique(
-    "stats",
-    s.stats.map((x) => x.id),
-  );
-  unique(
-    "actions",
-    s.actions.map((x) => x.id),
-  );
-  unique(
-    "items",
-    s.items.map((x) => x.id),
-  );
-  unique(
-    "conditions",
-    s.conditions.map((x) => x.id),
-  );
-  unique(
-    "resources",
-    s.resources.map((x) => x.id),
-  );
-  unique(
-    "character fields",
-    s.characterData.map((x) => x.id),
-  );
-  unique(
-    "sizes",
-    s.sizes.map((x) => x.id),
-  );
+  const lists: [string, readonly { id: string }[]][] = [
+    ["stats", s.stats],
+    ["actions", s.actions],
+    ["items", s.items],
+    ["conditions", s.conditions],
+    ["resources", s.resources],
+    ["character fields", s.characterData],
+    ["sizes", s.sizes],
+  ];
+  for (const [what, list] of lists)
+    unique(
+      what,
+      list.map((x) => x.id),
+    );
   for (const z of s.sizes)
     if (!(z.cells > 0)) problems.push(`${z.name}: a size needs more than 0 cells.`);
 

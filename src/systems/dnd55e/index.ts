@@ -63,11 +63,37 @@ export const proficiencyAt = (level: number) => 2 + Math.floor((Math.max(1, leve
 
 /** Cantrip dice by character level: one more at 5, 11 and 17. */
 const cantripDice = (level: number) =>
-  1 + (level >= 5 ? 1 : 0) + (level >= 11 ? 1 : 0) + (level >= 17 ? 1 : 0);
+  stepped(level, [
+    [1, 1],
+    [5, 2],
+    [11, 3],
+    [17, 4],
+  ]);
 
 /** By level, from a table of (from-level, value) steps: `stepped(7, [[1, 2], [3, 3], [6, 4]])` is 4. */
-const stepped = (level: number, steps: [number, number][]) =>
-  steps.reduce((v, [from, n]) => (level >= from ? n : v), 0);
+function stepped(level: number, steps: [number, number][]): number {
+  return steps.reduce((v, [from, n]) => (level >= from ? n : v), 0);
+}
+
+/** How many cantrips a class knows at a level: one more at 4 and 10. */
+function cantripsKnown(classId: string, level: number): number {
+  let base: number;
+  switch (classId) {
+    case "paladin":
+    case "ranger":
+      return 0;
+    case "cleric":
+    case "wizard":
+      base = 3;
+      break;
+    case "sorcerer":
+      base = 4;
+      break;
+    default:
+      base = 2;
+  }
+  return base + (level >= 4 ? 1 : 0) + (level >= 10 ? 1 : 0);
+}
 
 const classOf = (c: CharacterView): DndClass =>
   CLASSES.find((k) => k.id === c.data["classId"]) ?? CLASSES[0]!;
@@ -100,8 +126,9 @@ const levelOf = (c: CharacterView) => clampLevel(Number(c.data["level"] ?? 1));
 
 /** Spell slots by spell level (1–9) for a class at a level; Pact Magic is apart. */
 export function spellSlots(cls: DndClass, level: number): number[] {
-  const casterLevel =
-    cls.caster === "full" ? level : cls.caster === "half" ? Math.ceil(level / 2) : 0;
+  let casterLevel = 0;
+  if (cls.caster === "full") casterLevel = level;
+  else if (cls.caster === "half") casterLevel = Math.ceil(level / 2);
   return casterLevel ? (FULL_CASTER_SLOTS[clampLevel(casterLevel) - 1] ?? []) : [];
 }
 
@@ -145,14 +172,16 @@ const spellOptions = SPELLS_ALL.map((spell) => ({
 const selectedIds = (character: CharacterView, field: string, max = Infinity) =>
   commaListOf(character.data[field]).slice(0, max);
 
-const criticalThreshold = (context?: RollContext) =>
-  context?.action.category === "attack" &&
-  context.character?.data["subclass"] === "champion" &&
-  levelOf(context.character) >= 3
-    ? levelOf(context.character) >= 15
-      ? 18
-      : 19
-    : 20;
+/** The lowest d20 that crits: a Champion's attacks crit on 19 from level 3, and 18 from 15. */
+function criticalThreshold(context?: RollContext): number {
+  const character = context?.character;
+  if (context?.action.category !== "attack" || character?.data["subclass"] !== "champion")
+    return 20;
+  const level = levelOf(character);
+  if (level >= 15) return 18;
+  if (level >= 3) return 19;
+  return 20;
+}
 
 function startingSpells(classId: string) {
   const recommendations: Record<string, string[]> = {
@@ -180,16 +209,7 @@ function startingSpells(classId: string) {
         : "",
     knownCantrips: formatCommaList(
       SPELLS_ALL.filter((spell) => spell.classes.includes(classId) && !spell.level)
-        .slice(
-          0,
-          ["cleric", "wizard"].includes(classId)
-            ? 3
-            : classId === "sorcerer"
-              ? 4
-              : ["paladin", "ranger"].includes(classId)
-                ? 0
-                : 2,
-        )
+        .slice(0, cantripsKnown(classId, 1))
         .map((spell) => spell.id),
     ),
   };
@@ -445,9 +465,11 @@ const spellRoll = (s: Spell, crit: boolean): FollowUpDef => {
   };
 };
 
-const SPELL_ROLLS: FollowUpDef[] = SPELLS_ALL.flatMap((s) =>
-  !s.roll ? [] : s.attack ? [spellRoll(s, false), spellRoll(s, true)] : [spellRoll(s, false)],
-);
+/** Each spell's dice, and a spell attack's critical dice too. */
+const SPELL_ROLLS: FollowUpDef[] = SPELLS_ALL.flatMap((s) => {
+  if (!s.roll) return [];
+  return s.attack ? [spellRoll(s, false), spellRoll(s, true)] : [spellRoll(s, false)];
+});
 
 /** Spells with a save and no single target hit everyone in an area. */
 const inArea = (area?: AreaSpec): TargetSpec => ({
@@ -980,12 +1002,7 @@ export const dnd55e: GameSystem = {
         preparedMax: npc ? 0 : (PREPARATION_COUNTS[cls.id]?.[level - 1] ?? 0),
         actionSurgeMax: is("fighter", 2) ? (level >= 17 ? 2 : 1) : 0,
         innateSorceryMax: is("sorcerer") ? 2 : 0,
-        cantripsMax:
-          !npc && cls.casting && !["paladin", "ranger"].includes(cls.id)
-            ? (["cleric", "wizard"].includes(cls.id) ? 3 : cls.id === "sorcerer" ? 4 : 2) +
-              (level >= 4 ? 1 : 0) +
-              (level >= 10 ? 1 : 0)
-            : 0,
+        cantripsMax: !npc && cls.casting ? cantripsKnown(cls.id, level) : 0,
         ...Object.fromEntries(SLOT_LEVELS.map((n) => [`slots${n}`, slots[n - 1] ?? 0])),
         pactSlots: pact.slots,
         pactLevel: pact.level,
@@ -1088,14 +1105,18 @@ export const dnd55e: GameSystem = {
     const traits = new Set(
       SPECIES_ACTIONS.flatMap((a) => (a.species === c.data["species"] ? [a.id] : [])),
     );
-    const has = (a: ActionDef) =>
-      a.category === "class"
-        ? features.has(a.id)
-        : a.category === "spell"
-          ? spells.has(a.id)
-          : a.category === "species"
-            ? traits.has(a.id)
-            : true;
+    const has = (a: ActionDef) => {
+      switch (a.category) {
+        case "class":
+          return features.has(a.id);
+        case "spell":
+          return spells.has(a.id);
+        case "species":
+          return traits.has(a.id);
+        default:
+          return true;
+      }
+    };
     return ACTIONS_ALL.filter((a) => has(a) || granted.has(a.id));
   },
   tokenStats: (c, d) => [hpTokenStat(c, valueOf(d.values, "maxHp"))],

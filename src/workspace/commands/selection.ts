@@ -136,65 +136,65 @@ export const deleteSelection = selectionCommand(
   { available: (els) => !els.every((el) => el.locked) || "Locked" },
 );
 
-const one = (ctx: CampaignContext, p: Selection | undefined) => {
+/** The one selected element, if just one is selected and it `fits`. */
+const one = (
+  ctx: CampaignContext,
+  p: Selection | undefined,
+  fits: (el: SceneElement) => boolean,
+) => {
   const els = chosen(ctx, p);
-  return els.length === 1 ? els[0]! : null;
+  return els.length === 1 && fits(els[0]!) ? els[0]! : null;
 };
 
-export const tokenOptions = command<Selection | undefined>({
-  id: "token.options",
-  params: isSelectionOrNow,
-  title: "Token Options…",
-  icon: IconRename,
-  section: "open",
-  transact: false,
-  available: (ctx, p) => one(ctx, p)?.type === "token" || "Select one token",
-  menu: {
-    selection: (ctx, t) => (one(ctx, t)?.type === "token" ? [{ params: t }] : []),
-  },
-  run: (ctx, p) => {
-    const el = one(ctx, p);
-    if (el?.type === "token") open(ctx)?.tokenOptions(el.id, "token");
-  },
-});
-
-export const useAsToken = command<Selection | undefined>({
-  id: "map.useAsToken",
-  params: isSelectionOrNow,
-  title: "Use as Token",
-  icon: IconToken,
-  section: "act",
-  transact: false,
-  available: (ctx, p) => one(ctx, p)?.type === "map" || "Select one map",
-  menu: { selection: (ctx, t) => (one(ctx, t)?.type === "map" ? [{ params: t }] : []) },
-  run: (ctx, p) => {
-    const el = one(ctx, p);
-    if (el) open(ctx)?.controller.convert(el.id, "token");
-  },
-});
-
-export const useAsMap = command<Selection | undefined>({
-  id: "token.useAsMap",
-  params: isSelectionOrNow,
-  title: "Use as Map",
-  icon: IconMap,
-  section: "act",
-  transact: false,
-  available: (ctx, p) => {
-    const el = one(ctx, p);
-    return (el?.type === "token" && !!el.image) || "Select one token with an image";
-  },
-  menu: {
-    selection: (ctx, t) => {
-      const el = one(ctx, t);
-      return el?.type === "token" && el.image ? [{ params: t }] : [];
+/** Something done with one selected element of a kind; its menu lists it only for that. */
+const oneElementCommand = (
+  id: string,
+  look: { title: string; icon: Icon },
+  section: "open" | "act",
+  fits: (el: SceneElement) => boolean,
+  unfit: string,
+  act: (ctx: CampaignContext, id: string) => void,
+) =>
+  command<Selection | undefined>({
+    id,
+    params: isSelectionOrNow,
+    ...look,
+    section,
+    transact: false,
+    available: (ctx, p) => !!one(ctx, p, fits) || unfit,
+    menu: { selection: (ctx, t) => (one(ctx, t, fits) ? [{ params: t }] : []) },
+    run: (ctx, p) => {
+      const el = one(ctx, p, fits);
+      if (el) act(ctx, el.id);
     },
-  },
-  run: (ctx, p) => {
-    const el = one(ctx, p);
-    if (el) open(ctx)?.controller.convert(el.id, "map");
-  },
-});
+  });
+
+export const tokenOptions = oneElementCommand(
+  "token.options",
+  { title: "Token Options…", icon: IconRename },
+  "open",
+  (el) => el.type === "token",
+  "Select one token",
+  (ctx, id) => open(ctx)?.tokenOptions(id, "token"),
+);
+
+export const useAsToken = oneElementCommand(
+  "map.useAsToken",
+  { title: "Use as Token", icon: IconToken },
+  "act",
+  (el) => el.type === "map",
+  "Select one map",
+  (ctx, id) => open(ctx)?.controller.convert(id, "token"),
+);
+
+export const useAsMap = oneElementCommand(
+  "token.useAsMap",
+  { title: "Use as Map", icon: IconMap },
+  "act",
+  (el) => el.type === "token" && !!el.image,
+  "Select one token with an image",
+  (ctx, id) => open(ctx)?.controller.convert(id, "map"),
+);
 
 // An empty place on the scene
 
@@ -204,6 +204,9 @@ const isPlace = objectOf({
   at: (v): v is { x: number; y: number } => isObject(v),
 });
 
+const sceneOpen = (ctx: CampaignContext, { sceneId }: Place) =>
+  !!open(ctx, sceneId) || "Open the scene first";
+
 export const addTokenHere = command<Place>({
   id: "canvas.addToken",
   params: isPlace,
@@ -211,7 +214,7 @@ export const addTokenHere = command<Place>({
   icon: IconAdd,
   section: "open",
   transact: false,
-  available: (ctx, { sceneId }) => !!open(ctx, sceneId) || "Open the scene first",
+  available: sceneOpen,
   menu: { canvas: (_, t) => [{ params: t }] },
   run: (ctx, { sceneId, at }) => open(ctx, sceneId)?.controller.addToken(at),
 });
@@ -223,7 +226,7 @@ export const addImageHere = command<Place>({
   icon: IconImage,
   section: "open",
   transact: false,
-  available: (ctx, { sceneId }) => !!open(ctx, sceneId) || "Open the scene first",
+  available: sceneOpen,
   menu: { canvas: (_, t) => [{ params: t }] },
   run: (ctx, { sceneId, at }) => open(ctx, sceneId)?.importImagesAt(at),
 });

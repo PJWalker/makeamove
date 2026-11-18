@@ -20,11 +20,7 @@ function PaneToggle({
 }) {
   const split = useQuery(mode) === "split";
   const narrow = useQuery(tooNarrow);
-  const label = narrow
-    ? `One at a time (widen the panel to see the ${names.list} and ${names.detail} side by side)`
-    : split
-      ? "Side by side: click to show one at a time"
-      : `One at a time: click to show the ${names.list} and ${names.detail} side by side`;
+  const label = toggleLabel(split, narrow, names);
   return createElement(
     "button",
     {
@@ -39,6 +35,13 @@ function PaneToggle({
     },
     createElement(split ? IconLayoutSplit : IconLayoutSingle, { size: 22 }),
   );
+}
+
+function toggleLabel(split: boolean, narrow: boolean, names: { list: string; detail: string }) {
+  const both = `the ${names.list} and ${names.detail}`;
+  if (narrow) return `One at a time (widen the panel to see ${both} side by side)`;
+  if (split) return "Side by side: click to show one at a time";
+  return `One at a time: click to show ${both} side by side`;
 }
 
 /**

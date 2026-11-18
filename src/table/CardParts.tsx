@@ -60,6 +60,14 @@ export function SaveRequests({ campaign, m }: { campaign: Campaign; m: MoveMessa
   const ctx = useCampaign();
   // Re-read as roles change.
   useQuery(campaign.members, () => campaign.isGm());
+  const answerFor = (target: MoveTarget, mode?: string) =>
+    ctx.execute(answerRollRequest, {
+      messageId: m.id,
+      target,
+      save,
+      ...(mode ? { mode } : {}),
+      concentration: m.concentration,
+    });
   return (
     <div className="card-save">
       <p className="card-save-head">
@@ -80,33 +88,11 @@ export function SaveRequests({ campaign, m }: { campaign: Campaign; m: MoveMessa
                 </>
               ) : can(ctx, answerRollRequest, { messageId: m.id, target: t, save }) ? (
                 <span className="card-target-actions">
-                  <Button
-                    variant="ghost"
-                    onClick={() =>
-                      ctx.execute(answerRollRequest, {
-                        messageId: m.id,
-                        target: t,
-                        save,
-                        concentration: m.concentration,
-                      })
-                    }
-                  >
+                  <Button variant="ghost" onClick={() => answerFor(t)}>
                     Roll
                   </Button>
                   {modes.map((mode) => (
-                    <Button
-                      key={mode.id}
-                      variant="ghost"
-                      onClick={() =>
-                        ctx.execute(answerRollRequest, {
-                          messageId: m.id,
-                          target: t,
-                          save,
-                          mode: mode.id,
-                          concentration: m.concentration,
-                        })
-                      }
-                    >
+                    <Button key={mode.id} variant="ghost" onClick={() => answerFor(t, mode.id)}>
                       {mode.label}
                     </Button>
                   ))}
@@ -136,11 +122,11 @@ export function DamageTargets({ campaign, m }: { campaign: Campaign; m: RollMess
   const ctx = useCampaign();
   // Re-read as roles change.
   useQuery(campaign.members, () => campaign.isGm());
+  const system = systemOf(campaign);
   const healing = damage.type === "healing";
-  const typeName =
-    systemOf(campaign).damageTypes?.find((d) => d.id === damage.type)?.name ?? damage.type;
+  const typeName = system.damageTypes?.find((d) => d.id === damage.type)?.name ?? damage.type;
   const total = m.roll.total;
-  const armor = systemOf(campaign).damageArmor;
+  const armor = system.damageArmor;
   const apply = (t: MoveTarget, n: number, useArmor = false) =>
     ctx.execute(applyCardDamage, {
       messageId: m.id,
@@ -158,7 +144,7 @@ export function DamageTargets({ campaign, m }: { campaign: Campaign; m: RollMess
           const applied: number | undefined = state[appliedField(t.id)];
           const targetCharacter = t.characterId ? getCharacter(campaign, t.characterId) : undefined;
           const shield = targetCharacter
-            ? systemOf(campaign).damageBlockers?.(targetCharacter, damage.type)[0]
+            ? system.damageBlockers?.(targetCharacter, damage.type)[0]
             : undefined;
           return (
             <li key={t.id} className="card-target">
@@ -201,13 +187,11 @@ export function DamageTargets({ campaign, m }: { campaign: Campaign; m: RollMess
                         >
                           ×2
                         </Button>
-                        {armor &&
-                          (getCharacter(campaign, t.characterId)?.resources[armor.resource] ?? 0) >
-                            0 && (
-                            <Button variant="ghost" onClick={() => apply(t, total, true)}>
-                              {armor.label}
-                            </Button>
-                          )}
+                        {armor && (targetCharacter?.resources[armor.resource] ?? 0) > 0 && (
+                          <Button variant="ghost" onClick={() => apply(t, total, true)}>
+                            {armor.label}
+                          </Button>
+                        )}
                         {shield && (
                           <Button
                             variant="ghost"

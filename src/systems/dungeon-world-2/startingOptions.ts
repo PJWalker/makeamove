@@ -14,6 +14,28 @@ interface ClassStartingOptions {
   appearance: [string[], string[]?];
 }
 
+/* Equipment several classes can start with. */
+const ADVENTURING_GEAR: StarterOption = {
+  id: "adventuring-gear",
+  name: "Adventuring gear",
+  text: "3 uses to find a useful mundane item.",
+};
+const POTION_OF_HEALING: StarterOption = {
+  id: "potion-of-healing",
+  name: "Potion of healing",
+  text: "1 use; recover half maximum HP or clear a locked Condition.",
+};
+const PROVISIONS: StarterOption = {
+  id: "provisions",
+  name: "Provisions",
+  text: "3 uses; turn a Comfort or Support answer from No to Yes.",
+};
+const MEDICINE: StarterOption = {
+  id: "medicine",
+  name: "Medicine",
+  text: "2 uses to double the next HP someone recovers or cure a minor disease or poison.",
+};
+
 /** Each class's starting kit: weapon, equipment and looks to choose from. */
 export const CLASS_STARTING: Record<string, ClassStartingOptions> = {
   barbarian: {
@@ -39,26 +61,14 @@ export const CLASS_STARTING: Record<string, ClassStartingOptions> = {
       },
     ],
     equipment: [
-      {
-        id: "adventuring-gear",
-        name: "Adventuring gear",
-        text: "3 uses to find a useful mundane item.",
-      },
+      ADVENTURING_GEAR,
       {
         id: "hearty-feast",
         name: "Hearty feast",
         text: "1 use; everyone recovers half their maximum HP.",
       },
-      {
-        id: "potion-of-healing",
-        name: "Potion of healing",
-        text: "1 use; recover half maximum HP or clear a locked Condition.",
-      },
-      {
-        id: "provisions",
-        name: "Provisions",
-        text: "3 uses; turn a Comfort or Support answer from No to Yes.",
-      },
+      POTION_OF_HEALING,
+      PROVISIONS,
       { id: "trap-kit", name: "Trap kit", text: "2 uses to set a dangerous, impeding hazard." },
     ],
     appearance: [
@@ -89,11 +99,7 @@ export const CLASS_STARTING: Record<string, ClassStartingOptions> = {
       },
     ],
     equipment: [
-      {
-        id: "adventuring-gear",
-        name: "Adventuring gear",
-        text: "3 uses to find a useful mundane item.",
-      },
+      ADVENTURING_GEAR,
       {
         id: "artistic-samples",
         name: "Artistic samples",
@@ -104,16 +110,8 @@ export const CLASS_STARTING: Record<string, ClassStartingOptions> = {
         name: "Bag of books",
         text: "3 uses to find a relevant record for Spout Lore.",
       },
-      {
-        id: "potion-of-healing",
-        name: "Potion of healing",
-        text: "1 use; recover half maximum HP or clear a locked Condition.",
-      },
-      {
-        id: "provisions",
-        name: "Provisions",
-        text: "3 uses; turn a Comfort or Support answer from No to Yes.",
-      },
+      POTION_OF_HEALING,
+      PROVISIONS,
     ],
     appearance: [
       ["Colorful costume", "Fanciful suit/dress", "Masked leathers"],
@@ -149,17 +147,9 @@ export const CLASS_STARTING: Record<string, ClassStartingOptions> = {
         text: "Close, holy; 3 uses to ignore an enemy deity's Resists for a Scene.",
       },
       { id: "light-armor", name: "Leather armor", text: "Armor 1; requires STR +1." },
-      {
-        id: "medicine",
-        name: "Medicine",
-        text: "2 uses to double the next HP someone recovers or cure a minor disease or poison.",
-      },
+      MEDICINE,
       { id: "pious-supplies", name: "Pious supplies", text: "3 uses to find a worship item." },
-      {
-        id: "provisions",
-        name: "Provisions",
-        text: "3 uses; turn a Comfort or Support answer from No to Yes.",
-      },
+      PROVISIONS,
     ],
     appearance: [
       ["Ancient uniform", "Prized hide coat", "Simple robes"],
@@ -183,31 +173,15 @@ export const CLASS_STARTING: Record<string, ClassStartingOptions> = {
       },
     ],
     equipment: [
-      {
-        id: "adventuring-gear",
-        name: "Adventuring gear",
-        text: "3 uses to find a useful mundane item.",
-      },
+      ADVENTURING_GEAR,
       {
         id: "alchemical-vials",
         name: "Alchemical vials",
         text: "3 uses to withdraw acid, fire, or smoke.",
       },
-      {
-        id: "medicine",
-        name: "Medicine",
-        text: "2 uses to double the next HP someone recovers or cure a minor disease or poison.",
-      },
-      {
-        id: "potion-of-healing",
-        name: "Potion of healing",
-        text: "1 use; recover half maximum HP or clear a locked Condition.",
-      },
-      {
-        id: "provisions",
-        name: "Provisions",
-        text: "3 uses; turn a Comfort or Support answer from No to Yes.",
-      },
+      MEDICINE,
+      POTION_OF_HEALING,
+      PROVISIONS,
     ],
     appearance: [
       ["Earthy robes", "Handmade leathers", "Leaf-covered vestments"],
@@ -234,23 +208,11 @@ export const CLASS_STARTING: Record<string, ClassStartingOptions> = {
       },
     ],
     equipment: [
-      {
-        id: "adventuring-gear",
-        name: "Adventuring gear",
-        text: "3 uses to find a useful mundane item.",
-      },
+      ADVENTURING_GEAR,
       { id: "medium-armor", name: "Breastplate", text: "Armor 2; requires STR +2." },
       { id: "light-armor", name: "Studded leather", text: "Armor 1; requires STR +1." },
-      {
-        id: "medicine",
-        name: "Medicine",
-        text: "2 uses to double the next HP someone recovers or cure a minor disease or poison.",
-      },
-      {
-        id: "provisions",
-        name: "Provisions",
-        text: "3 uses; turn a Comfort or Support answer from No to Yes.",
-      },
+      MEDICINE,
+      PROVISIONS,
       { id: "shield", name: "Shield", text: "1 use to ignore all damage from one attack." },
     ],
     appearance: [
@@ -278,23 +240,11 @@ export const CLASS_STARTING: Record<string, ClassStartingOptions> = {
       },
     ],
     equipment: [
-      {
-        id: "adventuring-gear",
-        name: "Adventuring gear",
-        text: "3 uses to find a useful mundane item.",
-      },
+      ADVENTURING_GEAR,
       { id: "medium-armor", name: "Half plate", text: "Armor 2; requires STR +2." },
       { id: "javelin", name: "Javelins", text: "1d4 damage; ammo, near, thrown." },
-      {
-        id: "potion-of-healing",
-        name: "Potion of healing",
-        text: "1 use; recover half maximum HP or clear a locked Condition.",
-      },
-      {
-        id: "provisions",
-        name: "Provisions",
-        text: "3 uses; turn a Comfort or Support answer from No to Yes.",
-      },
+      POTION_OF_HEALING,
+      PROVISIONS,
     ],
     appearance: [
       ["Battered helm", "Modest cloak", "Rusted coif"],
@@ -321,22 +271,10 @@ export const CLASS_STARTING: Record<string, ClassStartingOptions> = {
       },
     ],
     equipment: [
-      {
-        id: "adventuring-gear",
-        name: "Adventuring gear",
-        text: "3 uses to find a useful mundane item.",
-      },
+      ADVENTURING_GEAR,
       { id: "light-armor", name: "Light armor", text: "Armor 1; requires STR +1." },
-      {
-        id: "medicine",
-        name: "Medicine",
-        text: "2 uses to double the next HP someone recovers or cure a minor disease or poison.",
-      },
-      {
-        id: "provisions",
-        name: "Provisions",
-        text: "3 uses; turn a Comfort or Support answer from No to Yes.",
-      },
+      MEDICINE,
+      PROVISIONS,
       { id: "trap-kit", name: "Trap kit", text: "2 uses to set a dangerous, impeding hazard." },
     ],
     appearance: [
@@ -364,22 +302,14 @@ export const CLASS_STARTING: Record<string, ClassStartingOptions> = {
       },
     ],
     equipment: [
-      {
-        id: "adventuring-gear",
-        name: "Adventuring gear",
-        text: "3 uses to find a useful mundane item.",
-      },
+      ADVENTURING_GEAR,
       {
         id: "alchemical-vials",
         name: "Alchemical vials",
         text: "3 uses to withdraw acid, fire, or smoke.",
       },
       { id: "light-armor", name: "Leather armor", text: "Armor 1; requires STR +1." },
-      {
-        id: "provisions",
-        name: "Provisions",
-        text: "3 uses; turn a Comfort or Support answer from No to Yes.",
-      },
+      PROVISIONS,
       {
         id: "thieves-tools",
         name: "Thieves' tools",
@@ -411,11 +341,7 @@ export const CLASS_STARTING: Record<string, ClassStartingOptions> = {
       },
     ],
     equipment: [
-      {
-        id: "adventuring-gear",
-        name: "Adventuring gear",
-        text: "3 uses to find a useful mundane item.",
-      },
+      ADVENTURING_GEAR,
       {
         id: "bag-of-books",
         name: "Bag of books",
@@ -426,16 +352,8 @@ export const CLASS_STARTING: Record<string, ClassStartingOptions> = {
         name: "Razor dagger",
         text: "1d4 damage; ammo, hand, close, piercing, precise, thrown.",
       },
-      {
-        id: "potion-of-healing",
-        name: "Potion of healing",
-        text: "1 use; recover half maximum HP or clear a locked Condition.",
-      },
-      {
-        id: "provisions",
-        name: "Provisions",
-        text: "3 uses; turn a Comfort or Support answer from No to Yes.",
-      },
+      POTION_OF_HEALING,
+      PROVISIONS,
     ],
     appearance: [["Astral robes", "Inconspicuous cloak", "Mystical spectacles"]],
   },

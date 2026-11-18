@@ -1,4 +1,5 @@
 import type * as React from "react";
+import { suppressNextClick } from "./suppressClick";
 
 /*
  * Press-and-drag reordering for a row or column of items (sidebar tabs, tools,
@@ -69,9 +70,7 @@ export function startReorder(o: ReorderOptions) {
     put();
     if (lifted) {
       // The click that ends a drag is not a press on the item.
-      const swallow = (ev: Event) => ev.stopPropagation();
-      window.addEventListener("click", swallow, { capture: true, once: true });
-      setTimeout(() => window.removeEventListener("click", swallow, { capture: true }), 0);
+      suppressNextClick();
       o.onEnd?.();
     }
   }
@@ -141,12 +140,10 @@ export function dropLine(axis: "x" | "y") {
       };
       const lo = (r: DOMRect) => (axis === "x" ? r.left : r.top);
       const hi = (r: DOMRect) => (axis === "x" ? r.right : r.bottom);
-      const at =
-        index === 0
-          ? lo(rectAt(0)) - 2
-          : index === rects.length
-            ? hi(rectAt(index - 1)) + 2
-            : (hi(rectAt(index - 1)) + lo(rectAt(index))) / 2;
+      let at: number;
+      if (index === 0) at = lo(rectAt(0)) - 2;
+      else if (index === rects.length) at = hi(rectAt(index - 1)) + 2;
+      else at = (hi(rectAt(index - 1)) + lo(rectAt(index))) / 2;
       const left = Math.min(...rects.map((r) => r.left));
       const right = Math.max(...rects.map((r) => r.right));
       const top = Math.min(...rects.map((r) => r.top));

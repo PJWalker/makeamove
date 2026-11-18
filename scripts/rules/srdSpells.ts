@@ -1,5 +1,6 @@
 import { markdownToRichText } from "../../src/macros/markdown.macro";
 import { readReference } from "./readReference";
+import { slug } from "./slug";
 import type { Ability, Spell } from "../../src/systems/dnd55e/data";
 import { parseCommaList } from "../../src/lib/list";
 
@@ -13,7 +14,6 @@ const ABILITIES: Record<string, Ability> = {
 };
 const DAMAGE =
   "Acid|Bludgeoning|Cold|Fire|Force|Lightning|Necrotic|Piercing|Poison|Psychic|Radiant|Slashing|Thunder";
-const slug = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
 /** Parse the SRD's consistently formatted spell entries into the system model. */
 export function parseSrdSpells(markdown: string): Spell[] {

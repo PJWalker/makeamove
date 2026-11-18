@@ -8,6 +8,9 @@ export interface PickerOption {
   group?: string;
 }
 
+const optionName = (option: PickerOption) =>
+  option.group ? `${option.group} · ${option.name}` : option.name;
+
 /**
  * Picks one of a set of named, described options. The menu shows each
  * option's description for browsing; once chosen, only the name shows, with
@@ -30,11 +33,7 @@ export function OptionPicker({
 }) {
   const selected = options.find((option) => option.id === value);
   // A value from before the options changed shows as it is.
-  const name = selected
-    ? selected.group
-      ? `${selected.group} · ${selected.name}`
-      : selected.name
-    : value || emptyLabel;
+  const name = selected ? optionName(selected) : value || emptyLabel;
   return (
     <div className="field field-inline option-picker">
       <span aria-hidden="true">{label}</span>

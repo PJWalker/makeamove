@@ -25,8 +25,9 @@ export function turnOrder(combatants: CombatMaps["combatants"]): CombatantView[]
     .entries()
     .map(([id, c]) => ({ id, ...c }))
     .sort((a, b) => {
-      if (a.init === null || b.init === null)
-        return a.init === null ? (b.init === null ? a.name.localeCompare(b.name) : 1) : -1;
+      if (a.init === null && b.init === null) return a.name.localeCompare(b.name);
+      if (a.init === null) return 1;
+      if (b.init === null) return -1;
       return b.init - a.init || b.tie - a.tie || a.name.localeCompare(b.name);
     });
 }

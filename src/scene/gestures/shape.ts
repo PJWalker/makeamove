@@ -1,6 +1,6 @@
 import { tokensCovered } from "../geometry";
-import type { Point } from "../grid";
-import { formatDistance } from "../measure";
+import { snapToLattice, type Point } from "../grid";
+import { formatDistance, toUnits } from "../measure";
 import { SHAPE_WIDTH, TEMPLATE_STYLE, type SceneTools } from "../tools";
 import type {
   DraggedShapeKind,
@@ -137,12 +137,7 @@ export function dragShape(
 function snapShapePoint(c: ToolContext, p: Point, shape: DraggedShapeKind, e: PointerEvent): Point {
   const grid = c.renderer.grid;
   if (grid.type !== "square" || e.altKey) return p;
-  const half = grid.size / 2;
-  const step = shape === "rect" ? grid.size : half;
-  return {
-    x: grid.offsetX + Math.round((p.x - grid.offsetX) / step) * step,
-    y: grid.offsetY + Math.round((p.y - grid.offsetY) / step) * step,
-  };
+  return snapToLattice(grid, p, shape === "rect" ? grid.size : grid.size / 2);
 }
 
 /**
@@ -161,7 +156,7 @@ function shapeFrom(
   const grid = c.renderer.grid;
   const step = grid.type === "none" || e.altKey ? 0 : grid.size;
   const round = (n: number) => (step ? Math.max(step, Math.round(n / step) * step) : n);
-  const units = (n: number) => formatDistance(grid, (n / grid.size) * grid.unit);
+  const units = (n: number) => formatDistance(grid, toUnits(grid, n));
   const dx = p.x - s.x;
   const dy = p.y - s.y;
   if (shape === "circle") {

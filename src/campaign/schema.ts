@@ -1,4 +1,4 @@
-import { arrayOf, isNumber, isObject, isString, oneOf } from "../data/guards";
+import { arrayOf, isBoolean, isNumber, isObject, isString, oneOf } from "../data/guards";
 import { collection, list, lww, record, subdoc, type Root } from "../data/schema";
 import { systemCampaignData } from "../systems/schema";
 import { characterEntry } from "../features/characters/schema";
@@ -32,7 +32,7 @@ export const campaignMeta = record({
   defaultGridType: lww(oneOf(...GRID_TYPES.map((g) => g.id))).or("square"),
   /** The scene last announced to the table. */
   tableScene: lww(isString),
-  noteFoldersMade: lww((v): v is boolean => typeof v === "boolean").or(false),
+  noteFoldersMade: lww(isBoolean).or(false),
   /** Sessions started so far. */
   sessions: lww(isNumber).or(0),
 });

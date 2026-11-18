@@ -87,9 +87,8 @@ export function Lobby({ error }: { error: string | null }) {
           </p>
         )}
 
-        {!ready ? null : list.length === 0 ? (
-          <Welcome onCreate={create} />
-        ) : (
+        {ready && list.length === 0 && <Welcome onCreate={create} />}
+        {ready && list.length > 0 && (
           <section className="panel lobby-section" aria-labelledby="your-campaigns">
             <div className="lobby-section-header">
               <h2 id="your-campaigns" className="eyebrow">
@@ -277,25 +276,23 @@ function DeleteCampaignDialog({
 }) {
   return (
     <LobbyModal title="Delete Campaign?" onClose={onClose}>
-      <>
-        <p>
-          Remove <strong>{campaignName}</strong> from this device? This cannot be undone.
-        </p>
-        <div className="form-actions">
-          <Button variant="ghost" autoFocus onClick={closeModal}>
-            Cancel
-          </Button>
-          <Button
-            variant="danger"
-            onClick={(e) => {
-              onConfirm();
-              closeModal(e);
-            }}
-          >
-            Delete from This Device
-          </Button>
-        </div>
-      </>
+      <p>
+        Remove <strong>{campaignName}</strong> from this device? This cannot be undone.
+      </p>
+      <div className="form-actions">
+        <Button variant="ghost" autoFocus onClick={closeModal}>
+          Cancel
+        </Button>
+        <Button
+          variant="danger"
+          onClick={(e) => {
+            onConfirm();
+            closeModal(e);
+          }}
+        >
+          Delete from This Device
+        </Button>
+      </div>
     </LobbyModal>
   );
 }
@@ -331,16 +328,7 @@ function NewCampaignDialog({ onClose }: { onClose: () => void }) {
             required
           />
         </label>
-        <label className="field">
-          Your name
-          <input
-            value={yourName}
-            onInput={(e) => setYourName(e.currentTarget.value)}
-            placeholder="Robin"
-            autoComplete="name"
-            required
-          />
-        </label>
+        <YourNameField value={yourName} onChange={setYourName} />
         <label className="field">
           System
           <select value={systemId} onChange={(e) => setSystemId(e.currentTarget.value)} required>
@@ -385,32 +373,45 @@ function JoinInviteDialog({ invite }: { invite: NonNullable<typeof pendingInvite
 
   return (
     <LobbyModal title="Join a Campaign" onClose={() => (pendingInvite.value = null)}>
-      <>
-        <p>You&apos;ve been invited to a campaign.</p>
-        <form onSubmit={(e) => submit(e)}>
-          <label className="field">
-            Your name
-            <input
-              value={yourName}
-              onInput={(e) => setYourName(e.currentTarget.value)}
-              placeholder="Robin"
-              autoComplete="name"
-              // The field is the dialog's one input.
-              // react-doctor-disable-next-line react-doctor/no-autofocus
-              autoFocus
-              required
-            />
-          </label>
-          <div className="form-actions">
-            <Button variant="ghost" onClick={closeModal}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary" disabled={!yourName.trim()}>
-              Join
-            </Button>
-          </div>
-        </form>
-      </>
+      <p>You&apos;ve been invited to a campaign.</p>
+      <form onSubmit={(e) => submit(e)}>
+        {/* The field is the dialog's one input. */}
+        <YourNameField value={yourName} onChange={setYourName} autoFocus />
+        <div className="form-actions">
+          <Button variant="ghost" onClick={closeModal}>
+            Cancel
+          </Button>
+          <Button type="submit" variant="primary" disabled={!yourName.trim()}>
+            Join
+          </Button>
+        </div>
+      </form>
     </LobbyModal>
+  );
+}
+
+/** The name this device goes by, asked for when making or joining a campaign. */
+function YourNameField({
+  value,
+  onChange,
+  autoFocus = false,
+}: {
+  value: string;
+  onChange: (name: string) => void;
+  autoFocus?: boolean;
+}) {
+  return (
+    <label className="field">
+      Your name
+      <input
+        value={value}
+        onInput={(e) => onChange(e.currentTarget.value)}
+        placeholder="Robin"
+        autoComplete="name"
+        // react-doctor-disable-next-line react-doctor/no-autofocus
+        autoFocus={autoFocus}
+        required
+      />
+    </label>
   );
 }

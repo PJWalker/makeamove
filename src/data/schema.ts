@@ -435,6 +435,49 @@ function settleCounts(m: Slot) {
   for (const v of m.values()) if (v instanceof Y.Map) settleCounts(v as Slot);
 }
 
+/** Add to the counter in a slot, making it if it isn't there yet. */
+function addToSlot(field: Field, map: Slot, key: string, by: number) {
+  const m = map.get(key);
+  if (m instanceof Y.Map) addToCounter(m as Y.Map<number>, by);
+  else setSlot(field, map, key, by);
+}
+
+// Whole maps of fields
+
+/** Each of a shape's fields stored in `map`, as plain values, into `out`. */
+function readPlain(map: Slot, shape: Shape, out: Record<string, unknown>) {
+  for (const [key, field] of Object.entries(shape)) {
+    const v = plainOf(field, readSlot(field, map, key));
+    if (v !== undefined) out[key] = v;
+  }
+  return out;
+}
+
+/** Set the given fields of a shape; `undefined` removes one. Unchanged values aren't rewritten. */
+function patchSlots(
+  map: Slot,
+  shape: Shape,
+  values: Readonly<Record<string, unknown>>,
+  skip?: string,
+) {
+  for (const [key, value] of Object.entries(values)) {
+    const field = shape[key];
+    if (!field || key === skip) continue;
+    if (value === undefined) map.delete(key);
+    else if (map.get(key) !== value) setSlot(field, map, key, value);
+  }
+}
+
+function transactOn(y: Slot, fn: () => void) {
+  if (y.doc) y.doc.transact(fn);
+  else fn();
+}
+
+function observeDeep(y: Slot, fn: () => void): () => void {
+  y.observeDeep(fn);
+  return () => y.unobserveDeep(fn);
+}
+
 // Handles
 
 /** Anything with a Yjs type behind it, for useQuery to watch. */
@@ -483,19 +526,12 @@ export class Rec<S extends Shape> implements Observable {
 
   /** Set several value fields at once; `undefined` removes one. Unchanged values aren't rewritten. */
   patch(values: Patch<S>) {
-    this.transact(() => {
-      for (const [key, value] of Object.entries(values)) {
-        if (value === undefined) this.y.delete(key);
-        else if (this.y.get(key) !== value) setSlot(this.shape[key]!, this.y, key, value);
-      }
-    });
+    this.transact(() => patchSlots(this.y, this.shape, values));
   }
 
   /** Add to a counter. */
   add(key: CounterKeys<S> & string, by: number) {
-    const m = this.y.get(key);
-    if (m instanceof Y.Map) addToCounter(m as Y.Map<number>, by);
-    else setSlot(this.shape[key]!, this.y, key, by);
+    addToSlot(this.shape[key]!, this.y, key, by);
   }
 
   /** A container field, made empty if it isn't there yet. */
@@ -518,23 +554,16 @@ export class Rec<S extends Shape> implements Observable {
 
   /** Call `fn` on any change to it or anything inside it. Returns a function that stops it. */
   observe(fn: () => void): () => void {
-    this.y.observeDeep(fn);
-    return () => this.y.unobserveDeep(fn);
+    return observeDeep(this.y, fn);
   }
 
   /** Every field as plain values, with fallbacks; text and subdocuments are left out. */
   read(): PlainRec<S> {
-    const out: Record<string, unknown> = {};
-    for (const [key, field] of Object.entries(this.shape)) {
-      const v = plainOf(field, readSlot(field, this.y, key));
-      if (v !== undefined) out[key] = v;
-    }
-    return out as PlainRec<S>;
+    return readPlain(this.y, this.shape, {}) as PlainRec<S>;
   }
 
   transact(fn: () => void) {
-    if (this.y.doc) this.y.doc.transact(fn);
-    else fn();
+    transactOn(this.y, fn);
   }
 }
 
@@ -567,25 +596,13 @@ export class VariantRec<
   readCase(): PlainVariant<Tag, B, C> | undefined {
     const tag = this.tag;
     if (tag === undefined) return undefined;
-    const out: Record<string, unknown> = { [this.variant.tag]: tag };
-    for (const [key, field] of Object.entries(this.fields())) {
-      const v = plainOf(field, readSlot(field, this.y, key));
-      if (v !== undefined) out[key] = v;
-    }
-    return out as PlainVariant<Tag, B, C>;
+    return readPlain(this.y, this.fields(), { [this.variant.tag]: tag }) as PlainVariant<Tag, B, C>;
   }
 
   /** Set any of its base or case fields; `undefined` removes one, and others are ignored. */
   patchCase(values: Readonly<Record<string, unknown>>) {
     const shape = this.fields();
-    this.transact(() => {
-      for (const [key, value] of Object.entries(values)) {
-        const field = shape[key];
-        if (!field || key === this.variant.tag) continue;
-        if (value === undefined) this.y.delete(key);
-        else if (this.y.get(key) !== value) setSlot(field, this.y, key, value);
-      }
-    });
+    this.transact(() => patchSlots(this.y, shape, values, this.variant.tag));
   }
 }
 
@@ -672,9 +689,7 @@ export class Coll<I extends Field, T = Item<I>> implements Observable {
 
   /** Add to a counter item. */
   add(this: Coll<CounterField>, id: string, by: number) {
-    const m = this.y.get(id);
-    if (m instanceof Y.Map) addToCounter(m as Y.Map<number>, by);
-    else setSlot(this.field.item, this.y, id, by);
+    addToSlot(this.field.item, this.y, id, by);
   }
 
   /** A container item, made empty if it isn't there yet. */
@@ -695,8 +710,7 @@ export class Coll<I extends Field, T = Item<I>> implements Observable {
 
   /** Call `fn` on any change to it or anything inside it. Returns a function that stops it. */
   observe(fn: () => void): () => void {
-    this.y.observeDeep(fn);
-    return () => this.y.unobserveDeep(fn);
+    return observeDeep(this.y, fn);
   }
 
   /** Every item as plain values. */
@@ -707,8 +721,7 @@ export class Coll<I extends Field, T = Item<I>> implements Observable {
   }
 
   transact(fn: () => void) {
-    if (this.y.doc) this.y.doc.transact(fn);
-    else fn();
+    transactOn(this.y, fn);
   }
 }
 

@@ -1,5 +1,5 @@
 import { Graphics } from "pixi.js";
-import { type Rect, toScreen } from "../camera";
+import { type Camera, type Rect, toScreen } from "../camera";
 import { corners } from "../geometry";
 import type { Point } from "../grid";
 import { isPlainToken, type SceneElement, type Transform } from "../types";
@@ -20,6 +20,21 @@ export interface OverlayState {
   rangeFrom: string | null;
 }
 
+/** A frame's corners on screen: top left, top right, bottom right, bottom left. */
+function screenCorners(t: Transform, cam: Camera): Point[] {
+  return corners(t).map((p) => toScreen(cam, p));
+}
+
+/** Draw the stem from the middle of a frame's top edge to its rotate knob; returns where the knob is. */
+function drawKnobStem(g: Graphics, t: Transform, points: Point[], cam: Camera): Point {
+  const [tl, tr] = points as [Point, Point];
+  const knob = rotateHandlePosition(t, cam);
+  g.moveTo((tl.x + tr.x) / 2, (tl.y + tr.y) / 2)
+    .lineTo(knob.x, knob.y)
+    .stroke({ color: ACCENT, width: 2 });
+  return knob;
+}
+
 /** The selection, its handles, the marquee and the eraser, in screen space. */
 export class OverlayLayer {
   readonly view = new Graphics();
@@ -38,7 +53,7 @@ export class OverlayLayer {
         const c = toScreen(cam, t);
         g.circle(c.x, c.y, (Math.min(t.w, t.h) / 2) * cam.zoom + 3);
       } else {
-        g.poly(corners(t).map((p) => toScreen(cam, p)));
+        g.poly(screenCorners(t, cam));
       }
       g.stroke({
         color: el.locked ? 0xffffff : ACCENT,
@@ -64,15 +79,9 @@ export class OverlayLayer {
     } else if (handles && selected.length === 1) {
       const el = selected[0]!;
       const t = s.previews.get(el.id) ?? el;
-      const points = corners(t).map((p) => toScreen(cam, p));
-      const tl = points[0]!;
-      const tr = points[1]!;
-      const br = points[2]!;
-      const bl = points[3]!;
-      const top = { x: (tl.x + tr.x) / 2, y: (tl.y + tr.y) / 2 };
-      const knob = rotateHandlePosition(t, cam);
-      g.moveTo(top.x, top.y).lineTo(knob.x, knob.y).stroke({ color: ACCENT, width: 2 });
-      for (const p of [tl, tr, br, bl]) {
+      const points = screenCorners(t, cam);
+      const knob = drawKnobStem(g, t, points, cam);
+      for (const p of points) {
         g.rect(p.x - HANDLE_SIZE / 2, p.y - HANDLE_SIZE / 2, HANDLE_SIZE, HANDLE_SIZE);
       }
       g.circle(knob.x, knob.y, HANDLE_SIZE / 2 + 1);
@@ -80,19 +89,13 @@ export class OverlayLayer {
     }
 
     if (group) {
-      const points = corners(group).map((p) => toScreen(cam, p));
-      const tl = points[0]!;
-      const tr = points[1]!;
-      const br = points[2]!;
-      const bl = points[3]!;
-      const top = { x: (tl.x + tr.x) / 2, y: (tl.y + tr.y) / 2 };
-      const knob = rotateHandlePosition(group, cam);
-      g.poly([tl, tr, br, bl]).stroke({
+      const points = screenCorners(group, cam);
+      g.poly(points).stroke({
         color: ACCENT,
         alpha: 0.6,
         width: 1.5,
       });
-      g.moveTo(top.x, top.y).lineTo(knob.x, knob.y).stroke({ color: ACCENT, width: 2 });
+      const knob = drawKnobStem(g, group, points, cam);
       g.circle(knob.x, knob.y, HANDLE_SIZE / 2 + 1);
       g.fill(ACCENT).stroke({ color: INK, width: 1.5 });
     }

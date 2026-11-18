@@ -1,5 +1,5 @@
 import { snapPoint, type Point } from "../grid";
-import type { SceneElement } from "../types";
+import type { SceneElement, TokenElement } from "../types";
 import { dragged, type Gesture, type ToolContext } from "./types";
 
 /**
@@ -14,6 +14,13 @@ export function moveSelection(c: ToolContext, start: Point): Gesture {
   let moved = false;
   const lone = originals.size === 1 ? [...originals.values()][0]! : null;
   const token = lone?.type === "token" ? lone : null;
+  // An item token's drag goes to the table's item handlers, any other token's to its token handlers.
+  const showDrag = (t: TokenElement, dragging: boolean, e: PointerEvent) =>
+    t.itemDefId
+      ? c.onItemTokenDragMove?.(dragging ? t : null, e)
+      : c.onTokenDragMove?.(dragging ? t : null, e);
+  const drop = (t: TokenElement, e: PointerEvent) =>
+    (t.itemDefId ? c.onItemTokenDrop?.(t, e) : c.onTokenDrop?.(t, e)) ?? false;
   return {
     kind: "move",
     move(e, world) {
@@ -29,19 +36,15 @@ export function moveSelection(c: ToolContext, start: Point): Gesture {
         c.renderer.previews.set(id, { ...el, ...p });
       }
       c.renderer.invalidate("previews", "overlay");
-      if (token?.itemDefId) c.onItemTokenDragMove?.(token, e);
-      else if (token) c.onTokenDragMove?.(token, e);
+      if (token) showDrag(token, true, e);
     },
     end(e) {
       if (!moved) {
         if (token) c.onTokenClick?.(token);
         if (lone) return;
       } else if (token) {
-        const handled = token.itemDefId
-          ? (c.onItemTokenDrop?.(token, e) ?? false)
-          : (c.onTokenDrop?.(token, e) ?? false);
-        if (token.itemDefId) c.onItemTokenDragMove?.(null, e);
-        else c.onTokenDragMove?.(null, e);
+        const handled = drop(token, e);
+        showDrag(token, false, e);
         if (handled) {
           c.renderer.invalidate("previews", "overlay");
           return;

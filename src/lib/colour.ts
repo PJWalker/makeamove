@@ -181,7 +181,7 @@ export function clampUserColour(hex: string): string {
 }
 
 /** sRGB hex → okLCH. Used to tint the UI from a scene colour. */
-export function hexToOklch(hex: string): { l: number; c: number; h: number } {
+export function hexToOklch(hex: string): Oklch {
   const { L, a, b } = rgbToOklab(...hexToRgb(hex));
   const h = (Math.atan2(b, a) * 180) / Math.PI;
   return { l: L, c: Math.hypot(a, b), h: h < 0 ? h + 360 : h };
@@ -217,8 +217,7 @@ export function backdropColour(hex: string, maxL = 0.34, maxC = 0.07): string {
  */
 export function dominantColour(rgba: Uint8ClampedArray, k = 5, iterations = 8): string {
   const px: Oklab[] = [];
-  for (let i = 0; i < rgba.length; i += 4) {
-    if (i + 3 >= rgba.length) break;
+  for (let i = 0; i + 3 < rgba.length; i += 4) {
     if (rgba[i + 3]! < 128) continue;
     px.push(rgbToOklab(rgba[i]!, rgba[i + 1]!, rgba[i + 2]!));
   }

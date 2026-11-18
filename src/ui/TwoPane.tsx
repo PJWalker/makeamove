@@ -20,6 +20,9 @@ export type PaneLevel = "list" | "detail";
 
 /** Narrower than this, the list and detail take turns. */
 const SPLIT_MIN_W = 381;
+const LIST_MIN_W = 100;
+/** Room the detail keeps beside the list when the split is dragged. */
+const DETAIL_MIN_W = 160;
 export interface PaneLayout {
   key: string;
   listWidth: Store<number>;
@@ -38,20 +41,21 @@ export interface PaneLayout {
   Toggle: () => React.JSX.Element;
 }
 
-/**
- * Which level shows when they take turns, and how to move between them:
- * one at a time, the move slides; side by side, both already show. `show`
- * is `go` for callers that need to wait until the level is showing.
- */
+/** The widest the list may be in a panel this wide. */
+const maxListWidth = (panelWidth: number) => Math.max(LIST_MIN_W, panelWidth - DETAIL_MIN_W);
+
+const clampListWidth = (width: number, panelWidth: number) =>
+  Math.max(LIST_MIN_W, Math.min(maxListWidth(panelWidth), width));
+
+/** Drag the splitter between the list and the detail to set the list's width. */
 function dragSplit(layout: PaneLayout, e: React.PointerEvent) {
   if (e.button !== 0) return;
   const split = e.currentTarget as HTMLElement;
   const grid = split.parentElement!;
   split.setPointerCapture(e.pointerId);
   const left = grid.getBoundingClientRect().left;
-  const max = () => grid.clientWidth - 160;
   const move = (ev: PointerEvent) =>
-    (layout.listWidth.value = Math.round(Math.max(100, Math.min(max(), ev.clientX - left))));
+    (layout.listWidth.value = Math.round(clampListWidth(ev.clientX - left, grid.clientWidth)));
   const up = () => {
     split.removeEventListener("pointermove", move);
     split.removeEventListener("pointerup", up);
@@ -61,9 +65,14 @@ function dragSplit(layout: PaneLayout, e: React.PointerEvent) {
   split.addEventListener("pointerup", up);
 }
 
+/** The panel's width, for limits on the list; a guess until it's on screen. */
+const panelWidth = (layout: PaneLayout) => layout.el?.clientWidth ?? 260;
+
 function resizeSplit(layout: PaneLayout, direction: -1 | 1) {
-  const max = Math.max(100, (layout.el?.clientWidth ?? 260) - 160);
-  layout.listWidth.value = Math.max(100, Math.min(max, layout.listWidth.value + direction * 10));
+  layout.listWidth.value = clampListWidth(
+    layout.listWidth.value + direction * 10,
+    panelWidth(layout),
+  );
   layout.save();
 }
 
@@ -119,8 +128,8 @@ export function TwoPane({
           role="separator"
           aria-orientation="vertical"
           aria-label={resizeLabel}
-          aria-valuemin={100}
-          aria-valuemax={Math.max(100, (layout.el?.clientWidth ?? 260) - 160)}
+          aria-valuemin={LIST_MIN_W}
+          aria-valuemax={maxListWidth(panelWidth(layout))}
           aria-valuenow={layout.listWidth.value}
           tabIndex={0}
           onPointerDown={(e) => dragSplit(layout, e)}

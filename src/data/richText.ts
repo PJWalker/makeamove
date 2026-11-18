@@ -22,23 +22,28 @@ export interface TrackerButton {
   label: string;
 }
 
+/** "+1 XP": a button's change and number, its label when it has none of its own. */
+const changeText = (by: number, name: string) => `${by > 0 ? "+" : ""}${by} ${name}`;
+
 export function parseTrackerButton(raw: string): TrackerButton | null {
   const m = new RegExp(TRACKER_TOKEN.source).exec(raw);
   if (!m) return null;
   const by = Number(m[1]);
   const name = m[2]!;
-  return { by, name, label: m[3] ?? `${by > 0 ? "+" : ""}${by} ${name}` };
+  return { by, name, label: m[3] ?? changeText(by, name) };
 }
 
 /** The token for a button: what the editor writes back as text. */
-export const trackerToken = (b: TrackerButton) =>
-  `[[${b.by > 0 ? "+" : ""}${b.by} ${b.name}${b.label !== `${b.by > 0 ? "+" : ""}${b.by} ${b.name}` ? `|${b.label}` : ""}]]`;
+export function trackerToken(b: TrackerButton): string {
+  const change = changeText(b.by, b.name);
+  return `[[${change}${b.label !== change ? `|${b.label}` : ""}]]`;
+}
 
 /** Rich text with nothing in it. */
 export const emptyRichText = (): RichText => ({ type: "doc", content: [] });
 
 /** A paragraph of plain text, its line breaks kept. */
-function plainParagraph(text: string): JSONContent {
+export function plainParagraph(text: string): JSONContent {
   const content: JSONContent[] = [];
   for (const [index, line] of text.split("\n").entries()) {
     if (index) content.push({ type: "hardBreak" });
