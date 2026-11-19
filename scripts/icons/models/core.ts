@@ -125,7 +125,7 @@ export function quillAndInkpot() {
     kit.ivory(),
   );
   quill.add(vaneMesh, shaft);
-  place(quill, [0.05, 0.5, 0], [0.1, 0.5, -0.62]);
+  place(quill, [0.05, 0.5, 0], [0, 0, -0.62]);
   group.add(quill);
   return group;
 }
@@ -255,7 +255,7 @@ export function treasureMap() {
     place(knob, [x, 0, 0.06]);
     group.add(rod, knob);
   }
-  place(group, [0, 0, 0], [-0.35, 0.2, -0.1]);
+  place(group, [0, 0, 0], [0, 0, -0.08]);
   return new Group().add(group);
 }
 
@@ -326,7 +326,7 @@ export function padlock(open = false) {
     place(rivet, [x, y, 0.21]);
     group.add(rivet);
   }
-  place(group, [0, 0, 0], [0.05, -0.38, 0]);
+  place(group, [0, 0, 0], [0, 0, 0]);
   return new Group().add(group);
 }
 
@@ -385,7 +385,7 @@ export function openBook() {
   (ribbon.material as MeshPhysicalMaterial).side = DoubleSide;
   place(ribbon, [0.04, 0.05, 0.82], [-Math.PI / 2 + 0.25, 0, 0.1]);
   book.add(ribbon);
-  place(book, [0, 0, 0], [0.7, 0, 0]);
+  place(book, [0, 0, 0], [1.3, 0, 0]);
   return new Group().add(book);
 }
 
@@ -444,7 +444,7 @@ export function cog() {
   sapphire.scale.z = 0.7;
   place(sapphire, [0, 0, 0.12]);
   const group = new Group().add(gear, hub, sapphire);
-  place(group, [0, 0, 0], [-0.35, 0.35, 0.1]);
+  place(group, [0, 0, 0], [0, 0, 0.1]);
   return new Group().add(group);
 }
 
@@ -454,7 +454,7 @@ export function dice() {
   group.add(place(d20(), [0.35, 0, 0.2]));
 
   const d6 = part(new RoundedBoxGeometry(0.85, 0.85, 0.85, 3, 0.12), kit.brass());
-  place(d6, [-0.55, -0.22, -0.35], [0.5, 0.65, 0.1]);
+  place(d6, [-0.55, -0.22, -0.35], [0.3, 0.6, 0.1]);
   group.add(d6);
   const pip = kit.lacquer(0x4a1f86);
   const pips: [number, number][] = [
@@ -560,6 +560,6 @@ export function archeryTarget() {
   }
   place(arrow, [0.12, 0.08, 0.1], [Math.PI / 2 - 0.55, 0, -0.7]);
   group.add(arrow);
-  place(group, [0, 0, 0], [0.05, -0.4, 0]);
+  place(group, [0, 0, 0], [0, 0, 0]);
   return new Group().add(group);
 }

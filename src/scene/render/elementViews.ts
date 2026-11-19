@@ -15,7 +15,7 @@ import { SdfText } from "./sdfText";
 import type { SdfTextOptions } from "./sdfText";
 import { ACCENT, cabin, fraunces, INK, textFont } from "./style";
 import type { PeerBlobs } from "../../media/images";
-import { iconGraphicFor, textureFor } from "./textures";
+import { iconTextureFor, textureFor } from "./textures";
 
 /** An element's drawing: its root in a layer, and how to move it to a transform. */
 export interface View {
@@ -184,13 +184,13 @@ export function buildView(
           anchor: 0.5,
         });
         body.addChildAt(initial, 1);
-        if (iconName) {
-          const icon = iconGraphicFor(iconName);
-          if (icon) {
+        if (iconName)
+          void iconTextureFor(iconName).then((tex) => {
+            if (!tex || root.destroyed) return;
             initial.visible = false;
+            const icon = new Sprite({ texture: tex, anchor: 0.5, width: 64, height: 64 });
             body.addChildAt(icon, 1);
-          }
-        }
+          });
         if (image) {
           // The initial stands in until the image loads, or if it's missing.
           void textureFor(image.hash, peers).then((tex) => {

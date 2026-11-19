@@ -4,7 +4,7 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "module": "esnext",
     "lib": ["ES2023", "ES2025.RegExp", "DOM"],
-    "types": ["vite/client", "unplugin-icons/types/react"],
+    "types": ["vite/client"],
     "allowArbitraryExtensions": true,
 
     /* Bundler mode */

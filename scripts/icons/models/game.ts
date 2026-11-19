@@ -56,7 +56,7 @@ export function combat() {
 
 /** A blacksmith's anvil of dark iron. */
 export const items = () =>
-  place(relief(outline("gi:anvil"), kit.blackIron(), 0.7, 0.06), [0, 0, 0], [0.1, -0.45, 0]);
+  place(relief(outline("gi:anvil"), kit.iron(), 0.7, 0.06), [0, 0, 0], [0, 0, 0]);
 
 /** A green canvas rucksack strapped in leather. */
 export function newGear() {
@@ -84,7 +84,7 @@ export function newGear() {
       place(part(new RoundedBoxGeometry(0.2, 0.16, 0.06, 1, 0.02), kit.brass()), [x, -0.05, 0.6]),
     );
   }
-  group.rotation.y = -0.35;
+  group.rotation.x = 0.15;
   return new Group().add(group);
 }
 
@@ -154,7 +154,7 @@ export function pin() {
   group.add(
     place(part(new ConeGeometry(0.05, 0.9, 12), kit.steel()), [0, -0.45, 0], [Math.PI, 0, 0]),
   );
-  group.rotation.set(0.2, 0, -0.55);
+  group.rotation.set(0, 0, -0.55);
   return new Group().add(group);
 }
 

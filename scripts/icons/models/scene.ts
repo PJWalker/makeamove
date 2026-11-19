@@ -75,7 +75,6 @@ export function target() {
   const pointer = new Group().add(half(1, 0xc0392b), half(-1, 0x39424e));
   group.add(place(pointer, [0, 0, 0.21], [0, 0, -0.6]));
   group.add(place(part(new SphereGeometry(0.08, 12, 8), kit.gold()), [0, 0, 0.27]));
-  group.rotation.set(-0.35, 0.25, 0);
   return new Group().add(group);
 }
 
@@ -108,7 +107,7 @@ export function post() {
       [Math.PI / 2, 0, 0],
     ),
   );
-  group.rotation.set(-0.3, 0.3, 0.12);
+  group.rotation.set(0, 0, 0.08);
   return new Group().add(group);
 }
 
@@ -144,12 +143,11 @@ export function image() {
     slab(1.8, 1.45, 0.04, new MeshStandardMaterial({ map: painting, roughness: 0.8 }), 0.01),
   );
   group.add(place(frame(2.1, 1.75, 0.2, 0.16, kit.gold()), [0, 0, 0.03]));
-  group.rotation.set(-0.1, 0.3, 0);
   return new Group().add(group);
 }
 
 const steelGlyph = (id: Parameters<typeof outline>[0]) => () =>
-  place(relief(outline(id), kit.steel(), 0.3, 0.07), [0, 0, 0], [0, 0.3, 0]);
+  place(relief(outline(id), kit.steel(), 0.3, 0.07), [0, 0, 0], [0, 0, 0]);
 
 export const back = steelGlyph("ms:chevron-left-rounded");
 export const folder = () => folio();
@@ -172,7 +170,6 @@ export function grid() {
     group.add(place(part(new RoundedBoxGeometry(1.8, 0.05, 0.03, 1, 0.01), chalk), [0, at, 0.13]));
     group.add(place(part(new RoundedBoxGeometry(0.05, 1.8, 0.03, 1, 0.01), chalk), [at, 0, 0.13]));
   }
-  group.rotation.set(-0.45, 0.3, 0);
   return new Group().add(group);
 }
 
@@ -180,7 +177,6 @@ function stack(front: number, behind: number) {
   const group = new Group();
   group.add(place(card(behind), [-0.4, 0.3, -0.2], [0, 0, 0.12]));
   group.add(place(card(front), [0.3, -0.2, 0.15], [0, 0, -0.08]));
-  group.rotation.y = 0.3;
   return new Group().add(group);
 }
 export const toFront = () => badged(stack(0x2f6fc2, 0x6a6470), "up");
@@ -190,7 +186,6 @@ export function duplicate() {
   const group = new Group();
   group.add(place(page(43), [-0.3, 0.25, -0.15], [0, 0, 0.05]));
   group.add(place(page(43), [0.3, -0.25, 0.1], [0, 0, 0.05]));
-  group.rotation.y = 0.25;
   return new Group().add(group);
 }
 
@@ -205,7 +200,7 @@ export function give() {
     const loop = part(new TorusGeometry(0.22, 0.07, 10, 24), ribbon);
     group.add(place(loop, [side * 0.2, 0.7, 0], [0, 0, side * 0.6]));
   }
-  group.rotation.set(0.35, -0.6, 0);
+  group.rotation.set(0.25, 0, 0);
   return new Group().add(group);
 }
 
@@ -250,7 +245,7 @@ export function rename() {
       [0.4, 0.3, 0],
     ),
   );
-  group.rotation.set(-0.15, 0.3, 0.25);
+  group.rotation.set(0, 0, 0.25);
   return new Group().add(group);
 }
 
@@ -261,12 +256,11 @@ export function shortcut() {
   const key = relief(outline("ms:keyboard-command-key-rounded"), kit.gold(), 0.08, 0.03);
   key.scale.setScalar(0.62);
   group.add(place(key, [0, 0, 0.42]));
-  group.rotation.set(-0.35, 0.3, 0);
   return new Group().add(group);
 }
 
 export const fitView = () =>
-  place(relief(outline("ms:fit-screen-rounded"), kit.gold(), 0.25, 0.06), [0, 0, 0], [0, 0.3, 0]);
+  place(relief(outline("ms:fit-screen-rounded"), kit.gold(), 0.25, 0.06), [0, 0, 0], [0, 0, 0]);
 export const undo = () =>
   place(
     relief(outline("ms:undo-rounded"), kit.enamel(0x4c7cc8), 0.3, 0.07),

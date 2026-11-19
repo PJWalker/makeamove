@@ -1,5 +1,4 @@
 import react from "@vitejs/plugin-react";
-import Icons from "unplugin-icons/vite";
 import { createJiti, type Jiti } from "jiti";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
@@ -438,8 +437,6 @@ export default defineConfig({
     lazyPlugins(() => [
       ...macroPlugins(),
       react({ babel: { plugins: ["babel-plugin-react-compiler"] } }),
-      // Icons are compiled into the bundle from local Iconify data, so they work offline.
-      Icons({ compiler: "jsx", jsx: "react", scale: 1 }),
       VitePWA({
         registerType: "autoUpdate",
         // The glob below already precaches every icon; don't list them twice.

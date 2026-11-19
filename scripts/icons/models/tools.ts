@@ -16,10 +16,10 @@ import { cloud } from "./props";
 /* Canvas tools and scene effects. */
 
 export const select = () =>
-  place(relief(outline("gi:arrow-cursor"), kit.enamel(0xf4efe4), 0.25), [0, 0, 0], [0, 0.3, 0]);
+  place(relief(outline("gi:arrow-cursor"), kit.enamel(0xf4efe4), 0.25), [0, 0, 0], [0, 0, 0]);
 
 export const pan = () =>
-  place(relief(outline("gi:hand"), kit.steel(), 0.28, 0.06), [0, 0, 0], [0.1, 0.25, 0]);
+  place(relief(outline("gi:hand"), kit.steel(), 0.28, 0.06), [0, 0, 0], [0, 0, 0]);
 
 export function eraser() {
   const group = new Group();
@@ -30,7 +30,7 @@ export function eraser() {
       [0.45, 0, 0],
     ),
   );
-  group.rotation.set(0.35, -0.5, 0.35);
+  group.rotation.set(0.25, 0, 0.35);
   return new Group().add(group);
 }
 
@@ -53,7 +53,7 @@ export function shapes() {
 const glyph =
   (id: Parameters<typeof outline>[0], material = kit.gold()) =>
   () =>
-    place(relief(outline(id), material, 0.3, 0.06), [0, 0, 0], [0.05, 0.3, 0]);
+    place(relief(outline(id), material, 0.3, 0.06), [0, 0, 0], [0, 0, 0]);
 
 export const text = glyph("ms:title-rounded");
 export const bold = glyph("ms:format-bold", kit.steel());
@@ -65,7 +65,7 @@ export function measure() {
   const steel = kit.steel();
   for (const side of [-1, 1]) {
     const leg = new Group();
-    leg.add(place(part(new CylinderGeometry(0.08, 0.015, 2, 12), steel), [0, -1, 0]));
+    leg.add(place(part(new CylinderGeometry(0.13, 0.03, 2, 12), steel), [0, -1, 0]));
     leg.rotation.z = side * 0.32;
     group.add(leg);
   }
@@ -77,7 +77,6 @@ export function measure() {
     ),
   );
   group.add(place(part(new CylinderGeometry(0.05, 0.07, 0.35, 12), kit.gold()), [0, 0.3, 0]));
-  group.rotation.set(0.2, 0.3, 0);
   return new Group().add(group);
 }
 
@@ -93,7 +92,6 @@ export function wall() {
       group.add(place(brick, [x, row * 0.55 - 0.55, 0], [0, 0, (seed % 3) * 0.02 - 0.02]));
     }
   }
-  group.rotation.set(0.2, -0.35, 0);
   return new Group().add(group);
 }
 
@@ -219,7 +217,7 @@ export function embers() {
 /** A dark wand bound in gold, a pink star blazing at its tip. */
 export function magic() {
   const group = new Group();
-  const wand = part(new CylinderGeometry(0.06, 0.1, 2.1, 12), kit.matte(0x2b1d17, 0.5));
+  const wand = part(new CylinderGeometry(0.1, 0.15, 2.1, 12), kit.matte(0x3b2a20, 0.5));
   group.add(place(wand, [0, 0, 0]));
   for (const y of [-0.55, -0.7])
     group.add(place(part(new CylinderGeometry(0.11, 0.11, 0.06, 16), kit.gold()), [0, y, 0]));

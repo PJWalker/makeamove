@@ -17,7 +17,6 @@ export function chat() {
   const front = relief(bubble, kit.ivory(), 0.2, 0.05);
   front.scale.setScalar(0.8);
   group.add(place(front, [-0.35, -0.3, 0.1]));
-  group.rotation.y = 0.25;
   return new Group().add(group);
 }
 
@@ -49,7 +48,6 @@ export function characters() {
   const plume = part(new SphereGeometry(0.3, 24, 16), kit.matte(0xb3242a, 0.85));
   plume.scale.set(0.6, 1, 1.6);
   group.add(place(plume, [0, 0.95, -0.2], [-0.4, 0, 0]));
-  group.rotation.y = -0.4;
   return new Group().add(group);
 }
 
@@ -65,7 +63,6 @@ export function playerCharacter() {
   const figure = relief(outline("ms:person-rounded"), kit.enamel(0x22406e), 0.06, 0.02);
   figure.scale.setScalar(0.72);
   group.add(place(figure, [0, -0.05, 0.12]));
-  group.rotation.y = 0.3;
   return new Group().add(group);
 }
 
@@ -101,7 +98,6 @@ export function libraries() {
     );
     x += width + 0.02;
   }
-  group.rotation.set(0.1, -0.35, 0);
   return new Group().add(group);
 }
 
@@ -122,7 +118,7 @@ export function reference() {
   );
   const tail = part(new RoundedBoxGeometry(0.12, 0.6, 0.03, 1, 0.01), kit.lacquer(0xa3201a));
   group.add(place(tail, [0.12, -0.3, 0.45], [0, 0, 0.2]));
-  group.rotation.set(0.15, 0, -0.75);
+  group.rotation.set(0, 0, -0.75);
   return new Group().add(group);
 }
 
@@ -142,7 +138,6 @@ export function secret() {
     [-0.62, -0.82],
   ] as const)
     group.add(place(slab(0.22, 0.22, 0.4, kit.steel(), 0.05), [x, y, 0]));
-  group.rotation.set(-0.1, 0.4, 0);
   return new Group().add(group);
 }
 

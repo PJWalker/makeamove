@@ -3,7 +3,8 @@ import type { Icon } from "./icons";
 /*
  * Rendered icons: full-colour objects from the adventurer's kit, modelled
  * and lit in scripts/icons and rendered by `npm run generate:icons` at 32px,
- * with a 64px render for high-density screens.
+ * with a 64px render for high-density screens. Library-entry icons also have
+ * a 128px render, for tokens on the canvas.
  */
 
 const RENDERS = import.meta.glob<string>("./icon-art/*.png", {
@@ -12,15 +13,16 @@ const RENDERS = import.meta.glob<string>("./icon-art/*.png", {
   import: "default",
 });
 
-function render(name: string, size: 32 | 64): string {
+/** The URL of one of an icon's renders. */
+export function artUrl(name: string, size: 32 | 64 | 128): string {
   const url = RENDERS[`./icon-art/${name}-${size}.png`];
   if (!url) throw new Error(`The ${name} icon has no ${size}px render; run npm run generate:icons`);
   return url;
 }
 
 export function art(name: string): Icon {
-  const src = render(name, 32);
-  const srcSet = `${render(name, 64)} 2x`;
+  const src = artUrl(name, 32);
+  const srcSet = `${artUrl(name, 64)} 2x`;
   return function ArtIcon({ size = 22, className }) {
     return (
       <img

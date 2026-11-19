@@ -119,7 +119,6 @@ export function folio() {
     corner.scale.z = 0.5;
     group.add(place(corner, [x * 0.97, -0.72, 0.14]));
   }
-  group.rotation.set(-0.15, 0.2, 0);
   return new Group().add(group);
 }
 
@@ -139,7 +138,7 @@ export function chest() {
   }
   group.add(place(slab(0.36, 0.42, 0.06, kit.gold(), 0.06), [0, 0.42, 0.62]));
   group.add(place(part(new SphereGeometry(0.05, 10, 8), kit.blackIron()), [0, 0.38, 0.67]));
-  group.rotation.set(0.15, -0.45, 0);
+  group.rotation.set(0.25, 0, 0);
   return new Group().add(group);
 }
 
@@ -193,6 +192,5 @@ export function pane(dividers: number[], shaded?: [number, number]) {
         0.04,
       ]),
     );
-  group.rotation.set(-0.1, 0.25, 0);
   return new Group().add(group);
 }

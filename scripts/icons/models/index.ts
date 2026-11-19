@@ -11,9 +11,11 @@ import {
 } from "./core";
 import * as tools from "./tools";
 import * as scene from "./scene";
+import { roll } from "./scene";
 import * as panels from "./panels";
 import * as game from "./game";
 import * as ui from "./interface";
+import * as entry from "./entries";
 
 /**
  * One model per icon, keyed by the file it renders to. Each matches an
@@ -43,7 +45,7 @@ export const MODELS = {
   token: scene.token,
   map: treasureMap,
   target: scene.target,
-  roll: scene.roll,
+  roll,
   post: scene.post,
   lock: () => padlock(),
   unlock: scene.unlock,
@@ -106,6 +108,56 @@ export const MODELS = {
   sidebar: ui.sidebar,
   "open-window": ui.openWindow,
   check: ui.check,
+
+  // Library entries, named as systems name them (src/ui/entryIcons.tsx)
+  "entry-rations": entry.rations,
+  "entry-gear": entry.gear,
+  "entry-potion": entry.potion,
+  "entry-herbs": entry.herbs,
+  "entry-poultice": entry.poultice,
+  "entry-books": entry.books,
+  "entry-dagger": entry.dagger,
+  "entry-sword": entry.shortSword,
+  "entry-longsword": entry.longsword,
+  "entry-axe": entry.axe,
+  "entry-spear": entry.spear,
+  "entry-polearm": entry.polearm,
+  "entry-rapier": entry.rapier,
+  "entry-bow": entry.bow,
+  "entry-arrows": entry.arrows,
+  "entry-chainmail": entry.chainmail,
+  "entry-scale-armor": entry.scaleArmor,
+  "entry-shield": entry.shield,
+  "entry-holy-symbol": entry.holySymbol,
+  "entry-spellbook": entry.spellbook,
+  "entry-tools": entry.lockpicks,
+  "entry-bag": entry.bag,
+  "entry-mace": entry.mace,
+  "entry-flail": entry.flail,
+  "entry-hammer": entry.hammer,
+  "entry-staff": entry.staff,
+  "entry-crossbow": entry.crossbow,
+  "entry-leather-armor": entry.leatherArmor,
+  "entry-breastplate": entry.breastplate,
+  "entry-torch": entry.torch,
+  "entry-wand": entry.wand,
+  "entry-ring": entry.ring,
+  "entry-cloak": entry.cloak,
+  "entry-gauntlet": entry.gauntlet,
+  "entry-bard": entry.lyre,
+  "entry-cleric": entry.ankh,
+  "entry-druid": entry.oakLeaf,
+  "entry-paladin": entry.paladin,
+  "entry-thief": entry.thief,
+  "entry-wizard": entry.wizard,
+  "entry-hero": entry.hero,
+  "entry-barbarian": entry.barbarian,
+  "entry-monk": entry.monk,
+  "entry-sorcerer": entry.sorcerer,
+  "entry-warlock": entry.warlock,
+  "entry-move": roll,
+  "entry-class-move": entry.classMove,
+  "entry-tag": entry.tag,
 } satisfies Record<string, () => Object3D>;
 
 export type IconName = keyof typeof MODELS;

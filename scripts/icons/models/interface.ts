@@ -71,7 +71,6 @@ export function leave() {
     );
   door.add(place(part(new TorusGeometry(0.1, 0.025, 8, 20), kit.brass()), [1.0, 0.85, 0.16]));
   group.add(place(door, [-0.6, 0, 0.1], [0, -0.75, 0]));
-  group.rotation.y = 0.2;
   return new Group().add(group);
 }
 
@@ -129,7 +128,7 @@ export function deleteItem() {
 const glyph =
   (id: Parameters<typeof outline>[0], material = kit.steel()) =>
   () =>
-    place(relief(outline(id), material, 0.3, 0.07), [0, 0, 0], [0.05, 0.3, 0]);
+    place(relief(outline(id), material, 0.3, 0.07), [0, 0, 0], [0, 0, 0]);
 
 export const add = glyph("ms:add-rounded", kit.enamel(0x2f9a54));
 export const remove = glyph("ms:remove-rounded", kit.enamel(0xb8322a));
@@ -159,7 +158,7 @@ export function search() {
     place(part(new CylinderGeometry(0.12, 0.14, 0.9, 16), kit.matte(0x2b1d17, 0.45)), [0, -1.4, 0]),
   );
   group.add(handle);
-  group.rotation.set(0.15, 0.25, 0.75);
+  group.rotation.set(0, 0, 0.75);
   return new Group().add(group);
 }
 

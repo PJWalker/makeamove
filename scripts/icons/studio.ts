@@ -29,7 +29,10 @@ import { MODELS, type IconName } from "./models";
  */
 
 const RENDER = 512;
+/** Shown at 32px, with a 64px render for high-density screens. */
 export const ICON_SIZES = [32, 64] as const;
+/** Library-entry icons are also drawn large, on tokens on the canvas. */
+const TOKEN_SIZE = 128;
 /** Fraction of the icon's width left clear around the art for the outline. */
 const MARGIN = 0.06;
 const OUTLINE = { colour: [28, 16, 8] as const, opacity: 0.9 };
@@ -66,7 +69,8 @@ export function renderIcons(names = Object.keys(MODELS) as IconName[]): IconRend
     const camera = frame(model);
     light(scene, model);
     renderer.render(scene, camera);
-    for (const size of ICON_SIZES) renders.push({ name, size, dataUrl: finish(canvas, size) });
+    const sizes = name.startsWith("entry-") ? [...ICON_SIZES, TOKEN_SIZE] : ICON_SIZES;
+    for (const size of sizes) renders.push({ name, size, dataUrl: finish(canvas, size) });
     scene.traverse((o) => {
       const mesh = o as Mesh;
       mesh.geometry?.dispose();
@@ -127,7 +131,7 @@ function rimLight(model: Object3D) {
             float edge = pow(facing, 2.6);
             float above = 0.35 + 0.65 * clamp(normal.y * 0.6 + 0.6, 0.0, 1.0);
             float darkness = 1.0 - dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));
-            totalEmissiveRadiance += ${RIM_COLOUR} * edge * above * (0.15 + 1.1 * darkness * darkness);
+            totalEmissiveRadiance += ${RIM_COLOUR} * edge * above * (0.15 + 1.5 * darkness * darkness);
           }`,
         );
       };
@@ -135,7 +139,8 @@ function rimLight(model: Object3D) {
   });
 }
 
-const VIEW = new Vector3(0, Math.sin((12 * Math.PI) / 180), Math.cos((12 * Math.PI) / 180));
+/** Every icon is shot front-on. */
+const VIEW = new Vector3(0, 0, 1);
 
 /** A square orthographic camera fitted tightly around the model's silhouette. */
 function frame(model: Object3D): OrthographicCamera {
@@ -178,7 +183,7 @@ function light(scene: Scene, model: Object3D) {
   const radius = bounds.getSize(new Vector3()).length() / 2;
 
   const key = new DirectionalLight(0xffe2b8, 3.6);
-  key.position.copy(centre).add(new Vector3(-3, 4, 4).normalize().multiplyScalar(radius * 4));
+  key.position.copy(centre).add(new Vector3(-1, 1, 0.9).normalize().multiplyScalar(radius * 4));
   key.target.position.copy(centre);
   key.castShadow = true;
   key.shadow.mapSize.set(2048, 2048);
@@ -214,9 +219,34 @@ function finish(source: HTMLCanvasElement, size: number): string {
   const ctx = current.getContext("2d", { willReadFrequently: true });
   if (!ctx) throw new Error("No 2D context");
   const image = ctx.getImageData(0, 0, size, size);
+  // Crisp edges at icon size, where the step down has softened them.
+  if (size <= 64) sharpen(image.data, size, size === 32 ? 0.6 : 0.35);
   outline(image.data, size, size / 32);
   ctx.putImageData(image, 0, 0);
   return current.toDataURL("image/png");
+}
+
+/** An unsharp mask over the colour of opaque pixels. */
+function sharpen(data: Uint8ClampedArray, size: number, amount: number) {
+  const source = Uint8ClampedArray.from(data);
+  const at = (x: number, y: number, c: number) =>
+    source[
+      (Math.min(size - 1, Math.max(0, y)) * size + Math.min(size - 1, Math.max(0, x))) * 4 + c
+    ] ?? 0;
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const i = (y * size + x) * 4;
+      if ((source[i + 3] ?? 0) < 8) continue;
+      for (let c = 0; c < 3; c++) {
+        let blur = 0;
+        for (let dy = -1; dy <= 1; dy++)
+          for (let dx = -1; dx <= 1; dx++) blur += at(x + dx, y + dy, c) * (dx || dy ? 1 : 4);
+        blur /= 12;
+        const value = source[i + c] ?? 0;
+        data[i + c] = value + (value - blur) * amount;
+      }
+    }
+  }
 }
 
 function outline(data: Uint8ClampedArray, size: number, radius: number) {
