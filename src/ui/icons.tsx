@@ -1,4 +1,4 @@
-import { type ComponentType, type ReactNode, useState } from "react";
+import { type ComponentType, type ReactNode, useId } from "react";
 
 /*
  * Every interface icon in the app, named for what it means rather than what
@@ -22,11 +22,10 @@ export const PROMINENT_ICON_SIZE = 32;
  * through it once: where shapes overlap they merge, rather than a
  * translucent text colour building up darker at the seams.
  */
-let masks = 0;
 function glyph(art: ReactNode): Icon {
   return function Glyph({ size = 22, className }) {
-    // Unique across the page, which may hold several React roots.
-    const [id] = useState(() => `glyph-mask-${++masks}`);
+    // Unique across the page: every extra React root sets its own identifierPrefix.
+    const id = useId();
     return (
       <svg viewBox="0 0 24 24" width={size} height={size} className={className} aria-hidden="true">
         <mask id={id} maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24" color="white">

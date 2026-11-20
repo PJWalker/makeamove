@@ -151,6 +151,9 @@ export function linkExtension(campaign: Campaign, o: Pick<RichTextOptions, "note
  * The list that drops down after `@`: arrow keys move, Enter or Tab picks,
  * Escape closes. It's anchored to the `@` text being typed (richText.css).
  */
+/** Counts suggestion lists, so each gets its own React id prefix. */
+let suggestionRoots = 0;
+
 function suggestionList(campaign: Campaign) {
   const host = document.createElement("div");
   let root: Root | null = null;
@@ -192,7 +195,8 @@ function suggestionList(campaign: Campaign) {
 
   return {
     onStart(p: SuggestionProps<LinkTarget>) {
-      root = createRoot(host);
+      // Its own id prefix, so ids (an icon's mask) can't clash with the app root's.
+      root = createRoot(host, { identifierPrefix: `link-suggestions-${++suggestionRoots}-` });
       props = p;
       index = 0;
       document.body.appendChild(host);
