@@ -2,10 +2,10 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vite-plus/test";
 import { art } from "../iconArt";
 
-const IconLock = art("lock");
+const IconRing = art("ring");
 
 describe("a rendered icon", () => {
-  const markup = renderToStaticMarkup(<IconLock size={20} className="extra" />).match(
+  const markup = renderToStaticMarkup(<IconRing size={20} className="extra" />).match(
     /<img [^>]*>/,
   )?.[0];
 
@@ -19,7 +19,7 @@ describe("a rendered icon", () => {
   });
 
   it("offers its 32px render, and its 64px render for high-density screens", () => {
-    expect(markup).toMatch(/src="[^"]*lock-32\.png"/);
-    expect(markup).toMatch(/srcSet="[^"]*lock-64\.png 2x"/);
+    expect(markup).toMatch(/src="[^"]*ring-32\.png"/);
+    expect(markup).toMatch(/srcSet="[^"]*ring-64\.png 2x"/);
   });
 });

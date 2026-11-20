@@ -17,7 +17,7 @@ const artName = new Map<Icon, string>();
 function entry(name: string): Icon {
   let icon = made.get(name);
   if (!icon) {
-    icon = art(`entry-${name}`);
+    icon = art(name);
     made.set(name, icon);
     artName.set(icon, name);
   }
@@ -97,5 +97,5 @@ export function entryIcon(kind: EntryKind, name?: string): Icon {
 
 /** The large render of an entry's icon, for drawing on a token. */
 export function tokenIconUrl(name?: string): string {
-  return artUrl(`entry-${artName.get(entryIcon("item", name)) ?? "bag"}`, 128);
+  return artUrl(artName.get(entryIcon("item", name)) ?? "bag", 128);
 }

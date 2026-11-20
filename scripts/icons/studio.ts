@@ -29,10 +29,8 @@ import { MODELS, type IconName } from "./models";
  */
 
 const RENDER = 512;
-/** Shown at 32px, with a 64px render for high-density screens. */
-export const ICON_SIZES = [32, 64] as const;
-/** Library-entry icons are also drawn large, on tokens on the canvas. */
-const TOKEN_SIZE = 128;
+/** Shown at 32px, with a 64px render for high-density screens and a 128px one for tokens. */
+export const ICON_SIZES = [32, 64, 128] as const;
 /** Fraction of the icon's width left clear around the art for the outline. */
 const MARGIN = 0.06;
 const OUTLINE = { colour: [28, 16, 8] as const, opacity: 0.9 };
@@ -69,8 +67,7 @@ export function renderIcons(names = Object.keys(MODELS) as IconName[]): IconRend
     const camera = frame(model);
     light(scene, model);
     renderer.render(scene, camera);
-    const sizes = name.startsWith("entry-") ? [...ICON_SIZES, TOKEN_SIZE] : ICON_SIZES;
-    for (const size of sizes) renders.push({ name, size, dataUrl: finish(canvas, size) });
+    for (const size of ICON_SIZES) renders.push({ name, size, dataUrl: finish(canvas, size) });
     scene.traverse((o) => {
       const mesh = o as Mesh;
       mesh.geometry?.dispose();

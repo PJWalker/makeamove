@@ -1,12 +1,17 @@
 import {
+  type BufferGeometry,
   CatmullRomCurve3,
   ConeGeometry,
   CylinderGeometry,
   ExtrudeGeometry,
   Group,
+  IcosahedronGeometry,
   type Material,
+  Mesh,
+  MeshStandardMaterial,
   MeshPhysicalMaterial,
   type Object3D,
+  PlaneGeometry,
   PointLight,
   Shape,
   SphereGeometry,
@@ -17,9 +22,7 @@ import {
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { drawnTexture, kit, part, place } from "../kit";
 import { outline, relief } from "../forms";
-import { glow, lathe, TAU } from "./core";
-import { characters } from "./panels";
-import { rename } from "./scene";
+import { glow, lathe, TAU } from "./shared";
 
 /*
  * Library entries: the gear, classes, moves and tags that systems name.
@@ -869,8 +872,6 @@ export function warlock() {
   return group;
 }
 
-export const hero = characters;
-
 /* Moves and tags */
 
 export function classMove() {
@@ -891,4 +892,124 @@ export function classMove() {
   return diagonal(group);
 }
 
-export const tag = rename;
+/* Shared with the interface's old models: the hero's helm, the tag, a move's d20. */
+
+/** A visored steel helm with a crimson plume. */
+export function hero() {
+  const group = new Group();
+  const steel = kit.steel();
+  const dome = part(new SphereGeometry(0.8, 48, 32, 0, Math.PI * 2, 0, Math.PI * 0.62), steel);
+  dome.scale.set(1, 1.1, 1);
+  group.add(place(dome, [0, 0.1, 0]));
+  const face = part(new CylinderGeometry(0.75, 0.66, 0.9, 48, 1, true), steel);
+  group.add(place(face, [0, -0.45, 0]));
+  const slit = part(new RoundedBoxGeometry(0.9, 0.1, 0.3, 1, 0.03), kit.matte(0x0c0a0a, 0.9));
+  group.add(place(slit, [0, -0.2, 0.68]));
+  group.add(
+    place(
+      part(new RoundedBoxGeometry(0.14, 1.1, 0.2, 2, 0.05), kit.gold()),
+      [0, 0.15, 0.78],
+      [-0.2, 0, 0],
+    ),
+  );
+  group.add(
+    place(
+      part(new TorusGeometry(0.74, 0.05, 8, 48), kit.gold()),
+      [0, -0.05, 0],
+      [Math.PI / 2, 0, 0],
+    ),
+  );
+  const plume = part(new SphereGeometry(0.3, 24, 16), kit.matte(0xb3242a, 0.85));
+  plume.scale.set(0.6, 1, 1.6);
+  group.add(place(plume, [0, 0.95, -0.2], [-0.4, 0, 0]));
+  return new Group().add(group);
+}
+
+/** A gold name tag on a red string. */
+export function tag() {
+  const group = new Group();
+  const tag = new Shape();
+  tag.moveTo(-0.9, -0.5);
+  tag.lineTo(0.5, -0.5);
+  tag.lineTo(0.95, 0);
+  tag.lineTo(0.5, 0.5);
+  tag.lineTo(-0.9, 0.5);
+  const hole = new Shape();
+  hole.absarc(0.55, 0, 0.1, 0, TAU, true);
+  tag.holes.push(hole);
+  const plate = part(
+    new ExtrudeGeometry(tag, {
+      depth: 0.08,
+      bevelEnabled: true,
+      bevelSize: 0.04,
+      bevelThickness: 0.04,
+    }),
+    kit.gold(),
+  );
+  group.add(plate);
+  const ink = kit.matte(0x5a3410, 0.6);
+  for (const [y, w] of [
+    [0.15, 1.0],
+    [-0.15, 0.7],
+  ] as const)
+    group.add(
+      place(part(new RoundedBoxGeometry(w, 0.09, 0.04, 1, 0.02), ink), [
+        -0.3 - (1 - w) / 2,
+        y,
+        0.13,
+      ]),
+    );
+  group.add(
+    place(
+      part(new TorusGeometry(0.3, 0.035, 8, 24), kit.lacquer(0xa3201a)),
+      [0.95, 0.15, 0.05],
+      [0.4, 0.3, 0],
+    ),
+  );
+  group.rotation.set(0, 0, 0.25);
+  return new Group().add(group);
+}
+
+/** A purple d20 with its gilded numeral turned to the viewer. */
+export function move() {
+  const group = new Group();
+  const die = part(new IcosahedronGeometry(0.75, 0), kit.lacquer(0x5b2a9a));
+  die.rotation.set(0.35, 0.5, 0.15);
+  group.add(die);
+  const numeral = numberDecal(die, "20");
+  if (numeral) group.add(numeral);
+  return group;
+}
+
+/** Ink on the face of `die` that most faces the camera. */
+function numberDecal(die: Mesh, label: string): Object3D | undefined {
+  die.updateMatrixWorld();
+  const geometry = die.geometry as BufferGeometry;
+  const pos = geometry.getAttribute("position");
+  const toCamera = new Vector3(0, 0.2, 1).normalize();
+  let best: { centre: Vector3; normal: Vector3; score: number } | undefined;
+  for (let i = 0; i < pos.count; i += 3) {
+    const [a, b, c] = [0, 1, 2].map((k) =>
+      new Vector3().fromBufferAttribute(pos, i + k).applyMatrix4(die.matrixWorld),
+    ) as [Vector3, Vector3, Vector3];
+    const normal = new Vector3().subVectors(b, a).cross(new Vector3().subVectors(c, a)).normalize();
+    const score = normal.dot(toCamera);
+    if (!best || score > best.score)
+      best = { centre: a.clone().add(b).add(c).divideScalar(3), normal, score };
+  }
+  if (!best) return undefined;
+  const texture = drawnTexture(128, 128, 1, (ctx, _r, w, h) => {
+    ctx.fillStyle = "#f2c24e";
+    ctx.font = `bold ${h * 0.62}px Georgia, serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(label, w / 2, h * 0.56);
+  });
+  const decal = new Mesh(
+    new PlaneGeometry(0.5, 0.5),
+    new MeshStandardMaterial({ map: texture, transparent: true, roughness: 0.6 }),
+  );
+  decal.position.copy(best.centre).addScaledVector(best.normal, 0.004);
+  decal.lookAt(best.centre.clone().add(best.normal));
+  return decal;
+}

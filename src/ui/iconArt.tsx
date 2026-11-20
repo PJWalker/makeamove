@@ -1,10 +1,10 @@
 import type { Icon } from "./icons";
 
 /*
- * Rendered icons: full-colour objects from the adventurer's kit, modelled
- * and lit in scripts/icons and rendered by `npm run generate:icons` at 32px,
- * with a 64px render for high-density screens. Library-entry icons also have
- * a 128px render, for tokens on the canvas.
+ * Rendered library-entry icons: full-colour objects from the adventurer's
+ * kit, modelled and lit in scripts/icons and rendered by
+ * `npm run generate:icons` at 32px, with a 64px render for high-density
+ * screens and a 128px one for tokens on the canvas.
  */
 
 const RENDERS = import.meta.glob<string>("./icon-art/*.png", {

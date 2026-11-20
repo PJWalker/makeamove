@@ -3,7 +3,7 @@ import { ENTRY_ICONS, tokenIconUrl } from "../entryIcons";
 
 describe("library entry icons", () => {
   it("draws a token's icon from the large render of the art it names", () => {
-    expect(tokenIconUrl("sword")).toMatch(/entry-sword-128\.png$/);
+    expect(tokenIconUrl("sword")).toMatch(/\/sword-128\.png$/);
   });
 
   it("falls back to the bag for an icon it doesn't know", () => {
