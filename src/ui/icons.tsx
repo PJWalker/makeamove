@@ -1,4 +1,4 @@
-import type { ComponentType, ReactNode } from "react";
+import { type ComponentType, type ReactNode, useState } from "react";
 
 /*
  * Every interface icon in the app, named for what it means rather than what
@@ -17,18 +17,22 @@ export type Icon = ComponentType<IconProps>;
 /** Icons on the main toolbar and the sidebar tabs. */
 export const PROMINENT_ICON_SIZE = 32;
 
+/**
+ * The art is drawn in white into a mask, and the text colour painted
+ * through it once: where shapes overlap they merge, rather than a
+ * translucent text colour building up darker at the seams.
+ */
+let masks = 0;
 function glyph(art: ReactNode): Icon {
   return function Glyph({ size = 22, className }) {
+    // Unique across the page, which may hold several React roots.
+    const [id] = useState(() => `glyph-mask-${++masks}`);
     return (
-      <svg
-        viewBox="0 0 24 24"
-        width={size}
-        height={size}
-        fill="currentColor"
-        className={className}
-        aria-hidden="true"
-      >
-        {art}
+      <svg viewBox="0 0 24 24" width={size} height={size} className={className} aria-hidden="true">
+        <mask id={id} maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24" color="white">
+          <g fill="currentColor">{art}</g>
+        </mask>
+        <rect width="24" height="24" fill="currentColor" mask={`url(#${id})`} />
       </svg>
     );
   };
@@ -60,6 +64,23 @@ function cogPath(teeth: number, outer: number, inner: number, hole: number) {
     ].join("L");
   }).join("L");
   return `M${rim}Z M${12 + hole} 12a${hole} ${hole} 0 1 0 ${-2 * hole} 0a${hole} ${hole} 0 1 0 ${2 * hole} 0Z`;
+}
+
+/** A four-pointed sparkle centred on (x, y), reaching r. */
+function sparkle(x: number, y: number, r: number) {
+  const k = r * 0.15;
+  return `M${x} ${y - r}Q${x + k} ${y - k} ${x + r} ${y}Q${x + k} ${y + k} ${x} ${y + r}Q${x - k} ${y + k} ${x - r} ${y}Q${x - k} ${y - k} ${x} ${y - r}Z`;
+}
+
+/** Erases the mask outside a circle of radius r: crops what's drawn before it. */
+function outsideCircle(r: number) {
+  return (
+    <path
+      fill="black"
+      fillRule="evenodd"
+      d={`M0 0h24v24H0zM${12 + r} 12a${r} ${r} 0 1 0 ${-2 * r} 0a${r} ${r} 0 1 0 ${2 * r} 0z`}
+    />
+  );
 }
 
 const bust = (
@@ -127,11 +148,15 @@ export const IconMeasure = glyph(
     <path {...line} {...faint} d="M7 17.5q5 2.2 10 0" />
   </>,
 );
+/** A radar sweep. */
 export const IconPing = glyph(
   <>
-    <circle {...line} cx="12" cy="12" r="9" />
-    <circle {...faint} cx="12" cy="12" r="5.5" />
-    <circle cx="12" cy="12" r="2.5" />
+    <circle {...line} cx="12" cy="12" r="9.5" />
+    <circle {...line} {...faint} strokeWidth="1.5" cx="12" cy="12" r="5" />
+    <path {...faint} d="M12 12V2.5a9.5 9.5 0 0 1 8.23 4.75z" />
+    <path {...line} d="M12 12l7.4-4.3" />
+    <circle cx="15.5" cy="16" r="1.7" />
+    <circle cx="12" cy="12" r="1.5" />
   </>,
 );
 export const IconWall = glyph(
@@ -148,13 +173,16 @@ export const IconLight = glyph(
     <rect x="6" y="19" width="12" height="2.5" />
   </>,
 );
-/** A seer's crystal ball. */
+/** A drift of magic sparkles. */
 export const IconEffects = glyph(
   <>
-    <circle {...faint} cx="12" cy="10" r="7.5" />
-    <circle {...line} cx="12" cy="10" r="7.5" />
-    <path d="M8 9.5a4.5 4.5 0 0 1 4-4v2a2.5 2.5 0 0 0-2 2z" />
-    <path d="M6.5 22 8 18.3h8l1.5 3.7z" />
+    <path d={sparkle(9.5, 10, 6.5)} />
+    <path d={sparkle(18, 5, 3.5)} />
+    <path {...faint} d={sparkle(17, 16.5, 4)} />
+    <path d={sparkle(6, 19, 2.5)} />
+    <circle {...faint} cx="3.5" cy="4" r="1" />
+    <circle {...faint} cx="21" cy="11" r="1" />
+    <circle cx="12.5" cy="21" r=".9" />
   </>,
 );
 export const IconRain = glyph(
@@ -212,25 +240,12 @@ export const IconMap = glyph(
     <path {...line} d="M14.5 7l3 3m0-3-3 3" />
   </>,
 );
-/** A compass, its needle on the mark. */
+/** A crosshair. */
 export const IconTarget = glyph(
   <>
-    <circle {...line} cx="12" cy="12" r="9.5" />
-    <path d="M12 4.5 14.5 12h-5z" />
-    <path {...faint} d="M9.5 12h5L12 19.5z" />
-  </>,
-);
-/** A d20. */
-export const IconRoll = glyph(
-  <>
-    <path {...line} d="M12 2.5 20.5 7.3v9.4L12 21.5l-8.5-4.8V7.3z" />
-    <path d="M12 7.5 16.5 15h-9z" />
-    <path
-      {...line}
-      {...faint}
-      strokeWidth="1.5"
-      d="M12 3v4.5M4 7.5l3.5 7.5M20 7.5 16.5 15M7.5 15 12 21M16.5 15 12 21"
-    />
+    <circle {...line} cx="12" cy="12" r="7.5" />
+    <path {...line} d="M12 2v5.5M12 16.5V22M2 12h5.5M16.5 12H22" />
+    <circle cx="12" cy="12" r="1.5" />
   </>,
 );
 export const IconPost = glyph(
@@ -307,7 +322,7 @@ export const IconBackupFolder = glyph(
 export const IconGrid = glyph(
   <>
     <rect {...line} x="3" y="3" width="18" height="18" />
-    <path {...line} {...faint} d="M9 3v18M15 3v18M3 9h18M3 15h18" />
+    <path {...line} strokeWidth="1.5" d="M9 3v18M15 3v18M3 9h18M3 15h18" />
   </>,
 );
 export const IconToFront = glyph(
@@ -328,14 +343,12 @@ export const IconDuplicate = glyph(
     <rect x="8" y="7" width="12" height="14.5" />
   </>,
 );
-/** An open hand, with a parcel given. */
+/** A gift resting in an open hand. */
 export const IconGive = glyph(
   <>
-    <path fillRule="evenodd" d="M8 2.5h9.5v8H8zm4 0v8h1.5v-8z" />
-    <path
-      {...line}
-      d="M2.5 14.5h3.5l3 1.8h4.5a1.4 1.4 0 0 1 0 2.8H9.5M13.5 18.5l5-3.2a1.4 1.4 0 0 1 1.8 2.1L15 21.5H7l-2.5-1.3h-2"
-    />
+    <path d="M11.5 7.6C10.3 5.2 7.8 4.8 7.8 6.5c0 1 1.6 1.4 3.7 1.4zm0 0c1.2-2.4 3.7-2.8 3.7-1.1 0 1-1.6 1.4-3.7 1.4z" />
+    <path d="M6.5 8.4h4.4v2.6H6.5zm5.6 0h4.4v2.6h-4.4zM7.2 11.8h3.7v4.4H7.2zm4.9 0h3.7v4.4h-3.7z" />
+    <path d="M2 15.5h3.5l3 1.5h5a1.75 1.75 0 0 1 0 3.5h-4.2v.4h4.9l5.3-3.6a1.7 1.7 0 0 1 2.2 2.6L15.6 23H6.8L4 21.5H2z" />
   </>,
 );
 export const IconRename = glyph(
@@ -372,22 +385,24 @@ export const IconChat = glyph(
     <path d="M2.5 8h13v9.5H8.5l-3.5 3.5v-3.5H2.5z" />
   </>,
 );
-/** A visored helm. */
+/** A figure with a raised sword. */
 export const IconCharacters = glyph(
   <>
-    <path {...faint} d="M11 3.6V2c3.5-.6 7 .9 9 4.2-2.2-1.2-4.6-1.7-7-1.4z" />
-    <path
-      fillRule="evenodd"
-      d="M12 3.5c-4.4 0-7.5 3.4-7.5 8v10h5.5v-4h4v4h5.5v-10c0-4.6-3.1-8-7.5-8zM6.5 11.5h4.5v2H6.5zm6.5 0h4.5v2H13z"
-    />
+    <circle cx="8.5" cy="4.5" r="3" />
+    <path d="M4.5 8.5h8l-.6 8H5.1z" />
+    <path d="M5.2 16h2.8v6.5H5.2zm3.9 0h2.8v6.5H9.1z" />
+    <path {...line} strokeWidth="2.5" d="M4.8 9.8 3.4 15M12 9.8l4 4" />
+    <path d="M16.2 12.5V3.2l.9-1.8.9 1.8v9.3zM14.3 12.5h5.6v1.6h-5.6zm2.1 1.6h1.4v3h-1.4z" />
   </>,
 );
-/** A cameo of a figure. */
+/** The same figure, chest up, in a cameo. */
 export const IconPlayerCharacter = glyph(
   <>
-    <ellipse {...line} strokeWidth="1.75" cx="12" cy="12" rx="8.5" ry="10" />
-    <circle cx="12" cy="8.5" r="3" />
-    <path d="M6.5 18.5c0-3.3 2.4-5.5 5.5-5.5s5.5 2.2 5.5 5.5z" />
+    <circle cx="10.5" cy="8.5" r="3" />
+    <path d="M3 24c0-6 3.4-10 7.5-10s7.5 4 7.5 10z" />
+    <path d="M16.3 14V5l.7-1.7.7 1.7v9zM14.6 14h4.8v1.4h-4.8zm1.8 1.4h1.2v2.6h-1.2z" />
+    {outsideCircle(8.6)}
+    <circle {...line} strokeWidth="1.75" cx="12" cy="12" r="9.5" />
   </>,
 );
 /** A shelf of books. */
@@ -465,6 +480,8 @@ export const IconDice = glyph(
     />
   </>,
 );
+/** Rolling: the same dice. */
+export const IconRoll = IconDice;
 const sword = (
   <>
     <path d="M21 3l-.7 3.2-9.6 9.6-2.5-2.5 9.6-9.6z" />
@@ -479,7 +496,7 @@ export const IconCombat = glyph(
 );
 /** An anvil. */
 export const IconItems = glyph(
-  <path d="M2 6h15v2.5c0 1.6 1.5 2.3 4.5 2.3v1.2c-2.6 0-4.4 1-5.4 3H15l1 2.8h2v3H6v-3h2l1-2.8H8.2C6.7 12.5 4.6 10.6 2 9z" />,
+  <path d="M2 7 6 6h14v4h-4.5v1.5c0 1.5.6 2.6 1.8 3.5H19v3.5H5V15h2.2c1.2-.9 1.8-2 1.8-3.5V10H7.5C5 10 3.5 8.8 2 7z" />,
 );
 /** A rucksack. */
 export const IconNewGear = glyph(
@@ -502,14 +519,15 @@ const skip = (
 );
 export const IconNextTurn = glyph(skip);
 export const IconPreviousTurn = glyph(<g transform="matrix(-1 0 0 1 24 0)">{skip}</g>);
-/** A tree. */
+/** Two people, each to the other. */
 export const IconRelationships = glyph(
   <>
-    <circle cx="12" cy="7.5" r="5" />
-    <circle cx="6.5" cy="11" r="3.8" />
-    <circle cx="17.5" cy="11" r="3.8" />
-    <rect x="11" y="12" width="2" height="8.5" />
-    <path {...line} {...faint} d="M6 21.5h12" />
+    <circle cx="5" cy="8.5" r="2.7" />
+    <path d="M.5 19c0-3.2 2-5.5 4.5-5.5s4.5 2.3 4.5 5.5z" />
+    <circle cx="19" cy="8.5" r="2.7" />
+    <path d="M14.5 19c0-3.2 2-5.5 4.5-5.5s4.5 2.3 4.5 5.5z" />
+    <path {...line} d="M10.5 9.5h3" />
+    <path d="M8.3 9.5 11 7v5zm7.4 0L13 7v5z" />
   </>,
 );
 export const IconPin = glyph(
@@ -542,11 +560,14 @@ export const IconHelp = glyph(
     <circle cx="12" cy="17.5" r="1.3" />
   </>,
 );
-/** An arched door standing open. */
+/** An arched door swung open in its doorway. */
 export const IconLeave = glyph(
   <>
     <path {...faint} d="M5 21.5V10a7 7 0 0 1 14 0v11.5z" />
-    <path fillRule="evenodd" d="M5 9.5l8 2.5v10.5l-8-1zm5 5.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2z" />
+    <path
+      fillRule="evenodd"
+      d="M5 21.5V10a3.85 7 0 0 1 7.7 0v11.5zM11 13.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"
+    />
   </>,
 );
 export const IconDelete = glyph(
