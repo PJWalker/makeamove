@@ -7,6 +7,7 @@ import "./styles/components.css";
 import "./styles/transitions.css";
 import "./ui/sounds";
 import "./ui/sparkle";
+import "./ui/iconMotion";
 import { App } from "./app/App";
 
 createRoot(document.getElementById("app")!).render(<App />);

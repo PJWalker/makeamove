@@ -4,6 +4,7 @@
  * second click restarts the glint rather than waiting for the first to end.
  */
 
+import { replay } from "./replay";
 import { reducedMotion } from "./transition";
 
 const SPARKLING = ".btn, .popup-tab, .campaign-open, .segment";
@@ -15,10 +16,7 @@ document.addEventListener(
     if (reducedMotion.matches || !(event.target instanceof Element)) return;
     const control = event.target.closest<HTMLElement>(SPARKLING);
     if (!control || control.matches(":disabled, [data-disabled], [aria-disabled='true']")) return;
-    delete control.dataset["sparkle"];
-    // Flush the style so re-adding the attribute starts the animation over.
-    void control.offsetWidth;
-    control.dataset["sparkle"] = "";
+    replay(control, "sparkle");
   },
   { capture: true },
 );

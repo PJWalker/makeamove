@@ -1,0 +1,756 @@
+/*
+ * Icon motion: a short animation for every interface icon, played when its
+ * control is clicked (ui/iconMotion.ts marks the icon's SVG data-playing).
+ * The icon's drawing sits in a mask (ui/icons.tsx), so these animate the
+ * mask's shapes: .art is the whole drawing, and named parts move alone.
+ * Parts transform about their own centre unless a rule says otherwise;
+ * a rule that names a point in the drawing switches to its 24-unit grid.
+ */
+@layer components {
+  [data-icon] {
+    --icon-motion: 460ms;
+    --icon-ease: cubic-bezier(0.2, 0.8, 0.3, 1);
+  }
+  [data-icon] .art {
+    transform-origin: 12px 12px;
+  }
+  [data-icon] .art [class] {
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  [data-icon][data-playing] :is(.art, .art *) {
+    animation-duration: var(--icon-motion);
+    animation-timing-function: var(--icon-ease);
+  }
+
+  /* Staggered parts follow one another. */
+  [data-icon][data-playing] .p2 {
+    animation-delay: 60ms;
+  }
+  [data-icon][data-playing] .p3 {
+    animation-delay: 120ms;
+  }
+  [data-icon][data-playing] .p4 {
+    animation-delay: 180ms;
+  }
+
+  /* Canvas tools */
+  [data-icon="select"][data-playing] .art {
+    animation-name: icon-press;
+    transform-origin: 5px 3px;
+  }
+  [data-icon="pan"][data-playing] .art {
+    animation-name: icon-wave;
+    transform-origin: 12px 22px;
+  }
+  [data-icon="draw"][data-playing] .quill {
+    animation-name: icon-scribble;
+  }
+  [data-icon="eraser"][data-playing] .rubber {
+    animation-name: icon-rub;
+  }
+  [data-icon="shapes"][data-playing] :is(.p1, .p2, .p3) {
+    animation-name: icon-hop;
+  }
+  [data-icon="text"][data-playing] .art,
+  [data-icon="bold"][data-playing] .art {
+    animation-name: icon-squash;
+    transform-origin: 12px 21px;
+  }
+  [data-icon="italic"][data-playing] .art {
+    animation-name: icon-lean;
+    transform-origin: 12px 21px;
+  }
+  [data-icon="measure"][data-playing] :is(.leg-left, .leg-right) {
+    transform-box: view-box;
+    transform-origin: 12px 6px;
+  }
+  [data-icon="measure"][data-playing] .leg-left {
+    animation-name: icon-spread-left;
+  }
+  [data-icon="measure"][data-playing] .leg-right {
+    animation-name: icon-spread-right;
+  }
+  [data-icon="ping"][data-playing] .sweep {
+    animation-name: icon-turn;
+    transform-box: view-box;
+    transform-origin: 12px 12px;
+    animation-timing-function: ease-in-out;
+  }
+  [data-icon="ping"][data-playing] .blip {
+    animation-name: icon-blink;
+  }
+  [data-icon="wall"][data-playing] .art {
+    animation-name: icon-drop;
+  }
+  [data-icon="light"][data-playing] .flame,
+  [data-icon="embers"][data-playing] .flame {
+    animation-name: icon-flicker;
+    transform-origin: center bottom;
+  }
+  [data-icon="effects"][data-playing] :is(.p1, .p2, .p3, .p4) {
+    animation-name: icon-twinkle;
+  }
+  [data-icon="rain"][data-playing] .drops {
+    animation-name: icon-fall;
+  }
+  [data-icon="snow"][data-playing] .art {
+    animation-name: icon-turn-sixth;
+  }
+  [data-icon="fog"][data-playing] :is(.p1, .p3) {
+    animation-name: icon-drift-right;
+  }
+  [data-icon="fog"][data-playing] .p2 {
+    animation-name: icon-drift-left;
+  }
+  [data-icon="embers"][data-playing] :is(.p1, .p2) {
+    animation-name: icon-rise;
+  }
+  [data-icon="magic"][data-playing] .star {
+    animation-name: icon-burst;
+  }
+  [data-icon="magic"][data-playing] .wand {
+    animation-name: icon-flick;
+    transform-box: view-box;
+    transform-origin: 4px 20px;
+  }
+
+  /* Scene elements and canvas actions */
+  [data-icon="token"][data-playing] .art,
+  [data-icon="new-gear"][data-playing] .art {
+    animation-name: icon-hop;
+  }
+  [data-icon="map"][data-playing] .route {
+    animation-name: icon-march;
+  }
+  [data-icon="map"][data-playing] .mark {
+    animation-name: icon-pop;
+  }
+  [data-icon="target"][data-playing] .ring {
+    animation-name: icon-focus;
+  }
+  [data-icon="post"][data-playing] .art {
+    animation-name: icon-fly;
+  }
+  [data-icon="lock"][data-playing] .shackle {
+    animation-name: icon-close-shackle;
+  }
+  [data-icon="unlock"][data-playing] .shackle {
+    animation-name: icon-open-shackle;
+  }
+  [data-icon="image"][data-playing] .sun {
+    animation-name: icon-sunrise;
+  }
+  [data-icon="back"][data-playing] .art {
+    animation-name: icon-nudge-left;
+  }
+  [data-icon="expand"][data-playing] .art {
+    animation-name: icon-nudge-down;
+  }
+  [data-icon="folder"][data-playing] .front,
+  [data-icon="new-folder"][data-playing] .front,
+  [data-icon="backup-folder"][data-playing] .front {
+    animation-name: icon-open-flap;
+    transform-origin: center bottom;
+  }
+  [data-icon="export"][data-playing] .arrow {
+    animation-name: icon-nudge-down;
+  }
+  [data-icon="import"][data-playing] .arrow {
+    animation-name: icon-nudge-up;
+  }
+  [data-icon="grid"][data-playing] .lines {
+    animation-name: icon-grow;
+  }
+  [data-icon="to-front"][data-playing] .front {
+    animation-name: icon-raise;
+  }
+  [data-icon="to-back"][data-playing] .back {
+    animation-name: icon-sink;
+  }
+  [data-icon="duplicate"][data-playing] .copy {
+    animation-name: icon-slide-copy;
+  }
+  [data-icon="give"][data-playing] .gift {
+    animation-name: icon-offer;
+  }
+  [data-icon="rename"][data-playing] .pencil {
+    animation-name: icon-scribble;
+  }
+  [data-icon="shortcut"][data-playing] .keys {
+    animation-name: icon-keypress;
+  }
+  [data-icon="fit"][data-playing] .corners {
+    animation-name: icon-gather;
+  }
+  [data-icon="undo"][data-playing] .art {
+    animation-name: icon-rewind;
+  }
+  [data-icon="redo"][data-playing] .art {
+    animation-name: icon-forward;
+  }
+
+  /* Sidebar panels */
+  [data-icon="chat"][data-playing] :is(.p1, .p2) {
+    animation-name: icon-pop;
+  }
+  [data-icon="characters"][data-playing] .sword {
+    animation-name: icon-swing;
+    transform-box: view-box;
+    transform-origin: 12px 10px;
+  }
+  [data-icon="player-character"][data-playing] .sword {
+    animation-name: icon-swing;
+    transform-origin: center bottom;
+  }
+  [data-icon="libraries"][data-playing] .lean {
+    animation-name: icon-straighten;
+    transform-origin: left bottom;
+  }
+  [data-icon="reference"][data-playing] .sheet {
+    animation-name: icon-unroll;
+    transform-origin: center top;
+  }
+  [data-icon="notes"][data-playing] .writing {
+    animation-name: icon-write;
+  }
+  [data-icon="secret"][data-playing] .eye {
+    animation-name: icon-blink-lid;
+  }
+  [data-icon="reveal"][data-playing] .iris {
+    animation-name: icon-look;
+  }
+  [data-icon="obscure"][data-playing] .slash,
+  [data-icon="check"][data-playing] .art path {
+    stroke-dasharray: 1;
+    animation-name: icon-draw-line;
+  }
+  [data-icon="members"][data-playing] :is(.p1, .p2, .p3),
+  [data-icon="relationships"][data-playing] :is(.p1, .p3) {
+    animation-name: icon-hop;
+  }
+  [data-icon="relationships"][data-playing] .arrow {
+    animation-name: icon-stretch;
+  }
+
+  /* Game actions */
+  [data-icon="dice"][data-playing] .art {
+    animation-name: icon-tumble;
+    animation-duration: 560ms;
+  }
+  [data-icon="combat"][data-playing] .p1 {
+    animation-name: icon-clash-left;
+  }
+  [data-icon="combat"][data-playing] .p2 {
+    animation-name: icon-clash-right;
+  }
+  [data-icon="combat"][data-playing] :is(.p1, .p2) {
+    transform-box: view-box;
+    transform-origin: 12px 19px;
+    animation-delay: 0ms;
+  }
+  [data-icon="items"][data-playing] .art {
+    animation-name: icon-strike;
+    transform-origin: 12px 19px;
+  }
+  [data-icon="new-move"][data-playing] .art {
+    animation-name: icon-flash;
+  }
+  [data-icon="start-combat"][data-playing] .art,
+  [data-icon="next-turn"][data-playing] .art {
+    animation-name: icon-nudge-right;
+  }
+  [data-icon="previous-turn"][data-playing] .art {
+    animation-name: icon-nudge-left;
+  }
+  [data-icon="end-combat"][data-playing] .art {
+    animation-name: icon-press;
+  }
+  [data-icon="pin"][data-playing] .art {
+    animation-name: icon-push-pin;
+  }
+  [data-icon="remove-member"][data-playing] .sign {
+    animation-name: icon-nudge-right;
+  }
+  [data-icon="allow-back"][data-playing] .sign,
+  [data-icon="add"][data-playing] .art,
+  [data-icon="close"][data-playing] .art {
+    animation-name: icon-quarter-turn;
+  }
+
+  /* Interface */
+  [data-icon="settings"][data-playing] .art {
+    animation-name: icon-turn-tooth;
+  }
+  [data-icon="help"][data-playing] .art {
+    animation-name: icon-wobble;
+  }
+  [data-icon="leave"][data-playing] .door {
+    animation-name: icon-swing-door;
+    transform-origin: left center;
+  }
+  [data-icon="delete"][data-playing] .lid {
+    animation-name: icon-lift-lid;
+    transform-origin: right bottom;
+  }
+  [data-icon="remove"][data-playing] .art {
+    animation-name: icon-pinch;
+  }
+  [data-icon="search"][data-playing] .art {
+    animation-name: icon-scan;
+  }
+  [data-icon="menu"][data-playing] .art {
+    animation-name: icon-squash;
+  }
+  [data-icon="layout-split"][data-playing] .divider {
+    animation-name: icon-grow;
+  }
+  [data-icon="layout-single"][data-playing] .art {
+    animation-name: icon-pop;
+  }
+  [data-icon="sidebar-hide"][data-playing] .chevron {
+    animation-name: icon-nudge-right;
+  }
+  [data-icon="sidebar"][data-playing] .panel {
+    animation-name: icon-slide-in;
+  }
+  [data-icon="open-window"][data-playing] .arrow {
+    animation-name: icon-launch;
+  }
+}
+
+@keyframes icon-press {
+  40% {
+    transform: scale(0.82);
+  }
+}
+@keyframes icon-pop {
+  40% {
+    transform: scale(1.22);
+  }
+}
+@keyframes icon-pinch {
+  40% {
+    transform: scaleX(0.55);
+  }
+}
+@keyframes icon-hop {
+  35% {
+    transform: translateY(-3px);
+  }
+  70% {
+    transform: translateY(0.5px);
+  }
+}
+@keyframes icon-squash {
+  35% {
+    transform: scale(1.12, 0.82);
+  }
+  70% {
+    transform: scale(0.96, 1.05);
+  }
+}
+@keyframes icon-lean {
+  40% {
+    transform: skewX(-12deg);
+  }
+}
+@keyframes icon-wave {
+  25% {
+    transform: rotate(-14deg);
+  }
+  60% {
+    transform: rotate(10deg);
+  }
+}
+@keyframes icon-wobble {
+  25% {
+    transform: rotate(-12deg);
+  }
+  55% {
+    transform: rotate(9deg);
+  }
+  80% {
+    transform: rotate(-4deg);
+  }
+}
+@keyframes icon-scribble {
+  20% {
+    transform: translate(-1px, 1px) rotate(-6deg);
+  }
+  45% {
+    transform: translate(1px, 0) rotate(5deg);
+  }
+  70% {
+    transform: translate(-1px, 1px) rotate(-4deg);
+  }
+}
+@keyframes icon-rub {
+  25% {
+    transform: translate(-2px, 2px);
+  }
+  50% {
+    transform: translate(1.5px, -1.5px);
+  }
+  75% {
+    transform: translate(-1px, 1px);
+  }
+}
+@keyframes icon-spread-left {
+  45% {
+    transform: rotate(12deg);
+  }
+}
+@keyframes icon-spread-right {
+  45% {
+    transform: rotate(-12deg);
+  }
+}
+@keyframes icon-turn {
+  to {
+    transform: rotate(1turn);
+  }
+}
+@keyframes icon-turn-sixth {
+  to {
+    transform: rotate(60deg);
+  }
+}
+@keyframes icon-turn-tooth {
+  to {
+    transform: rotate(45deg);
+  }
+}
+@keyframes icon-quarter-turn {
+  to {
+    transform: rotate(90deg);
+  }
+}
+@keyframes icon-blink {
+  20%,
+  60% {
+    opacity: 0.2;
+  }
+  40%,
+  80% {
+    opacity: 1;
+  }
+}
+@keyframes icon-drop {
+  from {
+    transform: translateY(-4px);
+  }
+  60% {
+    transform: translateY(0.8px);
+  }
+}
+@keyframes icon-flicker {
+  25% {
+    transform: scale(0.85, 1.15);
+  }
+  50% {
+    transform: scale(1.1, 0.9);
+  }
+  75% {
+    transform: scale(0.95, 1.08);
+  }
+}
+@keyframes icon-twinkle {
+  40% {
+    transform: scale(0.3) rotate(45deg);
+    opacity: 0.5;
+  }
+}
+@keyframes icon-fall {
+  50% {
+    transform: translateY(2.5px);
+    opacity: 0;
+  }
+  51% {
+    transform: translateY(-2.5px);
+    opacity: 0;
+  }
+}
+@keyframes icon-drift-right {
+  50% {
+    transform: translateX(2.5px);
+  }
+}
+@keyframes icon-drift-left {
+  50% {
+    transform: translateX(-2.5px);
+  }
+}
+@keyframes icon-rise {
+  60% {
+    transform: translateY(-3px);
+    opacity: 0;
+  }
+  61% {
+    transform: translateY(1px);
+    opacity: 0;
+  }
+}
+@keyframes icon-burst {
+  40% {
+    transform: scale(1.4) rotate(45deg);
+  }
+}
+@keyframes icon-flick {
+  30% {
+    transform: rotate(-12deg);
+  }
+  60% {
+    transform: rotate(6deg);
+  }
+}
+@keyframes icon-march {
+  to {
+    stroke-dashoffset: -8;
+  }
+}
+@keyframes icon-focus {
+  40% {
+    transform: scale(0.7);
+  }
+  70% {
+    transform: scale(1.06);
+  }
+}
+@keyframes icon-fly {
+  45% {
+    transform: translate(5px, -5px);
+    opacity: 0;
+  }
+  55% {
+    transform: translate(-5px, 5px);
+    opacity: 0;
+  }
+}
+@keyframes icon-close-shackle {
+  from {
+    transform: translateY(-2.5px);
+  }
+  60% {
+    transform: translateY(0.5px);
+  }
+}
+@keyframes icon-open-shackle {
+  45% {
+    transform: translateY(-2.5px);
+  }
+}
+@keyframes icon-sunrise {
+  from {
+    transform: translateY(4px);
+    opacity: 0;
+  }
+}
+@keyframes icon-nudge-left {
+  40% {
+    transform: translateX(-3px);
+  }
+}
+@keyframes icon-nudge-right {
+  40% {
+    transform: translateX(3px);
+  }
+}
+@keyframes icon-nudge-up {
+  40% {
+    transform: translateY(-3px);
+  }
+}
+@keyframes icon-nudge-down {
+  40% {
+    transform: translateY(3px);
+  }
+}
+@keyframes icon-open-flap {
+  40% {
+    transform: scaleY(0.7) skewX(-8deg);
+  }
+}
+@keyframes icon-grow {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+}
+@keyframes icon-raise {
+  40% {
+    transform: translate(-1.5px, -1.5px) scale(1.08);
+  }
+}
+@keyframes icon-sink {
+  40% {
+    transform: translate(1.5px, 1.5px) scale(0.9);
+    opacity: 0.4;
+  }
+}
+@keyframes icon-slide-copy {
+  from {
+    transform: translate(-4px, -4px);
+    opacity: 0.4;
+  }
+}
+@keyframes icon-offer {
+  40% {
+    transform: translateY(-3px) rotate(-6deg);
+  }
+  70% {
+    transform: translateY(0.5px);
+  }
+}
+@keyframes icon-keypress {
+  30% {
+    transform: translateY(1px) scaleY(0.8);
+  }
+}
+@keyframes icon-gather {
+  40% {
+    transform: scale(0.8);
+  }
+  70% {
+    transform: scale(1.06);
+  }
+}
+@keyframes icon-rewind {
+  40% {
+    transform: rotate(-35deg);
+  }
+}
+@keyframes icon-forward {
+  40% {
+    transform: rotate(35deg);
+  }
+}
+@keyframes icon-swing {
+  35% {
+    transform: rotate(-35deg);
+  }
+  65% {
+    transform: rotate(12deg);
+  }
+}
+@keyframes icon-straighten {
+  45% {
+    transform: rotate(-14deg);
+  }
+}
+@keyframes icon-unroll {
+  from {
+    transform: scaleY(0.2);
+  }
+}
+@keyframes icon-write {
+  from {
+    opacity: 0;
+    transform: scaleX(0.5);
+  }
+}
+@keyframes icon-blink-lid {
+  40% {
+    transform: scaleY(0.1);
+  }
+}
+@keyframes icon-look {
+  30% {
+    transform: translateX(-2.5px);
+  }
+  65% {
+    transform: translateX(2.5px);
+  }
+}
+@keyframes icon-draw-line {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+@keyframes icon-stretch {
+  40% {
+    transform: scaleX(1.45);
+  }
+}
+@keyframes icon-tumble {
+  35% {
+    transform: translateY(-3px) rotate(-200deg);
+  }
+  75% {
+    transform: translateY(0.5px) rotate(-345deg);
+  }
+  to {
+    transform: rotate(-1turn);
+  }
+}
+@keyframes icon-clash-left {
+  40% {
+    transform: rotate(-10deg);
+  }
+}
+@keyframes icon-clash-right {
+  40% {
+    transform: rotate(10deg);
+  }
+}
+@keyframes icon-strike {
+  20% {
+    transform: translateY(-2px);
+  }
+  40% {
+    transform: scale(1.08, 0.9);
+  }
+}
+@keyframes icon-flash {
+  15%,
+  45% {
+    opacity: 0.2;
+    transform: scale(1.15);
+  }
+  30%,
+  60% {
+    opacity: 1;
+  }
+}
+@keyframes icon-push-pin {
+  40% {
+    transform: translate(-1.5px, 1.5px) scale(0.9);
+  }
+}
+@keyframes icon-swing-door {
+  45% {
+    transform: scaleX(0.35);
+  }
+}
+@keyframes icon-lift-lid {
+  40% {
+    transform: translateY(-2.5px) rotate(12deg);
+  }
+}
+@keyframes icon-scan {
+  25% {
+    transform: translate(-1.5px, -1px);
+  }
+  50% {
+    transform: translate(1.5px, -1px);
+  }
+  75% {
+    transform: translate(0, 1.5px);
+  }
+}
+@keyframes icon-slide-in {
+  from {
+    transform: translateX(5px);
+    opacity: 0;
+  }
+}
+@keyframes icon-launch {
+  45% {
+    transform: translate(3px, -3px);
+    opacity: 0;
+  }
+  55% {
+    transform: translate(-2px, 2px);
+    opacity: 0;
+  }
+}
