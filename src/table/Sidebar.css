@@ -112,8 +112,9 @@
     translate: 1px 0;
     border-image: var(--gilt-edge);
     border-right: 0;
+    /* The same leather as the body it opens onto. */
     background-color: var(--surface);
-    background-image: var(--grain), var(--window-sheen);
+    background-image: var(--grain);
     color: var(--accent);
     /* Its shadow falls down and to the right, onto the tab below. */
     box-shadow: 1px 3px 6px #0004;
@@ -131,6 +132,36 @@
     border-right: 1px solid var(--gilt-lo);
     border-left: 0;
     box-shadow: 3px 3px 6px #0004;
+  }
+  /*
+   * The chosen tab opens onto the body. The tab strip scrolls, so it clips
+   * the tab short of the body's gilt edge; a patch of the tab's leather,
+   * anchored to the tab, covers that edge beside it instead.
+   */
+  .sidebar {
+    anchor-scope: --rail-active, --sidebar-body;
+  }
+  .sidebar-body {
+    anchor-name: --sidebar-body;
+  }
+  .rail-tab[aria-selected="true"] {
+    anchor-name: --rail-active;
+  }
+  .sidebar[data-open="true"]:has(.rail-tab[aria-selected="true"])::after {
+    content: "";
+    position: absolute;
+    z-index: 3;
+    top: calc(anchor(--rail-active top) + 1px);
+    bottom: calc(anchor(--rail-active bottom) + 1px);
+    width: 1px;
+    background: oklch(from var(--surface) l c h / 1);
+    pointer-events: none;
+  }
+  .sidebar[data-side="right"]::after {
+    left: anchor(--sidebar-body left);
+  }
+  .sidebar[data-side="left"]::after {
+    left: calc(anchor(--sidebar-body right) - 1px);
   }
   .rail-divider {
     height: var(--space-3);
