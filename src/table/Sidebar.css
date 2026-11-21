@@ -69,18 +69,11 @@
   }
   /*
    * The tab strip's shade (Toolbar.css) hangs on its non-scrolling edge, so
-   * it stays put while the tabs scroll. It fades toward the map, and at
-   * both ends.
+   * it stays put while the tabs scroll.
    */
   .sidebar-rail-edge {
     --fade-toward: left;
-    --fade-ends: linear-gradient(
-      to bottom,
-      transparent,
-      #000 32px,
-      #000 calc(100% - 32px),
-      transparent
-    );
+    --fade-along: bottom;
   }
   .sidebar[data-side="left"] .sidebar-rail-edge {
     --fade-toward: right;
