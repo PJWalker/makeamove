@@ -5,6 +5,7 @@ import jsxA11y from "eslint-plugin-jsx-a11y";
 import importPlugin from "eslint-plugin-import";
 import unicorn from "eslint-plugin-unicorn";
 import promise from "eslint-plugin-promise";
+import globals from "globals";
 import { defineConfig } from "eslint/config";
 import tseslint from "typescript-eslint";
 import dataLayer from "./eslint/noRawYjs.js";
@@ -20,6 +21,7 @@ export default defineConfig([
       "playwright-report/**",
       "test-results/**",
       "reference/**",
+      ".claude/**",
     ],
   },
   {
@@ -27,6 +29,12 @@ export default defineConfig([
     ...js.configs.recommended,
   },
   ...tseslint.configs.strictTypeChecked,
+  // JavaScript files sit outside every tsconfig, so they have no type information.
+  {
+    files: ["**/*.{js,mjs,cjs}"],
+    ...tseslint.configs.disableTypeChecked,
+    languageOptions: { globals: globals.node },
+  },
   {
     files: ["**/*.{ts,tsx}"],
     languageOptions: {
@@ -53,6 +61,8 @@ export default defineConfig([
       ...unicorn.configs.recommended.rules,
       ...promise.configs.recommended.rules,
       ...reactHooks.configs.recommended.rules,
+      // TypeScript resolves imports (including package `exports`), which the node resolver can't.
+      "import/no-unresolved": "off",
       "@typescript-eslint/no-floating-promises": "error",
       "@typescript-eslint/no-misused-promises": "error",
       "@typescript-eslint/no-unnecessary-condition": "error",

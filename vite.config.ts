@@ -39,7 +39,7 @@ export function macroPlugins(): Plugin[] {
           return jiti.import<Record<string, unknown>>(resolved);
         },
         invalidate: () => {
-          for (const key of Object.keys(jiti.cache)) delete jiti.cache[key];
+          for (const key of Object.keys(jiti.cache)) Reflect.deleteProperty(jiti.cache, key);
           const stale = [...loaded];
           loaded.clear();
           return stale;
@@ -52,12 +52,14 @@ export function macroPlugins(): Plugin[] {
       // Tests run in Node, so they may call a macro's functions directly, and
       // macro modules may use each other.
       resolveId(source, importer, options) {
-        const buildTime = importer?.includes("/__tests__/") || importer?.endsWith(".macro.ts");
+        const buildTime =
+          importer !== undefined &&
+          (importer.includes("/__tests__/") || importer.endsWith(".macro.ts"));
         if (source.endsWith(".macro") || source.endsWith(".macro.ts")) {
-          if ("scan" in options && options.scan) return { id: source, external: true };
+          if ("scan" in options && options.scan === true) return { id: source, external: true };
           if (!buildTime)
             this.error(
-              `${source} is a build-time macro: import it with { type: "macro" } (${importer})`,
+              `${source} is a build-time macro: import it with { type: "macro" } (${importer ?? "entry"})`,
             );
         }
         return;
@@ -68,7 +70,7 @@ export function macroPlugins(): Plugin[] {
 
 export default defineConfig({
   staged: {
-    "*": "eslint --fix --max-warnings 0",
+    "*": "eslint --fix --no-warn-ignored --max-warnings 0",
   },
   lint: {
     options: {
@@ -501,7 +503,7 @@ export default defineConfig({
       "src/systems/dungeon-world-2/rulebook.json",
     ],
   },
-  base: process.env["PAGES_BASE_PATH"] || "/",
+  base: (process.env["PAGES_BASE_PATH"] ?? "") || "/",
   server: {
     hmr: false,
   },
