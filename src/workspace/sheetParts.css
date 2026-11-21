@@ -30,6 +30,10 @@
     place-items: center;
     background: var(--surface-raised);
     border: 3px solid var(--token-colour, var(--text-muted));
+    /* Set in gilt, the token's own colour as the inner band. */
+    box-shadow:
+      var(--gilt-ring),
+      2px 3px 6px oklch(0% 0 0 / 0.5);
     flex: none;
   }
   .token-chip[data-style="plain"],
@@ -37,6 +41,7 @@
     border: 0;
     border-radius: 0;
     background: none;
+    box-shadow: none;
   }
   .token-chip[data-style="plain"] .entity-graphic-image,
   .token-image-preview[data-style="plain"] .entity-graphic-image {

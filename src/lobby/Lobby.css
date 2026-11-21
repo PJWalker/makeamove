@@ -41,10 +41,6 @@
     display: grid;
     gap: var(--space-3);
     padding: var(--space-4) var(--space-5) var(--space-5);
-    border: 1px solid var(--hairline);
-    background: var(--window-sheen), var(--surface);
-    background-clip: padding-box;
-    box-shadow: var(--window-shadow), var(--window-rim);
   }
   .lobby-section-header {
     display: flex;
@@ -188,7 +184,6 @@
     max-height: min(640px, 100vh - 2 * var(--space-4));
     padding: var(--space-4);
     color: var(--text);
-    border: 1px solid var(--hairline);
   }
   /* Grows out of what opened it (ui/morph.ts), or else fades and rises. */
   .lobby-modal[open] {

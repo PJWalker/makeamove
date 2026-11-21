@@ -89,7 +89,7 @@ export function Lobby({ error }: { error: string | null }) {
 
         {ready && list.length === 0 && <Welcome onCreate={create} />}
         {ready && list.length > 0 && (
-          <section className="panel lobby-section" aria-labelledby="your-campaigns">
+          <section className="panel window lobby-section" aria-labelledby="your-campaigns">
             <div className="lobby-section-header">
               <h2 id="your-campaigns" className="eyebrow">
                 Your Campaigns
@@ -191,7 +191,7 @@ function LobbyModal({
   return (
     <dialog
       ref={dialog}
-      className="lobby-modal panel"
+      className="lobby-modal panel window"
       aria-labelledby={titleId}
       onCancel={(e) => {
         e.preventDefault();

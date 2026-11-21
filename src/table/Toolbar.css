@@ -78,10 +78,53 @@
     overscroll-behavior-x: contain;
     scrollbar-width: none;
   }
+  /*
+   * The canvas tools are medallions: round, in a bronze ring. The chosen
+   * tool's ring is gilt and its face lit from within.
+   */
   .toolbar-tools > button {
     flex-shrink: 0;
-    width: 44px;
-    min-height: 44px;
+    width: 40px;
+    min-height: 40px;
+    margin-inline: 2px;
+  }
+  .toolbar .toolbar-tools > .btn:is(*, :hover, :active, [aria-pressed="true"]) {
+    border: 0;
+    border-image: none;
+    border-radius: 50%;
+  }
+  .toolbar .toolbar-tools > .btn:not([aria-pressed="true"]) {
+    background:
+      var(--grain),
+      radial-gradient(
+        circle at 35% 30%,
+        oklch(from var(--surface-raised) calc(l + 0.06) c h),
+        var(--surface-sunken) 75%
+      );
+    box-shadow: var(--bronze-ring), var(--raised-drop);
+  }
+  .toolbar .toolbar-tools > .btn:hover:not(:disabled, [aria-pressed="true"]) {
+    color: var(--text);
+    box-shadow: var(--gilt-ring), var(--raised-drop-hover);
+  }
+  .toolbar .toolbar-tools > .btn:active:not(:disabled) {
+    box-shadow:
+      var(--gilt-ring),
+      inset 1px 2px 4px oklch(0% 0 0 / 0.6);
+  }
+  .toolbar .toolbar-tools > .btn[aria-pressed="true"]:not([role="tab"]) {
+    background:
+      radial-gradient(circle at 50% 45%, oklch(from var(--accent) l c h / 0.45), transparent 70%),
+      radial-gradient(
+        circle at 35% 30%,
+        oklch(from var(--surface-raised) calc(l + 0.08) c h),
+        var(--surface-sunken) 80%
+      );
+    color: var(--gilt-hi);
+    box-shadow:
+      var(--gilt-ring),
+      0 0 10px oklch(from var(--accent) l c h / 0.45),
+      var(--raised-drop);
   }
   .toolbar-options {
     flex: 1 1 var(--toolbar-options-width);

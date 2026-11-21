@@ -122,6 +122,18 @@
           transparent
         )
         0 5.5px / 100% 1px no-repeat;
+    /*
+     * A gilt ring around something round (portraits, medallions): a dark
+     * seat, metal lit on its top left and shaded bottom right, and a dark
+     * outer bead. Goes first in a box-shadow list.
+     */
+    --gilt-ring:
+      0 0 0 1px oklch(15% 0.02 70), -0.5px -0.5px 0 2px var(--gilt-hi),
+      0.5px 0.5px 0 2px var(--gilt-lo), 0 0 0 3px oklch(15% 0.02 70);
+    --bronze-ring:
+      0 0 0 1px oklch(15% 0.02 70), -0.5px -0.5px 0 1.5px var(--bronze-hi),
+      0.5px 0.5px 0 1.5px oklch(from var(--bronze) calc(l - 0.15) c h),
+      0 0 0 2.5px oklch(15% 0.02 70);
     /* A small gilt lozenge, set at the end of a rule. */
     --lozenge: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M4 .5 7.5 4 4 7.5.5 4Z' fill='%23d4a957' stroke='%231d140a' stroke-width='.5'/%3E%3C/svg%3E");
     /* Tooled leather: a fine grain over every surface of the chrome. */
