@@ -43,6 +43,7 @@
     "@tiptap/y-tiptap": "3.0.10",
     "@types/node": "^26.6.6",
     "@types/three": "^0.187.0",
+    "@xstate/react": "^6.1.0",
     "cannon-es": "^0.20.0",
     "fractional-indexing": "^4.0.0",
     "fuse.js": "^7.5.0",
@@ -56,6 +57,7 @@
     "react-dom": "^19.3.1",
     "three": "^0.187.0",
     "trystero": "^0.26.0",
+    "xstate": "^5.33.4",
     "y-indexeddb": "^9.0.12",
     "y-protocols": "^1.0.7",
     "yjs": "^13.6.33"

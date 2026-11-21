@@ -38,8 +38,11 @@ describe("Blades in the Dark campaign behavior", () => {
     const hunt = bladesInTheDark.actions.find((action) => action.id === "hunt")!;
 
     startMove(campaign, id, hunt);
-    expect(campaign.moves.ask.value).toEqual({ moveId: "hunt", characterId: id });
-    campaign.moves.ask.value = null;
+    expect(campaign.moves.actor.getSnapshot().context.ask).toEqual({
+      moveId: "hunt",
+      characterId: id,
+    });
+    campaign.moves.ask(null);
     const message = await makeMove(campaign, id, hunt, { mode: "desperate" });
 
     expect(message).toMatchObject({ kind: "move", moveId: "hunt", characterName: "Vex" });

@@ -1,5 +1,7 @@
 import type * as React from "react";
 import { useEffect, useRef } from "react";
+import { createActor } from "xstate";
+import { throwMachine } from "./throwMachine";
 
 export interface ThrowOptions {
   /** Called when the element is let go at least THROW_DISTANCE from where it was picked up. */
@@ -78,6 +80,7 @@ export function useThrow({
   onTap,
   onAway,
 }: ThrowOptions) {
+  const actor = useRef(createActor(throwMachine));
   const gesture = useRef<{
     pointer: number;
     originX: number;
@@ -103,11 +106,17 @@ export function useThrow({
     return current;
   };
   useEffect(() => {
-    const cancel = () => void release();
+    actor.current.start();
+    const cancel = () => {
+      actor.current.send({ type: "CANCEL" });
+      void release();
+    };
     window.addEventListener("blur", cancel);
     return () => {
       window.removeEventListener("blur", cancel);
+      actor.current.send({ type: "CANCEL" });
       release();
+      actor.current.stop();
     };
   }, []);
   return {
@@ -125,6 +134,7 @@ export function useThrow({
       element.setPointerCapture(event.pointerId);
       element.focus({ preventScroll: true });
       const { carrier, drop } = lift(element);
+      actor.current.send({ type: "GRAB" });
       gesture.current = {
         pointer: event.pointerId,
         originX: event.clientX,
@@ -148,6 +158,7 @@ export function useThrow({
       const distance = Math.hypot(offsetX, offsetY);
       current.moved ||= distance >= TAP_SLOP;
       const away = distance >= THROW_DISTANCE;
+      actor.current.send({ type: "MOVE", moved: current.moved, away });
       if (away && !current.back)
         current.back = onAway?.(current.element, current.carrier) ?? (() => {});
       else if (!away && current.back) {
@@ -159,15 +170,18 @@ export function useThrow({
       const current = gesture.current;
       if (!current || current.pointer !== event.pointerId) return;
       const distance = Math.hypot(event.clientX - current.originX, event.clientY - current.originY);
+      actor.current.send({ type: "UP", moved: current.moved, away: distance >= THROW_DISTANCE });
       release();
       event.stopPropagation();
       if (enabled && distance >= THROW_DISTANCE) onThrow();
       else if (enabled && !current.moved && distance < TAP_SLOP) onTap?.();
     },
     onPointerCancel() {
+      actor.current.send({ type: "CANCEL" });
       release();
     },
     onLostPointerCapture() {
+      actor.current.send({ type: "CANCEL" });
       release();
     },
     onKeyDown(event: React.KeyboardEvent<HTMLElement>) {

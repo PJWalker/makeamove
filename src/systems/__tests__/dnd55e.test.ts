@@ -356,8 +356,10 @@ describe("D&D 5.5e campaign behavior", () => {
       characterId,
       systemOf(campaign).actions.find((action) => action.id === "skill-stealth")!,
     );
-    expect(campaign.moves.ask.value).toMatchObject({ moveId: "skill-stealth" });
-    campaign.moves.ask.value = null;
+    expect(campaign.moves.actor.getSnapshot().context.ask).toMatchObject({
+      moveId: "skill-stealth",
+    });
+    campaign.moves.ask(null);
     campaign.destroy();
   });
 });

@@ -177,7 +177,7 @@ function useAskStep(campaign: Campaign, characterId: string, moveId: string) {
   const system = systemOf(campaign);
   const move = system.actions.find((m) => m.id === moveId)!;
   const c = getCharacter(campaign, characterId)!;
-  const request = campaign.moves.ask.value;
+  const request = campaign.moves.actor.getSnapshot().context.ask;
   const targets = request?.targets;
   const ask = needsChoice(move);
   const check = checkOf(move);
@@ -219,7 +219,7 @@ function useAskStep(campaign: Campaign, characterId: string, moveId: string) {
     if (!rollFor(mode).ready) return;
     const choice = choiceOf(ask, check, draft, difficulty, mode);
     void ctx.execute(makeMove, { characterId: c.id, move, choice, targets });
-    campaign.moves.ask.set(null);
+    campaign.moves.ask(null);
   };
   const rollBonuses = new Set(draft.rollBonuses);
   return {

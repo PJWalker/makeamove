@@ -4,7 +4,6 @@ import { onScreenRect } from "./onScreenRect";
 import { RichTextView } from "../workspace/RichTextView";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { arrow, autoUpdate, computePosition, flip, offset, shift } from "@floating-ui/dom";
-import { watch } from "../lib/store";
 import { getCharacter, systemOf } from "../features/characters/api";
 import { needsChoice } from "../features/characters/moves";
 import { inRange } from "../scene/measure";
@@ -14,6 +13,7 @@ import { reducedMotion } from "../ui/transition";
 import { Button } from "../ui/Button";
 import { IconClose } from "../ui/icons";
 import { lastPressed } from "../ui/pressed";
+import { useSelector } from "@xstate/react";
 import { useQuery } from "../ui/useQuery";
 import type { ActionDef, AreaSpec } from "../systems/types";
 import type { MoveTarget } from "../features/chat/types";
@@ -107,8 +107,8 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
 
 function useMovePrompt(campaign: Campaign) {
   const ctx = useCampaign();
-  const target = useQuery(ctx.campaign.moves.targets);
-  const requestedMove = useQuery(ctx.campaign.moves.ask);
+  const target = useSelector(ctx.campaign.moves.actor, (snapshot) => snapshot.context.targets);
+  const requestedMove = useSelector(ctx.campaign.moves.actor, (snapshot) => snapshot.context.ask);
   const live = useMemo((): Request | null => {
     if (target) return { kind: "target", ...target };
     if (requestedMove) return { kind: "ask", ...requestedMove };
@@ -224,18 +224,19 @@ function useMovePrompt(campaign: Campaign) {
   }, [open, live]);
 
   // Hand a targeting request to the scene, so clicks on tokens target it.
-  useEffect(
-    () =>
-      watch([ctx.campaign.moves.targets], () => {
-        const r = ctx.campaign.moves.targets.value;
-        const s = r && systemOf(campaign).actions.find((m) => m.id === r.moveId)?.target;
-        ctx.canvas.targetPick.set(
-          r && s ? { ...(s.max !== undefined ? { max: s.max } : {}), actor: r.characterId } : null,
-        );
-        if (r) ctx.tools.activeTool.set("select");
-      }),
-    [ctx, campaign],
-  );
+  useEffect(() => {
+    const syncTargets = () => {
+      const r = ctx.campaign.moves.actor.getSnapshot().context.targets;
+      const s = r && systemOf(campaign).actions.find((m) => m.id === r.moveId)?.target;
+      ctx.canvas.targetPick.set(
+        r && s ? { ...(s.max !== undefined ? { max: s.max } : {}), actor: r.characterId } : null,
+      );
+      if (r) ctx.tools.activeTool.set("select");
+    };
+    syncTargets();
+    const stop = ctx.campaign.moves.actor.subscribe(syncTargets);
+    return () => stop.unsubscribe();
+  }, [ctx, campaign]);
   useEffect(() => () => cancel(ctx), [ctx]);
 
   // Escape backs out, before the canvas uses it to clear the selection.

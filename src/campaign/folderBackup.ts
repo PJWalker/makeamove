@@ -1,5 +1,5 @@
 import * as Y from "yjs";
-import { store, type Store } from "../lib/store";
+import { assign, createActor, setup } from "xstate";
 import { canWrite, pickFolder } from "../platform/files";
 import { deleteValue, readValue, writeValue } from "../platform/keyval";
 import { finishImport, openGuids, roleIn, thisDevice } from "./backup";
@@ -51,7 +51,8 @@ class FolderSync {
   constructor(
     private readonly campaign: Campaign,
     private readonly dir: FileSystemDirectoryHandle,
-    private readonly status: Store<FolderBackupState>,
+    private readonly status: () => FolderBackupState,
+    private readonly setStatus: (state: FolderBackupState) => void,
   ) {}
 
   start() {
@@ -109,23 +110,25 @@ class FolderSync {
       return this.saving;
     }
     const folder = this.dir.name;
-    const last = this.status.value;
-    this.status.value = {
+    const last = this.status();
+    this.setStatus({
       state: "saving",
       folder,
       ...("savedAt" in last && { savedAt: last.savedAt }),
-    };
+    });
     this.saving = this.write()
       .then(() => {
-        if (!this.stopped) this.status.value = { state: "saved", folder, savedAt: Date.now() };
+        if (!this.stopped) this.setStatus({ state: "saved", folder, savedAt: Date.now() });
       })
       .catch((e: unknown) => {
         if (this.stopped) return;
         // Permission can lapse while open; wait for a click.
         const lost = e instanceof DOMException && e.name === "NotAllowedError";
-        this.status.value = lost
-          ? { state: "paused", folder }
-          : { state: "failed", folder, error: e instanceof Error ? e.message : String(e) };
+        this.setStatus(
+          lost
+            ? { state: "paused", folder }
+            : { state: "failed", folder, error: e instanceof Error ? e.message : String(e) },
+        );
       })
       .finally(() => {
         this.saving = null;
@@ -183,32 +186,51 @@ async function mergeFolder(dir: FileSystemDirectoryHandle, campaignId?: string) 
  * A campaign's backup to a folder on this device: kept up to date while the
  * campaign is open, once it's linked. One per open campaign; `dispose` stops it.
  */
+const folderBackupMachine = setup({
+  types: {},
+}).createMachine({
+  initial: "active",
+  context: { state: { state: "off" } },
+  states: { active: {} },
+  on: {
+    SET_STATE: {
+      actions: assign({ state: ({ event }) => event.state }),
+    },
+  },
+});
+
 export class FolderBackup {
-  readonly status = store<FolderBackupState>({ state: "off" });
+  readonly actor = createActor(folderBackupMachine);
   #running: FolderSync | null = null;
   #disposed = false;
 
   /** Start backing up to the campaign's linked folder, if it has one. */
   constructor(private readonly campaign: Campaign) {
+    this.actor.start();
     void (async () => {
       const dir = await readValue<FileSystemDirectoryHandle>(handleKey(campaign.id));
       if (this.#disposed || !dir) return;
       if (await canWrite(dir)) {
         if (!this.#disposed) this.#begin(dir);
-      } else if (!this.#disposed) this.status.value = { state: "paused", folder: dir.name };
+      } else if (!this.#disposed) this.setStatus({ state: "paused", folder: dir.name });
     })();
   }
 
   #begin(dir: FileSystemDirectoryHandle) {
     this.#running?.stop();
-    this.#running = new FolderSync(this.campaign, dir, this.status);
+    this.#running = new FolderSync(
+      this.campaign,
+      dir,
+      () => this.actor.getSnapshot().context.state,
+      (state) => this.actor.send({ type: "SET_STATE", state }),
+    );
     this.#running.start();
   }
 
   #stop() {
     this.#running?.stop();
     this.#running = null;
-    this.status.value = { state: "off" };
+    this.setStatus({ state: "off" });
   }
 
   /** Choose a folder and start backing the campaign up to it. False if the user cancels. */
@@ -226,6 +248,10 @@ export class FolderBackup {
   async resume() {
     const dir = await readValue<FileSystemDirectoryHandle>(handleKey(this.campaign.id));
     if (dir && (await canWrite(dir, true))) this.#begin(dir);
+  }
+
+  private setStatus(state: FolderBackupState) {
+    this.actor.send({ type: "SET_STATE", state });
   }
 
   async unlink() {

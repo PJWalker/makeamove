@@ -86,9 +86,9 @@ const backupOf = (c: Campaign) => {
 /** The next time the folder is brought up to date. */
 const saved = (backup: FolderBackup) =>
   new Promise<void>((resolve) => {
-    const stop = backup.status.subscribe(() => {
-      if (backup.status.value.state === "saved") {
-        stop();
+    const stop = backup.actor.subscribe((snapshot) => {
+      if (snapshot.context.state.state === "saved") {
+        stop.unsubscribe();
         resolve();
       }
     });
@@ -124,7 +124,10 @@ describe("backing up to a folder", () => {
     const first = saved(backupOf(c));
     await backupOf(c).link();
     await first;
-    expect(backupOf(c).status.value).toMatchObject({ state: "saved", folder: "Dropbox" });
+    expect(backupOf(c).actor.getSnapshot().context.state).toMatchObject({
+      state: "saved",
+      folder: "Dropbox",
+    });
     expect((await backupIn(folder)).name).toBe("Barrows");
     expect(folder.folders.get("images")!.files.has(hash)).toBe(true);
 
@@ -152,7 +155,7 @@ describe("backing up to a folder", () => {
     expect(new TextDecoder().decode(sceneDoc.update)).toContain("Here");
 
     await backupOf(c).unlink();
-    expect(backupOf(c).status.value).toEqual({ state: "off" });
+    expect(backupOf(c).actor.getSnapshot().context.state).toEqual({ state: "off" });
     scene.destroy();
     backups.get(c)?.dispose();
     c.destroy();

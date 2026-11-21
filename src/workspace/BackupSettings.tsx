@@ -6,7 +6,7 @@ import { useCampaign } from "./campaignContext";
 import { canUseFolders } from "../platform/files";
 import { Button } from "../ui/Button";
 import { IconBackupFolder, IconExport } from "../ui/icons";
-import { useQuery } from "../ui/useQuery";
+import { useSelector } from "@xstate/react";
 
 const time = new Intl.DateTimeFormat(undefined, { timeStyle: "short" });
 
@@ -28,7 +28,7 @@ function folderStatus(s: FolderBackupState): string {
 /** Saving the campaign off this device: a one-off file, or a folder kept up to date. */
 export function BackupSettings({ campaign }: { campaign: Campaign }) {
   const { backup } = useCampaign();
-  const status = useQuery(backup.status);
+  const status = useSelector(backup.actor, (snapshot) => snapshot.context.state);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const run = (act: () => Promise<unknown>) => async () => {

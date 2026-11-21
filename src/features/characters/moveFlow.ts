@@ -29,20 +29,20 @@ export function startMove(
   if (sessionMoveUsed(campaign, characterId, move)) return;
   batch(() => {
     if (move.target && !targets) {
-      campaign.moves.ask.value = null;
-      campaign.moves.targets.value = { moveId: move.id, characterId };
+      campaign.moves.ask(null);
+      campaign.moves.targets({ moveId: move.id, characterId });
       return;
     }
-    campaign.moves.targets.value = null;
+    campaign.moves.targets(null);
     if (asksFirst(systemOf(campaign), move))
-      campaign.moves.ask.value = {
+      campaign.moves.ask({
         moveId: move.id,
         characterId,
         ...(targets ? { targets } : {}),
         ...(initialChoice ? { choice: initialChoice } : {}),
-      };
+      });
     else {
-      campaign.moves.ask.value = null;
+      campaign.moves.ask(null);
       void makeMove(campaign, characterId, move, {}, targets);
     }
   });
