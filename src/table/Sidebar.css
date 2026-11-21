@@ -67,6 +67,24 @@
     max-height: max(0px, calc(100% - var(--rail-top-clearance) - var(--rail-bottom-clearance)));
     margin-block: var(--rail-top-clearance) var(--rail-bottom-clearance);
   }
+  /*
+   * One band of shade behind the whole strip keeps its icons legible over
+   * the map, fading out toward every edge. It sits on the non-scrolling
+   * edge so it stays put while the tabs scroll, and on its own layer so
+   * the fade doesn't reach the tabs.
+   */
+  .sidebar-rail-edge::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--toolbar);
+    mask:
+      linear-gradient(to right, transparent, #000 30%, #000 70%, transparent),
+      linear-gradient(to bottom, transparent, #000 32px, #000 calc(100% - 32px), transparent);
+    mask-composite: intersect;
+    pointer-events: none;
+  }
   .sidebar-rail {
     position: relative;
     min-height: 0;
@@ -82,13 +100,12 @@
     scrollbar-width: none;
   }
   /*
-   * Unchosen tabs have no edge: a pool of shade behind each icon keeps it
-   * legible over the map, fading out before it reaches the tab's sides.
+   * Unchosen tabs have no edge of their own; they sit on the strip's shade.
    * The chosen tab fits the strip with a pixel to spare, so the strip's
    * scrolling never clips its frame.
    */
   .sidebar-rail .rail-tab {
-    --rail-shade: var(--toolbar);
+    --rail-shade: transparent;
     --rail-backdrop: radial-gradient(
       closest-side,
       var(--rail-shade),
@@ -107,7 +124,7 @@
       background-color 120ms var(--ease),
       color 120ms var(--ease);
   }
-  /* Under the pointer the shade lifts a little; there's still no edge. */
+  /* Under the pointer a pool of light lifts behind the icon; there's still no edge. */
   .sidebar-rail .rail-tab:is(:hover, :active):not([aria-selected="true"]) {
     border-image: none;
     background: var(--rail-backdrop);
