@@ -5,7 +5,7 @@ import { arrow, autoUpdate, computePosition, flip, offset, shift } from "@floati
 import type { ChatMessage } from "../features/chat/types";
 import { markRead } from "../features/chat/unread";
 import type { Campaign } from "../campaign/campaign";
-import { collapsedInto } from "../ui/bubble";
+import { growFrom, leave } from "../ui/morph";
 import { reducedMotion } from "../ui/transition";
 import { Button } from "../ui/Button";
 import { IconClose } from "../ui/icons";
@@ -36,9 +36,6 @@ const LoneMessage = lazy(() =>
 
 /** How long a popup stays, once the pointer isn't on the stack. */
 const STAY_MS = 6000;
-const ENTER_MS = 280;
-const LEAVE_MS = 220;
-const EASE = "cubic-bezier(0.2, 0.7, 0.2, 1)";
 /** Between the tab and the bubble, room for the bubble's tail. */
 const GAP = 16;
 /** The closest the bubble comes to the window's top and bottom edges. */
@@ -50,7 +47,6 @@ const chatTab = () => document.querySelector('.rail-tab[data-panel="chat"]');
 const tabRect = () => onScreenRect(chatTab());
 
 /** A popup squeezed into the Chat tab, or a little below itself when the tab isn't showing. */
-const collapsed = (box: DOMRect): Keyframe => collapsedInto(box, tabRect());
 
 export function ChatPopups({ campaign }: { campaign: Campaign }) {
   const { shown, held, hidden, leavingAll, setHeld, setLeavingAll, ref, stack, place } =
@@ -235,23 +231,13 @@ function Popup({
   const ref = useRef<HTMLDivElement>(null);
   const gone = useRef(false);
 
-  const leave = useEffectEvent(() => {
+  const leavePopup = useEffectEvent(() => {
     const el = ref.current;
     const box = stack.current?.getBoundingClientRect();
     if (gone.current) return;
     gone.current = true;
     if (!el || !box || reducedMotion.matches) return ctx.chat.dismissPopup(m.id);
-    // Start from wherever it is now: at rest, part-way in, or set back in the stack.
-    const from = getComputedStyle(el).transform;
-    el.getAnimations().forEach((a) => a.cancel());
-    el.animate([{ transform: from, opacity: 1 }, { opacity: 1, offset: 0.6 }, collapsed(box)], {
-      duration: LEAVE_MS,
-      easing: "ease-in",
-      fill: "forwards",
-    }).finished.then(
-      () => ctx.chat.dismissPopup(m.id),
-      () => {},
-    );
+    void leave(el, () => ctx.chat.dismissPopup(m.id), null);
   });
 
   useLayoutEffect(() => {
@@ -260,15 +246,7 @@ function Popup({
     void place().then(() => {
       const el = ref.current;
       const box = stack.current?.getBoundingClientRect();
-      if (active && el && box && !reducedMotion.matches) {
-        el.animate(
-          [collapsed(box), { opacity: 1, offset: 0.4 }, { transform: "none", opacity: 1 }],
-          {
-            duration: ENTER_MS,
-            easing: EASE,
-          },
-        );
-      }
+      if (active && el && box && !reducedMotion.matches) growFrom(el, box);
     });
     return () => {
       active = false;
@@ -278,12 +256,12 @@ function Popup({
   // Each waits its own time, all of them paused while the pointer is on the stack.
   useEffect(() => {
     if (held || leaving) return;
-    const timer = setTimeout(leave, STAY_MS);
+    const timer = setTimeout(leavePopup, STAY_MS);
     return () => clearTimeout(timer);
   }, [held, leaving]);
 
   useEffect(() => {
-    if (leaving) leave();
+    if (leaving) leavePopup();
   }, [leaving]);
 
   const open = (e: React.MouseEvent<HTMLDivElement>) => {

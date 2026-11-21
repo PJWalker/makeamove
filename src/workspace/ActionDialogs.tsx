@@ -12,6 +12,7 @@ import { Dialog } from "./Dialog";
 import { usePopupDialog } from "./usePopupDialog";
 import { useQuery } from "../ui/useQuery";
 import { useCampaign } from "./campaignContext";
+import { CommitInput } from "../ui/CommitInput";
 
 /*
  * Pop-ups for a player's own touches on an action (commands/custom.ts):
@@ -51,46 +52,43 @@ function RenameDialog({ campaign, id, title }: Props) {
   const ctx = useCampaign();
   const { ref, close, onClose } = usePopup();
   const custom = slotLook(campaign, id).label;
-  const [text, setText] = useState(custom ?? title);
   const done = (label: string | undefined) => {
     ctx.execute(lookOfSlot, { key: id, look: { label: label?.trim() || undefined } });
-    close();
   };
   return (
     <Dialog dialogRef={ref} title="Rename" onClose={onClose}>
-      <form
-        className="dialog-form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          done(text);
-        }}
-      >
+      <div className="dialog-form">
         <label className="field">
           Show on the hotbar as
-          <input
+          <CommitInput
             name="label"
-            value={text}
+            value={custom ?? title}
             // The field is the dialog's one input.
             // react-doctor-disable-next-line react-doctor/no-autofocus
             autoFocus
             onFocus={(e) => e.currentTarget.select()}
-            onInput={(e) => setText(e.currentTarget.value)}
+            onCommit={(label) => done(label)}
+            onBlur={close}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") close();
+            }}
           />
         </label>
-        <div className="form-actions">
-          {custom && (
-            <Button variant="ghost" className="form-actions-start" onClick={() => done(undefined)}>
+        {custom && (
+          <div className="form-actions">
+            <Button
+              variant="ghost"
+              className="form-actions-start"
+              onClick={() => {
+                done(undefined);
+                close();
+              }}
+            >
               Use Its Own Name
             </Button>
-          )}
-          <Button variant="ghost" onClick={close}>
-            Cancel
-          </Button>
-          <Button variant="primary" type="submit">
-            Save
-          </Button>
-        </div>
-      </form>
+          </div>
+        )}
+      </div>
     </Dialog>
   );
 }

@@ -1,4 +1,4 @@
-import { isNumber, isObject, isString } from "../../lib/guards";
+import { isBoolean, isNumber, isString, objectOf, optional } from "../../lib/guards";
 import { collection, lww, record, type Root } from "../../data/schema";
 
 /** Someone in the fight. */
@@ -18,6 +18,16 @@ export interface Combatant {
 }
 
 /** The turn tracker's parts of the campaign root (combat.ts). */
+const isCombatant = objectOf({
+  name: isString,
+  characterId: optional(isString),
+  tokenId: optional(isString),
+  sceneId: optional(isString),
+  init: (value: unknown): value is number | null => value === null || isNumber(value),
+  tie: isNumber,
+  hidden: optional(isBoolean),
+}) as (value: unknown) => value is Combatant;
+
 export const combatShape = {
   combat: record({
     /** 0 before the fight starts. */
@@ -25,7 +35,7 @@ export const combatShape = {
     /** Whose turn: a combatant id. */
     turn: lww(isString),
   }),
-  combatants: collection(lww(isObject<Combatant>), "combatant"),
+  combatants: collection(lww(isCombatant), "combatant"),
 };
 
 export type CombatMaps = Root<typeof combatShape>;

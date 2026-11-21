@@ -1,6 +1,6 @@
 /* oxlint-disable jsx-a11y/prefer-tag-over-role -- The relationship picker is an active-descendant listbox and its web is an SVG image. */
 import type {
-  FormEvent as ReactFormEvent,
+  InputEvent as ReactInputEvent,
   KeyboardEvent as ReactKeyboardEvent,
   RefObject,
 } from "react";
@@ -16,6 +16,7 @@ import {
 import type { CharacterView } from "../features/characters/types";
 import type { Campaign } from "../campaign/campaign";
 import { useQuery } from "../ui/useQuery";
+import { CommitInput } from "../ui/CommitInput";
 import { Button } from "../ui/Button";
 import { IconDelete, IconExpand } from "../ui/icons";
 import { Dialog } from "../workspace/Dialog";
@@ -192,12 +193,12 @@ function RelationshipRow({
         <button type="button" className="relationship-name" onClick={onOpenCharacter}>
           {other.name}
         </button>
-        <input
+        <CommitInput
           aria-label={`How ${c.name} sees ${other.name}`}
           placeholder="Trusts, owes, fears…"
           value={relationship.label}
           disabled={!editable}
-          onChange={(event) => onLabelChange(event.currentTarget.value.trim())}
+          onCommit={onLabelChange}
         />
         {depth && (
           <RelationshipDepthInput
@@ -334,7 +335,7 @@ function useRelationshipPicker(
     setAdding("");
     setSuggesting(false);
   };
-  const handleInput = (event: ReactFormEvent<HTMLInputElement>) => {
+  const handleInput = (event: ReactInputEvent<HTMLInputElement>) => {
     setAdding(event.currentTarget.value);
     setActive(0);
     setSuggesting(true);
@@ -404,7 +405,7 @@ function RelationshipPickerInput({
   expanded: boolean;
   activeDescendant: string | undefined;
   value: string;
-  onInput: (event: ReactFormEvent<HTMLInputElement>) => void;
+  onInput: (event: ReactInputEvent<HTMLInputElement>) => void;
   onFocus: () => void;
   onBlur: () => void;
   onKeyDown: (event: ReactKeyboardEvent<HTMLInputElement>) => void;

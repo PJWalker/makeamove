@@ -1,7 +1,7 @@
 import { plainText } from "../data/richText";
 import { MoveBody } from "../workspace/MoveBody";
 import type { ReactNode } from "react";
-import { useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo } from "react";
 import { getCharacter, systemOf } from "../features/characters/api";
 import { useActingCharacter } from "./useActingCharacter";
 import { getNote } from "../features/notes/api";
@@ -10,6 +10,7 @@ import type { Campaign } from "../campaign/campaign";
 import { useQuery } from "../ui/useQuery";
 import { Button } from "../ui/Button";
 import { closePopup } from "../ui/popup";
+import { CommitInput } from "../ui/CommitInput";
 import { usePopupDialog } from "../workspace/usePopupDialog";
 import { Dialog } from "../workspace/Dialog";
 import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
@@ -285,49 +286,44 @@ function RenameLink() {
 function RenameLinkDialog({ req }: { req: NonNullable<LinkPopupState["linkRename"]["value"]> }) {
   const ctx = useCampaign();
   const ref = usePopupDialog();
-  // oxlint-disable-next-line react-doctor/no-derived-useState -- RenameLink keys this dialog by request id to reset the draft.
-  const [text, setText] = useState(req.text);
   const onClose = () => ctx.linkPopups.linkRename.set(null);
   const done = (value: string | null) => {
     req.save(value);
-    closePopup(ref.current, onClose);
   };
   return (
     <Dialog dialogRef={ref} title="Link Text" onClose={onClose}>
-      <form
-        className="dialog-form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          done(text);
-        }}
-      >
+      <div className="dialog-form">
         <label className="field">
           Show this link as
-          <input
+          <CommitInput
             name="text"
-            value={text}
+            value={req.text}
             // The popup opens on a click, for this one field.
             // react-doctor-disable-next-line react-doctor/no-autofocus
             autoFocus
-            // Typing replaces it.
             onFocus={(e) => e.currentTarget.select()}
-            onInput={(e) => setText(e.currentTarget.value)}
+            onCommit={done}
+            onBlur={() => closePopup(ref.current, onClose)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") closePopup(ref.current, onClose);
+            }}
           />
         </label>
-        <div className="form-actions">
-          {req.custom && (
-            <Button variant="ghost" className="form-actions-start" onClick={() => done(null)}>
+        {req.custom && (
+          <div className="form-actions">
+            <Button
+              variant="ghost"
+              className="form-actions-start"
+              onClick={() => {
+                done(null);
+                closePopup(ref.current, onClose);
+              }}
+            >
               Use Its Own Name
             </Button>
-          )}
-          <Button variant="ghost" onClick={() => closePopup(ref.current, onClose)}>
-            Cancel
-          </Button>
-          <Button variant="primary" type="submit">
-            Save
-          </Button>
-        </div>
-      </form>
+          </div>
+        )}
+      </div>
     </Dialog>
   );
 }

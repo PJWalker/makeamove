@@ -9,7 +9,7 @@ import { getCharacter, systemOf } from "../features/characters/api";
 import { needsChoice } from "../features/characters/moves";
 import { inRange } from "../scene/measure";
 import type { Campaign } from "../campaign/campaign";
-import { collapsedInto } from "../ui/bubble";
+import { growFrom, leave } from "../ui/morph";
 import { reducedMotion } from "../ui/transition";
 import { Button } from "../ui/Button";
 import { IconClose } from "../ui/icons";
@@ -32,9 +32,6 @@ import { startMove } from "../workspace/commands/characters";
  * sidebars slide; without one on screen it sits above the hotbar.
  */
 
-const ENTER_MS = 150;
-const LEAVE_MS = 110;
-const EASE = "cubic-bezier(0.2, 0.7, 0.2, 1)";
 /** Between the button and the bubble, room for the tail. */
 const GAP = 14;
 /** The closest the bubble comes to the window's edges. */
@@ -124,7 +121,6 @@ function useMovePrompt(campaign: Campaign) {
   const shown = live ?? last;
   const ref = useRef<HTMLDialogElement>(null);
   const anchor = useRef<Element | null>(null);
-  const leaving = useRef<Animation | null>(null);
 
   // Whether a request was on screen as of the last commit.
   const wasShown = useRef(false);
@@ -134,8 +130,6 @@ function useMovePrompt(campaign: Campaign) {
     const pressed = lastPressed();
     if (pressed && !ref.current?.contains(pressed)) anchor.current = pressed;
     else if (!wasShown.current) anchor.current = null;
-    leaving.current?.cancel();
-    leaving.current = null;
   }, [live]);
   useLayoutEffect(() => {
     wasShown.current = shown !== null;
@@ -149,24 +143,12 @@ function useMovePrompt(campaign: Campaign) {
       setLast(null);
       return;
     }
-    const box = el.getBoundingClientRect();
-    const a = el.animate(
-      [
-        { transform: getComputedStyle(el).transform, opacity: 1 },
-        collapsedInto(box, onScreenRect(anchor.current)),
-      ],
-      {
-        duration: LEAVE_MS,
-        easing: "ease-in",
-        fill: "forwards",
-      },
-    );
-    leaving.current = a;
-    a.finished.then(
+    void leave(
+      el,
       () => {
-        if (leaving.current === a) setLast(null);
+        if (shown) setLast(null);
       },
-      () => {},
+      null,
     );
   }, [hasLive, shown]);
 
@@ -182,18 +164,8 @@ function useMovePrompt(campaign: Campaign) {
     const enter = () => {
       if (entered || reducedMotion.matches) return;
       entered = true;
-      const box = el.getBoundingClientRect();
-      el.animate(
-        [
-          collapsedInto(box, onScreenRect(anchor.current)),
-          { opacity: 1, offset: 0.4 },
-          { transform: "none", opacity: 1 },
-        ],
-        {
-          duration: ENTER_MS,
-          easing: EASE,
-        },
-      );
+      const origin = onScreenRect(anchor.current);
+      if (origin) growFrom(el, origin);
     };
     const place = async () => {
       const currentRevision = ++revision;

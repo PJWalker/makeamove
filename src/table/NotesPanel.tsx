@@ -25,6 +25,7 @@ import { NoteEditor } from "./NoteEditor";
 import { FolderTree } from "./FolderTree";
 import { notesLayout } from "./panelLayouts";
 import { useCampaign } from "../workspace/campaignContext";
+import { CommitInput } from "../ui/CommitInput";
 import {
   ensureDefaultNoteFolders,
   filePage,
@@ -298,17 +299,15 @@ function NotePage({
             </Button>
           </p>
         )}
-        <input
+        <CommitInput
           ref={titleRef}
           className="title"
           aria-label="Title"
           placeholder="Untitled"
           value={note.title === "Untitled" ? "" : note.title}
-          onChange={(e) => ctx.execute(renamePage, { id: note.id, title: e.currentTarget.value })}
+          onCommit={(title) => ctx.execute(renamePage, { id: note.id, title })}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
-              e.preventDefault();
-              e.currentTarget.blur();
               (
                 e.currentTarget
                   .closest(".note-page")

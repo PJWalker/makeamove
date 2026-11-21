@@ -4,6 +4,7 @@ import { DEFAULT_CANVAS_COLOUR, type Campaign } from "../campaign/campaign";
 import { useQuery } from "../ui/useQuery";
 import { ColourPicker } from "../ui/ColourPicker";
 import { Segmented } from "../ui/Segmented";
+import { CommitInput } from "../ui/CommitInput";
 import { canvasColour } from "../workspace/canvasState";
 import { useCampaign } from "../workspace/campaignContext";
 import { setGrid, setLighting, updateScene } from "../workspace/commands/scenes";
@@ -12,7 +13,7 @@ import type { SceneLighting } from "../scene/sceneDoc";
 import type { Grid } from "../scene/grid";
 
 const num = (v: string, fallback: number) =>
-  Number.isFinite(parseFloat(v)) ? parseFloat(v) : fallback;
+  Number.isFinite(Number.parseFloat(v)) ? Number.parseFloat(v) : fallback;
 
 export function SceneSettingsFields({
   campaign,
@@ -107,11 +108,11 @@ export function SceneSettingsFields({
           </label>
           <label className="field">
             Unit
-            <input
+            <CommitInput
               value={grid.unitName}
               disabled={!editable}
               autoComplete="off"
-              onChange={(e) => setGridOf({ unitName: e.currentTarget.value.trim() })}
+              onCommit={(unitName) => setGridOf({ unitName })}
             />
           </label>
         </div>

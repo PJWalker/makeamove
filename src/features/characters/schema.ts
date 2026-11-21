@@ -1,4 +1,13 @@
-import { arrayOf, isObject, isString, oneOf } from "../../lib/guards";
+import {
+  arrayOf,
+  isBoolean,
+  isNumber,
+  isObject,
+  isString,
+  objectOf,
+  optional,
+  oneOf,
+} from "../../lib/guards";
 import { collection, lww, record, text } from "../../data/schema";
 import { systemCharacterData } from "../../systems/schema";
 import { TOKEN_STYLES } from "../../scene/types";
@@ -28,6 +37,33 @@ export interface RelationshipEntry {
   depth?: number;
 }
 
+const isRelationship = objectOf({
+  label: isString,
+  depth: optional(isNumber),
+}) as (value: unknown) => value is RelationshipEntry;
+
+const isEffect = isObject<import("../../systems/effectTypes").Effect>;
+const isItemInstance = objectOf({
+  id: isString,
+  defId: optional(isString),
+  name: isString,
+  description: isString,
+  weight: isNumber,
+  tags: arrayOf(isString),
+  uses: optional(isNumber),
+  usesLeft: optional(isNumber),
+  resetUsesAtCamp: optional(isBoolean),
+  artifactProgress: optional(isNumber),
+  artifactUnlocked: optional(arrayOf(isString)),
+  broken: optional(isBoolean),
+  equippable: optional(isBoolean),
+  equipped: isBoolean,
+  icon: optional(isString),
+  effects: arrayOf(isEffect),
+  active: oneOf("always", "carried", "equipped"),
+  order: isString,
+}) as (value: unknown) => value is ItemInstance;
+
 export const characterEntry = record({
   name: lww(isString),
   owner: lww(isString),
@@ -46,9 +82,9 @@ export const characterEntry = record({
   durations: lww(isObject<Record<string, Duration>>),
   /** The action the character is concentrating on. */
   concentration: lww(isString),
-  inventory: collection(lww(isObject<ItemInstance>), "item"),
+  inventory: collection(lww(isItemInstance), "item"),
   /** Other character id -> how this one sees them. */
-  relationships: collection(lww(isObject<RelationshipEntry>), "relationship"),
+  relationships: collection(lww(isRelationship), "relationship"),
   /** Rich-text fields by name: notes, bonds, an NPC's long fields (CharacterText.tsx). */
   texts: collection(text()),
   /** Each system's own data, by system id. */
