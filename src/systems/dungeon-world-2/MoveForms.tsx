@@ -91,7 +91,7 @@ export function EndSession({ sheet }: MoveFormProps) {
           })
         }
       >
-        {used ? "Session ended" : "Award group XP"}
+        {used ? "Session Ended" : "Award Group XP"}
       </Button>
     </section>
   );
@@ -219,7 +219,7 @@ export function ComfortOrSupport({ sheet }: MoveFormProps) {
           void ctx.execute(comfort, { characterId: sheet.c.id, comforted: comforted.id, benefits })
         }
       >
-        {used ? "Used this session" : "Resolve Comfort or Support"}
+        {used ? "Used This Session" : "Resolve Comfort or Support"}
       </Button>
     </section>
   );
@@ -599,7 +599,7 @@ export function Downtime({ sheet }: MoveFormProps) {
         disabled={!canSpend || trained}
         onClick={() => ctx.execute(train, { characterId: sheet.c.id })}
       >
-        {trained ? "Trained this Downtime" : "Train (1 Treasure for 1 XP)"}
+        {trained ? "Trained This Downtime" : "Train (1 Treasure for 1 XP)"}
       </Button>
     </section>
   );
@@ -677,7 +677,7 @@ export function MakeCamp({ sheet }: MoveFormProps) {
           })
         }
       >
-        {used ? "Camp completed" : "Finish Making Camp"}
+        {used ? "Camp Completed" : "Finish Making Camp"}
       </Button>
     </section>
   );

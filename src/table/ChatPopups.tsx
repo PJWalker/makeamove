@@ -5,7 +5,8 @@ import { arrow, autoUpdate, computePosition, flip, offset, shift } from "@floati
 import type { ChatMessage } from "../features/chat/types";
 import { markRead } from "../features/chat/unread";
 import type { Campaign } from "../campaign/campaign";
-import { collapsedInto, reducedMotion } from "../ui/bubble";
+import { collapsedInto } from "../ui/bubble";
+import { reducedMotion } from "../ui/transition";
 import { Button } from "../ui/Button";
 import { IconClose } from "../ui/icons";
 import { useQuery } from "../ui/useQuery";

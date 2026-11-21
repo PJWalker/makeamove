@@ -168,7 +168,7 @@ function MemberList({ campaign }: { campaign: Campaign }) {
                 <span className="member-name">{r.name}</span>
                 <Button
                   variant="icon"
-                  label={`Let ${r.name} back in (they rejoin with the invite link)`}
+                  label={`Let ${r.name} Back In`}
                   onClick={() => ctx.execute(allowBack, { id: r.id })}
                 >
                   <IconAllowBack size={22} />

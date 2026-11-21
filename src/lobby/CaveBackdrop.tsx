@@ -1,5 +1,6 @@
 import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import { seededRandom } from "../lib/seededRandom";
+import { reducedMotion } from "../ui/transition";
 import { PARTY, type PartyMember } from "./caveParty";
 import { daubPath, paintRock, VIEW } from "./caveRock";
 
@@ -371,7 +372,6 @@ export function CaveBackdrop() {
   useEffect(() => {
     const element = scene.current;
     if (!element) return;
-    const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
     let frame = 0;
     let x = 0;
     let y = 0;

@@ -19,6 +19,7 @@ import {
   loadDiceRenderer,
   rollCarriedDice,
 } from "./rollDieHelpers";
+import { reducedMotion } from "../ui/transition";
 
 /** Waiting for the renderer, in the air, at rest, drawn flat, or disabled by the player. */
 type Phase = "pending" | "flying" | "landed" | "flat" | "disabled";
@@ -106,7 +107,7 @@ function useLanding(
       return;
     }
     const thrown =
-      wasArriving && !matchMedia("(prefers-reduced-motion: reduce)").matches
+      wasArriving && !reducedMotion.matches
         ? { from: throwFrom(slot.current!, mine, arrivalOrigin), delay: index * 90 }
         : undefined;
     let gone = false;

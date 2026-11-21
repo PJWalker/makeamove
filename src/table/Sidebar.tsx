@@ -426,7 +426,7 @@ function ActiveTab({
         <h2 className="panel-title" tabIndex={-1}>
           {entityTitle(id, record)}
         </h2>
-        <Button variant="icon" label="Close window" onClick={() => closeDockedEntity(ctx, id)}>
+        <Button variant="icon" label="Close Window" onClick={() => closeDockedEntity(ctx, id)}>
           <IconClose size={22} />
         </Button>
       </header>

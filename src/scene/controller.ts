@@ -34,6 +34,7 @@ import { hoverCursor } from "./gestures/select";
 import { dragShape, placementPlan } from "./gestures/shape";
 import { fitPatch, newTextLook, putText } from "./gestures/text";
 import type { Gesture, Placement, TextRequest, ToolContext } from "./gestures/types";
+import { reducedMotion } from "../ui/transition";
 
 /** How soon, and how near in screen px, a press must follow the last to count as a double click. */
 const MULTI_CLICK_MS = 500;
@@ -621,7 +622,7 @@ export class SceneController implements ToolContext {
       this.renderer.invalidate("previews", "overlay");
       complete();
     };
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return finish();
+    if (reducedMotion.matches) return finish();
     const start = performance.now();
     const tick = (now: number) => {
       const progress = Math.min(1, (now - start) / 180);
@@ -953,7 +954,7 @@ export class SceneController implements ToolContext {
           try {
             return await importImage(file);
           } catch (err) {
-            console.warn(`Couldn't import ${file.name}`, err);
+            console.error(`Couldn't import ${file.name}`, err);
             return null;
           }
         }),

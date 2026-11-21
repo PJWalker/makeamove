@@ -338,7 +338,7 @@ export function AdvancementDialog({
   };
 
   return (
-    <Dialog dialogRef={ref} title={`${c.name}: advancement ${plan.rank}`} onClose={onClose}>
+    <Dialog dialogRef={ref} title={`${c.name}: Advancement ${plan.rank}`} onClose={onClose}>
       <form
         className="creation-form"
         onSubmit={(e) => {

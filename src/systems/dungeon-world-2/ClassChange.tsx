@@ -71,7 +71,7 @@ function ClassChangeDialog({
   };
 
   return (
-    <Dialog dialogRef={ref} title={`${character.name}: change Class`} onClose={onClose}>
+    <Dialog dialogRef={ref} title={`${character.name}: Change Class`} onClose={onClose}>
       <form
         className="creation-form"
         onSubmit={(event) => {

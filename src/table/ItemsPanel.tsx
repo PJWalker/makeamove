@@ -490,7 +490,7 @@ function GearForm({
               />
               <Button
                 variant="icon"
-                label="Remove effect"
+                label="Remove Effect"
                 onClick={() => patch({ effects: effects.filter((_, i) => i !== index) })}
               >
                 <IconDelete />
@@ -503,7 +503,7 @@ function GearForm({
               patch({ effects: [...effects, { type: "rollBonus", stat: "", value: 1 }] })
             }
           >
-            <IconAdd size={22} /> Add effect
+            <IconAdd size={22} /> Add Effect
           </Button>
         </div>
       </section>

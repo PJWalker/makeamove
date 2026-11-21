@@ -431,7 +431,7 @@ function TokenSettings({
   const me = useQuery(device);
   const colour = c.tokenColour ?? colourOf(me);
   return (
-    <Dialog dialogRef={ref} title="Token settings" onClose={onClose}>
+    <Dialog dialogRef={ref} title="Token Settings" onClose={onClose}>
       <GraphicPicker
         graphic={graphic}
         onChange={(next) =>

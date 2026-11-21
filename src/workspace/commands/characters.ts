@@ -211,7 +211,7 @@ export const deleteCharacter = command<{ id: string }>({
   confirm: (ctx, { id }) => {
     const name = getCharacter(ctx.campaign, id)?.name ?? "this character";
     return {
-      title: "Delete character",
+      title: "Delete Character",
       body: `Delete ${name}? Their sheet is gone for everyone, and tokens on the map stop being linked to them.`,
       subject: name,
       confirmLabel: "Delete",

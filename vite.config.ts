@@ -6,6 +6,16 @@ import Macros from "unplugin-macros/vite";
 import { defineConfig, type Plugin, lazyPlugins } from "vite-plus";
 import { VitePWA } from "vite-plugin-pwa";
 
+/**
+ * oxlint's built-in rules the code follows beyond those set below, so new
+ * code keeps to them too. Each is on because the code already passes it.
+ */
+const builtinRules = (
+  createRequire(import.meta.url)("./lint/builtinRules.json") as {
+    rules: Record<string, "error" | "warn" | "off">;
+  }
+).rules;
+
 const doctorRules = (
   createRequire(import.meta.url)("./doctor.config.json") as {
     rules: Record<string, "error" | "warn" | "off">;
@@ -250,8 +260,65 @@ export default defineConfig({
           "jsx-a11y/tabindex-no-positive": "error",
           // Mixed domain exports and component size/complexity are reviewed architecturally, not enforced as lint blockers.
           ...doctorRules,
+          ...builtinRules,
+          "no-console": ["error", { allow: ["error"] }],
+          "no-restricted-globals": [
+            "error",
+            ...["localStorage", "sessionStorage", "indexedDB"].map((name) => ({
+              name,
+              message: "Reach browser storage through src/platform.",
+            })),
+          ],
+          "no-restricted-properties": [
+            "error",
+            {
+              property: "startViewTransition",
+              message: "Start view transitions with withTransition or morphOpen (src/ui).",
+            },
+            ...["localStorage", "sessionStorage", "indexedDB"].map((property) => ({
+              object: "window",
+              property,
+              message: "Reach browser storage through src/platform.",
+            })),
+          ],
+          "makeamove/dialog-title-ellipsis": "error",
+          "makeamove/prefer-reduced-motion": "error",
+          "makeamove/title-case": [
+            "error",
+            {
+              jsx: { Button: ["label", "children"], Dialog: ["title"], LobbyModal: ["title"] },
+              objects: [
+                { with: ["id", "run"], check: ["title"] },
+                { with: ["onSelect"], check: ["label"] },
+                { with: ["onPick"], check: ["label"] },
+                { with: ["confirmLabel"], check: ["title", "confirmLabel"] },
+              ],
+            },
+          ],
+          "makeamove/use-dialog": [
+            "error",
+            {
+              // Surfaces of their own kind: a modal outside any campaign, the
+              // command palette and a move's prompt bubble.
+              allow: [
+                "src/workspace/Dialog.tsx",
+                "src/lobby/Lobby.tsx",
+                "src/table/Palette.tsx",
+                "src/table/MovePrompt.tsx",
+              ],
+            },
+          ],
         },
-        plugins: ["react", "jsx-a11y"],
+        plugins: [
+          "react",
+          "jsx-a11y",
+          "import",
+          "promise",
+          "react-perf",
+          "unicorn",
+          "typescript",
+          "oxc",
+        ],
         jsPlugins: ["oxlint-plugin-react-doctor"],
         env: {
           browser: true,
@@ -329,8 +396,26 @@ export default defineConfig({
         },
       },
       {
+        // The layers that read stored data report what they can't read.
+        files: ["src/{data,kernel,platform}/**/*.{ts,tsx}"],
+        rules: { "no-console": "off" },
+      },
+      {
+        files: ["src/platform/**/*.{ts,tsx}"],
+        rules: { "no-restricted-globals": "off", "no-restricted-properties": "off" },
+      },
+      {
+        files: ["src/ui/transition.ts", "src/ui/morph.ts"],
+        rules: { "no-restricted-properties": "off" },
+      },
+      {
         files: ["src/**/__tests__/**/*.{ts,tsx}"],
-        rules: { "no-restricted-imports": "off" },
+        rules: {
+          "no-restricted-imports": "off",
+          "no-console": "off",
+          "no-restricted-globals": "off",
+          "no-restricted-properties": "off",
+        },
       },
       {
         files: ["vite.config.ts"],
@@ -357,9 +442,26 @@ export default defineConfig({
         name: "vite-plus",
         specifier: "vite-plus/oxlint-plugin",
       },
+      {
+        name: "makeamove",
+        specifier: "./lint/plugin.ts",
+      },
     ],
     rules: {
       "vite-plus/prefer-vite-plus-imports": "error",
+      "makeamove/reference-read-only": [
+        "error",
+        // Config files name reference/ only to leave it out or keep imports from it.
+        {
+          allow: [
+            "scripts/rules/readReference.ts",
+            "lint/",
+            "vite.config.ts",
+            "eslint.config.js",
+            ".dependency-cruiser.cjs",
+          ],
+        },
+      ],
     },
   },
   fmt: {

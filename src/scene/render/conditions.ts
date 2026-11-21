@@ -7,15 +7,8 @@ import type { TokenMarks } from "../tokenMarks";
 import type { Transform } from "../types";
 import { SdfText } from "./sdfText";
 import type { RenderState } from "./state";
-import {
-  drawPointer,
-  INK,
-  POINTER_ROOM,
-  reducedMotion,
-  screenViewport,
-  TOKEN_NAME,
-  cabin,
-} from "./style";
+import { drawPointer, INK, POINTER_ROOM, screenViewport, TOKEN_NAME, cabin } from "./style";
+import { reducedMotion } from "../../ui/transition";
 
 const NO_MARKS: TokenMarks = { pips: [], turn: false };
 const PIP_MIN_R = 3;
@@ -67,7 +60,7 @@ export class ConditionLayer {
   draw(turns: Graphics, pointer: Point | null, unseen: (t: Transform) => boolean) {
     const s = this.state;
     const now = performance.now();
-    const still = reducedMotion();
+    const still = reducedMotion.matches;
     const cam = s.camera;
     const previousCamera = this.camera;
     const cameraChanged =

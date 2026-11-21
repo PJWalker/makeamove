@@ -104,7 +104,7 @@ function SceneDetail({ campaign, active }: { campaign: Campaign; active: SceneVi
         }
       />
       <Button variant="secondary" onClick={() => ctx.execute(pullPlayers, { id: active.id })}>
-        <IconMembers size={22} /> Pull players here
+        <IconMembers size={22} /> Pull Players Here
       </Button>
       {scene ? (
         <SceneSettingsFields campaign={campaign} sceneId={active.id} scene={scene} />

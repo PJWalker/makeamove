@@ -115,7 +115,7 @@ export const revealPage = command<{ id: string }>({
   confirm: (ctx, { id }) => {
     const title = note(ctx, id)?.title || "Untitled";
     return {
-      title: "Reveal page",
+      title: "Reveal Page",
       body: `Show ${title} to everyone? Players get their own copy, so it can’t be hidden again.`,
       subject: title,
       confirmLabel: "Reveal",
@@ -151,7 +151,7 @@ export const deletePage = command<{ id: string }>({
   confirm: (ctx, { id }) => {
     const title = note(ctx, id)?.title || "Untitled";
     return {
-      title: "Delete page",
+      title: "Delete Page",
       body: `Delete ${title}? It’s gone for everyone, and links to it stop working. This can’t be undone.`,
       subject: title,
       confirmLabel: "Delete",

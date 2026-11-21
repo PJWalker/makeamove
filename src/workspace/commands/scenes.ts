@@ -142,7 +142,7 @@ export const deleteScene = command<{ id: string }>({
   confirm: (ctx, { id }) => {
     const name = scene(ctx, id)?.name ?? "this scene";
     return {
-      title: "Delete scene",
+      title: "Delete Scene",
       body: `Delete ${name}? Its maps, tokens and drawings are gone for everyone. This can’t be undone.`,
       subject: name,
       confirmLabel: "Delete",

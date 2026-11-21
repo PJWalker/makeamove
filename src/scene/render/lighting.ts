@@ -15,7 +15,8 @@ import {
   tokenBlocker,
 } from "../vision";
 import type { RenderState } from "./state";
-import { flat, reducedMotion } from "./style";
+import { flat } from "./style";
+import { reducedMotion } from "../../ui/transition";
 
 /** A scene's lighting: whether it's on, and how dark it is where no light reaches (0 to 1). */
 export interface Lighting {
@@ -219,7 +220,7 @@ export class LightingLayer {
    * Steady under reduced motion.
    */
   flicker(): boolean {
-    if (!this.flickering.length || reducedMotion()) return false;
+    if (!this.flickering.length || reducedMotion.matches) return false;
     const t = performance.now() / 1000;
     for (const { lamps, phase: p } of this.flickering) {
       const wave =

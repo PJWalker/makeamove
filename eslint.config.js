@@ -23,22 +23,4 @@ export default defineConfig([
     plugins: { data: dataLayer },
     rules: { "data/no-raw-yjs": "error" },
   },
-  {
-    files: ["src/**/*.{ts,tsx}", "scripts/**/*.ts", "vite.config.ts"],
-    ignores: ["scripts/rules/readReference.ts"],
-    languageOptions: { parser: tseslint.parser },
-    rules: {
-      "no-restricted-syntax": [
-        "error",
-        {
-          selector: "Literal[value=/(^|[/\\\\])reference[/\\\\]/]",
-          message: "reference/ is read only by scripts/rules/readReference.ts.",
-        },
-        {
-          selector: "TemplateElement[value.raw=/(^|[/\\\\])reference[/\\\\]/]",
-          message: "reference/ is read only by scripts/rules/readReference.ts.",
-        },
-      ],
-    },
-  },
 ]);

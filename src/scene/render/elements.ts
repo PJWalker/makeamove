@@ -4,7 +4,7 @@ import { kindOf, type SelectKind } from "../tools";
 import { LAYERS, type Layer, type TokenElement } from "../types";
 import { buildView, contentKey, DESTROY_VIEW, type View } from "./elementViews";
 import type { RenderState } from "./state";
-import { reducedMotion } from "./style";
+import { reducedMotion } from "../../ui/transition";
 
 /** The scene's elements: a view per element, kept in its layer and in order. */
 export class ElementLayer {
@@ -57,7 +57,7 @@ export class ElementLayer {
 
   /** Play out the moving effects; whether they need more frames (not under reduced motion). */
   animate(): boolean {
-    const still = reducedMotion();
+    const still = reducedMotion.matches;
     const time = still ? 0 : performance.now() / 1000;
     let animating = false;
     for (const view of this.views.values()) {
@@ -122,7 +122,7 @@ export class ElementLayer {
   syncDowned(): boolean {
     const s = this.state;
     const now = performance.now();
-    const still = reducedMotion();
+    const still = reducedMotion.matches;
     let animating = false;
     for (const [id, view] of this.views) {
       const el = s.byId.get(id);

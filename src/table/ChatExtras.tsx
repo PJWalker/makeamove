@@ -224,7 +224,7 @@ export function CounterCard({
           {can && (
             <Button
               variant="icon"
-              label="Down one"
+              label="Down One"
               disabled={m.max !== undefined && value <= 0}
               onClick={() => set(value - 1)}
             >
@@ -236,7 +236,7 @@ export function CounterCard({
             {m.max !== undefined && <span className="muted">/{m.max}</span>}
           </span>
           {can && (
-            <Button variant="icon" label="Up one" disabled={full} onClick={() => set(value + 1)}>
+            <Button variant="icon" label="Up One" disabled={full} onClick={() => set(value + 1)}>
               <IconAdd />
             </Button>
           )}

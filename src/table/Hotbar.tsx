@@ -87,7 +87,7 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
         <Button
           variant="icon"
           className="hotbar-palette"
-          label="Command palette (Ctrl/Cmd+K)"
+          label="Command Palette (Ctrl/Cmd+K)"
           onClick={() => ctx.table.togglePalette()}
         >
           <IconSearch size={22} />

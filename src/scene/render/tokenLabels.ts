@@ -12,15 +12,8 @@ import { resolveTokenLabelLayout, zoomTokenBars } from "../tokenLabelLayout";
 import type { Transform } from "../types";
 import { SdfText } from "./sdfText";
 import type { RenderState } from "./state";
-import {
-  drawPointer,
-  INK,
-  POINTER_ROOM,
-  reducedMotion,
-  screenViewport,
-  TOKEN_NAME,
-  cabin,
-} from "./style";
+import { drawPointer, INK, POINTER_ROOM, screenViewport, TOKEN_NAME, cabin } from "./style";
+import { reducedMotion } from "../../ui/transition";
 
 /** Token names never get smaller or bigger than this on screen, in px. */
 const NAME_MIN = 11;
@@ -87,7 +80,7 @@ export class TokenLabelLayer {
     const cam = s.camera;
     const g = this.bars.clear();
     const now = performance.now();
-    const still = reducedMotion();
+    const still = reducedMotion.matches;
     const viewport = screenViewport(s);
     const seen = new Set<string>();
     const usedNames = new Set<string>();

@@ -294,7 +294,7 @@ function SceneSettingsDialog({
   return (
     <Dialog
       dialogRef={ref}
-      title={view ? `${view.name} settings` : "Scene settings"}
+      title={view ? `${view.name} Settings` : "Scene Settings"}
       onClose={() => ctx.canvas.sceneSettingsOpen.set(false)}
     >
       <SceneSettingsFields

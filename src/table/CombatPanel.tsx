@@ -234,7 +234,7 @@ function CombatantActions({ c, gm, mine }: { c: CombatantView; gm: boolean; mine
       {c.init === null && mine && (
         <Button
           variant="icon"
-          label="Roll initiative"
+          label="Roll Initiative"
           onClick={() => ctx.execute(rollCombatantInitiative, { id: c.id })}
         >
           <IconDice />
@@ -244,14 +244,14 @@ function CombatantActions({ c, gm, mine }: { c: CombatantView; gm: boolean; mine
         <>
           <Button
             variant="icon"
-            label={c.hidden ? "Show to players" : "Hide from players"}
+            label={c.hidden ? "Show to Players" : "Hide from Players"}
             onClick={() => ctx.execute(hideCombatant, { id: c.id, hidden: !c.hidden })}
           >
             {c.hidden ? <IconSecret /> : <IconReveal />}
           </Button>
           <Button
             variant="icon"
-            label="Remove from combat"
+            label="Remove from Combat"
             onClick={() => ctx.execute(removeFromCombat, { id: c.id })}
           >
             <IconClose />

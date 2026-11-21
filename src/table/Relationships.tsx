@@ -211,7 +211,7 @@ function RelationshipRow({
         )}
         <Button
           variant="icon"
-          label={expanded ? "Hide notes" : "Notes"}
+          label={expanded ? "Hide Notes" : "Notes"}
           pressed={expanded}
           onClick={onToggleNotes}
         >

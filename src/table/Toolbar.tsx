@@ -171,7 +171,7 @@ function CampaignMenu() {
     <>
       <Button
         variant="icon"
-        label="Campaign menu"
+        label="Campaign Menu"
         className="toolbar-menu"
         pressed={!!menu}
         aria-haspopup="menu"

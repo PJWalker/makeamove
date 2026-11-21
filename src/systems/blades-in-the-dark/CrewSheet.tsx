@@ -106,8 +106,8 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
         onClick={() => ctx.execute(advanceTier, undefined)}
       >
         {state["crewHold"] === "weak"
-          ? `Strengthen hold (${cost.rep} rep)`
-          : `Increase Tier (${cost.rep} rep, ${cost.coin} coin)`}
+          ? `Strengthen Hold (${cost.rep} Rep)`
+          : `Increase Tier (${cost.rep} Rep, ${cost.coin} Coin)`}
       </Button>
     </section>
   );

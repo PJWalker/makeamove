@@ -293,7 +293,7 @@ function RenameLinkDialog({ req }: { req: NonNullable<LinkPopupState["linkRename
     closePopup(ref.current, onClose);
   };
   return (
-    <Dialog dialogRef={ref} title="Link text" onClose={onClose}>
+    <Dialog dialogRef={ref} title="Link Text" onClose={onClose}>
       <form
         className="dialog-form"
         onSubmit={(e) => {

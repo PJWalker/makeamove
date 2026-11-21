@@ -1,15 +1,14 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
-import { Color } from "pixi.js";
 import { toScreen } from "../scene/camera";
 import type { SceneController } from "../scene/controller";
 import type { TextRequest } from "../scene/gestures/types";
 import { mapTextOutline } from "../scene/render/elementViews";
-import { INK, textWeight } from "../scene/render/style";
+import { cssColour, INK, textWeight } from "../scene/render/style";
 import { fontFamily, type TextStyle } from "../scene/types";
 import { useQuery } from "../ui/useQuery";
 import { useCampaign } from "../workspace/campaignContext";
 
-const OUTLINE = new Color(INK).toHex();
+const OUTLINE = cssColour(INK).hex;
 
 /**
  * Text typed straight onto the map, where it goes: set as the map draws it,
@@ -52,7 +51,7 @@ export function TextEditor({
         fontWeight: textWeight(look.bold),
         fontStyle: look.italic ? "italic" : "normal",
         fontSize: `${look.size * scale}px`,
-        color: colour.toHex(),
+        color: colour.hex,
         opacity: colour.alpha,
         WebkitTextStroke: `${mapTextOutline(look.size) * scale}px ${OUTLINE}`,
       }}
@@ -99,7 +98,7 @@ function useTextEditor(controller: SceneController, request: TextRequest, onDone
   const scale = (el ? el.w / el.bw : 1) * cam.zoom;
   const at = toScreen(cam, el ?? request.at);
   const host = controller.host.getBoundingClientRect();
-  const colour = new Color(look.colour);
+  const colour = cssColour(look.colour);
 
   // Its words to start with, the caret at their end, and the map's copy hidden.
   useLayoutEffect(() => {
@@ -116,7 +115,6 @@ function useTextEditor(controller: SceneController, request: TextRequest, onDone
       cancelAnimationFrame(frame);
       show?.();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, as editing starts
   }, []);
 
   // Text being edited takes on the Text tool's style as it changes, starting from its own.
@@ -131,7 +129,6 @@ function useTextEditor(controller: SceneController, request: TextRequest, onDone
       if (changed.length)
         controller.setProps([id], Object.fromEntries(changed.map((k) => [k, next[k]])));
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, as editing starts
   }, []);
 
   /** Put it down, once. */

@@ -281,7 +281,7 @@ export function TokenOptionsDialog({
   return (
     <Dialog
       dialogRef={ref}
-      title={linked ? linked.name : (item?.name ?? token?.name ?? "Token options")}
+      title={linked ? linked.name : (item?.name ?? token?.name ?? "Token Options")}
       onClose={onClose}
       {...(linked ? { proxy: linkProxy(ctx, "character", linked.id, linked.name) } : {})}
     >

@@ -45,7 +45,7 @@ export function iconTextureFor(name: string): Promise<Texture | null> {
           source: new ImageSource({ resource: image, autoGenerateMipmaps: true }),
         }),
       (error: unknown) => {
-        console.warn(`Couldn't load token icon ${name}`, error);
+        console.error(`Couldn't load token icon ${name}`, error);
         return null;
       },
     );

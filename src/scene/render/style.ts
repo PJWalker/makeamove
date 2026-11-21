@@ -1,4 +1,4 @@
-import type { Graphics } from "pixi.js";
+import { Color, type Graphics } from "pixi.js";
 import type { Rect } from "../camera";
 import type { Point } from "../grid";
 import type { SdfFontSpec } from "./sdfFont";
@@ -9,6 +9,12 @@ import { fontFamily, TEXT_FONTS, type TextStyle } from "../types";
 /** The UI accent, oklch(82% 0.15 85), as sRGB for the canvas. */
 export const ACCENT = 0xf0bb3b;
 export const INK = 0x14161c;
+
+/** A scene colour as CSS: its hex without alpha, and its opacity apart. */
+export function cssColour(colour: string | number) {
+  const c = new Color(colour);
+  return { hex: c.toHex(), alpha: c.alpha };
+}
 
 /** The canvas fonts, loaded from index.html. */
 export const cabin = (weight: number): SdfFontSpec => ({ family: "Cabin, sans-serif", weight });
@@ -46,8 +52,6 @@ export const TOKEN_NAME: SdfTextOptions = {
 
 /** Points as Pixi's flat [x, y, x, y…]. */
 export const flat = (pts: Point[]) => pts.flatMap((p) => [p.x, p.y]);
-
-export const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /** What of the canvas isn't covered by UI, in screen px, kept a little in from its edges. */
 export function screenViewport(s: Pick<RenderState, "size" | "insets">): Rect {

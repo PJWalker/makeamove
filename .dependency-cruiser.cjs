@@ -115,6 +115,42 @@ module.exports = {
       to: { path: "^src/(table|lobby)/" },
     },
 
+    // ── Libraries ──────────────────────────────────────────────────────────
+    // Each engine is wrapped in one place, so the rest of the app uses the
+    // house components and services rather than the library itself.
+    {
+      name: "react-aria-only-in-ui",
+      comment:
+        "React Aria is wrapped by the components in ui/ (Button, ContextMenu, Segmented…); everything else uses those.",
+      severity: "error",
+      from: { pathNot: ["^src/ui/", TESTS] },
+      to: { path: "node_modules/react-aria(-components)?/" },
+    },
+    {
+      name: "pixi-only-in-the-scene",
+      comment:
+        "PixiJS draws the scene canvas; only scene/ uses it. The UI asks the scene for what it needs.",
+      severity: "error",
+      from: { pathNot: ["^src/scene/", TESTS] },
+      to: { path: "node_modules/pixi\\.js/" },
+    },
+    {
+      name: "three-only-in-the-dice",
+      comment:
+        "three.js draws the 3D dice, in table/diceRenderer.ts alone (a lazily loaded chunk).",
+      severity: "error",
+      from: { pathNot: ["^src/table/diceRenderer\\.ts$", TESTS] },
+      to: { path: "node_modules/three/" },
+    },
+    {
+      name: "trystero-only-in-its-transport",
+      comment:
+        "Trystero is one Transport (sync/trystero.ts); sync and tests use the Transport interface.",
+      severity: "error",
+      from: { pathNot: ["^src/sync/trystero\\.ts$", TESTS] },
+      to: { path: "node_modules/trystero/" },
+    },
+
     {
       name: "nothing-imports-reference",
       comment:
