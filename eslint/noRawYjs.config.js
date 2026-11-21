@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import reactHooks from "eslint-plugin-react-hooks";
 import tseslint from "typescript-eslint";
 import dataLayer from "./noRawYjs.js";
+import guardLayer from "./guardRules.js";
 
 export default defineConfig([
   {
@@ -15,7 +16,10 @@ export default defineConfig([
         tsconfigRootDir: fileURLToPath(new URL("..", import.meta.url)),
       },
     },
-    plugins: { data: dataLayer, "react-hooks": reactHooks },
-    rules: { "data/no-raw-yjs": "error" },
+    plugins: { data: dataLayer, guards: guardLayer, "react-hooks": reactHooks },
+    rules: {
+      "data/no-raw-yjs": "error",
+      "guards/guard-boundaries": "error",
+    },
   },
 ]);

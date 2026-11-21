@@ -31,6 +31,22 @@ module.exports = {
 
     // ── Layering ───────────────────────────────────────────────────────────
     {
+      name: "lib-never-imports-foundation-siblings",
+      comment:
+        "lib/ is the lowest foundation: it cannot import platform/, data/, sync/, or kernel/ back out of the foundation layers.",
+      severity: "error",
+      from: { path: "^src/lib/", pathNot: TESTS },
+      to: { path: "^src/(platform|data|sync|kernel)/" },
+    },
+    {
+      name: "platform-never-imports-data",
+      comment:
+        "platform/ provides storage and browser services. data/ may use lib/ and platform/ must not depend on typed Yjs/data schemas.",
+      severity: "error",
+      from: { path: "^src/platform/", pathNot: TESTS },
+      to: { path: "^src/data/" },
+    },
+    {
       name: "leaf-layers-stay-leaves",
       comment:
         "lib/ is the foundation and imports nothing else from the app. platform/ may use only lib/.",
@@ -137,10 +153,22 @@ module.exports = {
     {
       name: "three-only-in-the-dice",
       comment:
-        "three.js draws the 3D dice, in table/diceRenderer.ts alone (a lazily loaded chunk).",
+        "three.js and cannon-es draw and roll the 3D dice, in table/dice/ alone (a lazily loaded chunk).",
       severity: "error",
-      from: { pathNot: ["^src/table/diceRenderer\\.ts$", TESTS] },
-      to: { path: "node_modules/three/" },
+      from: { pathNot: ["^src/table/dice/", TESTS] },
+      to: { path: "node_modules/(three|cannon-es)/" },
+    },
+    {
+      name: "the-dice-load-on-demand",
+      comment:
+        "The 3D dice are a lazily loaded chunk: the rest of the app imports table/dice/ by dynamic import (table/rollDieHelpers.ts loadDice), or table/dice/types.ts for its types.",
+      severity: "error",
+      from: { pathNot: ["^src/table/dice/", TESTS] },
+      to: {
+        path: "^src/table/dice/",
+        pathNot: "^src/table/dice/types\\.ts$",
+        dependencyTypesNot: ["dynamic-import"],
+      },
     },
     {
       name: "trystero-only-in-its-transport",
@@ -161,6 +189,28 @@ module.exports = {
     },
 
     // ── Hygiene ────────────────────────────────────────────────────────────
+    {
+      name: "no-foundation-cycles",
+      comment:
+        "The foundation may contain only acyclic dependencies among lib/, platform/, and data/.",
+      severity: "error",
+      from: { path: "^src/(lib|platform|data)/", pathNot: TESTS },
+      to: {
+        circular: true,
+        viaOnly: { path: "^src/(lib|platform|data)/", pathNot: TESTS },
+      },
+    },
+    {
+      name: "no-domain-cycles",
+      comment:
+        "Feature, scene, campaign, and system domains must not form dependency cycles with one another.",
+      severity: "error",
+      from: { path: "^src/(features|scene|campaign|systems)/", pathNot: TESTS },
+      to: {
+        circular: true,
+        viaOnly: { path: "^src/(features|scene|campaign|systems)/", pathNot: TESTS },
+      },
+    },
     {
       name: "no-circular",
       severity: "error",
