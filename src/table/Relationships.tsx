@@ -308,12 +308,16 @@ function RelationshipPicker({
             listId={picker.listId}
             panel={picker.panel}
             onSelect={picker.handleAdd}
-            onPointerDown={picker.handlePointerDown}
+            onPointerDown={handleRelationshipPointerDown}
           />,
           document.body,
         )}
     </>
   );
+}
+
+function handleRelationshipPointerDown(event: React.PointerEvent<HTMLButtonElement>) {
+  event.preventDefault();
 }
 
 function useRelationshipPicker(
@@ -359,8 +363,6 @@ function useRelationshipPicker(
       handleAdd(matches[index].id);
     }
   };
-  const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) =>
-    event.preventDefault();
 
   useMenuOverlay({
     open: expanded,
@@ -379,7 +381,6 @@ function useRelationshipPicker(
     panel,
     activeDescendant: expanded && matches[index] ? `${listId}-${matches[index].id}` : undefined,
     handleAdd,
-    handlePointerDown,
     handleBlur,
     handleFocus,
     handleInput,

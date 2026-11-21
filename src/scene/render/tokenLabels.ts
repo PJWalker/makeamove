@@ -279,13 +279,14 @@ export class TokenLabelLayer {
       if (frames.some(Boolean)) this.pinToEdge(p, zoomed.bars, viewport, fly);
       for (const [index, s] of p.stats.entries()) {
         const changed = frames[index];
+        const delta = changed?.change.delta ?? 0;
         const frame = changed?.frame;
         const { y, w, h: barH } = zoomed.bars[index]!;
         const x = zoomed.bars[index]!.x + (frame?.shakeX ?? 0);
         const key = `${p.id}:${s.id}`;
         if (frame?.broken && changed) {
           this.drawShards(key, changed.change, { x, y, w, h: barH }, now);
-          this.drawDelta(key, changed.change.delta, frame, x + w / 2, y, barH);
+          this.drawDelta(key, delta, frame, x + w / 2, y, barH);
           usedDeltas.add(key);
           continue;
         }
@@ -294,7 +295,7 @@ export class TokenLabelLayer {
         const inner = (from: number, to: number) =>
           g.roundRect(x + 1.5 + (w - 3) * from, y + 1.5, (w - 3) * (to - from), barH - 3, 2);
         if (frame && changed && frame.ghost > frac) {
-          const hurt = changed.change.delta < 0;
+          const hurt = delta < 0;
           inner(frac, frame.ghost).fill(
             hurt
               ? { color: frame.ghostHot ? 0xFF_FF_FF : 0xFF_5C_4D }
@@ -331,13 +332,13 @@ export class TokenLabelLayer {
             }
           }
           // A rim that burns in the colour of the change, then fades.
-          const hurt = changed.change.delta < 0;
+          const hurt = delta < 0;
           g.roundRect(x - 1, y - 1, w + 2, barH + 2, 4).stroke({
             color: hurt ? 0xFF_5C_4D : 0x6E_E0_7A,
             width: 2,
             alpha: Math.min(1, frame.alpha * 1.5) * (1 - frame.rise * 0.5),
           });
-          this.drawDelta(`${p.id}:${s.id}`, changed.change.delta, frame, x + w / 2, y, barH);
+          this.drawDelta(`${p.id}:${s.id}`, delta, frame, x + w / 2, y, barH);
           usedDeltas.add(`${p.id}:${s.id}`);
         }
         // The value, when the bar is wide enough to read it.

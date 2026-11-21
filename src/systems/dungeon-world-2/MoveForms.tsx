@@ -225,6 +225,39 @@ export function ComfortOrSupport({ sheet }: MoveFormProperties) {
   );
 }
 
+function calculateComfortBenefits(
+  answers: boolean[],
+  benefitKinds: Record<number, string>,
+  conditionPicks: Record<number, string>,
+  receiverConditions: string[],
+  supporterConditions: string[],
+  canGainDepth: boolean,
+  hasValidComforted: boolean,
+) {
+  const benefits: ComfortBenefit[] = [];
+  let ready = hasValidComforted;
+  for (const [index, yes] of answers.entries()) {
+    if (!yes) continue;
+    const kind = benefitKinds[index] ?? "clear-comforted";
+    if (kind === "gain-depth") {
+      if (canGainDepth) benefits.push({ kind });
+      else ready = false;
+    } else {
+      const options = kind === "clear-comforted" ? receiverConditions : supporterConditions;
+      const condition =
+        conditionPicks[index] && options.includes(conditionPicks[index])
+          ? conditionPicks[index]
+          : options[0];
+      if (condition) {
+        benefits.push({ kind: kind as "clear-comforted" | "clear-supporter", condition });
+      } else {
+        ready = false;
+      }
+    }
+  }
+  return { benefits, ready };
+}
+
 function useComfortOrSupport(sheet: MoveFormProperties["sheet"]) {
   const [comfortedId, setComfortedId] = useState("");
   const [answers, setAnswers] = useState<boolean[]>([false, false, false]);
@@ -248,24 +281,15 @@ function useComfortOrSupport(sheet: MoveFormProperties["sheet"]) {
   const supporterConditions = sheet.c.conditions.filter(
     (condition) => !supporterLocked.has(condition),
   );
-  const benefits: ComfortBenefit[] = [];
-  let ready = !!comforted && comforted.id !== sheet.c.id;
-  for (const [index, yes] of answers.entries()) {
-    if (!yes) continue;
-    const kind = benefitKinds[index] ?? "clear-comforted";
-    if (kind === "gain-depth") {
-      if (canGainDepth) benefits.push({ kind });
-      else ready = false;
-    } else {
-      const options = kind === "clear-comforted" ? receiverConditions : supporterConditions;
-      const condition =
-        conditionPicks[index] && options.includes(conditionPicks[index])
-          ? conditionPicks[index]
-          : options[0];
-      if (condition) {benefits.push({ kind: kind as "clear-comforted" | "clear-supporter", condition });}
-      else {ready = false;}
-    }
-  }
+  const { benefits, ready } = calculateComfortBenefits(
+    answers,
+    benefitKinds,
+    conditionPicks,
+    receiverConditions,
+    supporterConditions,
+    canGainDepth,
+    !!comforted && comforted.id !== sheet.c.id,
+  );
   return {
     comfortedId,
     setComfortedId,

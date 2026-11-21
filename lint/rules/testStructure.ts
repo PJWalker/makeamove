@@ -27,8 +27,9 @@ export const testStructure = defineRule({
         for (const specifier of node.specifiers) {
           if (specifier.type !== "ImportSpecifier") continue;
           if (specifier.imported.type !== "Identifier") continue;
-          if (specifier.imported.name === "describe") suites.add(specifier.local.name);
-          if (specifier.imported.name === "it" || specifier.imported.name === "test") {
+          const importedName = specifier.imported.name;
+          if (importedName === "describe") suites.add(specifier.local.name);
+          if (importedName === "it" || importedName === "test") {
             tests.add(specifier.local.name);
           }
         }

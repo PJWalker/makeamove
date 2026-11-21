@@ -5,7 +5,13 @@ import { bounds } from "../scene/geometry";
 import { toScreen } from "../scene/camera";
 import { HANDLE_SIZE, ROTATE_HANDLE_GAP } from "../scene/render/handles";
 import { PEN_WIDTH_RANGE } from "../scene/tools";
-import { isPlainToken, sharedTextStyle, type EffectKind, type SceneElement } from "../scene/types";
+import {
+  isPlainToken,
+  sharedTextStyle,
+  type EffectKind,
+  type SceneElement,
+  type TextStyle,
+} from "../scene/types";
 import { ColourPicker } from "../ui/ColourPicker";
 import { CommitInput } from "../ui/CommitInput";
 import { Button } from "../ui/Button";
@@ -121,6 +127,16 @@ function useSelectionFields(
   onTokenOptions: (id: string, from: Element) => void,
 ) {
   const context = useCampaign();
+  return buildSelectionFields(controller, sel, onTokenOptions, (patch) =>
+    context.tools.setTextStyle(patch));
+}
+
+function buildSelectionFields(
+  controller: SceneController,
+  sel: readonly SceneElement[],
+  onTokenOptions: (id: string, from: Element) => void,
+  setTextStyle: (patch: Partial<TextStyle>) => void,
+) {
   const ids = sel.map((element) => element.id);
   const first = sel[0]!;
   const set = (patch: ElementPatch) => controller.setProps(ids, patch);
@@ -159,7 +175,7 @@ function useSelectionFields(
         onChange={(patch) => {
           set(patch);
           // New text follows, as does text being edited (see TextEditor).
-          context.tools.setTextStyle(patch);
+          setTextStyle(patch);
         }}
       />,
     );
