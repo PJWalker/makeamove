@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vite-plus/test";
-import { IconLock } from "../icons";
+import { IconDraw, IconLock } from "../icons";
 
 describe("an interface icon", () => {
   const markup = renderToStaticMarkup(<IconLock size={20} className="extra" />);
@@ -35,5 +35,18 @@ describe("an interface icon", () => {
     );
     const ids = [...pair.matchAll(/<mask id="([^"]+)"/g)].map((m) => m[1]);
     expect(new Set(ids).size).toBe(2);
+  });
+
+  it("gives each icon's gradients ids of their own, and fills from them", () => {
+    const pair = renderToStaticMarkup(
+      <>
+        <IconDraw />
+        <IconDraw />
+      </>,
+    );
+    const ids = [...pair.matchAll(/<linearGradient id="([^"]+)"/g)].map((m) => m[1]);
+    expect(ids).toHaveLength(2);
+    expect(new Set(ids).size).toBe(2);
+    for (const id of ids) expect(pair).toContain(`fill="url(#${id})"`);
   });
 });

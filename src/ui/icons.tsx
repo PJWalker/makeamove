@@ -22,10 +22,17 @@ export const PROMINENT_ICON_SIZE = 32;
  * through it once: where shapes overlap they merge, rather than a
  * translucent text colour building up darker at the seams.
  */
-function glyph(name: string, art: ReactNode): Icon {
+/**
+ * An icon's drawing, or a function that draws it given `ref`, which makes
+ * ids for its gradients that are unique to each icon on the page.
+ */
+type Art = ReactNode | ((ref: (local: string) => string) => ReactNode);
+
+function glyph(name: string, art: Art): Icon {
   return function Glyph({ size = 22, className }) {
     // Unique across the page: every extra React root sets its own identifierPrefix.
     const id = useId();
+    const drawing = typeof art === "function" ? art((local) => `${id}-${local}`) : art;
     return (
       <svg
         viewBox="0 0 24 24"
@@ -37,7 +44,7 @@ function glyph(name: string, art: ReactNode): Icon {
       >
         <mask id={id} maskUnits="userSpaceOnUse" x="-8" y="-8" width="40" height="40" color="white">
           <g className="art" fill="currentColor">
-            {art}
+            {drawing}
           </g>
         </mask>
         {/* Room around the icon for motion that travels past its edge. */}
@@ -57,6 +64,23 @@ const line = {
 } as const;
 /** What sits behind the subject. */
 const faint = { opacity: 0.4 } as const;
+
+/**
+ * A straight fade from one opacity to another, between two points of the
+ * grid. Drawn in user space, so it works on strokes with no height too.
+ */
+function fade(
+  id: string,
+  [x1, y1, x2, y2]: [number, number, number, number],
+  [from, to]: [number, number],
+) {
+  return (
+    <linearGradient id={id} gradientUnits="userSpaceOnUse" x1={x1} y1={y1} x2={x2} y2={y2}>
+      <stop stopColor="currentColor" stopOpacity={from} />
+      <stop offset="1" stopColor="currentColor" stopOpacity={to} />
+    </linearGradient>
+  );
+}
 
 /** A toothed wheel around a hole, as an even-odd path. */
 function cogPath(teeth: number, outer: number, inner: number, hole: number) {
@@ -119,16 +143,19 @@ export const IconPan = glyph(
   </>,
 );
 /** A quill. */
-export const IconDraw = glyph(
-  "draw",
+export const IconDraw = glyph("draw", (ref) => (
   <>
+    {fade(ref("vane"), [8, 17, 21, 2.5], [0.2, 0.85])}
     <g className="quill">
-      <path {...faint} d="M21 2.5C13.2 3 8 8.2 7 15.6l1.4 1.4C15.8 16 20.9 10.8 21 2.5z" />
-      <path {...line} strokeWidth="1.75" d="M4 20 8.5 15.5Q13.5 10.3 21 2.5" />
+      <path
+        fill={`url(#${ref("vane")})`}
+        d="M8 16.6C5.6 11.4 9.5 4.8 21 2.5c-2.7 6.4-6 11.6-10.6 15z"
+      />
+      <path {...line} strokeWidth="1.75" d="M4 20Q10 11.5 21 2.5" />
     </g>
     <path {...faint} className="stroke" d="M4 20.5h12V22H4z" />
-  </>,
-);
+  </>
+));
 export const IconEraser = glyph(
   "eraser",
   <>
@@ -174,38 +201,43 @@ export const IconMeasure = glyph(
   </>,
 );
 /** A radar sweep. */
-export const IconPing = glyph(
-  "ping",
+export const IconPing = glyph("ping", (ref) => (
   <>
+    {/* The sweep's trail fades behind its leading edge. */}
+    {fade(ref("trail"), [19, 8.5, 11, 3], [0.75, 0])}
     <circle {...line} cx="12" cy="12" r="9.5" />
     <circle {...line} {...faint} strokeWidth="1.5" cx="12" cy="12" r="5" />
     <g className="sweep">
-      <path {...faint} d="M12 12V2.5a9.5 9.5 0 0 1 8.23 4.75z" />
+      <path fill={`url(#${ref("trail")})`} d="M12 12V2.5a9.5 9.5 0 0 1 8.23 4.75z" />
       <path {...line} d="M12 12l7.4-4.3" />
     </g>
     <circle className="blip" cx="15.5" cy="16" r="1.7" />
     <circle cx="12" cy="12" r="1.5" />
-  </>,
-);
+  </>
+));
 export const IconWall = glyph(
   "wall",
   <path d="M2 3.5h9.2V8H2zm10.8 0H22V8h-9.2zM2 9.5h4V14H2zm5.6 0h8.8V14H7.6zm10.4 0h4V14h-4zM2 15.5h9.2V20H2zm10.8 0H22V20h-9.2z" />,
 );
 /** A lantern. */
-export const IconLight = glyph(
-  "light",
+export const IconLight = glyph("light", (ref) => (
   <>
+    {/* The glass glows brightest about the flame. */}
+    <radialGradient id={ref("glow")} gradientUnits="userSpaceOnUse" cx="12" cy="15" r="6">
+      <stop stopColor="currentColor" stopOpacity={0.75} />
+      <stop offset="1" stopColor="currentColor" stopOpacity={0.15} />
+    </radialGradient>
     <circle {...line} strokeWidth="1.75" cx="12" cy="3.5" r="1.75" />
     <path d="M6.5 9.5 9.5 5.8h5l3 3.7z" />
-    <rect {...faint} x="8" y="10" width="8" height="8.5" />
+    <rect fill={`url(#${ref("glow")})`} x="8" y="10" width="8" height="8.5" />
     <path
       className="flame"
       d="M12 11.3c1.7 1.7 2.3 2.9 2.3 4.2a2.3 2.3 0 0 1-4.6 0c0-1.3.6-2.5 2.3-4.2z"
     />
     <path {...line} strokeWidth="1.5" d="M7.75 10v8.5M16.25 10v8.5" />
     <rect x="6" y="19" width="12" height="2.5" />
-  </>,
-);
+  </>
+));
 /** A drift of magic sparkles. */
 export const IconEffects = glyph(
   "effects",
@@ -235,14 +267,18 @@ export const IconSnow = glyph(
     <g transform="rotate(120 12 12)">{snowArm}</g>
   </g>,
 );
-export const IconFog = glyph(
-  "fog",
-  <g {...line}>
-    <path {...faint} className="p1" d="M4 6.5h11M18 6.5h2" />
-    <path className="p2" d="M3 12h13M19 12h2" />
-    <path {...faint} className="p3" d="M5 17.5h13" />
-  </g>,
-);
+/** Wisps of fog, thinning out to the right. */
+export const IconFog = glyph("fog", (ref) => (
+  <>
+    {fade(ref("thick"), [3, 0, 21, 0], [1, 0.25])}
+    {fade(ref("thin"), [3, 0, 21, 0], [0.6, 0.1])}
+    <g {...line}>
+      <path className="p1" stroke={`url(#${ref("thin")})`} d="M4 6.5h11M18 6.5h2" />
+      <path className="p2" stroke={`url(#${ref("thick")})`} d="M3 12h13M19 12h2" />
+      <path className="p3" stroke={`url(#${ref("thin")})`} d="M5 17.5h13" />
+    </g>
+  </>
+));
 export const IconEmbers = glyph(
   "embers",
   <>
@@ -723,14 +759,15 @@ export const IconDelete = glyph(
 );
 export const IconAdd = glyph("add", <path {...line} strokeWidth="2.5" d="M12 4.5v15M4.5 12h15" />);
 export const IconRemove = glyph("remove", <path {...line} strokeWidth="2.5" d="M4.5 12h15" />);
-export const IconSearch = glyph(
-  "search",
+export const IconSearch = glyph("search", (ref) => (
   <>
-    <circle {...faint} cx="10" cy="10" r="6.5" />
+    {/* Light catching the lens from the top left. */}
+    {fade(ref("sheen"), [5, 5, 14, 14], [0.65, 0.05])}
+    <circle fill={`url(#${ref("sheen")})`} cx="10" cy="10" r="6.5" />
     <circle {...line} cx="10" cy="10" r="6.5" />
     <path d="m14.6 16.7 2.1-2.1 5.3 5.3-2.1 2.1z" />
-  </>,
-);
+  </>
+));
 export const IconClose = glyph(
   "close",
   <path {...line} strokeWidth="2.5" d="M6 6l12 12M18 6 6 18" />,
