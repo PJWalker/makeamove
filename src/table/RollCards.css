@@ -139,12 +139,6 @@
     align-items: center;
     gap: var(--space-1);
   }
-  .roll-term {
-    display: inline-flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-1);
-  }
   .roll-op {
     color: var(--text-faint);
     padding-inline: 2px;

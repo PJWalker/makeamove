@@ -257,54 +257,59 @@ function RollTerms({
   interaction: RollInteraction;
 } & Thrown) {
   const seeds = interaction.snapshot!.seeds;
-  const initial = useConstant(
-    () => new Set(seeds.flatMap((row, index) => (row.length > 0 ? row : [`flat:${index}`]))),
-  );
+  const initial = useConstant(() => new Set(seeds.flat()));
+  // Each die and chip is keyed by its own seed, so it keeps its place as others are rerolled, added or taken away.
   return (
     <div className="roll-terms">
-      {roll.terms.map((t, index) => {
-        // A term keeps its place as its dice are rerolled: each die is keyed by its own seed.
-        const key = `${t.kind}:${index}`;
-        return (
-          <span key={key} className="roll-term">
-            {/* A chip shows its own sign. */}
-            {t.kind === "dice" && (index > 0 || t.sign < 0) && (
-              <span className="roll-op">{t.sign < 0 ? "−" : "+"}</span>
-            )}
-            {t.kind === "flat" ? (
-              <RollChip
-                key={seeds[index]?.[0] ?? `flat:${index}`}
-                value={t.sign * t.value}
-                label={t.label}
-                index={index}
-                // Rolls edited before chips had seeds have none for them.
-                seed={seeds[index]?.[0] ?? `flat:${index}`}
-                arriving={arriving || !initial.has(seeds[index]?.[0] ?? `flat:${index}`)}
+      {roll.terms.flatMap((t, index) => {
+        const termSeeds = seeds[index]!;
+        if (t.kind === "flat") {
+          const seed = termSeeds[0]!;
+          return (
+            // A chip shows its own sign.
+            <RollChip
+              key={seed}
+              value={t.sign * t.value}
+              label={t.label}
+              index={index}
+              seed={seed}
+              arriving={arriving || !initial.has(seed)}
+              mine={mine}
+            />
+          );
+        }
+        return [
+          (index > 0 || t.sign < 0) && (
+            <span key={`op:${termSeeds[0]}`} className="roll-op">
+              {t.sign < 0 ? "−" : "+"}
+            </span>
+          ),
+          ...t.dice.map((d, dieIndex) => {
+            const seed = termSeeds[dieIndex]!;
+            return (
+              <RollDie
+                key={seed}
+                die={d}
+                index={dieIndex}
+                arriving={arriving || !initial.has(seed)}
                 mine={mine}
+                seed={seed}
+                colour={colour}
+                onReroll={
+                  interaction.allowed ? () => interaction.reroll(index, dieIndex) : undefined
+                }
+                onToggle={
+                  interaction.allowed ? () => interaction.toggle(index, dieIndex) : undefined
+                }
               />
-            ) : (
-              <>
-                {t.dice.map((d, index_) => {
-                  const seed = seeds[index]![index_]!;
-                  return (
-                    <RollDie
-                      key={seed}
-                      die={d}
-                      index={index_}
-                      arriving={arriving || !initial.has(seed)}
-                      mine={mine}
-                      seed={seed}
-                      colour={colour}
-                      onReroll={interaction.allowed ? () => interaction.reroll(index, index_) : undefined}
-                      onToggle={interaction.allowed ? () => interaction.toggle(index, index_) : undefined}
-                    />
-                  );
-                })}
-                {t.label && <span className="roll-label">{t.label}</span>}
-              </>
-            )}
-          </span>
-        );
+            );
+          }),
+          t.label && (
+            <span key={`label:${termSeeds[0]}`} className="roll-label">
+              {t.label}
+            </span>
+          ),
+        ];
       })}
     </div>
   );
