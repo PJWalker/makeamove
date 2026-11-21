@@ -6,11 +6,38 @@
     justify-items: center;
     width: var(--strip-w);
     padding-block: var(--space-2);
-    background: var(--grain), var(--raised-sheen), var(--toolbar);
-    /* A bronze bead around the strip, and a dark groove inside it. */
-    box-shadow:
-      inset 0 0 0 1px oklch(from var(--bronze) l c h / 0.7),
-      inset 0 0 0 2px oklch(0% 0 0 / 0.5);
+  }
+
+  /*
+   * Chrome over the map (the toolbar, the hotbar, the sidebars' tab strips)
+   * sits on a band of shade that keeps it legible. The band is solid
+   * against the window edge or sidebar it hangs from and fades out toward
+   * the map (--fade-toward); a strip can also fade at its ends
+   * (--fade-ends). It is a layer of its own so the fade never reaches the
+   * controls.
+   */
+  .toolbar,
+  .hotbar,
+  .sidebar-rail-edge {
+    isolation: isolate;
+    &::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background: var(--grain), var(--toolbar);
+      mask:
+        linear-gradient(to var(--fade-toward), #000 50%, transparent),
+        var(--fade-ends, linear-gradient(#000, #000));
+      mask-composite: intersect;
+      pointer-events: none;
+    }
+  }
+  .toolbar {
+    --fade-toward: bottom;
+  }
+  .hotbar {
+    --fade-toward: top;
   }
 
   /* The same strip laid out along a window edge, for the tools on top. */
@@ -60,10 +87,6 @@
     width: calc(100% - var(--panel-l, 0px) - var(--panel-r, 0px));
     max-width: none;
     padding-inline: var(--space-2);
-    background: var(--grain), var(--toolbar);
-    box-shadow:
-      inset 0 -1px 0 var(--gilt-lo),
-      inset 0 -2px 0 oklch(0% 0 0 / 0.5);
     overflow: visible;
     container: canvas-toolbar / inline-size;
   }

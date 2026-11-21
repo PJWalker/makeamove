@@ -68,22 +68,22 @@
     margin-block: var(--rail-top-clearance) var(--rail-bottom-clearance);
   }
   /*
-   * One band of shade behind the whole strip keeps its icons legible over
-   * the map, fading out toward every edge. It sits on the non-scrolling
-   * edge so it stays put while the tabs scroll, and on its own layer so
-   * the fade doesn't reach the tabs.
+   * The tab strip's shade (Toolbar.css) hangs on its non-scrolling edge, so
+   * it stays put while the tabs scroll. It fades toward the map, and at
+   * both ends.
    */
-  .sidebar-rail-edge::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    background: var(--toolbar);
-    mask:
-      linear-gradient(to right, transparent, #000 30%, #000 70%, transparent),
-      linear-gradient(to bottom, transparent, #000 32px, #000 calc(100% - 32px), transparent);
-    mask-composite: intersect;
-    pointer-events: none;
+  .sidebar-rail-edge {
+    --fade-toward: left;
+    --fade-ends: linear-gradient(
+      to bottom,
+      transparent,
+      #000 32px,
+      #000 calc(100% - 32px),
+      transparent
+    );
+  }
+  .sidebar[data-side="left"] .sidebar-rail-edge {
+    --fade-toward: right;
   }
   .sidebar-rail {
     position: relative;
