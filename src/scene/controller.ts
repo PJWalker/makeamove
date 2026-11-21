@@ -412,7 +412,10 @@ export class SceneController implements ToolContext {
     const tool = this.tools.activeTool.value;
     if (this.spaceHeld) return "grab";
     if (this.placing.value || (tool === "select" && this.targetMode.value)) return "crosshair";
-    return toolCursor(tool);
+    return toolCursor(tool, {
+      shape: this.tools.shapeTool.value,
+      effect: this.tools.effectTool.value.effect,
+    });
   }
 
   // Camera
