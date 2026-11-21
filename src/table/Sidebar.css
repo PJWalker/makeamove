@@ -74,61 +74,64 @@
     justify-items: end;
     padding-block: 4px;
     background: transparent;
+    /* The tabs float free; only the chosen one is framed. */
+    box-shadow: none;
     overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior-y: contain;
     scrollbar-width: none;
   }
-  .rail-tab {
+  /*
+   * Unchosen tabs have no edge: a pool of shade behind each icon keeps it
+   * legible over the map, fading out before it reaches the tab's sides.
+   * The chosen tab fits the strip with a pixel to spare, so the strip's
+   * scrolling never clips its frame.
+   */
+  .sidebar-rail .rail-tab {
+    --rail-shade: var(--toolbar);
+    --rail-backdrop: radial-gradient(
+      closest-side,
+      var(--rail-shade),
+      oklch(from var(--rail-shade) l c h / calc(alpha * 0.6)) 55%,
+      transparent
+    );
     position: relative;
     z-index: 0;
     width: 46px;
     min-height: 48px;
     border: 1px solid transparent;
-    border-top-width: 0px;
-    border-bottom-width: 0px;
     border-image: none;
-    background-color: var(--toolbar);
-    background-image: var(--grain);
+    background: var(--rail-backdrop);
     box-shadow: none;
     transition:
       background-color 120ms var(--ease),
       color 120ms var(--ease);
   }
-  .rail-tab:hover:not([aria-selected="true"]) {
-    background-image: var(--grain), var(--raised-sheen);
+  /* Under the pointer the shade lifts a little; there's still no edge. */
+  .sidebar-rail .rail-tab:is(:hover, :active):not([aria-selected="true"]) {
+    border-image: none;
+    background: var(--rail-backdrop);
+    box-shadow: none;
     color: var(--text);
   }
-  .rail-tab:last-child {
-    border-bottom-width: 1px;
+  .sidebar-rail .rail-tab:hover:not([aria-selected="true"]) {
+    --rail-shade: oklch(from var(--surface-raised) l c h / 0.95);
   }
-  .rail-tab:first-child {
-    border-top-width: 1px;
-    margin-bottom: 0;
-  }
-  .rail-tab[aria-selected="true"] {
+  .sidebar-rail .rail-tab[aria-selected="true"] {
     z-index: 2;
-    width: 53px;
-    translate: 1px 0;
+    width: 47px;
     border-image: var(--gilt-edge);
     border-right: 0;
     /* The same leather as the body it opens onto. */
-    background-color: var(--surface);
-    background-image: var(--grain);
+    background: var(--grain), var(--surface);
     color: var(--accent);
     /* Its shadow falls down and to the right, onto the tab below. */
     box-shadow: 1px 3px 6px #0004;
-    border-top-width: 1px;
-    border-bottom-width: 1px;
   }
   .sidebar[data-side="left"] .sidebar-rail {
     justify-items: start;
   }
-  .sidebar[data-side="left"] .rail-tab {
-    border-left: none;
-  }
-  .sidebar[data-side="left"] .rail-tab[aria-selected="true"] {
-    translate: -1px 0;
+  .sidebar[data-side="left"] .sidebar-rail .rail-tab[aria-selected="true"] {
     border-right: 1px solid var(--gilt-lo);
     border-left: 0;
     box-shadow: 3px 3px 6px #0004;
