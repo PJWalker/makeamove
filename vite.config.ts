@@ -68,7 +68,7 @@ export function macroPlugins(): Plugin[] {
 
 export default defineConfig({
   staged: {
-    "*": "vp check --fix",
+    "*": "eslint --fix --max-warnings 0",
   },
   lint: {
     options: {
