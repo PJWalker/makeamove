@@ -48,7 +48,9 @@ export const titleCaseRule = defineRule({
   },
   create(context) {
     const options = (context.options[0] ?? {}) as Options;
-    const jsx = options.jsx ?? {};
+    const jsx = new Map(
+      Object.entries(options.jsx ?? {}).map(([tag, props]) => [tag, new Set(props)]),
+    );
     const objects = options.objects ?? [];
     const source = context.sourceCode;
 
@@ -69,13 +71,13 @@ export const titleCaseRule = defineRule({
       JSXElement(node) {
         const name = node.openingElement.name;
         if (name.type !== "JSXIdentifier") return;
-        const props = jsx[name.name];
+        const props = jsx.get(name.name);
         if (!props) return;
         for (const attr of node.openingElement.attributes) {
           if (attr.type !== "JSXAttribute" || attr.name.type !== "JSXIdentifier") continue;
-          if (props.includes(attr.name.name)) check(writtenIn(attr.value, source));
+          if (props.has(attr.name.name)) check(writtenIn(attr.value, source));
         }
-        if (!props.includes("children")) return;
+        if (!props.has("children")) return;
         check(childrenText(node, source));
         // A string in braces is a phrase of its own when it's all the text
         // there is, {used ? "Done" : "Finish Camp"}, rather than part of one,
