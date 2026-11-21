@@ -1,7 +1,11 @@
 import { RuleTester } from "vite-plus/lint/plugins-dev";
 import { describe, it } from "vite-plus/test";
+import { cssCoLocated } from "../rules/cssCoLocated.ts";
 import { dialogTitleEllipsis } from "../rules/dialogTitleEllipsis.ts";
 import { noNativeConfirmation } from "../rules/noNativeConfirmation.ts";
+import { preferGuardHelpers } from "../rules/preferGuardHelpers.ts";
+import { preferNumberParsing } from "../rules/preferNumberParsing.ts";
+import { preferMotionHelpers } from "../rules/preferMotionHelpers.ts";
 import { preferReducedMotion } from "../rules/preferReducedMotion.ts";
 import { referenceReadOnly } from "../rules/referenceReadOnly.ts";
 import { titleCaseRule } from "../rules/titleCase.ts";
@@ -13,6 +17,96 @@ RuleTester.it = it;
 const ROOT = "/project";
 const tester = new RuleTester({ cwd: ROOT, languageOptions: { sourceType: "module" } });
 const at = (path: string) => `${ROOT}/${path}`;
+
+tester.run("prefer-guard-helpers", preferGuardHelpers, {
+  valid: [
+    {
+      filename: at("src/lib/guards.ts"),
+      code: 'export const isString = (v: unknown) => typeof v === "string";',
+    },
+    {
+      filename: at("src/data/schema.ts"),
+      code: "const kind = 'string'; const is = (v: unknown) => typeof v === kind;",
+    },
+  ],
+  invalid: [
+    {
+      filename: at("src/features/chat/send.ts"),
+      code: 'const id = typeof stored === "string" ? stored : undefined;',
+      output:
+        'import { isString } from "../../lib/guards";\nconst id = isString(stored) ? stored : undefined;',
+      errors: [{ messageId: "guard" }],
+    },
+    {
+      filename: at("src/ui/a.ts"),
+      code: 'import { isNumber } from "../lib/guards";\nconst is = typeof stored === "boolean";',
+      output: 'import { isNumber, isBoolean } from "../lib/guards";\nconst is = isBoolean(stored);',
+      errors: [{ messageId: "guard" }],
+    },
+    {
+      filename: at("src/ui/a.ts"),
+      code: 'const valid = typeof stored !== "string";',
+      output: 'import { isString } from "../lib/guards";\nconst valid = !isString(stored);',
+      errors: [{ messageId: "guard" }],
+    },
+  ],
+});
+
+tester.run("prefer-number-parsing", preferNumberParsing, {
+  valid: ["const n = Number.parseInt(value, 10);", "parseValue(value);"],
+  invalid: [
+    {
+      code: "const n = parseInt(value, 10);",
+      output: "const n = Number.parseInt(value, 10);",
+      errors: [{ messageId: "numberParsing" }],
+    },
+    {
+      code: "const n = parseFloat(value);",
+      output: "const n = Number.parseFloat(value);",
+      errors: [{ messageId: "numberParsing" }],
+    },
+  ],
+});
+
+tester.run("css-co-located", cssCoLocated, {
+  valid: [
+    { filename: at("src/table/SelectionBar.tsx"), code: 'import "./SelectionBar.css";' },
+    { filename: at("src/main.tsx"), code: 'import "./styles/base.css";' },
+  ],
+  invalid: [
+    {
+      filename: at("src/table/SelectionBar.tsx"),
+      code: 'import "../other.css";',
+      errors: [{ messageId: "css" }],
+    },
+  ],
+});
+
+const motionOptions = [
+  {
+    allow: [
+      "src/scene/",
+      "src/ui/morph.ts",
+      "src/table/useDicePool.ts",
+      "src/workspace/trackerButtons.ts",
+    ],
+  },
+];
+
+tester.run("prefer-motion-helpers", preferMotionHelpers, {
+  valid: [
+    { filename: at("src/scene/renderer.ts"), options: motionOptions, code: "effects.animate();" },
+    { filename: at("src/ui/morph.ts"), options: motionOptions, code: "el.animate([], {});" },
+  ],
+  invalid: [
+    {
+      filename: at("src/table/ChatPopups.tsx"),
+      options: motionOptions,
+      code: "el.animate([{ opacity: 0 }], { duration: 180 });",
+      errors: [{ messageId: "motion" }],
+    },
+  ],
+});
 
 tester.run("prefer-reduced-motion", preferReducedMotion, {
   valid: [
@@ -177,6 +271,11 @@ const dialogOptions = [{ allow: ["src/workspace/Dialog.tsx"] }];
 tester.run("use-dialog", useDialog, {
   valid: [
     { filename: at("src/workspace/Dialog.tsx"), options: dialogOptions, code: "<dialog />" },
+    {
+      filename: at("src/workspace/Dialog.tsx"),
+      options: dialogOptions,
+      code: "dialog.showModal();",
+    },
     { filename: at("src/table/A.tsx"), options: dialogOptions, code: '<Dialog title="A" />' },
   ],
   invalid: [
@@ -184,6 +283,12 @@ tester.run("use-dialog", useDialog, {
       filename: at("src/table/A.tsx"),
       options: dialogOptions,
       code: "<dialog open />",
+      errors: [{ messageId: "useDialog" }],
+    },
+    {
+      filename: at("src/table/A.tsx"),
+      options: dialogOptions,
+      code: "dialog.showModal();",
       errors: [{ messageId: "useDialog" }],
     },
   ],

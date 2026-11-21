@@ -30,6 +30,15 @@ export const useDialog = defineRule({
         if (node.name.type === "JSXIdentifier" && node.name.name === "dialog")
           context.report({ node, messageId: "useDialog" });
       },
+      CallExpression(node) {
+        if (
+          node.callee.type === "MemberExpression" &&
+          !node.callee.computed &&
+          node.callee.property.type === "Identifier" &&
+          node.callee.property.name === "showModal"
+        )
+          context.report({ node, messageId: "useDialog" });
+      },
     };
   },
 });

@@ -286,8 +286,22 @@ export default defineConfig({
               message: "Reach browser storage through src/platform.",
             })),
           ],
+          "makeamove/css-co-located": "error",
           "makeamove/dialog-title-ellipsis": "error",
           "makeamove/no-native-confirmation": "error",
+          "makeamove/prefer-guard-helpers": "error",
+          "makeamove/prefer-number-parsing": "error",
+          "makeamove/prefer-motion-helpers": [
+            "error",
+            {
+              allow: [
+                "src/scene/",
+                "src/ui/morph.ts",
+                "src/table/useDicePool.ts",
+                "src/workspace/trackerButtons.ts",
+              ],
+            },
+          ],
           "makeamove/prefer-reduced-motion": "error",
           "makeamove/title-case": [
             "error",
