@@ -259,3 +259,23 @@ test("opening an invite link presents a join modal, not a lobby section", async 
   await expect(invitation.getByLabel("Your name")).toBeFocused();
   await expect(page.locator(".lobby-join")).toHaveCount(0);
 });
+
+test("the campaign menu ticks only the panels the table has", async ({ page }) => {
+  await createCampaign(page, "Panel ticks");
+  await settled(page);
+  const menu = page.getByRole("button", { name: "Campaign Menu" });
+  const chat = page.getByRole("menuitemcheckbox", { name: "Chat" });
+
+  await menu.click();
+  await expect(chat).toHaveAttribute("aria-checked", "true");
+  await chat.click();
+  await expect(page.getByRole("tab", { name: /^Chat/ })).toHaveCount(0);
+
+  await menu.click();
+  await expect(chat).toHaveAttribute("aria-checked", "false");
+  await chat.click();
+  await expect(page.getByRole("tab", { name: /^Chat/ })).toHaveCount(1);
+
+  await menu.click();
+  await expect(chat).toHaveAttribute("aria-checked", "true");
+});

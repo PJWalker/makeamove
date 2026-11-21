@@ -25,7 +25,7 @@ import {
   PROMINENT_ICON_SIZE,
 } from "../ui/icons";
 import { TOOLS } from "../workspace/tools";
-import { ContextMenu } from "../ui/ContextMenu";
+import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
 import { useQuery } from "../ui/useQuery";
 import { withTransition } from "../ui/transition";
 import { EffectSightToggles } from "./effectOptions";
@@ -157,15 +157,18 @@ function CampaignMenu() {
   const [menu, setMenu] = useState<{
     x: number;
     y: number;
+    items: MenuItem[];
     press?: { x: number; y: number };
   } | null>(null);
-  // Re-read as panels open and close, so their ticks are current.
-  useQuery(context.panels.layout);
-  useQuery(context.panels.unavailablePanels);
-  const items = menuFor(context, { kind: "campaign" });
+  // Built as it opens, like every menu, so its ticks show the table as it is now.
   const openBelow = (element: HTMLElement, press?: { x: number; y: number }) => {
     const r = element.getBoundingClientRect();
-    setMenu({ x: r.left, y: r.bottom + 6, ...(press ? { press } : {}) });
+    setMenu({
+      x: r.left,
+      y: r.bottom + 6,
+      items: menuFor(context, { kind: "campaign" }),
+      ...(press ? { press } : {}),
+    });
   };
   return (
     <>
@@ -199,7 +202,6 @@ function CampaignMenu() {
         createPortal(
           <ContextMenu
             {...menu}
-            items={items}
             label="Campaign menu"
             onClose={() => setMenu(null)}
           />,
