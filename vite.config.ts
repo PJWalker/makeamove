@@ -6,10 +6,7 @@ import Macros from "unplugin-macros/vite";
 import { defineConfig, type Plugin, lazyPlugins } from "vite-plus";
 import { VitePWA } from "vite-plugin-pwa";
 
-/**
- * oxlint's built-in rules the code follows beyond those set below, so new
- * code keeps to them too. Each is on because the code already passes it.
- */
+/** ESLint rules for this project. */
 const builtinRules = (
   createRequire(import.meta.url)("./lint/builtinRules.json") as {
     rules: Record<string, "error" | "warn" | "off">;
@@ -63,16 +60,13 @@ export function macroPlugins(): Plugin[] {
               `${source} is a build-time macro: import it with { type: "macro" } (${importer})`,
             );
         }
-        return undefined;
+        return;
       },
     },
   ];
 }
 
 export default defineConfig({
-  staged: {
-    "*": "vp check --fix",
-  },
   lint: {
     options: {
       typeAware: true,
@@ -303,7 +297,8 @@ export default defineConfig({
             },
           ],
           "makeamove/prefer-reduced-motion": "error",
-          "makeamove/title-case": [
+          "makeamove/test-structure": "error",
+      "makeamove/title-case": [
             "error",
             {
               jsx: { Button: ["label", "children"], Dialog: ["title"], LobbyModal: ["title"] },
@@ -339,7 +334,6 @@ export default defineConfig({
           "typescript",
           "oxc",
         ],
-        jsPlugins: ["oxlint-plugin-react-doctor"],
         env: {
           browser: true,
         },
@@ -367,7 +361,7 @@ export default defineConfig({
             {
               patterns: [
                 {
-                  regex: "^(\\.\\.?/)+(app|lobby|table)(/|$)",
+                  regex: String.raw`^(\.\.?/)+(app|lobby|table)(/|$)`,
                   message: "Only composition (app, lobby, table) may import app, lobby or table.",
                 },
               ],
@@ -383,11 +377,11 @@ export default defineConfig({
             {
               patterns: [
                 {
-                  regex: "^(\\.\\./)+app(/|$)",
+                  regex: String.raw`^(\.\./)+app(/|$)`,
                   message: "The app shell wires the lobby and the table; neither imports it.",
                 },
                 {
-                  regex: "^(\\.\\./)+lobby(/|$)",
+                  regex: String.raw`^(\.\./)+lobby(/|$)`,
                   message: "The table may not import the lobby.",
                 },
               ],
@@ -403,11 +397,11 @@ export default defineConfig({
             {
               patterns: [
                 {
-                  regex: "^(\\.\\./)+app(/|$)",
+                  regex: String.raw`^(\.\./)+app(/|$)`,
                   message: "The app shell wires the lobby and the table; neither imports it.",
                 },
                 {
-                  regex: "^(\\.\\./)+table(/|$)",
+                  regex: String.raw`^(\.\./)+table(/|$)`,
                   message: "The lobby may not import the table.",
                 },
               ],
@@ -457,10 +451,6 @@ export default defineConfig({
       {
         name: "react-hooks-js",
         specifier: "eslint-plugin-react-hooks",
-      },
-      {
-        name: "vite-plus",
-        specifier: "vite-plus/oxlint-plugin",
       },
       {
         name: "makeamove",

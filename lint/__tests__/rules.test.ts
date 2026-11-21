@@ -9,6 +9,7 @@ import { preferMotionHelpers } from "../rules/preferMotionHelpers.ts";
 import { preferReducedMotion } from "../rules/preferReducedMotion.ts";
 import { referenceReadOnly } from "../rules/referenceReadOnly.ts";
 import { titleCaseRule } from "../rules/titleCase.ts";
+import { testStructure } from "../rules/testStructure.ts";
 import { useDialog } from "../rules/useDialog.ts";
 
 RuleTester.describe = describe;
@@ -295,6 +296,27 @@ tester.run("use-dialog", useDialog, {
 });
 
 const referenceOptions = [{ allow: ["scripts/rules/readReference.ts"] }];
+
+tester.run("test-structure", testStructure, {
+  valid: [
+    {
+      filename: at("src/example.test.ts"),
+      code: 'import { describe, it } from "vite-plus/test";\ndescribe("example", () => { it("works", () => {}); });',
+    },
+  ],
+  invalid: [
+    {
+      filename: at("src/example.test.ts"),
+      code: 'import { describe, it } from "vite-plus/test";\nit("outer", () => { describe("inner", () => {}); });',
+      errors: [{ messageId: "placement" }],
+    },
+    {
+      filename: at("src/example.test.ts"),
+      code: 'const fake = value as unknown as Campaign;',
+      errors: [{ messageId: "unsafeCast" }],
+    },
+  ],
+});
 
 tester.run("reference-read-only", referenceReadOnly, {
   valid: [

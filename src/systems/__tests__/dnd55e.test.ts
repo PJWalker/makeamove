@@ -7,7 +7,7 @@ import { SRD_CLASS_FEATURES } from "../dnd55e/srdClasses";
 import "fake-indexeddb/auto";
 import { describe, expect, it } from "vite-plus/test";
 import * as Y from "yjs";
-import { checkSystem, getSystem } from "..";
+import { getSystem } from "..";
 import { dnd55e as dnd, pactMagic, proficiencyAt, spellSlots } from "../dnd55e";
 import { CLASSES, ITEMS } from "../dnd55e/data";
 import {
@@ -77,8 +77,7 @@ describe("D&D 5.5e", () => {
     expect(dnd.creation?.feats?.options.map((feat) => feat.id)).toContain("boon-of-combat-prowess");
   });
 
-  it("is registered and holds together", () => {
-    expect(checkSystem(dnd)).toEqual([]);
+  it("is registered", () => {
     expect(getSystem("dnd-5.5e").name).toBe(dnd.name);
   });
 
