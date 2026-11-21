@@ -18,6 +18,10 @@
     transform-box: fill-box;
     transform-origin: center;
   }
+  /* Motion may carry a part past the icon's edge. */
+  [data-icon][data-playing] {
+    overflow: visible;
+  }
   [data-icon][data-playing] :is(.art, .art *) {
     animation-duration: var(--icon-motion);
     animation-timing-function: var(--icon-ease);
@@ -43,8 +47,17 @@
     animation-name: icon-wave;
     transform-origin: 12px 22px;
   }
+  /* The quill draws its line, then lifts back to where it began. */
+  [data-icon="draw"][data-playing] :is(.quill, .stroke) {
+    animation-duration: 820ms;
+    animation-timing-function: ease-in-out;
+  }
   [data-icon="draw"][data-playing] .quill {
-    animation-name: icon-scribble;
+    animation-name: icon-draw-across;
+  }
+  [data-icon="draw"][data-playing] .stroke {
+    animation-name: icon-ink-across;
+    transform-origin: left center;
   }
   [data-icon="eraser"][data-playing] .rubber {
     animation-name: icon-rub;
@@ -211,8 +224,13 @@
     animation-name: icon-unroll;
     transform-origin: center top;
   }
-  [data-icon="notes"][data-playing] .writing {
-    animation-name: icon-write;
+  /* A leaf turns from the right-hand page over to the left. */
+  [data-icon="notes"][data-playing] .leaf {
+    animation-name: icon-turn-page;
+    animation-duration: 560ms;
+    animation-timing-function: ease-in-out;
+    transform-box: view-box;
+    transform-origin: 12px 12px;
   }
   [data-icon="secret"][data-playing] .eye {
     animation-name: icon-blink-lid;
@@ -643,10 +661,34 @@
     transform: scaleY(0.2);
   }
 }
-@keyframes icon-write {
+@keyframes icon-draw-across {
+  60% {
+    transform: translateX(9px);
+  }
+  70% {
+    transform: translate(9px, -1.5px);
+  }
+}
+@keyframes icon-ink-across {
   from {
-    opacity: 0;
-    transform: scaleX(0.5);
+    transform: scaleX(0);
+  }
+  60% {
+    transform: scaleX(1);
+  }
+}
+@keyframes icon-turn-page {
+  from {
+    opacity: 0.8;
+    transform: scaleX(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleX(0);
+  }
+  to {
+    opacity: 0.8;
+    transform: scaleX(-1);
   }
 }
 @keyframes icon-blink-lid {

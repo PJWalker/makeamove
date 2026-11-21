@@ -35,12 +35,13 @@ function glyph(name: string, art: ReactNode): Icon {
         data-icon={name}
         aria-hidden="true"
       >
-        <mask id={id} maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24" color="white">
+        <mask id={id} maskUnits="userSpaceOnUse" x="-8" y="-8" width="40" height="40" color="white">
           <g className="art" fill="currentColor">
             {art}
           </g>
         </mask>
-        <rect width="24" height="24" fill="currentColor" mask={`url(#${id})`} />
+        {/* Room around the icon for motion that travels past its edge. */}
+        <rect x="-8" y="-8" width="40" height="40" fill="currentColor" mask={`url(#${id})`} />
       </svg>
     );
   };
@@ -125,7 +126,7 @@ export const IconDraw = glyph(
       <path d="M21 2.5C13.2 3 8 8.2 7 15.6l1.4 1.4C15.8 16 20.9 10.8 21 2.5z" />
       <path {...line} d="M8.5 15.5 4 20" />
     </g>
-    <path {...faint} d="M9.5 21.5h11v-1.5h-11z" />
+    <path {...faint} className="stroke" d="M4 20.5h9V22H4z" />
   </>,
 );
 export const IconEraser = glyph(
@@ -522,10 +523,11 @@ export const IconNotes = glyph(
     <path {...line} strokeWidth="1.75" d={bookPages} />
     <path
       {...line}
-      className="writing"
       strokeWidth="1.5"
       d="M12 7v13.5M5.5 9.5c1.4 0 2.6.3 3.8.8M5.5 13c1.4 0 2.6.3 3.8.8M14.7 10.3c1.2-.5 2.4-.8 3.8-.8M14.7 13.8c1.2-.5 2.4-.8 3.8-.8"
     />
+    {/* The leaf that turns over when the icon plays; unseen at rest. */}
+    <path className="leaf" opacity="0" d="M12 7c2.7-1.8 6-2.5 9.5-2v14c-3.5-.5-6.8.2-9.5 2z" />
   </>,
 );
 /** A GM-only page: a closed book with a watching eye. */
