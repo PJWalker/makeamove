@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "vp dev",
     "build": "npm run lint && tsc -b && npm run check:systems && vp build",
-    "lint": "eslint src scripts lint vite.config.ts --fix --max-warnings 0",
+    "lint": "eslint . --fix --max-warnings 0",
     "check:changed": "jiti scripts/lint.ts",
     "typecheck": "tsc -b",
     "check:systems": "npx jiti scripts/check-systems.ts",

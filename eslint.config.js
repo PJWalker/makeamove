@@ -13,16 +13,9 @@ import guardLayer from "./eslint/guardRules.js";
 import makeamove from "./lint/plugin.ts";
 
 export default defineConfig([
+  // What gets linted, for `npm run lint` and the pre-commit hook alike.
   {
-    ignores: [
-      "**/__tests__/**",
-      "dist/**",
-      "coverage/**",
-      "playwright-report/**",
-      "test-results/**",
-      "reference/**",
-      ".claude/**",
-    ],
+    ignores: ["*", "!src/", "!scripts/", "!lint/", "!vite.config.ts", "**/__tests__/**"],
   },
   {
     files: ["**/*.{js,mjs,cjs,ts,tsx}"],
