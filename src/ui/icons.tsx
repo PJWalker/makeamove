@@ -514,28 +514,28 @@ export const IconReference = glyph(
     <rect x="4.5" y="18" width="15" height="3.5" />
   </>,
 );
-const bookPages =
-  "M2.5 5c3.5-.5 6.8.2 9.5 2 2.7-1.8 6-2.5 9.5-2v14c-3.5-.5-6.8.2-9.5 2-2.7-1.8-6-2.5-9.5-2z";
+/**
+ * One half of an open book. It erases what lies beneath before drawing, so
+ * a page laid over another covers it rather than adding to its brightness.
+ */
+const halfPage = "M12 7c-2.7-1.8-6-2.5-9.5-2v14c3.5-.5 6.8.2 9.5 2z";
+const page = (
+  <>
+    <path fill="black" d={halfPage} />
+    <path {...faint} d={halfPage} />
+    <path {...line} strokeWidth="1.75" d={halfPage} />
+    <path {...line} strokeWidth="1.5" d="M5.5 9.5c1.4 0 2.6.3 3.8.8M5.5 13c1.4 0 2.6.3 3.8.8" />
+  </>
+);
+const rightPage = <g transform="matrix(-1 0 0 1 24 0)">{page}</g>;
+/** An open book; when it plays, its right-hand page turns over onto the left. */
 export const IconNotes = glyph(
   "notes",
   <>
-    <path {...faint} d={bookPages} />
-    <path {...line} strokeWidth="1.75" d={bookPages} />
-    <path
-      {...line}
-      strokeWidth="1.5"
-      d="M12 7v13.5M5.5 9.5c1.4 0 2.6.3 3.8.8M5.5 13c1.4 0 2.6.3 3.8.8M14.7 10.3c1.2-.5 2.4-.8 3.8-.8M14.7 13.8c1.2-.5 2.4-.8 3.8-.8"
-    />
-    {/* The leaf that turns when the icon plays: a written page, unseen at rest. */}
-    <g className="leaf" opacity="0">
-      <path d="M12 7c-2.7-1.8-6-2.5-9.5-2v14c3.5-.5 6.8.2 9.5 2z" />
-      <path
-        {...line}
-        stroke="black"
-        strokeWidth="1.5"
-        d="M5.5 9.5c1.4 0 2.6.3 3.8.8M5.5 13c1.4 0 2.6.3 3.8.8M5.5 16.5c1.4 0 2.6.3 3.8.8"
-      />
-    </g>
+    {page}
+    {rightPage}
+    <g className="leaf">{rightPage}</g>
+    <path {...line} strokeWidth="1.5" d="M12 7v13.5" />
   </>,
 );
 /** A GM-only page: a closed book with a watching eye. */

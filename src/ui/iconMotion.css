@@ -223,10 +223,10 @@
     animation-name: icon-unroll;
     transform-origin: center top;
   }
-  /* A leaf turns from the right-hand page over to the left. */
+  /* The right-hand page turns over onto the left, showing the next beneath. */
   [data-icon="notes"][data-playing] .leaf {
     animation-name: icon-turn-page;
-    animation-duration: 700ms;
+    animation-duration: 300ms;
     animation-timing-function: ease-in-out;
     transform-box: view-box;
     transform-origin: 12px 12px;
@@ -686,34 +686,21 @@
   }
 }
 /*
- * The leaf lifts off the left page, its outer edge curling up as it rises;
- * stands edge-on, a little taller, over the spine; then settles curling
- * the other way onto the right page and fades into it.
+ * The page lifts, its outer edge curling up as it rises; stands edge-on,
+ * a little taller, over the spine; then settles, curling the other way,
+ * exactly over the left-hand page.
  */
 @keyframes icon-turn-page {
-  from {
-    opacity: 0.4;
-    transform: none;
-  }
-  10% {
-    opacity: 1;
-  }
   25% {
-    transform: skewY(12deg) scale(0.7, 1.04);
+    transform: skewY(-12deg) scale(0.7, 1.04);
   }
   50% {
     transform: scale(0.06, 1.1);
   }
   75% {
-    opacity: 0.85;
-    transform: skewY(-12deg) scale(-0.7, 1.04);
-  }
-  90% {
-    opacity: 0.85;
-    transform: scaleX(-1);
+    transform: skewY(12deg) scale(-0.7, 1.04);
   }
   to {
-    opacity: 0;
     transform: scaleX(-1);
   }
 }
