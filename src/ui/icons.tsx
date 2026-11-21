@@ -126,7 +126,7 @@ export const IconDraw = glyph(
       <path d="M21 2.5C13.2 3 8 8.2 7 15.6l1.4 1.4C15.8 16 20.9 10.8 21 2.5z" />
       <path {...line} d="M8.5 15.5 4 20" />
     </g>
-    <path {...faint} className="stroke" d="M4 20.5h9V22H4z" />
+    <path {...faint} className="stroke" d="M4 20.5h12V22H4z" />
   </>,
 );
 export const IconEraser = glyph(

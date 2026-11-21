@@ -53,6 +53,8 @@
   }
   [data-icon="draw"][data-playing] .quill {
     animation-name: icon-draw-across;
+    transform-box: view-box;
+    transform-origin: 4px 20px;
   }
   [data-icon="draw"][data-playing] .stroke {
     animation-name: icon-ink-across;
@@ -660,16 +662,24 @@
     transform: scaleY(0.2);
   }
 }
-/* A decisive stroke, a beat's rest at its end, then back. */
+/*
+ * A decisive stroke, the quill turning nearer upright as it pulls along the
+ * page; a beat's rest at the end; then it lifts up off the page and floats
+ * back to where it began.
+ */
 @keyframes icon-draw-across {
   from {
     animation-timing-function: cubic-bezier(0.3, 0, 0.1, 1);
   }
   35% {
-    transform: translateX(9px);
+    transform: translateX(12px) rotate(-20deg);
   }
-  60% {
-    transform: translateX(9px);
+  55% {
+    transform: translateX(12px) rotate(-20deg);
+    animation-timing-function: cubic-bezier(0.3, 0, 0.4, 1);
+  }
+  70% {
+    transform: translate(11px, -4px) rotate(-12deg);
     animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   }
   to {
