@@ -43,6 +43,13 @@
     bottom: var(--dock-bottom-height, 48px);
     --rail-bottom-clearance: 0px;
   }
+  /* Under or over a bar that spans the window, the sidebar takes a gilt edge there too. */
+  .table:has(.dock-top[data-full-width="true"]) .sidebar-body {
+    border-top: 1px solid var(--gilt-lo);
+  }
+  .table:has(.dock-bottom[data-full-width="true"]) .sidebar-body {
+    border-bottom: 1px solid var(--gilt-lo);
+  }
   .sidebar[data-side="left"] {
     left: 0;
     flex-direction: row-reverse;
