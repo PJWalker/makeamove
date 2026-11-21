@@ -1,6 +1,7 @@
 import { RuleTester } from "vite-plus/lint/plugins-dev";
 import { describe, it } from "vite-plus/test";
 import { dialogTitleEllipsis } from "../rules/dialogTitleEllipsis.ts";
+import { noNativeConfirmation } from "../rules/noNativeConfirmation.ts";
 import { preferReducedMotion } from "../rules/preferReducedMotion.ts";
 import { referenceReadOnly } from "../rules/referenceReadOnly.ts";
 import { titleCaseRule } from "../rules/titleCase.ts";
@@ -137,6 +138,18 @@ tester.run("title-case", titleCaseRule, {
       ].join("\n"),
       errors: 4,
     },
+  ],
+});
+
+tester.run("no-native-confirmation", noNativeConfirmation, {
+  valid: [
+    'ctx.table.confirm({ title: "Delete Page" }, run);',
+    'const confirmed = appConfirm("Delete Page");',
+  ],
+  invalid: [
+    { code: 'confirm("Delete Page");', errors: [{ messageId: "native" }] },
+    { code: 'window.alert("Saved");', errors: [{ messageId: "native" }] },
+    { code: 'window.prompt("Name");', errors: [{ messageId: "native" }] },
   ],
 });
 

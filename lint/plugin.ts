@@ -1,5 +1,6 @@
 import { definePlugin } from "vite-plus/lint/plugins";
 import { dialogTitleEllipsis } from "./rules/dialogTitleEllipsis.ts";
+import { noNativeConfirmation } from "./rules/noNativeConfirmation.ts";
 import { preferReducedMotion } from "./rules/preferReducedMotion.ts";
 import { referenceReadOnly } from "./rules/referenceReadOnly.ts";
 import { titleCaseRule } from "./rules/titleCase.ts";
@@ -13,6 +14,7 @@ export default definePlugin({
   meta: { name: "makeamove" },
   rules: {
     "dialog-title-ellipsis": dialogTitleEllipsis,
+    "no-native-confirmation": noNativeConfirmation,
     "prefer-reduced-motion": preferReducedMotion,
     "reference-read-only": referenceReadOnly,
     "title-case": titleCaseRule,

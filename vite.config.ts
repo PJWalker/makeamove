@@ -261,6 +261,11 @@ export default defineConfig({
           // Mixed domain exports and component size/complexity are reviewed architecturally, not enforced as lint blockers.
           ...doctorRules,
           ...builtinRules,
+          // A switch that ends in `default` handles every other case on purpose.
+          "typescript/switch-exhaustiveness-check": [
+            "error",
+            { considerDefaultExhaustiveForUnions: true },
+          ],
           "no-console": ["error", { allow: ["error"] }],
           "no-restricted-globals": [
             "error",
@@ -282,6 +287,7 @@ export default defineConfig({
             })),
           ],
           "makeamove/dialog-title-ellipsis": "error",
+          "makeamove/no-native-confirmation": "error",
           "makeamove/prefer-reduced-motion": "error",
           "makeamove/title-case": [
             "error",
