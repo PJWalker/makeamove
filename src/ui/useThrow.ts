@@ -80,7 +80,9 @@ export function useThrow({
   onTap,
   onAway,
 }: ThrowOptions) {
-  const actor = useRef(createActor(throwMachine));
+  const actor = useRef<ReturnType<typeof createActor<typeof throwMachine>> | null>(null);
+  if (actor.current === null) actor.current = createActor(throwMachine);
+  const actorInstance = actor.current;
   const gesture = useRef<{
     pointer: number;
     originX: number;
@@ -106,19 +108,19 @@ export function useThrow({
     return current;
   };
   useEffect(() => {
-    actor.current.start();
+    actorInstance.start();
     const cancel = () => {
-      actor.current.send({ type: "CANCEL" });
+      actorInstance.send({ type: "CANCEL" });
       void release();
     };
     window.addEventListener("blur", cancel);
     return () => {
       window.removeEventListener("blur", cancel);
-      actor.current.send({ type: "CANCEL" });
+      actorInstance.send({ type: "CANCEL" });
       release();
-      actor.current.stop();
+      actorInstance.stop();
     };
-  }, []);
+  }, [actorInstance]);
   return {
     onPointerDown(event: React.PointerEvent<HTMLElement>) {
       if (!enabled || event.button !== 0) return;
@@ -134,7 +136,7 @@ export function useThrow({
       element.setPointerCapture(event.pointerId);
       element.focus({ preventScroll: true });
       const { carrier, drop } = lift(element);
-      actor.current.send({ type: "GRAB" });
+      actorInstance.send({ type: "GRAB" });
       gesture.current = {
         pointer: event.pointerId,
         originX: event.clientX,
@@ -158,7 +160,7 @@ export function useThrow({
       const distance = Math.hypot(offsetX, offsetY);
       current.moved ||= distance >= TAP_SLOP;
       const away = distance >= THROW_DISTANCE;
-      actor.current.send({ type: "MOVE", moved: current.moved, away });
+      actorInstance.send({ type: "MOVE", moved: current.moved, away });
       if (away && !current.back)
         current.back = onAway?.(current.element, current.carrier) ?? (() => {});
       else if (!away && current.back) {
@@ -170,18 +172,18 @@ export function useThrow({
       const current = gesture.current;
       if (!current || current.pointer !== event.pointerId) return;
       const distance = Math.hypot(event.clientX - current.originX, event.clientY - current.originY);
-      actor.current.send({ type: "UP", moved: current.moved, away: distance >= THROW_DISTANCE });
+      actorInstance.send({ type: "UP", moved: current.moved, away: distance >= THROW_DISTANCE });
       release();
       event.stopPropagation();
       if (enabled && distance >= THROW_DISTANCE) onThrow();
       else if (enabled && !current.moved && distance < TAP_SLOP) onTap?.();
     },
     onPointerCancel() {
-      actor.current.send({ type: "CANCEL" });
+      actorInstance.send({ type: "CANCEL" });
       release();
     },
     onLostPointerCapture() {
-      actor.current.send({ type: "CANCEL" });
+      actorInstance.send({ type: "CANCEL" });
       release();
     },
     onKeyDown(event: React.KeyboardEvent<HTMLElement>) {

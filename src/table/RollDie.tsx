@@ -86,7 +86,7 @@ function usePiece(
   const use3dDice = useQuery(threeDimensionalDice);
   const [pieceSnapshot, sendPiece] = useMachine(pieceMachine);
   /** The die once it's in its slot; null if it's drawn flat. */
-  const entered = useRef<Promise<Die | null>>(Promise.resolve(null));
+  const entered = useRef<Promise<Die | null> | null>(null);
   const initial = useRef({ look, entrance, mine, index, seed, eager });
   const enter = useEffectEvent(() => onEntered?.());
   const land = useEffectEvent(() => onLanded?.());
@@ -103,10 +103,11 @@ function usePiece(
     const delay = index * STAGGER_MS;
     const moving = entrance !== "rest" && !reducedMotion.matches;
     const show = async () => {
-      const dice = await loadDice();
       if (gone) return null;
-      if (!dice || !canvas.current) {
-        sendPiece({ type: "FLAT" });
+      if (!canvas.current) return null;
+      const dice = await loadDice();
+      if (gone || !dice || !canvas.current) {
+        if (!gone && (!dice || !canvas.current)) sendPiece({ type: "FLAT" });
         return null;
       }
       die = new dice.Die(canvas.current, look);
@@ -127,13 +128,14 @@ function usePiece(
         stopWaiting = whenNear(slot.current!, () => resolve(show()));
       });
     }
-    void entered.current.then(() => !gone && enter());
+    const enteredDie = entered.current ?? Promise.resolve(null);
+    void enteredDie.then(() => !gone && enter());
     return () => {
       gone = true;
       stopWaiting?.();
       die?.dispose();
     };
-  }, [use3dDice]);
+  }, [sendPiece, use3dDice]);
 
   const releaseSeed = release?.seed;
   const released = useEffectEvent(() => release);
@@ -141,7 +143,8 @@ function usePiece(
     const release = released();
     if (!release) return;
     let gone = false;
-    void entered.current.then(async (die) => {
+    const enteredDie = entered.current ?? Promise.resolve(null);
+    void enteredDie.then(async (die) => {
       if (gone) return;
       if (die) {
         sendPiece({ type: "MOVING" });
@@ -155,7 +158,7 @@ function usePiece(
     return () => {
       gone = true;
     };
-  }, [releaseSeed]);
+  }, [releaseSeed, sendPiece]);
 
   const phase: Phase = use3dDice
     ? pieceSnapshot.matches("flat")
