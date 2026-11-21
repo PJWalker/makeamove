@@ -206,7 +206,7 @@ export async function readBlobs(hashes: Iterable<string>): Promise<BackupBlob[]>
   const out: BackupBlob[] = [];
   const hashList = [...hashes];
   for (let offset = 0; offset < hashList.length; offset += 4) {
-    // eslint-disable-next-line react-doctor/async-await-in-loop -- Keep blob reads bounded to four at a time.
+     
     const batch = await Promise.all(
       hashList.slice(offset, offset + 4).map(async (hash): Promise<BackupBlob | null> => {
         const blob = await getBlob(hash);
