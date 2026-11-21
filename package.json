@@ -13,6 +13,8 @@
     "check:changed": "jiti scripts/lint.ts",
     "typecheck": "tsc -b",
     "check:systems": "npx jiti scripts/check-systems.ts",
+    "graph": "jiti scripts/dependencyGraph.ts",
+    "graph:serve": "jiti scripts/dependencyGraph.ts --serve",
     "knip": "knip",
     "dup": "jscpd",
     "deps": "depcruise src --config",
