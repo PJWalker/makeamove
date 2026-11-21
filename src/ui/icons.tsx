@@ -526,8 +526,16 @@ export const IconNotes = glyph(
       strokeWidth="1.5"
       d="M12 7v13.5M5.5 9.5c1.4 0 2.6.3 3.8.8M5.5 13c1.4 0 2.6.3 3.8.8M14.7 10.3c1.2-.5 2.4-.8 3.8-.8M14.7 13.8c1.2-.5 2.4-.8 3.8-.8"
     />
-    {/* The leaf that turns over when the icon plays; unseen at rest. */}
-    <path className="leaf" opacity="0" d="M12 7c2.7-1.8 6-2.5 9.5-2v14c-3.5-.5-6.8.2-9.5 2z" />
+    {/* The leaf that turns when the icon plays: a written page, unseen at rest. */}
+    <g className="leaf" opacity="0">
+      <path d="M12 7c-2.7-1.8-6-2.5-9.5-2v14c3.5-.5 6.8.2 9.5 2z" />
+      <path
+        {...line}
+        stroke="black"
+        strokeWidth="1.5"
+        d="M5.5 9.5c1.4 0 2.6.3 3.8.8M5.5 13c1.4 0 2.6.3 3.8.8M5.5 16.5c1.4 0 2.6.3 3.8.8"
+      />
+    </g>
   </>,
 );
 /** A GM-only page: a closed book with a watching eye. */
