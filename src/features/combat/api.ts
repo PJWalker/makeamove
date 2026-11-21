@@ -114,7 +114,7 @@ export async function rollAllInitiative(campaign: Campaign, { npcsOnly = false }
     if (c.init !== null) continue;
     const char = getCharacter(campaign, c.characterId);
     if (npcsOnly && char?.kind === "pc") continue;
-     
+    // eslint-disable-next-line react-doctor/async-await-in-loop -- Keep each result in turn order.
     await rollInitiative(campaign, c.id);
   }
 }

@@ -8,7 +8,10 @@ import unicorn from "eslint-plugin-unicorn";
 import { defineConfig } from "eslint/config";
 import globals from "globals";
 import { createRequire } from "node:module";
-import reactDoctor from "oxlint-plugin-react-doctor";
+import reactDoctor, {
+  FRAMEWORK_SPECIFIC_RULE_KEYS,
+  RECOMMENDED_RULES as doctorDefaults,
+} from "oxlint-plugin-react-doctor";
 import tseslint from "typescript-eslint";
 import guardLayer from "./eslint/guardRules.js";
 import dataLayer from "./eslint/noRawYjs.js";
@@ -19,8 +22,16 @@ const require = createRequire(import.meta.url);
 /** Rules turned on beyond the defaults, kept as data. */
 const builtinRules = require("./lint/builtinRules.json").rules;
 
-/** React Doctor's rules, shared with its own CLI (`npm run doctor`). */
-const doctorRules = require("./doctor.config.json").rules;
+/**
+ * React Doctor's rules as its own CLI (`npm run doctor`) runs them: its defaults,
+ * minus those for frameworks this project doesn't use, then doctor.config.json.
+ */
+const doctorRules = {
+  ...Object.fromEntries(
+    Object.entries(doctorDefaults).filter(([rule]) => !FRAMEWORK_SPECIFIC_RULE_KEYS.has(rule)),
+  ),
+  ...require("./doctor.config.json").rules,
+};
 
 export default defineConfig([
   // What gets linted, for `npm run lint` and the pre-commit hook alike.
