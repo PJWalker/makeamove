@@ -51,8 +51,8 @@ export function removeCombatant(m: CombatMaps, id: string) {
   m.combatants.transact(() => {
     if (turnOf(m) === id) {
       const order = turnOrder(m.combatants);
-      const i = order.findIndex((c) => c.id === id);
-      const next = order[(i + 1) % order.length];
+      const index = order.findIndex((c) => c.id === id);
+      const next = order[(index + 1) % order.length];
       m.combat.patch({ turn: next && next.id !== id ? next.id : undefined });
     }
     m.combatants.delete(id);
@@ -78,11 +78,11 @@ export function startCombat(m: CombatMaps): TurnChange {
 /** Pass the turn to the next combatant, starting a new round after the last. */
 export function nextTurn(m: CombatMaps): TurnChange {
   const order = turnOrder(m.combatants);
-  if (!order.length) return { ended: null, started: null, newRound: false };
+  if (order.length === 0) return { ended: null, started: null, newRound: false };
   const now = turnOf(m);
-  const i = order.findIndex((c) => c.id === now);
-  const wraps = i === order.length - 1;
-  const next = order[wraps || i < 0 ? 0 : i + 1]!;
+  const index = order.findIndex((c) => c.id === now);
+  const wraps = index === order.length - 1;
+  const next = order[wraps || index < 0 ? 0 : index + 1]!;
   m.combatants.transact(() => {
     if (wraps) m.combat.set("round", roundOf(m) + 1);
     m.combat.set("turn", next.id);
@@ -93,12 +93,12 @@ export function nextTurn(m: CombatMaps): TurnChange {
 /** Step back a turn, for mistakes. Durations aren't wound back. */
 export function previousTurn(m: CombatMaps) {
   const order = turnOrder(m.combatants);
-  if (!order.length) return;
-  const i = order.findIndex((c) => c.id === turnOf(m));
-  if (i <= 0 && roundOf(m) <= 1) return;
+  if (order.length === 0) return;
+  const index = order.findIndex((c) => c.id === turnOf(m));
+  if (index <= 0 && roundOf(m) <= 1) return;
   m.combatants.transact(() => {
-    if (i <= 0) m.combat.set("round", roundOf(m) - 1);
-    m.combat.set("turn", order[i <= 0 ? order.length - 1 : i - 1]!.id);
+    if (index <= 0) m.combat.set("round", roundOf(m) - 1);
+    m.combat.set("turn", order[index <= 0 ? order.length - 1 : index - 1]!.id);
   });
 }
 

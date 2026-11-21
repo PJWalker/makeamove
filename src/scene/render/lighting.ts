@@ -25,12 +25,12 @@ export interface Lighting {
 }
 
 /** The sizes of a glowing effect's nested rings, which soften its edge. */
-const GLOW_RINGS = Array.from({ length: 10 }, (_, i) => 1 - i * 0.05);
+const GLOW_RINGS = Array.from({ length: 10 }, (_, index) => 1 - index * 0.05);
 
 /** An angle from an id, so each flickering light keeps its own rhythm. */
 function hashPhase(id: string): number {
   let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
+  for (let index = 0; index < id.length; index++) h = (h * 31 + id.charCodeAt(index)) | 0;
   return ((h >>> 0) % 6283) / 1000;
 }
 
@@ -89,10 +89,10 @@ export class LightingLayer {
       w: view.w + 2 * margin,
       h: view.h + 2 * margin,
     };
-    const at = (el: SceneElement) => s.previews.get(el.id) ?? el;
-    const placed: SceneElement[] = s.elements.map((el) => ({ ...el, ...at(el) }));
+    const at = (element: SceneElement) => s.previews.get(element.id) ?? element;
+    const placed: SceneElement[] = s.elements.map((element) => ({ ...element, ...at(element) }));
     const walls = blockingSegments(placed);
-    const sightWalls = sightSegments(placed.filter((el) => !s.hidden.has(el.id)));
+    const sightWalls = sightSegments(placed.filter((element) => !s.hidden.has(element.id)));
 
     const lg = this.lightG.clear();
     const erase = this.lightErase.clear();
@@ -100,26 +100,26 @@ export class LightingLayer {
     const glowTint = this.glowTint.clear();
     const { enabled, darkness } = lighting;
     const strength = viewerIds ? 1 : 0.5;
-    const areas = s.elements.filter((el) => el.type === "area" && !s.hidden.has(el.id));
+    const areas = s.elements.filter((element) => element.type === "area" && !s.hidden.has(element.id));
     this.lightLayer.visible =
-      enabled && (darkness > 0 || areas.some((el) => el.type === "area" && el.tone === "dark"));
+      enabled && (darkness > 0 || areas.some((element) => element.type === "area" && element.tone === "dark"));
     const lit = new Set<string>();
     const tinted = new Set<string>();
     this.flickering = [];
     this.tintLayer.visible = enabled;
     if (enabled) {
       lg.rect(box.x, box.y, box.w, box.h).fill({
-        color: 0x000000,
+        color: 0x00_00_00,
         alpha: darkness * strength,
       });
-      const tokens = s.elements.flatMap((el) =>
-        el.type === "token" && !s.hidden.has(el.id) ? [at(el)] : [],
+      const tokens = s.elements.flatMap((element) =>
+        element.type === "token" && !s.hidden.has(element.id) ? [at(element)] : [],
       );
-      for (const el of s.elements) {
-        if (el.type !== "light" || s.hidden.has(el.id)) continue;
-        const t = at(el);
+      for (const element of s.elements) {
+        if (element.type !== "light" || s.hidden.has(element.id)) continue;
+        const t = at(element);
         const centre = { x: t.x, y: t.y };
-        const reach = lightReach(el.bright, el.dim);
+        const reach = lightReach(element.bright, element.dim);
         // Tokens in reach cast short shadows; one the lamp sits on (a torch carried) casts none.
         const blockers: Blocker[] = [];
         for (const k of tokens) {
@@ -130,46 +130,46 @@ export class LightingLayer {
         const state = {
           at: centre,
           radius: Math.min(t.w, t.h) / 2,
-          falloff: { bright: el.bright, dim: el.dim },
+          falloff: { bright: element.bright, dim: element.dim },
           box: { x: t.x - reach, y: t.y - reach, w: reach * 2, h: reach * 2 },
           walls: walls.filter((w) => segmentDistance(centre, w) < reach),
           blockers,
-          colour: ({ ...el, ...t } as typeof el).colour,
+          colour: ({ ...element, ...t } as typeof element).colour,
         };
         const drawn: Lamp[] = [];
         if (this.lightLayer.visible) {
-          lit.add(el.id);
-          drawn.push(this.lampFor(this.lamps, el.id, this.lampLayer));
+          lit.add(element.id);
+          drawn.push(this.lampFor(this.lamps, element.id, this.lampLayer));
         }
-        tinted.add(el.id);
-        drawn.push(this.lampFor(this.tints, el.id, this.tintLayer, true));
+        tinted.add(element.id);
+        drawn.push(this.lampFor(this.tints, element.id, this.tintLayer, true));
         for (const lamp of drawn) lamp.update(state);
-        if (el.flicker) this.flickering.push({ lamps: drawn, phase: hashPhase(el.id) });
+        if (element.flicker) this.flickering.push({ lamps: drawn, phase: hashPhase(element.id) });
       }
-      for (const el of this.lightLayer.visible ? areas : []) {
-        if (el.type !== "area") continue;
-        const poly = flat(areaPolygon({ ...el, ...at(el) }));
-        if (el.tone === "light") erase.poly(poly).fill({ color: 0xffffff, alpha: 1 });
-        else dark.poly(poly).fill({ color: 0x000000, alpha: strength });
+      for (const element of this.lightLayer.visible ? areas : []) {
+        if (element.type !== "area") continue;
+        const poly = flat(areaPolygon({ ...element, ...at(element) }));
+        if (element.tone === "light") erase.poly(poly).fill({ color: 0xFF_FF_FF, alpha: 1 });
+        else dark.poly(poly).fill({ color: 0x00_00_00, alpha: strength });
       }
-      for (const el of placed) {
-        if (el.type !== "effect" || !el.glow || s.hidden.has(el.id)) continue;
-        this.glow(el, this.lightLayer.visible ? erase : null, glowTint);
+      for (const element of placed) {
+        if (element.type !== "effect" || !element.glow || s.hidden.has(element.id)) continue;
+        this.glow(element, this.lightLayer.visible ? erase : null, glowTint);
       }
     }
     this.dropLamps(this.lamps, lit);
     this.dropLamps(this.tints, tinted);
 
     const fg = this.fogG.clear();
-    const viewers = viewerIds?.map((id) => s.byId.get(id)).filter((el) => !!el) ?? null;
+    const viewers = viewerIds?.map((id) => s.byId.get(id)).filter((element) => !!element) ?? null;
     this.fogLayer.visible = !!viewers?.length;
     this.sight = null;
     const seeing = new Set<string>();
     if (viewers?.length) {
-      fg.rect(box.x, box.y, box.w, box.h).fill({ color: 0x05070c, alpha: 1 });
-      const from = viewers.map((el) => {
-        const t = at(el);
-        return { id: el.id, at: { x: t.x, y: t.y } };
+      fg.rect(box.x, box.y, box.w, box.h).fill({ color: 0x05_07_0C, alpha: 1 });
+      const from = viewers.map((element) => {
+        const t = at(element);
+        return { id: element.id, at: { x: t.x, y: t.y } };
       });
       this.sight = { from: from.map((v) => v.at), walls: sightWalls };
       for (const v of from) {
@@ -191,14 +191,14 @@ export class LightingLayer {
    * A glowing effect: dim light through it, in its colour, at its strength
    * (its colour's opacity), softening towards its edge in nested rings.
    */
-  private glow(el: EffectElement, erase: Graphics | null, tint: Graphics) {
-    const colour = new Color(el.colour);
+  private glow(element: EffectElement, erase: Graphics | null, tint: Graphics) {
+    const colour = new Color(element.colour);
     const rings = GLOW_RINGS.length;
     // Rings that together lift the dark by half (dim light) in the middle.
     const lift = 1 - (1 - 0.5 * colour.alpha) ** (1 / rings);
     for (const k of GLOW_RINGS) {
-      const poly = flat(shapeOutline(el, el.w * k, el.h * k).map((p) => fromLocal(el, p)));
-      erase?.poly(poly).fill({ color: 0xffffff, alpha: lift });
+      const poly = flat(shapeOutline(element, element.w * k, element.h * k).map((p) => fromLocal(element, p)));
+      erase?.poly(poly).fill({ color: 0xFF_FF_FF, alpha: lift });
       tint.poly(poly).fill({ color: colour.toNumber(), alpha: (0.14 * colour.alpha) / rings });
     }
   }
@@ -220,7 +220,7 @@ export class LightingLayer {
    * Steady under reduced motion.
    */
   flicker(): boolean {
-    if (!this.flickering.length || reducedMotion.matches) return false;
+    if (this.flickering.length === 0 || reducedMotion.matches) return false;
     const t = performance.now() / 1000;
     for (const { lamps, phase: p } of this.flickering) {
       const wave =

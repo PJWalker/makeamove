@@ -11,12 +11,12 @@ import {
 } from "react-aria-components";
 import { ColourPicker } from "./ColourPicker";
 import { IconCheck } from "./icons";
-import type { IconProps } from "./icons";
+import type { IconProps as IconProperties } from "./icons";
 
 export type MenuItem =
   | {
       label: string;
-      Icon?: ComponentType<IconProps>;
+      Icon?: ComponentType<IconProperties>;
       shortcut?: string;
       danger?: boolean;
       disabled?: boolean;
@@ -74,7 +74,7 @@ export function ContextMenu({
         {items.map((item, index) => {
           if (item === "divider")
             return (
-              // oxlint-disable-next-line react-doctor/no-array-index-key, react-doctor/no-array-index-as-key -- Dividers are stateless structural markers.
+              // eslint-disable-next-line react-doctor/no-array-index-key, react-doctor/no-array-index-as-key -- Dividers are stateless structural markers.
               <Separator key={index} className="context-divider" />
             );
           if ("colour" in item) return null;
@@ -83,7 +83,7 @@ export function ContextMenu({
               key={item.label}
               id={item.label}
               textValue={item.label}
-              {...(item.disabled !== undefined ? { isDisabled: item.disabled } : {})}
+              {...(item.disabled === undefined ? {} : { isDisabled: item.disabled })}
               className="menu-item"
               data-action-index={index}
               data-danger={item.danger}
@@ -124,8 +124,8 @@ export function ContextMenu({
 }
 
 function useContextMenuActions(x: number, y: number, items: MenuItem[], onClose: () => void) {
-  const ref = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef(document.activeElement as HTMLElement);
+  const reference = useRef<HTMLDivElement>(null);
+  const triggerReference = useRef(document.activeElement as HTMLElement);
   const closed = useRef(false);
   useLayoutEffect(() => {
     closed.current = false;
@@ -134,13 +134,13 @@ function useContextMenuActions(x: number, y: number, items: MenuItem[], onClose:
   const dismiss = () => {
     if (closed.current) return;
     closed.current = true;
-    if (ref.current) void leave(ref.current, onClose, null);
+    if (reference.current) void leave(reference.current, onClose, null);
     else onClose();
   };
   const choose = (item: Extract<MenuItem, { onSelect: () => void }>, index: number) => {
     if (closed.current || item.disabled) return;
     closed.current = true;
-    const origin = ref.current?.querySelector<HTMLElement>(`[data-action-index="${index}"]`);
+    const origin = reference.current?.querySelector<HTMLElement>(`[data-action-index="${index}"]`);
     const run = () => {
       onClose();
       item.onSelect();
@@ -159,24 +159,24 @@ function useContextMenuActions(x: number, y: number, items: MenuItem[], onClose:
   const onRightRelease = useEffectEvent((event: PointerEvent) => {
     if (event.button !== 2 || !dragged.current) return;
     const row = (event.target as Element).closest<HTMLElement>("[data-action-index]");
-    if (!row || !ref.current?.contains(row)) return;
+    if (!row || !reference.current?.contains(row)) return;
     const index = Number(row.dataset["actionIndex"]);
     const item = items[index];
     if (item && item !== "divider" && "onSelect" in item) choose(item, index);
   });
   useEffect(() => {
     const onMove = (event: PointerEvent) => {
-      if (event.buttons & 2 && ref.current?.contains(event.target as Node)) dragged.current = true;
+      if (event.buttons & 2 && reference.current?.contains(event.target as Node)) dragged.current = true;
     };
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onRightRelease);
+    globalThis.addEventListener("pointermove", onMove);
+    globalThis.addEventListener("pointerup", onRightRelease);
     return () => {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onRightRelease);
+      globalThis.removeEventListener("pointermove", onMove);
+      globalThis.removeEventListener("pointerup", onRightRelease);
     };
   }, []);
 
-  return { ref, triggerRef, dismiss, choose };
+  return { ref: reference, triggerRef: triggerReference, dismiss, choose };
 }
 
 /** A colour picker embedded in a menu. */

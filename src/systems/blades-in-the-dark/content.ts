@@ -9,7 +9,7 @@ const { pc: PC_ABILITIES, crew } = abilities as unknown as Record<
 
 export const CREW_ABILITIES = crew;
 
-const key = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, "");
+const key = (value: string) => value.toLowerCase().replaceAll(/[^a-z0-9]/g, "");
 
 /** A playbook ability's rules text from the SRD, by its name. */
 export const abilityRules = (name: string) =>

@@ -77,41 +77,41 @@ export class NotationError extends Error {}
 
 /** Parse a formula, or throw a NotationError saying what's wrong with it. */
 export function parse(formula: string): Term[] {
-  const src = formula.trim();
-  if (!src) throw new NotationError("Enter some dice, like 2d6+1.");
-  const lower = src.toLowerCase();
+  const source = formula.trim();
+  if (!source) throw new NotationError("Enter some dice, like 2d6+1.");
+  const lower = source.toLowerCase();
   const terms: Term[] = [];
-  let i = 0;
+  let index = 0;
 
   const skipSpace = () => {
-    while (i < src.length && /\s/.test(src.charAt(i))) i++;
+    while (index < source.length && /\s/.test(source.charAt(index))) index++;
   };
   const int = (): number | null => {
-    const m = /^\d+/.exec(src.slice(i));
+    const m = /^\d+/.exec(source.slice(index));
     if (!m) return null;
-    i += m[0].length;
+    index += m[0].length;
     return Number(m[0]);
   };
 
   skipSpace();
-  while (i < src.length) {
+  while (index < source.length) {
     let sign: 1 | -1 = 1;
-    if (src[i] === "+" || src[i] === "-") {
-      sign = src[i] === "-" ? -1 : 1;
-      i++;
+    if (source[index] === "+" || source[index] === "-") {
+      sign = source[index] === "-" ? -1 : 1;
+      index++;
       skipSpace();
-    } else if (terms.length) {
-      throw new NotationError(`Expected + or - before “${src.slice(i)}”.`);
+    } else if (terms.length > 0) {
+      throw new NotationError(`Expected + or - before “${source.slice(index)}”.`);
     }
 
-    const start = i;
+    const start = index;
     const n = int();
     let term: Term;
-    if (lower[i] === "d") {
-      i++;
+    if (lower[index] === "d") {
+      index++;
       let sides: number | null;
-      if (src[i] === "%") {
-        i++;
+      if (source[index] === "%") {
+        index++;
         sides = 100;
       } else {
         sides = int();
@@ -126,9 +126,9 @@ export function parse(formula: string): Term[] {
 
       // Modifiers, in any order.
       for (;;) {
-        const km = /^(kh|kl|k|b|w|dh|dl)(\d+)/.exec(lower.slice(i));
+        const km = /^(kh|kl|k|b|w|dh|dl)(\d+)/.exec(lower.slice(index));
         if (km) {
-          i += km[0].length;
+          index += km[0].length;
           if (dice.drop || dice.keep)
             throw new NotationError("Use one keep or drop per dice term.");
           const op = km[1];
@@ -138,8 +138,8 @@ export function parse(formula: string): Term[] {
           else dice.keep = { which: op === "kl" || op === "w" ? "low" : "high", n: amount };
           continue;
         }
-        if (src[i] === "!") {
-          i++;
+        if (source[index] === "!") {
+          index++;
           if (sides === 1) throw new NotationError("A d1 can’t explode.");
           dice.explode = true;
           continue;
@@ -147,20 +147,20 @@ export function parse(formula: string): Term[] {
         break;
       }
       term = dice;
-    } else if (n !== null) {
-      term = { kind: "flat", sign, value: n };
+    } else if (n === null) {
+      throw new NotationError(`Couldn’t read “${source.slice(start)}”.`);
     } else {
-      throw new NotationError(`Couldn’t read “${src.slice(start)}”.`);
+      term = { kind: "flat", sign, value: n };
     }
 
     // An optional [label] after any term, kept as typed.
     skipSpace();
-    if (src[i] === "[") {
-      const close = src.indexOf("]", i);
-      if (close < 0) throw new NotationError("A [label] is missing its closing ].");
-      const label = src.slice(i + 1, close).trim();
+    if (source[index] === "[") {
+      const close = source.indexOf("]", index);
+      if (close === -1) throw new NotationError("A [label] is missing its closing ].");
+      const label = source.slice(index + 1, close).trim();
       if (label) term.label = label;
-      i = close + 1;
+      index = close + 1;
     }
     terms.push(term);
     skipSpace();
@@ -168,7 +168,7 @@ export function parse(formula: string): Term[] {
   return terms;
 }
 
-const UINT32_RANGE = 0x1_0000_0000;
+const UINT32_RANGE = 0x1_00_00_00_00;
 
 /** A uniform face in [1, sides], from a source of uniform 32-bit integers. */
 function faceFrom(sides: number, sample: () => number): number {
@@ -192,11 +192,12 @@ export function seededDie(seed: string) {
   return (sides: number) => faceFrom(sides, () => random() * UINT32_RANGE);
 }
 
-const notationOf = (t: DiceTerm) =>
-  `${t.count}d${t.sides === 100 ? "%" : t.sides}` +
-  (t.keep ? `k${t.keep.which === "high" ? "h" : "l"}${t.keep.n}` : "") +
-  (t.drop ? `d${t.drop.which === "high" ? "h" : "l"}${t.drop.n}` : "") +
-  (t.explode ? "!" : "");
+const notationOf = (t: DiceTerm) => {
+  const sides = t.sides === 100 ? "%" : t.sides;
+  const keep = t.keep ? `k${t.keep.which === "high" ? "h" : "l"}${t.keep.n}` : "";
+  const drop = t.drop ? `d${t.drop.which === "high" ? "h" : "l"}${t.drop.n}` : "";
+  return `${t.count}d${sides}${keep}${drop}${t.explode ? "!" : ""}`;
+};
 
 /** Roll parsed terms. `die` is the random source, injectable for tests. */
 export function rollTerms(
@@ -210,7 +211,7 @@ export function rollTerms(
         kind: "flat",
         sign: t.sign,
         value: t.value,
-        ...(t.label !== undefined ? { label: t.label } : {}),
+        ...(t.label === undefined ? {} : { label: t.label }),
       };
 
     const dice: Die[] = [];
@@ -229,13 +230,13 @@ export function rollTerms(
     const rule = t.keep ?? t.drop;
     if (rule) {
       const order = dice
-        .map((_, idx) => idx)
+        .map((_, index) => index)
         .sort((a, b) => dice[a]!.value - dice[b]!.value || a - b);
       const n = Math.min(rule.n, dice.length);
       const low = order.slice(0, n);
       const high = order.slice(dice.length - n);
       const chosen = new Set(rule.which === "low" ? low : high);
-      dice.forEach((d, idx) => (d.kept = t.keep ? chosen.has(idx) : !chosen.has(idx)));
+      for (const [index, d] of dice.entries()) (d.kept = t.keep ? chosen.has(index) : !chosen.has(index));
     }
 
     const subtotal = dice.reduce((sum, d) => sum + (d.kept ? d.value : 0), 0);
@@ -243,7 +244,7 @@ export function rollTerms(
       kind: "dice",
       sign: t.sign,
       notation: notationOf(t),
-      ...(t.label !== undefined ? { label: t.label } : {}),
+      ...(t.label === undefined ? {} : { label: t.label }),
       dice,
       subtotal,
     };
@@ -263,8 +264,8 @@ export function roll(formula: string, die?: (sides: number) => number): Roll {
 
 /** "2d6 (4+5) + STR 2 = 11", for plain-text logs and screen readers. */
 export function describe(r: Roll): string {
-  const parts = r.terms.map((t, i) => {
-    const sign = t.sign < 0 ? "- " : i ? "+ " : "";
+  const parts = r.terms.map((t, index) => {
+    const sign = t.sign < 0 ? "- " : (index ? "+ " : "");
     if (t.kind === "flat") return `${sign}${t.label ? `${t.label} ` : ""}${t.value}`;
     const faces = t.dice.map((d) => (d.kept ? `${d.value}` : `~~${d.value}~~`)).join("+");
     return `${sign}${t.notation}${t.label ? ` ${t.label}` : ""} (${faces})`;

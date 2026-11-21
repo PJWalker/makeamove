@@ -399,13 +399,13 @@ export function CaveBackdrop() {
     const leave = (event: MouseEvent) => {
       if (!event.relatedTarget) reset();
     };
-    window.addEventListener("pointermove", move, { passive: true });
+    globalThis.addEventListener("pointermove", move, { passive: true });
     document.addEventListener("mouseout", leave);
     window.addEventListener("blur", reset);
     window.addEventListener("resize", reset);
     reducedMotion.addEventListener("change", reset);
     return () => {
-      window.removeEventListener("pointermove", move);
+      globalThis.removeEventListener("pointermove", move);
       document.removeEventListener("mouseout", leave);
       window.removeEventListener("blur", reset);
       window.removeEventListener("resize", reset);

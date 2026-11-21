@@ -51,7 +51,7 @@ export function useLogWindow({
   me: string;
   settleOn: { editable: string; notes: unknown };
 }) {
-  const ref = useRef<HTMLDivElement>(null);
+  const reference = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLDivElement>(null);
   /** Following the newest message at the bottom. */
   const stick = useRef(true);
@@ -62,26 +62,26 @@ export function useLogWindow({
   const indexOf = (key: string | null) =>
     key === null ? -1 : rows.findIndex((r) => r.key === key);
   const endKeyAt = indexOf(span.end);
-  const endIdx = span.end === null || endKeyAt < 0 ? rows.length : endKeyAt + 1;
+  const endIndex = span.end === null || endKeyAt < 0 ? rows.length : endKeyAt + 1;
   const startKeyAt = indexOf(span.start);
-  const startIdx =
-    span.start === null || startKeyAt < 0 || startKeyAt >= endIdx
-      ? Math.max(0, endIdx - WINDOW)
+  const startIndex =
+    span.start === null || startKeyAt < 0 || startKeyAt >= endIndex
+      ? Math.max(0, endIndex - WINDOW)
       : startKeyAt;
-  const atNewest = endIdx === rows.length;
-  const shown = rows.slice(startIdx, endIdx);
+  const atNewest = endIndex === rows.length;
+  const shown = rows.slice(startIndex, endIndex);
 
   // Row heights (with the gap after them), measured as rows render; kept for this view.
   const [measured, setMeasured] = useState<ReadonlyMap<string, number>>(() => new Map());
   let total = 0;
   for (const h of measured.values()) total += h;
-  const guess = measured.size ? total / measured.size : ROW_GUESS;
+  const guess = measured.size > 0 ? total / measured.size : ROW_GUESS;
   const heightOf = (r: LogRow) => measured.get(r.key) ?? guess;
   const unloaded = earlierCount * guess;
   let above = unloaded;
-  for (let i = 0; i < startIdx; i++) above += heightOf(rows[i]!);
+  for (let index = 0; index < startIndex; index++) above += heightOf(rows[index]!);
   let below = 0;
-  for (let i = endIdx; i < rows.length; i++) below += heightOf(rows[i]!);
+  for (let index = endIndex; index < rows.length; index++) below += heightOf(rows[index]!);
 
   const showRows = (from: number, to: number) => {
     const next = {
@@ -110,40 +110,40 @@ export function useLogWindow({
       loadEarlier();
       return;
     }
-    let i = 0;
-    for (let acc = unloaded; i < rows.length - 1 && acc + heightOf(rows[i]!) <= y; i++)
-      acc += heightOf(rows[i]!);
-    const from = Math.max(0, i - JUMP_LEAD);
+    let index = 0;
+    for (let accumulator = unloaded; index < rows.length - 1 && accumulator + heightOf(rows[index]!) <= y; index++)
+      accumulator += heightOf(rows[index]!);
+    const from = Math.max(0, index - JUMP_LEAD);
     showRows(from, Math.min(rows.length, from + WINDOW));
   };
   const slide = () => {
-    const el = ref.current;
-    const rowsEl = list.current;
-    if (!el || !rowsEl) return;
-    const box = el.getBoundingClientRect();
-    const top = el.scrollTop;
-    const bottom = top + el.clientHeight;
+    const element = reference.current;
+    const rowsElement = list.current;
+    if (!element || !rowsElement) return;
+    const box = element.getBoundingClientRect();
+    const top = element.scrollTop;
+    const bottom = top + element.clientHeight;
     // Where the rendered rows are, in the log's scrolled content.
-    const rowsTop = rowsEl.getBoundingClientRect().top - box.top + top;
-    const rowsBottom = rowsTop + rowsEl.offsetHeight;
+    const rowsTop = rowsElement.getBoundingClientRect().top - box.top + top;
+    const rowsBottom = rowsTop + rowsElement.offsetHeight;
     const origin = rowsTop - above;
     if (bottom < rowsTop || top > rowsBottom) jumpTo(top - origin);
-    else if (top - rowsTop < NEAR_PX && (startIdx > 0 || earlierCount > 0)) {
-      if (startIdx > 0) {
-        const from = Math.max(0, startIdx - STEP);
-        showRows(from, Math.min(endIdx, from + MAX_ROWS));
+    else if (top - rowsTop < NEAR_PX && (startIndex > 0 || earlierCount > 0)) {
+      if (startIndex > 0) {
+        const from = Math.max(0, startIndex - STEP);
+        showRows(from, Math.min(endIndex, from + MAX_ROWS));
       } else loadEarlier();
     } else if (rowsBottom - bottom < NEAR_PX && !atNewest) {
-      const to = Math.min(rows.length, endIdx + STEP);
-      showRows(Math.max(startIdx, to - MAX_ROWS), to);
-    } else if (stick.current && endIdx - startIdx > MAX_ROWS) {
+      const to = Math.min(rows.length, endIndex + STEP);
+      showRows(Math.max(startIndex, to - MAX_ROWS), to);
+    } else if (stick.current && endIndex - startIndex > MAX_ROWS) {
       // Back at the newest after reading far up: let go of the old rows.
       setSpan({ start: null, end: null });
     }
   };
-  const slideRef = useRef(slide);
+  const slideReference = useRef(slide);
   useLayoutEffect(() => {
-    slideRef.current = slide;
+    slideReference.current = slide;
   });
 
   // Keep what's on screen where it is while rows come and go around it: note
@@ -151,12 +151,12 @@ export function useLogWindow({
   // and put it back after the next render.
   const anchor = useRef<{ key: string; top: number } | null>(null);
   const noteAnchor = () => {
-    const el = ref.current;
-    if (!el || stick.current) {
+    const element = reference.current;
+    if (!element || stick.current) {
       anchor.current = null;
       return;
     }
-    const { top, bottom } = el.getBoundingClientRect();
+    const { top, bottom } = element.getBoundingClientRect();
     // Only a row actually in view. Over a spacer there is none, and the scroll position stays put for slide() to fill.
     const row = [...(list.current?.children ?? [])].find((r) => {
       const box = r.getBoundingClientRect();
@@ -166,14 +166,14 @@ export function useLogWindow({
       ? { key: row.dataset["key"], top: row.getBoundingClientRect().top - top }
       : null;
   };
-  const noteAnchorRef = useRef(noteAnchor);
+  const noteAnchorReference = useRef(noteAnchor);
   useLayoutEffect(() => {
-    noteAnchorRef.current = noteAnchor;
+    noteAnchorReference.current = noteAnchor;
   });
 
   useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
+    const element = reference.current;
+    if (!element) return;
     // Re-render once rows are measured anew, so the spacers use the better average.
     let next: Map<string, number> | null = null;
     for (const row of list.current?.children ?? []) {
@@ -185,20 +185,20 @@ export function useLogWindow({
       next.set(key, height);
     }
     if (next) setMeasured(next);
-    if (stick.current) el.scrollTop = el.scrollHeight;
+    if (stick.current) element.scrollTop = element.scrollHeight;
     else if (anchor.current && !jumped.current) {
       const row = list.current?.querySelector<HTMLElement>(
         `[data-key="${CSS.escape(anchor.current.key)}"]`,
       );
       if (row)
-        el.scrollTop +=
-          row.getBoundingClientRect().top - el.getBoundingClientRect().top - anchor.current.top;
+        element.scrollTop +=
+          row.getBoundingClientRect().top - element.getBoundingClientRect().top - anchor.current.top;
     }
     jumped.current = false;
     // The window may still not reach far enough (a short window, rows just loaded, or a jump into unloaded chunks).
-    slideRef.current();
-    noteAnchorRef.current();
-  }, [measured, rows, startIdx, endIdx, earlierCount, loading, editable, notes]);
+    slideReference.current();
+    noteAnchorReference.current();
+  }, [measured, rows, startIndex, endIndex, earlierCount, loading, editable, notes]);
 
   // My own new message scrolls to the bottom even when I'd scrolled up.
   const [newestSeen, setNewestSeen] = useState(newest?.id);
@@ -213,27 +213,27 @@ export function useLogWindow({
     scrolledFor.current = newest?.id;
     if (newest?.author !== me) return;
     stick.current = true;
-    const el = ref.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    const element = reference.current;
+    if (element) element.scrollTop = element.scrollHeight;
   }, [newest?.id, newest?.author, me]);
 
   // Rows change size after they render (dice settling, fonts, images): stay at the bottom.
   useEffect(() => {
-    const el = ref.current;
-    if (!el || !list.current) return;
+    const element = reference.current;
+    if (!element || !list.current) return;
     const ro = new ResizeObserver(() => {
-      if (stick.current) el.scrollTop = el.scrollHeight;
-      else noteAnchorRef.current();
+      if (stick.current) element.scrollTop = element.scrollHeight;
+      else noteAnchorReference.current();
     });
     ro.observe(list.current);
     return () => ro.disconnect();
   }, []);
 
   const onScroll = (e: { currentTarget: HTMLElement }) => {
-    const el = e.currentTarget;
-    stick.current = atNewest && el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+    const element = e.currentTarget;
+    stick.current = atNewest && element.scrollHeight - element.scrollTop - element.clientHeight < 40;
     noteAnchor();
     slide();
   };
-  return { ref, list, shown, above, below, atNewest, onScroll };
+  return { ref: reference, list, shown, above, below, atNewest, onScroll };
 }

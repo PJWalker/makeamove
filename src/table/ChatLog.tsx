@@ -37,11 +37,11 @@ export function ChatLog({
   onMenu: (x: number, y: number, id: string) => void;
   quickRollMessage: string | null;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const messages = useQuery(campaign.chat.messages);
   const isGm = useQuery(campaign.members, () => campaign.isGm());
   const here = useQuery(campaign.members, () => campaign.activeSceneId());
-  const sceneIds = useQuery(campaign.scenes, () => [...campaign.scenes.keys()].join());
+  const sceneIds = useQuery(campaign.scenes, () => [...campaign.scenes.keys()].join(','));
   // One subscription for every move card's follow-up buttons, rather than one per card.
   const editable = useQuery(campaign.characters, () => editableIds(campaign));
   const me = useQuery(device).id;
@@ -49,7 +49,7 @@ export function ChatLog({
   const initial = useConstant(() => new Set(messages.map((m) => m.id)));
   useMarkRead(campaign, messages);
 
-  const opened = useQuery(ctx.table.openSessions);
+  const opened = useQuery(context.table.openSessions);
   const rows = useMemo(
     () =>
       logRows(
@@ -114,8 +114,8 @@ export function ChatLog({
 
 /** In view means read: when the panel is showing and the window has focus, and again on regaining focus. */
 function useMarkRead(campaign: Campaign, messages: readonly unknown[]) {
-  const ctx = useCampaign();
-  const visible = usePanelVisible(ctx.panels, "chat");
+  const context = useCampaign();
+  const visible = usePanelVisible(context.panels, "chat");
   useEffect(() => {
     if (visible && document.hasFocus()) markRead(campaign);
   }, [campaign, messages, visible]);
@@ -151,7 +151,7 @@ function ChatRow({
   quickRollMessage: string | null;
   onMenu: (x: number, y: number, id: string) => void;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const { me, isGm } = viewer;
   if (row.kind === "fold")
     return (
@@ -161,7 +161,7 @@ function ChatRow({
         className="chat-session-fold"
         aria-expanded={row.open}
         onClick={() =>
-          ctx.table.openSessions.set(toggleSetValue(ctx.table.openSessions.value, row.part))
+          context.table.openSessions.set(toggleSetValue(context.table.openSessions.value, row.part))
         }
       >
         <IconExpand size={22} className="chat-session-chevron" />

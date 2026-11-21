@@ -26,14 +26,14 @@ export function splitSessions(messages: ChatMessage[]): SessionPart[] {
   let part: SessionPart = { key: "before", marker: null, messages: [], current: false };
   for (const m of messages) {
     if (isSessionStart(m)) {
-      if (part.marker || part.messages.length) parts.push(part);
+      if (part.marker || part.messages.length > 0) parts.push(part);
       part = { key: m.id, marker: m, messages: [], current: false };
     } else {
       part.messages.push(m);
     }
   }
-  if (part.marker || part.messages.length) parts.push(part);
-  if (parts.length) parts[parts.length - 1]!.current = true;
+  if (part.marker || part.messages.length > 0) parts.push(part);
+  if (parts.length > 0) parts.at(-1)!.current = true;
   return parts;
 }
 
@@ -53,16 +53,16 @@ export type LogRow =
 export function logRows(messages: ChatMessage[], isOpen: (part: string) => boolean): LogRow[] {
   const rows: LogRow[] = [];
   const add = (list: ChatMessage[]) =>
-    list.forEach((m, i) => {
-      const prev = list[i - 1];
+    { for (const [index, m] of list.entries()) {
+      const previous = list[index - 1];
       const header =
         m.kind !== "system" &&
-        (!prev ||
-          prev.kind === "system" ||
-          prev.author !== m.author ||
-          stampTime(m.hlc) - stampTime(prev.hlc) > GROUP_MS);
+        (!previous ||
+          previous.kind === "system" ||
+          previous.author !== m.author ||
+          stampTime(m.hlc) - stampTime(previous.hlc) > GROUP_MS);
       rows.push({ kind: "message", key: m.id, m, header });
-    });
+    } };
   for (const part of splitSessions(messages)) {
     if (part.current) {
       if (part.marker) add([part.marker]);

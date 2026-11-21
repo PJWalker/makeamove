@@ -27,13 +27,13 @@ const GRAVITY = 1100;
 
 /** A random number generator seeded from a string, so a bar breaks the same way on every frame. */
 function seeded(seed: string) {
-  let h = 2166136261;
-  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
+  let h = 2_166_136_261;
+  for (let index = 0; index < seed.length; index++) h = Math.imul(h ^ seed.charCodeAt(index), 16_777_619);
   return () => {
-    h = Math.imul(h ^ (h >>> 15), 2246822507);
-    h = Math.imul(h ^ (h >>> 13), 3266489909);
+    h = Math.imul(h ^ (h >>> 15), 2_246_822_507);
+    h = Math.imul(h ^ (h >>> 13), 3_266_489_909);
     h ^= h >>> 16;
-    return (h >>> 0) / 4294967296;
+    return (h >>> 0) / 4_294_967_296;
   };
 }
 
@@ -42,13 +42,13 @@ export function barShards(seed: string): BarShard[] {
   const random = seeded(seed);
   const jitter = (n: number) => (random() - 0.5) * n;
   // Each cut runs top to bottom with a kink in the middle; the ends are straight.
-  const cuts = Array.from({ length: SHARDS + 1 }, (_, i) => {
-    if (i === 0 || i === SHARDS) return [i / SHARDS, i / SHARDS, i / SHARDS];
-    const x = i / SHARDS + jitter(0.06);
+  const cuts = Array.from({ length: SHARDS + 1 }, (_, index) => {
+    if (index === 0 || index === SHARDS) return [index / SHARDS, index / SHARDS, index / SHARDS];
+    const x = index / SHARDS + jitter(0.06);
     return [x + jitter(0.08), x + jitter(0.1), x + jitter(0.08)];
   });
-  return cuts.slice(0, -1).map((left, i) => {
-    const right = cuts[i + 1]!;
+  return cuts.slice(0, -1).map((left, index) => {
+    const right = cuts[index + 1]!;
     const outline = [
       { x: left[0]!, y: 0 },
       { x: right[0]!, y: 0 },

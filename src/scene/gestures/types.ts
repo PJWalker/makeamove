@@ -3,7 +3,7 @@ import type { Rect } from "../camera";
 import type { Point } from "../grid";
 import type { Presence } from "../presence";
 import type { SceneRenderer } from "../renderer";
-import type { SceneDoc } from "../sceneDoc";
+import type { SceneDoc as SceneDocument } from "../sceneDoc";
 import type { SceneTools } from "../tools";
 import type {
   DraggedShapeKind,
@@ -93,7 +93,7 @@ export interface TextRequest {
 /** What the tools' gestures see of the controller. */
 export interface ToolContext {
   readonly renderer: SceneRenderer;
-  readonly scene: SceneDoc;
+  readonly scene: SceneDocument;
   /** The tools and their settings on this device. */
   readonly tools: SceneTools;
   /** Whether this device is the GM's: only the GM sees and edits walls and lights. */
@@ -108,7 +108,7 @@ export interface ToolContext {
   readonly placing: Store<Placement | null>;
   /** A polygon (a shape, or an area of solid light or dark) being placed, a click at a time. */
   readonly polygon: PolygonPlacer;
-  readonly onTextRequest: ((req: TextRequest) => void) | null;
+  readonly onTextRequest: ((request: TextRequest) => void) | null;
   /** Leave an element undrawn until the returned function is called. */
   hide(id: string): () => void;
   readonly onItemTokenDragMove: ((token: TokenElement | null, event: PointerEvent) => void) | null;
@@ -120,7 +120,7 @@ export interface ToolContext {
   element(id: string): SceneElement | null;
   selected(): SceneElement[];
   hitTest(p: Point, includeLocked?: boolean, ignoreTool?: boolean): SceneElement | null;
-  pickable(el: SceneElement): boolean;
+  pickable(element: SceneElement): boolean;
   toggleTarget(id: string): void;
   toWorld(clientX: number, clientY: number): Point;
   updateOverlay(): void;
@@ -148,5 +148,5 @@ export function dragged(c: ToolContext, start: Point, world: Point): boolean {
 
 /** A pointer event and the ones the browser coalesced into it, at their world points. */
 export function coalesced(c: ToolContext, e: PointerEvent): [PointerEvent, Point][] {
-  return (e.getCoalescedEvents?.() ?? [e]).map((ev) => [ev, c.toWorld(ev.clientX, ev.clientY)]);
+  return (e.getCoalescedEvents?.() ?? [e]).map((event) => [event, c.toWorld(event.clientX, event.clientY)]);
 }

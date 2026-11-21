@@ -45,10 +45,10 @@ export function Dialog({
   dockId?: DockItemId | undefined;
   children: ReactNode;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const [rolled, setRolled] = useState(false);
   // Its own transition name, so two windows can animate at once.
-  const transitionName = `dialog-window-${useId().replace(/[^\w-]/g, "")}`;
+  const transitionName = `dialog-window-${useId().replaceAll(/[^\w-]/g, "")}`;
   useLayoutEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
@@ -56,9 +56,9 @@ export function Dialog({
     dialog.addEventListener("cancel", preventNativeCancel);
     return () => dialog.removeEventListener("cancel", preventNativeCancel);
   }, [dialogRef]);
-  const floating = useQuery(ctx.panels.layout).floating;
+  const floating = useQuery(context.panels.layout).floating;
   const win = useWindowRect(
-    ctx.panels,
+    context.panels,
     dockId ? floating.find((item) => item.id === dockId) : undefined,
   );
   const windowStyle = {
@@ -68,14 +68,14 @@ export function Dialog({
   const close = () => closePopup(dialogRef.current, onClose);
 
   function onResizePointerDown(e: PointerEvent, dir: ResizeDir) {
-    if (dockId && win) ctx.panels.startWindowResize(dockId, e, dir);
+    if (dockId && win) context.panels.startWindowResize(dockId, e, dir);
     else resizePopup(dialogRef.current!, e, dir);
   }
   // Rendered in the window layer with the other windows: a non-modal dialog
   // would otherwise be clipped by the panel that opened it (the scene bar
   // clips its contents).
   return createPortal(
-    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- Native dialog handles backdrop clicks to close.
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- Native dialog handles backdrop clicks to close.
     <dialog
       ref={dialogRef}
       className="dialog window panel"
@@ -91,7 +91,7 @@ export function Dialog({
         close();
       }}
       onPointerDown={(e) => {
-        if (dockId) ctx.panels.raiseWindow(dockId);
+        if (dockId) context.panels.raiseWindow(dockId);
         else raisePopup(e.currentTarget);
         contextMenu?.onPointerDown(e);
       }}
@@ -118,7 +118,7 @@ export function Dialog({
                 // Not a drag of the window itself.
                 e.stopPropagation();
                 dragEntity(
-                  ctx.canvas,
+                  context.canvas,
                   e,
                   proxy.entity,
                   e.currentTarget.nextElementSibling as HTMLElement,
@@ -133,7 +133,7 @@ export function Dialog({
                 size={22}
               />
             </span>
-          ) : graphicCampaign && graphicRef ? (
+          ) : (graphicCampaign && graphicRef ? (
             <CampaignEntityGraphic
               campaign={graphicCampaign}
               kind={graphicRef.kind}
@@ -141,14 +141,14 @@ export function Dialog({
               defaultIcon={graphicDefaultIcon}
               size={22}
             />
-          ) : undefined
+          ) : undefined)
         }
         rolled={rolled}
         onToggleRoll={() => setRolled(!rolled)}
         onDragStart={(e) => {
           if (dockId && win) {
             const dialog = dialogRef.current!;
-            ctx.panels.startWindowDrag(
+            context.panels.startWindowDrag(
               dockId,
               e,
               e.clientX - dialog.offsetLeft,

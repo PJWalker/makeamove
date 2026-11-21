@@ -100,13 +100,13 @@ export class PresenceLayer {
     const cam = s.camera;
     const byId = s.byId;
     const rings = new Map<string, number>();
-    const fromEl = rangeFrom ? byId.get(rangeFrom) : undefined;
-    const from = fromEl && (s.previews.get(fromEl.id) ?? fromEl);
+    const fromElement = rangeFrom ? byId.get(rangeFrom) : undefined;
+    const from = fromElement && (s.previews.get(fromElement.id) ?? fromElement);
     for (const m of this.marks) {
       for (const id of m.targets) {
-        const el = byId.get(id);
-        if (el?.type !== "token") continue;
-        const t = s.previews.get(id) ?? el;
+        const element = byId.get(id);
+        if (element?.type !== "token") continue;
+        const t = s.previews.get(id) ?? element;
         const n = rings.get(id) ?? 0;
         rings.set(id, n + 1);
         const c = toScreen(cam, t);
@@ -124,7 +124,7 @@ export class PresenceLayer {
             .lineTo(c.x + dx * (r + 5), c.y + dy * (r + 5))
             .stroke({ color: m.colour, width: 2.5 });
         }
-        if (m.self && from && fromEl.id !== id) {
+        if (m.self && from && fromElement.id !== id) {
           this.label(
             `target:${id}`,
             formatDistance(s.grid, tokenDistance(s.grid, from, t)),
@@ -163,7 +163,7 @@ export class PresenceLayer {
         const move = m.self ? undefined : this.cursors.get(m.id);
         if (move && now - move.start < CURSOR_GLIDE_MS) animating = true;
         const c = toScreen(cam, move ? cursorAt(move, now) : m.cursor);
-        g.circle(c.x, c.y, 6).fill(m.colour).stroke({ color: 0xffffff, width: 2 });
+        g.circle(c.x, c.y, 6).fill(m.colour).stroke({ color: 0xFF_FF_FF, width: 2 });
       }
 
       if (m.ruler) {
@@ -190,10 +190,10 @@ export class PresenceLayer {
           const f = 1 - (now - q.t) / TRAIL_MS;
           return f > 0 ? [{ ...toScreen(cam, q), f }] : [];
         });
-        if (pts.length) animating = true;
-        for (let i = 1; i < pts.length; i++) {
-          const previous = pts[i - 1]!;
-          const current = pts[i]!;
+        if (pts.length > 0) animating = true;
+        for (let index = 1; index < pts.length; index++) {
+          const previous = pts[index - 1]!;
+          const current = pts[index]!;
           const f = (current.f + previous.f) / 2;
           g.moveTo(previous.x, previous.y)
             .lineTo(current.x, current.y)
@@ -206,13 +206,13 @@ export class PresenceLayer {
           g.moveTo(previous.x, previous.y)
             .lineTo(current.x, current.y)
             .stroke({
-              color: 0xffffff,
+              color: 0xFF_FF_FF,
               width: 1 + 2 * f,
               alpha: f,
               cap: "round",
             });
         }
-        const head = pts[pts.length - 1];
+        const head = pts.at(-1);
         if (head) {
           g.circle(head.x, head.y, 4 + 3 * head.f).fill({
             color: m.colour,
@@ -236,33 +236,7 @@ export class PresenceLayer {
           const B = Math.max(T + 1, s.size.height);
           const inset = 28;
           const off = c.x < L || c.y < T || c.x > R || c.y > B;
-          if (!off) {
-            for (const phase of [0, 0.25]) {
-              // Each ring finishes expanding and fading exactly as the ping ends.
-              const k = (age - phase) / (1 - phase);
-              if (k <= 0) continue;
-              const fade = (1 - k) * (1 - k);
-              g.circle(c.x, c.y, 8 + 55 * (1 - (1 - k) ** 2)).stroke({
-                color: m.colour,
-                width: 3,
-                alpha: fade,
-              });
-            }
-            g.circle(c.x, c.y, 5).fill({
-              color: m.colour,
-              alpha: (1 - age) ** 2,
-            });
-            if (!m.self)
-              this.label(
-                `ping:${m.id}`,
-                m.name,
-                c.x + 14,
-                c.y - 30,
-                m.colour,
-                used,
-                (1 - age) ** 2,
-              );
-          } else {
+          if (off) {
             // Point at the ping from the nearest edge of the view.
             const mid = { x: (L + R) / 2, y: (T + B) / 2 };
             const dx = c.x - mid.x;
@@ -289,6 +263,32 @@ export class PresenceLayer {
             const lx = Math.min(Math.max(e.x - Math.cos(ang) * 24 - 20, L + 4), R - 80);
             const ly = Math.min(Math.max(e.y - Math.sin(ang) * 24 - 8, T + 4), B - 22);
             this.label(`ping:${m.id}`, m.name, lx, ly, m.colour, used, (1 - age) ** 0.7);
+          } else {
+            for (const phase of [0, 0.25]) {
+              // Each ring finishes expanding and fading exactly as the ping ends.
+              const k = (age - phase) / (1 - phase);
+              if (k <= 0) continue;
+              const fade = (1 - k) * (1 - k);
+              g.circle(c.x, c.y, 8 + 55 * (1 - (1 - k) ** 2)).stroke({
+                color: m.colour,
+                width: 3,
+                alpha: fade,
+              });
+            }
+            g.circle(c.x, c.y, 5).fill({
+              color: m.colour,
+              alpha: (1 - age) ** 2,
+            });
+            if (!m.self)
+              this.label(
+                `ping:${m.id}`,
+                m.name,
+                c.x + 14,
+                c.y - 30,
+                m.colour,
+                used,
+                (1 - age) ** 2,
+              );
           }
         }
       }
@@ -296,7 +296,7 @@ export class PresenceLayer {
 
     for (const [key, t] of this.labelPool) {
       if (used.has(key)) continue;
-      this.labels.removeChild(t);
+      t.remove();
       t.destroy();
       this.labelPool.delete(key);
     }

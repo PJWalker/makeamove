@@ -41,11 +41,11 @@ export function Tooltip() {
  * and up from the bottom. data-tip-side="left" or "right" picks a side; it
  * still flips if it wouldn't fit.
  */
-function preferredDir(el: Element): Dir {
-  const r = el.getBoundingClientRect();
-  const side = el.getAttribute("data-tip-side");
+function preferredDir(element: Element): Dir {
+  const r = element.getBoundingClientRect();
+  const side = element.dataset.tipSide;
   if (side === "left" || side === "right") return side;
-  if (el.closest(".sidebar-rail") || side !== null)
+  if (element.closest(".sidebar-rail") || side !== null)
     return r.left + r.width / 2 < innerWidth / 2 ? "right" : "left";
   return r.top + r.height / 2 < innerHeight / 2 ? "down" : "up";
 }
@@ -58,13 +58,13 @@ function placedDir(box: DOMRect, r: DOMRect, across: boolean): Dir {
 
 function useTooltip() {
   const [tip, setTip] = useState<Tip>(null);
-  const ref = useRef<HTMLDivElement>(null);
-  useTooltipTracking(setTip, ref);
-  useTooltipPosition(ref, tip);
-  return { tip, ref };
+  const reference = useRef<HTMLDivElement>(null);
+  useTooltipTracking(setTip, reference);
+  useTooltipPosition(reference, tip);
+  return { tip, ref: reference };
 }
 
-function useTooltipTracking(setTip: (tip: Tip) => void, ref: RefObject<HTMLDivElement | null>) {
+function useTooltipTracking(setTip: (tip: Tip) => void, reference: RefObject<HTMLDivElement | null>) {
   useEffect(() => {
     let timer = 0;
     let current: Element | null = null;
@@ -93,37 +93,37 @@ function useTooltipTracking(setTip: (tip: Tip) => void, ref: RefObject<HTMLDivEl
     setTooltipHider(() => {
       suppressed = current;
       dismiss();
-      if (ref.current?.matches(":popover-open")) ref.current.hidePopover();
+      if (reference.current?.matches(":popover-open")) reference.current.hidePopover();
     });
 
-    function textOf(el: Element) {
-      const title = el.getAttribute("title");
+    function textOf(element: Element) {
+      const title = element.getAttribute("title");
       if (title) {
-        el.setAttribute("data-tip", title);
-        el.removeAttribute("title");
+        element.dataset.tip = title;
+        element.removeAttribute("title");
       }
-      return el.getAttribute("data-tip");
+      return element.dataset.tip;
     }
 
-    function show(el: Element, instant = false) {
-      const text = el.getAttribute("data-tip");
-      if (!text || !el.isConnected) return;
+    function show(element: Element, instant = false) {
+      const text = element.dataset.tip;
+      if (!text || !element.isConnected) return;
       // A tip that only repeats the label in view adds nothing; it shows once the label is hidden.
-      if (el instanceof HTMLElement && el.innerText.trim() === text) return;
-      const long = el.hasAttribute("data-tip-long");
+      if (element instanceof HTMLElement && element.innerText.trim() === text) return;
+      const long = Object.hasOwn(element.dataset, "tipLong");
       showing = true;
-      setTip({ text, long, el, dir: preferredDir(el), instant });
+      setTip({ text, long, el: element, dir: preferredDir(element), instant });
     }
 
     function consider(target: EventTarget | null, delay: number) {
-      const el = (target as Element | null)?.closest?.("[title], [data-tip]") ?? null;
-      if (el === current || (el && el === suppressed)) return;
+      const element = (target as Element | null)?.closest?.("[title], [data-tip]") ?? null;
+      if (element === current || (element && element === suppressed)) return;
       hide();
-      if (!el || !textOf(el)) return;
-      current = el;
+      if (!element || !textOf(element)) return;
+      current = element;
       const browsing = performance.now() - lastShown < 200;
-      if (browsing) show(el, true);
-      else timer = window.setTimeout(() => show(el), delay);
+      if (browsing) show(element, true);
+      else timer = globalThis.setTimeout(() => show(element), delay);
     }
 
     const onOver = (e: PointerEvent) =>
@@ -133,7 +133,7 @@ function useTooltipTracking(setTip: (tip: Tip) => void, ref: RefObject<HTMLDivEl
     // Focus leaving the element it belongs to; focus moving elsewhere (a
     // click that focuses a button) leaves a pointer's tooltip alone.
     const onBlur = (e: FocusEvent) => {
-      if (current && current.contains(e.target as Node)) hide();
+      if (current?.contains(e.target as Node)) hide();
     };
     const onOut = (e: Event) => {
       if (inTransition()) return;
@@ -164,27 +164,27 @@ function useTooltipTracking(setTip: (tip: Tip) => void, ref: RefObject<HTMLDivEl
     };
     // Registered once: re-running on every tip change would hide each tip
     // as soon as it showed.
-  }, [ref, setTip]);
+  }, [reference, setTip]);
 }
 
-function useTooltipPosition(ref: RefObject<HTMLDivElement | null>, tip: Tip) {
+function useTooltipPosition(reference: RefObject<HTMLDivElement | null>, tip: Tip) {
   // CSS places it, flipping it to the other side if it won't fit; then point
   // the arrow at the middle of the element from whichever side it went to.
   useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el || !tip) return;
-    const untether = tether(el, tip.el);
-    el.dataset["prefer"] = tip.dir;
-    el.showPopover();
+    const element = reference.current;
+    if (!element || !tip) return;
+    const untether = tether(element, tip.el);
+    element.dataset["prefer"] = tip.dir;
+    element.showPopover();
     const r = tip.el.getBoundingClientRect();
-    const box = el.getBoundingClientRect();
+    const box = element.getBoundingClientRect();
     const across = tip.dir === "left" || tip.dir === "right";
-    el.dataset["dir"] = placedDir(box, r, across);
+    element.dataset["dir"] = placedDir(box, r, across);
     const arrow = across ? r.top + r.height / 2 - box.top : r.left + r.width / 2 - box.left;
-    el.style.setProperty("--arrow", `${arrow}px`);
+    element.style.setProperty("--arrow", `${arrow}px`);
     return () => {
-      if (el.matches(":popover-open")) el.hidePopover();
+      if (element.matches(":popover-open")) element.hidePopover();
       untether();
     };
-  }, [ref, tip]);
+  }, [reference, tip]);
 }

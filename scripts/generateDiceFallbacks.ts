@@ -5,11 +5,8 @@ import { decodeDataUrl, renderInBrowser } from "./renderInBrowser.ts";
 const output = resolve(import.meta.dirname, "../src/table/dice-fallbacks");
 
 const renders = await renderInBrowser<{ sides: number; dataUrl: string }[]>({
-  module: "/src/table/diceRenderer.ts",
-  expression: `(() => {
-    const renderer = mod.createDiceRenderer();
-    return [4, 6, 8, 10, 12, 20].map((sides) => ({ sides, dataUrl: renderer.renderBlank(sides) }));
-  })()`,
+  module: "/src/table/dice/painter.ts",
+  expression: `[4, 6, 8, 10, 12, 20].map((sides) => ({ sides, dataUrl: mod.renderBlank(sides) }))`,
   dependencies: ["three", "cannon-es"],
   deviceScaleFactor: 3,
 });

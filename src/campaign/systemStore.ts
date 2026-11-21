@@ -20,7 +20,7 @@ export interface SystemStore<T> {
 
 export class SystemData implements Observable {
   constructor(
-    private readonly ext: CampaignRoot["ext"],
+    private readonly extension: CampaignRoot["ext"],
     private readonly systemId: () => string,
   ) {}
 

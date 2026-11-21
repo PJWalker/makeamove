@@ -24,7 +24,7 @@ export function TargetRolls({ campaign, m }: { campaign: Campaign; m: MoveMessag
     <ul className="card-targets">
       {m.targets!.map((t) => {
         const label = results.find((r) => r.id === t.result)?.label;
-        const verdict = t.hit === undefined ? null : t.hit ? "Hit" : "Miss";
+        const verdict = t.hit === undefined ? null : (t.hit ? "Hit" : "Miss");
         return (
           <li key={t.id} className="card-target" data-hit={t.hit}>
             <span className="card-target-name">
@@ -57,11 +57,11 @@ export function SaveRequests({ campaign, m }: { campaign: Campaign; m: MoveMessa
   const system = systemOf(campaign);
   const saveAction = system.actions.find((action) => action.id === save.action);
   const modes = saveAction ? rollModesFor(system, saveAction) : [];
-  const ctx = useCampaign();
+  const context = useCampaign();
   // Re-read as roles change.
   useQuery(campaign.members, () => campaign.isGm());
   const answerFor = (target: MoveTarget, mode?: string) =>
-    ctx.execute(answerRollRequest, {
+    context.execute(answerRollRequest, {
       messageId: m.id,
       target,
       save,
@@ -86,7 +86,7 @@ export function SaveRequests({ campaign, m }: { campaign: Campaign; m: MoveMessa
                   </span>
                   <span className="card-target-verdict">{answer.success ? "Saved" : "Failed"}</span>
                 </>
-              ) : can(ctx, answerRollRequest, { messageId: m.id, target: t, save }) ? (
+              ) : (can(context, answerRollRequest, { messageId: m.id, target: t, save }) ? (
                 <span className="card-target-actions">
                   <Button variant="ghost" onClick={() => answerFor(t)}>
                     Roll
@@ -99,7 +99,7 @@ export function SaveRequests({ campaign, m }: { campaign: Campaign; m: MoveMessa
                 </span>
               ) : (
                 <span className="muted">Waiting</span>
-              )}
+              ))}
             </li>
           );
         })}
@@ -119,7 +119,7 @@ export function DamageTargets({ campaign, m }: { campaign: Campaign; m: RollMess
     m.id,
     damage.targets.map((t) => appliedField(t.id)),
   );
-  const ctx = useCampaign();
+  const context = useCampaign();
   // Re-read as roles change.
   useQuery(campaign.members, () => campaign.isGm());
   const system = systemOf(campaign);
@@ -128,7 +128,7 @@ export function DamageTargets({ campaign, m }: { campaign: Campaign; m: RollMess
   const total = m.roll.total;
   const armor = system.damageArmor;
   const apply = (t: MoveTarget, n: number, useArmor = false) =>
-    ctx.execute(applyCardDamage, {
+    context.execute(applyCardDamage, {
       messageId: m.id,
       target: t,
       amount: n,
@@ -157,7 +157,7 @@ export function DamageTargets({ campaign, m }: { campaign: Campaign; m: RollMess
               )}
               {t.characterId &&
                 applied === undefined &&
-                can(ctx, applyCardDamage, {
+                can(context, applyCardDamage, {
                   messageId: m.id,
                   target: t,
                   amount: total,
@@ -196,7 +196,7 @@ export function DamageTargets({ campaign, m }: { campaign: Campaign; m: RollMess
                           <Button
                             variant="ghost"
                             onClick={() =>
-                              ctx.execute(applyCardDamage, {
+                              context.execute(applyCardDamage, {
                                 messageId: m.id,
                                 target: t,
                                 amount: total,

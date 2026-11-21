@@ -1,5 +1,5 @@
 import { store } from "../lib/store";
-import { choiceOf, listOf, settingsOver, type LocalDoc, type LocalValue } from "../data/localDoc";
+import { choiceOf, listOf, settingsOver, type LocalDoc as LocalDocument, type LocalValue } from "../data/localDoc";
 import { oneOf } from "../lib/guards";
 import {
   EFFECTS,
@@ -71,7 +71,7 @@ export type SelectKind =
   | "wall"
   | "light"
   | "effect";
-export const kindOf = (el: SceneElement): SelectKind => (el.type === "area" ? "light" : el.type);
+export const kindOf = (element: SceneElement): SelectKind => (element.type === "area" ? "light" : element.type);
 const SELECT_KINDS: readonly SelectKind[] = [
   "token",
   "map",
@@ -104,7 +104,7 @@ export class SceneTools {
   /** The sorts of things the Select tool picks. Lights and effects are off until asked for. */
   readonly selectable: LocalValue<SelectKind[]>;
 
-  constructor(local: LocalDoc) {
+  constructor(local: LocalDocument) {
     this.toolOrder = local.value("toolOrder", listOf(oneOf(...TOOL_IDS), "tool order"));
     // Gold, like the UI accent.
     const penRead = settingsOver<PenSettings>(
@@ -147,7 +147,7 @@ export class SceneTools {
     this.effectTool = local.value("effectTool", (v) => {
       const e = effectRead(v);
       const known = EFFECTS.some((x) => x.id === e.effect) && SHAPES.some((s) => s.id === e.shape);
-      return known ? e : effectRead(undefined);
+      return known ? e : effectRead();
     });
     this.selectable = local.value(
       "selectable",

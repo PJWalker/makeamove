@@ -10,8 +10,8 @@
 
 let count = 0;
 
-function names(el: HTMLElement) {
-  return el.style
+function names(element: HTMLElement) {
+  return element.style
     .getPropertyValue("anchor-name")
     .split(",")
     .map((n) => n.trim())
@@ -23,16 +23,16 @@ function names(el: HTMLElement) {
  * the top layer) to `anchor`. Returns a function that lets go. An anchor
  * can hold several things at once.
  */
-export function tether(el: HTMLElement, anchor: Element): () => void {
+export function tether(element: HTMLElement, anchor: Element): () => void {
   const name = `--anchor-${++count}`;
   const target = anchor as HTMLElement;
   target.style.setProperty("anchor-name", [...names(target), name].join(", "));
-  el.style.setProperty("position-anchor", name);
+  element.style.setProperty("position-anchor", name);
   return () => {
     const rest = names(target).filter((n) => n !== name);
-    if (rest.length) target.style.setProperty("anchor-name", rest.join(", "));
+    if (rest.length > 0) target.style.setProperty("anchor-name", rest.join(", "));
     else target.style.removeProperty("anchor-name");
-    if (el.style.getPropertyValue("position-anchor") === name)
-      el.style.removeProperty("position-anchor");
+    if (element.style.getPropertyValue("position-anchor") === name)
+      element.style.removeProperty("position-anchor");
   };
 }

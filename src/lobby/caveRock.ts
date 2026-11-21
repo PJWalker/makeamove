@@ -105,8 +105,8 @@ function smooth(points: Point[]): string {
   const first = points[0];
   const last = points.at(-1);
   if (!first || !last) return "";
-  const curve = points.slice(1, -1).map((point, i) => {
-    const next = points[i + 2] ?? last;
+  const curve = points.slice(1, -1).map((point, index) => {
+    const next = points[index + 2] ?? last;
     return `Q${at(point)} ${at({ x: (point.x + next.x) / 2, y: (point.y + next.y) / 2 })}`;
   });
   return `M${at(first)}${curve.join("")}L${at(last)}Z`;

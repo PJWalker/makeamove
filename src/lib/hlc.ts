@@ -18,7 +18,7 @@ const encode = ({ wall, counter, node }: Hlc) =>
 
 export function decode(stamp: string): Hlc {
   const [wall = "0", counter = "0", ...node] = stamp.split(":");
-  return { wall: parseInt(wall, 36), counter: parseInt(counter, 36), node: node.join(":") };
+  return { wall: Number.parseInt(wall, 36), counter: Number.parseInt(counter, 36), node: node.join(":") };
 }
 
 /** Wall-clock milliseconds of a stamp, for showing when a message was sent. */
@@ -36,8 +36,7 @@ export class HybridClock {
   /** A new stamp for a local event, later than every stamp seen so far. */
   tick(): string {
     const now = this.now();
-    if (now > this.last.wall) this.last = { ...this.last, wall: now, counter: 0 };
-    else this.last = { ...this.last, counter: this.last.counter + 1 };
+    this.last = now > this.last.wall ? { ...this.last, wall: now, counter: 0 } : { ...this.last, counter: this.last.counter + 1 };
     return encode(this.last);
   }
 

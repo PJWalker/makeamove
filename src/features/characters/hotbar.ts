@@ -43,14 +43,14 @@ export const unpin = (slots: string[], id: string) => slots.filter((s) => s !== 
 
 /** Move a slot one place left (-1) or right (+1). */
 export function shift(slots: string[], id: string, by: -1 | 1): string[] {
-  const i = slots.indexOf(id);
-  const j = i + by;
-  if (i < 0 || j < 0 || j >= slots.length) return slots;
+  const index = slots.indexOf(id);
+  const index_ = index + by;
+  if (index < 0 || index_ < 0 || index_ >= slots.length) return slots;
   const next = [...slots];
-  const left = next[i]!;
-  const right = next[j]!;
-  next[i] = right;
-  next[j] = left;
+  const left = next[index]!;
+  const right = next[index_]!;
+  next[index] = right;
+  next[index_] = left;
   return next;
 }
 
@@ -66,7 +66,7 @@ export function defaultHotbar(campaign: Campaign, characterId: string): string[]
   const moves = actionsFor(c, system, d).flatMap((m) =>
     skip.has(m.category) ? [] : [moveSlot(m.id)],
   );
-  const gear = c.inventory.flatMap((i) => (i.uses && itemActive(i) ? [useSlot(i.id)] : []));
+  const gear = c.inventory.flatMap((index) => (index.uses && itemActive(index) ? [useSlot(index.id)] : []));
   return [...moves, ...gear, ...BASIC_SLOTS].slice(0, MAX_SLOTS);
 }
 
@@ -82,7 +82,7 @@ export function setHotbar(campaign: Campaign, characterId: string | undefined, s
 /** Move a slot to a position (as counted before it was lifted out). */
 export function moveTo(slots: string[], id: string, index: number): string[] {
   const from = slots.indexOf(id);
-  if (from < 0) return slots;
+  if (from === -1) return slots;
   const rest = slots.filter((s) => s !== id);
   rest.splice(index > from ? index - 1 : index, 0, id);
   return rest;

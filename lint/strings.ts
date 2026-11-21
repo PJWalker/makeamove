@@ -39,7 +39,7 @@ export function writtenIn(node: ESTree.Node | null | undefined, source: SourceCo
             fixer.replaceText(
               node,
               "`" +
-                text.split(HOLE).reduce((out, part, i) => out + (holes[i - 1] ?? "") + part) +
+                text.split(HOLE).reduce((out, part, index) => out + (holes[index - 1] ?? "") + part) +
                 "`",
             ),
         },
@@ -51,18 +51,22 @@ export function writtenIn(node: ESTree.Node | null | undefined, source: SourceCo
         ? [{ node, text: raw, rewrite: (fixer, text) => fixer.replaceText(node, text) }]
         : [];
     }
-    case "JSXExpressionContainer":
+    case "JSXExpressionContainer": {
       return node.expression.type === "JSXEmptyExpression"
         ? []
         : writtenIn(node.expression, source);
-    case "ConditionalExpression":
+    }
+    case "ConditionalExpression": {
       return [...writtenIn(node.consequent, source), ...writtenIn(node.alternate, source)];
-    case "LogicalExpression":
+    }
+    case "LogicalExpression": {
       return node.operator === "&&"
         ? writtenIn(node.right, source)
         : [...writtenIn(node.left, source), ...writtenIn(node.right, source)];
-    default:
+    }
+    default: {
       return [];
+    }
   }
 }
 
@@ -92,8 +96,8 @@ export function childrenText(element: ESTree.JSXElement, source: SourceCode): Wr
       text,
       rewrite: (fixer, fixed) => {
         const pieces = fixed.split(HOLE);
-        return runs.flatMap((run, i) =>
-          run && pieces[i] !== source.getText(run) ? [fixer.replaceText(run, pieces[i] ?? "")] : [],
+        return runs.flatMap((run, index) =>
+          run && pieces[index] !== source.getText(run) ? [fixer.replaceText(run, pieces[index] ?? "")] : [],
         );
       },
     },

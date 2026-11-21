@@ -1,4 +1,4 @@
-/* oxlint-disable jsx-a11y/prefer-tag-over-role -- The die's accessible image is canvas-rendered and has no img source. */
+/* eslint-disable jsx-a11y/prefer-tag-over-role -- The die's accessible image is canvas-rendered and has no img source. */
 import { useEffect, useEffectEvent, useRef } from "react";
 import { useMachine } from "@xstate/react";
 import { pieceMachine } from "./pieceMachine";
@@ -157,15 +157,15 @@ function usePiece(
     };
   }, [releaseSeed]);
 
-  const phase: Phase = !use3dDice
-    ? "flat"
-    : pieceSnapshot.matches("flat")
+  const phase: Phase = use3dDice
+    ? pieceSnapshot.matches("flat")
       ? "flat"
       : pieceSnapshot.matches("moving")
         ? "moving"
         : pieceSnapshot.matches("landed")
           ? "landed"
-          : "pending";
+          : "pending"
+    : "flat";
   return { slot, canvas, phase };
 }
 
@@ -304,7 +304,7 @@ export function RollDie({
   });
 
   return (
-    // oxlint-disable-next-line jsx-a11y/no-static-element-interactions -- The role is button when rerolling is enabled.
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- The role is button when rerolling is enabled.
     <span
       ref={slot}
       className="die"

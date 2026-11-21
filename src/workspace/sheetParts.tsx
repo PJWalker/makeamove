@@ -156,15 +156,27 @@ function CounterInput({
       onChange={(e) => setDraft(e.currentTarget.value)}
       onBlur={commit}
       onKeyDown={(e) => {
-        if (e.key === "Enter") e.currentTarget.blur();
-        else if (e.key === "Escape") {
+        switch (e.key) {
+        case "Enter": {
+        e.currentTarget.blur();
+        break;
+        }
+        case "Escape": {
           e.stopPropagation();
           cancelled.current = true;
           e.currentTarget.blur();
-        } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+
+        break;
+        }
+        case "ArrowUp":
+        case "ArrowDown": {
           e.preventDefault();
           setDraft(null);
           onChange(e.key === "ArrowUp" ? 1 : -1);
+
+        break;
+        }
+        // No default
         }
       }}
     />
@@ -223,7 +235,7 @@ export function MoveList({
               tag={rollTag(system, m)}
               tip={plainText(m.text)}
               onOpen={(row) => windows.show(moveKey(ownerId, m.id), row)}
-              onPointerDown={(ev) => dragEntity(ctx.canvas, ev, entity(ctx, "move", m.id, m.name))}
+              onPointerDown={(event) => dragEntity(ctx.canvas, event, entity(ctx, "move", m.id, m.name))}
               menuItems={[
                 {
                   label: used ? "Already Used This Session" : makeVerb(m).label,
@@ -239,10 +251,10 @@ export function MoveList({
         })}
       </List>
       {windows.keys.map((key) => {
-        const ref = parseEntryKey(key);
+        const reference = parseEntryKey(key);
         const m =
-          ref?.kind === "move" && ref.ownerId === ownerId
-            ? moves.find((k) => k.id === ref.moveId)
+          reference?.kind === "move" && reference.ownerId === ownerId
+            ? moves.find((k) => k.id === reference.moveId)
             : undefined;
         if (!m) return null;
         const tag = rollTag(system, m);
@@ -309,7 +321,7 @@ function useMoveList(
   ownerId: string,
   learned: string[],
 ) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const categories = system.actionCategories.filter((category) =>
     moves.some((move) => move.category === category.id),
   );
@@ -323,11 +335,11 @@ function useMoveList(
   const usedIds = new Set(useQuery(campaign.systemData, readUsedIds));
   const learnedIds = new Set(learned);
   const shown = filter === "all" ? moves : moves.filter((move) => move.category === filter);
-  return { ctx, categories, filter, setFilter, windows, usedIds, learnedIds, shown };
+  return { ctx: context, categories, filter, setFilter, windows, usedIds, learnedIds, shown };
 }
 
 export function CharacterName({ c, editable }: { c: CharacterView; editable: boolean }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   return (
     <input
       className="sheet-name"
@@ -336,7 +348,7 @@ export function CharacterName({ c, editable }: { c: CharacterView; editable: boo
       disabled={!editable}
       onChange={(e) =>
         e.currentTarget.value.trim() &&
-        ctx.execute(setField, { id: c.id, key: "name", value: e.currentTarget.value.trim() })
+        context.execute(setField, { id: c.id, key: "name", value: e.currentTarget.value.trim() })
       }
     />
   );
@@ -352,7 +364,7 @@ export function TokenChip({
   c: CharacterView;
   editable: boolean;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const [settings, setSettings] = useState(false);
   const graphic = useQuery(campaign.entityGraphics, () =>
@@ -386,7 +398,7 @@ export function TokenChip({
         {...trigger}
         onPointerDown={(e) => {
           trigger.onPointerDown(e);
-          dragToken(ctx.canvas, e, {
+          dragToken(context.canvas, e, {
             characterId: c.id,
             name: c.name,
             graphic,
@@ -424,20 +436,20 @@ function TokenSettings({
   graphic: EntityGraphic;
   onClose: () => void;
 }) {
-  const ctx = useCampaign();
-  const ref = usePopupDialog();
+  const context = useCampaign();
+  const reference = usePopupDialog();
   const style = c.tokenStyle ?? "disc";
   const plain = style === "plain" && graphic.kind === "image";
   const me = useQuery(device);
   const colour = c.tokenColour ?? colourOf(me);
   return (
-    <Dialog dialogRef={ref} title="Token Settings" onClose={onClose}>
+    <Dialog dialogRef={reference} title="Token Settings" onClose={onClose}>
       <GraphicPicker
         graphic={graphic}
         onChange={(next) =>
-          ctx.execute(chooseGraphic, { kind: "character", id: c.id, graphic: next })
+          context.execute(chooseGraphic, { kind: "character", id: c.id, graphic: next })
         }
-        onReset={() => ctx.execute(chooseGraphic, { kind: "character", id: c.id })}
+        onReset={() => context.execute(chooseGraphic, { kind: "character", id: c.id })}
       />
       <div className="field">
         Style
@@ -445,7 +457,7 @@ function TokenSettings({
           label="Token style"
           value={style}
           options={TOKEN_STYLES}
-          onChange={(v) => ctx.execute(setField, { id: c.id, key: "tokenStyle", value: v })}
+          onChange={(v) => context.execute(setField, { id: c.id, key: "tokenStyle", value: v })}
         />
       </div>
       <div className="field colour-field" data-disabled={plain}>
@@ -457,7 +469,7 @@ function TokenSettings({
             value={colour}
             disabled={plain}
             onChange={(next) =>
-              ctx.execute(setField, { id: c.id, key: "tokenColour", value: next })
+              context.execute(setField, { id: c.id, key: "tokenColour", value: next })
             }
           />
           <span className="colour-hex">{colour}</span>
@@ -517,7 +529,7 @@ export function ConditionToggles({
   conditions?: ConditionDef[];
   editable: boolean;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const conditionIds = new Set(c.conditions);
   return (
     <ul className="condition-toggles">
@@ -529,7 +541,7 @@ export function ConditionToggles({
             disabled={!editable}
             title={condition.text}
             style={{ "--condition-colour": conditionColour(system, condition.id) }}
-            onClick={() => ctx.execute(toggleCondition, { id: c.id, condition: condition.id })}
+            onClick={() => context.execute(toggleCondition, { id: c.id, condition: condition.id })}
           >
             <span className="condition-dot" aria-hidden="true" />
             {condition.name}

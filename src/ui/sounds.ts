@@ -43,7 +43,7 @@ function repeatedTooSoon(sound: UiSound, now: number): boolean {
 }
 
 function audio() {
-  if (!("AudioContext" in window)) return;
+  if (!("AudioContext" in globalThis)) return;
   context ??= new AudioContext();
   if (context.state !== "running") void context.resume().catch(() => {});
   return context;
@@ -98,7 +98,7 @@ export function playUiSound(sound: UiSound) {
 
 export function playDiceImpact(strength: number) {
   const current = audio();
-  if (!current || current.state !== "running") return;
+  if (current?.state !== "running") return;
 
   const now = current.currentTime;
   if (now - lastImpact < 0.035) return;
@@ -152,7 +152,7 @@ function openSurfaces() {
   return new Set<Element>([
     ...document.querySelectorAll("dialog[open], details[open]"),
     ...[...document.querySelectorAll<HTMLElement>("[popover]")].filter(
-      (el) => !el.matches('.tooltip, [role="tooltip"]') && el.matches(":popover-open"),
+      (element) => !element.matches('.tooltip, [role="tooltip"]') && element.matches(":popover-open"),
     ),
   ]);
 }
@@ -172,7 +172,7 @@ document.addEventListener(
     )
       return;
     const before = openSurfaces();
-    window.setTimeout(() => {
+    globalThis.setTimeout(() => {
       const after = openSurfaces();
       if (before.size !== after.size || [...before].some((surface) => !after.has(surface))) return;
       playUiSound("press");

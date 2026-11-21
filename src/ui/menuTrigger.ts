@@ -16,7 +16,7 @@
 /** A right-button press opened a menu; its `contextmenu` event is still to come. */
 let pressOpened = false;
 
-window.addEventListener(
+globalThis.addEventListener(
   "contextmenu",
   (e) => {
     if (pressOpened || document.querySelector("[data-context-menu]")) {

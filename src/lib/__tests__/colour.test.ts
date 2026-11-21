@@ -21,7 +21,7 @@ import {
 describe("colour", () => {
   it("round-trips sRGB through OKLab", () => {
     for (const hex of ["#000000", "#ffffff", "#2b3a55", "#c08a3e", "#ff0000"]) {
-      const n = parseInt(hex.slice(1), 16);
+      const n = Number.parseInt(hex.slice(1), 16);
       expect(oklabToHex(rgbToOklab((n >> 16) & 255, (n >> 8) & 255, n & 255))).toBe(hex);
     }
   });

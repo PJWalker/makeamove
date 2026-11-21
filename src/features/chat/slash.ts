@@ -6,7 +6,7 @@ import { NotationError, parse } from "../dice/notation";
  * box makes of what's typed, are in workspace/commands/chat.ts.
  */
 
-export interface MemberRef {
+export interface MemberReference {
   id: string;
   name: string;
   role: string;
@@ -21,16 +21,16 @@ export function splitFormula(
   let firstError = "";
   // Try every whitespace boundary, longest first.
   const cuts = [text.length];
-  for (let i = text.length - 1; i > 0; i--)
-    if (/\s/.test(text.charAt(i)) && !/\s/.test(text.charAt(i - 1))) cuts.push(i);
+  for (let index = text.length - 1; index > 0; index--)
+    if (/\s/.test(text.charAt(index)) && !/\s/.test(text.charAt(index - 1))) cuts.push(index);
   for (const cut of cuts) {
     const formula = text.slice(0, cut).trim();
     try {
       parse(formula);
       const comment = text.slice(cut).trim();
       return comment ? { formula, comment } : { formula };
-    } catch (e) {
-      if (!firstError && e instanceof NotationError) firstError = e.message;
+    } catch (error) {
+      if (!firstError && error instanceof NotationError) firstError = error.message;
     }
   }
   return { error: firstError || "Those dice don’t make sense." };
@@ -55,9 +55,9 @@ export function parseDuration(text: string): number | null {
     const first = clock[1];
     const second = clock[2];
     if (!first || !second) return null;
-    return clock[3] !== undefined
-      ? +first * 3600 + +second * 60 + +clock[3]
-      : +first * 60 + +second;
+    return clock[3] === undefined
+      ? +first * 60 + +second
+      : +first * 3600 + +second * 60 + +clock[3];
   }
   if (/^\d+$/.test(t)) return +t;
   const parts = /^(?:(\d+)h)?\s*(?:(\d+)m(?:in)?)?\s*(?:(\d+)s(?:ec)?)?$/.exec(t);
@@ -75,8 +75,8 @@ export const unquote = (s: string) =>
 /** Whoever `rest` starts with: the longest matching member name, or "gm". */
 export function whisperTarget(
   rest: string,
-  members: MemberRef[],
-): { to: MemberRef[]; text: string } | null {
+  members: MemberReference[],
+): { to: MemberReference[]; text: string } | null {
   const lower = rest.toLowerCase();
   const byName = [...members].sort((a, b) => b.name.length - a.name.length);
   for (const m of byName) {
@@ -91,7 +91,7 @@ export function whisperTarget(
   }
   if (/^gm(\s|$)/.test(lower)) {
     const gms = members.filter((m) => m.role === "gm");
-    if (gms.length) return { to: gms, text: rest.slice(2).trim() };
+    if (gms.length > 0) return { to: gms, text: rest.slice(2).trim() };
   }
   return null;
 }

@@ -143,7 +143,7 @@ test("a campaign can be created, left, and reopened", async ({ page }) => {
     "Scene: The Opening Scene",
   );
 
-  await page.getByRole("button", { name: "Campaign menu" }).click();
+  await page.getByRole("button", { name: "Campaign Menu" }).click();
   await page.getByRole("menuitem", { name: "Back to Campaigns" }).click();
   const campaign = page.getByRole("button", { name: /^The Lost Barrows/ }).last();
   await expect(campaign).toBeVisible();
@@ -176,7 +176,7 @@ test("selected menu items fade after the menu closes", async ({ page }) => {
     await page.emulateMedia({
       reducedMotion: interaction === "reduced-motion" ? "reduce" : "no-preference",
     });
-    await page.getByRole("button", { name: "Campaign menu" }).click();
+    await page.getByRole("button", { name: "Campaign Menu" }).click();
     const item = page.getByRole("menuitemcheckbox").first();
     if (interaction === "keyboard") await item.focus();
     if (interaction === "keyboard") await item.press("Enter");
@@ -210,7 +210,7 @@ test("selected menu items fade after the menu closes", async ({ page }) => {
 
 test("right-drag menus select and close on release", async ({ page }) => {
   await createCampaign(page, "Right-drag menu");
-  await page.getByRole("button", { name: "Campaign menu" }).click();
+  await page.getByRole("button", { name: "Campaign Menu" }).click();
   await page.getByRole("menuitem", { name: "Back to Campaigns" }).click();
   const campaign = page.getByRole("button", { name: /^Right-drag menu/ });
   await expect(campaign).toBeVisible();
@@ -227,7 +227,7 @@ test("right-drag menus select and close on release", async ({ page }) => {
 
 test("campaign deletion is available from the right-click menu and confirms", async ({ page }) => {
   await createCampaign(page, "Delete menu test");
-  await page.getByRole("button", { name: "Campaign menu" }).click();
+  await page.getByRole("button", { name: "Campaign Menu" }).click();
   await page.getByRole("menuitem", { name: "Back to Campaigns" }).click();
 
   const campaign = page.getByRole("button", { name: /^Delete menu test/ });

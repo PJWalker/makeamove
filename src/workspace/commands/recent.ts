@@ -1,4 +1,4 @@
-import { listOf, type LocalDoc, type LocalValue } from "../../data/localDoc";
+import { listOf, type LocalDoc as LocalDocument, type LocalValue } from "../../data/localDoc";
 import { isString } from "../../lib/guards";
 
 const MAX = 12;
@@ -10,7 +10,7 @@ const read = (stored: unknown) => readList(stored).slice(0, MAX);
 export class RecentActions {
   readonly ids: LocalValue<string[]>;
 
-  constructor(local: LocalDoc) {
+  constructor(local: LocalDocument) {
     this.ids = local.value("recentActions", read);
   }
 

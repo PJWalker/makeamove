@@ -2,7 +2,7 @@ import { generateKeyBetween } from "fractional-indexing";
 import type * as Y from "yjs";
 import { newId } from "../lib/ids";
 import { byOrder } from "../lib/order";
-import { sceneDbName } from "../scene/sceneDoc";
+import { sceneDbName as sceneDatabaseName } from "../scene/sceneDoc";
 import type { Members, Scenes } from "./schema";
 import type { SceneView } from "./types";
 import { deleteData } from "../platform/dataEpoch";
@@ -51,7 +51,7 @@ export function updateScene(scenes: Scenes, id: string, patch: Partial<Omit<Scen
 
 export function removeScene(campaignId: string, scenes: Scenes, id: string) {
   scenes.delete(id);
-  deleteData(sceneDbName(sceneGuid(campaignId, id)));
+  deleteData(sceneDatabaseName(sceneGuid(campaignId, id)));
 }
 
 export function activeSceneId(members: Members, scenes: Scenes, deviceId: string): string | null {

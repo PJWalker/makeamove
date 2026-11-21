@@ -670,9 +670,9 @@ export const dungeonWorld2: GameSystem = {
       const notation =
         first.keep?.which === "high"
           ? "d8+2d6kh1"
-          : disadvantaged || first.keep?.which === "low"
+          : (disadvantaged || first.keep?.which === "low"
             ? "d8+2d6kl1"
-            : "d8+d6";
+            : "d8+d6");
       return formula.replace(prefix, notation);
     }
     if (!disadvantaged) return formula;
@@ -685,7 +685,7 @@ export const dungeonWorld2: GameSystem = {
     { id: "weak", label: "7-9", tone: "mixed" },
     { id: "miss", label: "6 or less", tone: "bad" },
   ],
-  result: (total) => (total >= 10 ? "strong" : total >= 7 ? "weak" : "miss"),
+  result: (total) => (total >= 10 ? "strong" : (total >= 7 ? "weak" : "miss")),
   actions: [...ACTIONS, ...PATH_ACTIONS, ...ARTIFACT_ACTIONS],
   actionCategories: [
     { id: "class", label: "Class" },
@@ -910,9 +910,7 @@ export const dungeonWorld2: GameSystem = {
   resolveDamage(character, derived, amount, options) {
     if (amount <= 0) return { hp: 0 };
     const armor =
-      options.type?.toLowerCase() === "piercing"
-        ? 0
-        : Math.max(0, Number(derived.values["armor"] ?? 0));
+      options.type?.toLowerCase() === "piercing" ? 0 : Math.max(0, derived.values["armor"] ?? 0);
     const armorUsable = (character.scores["str"] ?? 0) >= armor;
     return {
       hp: armorUsable ? Math.max(1, amount - armor) : amount,
@@ -930,7 +928,7 @@ export const dungeonWorld2: GameSystem = {
         (entry) => entry.id === move.id.replace(/^path-/, "").replace(/-\d+$/, ""),
       );
       if (!path || !ownedPaths.includes(path.id)) return false;
-      const moveIndex = path.moves.findIndex((name) => name === move.name) + 1;
+      const moveIndex = path.moves.indexOf(move.name) + 1;
       return moveIndex === 1 || ownedPathMoves.includes(`${path.id}:${moveIndex}`);
     });
     const artifactMoves = character.inventory.flatMap((item) => {
@@ -1016,7 +1014,7 @@ export const dungeonWorld2: GameSystem = {
         ),
   acquireItem(item, character) {
     if (item.tags.includes("magic")) return { label: "GM grant", gmOnly: true };
-    if (!item.wealthCost) return undefined;
+    if (!item.wealthCost) return;
     if (!character) return { label: "Purchase" };
     const remaining = purchaseAtWealth(
       Number(character.data["treasureBoxes"] ?? INITIAL_TREASURE_BOXES),

@@ -49,7 +49,7 @@ export const titleCaseRule = defineRule({
   create(context) {
     const options = (context.options[0] ?? {}) as Options;
     const jsx = new Map(
-      Object.entries(options.jsx ?? {}).map(([tag, props]) => [tag, new Set(props)]),
+      Object.entries(options.jsx ?? {}).map(([tag, properties]) => [tag, new Set(properties)]),
     );
     const objects = options.objects ?? [];
     const source = context.sourceCode;
@@ -71,25 +71,25 @@ export const titleCaseRule = defineRule({
       JSXElement(node) {
         const name = node.openingElement.name;
         if (name.type !== "JSXIdentifier") return;
-        const props = jsx.get(name.name);
-        if (!props) return;
-        for (const attr of node.openingElement.attributes) {
-          if (attr.type !== "JSXAttribute" || attr.name.type !== "JSXIdentifier") continue;
-          if (props.has(attr.name.name)) check(writtenIn(attr.value, source));
+        const properties = jsx.get(name.name);
+        if (!properties) return;
+        for (const attribute of node.openingElement.attributes) {
+          if (attribute.type !== "JSXAttribute" || attribute.name.type !== "JSXIdentifier") continue;
+          if (properties.has(attribute.name.name)) check(writtenIn(attribute.value, source));
         }
-        if (!props.has("children")) return;
+        if (!properties.has("children")) return;
         check(childrenText(node, source));
         // A string in braces is a phrase of its own when it's all the text
         // there is, {used ? "Done" : "Finish Camp"}, rather than part of one,
         // Roll{as ? ` as ${as}` : ""}.
         const texts = node.children.filter((c) => c.type === "JSXText" && c.value.trim());
-        if (texts.length) return;
+        if (texts.length > 0) return;
         for (const child of node.children)
           if (child.type === "JSXExpressionContainer")
             check(writtenIn(child, source).filter((w) => !/^\s/.test(w.text)));
       },
       ObjectExpression(node) {
-        if (!objects.length) return;
+        if (objects.length === 0) return;
         const properties = propertiesOf(node);
         for (const { with: needed, check: keys } of objects) {
           if (!needed.every((k) => properties.has(k))) continue;

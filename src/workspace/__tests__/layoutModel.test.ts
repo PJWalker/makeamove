@@ -1,14 +1,11 @@
 import { describe, expect, it } from "vite-plus/test";
 import {
   PANEL_ORDER,
-  SIDEBAR_DEFAULT_W,
-  SIDEBAR_MIN_W,
   close,
   defaultLayout,
   detach,
   dock,
   keyedSideWidth,
-  locate,
   normalise,
   oneSideIfCramped,
   reorder,
@@ -17,7 +14,10 @@ import {
   setOpen,
   showTab,
   withoutPanels,
+  SIDEBAR_DEFAULT_W,
+  SIDEBAR_MIN_W,
 } from "../layoutModel";
+
 
 const win = { x: 10, y: 10, w: 300, h: 300, z: 1 };
 const everywhere = (l: ReturnType<typeof defaultLayout>) =>
@@ -168,9 +168,7 @@ describe("panel layout", () => {
     l = dock(l, "scene", "right", 3);
     l = dock(l, "items");
     const keys = l.right.panels.map((id) => l.order[id]!);
-    expect(keys).toEqual(
-      [...keys].sort((left, right) => String(left).localeCompare(String(right))),
-    );
+    expect(keys).toEqual([...keys].sort((left, right) => left.localeCompare(right)));
     expect(new Set(keys).size).toBe(keys.length);
     expect(l.right.panels).toEqual([
       "chat",

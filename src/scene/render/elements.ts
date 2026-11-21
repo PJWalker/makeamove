@@ -48,9 +48,9 @@ export class ElementLayer {
     const s = this.state;
     for (const [id, view] of this.views) {
       view.root.visible = !s.hidden.has(id);
-      const el = s.byId.get(id);
-      if (!view.helper || !el) continue;
-      const kind = kindOf(el);
+      const element = s.byId.get(id);
+      if (!view.helper || !element) continue;
+      const kind = kindOf(element);
       view.helper.visible = showHelpers && (kind === "wall" || shown.has(kind));
     }
   }
@@ -71,21 +71,21 @@ export class ElementLayer {
   sync() {
     const s = this.state;
     const seen = new Set<string>();
-    for (const el of s.elements) {
-      seen.add(el.id);
-      const key = contentKey(el);
-      let view = this.views.get(el.id);
+    for (const element of s.elements) {
+      seen.add(element.id);
+      const key = contentKey(element);
+      let view = this.views.get(element.id);
       if (view && view.key !== key) {
         view.root.destroy(DESTROY_VIEW);
         view = undefined;
       }
       if (!view) {
-        view = buildView(el, key, () => s.invalidate(), this.dropHighlightToken, s.peers);
-        this.views.set(el.id, view);
+        view = buildView(element, key, () => s.invalidate(), this.dropHighlightToken, s.peers);
+        this.views.set(element.id, view);
         // A new view isn't in a layer yet, so force a restack.
         this.order = "";
       }
-      view.apply(s.previews.get(el.id) ?? el);
+      view.apply(s.previews.get(element.id) ?? element);
     }
     this.previewed = new Set(s.previews.keys());
     for (const [id, view] of this.views) {
@@ -95,11 +95,11 @@ export class ElementLayer {
       }
     }
     // Restack only when the order (or a layer) actually changed.
-    const order = s.elements.map((e) => `${e.layer}:${e.id}`).join();
+    const order = s.elements.map((e) => `${e.layer}:${e.id}`).join(',');
     if (order !== this.order) {
       this.order = order;
       for (const layer of LAYERS) this.layers[layer].removeChildren();
-      for (const el of s.elements) this.layers[el.layer].addChild(this.views.get(el.id)!.root);
+      for (const element of s.elements) this.layers[element.layer].addChild(this.views.get(element.id)!.root);
     }
   }
 
@@ -108,8 +108,8 @@ export class ElementLayer {
     const s = this.state;
     for (const id of this.previewed) {
       if (s.previews.has(id)) continue;
-      const el = s.byId.get(id);
-      if (el) this.views.get(id)?.apply(el);
+      const element = s.byId.get(id);
+      if (element) this.views.get(id)?.apply(element);
     }
     for (const [id, t] of s.previews) this.views.get(id)?.apply(t);
     this.previewed = new Set(s.previews.keys());
@@ -125,9 +125,9 @@ export class ElementLayer {
     const still = reducedMotion.matches;
     let animating = false;
     for (const [id, view] of this.views) {
-      const el = s.byId.get(id);
-      if (!view.pose || el?.type !== "token") continue;
-      const down = this.downed(el);
+      const element = s.byId.get(id);
+      if (!view.pose || element?.type !== "token") continue;
+      const down = this.downed(element);
       let turn = this.turns.get(id);
       if (!turn) {
         // Already down when first drawn: no fall to play.

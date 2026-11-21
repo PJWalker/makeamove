@@ -113,9 +113,9 @@ export function applyDamage(
       if (shield) updateItem(campaign, c.id, shield.id, { usesLeft: (shield.usesLeft ?? 1) - 1 });
       let left = damage.hp;
       if (system.tempHp) {
-        const temp = Number(c.data[system.tempHp] ?? 0);
-        const soaked = Math.min(temp, left);
-        if (soaked) setData(campaign, c.id, system.tempHp, temp - soaked);
+        const temporary = Number(c.data[system.tempHp] ?? 0);
+        const soaked = Math.min(temporary, left);
+        if (soaked) setData(campaign, c.id, system.tempHp, temporary - soaked);
         left -= soaked;
       }
       if (left) bumpResource(campaign, c.id, "hp", -left);

@@ -98,22 +98,22 @@ export class TokenLabelLayer {
       small: boolean;
     }[] = [];
 
-    for (const el of s.elements) {
-      if (el.type !== "token" || s.hidden.has(el.id)) continue;
-      const t = s.previews.get(el.id) ?? el;
+    for (const element of s.elements) {
+      if (element.type !== "token" || s.hidden.has(element.id)) continue;
+      const t = s.previews.get(element.id) ?? element;
       // Out of sight: no name or bars to give it away.
       if (unseen(t)) continue;
       const screenW = t.w * cam.zoom;
-      const allStats = !el.hideBars && el.characterId ? this.statsFor(el.characterId) : [];
+      const allStats = !element.hideBars && element.characterId ? this.statsFor(element.characterId) : [];
       for (const stat of allStats) {
-        const key = `${el.id}:${stat.id}`;
+        const key = `${element.id}:${stat.id}`;
         seen.add(key);
         this.noteValue(key, stat, now, still);
       }
       // A down token's hit point bar has broken off: gone, once it's done falling.
       const stats = allStats.filter((stat) => {
         if (!downs(stat)) return true;
-        const key = `${el.id}:${stat.id}`;
+        const key = `${element.id}:${stat.id}`;
         const change = this.barChanges.get(key);
         if (change && !barChangeFrame(change, now - change.start).done) return true;
         this.barChanges.delete(key);
@@ -125,12 +125,12 @@ export class TokenLabelLayer {
       let bars: Box | null = null;
       let wideBars: Box | null = null;
       const barH = Math.round(Math.min(BAR_MAX_H, Math.max(BAR_MIN_H, screenW * 0.11)));
-      if (stats.length) {
+      if (stats.length > 0) {
         // The first bar straddles the token's bottom edge.
         const top = Math.round(foot.y - barH / 2);
         const h = stats.length * (barH + BAR_GAP) - BAR_GAP;
         const box = (w: number) => ({
-          id: el.id,
+          id: element.id,
           x: Math.round(foot.x - w / 2),
           y: top,
           w: Math.round(w),
@@ -141,20 +141,20 @@ export class TokenLabelLayer {
         y = top + h + 2;
       }
       let name: (Box & { text: SdfText }) | null = null;
-      const label = el.hideName ? "" : el.name.trim();
+      const label = element.hideName ? "" : element.name.trim();
       if (label) {
-        let text = this.namePool.get(el.id);
+        let text = this.namePool.get(element.id);
         if (!text) {
           text = new SdfText({ ...TOKEN_NAME, anchor: { x: 0.5, y: 0 } });
-          this.namePool.set(el.id, text);
+          this.namePool.set(element.id, text);
           this.names.addChild(text);
         }
         if (text.text !== label) text.text = label;
         text.scale.set(Math.min(NAME_MAX, Math.max(NAME_MIN, screenW * 0.2)) / NAME_MAX);
         text.position.set(Math.round(foot.x), Math.round(y));
-        usedNames.add(el.id);
+        usedNames.add(element.id);
         name = {
-          id: el.id,
+          id: element.id,
           x: foot.x - text.width / 2,
           y,
           w: text.width,
@@ -163,7 +163,7 @@ export class TokenLabelLayer {
         };
       }
       plans.push({
-        id: el.id,
+        id: element.id,
         t,
         stats,
         bars,
@@ -235,7 +235,7 @@ export class TokenLabelLayer {
         this.animating = true;
         return { change, frame };
       });
-      const scales = p.stats.map((stat, i) => {
+      const scales = p.stats.map((stat, index) => {
         const key = `${p.id}:${stat.id}`;
         usedZooms.add(key);
         let zoom = this.barZoom.get(key);
@@ -253,7 +253,7 @@ export class TokenLabelLayer {
         const progress = still ? 1 : Math.min(1, (now - zoom.start) / 320);
         zoom.scale = Math.max(1, zoom.from + (zoom.target - zoom.from) * hoverSpring(progress));
         if (progress < 1) this.animating = true;
-        const frame = frames[i]?.frame;
+        const frame = frames[index]?.frame;
         // A change grows the bar big enough to read, at least.
         const grown = frame
           ? 1 + (Math.max(1.6, Math.min(2.4, 96 / barBox.w), 26 / p.barH) - 1) * frame.grow
@@ -277,17 +277,17 @@ export class TokenLabelLayer {
       // It flies out to the edge as the bar grows, and back as it settles.
       const fly = Math.max(0, ...frames.map((f) => f?.frame.grow ?? 0));
       if (frames.some(Boolean)) this.pinToEdge(p, zoomed.bars, viewport, fly);
-      p.stats.forEach((s, i) => {
-        const changed = frames[i];
+      for (const [index, s] of p.stats.entries()) {
+        const changed = frames[index];
         const frame = changed?.frame;
-        const { y, w, h: barH } = zoomed.bars[i]!;
-        const x = zoomed.bars[i]!.x + (frame?.shakeX ?? 0);
+        const { y, w, h: barH } = zoomed.bars[index]!;
+        const x = zoomed.bars[index]!.x + (frame?.shakeX ?? 0);
         const key = `${p.id}:${s.id}`;
         if (frame?.broken && changed) {
           this.drawShards(key, changed.change, { x, y, w, h: barH }, now);
           this.drawDelta(key, changed.change.delta, frame, x + w / 2, y, barH);
           usedDeltas.add(key);
-          return;
+          continue;
         }
         const frac = frame ? frame.fill : fillOf(s);
         g.roundRect(x, y, w, barH, 3).fill({ color: INK, alpha: frame ? 0.95 : 0.85 });
@@ -297,14 +297,14 @@ export class TokenLabelLayer {
           const hurt = changed.change.delta < 0;
           inner(frac, frame.ghost).fill(
             hurt
-              ? { color: frame.ghostHot ? 0xffffff : 0xff5c4d }
-              : { color: 0xb8f5c2, alpha: 0.75 },
+              ? { color: frame.ghostHot ? 0xFF_FF_FF : 0xFF_5C_4D }
+              : { color: 0xB8_F5_C2, alpha: 0.75 },
           );
         }
         if (frac > 0) inner(0, frac).fill({ color: s.colour });
         if (frame && changed) {
           if (frame.flash > 0)
-            g.roundRect(x, y, w, barH, 3).fill({ color: 0xffffff, alpha: frame.flash * 0.7 });
+            g.roundRect(x, y, w, barH, 3).fill({ color: 0xFF_FF_FF, alpha: frame.flash * 0.7 });
           // Cracks spread across a bar about to break.
           if (frame.crack > 0) {
             for (const shard of this.breakFor(key, changed.change, {
@@ -323,7 +323,7 @@ export class TokenLabelLayer {
                 .lineTo(m.x, m.y)
                 .lineTo(m.x + (b.x - m.x) * reach, m.y + (b.y - m.y) * reach)
                 .stroke({
-                  color: 0xffffff,
+                  color: 0xFF_FF_FF,
                   width: 1.5,
                   alpha: 0.5 + 0.5 * frame.crack,
                   join: "miter",
@@ -333,7 +333,7 @@ export class TokenLabelLayer {
           // A rim that burns in the colour of the change, then fades.
           const hurt = changed.change.delta < 0;
           g.roundRect(x - 1, y - 1, w + 2, barH + 2, 4).stroke({
-            color: hurt ? 0xff5c4d : 0x6ee07a,
+            color: hurt ? 0xFF_5C_4D : 0x6E_E0_7A,
             width: 2,
             alpha: Math.min(1, frame.alpha * 1.5) * (1 - frame.rise * 0.5),
           });
@@ -341,13 +341,13 @@ export class TokenLabelLayer {
           usedDeltas.add(`${p.id}:${s.id}`);
         }
         // The value, when the bar is wide enough to read it.
-        if (w < BAR_TEXT_MIN_W) return;
+        if (w < BAR_TEXT_MIN_W) continue;
         let text = this.barTextPool.get(key);
         if (!text) {
           text = new SdfText({
             font: cabin(700),
             size: BAR_MAX_H - 2,
-            fill: 0xffffff,
+            fill: 0xFF_FF_FF,
             anchor: 0.5,
           });
           this.barTextPool.set(key, text);
@@ -360,7 +360,7 @@ export class TokenLabelLayer {
         text.position.set(Math.round(x + w / 2), Math.round(y + barH / 2));
         usedValues.add(key);
         if (p.id === hover) this.barText.setChildIndex(text, this.barText.children.length - 1);
-      });
+      }
     }
 
     for (const [key, text] of this.deltaPool) {
@@ -409,9 +409,9 @@ export class TokenLabelLayer {
     const same = live && Math.sign(running.delta) === Math.sign(delta);
     this.barChanges.set(key, {
       from: live
-        ? same && delta < 0
+        ? (same && delta < 0
           ? frame.ghost
-          : frame.fill
+          : frame.fill)
         : fillOf({ ...stat, value: last }),
       to: fillOf(stat),
       delta: same ? running.delta + delta : delta,
@@ -497,8 +497,8 @@ export class TokenLabelLayer {
         });
       g.poly(place(1, 1)).fill({ color: INK, alpha: 0.95 * f.alpha });
       if (shard.centre.x < lost)
-        g.poly(place(0.8, Math.max(0, 1 - 3 / at.h))).fill({ color: 0xff5c4d, alpha: f.alpha });
-      g.poly(place(1, 1)).stroke({ color: 0xff5c4d, width: 1.5, alpha: 0.8 * f.alpha });
+        g.poly(place(0.8, Math.max(0, 1 - 3 / at.h))).fill({ color: 0xFF_5C_4D, alpha: f.alpha });
+      g.poly(place(1, 1)).stroke({ color: 0xFF_5C_4D, width: 1.5, alpha: 0.8 * f.alpha });
     }
   }
 
@@ -516,7 +516,7 @@ export class TokenLabelLayer {
       text = new SdfText({
         font: cabin(800),
         size: 36,
-        fill: 0xffffff,
+        fill: 0xFF_FF_FF,
         outline: { color: INK, width: 5 },
         anchor: { x: 0.5, y: 1 },
       });
@@ -525,7 +525,7 @@ export class TokenLabelLayer {
     }
     const label = delta > 0 ? `+${delta}` : `${delta}`.replace("-", "\u2212");
     if (text.text !== label) text.text = label;
-    text.fill = delta < 0 ? 0xff7a6b : 0x8cf09a;
+    text.fill = delta < 0 ? 0xFF_7A_6B : 0x8C_F0_9A;
     const size = Math.max(26, Math.min(36, barH * 1.6));
     text.scale.set((size / 36) * frame.pop);
     text.alpha = frame.alpha;

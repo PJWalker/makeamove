@@ -5,8 +5,7 @@ import type { Awareness } from "y-protocols/awareness";
 import * as Y from "yjs";
 import { newId } from "../lib/ids";
 import { colourOf } from "../scene/presence";
-import { importImage, loadBlob, type PeerBlobs } from "../media/images";
-import type { BlobRef } from "../media/images";
+import { importImage, loadBlob, type PeerBlobs , BlobRef as BlobReference } from "../media/images";
 import { device } from "../platform/device";
 
 /*
@@ -77,7 +76,7 @@ export const NoteImage = Node.create<{ peers: PeerBlobs | null }>({
       const dom = document.createElement("figure");
       dom.className = "note-image";
       dom.dataset["type"] = IMAGE_NODE;
-      const { hash, width, height } = node.attrs as BlobRef;
+      const { hash, width, height } = node.attrs as BlobReference;
       // Hold the space while it loads, so text doesn't jump.
       if (width && height) {
         dom.style.aspectRatio = `${width} / ${height}`;
@@ -91,7 +90,7 @@ export const NoteImage = Node.create<{ peers: PeerBlobs | null }>({
       const load = () =>
         loadBlob(hash, peers).then((blob) => {
           if (gone || !blob || url) return;
-          // oxlint-disable-next-line react-doctor/no-create-object-url-without-revoke -- The node view revokes this URL in destroy().
+          // eslint-disable-next-line react-doctor/no-create-object-url-without-revoke -- The node view revokes this URL in destroy().
           url = URL.createObjectURL(blob);
           img.src = url;
           dom.append(img);
@@ -114,11 +113,11 @@ export const NoteImage = Node.create<{ peers: PeerBlobs | null }>({
 /** Store image files and put them in the note at a position, in order. */
 export async function insertImages(editor: Editor, files: File[], pos?: number) {
   const images = files.filter((f) => f.type.startsWith("image/"));
-  const refs = await Promise.all(images.map(importImage));
-  for (const ref of refs) {
+  const references = await Promise.all(images.map(importImage));
+  for (const reference of references) {
     if (editor.isDestroyed) return;
     const at = pos ?? editor.state.selection.to;
-    editor.chain().focus().insertContentAt(at, { type: IMAGE_NODE, attrs: ref }).run();
+    editor.chain().focus().insertContentAt(at, { type: IMAGE_NODE, attrs: reference }).run();
   }
 }
 

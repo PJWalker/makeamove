@@ -17,22 +17,22 @@ export function parseSrdMagicItems(markdown: string): ItemDef[] {
         /\b(Common|Uncommon|Rare|Very Rare|Legendary|Artifact)\b/i
           .exec(metadata)?.[1]
           ?.toLowerCase()
-          .replace(/\s+/g, "-") ?? "varies";
+          .replaceAll(/\s+/g, "-") ?? "varies";
       const category =
         /^(Weapon|Armor|Potion|Ring|Rod|Scroll|Staff|Wand|Wondrous Item)/i
           .exec(metadata)?.[1]
           ?.toLowerCase()
-          .replace(/\s+/g, "-") ?? "magic";
+          .replaceAll(/\s+/g, "-") ?? "magic";
       const description = lines
         .filter((line) => line.trim() !== metadata)
         .join("\n")
-        .replace(/<[^>]+>/g, " ")
+        .replaceAll(/<[^>]+>/g, " ")
         .trim();
       return [
         {
           id: `magic-${slug(name)}`,
           name,
-          description: `${metadata.replace(/^_|_$/g, "")}${description ? `\n${description}` : ""}`,
+          description: `${metadata.replaceAll(/^_|_$/g, "")}${description ? `\n${description}` : ""}`,
           weight: 0,
           tags: ["magic", rarity, category],
         },

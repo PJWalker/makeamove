@@ -10,18 +10,18 @@ export const text: ToolPress = (c, _e, at) => {
 };
 
 /** A request to edit text that's on the map. */
-export const editRequest = (el: TextElement) => ({ at: { x: el.x, y: el.y }, id: el.id });
+export const editRequest = (element: TextElement) => ({ at: { x: element.x, y: element.y }, id: element.id });
 
 /** Text's size laid out as it looks, scaled as it is now. */
-export function fitText(c: ToolContext, el: TextElement & Partial<TextLook>) {
-  const m = c.renderer.measureText(el);
-  const k = el.w / el.bw;
+export function fitText(c: ToolContext, element: TextElement & Partial<TextLook>) {
+  const m = c.renderer.measureText(element);
+  const k = element.w / element.bw;
   return { bw: m.w, bh: m.h, w: m.w * k, h: m.h * k };
 }
 
 /** A patch for `el`, with its size fitted to its words and style when it's text. */
-export function fitPatch<P extends object>(c: ToolContext, el: SceneElement, patch: P) {
-  return el.type === "text" ? { ...patch, ...fitText(c, { ...el, ...patch }) } : patch;
+export function fitPatch<P extends object>(c: ToolContext, element: SceneElement, patch: P) {
+  return element.type === "text" ? { ...patch, ...fitText(c, { ...element, ...patch }) } : patch;
 }
 
 /** How new text looks: in the Text tool's style and the pen's colour, sized to the grid. */

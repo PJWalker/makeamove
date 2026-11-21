@@ -55,7 +55,7 @@ export function rank(
     let s = 100 * (1 - (score ?? 0));
     if (a.mine) s += 15;
     const r = recent.indexOf(a.id);
-    if (r >= 0) s += Math.max(2, 12 - r);
+    if (r !== -1) s += Math.max(2, 12 - r);
     if (a.available !== true) s -= 30;
     return { a, s, i: registrationOrder.get(a) ?? 0 };
   });

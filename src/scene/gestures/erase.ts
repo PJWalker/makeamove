@@ -9,9 +9,9 @@ export const erase: ToolPress = (c, _e, world) => {
   const erased = new Map<string, () => void>();
   const at = (p: Point) => {
     const r = ERASER_RADIUS / c.renderer.camera.zoom;
-    for (const el of c.allElements()) {
-      if (el.type !== "drawing" || el.locked || erased.has(el.id)) continue;
-      if (hits(el, p, r)) erased.set(el.id, c.hide(el.id));
+    for (const element of c.allElements()) {
+      if (element.type !== "drawing" || element.locked || erased.has(element.id)) continue;
+      if (hits(element, p, r)) erased.set(element.id, c.hide(element.id));
     }
   };
   const showAll = () => {
@@ -25,7 +25,7 @@ export const erase: ToolPress = (c, _e, world) => {
       c.updateOverlay();
     },
     end() {
-      if (erased.size) c.scene.remove([...erased.keys()]);
+      if (erased.size > 0) c.scene.remove([...erased.keys()]);
       showAll();
     },
     cancel: showAll,

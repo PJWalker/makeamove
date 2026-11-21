@@ -144,7 +144,7 @@ export class SceneRenderer implements RenderState {
     // Ticker.system running a frame loop even when nothing is drawn.
     this.app.renderer.events.setTargetElement(null as unknown as HTMLElement);
     this.app.stage.eventMode = "none";
-    host.appendChild(this.app.canvas);
+    host.append(this.app.canvas);
     const lighting = this.lightingLayer;
     this.world.addChild(
       this.layers.map,

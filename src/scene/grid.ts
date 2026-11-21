@@ -79,8 +79,8 @@ export function hexAt(grid: Grid, p: Point): { q: number; r: number } {
 /** Corners of a pointy-topped hex, clockwise from the upper right. */
 export function hexCorners(c: Point, size: number): Point[] {
   const R = hexRadius(size);
-  return Array.from({ length: 6 }, (_, i) => {
-    const a = (Math.PI / 180) * (60 * i - 30);
+  return Array.from({ length: 6 }, (_, index) => {
+    const a = (Math.PI / 180) * (60 * index - 30);
     return { x: c.x + R * Math.cos(a), y: c.y + R * Math.sin(a) };
   });
 }

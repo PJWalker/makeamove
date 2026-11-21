@@ -22,5 +22,5 @@ export function parseEntryKey(key: string): EntryRef | undefined {
 
 function splitOnce(text: string, separator: string): [string, string] {
   const at = text.indexOf(separator);
-  return at < 0 ? [text, ""] : [text.slice(0, at), text.slice(at + 1)];
+  return at === -1 ? [text, ""] : [text.slice(0, at), text.slice(at + 1)];
 }

@@ -25,12 +25,12 @@ export class LocalDoc {
   readonly #persistence: IndexeddbPersistence | null;
   readonly #stops: (() => void)[] = [];
 
-  private constructor(dbName: string | null) {
-    this.#persistence = dbName === null ? null : new IndexeddbPersistence(dbName, this.doc);
+  private constructor(databaseName: string | null) {
+    this.#persistence = databaseName === null ? null : new IndexeddbPersistence(databaseName, this.doc);
   }
 
-  static async open(dbName: string): Promise<LocalDoc> {
-    const d = new LocalDoc(dbName);
+  static async open(databaseName: string): Promise<LocalDoc> {
+    const d = new LocalDoc(databaseName);
     await d.#persistence!.whenSynced;
     return d;
   }

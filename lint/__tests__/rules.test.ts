@@ -3,7 +3,7 @@ import { describe, it } from "vite-plus/test";
 import { cssCoLocated } from "../rules/cssCoLocated.ts";
 import { dialogTitleEllipsis } from "../rules/dialogTitleEllipsis.ts";
 import { noNativeConfirmation } from "../rules/noNativeConfirmation.ts";
-import { preferGuardHelpers } from "../rules/preferGuardHelpers.ts";
+import { preferGuardHelpers } from "../rules/prefer-guard-helpers.ts";
 import { preferNumberParsing } from "../rules/preferNumberParsing.ts";
 import { preferMotionHelpers } from "../rules/preferMotionHelpers.ts";
 import { preferReducedMotion } from "../rules/preferReducedMotion.ts";

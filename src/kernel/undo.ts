@@ -98,6 +98,6 @@ export class UndoHistory {
 }
 
 function removeLast<T>(list: T[], item: T) {
-  const i = list.lastIndexOf(item);
-  if (i >= 0) list.splice(i, 1);
+  const index = list.lastIndexOf(item);
+  if (index !== -1) list.splice(index, 1);
 }

@@ -27,11 +27,11 @@ export const selectTool = command<{ tool: ToolId }>({
   params: objectOf({ tool: isTool }),
   kind: "tool",
   title: (_, { tool }) => TOOLS.find((t) => t.id === tool)?.label ?? "Tool",
-  permission: (ctx, { tool }) =>
-    !TOOLS.find((t) => t.id === tool)?.gmOnly || ctx.isGm() || "GM only",
+  permission: (context, { tool }) =>
+    !TOOLS.find((t) => t.id === tool)?.gmOnly || context.isGm() || "GM only",
   transact: false,
   offers: () => TOOLS.map((t) => ({ params: { tool: t.id }, icon: t.Icon, keys: [t.key] })),
-  run: (ctx, { tool }) => ctx.tools.activeTool.set(tool),
+  run: (context, { tool }) => context.tools.activeTool.set(tool),
 });
 
 /** Undo or Redo: a gesture under way is dropped first, so it doesn't land on the restored state. */
@@ -44,15 +44,15 @@ const historyCommand = (
     params: isNothing,
     ...look,
     transact: false,
-    available: (ctx) =>
-      (step === "undo" ? ctx.history.canUndo.value : ctx.history.canRedo.value) ||
+    available: (context) =>
+      (step === "undo" ? context.history.canUndo.value : context.history.canRedo.value) ||
       `Nothing to ${step}`,
     offers: () => [{ params: undefined }],
     section: "arrange",
     menu: { canvas: () => [{ params: undefined }] },
-    run: (ctx) => {
-      ctx.canvas.canvasCommands.value?.controller.cancelGesture();
-      ctx.history[step]();
+    run: (context) => {
+      context.canvas.canvasCommands.value?.controller.cancelGesture();
+      context.history[step]();
     },
   });
 
@@ -71,11 +71,11 @@ export const fitToScene = command({
   keys: ["Shift+1"],
   icon: IconFit,
   transact: false,
-  available: (ctx) => !!ctx.canvas.canvasCommands.value || "Open a scene first",
+  available: (context) => !!context.canvas.canvasCommands.value || "Open a scene first",
   offers: () => [{ params: undefined }],
   section: "arrange",
   menu: { canvas: () => [{ params: undefined }] },
-  run: (ctx) => ctx.canvas.canvasCommands.value?.controller.fit(),
+  run: (context) => context.canvas.canvasCommands.value?.controller.fit(),
 });
 
 export const toggleAutohide = command({
@@ -103,7 +103,7 @@ const dialog = (
     ...look,
     offers: () => [{ params: undefined }],
     menu: { campaign: () => [{ params: undefined }] },
-    run: (ctx) => ctx.canvas.dialogRequest.set(which),
+    run: (context) => context.canvas.dialogRequest.set(which),
   });
 
 export const openSettings = dialog("settings", {
@@ -125,23 +125,23 @@ export const openHelp = dialog("help", {
 
 const isPanel = oneOf(...PANEL_ORDER);
 /** The panels this campaign has, in order. */
-const campaignPanels = (ctx: CampaignContext) =>
-  PANEL_ORDER.filter((id) => !ctx.panels.unavailablePanels.value.includes(id));
+const campaignPanels = (context: CampaignContext) =>
+  PANEL_ORDER.filter((id) => !context.panels.unavailablePanels.value.includes(id));
 
 export const showPanel = command<{ panel: PanelId }>({
   id: "panel.show",
   params: objectOf({ panel: isPanel }),
   title: (_, { panel }) => `Show ${PANELS[panel].label}`,
   transact: false,
-  available: (ctx, { panel }) =>
-    !ctx.panels.unavailablePanels.value.includes(panel) || "Not in this campaign",
-  offers: (ctx) =>
-    campaignPanels(ctx).map((id) => ({
+  available: (context, { panel }) =>
+    !context.panels.unavailablePanels.value.includes(panel) || "Not in this campaign",
+  offers: (context) =>
+    campaignPanels(context).map((id) => ({
       params: { panel: id },
       aliases: [PANELS[id].label],
       icon: PANELS[id].Icon,
     })),
-  run: (ctx, { panel }) => ctx.panels.showPanel(panel),
+  run: (context, { panel }) => context.panels.showPanel(panel),
 });
 
 /** Whether the table has a panel at all: ticked ones are in a sidebar or a window. */
@@ -151,13 +151,13 @@ export const togglePanel = command<{ panel: PanelId }>({
   title: (_, { panel }) => PANELS[panel].label,
   transact: false,
   section: "arrange",
-  checked: (ctx, { panel }) => !ctx.panels.layout.value.closed.includes(panel),
+  checked: (context, { panel }) => !context.panels.layout.value.closed.includes(panel),
   menu: {
-    campaign: (ctx) =>
-      campaignPanels(ctx).map((id) => ({ params: { panel: id }, icon: PANELS[id].Icon })),
+    campaign: (context) =>
+      campaignPanels(context).map((id) => ({ params: { panel: id }, icon: PANELS[id].Icon })),
   },
-  run: (ctx, { panel }) =>
-    ctx.panels.setPanelClosed(panel, !ctx.panels.layout.value.closed.includes(panel)),
+  run: (context, { panel }) =>
+    context.panels.setPanelClosed(panel, !context.panels.layout.value.closed.includes(panel)),
 });
 
 export const leaveCampaign = command({
@@ -177,7 +177,7 @@ export const togglePalette = command({
   title: "Command Palette",
   keys: ["Mod+K"],
   transact: false,
-  run: (ctx) => ctx.table.togglePalette(),
+  run: (context) => context.table.togglePalette(),
 });
 
 export const coreCommands = [

@@ -139,7 +139,7 @@ function formulaOf(terms: Roll["terms"]) {
   return terms
     .map(
       (term, index) =>
-        (term.sign < 0 ? "-" : index ? "+" : "") +
+        (term.sign < 0 ? "-" : (index ? "+" : "")) +
         (term.kind === "dice" ? term.notation.replace(/^1d/, "d") : term.value) +
         (term.label ? `[${term.label}]` : ""),
     )

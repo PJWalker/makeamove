@@ -12,7 +12,7 @@ import {
   revealNote,
   touchNote,
 } from "../../features/notes/api";
-import type { LinkRef } from "../../features/notes/links";
+import type { LinkRef as LinkReference } from "../../features/notes/links";
 import { arrayOf, isNothing, isString, objectOf, optional } from "../../lib/guards";
 import {
   IconDelete,
@@ -29,9 +29,9 @@ import { command } from "./types";
 /* Notes: pages, their folders, and revealing the GM's own pages to the players. */
 
 const isId = objectOf({ id: isString });
-const note = (ctx: CampaignContext, id: string) => getNote(ctx.campaign, id);
-const exists = (ctx: CampaignContext, { id }: { id: string }) =>
-  !!note(ctx, id) || "That page is gone";
+const note = (context: CampaignContext, id: string) => getNote(context.campaign, id);
+const exists = (context: CampaignContext, { id }: { id: string }) =>
+  !!note(context, id) || "That page is gone";
 
 const newPageCommand = (gmOnly: boolean) =>
   command<{ folder?: string | undefined }, string>({
@@ -43,14 +43,14 @@ const newPageCommand = (gmOnly: boolean) =>
     ...(gmOnly
       ? {
           permission: "gm" as const,
-          available: (ctx: CampaignContext) =>
-            !!ctx.campaign.vault.value || "Waiting for the vault",
+          available: (context: CampaignContext) =>
+            !!context.campaign.vault.value || "Waiting for the vault",
         }
       : {}),
     offers: () => [{ params: {} }],
-    run: (ctx, { folder }) => {
-      const id = createNote(ctx.campaign, { ...(folder ? { folder } : {}), gmOnly });
-      ctx.links.openNote(id);
+    run: (context, { folder }) => {
+      const id = createNote(context.campaign, { ...(folder ? { folder } : {}), gmOnly });
+      context.links.openNote(id);
       return id;
     },
   });
@@ -65,7 +65,7 @@ export const openPage = command<{ id: string }>({
   transact: false,
   available: exists,
   menu: { note: (_, { id }) => [{ params: { id } }] },
-  run: (ctx, { id }) => ctx.links.openNote(id),
+  run: (context, { id }) => context.links.openNote(id),
 });
 
 export const renamePage = command<{ id: string; title: string }>({
@@ -78,9 +78,9 @@ export const renamePage = command<{ id: string; title: string }>({
 });
 
 /** That a page was just edited, and what it links to now: bookkeeping alongside its text, not an edit of its own. */
-export const notePageEdited = command<{ id: string; links: LinkRef[] }>({
+export const notePageEdited = command<{ id: string; links: LinkReference[] }>({
   id: "note.touch",
-  params: objectOf({ id: isString, links: arrayOf(isString) as (v: unknown) => v is LinkRef[] }),
+  params: objectOf({ id: isString, links: arrayOf(isString) as (v: unknown) => v is LinkReference[] }),
   title: "Page Edited",
   undoGroup: false,
   run: ({ campaign }, { id, links }) => touchNote(campaign, id, links),
@@ -94,9 +94,9 @@ export const filePage = command<{ id: string; folder?: string | undefined }>({
   section: "file",
   available: exists,
   menu: {
-    note: (ctx, { id }) => {
-      const n = note(ctx, id);
-      return moveFolderOffers(id, n?.folder, listNoteFolders(ctx.campaign));
+    note: (context, { id }) => {
+      const n = note(context, id);
+      return moveFolderOffers(id, n?.folder, listNoteFolders(context.campaign));
     },
   },
   run: ({ campaign }, { id, folder }) => moveNote(campaign, id, folder),
@@ -112,8 +112,8 @@ export const revealPage = command<{ id: string }>({
   available: exists,
   // Players get their own copy, so it can't be hidden again.
   undoGroup: false,
-  confirm: (ctx, { id }) => {
-    const title = note(ctx, id)?.title || "Untitled";
+  confirm: (context, { id }) => {
+    const title = note(context, id)?.title || "Untitled";
     return {
       title: "Reveal Page",
       body: `Show ${title} to everyone? Players get their own copy, so it can’t be hidden again.`,
@@ -121,7 +121,7 @@ export const revealPage = command<{ id: string }>({
       confirmLabel: "Reveal",
     };
   },
-  menu: { note: (ctx, { id }) => (note(ctx, id)?.gmOnly ? [{ params: { id } }] : []) },
+  menu: { note: (context, { id }) => (note(context, id)?.gmOnly ? [{ params: { id } }] : []) },
   run: ({ campaign }, { id }) => revealNote(campaign, id),
 });
 
@@ -133,9 +133,9 @@ export const changePageGraphic = command<{ id: string }>({
   section: "edit",
   transact: false,
   // GM-only pages have none.
-  available: (ctx, { id }) => !note(ctx, id)?.gmOnly || "GM pages have no graphic",
-  menu: { note: (ctx, { id }) => (note(ctx, id)?.gmOnly ? [] : [{ params: { id } }]) },
-  run: (ctx, { id }) => ctx.table.editGraphic("note", id, note(ctx, id)?.title ?? ""),
+  available: (context, { id }) => !note(context, id)?.gmOnly || "GM pages have no graphic",
+  menu: { note: (context, { id }) => (note(context, id)?.gmOnly ? [] : [{ params: { id } }]) },
+  run: (context, { id }) => context.table.editGraphic("note", id, note(context, id)?.title ?? ""),
 });
 
 export const deletePage = command<{ id: string }>({
@@ -148,8 +148,8 @@ export const deletePage = command<{ id: string }>({
   available: exists,
   // Its text goes from this device too.
   undoGroup: false,
-  confirm: (ctx, { id }) => {
-    const title = note(ctx, id)?.title || "Untitled";
+  confirm: (context, { id }) => {
+    const title = note(context, id)?.title || "Untitled";
     return {
       title: "Delete Page",
       body: `Delete ${title}? It’s gone for everyone, and links to it stop working. This can’t be undone.`,

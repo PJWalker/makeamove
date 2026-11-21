@@ -63,9 +63,9 @@
     "yjs": "^13.6.33"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "@iconify-json/game-icons": "^1.2.4",
-    "@iconify-json/material-symbols": "^1.2.96",
-    "@svgr/core": "^8.1.0",
+    "@iconify-json/material-symbols": "^1.2.101",
     "@svgr/plugin-jsx": "^8.1.0",
     "@swc/core": "^1.16.22",
     "@tiptap/markdown": "3.32.0",
@@ -85,7 +85,6 @@
     "eslint-plugin-promise": "^7.2.1",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
-    "eslint-plugin-react-perf": "^3.3.3",
     "eslint-plugin-unicorn": "^59.0.1",
     "fake-indexeddb": "^6.2.6",
     "happy-dom": "^21.0.4",

@@ -41,8 +41,8 @@ export function setMorphOrigin(from: Element | DOMRect | null | undefined) {
     origin = null;
     return;
   }
-  const el = from instanceof DOMRect ? null : from;
-  origin = { rect: el?.getBoundingClientRect() ?? (from as DOMRect), el, at: performance.now() };
+  const element = from instanceof DOMRect ? null : from;
+  origin = { rect: element?.getBoundingClientRect() ?? (from as DOMRect), el: element, at: performance.now() };
 }
 
 /** Where the next pop-up should open: over the thing that spawned it, if that was just now. */
@@ -167,34 +167,34 @@ const AT_REST: Keyframe = {
 };
 
 /** Grow an element that has just appeared out of `from` (FLIP on the element). */
-export function growFrom(el: HTMLElement, from: Element | DOMRect) {
+export function growFrom(element: HTMLElement, from: Element | DOMRect) {
   if (reducedMotion.matches) return;
   const rect = from instanceof DOMRect ? from : from.getBoundingClientRect();
   if (rect.width < 1) return;
   // Skip the element's own fade-and-rise; this animation replaces it.
-  el.dataset["morph"] = "true";
-  const anim = el.animate(
+  element.dataset["morph"] = "true";
+  const anim = element.animate(
     [
-      { ...overKeyframe(el.getBoundingClientRect(), rect), opacity: 0.5 },
+      { ...overKeyframe(element.getBoundingClientRect(), rect), opacity: 0.5 },
       { opacity: 1, offset: 0.35 },
       { ...AT_REST, opacity: 1 },
     ],
     { duration: DURATION_MS, easing: EASE },
   );
-  anim.finished.catch(() => {}).finally(() => delete el.dataset["morph"]);
+  anim.finished.catch(() => {}).finally(() => delete element.dataset["morph"]);
 }
 
 /** Whether `el` is on screen to morph into. */
-function onScreen(el: Element | undefined): el is Element {
-  if (!el?.isConnected || !el.checkVisibility({ opacityProperty: true, visibilityProperty: true }))
+function onScreen(element: Element | undefined): element is Element {
+  if (!element?.isConnected || !element.checkVisibility({ opacityProperty: true, visibilityProperty: true }))
     return false;
-  const r = el.getBoundingClientRect();
+  const r = element.getBoundingClientRect();
   return r.width >= 1 && r.bottom > 0 && r.right > 0 && r.top < innerHeight && r.left < innerWidth;
 }
 
 /** What `el` was opened from, if it's still on screen to go back into. */
-function spawnerOf(el: Element): Element | null {
-  const s = spawners.get(el);
+function spawnerOf(element: Element): Element | null {
+  const s = spawners.get(element);
   return onScreen(s) ? s : null;
 }
 
@@ -207,20 +207,20 @@ const LEAVE_NAME = "popup-leave";
  * immediate; only the snapshot animates. Ignored while `el` is already leaving.
  */
 export async function leave(
-  el: HTMLElement,
+  element: HTMLElement,
   finish: () => void,
-  into: Element | null = spawnerOf(el),
+  into: Element | null = spawnerOf(element),
 ): Promise<void> {
-  if (el.style.viewTransitionName === LEAVE_NAME) return;
+  if (element.style.viewTransitionName === LEAVE_NAME) return;
   const target = onScreen(into ?? undefined) ? into : null;
-  const ownName = el.style.viewTransitionName;
-  el.style.viewTransitionName = LEAVE_NAME;
+  const ownName = element.style.viewTransitionName;
+  element.style.viewTransitionName = LEAVE_NAME;
   await withTransition(
     async () => {
-      el.style.viewTransitionName = ownName;
+      element.style.viewTransitionName = ownName;
       finish();
       // Pop-ups close at once; React unmounts others on its next render.
-      await until(() => !el.isConnected || !el.checkVisibility(), 300);
+      await until(() => !element.isConnected || !element.checkVisibility(), 300);
     },
     { rootClass: target ? "vt-leave-into" : "vt-leave", home: target },
   );

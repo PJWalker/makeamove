@@ -23,7 +23,7 @@ function useOpenCampaign(id: string | null): CampaignContext | null {
   useEffect(() => {
     if (!id) return;
     openError.value = null;
-    let ctx: CampaignContext | null = null;
+    let context: CampaignContext | null = null;
     let left = false;
     openCampaign(id)
       .then((campaign) =>
@@ -34,17 +34,17 @@ function useOpenCampaign(id: string | null): CampaignContext | null {
       )
       .then((c) => {
         if (left) return c.dispose();
-        ctx = c;
+        context = c;
         setOpen(c);
       })
-      .catch((e) => {
+      .catch((error: unknown) => {
         if (left) return;
-        openError.value = `Couldn't open that campaign: ${e}`;
+        openError.value = `Couldn't open that campaign: ${String(error)}`;
         goToCampaign(null);
       });
     return () => {
       left = true;
-      ctx?.dispose();
+      context?.dispose();
     };
   }, [id]);
   return open && !open.disposed && open.campaign.id === id ? open : null;
@@ -52,10 +52,10 @@ function useOpenCampaign(id: string | null): CampaignContext | null {
 
 export function App() {
   const id = useQuery(routeCampaignId);
-  const ctx = useOpenCampaign(id);
+  const context = useOpenCampaign(id);
   return (
     <>
-      <Screen id={id} ctx={ctx} />
+      <Screen id={id} ctx={context} />
       <Tooltip />
     </>
   );

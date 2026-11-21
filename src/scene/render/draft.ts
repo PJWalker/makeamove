@@ -51,7 +51,7 @@ export class DraftLayer {
       g.position.set(0, 0);
       g.rotation = 0;
       const { paint } = d;
-      if (!d.points.length) return;
+      if (d.points.length === 0) return;
       if (d.points.length > 2) g.poly(flat(d.points)).fill({ color: paint.fill });
       const first = d.points[0]!;
       g.moveTo(first.x, first.y);

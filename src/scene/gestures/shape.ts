@@ -96,7 +96,7 @@ export function placementPlan(c: ToolContext, fixed: Placement): DragPlan {
         template: true,
       })[0]!;
       c.placing.value = null;
-      const tokens = c.allElements().filter((el) => el.type === "token");
+      const tokens = c.allElements().filter((element) => element.type === "token");
       fixed.onPlaced({ id, covered: tokensCovered({ ...t, shape: fixed.shape }, tokens) });
     },
   };
@@ -195,14 +195,14 @@ function shapeFrom(
   // Lines and cones run from the start towards the pointer.
   const angle = Math.hypot(dx, dy) > 0 ? Math.atan2(dy, dx) : 0;
   const rot = e.shiftKey ? Math.round(angle / (Math.PI / 4)) * (Math.PI / 4) : angle;
-  const len = fixed ? fixed.length : round(Math.hypot(dx, dy));
-  const thick = shape === "cone" ? len : fixed ? fixed.width : grid.size;
+  const length = fixed ? fixed.length : round(Math.hypot(dx, dy));
+  const thick = shape === "cone" ? length : (fixed ? fixed.width : grid.size);
   return {
-    x: s.x + (Math.cos(rot) * len) / 2,
-    y: s.y + (Math.sin(rot) * len) / 2,
-    w: len,
+    x: s.x + (Math.cos(rot) * length) / 2,
+    y: s.y + (Math.sin(rot) * length) / 2,
+    w: length,
     h: thick,
     rot,
-    label: units(len),
+    label: units(length),
   };
 }

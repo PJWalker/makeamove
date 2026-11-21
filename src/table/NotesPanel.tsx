@@ -43,8 +43,8 @@ function ago(at: number) {
   const s = (Date.now() - at) / 1000;
   if (s < 60) return "just now";
   if (s < 3600) return `${Math.floor(s / 60)}m ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
-  return `${Math.floor(s / 86400)}d ago`;
+  if (s < 86_400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86_400)}d ago`;
 }
 
 /**
@@ -52,33 +52,33 @@ function ago(at: number) {
  * together. The list and the open page sit side by side, or take turns.
  */
 export function NotesPanel({ campaign }: { campaign: Campaign }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   // GM-only pages, on a GM device; watched too, so the list keeps up with them.
   const vault = useQuery(campaign.vault);
   useQuery(vault?.notes, () => null);
   const notes = useQuery(campaign.notes, () => listNotes(campaign));
   const folders = useQuery(campaign.noteFolders, () => listNoteFolders(campaign));
   // After useQuery, so it is already watching when the folders appear.
-  useEffect(() => ctx.execute(ensureDefaultNoteFolders, undefined), [ctx]);
-  const openId = useQuery(ctx.links.openNoteId);
+  useEffect(() => context.execute(ensureDefaultNoteFolders), [context]);
+  const openId = useQuery(context.links.openNoteId);
   const open = openId ? notes.find((n) => n.id === openId) : undefined;
   const split = useQuery(notesLayout.mode) === "split";
   const { level, go, show } = usePaneLevel(notesLayout, open ? "detail" : "list");
 
   // Asked to open a page (from the list, a link or elsewhere): show it.
-  const requests = useQuery(ctx.links.noteOpened);
+  const requests = useQuery(context.links.noteOpened);
   const seen = useRef(requests);
   useEffect(() => {
-    if (requests !== seen.current && ctx.links.openNoteId.value) go("detail");
+    if (requests !== seen.current && context.links.openNoteId.value) go("detail");
     seen.current = requests;
-  }, [ctx, requests, go]);
+  }, [context, requests, go]);
   // The open page was deleted: back to the list.
   useEffect(() => {
     if (openId && !open && !campaign.notes.has(openId)) {
-      ctx.links.openNoteId.set(null);
+      context.links.openNoteId.set(null);
       go("list");
     }
-  }, [ctx, openId, open, campaign.notes, go]);
+  }, [context, openId, open, campaign.notes, go]);
 
   const folder = folders.find((f) => f.id === open?.folder);
   return (
@@ -127,7 +127,7 @@ function NoteList({
   openId: string | null;
   showList: () => Promise<void>;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const [query, setQuery] = useState("");
   const needle = query.trim();
@@ -141,7 +141,7 @@ function NoteList({
   const matches = fresh ? result.matches : [];
   const searching = !!needle && !fresh;
   // GM pages need the vault, which a GM device opens once the campaign has loaded.
-  const gmPages = useQuery(campaign.vault, () => ctx.commands.check(newGmPage, {}) === true);
+  const gmPages = useQuery(campaign.vault, () => context.commands.check(newGmPage, {}) === true);
   useEffect(() => {
     if (!needle) return;
     let cancelled = false;
@@ -149,7 +149,7 @@ function NoteList({
       const found = await searchNotes(campaign, needle, () => cancelled);
       if (!cancelled) setResult({ needle, notes, matches: found });
     };
-    const timer = window.setTimeout(() => void search(), 180);
+    const timer = globalThis.setTimeout(() => void search(), 180);
     return () => {
       cancelled = true;
       clearTimeout(timer);
@@ -157,10 +157,10 @@ function NoteList({
   }, [campaign, notes, needle]);
 
   const row = (n: NoteView) => {
-    const dragged = entity(ctx, "note", n.id, n.title);
-    dragged.folder = (folder) => void ctx.execute(filePage, { id: n.id, folder });
+    const dragged = entity(context, "note", n.id, n.title);
+    dragged.folder = (folder) => void context.execute(filePage, { id: n.id, folder });
     const trigger = menuTrigger((x, y) =>
-      setMenu({ x, y, items: menuFor(ctx, { kind: "note", id: n.id }) }),
+      setMenu({ x, y, items: menuFor(context, { kind: "note", id: n.id }) }),
     );
     return (
       <ListRow
@@ -170,11 +170,11 @@ function NoteList({
         tag={n.gmOnly ? "GM" : null}
         meta={ago(n.updatedAt)}
         selected={n.id === openId}
-        onPick={() => ctx.links.openNote(n.id)}
+        onPick={() => context.links.openNote(n.id)}
         pick={{
           onPointerDown: (e) => {
             trigger.onPointerDown(e);
-            dragEntity(ctx.canvas, e, dragged);
+            dragEntity(context.canvas, e, dragged);
           },
           onContextMenu: trigger.onContextMenu,
         }}
@@ -198,7 +198,7 @@ function NoteList({
           <div className="panel-scroll notes-search-results">
             {searching ? (
               <p className="empty">Searching notes…</p>
-            ) : matches.length ? (
+            ) : (matches.length > 0 ? (
               <List>
                 {matches.map((match) => (
                   <ListRow
@@ -209,19 +209,19 @@ function NoteList({
                     tag={match.note.gmOnly ? "GM" : null}
                     selected={match.note.id === openId}
                     onPick={() => {
-                      ctx.links.noteSearchTarget.set(
+                      context.links.noteSearchTarget.set(
                         match.from === undefined
                           ? null
                           : { noteId: match.note.id, from: match.from, to: match.to! },
                       );
-                      ctx.links.openNote(match.note.id);
+                      context.links.openNote(match.note.id);
                     }}
                   />
                 ))}
               </List>
             ) : (
               <p className="empty">Nothing matches “{needle}”.</p>
-            )}
+            ))}
           </div>
         ) : (
           <FolderTree
@@ -233,7 +233,7 @@ function NoteList({
             renderItem={row}
             renderActions={(newFolder) => (
               <>
-                <Button icon={IconAdd} onClick={() => ctx.execute(newPage, {})}>
+                <Button icon={IconAdd} onClick={() => context.execute(newPage, {})}>
                   New Page
                 </Button>
                 {gmPages && (
@@ -241,7 +241,7 @@ function NoteList({
                     variant="ghost"
                     icon={IconSecret}
                     title="Only you can see it, until you reveal it"
-                    onClick={() => ctx.execute(newGmPage, {})}
+                    onClick={() => context.execute(newGmPage, {})}
                   >
                     New GM Page
                   </Button>
@@ -254,7 +254,7 @@ function NoteList({
             tree="note"
             folderCommands={noteFolders}
             showList={showList}
-            emptyContent={!notes.length ? <p className="empty-inline">No pages yet.</p> : null}
+            emptyContent={notes.length === 0 ? <p className="empty-inline">No pages yet.</p> : null}
           />
         )}
       </div>
@@ -274,12 +274,12 @@ function NotePage({
   notes: NoteView[];
   active: boolean;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const linkedFrom = backlinks(campaign, `note:${note.id}`);
-  const titleRef = useRef<HTMLInputElement>(null);
+  const titleReference = useRef<HTMLInputElement>(null);
   // A brand-new page starts with its title ready to type.
   useLayoutEffect(() => {
-    if (!getNote(campaign, note.id)?.title || note.title === "Untitled") titleRef.current?.focus();
+    if (!getNote(campaign, note.id)?.title || note.title === "Untitled") titleReference.current?.focus();
   }, [campaign, note.id, note.title]);
 
   return (
@@ -292,7 +292,7 @@ function NotePage({
             <Button
               variant="ghost"
               onClick={(e) =>
-                morphOpen(e.currentTarget, () => invoke(ctx, revealPage, { id: note.id }))
+                morphOpen(e.currentTarget, () => invoke(context, revealPage, { id: note.id }))
               }
             >
               Reveal to Players…
@@ -300,12 +300,12 @@ function NotePage({
           </p>
         )}
         <CommitInput
-          ref={titleRef}
+          ref={titleReference}
           className="title"
           aria-label="Title"
           placeholder="Untitled"
           value={note.title === "Untitled" ? "" : note.title}
-          onCommit={(title) => ctx.execute(renamePage, { id: note.id, title })}
+          onCommit={(title) => context.execute(renamePage, { id: note.id, title })}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               (
@@ -326,7 +326,7 @@ function NotePage({
                   key={n.id}
                   lead={<IconNotes size={22} />}
                   name={notes.find((k) => k.id === n.id)?.title ?? n.title}
-                  onPick={() => ctx.links.openNote(n.id)}
+                  onPick={() => context.links.openNote(n.id)}
                 />
               ))}
             </List>

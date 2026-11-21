@@ -1,4 +1,4 @@
-import type { BlobRef, EntityGraphic, EntityGraphicRef } from "../media/images";
+import type { BlobRef as BlobReference, EntityGraphic, EntityGraphicRef } from "../media/images";
 
 /*
  * Scene elements as plain values. Each is stored as a Y.Map of these fields
@@ -31,7 +31,7 @@ interface Base extends Transform {
 
 export interface MapElement extends Base {
   type: "map";
-  image: BlobRef;
+  image: BlobReference;
 }
 
 /**
@@ -47,7 +47,7 @@ export const TOKEN_STYLES: { id: TokenStyle; label: string }[] = [
 
 export interface TokenElement extends Base {
   type: "token";
-  image?: BlobRef;
+  image?: BlobReference;
   graphic?: EntityGraphic;
   entityRef?: EntityGraphicRef;
   /** A bundled entry icon, rendered when the token has no image. */
@@ -68,8 +68,8 @@ export interface TokenElement extends Base {
 }
 
 /** A token is only drawn plain if it has an image to show. */
-export const isPlainToken = (el: SceneElement) =>
-  el.type === "token" && el.style === "plain" && (!!el.image || el.graphic?.kind === "image");
+export const isPlainToken = (element: SceneElement) =>
+  element.type === "token" && element.style === "plain" && (!!element.image || element.graphic?.kind === "image");
 
 export interface DrawingElement extends Base {
   type: "drawing";
@@ -141,9 +141,9 @@ export interface TextStyle {
 export function sharedTextStyle(els: readonly TextStyle[]): Partial<TextStyle> {
   const font = els[0]?.font;
   return {
-    ...(font && els.every((el) => el.font === font) && { font }),
-    bold: els.every((el) => el.bold),
-    italic: els.every((el) => el.italic),
+    ...(font && els.every((element) => element.font === font) && { font }),
+    bold: els.every((element) => element.bold),
+    italic: els.every((element) => element.italic),
   };
 }
 

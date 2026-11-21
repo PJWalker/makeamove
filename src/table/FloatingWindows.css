@@ -189,6 +189,32 @@
       opacity: 0.6;
     }
   }
+  /*
+   * On a phone, windows (pulled-out panels and docked windows such as
+   * character sheets) fill the screen below the toolbar, stacked like sheets,
+   * overriding the geometry they keep for larger screens.
+   */
+  @media (max-width: 600px) {
+    :is(.floating-window, .dialog.window[data-window-id]) {
+      inset: var(--dock-top-height, 48px) 0 0 !important;
+      width: auto !important;
+      height: auto !important;
+      min-width: 0;
+      max-width: none;
+      max-height: none;
+      & :is(.win-resize, .resize-grip) {
+        display: none;
+      }
+      & .window-header {
+        cursor: default;
+      }
+    }
+    :is(.floating-window, .dialog.window[data-window-id])[data-rolled="true"] {
+      bottom: auto !important;
+      width: auto !important;
+      max-width: none;
+    }
+  }
   @media (prefers-reduced-motion: reduce) {
     .drag-tab,
     .floating-window[data-morph] {

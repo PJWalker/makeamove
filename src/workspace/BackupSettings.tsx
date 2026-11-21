@@ -12,16 +12,21 @@ const time = new Intl.DateTimeFormat(undefined, { timeStyle: "short" });
 
 function folderStatus(s: FolderBackupState): string {
   switch (s.state) {
-    case "off":
+    case "off": {
       return "Not backing up to a folder.";
-    case "paused":
+    }
+    case "paused": {
       return `Paused. ${s.folder} needs permission again.`;
-    case "saving":
+    }
+    case "saving": {
       return `Saving to ${s.folder}…`;
-    case "saved":
+    }
+    case "saved": {
       return `Saved to ${s.folder} at ${time.format(s.savedAt)}.`;
-    case "failed":
+    }
+    case "failed": {
       return `Couldn't save to ${s.folder}: ${s.error}`;
+    }
   }
 }
 
@@ -36,8 +41,8 @@ export function BackupSettings({ campaign }: { campaign: Campaign }) {
     setBusy(true);
     try {
       await act();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+    } catch (error_) {
+      setError(error_ instanceof Error ? error_.message : String(error_));
     } finally {
       setBusy(false);
     }

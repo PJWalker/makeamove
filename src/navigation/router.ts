@@ -18,13 +18,13 @@ function readHash() {
   const invite = parseInvite(location.hash);
   if (invite) {
     pendingInvite.value = invite;
-    history.replaceState(null, "", location.pathname + location.search + "#/");
+    history.replaceState(null, "", `${location.pathname + location.search}#/`);
   }
   routeCampaignId.value = campaignIdFromHash();
 }
 
 readHash();
-window.addEventListener("hashchange", readHash);
+globalThis.addEventListener("hashchange", readHash);
 
 /** The campaign's row in the lobby list, if it's on the page. */
 const rowOf = (id: string) =>

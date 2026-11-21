@@ -1,5 +1,5 @@
 import { cellOr, type Grid, type Point, snapPoint, snapSize } from "./grid";
-import type { BlobRef, EntityGraphic, EntityGraphicRef } from "../media/images";
+import type { BlobRef as BlobReference, EntityGraphic, EntityGraphicRef } from "../media/images";
 import type { NewElement, SceneElement, TokenStyle } from "./types";
 
 /*
@@ -11,7 +11,7 @@ export interface TokenSpec {
   name: string;
   colour: string;
   style: TokenStyle;
-  image?: BlobRef | undefined;
+  image?: BlobReference | undefined;
   icon?: string | undefined;
   itemDefId?: string | undefined;
   characterId?: string | undefined;
@@ -72,7 +72,7 @@ export function newToken(grid: Grid, at: Point, spec: TokenSpec): NewElement {
  */
 export function imageElement(
   grid: Grid,
-  image: BlobRef,
+  image: BlobReference,
   fileName: string,
   at: Point,
   token: { colour: string; style: TokenStyle },
@@ -97,16 +97,16 @@ export function imageElement(
  * it's already that, or has no image.
  */
 export function conversion(
-  el: SceneElement,
+  element: SceneElement,
   to: "map" | "token",
   grid: Grid,
   token: { colour: string; style: TokenStyle },
 ): Partial<SceneElement> | null {
-  if (el.type === to || !("image" in el) || !el.image) return null;
-  const image = el.image;
+  if (element.type === to || !("image" in element) || !element.image) return null;
+  const image = element.image;
   if (to === "token") {
-    const size = snapSize(grid, Math.min(el.w, el.h, grid.size));
-    const p = snapPoint(grid, el, Math.round(size / grid.size));
+    const size = snapSize(grid, Math.min(element.w, element.h, grid.size));
+    const p = snapPoint(grid, element, Math.round(size / grid.size));
     return {
       type: "token",
       name: "",
@@ -117,7 +117,7 @@ export function conversion(
       rot: 0,
     };
   }
-  const k = el.w / Math.max(image.width, image.height);
+  const k = element.w / Math.max(image.width, image.height);
   return {
     type: "map",
     name: undefined,
@@ -132,7 +132,7 @@ export function conversion(
 function tokenName(file: string): string {
   const base = file
     .replace(/\.[^.]+$/, "")
-    .replace(/[-_]+/g, " ")
+    .replaceAll(/[-_]+/g, " ")
     .trim();
   return base ? base.charAt(0).toUpperCase() + base.slice(1) : "";
 }

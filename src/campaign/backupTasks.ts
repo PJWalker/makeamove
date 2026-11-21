@@ -8,13 +8,13 @@ import {
   decodeBackup,
   encodeBackup,
   isGmBackup,
-  mergeStoredDoc,
+  mergeStoredDoc as mergeStoredDocument,
   metaOf,
   readBlobs,
   snapshotCampaign,
   type CampaignBackup,
   type BackupDevice,
-  type DocSnapshot,
+  type DocSnapshot as DocumentSnapshot,
 } from "./backupFormat";
 import type { BackupResult, BackupTask, ImportSummary } from "./backupWorkerProtocol";
 
@@ -46,9 +46,9 @@ async function importBackup(
   const open = new Set(live);
   const claim = gm ? (root: Y.Doc) => claimGm(root, device, backup.exportedBy) : undefined;
   const merges: Promise<void>[] = [];
-  for (const doc of backup.docs)
-    if (!open.has(doc.guid))
-      merges.push(mergeStoredDoc(doc, doc.kind === "campaign" ? claim : undefined));
+  for (const document of backup.docs)
+    if (!open.has(document.guid))
+      merges.push(mergeStoredDocument(document, document.kind === "campaign" ? claim : undefined));
   await Promise.all(merges);
   const { roomKey, createdAt } = metaOf(backup.docs, backup.campaignId);
   return {
@@ -92,14 +92,14 @@ async function mergeFolder(
 
 /** What a folder's last save left there, so the next only re-reads what changed. */
 interface FolderState {
-  snapshots: Map<string, DocSnapshot>;
+  snapshots: Map<string, DocumentSnapshot>;
   /** Images already in the folder. */
   onDisk: Set<string>;
 }
 const folders = new Map<string, FolderState>();
 
 /** Every image the documents use. */
-const hashesOf = (docs: DocSnapshot[]) => new Set(docs.flatMap((d) => [...d.hashes]));
+const hashesOf = (docs: DocumentSnapshot[]) => new Set(docs.flatMap((d) => [...d.hashes]));
 
 async function saveFolder(task: Extract<BackupTask, { type: "saveFolder" }>) {
   const { dir, campaignId, device, role, changed } = task;
@@ -140,18 +140,21 @@ export async function runBackupTask(task: BackupTask): Promise<BackupResult> {
       const backup = assembleBackup(task.campaignId, task.device, docs, blobs);
       return { type: "export", file: await encodeBackup(backup) };
     }
-    case "import":
+    case "import": {
       return {
         type: "import",
         imported: await importBackup(await decodeBackup(task.file), task.device, task.live),
       };
-    case "mergeFolder":
+    }
+    case "mergeFolder": {
       return {
         type: "mergeFolder",
         imported: await mergeFolder(task.dir, task.campaignId, task.device, task.live),
       };
-    case "saveFolder":
+    }
+    case "saveFolder": {
       await saveFolder(task);
       return { type: "saveFolder" };
+    }
   }
 }

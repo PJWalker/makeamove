@@ -1,5 +1,5 @@
 import { DEFAULT_GRID, DIAGONAL_RULES, GRID_TYPES, MIN_GRID_SIZE } from "../scene/grid";
-import type { SceneDoc } from "../scene/sceneDoc";
+import type { SceneDoc as SceneDocument , SceneLighting } from "../scene/sceneDoc";
 import { DEFAULT_CANVAS_COLOUR, type Campaign } from "../campaign/campaign";
 import { useQuery } from "../ui/useQuery";
 import { ColourPicker } from "../ui/ColourPicker";
@@ -9,10 +9,9 @@ import { canvasColour } from "../workspace/canvasState";
 import { useCampaign } from "../workspace/campaignContext";
 import { setGrid, setLighting, updateScene } from "../workspace/commands/scenes";
 import { can } from "../workspace/commands/views";
-import type { SceneLighting } from "../scene/sceneDoc";
 import type { Grid } from "../scene/grid";
 
-const num = (v: string, fallback: number) =>
+const number_ = (v: string, fallback: number) =>
   Number.isFinite(Number.parseFloat(v)) ? Number.parseFloat(v) : fallback;
 
 export function SceneSettingsFields({
@@ -23,18 +22,18 @@ export function SceneSettingsFields({
 }: {
   campaign: Campaign;
   sceneId: string;
-  scene: SceneDoc;
+  scene: SceneDocument;
   showHeading?: boolean;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const grid = useQuery(scene.settings, () => scene.grid());
   const lighting = useQuery(scene.settings, () => scene.lighting());
   const view = useQuery(campaign.scenes, () => campaign.sceneViews().find((s) => s.id === sceneId));
-  const editable = can(ctx, setGrid, { id: sceneId, patch: {} });
-  const setGridOf = (patch: Partial<Grid>) => ctx.execute(setGrid, { id: sceneId, patch });
+  const editable = can(context, setGrid, { id: sceneId, patch: {} });
+  const setGridOf = (patch: Partial<Grid>) => context.execute(setGrid, { id: sceneId, patch });
   const setLightingOf = (patch: Partial<SceneLighting>) =>
-    ctx.execute(setLighting, { id: sceneId, patch });
-  const mapColour = useQuery(ctx.canvas.activeMapColour);
+    context.execute(setLighting, { id: sceneId, patch });
+  const mapColour = useQuery(context.canvas.activeMapColour);
   const shown = view ? canvasColour(view, mapColour) : DEFAULT_CANVAS_COLOUR;
   const auto = !view?.canvasColour;
 
@@ -64,7 +63,7 @@ export function SceneSettingsFields({
               disabled={!editable || grid.type === "none"}
               onChange={(e) =>
                 setGridOf({
-                  size: Math.max(MIN_GRID_SIZE, num(e.currentTarget.value, DEFAULT_GRID.size)),
+                  size: Math.max(MIN_GRID_SIZE, number_(e.currentTarget.value, DEFAULT_GRID.size)),
                 })
               }
             />
@@ -76,7 +75,7 @@ export function SceneSettingsFields({
               step={1}
               value={grid.offsetX}
               disabled={!editable || grid.type === "none"}
-              onChange={(e) => setGridOf({ offsetX: num(e.currentTarget.value, 0) })}
+              onChange={(e) => setGridOf({ offsetX: number_(e.currentTarget.value, 0) })}
             />
           </label>
           <label className="field">
@@ -86,7 +85,7 @@ export function SceneSettingsFields({
               step={1}
               value={grid.offsetY}
               disabled={!editable || grid.type === "none"}
-              onChange={(e) => setGridOf({ offsetY: num(e.currentTarget.value, 0) })}
+              onChange={(e) => setGridOf({ offsetY: number_(e.currentTarget.value, 0) })}
             />
           </label>
         </div>
@@ -101,7 +100,7 @@ export function SceneSettingsFields({
               disabled={!editable}
               onChange={(e) =>
                 setGridOf({
-                  unit: Math.max(0, num(e.currentTarget.value, DEFAULT_GRID.unit)),
+                  unit: Math.max(0, number_(e.currentTarget.value, DEFAULT_GRID.unit)),
                 })
               }
             />
@@ -147,7 +146,7 @@ export function SceneSettingsFields({
               ]}
               disabled={!editable}
               onChange={(v) =>
-                ctx.execute(updateScene, {
+                context.execute(updateScene, {
                   id: sceneId,
                   patch: { canvasColour: v === "auto" ? null : shown },
                 })
@@ -158,7 +157,7 @@ export function SceneSettingsFields({
               value={shown}
               disabled={!editable}
               onChange={(next) =>
-                ctx.execute(updateScene, { id: sceneId, patch: { canvasColour: next } })
+                context.execute(updateScene, { id: sceneId, patch: { canvasColour: next } })
               }
             />
           </span>

@@ -67,6 +67,9 @@ export function macroPlugins(): Plugin[] {
 }
 
 export default defineConfig({
+  staged: {
+    "*": "vp check --fix",
+  },
   lint: {
     options: {
       typeAware: true,
@@ -298,7 +301,7 @@ export default defineConfig({
           ],
           "makeamove/prefer-reduced-motion": "error",
           "makeamove/test-structure": "error",
-      "makeamove/title-case": [
+          "makeamove/title-case": [
             "error",
             {
               jsx: { Button: ["label", "children"], Dialog: ["title"], LobbyModal: ["title"] },

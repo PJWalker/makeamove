@@ -3,10 +3,11 @@ import type { ReactNode } from "react";
 import { forwardRef } from "react";
 import { mergeProps, useButton, useObjectRef } from "react-aria";
 import type { Icon } from "./icons";
+import { isString } from "../lib/guards";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger" | "icon";
 
-type Props = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "size"> & {
+type Properties = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "size"> & {
   [attribute: `data-${string}`]: string | number | boolean | undefined;
   variant?: Variant;
   /** Accessible name; required for icon-only buttons and shown as a tooltip. */
@@ -21,7 +22,7 @@ type Props = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "size"> & {
   children?: ReactNode;
 };
 
-export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
+export const Button = forwardRef<HTMLButtonElement, Properties>(function Button(
   {
     variant = "secondary",
     label,
@@ -31,26 +32,26 @@ export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
     children,
     onClick,
     ...rest
-  }: Props,
-  forwardedRef,
+  }: Properties,
+  forwardedReference,
 ) {
-  const ref = useObjectRef(forwardedRef);
+  const reference = useObjectRef(forwardedReference);
   const { buttonProps } = useButton(
     {
       type: rest.type ?? "button",
       ...(onClick
         ? { onClick: (event) => onClick(event as React.MouseEvent<HTMLButtonElement>) }
         : {}),
-      ...(rest.disabled !== undefined ? { isDisabled: rest.disabled } : {}),
+      ...(rest.disabled === undefined ? {} : { isDisabled: rest.disabled }),
     },
-    ref,
+    reference,
   );
   const classes = ["btn", `btn-${variant}`, className].filter(Boolean).join(" ");
-  const name = label ?? (ButtonIcon && typeof children === "string" ? children : undefined);
+  const name = label ?? (ButtonIcon && isString(children) ? children : undefined);
   return (
     <button
       {...mergeProps(buttonProps, rest)}
-      ref={ref}
+      ref={reference}
       type={rest.type ?? "button"}
       className={classes}
       aria-label={rest["aria-label"] ?? (variant === "icon" || ButtonIcon ? name : undefined)}

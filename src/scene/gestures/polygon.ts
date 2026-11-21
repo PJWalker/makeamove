@@ -52,7 +52,7 @@ export class PolygonDraft {
       this.finish();
       return;
     }
-    const last = pts[pts.length - 1];
+    const last = pts.at(-1);
     if (!last || last.x !== p.x || last.y !== p.y) pts.push(p);
     this.preview(world, e);
   }

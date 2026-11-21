@@ -28,14 +28,14 @@ export function PanelActionsProvider({ children }: { children: ReactNode }) {
 export function PanelActionsSlot() {
   const context = useContext(PanelActionsContext);
   const row = context?.target;
-  const slotRef = useRef<HTMLDivElement>(null);
+  const slotReference = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const slot = slotRef.current;
+    const slot = slotReference.current;
     const header = slot?.parentElement;
     if (!slot || !header || !row) return;
     // Measured with the labels showing, then compacted only if they overflow.
     const fit = () => {
-      slot.removeAttribute("data-compact");
+      delete slot.dataset.compact;
       slot.toggleAttribute("data-compact", row.offsetWidth > slot.clientWidth);
     };
     // The header for the room there is, the row for what's in it.
@@ -45,7 +45,7 @@ export function PanelActionsSlot() {
     return () => observer.disconnect();
   }, [row]);
   return (
-    <div className="panel-actions" ref={slotRef}>
+    <div className="panel-actions" ref={slotReference}>
       <div className="panel-actions-row" ref={context?.setTarget} />
     </div>
   );

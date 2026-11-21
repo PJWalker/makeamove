@@ -47,25 +47,25 @@ export class OverlayLayer {
     const { selected, handles, group, marquee, eraser } = o;
     const cam = s.camera;
 
-    for (const el of selected) {
-      const t = s.previews.get(el.id) ?? el;
-      if ((el.type === "token" && !isPlainToken(el)) || el.type === "light") {
+    for (const element of selected) {
+      const t = s.previews.get(element.id) ?? element;
+      if ((element.type === "token" && !isPlainToken(element)) || element.type === "light") {
         const c = toScreen(cam, t);
         g.circle(c.x, c.y, (Math.min(t.w, t.h) / 2) * cam.zoom + 3);
       } else {
         g.poly(screenCorners(t, cam));
       }
       g.stroke({
-        color: el.locked ? 0xffffff : ACCENT,
-        alpha: el.locked ? 0.5 : 1,
+        color: element.locked ? 0xFF_FF_FF : ACCENT,
+        alpha: element.locked ? 0.5 : 1,
         width: 2,
       });
     }
 
     const selectedElement = selected.length === 1 ? selected[0]! : undefined;
     if (handles && selectedElement?.type === "light") {
-      const el = selectedElement;
-      const light = { ...el, ...s.previews.get(el.id) } as typeof el;
+      const element = selectedElement;
+      const light = { ...element, ...s.previews.get(element.id) } as typeof element;
       const c = toScreen(cam, light);
       for (const r of [light.bright, light.dim]) {
         g.circle(c.x, c.y, r * cam.zoom).stroke({
@@ -77,8 +77,8 @@ export class OverlayLayer {
       for (const { at } of lightHandles(light, cam)) g.circle(at.x, at.y, HANDLE_SIZE / 2 + 1);
       g.fill(ACCENT).stroke({ color: INK, width: 1.5 });
     } else if (handles && selected.length === 1) {
-      const el = selected[0]!;
-      const t = s.previews.get(el.id) ?? el;
+      const element = selected[0]!;
+      const t = s.previews.get(element.id) ?? element;
       const points = screenCorners(t, cam);
       const knob = drawKnobStem(g, t, points, cam);
       for (const p of points) {
@@ -110,7 +110,7 @@ export class OverlayLayer {
     if (eraser) {
       const c = toScreen(cam, eraser.p);
       g.circle(c.x, c.y, eraser.r * cam.zoom).stroke({
-        color: 0xffffff,
+        color: 0xFF_FF_FF,
         alpha: 0.7,
         width: 1.5,
       });

@@ -9,7 +9,7 @@ import { Button } from "../ui/Button";
 import { OptionPicker } from "../ui/OptionPicker";
 import { CharacterText } from "./CharacterText";
 import { CharacterName, Counter, MoveList, TokenChip } from "./sheetParts";
-import { signedStr } from "./actionPresentation";
+import { signedStr as signedString } from "./actionPresentation";
 import { useCampaign } from "./campaignContext";
 import { roll } from "./commands/chat";
 import { setData, setLearned, setModifier, setNpcField, startMove } from "./commands/characters";
@@ -27,7 +27,7 @@ export type SectionContext = {
 
 /** The section of a given kind. */
 type Of<K extends SheetSection["kind"]> = Extract<SheetSection, { kind: K }>;
-type SectionProps<K extends SheetSection["kind"]> = SectionContext & { section: Of<K> };
+type SectionProperties<K extends SheetSection["kind"]> = SectionContext & { section: Of<K> };
 
 /** A titled block of the sheet. */
 function Block({
@@ -49,7 +49,7 @@ function Block({
 }
 
 export function HeaderSection({ campaign, system, c, editable }: SectionContext) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const classChoice =
     c.kind === "pc"
       ? choicesAt(system.creation, "create", c.data).find((choice) => choice.field === CLASS_FIELD)
@@ -66,7 +66,7 @@ export function HeaderSection({ campaign, system, c, editable }: SectionContext)
             options={classChoice.options}
             value={String(c.data[CLASS_FIELD] ?? "")}
             disabled={!editable}
-            onChange={(id) => ctx.execute(setData, { id: c.id, key: CLASS_FIELD, value: id })}
+            onChange={(id) => context.execute(setData, { id: c.id, key: CLASS_FIELD, value: id })}
           />
         )}
       </div>
@@ -74,19 +74,19 @@ export function HeaderSection({ campaign, system, c, editable }: SectionContext)
   );
 }
 
-export function ChoicesSection({ system, c, editable, section }: SectionProps<"choices">) {
-  const ctx = useCampaign();
+export function ChoicesSection({ system, c, editable, section }: SectionProperties<"choices">) {
+  const context = useCampaign();
   const rank = Number(
     system.creation?.advancementField ? c.data[system.creation.advancementField] : 0,
   );
   const sectionChoices = section.choices ? new Set(section.choices) : undefined;
   const choices = [
     ...choicesAt(system.creation, "create", c.data),
-    ...Array.from({ length: rank }, (_, i) => choicesAt(system.creation, i + 1, c.data)).flat(),
+    ...Array.from({ length: rank }, (_, index) => choicesAt(system.creation, index + 1, c.data)).flat(),
   ].filter(
     (choice) => choice.field !== CLASS_FIELD && (!sectionChoices || sectionChoices.has(choice.id)),
   );
-  if (!choices.length) return null;
+  if (choices.length === 0) return null;
   return (
     <Block label="Character choices">
       {choices.map((choice) => (
@@ -96,7 +96,7 @@ export function ChoicesSection({ system, c, editable, section }: SectionProps<"c
           options={choice.options}
           value={String(c.data[choice.field] ?? "")}
           disabled={!editable}
-          onChange={(id) => ctx.execute(setData, { id: c.id, key: choice.field, value: id })}
+          onChange={(id) => context.execute(setData, { id: c.id, key: choice.field, value: id })}
         />
       ))}
     </Block>
@@ -113,10 +113,10 @@ function DataField({
   item: Of<"fields">["items"][number];
   editable: boolean;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const change = (typed: string) => {
     if (item.type !== "number") {
-      ctx.execute(setData, { id: c.id, key: item.field, value: typed });
+      context.execute(setData, { id: c.id, key: item.field, value: typed });
       return;
     }
     const value = parseInputNumber(typed);
@@ -124,7 +124,7 @@ function DataField({
       value !== undefined &&
       (item.min === undefined || value >= item.min) &&
       (item.max === undefined || value <= item.max);
-    if (inBounds) ctx.execute(setData, { id: c.id, key: item.field, value });
+    if (inBounds) context.execute(setData, { id: c.id, key: item.field, value });
   };
   return (
     <label className="field">
@@ -141,7 +141,7 @@ function DataField({
   );
 }
 
-export function FieldsSection({ c, editable, section }: SectionProps<"fields">) {
+export function FieldsSection({ c, editable, section }: SectionProperties<"fields">) {
   return (
     <Block label={section.label ?? "Character details"} heading={section.label ?? "Details"}>
       {section.items.map((item) => (
@@ -173,9 +173,9 @@ export function DerivedEntry({
 
 /** A derived value, or a die to roll when it is one. */
 function DerivedStat({ item, d }: { item: Of<"derived">["items"][number]; d: Derived }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const value = (id: string) => d.values[id] ?? 0;
-  const plus = item.plus && value(item.plus) ? signedStr(value(item.plus)) : "";
+  const plus = item.plus && value(item.plus) ? signedString(value(item.plus)) : "";
   return (
     <DerivedEntry
       label={item.label}
@@ -189,7 +189,7 @@ function DerivedStat({ item, d }: { item: Of<"derived">["items"][number]; d: Der
           title={`Roll ${item.label}`}
           aria-label={`Roll ${item.label}`}
           onClick={() =>
-            void ctx.execute(roll, {
+            void context.execute(roll, {
               formula: `d${value(item.value)}${plus}`,
               visibility: "public",
               comment: item.label,
@@ -209,7 +209,7 @@ function DerivedStat({ item, d }: { item: Of<"derived">["items"][number]; d: Der
   );
 }
 
-export function DerivedSection({ d, section }: SectionProps<"derived">) {
+export function DerivedSection({ d, section }: SectionProperties<"derived">) {
   return (
     <section className="form-section sheet-derived-group" aria-label="Combat">
       <h3 className="sheet-heading">Combat</h3>
@@ -222,8 +222,8 @@ export function DerivedSection({ d, section }: SectionProps<"derived">) {
   );
 }
 
-export function ModifiersSection({ system, c, editable, section }: SectionProps<"modifiers">) {
-  const ctx = useCampaign();
+export function ModifiersSection({ system, c, editable, section }: SectionProperties<"modifiers">) {
+  const context = useCampaign();
   return (
     <Block label={section.label}>
       <div className="sheet-vitals">
@@ -234,7 +234,7 @@ export function ModifiersSection({ system, c, editable, section }: SectionProps<
             value={c.modifiers[m.id] ?? 0}
             disabled={!editable}
             onChange={(by) =>
-              ctx.execute(setModifier, {
+              context.execute(setModifier, {
                 id: c.id,
                 modifier: m.id,
                 value: (c.modifiers[m.id] ?? 0) + by,
@@ -254,8 +254,8 @@ export function ActionsSection({
   d,
   editable,
   section,
-}: SectionProps<"actions">) {
-  const ctx = useCampaign();
+}: SectionProperties<"actions">) {
+  const context = useCampaign();
   return (
     <Block label={section.label} data-move-drop={editable ? c.id : undefined}>
       <MoveList
@@ -263,11 +263,11 @@ export function ActionsSection({
         system={system}
         moves={actionsFor(c, system, d)}
         ownerId={c.id}
-        onMake={(m) => ctx.execute(startMove, { characterId: c.id, move: m.id })}
+        onMake={(m) => context.execute(startMove, { characterId: c.id, move: m.id })}
         learned={c.learned}
         onForget={
           editable
-            ? (m) => ctx.execute(setLearned, { id: c.id, action: m.id, known: false })
+            ? (m) => context.execute(setLearned, { id: c.id, action: m.id, known: false })
             : undefined
         }
       />
@@ -297,7 +297,7 @@ export function NpcField({
   field: GameSystem["npcFields"][number];
   editable: boolean;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   if (f.type === "longtext")
     return (
       <CharacterText
@@ -317,7 +317,7 @@ export function NpcField({
           value={c.fields[f.id]}
           disabled={!editable}
           onChange={(e) =>
-            ctx.execute(setNpcField, {
+            context.execute(setNpcField, {
               id: c.id,
               field: f.id,
               value:
@@ -329,7 +329,7 @@ export function NpcField({
           <Button
             variant="secondary"
             onClick={() =>
-              void ctx.execute(roll, {
+              void context.execute(roll, {
                 formula: String(c.fields[f.id]),
                 visibility: "public",
                 comment: f.label,
@@ -350,7 +350,7 @@ export function NpcFieldsSection({
   c,
   editable,
   section,
-}: SectionProps<"npcFields">) {
+}: SectionProperties<"npcFields">) {
   const shown = section.fields ? new Set(section.fields) : undefined;
   return (
     <Block label="Details">
@@ -363,7 +363,7 @@ export function NpcFieldsSection({
   );
 }
 
-export function TextSection({ campaign, c, editable, section }: SectionProps<"text">) {
+export function TextSection({ campaign, c, editable, section }: SectionProperties<"text">) {
   const fields = section.fields.map((f) => (
     <CharacterText
       key={f.field}

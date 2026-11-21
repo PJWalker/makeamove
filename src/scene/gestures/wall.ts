@@ -43,9 +43,9 @@ export function snapWallPoint(c: ToolContext, p: Point, e: Keys): Point {
   const reach = 12 / c.renderer.camera.zoom;
   let best: Point | null = null;
   let bestD = reach;
-  for (const el of c.allElements()) {
-    if (el.type !== "wall") continue;
-    const { a, b } = wallEnds(el);
+  for (const element of c.allElements()) {
+    if (element.type !== "wall") continue;
+    const { a, b } = wallEnds(element);
     for (const q of [a, b]) {
       const d = Math.hypot(q.x - p.x, q.y - p.y);
       if (d < bestD) {
@@ -62,11 +62,11 @@ export function snapWallPoint(c: ToolContext, p: Point, e: Keys): Point {
 /** A wall from where the drag started to (snapped) p. */
 function wallFrom(c: ToolContext, start: Point, p: Point, e: Keys): Transform {
   const end = snapWallPoint(c, p, e);
-  const len = Math.hypot(end.x - start.x, end.y - start.y);
+  const length = Math.hypot(end.x - start.x, end.y - start.y);
   return {
     x: (start.x + end.x) / 2,
     y: (start.y + end.y) / 2,
-    w: len,
+    w: length,
     h: 6,
     rot: Math.atan2(end.y - start.y, end.x - start.x),
   };

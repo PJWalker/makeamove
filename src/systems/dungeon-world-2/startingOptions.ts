@@ -411,7 +411,7 @@ export const CLASS_STARTING_CHOICES: ChoiceDef[] = Object.entries(CLASS_STARTING
               options: row.map((name) => ({
                 id: name
                   .toLowerCase()
-                  .replace(/[^a-z0-9]+/g, "-")
+                  .replaceAll(/[^a-z0-9]+/g, "-")
                   .replace(/-$/, ""),
                 name,
                 text: `Choose this ${rowIndex === 0 ? "look" : "detail"} or something else.`,

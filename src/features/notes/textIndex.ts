@@ -2,6 +2,7 @@ import Fuse, { type FuseIndex, type IFuseOptions } from "fuse.js";
 import { dataName } from "../../platform/dataEpoch";
 import { deleteValue, readValue, writeValue } from "../../platform/keyval";
 import { LINK_NODE } from "./links";
+import { isString } from "../../lib/guards";
 
 /*
  * Note search, on this device: each page's plain text with a prebuilt Fuse
@@ -75,7 +76,7 @@ export function flattenNote(root: NoteNode): { text: string; runs: Run[] } {
     }
     if (node.type === LINK_NODE) {
       const label = node.attrs?.["text"] || node.attrs?.["label"] || node.attrs?.["id"];
-      if (typeof label === "string") append(`@${label}`, position, 1);
+      if (isString(label)) append(`@${label}`, position, 1);
       return 1;
     }
     if (node.type === "doc") {
@@ -85,7 +86,7 @@ export function flattenNote(root: NoteNode): { text: string; runs: Run[] } {
     }
     if (node.type && TEXT_BLOCKS.has(node.type) && textBlocks++) append("\n", -1, 1);
     const children = node.content ?? [];
-    if (!children.length) return 1;
+    if (children.length === 0) return 1;
     let next = position + 1;
     for (const child of children) next += walk(child, next);
     return next - position + 1;
@@ -139,7 +140,7 @@ function spans(text: string, ranges: [number, number][]) {
 function snippet(text: string, start: number, end: number) {
   const from = Math.max(0, start - 42);
   const to = Math.min(text.length, end + 42);
-  return `${from ? "…" : ""}${text.slice(from, to).replace(/\s+/g, " ")}${to < text.length ? "…" : ""}`;
+  return `${from ? "…" : ""}${text.slice(from, to).replaceAll(/\s+/g, " ")}${to < text.length ? "…" : ""}`;
 }
 
 export class NoteTextIndex {

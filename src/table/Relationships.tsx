@@ -1,4 +1,4 @@
-/* oxlint-disable jsx-a11y/prefer-tag-over-role -- The relationship picker is an active-descendant listbox and its web is an SVG image. */
+/* eslint-disable jsx-a11y/prefer-tag-over-role -- The relationship picker is an active-descendant listbox and its web is an SVG image. */
 import type {
   InputEvent as ReactInputEvent,
   KeyboardEvent as ReactKeyboardEvent,
@@ -43,7 +43,7 @@ import {
 
 /** The Relationships section of a sheet. */
 export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: CharacterView }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const editable = canEdit(campaign, c);
   const system = systemOf(campaign);
   const depth = system.relationshipDepth;
@@ -62,11 +62,11 @@ export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: C
         relationshipsOf(campaign.characters, c.id).some((relationship) => relationship.to === to)
       )
         return false;
-      ctx.execute(setRelationship, { from: c.id, to, label: "" });
+      context.execute(setRelationship, { from: c.id, to, label: "" });
       setOpen(null);
       return true;
     },
-    [ctx, campaign, c.id],
+    [context, campaign, c.id],
   );
   useRelationshipDrop(section, editable, others, add);
 
@@ -74,7 +74,7 @@ export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: C
     <section ref={section} className="form-section sheet-section" aria-label="Relationships">
       <header className="sheet-section-header">
         <h3 className="sheet-heading">Relationships</h3>
-        <Button variant="ghost" onClick={() => ctx.canvas.dialogRequest.set("relationships")}>
+        <Button variant="ghost" onClick={() => context.canvas.dialogRequest.set("relationships")}>
           Web
         </Button>
       </header>
@@ -93,13 +93,13 @@ export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: C
                 editable={editable}
                 depth={depth}
                 expanded={open === r.to}
-                onOpenCharacter={() => ctx.links.openCharacter(other.id)}
+                onOpenCharacter={() => context.links.openCharacter(other.id)}
                 onLabelChange={(label) =>
-                  ctx.execute(setRelationship, { from: c.id, to: r.to, label })
+                  context.execute(setRelationship, { from: c.id, to: r.to, label })
                 }
                 onDepthChange={(value) => {
                   if (!depth) return;
-                  ctx.execute(setRelationshipDepth, {
+                  context.execute(setRelationshipDepth, {
                     from: c.id,
                     to: r.to,
                     depth: value,
@@ -107,7 +107,7 @@ export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: C
                   });
                 }}
                 onToggleNotes={() => setOpen(open === r.to ? null : r.to)}
-                onRemove={() => ctx.execute(removeRelationship, { from: c.id, to: r.to })}
+                onRemove={() => context.execute(removeRelationship, { from: c.id, to: r.to })}
               />
             );
           })}
@@ -349,7 +349,7 @@ function useRelationshipPicker(
       setSuggesting(false);
     } else if (
       expanded &&
-      matches.length &&
+      matches.length > 0 &&
       (event.key === "ArrowDown" || event.key === "ArrowUp")
     ) {
       event.preventDefault();
@@ -460,7 +460,7 @@ function RelationshipSuggestionList({
       aria-label="Character matches"
       className="note-suggest context-menu panel drops-down"
     >
-      {matches.length ? (
+      {matches.length > 0 ? (
         matches.map((target, matchIndex) => (
           <RelationshipSuggestion
             key={target.id}
@@ -520,7 +520,7 @@ export function RelationshipsDialog({
   campaign: Campaign;
   dialogRef: RefObject<HTMLDialogElement | null>;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const readWeb = useCallback(() => {
     const people = listCharacters(campaign);
     const ids = people.map((p) => p.id);
@@ -537,11 +537,11 @@ export function RelationshipsDialog({
   }, [people, edges]);
   return (
     <Dialog dialogRef={dialogRef} title="Relationships">
-      {shown.length ? (
+      {shown.length > 0 ? (
         <RelationshipWeb
           people={shown}
           edges={edges}
-          onOpenCharacter={(id) => ctx.links.openCharacter(id)}
+          onOpenCharacter={(id) => context.links.openCharacter(id)}
         />
       ) : (
         <p className="empty">No relationships yet. Add them from a character’s sheet.</p>

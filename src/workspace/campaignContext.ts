@@ -1,8 +1,8 @@
 import { createContext, use } from "react";
-import { LocalDoc } from "../data/localDoc";
+import { LocalDoc as LocalDocument } from "../data/localDoc";
 import type { Campaign } from "../campaign/campaign";
 import { FolderBackup } from "../campaign/folderBackup";
-import { campaignUiDbName } from "../campaign/storage";
+import { campaignUiDbName as campaignUiDatabaseName } from "../campaign/storage";
 import { ChatNotifications } from "../features/chat/notify";
 import { SceneTools } from "../scene/tools";
 import { CanvasState } from "./canvasState";
@@ -31,7 +31,7 @@ import { undoStack, type UndoStack } from "../data/undo";
 export class CampaignContext implements CommandHost {
   readonly campaign: Campaign;
   /** This device's UI state for the campaign, never synced. */
-  readonly local: LocalDoc;
+  readonly local: LocalDocument;
   readonly panels: PanelLayout;
   readonly windows: EntityWindows;
   readonly canvas = new CanvasState();
@@ -54,7 +54,7 @@ export class CampaignContext implements CommandHost {
   #disposeUndo: () => void;
   #disposed = false;
 
-  private constructor(campaign: Campaign, local: LocalDoc) {
+  private constructor(campaign: Campaign, local: LocalDocument) {
     this.campaign = campaign;
     this.local = local;
     this.panels = new PanelLayout(local);
@@ -77,13 +77,13 @@ export class CampaignContext implements CommandHost {
     return this.campaign.isGm();
   }
 
-  transact<T>(fn: () => T, undoable: boolean): T {
-    return this.campaign.transact(fn, undoable ? this.#origin : null);
+  transact<T>(function_: () => T, undoable: boolean): T {
+    return this.campaign.transact(function_, undoable ? this.#origin : null);
   }
 
   /** Run a command; see CommandRegistry.execute. */
-  execute<P, R>(command: Command<CampaignContext, P, R>, params: P): R | undefined {
-    return this.commands.execute(command, params);
+  execute<P, R>(command: Command<CampaignContext, P, R>, parameters: P): R | undefined {
+    return this.commands.execute(command, parameters);
   }
 
   /**
@@ -92,15 +92,15 @@ export class CampaignContext implements CommandHost {
    */
   static async open(
     campaign: Campaign,
-    commands: (ctx: CampaignContext) => readonly AnyCommand<CampaignContext>[] = () => [],
+    commands: (context: CampaignContext) => readonly AnyCommand<CampaignContext>[] = () => [],
   ): Promise<CampaignContext> {
     try {
-      const ctx = new CampaignContext(campaign, await LocalDoc.open(campaignUiDbName(campaign.id)));
-      ctx.commands.register(commands(ctx));
-      return ctx;
-    } catch (e) {
+      const context = new CampaignContext(campaign, await LocalDocument.open(campaignUiDatabaseName(campaign.id)));
+      context.commands.register(commands(context));
+      return context;
+    } catch (error) {
       campaign.destroy();
-      throw e;
+      throw error;
     }
   }
 
@@ -131,7 +131,7 @@ export const CampaignReactContext = createContext<CampaignContext | null>(null);
 
 /** The open campaign's context, for components inside the table. */
 export function useCampaign(): CampaignContext {
-  const ctx = use(CampaignReactContext);
-  if (!ctx) throw new Error("useCampaign needs a CampaignReactContext provider");
-  return ctx;
+  const context = use(CampaignReactContext);
+  if (!context) throw new Error("useCampaign needs a CampaignReactContext provider");
+  return context;
 }

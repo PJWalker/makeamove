@@ -29,7 +29,7 @@ import { CaveBackdrop } from "./CaveBackdrop";
 const relative = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
 
 function ago(ts: number): string {
-  const mins = Math.round((ts - Date.now()) / 60000);
+  const mins = Math.round((ts - Date.now()) / 60_000);
   if (mins > -60) return relative.format(mins, "minute");
   const hours = Math.round(mins / 60);
   if (hours > -24) return relative.format(hours, "hour");
@@ -46,7 +46,7 @@ let shownOrder: string[] | null = null;
 
 function stableOrder(list: CampaignSummary[]): CampaignSummary[] {
   if (shownOrder) {
-    const rank = new Map(shownOrder.map((id, i) => [id, i]));
+    const rank = new Map(shownOrder.map((id, index) => [id, index]));
     list = [...list].sort((a, b) => (rank.get(a.id) ?? -1) - (rank.get(b.id) ?? -1));
   }
   shownOrder = list.map((c) => c.id);
@@ -60,8 +60,8 @@ async function runBackup(act: () => Promise<unknown>) {
   backupError.value = null;
   try {
     await act();
-  } catch (e) {
-    backupError.value = e instanceof Error ? e.message : String(e);
+  } catch (error) {
+    backupError.value = error instanceof Error ? error.message : String(error);
   }
 }
 

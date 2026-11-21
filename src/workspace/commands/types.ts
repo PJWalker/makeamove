@@ -59,7 +59,7 @@ export interface Offer<P> {
   open?: () => void;
 }
 
-type Shown<P, T> = T | ((ctx: CampaignContext, params: P) => T);
+type Shown<P, T> = T | ((context: CampaignContext, parameters: P) => T);
 
 export interface TableCommand<P = void, R = unknown> extends Command<CampaignContext, P, R> {
   title: Shown<P, string>;
@@ -73,13 +73,13 @@ export interface TableCommand<P = void, R = unknown> extends Command<CampaignCon
   keys?: string[];
   danger?: boolean;
   /** For something that turns on and off: whether it's on. */
-  checked?: (ctx: CampaignContext, params: P) => boolean;
+  checked?: (context: CampaignContext, parameters: P) => boolean;
   /** Asked before it runs from a menu, the palette, the hotbar or a shortcut. */
-  confirm?: (ctx: CampaignContext, params: P) => Confirmation;
+  confirm?: (context: CampaignContext, parameters: P) => Confirmation;
   /** The calls listed in the palette and pinnable to the hotbar. */
-  offers?: (ctx: CampaignContext) => Offer<P>[];
+  offers?: (context: CampaignContext) => Offer<P>[];
   /** The calls listed in the context menu of each kind of object it applies to. */
-  menu?: { [K in TargetKind]?: (ctx: CampaignContext, target: CommandTargets[K]) => Offer<P>[] };
+  menu?: { [K in TargetKind]?: (context: CampaignContext, target: CommandTargets[K]) => Offer<P>[] };
   section?: MenuSection;
   /** Ways to type it in the chat box, like `/r 2d6`. */
   slash?: SlashForm<P>[];
@@ -92,10 +92,10 @@ export interface SlashForm<P> {
   usage: string;
   help: string;
   /** The call for what's typed after the name, or what's wrong with it. */
-  parse: (rest: string, ctx: CampaignContext, typed: ChatContent) => P | { error: string };
+  parse: (rest: string, context: CampaignContext, typed: ChatContent) => P | { error: string };
 }
 
-// oxlint-disable-next-line @typescript-eslint/no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnyTableCommand = TableCommand<any> & AnyCommand<CampaignContext>;
 
 /** Declare a command, inferring its parameters from its guard. */

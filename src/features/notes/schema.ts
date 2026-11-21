@@ -1,6 +1,6 @@
 import { arrayOf, isNumber, isString } from "../../lib/guards";
 import { lww, record, subdoc } from "../../data/schema";
-import type { LinkRef } from "./links";
+import type { LinkRef as LinkReference } from "./links";
 
 /*
  * A page's entry in a notes index, kept in the campaign root (or the GM
@@ -12,7 +12,7 @@ export const noteEntry = record({
   folder: lww(isString),
   order: lww(isString).or("a0"),
   /** What the page links to. */
-  links: lww(arrayOf(isString) as (v: unknown) => v is LinkRef[]).or([]),
+  links: lww(arrayOf(isString) as (v: unknown) => v is LinkReference[]).or([]),
   updatedAt: lww(isNumber).or(0),
   updatedBy: lww(isString),
   /** The session a session page is for (sessions.ts). */

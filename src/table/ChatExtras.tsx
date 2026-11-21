@@ -37,14 +37,14 @@ export function EditBox({
   id: string;
   text: ChatContent;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const value = useRef(text);
   const input = useRef<ChatInputHandle | null>(null);
   const done = (save: boolean) => {
     const body = commandText(value.current).trim();
     const content = contentForCommand(value.current, body);
-    if (save && body && !sameRichText(content, text)) ctx.execute(saveMessageEdit, { id, content });
-    ctx.table.editingMessage.set(null);
+    if (save && body && !sameRichText(content, text)) context.execute(saveMessageEdit, { id, content });
+    context.table.editingMessage.set(null);
   };
   return (
     <div
@@ -79,7 +79,7 @@ function useNow(running: boolean): number {
   const updateNow = useEffectEvent(() => setNow(Date.now()));
   useEffect(() => {
     if (!running) return;
-    const t = window.setInterval(updateNow, 500);
+    const t = globalThis.setInterval(updateNow, 500);
     return () => clearInterval(t);
   }, [running]);
   return now;
@@ -121,7 +121,7 @@ function useRinging(done: boolean): boolean {
     const arm = () => {
       clearTimeout(timer);
       if (document.visibilityState === "visible")
-        timer = window.setTimeout(() => setRinging(false), RING_MS);
+        timer = globalThis.setTimeout(() => setRinging(false), RING_MS);
     };
     arm();
     document.addEventListener("visibilitychange", arm);
@@ -149,14 +149,14 @@ export function TimerCard({
   const now = useNow(!stopped);
   const left = (((stopped ?? now) - endsAt) * -1) / 1000;
   const done = left <= 0;
-  const ctx = useCampaign();
+  const context = useCampaign();
   const can = useQuery(
     campaign.members,
-    () => ctx.commands.permits(timerControl, { id: m.id, action: "stop" }) === true,
+    () => context.commands.permits(timerControl, { id: m.id, action: "stop" }) === true,
   );
   const ringing = useRinging(done);
   const control = (action: "restart" | "resume" | "stop") =>
-    ctx.execute(timerControl, { id: m.id, action });
+    context.execute(timerControl, { id: m.id, action });
   return (
     <div
       className="roll-card chat-timer"
@@ -205,12 +205,12 @@ export function CounterCard({
 }) {
   const state = useMessageState<number>(campaign, m.id, ["value"]);
   const value: number = state["value"] ?? m.start;
-  const ctx = useCampaign();
+  const context = useCampaign();
   const can = useQuery(
     campaign.members,
-    () => ctx.commands.permits(setCounterValue, { id: m.id, value: 0 }) === true,
+    () => context.commands.permits(setCounterValue, { id: m.id, value: 0 }) === true,
   );
-  const set = (value: number) => ctx.execute(setCounterValue, { id: m.id, value });
+  const set = (value: number) => context.execute(setCounterValue, { id: m.id, value });
   const full = m.max !== undefined && value >= m.max;
   return (
     <div
@@ -245,8 +245,8 @@ export function CounterCard({
       {m.max !== undefined &&
         (m.max <= 12 ? (
           <div className="chat-pips" aria-hidden="true">
-            {Array.from({ length: m.max }, (_, i) => (
-              <span key={i} data-on={i < value || undefined} />
+            {Array.from({ length: m.max }, (_, index) => (
+              <span key={index} data-on={index < value || undefined} />
             ))}
           </div>
         ) : (
@@ -276,7 +276,7 @@ export function PinnedStrip({
   onMenu: (x: number, y: number, id: string) => void;
 }) {
   const { gm, shown, initial, rows } = usePinnedMessages(campaign);
-  if (!rows.length) return null;
+  if (rows.length === 0) return null;
   return (
     <section className="chat-pinned" aria-label="Pinned">
       <div className="chat-pin-stack">
@@ -289,7 +289,7 @@ export function PinnedStrip({
               className="chat-pin"
               data-new={!initial.has(message.id) || undefined}
               data-leaving={!shown.has(message.id) || undefined}
-              // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable so the GM can open its menu by keyboard
+              // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable so the GM can open its menu by keyboard
               tabIndex={unpinnable ? 0 : undefined}
               aria-label={unpinnable ? `Pinned message from ${message.name}` : undefined}
               {...(unpinnable ? menuTrigger((x, y) => onMenu(x, y, message.id)) : {})}
@@ -323,13 +323,13 @@ function usePinnedMessages(campaign: Campaign) {
     const gone = [...before.current].filter((id) => !currentShown.has(id));
     const goneIds = new Set(gone);
     before.current = currentShown;
-    if (!gone.length) return;
+    if (gone.length === 0) return;
     setLeaving((current) => new Set([...current, ...gone]));
-    const timeout = window.setTimeout(
+    const timeout = globalThis.setTimeout(
       () => setLeaving((current) => new Set([...current].filter((id) => !goneIds.has(id)))),
       PIN_LEAVE_MS,
     );
-    return () => window.clearTimeout(timeout);
+    return () => globalThis.clearTimeout(timeout);
   }, [shownIds]);
   // Those here when the strip first drew came with it.
   const initial = useConstant(() => shown);

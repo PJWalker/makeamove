@@ -11,6 +11,6 @@ export type UndoStack = Y.UndoManager;
  * An undo stack for a document's changes tagged with `origin`. Changes within
  * `mergeWithin` milliseconds join one step unless `stopCapturing()` comes first.
  */
-export function undoStack(doc: Y.Doc, origin: object, mergeWithin = 0): UndoStack {
-  return new Y.UndoManager(doc, { trackedOrigins: new Set([origin]), captureTimeout: mergeWithin });
+export function undoStack(document: Y.Doc, origin: object, mergeWithin = 0): UndoStack {
+  return new Y.UndoManager(document, { trackedOrigins: new Set([origin]), captureTimeout: mergeWithin });
 }

@@ -2,7 +2,7 @@ import { store, watch } from "../lib/store";
 import * as Y from "yjs";
 import { IndexeddbPersistence } from "y-indexeddb";
 import { newId, newSecret } from "../lib/ids";
-import { campaignDbName, campaignUiDbName } from "./storage";
+import { campaignDbName as campaignDatabaseName, campaignUiDbName as campaignUiDatabaseName } from "./storage";
 
 import { commaListOf, formatCommaList } from "../lib/list";
 import { device, type Device } from "../platform/device";
@@ -20,12 +20,12 @@ import {
 import { NO_SYSTEM_ID, getSystem } from "../systems";
 import type { Invite } from "../sync/invite";
 import { CampaignConnection } from "./connection";
-import { noteDbName, noteGuid } from "../features/notes/noteDoc";
+import { noteDbName as noteDatabaseName, noteGuid } from "../features/notes/noteDoc";
 import { deleteNoteTextIndex } from "../features/notes/textIndex";
-import { Vault, vaultDbName, vaultNoteGuid, vaultShape } from "../features/notes/vault";
+import { Vault, vaultDbName as vaultDatabaseName, vaultNoteGuid, vaultShape } from "../features/notes/vault";
 import { ChatLog, deleteChatData } from "../features/chat/chatLog";
 import { MoveRequests } from "../features/characters/moveRequests";
-import { sceneDbName } from "../scene/sceneDoc";
+import { sceneDbName as sceneDatabaseName } from "../scene/sceneDoc";
 import { upgrade } from "../data/migrate";
 import { rootOf } from "../data/schema";
 import { campaignShape, type CampaignRoot } from "./schema";
@@ -41,6 +41,7 @@ import {
 } from "./sceneIndex";
 import type { CampaignDefaults, MemberView, RevokedView, Role, SceneView } from "./types";
 import { deleteData } from "../platform/dataEpoch";
+import { isString } from "../lib/guards";
 export type { CampaignDefaults, MemberView, RevokedView, Role, SceneView } from "./types";
 
 /* An open campaign: its root document (laid out in schema.ts), sync and services. */
@@ -151,7 +152,7 @@ export class Campaign {
       entityGraphics: this.entityGraphics,
     } = this.root);
     this.systemData = new SystemData(this.root.ext, () => this.systemId);
-    this.persistence = new IndexeddbPersistence(campaignDbName(id), this.doc);
+    this.persistence = new IndexeddbPersistence(campaignDatabaseName(id), this.doc);
     this.chat = new ChatLog(this.root.chat, id, this.device.value.id);
     this.connection = new CampaignConnection(id, this.doc, this.device, this.joinRoom);
   }
@@ -221,7 +222,7 @@ export class Campaign {
       let timer = 0;
       const stop = watch([this.peerCount], () => {
         if (this.peerCount.value === 0 || timer) return;
-        timer = window.setTimeout(() => {
+        timer = globalThis.setTimeout(() => {
           this.checkingRejoin = false;
           this.checkMembership();
         }, REJOIN_CHECK_MS);
@@ -285,8 +286,8 @@ export class Campaign {
   }
 
   /** Run `fn` as one transaction on the campaign document, tagged with `origin` (see kernel/commands.ts). */
-  transact<T>(fn: () => T, origin: object | null = null): T {
-    return this.doc.transact(fn, origin);
+  transact<T>(function_: () => T, origin: object | null = null): T {
+    return this.doc.transact(function_, origin);
   }
 
   isGm(deviceId = this.device.value.id): boolean {
@@ -507,7 +508,7 @@ export function setSystemCampaignData(
     campaign.systemData.setValue(fieldId, formatCommaList([...new Set(values)]));
     return;
   }
-  if (field.type === "text" && typeof value !== "string") return;
+  if (field.type === "text" && isString(value)) return;
   campaign.systemData.setValue(fieldId, value);
 }
 
@@ -549,33 +550,33 @@ export function joinCampaign({ campaignId, roomKey }: Invite): string {
 }
 
 /** Load a stored document, let `clear` delete what it points to, then delete the document. */
-async function clearStoredDoc(dbName: string, clear: (doc: Y.Doc) => void | Promise<void>) {
-  const doc = new Y.Doc();
-  const p = new IndexeddbPersistence(dbName, doc);
+async function clearStoredDocument(databaseName: string, clear: (document: Y.Doc) => void | Promise<void>) {
+  const document = new Y.Doc();
+  const p = new IndexeddbPersistence(databaseName, document);
   await p.whenSynced;
-  await clear(doc);
+  await clear(document);
   await p.clearData();
-  doc.destroy();
+  document.destroy();
 }
 
 /** Drop this device's GM vault for a campaign, and its pages' text. */
 function deleteVault(id: string) {
-  return clearStoredDoc(vaultDbName(id), (doc) => {
-    for (const noteId of rootOf(doc, vaultShape).notes.keys())
-      deleteData(noteDbName(vaultNoteGuid(id, noteId)));
+  return clearStoredDocument(vaultDatabaseName(id), (document) => {
+    for (const noteId of rootOf(document, vaultShape).notes.keys())
+      deleteData(noteDatabaseName(vaultNoteGuid(id, noteId)));
   });
 }
 
 /** Remove a campaign from this device only. Peers keep their copies. */
 export async function deleteLocalCampaign(id: string) {
   for (const c of open) if (c.id === id) c.destroy();
-  await clearStoredDoc(campaignDbName(id), async (doc) => {
-    const root = rootOf(doc, campaignShape);
-    for (const sceneId of root.scenes.keys()) deleteData(sceneDbName(sceneGuid(id, sceneId)));
-    for (const noteId of root.notes.keys()) deleteData(noteDbName(noteGuid(id, noteId)));
+  await clearStoredDocument(campaignDatabaseName(id), async (document) => {
+    const root = rootOf(document, campaignShape);
+    for (const sceneId of root.scenes.keys()) deleteData(sceneDatabaseName(sceneGuid(id, sceneId)));
+    for (const noteId of root.notes.keys()) deleteData(noteDatabaseName(noteGuid(id, noteId)));
     await deleteVault(id);
     await deleteNoteTextIndex(id);
-    deleteData(campaignUiDbName(id));
+    deleteData(campaignUiDatabaseName(id));
     deleteChatData(root.chat);
   });
   forgetCampaign(id);

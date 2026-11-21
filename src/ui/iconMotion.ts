@@ -31,6 +31,6 @@ function play(icon: SVGElement) {
   replay(icon, "playing");
   const running = icon.getAnimations({ subtree: true });
   void Promise.allSettled(running.map((a) => a.finished)).then(() => {
-    if (!icon.getAnimations({ subtree: true }).length) delete icon.dataset["playing"];
+    if (icon.getAnimations({ subtree: true }).length === 0) delete icon.dataset["playing"];
   });
 }

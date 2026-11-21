@@ -47,15 +47,16 @@ import {
   viewSheet,
 } from "../workspace/commands/characters";
 import { menuFor } from "../workspace/commands/views";
+import { isString } from "../lib/guards";
 
 export function CharactersPanel({ campaign }: { campaign: Campaign }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const system = systemOf(campaign);
   const characters = useQuery(campaign.characters, () => listCharacters(campaign));
   const folders = useQuery(campaign.characterFolders, () => listFolders(campaign));
   const selectedId = useQuery(campaign.members, () => viewedCharacterId(campaign));
   const [creating, setCreating] = useState(false);
-  const [creationFolder, setCreationFolder] = useState<string | undefined>(undefined);
+  const [creationFolder, setCreationFolder] = useState<string | undefined>();
   // Copies (a template's tokens) aren't listed, but selecting one's token opens its sheet.
   const selected = useQuery(campaign.characters, () => getCharacter(campaign, selectedId));
   // One at a time: which level shows, the list or the sheet.
@@ -91,7 +92,7 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
           onPick={(id) => {
             setCreating(false);
             go("detail");
-            ctx.execute(viewSheet, { id });
+            context.execute(viewSheet, { id });
           }}
           showList={() => show("list")}
         />
@@ -109,11 +110,11 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
                 setCreationFolder(undefined);
               }}
             />
-          ) : selected ? (
+          ) : (selected ? (
             <CharacterSheet campaign={campaign} system={system} c={selected} />
           ) : (
             <p className="empty">Create a character, or pick one to see its sheet.</p>
-          )}
+          ))}
         </div>
       }
     />
@@ -122,7 +123,7 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
 
 /** Who plays a character, as the list shows it. */
 function tagFor(player: MemberView | undefined) {
-  if (!player) return undefined;
+  if (!player) return;
   return player.id === device.value.id ? "You" : player.name;
 }
 
@@ -151,19 +152,19 @@ function CharacterList({
   onPick: (id: string) => void;
   showList: () => Promise<void>;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const members = useQuery(campaign.members, () => campaign.memberViews());
   const playedBy = new Map(members.flatMap((m) => (m.playing ? [[m.playing, m] as const] : [])));
 
   const row = (c: CharacterView) => {
     const mine = canEdit(campaign, c);
-    const dragged = entity(ctx, "character", c.id, c.name);
-    if (mine) dragged.folder = (folder) => void ctx.execute(fileCharacter, { id: c.id, folder });
+    const dragged = entity(context, "character", c.id, c.name);
+    if (mine) dragged.folder = (folder) => void context.execute(fileCharacter, { id: c.id, folder });
     else delete dragged.folder;
     const player = playedBy.get(c.id);
     const trigger = menuTrigger((x, y) =>
-      setMenu({ x, y, items: menuFor(ctx, { kind: "character", id: c.id }) }),
+      setMenu({ x, y, items: menuFor(context, { kind: "character", id: c.id }) }),
     );
     return (
       <ListRow
@@ -179,13 +180,13 @@ function CharacterList({
         }}
         pick={{
           onDoubleClick: (e) =>
-            ctx.linkPopups.show({ kind: "character", id: c.id }, e.currentTarget),
+            context.linkPopups.show({ kind: "character", id: c.id }, e.currentTarget),
           "data-kind": c.kind,
           "data-item-drop": mine ? c.id : undefined,
           "data-move-drop": mine ? c.id : undefined,
           onPointerDown: (e) => {
             trigger.onPointerDown(e);
-            dragEntity(ctx.canvas, e, dragged);
+            dragEntity(context.canvas, e, dragged);
           },
           onContextMenu: trigger.onContextMenu,
         }}
@@ -219,7 +220,7 @@ function CharacterList({
         ]}
         showList={showList}
         emptyContent={
-          !characters.length && !folders.length ? (
+          characters.length === 0 && folders.length === 0 ? (
             <p className="empty-inline">No characters yet.</p>
           ) : null
         }
@@ -352,7 +353,7 @@ function initialPicks(system: GameSystem): Record<string, Picked> {
   return Object.fromEntries(
     (system.creation?.choices ?? []).flatMap((choice) => {
       const value = system.characterData.find((field) => field.id === choice.field)?.default;
-      return choice.at === "create" && typeof value === "string" && value
+      return choice.at === "create" && isString(value) && value
         ? [[choice.id, { option: value, pattern: 0, order: [] }]]
         : [];
     }),
@@ -366,7 +367,7 @@ function madeCharacter(
   picks: Record<string, Picked>,
   identity: Record<string, string>,
 ) {
-  if (!system.creation) return undefined;
+  if (!system.creation) return;
   const made = creationResult(system, scores, picks);
   for (const { field } of system.creation.identity?.fields ?? [])
     made.data[field] = (identity[field] ?? "").trim();
@@ -428,11 +429,11 @@ function deriveCreation({
 /** One of the choices made while creating a character, with a note when it repeats another PC's. */
 function CreationChoice({
   note,
-  ...props
+  ...properties
 }: ComponentProps<typeof ChoiceField> & { note: string | undefined }) {
   return (
     <>
-      <ChoiceField {...props} />
+      <ChoiceField {...properties} />
       {note && <output className="muted">{note}</output>}
     </>
   );
@@ -446,8 +447,8 @@ function KindField({
   kind: "pc" | "npc";
   onChange: (kind: "pc" | "npc") => void;
 }) {
-  const ctx = useCampaign();
-  if (ctx.commands.permits(newNpc, {}) !== true) return null;
+  const context = useCampaign();
+  if (context.commands.permits(newNpc, {}) !== true) return null;
   return (
     <div className="field field-inline">
       Type
@@ -579,7 +580,7 @@ function useNewCharacter(
   initialFolder: string | undefined,
   onDone: () => void,
 ) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const [kind, setKind] = useState<"pc" | "npc">("pc");
   const [name, setName] = useState("");
   const [identity, setIdentity] = useState<Record<string, string>>({});
@@ -628,9 +629,9 @@ function useNewCharacter(
   );
   const submit = () => {
     if (!ready) return;
-    if (kind === "npc") ctx.execute(newNpc, { name, folder: folder || undefined });
+    if (kind === "npc") context.execute(newNpc, { name, folder: folder || undefined });
     else {
-      ctx.execute(newCharacter, {
+      context.execute(newCharacter, {
         name,
         classId: String(choiceData[CLASS_FIELD] ?? ""),
         made: madeCharacter(system, scores, picks, identity),

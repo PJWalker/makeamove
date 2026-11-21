@@ -15,17 +15,17 @@ import type { PanelLayout } from "./panelLayout";
  * pages those pop-ups show.
  */
 
-export interface LinkRef {
+export interface LinkReference {
   kind: LinkKind;
   id: string;
 }
 
-export const linkKey = (l: LinkRef) => `${l.kind}:${l.id}`;
+export const linkKey = (l: LinkReference) => `${l.kind}:${l.id}`;
 
 /** What links in rich text have open, per campaign. */
 export class LinkPopups {
   /** Links with a pop-up open, oldest first. */
-  readonly openLinks = store<LinkRef[]>([]);
+  readonly openLinks = store<LinkReference[]>([]);
 
   /** A link's right-click menu, where it was opened. */
   readonly linkMenu = store<{ x: number; y: number; items: MenuItem[] } | null>(null);
@@ -43,7 +43,7 @@ export class LinkPopups {
   constructor(private readonly panels: PanelLayout) {}
 
   /** Open a link's pop-up, growing out of its tooltip (or the link itself); bring it forward if it's open. */
-  show(link: LinkRef, from: Element) {
+  show(link: LinkReference, from: Element) {
     const id = entityTabId(`link:${linkKey(link)}`);
     if (locate(this.panels.layout.value, id) !== "closed") {
       this.panels.showPanel(id);
@@ -60,12 +60,12 @@ export class LinkPopups {
     });
   }
 
-  close(link: LinkRef) {
+  close(link: LinkReference) {
     this.openLinks.value = this.openLinks.value.filter((l) => linkKey(l) !== linkKey(link));
   }
 
   /** Ask to rename a link; each request gets its own pop-up. */
-  rename(req: { text: string; custom: boolean; save: (text: string | null) => void }) {
-    this.linkRename.value = { ...req, n: ++this.#renames };
+  rename(request: { text: string; custom: boolean; save: (text: string | null) => void }) {
+    this.linkRename.value = { ...request, n: ++this.#renames };
   }
 }

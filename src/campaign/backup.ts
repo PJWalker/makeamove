@@ -31,10 +31,10 @@ function liveDocs(campaignId: string): Map<string, Y.Doc> {
   const live = new Map<string, Y.Doc>();
   const campaign = openOne(campaignId);
   if (!campaign) return live;
-  const add = (doc: Y.Doc) => {
-    live.set(doc.guid, doc);
+  const add = (document: Y.Doc) => {
+    live.set(document.guid, document);
     // `shouldLoad` is what load() sets; Yjs sets `isLoaded` only once a provider says so.
-    for (const sub of doc.getSubdocs()) if (sub.shouldLoad) live.set(sub.guid, sub);
+    for (const sub of document.getSubdocs()) if (sub.shouldLoad) live.set(sub.guid, sub);
   };
   add(campaign.doc);
   const vault = campaign.vault.value;
@@ -55,11 +55,11 @@ export const openGuids = () => [...openCampaigns].flatMap((c) => [...liveDocs(c.
 export function finishImport(imported: ImportSummary): string {
   const { campaignId, gm } = imported;
   const live = liveDocs(campaignId);
-  for (const doc of imported.live) {
-    const open = live.get(doc.guid);
+  for (const document of imported.live) {
+    const open = live.get(document.guid);
     if (!open) continue;
-    Y.applyUpdate(open, doc.update);
-    if (doc.kind === "campaign" && gm) claimGm(open, thisDevice(), imported.exportedBy);
+    Y.applyUpdate(open, document.update);
+    if (document.kind === "campaign" && gm) claimGm(open, thisDevice(), imported.exportedBy);
   }
   if (!summaryOf(campaignId)) {
     const now = Date.now();

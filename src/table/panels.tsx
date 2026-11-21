@@ -138,7 +138,7 @@ function Presence({ campaign }: { campaign: Campaign }) {
 }
 
 function MemberList({ campaign }: { campaign: Campaign }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const members = useQuery(campaign.members, () => campaign.memberViews());
   const revoked = useQuery(campaign.revoked, () => campaign.revokedViews());
   // Re-read as roles change.
@@ -152,11 +152,11 @@ function MemberList({ campaign }: { campaign: Campaign }) {
             key={m.id}
             campaign={campaign}
             m={m}
-            canRemove={can(ctx, removeMember, { id: m.id })}
+            canRemove={can(context, removeMember, { id: m.id })}
           />
         ))}
       </ul>
-      {revoked.length > 0 && can(ctx, allowBack, { id: revoked[0]!.id }) && (
+      {revoked.length > 0 && can(context, allowBack, { id: revoked[0]!.id }) && (
         <section className="member-section" aria-labelledby="removed-members">
           <h3 id="removed-members" className="eyebrow">
             Removed
@@ -169,7 +169,7 @@ function MemberList({ campaign }: { campaign: Campaign }) {
                 <Button
                   variant="icon"
                   label={`Let ${r.name} Back In`}
-                  onClick={() => ctx.execute(allowBack, { id: r.id })}
+                  onClick={() => context.execute(allowBack, { id: r.id })}
                 >
                   <IconAllowBack size={22} />
                 </Button>
@@ -194,7 +194,7 @@ function MemberRow({
   m: MemberView;
   canRemove: boolean;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const me = useQuery(device).id;
   const online = useQuery(campaign.online);
   const [confirming, setConfirming] = useState(false);
@@ -205,7 +205,7 @@ function MemberRow({
         <Button variant="ghost" onClick={() => setConfirming(false)}>
           Cancel
         </Button>
-        <Button variant="danger" onClick={() => ctx.execute(removeMember, { id: m.id })}>
+        <Button variant="danger" onClick={() => context.execute(removeMember, { id: m.id })}>
           Remove
         </Button>
       </li>

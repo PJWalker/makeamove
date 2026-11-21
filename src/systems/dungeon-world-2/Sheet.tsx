@@ -3,7 +3,7 @@ import {
   SheetFrame,
   SheetSectionView,
   type SheetDrop,
-  type SheetProps,
+  type SheetProps as SheetProperties,
 } from "../../workspace/DeclarativeSheet";
 import { useSheet } from "../../workspace/sheetModel";
 import { CharacterText } from "../../workspace/CharacterText";
@@ -19,7 +19,7 @@ import { useCampaign } from "../../workspace/campaignContext";
 import { parseInputNumber } from "../../lib/number";
 
 function TreasureWealth({ sheet }: { sheet: ReturnType<typeof useSheet> }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const boxes = Number(sheet.c.data["treasureBoxes"] ?? 4);
   const wealth = wealthTierForBoxes(boxes);
   return (
@@ -32,7 +32,7 @@ function TreasureWealth({ sheet }: { sheet: ReturnType<typeof useSheet> }) {
         max={MAX_TREASURE_BOXES}
         disabled={!sheet.editable}
         onChange={(by) =>
-          ctx.execute(setData, {
+          context.execute(setData, {
             id: sheet.c.id,
             key: "treasureBoxes",
             value: addTreasureBoxes(boxes, by),
@@ -51,7 +51,7 @@ function StruggleSection({
   sheet: ReturnType<typeof useSheet>;
   struggle: Struggle;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const track = struggle.track;
   return (
     <section className="form-section sheet-section" aria-label="Current Struggle">
@@ -78,7 +78,7 @@ function StruggleSection({
                 value >= 0 &&
                 value <= track.max
               )
-                ctx.execute(setData, { id: sheet.c.id, key: "struggleProgress", value });
+                context.execute(setData, { id: sheet.c.id, key: "struggleProgress", value });
             }}
           />
         </label>
@@ -93,7 +93,7 @@ function StruggleSection({
       <Button
         variant="secondary"
         disabled={!sheet.editable}
-        onClick={() => ctx.execute(resolveCharacterStruggle, { characterId: sheet.c.id })}
+        onClick={() => context.execute(resolveCharacterStruggle, { characterId: sheet.c.id })}
       >
         Resolve Struggle
       </Button>
@@ -101,9 +101,9 @@ function StruggleSection({
   );
 }
 
-export function DungeonWorld2Sheet(props: SheetProps) {
-  const ctx = useCampaign();
-  const sheet = useSheet(props);
+export function DungeonWorld2Sheet(properties: SheetProperties) {
+  const context = useCampaign();
+  const sheet = useSheet(properties);
   const revealed = sheet.c.data["struggleRevealed"] === true;
   const struggle = revealed
     ? STRUGGLES.find((entry) => entry.id === sheet.c.data["struggleId"])
@@ -112,7 +112,7 @@ export function DungeonWorld2Sheet(props: SheetProps) {
   const isPc = sheet.c.kind === "pc";
   // A Struggle from the Libraries reveals it, while the character has none.
   const drop = useMemo<SheetDrop | undefined>(() => {
-    if (!isPc || revealed) return undefined;
+    if (!isPc || revealed) return;
     const dropped = (entity: DragEntity) =>
       entity.libraryEntry?.kind === "option" ? struggleOfEntry(entity.libraryEntry.id) : undefined;
     return {
@@ -120,11 +120,11 @@ export function DungeonWorld2Sheet(props: SheetProps) {
       drop: (entity) => {
         const struggle = dropped(entity);
         return (
-          !!struggle && ctx.execute(revealCharacterStruggle, { characterId, struggle: struggle.id })
+          !!struggle && context.execute(revealCharacterStruggle, { characterId, struggle: struggle.id })
         );
       },
     };
-  }, [isPc, revealed, ctx, characterId]);
+  }, [isPc, revealed, context, characterId]);
   return (
     <SheetFrame {...sheet} drop={drop}>
       <SheetSectionView {...sheet} section={{ kind: "header" }} />
@@ -257,7 +257,7 @@ function useItemAward(
   claimedField: "magicItemClaimed" | "artifactClaimed",
   tag: "magic-item" | "artifact",
 ) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const options =
     tag === "magic-item"
       ? [...DW2_GEAR.filter((item) => item.tags.includes("magic")), ...DW2_MAGIC_ITEMS]
@@ -268,16 +268,16 @@ function useItemAward(
   const award = () => {
     const item = options.find((entry) => entry.id === selected);
     if (!item) return;
-    ctx.commands.batch(() => {
-      ctx.execute(giveItem, { characterId: sheet.c.id, item });
-      ctx.execute(setData, { id: sheet.c.id, key: claimedField, value: true });
+    context.commands.batch(() => {
+      context.execute(giveItem, { characterId: sheet.c.id, item });
+      context.execute(setData, { id: sheet.c.id, key: claimedField, value: true });
     });
   };
   return { options, selected, setSelected, pending, award };
 }
 
-export function DungeonWorld2NpcSheet(props: SheetProps) {
-  const sheet = useSheet(props);
+export function DungeonWorld2NpcSheet(properties: SheetProperties) {
+  const sheet = useSheet(properties);
   return (
     <SheetFrame {...sheet}>
       <SheetSectionView {...sheet} section={{ kind: "header" }} />

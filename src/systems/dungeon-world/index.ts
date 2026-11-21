@@ -721,7 +721,7 @@ export const dungeonWorld: GameSystem = {
     { id: "weak", label: "Partial success", tone: "mixed" },
     { id: "miss", label: "Miss", tone: "bad" },
   ],
-  result: (total) => (total >= 10 ? "strong" : total >= 7 ? "weak" : "miss"),
+  result: (total) => (total >= 10 ? "strong" : (total >= 7 ? "weak" : "miss")),
   actions: ACTIONS,
   actionCategories: [
     { id: "class", label: "Class" },
@@ -812,7 +812,7 @@ export const dungeonWorld: GameSystem = {
       resolved,
       values: {
         ...resolved.values,
-        load: c.inventory.reduce((n, i) => n + i.weight, 0),
+        load: c.inventory.reduce((n, index) => n + index.weight, 0),
         /** XP needed to level up. */
         xpNeeded: level + 7,
       },

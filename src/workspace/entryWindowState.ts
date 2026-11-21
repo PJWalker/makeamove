@@ -8,14 +8,14 @@ import { useCampaign } from "./campaignContext";
 
 /** Which entries have windows open, and how to open one from its row. */
 export function useEntryWindows() {
-  const ctx = useCampaign();
+  const context = useCampaign();
   return {
-    keys: useQuery(ctx.windows.openEntries),
+    keys: useQuery(context.windows.openEntries),
     /** Open the window for `key`, morphing it out of the row's tooltip (or the row). */
     show(key: string, row: Element) {
       const id = entityTabId(`entry:${key}`);
-      if (locate(ctx.panels.layout.value, id) !== "closed") {
-        ctx.panels.showPanel(id);
+      if (locate(context.panels.layout.value, id) !== "closed") {
+        context.panels.showPanel(id);
         return;
       }
       const already = document.querySelector<HTMLElement>(
@@ -25,11 +25,11 @@ export function useEntryWindows() {
       const tip = document.querySelector(".tooltip:popover-open");
       morphOpen(tip ?? row, () => {
         hideTooltip();
-        ctx.windows.openEntries.set([...new Set([...ctx.windows.openEntries.value, key])]);
+        context.windows.openEntries.set([...new Set([...context.windows.openEntries.value, key])]);
       });
     },
     close(key: string) {
-      ctx.windows.close(entityTabId(`entry:${key}`));
+      context.windows.close(entityTabId(`entry:${key}`));
     },
   };
 }

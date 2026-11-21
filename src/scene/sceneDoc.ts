@@ -31,7 +31,7 @@ const GRID_KEYS = {
   diagonal: "gridDiagonal",
 } as const satisfies Record<keyof Grid, string>;
 
-const byOrder = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+const byOrder = (a: string, b: string) => (a < b ? -1 : (a > b ? 1 : 0));
 
 /** Fields to set on an element; `undefined` removes one. */
 export type ElementPatch = Unset<SceneElement>;
@@ -47,12 +47,12 @@ export class SceneDoc {
   readonly origin = { local: true };
   private persistence: IndexeddbPersistence;
 
-  private constructor(doc: Y.Doc) {
-    this.doc = doc;
-    const root = rootOf(doc, sceneShape);
+  private constructor(document: Y.Doc) {
+    this.doc = document;
+    const root = rootOf(document, sceneShape);
     this.elements = root.elements;
     this.settings = root.settings;
-    this.persistence = new IndexeddbPersistence(sceneDbName(doc.guid), doc);
+    this.persistence = new IndexeddbPersistence(sceneDbName(document.guid), document);
     this.undo = new Y.UndoManager([this.elements.y, this.settings.y], {
       trackedOrigins: new Set([this.origin]),
       // Every committed action is its own undo step.
@@ -65,14 +65,14 @@ export class SceneDoc {
    * diagonal rule) get the campaign's and system's defaults, as an untracked
    * edit so they can't be undone.
    */
-  static async open(doc: Y.Doc, defaults: Partial<Grid> = {}): Promise<SceneDoc> {
-    doc.load();
-    const s = new SceneDoc(doc);
+  static async open(document: Y.Doc, defaults: Partial<Grid> = {}): Promise<SceneDoc> {
+    document.load();
+    const s = new SceneDoc(document);
     await s.persistence.whenSynced;
     const missing = (Object.keys(defaults) as (keyof Grid)[]).filter(
       (k) => defaults[k] !== undefined && !s.settings.has(GRID_KEYS[k]),
     );
-    if (missing.length)
+    if (missing.length > 0)
       s.settings.patch(gridSettings(Object.fromEntries(missing.map((k) => [k, defaults[k]]))));
     return s;
   }
@@ -84,8 +84,8 @@ export class SceneDoc {
     this.doc.destroy();
   }
 
-  transact(fn: () => void) {
-    this.doc.transact(fn, this.origin);
+  transact(function_: () => void) {
+    this.doc.transact(function_, this.origin);
   }
 
   // Settings
@@ -127,7 +127,7 @@ export class SceneDoc {
   views(): SceneElement[] {
     return this.elements
       .views()
-      .map(([, el]) => el)
+      .map(([, element]) => element)
       .sort(
         (a, b) =>
           LAYERS.indexOf(a.layer) - LAYERS.indexOf(b.layer) ||
@@ -155,12 +155,12 @@ export class SceneDoc {
   add(...els: NewElement[]): string[] {
     const ids: string[] = [];
     this.transact(() => {
-      for (const el of els) {
+      for (const element of els) {
         const id = newId();
         this.elements.set(id, {
           locked: false,
-          ...el,
-          z: this.zOnTop(el.layer),
+          ...element,
+          z: this.zOnTop(element.layer),
           createdBy: device.value.id,
         });
         ids.push(id);
@@ -186,10 +186,10 @@ export class SceneDoc {
   duplicate(ids: Iterable<string>, offset: number): string[] {
     const copies: NewElement[] = [];
     for (const id of ids) {
-      const el = this.get(id);
-      if (!el) continue;
-      const { id: _id, z: _z, createdBy: _by, ...rest } = el;
-      copies.push({ ...rest, x: el.x + offset, y: el.y + offset, locked: false });
+      const element = this.get(id);
+      if (!element) continue;
+      const { id: _id, z: _z, createdBy: _by, ...rest } = element;
+      copies.push({ ...rest, x: element.x + offset, y: element.y + offset, locked: false });
     }
     return this.add(...copies);
   }
@@ -200,12 +200,12 @@ export class SceneDoc {
     els.sort((a, b) => byOrder(a.z, b.z));
     this.transact(() => {
       if (to === "front") {
-        for (const el of els) this.elements.get(el.id)!.patch({ z: this.zOnTop(el.layer) });
+        for (const element of els) this.elements.get(element.id)!.patch({ z: this.zOnTop(element.layer) });
       } else {
-        for (const el of els.reverse())
+        for (const element of els.reverse())
           this.elements
-            .get(el.id)!
-            .patch({ z: generateKeyBetween(null, this.edgeZ(el.layer, "bottom")) });
+            .get(element.id)!
+            .patch({ z: generateKeyBetween(null, this.edgeZ(element.layer, "bottom")) });
       }
     });
   }

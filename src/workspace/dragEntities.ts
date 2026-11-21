@@ -30,25 +30,30 @@ import { getEntityGraphic } from "./entityGraphics";
 /** The call that pins a link target to the hotbar, for the targets that have one. */
 function pinnedCall(kind: LinkKind, id: string): string | undefined {
   switch (kind) {
-    case "move":
+    case "move": {
       return moveSlot(id);
-    case "item":
+    }
+    case "item": {
       return librarySlot(id);
-    case "character":
+    }
+    case "character": {
       return callKey(openCharacter.id, { id });
-    case "scene":
+    }
+    case "scene": {
       return callKey(openScene.id, { id });
-    default:
+    }
+    default: {
       return undefined;
+    }
   }
 }
 
-const pinAt = (ctx: CampaignContext, key: string) => (index: number) =>
-  void ctx.execute(pinToHotbar, { key, at: index });
+const pinAt = (context: CampaignContext, key: string) => (index: number) =>
+  void context.execute(pinToHotbar, { key, at: index });
 
-const canGive = (ctx: CampaignContext, characterId: string) => {
-  const character = getCharacter(ctx.campaign, characterId);
-  return !!character && canEdit(ctx.campaign, character);
+const canGive = (context: CampaignContext, characterId: string) => {
+  const character = getCharacter(context.campaign, characterId);
+  return !!character && canEdit(context.campaign, character);
 };
 
 /** How a token looks, to carry over to the token it's dragged as. */
@@ -60,19 +65,19 @@ const tokenLook = (token: TokenElement) => ({
 
 /** An entity for a link target: anything links; most also pin; gear and moves can be given. */
 export function entity(
-  ctx: CampaignContext,
+  context: CampaignContext,
   kind: LinkKind,
   id: string,
   label: string,
   equipOnGive = false,
 ): DragEntity {
-  const { campaign } = ctx;
+  const { campaign } = context;
   const key = pinnedCall(kind, id);
   const out: DragEntity = {
     label,
     token: { name: label },
     link: { kind, id },
-    ...(key ? { pin: pinAt(ctx, key) } : {}),
+    ...(key ? { pin: pinAt(context, key) } : {}),
   };
   if (kind === "character") {
     const character = getCharacter(campaign, id);
@@ -87,14 +92,14 @@ export function entity(
       };
   }
   if (kind === "item") {
-    const def = systemOf(campaign).items.find((i) => i.id === id);
+    const def = systemOf(campaign).items.find((index) => index.id === id);
     out.token = { name: label, icon: def?.icon ?? "bag", itemDefId: id };
     if (def)
       out.give = {
         kind,
         to: (characterId) =>
-          void ctx.execute(giveItem, { characterId, item: def, equip: equipOnGive }),
-        canGive: (characterId) => canGive(ctx, characterId),
+          void context.execute(giveItem, { characterId, item: def, equip: equipOnGive }),
+        canGive: (characterId) => canGive(context, characterId),
       };
   }
   if (kind === "move") {
@@ -102,8 +107,8 @@ export function entity(
     out.give = {
       kind,
       to: (characterId) =>
-        void ctx.execute(setLearned, { id: characterId, action: id, known: true }),
-      canGive: (characterId) => canGive(ctx, characterId),
+        void context.execute(setLearned, { id: characterId, action: id, known: true }),
+      canGive: (characterId) => canGive(context, characterId),
     };
   }
   return out;
@@ -123,10 +128,10 @@ export function itemDefinitionForToken(
   return matches.length === 1 ? matches[0] : undefined;
 }
 
-export function itemTokenEntity(ctx: CampaignContext, token: TokenElement): DragEntity | null {
-  const def = itemDefinitionForToken(ctx.campaign, token);
+export function itemTokenEntity(context: CampaignContext, token: TokenElement): DragEntity | null {
+  const def = itemDefinitionForToken(context.campaign, token);
   if (!def) return null;
-  const dragged = entity(ctx, "item", def.id, token.name, true);
+  const dragged = entity(context, "item", def.id, token.name, true);
   dragged.token = {
     itemDefId: def.id,
     name: token.name,
@@ -139,36 +144,41 @@ export function itemTokenEntity(ctx: CampaignContext, token: TokenElement): Drag
 /** The link target a call names, for the calls that name one. */
 function linkTargetOf(
   command: unknown,
-  params: { id?: string; move?: string; item?: string },
+  parameters: { id?: string; move?: string; item?: string },
 ): [LinkKind, string | undefined] | null {
   switch (command) {
-    case startMove:
-      return ["move", params.move];
-    case addItem:
-      return ["item", params.item];
-    case openCharacter:
-      return ["character", params.id];
-    case openScene:
-      return ["scene", params.id];
-    default:
+    case startMove: {
+      return ["move", parameters.move];
+    }
+    case addItem: {
+      return ["item", parameters.item];
+    }
+    case openCharacter: {
+      return ["character", parameters.id];
+    }
+    case openScene: {
+      return ["scene", parameters.id];
+    }
+    default: {
       return null;
+    }
   }
 }
 
 /** An entity for a hotbar or palette call, by its key: links and gifts where it names a link target. */
-export function actionEntity(ctx: CampaignContext, key: string, label: string): DragEntity {
-  const pin = pinAt(ctx, key);
-  const call = ctx.commands.resolve(key);
-  const params = (call?.params ?? {}) as {
+export function actionEntity(context: CampaignContext, key: string, label: string): DragEntity {
+  const pin = pinAt(context, key);
+  const call = context.commands.resolve(key);
+  const parameters = (call?.params ?? {}) as {
     id?: string;
     move?: string;
     item?: string;
     itemId?: string;
   };
   const command = call?.command;
-  if ((command === useItem || command === equipItem) && params.itemId) {
-    const item = getCharacter(ctx.campaign, actingCharacterId(ctx.campaign))?.inventory.find(
-      (entry) => entry.id === params.itemId,
+  if ((command === useItem || command === equipItem) && parameters.itemId) {
+    const item = getCharacter(context.campaign, actingCharacterId(context.campaign))?.inventory.find(
+      (entry) => entry.id === parameters.itemId,
     );
     if (item)
       return {
@@ -177,20 +187,20 @@ export function actionEntity(ctx: CampaignContext, key: string, label: string): 
         token: { name: item.name, icon: item.icon ?? "bag", itemDefId: item.defId ?? item.id },
         give: {
           kind: "item",
-          to: (characterId) => void ctx.execute(giveItem, { characterId, item, equip: true }),
-          canGive: (characterId) => canGive(ctx, characterId),
+          to: (characterId) => void context.execute(giveItem, { characterId, item, equip: true }),
+          canGive: (characterId) => canGive(context, characterId),
         },
       };
   }
-  const target = linkTargetOf(command, params);
+  const target = linkTargetOf(command, parameters);
   return target?.[1]
-    ? { ...entity(ctx, target[0], target[1], label), pin }
+    ? { ...entity(context, target[0], target[1], label), pin }
     : { label, pin, token: { name: label } };
 }
 
 /** Resolve a scene token back to the library entry it represents. */
-export function tokenEntity(ctx: CampaignContext, token: TokenElement): DragEntity | null {
-  const { campaign } = ctx;
+export function tokenEntity(context: CampaignContext, token: TokenElement): DragEntity | null {
+  const { campaign } = context;
   const extra = token as TokenElement & {
     entityRef?: { kind: string; id: string };
     graphic?: EntityGraphic;
@@ -204,8 +214,8 @@ export function tokenEntity(ctx: CampaignContext, token: TokenElement): DragEnti
   if (linkLabel(campaign, linkKind, id) === null) return null;
   const dragged =
     kind === "item" && token.itemDefId
-      ? itemTokenEntity(ctx, token)
-      : entity(ctx, linkKind, id, token.name);
+      ? itemTokenEntity(context, token)
+      : entity(context, linkKind, id, token.name);
   if (!dragged) return null;
   dragged.label = token.name;
   dragged.token = {

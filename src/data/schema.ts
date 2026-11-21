@@ -1,5 +1,6 @@
 import * as Y from "yjs";
 import type { Guard } from "../lib/guards";
+import { isString } from "../lib/guards";
 
 /*
  * The typed data layer (design.md#documents). Shared state is declared once,
@@ -208,7 +209,7 @@ export type Init<F> = 0 extends 1 & F
 type InitKeys<S extends Shape> = { [K in keyof S]: S[K] extends TextField ? never : K }[keyof S];
 export type InitRec<S extends Shape> = { [K in InitKeys<S>]?: Init<S[K]> };
 type InitVariant<Tag extends string, B extends Shape, C extends Record<string, Shape>> = {
-  [K in keyof C & string]: InitRec<B> & InitRec<C[K]> & { [T in Tag]: K };
+  [K in keyof C & string]: InitRec<B> & InitRec<C[K]> & Record<Tag, K>;
 }[keyof C & string];
 
 /** The fields that hold a single value, set and read in place. */
@@ -246,7 +247,7 @@ type PlainKeys<S extends Shape> = {
   [K in keyof S]: S[K] extends TextField | SubdocField ? never : K;
 }[keyof S];
 type OptionalKeys<S extends Shape> = {
-  [K in keyof S]: S[K] extends LwwField<unknown, false> ? K : never;
+  [K in keyof S]: S[K] extends LwwField<unknown> ? K : never;
 }[keyof S];
 type Flatten<T> = { [K in keyof T]: T[K] };
 export type PlainRec<S extends Shape> = Flatten<
@@ -255,7 +256,7 @@ export type PlainRec<S extends Shape> = Flatten<
   }
 >;
 export type PlainVariant<Tag extends string, B extends Shape, C extends Record<string, Shape>> = {
-  [K in keyof C & string]: Flatten<PlainRec<B> & PlainRec<C[K]> & { [T in Tag]: K }>;
+  [K in keyof C & string]: Flatten<PlainRec<B> & PlainRec<C[K]> & Record<Tag, K>>;
 }[keyof C & string];
 
 // Logging what can't be read
@@ -287,45 +288,56 @@ function readSlot(field: Field, map: Slot, key: string): unknown {
       }
       return raw;
     }
-    case "counter":
+    case "counter": {
       return raw instanceof Y.Map ? counterTotal(raw as Y.Map<number>) : 0;
-    case "text":
+    }
+    case "text": {
       return raw instanceof Y.XmlFragment ? raw : undefined;
-    case "subdoc":
+    }
+    case "subdoc": {
       return raw instanceof Y.Doc ? raw : undefined;
-    case "list":
+    }
+    case "list": {
       return raw instanceof Y.Array ? listOf(raw) : undefined;
-    case "record":
+    }
+    case "record": {
       return raw instanceof Y.Map ? recOf(raw as Slot, field.shape) : undefined;
-    case "variant":
+    }
+    case "variant": {
       return raw instanceof Y.Map ? variantOf(raw as Slot, field) : undefined;
-    case "collection":
+    }
+    case "collection": {
       return raw instanceof Y.Map ? collOf(raw as Slot, field) : undefined;
+    }
   }
 }
 
 /** What to store for a field, made from a plain value. */
 function toStored(field: Field, init: unknown): unknown {
   switch (field.kind) {
-    case "lww":
+    case "lww": {
       return init;
+    }
     case "counter": {
       const m = new Y.Map<number>();
       // Set once the map is in a document, when it has a client id.
       pendingCounts.set(m, init as number);
       return m;
     }
-    case "text":
+    case "text": {
       return new Y.XmlFragment();
-    case "subdoc":
+    }
+    case "subdoc": {
       return init;
+    }
     case "list": {
       const a = new Y.Array<unknown>();
       a.push([...(init as readonly unknown[])]);
       return a;
     }
-    case "record":
+    case "record": {
       return fill(new Y.Map(), field.shape, init as Record<string, unknown>);
+    }
     case "variant": {
       const values = init as Record<string, unknown>;
       const tag = values[field.tag] as string;
@@ -353,18 +365,22 @@ function fill(m: Slot, shape: Shape, values: Record<string, unknown>): Slot {
 /** A fresh, empty container for a field: an empty map, list or text. */
 function emptyStored(field: Field): unknown {
   switch (field.kind) {
-    case "text":
+    case "text": {
       return new Y.XmlFragment();
-    case "list":
+    }
+    case "list": {
       return new Y.Array();
+    }
     case "counter":
     case "record":
     case "variant":
-    case "collection":
+    case "collection": {
       return new Y.Map();
+    }
     case "lww":
-    case "subdoc":
+    case "subdoc": {
       throw new Error(`A ${field.kind} field has no empty value`);
+    }
   }
 }
 
@@ -382,18 +398,23 @@ function plainOf(field: Field, value: unknown): unknown {
   if (value === undefined) return undefined;
   switch (field.kind) {
     case "lww":
-    case "counter":
+    case "counter": {
       return value;
-    case "list":
+    }
+    case "list": {
       return (value as List<unknown>).toArray();
+    }
     case "record":
-    case "collection":
+    case "collection": {
       return (value as { read(): unknown }).read();
-    case "variant":
+    }
+    case "variant": {
       return (value as { readCase(): unknown }).readCase();
+    }
     case "text":
-    case "subdoc":
+    case "subdoc": {
       return undefined;
+    }
   }
 }
 
@@ -466,21 +487,21 @@ function patchSlots(
   }
 }
 
-function transactOn(y: Slot, fn: () => void) {
-  if (y.doc) y.doc.transact(fn);
-  else fn();
+function transactOn(y: Slot, function_: () => void) {
+  if (y.doc) y.doc.transact(function_);
+  else function_();
 }
 
-function observeDeep(y: Slot, fn: () => void): () => void {
-  y.observeDeep(fn);
-  return () => y.unobserveDeep(fn);
+function observeDeep(y: Slot, function_: () => void): () => void {
+  y.observeDeep(function_);
+  return () => y.unobserveDeep(function_);
 }
 
 // Handles
 
 /** Anything with a Yjs type behind it, for useQuery to watch. */
 export interface Observable {
-  readonly y: Y.AbstractType<any>; // oxlint-disable-line @typescript-eslint/no-explicit-any
+  readonly y: Y.AbstractType<any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 
 /** The handle for a Yjs type, made once so it can be compared and cached. */
@@ -551,8 +572,8 @@ export class Rec<S extends Shape> implements Observable {
   }
 
   /** Call `fn` on any change to it or anything inside it. Returns a function that stops it. */
-  observe(fn: () => void): () => void {
-    return observeDeep(this.y, fn);
+  observe(function_: () => void): () => void {
+    return observeDeep(this.y, function_);
   }
 
   /** Every field as plain values, with fallbacks; text and subdocuments are left out. */
@@ -560,8 +581,8 @@ export class Rec<S extends Shape> implements Observable {
     return readPlain(this.y, this.shape, {}) as PlainRec<S>;
   }
 
-  transact(fn: () => void) {
-    transactOn(this.y, fn);
+  transact(function_: () => void) {
+    transactOn(this.y, function_);
   }
 }
 
@@ -581,7 +602,7 @@ export class VariantRec<
   /** Its tag, if it's one this build knows. */
   get tag(): (keyof C & string) | undefined {
     const tag = this.y.get(this.variant.tag);
-    return typeof tag === "string" && tag in this.variant.cases ? tag : undefined;
+    return isString(tag) && tag in this.variant.cases ? tag : undefined;
   }
 
   /** The fields of its case beside the base ones. */
@@ -707,8 +728,8 @@ export class Coll<I extends Field, T = Item<I>> implements Observable {
   }
 
   /** Call `fn` on any change to it or anything inside it. Returns a function that stops it. */
-  observe(fn: () => void): () => void {
-    return observeDeep(this.y, fn);
+  observe(function_: () => void): () => void {
+    return observeDeep(this.y, function_);
   }
 
   /** Every item as plain values. */
@@ -718,8 +739,8 @@ export class Coll<I extends Field, T = Item<I>> implements Observable {
     return out;
   }
 
-  transact(fn: () => void) {
-    transactOn(this.y, fn);
+  transact(function_: () => void) {
+    transactOn(this.y, function_);
   }
 }
 
@@ -751,9 +772,9 @@ export class List<T> implements Observable {
     this.y.delete(index, count);
   }
 
-  observe(fn: () => void): () => void {
-    this.y.observe(fn);
-    return () => this.y.unobserve(fn);
+  observe(function_: () => void): () => void {
+    this.y.observe(function_);
+    return () => this.y.unobserve(function_);
   }
 }
 
@@ -780,25 +801,30 @@ export function copyText(into: Y.XmlFragment, from: Y.XmlFragment) {
 export type Root<S extends Shape> = { readonly [K in keyof S]: Item<S[K]> };
 
 /** Typed handles for a document's top-level fields, each a shared type of its own. */
-export function rootOf<S extends Shape>(doc: Y.Doc, shape: S): Root<S> {
-  return cached(shape, doc, () => {
+export function rootOf<S extends Shape>(document: Y.Doc, shape: S): Root<S> {
+  return cached(shape, document, () => {
     const out: Record<string, unknown> = {};
     for (const [key, field] of Object.entries(shape)) {
       switch (field.kind) {
-        case "record":
-          out[key] = recOf(doc.getMap(key), field.shape);
+        case "record": {
+          out[key] = recOf(document.getMap(key), field.shape);
           break;
-        case "collection":
-          out[key] = collOf(doc.getMap(key), field);
+        }
+        case "collection": {
+          out[key] = collOf(document.getMap(key), field);
           break;
-        case "list":
-          out[key] = listOf(doc.getArray(key));
+        }
+        case "list": {
+          out[key] = listOf(document.getArray(key));
           break;
-        case "text":
-          out[key] = doc.getXmlFragment(key);
+        }
+        case "text": {
+          out[key] = document.getXmlFragment(key);
           break;
-        default:
+        }
+        default: {
           throw new Error(`A document can't hold a ${field.kind} at its top level`);
+        }
       }
     }
     return out as Root<S>;

@@ -505,7 +505,7 @@ const ABILITIES_BY_PLAYBOOK: Record<string, { name: string; text: string }[]> = 
 
 const PLAYBOOK_ABILITIES = PLAYBOOKS.flatMap((playbook) =>
   (ABILITIES_BY_PLAYBOOK[playbook.id] ?? []).map((ability) => ({
-    id: `ability-${playbook.id}-${ability.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+    id: `ability-${playbook.id}-${ability.name.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-")}`,
     playbook: playbook.id,
     ...ability,
     text: abilityRules(ability.name) ?? richTextFromPlain(ability.text),
@@ -544,9 +544,9 @@ const ITEMS = (
     ["papers", "Documents", 0],
   ] as const
 ).map(([id, name, weight]) => ({
-  id: String(id),
-  name: String(name),
-  weight: Number(weight),
+  id,
+  name,
+  weight,
   description: "Declare use during the score; count its load when selected.",
   tags: [],
   equippable: true,
@@ -727,9 +727,9 @@ export const bladesInTheDark: GameSystem = {
     const dice = first?.kind === "dice" ? first.dice.filter((die) => !die.disabled) : [];
     const specification = rolled ? parse(rolled.formula)[0] : undefined;
     const zeroDice = specification?.kind === "dice" && specification.keep?.which === "low";
-    const values = dice.length ? dice.map((die) => die.value) : natural;
+    const values = dice.length > 0 ? dice.map((die) => die.value) : natural;
     if (!zeroDice && values.filter((value) => value === 6).length > 1) return "critical";
-    const highest = zeroDice || !values.length ? total : Math.max(...values);
+    const highest = zeroDice || values.length === 0 ? total : Math.max(...values);
     const band = bandOf(highest);
     const position = first?.label?.toLowerCase();
     return band !== "strong" && (position === "controlled" || position === "desperate")

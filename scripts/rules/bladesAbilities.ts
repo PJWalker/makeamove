@@ -7,7 +7,7 @@ const source = readReference("Blades-in-the-Dark-SRD.md");
 
 function abilities(title: string): { id: string; name: string; text: RichText }[] {
   const start = source.indexOf(title);
-  if (start < 0) return [];
+  if (start === -1) return [];
   const section = source.slice(start + title.length).split(/^#{1,2} /m)[0] ?? "";
   const headings = [...section.matchAll(/^### (.+)$/gm)];
   return headings.flatMap((heading, index) => {

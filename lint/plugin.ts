@@ -1,7 +1,7 @@
 import { cssCoLocated } from "./rules/cssCoLocated.ts";
 import { dialogTitleEllipsis } from "./rules/dialogTitleEllipsis.ts";
 import { noNativeConfirmation } from "./rules/noNativeConfirmation.ts";
-import { preferGuardHelpers } from "./rules/preferGuardHelpers.ts";
+import { preferGuardHelpers } from "./rules/prefer-guard-helpers.ts";
 import { preferMotionHelpers } from "./rules/preferMotionHelpers.ts";
 import { preferNumberParsing } from "./rules/preferNumberParsing.ts";
 import { preferReducedMotion } from "./rules/preferReducedMotion.ts";

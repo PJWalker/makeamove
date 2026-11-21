@@ -84,8 +84,8 @@ function marquee(c: ToolContext, start: Point, base: string[], pick: string | nu
       const rect = rectBetween(start, world);
       const inside = c
         .allElements()
-        .flatMap((el) =>
-          !el.locked && c.pickable(el) && contains(rect, bounds([el])!) ? [el.id] : [],
+        .flatMap((element) =>
+          !element.locked && c.pickable(element) && contains(rect, bounds([element])!) ? [element.id] : [],
         );
       c.selection.value = [...new Set([...base, ...inside])];
       c.updateOverlay();

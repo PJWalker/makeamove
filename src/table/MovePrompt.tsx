@@ -41,9 +41,9 @@ const BOTTOM_BAND = 120;
 
 type Request = { kind: "target" | "ask"; moveId: string; characterId: string };
 
-const cancel = (ctx: CampaignContext) => {
-  ctx.campaign.moves.clear();
-  ctx.canvas.areaRequest.set(null);
+const cancel = (context: CampaignContext) => {
+  context.campaign.moves.clear();
+  context.canvas.areaRequest.set(null);
 };
 
 /** Start placing an action's area on the scene, or stop. */
@@ -106,9 +106,9 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
 }
 
 function useMovePrompt(campaign: Campaign) {
-  const ctx = useCampaign();
-  const target = useSelector(ctx.campaign.moves.actor, (snapshot) => snapshot.context.targets);
-  const requestedMove = useSelector(ctx.campaign.moves.actor, (snapshot) => snapshot.context.ask);
+  const context = useCampaign();
+  const target = useSelector(context.campaign.moves.actor, (snapshot) => snapshot.context.targets);
+  const requestedMove = useSelector(context.campaign.moves.actor, (snapshot) => snapshot.context.ask);
   const live = useMemo((): Request | null => {
     if (target) return { kind: "target", ...target };
     if (requestedMove) return { kind: "ask", ...requestedMove };
@@ -119,7 +119,7 @@ function useMovePrompt(campaign: Campaign) {
   const [last, setLast] = useState<Request | null>(null);
   if (live && live !== last) setLast(live);
   const shown = live ?? last;
-  const ref = useRef<HTMLDialogElement>(null);
+  const reference = useRef<HTMLDialogElement>(null);
   const anchor = useRef<Element | null>(null);
 
   // Whether a request was on screen as of the last commit.
@@ -128,7 +128,7 @@ function useMovePrompt(campaign: Campaign) {
   useLayoutEffect(() => {
     if (!live) return;
     const pressed = lastPressed();
-    if (pressed && !ref.current?.contains(pressed)) anchor.current = pressed;
+    if (pressed && !reference.current?.contains(pressed)) anchor.current = pressed;
     else if (!wasShown.current) anchor.current = null;
   }, [live]);
   useLayoutEffect(() => {
@@ -138,13 +138,13 @@ function useMovePrompt(campaign: Campaign) {
   // Shrink back into the button once the request is done or cancelled.
   useLayoutEffect(() => {
     if (hasLive || !shown) return;
-    const el = ref.current;
-    if (!el || reducedMotion.matches) {
+    const element = reference.current;
+    if (!element || reducedMotion.matches) {
       setLast(null);
       return;
     }
     void leave(
-      el,
+      element,
       () => {
         if (shown) setLast(null);
       },
@@ -156,8 +156,8 @@ function useMovePrompt(campaign: Campaign) {
   // Follow the button as its sidebar moves; use the hotbar fallback if it leaves the viewport.
   useLayoutEffect(() => {
     if (!open) return;
-    const el = ref.current;
-    if (!el) return;
+    const element = reference.current;
+    if (!element) return;
     let active = true;
     let revision = 0;
     let entered = false;
@@ -165,27 +165,27 @@ function useMovePrompt(campaign: Campaign) {
       if (entered || reducedMotion.matches) return;
       entered = true;
       const origin = onScreenRect(anchor.current);
-      if (origin) growFrom(el, origin);
+      if (origin) growFrom(element, origin);
     };
     const place = async () => {
       const currentRevision = ++revision;
       const source = anchor.current;
       const a = onScreenRect(source);
       if (!a || !source) {
-        const w = el.offsetWidth;
-        const h = el.offsetHeight;
-        el.dataset["side"] = "none";
-        el.style.left = `${Math.round(Math.min(Math.max((innerWidth - w) / 2, MARGIN), innerWidth - w - MARGIN))}px`;
-        el.style.top = `${Math.round(Math.min(Math.max(innerHeight - h - 60, MARGIN), innerHeight - h - MARGIN))}px`;
-        el.style.setProperty("--tail", "0px");
+        const w = element.offsetWidth;
+        const h = element.offsetHeight;
+        element.dataset["side"] = "none";
+        element.style.left = `${Math.round(Math.min(Math.max((innerWidth - w) / 2, MARGIN), innerWidth - w - MARGIN))}px`;
+        element.style.top = `${Math.round(Math.min(Math.max(innerHeight - h - 60, MARGIN), innerHeight - h - MARGIN))}px`;
+        element.style.setProperty("--tail", "0px");
         enter();
         return;
       }
 
-      const side = preferredSide(a, el.offsetWidth);
-      el.dataset["side"] = sideName(side);
-      const tail = el.querySelector<HTMLElement>(".roll-prompt-tail");
-      const result = await computePosition(source, el, {
+      const side = preferredSide(a, element.offsetWidth);
+      element.dataset["side"] = sideName(side);
+      const tail = element.querySelector<HTMLElement>(".roll-prompt-tail");
+      const result = await computePosition(source, element, {
         strategy: "fixed",
         placement: side,
         middleware: [
@@ -197,18 +197,18 @@ function useMovePrompt(campaign: Campaign) {
       });
       if (!active || currentRevision !== revision) return;
       const placement = result.placement.split("-")[0];
-      el.dataset["side"] = sideName(placement);
-      el.style.left = `${Math.round(result.x)}px`;
-      el.style.top = `${Math.round(result.y)}px`;
+      element.dataset["side"] = sideName(placement);
+      element.style.left = `${Math.round(result.x)}px`;
+      element.style.top = `${Math.round(result.y)}px`;
       const arrowOffset = result.middlewareData.arrow;
       const along = placement === "left" || placement === "right" ? arrowOffset?.y : arrowOffset?.x;
-      if (along !== undefined) el.style.setProperty("--tail", `${along + 12}px`);
+      if (along !== undefined) element.style.setProperty("--tail", `${along + 12}px`);
       enter();
     };
 
     const source = anchor.current;
     if (source) {
-      const cleanup = autoUpdate(source, el, () => void place(), { animationFrame: true });
+      const cleanup = autoUpdate(source, element, () => void place(), { animationFrame: true });
       return () => {
         active = false;
         cleanup();
@@ -226,18 +226,18 @@ function useMovePrompt(campaign: Campaign) {
   // Hand a targeting request to the scene, so clicks on tokens target it.
   useEffect(() => {
     const syncTargets = () => {
-      const r = ctx.campaign.moves.actor.getSnapshot().context.targets;
+      const r = context.campaign.moves.actor.getSnapshot().context.targets;
       const s = r && systemOf(campaign).actions.find((m) => m.id === r.moveId)?.target;
-      ctx.canvas.targetPick.set(
-        r && s ? { ...(s.max !== undefined ? { max: s.max } : {}), actor: r.characterId } : null,
+      context.canvas.targetPick.set(
+        r && s ? { ...(s.max === undefined ? {} : { max: s.max }), actor: r.characterId } : null,
       );
-      if (r) ctx.tools.activeTool.set("select");
+      if (r) context.tools.activeTool.set("select");
     };
     syncTargets();
-    const stop = ctx.campaign.moves.actor.subscribe(syncTargets);
+    const stop = context.campaign.moves.actor.subscribe(syncTargets);
     return () => stop.unsubscribe();
-  }, [ctx, campaign]);
-  useEffect(() => () => cancel(ctx), [ctx]);
+  }, [context, campaign]);
+  useEffect(() => () => cancel(context), [context]);
 
   // Escape backs out, before the canvas uses it to clear the selection.
   useEffect(() => {
@@ -245,16 +245,16 @@ function useMovePrompt(campaign: Campaign) {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape" || e.defaultPrevented) return;
       e.preventDefault();
-      cancel(ctx);
+      cancel(context);
     };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [ctx, hasLive]);
+    globalThis.addEventListener("keydown", onKey, true);
+    return () => globalThis.removeEventListener("keydown", onKey, true);
+  }, [context, hasLive]);
 
-  const req = shown;
-  const move = req ? systemOf(campaign).actions.find((m) => m.id === req.moveId) : undefined;
-  const character = req ? getCharacter(campaign, req.characterId) : undefined;
-  return { ctx, hasLive, ref, req, move, character };
+  const request = shown;
+  const move = request ? systemOf(campaign).actions.find((m) => m.id === request.moveId) : undefined;
+  const character = request ? getCharacter(campaign, request.characterId) : undefined;
+  return { ctx: context, hasLive, ref: reference, req: request, move, character };
 }
 
 /** Targets, picked by clicking tokens on the map. */
@@ -267,12 +267,12 @@ function TargetStep({
   characterId: string;
   moveId: string;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const move = systemOf(campaign).actions.find((m) => m.id === moveId)!;
   const spec = move.target!;
-  const targets = useQuery(ctx.canvas.chosenTargets);
+  const targets = useQuery(context.canvas.chosenTargets);
   const ready = targets.length >= spec.min;
-  const fmt = useQuery(ctx.canvas.sceneDistance);
+  const fmt = useQuery(context.canvas.sceneDistance);
   const wanted = wantedTargets(spec.max);
   const reach = (d: number | null) =>
     spec.range && d !== null ? inRange(d, spec.range) : "normal";
@@ -283,16 +283,16 @@ function TargetStep({
       id: t.id,
       name: t.name,
       ...(t.characterId ? { characterId: t.characterId } : {}),
-      ...(t.distance !== null ? { distance: fmt(t.distance) } : {}),
+      ...(t.distance === null ? {} : { distance: fmt(t.distance) }),
       ...(reach(t.distance) === "long" ? { long: true } : {}),
     }));
-    ctx.execute(startMove, { characterId, move: move.id, targets: picked });
+    context.execute(startMove, { characterId, move: move.id, targets: picked });
   };
   const area = spec.area;
-  const request = useQuery(ctx.canvas.areaRequest);
-  const placed = useQuery(ctx.canvas.placedArea);
+  const request = useQuery(context.canvas.areaRequest);
+  const placed = useQuery(context.canvas.placedArea);
   const placing = !!request;
-  const placeArea = () => toggleAreaRequest(ctx.canvas, area!, characterId);
+  const placeArea = () => toggleAreaRequest(context.canvas, area!, characterId);
   return (
     <div className="move-form">
       <p className="roll-prompt-text">{spec.prompt}</p>
@@ -301,7 +301,7 @@ function TargetStep({
           {areaButtonLabel(placing, !!placed, areaName(fmt, area))}
         </Button>
       )}
-      {targets.length ? (
+      {targets.length > 0 ? (
         <span className="roll-prompt-targets">
           {targets.map((t) => {
             const r = reach(t.distance);
@@ -366,7 +366,7 @@ function withoutAskedQuestions(move: ActionDef): RichText {
       return kept ? [kept] : [];
     });
     const emptyList =
-      (node.type === "bulletList" || node.type === "orderedList") && !content.length;
+      (node.type === "bulletList" || node.type === "orderedList") && content.length === 0;
     return emptyList ? null : { ...node, content };
   };
   return prune(move.text) ?? emptyRichText();

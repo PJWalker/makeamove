@@ -20,8 +20,8 @@ import { useCampaign } from "../workspace/campaignContext";
 const TAB = 44;
 
 export function FloatingWindows({ campaign }: { campaign: Campaign }) {
-  const ctx = useCampaign();
-  const windows = useQuery(ctx.panels.floatingWindows);
+  const context = useCampaign();
+  const windows = useQuery(context.panels.floatingWindows);
   return createPortal(
     <>
       {windows.map((w) => (
@@ -46,13 +46,13 @@ function nextMorph(phase: Morph, lifted: boolean, overTab: boolean): Morph {
  * animation short. A window pulled out of a tab starts as the tab ('hidden') and grows from it when it leaves the sidebar.
  */
 function useDockMorph(id: PanelId, lifted: boolean, overTab: boolean) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const [phase, setPhase] = useState<Morph>(() =>
-    ctx.panels.spawnedFromTab.has(id) ? "hidden" : undefined,
+    context.panels.spawnedFromTab.has(id) ? "hidden" : undefined,
   );
   useEffect(() => {
-    ctx.panels.spawnedFromTab.delete(id);
-  }, [ctx, id]);
+    context.panels.spawnedFromTab.delete(id);
+  }, [context, id]);
   const morph = nextMorph(phase, lifted, overTab);
   if (morph !== phase) setPhase(morph);
   return morph;
@@ -60,7 +60,7 @@ function useDockMorph(id: PanelId, lifted: boolean, overTab: boolean) {
 
 /** What a window shows below its title bar, unless it's rolled up: its panel, and the grips to resize it. */
 function WindowBody({ win, campaign }: { win: { id: PanelId }; campaign: Campaign }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   return (
     <>
       <div className="panel-body panel-content">
@@ -73,7 +73,7 @@ function WindowBody({ win, campaign }: { win: { id: PanelId }; campaign: Campaig
           className="win-resize"
           data-dir={dir}
           aria-hidden="true"
-          onPointerDown={(e) => ctx.panels.startWindowResize(win.id, e.nativeEvent, dir)}
+          onPointerDown={(e) => context.panels.startWindowResize(win.id, e.nativeEvent, dir)}
         />
       ))}
     </>
@@ -140,23 +140,23 @@ function Window({
 }
 
 function useWindowPresentation(stored: FloatingWindow & { id: PanelId }, campaign: Campaign) {
-  const ctx = useCampaign();
-  const win = useWindowRect(ctx.panels, stored);
+  const context = useCampaign();
+  const win = useWindowRect(context.panels, stored);
   const label = usePanelLabel(win.id, campaign);
   const [rolled, setRolled] = useState(false);
-  const pointer = useWindowPointer(ctx.panels, win.id);
-  const target = useQuery(ctx.panels.dockTarget);
+  const pointer = useWindowPointer(context.panels, win.id);
+  const target = useQuery(context.panels.dockTarget);
 
   function onHeaderPointerDown(e: PointerEvent) {
     if (e.button !== 0 || (e.target as HTMLElement).closest("button")) return;
     e.preventDefault();
-    ctx.panels.startWindowDrag(win.id, e, e.clientX - win.x, e.clientY - win.y);
+    context.panels.startWindowDrag(win.id, e, e.clientX - win.x, e.clientY - win.y);
   }
 
   // Over a sidebar the window morphs into the tab it would become, and back out again.
-  const asTab = target !== null ? pointer : null;
+  const asTab = target === null ? null : pointer;
   const morph = useDockMorph(win.id, pointer !== null, asTab !== null);
   const to = pointer ?? { x: win.x, y: win.y };
   const toTab = `translate(${to.x - TAB / 2 - win.x}px, ${to.y - TAB / 2 - win.y}px) scale(${TAB / win.w}, ${TAB / win.h})`;
-  return { ctx, win, label, rolled, setRolled, pointer, asTab, morph, toTab, onHeaderPointerDown };
+  return { ctx: context, win, label, rolled, setRolled, pointer, asTab, morph, toTab, onHeaderPointerDown };
 }

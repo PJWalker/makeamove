@@ -7,7 +7,7 @@ const only = process.argv.slice(2);
 
 const renders = await renderInBrowser<{ name: string; size: number; dataUrl: string }[]>({
   module: "/scripts/icons/studio.ts",
-  expression: `mod.renderIcons(${only.length ? JSON.stringify(only) : ""})`,
+  expression: `mod.renderIcons(${only.length > 0 ? JSON.stringify(only) : ""})`,
   dependencies: ["three"],
 });
 

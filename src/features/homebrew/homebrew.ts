@@ -62,7 +62,7 @@ export function deleteHomebrew(map: Homebrew, id: string) {
 
 /** A system with the campaign's homebrew added: its gear after the system's, its moves too. */
 export function withHomebrew(system: GameSystem, entries: HomebrewEntry[]): GameSystem {
-  if (!entries.length) return system;
+  if (entries.length === 0) return system;
   const items = entries.flatMap((e) => (e.kind === "gear" ? [e.item] : []));
   const actions = entries.flatMap((e) => (e.kind === "move" ? [e.move] : []));
   return {

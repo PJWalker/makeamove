@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { systemOf } from "../../features/characters/api";
 import { derive } from "../../features/characters/store";
 import { Button } from "../../ui/Button";
-import type { ItemUseProps } from "../extensionTypes";
+import type { ItemUseProps as ItemUseProperties } from "../extensionTypes";
 import { useGear } from "./commands";
 import { useCampaign } from "../../workspace/campaignContext";
 
@@ -32,7 +32,7 @@ function UseControls({
 }
 
 /** Whether an item has no uses left. */
-const usedUp = (item: ItemUseProps["item"]) => (item.usesLeft ?? 0) <= 0;
+const usedUp = (item: ItemUseProperties["item"]) => (item.usesLeft ?? 0) <= 0;
 
 /** A labelled selector over a list of ids. */
 function OptionSelect({
@@ -67,8 +67,8 @@ function OptionSelect({
 }
 
 /** A magic wand: drain it until camp, or mark a Condition instead. */
-function WandUse({ campaign, character, item, editable }: ItemUseProps) {
-  const ctx = useCampaign();
+function WandUse({ campaign, character, item, editable }: ItemUseProperties) {
+  const context = useCampaign();
   const [marking, setMarking] = useState(false);
   const [condition, setCondition] = useState("");
   const locked = new Set(character.lockedConditions);
@@ -91,7 +91,7 @@ function WandUse({ campaign, character, item, editable }: ItemUseProps) {
             {
               id: "mark-condition",
               label: "Mark or lock a Condition instead",
-              disabled: !available.length,
+              disabled: available.length === 0,
             },
           ]}
           disabled={disabled}
@@ -110,7 +110,7 @@ function WandUse({ campaign, character, item, editable }: ItemUseProps) {
         )
       }
       onUse={() =>
-        ctx.execute(useGear, {
+        context.execute(useGear, {
           characterId: character.id,
           itemId: item.id,
           choice: marking ? { kind: "mark-condition", condition: chosen } : { kind: "drain" },
@@ -121,8 +121,8 @@ function WandUse({ campaign, character, item, editable }: ItemUseProps) {
 }
 
 /** A healing potion: recover half the lost HP, or clear a locked Condition. */
-function PotionUse({ campaign, character, item, editable }: ItemUseProps) {
-  const ctx = useCampaign();
+function PotionUse({ campaign, character, item, editable }: ItemUseProperties) {
+  const context = useCampaign();
   const [clearing, setClearing] = useState(false);
   const [condition, setCondition] = useState(character.lockedConditions?.[0] ?? "");
   const locked = character.lockedConditions ?? [];
@@ -140,7 +140,7 @@ function PotionUse({ campaign, character, item, editable }: ItemUseProps) {
           value={clearing ? "clear-locked" : "heal"}
           options={[
             { id: "heal", label: "Recover half lost HP" },
-            { id: "clear-locked", label: "Clear a locked Condition", disabled: !locked.length },
+            { id: "clear-locked", label: "Clear a locked Condition", disabled: locked.length === 0 },
           ]}
           disabled={disabled}
           onChange={(id) => setClearing(id === "clear-locked")}
@@ -159,7 +159,7 @@ function PotionUse({ campaign, character, item, editable }: ItemUseProps) {
         )
       }
       onUse={() =>
-        ctx.execute(useGear, {
+        context.execute(useGear, {
           characterId: character.id,
           itemId: item.id,
           choice: clearing
@@ -172,17 +172,17 @@ function PotionUse({ campaign, character, item, editable }: ItemUseProps) {
 }
 
 /** Controls for Dungeon World 2's charged items: a potion's or a wand's choice of effect. */
-export function Dw2ItemUse(props: ItemUseProps) {
-  const ctx = useCampaign();
-  const { campaign, character, item, editable } = props;
+export function Dw2ItemUse(properties: ItemUseProperties) {
+  const context = useCampaign();
+  const { campaign, character, item, editable } = properties;
   if (item.uses === undefined) return null;
   const use = systemOf(campaign).items.find((entry) => entry.id === item.defId)?.itemUse;
-  if (use === "magic-wand") return <WandUse {...props} />;
-  if (use === "healing-potion") return <PotionUse {...props} />;
+  if (use === "magic-wand") return <WandUse {...properties} />;
+  if (use === "healing-potion") return <PotionUse {...properties} />;
   return (
     <Button
       disabled={!editable || usedUp(item)}
-      onClick={() => ctx.execute(useGear, { characterId: character.id, itemId: item.id })}
+      onClick={() => context.execute(useGear, { characterId: character.id, itemId: item.id })}
     >
       Use
     </Button>

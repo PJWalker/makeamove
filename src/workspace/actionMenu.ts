@@ -15,13 +15,13 @@ export interface ActionMenuTarget {
 
 /** Context-menu entries for calls that can be pinned or given a shortcut. */
 export function actionMenuItems(
-  ctx: CampaignContext,
+  context: CampaignContext,
   targets: ActionMenuTarget[],
   beforeShortcut?: () => void,
 ): MenuItem[] {
-  const { campaign } = ctx;
+  const { campaign } = context;
   const resolved = targets.flatMap(({ id, title }) => {
-    const action = findAction(ctx, id);
+    const action = findAction(context, id);
     return action ? [{ id, title: title ?? action.title }] : [];
   });
   const multiple = resolved.length > 1;
@@ -37,8 +37,8 @@ export function actionMenuItems(
         disabled: !pinned && hotbarSlots(campaign, actingCharacterId(campaign)).length >= MAX_SLOTS,
         onSelect: () =>
           void (pinned
-            ? ctx.execute(unpinFromHotbar, { key: id })
-            : ctx.execute(pinToHotbar, { key: id })),
+            ? context.execute(unpinFromHotbar, { key: id })
+            : context.execute(pinToHotbar, { key: id })),
       },
       {
         label: `${shortcut ? "Change" : "Add"} Shortcut${multiple ? ` for ${title}` : ""}…`,
@@ -46,7 +46,7 @@ export function actionMenuItems(
         ...(shortcut ? { shortcut: showCombo(shortcut) } : {}),
         onSelect: () => {
           beforeShortcut?.();
-          ctx.table.editAction("shortcut", id, title);
+          context.table.editAction("shortcut", id, title);
         },
       },
     ] satisfies MenuItem[];

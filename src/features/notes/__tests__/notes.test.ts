@@ -114,7 +114,8 @@ describe("the GM vault", () => {
     expect(listNotes(c).find((n) => n.id === secret)?.gmOnly).toBe(true);
     // The vault's own key, never written to the shared campaign.
     expect(c.vault.value!.key).toMatch(/.{20,}/);
-    expect(JSON.stringify(c.doc.toJSON())).not.toContain(c.vault.value!.key);
+    const shared = [...c.doc.share].map(([name, type]): [string, unknown] => [name, type.toJSON()]);
+    expect(JSON.stringify(shared)).not.toContain(c.vault.value!.key);
     c.destroy();
   });
 

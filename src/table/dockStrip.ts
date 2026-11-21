@@ -7,8 +7,8 @@ type Measurement = { width: number; elements: HTMLElement[] };
 export function measureRow(row: HTMLElement): Measurement {
   const elements = [...row.children] as HTMLElement[];
   const style = getComputedStyle(row);
-  const padding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
-  const gaps = Math.max(0, elements.length - 1) * (parseFloat(style.columnGap) || 0);
+  const padding = Number.parseFloat(style.paddingLeft) + Number.parseFloat(style.paddingRight);
+  const gaps = Math.max(0, elements.length - 1) * (Number.parseFloat(style.columnGap) || 0);
   return {
     width: elements.reduce((width, element) => width + element.offsetWidth, 0) + padding + gaps,
     elements,
@@ -16,14 +16,14 @@ export function measureRow(row: HTMLElement): Measurement {
 }
 
 export function useDockStripLayout(
-  ref: RefObject<HTMLDivElement | null>,
+  reference: RefObject<HTMLDivElement | null>,
   edge: "top" | "bottom",
   measureContent: (bar: HTMLElement) => Measurement = measureRow,
 ) {
-  const ctx = useCampaign();
-  const insets = useQuery(ctx.panels.dockInsets);
+  const context = useCampaign();
+  const insets = useQuery(context.panels.dockInsets);
   useLayoutEffect(() => {
-    const bar = ref.current;
+    const bar = reference.current;
     const table = bar?.closest<HTMLElement>(".table");
     if (!bar || !table) return;
     const heightProperty = `--dock-${edge}-height`;

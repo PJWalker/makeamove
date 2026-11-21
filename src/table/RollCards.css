@@ -166,7 +166,7 @@
     transition: opacity 560ms var(--ease);
   }
   /* Reveal the total once every die has landed. */
-  .roll-body:has(.die:is([data-phase="pending"], [data-phase="flying"])) > .roll-total {
+  .roll-body:has(.die:is([data-phase="pending"], [data-phase="moving"])) > .roll-total {
     opacity: 0;
   }
 

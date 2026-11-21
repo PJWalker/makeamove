@@ -1,13 +1,14 @@
 import { batch, derived, store, type ReadonlyStore } from "../lib/store";
+import { isPhone } from "../ui/viewport";
 import { useSyncExternalStore } from "react";
-import type { LocalDoc, LocalValue } from "../data/localDoc";
+import type { LocalDoc as LocalDocument, LocalValue } from "../data/localDoc";
 import { dropLine, indexAmong } from "../ui/reorder";
 import { withTransition } from "../ui/transition";
 import { nextZ, noteZ } from "../ui/windows";
 import { trackPointer } from "../ui/pointer";
 import { RESIZE_CURSORS, resizeRect, type Rect, type ResizeDir } from "../ui/resizeRect";
 import {
-  PANEL_ORDER,
+
   SIDEBAR_MIN_W,
   SIDES,
   close,
@@ -18,7 +19,7 @@ import {
   normalise,
   oneSideIfCramped,
   reorder,
-  otherSide,
+
   setOpen,
   showTab,
   type FloatingWindow,
@@ -44,8 +45,8 @@ import {
   type Icon,
 } from "../ui/icons";
 
-export { PANEL_ORDER, SIDEBAR_MIN_W, otherSide, isPanelId, locate };
-export type { DockItemId, FloatingWindow, PanelId, Side };
+
+
 
 export const PANELS: Record<PanelId, { label: string; Icon: Icon }> = {
   scene: { label: "Scenes", Icon: IconMap },
@@ -68,8 +69,6 @@ export const PANELS: Record<PanelId, { label: string; Icon: Icon }> = {
 
 export const sidebarMaxWidth = () => Math.max(SIDEBAR_MIN_W, Math.min(720, innerWidth - 160));
 
-const narrow = () => matchMedia("(max-width: 600px)").matches;
-
 /**
  * Window geometry is always stored as whole pixels. Pointer coordinates can be
  * fractional (zoom, high-DPI), and fractional boxes render with blurry edges.
@@ -81,7 +80,7 @@ function whole<T extends Record<string, number | undefined>>(geometry: T): T {
 }
 
 function read(stored: unknown): Layout {
-  const l = normalise(stored ?? null, narrow());
+  const l = normalise(stored ?? null, isPhone());
   return {
     ...l,
     floating: l.floating.map((w) => ({ ...w, ...whole({ x: w.x, y: w.y, w: w.w, h: w.h }) })),
@@ -138,7 +137,7 @@ export class PanelLayout {
   /** The window being dragged and where its pointer is, so it can shrink to a tab over a sidebar. */
   readonly windowPointer = store<{ id: DockItemId; x: number; y: number } | null>(null);
 
-  constructor(local: LocalDoc) {
+  constructor(local: LocalDocument) {
     this.layout = local.value("layout", read);
     // Saved windows keep their order; anything opened later goes above them.
     for (const w of this.layout.value.floating) noteZ(w.z);
@@ -154,8 +153,8 @@ export class PanelLayout {
       const l = this.shownLayout.value;
       const of = (side: Side) => {
         const s = l[side];
-        const body = s.open && s.panels.length ? s.width : 0;
-        return { body, total: body + (s.panels.length ? 48 : 0) };
+        const body = s.open && s.panels.length > 0 ? s.width : 0;
+        return { body, total: body + (s.panels.length > 0 ? 48 : 0) };
       };
       return { left: of("left"), right: of("right") };
     });
@@ -254,10 +253,10 @@ export class PanelLayout {
     if (!start) return;
     trackPointer(
       RESIZE_CURSORS[dir],
-      (ev) =>
+      (event) =>
         this.#setLiveRect(
           id,
-          resizeRect(start, dir, ev.clientX - e.clientX, ev.clientY - e.clientY),
+          resizeRect(start, dir, event.clientX - e.clientX, event.clientY - e.clientY),
         ),
       () => this.#commitLiveRect(),
     );
@@ -268,25 +267,25 @@ export class PanelLayout {
     this.raiseWindow(id);
     this.windowDragging.value = true;
     const marker = dropLine("y");
-    const move = (ev: PointerEvent) => {
-      const x = Math.min(Math.max(ev.clientX - grabX, -200), innerWidth - 80);
-      const y = Math.min(Math.max(ev.clientY - grabY, 0), innerHeight - 40);
+    const move = (event: PointerEvent) => {
+      const x = Math.min(Math.max(event.clientX - grabX, -200), innerWidth - 80);
+      const y = Math.min(Math.max(event.clientY - grabY, 0), innerHeight - 40);
       this.#setLiveRect(id, { x, y });
-      const side = sideAt(ev.clientX, ev.clientY);
+      const side = sideAt(event.clientX, event.clientY);
       this.dockTarget.value = side;
-      this.windowPointer.value = { id, x: ev.clientX, y: ev.clientY };
-      if (side) marker.show(tabsOf(side), indexAmong(tabsOf(side), "y", ev));
+      this.windowPointer.value = { id, x: event.clientX, y: event.clientY };
+      if (side) marker.show(tabsOf(side), indexAmong(tabsOf(side), "y", event));
       else marker.hide();
     };
-    const up = (ev: PointerEvent) => {
+    const up = (event: PointerEvent) => {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
       window.removeEventListener("pointercancel", up);
-      const side = sideAt(ev.clientX, ev.clientY);
+      const side = sideAt(event.clientX, event.clientY);
       marker.hide();
       this.#commitLiveRect();
       if (side) {
-        const index = indexAmong(tabsOf(side), "y", ev);
+        const index = indexAmong(tabsOf(side), "y", event);
         // Dropped on a closed sidebar, it joins the tabs without opening it.
         void withTransition(() => this.dockPanel(id, side, index, false));
       }
@@ -294,9 +293,9 @@ export class PanelLayout {
       this.windowDragging.value = false;
       this.windowPointer.value = null;
     };
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
-    window.addEventListener("pointercancel", up);
+    globalThis.addEventListener("pointermove", move);
+    globalThis.addEventListener("pointerup", up);
+    globalThis.addEventListener("pointercancel", up);
     move(e);
   }
 }
@@ -326,3 +325,5 @@ export function useWindowRect<W extends FloatingWindow | undefined>(
 export function useWindowPointer(panels: PanelLayout, id: DockItemId) {
   return useFor(panels.windowPointer, id);
 }
+
+export {PANEL_ORDER, otherSide, isPanelId, type DockItemId, type FloatingWindow, type PanelId, type Side} from "./layoutModel";

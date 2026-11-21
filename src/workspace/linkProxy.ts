@@ -5,17 +5,17 @@ import type { CampaignContext } from "./campaignContext";
 
 /** A window's title-bar icon for a link target, dragging like a link to it. */
 export function linkProxy(
-  ctx: CampaignContext,
+  context: CampaignContext,
   kind: LinkKind,
   id: string,
   label: string,
   icon?: string,
 ): WindowProxy {
   return {
-    campaign: ctx.campaign,
+    campaign: context.campaign,
     kind,
     id,
     defaultIcon: icon,
-    entity: entity(ctx, kind, id, label),
+    entity: entity(context, kind, id, label),
   };
 }

@@ -47,7 +47,7 @@ function LiveLinkChip({
   id: string;
   shown: string;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const [button, setButton] = useState<HTMLButtonElement | null>(null);
   // The menu is built as it opens, from where the chip is then.
@@ -57,9 +57,9 @@ function LiveLinkChip({
       y,
       items: joinSections(
         linkMenuSections(
-          ctx,
+          context,
           { kind, id },
-          { title: shown, openInWindow: () => button && ctx.linkPopups.show({ kind, id }, button) },
+          { title: shown, openInWindow: () => button && context.linkPopups.show({ kind, id }, button) },
         ),
       ),
     }),
@@ -74,10 +74,10 @@ function LiveLinkChip({
         data-tip={linkTip(campaign, kind, id) ?? undefined}
         data-tip-long="true"
         data-tip-opens="true"
-        onClick={(e) => ctx.linkPopups.show({ kind, id }, e.currentTarget)}
+        onClick={(e) => context.linkPopups.show({ kind, id }, e.currentTarget)}
         onPointerDown={(e) => {
           trigger.onPointerDown(e);
-          dragEntity(ctx.canvas, e, entity(ctx, kind, id, shown));
+          dragEntity(context.canvas, e, entity(context, kind, id, shown));
         }}
         onContextMenu={(e) => trigger.onContextMenu(e)}
       >

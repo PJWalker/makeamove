@@ -102,14 +102,14 @@ export class BlobExchange {
   private async accept(hash: string, dec: decoding.Decoder) {
     const pending = this.pending.get(hash);
     if (!pending) return;
-    const blob = new Blob([decoding.readVarUint8Array(dec).slice()]);
+    const blob = new Blob([[...decoding.readVarUint8Array(dec)]]);
     // A bad copy is dropped and we keep waiting for another peer.
     if ((await sha256(await blob.arrayBuffer())) !== hash) return;
     if (!this.pending.delete(hash)) return;
     clearInterval(pending.retry);
     await Promise.resolve()
       .then(() => this.store.put(blob))
-      .catch(() => undefined);
+      .catch(() => {});
     for (const w of pending.waiters) w(blob);
   }
 }

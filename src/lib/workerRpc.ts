@@ -57,7 +57,7 @@ export function workerClient<Task extends Typed, Result extends Typed>(
       event.preventDefault();
       fail(w, new Error(event.message || `${name} failed`));
     };
-    w.onmessageerror = () => fail(w, new Error(`Could not read ${name.toLowerCase()} response`));
+    w.addEventListener('messageerror', () => fail(w, new Error(`Could not read ${name.toLowerCase()} response`)));
     worker = w;
     return w;
   };

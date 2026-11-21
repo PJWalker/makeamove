@@ -72,12 +72,12 @@ export function linkTargets(
     ...campaign
       .sceneViews()
       .map((s) => ({ kind: "scene" as const, id: s.id, label: s.name, detail: KIND_DETAIL.scene })),
-    ...system.items.map((i) => ({
+    ...system.items.map((index) => ({
       kind: "item" as const,
-      id: i.id,
-      label: i.name,
+      id: index.id,
+      label: index.name,
       detail: KIND_DETAIL.item,
-      ...(i.icon ? { icon: i.icon } : {}),
+      ...(index.icon ? { icon: index.icon } : {}),
     })),
     ...system.actions.map((m) => ({
       kind: "move" as const,
@@ -94,16 +94,21 @@ export function linkTargets(
 export function linkLabel(campaign: Campaign, kind: LinkKind, id: string): string | null {
   const system = systemOf(campaign);
   switch (kind) {
-    case "note":
+    case "note": {
       return listNotes(campaign).find((n) => n.id === id)?.title ?? null;
-    case "character":
+    }
+    case "character": {
       return getCharacter(campaign, id)?.name ?? null;
-    case "scene":
+    }
+    case "scene": {
       return campaign.sceneViews().find((s) => s.id === id)?.name ?? null;
-    case "item":
-      return system.items.find((i) => i.id === id)?.name ?? null;
-    case "move":
+    }
+    case "item": {
+      return system.items.find((index) => index.id === id)?.name ?? null;
+    }
+    case "move": {
       return system.actions.find((m) => m.id === id)?.name ?? null;
+    }
   }
 }
 
@@ -127,8 +132,8 @@ export function linkTip(campaign: Campaign, kind: LinkKind, id: string): string 
       return s ? `${s.name}\nScene` : null;
     }
     case "item": {
-      const i = system.items.find((x) => x.id === id);
-      return i ? `${i.name}\n${i.description}` : null;
+      const index = system.items.find((x) => x.id === id);
+      return index ? `${index.name}\n${index.description}` : null;
     }
     case "move": {
       const m = system.actions.find((x) => x.id === id);

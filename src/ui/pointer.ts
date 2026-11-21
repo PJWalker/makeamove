@@ -4,9 +4,9 @@ function rememberPointer(event: PointerEvent) {
   lastPosition = { x: event.clientX, y: event.clientY };
 }
 
-if (typeof window !== "undefined") {
-  window.addEventListener("pointermove", rememberPointer, { passive: true });
-  window.addEventListener("pointerdown", rememberPointer, { passive: true });
+if (globalThis.window !== undefined) {
+  globalThis.addEventListener("pointermove", rememberPointer, { passive: true });
+  globalThis.addEventListener("pointerdown", rememberPointer, { passive: true });
 }
 
 export function lastPointer() {
@@ -41,16 +41,16 @@ export function followPress(
     on.move(e);
   };
   const end = (e: PointerEvent, commit: boolean) => {
-    window.removeEventListener("pointermove", move);
-    window.removeEventListener("pointerup", up);
-    window.removeEventListener("pointercancel", cancel);
+    globalThis.removeEventListener("pointermove", move);
+    globalThis.removeEventListener("pointerup", up);
+    globalThis.removeEventListener("pointercancel", cancel);
     on.end(e, commit, lifted);
   };
   const up = (e: PointerEvent) => end(e, true);
   const cancel = (e: PointerEvent) => end(e, false);
-  window.addEventListener("pointermove", move);
-  window.addEventListener("pointerup", up);
-  window.addEventListener("pointercancel", cancel);
+  globalThis.addEventListener("pointermove", move);
+  globalThis.addEventListener("pointerup", up);
+  globalThis.addEventListener("pointercancel", cancel);
 }
 
 /**
@@ -74,13 +74,13 @@ export function trackPointer(
   const stop = (event?: Event) => {
     if (done) return;
     done = true;
-    window.removeEventListener("pointermove", onMove);
-    for (const type of ends) window.removeEventListener(type, stop);
+    globalThis.removeEventListener("pointermove", onMove);
+    for (const type of ends) globalThis.removeEventListener(type, stop);
     root.classList.remove("is-dragging");
     root.style.removeProperty("--drag-cursor");
     onEnd?.(event);
   };
-  window.addEventListener("pointermove", onMove);
-  for (const type of ends) window.addEventListener(type, stop);
+  globalThis.addEventListener("pointermove", onMove);
+  for (const type of ends) globalThis.addEventListener(type, stop);
   return () => stop();
 }

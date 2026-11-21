@@ -37,26 +37,35 @@ export interface View {
 export const DESTROY_VIEW = { children: true, context: true } as const;
 
 /** What an element's view is drawn from, apart from its transform: a change means a rebuild. */
-export function contentKey(el: SceneElement): string {
-  switch (el.type) {
-    case "map":
-      return `map:${el.image.hash}`;
-    case "token":
-      return `token:${el.graphic?.kind === "image" ? el.graphic.image.hash : ""}:${el.graphic?.kind === "icon" ? el.graphic.name : ""}:${el.name}:${el.colour}:${isPlainToken(el) ? "plain" : "disc"}`;
-    case "drawing":
-      return `drawing:${el.points.length}:${el.points[0]}:${el.points[1]}:${el.colour}:${el.width}:${el.bw}:${el.bh}`;
-    case "shape":
-      return `shape:${el.shape}:${el.shape === "polygon" ? `${el.points.join(",")}:${el.bw}:${el.bh}` : ""}:${el.stroke}:${el.fill}:${el.width}`;
-    case "text":
-      return `text:${el.text}:${el.colour}:${el.size}:${el.font}:${el.bold}:${el.italic}:${el.bw}:${el.bh}`;
-    case "wall":
-      return `wall:${!!el.door}:${!!el.open}`;
-    case "light":
-      return `light:${el.bright}:${el.dim}:${el.colour}`;
-    case "area":
-      return `area:${el.tone}:${el.points.join(",")}:${el.bw}:${el.bh}`;
-    case "effect":
-      return `effect:${el.effect}:${el.colour}:${el.shape}:${el.shape === "polygon" ? `${el.points.join(",")}:${el.bw}:${el.bh}` : ""}`;
+export function contentKey(element: SceneElement): string {
+  switch (element.type) {
+    case "map": {
+      return `map:${element.image.hash}`;
+    }
+    case "token": {
+      return `token:${element.graphic?.kind === "image" ? element.graphic.image.hash : ""}:${element.graphic?.kind === "icon" ? element.graphic.name : ""}:${element.name}:${element.colour}:${isPlainToken(element) ? "plain" : "disc"}`;
+    }
+    case "drawing": {
+      return `drawing:${element.points.length}:${element.points[0]}:${element.points[1]}:${element.colour}:${element.width}:${element.bw}:${element.bh}`;
+    }
+    case "shape": {
+      return `shape:${element.shape}:${element.shape === "polygon" ? `${element.points.join(",")}:${element.bw}:${element.bh}` : ""}:${element.stroke}:${element.fill}:${element.width}`;
+    }
+    case "text": {
+      return `text:${element.text}:${element.colour}:${element.size}:${element.font}:${element.bold}:${element.italic}:${element.bw}:${element.bh}`;
+    }
+    case "wall": {
+      return `wall:${!!element.door}:${!!element.open}`;
+    }
+    case "light": {
+      return `light:${element.bright}:${element.dim}:${element.colour}`;
+    }
+    case "area": {
+      return `area:${element.tone}:${element.points.join(",")}:${element.bw}:${element.bh}`;
+    }
+    case "effect": {
+      return `effect:${element.effect}:${element.colour}:${element.shape}:${element.shape === "polygon" ? `${element.points.join(",")}:${element.bw}:${element.bh}` : ""}`;
+    }
   }
 }
 
@@ -97,32 +106,32 @@ export const mapText = (
  * `peers` supplies images this device lacks.
  */
 export function buildView(
-  el: SceneElement,
+  element: SceneElement,
   key: string,
   invalidate: () => void,
   highlighted: string | null,
   peers: PeerBlobs | null,
 ): View {
   const root = new Container({ cullable: true });
-  switch (el.type) {
+  switch (element.type) {
     case "map": {
       const placeholder = new Graphics()
         .rect(-0.5, -0.5, 1, 1)
-        .fill({ color: 0xffffff, alpha: 0.06 });
+        .fill({ color: 0xFF_FF_FF, alpha: 0.06 });
       root.addChild(placeholder);
       let sprite: Sprite | null = null;
       let missing: SdfText | null = null;
-      let size = { w: el.w, h: el.h };
-      void textureFor(el.image.hash, peers).then((tex) => {
+      let size = { w: element.w, h: element.h };
+      void textureFor(element.image.hash, peers).then((tex) => {
         if (root.destroyed) return;
         if (!tex) {
           // Not on this device; from M2 a peer will send it.
-          placeholder.clear().rect(-0.5, -0.5, 1, 1).fill({ color: 0xffffff, alpha: 0.12 });
+          placeholder.clear().rect(-0.5, -0.5, 1, 1).fill({ color: 0xFF_FF_FF, alpha: 0.12 });
           missing = new SdfText({
             text: "Image not on this device",
             font: cabin(400),
             size: 28,
-            fill: 0xffffff,
+            fill: 0xFF_FF_FF,
             anchor: 0.5,
           });
           missing.alpha = 0.7;
@@ -154,15 +163,15 @@ export function buildView(
     case "token": {
       // The body is drawn 100 px across and scaled; the label stays upright.
       const body = new Container();
-      const image = el.graphic?.kind === "image" ? el.graphic.image : undefined;
-      const iconName = el.graphic?.kind === "icon" ? el.graphic.name : undefined;
-      if (isPlainToken(el)) {
+      const image = element.graphic?.kind === "image" ? element.graphic.image : undefined;
+      const iconName = element.graphic?.kind === "icon" ? element.graphic.name : undefined;
+      if (isPlainToken(element)) {
         // The image as it is, fitted inside the token's square.
         void textureFor(image!.hash, peers).then((tex) => {
           if (root.destroyed) return;
           if (!tex) {
             // Missing image: fall back to a plain disc so the token can be found.
-            body.addChild(new Graphics().circle(0, 0, 50).fill({ color: el.colour, alpha: 0.6 }));
+            body.addChild(new Graphics().circle(0, 0, 50).fill({ color: element.colour, alpha: 0.6 }));
             invalidate();
             return;
           }
@@ -174,13 +183,13 @@ export function buildView(
       } else {
         // A disc: coloured background, the image or an initial, and a ring.
         // The background stops at the ring, so a see-through colour doesn't show darker under it.
-        const ring = new Graphics().circle(0, 0, 48).stroke({ color: el.colour, width: 5 });
-        body.addChild(new Graphics().circle(0, 0, 45.5).fill({ color: el.colour }), ring);
+        const ring = new Graphics().circle(0, 0, 48).stroke({ color: element.colour, width: 5 });
+        body.addChild(new Graphics().circle(0, 0, 45.5).fill({ color: element.colour }), ring);
         const initial = new SdfText({
-          text: (el.name.trim()[0] ?? "").toUpperCase(),
+          text: (element.name.trim()[0] ?? "").toUpperCase(),
           font: fraunces(600),
           size: 52,
-          fill: 0xffffff,
+          fill: 0xFF_FF_FF,
           anchor: 0.5,
         });
         body.addChildAt(initial, 1);
@@ -212,11 +221,11 @@ export function buildView(
       }
       const dropHighlight = new Graphics()
         .circle(0, 0, 49)
-        .stroke({ color: 0xffffff, width: 3 })
+        .stroke({ color: 0xFF_FF_FF, width: 3 })
         .circle(0, 0, 45)
         .stroke({ color: ACCENT, width: 4 });
-      dropHighlight.visible = el.id === highlighted;
-      const dropFlash = new Graphics().circle(0, 0, 50).stroke({ color: 0xffffff, width: 10 });
+      dropHighlight.visible = element.id === highlighted;
+      const dropFlash = new Graphics().circle(0, 0, 50).stroke({ color: 0xFF_FF_FF, width: 10 });
       dropFlash.visible = false;
       body.addChild(dropHighlight, dropFlash);
       const pose = new Container();
@@ -239,8 +248,8 @@ export function buildView(
 
     case "drawing": {
       const g = new Graphics()
-        .poly(strokeOutline(el.points, el.width, hasRealPressure(el.points)))
-        .fill({ color: el.colour });
+        .poly(strokeOutline(element.points, element.width, hasRealPressure(element.points)))
+        .fill({ color: element.colour });
       root.addChild(g);
       return {
         root,
@@ -248,7 +257,7 @@ export function buildView(
         apply: (t) => {
           root.position.set(t.x, t.y);
           root.rotation = t.rot;
-          g.scale.set(t.w / el.bw, t.h / el.bh);
+          g.scale.set(t.w / element.bw, t.h / element.bh);
         },
       };
     }
@@ -267,7 +276,7 @@ export function buildView(
           const next = `${t.w}x${t.h}`;
           if (next !== size) {
             size = next;
-            drawShape(g, el, t.w, t.h, el, el.width);
+            drawShape(g, element, t.w, t.h, element, element.width);
           }
         },
       };
@@ -288,14 +297,14 @@ export function buildView(
           const next = `${t.w}`;
           if (next === size) return;
           size = next;
-          const colour = el.door ? 0xe0a33b : 0xd8e0ff;
+          const colour = element.door ? 0xE0_A3_3B : 0xD8_E0_FF;
           g.clear()
             .moveTo(-t.w / 2, 0)
             .lineTo(t.w / 2, 0)
             .stroke({
               color: colour,
-              width: el.door ? 8 : 5,
-              alpha: el.door && el.open ? 0.4 : 0.9,
+              width: element.door ? 8 : 5,
+              alpha: element.door && element.open ? 0.4 : 0.9,
               cap: "round",
             })
             .circle(-t.w / 2, 0, 4)
@@ -316,7 +325,7 @@ export function buildView(
           root.position.set(t.x, t.y);
           const r = Math.min(t.w, t.h) / 2;
           // A drag on its reach handles, or picking its colour, previews the whole light, not just its transform.
-          const { bright, dim, colour } = { ...el, ...t } as typeof el;
+          const { bright, dim, colour } = { ...element, ...t } as typeof element;
           g.clear()
             .circle(0, 0, dim)
             .stroke({ color: colour, width: 1.5, alpha: 0.35 })
@@ -331,8 +340,8 @@ export function buildView(
 
     case "area": {
       const g = new Graphics();
-      const colour = AREA_COLOURS[el.tone];
-      const pts = el.points;
+      const colour = AREA_COLOURS[element.tone];
+      const pts = element.points;
       root.addChild(g);
       return {
         root,
@@ -341,10 +350,10 @@ export function buildView(
         apply: (t) => {
           root.position.set(t.x, t.y);
           root.rotation = t.rot;
-          const sx = t.w / el.bw;
-          const sy = t.h / el.bh;
+          const sx = t.w / element.bw;
+          const sy = t.h / element.bh;
           g.clear()
-            .poly(pts.map((v, i) => v * (i % 2 ? sy : sx)))
+            .poly(pts.map((v, index) => v * (index % 2 ? sy : sx)))
             .fill({ color: colour, alpha: 0.12 })
             .stroke({ color: colour, width: 2, alpha: 0.8 });
         },
@@ -352,7 +361,7 @@ export function buildView(
     }
 
     case "effect": {
-      const view = new EffectView(el);
+      const view = new EffectView(element);
       return {
         root: view.root,
         key,
@@ -364,10 +373,10 @@ export function buildView(
 
     case "text": {
       // A see-through colour fades the text and its outline together.
-      const colour = new Color(el.colour);
+      const colour = new Color(element.colour);
       const text = new SdfText({
-        ...mapText(el, colour.toNumber()),
-        text: el.text,
+        ...mapText(element, colour.toNumber()),
+        text: element.text,
         anchor: 0.5,
       });
       text.alpha = colour.alpha;
@@ -378,7 +387,7 @@ export function buildView(
         apply: (t) => {
           root.position.set(t.x, t.y);
           root.rotation = t.rot;
-          text.scale.set(t.w / el.bw, t.h / el.bh);
+          text.scale.set(t.w / element.bw, t.h / element.bh);
         },
       };
     }

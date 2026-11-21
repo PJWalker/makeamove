@@ -30,8 +30,8 @@ export function usePaneLevel(layout: PaneLayout, initial: PaneLevel) {
   return { level, go, show };
 }
 
-function markSliding(el: HTMLElement | null): () => void {
-  if (!el) return () => {};
-  el.dataset["sliding"] = "true";
-  return () => delete el.dataset["sliding"];
+function markSliding(element: HTMLElement | null): () => void {
+  if (!element) return () => {};
+  element.dataset["sliding"] = "true";
+  return () => delete element.dataset["sliding"];
 }

@@ -72,7 +72,7 @@ function ImageField({
   inherited: boolean;
   onChange: (image: TokenElement["image"]) => void;
 }) {
-  const fileRef = useRef<HTMLInputElement>(null);
+  const fileReference = useRef<HTMLInputElement>(null);
   const style = token.style ?? "disc";
   return (
     <div className="field">
@@ -85,11 +85,11 @@ function ImageField({
         >
           <EntityGraphicView graphic={graphic} size={64} />
         </span>
-        <Button onClick={() => fileRef.current?.click()}>
-          {inherited ? "Override…" : token.image ? "Change…" : "Choose…"}
+        <Button onClick={() => fileReference.current?.click()}>
+          {inherited ? "Override…" : (token.image ? "Change…" : "Choose…")}
         </Button>
         {token.image && (
-          <Button variant="ghost" onClick={() => onChange(undefined)}>
+          <Button variant="ghost" onClick={() => onChange()}>
             {inherited ? "Clear Override" : "Remove"}
           </Button>
         )}
@@ -100,7 +100,7 @@ function ImageField({
         </span>
       )}
       <input
-        ref={fileRef}
+        ref={fileReference}
         type="file"
         accept="image/*"
         hidden
@@ -188,12 +188,12 @@ function LookFields({
 
 /** What the dialog shows of a token, and how it changes it: the token, its character and item, and its look. */
 function useTokenOptions(campaign: Campaign, controller: SceneController, id: string | null) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const scene = controller.scene;
   // The table stays usable while this is open, so the token may change or be deleted.
   const tokenMap = useQuery(scene.elements, () => (id ? scene.elements.get(id) : undefined));
-  const el = useQuery(tokenMap, () => (id && tokenMap ? scene.get(id) : null));
-  const token = el?.type === "token" ? el : null;
+  const element = useQuery(tokenMap, () => (id && tokenMap ? scene.get(id) : null));
+  const token = element?.type === "token" ? element : null;
   const system = systemOf(campaign);
   const item = token ? itemDefinitionForToken(campaign, token) : undefined;
   const characters = useQuery(campaign.characters, () => listCharacters(campaign));
@@ -230,7 +230,7 @@ function useTokenOptions(campaign: Campaign, controller: SceneController, id: st
     const name = token.name.trim();
     if (!c.template) return update({ characterId: chosen, ...(name ? {} : { name: c.name }) });
     const copyName = name || tokenName(c, c.template, controller.tokenNames());
-    const copy = ctx.execute(copyCharacter, { template: chosen, name: copyName });
+    const copy = context.execute(copyCharacter, { template: chosen, name: copyName });
     if (copy) update({ characterId: copy, name: copyName });
   };
   return {
@@ -266,24 +266,24 @@ export function TokenOptionsDialog({
   onTabChange: (tab: TokenTab) => void;
   onClose: () => void;
 }) {
-  const ctx = useCampaign();
-  const ref = useRef<HTMLDialogElement>(null);
+  const context = useCampaign();
+  const reference = useRef<HTMLDialogElement>(null);
   const t = useTokenOptions(campaign, controller, id);
   const { token, item, linked, update } = t;
 
   useEffect(() => {
-    if (id) openPopup(ref.current);
+    if (id) openPopup(reference.current);
   }, [id]);
   useEffect(() => {
-    if (id && !token) ref.current?.close();
+    if (id && !token) reference.current?.close();
   }, [id, token]);
 
   return (
     <Dialog
-      dialogRef={ref}
+      dialogRef={reference}
       title={linked ? linked.name : (item?.name ?? token?.name ?? "Token Options")}
       onClose={onClose}
-      {...(linked ? { proxy: linkProxy(ctx, "character", linked.id, linked.name) } : {})}
+      {...(linked ? { proxy: linkProxy(context, "character", linked.id, linked.name) } : {})}
     >
       {linked && (
         <>

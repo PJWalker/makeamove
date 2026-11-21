@@ -78,8 +78,8 @@ export function ChoiceField({
           <Segmented
             label="Increase"
             value={String(value.pattern)}
-            options={boost.amounts.map((a, i) => ({
-              id: String(i),
+            options={boost.amounts.map((a, index) => ({
+              id: String(index),
               label: a
                 .filter(Boolean)
                 .map((n) => `+${n}`)
@@ -87,18 +87,18 @@ export function ChoiceField({
             }))}
             onChange={(v) => onChange({ ...value, pattern: Number(v) })}
           />
-          {amounts.map((n, i) =>
+          {amounts.map((n, index) =>
             n ? (
               <label key={n} className="creation-boost-pick">
                 +{n}
                 <select
-                  value={value.order[i] ?? ""}
+                  value={value.order[index] ?? ""}
                   onChange={(e) => {
                     // Swap so each stat takes one amount.
-                    const order = value.order.slice();
-                    const j = order.indexOf(e.currentTarget.value);
-                    if (j >= 0) order[j] = order[i] ?? e.currentTarget.value;
-                    order[i] = e.currentTarget.value;
+                    const order = [...value.order];
+                    const index_ = order.indexOf(e.currentTarget.value);
+                    if (index_ !== -1) order[index_] = order[index] ?? e.currentTarget.value;
+                    order[index] = e.currentTarget.value;
                     onChange({ ...value, order });
                   }}
                 >
@@ -221,15 +221,28 @@ function useScoreFields(
   useEffect(() => {
     if (rule) onScores(ruleStartingScores(rule, system.stats));
     // Only a new rule resets the scores.
-    // oxlint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rule]);
   const rollPool = () =>
     takePool(system.stats.map(() => roll(methods.roll!).total).sort((a, b) => b - a));
   const choose = (m: ScoreMethod) => {
     onMethod(m);
-    if (m === "array") takePool(methods.standardArray!);
-    else if (m === "buy") onScores(startingScores(system, methods, m));
-    else if (m === "roll") rollPool();
+    switch (m) {
+    case "array": {
+    takePool(methods.standardArray!);
+    break;
+    }
+    case "buy": {
+    onScores(startingScores(system, methods, m));
+    break;
+    }
+    case "roll": { {
+    rollPool();
+    // No default
+    }
+    break;
+    }
+    }
   };
   const spent = methods.pointBuy ? pointsSpent(scores, methods.pointBuy) : null;
   const buyable = methods.pointBuy ? Object.keys(methods.pointBuy.costs).map(Number) : [];
@@ -304,8 +317,8 @@ export function AdvancementDialog({
   characterId: string;
   onClose: () => void;
 }) {
-  const ctx = useCampaign();
-  const ref = usePopupDialog();
+  const context = useCampaign();
+  const reference = usePopupDialog();
   const system = systemOf(campaign);
   const c = getCharacter(campaign, characterId)!;
   const [picks, setPicks] = useState<Record<string, Picked>>({});
@@ -319,26 +332,26 @@ export function AdvancementDialog({
 
   const apply = () => {
     const before = derive(c, system).values["maxHp"] ?? 0;
-    ctx.commands.batch(() => {
-      for (const [key, value] of plan.data) ctx.execute(setData, { id: c.id, key, value });
-      for (const [stat, score] of plan.scores) ctx.execute(setScore, { id: c.id, stat, score });
+    context.commands.batch(() => {
+      for (const [key, value] of plan.data) context.execute(setData, { id: c.id, key, value });
+      for (const [stat, score] of plan.scores) context.execute(setScore, { id: c.id, stat, score });
     });
     const d = derive(getCharacter(campaign, c.id)!, system);
     const gained = (d.values["maxHp"] ?? 0) - before;
     if (gained > 0)
-      ctx.execute(bumpResource, { id: c.id, resource: "hp", by: gained, max: d.values["maxHp"] });
+      context.execute(bumpResource, { id: c.id, resource: "hp", by: gained, max: d.values["maxHp"] });
     if (system.resources.some((r) => r.id === "hitDice"))
-      ctx.execute(bumpResource, {
+      context.execute(bumpResource, {
         id: c.id,
         resource: "hitDice",
         by: 1,
         max: d.values["hitDiceMax"],
       });
-    closePopup(ref.current, onClose);
+    closePopup(reference.current, onClose);
   };
 
   return (
-    <Dialog dialogRef={ref} title={`${c.name}: Advancement ${plan.rank}`} onClose={onClose}>
+    <Dialog dialogRef={reference} title={`${c.name}: Advancement ${plan.rank}`} onClose={onClose}>
       <form
         className="creation-form"
         onSubmit={(e) => {
@@ -364,11 +377,11 @@ export function AdvancementDialog({
             onChange={setImprovement}
           />
         )}
-        {!plan.choices.length && !plan.improves && (
+        {plan.choices.length === 0 && !plan.improves && (
           <p className="muted">Hit points and Hit Dice go up.</p>
         )}
         <div className="form-actions">
-          <Button variant="ghost" onClick={() => closePopup(ref.current, onClose)}>
+          <Button variant="ghost" onClick={() => closePopup(reference.current, onClose)}>
             Cancel
           </Button>
           <Button variant="primary" type="submit" disabled={!plan.ready}>

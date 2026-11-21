@@ -17,7 +17,7 @@ import { referenceLayout } from "./panelLayouts";
 export function ReferencePanel({ campaign }: { campaign: Campaign }) {
   const { gm, stacked, level, go, query, sections, selected, needle, search, select } =
     useReferencePanel(campaign);
-  if (!gm || !sections.length) return <p className="empty">No reference for this game.</p>;
+  if (!gm || sections.length === 0) return <p className="empty">No reference for this game.</p>;
 
   return (
     <TwoPane
@@ -38,7 +38,7 @@ export function ReferencePanel({ campaign }: { campaign: Campaign }) {
               onChange={(event) => search(event.currentTarget.value)}
             />
           </div>
-          {sections.length ? (
+          {sections.length > 0 ? (
             <List>
               {sections.map((section) => (
                 <ListRow
@@ -116,16 +116,16 @@ function ReferenceEntry({
   section: ReferenceSectionDef;
   query: string;
 }) {
-  const entryRef = useRef<HTMLElement>(null);
+  const entryReference = useRef<HTMLElement>(null);
   const characterId = useQuery(campaign.members, () => actingCharacterId(campaign)) ?? null;
 
   useEffect(() => {
     if (!query) return;
-    entryRef.current?.querySelector(".search-hit")?.scrollIntoView({ block: "center" });
+    entryReference.current?.querySelector(".search-hit")?.scrollIntoView({ block: "center" });
   }, [section.id, query]);
 
   return (
-    <article ref={entryRef} className="panel-scroll reference-entry reference-section">
+    <article ref={entryReference} className="panel-scroll reference-entry reference-section">
       <h2>
         <SearchHighlight text={section.title} term={query} />
       </h2>

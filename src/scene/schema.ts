@@ -1,6 +1,6 @@
 import { arrayOf, isBoolean, isNumber, isObject, isString, oneOf } from "../lib/guards";
 import { Invalid, collection, lww, record, variant, type Item, type Shape } from "../data/schema";
-import type { BlobRef, EntityGraphic, EntityGraphicRef } from "../media/images";
+import type { BlobRef as BlobReference, EntityGraphic, EntityGraphicRef } from "../media/images";
 import { DEFAULT_GRID } from "./grid";
 import { EFFECTS, LAYERS, SHAPES, TEXT_FONTS, TOKEN_STYLES, type SceneElement } from "./types";
 
@@ -14,22 +14,22 @@ import { EFFECTS, LAYERS, SHAPES, TEXT_FONTS, TOKEN_STYLES, type SceneElement } 
  * IndexedDB database and loaded only while someone is looking at it.
  */
 
-const num = (fallback: number) => lww(isNumber).or(fallback);
+const number_ = (fallback: number) => lww(isNumber).or(fallback);
 const colour = lww(isString).or("#ffffff");
 const isPoints = arrayOf(isNumber);
-const isBlob = isObject<BlobRef>;
+const isBlob = isObject<BlobReference>;
 
 export const sceneSettings = record({
   lighting: lww(isBoolean).or(false),
   /** How dark unlit places are, 0 to 1. */
-  darkness: num(0.75),
+  darkness: number_(0.75),
   /** Whether players see only what their tokens see. */
   vision: lww(isBoolean).or(false),
   gridType: lww(oneOf("none", "square", "hex")).or(DEFAULT_GRID.type),
-  gridSize: num(DEFAULT_GRID.size),
-  gridOffsetX: num(DEFAULT_GRID.offsetX),
-  gridOffsetY: num(DEFAULT_GRID.offsetY),
-  gridUnit: num(DEFAULT_GRID.unit),
+  gridSize: number_(DEFAULT_GRID.size),
+  gridOffsetX: number_(DEFAULT_GRID.offsetX),
+  gridOffsetY: number_(DEFAULT_GRID.offsetY),
+  gridUnit: number_(DEFAULT_GRID.unit),
   gridUnitName: lww(isString).or(DEFAULT_GRID.unitName),
   gridDiagonal: lww(oneOf("one", "alternate", "euclid")).or(DEFAULT_GRID.diagonal),
 });
@@ -55,27 +55,27 @@ const elementCases = {
     hideName: lww(isBoolean),
     hideBars: lww(isBoolean),
   },
-  drawing: { ...outline, colour, width: num(4) },
+  drawing: { ...outline, colour, width: number_(4) },
   shape: {
     ...outline,
     shape: shapeKind,
     stroke: lww(isString).or("#ffffffff"),
     fill: lww(isString).or("#ffffff00"),
-    width: num(2),
+    width: number_(2),
     template: lww(isBoolean),
   },
   text: {
     text: lww(isString).or(""),
     colour,
-    size: num(24),
-    bw: num(1),
-    bh: num(1),
+    size: number_(24),
+    bw: number_(1),
+    bh: number_(1),
     font: lww(oneOf(...TEXT_FONTS.map((f) => f.id))).or("sans"),
     bold: lww(isBoolean).or(true),
     italic: lww(isBoolean).or(false),
   },
   wall: { door: lww(isBoolean), open: lww(isBoolean) },
-  light: { bright: num(0), dim: num(0), colour, flicker: lww(isBoolean) },
+  light: { bright: number_(0), dim: number_(0), colour, flicker: lww(isBoolean) },
   area: { ...outline, tone: lww(oneOf("light", "dark")).or("light") },
   effect: {
     ...outline,
@@ -90,11 +90,11 @@ const elementCases = {
 export const sceneElement = variant(
   "type",
   {
-    x: num(0),
-    y: num(0),
-    w: num(1),
-    h: num(1),
-    rot: num(0),
+    x: number_(0),
+    y: number_(0),
+    w: number_(1),
+    h: number_(1),
+    rot: number_(0),
     layer: lww(oneOf(...LAYERS)).or("token"),
     /** A fractional index ordering it within its layer. */
     z: lww(isString).or("a0"),
@@ -110,14 +110,14 @@ export const sceneElement = variant(
  * version (or a build part way through a change) may have left it.
  */
 function parseElement(m: Item<typeof sceneElement>, id: string): SceneElement | Invalid {
-  const el = m.readCase();
-  if (!el) return new Invalid("not a kind of element this version knows");
-  const polygon = el.type === "area" || ("shape" in el && el.shape === "polygon");
-  if (polygon || el.type === "drawing") {
-    const { points, bw, bh } = el as { points?: number[]; bw?: number; bh?: number };
+  const element = m.readCase();
+  if (!element) return new Invalid("not a kind of element this version knows");
+  const polygon = element.type === "area" || ("shape" in element && element.shape === "polygon");
+  if (polygon || element.type === "drawing") {
+    const { points, bw, bh } = element as { points?: number[]; bw?: number; bh?: number };
     const ok =
       !!points &&
-      points.length % (el.type === "drawing" ? 3 : 2) === 0 &&
+      points.length % (element.type === "drawing" ? 3 : 2) === 0 &&
       points.length >= (polygon ? 6 : 3) &&
       bw !== undefined &&
       bh !== undefined &&
@@ -125,8 +125,8 @@ function parseElement(m: Item<typeof sceneElement>, id: string): SceneElement | 
       bh > 0;
     if (!ok) return new Invalid("its points are missing");
   }
-  if (el.type === "map" && !el.image) return new Invalid("its image is missing");
-  return { id, ...el } as SceneElement;
+  if (element.type === "map" && !element.image) return new Invalid("its image is missing");
+  return { id, ...element } as SceneElement;
 }
 
 export const sceneShape = {

@@ -20,7 +20,7 @@ function gearItem(
     name,
     description,
     weight: 0,
-    ...(rank !== undefined ? { wealthCost: { rank, tier: WEALTH[rank]! } } : {}),
+    ...(rank === undefined ? {} : { wealthCost: { rank, tier: WEALTH[rank]! } }),
     tags,
     ...extra,
   };
@@ -473,7 +473,6 @@ export const DW2_CLASS_GEAR: ItemDef[] = [
     "delicate-grimoire",
     "Delicate grimoire",
     "Arcane focus. Once per session, reference or study it to Prepare a School instantly.",
-    undefined,
   ),
   gearItem(
     "unwieldy-staff",

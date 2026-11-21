@@ -79,7 +79,7 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
           New Move
         </Button>
       </PanelActions>
-      {!entries.length && <p className="empty">No gear or moves yet.</p>}
+      {entries.length === 0 && <p className="empty">No gear or moves yet.</p>}
       {gear.length > 0 && (
         <ListGroup label="Gear" count={gear.length} {...fold("gear")}>
           <List>
@@ -151,7 +151,7 @@ function gearMeta(item: ItemDef): string | undefined {
 }
 
 function useItemsPanel(campaign: Campaign) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const readEntries = useCallback(() => listHomebrew(campaign.homebrew), [campaign.homebrew]);
   const entries = useQuery(campaign.homebrew, readEntries);
   const system = systemOf(campaign);
@@ -166,8 +166,8 @@ function useItemsPanel(campaign: Campaign) {
   /** Gives the acting character this gear, or has them make this move. */
   const actOn = (entry: Entry) => {
     if (!me || !canAct) return;
-    if (entry.kind === "gear") ctx.execute(giveItem, { characterId: me.id, item: entry.item });
-    else ctx.execute(startMove, { characterId: me.id, move: entry.move.id });
+    if (entry.kind === "gear") context.execute(giveItem, { characterId: me.id, item: entry.item });
+    else context.execute(startMove, { characterId: me.id, move: entry.move.id });
   };
 
   const actionLabel = (entry: Entry) => {
@@ -178,16 +178,16 @@ function useItemsPanel(campaign: Campaign) {
   const menuItemsFor = (entry: Entry): MenuItem[] => {
     const actions =
       entry.kind === "gear"
-        ? actionMenuItems(ctx, [{ id: `library:${entry.id}`, title: entry.item.name }])
-        : actionMenuItems(ctx, [{ id: `move:${entry.id}`, title: entry.move.name }]);
+        ? actionMenuItems(context, [{ id: `library:${entry.id}`, title: entry.item.name }])
+        : actionMenuItems(context, [{ id: `move:${entry.id}`, title: entry.move.name }]);
     return [
       { label: actionLabel(entry), disabled: !canAct, onSelect: () => actOn(entry) },
-      ...(actions.length ? (["divider"] as const) : []),
+      ...(actions.length > 0 ? (["divider"] as const) : []),
       ...actions,
     ];
   };
 
-  return { ctx, entries, system, editing, setEditing, fold, canAct, actOn, menuItemsFor };
+  return { ctx: context, entries, system, editing, setEditing, fold, canAct, actOn, menuItemsFor };
 }
 
 /** Makes or changes one of the table's gear or moves. */
@@ -204,11 +204,11 @@ function ItemDialog({
   entry: Entry | undefined;
   onClose: () => void;
 }) {
-  const ref = usePopupDialog();
-  const done = () => closePopup(ref.current, onClose);
+  const reference = usePopupDialog();
+  const done = () => closePopup(reference.current, onClose);
   const title = `${id ? "Edit" : "New"} ${kind === "gear" ? "Gear" : "Move"}`;
   return (
-    <Dialog dialogRef={ref} title={title} onClose={onClose}>
+    <Dialog dialogRef={reference} title={title} onClose={onClose}>
       {kind === "gear" ? (
         <GearForm
           campaign={campaign}
@@ -358,7 +358,7 @@ function itemFromDraft(draft: GearDraft, id: string): ItemDef {
     weight: draft.weight,
     ...(draft.uses ? { uses: draft.uses } : {}),
     tags: splitTags(draft.tags),
-    ...(effects.length ? { effects } : {}),
+    ...(effects.length > 0 ? { effects } : {}),
     ...(draft.equippable ? { equippable: true, active: "equipped" as const } : {}),
   };
 }
@@ -374,19 +374,19 @@ function GearForm({
   initial?: ItemDef;
   onDone: () => void;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const [draft, patch] = useDraft(() => gearDraftOf(campaign, initial));
   const { effects } = draft;
   const setEffect = (index: number, changes: Partial<EffectRow>) =>
     patch({
-      effects: effects.map((row, i) => (i === index ? ({ ...row, ...changes } as EffectRow) : row)),
+      effects: effects.map((row, index_) => (index_ === index ? ({ ...row, ...changes } as EffectRow) : row)),
     });
   return (
     <HomebrewForm
       id={initial?.id}
       ready={!!draft.name.trim()}
       onSave={() =>
-        ctx.execute(saveHomebrewGear, {
+        context.execute(saveHomebrewGear, {
           graphic: savedGraphic(draft),
           item: itemFromDraft(draft, initial?.id ?? ""),
         })
@@ -491,7 +491,7 @@ function GearForm({
               <Button
                 variant="icon"
                 label="Remove Effect"
-                onClick={() => patch({ effects: effects.filter((_, i) => i !== index) })}
+                onClick={() => patch({ effects: effects.filter((_, index_) => index_ !== index) })}
               >
                 <IconDelete />
               </Button>
@@ -620,14 +620,14 @@ function moveFromDraft(system: GameSystem, draft: MoveDraft, id: string): Action
   };
 }
 
-type SectionProps = {
+type SectionProperties = {
   campaign: Campaign;
   system: GameSystem;
   draft: MoveDraft;
   patch: (changes: Partial<MoveDraft>) => void;
 };
 
-function MoveDetails({ campaign, system, draft, patch }: SectionProps) {
+function MoveDetails({ campaign, system, draft, patch }: SectionProperties) {
   return (
     <section className="form-section">
       <h4 className="form-heading">Details</h4>
@@ -663,7 +663,7 @@ function MoveAppearance({
   id,
   draft,
   patch,
-}: Pick<SectionProps, "campaign" | "draft" | "patch"> & { id: string }) {
+}: Pick<SectionProperties, "campaign" | "draft" | "patch"> & { id: string }) {
   return (
     <section className="form-section">
       <h4 className="form-heading">Appearance</h4>
@@ -672,7 +672,7 @@ function MoveAppearance({
   );
 }
 
-function MoveRoll({ campaign, system, draft, patch }: SectionProps) {
+function MoveRoll({ campaign, system, draft, patch }: SectionProperties) {
   return (
     <section className="form-section">
       <h4 className="form-heading">Roll</h4>
@@ -718,7 +718,7 @@ function MoveRoll({ campaign, system, draft, patch }: SectionProps) {
   );
 }
 
-function MoveTargeting({ system, draft, patch }: Omit<SectionProps, "campaign">) {
+function MoveTargeting({ system, draft, patch }: Omit<SectionProperties, "campaign">) {
   return (
     <section className="form-section">
       <h4 className="form-heading">Targets</h4>
@@ -757,7 +757,7 @@ function MoveForm({
   initial?: ActionDef;
   onDone: () => void;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const [draft, patch] = useDraft(() => moveDraftOf(campaign, system, initial));
   const sections = { campaign, system, draft, patch };
   return (
@@ -765,7 +765,7 @@ function MoveForm({
       id={initial?.id}
       ready={!!draft.name.trim()}
       onSave={() =>
-        ctx.execute(saveHomebrewMove, {
+        context.execute(saveHomebrewMove, {
           graphic: savedGraphic(draft),
           move: moveFromDraft(system, draft, initial?.id ?? ""),
         })
@@ -817,7 +817,7 @@ function HomebrewForm({
   onDone: () => void;
   children: ReactNode;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   return (
     <form
       className="creation-form form-layout"
@@ -835,7 +835,7 @@ function HomebrewForm({
             variant="danger"
             className="form-actions-start"
             onClick={() => {
-              ctx.execute(deleteHomebrewEntry, { id });
+              context.execute(deleteHomebrewEntry, { id });
               onDone();
             }}
           >

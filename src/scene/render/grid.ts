@@ -66,7 +66,7 @@ export class GridLayer {
     }
     // A dark line and a light one on the same pixels read on maps of any
     // brightness.
-    g.stroke({ color: 0x000000, alpha: 0.3, pixelLine: true });
-    g.stroke({ color: 0xffffff, alpha: 0.14, pixelLine: true });
+    g.stroke({ color: 0x00_00_00, alpha: 0.3, pixelLine: true });
+    g.stroke({ color: 0xFF_FF_FF, alpha: 0.14, pixelLine: true });
   }
 }

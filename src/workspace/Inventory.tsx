@@ -17,7 +17,7 @@ import { entity } from "./dragEntities";
 import { CampaignEntityGraphic } from "./EntityGraphic";
 import { getEntityGraphic } from "./entityGraphics";
 import { useExtension } from "./systemExtensions";
-import type { ItemUseProps } from "../systems/extensionTypes";
+import type { ItemUseProps as ItemUseProperties } from "../systems/extensionTypes";
 import { useCampaign } from "./campaignContext";
 import {
   clearItemTrack,
@@ -31,17 +31,17 @@ import {
 import { callKey } from "../kernel/commands";
 import { findAction, joinSections, menuFor } from "./commands/views";
 
-const metaOf = (i: ItemInstance) =>
+const metaOf = (index: ItemInstance) =>
   [
-    i.weight ? `${i.weight} wt` : "",
-    i.uses !== undefined ? `${i.usesLeft ?? 0}/${i.uses} uses` : "",
-    i.broken ? "Broken" : "",
+    index.weight ? `${index.weight} wt` : "",
+    index.uses === undefined ? "" : `${index.usesLeft ?? 0}/${index.uses} uses`,
+    index.broken ? "Broken" : "",
   ]
     .filter(Boolean)
     .join(" · ");
 
-const tipOf = (i: { description: string; tags: string[] }) =>
-  i.tags.length ? `${i.description}\n\n${i.tags.join(", ")}` : i.description;
+const tipOf = (index: { description: string; tags: string[] }) =>
+  index.tags.length > 0 ? `${index.description}\n\n${index.tags.join(", ")}` : index.description;
 
 function ArtifactTracker({
   campaign,
@@ -120,7 +120,7 @@ function ArtifactTracker({
 }
 
 function useArtifactTracker(campaign: Campaign, characterId: string, item: ItemInstance) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const [choice, setChoice] = useState("");
   const definition = systemOf(campaign).items.find((entry) => entry.id === item.defId);
   const artifact = definition?.artifact;
@@ -133,22 +133,22 @@ function useArtifactTracker(campaign: Campaign, characterId: string, item: ItemI
   const selected =
     choice && available.some((move) => move.id === choice) ? choice : (available[0]?.id ?? "");
   const mark = () =>
-    ctx.execute(markItemTrack, {
+    context.execute(markItemTrack, {
       characterId,
       itemId: item.id,
       unlock: needsChoice ? selected : undefined,
     });
-  const clear = () => ctx.execute(clearItemTrack, { characterId, itemId: item.id });
+  const clear = () => context.execute(clearItemTrack, { characterId, itemId: item.id });
   return { artifact, progress, unlocked, available, needsChoice, selected, setChoice, mark, clear };
 }
 
 /** The core's Use button: spends a use, or does whatever the system's command for it does. */
-function UseButton({ character, item, editable }: ItemUseProps) {
-  const ctx = useCampaign();
+function UseButton({ character, item, editable }: ItemUseProperties) {
+  const context = useCampaign();
   return (
     <Button
       disabled={!editable || (item.usesLeft ?? 0) <= 0}
-      onClick={() => ctx.execute(useItem, { characterId: character.id, itemId: item.id })}
+      onClick={() => context.execute(useItem, { characterId: character.id, itemId: item.id })}
     >
       Use
     </Button>
@@ -171,40 +171,40 @@ export function Inventory({
   d?: Derived;
   editable: boolean;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const windows = useEntryWindows();
-  const patch = (i: ItemInstance, p: Partial<ItemInstance>) =>
-    ctx.execute(updateItem, { characterId: c.id, itemId: i.id, patch: p });
+  const patch = (index: ItemInstance, p: Partial<ItemInstance>) =>
+    context.execute(updateItem, { characterId: c.id, itemId: index.id, patch: p });
   const over = d && (d.values["load"] ?? 0) > (d.values["maxLoad"] ?? 0);
   const system = systemOf(campaign);
   const extension = useExtension(system);
   const ItemUse = extension.ItemUse ?? UseButton;
   /** Its commands, then pinning its use or equipping to the hotbar. */
-  const itemMenu = (i: ItemInstance) => {
-    const target = { characterId: c.id, itemId: i.id };
+  const itemMenu = (index: ItemInstance) => {
+    const target = { characterId: c.id, itemId: index.id };
     const pinnable = [useItem, equipItem]
-      .filter((command) => command.menu?.item?.(ctx, target).length)
-      .flatMap((command) => findAction(ctx, callKey(command.id, { itemId: i.id })) ?? [])
+      .filter((command) => command.menu?.item?.(context, target).length)
+      .flatMap((command) => findAction(context, callKey(command.id, { itemId: index.id })) ?? [])
       .map((a) => ({ id: a.id, title: a.title }));
     return joinSections([
-      menuFor(ctx, { kind: "item", ...target }),
-      actionMenuItems(ctx, pinnable),
+      menuFor(context, { kind: "item", ...target }),
+      actionMenuItems(context, pinnable),
     ]);
   };
 
-  const actions = (i: ItemInstance) => (
+  const actions = (index: ItemInstance) => (
     <>
-      {i.equippable && (
+      {index.equippable && (
         <Button
-          pressed={i.equipped}
+          pressed={index.equipped}
           disabled={!editable}
-          onClick={() => patch(i, { equipped: !i.equipped })}
+          onClick={() => patch(index, { equipped: !index.equipped })}
         >
-          {i.equipped ? "Equipped" : "Equip"}
+          {index.equipped ? "Equipped" : "Equip"}
         </Button>
       )}
-      {itemUsable(ctx, i) && (
-        <ItemUse campaign={campaign} character={c} item={i} editable={editable} />
+      {itemUsable(context, index) && (
+        <ItemUse campaign={campaign} character={c} item={index} editable={editable} />
       )}
     </>
   );
@@ -231,44 +231,44 @@ export function Inventory({
         </p>
       ) : (
         <List>
-          {c.inventory.map((i) => (
+          {c.inventory.map((index) => (
             <EntryRow
-              key={i.id}
-              name={i.name}
+              key={index.id}
+              name={index.name}
               lead={
                 <CampaignEntityGraphic
                   campaign={campaign}
                   kind="item"
-                  id={i.defId ?? i.id}
-                  defaultIcon={i.icon}
+                  id={index.defId ?? index.id}
+                  defaultIcon={index.icon}
                   size={22}
                 />
               }
-              meta={metaOf(i)}
-              tip={tipOf(i)}
-              dim={(i.equippable && !i.equipped) || i.broken}
-              onOpen={(row) => windows.show(inventoryKey(c.id, i.id), row)}
-              onPointerDown={(ev) => {
-                const source = i.defId
-                  ? entity(ctx, "item", i.defId, i.name)
+              meta={metaOf(index)}
+              tip={tipOf(index)}
+              dim={(index.equippable && !index.equipped) || index.broken}
+              onOpen={(row) => windows.show(inventoryKey(c.id, index.id), row)}
+              onPointerDown={(event) => {
+                const source = index.defId
+                  ? entity(context, "item", index.defId, index.name)
                   : {
-                      label: i.name,
+                      label: index.name,
                       token: {
-                        name: i.name,
-                        graphic: getEntityGraphic(campaign, "item", i.id, i.icon),
-                        entityRef: { kind: "item", id: i.id },
+                        name: index.name,
+                        graphic: getEntityGraphic(campaign, "item", index.id, index.icon),
+                        entityRef: { kind: "item", id: index.id },
                       },
                       give: {
                         kind: "item" as const,
                         to: (characterId: string) =>
-                          ctx.execute(giveItem, { characterId, item: i }),
+                          context.execute(giveItem, { characterId, item: index }),
                       },
                     };
-                dragEntity(ctx.canvas, ev, source);
+                dragEntity(context.canvas, event, source);
               }}
-              menuItems={itemMenu(i)}
+              menuItems={itemMenu(index)}
             >
-              {actions(i)}
+              {actions(index)}
             </EntryRow>
           ))}
         </List>
@@ -277,31 +277,31 @@ export function Inventory({
         <Button
           variant="ghost"
           className="inventory-find"
-          onClick={() => ctx.library.browse("item")}
+          onClick={() => context.library.browse("item")}
         >
           Find Items in the Libraries…
         </Button>
       )}
       {windows.keys.map((key) => {
-        const i = c.inventory.find((k) => inventoryKey(c.id, k.id) === key);
-        if (!i) return null;
+        const index = c.inventory.find((k) => inventoryKey(c.id, k.id) === key);
+        if (!index) return null;
         return (
           <EntryWindow
             key={key}
             entryKey={key}
-            title={i.name}
-            text={i.description}
-            tags={i.tags}
+            title={index.name}
+            text={index.description}
+            tags={index.tags}
             onClose={() => windows.close(key)}
-            menuItems={itemMenu(i)}
-            graphicRef={{ kind: "item", id: i.defId ?? i.id }}
-            graphicDefaultIcon={i.icon}
+            menuItems={itemMenu(index)}
+            graphicRef={{ kind: "item", id: index.defId ?? index.id }}
+            graphicDefaultIcon={index.icon}
             // Gear from the Libraries stands for its entry there.
-            proxy={i.defId ? linkProxy(ctx, "item", i.defId, i.name, i.icon) : undefined}
+            proxy={index.defId ? linkProxy(context, "item", index.defId, index.name, index.icon) : undefined}
           >
-            {metaOf(i) && <span className="muted">{metaOf(i)}</span>}
-            <ArtifactTracker campaign={campaign} characterId={c.id} item={i} editable={editable} />
-            {actions(i)}
+            {metaOf(index) && <span className="muted">{metaOf(index)}</span>}
+            <ArtifactTracker campaign={campaign} characterId={c.id} item={index} editable={editable} />
+            {actions(index)}
           </EntryWindow>
         );
       })}

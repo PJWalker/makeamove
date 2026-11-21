@@ -47,7 +47,7 @@ export function renderIcons(names = Object.keys(MODELS) as IconName[]): IconRend
   });
   renderer.setPixelRatio(1);
   renderer.setSize(RENDER, RENDER, false);
-  renderer.setClearColor(0x000000, 0);
+  renderer.setClearColor(0x00_00_00, 0);
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.toneMapping = NeutralToneMapping;
   renderer.toneMappingExposure = 1.05;
@@ -98,8 +98,8 @@ function studioEnvironment() {
     panel.lookAt(0, 2, 0);
     room.add(panel);
   };
-  softbox(2.4, 0xfff1dc, 30, 16, [0, 4, 13]);
-  softbox(5, 0xfff4e4, 8, 8, [-9, 13, 8]);
+  softbox(2.4, 0xFF_F1_DC, 30, 16, [0, 4, 13]);
+  softbox(5, 0xFF_F4_E4, 8, 8, [-9, 13, 8]);
   return room;
 }
 
@@ -154,8 +154,8 @@ function frame(model: Object3D): OrthographicCamera {
     const position =
       mesh.isMesh && !mesh.userData["glow"] && mesh.geometry.getAttribute("position");
     if (!position) return;
-    for (let i = 0; i < position.count; i++) {
-      point.fromBufferAttribute(position, i).applyMatrix4(mesh.matrixWorld).applyMatrix4(inverse);
+    for (let index = 0; index < position.count; index++) {
+      point.fromBufferAttribute(position, index).applyMatrix4(mesh.matrixWorld).applyMatrix4(inverse);
       min.min(point);
       max.max(point);
     }
@@ -174,12 +174,12 @@ function frame(model: Object3D): OrthographicCamera {
 }
 
 function light(scene: Scene, model: Object3D) {
-  scene.add(new HemisphereLight(0xfff0d8, 0x2a1c12, 0.35));
+  scene.add(new HemisphereLight(0xFF_F0_D8, 0x2A_1C_12, 0.35));
   const bounds = new Box3().setFromObject(model);
   const centre = bounds.getCenter(new Vector3());
   const radius = bounds.getSize(new Vector3()).length() / 2;
 
-  const key = new DirectionalLight(0xffe2b8, 3.6);
+  const key = new DirectionalLight(0xFF_E2_B8, 3.6);
   key.position.copy(centre).add(new Vector3(-1, 1, 0.9).normalize().multiplyScalar(radius * 4));
   key.target.position.copy(centre);
   key.castShadow = true;
@@ -194,9 +194,9 @@ function light(scene: Scene, model: Object3D) {
   s.far = radius * 8;
   scene.add(key, key.target);
 
-  const fill = new DirectionalLight(0xb8c6ff, 0.45);
+  const fill = new DirectionalLight(0xB8_C6_FF, 0.45);
   fill.position.copy(centre).add(new Vector3(4, 1, 3));
-  const rim = new DirectionalLight(0xfff6e8, 2.2);
+  const rim = new DirectionalLight(0xFF_F6_E8, 2.2);
   rim.position.copy(centre).add(new Vector3(2.5, 3, -4));
   scene.add(fill, rim);
 }
@@ -207,19 +207,19 @@ function finish(source: HTMLCanvasElement, size: number): string {
   while (current.width > size) {
     const next = document.createElement("canvas");
     next.width = next.height = Math.max(size, current.width / 2);
-    const ctx = next.getContext("2d");
-    if (!ctx) throw new Error("No 2D context");
-    ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(current, 0, 0, next.width, next.height);
+    const context = next.getContext("2d");
+    if (!context) throw new Error("No 2D context");
+    context.imageSmoothingQuality = "high";
+    context.drawImage(current, 0, 0, next.width, next.height);
     current = next;
   }
-  const ctx = current.getContext("2d", { willReadFrequently: true });
-  if (!ctx) throw new Error("No 2D context");
-  const image = ctx.getImageData(0, 0, size, size);
+  const context = current.getContext("2d", { willReadFrequently: true });
+  if (!context) throw new Error("No 2D context");
+  const image = context.getImageData(0, 0, size, size);
   // Crisp edges at icon size, where the step down has softened them.
   if (size <= 64) sharpen(image.data, size, size === 32 ? 0.6 : 0.35);
   outline(image.data, size, size / 32);
-  ctx.putImageData(image, 0, 0);
+  context.putImageData(image, 0, 0);
   return current.toDataURL("image/png");
 }
 
@@ -232,15 +232,15 @@ function sharpen(data: Uint8ClampedArray, size: number, amount: number) {
     ] ?? 0;
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
-      const i = (y * size + x) * 4;
-      if ((source[i + 3] ?? 0) < 8) continue;
+      const index = (y * size + x) * 4;
+      if ((source[index + 3] ?? 0) < 8) continue;
       for (let c = 0; c < 3; c++) {
         let blur = 0;
         for (let dy = -1; dy <= 1; dy++)
           for (let dx = -1; dx <= 1; dx++) blur += at(x + dx, y + dy, c) * (dx || dy ? 1 : 4);
         blur /= 12;
-        const value = source[i + c] ?? 0;
-        data[i + c] = value + (value - blur) * amount;
+        const value = source[index + c] ?? 0;
+        data[index + c] = value + (value - blur) * amount;
       }
     }
   }
@@ -248,7 +248,7 @@ function sharpen(data: Uint8ClampedArray, size: number, amount: number) {
 
 function outline(data: Uint8ClampedArray, size: number, radius: number) {
   const alpha = new Float32Array(size * size);
-  for (let i = 0; i < alpha.length; i++) alpha[i] = (data[i * 4 + 3] ?? 0) / 255;
+  for (let index = 0; index < alpha.length; index++) alpha[index] = (data[index * 4 + 3] ?? 0) / 255;
   const reach = Math.ceil(radius);
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
@@ -263,14 +263,14 @@ function outline(data: Uint8ClampedArray, size: number, radius: number) {
         }
       }
       o *= OUTLINE.opacity;
-      const i = (y * size + x) * 4;
+      const index = (y * size + x) * 4;
       const a = alpha[y * size + x] ?? 0;
       const out = a + o * (1 - a);
       if (out === 0) continue;
-      OUTLINE.colour.forEach((colour, c) => {
-        data[i + c] = ((data[i + c] ?? 0) * a + colour * o * (1 - a)) / out;
-      });
-      data[i + 3] = out * 255;
+      for (const [c, colour] of OUTLINE.colour.entries()) {
+        data[index + c] = ((data[index + c] ?? 0) * a + colour * o * (1 - a)) / out;
+      }
+      data[index + 3] = out * 255;
     }
   }
 }

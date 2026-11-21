@@ -1,10 +1,9 @@
 import { store } from "../lib/store";
-import type { SceneDoc } from "../scene/sceneDoc";
+import type { SceneDoc as SceneDocument } from "../scene/sceneDoc";
 import type { SceneController } from "../scene/controller";
 import type { Point } from "../scene/grid";
-import type { BlobRef } from "../media/images";
+import type { BlobRef as BlobReference, EntityGraphic, EntityGraphicRef } from "../media/images";
 import type { TokenStyle } from "../scene/types";
-import type { EntityGraphic, EntityGraphicRef } from "../media/images";
 import type { AreaSpec } from "../systems/types";
 import { backdropColour } from "../lib/colour";
 import { DEFAULT_CANVAS_COLOUR, type SceneView } from "../campaign/campaign";
@@ -27,7 +26,7 @@ export function canvasColour(scene: SceneView, mapColour: string | null): string
 export interface TokenSpec {
   name: string;
   characterId?: string;
-  image?: BlobRef;
+  image?: BlobReference;
   icon?: string;
   itemDefId?: string;
   style?: TokenStyle;
@@ -39,7 +38,7 @@ export interface TokenSpec {
 /** The open scene's canvas, for the commands that work on it (commands/selection.ts). */
 export interface CanvasCommands {
   sceneId: string;
-  scene: SceneDoc;
+  scene: SceneDocument;
   controller: SceneController;
   /** Open a token's options pop-up, on its sheet or its token tab. */
   tokenOptions(id: string, tab: "character" | "token"): void;

@@ -75,19 +75,19 @@ class FolderSync {
   }
 
   /** Mark a document dirty on each change, and its subdocuments as they load. */
-  private watchDoc(doc: Y.Doc) {
+  private watchDoc(document: Y.Doc) {
     const watchOne = (d: Y.Doc) => {
       const onUpdate = () => this.changed(d.guid);
       d.on("update", onUpdate);
       this.stops.push(() => d.off("update", onUpdate));
     };
-    watchOne(doc);
-    for (const sub of doc.getSubdocs()) if (sub.shouldLoad) watchOne(sub);
+    watchOne(document);
+    for (const sub of document.getSubdocs()) if (sub.shouldLoad) watchOne(sub);
     const onSubdocs = ({ loaded }: { loaded: Set<Y.Doc> }) => {
       for (const sub of loaded) watchOne(sub);
     };
-    doc.on("subdocs", onSubdocs);
-    this.stops.push(() => doc.off("subdocs", onSubdocs));
+    document.on("subdocs", onSubdocs);
+    this.stops.push(() => document.off("subdocs", onSubdocs));
   }
 
   private changed(guid: string) {
@@ -120,14 +120,14 @@ class FolderSync {
       .then(() => {
         if (!this.stopped) this.setStatus({ state: "saved", folder, savedAt: Date.now() });
       })
-      .catch((e: unknown) => {
+      .catch((error: unknown) => {
         if (this.stopped) return;
         // Permission can lapse while open; wait for a click.
-        const lost = e instanceof DOMException && e.name === "NotAllowedError";
+        const lost = error instanceof DOMException && error.name === "NotAllowedError";
         this.setStatus(
           lost
             ? { state: "paused", folder }
-            : { state: "failed", folder, error: e instanceof Error ? e.message : String(e) },
+            : { state: "failed", folder, error: error instanceof Error ? error.message : String(error) },
         );
       })
       .finally(() => {
@@ -154,10 +154,10 @@ class FolderSync {
         role: roleIn(this.campaign.id),
         changed: everything ? "all" : [...dirty],
       });
-    } catch (e) {
+    } catch (error) {
       for (const guid of dirty) this.dirty.add(guid);
       this.everything ||= everything;
-      throw e;
+      throw error;
     }
   }
 

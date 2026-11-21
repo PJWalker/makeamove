@@ -114,7 +114,7 @@ export async function rollAllInitiative(campaign: Campaign, { npcsOnly = false }
     if (c.init !== null) continue;
     const char = getCharacter(campaign, c.characterId);
     if (npcsOnly && char?.kind === "pc") continue;
-    // oxlint-disable-next-line react-doctor/async-await-in-loop -- Keep each result in turn order.
+    // eslint-disable-next-line react-doctor/async-await-in-loop -- Keep each result in turn order.
     await rollInitiative(campaign, c.id);
   }
 }
@@ -124,9 +124,9 @@ function tick(campaign: Campaign, combatant: string | null, point: "start" | "en
   if (!combatant) return;
   for (const [id, m] of campaign.characters.entries()) {
     const durations = m.get("durations");
-    if (!durations || !Object.keys(durations).length) continue;
+    if (!durations || Object.keys(durations).length === 0) continue;
     const { left, expired } = tickDurations(durations, combatant, point);
-    if (!expired.length && JSON.stringify(left) === JSON.stringify(durations)) continue;
+    if (expired.length === 0 && JSON.stringify(left) === JSON.stringify(durations)) continue;
     m.set("durations", left);
     for (const condition of expired) clearCondition(campaign, id, condition);
   }

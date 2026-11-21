@@ -37,7 +37,7 @@ function canAdvanceTier(state: Record<string, unknown>, cost: { rep: number; coi
 }
 
 export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const [reward, setReward] = useState("upgrades");
   const [upgrade, setUpgrade] = useState("");
   const system = systemOf(campaign);
@@ -56,7 +56,7 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
   const cost = crewTierCost(campaign);
   const upgradeCost = UPGRADE_COSTS[upgrade] ?? 1;
   // The crew is the GM's to advance.
-  const gm = can(ctx, advanceTier, undefined);
+  const gm = can(context, advanceTier);
   return (
     <section className="dialog-section" aria-label="Crew advancement">
       <h3 className="dialog-heading">Crew advancement</h3>
@@ -65,7 +65,7 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
         value={xp}
         max={counter.max}
         disabled={!gm}
-        onChange={(by) => void ctx.execute(bumpSystemCounter, { counter: counter.id, by })}
+        onChange={(by) => void context.execute(bumpSystemCounter, { counter: counter.id, by })}
       />
       <label className="field">
         Crew advance
@@ -80,7 +80,7 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
       </label>
       <Button
         disabled={!gm || xp < (counter.max ?? 10)}
-        onClick={() => ctx.execute(advanceCrew, { reward })}
+        onClick={() => context.execute(advanceCrew, { reward })}
       >
         Advance Crew
       </Button>
@@ -97,13 +97,13 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
       </label>
       <Button
         disabled={!gm || !upgrade || Number(state["crewUpgradePoints"] ?? 0) < upgradeCost}
-        onClick={() => ctx.execute(buyUpgrade, { upgrade })}
+        onClick={() => context.execute(buyUpgrade, { upgrade })}
       >
         Buy Upgrade ({upgradeCost})
       </Button>
       <Button
         disabled={!gm || !canAdvanceTier(state, cost)}
-        onClick={() => ctx.execute(advanceTier, undefined)}
+        onClick={() => context.execute(advanceTier)}
       >
         {state["crewHold"] === "weak"
           ? `Strengthen Hold (${cost.rep} Rep)`

@@ -11,12 +11,12 @@ export const CommitInput = forwardRef<
     value: string;
     onCommit: (value: string) => void;
   }
->(function CommitInput({ value, onCommit, className = "input", ...rest }, ref) {
+>(function CommitInput({ value, onCommit, className = "input", ...rest }, reference) {
   const [draft, setDraft] = useState<string | null>(null);
   const cancelled = useRef(false);
   return (
     <input
-      ref={ref}
+      ref={reference}
       autoComplete="off"
       {...rest}
       className={className}

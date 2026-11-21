@@ -60,7 +60,7 @@ export function needsChoice(action: ActionDef): Ask | null {
 
 /** Whether using this action opens the roll dialog: it asks for something, or the system offers roll modes. */
 export function asksFirst(system: GameSystem, action: ActionDef): boolean {
-  return !!needsChoice(action) || (!!rollModesFor(system, action).length && !!checkOf(action));
+  return !!needsChoice(action) || (rollModesFor(system, action).length > 0 && !!checkOf(action));
 }
 
 export function rollModesFor(system: GameSystem, action: ActionDef) {
@@ -89,14 +89,18 @@ function difficultyValue(
   target: number | undefined,
 ): number | undefined {
   switch (spec.kind) {
-    case "fixed":
+    case "fixed": {
       return spec.value;
-    case "derived":
+    }
+    case "derived": {
       return derived.values[spec.value];
-    case "target":
+    }
+    case "target": {
       return target ?? chosen;
-    default:
+    }
+    default: {
       return chosen ?? spec.initial;
+    }
   }
 }
 
@@ -112,7 +116,7 @@ function resourcesFor(
   const totals = new Map<string, number>();
   for (const { resource, by } of [...(action.costs ?? []), ...variantCosts, ...bonusCosts])
     totals.set(resource, (totals.get(resource) ?? 0) + by);
-  return [...totals].flatMap(([id, by]) => (by !== 0 ? [{ id, by }] : []));
+  return [...totals].flatMap(([id, by]) => (by === 0 ? [] : [{ id, by }]));
 }
 
 /**
@@ -284,7 +288,7 @@ export function performMove(
 ): MoveResult {
   const { targets, valueAt } = aim;
   const check = checkOf(action);
-  if (action.variants && !action.variants(c, d).length) throw new Error("Not enough resources");
+  if (action.variants && action.variants(c, d).length === 0) throw new Error("Not enough resources");
   const basePlan = planMove(system, action, c, d, choice);
   if (!canPayMove(c, basePlan)) throw new Error("Not enough resources");
   const difficulty =
@@ -292,9 +296,9 @@ export function performMove(
       ? resolveDifficulty(check.difficulty, d, choice.difficulty)
       : undefined;
   const sharedResult = {
-    ...(basePlan.resources.length ? { resourcesSpent: basePlan.resources } : {}),
-    ...(Object.keys(basePlan.rollValues).length ? { rollValues: basePlan.rollValues } : {}),
-    ...(difficulty !== undefined ? { difficulty } : {}),
+    ...(basePlan.resources.length > 0 ? { resourcesSpent: basePlan.resources } : {}),
+    ...(Object.keys(basePlan.rollValues).length > 0 ? { rollValues: basePlan.rollValues } : {}),
+    ...(difficulty === undefined ? {} : { difficulty }),
     ...(choice.counterMessageId ? { counterMessageId: choice.counterMessageId } : {}),
   };
   const rollDerived = { ...d, values: { ...d.values, ...basePlan.rollValues } };
@@ -337,7 +341,7 @@ export function performMove(
       const context = {
         action,
         character: c,
-        ...(against !== undefined ? { difficulty: against } : {}),
+        ...(against === undefined ? {} : { difficulty: against }),
       };
       const result = system.result(r.total, natural, r, context);
       let hit: boolean | undefined;
@@ -347,7 +351,7 @@ export function performMove(
         ...t,
         roll: r,
         result,
-        ...(against !== undefined ? { against, ...(hit !== undefined ? { hit } : {}) } : {}),
+        ...(against === undefined ? {} : { against, ...(hit === undefined ? {} : { hit }) }),
       };
     });
     // Follow-ups for the best result that hit (or might have, against an unknown value).
@@ -374,7 +378,7 @@ export function performMove(
   const result = system.result(r.total, naturalOf(r), r, {
     action,
     character: c,
-    ...(difficulty !== undefined ? { difficulty } : {}),
+    ...(difficulty === undefined ? {} : { difficulty }),
   });
   const followUps = [
     ...(check.followUps?.[result] ?? []),
@@ -407,7 +411,7 @@ export function readRollResult(
   const result = system.result(resultRoll.total, naturalOf(resultRoll), resultRoll, {
     action,
     character,
-    ...(difficulty !== undefined ? { difficulty } : {}),
+    ...(difficulty === undefined ? {} : { difficulty }),
   });
   const suggestions = suggestionsFor(
     system,
@@ -423,7 +427,7 @@ export function readRollResult(
     suggestions,
     spent: [],
     ...(targets ? { targets } : {}),
-    ...(difficulty !== undefined ? { difficulty } : {}),
+    ...(difficulty === undefined ? {} : { difficulty }),
     ...(counterMessageId ? { counterMessageId } : {}),
   };
 }

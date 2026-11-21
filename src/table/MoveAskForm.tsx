@@ -38,7 +38,7 @@ type Draft = {
 type DifficultySpec = { prompt: string; initial?: number | undefined; min?: number; max?: number };
 
 /** A formula without its labels, as the Roll button reads: 1d20+2[Prof] → 1d20+2. */
-const bare = (formula: string) => formula.replace(/\[[^\]]*\]/g, "");
+const bare = (formula: string) => formula.replaceAll(/\[[^\]]*\]/g, "");
 
 /** Whether the move asks for a difficulty: its own, or when a target's defense isn't known. */
 function difficultyAsked(
@@ -61,7 +61,7 @@ function difficultyAsked(
 
 /** The difficulty typed, if it is a number the move accepts. */
 function chosenDifficulty(spec: DifficultySpec | undefined, typed: string) {
-  if (!spec || !typed.trim()) return undefined;
+  if (!spec || !typed.trim()) return;
   const value = Number(typed);
   return Number.isFinite(value) && value >= (spec.min ?? 0) && value <= (spec.max ?? 99)
     ? value
@@ -173,7 +173,7 @@ export function AskStep({
 }
 
 function useAskStep(campaign: Campaign, characterId: string, moveId: string) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const system = systemOf(campaign);
   const move = system.actions.find((m) => m.id === moveId)!;
   const c = getCharacter(campaign, characterId)!;
@@ -193,11 +193,11 @@ function useAskStep(campaign: Campaign, characterId: string, moveId: string) {
     extra: request?.choice?.extra ?? 0,
     variant: "",
   });
-  const formRef = useRef<HTMLFormElement>(null);
+  const formReference = useRef<HTMLFormElement>(null);
   // Enter rolls straight away.
   useEffect(
     () =>
-      formRef.current
+      formReference.current
         ?.querySelector<HTMLButtonElement>('button[type="submit"]')
         ?.focus({ preventScroll: true }),
     [],
@@ -218,7 +218,7 @@ function useAskStep(campaign: Campaign, characterId: string, moveId: string) {
   const go = (mode: string) => {
     if (!rollFor(mode).ready) return;
     const choice = choiceOf(ask, check, draft, difficulty, mode);
-    void ctx.execute(makeMove, { characterId: c.id, move, choice, targets });
+    void context.execute(makeMove, { characterId: c.id, move, choice, targets });
     campaign.moves.ask(null);
   };
   const rollBonuses = new Set(draft.rollBonuses);
@@ -232,7 +232,7 @@ function useAskStep(campaign: Campaign, characterId: string, moveId: string) {
     counters,
     draft,
     patch,
-    formRef,
+    formRef: formReference,
     rollBonuses,
     rollFor,
     go,
@@ -254,10 +254,10 @@ function VariantField({
       Casting or use
       <select
         value={value || variants[0]?.id || ""}
-        disabled={!variants.length}
+        disabled={variants.length === 0}
         onChange={(event) => onChange(event.currentTarget.value)}
       >
-        {!variants.length && <option value="">No available uses</option>}
+        {variants.length === 0 && <option value="">No available uses</option>}
         {variants.map((entry) => (
           <option key={entry.id} value={entry.id}>
             {entry.label}
@@ -417,18 +417,18 @@ function CounterField({
       {spec.prompt}
       <select
         value={value}
-        disabled={!counters.length}
+        disabled={counters.length === 0}
         onChange={(e) => onChange(e.currentTarget.value)}
       >
         <option value="">Choose a counter</option>
         {counters.map((counter) => (
           <option key={counter.id} value={counter.id}>
             {counter.label} ({counter.start}
-            {counter.max !== undefined ? `/${counter.max}` : ""})
+            {counter.max === undefined ? "" : `/${counter.max}`})
           </option>
         ))}
       </select>
-      {!counters.length && (
+      {counters.length === 0 && (
         <span className="muted">Create a track with /clock or /count first.</span>
       )}
     </label>

@@ -55,7 +55,7 @@ export async function getBlob(hash: string): Promise<Blob | null> {
   if (dir) {
     try {
       const file = await (await dir.getFileHandle(hash)).getFile();
-      return file.size ? file : null;
+      return file.size > 0 ? file : null;
     } catch {
       return null;
     }

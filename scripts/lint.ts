@@ -27,13 +27,6 @@ export function createLintFixes(files: string[]): LintCheck[] {
   const eslintFiles = codeFiles.filter((file) => ESLINT_FILE.test(file));
   const checks: LintCheck[] = [];
 
-  if (codeFiles.length > 0) {
-    checks.push({
-      name: "Oxlint autofix",
-      command: "npx",
-      args: ["vp", "lint", ...codeFiles, "--max-warnings", "0", "--fix"],
-    });
-  }
   if (eslintFiles.length > 0) {
     checks.push({
       name: "ESLint autofix",
@@ -63,13 +56,6 @@ export function createLintAnalyses(files: string[]): LintCheck[] {
     },
   ];
 
-  if (codeFiles.length > 0) {
-    checks.push({
-      name: "Oxlint",
-      command: "npx",
-      args: ["vp", "lint", ...codeFiles, "--max-warnings", "0"],
-    });
-  }
   if (eslintFiles.length > 0) {
     checks.push({
       name: "ESLint",

@@ -67,8 +67,8 @@ export function createPaneLayout(key: string, names: { list: string; detail: str
     setStorageJson(storeKey, { w: listWidth.value, layout: chosen.value });
   };
 
-  const Toggle = () =>
-    createElement(PaneToggle, {
+  function Toggle() {
+    return createElement(PaneToggle, {
       mode,
       tooNarrow,
       names,
@@ -77,6 +77,7 @@ export function createPaneLayout(key: string, names: { list: string; detail: str
         save();
       },
     });
+  }
 
   const layout: PaneLayout = {
     key,
@@ -90,8 +91,8 @@ export function createPaneLayout(key: string, names: { list: string; detail: str
       save();
     },
     el: null,
-    attach: (el) => {
-      layout.el = el;
+    attach: (element) => {
+      layout.el = element;
     },
     Toggle,
   };

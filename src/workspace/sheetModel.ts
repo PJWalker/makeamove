@@ -1,7 +1,7 @@
 import { canEdit } from "../features/characters/api";
 import { derive } from "../features/characters/store";
-import type { SheetProps } from "../systems/extensionTypes";
+import type { SheetProps as SheetProperties } from "../systems/extensionTypes";
 
-export function useSheet(props: SheetProps) {
-  return { ...props, d: derive(props.c, props.system), editable: canEdit(props.campaign, props.c) };
+export function useSheet(properties: SheetProperties) {
+  return { ...properties, d: derive(properties.c, properties.system), editable: canEdit(properties.campaign, properties.c) };
 }

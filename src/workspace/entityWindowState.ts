@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { store } from "../lib/store";
-import { listOf, type LocalDoc, type LocalValue } from "../data/localDoc";
+import { listOf, type LocalDoc as LocalDocument, type LocalValue } from "../data/localDoc";
 import { arrayOf, isString, objectOf, optional } from "../lib/guards";
 import type { Icon } from "../ui/icons";
 import type { MenuItem } from "../ui/ContextMenu";
@@ -90,7 +90,7 @@ export class EntityWindows {
   readonly #stop: () => void;
 
   constructor(
-    local: LocalDoc,
+    local: LocalDocument,
     private readonly panels: PanelLayout,
   ) {
     this.#saved = local.value("entityWindows", readSaved);
@@ -105,7 +105,7 @@ export class EntityWindows {
       const now = this.records.value;
       const closed = new Set(entryKeysOf([...windowIds].filter((id) => !(id in now))));
       windowIds = new Set(Object.keys(now));
-      if (closed.size)
+      if (closed.size > 0)
         this.openEntries.value = this.openEntries.value.filter((k) => !closed.has(k));
     });
   }

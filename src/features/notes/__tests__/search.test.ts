@@ -13,6 +13,7 @@ import {
   searchNotes,
 } from "../api";
 import { NoteDoc, noteDbName } from "../noteDoc";
+import { isString } from "../../../lib/guards";
 
 async function setUp() {
   device.value = { id: "gm", name: "Gwen" };
@@ -23,7 +24,7 @@ const paragraph = (...content: (string | Y.XmlElement)[]) => {
   const p = new Y.XmlElement("paragraph");
   p.insert(
     0,
-    content.map((c) => (typeof c === "string" ? new Y.XmlText(c) : c)),
+    content.map((c) => (isString(c) ? new Y.XmlText(c) : c)),
   );
   return p;
 };

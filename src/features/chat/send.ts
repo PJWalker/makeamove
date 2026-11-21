@@ -15,6 +15,7 @@ import {
 } from "./types";
 import type { SystemCounterDef } from "../../systems/types";
 import { getSystem } from "../../systems";
+import { isString } from "../../lib/guards";
 
 /** This device's name in the campaign, as other players see it. */
 export function myName(campaign: Campaign): string {
@@ -44,7 +45,7 @@ export function postText(
 export async function ensureSystemCounter(campaign: Campaign, counter: SystemCounterDef) {
   const field = `counter:${counter.id}`;
   const stored = campaign.systemData.value(field);
-  const id = typeof stored === "string" ? stored : undefined;
+  const id = isString(stored) ? stored : undefined;
   const existing = campaign.chat.messages.value.find(
     (message) =>
       message.kind === "counter" && (message.id === id || message.systemCounter === counter.id),
@@ -54,7 +55,7 @@ export async function ensureSystemCounter(campaign: Campaign, counter: SystemCou
     return existing;
   }
   const system = getSystem(campaign.systemId);
-  if (!system.counters?.some((candidate) => candidate.id === counter.id)) return undefined;
+  if (!system.counters?.some((candidate) => candidate.id === counter.id)) return;
   const message = await pinWhenPosted(
     campaign,
     campaign.chat.post(
@@ -62,7 +63,7 @@ export async function ensureSystemCounter(campaign: Campaign, counter: SystemCou
         kind: "counter",
         label: counter.label,
         start: counter.start,
-        ...(counter.max !== undefined ? { max: counter.max } : {}),
+        ...(counter.max === undefined ? {} : { max: counter.max }),
         systemCounter: counter.id,
       },
       me(campaign),
@@ -140,7 +141,7 @@ export function postCounter(campaign: Campaign, start: number, label: string, ma
   return pinWhenPosted(
     campaign,
     campaign.chat.post(
-      { kind: "counter", label, start, ...(max !== undefined ? { max } : {}) },
+      { kind: "counter", label, start, ...(max === undefined ? {} : { max }) },
       me(campaign),
     ),
   );

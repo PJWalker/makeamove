@@ -39,59 +39,59 @@ import { command } from "./types";
 /* The fight: the GM runs it; players roll their own initiative and look after their own conditions. */
 
 const isId = objectOf({ id: isString });
-const combatants = (ctx: CampaignContext) => turnOrder(ctx.campaign.combatants);
-const running = (ctx: CampaignContext): Availability =>
-  roundOf(combatMaps(ctx.campaign)) > 0 || "No fight running";
-const anyone = (ctx: CampaignContext): Availability =>
-  combatants(ctx).length > 0 || "No one is in the fight";
-const supported = (ctx: CampaignContext): Availability =>
-  hasCombat(ctx.campaign) || "This game has no initiative";
+const combatants = (context: CampaignContext) => turnOrder(context.campaign.combatants);
+const running = (context: CampaignContext): Availability =>
+  roundOf(combatMaps(context.campaign)) > 0 || "No fight running";
+const anyone = (context: CampaignContext): Availability =>
+  combatants(context).length > 0 || "No one is in the fight";
+const supported = (context: CampaignContext): Availability =>
+  hasCombat(context.campaign) || "This game has no initiative";
 
 /** The GM, or the player whose character it is. */
-const owns = (ctx: CampaignContext, characterId: string | undefined): Availability => {
-  if (ctx.isGm()) return true;
-  const c = getCharacter(ctx.campaign, characterId);
+const owns = (context: CampaignContext, characterId: string | undefined): Availability => {
+  if (context.isGm()) return true;
+  const c = getCharacter(context.campaign, characterId);
   return (!!c && c.owner === device.value.id) || "Not your character";
 };
-const ownsCombatant = (ctx: CampaignContext, { id }: { id: string }) =>
-  owns(ctx, ctx.campaign.combatants.get(id)?.characterId);
-const ownsCharacter = (ctx: CampaignContext, { characterId }: { characterId: string }) =>
-  owns(ctx, characterId);
+const ownsCombatant = (context: CampaignContext, { id }: { id: string }) =>
+  owns(context, context.campaign.combatants.get(id)?.characterId);
+const ownsCharacter = (context: CampaignContext, { characterId }: { characterId: string }) =>
+  owns(context, characterId);
 
 /** Tokens in the open scene's selection, as combatants. */
-function selectedTokens(ctx: CampaignContext, sceneId: string, ids: string[]) {
-  const open = ctx.canvas.canvasCommands.value;
+function selectedTokens(context: CampaignContext, sceneId: string, ids: string[]) {
+  const open = context.canvas.canvasCommands.value;
   if (open?.sceneId !== sceneId) return [];
   return ids.flatMap((id) => {
-    const el = open.scene.get(id);
-    return el?.type === "token"
-      ? [{ id, name: el.name, ...(el.characterId ? { characterId: el.characterId } : {}) }]
+    const element = open.scene.get(id);
+    return element?.type === "token"
+      ? [{ id, name: element.name, ...(element.characterId ? { characterId: element.characterId } : {}) }]
       : [];
   });
 }
 
 /** The selected tokens that aren't in the fight yet. */
-const newToCombat = (ctx: CampaignContext, sceneId: string, ids: string[]) =>
-  selectedTokens(ctx, sceneId, ids).filter((t) => !combatantForToken(ctx.campaign, t.id));
+const newToCombat = (context: CampaignContext, sceneId: string, ids: string[]) =>
+  selectedTokens(context, sceneId, ids).filter((t) => !combatantForToken(context.campaign, t.id));
 
 export const addToCombat = command<{ sceneId: string; ids: string[] }>({
   id: "combat.addTokens",
   params: objectOf({ sceneId: isString, ids: (v): v is string[] => Array.isArray(v) }),
   title: "Add to Combat",
   icon: IconCombat,
-  permission: (ctx) => {
-    const ok = supported(ctx);
-    return ok !== true ? ok : ctx.isGm() || GM_ONLY;
+  permission: (context) => {
+    const ok = supported(context);
+    return ok === true ? context.isGm() || GM_ONLY : ok;
   },
-  available: (ctx, { sceneId, ids }) =>
-    newToCombat(ctx, sceneId, ids).length > 0 || "Already in the fight",
+  available: (context, { sceneId, ids }) =>
+    newToCombat(context, sceneId, ids).length > 0 || "Already in the fight",
   menu: {
-    selection: (ctx, { sceneId, ids }) =>
-      selectedTokens(ctx, sceneId, ids).length ? [{ params: { sceneId, ids } }] : [],
+    selection: (context, { sceneId, ids }) =>
+      selectedTokens(context, sceneId, ids).length > 0 ? [{ params: { sceneId, ids } }] : [],
   },
-  run: (ctx, { sceneId, ids }) => {
-    addTokens(ctx.campaign, sceneId, newToCombat(ctx, sceneId, ids));
-    ctx.panels.showPanel("combat");
+  run: (context, { sceneId, ids }) => {
+    addTokens(context.campaign, sceneId, newToCombat(context, sceneId, ids));
+    context.panels.showPanel("combat");
   },
 });
 
@@ -109,9 +109,9 @@ export const nextTurn = command({
   params: isNothing,
   title: "Next Turn",
   permission: "gm",
-  available: (ctx) => {
-    const fight = running(ctx);
-    return fight === true ? anyone(ctx) : fight;
+  available: (context) => {
+    const fight = running(context);
+    return fight === true ? anyone(context) : fight;
   },
   run: ({ campaign }) => advanceTurn(campaign),
 });
@@ -139,7 +139,7 @@ export const rollForNpcs = command({
   params: isNothing,
   title: "Roll for NPCs",
   permission: "gm",
-  available: (ctx) => combatants(ctx).some((c) => c.init === null) || "Everyone has rolled",
+  available: (context) => combatants(context).some((c) => c.init === null) || "Everyone has rolled",
   undoGroup: false,
   run: ({ campaign }) => rollAllInitiative(campaign, { npcsOnly: true }),
 });

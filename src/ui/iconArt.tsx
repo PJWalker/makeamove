@@ -21,14 +21,14 @@ export function artUrl(name: string, size: 32 | 64 | 128): string {
 }
 
 export function art(name: string): Icon {
-  const src = artUrl(name, 32);
-  const srcSet = `${artUrl(name, 64)} 2x`;
+  const source = artUrl(name, 32);
+  const sourceSet = `${artUrl(name, 64)} 2x`;
   return function ArtIcon({ size = 22, className }) {
     return (
       <img
         className={className ? `icon-art ${className}` : "icon-art"}
-        src={src}
-        srcSet={srcSet}
+        src={source}
+        srcSet={sourceSet}
         width={size}
         height={size}
         alt=""

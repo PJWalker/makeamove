@@ -96,7 +96,7 @@ export function newNpc(campaign: Campaign, name: string, folder?: string) {
 export function newNpcFromMonster(campaign: Campaign, monsterId: string) {
   const system = systemOf(campaign);
   const monster = system.monsters?.find((entry) => entry.id === monsterId);
-  if (!monster) return undefined;
+  if (!monster) return;
   const id = newNpc(campaign, monster.name);
   for (const [stat, value] of Object.entries(monster.scores ?? {}))
     if (system.stats.some((entry) => entry.id === stat)) setScore(campaign, id, stat, value);
@@ -105,7 +105,7 @@ export function newNpcFromMonster(campaign: Campaign, monsterId: string) {
   for (const [field, value] of Object.entries(monster.fields))
     if (system.npcFields.some((entry) => entry.id === field))
       setNpcField(campaign, id, field, value);
-  if (monster.size && system.npcFields.some((field) => field.id === "size"))
+  if (monster.size > 0 && system.npcFields.some((field) => field.id === "size"))
     setNpcField(campaign, id, "size", monster.size);
   return id;
 }

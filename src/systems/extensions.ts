@@ -4,6 +4,7 @@ import { dnd55eExtension } from "./dnd55e/extension";
 import { dungeonWorldExtension } from "./dungeon-world/extension";
 import { dungeonWorld2Extension } from "./dungeon-world-2/extension";
 import { bladesExtension } from "./blades-in-the-dark/extension";
+import { isString } from "../lib/guards";
 
 /*
  * What a system adds to the table besides its rules: sheet components,
@@ -23,4 +24,4 @@ const NONE: SystemExtension = {};
 
 /** What a system adds to the table; nothing for systems that add nothing. */
 export const extensionOf = (system: Pick<GameSystem, "id"> | string | undefined): SystemExtension =>
-  EXTENSIONS[typeof system === "string" ? system : (system?.id ?? "")] ?? NONE;
+  EXTENSIONS[isString(system) ? system : (system?.id ?? "")] ?? NONE;

@@ -89,13 +89,13 @@ export class Presence {
     this.awareness = null;
   }
 
-  subscribe(fn: () => void) {
-    this.listeners.add(fn);
-    return () => this.listeners.delete(fn);
+  subscribe(function_: () => void) {
+    this.listeners.add(function_);
+    return () => this.listeners.delete(function_);
   }
 
   private emit = () => {
-    for (const fn of this.listeners) fn();
+    for (const function_ of this.listeners) function_();
   };
 
   private publish(patch: Partial<LocalState>) {
@@ -142,7 +142,7 @@ export class Presence {
 
   /** Send the final trail so peers can finish fading it. */
   endTrail() {
-    if (this.localTrail.length) this.publishTrail(performance.now());
+    if (this.localTrail.length > 0) this.publishTrail(performance.now());
   }
 
   private publishTrail(now: number, extra?: Partial<LocalState>) {
@@ -173,7 +173,7 @@ export class Presence {
       ping: this.localPing && now - this.localPing.startedAt < PING_MS ? this.localPing : null,
       ruler: mine.scene === scene ? mine.ruler : null,
       targets: mine.scene === scene ? (mine.targets ?? []) : [],
-      trail: this.localTrail.length ? this.localTrail : null,
+      trail: this.localTrail.length > 0 ? this.localTrail : null,
     });
     const states = this.awareness?.getStates();
     if (!states) return marks;
@@ -218,9 +218,9 @@ export class Presence {
       this.trailSeen.set(key, seen);
     }
     const trail: { x: number; y: number; t: number }[] = [];
-    for (let i = 0; i + 2 < p.trail.length; i += 3) {
-      const t = seen.at - p.trail[i + 2]!;
-      if (now - t < TRAIL_MS) trail.push({ x: p.trail[i]!, y: p.trail[i + 1]!, t });
+    for (let index = 0; index + 2 < p.trail.length; index += 3) {
+      const t = seen.at - p.trail[index + 2]!;
+      if (now - t < TRAIL_MS) trail.push({ x: p.trail[index]!, y: p.trail[index + 1]!, t });
     }
     return trail;
   }

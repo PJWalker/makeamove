@@ -62,9 +62,9 @@ export function planAdvancement(
   for (const { pick, option } of chosen) {
     if (!option.boost) continue;
     scores = raise(scores, boostFrom(option, pick.pattern, pick.order), caps);
-    option.boost.amounts[pick.pattern]?.forEach((amount, index) => {
+    if (option.boost.amounts[pick.pattern]) for (const [index, amount] of option.boost.amounts[pick.pattern].entries()) {
       if (amount && pick.order[index]) marked.add(pick.order[index]);
-    });
+    }
   }
   const listFields = new Set(listFieldsOf(system));
   for (const [key, value] of Object.entries(dataFrom(choices, picked, [...listFields], c.data)))

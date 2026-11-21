@@ -49,10 +49,10 @@ export function SearchHighlight({ text, term }: { text: string; term: string }) 
   if (!term) return text;
   return (
     <>
-      {text.split(new RegExp(`(${RegExp.escape(term)})`, "ig")).map((part, i) =>
+      {text.split(new RegExp(`(${RegExp.escape(term)})`, "ig")).map((part, index) =>
         part.toLowerCase() === term.toLowerCase() ? (
-          // oxlint-disable-next-line react-doctor/no-array-index-key -- The pieces of fixed text never reorder, and may repeat.
-          <mark key={i} className="search-hit">
+          // eslint-disable-next-line react-doctor/no-array-index-key -- The pieces of fixed text never reorder, and may repeat.
+          <mark key={index} className="search-hit">
             {part}
           </mark>
         ) : (
@@ -73,7 +73,7 @@ export function TrackerButtonView({
   characterId: string | null;
   b: TrackerButton;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   // Pressable or not follows the character's numbers as they change.
   const blocked = useQuery(campaign.characters, () => {
     void getCharacter(campaign, characterId ?? undefined);
@@ -86,7 +86,7 @@ export function TrackerButtonView({
       aria-disabled={blocked ? true : undefined}
       data-tip={trackerTip(campaign, characterId, b)}
       onClick={(e) => {
-        if (blocked || !characterId || !ctx.execute(pressTrackerButton, { characterId, button: b }))
+        if (blocked || !characterId || !context.execute(pressTrackerButton, { characterId, button: b }))
           shake(e.currentTarget);
       }}
     >
@@ -109,13 +109,13 @@ export function RichTextView({
   className?: string;
   searchTerm?: string;
 }) {
-  const ctx = useCampaign();
+  const context_ = useCampaign();
   const context = useMemo(
     () => ({ campaign, characterId, searchTerm }),
     [campaign, characterId, searchTerm],
   );
   const rendered = renderToReactElement({
-    extensions: ruleTextExtensions(ctx),
+    extensions: ruleTextExtensions(context_),
     content: text,
     options: {
       nodeMapping: {

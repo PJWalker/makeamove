@@ -12,7 +12,7 @@ import {
   IconShapes,
   IconText,
   IconWall,
-  type IconProps,
+  type IconProps as IconProperties,
 } from "../ui/icons";
 
 /** The canvas tools, as the toolbar and the command palette list them. */
@@ -20,7 +20,7 @@ export const TOOLS: {
   id: ToolId;
   label: string;
   key: string;
-  Icon: ComponentType<IconProps>;
+  Icon: ComponentType<IconProperties>;
   gmOnly?: boolean;
 }[] = [
   { id: "select", label: "Select", key: "V", Icon: IconSelect },

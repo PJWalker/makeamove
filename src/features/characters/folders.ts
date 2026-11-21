@@ -9,7 +9,7 @@ import {
   type FolderView,
 } from "../../campaign/folders";
 
-export type { FolderView };
+
 
 export function listFolders(campaign: Campaign): FolderView[] {
   return foldersByName(campaign.characterFolders);
@@ -40,3 +40,5 @@ export function moveToFolder(
 ) {
   campaign.characters.get(characterId)?.patch({ folder: folderId });
 }
+
+export {type FolderView} from "../../campaign/folders";

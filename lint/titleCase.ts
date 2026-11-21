@@ -29,12 +29,12 @@ const capitalise = (word: string) => word.charAt(0).toUpperCase() + word.slice(1
 
 /** `text` in Title Case, with "..." as "…". */
 export function titleCase(text: string): string {
-  const tokens = text.replace(/\.\.\./g, "…").split(/(\s+)/);
-  const words = tokens.flatMap((t, i) => (t.trim() ? [i] : []));
+  const tokens = text.replaceAll('...', "…").split(/(\s+)/);
+  const words = tokens.flatMap((t, index) => (t.trim() ? [index] : []));
   return tokens
-    .map((token, i) => {
-      const at = words.indexOf(i);
-      if (at < 0 || token.includes(HOLE)) return token;
+    .map((token, index) => {
+      const at = words.indexOf(index);
+      if (at === -1 || token.includes(HOLE)) return token;
       const [, lead = "", core = "", trail = ""] = WORD.exec(token) ?? [];
       if (keepsItsCase(core)) return token;
       const previous = tokens[words[at - 1] ?? -1] ?? "";

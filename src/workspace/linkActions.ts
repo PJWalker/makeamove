@@ -5,11 +5,11 @@ import { IconImage, IconOpenWindow, IconSidebar } from "../ui/icons";
 import { actionMenuItems } from "./actionMenu";
 import type { CampaignContext } from "./campaignContext";
 import { giveItem, startMove } from "./commands/characters";
-import type { LinkRef } from "./linkState";
+import type { LinkRef as LinkReference } from "./linkState";
 
 /** The primary action exposed by a linked item or move. */
-export function linkActionItems(ctx: CampaignContext, link: LinkRef): MenuItem[] {
-  const { campaign } = ctx;
+export function linkActionItems(context: CampaignContext, link: LinkReference): MenuItem[] {
+  const { campaign } = context;
   if (link.kind !== "item" && link.kind !== "move") return [];
   const me = getCharacter(campaign, actingCharacterId(campaign));
   const canAct = !!me && canEdit(campaign, me);
@@ -28,13 +28,13 @@ export function linkActionItems(ctx: CampaignContext, link: LinkRef): MenuItem[]
     const item = system.items.find((candidate) => candidate.id === link.id);
     if (!item) return [];
     return actAs(me ? `Give to ${me.name}` : "Choose a Character", (characterId) =>
-      ctx.execute(giveItem, { characterId, item }),
+      context.execute(giveItem, { characterId, item }),
     );
   }
   const move = system.actions.find((candidate) => candidate.id === link.id);
   if (!move) return [];
   return actAs(`Make ${move.name}`, (characterId) =>
-    ctx.execute(startMove, { characterId, move: move.id }),
+    context.execute(startMove, { characterId, move: move.id }),
   );
 }
 
@@ -44,22 +44,22 @@ export function linkActionItems(ctx: CampaignContext, link: LinkRef): MenuItem[]
  * what the link says; `openInWindow` is absent where a click already does that.
  */
 export function linkMenuSections(
-  ctx: CampaignContext,
-  link: LinkRef,
+  context: CampaignContext,
+  link: LinkReference,
   { title, openInWindow }: { title: string | undefined; openInWindow?: () => void },
 ): MenuItem[][] {
   const { kind, id } = link;
-  const actionId = kind === "move" ? `move:${id}` : kind === "item" ? `library:${id}` : null;
-  const canChangeGraphic = kind !== "note" || !getNote(ctx.campaign, id)?.gmOnly;
+  const actionId = kind === "move" ? `move:${id}` : (kind === "item" ? `library:${id}` : null);
+  const canChangeGraphic = kind !== "note" || !getNote(context.campaign, id)?.gmOnly;
   return [
-    linkActionItems(ctx, link),
-    actionId ? actionMenuItems(ctx, [{ id: actionId, title }]) : [],
+    linkActionItems(context, link),
+    actionId ? actionMenuItems(context, [{ id: actionId, title }]) : [],
     canChangeGraphic
       ? [
           {
             label: "Change Graphic…",
             Icon: IconImage,
-            onSelect: () => ctx.table.editGraphic(kind, id, title ?? "Entity"),
+            onSelect: () => context.table.editGraphic(kind, id, title ?? "Entity"),
           },
         ]
       : [],
@@ -67,7 +67,7 @@ export function linkMenuSections(
       {
         label: "Open in Sidebar",
         Icon: IconSidebar,
-        onSelect: () => ctx.links.openInSidebar(kind, id),
+        onSelect: () => context.links.openInSidebar(kind, id),
       },
       ...(openInWindow
         ? [{ label: "Open in a Window", Icon: IconOpenWindow, onSelect: openInWindow }]

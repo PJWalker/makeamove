@@ -1,4 +1,4 @@
-/* oxlint-disable jsx-a11y/prefer-tag-over-role -- Completion options belong to a custom keyboard listbox. */
+/* eslint-disable jsx-a11y/prefer-tag-over-role -- Completion options belong to a custom keyboard listbox. */
 import { Editor, mergeAttributes } from "@tiptap/core";
 import Collaboration from "@tiptap/extension-collaboration";
 import Mention from "@tiptap/extension-mention";
@@ -9,7 +9,7 @@ import { ySyncPluginKey } from "@tiptap/y-tiptap";
 import { createRoot, type Root } from "react-dom/client";
 import type * as Y from "yjs";
 import type { Awareness } from "y-protocols/awareness";
-import { IconDelete, IconImage, IconReveal, IconSecret } from "../ui/icons";
+import { IconDelete, IconImage, IconReveal, IconSecret , IconRename } from "../ui/icons";
 import {
   carets,
   deleteSecret,
@@ -31,7 +31,6 @@ import { linkMenuSections } from "./linkActions";
 import { joinSections } from "./commands/views";
 import type { Campaign } from "../campaign/campaign";
 import type { CampaignContext } from "./campaignContext";
-import { IconRename } from "../ui/icons";
 import { dragEntity, registerLinkDrop } from "./entityDrag";
 import { entity } from "./dragEntities";
 import { CampaignEntityGraphic } from "./EntityGraphic";
@@ -83,17 +82,17 @@ export function linkExtension(campaign: Campaign, o: Pick<RichTextOptions, "note
         ...this.parent?.(),
         kind: {
           default: "note",
-          parseHTML: (el: HTMLElement) => el.getAttribute("data-kind"),
-          renderHTML: (attrs: { kind: string }) => ({
-            "data-kind": attrs.kind,
+          parseHTML: (element: HTMLElement) => element.dataset.kind,
+          renderHTML: (attributes: { kind: string }) => ({
+            "data-kind": attributes.kind,
           }),
         },
         /** Text chosen for the link, shown instead of its target's name. */
         text: {
           default: null,
-          parseHTML: (el: HTMLElement) => el.getAttribute("data-text"),
-          renderHTML: (attrs: { text: string | null }) =>
-            attrs.text ? { "data-text": attrs.text } : {},
+          parseHTML: (element: HTMLElement) => element.dataset.text,
+          renderHTML: (attributes: { text: string | null }) =>
+            attributes.text ? { "data-text": attributes.text } : {},
         },
       };
     },
@@ -159,26 +158,26 @@ function suggestionList(campaign: Campaign) {
   let root: Root | null = null;
   host.className = "note-suggest mention-list context-menu panel drops-down";
   host.setAttribute("role", "listbox");
-  let props: SuggestionProps<LinkTarget> | null = null;
+  let properties: SuggestionProps<LinkTarget> | null = null;
   let index = 0;
 
   const draw = () => {
-    if (!props) return;
-    const items = props.items;
+    if (!properties) return;
+    const items = properties.items;
     root?.render(
-      items.length ? (
+      items.length > 0 ? (
         <>
-          {items.map((t, i) => {
+          {items.map((t, index_) => {
             return (
               <button
                 key={`${t.kind}:${t.id}`}
                 type="button"
                 role="option"
                 className="menu-item"
-                aria-selected={i === index}
-                data-active={i === index || undefined}
+                aria-selected={index_ === index}
+                data-active={index_ === index || undefined}
                 onPointerDown={(e) => e.preventDefault()}
-                onClick={() => props?.command(t)}
+                onClick={() => properties?.command(t)}
               >
                 <CampaignEntityGraphic campaign={campaign} kind={t.kind} id={t.id} size={22} />
                 <span className="menu-label">{t.label}</span>
@@ -197,29 +196,40 @@ function suggestionList(campaign: Campaign) {
     onStart(p: SuggestionProps<LinkTarget>) {
       // Its own id prefix, so ids (an icon's mask) can't clash with the app root's.
       root = createRoot(host, { identifierPrefix: `link-suggestions-${++suggestionRoots}-` });
-      props = p;
+      properties = p;
       index = 0;
-      document.body.appendChild(host);
+      document.body.append(host);
       draw();
     },
     onUpdate(p: SuggestionProps<LinkTarget>) {
-      props = p;
+      properties = p;
       index = Math.min(index, Math.max(0, p.items.length - 1));
       draw();
     },
     onKeyDown({ event }: SuggestionKeyDownProps) {
-      const n = props?.items.length ?? 0;
+      const n = properties?.items.length ?? 0;
       if (event.key === "Escape") {
         host.remove();
         return true;
       }
       if (!n) return false;
-      if (event.key === "ArrowDown") index = (index + 1) % n;
-      else if (event.key === "ArrowUp") index = (index - 1 + n) % n;
-      else if (event.key === "Enter" || event.key === "Tab") {
-        props?.command(props.items[index]);
+      switch (event.key) {
+      case "ArrowDown": {
+      index = (index + 1) % n;
+      break;
+      }
+      case "ArrowUp": {
+      index = (index - 1 + n) % n;
+      break;
+      }
+      case "Enter":
+      case "Tab": {
+        properties?.command(properties.items[index]);
         return true;
-      } else return false;
+      }
+      default: { return false;
+      }
+      }
       draw();
       return true;
     },
@@ -227,7 +237,7 @@ function suggestionList(campaign: Campaign) {
       root?.unmount();
       root = null;
       host.remove();
-      props = null;
+      properties = null;
     },
   };
 }
@@ -238,7 +248,7 @@ function pickImages(editor: Editor) {
   input.type = "file";
   input.accept = "image/*";
   input.multiple = true;
-  input.onchange = () => void insertImages(editor, [...(input.files ?? [])]);
+  input.addEventListener('change', () => void insertImages(editor, [...(input.files ?? [])]));
   input.click();
 }
 
@@ -251,10 +261,10 @@ export function mountRichText(
   const { campaign } = ctx;
   const vault = o.secrets?.vault ?? null;
   /** A secret's own text, edited in place inside the note (GM only). */
-  const mountSecret = (body: HTMLElement, id: string, doc: Y.Doc): (() => void) => {
+  const mountSecret = (body: HTMLElement, id: string, document: Y.Doc): (() => void) => {
     const nested = mountRichText(body, {
       ctx,
-      fragment: secretFragment(doc, id),
+      fragment: secretFragment(document, id),
       placeholder: "Only you can see this.",
       label: "Secret text",
       editable: o.editable,
@@ -284,13 +294,13 @@ export function mountRichText(
         const files = [...(e.clipboardData?.files ?? [])].filter((f) =>
           f.type.startsWith("image/"),
         );
-        if (!files.length || !editor.isEditable) return false;
+        if (files.length === 0 || !editor.isEditable) return false;
         void insertImages(editor, files);
         return true;
       },
       handleDrop: (view, e) => {
         const files = [...(e.dataTransfer?.files ?? [])].filter((f) => f.type.startsWith("image/"));
-        if (!files.length || !editor.isEditable) return false;
+        if (files.length === 0 || !editor.isEditable) return false;
         e.preventDefault();
         void insertImages(
           editor,
@@ -310,7 +320,7 @@ export function mountRichText(
 
   const chipAt = (e: Event) =>
     (e.target as Element).closest<HTMLElement>(`[data-type="${LINK_NODE}"]`);
-  const refOf = (chip: HTMLElement) => ({
+  const referenceOf = (chip: HTMLElement) => ({
     kind: chip.dataset["kind"] as LinkKind,
     id: chip.dataset["id"] ?? "",
   });
@@ -322,7 +332,7 @@ export function mountRichText(
     const chip = chipAt(e);
     if (!chip || chip.dataset["missing"]) return;
     e.preventDefault();
-    const link = refOf(chip);
+    const link = referenceOf(chip);
     if (followsInPlace(link.kind)) ctx.links.followLink(link.kind, link.id);
     else ctx.linkPopups.show(link, chip);
   };
@@ -352,8 +362,7 @@ export function mountRichText(
           label: "Reveal to Players",
           Icon: IconReveal,
           onSelect: () => revealSecret(editor, vault, pos),
-        });
-        items.push({
+        }, {
           label: "Delete Secret",
           Icon: IconDelete,
           danger: true,
@@ -375,7 +384,7 @@ export function mountRichText(
   const menu = menuTrigger((x, y) => {
     const chip = menuChip;
     if (!chip) return;
-    const link = refOf(chip);
+    const link = referenceOf(chip);
     const found = nodeOf(chip);
     const sections = chip.dataset["missing"]
       ? []
@@ -409,7 +418,7 @@ export function mountRichText(
       ]);
     }
     const items = joinSections(sections);
-    if (items.length) ctx.linkPopups.linkMenu.set({ x, y, items });
+    if (items.length > 0) ctx.linkPopups.linkMenu.set({ x, y, items });
   });
   let menuChip: HTMLElement | null = null;
   /** Whether a press is for the text menu: in this editor's own text, not a nested secret's, with notes' extras on. */

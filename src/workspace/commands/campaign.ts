@@ -61,9 +61,9 @@ export const removeMember = command<{ id: string }>({
   params: objectOf({ id: isString }),
   title: "Remove from Campaign",
   danger: true,
-  permission: (ctx, { id }) => {
-    if (!ctx.isGm()) return "GM only";
-    const gm = id === device.value.id || ctx.campaign.members.get(id)?.get("role") === "gm";
+  permission: (context, { id }) => {
+    if (!context.isGm()) return "GM only";
+    const gm = id === device.value.id || context.campaign.members.get(id)?.get("role") === "gm";
     return !gm || "The GM stays";
   },
   // Their device has been told to leave.
@@ -150,8 +150,8 @@ export const pinToHotbar = command<{ key: string; at?: number | undefined }>({
   id: "hotbar.pin",
   params: objectOf({ key: isString, at: optional(isNumber) }),
   title: "Add to Hotbar",
-  available: (ctx, { key }) => {
-    const slots = myHotbar(ctx.campaign);
+  available: (context, { key }) => {
+    const slots = myHotbar(context.campaign);
     return slots.includes(key) || slots.length < MAX_SLOTS || "The hotbar is full";
   },
   run: ({ campaign }, { key, at }) => {

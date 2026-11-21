@@ -13,6 +13,7 @@
  */
 
 import { generateKeyBetween, generateNKeysBetween } from "fractional-indexing";
+import { isString } from "../lib/guards";
 
 export type PanelId =
   | "scene"
@@ -95,7 +96,7 @@ const PANEL_IDS = new Set<string>(PANEL_ORDER);
 
 function isDockItemId(id: unknown): id is DockItemId {
   return (
-    typeof id === "string" && (PANEL_IDS.has(id) || (id.startsWith("entity:") && id.length > 7))
+    isString(id) && (PANEL_IDS.has(id) || (id.startsWith("entity:") && id.length > 7))
   );
 }
 
@@ -123,11 +124,11 @@ export function defaultLayout(narrow: boolean): Layout {
 /** Fresh order keys for tabs in this order. */
 function orderKeys(panels: DockItemId[]): Layout["order"] {
   const keys = generateNKeysBetween(null, null, panels.length);
-  return Object.fromEntries(panels.map((id, i) => [id, keys[i]]));
+  return Object.fromEntries(panels.map((id, index) => [id, keys[index]]));
 }
 
 function isOrderKey(key: unknown): key is string {
-  if (typeof key !== "string") return false;
+  if (!isString(key)) return false;
   try {
     generateKeyBetween(key, null);
     return true;
@@ -139,9 +140,9 @@ function isOrderKey(key: unknown): key is string {
 /** Whether a side's tabs all have keys, sorted the way the tabs are. */
 function inOrder(panels: DockItemId[], order: Layout["order"]) {
   const keys = panels.map((id) => order[id]);
-  return keys.every((key, i) => {
-    const prev = keys[i - 1];
-    return key !== undefined && (i === 0 || (prev !== undefined && prev < key));
+  return keys.every((key, index) => {
+    const previous = keys[index - 1];
+    return key !== undefined && (index === 0 || (previous !== undefined && previous < key));
   });
 }
 
@@ -214,7 +215,7 @@ export function normalise(saved: unknown, narrow: boolean): Layout {
 
 /** The layout as shown, leaving out panels this campaign doesn't have (Combat without initiative). */
 export function withoutPanels(l: Layout, ids: PanelId[]): Layout {
-  if (!ids.length) return l;
+  if (ids.length === 0) return l;
   const keep = (id: DockItemId) => !isPanelId(id) || !ids.includes(id);
   return {
     ...l,
@@ -258,10 +259,10 @@ export function bothSidesCramped(l: Layout, viewportWidth: number): boolean {
  * In a window too narrow for both sidebars and the map, opening one sidebar
  * shuts the other. A side that was already open stays as it is.
  */
-export function oneSideIfCramped(prev: Layout, next: Layout, viewportWidth: number): Layout {
+export function oneSideIfCramped(previous: Layout, next: Layout, viewportWidth: number): Layout {
   if (!next.left.open || !next.right.open || !bothSidesCramped(next, viewportWidth)) return next;
-  if (!prev.left.open) return { ...next, right: { ...next.right, open: false } };
-  if (!prev.right.open) return { ...next, left: { ...next.left, open: false } };
+  if (!previous.left.open) return { ...next, right: { ...next.right, open: false } };
+  if (!previous.right.open) return { ...next, left: { ...next.left, open: false } };
   return next;
 }
 
@@ -345,11 +346,11 @@ function place(
   const keys = panels.map((p) => l.order[p] ?? null);
   const remembered = l.order[id];
   const at =
-    index !== "remembered"
-      ? Math.min(Math.max(index, 0), panels.length)
-      : remembered === undefined
+    index === "remembered"
+      ? (remembered === undefined
         ? panels.length
-        : keys.filter((k) => k !== null && k <= remembered).length;
+        : keys.filter((k) => k !== null && k <= remembered).length)
+      : Math.min(Math.max(index, 0), panels.length);
   const before = keys[at - 1] ?? null;
   const after = keys[at] ?? null;
   // The remembered key is kept unless a tab placed since has taken it.

@@ -17,12 +17,15 @@ export const chipText = (value: number, label?: string) =>
 /** How a pick reads on its tray button: "d6", "+1", "−1", "STR". */
 export function pickName(pick: TrayPick): string {
   switch (pick.kind) {
-    case "die":
+    case "die": {
       return `d${pick.sides}`;
-    case "stat":
+    }
+    case "stat": {
       return pick.stat;
-    case "modifier":
+    }
+    case "modifier": {
       return signed(pick.value);
+    }
   }
 }
 

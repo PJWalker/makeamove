@@ -39,25 +39,25 @@ function MessageBox({
   error: string | null;
   onError: (message: string | null) => void;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const [content, setContent] = useState<ChatContent>(() => emptyChatContent());
   const typed = commandText(content);
   const last = useRef("");
   const input = useRef<ChatInputHandle | null>(null);
   // Which commands are offered follows the player's role.
   useQuery(campaign.members, () => campaign.isGm());
-  const hints = suggestSlash(ctx, typed);
+  const hints = suggestSlash(context, typed);
 
   function send() {
     const source = commandText(content);
     if (!source.trim()) return;
     // Quick dice and a bare formula use the toggle's visibility; /r and /sr their own.
-    const call = chatCall(ctx, content, visibility);
+    const call = chatCall(context, content, visibility);
     if ("error" in call) {
       onError(call.error);
       return;
     }
-    invoke(ctx, call.command, call.params);
+    invoke(context, call.command, call.params);
     last.current = source;
     input.current?.set("");
     onError(null);

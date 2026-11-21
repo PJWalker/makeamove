@@ -16,35 +16,35 @@ export function dragToken(
   spec: TokenSpec,
 ) {
   if (e.button !== 0) return;
-  const src = e.currentTarget as HTMLElement;
-  const box = src.getBoundingClientRect();
+  const source = e.currentTarget as HTMLElement;
+  const box = source.getBoundingClientRect();
   let ghost: HTMLElement;
-  const overScene = (ev: PointerEvent) =>
-    !!document.elementFromPoint(ev.clientX, ev.clientY)?.closest(".scene-canvas");
+  const overScene = (event: PointerEvent) =>
+    !!document.elementFromPoint(event.clientX, event.clientY)?.closest(".scene-canvas");
 
   followPress(e, THRESHOLD, {
     lift() {
-      ghost = src.cloneNode(true) as HTMLElement;
+      ghost = source.cloneNode(true) as HTMLElement;
       ghost.classList.add("drag-ghost");
       ghost.style.width = `${box.width}px`;
       ghost.style.height = `${box.height}px`;
-      document.body.appendChild(ghost);
+      document.body.append(ghost);
       document.documentElement.classList.add("is-reordering");
     },
-    move(ev) {
+    move(event) {
       document.documentElement.dataset["dropValid"] = String(
-        overScene(ev) && !!canvas.tokenDrop.value,
+        overScene(event) && !!canvas.tokenDrop.value,
       );
-      ghost.style.left = `${ev.clientX - box.width / 2}px`;
-      ghost.style.top = `${ev.clientY - box.height / 2}px`;
+      ghost.style.left = `${event.clientX - box.width / 2}px`;
+      ghost.style.top = `${event.clientY - box.height / 2}px`;
     },
-    end(ev, commit, lifted) {
+    end(event, commit, lifted) {
       delete document.documentElement.dataset["dropValid"];
       if (!lifted) return;
       ghost.remove();
       document.documentElement.classList.remove("is-reordering");
       suppressNextClick();
-      if (commit && overScene(ev)) canvas.tokenDrop.value?.(ev.clientX, ev.clientY, spec);
+      if (commit && overScene(event)) canvas.tokenDrop.value?.(event.clientX, event.clientY, spec);
     },
   });
 }

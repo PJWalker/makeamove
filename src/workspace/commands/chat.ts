@@ -99,9 +99,9 @@ export const say = command<{
       names: ["w", "whisper"],
       usage: "/w name message",
       help: "Whisper to one person (or “gm”)",
-      parse: (rest, ctx, typed) => {
+      parse: (rest, context, typed) => {
         if (!rest.trim()) return { error: "Whisper to whom? Try /w name message." };
-        const target = whisperTarget(rest, ctx.campaign.memberViews());
+        const target = whisperTarget(rest, context.campaign.memberViews());
         if (!target) return { error: `No one here is called “${rest.split(/\s/)[0]}”.` };
         if (!target.text) return { error: `What do you want to whisper to ${target.to[0]!.name}?` };
         return {
@@ -216,9 +216,9 @@ export const startCounter = command<{ start: number; max?: number | undefined; l
       parse: (rest) => {
         const m = /^(-?\d+)(?:\s*\/\s*(\d+))?\s*([\s\S]*)$/.exec(rest.trim());
         if (!m?.[1]) return { error: "Start where? Try /count 0/8 The cops arrive." };
-        const max = m[2] !== undefined ? +m[2] : undefined;
+        const max = m[2] === undefined ? undefined : +m[2];
         if (max !== undefined && max < 1) return { error: "Count up to 1 or more." };
-        return { start: +m[1], ...(max !== undefined ? { max } : {}), label: unquote(m[3] ?? "") };
+        return { start: +m[1], ...(max === undefined ? {} : { max }), label: unquote(m[3] ?? "") };
       },
     },
     {
@@ -264,37 +264,37 @@ export const chatHelp = command({
   title: "Chat Commands",
   transact: false,
   slash: [
-    { names: ["help", "?"], usage: "/help", help: "List these commands", parse: () => undefined },
+    { names: ["help", "?"], usage: "/help", help: "List these commands", parse: () => {} },
   ],
-  run: (ctx) =>
-    ctx.table.noteInChat(
+  run: (context) =>
+    context.table.noteInChat(
       [
         "Commands:",
-        ...slashForms(ctx).map(({ form }) => `${form.usage}  ${form.help}`),
+        ...slashForms(context).map(({ form }) => `${form.usage}  ${form.help}`),
         "Formulas: 2d6+1, 4d6kh3, 2d20kl1, d6!, 1d8+2[STR]",
       ].join("\n"),
     ),
 });
 
 /** Every way to type a command that this player may run, in the order registered. */
-export function slashForms(ctx: CampaignContext) {
-  return (ctx.commands.all() as AnyTableCommand[]).flatMap((command) =>
+export function slashForms(context: CampaignContext) {
+  return (context.commands.all() as AnyTableCommand[]).flatMap((command) =>
     (command.slash ?? []).flatMap((form: SlashForm<unknown>) =>
-      permittedAtAll(ctx, command) ? [{ command, form }] : [],
+      permittedAtAll(context, command) ? [{ command, form }] : [],
     ),
   );
 }
 
 /** Slash commands are listed by who may run them at all; what's typed is checked when it runs. */
-const permittedAtAll = (ctx: CampaignContext, command: AnyTableCommand) =>
-  command.permission !== "gm" || ctx.isGm();
+const permittedAtAll = (context: CampaignContext, command: AnyTableCommand) =>
+  command.permission !== "gm" || context.isGm();
 
 /** Slash commands whose names start with what's typed so far, for the hint list. */
-export function suggestSlash(ctx: CampaignContext, input: string): SlashForm<unknown>[] {
+export function suggestSlash(context: CampaignContext, input: string): SlashForm<unknown>[] {
   const m = /^\/(\S*)$/.exec(input);
   if (!m) return [];
   const typed = (m[1] ?? "").toLowerCase();
-  return slashForms(ctx).flatMap(({ form }) =>
+  return slashForms(context).flatMap(({ form }) =>
     form.names.some((n) => n.startsWith(typed)) ? [form] : [],
   );
 }
@@ -305,7 +305,7 @@ export function suggestSlash(ctx: CampaignContext, input: string): SlashForm<unk
  * a leading slash is a command, and `//text` sends text starting with a slash.
  */
 export function chatCall(
-  ctx: CampaignContext,
+  context: CampaignContext,
   typed: ChatContent,
   visibility: RollVisibility,
 ): { command: AnyTableCommand; params: unknown } | { error: string } {
@@ -321,31 +321,31 @@ export function chatCall(
   const m = /^\/(\S+)\s*([\s\S]*)$/.exec(text);
   if (!m?.[1]) return { error: "Enter a command name." };
   const name = m[1].toLowerCase();
-  const found = slashForms(ctx).find(({ form }) => form.names.includes(name));
+  const found = slashForms(context).find(({ form }) => form.names.includes(name));
   if (!found) return { error: `There’s no /${name} command. Try /help.` };
-  const params = found.form.parse(m[2] ?? "", ctx, typed);
-  if (isObject<{ error?: unknown }>(params) && typeof params.error === "string")
-    return { error: params.error };
-  return { command: found.command, params };
+  const parameters = found.form.parse(m[2] ?? "", context, typed);
+  if (isObject<{ error?: unknown }>(parameters) && isString(parameters.error))
+    return { error: parameters.error };
+  return { command: found.command, params: parameters };
 }
 
 // Messages once sent
 
 const isId = objectOf({ id: isString });
-const message = (ctx: CampaignContext, id: string): ChatMessage | undefined =>
-  ctx.campaign.chat.messages.value.find((m) => m.id === id);
+const message = (context: CampaignContext, id: string): ChatMessage | undefined =>
+  context.campaign.chat.messages.value.find((m) => m.id === id);
 const me = () => device.value.id;
 /** Whether the player may work a message's controls: its dice, timer or counter. */
-const works = (ctx: CampaignContext, { id }: { id: string }): Availability => {
-  const m = message(ctx, id);
-  return (!!m && canWork(m, me(), ctx.isGm())) || "Not yours to change";
+const works = (context: CampaignContext, { id }: { id: string }): Availability => {
+  const m = message(context, id);
+  return (!!m && canWork(m, me(), context.isGm())) || "Not yours to change";
 };
-const ownMessage = (ctx: CampaignContext, { id }: { id: string }): Availability => {
-  const m = message(ctx, id);
+const ownMessage = (context: CampaignContext, { id }: { id: string }): Availability => {
+  const m = message(context, id);
   return (!!m && canEditMessage(m, me())) || "Not your message";
 };
-const systemCounter = (ctx: CampaignContext, id: string) =>
-  systemOf(ctx.campaign).counters?.find((c) => c.id === id);
+const systemCounter = (context: CampaignContext, id: string) =>
+  systemOf(context.campaign).counters?.find((c) => c.id === id);
 
 export const editMessage = command<{ id: string }>({
   id: "message.edit",
@@ -356,7 +356,7 @@ export const editMessage = command<{ id: string }>({
   transact: false,
   permission: ownMessage,
   menu: { chatMessage: (_, { id }) => [{ params: { id } }] },
-  run: (ctx, { id }) => ctx.table.editingMessage.set(id),
+  run: (context, { id }) => context.table.editingMessage.set(id),
 });
 
 export const saveMessageEdit = command<{ id: string; content: ChatContent }>({
@@ -373,10 +373,10 @@ export const pinChatMessage = command<{ id: string; pinned: boolean }>({
   title: (_, { pinned }) => (pinned ? "Pin Message" : "Unpin Message"),
   icon: IconPin,
   section: "act",
-  permission: (ctx, { id }) =>
-    (ctx.isGm() && message(ctx, id)?.kind !== "system") || "Only the GM pins messages",
+  permission: (context, { id }) =>
+    (context.isGm() && message(context, id)?.kind !== "system") || "Only the GM pins messages",
   menu: {
-    chatMessage: (ctx, { id }) => [{ params: { id, pinned: !isPinned(ctx.campaign, id) } }],
+    chatMessage: (context, { id }) => [{ params: { id, pinned: !isPinned(context.campaign, id) } }],
   },
   run: ({ campaign }, { id, pinned }) => setPinned(campaign, id, pinned),
 });
@@ -388,9 +388,9 @@ export const deleteMessage = command<{ id: string }>({
   icon: IconDelete,
   danger: true,
   section: "delete",
-  permission: (ctx, { id }) => {
-    const m = message(ctx, id);
-    return (!!m && canDelete(m, me(), ctx.isGm())) || "Not your message";
+  permission: (context, { id }) => {
+    const m = message(context, id);
+    return (!!m && canDelete(m, me(), context.isGm())) || "Not your message";
   },
   undoGroup: false,
   menu: { chatMessage: (_, { id }) => [{ params: { id } }] },
@@ -402,9 +402,9 @@ export const timerControl = command<{ id: string; action: TimerAction }>({
   params: objectOf({ id: isString, action: oneOf("restart", "stop", "resume") }),
   title: (_, { action }) => ({ restart: "Restart", stop: "Stop", resume: "Resume" })[action],
   permission: works,
-  run: (ctx, { id, action }) => {
-    const m = message(ctx, id);
-    if (m?.kind === "timer") workTimer(ctx.campaign, m, action);
+  run: (context, { id, action }) => {
+    const m = message(context, id);
+    if (m?.kind === "timer") workTimer(context.campaign, m, action);
   },
 });
 
@@ -414,9 +414,9 @@ export const setCounterValue = command<{ id: string; value: number }>({
   title: "Change Counter",
   permission: works,
   undoGroup: ({ id }) => `counter ${id}`,
-  run: (ctx, { id, value }) => {
-    const m = message(ctx, id);
-    if (m?.kind === "counter") setCounter(ctx.campaign, m, value);
+  run: (context, { id, value }) => {
+    const m = message(context, id);
+    if (m?.kind === "counter") setCounter(context.campaign, m, value);
   },
 });
 
@@ -424,19 +424,19 @@ export const setCounterValue = command<{ id: string; value: number }>({
 export const showSystemCounter = command<{ counter: string }>({
   id: "systemCounter.show",
   params: objectOf({ counter: isString }),
-  title: (ctx, { counter }) => `Show ${systemCounter(ctx, counter)?.label ?? "Counter"}`,
+  title: (context, { counter }) => `Show ${systemCounter(context, counter)?.label ?? "Counter"}`,
   aliases: ["count"],
-  source: (ctx) => systemOf(ctx.campaign).name,
+  source: (context) => systemOf(context.campaign).name,
   permission: "gm",
   undoGroup: false,
-  offers: (ctx) =>
-    (systemOf(ctx.campaign).counters ?? []).map((c) => ({
+  offers: (context) =>
+    (systemOf(context.campaign).counters ?? []).map((c) => ({
       params: { counter: c.id },
       aliases: [c.label.toLowerCase()],
     })),
-  run: (ctx, { counter }) => {
-    const def = systemCounter(ctx, counter);
-    return def && ensureSystemCounter(ctx.campaign, def);
+  run: (context, { counter }) => {
+    const def = systemCounter(context, counter);
+    return def && ensureSystemCounter(context.campaign, def);
   },
 });
 
@@ -447,15 +447,15 @@ export const bumpSystemCounter = command<{ counter: string; by: number }>({
   title: "Change Counter",
   permission: "gm",
   undoGroup: false,
-  run: async (ctx, { counter, by }) => {
-    const def = systemCounter(ctx, counter);
-    const m = def && (await ensureSystemCounter(ctx.campaign, def));
-    if (m?.kind === "counter") setCounter(ctx.campaign, m, counterValue(ctx.campaign, m) + by);
+  run: async (context, { counter, by }) => {
+    const def = systemCounter(context, counter);
+    const m = def && (await ensureSystemCounter(context.campaign, def));
+    if (m?.kind === "counter") setCounter(context.campaign, m, counterValue(context.campaign, m) + by);
   },
 });
 
-const rollOf = (ctx: CampaignContext, id: string) => {
-  const m = message(ctx, id);
+const rollOf = (context: CampaignContext, id: string) => {
+  const m = message(context, id);
   return (m?.kind === "roll" || m?.kind === "move") && m.roll ? m.roll : undefined;
 };
 
@@ -466,13 +466,13 @@ export const reroll = command<{ id: string; term?: number | undefined; die?: num
   title: (_, { die }) => (die === undefined ? "Reroll All" : "Reroll"),
   permission: works,
   undoGroup: false,
-  menu: { chatMessage: (ctx, { id }) => (rollOf(ctx, id) ? [{ params: { id } }] : []) },
-  run: (ctx, { id, term, die }) => {
-    const source = rollOf(ctx, id);
+  menu: { chatMessage: (context, { id }) => (rollOf(context, id) ? [{ params: { id } }] : []) },
+  run: (context, { id, term, die }) => {
+    const source = rollOf(context, id);
     if (!source) return;
     if (term === undefined || die === undefined)
-      rerollMessage(ctx.campaign.messageState, id, source);
-    else rerollDie(ctx.campaign.messageState, id, source, term, die);
+      rerollMessage(context.campaign.messageState, id, source);
+    else rerollDie(context.campaign.messageState, id, source, term, die);
   },
 });
 
@@ -481,9 +481,9 @@ export const toggleDie = command<{ id: string; term: number; die: number }>({
   params: objectOf({ id: isString, term: isNumber, die: isNumber }),
   title: "Keep or Drop Die",
   permission: works,
-  run: (ctx, { id, term, die }) => {
-    const source = rollOf(ctx, id);
-    if (source) toggleRollDie(ctx.campaign.messageState, id, source, term, die);
+  run: (context, { id, term, die }) => {
+    const source = rollOf(context, id);
+    if (source) toggleRollDie(context.campaign.messageState, id, source, term, die);
   },
 });
 

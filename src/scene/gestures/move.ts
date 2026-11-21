@@ -29,11 +29,11 @@ export function moveSelection(c: ToolContext, start: Point): Gesture {
       if (!moved && !dragged(c, start, world)) return;
       moved = true;
       const grid = c.renderer.grid;
-      for (const [id, el] of originals) {
-        let p = { x: el.x + dx, y: el.y + dy };
+      for (const [id, element] of originals) {
+        let p = { x: element.x + dx, y: element.y + dy };
         // Tokens snap to the grid; hold Alt to place them freely.
-        if (el.type === "token" && !e.altKey) p = snapPoint(grid, p, Math.round(el.w / grid.size));
-        c.renderer.previews.set(id, { ...el, ...p });
+        if (element.type === "token" && !e.altKey) p = snapPoint(grid, p, Math.round(element.w / grid.size));
+        c.renderer.previews.set(id, { ...element, ...p });
       }
       c.renderer.invalidate("previews", "overlay");
       if (token) showDrag(token, true, e);

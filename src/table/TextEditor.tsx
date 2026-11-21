@@ -35,7 +35,7 @@ export function TextEditor({
     <div
       ref={ref}
       // A textarea can't size itself to its words in Safari, nor set its text as the map does.
-      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
+      // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
       role="textbox"
       aria-multiline
       tabIndex={0}
@@ -58,14 +58,14 @@ export function TextEditor({
       }}
       onKeyDown={(event) => {
         event.stopPropagation();
-        const mod = event.metaKey || event.ctrlKey;
-        if (event.key === "Escape" || (mod && event.key === "Enter")) {
+        const module_ = event.metaKey || event.ctrlKey;
+        if (event.key === "Escape" || (module_ && event.key === "Enter")) {
           event.preventDefault();
           finish();
-        } else if (mod && event.key.toLowerCase() === "b") {
+        } else if (module_ && event.key.toLowerCase() === "b") {
           event.preventDefault();
           restyle({ bold: !look.bold });
-        } else if (mod && event.key.toLowerCase() === "i") {
+        } else if (module_ && event.key.toLowerCase() === "i") {
           event.preventDefault();
           restyle({ italic: !look.italic });
         }
@@ -90,23 +90,23 @@ function useTextEditor(controller: SceneController, request: TextRequest, onDone
   useQuery(controller.revision);
   useQuery(tools.textStyle);
   useQuery(tools.pen);
-  const ref = useRef<HTMLDivElement>(null);
+  const reference = useRef<HTMLDivElement>(null);
   const done = useRef(false);
   const { id } = request;
   const existing = id ? controller.element(id) : null;
-  const el = existing?.type === "text" ? existing : null;
-  const look = el ?? controller.newTextLook("");
-  const scale = (el ? el.w / el.bw : 1) * cam.zoom;
-  const at = toScreen(cam, el ?? request.at);
+  const element = existing?.type === "text" ? existing : null;
+  const look = element ?? controller.newTextLook("");
+  const scale = (element ? element.w / element.bw : 1) * cam.zoom;
+  const at = toScreen(cam, element ?? request.at);
   const host = controller.host.getBoundingClientRect();
   const colour = cssColour(look.colour);
   // What it held when the editor opened, kept as edits arrive.
-  const startText = useConstant(() => el?.text ?? "");
-  const startStyle = useConstant(() => el && { font: el.font, bold: el.bold, italic: el.italic });
+  const startText = useConstant(() => element?.text ?? "");
+  const startStyle = useConstant(() => element && { font: element.font, bold: element.bold, italic: element.italic });
 
   // Its words to start with, the caret at their end, and the map's copy hidden.
   useLayoutEffect(() => {
-    const node = ref.current!;
+    const node = reference.current!;
     node.textContent = startText;
     // Next frame, once the press that opened it has finished moving focus.
     const frame = requestAnimationFrame(() => {
@@ -130,7 +130,7 @@ function useTextEditor(controller: SceneController, request: TextRequest, onDone
       const next = tools.textStyle.value;
       if (now?.type !== "text") return;
       const changed = (Object.keys(next) as (keyof TextStyle)[]).filter((k) => next[k] !== now[k]);
-      if (changed.length)
+      if (changed.length > 0)
         controller.setProps([id], Object.fromEntries(changed.map((k) => [k, next[k]])));
     });
   }, [tools, controller, id, startStyle]);
@@ -139,12 +139,12 @@ function useTextEditor(controller: SceneController, request: TextRequest, onDone
   const finish = () => {
     if (done.current) return;
     done.current = true;
-    controller.putText(request.at, ref.current?.innerText ?? "", id);
+    controller.putText(request.at, reference.current?.innerText ?? "", id);
     onDone();
   };
 
   /** Text is styled through the Text tool's style, which text being edited follows. */
   const restyle = (patch: Partial<TextStyle>) => tools.setTextStyle(patch);
 
-  return { ref, el, look, scale, at, host, colour, finish, restyle };
+  return { ref: reference, el: element, look, scale, at, host, colour, finish, restyle };
 }

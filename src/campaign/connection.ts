@@ -20,7 +20,7 @@ export class CampaignConnection {
 
   constructor(
     private readonly id: string,
-    private readonly doc: Y.Doc,
+    private readonly document: Y.Doc,
     private readonly device: ReadonlyStore<Device>,
     private readonly joinRoom: JoinRoom,
   ) {}

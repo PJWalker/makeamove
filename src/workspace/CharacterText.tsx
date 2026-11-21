@@ -7,7 +7,7 @@ import { useQuery } from "../ui/useQuery";
 import { mountRichText } from "./richText";
 import { useCampaign } from "./campaignContext";
 
-interface CharacterTextProps {
+interface CharacterTextProperties {
   campaign: Campaign;
   c: CharacterView;
   field: string;
@@ -29,7 +29,7 @@ export function CharacterText({
   label,
   editable,
   placeholder = "Type @ to link",
-}: CharacterTextProps) {
+}: CharacterTextProperties) {
   const textOf = (id: string | undefined) =>
     id ? campaign.characters.get(id)?.get("texts")?.get(field) : undefined;
   const own = useQuery(campaign.characters, () => textOf(c.id));
@@ -61,7 +61,7 @@ export function GMCharacterText({
   label,
   editable,
   placeholder = "Type @ to link",
-}: CharacterTextProps) {
+}: CharacterTextProperties) {
   const vault = useQuery(campaign.vault);
   return vault ? (
     <VaultCharacterText
@@ -82,7 +82,7 @@ function VaultCharacterText({
   label,
   editable,
   placeholder,
-}: Omit<CharacterTextProps, "campaign" | "placeholder"> & {
+}: Omit<CharacterTextProperties, "campaign" | "placeholder"> & {
   vault: NonNullable<Campaign["vault"]["value"]>;
   placeholder: string;
 }) {
@@ -133,8 +133,8 @@ function TextField({
   /** Give the field its own text, starting from `from`. */
   fork: (from: Y.XmlFragment) => void;
 }) {
-  const ctx = useCampaign();
-  const hostRef = useRef<HTMLDivElement>(null);
+  const context = useCampaign();
+  const hostReference = useRef<HTMLDivElement>(null);
   const shown = own ?? inherited;
   const makeOwnNow = useEffectEvent(makeOwn);
 
@@ -145,10 +145,10 @@ function TextField({
   }, [shown, editable, fieldKey]);
 
   useEffect(() => {
-    const host = hostRef.current;
+    const host = hostReference.current;
     if (!host || !shown) return;
     const rich = mountRichText(host, {
-      ctx,
+      ctx: context,
       fragment: shown,
       placeholder,
       label,
@@ -157,7 +157,7 @@ function TextField({
       shared,
     });
     return () => rich.destroy();
-  }, [ctx, shown, editable, label, own, placeholder, shared]);
+  }, [context, shown, editable, label, own, placeholder, shared]);
 
   /** A copy's first press: its own text, starting from the template's. */
   const onPress = () => {
@@ -168,7 +168,7 @@ function TextField({
     <div className="field">
       {label}
       <div
-        ref={hostRef}
+        ref={hostReference}
         className="rich-field input"
         data-disabled={!editable || undefined}
         onPointerDown={onPress}

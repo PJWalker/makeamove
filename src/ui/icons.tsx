@@ -26,7 +26,7 @@ export const PROMINENT_ICON_SIZE = 32;
  * An icon's drawing, or a function that draws it given `ref`, which makes
  * ids for its gradients that are unique to each icon on the page.
  */
-type Art = ReactNode | ((ref: (local: string) => string) => ReactNode);
+type Art = ReactNode | ((reference: (local: string) => string) => ReactNode);
 
 function glyph(name: string, art: Art): Icon {
   return function Glyph({ size = 22, className }) {
@@ -87,8 +87,8 @@ function cogPath(teeth: number, outer: number, inner: number, hole: number) {
   const step = (Math.PI * 2) / teeth;
   const at = (r: number, a: number) =>
     `${(12 + Math.cos(a) * r).toFixed(2)} ${(12 + Math.sin(a) * r).toFixed(2)}`;
-  const rim = Array.from({ length: teeth }, (_, i) => {
-    const a = i * step - Math.PI / 2 - step * 0.3;
+  const rim = Array.from({ length: teeth }, (_, index) => {
+    const a = index * step - Math.PI / 2 - step * 0.3;
     return [
       at(inner, a),
       at(outer, a + step * 0.15),
@@ -143,12 +143,12 @@ export const IconPan = glyph(
   </>,
 );
 /** A quill. */
-export const IconDraw = glyph("draw", (ref) => (
+export const IconDraw = glyph("draw", (reference) => (
   <>
-    {fade(ref("vane"), [8, 17, 21, 2.5], [0.2, 0.85])}
+    {fade(reference("vane"), [8, 17, 21, 2.5], [0.2, 0.85])}
     <g className="quill">
       <path
-        fill={`url(#${ref("vane")})`}
+        fill={`url(#${reference("vane")})`}
         d="M8 16.6C5.6 11.4 9.5 4.8 21 2.5c-2.7 6.4-6 11.6-10.6 15z"
       />
       <path {...line} strokeWidth="1.75" d="M4 20Q10 11.5 21 2.5" />
@@ -201,14 +201,14 @@ export const IconMeasure = glyph(
   </>,
 );
 /** A radar sweep. */
-export const IconPing = glyph("ping", (ref) => (
+export const IconPing = glyph("ping", (reference) => (
   <>
     {/* The sweep's trail fades behind its leading edge. */}
-    {fade(ref("trail"), [19, 8.5, 11, 3], [0.75, 0])}
+    {fade(reference("trail"), [19, 8.5, 11, 3], [0.75, 0])}
     <circle {...line} cx="12" cy="12" r="9.5" />
     <circle {...line} {...faint} strokeWidth="1.5" cx="12" cy="12" r="5" />
     <g className="sweep">
-      <path fill={`url(#${ref("trail")})`} d="M12 12V2.5a9.5 9.5 0 0 1 8.23 4.75z" />
+      <path fill={`url(#${reference("trail")})`} d="M12 12V2.5a9.5 9.5 0 0 1 8.23 4.75z" />
       <path {...line} d="M12 12l7.4-4.3" />
     </g>
     <circle className="blip" cx="15.5" cy="16" r="1.7" />
@@ -220,16 +220,16 @@ export const IconWall = glyph(
   <path d="M2 3.5h9.2V8H2zm10.8 0H22V8h-9.2zM2 9.5h4V14H2zm5.6 0h8.8V14H7.6zm10.4 0h4V14h-4zM2 15.5h9.2V20H2zm10.8 0H22V20h-9.2z" />,
 );
 /** A lantern. */
-export const IconLight = glyph("light", (ref) => (
+export const IconLight = glyph("light", (reference) => (
   <>
     {/* The glass glows brightest about the flame. */}
-    <radialGradient id={ref("glow")} gradientUnits="userSpaceOnUse" cx="12" cy="15" r="6">
+    <radialGradient id={reference("glow")} gradientUnits="userSpaceOnUse" cx="12" cy="15" r="6">
       <stop stopColor="currentColor" stopOpacity={0.75} />
       <stop offset="1" stopColor="currentColor" stopOpacity={0.15} />
     </radialGradient>
     <circle {...line} strokeWidth="1.75" cx="12" cy="3.5" r="1.75" />
     <path d="M6.5 9.5 9.5 5.8h5l3 3.7z" />
-    <rect fill={`url(#${ref("glow")})`} x="8" y="10" width="8" height="8.5" />
+    <rect fill={`url(#${reference("glow")})`} x="8" y="10" width="8" height="8.5" />
     <path
       className="flame"
       d="M12 11.3c1.7 1.7 2.3 2.9 2.3 4.2a2.3 2.3 0 0 1-4.6 0c0-1.3.6-2.5 2.3-4.2z"
@@ -268,14 +268,14 @@ export const IconSnow = glyph(
   </g>,
 );
 /** Wisps of fog, thinning out to the right. */
-export const IconFog = glyph("fog", (ref) => (
+export const IconFog = glyph("fog", (reference) => (
   <>
-    {fade(ref("thick"), [3, 0, 21, 0], [1, 0.25])}
-    {fade(ref("thin"), [3, 0, 21, 0], [0.6, 0.1])}
+    {fade(reference("thick"), [3, 0, 21, 0], [1, 0.25])}
+    {fade(reference("thin"), [3, 0, 21, 0], [0.6, 0.1])}
     <g {...line}>
-      <path className="p1" stroke={`url(#${ref("thin")})`} d="M4 6.5h11M18 6.5h2" />
-      <path className="p2" stroke={`url(#${ref("thick")})`} d="M3 12h13M19 12h2" />
-      <path className="p3" stroke={`url(#${ref("thin")})`} d="M5 17.5h13" />
+      <path className="p1" stroke={`url(#${reference("thin")})`} d="M4 6.5h11M18 6.5h2" />
+      <path className="p2" stroke={`url(#${reference("thick")})`} d="M3 12h13M19 12h2" />
+      <path className="p3" stroke={`url(#${reference("thin")})`} d="M5 17.5h13" />
     </g>
   </>
 ));
@@ -623,18 +623,18 @@ export const IconMembers = glyph(
 );
 
 // Game actions
-export const IconDice = glyph(
-  "dice",
+const diceArt = (
   <>
     <rect {...faint} x="10.5" y="2.5" width="10" height="10" transform="rotate(15 15.5 7.5)" />
     <path
       fillRule="evenodd"
       d="M3 9.5h12v12H3zM6.3 11.5a1.3 1.3 0 1 0 0 2.6 1.3 1.3 0 0 0 0-2.6zm2.7 3a1.3 1.3 0 1 0 0 2.6 1.3 1.3 0 0 0 0-2.6zm2.7 3a1.3 1.3 0 1 0 0 2.6 1.3 1.3 0 0 0 0-2.6z"
     />
-  </>,
+  </>
 );
+export const IconDice = glyph("dice", diceArt);
 /** Rolling: the same dice. */
-export const IconRoll = IconDice;
+export const IconRoll = glyph("roll", diceArt);
 const sword = (
   <>
     <path d="M21 3l-.7 3.2-9.6 9.6-2.5-2.5 9.6-9.6z" />
@@ -759,11 +759,11 @@ export const IconDelete = glyph(
 );
 export const IconAdd = glyph("add", <path {...line} strokeWidth="2.5" d="M12 4.5v15M4.5 12h15" />);
 export const IconRemove = glyph("remove", <path {...line} strokeWidth="2.5" d="M4.5 12h15" />);
-export const IconSearch = glyph("search", (ref) => (
+export const IconSearch = glyph("search", (reference) => (
   <>
     {/* Light catching the lens from the top left. */}
-    {fade(ref("sheen"), [5, 5, 14, 14], [0.65, 0.05])}
-    <circle fill={`url(#${ref("sheen")})`} cx="10" cy="10" r="6.5" />
+    {fade(reference("sheen"), [5, 5, 14, 14], [0.65, 0.05])}
+    <circle fill={`url(#${reference("sheen")})`} cx="10" cy="10" r="6.5" />
     <circle {...line} cx="10" cy="10" r="6.5" />
     <path d="m14.6 16.7 2.1-2.1 5.3 5.3-2.1 2.1z" />
   </>

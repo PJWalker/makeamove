@@ -62,7 +62,7 @@ export const preferReducedMotion = defineRule({
   create(context) {
     const path = projectPath(context.physicalFilename, context.cwd);
     if (path === `${MODULE}.ts`) return {};
-    const inSrc = path.startsWith("src/");
+    const inSource = path.startsWith("src/");
     return {
       CallExpression(node) {
         const callee = node.callee;
@@ -77,7 +77,7 @@ export const preferReducedMotion = defineRule({
         if (!isMatchMedia) return;
         const query = writtenIn(node.arguments[0], context.sourceCode);
         if (!query.some((q) => q.text.includes("prefers-reduced-motion"))) return;
-        const fixable = inSrc && !shadowed(context, node, NAME);
+        const fixable = inSource && !shadowed(context, node, NAME);
         context.report({
           node,
           messageId: "reducedMotion",

@@ -10,4 +10,4 @@ import "./ui/sparkle";
 import "./ui/iconMotion";
 import { App } from "./app/App";
 
-createRoot(document.getElementById("app")!).render(<App />);
+createRoot(document.querySelector("#app")!).render(<App />);

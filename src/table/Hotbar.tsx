@@ -102,11 +102,11 @@ function useHotbar(campaign: Campaign) {
   // Rebuilt from the campaign's Yjs data on every change, which changes in place, so
   // React Compiler's memoizing would keep the old slots.
   "use no memo";
-  const ctx = useCampaign();
+  const context = useCampaign();
   const charId = useQuery(campaign.members, () => actingCharacterId(campaign));
   const [dragging, setDragging] = useState<string | null>(null);
-  const barRef = useRef<HTMLDivElement>(null);
-  useDockStripLayout(barRef, "bottom");
+  const barReference = useRef<HTMLDivElement>(null);
+  useDockStripLayout(barReference, "bottom");
   // Rebuilt on any change to characters or members so labels and availability stay current.
   const [, setTick] = useState(0);
   const bumpTick = useEffectEvent(() => setTick((n) => n + 1));
@@ -123,11 +123,11 @@ function useHotbar(campaign: Campaign) {
   useQuery(campaign.chat.messages);
 
   const slots = hotbarSlots(campaign, charId);
-  const find = (id: string) => findAction(ctx, id);
+  const find = (id: string) => findAction(context, id);
   const run = (id: string) => {
     const a = find(id);
     if (a?.available !== true) return;
-    ctx.recent.note(a.id);
+    context.recent.note(a.id);
     a.run();
   };
 
@@ -140,15 +140,15 @@ function useHotbar(campaign: Campaign) {
       if (id) {
         e.preventDefault();
         // Whatever the slot starts appears beside it, as if it were clicked.
-        notePressed(barRef.current?.querySelectorAll(".hotbar-slot > .btn")[Number(e.key) - 1]);
+        notePressed(barReference.current?.querySelectorAll(".hotbar-slot > .btn")[Number(e.key) - 1]);
         run(id);
       }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    globalThis.addEventListener("keydown", onKey);
+    return () => globalThis.removeEventListener("keydown", onKey);
   });
 
-  const edit = (fn: (s: string[]) => string[]) => ctx.execute(setSlots, { slots: fn(slots) });
+  const edit = (function_: (s: string[]) => string[]) => context.execute(setSlots, { slots: function_(slots) });
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const slotMenu = (id: string, title: string) =>
     menuTrigger((x, y) => {
@@ -180,17 +180,17 @@ function useHotbar(campaign: Campaign) {
           {
             label: "Rename…",
             Icon: IconRename,
-            onSelect: () => ctx.table.editAction("rename", id, title),
+            onSelect: () => context.table.editAction("rename", id, title),
           },
           {
             label: "Change Icon…",
             Icon: IconImage,
-            onSelect: () => ctx.table.editAction("icon", id, title),
+            onSelect: () => context.table.editAction("icon", id, title),
           },
           {
             label: shortcutFor(campaign, id) ? "Change Shortcut…" : "Add Shortcut…",
             Icon: IconShortcut,
-            onSelect: () => ctx.table.editAction("shortcut", id, title),
+            onSelect: () => context.table.editAction("shortcut", id, title),
           },
           "divider",
           {
@@ -204,16 +204,16 @@ function useHotbar(campaign: Campaign) {
     });
   const dragSlot = (id: string, e: ReactPointerEvent) => {
     // Off the bar, a slot can land on a character or in a note, like a palette result; anywhere else unpins it.
-    const what = actionEntity(ctx, id, find(id)?.title ?? id);
-    const mark = dropMarker(ctx.canvas);
+    const what = actionEntity(context, id, find(id)?.title ?? id);
+    const mark = dropMarker(context.canvas);
     startReorder({
       event: e,
       axis: "x",
-      container: barRef.current,
-      items: () => [...barRef.current!.querySelectorAll<HTMLElement>(".hotbar-slot")],
+      container: barReference.current,
+      items: () => [...barReference.current!.querySelectorAll<HTMLElement>(".hotbar-slot")],
       onLift: () => setDragging(id),
-      onMove: (ev, inside) => {
-        const target = inside ? null : dropTargetAt(ctx.canvas, ev.clientX, ev.clientY, what);
+      onMove: (event, inside) => {
+        const target = inside ? null : dropTargetAt(context.canvas, event.clientX, event.clientY, what);
         mark(target);
         setDropCursor(inside ? null : !!target);
       },
@@ -225,14 +225,14 @@ function useHotbar(campaign: Campaign) {
       onDrop: (index) => edit((s) => placeAt(s, id, index)),
       outside: {
         when: "release",
-        run: (ev) => {
-          const target = dropTargetAt(ctx.canvas, ev.clientX, ev.clientY, what);
-          if (target) dropOn(ctx.canvas, target, what, ev.clientX, ev.clientY);
+        run: (event) => {
+          const target = dropTargetAt(context.canvas, event.clientX, event.clientY, what);
+          if (target) dropOn(context.canvas, target, what, event.clientX, event.clientY);
           else edit((s) => unpin(s, id));
         },
       },
     });
   };
 
-  return { ctx, dragging, barRef, slots, find, run, edit, menu, setMenu, slotMenu, dragSlot };
+  return { ctx: context, dragging, barRef: barReference, slots, find, run, edit, menu, setMenu, slotMenu, dragSlot };
 }

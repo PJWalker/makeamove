@@ -17,10 +17,10 @@ function splitText(node: JSONContent): JSONContent[] {
   const marks = node.marks ? { marks: node.marks } : {};
   const out: JSONContent[] = [];
   const text = (value: string) => {
-    value.split("\n").forEach((line, i) => {
-      if (i) out.push({ type: "hardBreak" });
+    for (const [index, line] of value.split("\n").entries()) {
+      if (index) out.push({ type: "hardBreak" });
       if (line) out.push({ type: "text", text: line, ...marks });
-    });
+    }
   };
   let last = 0;
   for (const m of (node.text ?? "").matchAll(TRACKER_TOKEN)) {

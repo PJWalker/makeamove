@@ -3,7 +3,7 @@ import { workerClient } from "../lib/workerRpc";
 import type { ImageWorkerResult, ImageWorkerTask } from "./imageWorkerProtocol";
 
 /** An image in the blob store; the CRDT holds only this reference. */
-export interface BlobRef {
+export interface BlobReference {
   hash: string;
   mime: string;
   width: number;
@@ -11,7 +11,7 @@ export interface BlobRef {
 }
 
 /** What an entity (a character, an item, a move) is pictured as: an image, or a built-in icon. */
-export type EntityGraphic = { kind: "icon"; name: string } | { kind: "image"; image: BlobRef };
+export type EntityGraphic = { kind: "icon"; name: string } | { kind: "image"; image: BlobReference };
 
 /** The entity a token's graphic comes from. */
 export interface EntityGraphicRef {
@@ -20,7 +20,7 @@ export interface EntityGraphicRef {
 }
 
 const runImageTask = workerClient<ImageWorkerTask, ImageWorkerResult>(
-  () => new Worker(new URL("./images.worker.ts", import.meta.url), { type: "module" }),
+  () => new Worker(new URL("images.worker.ts", import.meta.url), { type: "module" }),
   "Image worker",
   // A decoded image nobody wants any more still holds GPU memory.
   (result) => {
@@ -32,7 +32,7 @@ const runImageTask = workerClient<ImageWorkerTask, ImageWorkerResult>(
  * Import an image file: decode it, cap its size, re-encode it as WebP and
  * store it by hash. Only the returned reference goes into the CRDT.
  */
-export async function importImage(file: Blob): Promise<BlobRef> {
+export async function importImage(file: Blob): Promise<BlobReference> {
   const { blob, width, height, colour } = await runImageTask({
     type: "import",
     blob: file,
@@ -50,7 +50,7 @@ export class PeerBlobs {
   /** Set (or clear) how to reach peers; their arrival tells listeners to retry missing images. */
   connect(fetch: ((hash: string) => Promise<Blob | null>) | null) {
     this.#fetch = fetch;
-    if (fetch) for (const listener of Array.from(this.#listeners)) listener();
+    if (fetch) for (const listener of this.#listeners) listener();
   }
 
   fetch(hash: string): Promise<Blob | null> {
@@ -58,9 +58,9 @@ export class PeerBlobs {
   }
 
   /** Be told when peers become available to fetch from, so missing images can retry. */
-  onAvailable(fn: () => void): () => void {
-    this.#listeners.add(fn);
-    return () => void this.#listeners.delete(fn);
+  onAvailable(function_: () => void): () => void {
+    this.#listeners.add(function_);
+    return () => void this.#listeners.delete(function_);
   }
 }
 

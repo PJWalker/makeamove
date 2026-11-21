@@ -42,12 +42,12 @@ function lift(element: HTMLElement) {
   carrier.classList.add("throw-carrier");
   // A cloned canvas comes up blank; copy what each one shows.
   const canvases = element.querySelectorAll("canvas");
-  carrier.querySelectorAll("canvas").forEach((copy, index) => {
+  for (const [index, copy] of carrier.querySelectorAll("canvas").entries()) {
     const source = canvases[index]!;
     copy.width = source.width;
     copy.height = source.height;
     copy.getContext("2d")?.drawImage(source, 0, 0);
-  });
+  }
   for (const property of INHERITED)
     carrier.style.setProperty(property, computed.getPropertyValue(property));
   Object.assign(carrier.style, {

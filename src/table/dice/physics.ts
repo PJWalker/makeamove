@@ -23,19 +23,19 @@ export interface DieHull {
 /** A flat round chip: a prism on a `sides`-gon, its faces towards +Z and −Z. */
 export function discHull(radius: number, thickness: number, sides = 16): DieHull {
   const ring = (z: number) =>
-    Array.from({ length: sides }, (_, i) => {
-      const a = (i * 2 * Math.PI) / sides;
+    Array.from({ length: sides }, (_, index) => {
+      const a = (index * 2 * Math.PI) / sides;
       return [radius * Math.cos(a), radius * Math.sin(a), z];
     });
-  const next = (i: number) => (i + 1) % sides;
+  const next = (index: number) => (index + 1) % sides;
   return {
     // The top ring, then the bottom ring.
     vertices: [...ring(thickness / 2), ...ring(-thickness / 2)],
     // Corners anticlockwise seen from outside, as the solver wants them.
     faces: [
-      Array.from({ length: sides }, (_, i) => i),
-      Array.from({ length: sides }, (_, i) => 2 * sides - 1 - i),
-      ...Array.from({ length: sides }, (_, i) => [sides + i, sides + next(i), next(i), i]),
+      Array.from({ length: sides }, (_, index) => index),
+      Array.from({ length: sides }, (_, index) => 2 * sides - 1 - index),
+      ...Array.from({ length: sides }, (_, index) => [sides + index, sides + next(index), next(index), index]),
     ],
   };
 }
@@ -73,6 +73,8 @@ const LABEL_TURN_KEPT = 0.5;
  */
 const TARGET_PULL = 0.5;
 const MAX_TARGET_PULL = 5;
+/** How many times heavier than a rolling die is one lying still while others roll. */
+const HEAVY_MASS = 40;
 /** Seconds after the last die is thrown before the dice lose their bounce. */
 export const CALM_AFTER = 2.5;
 const MAX_STEPS = 3600;
@@ -89,6 +91,11 @@ export interface DieThrow {
   hull: DieHull;
   seed: string;
   delay?: number;
+  /**
+   * Lying in the tray and not being rolled: knocked about by the dice that
+   * are, but too heavy to be turned onto another face.
+   */
+  heavy?: boolean;
   /** Already in the tray and moving like this, rather than thrown in over its edge. */
   state?: DieState;
   /** Where it comes to rest, in a pose's axes (y down): drawn towards it as it rolls, then slid into it. */
@@ -99,6 +106,8 @@ interface FlightBody {
   body: Body;
   vertices: Vec3[];
   target: Vec3;
+  /** Lying still while others roll: it keeps the face it shows. */
+  heavy: boolean;
   labelUps?: Vec3[] | undefined;
   faceUp: boolean;
   delay: number;
@@ -192,9 +201,12 @@ class TrayWorld {
     }
   }
 
-  dieBody(hull: DieHull, vertices: Vec3[]) {
+  dieBody(hull: DieHull, vertices: Vec3[], heavy: boolean) {
     return new Body({
-      mass: 1,
+      mass: heavy ? HEAVY_MASS : 1,
+      // Nothing turns it: not knocks, nor the bump that tips cocked dice over.
+      fixedRotation: heavy,
+      angularFactor: heavy ? new Vec3(0, 0, 0) : new Vec3(1, 1, 1),
       material: this.dieMaterial,
       shape: new ConvexPolyhedron({ vertices, faces: hull.faces }),
       linearDamping: 0.3,
@@ -315,13 +327,13 @@ export class DiceFlight {
     const trayWorld = new TrayWorld(tray);
     this.trayWorld = trayWorld;
     const width = tray.right - tray.left;
-    this.dice = throws.map(({ hull, seed, delay = 0, state, target: toward }, index) => {
+    this.dice = throws.map(({ hull, seed, delay = 0, state, target: toward, heavy = false }, index) => {
       const random = seededRandom(seed);
       const target = new Vec3(toward.x, -toward.y, 0);
       const vertices = hull.vertices.map(([x, y, z]) => new Vec3(x, y, z));
       const labelUps = hull.labelUps?.map(([x, y, z]) => new Vec3(x, y, z));
       const faceUp = hull.faceUp ?? false;
-      const body = trayWorld.dieBody(hull, vertices);
+      const body = trayWorld.dieBody(hull, vertices, heavy);
       if (state) {
         body.position.set(...state.position);
         const q = state.quaternion;
@@ -332,6 +344,7 @@ export class DiceFlight {
           body,
           vertices,
           target,
+          heavy,
           labelUps,
           faceUp,
           delay: delay / 1000,
@@ -353,6 +366,7 @@ export class DiceFlight {
         body,
         vertices,
         target,
+        heavy,
         labelUps,
         faceUp,
         delay: delay / 1000,
@@ -391,14 +405,27 @@ export class DiceFlight {
   private finishing?: { eases: Ease[]; step: number; steps: number };
 
   /**
-   * A die's finishing move into its final pose: down onto the face it leans
-   * towards (or a face-up die up onto its point), turned about the vertical so
-   * its top label is turned only half as far from upright, and slid into its target.
+   * A die's finishing move into its final pose: slid into its target and,
+   * unless it's heavy, laid flat and its label turned towards upright.
    */
   private ease(die: FlightBody): Ease {
-    const { body, vertices, labelUps, faceUp } = die;
-    const { faceNormals } = body.shapes[0] as ConvexPolyhedron;
+    const { body, vertices } = die;
     const from = body.quaternion.clone();
+    const to = die.heavy ? from.clone() : this.layFlat(die);
+    // It comes to rest on the floor of the tray, in its target.
+    const toPosition = new Vec3(die.target.x, die.target.y, -lowestPoint(to, vertices));
+    body.collisionFilterMask = 0;
+    return { die, from, to, fromPosition: body.position.clone(), toPosition };
+  }
+
+  /**
+   * How a die comes to lie: down onto the face it leans towards (or a face-up
+   * die up onto its point), turned about the vertical so its top label is
+   * turned only half as far from upright.
+   */
+  private layFlat({ body, labelUps, faceUp }: FlightBody) {
+    const { faceNormals } = body.shapes[0] as ConvexPolyhedron;
+    const from = body.quaternion;
     const sign = faceUp ? 1 : -1;
     const lying = from.vmult(faceNormals[faceTowards(body, from, sign)]!);
     const to = new Quaternion().setFromVectors(lying, new Vec3(0, 0, sign)).mult(from);
@@ -414,10 +441,7 @@ export class DiceFlight {
       );
       to.copy(twist.mult(to)).normalize();
     }
-    // It comes to rest on the floor of the tray, in its target.
-    const toPosition = new Vec3(die.target.x, die.target.y, -lowestPoint(to, vertices));
-    body.collisionFilterMask = 0;
-    return { die, from, to, fromPosition: body.position.clone(), toPosition };
+    return to;
   }
 
   /** Starts every die's finishing move, however they lie. */
@@ -549,9 +573,10 @@ export class DiceFlight {
     const resting = this.dice.every((die) => die.captured && die.still >= STILL_TIME);
     if (!resting) return false;
     const leaning = this.dice.filter(
-      (die) => tilted(die.body) || (this.nudges < MAX_NUDGES && raised(die.body, die.vertices)),
+      (die) =>
+        (!die.heavy && tilted(die.body)) || (this.nudges < MAX_NUDGES && raised(die.body, die.vertices)),
     );
-    if (leaning.length && this.nudges < MAX_NUDGES) {
+    if (leaning.length > 0 && this.nudges < MAX_NUDGES) {
       const random = seededRandom(`${this.nudges}:${this.elapsed}`);
       this.nudges++;
       for (const die of leaning) this.uncock(die, random);
@@ -576,7 +601,7 @@ export function simulateDice(tray: DieTray, throws: DieThrow[], calmAfter = CALM
   for (let step = 0; ; step++) {
     if (step === MAX_STEPS) flight.finish();
     const done = flight.step();
-    flight.poses().forEach((pose, index) => frames[index]!.push(pose));
+    for (const [index, pose] of flight.poses().entries()) frames[index]!.push(pose);
     if (done) return frames;
   }
 }

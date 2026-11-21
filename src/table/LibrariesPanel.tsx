@@ -67,31 +67,31 @@ type Browsing = {
 
 /** An entry's context menu: what it offers, pinning it, and changing its graphic. */
 function useEntryMenu({ actionsFor }: Pick<Browsing, "actionsFor">) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   return (e: LibraryEntry) =>
     joinSections([
       entryActionMenu(actionsFor(e)),
-      hotbarMenu(ctx, e),
+      hotbarMenu(context, e),
       [
         {
           label: "Change Graphic…",
           Icon: IconImage,
-          onSelect: () => ctx.table.editGraphic(e.kind, e.id, e.name, e.icon),
+          onSelect: () => context.table.editGraphic(e.kind, e.id, e.name, e.icon),
         },
       ],
     ]);
 }
 
 /** Pinning an item or move to the hotbar, or giving it a shortcut. */
-function hotbarMenu(ctx: CampaignContext, e: LibraryEntry) {
-  if (e.kind === "item") return actionMenuItems(ctx, [{ id: `library:${e.id}`, title: e.name }]);
-  if (e.kind === "move") return actionMenuItems(ctx, [{ id: `move:${e.id}`, title: e.name }]);
+function hotbarMenu(context: CampaignContext, e: LibraryEntry) {
+  if (e.kind === "item") return actionMenuItems(context, [{ id: `library:${e.id}`, title: e.name }]);
+  if (e.kind === "move") return actionMenuItems(context, [{ id: `move:${e.id}`, title: e.name }]);
   return [];
 }
 
 /** What dragging an entry's row carries: an item or move to link, or any other entry as a token. */
-function dragPayload(ctx: CampaignContext, campaign: Campaign, e: LibraryEntry) {
-  if (e.kind === "item" || e.kind === "move") return entity(ctx, e.kind, e.id, e.name);
+function dragPayload(context: CampaignContext, campaign: Campaign, e: LibraryEntry) {
+  if (e.kind === "item" || e.kind === "move") return entity(context, e.kind, e.id, e.name);
   return {
     label: e.name,
     libraryEntry: { kind: e.kind, id: e.id },
@@ -122,7 +122,7 @@ function LibraryRow({
   view: EntryView;
   aligned: boolean;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const menuFor = useEntryMenu(browsing);
   const { campaign, windows, openedIds, searching, toggle } = browsing;
   const e = v.entry;
@@ -141,9 +141,9 @@ function LibraryRow({
               onToggle={() => toggle(id)}
               label={`${open ? "Hide" : "Show"} what ${e.name} holds`}
             />
-          ) : aligned ? (
+          ) : (aligned ? (
             <span className="list-expand" aria-hidden="true" />
-          ) : undefined
+          ) : undefined)
         }
         lead={
           <CampaignEntityGraphic
@@ -162,7 +162,7 @@ function LibraryRow({
         onPointerDown={
           e.kind === "monster"
             ? undefined
-            : (ev) => dragEntity(ctx.canvas, ev, dragPayload(ctx, campaign, e))
+            : (event) => dragEntity(context.canvas, event, dragPayload(context, campaign, e))
         }
       />
       {open && (
@@ -231,7 +231,7 @@ function LibraryEntryWindows({
   sources: LibrarySource[];
   me: CharacterView | undefined;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const menuFor = useEntryMenu(browsing);
   const { campaign, windows, actionsFor } = browsing;
   const entries = sources.flatMap((s) =>
@@ -259,7 +259,7 @@ function LibraryEntryWindows({
         graphicDefaultIcon={e.icon}
         proxy={
           e.kind === "item" || e.kind === "move"
-            ? linkProxy(ctx, e.kind, e.id, e.name, e.icon)
+            ? linkProxy(context, e.kind, e.id, e.name, e.icon)
             : undefined
         }
         menuItems={menuFor(e)}
@@ -274,8 +274,8 @@ function LibraryEntryWindows({
 
 /** The search box, and a filter by kind when the libraries hold more than one. */
 function LibraryTools({ kinds }: { kinds: EntryKind[] }) {
-  const ctx = useCampaign();
-  const { kind, query } = useQuery(ctx.library.view);
+  const context = useCampaign();
+  const { kind, query } = useQuery(context.library.view);
   return (
     <div className="panel-bar libraries-tools">
       <input
@@ -284,7 +284,7 @@ function LibraryTools({ kinds }: { kinds: EntryKind[] }) {
         aria-label="Search the Libraries"
         value={query}
         onInput={(e) =>
-          ctx.library.view.set({ ...ctx.library.view.value, query: e.currentTarget.value })
+          context.library.view.set({ ...context.library.view.value, query: e.currentTarget.value })
         }
       />
       {kinds.length > 1 && (
@@ -295,7 +295,7 @@ function LibraryTools({ kinds }: { kinds: EntryKind[] }) {
             { id: "all", label: "All" },
             ...kinds.map((k) => ({ id: k, label: KIND_LABEL[k] })),
           ]}
-          onChange={(k) => ctx.library.view.set({ ...ctx.library.view.value, kind: k })}
+          onChange={(k) => context.library.view.set({ ...context.library.view.value, kind: k })}
         />
       )}
     </div>
@@ -314,13 +314,13 @@ function targetNote(me: CharacterView | undefined, canAct: boolean) {
  * to the selected character, and moves made by them.
  */
 export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   // The Libraries are the system's own; homebrew is in the Items panel.
   const sources = useLibrariesFor(baseSystemOf(campaign));
   const { me, canAct, actionsFor } = useLibraryActions(campaign);
   const windows = useEntryWindows();
-  const { kind, query } = useQuery(ctx.library.view);
-  const openedIds = useQuery(ctx.library.openedEntries);
+  const { kind, query } = useQuery(context.library.view);
+  const openedIds = useQuery(context.library.openedEntries);
   const searching = query.trim() !== "";
   const browsing: Browsing = {
     campaign,
@@ -329,7 +329,7 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
     openedIds,
     searching,
     toggle: (id) =>
-      ctx.library.openedEntries.set(toggleSetValue(ctx.library.openedEntries.value, id)),
+      context.library.openedEntries.set(toggleSetValue(context.library.openedEntries.value, id)),
   };
 
   const kinds = (Object.keys(KIND_LABEL) as EntryKind[]).filter((k) =>
@@ -369,7 +369,7 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
           {s.attribution && <p className="muted sheet-attribution">{s.attribution}</p>}
         </section>
       ))}
-      {searching && !shown.length && <p className="empty">Nothing matches “{query.trim()}”.</p>}
+      {searching && shown.length === 0 && <p className="empty">Nothing matches “{query.trim()}”.</p>}
       <LibraryEntryWindows browsing={browsing} sources={sources} me={me} />
     </div>
   );

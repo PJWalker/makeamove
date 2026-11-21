@@ -76,12 +76,12 @@ describe("laser trail fade", () => {
     a.presence.trailTo({ x: 0, y: 0 });
     a.presence.endTrail();
     await room.settle();
-    const firstMark = b.presence.marks("s1", "b", "B").filter((m) => m.id === "a")[0]!;
+    const firstMark = b.presence.marks("s1", "b", "B").find((m) => m.id === "a")!;
     const first = (firstMark.trail ?? [])[0]!.t;
     await new Promise((r) => setTimeout(r, 30));
     a.presence.setCursor({ x: 9, y: 9 });
     await room.settle();
-    const againMark = b.presence.marks("s1", "b", "B").filter((m) => m.id === "a")[0]!;
+    const againMark = b.presence.marks("s1", "b", "B").find((m) => m.id === "a")!;
     const again = (againMark.trail ?? [])[0]!.t;
     expect(again).toBe(first);
   });

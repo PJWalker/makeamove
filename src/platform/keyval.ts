@@ -22,9 +22,9 @@ function database() {
 }
 
 async function run<T>(mode: IDBTransactionMode, act: (store: IDBObjectStore) => IDBRequest<T>) {
-  const db = await database();
+  const database_ = await database();
   return new Promise<T>((resolve, reject) => {
-    const request = act(db.transaction(STORE, mode).objectStore(STORE));
+    const request = act(database_.transaction(STORE, mode).objectStore(STORE));
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error ?? new Error("On-device storage failed"));
   });

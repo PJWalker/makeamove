@@ -13,8 +13,8 @@ function sectionText(block: string, name: string) {
   const end = headings.find((entry) => (entry.index ?? -1) > heading.index)?.index ?? block.length;
   return block
     .slice(heading.index + (heading[0]?.length ?? 0), end)
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
+    .replaceAll(/<[^>]+>/g, " ")
+    .replaceAll('&nbsp;', " ")
     .trim();
 }
 
@@ -59,7 +59,7 @@ export function parseSrdMonsters(markdown: string): MonsterDef[] {
           id: slug(name),
           name,
           description: `${details}${fields.cr ? ` · CR ${fields.cr}` : ""}`,
-          hp: Number(valueAfter(block, "HP").replace(/,/g, "").match(/^\d+/)?.[0]) || 1,
+          hp: Number(valueAfter(block, "HP").replaceAll(',', "").match(/^\d+/)?.[0]) || 1,
           scores,
           fields,
           ...(size ? { size } : {}),

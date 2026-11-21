@@ -22,7 +22,7 @@ export function setSlotLook(campaign: Campaign, id: string, patch: SlotLook) {
   if (!entry) return;
   const next: SlotLook = { ...slotLook(campaign, id), ...patch };
   for (const k of Object.keys(next) as (keyof SlotLook)[]) if (!next[k]) delete next[k];
-  if (Object.keys(next).length) entry.ensure("hotbarLooks").set(id, next);
+  if (Object.keys(next).length > 0) entry.ensure("hotbarLooks").set(id, next);
   else entry.get("hotbarLooks")?.delete(id);
 }
 
@@ -67,7 +67,7 @@ export function actionForCombo(all: Record<string, string>, combo: string): stri
   return Object.keys(all).find((id) => all[id] === combo);
 }
 
-const MODIFIERS = ["Control", "Alt", "Shift", "Meta", "CapsLock", "Fn", "OS"];
+const MODIFIERS = new Set(["Control", "Alt", "Shift", "Meta", "CapsLock", "Fn", "OS"]);
 
 /**
  * A key press as a combo like `Ctrl+Shift+R`, or null for a lone modifier.
@@ -77,7 +77,7 @@ const MODIFIERS = ["Control", "Alt", "Shift", "Meta", "CapsLock", "Fn", "OS"];
 export function comboOf(
   e: Pick<KeyboardEvent, "key" | "code" | "ctrlKey" | "altKey" | "shiftKey" | "metaKey">,
 ): string | null {
-  if (MODIFIERS.includes(e.key)) return null;
+  if (MODIFIERS.has(e.key)) return null;
   let key = keyName(e);
   if (!key || key === "Unidentified" || key === "Dead") return null;
   if (key.startsWith("Arrow")) key = key.slice(5);

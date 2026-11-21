@@ -21,6 +21,16 @@
       opacity 200ms var(--ease),
       translate 280ms var(--ease);
   }
+  /* On a phone an open sidebar covers the map, leaving just its tab strip. */
+  @media (max-width: 600px) {
+    .sidebar {
+      --sidebar-w: calc(100vw - 48px);
+    }
+    .sidebar-resize,
+    .sidebar-body-resize {
+      display: none;
+    }
+  }
   .sidebar[data-side="right"] {
     right: 0;
     translate: var(--sidebar-w) 0;

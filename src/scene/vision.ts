@@ -17,14 +17,14 @@ export interface Segment {
 }
 
 /** A wall's two ends in the world: it lies along its length (w), through its centre, at its rotation. */
-export function wallEnds(el: { x: number; y: number; w: number; h: number; rot: number }): Segment {
-  return { a: fromLocal(el, { x: -el.w / 2, y: 0 }), b: fromLocal(el, { x: el.w / 2, y: 0 }) };
+export function wallEnds(element: { x: number; y: number; w: number; h: number; rot: number }): Segment {
+  return { a: fromLocal(element, { x: -element.w / 2, y: 0 }), b: fromLocal(element, { x: element.w / 2, y: 0 }) };
 }
 
 /** The segments that block sight: every wall but open doors. */
 export function blockingSegments(elements: readonly SceneElement[]): Segment[] {
-  return elements.flatMap((el) =>
-    el.type === "wall" && !(el.door && el.open) ? [wallEnds(el)] : [],
+  return elements.flatMap((element) =>
+    element.type === "wall" && !(element.door && element.open) ? [wallEnds(element)] : [],
   );
 }
 
@@ -35,10 +35,10 @@ export function blockingSegments(elements: readonly SceneElement[]): Segment[] {
 export function sightSegments(elements: readonly SceneElement[]): Segment[] {
   return [
     ...blockingSegments(elements),
-    ...elements.flatMap((el) => {
-      if (el.type !== "effect" || !el.obscures) return [];
-      const poly = shapePolygon(el);
-      return poly.map((a, i) => ({ a, b: poly[(i + 1) % poly.length]! }));
+    ...elements.flatMap((element) => {
+      if (element.type !== "effect" || !element.obscures) return [];
+      const poly = shapePolygon(element);
+      return poly.map((a, index) => ({ a, b: poly[(index + 1) % poly.length]! }));
     }),
   ];
 }
@@ -98,36 +98,36 @@ function discShare(t: number): number {
 export function lampHidden(p: Point, lamp: Point, radius: number, s: Segment): number {
   const tx = lamp.x - p.x;
   const ty = lamp.y - p.y;
-  const dist = Math.hypot(tx, ty);
-  if (dist < 1e-6) return 0;
-  const dx = tx / dist;
-  const dy = ty / dist;
+  const distribution = Math.hypot(tx, ty);
+  if (distribution < 1e-6) return 0;
+  const dx = tx / distribution;
+  const dy = ty / distribution;
   let ax = s.a.x - p.x;
   let ay = s.a.y - p.y;
   let bx = s.b.x - p.x;
   let by = s.b.y - p.y;
   let da = ax * dx + ay * dy;
-  let db = bx * dx + by * dy;
-  const near = dist * 1e-4;
-  if (Math.max(da, db) <= near || Math.min(da, db) >= dist) return 0;
+  let database = bx * dx + by * dy;
+  const near = distribution * 1e-4;
+  if (Math.max(da, database) <= near || Math.min(da, database) >= distribution) return 0;
   // Clip to what lies between p and the lamp.
   const clip = (lo: number, keepAbove: boolean) => {
-    const t = (lo - da) / (db - da);
+    const t = (lo - da) / (database - da);
     if (keepAbove ? da < lo : da > lo) {
       ax += (bx - ax) * t;
       ay += (by - ay) * t;
       da = lo;
-    } else if (keepAbove ? db < lo : db > lo) {
+    } else if (keepAbove ? database < lo : database > lo) {
       bx = ax + (bx - ax) * t;
       by = ay + (by - ay) * t;
-      db = lo;
+      database = lo;
     }
   };
   clip(near, true);
-  clip(dist, false);
+  clip(distribution, false);
   const r = Math.max(radius, 1e-6);
-  const xa = ((ax * -dy + ay * dx) * dist) / (da * r);
-  const xb = ((bx * -dy + by * dx) * dist) / (db * r);
+  const xa = ((ax * -dy + ay * dx) * distribution) / (da * r);
+  const xb = ((bx * -dy + by * dx) * distribution) / (database * r);
   return Math.abs(discShare(xb) - discShare(xa));
 }
 

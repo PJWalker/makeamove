@@ -23,7 +23,7 @@ export type EntryAction = {
 
 /** What a library entry offers the character this device is playing; one definition for its buttons and its menu. */
 export function useLibraryActions(campaign: Campaign) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const system = systemOf(campaign);
   const meId = useQuery(campaign.members, () => actingCharacterId(campaign));
   const me = useQuery(campaign.characters, () => getCharacter(campaign, meId));
@@ -32,7 +32,7 @@ export function useLibraryActions(campaign: Campaign) {
   const actionsFor = (e: LibraryEntry): EntryAction[] => {
     if (e.kind === "item") {
       const allowed = me
-        ? ctx.commands.check(acquireItem, { characterId: me.id, item: e.item.id })
+        ? context.commands.check(acquireItem, { characterId: me.id, item: e.item.id })
         : "Choose a character first";
       return [
         {
@@ -41,9 +41,9 @@ export function useLibraryActions(campaign: Campaign) {
             (me ? `Give to ${me.name}` : "Choose a Character"),
           Icon: IconGive,
           disabled: allowed !== true,
-          reason: allowed === true ? undefined : String(allowed),
+          reason: allowed === true ? undefined : allowed,
           onSelect: () =>
-            me && void ctx.execute(acquireItem, { characterId: me.id, item: e.item.id }),
+            me && void context.execute(acquireItem, { characterId: me.id, item: e.item.id }),
         },
       ];
     }
@@ -56,7 +56,7 @@ export function useLibraryActions(campaign: Campaign) {
           as: me?.name,
           disabled: !canAct,
           onSelect: () =>
-            me && void ctx.execute(startMove, { characterId: me.id, move: e.move.id }),
+            me && void context.execute(startMove, { characterId: me.id, move: e.move.id }),
         },
       ];
     }
@@ -65,8 +65,8 @@ export function useLibraryActions(campaign: Campaign) {
         {
           label: "Create NPC",
           Icon: IconAdd,
-          disabled: !can(ctx, npcFromMonster, { monster: e.monster.id }),
-          onSelect: () => void ctx.execute(npcFromMonster, { monster: e.monster.id }),
+          disabled: !can(context, npcFromMonster, { monster: e.monster.id }),
+          onSelect: () => void context.execute(npcFromMonster, { monster: e.monster.id }),
         },
       ];
     return [];

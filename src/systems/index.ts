@@ -117,7 +117,7 @@ const SYSTEMS = new Map<string, GameSystem>();
 /** Add a system, after checking that its data holds together. */
 export function defineSystem(system: GameSystem): GameSystem {
   const problems = checkSystem(system);
-  if (problems.length) throw new Error(`${system.name} has problems:\n${problems.join("\n")}`);
+  if (problems.length > 0) throw new Error(`${system.name} has problems:\n${problems.join("\n")}`);
   SYSTEMS.set(system.id, system);
   return system;
 }

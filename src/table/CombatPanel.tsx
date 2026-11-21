@@ -45,9 +45,9 @@ import {
  */
 
 export function CombatPanel({ campaign }: { campaign: Campaign }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   // Running the fight is the GM's: what the controls show follows who may run them.
-  const gm = useQuery(campaign.members, () => can(ctx, startCombat, undefined));
+  const gm = useQuery(campaign.members, () => can(context, startCombat));
   const state = useQuery(
     campaign.combat,
     () => `${roundOf(combatMaps(campaign))}|${turnOf(combatMaps(campaign)) ?? ""}`,
@@ -62,7 +62,7 @@ export function CombatPanel({ campaign }: { campaign: Campaign }) {
   return (
     <div className="combat-panel">
       <CombatControls gm={gm} round={round} combatants={all} />
-      {shown.length ? (
+      {shown.length > 0 ? (
         <ol className="combat-list">
           {shown.map((c) => (
             <CombatRow
@@ -96,7 +96,7 @@ function CombatControls({
   round: number;
   combatants: CombatantView[];
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   return (
     <PanelActions>
       <span className="combat-round">{round ? `Round ${round}` : "Not started"}</span>
@@ -107,22 +107,22 @@ function CombatControls({
               <Button
                 variant="ghost"
                 icon={IconPreviousTurn}
-                onClick={() => ctx.execute(previousCombatTurn, undefined)}
+                onClick={() => context.execute(previousCombatTurn)}
               >
                 Back
               </Button>
               <Button
                 variant="primary"
                 icon={IconNextTurn}
-                disabled={!combatants.length}
-                onClick={() => ctx.execute(nextTurn, undefined)}
+                disabled={combatants.length === 0}
+                onClick={() => context.execute(nextTurn)}
               >
                 Next Turn
               </Button>
               <Button
                 variant="ghost"
                 icon={IconEndCombat}
-                onClick={() => ctx.execute(endCombat, undefined)}
+                onClick={() => context.execute(endCombat)}
               >
                 End
               </Button>
@@ -133,15 +133,15 @@ function CombatControls({
                 variant="ghost"
                 icon={IconDice}
                 disabled={!combatants.some((combatant) => combatant.init === null)}
-                onClick={() => void ctx.execute(rollForNpcs, undefined)}
+                onClick={() => void context.execute(rollForNpcs)}
               >
                 Roll for NPCs
               </Button>
               <Button
                 variant="primary"
                 icon={IconStartCombat}
-                disabled={!combatants.length}
-                onClick={() => ctx.execute(startCombat, undefined)}
+                disabled={combatants.length === 0}
+                onClick={() => context.execute(startCombat)}
               >
                 Start
               </Button>
@@ -165,7 +165,7 @@ function CombatantConditions({
   concentration: string | undefined;
   mine: boolean;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   if (ch.conditions.length === 0 && !concentration) return null;
   return (
     <div className="combat-conditions">
@@ -195,7 +195,7 @@ function CombatantConditions({
               type="button"
               className="combat-chip-x"
               aria-label="End concentration"
-              onClick={() => ctx.execute(stopConcentrating, { characterId: ch.id })}
+              onClick={() => context.execute(stopConcentrating, { characterId: ch.id })}
             >
               ×
             </button>
@@ -208,7 +208,7 @@ function CombatantConditions({
 
 /** A combatant's initiative: editable by whoever may change it. */
 function Initiative({ c, mine }: { c: CombatantView; mine: boolean }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   if (!mine) return <span className="combat-init">{c.init ?? "–"}</span>;
   return (
     <input
@@ -217,7 +217,7 @@ function Initiative({ c, mine }: { c: CombatantView; mine: boolean }) {
       aria-label={`${c.name} initiative`}
       value={c.init ?? ""}
       onChange={(e) =>
-        ctx.execute(setInitiative, {
+        context.execute(setInitiative, {
           id: c.id,
           init: e.currentTarget.value === "" ? null : Number(e.currentTarget.value),
         })
@@ -228,14 +228,14 @@ function Initiative({ c, mine }: { c: CombatantView; mine: boolean }) {
 
 /** Roll initiative, or (for the GM) hide or remove a combatant. */
 function CombatantActions({ c, gm, mine }: { c: CombatantView; gm: boolean; mine: boolean }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   return (
     <>
       {c.init === null && mine && (
         <Button
           variant="icon"
           label="Roll Initiative"
-          onClick={() => ctx.execute(rollCombatantInitiative, { id: c.id })}
+          onClick={() => context.execute(rollCombatantInitiative, { id: c.id })}
         >
           <IconDice />
         </Button>
@@ -245,14 +245,14 @@ function CombatantActions({ c, gm, mine }: { c: CombatantView; gm: boolean; mine
           <Button
             variant="icon"
             label={c.hidden ? "Show to Players" : "Hide from Players"}
-            onClick={() => ctx.execute(hideCombatant, { id: c.id, hidden: !c.hidden })}
+            onClick={() => context.execute(hideCombatant, { id: c.id, hidden: !c.hidden })}
           >
             {c.hidden ? <IconSecret /> : <IconReveal />}
           </Button>
           <Button
             variant="icon"
             label="Remove from Combat"
-            onClick={() => ctx.execute(removeFromCombat, { id: c.id })}
+            onClick={() => context.execute(removeFromCombat, { id: c.id })}
           >
             <IconClose />
           </Button>
@@ -281,7 +281,7 @@ function CombatRow({
   turn: string | null;
   everyone: CombatantView[];
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const system = systemOf(campaign);
   // Re-render when the character changes (HP, conditions).
   const readCharacter = useCallback(
@@ -290,7 +290,7 @@ function CombatRow({
   );
   const ch = useQuery(campaign.characters, readCharacter);
   // Their player or the GM: whoever may change their initiative.
-  const mine = can(ctx, setInitiative, { id: c.id, init: null });
+  const mine = can(context, setInitiative, { id: c.id, init: null });
   const hp = ch ? (ch.resources["hp"] ?? 0) : null;
   const maxHp = ch ? derive(ch, system).values["maxHp"] : null;
   const concentration = ch?.concentration
@@ -427,7 +427,7 @@ function useConditionForm(
   turn: string | null,
   everyone: CombatantView[],
 ) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const system = systemOf(campaign);
   const [condition, setCondition] = useState(system.conditions[0]?.id ?? "");
   const [rounds, setRounds] = useState(1);
@@ -437,13 +437,13 @@ function useConditionForm(
   const has = ch.conditions.includes(condition);
   const add = () => {
     if (!condition) return;
-    ctx.execute(timeCondition, {
+    context.execute(timeCondition, {
       characterId,
       condition,
       duration: rounds > 0 && of ? { rounds, tick, of } : undefined,
     });
   };
-  const remove = () => ctx.execute(removeTimedCondition, { characterId, condition });
+  const remove = () => context.execute(removeTimedCondition, { characterId, condition });
   return {
     system,
     condition,

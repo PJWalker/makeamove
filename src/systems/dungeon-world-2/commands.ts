@@ -48,7 +48,7 @@ const itemOf = (
   campaign: Parameters<typeof getCharacter>[0],
   characterId: string,
   itemId: string,
-) => getCharacter(campaign, characterId)?.inventory.find((i) => i.id === itemId);
+) => getCharacter(campaign, characterId)?.inventory.find((index) => index.id === itemId);
 
 /** Using gear does what the game says that kind does, instead of only spending a use. */
 export const useGear = command<
@@ -66,22 +66,22 @@ export const useGear = command<
     characterId: optional(isString),
     choice: optional(isObject<DungeonWorld2ItemUse>),
   }),
-  run: (ctx, { itemId, characterId, choice }) => {
-    const who = characterId ?? actingCharacterId(ctx.campaign);
-    return !!who && consumeDungeonWorld2Item(ctx.campaign, who, itemId, choice);
+  run: (context, { itemId, characterId, choice }) => {
+    const who = characterId ?? actingCharacterId(context.campaign);
+    return !!who && consumeDungeonWorld2Item(context.campaign, who, itemId, choice);
   },
 });
 
 export const breakWeapon = characterCommand<{ characterId: string; itemId: string }, boolean>({
   id: "dw2.breakWeapon",
   params: isItem,
-  title: (ctx, { characterId, itemId }) =>
-    `Mark ${itemOf(ctx.campaign, characterId, itemId)?.name ?? "Weapon"} Broken`,
+  title: (context, { characterId, itemId }) =>
+    `Mark ${itemOf(context.campaign, characterId, itemId)?.name ?? "Weapon"} Broken`,
   section: "act",
   menu: {
-    item: (ctx, t) => {
-      const i = itemOf(ctx.campaign, t.characterId, t.itemId);
-      return i?.equippable && !i.broken && i.tags.some((tag) => WEAPON_TAGS.has(tag))
+    item: (context, t) => {
+      const index = itemOf(context.campaign, t.characterId, t.itemId);
+      return index?.equippable && !index.broken && index.tags.some((tag) => WEAPON_TAGS.has(tag))
         ? [{ params: t }]
         : [];
     },
@@ -93,17 +93,17 @@ export const breakWeapon = characterCommand<{ characterId: string; itemId: strin
 export const sellGear = characterCommand<{ characterId: string; itemId: string }, boolean>({
   id: "dw2.sell",
   params: isItem,
-  title: (ctx, { characterId, itemId }) => {
-    const name = itemOf(ctx.campaign, characterId, itemId)?.name ?? "Item";
-    const value = saleValueDungeonWorld2Item(ctx.campaign, characterId, itemId);
+  title: (context, { characterId, itemId }) => {
+    const name = itemOf(context.campaign, characterId, itemId)?.name ?? "Item";
+    const value = saleValueDungeonWorld2Item(context.campaign, characterId, itemId);
     return value ? `Sell ${name} for 1 Treasure` : `Sell ${name} for no Treasure`;
   },
   section: "act",
   menu: {
-    item: (ctx, t) =>
-      saleValueDungeonWorld2Item(ctx.campaign, t.characterId, t.itemId) !== null
-        ? [{ params: t }]
-        : [],
+    item: (context, t) =>
+      saleValueDungeonWorld2Item(context.campaign, t.characterId, t.itemId) === null
+        ? []
+        : [{ params: t }],
   },
   run: ({ campaign }, { characterId, itemId }) =>
     sellDungeonWorld2Item(campaign, characterId, itemId),

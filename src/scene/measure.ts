@@ -27,9 +27,9 @@ export function cellAt(grid: Grid, p: Point): { i: number; j: number } {
   };
 }
 
-export const cellCentre = (grid: Grid, i: number, j: number): Point => ({
-  x: grid.offsetX + (i + 0.5) * grid.size,
-  y: grid.offsetY + (j + 0.5) * grid.size,
+export const cellCentre = (grid: Grid, index: number, index_: number): Point => ({
+  x: grid.offsetX + (index + 0.5) * grid.size,
+  y: grid.offsetY + (index_ + 0.5) * grid.size,
 });
 
 /** Hexes between two hexes in axial coordinates. */
@@ -51,11 +51,11 @@ export interface Measure {
 export function measure(grid: Grid, a: Point, b: Point): Measure {
   if (grid.type === "square") {
     const ca = cellAt(grid, a);
-    const cb = cellAt(grid, b);
+    const callback = cellAt(grid, b);
     return {
-      distance: steps(cb.i - ca.i, cb.j - ca.j, grid.diagonal) * grid.unit,
+      distance: steps(callback.i - ca.i, callback.j - ca.j, grid.diagonal) * grid.unit,
       a: cellCentre(grid, ca.i, ca.j),
-      b: cellCentre(grid, cb.i, cb.j),
+      b: cellCentre(grid, callback.i, callback.j),
     };
   }
   if (grid.type === "hex") {
@@ -82,9 +82,9 @@ export function tokenCells(grid: Grid, t: Transform) {
     const c = Math.floor((centre - offset) / grid.size);
     return [c, c] as const;
   };
-  const [i0, i1] = span(t.x, t.w, grid.offsetX);
-  const [j0, j1] = span(t.y, t.h, grid.offsetY);
-  return { i0, i1, j0, j1 };
+  const [index0, index1] = span(t.x, t.w, grid.offsetX);
+  const [index0_, index1_] = span(t.y, t.h, grid.offsetY);
+  return { i0: index0, i1: index1, j0: index0_, j1: index1_ };
 }
 
 /**

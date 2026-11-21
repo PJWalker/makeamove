@@ -16,7 +16,7 @@ import { systemOf } from "./system";
  */
 function inventoryOf(campaign: Campaign, characterId: string) {
   const m = campaign.characters.get(characterId);
-  if (!m) return undefined;
+  if (!m) return;
   const stored = m.get("inventory");
   if (stored || !m.get("base")) return stored;
   m.set("inventory", baseOf(campaign, m)?.get("inventory")?.read() ?? {});
@@ -29,7 +29,7 @@ export function addItem(campaign: Campaign, characterId: string, def: ItemDef, e
   const last =
     inv
       .values()
-      .map((i) => i.order)
+      .map((index) => index.order)
       .sort()
       .at(-1) ?? null;
   const item = instanceOf(def, generateKeyBetween(last, null));
@@ -52,7 +52,7 @@ export function updateItem(
 /** A player character's artifact, with its track as the system defines it. */
 function artifactOf(campaign: Campaign, characterId: string, itemId: string) {
   const character = getCharacter(campaign, characterId);
-  if (character?.kind !== "pc") return undefined;
+  if (character?.kind !== "pc") return;
   const item = character.inventory.find((entry) => entry.id === itemId);
   const artifact =
     item &&
@@ -80,7 +80,7 @@ export function markArtifactTrack(
   const unlocked = item.artifactUnlocked ?? [];
   const unlockedMoves = new Set(unlocked);
   const available = artifact.unlocks.filter((move) => !unlockedMoves.has(move.id));
-  if (!available.length) {
+  if (available.length === 0) {
     updateItem(campaign, characterId, itemId, { artifactProgress: artifact.capacity });
     return true;
   }
@@ -113,7 +113,7 @@ export function clearArtifactTrack(
 /** Spend one of an item's uses. */
 export function spendItemUse(campaign: Campaign, characterId: string, itemId: string): boolean {
   const item = getCharacter(campaign, characterId)?.inventory.find((entry) => entry.id === itemId);
-  if (!item || item.uses === undefined || (item.usesLeft ?? 0) <= 0) return false;
+  if (item?.uses === undefined || (item.usesLeft ?? 0) <= 0) return false;
   updateItem(campaign, characterId, itemId, { usesLeft: (item.usesLeft ?? 0) - 1 });
   return true;
 }

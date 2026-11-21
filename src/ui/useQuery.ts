@@ -35,25 +35,25 @@ class YSource implements Source {
   };
 
   readonly subscribe = (listener: Listener) => {
-    if (!this.#listeners.size) this.#type.observeDeep(this.#onChange);
+    if (this.#listeners.size === 0) this.#type.observeDeep(this.#onChange);
     this.#listeners.add(listener);
     return () => {
       this.#listeners.delete(listener);
-      if (!this.#listeners.size) this.#type.unobserveDeep(this.#onChange);
+      if (this.#listeners.size === 0) this.#type.unobserveDeep(this.#onChange);
     };
   };
 }
 
 const ySources = new WeakMap<YObservable, YSource>();
 
-function isStore(ref: object): ref is ReadonlyStore<unknown> {
-  return "subscribe" in ref && "version" in ref;
+function isStore(reference: object): reference is ReadonlyStore<unknown> {
+  return "subscribe" in reference && "version" in reference;
 }
 
-function sourceOf(ref: Queryable | null | undefined): Source | null {
-  if (!ref) return null;
-  if (isStore(ref)) return ref;
-  const type = "y" in ref ? ref.y : ref;
+function sourceOf(reference: Queryable | null | undefined): Source | null {
+  if (!reference) return null;
+  if (isStore(reference)) return reference;
+  const type = "y" in reference ? reference.y : reference;
   let s = ySources.get(type);
   if (!s) ySources.set(type, (s = new YSource(type)));
   return s;
@@ -65,8 +65,8 @@ export type Queryable = { readonly y: YObservable } | YObservable | ReadonlyStor
 const noSubscribe = () => () => {};
 
 /** Read a store, re-rendering when it changes. A missing store reads as undefined. */
-export function useQuery<T>(ref: ReadonlyStore<T>): T;
-export function useQuery<T>(ref: ReadonlyStore<T> | null | undefined): T | undefined;
+export function useQuery<T>(reference: ReadonlyStore<T>): T;
+export function useQuery<T>(reference: ReadonlyStore<T> | null | undefined): T | undefined;
 /**
  * Read `select(ref)`, re-rendering when `ref` (or anything inside it) changes
  * and `select` gives something new. Values compare with Object.is, so reads
@@ -79,22 +79,22 @@ export function useQuery<T>(ref: ReadonlyStore<T> | null | undefined): T | undef
  * miss edits. A missing `ref` never changes; `select` still runs.
  */
 export function useQuery<R extends Queryable, T>(
-  ref: R | null | undefined,
-  select: (ref: R) => T,
+  reference: R | null | undefined,
+  select: (reference: R) => T,
 ): T;
 export function useQuery<R extends Queryable, T>(
-  ref: R | null | undefined,
-  select?: (ref: R) => T,
+  reference: R | null | undefined,
+  select?: (reference_: R) => T,
 ): T | undefined {
   "use no memo";
-  const source = sourceOf(ref);
+  const source = sourceOf(reference);
   const read = select ?? ((r: R | null | undefined) => (r as ReadonlyStore<T> | null)?.value);
   const cache = useRef<{ version: number; read: typeof read; value: T | undefined } | null>(null);
   const snapshot = () => {
     const version = source?.version ?? 0;
     const c = cache.current;
-    if (c && c.version === version && c.read === read) return c.value;
-    const next = read(ref as R);
+    if (c?.version === version && c.read === read) return c.value;
+    const next = read(reference as R);
     const value = c && Object.is(c.value, next) ? c.value : next;
     cache.current = { version, read, value };
     return value;

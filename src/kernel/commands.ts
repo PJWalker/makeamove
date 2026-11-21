@@ -18,13 +18,13 @@ export type Availability = true | string;
 
 export const GM_ONLY = "GM only";
 
-export type Permission<C, P> = "anyone" | "gm" | ((ctx: C, params: P) => Availability);
+export type Permission<C, P> = "anyone" | "gm" | ((context: C, parameters: P) => Availability);
 
 /** What a context needs to run commands against. */
 export interface CommandHost {
   isGm(): boolean;
   /** Run `fn` as one transaction on the shared document, tagged as the player's own undoable change or not. */
-  transact<T>(fn: () => T, undoable: boolean): T;
+  transact<T>(function_: () => T, undoable: boolean): T;
   readonly history: UndoHistory;
   /** The shared document's undo stack, in `history`. */
   readonly undoStack: UndoStack;
@@ -38,14 +38,14 @@ export interface Command<C, P = void, R = unknown> {
   /** Who may run it: anyone (the default), the GM, or a check of its own. */
   readonly permission?: Permission<C, P>;
   /** Whether it can run now; checked after permission. */
-  readonly available?: (ctx: C, params: P) => Availability;
-  readonly run: (ctx: C, params: P) => R;
+  readonly available?: (context: C, parameters: P) => Availability;
+  readonly run: (context: C, parameters: P) => R;
   /**
    * Runs one after another in the same group are one undo step (dragging a
    * slider, typing in a field); `false` keeps the change out of undo, for
    * things that can't sensibly be taken back, like sending a message.
    */
-  readonly undoGroup?: string | false | ((params: P) => string | false);
+  readonly undoGroup?: string | false | ((parameters: P) => string | false);
   /**
    * False runs it outside any transaction: for undo and redo, which make
    * their own, and for commands that only change what this player sees.
@@ -59,7 +59,7 @@ export interface Command<C, P = void, R = unknown> {
 }
 
 /** Any command, whatever its parameters. */
-// oxlint-disable-next-line @typescript-eslint/no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnyCommand<C> = Command<C, any>;
 
 /** A command and its parameters, as one value. */
@@ -69,17 +69,17 @@ export interface Call<K> {
 }
 
 /** A call as a string, for storing: the command's id, then its parameters as JSON. */
-export function callKey(id: string, params: unknown): string {
+export function callKey(id: string, parameters: unknown): string {
   const empty =
-    params === undefined ||
-    params === null ||
-    (typeof params === "object" && !Object.keys(params).length);
-  return empty ? id : `${id} ${JSON.stringify(params)}`;
+    parameters === undefined ||
+    parameters === null ||
+    (typeof parameters === "object" && Object.keys(parameters).length === 0);
+  return empty ? id : `${id} ${JSON.stringify(parameters)}`;
 }
 
 function parseKey(key: string): { id: string; params: unknown } | null {
   const space = key.indexOf(" ");
-  if (space < 0) return { id: key, params: undefined };
+  if (space === -1) return { id: key, params: undefined };
   try {
     return { id: key.slice(0, space), params: JSON.parse(key.slice(space + 1)) as unknown };
   } catch {
@@ -94,8 +94,8 @@ export class CommandRegistry<C extends CommandHost, K extends AnyCommand<C> = An
   readonly #stand = new Map<string, K>();
   readonly #warned = new Set<string>();
 
-  constructor(ctx: C) {
-    this.#ctx = ctx;
+  constructor(context: C) {
+    this.#ctx = context;
   }
 
   /** Add commands; the returned function removes them again. */
@@ -129,18 +129,18 @@ export class CommandRegistry<C extends CommandHost, K extends AnyCommand<C> = An
   }
 
   /** Whether the player may run the call at all, whatever the state of things. */
-  permits<P>(command: Command<C, P, unknown>, params: P): Availability {
+  permits<P>(command: Command<C, P>, parameters: P): Availability {
     const p = this.#actual(command).permission ?? "anyone";
     if (p === "anyone") return true;
     if (p === "gm") return this.#ctx.isGm() || GM_ONLY;
-    return p(this.#ctx, params);
+    return p(this.#ctx, parameters);
   }
 
   /** Whether the player may run the call now: permission first, then availability. */
-  check<P>(command: Command<C, P, unknown>, params: P): Availability {
-    const allowed = this.permits(command, params);
+  check<P>(command: Command<C, P>, parameters: P): Availability {
+    const allowed = this.permits(command, parameters);
     if (allowed !== true) return allowed;
-    return this.#actual(command).available?.(this.#ctx, params) ?? true;
+    return this.#actual(command).available?.(this.#ctx, parameters) ?? true;
   }
 
   /**
@@ -148,19 +148,19 @@ export class CommandRegistry<C extends CommandHost, K extends AnyCommand<C> = An
    * and one undo step unless it opts out. Returns what the command returns,
    * or undefined if it didn't run.
    */
-  execute<P, R>(given: Command<C, P, R>, params: P): R | undefined {
+  execute<P, R>(given: Command<C, P, R>, parameters: P): R | undefined {
     const command = this.#actual(given);
-    const why = this.check(command, params);
+    const why = this.check(command, parameters);
     if (why !== true) {
       console.warn(`Command ${command.id} did not run: ${why}`);
       return undefined;
     }
-    const ctx = this.#ctx;
-    if (command.transact === false) return command.run(ctx, params);
+    const context = this.#ctx;
+    if (command.transact === false) return command.run(context, parameters);
     const g = command.undoGroup;
-    const group = typeof g === "function" ? g(params) : g;
-    if (group !== false) ctx.history.begin(ctx.undoStack, group);
-    return ctx.transact(() => command.run(ctx, params), group !== false);
+    const group = typeof g === "function" ? g(parameters) : g;
+    if (group !== false) context.history.begin(context.undoStack, group);
+    return context.transact(() => command.run(context, parameters), group !== false);
   }
 
   /**
@@ -168,10 +168,10 @@ export class CommandRegistry<C extends CommandHost, K extends AnyCommand<C> = An
    * something a player does that's made of several changes. Each call still
    * checks its own permission.
    */
-  batch<R>(fn: () => R): R {
-    const ctx = this.#ctx;
-    ctx.history.begin(ctx.undoStack, undefined);
-    return ctx.transact(fn, true);
+  batch<R>(function_: () => R): R {
+    const context = this.#ctx;
+    context.history.begin(context.undoStack);
+    return context.transact(function_, true);
   }
 
   /**

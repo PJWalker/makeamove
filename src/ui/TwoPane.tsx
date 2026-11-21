@@ -1,4 +1,4 @@
-/* oxlint-disable jsx-a11y/prefer-tag-over-role -- The panel's interactive splitter cannot be an hr. */
+/* eslint-disable jsx-a11y/prefer-tag-over-role -- The panel's interactive splitter cannot be an hr. */
 import type * as React from "react";
 import type { ReadonlyStore, Store } from "../lib/store";
 import type { ReactNode } from "react";
@@ -36,7 +36,7 @@ export interface PaneLayout {
   /** The panel's two-pane element, while it's on screen. */
   el: HTMLElement | null;
   /** Record the panel's two-pane element (a ref callback). */
-  attach(el: HTMLElement | null): void;
+  attach(element: HTMLElement | null): void;
   /** The layout switch for the panel's title bar. */
   Toggle: () => React.JSX.Element;
 }
@@ -54,8 +54,8 @@ function dragSplit(layout: PaneLayout, e: React.PointerEvent) {
   const grid = split.parentElement!;
   split.setPointerCapture(e.pointerId);
   const left = grid.getBoundingClientRect().left;
-  const move = (ev: PointerEvent) =>
-    (layout.listWidth.value = Math.round(clampListWidth(ev.clientX - left, grid.clientWidth)));
+  const move = (event: PointerEvent) =>
+    (layout.listWidth.value = Math.round(clampListWidth(event.clientX - left, grid.clientWidth)));
   const up = () => {
     split.removeEventListener("pointermove", move);
     split.removeEventListener("pointerup", up);
@@ -98,22 +98,22 @@ export function TwoPane({
   onBack: () => void;
   resizeLabel: string;
 }) {
-  const rootRef = useRef<HTMLDivElement>(null);
+  const rootReference = useRef<HTMLDivElement>(null);
   const mode = useQuery(layout.mode);
   const listWidth = useQuery(layout.listWidth);
   useEffect(() => {
-    const el = rootRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(() => (layout.tooNarrow.value = el.clientWidth < SPLIT_MIN_W));
-    ro.observe(el);
+    const element = rootReference.current;
+    if (!element) return;
+    const ro = new ResizeObserver(() => (layout.tooNarrow.value = element.clientWidth < SPLIT_MIN_W));
+    ro.observe(element);
     return () => ro.disconnect();
   }, [layout]);
 
   return (
-    <div className="panes-root" ref={rootRef}>
+    <div className="panes-root" ref={rootReference}>
       <div
         className="panes"
-        ref={(el) => layout.attach(el)}
+        ref={(element) => layout.attach(element)}
         data-layout={mode}
         data-level={level}
         // Its own transition name, so two panels can slide at once.

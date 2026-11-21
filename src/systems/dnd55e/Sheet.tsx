@@ -9,7 +9,7 @@ import { Inventory } from "../../workspace/Inventory";
 import { SheetSectionView } from "../../workspace/DeclarativeSheet";
 import { ActionsSection, NpcField, TextSection } from "../../workspace/sheetSections";
 import { CharacterName, Counter, TokenChip } from "../../workspace/sheetParts";
-import { signedStr } from "../../workspace/actionPresentation";
+import { signedStr as signedString } from "../../workspace/actionPresentation";
 import type { Derived, GameSystem } from "../types";
 import { useQuery } from "../../ui/useQuery";
 import { bumpData, bumpResource, setData, setScore } from "../../workspace/commands/characters";
@@ -26,7 +26,7 @@ import {
   SkillsSection,
   VitalsSection,
 } from "./sections";
-import { levelOf, num, useAction, valueOf } from "./sheetHooks";
+import { levelOf, num as number_, useAction, valueOf } from "./sheetHooks";
 
 /*
  * D&D 5.5e's character sheets, from the shared parts in workspace/sheetParts.tsx.
@@ -34,7 +34,7 @@ import { levelOf, num, useAction, valueOf } from "./sheetHooks";
  * targets and the card work the same from the sheet, the hotbar and the palette.
  */
 
-type Props = { campaign: Campaign; system: GameSystem; c: CharacterView };
+type Properties = { campaign: Campaign; system: GameSystem; c: CharacterView };
 
 function Name({
   campaign,
@@ -65,8 +65,8 @@ function Abilities({
   d,
   editable,
   use,
-}: Props & { d: Derived; editable: boolean; use: (id: string) => void }) {
-  const ctx = useCampaign();
+}: Properties & { d: Derived; editable: boolean; use: (id: string) => void }) {
+  const context = useCampaign();
   return (
     <ul className="sheet-stats dnd-abilities">
       {system.stats.map((s) => {
@@ -85,7 +85,7 @@ function Abilities({
               aria-label={`${s.name} check`}
               onClick={() => use(`check-${s.id}`)}
             >
-              {signedStr(modifier)}
+              {signedString(modifier)}
             </button>
             <input
               className="stat-score"
@@ -93,13 +93,13 @@ function Abilities({
               min={1}
               max={30}
               aria-label={`${s.name} score`}
-              title={score !== c.scores[s.id] ? `Effective ${score}` : undefined}
+              title={score === c.scores[s.id] ? undefined : `Effective ${score}`}
               value={c.scores[s.id]}
               disabled={!editable}
               onChange={(e) => {
                 const value = parseInputNumber(e.currentTarget.value);
                 if (value !== undefined && value >= 1 && value <= 30)
-                  ctx.execute(setScore, { id: c.id, stat: s.id, score: value });
+                  context.execute(setScore, { id: c.id, stat: s.id, score: value });
               }}
             />
             <button
@@ -109,7 +109,7 @@ function Abilities({
               aria-label={`${s.name} save`}
               onClick={() => use(`save-${s.id}`)}
             >
-              Save {signedStr(modifier + saveBonus)}
+              Save {signedString(modifier + saveBonus)}
             </button>
           </li>
         );
@@ -120,12 +120,12 @@ function Abilities({
 
 /** Ability scores under a heading. */
 function AbilitiesSection(
-  props: Props & { d: Derived; editable: boolean; use: (id: string) => void },
+  properties: Properties & { d: Derived; editable: boolean; use: (id: string) => void },
 ) {
   return (
     <section className="form-section sheet-section" aria-label="Abilities">
       <h3 className="sheet-heading">Abilities</h3>
-      <Abilities {...props} />
+      <Abilities {...properties} />
     </section>
   );
 }
@@ -137,7 +137,7 @@ function ownership(mine: boolean, editable: boolean): string {
 }
 
 /** A player character's sheet. */
-export function DndSheet({ campaign, system, c }: Props) {
+export function DndSheet({ campaign, system, c }: Properties) {
   const d = derive(c, system);
   const editable = canEdit(campaign, c);
   const me = useQuery(device).id;
@@ -191,11 +191,11 @@ export function DndSheet({ campaign, system, c }: Props) {
 }
 
 /** An NPC or monster: a stat block's numbers and text. */
-export function DndNpcSheet({ campaign, system, c }: Props) {
-  const ctx = useCampaign();
+export function DndNpcSheet({ campaign, system, c }: Properties) {
+  const context = useCampaign();
   const d = derive(c, system);
   const editable = canEdit(campaign, c);
-  const maxHp = num(c.data["maxHp"]);
+  const maxHp = number_(c.data["maxHp"]);
   const use = useAction({ system, c });
   const section = { campaign, system, c, d, editable };
   const field = (id: string) => (
@@ -222,7 +222,7 @@ export function DndNpcSheet({ campaign, system, c }: Props) {
             max={maxHp}
             disabled={!editable}
             onChange={(by) =>
-              ctx.execute(bumpResource, { id: c.id, resource: "hp", by, max: maxHp })
+              context.execute(bumpResource, { id: c.id, resource: "hp", by, max: maxHp })
             }
           />
           <label className="counter">
@@ -236,15 +236,15 @@ export function DndNpcSheet({ campaign, system, c }: Props) {
               onChange={(e) => {
                 const value = parseInputNumber(e.currentTarget.value);
                 if (value !== undefined && value >= 1)
-                  ctx.execute(setData, { id: c.id, key: "maxHp", value: Math.floor(value) });
+                  context.execute(setData, { id: c.id, key: "maxHp", value: Math.floor(value) });
               }}
             />
           </label>
           <Counter
             label="Temp HP"
-            value={num(c.data["tempHp"])}
+            value={number_(c.data["tempHp"])}
             disabled={!editable}
-            onChange={(by) => ctx.execute(bumpData, { id: c.id, key: "tempHp", by })}
+            onChange={(by) => context.execute(bumpData, { id: c.id, key: "tempHp", by })}
           />
         </div>
       </section>
@@ -268,7 +268,7 @@ export function DndNpcSheet({ campaign, system, c }: Props) {
                 disabled={!editable}
                 onClick={() => use("initiative")}
               >
-                {signedStr(valueOf(d.values, "initiative"))}
+                {signedString(valueOf(d.values, "initiative"))}
               </button>
             </dd>
           </div>

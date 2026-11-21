@@ -15,7 +15,7 @@ export async function renderInBrowser<T>({
   dependencies,
   deviceScaleFactor = 1,
 }: {
-  /** Path from the project root, such as "/src/table/diceRenderer.ts". */
+  /** Path from the project root, such as "/src/table/dice/painter.ts". */
   module: string;
   expression: string;
   /** Packages the module imports, prebundled so the page loads quickly. */
@@ -48,7 +48,7 @@ export async function renderInBrowser<T>({
       });
       return (await page.evaluate(
         `(async () => { const mod = await import(${JSON.stringify(module)}); return ${expression}; })()`,
-      )) as T;
+      ));
     } finally {
       await browser.close();
     }

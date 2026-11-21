@@ -1,4 +1,5 @@
 import type { JSONContent } from "@tiptap/core";
+import { isString } from "../lib/guards";
 
 /*
  * Formatted text, in the one shape the app uses everywhere: a Tiptap "doc"
@@ -36,7 +37,7 @@ export function parseTrackerButton(raw: string): TrackerButton | null {
 /** The token for a button: what the editor writes back as text. */
 export function trackerToken(b: TrackerButton): string {
   const change = changeText(b.by, b.name);
-  return `[[${change}${b.label !== change ? `|${b.label}` : ""}]]`;
+  return `[[${change}${b.label === change ? "" : `|${b.label}`}]]`;
 }
 
 /** Rich text with nothing in it. */
@@ -49,7 +50,7 @@ export function plainParagraph(text: string): JSONContent {
     if (index) content.push({ type: "hardBreak" });
     if (line) content.push({ type: "text", text: line });
   }
-  return { type: "paragraph", ...(content.length ? { content } : {}) };
+  return { type: "paragraph", ...(content.length > 0 ? { content } : {}) };
 }
 
 /**
@@ -69,7 +70,7 @@ export function richTextFromPlain(text: string): RichText {
  */
 export function asRichText(value: RichText | string | undefined): RichText {
   if (value === undefined) return emptyRichText();
-  return typeof value === "string" ? richTextFromPlain(value) : value;
+  return isString(value) ? richTextFromPlain(value) : value;
 }
 
 /** Whether two rich texts say the same thing in the same way. */
@@ -83,7 +84,7 @@ const BLOCKS = new Set(["paragraph", "heading", "codeBlock"]);
  * `atomText` names an inline atom (a link) it doesn't know itself.
  */
 export function plainText(
-  doc: RichText | undefined,
+  document: RichText | undefined,
   atomText: (node: JSONContent) => string | null = () => null,
 ): string {
   const lines: string[] = [];
@@ -94,22 +95,22 @@ export function plainText(
     if (!node.content) {
       const named = atomText(node);
       if (named !== null) return named;
-      const attrs = node.attrs ?? {};
-      return String(attrs["text"] || attrs["label"] || "");
+      const attributes = node.attrs ?? {};
+      return String(attributes["text"] || attributes["label"] || "");
     }
     return node.content.map(inline).join("");
   };
   const block = (node: JSONContent, bullet = "") => {
     if (node.type === "listItem") {
-      node.content?.forEach((child, i) => block(child, i ? "" : "• "));
+      if (node.content) for (const [index, child] of node.content.entries()) block(child, index ? "" : "• ");
       return;
     }
     if (BLOCKS.has(node.type ?? "")) {
       lines.push(bullet + (node.content ?? []).map(inline).join(""));
       return;
     }
-    node.content?.forEach((child) => block(child));
+    if (node.content) for (const child of node.content) block(child);
   };
-  block(doc ?? {});
+  block(document ?? {});
   return lines.join("\n");
 }

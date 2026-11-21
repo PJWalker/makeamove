@@ -67,18 +67,18 @@ const linkDrops = new Map<
 
 /** Let an editor take dropped entities as links; returns a function that stops it. */
 export function registerLinkDrop(
-  el: HTMLElement,
+  element: HTMLElement,
   insert: (
     link: { kind: LinkKind; id: string; label: string },
     x: number,
     y: number,
   ) => boolean | void,
 ) {
-  el.dataset["linkDrop"] = "true";
-  linkDrops.set(el, insert);
+  element.dataset["linkDrop"] = "true";
+  linkDrops.set(element, insert);
   return () => {
-    delete el.dataset["linkDrop"];
-    linkDrops.delete(el);
+    delete element.dataset["linkDrop"];
+    linkDrops.delete(element);
   };
 }
 
@@ -93,8 +93,8 @@ export function overHotbar(x: number, y: number) {
 }
 
 /** The innermost element under a point that registered a drop accepting the entity. */
-function registeredDropAt(el: Element | null, entity: DragEntity): HTMLElement | null {
-  for (let at = el; at; at = at.parentElement)
+function registeredDropAt(element: Element | null, entity: DragEntity): HTMLElement | null {
+  for (let at = element; at; at = at.parentElement)
     if (at instanceof HTMLElement && entityDrops.get(at)?.accepts(entity)) return at;
   return null;
 }
@@ -111,21 +111,21 @@ export function dropTargetAt(
   y: number,
   entity: DragEntity,
 ): DropTarget | null {
-  const el = document.elementFromPoint(x, y);
-  const registered = registeredDropAt(el, entity);
+  const element = document.elementFromPoint(x, y);
+  const registered = registeredDropAt(element, entity);
   if (registered) return { element: registered };
-  const editor = el?.closest<HTMLElement>("[data-link-drop]");
+  const editor = element?.closest<HTMLElement>("[data-link-drop]");
   if (entity.link && editor && linkDrops.has(editor)) return { element: editor };
-  const folder = entity.folder ? el?.closest<HTMLElement>("[data-folder-drop]") : null;
+  const folder = entity.folder ? element?.closest<HTMLElement>("[data-folder-drop]") : null;
   if (folder) return { element: folder };
   if (entity.give) {
-    const character = el?.closest<HTMLElement>(`[data-${entity.give.kind}-drop]`);
+    const character = element?.closest<HTMLElement>(`[data-${entity.give.kind}-drop]`);
     if (character) {
       const characterId = character.dataset[entity.give.kind === "item" ? "itemDrop" : "moveDrop"];
       if (characterId) return { element: character, characterId };
     }
   }
-  const scene = el?.closest<HTMLElement>(".scene-canvas");
+  const scene = element?.closest<HTMLElement>(".scene-canvas");
   if (!scene || !canvas.tokenDrop.value) return null;
   const character = entity.give ? canvas.sceneCharacterAt.value?.(x, y) : null;
   if (character && !character.editable) return null;
@@ -157,7 +157,7 @@ export function dropOn(
     const link = linkDrops.get(target.element);
     if (link && entity.link) {
       if (link({ ...entity.link, label: entity.label }, x, y) === false) return false;
-    } else if (entity.folder && target.element.hasAttribute("data-folder-drop")) {
+    } else if (entity.folder && Object.hasOwn(target.element.dataset, "folderDrop")) {
       entity.folder(target.element.dataset["folderDrop"] || undefined);
     } else if (entity.give && target.characterId) {
       const key = entity.give.kind === "item" ? "itemDrop" : "moveDrop";
@@ -208,7 +208,7 @@ function sendGhostToToken(
   ghost.style.top = `${center.y - box.height / 2}px`;
   ghost.style.transform = "scale(0.08)";
   ghost.style.opacity = "0";
-  window.setTimeout(() => {
+  globalThis.setTimeout(() => {
     ghost.remove();
     complete();
   }, 180);
@@ -230,7 +230,7 @@ export function dragEntity(
   let ghost: HTMLElement;
   const mark = dropMarker(canvas);
   const line = dropLine("x");
-  const onBar = (ev: PointerEvent) => !!entity.pin && overHotbar(ev.clientX, ev.clientY);
+  const onBar = (event: PointerEvent) => !!entity.pin && overHotbar(event.clientX, event.clientY);
 
   function lift() {
     // Just the name and icon, not the row's buttons or details.
@@ -238,32 +238,32 @@ export function dragEntity(
     ghost = pick.cloneNode(true) as HTMLElement;
     ghost.removeAttribute("id");
     ghost.className = "drag-ghost item-ghost";
-    document.body.appendChild(ghost);
+    document.body.append(ghost);
     document.documentElement.classList.add("is-reordering");
     hideTooltip();
   }
 
-  function move(ev: PointerEvent) {
+  function move(event: PointerEvent) {
     // Beside the pointer, so it doesn't hide what it's over.
-    ghost.style.left = `${ev.clientX + 12}px`;
-    ghost.style.top = `${ev.clientY + 8}px`;
+    ghost.style.left = `${event.clientX + 12}px`;
+    ghost.style.top = `${event.clientY + 8}px`;
     const bar = hotbar();
-    const onHotbar = onBar(ev);
+    const onHotbar = onBar(event);
     let target: DropTarget | null = null;
     if (onHotbar) {
       if (bar) bar.dataset["dropping"] = "true";
-      line.show(hotbarSlots(), indexAmong(hotbarSlots(), "x", ev));
+      line.show(hotbarSlots(), indexAmong(hotbarSlots(), "x", event));
       mark(null);
     } else {
       if (bar) delete bar.dataset["dropping"];
       line.hide();
-      target = dropTargetAt(canvas, ev.clientX, ev.clientY, entity);
+      target = dropTargetAt(canvas, event.clientX, event.clientY, entity);
       mark(target);
     }
     setDropCursor(onHotbar || !!target);
   }
 
-  function end(ev: PointerEvent, commit: boolean, lifted: boolean) {
+  function end(event: PointerEvent, commit: boolean, lifted: boolean) {
     mark(null);
     line.hide();
     setDropCursor(null);
@@ -272,22 +272,22 @@ export function dragEntity(
     if (bar) delete bar.dataset["dropping"];
     if (!lifted) return;
     const target =
-      commit && !onBar(ev) ? dropTargetAt(canvas, ev.clientX, ev.clientY, entity) : null;
+      commit && !onBar(event) ? dropTargetAt(canvas, event.clientX, event.clientY, entity) : null;
     document.documentElement.classList.remove("is-reordering");
     // The click that ends a drag is not a press on the row.
     suppressNextClick();
     if (!commit) return ghost.remove();
-    if (onBar(ev)) {
+    if (onBar(event)) {
       ghost.remove();
-      return entity.pin!(indexAmong(hotbarSlots(), "x", ev));
+      return entity.pin!(indexAmong(hotbarSlots(), "x", event));
     }
     if (target?.tokenId && target.tokenCenter && target.characterId && entity.give) {
       return sendGhostToToken(ghost, target.tokenCenter, () =>
-        dropOn(canvas, target, entity, ev.clientX, ev.clientY),
+        dropOn(canvas, target, entity, event.clientX, event.clientY),
       );
     }
     ghost.remove();
-    if (target) dropOn(canvas, target, entity, ev.clientX, ev.clientY);
+    if (target) dropOn(canvas, target, entity, event.clientX, event.clientY);
   }
 
   followPress(e, THRESHOLD, { lift, move, end });

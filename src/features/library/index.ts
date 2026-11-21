@@ -2,7 +2,7 @@ import Fuse, { type IFuseOptions } from "fuse.js";
 import { plainText } from "../../data/richText";
 import { store } from "../../lib/store";
 import type { EntryKind } from "../../ui/entryIcons";
-export type { EntryKind };
+
 import type {
   ActionDef,
   ChoiceDef,
@@ -79,14 +79,14 @@ export const KIND_LABEL: Record<EntryKind, string> = {
   tag: "Tags",
 };
 
-export const itemEntry = (i: ItemDef): LibraryEntry => ({
+export const itemEntry = (index: ItemDef): LibraryEntry => ({
   kind: "item",
-  id: i.id,
-  name: i.name,
-  text: `${i.description}${i.wealthCost ? `\n\nCost: ${i.wealthCost.tier} (${i.wealthCost.rank})` : ""}`,
-  tags: i.tags,
-  ...(i.icon ? { icon: i.icon } : {}),
-  item: i,
+  id: index.id,
+  name: index.name,
+  text: `${index.description}${index.wealthCost ? `\n\nCost: ${index.wealthCost.tier} (${index.wealthCost.rank})` : ""}`,
+  tags: index.tags,
+  ...(index.icon ? { icon: index.icon } : {}),
+  item: index,
 });
 export const moveEntry = (m: ActionDef): LibraryEntry => ({
   kind: "move",
@@ -142,7 +142,7 @@ function buildSystemLibrary(system: GameSystem): LibrarySource {
       kind: "monster",
       entries: system.monsters.map(monsterEntry),
     });
-  if (system.tags.length) {
+  if (system.tags.length > 0) {
     collections.push({
       id: "tags",
       name: "Tags",
@@ -168,7 +168,7 @@ function buildSystemLibrary(system: GameSystem): LibrarySource {
 
 /** A system's own layout, its ids resolved to entries. */
 function laidOut(system: GameSystem): LibraryCollection[] {
-  const items = new Map(system.items.map((i) => [i.id, i]));
+  const items = new Map(system.items.map((index) => [index.id, index]));
   const moves = new Map(system.actions.map((m) => [m.id, m]));
   /** The entry a node names, if the system has it. */
   const entryOf = (node: LibraryNode): LibraryEntry | undefined => {
@@ -187,12 +187,12 @@ function laidOut(system: GameSystem): LibraryCollection[] {
     if (!base) return [];
     const groups = (node.groups ?? []).flatMap((g) => {
       const entries = g.entries.flatMap(resolve);
-      return entries.length
+      return entries.length > 0
         ? [{ id: g.id, name: g.name, ...(g.note ? { note: g.note } : {}), entries }]
         : [];
     });
     return [
-      { ...base, ...(node.note ? { note: node.note } : {}), ...(groups.length ? { groups } : {}) },
+      { ...base, ...(node.note ? { note: node.note } : {}), ...(groups.length > 0 ? { groups } : {}) },
     ];
   };
   return system.library!.map((c) => ({
@@ -206,7 +206,7 @@ function laidOut(system: GameSystem): LibraryCollection[] {
 /** Each kind listed flat: gear, moves by category, then each choice's options. */
 function flat(system: GameSystem): LibraryCollection[] {
   const collections: LibraryCollection[] = [];
-  if (system.items.length) {
+  if (system.items.length > 0) {
     collections.push({
       id: "items",
       name: "Gear",
@@ -216,7 +216,7 @@ function flat(system: GameSystem): LibraryCollection[] {
   }
   for (const cat of system.actionCategories) {
     const moves = system.actions.filter((m) => m.category === cat.id);
-    if (moves.length)
+    if (moves.length > 0)
       collections.push({
         id: `moves-${cat.id}`,
         name: `${cat.label} moves`,
@@ -228,7 +228,7 @@ function flat(system: GameSystem): LibraryCollection[] {
     ...(system.creation?.choices ?? []),
     ...(system.creation?.feats ? [system.creation.feats] : []),
   ]) {
-    if (c.options.length) collections.push(optionCollection(c));
+    if (c.options.length > 0) collections.push(optionCollection(c));
   }
   return collections;
 }
@@ -343,9 +343,9 @@ export function viewEntries(
         best = Math.min(best, v[1]);
         return [v[0]];
       });
-      return kept.length ? [{ group, entries: kept }] : [];
+      return kept.length > 0 ? [{ group, entries: kept }] : [];
     });
-    return groups.length ? [{ entry: e, groups, reveal: true }, best] : null;
+    return groups.length > 0 ? [{ entry: e, groups, reveal: true }, best] : null;
   };
   return entries
     .flatMap((e) => {
@@ -369,3 +369,5 @@ export function entryByKey(
   if (!source) return undefined;
   return { source, entry: sourceEntries(source).find((e) => libraryKey(source.id, e) === key) };
 }
+
+export {type EntryKind} from "../../ui/entryIcons";

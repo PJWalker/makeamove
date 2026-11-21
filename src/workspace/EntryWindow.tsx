@@ -1,5 +1,4 @@
-import type { PointerEvent as ReactPointerEvent } from "react";
-import type { ReactNode } from "react";
+import type { PointerEvent as ReactPointerEvent , ReactNode } from "react";
 import { useLayoutEffect, useRef, useState } from "react";
 import type { Icon } from "../ui/icons";
 import { ListRow } from "../ui/List";
@@ -50,10 +49,10 @@ export function EntryWindow({
   /** The actions along the bottom. */
   children?: ReactNode | undefined;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const id = windowId ?? entityTabId(`entry:${entryKey}`);
   useLayoutEffect(() => {
-    ctx.windows.register({
+    context.windows.register({
       id,
       title,
       text,
@@ -71,7 +70,7 @@ export function EntryWindow({
       ),
     });
   }, [
-    ctx,
+    context,
     id,
     title,
     text,

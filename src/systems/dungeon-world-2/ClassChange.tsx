@@ -49,7 +49,7 @@ function ClassChangeDialog({
   characterId: string;
   onClose: () => void;
 }) {
-  const ref = usePopupDialog();
+  const reference = usePopupDialog();
   const {
     system,
     character,
@@ -67,11 +67,11 @@ function ClassChangeDialog({
     apply,
   } = useClassChange(campaign, characterId);
   const submit = () => {
-    if (apply()) closePopup(ref.current, onClose);
+    if (apply()) closePopup(reference.current, onClose);
   };
 
   return (
-    <Dialog dialogRef={ref} title={`${character.name}: Change Class`} onClose={onClose}>
+    <Dialog dialogRef={reference} title={`${character.name}: Change Class`} onClose={onClose}>
       <form
         className="creation-form"
         onSubmit={(event) => {
@@ -114,7 +114,7 @@ function ClassChangeDialog({
           <p className="muted">This character has no advancements to reassign.</p>
         )}
         <div className="form-actions">
-          <Button variant="ghost" onClick={() => closePopup(ref.current, onClose)}>
+          <Button variant="ghost" onClick={() => closePopup(reference.current, onClose)}>
             Cancel
           </Button>
           <Button variant="primary" type="submit" disabled={!ready}>
@@ -127,7 +127,7 @@ function ClassChangeDialog({
 }
 
 function useClassChange(campaign: Campaign, characterId: string) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const system = systemOf(campaign);
   const character = getCharacter(campaign, characterId)!;
   const creation = system.creation;
@@ -183,7 +183,7 @@ function useClassChange(campaign: Campaign, characterId: string) {
     classChoice?.options.filter((option) => option.id !== character.data["classId"]) ?? [];
   const apply = () =>
     ready &&
-    ctx.execute(changeClass, {
+    context.execute(changeClass, {
       characterId,
       classId: newClassId,
       scores: stageScores,

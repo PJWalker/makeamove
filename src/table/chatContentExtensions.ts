@@ -3,8 +3,8 @@ import type { CampaignContext } from "../workspace/campaignContext";
 import { linkExtension } from "../workspace/richText";
 import { trackerButtonExtension } from "../workspace/trackerButtons";
 
-export function chatContentExtensions(ctx: CampaignContext) {
-  const { campaign } = ctx;
+export function chatContentExtensions(context: CampaignContext) {
+  const { campaign } = context;
   return [
     StarterKit.configure({
       heading: false,
@@ -21,6 +21,6 @@ export function chatContentExtensions(ctx: CampaignContext) {
       },
     }),
     linkExtension(campaign, { shared: true }),
-    trackerButtonExtension(ctx),
+    trackerButtonExtension(context),
   ];
 }

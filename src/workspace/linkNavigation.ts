@@ -46,15 +46,19 @@ export class LinkNavigation {
   /** Follow a link: open the page, the character's sheet, the scene, or the Libraries. */
   followLink(kind: LinkKind, id: string) {
     switch (kind) {
-      case "note":
+      case "note": {
         return this.openNote(id);
-      case "character":
+      }
+      case "character": {
         return this.openCharacter(id);
-      case "scene":
+      }
+      case "scene": {
         return this.campaign.setActiveScene(id);
+      }
       case "item":
-      case "move":
+      case "move": {
         return this.library.search(kind, linkLabel(this.campaign, kind, id) ?? "");
+      }
     }
   }
 }

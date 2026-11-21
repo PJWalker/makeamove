@@ -7,8 +7,8 @@ import type { RenderState } from "./state";
 import { fontFamily, TEXT_FONTS, type TextStyle } from "../types";
 
 /** The UI accent, oklch(82% 0.15 85), as sRGB for the canvas. */
-export const ACCENT = 0xf0bb3b;
-export const INK = 0x14161c;
+export const ACCENT = 0xF0_BB_3B;
+export const INK = 0x14_16_1C;
 
 /** A scene colour as CSS: its hex without alpha, and its opacity apart. */
 export function cssColour(colour: string | number) {
@@ -46,7 +46,7 @@ export const CANVAS_FONTS = [
 export const TOKEN_NAME: SdfTextOptions = {
   font: cabin(600),
   size: 15,
-  fill: 0xffffff,
+  fill: 0xFF_FF_FF,
   outline: { color: INK, width: 4 },
 };
 
@@ -71,5 +71,5 @@ export const POINTER_ROOM = 16;
 export const drawPointer = (g: Graphics, pointer: Point[], alpha = 1) =>
   g
     .poly(flat(pointer))
-    .fill({ color: 0xffffff, alpha })
+    .fill({ color: 0xFF_FF_FF, alpha })
     .stroke({ color: INK, width: 2, join: "round", alpha });

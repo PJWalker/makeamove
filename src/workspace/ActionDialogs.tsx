@@ -1,4 +1,4 @@
-/* oxlint-disable jsx-a11y/prefer-tag-over-role -- The icon grid is a keyboard-selectable listbox, not a native select. */
+/* eslint-disable jsx-a11y/prefer-tag-over-role -- The icon grid is a keyboard-selectable listbox, not a native select. */
 import { useState } from "react";
 import { actionForCombo, comboOf, shortcuts, showCombo, slotLook } from "./commands/custom";
 import { bindKey, lookOfSlot } from "./commands/campaign";
@@ -21,39 +21,39 @@ import { CommitInput } from "../ui/CommitInput";
  */
 
 export function ActionDialogs({ campaign }: { campaign: Campaign }) {
-  const ctx = useCampaign();
-  const req = useQuery(ctx.table.actionEdit);
-  if (!req) return null;
+  const context = useCampaign();
+  const request = useQuery(context.table.actionEdit);
+  if (!request) return null;
   // A new pop-up for each request, opened as it mounts so the menu item's morph catches it.
-  const props = { key: req.n, campaign, id: req.id, title: req.title };
-  if (req.kind === "rename") return <RenameDialog {...props} />;
-  if (req.kind === "icon") return <IconDialog {...props} />;
-  return <ShortcutDialog {...props} />;
+  const properties = { key: request.n, campaign, id: request.id, title: request.title };
+  if (request.kind === "rename") return <RenameDialog {...properties} />;
+  if (request.kind === "icon") return <IconDialog {...properties} />;
+  return <ShortcutDialog {...properties} />;
 }
 
-interface Props {
+interface Properties {
   campaign: Campaign;
   id: string;
   title: string;
 }
 
 function usePopup() {
-  const ctx = useCampaign();
-  const ref = usePopupDialog();
-  const onClose = () => ctx.table.actionEdit.set(null);
+  const context = useCampaign();
+  const reference = usePopupDialog();
+  const onClose = () => context.table.actionEdit.set(null);
   return {
-    ref,
-    close: () => closePopup(ref.current, onClose),
+    ref: reference,
+    close: () => closePopup(reference.current, onClose),
     onClose,
   };
 }
 
-function RenameDialog({ campaign, id, title }: Props) {
-  const ctx = useCampaign();
+function RenameDialog({ campaign, id, title }: Properties) {
+  const context = useCampaign();
   const { ref, close, onClose } = usePopup();
   const custom = slotLook(campaign, id).label;
   const done = (label: string | undefined) => {
-    ctx.execute(lookOfSlot, { key: id, look: { label: label?.trim() || undefined } });
+    context.execute(lookOfSlot, { key: id, look: { label: label?.trim() || undefined } });
   };
   return (
     <Dialog dialogRef={ref} title="Rename" onClose={onClose}>
@@ -80,7 +80,7 @@ function RenameDialog({ campaign, id, title }: Props) {
               variant="ghost"
               className="form-actions-start"
               onClick={() => {
-                done(undefined);
+                done();
                 close();
               }}
             >
@@ -95,15 +95,15 @@ function RenameDialog({ campaign, id, title }: Props) {
 
 /** Each icon once: some names share one (fighter and longsword). */
 const CHOICES = (Object.keys(ENTRY_ICONS) as EntryIconName[]).filter(
-  (name, i, all) => all.findIndex((n) => ENTRY_ICONS[n] === ENTRY_ICONS[name]) === i,
+  (name, index, all) => all.findIndex((n) => ENTRY_ICONS[n] === ENTRY_ICONS[name]) === index,
 );
 
-function IconDialog({ campaign, id, title }: Props) {
-  const ctx = useCampaign();
+function IconDialog({ campaign, id, title }: Properties) {
+  const context = useCampaign();
   const { ref, close, onClose } = usePopup();
   const current = slotLook(campaign, id).icon;
   const choose = (icon: EntryIconName | undefined) => {
-    ctx.execute(lookOfSlot, { key: id, look: { icon } });
+    context.execute(lookOfSlot, { key: id, look: { icon } });
     close();
   };
   return (
@@ -133,7 +133,7 @@ function IconDialog({ campaign, id, title }: Props) {
           })}
         </div>
         <div className="form-actions">
-          <Button variant="ghost" disabled={!current} onClick={() => choose(undefined)}>
+          <Button variant="ghost" disabled={!current} onClick={() => choose()}>
             Use Its Own Icon
           </Button>
         </div>
@@ -142,18 +142,18 @@ function IconDialog({ campaign, id, title }: Props) {
   );
 }
 
-function ShortcutDialog({ campaign, id, title }: Props) {
-  const ctx = useCampaign();
+function ShortcutDialog({ campaign, id, title }: Properties) {
+  const context = useCampaign();
   const { ref, close, onClose } = usePopup();
   const existing = shortcuts(campaign)[id] ?? null;
   const [combo, setCombo] = useState<string | null>(existing);
   const other = combo ? actionForCombo(shortcuts(campaign), combo) : undefined;
   const taken =
     other && other !== id
-      ? (slotLook(campaign, other).label ?? findAction(ctx, other)?.title ?? "another action")
+      ? (slotLook(campaign, other).label ?? findAction(context, other)?.title ?? "another action")
       : null;
   const save = (value: string | null) => {
-    ctx.execute(bindKey, { key: id, combo: value });
+    context.execute(bindKey, { key: id, combo: value });
     close();
   };
   return (

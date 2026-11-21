@@ -61,7 +61,7 @@ export function QuickDice({
           else dice.addPick(pick);
         }}
         onContextMenu={(e) => {
-          if (!pool.length) return;
+          if (pool.length === 0) return;
           e.preventDefault();
           dice.removePick(pick);
         }}

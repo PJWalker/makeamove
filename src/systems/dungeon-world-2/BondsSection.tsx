@@ -80,9 +80,9 @@ export function Dw2Bonds({
                           {move.name}:{" "}
                           {move.starting
                             ? "Starting move"
-                            : advancedMoveIds.has(move.id)
+                            : (advancedMoveIds.has(move.id)
                               ? "Unlocked"
-                              : "Locked"}
+                              : "Locked")}
                         </li>
                       ))}
                     </ul>
@@ -116,7 +116,7 @@ function BondForgeForm({
   eligibleBondmates: ReturnType<typeof characterLinkTargets>;
   bonds: ReturnType<typeof bondsFor>;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const [bondmateId, setBondmateId] = useState("");
   const [bondType, setBondType] = useState("");
   const [bondMoveId, setBondMoveId] = useState("");
@@ -140,7 +140,7 @@ function BondForgeForm({
           character.id,
           bondmateId,
           bondType,
-          (id, xp) => ctx.execute(bumpData, { id, key: "xp", by: xp }),
+          (id, xp) => context.execute(bumpData, { id, key: "xp", by: xp }),
         );
     if (changed) {
       setBondmateId("");

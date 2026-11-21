@@ -49,8 +49,10 @@ const SHAPE_BADGES: Record<ShapeKind, string> = {
 /** Each effect, after its icon in the Effects tool's options. */
 const EFFECT_BADGES: Record<EffectKind, string> = {
   rain: fromIcon(
-    `<path d="M7 15a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 17.6 7.8 3.6 3.6 0 0 1 17.5 15z"/>` +
-      lines("M8 18.5l-1 2.5M12.5 18.5l-1 2.5M17 18.5l-1 2.5", 2.5),
+    `<path d="M7 15a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 17.6 7.8 3.6 3.6 0 0 1 17.5 15z"/>${lines(
+      "M8 18.5l-1 2.5M12.5 18.5l-1 2.5M17 18.5l-1 2.5",
+      2.5,
+    )}`,
   ),
   snow: fromIcon(
     [0, 60, 120]
@@ -67,8 +69,10 @@ const EFFECT_BADGES: Record<EffectKind, string> = {
   ),
   // A wand, starred at its tip.
   magic: fromIcon(
-    lines("M4 20 12.5 11.5", 3) +
-      `<path d="m16.5 2.5 1.3 3.7 3.7 1.3-3.7 1.3-1.3 3.7-1.3-3.7-3.7-1.3 3.7-1.3z"/>`,
+    `${lines(
+      "M4 20 12.5 11.5",
+      3,
+    )}<path d="m16.5 2.5 1.3 3.7 3.7 1.3-3.7 1.3-1.3 3.7-1.3-3.7-3.7-1.3 3.7-1.3z"/>`,
   ),
 };
 
@@ -84,9 +88,9 @@ const BADGES: Partial<Record<ToolId, string>> = {
 /** The Ping tool's radar, aimed from its centre at (16, 16): the toolbar icon's, sweep and all. */
 const RADAR =
   `<circle cx="16" cy="16" r="9.5" fill="none" stroke="currentColor" stroke-width="1.5"/>` +
-  `<circle cx="16" cy="16" r="5" fill="none" stroke="currentColor"/>` +
-  lines("M16 16l7.4-4.3") +
-  `<circle cx="19.5" cy="20" r="1.5"/><circle cx="16" cy="16" r="1.5"/>`;
+  `<circle cx="16" cy="16" r="5" fill="none" stroke="currentColor"/>${lines(
+    "M16 16l7.4-4.3",
+  )}<circle cx="19.5" cy="20" r="1.5"/><circle cx="16" cy="16" r="1.5"/>`;
 
 /** The Draw tool's quill, its tip at (3, 29): the toolbar icon's, a little larger. */
 const QUILL_TRANSFORM = "translate(-2.2 3) scale(1.3)";
@@ -120,8 +124,8 @@ export function toolCursor(tool: ToolId, settings: CursorSettings, mac = IS_MAC)
   const badge =
     tool === "shape"
       ? SHAPE_BADGES[settings.shape]
-      : tool === "effect"
+      : (tool === "effect"
         ? EFFECT_BADGES[settings.effect]
-        : (BADGES[tool] ?? "");
+        : (BADGES[tool] ?? ""));
   return imageCursor(CROSSHAIR + badge, [10, 10], mac);
 }

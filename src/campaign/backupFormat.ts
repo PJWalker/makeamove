@@ -2,15 +2,16 @@ import * as decoding from "lib0/decoding";
 import * as encoding from "lib0/encoding";
 import * as Y from "yjs";
 import { IndexeddbPersistence, storeState } from "y-indexeddb";
-import { chatDbName } from "../features/chat/chatLog";
-import { noteDbName } from "../features/notes/noteDoc";
-import { vaultDbName, vaultGuid, vaultShape } from "../features/notes/vault";
+import { chatDbName as chatDatabaseName } from "../features/chat/chatLog";
+import { noteDbName as noteDatabaseName } from "../features/notes/noteDoc";
+import { vaultDbName as vaultDatabaseName, vaultGuid, vaultShape } from "../features/notes/vault";
 import { rootOf } from "../data/schema";
 import { campaignShape } from "./schema";
 import { getBlob } from "../platform/blobs";
 import type { FileKind } from "../platform/files";
-import { sceneDbName } from "../scene/sceneDoc";
-import { campaignDbName } from "./storage";
+import { sceneDbName as sceneDatabaseName } from "../scene/sceneDoc";
+import { campaignDbName as campaignDatabaseName } from "./storage";
+import { isString } from "../lib/guards";
 
 /*
  * Campaign backups: everything this device holds of a campaign in one file.
@@ -41,7 +42,7 @@ const FORMAT = 1;
 const KINDS = ["campaign", "scene", "note", "chat", "vault", "vault-note"] as const;
 export type BackupDocKind = (typeof KINDS)[number];
 
-export interface BackupDoc {
+export interface BackupDocument {
   kind: BackupDocKind;
   guid: string;
   update: Uint8Array;
@@ -60,7 +61,7 @@ export interface CampaignBackup {
   exportedAt: number;
   /** The device that made it. */
   exportedBy: string;
-  docs: BackupDoc[];
+  docs: BackupDocument[];
   blobs: BackupBlob[];
 }
 
@@ -71,13 +72,13 @@ export interface BackupDevice {
 }
 
 const DB_NAMES: Record<BackupDocKind, (guid: string) => string> = {
-  campaign: campaignDbName,
-  scene: sceneDbName,
-  note: noteDbName,
-  chat: chatDbName,
+  campaign: campaignDatabaseName,
+  scene: sceneDatabaseName,
+  note: noteDatabaseName,
+  chat: chatDatabaseName,
   // The vault's guid is `<campaign>/vault`; its database is named by campaign.
-  vault: (guid) => vaultDbName(guid.slice(0, -"/vault".length)),
-  "vault-note": noteDbName,
+  vault: (guid) => vaultDatabaseName(guid.slice(0, -"/vault".length)),
+  "vault-note": noteDatabaseName,
 };
 
 /** Whether a document may belong to the campaign, so a file can't write into another one. */
@@ -89,34 +90,34 @@ function belongs(campaignId: string, { kind, guid }: { kind: string; guid: strin
 }
 
 /** The subdocuments a root or vault document lists, by kind. */
-export function subdocsOf(kind: BackupDocKind, doc: Y.Doc): { kind: BackupDocKind; doc: Y.Doc }[] {
+export function subdocsOf(kind: BackupDocKind, document: Y.Doc): { kind: BackupDocKind; doc: Y.Doc }[] {
   const docsIn = (entries: { get(key: "doc"): Y.Doc | undefined }[], as: BackupDocKind) =>
     entries.flatMap((entry) => {
       const sub = entry.get("doc");
       return sub ? [{ kind: as, doc: sub }] : [];
     });
   if (kind === "campaign") {
-    const root = rootOf(doc, campaignShape);
+    const root = rootOf(document, campaignShape);
     return [
       ...docsIn(root.scenes.values(), "scene"),
       ...docsIn(root.notes.values(), "note"),
       ...root.chat.toArray().map((chunk) => ({ kind: "chat" as const, doc: chunk })),
     ];
   }
-  if (kind === "vault") return docsIn(rootOf(doc, vaultShape).notes.values(), "vault-note");
+  if (kind === "vault") return docsIn(rootOf(document, vaultShape).notes.values(), "vault-note");
   return [];
 }
 
 /** Load a document as this device stored it. The caller destroys it. */
-async function readStoredDoc(kind: BackupDocKind, guid: string): Promise<Y.Doc> {
-  const doc = new Y.Doc({ guid });
-  const p = new IndexeddbPersistence(DB_NAMES[kind](guid), doc);
+async function readStoredDocument(kind: BackupDocKind, guid: string): Promise<Y.Doc> {
+  const document = new Y.Doc({ guid });
+  const p = new IndexeddbPersistence(DB_NAMES[kind](guid), document);
   await p.whenSynced;
   await p.destroy();
-  return doc;
+  return document;
 }
 
-const isEmpty = (doc: Y.Doc) => doc.store.clients.size === 0;
+const isEmpty = (document: Y.Doc) => document.store.clients.size === 0;
 
 const HASH = /^[0-9a-f]{64}$/;
 
@@ -125,10 +126,10 @@ const HASH = /^[0-9a-f]{64}$/;
  * (map elements, tokens, entity graphics, note image attributes), so this
  * looks at every stored value rather than knowing each one.
  */
-export function blobHashesIn(doc: Y.Doc): Set<string> {
+export function blobHashesIn(document: Y.Doc): Set<string> {
   const found = new Set<string>();
   const visit = (v: unknown) => {
-    if (typeof v === "string") {
+    if (isString(v)) {
       if (HASH.test(v)) found.add(v);
     } else if (Array.isArray(v)) {
       for (const x of v) visit(x);
@@ -136,7 +137,7 @@ export function blobHashesIn(doc: Y.Doc): Set<string> {
       for (const x of Object.values(v)) visit(x);
     }
   };
-  for (const structs of doc.store.clients.values()) {
+  for (const structs of document.store.clients.values()) {
     for (const s of structs) {
       if (!(s instanceof Y.Item) || s.deleted) continue;
       const c = s.content;
@@ -149,15 +150,15 @@ export function blobHashesIn(doc: Y.Doc): Set<string> {
 }
 
 /** One document of a backup, with the images it uses. */
-export interface DocSnapshot extends BackupDoc {
+export interface DocumentSnapshot extends BackupDocument {
   hashes: Set<string>;
 }
 
-const snapshotDoc = (kind: BackupDocKind, doc: Y.Doc): DocSnapshot => ({
+const snapshotDocument = (kind: BackupDocKind, document: Y.Doc): DocumentSnapshot => ({
   kind,
-  guid: doc.guid,
-  update: Y.encodeStateAsUpdate(doc),
-  hashes: blobHashesIn(doc),
+  guid: document.guid,
+  update: Y.encodeStateAsUpdate(document),
+  hashes: blobHashesIn(document),
 });
 
 /**
@@ -170,25 +171,25 @@ export async function snapshotCampaign(
   campaignId: string,
   device: BackupDevice,
   role: string | undefined,
-  reuse: (guid: string) => DocSnapshot | undefined = () => undefined,
-): Promise<DocSnapshot[]> {
-  const out: DocSnapshot[] = [];
-  const visit = async (kind: BackupDocKind, guid: string): Promise<DocSnapshot | undefined> => {
+  reuse: (guid: string) => DocumentSnapshot | undefined = () => {},
+): Promise<DocumentSnapshot[]> {
+  const out: DocumentSnapshot[] = [];
+  const visit = async (kind: BackupDocKind, guid: string): Promise<DocumentSnapshot | undefined> => {
     const kept = reuse(guid);
     if (kept) return kept;
-    const doc = await readStoredDoc(kind, guid);
-    const snapshot = isEmpty(doc) ? undefined : snapshotDoc(kind, doc);
-    doc.destroy();
+    const document = await readStoredDocument(kind, guid);
+    const snapshot = isEmpty(document) ? undefined : snapshotDocument(kind, document);
+    document.destroy();
     return snapshot;
   };
   // A root is always read, to find its subdocuments.
   const walk = async (kind: BackupDocKind, guid: string) => {
-    const root = await readStoredDoc(kind, guid);
-    if (!isEmpty(root)) out.push(reuse(guid) ?? snapshotDoc(kind, root));
+    const root = await readStoredDocument(kind, guid);
+    if (!isEmpty(root)) out.push(reuse(guid) ?? snapshotDocument(kind, root));
     const subdocs = await Promise.all(
       subdocsOf(kind, root).map((sub) => visit(sub.kind, sub.doc.guid)),
     );
-    out.push(...subdocs.filter((doc) => doc !== undefined));
+    out.push(...subdocs.filter((document) => document !== undefined));
     return root;
   };
 
@@ -205,7 +206,7 @@ export async function readBlobs(hashes: Iterable<string>): Promise<BackupBlob[]>
   const out: BackupBlob[] = [];
   const hashList = [...hashes];
   for (let offset = 0; offset < hashList.length; offset += 4) {
-    // oxlint-disable-next-line react-doctor/async-await-in-loop -- Keep blob reads bounded to four at a time.
+    // eslint-disable-next-line react-doctor/async-await-in-loop -- Keep blob reads bounded to four at a time.
     const batch = await Promise.all(
       hashList.slice(offset, offset + 4).map(async (hash): Promise<BackupBlob | null> => {
         const blob = await getBlob(hash);
@@ -220,25 +221,25 @@ export async function readBlobs(hashes: Iterable<string>): Promise<BackupBlob[]>
 }
 
 /** What the campaign's root document says about itself. */
-export function metaOf(docs: BackupDoc[], campaignId: string) {
-  const doc = new Y.Doc();
+export function metaOf(docs: BackupDocument[], campaignId: string) {
+  const document = new Y.Doc();
   const root = docs.find((d) => d.kind === "campaign" && d.guid === campaignId);
-  if (root) Y.applyUpdate(doc, root.update);
-  const meta = rootOf(doc, campaignShape).meta;
+  if (root) Y.applyUpdate(document, root.update);
+  const meta = rootOf(document, campaignShape).meta;
   const out = {
     name: meta.get("name") ?? "Untitled campaign",
     systemId: meta.get("systemId") ?? "",
     roomKey: meta.get("roomKey"),
     createdAt: meta.get("createdAt"),
   };
-  doc.destroy();
+  document.destroy();
   return out;
 }
 
 export function assembleBackup(
   campaignId: string,
   device: BackupDevice,
-  docs: BackupDoc[],
+  docs: BackupDocument[],
   blobs: BackupBlob[],
 ): CampaignBackup {
   const { name, systemId } = metaOf(docs, campaignId);
@@ -304,7 +305,7 @@ export async function decodeBackup(file: Uint8Array): Promise<CampaignBackup> {
     const systemId = decoding.readVarString(d);
     const exportedAt = decoding.readVarUint(d);
     const exportedBy = decoding.readVarString(d);
-    const docs: BackupDoc[] = [];
+    const docs: BackupDocument[] = [];
     for (let n = decoding.readVarUint(d); n > 0; n--) {
       const kind = decoding.readVarString(d) as BackupDocKind;
       const guid = decoding.readVarString(d);
@@ -319,8 +320,8 @@ export async function decodeBackup(file: Uint8Array): Promise<CampaignBackup> {
       blobs.push({ hash, type, data: decoding.readVarUint8Array(d) });
     }
     return { campaignId, name, systemId, exportedAt, exportedBy, docs, blobs };
-  } catch (e) {
-    if (e instanceof BackupFileError) throw e;
+  } catch (error) {
+    if (error instanceof BackupFileError) throw error;
     throw new BackupFileError("That campaign file is damaged.");
   }
 }
@@ -330,9 +331,9 @@ export function backupFileName(name: string, at = new Date()): string {
   const slug =
     name
       .normalize("NFKD")
-      .replace(/[^\w\s-]/g, "")
+      .replaceAll(/[^\w\s-]/g, "")
       .trim()
-      .replace(/\s+/g, "-")
+      .replaceAll(/\s+/g, "-")
       .toLowerCase() || "campaign";
   const day = `${at.getFullYear()}-${String(at.getMonth() + 1).padStart(2, "0")}-${String(at.getDate()).padStart(2, "0")}`;
   return `${slug}-${day}${BACKUP_FILE.extension}`;
@@ -357,11 +358,11 @@ export function claimGm(root: Y.Doc, device: BackupDevice, exportedBy: string) {
 export const isGmBackup = (backup: CampaignBackup) => backup.docs.some((d) => d.kind === "vault");
 
 /** Merge a document into this device's stored copy. */
-export async function mergeStoredDoc(doc: BackupDoc, after?: (doc: Y.Doc) => void) {
-  const stored = new Y.Doc({ guid: doc.guid });
-  const p = new IndexeddbPersistence(DB_NAMES[doc.kind](doc.guid), stored);
+export async function mergeStoredDoc(document: BackupDocument, after?: (document_: Y.Doc) => void) {
+  const stored = new Y.Doc({ guid: document.guid });
+  const p = new IndexeddbPersistence(DB_NAMES[document.kind](document.guid), stored);
   await p.whenSynced;
-  Y.applyUpdate(stored, doc.update);
+  Y.applyUpdate(stored, document.update);
   after?.(stored);
   await storeState(p);
   await p.destroy();

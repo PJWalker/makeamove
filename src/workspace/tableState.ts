@@ -64,10 +64,10 @@ export class TableState {
   }
 
   /** The palette is showing as `el` until the returned function is called. */
-  showingPalette(el: HTMLElement): () => void {
-    this.#palette = el;
+  showingPalette(element: HTMLElement): () => void {
+    this.#palette = element;
     return () => {
-      if (this.#palette === el) this.#palette = null;
+      if (this.#palette === element) this.#palette = null;
     };
   }
 

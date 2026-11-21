@@ -4,11 +4,11 @@ import { createCampaign, settled } from "./e2e-helpers";
 test("hovering a labelled button shows its tooltip and keeps it up", async ({ page }) => {
   await createCampaign(page, "Tooltips");
   await settled(page);
-  await page.getByRole("button", { name: "Campaign menu" }).hover();
+  await page.getByRole("button", { name: "Campaign Menu" }).hover();
 
   const tooltip = page.getByRole("tooltip");
   await expect(tooltip).toBeVisible();
-  await expect(tooltip).toHaveText("Campaign menu");
+  await expect(tooltip).toHaveText("Campaign Menu");
   // It stays while the pointer rests on the button, rather than flashing away.
   await new Promise((resolve) => setTimeout(resolve, 500));
   await expect(tooltip).toBeVisible();

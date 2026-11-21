@@ -60,6 +60,6 @@ export function setCounter(
     campaign.messageState,
     m.id,
     "value",
-    m.max !== undefined ? Math.min(m.max, Math.max(0, value)) : value,
+    m.max === undefined ? value : Math.min(m.max, Math.max(0, value)),
   );
 }

@@ -30,7 +30,7 @@ interface Pickers {
   }): Promise<FileSystemFileHandle>;
 }
 
-const pickers = (): Pickers => (typeof window === "undefined" ? {} : (window as Pickers));
+const pickers = (): Pickers => (globalThis.window === undefined ? {} : (globalThis as Pickers));
 
 /** A file type for the pickers: what it's called and its extension, with the dot. */
 export interface FileKind {
@@ -49,9 +49,9 @@ export async function pickFolder(id?: string): Promise<FileSystemDirectoryHandle
   if (!p.showDirectoryPicker) return null;
   try {
     return await p.showDirectoryPicker({ ...(id && { id }), mode: "readwrite" });
-  } catch (e) {
-    if (isAbort(e)) return null;
-    throw e;
+  } catch (error) {
+    if (isAbort(error)) return null;
+    throw error;
   }
 }
 
@@ -94,9 +94,9 @@ export async function saveFile(
           },
         ],
       });
-    } catch (e) {
-      if (isAbort(e)) return false;
-      throw e;
+    } catch (error) {
+      if (isAbort(error)) return false;
+      throw error;
     }
     const blob = await toBlob();
     const w = await file.createWritable();
@@ -131,9 +131,9 @@ export async function readFileIn(
 ): Promise<File | null> {
   try {
     return await (await dir.getFileHandle(name)).getFile();
-  } catch (e) {
-    if (e instanceof DOMException && e.name === "NotFoundError") return null;
-    throw e;
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "NotFoundError") return null;
+    throw error;
   }
 }
 

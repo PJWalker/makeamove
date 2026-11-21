@@ -1,5 +1,5 @@
 @layer components {
-  /* Dice: solids drawn in 3D (table/diceRenderer.ts), the result written on the face turned to you. */
+  /* Dice: solids drawn in 3D (table/dice/), the result written on the face turned to you. */
   .die {
     /* The roller's colour, set inline. */
     --die-colour: var(--gem-smoky);
@@ -26,21 +26,36 @@
         text-decoration: line-through;
       }
     }
-    /* In the air, or not yet drawn: the slot waits empty. */
-    &:is([data-phase="pending"], [data-phase="flying"]) > * {
-      visibility: hidden;
-    }
   }
-  /* A die's shadow falls further and softer the higher it's lifted off the table. */
-  :is(.die-canvas, .dice-flight) {
+  /*
+   * A die's canvas: in its slot at rest; while it moves, the same canvas is lifted
+   * into the top layer (a manual popover) and carried over the page by transform.
+   * Its shadow falls further and softer the higher it's lifted off the table.
+   */
+  .die-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    overflow: visible;
+    background: none;
     filter: drop-shadow(
       calc(3px + var(--lift, 0) * 2px) calc(5px + var(--lift, 0) * 3px)
         calc(2px + var(--lift, 0) * 2px) oklch(0% 0 0 / 0.3)
     );
-  }
-  .die-canvas {
-    position: absolute;
-    inset: 0;
+    pointer-events: none;
+    &:not(:popover-open) {
+      display: block;
+    }
+    &:popover-open {
+      position: fixed;
+      inset: 0 auto auto 0;
+      width: 64px;
+      height: 64px;
+    }
   }
   .roll-card[data-throwable] {
     touch-action: pan-y;
@@ -93,13 +108,6 @@
       text-align: center;
       white-space: pre-line;
     }
-  }
-  /* Thrown dice cross the window on their way to the chat. */
-  .dice-flight {
-    position: fixed;
-    inset: 0 auto auto 0;
-    z-index: 10001;
-    pointer-events: none;
   }
   /* Without WebGL: the rendered die, tinted to match the roller, with its number overlaid. */
   .die[data-phase="flat"] {

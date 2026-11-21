@@ -342,9 +342,9 @@ test("DW2 End the Session awards group XP from affirmative answers", async ({ pa
   await session
     .getByLabel("Did we learn something new and important about the world or NPCs?")
     .check();
-  await session.getByRole("button", { name: "Award group XP" }).click();
+  await session.getByRole("button", { name: "Award Group XP" }).click();
   await expect(page.getByRole("group", { name: "XP" }).getByRole("textbox")).toHaveValue("2");
-  await expect(session.getByRole("button", { name: "Session ended" })).toBeDisabled();
+  await expect(session.getByRole("button", { name: "Session Ended" })).toBeDisabled();
 });
 
 test("DW2 Make Camp restores HP and is limited to once per session", async ({ page }) => {
@@ -362,7 +362,7 @@ test("DW2 Make Camp restores HP and is limited to once per session", async ({ pa
   const camp = page.getByRole("region", { name: "Make Camp" });
   await camp.getByRole("button", { name: "Finish Making Camp" }).click();
   await expect(hp.getByRole("textbox")).toHaveValue("12");
-  await expect(camp.getByRole("button", { name: "Camp completed" })).toBeDisabled();
+  await expect(camp.getByRole("button", { name: "Camp Completed" })).toBeDisabled();
 });
 
 test("DW2 Comfort or Support applies the comforted PC's Depth choice", async ({ page }) => {
@@ -381,7 +381,7 @@ test("DW2 Comfort or Support applies the comforted PC's Depth choice", async ({ 
   await comfort.getByLabel("Did you explore, change, or reaffirm a Relationship or Bond?").check();
   await comfort.getByLabel("Benefit").selectOption("gain-depth");
   await comfort.getByRole("button", { name: "Resolve Comfort or Support" }).click();
-  await expect(comfort.getByRole("button", { name: "Used this session" })).toBeDisabled();
+  await expect(comfort.getByRole("button", { name: "Used This Session" })).toBeDisabled();
   await page
     .getByRole("region", { name: "Relationships" })
     .getByRole("button", { name: "Ayla" })
@@ -427,7 +427,7 @@ test("DW2 Downtime Train spends Treasure once per period", async ({ page }) => {
   await downtime.getByRole("button", { name: "Begin Downtime" }).click();
   await downtime.getByRole("button", { name: "Train (1 Treasure for 1 XP)" }).click();
   await expect(page.getByRole("group", { name: "XP" }).getByRole("textbox")).toHaveValue("1");
-  await expect(downtime.getByRole("button", { name: "Trained this Downtime" })).toBeDisabled();
+  await expect(downtime.getByRole("button", { name: "Trained This Downtime" })).toBeDisabled();
   await downtime.getByLabel("Shop service").selectOption("repair");
   await downtime.getByLabel("Service tier").selectOption("3");
   await downtime.getByRole("button", { name: "Shop (1 Treasure)" }).click();

@@ -12,9 +12,9 @@ export const levelOf = (data: Record<string, unknown>) =>
 
 /** Make the action with this id as the character, when the system has one. */
 export function useAction({ system, c }: Pick<SectionContext, "system" | "c">) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   return (id: string) => {
     const a = system.actions.find((x) => x.id === id);
-    if (a) ctx.execute(startMove, { characterId: c.id, move: a.id });
+    if (a) context.execute(startMove, { characterId: c.id, move: a.id });
   };
 }

@@ -20,11 +20,11 @@ export const oneOf =
 export const arrayOf =
   <T>(item: Guard<T>): Guard<T[]> =>
   (v): v is T[] =>
-    Array.isArray(v) && v.every(item);
+    Array.isArray(v) && v.every((value) => item(value));
 
 /** A plain object (not an array or null); its fields are the reader's to check. */
-export const isObject = <T extends object>(v: unknown): v is T =>
-  typeof v === "object" && v !== null && !Array.isArray(v);
+export const isObject = <T extends object>(v: unknown, guard?: Guard<T>): v is T =>
+  typeof v === "object" && v !== null && !Array.isArray(v) && (guard === undefined || guard(v));
 
 /** Missing, or passing the guard. */
 export const optional =
@@ -47,4 +47,4 @@ export const objectOf =
 
 /** No parameters: nothing, or an empty object. */
 export const isNothing: Guard<void> = (v): v is void =>
-  v === undefined || v === null || (isObject<object>(v) && !Object.keys(v).length);
+  v === undefined || v === null || (isObject(v) && Object.keys(v).length === 0);
