@@ -123,8 +123,8 @@ export const IconDraw = glyph(
   "draw",
   <>
     <g className="quill">
-      <path d="M21 2.5C13.2 3 8 8.2 7 15.6l1.4 1.4C15.8 16 20.9 10.8 21 2.5z" />
-      <path {...line} d="M8.5 15.5 4 20" />
+      <path {...faint} d="M21 2.5C13.2 3 8 8.2 7 15.6l1.4 1.4C15.8 16 20.9 10.8 21 2.5z" />
+      <path {...line} strokeWidth="1.75" d="M4 20 8.5 15.5Q13.5 10.3 21 2.5" />
     </g>
     <path {...faint} className="stroke" d="M4 20.5h12V22H4z" />
   </>,

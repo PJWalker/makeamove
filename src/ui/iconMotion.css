@@ -49,7 +49,7 @@
   }
   /* The quill draws its line, then lifts back to where it began. */
   [data-icon="draw"][data-playing] :is(.quill, .stroke) {
-    animation-duration: 300ms;
+    animation-duration: 500ms;
   }
   [data-icon="draw"][data-playing] .quill {
     animation-name: icon-draw-across;
