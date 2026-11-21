@@ -68,6 +68,7 @@ function RenameDialog({ campaign, id, title }: Props) {
         <label className="field">
           Show on the hotbar as
           <input
+            name="label"
             value={text}
             // The field is the dialog's one input.
             // react-doctor-disable-next-line react-doctor/no-autofocus
@@ -169,6 +170,7 @@ function ShortcutDialog({ campaign, id, title }: Props) {
         <label className="field">
           Press the keys to use
           <input
+            name="keys"
             className={`input ${RECORDER}`}
             readOnly
             // The field is the dialog's one input.

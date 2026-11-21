@@ -74,7 +74,7 @@ export function ContextMenu({
         {items.map((item, index) => {
           if (item === "divider")
             return (
-              // oxlint-disable-next-line react-doctor/no-array-index-as-key -- Dividers are stateless structural markers.
+              // oxlint-disable-next-line react-doctor/no-array-index-key -- Dividers are stateless structural markers.
               <Separator key={index} className="context-divider" />
             );
           if ("colour" in item) return null;

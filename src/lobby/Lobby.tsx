@@ -1,4 +1,4 @@
-import type { FormEvent, ReactNode } from "react";
+import type { ReactNode, SubmitEvent } from "react";
 import { useId, useLayoutEffect, useRef, useState } from "react";
 import {
   IconAdd,
@@ -304,7 +304,7 @@ function NewCampaignDialog({ onClose }: { onClose: () => void }) {
   const [busy, setBusy] = useState(false);
   const system = listSystems().find((s) => s.id === systemId);
 
-  async function submit(e: FormEvent<HTMLFormElement>) {
+  async function submit(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!name.trim() || !yourName.trim() || !system) return;
     setBusy(true);
@@ -319,6 +319,7 @@ function NewCampaignDialog({ onClose }: { onClose: () => void }) {
         <label className="field">
           Campaign name
           <input
+            name="name"
             value={name}
             onInput={(e) => setName(e.currentTarget.value)}
             placeholder="The Lost Barrows"
@@ -331,7 +332,12 @@ function NewCampaignDialog({ onClose }: { onClose: () => void }) {
         <YourNameField value={yourName} onChange={setYourName} />
         <label className="field">
           System
-          <select value={systemId} onChange={(e) => setSystemId(e.currentTarget.value)} required>
+          <select
+            name="system"
+            value={systemId}
+            onChange={(e) => setSystemId(e.currentTarget.value)}
+            required
+          >
             <option value="" disabled>
               Choose a system
             </option>
@@ -362,7 +368,7 @@ function NewCampaignDialog({ onClose }: { onClose: () => void }) {
 function JoinInviteDialog({ invite }: { invite: NonNullable<typeof pendingInvite.value> }) {
   const [yourName, setYourName] = useState(device.value.name);
 
-  function submit(e: FormEvent<HTMLFormElement>) {
+  function submit(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!yourName.trim()) return;
     setDeviceName(yourName.trim());

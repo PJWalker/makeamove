@@ -5,6 +5,7 @@ import type { TextRequest } from "../scene/gestures/types";
 import { mapTextOutline } from "../scene/render/elementViews";
 import { cssColour, INK, textWeight } from "../scene/render/style";
 import { fontFamily, type TextStyle } from "../scene/types";
+import { useConstant } from "../ui/useConstant";
 import { useQuery } from "../ui/useQuery";
 import { useCampaign } from "../workspace/campaignContext";
 
@@ -84,11 +85,11 @@ export function TextEditor({
 }
 
 function useTextEditor(controller: SceneController, request: TextRequest, onDone: () => void) {
-  const ctx = useCampaign();
+  const { tools } = useCampaign();
   const cam = useQuery(controller.camera);
   useQuery(controller.revision);
-  useQuery(ctx.tools.textStyle);
-  useQuery(ctx.tools.pen);
+  useQuery(tools.textStyle);
+  useQuery(tools.pen);
   const ref = useRef<HTMLDivElement>(null);
   const done = useRef(false);
   const { id } = request;
@@ -99,11 +100,14 @@ function useTextEditor(controller: SceneController, request: TextRequest, onDone
   const at = toScreen(cam, el ?? request.at);
   const host = controller.host.getBoundingClientRect();
   const colour = cssColour(look.colour);
+  // What it held when the editor opened, kept as edits arrive.
+  const startText = useConstant(() => el?.text ?? "");
+  const startStyle = useConstant(() => el && { font: el.font, bold: el.bold, italic: el.italic });
 
   // Its words to start with, the caret at their end, and the map's copy hidden.
   useLayoutEffect(() => {
     const node = ref.current!;
-    node.textContent = el?.text ?? "";
+    node.textContent = startText;
     // Next frame, once the press that opened it has finished moving focus.
     const frame = requestAnimationFrame(() => {
       node.focus();
@@ -115,21 +119,21 @@ function useTextEditor(controller: SceneController, request: TextRequest, onDone
       cancelAnimationFrame(frame);
       show?.();
     };
-  }, []);
+  }, [controller, id, startText]);
 
   // Text being edited takes on the Text tool's style as it changes, starting from its own.
   useEffect(() => {
-    if (!el || !id) return;
-    ctx.tools.setTextStyle({ font: el.font, bold: el.bold, italic: el.italic });
-    return ctx.tools.textStyle.subscribe(() => {
+    if (!startStyle || !id) return;
+    tools.setTextStyle(startStyle);
+    return tools.textStyle.subscribe(() => {
       const now = controller.element(id);
-      const next = ctx.tools.textStyle.value;
+      const next = tools.textStyle.value;
       if (now?.type !== "text") return;
       const changed = (Object.keys(next) as (keyof TextStyle)[]).filter((k) => next[k] !== now[k]);
       if (changed.length)
         controller.setProps([id], Object.fromEntries(changed.map((k) => [k, next[k]])));
     });
-  }, []);
+  }, [tools, controller, id, startStyle]);
 
   /** Put it down, once. */
   const finish = () => {
@@ -140,7 +144,7 @@ function useTextEditor(controller: SceneController, request: TextRequest, onDone
   };
 
   /** Text is styled through the Text tool's style, which text being edited follows. */
-  const restyle = (patch: Partial<TextStyle>) => ctx.tools.setTextStyle(patch);
+  const restyle = (patch: Partial<TextStyle>) => tools.setTextStyle(patch);
 
   return { ref, el, look, scale, at, host, colour, finish, restyle };
 }

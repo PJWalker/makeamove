@@ -51,6 +51,7 @@ export function SearchHighlight({ text, term }: { text: string; term: string }) 
     <>
       {text.split(new RegExp(`(${RegExp.escape(term)})`, "ig")).map((part, i) =>
         part.toLowerCase() === term.toLowerCase() ? (
+          // oxlint-disable-next-line react-doctor/no-array-index-key -- The pieces of fixed text never reorder, and may repeat.
           <mark key={i} className="search-hit">
             {part}
           </mark>

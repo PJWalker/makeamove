@@ -366,6 +366,7 @@ function ConditionForm({
       }}
     >
       <select
+        name="condition"
         aria-label="Condition"
         value={condition}
         onChange={(event) => setCondition(event.currentTarget.value)}
@@ -378,6 +379,7 @@ function ConditionForm({
       </select>
       <label className="combat-form-rounds">
         <input
+          name="rounds"
           type="number"
           min={0}
           max={100}
@@ -387,6 +389,7 @@ function ConditionForm({
         rounds, to the
       </label>
       <select
+        name="tick"
         aria-label="Counted at"
         value={tick}
         onChange={(event) => setTick(event.currentTarget.value as "start" | "end")}
@@ -395,6 +398,7 @@ function ConditionForm({
         <option value="start">start</option>
       </select>
       <select
+        name="of"
         aria-label="Of whose turn"
         value={of}
         onChange={(event) => setOf(event.currentTarget.value)}

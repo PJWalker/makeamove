@@ -304,6 +304,7 @@ function RenameLinkDialog({ req }: { req: NonNullable<LinkPopupState["linkRename
         <label className="field">
           Show this link as
           <input
+            name="text"
             value={text}
             // The popup opens on a click, for this one field.
             // react-doctor-disable-next-line react-doctor/no-autofocus
