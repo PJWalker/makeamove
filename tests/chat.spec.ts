@@ -248,3 +248,70 @@ test("using a move asks for its stat and posts the result to chat", async ({ pag
 
   await expect(page.getByRole("log").getByText(/Defy Danger.*Ayla/)).toBeVisible();
 });
+
+test("dice still settling stay on a roll card that's picked up, and land in it when it's put back", async ({
+  page,
+}) => {
+  await createCampaign(page);
+  await page.getByRole("textbox", { name: "Message" }).fill("/roll 3d6");
+  await page.keyboard.press("Enter");
+  const card = page.locator(".chat-log .roll-card").last();
+  await expect(card).toBeVisible();
+  // While the dice still roll, the card is picked up by its heading and held off to one side,
+  // short of a throw, then put back. (Dispatched in the page: the harness's mouse loses pointer capture.)
+  const held = await card.evaluate(
+    async (element) => {
+      const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+      await new Promise((resolve) => setTimeout(resolve, 900));
+      const head = element.querySelector(".roll-head")!.getBoundingClientRect();
+      const grip = { x: head.left + head.width / 2, y: head.top + head.height / 2 };
+      const pointer = (type: string, x: number, y: number) =>
+        element.dispatchEvent(
+          new PointerEvent(type, {
+            pointerId: 1,
+            pointerType: "mouse",
+            isPrimary: true,
+            button: 0,
+            buttons: type === "pointerup" ? 0 : 1,
+            clientX: x,
+            clientY: y,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+      pointer("pointerdown", grip.x, grip.y);
+      for (let step = 1; step <= 4; step++) {
+        pointer("pointermove", grip.x - 15 * step, grip.y - 10 * step);
+        await frame();
+      }
+      const carrier = document.querySelector(".throw-carrier")!.getBoundingClientRect();
+      let moving = 0;
+      let offCopy = 0;
+      const until = performance.now() + 500;
+      while (performance.now() < until) {
+        await frame();
+        for (const canvas of document.querySelectorAll(".die-canvas:popover-open")) {
+          const box = canvas.getBoundingClientRect();
+          const [x, y] = [box.left + box.width / 2, box.top + box.height / 2];
+          moving++;
+          if (x < carrier.left || x > carrier.right || y < carrier.top || y > carrier.bottom)
+            offCopy++;
+        }
+      }
+      pointer("pointermove", grip.x, grip.y);
+      pointer("pointerup", grip.x, grip.y);
+      return { moving, offCopy };
+    },
+  );
+  expect(held.moving).toBeGreaterThan(0);
+  expect(held.offCopy).toBe(0);
+  await expect(card.locator('.die[data-phase="landed"]')).toHaveCount(3);
+  const offsets = await card.evaluate((element) =>
+    [...element.querySelectorAll(".die")].map((die) => {
+      const slot = die.getBoundingClientRect();
+      const canvas = die.querySelector("canvas")!.getBoundingClientRect();
+      return Math.hypot(slot.left - canvas.left, slot.top - canvas.top);
+    }),
+  );
+  expect(offsets.every((offset) => offset < 1)).toBe(true);
+}, 30000);

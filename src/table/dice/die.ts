@@ -141,6 +141,7 @@ export class Die {
         resolve();
       };
       this.motion = { stop };
+      let shown = false;
       const tick = (now: number) => {
         start ??= now;
         const ms = now - start;
@@ -152,6 +153,9 @@ export class Die {
           if (this.carriedIn) this.carriedIn.style.visibility = "hidden";
           this.place(pose);
           this.draw(pose.rotation);
+          // However long its first frame took to draw (the renderer may have just started), the motion plays out from there.
+          if (!shown) start += performance.now() - now;
+          shown = true;
         }
         frame = requestAnimationFrame(tick);
       };
