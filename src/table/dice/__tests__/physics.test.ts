@@ -264,4 +264,56 @@ describe("a die coming to rest", () => {
       expect(rest.z).toBeGreaterThan(0);
     }
   });
+
+  describe("a reroll among dice left lying", () => {
+    it("knocks a heavy die about without turning it to another face, and leaves it in its slot", () => {
+      const lying = { x: 0.2, y: -0.4, z: 0.1, w: 0.89 };
+      const length = Math.hypot(lying.x, lying.y, lying.z, lying.w);
+      const rotation = {
+        x: lying.x / length,
+        y: lying.y / length,
+        z: lying.z / length,
+        w: lying.w / length,
+      };
+      const flight = new DiceFlight(tray, [
+        {
+          hull: cube,
+          seed: "rolled",
+          target: { x: 2, y: 3 },
+          state: {
+            position: [2, -3, 0.65],
+            quaternion: { x: 0, y: 0, z: 0, w: 1 },
+            velocity: [14, 0, 0],
+            angularVelocity: [0, 0, 0],
+          },
+        },
+        {
+          hull: cube,
+          seed: "left",
+          heavy: true,
+          target: { x: 4, y: 3 },
+          state: {
+            position: [4, -3, 1.2],
+            quaternion: rotation,
+            velocity: [0, 0, 0],
+            angularVelocity: [0, 0, 0],
+          },
+        },
+      ]);
+      let impact = 0;
+      let done = false;
+      for (let step = 0; step < 3600 && !done; step++) {
+        done = flight.step();
+        impact = Math.max(impact, flight.poses()[1]!.impact ?? 0);
+        const { quaternion } = flight.poses()[1]!;
+        for (const axis of ["x", "y", "z", "w"] as const)
+          expect(quaternion[axis]).toBeCloseTo(rotation[axis], 6);
+      }
+      expect(done).toBe(true);
+      expect(impact).toBeGreaterThan(0.5);
+      const rest = flight.poses()[1]!;
+      expect(rest.x).toBeCloseTo(4, 6);
+      expect(rest.y).toBeCloseTo(3, 6);
+    });
+  });
 });
