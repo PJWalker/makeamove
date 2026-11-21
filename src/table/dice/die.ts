@@ -172,6 +172,9 @@ export class Die {
    */
   carry(copy: HTMLCanvasElement): () => void {
     this.carriedIn = copy;
+    // The copy was made of the canvas as it was, wherever it had been carried to.
+    copy.style.removeProperty("transform");
+    copy.style.removeProperty("--lift");
     if (this.moving) copy.style.visibility = "hidden";
     return () => {
       if (this.carriedIn === copy) this.carriedIn = undefined;

@@ -12,7 +12,7 @@ import { Button } from "../ui/Button";
 import { DamageTargets, SaveRequests, TargetRolls } from "./CardParts";
 import { poolFormula, type TrayPick } from "../features/dice/pool";
 import { PendingDie, RollChip, RollDie } from "./RollDie";
-import { rollCarriedDice } from "./rollDieHelpers";
+import { carryDice, rollCarriedDice } from "./rollDieHelpers";
 import { colourOf } from "../scene/presence";
 import { canWork } from "../features/chat/types";
 import { readRollState } from "../features/chat/rollState";
@@ -180,6 +180,7 @@ function useThrowableRoll(
   const gesture = useThrow({
     onThrow: interaction.rerollAll,
     onAway: rollCarriedDice,
+    onLift: carryDice,
     enabled: canThrow,
     ignoreControls: true,
   });
@@ -262,10 +263,8 @@ function RollTerms({
   return (
     <div className="roll-terms">
       {roll.terms.map((t, index) => {
-        const key =
-          t.kind === "flat"
-            ? (seeds[index]?.[0] ?? `${t.sign}:${t.value}:${t.label ?? ""}`)
-            : (seeds[index]?.join(":") ?? `${t.sign}:${t.label ?? ""}:${t.dice.length}`);
+        // A term keeps its place as its dice are rerolled: each die is keyed by its own seed.
+        const key = `${t.kind}:${index}`;
         return (
           <span key={key} className="roll-term">
             {/* A chip shows its own sign. */}
@@ -274,6 +273,7 @@ function RollTerms({
             )}
             {t.kind === "flat" ? (
               <RollChip
+                key={seeds[index]?.[0] ?? `flat:${index}`}
                 value={t.sign * t.value}
                 label={t.label}
                 index={index}

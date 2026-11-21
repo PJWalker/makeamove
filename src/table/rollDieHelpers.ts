@@ -34,6 +34,14 @@ function carriedDice(element: HTMLElement, carrier: HTMLElement) {
   });
 }
 
+/** Keeps the dice still moving in `element` on its carried copy `carrier`; the returned function lets them go. */
+export function carryDice(element: HTMLElement, carrier: HTMLElement) {
+  const releases = carriedDice(element, carrier).map(({ die, copy }) => die.carry(copy));
+  return () => {
+    for (const release of releases) release();
+  };
+}
+
 /** Tumbles the dice at rest in a carried copy of `element`; the returned function settles them back. */
 export function rollCarriedDice(element: HTMLElement, carrier: HTMLElement) {
   const settles = carriedDice(element, carrier).flatMap(({ die, copy }) =>

@@ -15,6 +15,8 @@ export interface ThrowOptions {
    * picked up; returns what to do when it comes back, or is let go.
    */
   onAway?: ((element: HTMLElement, carrier: HTMLElement) => () => void) | undefined;
+  /** Called as the copy is picked up; returns what to do when it's let go. */
+  onLift?: ((element: HTMLElement, carrier: HTMLElement) => () => void) | undefined;
 }
 
 /** Inherited text styles a lifted copy loses when it leaves its panel. */
@@ -79,6 +81,7 @@ export function useThrow({
   ignoreControls = false,
   onTap,
   onAway,
+  onLift,
 }: ThrowOptions) {
   const actor = useRef<ReturnType<typeof createActor<typeof throwMachine>> | null>(null);
   if (actor.current === null) actor.current = createActor(throwMachine);
@@ -135,7 +138,12 @@ export function useThrow({
       const element = event.currentTarget;
       element.setPointerCapture(event.pointerId);
       element.focus({ preventScroll: true });
-      const { carrier, drop } = lift(element);
+      const { carrier, drop: dropCopy } = lift(element);
+      const letGo = onLift?.(element, carrier);
+      const drop = () => {
+        letGo?.();
+        dropCopy();
+      };
       actorInstance.send({ type: "GRAB" });
       gesture.current = {
         pointer: event.pointerId,

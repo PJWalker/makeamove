@@ -63,8 +63,21 @@ for (const width of [1280, 390]) {
           const restingSizes: number[] = [];
           let original: HTMLCanvasElement | null = null;
           let sameCanvas = true;
-          let wasLifted = false;
+          /** Where a lifted canvas is carried to, from the transform the die sets on it. */
+          const carriedTo = (transform: string): Point | undefined => {
+            const match = /translate\(([-\d.]+)px, ([-\d.]+)px\)/.exec(transform);
+            return match ? { x: Number(match[1]) + 32, y: Number(match[2]) + 32 } : undefined;
+          };
+          // Read in step with the die: as it moves its canvas, not a frame later.
+          let watched: HTMLCanvasElement | null = null;
           let last: Point | undefined;
+          const moves = new MutationObserver(() => {
+            const at = carriedTo(watched!.style.transform);
+            const slot = centre(watched!.parentElement!);
+            if (at && !last) lifts.push({ at, slot });
+            if (!at && last) lowers.push({ at: last, slot });
+            last = at;
+          });
           let started = false;
           let gaps = 0;
           let doubles = 0;
@@ -75,14 +88,13 @@ for (const width of [1280, 390]) {
             if (canvas) {
               original ??= canvas;
               sameCanvas &&= original === canvas;
+              if (!watched) {
+                watched = canvas;
+                moves.observe(canvas, { attributes: true, attributeFilter: ["style"] });
+              }
               const lifted = canvas.matches(":popover-open");
-              const slot = centre(canvas.parentElement!);
-              if (lifted && !wasLifted) lifts.push({ at: centre(canvas), slot });
-              if (!lifted && wasLifted) lowers.push({ at: last!, slot });
-              if (lifted) last = centre(canvas);
-              else if (drawn(canvas)) restingSizes.push(canvas.getBoundingClientRect().width);
+              if (!lifted && drawn(canvas)) restingSizes.push(canvas.getBoundingClientRect().width);
               if (lifted && drawn(canvas)) colourful ||= coloured(canvas);
-              wasLifted = lifted;
             }
             const visible = [
               ...document.querySelectorAll<HTMLCanvasElement>(".die-canvas"),
@@ -92,6 +104,7 @@ for (const width of [1280, 390]) {
             if (visible.length > 1) doubles++;
             const posted = document.querySelector(".chat-log .roll-card:not([data-quick-roll-active])");
             if ((original && !canvas && posted) || performance.now() > deadline) {
+              moves.disconnect();
               resolve({ lifts, lowers, sameCanvas, gaps, doubles, restingSizes, colourful });
             } else requestAnimationFrame(sample);
           };
@@ -100,7 +113,6 @@ for (const width of [1280, 390]) {
     );
     await page.mouse.click(pointer.x, pointer.y);
     const result = await observed;
-    console.log("DICE", JSON.stringify({ ...result, restingSizes: [...new Set(result.restingSizes)], pointer }));
     const near = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y) < 2;
     expect(result.sameCanvas).toBe(true);
     // Carried in from the pointer, then rolled from where it lay in its slot.
