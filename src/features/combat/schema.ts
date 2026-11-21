@@ -1,4 +1,4 @@
-import { isNumber, isObject, isString } from "../../data/guards";
+import { isNumber, isObject, isString } from "../../lib/guards";
 import { collection, lww, record, type Root } from "../../data/schema";
 
 /** Someone in the fight. */

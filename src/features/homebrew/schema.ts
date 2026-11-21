@@ -1,4 +1,4 @@
-import { isObject } from "../../data/guards";
+import { isObject } from "../../lib/guards";
 import { collection, lww, type Item } from "../../data/schema";
 import type { ActionDef, ItemDef } from "../../systems/types";
 

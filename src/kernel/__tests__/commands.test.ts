@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 import * as Y from "yjs";
-import { isNothing, isNumber, objectOf } from "../../data/guards";
+import { isNothing, isNumber, objectOf } from "../../lib/guards";
 import { undoStack } from "../../data/undo";
 import { callKey, CommandRegistry, GM_ONLY, type Command, type CommandHost } from "../commands";
 import { UndoHistory } from "../undo";

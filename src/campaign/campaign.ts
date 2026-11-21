@@ -40,6 +40,7 @@ import {
   updateScene,
 } from "./sceneIndex";
 import type { CampaignDefaults, MemberView, RevokedView, Role, SceneView } from "./types";
+import { deleteData } from "../platform/dataEpoch";
 export type { CampaignDefaults, MemberView, RevokedView, Role, SceneView } from "./types";
 
 /* An open campaign: its root document (laid out in schema.ts), sync and services. */
@@ -561,7 +562,7 @@ async function clearStoredDoc(dbName: string, clear: (doc: Y.Doc) => void | Prom
 function deleteVault(id: string) {
   return clearStoredDoc(vaultDbName(id), (doc) => {
     for (const noteId of rootOf(doc, vaultShape).notes.keys())
-      indexedDB.deleteDatabase(noteDbName(vaultNoteGuid(id, noteId)));
+      deleteData(noteDbName(vaultNoteGuid(id, noteId)));
   });
 }
 
@@ -570,13 +571,11 @@ export async function deleteLocalCampaign(id: string) {
   for (const c of open) if (c.id === id) c.destroy();
   await clearStoredDoc(campaignDbName(id), async (doc) => {
     const root = rootOf(doc, campaignShape);
-    for (const sceneId of root.scenes.keys())
-      indexedDB.deleteDatabase(sceneDbName(sceneGuid(id, sceneId)));
-    for (const noteId of root.notes.keys())
-      indexedDB.deleteDatabase(noteDbName(noteGuid(id, noteId)));
+    for (const sceneId of root.scenes.keys()) deleteData(sceneDbName(sceneGuid(id, sceneId)));
+    for (const noteId of root.notes.keys()) deleteData(noteDbName(noteGuid(id, noteId)));
     await deleteVault(id);
     await deleteNoteTextIndex(id);
-    indexedDB.deleteDatabase(campaignUiDbName(id));
+    deleteData(campaignUiDbName(id));
     deleteChatData(root.chat);
   });
   forgetCampaign(id);

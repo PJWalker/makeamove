@@ -4,6 +4,12 @@ import { IconLayoutSingle, IconLayoutSplit } from "./icons";
 import { getStorageJson, setStorageJson } from "../platform/localStorage";
 import { useQuery } from "./useQuery";
 import type { PaneLayout, PaneLayoutMode } from "./TwoPane";
+import { isNumber, objectOf, oneOf, optional } from "../lib/guards";
+
+const isSavedPaneLayout = objectOf({
+  w: optional(isNumber),
+  layout: optional(oneOf<PaneLayoutMode[]>("split", "stack")),
+});
 
 const DEFAULT_LIST_W = 200;
 
@@ -50,7 +56,7 @@ function toggleLabel(split: boolean, narrow: boolean, names: { list: string; det
  */
 export function createPaneLayout(key: string, names: { list: string; detail: string }): PaneLayout {
   const storeKey = `makeamove.${key}`;
-  const saved = getStorageJson<{ w?: number; layout?: PaneLayoutMode }>(storeKey, {});
+  const saved = getStorageJson(storeKey, isSavedPaneLayout, {});
   const listWidth = store(saved.w ?? DEFAULT_LIST_W);
   const chosen = store<PaneLayoutMode>(saved.layout ?? "split");
   const tooNarrow = store(false);

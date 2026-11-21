@@ -1,4 +1,4 @@
-import { isNothing, isString, objectOf } from "../../data/guards";
+import { isNothing, isString, objectOf } from "../../lib/guards";
 import { characterCommand } from "../../workspace/commands/characters";
 import { command } from "../../workspace/commands/types";
 import {

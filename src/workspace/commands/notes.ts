@@ -13,7 +13,7 @@ import {
   touchNote,
 } from "../../features/notes/api";
 import type { LinkRef } from "../../features/notes/links";
-import { arrayOf, isNothing, isString, objectOf, optional } from "../../data/guards";
+import { arrayOf, isNothing, isString, objectOf, optional } from "../../lib/guards";
 import {
   IconDelete,
   IconFolder,

@@ -1,6 +1,6 @@
 import * as Y from "yjs";
 import { IndexeddbPersistence } from "y-indexeddb";
-import { isObject } from "./guards";
+import { isObject, type Guard } from "../lib/guards";
 import { collection, lww, rootOf } from "./schema";
 import { store, type ReadonlyStore, type Store } from "../lib/store";
 
@@ -94,5 +94,33 @@ export function settingsOver<T extends object>(defaults: T, name: string) {
       if (v !== undefined && typeof v === typeof defaults[k]) out[k] = v;
     }
     return out;
+  };
+}
+
+/** Read a stored list, leaving out the items that aren't a T. */
+export function listOf<T>(is: Guard<T>, name: string, fallback: T[] = []) {
+  return (stored: unknown): T[] => {
+    if (stored === undefined) return fallback;
+    if (!Array.isArray(stored)) {
+      console.warn(`Ignoring stored ${name}: not a list`, stored);
+      return fallback;
+    }
+    const items = stored.filter(is);
+    if (items.length < stored.length)
+      console.warn(
+        `Leaving out stored ${name} that can't be read`,
+        stored.filter((v) => !is(v)),
+      );
+    return items;
+  };
+}
+
+/** Read one of `options` as stored, or `fallback`. */
+export function choiceOf<const T extends string>(options: readonly T[], fallback: T, name: string) {
+  return (stored: unknown): T => {
+    if (stored === undefined) return fallback;
+    if (options.includes(stored as T)) return stored as T;
+    console.warn(`Ignoring stored ${name}: unknown`, stored);
+    return fallback;
   };
 }

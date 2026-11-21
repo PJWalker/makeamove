@@ -1,4 +1,4 @@
-import { arrayOf, isNumber, isString } from "../../data/guards";
+import { arrayOf, isNumber, isString } from "../../lib/guards";
 import { lww, record, subdoc } from "../../data/schema";
 import type { LinkRef } from "./links";
 

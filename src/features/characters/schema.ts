@@ -1,4 +1,4 @@
-import { arrayOf, isObject, isString, oneOf } from "../../data/guards";
+import { arrayOf, isObject, isString, oneOf } from "../../lib/guards";
 import { collection, lww, record, text } from "../../data/schema";
 import { systemCharacterData } from "../../systems/schema";
 import { TOKEN_STYLES } from "../../scene/types";

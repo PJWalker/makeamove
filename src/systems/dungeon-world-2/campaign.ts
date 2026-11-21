@@ -1,4 +1,4 @@
-import { isNumber } from "../../data/guards";
+import { isNumber } from "../../lib/guards";
 import type { Campaign } from "../../campaign/campaign";
 import { contentFromText } from "../../features/chat/content";
 import { postText } from "../../features/chat/send";

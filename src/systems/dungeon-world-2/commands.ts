@@ -7,7 +7,7 @@ import {
   objectOf,
   oneOf,
   optional,
-} from "../../data/guards";
+} from "../../lib/guards";
 import type { DataValue } from "../../data/types";
 import { actingCharacterId, getCharacter } from "../../features/characters/api";
 import { characterCommand, useItem } from "../../workspace/commands/characters";

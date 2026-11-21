@@ -47,7 +47,7 @@ import {
   objectOf,
   oneOf,
   optional,
-} from "../../data/guards";
+} from "../../lib/guards";
 import type { Availability } from "../../kernel/commands";
 import { device } from "../../platform/device";
 import { IconDelete, IconDice, IconPin, IconRename } from "../../ui/icons";

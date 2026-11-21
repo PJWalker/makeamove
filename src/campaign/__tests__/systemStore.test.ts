@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import * as Y from "yjs";
-import { isNumber } from "../../data/guards";
+import { isNumber } from "../../lib/guards";
 import { rootOf } from "../../data/schema";
 import { campaignShape } from "../schema";
 import { pairKey, SystemData } from "../systemStore";

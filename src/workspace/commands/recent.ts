@@ -1,15 +1,10 @@
-import type { LocalDoc, LocalValue } from "../../data/localDoc";
+import { listOf, type LocalDoc, type LocalValue } from "../../data/localDoc";
+import { isString } from "../../lib/guards";
 
 const MAX = 12;
 
-function read(stored: unknown): string[] {
-  if (stored === undefined) return [];
-  if (!Array.isArray(stored)) {
-    console.warn("Ignoring stored recent actions: not a list", stored);
-    return [];
-  }
-  return stored.filter((x): x is string => typeof x === "string").slice(0, MAX);
-}
+const readList = listOf(isString, "recent actions");
+const read = (stored: unknown) => readList(stored).slice(0, MAX);
 
 /** Recently run actions, newest first, remembered in the campaign's local document. */
 export class RecentActions {

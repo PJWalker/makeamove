@@ -1,4 +1,5 @@
 import * as Y from "yjs";
+import type { Guard } from "../lib/guards";
 
 /*
  * The typed data layer (design.md#documents). Shared state is declared once,
@@ -21,9 +22,6 @@ import * as Y from "yjs";
  */
 
 // Fields
-
-/** Whether a stored value is a T. */
-export type Guard<T> = (value: unknown) => value is T;
 
 const NO_VALUE: unique symbol = Symbol("no value");
 

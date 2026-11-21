@@ -4,7 +4,7 @@ import { IndexeddbPersistence } from "y-indexeddb";
 import { HybridClock } from "../../lib/hlc";
 import { newId } from "../../lib/ids";
 import { compareCodeUnits } from "../../lib/order";
-import { dataName } from "../../platform/dataEpoch";
+import { dataName, deleteData } from "../../platform/dataEpoch";
 import { device } from "../../platform/device";
 import { colourOf } from "../../scene/presence";
 import { list, rootOf, type List } from "../../data/schema";
@@ -29,7 +29,7 @@ export const chatDbName = (guid: string) => dataName("chat", guid);
 
 /** Remove this device's copy of every chunk listed in a campaign's chat log. */
 export function deleteChatData(chunks: List<Y.Doc>) {
-  for (const chunk of chunks.toArray()) indexedDB.deleteDatabase(chatDbName(chunk.guid));
+  for (const chunk of chunks.toArray()) deleteData(chatDbName(chunk.guid));
 }
 
 /** A chunk of the log: up to CHUNK_SIZE messages, in the order they were posted. */

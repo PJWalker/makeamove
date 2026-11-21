@@ -1,4 +1,4 @@
-import { arrayOf, isBoolean, isNumber, isObject, isString, oneOf } from "../data/guards";
+import { arrayOf, isBoolean, isNumber, isObject, isString, oneOf } from "../lib/guards";
 import { Invalid, collection, lww, record, variant, type Item, type Shape } from "../data/schema";
 import type { BlobRef, EntityGraphic, EntityGraphicRef } from "../media/images";
 import { DEFAULT_GRID } from "./grid";

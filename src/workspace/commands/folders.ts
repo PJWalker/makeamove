@@ -1,5 +1,5 @@
 import { UNTITLED_FOLDER } from "../../campaign/folders";
-import { isString, objectOf, optional } from "../../data/guards";
+import { isString, objectOf, optional } from "../../lib/guards";
 import type { Permission } from "../../kernel/commands";
 import { IconDelete } from "../../ui/icons";
 import type { CampaignContext } from "../campaignContext";

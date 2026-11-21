@@ -30,7 +30,7 @@ import {
   isString,
   objectOf,
   optional,
-} from "../../data/guards";
+} from "../../lib/guards";
 import { GM_ONLY, type Availability } from "../../kernel/commands";
 import { IconCombat } from "../../ui/icons";
 import type { CampaignContext } from "../campaignContext";

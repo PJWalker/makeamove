@@ -1,4 +1,5 @@
-import type { Guard, Observable } from "../data/schema";
+import type { Observable } from "../data/schema";
+import type { Guard } from "../lib/guards";
 import type { DataValue } from "../data/types";
 import type { CampaignRoot } from "./schema";
 

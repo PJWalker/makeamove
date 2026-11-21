@@ -1,4 +1,4 @@
-import type { Guard } from "../data/schema";
+import type { Guard } from "../lib/guards";
 import type { UndoStack } from "../data/undo";
 import type { UndoHistory } from "./undo";
 

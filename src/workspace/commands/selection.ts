@@ -1,5 +1,5 @@
-import { arrayOf, isObject, isString, objectOf } from "../../data/guards";
-import type { Guard } from "../../data/schema";
+import { arrayOf, isObject, isString, objectOf } from "../../lib/guards";
+import type { Guard } from "../../lib/guards";
 import type { SceneElement } from "../../scene/types";
 import {
   IconAdd,

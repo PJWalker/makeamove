@@ -15,6 +15,7 @@ import Fuse from "fuse.js";
 import type { LinkRef } from "./links";
 import { NoteTextIndex, type NoteNode, type TextMatch } from "./textIndex";
 import { vaultNoteGuid } from "./vault";
+import { deleteData } from "../../platform/dataEpoch";
 
 /*
  * Notes: pages of rich text filed in folders. The index (titles, folders,
@@ -254,7 +255,7 @@ export function deleteNote(campaign: Campaign, id: string) {
   at.map.delete(id);
   void noteTextIndex(campaign).then((index) => index.delete(id));
   // This device's copy of the text; peers that have it keep theirs.
-  indexedDB.deleteDatabase(noteDbName(guidOf(campaign, id, at.gmOnly)));
+  deleteData(noteDbName(guidOf(campaign, id, at.gmOnly)));
 }
 
 /**
@@ -282,7 +283,7 @@ export async function revealNote(campaign: Campaign, id: string) {
 
   campaign.notes.set(id, { ...m.read(), doc: to });
   vault.notes.delete(id);
-  indexedDB.deleteDatabase(noteDbName(vaultNoteGuid(campaign.id, id)));
+  deleteData(noteDbName(vaultNoteGuid(campaign.id, id)));
   // Let the stored copy settle before letting go of it.
   setTimeout(() => void save.destroy(), 1000);
 }

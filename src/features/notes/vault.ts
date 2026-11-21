@@ -1,6 +1,6 @@
 import * as Y from "yjs";
 import { IndexeddbPersistence } from "y-indexeddb";
-import { isString } from "../../data/guards";
+import { isString } from "../../lib/guards";
 import { collection, lww, record, rootOf, text, type Root } from "../../data/schema";
 import { newSecret } from "../../lib/ids";
 import { noteEntry } from "./schema";

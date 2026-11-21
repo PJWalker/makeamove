@@ -1,4 +1,4 @@
-import { isNumber } from "../data/guards";
+import { isNumber } from "../lib/guards";
 import { collection, counter, lww, record, type Item } from "../data/schema";
 import type { DataValue } from "../data/types";
 

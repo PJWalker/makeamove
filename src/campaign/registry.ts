@@ -2,7 +2,7 @@ import { store } from "../lib/store";
 import * as Y from "yjs";
 import { IndexeddbPersistence } from "y-indexeddb";
 import { dataName } from "../platform/dataEpoch";
-import { isObject } from "../data/guards";
+import { isObject } from "../lib/guards";
 import { collection, lww, rootOf } from "../data/schema";
 
 /**

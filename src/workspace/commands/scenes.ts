@@ -6,7 +6,7 @@ import {
   renameSceneFolder,
 } from "../../campaign/sceneFolders";
 import type { SceneView } from "../../campaign/types";
-import { isObject, isString, objectOf, optional } from "../../data/guards";
+import { isObject, isString, objectOf, optional } from "../../lib/guards";
 import type { Grid } from "../../scene/grid";
 import type { SceneLighting } from "../../scene/sceneDoc";
 import { IconAdd, IconDelete, IconFolder, IconMap, IconMembers } from "../../ui/icons";

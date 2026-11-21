@@ -1,5 +1,6 @@
 import { store } from "../lib/store";
-import { settingsOver, type LocalDoc, type LocalValue } from "../data/localDoc";
+import { choiceOf, listOf, settingsOver, type LocalDoc, type LocalValue } from "../data/localDoc";
+import { oneOf } from "../lib/guards";
 import {
   EFFECTS,
   SHAPES,
@@ -13,18 +14,21 @@ import {
   TEXT_FONTS,
 } from "./types";
 
-export type ToolId =
-  | "select"
-  | "pan"
-  | "draw"
-  | "erase"
-  | "shape"
-  | "text"
-  | "ruler"
-  | "ping"
-  | "wall"
-  | "light"
-  | "effect";
+export const TOOL_IDS = [
+  "select",
+  "pan",
+  "draw",
+  "erase",
+  "shape",
+  "text",
+  "ruler",
+  "ping",
+  "wall",
+  "light",
+  "effect",
+] as const;
+
+export type ToolId = (typeof TOOL_IDS)[number];
 
 /** The range of pen widths, in screen px. */
 export const PEN_WIDTH_RANGE = { min: 1, max: 24 } as const;
@@ -80,16 +84,6 @@ const SELECT_KINDS: readonly SelectKind[] = [
 ];
 const SELECTABLE_DEFAULT: SelectKind[] = ["token", "map", "drawing", "shape", "text", "wall"];
 
-/** One of `options` as stored, or `fallback`. */
-function oneOf<T extends string>(options: readonly T[], fallback: T, name: string) {
-  return (stored: unknown): T => {
-    if (stored === undefined) return fallback;
-    if (options.includes(stored as T)) return stored as T;
-    console.warn(`Ignoring stored ${name}: unknown`, stored);
-    return fallback;
-  };
-}
-
 /**
  * The scene tools on this device: which is in use (for this session only),
  * and each one's settings, remembered in the campaign's local document.
@@ -111,11 +105,7 @@ export class SceneTools {
   readonly selectable: LocalValue<SelectKind[]>;
 
   constructor(local: LocalDoc) {
-    this.toolOrder = local.value("toolOrder", (v) => {
-      if (Array.isArray(v)) return v.filter((t): t is ToolId => typeof t === "string");
-      if (v !== undefined) console.warn("Ignoring stored tool order: not a list", v);
-      return [];
-    });
+    this.toolOrder = local.value("toolOrder", listOf(oneOf(...TOOL_IDS), "tool order"));
     // Gold, like the UI accent.
     const penRead = settingsOver<PenSettings>(
       { colour: "#f0bb3b", width: 6, layer: "over" },
@@ -127,7 +117,7 @@ export class SceneTools {
     });
     this.shapeTool = local.value(
       "shapeTool",
-      oneOf(
+      choiceOf(
         SHAPES.map((s) => s.id),
         "rect",
         "shape tool",
@@ -148,7 +138,7 @@ export class SceneTools {
     });
     this.lightTool = local.value(
       "lightTool",
-      oneOf(["lamp", "light", "dark"], "lamp", "light tool"),
+      choiceOf(["lamp", "light", "dark"], "lamp", "light tool"),
     );
     const effectRead = settingsOver<EffectSettings>(
       { ...effectDefaults("fog"), shape: "circle" },
@@ -159,12 +149,10 @@ export class SceneTools {
       const known = EFFECTS.some((x) => x.id === e.effect) && SHAPES.some((s) => s.id === e.shape);
       return known ? e : effectRead(undefined);
     });
-    this.selectable = local.value("selectable", (v) => {
-      if (Array.isArray(v))
-        return v.filter((k: unknown): k is SelectKind => SELECT_KINDS.includes(k as SelectKind));
-      if (v !== undefined) console.warn("Ignoring stored selectable kinds: not a list", v);
-      return SELECTABLE_DEFAULT;
-    });
+    this.selectable = local.value(
+      "selectable",
+      listOf(oneOf(...SELECT_KINDS), "selectable kinds", SELECTABLE_DEFAULT),
+    );
   }
 
   setPen(patch: Partial<PenSettings>) {

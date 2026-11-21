@@ -1,4 +1,4 @@
-import { isNothing, objectOf, oneOf } from "../../data/guards";
+import { isNothing, objectOf, oneOf } from "../../lib/guards";
 import type { ToolId } from "../../scene/tools";
 import {
   IconFit,

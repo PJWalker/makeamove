@@ -1,4 +1,4 @@
-import { arrayOf, isBoolean, isNumber, isObject, isString, oneOf } from "../data/guards";
+import { arrayOf, isBoolean, isNumber, isObject, isString, oneOf } from "../lib/guards";
 import { collection, list, lww, record, subdoc, type Root } from "../data/schema";
 import { systemCampaignData } from "../systems/schema";
 import { characterEntry } from "../features/characters/schema";

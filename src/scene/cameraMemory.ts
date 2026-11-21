@@ -1,11 +1,13 @@
 import type { Camera } from "./camera";
+import { isNumber, objectOf, type Guard } from "../lib/guards";
 import { getStorageJson, setStorageJson } from "../platform/localStorage";
 
 const cameraKey = (sceneId: string) => `mam:camera:${sceneId}`;
 
+const isCamera: Guard<Camera> = objectOf({ x: isNumber, y: isNumber, zoom: isNumber });
+
 export function readSceneCamera(sceneId: string): Camera | null {
-  const saved = getStorageJson<Camera | null>(cameraKey(sceneId), null);
-  return saved && typeof saved.zoom === "number" ? saved : null;
+  return getStorageJson(cameraKey(sceneId), isCamera, null);
 }
 
 export function saveSceneCamera(sceneId: string, camera: Camera) {

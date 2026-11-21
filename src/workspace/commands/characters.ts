@@ -74,7 +74,7 @@ import {
   objectOf,
   oneOf,
   optional,
-} from "../../data/guards";
+} from "../../lib/guards";
 import type { Availability } from "../../kernel/commands";
 import type { ActionDef, ItemDef, ResetEvent } from "../../systems/types";
 import { IconDelete, IconFolder, IconImage } from "../../ui/icons";

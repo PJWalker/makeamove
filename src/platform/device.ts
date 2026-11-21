@@ -1,6 +1,7 @@
 import { store } from "../lib/store";
 import { newId } from "../lib/ids";
 import { clampUserColour } from "../lib/colour";
+import { isString, objectOf, optional } from "../lib/guards";
 import { getStorageJson, setStorageJson } from "./localStorage";
 
 /**
@@ -16,8 +17,11 @@ export interface Device {
 
 const KEY = "mam:device";
 
+const isDevice = (v: unknown): v is Device =>
+  objectOf({ id: isString, name: isString, colour: optional(isString) })(v);
+
 function load(): Device {
-  const saved = getStorageJson<Device | null>(KEY, null);
+  const saved = getStorageJson(KEY, isDevice, null);
   if (saved) return saved;
   const fresh: Device = { id: newId(), name: "" };
   save(fresh);

@@ -1,6 +1,6 @@
 import { setSystemCampaignData, type Campaign } from "../../campaign/campaign";
 import type { CampaignDefaults } from "../../campaign/types";
-import { isNumber, isObject, isString, objectOf, optional } from "../../data/guards";
+import { isNumber, isObject, isString, objectOf, optional } from "../../lib/guards";
 import { actingCharacterId } from "../../features/characters/api";
 import { hotbarSlots, MAX_SLOTS, setHotbar } from "../../features/characters/hotbar";
 import { deleteHomebrew, saveGear, saveMove } from "../../features/homebrew/homebrew";

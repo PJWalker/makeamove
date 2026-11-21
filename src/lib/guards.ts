@@ -1,4 +1,5 @@
-import type { Guard } from "./schema";
+/** Whether a stored value is a T. */
+export type Guard<T> = (value: unknown) => value is T;
 
 /*
  * Checks for stored values, for `lww(guard)`: what a field must hold to be

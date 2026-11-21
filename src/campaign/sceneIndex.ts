@@ -5,6 +5,7 @@ import { byOrder } from "../lib/order";
 import { sceneDbName } from "../scene/sceneDoc";
 import type { Members, Scenes } from "./schema";
 import type { SceneView } from "./types";
+import { deleteData } from "../platform/dataEpoch";
 
 export const sceneGuid = (campaignId: string, sceneId: string) => `${campaignId}/${sceneId}`;
 
@@ -50,7 +51,7 @@ export function updateScene(scenes: Scenes, id: string, patch: Partial<Omit<Scen
 
 export function removeScene(campaignId: string, scenes: Scenes, id: string) {
   scenes.delete(id);
-  indexedDB.deleteDatabase(sceneDbName(sceneGuid(campaignId, id)));
+  deleteData(sceneDbName(sceneGuid(campaignId, id)));
 }
 
 export function activeSceneId(members: Members, scenes: Scenes, deviceId: string): string | null {
