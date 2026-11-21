@@ -9,6 +9,7 @@ import { referenceReadOnly } from "./rules/referenceReadOnly.ts";
 import { titleCaseRule } from "./rules/titleCase.ts";
 import { testStructure } from "./rules/testStructure.ts";
 import { useDialog } from "./rules/useDialog.ts";
+import { validImportMembers } from "./rules/validImportMembers.ts";
 
 /*
  * Make a Move's own lint rules for patterns that standard ESLint rules can't express.
@@ -28,5 +29,6 @@ export default {
     "title-case": titleCaseRule,
     "test-structure": testStructure,
     "use-dialog": useDialog,
+    "valid-import-members": validImportMembers,
   },
 };

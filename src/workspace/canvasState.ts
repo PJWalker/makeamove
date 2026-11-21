@@ -2,7 +2,7 @@ import { store } from "../lib/store";
 import type { SceneDoc as SceneDocument } from "../scene/sceneDoc";
 import type { SceneController } from "../scene/controller";
 import type { Point } from "../scene/grid";
-import type { BlobRef as BlobReference, EntityGraphic, EntityGraphicRef } from "../media/images";
+import type { BlobReference, EntityGraphic, EntityGraphicRef } from "../media/images";
 import type { TokenStyle } from "../scene/types";
 import type { AreaSpec } from "../systems/types";
 import { backdropColour } from "../lib/colour";

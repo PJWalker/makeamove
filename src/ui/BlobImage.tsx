@@ -1,7 +1,7 @@
 import type * as React from "react";
 import { use, useEffect, useState } from "react";
 import { loadBlob } from "../media/images";
-import type { BlobRef as BlobReference } from "../media/images";
+import type { BlobReference } from "../media/images";
 import { PeerBlobsContext } from "./blobImageContext";
 
 /** An image from the blob store, or `fallback` while it's missing from this device. */

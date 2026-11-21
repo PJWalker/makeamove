@@ -1,5 +1,5 @@
 import { cellOr, type Grid, type Point, snapPoint, snapSize } from "./grid";
-import type { BlobRef as BlobReference, EntityGraphic, EntityGraphicRef } from "../media/images";
+import type { BlobReference, EntityGraphic, EntityGraphicRef } from "../media/images";
 import type { NewElement, SceneElement, TokenStyle } from "./types";
 
 /*

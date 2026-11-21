@@ -1,6 +1,6 @@
 import { arrayOf, isBoolean, isNumber, isObject, isString, oneOf } from "../lib/guards";
 import { Invalid, collection, lww, record, variant, type Item, type Shape } from "../data/schema";
-import type { BlobRef as BlobReference, EntityGraphic, EntityGraphicRef } from "../media/images";
+import type { BlobReference, EntityGraphic, EntityGraphicRef } from "../media/images";
 import { DEFAULT_GRID } from "./grid";
 import { EFFECTS, LAYERS, SHAPES, TEXT_FONTS, TOKEN_STYLES, type SceneElement } from "./types";
 

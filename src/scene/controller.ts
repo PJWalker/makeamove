@@ -8,7 +8,7 @@ import { readSceneCamera, saveSceneCamera } from "./cameraMemory";
 import { bounds, hits } from "./geometry";
 import { cellOr, type Point, snapPoint } from "./grid";
 import {
-  type BlobRef as BlobReference,
+  type BlobReference,
   type EntityGraphic,
   type EntityGraphicRef,
   importImage,

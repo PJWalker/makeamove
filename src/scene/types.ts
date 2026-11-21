@@ -1,4 +1,4 @@
-import type { BlobRef as BlobReference, EntityGraphic, EntityGraphicRef } from "../media/images";
+import type { BlobReference, EntityGraphic, EntityGraphicRef } from "../media/images";
 
 /*
  * Scene elements as plain values. Each is stored as a Y.Map of these fields

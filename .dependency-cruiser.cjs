@@ -232,12 +232,28 @@ module.exports = {
       to: { dependencyTypes: ["npm-dev"], pathNot: "^node_modules/(@types|unplugin-icons|vite)/" },
     },
     {
-      name: "not-to-unresolvable",
+      name: "static-import-must-resolve",
       severity: "error",
       from: {},
       comment:
-        "Only relative imports are checked: package subpath exports are not resolved by this parser.",
-      to: { couldNotResolve: true, path: "^\\." },
+        "Every static relative import must resolve to a module. Package subpath exports are outside dependency-cruiser's parser resolution.",
+      to: {
+        couldNotResolve: true,
+        path: "^\\.",
+        dependencyTypesNot: ["dynamic-import"],
+      },
+    },
+    {
+      name: "dynamic-import-must-resolve",
+      severity: "error",
+      from: {},
+      comment:
+        "Every relative dynamic import must resolve to a module, including imports added by future lazy-loaded features.",
+      to: {
+        couldNotResolve: true,
+        path: "^\\.",
+        dependencyTypes: ["dynamic-import"],
+      },
     },
     {
       name: "no-deprecated-core",

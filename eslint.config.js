@@ -102,6 +102,7 @@ export default defineConfig([
           ],
         },
       ],
+      "makeamove/valid-import-members": "error",
       "makeamove/use-dialog": [
         "error",
         {

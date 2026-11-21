@@ -5,7 +5,7 @@ import type { Awareness } from "y-protocols/awareness";
 import * as Y from "yjs";
 import { newId } from "../lib/ids";
 import { colourOf } from "../scene/presence";
-import { importImage, loadBlob, type PeerBlobs , BlobRef as BlobReference } from "../media/images";
+import { importImage, loadBlob, type PeerBlobs, type BlobReference } from "../media/images";
 import { device } from "../platform/device";
 
 /*
