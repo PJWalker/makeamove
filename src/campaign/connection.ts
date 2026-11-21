@@ -38,7 +38,7 @@ export class CampaignConnection {
       return false;
     }
 
-    const session = new SyncSession(this.doc, transport);
+    const session = new SyncSession(this.document, transport);
     this.session = session;
     const refresh = () => {
       this.peerCount.value = session.peerIds().length;

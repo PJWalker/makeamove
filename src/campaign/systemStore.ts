@@ -26,15 +26,15 @@ export class SystemData implements Observable {
 
   /** Changes to any system's data, for useQuery. */
   get y() {
-    return this.ext.y;
+    return this.extension.y;
   }
 
   private read() {
-    return this.ext.get(this.systemId());
+    return this.extension.get(this.systemId());
   }
 
   private write() {
-    return this.ext.ensure(this.systemId());
+    return this.extension.ensure(this.systemId());
   }
 
   value(key: string): DataValue | undefined {
