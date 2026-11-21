@@ -1,6 +1,7 @@
 import type { Campaign } from "../../campaign/campaign";
 import type { SlotLook } from "../../campaign/schema";
 import { device } from "../../platform/device";
+import { IS_MAC } from "../../platform/os";
 export type { SlotLook } from "../../campaign/schema";
 
 /*
@@ -99,10 +100,8 @@ function keyName(e: Pick<KeyboardEvent, "key" | "code">): string {
 /** Whether a combo should still fire while typing in a field: only with Ctrl or Cmd held. */
 export const firesWhileTyping = (combo: string) => /(^|\+)(Ctrl|Meta)\+/.test(combo);
 
-const MAC = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
-
 /** A built-in combo for this platform: `Mod` is Cmd on a Mac and Ctrl elsewhere, kept in `comboOf`'s order. */
-export function platformCombo(combo: string, mac = MAC): string {
+export function platformCombo(combo: string, mac = IS_MAC): string {
   if (!combo.includes("Mod+")) return combo;
   const parts = combo.split("+");
   const key = parts.at(-1)!;
@@ -113,7 +112,7 @@ const MAC_GLYPHS: Record<string, string> = { Ctrl: "⌃", Alt: "⌥", Shift: "�
 const ARROWS: Record<string, string> = { Up: "↑", Down: "↓", Left: "←", Right: "→" };
 
 /** A combo as people read it: ⌥⇧R on a Mac, Alt+Shift+R elsewhere. */
-export function showCombo(combo: string, mac = MAC): string {
+export function showCombo(combo: string, mac = IS_MAC): string {
   const parts = combo.split("+");
   // "+" itself is a key: `Shift++`.
   if (combo.endsWith("++")) parts.splice(-2, 2, "+");

@@ -24,7 +24,8 @@ import {
 } from "./newElements";
 import type { SceneRenderer } from "./renderer";
 import type { ElementPatch, SceneDoc } from "./sceneDoc";
-import { ERASER_RADIUS, GM_KINDS, kindOf, type SceneTools, type ToolId } from "./tools";
+import { toolCursor } from "./toolCursors";
+import { ERASER_RADIUS, GM_KINDS, kindOf, type SceneTools } from "./tools";
 import type { Layer, NewElement, SceneElement, TokenElement, TokenStyle, Transform } from "./types";
 import { TOOL_PRESS } from "./gestures";
 import { PolygonDraft } from "./gestures/polygon";
@@ -37,17 +38,6 @@ import type { Gesture, Placement, TextRequest, ToolContext } from "./gestures/ty
 /** How soon, and how near in screen px, a press must follow the last to count as a double click. */
 const MULTI_CLICK_MS = 500;
 const MULTI_CLICK_SLOP = 6;
-
-/** Tools that aim at a point on the map. */
-const CROSSHAIR_TOOLS: ReadonlySet<ToolId> = new Set([
-  "draw",
-  "shape",
-  "wall",
-  "light",
-  "effect",
-  "ruler",
-  "ping",
-]);
 
 /** Which way each arrow key nudges the selection. */
 const ARROW_NUDGES: Record<string, Point> = {
@@ -414,18 +404,15 @@ export class SceneController implements ToolContext {
   }
 
   private updateCursor(cursor?: string) {
-    this.host.style.cursor = cursor ?? this.gesture?.cursor ?? this.toolCursor();
+    this.host.style.cursor = cursor ?? this.gesture?.cursor ?? this.idleCursor();
   }
 
   /** The cursor for the tool in use, between gestures. */
-  private toolCursor(): string {
+  private idleCursor(): string {
     const tool = this.tools.activeTool.value;
-    if (this.spaceHeld || tool === "pan") return "grab";
-    if (this.placing.value || CROSSHAIR_TOOLS.has(tool)) return "crosshair";
-    if (tool === "select" && this.targetMode.value) return "crosshair";
-    if (tool === "text") return "text";
-    if (tool === "erase") return "none";
-    return "default";
+    if (this.spaceHeld) return "grab";
+    if (this.placing.value || (tool === "select" && this.targetMode.value)) return "crosshair";
+    return toolCursor(tool);
   }
 
   // Camera
