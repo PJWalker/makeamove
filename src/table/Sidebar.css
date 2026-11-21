@@ -89,13 +89,14 @@
     border-bottom-width: 0px;
     border-image: none;
     background-color: var(--toolbar);
+    background-image: var(--grain);
     box-shadow: none;
     transition:
       background-color 120ms var(--ease),
       color 120ms var(--ease);
   }
   .rail-tab:hover:not([aria-selected="true"]) {
-    background-image: var(--raised-sheen);
+    background-image: var(--grain), var(--raised-sheen);
     color: var(--text);
   }
   .rail-tab:last-child {
@@ -109,10 +110,10 @@
     z-index: 2;
     width: 53px;
     translate: 1px 0;
-    border-image: linear-gradient(to bottom right, #fff6, #fff3) 1;
+    border-image: var(--gilt-edge);
     border-right: 0;
     background-color: var(--surface);
-    background-image: var(--window-sheen);
+    background-image: var(--grain), var(--window-sheen);
     color: var(--accent);
     /* Its shadow falls down and to the right, onto the tab below. */
     box-shadow: 1px 3px 6px #0004;
@@ -127,7 +128,7 @@
   }
   .sidebar[data-side="left"] .rail-tab[aria-selected="true"] {
     translate: -1px 0;
-    border-right: 1px solid #fff3;
+    border-right: 1px solid var(--gilt-lo);
     border-left: 0;
     box-shadow: 3px 3px 6px #0004;
   }
@@ -141,13 +142,13 @@
     display: flex;
     flex-direction: column;
     width: var(--sidebar-w);
-    border-left: 1px solid #fff3;
+    border-left: 1px solid var(--gilt-lo);
     /* Lit from the left, it casts only a faint shadow onto the table. */
     box-shadow: -4px 0 16px -10px oklch(0% 0 0 / 0.45);
   }
   .sidebar[data-side="left"] .sidebar-body {
     border-left: 0;
-    border-right: 1px solid #fff3;
+    border-right: 1px solid var(--gilt-lo);
     /* Casts its shadow to the right, onto the table. */
     box-shadow: 10px 4px 28px -14px oklch(0% 0 0 / 0.6);
   }
@@ -250,9 +251,10 @@
     min-width: 16px;
     height: 16px;
     padding: 0 4px;
-    background: var(--raised-sheen), var(--accent);
+    background: var(--gilt-metal);
     color: var(--accent-ink);
     box-shadow: var(--edge-glow), var(--raised-drop);
+    text-shadow: var(--engraved);
     font-size: var(--text-badge);
     font-weight: 700;
     line-height: 16px;

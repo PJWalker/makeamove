@@ -37,6 +37,7 @@
     font-size: var(--text-md);
     line-height: 1.45;
     accent-color: var(--accent);
+    scrollbar-color: var(--bronze) transparent;
     overflow: hidden;
     -webkit-font-smoothing: antialiased;
   }

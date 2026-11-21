@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="12" viewBox="0 0 64 12">
+  <!-- The centrepiece of a section rule: a lozenge between two scrolls. -->
+  <defs>
+    <linearGradient id="gilt" x1="0" y1="0" x2="0" y2="12" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f3dc9a" />
+      <stop offset="0.55" stop-color="#b8893f" />
+      <stop offset="1" stop-color="#6e4f22" />
+    </linearGradient>
+  </defs>
+  <g fill="none" stroke="url(#gilt)" stroke-width="1.1" stroke-linecap="round">
+    <path d="M2 6 H14 C18 6 19 2.5 22.5 2.5 C25 2.5 25.5 5 24 6.2 M62 6 H50 C46 6 45 2.5 41.5 2.5 C39 2.5 38.5 5 40 6.2" />
+    <path d="M14 6 C18 6 19 9.5 22.5 9.5 C24.5 9.5 25.5 8 25.5 7 M50 6 C46 6 45 9.5 41.5 9.5 C39.5 9.5 38.5 8 38.5 7" opacity="0.7" />
+  </g>
+  <path d="M32 1 L37 6 L32 11 L27 6 Z" fill="url(#gilt)" stroke="#1d140a" stroke-width="0.6" />
+  <circle cx="31.2" cy="5" r="0.9" fill="#fff6d8" opacity="0.8" />
+</svg>
