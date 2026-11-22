@@ -102,10 +102,14 @@ function fbm(point: Vec3, octaves = 3): number {
 /** The tunnel at a depth: where its middle is, and its half width and height. */
 export function section(z: number) {
   const depth = (NEAR - z) / (NEAR - FAR);
+  const twist = 1 - Math.max(0, 1 - depth * 1.45);
+  const weave = Math.sin(z * 0.16) * 1.15 + Math.sin(z * 0.055 + 0.9) * 0.7;
+  const bulge = Math.sin(z * 0.27 + 0.6) * 0.48 + Math.sin(z * 0.71 - 1.1) * 0.18;
+  const arch = Math.sin(z * 0.21 - 0.4) * 0.38 + Math.sin(z * 0.63 + 0.8) * 0.16;
   return {
-    middle: -0.0022 * Math.min(0, z) ** 2,
-    halfWidth: 4.9 - 1.9 * depth,
-    height: 5.3 - 1.7 * depth,
+    middle: -0.0022 * Math.min(0, z) ** 2 + weave * twist,
+    halfWidth: (4.9 - 1.9 * depth) * (1 + bulge * 0.18),
+    height: (5.3 - 1.7 * depth) * (1 + arch * 0.12),
   };
 }
 
@@ -127,7 +131,6 @@ interface Finish {
  */
 function sculptor(random: () => number, splats: Splat[], density: number) {
   const spread = (range: number) => (random() * 2 - 1) * range;
-  let characterMotion: Finish = {};
   const pick = <T>(list: readonly T[]) => list[Math.floor(random() * list.length)] as T;
   const shade = (colour: Vec3, vary: number) => scale(colour, 1 + spread(vary));
   const direction = (): Vec3 => {
@@ -163,7 +166,7 @@ function sculptor(random: () => number, splats: Splat[], density: number) {
   };
 
   /** Covers an ellipsoid's surface. */
-  const ellipsoid = (centre: Vec3, radii: Vec3, colour: Vec3, { vary = 0.18, motion = characterMotion.motion ?? MOTION.still, phase = characterMotion.phase ?? 0 }: Finish = {}) => {
+  const ellipsoid = (centre: Vec3, radii: Vec3, colour: Vec3, { vary = 0.18, motion = MOTION.still, phase = 0 }: Finish = {}) => {
     const [a, b, c] = radii;
     const p = 1.6;
     const area = 4 * Math.PI * (((a * b) ** p + (a * c) ** p + (b * c) ** p) / 3) ** (1 / p);
@@ -191,7 +194,7 @@ function sculptor(random: () => number, splats: Splat[], density: number) {
     to: Vec3,
     [start, end]: [number, number],
     colour: Vec3,
-    { vary = 0.18, folds = 0, motion = characterMotion.motion ?? MOTION.still, phase = characterMotion.phase ?? 0 }: Finish = {},
+    { vary = 0.18, folds = 0, motion = MOTION.still, phase = 0 }: Finish = {},
   ) => {
     const axis = sub(to, from);
     const along = normalize(axis);
@@ -227,8 +230,8 @@ function sculptor(random: () => number, splats: Splat[], density: number) {
     opacity: number,
     {
       light,
-      motion = characterMotion.motion ?? MOTION.still,
-      phase = characterMotion.phase ?? 0,
+      motion = MOTION.still,
+      phase = 0,
       lit = false,
     }: { light?: number; motion?: Motion; phase?: number; lit?: boolean } = {},
   ) => {
@@ -250,11 +253,7 @@ function sculptor(random: () => number, splats: Splat[], density: number) {
     });
   };
 
-  const setCharacterMotion = (motion: Motion, phase: number) => {
-    characterMotion = { motion, phase };
-  };
-
-  return { random, spread, pick, shade, patch, ellipsoid, tube, speck, setCharacterMotion };
+  return { random, spread, pick, shade, patch, ellipsoid, tube, speck };
 }
 
 type Sculptor = ReturnType<typeof sculptor>;
@@ -270,7 +269,9 @@ function walls({ random, spread, pick, shade, patch }: Sculptor) {
     const base: Vec3 = [middle + halfWidth * Math.cos(angle), height * Math.sin(angle) ** 0.8, z];
     const outward = normalize([base[0] - middle, base[1] - height * 0.3, 0]);
     const bulge =
-      (fbm(scale(base, 0.45)) - 0.5) * 2.2 + (fbm(times(base, [1.8, 2.4, 1.2])) - 0.5) * 0.5;
+      (fbm(scale(base, 0.45)) - 0.5) * 3.8 +
+      (fbm(times(base, [1.8, 2.4, 1.2])) - 0.5) * 0.9 +
+      Math.sin(base[2] * 0.31 + base[1] * 1.7) * 0.42;
     const at = add(base, scale(outward, bulge));
     if (at[1] < -0.1) continue;
     const facing = normalize(add(scale(outward, -1), [spread(0.35), spread(0.35), spread(0.35)]));
@@ -858,20 +859,28 @@ export function buildCave(seed = `${Date.now().toString(36)}-${Math.random().toS
   floor(rock);
   spikes(rock);
   caveDetails(rock);
-  const partySpot = (base: Vec3, xRange: number, zRange: number): Vec3 => [
-    base[0] + (random() * 2 - 1) * xRange,
-    0,
-    base[2] + (random() * 2 - 1) * zRange,
+  const spots: Vec3[] = [
+    [-3.6, 0, 1.2],
+    [-1.2, 0, -1.8],
+    [1.2, 0, -4.8],
+    [3.6, 0, -7.2],
   ];
-  party.setCharacterMotion(MOTION.idle, 0.1);
-  const warriorTorch = warrior(party, partySpot([-2.9, 0, -1.6], 0.45, 0.5));
-  party.setCharacterMotion(MOTION.idle, 0.35);
-  dwarf(party, partySpot([-1.35, 0, -0.1], 0.5, 0.7));
-  party.setCharacterMotion(MOTION.idle, 0.6);
-  const rangerTorch = ranger(party, partySpot([2.2, 0, -3.8], 0.55, 0.6));
-  party.setCharacterMotion(MOTION.idle, 0.85);
-  const wispAt = wizard(party, partySpot([3.05, 0, -1.3], 0.45, 0.6));
-  party.setCharacterMotion(MOTION.still, 0);
+  for (let index = spots.length - 1; index > 0; index--) {
+    const swap = Math.floor(random() * (index + 1));
+    [spots[index], spots[swap]] = [spots[swap]!, spots[index]!];
+  }
+  const partySpot = (index: number): Vec3 => {
+    const spot = spots[index]!;
+    const z = Math.max(-8.8, Math.min(2.2, spot[2] + (random() * 2 - 1) * 1.8));
+    const { middle, halfWidth } = section(z);
+    const limit = Math.max(1.8, halfWidth - 0.9);
+    const x = middle + Math.max(-limit, Math.min(limit, spot[0] + (random() * 2 - 1) * 1.2));
+    return [x, 0, z];
+  };
+  const warriorTorch = warrior(party, partySpot(0));
+  dwarf(party, partySpot(1));
+  const rangerTorch = ranger(party, partySpot(2));
+  const wispAt = wizard(party, partySpot(3));
   wisp(party, wispAt);
   return {
     splats,

@@ -111,9 +111,9 @@ const VERTEX = /* glsl */ `
       opacity *= smoothstep(0.0, 0.15, rise) * (1.0 - rise);
     } else if (motion.x == ${String(MOTION.idle)}.0) {
       at += vec3(
-        sin(time * 0.55 + phase * TAU) * 0.035,
-        sin(time * 1.2 + phase * TAU) * 0.018,
-        cos(time * 0.45 + phase * TAU) * 0.012
+        sin(time * 0.55 + phase * TAU) * 0.018,
+        0.0,
+        cos(time * 0.45 + phase * TAU) * 0.008
       );
     } else if (motion.x == ${String(MOTION.drip)}.0) {
       // Hangs and swells for most of its cycle, then falls under gravity.
