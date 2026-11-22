@@ -1,3 +1,4 @@
 git diff --cached --quiet -- src/table/diceRenderer.ts || npm run generate:dice
 
-vp staged
+# Hide every unstaged change, so the checks see exactly what is being committed.
+vp staged --hide-unstaged

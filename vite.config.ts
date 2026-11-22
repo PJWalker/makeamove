@@ -57,8 +57,11 @@ export function macroPlugins(): Plugin[] {
 }
 
 export default defineConfig({
+  // The same checks as `npm run lint`, through its own scripts so the two can't drift apart.
+  // The typecheck covers the whole project, so takes no files.
+  // React Doctor's rules run inside ESLint; its full scan (`npm run doctor`) is left to `npm run lint`.
   staged: {
-    "*": "eslint --fix --prune-suppressions --no-warn-ignored",
+    "*": ["npm run lint:eslint", () => "npm run typecheck"],
   },
   fmt: {
     printWidth: 100,

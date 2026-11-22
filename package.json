@@ -9,7 +9,8 @@
   "scripts": {
     "dev": "vp dev",
     "build": "npm run lint && npm run check:systems && vp build",
-    "lint": "eslint . --prune-suppressions && npm run typecheck && npm run doctor",
+    "lint": "npm run lint:eslint -- . && npm run typecheck && npm run doctor",
+    "lint:eslint": "eslint --prune-suppressions --no-warn-ignored",
     "check:changed": "jiti scripts/lint.ts",
     "typecheck": "tsc -b",
     "check:systems": "npx jiti scripts/check-systems.ts",
