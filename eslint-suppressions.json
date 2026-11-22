@@ -1,0 +1,5909 @@
+{
+  "lint/__tests__/rules.test.ts": {
+    "import/extensions": {
+      "count": 13
+    },
+    "no-template-curly-in-string": {
+      "count": 6
+    }
+  },
+  "lint/__tests__/titleCase.test.ts": {
+    "import/extensions": {
+      "count": 1
+    }
+  },
+  "lint/plugin.ts": {
+    "import/extensions": {
+      "count": 14
+    },
+    "import/no-anonymous-default-export": {
+      "count": 1
+    }
+  },
+  "lint/rules/cssCoLocated.ts": {
+    "import/extensions": {
+      "count": 1
+    },
+    "import/no-nodejs-modules": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "unicorn/import-style": {
+      "count": 1
+    }
+  },
+  "lint/rules/dialogTitleEllipsis.ts": {
+    "import/extensions": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "lint/rules/noNativeConfirmation.ts": {
+    "@typescript-eslint/prefer-destructuring": {
+      "count": 2
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "lint/rules/noProps.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "lint/rules/noRedundantTypeSynonyms.ts": {
+    "@typescript-eslint/prefer-destructuring": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "lint/rules/prefer-guard-helpers.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 1
+    },
+    "import/extensions": {
+      "count": 2
+    },
+    "import/no-nodejs-modules": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 2
+    }
+  },
+  "lint/rules/preferMotionHelpers.ts": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "import/extensions": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "lint/rules/preferNumberParsing.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "lint/rules/preferReducedMotion.ts": {
+    "import/extensions": {
+      "count": 1
+    },
+    "import/no-nodejs-modules": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "unicorn/import-style": {
+      "count": 1
+    }
+  },
+  "lint/rules/referenceReadOnly.ts": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "import/extensions": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "lint/rules/testStructure.ts": {
+    "@typescript-eslint/prefer-destructuring": {
+      "count": 1
+    },
+    "import/extensions": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "lint/rules/titleCase.ts": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "import/extensions": {
+      "count": 2
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "lint/rules/useDialog.ts": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "import/extensions": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "lint/rules/validImportMembers.ts": {
+    "@typescript-eslint/no-unnecessary-type-conversion": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "lint/strings.ts": {
+    "import/extensions": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "scripts/check-systems.ts": {
+    "import/extensions": {
+      "count": 1
+    },
+    "no-console": {
+      "count": 1
+    }
+  },
+  "scripts/dependencyGraph.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 8
+    },
+    "@typescript-eslint/no-misused-promises": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 3
+    },
+    "import/no-nodejs-modules": {
+      "count": 5
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "no-console": {
+      "count": 2
+    },
+    "unicorn/import-style": {
+      "count": 1
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 2
+    }
+  },
+  "scripts/generateDiceFallbacks.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 2
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 3
+    },
+    "import/extensions": {
+      "count": 1
+    },
+    "import/no-nodejs-modules": {
+      "count": 2
+    },
+    "no-await-in-loop": {
+      "count": 1
+    },
+    "no-console": {
+      "count": 1
+    },
+    "unicorn/import-style": {
+      "count": 1
+    }
+  },
+  "scripts/generateIcons.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 2
+    },
+    "import/extensions": {
+      "count": 1
+    },
+    "import/no-nodejs-modules": {
+      "count": 2
+    },
+    "no-await-in-loop": {
+      "count": 1
+    },
+    "no-console": {
+      "count": 1
+    },
+    "unicorn/import-style": {
+      "count": 1
+    }
+  },
+  "scripts/generateRules.ts": {
+    "import/dynamic-import-chunkname": {
+      "count": 1
+    },
+    "import/no-nodejs-modules": {
+      "count": 2
+    },
+    "unicorn/import-style": {
+      "count": 1
+    }
+  },
+  "scripts/icons/forms.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 8
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 2
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 2
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 2
+    }
+  },
+  "scripts/icons/kit.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 9
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 57
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    },
+    "no-multi-assign": {
+      "count": 1
+    }
+  },
+  "scripts/icons/models/entries.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 6
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 886
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 5
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "scripts/icons/models/index.ts": {
+    "import/avoid-namespace-import": {
+      "count": 1
+    }
+  },
+  "scripts/icons/models/shared.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 4
+    }
+  },
+  "scripts/icons/studio.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 72
+    },
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 3
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 4
+    },
+    "max-depth": {
+      "count": 2
+    },
+    "no-multi-assign": {
+      "count": 3
+    }
+  },
+  "scripts/lint.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 3
+    },
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 3
+    },
+    "import/no-nodejs-modules": {
+      "count": 5
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "no-console": {
+      "count": 4
+    },
+    "unicorn/import-style": {
+      "count": 1
+    }
+  },
+  "scripts/renderInBrowser.ts": {
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    },
+    "import/avoid-importing-barrel-files": {
+      "count": 1
+    },
+    "import/no-nodejs-modules": {
+      "count": 1
+    },
+    "unicorn/import-style": {
+      "count": 1
+    }
+  },
+  "scripts/rules/bladesAbilities.ts": {
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 3
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "scripts/rules/dungeonWorld2.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 19
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 10
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/prefer-destructuring": {
+      "count": 5
+    },
+    "complexity": {
+      "count": 1
+    },
+    "consistent-return": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 4
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 8
+    }
+  },
+  "scripts/rules/dungeonWorld2Hints.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "@typescript-eslint/prefer-destructuring": {
+      "count": 1
+    },
+    "consistent-return": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "scripts/rules/readReference.ts": {
+    "import/no-nodejs-modules": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "scripts/rules/slug.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "scripts/rules/srdClasses.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 2
+    },
+    "@typescript-eslint/prefer-destructuring": {
+      "count": 2
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 2
+    }
+  },
+  "scripts/rules/srdFeats.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "@typescript-eslint/prefer-destructuring": {
+      "count": 2
+    }
+  },
+  "scripts/rules/srdMonsters.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 3
+    },
+    "@typescript-eslint/prefer-destructuring": {
+      "count": 2
+    }
+  },
+  "scripts/rules/srdSpells.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 6
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/prefer-destructuring": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 2
+    },
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/app/App.tsx": {
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 2
+    }
+  },
+  "src/campaign/__tests__/backup.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 10
+    },
+    "import/avoid-namespace-import": {
+      "count": 1
+    },
+    "import/dynamic-import-chunkname": {
+      "count": 1
+    },
+    "import/no-unassigned-import": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "unicorn/no-await-expression-member": {
+      "count": 1
+    }
+  },
+  "src/campaign/__tests__/connection.test.ts": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "import/avoid-namespace-import": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/campaign/__tests__/folderBackup.test.ts": {
+    "@typescript-eslint/class-methods-use-this": {
+      "count": 1
+    },
+    "@typescript-eslint/consistent-type-imports": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 2
+    },
+    "@typescript-eslint/parameter-properties": {
+      "count": 1
+    },
+    "import/dynamic-import-chunkname": {
+      "count": 1
+    },
+    "import/no-unassigned-import": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "promise/avoid-new": {
+      "count": 1
+    },
+    "unicorn/no-await-expression-member": {
+      "count": 2
+    }
+  },
+  "src/campaign/__tests__/peerHarness.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 8
+    },
+    "@typescript-eslint/parameter-properties": {
+      "count": 2
+    },
+    "@typescript-eslint/prefer-destructuring": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    },
+    "import/avoid-importing-barrel-files": {
+      "count": 1
+    },
+    "import/avoid-namespace-import": {
+      "count": 1
+    },
+    "import/no-unassigned-import": {
+      "count": 1
+    },
+    "max-classes-per-file": {
+      "count": 1
+    },
+    "no-await-in-loop": {
+      "count": 2
+    },
+    "no-param-reassign": {
+      "count": 1
+    },
+    "no-promise-executor-return": {
+      "count": 1
+    },
+    "operator-assignment": {
+      "count": 1
+    },
+    "promise/avoid-new": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    },
+    "unicorn/prefer-math-trunc": {
+      "count": 1
+    }
+  },
+  "src/campaign/__tests__/peers.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 9
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "no-await-in-loop": {
+      "count": 1
+    }
+  },
+  "src/campaign/__tests__/revoke.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "import/no-unassigned-import": {
+      "count": 1
+    }
+  },
+  "src/campaign/__tests__/sceneFolders.test.ts": {
+    "import/no-unassigned-import": {
+      "count": 1
+    }
+  },
+  "src/campaign/__tests__/sceneNotice.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 7
+    },
+    "import/no-unassigned-import": {
+      "count": 1
+    },
+    "no-promise-executor-return": {
+      "count": 1
+    },
+    "promise/avoid-new": {
+      "count": 1
+    },
+    "promise/param-names": {
+      "count": 1
+    }
+  },
+  "src/campaign/__tests__/systemStore.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 2
+    },
+    "import/avoid-namespace-import": {
+      "count": 1
+    }
+  },
+  "src/campaign/backupFormat.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 2
+    },
+    "@typescript-eslint/no-empty-function": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 2
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    },
+    "unicorn/error-message": {
+      "count": 2
+    }
+  },
+  "src/campaign/backupTasks.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "consistent-return": {
+      "count": 1
+    },
+    "default-case": {
+      "count": 1
+    },
+    "require-atomic-updates": {
+      "count": 1
+    },
+    "unicorn/no-await-expression-member": {
+      "count": 1
+    }
+  },
+  "src/campaign/backupWorker.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/campaign/backupWorkerProtocol.ts": {
+    "@typescript-eslint/sort-type-constituents": {
+      "count": 1
+    }
+  },
+  "src/campaign/campaign.ts": {
+    "@typescript-eslint/class-methods-use-this": {
+      "count": 1
+    },
+    "@typescript-eslint/no-empty-function": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unused-private-class-members": {
+      "count": 2
+    },
+    "import/avoid-namespace-import": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    }
+  },
+  "src/campaign/connection.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/parameter-properties": {
+      "count": 4
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/campaign/folderBackup.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 2
+    },
+    "@typescript-eslint/parameter-properties": {
+      "count": 5
+    },
+    "@typescript-eslint/sort-type-constituents": {
+      "count": 1
+    },
+    "max-classes-per-file": {
+      "count": 1
+    },
+    "promise/prefer-await-to-callbacks": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "src/campaign/registry.ts": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "import/avoid-namespace-import": {
+      "count": 1
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 1
+    }
+  },
+  "src/campaign/systemStore.ts": {
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 2
+    },
+    "@typescript-eslint/parameter-properties": {
+      "count": 2
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "src/data/__tests__/localDoc.test.ts": {
+    "@typescript-eslint/no-empty-function": {
+      "count": 5
+    }
+  },
+  "src/data/__tests__/schema.test.ts": {
+    "@typescript-eslint/no-empty-function": {
+      "count": 2
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 12
+    },
+    "import/avoid-namespace-import": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/data/localDoc.ts": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 3
+    },
+    "import/avoid-namespace-import": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "src/data/migrate.ts": {
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    }
+  },
+  "src/data/richText.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 2
+    },
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 2
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 3
+    }
+  },
+  "src/data/schema.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 4
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 26
+    },
+    "@typescript-eslint/parameter-properties": {
+      "count": 7
+    },
+    "consistent-return": {
+      "count": 4
+    },
+    "default-case": {
+      "count": 4
+    },
+    "import/avoid-namespace-import": {
+      "count": 1
+    },
+    "max-classes-per-file": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    }
+  },
+  "src/data/undo.ts": {
+    "import/avoid-namespace-import": {
+      "count": 1
+    }
+  },
+  "src/features/characters/__tests__/campaign.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 2
+    },
+    "import/no-unassigned-import": {
+      "count": 1
+    }
+  },
+  "src/features/characters/__tests__/scoreRule.test.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 21
+    }
+  },
+  "src/features/characters/__tests__/sessionMoves.test.ts": {
+    "import/no-unassigned-import": {
+      "count": 1
+    }
+  },
+  "src/features/characters/__tests__/templates.test.ts": {
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 3
+    }
+  },
+  "src/features/characters/api.ts": {
+    "import/avoid-barrel-files": {
+      "count": 1
+    }
+  },
+  "src/features/characters/creation.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 4
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 4
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 3
+    }
+  },
+  "src/features/characters/hotbar.ts": {
+    "@eslint-react/no-unnecessary-use-prefix": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 1
+    }
+  },
+  "src/features/characters/inventory.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 4
+    },
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 1
+    },
+    "consistent-return": {
+      "count": 3
+    }
+  },
+  "src/features/characters/lifecycle.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "consistent-return": {
+      "count": 1
+    }
+  },
+  "src/features/characters/moveFlow.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 2
+    },
+    "consistent-return": {
+      "count": 1
+    }
+  },
+  "src/features/characters/moveRequests.ts": {
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 4
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 2
+    }
+  },
+  "src/features/characters/moves.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 6
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "@typescript-eslint/prefer-destructuring": {
+      "count": 1
+    },
+    "@typescript-eslint/prefer-optional-chain": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "src/features/characters/relationships.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 3
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 23
+    },
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 3
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "src/features/characters/resolution.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 2
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/features/characters/schema.ts": {
+    "@typescript-eslint/consistent-type-imports": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 2
+    }
+  },
+  "src/features/characters/sessionMoves.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 3
+    }
+  },
+  "src/features/characters/sheet.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 12
+    },
+    "@typescript-eslint/no-dynamic-delete": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/features/characters/store.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    }
+  },
+  "src/features/characters/templates.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    }
+  },
+  "src/features/characters/trackers.ts": {
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    }
+  },
+  "src/features/chat/__tests__/chatLog.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 5
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 4
+    },
+    "import/avoid-namespace-import": {
+      "count": 1
+    },
+    "import/no-unassigned-import": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "no-await-in-loop": {
+      "count": 2
+    },
+    "no-promise-executor-return": {
+      "count": 1
+    },
+    "promise/avoid-new": {
+      "count": 1
+    },
+    "promise/param-names": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "src/features/chat/__tests__/content.test.ts": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/features/chat/__tests__/notify.test.ts": {
+    "makeamove/test-structure": {
+      "count": 5
+    }
+  },
+  "src/features/chat/__tests__/rollState.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 12
+    },
+    "@typescript-eslint/prefer-destructuring": {
+      "count": 2
+    },
+    "import/avoid-namespace-import": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "src/features/chat/__tests__/sessions.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 4
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 6
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 2
+    }
+  },
+  "src/features/chat/__tests__/slash.test.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 4
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 2
+    },
+    "makeamove/test-structure": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/features/chat/__tests__/visibility.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    }
+  },
+  "src/features/chat/chatLog.ts": {
+    "@typescript-eslint/no-empty-function": {
+      "count": 1
+    },
+    "import/avoid-namespace-import": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "src/features/chat/content.ts": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 3
+    },
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 1
+    }
+  },
+  "src/features/chat/messageState.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unnecessary-type-parameters": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 4
+    }
+  },
+  "src/features/chat/messages.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    }
+  },
+  "src/features/chat/notify.ts": {
+    "@typescript-eslint/no-empty-function": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 2
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 2
+    },
+    "consistent-return": {
+      "count": 1
+    },
+    "default-case": {
+      "count": 1
+    }
+  },
+  "src/features/chat/rollState.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 6
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-plus-operands": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 7
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "src/features/chat/send.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 2
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 2
+    },
+    "consistent-return": {
+      "count": 1
+    }
+  },
+  "src/features/chat/sessions.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 3
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    }
+  },
+  "src/features/chat/slash.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 13
+    },
+    "@typescript-eslint/prefer-destructuring": {
+      "count": 2
+    }
+  },
+  "src/features/combat/__tests__/combat.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    },
+    "import/avoid-namespace-import": {
+      "count": 1
+    }
+  },
+  "src/features/combat/api.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-dynamic-delete": {
+      "count": 1
+    },
+    "@typescript-eslint/prefer-destructuring": {
+      "count": 1
+    },
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    },
+    "no-await-in-loop": {
+      "count": 1
+    }
+  },
+  "src/features/combat/schema.ts": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    }
+  },
+  "src/features/dice/__tests__/notation.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 26
+    },
+    "makeamove/test-structure": {
+      "count": 1
+    }
+  },
+  "src/features/dice/__tests__/pool.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 21
+    }
+  },
+  "src/features/dice/notation.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 3
+    },
+    "@typescript-eslint/prefer-destructuring": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 10
+    },
+    "complexity": {
+      "count": 1
+    },
+    "max-depth": {
+      "count": 3
+    },
+    "max-lines-per-function": {
+      "count": 2
+    },
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/features/dice/pool.ts": {
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 7
+    },
+    "consistent-return": {
+      "count": 1
+    },
+    "default-case": {
+      "count": 1
+    }
+  },
+  "src/features/library/index.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    },
+    "import/no-rename-default": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 8
+    }
+  },
+  "src/features/notes/__tests__/notes.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 3
+    },
+    "import/avoid-namespace-import": {
+      "count": 1
+    },
+    "import/no-unassigned-import": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 2
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "src/features/notes/__tests__/search.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "import/avoid-namespace-import": {
+      "count": 1
+    },
+    "import/no-unassigned-import": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "no-promise-executor-return": {
+      "count": 1
+    },
+    "promise/avoid-new": {
+      "count": 1
+    },
+    "unicorn/no-await-expression-member": {
+      "count": 3
+    }
+  },
+  "src/features/notes/__tests__/targets.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 3
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "makeamove/test-structure": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/features/notes/api.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 2
+    },
+    "import/avoid-namespace-import": {
+      "count": 1
+    },
+    "import/no-rename-default": {
+      "count": 1
+    },
+    "no-await-in-loop": {
+      "count": 1
+    }
+  },
+  "src/features/notes/links.ts": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 3
+    },
+    "unicorn/no-array-for-each": {
+      "count": 1
+    }
+  },
+  "src/features/notes/schema.ts": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    }
+  },
+  "src/features/notes/sessions.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    },
+    "import/avoid-namespace-import": {
+      "count": 1
+    }
+  },
+  "src/features/notes/targets.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 2
+    },
+    "consistent-return": {
+      "count": 2
+    },
+    "default-case": {
+      "count": 2
+    }
+  },
+  "src/features/notes/textIndex.ts": {
+    "@typescript-eslint/no-empty-function": {
+      "count": 2
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 4
+    },
+    "@typescript-eslint/parameter-properties": {
+      "count": 1
+    },
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 2
+    },
+    "complexity": {
+      "count": 1
+    },
+    "import/no-rename-default": {
+      "count": 1
+    },
+    "no-param-reassign": {
+      "count": 2
+    }
+  },
+  "src/features/notes/vault.ts": {
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 2
+    },
+    "@typescript-eslint/parameter-properties": {
+      "count": 2
+    },
+    "import/avoid-namespace-import": {
+      "count": 1
+    }
+  },
+  "src/kernel/__tests__/commands.test.ts": {
+    "@typescript-eslint/no-empty-function": {
+      "count": 2
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 6
+    },
+    "import/avoid-namespace-import": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/kernel/commands.ts": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    }
+  },
+  "src/kernel/undo.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/lib/__tests__/colour.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 51
+    },
+    "max-depth": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/lib/__tests__/hlc.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 7
+    }
+  },
+  "src/lib/colour.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 88
+    },
+    "no-loop-func": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 2
+    },
+    "unicorn/prefer-code-point": {
+      "count": 1
+    },
+    "unicorn/prefer-math-trunc": {
+      "count": 1
+    }
+  },
+  "src/lib/guards.ts": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    }
+  },
+  "src/lib/hash.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 2
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/lib/hlc.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 4
+    }
+  },
+  "src/lib/ids.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 6
+    },
+    "@typescript-eslint/restrict-plus-operands": {
+      "count": 2
+    },
+    "unicorn/prefer-code-point": {
+      "count": 1
+    }
+  },
+  "src/lib/number.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/lib/seededRandom.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 7
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "unicorn/prefer-code-point": {
+      "count": 1
+    }
+  },
+  "src/lib/set.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/lib/store.ts": {
+    "@typescript-eslint/parameter-properties": {
+      "count": 2
+    },
+    "@typescript-eslint/prefer-optional-chain": {
+      "count": 1
+    },
+    "max-classes-per-file": {
+      "count": 1
+    }
+  },
+  "src/lib/workerRpc.ts": {
+    "@typescript-eslint/no-unnecessary-type-parameters": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "promise/avoid-new": {
+      "count": 1
+    },
+    "promise/prefer-await-to-callbacks": {
+      "count": 1
+    },
+    "unicorn/prefer-add-event-listener": {
+      "count": 3
+    },
+    "unicorn/require-post-message-target-origin": {
+      "count": 1
+    }
+  },
+  "src/lobby/CaveBackdrop.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/lobby/Lobby.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 5
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "no-param-reassign": {
+      "count": 1
+    },
+    "react-doctor/no-autofocus": {
+      "count": 5
+    },
+    "react-doctor/no-unescaped-entities": {
+      "count": 1
+    }
+  },
+  "src/lobby/__tests__/CaveBackdrop.test.tsx": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 7
+    },
+    "@typescript-eslint/prefer-destructuring": {
+      "count": 1
+    }
+  },
+  "src/lobby/caveScene.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 8
+    },
+    "@typescript-eslint/no-unsafe-argument": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-assignment": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-call": {
+      "count": 5
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 5
+    }
+  },
+  "src/lobby/caveStage.ts": {
+    "@typescript-eslint/no-empty-function": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "no-console": {
+      "count": 1
+    },
+    "no-multi-assign": {
+      "count": 2
+    }
+  },
+  "src/lobby/crossProcess.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/lobby/splatCloud.ts": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/lobby/wispFlight.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    }
+  },
+  "src/macros/markdown.macro.ts": {
+    "import/no-named-as-default": {
+      "count": 1
+    }
+  },
+  "src/main.tsx": {
+    "import/no-unassigned-import": {
+      "count": 7
+    }
+  },
+  "src/media/images.ts": {
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "unicorn/no-await-expression-member": {
+      "count": 1
+    }
+  },
+  "src/media/images.worker.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 6
+    }
+  },
+  "src/navigation/router.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 2
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 6
+    }
+  },
+  "src/platform/__tests__/localStorage.test.ts": {
+    "@typescript-eslint/no-empty-function": {
+      "count": 2
+    }
+  },
+  "src/platform/blobs.ts": {
+    "@typescript-eslint/no-empty-function": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 1
+    },
+    "unicorn/no-await-expression-member": {
+      "count": 3
+    }
+  },
+  "src/platform/dataEpoch.ts": {
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    }
+  },
+  "src/platform/files.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 4
+    },
+    "promise/avoid-new": {
+      "count": 1
+    },
+    "unicorn/no-await-expression-member": {
+      "count": 2
+    }
+  },
+  "src/platform/keyval.ts": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "promise/avoid-new": {
+      "count": 2
+    },
+    "unicorn/prefer-add-event-listener": {
+      "count": 2
+    }
+  },
+  "src/platform/localStorage.ts": {
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 1
+    }
+  },
+  "src/platform/os.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/scene/__tests__/barBreak.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 2
+    },
+    "unicorn/no-unreadable-array-destructuring": {
+      "count": 1
+    }
+  },
+  "src/scene/__tests__/barChange.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 9
+    }
+  },
+  "src/scene/__tests__/camera.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 12
+    }
+  },
+  "src/scene/__tests__/conditionLayout.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 14
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/scene/__tests__/downed.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 4
+    }
+  },
+  "src/scene/__tests__/edgePin.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 9
+    }
+  },
+  "src/scene/__tests__/geometry.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 33
+    },
+    "max-lines-per-function": {
+      "count": 2
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "src/scene/__tests__/grid.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 21
+    }
+  },
+  "src/scene/__tests__/measure.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 43
+    }
+  },
+  "src/scene/__tests__/sceneDoc.test.ts": {
+    "@typescript-eslint/no-empty-function": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 2
+    },
+    "import/avoid-namespace-import": {
+      "count": 1
+    }
+  },
+  "src/scene/__tests__/selection.test.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 3
+    },
+    "@typescript-eslint/no-empty-function": {
+      "count": 10
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 128
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 5
+    },
+    "import/dynamic-import-chunkname": {
+      "count": 3
+    },
+    "makeamove/test-structure": {
+      "count": 4
+    },
+    "max-lines-per-function": {
+      "count": 3
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 3
+    }
+  },
+  "src/scene/__tests__/stroke.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 35
+    }
+  },
+  "src/scene/__tests__/tokenLabelLayout.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 25
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/scene/__tests__/toolCursors.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 7
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/scene/__tests__/vision.test.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 92
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "src/scene/barBreak.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 25
+    },
+    "unicorn/prefer-code-point": {
+      "count": 1
+    }
+  },
+  "src/scene/barChange.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 36
+    }
+  },
+  "src/scene/camera.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 7
+    }
+  },
+  "src/scene/conditionLayout.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 21
+    }
+  },
+  "src/scene/controller.ts": {
+    "@typescript-eslint/class-methods-use-this": {
+      "count": 1
+    },
+    "@typescript-eslint/max-params": {
+      "count": 2
+    },
+    "@typescript-eslint/no-empty-function": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 29
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 3
+    },
+    "complexity": {
+      "count": 1
+    },
+    "default-case": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 2
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 3
+    },
+    "unicorn/prefer-single-call": {
+      "count": 1
+    }
+  },
+  "src/scene/downed.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 15
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "src/scene/edgePin.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 2
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 9
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "src/scene/geometry.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 33
+    },
+    "consistent-return": {
+      "count": 2
+    },
+    "default-case": {
+      "count": 2
+    }
+  },
+  "src/scene/gestures/draw.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 2
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 2
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/scene/gestures/effect.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 1
+    },
+    "import/avoid-importing-barrel-files": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/scene/gestures/erase.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/scene/gestures/index.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/scene/gestures/light.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 2
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "new-cap": {
+      "count": 1
+    }
+  },
+  "src/scene/gestures/move.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/scene/gestures/pan.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 4
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 4
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    }
+  },
+  "src/scene/gestures/ping.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/scene/gestures/polygon.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 5
+    },
+    "@typescript-eslint/parameter-properties": {
+      "count": 1
+    },
+    "@typescript-eslint/prefer-destructuring": {
+      "count": 1
+    },
+    "@typescript-eslint/prefer-optional-chain": {
+      "count": 1
+    }
+  },
+  "src/scene/gestures/ruler.ts": {
+    "@typescript-eslint/no-shadow": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/scene/gestures/select.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 2
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    }
+  },
+  "src/scene/gestures/shape.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 4
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 11
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 7
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "no-multi-assign": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/scene/gestures/text.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 2
+    }
+  },
+  "src/scene/gestures/transform.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 2
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 16
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 3
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 2
+    }
+  },
+  "src/scene/gestures/types.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 2
+    }
+  },
+  "src/scene/gestures/wall.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 5
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 4
+    }
+  },
+  "src/scene/grid.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 15
+    }
+  },
+  "src/scene/lampShader.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 16
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 6
+    },
+    "@typescript-eslint/parameter-properties": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 10
+    },
+    "import/avoid-importing-barrel-files": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "unicorn/no-new-buffer": {
+      "count": 1
+    }
+  },
+  "src/scene/measure.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 11
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    }
+  },
+  "src/scene/newElements.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 2
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 4
+    },
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 1
+    }
+  },
+  "src/scene/presence.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 8
+    },
+    "@typescript-eslint/prefer-optional-chain": {
+      "count": 2
+    },
+    "unicorn/prefer-code-point": {
+      "count": 1
+    },
+    "unicorn/prefer-math-trunc": {
+      "count": 1
+    }
+  },
+  "src/scene/render/conditions.ts": {
+    "@typescript-eslint/class-methods-use-this": {
+      "count": 1
+    },
+    "@typescript-eslint/max-params": {
+      "count": 2
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 66
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 5
+    },
+    "@typescript-eslint/parameter-properties": {
+      "count": 1
+    },
+    "@typescript-eslint/prefer-destructuring": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "import/avoid-importing-barrel-files": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 2
+    },
+    "no-multi-assign": {
+      "count": 2
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 2
+    }
+  },
+  "src/scene/render/draft.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 2
+    },
+    "import/avoid-importing-barrel-files": {
+      "count": 1
+    }
+  },
+  "src/scene/render/effects.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 3
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 103
+    },
+    "@typescript-eslint/parameter-properties": {
+      "count": 5
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 2
+    },
+    "default-case": {
+      "count": 1
+    },
+    "import/avoid-importing-barrel-files": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "max-classes-per-file": {
+      "count": 1
+    },
+    "unicorn/prefer-code-point": {
+      "count": 1
+    }
+  },
+  "src/scene/render/elementViews.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 2
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 37
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 25
+    },
+    "consistent-return": {
+      "count": 2
+    },
+    "default-case": {
+      "count": 2
+    },
+    "import/avoid-importing-barrel-files": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/scene/render/elements.ts": {
+    "@typescript-eslint/class-methods-use-this": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 3
+    },
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 2
+    },
+    "@typescript-eslint/parameter-properties": {
+      "count": 2
+    },
+    "complexity": {
+      "count": 1
+    },
+    "import/avoid-importing-barrel-files": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/scene/render/grid.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 11
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 1
+    },
+    "import/avoid-importing-barrel-files": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/scene/render/handles.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 5
+    }
+  },
+  "src/scene/render/lighting.ts": {
+    "@typescript-eslint/class-methods-use-this": {
+      "count": 3
+    },
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 24
+    },
+    "@typescript-eslint/parameter-properties": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "import/avoid-importing-barrel-files": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "unicorn/prefer-code-point": {
+      "count": 1
+    },
+    "unicorn/prefer-math-trunc": {
+      "count": 1
+    }
+  },
+  "src/scene/render/overlay.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 11
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/parameter-properties": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "import/avoid-importing-barrel-files": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/scene/render/presence.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 62
+    },
+    "@typescript-eslint/parameter-properties": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "import/avoid-importing-barrel-files": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "max-depth": {
+      "count": 3
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "no-multi-assign": {
+      "count": 1
+    }
+  },
+  "src/scene/render/sdfFont.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 5
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 3
+    },
+    "import/avoid-importing-barrel-files": {
+      "count": 1
+    },
+    "no-multi-assign": {
+      "count": 2
+    }
+  },
+  "src/scene/render/sdfText.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 3
+    },
+    "accessor-pairs": {
+      "count": 2
+    },
+    "import/avoid-importing-barrel-files": {
+      "count": 1
+    }
+  },
+  "src/scene/render/style.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 10
+    },
+    "import/avoid-importing-barrel-files": {
+      "count": 1
+    }
+  },
+  "src/scene/render/textures.ts": {
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "import/avoid-importing-barrel-files": {
+      "count": 1
+    },
+    "promise/prefer-await-to-callbacks": {
+      "count": 1
+    }
+  },
+  "src/scene/render/tokenLabels.ts": {
+    "@typescript-eslint/class-methods-use-this": {
+      "count": 1
+    },
+    "@typescript-eslint/max-params": {
+      "count": 4
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 70
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 2
+    },
+    "@typescript-eslint/parameter-properties": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 5
+    },
+    "complexity": {
+      "count": 1
+    },
+    "import/avoid-importing-barrel-files": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "max-depth": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-unreadable-array-destructuring": {
+      "count": 1
+    }
+  },
+  "src/scene/renderer.ts": {
+    "@typescript-eslint/class-methods-use-this": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 2
+    },
+    "@typescript-eslint/parameter-properties": {
+      "count": 1
+    },
+    "import/avoid-importing-barrel-files": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "no-multi-assign": {
+      "count": 1
+    }
+  },
+  "src/scene/sceneDoc.ts": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 5
+    },
+    "import/avoid-namespace-import": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/scene/schema.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 8
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    }
+  },
+  "src/scene/stroke.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 8
+    }
+  },
+  "src/scene/tokenLabelLayout.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 3
+    },
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "src/scene/toolCursors.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 14
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 4
+    },
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/scene/tools.ts": {
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/scene/vision.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 16
+    }
+  },
+  "src/sync/__tests__/blobs.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 9
+    },
+    "import/avoid-namespace-import": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "no-await-in-loop": {
+      "count": 3
+    },
+    "no-new": {
+      "count": 3
+    },
+    "no-promise-executor-return": {
+      "count": 1
+    },
+    "promise/avoid-new": {
+      "count": 1
+    },
+    "promise/param-names": {
+      "count": 1
+    }
+  },
+  "src/sync/__tests__/memoryRoom.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/parameter-properties": {
+      "count": 4
+    },
+    "max-classes-per-file": {
+      "count": 1
+    }
+  },
+  "src/sync/__tests__/presence.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 3
+    },
+    "import/avoid-namespace-import": {
+      "count": 1
+    },
+    "no-promise-executor-return": {
+      "count": 1
+    },
+    "promise/avoid-new": {
+      "count": 1
+    },
+    "promise/param-names": {
+      "count": 1
+    }
+  },
+  "src/sync/__tests__/session.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 3
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 3
+    },
+    "import/avoid-namespace-import": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 5
+    }
+  },
+  "src/sync/blobs.ts": {
+    "@typescript-eslint/no-empty-function": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "@typescript-eslint/parameter-properties": {
+      "count": 2
+    },
+    "import/avoid-namespace-import": {
+      "count": 2
+    },
+    "promise/avoid-new": {
+      "count": 1
+    }
+  },
+  "src/sync/invite.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-plus-operands": {
+      "count": 1
+    }
+  },
+  "src/sync/publicRoom.ts": {
+    "import/dynamic-import-chunkname": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "unicorn/no-await-expression-member": {
+      "count": 1
+    }
+  },
+  "src/sync/session.ts": {
+    "@typescript-eslint/class-methods-use-this": {
+      "count": 1
+    },
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/parameter-properties": {
+      "count": 2
+    },
+    "import/avoid-namespace-import": {
+      "count": 4
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "src/sync/trystero.ts": {
+    "@typescript-eslint/no-empty-function": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/systems/__tests__/blades-in-the-dark.test.ts": {
+    "import/no-unassigned-import": {
+      "count": 1
+    }
+  },
+  "src/systems/__tests__/dnd55e-creation.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 13
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    },
+    "import/avoid-namespace-import": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "src/systems/__tests__/dnd55e.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 82
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 2
+    },
+    "import/avoid-namespace-import": {
+      "count": 1
+    },
+    "import/no-unassigned-import": {
+      "count": 1
+    },
+    "import/order": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 2
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 2
+    }
+  },
+  "src/systems/__tests__/dungeon-world-2-relationships.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 24
+    },
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 1
+    },
+    "import/avoid-namespace-import": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/systems/__tests__/dungeon-world-2-trackers.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "import/no-unassigned-import": {
+      "count": 1
+    }
+  },
+  "src/systems/__tests__/dungeon-world-2.test.ts": {
+    "@typescript-eslint/no-empty-function": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 40
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 2
+    },
+    "import/no-unassigned-import": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "src/systems/__tests__/dungeon-world-homebrew.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 2
+    },
+    "import/avoid-namespace-import": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "src/systems/__tests__/dungeon-world-library.test.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 2
+    }
+  },
+  "src/systems/__tests__/dungeon-world-moves.test.ts": {
+    "@typescript-eslint/consistent-type-imports": {
+      "count": 2
+    },
+    "@typescript-eslint/max-params": {
+      "count": 2
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 28
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 2
+    },
+    "no-negated-condition": {
+      "count": 1
+    }
+  },
+  "src/systems/__tests__/dungeon-world.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 10
+    },
+    "import/no-unassigned-import": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/systems/__tests__/systems.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 117
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 2
+    },
+    "@typescript-eslint/prefer-destructuring": {
+      "count": 1
+    },
+    "import/no-unassigned-import": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 5
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "src/systems/__tests__/tokenStats.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 6
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 2
+    },
+    "makeamove/test-structure": {
+      "count": 1
+    }
+  },
+  "src/systems/blades-in-the-dark/CrewSheet.tsx": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 2
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 3
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/systems/blades-in-the-dark/Sheet.tsx": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 6
+    }
+  },
+  "src/systems/blades-in-the-dark/commands.ts": {
+    "@typescript-eslint/no-invalid-void-type": {
+      "count": 1
+    }
+  },
+  "src/systems/blades-in-the-dark/content.ts": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    }
+  },
+  "src/systems/blades-in-the-dark/extension.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/systems/blades-in-the-dark/index.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 3
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 17
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 1
+    },
+    "@typescript-eslint/prefer-destructuring": {
+      "count": 2
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 7
+    },
+    "max-lines": {
+      "count": 1
+    }
+  },
+  "src/systems/blades-in-the-dark/progression.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 13
+    },
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/systems/dnd55e/Sheet.tsx": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 3
+    }
+  },
+  "src/systems/dnd55e/data.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 2
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 295
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 4
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/systems/dnd55e/extension.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/systems/dnd55e/index.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 2
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 142
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 27
+    },
+    "complexity": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 2
+    },
+    "no-nested-ternary": {
+      "count": 6
+    },
+    "unicorn/no-array-reduce": {
+      "count": 1
+    }
+  },
+  "src/systems/dnd55e/origins.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 6
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    }
+  },
+  "src/systems/dnd55e/sections.tsx": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 4
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 5
+    }
+  },
+  "src/systems/dnd55e/sheetHooks.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    }
+  },
+  "src/systems/dnd55e/srdClasses.ts": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/systems/dnd55e/srdFeats.ts": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/systems/dnd55e/srdMagicItems.ts": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/systems/dnd55e/srdMonsters.ts": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/systems/dnd55e/srdSpells.ts": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/systems/dungeon-world-2/BondsSection.tsx": {
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/systems/dungeon-world-2/ClassChange.tsx": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 4
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/systems/dungeon-world-2/ItemUse.tsx": {
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 2
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/systems/dungeon-world-2/MoveForms.tsx": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 4
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 5
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/systems/dungeon-world-2/Sheet.tsx": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 1
+    },
+    "consistent-return": {
+      "count": 1
+    }
+  },
+  "src/systems/dungeon-world-2/bondSpecs.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/systems/dungeon-world-2/bondStore.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 2
+    }
+  },
+  "src/systems/dungeon-world-2/bonds.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/systems/dungeon-world-2/campaign.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 7
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 4
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 2
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 3
+    }
+  },
+  "src/systems/dungeon-world-2/commands.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 4
+    }
+  },
+  "src/systems/dungeon-world-2/extension.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/systems/dungeon-world-2/gear.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 22
+    },
+    "@typescript-eslint/no-useless-default-assignment": {
+      "count": 1
+    }
+  },
+  "src/systems/dungeon-world-2/index.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 2
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 15
+    },
+    "@typescript-eslint/prefer-destructuring": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 6
+    },
+    "consistent-return": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 4
+    }
+  },
+  "src/systems/dungeon-world-2/library.ts": {
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 3
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 2
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "src/systems/dungeon-world-2/rulebook.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    }
+  },
+  "src/systems/dungeon-world-2/sourceMoveNames.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/systems/dungeon-world-2/startingOptions.ts": {
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 4
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/systems/dungeon-world-2/stats.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/systems/dungeon-world-2/wealth.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 4
+    }
+  },
+  "src/systems/dungeon-world/extension.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/systems/dungeon-world/index.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 21
+    },
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 2
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 8
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "src/systems/effects.ts": {
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 2
+    },
+    "default-case": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/systems/extensionTypes.ts": {
+    "makeamove/no-props": {
+      "count": 3
+    },
+    "makeamove/no-redundant-type-synonyms": {
+      "count": 3
+    }
+  },
+  "src/systems/extensions.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/systems/index.ts": {
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "max-depth": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/systems/tokenStats.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 2
+    },
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/systems/types.ts": {
+    "@typescript-eslint/sort-type-constituents": {
+      "count": 3
+    },
+    "max-lines": {
+      "count": 1
+    }
+  },
+  "src/table/CampaignDialogHost.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 3
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/table/CardParts.tsx": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 2
+    },
+    "no-duplicate-imports": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 2
+    }
+  },
+  "src/table/CharactersPanel.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 1
+    },
+    "@typescript-eslint/max-params": {
+      "count": 2
+    },
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    },
+    "consistent-return": {
+      "count": 2
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "react-doctor/no-autofocus": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "src/table/ChatComposer.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/table/ChatExtras.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 3
+    },
+    "@eslint-react/use-state": {
+      "count": 1
+    },
+    "@typescript-eslint/no-empty-function": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 11
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 1
+    },
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 2
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 4
+    },
+    "consistent-return": {
+      "count": 3
+    },
+    "jsx-a11y/no-static-element-interactions": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "src/table/ChatInput.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 3
+    },
+    "consistent-return": {
+      "count": 1
+    },
+    "import/no-rename-default": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "src/table/ChatLog.tsx": {
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 2
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/table/ChatMessage.tsx": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 2
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    },
+    "default-case": {
+      "count": 1
+    }
+  },
+  "src/table/ChatPanel.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 1
+    },
+    "consistent-return": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/table/ChatPopups.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 6
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 3
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/prefer-destructuring": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 3
+    },
+    "consistent-return": {
+      "count": 2
+    },
+    "import/dynamic-import-chunkname": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/table/CombatPanel.tsx": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 2
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 3
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/table/ConfirmDialog.tsx": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/table/FloatingWindows.tsx": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 4
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 4
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/table/FolderTree.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 1
+    },
+    "@eslint-react/use-state": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 2
+    }
+  },
+  "src/table/Hotbar.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 1
+    },
+    "@eslint-react/use-state": {
+      "count": 1
+    },
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/table/ItemsPanel.tsx": {
+    "@eslint-react/use-state": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 2
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 2
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 2
+    }
+  },
+  "src/table/LibrariesPanel.tsx": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 3
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/table/LinkPopups.tsx": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "no-duplicate-imports": {
+      "count": 1
+    },
+    "react-doctor/no-autofocus": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "src/table/MoveAskForm.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 1
+    },
+    "@typescript-eslint/max-params": {
+      "count": 3
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 4
+    },
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 2
+    },
+    "consistent-return": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    }
+  },
+  "src/table/MovePrompt.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 3
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 5
+    },
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 1
+    },
+    "@typescript-eslint/prefer-destructuring": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 6
+    },
+    "consistent-return": {
+      "count": 3
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "react-hooks/todo": {
+      "count": 1
+    },
+    "require-atomic-updates": {
+      "count": 3
+    }
+  },
+  "src/table/NoteEditor.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 2
+    },
+    "@typescript-eslint/prefer-destructuring": {
+      "count": 1
+    },
+    "consistent-return": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/table/NotesPanel.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 2
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 8
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 4
+    },
+    "consistent-return": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/table/Palette.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 4
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 1
+    },
+    "@typescript-eslint/no-empty-function": {
+      "count": 1
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 2
+    },
+    "consistent-return": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "jsx-a11y/no-noninteractive-element-interactions": {
+      "count": 1
+    },
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 3
+    }
+  },
+  "src/table/PanelActions.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 1
+    },
+    "@eslint-react/no-use-context": {
+      "count": 2
+    },
+    "consistent-return": {
+      "count": 1
+    }
+  },
+  "src/table/PlayerCharacterPanel.tsx": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/table/QuickDice.tsx": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 6
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 3
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 3
+    }
+  },
+  "src/table/ReferencePanel.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/table/RelationshipWeb.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 10
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 10
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    }
+  },
+  "src/table/Relationships.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 3
+    },
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 2
+    },
+    "consistent-return": {
+      "count": 1
+    },
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 2
+    },
+    "max-lines": {
+      "count": 1
+    }
+  },
+  "src/table/RollCards.tsx": {
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 8
+    }
+  },
+  "src/table/RollDie.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 4
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 5
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 7
+    },
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 8
+    },
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 6
+    },
+    "consistent-return": {
+      "count": 2
+    },
+    "jsx-a11y/no-aria-hidden-on-focusable": {
+      "count": 1
+    },
+    "jsx-a11y/no-noninteractive-tabindex": {
+      "count": 1
+    },
+    "jsx-a11y/no-static-element-interactions": {
+      "count": 1
+    },
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 3
+    },
+    "no-nested-ternary": {
+      "count": 3
+    },
+    "promise/avoid-new": {
+      "count": 1
+    }
+  },
+  "src/table/SceneCanvas.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 4
+    },
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 2
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 2
+    },
+    "consistent-return": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "jsx-a11y/no-static-element-interactions": {
+      "count": 1
+    }
+  },
+  "src/table/ScenePanel.tsx": {
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 1
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/table/SceneSettingsFields.tsx": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 3
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/table/SelectionBar.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 1
+    },
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 5
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 2
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 2
+    },
+    "import/no-unassigned-import": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "src/table/Sidebar.tsx": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 15
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 3
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 4
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    }
+  },
+  "src/table/Tabletop.tsx": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 7
+    },
+    "consistent-return": {
+      "count": 1
+    },
+    "import/dynamic-import-chunkname": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/table/TextEditor.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 5
+    },
+    "consistent-return": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    },
+    "unicorn/prefer-dom-node-text-content": {
+      "count": 1
+    }
+  },
+  "src/table/TextStyleFields.tsx": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "import/no-unassigned-import": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/table/TokenOptionsDialog.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 2
+    },
+    "@typescript-eslint/no-empty-function": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 2
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "react-doctor/no-autofocus": {
+      "count": 1
+    }
+  },
+  "src/table/Toolbar.tsx": {
+    "@eslint-react/dom-no-flush-sync": {
+      "count": 1
+    },
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 2
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 3
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 5
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 3
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 2
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "no-duplicate-imports": {
+      "count": 1
+    }
+  },
+  "src/table/chatContentExtensions.ts": {
+    "import/no-named-as-default": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/table/dice/__tests__/physics.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 106
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 2
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 3
+    },
+    "unicorn/no-array-reduce": {
+      "count": 1
+    }
+  },
+  "src/table/dice/__tests__/tray.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 54
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    }
+  },
+  "src/table/dice/die.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 6
+    },
+    "@typescript-eslint/parameter-properties": {
+      "count": 2
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 3
+    },
+    "no-param-reassign": {
+      "count": 2
+    },
+    "promise/avoid-new": {
+      "count": 2
+    },
+    "promise/param-names": {
+      "count": 1
+    }
+  },
+  "src/table/dice/painter.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 36
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 2
+    },
+    "no-multi-assign": {
+      "count": 1
+    }
+  },
+  "src/table/dice/physics.ts": {
+    "@typescript-eslint/class-methods-use-this": {
+      "count": 4
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 53
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 3
+    },
+    "@typescript-eslint/parameter-properties": {
+      "count": 3
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 2
+    },
+    "complexity": {
+      "count": 1
+    },
+    "max-classes-per-file": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 3
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "src/table/dice/shapes.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 45
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "unicorn/no-array-reduce": {
+      "count": 2
+    }
+  },
+  "src/table/dice/tracks.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 3
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 11
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/table/dockStrip.ts": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    },
+    "consistent-return": {
+      "count": 1
+    }
+  },
+  "src/table/effectOptions.tsx": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/table/effectOptionsData.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/table/onScreenRect.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/table/panels.tsx": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    },
+    "import/dynamic-import-chunkname": {
+      "count": 9
+    }
+  },
+  "src/table/pieceMachine.ts": {
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/table/rollDieHelpers.ts": {
+    "@typescript-eslint/consistent-type-imports": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 6
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 3
+    },
+    "import/dynamic-import-chunkname": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "promise/prefer-await-to-callbacks": {
+      "count": 1
+    }
+  },
+  "src/table/sceneDrops.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "no-param-reassign": {
+      "count": 1
+    }
+  },
+  "src/table/sheets.tsx": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/table/useActingCharacter.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/table/useDicePool.ts": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 8
+    },
+    "@typescript-eslint/no-empty-function": {
+      "count": 2
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 6
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 12
+    },
+    "max-lines-per-function": {
+      "count": 2
+    },
+    "no-promise-executor-return": {
+      "count": 3
+    },
+    "promise/avoid-new": {
+      "count": 5
+    },
+    "react-hooks/todo": {
+      "count": 1
+    }
+  },
+  "src/table/useDraft.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/table/useLogWindow.ts": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 8
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 3
+    },
+    "@typescript-eslint/no-unused-expressions": {
+      "count": 1
+    },
+    "@typescript-eslint/prefer-destructuring": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "consistent-return": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "react-hooks/todo": {
+      "count": 1
+    }
+  },
+  "src/table/useSceneCanvas.ts": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 1
+    },
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "consistent-return": {
+      "count": 8
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 2
+    }
+  },
+  "src/ui/Avatar.tsx": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/ui/BlobImage.tsx": {
+    "consistent-return": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/ui/Button.tsx": {
+    "@eslint-react/no-forward-ref": {
+      "count": 1
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "import/avoid-importing-barrel-files": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/ui/ColourPicker.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 1
+    },
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 27
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 3
+    },
+    "consistent-return": {
+      "count": 1
+    },
+    "import/avoid-importing-barrel-files": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "jsx-a11y/no-aria-hidden-on-focusable": {
+      "count": 1
+    },
+    "no-multi-assign": {
+      "count": 1
+    }
+  },
+  "src/ui/CommitInput.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 1
+    },
+    "@eslint-react/no-forward-ref": {
+      "count": 1
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/ui/ContextMenu.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 5
+    },
+    "@eslint-react/no-array-index-key": {
+      "count": 1
+    },
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 3
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 3
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    },
+    "import/avoid-importing-barrel-files": {
+      "count": 1
+    },
+    "react-doctor/no-autofocus": {
+      "count": 1
+    }
+  },
+  "src/ui/EntityGraphic.tsx": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/ui/FilterableMenu.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 2
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 2
+    },
+    "import/avoid-importing-barrel-files": {
+      "count": 1
+    },
+    "react-doctor/no-autofocus": {
+      "count": 1
+    }
+  },
+  "src/ui/FolderName.tsx": {
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "react-doctor/no-autofocus": {
+      "count": 1
+    }
+  },
+  "src/ui/GraphicPicker.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/ui/List.tsx": {
+    "@eslint-react/no-leaked-conditional-rendering": {
+      "count": 2
+    },
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 3
+    }
+  },
+  "src/ui/OptionPicker.tsx": {
+    "makeamove/no-props": {
+      "count": 1
+    }
+  },
+  "src/ui/PopupTabs.tsx": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "import/avoid-importing-barrel-files": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/ui/Segmented.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 2
+    },
+    "@typescript-eslint/no-empty-function": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 2
+    },
+    "consistent-return": {
+      "count": 1
+    },
+    "import/avoid-importing-barrel-files": {
+      "count": 1
+    }
+  },
+  "src/ui/Tooltip.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 1
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 2
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 7
+    },
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 5
+    },
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 2
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    },
+    "consistent-return": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "unicorn/prefer-dom-node-text-content": {
+      "count": 1
+    }
+  },
+  "src/ui/TwoPane.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    },
+    "consistent-return": {
+      "count": 1
+    },
+    "jsx-a11y/no-noninteractive-element-interactions": {
+      "count": 1
+    },
+    "jsx-a11y/no-noninteractive-tabindex": {
+      "count": 1
+    },
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    }
+  },
+  "src/ui/__tests__/iconMotion.test.tsx": {
+    "import/no-unassigned-import": {
+      "count": 1
+    }
+  },
+  "src/ui/__tests__/icons.test.tsx": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 3
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 2
+    }
+  },
+  "src/ui/__tests__/resizeRect.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 9
+    }
+  },
+  "src/ui/anchor.ts": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/ui/blobImageContext.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/ui/entryIcons.tsx": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 1
+    }
+  },
+  "src/ui/iconArt.tsx": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 6
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 2
+    }
+  },
+  "src/ui/icons.tsx": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 59
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 32
+    },
+    "makeamove/no-props": {
+      "count": 2
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "react-doctor/only-export-components": {
+      "count": 1
+    }
+  },
+  "src/ui/keys.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/ui/menuOverlay.ts": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "consistent-return": {
+      "count": 2
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/ui/menuTrigger.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/ui/morph.ts": {
+    "@typescript-eslint/no-empty-function": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 3
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 8
+    },
+    "no-multi-assign": {
+      "count": 1
+    },
+    "promise/catch-or-return": {
+      "count": 1
+    }
+  },
+  "src/ui/paneLayout.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/ui/paneLevel.ts": {
+    "@typescript-eslint/no-empty-function": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/ui/pointer.ts": {
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 1
+    }
+  },
+  "src/ui/popup.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 6
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 8
+    }
+  },
+  "src/ui/pressed.ts": {
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    }
+  },
+  "src/ui/react.d.ts": {
+    "import/no-unassigned-import": {
+      "count": 1
+    }
+  },
+  "src/ui/reorder.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 11
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 9
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/ui/replay.ts": {
+    "@typescript-eslint/no-dynamic-delete": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/ui/resizeRect.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "no-param-reassign": {
+      "count": 2
+    }
+  },
+  "src/ui/sounds.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-empty-function": {
+      "count": 2
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 66
+    },
+    "consistent-return": {
+      "count": 1
+    }
+  },
+  "src/ui/suppressClick.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "src/ui/throwMachine.ts": {
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 6
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/ui/transition.ts": {
+    "@typescript-eslint/no-empty-function": {
+      "count": 2
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 4
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "no-promise-executor-return": {
+      "count": 1
+    },
+    "promise/avoid-new": {
+      "count": 2
+    }
+  },
+  "src/ui/useConstant.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/ui/useQuery.ts": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 1
+    },
+    "@typescript-eslint/no-empty-function": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "src/ui/useThrow.ts": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 2
+    },
+    "@typescript-eslint/no-empty-function": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 2
+    },
+    "@typescript-eslint/prefer-optional-chain": {
+      "count": 2
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 6
+    },
+    "consistent-return": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "react-hooks/todo": {
+      "count": 1
+    }
+  },
+  "src/ui/viewport.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/ui/wheel.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/ui/whenNear.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/workspace/ActionDialogs.tsx": {
+    "@eslint-react/no-implicit-key": {
+      "count": 3
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/no-useless-default-assignment": {
+      "count": 2
+    },
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 2
+    },
+    "react-doctor/no-autofocus": {
+      "count": 2
+    }
+  },
+  "src/workspace/BackupSettings.tsx": {
+    "consistent-return": {
+      "count": 1
+    },
+    "default-case": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "react-hooks/todo": {
+      "count": 1
+    }
+  },
+  "src/workspace/CampaignDialogs.tsx": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/workspace/CharacterText.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 1
+    },
+    "consistent-return": {
+      "count": 1
+    }
+  },
+  "src/workspace/CreationParts.tsx": {
+    "@eslint-react/no-unstable-default-props": {
+      "count": 1
+    },
+    "@eslint-react/unstable-exhaustive-deps": {
+      "count": 1
+    },
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 4
+    },
+    "@typescript-eslint/switch-exhaustiveness-check": {
+      "count": 1
+    },
+    "default-case": {
+      "count": 1
+    },
+    "no-lone-blocks": {
+      "count": 1
+    }
+  },
+  "src/workspace/DeclarativeSheet.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 1
+    },
+    "@eslint-react/no-unused-props": {
+      "count": 1
+    },
+    "@typescript-eslint/no-invalid-void-type": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 4
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 3
+    },
+    "consistent-return": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "src/workspace/Dialog.tsx": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "consistent-return": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "jsx-a11y/no-noninteractive-element-interactions": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/workspace/EntityGraphic.tsx": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/workspace/EntryActionButtons.tsx": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/workspace/EntryWindow.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 1
+    },
+    "@eslint-react/no-leaked-conditional-rendering": {
+      "count": 1
+    }
+  },
+  "src/workspace/GraphicDialogs.tsx": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/workspace/Inventory.tsx": {
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 3
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/workspace/LinkChip.tsx": {
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 1
+    },
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 2
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/workspace/MoveBody.tsx": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/workspace/RichTextField.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 3
+    },
+    "consistent-return": {
+      "count": 1
+    },
+    "import/no-rename-default": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/workspace/RichTextView.tsx": {
+    "@eslint-react/no-array-index-key": {
+      "count": 1
+    },
+    "@eslint-react/no-context-provider": {
+      "count": 1
+    },
+    "@eslint-react/no-use-context": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    }
+  },
+  "src/workspace/WindowControls.tsx": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 2
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    },
+    "jsx-a11y/no-static-element-interactions": {
+      "count": 1
+    }
+  },
+  "src/workspace/__tests__/entityDrag.test.ts": {
+    "@typescript-eslint/no-shadow": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 3
+    },
+    "import/dynamic-import-chunkname": {
+      "count": 4
+    },
+    "import/no-unassigned-import": {
+      "count": 1
+    },
+    "makeamove/test-structure": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "src/workspace/__tests__/layoutModel.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 16
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "src/workspace/__tests__/linkNavigation.test.ts": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 2
+    },
+    "makeamove/test-structure": {
+      "count": 2
+    }
+  },
+  "src/workspace/actionMenu.ts": {
+    "@typescript-eslint/no-meaningless-void-operator": {
+      "count": 1
+    }
+  },
+  "src/workspace/actionPresentation.ts": {
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 2
+    },
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/workspace/advancementModel.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 2
+    },
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/workspace/campaignContext.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    }
+  },
+  "src/workspace/campaignSheets.tsx": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/workspace/canvasState.ts": {
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "src/workspace/commands/__tests__/custom.test.ts": {
+    "@typescript-eslint/no-shadow": {
+      "count": 1
+    }
+  },
+  "src/workspace/commands/__tests__/search.test.ts": {
+    "@typescript-eslint/no-empty-function": {
+      "count": 2
+    }
+  },
+  "src/workspace/commands/all.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/workspace/commands/campaign.ts": {
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "src/workspace/commands/characters.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unnecessary-type-parameters": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 2
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 4
+    },
+    "max-lines": {
+      "count": 1
+    }
+  },
+  "src/workspace/commands/chat.ts": {
+    "@typescript-eslint/no-empty-function": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 5
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    }
+  },
+  "src/workspace/commands/custom.ts": {
+    "@typescript-eslint/no-dynamic-delete": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 3
+    },
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/workspace/commands/keys.ts": {
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 2
+    }
+  },
+  "src/workspace/commands/notes.ts": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 2
+    }
+  },
+  "src/workspace/commands/recent.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/workspace/commands/scenes.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    }
+  },
+  "src/workspace/commands/search.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 7
+    },
+    "@typescript-eslint/prefer-destructuring": {
+      "count": 1
+    },
+    "import/no-rename-default": {
+      "count": 1
+    }
+  },
+  "src/workspace/commands/selection.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 2
+    }
+  },
+  "src/workspace/commands/types.ts": {
+    "@typescript-eslint/no-generated-empty-object-type": {
+      "count": 1
+    }
+  },
+  "src/workspace/commands/views.ts": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 4
+    },
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/workspace/creationModel.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 2
+    }
+  },
+  "src/workspace/dragEntities.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    }
+  },
+  "src/workspace/entityDrag.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 3
+    },
+    "@typescript-eslint/no-invalid-void-type": {
+      "count": 4
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 7
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 2
+    },
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 4
+    },
+    "complexity": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/workspace/entityGraphics.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 3
+    }
+  },
+  "src/workspace/entityWindowState.ts": {
+    "@typescript-eslint/no-dynamic-delete": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 5
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "@typescript-eslint/parameter-properties": {
+      "count": 1
+    }
+  },
+  "src/workspace/entityWindows.tsx": {
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/workspace/entryWindowState.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/workspace/layoutModel.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 4
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 2
+    }
+  },
+  "src/workspace/libraryActions.ts": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/workspace/libraryView.ts": {
+    "@typescript-eslint/parameter-properties": {
+      "count": 1
+    }
+  },
+  "src/workspace/linkActions.ts": {
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/workspace/linkNavigation.ts": {
+    "@typescript-eslint/parameter-properties": {
+      "count": 3
+    },
+    "default-case": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/workspace/linkProxy.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/workspace/linkState.ts": {
+    "@typescript-eslint/parameter-properties": {
+      "count": 1
+    }
+  },
+  "src/workspace/noteExtensions.ts": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 7
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 3
+    },
+    "import/no-named-as-default": {
+      "count": 1
+    },
+    "import/no-rename-default": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "src/workspace/panelLayout.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 3
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 8
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 2
+    }
+  },
+  "src/workspace/richText.tsx": {
+    "@typescript-eslint/no-empty-function": {
+      "count": 1
+    },
+    "@typescript-eslint/no-shadow": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 3
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 9
+    },
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 6
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 2
+    },
+    "import/no-named-as-default": {
+      "count": 3
+    },
+    "import/no-rename-default": {
+      "count": 3
+    },
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    }
+  },
+  "src/workspace/richTextExtensions.ts": {
+    "import/no-named-as-default": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/workspace/sheetModel.ts": {
+    "@eslint-react/no-unnecessary-use-prefix": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/workspace/sheetParts.tsx": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 1
+    },
+    "@eslint-react/no-unstable-default-props": {
+      "count": 1
+    },
+    "@eslint-react/no-unused-props": {
+      "count": 2
+    },
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "count": 1
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "react-hooks/todo": {
+      "count": 1
+    }
+  },
+  "src/workspace/sheetSections.tsx": {
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 2
+    }
+  },
+  "src/workspace/systemExtensions.ts": {
+    "@eslint-react/naming-convention-context-name": {
+      "count": 1
+    },
+    "@eslint-react/no-use-context": {
+      "count": 1
+    }
+  },
+  "src/workspace/tableState.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 1
+    },
+    "@typescript-eslint/parameter-properties": {
+      "count": 1
+    }
+  },
+  "src/workspace/tokenDrag.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 2
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 4
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/workspace/tools.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/workspace/trackerButtons.ts": {
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 3
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 3
+    }
+  },
+  "src/workspace/usePopupDialog.ts": {
+    "@eslint-react/naming-convention-ref-name": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "vite.config.ts": {
+    "camelcase": {
+      "count": 3
+    },
+    "consistent-return": {
+      "count": 1
+    },
+    "import/avoid-importing-barrel-files": {
+      "count": 1
+    },
+    "import/no-nodejs-modules": {
+      "count": 1
+    },
+    "import/no-rename-default": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "new-cap": {
+      "count": 2
+    }
+  }
+}
