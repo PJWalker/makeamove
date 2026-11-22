@@ -1,9 +1,9 @@
 import { Quaternion, Vector3 } from "three";
 import { chipModel, dieModel, paint, resolveColour  } from "./painter";
 import type {Model} from "./painter";
-import { simulateDice   } from "./physics";
-import type {DieHull, DiePose} from "./physics";
+import type { DieHull, DiePose, DieThrow, DieTray } from "./physics";
 import { chipHull, firstFaceFor, SCALE, shapeFor, SLOT } from "./shapes";
+import { simulateDiceInWorker, warmDice } from "./simulation";
 import { centreOf, glideTrack, lyingAt, rollTrack, struck } from "./tracks";
 import type { DieLook, Point, Pose, Track } from "./types";
 
@@ -45,6 +45,7 @@ export class Die {
     this.first = "chip" in look ? 0 : look.value;
     this.model = this.build();
     dice.set(canvas, this);
+    void warmDice();
   }
 
   get slot(): HTMLElement {
@@ -255,6 +256,8 @@ interface Throw {
 }
 
 const pending = new Map<HTMLElement, Throw[]>();
+/** Each tray's latest roll, so the next one there waits until its dice are moving. */
+const rolling = new WeakMap<HTMLElement, Promise<void>>();
 
 function throwDie(
   die: Die,
@@ -273,7 +276,8 @@ function rollPending() {
   for (const [tray, all] of batches) {
     for (const gone of all) if (!gone.die.alive) gone.settle(Promise.resolve());
     const throws = all.filter(({ die }) => die.alive);
-    if (throws.length > 0) roll(tray, throws, lyingIn(tray, throws));
+    if (throws.length > 0)
+      rolling.set(tray, (rolling.get(tray) ?? Promise.resolve()).then(() => roll(tray, throws)));
   }
 }
 
@@ -285,50 +289,62 @@ function lyingIn(tray: HTMLElement, throws: Throw[]) {
   });
 }
 
-/**
- * Rolls `throws` into `tray`, among the dice `lying` there: those are knocked
- * about by the rolling dice, but keep the faces they show.
- */
-function roll(tray: HTMLElement, throws: Throw[], lying: Die[]) {
+/** The roll of `throws` among the dice `lying` in `tray`, in the tray's own frame, for the physics. */
+function inTrayFrame(tray: HTMLElement, throws: Throw[], lying: Die[]): [DieTray, DieThrow[]] {
   const box = tray.getBoundingClientRect();
   const inTray = ({ x, y }: Point) => ({ x: (x - box.left) / SCALE, y: (y - box.top) / SCALE });
+  return [
+    { left: 0, top: 0, right: box.width / SCALE, bottom: box.height / SCALE },
+    [
+      ...throws.map(({ die, seed, delay, trayVelocity }) => {
+        const target = inTray(centreOf(die.slot));
+        return {
+          hull: die.hull,
+          seed,
+          delay,
+          target,
+          ...(trayVelocity
+            ? { state: struck(die.hull, die.restingRotation, target, trayVelocity) }
+            : {}),
+        };
+      }),
+      ...lying.map((die) => {
+        const target = inTray(centreOf(die.slot));
+        return {
+          hull: die.hull,
+          seed: "",
+          target,
+          heavy: true,
+          state: lyingAt(die.hull, die.restingRotation, target),
+        };
+      }),
+    ],
+  ];
+}
+
+/**
+ * Rolls `throws` into `tray`, among the dice lying still there: those are knocked
+ * about by the rolling dice, but keep the faces they show.
+ */
+async function roll(tray: HTMLElement, throws: Throw[]) {
+  const lying = lyingIn(tray, throws);
   let frames: DiePose[][] | undefined;
   try {
-    frames = simulateDice(
-      { left: 0, top: 0, right: box.width / SCALE, bottom: box.height / SCALE },
-      [
-        ...throws.map(({ die, seed, delay, trayVelocity }) => {
-          const target = inTray(centreOf(die.slot));
-          return {
-            hull: die.hull,
-            seed,
-            delay,
-            target,
-            ...(trayVelocity
-              ? { state: struck(die.hull, die.restingRotation, target, trayVelocity) }
-              : {}),
-          };
-        }),
-        ...lying.map((die) => {
-          const target = inTray(centreOf(die.slot));
-          return {
-            hull: die.hull,
-            seed: "",
-            target,
-            heavy: true,
-            state: lyingAt(die.hull, die.restingRotation, target),
-          };
-        }),
-      ],
-    );
+    frames = await simulateDiceInWorker(...inTrayFrame(tray, throws, lying));
   } catch (error) {
     console.error("The dice couldn't be rolled; they're shown at rest.", error);
   }
   for (const [index, { die, delay, from, settle }] of throws.entries()) {
     const poses = frames?.[index];
+    // Gone while the roll was worked out.
+    if (!die.alive) {
+      settle(Promise.resolve());
+      continue;
+    }
     if (!poses) {
       die.rest();
-       settle(Promise.resolve()); continue;
+      settle(Promise.resolve());
+      continue;
     }
     const { x, y, z, w } = poses.at(-1)!.quaternion;
     const track = rollTrack(poses, tray, die.slot, delay, from);
@@ -336,6 +352,6 @@ function roll(tray: HTMLElement, throws: Throw[], lying: Die[]) {
   }
   for (const [index, die] of lying.entries()) {
     const poses = frames?.[throws.length + index];
-    if (poses) void die.play(rollTrack(poses, tray, die.slot, 0), 0, die.restingRotation);
+    if (poses && die.alive) void die.play(rollTrack(poses, tray, die.slot, 0), 0, die.restingRotation);
   }
 }
