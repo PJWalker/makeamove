@@ -95,7 +95,7 @@ function MessageBox({
           handleRef={input}
           placeholder="Message, @ to link, or roll 2d6+1"
           label="Message"
-          invalid={!!error}
+          invalid={Boolean(error)}
           onChange={(next) => {
             setContent(next);
             onError(null);
@@ -107,7 +107,7 @@ function MessageBox({
             onError(null);
           }}
         />
-        <Button variant="primary" type="submit" label="Send" disabled={!typed.trim()}>
+        <Button variant="secondary" type="submit" label="Send" disabled={!typed.trim()}>
           Send
         </Button>
       </form>
