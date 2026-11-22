@@ -10,7 +10,7 @@
     position: relative;
     display: grid;
     gap: var(--space-4);
-    width: min(640px, 100% - 2 * var(--space-4));
+    width: min(760px, 100% - 2 * var(--space-4));
     margin-inline: auto;
     padding-block: 10vh var(--space-6);
   }
@@ -77,7 +77,7 @@
   }
   .welcome-features {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: var(--space-3);
     width: 100%;
     margin: 0;
@@ -86,8 +86,10 @@
   }
   .welcome-features li {
     display: grid;
+    align-content: start;
     justify-items: center;
     gap: var(--space-2);
+    min-width: 0;
     padding: var(--space-4) var(--space-3);
     border: 1px solid oklch(80% 0.12 82 / 0.22);
     background: rgb(8 9 16 / 0.55);
@@ -100,12 +102,18 @@
       translate 200ms var(--ease),
       color 200ms var(--ease);
   }
-  .welcome-features li:nth-child(2) {
-    animation-delay: 90ms;
+  .welcome-features li strong {
+    font-size: var(--text-sm);
   }
-  .welcome-features li:nth-child(3) {
-    animation-delay: 180ms;
+  .welcome-features li span {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    line-height: 1.45;
   }
+  .welcome-features li:nth-child(2) { animation-delay: 90ms; }
+  .welcome-features li:nth-child(3) { animation-delay: 180ms; }
+  .welcome-features li:nth-child(4) { animation-delay: 270ms; }
+  .welcome-features li:nth-child(5) { animation-delay: 360ms; }
   .welcome-features li svg {
     color: var(--accent);
     transition: rotate 300ms var(--ease);
@@ -116,6 +124,25 @@
   }
   .welcome-features li:hover svg {
     rotate: -8deg;
+  }
+  @media (max-width: 680px) {
+    .welcome-features {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .welcome-features li:last-child {
+      grid-column: 1 / -1;
+      width: calc(50% - var(--space-2) / 2);
+      justify-self: center;
+    }
+  }
+  @media (max-width: 420px) {
+    .welcome-features {
+      grid-template-columns: 1fr;
+    }
+    .welcome-features li:last-child {
+      grid-column: auto;
+      width: 100%;
+    }
   }
   .welcome-cta {
     box-shadow: 0 4px 24px #000a;
