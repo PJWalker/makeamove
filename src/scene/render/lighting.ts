@@ -92,15 +92,25 @@ export class LightingLayer {
       h: view.h + 2 * margin,
     };
     const at = (element: SceneElement) => s.previews.get(element.id) ?? element;
-    const placed: SceneElement[] = s.elements.map((element) => ({ ...element, ...at(element) }));
-    const walls = blockingSegments(placed);
-    const sightWalls = sightSegments(placed.filter((element) => !s.hidden.has(element.id)));
+    const { enabled, darkness } = lighting;
+    const viewers =
+      viewerIds?.flatMap((id) => {
+        const element = s.byId.get(id);
+        return element ? [element] : [];
+      }) ?? null;
+    // Only walls and effects block or glow, so only they need placing where they're dragged to.
+    // Panning redraws this every frame, so skip the work when there's no light or sight to draw.
+    const placed: SceneElement[] =
+      enabled || viewers?.length
+        ? s.elements.flatMap((element) =>
+            element.type === "wall" || element.type === "effect" ? [{ ...element, ...at(element) }] : [],
+          )
+        : [];
 
     const lg = this.lightG.clear();
     const erase = this.lightErase.clear();
     const dark = this.lightDark.clear();
     const glowTint = this.glowTint.clear();
-    const { enabled, darkness } = lighting;
     const strength = viewerIds ? 1 : 0.5;
     const areas = s.elements.filter((element) => element.type === "area" && !s.hidden.has(element.id));
     this.lightLayer.visible =
@@ -114,6 +124,7 @@ export class LightingLayer {
         color: 0x00_00_00,
         alpha: darkness * strength,
       });
+      const walls = blockingSegments(placed);
       const tokens = s.elements.flatMap((element) =>
         element.type === "token" && !s.hidden.has(element.id) ? [at(element)] : [],
       );
@@ -163,12 +174,12 @@ export class LightingLayer {
     this.dropLamps(this.tints, tinted);
 
     const fg = this.fogG.clear();
-    const viewers = viewerIds?.map((id) => s.byId.get(id)).filter((element) => !!element) ?? null;
-    this.fogLayer.visible = !!viewers?.length;
+    this.fogLayer.visible = Boolean(viewers?.length);
     this.sight = null;
     const seeing = new Set<string>();
     if (viewers?.length) {
       fg.rect(box.x, box.y, box.w, box.h).fill({ color: 0x05_07_0C, alpha: 1 });
+      const sightWalls = sightSegments(placed.filter((element) => !s.hidden.has(element.id)));
       const from = viewers.map((element) => {
         const t = at(element);
         return { id: element.id, at: { x: t.x, y: t.y } };
@@ -247,6 +258,6 @@ export class LightingLayer {
   /** Whether a token is out of the viewers' sight (always false when they see everything). */
   unseen(t: Transform): boolean {
     const {sight} = this;
-    return !!sight && sight.from.every((p) => blocked(p, t, sight.walls));
+    return sight?.from.every((p) => blocked(p, t, sight.walls)) ?? false;
   }
 }

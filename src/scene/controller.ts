@@ -127,7 +127,7 @@ export class SceneController implements ToolContext {
   }
   private set gesture(g: Gesture | null) {
     this.current = g;
-    this.pressing.value = !!g;
+    this.pressing.value = Boolean(g);
   }
   /** Whether a press is under way, so chrome over the scene can keep out of its way. */
   readonly pressing = store(false);
@@ -319,7 +319,7 @@ export class SceneController implements ToolContext {
   selected(): SceneElement[] {
     return this.selection.value
       .map((id) => this.byId.get(id))
-      .filter((e): e is SceneElement => !!e);
+      .filter((e): e is SceneElement => Boolean(e));
   }
 
   element(id: string) {
@@ -337,7 +337,7 @@ export class SceneController implements ToolContext {
     const groupBounds = movable.length > 1 && !g ? bounds(movable) : null;
     this.renderer.overlayState = {
       selected,
-      handles: selected.length === 1 && !selected[0]!.locked && (!g || !!g.keepsHandles),
+      handles: selected.length === 1 && !selected[0]!.locked && (!g || Boolean(g.keepsHandles)),
       group: g
         ? (g.groupFrame?.() ?? null)
         : groupBounds && {
@@ -493,19 +493,27 @@ export class SceneController implements ToolContext {
    * makes. Only the GM picks walls, lights and effects.
    */
   pickable(element: SceneElement): boolean {
-    const kind = kindOf(element);
-    if (GM_KINDS.includes(kind) && !this.gm) return false;
-    return this.tools.pickingKinds().includes(kind);
+    return this.picker()(element);
+  }
+
+  /** `pickable`, with the active tool's kinds looked up once, for testing many elements. */
+  private picker(): (element: SceneElement) => boolean {
+    const kinds = this.tools.pickingKinds();
+    return (element) => {
+      const kind = kindOf(element);
+      return (this.gm || !GM_KINDS.includes(kind)) && kinds.includes(kind);
+    };
   }
 
   /** Topmost element under p. Locked elements only count when asked. */
   hitTest(p: Point, includeLocked = false, ignoreTool = false): SceneElement | null {
     const tolerance = 4 / this.renderer.camera.zoom;
+    const pickable = ignoreTool ? () => true : this.picker();
     for (let index = this.elements.length - 1; index >= 0; index--) {
       const element = this.elements[index];
       if (!element) continue;
       if (element.locked && !includeLocked) continue;
-      if (!ignoreTool && !this.pickable(element)) continue;
+      if (!pickable(element)) continue;
       if (hits(element, p, tolerance)) return element;
     }
     return null;
@@ -933,7 +941,7 @@ export class SceneController implements ToolContext {
     at: Point,
     spec: Omit<TokenSpec, "colour" | "style"> & { colour?: string; style?: TokenStyle },
   ) {
-    const look = this.newTokenLook(!!spec.image || spec.graphic?.kind === "image", spec);
+    const look = this.newTokenLook(Boolean(spec.image) || spec.graphic?.kind === "image", spec);
     const id = this.scene.add(newToken(this.renderer.grid, at, { ...spec, ...look }))[0]!;
     this.tools.activeTool.value = "select";
     this.selection.value = [id];
