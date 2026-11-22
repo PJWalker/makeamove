@@ -34,7 +34,8 @@ describe("the cave's splats", () => {
     expect(away.length).toBeLessThan(seconds.length / 2);
   });
 
-  it("draws the same picture every time", () => {
-    expect(pack(buildCave().splats)).toEqual(pack(cave.splats));
+  it("draws a repeatable picture for a seed, but varies each default build", () => {
+    expect(pack(buildCave("fixed seed").splats)).toEqual(pack(buildCave("fixed seed").splats));
+    expect(pack(buildCave("first random seed").splats)).not.toEqual(pack(buildCave("second random seed").splats));
   });
 });

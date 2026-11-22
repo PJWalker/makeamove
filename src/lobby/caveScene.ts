@@ -353,6 +353,65 @@ const GOLD = hex("#b08a3a");
 const SKIN = hex("#c8a080");
 const BONE = hex("#d8c8a0");
 
+/** Small environmental features that vary in placement and appearance with every cave. */
+// eslint-disable-next-line max-lines-per-function
+function caveDetails(sculpt: Sculptor) {
+  const { random, spread, pick, ellipsoid, tube, speck } = sculpt;
+  const crystalColours = [hex("#6688aa"), hex("#8870a0"), hex("#75a8a0"), hex("#a49a78")];
+
+  for (let cluster = 0; cluster < 9; cluster++) {
+    const z = 2 - random() * 30;
+    const { middle, halfWidth } = section(z);
+    const side = random() < 0.5 ? -1 : 1;
+    const base: Vec3 = [middle + side * (halfWidth - 1.2 - random() * 0.8), 0.02, z];
+    const crystal = pick(crystalColours);
+    const count = 3 + Math.floor(random() * 5);
+    for (let index = 0; index < count; index++) {
+      const tall = 0.12 + random() * 0.48;
+      const offset: Vec3 = [spread(0.18), 0, spread(0.18)];
+      const tip = add(base, add(offset, [(random() - 0.5) * 0.08, tall, (random() - 0.5) * 0.08]));
+      tube(add(base, offset), tip, [0.018 + random() * 0.018, 0.002], crystal, { vary: 0.18 });
+      speck(tip, 0.015, crystal, 0.8, { lit: true });
+    }
+  }
+
+  for (let patch = 0; patch < 7; patch++) {
+    const z = 2 - random() * 27;
+    const { middle, halfWidth } = section(z);
+    const centre: Vec3 = [middle + spread(halfWidth * 0.7), 0.015, z];
+    const count = 2 + Math.floor(random() * 4);
+    const cap = pick([hex("#7a4e32"), hex("#9a7650"), hex("#5f663e"), hex("#8a6a78")]);
+    for (let index = 0; index < count; index++) {
+      const at = add(centre, [spread(0.32), 0, spread(0.32)]);
+      const height = 0.05 + random() * 0.12;
+      tube(at, add(at, [0, height, 0]), [0.018, 0.024], BONE, { vary: 0.2 });
+      ellipsoid(add(at, [0, height + 0.025, 0]), [0.055 + random() * 0.025, 0.022, 0.055 + random() * 0.025], cap, { vary: 0.25 });
+    }
+  }
+
+  for (let pool = 0; pool < 3; pool++) {
+    const z = -3 - random() * 24;
+    const { middle, halfWidth } = section(z);
+    const centre: Vec3 = [middle + spread(halfWidth * 0.45), 0.022, z];
+    const radius = 0.25 + random() * 0.65;
+    for (let index = 0; index < 30; index++) {
+      const angle = random() * Math.PI * 2;
+      const distance = Math.sqrt(random()) * radius;
+      speck(add(centre, [Math.cos(angle) * distance, 0, Math.sin(angle) * distance * 0.55]),
+        [0.018, 0.008, 0.018], pick([hex("#31465a"), hex("#456078"), hex("#6f7d7e")]), 0.45, { lit: true });
+    }
+  }
+
+  for (let root = 0; root < 5; root++) {
+    const z = -5 - random() * 25;
+    const { middle, halfWidth, height } = section(z);
+    const side = random() < 0.5 ? -1 : 1;
+    const rootStart: Vec3 = [middle + side * halfWidth * (0.55 + random() * 0.35), height * (0.72 + random() * 0.18), z];
+    const reach = 0.8 + random() * 1.8;
+    tube(rootStart, add(rootStart, [side * reach * 0.45, -reach, spread(0.25)]), [0.035, 0.008], WOOD, { vary: 0.25, folds: 5 });
+  }
+}
+
 /** A torch's flame, where it burns, and the light around it. */
 function flame({ random, spread, speck }: Sculptor, at: Vec3, light: number, size: number) {
   for (let index = 0; index < 260; index++) {
@@ -734,8 +793,8 @@ function wisp({ random, speck }: Sculptor, at: Vec3) {
 const still = (): Vec3 => [0, 0, 0];
 
 /** The wisp bobs about the wizard's hand, and now and then flies off to scout down the cave. */
-function wispDrift(home: Vec3) {
-  const flight = flightPlan("scouting", (random) => {
+function wispDrift(home: Vec3, seed: string) {
+  const flight = flightPlan(`${seed}:scouting`, (random) => {
     const z = -12 - random() * 22;
     const { middle } = section(z);
     return sub([middle + (random() - 0.5) * 3.2, 1.3 + random() * 2.2, z], home);
@@ -748,8 +807,8 @@ function wispDrift(home: Vec3) {
     ]);
 }
 
-export function buildCave(): Cave {
-  const random = seededRandom("the lost barrows");
+export function buildCave(seed = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`): Cave {
+  const random = seededRandom(seed);
   const splats: Splat[] = [];
   // The rock is seen from further off than the party, so it's laid on coarser.
   const rock = sculptor(random, splats, 380);
@@ -757,6 +816,7 @@ export function buildCave(): Cave {
   walls(rock);
   floor(rock);
   spikes(rock);
+  caveDetails(rock);
   const warriorTorch = warrior(party, [-2.9, 0, -1.6]);
   dwarf(party, [-1.35, 0, -0.1]);
   const rangerTorch = ranger(party, [2.2, 0, -3.8]);
@@ -767,7 +827,7 @@ export function buildCave(): Cave {
     lights: [
       { at: warriorTorch, colour: TORCHLIGHT, reach: 6, period: 3.7, drift: still },
       { at: rangerTorch, colour: scale(TORCHLIGHT, 0.85), reach: 5.5, period: 4.6, drift: still },
-      { at: wispAt, colour: WISPLIGHT, reach: 7, period: 2.9, drift: wispDrift(wispAt) },
+      { at: wispAt, colour: WISPLIGHT, reach: 7, period: 2.9, drift: wispDrift(wispAt, seed) },
     ],
     party: ["warrior", "dwarf", "ranger", "wizard"],
   };
