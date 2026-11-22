@@ -1,10 +1,10 @@
-/* eslint-disable max-lines-per-function, @typescript-eslint/max-params, @typescript-eslint/no-magic-numbers, @typescript-eslint/no-unnecessary-condition, @typescript-eslint/prefer-destructuring, unicorn/no-zero-fractions */
+/* eslint-disable max-lines-per-function, no-console, @typescript-eslint/max-params, @typescript-eslint/no-magic-numbers, @typescript-eslint/no-unnecessary-condition, @typescript-eslint/prefer-destructuring, unicorn/no-zero-fractions */
 import type { Matrix4 } from "three";
 import { STRIDE } from "./splat";
 import { sortSplatIndices } from "./splatCloud";
 
 export interface NativeLight {
-  at: readonly [number, number, number];
+  at: [number, number, number];
   moved: readonly [number, number, number];
   colour: readonly [number, number, number];
   reach: number;
@@ -73,11 +73,11 @@ fn vertexMain(@builtin(vertex_index) vertexIndex: u32, @builtin(instance_index) 
     let lightIndex = i32(motion.y + 0.5) - 1;
     if (lightIndex >= 0) {
       let middle = uniforms.lightAt[lightIndex].xyz;
-      let from = at - (middle - uniforms.lightMoved[lightIndex].xyz);
+      let offsetFromMiddle = at - (middle - uniforms.lightMoved[lightIndex].xyz);
       let turn = time * 1.4;
       let c = cos(turn);
       let s = sin(turn);
-      at = middle + vec3<f32>(c * from.x - s * from.z, from.y + sin(time * 2.0 + phase * 6.2831853) * 0.03, s * from.x + c * from.z);
+      at = middle + vec3<f32>(c * offsetFromMiddle.x - s * offsetFromMiddle.z, offsetFromMiddle.y + sin(time * 2.0 + phase * 6.2831853) * 0.03, s * offsetFromMiddle.x + c * offsetFromMiddle.z);
     }
   } else if (motion.x > 2.5 && motion.x < 3.5) {
     let cycle = fract(time * 0.045 + phase);
@@ -139,13 +139,13 @@ fn vertexMain(@builtin(vertex_index) vertexIndex: u32, @builtin(instance_index) 
   }
 
   let clip = uniforms.projection * view;
-  var result: Varyings;
-  result.position = vec4<f32>(clip.xy / clip.w + pixelOffset * 2.0 * 2.5 / uniforms.viewportTime.xy, 0.0, 1.0);
-  result.colour = vec4<f32>(pow(max(shade, vec3<f32>(0.0)), vec3<f32>(1.0 / 2.2)), opacity);
-  result.offset = point * 2.5;
-  result.phase = phase;
-  result.glow = glow;
-  return result;
+  var fragmentData: Varyings;
+  fragmentData.position = vec4<f32>(clip.xy / clip.w + pixelOffset * 2.0 * 2.5 / uniforms.viewportTime.xy, 0.0, 1.0);
+  fragmentData.colour = vec4<f32>(pow(max(shade, vec3<f32>(0.0)), vec3<f32>(1.0 / 2.2)), opacity);
+  fragmentData.offset = point * 2.5;
+  fragmentData.phase = phase;
+  fragmentData.glow = glow;
+  return fragmentData;
 }
 
 fn brushNoise(point: vec2<f32>) -> f32 {
@@ -155,35 +155,35 @@ fn brushNoise(point: vec2<f32>) -> f32 {
 }
 
 @fragment
-fn fragmentMain(varying: Varyings) -> @location(0) vec4<f32> {
-  let radial = dot(varying.offset, varying.offset);
-  if (varying.glow > 0.5) {
-    let alpha = varying.colour.w * exp(-0.5 * radial);
+fn fragmentMain(fragmentData: Varyings) -> @location(0) vec4<f32> {
+  let radial = dot(fragmentData.offset, fragmentData.offset);
+  if (fragmentData.glow > 0.5) {
+    let alpha = fragmentData.colour.w * exp(-0.5 * radial);
     if (alpha < 1.0 / 255.0) { discard; }
-    return vec4<f32>(varying.colour.xyz * alpha, 0.0);
+    return vec4<f32>(fragmentData.colour.xyz * alpha, 0.0);
   }
 
-  let angle = atan2(varying.offset.y, varying.offset.x);
-  let edgeNoise = sin(angle * 9.0 + varying.phase * 41.0) * 0.026
-    + sin(angle * 21.0 - varying.phase * 67.0) * 0.018
-    + sin(angle * 37.0 + varying.phase * 113.0) * 0.008;
+  let angle = atan2(fragmentData.offset.y, fragmentData.offset.x);
+  let edgeNoise = sin(angle * 9.0 + fragmentData.phase * 41.0) * 0.026
+    + sin(angle * 21.0 - fragmentData.phase * 67.0) * 0.018
+    + sin(angle * 37.0 + fragmentData.phase * 113.0) * 0.008;
   let edge = 1.0 - smoothstep(0.62 + edgeNoise, 0.96 + edgeNoise, radial);
-  let pigmentCell = floor(varying.position.xy / 2.1);
-  let grain = brushNoise(pigmentCell + vec2<f32>(varying.phase * 127.0, varying.phase * 311.0));
-  let fibre = sin(varying.offset.x * 26.0 + varying.offset.y * 7.0 + varying.phase * 53.0);
-  let fibreTwo = sin(varying.offset.x * 43.0 - varying.offset.y * 13.0 - varying.phase * 29.0) * 0.45;
-  let taper = 1.0 - smoothstep(0.46, 1.0, abs(varying.offset.x));
-  let widthFade = 1.0 - smoothstep(0.68, 1.0, abs(varying.offset.y));
-  let bristleBand = 0.68 + 0.32 * smoothstep(-0.35, 0.75, sin(varying.offset.y * 19.0 + varying.phase * 47.0));
+  let pigmentCell = floor(fragmentData.position.xy / 2.1);
+  let grain = brushNoise(pigmentCell + vec2<f32>(fragmentData.phase * 127.0, fragmentData.phase * 311.0));
+  let fibre = sin(fragmentData.offset.x * 26.0 + fragmentData.offset.y * 7.0 + fragmentData.phase * 53.0);
+  let fibreTwo = sin(fragmentData.offset.x * 43.0 - fragmentData.offset.y * 13.0 - fragmentData.phase * 29.0) * 0.45;
+  let taper = 1.0 - smoothstep(0.46, 1.0, abs(fragmentData.offset.x));
+  let widthFade = 1.0 - smoothstep(0.68, 1.0, abs(fragmentData.offset.y));
+  let bristleBand = 0.68 + 0.32 * smoothstep(-0.35, 0.75, sin(fragmentData.offset.y * 19.0 + fragmentData.phase * 47.0));
   let dryGap = 0.58 + 0.42 * smoothstep(0.18, 0.82, grain);
-  let split = smoothstep(-0.18, 0.28, sin(varying.offset.x * 31.0 - varying.offset.y * 9.0 + varying.phase * 71.0));
+  let split = smoothstep(-0.18, 0.28, sin(fragmentData.offset.x * 31.0 - fragmentData.offset.y * 9.0 + fragmentData.phase * 71.0));
   let bristle = (0.58 + 0.22 * grain + 0.12 * smoothstep(-0.8, 0.8, fibre + fibreTwo))
     * mix(dryGap, 1.0, bristleBand) * mix(0.72, 1.0, split);
-  let stipple = 0.78 + 0.22 * brushNoise(pigmentCell * 0.73 + vec2<f32>(varying.phase * 91.0, 1.0));
-  var alpha = varying.colour.w * edge * widthFade * taper * bristle * stipple;
+  let stipple = 0.78 + 0.22 * brushNoise(pigmentCell * 0.73 + vec2<f32>(fragmentData.phase * 91.0, 1.0));
+  var alpha = fragmentData.colour.w * edge * widthFade * taper * bristle * stipple;
   if (alpha < 1.0 / 255.0) { discard; }
 
-  var colour = varying.colour.xyz;
+  var colour = fragmentData.colour.xyz;
   let light = dot(colour, vec3<f32>(0.299, 0.587, 0.114));
   let bright = smoothstep(0.3, 0.9, light);
   let dark = 1.0 - smoothstep(0.0, 0.3, light);
@@ -219,17 +219,36 @@ export async function createNativeSplatCloud(
   device.queue.writeBuffer(orderBuffer, 0, order);
   const uniformBuffer = device.createBuffer({ size: 384, usage: 64 | 8 });
   const module = device.createShaderModule({ code: WGSL });
+  void module.getCompilationInfo().then((info) => {
+    for (const message of info.messages) {
+      if (message.type === "error" || message.type === "warning") {
+        console.warn(`Cave WGSL ${message.type}: ${message.message}`);
+      }
+    }
+  });
+  device.pushErrorScope("validation");
   const pipeline = device.createRenderPipeline({
     layout: "auto",
     vertex: { module, entryPoint: "vertexMain" },
     fragment: { module, entryPoint: "fragmentMain", targets: [{ format, blend: { color: { srcFactor: "src-alpha", dstFactor: "one-minus-src-alpha" }, alpha: { srcFactor: "one", dstFactor: "one-minus-src-alpha" } } }] },
     primitive: { topology: "triangle-list", cullMode: "none" },
   });
+  const pipelineError = await device.popErrorScope();
+  if (pipelineError) {
+    console.warn("The lobby cave WebGPU pipeline is invalid.", pipelineError.message);
+    return undefined;
+  }
+  device.pushErrorScope("validation");
   const bindGroup = device.createBindGroup({ layout: pipeline.getBindGroupLayout(0), entries: [
     { binding: 0, resource: { buffer: splatBuffer } },
     { binding: 1, resource: { buffer: orderBuffer } },
     { binding: 2, resource: { buffer: uniformBuffer } },
   ] });
+  const bindError = await device.popErrorScope();
+  if (bindError) {
+    console.warn("The lobby cave WebGPU bind group is invalid.", bindError.message);
+    return undefined;
+  }
 
   let disposed = false;
   let lastOrderView: Matrix4 | undefined;

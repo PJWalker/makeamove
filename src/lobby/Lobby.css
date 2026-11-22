@@ -8,6 +8,7 @@
   }
   .lobby-inner {
     position: relative;
+    z-index: 1;
     display: grid;
     gap: var(--space-4);
     width: min(760px, 100% - 2 * var(--space-4));

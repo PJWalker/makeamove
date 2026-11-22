@@ -1816,12 +1816,6 @@
     }
   },
   "src/lobby/caveStage.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    },
-    "no-console": {
-      "count": 1
-    },
     "no-multi-assign": {
       "count": 2
     }
