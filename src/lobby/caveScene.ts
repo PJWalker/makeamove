@@ -11,9 +11,9 @@ import {
   sub,
   tangents,
   times
-  
-  
-  
+
+
+
 } from "./splat";
 import type {Motion, Splat, Vec3} from "./splat";
 
@@ -127,6 +127,7 @@ interface Finish {
  */
 function sculptor(random: () => number, splats: Splat[], density: number) {
   const spread = (range: number) => (random() * 2 - 1) * range;
+  let characterMotion: Finish = {};
   const pick = <T>(list: readonly T[]) => list[Math.floor(random() * list.length)] as T;
   const shade = (colour: Vec3, vary: number) => scale(colour, 1 + spread(vary));
   const direction = (): Vec3 => {
@@ -162,7 +163,7 @@ function sculptor(random: () => number, splats: Splat[], density: number) {
   };
 
   /** Covers an ellipsoid's surface. */
-  const ellipsoid = (centre: Vec3, radii: Vec3, colour: Vec3, { vary = 0.18, motion = MOTION.still, phase = 0 }: Finish = {}) => {
+  const ellipsoid = (centre: Vec3, radii: Vec3, colour: Vec3, { vary = 0.18, motion = characterMotion.motion ?? MOTION.still, phase = characterMotion.phase ?? 0 }: Finish = {}) => {
     const [a, b, c] = radii;
     const p = 1.6;
     const area = 4 * Math.PI * (((a * b) ** p + (a * c) ** p + (b * c) ** p) / 3) ** (1 / p);
@@ -190,7 +191,7 @@ function sculptor(random: () => number, splats: Splat[], density: number) {
     to: Vec3,
     [start, end]: [number, number],
     colour: Vec3,
-    { vary = 0.18, folds = 0, motion = MOTION.still, phase = 0 }: Finish = {},
+    { vary = 0.18, folds = 0, motion = characterMotion.motion ?? MOTION.still, phase = characterMotion.phase ?? 0 }: Finish = {},
   ) => {
     const axis = sub(to, from);
     const along = normalize(axis);
@@ -226,8 +227,8 @@ function sculptor(random: () => number, splats: Splat[], density: number) {
     opacity: number,
     {
       light,
-      motion = MOTION.still,
-      phase = 0,
+      motion = characterMotion.motion ?? MOTION.still,
+      phase = characterMotion.phase ?? 0,
       lit = false,
     }: { light?: number; motion?: Motion; phase?: number; lit?: boolean } = {},
   ) => {
@@ -249,7 +250,11 @@ function sculptor(random: () => number, splats: Splat[], density: number) {
     });
   };
 
-  return { random, spread, pick, shade, patch, ellipsoid, tube, speck };
+  const setCharacterMotion = (motion: Motion, phase: number) => {
+    characterMotion = { motion, phase };
+  };
+
+  return { random, spread, pick, shade, patch, ellipsoid, tube, speck, setCharacterMotion };
 }
 
 type Sculptor = ReturnType<typeof sculptor>;
@@ -853,10 +858,20 @@ export function buildCave(seed = `${Date.now().toString(36)}-${Math.random().toS
   floor(rock);
   spikes(rock);
   caveDetails(rock);
-  const warriorTorch = warrior(party, [-2.9, 0, -1.6]);
-  dwarf(party, [-1.35, 0, -0.1]);
-  const rangerTorch = ranger(party, [2.2, 0, -3.8]);
-  const wispAt = wizard(party, [3.05, 0, -1.3]);
+  const partySpot = (base: Vec3, xRange: number, zRange: number): Vec3 => [
+    base[0] + (random() * 2 - 1) * xRange,
+    0,
+    base[2] + (random() * 2 - 1) * zRange,
+  ];
+  party.setCharacterMotion(MOTION.idle, 0.1);
+  const warriorTorch = warrior(party, partySpot([-2.9, 0, -1.6], 0.45, 0.5));
+  party.setCharacterMotion(MOTION.idle, 0.35);
+  dwarf(party, partySpot([-1.35, 0, -0.1], 0.5, 0.7));
+  party.setCharacterMotion(MOTION.idle, 0.6);
+  const rangerTorch = ranger(party, partySpot([2.2, 0, -3.8], 0.55, 0.6));
+  party.setCharacterMotion(MOTION.idle, 0.85);
+  const wispAt = wizard(party, partySpot([3.05, 0, -1.3], 0.45, 0.6));
+  party.setCharacterMotion(MOTION.still, 0);
   wisp(party, wispAt);
   return {
     splats,
