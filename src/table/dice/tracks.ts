@@ -14,6 +14,21 @@ import type { Point, Track } from "./types";
 const GLIDE_MS = 220;
 /** How hard (units/s) a die is struck to roll it where it lies. */
 const ROLL_SPEED = 8;
+/**
+ * How hard a die rolled where it lies is thrown towards the bottom of its tray:
+ * this many units/s per square root of the tray's height (the speed it takes to
+ * slide a distance grows as its square root), so it bounces off the bottom and,
+ * in a tray of a row or two, often gets back to the top.
+ */
+const THROW_SPEED = 10;
+/** How much softer or harder than that each die is thrown. */
+const THROW_SOFTEST = 0.8;
+const THROW_HARDEST = 1.2;
+/** How fast (units/s) a die rolled where it lies is tossed up off the floor. */
+const HOP_SLOWEST = 4;
+const HOP_FASTEST = 8;
+
+const between = (low: number, high: number) => low + Math.random() * (high - low);
 /** How hard a die must strike something to be heard. */
 const AUDIBLE_IMPACT = 2.5;
 
@@ -35,21 +50,26 @@ export function lyingAt(hull: DieHull, rotation: Quaternion, slot: Point): DieSt
   };
 }
 
-/** A die lying in its slot, struck to roll where it lies, as its tray moves at `trayVelocity` px/s. */
+/**
+ * A die lying in its slot, thrown to roll where it lies towards the bottom of
+ * its tray (`trayHeight` units tall), as the tray moves at `trayVelocity` px/s.
+ */
 export function struck(
   hull: DieHull,
   rotation: Quaternion,
   slot: Point,
   trayVelocity: Point,
+  trayHeight: number,
 ): DieState {
   const strike = () => (Math.random() - 0.5) * ROLL_SPEED;
+  const toBottom = THROW_SPEED * Math.sqrt(trayHeight) * between(THROW_SOFTEST, THROW_HARDEST);
   return {
     ...lyingAt(hull, rotation, slot),
     // The die stays where it was as the tray is pulled from under it.
     velocity: [
       strike() - trayVelocity.x / SCALE,
-      strike() + trayVelocity.y / SCALE,
-      2 + Math.random() * 2,
+      strike() + trayVelocity.y / SCALE - toBottom,
+      between(HOP_SLOWEST, HOP_FASTEST),
     ],
     angularVelocity: [strike() * 4, strike() * 4, strike() * 4],
   };

@@ -4625,7 +4625,7 @@
       "count": 3
     },
     "@typescript-eslint/no-magic-numbers": {
-      "count": 11
+      "count": 9
     },
     "max-lines-per-function": {
       "count": 1

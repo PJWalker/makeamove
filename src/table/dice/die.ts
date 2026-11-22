@@ -304,7 +304,7 @@ function inTrayFrame(tray: HTMLElement, throws: Throw[], lying: Die[]): [DieTray
           delay,
           target,
           ...(trayVelocity
-            ? { state: struck(die.hull, die.restingRotation, target, trayVelocity) }
+            ? { state: struck(die.hull, die.restingRotation, target, trayVelocity, box.height / SCALE) }
             : {}),
         };
       }),
