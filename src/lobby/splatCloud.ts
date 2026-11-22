@@ -168,10 +168,10 @@ const VERTEX = /* glsl */ `
     float d = screen[1][1] + 0.3;
     float middle = 0.5 * (a + d);
     float radius = length(vec2(0.5 * (a - d), b));
-    float major = middle + radius;
-    float minor = max(middle - radius, 0.05);
-    vec2 toward = vec2(b, major - a);
-    vec2 axis = dot(toward, toward) < 1e-12 ? vec2(1.0, 0.0) : normalize(toward);
+    float major = (middle + radius) * 2.0;
+    float minor = max((middle - radius) * 1.35, 0.18);
+    float angle = fract(phase * 17.11 + at.x * 0.37 + at.z * 0.23) * TAU;
+    vec2 axis = vec2(cos(angle), sin(angle));
     vec2 offset =
       position.x * min(sqrt(major), 1024.0) * axis +
       position.y * min(sqrt(minor), 1024.0) * vec2(-axis.y, axis.x);
