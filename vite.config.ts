@@ -1,8 +1,10 @@
-import react from "@vitejs/plugin-react";
-import { createJiti, type Jiti } from "jiti";
 import { fileURLToPath } from "node:url";
+import react from "@vitejs/plugin-react";
+import { createJiti  } from "jiti";
+import type {Jiti} from "jiti";
 import Macros from "unplugin-macros/vite";
-import { defineConfig, type Plugin, lazyPlugins } from "vite-plus";
+import { defineConfig,  lazyPlugins } from "vite-plus";
+import type {Plugin} from "vite-plus";
 import { VitePWA } from "vite-plugin-pwa";
 
 /**
@@ -56,7 +58,7 @@ export function macroPlugins(): Plugin[] {
 
 export default defineConfig({
   staged: {
-    "*": "eslint --fix --no-warn-ignored",
+    "*": "eslint --fix --prune-suppressions --no-warn-ignored",
   },
   fmt: {
     printWidth: 100,
