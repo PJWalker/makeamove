@@ -5,10 +5,10 @@ import { buildCave } from "../caveScene";
 import { MOTION, pack } from "../splat";
 
 describe("the lobby's cave backdrop", () => {
-  it("is decoration, hidden from assistive technology", () => {
-    expect(renderToStaticMarkup(<CaveBackdrop />)).toMatch(
-      /^<div class="cave-backdrop" aria-hidden="true"/,
-    );
+  it("keeps the canvas decorative and exposes its playback control", () => {
+    const markup = renderToStaticMarkup(<CaveBackdrop />);
+    expect(markup).toContain('<canvas class="cave-canvas"');
+    expect(markup).toContain('aria-label="Pause cave animation"');
   });
 });
 

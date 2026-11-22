@@ -179,8 +179,8 @@ function sculptor(random: () => number, splats: Splat[], density: number) {
       patch(
         add(centre, times(radii, unit)),
         facing,
-        add(brush, scale(direction(), 0.12)),
-        [size * (1.8 + random() * 1.4), size * (0.45 + random() * 0.28)],
+        add(brush, scale(direction(), 0.08)),
+        [size * (3.2 + random() * 2.2), size * (0.22 + random() * 0.18)],
         shade(colour, vary),
         0.74 + random() * 0.18,
         phase + spread(0.08),
@@ -947,7 +947,7 @@ export function buildCave(seed = `${Date.now().toString(36)}-${Math.random().toS
   const random = seededRandom(seed);
   const splats: Splat[] = [];
   // The rock is seen from further off than the party, so it's laid on coarser.
-  const rock = sculptor(random, splats, 380);
+  const rock = sculptor(random, splats, 280);
   const party = sculptor(random, splats, 900);
   walls(rock);
   floor(rock);

@@ -16,4 +16,31 @@
     height: 100%;
     mask-image: linear-gradient(to bottom, transparent, #000 22%);
   }
+  .cave-playback {
+    position: absolute;
+    right: max(var(--space-3), env(safe-area-inset-right));
+    bottom: max(var(--space-3), env(safe-area-inset-bottom));
+    display: grid;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    border: 1px solid oklch(92% 0.02 82 / 0.16);
+    border-radius: 50%;
+    background: oklch(18% 0.015 260 / 0.68);
+    color: oklch(92% 0.02 82);
+    opacity: 0.56;
+    backdrop-filter: blur(8px);
+    transition:
+      opacity 160ms var(--ease),
+      background 160ms var(--ease),
+      transform 160ms var(--ease);
+  }
+  .cave-playback:hover,
+  .cave-playback:focus-visible {
+    opacity: 1;
+  }
+  .cave-playback:active { transform: scale(0.94); }
+  @media (prefers-reduced-motion: reduce) {
+    .cave-playback { transition: none; }
+  }
 }

@@ -226,54 +226,68 @@ const FRAGMENT = /* glsl */ `
     float grain = brushNoise(pigmentCell + vec2(vPhase * 127.0, vPhase * 311.0));
     float fibre = sin((point.x * 26.0 + point.y * 7.0) + vPhase * 53.0);
     fibre += sin((point.x * 43.0 - point.y * 13.0) - vPhase * 29.0) * 0.45;
-    float bristle = 0.74 + 0.18 * grain + 0.08 * smoothstep(-0.8, 0.8, fibre);
-    float stipple = 0.82 + 0.18 * brushNoise(pigmentCell * 0.73 + vec2(vPhase * 91.0, 1.0));
-    float alpha = vColour.a * edge * bristle * mix(stipple, 1.0, smoothstep(0.2, 0.9, 1.0 - radial));
+
+    float along = abs(point.x);
+    float taper = 1.0 - smoothstep(0.46, 1.0, along);
+    float widthFade = 1.0 - smoothstep(0.68, 1.0, abs(point.y));
+    float bristleBand = 0.68 + 0.32 * smoothstep(-0.35, 0.75, sin(point.y * 19.0 + vPhase * 47.0));
+    float dryGap = 0.58 + 0.42 * smoothstep(0.18, 0.82, grain);
+    float split = smoothstep(-0.18, 0.28, sin(point.x * 31.0 - point.y * 9.0 + vPhase * 71.0));
+    float bristle = 0.58 + 0.22 * grain + 0.12 * smoothstep(-0.8, 0.8, fibre);
+    bristle *= mix(dryGap, 1.0, bristleBand) * mix(0.72, 1.0, split);
+
+    float stipple = 0.78 + 0.22 * brushNoise(pigmentCell * 0.73 + vec2(vPhase * 91.0, 1.0));
+    float alpha = vColour.a * edge * widthFade * taper * bristle * stipple;
 
     if (alpha < 1.0 / 255.0) discard;
     gl_FragColor = vec4(vColour.rgb * alpha, alpha);
   }
 `;
 
+export function sortSplatIndices(source: Float32Array, view: Matrix4): Uint32Array {
+  const count = source.length / STRIDE;
+  const order = new Uint32Array(count);
+  const depths = new Float32Array(count);
+  const buckets = new Uint32Array(count);
+  const starts = new Uint32Array(65_536);
+  const { elements } = view;
+  const [ex, ey, ez, ew] = [elements[2], elements[6], elements[10], elements[14]];
+  let near = -Infinity;
+  let far = Infinity;
+  for (let index = 0; index < count; index++) {
+    const row = index * STRIDE;
+    const depth = ex * (source[row] ?? 0) + ey * (source[row + 1] ?? 0) + ez * (source[row + 2] ?? 0) + ew;
+    depths[index] = depth;
+    near = Math.max(near, depth);
+    far = Math.min(far, depth);
+  }
+  const step = 65_535 / (near - far || 1);
+  for (let index = 0; index < count; index++) {
+    const bucket = Math.floor(((depths[index] ?? 0) - far) * step);
+    buckets[index] = bucket;
+    starts[bucket] = (starts[bucket] ?? 0) + 1;
+  }
+  let total = 0;
+  for (let bucket = 0; bucket < starts.length; bucket++) {
+    const size = starts[bucket] ?? 0;
+    starts[bucket] = total;
+    total += size;
+  }
+  for (let index = 0; index < count; index++) {
+    const bucket = buckets[index] ?? 0;
+    const place = starts[bucket] ?? 0;
+    starts[bucket] = place + 1;
+    order[place] = index;
+  }
+  return order;
+}
+
 /** Orders a cloud's splats back to front, from a camera's point of view. */
 function sorter(source: Float32Array) {
   const count = source.length / STRIDE;
   const order = new Float32Array(count);
-  const depths = new Float32Array(count);
-  const buckets = new Uint16Array(count);
-  const starts = new Uint32Array(65_536);
   return (view: Matrix4) => {
-    const { elements } = view;
-    const [ex, ey, ez, ew] = [elements[2], elements[6], elements[10], elements[14]];
-    let near = -Infinity;
-    let far = Infinity;
-    for (let index = 0; index < count; index++) {
-      const row = index * STRIDE;
-      const depth =
-        ex * (source[row] ?? 0) + ey * (source[row + 1] ?? 0) + ez * (source[row + 2] ?? 0) + ew;
-      depths[index] = depth;
-      if (depth > near) near = depth;
-      if (depth < far) far = depth;
-    }
-    const step = 65_535 / (near - far || 1);
-    starts.fill(0);
-    for (let index = 0; index < count; index++) {
-      const bucket = Math.floor(((depths[index] ?? 0) - far) * step);
-      buckets[index] = bucket;
-      starts[bucket] = (starts[bucket] ?? 0) + 1;
-    }
-    let total = 0;
-    for (let bucket = 0; bucket < starts.length; bucket++) {
-      const size = starts[bucket] ?? 0;
-      starts[bucket] = total;
-      total += size;
-    }
-    for (let index = 0; index < count; index++) {
-      const bucket = buckets[index] ?? 0;
-      const place = starts[bucket] ?? 0;
-      starts[bucket] = place + 1;
-      order[place] = index;
-    }
+    order.set(sortSplatIndices(source, view));
     return order;
   };
 }

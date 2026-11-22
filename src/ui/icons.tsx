@@ -776,6 +776,14 @@ export const IconSearch = glyph("search", (reference) => (
     <path d="m14.6 16.7 2.1-2.1 5.3 5.3-2.1 2.1z" />
   </>
 ));
+export const IconPause = glyph(
+  "pause",
+  <path fill="currentColor" d="M7 5h3v14H7zm7 0h3v14h-3z" />,
+);
+export const IconPlay = glyph(
+  "play",
+  <path fill="currentColor" d="M7 4l11 8-11 8z" />,
+);
 export const IconClose = glyph(
   "close",
   <path {...line} strokeWidth="2.5" d="M6 6l12 12M18 6 6 18" />,
