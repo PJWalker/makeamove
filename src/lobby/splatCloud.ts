@@ -48,6 +48,7 @@ const VERTEX = /* glsl */ `
   out vec4 vColour;
   out vec2 vOffset;
   out float vGlow;
+  out float vPhase;
 
   const float TAU = 6.2831853;
   /** How many standard deviations out each quad reaches. */
@@ -143,6 +144,7 @@ const VERTEX = /* glsl */ `
     shade = mix(haze, shade, exp(-max(0.0, -view.z - 8.0) * (glow > 0.5 ? 0.03 : 0.05)));
     vColour = vec4(pow(max(shade, 0.0), vec3(1.0 / 2.2)), opacity);
     vGlow = glow;
+    vPhase = phase;
 
     // The ellipsoid's outline on screen: its covariance, carried through the
     // camera and the perspective divide (linearised at its centre).
@@ -183,13 +185,39 @@ const FRAGMENT = /* glsl */ `
   in vec4 vColour;
   in vec2 vOffset;
   in float vGlow;
+  in float vPhase;
+
+  float brushNoise(vec2 point) {
+    vec3 p3 = fract(vec3(point.xyx) * vec3(0.1031, 0.1030, 0.0973));
+    p3 += dot(p3, p3.yxz + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+  }
 
   void main() {
-    float distance = dot(vOffset, vOffset);
-    float alpha = vColour.a * exp(-0.5 * distance);
+    vec2 point = vOffset;
+    float radial = dot(point, point);
+
+    if (vGlow > 0.5) {
+      float alpha = vColour.a * exp(-0.5 * radial);
+      if (alpha < 1.0 / 255.0) discard;
+      gl_FragColor = vec4(vColour.rgb * alpha, 0.0);
+      return;
+    }
+
+    float angle = atan(point.y, point.x);
+    float edgeNoise =
+      sin(angle * 7.0 + vPhase * 41.0) * 0.045 +
+      sin(angle * 13.0 - vPhase * 67.0) * 0.025;
+    float edge = 1.0 - smoothstep(0.68 + edgeNoise, 1.06 + edgeNoise, radial);
+
+    vec2 pigmentCell = floor(gl_FragCoord.xy / 2.1);
+    float grain = brushNoise(pigmentCell + vec2(vPhase * 127.0, vPhase * 311.0));
+    float bristle = 0.74 + 0.26 * sin(point.y * 19.0 + vPhase * 53.0 + grain * 2.0);
+    float stipple = 0.58 + 0.42 * brushNoise(pigmentCell * 0.73 + vec2(vPhase * 91.0, 1.0));
+    float alpha = vColour.a * edge * bristle * mix(stipple, 1.0, smoothstep(0.2, 0.9, 1.0 - radial));
+
     if (alpha < 1.0 / 255.0) discard;
-    // Premultiplied: glowing splats leave alpha out, so they add to what's behind.
-    gl_FragColor = vec4(vColour.rgb * alpha, alpha * (1.0 - vGlow));
+    gl_FragColor = vec4(vColour.rgb * alpha, alpha);
   }
 `;
 
