@@ -175,14 +175,15 @@ function sculptor(random: () => number, splats: Splat[], density: number) {
     for (let index = 0; index < count; index++) {
       const unit = direction();
       const facing = normalize([unit[0] / a, unit[1] / b, unit[2] / c]);
+      const [brush] = tangents(facing, [spread(0.8), spread(0.8), spread(0.8)]);
       patch(
         add(centre, times(radii, unit)),
         facing,
-        direction(),
-        [size * 1.25, size],
+        add(brush, scale(direction(), 0.12)),
+        [size * (1.8 + random() * 1.4), size * (0.45 + random() * 0.28)],
         shade(colour, vary),
-        0.92,
-        phase,
+        0.74 + random() * 0.18,
+        phase + spread(0.08),
         motion,
       );
     }
