@@ -19,6 +19,8 @@ export const MOTION = {
   smoke: 4,
   /** Swells where it hangs, then falls to the floor: a drip of water. */
   drip: 5,
+  /** A subtle full-body idle, separate from environmental motion. */
+  idle: 6,
 } as const;
 export type Motion = (typeof MOTION)[keyof typeof MOTION];
 

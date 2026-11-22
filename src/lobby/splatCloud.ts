@@ -109,6 +109,12 @@ const VERTEX = /* glsl */ `
       );
       size = 1.0 + rise * 4.0;
       opacity *= smoothstep(0.0, 0.15, rise) * (1.0 - rise);
+    } else if (motion.x == ${String(MOTION.idle)}.0) {
+      at += vec3(
+        sin(time * 0.55 + phase * TAU) * 0.018,
+        sin(time * 1.2 + phase * TAU) * 0.012,
+        cos(time * 0.45 + phase * TAU) * 0.008
+      );
     } else if (motion.x == ${String(MOTION.drip)}.0) {
       // Hangs and swells for most of its cycle, then falls under gravity.
       float period = 4.0 + phase * 5.0;
@@ -170,10 +176,11 @@ const VERTEX = /* glsl */ `
     float radius = length(vec2(0.5 * (a - d), b));
     float major = (middle + radius) * 2.2;
     float minor = max((middle - radius) * 0.9, 0.14);
+    float drift = time * 0.035;
     float flow =
-      sin(at.z * 0.11 + at.x * 0.14) * 0.48 +
-      sin(at.x * 0.22 - at.z * 0.07) * 0.24 +
-      sin(at.y * 0.19 + at.x * 0.08) * 0.18;
+      sin(at.z * 0.11 + at.x * 0.14 + drift) * 0.48 +
+      sin(at.x * 0.22 - at.z * 0.07 - drift * 0.7) * 0.24 +
+      sin(at.y * 0.19 + at.x * 0.08 + drift * 0.45) * 0.18;
     float angle = flow + fract(phase * 19.0) * 0.12;
     vec2 axis = vec2(cos(angle), sin(angle));
     vec2 offset =

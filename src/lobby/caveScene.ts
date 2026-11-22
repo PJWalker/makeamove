@@ -115,6 +115,10 @@ interface Finish {
   vary?: number;
   /** For a tube: how many folds run along it, as in cloth. */
   folds?: number;
+  /** A repeating motion for the shape, used for subtle character idle. */
+  motion?: Motion;
+  /** Where in the motion cycle the shape begins. */
+  phase?: number;
 }
 
 /**
@@ -142,6 +146,7 @@ function sculptor(random: () => number, splats: Splat[], density: number) {
     colour: Vec3,
     opacity: number,
     phase = 0,
+    motion: Motion = MOTION.still,
   ) => {
     const [first, second] = tangents(facing, along);
     splats.push({
@@ -151,13 +156,13 @@ function sculptor(random: () => number, splats: Splat[], density: number) {
       opacity,
       facing,
       glow: false,
-      motion: MOTION.still,
+      motion,
       phase,
     });
   };
 
   /** Covers an ellipsoid's surface. */
-  const ellipsoid = (centre: Vec3, radii: Vec3, colour: Vec3, { vary = 0.18 }: Finish = {}) => {
+  const ellipsoid = (centre: Vec3, radii: Vec3, colour: Vec3, { vary = 0.18, motion = MOTION.still, phase = 0 }: Finish = {}) => {
     const [a, b, c] = radii;
     const p = 1.6;
     const area = 4 * Math.PI * (((a * b) ** p + (a * c) ** p + (b * c) ** p) / 3) ** (1 / p);
@@ -173,6 +178,8 @@ function sculptor(random: () => number, splats: Splat[], density: number) {
         [size * 1.25, size],
         shade(colour, vary),
         0.92,
+        phase,
+        motion,
       );
     }
   };
@@ -183,7 +190,7 @@ function sculptor(random: () => number, splats: Splat[], density: number) {
     to: Vec3,
     [start, end]: [number, number],
     colour: Vec3,
-    { vary = 0.18, folds = 0 }: Finish = {},
+    { vary = 0.18, folds = 0, motion = MOTION.still, phase = 0 }: Finish = {},
   ) => {
     const axis = sub(to, from);
     const along = normalize(axis);
@@ -205,6 +212,8 @@ function sculptor(random: () => number, splats: Splat[], density: number) {
         [size * 1.5, size * 0.8],
         scale(shade(colour, vary), 1 + 0.22 * fold),
         0.92,
+        phase,
+        motion,
       );
     }
   };
@@ -509,10 +518,10 @@ function warrior(sculpt: Sculptor, origin: Vec3): Vec3 {
   tube(at([0, 0.98, 0]), at([0, 0.6, 0]), [0.24, 0.3], CHAIN, { vary: 0.3, folds: 16 });
   tube(at([0, 0.93, 0.02]), at([0, 0.88, 0.04]), [0.3, 0.305], DARK_LEATHER, { folds: 12 });
   ellipsoid(at([0, 0.91, 0.31]), [0.075, 0.06, 0.025], BRONZE, { vary: 0.1 });
-  ellipsoid(at([0, 1.22, -0.02]), [0.27, 0.34, 0.17], STEEL);
+  ellipsoid(at([0, 1.22, -0.02]), [0.27, 0.34, 0.17], STEEL, { motion: MOTION.idle, phase: 0.1 });
   tube(at([0, 1.62, 0]), at([0, 1.5, 0]), [0.1, 0.16], CHAIN, { vary: 0.3 });
   // The cloak, its gold-stitched hem, and the fold of it over the shoulders.
-  tube(at([0, 1.48, 0.06]), at([0, 0.16, 0.14]), [0.25, 0.43], cloak, { vary: 0.12, folds: 9 });
+  tube(at([0, 1.48, 0.06]), at([0, 0.16, 0.14]), [0.25, 0.43], cloak, { vary: 0.12, folds: 9, motion: MOTION.idle, phase: 0.1 });
   tube(at([0, 0.22, 0.135]), at([0, 0.15, 0.14]), [0.425, 0.44], GOLD, { vary: 0.2 });
   ellipsoid(at([0, 1.5, 0.05]), [0.25, 0.06, 0.17], hex("#561418"));
   for (const side of [-1, 1]) {
@@ -588,7 +597,7 @@ function dwarf(sculpt: Sculptor, origin: Vec3) {
   for (const side of [-1, 1]) {
     tube(at([side * 0.14, 0.08, 0]), at([side * 0.14, 0.5, 0]), [0.1, 0.11], cloth, { folds: 5 });
   }
-  ellipsoid(at([0, 0.78, 0]), [0.32, 0.36, 0.25], cloth);
+  ellipsoid(at([0, 0.78, 0]), [0.32, 0.36, 0.25], cloth, { motion: MOTION.idle, phase: 0.35 });
   tube(at([0, 0.47, 0]), at([0, 0.62, 0]), [0.31, 0.3], CHAIN, { vary: 0.3, folds: 14 });
   // Hair in braids down the back, and the beard spilling out at the sides.
   for (const side of [-1, 0, 1]) {
@@ -667,7 +676,7 @@ function ranger(sculpt: Sculptor, origin: Vec3): Vec3 {
   for (const side of [-1, 1]) {
     tube(at([side * 0.1, 0.1, 0]), at([side * 0.1, 0.9, 0]), [0.07, 0.09], trousers, { folds: 4 });
   }
-  tube(at([0, 1.5, 0.02]), at([0, 0.14, 0.06]), [0.22, 0.36], cloak, { vary: 0.12, folds: 8 });
+  tube(at([0, 1.5, 0.02]), at([0, 0.14, 0.06]), [0.22, 0.36], cloak, { vary: 0.12, folds: 8, motion: MOTION.idle, phase: 0.6 });
   tube(at([0, 0.92, 0.02]), at([0, 0.86, 0.04]), [0.235, 0.24], DARK_LEATHER, { folds: 8 });
   ellipsoid(at([0, 0.89, 0.22]), [0.055, 0.045, 0.02], BRONZE, { vary: 0.1 });
   for (let index = 0; index < 22; index++) {
@@ -734,7 +743,7 @@ function wizard(sculpt: Sculptor, origin: Vec3): Vec3 {
   const robe = hex("#252c60");
   const beard = hex("#d0ccc4");
   const sash = hex("#6a2a5a");
-  tube(at([0, 1.45, 0]), at([0, 0.02, 0.05]), [0.22, 0.5], robe, { vary: 0.12, folds: 10 });
+  tube(at([0, 1.45, 0]), at([0, 0.02, 0.05]), [0.22, 0.5], robe, { vary: 0.12, folds: 10, motion: MOTION.idle, phase: 0.85 });
   tube(at([0, 0.09, 0.05]), at([0, 0.02, 0.05]), [0.49, 0.505], GOLD, { vary: 0.15 });
   for (let index = -4; index <= 4; index++) {
     speck(at([index * 0.055, 0.105, 0.42]), 0.018, GOLD, 0.9, { lit: true });
