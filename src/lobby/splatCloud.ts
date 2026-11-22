@@ -168,9 +168,13 @@ const VERTEX = /* glsl */ `
     float d = screen[1][1] + 0.3;
     float middle = 0.5 * (a + d);
     float radius = length(vec2(0.5 * (a - d), b));
-    float major = (middle + radius) * 2.0;
-    float minor = max((middle - radius) * 1.35, 0.18);
-    float angle = fract(phase * 17.11 + at.x * 0.37 + at.z * 0.23) * TAU;
+    float major = (middle + radius) * 2.2;
+    float minor = max((middle - radius) * 0.9, 0.14);
+    float flow =
+      sin(at.z * 0.11 + at.x * 0.14) * 0.48 +
+      sin(at.x * 0.22 - at.z * 0.07) * 0.24 +
+      sin(at.y * 0.19 + at.x * 0.08) * 0.18;
+    float angle = flow + fract(phase * 19.0) * 0.12;
     vec2 axis = vec2(cos(angle), sin(angle));
     vec2 offset =
       position.x * min(sqrt(major), 1024.0) * axis +

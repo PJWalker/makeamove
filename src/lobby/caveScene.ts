@@ -269,8 +269,8 @@ function walls({ random, spread, pick, shade, patch }: Sculptor) {
     patch(
       at,
       facing,
-      [0, spread(0.25), 1],
-      [size * (1.4 + random()), size * 0.6],
+      [0.12 * Math.sin(at[2] * 0.09 + at[0] * 0.16), 0.3 * Math.sin(at[0] * 0.12 - at[2] * 0.08), 1],
+      [size * (2.2 + random() * 1.8), size * (0.38 + random() * 0.22)],
       scale(shade(random() < 0.15 ? pick(WALL_PAINTS) : paint, 0.25), roof),
       0.55 + random() * 0.4,
       random(),
@@ -291,8 +291,8 @@ function floor({ random, spread, pick, shade, patch, ellipsoid }: Sculptor) {
     patch(
       at,
       normalize([spread(0.2), 1, spread(0.2)]),
-      [spread(1), 0, spread(1)],
-      [size * (1.2 + random()), size * 0.7],
+      [0.55 + 0.25 * Math.sin(z * 0.11), 0.08 * Math.sin(x * 0.22), 1],
+      [size * (2.4 + random() * 1.8), size * (0.38 + random() * 0.24)],
       shade(pick(FLOOR_PAINTS), 0.3),
       0.6 + random() * 0.35,
       random(),
@@ -507,6 +507,8 @@ function warrior(sculpt: Sculptor, origin: Vec3): Vec3 {
   }
   // A mail skirt shows under the cloak; plate over the body, mail at the neck.
   tube(at([0, 0.98, 0]), at([0, 0.6, 0]), [0.24, 0.3], CHAIN, { vary: 0.3, folds: 16 });
+  tube(at([0, 0.93, 0.02]), at([0, 0.88, 0.04]), [0.3, 0.305], DARK_LEATHER, { folds: 12 });
+  ellipsoid(at([0, 0.91, 0.31]), [0.075, 0.06, 0.025], BRONZE, { vary: 0.1 });
   ellipsoid(at([0, 1.22, -0.02]), [0.27, 0.34, 0.17], STEEL);
   tube(at([0, 1.62, 0]), at([0, 1.5, 0]), [0.1, 0.16], CHAIN, { vary: 0.3 });
   // The cloak, its gold-stitched hem, and the fold of it over the shoulders.
@@ -527,6 +529,9 @@ function warrior(sculpt: Sculptor, origin: Vec3): Vec3 {
   // The helm, and its plume running back over the top and down behind.
   ellipsoid(at([0, 1.71, 0]), [0.12, 0.15, 0.13], STEEL);
   ellipsoid(at([0, 1.64, 0]), [0.13, 0.025, 0.14], BRONZE, { vary: 0.1 });
+  for (const side of [-1, 1]) {
+    ellipsoid(at([side * 0.095, 1.67, 0.07]), [0.018, 0.018, 0.018], BRONZE, { vary: 0.05 });
+  }
   tube(at([0, 1.86, -0.07]), at([0, 1.87, 0.07]), [0.035, 0.04], plume, { folds: 6 });
   tube(at([0, 1.87, 0.07]), at([0, 1.6, 0.22]), [0.04, 0.012], plume, { folds: 6 });
   // The greatsword: blade down across the back, hilt up over the left shoulder.
@@ -618,6 +623,8 @@ function dwarf(sculpt: Sculptor, origin: Vec3) {
   for (const side of [-1, 1]) {
     tube(at([side * 0.2, 1.21, 0.22]), at([side * 0.22, 1.21, 0.22]), [0.105, 0.105], DARK_LEATHER);
   }
+  tube(at([-0.27, 0.58, 0.02]), at([0.27, 0.58, 0.02]), [0.025, 0.025], DARK_LEATHER);
+  ellipsoid(at([0, 0.58, 0.38]), [0.06, 0.055, 0.02], BRONZE, { vary: 0.1 });
   ring(
     sculpt,
     at([0.33, 0.82, 0.26]),
@@ -643,6 +650,8 @@ function dwarf(sculpt: Sculptor, origin: Vec3) {
   // The axe over the right shoulder: haft, bound grip, and a double bit.
   tube(at([0.24, 0.95, 0.02]), at([0.42, 1.62, -0.06]), [0.025, 0.025], WOOD);
   tube(at([0.27, 1.06, 0.01]), at([0.31, 1.22, 0]), [0.03, 0.03], DARK_LEATHER, { folds: 8 });
+  ellipsoid(at([0.3, 1.14, 0.02]), [0.035, 0.025, 0.035], BRONZE, { vary: 0.1 });
+  ellipsoid(at([0.34, 1.32, 0.01]), [0.035, 0.025, 0.035], BRONZE, { vary: 0.1 });
   ellipsoid(at([0.52, 1.56, -0.06]), [0.12, 0.1, 0.022], STEEL, { vary: 0.1 });
   ellipsoid(at([0.32, 1.6, -0.06]), [0.1, 0.085, 0.022], STEEL, { vary: 0.1 });
   tube(at([0.42, 1.62, -0.06]), at([0.44, 1.72, -0.065]), [0.02, 0.004], STEEL);
@@ -659,6 +668,8 @@ function ranger(sculpt: Sculptor, origin: Vec3): Vec3 {
     tube(at([side * 0.1, 0.1, 0]), at([side * 0.1, 0.9, 0]), [0.07, 0.09], trousers, { folds: 4 });
   }
   tube(at([0, 1.5, 0.02]), at([0, 0.14, 0.06]), [0.22, 0.36], cloak, { vary: 0.12, folds: 8 });
+  tube(at([0, 0.92, 0.02]), at([0, 0.86, 0.04]), [0.235, 0.24], DARK_LEATHER, { folds: 8 });
+  ellipsoid(at([0, 0.89, 0.22]), [0.055, 0.045, 0.02], BRONZE, { vary: 0.1 });
   for (let index = 0; index < 22; index++) {
     const angle = Math.PI * (0.1 + 0.8 * (index / 21)) + (random() - 0.5) * 0.1;
     ellipsoid(
@@ -702,13 +713,17 @@ function ranger(sculpt: Sculptor, origin: Vec3): Vec3 {
   }
   tube(at([-0.2, 0.76, 0.245]), at([-0.2, 1.89, 0.245]), [0.004, 0.004], hex("#c8c0a8"));
   ellipsoid(at([-0.08, 1.32, 0.25]), [0.02, 0.05, 0.022], DARK_LEATHER);
-  // A pouch at the belt, and the arms: one down, one holding the torch.
+  // A pouch at the belt, map case, and the arms: one down, one holding the torch.
   ellipsoid(at([-0.27, 0.92, 0.08]), [0.06, 0.075, 0.05], LEATHER);
+  tube(at([0.26, 0.84, 0.09]), at([0.28, 0.72, 0.14]), [0.06, 0.052], LEATHER, { folds: 4 });
+  tube(at([0.28, 0.72, 0.14]), at([0.28, 0.68, 0.15]), [0.064, 0.064], DARK_LEATHER);
   tube(at([0.24, 1.42, 0]), at([0.28, 0.95, 0.02]), [0.065, 0.055], cloak, { folds: 4 });
   ellipsoid(at([0.285, 0.9, 0.02]), [0.045, 0.05, 0.045], DARK_LEATHER);
   tube(at([-0.24, 1.42, 0]), at([-0.38, 1.72, -0.05]), [0.065, 0.055], cloak, { folds: 4 });
   tube(at([-0.38, 1.72, -0.05]), at([-0.4, 1.95, -0.08]), [0.055, 0.05], cloak, { folds: 4 });
   ellipsoid(at([-0.4, 1.97, -0.08]), [0.045, 0.05, 0.045], DARK_LEATHER);
+  tube(at([-0.36, 1.1, -0.02]), at([-0.38, 1.02, -0.03]), [0.075, 0.075], DARK_LEATHER);
+  tube(at([0.27, 1.12, -0.02]), at([0.29, 1.03, -0.03]), [0.075, 0.075], DARK_LEATHER);
   return torch(sculpt, at([-0.4, 2, -0.08]), 1, 1.05);
 }
 
@@ -721,6 +736,9 @@ function wizard(sculpt: Sculptor, origin: Vec3): Vec3 {
   const sash = hex("#6a2a5a");
   tube(at([0, 1.45, 0]), at([0, 0.02, 0.05]), [0.22, 0.5], robe, { vary: 0.12, folds: 10 });
   tube(at([0, 0.09, 0.05]), at([0, 0.02, 0.05]), [0.49, 0.505], GOLD, { vary: 0.15 });
+  for (let index = -4; index <= 4; index++) {
+    speck(at([index * 0.055, 0.105, 0.42]), 0.018, GOLD, 0.9, { lit: true });
+  }
   tube(at([0, 1.03, 0.02]), at([0, 0.96, 0.025]), [0.33, 0.345], sash, { folds: 6 });
   tube(at([0.08, 0.98, 0.34]), at([0.12, 0.62, 0.4]), [0.035, 0.025], sash, { folds: 3 });
   ellipsoid(at([0, 1.5, 0]), [0.24, 0.14, 0.17], robe);
@@ -765,6 +783,8 @@ function wizard(sculpt: Sculptor, origin: Vec3): Vec3 {
   ellipsoid(at([0.38, 1, -0.07]), [0.045, 0.05, 0.045], SKIN);
   tube(at([0.38, 0, -0.08]), at([0.4, 2.1, -0.1]), [0.03, 0.03], WOOD, { vary: 0.3, folds: 3 });
   ellipsoid(at([0.4, 2.13, -0.1]), [0.07, 0.08, 0.07], WOOD, { vary: 0.3 });
+  tube(at([0.4, 1.58, -0.095]), at([0.4, 1.62, -0.098]), [0.045, 0.045], BRONZE, { vary: 0.1 });
+  tube(at([0.4, 1.98, -0.098]), at([0.4, 2.02, -0.1]), [0.045, 0.045], BRONZE, { vary: 0.1 });
   speck(at([0.4, 2.24, -0.1]), [0.03, 0.045, 0.03], [0.5, 0.9, 1.2], 0.9);
   tube(at([-0.26, 1.44, 0]), at([-0.48, 1.68, -0.1]), [0.08, 0.1], robe, { folds: 5 });
   tube(at([-0.47, 1.67, -0.1]), at([-0.5, 1.7, -0.11]), [0.105, 0.11], GOLD, { vary: 0.12 });
