@@ -100,13 +100,8 @@
     color: var(--accent);
   }
 
-  /* Primary: gold catches a brighter edge than the dark surfaces. */
+  /* Primary: the same gilt, tinted-metal finish as a selected segmented control. */
   .btn-primary {
-    border-image: var(--gilt-edge);
-    background-color: var(--accent);
-    background-image: var(--gilt-metal);
-    background-clip: border-box;
-    color: var(--accent-ink);
     font-weight: 600;
     text-shadow: var(--engraved);
   }
@@ -114,18 +109,14 @@
     box-shadow: var(--edge-glow), var(--edge-shade), var(--raised-drop);
   }
   .btn-primary:hover:not(:disabled, :active) {
-    background-color: var(--accent-hover);
-    filter: brightness(1.08);
     box-shadow: var(--edge-glow-strong), var(--edge-shade), var(--raised-drop-hover);
   }
   .btn-primary:active:not(:disabled) {
-    background-color: var(--accent-press);
-    background-image: none;
     filter: none;
   }
 
   /* Selected */
-  :is(.btn[aria-pressed="true"]:not([role="tab"]), .segment[data-selected]) {
+  :is(.btn-primary, .btn[aria-pressed="true"]:not([role="tab"]), .segment[data-selected]) {
     --tint: var(--selected-tint, var(--accent));
     border-color: var(--gilt);
     border-image: var(--gilt-edge);

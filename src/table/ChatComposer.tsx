@@ -107,7 +107,7 @@ function MessageBox({
             onError(null);
           }}
         />
-        <Button variant="secondary" type="submit" label="Send" disabled={!typed.trim()}>
+        <Button variant="primary" type="submit" label="Send" disabled={!typed.trim()}>
           Send
         </Button>
       </form>

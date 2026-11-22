@@ -142,7 +142,7 @@ function Welcome({ onCreate }: { onCreate: () => void }) {
           </li>
         ))}
       </ul>
-      <Button variant="secondary" className="welcome-cta" icon={IconAdd} onClick={onCreate} autoFocus>
+      <Button variant="primary" className="welcome-cta" icon={IconAdd} onClick={onCreate} autoFocus>
         Create a Campaign
       </Button>
     </section>
