@@ -68,6 +68,7 @@ function App() {
 
 App.displayName = "App";
 
+export { App };
 export default App;
 
 function Screen({ id, ctx }: { id: string | null; ctx: CampaignContext | null }) {

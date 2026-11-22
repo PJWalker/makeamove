@@ -14,6 +14,19 @@ test("hovering a labelled button shows its tooltip and keeps it up", async ({ pa
   await expect(tooltip).toBeVisible();
 });
 
+test("a tooltip reappears after leaving and rehovering", async ({ page }) => {
+  await createCampaign(page, "Tooltip reentry");
+  await settled(page);
+  const button = page.getByRole("button", { name: "Campaign Menu" });
+
+  await button.hover();
+  await expect(page.getByRole("tooltip")).toBeVisible();
+  await page.mouse.move(5, 5);
+  await expect(page.getByRole("tooltip")).toBeHidden();
+  await button.hover();
+  await expect(page.getByRole("tooltip")).toBeVisible();
+});
+
 test("a tooltip opens beside its button and points at it", async ({ page }) => {
   await createCampaign(page, "Tooltip placement");
   await page.getByRole("tab", { name: "Notes" }).hover();

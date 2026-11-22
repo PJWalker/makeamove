@@ -87,7 +87,7 @@ function useTooltipTracking(setTip: (tip: Tip) => void, reference: RefObject<HTM
       lastShown = 0;
     };
     const onPress = (e: PointerEvent) => {
-      const opens = (e.target as Element | null)?.closest?.("[data-tip-opens]");
+      const opens = (e.target as Element | null)?.closest("[data-tip-opens]");
       if (opens && opens === current) return;
       dismiss();
     };
@@ -129,14 +129,17 @@ function useTooltipTracking(setTip: (tip: Tip) => void, reference: RefObject<HTM
       else timer = globalThis.setTimeout(() => { show(element); }, delay);
     }
 
-    const onOver = (e: PointerEvent) =>
-      e.pointerType !== "touch" && !inTransition() && consider(e.target, DELAY);
-    const onFocus = (e: FocusEvent) =>
-      (e.target as Element).matches?.(":focus-visible") && consider(e.target, DELAY);
-    // Focus leaving the element it belongs to; focus moving elsewhere (a
-    // click that focuses a button) leaves a pointer's tooltip alone.
+    const onOver = (e: PointerEvent) => {
+      if (e.pointerType !== "touch" && !inTransition()) consider(e.target, DELAY);
+    };
+    const onFocus = (e: FocusEvent) => {
+      if ((e.target as Element).matches(":focus-visible")) consider(e.target, DELAY);
+    };
+    // Focus leaving the element it belongs to; moving between descendants
+    // should keep the current tooltip until focus is outside it.
     const onBlur = (e: FocusEvent) => {
-      if (current?.contains(e.target as Node)) hide();
+      const next = e.relatedTarget as Node | null;
+      if (current && (!next || !current.contains(next))) hide();
     };
     const onOut = (e: Event) => {
       if (inTransition()) return;
@@ -146,7 +149,12 @@ function useTooltipTracking(setTip: (tip: Tip) => void, reference: RefObject<HTM
       hide();
     };
 
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerType !== "touch" && !inTransition()) consider(e.target, DELAY);
+    };
+
     document.addEventListener("pointerover", onOver);
+    document.addEventListener("pointermove", onMove);
     document.addEventListener("pointerout", onOut);
     document.addEventListener("focusin", onFocus);
     document.addEventListener("focusout", onBlur);
@@ -157,6 +165,7 @@ function useTooltipTracking(setTip: (tip: Tip) => void, reference: RefObject<HTM
     return () => {
       hide();
       document.removeEventListener("pointerover", onOver);
+      document.removeEventListener("pointermove", onMove);
       document.removeEventListener("pointerout", onOut);
       document.removeEventListener("focusin", onFocus);
       document.removeEventListener("focusout", onBlur);
@@ -175,12 +184,12 @@ function useTooltipPosition(reference: RefObject<HTMLDivElement | null>, tip: Ti
   // the arrow at the middle of the element from whichever side it went to.
   useLayoutEffect(() => {
     const element = reference.current;
-    if (!element || !tip) return;
+    if (!element || !tip?.el.isConnected) return;
     const untether = tether(element, tip.el);
     // The popover is intentionally styled here after it has been positioned.
     // eslint-disable-next-line react-hooks/immutability
     element.dataset["prefer"] = tip.dir;
-    element.showPopover();
+    if (!element.matches(":popover-open") && element.isConnected) element.showPopover();
     const r = tip.el.getBoundingClientRect();
     const box = element.getBoundingClientRect();
     const across = tip.dir === "left" || tip.dir === "right";
