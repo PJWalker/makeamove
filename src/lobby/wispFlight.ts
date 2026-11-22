@@ -39,7 +39,7 @@ const out = (to: Vec3, t: number) =>
   bezier([0, 0, 0], [-0.6, 1.1, -1.2], add(to, [0, 1, 5]), to, ease(t));
 
 /** Where the wisp goes, as an offset from its home, for any moment: `pick` chooses each place it scouts. */
-export default function flightPlan(seed: string, pick: (random: () => number) => Vec3) {
+export function flightPlan(seed: string, pick: (random: () => number) => Vec3) {
   const random = seededRandom(seed);
   const trips: Trip[] = [];
   const plan = (index: number): Trip => {

@@ -1786,6 +1786,9 @@
   "src/lobby/wispFlight.ts": {
     "@typescript-eslint/max-params": {
       "count": 1
+    },
+    "import/prefer-default-export": {
+      "count": 1
     }
   },
   "src/macros/markdown.macro.ts": {

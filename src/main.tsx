@@ -8,6 +8,6 @@ import "./styles/transitions.css";
 import "./ui/sounds";
 import "./ui/sparkle";
 import "./ui/iconMotion";
-import { App } from "./app/App";
+import App from "./app/App";
 
 createRoot(document.querySelector("#app")!).render(<App />);
