@@ -178,6 +178,9 @@
     }
   },
   "lint/strings.ts": {
+    "@typescript-eslint/method-signature-style": {
+      "count": 1
+    },
     "import/extensions": {
       "count": 1
     },
@@ -387,6 +390,9 @@
     },
     "unicorn/import-style": {
       "count": 1
+    },
+    "unicorn/prefer-import-meta-properties": {
+      "count": 1
     }
   },
   "scripts/renderInBrowser.ts": {
@@ -438,6 +444,9 @@
     },
     "max-lines-per-function": {
       "count": 4
+    },
+    "no-useless-return": {
+      "count": 1
     },
     "unicorn/no-array-callback-reference": {
       "count": 8
@@ -619,6 +628,9 @@
     "no-await-in-loop": {
       "count": 2
     },
+    "no-implicit-coercion": {
+      "count": 1
+    },
     "no-param-reassign": {
       "count": 1
     },
@@ -797,6 +809,11 @@
       "count": 1
     }
   },
+  "src/campaign/folders.ts": {
+    "@typescript-eslint/method-signature-style": {
+      "count": 5
+    }
+  },
   "src/campaign/registry.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
@@ -809,6 +826,9 @@
     }
   },
   "src/campaign/systemStore.ts": {
+    "@typescript-eslint/method-signature-style": {
+      "count": 5
+    },
     "@typescript-eslint/no-unnecessary-condition": {
       "count": 2
     },
@@ -873,6 +893,9 @@
   },
   "src/data/schema.ts": {
     "@typescript-eslint/max-params": {
+      "count": 4
+    },
+    "@typescript-eslint/method-signature-style": {
       "count": 4
     },
     "@typescript-eslint/no-shadow": {
@@ -946,6 +969,9 @@
     "@typescript-eslint/restrict-template-expressions": {
       "count": 4
     },
+    "no-implicit-coercion": {
+      "count": 3
+    },
     "unicorn/no-array-callback-reference": {
       "count": 3
     }
@@ -974,6 +1000,9 @@
       "count": 1
     },
     "consistent-return": {
+      "count": 1
+    },
+    "unicorn/explicit-length-check": {
       "count": 1
     }
   },
@@ -1014,6 +1043,9 @@
     },
     "max-lines-per-function": {
       "count": 2
+    },
+    "no-implicit-coercion": {
+      "count": 2
     }
   },
   "src/features/characters/relationships.ts": {
@@ -1051,6 +1083,9 @@
     },
     "max-lines-per-function": {
       "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 1
     }
   },
   "src/features/characters/schema.ts": {
@@ -1064,6 +1099,9 @@
   "src/features/characters/sessionMoves.ts": {
     "@typescript-eslint/max-params": {
       "count": 3
+    },
+    "no-implicit-coercion": {
+      "count": 1
     }
   },
   "src/features/characters/sheet.ts": {
@@ -1091,6 +1129,9 @@
       "count": 2
     },
     "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "no-implicit-coercion": {
       "count": 1
     }
   },
@@ -1163,6 +1204,9 @@
       "count": 1
     },
     "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/explicit-length-check": {
       "count": 1
     }
   },
@@ -1238,6 +1282,9 @@
   "src/features/chat/messages.ts": {
     "@typescript-eslint/no-magic-numbers": {
       "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 1
     }
   },
   "src/features/chat/notify.ts": {
@@ -1308,6 +1355,9 @@
     },
     "@typescript-eslint/prefer-destructuring": {
       "count": 2
+    },
+    "no-implicit-coercion": {
+      "count": 9
     }
   },
   "src/features/combat/__tests__/combat.test.ts": {
@@ -1339,6 +1389,9 @@
     },
     "no-await-in-loop": {
       "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 1
     }
   },
   "src/features/combat/schema.ts": {
@@ -1351,6 +1404,9 @@
       "count": 26
     },
     "makeamove/test-structure": {
+      "count": 1
+    },
+    "unicorn/explicit-length-check": {
       "count": 1
     }
   },
@@ -1379,6 +1435,9 @@
       "count": 2
     },
     "no-nested-ternary": {
+      "count": 1
+    },
+    "unicorn/custom-error-definition": {
       "count": 1
     }
   },
@@ -1568,6 +1627,9 @@
     }
   },
   "src/kernel/commands.ts": {
+    "@typescript-eslint/method-signature-style": {
+      "count": 2
+    },
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
     }
@@ -1675,6 +1737,9 @@
     }
   },
   "src/lib/workerRpc.ts": {
+    "@typescript-eslint/method-signature-style": {
+      "count": 1
+    },
     "@typescript-eslint/no-unnecessary-type-parameters": {
       "count": 1
     },
@@ -1688,6 +1753,9 @@
       "count": 1
     },
     "promise/prefer-await-to-callbacks": {
+      "count": 1
+    },
+    "promise/prefer-catch": {
       "count": 1
     },
     "unicorn/prefer-add-event-listener": {
@@ -1737,15 +1805,6 @@
     "@typescript-eslint/max-params": {
       "count": 8
     },
-    "@typescript-eslint/no-unsafe-argument": {
-      "count": 1
-    },
-    "@typescript-eslint/no-unsafe-assignment": {
-      "count": 1
-    },
-    "@typescript-eslint/no-unsafe-call": {
-      "count": 5
-    },
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
     },
@@ -1754,6 +1813,9 @@
     },
     "max-lines-per-function": {
       "count": 5
+    },
+    "no-implicit-coercion": {
+      "count": 1
     }
   },
   "src/lobby/caveStage.ts": {
@@ -1820,6 +1882,9 @@
     },
     "@typescript-eslint/restrict-template-expressions": {
       "count": 6
+    },
+    "no-implicit-coercion": {
+      "count": 1
     }
   },
   "src/platform/__tests__/localStorage.test.ts": {
@@ -1844,6 +1909,9 @@
     }
   },
   "src/platform/files.ts": {
+    "@typescript-eslint/method-signature-style": {
+      "count": 4
+    },
     "@typescript-eslint/no-magic-numbers": {
       "count": 1
     },
@@ -1852,6 +1920,9 @@
     },
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 4
+    },
+    "no-implicit-coercion": {
+      "count": 1
     },
     "promise/avoid-new": {
       "count": 1
@@ -1994,6 +2065,9 @@
     },
     "max-lines-per-function": {
       "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 2
     }
   },
   "src/scene/__tests__/vision.test.ts": {
@@ -2024,6 +2098,9 @@
   "src/scene/barChange.ts": {
     "@typescript-eslint/no-magic-numbers": {
       "count": 36
+    },
+    "no-implicit-coercion": {
+      "count": 1
     }
   },
   "src/scene/camera.ts": {
@@ -2195,6 +2272,9 @@
     },
     "@typescript-eslint/prefer-optional-chain": {
       "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 1
     }
   },
   "src/scene/gestures/ruler.ts": {
@@ -2216,6 +2296,9 @@
   "src/scene/gestures/shape.ts": {
     "@typescript-eslint/max-params": {
       "count": 4
+    },
+    "@typescript-eslint/method-signature-style": {
+      "count": 2
     },
     "@typescript-eslint/no-magic-numbers": {
       "count": 11
@@ -2261,6 +2344,9 @@
   "src/scene/gestures/types.ts": {
     "@typescript-eslint/max-params": {
       "count": 1
+    },
+    "@typescript-eslint/method-signature-style": {
+      "count": 17
     },
     "@typescript-eslint/no-unnecessary-condition": {
       "count": 2
@@ -2375,6 +2461,9 @@
     "no-multi-assign": {
       "count": 2
     },
+    "unicorn/explicit-length-check": {
+      "count": 1
+    },
     "unicorn/no-array-callback-reference": {
       "count": 2
     }
@@ -2412,6 +2501,9 @@
     "max-classes-per-file": {
       "count": 1
     },
+    "no-useless-return": {
+      "count": 1
+    },
     "unicorn/prefer-code-point": {
       "count": 1
     }
@@ -2437,6 +2529,9 @@
     },
     "max-lines-per-function": {
       "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 2
     }
   },
   "src/scene/render/elements.ts": {
@@ -2593,6 +2688,11 @@
       "count": 1
     }
   },
+  "src/scene/render/state.ts": {
+    "@typescript-eslint/method-signature-style": {
+      "count": 2
+    }
+  },
   "src/scene/render/style.ts": {
     "@typescript-eslint/no-magic-numbers": {
       "count": 10
@@ -2609,6 +2709,9 @@
       "count": 1
     },
     "promise/prefer-await-to-callbacks": {
+      "count": 1
+    },
+    "promise/prefer-catch": {
       "count": 1
     }
   },
@@ -2684,6 +2787,9 @@
     "max-lines-per-function": {
       "count": 1
     },
+    "no-implicit-coercion": {
+      "count": 1
+    },
     "no-multi-assign": {
       "count": 1
     }
@@ -2695,6 +2801,9 @@
     "import/avoid-namespace-import": {
       "count": 1
     },
+    "no-implicit-coercion": {
+      "count": 1
+    },
     "no-nested-ternary": {
       "count": 1
     }
@@ -2704,6 +2813,9 @@
       "count": 8
     },
     "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "no-implicit-coercion": {
       "count": 1
     }
   },
@@ -2752,6 +2864,14 @@
     },
     "max-lines-per-function": {
       "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 2
+    }
+  },
+  "src/scene/types.ts": {
+    "no-implicit-coercion": {
+      "count": 1
     }
   },
   "src/scene/vision.ts": {
@@ -2797,6 +2917,12 @@
     },
     "max-classes-per-file": {
       "count": 1
+    },
+    "unicorn/explicit-length-check": {
+      "count": 2
+    },
+    "unicorn/prefer-spread": {
+      "count": 1
     }
   },
   "src/sync/__tests__/presence.test.ts": {
@@ -2834,6 +2960,9 @@
     }
   },
   "src/sync/blobs.ts": {
+    "@typescript-eslint/method-signature-style": {
+      "count": 4
+    },
     "@typescript-eslint/no-empty-function": {
       "count": 1
     },
@@ -2892,6 +3021,11 @@
       "count": 1
     }
   },
+  "src/sync/transport.ts": {
+    "@typescript-eslint/method-signature-style": {
+      "count": 3
+    }
+  },
   "src/sync/trystero.ts": {
     "@typescript-eslint/no-empty-function": {
       "count": 1
@@ -2943,6 +3077,9 @@
     },
     "max-lines-per-function": {
       "count": 2
+    },
+    "unicorn/explicit-length-check": {
+      "count": 1
     },
     "unicorn/no-array-callback-reference": {
       "count": 2
@@ -3030,6 +3167,9 @@
     },
     "no-negated-condition": {
       "count": 1
+    },
+    "unicorn/explicit-length-check": {
+      "count": 2
     }
   },
   "src/systems/__tests__/dungeon-world.test.ts": {
@@ -3066,6 +3206,9 @@
       "count": 5
     },
     "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/explicit-length-check": {
       "count": 1
     },
     "unicorn/no-array-callback-reference": {
@@ -3194,6 +3337,9 @@
     "max-lines-per-function": {
       "count": 2
     },
+    "no-implicit-coercion": {
+      "count": 1
+    },
     "no-nested-ternary": {
       "count": 6
     },
@@ -3215,6 +3361,9 @@
     },
     "@typescript-eslint/restrict-template-expressions": {
       "count": 5
+    },
+    "no-implicit-coercion": {
+      "count": 1
     }
   },
   "src/systems/dnd55e/sheetHooks.ts": {
@@ -3279,6 +3428,9 @@
     },
     "import/prefer-default-export": {
       "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 3
     }
   },
   "src/systems/dungeon-world-2/ItemUse.tsx": {
@@ -3302,6 +3454,9 @@
     "max-lines": {
       "count": 1
     },
+    "no-implicit-coercion": {
+      "count": 3
+    },
     "no-nested-ternary": {
       "count": 1
     }
@@ -3318,6 +3473,9 @@
     },
     "consistent-return": {
       "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 2
     }
   },
   "src/systems/dungeon-world-2/bondSpecs.ts": {
@@ -3361,6 +3519,9 @@
   "src/systems/dungeon-world-2/commands.ts": {
     "@typescript-eslint/no-magic-numbers": {
       "count": 4
+    },
+    "no-implicit-coercion": {
+      "count": 1
     }
   },
   "src/systems/dungeon-world-2/extension.ts": {
@@ -3400,6 +3561,9 @@
     },
     "max-lines": {
       "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 2
     },
     "no-nested-ternary": {
       "count": 4
@@ -3525,6 +3689,9 @@
     }
   },
   "src/systems/types.ts": {
+    "@typescript-eslint/method-signature-style": {
+      "count": 17
+    },
     "@typescript-eslint/sort-type-constituents": {
       "count": 3
     },
@@ -3572,6 +3739,9 @@
     },
     "max-lines": {
       "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 4
     },
     "no-nested-ternary": {
       "count": 1
@@ -3625,6 +3795,9 @@
     "jsx-a11y/no-static-element-interactions": {
       "count": 1
     },
+    "no-implicit-coercion": {
+      "count": 1
+    },
     "unicorn/consistent-function-scoping": {
       "count": 1
     }
@@ -3633,10 +3806,16 @@
     "@eslint-react/naming-convention-ref-name": {
       "count": 3
     },
+    "@typescript-eslint/method-signature-style": {
+      "count": 2
+    },
     "consistent-return": {
       "count": 1
     },
     "import/no-rename-default": {
+      "count": 1
+    },
+    "no-implicit-coercion": {
       "count": 1
     },
     "unicorn/consistent-function-scoping": {
@@ -3649,6 +3828,9 @@
     },
     "import/prefer-default-export": {
       "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 2
     }
   },
   "src/table/ChatMessage.tsx": {
@@ -3666,6 +3848,9 @@
     },
     "default-case": {
       "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 2
     }
   },
   "src/table/ChatPanel.tsx": {
@@ -3702,6 +3887,12 @@
       "count": 1
     },
     "import/prefer-default-export": {
+      "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 1
+    },
+    "promise/prefer-catch": {
       "count": 1
     }
   },
@@ -3770,6 +3961,9 @@
     },
     "import/prefer-default-export": {
       "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 1
     }
   },
   "src/table/ItemsPanel.tsx": {
@@ -3787,6 +3981,9 @@
     },
     "max-lines": {
       "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 2
     },
     "unicorn/no-array-callback-reference": {
       "count": 2
@@ -3847,6 +4044,9 @@
     },
     "max-lines": {
       "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 4
     }
   },
   "src/table/MovePrompt.tsx": {
@@ -3871,6 +4071,9 @@
     "import/prefer-default-export": {
       "count": 1
     },
+    "no-implicit-coercion": {
+      "count": 3
+    },
     "react-hooks/todo": {
       "count": 1
     },
@@ -3889,6 +4092,9 @@
       "count": 1
     },
     "import/prefer-default-export": {
+      "count": 1
+    },
+    "no-implicit-coercion": {
       "count": 1
     }
   },
@@ -3910,6 +4116,9 @@
     },
     "import/prefer-default-export": {
       "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 2
     },
     "no-nested-ternary": {
       "count": 1
@@ -3958,6 +4167,9 @@
       "count": 2
     },
     "consistent-return": {
+      "count": 1
+    },
+    "unicorn/prefer-dom-node-dataset": {
       "count": 1
     }
   },
@@ -4037,6 +4249,9 @@
     },
     "@typescript-eslint/restrict-template-expressions": {
       "count": 8
+    },
+    "no-implicit-coercion": {
+      "count": 3
     }
   },
   "src/table/RollDie.tsx": {
@@ -4072,6 +4287,9 @@
     },
     "jsx-a11y/prefer-tag-over-role": {
       "count": 3
+    },
+    "no-implicit-coercion": {
+      "count": 1
     },
     "no-nested-ternary": {
       "count": 3
@@ -4147,6 +4365,9 @@
     "import/prefer-default-export": {
       "count": 1
     },
+    "no-implicit-coercion": {
+      "count": 1
+    },
     "unicorn/no-array-callback-reference": {
       "count": 1
     }
@@ -4183,6 +4404,9 @@
     },
     "import/prefer-default-export": {
       "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 2
     }
   },
   "src/table/TextEditor.tsx": {
@@ -4217,6 +4441,9 @@
     },
     "import/prefer-default-export": {
       "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 2
     }
   },
   "src/table/TokenOptionsDialog.tsx": {
@@ -4234,6 +4461,9 @@
     },
     "import/prefer-default-export": {
       "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 2
     },
     "no-nested-ternary": {
       "count": 1
@@ -4266,6 +4496,9 @@
     },
     "no-duplicate-imports": {
       "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 2
     }
   },
   "src/table/chatContentExtensions.ts": {
@@ -4316,6 +4549,9 @@
     },
     "@typescript-eslint/restrict-template-expressions": {
       "count": 3
+    },
+    "no-implicit-coercion": {
+      "count": 1
     },
     "no-param-reassign": {
       "count": 2
@@ -4476,6 +4712,9 @@
     "max-lines-per-function": {
       "count": 1
     },
+    "no-implicit-coercion": {
+      "count": 2
+    },
     "no-param-reassign": {
       "count": 1
     }
@@ -4487,6 +4726,9 @@
   },
   "src/table/useActingCharacter.ts": {
     "import/prefer-default-export": {
+      "count": 1
+    },
+    "no-implicit-coercion": {
       "count": 1
     }
   },
@@ -4570,6 +4812,9 @@
       "count": 8
     },
     "max-lines-per-function": {
+      "count": 1
+    },
+    "no-implicit-coercion": {
       "count": 1
     },
     "no-nested-ternary": {
@@ -4736,11 +4981,6 @@
       "count": 3
     }
   },
-  "src/ui/OptionPicker.tsx": {
-    "makeamove/no-props": {
-      "count": 1
-    }
-  },
   "src/ui/PopupTabs.tsx": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
@@ -4797,6 +5037,9 @@
     "import/prefer-default-export": {
       "count": 1
     },
+    "unicorn/prefer-dom-node-dataset": {
+      "count": 5
+    },
     "unicorn/prefer-dom-node-text-content": {
       "count": 1
     }
@@ -4804,6 +5047,9 @@
   "src/ui/TwoPane.tsx": {
     "@eslint-react/naming-convention-ref-name": {
       "count": 1
+    },
+    "@typescript-eslint/method-signature-style": {
+      "count": 3
     },
     "@typescript-eslint/no-magic-numbers": {
       "count": 2
@@ -4830,6 +5076,9 @@
   "src/ui/__tests__/iconMotion.test.tsx": {
     "import/no-unassigned-import": {
       "count": 1
+    },
+    "unicorn/prefer-dom-node-dataset": {
+      "count": 3
     }
   },
   "src/ui/__tests__/icons.test.tsx": {
@@ -4914,6 +5163,9 @@
     },
     "import/prefer-default-export": {
       "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 2
     }
   },
   "src/ui/menuTrigger.ts": {
@@ -4939,6 +5191,9 @@
     },
     "@typescript-eslint/restrict-template-expressions": {
       "count": 8
+    },
+    "no-implicit-coercion": {
+      "count": 2
     },
     "no-multi-assign": {
       "count": 1
@@ -5089,6 +5344,9 @@
   "src/ui/useQuery.ts": {
     "@eslint-react/naming-convention-ref-name": {
       "count": 1
+    },
+    "@typescript-eslint/method-signature-style": {
+      "count": 2
     },
     "@typescript-eslint/no-empty-function": {
       "count": 1
@@ -5251,6 +5509,9 @@
     "max-lines": {
       "count": 1
     },
+    "no-implicit-coercion": {
+      "count": 3
+    },
     "no-nested-ternary": {
       "count": 1
     },
@@ -5386,6 +5647,9 @@
     "max-lines-per-function": {
       "count": 1
     },
+    "no-implicit-coercion": {
+      "count": 1
+    },
     "unicorn/consistent-function-scoping": {
       "count": 1
     }
@@ -5437,6 +5701,9 @@
     },
     "max-lines-per-function": {
       "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 4
     }
   },
   "src/workspace/campaignContext.ts": {
@@ -5450,6 +5717,9 @@
     }
   },
   "src/workspace/canvasState.ts": {
+    "@typescript-eslint/method-signature-style": {
+      "count": 2
+    },
     "@typescript-eslint/restrict-template-expressions": {
       "count": 1
     },
@@ -5492,6 +5762,9 @@
     },
     "max-lines": {
       "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 5
     }
   },
   "src/workspace/commands/chat.ts": {
@@ -5512,6 +5785,19 @@
     },
     "max-lines": {
       "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 7
+    }
+  },
+  "src/workspace/commands/combat.ts": {
+    "no-implicit-coercion": {
+      "count": 1
+    }
+  },
+  "src/workspace/commands/core.ts": {
+    "no-implicit-coercion": {
+      "count": 1
     }
   },
   "src/workspace/commands/custom.ts": {
@@ -5531,12 +5817,20 @@
       "count": 1
     }
   },
+  "src/workspace/commands/folders.ts": {
+    "@typescript-eslint/method-signature-style": {
+      "count": 3
+    }
+  },
   "src/workspace/commands/keys.ts": {
     "@typescript-eslint/no-unnecessary-condition": {
       "count": 2
     },
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 2
+    },
+    "no-implicit-coercion": {
+      "count": 1
     }
   },
   "src/workspace/commands/notes.ts": {
@@ -5544,6 +5838,9 @@
       "count": 1
     },
     "@typescript-eslint/prefer-nullish-coalescing": {
+      "count": 2
+    },
+    "no-implicit-coercion": {
       "count": 2
     }
   },
@@ -5558,6 +5855,9 @@
     },
     "@typescript-eslint/restrict-template-expressions": {
       "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 3
     }
   },
   "src/workspace/commands/search.ts": {
@@ -5574,6 +5874,9 @@
   "src/workspace/commands/selection.ts": {
     "@typescript-eslint/max-params": {
       "count": 2
+    },
+    "no-implicit-coercion": {
+      "count": 3
     }
   },
   "src/workspace/commands/types.ts": {
@@ -5603,6 +5906,9 @@
     },
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 1
     }
   },
   "src/workspace/entityDrag.ts": {
@@ -5629,11 +5935,17 @@
     },
     "max-lines-per-function": {
       "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 3
     }
   },
   "src/workspace/entityGraphics.ts": {
     "@typescript-eslint/max-params": {
       "count": 3
+    },
+    "no-implicit-coercion": {
+      "count": 1
     }
   },
   "src/workspace/entityWindowState.ts": {
@@ -5651,6 +5963,9 @@
     }
   },
   "src/workspace/entityWindows.tsx": {
+    "no-implicit-coercion": {
+      "count": 2
+    },
     "no-nested-ternary": {
       "count": 1
     }
@@ -5683,6 +5998,9 @@
   "src/workspace/libraryActions.ts": {
     "max-lines-per-function": {
       "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 1
     }
   },
   "src/workspace/libraryView.ts": {
@@ -5691,6 +6009,9 @@
     }
   },
   "src/workspace/linkActions.ts": {
+    "no-implicit-coercion": {
+      "count": 1
+    },
     "no-nested-ternary": {
       "count": 1
     }
@@ -5703,6 +6024,9 @@
       "count": 1
     },
     "import/prefer-default-export": {
+      "count": 1
+    },
+    "no-useless-return": {
       "count": 1
     }
   },
@@ -5774,6 +6098,12 @@
     },
     "jsx-a11y/prefer-tag-over-role": {
       "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 2
+    },
+    "unicorn/prefer-dom-node-dataset": {
+      "count": 2
     }
   },
   "src/workspace/richTextExtensions.ts": {
@@ -5817,6 +6147,9 @@
     "max-lines": {
       "count": 1
     },
+    "no-implicit-coercion": {
+      "count": 1
+    },
     "react-hooks/todo": {
       "count": 1
     }
@@ -5854,6 +6187,9 @@
     },
     "import/prefer-default-export": {
       "count": 1
+    },
+    "no-implicit-coercion": {
+      "count": 2
     }
   },
   "src/workspace/tools.ts": {
@@ -5907,6 +6243,9 @@
     },
     "new-cap": {
       "count": 2
+    },
+    "no-useless-return": {
+      "count": 1
     }
   }
 }
