@@ -206,14 +206,14 @@ const FRAGMENT = /* glsl */ `
 
     float angle = atan(point.y, point.x);
     float edgeNoise =
-      sin(angle * 7.0 + vPhase * 41.0) * 0.045 +
-      sin(angle * 13.0 - vPhase * 67.0) * 0.025;
+      sin(angle * 7.0 + vPhase * 41.0) * 0.012 +
+      sin(angle * 13.0 - vPhase * 67.0) * 0.008;
     float edge = 1.0 - smoothstep(0.68 + edgeNoise, 1.06 + edgeNoise, radial);
 
     vec2 pigmentCell = floor(gl_FragCoord.xy / 2.1);
     float grain = brushNoise(pigmentCell + vec2(vPhase * 127.0, vPhase * 311.0));
-    float bristle = 0.74 + 0.26 * sin(point.y * 19.0 + vPhase * 53.0 + grain * 2.0);
-    float stipple = 0.58 + 0.42 * brushNoise(pigmentCell * 0.73 + vec2(vPhase * 91.0, 1.0));
+    float bristle = 0.92 + 0.08 * grain;
+    float stipple = 0.84 + 0.16 * brushNoise(pigmentCell * 0.73 + vec2(vPhase * 91.0, 1.0));
     float alpha = vColour.a * edge * bristle * mix(stipple, 1.0, smoothstep(0.2, 0.9, 1.0 - radial));
 
     if (alpha < 1.0 / 255.0) discard;

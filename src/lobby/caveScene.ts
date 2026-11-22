@@ -141,6 +141,7 @@ function sculptor(random: () => number, splats: Splat[], density: number) {
     [long, wide]: [number, number],
     colour: Vec3,
     opacity: number,
+    phase = 0,
   ) => {
     const [first, second] = tangents(facing, along);
     splats.push({
@@ -151,7 +152,7 @@ function sculptor(random: () => number, splats: Splat[], density: number) {
       facing,
       glow: false,
       motion: MOTION.still,
-      phase: 0,
+      phase,
     });
   };
 
@@ -247,7 +248,9 @@ type Sculptor = ReturnType<typeof sculptor>;
 /** The tunnel's walls and roof, each splat a stroke following the rock's strata. */
 function walls({ random, spread, pick, shade, patch }: Sculptor) {
   for (let index = 0; index < 60_000; index++) {
-    const z = FAR + (NEAR - FAR) * random() ** 0.8;
+    const z = FAR + (NEAR - FAR) * random();
+    const depth = (NEAR - z) / (NEAR - FAR);
+    if (random() > 1 - depth * 0.78) continue;
     const { middle, halfWidth, height } = section(z);
     const angle = random() * Math.PI;
     const base: Vec3 = [middle + halfWidth * Math.cos(angle), height * Math.sin(angle) ** 0.8, z];
@@ -262,7 +265,7 @@ function walls({ random, spread, pick, shade, patch }: Sculptor) {
       WALL_PAINTS[Math.floor(band * WALL_PAINTS.length * 1.6) % WALL_PAINTS.length] ??
       WALL_PAINTS[0];
     const roof = 1 - 0.8 * (Math.max(0, at[1]) / height) ** 2;
-    const size = 0.045 + random() * 0.07;
+    const size = (0.045 + random() * 0.07) * (0.32 + depth * 2.75);
     patch(
       at,
       facing,
@@ -270,6 +273,7 @@ function walls({ random, spread, pick, shade, patch }: Sculptor) {
       [size * (1.4 + random()), size * 0.6],
       scale(shade(random() < 0.15 ? pick(WALL_PAINTS) : paint, 0.25), roof),
       0.55 + random() * 0.4,
+      random(),
     );
   }
 }
@@ -277,11 +281,13 @@ function walls({ random, spread, pick, shade, patch }: Sculptor) {
 /** The floor between the feet of the walls, with loose stones on it. */
 function floor({ random, spread, pick, shade, patch, ellipsoid }: Sculptor) {
   for (let index = 0; index < 22_000; index++) {
-    const z = FAR + (NEAR - FAR) * random() ** 0.7;
+    const z = FAR + (NEAR - FAR) * random();
+    const depth = (NEAR - z) / (NEAR - FAR);
+    if (random() > 1 - depth * 0.88) continue;
     const { middle, halfWidth } = section(z);
     const x = middle + spread(halfWidth * 0.97);
-    const at: Vec3 = [x, (fbm([x * 0.7, 0, z * 0.7]) - 0.5) * 0.22, z];
-    const size = 0.05 + random() * 0.08;
+    const at: Vec3 = [x, spread(0.018), z];
+    const size = (0.05 + random() * 0.08) * (0.32 + depth * 2.75);
     patch(
       at,
       normalize([spread(0.2), 1, spread(0.2)]),
@@ -289,6 +295,7 @@ function floor({ random, spread, pick, shade, patch, ellipsoid }: Sculptor) {
       [size * (1.2 + random()), size * 0.7],
       shade(pick(FLOOR_PAINTS), 0.3),
       0.6 + random() * 0.35,
+      random(),
     );
   }
   for (let index = 0; index < 26; index++) {
