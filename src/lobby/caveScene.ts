@@ -602,9 +602,9 @@ function ring(
 }
 
 /* The warrior: plate and a red cloak, a round painted shield and a greatsword slung behind, torch held high. */
-function warrior(sculpt: Sculptor, origin: Vec3): Vec3 {
+function warrior(sculpt: Sculptor, origin: Vec3, facing: -1 | 1): Vec3 {
   const { ellipsoid, tube } = sculpt;
-  const at = (p: Vec3) => add(origin, p);
+  const at = (p: Vec3): Vec3 => [origin[0] + p[0] * facing, origin[1] + p[1], origin[2] + p[2]];
   const cloak = hex("#6a1a1e");
   const plume = hex("#9a2a24");
   boots(sculpt, at, 0.12);
@@ -688,9 +688,9 @@ function warrior(sculpt: Sculptor, origin: Vec3): Vec3 {
 }
 
 /* The dwarf: short and broad, braided red hair, a horned helm, a laden pack and an axe on the shoulder. */
-function dwarf(sculpt: Sculptor, origin: Vec3) {
+function dwarf(sculpt: Sculptor, origin: Vec3, facing: -1 | 1) {
   const { ellipsoid, tube } = sculpt;
-  const at = (p: Vec3) => add(origin, p);
+  const at = (p: Vec3): Vec3 => [origin[0] + p[0] * facing, origin[1] + p[1], origin[2] + p[2]];
   const cloth = hex("#4a3424");
   const hair = hex("#a0502a");
   boots(sculpt, at, 0.14, 1.2);
@@ -767,9 +767,9 @@ function dwarf(sculpt: Sculptor, origin: Vec3) {
 }
 
 /* The ranger: a green hooded cloak worn ragged at the hem, a quiver of arrows and a strung bow, and the second torch. */
-function ranger(sculpt: Sculptor, origin: Vec3): Vec3 {
+function ranger(sculpt: Sculptor, origin: Vec3, facing: -1 | 1): Vec3 {
   const { random, ellipsoid, tube, speck } = sculpt;
-  const at = (p: Vec3) => add(origin, p);
+  const at = (p: Vec3): Vec3 => [origin[0] + p[0] * facing, origin[1] + p[1], origin[2] + p[2]];
   const cloak = hex("#2a4430");
   const trousers = hex("#3a3024");
   boots(sculpt, at, 0.1, 0.95);
@@ -837,9 +837,9 @@ function ranger(sculpt: Sculptor, origin: Vec3): Vec3 {
 }
 
 /* The wizard: a starry blue robe with a moon on the back, a long white beard, a tall hat, a staff, and a hand held up to the wisp. */
-function wizard(sculpt: Sculptor, origin: Vec3): Vec3 {
+function wizard(sculpt: Sculptor, origin: Vec3, facing: -1 | 1): Vec3 {
   const { random, ellipsoid, tube, speck } = sculpt;
-  const at = (p: Vec3) => add(origin, p);
+  const at = (p: Vec3): Vec3 => [origin[0] + p[0] * facing, origin[1] + p[1], origin[2] + p[2]];
   const robe = hex("#252c60");
   const beard = hex("#d0ccc4");
   const sash = hex("#6a2a5a");
@@ -971,10 +971,10 @@ export function buildCave(seed = `${Date.now().toString(36)}-${Math.random().toS
     const x = middle + Math.max(-limit, Math.min(limit, spot[0] + (random() * 2 - 1) * 1.2));
     return [x, 0, z];
   };
-  const warriorTorch = warrior(party, partySpot(0));
-  dwarf(party, partySpot(1));
-  const rangerTorch = ranger(party, partySpot(2));
-  const wispAt = wizard(party, partySpot(3));
+  const warriorTorch = warrior(party, partySpot(0), random() < 0.5 ? -1 : 1);
+  dwarf(party, partySpot(1), random() < 0.5 ? -1 : 1);
+  const rangerTorch = ranger(party, partySpot(2), random() < 0.5 ? -1 : 1);
+  const wispAt = wizard(party, partySpot(3), random() < 0.5 ? -1 : 1);
   wisp(party, wispAt);
   return {
     splats,
