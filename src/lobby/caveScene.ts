@@ -375,13 +375,102 @@ const GOLD = hex("#b08a3a");
 const SKIN = hex("#c8a080");
 const BONE = hex("#d8c8a0");
 
+/** One of the larger points of interest that can appear in a cave. */
+// eslint-disable-next-line max-lines-per-function
+function caveDiscovery(sculpt: Sculptor) {
+  const { random, spread, pick, ellipsoid, tube, speck } = sculpt;
+  const z = 1 - random() * 29;
+  const { middle, halfWidth } = section(z);
+  const side = random() < 0.5 ? -1 : 1;
+  const discoveries = ["torch", "door", "trap", "particles", "skeleton", "sword", "blood"] as const;
+
+  switch (pick(discoveries)) {
+    case "torch": {
+      const at: Vec3 = [middle + side * (halfWidth - 0.12), 1.2 + random() * 1.8, z];
+      tube(add(at, [side * 0.12, -0.48, 0]), at, [0.035, 0.025], BRONZE, { vary: 0.18 });
+      ellipsoid(add(at, [0, 0.03, 0]), [0.04, 0.045, 0.04], DARK_STEEL);
+      const flameColour = pick([hex("#66d6ff"), hex("#b56cff"), hex("#62f4a5"), hex("#ff89c9")]);
+      for (let index = 0; index < 38; index++) {
+        speck(add(at, [spread(0.055), 0.12 + random() * 0.32, spread(0.055)]), [0.026, 0.045, 0.026], flameColour, 0.72, { motion: MOTION.drift, phase: random(), lit: true });
+      }
+      break;
+    }
+    case "door": {
+      const width = 0.65 + random() * 0.35;
+      const height = 1.7 + random() * 0.55;
+      const base: Vec3 = [middle + side * (halfWidth - 0.08), 0.02, z];
+      tube(add(base, [0, 0, -width]), add(base, [0, height, -width]), [0.075, 0.075], WOOD);
+      tube(add(base, [0, 0, width]), add(base, [0, height, width]), [0.075, 0.075], WOOD);
+      tube(add(base, [0, height, -width]), add(base, [0, height, width]), [0.075, 0.075], WOOD);
+      for (let panel = 0; panel < 3; panel++) {
+        const y = 0.35 + panel * 0.48;
+        ellipsoid(add(base, [side * 0.015, y, spread(0.15)]), [0.028, 0.12, 0.28], WOOD, { vary: 0.22 });
+      }
+      ellipsoid(add(base, [side * 0.09, height * 0.48, 0]), [0.055, 0.055, 0.055], BRONZE);
+      break;
+    }
+    case "trap": {
+      const centre: Vec3 = [middle + spread(halfWidth * 0.65), 0.018, z];
+      const radius = 0.32 + random() * 0.34;
+      ellipsoid(centre, [radius, 0.018, radius * 0.65], DARK_STEEL, { vary: 0.12 });
+      for (let spike = 0; spike < 7; spike++) {
+        const angle = random() * Math.PI * 2;
+        const distance = Math.sqrt(random()) * radius;
+        const at = add(centre, [Math.cos(angle) * distance, 0.02, Math.sin(angle) * distance * 0.65]);
+        tube(at, add(at, [spread(0.03), 0.16 + random() * 0.16, spread(0.03)]), [0.018, 0.002], STEEL, { vary: 0.25 });
+      }
+      break;
+    }
+    case "particles": {
+      const centre: Vec3 = [middle + spread(halfWidth * 0.65), 0.5 + random() * 1.8, z];
+      const colour = pick([hex("#75baff"), hex("#dc82ff"), hex("#72f0c1"), hex("#ffd66b")]);
+      for (let index = 0; index < 30; index++) {
+        speck(add(centre, [spread(0.55), spread(0.6), spread(0.55)]), 0.018 + random() * 0.018, colour, 0.75, { motion: MOTION.drift, phase: random(), lit: true });
+      }
+      break;
+    }
+    case "skeleton": {
+      const base: Vec3 = [middle + spread(halfWidth * 0.65), 0.12, z];
+      ellipsoid(add(base, [0, 0.72, 0]), [0.12, 0.14, 0.11], BONE, { vary: 0.12 });
+      tube(add(base, [0, 0.58, 0]), add(base, [0, 0.22, 0]), [0.035, 0.025], BONE, { vary: 0.12 });
+      tube(add(base, [-0.08, 0.5, 0]), add(base, [-0.38, 0.22, spread(0.12)]), [0.028, 0.018], BONE);
+      tube(add(base, [0.08, 0.5, 0]), add(base, [0.38, 0.22, spread(0.12)]), [0.028, 0.018], BONE);
+      tube(add(base, [-0.08, 0.22, 0]), add(base, [-0.32, 0.03, 0.18]), [0.035, 0.018], BONE);
+      tube(add(base, [0.08, 0.22, 0]), add(base, [0.32, 0.03, -0.18]), [0.035, 0.018], BONE);
+      break;
+    }
+    case "sword": {
+      const base: Vec3 = [middle + spread(halfWidth * 0.65), 0.06, z];
+      const bladeTip = add(base, [0.65 + random() * 0.22, 0.09, spread(0.18)]);
+      tube(base, bladeTip, [0.018, 0.008], STEEL, { vary: 0.08 });
+      tube(add(base, [-0.11, 0, -0.04]), add(base, [0.11, 0, 0.04]), [0.025, 0.025], GOLD);
+      tube(add(base, [-0.16, -0.04, -0.02]), add(base, [-0.22, 0.02, 0.02]), [0.028, 0.02], DARK_LEATHER);
+      break;
+    }
+    case "blood": {
+      const centre: Vec3 = [middle + spread(halfWidth * 0.65), 0.018, z];
+      const radius = 0.22 + random() * 0.5;
+      const blood = pick([hex("#7a1717"), hex("#981f1f"), hex("#5e1218")]);
+      for (let index = 0; index < 42; index++) {
+        const angle = random() * Math.PI * 2;
+        const distance = Math.sqrt(random()) * radius;
+        speck(add(centre, [Math.cos(angle) * distance, 0, Math.sin(angle) * distance * 0.55]), [0.024, 0.006, 0.024], blood, 0.82, { lit: true });
+      }
+      break;
+    }
+    default: {
+      break;
+    }
+  }
+}
+
 /** Small environmental features that vary in placement and appearance with every cave. */
 // eslint-disable-next-line max-lines-per-function
 function caveDetails(sculpt: Sculptor) {
   const { random, spread, pick, ellipsoid, tube, speck } = sculpt;
   const crystalColours = [hex("#6688aa"), hex("#8870a0"), hex("#75a8a0"), hex("#a49a78")];
 
-  for (let cluster = 0; cluster < 9; cluster++) {
+  for (let cluster = 0; cluster < 14; cluster++) {
     const z = 2 - random() * 30;
     const { middle, halfWidth } = section(z);
     const side = random() < 0.5 ? -1 : 1;
@@ -397,7 +486,7 @@ function caveDetails(sculpt: Sculptor) {
     }
   }
 
-  for (let patch = 0; patch < 7; patch++) {
+  for (let patch = 0; patch < 12; patch++) {
     const z = 2 - random() * 27;
     const { middle, halfWidth } = section(z);
     const centre: Vec3 = [middle + spread(halfWidth * 0.7), 0.015, z];
@@ -411,7 +500,7 @@ function caveDetails(sculpt: Sculptor) {
     }
   }
 
-  for (let pool = 0; pool < 3; pool++) {
+  for (let pool = 0; pool < 5; pool++) {
     const z = -3 - random() * 24;
     const { middle, halfWidth } = section(z);
     const centre: Vec3 = [middle + spread(halfWidth * 0.45), 0.022, z];
@@ -424,13 +513,17 @@ function caveDetails(sculpt: Sculptor) {
     }
   }
 
-  for (let root = 0; root < 5; root++) {
+  for (let root = 0; root < 9; root++) {
     const z = -5 - random() * 25;
     const { middle, halfWidth, height } = section(z);
     const side = random() < 0.5 ? -1 : 1;
     const rootStart: Vec3 = [middle + side * halfWidth * (0.55 + random() * 0.35), height * (0.72 + random() * 0.18), z];
     const reach = 0.8 + random() * 1.8;
     tube(rootStart, add(rootStart, [side * reach * 0.45, -reach, spread(0.25)]), [0.035, 0.008], WOOD, { vary: 0.25, folds: 5 });
+  }
+
+  for (let discovery = 0; discovery < 14; discovery++) {
+    caveDiscovery(sculpt);
   }
 }
 
