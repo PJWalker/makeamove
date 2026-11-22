@@ -4,11 +4,13 @@ import {
   IconAdd,
   IconBackupFolder,
   IconDelete,
-  IconDice,
+  IconDraw,
   IconExport,
+  IconFog,
   IconImport,
-  IconMap,
+  IconLibraries,
   IconMembers,
+  IconPhone,
 } from "../ui/icons";
 import { goToCampaign, pendingInvite } from "../navigation/router";
 import { exportBackupFile, importBackupFile } from "../campaign/backup";
@@ -122,9 +124,31 @@ export function Lobby({ error }: { error: string | null }) {
 }
 
 const FEATURES = [
-  { Icon: IconMap, label: "Maps & Tokens" },
-  { Icon: IconDice, label: "Dice & Combat" },
-  { Icon: IconMembers, label: "Play Together" },
+  {
+    Icon: IconMembers,
+    title: "P2P & Offline",
+    description: "No server required. Play together or keep playing offline.",
+  },
+  {
+    Icon: IconLibraries,
+    title: "Pluggable",
+    description: "Extensions bring in new systems and tools.",
+  },
+  {
+    Icon: IconFog,
+    title: "Fog & Lighting",
+    description: "Dynamic atmosphere, visibility, and concealment.",
+  },
+  {
+    Icon: IconDraw,
+    title: "Drawing Tools",
+    description: "Sketch maps and mark the table in real time.",
+  },
+  {
+    Icon: IconPhone,
+    title: "Mobile Responsive",
+    description: "Keep the table close on phones and tablets.",
+  },
 ];
 
 /** The lobby with no campaigns: what the table offers and the way in. */
@@ -135,10 +159,11 @@ function Welcome({ onCreate }: { onCreate: () => void }) {
         Start Your First Campaign
       </h2>
       <ul className="welcome-features">
-        {FEATURES.map(({ Icon, label }) => (
-          <li key={label}>
+        {FEATURES.map(({ Icon, title, description }) => (
+          <li key={title}>
             <Icon size={28} />
-            {label}
+            <strong>{title}</strong>
+            <span>{description}</span>
           </li>
         ))}
       </ul>
