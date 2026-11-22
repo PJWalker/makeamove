@@ -20,7 +20,7 @@ export interface LintResult {
 const JSCPD_BASELINE = join(tmpdir(), `makeamove-jscpd-${process.pid}.json`);
 
 const CODE_FILE = /\.(?:[cm]?[jt]sx?|css)$/i;
-const ESLINT_FILE = /\.(?:[cm]?[jt]sx?)$/i;
+const ESLINT_FILE = /\.[cm]?[jt]sx?$/i;
 
 export function createLintFixes(files: string[]): LintCheck[] {
   const codeFiles = files.filter((file) => CODE_FILE.test(file));
@@ -46,7 +46,7 @@ export function createLintFixes(files: string[]): LintCheck[] {
 
 export function createLintAnalyses(files: string[]): LintCheck[] {
   const eslintFiles = files.filter((file) => ESLINT_FILE.test(file));
-  const sourceFiles = files.filter((file) => /^src\/.*\.(?:[cm]?[jt]sx?)$/i.test(file));
+  const sourceFiles = files.filter((file) => /^src\/.*\.[cm]?[jt]sx?$/i.test(file));
   const checks: LintCheck[] = [
     {
       name: "TypeScript typecheck",
@@ -59,7 +59,7 @@ export function createLintAnalyses(files: string[]): LintCheck[] {
     checks.push({
       name: "ESLint",
       command: "npx",
-      args: ["eslint", ...eslintFiles],
+      args: ["eslint", "--prune-suppressions", ...eslintFiles],
     });
   }
 

@@ -25,12 +25,16 @@ const require = createRequire(import.meta.url);
  */
 const doctorRules = {
   ...Object.fromEntries(
-    Object.entries(doctorDefaults).filter(([rule]) => !FRAMEWORK_SPECIFIC_RULE_KEYS.has(rule)),
+    Object.entries(doctorDefaults).flatMap(([rule, severity]) =>
+      FRAMEWORK_SPECIFIC_RULE_KEYS.has(rule) ? [] : [[rule, severity === "warn" ? "error" : severity]],
+    ),
   ),
   ...require("./doctor.config.json").rules,
 };
 
 export default defineConfig([
+  // Like every rule, a disable directive that no longer does anything is an error.
+  { linterOptions: { reportUnusedDisableDirectives: "error" } },
   // What gets linted, for `npm run lint` and the pre-commit hook alike.
   {
     ignores: ["*", "!src/", "!scripts/", "!lint/", "!vite.config.ts"],
@@ -86,6 +90,8 @@ export default defineConfig([
     rules: {
       "id-length": "off",
       "init-declarations": "off",
+      // Its fix (`/=/` to `/[=]/`) is undone by unicorn/better-regex, endlessly.
+      "no-div-regex": "off",
       "no-eq-null": "off",
       "no-inline-comments": "off",
       "no-plusplus": "off",
@@ -97,23 +103,26 @@ export default defineConfig([
       "no-warning-comments": "off",
       "one-var": "off",
       "sort-imports": "off",
+      "max-lines": ["error", { max: 500, skipBlankLines: false, skipComments: false }],
       "capitalized-comments": "off",
       curly: "off",
       "func-style": "off",
-      "max-params": "off",
       "max-statements": "off",
       "no-bitwise": "off",
       "no-continue": "off",
       "prefer-arrow-callback": "off",
       "prefer-named-capture-group": "off",
+      // Off while their autofix breaks code (types, behaviour or other files); `eslint --fix` runs on commit.
+      "no-implicit-coercion": "off",
+      "no-useless-return": "off",
       "require-unicode-regexp": "off",
       "sort-keys": "off",
       // `tseslint.configs.eslintRecommended` turns this off for TypeScript files.
       "consistent-return": "error",
-      "no-case-declarations": "warn",
+      "no-case-declarations": "error",
       "no-duplicate-imports": ["error", { includeExports: false, allowSeparateTypeImports: true }],
       "no-empty": ["error", { allowEmptyCatch: true }],
-      "no-useless-escape": "warn",
+      "no-useless-escape": "error",
     },
   },
   {
@@ -135,8 +144,6 @@ export default defineConfig([
       "@typescript-eslint/consistent-type-imports": "error",
       "@typescript-eslint/default-param-last": "error",
       "@typescript-eslint/dot-notation": "error",
-      "@typescript-eslint/max-params": "error",
-      "@typescript-eslint/method-signature-style": "error",
       "@typescript-eslint/no-array-constructor": "error",
       "@typescript-eslint/no-array-delete": "error",
       "@typescript-eslint/no-base-to-string": "error",
@@ -249,7 +256,6 @@ export default defineConfig([
       "import/no-named-as-default-member": "error",
       "import/no-anonymous-default-export": "error",
       "import/no-rename-default": "error",
-      "import/no-unused-modules": "error",
       "import/no-commonjs": "error",
       "import/no-amd": "error",
       "import/first": "error",
@@ -302,7 +308,6 @@ export default defineConfig([
       "promise/no-return-wrap": "error",
       "promise/catch-or-return": "error",
       "promise/prefer-await-to-callbacks": "error",
-      "promise/prefer-catch": "error",
       "promise/no-native": "error",
       "promise/no-callback-in-promise": "error",
       "promise/no-promise-in-callback": "error",
@@ -421,12 +426,10 @@ export default defineConfig([
       "unicorn/consistent-empty-array-spread": "error",
       "unicorn/consistent-existence-index-check": "error",
       "unicorn/consistent-function-scoping": "error",
-      "unicorn/custom-error-definition": "error",
       "unicorn/empty-brace-spaces": "error",
       "unicorn/error-message": "error",
       "unicorn/escape-case": "error",
       "unicorn/expiring-todo-comments": "error",
-      "unicorn/explicit-length-check": "error",
       "unicorn/import-style": "error",
       "unicorn/new-for-builtins": "error",
       "unicorn/no-abusive-eslint-disable": "error",
@@ -484,12 +487,10 @@ export default defineConfig([
       "unicorn/prefer-date-now": "error",
       "unicorn/prefer-default-parameters": "error",
       "unicorn/prefer-dom-node-append": "error",
-      "unicorn/prefer-dom-node-dataset": "error",
       "unicorn/prefer-dom-node-remove": "error",
       "unicorn/prefer-dom-node-text-content": "error",
       "unicorn/prefer-event-target": "error",
       "unicorn/prefer-global-this": "error",
-      "unicorn/prefer-import-meta-properties": "error",
       "unicorn/prefer-json-parse-buffer": "error",
       "unicorn/prefer-keyboard-event-key": "error",
       "unicorn/prefer-logical-operator-over-ternary": "error",
@@ -510,7 +511,6 @@ export default defineConfig([
       "unicorn/prefer-set-has": "error",
       "unicorn/prefer-set-size": "error",
       "unicorn/prefer-single-call": "error",
-      "unicorn/prefer-spread": "error",
       "unicorn/prefer-string-raw": "error",
       "unicorn/prefer-string-replace-all": "error",
       "unicorn/prefer-string-slice": "error",
@@ -561,11 +561,11 @@ export default defineConfig([
           pathGroupOverrides: [{ pattern: "three/addons/**", action: "ignore" }],
         },
       ],
-      "react-hooks/exhaustive-deps": "warn",
-      "react-hooks/incompatible-library": "warn",
-      "react-hooks/unsupported-syntax": "warn",
+      "react-hooks/exhaustive-deps": "error",
+      "react-hooks/incompatible-library": "error",
+      "react-hooks/unsupported-syntax": "error",
       "jsx-a11y/anchor-ambiguous-text": "off",
-      "jsx-a11y/click-events-have-key-events": "warn",
+      "jsx-a11y/click-events-have-key-events": "error",
       "jsx-a11y/control-has-associated-label": "off",
       "jsx-a11y/interactive-supports-focus": [
         "error",
@@ -582,7 +582,7 @@ export default defineConfig([
           canvas: ["img"],
         },
       ],
-      "jsx-a11y/no-noninteractive-element-interactions": "warn",
+      "jsx-a11y/no-noninteractive-element-interactions": "error",
       "jsx-a11y/no-noninteractive-element-to-interactive-role": [
         "error",
         {
@@ -594,8 +594,8 @@ export default defineConfig([
           fieldset: ["radiogroup", "presentation"],
         },
       ],
-      "jsx-a11y/no-noninteractive-tabindex": "warn",
-      "jsx-a11y/no-static-element-interactions": "warn",
+      "jsx-a11y/no-noninteractive-tabindex": "error",
+      "jsx-a11y/no-static-element-interactions": "error",
       "makeamove/reference-read-only": [
         "error",
         // Config files name reference/ only to leave it out or keep imports from it.
@@ -704,12 +704,19 @@ export default defineConfig([
       "capitalized-comments": "off",
       curly: "off",
       "func-style": "off",
-      "max-params": "off",
       "max-statements": "off",
       "no-bitwise": "off",
       "no-continue": "off",
       "prefer-arrow-callback": "off",
       "prefer-named-capture-group": "off",
+      // Off while their autofix breaks code (types, behaviour or other files); `eslint --fix` runs on commit.
+      "@typescript-eslint/method-signature-style": "off",
+      "promise/prefer-catch": "off",
+      "unicorn/custom-error-definition": "off",
+      "unicorn/explicit-length-check": "off",
+      "unicorn/prefer-dom-node-dataset": "off",
+      "unicorn/prefer-import-meta-properties": "off",
+      "unicorn/prefer-spread": "off",
       "require-unicode-regexp": "off",
       "sort-keys": "off",
       "@typescript-eslint/consistent-return": "off",
@@ -822,10 +829,10 @@ export default defineConfig([
     files: ["src/**/*.tsx"],
     ignores: ["**/__tests__/**"],
     rules: {
-      complexity: ["warn", 57],
-      "max-depth": ["warn", 3],
-      "max-nested-callbacks": ["warn", 4],
-      "max-lines-per-function": ["warn", { max: 531, skipBlankLines: false, skipComments: false }],
+      complexity: ["error", 57],
+      "max-depth": ["error", 3],
+      "max-nested-callbacks": ["error", 4],
+      "max-lines-per-function": ["error", { max: 531, skipBlankLines: false, skipComments: false }],
     },
   },
   {

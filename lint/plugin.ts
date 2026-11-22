@@ -1,6 +1,8 @@
 import { cssCoLocated } from "./rules/cssCoLocated.ts";
 import { dialogTitleEllipsis } from "./rules/dialogTitleEllipsis.ts";
 import { noNativeConfirmation } from "./rules/noNativeConfirmation.ts";
+import { noProps } from "./rules/noProps.ts";
+import { noRedundantTypeSynonyms } from "./rules/noRedundantTypeSynonyms.ts";
 import { preferGuardHelpers } from "./rules/prefer-guard-helpers.ts";
 import { preferMotionHelpers } from "./rules/preferMotionHelpers.ts";
 import { preferNumberParsing } from "./rules/preferNumberParsing.ts";
@@ -21,6 +23,8 @@ export default {
     "css-co-located": cssCoLocated,
     "dialog-title-ellipsis": dialogTitleEllipsis,
     "no-native-confirmation": noNativeConfirmation,
+    "no-props": noProps,
+    "no-redundant-type-synonyms": noRedundantTypeSynonyms,
     "prefer-guard-helpers": preferGuardHelpers,
     "prefer-number-parsing": preferNumberParsing,
     "prefer-motion-helpers": preferMotionHelpers,

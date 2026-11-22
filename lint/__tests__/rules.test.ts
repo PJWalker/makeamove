@@ -3,6 +3,8 @@ import { describe, it } from "vite-plus/test";
 import { cssCoLocated } from "../rules/cssCoLocated.ts";
 import { dialogTitleEllipsis } from "../rules/dialogTitleEllipsis.ts";
 import { noNativeConfirmation } from "../rules/noNativeConfirmation.ts";
+import { noProps } from "../rules/noProps.ts";
+import { noRedundantTypeSynonyms } from "../rules/noRedundantTypeSynonyms.ts";
 import { preferGuardHelpers } from "../rules/prefer-guard-helpers.ts";
 import { preferNumberParsing } from "../rules/preferNumberParsing.ts";
 import { preferMotionHelpers } from "../rules/preferMotionHelpers.ts";
@@ -314,6 +316,55 @@ tester.run("test-structure", testStructure, {
       filename: at("src/example.test.ts"),
       code: 'const fake = value as unknown as Campaign;',
       errors: [{ messageId: "unsafeCast" }],
+    },
+  ],
+});
+
+tester.run("no-props", noProps, {
+  valid: [
+    { filename: at("a.ts"), code: 'import type { ComponentProps } from "react";' },
+    { filename: at("a.ts"), code: 'import { mergeProps } from "react-aria";' },
+  ],
+  invalid: [
+    {
+      filename: at("a.ts"),
+      code: "interface SheetProperties {}\nconst properties = (props: SheetProperties) => props;",
+      output: "interface SheetProperties {}\nconst properties = (properties: SheetProperties) => properties;",
+      errors: 2,
+    },
+    {
+      filename: at("a.ts"),
+      code: "export type IconProps = { size?: number };",
+      output: "export type IconProperties = { size?: number };",
+      errors: 1,
+    },
+    {
+      filename: at("a.ts"),
+      code: "const PROPS = 1; // the props, Props and PROPS",
+      output: "const PROPERTIES = 1; // the properties, Properties and PROPERTIES",
+      errors: 2,
+    },
+  ],
+});
+
+tester.run("no-redundant-type-synonyms", noRedundantTypeSynonyms, {
+  valid: [
+    { filename: at("a.ts"), code: "export type Alias = Existing;" },
+    { filename: at("a.ts"), code: "export interface SheetProperties {}" },
+  ],
+  invalid: [
+    {
+      filename: at("a.ts"),
+      code: "export type SheetProps = SheetProperties;\nconst sheet: SheetProps = {};",
+      output: "const sheet: SheetProperties = {};",
+      errors: 1,
+    },
+    {
+      // Uses nested in other types and functions are all renamed, and the fix terminates.
+      filename: at("a.ts"),
+      code: "type SheetProps = SheetProperties;\ntype Pair = [SheetProps, SheetProps];\nfunction open(sheet: SheetProps) { const inner: SheetProps = sheet; return inner; }",
+      output: "type Pair = [SheetProperties, SheetProperties];\nfunction open(sheet: SheetProperties) { const inner: SheetProperties = sheet; return inner; }",
+      errors: 1,
     },
   ],
 });
