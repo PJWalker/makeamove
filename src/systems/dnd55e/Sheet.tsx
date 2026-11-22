@@ -34,7 +34,7 @@ import { levelOf, num as number_, useAction, valueOf } from "./sheetHooks";
  * targets and the card work the same from the sheet, the hotbar and the palette.
  */
 
-type Properties = { campaign: Campaign; system: GameSystem; c: CharacterView };
+interface Properties { campaign: Campaign; system: GameSystem; c: CharacterView }
 
 function Name({
   campaign,
@@ -83,7 +83,7 @@ function Abilities({
               type="button"
               className="stat-mod"
               aria-label={`${s.name} check`}
-              onClick={() => use(`check-${s.id}`)}
+              onClick={() => { use(`check-${s.id}`); }}
             >
               {signedString(modifier)}
             </button>
@@ -107,7 +107,7 @@ function Abilities({
               className="dnd-save"
               data-prof={prof}
               aria-label={`${s.name} save`}
-              onClick={() => use(`save-${s.id}`)}
+              onClick={() => { use(`save-${s.id}`); }}
             >
               Save {signedString(modifier + saveBonus)}
             </button>
@@ -266,7 +266,7 @@ export function DndNpcSheet({ campaign, system, c }: Properties) {
                 type="button"
                 className="dnd-roll"
                 disabled={!editable}
-                onClick={() => use("initiative")}
+                onClick={() => { use("initiative"); }}
               >
                 {signedString(valueOf(d.values, "initiative"))}
               </button>

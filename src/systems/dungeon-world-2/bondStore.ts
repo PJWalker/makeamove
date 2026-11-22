@@ -1,5 +1,6 @@
 import type { Characters } from "../../campaign/schema";
-import { pairKey, type SystemData } from "../../campaign/systemStore";
+import { pairKey  } from "../../campaign/systemStore";
+import type {SystemData} from "../../campaign/systemStore";
 import { isObject } from "../../lib/guards";
 import { relationshipsOf, removeRelationship } from "../../features/characters/relationships";
 import type { RelationshipDepthDef } from "../types";

@@ -1,12 +1,14 @@
-import { richTextFromPlain } from "../data/richText";
 import { useState } from "react";
+import { richTextFromPlain } from "../data/richText";
 import { systemOf } from "../features/characters/api";
 import type { CharacterView, ItemInstance } from "../features/characters/types";
 import type { Derived } from "../systems/types";
 import type { Campaign } from "../campaign/campaign";
 import { Button } from "../ui/Button";
-import { RichTextView } from "./RichTextView";
 import { List } from "../ui/List";
+import type { ItemUseProps as ItemUseProperties } from "../systems/extensionTypes";
+import { callKey } from "../kernel/commands";
+import { RichTextView } from "./RichTextView";
 import { EntryRow, EntryWindow } from "./EntryWindow";
 import { useEntryWindows } from "./entryWindowState";
 import { inventoryKey } from "./entryKeys";
@@ -17,7 +19,6 @@ import { entity } from "./dragEntities";
 import { CampaignEntityGraphic } from "./EntityGraphic";
 import { getEntityGraphic } from "./entityGraphics";
 import { useExtension } from "./systemExtensions";
-import type { ItemUseProps as ItemUseProperties } from "../systems/extensionTypes";
 import { useCampaign } from "./campaignContext";
 import {
   clearItemTrack,
@@ -28,7 +29,6 @@ import {
   updateItem,
   useItem,
 } from "./commands/characters";
-import { callKey } from "../kernel/commands";
 import { findAction, joinSections, menuFor } from "./commands/views";
 
 const metaOf = (index: ItemInstance) =>
@@ -80,7 +80,7 @@ function ArtifactTracker({
                 value={move.id}
                 checked={selected === move.id}
                 disabled={!editable}
-                onChange={() => setChoice(move.id)}
+                onChange={() => { setChoice(move.id); }}
               />
               {move.name}
             </label>
@@ -247,7 +247,7 @@ export function Inventory({
               meta={metaOf(index)}
               tip={tipOf(index)}
               dim={(index.equippable && !index.equipped) || index.broken}
-              onOpen={(row) => windows.show(inventoryKey(c.id, index.id), row)}
+              onOpen={(row) => { windows.show(inventoryKey(c.id, index.id), row); }}
               onPointerDown={(event) => {
                 const source = index.defId
                   ? entity(context, "item", index.defId, index.name)
@@ -277,7 +277,7 @@ export function Inventory({
         <Button
           variant="ghost"
           className="inventory-find"
-          onClick={() => context.library.browse("item")}
+          onClick={() => { context.library.browse("item"); }}
         >
           Find Items in the Libraries…
         </Button>
@@ -292,7 +292,7 @@ export function Inventory({
             title={index.name}
             text={index.description}
             tags={index.tags}
-            onClose={() => windows.close(key)}
+            onClose={() => { windows.close(key); }}
             menuItems={itemMenu(index)}
             graphicRef={{ kind: "item", id: index.defId ?? index.id }}
             graphicDefaultIcon={index.icon}

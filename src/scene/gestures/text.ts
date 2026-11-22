@@ -13,7 +13,7 @@ export const text: ToolPress = (c, _e, at) => {
 export const editRequest = (element: TextElement) => ({ at: { x: element.x, y: element.y }, id: element.id });
 
 /** Text's size laid out as it looks, scaled as it is now. */
-export function fitText(c: ToolContext, element: TextElement & Partial<TextLook>) {
+export function fitText(c: ToolContext, element: Partial<TextLook> & TextElement) {
   const m = c.renderer.measureText(element);
   const k = element.w / element.bw;
   return { bw: m.w, bh: m.h, w: m.w * k, h: m.h * k };

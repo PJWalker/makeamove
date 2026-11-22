@@ -6,9 +6,10 @@ import {
   hexCellsIn,
   snapPoint,
   snapSize,
-  squareLines,
-  type Grid,
+  squareLines
+  
 } from "../grid";
+import type {Grid} from "../grid";
 
 const square: Grid = { ...DEFAULT_GRID, type: "square", size: 50 };
 const hex: Grid = { ...DEFAULT_GRID, type: "hex", size: 60 };

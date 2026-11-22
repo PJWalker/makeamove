@@ -27,7 +27,7 @@ function originHints(classId: string) {
     sourceClassSectionText(classId, "Origins")
       .split(/\n\s*\n/)
       .flatMap((paragraph) => {
-        const match = /^(\w+):[^\n]*\n([\s\S]+)$/.exec(paragraph.trim());
+        const match = /^(\w+):[^\n]*\n([\S\s]+)$/.exec(paragraph.trim());
         const field = match && IDENTITY_FIELDS[match[1]!];
         return field ? [[field, oneLine(match[2]!)]] : [];
       }),

@@ -33,13 +33,13 @@ interface Pending {
 }
 
 export class BlobExchange {
-  private pending = new Map<string, Pending>();
+  private readonly pending = new Map<string, Pending>();
 
   constructor(
-    private link: BlobLink,
-    private store: BlobStore,
+    private readonly link: BlobLink,
+    private readonly store: BlobStore,
   ) {
-    link.onBlob = (data, from) => this.receive(data, from);
+    link.onBlob = (data, from) => { this.receive(data, from); };
     link.onPeer = (peer) => {
       for (const hash of this.pending.keys()) this.request(hash, peer);
     };
@@ -86,7 +86,7 @@ export class BlobExchange {
     const dec = decoding.createDecoder(data);
     const type = decoding.readVarUint(dec);
     const hash = decoding.readVarString(dec);
-    if (!/^[0-9a-f]{64}$/.test(hash)) return;
+    if (!/^[\da-f]{64}$/.test(hash)) return;
     if (type === REQUEST) void this.serve(hash, from);
     else if (type === DATA) void this.accept(hash, dec);
   }
@@ -102,7 +102,7 @@ export class BlobExchange {
   private async accept(hash: string, dec: decoding.Decoder) {
     const pending = this.pending.get(hash);
     if (!pending) return;
-    const blob = new Blob([[...decoding.readVarUint8Array(dec)]]);
+    const blob = new Blob([new Uint8Array(decoding.readVarUint8Array(dec))]);
     // A bad copy is dropped and we keep waiting for another peer.
     if ((await sha256(await blob.arrayBuffer())) !== hash) return;
     if (!this.pending.delete(hash)) return;

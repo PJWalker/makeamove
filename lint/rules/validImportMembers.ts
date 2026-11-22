@@ -1,5 +1,6 @@
 import ts from "typescript";
-import { defineRule, type ESTree } from "vite-plus/lint/plugins";
+import { defineRule  } from "vite-plus/lint/plugins";
+import type {ESTree} from "vite-plus/lint/plugins";
 
 interface TypeScriptServices {
   program?: ts.Program;

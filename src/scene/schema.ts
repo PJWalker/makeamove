@@ -1,8 +1,10 @@
 import { arrayOf, isBoolean, isNumber, isObject, isString, oneOf } from "../lib/guards";
-import { Invalid, collection, lww, record, variant, type Item, type Shape } from "../data/schema";
-import type { BlobReference, EntityGraphic, EntityGraphicRef } from "../media/images";
+import { Invalid, collection, lww, record, variant   } from "../data/schema";
+import type {Item, Shape} from "../data/schema";
+import type { BlobReference, EntityGraphic, EntityGraphicRef as EntityGraphicReference } from "../media/images";
 import { DEFAULT_GRID } from "./grid";
-import { EFFECTS, LAYERS, SHAPES, TEXT_FONTS, TOKEN_STYLES, type SceneElement } from "./types";
+import { EFFECTS, LAYERS, SHAPES, TEXT_FONTS, TOKEN_STYLES  } from "./types";
+import type {SceneElement} from "./types";
 
 /*
  * A scene subdocument (see design doc, "Data model"):
@@ -45,7 +47,7 @@ const elementCases = {
   token: {
     image: lww(isBlob),
     graphic: lww(isObject<EntityGraphic>),
-    entityRef: lww(isObject<EntityGraphicRef>),
+    entityRef: lww(isObject<EntityGraphicReference>),
     icon: lww(isString),
     itemDefId: lww(isString),
     name: lww(isString).or(""),
@@ -109,7 +111,7 @@ export const sceneElement = variant(
  * know, or a polygon or stroke without its points, as a peer on another
  * version (or a build part way through a change) may have left it.
  */
-function parseElement(m: Item<typeof sceneElement>, id: string): SceneElement | Invalid {
+function parseElement(m: Item<typeof sceneElement>, id: string): Invalid | SceneElement {
   const element = m.readCase();
   if (!element) return new Invalid("not a kind of element this version knows");
   const polygon = element.type === "area" || ("shape" in element && element.shape === "polygon");

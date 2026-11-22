@@ -5,6 +5,16 @@ import { FolderBackup } from "../campaign/folderBackup";
 import { campaignUiDbName as campaignUiDatabaseName } from "../campaign/storage";
 import { ChatNotifications } from "../features/chat/notify";
 import { SceneTools } from "../scene/tools";
+import {
+  CommandRegistry
+  
+  
+  
+} from "../kernel/commands";
+import type {AnyCommand, Command, CommandHost} from "../kernel/commands";
+import { UndoHistory } from "../kernel/undo";
+import { undoStack  } from "../data/undo";
+import type {UndoStack} from "../data/undo";
 import { CanvasState } from "./canvasState";
 import { RecentActions } from "./commands/recent";
 import { EntityWindows } from "./entityWindowState";
@@ -13,14 +23,6 @@ import { LinkNavigation } from "./linkNavigation";
 import { LinkPopups } from "./linkState";
 import { PanelLayout } from "./panelLayout";
 import { TableState } from "./tableState";
-import {
-  CommandRegistry,
-  type AnyCommand,
-  type Command,
-  type CommandHost,
-} from "../kernel/commands";
-import { UndoHistory } from "../kernel/undo";
-import { undoStack, type UndoStack } from "../data/undo";
 
 /**
  * An open campaign and everything the table keeps for it: the shared
@@ -51,7 +53,7 @@ export class CampaignContext implements CommandHost {
   readonly undoStack: UndoStack;
   /** Tags this player's own commands, so undo never reverts anyone else's. */
   readonly #origin = { commands: true };
-  #disposeUndo: () => void;
+  readonly #disposeUndo: () => void;
   #disposed = false;
 
   private constructor(campaign: Campaign, local: LocalDocument) {
@@ -128,6 +130,7 @@ export class CampaignContext implements CommandHost {
 }
 
 export const CampaignReactContext = createContext<CampaignContext | null>(null);
+CampaignReactContext.displayName = "CampaignReactContext";
 
 /** The open campaign's context, for components inside the table. */
 export function useCampaign(): CampaignContext {

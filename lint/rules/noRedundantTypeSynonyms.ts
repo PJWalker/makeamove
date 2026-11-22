@@ -1,4 +1,5 @@
 import { defineRule } from "vite-plus/lint/plugins";
+import type { ESTree } from "vite-plus/lint/plugins";
 
 /** A plain type alias adds no shape and should be replaced by its target. */
 export const noRedundantTypeSynonyms = defineRule({
@@ -13,7 +14,7 @@ export const noRedundantTypeSynonyms = defineRule({
   },
   create(context) {
     const source = context.sourceCode;
-    const aliases: { node: any; name: string; target: string }[] = [];
+    const aliases: { node: ESTree.TSTypeAliasDeclaration; name: string; target: string }[] = [];
 
     return {
       TSTypeAliasDeclaration(node) {
@@ -33,8 +34,8 @@ export const noRedundantTypeSynonyms = defineRule({
             messageId: "redundant",
             data: { name: alias.name, target: alias.target },
             fix(fixer) {
-              // `type A = A` has no other name to inline.
-              if (alias.name === alias.target) return null;
+              // `type A = A` has no other name to inline, and other files import an exported alias.
+              if (alias.name === alias.target || alias.node.parent.type.startsWith("Export")) return null;
               const text = source.getText();
               const start = text.lastIndexOf("\n", alias.node.range[0] - 1) + 1;
               let end = alias.node.range[1];

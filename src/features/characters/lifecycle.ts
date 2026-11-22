@@ -105,7 +105,7 @@ export function newNpcFromMonster(campaign: Campaign, monsterId: string) {
   for (const [field, value] of Object.entries(monster.fields))
     if (system.npcFields.some((entry) => entry.id === field))
       setNpcField(campaign, id, field, value);
-  if (monster.size > 0 && system.npcFields.some((field) => field.id === "size"))
+  if (monster.size && system.npcFields.some((field) => field.id === "size"))
     setNpcField(campaign, id, "size", monster.size);
   return id;
 }

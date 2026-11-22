@@ -4,7 +4,8 @@ import type { SceneController } from "../scene/controller";
 import type { TextRequest } from "../scene/gestures/types";
 import { mapTextOutline } from "../scene/render/elementViews";
 import { cssColour, INK, textWeight } from "../scene/render/style";
-import { fontFamily, type TextStyle } from "../scene/types";
+import { fontFamily  } from "../scene/types";
+import type {TextStyle} from "../scene/types";
 import { useConstant } from "../ui/useConstant";
 import { useQuery } from "../ui/useQuery";
 import { useCampaign } from "../workspace/campaignContext";
@@ -35,7 +36,7 @@ export function TextEditor({
     <div
       ref={ref}
       // A textarea can't size itself to its words in Safari, nor set its text as the map does.
-      // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
+
       role="textbox"
       aria-multiline
       tabIndex={0}
@@ -73,7 +74,7 @@ export function TextEditor({
       onBlur={(event) => {
         if (event.relatedTarget?.closest("[data-text-style]")) {
           const node = event.currentTarget;
-          addEventListener("pointerup", () => requestAnimationFrame(() => node.focus()), {
+          addEventListener("pointerup", () => requestAnimationFrame(() => { node.focus(); }), {
             once: true,
           });
           return;
@@ -144,7 +145,7 @@ function useTextEditor(controller: SceneController, request: TextRequest, onDone
   };
 
   /** Text is styled through the Text tool's style, which text being edited follows. */
-  const restyle = (patch: Partial<TextStyle>) => tools.setTextStyle(patch);
+  const restyle = (patch: Partial<TextStyle>) => { tools.setTextStyle(patch); };
 
   return { ref: reference, el: element, look, scale, at, host, colour, finish, restyle };
 }

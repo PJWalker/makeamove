@@ -5,9 +5,7 @@ import { art } from "../iconArt";
 const IconRing = art("ring");
 
 describe("a rendered icon", () => {
-  const markup = renderToStaticMarkup(<IconRing size={20} className="extra" />).match(
-    /<img [^>]*>/,
-  )?.[0];
+  const markup = (/<img [^>]*>/.exec(renderToStaticMarkup(<IconRing size={20} className="extra" />)))?.[0];
 
   it("is a decorative image at the requested size", () => {
     expect(markup).toBeDefined();

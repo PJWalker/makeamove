@@ -1,6 +1,7 @@
 /** What a link in a note points at. */
 import { isString } from "../../lib/guards";
-export type LinkKind = "note" | "character" | "scene" | "item" | "move";
+
+export type LinkKind = "character" | "item" | "move" | "note" | "scene";
 /** A link target, as stored: `kind:id`. */
 export type LinkRef = `${LinkKind}:${string}`;
 

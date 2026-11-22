@@ -23,7 +23,7 @@ import { flat } from "./style";
  * tints its particles, and its opacity is how strong the effect is.
  */
 
-type Sprite = "dot" | "streak" | "puff" | "star";
+type Sprite = "dot" | "puff" | "star" | "streak";
 
 /** One drift of particles in an effect, all alike. */
 interface Drift {
@@ -276,7 +276,7 @@ class DriftView {
   draw(time: number, tint: number, strength: number) {
     const d = this.drift;
     const { w, h } = this.box;
-    const fade = this.fade;
+    const {fade} = this;
     if (!fade) return;
     const angle = Math.atan2(d.velocity.y, d.velocity.x) - Math.PI / 2;
     for (let index = 0; index < this.particles.length; index++) {
@@ -319,10 +319,10 @@ export class EffectView {
 
   /** Move or resize the zone, or change its colour while one is being picked. */
   apply(t: Transform) {
-    const { colour } = { ...this.el, ...t } as EffectElement;
+    const { colour } = { ...this.element, ...t } as EffectElement;
     this.colour = new Color(colour);
     this.root.position.set(t.x, t.y);
-    const outline = shapeOutline(this.el, t.w, t.h);
+    const outline = shapeOutline(this.element, t.w, t.h);
     for (const d of this.drifts) d.fit(outline, t);
     // Its particles have no bounds of their own, so it's culled by its box.
     const r = Math.hypot(t.w, t.h) / 2;

@@ -13,11 +13,13 @@ import {
   IconToBack,
   IconToFront,
   IconToken,
-  IconUnlock,
-  type Icon,
+  IconUnlock
+  
 } from "../../ui/icons";
+import type {Icon} from "../../ui/icons";
 import type { CampaignContext } from "../campaignContext";
-import { command, type CommandTargets, type Offer } from "./types";
+import { command   } from "./types";
+import type {CommandTargets, Offer} from "./types";
 
 /*
  * What can be done with what's selected on the open scene, and with an
@@ -52,13 +54,13 @@ function chosen(context: CampaignContext, p: Selection | undefined): SceneElemen
 const selectionCommand = (
   id: string,
   look: { title: string; icon: Icon; keys?: string[]; danger?: boolean },
-  section: "arrange" | "edit" | "delete",
+  section: "arrange" | "delete" | "edit",
   edit: (context: CampaignContext, ids: string[]) => void,
   {
     available,
     offered,
   }: {
-    available?: (els: SceneElement[]) => true | string;
+    available?: (els: SceneElement[]) => string | true;
     offered?: (els: SceneElement[]) => boolean;
   } = {},
 ) =>
@@ -150,7 +152,7 @@ const one = (
 const oneElementCommand = (
   id: string,
   look: { title: string; icon: Icon },
-  section: "open" | "act",
+  section: "act" | "open",
   fits: (element: SceneElement) => boolean,
   unfit: string,
   act: (context: CampaignContext, id: string) => void,
@@ -239,7 +241,7 @@ export const sceneSettings = command<Place>({
   section: "edit",
   transact: false,
   menu: { canvas: (_, t) => [{ params: t }] },
-  run: (context) => context.canvas.sceneSettingsOpen.set(true),
+  run: (context) => { context.canvas.sceneSettingsOpen.set(true); },
 });
 
 export const selectionCommands = [

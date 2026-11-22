@@ -1,12 +1,29 @@
-import { batch, derived, store, type ReadonlyStore } from "../lib/store";
-import { isPhone } from "../ui/viewport";
 import { useSyncExternalStore } from "react";
+import { batch, derived, store  } from "../lib/store";
+import type {ReadonlyStore} from "../lib/store";
+import { isPhone } from "../ui/viewport";
 import type { LocalDoc as LocalDocument, LocalValue } from "../data/localDoc";
 import { dropLine, indexAmong } from "../ui/reorder";
 import { withTransition } from "../ui/transition";
 import { nextZ, noteZ } from "../ui/windows";
 import { trackPointer } from "../ui/pointer";
-import { RESIZE_CURSORS, resizeRect, type Rect, type ResizeDir } from "../ui/resizeRect";
+import { RESIZE_CURSORS, resizeRect   } from "../ui/resizeRect";
+import type {Rect, ResizeDir} from "../ui/resizeRect";
+import { useQuery } from "../ui/useQuery";
+import {
+  IconCharacters,
+  IconChat,
+  IconCombat,
+  IconItems,
+  IconLibraries,
+  IconMap,
+  IconMembers,
+  IconNotes,
+  IconPlayerCharacter,
+  IconReference
+  
+} from "../ui/icons";
+import type {Icon} from "../ui/icons";
 import {
 
   SIDEBAR_MIN_W,
@@ -22,28 +39,15 @@ import {
 
   setOpen,
   showTab,
-  type FloatingWindow,
-  type DockItemId,
-  type Layout,
-  type PanelId,
-  type Side,
+  
+  
+  
+  
+  
   withoutPanels,
-  isPanelId,
+  isPanelId
 } from "./layoutModel";
-import { useQuery } from "../ui/useQuery";
-import {
-  IconCharacters,
-  IconChat,
-  IconCombat,
-  IconItems,
-  IconLibraries,
-  IconMap,
-  IconMembers,
-  IconNotes,
-  IconPlayerCharacter,
-  IconReference,
-  type Icon,
-} from "../ui/icons";
+import type {FloatingWindow, DockItemId, Layout, PanelId, Side} from "./layoutModel";
 
 
 
@@ -98,9 +102,9 @@ function visibleIn(l: Layout, id: DockItemId) {
 
 function sideAt(x: number, y: number): Side | null {
   for (const side of SIDES) {
-    const el = document.querySelector(`.sidebar[data-side="${side}"]`);
-    if (!el) continue;
-    const r = el.getBoundingClientRect();
+    const element = document.querySelector(`.sidebar[data-side="${side}"]`);
+    if (!element) continue;
+    const r = element.getBoundingClientRect();
     if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return side;
   }
   return null;
@@ -253,12 +257,11 @@ export class PanelLayout {
     if (!start) return;
     trackPointer(
       RESIZE_CURSORS[dir],
-      (event) =>
-        this.#setLiveRect(
+      (event) => { this.#setLiveRect(
           id,
           resizeRect(start, dir, event.clientX - e.clientX, event.clientY - e.clientY),
-        ),
-      () => this.#commitLiveRect(),
+        ); },
+      () => { this.#commitLiveRect(); },
     );
   }
 
@@ -278,16 +281,16 @@ export class PanelLayout {
       else marker.hide();
     };
     const up = (event: PointerEvent) => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-      window.removeEventListener("pointercancel", up);
+      globalThis.removeEventListener("pointermove", move);
+      globalThis.removeEventListener("pointerup", up);
+      globalThis.removeEventListener("pointercancel", up);
       const side = sideAt(event.clientX, event.clientY);
       marker.hide();
       this.#commitLiveRect();
       if (side) {
         const index = indexAmong(tabsOf(side), "y", event);
         // Dropped on a closed sidebar, it joins the tabs without opening it.
-        void withTransition(() => this.dockPanel(id, side, index, false));
+        void withTransition(() => { this.dockPanel(id, side, index, false); });
       }
       this.dockTarget.value = null;
       this.windowDragging.value = false;

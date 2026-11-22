@@ -1,13 +1,19 @@
+/* eslint-disable @typescript-eslint/no-magic-numbers */
 import { PerspectiveCamera, Scene, Vector3, WebGLRenderer } from "three";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
 import { reducedMotion } from "../ui/transition";
 import { buildCave, VIEWER } from "./caveScene";
+import { CROSS_PROCESS } from "./crossProcess";
 import { hex, pack } from "./splat";
 import { splatCloud } from "./splatCloud";
 
 /*
  * Puts the cave (caveScene.ts) on a canvas and keeps it alive: the torches
- * flicker, the wisp wanders, and the viewer's eye follows the mouse a little,
- * so the cave shifts in depth. With reduced motion it's a still picture.
+ * flicker and smoke, water drips, the wisp flies off to scout and back, and the viewer's eye follows the mouse a little,
+ * so the cave shifts in depth. The finished picture is lightly cross-processed
+ * (crossProcess.ts). With reduced motion it's a still picture.
  */
 
 const DARK = "#04050a";
@@ -59,12 +65,15 @@ export function stageCave(canvas: HTMLCanvasElement): () => void {
   renderer.setClearColor(DARK);
 
   const cave = buildCave();
-  const cloud = splatCloud(pack(cave.splats), cave.lights.length);
+  const lights = cave.lights.map((light) => ({
+    ...light,
+    start: new Vector3(...light.at),
+    at: new Vector3(...light.at),
+    moved: new Vector3(),
+    colour: new Vector3(...light.colour),
+  }));
+  const cloud = splatCloud(pack(cave.splats), lights);
   const { uniforms } = cloud;
-  for (const [index, light] of cave.lights.entries()) {
-    uniforms.lightColour.value[index]!.set(...light.colour);
-    uniforms.lightReach.value[index] = light.reach;
-  }
   uniforms.ambient.value.set(0.006, 0.007, 0.014);
   // The clear colour, in linear light, so the far dark meets it seamlessly.
   uniforms.haze.value.set(...hex(DARK));
@@ -72,6 +81,9 @@ export function stageCave(canvas: HTMLCanvasElement): () => void {
   scene.add(cloud.mesh);
 
   const camera = new PerspectiveCamera();
+  const composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, camera));
+  composer.addPass(new ShaderPass(CROSS_PROCESS));
   const eye = new Vector3(...VIEWER.eye);
   const target = new Vector3(...VIEWER.target);
   const sortedFrom = new Vector3(Infinity, 0, 0);
@@ -89,16 +101,12 @@ export function stageCave(canvas: HTMLCanvasElement): () => void {
       sortedFrom.copy(camera.position);
     }
     uniforms.time.value = seconds;
-    for (const [index, light] of cave.lights.entries()) {
-      const moved = uniforms.lightMoved.value[index]!.set(
-        Math.sin(seconds * 0.7) * light.wander,
-        Math.sin(seconds * 1.13) * light.wander,
-        Math.cos(seconds * 0.61) * light.wander * 0.7,
-      );
-      uniforms.lightAt.value[index]!.set(...light.at).add(moved);
+    for (const [index, light] of lights.entries()) {
+      light.moved.set(...light.drift(seconds));
+      light.at.copy(light.start).add(light.moved);
       uniforms.flicker.value[index] = flickerAt(seconds, light.period, index);
     }
-    renderer.render(scene, camera);
+    composer.render();
   };
 
   let animation = 0;
@@ -121,6 +129,8 @@ export function stageCave(canvas: HTMLCanvasElement): () => void {
     if (!width || !height) return;
     renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
     renderer.setSize(width, height, false);
+    composer.setPixelRatio(renderer.getPixelRatio());
+    composer.setSize(width, height);
     uniforms.viewport.value.set(canvas.width, canvas.height);
     frame(camera, width / height);
     if (!animation) play();
@@ -153,6 +163,7 @@ export function stageCave(canvas: HTMLCanvasElement): () => void {
     globalThis.removeEventListener("blur", reset);
     reducedMotion.removeEventListener("change", play);
     cloud.dispose();
+    composer.dispose();
     renderer.dispose();
   };
 }

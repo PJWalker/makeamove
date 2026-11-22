@@ -5,15 +5,15 @@ import { useQuery } from "../ui/useQuery";
 import { Button } from "../ui/Button";
 import { extensionOf } from "../systems/extensions";
 import type { SheetProps as SheetProperties } from "../systems/extensionTypes";
-import { CopyBanner, TemplateSettings } from "./TemplateSettings";
 import { DeclarativeSheet } from "../workspace/DeclarativeSheet";
-import { RelationshipsSection } from "./Relationships";
 import { CharacterText, GMCharacterText } from "../workspace/CharacterText";
 import { claim } from "../workspace/commands/characters";
 import { useCampaign } from "../workspace/campaignContext";
+import { RelationshipsSection } from "./Relationships";
+import { CopyBanner, TemplateSettings } from "./TemplateSettings";
 
 /** For systems with a layout: the core's declarative sheet. */
-const declarative = (kind: "pc" | "npc") =>
+const declarative = (kind: "npc" | "pc") =>
   function Declarative(p: SheetProperties) {
     return <DeclarativeSheet {...p} layout={p.system.sheet![kind]} />;
   };

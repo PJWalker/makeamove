@@ -9,10 +9,10 @@ function gearItem(
   id: string,
   name: string,
   description: string,
-  rank: number | undefined,
+  rank: number | undefined = undefined,
   tags: string[] = [],
   extra: Partial<
-    Pick<ItemDef, "uses" | "resetUsesAtCamp" | "itemUse" | "equippable" | "active" | "effects">
+    Pick<ItemDef, "active" | "effects" | "equippable" | "itemUse" | "resetUsesAtCamp" | "uses">
   > = {},
 ): ItemDef {
   return {

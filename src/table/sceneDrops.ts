@@ -1,5 +1,5 @@
 import { toScreen } from "../scene/camera";
-import { SceneController } from "../scene/controller";
+import type { SceneController } from "../scene/controller";
 import type { SceneElement } from "../scene/types";
 import type { Campaign } from "../campaign/campaign";
 import { canEdit, getCharacter } from "../features/characters/api";
@@ -59,7 +59,7 @@ export function bindSceneDrops(
     };
   });
   ctl.onItemTokenDragMove = (token, event) => {
-    if (!token) return clearDropHint(context);
+    if (!token) { clearDropHint(context); return; }
     const dragged = itemTokenEntity(context, token);
     const target = dragged ? dropTargetAt(context.canvas, event.clientX, event.clientY, dragged) : null;
     document.documentElement.classList.add("is-reordering");

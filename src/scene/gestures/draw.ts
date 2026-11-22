@@ -1,5 +1,6 @@
 import { finishStroke, STRIDE } from "../stroke";
-import { coalesced, type ToolPress } from "./types";
+import { coalesced  } from "./types";
+import type {ToolPress} from "./types";
 
 /** The Pen: a freehand stroke, pressure-sensitive with a stylus, in the pen's colour, width and layer. */
 export const draw: ToolPress = (c, e, world) => {

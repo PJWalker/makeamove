@@ -6,20 +6,22 @@ import {
   HemisphereLight,
   MeshBasicMaterial,
   PlaneGeometry,
-  type Material,
+  
   MeshStandardMaterial,
   Mesh,
-  type Object3D,
+  
   OrthographicCamera,
   PCFShadowMap,
   PMREMGenerator,
   Scene,
   SRGBColorSpace,
   Vector3,
-  WebGLRenderer,
+  WebGLRenderer
 } from "three";
+import type {Material, Object3D} from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { MODELS, type IconName } from "./models";
+import { MODELS  } from "./models";
+import type {IconName} from "./models";
 
 /*
  * The photo studio every icon is shot in: one camera angle, one warm key
@@ -35,7 +37,7 @@ export const ICON_SIZES = [32, 64, 128] as const;
 const MARGIN = 0.06;
 const OUTLINE = { colour: [28, 16, 8] as const, opacity: 0.9 };
 
-export type IconRender = { name: IconName; size: number; dataUrl: string };
+export interface IconRender { name: IconName; size: number; dataUrl: string }
 
 export function renderIcons(names = Object.keys(MODELS) as IconName[]): IconRender[] {
   const canvas = document.createElement("canvas");

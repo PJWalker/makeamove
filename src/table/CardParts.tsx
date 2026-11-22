@@ -1,6 +1,7 @@
 import { getCharacter, systemOf } from "../features/characters/api";
 import { rollModesFor } from "../features/characters/moves";
-import { appliedField, saveField, type SaveAnswer } from "../features/chat/messageState";
+import { appliedField, saveField  } from "../features/chat/messageState";
+import type {SaveAnswer} from "../features/chat/messageState";
 import { useMessageState } from "../features/chat/messageState";
 import type { MoveMessage, MoveTarget, RollMessage } from "../features/chat/types";
 import type { Campaign } from "../campaign/campaign";
@@ -19,7 +20,7 @@ import { useCampaign } from "../workspace/campaignContext";
 
 /** One row per target of a check against targets: the roll, what it had to reach, and hit or miss. */
 export function TargetRolls({ campaign, m }: { campaign: Campaign; m: MoveMessage }) {
-  const results = systemOf(campaign).results;
+  const {results} = systemOf(campaign);
   return (
     <ul className="card-targets">
       {m.targets!.map((t) => {
@@ -125,7 +126,7 @@ export function DamageTargets({ campaign, m }: { campaign: Campaign; m: RollMess
   const system = systemOf(campaign);
   const healing = damage.type === "healing";
   const typeName = system.damageTypes?.find((d) => d.id === damage.type)?.name ?? damage.type;
-  const total = m.roll.total;
+  const {total} = m.roll;
   const armor = system.damageArmor;
   const apply = (t: MoveTarget, n: number, useArmor = false) =>
     context.execute(applyCardDamage, {

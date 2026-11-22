@@ -4,7 +4,8 @@ import { Button } from "../../ui/Button";
 import { AdvancementDialog } from "../../workspace/CreationParts";
 import { ConditionToggles, Counter } from "../../workspace/sheetParts";
 import { signedStr as signedString } from "../../workspace/actionPresentation";
-import { DerivedEntry, type SectionContext } from "../../workspace/sheetSections";
+import { DerivedEntry  } from "../../workspace/sheetSections";
+import type {SectionContext} from "../../workspace/sheetSections";
 import { useCampaign } from "../../workspace/campaignContext";
 import { roll } from "../../workspace/commands/chat";
 import { bumpData, bumpResource, rest, setData } from "../../workspace/commands/characters";
@@ -189,14 +190,14 @@ export function LevelUp({ campaign, c, d, editable }: SectionContext) {
     <>
       {ready && (
         <div className="sheet-advancement">
-          <Button onClick={() => setLevelling(true)}>Level Up</Button>
+          <Button onClick={() => { setLevelling(true); }}>Level Up</Button>
         </div>
       )}
       {levelling && (
         <AdvancementDialog
           campaign={campaign}
           characterId={c.id}
-          onClose={() => setLevelling(false)}
+          onClose={() => { setLevelling(false); }}
         />
       )}
     </>
@@ -207,7 +208,7 @@ export function LevelUp({ campaign, c, d, editable }: SectionContext) {
 export function DeathSaves({ c, editable, use }: Sections) {
   const context = useCampaign();
   if ((c.resources["hp"] ?? 0) !== 0) return null;
-  const counter = (label: string, key: "deathSuccesses" | "deathFailures") => (
+  const counter = (label: string, key: "deathFailures" | "deathSuccesses") => (
     <Counter
       label={label}
       value={number_(c.data[key])}
@@ -223,7 +224,7 @@ export function DeathSaves({ c, editable, use }: Sections) {
         {counter("Failures", "deathFailures")}
       </div>
       <div className="sheet-row">
-        <Button disabled={!editable} onClick={() => use("death-save")}>
+        <Button disabled={!editable} onClick={() => { use("death-save"); }}>
           Death Save
         </Button>
       </div>
@@ -234,7 +235,7 @@ export function DeathSaves({ c, editable, use }: Sections) {
 /** Armor class, initiative, speed and the numbers that follow from them. */
 export function CombatStats({ d, editable, use }: Pick<Sections, "d" | "editable" | "use">) {
   const v = d.values;
-  const why = d.resolved.why;
+  const {why} = d.resolved;
   return (
     <section className="form-section sheet-derived-group" aria-label="Combat">
       <h3 className="sheet-heading">Combat</h3>
@@ -250,7 +251,7 @@ export function CombatStats({ d, editable, use }: Pick<Sections, "d" | "editable
             type="button"
             className="dnd-roll"
             disabled={!editable}
-            onClick={() => use("initiative")}
+            onClick={() => { use("initiative"); }}
           >
             {signedString(valueOf(v, "initiative"))}
           </button>
@@ -292,7 +293,7 @@ export function SkillsSection({ system, c, d, editable, use }: Sections) {
                   context.execute(setData, { id: c.id, key: `skill:${s.id}`, value: (rank + 1) % 3 })
                 }
               />
-              <button type="button" className="dnd-skill" onClick={() => use(`skill-${s.id}`)}>
+              <button type="button" className="dnd-skill" onClick={() => { use(`skill-${s.id}`); }}>
                 <span>{s.name}</span>
                 <span className="muted">{abbr}</span>
                 <span className="dnd-bonus">

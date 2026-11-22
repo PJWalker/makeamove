@@ -1,8 +1,10 @@
 import { Graphics } from "pixi.js";
-import { type Camera, type Rect, toScreen } from "../camera";
+import {   toScreen } from "../camera";
+import type {Camera, Rect} from "../camera";
 import { corners } from "../geometry";
 import type { Point } from "../grid";
-import { isPlainToken, type SceneElement, type Transform } from "../types";
+import { isPlainToken   } from "../types";
+import type {SceneElement, Transform} from "../types";
 import { HANDLE_SIZE, lightHandles, rotateHandlePosition } from "./handles";
 import type { RenderState } from "./state";
 import { ACCENT, INK } from "./style";

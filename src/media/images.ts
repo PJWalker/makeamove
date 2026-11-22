@@ -14,10 +14,12 @@ export interface BlobReference {
 export type EntityGraphic = { kind: "icon"; name: string } | { kind: "image"; image: BlobReference };
 
 /** The entity a token's graphic comes from. */
-export interface EntityGraphicRef {
+export interface EntityGraphicReference {
   kind: string;
   id: string;
 }
+
+export type EntityGraphicRef = EntityGraphicReference;
 
 const runImageTask = workerClient<ImageWorkerTask, ImageWorkerResult>(
   () => new Worker(new URL("images.worker.ts", import.meta.url), { type: "module" }),

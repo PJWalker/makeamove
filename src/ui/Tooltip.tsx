@@ -1,12 +1,13 @@
-import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, useState  } from "react";
+import type {RefObject} from "react";
 import { tether } from "./anchor";
 import { inTransition } from "./transition";
 import { setTooltipHider } from "./tooltipController";
 
 const DELAY = 150;
 
-type Dir = "down" | "up" | "left" | "right";
-type Tip = { text: string; long?: boolean; el: Element; dir: Dir; instant?: boolean } | null;
+type Dir = "down" | "left" | "right" | "up";
+type Tip = { text: string; long?: boolean; el: HTMLElement; dir: Dir; instant?: boolean } | null;
 
 /**
  * One tooltip for the whole app. It watches the pointer and keyboard focus
@@ -41,9 +42,9 @@ export function Tooltip() {
  * and up from the bottom. data-tip-side="left" or "right" picks a side; it
  * still flips if it wouldn't fit.
  */
-function preferredDir(element: Element): Dir {
+function preferredDir(element: HTMLElement): Dir {
   const r = element.getBoundingClientRect();
-  const side = element.dataset.tipSide;
+  const side = element.getAttribute("data-tip-side");
   if (side === "left" || side === "right") return side;
   if (element.closest(".sidebar-rail") || side !== null)
     return r.left + r.width / 2 < innerWidth / 2 ? "right" : "left";
@@ -66,7 +67,7 @@ function useTooltip() {
 
 function useTooltipTracking(setTip: (tip: Tip) => void, reference: RefObject<HTMLDivElement | null>) {
   useEffect(() => {
-    let timer = 0;
+    let timer: ReturnType<typeof globalThis.setTimeout> | undefined;
     let current: Element | null = null;
     // Turned into something else; not shown again until the pointer leaves it.
     let suppressed: Element | null = null;
@@ -74,7 +75,7 @@ function useTooltipTracking(setTip: (tip: Tip) => void, reference: RefObject<HTM
     let showing = false;
 
     const hide = () => {
-      clearTimeout(timer);
+      if (timer !== undefined) clearTimeout(timer);
       current = null;
       if (showing) lastShown = performance.now();
       showing = false;
@@ -96,34 +97,36 @@ function useTooltipTracking(setTip: (tip: Tip) => void, reference: RefObject<HTM
       if (reference.current?.matches(":popover-open")) reference.current.hidePopover();
     });
 
-    function textOf(element: Element) {
+    function textOf(element: HTMLElement) {
       const title = element.getAttribute("title");
       if (title) {
-        element.dataset.tip = title;
+        element.setAttribute("data-tip", title);
         element.removeAttribute("title");
       }
-      return element.dataset.tip;
+      return element.getAttribute("data-tip") ?? undefined;
     }
 
-    function show(element: Element, instant = false) {
-      const text = element.dataset.tip;
+    function show(element: HTMLElement, instant = false) {
+      const text = element.getAttribute("data-tip");
       if (!text || !element.isConnected) return;
       // A tip that only repeats the label in view adds nothing; it shows once the label is hidden.
       if (element instanceof HTMLElement && element.innerText.trim() === text) return;
-      const long = Object.hasOwn(element.dataset, "tipLong");
+      const long = element.hasAttribute("data-tip-long");
       showing = true;
       setTip({ text, long, el: element, dir: preferredDir(element), instant });
     }
 
     function consider(target: EventTarget | null, delay: number) {
-      const element = (target as Element | null)?.closest?.("[title], [data-tip]") ?? null;
+      const element = target instanceof HTMLElement
+        ? target.closest<HTMLElement>("[title], [data-tip]")
+        : null;
       if (element === current || (element && element === suppressed)) return;
       hide();
       if (!element || !textOf(element)) return;
       current = element;
       const browsing = performance.now() - lastShown < 200;
       if (browsing) show(element, true);
-      else timer = globalThis.setTimeout(() => show(element), delay);
+      else timer = globalThis.setTimeout(() => { show(element); }, delay);
     }
 
     const onOver = (e: PointerEvent) =>
@@ -174,6 +177,8 @@ function useTooltipPosition(reference: RefObject<HTMLDivElement | null>, tip: Ti
     const element = reference.current;
     if (!element || !tip) return;
     const untether = tether(element, tip.el);
+    // The popover is intentionally styled here after it has been positioned.
+    // eslint-disable-next-line react-hooks/immutability
     element.dataset["prefer"] = tip.dir;
     element.showPopover();
     const r = tip.el.getBoundingClientRect();

@@ -14,7 +14,7 @@ const { SceneTools } = await import("../tools");
 const { LocalDoc } = await import("../../data/localDoc");
 type Controller = InstanceType<typeof SceneController>;
 type Args = ConstructorParameters<typeof SceneController>;
-type Preview = { x: number; y: number; rot: number };
+interface Preview { x: number; y: number; rot: number }
 type Fire = (type: string, x: number, y: number, extra?: Record<string, unknown>) => void;
 
 function setup(els: object[]) {

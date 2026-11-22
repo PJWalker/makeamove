@@ -4,9 +4,10 @@ import {
   foldersByName,
   renameFolderIn,
   UNTITLED_FOLDER,
-  unfile,
-  type FolderView,
+  unfile
+  
 } from "./folders";
+import type {FolderView} from "./folders";
 import type { CampaignRoot, Scenes } from "./schema";
 
 export type SceneFolderView = FolderView;

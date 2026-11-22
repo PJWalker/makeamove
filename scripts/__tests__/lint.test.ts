@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { runLintChecks } from "../lint";
+
 describe("changed-code lint checks", () => {
   it("reports every failure instead of stopping at the first one", () => {
     const output: string[] = [];

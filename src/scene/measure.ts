@@ -1,4 +1,5 @@
-import { type DiagonalRule, type Grid, type Point, hexAt, hexCentre } from "./grid";
+import {    hexAt, hexCentre } from "./grid";
+import type {DiagonalRule, Grid, Point} from "./grid";
 import type { Transform } from "./types";
 
 /*
@@ -127,7 +128,7 @@ export interface Range {
 }
 
 /** Whether a distance is within a range, at long range, or out of it. */
-export function inRange(distance: number, range: Range): "normal" | "long" | "out" {
+export function inRange(distance: number, range: Range): "long" | "normal" | "out" {
   if (distance <= range.normal) return "normal";
   if (range.long !== undefined && distance <= range.long) return "long";
   return "out";

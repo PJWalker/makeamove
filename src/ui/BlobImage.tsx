@@ -22,7 +22,7 @@ export function BlobImage({
   const hash = image?.hash;
   const peers = use(PeerBlobsContext);
 
-  useEffect(() => peers?.onAvailable(() => setTries((n) => n + 1)), [peers]);
+  useEffect(() => peers?.onAvailable(() => { setTries((n) => n + 1); }), [peers]);
   useEffect(() => {
     if (!hash) return;
     let made: string | null = null;

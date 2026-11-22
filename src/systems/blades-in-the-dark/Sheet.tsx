@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { SheetFrame, SheetSectionView, type SheetProps as SheetProperties } from "../../workspace/DeclarativeSheet";
+import { SheetFrame, SheetSectionView  } from "../../workspace/DeclarativeSheet";
+import type {SheetProps as SheetProperties} from "../../workspace/DeclarativeSheet";
 import { useSheet } from "../../workspace/sheetModel";
 import { Counter } from "../../workspace/sheetParts";
 import { Button } from "../../ui/Button";
 import { IconRoll } from "../../ui/icons";
-import { ATTRIBUTES, TRAUMAS } from "./index";
 import { commaListOf } from "../../lib/list";
 import { parseInputNumber } from "../../lib/number";
 import { systemCampaignData } from "../../campaign/campaign";
@@ -17,6 +17,7 @@ import {
 } from "../../workspace/commands/characters";
 import { useCampaign } from "../../workspace/campaignContext";
 import { advanceAction } from "./commands";
+import { ATTRIBUTES, TRAUMAS } from "./index";
 
 function AttributeAdvance({
   sheet,
@@ -50,7 +51,7 @@ function AttributeAdvanceControl({
       <select
         aria-label={`${attribute.name} advancement action`}
         value={chosen}
-        onChange={(event) => setSelected(event.currentTarget.value)}
+        onChange={(event) => { setSelected(event.currentTarget.value); }}
       >
         {eligible.map((id) => (
           <option key={id} value={id}>
@@ -175,7 +176,7 @@ function AttributeSection({
           variant="secondary"
           label={`Resist with ${attribute.name}`}
           aria-label={`Resist with ${attribute.name}`}
-          onClick={() => use(`resist-${attribute.id}`)}
+          onClick={() => { use(`resist-${attribute.id}`); }}
         >
           <IconRoll size={18} /> {d.values[attribute.id]}d
         </Button>
@@ -190,7 +191,7 @@ function AttributeSection({
                 variant="secondary"
                 label={`Roll ${stat.name}`}
                 aria-label={`Roll ${stat.name}`}
-                onClick={() => use(actionId)}
+                onClick={() => { use(actionId); }}
               >
                 <IconRoll size={18} /> {stat.name}
               </Button>

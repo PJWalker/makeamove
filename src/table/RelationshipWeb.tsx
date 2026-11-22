@@ -1,15 +1,16 @@
 import { useMemo, useRef, useState } from "react";
 import {
-  layoutWeb,
-  type NodePosition,
-  type RelationshipEdge,
+  layoutWeb
+  
+  
 } from "../features/characters/relationships";
+import type {NodePosition, RelationshipEdge} from "../features/characters/relationships";
 
 const WIDTH = 640;
 const HEIGHT = 440;
 const NODE_RADIUS = 20;
 
-type RelationshipPerson = { id: string; name: string; kind: string };
+interface RelationshipPerson { id: string; name: string; kind: string }
 
 export function RelationshipWeb({
   people,
@@ -127,7 +128,7 @@ export function RelationshipWeb({
             className="relationship-node"
             data-npc={person.kind === "npc" || undefined}
             transform={`translate(${position.x},${position.y})`}
-            onPointerDown={(event) => drag(person.id, event as unknown as PointerEvent)}
+            onPointerDown={(event) => { drag(person.id, event as unknown as PointerEvent); }}
           >
             <circle r={NODE_RADIUS} />
             <text className="relationship-initial" textAnchor="middle" dy="0.35em">

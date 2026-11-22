@@ -12,7 +12,7 @@ export interface Point {
  * with `chip` on both faces (lines split by \n). `colour` is any CSS colour,
  * read where the die's slot sits in the page.
  */
-export type DieLook = { sides: number; value: number; colour: string } | { chip: string; colour: string };
+export type DieLook = { chip: string; colour: string } | { sides: number; value: number; colour: string };
 
 /** Where a moving die is, in viewport px, how high it's lifted off the table, and how it's turned. */
 export interface Pose {

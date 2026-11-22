@@ -1,13 +1,6 @@
 import "fake-indexeddb/auto";
 import { describe, expect, it, vi } from "vite-plus/test";
 
-vi.mock("../../workspace/panelLayout", () => ({ showPanel: () => {} }));
-vi.mock("../../ui/icons", () => ({
-  IconDelete: () => null,
-  IconFolder: () => null,
-  IconImage: () => null,
-}));
-
 import { openCharacter, startMove as startMoveCommand } from "../../workspace/commands/characters";
 import type { CampaignContext } from "../../workspace/campaignContext";
 import { Campaign, createCampaign } from "../../campaign/campaign";
@@ -61,6 +54,13 @@ import {
   shopDungeonWorld2Service,
   trainDungeonWorld2,
 } from "../dungeon-world-2/campaign";
+
+vi.mock("../../workspace/panelLayout", () => ({ showPanel: () => {} }));
+vi.mock("../../ui/icons", () => ({
+  IconDelete: () => null,
+  IconFolder: () => null,
+  IconImage: () => null,
+}));
 
 async function setUp() {
   device.value = { id: "gm", name: "Gwen" };
@@ -493,7 +493,7 @@ describe("Dungeon World 2 campaign behavior", () => {
   it("tracks Artifact marks and applies the source unlock policies per item instance", async () => {
     const campaign = await setUp();
     const ayla = newCharacter(campaign, "Ayla", "barbarian");
-    const items = systemOf(campaign).items;
+    const {items} = systemOf(campaign);
     const soulstealer = items.find((item) => item.name === "Alveric’s Soulstealer Blade")!;
     const branch = items.find((item) => item.name === "Gwendolen’s Branch of the Green")!;
     addItem(campaign, ayla, soulstealer, true);

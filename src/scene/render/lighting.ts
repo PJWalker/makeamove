@@ -2,21 +2,23 @@ import { AlphaFilter, Color, Container, Graphics } from "pixi.js";
 import { visibleWorld } from "../camera";
 import { areaPolygon, fromLocal, shapeOutline } from "../geometry";
 import type { Point } from "../grid";
-import { type Blocker, Lamp } from "../lampShader";
+import {  Lamp } from "../lampShader";
+import type {Blocker} from "../lampShader";
 import type { EffectElement, SceneElement, Transform } from "../types";
 import {
   blocked,
   blockingSegments,
   segmentDistance,
   lightReach,
-  type Segment,
+  
   sightSegments,
   TOKEN_SHADE,
-  tokenBlocker,
+  tokenBlocker
 } from "../vision";
+import type {Segment} from "../vision";
+import { reducedMotion } from "../../ui/transition";
 import type { RenderState } from "./state";
 import { flat } from "./style";
-import { reducedMotion } from "../../ui/transition";
 
 /** A scene's lighting: whether it's on, and how dark it is where no light reaches (0 to 1). */
 export interface Lighting {
@@ -45,21 +47,21 @@ export class LightingLayer {
   readonly lightLayer = new Container();
   /** Everything outside the viewers' sight, with what they see erased out of it. */
   readonly fogLayer = new Container();
-  private lightG = new Graphics();
+  private readonly lightG = new Graphics();
   /** Each light's reach, erased from the darkness by the lamp shader. */
-  private lampLayer = new Container();
-  private lamps = new Map<string, Lamp>();
-  private tints = new Map<string, Lamp>();
+  private readonly lampLayer = new Container();
+  private readonly lamps = new Map<string, Lamp>();
+  private readonly tints = new Map<string, Lamp>();
   /** The lights that flicker, with an offset so no two waver together. */
   private flickering: { lamps: Lamp[]; phase: number }[] = [];
   /** Glowing effects' colour, washed over them. */
-  private glowTint = new Graphics();
+  private readonly glowTint = new Graphics();
   /** Areas of solid light, and glowing effects, erased from the darkness. */
-  private lightErase = new Graphics({ blendMode: "erase" });
+  private readonly lightErase = new Graphics({ blendMode: "erase" });
   /** Areas of solid dark, over everything else. */
-  private lightDark = new Graphics();
-  private fogG = new Graphics();
-  private sights = new Map<string, Lamp>();
+  private readonly lightDark = new Graphics();
+  private readonly fogG = new Graphics();
+  private readonly sights = new Map<string, Lamp>();
   /** Where the viewers see from and the walls in the way, for hiding the names of tokens they can't see. */
   private sight: { from: Point[]; walls: Segment[] } | null = null;
 
@@ -244,7 +246,7 @@ export class LightingLayer {
 
   /** Whether a token is out of the viewers' sight (always false when they see everything). */
   unseen(t: Transform): boolean {
-    const sight = this.sight;
+    const {sight} = this;
     return !!sight && sight.from.every((p) => blocked(p, t, sight.walls));
   }
 }

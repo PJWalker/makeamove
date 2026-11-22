@@ -18,9 +18,10 @@ import {
   removeCombatant,
   roundOf,
   turnOrder,
-  updateCombatant,
-  type Combatant,
+  updateCombatant
+  
 } from "../../features/combat/combat";
+import type {Combatant} from "../../features/combat/combat";
 import { device } from "../../platform/device";
 import {
   isBoolean,
@@ -31,7 +32,8 @@ import {
   objectOf,
   optional,
 } from "../../lib/guards";
-import { GM_ONLY, type Availability } from "../../kernel/commands";
+import { GM_ONLY  } from "../../kernel/commands";
+import type {Availability} from "../../kernel/commands";
 import { IconCombat } from "../../ui/icons";
 import type { CampaignContext } from "../campaignContext";
 import { command } from "./types";
@@ -101,7 +103,7 @@ export const startCombat = command({
   title: "Start Combat",
   permission: "gm",
   available: anyone,
-  run: ({ campaign }) => beginCombat(campaign),
+  run: ({ campaign }) => { beginCombat(campaign); },
 });
 
 export const nextTurn = command({
@@ -113,7 +115,7 @@ export const nextTurn = command({
     const fight = running(context);
     return fight === true ? anyone(context) : fight;
   },
-  run: ({ campaign }) => advanceTurn(campaign),
+  run: ({ campaign }) => { advanceTurn(campaign); },
 });
 
 export const previousCombatTurn = command({
@@ -122,7 +124,7 @@ export const previousCombatTurn = command({
   title: "Previous Turn",
   permission: "gm",
   available: running,
-  run: ({ campaign }) => previousTurn(combatMaps(campaign)),
+  run: ({ campaign }) => { previousTurn(combatMaps(campaign)); },
 });
 
 export const endCombat = command({
@@ -131,7 +133,7 @@ export const endCombat = command({
   title: "End Combat",
   permission: "gm",
   available: running,
-  run: ({ campaign }) => finishCombat(campaign),
+  run: ({ campaign }) => { finishCombat(campaign); },
 });
 
 export const rollForNpcs = command({
@@ -159,7 +161,7 @@ export const setInitiative = command<{ id: string; init: number | null }>({
   title: "Set Initiative",
   permission: ownsCombatant,
   undoGroup: ({ id }) => `initiative ${id}`,
-  run: ({ campaign }, { id, init }) => updateCombatant(combatMaps(campaign), id, { init }),
+  run: ({ campaign }, { id, init }) => { updateCombatant(combatMaps(campaign), id, { init }); },
 });
 
 export const hideCombatant = command<{ id: string; hidden: boolean }>({
@@ -167,8 +169,7 @@ export const hideCombatant = command<{ id: string; hidden: boolean }>({
   params: objectOf({ id: isString, hidden: isBoolean }),
   title: (_, { hidden }) => (hidden ? "Hide from Players" : "Show to Players"),
   permission: "gm",
-  run: ({ campaign }, { id, hidden }) =>
-    updateCombatant(combatMaps(campaign), id, { hidden } satisfies Partial<Combatant>),
+  run: ({ campaign }, { id, hidden }) => { updateCombatant(combatMaps(campaign), id, { hidden } satisfies Partial<Combatant>); },
 });
 
 export const removeFromCombat = command<{ id: string }>({
@@ -176,7 +177,7 @@ export const removeFromCombat = command<{ id: string }>({
   params: isId,
   title: "Remove from Combat",
   permission: "gm",
-  run: ({ campaign }, { id }) => removeCombatant(combatMaps(campaign), id),
+  run: ({ campaign }, { id }) => { removeCombatant(combatMaps(campaign), id); },
 });
 
 /** Give a character a condition for so many rounds, or with no duration, until it's removed. */
@@ -217,7 +218,7 @@ export const stopConcentrating = command<{ characterId: string }>({
   params: objectOf({ characterId: isString }),
   title: "End Concentration",
   permission: ownsCharacter,
-  run: ({ campaign }, { characterId }) => endConcentration(campaign, characterId),
+  run: ({ campaign }, { characterId }) => { endConcentration(campaign, characterId); },
 });
 
 export const combatCommands = [

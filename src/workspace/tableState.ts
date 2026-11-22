@@ -4,7 +4,7 @@ import { getNote } from "../features/notes/api";
 import { leave } from "../ui/morph";
 
 /** What can be changed about an action from its menu (see ActionDialogs.tsx and commands/custom.ts). */
-export type ActionEditKind = "rename" | "icon" | "shortcut";
+export type ActionEditKind = "icon" | "rename" | "shortcut";
 
 /** What a command asks before it runs (commands/views.ts `invoke`). */
 export interface Confirmation {

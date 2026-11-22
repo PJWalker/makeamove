@@ -1,19 +1,18 @@
-import { emptyRichText, plainText, type RichText } from "../data/richText";
-import { AskStep } from "./MoveAskForm";
-import { onScreenRect } from "./onScreenRect";
-import { RichTextView } from "../workspace/RichTextView";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { arrow, autoUpdate, computePosition, flip, offset, shift } from "@floating-ui/dom";
-import { getCharacter, systemOf } from "../features/characters/api";
-import { needsChoice } from "../features/characters/moves";
-import { inRange } from "../scene/measure";
-import type { Campaign } from "../campaign/campaign";
-import { growFrom, leave } from "../ui/morph";
-import { reducedMotion } from "../ui/transition";
-import { Button } from "../ui/Button";
-import { IconClose } from "../ui/icons";
-import { lastPressed } from "../ui/pressed";
 import { useSelector } from "@xstate/react";
+import { lastPressed } from "../ui/pressed";
+import { IconClose } from "../ui/icons";
+import { Button } from "../ui/Button";
+import { reducedMotion } from "../ui/transition";
+import { growFrom, leave } from "../ui/morph";
+import type { Campaign } from "../campaign/campaign";
+import { inRange } from "../scene/measure";
+import { needsChoice } from "../features/characters/moves";
+import { getCharacter, systemOf } from "../features/characters/api";
+import { RichTextView } from "../workspace/RichTextView";
+import type {RichText} from "../data/richText";
+import { emptyRichText, plainText  } from "../data/richText";
 import { useQuery } from "../ui/useQuery";
 import type { ActionDef, AreaSpec } from "../systems/types";
 import type { MoveTarget } from "../features/chat/types";
@@ -21,6 +20,8 @@ import { useCampaign } from "../workspace/campaignContext";
 import type { CanvasState } from "../workspace/canvasState";
 import type { CampaignContext } from "../workspace/campaignContext";
 import { startMove } from "../workspace/commands/characters";
+import { onScreenRect } from "./onScreenRect";
+import { AskStep } from "./MoveAskForm";
 
 /*
  * What a move asks before it rolls, in a speech bubble beside the button that
@@ -39,7 +40,7 @@ const MARGIN = 8;
 /** A button this close to the bottom (the hotbar) gets the bubble above it. */
 const BOTTOM_BAND = 120;
 
-type Request = { kind: "target" | "ask"; moveId: string; characterId: string };
+interface Request { kind: "ask" | "target"; moveId: string; characterId: string }
 
 const cancel = (context: CampaignContext) => {
   context.campaign.moves.clear();
@@ -52,7 +53,7 @@ const toggleAreaRequest = (canvas: CanvasState, area: AreaSpec, actor: string) =
 };
 
 /** Where the bubble goes: above a button near the bottom (the hotbar), else beside it, to the right where there's room. */
-function preferredSide(anchor: DOMRect, width: number): "top" | "right" | "left" {
+function preferredSide(anchor: DOMRect, width: number): "left" | "right" | "top" {
   if (anchor.top > innerHeight - BOTTOM_BAND) return "top";
   const roomRight = innerWidth - anchor.right - GAP - MARGIN >= width;
   return roomRight || anchor.left + anchor.width / 2 < innerWidth / 2 ? "right" : "left";
@@ -80,7 +81,7 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
         <span className="eyebrow">
           {move.name} · {character.name}
         </span>
-        <Button variant="icon" label="Cancel" onClick={() => cancel(ctx)}>
+        <Button variant="icon" label="Cancel" onClick={() => { cancel(ctx); }}>
           <IconClose />
         </Button>
       </div>
@@ -235,9 +236,9 @@ function useMovePrompt(campaign: Campaign) {
     };
     syncTargets();
     const stop = context.campaign.moves.actor.subscribe(syncTargets);
-    return () => stop.unsubscribe();
+    return () => { stop.unsubscribe(); };
   }, [context, campaign]);
-  useEffect(() => () => cancel(context), [context]);
+  useEffect(() => () => { cancel(context); }, [context]);
 
   // Escape backs out, before the canvas uses it to clear the selection.
   useEffect(() => {
@@ -248,7 +249,7 @@ function useMovePrompt(campaign: Campaign) {
       cancel(context);
     };
     globalThis.addEventListener("keydown", onKey, true);
-    return () => globalThis.removeEventListener("keydown", onKey, true);
+    return () => { globalThis.removeEventListener("keydown", onKey, true); };
   }, [context, hasLive]);
 
   const request = shown;
@@ -288,11 +289,11 @@ function TargetStep({
     }));
     context.execute(startMove, { characterId, move: move.id, targets: picked });
   };
-  const area = spec.area;
+  const {area} = spec;
   const request = useQuery(context.canvas.areaRequest);
   const placed = useQuery(context.canvas.placedArea);
   const placing = !!request;
-  const placeArea = () => toggleAreaRequest(context.canvas, area!, characterId);
+  const placeArea = () => { toggleAreaRequest(context.canvas, area!, characterId); };
   return (
     <div className="move-form">
       <p className="roll-prompt-text">{spec.prompt}</p>

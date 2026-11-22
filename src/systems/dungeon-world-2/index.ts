@@ -4,7 +4,10 @@ import { commaListOf } from "../../lib/list";
 
 import { resolveEffects } from "../effects";
 import type { ActionDef, ChoiceDef, GameSystem, OptionDef } from "../types";
-import { plainText, richTextFromPlain, type RichText } from "../../data/richText";
+import { plainText, richTextFromPlain  } from "../../data/richText";
+import type {RichText} from "../../data/richText";
+import { hpTokenStat } from "../tokenStats";
+import { PIP_COLOURS } from "../../features/combat/pipColours";
 import { CLASS_CREATION_HINTS, GM_REFERENCE, PATHS, SOURCE_MOVES } from "./rulebook";
 import { revealedStruggleData, STRUGGLES } from "./struggles";
 import { INITIAL_TREASURE_BOXES, MAX_TREASURE_BOXES, purchaseAtWealth } from "./wealth";
@@ -13,22 +16,20 @@ import { DW2_CLASS_GEAR, DW2_GEAR, DW2_MAGIC_ITEMS } from "./gear";
 import { DW2_CLASS_SCORE_RULES } from "./stats";
 import { CLASS_STARTING_CHOICES } from "./startingOptions";
 import { dw2Library } from "./library";
-import { hpTokenStat } from "../tokenStats";
-import { PIP_COLOURS } from "../../features/combat/pipColours";
 
-type Band = "strong" | "weak" | "miss";
-type MoveSpec = {
+type Band = "miss" | "strong" | "weak";
+interface MoveSpec {
   id: string;
   name: string;
-  category: "basic" | "special" | "campaign" | "class";
+  category: "basic" | "campaign" | "class" | "special";
   trigger: string;
   text: RichText;
   /** A stat id, "choose" or "none". */
   stat?: string;
   outcomes?: Record<Band, RichText>;
   classId?: string;
-  sessionUse?: "character" | "campaign";
-};
+  sessionUse?: "campaign" | "character";
+}
 
 const STATS = [
   { id: "str", name: "Strength", abbr: "STR", condition: "exhausted" },
@@ -101,7 +102,7 @@ const bands = (strong: RichText, weak: RichText, miss: RichText): Record<Band, R
   miss,
 });
 const marksXp = (outcomes?: Record<Band, RichText>) =>
-  /\bmark(?:s)?\s+(?:1\s+)?XP\b/i.test(plainText(outcomes?.miss));
+  /\bmarks?\s+(?:1\s+)?xp\b/i.test(plainText(outcomes?.miss));
 
 const MOVES: MoveSpec[] = (
   [
@@ -659,7 +660,7 @@ export const dungeonWorld2: GameSystem = {
   checkRoll(formula, stat, character, action) {
     const first = parse(formula)[0];
     if (first?.kind !== "dice") return formula;
-    const prefix = /^(?:\d+)?d\d+(?:k[hl]\d+)?!?\[[^\]]*\]|^(?:\d+)?d\d+(?:k[hl]\d+)?!?/i;
+    const prefix = /^(?:\d+)?d\d+(?:k[hl]\d+)?!?\[[^\]]*]|^(?:\d+)?d\d+(?:k[hl]\d+)?!?/i;
     const activeConditions = [...character.conditions, ...(character.lockedConditions ?? [])];
     const disadvantaged =
       !!stat &&

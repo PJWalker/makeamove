@@ -15,6 +15,8 @@ export interface SheetProperties {
   c: CharacterView;
 }
 
+export type SheetProps = SheetProperties;
+
 /** A form drawn under a move's text, for the character making it. */
 export interface MoveFormProperties {
   sheet: {
@@ -26,12 +28,16 @@ export interface MoveFormProperties {
   };
 }
 
+export type MoveFormProps = MoveFormProperties;
+
 export interface ItemUseProperties {
   campaign: Campaign;
   character: CharacterView;
   item: ItemInstance;
   editable: boolean;
 }
+
+export type ItemUseProps = ItemUseProperties;
 
 export interface SystemExtension {
   /** The system's own sheet components, instead of the core's declarative sheet. */

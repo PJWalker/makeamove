@@ -7,12 +7,13 @@ import {
   libraryKey,
   sourceEntries,
   topLevelKeys,
-  viewEntries,
-  type EntryKind,
-  type EntryView,
-  type LibraryEntry,
-  type LibrarySource,
+  viewEntries
+  
+  
+  
+  
 } from "../features/library";
+import type {EntryKind, EntryView, LibraryEntry, LibrarySource} from "../features/library";
 import { toggleSetValue } from "../lib/set";
 import type { Campaign } from "../campaign/campaign";
 import { useQuery } from "../ui/useQuery";
@@ -28,10 +29,12 @@ import { rollTag } from "../workspace/actionPresentation";
 import { actionMenuItems } from "../workspace/actionMenu";
 import { getEntityGraphic } from "../workspace/entityGraphics";
 import { CampaignEntityGraphic } from "../workspace/EntityGraphic";
-import { useCampaign, type CampaignContext } from "../workspace/campaignContext";
+import { useCampaign  } from "../workspace/campaignContext";
+import type {CampaignContext} from "../workspace/campaignContext";
 import { joinSections } from "../workspace/commands/views";
 import { EntryActionButtons } from "../workspace/EntryActionButtons";
-import { entryActionMenu, useLibraryActions, type EntryAction } from "../workspace/libraryActions";
+import { entryActionMenu, useLibraryActions  } from "../workspace/libraryActions";
+import type {EntryAction} from "../workspace/libraryActions";
 
 const metaOf = (e: LibraryEntry) =>
   [
@@ -56,14 +59,14 @@ const textOf = (e: LibraryEntry) =>
     ),
   ].join("\n\n");
 
-type Browsing = {
+interface Browsing {
   campaign: Campaign;
   actionsFor: (e: LibraryEntry) => EntryAction[];
   windows: ReturnType<typeof useEntryWindows>;
   openedIds: ReadonlySet<string>;
   searching: boolean;
   toggle: (id: string) => void;
-};
+}
 
 /** An entry's context menu: what it offers, pinning it, and changing its graphic. */
 function useEntryMenu({ actionsFor }: Pick<Browsing, "actionsFor">) {
@@ -76,7 +79,7 @@ function useEntryMenu({ actionsFor }: Pick<Browsing, "actionsFor">) {
         {
           label: "Change Graphic…",
           Icon: IconImage,
-          onSelect: () => context.table.editGraphic(e.kind, e.id, e.name, e.icon),
+          onSelect: () => { context.table.editGraphic(e.kind, e.id, e.name, e.icon); },
         },
       ],
     ]);
@@ -138,7 +141,7 @@ function LibraryRow({
           holds ? (
             <ListExpand
               open={open}
-              onToggle={() => toggle(id)}
+              onToggle={() => { toggle(id); }}
               label={`${open ? "Hide" : "Show"} what ${e.name} holds`}
             />
           ) : (aligned ? (
@@ -157,12 +160,12 @@ function LibraryRow({
         tag={e.kind === "move" ? rollTag(systemOf(campaign), e.move) : null}
         meta={metaOf(e)}
         tip={hint ? `${e.text}\n\n${hint}` : e.text}
-        onOpen={(rowElement) => windows.show(libraryKey(sourceId, e), rowElement)}
+        onOpen={(rowElement) => { windows.show(libraryKey(sourceId, e), rowElement); }}
         menuItems={menuFor(e)}
         onPointerDown={
           e.kind === "monster"
             ? undefined
-            : (event) => dragEntity(context.canvas, event, dragPayload(context, campaign, e))
+            : (event) => { dragEntity(context.canvas, event, dragPayload(context, campaign, e)); }
         }
       />
       {open && (
@@ -254,7 +257,7 @@ function LibraryEntryWindows({
           ) : undefined
         }
         tags={e.tags}
-        onClose={() => windows.close(key)}
+        onClose={() => { windows.close(key); }}
         graphicRef={{ kind: e.kind, id: e.id }}
         graphicDefaultIcon={e.icon}
         proxy={
@@ -283,8 +286,7 @@ function LibraryTools({ kinds }: { kinds: EntryKind[] }) {
         placeholder="Search the Libraries…"
         aria-label="Search the Libraries"
         value={query}
-        onInput={(e) =>
-          context.library.view.set({ ...context.library.view.value, query: e.currentTarget.value })
+        onInput={(e) => { context.library.view.set({ ...context.library.view.value, query: e.currentTarget.value }); }
         }
       />
       {kinds.length > 1 && (
@@ -295,7 +297,7 @@ function LibraryTools({ kinds }: { kinds: EntryKind[] }) {
             { id: "all", label: "All" },
             ...kinds.map((k) => ({ id: k, label: KIND_LABEL[k] })),
           ]}
-          onChange={(k) => context.library.view.set({ ...context.library.view.value, kind: k })}
+          onChange={(k) => { context.library.view.set({ ...context.library.view.value, kind: k }); }}
         />
       )}
     </div>
@@ -328,8 +330,7 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
     windows,
     openedIds,
     searching,
-    toggle: (id) =>
-      context.library.openedEntries.set(toggleSetValue(context.library.openedEntries.value, id)),
+    toggle: (id) => { context.library.openedEntries.set(toggleSetValue(context.library.openedEntries.value, id)); },
   };
 
   const kinds = (Object.keys(KIND_LABEL) as EntryKind[]).filter((k) =>
@@ -360,7 +361,7 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
                 label={c.name}
                 count={views.length}
                 open={searching || openedIds.has(id)}
-                onToggle={() => browsing.toggle(id)}
+                onToggle={() => { browsing.toggle(id); }}
               >
                 <LibraryRows browsing={browsing} sourceId={s.id} path={id} views={views} />
               </ListGroup>

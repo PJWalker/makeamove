@@ -1,5 +1,6 @@
 import { Graphics } from "pixi.js";
-import { type Rect, visibleWorld } from "../camera";
+import {  visibleWorld } from "../camera";
+import type {Rect} from "../camera";
 import { hexCellsIn, hexCentre, hexCorners, squareLines } from "../grid";
 import type { RenderState } from "./state";
 
@@ -20,7 +21,7 @@ export class GridLayer {
 
   draw(s: RenderState) {
     const g = this.view;
-    const grid = s.grid;
+    const {grid} = s;
     // Fade the grid out as cells get too small to read; hexes sooner, as
     // they're busier.
     const cell = grid.size * s.camera.zoom;

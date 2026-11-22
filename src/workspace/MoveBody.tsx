@@ -1,9 +1,9 @@
 import { useCallback } from "react";
 import type { Campaign } from "../campaign/campaign";
 import { canEdit, getCharacter, systemOf } from "../features/characters/api";
-import { useExtension } from "./systemExtensions";
 import type { ActionDef } from "../systems/types";
 import { useQuery } from "../ui/useQuery";
+import { useExtension } from "./systemExtensions";
 import { RichTextView } from "./RichTextView";
 
 /*

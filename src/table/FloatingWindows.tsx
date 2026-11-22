@@ -1,20 +1,21 @@
-import type { Campaign } from "../campaign/campaign";
-import { windowLayer } from "../ui/windows";
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
+import { windowLayer } from "../ui/windows";
+import type { Campaign } from "../campaign/campaign";
 import {
   useWindowPointer,
-  useWindowRect,
-  type FloatingWindow,
-  type PanelId,
+  useWindowRect
+  
+  
 } from "../workspace/panelLayout";
-import { PanelContent, PanelIcon, PaneToggle } from "./panels";
-import { usePanelLabel } from "./panelLabels";
+import type {FloatingWindow, PanelId} from "../workspace/panelLayout";
 import { RESIZE_DIRS } from "../ui/resizeRect";
 import { WindowControls } from "../workspace/WindowControls";
-import { PanelActionsProvider, PanelActionsSlot } from "./PanelActions";
 import { useQuery } from "../ui/useQuery";
 import { useCampaign } from "../workspace/campaignContext";
+import { PanelActionsProvider, PanelActionsSlot } from "./PanelActions";
+import { usePanelLabel } from "./panelLabels";
+import { PanelContent, PanelIcon, PaneToggle } from "./panels";
 
 /** Size of the tab a window morphs into. */
 const TAB = 44;
@@ -32,7 +33,7 @@ export function FloatingWindows({ campaign }: { campaign: Campaign }) {
   );
 }
 
-type Morph = "in" | "out" | "hidden" | undefined;
+type Morph = "hidden" | "in" | "out" | undefined;
 
 /** The next phase of a window's morph, from the last: lifted and over a sidebar it becomes a tab; lifted elsewhere it grows back out. */
 function nextMorph(phase: Morph, lifted: boolean, overTab: boolean): Morph {
@@ -73,7 +74,7 @@ function WindowBody({ win, campaign }: { win: { id: PanelId }; campaign: Campaig
           className="win-resize"
           data-dir={dir}
           aria-hidden="true"
-          onPointerDown={(e) => context.panels.startWindowResize(win.id, e.nativeEvent, dir)}
+          onPointerDown={(e) => { context.panels.startWindowResize(win.id, e.nativeEvent, dir); }}
         />
       ))}
     </>
@@ -116,7 +117,7 @@ function Window({
         data-lifted={pointer !== null}
         aria-label={label}
         tabIndex={-1}
-        onPointerDown={() => ctx.panels.raiseWindow(win.id)}
+        onPointerDown={() => { ctx.panels.raiseWindow(win.id); }}
       >
         <WindowControls
           title={label}
@@ -128,9 +129,9 @@ function Window({
           beforeTitle={<PaneToggle id={win.id} />}
           afterTitle={!rolled && <PanelActionsSlot />}
           rolled={rolled}
-          onToggleRoll={() => setRolled(!rolled)}
+          onToggleRoll={() => { setRolled(!rolled); }}
           onDragStart={onHeaderPointerDown}
-          onClose={() => ctx.panels.setPanelClosed(win.id, true)}
+          onClose={() => { ctx.panels.setPanelClosed(win.id, true); }}
           closeLabel="Close (reopen from the campaign menu)"
         />
         {!rolled && <WindowBody win={win} campaign={campaign} />}

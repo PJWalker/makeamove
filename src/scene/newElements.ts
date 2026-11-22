@@ -1,5 +1,6 @@
-import { cellOr, type Grid, type Point, snapPoint, snapSize } from "./grid";
-import type { BlobReference, EntityGraphic, EntityGraphicRef } from "../media/images";
+import type { BlobReference, EntityGraphic, EntityGraphicRef as EntityGraphicReference } from "../media/images";
+import { cellOr,   snapPoint, snapSize } from "./grid";
+import type {Grid, Point} from "./grid";
 import type { NewElement, SceneElement, TokenStyle } from "./types";
 
 /*
@@ -16,7 +17,7 @@ export interface TokenSpec {
   itemDefId?: string | undefined;
   characterId?: string | undefined;
   graphic?: EntityGraphic | undefined;
-  entityRef?: EntityGraphicRef | undefined;
+  entityRef?: EntityGraphicReference | undefined;
 }
 
 /** Muted, mid-tone colours that sit well behind white text and over any map. */
@@ -103,7 +104,7 @@ export function conversion(
   token: { colour: string; style: TokenStyle },
 ): Partial<SceneElement> | null {
   if (element.type === to || !("image" in element) || !element.image) return null;
-  const image = element.image;
+  const {image} = element;
   if (to === "token") {
     const size = snapSize(grid, Math.min(element.w, element.h, grid.size));
     const p = snapPoint(grid, element, Math.round(size / grid.size));
@@ -132,7 +133,7 @@ export function conversion(
 function tokenName(file: string): string {
   const base = file
     .replace(/\.[^.]+$/, "")
-    .replaceAll(/[-_]+/g, " ")
+    .replaceAll(/[_-]+/g, " ")
     .trim();
   return base ? base.charAt(0).toUpperCase() + base.slice(1) : "";
 }

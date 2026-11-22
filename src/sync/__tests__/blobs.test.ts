@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import * as Y from "yjs";
-import { BlobExchange, type BlobStore } from "../blobs";
+import { BlobExchange  } from "../blobs";
+import type {BlobStore} from "../blobs";
 import { SyncSession } from "../session";
 import { MemoryRoom } from "./memoryRoom";
 

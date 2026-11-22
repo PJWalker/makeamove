@@ -1,5 +1,3 @@
-import { leave, morphOpen, setMorphOrigin } from "./morph";
-import { withTransition } from "./transition";
 import type { ComponentType } from "react";
 import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from "react";
 import {
@@ -9,22 +7,14 @@ import {
   Popover,
   Separator,
 } from "react-aria-components";
+import { withTransition } from "./transition";
+import { leave, morphOpen, setMorphOrigin } from "./morph";
 import { ColourPicker } from "./ColourPicker";
 import { IconCheck } from "./icons";
 import type { IconProps as IconProperties } from "./icons";
 
 export type MenuItem =
-  | {
-      label: string;
-      Icon?: ComponentType<IconProperties>;
-      shortcut?: string;
-      danger?: boolean;
-      disabled?: boolean;
-      /** For an item that turns something on or off: ticked when it's on. */
-      checked?: boolean;
-      onSelect: () => void;
-    }
-  | {
+  "divider" | {
       /**
        * A colour picker. While a colour is being picked, onPreview shows it
        * (null: stop showing it); onPick keeps it when the picker or the menu
@@ -36,8 +26,16 @@ export type MenuItem =
       alpha?: boolean;
       onPreview: (colour: string | null) => void;
       onPick: (colour: string) => void;
-    }
-  | "divider";
+    } | {
+      label: string;
+      Icon?: ComponentType<IconProperties>;
+      shortcut?: string;
+      danger?: boolean;
+      disabled?: boolean;
+      /** For an item that turns something on or off: ticked when it's on. */
+      checked?: boolean;
+      onSelect: () => void;
+    };
 
 export function ContextMenu({
   x,
@@ -68,7 +66,7 @@ export function ContextMenu({
       aria-label={label ?? "Actions"}
       className="context-menu panel"
       data-context-menu
-      onContextMenu={(event) => event.preventDefault()}
+      onContextMenu={(event) => { event.preventDefault(); }}
     >
       <Menu aria-label={label ?? "Actions"} className="context-menu-actions" autoFocus="first">
         {items.map((item, index) => {
@@ -87,7 +85,7 @@ export function ContextMenu({
               className="menu-item"
               data-action-index={index}
               data-danger={item.danger}
-              onAction={() => choose(item, index)}
+              onAction={() => { choose(item, index); }}
             >
               {item.checked !== undefined &&
                 (item.checked ? (
@@ -145,9 +143,9 @@ function useContextMenuActions(x: number, y: number, items: MenuItem[], onClose:
       onClose();
       item.onSelect();
     };
-    if (!origin) return run();
+    if (!origin) { run(); return; }
     // An item that opens a window ("…") grows into it.
-    if (item.label.endsWith("…")) return morphOpen(origin, run);
+    if (item.label.endsWith("…")) { morphOpen(origin, run); return; }
     setMorphOrigin(origin);
     origin.style.viewTransitionName = `menu-selection-${crypto.randomUUID()}`;
     void withTransition(run).finally(() => {
@@ -193,7 +191,7 @@ function MenuColour({ item }: { item: Extract<MenuItem, { colour: string }> }) {
   };
   // Closing the menu keeps what was picked, as putting the picker away does.
   const keepOnClose = useEffectEvent(keep);
-  useEffect(() => () => keepOnClose(), []);
+  useEffect(() => () => { keepOnClose(); }, []);
   return (
     <fieldset className="menu-colour">
       <legend className="menu-label">{item.label}</legend>

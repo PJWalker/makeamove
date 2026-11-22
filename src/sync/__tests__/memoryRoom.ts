@@ -14,11 +14,11 @@ export interface MemoryRoomOptions {
 
 /** An in-memory room: delivers messages between its members, asynchronously. */
 export class MemoryRoom {
-  private members = new Map<string, MemoryTransport>();
+  private readonly members = new Map<string, MemoryTransport>();
   /** Messages and arrivals sent but not yet delivered. */
   private queue: Delivery[] = [];
 
-  constructor(private options: MemoryRoomOptions = {}) {}
+  constructor(private readonly options: MemoryRoomOptions = {}) {}
 
   join(id: string): MemoryTransport {
     const t = new MemoryTransport(id, this);
@@ -64,7 +64,7 @@ export class MemoryRoom {
     const i = this.options.pick?.(this.queue.length) ?? 0;
     const [next] = this.queue.splice(i, 1);
     if (!next || !this.members.has(next.to)) return;
-    const { deliverTo = (_, deliver) => deliver() } = this.options;
+    const { deliverTo = (_, deliver) => { deliver(); } } = this.options;
     deliverTo(next.to, next.run);
   }
 
@@ -82,7 +82,7 @@ class MemoryTransport implements Transport {
   onPeerLeave: Transport["onPeerLeave"] = null;
   constructor(
     readonly selfId: string,
-    private room: MemoryRoom,
+    private readonly room: MemoryRoom,
   ) {}
   peers() {
     return this.room.peersOf(this.selfId);
@@ -99,7 +99,7 @@ class MemoryTransport implements Transport {
 export class MemoryNetwork {
   readonly rooms = new Map<string, MemoryRoom>();
 
-  constructor(private options: MemoryRoomOptions = {}) {}
+  constructor(private readonly options: MemoryRoomOptions = {}) {}
 
   /** How `member` joins rooms on this network. */
   joinAs(member: string): JoinRoom {

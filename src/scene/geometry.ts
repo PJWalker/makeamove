@@ -2,7 +2,8 @@ import type { Rect } from "./camera";
 
 import type { Point } from "./grid";
 import { distanceToSegment, distanceToStroke } from "./stroke";
-import { isPlainToken, type SceneElement, type ShapeGeometry, type Transform } from "./types";
+import { isPlainToken    } from "./types";
+import type {SceneElement, ShapeGeometry, Transform} from "./types";
 
 /** A rectangle's corners, clockwise from the top left, as which way each lies from its centre. */
 export type Corner = 0 | 1 | 2 | 3;
@@ -92,7 +93,7 @@ export function shapeOutline(geo: ShapeGeometry, w: number, h: number): Point[] 
 }
 
 /** Whether world point p is inside a shape, grown by `margin` world px (a circle's or a cone's edge counts as in). */
-export function shapeCovers(element: Transform & ShapeGeometry, p: Point, margin = 0): boolean {
+export function shapeCovers(element: ShapeGeometry & Transform, p: Point, margin = 0): boolean {
   const l = toLocal(element, p);
   if (element.shape === "circle") {
     const rx = element.w / 2 + margin;
@@ -131,7 +132,7 @@ function inBox(l: Point, hw: number, hh: number): boolean {
  * edge within it (a token half in a cone is caught).
  */
 export function tokensCovered(
-  area: Transform & ShapeGeometry,
+  area: ShapeGeometry & Transform,
   tokens: (Transform & { id: string })[],
 ): string[] {
   return tokens.flatMap((t) => {
@@ -203,7 +204,7 @@ export function insidePolygon(poly: Point[], p: Point): boolean {
 }
 
 /** A shape's outline in the world, at its size and rotation. */
-export function shapePolygon(element: Transform & ShapeGeometry): Point[] {
+export function shapePolygon(element: ShapeGeometry & Transform): Point[] {
   return shapeOutline(element, element.w, element.h).map((p) => fromLocal(element, p));
 }
 

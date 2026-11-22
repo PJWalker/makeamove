@@ -13,7 +13,7 @@ export const isBoolean: Guard<boolean> = (v): v is boolean => typeof v === "bool
 
 /** One of a fixed set of values. */
 export const oneOf =
-  <const T extends readonly (string | number | boolean)[]>(...values: T): Guard<T[number]> =>
+  <const T extends readonly (boolean | number | string)[]>(...values: T): Guard<T[number]> =>
   (v): v is T[number] =>
     values.includes(v as T[number]);
 
@@ -33,9 +33,9 @@ export const optional =
     v === undefined || is(v);
 
 type Guarded<S extends Record<string, Guard<unknown>>> = {
-  [K in keyof S as undefined extends GuardOf<S[K]> ? never : K]: GuardOf<S[K]>;
-} & {
   [K in keyof S as undefined extends GuardOf<S[K]> ? K : never]?: GuardOf<S[K]>;
+} & {
+  [K in keyof S as undefined extends GuardOf<S[K]> ? never : K]: GuardOf<S[K]>;
 };
 type GuardOf<G> = G extends Guard<infer T> ? T : never;
 

@@ -4,7 +4,7 @@
  */
 export type TrayPick =
   | { kind: "die"; sides: number }
-  | { kind: "modifier"; value: 1 | -1 }
+  | { kind: "modifier"; value: -1 | 1 }
   | { kind: "stat"; stat: string; value: number };
 
 /** A number written with its sign, as a chip shows it: "+1", "−2". */

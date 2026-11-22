@@ -14,7 +14,7 @@ export type RichText = JSONContent;
 export const TRACKER_NODE = "trackerButton";
 
 /** [[±N name]] or [[±N name|label]]: how a tracker button is typed. */
-export const TRACKER_TOKEN = /\[\[\s*([+-]\d+)\s+([^\]|]+?)\s*(?:\|\s*([^\]]+?)\s*)?\]\]/g;
+export const TRACKER_TOKEN = /\[\[\s*([+-]\d+)\s+([^\]|]+?)\s*(?:\|\s*([^\]]+?)\s*)?]]/g;
 
 export interface TrackerButton {
   by: number;

@@ -1,10 +1,11 @@
 import { memo, useEffect, useMemo } from "react";
-import { useConstant } from "../ui/useConstant";
 import { renderToReactElement } from "@tiptap/static-renderer/pm/react";
+import { useConstant } from "../ui/useConstant";
 import type { ChatContent } from "../features/chat/content";
 import type { ChatMessage, TextMessage } from "../features/chat/types";
 import { canEdit, getCharacter, actingCharacterId } from "../features/characters/api";
-import { TRACKER_NODE, type TrackerButton } from "../data/richText";
+import { TRACKER_NODE  } from "../data/richText";
+import type {TrackerButton} from "../data/richText";
 import { TrackerButtonView } from "../workspace/RichTextView";
 import { stampTime } from "../lib/hlc";
 import type { Campaign } from "../campaign/campaign";
@@ -13,16 +14,16 @@ import { useQuery } from "../ui/useQuery";
 import { Avatar } from "../ui/Avatar";
 import { Button } from "../ui/Button";
 import { menuTrigger } from "../ui/menuTrigger";
-import { chatContentExtensions } from "./chatContentExtensions";
 import { LINK_NODE } from "../features/notes/links";
 import type { LinkKind } from "../features/notes/links";
 import { LinkChip } from "../workspace/LinkChip";
 import { editedText, useTextState } from "../features/chat/messageState";
-import { CounterCard, EditBox, TimerCard } from "./ChatExtras";
 import { isPinned } from "../features/chat/messages";
 import { playUiSound } from "../ui/sounds";
-import { MoveCard, RollCard } from "./RollCards";
 import { useCampaign } from "../workspace/campaignContext";
+import { MoveCard, RollCard } from "./RollCards";
+import { CounterCard, EditBox, TimerCard } from "./ChatExtras";
+import { chatContentExtensions } from "./chatContentExtensions";
 
 /* One message in the chat, as the log and the pinned strip show it. */
 
@@ -51,7 +52,7 @@ export function LoneMessage({ campaign, m }: { campaign: Campaign; m: ChatMessag
   );
 }
 
-type MessageProperties = {
+interface MessageProperties {
   campaign: Campaign;
   m: ChatMessage;
   header: boolean;
@@ -67,7 +68,7 @@ type MessageProperties = {
   quickRollActive?: boolean;
   /** Opens the message's menu; present when there's something in it. */
   onMenu?: ((x: number, y: number, id: string) => void) | undefined;
-};
+}
 
 /** Messages that have played their arrival, so scrolling the log's window back over them doesn't replay it. */
 const arrived = new Set<string>();
@@ -93,7 +94,7 @@ function MessageBody({
   ...properties
 }: Pick<
   MessageProperties,
-  "campaign" | "masked" | "mine" | "canAct" | "quickRoll" | "quickRollActive"
+  "campaign" | "canAct" | "masked" | "mine" | "quickRoll" | "quickRollActive"
 > & {
   m: Exclude<ChatMessage, { kind: "system" }>;
   arriving: boolean;
@@ -157,7 +158,7 @@ function SystemNotice({
         <Button
           variant="ghost"
           className="chat-go"
-          onClick={() => campaign.setActiveScene(m.sceneId!)}
+          onClick={() => { campaign.setActiveScene(m.sceneId!); }}
         >
           Go There
         </Button>
@@ -166,7 +167,7 @@ function SystemNotice({
   );
 }
 
-/** Memoised: the log re-renders as messages arrive, but a message only when its own props change. */
+/** Memoised: the log re-renders as messages arrive, but a message only when its own properties change. */
 export const Message = memo(function Message({
   m,
   header,
@@ -177,7 +178,7 @@ export const Message = memo(function Message({
   ...properties
 }: MessageProperties) {
   const { campaign, mine } = properties;
-  const menu = useMemo(() => onMenu && menuTrigger((x, y) => onMenu(x, y, m.id)), [onMenu, m.id]);
+  const menu = useMemo(() => onMenu && menuTrigger((x, y) => { onMenu(x, y, m.id); }), [onMenu, m.id]);
   const arriving = useArrival(m.id, fresh, mine, quickRoll);
   const pinned = useQuery(campaign.messageState, () => isPinned(campaign, m.id));
   if (m.kind === "system")

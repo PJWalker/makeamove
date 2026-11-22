@@ -2,7 +2,7 @@ import type { RichText } from "../../data/richText";
 import type { CreationHints, ItemDef, ReferenceSectionDef } from "../types";
 import rulebook from "./rulebook.json";
 
-export type Band = "strong" | "weak" | "miss";
+export type Band = "miss" | "strong" | "weak";
 
 export interface Dw2PathMove {
   name: string;

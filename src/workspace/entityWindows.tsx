@@ -7,16 +7,18 @@ import { useQuery } from "../ui/useQuery";
 import { entryByKey, librariesFor, useLibrariesFor } from "../features/library";
 import { IconOpenWindow , IconPost, IconRoll, IconTarget } from "../ui/icons";
 import { Button } from "../ui/Button";
-import { usePopupDialog } from "./usePopupDialog";
-import { Dialog } from "./Dialog";
-import { entryKeyOf, type EntityWindowRecord } from "./entityWindowState";
-import { parseEntryKey, type EntryRef as EntryReference } from "./entryKeys";
-import { EntryActionButtons } from "./EntryActionButtons";
-import { useLibraryActions } from "./libraryActions";
 import type { MenuItem } from "../ui/ContextMenu";
 import { menuTrigger } from "../ui/menuTrigger";
 import { ContextMenu } from "../ui/ContextMenu";
 import { withTransition } from "../ui/transition";
+import { usePopupDialog } from "./usePopupDialog";
+import { Dialog } from "./Dialog";
+import { entryKeyOf  } from "./entityWindowState";
+import type {EntityWindowRecord} from "./entityWindowState";
+import { parseEntryKey  } from "./entryKeys";
+import type {EntryRef as EntryReference} from "./entryKeys";
+import { EntryActionButtons } from "./EntryActionButtons";
+import { useLibraryActions } from "./libraryActions";
 import { useCampaign } from "./campaignContext";
 import { setLearned, startMove, updateItem } from "./commands/characters";
 
@@ -50,7 +52,7 @@ function EntityPopup({ campaign, record }: { campaign: Campaign; record: EntityW
   const context = useCampaign();
   const reference = usePopupDialog();
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
-  const trigger = menuTrigger((x, y) => setMenu({ x, y }));
+  const trigger = menuTrigger((x, y) => { setMenu({ x, y }); });
   const close = () => {
     record.close?.();
     context.windows.close(record.id);
@@ -58,11 +60,11 @@ function EntityPopup({ campaign, record }: { campaign: Campaign; record: EntityW
   const items: MenuItem[] = [
     {
       label: "Dock to Left Sidebar",
-      onSelect: () => void withTransition(() => context.panels.dockPanel(record.id, "left")),
+      onSelect: () => void withTransition(() => { context.panels.dockPanel(record.id, "left"); }),
     },
     {
       label: "Dock to Right Sidebar",
-      onSelect: () => void withTransition(() => context.panels.dockPanel(record.id, "right")),
+      onSelect: () => void withTransition(() => { context.panels.dockPanel(record.id, "right"); }),
     },
     "divider",
     { label: "Close", onSelect: close },
@@ -87,7 +89,7 @@ function EntityPopup({ campaign, record }: { campaign: Campaign; record: EntityW
           <p className="muted item-tags">{record.tags.join(", ")}</p>
         )}
       </Dialog>
-      {menu && <ContextMenu {...menu} items={items} onClose={() => setMenu(null)} />}
+      {menu && <ContextMenu {...menu} items={items} onClose={() => { setMenu(null); }} />}
     </>
   );
 }

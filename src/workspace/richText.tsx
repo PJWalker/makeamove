@@ -1,4 +1,4 @@
-/* eslint-disable jsx-a11y/prefer-tag-over-role -- Completion options belong to a custom keyboard listbox. */
+
 import { Editor, mergeAttributes } from "@tiptap/core";
 import Collaboration from "@tiptap/extension-collaboration";
 import Mention from "@tiptap/extension-mention";
@@ -6,10 +6,21 @@ import Placeholder from "@tiptap/extension-placeholder";
 import StarterKit from "@tiptap/starter-kit";
 import type { SuggestionKeyDownProps, SuggestionProps } from "@tiptap/suggestion";
 import { ySyncPluginKey } from "@tiptap/y-tiptap";
-import { createRoot, type Root } from "react-dom/client";
+import { createRoot  } from "react-dom/client";
+import type {Root} from "react-dom/client";
 import type * as Y from "yjs";
 import type { Awareness } from "y-protocols/awareness";
 import { IconDelete, IconImage, IconReveal, IconSecret , IconRename } from "../ui/icons";
+import { getNote } from "../features/notes/api";
+import type { LinkKind } from "../features/notes/links";
+import { LINK_NODE } from "../features/notes/links";
+import { linkLabel, linkTargets, linkTip  } from "../features/notes/targets";
+import type {LinkTarget} from "../features/notes/targets";
+import { menuTrigger } from "../ui/menuTrigger";
+import type { MenuItem } from "../ui/ContextMenu";
+import type { Campaign } from "../campaign/campaign";
+import { joinSections } from "./commands/views";
+import { linkMenuSections } from "./linkActions";
 import {
   carets,
   deleteSecret,
@@ -21,15 +32,6 @@ import {
   secretNode,
   SECRET_NODE,
 } from "./noteExtensions";
-import { getNote } from "../features/notes/api";
-import type { LinkKind } from "../features/notes/links";
-import { LINK_NODE } from "../features/notes/links";
-import { linkLabel, linkTargets, linkTip, type LinkTarget } from "../features/notes/targets";
-import { menuTrigger } from "../ui/menuTrigger";
-import type { MenuItem } from "../ui/ContextMenu";
-import { linkMenuSections } from "./linkActions";
-import { joinSections } from "./commands/views";
-import type { Campaign } from "../campaign/campaign";
 import type { CampaignContext } from "./campaignContext";
 import { dragEntity, registerLinkDrop } from "./entityDrag";
 import { entity } from "./dragEntities";
@@ -82,7 +84,7 @@ export function linkExtension(campaign: Campaign, o: Pick<RichTextOptions, "note
         ...this.parent?.(),
         kind: {
           default: "note",
-          parseHTML: (element: HTMLElement) => element.dataset.kind,
+          parseHTML: (element: HTMLElement) => element.getAttribute("data-kind"),
           renderHTML: (attributes: { kind: string }) => ({
             "data-kind": attributes.kind,
           }),
@@ -90,7 +92,7 @@ export function linkExtension(campaign: Campaign, o: Pick<RichTextOptions, "note
         /** Text chosen for the link, shown instead of its target's name. */
         text: {
           default: null,
-          parseHTML: (element: HTMLElement) => element.dataset.text,
+          parseHTML: (element: HTMLElement) => element.getAttribute("data-text"),
           renderHTML: (attributes: { text: string | null }) =>
             attributes.text ? { "data-text": attributes.text } : {},
         },
@@ -163,12 +165,11 @@ function suggestionList(campaign: Campaign) {
 
   const draw = () => {
     if (!properties) return;
-    const items = properties.items;
+    const {items} = properties;
     root?.render(
       items.length > 0 ? (
         <>
-          {items.map((t, index_) => {
-            return (
+          {items.map((t, index_) => (
               <button
                 key={`${t.kind}:${t.id}`}
                 type="button"
@@ -176,15 +177,14 @@ function suggestionList(campaign: Campaign) {
                 className="menu-item"
                 aria-selected={index_ === index}
                 data-active={index_ === index || undefined}
-                onPointerDown={(e) => e.preventDefault()}
+                onPointerDown={(e) => { e.preventDefault(); }}
                 onClick={() => properties?.command(t)}
               >
                 <CampaignEntityGraphic campaign={campaign} kind={t.kind} id={t.id} size={22} />
                 <span className="menu-label">{t.label}</span>
                 <span className="menu-shortcut">{t.detail}</span>
               </button>
-            );
-          })}
+            ))}
         </>
       ) : (
         <p className="empty-inline note-suggest-empty">Nothing by that name.</p>
@@ -352,7 +352,7 @@ export function mountRichText(
   const textMenu = menuTrigger((x, y) => {
     if (!editor.isEditable) return;
     const items: MenuItem[] = [
-      { label: "Insert Image…", Icon: IconImage, onSelect: () => pickImages(editor) },
+      { label: "Insert Image…", Icon: IconImage, onSelect: () => { pickImages(editor); } },
     ];
     if (vault) {
       const secret = menuSecret;
@@ -361,12 +361,12 @@ export function mountRichText(
         items.push("divider", {
           label: "Reveal to Players",
           Icon: IconReveal,
-          onSelect: () => revealSecret(editor, vault, pos),
+          onSelect: () => { revealSecret(editor, vault, pos); },
         }, {
           label: "Delete Secret",
           Icon: IconDelete,
           danger: true,
-          onSelect: () => deleteSecret(editor, vault, pos),
+          onSelect: () => { deleteSecret(editor, vault, pos); },
         });
       } else {
         items.push("divider", {
@@ -391,7 +391,7 @@ export function mountRichText(
       : linkMenuSections(ctx, link, {
           title: chip.textContent ?? undefined,
           ...(followsInPlace(link.kind)
-            ? { openInWindow: () => ctx.linkPopups.show(link, chip) }
+            ? { openInWindow: () => { ctx.linkPopups.show(link, chip); } }
             : {}),
         });
     if (found && editor.isEditable) {
@@ -400,8 +400,7 @@ export function mountRichText(
         {
           label: "Edit Link Text…",
           Icon: IconRename,
-          onSelect: () =>
-            ctx.linkPopups.rename({
+          onSelect: () => { ctx.linkPopups.rename({
               text: chip.textContent ?? "",
               custom,
               save: (text) => {
@@ -413,7 +412,7 @@ export function mountRichText(
                   }),
                 );
               },
-            }),
+            }); },
         },
       ]);
     }

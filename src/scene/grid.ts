@@ -5,13 +5,13 @@
  * tokens of the same size.
  */
 
-export type GridType = "none" | "square" | "hex";
+export type GridType = "hex" | "none" | "square";
 
 /**
  * How a square grid counts a diagonal step: always one cell (5.5e's default),
  * alternately one and two cells, or its true length.
  */
-export type DiagonalRule = "one" | "alternate" | "euclid";
+export type DiagonalRule = "alternate" | "euclid" | "one";
 
 export interface Grid {
   type: GridType;

@@ -1,7 +1,9 @@
 import { tokensCovered } from "../geometry";
-import { snapToLattice, type Point } from "../grid";
+import { snapToLattice  } from "../grid";
+import type {Point} from "../grid";
 import { formatDistance, toUnits } from "../measure";
-import { SHAPE_WIDTH, TEMPLATE_STYLE, type SceneTools } from "../tools";
+import { SHAPE_WIDTH, TEMPLATE_STYLE  } from "../tools";
+import type {SceneTools} from "../tools";
 import type {
   DraggedShapeKind,
   Layer,
@@ -12,7 +14,7 @@ import type {
 } from "../types";
 import type { Gesture, Placement, ToolContext, ToolPress } from "./types";
 
-type Keys = { shiftKey: boolean; altKey: boolean };
+interface Keys { shiftKey: boolean; altKey: boolean }
 
 /**
  * The Shapes tool: drag out the chosen shape, its size shown as it goes, or
@@ -42,7 +44,7 @@ export interface ShapePlan {
   /** Which sort of thing this is: a polygon's click for another sort starts afresh. */
   key: string;
   style: ShapeStyle;
-  place(geo: Transform & ShapeGeometry): void;
+  place(geo: ShapeGeometry & Transform): void;
 }
 
 /**
@@ -59,7 +61,7 @@ export function placeShape(
   if (kind !== "polygon")
     return dragShape(c, e, world, kind, {
       style: plan.style,
-      place: (t) => plan.place({ ...t, shape: kind }),
+      place: (t) => { plan.place({ ...t, shape: kind }); },
     });
   c.polygon.add(
     {
@@ -67,7 +69,7 @@ export function placeShape(
       paint: plan.style,
       width: plan.style.width,
       layer: plan.style.layer,
-      place: (frame) => plan.place({ shape: "polygon", ...frame }),
+      place: (frame) => { plan.place({ shape: "polygon", ...frame }); },
     },
     world,
     e,
@@ -121,7 +123,7 @@ export function dragShape(
   show(world, e);
   return {
     kind: "shape",
-    move: (e, world) => show(world, e),
+    move: (e, world) => { show(world, e); },
     end(e) {
       c.renderer.draft = null;
       c.renderer.invalidate("overlay", "presence");
@@ -135,7 +137,7 @@ export function dragShape(
 
 /** Where a shape starts: a grid corner for squares, a cell centre or corner for the rest (Alt places freely). */
 function snapShapePoint(c: ToolContext, p: Point, shape: DraggedShapeKind, e: PointerEvent): Point {
-  const grid = c.renderer.grid;
+  const {grid} = c.renderer;
   if (grid.type !== "square" || e.altKey) return p;
   return snapToLattice(grid, p, shape === "rect" ? grid.size : grid.size / 2);
 }
@@ -153,7 +155,7 @@ function shapeFrom(
   p: Point,
   e: Keys,
 ): Transform & { label: string } {
-  const grid = c.renderer.grid;
+  const {grid} = c.renderer;
   const step = grid.type === "none" || e.altKey ? 0 : grid.size;
   const round = (n: number) => (step ? Math.max(step, Math.round(n / step) * step) : n);
   const units = (n: number) => formatDistance(grid, toUnits(grid, n));

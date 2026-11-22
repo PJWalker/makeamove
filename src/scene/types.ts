@@ -1,4 +1,4 @@
-import type { BlobReference, EntityGraphic, EntityGraphicRef } from "../media/images";
+import type { BlobReference, EntityGraphic, EntityGraphicRef as EntityGraphicReference } from "../media/images";
 
 /*
  * Scene elements as plain values. Each is stored as a Y.Map of these fields
@@ -49,7 +49,7 @@ export interface TokenElement extends Base {
   type: "token";
   image?: BlobReference;
   graphic?: EntityGraphic;
-  entityRef?: EntityGraphicRef;
+  entityRef?: EntityGraphicReference;
   /** A bundled entry icon, rendered when the token has no image. */
   icon?: string;
   /** The gear definition represented by an item token. */
@@ -88,7 +88,7 @@ export interface DrawingElement extends Base {
  * from the middle of its left edge to its right edge, or a polygon through
  * its own corners.
  */
-export type ShapeKind = "rect" | "circle" | "line" | "cone" | "polygon";
+export type ShapeKind = "circle" | "cone" | "line" | "polygon" | "rect";
 
 /** The shapes dragged out corner to corner or from an origin: every kind but the polygon, placed a corner at a time. */
 export type DraggedShapeKind = Exclude<ShapeKind, "polygon">;
@@ -98,8 +98,7 @@ export type DraggedShapeKind = Exclude<ShapeKind, "polygon">;
  * [x, y, …] relative to the centre at the size bw × bh.
  */
 export type ShapeGeometry =
-  | { shape: DraggedShapeKind }
-  | { shape: "polygon"; points: number[]; bw: number; bh: number };
+  { shape: "polygon"; points: number[]; bw: number; bh: number } | { shape: DraggedShapeKind };
 
 /** How a shape is painted: its outline and its inside, each a colour with its opacity, #rrggbbaa. */
 export interface ShapePaint {
@@ -107,9 +106,7 @@ export interface ShapePaint {
   fill: string;
 }
 
-export type ShapeElement = Base &
-  ShapePaint &
-  ShapeGeometry & {
+export type ShapeElement = Base & ShapeGeometry & ShapePaint & {
     type: "shape";
     /** Outline width. */
     width: number;
@@ -183,7 +180,7 @@ export interface LightElement extends Base {
 }
 
 /** Whether an area is lit whatever the lights do, or dark whatever they do. */
-export type AreaTone = "light" | "dark";
+export type AreaTone = "dark" | "light";
 
 /** How the GM sees an area of solid light or dark. */
 export const AREA_COLOURS: Record<AreaTone, string> = {
@@ -204,7 +201,7 @@ export interface AreaElement extends Base {
 }
 
 /** What fills an effect zone. */
-export type EffectKind = "rain" | "snow" | "fog" | "embers" | "magic";
+export type EffectKind = "embers" | "fog" | "magic" | "rain" | "snow";
 
 /** Whether an effect gives off light, and whether it blocks sight. */
 export interface EffectSight {
@@ -215,7 +212,7 @@ export interface EffectSight {
 }
 
 /** The effects a zone can have, each with the colour, light and sight a new one starts with. */
-export const EFFECTS: ({ id: EffectKind; label: string; colour: string } & EffectSight)[] = [
+export const EFFECTS: (EffectSight & { id: EffectKind; label: string; colour: string })[] = [
   { id: "rain", label: "Rain", colour: "#a9c4e8" },
   { id: "snow", label: "Snow", colour: "#ffffff" },
   { id: "fog", label: "Fog", colour: "#c8ced6", obscures: true },
@@ -228,27 +225,17 @@ export const EFFECTS: ({ id: EffectKind; label: string; colour: string } & Effec
  * shape the Shapes tool draws. Everyone sees the effect; only the GM sees
  * its outline. It may glow, and it may block sight, as fog does.
  */
-export type EffectElement = Base &
-  ShapeGeometry &
-  EffectSight & {
+export type EffectElement = Base & EffectSight & ShapeGeometry & {
     type: "effect";
     effect: EffectKind;
     colour: string;
   };
 
 export type SceneElement =
-  | MapElement
-  | TokenElement
-  | DrawingElement
-  | ShapeElement
-  | TextElement
-  | WallElement
-  | LightElement
-  | AreaElement
-  | EffectElement;
+  AreaElement | DrawingElement | EffectElement | LightElement | MapElement | ShapeElement | TextElement | TokenElement | WallElement;
 
 /** What callers supply when adding an element; the store fills in the rest. */
-export type NewElement = DistributiveOmit<SceneElement, "id" | "z" | "createdBy" | "locked"> & {
+export type NewElement = DistributiveOmit<SceneElement, "createdBy" | "id" | "locked" | "z"> & {
   locked?: boolean;
 };
 

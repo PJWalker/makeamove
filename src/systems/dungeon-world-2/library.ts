@@ -20,7 +20,7 @@ interface ClassInfo {
 const slug = (text: string) =>
   text
     .toLowerCase()
-    .replaceAll(/[^a-z0-9]+/g, "-")
+    .replaceAll(/[^\da-z]+/g, "-")
     .replaceAll(/^-|-$/g, "");
 
 /** The advancements, one entry for each kind of choice; level-up offers the specific ones. */

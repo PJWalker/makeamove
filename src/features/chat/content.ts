@@ -5,10 +5,11 @@ import {
   plainParagraph,
   plainText,
   TRACKER_NODE,
-  trackerToken,
-  type RichText,
-  type TrackerButton,
+  trackerToken
+  
+  
 } from "../../data/richText";
+import type {RichText, TrackerButton} from "../../data/richText";
 import { isString } from "../../lib/guards";
 
 /** A chat message's text: rich text, as everywhere else. */
@@ -17,7 +18,7 @@ export type ChatContent = RichText;
 type NameOf = (kind: LinkKind, id: string) => string | null;
 
 const entityToken = (kind: LinkKind, id: string, text = "") =>
-  `@[${text.replaceAll(/[\]\n]/g, "")}](${kind}:${id})`;
+  `@[${text.replaceAll(/[\n\]]/g, "")}](${kind}:${id})`;
 
 export function emptyChatContent(): ChatContent {
   return { type: "doc", content: [{ type: "paragraph" }] };

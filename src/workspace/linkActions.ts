@@ -59,7 +59,7 @@ export function linkMenuSections(
           {
             label: "Change Graphic…",
             Icon: IconImage,
-            onSelect: () => context.table.editGraphic(kind, id, title ?? "Entity"),
+            onSelect: () => { context.table.editGraphic(kind, id, title ?? "Entity"); },
           },
         ]
       : [],
@@ -67,7 +67,7 @@ export function linkMenuSections(
       {
         label: "Open in Sidebar",
         Icon: IconSidebar,
-        onSelect: () => context.links.openInSidebar(kind, id),
+        onSelect: () => { context.links.openInSidebar(kind, id); },
       },
       ...(openInWindow
         ? [{ label: "Open in a Window", Icon: IconOpenWindow, onSelect: openInWindow }]

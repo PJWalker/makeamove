@@ -2,23 +2,26 @@ import type * as React from "react";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { useConstant } from "../ui/useConstant";
 import { withField, useMessageState } from "../features/chat/messageState";
-import { commandText, contentForCommand, type ChatContent } from "../features/chat/content";
+import { commandText, contentForCommand  } from "../features/chat/content";
+import type {ChatContent} from "../features/chat/content";
 import { sameRichText } from "../data/richText";
 import {
-  visibilityOf,
-  type ChatMessage,
-  type CounterMessage,
-  type TimerMessage,
+  visibilityOf
+  
+  
+  
 } from "../features/chat/types";
+import type {ChatMessage, CounterMessage, TimerMessage} from "../features/chat/types";
 import type { Campaign } from "../campaign/campaign";
 import { device } from "../platform/device";
 import { useQuery } from "../ui/useQuery";
 import { Button } from "../ui/Button";
 import { menuTrigger } from "../ui/menuTrigger";
 import { IconRemove, IconAdd } from "../ui/icons";
-import { ChatInput, type ChatInputHandle } from "./ChatInput";
 import { useCampaign } from "../workspace/campaignContext";
 import { saveMessageEdit, setCounterValue, timerControl } from "../workspace/commands/chat";
+import { ChatInput  } from "./ChatInput";
+import type {ChatInputHandle} from "./ChatInput";
 
 /*
  * What chat messages gained in M10, all kept in the campaign's message state
@@ -65,9 +68,9 @@ export function EditBox({
         onChange={(content) => {
           value.current = content;
         }}
-        onEnter={() => done(true)}
+        onEnter={() => { done(true); }}
         onUp={() => {}}
-        onEscape={() => done(false)}
+        onEscape={() => { done(false); }}
       />
     </div>
   );
@@ -76,11 +79,11 @@ export function EditBox({
 /** The clock now, ticking every half second while something needs it. */
 function useNow(running: boolean): number {
   const [now, setNow] = useState(() => Date.now());
-  const updateNow = useEffectEvent(() => setNow(Date.now()));
+  const updateNow = useEffectEvent(() => { setNow(Date.now()); });
   useEffect(() => {
     if (!running) return;
     const t = globalThis.setInterval(updateNow, 500);
-    return () => clearInterval(t);
+    return () => { clearInterval(t); };
   }, [running]);
   return now;
 }
@@ -117,11 +120,11 @@ function useRinging(done: boolean): boolean {
   }
   useEffect(() => {
     if (!ringing) return;
-    let timer = 0;
+    let timer: ReturnType<typeof globalThis.setTimeout> | undefined;
     const arm = () => {
-      clearTimeout(timer);
+      if (timer !== undefined) clearTimeout(timer);
       if (document.visibilityState === "visible")
-        timer = globalThis.setTimeout(() => setRinging(false), RING_MS);
+        timer = globalThis.setTimeout(() => { setRinging(false); }, RING_MS);
     };
     arm();
     document.addEventListener("visibilitychange", arm);
@@ -292,7 +295,7 @@ export function PinnedStrip({
               // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable so the GM can open its menu by keyboard
               tabIndex={unpinnable ? 0 : undefined}
               aria-label={unpinnable ? `Pinned message from ${message.name}` : undefined}
-              {...(unpinnable ? menuTrigger((x, y) => onMenu(x, y, message.id)) : {})}
+              {...(unpinnable ? menuTrigger((x, y) => { onMenu(x, y, message.id); }) : {})}
             >
               <div className="chat-pin-body">{render(message)}</div>
             </div>
@@ -326,10 +329,10 @@ function usePinnedMessages(campaign: Campaign) {
     if (gone.length === 0) return;
     setLeaving((current) => new Set([...current, ...gone]));
     const timeout = globalThis.setTimeout(
-      () => setLeaving((current) => new Set([...current].filter((id) => !goneIds.has(id)))),
+      () => { setLeaving((current) => new Set([...current].filter((id) => !goneIds.has(id)))); },
       PIN_LEAVE_MS,
     );
-    return () => globalThis.clearTimeout(timeout);
+    return () => { globalThis.clearTimeout(timeout); };
   }, [shownIds]);
   // Those here when the strip first drew came with it.
   const initial = useConstant(() => shown);

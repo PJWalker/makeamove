@@ -1,4 +1,4 @@
-import * as Y from "yjs";
+import type * as Y from "yjs";
 import { assign, createActor, setup } from "xstate";
 import { canWrite, pickFolder } from "../platform/files";
 import { deleteValue, readValue, writeValue } from "../platform/keyval";
@@ -69,7 +69,7 @@ class FolderSync {
         if (document.visibilityState === "hidden") this.flush();
       };
       document.addEventListener("visibilitychange", onHide);
-      this.stops.push(() => document.removeEventListener("visibilitychange", onHide));
+      this.stops.push(() => { document.removeEventListener("visibilitychange", onHide); });
     }
     void this.save();
   }
@@ -77,9 +77,9 @@ class FolderSync {
   /** Mark a document dirty on each change, and its subdocuments as they load. */
   private watchDoc(document: Y.Doc) {
     const watchOne = (d: Y.Doc) => {
-      const onUpdate = () => this.changed(d.guid);
+      const onUpdate = () => { this.changed(d.guid); };
       d.on("update", onUpdate);
-      this.stops.push(() => d.off("update", onUpdate));
+      this.stops.push(() => { d.off("update", onUpdate); });
     };
     watchOne(document);
     for (const sub of document.getSubdocs()) if (sub.shouldLoad) watchOne(sub);
@@ -87,7 +87,7 @@ class FolderSync {
       for (const sub of loaded) watchOne(sub);
     };
     document.on("subdocs", onSubdocs);
-    this.stops.push(() => document.off("subdocs", onSubdocs));
+    this.stops.push(() => { document.off("subdocs", onSubdocs); });
   }
 
   private changed(guid: string) {
@@ -141,8 +141,8 @@ class FolderSync {
   }
 
   private async write() {
-    const dirty = this.dirty;
-    const everything = this.everything;
+    const {dirty} = this;
+    const {everything} = this;
     this.dirty = new Set();
     this.everything = false;
     try {
@@ -187,7 +187,10 @@ async function mergeFolder(dir: FileSystemDirectoryHandle, campaignId?: string) 
  * campaign is open, once it's linked. One per open campaign; `dispose` stops it.
  */
 const folderBackupMachine = setup({
-  types: {},
+  types: {
+    context: {} as { state: FolderBackupState },
+    events: {} as { type: "SET_STATE"; state: FolderBackupState },
+  },
 }).createMachine({
   initial: "active",
   context: { state: { state: "off" } },
@@ -222,7 +225,7 @@ export class FolderBackup {
       this.campaign,
       dir,
       () => this.actor.getSnapshot().context.state,
-      (state) => this.actor.send({ type: "SET_STATE", state }),
+      (state) => { this.actor.send({ type: "SET_STATE", state }); },
     );
     this.#running.start();
   }
@@ -235,7 +238,7 @@ export class FolderBackup {
 
   /** Choose a folder and start backing the campaign up to it. False if the user cancels. */
   async link(): Promise<boolean> {
-    const id = this.campaign.id;
+    const {id} = this.campaign;
     const dir = await pickFolder(`backup-${id}`);
     if (!dir) return false;
     await mergeFolder(dir, id);

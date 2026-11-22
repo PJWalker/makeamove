@@ -1,7 +1,7 @@
-import { Dialog } from "./Dialog";
 import type { Campaign } from "../campaign/campaign";
 import { useQuery } from "../ui/useQuery";
 import { GraphicPicker } from "../ui/GraphicPicker";
+import { Dialog } from "./Dialog";
 import { getEntityGraphic } from "./entityGraphics";
 import { usePopupDialog } from "./usePopupDialog";
 import { useCampaign } from "./campaignContext";

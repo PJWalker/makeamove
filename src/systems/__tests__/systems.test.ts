@@ -225,7 +225,7 @@ describe("Dungeon World 2", () => {
       const step = action.steps[0];
       if (step?.kind !== "check") continue;
       expect(Boolean(step.followUps?.["miss"])).toBe(
-        /\bmark(?:s)?\s+(?:1\s+)?XP\b/i.test(plainText(step.outcomes["miss"])),
+        /\bmarks?\s+(?:1\s+)?xp\b/i.test(plainText(step.outcomes["miss"])),
       );
     }
   });
@@ -538,7 +538,7 @@ describe("Dungeon World 2", () => {
     const pickedOptions = Object.fromEntries(
       Object.entries(picks).map(([id, pick]) => [id, pick.option]),
     );
-    const pickedData: Record<string, string | number | boolean> = {};
+    const pickedData: Record<string, boolean | number | string> = {};
     for (const choice of creation.choices) {
       const option = choice.options.find((item) => item.id === pickedOptions[choice.id]);
       if (!option) continue;

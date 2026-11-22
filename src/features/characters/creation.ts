@@ -1,13 +1,14 @@
 import type { DataValue } from "../../data/types";
 import {
-  atLevel,
-  type ChoiceDef,
-  type CreationDef,
-  type OptionDef,
-  type ScoreMethods,
-  type ScoreRule,
-  type StatDef,
+  atLevel
+  
+  
+  
+  
+  
+  
 } from "../../systems/types";
+import type {ChoiceDef, CreationDef, OptionDef, ScoreMethods, ScoreRule, StatDef} from "../../systems/types";
 import { commaListOf } from "../../lib/list";
 
 /*
@@ -23,7 +24,7 @@ export const CLASS_FIELD = "classId";
 /** Choices available at creation or a system-defined advancement point. */
 export function choicesAt(
   creation: CreationDef | undefined,
-  at: "create" | number,
+  at: number | "create",
   data: Record<string, DataValue> = {},
   scores: Record<string, number> = {},
 ): ChoiceDef[] {
@@ -70,7 +71,7 @@ export function choicesAt(
 
 export function previewChoices(
   creation: CreationDef | undefined,
-  at: "create" | number,
+  at: number | "create",
   data: Record<string, DataValue>,
   scores: Record<string, number>,
   picked: Record<string, string>,

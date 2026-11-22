@@ -3,8 +3,9 @@ import { parse } from "../../features/dice/notation";
 import { commaListOf } from "../../lib/list";
 import { resolveEffects } from "../effects";
 import type { ActionDef, CheckStep, GameSystem } from "../types";
+import { plainText, richTextFromPlain  } from "../../data/richText";
+import type {RichText} from "../../data/richText";
 import { abilityRules, CREW_ABILITIES as CREW_RULES } from "./content";
-import { plainText, richTextFromPlain, type RichText } from "../../data/richText";
 
 const ACTIONS = [
   ["hunt", "Hunt", "Track a target or attack at range."],
@@ -59,7 +60,7 @@ function rollLabel(formula: string, action: ActionDef | undefined): string {
 }
 
 /** How well a roll went, by its highest die: 6, 4/5, or 1-3. */
-function bandOf(highest: number): "strong" | "weak" | "miss" {
+function bandOf(highest: number): "miss" | "strong" | "weak" {
   if (highest === 6) return "strong";
   if (highest >= 4) return "weak";
   return "miss";
@@ -505,7 +506,7 @@ const ABILITIES_BY_PLAYBOOK: Record<string, { name: string; text: string }[]> = 
 
 const PLAYBOOK_ABILITIES = PLAYBOOKS.flatMap((playbook) =>
   (ABILITIES_BY_PLAYBOOK[playbook.id] ?? []).map((ability) => ({
-    id: `ability-${playbook.id}-${ability.name.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-")}`,
+    id: `ability-${playbook.id}-${ability.name.toLowerCase().replaceAll(/[^\da-z]+/g, "-")}`,
     playbook: playbook.id,
     ...ability,
     text: abilityRules(ability.name) ?? richTextFromPlain(ability.text),

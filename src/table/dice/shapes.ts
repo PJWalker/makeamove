@@ -11,7 +11,8 @@ import {
   TetrahedronGeometry,
   Vector3,
 } from "three";
-import { discHull, type DieHull } from "./physics";
+import { discHull  } from "./physics";
+import type {DieHull} from "./physics";
 
 /*
  * The solids the dice are made of: their geometry, the hull the physics rolls,

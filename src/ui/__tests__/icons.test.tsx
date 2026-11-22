@@ -16,11 +16,11 @@ describe("an interface icon", () => {
 
   it("takes its single colour from the text around it", () => {
     expect(markup).toContain('fill="currentColor"');
-    expect(markup).not.toMatch(/#[0-9a-f]{3,6}/i);
+    expect(markup).not.toMatch(/#[\da-f]{3,6}/i);
   });
 
   it("paints that colour once through its shapes, so where they overlap a translucent colour doesn't double up", () => {
-    const id = markup.match(/<mask id="([^"]+)"/)?.[1];
+    const id = (/<mask id="([^"]+)"/.exec(markup))?.[1];
     expect(id).toBeTruthy();
     expect(markup.match(/fill="currentColor"[^>]*mask="url\(#[^"]+\)"/g)).toHaveLength(1);
     expect(markup).toContain(`mask="url(#${id})"`);

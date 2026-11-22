@@ -1,8 +1,10 @@
-import { createContext, useContext, useMemo, type ReactNode } from "react";
+import { createContext, useContext, useMemo  } from "react";
+import type {ReactNode} from "react";
 import type { Node } from "@tiptap/pm/model";
 import { renderToReactElement } from "@tiptap/static-renderer/pm/react";
 import type { Campaign } from "../campaign/campaign";
-import { TRACKER_NODE, type RichText, type TrackerButton } from "../data/richText";
+import { TRACKER_NODE   } from "../data/richText";
+import type {RichText, TrackerButton} from "../data/richText";
 import { getCharacter } from "../features/characters/api";
 import { trackerBlock } from "../features/characters/trackers";
 import { useQuery } from "../ui/useQuery";
@@ -16,6 +18,7 @@ const RichTextContext = createContext<{
   characterId: string | null;
   searchTerm: string;
 } | null>(null);
+RichTextContext.displayName = "RichTextContext";
 
 type RichTextNode = Node;
 

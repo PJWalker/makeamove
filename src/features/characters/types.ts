@@ -2,8 +2,8 @@ import type { TokenStyle } from "../../scene/types";
 import type { Effect, EffectActive } from "../../systems/effectTypes";
 import type { DataValue } from "../../data/types";
 
-export type CharacterKind = "pc" | "npc";
-export type Naming = "number" | "list" | "adjective";
+export type CharacterKind = "npc" | "pc";
+export type Naming = "adjective" | "list" | "number";
 
 export interface TemplateSettings {
   naming: Naming;
@@ -45,7 +45,7 @@ export interface CharacterView {
   durations: Record<string, Duration>;
   concentration?: string | undefined;
   modifiers: Record<string, number>;
-  fields: Record<string, string | number>;
+  fields: Record<string, number | string>;
   inventory: ItemInstance[];
   tokenStyle?: TokenStyle | undefined;
   tokenColour?: string | undefined;
@@ -56,6 +56,6 @@ export interface CharacterView {
 
 export interface Duration {
   rounds: number;
-  tick: "start" | "end";
+  tick: "end" | "start";
   of: string;
 }

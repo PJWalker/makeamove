@@ -1,10 +1,11 @@
 import type { Die } from "../features/dice/notation";
-import type { DieLook } from "./dice/types";
 import { contrastingTextColour } from "../lib/colour";
 import { colourOf } from "../scene/presence";
 import { device } from "../platform/device";
-import { chipText, type TrayPick } from "../features/dice/pool";
+import { chipText  } from "../features/dice/pool";
+import type {TrayPick} from "../features/dice/pool";
 import { threeDimensionalDice } from "../workspace/diceRendering";
+import type { DieLook } from "./dice/types";
 
 /** The 3D dice, once they've loaded. */
 type Dice = Pick<typeof import("./dice"), "Die" | "dieOf">;

@@ -6,16 +6,22 @@ export interface MoveChoiceExtra {
   extra?: number | undefined;
 }
 
-export type AskRequest = {
+export interface AskRequest {
   moveId: string;
   characterId: string;
   targets?: MoveTarget[];
   choice?: MoveChoiceExtra;
-};
-export type TargetRequest = { moveId: string; characterId: string };
+}
+export interface TargetRequest { moveId: string; characterId: string }
 
 export const moveRequestMachine = setup({
-  types: {},
+  types: {
+    context: {} as { ask: AskRequest | null; targets: TargetRequest | null },
+    events: {} as
+      | { type: "CLEAR" }
+      | { type: "SET_ASK"; ask: AskRequest | null }
+      | { type: "SET_TARGETS"; targets: TargetRequest | null },
+  },
 }).createMachine({
   initial: "idle",
   context: { ask: null, targets: null },

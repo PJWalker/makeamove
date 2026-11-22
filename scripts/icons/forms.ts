@@ -1,4 +1,5 @@
-import { ExtrudeGeometry, type Material, type Object3D, Path, Shape, Vector2 } from "three";
+import { ExtrudeGeometry,   Path, Shape, Vector2 } from "three";
+import type {Material, Object3D} from "three";
 import { SVGLoader } from "three/addons/loaders/SVGLoader.js";
 import gameIcons from "@iconify-json/game-icons/icons.json";
 import materialSymbols from "@iconify-json/material-symbols/icons.json";
@@ -10,11 +11,11 @@ import { part } from "./kit";
  * object (adding, removing, sending one way or the other).
  */
 
-type IconSet = {
+interface IconSet {
   width?: number;
   icons: Record<string, { body: string }>;
   aliases?: Record<string, { parent: string }>;
-};
+}
 const SETS = { gi: gameIcons, ms: materialSymbols } as unknown as Record<"gi" | "ms", IconSet>;
 
 /**

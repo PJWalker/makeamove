@@ -2,6 +2,7 @@ import type { Campaign } from "../../campaign/campaign";
 import type { SlotLook } from "../../campaign/schema";
 import { device } from "../../platform/device";
 import { IS_MAC } from "../../platform/os";
+
 export type { SlotLook } from "../../campaign/schema";
 
 /*
@@ -75,7 +76,7 @@ const MODIFIERS = new Set(["Control", "Alt", "Shift", "Meta", "CapsLock", "Fn", 
  * types ®) is still Alt+R.
  */
 export function comboOf(
-  e: Pick<KeyboardEvent, "key" | "code" | "ctrlKey" | "altKey" | "shiftKey" | "metaKey">,
+  e: Pick<KeyboardEvent, "altKey" | "code" | "ctrlKey" | "key" | "metaKey" | "shiftKey">,
 ): string | null {
   if (MODIFIERS.has(e.key)) return null;
   let key = keyName(e);
@@ -90,7 +91,7 @@ export function comboOf(
 }
 
 /** The key of a press, without modifiers: letters and digits by physical key. */
-function keyName(e: Pick<KeyboardEvent, "key" | "code">): string {
+function keyName(e: Pick<KeyboardEvent, "code" | "key">): string {
   const physical = /^Key([A-Z])$/.exec(e.code)?.[1] ?? /^(?:Digit|Numpad)(\d)$/.exec(e.code)?.[1];
   if (physical) return physical;
   if (e.key === " ") return "Space";

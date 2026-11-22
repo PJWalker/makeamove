@@ -1,5 +1,6 @@
 import { defineRule } from "vite-plus/lint/plugins";
-import { childrenText, propertiesOf, writtenIn, type Written } from "../strings.ts";
+import { childrenText, propertiesOf, writtenIn  } from "../strings.ts";
+import type {Written} from "../strings.ts";
 import { HOLE, titleCase } from "../titleCase.ts";
 
 interface Options {
@@ -69,7 +70,7 @@ export const titleCaseRule = defineRule({
 
     return {
       JSXElement(node) {
-        const name = node.openingElement.name;
+        const {name} = node.openingElement;
         if (name.type !== "JSXIdentifier") return;
         const properties = jsx.get(name.name);
         if (!properties) return;

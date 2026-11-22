@@ -1,12 +1,12 @@
 import { useState } from "react";
+import { useSelector } from "@xstate/react";
 import { exportBackupFile } from "../campaign/backup";
 import type { Campaign } from "../campaign/campaign";
 import type { FolderBackupState } from "../campaign/folderBackup";
-import { useCampaign } from "./campaignContext";
 import { canUseFolders } from "../platform/files";
 import { Button } from "../ui/Button";
 import { IconBackupFolder, IconExport } from "../ui/icons";
-import { useSelector } from "@xstate/react";
+import { useCampaign } from "./campaignContext";
 
 const time = new Intl.DateTimeFormat(undefined, { timeStyle: "short" });
 

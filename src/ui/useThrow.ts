@@ -59,7 +59,7 @@ function lift(element: HTMLElement) {
     height: `${box.height}px`,
   });
   document.body.append(carrier);
-  const opacity = element.style.opacity;
+  const {opacity} = element.style;
   element.style.opacity = "0";
   return {
     carrier,
@@ -83,9 +83,7 @@ export function useThrow({
   onAway,
   onLift,
 }: ThrowOptions) {
-  const actor = useRef<ReturnType<typeof createActor<typeof throwMachine>> | null>(null);
-  if (actor.current === null) actor.current = createActor(throwMachine);
-  const actorInstance = actor.current;
+  const actorInstance = useRef<ReturnType<typeof createActor<typeof throwMachine>> | null>(null);
   const gesture = useRef<{
     pointer: number;
     originX: number;
@@ -100,7 +98,7 @@ export function useThrow({
     back?: (() => void) | undefined;
   } | null>(null);
   const release = () => {
-    const current = gesture.current;
+    const {current} = gesture;
     if (!current) return;
     gesture.current = null;
     current.element.style.cursor = current.cursor;
@@ -111,19 +109,22 @@ export function useThrow({
     return current;
   };
   useEffect(() => {
-    actorInstance.start();
+    const instance = createActor(throwMachine);
+    actorInstance.current = instance;
+    instance.start();
     const cancel = () => {
-      actorInstance.send({ type: "CANCEL" });
+      instance.send({ type: "CANCEL" });
       void release();
     };
     window.addEventListener("blur", cancel);
     return () => {
       window.removeEventListener("blur", cancel);
-      actorInstance.send({ type: "CANCEL" });
+      instance.send({ type: "CANCEL" });
       release();
-      actorInstance.stop();
+      instance.stop();
+      actorInstance.current = null;
     };
-  }, [actorInstance]);
+  }, []);
   return {
     onPointerDown(event: React.PointerEvent<HTMLElement>) {
       if (!enabled || event.button !== 0) return;
@@ -144,7 +145,7 @@ export function useThrow({
         letGo?.();
         dropCopy();
       };
-      actorInstance.send({ type: "GRAB" });
+      actorInstance.current?.send({ type: "GRAB" });
       gesture.current = {
         pointer: event.pointerId,
         originX: event.clientX,
@@ -160,7 +161,7 @@ export function useThrow({
       element.style.cursor = "grabbing";
     },
     onPointerMove(event: React.PointerEvent<HTMLElement>) {
-      const current = gesture.current;
+      const {current} = gesture;
       if (!current || current.pointer !== event.pointerId) return;
       const offsetX = event.clientX - current.originX;
       const offsetY = event.clientY - current.originY;
@@ -168,7 +169,7 @@ export function useThrow({
       const distance = Math.hypot(offsetX, offsetY);
       current.moved ||= distance >= TAP_SLOP;
       const away = distance >= THROW_DISTANCE;
-      actorInstance.send({ type: "MOVE", moved: current.moved, away });
+      actorInstance.current?.send({ type: "MOVE", moved: current.moved, away });
       if (away && !current.back)
         current.back = onAway?.(current.element, current.carrier) ?? (() => {});
       else if (!away && current.back) {
@@ -177,21 +178,21 @@ export function useThrow({
       }
     },
     onPointerUp(event: React.PointerEvent<HTMLElement>) {
-      const current = gesture.current;
+      const {current} = gesture;
       if (!current || current.pointer !== event.pointerId) return;
       const distance = Math.hypot(event.clientX - current.originX, event.clientY - current.originY);
-      actorInstance.send({ type: "UP", moved: current.moved, away: distance >= THROW_DISTANCE });
+      actorInstance.current?.send({ type: "UP" });
       release();
       event.stopPropagation();
       if (enabled && distance >= THROW_DISTANCE) onThrow();
       else if (enabled && !current.moved && distance < TAP_SLOP) onTap?.();
     },
     onPointerCancel() {
-      actorInstance.send({ type: "CANCEL" });
+      actorInstance.current?.send({ type: "CANCEL" });
       release();
     },
     onLostPointerCapture() {
-      actorInstance.send({ type: "CANCEL" });
+      actorInstance.current?.send({ type: "CANCEL" });
       release();
     },
     onKeyDown(event: React.KeyboardEvent<HTMLElement>) {

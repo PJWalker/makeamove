@@ -12,7 +12,7 @@ function database() {
   opened ??= new Promise((resolve, reject) => {
     const request = indexedDB.open(dataName("keyval"), 1);
     request.onupgradeneeded = () => request.result.createObjectStore(STORE);
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => { resolve(request.result); };
     request.onerror = () => {
       opened = null;
       reject(request.error ?? new Error("Couldn't open on-device storage"));
@@ -25,8 +25,8 @@ async function run<T>(mode: IDBTransactionMode, act: (store: IDBObjectStore) => 
   const database_ = await database();
   return new Promise<T>((resolve, reject) => {
     const request = act(database_.transaction(STORE, mode).objectStore(STORE));
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error ?? new Error("On-device storage failed"));
+    request.onsuccess = () => { resolve(request.result); };
+    request.onerror = () => { reject(request.error ?? new Error("On-device storage failed")); };
   });
 }
 

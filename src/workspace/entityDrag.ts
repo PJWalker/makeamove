@@ -276,15 +276,15 @@ export function dragEntity(
     document.documentElement.classList.remove("is-reordering");
     // The click that ends a drag is not a press on the row.
     suppressNextClick();
-    if (!commit) return ghost.remove();
+    if (!commit) { ghost.remove(); return; }
     if (onBar(event)) {
       ghost.remove();
-      return entity.pin!(indexAmong(hotbarSlots(), "x", event));
+      entity.pin!(indexAmong(hotbarSlots(), "x", event)); return;
     }
     if (target?.tokenId && target.tokenCenter && target.characterId && entity.give) {
-      return sendGhostToToken(ghost, target.tokenCenter, () =>
+      sendGhostToToken(ghost, target.tokenCenter, () =>
         dropOn(canvas, target, entity, event.clientX, event.clientY),
-      );
+      ); return;
     }
     ghost.remove();
     if (target) dropOn(canvas, target, entity, event.clientX, event.clientY);

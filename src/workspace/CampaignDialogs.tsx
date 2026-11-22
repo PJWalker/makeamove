@@ -1,7 +1,8 @@
-import { ColourPicker } from "../ui/ColourPicker";
 import type { RefObject } from "react";
 import { useState } from "react";
-import { systemCampaignData, type Campaign } from "../campaign/campaign";
+import { ColourPicker } from "../ui/ColourPicker";
+import { systemCampaignData  } from "../campaign/campaign";
+import type {Campaign} from "../campaign/campaign";
 import { commaListOf, formatCommaList } from "../lib/list";
 import { parseInputNumber } from "../lib/number";
 import { device, setDeviceColour, setDeviceName } from "../platform/device";
@@ -77,7 +78,7 @@ export function SettingsDialog({
                 { id: "always", label: "Always shown" },
                 { id: "autohide", label: "Autohide" },
               ]}
-              onChange={(v) => setAutohide(v === "autohide")}
+              onChange={(v) => { setAutohide(v === "autohide"); }}
             />
             <span className="muted">
               Autohide hides them until your pointer nears a window edge.
@@ -92,7 +93,7 @@ export function SettingsDialog({
                 { id: "3d", label: "3D" },
                 { id: "flat", label: "Flat" },
               ]}
-              onChange={(v) => setThreeDimensionalDice(v === "3d")}
+              onChange={(v) => { setThreeDimensionalDice(v === "3d"); }}
             />
           </div>
         </div>
@@ -320,14 +321,14 @@ function InviteField({ campaign }: { campaign: Campaign }) {
             aria-label="Invite link"
             readOnly
             value={url}
-            onFocus={(e) => e.currentTarget.select()}
+            onFocus={(e) => { e.currentTarget.select(); }}
           />
           <Button
             variant="secondary"
             onClick={() => {
               void navigator.clipboard.writeText(url).then(() => {
                 setCopied(true);
-                setTimeout(() => setCopied(false), 1500);
+                setTimeout(() => { setCopied(false); }, 1500);
               });
             }}
           >

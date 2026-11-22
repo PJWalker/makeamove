@@ -4,7 +4,8 @@ import type { Point } from "../grid";
 import { moveSelection } from "./move";
 import { editRequest } from "./text";
 import { handleAt, handleCursor, startHandleDrag } from "./transform";
-import { dragged, type Gesture, type ToolContext, type ToolPress } from "./types";
+import { dragged    } from "./types";
+import type {Gesture, ToolContext, ToolPress} from "./types";
 
 /**
  * The Select tool (and the Lights tool's own): a press on a handle drags it,

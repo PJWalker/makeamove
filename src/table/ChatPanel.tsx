@@ -2,16 +2,17 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useConstant } from "../ui/useConstant";
 import { entityContent } from "../features/chat/content";
 import type { Campaign } from "../campaign/campaign";
-import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
+import { ContextMenu  } from "../ui/ContextMenu";
+import type {MenuItem} from "../ui/ContextMenu";
 import { registerLinkDrop } from "../workspace/entityDrag";
-import { PinnedStrip } from "./ChatExtras";
-import { ChatComposer } from "./ChatComposer";
-import { ChatLog } from "./ChatLog";
-import { PinnedMessage } from "./ChatMessage";
 import { useCampaign } from "../workspace/campaignContext";
 import { useQuery } from "../ui/useQuery";
 import { say } from "../workspace/commands/chat";
 import { menuFor } from "../workspace/commands/views";
+import { PinnedStrip } from "./ChatExtras";
+import { ChatComposer } from "./ChatComposer";
+import { ChatLog } from "./ChatLog";
+import { PinnedMessage } from "./ChatMessage";
 
 /*
  * The chat panel: who's here, the log of chat and rolls, the message box
@@ -30,7 +31,7 @@ export function ChatPanel({ campaign }: { campaign: Campaign }) {
     host.className = "chat-roll-overlay-host";
     return host;
   });
-  const closeMenu = useCallback(() => setMenu(null), []);
+  const closeMenu = useCallback(() => { setMenu(null); }, []);
   const openMenu = useCallback(
     (x: number, y: number, id: string) => {
       const items = menuFor(context, { kind: "chatMessage", id });
@@ -48,7 +49,7 @@ export function ChatPanel({ campaign }: { campaign: Campaign }) {
   }, [context]);
   useEffect(() => {
     document.body.append(rollOverlay);
-    return () => rollOverlay.remove();
+    return () => { rollOverlay.remove(); };
   }, [rollOverlay]);
 
   return (

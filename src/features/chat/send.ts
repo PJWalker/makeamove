@@ -1,21 +1,22 @@
 import { roll } from "../dice/notation";
 import { makeSessionPage } from "../notes/sessions";
-import { setPinned } from "./messages";
-import { addRollDie, addRollModifier } from "./rollState";
 import type { TrayPick } from "../dice/pool";
 import type { Campaign } from "../../campaign/campaign";
 import { device } from "../../platform/device";
-import type { ChatContent } from "./content";
-import {
-  canWork,
-  type ChatMessage,
-  type RollMessage,
-  type RollVisibility,
-  type TextMessage,
-} from "./types";
 import type { SystemCounterDef } from "../../systems/types";
 import { getSystem } from "../../systems";
 import { isString } from "../../lib/guards";
+import type {ChatMessage, RollMessage, RollVisibility, TextMessage} from "./types";
+import {
+  canWork
+  
+  
+  
+  
+} from "./types";
+import type { ChatContent } from "./content";
+import { addRollDie, addRollModifier } from "./rollState";
+import { setPinned } from "./messages";
 
 /** This device's name in the campaign, as other players see it. */
 export function myName(campaign: Campaign): string {
@@ -148,7 +149,7 @@ export function postCounter(campaign: Campaign, start: number, label: string, ma
 }
 
 /** Mark the start or end of a session. Sessions are numbered in the campaign itself, so every peer agrees. */
-export function markSession(campaign: Campaign, action: "start" | "end") {
+export function markSession(campaign: Campaign, action: "end" | "start") {
   const count = campaign.meta.get("sessions");
   const session = action === "start" ? count + 1 : count;
   if (action === "start") campaign.meta.set("sessions", session);

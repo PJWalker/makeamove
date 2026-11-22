@@ -1,13 +1,14 @@
-import { store } from "../../lib/store";
 import * as Y from "yjs";
 import { IndexeddbPersistence } from "y-indexeddb";
+import { store } from "../../lib/store";
 import { HybridClock } from "../../lib/hlc";
 import { newId } from "../../lib/ids";
 import { compareCodeUnits } from "../../lib/order";
 import { dataName, deleteData } from "../../platform/dataEpoch";
 import { device } from "../../platform/device";
 import { colourOf } from "../../scene/presence";
-import { list, rootOf, type List } from "../../data/schema";
+import { list, rootOf  } from "../../data/schema";
+import type {List} from "../../data/schema";
 import type { ChatMessage } from "./types";
 
 /*
@@ -44,7 +45,7 @@ interface LoadedChunk {
 
 export type NewMessage = ChatMessage extends infer M
   ? M extends ChatMessage
-    ? Omit<M, "id" | "hlc" | "author" | "name" | "colour">
+    ? Omit<M, "author" | "colour" | "hlc" | "id" | "name">
     : never
   : never;
 
@@ -63,7 +64,7 @@ export class ChatLog {
   /** Index in `chunks` of the oldest chunk to keep loaded. */
   private from = Infinity;
   private destroyed = false;
-  private stopRoot: () => void;
+  private readonly stopRoot: () => void;
   /** Posts not yet written, so they go in one at a time, in order. */
   private queue: Promise<unknown> = Promise.resolve();
 
@@ -107,7 +108,7 @@ export class ChatLog {
       doc: document,
       messages,
       persistence,
-      stop: messages.observe(() => this.refresh()),
+      stop: messages.observe(() => { this.refresh(); }),
     });
     await persistence.whenSynced;
     this.refresh();

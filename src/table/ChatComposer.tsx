@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { commandText, emptyChatContent, type ChatContent } from "../features/chat/content";
+import { commandText, emptyChatContent  } from "../features/chat/content";
+import type {ChatContent} from "../features/chat/content";
 import { useCampaign } from "../workspace/campaignContext";
 import { chatCall, suggestSlash } from "../workspace/commands/chat";
 import { invoke } from "../workspace/commands/views";
@@ -10,7 +11,8 @@ import { actingCharacterId, actingStatBonuses } from "../features/characters/api
 import type { Campaign } from "../campaign/campaign";
 import { useQuery } from "../ui/useQuery";
 import { Button } from "../ui/Button";
-import { ChatInput, type ChatInputHandle } from "./ChatInput";
+import { ChatInput  } from "./ChatInput";
+import type {ChatInputHandle} from "./ChatInput";
 import { PendingRollCard } from "./RollCards";
 import { QuickDice } from "./QuickDice";
 import { useDicePool } from "./useDicePool";

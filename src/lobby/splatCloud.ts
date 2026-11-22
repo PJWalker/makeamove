@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-magic-numbers */
 import {
   BufferAttribute,
   CustomBlending,
@@ -11,9 +12,10 @@ import {
   RGBAFormat,
   ShaderMaterial,
   Vector2,
-  Vector3,
-  type Matrix4,
+  Vector3
+  
 } from "three";
+import type {Matrix4} from "three";
 import { MOTION, STRIDE } from "./splat";
 
 /*
@@ -55,7 +57,7 @@ const VERTEX = /* glsl */ `
 
   void main() {
     int index = int(splat);
-    ivec2 base = ivec2((index % ${PER_ROW}) * ${TEXELS}, index / ${PER_ROW});
+    ivec2 base = ivec2((index % ${String(PER_ROW)}) * ${String(TEXELS)}, index / ${String(PER_ROW)});
     vec4 t0 = texelFetch(splats, base, 0);
     vec4 t1 = texelFetch(splats, base + ivec2(1, 0), 0);
     vec4 t2 = texelFetch(splats, base + ivec2(2, 0), 0);
@@ -80,7 +82,7 @@ const VERTEX = /* glsl */ `
       at += lightMoved[light];
       brightness = flicker[light];
     }
-    if (motion.x == ${MOTION.flame}.0) {
+    if (motion.x == ${String(MOTION.flame)}.0) {
       float life = fract(time * 1.7 + phase);
       at += vec3(
         sin(time * 3.1 + phase * TAU) * 0.035 * life,
@@ -90,14 +92,31 @@ const VERTEX = /* glsl */ `
       size = 1.0 - life * 0.65;
       opacity *= smoothstep(0.0, 0.12, life) * (1.0 - life);
       tint *= mix(vec3(1.0, 0.82, 0.45), vec3(0.95, 0.22, 0.04), smoothstep(0.05, 0.75, life));
-    } else if (motion.x == ${MOTION.orbit}.0) {
+    } else if (motion.x == ${String(MOTION.orbit)}.0) {
       vec3 middle = lightAt[light];
       vec3 from = centre - (middle - lightMoved[light]);
       float turn = time * 1.4;
       float c = cos(turn);
       float s = sin(turn);
       at = middle + vec3(c * from.x - s * from.z, from.y + sin(time * 2.0 + phase * TAU) * 0.03, s * from.x + c * from.z);
-    } else if (motion.x == ${MOTION.drift}.0) {
+    } else if (motion.x == ${String(MOTION.smoke)}.0) {
+      float rise = fract(time * 0.22 + phase);
+      at += vec3(
+        sin(time * 0.5 + phase * TAU) * 0.5 * rise + rise * 0.4,
+        rise * 1.8,
+        cos(time * 0.4 + phase * 9.0) * 0.4 * rise
+      );
+      size = 1.0 + rise * 4.0;
+      opacity *= smoothstep(0.0, 0.15, rise) * (1.0 - rise);
+    } else if (motion.x == ${String(MOTION.drip)}.0) {
+      // Hangs and swells for most of its cycle, then falls under gravity.
+      float period = 4.0 + phase * 5.0;
+      float cycle = fract(time / period + phase);
+      float fall = max(0.0, cycle - 0.8) * period;
+      size = 0.4 + 0.6 * smoothstep(0.0, 0.8, cycle);
+      at.y -= 4.9 * fall * fall;
+      if (at.y < 0.0) opacity = 0.0;
+    } else if (motion.x == ${String(MOTION.drift)}.0) {
       float cycle = fract(time * 0.045 + phase);
       at += vec3(sin(time * 0.31 + phase * 17.0) * 0.35, cycle * 1.4 - 0.5, cos(time * 0.27 + phase * 11.0) * 0.3);
       opacity *= sin(3.14159 * cycle);
@@ -121,7 +140,7 @@ const VERTEX = /* glsl */ `
 
     vec4 view = modelViewMatrix * vec4(at, 1.0);
     if (view.z > -0.15 || opacity < 0.004) { hide(); return; }
-    shade = mix(haze, shade, exp(-max(0.0, -view.z - 6.0) * 0.15));
+    shade = mix(haze, shade, exp(-max(0.0, -view.z - 8.0) * (glow > 0.5 ? 0.03 : 0.05)));
     vColour = vec4(pow(max(shade, 0.0), vec3(1.0 / 2.2)), opacity);
     vGlow = glow;
 
@@ -182,16 +201,14 @@ function sorter(source: Float32Array) {
   const buckets = new Uint16Array(count);
   const starts = new Uint32Array(65_536);
   return (view: Matrix4) => {
-    const [, , ex, , , , ey, , , , ez, , , , ew] = view.elements;
+    const { elements } = view;
+    const [ex, ey, ez, ew] = [elements[2], elements[6], elements[10], elements[14]];
     let near = -Infinity;
     let far = Infinity;
     for (let index = 0; index < count; index++) {
       const row = index * STRIDE;
       const depth =
-        (ex ?? 0) * (source[row] ?? 0) +
-        (ey ?? 0) * (source[row + 1] ?? 0) +
-        (ez ?? 0) * (source[row + 2] ?? 0) +
-        (ew ?? 0);
+        ex * (source[row] ?? 0) + ey * (source[row + 1] ?? 0) + ez * (source[row + 2] ?? 0) + ew;
       depths[index] = depth;
       if (depth > near) near = depth;
       if (depth < far) far = depth;
@@ -219,7 +236,16 @@ function sorter(source: Float32Array) {
   };
 }
 
-export function splatCloud(data: Float32Array, lightCount: number) {
+/** A light as the cloud sees it; its vectors are shared, so moving them moves the light. */
+export interface SplatLight {
+  at: Vector3;
+  /** How far it has wandered from where it started, which the splats that belong to it follow. */
+  moved: Vector3;
+  colour: Vector3;
+  reach: number;
+}
+
+export function splatCloud(data: Float32Array, lights: readonly SplatLight[]) {
   const count = data.length / STRIDE;
   const sort = sorter(data);
   const rows = Math.ceil(count / PER_ROW);
@@ -237,23 +263,22 @@ export function splatCloud(data: Float32Array, lightCount: number) {
   geometry.setAttribute("splat", order);
   geometry.instanceCount = count;
 
-  const each = <T>(make: () => T) => Array.from({ length: lightCount }, make);
   const uniforms = {
     splats: { value: texture },
     viewport: { value: new Vector2(1, 1) },
     time: { value: 0 },
-    lightAt: { value: each(() => new Vector3()) },
-    lightMoved: { value: each(() => new Vector3()) },
-    lightColour: { value: each(() => new Vector3()) },
-    lightReach: { value: each(() => 1) },
-    flicker: { value: each(() => 1) },
+    lightAt: { value: lights.map((light) => light.at) },
+    lightMoved: { value: lights.map((light) => light.moved) },
+    lightColour: { value: lights.map((light) => light.colour) },
+    lightReach: { value: lights.map((light) => light.reach) },
+    flicker: { value: lights.map(() => 1) },
     ambient: { value: new Vector3() },
     haze: { value: new Vector3() },
   };
   const material = new ShaderMaterial({
     vertexShader: VERTEX,
     fragmentShader: FRAGMENT,
-    defines: { LIGHTS: lightCount },
+    defines: { LIGHTS: lights.length },
     uniforms,
     transparent: true,
     depthTest: false,

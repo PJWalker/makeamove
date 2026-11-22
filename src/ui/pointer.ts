@@ -46,8 +46,8 @@ export function followPress(
     globalThis.removeEventListener("pointercancel", cancel);
     on.end(e, commit, lifted);
   };
-  const up = (e: PointerEvent) => end(e, true);
-  const cancel = (e: PointerEvent) => end(e, false);
+  const up = (e: PointerEvent) => { end(e, true); };
+  const cancel = (e: PointerEvent) => { end(e, false); };
   globalThis.addEventListener("pointermove", move);
   globalThis.addEventListener("pointerup", up);
   globalThis.addEventListener("pointercancel", cancel);
@@ -82,5 +82,5 @@ export function trackPointer(
   };
   globalThis.addEventListener("pointermove", onMove);
   for (const type of ends) globalThis.addEventListener(type, stop);
-  return () => stop();
+  return () => { stop(); };
 }

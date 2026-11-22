@@ -1,23 +1,28 @@
-import { ColorMatrixFilter, type Container } from "pixi.js";
-import { downFrame, type DownTurn } from "../downed";
-import { kindOf, type SelectKind } from "../tools";
-import { LAYERS, type Layer, type TokenElement } from "../types";
-import { buildView, contentKey, DESTROY_VIEW, type View } from "./elementViews";
-import type { RenderState } from "./state";
+import { ColorMatrixFilter  } from "pixi.js";
+import type {Container} from "pixi.js";
+import { downFrame  } from "../downed";
+import type {DownTurn} from "../downed";
+import { kindOf  } from "../tools";
+import type {SelectKind} from "../tools";
+import { LAYERS   } from "../types";
+import type {Layer, TokenElement} from "../types";
 import { reducedMotion } from "../../ui/transition";
+import { buildView, contentKey, DESTROY_VIEW  } from "./elementViews";
+import type {View} from "./elementViews";
+import type { RenderState } from "./state";
 
 /** The scene's elements: a view per element, kept in its layer and in order. */
 export class ElementLayer {
-  private views = new Map<string, View>();
+  private readonly views = new Map<string, View>();
   /** Elements given a preview transform at the last sync, to put back once it's gone. */
   private previewed = new Set<string>();
   private order = "";
   private dropHighlightToken: string | null = null;
-  private dropFlashFrames = new Map<string, number>();
+  private readonly dropFlashFrames = new Map<string, number>();
   private destroyed = false;
   /** Each token falling over, getting up, or lying down. */
-  private turns = new Map<string, DownTurn>();
-  private greys = new Map<string, ColorMatrixFilter>();
+  private readonly turns = new Map<string, DownTurn>();
+  private readonly greys = new Map<string, ColorMatrixFilter>();
   /** Whether a token's character is down. */
   downed: (token: TokenElement) => boolean = () => false;
 
@@ -80,7 +85,7 @@ export class ElementLayer {
         view = undefined;
       }
       if (!view) {
-        view = buildView(element, key, () => s.invalidate(), this.dropHighlightToken, s.peers);
+        view = buildView(element, key, () => { s.invalidate(); }, this.dropHighlightToken, s.peers);
         this.views.set(element.id, view);
         // A new view isn't in a layer yet, so force a restack.
         this.order = "";

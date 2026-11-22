@@ -4,7 +4,7 @@ import { actionForCombo, comboOf, firesWhileTyping, rebind, showCombo } from "..
 const key = (
   key: string,
   code: string,
-  mods: Partial<Record<"ctrlKey" | "altKey" | "shiftKey" | "metaKey", boolean>> = {},
+  mods: Partial<Record<"altKey" | "ctrlKey" | "metaKey" | "shiftKey", boolean>> = {},
 ) => ({
   key,
   code,

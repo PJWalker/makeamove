@@ -2,7 +2,8 @@ import { actingCharacterId, canEdit, getCharacter, systemOf } from "../features/
 import type { LibraryEntry } from "../features/library";
 import type { Campaign } from "../campaign/campaign";
 import type { MenuItem } from "../ui/ContextMenu";
-import { IconAdd, IconGive, type Icon } from "../ui/icons";
+import { IconAdd, IconGive  } from "../ui/icons";
+import type {Icon} from "../ui/icons";
 import { useQuery } from "../ui/useQuery";
 import { makeVerb } from "./actionPresentation";
 import { useCampaign } from "./campaignContext";
@@ -10,7 +11,7 @@ import { acquireItem, npcFromMonster, startMove } from "./commands/characters";
 import { can } from "./commands/views";
 
 /** Something the acting character can do with a library entry: get an item, make a move, create an NPC. */
-export type EntryAction = {
+export interface EntryAction {
   label: string;
   Icon: Icon;
   /** Who it is done as, shown after the label on a button. */
@@ -19,7 +20,7 @@ export type EntryAction = {
   /** Why it can't be done, when it can't. */
   reason?: string | undefined;
   onSelect: () => void;
-};
+}
 
 /** What a library entry offers the character this device is playing; one definition for its buttons and its menu. */
 export function useLibraryActions(campaign: Campaign) {

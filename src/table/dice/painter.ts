@@ -1,3 +1,5 @@
+import type {
+  Quaternion} from "three";
 import {
   CanvasTexture,
   DirectionalLight,
@@ -10,7 +12,6 @@ import {
   OrthographicCamera,
   PlaneGeometry,
   PMREMGenerator,
-  Quaternion,
   Scene,
   SRGBColorSpace,
   WebGLRenderer,
@@ -146,7 +147,7 @@ export function dieModel(sides: number, first: number, colour: string): Model {
     number.quaternion.copy(face.labelRotation);
     mesh.add(number);
   }
-  return { mesh, dispose: () => material.dispose() };
+  return { mesh, dispose: () => { material.dispose(); } };
 }
 
 /** A chip in `colour` (hex) with `text` on both faces. */
@@ -199,7 +200,7 @@ export function renderBlank(sides: number) {
   mesh.scale.setScalar(SCALE);
   mesh.add(new LineSegments(shape.edges, edgeMaterial));
   const canvas = document.createElement("canvas");
-  paint({ mesh, dispose: () => material.dispose() }, shape.rest, canvas);
+  paint({ mesh, dispose: () => { material.dispose(); } }, shape.rest, canvas);
   material.dispose();
   return canvas.toDataURL("image/webp", 0.9);
 }

@@ -1,4 +1,5 @@
-import { commandText, contentForCommand, type ChatContent } from "../../features/chat/content";
+import { commandText, contentForCommand  } from "../../features/chat/content";
+import type {ChatContent} from "../../features/chat/content";
 import {
   counterValue,
   isPinned,
@@ -6,9 +7,10 @@ import {
   saveEdit,
   setCounter,
   setPinned,
-  workTimer,
-  type TimerAction,
+  workTimer
+  
 } from "../../features/chat/messages";
+import type {TimerAction} from "../../features/chat/messages";
 import { rerollDie, rerollMessage, toggleRollDie } from "../../features/chat/rollState";
 import {
   addToRoll,
@@ -30,10 +32,11 @@ import {
 import {
   canDelete,
   canEditMessage,
-  canWork,
-  type ChatMessage,
-  type RollVisibility,
+  canWork
+  
+  
 } from "../../features/chat/types";
+import type {ChatMessage, RollVisibility} from "../../features/chat/types";
 import { seededDie } from "../../features/dice/notation";
 import type { TrayPick } from "../../features/dice/pool";
 import { systemOf } from "../../features/characters/api";
@@ -52,7 +55,8 @@ import type { Availability } from "../../kernel/commands";
 import { device } from "../../platform/device";
 import { IconDelete, IconDice, IconPin, IconRename } from "../../ui/icons";
 import type { CampaignContext } from "../campaignContext";
-import { command, type AnyTableCommand, type SlashForm } from "./types";
+import { command   } from "./types";
+import type {AnyTableCommand, SlashForm} from "./types";
 
 /*
  * The chat: what can be typed in it, and what can be done with messages once
@@ -214,7 +218,7 @@ export const startCounter = command<{ start: number; max?: number | undefined; l
       usage: "/count 0/8 The cops arrive",
       help: "A pinned counter to move by hand",
       parse: (rest) => {
-        const m = /^(-?\d+)(?:\s*\/\s*(\d+))?\s*([\s\S]*)$/.exec(rest.trim());
+        const m = /^(-?\d+)(?:\s*\/\s*(\d+))?\s*([\S\s]*)$/.exec(rest.trim());
         if (!m?.[1]) return { error: "Start where? Try /count 0/8 The cops arrive." };
         const max = m[2] === undefined ? undefined : +m[2];
         if (max !== undefined && max < 1) return { error: "Count up to 1 or more." };
@@ -226,7 +230,7 @@ export const startCounter = command<{ start: number; max?: number | undefined; l
       usage: "/clock 8 The alarm sounds",
       help: "A pinned progress clock with the given number of segments",
       parse: (rest) => {
-        const m = /^(\d+)\s+([\s\S]*)$/.exec(rest.trim());
+        const m = /^(\d+)\s+([\S\s]*)$/.exec(rest.trim());
         if (!m?.[1] || +m[1] < 1)
           return { error: "How many segments? Try /clock 8 The alarm sounds." };
         return { start: 0, max: +m[1], label: unquote(m[2] ?? "") };
@@ -236,7 +240,7 @@ export const startCounter = command<{ start: number; max?: number | undefined; l
   run: ({ campaign }, { start, max, label }) => postCounter(campaign, start, label, max),
 });
 
-export const session = command<{ action: "start" | "end" }>({
+export const session = command<{ action: "end" | "start" }>({
   id: "chat.session",
   params: objectOf({ action: oneOf("start", "end") }),
   title: (_, { action }) => (action === "start" ? "Start Session" : "End Session"),
@@ -255,7 +259,7 @@ export const session = command<{ action: "start" | "end" }>({
       },
     },
   ],
-  run: ({ campaign }, { action }) => markSession(campaign, action),
+  run: ({ campaign }, { action }) => { markSession(campaign, action); },
 });
 
 export const chatHelp = command({
@@ -266,14 +270,13 @@ export const chatHelp = command({
   slash: [
     { names: ["help", "?"], usage: "/help", help: "List these commands", parse: () => {} },
   ],
-  run: (context) =>
-    context.table.noteInChat(
+  run: (context) => { context.table.noteInChat(
       [
         "Commands:",
         ...slashForms(context).map(({ form }) => `${form.usage}  ${form.help}`),
         "Formulas: 2d6+1, 4d6kh3, 2d20kl1, d6!, 1d8+2[STR]",
       ].join("\n"),
-    ),
+    ); },
 });
 
 /** Every way to type a command that this player may run, in the order registered. */
@@ -318,7 +321,7 @@ export function chatCall(
   }
   if (text.startsWith("//"))
     return { command: say, params: { content: said(typed, text.slice(1)) } };
-  const m = /^\/(\S+)\s*([\s\S]*)$/.exec(text);
+  const m = /^\/(\S+)\s*([\S\s]*)$/.exec(text);
   if (!m?.[1]) return { error: "Enter a command name." };
   const name = m[1].toLowerCase();
   const found = slashForms(context).find(({ form }) => form.names.includes(name));
@@ -356,7 +359,7 @@ export const editMessage = command<{ id: string }>({
   transact: false,
   permission: ownMessage,
   menu: { chatMessage: (_, { id }) => [{ params: { id } }] },
-  run: (context, { id }) => context.table.editingMessage.set(id),
+  run: (context, { id }) => { context.table.editingMessage.set(id); },
 });
 
 export const saveMessageEdit = command<{ id: string; content: ChatContent }>({
@@ -364,7 +367,7 @@ export const saveMessageEdit = command<{ id: string; content: ChatContent }>({
   params: objectOf({ id: isString, content: isContent }),
   title: "Save Edit",
   permission: ownMessage,
-  run: ({ campaign }, { id, content }) => saveEdit(campaign, id, content),
+  run: ({ campaign }, { id, content }) => { saveEdit(campaign, id, content); },
 });
 
 export const pinChatMessage = command<{ id: string; pinned: boolean }>({
@@ -378,7 +381,7 @@ export const pinChatMessage = command<{ id: string; pinned: boolean }>({
   menu: {
     chatMessage: (context, { id }) => [{ params: { id, pinned: !isPinned(context.campaign, id) } }],
   },
-  run: ({ campaign }, { id, pinned }) => setPinned(campaign, id, pinned),
+  run: ({ campaign }, { id, pinned }) => { setPinned(campaign, id, pinned); },
 });
 
 export const deleteMessage = command<{ id: string }>({
@@ -394,7 +397,7 @@ export const deleteMessage = command<{ id: string }>({
   },
   undoGroup: false,
   menu: { chatMessage: (_, { id }) => [{ params: { id } }] },
-  run: ({ campaign }, { id }) => removeMessage(campaign, id),
+  run: ({ campaign }, { id }) => { removeMessage(campaign, id); },
 });
 
 export const timerControl = command<{ id: string; action: TimerAction }>({
@@ -494,7 +497,7 @@ export const addToChatRoll = command<{ id: string; pick: TrayPick }>({
   title: "Add to Roll",
   permission: works,
   undoGroup: false,
-  run: ({ campaign }, { id, pick }) => addToRoll(campaign, id, pick),
+  run: ({ campaign }, { id, pick }) => { addToRoll(campaign, id, pick); },
 });
 
 export const chatCommands = [

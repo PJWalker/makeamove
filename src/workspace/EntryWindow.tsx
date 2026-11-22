@@ -2,9 +2,10 @@ import type { PointerEvent as ReactPointerEvent , ReactNode } from "react";
 import { useLayoutEffect, useRef, useState } from "react";
 import type { Icon } from "../ui/icons";
 import { ListRow } from "../ui/List";
-import type { WindowProxy } from "./entityWindowState";
 import { menuTrigger } from "../ui/menuTrigger";
-import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
+import { ContextMenu  } from "../ui/ContextMenu";
+import type {MenuItem} from "../ui/ContextMenu";
+import type { WindowProxy } from "./entityWindowState";
 import type { DockItemId } from "./panelLayout";
 import { entityTabId } from "./entityWindowState";
 import { useCampaign } from "./campaignContext";
@@ -126,7 +127,7 @@ export function EntryRow({
 }) {
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const rowElement = useRef<Element | null>(null);
-  const trigger = menuTrigger((x, y) => setMenu({ x, y }));
+  const trigger = menuTrigger((x, y) => { setMenu({ x, y }); });
   const items: MenuItem[] = [
     {
       label: openLabel,
@@ -145,7 +146,7 @@ export function EntryRow({
         meta={meta}
         dim={dim}
         before={before}
-        onPick={(e) => onOpen(e.currentTarget.closest("li")!)}
+        onPick={(e) => { onOpen(e.currentTarget.closest("li")!); }}
         row={{
           "data-draggable": onPointerDown ? true : undefined,
           "data-tip": tip,
@@ -165,7 +166,7 @@ export function EntryRow({
       >
         {children}
       </ListRow>
-      {menu && <ContextMenu {...menu} items={items} onClose={() => setMenu(null)} />}
+      {menu && <ContextMenu {...menu} items={items} onClose={() => { setMenu(null); }} />}
     </>
   );
 }

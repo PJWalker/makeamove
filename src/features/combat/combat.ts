@@ -1,7 +1,8 @@
-import type { Combatant, CombatMaps } from "./schema";
-export type { Combatant, CombatMaps } from "./schema";
 import { newId } from "../../lib/ids";
 import type { Duration } from "../characters/types";
+import type { Combatant, CombatMaps } from "./schema";
+
+export type { Combatant, CombatMaps } from "./schema";
 
 /*
  * The turn tracker (design: core change 11). One fight at a time per
@@ -117,7 +118,7 @@ export function endCombat(m: CombatMaps) {
 export function tickDurations(
   durations: Record<string, Duration>,
   combatant: string,
-  tick: "start" | "end",
+  tick: "end" | "start",
 ): { left: Record<string, Duration>; expired: string[] } {
   const left: Record<string, Duration> = {};
   const expired: string[] = [];

@@ -1,6 +1,7 @@
-import { useId, type ReactNode } from "react";
+import { useId  } from "react";
+import type {ReactNode} from "react";
 
-/** The props that tie an input to its label and hint. */
+/** The properties that tie an input to its label and hint. */
 export interface HintedInputProperties {
   id: string;
   "aria-describedby"?: string;

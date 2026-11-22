@@ -16,7 +16,8 @@ import { PANEL_ORDER, PANELS } from "../panelLayout";
 import type { PanelId } from "../layoutModel";
 import type { CampaignContext } from "../campaignContext";
 import { TOOLS } from "../tools";
-import { command, type TableCommand } from "./types";
+import { command  } from "./types";
+import type {TableCommand} from "./types";
 
 /* What every campaign has: tools, undo, the view, dialogs and panels. */
 
@@ -31,13 +32,13 @@ export const selectTool = command<{ tool: ToolId }>({
     !TOOLS.find((t) => t.id === tool)?.gmOnly || context.isGm() || "GM only",
   transact: false,
   offers: () => TOOLS.map((t) => ({ params: { tool: t.id }, icon: t.Icon, keys: [t.key] })),
-  run: (context, { tool }) => context.tools.activeTool.set(tool),
+  run: (context, { tool }) => { context.tools.activeTool.set(tool); },
 });
 
 /** Undo or Redo: a gesture under way is dropped first, so it doesn't land on the restored state. */
 const historyCommand = (
-  step: "undo" | "redo",
-  look: Pick<TableCommand, "title" | "icon" | "keys">,
+  step: "redo" | "undo",
+  look: Pick<TableCommand, "icon" | "keys" | "title">,
 ) =>
   command({
     id: `history.${step}`,
@@ -88,12 +89,12 @@ export const toggleAutohide = command({
   transact: false,
   checked: () => autohide.value,
   offers: () => [{ params: undefined }],
-  run: () => setAutohide(!autohide.value),
+  run: () => { setAutohide(!autohide.value); },
 });
 
 const dialog = (
-  which: "settings" | "help" | "relationships",
-  look: Pick<TableCommand, "title" | "icon" | "aliases" | "kind">,
+  which: "help" | "relationships" | "settings",
+  look: Pick<TableCommand, "aliases" | "icon" | "kind" | "title">,
 ) =>
   command({
     id: `dialog.${which}`,
@@ -103,7 +104,7 @@ const dialog = (
     ...look,
     offers: () => [{ params: undefined }],
     menu: { campaign: () => [{ params: undefined }] },
-    run: (context) => context.canvas.dialogRequest.set(which),
+    run: (context) => { context.canvas.dialogRequest.set(which); },
   });
 
 export const openSettings = dialog("settings", {
@@ -141,7 +142,7 @@ export const showPanel = command<{ panel: PanelId }>({
       aliases: [PANELS[id].label],
       icon: PANELS[id].Icon,
     })),
-  run: (context, { panel }) => context.panels.showPanel(panel),
+  run: (context, { panel }) => { context.panels.showPanel(panel); },
 });
 
 /** Whether the table has a panel at all: ticked ones are in a sidebar or a window. */
@@ -156,8 +157,7 @@ export const togglePanel = command<{ panel: PanelId }>({
     campaign: (context) =>
       campaignPanels(context).map((id) => ({ params: { panel: id }, icon: PANELS[id].Icon })),
   },
-  run: (context, { panel }) =>
-    context.panels.setPanelClosed(panel, !context.panels.layout.value.closed.includes(panel)),
+  run: (context, { panel }) => { context.panels.setPanelClosed(panel, !context.panels.layout.value.closed.includes(panel)); },
 });
 
 export const leaveCampaign = command({
@@ -168,7 +168,7 @@ export const leaveCampaign = command({
   transact: false,
   section: "delete",
   menu: { campaign: () => [{ params: undefined }] },
-  run: () => goToCampaign(null),
+  run: () => { goToCampaign(null); },
 });
 
 export const togglePalette = command({
@@ -177,7 +177,7 @@ export const togglePalette = command({
   title: "Command Palette",
   keys: ["Mod+K"],
   transact: false,
-  run: (context) => context.table.togglePalette(),
+  run: (context) => { context.table.togglePalette(); },
 });
 
 export const coreCommands = [

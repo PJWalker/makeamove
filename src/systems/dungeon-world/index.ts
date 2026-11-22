@@ -3,8 +3,8 @@ import type { RichText } from "../../data/richText";
 import { resolveEffects } from "../effects";
 
 import type { ActionDef, GameSystem, TargetSpec } from "../types";
-import { CLASSES, ITEMS, TAGS } from "./data";
 import { hpTokenStat } from "../tokenStats";
+import { CLASSES, ITEMS, TAGS } from "./data";
 
 /*
  * Dungeon World, core rules. Move and class text is a condensed paraphrase of
@@ -16,19 +16,19 @@ import { hpTokenStat } from "../tokenStats";
  * is one check step.
  */
 
-type Band = "strong" | "weak" | "miss";
+type Band = "miss" | "strong" | "weak";
 
 interface DwMove {
   id: string;
   name: string;
-  category: "basic" | "special" | "class";
+  category: "basic" | "class" | "special";
   classId?: string;
   trigger: string;
   text: RichText;
   /** A stat id, 'choose' to ask which, 'bond' to ask for the bond's bonus, or 'none' for a plain roll. */
   roll?: { stat: string };
   outcomes?: Record<Band, RichText>;
-  suggest?: Partial<Record<Band, ("xp" | "damage")[]>>;
+  suggest?: Partial<Record<Band, ("damage" | "xp")[]>>;
   /** Who it's aimed at, when that's someone on the map. */
   target?: TargetSpec;
   tags?: string[];
@@ -743,7 +743,7 @@ export const dungeonWorld: GameSystem = {
   tags: TAGS,
   // Debilities: each takes 1 from rolls with its stat.
   conditions: STATS.flatMap((s) => {
-    const debility = s.debility;
+    const {debility} = s;
     return debility
       ? [
           {

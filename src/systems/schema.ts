@@ -1,5 +1,6 @@
 import { isNumber, isString, isBoolean } from "../lib/guards";
-import { collection, counter, lww, record, type Item } from "../data/schema";
+import { collection, counter, lww, record  } from "../data/schema";
+import type {Item} from "../data/schema";
 import type { DataValue } from "../data/types";
 
 /*
@@ -27,7 +28,7 @@ export const systemCharacterData = record({
   /** Modifier id -> value (Dungeon World's forward, ongoing). */
   modifiers: collection(lww(isNumber)),
   /** An NPC's system-defined fields. */
-  fields: collection(lww((v): v is string | number => isString(v) || isNumber(v))),
+  fields: collection(lww((v): v is number | string => isString(v) || isNumber(v))),
 });
 
 /** What a system keeps campaign-wide. */

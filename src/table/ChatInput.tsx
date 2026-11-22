@@ -1,11 +1,12 @@
 import { Editor, Extension } from "@tiptap/core";
 import Placeholder from "@tiptap/extension-placeholder";
-import { useEffect, useLayoutEffect, useRef, type RefObject } from "react";
-import { contentFromText, emptyChatContent, type ChatContent } from "../features/chat/content";
+import { useEffect, useLayoutEffect, useRef  } from "react";
+import type {RefObject} from "react";
+import { contentFromText, emptyChatContent  } from "../features/chat/content";
+import type {ChatContent} from "../features/chat/content";
 import { LINK_NODE } from "../features/notes/links";
 import type { Campaign } from "../campaign/campaign";
 import { registerLinkDrop } from "../workspace/entityDrag";
-import { chatContentExtensions } from "./chatContentExtensions";
 
 /*
  * The chat's message box stores Tiptap JSON. Enter sends; Shift+Enter starts
@@ -14,10 +15,11 @@ import { chatContentExtensions } from "./chatContentExtensions";
 
 import { useCampaign } from "../workspace/campaignContext";
 import { isString } from "../lib/guards";
+import { chatContentExtensions } from "./chatContentExtensions";
 
 export interface ChatInputHandle {
   /** Replace the current document with text or Tiptap JSON. */
-  set(content: string | ChatContent): void;
+  set(content: ChatContent | string): void;
   focus(): void;
 }
 
@@ -39,7 +41,7 @@ export function ChatInput({
   label: string;
   invalid: boolean;
   className?: string;
-  initialContent?: string | ChatContent;
+  initialContent?: ChatContent | string;
   /** The text as it changes, links as tokens. */
   onChange: (content: ChatContent) => void;
   onEnter: () => void;
@@ -96,7 +98,7 @@ export function ChatInput({
           "aria-multiline": "true",
         },
       },
-      onUpdate: ({ editor: ed }) => callback.current.onChange(ed.getJSON()),
+      onUpdate: ({ editor: ed }) => { callback.current.onChange(ed.getJSON()); },
     });
     const initial =
       isString(firstContent.current)

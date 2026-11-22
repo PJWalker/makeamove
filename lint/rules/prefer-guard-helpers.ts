@@ -1,12 +1,13 @@
 import path from "node:path";
 import {
-  defineRule,
-  type Context,
-  type ESTree,
-  type Fix,
-  type Fixer,
-  type Scope,
+  defineRule
+  
+  
+  
+  
+  
 } from "vite-plus/lint/plugins";
+import type {Context, ESTree, Fix, Fixer, Scope} from "vite-plus/lint/plugins";
 import { isString } from "../../src/lib/guards.ts";
 import { projectPath } from "../strings.ts";
 

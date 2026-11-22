@@ -5,13 +5,7 @@ import type { SceneElement, Transform } from "../types";
 
 /** The parts of the picture that can be marked for redrawing (see SceneRenderer.invalidate). */
 export type RenderPart =
-  | "elements"
-  | "previews"
-  | "camera"
-  | "grid"
-  | "overlay"
-  | "presence"
-  | "lighting";
+  "camera" | "elements" | "grid" | "lighting" | "overlay" | "presence" | "previews";
 
 /** What every layer reads to draw a frame: the renderer, seen read-only. */
 export interface RenderState {

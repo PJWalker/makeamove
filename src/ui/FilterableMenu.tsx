@@ -32,7 +32,7 @@ export function FilterableMenu({
 }: {
   label: string;
   trigger: ReactNode;
-  triggerProps?: Omit<ComponentProps<typeof Button>, "onClick" | "children">;
+  triggerProps?: Omit<ComponentProps<typeof Button>, "children" | "onClick">;
   /** A grid of compact tiles, or a list of full-width rows. */
   layout?: "grid" | "list";
   searchLabel: string;

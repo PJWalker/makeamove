@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import { roll } from "../notation";
-import { chipText, poolFormula, type TrayPick } from "../pool";
+import { chipText, poolFormula  } from "../pool";
+import type {TrayPick} from "../pool";
 
 const d = (...sides: number[]): TrayPick[] => sides.map((s) => ({ kind: "die", sides: s }));
 const plus: TrayPick = { kind: "modifier", value: 1 };

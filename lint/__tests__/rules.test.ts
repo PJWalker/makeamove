@@ -324,6 +324,10 @@ tester.run("no-props", noProps, {
   valid: [
     { filename: at("a.ts"), code: 'import type { ComponentProps } from "react";' },
     { filename: at("a.ts"), code: 'import { mergeProps } from "react-aria";' },
+    // Names that belong to other types: imported, destructured, read as members or keys.
+    { filename: at("a.ts"), code: 'import type { SuggestionProps } from "x"; let p: SuggestionProps | null = null;' },
+    { filename: at("a.ts"), code: "const command = ({ editor, props }) => props;" },
+    { filename: at("a.ts"), code: "const x = element.props; const y = { editorProps: 1 };" },
   ],
   invalid: [
     {
@@ -333,10 +337,17 @@ tester.run("no-props", noProps, {
       errors: 2,
     },
     {
+      // Importers elsewhere still use the old name, so an exported name is reported, not renamed.
       filename: at("a.ts"),
       code: "export type IconProps = { size?: number };",
-      output: "export type IconProperties = { size?: number };",
+      output: null,
       errors: 1,
+    },
+    {
+      filename: at("a.ts"),
+      code: "type IconProps = { size?: number }; const icon: IconProps = {};",
+      output: "type IconProperties = { size?: number }; const icon: IconProperties = {};",
+      errors: 2,
     },
     {
       filename: at("a.ts"),
@@ -354,8 +365,15 @@ tester.run("no-redundant-type-synonyms", noRedundantTypeSynonyms, {
   ],
   invalid: [
     {
+      // Other files import an exported alias, so it is reported, not removed.
       filename: at("a.ts"),
       code: "export type SheetProps = SheetProperties;\nconst sheet: SheetProps = {};",
+      output: null,
+      errors: 1,
+    },
+    {
+      filename: at("a.ts"),
+      code: "type SheetProps = SheetProperties;\nconst sheet: SheetProps = {};",
       output: "const sheet: SheetProperties = {};",
       errors: 1,
     },

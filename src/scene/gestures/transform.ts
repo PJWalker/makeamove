@@ -1,14 +1,17 @@
 import { toScreen } from "../camera";
-import { snapSize, type Point } from "../grid";
+import { snapSize  } from "../grid";
+import type {Point} from "../grid";
 import {
   CORNER_SIGNS,
-  type Corner,
+  
   corners,
   fromLocal,
   resizeFromCorner,
-  rotationTowards,
+  rotationTowards
 } from "../geometry";
-import { HANDLE_SIZE, type LightPart, lightHandles, rotateHandlePosition } from "../render/handles";
+import type {Corner} from "../geometry";
+import { HANDLE_SIZE,  lightHandles, rotateHandlePosition } from "../render/handles";
+import type {LightPart} from "../render/handles";
 import type { LightElement, SceneElement, Transform } from "../types";
 import type { Gesture, ToolContext } from "./types";
 
@@ -18,9 +21,7 @@ import type { Gesture, ToolContext } from "./types";
  */
 
 export type Handle =
-  | { kind: "corner"; corner: Corner }
-  | { kind: "rotate" }
-  | { kind: "light"; part: LightPart };
+  { kind: "corner"; corner: Corner } | { kind: "light"; part: LightPart } | { kind: "rotate" };
 
 const RESIZE_CURSORS = ["nwse-resize", "nesw-resize", "nwse-resize", "nesw-resize"];
 
@@ -62,7 +63,7 @@ export function handleCursor(element: Transform, handle: Handle): string {
 
 /** Start dragging the handle pressed: of the group frame if there is one, else of the one selected element. */
 export function startHandleDrag(c: ToolContext, handle: Handle, world: Point): Gesture | null {
-  const group = c.renderer.overlayState.group;
+  const {group} = c.renderer.overlayState;
   if (group) return rotateGroup(c, group, world);
   const element = c.selected()[0]!;
   if (handle.kind === "rotate") return rotate(c, element);
@@ -88,7 +89,7 @@ function resize(c: ToolContext, element: SceneElement, corner: Corner): Gesture 
       c.renderer.previews.set(element.id, { ...element, ...t });
       c.renderer.invalidate("previews", "overlay");
     },
-    end: () => c.commitPreviews(),
+    end: () => { c.commitPreviews(); },
   };
 }
 
@@ -102,7 +103,7 @@ function rotate(c: ToolContext, element: SceneElement): Gesture {
       c.renderer.previews.set(element.id, { ...element, rot });
       c.renderer.invalidate("previews", "overlay");
     },
-    end: () => c.commitPreviews(),
+    end: () => { c.commitPreviews(); },
   };
 }
 
@@ -133,7 +134,7 @@ function rotateGroup(c: ToolContext, frame: Transform, world: Point): Gesture {
       c.renderer.invalidate("previews");
       c.updateOverlay();
     },
-    end: () => c.commitPreviews(),
+    end: () => { c.commitPreviews(); },
   };
 }
 

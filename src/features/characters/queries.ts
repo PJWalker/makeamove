@@ -2,7 +2,8 @@ import type { Campaign } from "../../campaign/campaign";
 import { device } from "../../platform/device";
 import type { TokenStat } from "../../systems/types";
 import type { CharacterView } from "./types";
-import { canEditCharacter, characterView, derive, statBonus, type CharacterRec } from "./store";
+import { canEditCharacter, characterView, derive, statBonus  } from "./store";
+import type {CharacterRec} from "./store";
 import { systemOf } from "./system";
 
 /*

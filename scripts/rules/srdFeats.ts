@@ -1,9 +1,9 @@
+import type { OptionDef } from "../../src/systems/types";
 import { readReference } from "./readReference";
 import { slug } from "./slug";
-import type { OptionDef } from "../../src/systems/types";
 
 export type SrdFeat = OptionDef & {
-  category: "origin" | "general" | "fighting-style" | "epic";
+  category: "epic" | "fighting-style" | "general" | "origin";
 };
 
 const CATEGORIES: Record<string, SrdFeat["category"]> = {
@@ -17,7 +17,7 @@ const CATEGORIES: Record<string, SrdFeat["category"]> = {
 export function parseSrdFeats(markdown: string): SrdFeat[] {
   const sections = [
     ...markdown.matchAll(
-      /^### (Origin|General|Fighting Style|Epic Boon) Feats\s*$([\s\S]*?)(?=^### |^## |$(?![\s\S]))/gm,
+      /^### (Origin|General|Fighting Style|Epic Boon) Feats\s*$([\S\s]*?)(?=^### |^## |$(?![\S\s]))/gm,
     ),
   ];
   const feats: SrdFeat[] = [];
@@ -27,7 +27,7 @@ export function parseSrdFeats(markdown: string): SrdFeat[] {
     if (!sectionTitle || !sectionBody) continue;
     const category = CATEGORIES[sectionTitle];
     if (!category) continue;
-    for (const block of sectionBody.split(/^#### /m).slice(1)) {
+    for (const block of sectionBody.split(/^#{4} /m).slice(1)) {
       const [heading, ...lines] = block.split(/\r?\n/);
       const name = heading?.trim();
       if (!name) continue;

@@ -24,6 +24,16 @@ describe("the cave's splats", () => {
     expect(cave.splats.some((splat) => splat.light === 2 && splat.glow)).toBe(true);
   });
 
+  it("sends the wisp down the cave to scout now and then, and brings it back", () => {
+    const wisp = cave.lights[2];
+    const seconds = Array.from({ length: 1200 }, (_, index) => index / 10);
+    const deepest = Math.min(...seconds.map((at) => wisp?.drift(at)[2] ?? 0));
+    expect(deepest).toBeLessThan(-8);
+    const away = seconds.filter((at) => Math.hypot(...(wisp?.drift(at) ?? [0, 0, 0])) > 1);
+    expect(away.length).toBeGreaterThan(0);
+    expect(away.length).toBeLessThan(seconds.length / 2);
+  });
+
   it("draws the same picture every time", () => {
     expect(pack(buildCave().splats)).toEqual(pack(cave.splats));
   });

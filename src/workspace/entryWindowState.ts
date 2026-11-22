@@ -1,9 +1,9 @@
 import { morphOpen } from "../ui/morph";
 import { raisePopup } from "../ui/popup";
 import { hideTooltip } from "../ui/tooltipController";
+import { useQuery } from "../ui/useQuery";
 import { entityTabId } from "./entityWindowState";
 import { locate } from "./layoutModel";
-import { useQuery } from "../ui/useQuery";
 import { useCampaign } from "./campaignContext";
 
 /** Which entries have windows open, and how to open one from its row. */
@@ -21,7 +21,7 @@ export function useEntryWindows() {
       const already = document.querySelector<HTMLElement>(
         `dialog[data-window-id="${CSS.escape(id)}"]`,
       );
-      if (already) return raisePopup(already);
+      if (already) { raisePopup(already); return; }
       const tip = document.querySelector(".tooltip:popover-open");
       morphOpen(tip ?? row, () => {
         hideTooltip();

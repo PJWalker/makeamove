@@ -1,14 +1,15 @@
 import { Container, Graphics } from "pixi.js";
-import { type Camera, type Rect, toScreen } from "../camera";
+import {   toScreen } from "../camera";
+import type {Camera, Rect} from "../camera";
 import { conditionContains, conditionLayout, hoverSpring } from "../conditionLayout";
 import { pointerToward, unionRect } from "../edgePin";
 import type { Point } from "../grid";
 import type { TokenMarks } from "../tokenMarks";
 import type { Transform } from "../types";
+import { reducedMotion } from "../../ui/transition";
 import { SdfText } from "./sdfText";
 import type { RenderState } from "./state";
 import { drawPointer, INK, POINTER_ROOM, screenViewport, TOKEN_NAME, cabin } from "./style";
-import { reducedMotion } from "../../ui/transition";
 
 const NO_MARKS: TokenMarks = { pips: [], turn: false };
 const PIP_MIN_R = 3;
@@ -39,11 +40,11 @@ export class ConditionLayer {
   readonly view = new Graphics();
   readonly texts = new Container();
   private hover: { id: string; anchor: number; bounds: Rect } | null = null;
-  private views = new Map<string, ConditionView>();
+  private readonly views = new Map<string, ConditionView>();
   /** Names of off-screen tokens, over the conditions they've just had applied. */
-  private names = new Map<string, SdfText>();
+  private readonly names = new Map<string, SdfText>();
   /** Off-screen tokens whose names head their conditions out at the edge: which condition it rides on, and where. */
-  private pinnedNames = new Map<string, { view: ConditionView; offset: Point }>();
+  private readonly pinnedNames = new Map<string, { view: ConditionView; offset: Point }>();
   /** Tokens drawn last frame: a condition new on one of these was just applied. */
   private drawnTokens = new Set<string>();
   /** Whose turn it was last frame, and when it became theirs, to ring it in. */
@@ -300,7 +301,7 @@ export class ConditionLayer {
             current.h,
             Math.min(open ? 4 : plan.radius, current.h / 2),
           );
-        const colour = plan.marks.pips[index]!.colour;
+        const {colour} = (plan.marks.pips[index]!);
         this.view.fill({ color: colour }).stroke({ color: INK, width: 1.5 });
         // A ring rings out from a condition as it's applied.
         const pulse = view.appliedAt === null ? 1 : (now - view.appliedAt) / PULSE_MS;

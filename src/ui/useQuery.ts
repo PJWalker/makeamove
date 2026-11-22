@@ -60,7 +60,7 @@ function sourceOf(reference: Queryable | null | undefined): Source | null {
 }
 
 /** A typed handle from data/ (or the Yjs type behind one), or a store. */
-export type Queryable = { readonly y: YObservable } | YObservable | ReadonlyStore<unknown>;
+export type Queryable = ReadonlyStore<unknown> | YObservable | { readonly y: YObservable };
 
 const noSubscribe = () => () => {};
 
@@ -73,7 +73,7 @@ export function useQuery<T>(reference: ReadonlyStore<T> | null | undefined): T |
  * that return strings, numbers or booleans (or JSON) skip renders for changes
  * that don't touch them: a chat card doesn't redraw when another card does.
  *
- * `select` runs again on every render, so a value that also depends on props
+ * `select` runs again on every render, so a value that also depends on properties
  * or state is never stale when only they change. Yjs types are mutable, so
  * this hook opts out of React Compiler: memoizing on their identity would
  * miss edits. A missing `ref` never changes; `select` still runs.
@@ -94,7 +94,7 @@ export function useQuery<R extends Queryable, T>(
     const version = source?.version ?? 0;
     const c = cache.current;
     if (c?.version === version && c.read === read) return c.value;
-    const next = read(reference as R);
+    const next = read(reference!);
     const value = c && Object.is(c.value, next) ? c.value : next;
     cache.current = { version, read, value };
     return value;

@@ -1,8 +1,8 @@
 import { markdownToRichText } from "../../src/macros/markdown.macro";
-import { readReference } from "./readReference";
-import { slug } from "./slug";
 import type { Feature } from "../../src/systems/dnd55e/data";
 import { SUBCLASSES } from "../../src/systems/dnd55e/origins";
+import { readReference } from "./readReference";
+import { slug } from "./slug";
 
 export function parseSrdClassFeatures(markdown: string): Feature[] {
   const features: Feature[] = [];

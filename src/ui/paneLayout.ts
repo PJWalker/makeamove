@@ -1,10 +1,12 @@
-import { createElement, type PointerEvent as ReactPointerEvent } from "react";
-import { derived, store, type ReadonlyStore } from "../lib/store";
-import { IconLayoutSingle, IconLayoutSplit } from "./icons";
+import { createElement  } from "react";
+import type {PointerEvent as ReactPointerEvent} from "react";
+import { derived, store  } from "../lib/store";
+import type {ReadonlyStore} from "../lib/store";
 import { getStorageJson, setStorageJson } from "../platform/localStorage";
+import { isNumber, objectOf, oneOf, optional } from "../lib/guards";
+import { IconLayoutSingle, IconLayoutSplit } from "./icons";
 import { useQuery } from "./useQuery";
 import type { PaneLayout, PaneLayoutMode } from "./TwoPane";
-import { isNumber, objectOf, oneOf, optional } from "../lib/guards";
 
 const isSavedPaneLayout = objectOf({
   w: optional(isNumber),
@@ -36,7 +38,7 @@ function PaneToggle({
       title: label,
       "aria-pressed": split,
       disabled: narrow,
-      onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>) => event.stopPropagation(),
+      onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>) => { event.stopPropagation(); },
       onClick: onToggle,
     },
     createElement(split ? IconLayoutSplit : IconLayoutSingle, { size: 22 }),

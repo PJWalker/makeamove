@@ -1,21 +1,22 @@
 import { generateKeyBetween } from "fractional-indexing";
 import * as Y from "yjs";
+import { IndexeddbPersistence } from "y-indexeddb";
+import { yXmlFragmentToProsemirrorJSON } from "@tiptap/y-tiptap";
+import Fuse from "fuse.js";
 import { newId } from "../../lib/ids";
 import { byOrder } from "../../lib/order";
 import { folderName, renameFolderIn, UNTITLED_FOLDER, unfile } from "../../campaign/folders";
 import type { Campaign } from "../../campaign/campaign";
 import type { NotesIndex } from "../../campaign/schema";
 import type { Item } from "../../data/schema";
-import type { noteEntry } from "./schema";
 import { device } from "../../platform/device";
-import { IndexeddbPersistence } from "y-indexeddb";
-import { yXmlFragmentToProsemirrorJSON } from "@tiptap/y-tiptap";
-import { NoteDoc as NoteDocument, noteDbName as noteDatabaseName, noteGuid } from "./noteDoc";
-import Fuse from "fuse.js";
-import type { LinkRef as LinkReference } from "./links";
-import { NoteTextIndex, type NoteNode, type TextMatch } from "./textIndex";
-import { vaultNoteGuid } from "./vault";
 import { deleteData } from "../../platform/dataEpoch";
+import type { noteEntry } from "./schema";
+import { NoteDoc as NoteDocument, noteDbName as noteDatabaseName, noteGuid } from "./noteDoc";
+import type { LinkRef as LinkReference } from "./links";
+import { NoteTextIndex   } from "./textIndex";
+import type {NoteNode, TextMatch} from "./textIndex";
+import { vaultNoteGuid } from "./vault";
 
 /*
  * Notes: pages of rich text filed in folders. The index (titles, folders,
@@ -165,8 +166,7 @@ export async function openNotePage(campaign: Campaign, id: string): Promise<Note
   const sub = noteSubdoc(campaign, id);
   if (!sub) return null;
   const index = await noteTextIndex(campaign);
-  return NoteDocument.open(sub, (body) =>
-    index.set(id, yXmlFragmentToProsemirrorJSON(body) as NoteNode),
+  return NoteDocument.open(sub, (body) => { index.set(id, yXmlFragmentToProsemirrorJSON(body) as NoteNode); },
   );
 }
 
@@ -201,8 +201,7 @@ export async function searchNotes(
     if (!sub || sub.isLoaded) continue;
     const copy = new Y.Doc({ guid: sub.guid });
     // eslint-disable-next-line react-doctor/async-await-in-loop -- Keep document memory bounded and check cancellation between notes.
-    const opened = await NoteDocument.open(copy, (body) =>
-      index.set(note.id, yXmlFragmentToProsemirrorJSON(body) as NoteNode),
+    const opened = await NoteDocument.open(copy, (body) => { index.set(note.id, yXmlFragmentToProsemirrorJSON(body) as NoteNode); },
     );
     opened.destroy();
     if (cancelled()) return [];
@@ -251,7 +250,7 @@ export function deleteNote(campaign: Campaign, id: string) {
   const at = locate(campaign, id);
   if (!at) return;
   at.map.delete(id);
-  void noteTextIndex(campaign).then((index) => index.delete(id));
+  void noteTextIndex(campaign).then((index) => { index.delete(id); });
   // This device's copy of the text; peers that have it keep theirs.
   deleteData(noteDatabaseName(guidOf(campaign, id, at.gmOnly)));
 }
@@ -325,5 +324,5 @@ export function deleteNoteFolder(campaign: Campaign, id: string) {
     campaign.noteFolders.delete(id);
   });
   const vault = campaign.vault.value;
-  vault?.notes.transact(() => unfile(vault.notes.values(), id));
+  vault?.notes.transact(() => { unfile(vault.notes.values(), id); });
 }

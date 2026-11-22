@@ -1,6 +1,6 @@
-import { asRichText, sameRichText } from "../data/richText";
-import { RichTextView } from "../workspace/RichTextView";
 import type { Ref } from "react";
+import { RichTextView } from "../workspace/RichTextView";
+import { asRichText, sameRichText } from "../data/richText";
 import { useConstant } from "../ui/useConstant";
 import type { MoveMessage, RollMessage, RollVisibility } from "../features/chat/types";
 import type { Roll } from "../features/dice/notation";
@@ -9,10 +9,8 @@ import type { Campaign } from "../campaign/campaign";
 import { device } from "../platform/device";
 import { useQuery } from "../ui/useQuery";
 import { Button } from "../ui/Button";
-import { DamageTargets, SaveRequests, TargetRolls } from "./CardParts";
-import { poolFormula, type TrayPick } from "../features/dice/pool";
-import { PendingDie, RollChip, RollDie } from "./RollDie";
-import { carryDice, rollCarriedDice } from "./rollDieHelpers";
+import { poolFormula  } from "../features/dice/pool";
+import type {TrayPick} from "../features/dice/pool";
 import { colourOf } from "../scene/presence";
 import { canWork } from "../features/chat/types";
 import { readRollState } from "../features/chat/rollState";
@@ -23,6 +21,9 @@ import { applySuggestion } from "../workspace/commands/characters";
 import { useCampaign } from "../workspace/campaignContext";
 import { reroll, toggleDie } from "../workspace/commands/chat";
 import { can } from "../workspace/commands/views";
+import { carryDice, rollCarriedDice } from "./rollDieHelpers";
+import { PendingDie, RollChip, RollDie } from "./RollDie";
+import { DamageTargets, SaveRequests, TargetRolls } from "./CardParts";
 
 /* Rolls and moves in the chat: their dice, which anyone allowed can reroll or throw, and their outcome. */
 
@@ -31,10 +32,10 @@ const VISIBILITY_LABEL: Record<RollVisibility, string> = {
   private: "Secret: you and the GM",
 };
 
-type Thrown = { arriving: boolean; mine: boolean };
+interface Thrown { arriving: boolean; mine: boolean }
 
 /** The dice of a roll take the colour of the player who rolled them. */
-const rollerDiceColour = (m: RollMessage | MoveMessage) =>
+const rollerDiceColour = (m: MoveMessage | RollMessage) =>
   colourOf({ id: m.author, ...(m.colour ? { colour: m.colour } : {}) });
 
 /** What a queued roll shows, in order: its dice by size, then its modifier, then its stats. */
@@ -111,8 +112,8 @@ export function PendingRollCard({
           sides={entry.sides}
           index={index}
           release={releaseOf(entry, index)}
-          onLanded={() => onDieLanded(index)}
-          onEntered={() => onDieEntered(entryKey)}
+          onLanded={() => { onDieLanded(index); }}
+          onEntered={() => { onDieEntered(entryKey); }}
         />
       );
     }
@@ -149,7 +150,7 @@ export function PendingRollCard({
   );
 }
 
-function useSharedRoll(campaign: Campaign, message: RollMessage | MoveMessage) {
+function useSharedRoll(campaign: Campaign, message: MoveMessage | RollMessage) {
   const context = useCampaign();
   const source = message.roll;
   const snapshot = JSON.parse(
@@ -172,7 +173,7 @@ type RollInteraction = ReturnType<typeof useSharedRoll>;
 /** A shared roll that, when `throwable` and this player may reroll it, is thrown again by flicking its card. */
 function useThrowableRoll(
   campaign: Campaign,
-  message: RollMessage | MoveMessage,
+  message: MoveMessage | RollMessage,
   throwable: boolean,
 ) {
   const interaction = useSharedRoll(campaign, message);
@@ -195,13 +196,13 @@ export function RollCard({
   mine,
   quickRoll = false,
   quickRollActive = false,
-}: {
+}: Thrown & {
   campaign: Campaign;
   m: RollMessage;
   masked: boolean;
   quickRoll?: boolean;
   quickRollActive?: boolean;
-} & Thrown) {
+}) {
   const { interaction, canThrow, gesture } = useThrowableRoll(campaign, m, !masked);
   if (masked) {
     return (
@@ -251,12 +252,12 @@ function RollTerms({
   arriving,
   mine,
   interaction,
-}: {
+}: Thrown & {
   roll: Roll;
   colour: string;
   interaction: RollInteraction;
-} & Thrown) {
-  const seeds = interaction.snapshot!.seeds;
+}) {
+  const {seeds} = (interaction.snapshot!);
   const initial = useConstant(() => new Set(seeds.flat()));
   // Each die and chip is keyed by its own seed, so it keeps its place as others are rerolled, added or taken away.
   return (
@@ -432,7 +433,7 @@ export function MoveCard({
   canAct,
   arriving,
   mine,
-}: { campaign: Campaign; m: MoveMessage; canAct: boolean } & Thrown) {
+}: Thrown & { campaign: Campaign; m: MoveMessage; canAct: boolean }) {
   const {
     interaction,
     canThrow: throwable,

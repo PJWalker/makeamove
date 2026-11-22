@@ -42,8 +42,7 @@ export const GROUP_MS = 5 * 60 * 1000;
 
 /** One row of the chat log as shown: a message, or an earlier session's fold. */
 export type LogRow =
-  | { kind: "message"; key: string; m: ChatMessage; header: boolean }
-  | { kind: "fold"; key: string; part: string; title: string; count: number; open: boolean };
+  { kind: "fold"; key: string; part: string; title: string; count: number; open: boolean } | { kind: "message"; key: string; m: ChatMessage; header: boolean };
 
 /**
  * The log flattened into the rows it shows, so the panel can render just a

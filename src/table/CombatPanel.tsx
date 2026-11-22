@@ -1,14 +1,14 @@
 import { useCallback, useState } from "react";
 import { getCharacter, systemOf } from "../features/characters/api";
 import { derive } from "../features/characters/store";
-import { roundOf, turnOf, turnOrder, type CombatantView } from "../features/combat/combat";
+import { roundOf, turnOf, turnOrder  } from "../features/combat/combat";
+import type {CombatantView} from "../features/combat/combat";
 import { combatMaps } from "../features/combat/api";
 import type { Campaign } from "../campaign/campaign";
 import type { GameSystem } from "../systems/types";
 import type { CharacterView } from "../features/characters/types";
 import { useQuery } from "../ui/useQuery";
 import { Button } from "../ui/Button";
-import { PanelActions } from "./PanelActions";
 import {
   IconClose,
   IconDice,
@@ -36,6 +36,7 @@ import {
   stopConcentrating,
   timeCondition,
 } from "../workspace/commands/combat";
+import { PanelActions } from "./PanelActions";
 
 /*
  * The turn tracker: who's in the fight, in initiative order, whose turn it
@@ -47,7 +48,7 @@ import {
 export function CombatPanel({ campaign }: { campaign: Campaign }) {
   const context = useCampaign();
   // Running the fight is the GM's: what the controls show follows who may run them.
-  const gm = useQuery(campaign.members, () => can(context, startCombat));
+  const gm = useQuery(campaign.members, () => can(context, startCombat, undefined));
   const state = useQuery(
     campaign.combat,
     () => `${roundOf(combatMaps(campaign))}|${turnOf(combatMaps(campaign)) ?? ""}`,
@@ -72,7 +73,7 @@ export function CombatPanel({ campaign }: { campaign: Campaign }) {
               current={c.id === turn}
               gm={gm}
               open={open === c.id}
-              onToggle={() => setOpen(open === c.id ? null : c.id)}
+              onToggle={() => { setOpen(open === c.id ? null : c.id); }}
               turn={turn || null}
               everyone={all}
             />
@@ -107,7 +108,7 @@ function CombatControls({
               <Button
                 variant="ghost"
                 icon={IconPreviousTurn}
-                onClick={() => context.execute(previousCombatTurn)}
+                onClick={() => context.execute(previousCombatTurn, undefined)}
               >
                 Back
               </Button>
@@ -115,14 +116,14 @@ function CombatControls({
                 variant="primary"
                 icon={IconNextTurn}
                 disabled={combatants.length === 0}
-                onClick={() => context.execute(nextTurn)}
+                onClick={() => context.execute(nextTurn, undefined)}
               >
                 Next Turn
               </Button>
               <Button
                 variant="ghost"
                 icon={IconEndCombat}
-                onClick={() => context.execute(endCombat)}
+                onClick={() => context.execute(endCombat, undefined)}
               >
                 End
               </Button>
@@ -133,7 +134,7 @@ function CombatControls({
                 variant="ghost"
                 icon={IconDice}
                 disabled={!combatants.some((combatant) => combatant.init === null)}
-                onClick={() => void context.execute(rollForNpcs)}
+                onClick={() => void context.execute(rollForNpcs, undefined)}
               >
                 Roll for NPCs
               </Button>
@@ -141,7 +142,7 @@ function CombatControls({
                 variant="primary"
                 icon={IconStartCombat}
                 disabled={combatants.length === 0}
-                onClick={() => context.execute(startCombat)}
+                onClick={() => context.execute(startCombat, undefined)}
               >
                 Start
               </Button>
@@ -369,7 +370,7 @@ function ConditionForm({
         name="condition"
         aria-label="Condition"
         value={condition}
-        onChange={(event) => setCondition(event.currentTarget.value)}
+        onChange={(event) => { setCondition(event.currentTarget.value); }}
       >
         {system.conditions.map((entry) => (
           <option key={entry.id} value={entry.id}>
@@ -384,7 +385,7 @@ function ConditionForm({
           min={0}
           max={100}
           value={rounds}
-          onInput={(event) => setRounds(Number(event.currentTarget.value) || 0)}
+          onInput={(event) => { setRounds(Number(event.currentTarget.value) || 0); }}
         />
         rounds, to the
       </label>
@@ -392,7 +393,7 @@ function ConditionForm({
         name="tick"
         aria-label="Counted at"
         value={tick}
-        onChange={(event) => setTick(event.currentTarget.value as "start" | "end")}
+        onChange={(event) => { setTick(event.currentTarget.value as "end" | "start"); }}
       >
         <option value="end">end</option>
         <option value="start">start</option>
@@ -401,7 +402,7 @@ function ConditionForm({
         name="of"
         aria-label="Of whose turn"
         value={of}
-        onChange={(event) => setOf(event.currentTarget.value)}
+        onChange={(event) => { setOf(event.currentTarget.value); }}
       >
         {everyone.map((combatant) => (
           <option key={combatant.id} value={combatant.id}>
@@ -432,7 +433,7 @@ function useConditionForm(
   const [condition, setCondition] = useState(system.conditions[0]?.id ?? "");
   const [rounds, setRounds] = useState(1);
   const [of, setOf] = useState(turn ?? everyone[0]?.id ?? "");
-  const [tick, setTick] = useState<"start" | "end">("end");
+  const [tick, setTick] = useState<"end" | "start">("end");
   const ch = getCharacter(campaign, characterId)!;
   const has = ch.conditions.includes(condition);
   const add = () => {

@@ -32,9 +32,10 @@ import {
   addTreasureBoxes,
   DW2_SERVICES,
   wealthTierForBoxes,
-  WEALTH_TIERS,
-  type ServiceRank,
+  WEALTH_TIERS
+  
 } from "./wealth";
+import type {ServiceRank} from "./wealth";
 
 /*
  * Dungeon World 2's campaign actions: the moves and Downtime activities
@@ -206,9 +207,7 @@ export async function makeDungeonWorld2Camp(
 }
 
 export type ComfortBenefit =
-  | { kind: "clear-comforted"; condition: string }
-  | { kind: "gain-depth" }
-  | { kind: "clear-supporter"; condition: string };
+  { kind: "clear-comforted"; condition: string } | { kind: "clear-supporter"; condition: string } | { kind: "gain-depth" };
 
 /** Apply one chosen benefit for each affirmative Comfort or Support answer. */
 export async function resolveComfortOrSupport(
@@ -485,10 +484,7 @@ export function breakDungeonWorld2Weapon(
 }
 
 export type DungeonWorld2ItemUse =
-  | { kind: "heal-half-lost" }
-  | { kind: "clear-locked"; condition: string }
-  | { kind: "drain" }
-  | { kind: "mark-condition"; condition: string };
+  { kind: "clear-locked"; condition: string } | { kind: "drain" } | { kind: "heal-half-lost" } | { kind: "mark-condition"; condition: string };
 
 /** Use a charged item and apply the deterministic DW2 effects supported by the sheet. */
 export function consumeDungeonWorld2Item(

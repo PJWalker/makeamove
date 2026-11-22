@@ -2,7 +2,7 @@ import { art, artUrl } from "./iconArt";
 import type { Icon } from "./icons";
 
 /** The kinds of entry a library holds. */
-export type EntryKind = "item" | "move" | "tag" | "option" | "monster";
+export type EntryKind = "item" | "monster" | "move" | "option" | "tag";
 
 /*
  * Icons for library entries and inventory items, rendered with the rest of

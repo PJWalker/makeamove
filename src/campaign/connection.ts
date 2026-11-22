@@ -1,5 +1,6 @@
-import { store, watch, type ReadonlyStore } from "../lib/store";
-import * as Y from "yjs";
+import type * as Y from "yjs";
+import { store, watch  } from "../lib/store";
+import type {ReadonlyStore} from "../lib/store";
 import { colourOf, Presence } from "../scene/presence";
 import { PeerBlobs } from "../media/images";
 import { BlobExchange } from "../sync/blobs";

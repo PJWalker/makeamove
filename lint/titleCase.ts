@@ -23,7 +23,7 @@ const WORD = /^([^\p{L}\p{N}\\]*)(.*?)([^\p{L}\p{N}]*)$/su;
 
 /** Whether a word is left as written: an acronym, a mixed-case name, a number, a path. */
 const keepsItsCase = (core: string) =>
-  !/^\p{L}/u.test(core) || /\p{Lu}/u.test(core.slice(1)) || /[\d./@_\\]/.test(core);
+  !/^\p{L}/u.test(core) || /\p{Lu}/u.test(core.slice(1)) || /[\d./@\\_]/.test(core);
 
 const capitalise = (word: string) => word.charAt(0).toUpperCase() + word.slice(1);
 
@@ -38,7 +38,7 @@ export function titleCase(text: string): string {
       const [, lead = "", core = "", trail = ""] = WORD.exec(token) ?? [];
       if (keepsItsCase(core)) return token;
       const previous = tokens[words[at - 1] ?? -1] ?? "";
-      const edge = at === 0 || at === words.length - 1 || /[:—–]$/.test(previous);
+      const edge = at === 0 || at === words.length - 1 || /[:–—]$/.test(previous);
       const lower = core.toLowerCase();
       let next: string;
       if (edge) next = capitalise(core);

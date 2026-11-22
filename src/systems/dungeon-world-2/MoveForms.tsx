@@ -1,10 +1,5 @@
+import { useMemo, useState } from "react";
 import { getCharacter, listCharacters } from "../../features/characters/api";
-import {
-  dungeonWorld2DowntimeEpoch,
-  trainedDuringDungeonWorld2Downtime,
-  type ComfortBenefit,
-  type JourneyPace,
-} from "./campaign";
 import { sessionMoveUsed } from "../../features/characters/sessionMoves";
 import { relationshipsOf } from "../../features/characters/relationships";
 import type { CharacterView } from "../../features/characters/types";
@@ -12,8 +7,17 @@ import { Button } from "../../ui/Button";
 import { useQuery } from "../../ui/useQuery";
 import { derive } from "../../features/characters/store";
 import type { MoveFormProps as MoveFormProperties } from "../extensionTypes";
-import { DW2_SERVICES, type ServiceRank } from "./wealth";
-import { useMemo, useState } from "react";
+import { useCampaign } from "../../workspace/campaignContext";
+import { can } from "../../workspace/commands/views";
+import {
+  dungeonWorld2DowntimeEpoch,
+  trainedDuringDungeonWorld2Downtime
+  
+  
+} from "./campaign";
+import type {ComfortBenefit, JourneyPace} from "./campaign";
+import { DW2_SERVICES  } from "./wealth";
+import type {ServiceRank} from "./wealth";
 import {
   beginDowntime,
   carouse,
@@ -25,8 +29,6 @@ import {
   shop,
   train,
 } from "./commands";
-import { useCampaign } from "../../workspace/campaignContext";
-import { can } from "../../workspace/commands/views";
 
 /*
  * What some Dungeon World 2 moves ask for and do, shown with the move's text
@@ -124,8 +126,8 @@ export function ComfortOrSupport({ sheet }: MoveFormProperties) {
         <select
           value={comfortedId}
           disabled={!sheet.editable || used}
-          onChange={(event) => setComfortedId(event.currentTarget.value)}
-          onInput={(event) => setComfortedId(event.currentTarget.value)}
+          onChange={(event) => { setComfortedId(event.currentTarget.value); }}
+          onInput={(event) => { setComfortedId(event.currentTarget.value); }}
         >
           <option value="">Choose a PC</option>
           {party.flatMap((character) =>
@@ -161,11 +163,10 @@ export function ComfortOrSupport({ sheet }: MoveFormProperties) {
                 <select
                   value={benefitKinds[index] ?? "clear-comforted"}
                   disabled={!sheet.editable || used}
-                  onChange={(event) =>
-                    setBenefitKinds({
+                  onChange={(event) => { setBenefitKinds({
                       ...benefitKinds,
                       [index]: event.currentTarget.value,
-                    })
+                    }); }
                   }
                 >
                   {receiverConditions.length > 0 && (
@@ -189,11 +190,10 @@ export function ComfortOrSupport({ sheet }: MoveFormProperties) {
                       ""
                     }
                     disabled={!sheet.editable || used}
-                    onChange={(event) =>
-                      setConditionPicks({
+                    onChange={(event) => { setConditionPicks({
                         ...conditionPicks,
                         [index]: event.currentTarget.value,
-                      })
+                      }); }
                     }
                   >
                     {((benefitKinds[index] ?? "clear-comforted") === "clear-comforted"
@@ -328,7 +328,7 @@ export function PerilousJourney({ sheet }: MoveFormProperties) {
     <section className="move-form-section" aria-label="Undertake a Perilous Journey">
       <label className="field">
         Leader
-        <select value={leaderId} onChange={(event) => setChosenLeaderId(event.currentTarget.value)}>
+        <select value={leaderId} onChange={(event) => { setChosenLeaderId(event.currentTarget.value); }}>
           {party.map((character) => (
             <option key={character.id} value={character.id}>
               {character.name}
@@ -340,7 +340,7 @@ export function PerilousJourney({ sheet }: MoveFormProperties) {
         Pace
         <select
           value={pace}
-          onChange={(event) => setPace(event.currentTarget.value as JourneyPace)}
+          onChange={(event) => { setPace(event.currentTarget.value as JourneyPace); }}
         >
           <option value="quick">Quickly, risking it all (-1; everyone marks a Condition)</option>
           <option value="regular">Regular pace (+1; leader marks a Condition)</option>
@@ -357,11 +357,10 @@ export function PerilousJourney({ sheet }: MoveFormProperties) {
             <select
               value={conditionPicks[character.id]}
               disabled={!sheet.editable}
-              onChange={(event) =>
-                setConditions((current) => ({
+              onChange={(event) => { setConditions((current) => ({
                   ...current,
                   [character.id]: event.currentTarget.value,
-                }))
+                })); }
               }
             >
               {available.map((condition) => (
@@ -463,8 +462,7 @@ function Carouse({ sheet }: MoveFormProperties) {
         Carouse
         <select
           value={benefit}
-          onChange={(event) =>
-            setBenefit(event.currentTarget.value as "clear-locked" | "gain-depth")
+          onChange={(event) => { setBenefit(event.currentTarget.value as "clear-locked" | "gain-depth"); }
           }
         >
           <option value="clear-locked" disabled={!canClearLocked}>
@@ -478,7 +476,7 @@ function Carouse({ sheet }: MoveFormProperties) {
       {benefit === "clear-locked" && canClearLocked && (
         <label className="field">
           Locked Condition
-          <select value={condition} onChange={(event) => setCondition(event.currentTarget.value)}>
+          <select value={condition} onChange={(event) => { setCondition(event.currentTarget.value); }}>
             {sheet.c.lockedConditions?.map((entry) => (
               <option key={entry} value={entry}>
                 {entry}
@@ -492,7 +490,7 @@ function Carouse({ sheet }: MoveFormProperties) {
           PC
           <select
             value={selectedPartyId ?? ""}
-            onChange={(event) => setPartyId(event.currentTarget.value)}
+            onChange={(event) => { setPartyId(event.currentTarget.value); }}
           >
             {others.map((character) => (
               <option key={character.id} value={character.id}>
@@ -564,7 +562,7 @@ function ShopService({ sheet }: MoveFormProperties) {
     <>
       <label className="field">
         Shop service
-        <select value={serviceId} onChange={(event) => setServiceId(event.currentTarget.value)}>
+        <select value={serviceId} onChange={(event) => { setServiceId(event.currentTarget.value); }}>
           {DW2_SERVICES.map((service) => (
             <option key={service.id} value={service.id}>
               {service.name}
@@ -576,7 +574,7 @@ function ShopService({ sheet }: MoveFormProperties) {
         Service tier
         <select
           value={serviceRank}
-          onChange={(event) => setServiceRank(Number(event.currentTarget.value) as ServiceRank)}
+          onChange={(event) => { setServiceRank(Number(event.currentTarget.value) as ServiceRank); }}
         >
           <option value={2}>Modest (2)</option>
           <option value={3}>Comfortable (3)</option>
@@ -604,8 +602,8 @@ export function Downtime({ sheet }: MoveFormProperties) {
   );
   return (
     <section className="move-form-section" aria-label="Enjoy Downtime">
-      {can(context, beginDowntime) && (
-        <Button variant="secondary" onClick={() => context.execute(beginDowntime)}>
+      {can(context, beginDowntime, undefined) && (
+        <Button variant="secondary" onClick={() => context.execute(beginDowntime, undefined)}>
           Begin Downtime
         </Button>
       )}
@@ -654,11 +652,10 @@ export function MakeCamp({ sheet }: MoveFormProperties) {
             <select
               value={choices[character.id]}
               disabled={!sheet.editable || used}
-              onChange={(event) =>
-                setSelections({
+              onChange={(event) => { setSelections({
                   ...selections,
                   [character.id]: event.currentTarget.value,
-                })
+                }); }
               }
             >
               {options.map((condition) => (
@@ -677,8 +674,7 @@ export function MakeCamp({ sheet }: MoveFormProperties) {
             <select
               value={repairChoices[character.id]}
               disabled={!sheet.editable || used}
-              onChange={(event) =>
-                setRepairs({ ...repairs, [character.id]: event.currentTarget.value })
+              onChange={(event) => { setRepairs({ ...repairs, [character.id]: event.currentTarget.value }); }
               }
             >
               {options.map((item) => (

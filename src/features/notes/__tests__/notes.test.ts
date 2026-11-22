@@ -1,5 +1,6 @@
 import "fake-indexeddb/auto";
 import { describe, expect, it } from "vite-plus/test";
+import * as Y from "yjs";
 import { Campaign, createCampaign } from "../../../campaign/campaign";
 import { device } from "../../../platform/device";
 import {
@@ -19,7 +20,6 @@ import {
   touchNote,
 } from "../api";
 import { NoteDoc } from "../noteDoc";
-import * as Y from "yjs";
 import { linksIn, parseLink } from "../links";
 import { makeSessionPage, sessionPageId } from "../sessions";
 
@@ -141,7 +141,7 @@ describe("the GM vault", () => {
 
   it("is only opened on GM devices", async () => {
     const c = await setUp();
-    const id = c.id;
+    const {id} = c;
     c.destroy();
     device.value = { id: "pat", name: "Pat" };
     const asPlayer = await Campaign.open(id);

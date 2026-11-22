@@ -2,30 +2,37 @@ import { store, watch } from "../lib/store";
 import type { CampaignDefaults } from "../campaign/campaign";
 import { device } from "../platform/device";
 
-import { colourOf, type Presence } from "./presence";
-import { type Camera, clampZoom, fitCamera, toWorld, zoomAt } from "./camera";
+import {
+  
+  
+  
+  importImage,
+  imageColour
+} from "../media/images";
+import type {BlobReference, EntityGraphic, EntityGraphicRef as EntityGraphicReference} from "../media/images";
+import { reducedMotion } from "../ui/transition";
+import { colourOf  } from "./presence";
+import type {Presence} from "./presence";
+import {  clampZoom, fitCamera, toWorld, zoomAt } from "./camera";
+import type {Camera} from "./camera";
 import { readSceneCamera, saveSceneCamera } from "./cameraMemory";
 import { bounds, hits } from "./geometry";
-import { cellOr, type Point, snapPoint } from "./grid";
-import {
-  type BlobReference,
-  type EntityGraphic,
-  type EntityGraphicRef,
-  importImage,
-  imageColour,
-} from "../media/images";
+import { cellOr,  snapPoint } from "./grid";
+import type {Point} from "./grid";
 import { tokenDistance } from "./measure";
 import {
   conversion,
   imageElement,
   newToken,
-  randomTokenColour,
-  type TokenSpec,
+  randomTokenColour
+  
 } from "./newElements";
+import type {TokenSpec} from "./newElements";
 import type { SceneRenderer } from "./renderer";
 import type { ElementPatch, SceneDoc as SceneDocument } from "./sceneDoc";
 import { toolCursor } from "./toolCursors";
-import { ERASER_RADIUS, GM_KINDS, kindOf, type SceneTools } from "./tools";
+import { ERASER_RADIUS, GM_KINDS, kindOf  } from "./tools";
+import type {SceneTools} from "./tools";
 import type { Layer, NewElement, SceneElement, TokenElement, TokenStyle, Transform } from "./types";
 import { TOOL_PRESS } from "./gestures";
 import { PolygonDraft } from "./gestures/polygon";
@@ -34,7 +41,6 @@ import { hoverCursor } from "./gestures/select";
 import { dragShape, placementPlan } from "./gestures/shape";
 import { fitPatch, newTextLook, putText } from "./gestures/text";
 import type { Gesture, Placement, TextRequest, ToolContext } from "./gestures/types";
-import { reducedMotion } from "../ui/transition";
 
 /** How soon, and how near in screen px, a press must follow the last to count as a double click. */
 const MULTI_CLICK_MS = 500;
@@ -137,7 +143,7 @@ export class SceneController implements ToolContext {
   private spaceHeld = false;
   private hover: Point | null = null;
   private disposers: (() => void)[] = [];
-  private saveTimer = 0;
+  private saveTimer: ReturnType<typeof globalThis.setTimeout> | undefined;
   private itemTokenDropFrame = 0;
 
   readonly scene: SceneDocument;
@@ -169,7 +175,7 @@ export class SceneController implements ToolContext {
   }
 
   start() {
-    const refresh = () => this.refresh();
+    const refresh = () => { this.refresh(); };
     const regrid = () => {
       this.renderer.setGrid(this.scene.grid());
       this.renderer.invalidate("overlay");
@@ -221,16 +227,15 @@ export class SceneController implements ToolContext {
       };
     };
     if (this.presence) {
-      const presence = this.presence;
-      const show = () =>
-        this.renderer.setPresence(
+      const {presence} = this;
+      const show = () => { this.renderer.setPresence(
           presence.marks(this.sceneId, device.value.id, device.value.name, colourOf(device.value)),
-        );
+        ); };
       presence.setScene(this.sceneId);
       this.disposers.push(
         presence.subscribe(show),
-        () => presence.setScene(null),
-        () => this.renderer.setPresence([]),
+        () => { presence.setScene(null); },
+        () => { this.renderer.setPresence([]); },
       );
       this.disposers.push(watch([device], show));
       show();
@@ -251,19 +256,19 @@ export class SceneController implements ToolContext {
       options?: AddEventListenerOptions,
     ) => {
       element.addEventListener(type, function_ as EventListener, options);
-      this.disposers.push(() => element.removeEventListener(type, function_ as EventListener, options));
+      this.disposers.push(() => { element.removeEventListener(type, function_ as EventListener, options); });
     };
-    listen("pointerdown", (e) => this.onPointerDown(e));
-    listen("pointermove", (e) => this.onPointerMove(e));
-    listen("pointerup", (e) => this.onPointerUp(e));
-    listen("pointercancel", (e) => this.onPointerUp(e, true));
+    listen("pointerdown", (e) => { this.onPointerDown(e); });
+    listen("pointermove", (e) => { this.onPointerMove(e); });
+    listen("pointerup", (e) => { this.onPointerUp(e); });
+    listen("pointercancel", (e) => { this.onPointerUp(e, true); });
     listen("pointerleave", () => {
       this.presence?.setCursor(null);
       this.hover = null;
       this.renderer.setHoverToken(null);
       this.updateOverlay();
     });
-    listen("wheel", (e) => this.onWheel(e), { passive: false });
+    listen("wheel", (e) => { this.onWheel(e); }, { passive: false });
   }
 
   stop() {
@@ -432,7 +437,7 @@ export class SceneController implements ToolContext {
 
   private scheduleSaveCamera() {
     clearTimeout(this.saveTimer);
-    this.saveTimer = globalThis.setTimeout(() => this.saveCamera(), 300);
+    this.saveTimer = globalThis.setTimeout(() => { this.saveCamera(); }, 300);
   }
 
   private saveCamera() {
@@ -594,7 +599,7 @@ export class SceneController implements ToolContext {
   }
 
   commitPreviews() {
-    const previews = this.renderer.previews;
+    const {previews} = this.renderer;
     if (previews.size === 0) return;
     this.scene.update([...previews].map(([id, t]) => [id, transformOf(t)]));
     previews.clear();
@@ -604,7 +609,7 @@ export class SceneController implements ToolContext {
   /** Shrink a scene item token into its drop point before transferring it. */
   animateItemTokenDrop(id: string, clientX: number, clientY: number, complete: () => void) {
     const original = this.byId.get(id);
-    if (original?.type !== "token") return complete();
+    if (original?.type !== "token") { complete(); return; }
     const current = this.renderer.previews.get(id) ?? original;
     cancelAnimationFrame(this.itemTokenDropFrame);
     const from = transformOf(current);
@@ -622,7 +627,7 @@ export class SceneController implements ToolContext {
       this.renderer.invalidate("previews", "overlay");
       complete();
     };
-    if (reducedMotion.matches) return finish();
+    if (reducedMotion.matches) { finish(); return; }
     const start = performance.now();
     const tick = (now: number) => {
       const progress = Math.min(1, (now - start) / 180);
@@ -783,7 +788,7 @@ export class SceneController implements ToolContext {
     this.scene.update(ids.map((id) => [id, { locked }]));
   }
 
-  restack(ids: string[], to: "front" | "back") {
+  restack(ids: string[], to: "back" | "front") {
     this.scene.restack(ids, to);
   }
 
@@ -856,20 +861,13 @@ export class SceneController implements ToolContext {
     patch: {
       [
         K in
-          | "name"
-          | "style"
-          | "colour"
-          | "characterId"
-          | "image"
-          | "itemDefId"
-          | "hideName"
-          | "hideBars"
+          "characterId" | "colour" | "hideBars" | "hideName" | "image" | "itemDefId" | "name" | "style"
       ]?: TokenElement[K] | undefined;
     },
     cells?: number,
   ) {
     const element = this.byId.get(id);
-    const grid = this.renderer.grid;
+    const {grid} = this.renderer;
     const size = cells && element ? cells * grid.size : 0;
     const resize = size && element && (Math.abs(element.w - size) > 0.5 || Math.abs(element.h - size) > 0.5);
     this.scene.update([
@@ -909,7 +907,7 @@ export class SceneController implements ToolContext {
       style?: TokenStyle;
       colour?: string;
       graphic?: EntityGraphic;
-      entityRef?: EntityGraphicRef;
+      entityRef?: EntityGraphicReference;
     } = {},
   ) {
     return this.placeToken(at, { ...options, name });
@@ -925,7 +923,7 @@ export class SceneController implements ToolContext {
       style?: TokenStyle;
       colour?: string;
       graphic?: EntityGraphic;
-      entityRef?: EntityGraphicRef;
+      entityRef?: EntityGraphicReference;
     },
   ) {
     return this.placeToken(at, spec);
@@ -950,7 +948,7 @@ export class SceneController implements ToolContext {
     const images = [...files].filter((f) => f.type.startsWith("image/"));
     if (images.length === 0) return;
     this.host.style.cursor = "progress";
-    const grid = this.renderer.grid;
+    const {grid} = this.renderer;
     const added: NewElement[] = [];
     try {
       const imported = await Promise.all(

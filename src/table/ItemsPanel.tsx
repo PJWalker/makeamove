@@ -1,12 +1,13 @@
-import { useCallback, useState, type ReactNode } from "react";
-import { useDraft } from "./useDraft";
-import { emptyRichText, plainText, type RichText } from "../data/richText";
+import { useCallback, useState  } from "react";
+import type {ReactNode} from "react";
+import { emptyRichText, plainText  } from "../data/richText";
+import type {RichText} from "../data/richText";
 import { RichTextField } from "../workspace/RichTextField";
 import { systemOf } from "../features/characters/api";
-import { useActingCharacter } from "./useActingCharacter";
 import { parseCommaList } from "../lib/list";
 import { toggleSetValue } from "../lib/set";
-import { listHomebrew, type HomebrewEntry } from "../features/homebrew/homebrew";
+import { listHomebrew  } from "../features/homebrew/homebrew";
+import type {HomebrewEntry} from "../features/homebrew/homebrew";
 import {
   deleteHomebrewEntry,
   saveHomebrewGear,
@@ -27,7 +28,6 @@ import type {
   TargetSpec,
 } from "../systems/types";
 import { Button } from "../ui/Button";
-import { PanelActions } from "./PanelActions";
 import { IconAdd, IconDelete, IconNewGear, IconNewMove } from "../ui/icons";
 import type { MenuItem } from "../ui/ContextMenu";
 import { List, ListGroup } from "../ui/List";
@@ -42,6 +42,9 @@ import { GraphicPicker } from "../ui/GraphicPicker";
 import { getDefaultEntityGraphic, getEntityGraphic } from "../workspace/entityGraphics";
 import { useCampaign } from "../workspace/campaignContext";
 import { giveItem, startMove } from "../workspace/commands/characters";
+import { PanelActions } from "./PanelActions";
+import { useActingCharacter } from "./useActingCharacter";
+import { useDraft } from "./useDraft";
 
 /*
  * Items: the table's own gear and moves (homebrew/homebrew.ts), with
@@ -68,14 +71,14 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
           system={system}
           editing={editing}
           entry={editing.id ? entries.find((entry) => entry.id === editing.id) : undefined}
-          onClose={() => setEditing(null)}
+          onClose={() => { setEditing(null); }}
         />
       )}
       <PanelActions>
-        <Button icon={IconNewGear} onClick={() => setEditing({ kind: "gear", id: null })}>
+        <Button icon={IconNewGear} onClick={() => { setEditing({ kind: "gear", id: null }); }}>
           New Gear
         </Button>
-        <Button icon={IconNewMove} onClick={() => setEditing({ kind: "move", id: null })}>
+        <Button icon={IconNewMove} onClick={() => { setEditing({ kind: "move", id: null }); }}>
           New Move
         </Button>
       </PanelActions>
@@ -99,13 +102,12 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
                 openLabel="Edit"
                 meta={gearMeta(entry.item)}
                 tip={entry.item.description}
-                onOpen={() => setEditing({ kind: "gear", id: entry.id })}
-                onPointerDown={(event) =>
-                  dragEntity(ctx.canvas, event, entity(ctx, "item", entry.id, entry.item.name))
+                onOpen={() => { setEditing({ kind: "gear", id: entry.id }); }}
+                onPointerDown={(event) => { dragEntity(ctx.canvas, event, entity(ctx, "item", entry.id, entry.item.name)); }
                 }
                 menuItems={menuItemsFor(entry)}
               >
-                <Button variant="secondary" disabled={!canAct} onClick={() => actOn(entry)}>
+                <Button variant="secondary" disabled={!canAct} onClick={() => { actOn(entry); }}>
                   Add
                 </Button>
               </EntryRow>
@@ -126,13 +128,12 @@ export function ItemsPanel({ campaign }: { campaign: Campaign }) {
                 openLabel="Edit"
                 tag={rollTag(system, entry.move)}
                 tip={`${plainText(entry.move.text)}\n\nDrag onto a character to teach it to them.`}
-                onOpen={() => setEditing({ kind: "move", id: entry.id })}
-                onPointerDown={(event) =>
-                  dragEntity(ctx.canvas, event, entity(ctx, "move", entry.id, entry.move.name))
+                onOpen={() => { setEditing({ kind: "move", id: entry.id }); }}
+                onPointerDown={(event) => { dragEntity(ctx.canvas, event, entity(ctx, "move", entry.id, entry.move.name)); }
                 }
                 menuItems={menuItemsFor(entry)}
               >
-                <Button variant="secondary" disabled={!canAct} onClick={() => actOn(entry)}>
+                <Button variant="secondary" disabled={!canAct} onClick={() => { actOn(entry); }}>
                   Make
                 </Button>
               </EntryRow>
@@ -159,7 +160,7 @@ function useItemsPanel(campaign: Campaign) {
   const [folded, setFolded] = useState<Set<string>>(new Set());
   const fold = (id: string) => ({
     open: !folded.has(id),
-    onToggle: () => setFolded(toggleSetValue(folded, id)),
+    onToggle: () => { setFolded(toggleSetValue(folded, id)); },
   });
   const { me, canAct } = useActingCharacter(campaign);
 
@@ -181,7 +182,7 @@ function useItemsPanel(campaign: Campaign) {
         ? actionMenuItems(context, [{ id: `library:${entry.id}`, title: entry.item.name }])
         : actionMenuItems(context, [{ id: `move:${entry.id}`, title: entry.move.name }]);
     return [
-      { label: actionLabel(entry), disabled: !canAct, onSelect: () => actOn(entry) },
+      { label: actionLabel(entry), disabled: !canAct, onSelect: () => { actOn(entry); } },
       ...(actions.length > 0 ? (["divider"] as const) : []),
       ...actions,
     ];
@@ -205,7 +206,7 @@ function ItemDialog({
   onClose: () => void;
 }) {
   const reference = usePopupDialog();
-  const done = () => closePopup(reference.current, onClose);
+  const done = () => { closePopup(reference.current, onClose); };
   const title = `${id ? "Edit" : "New"} ${kind === "gear" ? "Gear" : "Move"}`;
   return (
     <Dialog dialogRef={reference} title={title} onClose={onClose}>
@@ -250,13 +251,13 @@ function Text({
           rows={4}
           value={value}
           placeholder={placeholder}
-          onInput={(e) => onChange(e.currentTarget.value)}
+          onInput={(e) => { onChange(e.currentTarget.value); }}
         />
       ) : (
         <input
           value={value}
           placeholder={placeholder}
-          onInput={(e) => onChange(e.currentTarget.value)}
+          onInput={(e) => { onChange(e.currentTarget.value); }}
         />
       )}
     </label>
@@ -281,7 +282,7 @@ function NumberField({
         type="number"
         min={min}
         value={value}
-        onInput={(e) => onChange(Number(e.currentTarget.value) || 0)}
+        onInput={(e) => { onChange(Number(e.currentTarget.value) || 0); }}
       />
     </label>
   );
@@ -291,11 +292,10 @@ const splitTags = (s: string) => parseCommaList(s).flatMap((t) => t.trim() || []
 
 /** An effect row in the gear form: a bonus to rolls with a stat, or a change to a derived value. */
 type EffectRow =
-  | { type: "rollBonus"; stat: string; value: number }
-  | { type: "modify"; path: string; value: number };
+  { type: "modify"; path: string; value: number } | { type: "rollBonus"; stat: string; value: number };
 
 /** A form's choice of picture: its own, or reset to the default (`resetGraphic`). */
-type GraphicDraft = { graphic: EntityGraphic | undefined; resetGraphic: boolean };
+interface GraphicDraft { graphic: EntityGraphic | undefined; resetGraphic: boolean }
 
 function graphicDraftOf(campaign: Campaign, kind: "item" | "move", id: string | undefined) {
   return {
@@ -377,10 +377,9 @@ function GearForm({
   const context = useCampaign();
   const [draft, patch] = useDraft(() => gearDraftOf(campaign, initial));
   const { effects } = draft;
-  const setEffect = (index: number, changes: Partial<EffectRow>) =>
-    patch({
+  const setEffect = (index: number, changes: Partial<EffectRow>) => { patch({
       effects: effects.map((row, index_) => (index_ === index ? ({ ...row, ...changes } as EffectRow) : row)),
-    });
+    }); };
   return (
     <HomebrewForm
       id={initial?.id}
@@ -395,25 +394,25 @@ function GearForm({
     >
       <section className="form-section">
         <h4 className="form-heading">Details</h4>
-        <Text label="Name" value={draft.name} onChange={(name) => patch({ name })} />
+        <Text label="Name" value={draft.name} onChange={(name) => { patch({ name }); }} />
         <Text
           label="Description"
           value={draft.description}
-          onChange={(description) => patch({ description })}
+          onChange={(description) => { patch({ description }); }}
           multiline
         />
         <div className="sheet-row">
           <NumberField
             label="Weight"
             value={draft.weight}
-            onChange={(weight) => patch({ weight })}
+            onChange={(weight) => { patch({ weight }); }}
           />
-          <NumberField label="Uses" value={draft.uses} onChange={(uses) => patch({ uses })} />
+          <NumberField label="Uses" value={draft.uses} onChange={(uses) => { patch({ uses }); }} />
         </div>
         <Text
           label="Tags"
           value={draft.tags}
-          onChange={(tags) => patch({ tags })}
+          onChange={(tags) => { patch({ tags }); }}
           placeholder="close, +1 armor"
         />
       </section>
@@ -423,7 +422,7 @@ function GearForm({
           <input
             type="checkbox"
             checked={draft.equippable}
-            onChange={() => patch({ equippable: !draft.equippable })}
+            onChange={() => { patch({ equippable: !draft.equippable }); }}
           />
           Equippable
         </label>
@@ -446,13 +445,12 @@ function GearForm({
               <select
                 aria-label="Effect"
                 value={effect.type}
-                onChange={(event) =>
-                  setEffect(
+                onChange={(event) => { setEffect(
                     index,
                     event.currentTarget.value === "rollBonus"
                       ? { type: "rollBonus", stat: "" }
                       : ({ type: "modify", path: "" } as never),
-                  )
+                  ); }
                 }
               >
                 <option value="rollBonus">Bonus to rolls</option>
@@ -462,7 +460,7 @@ function GearForm({
                 <select
                   aria-label="With stat"
                   value={effect.stat}
-                  onChange={(event) => setEffect(index, { stat: event.currentTarget.value })}
+                  onChange={(event) => { setEffect(index, { stat: event.currentTarget.value }); }}
                 >
                   <option value="">Every roll</option>
                   {system.stats.map((stat) => (
@@ -476,7 +474,7 @@ function GearForm({
                   aria-label="Value name"
                   placeholder="armor, ac, speed"
                   value={effect.path}
-                  onInput={(event) => setEffect(index, { path: event.currentTarget.value.trim() })}
+                  onInput={(event) => { setEffect(index, { path: event.currentTarget.value.trim() }); }}
                 />
               )}
               <input
@@ -484,14 +482,13 @@ function GearForm({
                 type="number"
                 aria-label="Amount"
                 value={effect.value}
-                onInput={(event) =>
-                  setEffect(index, { value: Number(event.currentTarget.value) || 0 })
+                onInput={(event) => { setEffect(index, { value: Number(event.currentTarget.value) || 0 }); }
                 }
               />
               <Button
                 variant="icon"
                 label="Remove Effect"
-                onClick={() => patch({ effects: effects.filter((_, index_) => index_ !== index) })}
+                onClick={() => { patch({ effects: effects.filter((_, index_) => index_ !== index) }); }}
               >
                 <IconDelete />
               </Button>
@@ -499,8 +496,7 @@ function GearForm({
           ))}
           <Button
             variant="ghost"
-            onClick={() =>
-              patch({ effects: [...effects, { type: "rollBonus", stat: "", value: 1 }] })
+            onClick={() => { patch({ effects: [...effects, { type: "rollBonus", stat: "", value: 1 }] }); }
             }
           >
             <IconAdd size={22} /> Add Effect
@@ -532,14 +528,14 @@ function DraftGraphicPicker({
           ? getDefaultEntityGraphic(campaign, kind, id)
           : (draft.graphic ?? getEntityGraphic(campaign, kind, id))
       }
-      onChange={(graphic) => patch({ graphic, resetGraphic: false })}
-      onReset={() => patch({ graphic: undefined, resetGraphic: true })}
+      onChange={(graphic) => { patch({ graphic, resetGraphic: false }); }}
+      onReset={() => { patch({ graphic: undefined, resetGraphic: true }); }}
     />
   );
 }
 
-type RollKind = "none" | "stat" | "ask";
-type TargetKind = "none" | "one" | "many";
+type RollKind = "ask" | "none" | "stat";
+type TargetKind = "many" | "none" | "one";
 
 /** What the move form edits, before it's a move. */
 type MoveDraft = GraphicDraft & {
@@ -620,21 +616,21 @@ function moveFromDraft(system: GameSystem, draft: MoveDraft, id: string): Action
   };
 }
 
-type SectionProperties = {
+interface SectionProperties {
   campaign: Campaign;
   system: GameSystem;
   draft: MoveDraft;
   patch: (changes: Partial<MoveDraft>) => void;
-};
+}
 
 function MoveDetails({ campaign, system, draft, patch }: SectionProperties) {
   return (
     <section className="form-section">
       <h4 className="form-heading">Details</h4>
-      <Text label="Name" value={draft.name} onChange={(name) => patch({ name })} />
+      <Text label="Name" value={draft.name} onChange={(name) => { patch({ name }); }} />
       <label className="field">
         Kind
-        <select value={draft.category} onChange={(e) => patch({ category: e.currentTarget.value })}>
+        <select value={draft.category} onChange={(e) => { patch({ category: e.currentTarget.value }); }}>
           {system.actionCategories.map((k) => (
             <option key={k.id} value={k.id}>
               {k.label}
@@ -645,14 +641,14 @@ function MoveDetails({ campaign, system, draft, patch }: SectionProperties) {
       <Text
         label="Trigger"
         value={draft.trigger}
-        onChange={(trigger) => patch({ trigger })}
+        onChange={(trigger) => { patch({ trigger }); }}
         placeholder="When you…"
       />
       <RichTextField
         campaign={campaign}
         label="Text"
         value={draft.text}
-        onChange={(text) => patch({ text })}
+        onChange={(text) => { patch({ text }); }}
       />
     </section>
   );
@@ -687,13 +683,13 @@ function MoveRoll({ campaign, system, draft, patch }: SectionProperties) {
               { id: "stat", label: "With a stat" },
               { id: "ask", label: "Stat chosen when made" },
             ]}
-            onChange={(rolls) => patch({ rolls })}
+            onChange={(rolls) => { patch({ rolls }); }}
           />
           {draft.rolls === "stat" && (
             <select
               aria-label="Stat"
               value={draft.stat}
-              onChange={(e) => patch({ stat: e.currentTarget.value })}
+              onChange={(e) => { patch({ stat: e.currentTarget.value }); }}
             >
               {system.stats.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -710,7 +706,7 @@ function MoveRoll({ campaign, system, draft, patch }: SectionProperties) {
               campaign={campaign}
               label={r.label || "Otherwise"}
               value={draft.outcomes[r.id]}
-              onChange={(value) => patch({ outcomes: { ...draft.outcomes, [r.id]: value } })}
+              onChange={(value) => { patch({ outcomes: { ...draft.outcomes, [r.id]: value } }); }}
             />
           ))}
       </div>
@@ -732,13 +728,13 @@ function MoveTargeting({ system, draft, patch }: Omit<SectionProperties, "campai
             { id: "one", label: "One" },
             { id: "many", label: "Any number" },
           ]}
-          onChange={(targets) => patch({ targets })}
+          onChange={(targets) => { patch({ targets }); }}
         />
         {draft.targets !== "none" && (
           <NumberFieldInline
             label={`Range (${system.scene.unitName}, 0 for any)`}
             value={draft.range}
-            onChange={(range) => patch({ range })}
+            onChange={(range) => { patch({ range }); }}
           />
         )}
       </div>
@@ -796,7 +792,7 @@ function NumberFieldInline({
         type="number"
         min={0}
         value={value}
-        onInput={(e) => onChange(Number(e.currentTarget.value) || 0)}
+        onInput={(e) => { onChange(Number(e.currentTarget.value) || 0); }}
       />
       <span className="muted">{label}</span>
     </label>

@@ -1,10 +1,11 @@
-import { useState, type ReactNode } from "react";
+import { useState  } from "react";
+import type {ReactNode} from "react";
 import { systemOf } from "../../features/characters/api";
 import { derive } from "../../features/characters/store";
 import { Button } from "../../ui/Button";
 import type { ItemUseProps as ItemUseProperties } from "../extensionTypes";
-import { useGear } from "./commands";
 import { useCampaign } from "../../workspace/campaignContext";
+import { useGear } from "./commands";
 
 /** A Use button and an Effect selector around an item's own extra choice. */
 function UseControls({
@@ -54,7 +55,7 @@ function OptionSelect({
       <select
         value={value}
         disabled={disabled}
-        onChange={(event) => onChange(event.currentTarget.value)}
+        onChange={(event) => { onChange(event.currentTarget.value); }}
       >
         {options.map((entry) => (
           <option key={entry.id} value={entry.id} disabled={entry.disabled}>
@@ -95,7 +96,7 @@ function WandUse({ campaign, character, item, editable }: ItemUseProperties) {
             },
           ]}
           disabled={disabled}
-          onChange={(id) => setMarking(id === "mark-condition")}
+          onChange={(id) => { setMarking(id === "mark-condition"); }}
         />
       }
       extra={
@@ -143,7 +144,7 @@ function PotionUse({ campaign, character, item, editable }: ItemUseProperties) {
             { id: "clear-locked", label: "Clear a locked Condition", disabled: locked.length === 0 },
           ]}
           disabled={disabled}
-          onChange={(id) => setClearing(id === "clear-locked")}
+          onChange={(id) => { setClearing(id === "clear-locked"); }}
         />
       }
       extra={

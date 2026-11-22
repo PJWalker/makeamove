@@ -10,7 +10,8 @@ import {
   UniformGroup,
 } from "pixi.js";
 import type { Point } from "./grid";
-import { segmentDistance, type Segment } from "./vision";
+import { segmentDistance  } from "./vision";
+import type {Segment} from "./vision";
 
 /*
  * A lamp's light, or a viewer's sight, worked out per pixel (M12). One quad

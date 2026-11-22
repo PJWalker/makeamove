@@ -1,4 +1,5 @@
-import { forwardRef, useRef, useState, type InputHTMLAttributes } from "react";
+import { forwardRef, useRef, useState  } from "react";
+import type {InputHTMLAttributes} from "react";
 
 /**
  * A text field that commits when it loses focus or on Enter, so an edit is
@@ -7,7 +8,7 @@ import { forwardRef, useRef, useState, type InputHTMLAttributes } from "react";
  */
 export const CommitInput = forwardRef<
   HTMLInputElement,
-  Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "defaultValue" | "onChange"> & {
+  Omit<InputHTMLAttributes<HTMLInputElement>, "defaultValue" | "onChange" | "value"> & {
     value: string;
     onCommit: (value: string) => void;
   }
@@ -25,7 +26,7 @@ export const CommitInput = forwardRef<
         setDraft(value);
         rest.onFocus?.(e);
       }}
-      onChange={(e) => setDraft(e.currentTarget.value)}
+      onChange={(e) => { setDraft(e.currentTarget.value); }}
       onBlur={(e) => {
         const next = draft?.trim();
         setDraft(null);

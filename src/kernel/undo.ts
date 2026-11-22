@@ -12,7 +12,7 @@ export class UndoHistory {
   /** Which stack holds each undoable step, oldest first. */
   #undo: UndoStack[] = [];
   #redo: UndoStack[] = [];
-  #stacks = new Set<UndoStack>();
+  readonly #stacks = new Set<UndoStack>();
   #replaying = false;
   /** The undo group of the last step recorded, so the next can join it. */
   #lastGroup: { stack: UndoStack; group: string } | null = null;
@@ -21,7 +21,7 @@ export class UndoHistory {
 
   /** Record a stack's steps in this history, until the returned function is called. */
   track(stack: UndoStack): () => void {
-    const added = ({ type }: { type: "undo" | "redo" }) => {
+    const added = ({ type }: { type: "redo" | "undo" }) => {
       if (type === "redo") this.#redo.push(stack);
       else {
         this.#undo.push(stack);
@@ -29,7 +29,7 @@ export class UndoHistory {
       }
       this.#update();
     };
-    const popped = ({ type }: { type: "undo" | "redo" }) => {
+    const popped = ({ type }: { type: "redo" | "undo" }) => {
       removeLast(type === "undo" ? this.#undo : this.#redo, stack);
       this.#update();
     };

@@ -3,9 +3,9 @@ import type * as Y from "yjs";
 import { newId } from "../lib/ids";
 import { byOrder } from "../lib/order";
 import { sceneDbName as sceneDatabaseName } from "../scene/sceneDoc";
+import { deleteData } from "../platform/dataEpoch";
 import type { Members, Scenes } from "./schema";
 import type { SceneView } from "./types";
-import { deleteData } from "../platform/dataEpoch";
 
 export const sceneGuid = (campaignId: string, sceneId: string) => `${campaignId}/${sceneId}`;
 

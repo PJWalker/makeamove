@@ -3,17 +3,19 @@ import { toScreen } from "../camera";
 import type { Rect } from "../camera";
 import type { Point } from "../grid";
 import type { TokenStat } from "../../systems/types";
-import { barShards, shardFrame, type BarShard } from "../barBreak";
-import { BAR_BREAK_AT, BAR_CHANGE_MS, barChangeFrame, type BarChange } from "../barChange";
+import { barShards, shardFrame  } from "../barBreak";
+import type {BarShard} from "../barBreak";
+import { BAR_BREAK_AT, BAR_CHANGE_MS, barChangeFrame  } from "../barChange";
+import type {BarChange} from "../barChange";
 import { downs } from "../downed";
 import { pinInside, pointerToward, unionRect } from "../edgePin";
 import { hoverSpring } from "../conditionLayout";
 import { resolveTokenLabelLayout, zoomTokenBars } from "../tokenLabelLayout";
 import type { Transform } from "../types";
+import { reducedMotion } from "../../ui/transition";
 import { SdfText } from "./sdfText";
 import type { RenderState } from "./state";
 import { drawPointer, INK, POINTER_ROOM, screenViewport, TOKEN_NAME, cabin } from "./style";
-import { reducedMotion } from "../../ui/transition";
 
 /** Token names never get smaller or bigger than this on screen, in px. */
 const NAME_MIN = 11;
@@ -47,21 +49,21 @@ export class TokenLabelLayer {
   readonly barText = new Container();
   /** Token names. */
   readonly names = new Container();
-  private namePool = new Map<string, SdfText>();
-  private barTextPool = new Map<string, SdfText>();
+  private readonly namePool = new Map<string, SdfText>();
+  private readonly barTextPool = new Map<string, SdfText>();
   private barHover: { tokenId: string; statId: string } | null = null;
-  private barZoom = new Map<
+  private readonly barZoom = new Map<
     string,
     { scale: number; from: number; target: number; start: number }
   >();
   /** Each bar's value when last drawn, to catch it changing. */
-  private barValues = new Map<string, number>();
+  private readonly barValues = new Map<string, number>();
   /** Bars playing out a change in value. */
-  private barChanges = new Map<string, BarChange>();
+  private readonly barChanges = new Map<string, BarChange>();
   /** Bars broken apart: where each snapped, and its pieces. */
-  private breaks = new Map<string, { at: Rect; shards: BarShard[] }>();
+  private readonly breaks = new Map<string, { at: Rect; shards: BarShard[] }>();
   /** The numbers that rise off bars as they change. */
-  private deltaPool = new Map<string, SdfText>();
+  private readonly deltaPool = new Map<string, SdfText>();
   /** Whether a bar is still zooming, and needs more frames. */
   animating = false;
   /** What a linked token shows, from its character. */
@@ -85,7 +87,7 @@ export class TokenLabelLayer {
     const seen = new Set<string>();
     const usedNames = new Set<string>();
     const usedValues = new Set<string>();
-    type Box = { id: string; x: number; y: number; w: number; h: number };
+    interface Box { id: string; x: number; y: number; w: number; h: number }
     const plans: {
       id: string;
       t: Transform;
@@ -536,5 +538,5 @@ export class TokenLabelLayer {
 }
 
 /** How full a stat's bar is, 0 to 1. */
-const fillOf = (stat: Pick<TokenStat, "value" | "max">) =>
+const fillOf = (stat: Pick<TokenStat, "max" | "value">) =>
   stat.max > 0 ? Math.min(1, Math.max(0, stat.value / stat.max)) : 0;

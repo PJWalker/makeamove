@@ -1,6 +1,6 @@
+import { useEffect, useRef, useState } from "react";
 import { plainText } from "../data/richText";
 import type { ReferenceSectionDef } from "../systems/types";
-import { useEffect, useRef, useState } from "react";
 import type { Campaign } from "../campaign/campaign";
 import { actingCharacterId, systemOf } from "../features/characters/api";
 import { List, ListRow } from "../ui/List";
@@ -25,7 +25,7 @@ export function ReferencePanel({ campaign }: { campaign: Campaign }) {
       level={level}
       title="Reference"
       backLabel="Back to the Reference"
-      onBack={() => go("list")}
+      onBack={() => { go("list"); }}
       resizeLabel="Resize the Reference list"
       list={
         <nav className="panel-scroll reference-list" aria-label="GM Reference">
@@ -35,7 +35,7 @@ export function ReferencePanel({ campaign }: { campaign: Campaign }) {
               placeholder="Search the Reference…"
               aria-label="Search the Reference"
               value={query}
-              onChange={(event) => search(event.currentTarget.value)}
+              onChange={(event) => { search(event.currentTarget.value); }}
             />
           </div>
           {sections.length > 0 ? (
@@ -45,7 +45,7 @@ export function ReferencePanel({ campaign }: { campaign: Campaign }) {
                   key={section.id}
                   name={section.title}
                   selected={section.id === selected?.id}
-                  onPick={() => select(section.id)}
+                  onPick={() => { select(section.id); }}
                 />
               ))}
             </List>
@@ -63,7 +63,7 @@ export function ReferencePanel({ campaign }: { campaign: Campaign }) {
                 placeholder="Search the Reference…"
                 aria-label="Search the Reference"
                 value={query}
-                onChange={(event) => search(event.currentTarget.value)}
+                onChange={(event) => { search(event.currentTarget.value); }}
               />
             </div>
           )}

@@ -59,7 +59,7 @@ export async function renderInBrowser<T>({
 
 /** Decodes a canvas data URL, checking it holds the expected image format. */
 export function decodeDataUrl(dataUrl: string, type: "png" | "webp"): Buffer {
-  const base64 = dataUrl.match(new RegExp(`^data:image/${type};base64,(.+)$`))?.[1];
+  const base64 = (new RegExp(`^data:image/${type};base64,(.+)$`).exec(dataUrl))?.[1];
   if (!base64) throw new Error(`Expected a ${type} data URL`);
   return Buffer.from(base64, "base64");
 }

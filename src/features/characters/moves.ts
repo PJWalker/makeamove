@@ -1,5 +1,7 @@
-import { emptyRichText, type RichText } from "../../data/richText";
-import { roll, type Roll } from "../dice/notation";
+import { emptyRichText  } from "../../data/richText";
+import type {RichText} from "../../data/richText";
+import { roll  } from "../dice/notation";
+import type {Roll} from "../dice/notation";
 
 import type { MoveSuggestion, MoveTarget, SaveRequest } from "../chat/types";
 import type {
@@ -325,7 +327,7 @@ export function performMove(
   // Against targets: one roll each, read against that target's value.
   const targetDifficulty = check.difficulty?.kind === "target" ? check.difficulty : undefined;
   if (targetDifficulty && targets?.length) {
-    const spends = basePlan.spends;
+    const {spends} = basePlan;
     const rolled = targets.map((t): MoveTarget => {
       const plan = planMove(system, action, c, d, {
         ...choice,

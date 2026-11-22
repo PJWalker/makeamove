@@ -17,13 +17,13 @@ import { setData, setLearned, setModifier, setNpcField, startMove } from "./comm
 /* The sheet sections that are only fields, lists and buttons over a character, one component for each kind. */
 
 /** What every sheet section is shown with. */
-export type SectionContext = {
+export interface SectionContext {
   campaign: Campaign;
   system: GameSystem;
   c: CharacterView;
   d: Derived;
   editable: boolean;
-};
+}
 
 /** The section of a given kind. */
 type Of<K extends SheetSection["kind"]> = Extract<SheetSection, { kind: K }>;
@@ -35,11 +35,11 @@ function Block({
   heading = label,
   children,
   ...rest
-}: {
+}: React.HTMLAttributes<HTMLElement> & {
   label: string;
   heading?: string;
   children: React.ReactNode;
-} & React.HTMLAttributes<HTMLElement>) {
+}) {
   return (
     <section className="form-section sheet-section" aria-label={label} {...rest}>
       <h3 className="sheet-heading">{heading}</h3>
@@ -135,7 +135,7 @@ function DataField({
         max={item.type === "number" ? item.max : undefined}
         value={String(c.data[item.field] ?? (item.type === "number" ? 0 : ""))}
         disabled={!editable}
-        onChange={(event) => change(event.currentTarget.value)}
+        onChange={(event) => { change(event.currentTarget.value); }}
       />
     </label>
   );

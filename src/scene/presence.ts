@@ -68,12 +68,12 @@ interface PeerState {
 export class Presence {
   private awareness: Awareness | null = null;
   private local: LocalState = { scene: null, cursor: null, ping: null, ruler: null, trail: null };
-  private listeners = new Set<() => void>();
+  private readonly listeners = new Set<() => void>();
   /** When each peer's latest ping first reached us, so animation uses our own clock. */
-  private seen = new Map<string, { n: number; startedAt: number }>();
+  private readonly seen = new Map<string, { n: number; startedAt: number }>();
   private pingCount = 0;
   /** When each peer's latest trail update reached us, to age its points locally. */
-  private trailSeen = new Map<string, { n: number | undefined; at: number }>();
+  private readonly trailSeen = new Map<string, { n: number | undefined; at: number }>();
   private trailCount = 0;
   private localTrail: { x: number; y: number; t: number }[] = [];
   private localPing: { p: Point; startedAt: number } | null = null;
@@ -94,7 +94,7 @@ export class Presence {
     return () => this.listeners.delete(function_);
   }
 
-  private emit = () => {
+  private readonly emit = () => {
     for (const function_ of this.listeners) function_();
   };
 

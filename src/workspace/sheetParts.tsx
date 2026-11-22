@@ -1,7 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { plainText } from "../data/richText";
 import { ColourPicker } from "../ui/ColourPicker";
-import { MoveBody } from "./MoveBody";
 import { useQuery } from "../ui/useQuery";
 import type { EntityGraphic } from "../media/images";
 import type { CharacterView } from "../features/characters/types";
@@ -18,21 +17,23 @@ import { entryIcon } from "../ui/entryIcons";
 import { IconAdd, IconImage, IconRemove, IconRename } from "../ui/icons";
 import { List, Tag } from "../ui/List";
 import { menuTrigger } from "../ui/menuTrigger";
-import { usePopupDialog } from "./usePopupDialog";
 import { Segmented, SegmentedOrSelect } from "../ui/Segmented";
-import { Dialog } from "./Dialog";
-import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
-import { EntryRow, EntryWindow } from "./EntryWindow";
-import { useEntryWindows } from "./entryWindowState";
-import { moveKey, parseEntryKey } from "./entryKeys";
-import { linkProxy } from "./linkProxy";
-import { makeVerb, rollTag } from "./actionPresentation";
-import { dragToken } from "./tokenDrag";
-import { getEntityGraphic } from "./entityGraphics";
-import { actionMenuItems } from "./actionMenu";
-import { dragEntity } from "./entityDrag";
-import { entity } from "./dragEntities";
+import { ContextMenu  } from "../ui/ContextMenu";
+import type {MenuItem} from "../ui/ContextMenu";
 import { sessionUseIds } from "../features/characters/sessionMoves";
+import { entity } from "./dragEntities";
+import { dragEntity } from "./entityDrag";
+import { actionMenuItems } from "./actionMenu";
+import { getEntityGraphic } from "./entityGraphics";
+import { dragToken } from "./tokenDrag";
+import { makeVerb, rollTag } from "./actionPresentation";
+import { linkProxy } from "./linkProxy";
+import { moveKey, parseEntryKey } from "./entryKeys";
+import { useEntryWindows } from "./entryWindowState";
+import { EntryRow, EntryWindow } from "./EntryWindow";
+import { Dialog } from "./Dialog";
+import { usePopupDialog } from "./usePopupDialog";
+import { MoveBody } from "./MoveBody";
 import { useCampaign } from "./campaignContext";
 import { chooseGraphic } from "./commands/campaign";
 import { setField, toggleCondition } from "./commands/characters";
@@ -87,7 +88,7 @@ export function Counter({
           className="counter-btn"
           label={`Decrease ${label}`}
           disabled={disabled}
-          onClick={() => onChange(-1)}
+          onClick={() => { onChange(-1); }}
         >
           <IconRemove size={22} />
         </Button>
@@ -100,7 +101,7 @@ export function Counter({
           className="counter-btn"
           label={`Increase ${label}`}
           disabled={disabled}
-          onClick={() => onChange(1)}
+          onClick={() => { onChange(1); }}
         >
           <IconAdd size={22} />
         </Button>
@@ -153,7 +154,7 @@ function CounterInput({
         setDraft(String(value));
         e.currentTarget.select();
       }}
-      onChange={(e) => setDraft(e.currentTarget.value)}
+      onChange={(e) => { setDraft(e.currentTarget.value); }}
       onBlur={commit}
       onKeyDown={(e) => {
         switch (e.key) {
@@ -221,7 +222,7 @@ export function MoveList({
           label="Move type"
           value={filter}
           options={[{ id: "all", label: "All" }, ...categories]}
-          onChange={(k) => setFilter(k)}
+          onChange={(k) => { setFilter(k); }}
         />
       )}
       <List>
@@ -234,13 +235,13 @@ export function MoveList({
               Icon={entryIcon("move", m.category === "class" ? "class-move" : undefined)}
               tag={rollTag(system, m)}
               tip={plainText(m.text)}
-              onOpen={(row) => windows.show(moveKey(ownerId, m.id), row)}
-              onPointerDown={(event) => dragEntity(ctx.canvas, event, entity(ctx, "move", m.id, m.name))}
+              onOpen={(row) => { windows.show(moveKey(ownerId, m.id), row); }}
+              onPointerDown={(event) => { dragEntity(ctx.canvas, event, entity(ctx, "move", m.id, m.name)); }}
               menuItems={[
                 {
                   label: used ? "Already Used This Session" : makeVerb(m).label,
                   disabled: used,
-                  onSelect: () => onMake(m),
+                  onSelect: () => { onMake(m); },
                 },
                 ...actionMenuItems(ctx, [{ id: `move:${m.id}`, title: m.name }]),
               ]}
@@ -266,7 +267,7 @@ export function MoveList({
             title={m.name}
             text={plainText(m.text)}
             body={<MoveBody campaign={campaign} move={m} characterId={ownerId} />}
-            onClose={() => windows.close(key)}
+            onClose={() => { windows.close(key); }}
             proxy={linkProxy(
               ctx,
               "move",
@@ -278,7 +279,7 @@ export function MoveList({
               {
                 label: used ? "Already Used This Session" : makeVerb(m).label,
                 disabled: used,
-                onSelect: () => onMake(m),
+                onSelect: () => { onMake(m); },
               },
               ...(onForget && learnedIds.has(m.id)
                 ? [
@@ -370,8 +371,8 @@ export function TokenChip({
   const graphic = useQuery(campaign.entityGraphics, () =>
     getEntityGraphic(campaign, "character", c.id),
   );
-  const pick = () => setSettings(true);
-  const trigger = menuTrigger((x, y) => setMenu({ x, y }));
+  const pick = () => { setSettings(true); };
+  const trigger = menuTrigger((x, y) => { setMenu({ x, y }); });
   const items: MenuItem[] = editable
     ? [
         { label: "Change Graphic…", Icon: IconImage, onSelect: pick },
@@ -379,7 +380,7 @@ export function TokenChip({
         {
           label: "Token Settings…",
           Icon: IconRename,
-          onSelect: () => setSettings(true),
+          onSelect: () => { setSettings(true); },
         },
       ]
     : [];
@@ -412,14 +413,14 @@ export function TokenChip({
         <EntityGraphicView graphic={graphic} size={58} />
       </button>
       {menu && items.length > 0 && (
-        <ContextMenu {...menu} items={items} onClose={() => setMenu(null)} />
+        <ContextMenu {...menu} items={items} onClose={() => { setMenu(null); }} />
       )}
       {settings && (
         <TokenSettings
           campaign={campaign}
           c={c}
           graphic={graphic}
-          onClose={() => setSettings(false)}
+          onClose={() => { setSettings(false); }}
         />
       )}
     </div>
@@ -495,7 +496,7 @@ function MakeButton({
   const { label, Icon } = makeVerb(m);
   if (big) {
     return (
-      <Button variant="primary" disabled={disabled} onClick={() => onMake(m)}>
+      <Button variant="primary" disabled={disabled} onClick={() => { onMake(m); }}>
         <Icon size={22} /> {label}
       </Button>
     );
@@ -509,7 +510,7 @@ function MakeButton({
       aria-label={`${label}: ${m.name}`}
       disabled={disabled}
       title={disabled ? "Already used this session" : undefined}
-      onClick={() => onMake(m)}
+      onClick={() => { onMake(m); }}
     >
       <Icon size={22} />
     </Button>

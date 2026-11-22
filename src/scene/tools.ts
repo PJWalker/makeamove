@@ -1,18 +1,20 @@
 import { store } from "../lib/store";
-import { choiceOf, listOf, settingsOver, type LocalDoc as LocalDocument, type LocalValue } from "../data/localDoc";
-import { oneOf } from "../lib/guards";
+import { choiceOf, listOf, settingsOver   } from "../data/localDoc";
+import type {LocalDoc as LocalDocument, LocalValue} from "../data/localDoc";
+import { oneOf, isString } from "../lib/guards";
 import {
   EFFECTS,
   SHAPES,
-  type AreaTone,
-  type EffectKind,
-  type Layer,
-  type SceneElement,
-  type ShapeKind,
-  type ShapePaint,
-  type TextStyle,
-  TEXT_FONTS,
+  
+  
+  
+  
+  
+  
+  
+  TEXT_FONTS
 } from "./types";
+import type {AreaTone, EffectKind, Layer, SceneElement, ShapeKind, ShapePaint, TextStyle} from "./types";
 
 export const TOOL_IDS = [
   "select",
@@ -37,14 +39,14 @@ interface PenSettings {
   colour: string;
   /** Stroke width in screen px, so the brush is the same size on screen at any zoom. */
   width: number;
-  layer: Extract<Layer, "under" | "over">;
+  layer: Extract<Layer, "over" | "under">;
 }
 
 /** Eraser radius in screen px. */
 export const ERASER_RADIUS = 14;
 
 /** What the Lights tool places: a lamp, or an area of solid light or dark. */
-export type LightToolMode = "lamp" | AreaTone;
+export type LightToolMode = AreaTone | "lamp";
 
 /** What the Effects tool puts down: the effect, its colour, light and sight, and the shape of its zone. */
 interface EffectSettings {
@@ -63,16 +65,9 @@ function effectDefaults(effect: EffectKind) {
 
 /** The sorts of things on a scene, as the Select tool picks them: lamps and areas are both lights. */
 export type SelectKind =
-  | "token"
-  | "map"
-  | "drawing"
-  | "shape"
-  | "text"
-  | "wall"
-  | "light"
-  | "effect";
+  "drawing" | "effect" | "light" | "map" | "shape" | "text" | "token" | "wall";
 export const kindOf = (element: SceneElement): SelectKind => (element.type === "area" ? "light" : element.type);
-const SELECT_KINDS: readonly SelectKind[] = [
+const SELECT_KINDS = new Set([
   "token",
   "map",
   "drawing",
@@ -81,7 +76,7 @@ const SELECT_KINDS: readonly SelectKind[] = [
   "wall",
   "light",
   "effect",
-];
+]);
 const SELECTABLE_DEFAULT: SelectKind[] = ["token", "map", "drawing", "shape", "text", "wall"];
 
 /**
@@ -147,11 +142,15 @@ export class SceneTools {
     this.effectTool = local.value("effectTool", (v) => {
       const e = effectRead(v);
       const known = EFFECTS.some((x) => x.id === e.effect) && SHAPES.some((s) => s.id === e.shape);
-      return known ? e : effectRead();
+      return known ? e : effectRead(undefined);
     });
     this.selectable = local.value(
       "selectable",
-      listOf(oneOf(...SELECT_KINDS), "selectable kinds", SELECTABLE_DEFAULT),
+      listOf(
+        (value): value is SelectKind => isString(value) && SELECT_KINDS.has(value as SelectKind),
+        "selectable kinds",
+        SELECTABLE_DEFAULT,
+      ),
     );
   }
 

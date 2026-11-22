@@ -1,11 +1,11 @@
-import { shortcutFor, showCombo } from "./commands/custom";
 import { hotbarSlots, isPinned, MAX_SLOTS } from "../features/characters/hotbar";
 import { actingCharacterId } from "../features/characters/api";
+import { IconAdd, IconDelete, IconShortcut } from "../ui/icons";
+import type { MenuItem } from "../ui/ContextMenu";
+import { shortcutFor, showCombo } from "./commands/custom";
 import type { CampaignContext } from "./campaignContext";
 import { pinToHotbar, unpinFromHotbar } from "./commands/campaign";
 import { findAction } from "./commands/views";
-import { IconAdd, IconDelete, IconShortcut } from "../ui/icons";
-import type { MenuItem } from "../ui/ContextMenu";
 
 export interface ActionMenuTarget {
   /** The call's key. */

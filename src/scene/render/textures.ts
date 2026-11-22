@@ -1,6 +1,7 @@
 import { ImageSource, Texture } from "pixi.js";
 import { tokenIconUrl } from "../../ui/entryIcons";
-import { forgetBitmaps, loadBitmap, type PeerBlobs } from "../../media/images";
+import { forgetBitmaps, loadBitmap  } from "../../media/images";
+import type {PeerBlobs} from "../../media/images";
 
 const textures = new Map<string, Promise<Texture | null>>();
 

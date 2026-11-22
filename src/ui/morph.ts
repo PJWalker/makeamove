@@ -36,7 +36,7 @@ const EASE = "cubic-bezier(0.2, 0.8, 0.2, 1)";
 let origin: { rect: DOMRect; el: Element | null; at: number } | null = null;
 
 /** Remember where the next pop-up is being opened from. */
-export function setMorphOrigin(from: Element | DOMRect | null | undefined) {
+export function setMorphOrigin(from: DOMRect | Element | null | undefined) {
   if (!from) {
     origin = null;
     return;
@@ -167,7 +167,7 @@ const AT_REST: Keyframe = {
 };
 
 /** Grow an element that has just appeared out of `from` (FLIP on the element). */
-export function growFrom(element: HTMLElement, from: Element | DOMRect) {
+export function growFrom(element: HTMLElement, from: DOMRect | Element) {
   if (reducedMotion.matches) return;
   const rect = from instanceof DOMRect ? from : from.getBoundingClientRect();
   if (rect.width < 1) return;

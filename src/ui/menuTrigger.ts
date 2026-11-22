@@ -27,8 +27,8 @@ globalThis.addEventListener(
   { capture: true },
 );
 
-type PointerInput = Pick<PointerEvent, "button" | "pointerType" | "clientX" | "clientY">;
-type MouseInput = Pick<MouseEvent, "clientX" | "clientY" | "preventDefault" | "defaultPrevented">;
+type PointerInput = Pick<PointerEvent, "button" | "clientX" | "clientY" | "pointerType">;
+type MouseInput = Pick<MouseEvent, "clientX" | "clientY" | "defaultPrevented" | "preventDefault">;
 
 export function menuTrigger(open: (x: number, y: number) => void): {
   onPointerDown: (event: PointerInput) => void;

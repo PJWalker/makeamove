@@ -23,7 +23,7 @@ export function hpTokenStat(character: CharacterView, max: number): TokenStat {
 
 /** A token stat's value as the character has it now, read from where the stat says it's kept. */
 export const tokenStatValue = (
-  character: Pick<CharacterView, "resources" | "data">,
+  character: Pick<CharacterView, "data" | "resources">,
   stat: Pick<TokenStat, "source">,
 ): number =>
   "resource" in stat.source

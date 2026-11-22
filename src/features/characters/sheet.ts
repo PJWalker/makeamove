@@ -6,10 +6,11 @@ import { baseOf, getCharacter } from "./queries";
 import {
   derive,
   ensureSystemPart,
-  systemPartOf,
-  type CharacterRec,
-  type SystemPart,
+  systemPartOf
+  
+  
 } from "./store";
+import type {CharacterRec, SystemPart} from "./store";
 import type { characterEntry } from "./schema";
 import { systemOf } from "./system";
 
@@ -49,7 +50,7 @@ function current(campaign: Campaign, id: string, key: SystemPart, field: string)
   return systemPartOf(baseOf(campaign, m), system)?.get(key)?.get(field);
 }
 
-type ListField = "conditions" | "lockedConditions" | "learned";
+type ListField = "conditions" | "learned" | "lockedConditions";
 
 /** One of a character's lists as it has it: its own, or for a copy without one, its template's. */
 function listOf(campaign: Campaign, m: CharacterRec, key: ListField): string[] {
@@ -127,7 +128,7 @@ export function toggleCondition(campaign: Campaign, id: string, condition: strin
   );
 }
 
-export type ConditionState = "clear" | "marked" | "locked";
+export type ConditionState = "clear" | "locked" | "marked";
 
 /** Set a condition's clear, marked, or protected state. */
 export function setConditionState(
@@ -169,7 +170,7 @@ export function setLearned(campaign: Campaign, id: string, actionId: string, kno
 }
 
 /** Set one of an NPC's system-defined fields. */
-export function setNpcField(campaign: Campaign, id: string, field: string, value: string | number) {
+export function setNpcField(campaign: Campaign, id: string, field: string, value: number | string) {
   part(campaign, id, "fields")?.set(field, value);
 }
 

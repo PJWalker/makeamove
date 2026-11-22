@@ -25,7 +25,7 @@ export const dialogTitleEllipsis = defineRule({
           context.report({
             node: w.node,
             messageId: "ellipsis",
-            fix: (fixer) => w.rewrite(fixer, w.text.replace(/(\.\.\.|\.)?$/, "…")),
+            fix: (fixer) => w.rewrite(fixer, w.text.replace(/(\.{3}|\.)?$/, "…")),
           });
         }
       },

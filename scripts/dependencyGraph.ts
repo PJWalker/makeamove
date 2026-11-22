@@ -7,7 +7,7 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 const root = resolve(import.meta.dirname, "..");
 const outputDirectory = join(root, ".dependencygraph");
-const port = Number(process.env.DEP_GRAPH_PORT ?? 4175);
+const port = Number(process.env["DEP_GRAPH_PORT"] ?? 4175);
 
 interface CruiserDependency {
   resolved: string;
@@ -30,7 +30,7 @@ interface CruiseResult {
 
 function cluster(source: string): string {
   const match = /^src\/([^/]+)/.exec(source);
-  if (match) return match[1];
+  if (match?.[1]) return match[1];
   if (source.startsWith("scripts/")) return "scripts";
   if (source.startsWith("lint/")) return "lint";
   return "other";
@@ -555,5 +555,4 @@ async function serve(): Promise<void> {
   });
 }
 
-if (process.argv.includes("--serve")) await serve();
-else await generate();
+await (process.argv.includes("--serve") ? serve() : generate());

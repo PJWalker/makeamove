@@ -1,4 +1,5 @@
-import Fuse, { type IFuseOptions } from "fuse.js";
+import Fuse from "fuse.js";
+import type {IFuseOptions} from "fuse.js";
 import { plainText } from "../../data/richText";
 import { store } from "../../lib/store";
 import type { EntryKind } from "../../ui/entryIcons";
@@ -47,12 +48,7 @@ export interface LibraryGroup {
 }
 
 export type LibraryEntry =
-  | (EntryBase & { kind: "item"; item: ItemDef })
-  | (EntryBase & { kind: "move"; move: ActionDef })
-  | (EntryBase & { kind: "tag"; tag: TagDef })
-  /** A character option: a species, background, subclass or feat. */
-  | (EntryBase & { kind: "option"; option: OptionDef })
-  | (EntryBase & { kind: "monster"; monster: MonsterDef });
+  EntryBase & { kind: "item"; item: ItemDef } | EntryBase & { kind: "monster"; monster: MonsterDef } | EntryBase & { kind: "move"; move: ActionDef } | EntryBase & { kind: "option"; option: OptionDef } | EntryBase & { kind: "tag"; tag: TagDef };
 
 export interface LibraryCollection {
   id: string;
@@ -65,7 +61,7 @@ export interface LibrarySource {
   id: string;
   name: string;
   /** Who contributed it: the campaign's game system, or a plugin. */
-  from: "system" | "plugin";
+  from: "plugin" | "system";
   collections: LibraryCollection[];
   /** Credit for the text, shown under the source. */
   attribution?: string;

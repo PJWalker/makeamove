@@ -1,4 +1,4 @@
-import * as Y from "yjs";
+import type * as Y from "yjs";
 import { IndexeddbPersistence } from "y-indexeddb";
 import { dataName } from "../../platform/dataEpoch";
 
@@ -18,7 +18,7 @@ const REPORT_MS = 800;
 export class NoteDoc {
   readonly doc: Y.Doc;
   readonly body: Y.XmlFragment;
-  private persistence: IndexeddbPersistence;
+  private readonly persistence: IndexeddbPersistence;
   private report: (() => void) | null = null;
   private reportTimer: ReturnType<typeof setTimeout> | undefined;
 

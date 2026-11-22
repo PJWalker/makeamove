@@ -1,7 +1,8 @@
 import { useEffect, useMemo } from "react";
 import { useConstant } from "../ui/useConstant";
 import { canDelete, canEditMessage, visibilityOf } from "../features/chat/types";
-import { logRows, type LogRow } from "../features/chat/sessions";
+import { logRows  } from "../features/chat/sessions";
+import type {LogRow} from "../features/chat/sessions";
 import { markRead } from "../features/chat/unread";
 import { toggleSetValue } from "../lib/set";
 import { canEdit, getCharacter } from "../features/characters/api";
@@ -120,20 +121,20 @@ function useMarkRead(campaign: Campaign, messages: readonly unknown[]) {
     if (visible && document.hasFocus()) markRead(campaign);
   }, [campaign, messages, visible]);
   useEffect(() => {
-    const read = () => markRead(campaign);
+    const read = () => { markRead(campaign); };
     window.addEventListener("focus", read);
-    return () => window.removeEventListener("focus", read);
+    return () => { window.removeEventListener("focus", read); };
   }, [campaign]);
 }
 
 /** Who is looking at the log, and what they may reach from it. */
-type Viewer = {
+interface Viewer {
   me: string;
   isGm: boolean;
   here: string | null | undefined;
   editableCharacters: Set<string>;
   sceneIds: Set<string>;
-};
+}
 
 /** A row of the log: a folded session's heading, or a message. */
 function ChatRow({
@@ -160,8 +161,7 @@ function ChatRow({
         type="button"
         className="chat-session-fold"
         aria-expanded={row.open}
-        onClick={() =>
-          context.table.openSessions.set(toggleSetValue(context.table.openSessions.value, row.part))
+        onClick={() => { context.table.openSessions.set(toggleSetValue(context.table.openSessions.value, row.part)); }
         }
       >
         <IconExpand size={22} className="chat-session-chevron" />

@@ -1,7 +1,10 @@
 import { setup } from "xstate";
 
 export const throwMachine = setup({
-  types: {},
+  types: {
+    events: {} as
+      { type: "CANCEL" } | { type: "GRAB" } | { type: "MOVE"; away: boolean; moved: boolean } | { type: "UP" },
+  },
 }).createMachine({
   initial: "idle",
   on: { GRAB: ".grabbed" },

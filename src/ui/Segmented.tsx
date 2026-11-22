@@ -1,4 +1,5 @@
-import { useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useLayoutEffect, useRef, useState   } from "react";
+import type {ReactNode, RefObject} from "react";
 import {
   RadioButton,
   RadioField,
@@ -36,7 +37,7 @@ export function Segmented<T extends string>({
       aria-label={label}
       orientation="horizontal"
       value={value}
-      onChange={(next) => onChange(next as T)}
+      onChange={(next) => { onChange(next as T); }}
       {...(disabled === undefined ? {} : { isDisabled: disabled })}
     >
       {options.map((o) => {
@@ -86,7 +87,7 @@ export function SegmentedOrSelect<T extends string>(properties: Parameters<typeo
           aria-label={label}
           value={value}
           disabled={disabled}
-          onChange={(event) => onChange(event.currentTarget.value as T)}
+          onChange={(event) => { onChange(event.currentTarget.value as T); }}
         >
           {options.map((option) => (
             <option key={option.id} value={option.id} disabled={option.disabled}>
@@ -108,12 +109,12 @@ function useSegmentedFit(
     const root = rootReference.current;
     const measure = measureReference.current;
     if (!root || !measure) return;
-    const check = () => setFits(measure.offsetWidth <= root.clientWidth);
+    const check = () => { setFits(measure.offsetWidth <= root.clientWidth); };
     check();
     const ro = new ResizeObserver(check);
     ro.observe(root);
     ro.observe(measure);
-    return () => ro.disconnect();
+    return () => { ro.disconnect(); };
   }, [fits, measureReference, rootReference]);
   return fits;
 }
@@ -140,9 +141,7 @@ export function ToggleGroup<T extends string>({
       aria-label={label}
       selectionMode="multiple"
       selectedKeys={value}
-      onSelectionChange={(keys) =>
-        // In the options' order, whatever order they were turned on in.
-        onChange(options.flatMap((o) => (keys.has(o.id) ? [o.id] : [])))
+      onSelectionChange={(keys) => { onChange(options.flatMap((o) => (keys.has(o.id) ? [o.id] : []))); }
       }
     >
       {options.map((o) => (

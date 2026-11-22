@@ -3,7 +3,8 @@ import { isString, objectOf, optional } from "../../lib/guards";
 import type { Permission } from "../../kernel/commands";
 import { IconDelete } from "../../ui/icons";
 import type { CampaignContext } from "../campaignContext";
-import { command, type FolderTreeKind, type Offer, type TableCommand } from "./types";
+import { command    } from "./types";
+import type {FolderTreeKind, Offer, TableCommand} from "./types";
 import { shown } from "./views";
 
 /*
@@ -54,7 +55,7 @@ export function folderCommands(tree: FolderTreeKind, ops: FolderOps) {
     params: objectOf({ id: isString, name: isString }),
     title: "Rename Folder",
     permission,
-    run: (context, { id, name }) => ops.rename(context, id, name),
+    run: (context, { id, name }) => { ops.rename(context, id, name); },
   });
   const remove = command<{ id: string }>({
     id: `${tree}Folder.delete`,
@@ -65,7 +66,7 @@ export function folderCommands(tree: FolderTreeKind, ops: FolderOps) {
     permission,
     section: "delete",
     menu: { folder: (_, t) => (t.tree === tree ? [{ params: { id: t.id } }] : []) },
-    run: (context, { id }) => ops.remove(context, id),
+    run: (context, { id }) => { ops.remove(context, id); },
   });
   const newHere = (ops.newHere ?? []).map((make) =>
     command<{ folder: string }>({

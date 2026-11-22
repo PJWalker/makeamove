@@ -17,7 +17,7 @@ const PAGE_SIZE = 2048;
 export interface SdfFontSpec {
   family: string;
   weight: number;
-  style?: "normal" | "italic";
+  style?: "italic" | "normal";
 }
 
 /** The spec as a CSS font shorthand, at `size` px. */
@@ -135,7 +135,7 @@ export function sdfFont(spec: SdfFontSpec, haloRatio: number): string {
   if (!Cache.has(`${name}-bitmap`)) {
     const font = new SdfFont(spec, haloRatio * GLYPH_SIZE);
     Cache.set(`${name}-bitmap`, font);
-    font.once("destroy", () => Cache.remove(`${name}-bitmap`));
+    font.once("destroy", () => { Cache.remove(`${name}-bitmap`); });
   }
   return name;
 }

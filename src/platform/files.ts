@@ -7,7 +7,7 @@
  * so their shapes are declared here.
  */
 
-type Permission = "granted" | "denied" | "prompt";
+type Permission = "denied" | "granted" | "prompt";
 
 interface PermissionTarget {
   queryPermission?(options: { mode: "readwrite" }): Promise<Permission>;
@@ -109,7 +109,7 @@ export async function saveFile(
   a.href = url;
   a.download = name;
   a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setTimeout(() => { URL.revokeObjectURL(url); }, 1000);
   return true;
 }
 
@@ -119,8 +119,8 @@ export function openFile(kind: FileKind): Promise<File | null> {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = kind.extension;
-    input.addEventListener("change", () => resolve(input.files?.[0] ?? null));
-    input.addEventListener("cancel", () => resolve(null));
+    input.addEventListener("change", () => { resolve(input.files?.[0] ?? null); });
+    input.addEventListener("cancel", () => { resolve(null); });
     input.click();
   });
 }

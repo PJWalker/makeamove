@@ -1,8 +1,9 @@
-import Fuse, { type FuseIndex, type IFuseOptions } from "fuse.js";
+import Fuse from "fuse.js";
+import type {FuseIndex, IFuseOptions} from "fuse.js";
 import { dataName } from "../../platform/dataEpoch";
 import { deleteValue, readValue, writeValue } from "../../platform/keyval";
-import { LINK_NODE } from "./links";
 import { isString } from "../../lib/guards";
+import { LINK_NODE } from "./links";
 
 /*
  * Note search, on this device: each page's plain text with a prebuilt Fuse
@@ -14,12 +15,12 @@ import { isString } from "../../lib/guards";
  */
 
 /** A page as the editor serialises it (ProseMirror JSON). */
-export type NoteNode = {
+export interface NoteNode {
   type?: string;
   text?: string;
   attrs?: Record<string, unknown> | undefined;
   content?: NoteNode[] | undefined;
-};
+}
 
 /**
  * Where a stretch of the text starts and the editor position it starts at:
@@ -144,7 +145,7 @@ function snippet(text: string, start: number, end: number) {
 }
 
 export class NoteTextIndex {
-  private pages: Map<string, IndexedPage>;
+  private readonly pages: Map<string, IndexedPage>;
   private fuse: Fuse<IndexedPage> | null;
   private saveTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -228,7 +229,7 @@ export class NoteTextIndex {
   private changed() {
     this.fuse = null;
     clearTimeout(this.saveTimer);
-    this.saveTimer = setTimeout(() => this.flush(), SAVE_MS);
+    this.saveTimer = setTimeout(() => { this.flush(); }, SAVE_MS);
   }
 }
 

@@ -1,25 +1,16 @@
-import { store, watch } from "../lib/store";
 import * as Y from "yjs";
 import { IndexeddbPersistence } from "y-indexeddb";
+import { store, watch } from "../lib/store";
 import { newId, newSecret } from "../lib/ids";
-import { campaignDbName as campaignDatabaseName, campaignUiDbName as campaignUiDatabaseName } from "./storage";
 
 import { commaListOf, formatCommaList } from "../lib/list";
-import { device, type Device } from "../platform/device";
+import { device  } from "../platform/device";
+import type {Device} from "../platform/device";
 import type { JoinRoom } from "../sync/transport";
 import { joinPublicRoom } from "../sync/publicRoom";
 import type { ReadonlyStore } from "../lib/store";
-import {
-  forgetCampaign,
-  renameCampaignEntry,
-  summaryOf,
-  touchCampaign,
-  updateCampaignEntry,
-  upsertCampaign,
-} from "./registry";
 import { NO_SYSTEM_ID, getSystem } from "../systems";
 import type { Invite } from "../sync/invite";
-import { CampaignConnection } from "./connection";
 import { noteDbName as noteDatabaseName, noteGuid } from "../features/notes/noteDoc";
 import { deleteNoteTextIndex } from "../features/notes/textIndex";
 import { Vault, vaultDbName as vaultDatabaseName, vaultNoteGuid, vaultShape } from "../features/notes/vault";
@@ -28,8 +19,9 @@ import { MoveRequests } from "../features/characters/moveRequests";
 import { sceneDbName as sceneDatabaseName } from "../scene/sceneDoc";
 import { upgrade } from "../data/migrate";
 import { rootOf } from "../data/schema";
-import { campaignShape, type CampaignRoot } from "./schema";
-import { SystemData } from "./systemStore";
+import { deleteData } from "../platform/dataEpoch";
+import { isString } from "../lib/guards";
+import type { CampaignDefaults, MemberView, RevokedView, Role, SceneView } from "./types";
 import {
   activeSceneId as activeSceneIdFromIndex,
   createScene,
@@ -39,9 +31,20 @@ import {
   sceneViews,
   updateScene,
 } from "./sceneIndex";
-import type { CampaignDefaults, MemberView, RevokedView, Role, SceneView } from "./types";
-import { deleteData } from "../platform/dataEpoch";
-import { isString } from "../lib/guards";
+import { SystemData } from "./systemStore";
+import type {CampaignRoot} from "./schema";
+import { campaignShape  } from "./schema";
+import { CampaignConnection } from "./connection";
+import {
+  forgetCampaign,
+  renameCampaignEntry,
+  summaryOf,
+  touchCampaign,
+  updateCampaignEntry,
+  upsertCampaign,
+} from "./registry";
+import { campaignDbName as campaignDatabaseName, campaignUiDbName as campaignUiDatabaseName } from "./storage";
+
 export type { CampaignDefaults, MemberView, RevokedView, Role, SceneView } from "./types";
 
 /* An open campaign: its root document (laid out in schema.ts), sync and services. */
@@ -106,7 +109,7 @@ export class Campaign {
   /** The device this campaign is open on. */
   readonly device: ReadonlyStore<Device>;
   private readonly joinRoom: JoinRoom;
-  private persistence: IndexeddbPersistence;
+  private readonly persistence: IndexeddbPersistence;
   private destroyed = false;
   private rejoinCleanups: (() => void)[] = [];
 
@@ -219,15 +222,15 @@ export class Campaign {
     if (this.removed.value && !rejoin) return;
     if (rejoin && this.removed.value) {
       this.checkingRejoin = true;
-      let timer = 0;
+      let timer: ReturnType<typeof globalThis.setTimeout> | undefined;
       const stop = watch([this.peerCount], () => {
-        if (this.peerCount.value === 0 || timer) return;
+        if (this.peerCount.value === 0 || timer !== undefined) return;
         timer = globalThis.setTimeout(() => {
           this.checkingRejoin = false;
           this.checkMembership();
         }, REJOIN_CHECK_MS);
       });
-      this.rejoinCleanups.push(stop, () => clearTimeout(timer));
+      this.rejoinCleanups.push(stop, () => { if (timer !== undefined) clearTimeout(timer); });
     }
     if (await this.connection.connect(roomKey, () => this.destroyed))
       void this.vault.value?.connect();
@@ -338,7 +341,7 @@ export class Campaign {
   }
 
   ensureMember(name: string, role: Role = "player") {
-    const id = this.device.value.id;
+    const {id} = this.device.value;
     this.doc.transact(() => {
       if (!this.members.has(id)) this.members.set(id, { role, joinedAt: Date.now() });
       if (name) this.members.get(id)?.patch({ name });
@@ -377,7 +380,7 @@ export class Campaign {
     // Where the GM goes, the table goes: tell everyone once they've settled.
     if (this.isGm()) {
       clearTimeout(this.sceneNoticeTimer);
-      this.sceneNoticeTimer = setTimeout(() => this.announceScene(), Campaign.sceneNoticeDelay);
+      this.sceneNoticeTimer = setTimeout(() => { this.announceScene(); }, Campaign.sceneNoticeDelay);
     }
   }
 
@@ -470,7 +473,7 @@ export async function createCampaign(
 }
 
 /** Resolve a system's campaign-level values, falling back for older stored campaigns. */
-export function systemCampaignData(campaign: Campaign): Record<string, string | number | boolean> {
+export function systemCampaignData(campaign: Campaign): Record<string, boolean | number | string> {
   const system = getSystem(campaign.systemId);
   return Object.fromEntries(
     (system.campaignFields ?? []).map((field) => [
@@ -484,7 +487,7 @@ export function systemCampaignData(campaign: Campaign): Record<string, string | 
 export function setSystemCampaignData(
   campaign: Campaign,
   fieldId: string,
-  value: string | number | boolean,
+  value: boolean | number | string,
 ) {
   const field = getSystem(campaign.systemId).campaignFields?.find(
     (candidate) => candidate.id === fieldId,
@@ -550,7 +553,7 @@ export function joinCampaign({ campaignId, roomKey }: Invite): string {
 }
 
 /** Load a stored document, let `clear` delete what it points to, then delete the document. */
-async function clearStoredDocument(databaseName: string, clear: (document: Y.Doc) => void | Promise<void>) {
+async function clearStoredDocument(databaseName: string, clear: (document: Y.Doc) => Promise<void> | void) {
   const document = new Y.Doc();
   const p = new IndexeddbPersistence(databaseName, document);
   await p.whenSynced;

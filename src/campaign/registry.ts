@@ -1,6 +1,6 @@
-import { store } from "../lib/store";
 import * as Y from "yjs";
 import { IndexeddbPersistence } from "y-indexeddb";
+import { store } from "../lib/store";
 import { dataName } from "../platform/dataEpoch";
 import { isObject } from "../lib/guards";
 import { collection, lww, rootOf } from "../data/schema";

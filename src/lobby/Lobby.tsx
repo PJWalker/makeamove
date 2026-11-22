@@ -17,7 +17,8 @@ import { importFromFolder } from "../campaign/folderBackup";
 import { canUseFolders } from "../platform/files";
 import { store } from "../lib/store";
 import { device, setDeviceName } from "../platform/device";
-import { campaigns, registryReady, type CampaignSummary } from "../campaign/registry";
+import { campaigns, registryReady  } from "../campaign/registry";
+import type {CampaignSummary} from "../campaign/registry";
 import { getSystem, listSystems, NO_SYSTEM_ID } from "../systems";
 import { Button } from "../ui/Button";
 import { ContextMenu } from "../ui/ContextMenu";
@@ -71,7 +72,7 @@ export function Lobby({ error }: { error: string | null }) {
   const invite = useQuery(pendingInvite);
   const failed = useQuery(backupError);
   const [creating, setCreating] = useState(false);
-  const create = () => setCreating(true);
+  const create = () => { setCreating(true); };
 
   return (
     <main className="lobby">
@@ -113,7 +114,7 @@ export function Lobby({ error }: { error: string | null }) {
         )}
         {ready && <ImportActions />}
 
-        {creating && <NewCampaignDialog onClose={() => setCreating(false)} />}
+        {creating && <NewCampaignDialog onClose={() => { setCreating(false); }} />}
         {invite && <JoinInviteDialog invite={invite} />}
       </div>
     </main>
@@ -185,7 +186,7 @@ function LobbyModal({
   // In a layout effect, so a menu item's morph catches it (ui/morph.ts).
   useLayoutEffect(() => {
     const d = dialog.current;
-    if (d) showFromOrigin(d, () => d.showModal());
+    if (d) showFromOrigin(d, () => { d.showModal(); });
   }, []);
 
   return (
@@ -210,13 +211,13 @@ function LobbyModal({
 /** Closes the modal the event's control sits in, shrinking it back into what opened it. */
 function closeModal(e: { currentTarget: Element }) {
   const d = e.currentTarget.closest("dialog");
-  if (d) void leave(d, () => d.close());
+  if (d) void leave(d, () => { d.close(); });
 }
 
 function CampaignRow({ c }: { c: CampaignSummary }) {
   const [confirming, setConfirming] = useState(false);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
-  const trigger = menuTrigger((x, y) => setMenu({ x, y }));
+  const trigger = menuTrigger((x, y) => { setMenu({ x, y }); });
 
   return (
     <li className="campaign-row">
@@ -224,7 +225,7 @@ function CampaignRow({ c }: { c: CampaignSummary }) {
         type="button"
         className="campaign-open"
         data-campaign-id={c.id}
-        onClick={() => goToCampaign(c.id)}
+        onClick={() => { goToCampaign(c.id); }}
         {...trigger}
       >
         <span className="campaign-name">{c.name}</span>
@@ -248,16 +249,16 @@ function CampaignRow({ c }: { c: CampaignSummary }) {
               label: "Delete…",
               Icon: IconDelete,
               danger: true,
-              onSelect: () => setConfirming(true),
+              onSelect: () => { setConfirming(true); },
             },
           ]}
-          onClose={() => setMenu(null)}
+          onClose={() => { setMenu(null); }}
         />
       )}
       {confirming && (
         <DeleteCampaignDialog
           campaignName={c.name}
-          onClose={() => setConfirming(false)}
+          onClose={() => { setConfirming(false); }}
           onConfirm={() => void deleteLocalCampaign(c.id)}
         />
       )}
@@ -321,7 +322,7 @@ function NewCampaignDialog({ onClose }: { onClose: () => void }) {
           <input
             name="name"
             value={name}
-            onInput={(e) => setName(e.currentTarget.value)}
+            onInput={(e) => { setName(e.currentTarget.value); }}
             placeholder="The Lost Barrows"
             // The field is the dialog's one input.
             // react-doctor-disable-next-line react-doctor/no-autofocus
@@ -335,7 +336,7 @@ function NewCampaignDialog({ onClose }: { onClose: () => void }) {
           <select
             name="system"
             value={systemId}
-            onChange={(e) => setSystemId(e.currentTarget.value)}
+            onChange={(e) => { setSystemId(e.currentTarget.value); }}
             required
           >
             <option value="" disabled>
@@ -380,7 +381,7 @@ function JoinInviteDialog({ invite }: { invite: NonNullable<typeof pendingInvite
   return (
     <LobbyModal title="Join a Campaign" onClose={() => (pendingInvite.value = null)}>
       <p>You&apos;ve been invited to a campaign.</p>
-      <form onSubmit={(e) => submit(e)}>
+      <form onSubmit={(e) => { submit(e); }}>
         {/* The field is the dialog's one input. */}
         <YourNameField value={yourName} onChange={setYourName} autoFocus />
         <div className="form-actions">
@@ -411,7 +412,7 @@ function YourNameField({
       Your name
       <input
         value={value}
-        onInput={(e) => onChange(e.currentTarget.value)}
+        onInput={(e) => { onChange(e.currentTarget.value); }}
         placeholder="Robin"
         autoComplete="name"
         // react-doctor-disable-next-line react-doctor/no-autofocus

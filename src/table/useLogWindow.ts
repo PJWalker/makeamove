@@ -31,7 +31,7 @@ const ROW_GUESS = 64;
 const JUMP_LEAD = 20;
 
 /** Where the window starts and ends: null means "WINDOW rows before the end" and "the newest row". */
-type Span = { start: string | null; end: string | null };
+interface Span { start: string | null; end: string | null }
 
 /**
  * The window of a long chat log that's rendered, and the scroll behaviour around it: following the
@@ -93,11 +93,11 @@ export function useLogWindow({
   };
   const [loading, setLoading] = useState(false);
   // Read so finishing a load re-renders, and slide() can ask for the next chunk.
-  void loading;
+  loading;
   const loadEarlier = () => {
     if (!campaign.chat.hasEarlier.value || loading) return;
     setLoading(true);
-    void campaign.chat.loadEarlier().finally(() => setLoading(false));
+    void campaign.chat.loadEarlier().finally(() => { setLoading(false); });
   };
   /** Set when the window moves to where the scrollbar was dragged: the spacers place it, so no anchoring. */
   const jumped = useRef(false);
@@ -226,7 +226,7 @@ export function useLogWindow({
       else noteAnchorReference.current();
     });
     ro.observe(list.current);
-    return () => ro.disconnect();
+    return () => { ro.disconnect(); };
   }, []);
 
   const onScroll = (e: { currentTarget: HTMLElement }) => {

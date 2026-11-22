@@ -1,8 +1,9 @@
-import type { Homebrew, HomebrewEntry } from "./schema";
-export type { HomebrewEntry } from "./schema";
 import { asRichText } from "../../data/richText";
 import { newId } from "../../lib/ids";
 import type { ActionDef, GameSystem, ItemDef } from "../../systems/types";
+import type { Homebrew, HomebrewEntry } from "./schema";
+
+export type { HomebrewEntry } from "./schema";
 
 /*
  * A campaign's homebrew: gear and moves made at the table, kept in the

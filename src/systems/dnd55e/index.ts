@@ -1,9 +1,11 @@
 import { md } from "../../macros/markdown.macro" with { type: "macro" };
-import { plainText, richTextFromPlain, type RichText } from "../../data/richText";
+import { plainText, richTextFromPlain  } from "../../data/richText";
+import type {RichText} from "../../data/richText";
 import type { CharacterView } from "../../features/characters/types";
 import { commaListOf, formatCommaList } from "../../lib/list";
 
-import { resolveEffects, type EffectSource } from "../effects";
+import { resolveEffects  } from "../effects";
+import type {EffectSource} from "../effects";
 import type {
   ActionDef,
   AreaSpec,
@@ -17,6 +19,7 @@ import type {
   SaveStep,
   TargetSpec,
 } from "../types";
+import { hpTokenStat } from "../tokenStats";
 import {
   ABILITIES,
   ACTIONS,
@@ -29,11 +32,12 @@ import {
   SKILLS,
   SPELLS,
   TAGS,
-  XP_FOR_LEVEL,
-  type Ability,
-  type DndClass,
-  type Spell,
+  XP_FOR_LEVEL
+  
+  
+  
 } from "./data";
+import type {Ability, DndClass, Spell} from "./data";
 import {
   BACKGROUNDS,
   FEATS,
@@ -47,7 +51,6 @@ import { SRD_SPELLS } from "./srdSpells";
 import { SRD_MONSTERS } from "./srdMonsters";
 import { SRD_MAGIC_ITEMS } from "./srdMagicItems";
 import { SRD_CLASS_FEATURES } from "./srdClasses";
-import { hpTokenStat } from "../tokenStats";
 
 /*
  * D&D 5th edition, 2024 rules ("5.5e"), from the SRD 5.2: the formulas, and
@@ -460,7 +463,7 @@ const spellRoll = (s: Spell, crit: boolean): FollowUpDef => {
       const extraLevels = Math.max(0, (d.values["spellSlot"] ?? s.level) - s.level);
       const extraDice =
         s.upcastDice ??
-        Number(plainText(s.text).match(/\+(\d+)d\d+ per slot level above/i)?.[1] ?? 0);
+        Number((/\+(\d+)d\d+ per slot level above/i.exec(plainText(s.text)))?.[1] ?? 0);
       const n =
         (r.count * (r.scales ? cantripDice(levelOf(c)) : 1) + extraLevels * extraDice) *
         (crit ? 2 : 1);

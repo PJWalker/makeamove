@@ -15,7 +15,7 @@ import type { CharacterKind, CharacterView, ItemInstance } from "./types";
 
 export type CharacterRec = Item<typeof characterEntry>;
 /** The parts of a system's data kept as id -> value. */
-export type SystemPart = "data" | "scores" | "resources" | "modifiers" | "fields";
+export type SystemPart = "data" | "fields" | "modifiers" | "resources" | "scores";
 
 const readPart = (data: SystemCharacterRec | undefined, part: SystemPart) =>
   data?.get(part)?.read();
@@ -118,7 +118,7 @@ export function characterView(
     }) as Plain<SystemCharacterRec["shape"][P]>;
   const kind: CharacterKind = get("kind") === "npc" ? "npc" : "pc";
   const storedFields = merged("fields");
-  const fields: Record<string, string | number> = {};
+  const fields: Record<string, number | string> = {};
   for (const f of system.npcFields)
     fields[f.id] = storedFields[f.id] ?? f.default ?? (f.type === "number" ? 0 : "");
   const inv = m.get("inventory") ?? base?.get("inventory");

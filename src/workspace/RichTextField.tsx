@@ -41,9 +41,9 @@ export function RichTextField({
       extensions: [...ruleTextExtensions(context), Placeholder.configure({ placeholder })],
       ...(initial.current ? { content: initial.current } : {}),
       editorProps: { attributes: { class: "note-body", "aria-label": label } },
-      onUpdate: ({ editor: ed }) => change.current(ed.getJSON()),
+      onUpdate: ({ editor: ed }) => { change.current(ed.getJSON()); },
     });
-    return () => editor.destroy();
+    return () => { editor.destroy(); };
   }, [campaign, context, label, placeholder]);
 
   return (

@@ -14,7 +14,7 @@ import type { UndoHistory } from "./undo";
  */
 
 /** True, or why it can't run now. */
-export type Availability = true | string;
+export type Availability = string | true;
 
 export const GM_ONLY = "GM only";
 
@@ -170,7 +170,7 @@ export class CommandRegistry<C extends CommandHost, K extends AnyCommand<C> = An
    */
   batch<R>(function_: () => R): R {
     const context = this.#ctx;
-    context.history.begin(context.undoStack);
+    context.history.begin(context.undoStack, undefined);
     return context.transact(function_, true);
   }
 

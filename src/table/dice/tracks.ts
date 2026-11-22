@@ -1,6 +1,7 @@
 import { Quaternion, Vector3 } from "three";
 import { playDiceImpact } from "../../ui/sounds";
-import { PHYSICS_STEP, type DieHull, type DiePose, type DieState } from "./physics";
+import { PHYSICS_STEP    } from "./physics";
+import type {DieHull, DiePose, DieState} from "./physics";
 import { SCALE } from "./shapes";
 import type { Point, Track } from "./types";
 

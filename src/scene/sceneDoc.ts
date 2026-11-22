@@ -4,9 +4,11 @@ import { IndexeddbPersistence } from "y-indexeddb";
 import { newId } from "../lib/ids";
 import { dataName } from "../platform/dataEpoch";
 import { device } from "../platform/device";
+import { rootOf   } from "../data/schema";
+import type {Patch, Root} from "../data/schema";
 import type { Grid } from "./grid";
-import { LAYERS, type Layer, type NewElement, type SceneElement } from "./types";
-import { rootOf, type Patch, type Root } from "../data/schema";
+import { LAYERS    } from "./types";
+import type {Layer, NewElement, SceneElement} from "./types";
 import { sceneShape } from "./schema";
 
 /* A scene subdocument and how it's edited; its layout is declared in schema.ts. */
@@ -45,7 +47,7 @@ export class SceneDoc {
   readonly undo: Y.UndoManager;
   /** Marks this user's own edits, so undo never reverts anyone else's. */
   readonly origin = { local: true };
-  private persistence: IndexeddbPersistence;
+  private readonly persistence: IndexeddbPersistence;
 
   private constructor(document: Y.Doc) {
     this.doc = document;
@@ -104,17 +106,16 @@ export class SceneDoc {
   }
 
   setLighting(patch: Partial<SceneLighting>) {
-    this.transact(() =>
-      this.settings.patch({
+    this.transact(() => { this.settings.patch({
         lighting: patch.enabled,
         darkness: patch.darkness,
         vision: patch.vision,
-      }),
+      }); },
     );
   }
 
   setGrid(patch: Partial<Grid>) {
-    this.transact(() => this.settings.patch(gridSettings(patch)));
+    this.transact(() => { this.settings.patch(gridSettings(patch)); });
   }
 
   // Elements
@@ -137,7 +138,7 @@ export class SceneDoc {
   }
 
   /** The order of the topmost (or bottommost) element in a layer; null if it's empty. */
-  private edgeZ(layer: Layer, edge: "top" | "bottom"): string | null {
+  private edgeZ(layer: Layer, edge: "bottom" | "top"): string | null {
     let found: string | null = null;
     for (const m of this.elements.values()) {
       if (m.get("layer") !== layer) continue;
@@ -170,7 +171,7 @@ export class SceneDoc {
   }
 
   /** Apply several patches as one undo step; an `undefined` value clears that field. */
-  update(patches: Map<string, ElementPatch> | [string, ElementPatch][]) {
+  update(patches: [string, ElementPatch][] | Map<string, ElementPatch>) {
     this.transact(() => {
       for (const [id, patch] of patches) this.elements.get(id)?.patchCase(patch);
     });
@@ -195,7 +196,7 @@ export class SceneDoc {
   }
 
   /** Move elements to the top (or bottom) of their layers, keeping their order. */
-  restack(ids: Iterable<string>, to: "front" | "back") {
+  restack(ids: Iterable<string>, to: "back" | "front") {
     const els = [...ids].map((id) => this.get(id)).filter((e): e is SceneElement => !!e);
     els.sort((a, b) => byOrder(a.z, b.z));
     this.transact(() => {

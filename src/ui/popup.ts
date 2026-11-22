@@ -2,7 +2,8 @@ import type * as React from "react";
 
 import { leave, originRect, releaseMorph, showFromOrigin } from "./morph";
 import { nextZ } from "./windows";
-import { RESIZE_CURSORS, resizeRect, type ResizeDir } from "./resizeRect";
+import { RESIZE_CURSORS, resizeRect  } from "./resizeRect";
+import type {ResizeDir} from "./resizeRect";
 import { trackPointer } from "./pointer";
 
 /*
@@ -146,7 +147,7 @@ export function dragPopup(dialog: HTMLElement, e: PointerEvent | React.PointerEv
   dialog.dataset["lifted"] = "true";
   trackPointer(
     "grabbing",
-    (event) => place(dialog, event.clientX - dx, event.clientY - dy),
+    (event) => { place(dialog, event.clientX - dx, event.clientY - dy); },
     () => delete dialog.dataset["lifted"],
   );
 }

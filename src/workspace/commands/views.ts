@@ -3,14 +3,15 @@ import type { MenuItem } from "../../ui/ContextMenu";
 import type { CampaignContext } from "../campaignContext";
 import { platformCombo, shortcutFor, showCombo } from "./custom";
 import {
-  MENU_SECTIONS,
-  type Action,
-  type AnyTableCommand,
-  type MenuSection,
-  type Offer,
-  type TableCommand,
-  type Target,
+  MENU_SECTIONS
+  
+  
+  
+  
+  
+  
 } from "./types";
+import type {Action, AnyTableCommand, MenuSection, Offer, TableCommand, Target} from "./types";
 
 /*
  * Views over the command registry: what the palette and hotbar list, and
@@ -56,7 +57,7 @@ export function actionFor(
     title: offer.title ?? shown(command.title, context, params),
     source: command.source ? shown(command.source, context, params) : "Core",
     available: context.commands.check(command, params),
-    run: () => invoke(context, command, params),
+    run: () => { invoke(context, command, params); },
     ...(offer.group ? { group: offer.group } : {}),
     ...(aliases.length > 0 ? { aliases } : {}),
     ...(offer.tags ? { tags: offer.tags } : {}),

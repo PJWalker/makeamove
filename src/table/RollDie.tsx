@@ -1,18 +1,18 @@
-/* eslint-disable jsx-a11y/prefer-tag-over-role -- The die's accessible image is canvas-rendered and has no img source. */
+
 import { useEffect, useEffectEvent, useRef } from "react";
 import { useMachine } from "@xstate/react";
-import { pieceMachine } from "./pieceMachine";
-import type { Die as RolledDie } from "../features/dice/notation";
-import { lastPointer } from "../ui/pointer";
-import { useThrow } from "../ui/useThrow";
-import { whenNear } from "../ui/whenNear";
-import type { DieLook, Point } from "./dice/types";
 import type { ReactNode, RefObject } from "react";
+import { whenNear } from "../ui/whenNear";
+import { useThrow } from "../ui/useThrow";
+import { lastPointer } from "../ui/pointer";
+import type { Die as RolledDie } from "../features/dice/notation";
 import { colourOf } from "../scene/presence";
 import { device } from "../platform/device";
 import { chipText, signed } from "../features/dice/pool";
 import { useQuery } from "../ui/useQuery";
 import { threeDimensionalDice } from "../workspace/diceRendering";
+import { reducedMotion } from "../ui/transition";
+import type {PhysicalDie as Die} from "./rollDieHelpers";
 import {
   chipSign,
   dieColours,
@@ -20,13 +20,14 @@ import {
   dieTitle,
   CHIP_COLOUR,
   loadDice,
-  rollCarriedDice,
-  type PhysicalDie as Die,
+  rollCarriedDice
+  
 } from "./rollDieHelpers";
-import { reducedMotion } from "../ui/transition";
+import type { DieLook, Point } from "./dice/types";
+import { pieceMachine } from "./pieceMachine";
 
 /** Waiting for the 3D dice, moving, at rest, or drawn flat. */
-type Phase = "pending" | "moving" | "landed" | "flat";
+type Phase = "flat" | "landed" | "moving" | "pending";
 
 /** Where a die thrown into this slot starts: the roller's pointer, or else above the log. */
 function throwFrom(slot: HTMLElement, mine: boolean): Point {
@@ -41,7 +42,7 @@ function throwFrom(slot: HTMLElement, mine: boolean): Point {
 }
 
 /** How a piece comes to be in its slot: thrown or carried in as it arrives, else there already. */
-type Entrance = "throw" | "glide" | "rest";
+type Entrance = "glide" | "rest" | "throw";
 
 /** A roll of a piece already in its slot, rolled where it lies to show `value`. */
 interface Release {
@@ -125,7 +126,7 @@ function usePiece(
     else {
       void loadDice();
       entered.current = new Promise((resolve) => {
-        stopWaiting = whenNear(slot.current!, () => resolve(show()));
+        stopWaiting = whenNear(slot.current!, () => { resolve(show()); });
       });
     }
     const enteredDie = entered.current ?? Promise.resolve(null);
@@ -184,7 +185,7 @@ function PieceFace({
 }) {
   if (phase !== "flat") return <canvas ref={canvas} className="die-canvas" aria-hidden="true" />;
   return (
-    <span className="die-value" aria-hidden="true">
+    <span className="die-value">
       {flat}
     </span>
   );
@@ -205,13 +206,13 @@ export function RollChip({
   mine,
   seed,
   pendingIndex,
-}: {
+}: Thrown & {
   value: number;
   label?: string | undefined;
   index: number;
   seed: string;
   pendingIndex?: number | undefined;
-} & Thrown) {
+}) {
   const text = chipText(value, label);
   const { slot, canvas, phase } = usePiece(
     { chip: text, colour: CHIP_COLOUR },
@@ -307,7 +308,7 @@ export function RollDie({
   });
 
   return (
-    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- The role is button when rerolling is enabled.
+
     <span
       ref={slot}
       className="die"

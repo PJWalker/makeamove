@@ -5,9 +5,10 @@ import {
   foldersByName,
   renameFolderIn,
   UNTITLED_FOLDER,
-  unfile,
-  type FolderView,
+  unfile
+  
 } from "../../campaign/folders";
+import type {FolderView} from "../../campaign/folders";
 
 
 

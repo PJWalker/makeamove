@@ -1,22 +1,24 @@
 import { useMemo, useState } from "react";
 import {
   SheetFrame,
-  SheetSectionView,
-  type SheetDrop,
-  type SheetProps as SheetProperties,
+  SheetSectionView
+  
+  
 } from "../../workspace/DeclarativeSheet";
+import type {SheetDrop, SheetProps as SheetProperties} from "../../workspace/DeclarativeSheet";
 import { useSheet } from "../../workspace/sheetModel";
 import { CharacterText } from "../../workspace/CharacterText";
 import type { DragEntity } from "../../workspace/entityDrag";
-import { STRUGGLES, struggleOfEntry, type Struggle } from "./struggles";
 import { Button } from "../../ui/Button";
 import { Counter } from "../../workspace/sheetParts";
-import { addTreasureBoxes, wealthTierForBoxes, MAX_TREASURE_BOXES } from "./wealth";
-import { DW2_GEAR, DW2_MAGIC_ITEMS } from "./gear";
 import { giveItem, setData } from "../../workspace/commands/characters";
-import { resolveCharacterStruggle, revealCharacterStruggle } from "./commands";
 import { useCampaign } from "../../workspace/campaignContext";
 import { parseInputNumber } from "../../lib/number";
+import { STRUGGLES, struggleOfEntry  } from "./struggles";
+import type {Struggle} from "./struggles";
+import { addTreasureBoxes, wealthTierForBoxes, MAX_TREASURE_BOXES } from "./wealth";
+import { DW2_GEAR, DW2_MAGIC_ITEMS } from "./gear";
+import { resolveCharacterStruggle, revealCharacterStruggle } from "./commands";
 
 function TreasureWealth({ sheet }: { sheet: ReturnType<typeof useSheet> }) {
   const context = useCampaign();
@@ -52,7 +54,7 @@ function StruggleSection({
   struggle: Struggle;
 }) {
   const context = useCampaign();
-  const track = struggle.track;
+  const {track} = struggle;
   return (
     <section className="form-section sheet-section" aria-label="Current Struggle">
       <h3 className="sheet-heading">{struggle.name}</h3>
@@ -219,9 +221,9 @@ function ItemAward({
   title,
 }: {
   sheet: ReturnType<typeof useSheet>;
-  field: "magicItemAward" | "artifactAward";
-  claimedField: "magicItemClaimed" | "artifactClaimed";
-  tag: "magic-item" | "artifact";
+  field: "artifactAward" | "magicItemAward";
+  claimedField: "artifactClaimed" | "magicItemClaimed";
+  tag: "artifact" | "magic-item";
   title: string;
 }) {
   const { options, selected, setSelected, pending, award } = useItemAward(
@@ -236,7 +238,7 @@ function ItemAward({
       <h3 className="sheet-heading">{title}</h3>
       <label className="field">
         Choose an item
-        <select value={selected} onChange={(event) => setSelected(event.currentTarget.value)}>
+        <select value={selected} onChange={(event) => { setSelected(event.currentTarget.value); }}>
           {options.map((item) => (
             <option key={item.id} value={item.id}>
               {item.name}
@@ -253,9 +255,9 @@ function ItemAward({
 
 function useItemAward(
   sheet: ReturnType<typeof useSheet>,
-  field: "magicItemAward" | "artifactAward",
-  claimedField: "magicItemClaimed" | "artifactClaimed",
-  tag: "magic-item" | "artifact",
+  field: "artifactAward" | "magicItemAward",
+  claimedField: "artifactClaimed" | "magicItemClaimed",
+  tag: "artifact" | "magic-item",
 ) {
   const context = useCampaign();
   const options =

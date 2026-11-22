@@ -1,12 +1,12 @@
+import type { ItemDef } from "../../src/systems/types";
 import { readReference } from "./readReference";
 import { slug } from "./slug";
-import type { ItemDef } from "../../src/systems/types";
 
 /** Parse the SRD's Magic Items A-Z section into searchable system gear. */
 export function parseSrdMagicItems(markdown: string): ItemDef[] {
   const section = markdown.slice(markdown.indexOf("## Magic Items A–Z"));
   return section
-    .split(/^#### /m)
+    .split(/^#{4} /m)
     .slice(1)
     .flatMap((block): ItemDef[] => {
       const [heading, ...lines] = block.split(/\r?\n/);
@@ -14,12 +14,12 @@ export function parseSrdMagicItems(markdown: string): ItemDef[] {
       if (!name) return [];
       const metadata = lines.find((line) => /^_[^_]+_$/.test(line.trim()))?.trim() ?? "";
       const rarity =
-        /\b(Common|Uncommon|Rare|Very Rare|Legendary|Artifact)\b/i
+        /\b(common|uncommon|rare|very rare|legendary|artifact)\b/i
           .exec(metadata)?.[1]
           ?.toLowerCase()
           .replaceAll(/\s+/g, "-") ?? "varies";
       const category =
-        /^(Weapon|Armor|Potion|Ring|Rod|Scroll|Staff|Wand|Wondrous Item)/i
+        /^(weapon|armor|potion|ring|rod|scroll|staff|wand|wondrous item)/i
           .exec(metadata)?.[1]
           ?.toLowerCase()
           .replaceAll(/\s+/g, "-") ?? "magic";

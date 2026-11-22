@@ -3,11 +3,11 @@ import { watch } from "../lib/store";
 import type { Campaign } from "../campaign/campaign";
 import { openPopup } from "../ui/popup";
 import { HelpDialog, SettingsDialog } from "../workspace/CampaignDialogs";
-import { RelationshipsDialog } from "./Relationships";
 import { useCampaign } from "../workspace/campaignContext";
 import { useQuery } from "../ui/useQuery";
-import { ConfirmDialog } from "./ConfirmDialog";
 import type { Confirmation } from "../workspace/tableState";
+import { ConfirmDialog } from "./ConfirmDialog";
+import { RelationshipsDialog } from "./Relationships";
 
 /** Always mounted so campaign actions can open dialogs from any panel. */
 export function CampaignDialogHost({ campaign }: { campaign: Campaign }) {
@@ -54,8 +54,8 @@ function CommandConfirmation() {
       title={title}
       confirmLabel={confirmLabel}
       confirmVariant={danger ? "danger" : "primary"}
-      onClose={() => context.table.confirming.set(null)}
-      onConfirm={() => asking.run()}
+      onClose={() => { context.table.confirming.set(null); }}
+      onConfirm={() => { asking.run(); }}
     >
       <p>
         <Emphasised {...asking.confirmation} />

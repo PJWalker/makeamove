@@ -2,13 +2,13 @@ import type * as React from "react";
 import type { ReactNode } from "react";
 import { forwardRef } from "react";
 import { mergeProps, useButton, useObjectRef } from "react-aria";
-import type { Icon } from "./icons";
 import { isString } from "../lib/guards";
+import type { Icon } from "./icons";
 
-type Variant = "primary" | "secondary" | "ghost" | "danger" | "icon";
+type Variant = "danger" | "ghost" | "icon" | "primary" | "secondary";
 
 type Properties = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "size"> & {
-  [attribute: `data-${string}`]: string | number | boolean | undefined;
+  [attribute: `data-${string}`]: boolean | number | string | undefined;
   variant?: Variant;
   /** Accessible name; required for icon-only buttons and shown as a tooltip. */
   label?: string;
@@ -40,7 +40,7 @@ export const Button = forwardRef<HTMLButtonElement, Properties>(function Button(
     {
       type: rest.type ?? "button",
       ...(onClick
-        ? { onClick: (event) => onClick(event as React.MouseEvent<HTMLButtonElement>) }
+        ? { onClick: (event) => { onClick(event as React.MouseEvent<HTMLButtonElement>); } }
         : {}),
       ...(rest.disabled === undefined ? {} : { isDisabled: rest.disabled }),
     },

@@ -1,4 +1,4 @@
-type UiSound = "press" | "open" | "close" | "message" | "critical" | "failure";
+type UiSound = "close" | "critical" | "failure" | "message" | "open" | "press";
 
 let context: AudioContext | undefined;
 let noise: AudioBuffer | undefined;
@@ -184,7 +184,7 @@ document.addEventListener(
 document.addEventListener(
   "toggle",
   (event) => {
-    const target = event.target;
+    const {target} = event;
     if (
       target instanceof HTMLElement &&
       target.hasAttribute("popover") &&
@@ -198,7 +198,7 @@ document.addEventListener(
 
 new MutationObserver((changes) => {
   for (const change of changes) {
-    const target = change.target;
+    const {target} = change;
     if (!(target instanceof HTMLElement)) continue;
     if (change.attributeName === "aria-expanded") {
       const previous = change.oldValue;

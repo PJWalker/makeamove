@@ -1,5 +1,6 @@
 import { isBoolean, isNumber, isString, objectOf, optional } from "../../lib/guards";
-import { collection, lww, record, type Root } from "../../data/schema";
+import { collection, lww, record  } from "../../data/schema";
+import type {Root} from "../../data/schema";
 
 /** Someone in the fight. */
 export interface Combatant {

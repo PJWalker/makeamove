@@ -4,15 +4,17 @@ import {
   useEffect,
   useMemo,
   useRef,
-  useState,
-  type ReactNode,
+  useState
+  
 } from "react";
+import type {ReactNode} from "react";
 import { createPortal } from "react-dom";
 
 const PanelActionsContext = createContext<{
   target: HTMLDivElement | null;
   setTarget: (target: HTMLDivElement | null) => void;
 } | null>(null);
+PanelActionsContext.displayName = "PanelActionsContext";
 
 export function PanelActionsProvider({ children }: { children: ReactNode }) {
   const [target, setTarget] = useState<HTMLDivElement | null>(null);
@@ -35,14 +37,14 @@ export function PanelActionsSlot() {
     if (!slot || !header || !row) return;
     // Measured with the labels showing, then compacted only if they overflow.
     const fit = () => {
-      delete slot.dataset.compact;
+      slot.removeAttribute("data-compact");
       slot.toggleAttribute("data-compact", row.offsetWidth > slot.clientWidth);
     };
     // The header for the room there is, the row for what's in it.
     const observer = new ResizeObserver(fit);
     observer.observe(header);
     observer.observe(row);
-    return () => observer.disconnect();
+    return () => { observer.disconnect(); };
   }, [row]);
   return (
     <div className="panel-actions" ref={slotReference}>

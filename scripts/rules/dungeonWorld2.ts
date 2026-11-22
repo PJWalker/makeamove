@@ -1,12 +1,12 @@
 import type { RichText } from "../../src/data/richText";
 import type { Band, Dw2Path, Dw2PathMove } from "../../src/systems/dungeon-world-2/rulebook";
 import { markdownToRichText } from "../../src/macros/markdown.macro";
-import { readReference } from "./readReference";
-import { slug } from "./slug";
 import type { ArtifactDef, ItemDef, ReferenceSectionDef } from "../../src/systems/types";
 import { BOND_SPECS } from "../../src/systems/dungeon-world-2/bondSpecs";
 import { MOVE_SOURCE_NAMES } from "../../src/systems/dungeon-world-2/sourceMoveNames";
 import { STRUGGLE_SPECS } from "../../src/systems/dungeon-world-2/struggleSpecs";
+import { slug } from "./slug";
+import { readReference } from "./readReference";
 
 /*
  * The Dungeon World 2 rulebook, parsed by scripts/generateRules.ts into
@@ -22,23 +22,23 @@ const source = readReference("Dungeon World 2 Beta v3.md");
  */
 const ruleMarkdown = (raw: string) =>
   raw
-    .replaceAll(/\[([^\]]+)\]\((?:\\.|[^)])*\)/g, "$1")
+    .replaceAll(/\[([^\]]+)]\((?:\\.|[^)])*\)/g, "$1")
     .replaceAll(String.raw`\*`, "∗")
-    .replaceAll(/\\([\\!+_#.|(){}[\]-])/g, "$1")
-    .replaceAll(/\{#[^}]+\}/g, "")
+    .replaceAll(/\\([!#()+.[\\\]_{|}-])/g, "$1")
+    .replaceAll(/{#[^}]+}/g, "")
     .replaceAll(/__([^_]+)__/g, "**$1**")
-    .replaceAll(/[ \t]+/g, " ")
+    .replaceAll(/[\t ]+/g, " ")
     // "+STR if you…" options, as a list.
     .replaceAll(/\s\+(STR|DEX|INT|WIS|CHA)\b(?=\s+(?:if|when|to)\b)/g, "\n- **+$1**")
     // "*Carouse*. Spend…" options, as a list.
-    .replaceAll(/(^|[\s:.])\*([A-Z][^*\n]{0,40}?)\*([.:])\s/g, "$1\n- *$2*$3 ")
+    .replaceAll(/(^|[\s.:])\*([A-Z][^\n*]{0,40}?)\*([.:])\s/g, "$1\n- *$2*$3 ")
     // "*Quickly, risking it all* — …" options, as a list.
-    .replaceAll(/(^|\s)\*([A-Z][^*\n]{0,40}?)\*\s+—\s/g, "$1\n- *$2* — ")
+    .replaceAll(/(^|\s)\*([A-Z][^\n*]{0,40}?)\*\s+—\s/g, "$1\n- *$2* — ")
     // "*It's risky*; …" options, as a list.
-    .replaceAll(/(^|\s)\*([A-Z][^*\n]{0,40}?)\*;\s/g, "$1\n- *$2*; ")
+    .replaceAll(/(^|\s)\*([A-Z][^\n*]{0,40}?)\*;\s/g, "$1\n- *$2*; ")
     // An italic run of questions, one to a line.
     .replaceAll(
-      /:\s*\*([^*\n]+\?)\*\s*/g,
+      /:\s*\*([^\n*]+\?)\*\s*/g,
       (_m, qs: string) =>
         `:\n${qs
           .split(/(?<=\?)\s+/)
@@ -46,26 +46,26 @@ const ruleMarkdown = (raw: string) =>
           .join("\n")}\n\n`,
     )
     // Each result band its own paragraph.
-    .replaceAll(/\s*[✷✶]\s*On a (10\+|12\+|7-9|6-)([,:]?)\s*/g, "\n\n**On a $1$2** ")
-    .replaceAll(/\b(?:mark|marks) (?:1 )?XP\b/gi, (m) => `[[+1 XP|${m}]]`)
-    .replaceAll(/\b(?:spend|spends) (\d+) Treasure\b/gi, (m, n: string) => `[[-${n} Treasure|${m}]]`)
+    .replaceAll(/\s*[✶✷]\s*On a (10\+|12\+|7-9|6-)([,:]?)\s*/g, "\n\n**On a $1$2** ")
+    .replaceAll(/\b(?:mark|marks) (?:1 )?xp\b/gi, (m) => `[[+1 XP|${m}]]`)
+    .replaceAll(/\b(?:spend|spends) (\d+) treasure\b/gi, (m, n: string) => `[[-${n} Treasure|${m}]]`)
     .replaceAll(/ *\n */g, "\n")
     .trim();
 
 const plain = (text: string) =>
   text
-    .replaceAll(/\[([^\]]+)\]\((?:\\.|[^)])*\)/g, "$1")
-    .replaceAll(/\\([\\!*+_#.|(){}[\]-])/g, "$1")
+    .replaceAll(/\[([^\]]+)]\((?:\\.|[^)])*\)/g, "$1")
+    .replaceAll(/\\([!#()*+.[\\\]_{|}-])/g, "$1")
     .replaceAll(/[*_]/g, "")
-    .replaceAll(/\{#[^}]+\}/g, "")
+    .replaceAll(/{#[^}]+}/g, "")
     .trim();
 
 const key = (text: string) =>
   plain(text)
     .toLowerCase()
-    .replaceAll(/[^a-z0-9]/g, "");
+    .replaceAll(/[^\da-z]/g, "");
 const moveHeadings = [...source.matchAll(/^### (.+)$/gm)];
-const headings = [...source.matchAll(/^(?:[-*+] \[[x ]\] )?#### (.+)$/gm)];
+const headings = [...source.matchAll(/^(?:[*+-] \[[ x]] )?#{4} (.+)$/gm)];
 
 /** An artifact's unlockable move, by name. */
 const unlock = (name: string) => ({ id: slug(name), name });
@@ -138,7 +138,7 @@ export const sourceMagicItems = (): ItemDef[] => {
     { source: source.slice(artifactStart, campaignStart), artifact: true },
   ];
   return sections.flatMap(({ source: section, artifact }) => {
-    const entries = [...section.matchAll(/^#### (.+)$/gm)];
+    const entries = [...section.matchAll(/^#{4} (.+)$/gm)];
     return entries.flatMap((heading, index): ItemDef[] => {
       const rawName = heading[1];
       if (!rawName || heading.index === undefined || !heading[0]) return [];
@@ -221,7 +221,7 @@ export const sourceGmReference = (): ReferenceSectionDef[] => {
 };
 
 export const sourceClassSectionText = (classId: string, sectionName: string): string => {
-  const classHeading = [...source.matchAll(/^## The (.+?) \{#[^}]+\}$/gm)].find(
+  const classHeading = [...source.matchAll(/^## The (.+?) {#[^}]+}$/gm)].find(
     (heading) => key(heading[1] ?? "") === key(classId),
   );
   if (!classHeading?.index) throw new Error(`Missing Dungeon World 2 class: ${classId}`);
@@ -271,7 +271,7 @@ export const sourceMoveOutcomes = (
   level: 3 | 4 = 3,
 ): Record<Band, RichText> | undefined => {
   const text = sourceMoveText(name, level);
-  const markers = [...text.matchAll(/[✷✶]\s*On a (10\+|7-9|6-)[,:]?\s*/g)];
+  const markers = [...text.matchAll(/[✶✷]\s*On a (10\+|7-9|6-)[,:]?\s*/g)];
   if (markers.length !== 3) return undefined;
   const entries = markers.map((marker, index) => {
     const band = bandOf(marker[1]);
@@ -315,7 +315,7 @@ const ruleFor = (name: string): Dw2PathMove => {
       ];
     }),
   );
-  const statName = text.match(/roll\s*\+\s*(STR|DEX|INT|WIS|CHA)/i)?.[1];
+  const statName = (/roll\s*\+\s*(str|dex|int|wis|cha)/i.exec(text))?.[1];
   const stat = statName?.toLowerCase();
   const strong = outcomes["strong"];
   const weak = outcomes["weak"];

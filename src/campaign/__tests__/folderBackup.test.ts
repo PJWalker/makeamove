@@ -1,6 +1,14 @@
 import "fake-indexeddb/auto";
 import { describe, expect, it, vi } from "vite-plus/test";
 
+import { putBlob } from "../../platform/blobs";
+import { device } from "../../platform/device";
+import { SceneDoc } from "../../scene/sceneDoc";
+import { decodeBackup } from "../backupFormat";
+import { Campaign, createCampaign, deleteLocalCampaign } from "../campaign";
+import { FolderBackup, folderSaveDelay, importFromFolder } from "../folderBackup";
+import { summaryOf } from "../registry";
+
 const mocks = vi.hoisted(() => ({
   blobs: new Map<string, Blob>(),
   values: new Map<string, unknown>(),
@@ -30,14 +38,6 @@ vi.mock("../../platform/files", async (original) => ({
   ...(await original<typeof import("../../platform/files")>()),
   pickFolder: () => Promise.resolve(mocks.picked),
 }));
-
-import { putBlob } from "../../platform/blobs";
-import { device } from "../../platform/device";
-import { SceneDoc } from "../../scene/sceneDoc";
-import { decodeBackup } from "../backupFormat";
-import { Campaign, createCampaign, deleteLocalCampaign } from "../campaign";
-import { FolderBackup, folderSaveDelay, importFromFolder } from "../folderBackup";
-import { summaryOf } from "../registry";
 
 /** A folder in memory, shaped like the File System API's. */
 class FakeFolder {

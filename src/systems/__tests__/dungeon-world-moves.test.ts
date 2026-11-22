@@ -1,5 +1,5 @@
-import { md } from "../../macros/markdown.macro" with { type: "macro" };
 import { describe, expect, it } from "vite-plus/test";
+import { md } from "../../macros/markdown.macro" with { type: "macro" };
 import { dungeonWorld as dw } from "../dungeon-world";
 import { derive } from "../../features/characters/store";
 import type { CharacterView } from "../../features/characters/types";
@@ -147,7 +147,7 @@ describe("performMove", () => {
     );
     expect(resolveDifficulty({ kind: "target", value: "ac" }, derived, 14)).toBe(14);
     expect(resolveDifficulty({ kind: "target", value: "ac" }, derived, 14, 17)).toBe(17);
-    expect(() => resolveDifficulty({ kind: "fixed", value: NaN }, derived)).toThrow("finite");
+    expect(() => resolveDifficulty({ kind: "fixed", value: Number.NaN }, derived)).toThrow("finite");
     expect(() =>
       resolveDifficulty({ kind: "prompt", prompt: "Difficulty", min: 1 }, derived, 0),
     ).toThrow("range");

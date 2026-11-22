@@ -23,11 +23,12 @@ import {
   tickDurations,
   turnOf,
   turnOrder,
-  updateCombatant,
-  type CombatMaps,
-  type Combatant,
-  type TurnChange,
+  updateCombatant
+  
+  
+  
 } from "./combat";
+import type {CombatMaps, Combatant, TurnChange} from "./combat";
 
 /*
  * The turn tracker as the table uses it: combatants from tokens, initiative
@@ -120,7 +121,7 @@ export async function rollAllInitiative(campaign: Campaign, { npcsOnly = false }
 }
 
 /** Count down durations for one point of a turn, on every character, removing conditions that ran out. */
-function tick(campaign: Campaign, combatant: string | null, point: "start" | "end") {
+function tick(campaign: Campaign, combatant: string | null, point: "end" | "start") {
   if (!combatant) return;
   for (const [id, m] of campaign.characters.entries()) {
     const durations = m.get("durations");

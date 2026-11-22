@@ -15,7 +15,7 @@ export interface MemberReference {
 /** Split "2d6+1 [STR] hack and slash" into the longest formula that parses and the rest. */
 export function splitFormula(
   rest: string,
-): { formula: string; comment?: string } | { error: string } {
+): { error: string } | { formula: string; comment?: string } {
   const text = rest.trim();
   if (!text) return { error: "Add some dice, like /r 2d6+1." };
   let firstError = "";
@@ -69,7 +69,7 @@ export function parseDuration(text: string): number | null {
 export const unquote = (s: string) =>
   s
     .trim()
-    .replace(/^["“'](.*)["”']$/s, "$1")
+    .replace(/^["'“](.*)["'”]$/s, "$1")
     .trim();
 
 /** Whoever `rest` starts with: the longest matching member name, or "gm". */

@@ -5,9 +5,10 @@ import { trackerBlock } from "../features/characters/trackers";
 import {
   parseTrackerButton,
   TRACKER_NODE,
-  trackerToken,
-  type TrackerButton,
+  trackerToken
+  
 } from "../data/richText";
+import type {TrackerButton} from "../data/richText";
 import { pressTrackerButton } from "./commands/characters";
 import type { CampaignContext } from "./campaignContext";
 
@@ -38,7 +39,7 @@ export function trackerTip(
 
 export function trackerButtonExtension(context: CampaignContext) {
   const { campaign } = context;
-  const TOKEN = /\[\[\s*[+-]\d+\s+[^\]|]+?(?:\|[^\]]+?)?\]\]/;
+  const TOKEN = /\[\[\s*[+-]\d+\s+[^\]|]+?(?:\|[^\]]+?)?]]/;
   const attributesOf = (raw: string) => {
     const b = parseTrackerButton(raw);
     return b ? { by: b.by, name: b.name, label: b.label } : null;
@@ -105,7 +106,7 @@ export function trackerButtonExtension(context: CampaignContext) {
       ];
     },
     onCreate() {
-      const dom = this.editor.view.dom;
+      const {dom} = this.editor.view;
       const buttonAt = (e: Event) =>
         (e.target as Element).closest<HTMLElement>(`[data-type="${TRACKER_NODE}"]`);
       const toButton = (element: HTMLElement): TrackerButton => ({

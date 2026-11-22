@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
-import { toolCursor, type CursorSettings } from "../toolCursors";
+import { toolCursor  } from "../toolCursors";
+import type {CursorSettings} from "../toolCursors";
 import type { ToolId } from "../tools";
 import { EFFECTS, SHAPES } from "../types";
 

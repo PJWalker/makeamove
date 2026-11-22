@@ -1,8 +1,9 @@
-import { useLayoutEffect, type RefObject } from "react";
+import { useLayoutEffect  } from "react";
+import type {RefObject} from "react";
 import { useCampaign } from "../workspace/campaignContext";
 import { useQuery } from "../ui/useQuery";
 
-type Measurement = { width: number; elements: HTMLElement[] };
+interface Measurement { width: number; elements: HTMLElement[] }
 
 export function measureRow(row: HTMLElement): Measurement {
   const elements = [...row.children] as HTMLElement[];
@@ -17,18 +18,21 @@ export function measureRow(row: HTMLElement): Measurement {
 
 export function useDockStripLayout(
   reference: RefObject<HTMLDivElement | null>,
-  edge: "top" | "bottom",
+  edge: "bottom" | "top",
   measureContent: (bar: HTMLElement) => Measurement = measureRow,
 ) {
   const context = useCampaign();
   const insets = useQuery(context.panels.dockInsets);
   useLayoutEffect(() => {
-    const bar = reference.current;
-    const table = bar?.closest<HTMLElement>(".table");
-    if (!bar || !table) return;
+    const barElement = reference.current;
+    const table = barElement?.closest<HTMLElement>(".table");
+    if (!barElement || !table) return;
+    const bar = barElement;
     const heightProperty = `--dock-${edge}-height`;
     const measure = () => {
       const available = table.clientWidth - insets.left.body - insets.right.body;
+      // The measured DOM is intentionally updated by this layout effect.
+      // eslint-disable-next-line react-hooks/immutability
       bar.dataset["fullWidth"] = String(measureContent(bar).width > available);
       table.style.setProperty(heightProperty, `${bar.offsetHeight}px`);
     };

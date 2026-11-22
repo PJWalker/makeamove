@@ -1,24 +1,24 @@
 import {
-  type BufferGeometry,
   CatmullRomCurve3,
   ConeGeometry,
   CylinderGeometry,
   ExtrudeGeometry,
   Group,
   IcosahedronGeometry,
-  type Material,
+  
   Mesh,
   MeshStandardMaterial,
   MeshPhysicalMaterial,
-  type Object3D,
+  
   PlaneGeometry,
   PointLight,
   Shape,
   SphereGeometry,
   TorusGeometry,
   TubeGeometry,
-  Vector3,
+  Vector3
 } from "three";
+import type {Material, Object3D} from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { drawnTexture, kit, part, place } from "../kit";
 import { outline, relief } from "../forms";
@@ -67,7 +67,7 @@ function blade(length: number, width: number, { leaf = 0, material = kit.steel()
   return new Group().add(mesh, place(fuller, [0, length * 0.38, 0.05]));
 }
 
-type Hilt = { guard: number; grip: number; guardMaterial?: Material; gripMaterial?: Material };
+interface Hilt { guard: number; grip: number; guardMaterial?: Material; gripMaterial?: Material }
 
 /** Crossguard, wrapped grip and pommel, hanging below y = 0. */
 function hilt({
@@ -984,7 +984,7 @@ export function move() {
 /** Ink on the face of `die` that most faces the camera. */
 function numberDecal(die: Mesh, label: string): Object3D | undefined {
   die.updateMatrixWorld();
-  const geometry = die.geometry;
+  const {geometry} = die;
   const pos = geometry.getAttribute("position");
   const toCamera = new Vector3(0, 0.2, 1).normalize();
   let best: { centre: Vector3; normal: Vector3; score: number } | undefined;

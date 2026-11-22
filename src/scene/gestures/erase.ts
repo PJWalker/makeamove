@@ -1,7 +1,8 @@
 import { hits } from "../geometry";
 import type { Point } from "../grid";
 import { ERASER_RADIUS } from "../tools";
-import { coalesced, type ToolPress } from "./types";
+import { coalesced  } from "./types";
+import type {ToolPress} from "./types";
 
 /** The Eraser: strokes it passes over hide at once, and go when it lifts. */
 export const erase: ToolPress = (c, _e, world) => {

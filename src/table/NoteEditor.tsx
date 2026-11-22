@@ -1,11 +1,11 @@
 import type { Editor } from "@tiptap/core";
 import { useEffect, useRef, useState } from "react";
+import { Awareness } from "y-protocols/awareness";
 import { getNote, noteSubdoc, openNotePage, touchNote } from "../features/notes/api";
 import type { NoteDoc as NoteDocument } from "../features/notes/noteDoc";
 import { linksIn } from "../features/notes/links";
 import type { Campaign } from "../campaign/campaign";
 import { mountRichText } from "../workspace/richText";
-import { Awareness } from "y-protocols/awareness";
 import { myName } from "../features/chat/send";
 import { useQuery } from "../ui/useQuery";
 import { useCampaign } from "../workspace/campaignContext";
@@ -37,12 +37,12 @@ export function NoteEditor({
     let note: NoteDocument | null = null;
     let editor: Editor | null = null;
     let rich: ReturnType<typeof mountRichText> | null = null;
-    let timer = 0;
+    let timer: ReturnType<typeof globalThis.setTimeout> | undefined;
 
     let local: Awareness | null = null;
     void openNotePage(campaign, noteId).then((n) => {
       if (!n) return;
-      if (cancelled) return n.destroy();
+      if (cancelled) { n.destroy(); return; }
       note = n;
       const gmOnly = !!getNote(campaign, noteId)?.gmOnly;
       // Carets travel with the page's own sync: the campaign's, or for a GM page the vault's.
@@ -61,9 +61,9 @@ export function NoteEditor({
         noteId,
         shared: !getNote(campaign, noteId)?.gmOnly,
         onLocalEdit: (ed) => {
-          clearTimeout(timer);
+          if (timer !== undefined) clearTimeout(timer);
           timer = globalThis.setTimeout(
-            () => touchNote(campaign, noteId, linksIn(ed.getJSON())),
+            () => { touchNote(campaign, noteId, linksIn(ed.getJSON())); },
             TOUCH_MS,
           );
         },

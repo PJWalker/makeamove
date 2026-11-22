@@ -10,7 +10,7 @@ import type { AreaSpec, ConditionDef, ItemDef, TagDef, TargetSpec } from "../typ
  * The formulas that read these tables are in index.ts.
  */
 
-export type Ability = "str" | "dex" | "con" | "int" | "wis" | "cha";
+export type Ability = "cha" | "con" | "dex" | "int" | "str" | "wis";
 
 export const ABILITIES: { id: Ability; name: string; abbr: string }[] = [
   { id: "str", name: "Strength", abbr: "STR" },

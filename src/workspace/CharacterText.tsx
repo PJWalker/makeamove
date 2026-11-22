@@ -47,7 +47,7 @@ export function CharacterText({
       makeOwn={makeOwn}
       fork={(from) => {
         const m = campaign.characters.get(c.id);
-        m?.transact(() => copyText(m.ensure("texts").ensure(field), from));
+        m?.transact(() => { copyText(m.ensure("texts").ensure(field), from); });
       }}
     />
   );
@@ -100,7 +100,7 @@ function VaultCharacterText({
       inherited={inherited}
       shared={false}
       makeOwn={() => texts.ensure(key)}
-      fork={(from) => texts.transact(() => copyText(texts.ensure(key), from))}
+      fork={(from) => { texts.transact(() => { copyText(texts.ensure(key), from); }); }}
     />
   );
 }
@@ -156,7 +156,7 @@ function TextField({
       editable: editable && shown === own,
       shared,
     });
-    return () => rich.destroy();
+    return () => { rich.destroy(); };
   }, [context, shown, editable, label, own, placeholder, shared]);
 
   /** A copy's first press: its own text, starting from the template's. */

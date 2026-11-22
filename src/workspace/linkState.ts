@@ -20,6 +20,8 @@ export interface LinkReference {
   id: string;
 }
 
+export type LinkRef = LinkReference;
+
 export const linkKey = (l: LinkReference) => `${l.kind}:${l.id}`;
 
 /** What links in rich text have open, per campaign. */
@@ -52,7 +54,7 @@ export class LinkPopups {
     const already = document.querySelector<HTMLElement>(
       `dialog[data-entry="${CSS.escape(`link:${linkKey(link)}`)}"]`,
     );
-    if (already) return raisePopup(already);
+    if (already) { raisePopup(already); return; }
     const tip = document.querySelector(".tooltip:popover-open");
     morphOpen(tip ?? from, () => {
       hideTooltip();

@@ -119,7 +119,7 @@ export function itemDefinitionForToken(
   campaign: Campaign,
   token: TokenElement,
 ): ItemDef | undefined {
-  const items = systemOf(campaign).items;
+  const {items} = systemOf(campaign);
   if (token.itemDefId) return items.find((item) => item.id === token.itemDefId);
   if (!token.icon) return undefined;
   const matches = items.filter(

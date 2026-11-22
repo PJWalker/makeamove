@@ -1,12 +1,13 @@
 import { dirname, relative } from "node:path";
 import {
-  defineRule,
-  type Context,
-  type ESTree,
-  type Fix,
-  type Fixer,
-  type Scope,
+  defineRule
+  
+  
+  
+  
+  
 } from "vite-plus/lint/plugins";
+import type {Context, ESTree, Fix, Fixer, Scope} from "vite-plus/lint/plugins";
 import { projectPath, writtenIn } from "../strings.ts";
 
 const MODULE = "src/ui/transition";
@@ -65,7 +66,7 @@ export const preferReducedMotion = defineRule({
     const inSource = path.startsWith("src/");
     return {
       CallExpression(node) {
-        const callee = node.callee;
+        const {callee} = node;
         const isMatchMedia =
           (callee.type === "Identifier" && callee.name === "matchMedia") ||
           (callee.type === "MemberExpression" &&

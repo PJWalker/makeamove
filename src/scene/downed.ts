@@ -5,7 +5,7 @@ import { BAR_BREAK_AT } from "./barChange";
 export const DOWN_MS = 900;
 
 /** Whether a stat puts its token down: hit points at zero. */
-export const downs = (stat: Pick<TokenStat, "id" | "value" | "max">) =>
+export const downs = (stat: Pick<TokenStat, "id" | "max" | "value">) =>
   stat.id === "hp" && stat.max > 0 && stat.value <= 0;
 
 /** Whether a token with these stats is down. */

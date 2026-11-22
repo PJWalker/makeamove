@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Button,
-  type Color,
+  
   ColorArea,
   ColorField,
   ColorSwatch,
@@ -13,8 +13,9 @@ import {
   Popover,
   Slider,
   SliderThumb,
-  SliderTrack,
+  SliderTrack
 } from "react-aria-components";
+import type {Color} from "react-aria-components";
 import {
   clampOklch,
   gamutMappedOklch,
@@ -24,11 +25,12 @@ import {
   oklchToSrgbHex,
   oklchFromGamutPosition,
   oklchToGamutPosition,
-  USER_COLOUR_LIMITS,
-  type Oklch,
+  USER_COLOUR_LIMITS
+  
 } from "../lib/colour";
+import type {Oklch} from "../lib/colour";
 
-type ColourRange = typeof USER_COLOUR_LIMITS | typeof GENERAL_COLOUR_LIMITS;
+type ColourRange = typeof GENERAL_COLOUR_LIMITS | typeof USER_COLOUR_LIMITS;
 
 /** A picked colour as OKLCH, ignoring its opacity, kept within `range`. */
 const oklchOf = (colour: Color, range: ColourRange) =>
@@ -101,8 +103,8 @@ function OklchGamutArea({
   useEffect(() => {
     const target = canvas.current;
     if (!target) return;
-    const frame = requestAnimationFrame(() => drawGamut(target, hue, range));
-    return () => cancelAnimationFrame(frame);
+    const frame = requestAnimationFrame(() => { drawGamut(target, hue, range); });
+    return () => { cancelAnimationFrame(frame); };
   }, [hue, range]);
 
   return (
@@ -185,7 +187,7 @@ export function ColourPicker({
             maxValue={360}
             step={1}
             value={userColour.h}
-            onChange={(hue) => emitColour({ ...userColour, h: hue })}
+            onChange={(hue) => { emitColour({ ...userColour, h: hue }); }}
           >
             <SliderTrack
               className="colour-picker-track"
@@ -203,7 +205,7 @@ export function ColourPicker({
               step={0.01}
               value={opacity}
               formatOptions={{ style: "percent" }}
-              onChange={(next) => emitColour(userColour, next)}
+              onChange={(next) => { emitColour(userColour, next); }}
             >
               <SliderTrack
                 className="colour-picker-track"

@@ -2,7 +2,7 @@ import * as decoding from "lib0/decoding";
 import * as encoding from "lib0/encoding";
 import * as awarenessProtocol from "y-protocols/awareness";
 import * as syncProtocol from "y-protocols/sync";
-import * as Y from "yjs";
+import type * as Y from "yjs";
 import type { Transport } from "./transport";
 
 /*
@@ -34,16 +34,16 @@ interface AwarenessChange {
 
 export class SyncSession {
   readonly awareness: awarenessProtocol.Awareness;
-  private docs = new Map<string, Y.Doc>();
-  private cleanups = new Map<string, () => void>();
+  private readonly docs = new Map<string, Y.Doc>();
+  private readonly cleanups = new Map<string, () => void>();
   /** Awareness client ids each peer has told us about, by awareness, to clear them on leave. */
-  private clients = new Map<awarenessProtocol.Awareness, Map<string, Set<number>>>();
+  private readonly clients = new Map<awarenessProtocol.Awareness, Map<string, Set<number>>>();
   /** Subdocuments' own awareness (carets in notes), by guid. */
-  private docAwareness = new Map<
+  private readonly docAwareness = new Map<
     string,
     { awareness: awarenessProtocol.Awareness; stop: () => void; heard: Set<string> }
   >();
-  private stopRoot: () => void;
+  private readonly stopRoot: () => void;
   /** Called when peers connect or disconnect, or their presence changes. */
   onChange: (() => void) | null = null;
   /** Blob-channel traffic and new peers, for the blob exchange. */
@@ -52,7 +52,7 @@ export class SyncSession {
 
   constructor(
     readonly root: Y.Doc,
-    private transport: Transport,
+    private readonly transport: Transport,
   ) {
     this.awareness = new awarenessProtocol.Awareness(root);
     this.attach(root);
@@ -114,7 +114,7 @@ export class SyncSession {
       this.transport.send("sync", encoding.toUint8Array(enc));
     };
     document.on("update", onUpdate);
-    this.cleanups.set(document.guid, () => document.off("update", onUpdate));
+    this.cleanups.set(document.guid, () => { document.off("update", onUpdate); });
     for (const peer of this.transport.peers()) this.sendStep1(document, peer);
   }
 
@@ -140,7 +140,7 @@ export class SyncSession {
     this.docAwareness.set(document.guid, {
       awareness,
       heard: new Set(),
-      stop: () => awareness.off("update", onUpdate),
+      stop: () => { awareness.off("update", onUpdate); },
     });
     return awareness;
   }

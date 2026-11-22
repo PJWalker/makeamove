@@ -7,7 +7,8 @@ import {
 } from "../../features/characters/api";
 import { commaListOf, formatCommaList } from "../../lib/list";
 import { getState, setState } from "../../features/chat/messageState";
-import { systemCampaignData, setSystemCampaignData, type Campaign } from "../../campaign/campaign";
+import { systemCampaignData, setSystemCampaignData  } from "../../campaign/campaign";
+import type {Campaign} from "../../campaign/campaign";
 import { ATTRIBUTES } from "./index";
 
 export function advanceAttribute(

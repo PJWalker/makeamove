@@ -1,5 +1,6 @@
 import { richTextFromPlain } from "../../data/richText";
-import { appliedField, getState, saveField, setState, type SaveAnswer } from "../chat/messageState";
+import { appliedField, getState, saveField, setState  } from "../chat/messageState";
+import type {SaveAnswer} from "../chat/messageState";
 import { myName } from "../chat/send";
 import type { MoveTarget, SaveRequest } from "../chat/types";
 import { describe, roll } from "../dice/notation";

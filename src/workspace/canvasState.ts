@@ -2,11 +2,12 @@ import { store } from "../lib/store";
 import type { SceneDoc as SceneDocument } from "../scene/sceneDoc";
 import type { SceneController } from "../scene/controller";
 import type { Point } from "../scene/grid";
-import type { BlobReference, EntityGraphic, EntityGraphicRef } from "../media/images";
+import type { BlobReference, EntityGraphic, EntityGraphicRef as EntityGraphicReference } from "../media/images";
 import type { TokenStyle } from "../scene/types";
 import type { AreaSpec } from "../systems/types";
 import { backdropColour } from "../lib/colour";
-import { DEFAULT_CANVAS_COLOUR, type SceneView } from "../campaign/campaign";
+import { DEFAULT_CANVAS_COLOUR  } from "../campaign/campaign";
+import type {SceneView} from "../campaign/campaign";
 
 /*
  * State shared between the scene canvas (loaded lazily, with PixiJS) and the
@@ -32,7 +33,7 @@ export interface TokenSpec {
   style?: TokenStyle;
   colour?: string;
   graphic?: EntityGraphic;
-  entityRef?: EntityGraphicRef;
+  entityRef?: EntityGraphicReference;
 }
 
 /** The open scene's canvas, for the commands that work on it (commands/selection.ts). */
@@ -107,5 +108,5 @@ export class CanvasState {
   readonly canvasCommands = store<CanvasCommands | null>(null);
 
   /** Open one of the campaign's dialogs (from the campaign menu or the command palette). */
-  readonly dialogRequest = store<"settings" | "help" | "relationships" | null>(null);
+  readonly dialogRequest = store<"help" | "relationships" | "settings" | null>(null);
 }

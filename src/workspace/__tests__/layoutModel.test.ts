@@ -13,6 +13,7 @@ import {
   resizeSide,
   setOpen,
   showTab,
+  locate,
   withoutPanels,
   SIDEBAR_DEFAULT_W,
   SIDEBAR_MIN_W,

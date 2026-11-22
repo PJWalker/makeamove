@@ -1,5 +1,6 @@
 import { isObject, isString } from "../../lib/guards";
-import { collection, lww, type Item } from "../../data/schema";
+import { collection, lww  } from "../../data/schema";
+import type {Item} from "../../data/schema";
 import type { ActionDef, ItemDef } from "../../systems/types";
 
 export type HomebrewEntry = { kind: "gear"; item: ItemDef } | { kind: "move"; move: ActionDef };

@@ -1,7 +1,7 @@
 import "fake-indexeddb/auto";
 import { describe, expect, it } from "vite-plus/test";
-import { commandText, contentFromText } from "../content";
 import * as Y from "yjs";
+import { commandText, contentFromText } from "../content";
 import { SyncSession } from "../../../sync/session";
 import { MemoryRoom } from "../../../sync/__tests__/memoryRoom";
 import { ChatLog, CHUNK_SIZE } from "../chatLog";

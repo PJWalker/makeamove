@@ -2,5 +2,5 @@
 export const slug = (value: string) =>
   value
     .toLowerCase()
-    .replaceAll(/[^a-z0-9]+/g, "-")
+    .replaceAll(/[^\da-z]+/g, "-")
     .replaceAll(/^-|-$/g, "");

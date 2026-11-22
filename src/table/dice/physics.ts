@@ -221,7 +221,7 @@ class TrayWorld {
 
   /** Keeps a die's hull inside the walls, however fast it was going. */
   contain(body: Body, vertices: Vec3[], restitution: number) {
-    const tray = this.tray;
+    const {tray} = this;
     const offsets = vertices.map((vertex) => body.quaternion.vmult(vertex));
     for (const [axis, minimum, maximum] of [
       ["x", tray.left, tray.right],
@@ -249,7 +249,7 @@ class TrayWorld {
 }
 
 /** The index of the face whose normal, turned by `quaternion`, points most nearly along `sign` × Z. */
-function faceTowards(body: Body, quaternion: Quaternion, sign: 1 | -1) {
+function faceTowards(body: Body, quaternion: Quaternion, sign: -1 | 1) {
   const { faceNormals } = body.shapes[0] as ConvexPolyhedron;
   let best = 0;
   let bestZ = -Infinity;

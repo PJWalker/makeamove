@@ -1,14 +1,15 @@
 import {
   CanvasTexture,
-  type BufferGeometry,
-  type Material,
+  
+  
   Mesh,
   MeshPhysicalMaterial,
   MeshStandardMaterial,
   RepeatWrapping,
-  SRGBColorSpace,
-  type Object3D,
+  SRGBColorSpace
+  
 } from "three";
+import type {BufferGeometry, Material, Object3D} from "three";
 
 /*
  * The adventurer's kit: the materials every icon is made from, so the set

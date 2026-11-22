@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vite-plus/test";
 import { contentFromText, messageText } from "../content";
 import { logRows, splitSessions } from "../sessions";
-import { canDelete, type ChatMessage } from "../types";
+import { canDelete  } from "../types";
+import type {ChatMessage} from "../types";
 
 let n = 0;
 const text = (t: string, author = "pat"): ChatMessage => ({

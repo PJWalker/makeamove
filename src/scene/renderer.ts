@@ -1,22 +1,27 @@
 import { Application, Container, CullerPlugin, extensions } from "pixi.js";
-import type { Camera } from "./camera";
-import { type Grid, DEFAULT_GRID, type Point } from "./grid";
 import type { PeerBlobs } from "../media/images";
-import type { PresenceMark } from "./presence";
 import type { TokenStat } from "../systems/types";
+import type { Camera } from "./camera";
+import {  DEFAULT_GRID  } from "./grid";
+import type {Grid, Point} from "./grid";
+import type { PresenceMark } from "./presence";
 import type { TokenMarks } from "./tokenMarks";
 import type { SelectKind } from "./tools";
-import { LAYERS, type Layer, type SceneElement, type TextLook, type Transform } from "./types";
+import { LAYERS     } from "./types";
+import type {Layer, SceneElement, TextLook, Transform} from "./types";
 import { ConditionLayer } from "./render/conditions";
-import { type Draft, DraftLayer } from "./render/draft";
+import {  DraftLayer } from "./render/draft";
+import type {Draft} from "./render/draft";
 import { mapText } from "./render/elementViews";
 import { loadSdfFonts } from "./render/sdfFont";
 import { measureSdfText } from "./render/sdfText";
 import { CANVAS_FONTS } from "./render/style";
 import { ElementLayer } from "./render/elements";
 import { GridLayer } from "./render/grid";
-import { type Lighting, LightingLayer } from "./render/lighting";
-import { type OverlayState, OverlayLayer } from "./render/overlay";
+import {  LightingLayer } from "./render/lighting";
+import type {Lighting} from "./render/lighting";
+import {  OverlayLayer } from "./render/overlay";
+import type {OverlayState} from "./render/overlay";
 import { PresenceLayer } from "./render/presence";
 import type { RenderPart, RenderState } from "./render/state";
 import { releaseTextures } from "./render/textures";
@@ -208,7 +213,7 @@ export class SceneRenderer implements RenderState {
 
   invalidate(...what: RenderPart[]) {
     for (const w of what) this.dirty[w] = true;
-    if (!this.frame && !this.destroyed) this.frame = requestAnimationFrame(() => this.render());
+    if (!this.frame && !this.destroyed) this.frame = requestAnimationFrame(() => { this.render(); });
   }
 
   setElements(elements: SceneElement[]) {

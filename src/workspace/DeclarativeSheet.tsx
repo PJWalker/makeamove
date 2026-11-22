@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState   } from "react";
+import type {ComponentType, ReactNode} from "react";
 import { statBonus } from "../features/characters/store";
 import type { ConditionState } from "../features/characters/sheet";
 import type { CharacterView } from "../features/characters/types";
@@ -12,14 +13,16 @@ import { parseInputNumber } from "../lib/number";
 import { Button } from "../ui/Button";
 import { IconLock } from "../ui/icons";
 import { menuTrigger } from "../ui/menuTrigger";
-import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
+import { ContextMenu  } from "../ui/ContextMenu";
+import type {MenuItem} from "../ui/ContextMenu";
+import { useQuery } from "../ui/useQuery";
 import { AdvancementDialog } from "./CreationParts";
 import { useExtension } from "./systemExtensions";
-import { registerEntityDrop, type DragEntity } from "./entityDrag";
+import { registerEntityDrop  } from "./entityDrag";
+import type {DragEntity} from "./entityDrag";
 import { Inventory } from "./Inventory";
 import { Counter } from "./sheetParts";
 import { signedStr as signedString } from "./actionPresentation";
-import { useQuery } from "../ui/useQuery";
 import {
   ActionsSection,
   ChoicesSection,
@@ -28,9 +31,10 @@ import {
   HeaderSection,
   ModifiersSection,
   NpcFieldsSection,
-  TextSection,
-  type SectionContext,
+  TextSection
+  
 } from "./sheetSections";
+import type {SectionContext} from "./sheetSections";
 import {
   bumpData,
   bumpResource,
@@ -117,10 +121,10 @@ function Advancement({ campaign, system, c, d, editable, section }: SectionOf<"a
   return (
     <div className="sheet-advancement">
       <span>{section.label}</span>
-      <Button onClick={() => setOpen(true)}>{section.button}…</Button>
+      <Button onClick={() => { setOpen(true); }}>{section.button}…</Button>
       {Actions && <Actions campaign={campaign} characterId={c.id} />}
       {open && (
-        <AdvancementDialog campaign={campaign} characterId={c.id} onClose={() => setOpen(false)} />
+        <AdvancementDialog campaign={campaign} characterId={c.id} onClose={() => { setOpen(false); }} />
       )}
     </div>
   );
@@ -142,7 +146,7 @@ function Loadout({ system, c, d, editable, id }: SectionContext & { id: string }
             type="checkbox"
             checked={free}
             disabled={!editable}
-            onChange={(event) => setFree(event.currentTarget.checked)}
+            onChange={(event) => { setFree(event.currentTarget.checked); }}
           />
           {definition.freeSwapLabel}
         </label>
@@ -152,7 +156,7 @@ function Loadout({ system, c, d, editable, id }: SectionContext & { id: string }
           type="search"
           aria-label={`Search ${definition.label}`}
           value={query}
-          onInput={(event) => setQuery(event.currentTarget.value)}
+          onInput={(event) => { setQuery(event.currentTarget.value); }}
         />
       )}
       {options.map(({ option, selected, affordable }) => (
@@ -161,7 +165,7 @@ function Loadout({ system, c, d, editable, id }: SectionContext & { id: string }
             type="checkbox"
             checked={selected}
             disabled={!editable || (!selected && (active.length >= max || !affordable))}
-            onChange={() => toggleOption(option.id)}
+            onChange={() => { toggleOption(option.id); }}
           />
           {option.name}
         </label>
@@ -175,7 +179,7 @@ function useLoadout({
   c,
   d,
   id,
-}: Pick<SectionContext, "system" | "c" | "d"> & { id: string }) {
+}: Pick<SectionContext, "c" | "d" | "system"> & { id: string }) {
   const context = useCampaign();
   const [free, setFree] = useState(false);
   const [query, setQuery] = useState("");
@@ -396,7 +400,7 @@ function Stats({
               className="stat-mod"
               title={`Roll +${stat.name}`}
               aria-label={`Roll +${stat.name}`}
-              onClick={() => rollStat(stat.id, stat.abbr)}
+              onClick={() => { rollStat(stat.id, stat.abbr); }}
               onPointerDown={editable ? trigger.onPointerDown : undefined}
               onContextMenu={editable ? trigger.onContextMenu : undefined}
             >
@@ -413,7 +417,7 @@ function Stats({
                   aria-label={`${stat.name} score`}
                   value={c.scores[stat.id]}
                   disabled={!editable}
-                  onChange={(event) => updateScore(stat, event.currentTarget.value)}
+                  onChange={(event) => { updateScore(stat, event.currentTarget.value); }}
                 />
               </label>
             )}
@@ -449,7 +453,7 @@ function Stats({
           </li>
         ))}
       </ul>
-      {menu && <ContextMenu {...menu} onClose={() => setMenu(null)} />}
+      {menu && <ContextMenu {...menu} onClose={() => { setMenu(null); }} />}
     </section>
   );
 }
@@ -473,7 +477,7 @@ function useStats({
   d,
   editable,
   showScore,
-}: Pick<SectionContext, "system" | "c" | "d" | "editable"> & { showScore: boolean }) {
+}: Pick<SectionContext, "c" | "d" | "editable" | "system"> & { showScore: boolean }) {
   const context = useCampaign();
   const [menu, setMenu] = useState<{
     x: number;
@@ -535,7 +539,7 @@ function useStats({
     rows,
     rollStat,
     updateScore,
-    cycleCondition: (condition: string, state: "clear" | "marked" | "locked") =>
+    cycleCondition: (condition: string, state: "clear" | "locked" | "marked") =>
       context.execute(setCondition, { id: c.id, condition, state }),
     toggleConditionState: (condition: string) =>
       context.execute(toggleCondition, { id: c.id, condition }),

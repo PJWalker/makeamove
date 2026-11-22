@@ -70,7 +70,7 @@ export interface CollectionField<I extends Field, T = Item<I>> {
   readonly kind: "collection";
   readonly item: I;
   /** See `collection`. A method, so a collection of any item is a Field. */
-  parse?(item: Item<I>, id: string): T | Invalid;
+  parse?(item: Item<I>, id: string): Invalid | T;
   readonly label: string;
 }
 
@@ -79,19 +79,12 @@ export interface SubdocField {
 }
 
 export type Field =
-  | LwwField<unknown, boolean>
-  | CounterField
-  | TextField
-  | ListField<unknown>
-  | RecordField<Shape>
-  | VariantField<string, Shape, Record<string, Shape>>
-  | CollectionField<Field, unknown>
-  | SubdocField;
+  CollectionField<Field, unknown> | CounterField | ListField<unknown> | LwwField<unknown, boolean> | RecordField<Shape> | SubdocField | TextField | VariantField<string, Shape, Record<string, Shape>>;
 
-export type Shape = { readonly [key: string]: Field };
+export interface Shape { readonly [key: string]: Field }
 
 /** Checks a collection item as it's read: its value, or why it can't be used. */
-export type Parse<I extends Field, T> = (item: Item<I>, id: string) => T | Invalid;
+export type Parse<I extends Field, T> = (item: Item<I>, id: string) => Invalid | T;
 
 /** Why a stored item can't be used. */
 export class Invalid {
@@ -156,7 +149,7 @@ export function collection<I extends Field, T>(
 // Types derived from fields
 
 /** What a present value of a field reads as. */
-export type Item<F> = 0 extends 1 & F
+export type Item<F> = 0 extends F & 1
   ? unknown
   : F extends LwwField<infer T, boolean>
     ? T
@@ -177,7 +170,7 @@ export type Item<F> = 0 extends 1 & F
                   : never;
 
 /** What a field in a record reads as: missing values are undefined unless the field has a fallback. */
-export type Got<F> = 0 extends 1 & F
+export type Got<F> = 0 extends F & 1
   ? unknown
   : F extends LwwField<infer T, infer Has>
     ? Has extends true
@@ -188,7 +181,7 @@ export type Got<F> = 0 extends 1 & F
       : Item<F> | undefined;
 
 /** What a field is written from. */
-export type Init<F> = 0 extends 1 & F
+export type Init<F> = 0 extends F & 1
   ? unknown
   : F extends LwwField<infer T, boolean>
     ? T
@@ -209,12 +202,12 @@ export type Init<F> = 0 extends 1 & F
 type InitKeys<S extends Shape> = { [K in keyof S]: S[K] extends TextField ? never : K }[keyof S];
 export type InitRec<S extends Shape> = { [K in InitKeys<S>]?: Init<S[K]> };
 type InitVariant<Tag extends string, B extends Shape, C extends Record<string, Shape>> = {
-  [K in keyof C & string]: InitRec<B> & InitRec<C[K]> & Record<Tag, K>;
-}[keyof C & string];
+  [K in string & keyof C]: InitRec<B> & InitRec<C[K]> & Record<Tag, K>;
+}[string & keyof C];
 
 /** The fields that hold a single value, set and read in place. */
 type ValueKeys<S extends Shape> = {
-  [K in keyof S]: S[K] extends LwwField<unknown, boolean> | CounterField ? K : never;
+  [K in keyof S]: S[K] extends CounterField | LwwField<unknown, boolean> ? K : never;
 }[keyof S];
 /** The fields that hold a Yjs type of their own. */
 type ContainerKeys<S extends Shape> = Exclude<keyof S, ValueKeys<S>>;
@@ -227,7 +220,7 @@ type CounterKeys<S extends Shape> = {
 }[keyof S];
 
 /** A plain copy of a field's value: for backups, tests and views. */
-export type Plain<F> = 0 extends 1 & F
+export type Plain<F> = 0 extends F & 1
   ? unknown
   : F extends LwwField<infer T, boolean>
     ? T
@@ -244,20 +237,20 @@ export type Plain<F> = 0 extends 1 & F
               : never;
 
 type PlainKeys<S extends Shape> = {
-  [K in keyof S]: S[K] extends TextField | SubdocField ? never : K;
+  [K in keyof S]: S[K] extends SubdocField | TextField ? never : K;
 }[keyof S];
 type OptionalKeys<S extends Shape> = {
   [K in keyof S]: S[K] extends LwwField<unknown> ? K : never;
 }[keyof S];
 type Flatten<T> = { [K in keyof T]: T[K] };
 export type PlainRec<S extends Shape> = Flatten<
-  { [K in Exclude<PlainKeys<S>, OptionalKeys<S>>]: Plain<S[K]> } & {
+  {
     [K in OptionalKeys<S>]?: Plain<S[K]>;
-  }
+  } & { [K in Exclude<PlainKeys<S>, OptionalKeys<S>>]: Plain<S[K]> }
 >;
 export type PlainVariant<Tag extends string, B extends Shape, C extends Record<string, Shape>> = {
-  [K in keyof C & string]: Flatten<PlainRec<B> & PlainRec<C[K]> & Record<Tag, K>>;
-}[keyof C & string];
+  [K in string & keyof C]: Flatten<PlainRec<B> & PlainRec<C[K]> & Record<Tag, K>>;
+}[string & keyof C];
 
 // Logging what can't be read
 
@@ -494,7 +487,7 @@ function transactOn(y: Slot, function_: () => void) {
 
 function observeDeep(y: Slot, function_: () => void): () => void {
   y.observeDeep(function_);
-  return () => y.unobserveDeep(function_);
+  return () => { y.unobserveDeep(function_); };
 }
 
 // Handles
@@ -521,17 +514,17 @@ export class Rec<S extends Shape> implements Observable {
     readonly shape: S,
   ) {}
 
-  get<K extends keyof S & string>(key: K): Got<S[K]> {
+  get<K extends string & keyof S>(key: K): Got<S[K]> {
     return readSlot(this.shape[key]!, this.y, key) as Got<S[K]>;
   }
 
   /** Whether the field is stored here (a copy reads what it lacks from its template). */
-  has(key: keyof S & string): boolean {
+  has(key: string & keyof S): boolean {
     return this.y.has(key);
   }
 
   /** The fields stored here. */
-  keys(): (keyof S & string)[] {
+  keys(): (string & keyof S)[] {
     return [...this.y.keys()].filter((k) => k in this.shape);
   }
 
@@ -539,13 +532,13 @@ export class Rec<S extends Shape> implements Observable {
     setSlot(this.shape[key]!, this.y, key, value);
   }
 
-  delete(key: keyof S & string) {
+  delete(key: string & keyof S) {
     this.y.delete(key);
   }
 
   /** Set several value fields at once; `undefined` removes one. Unchanged values aren't rewritten. */
   patch(values: Patch<S>) {
-    this.transact(() => patchSlots(this.y, this.shape, values));
+    this.transact(() => { patchSlots(this.y, this.shape, values); });
   }
 
   /** Add to a counter. */
@@ -563,7 +556,7 @@ export class Rec<S extends Shape> implements Observable {
   }
 
   /** The field's subdocument, made with this guid if it has none. */
-  subdoc(key: keyof S & string, guid: string): Y.Doc {
+  subdoc(key: string & keyof S, guid: string): Y.Doc {
     const existing = this.y.get(key);
     if (existing instanceof Y.Doc) return existing;
     const created = new Y.Doc({ guid });
@@ -600,20 +593,20 @@ export class VariantRec<
   }
 
   /** Its tag, if it's one this build knows. */
-  get tag(): (keyof C & string) | undefined {
+  get tag(): (string & keyof C) | undefined {
     const tag = this.y.get(this.variant.tag);
     return isString(tag) && tag in this.variant.cases ? tag : undefined;
   }
 
   /** The fields of its case beside the base ones. */
   private fields(): Shape {
-    const tag = this.tag;
+    const {tag} = this;
     return tag === undefined ? this.shape : { ...this.shape, ...this.variant.cases[tag] };
   }
 
   /** Every field of its case as plain values, its tag included; undefined for an unknown tag. */
   readCase(): PlainVariant<Tag, B, C> | undefined {
-    const tag = this.tag;
+    const {tag} = this;
     if (tag === undefined) return undefined;
     return readPlain(this.y, this.fields(), { [this.variant.tag]: tag }) as PlainVariant<Tag, B, C>;
   }
@@ -621,7 +614,7 @@ export class VariantRec<
   /** Set any of its base or case fields; `undefined` removes one, and others are ignored. */
   patchCase(values: Readonly<Record<string, unknown>>) {
     const shape = this.fields();
-    this.transact(() => patchSlots(this.y, shape, values, this.variant.tag));
+    this.transact(() => { patchSlots(this.y, shape, values, this.variant.tag); });
   }
 }
 
@@ -724,7 +717,7 @@ export class Coll<I extends Field, T = Item<I>> implements Observable {
   }
 
   clear() {
-    this.transact(() => this.y.clear());
+    this.transact(() => { this.y.clear(); });
   }
 
   /** Call `fn` on any change to it or anything inside it. Returns a function that stops it. */
@@ -774,7 +767,7 @@ export class List<T> implements Observable {
 
   observe(function_: () => void): () => void {
     this.y.observe(function_);
-    return () => this.y.unobserve(function_);
+    return () => { this.y.unobserve(function_); };
   }
 }
 

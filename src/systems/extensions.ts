@@ -1,10 +1,10 @@
+import { isString } from "../lib/guards";
 import type { GameSystem } from "./types";
 import type { SystemExtension } from "./extensionTypes";
 import { dnd55eExtension } from "./dnd55e/extension";
 import { dungeonWorldExtension } from "./dungeon-world/extension";
 import { dungeonWorld2Extension } from "./dungeon-world-2/extension";
 import { bladesExtension } from "./blades-in-the-dark/extension";
-import { isString } from "../lib/guards";
 
 /*
  * What a system adds to the table besides its rules: sheet components,

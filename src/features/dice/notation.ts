@@ -18,7 +18,7 @@ import { seededRandom } from "../../lib/seededRandom";
 
 export interface DiceTerm {
   kind: "dice";
-  sign: 1 | -1;
+  sign: -1 | 1;
   count: number;
   sides: number;
   keep?: { which: "high" | "low"; n: number };
@@ -29,7 +29,7 @@ export interface DiceTerm {
 
 export interface FlatTerm {
   kind: "flat";
-  sign: 1 | -1;
+  sign: -1 | 1;
   value: number;
   label?: string;
 }
@@ -49,7 +49,7 @@ export interface Die {
 
 export interface RolledDice {
   kind: "dice";
-  sign: 1 | -1;
+  sign: -1 | 1;
   notation: string;
   label?: string;
   dice: Die[];
@@ -58,7 +58,7 @@ export interface RolledDice {
 
 export interface RolledFlat {
   kind: "flat";
-  sign: 1 | -1;
+  sign: -1 | 1;
   value: number;
   label?: string;
 }
@@ -95,7 +95,7 @@ export function parse(formula: string): Term[] {
 
   skipSpace();
   while (index < source.length) {
-    let sign: 1 | -1 = 1;
+    let sign: -1 | 1 = 1;
     if (source[index] === "+" || source[index] === "-") {
       sign = source[index] === "-" ? -1 : 1;
       index++;

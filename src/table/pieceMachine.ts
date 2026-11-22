@@ -1,7 +1,10 @@
 import { setup } from "xstate";
 
 export const pieceMachine = setup({
-  types: {},
+  types: {
+    events: {} as
+      { type: "ENTER"; moving: boolean } | { type: "FLAT" } | { type: "LANDED" } | { type: "MOVING" } | { type: "RESET" },
+  },
 }).createMachine({
   initial: "pending",
   states: {

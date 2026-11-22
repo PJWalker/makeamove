@@ -1,17 +1,19 @@
-import { Color, type Graphics } from "pixi.js";
+import { Color  } from "pixi.js";
+import type {Graphics} from "pixi.js";
 import type { Rect } from "../camera";
 import type { Point } from "../grid";
+import { fontFamily, TEXT_FONTS  } from "../types";
+import type {TextStyle} from "../types";
 import type { SdfFontSpec } from "./sdfFont";
 import type { SdfTextOptions } from "./sdfText";
 import type { RenderState } from "./state";
-import { fontFamily, TEXT_FONTS, type TextStyle } from "../types";
 
 /** The UI accent, oklch(82% 0.15 85), as sRGB for the canvas. */
 export const ACCENT = 0xF0_BB_3B;
 export const INK = 0x14_16_1C;
 
 /** A scene colour as CSS: its hex without alpha, and its opacity apart. */
-export function cssColour(colour: string | number) {
+export function cssColour(colour: number | string) {
   const c = new Color(colour);
   return { hex: c.toHex(), alpha: c.alpha };
 }
@@ -54,7 +56,7 @@ export const TOKEN_NAME: SdfTextOptions = {
 export const flat = (pts: Point[]) => pts.flatMap((p) => [p.x, p.y]);
 
 /** What of the canvas isn't covered by UI, in screen px, kept a little in from its edges. */
-export function screenViewport(s: Pick<RenderState, "size" | "insets">): Rect {
+export function screenViewport(s: Pick<RenderState, "insets" | "size">): Rect {
   const insets = s.insets();
   return {
     x: insets.left + 4,

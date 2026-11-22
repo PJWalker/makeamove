@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-magic-numbers */
 /*
  * A 3D Gaussian splat: a soft, coloured ellipsoid. A cloud of them, packed
  * into one Float32Array by `pack`, is what splatCloud.ts draws.
@@ -14,6 +15,10 @@ export const MOTION = {
   orbit: 2,
   /** Drifts slowly upwards, fading in and out: dust in the air. */
   drift: 3,
+  /** Rises and spreads, thinning out: smoke. */
+  smoke: 4,
+  /** Swells where it hangs, then falls to the floor: a drip of water. */
+  drip: 5,
 } as const;
 export type Motion = (typeof MOTION)[keyof typeof MOTION];
 
@@ -50,12 +55,12 @@ export function pack(splats: readonly Splat[]): Float32Array {
     data.set(
       [
         ...splat.at,
-        sum(([x]) => x * x),
-        sum(([x, y]) => x * y),
-        sum(([x, , z]) => x * z),
-        sum(([, y]) => y * y),
-        sum(([, y, z]) => y * z),
-        sum(([, , z]) => z * z),
+        sum((axis) => axis[0] * axis[0]),
+        sum((axis) => axis[0] * axis[1]),
+        sum((axis) => axis[0] * axis[2]),
+        sum((axis) => axis[1] * axis[1]),
+        sum((axis) => axis[1] * axis[2]),
+        sum((axis) => axis[2] * axis[2]),
         ...splat.colour,
         splat.opacity,
         ...splat.facing,

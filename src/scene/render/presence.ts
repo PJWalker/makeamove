@@ -3,7 +3,8 @@ import { toScreen } from "../camera";
 import { fromLocal as fromLocalPoint } from "../geometry";
 import type { Point } from "../grid";
 import { formatDistance, measure, tokenDistance } from "../measure";
-import { PING_MS, TRAIL_MS, type PresenceMark } from "../presence";
+import { PING_MS, TRAIL_MS  } from "../presence";
+import type {PresenceMark} from "../presence";
 import type { Draft } from "./draft";
 import { SdfText } from "./sdfText";
 import type { RenderState } from "./state";
@@ -34,9 +35,9 @@ function cursorAt(m: CursorMove, now: number): Point {
 export class PresenceLayer {
   readonly view = new Graphics();
   readonly labels = new Container();
-  private labelPool = new Map<string, SdfText>();
+  private readonly labelPool = new Map<string, SdfText>();
   private marks: PresenceMark[] = [];
-  private cursors = new Map<string, CursorMove>();
+  private readonly cursors = new Map<string, CursorMove>();
 
   constructor(private readonly state: RenderState) {}
 
@@ -98,7 +99,7 @@ export class PresenceLayer {
   private drawTargets(g: Graphics, used: Set<string>, rangeFrom: string | null) {
     const s = this.state;
     const cam = s.camera;
-    const byId = s.byId;
+    const {byId} = s;
     const rings = new Map<string, number>();
     const fromElement = rangeFrom ? byId.get(rangeFrom) : undefined;
     const from = fromElement && (s.previews.get(fromElement.id) ?? fromElement);
@@ -296,7 +297,6 @@ export class PresenceLayer {
 
     for (const [key, t] of this.labelPool) {
       if (used.has(key)) continue;
-      t.remove();
       t.destroy();
       this.labelPool.delete(key);
     }

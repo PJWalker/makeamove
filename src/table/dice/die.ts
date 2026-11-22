@@ -1,6 +1,8 @@
 import { Quaternion, Vector3 } from "three";
-import { chipModel, dieModel, paint, resolveColour, type Model } from "./painter";
-import { simulateDice, type DieHull, type DiePose } from "./physics";
+import { chipModel, dieModel, paint, resolveColour  } from "./painter";
+import type {Model} from "./painter";
+import { simulateDice   } from "./physics";
+import type {DieHull, DiePose} from "./physics";
 import { chipHull, firstFaceFor, SCALE, shapeFor, SLOT } from "./shapes";
 import { centreOf, glideTrack, lyingAt, rollTrack, struck } from "./tracks";
 import type { DieLook, Point, Pose, Track } from "./types";
@@ -145,10 +147,10 @@ export class Die {
       const tick = (now: number) => {
         start ??= now;
         const ms = now - start;
-        if (!this.alive) return stop();
+        if (!this.alive) { stop(); return; }
         if (ms >= delay) {
           const { pose, done } = track(ms);
-          if (done) return stop();
+          if (done) { stop(); return; }
           this.lift();
           if (this.carriedIn) this.carriedIn.style.visibility = "hidden";
           this.place(pose);

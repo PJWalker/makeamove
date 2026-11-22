@@ -11,8 +11,8 @@ import type { CampaignContext } from "../campaignContext";
  * offered for the object they're opened on.
  */
 
-export type ActionKind = "move" | "item" | "tool" | "command" | "entry" | "setting";
-export type EntryGroup = "character" | "scene" | "note" | "library";
+export type ActionKind = "command" | "entry" | "item" | "move" | "setting" | "tool";
+export type EntryGroup = "character" | "library" | "note" | "scene";
 
 /** The objects context menus open on, and what identifies each. */
 export interface CommandTargets {
@@ -33,7 +33,7 @@ export interface CommandTargets {
 }
 export type TargetKind = keyof CommandTargets;
 export type FolderTreeKind = "character" | "note" | "scene";
-export type Target = { [K in TargetKind]: { kind: K } & CommandTargets[K] }[TargetKind];
+export type Target = { [K in TargetKind]: CommandTargets[K] & { kind: K } }[TargetKind];
 
 /**
  * Where an entry sits in a context menu: sections are kept in this order,
@@ -96,7 +96,7 @@ export interface SlashForm<P> {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type AnyTableCommand = TableCommand<any> & AnyCommand<CampaignContext>;
+export type AnyTableCommand = AnyCommand<CampaignContext> & TableCommand<any>;
 
 /** Declare a command, inferring its parameters from its guard. */
 export const command = <P = void, R = unknown>(c: TableCommand<P, R>): TableCommand<P, R> => c;

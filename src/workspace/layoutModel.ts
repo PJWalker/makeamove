@@ -16,16 +16,7 @@ import { generateKeyBetween, generateNKeysBetween } from "fractional-indexing";
 import { isString } from "../lib/guards";
 
 export type PanelId =
-  | "scene"
-  | "chat"
-  | "pc"
-  | "characters"
-  | "combat"
-  | "libraries"
-  | "reference"
-  | "items"
-  | "notes"
-  | "members";
+  "characters" | "chat" | "combat" | "items" | "libraries" | "members" | "notes" | "pc" | "reference" | "scene";
 export type DockItemId = PanelId | `entity:${string}`;
 export type Side = "left" | "right";
 
@@ -146,7 +137,7 @@ function inOrder(panels: DockItemId[], order: Layout["order"]) {
   });
 }
 
-export function locate(l: Layout, id: DockItemId): Side | "floating" | "closed" {
+export function locate(l: Layout, id: DockItemId): Side | "closed" | "floating" {
   if (l.floating.some((w) => w.id === id)) return "floating";
   if (l.closed.includes(id)) return "closed";
   if (l.left.panels.includes(id)) return "left";
@@ -274,7 +265,7 @@ export function resizeSide(l: Layout, side: Side, width: number, max: number): L
   return w !== s.width || !s.open ? { ...l, [side]: { ...s, width: w, open: true } } : l;
 }
 
-const ARROW_DIRECTION: Record<string, 1 | -1> = { ArrowRight: 1, ArrowLeft: -1 };
+const ARROW_DIRECTION: Record<string, -1 | 1> = { ArrowRight: 1, ArrowLeft: -1 };
 
 /**
  * The width a key asks of a side's resize separator, or null for keys it
@@ -286,7 +277,7 @@ export function keyedSideWidth(
   s: SideState,
   key: string,
   shift: boolean,
-  grow: 1 | -1,
+  grow: -1 | 1,
   max: number,
 ): number | null {
   const step = shift ? SIDEBAR_KEY_STEP_LARGE : SIDEBAR_KEY_STEP;

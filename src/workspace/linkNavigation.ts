@@ -25,7 +25,7 @@ export class LinkNavigation {
 
   /** Show a character's sheet: in My Character for this device's own, else in Characters. */
   openCharacter(id: string) {
-    if (id === playedCharacterId(this.campaign)) return this.panels.showPanel("pc");
+    if (id === playedCharacterId(this.campaign)) { this.panels.showPanel("pc"); return; }
     viewCharacter(this.campaign, id);
     this.panels.showPanel("characters");
   }
@@ -39,7 +39,7 @@ export class LinkNavigation {
 
   /** Show a link's target in its panel: the page, the sheet, the Scenes list, or the Libraries. */
   openInSidebar(kind: LinkKind, id: string) {
-    if (kind === "scene") return this.panels.showPanel("scene");
+    if (kind === "scene") { this.panels.showPanel("scene"); return; }
     this.followLink(kind, id);
   }
 
@@ -47,17 +47,17 @@ export class LinkNavigation {
   followLink(kind: LinkKind, id: string) {
     switch (kind) {
       case "note": {
-        return this.openNote(id);
+        this.openNote(id); return;
       }
       case "character": {
-        return this.openCharacter(id);
+        this.openCharacter(id); return;
       }
       case "scene": {
-        return this.campaign.setActiveScene(id);
+        this.campaign.setActiveScene(id); return;
       }
       case "item":
       case "move": {
-        return this.library.search(kind, linkLabel(this.campaign, kind, id) ?? "");
+        this.library.search(kind, linkLabel(this.campaign, kind, id) ?? ""); return;
       }
     }
   }
