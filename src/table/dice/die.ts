@@ -1,4 +1,4 @@
-import { Quaternion, Vector3 } from "three";
+import { Quaternion, Vector3 } from "three/webgpu";
 import { chipModel, dieModel, paint, resolveColour  } from "./painter";
 import type {Model} from "./painter";
 import type { DieHull, DiePose, DieThrow, DieTray } from "./physics";

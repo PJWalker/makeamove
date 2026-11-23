@@ -7,7 +7,7 @@ const output = resolve(import.meta.dirname, "../src/table/dice-fallbacks");
 const renders = await renderInBrowser<{ sides: number; dataUrl: string }[]>({
   module: "/src/table/dice/painter.ts",
   expression: `[4, 6, 8, 10, 12, 20].map((sides) => ({ sides, dataUrl: mod.renderBlank(sides) }))`,
-  dependencies: ["three", "cannon-es"],
+  dependencies: ["three/webgpu", "cannon-es"],
   deviceScaleFactor: 3,
 });
 

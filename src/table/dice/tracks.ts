@@ -1,4 +1,4 @@
-import { Quaternion, Vector3 } from "three";
+import { Quaternion, Vector3 } from "three/webgpu";
 import { playDiceImpact } from "../../ui/sounds";
 import { PHYSICS_STEP    } from "./physics";
 import type {DieHull, DiePose, DieState} from "./physics";

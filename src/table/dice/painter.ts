@@ -1,5 +1,3 @@
-import type {
-  Quaternion} from "three";
 import {
   CanvasTexture,
   DirectionalLight,
@@ -14,8 +12,9 @@ import {
   PMREMGenerator,
   Scene,
   SRGBColorSpace,
-  WebGLRenderer,
-} from "three";
+  WebGPURenderer,
+} from "three/webgpu";
+import type { Quaternion } from "three/webgpu";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { contrastingTextColour } from "../../lib/colour";
 import {
@@ -29,8 +28,10 @@ import {
 } from "./shapes";
 
 /*
- * Draws a die, in a pose, into a canvas. One small WebGL renderer draws every
- * die; each frame of a die is copied into the die's own canvas.
+ * Draws a die, in a pose, into a canvas. One small renderer draws every die,
+ * with WebGPU (WebGL where WebGPU is missing); each frame of a die is copied
+ * into the die's own canvas. The module waits for the renderer to start, so
+ * painting is synchronous once it's loaded.
  */
 
 /** A die or chip ready to draw; dispose() frees what's its own. */
@@ -39,10 +40,9 @@ export interface Model {
   dispose: () => void;
 }
 
-let stage: { renderer: WebGLRenderer; scene: Scene; camera: OrthographicCamera } | undefined;
-function stageFor() {
-  if (stage) return stage;
-  const renderer = new WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+async function startStage() {
+  const renderer = new WebGPURenderer({ antialias: true, alpha: true });
+  await renderer.init();
   renderer.setClearColor(0x00_00_00, 0);
   renderer.setPixelRatio(devicePixelRatio);
   renderer.setSize(SLOT, SLOT, false);
@@ -59,9 +59,9 @@ function stageFor() {
   rim.position.set(3, -1, 2);
   scene.add(new HemisphereLight(0xFF_FF_FF, 0x33_40_55, 0.85), key, rim);
   const camera = new OrthographicCamera(-SLOT / 2, SLOT / 2, SLOT / 2, -SLOT / 2, -100, 100);
-  stage = { renderer, scene, camera };
-  return stage;
+  return { renderer, scene, camera };
 }
+const stage = await startStage();
 
 const dieFinish = {
   roughness: 0.2,
@@ -174,11 +174,12 @@ export function chipModel(text: string, colour: string): Model {
 
 /** Draws `model`, turned by `rotation`, into `canvas`, sizing it to the renderer's pixels. */
 export function paint(model: Model, rotation: Quaternion, canvas: HTMLCanvasElement) {
-  const { renderer, scene, camera } = stageFor();
+  const { renderer, scene, camera } = stage;
   model.mesh.quaternion.copy(rotation);
   scene.add(model.mesh);
   renderer.render(scene, camera);
   scene.remove(model.mesh);
+  // A WebGPU canvas only holds its picture until the task ends, so it's copied straight away.
   const source = renderer.domElement;
   if (canvas.width !== source.width || canvas.height !== source.height) {
     canvas.width = source.width;

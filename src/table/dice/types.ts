@@ -1,4 +1,4 @@
-import type { Quaternion } from "three";
+import type { Quaternion } from "three/webgpu";
 
 /* What the rest of the app knows of the 3D dice, without loading them. */
 

@@ -10,7 +10,7 @@ import {
   Quaternion,
   TetrahedronGeometry,
   Vector3,
-} from "three";
+} from "three/webgpu";
 import { discHull  } from "./physics";
 import type {DieHull} from "./physics";
 
