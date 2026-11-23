@@ -35,8 +35,8 @@ export interface Light {
   reach: number;
   /** Seconds for the slowest swell of its flicker. */
   period: number;
-  /** Where it has moved to at a moment, from where it started. */
-  drift: (seconds: number) => Vec3;
+  /** Whether it flies off to scout down the cave now and then, as the wisp does; see `lightDrift`. */
+  scouts: boolean;
 }
 
 export interface Cave {
@@ -926,8 +926,6 @@ function wisp({ random, speck }: Sculptor, at: Vec3) {
   }
 }
 
-const still = (): Vec3 => [0, 0, 0];
-
 /** The wisp bobs about the wizard's hand, and now and then flies off to scout down the cave. */
 function wispDrift(home: Vec3, seed: string) {
   const flight = flightPlan(`${seed}:scouting`, (random) => {
@@ -943,7 +941,15 @@ function wispDrift(home: Vec3, seed: string) {
     ]);
 }
 
-export function buildCave(seed = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`): Cave {
+/** A seed for a cave no one has seen before. */
+export const freshSeed = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+
+/** Where a light of the cave built from `seed` has moved to at a moment, from where it started. */
+export function lightDrift(light: Light, seed: string): (seconds: number) => Vec3 {
+  return light.scouts ? wispDrift(light.at, seed) : () => [0, 0, 0];
+}
+
+export function buildCave(seed = freshSeed()): Cave {
   const random = seededRandom(seed);
   const splats: Splat[] = [];
   // The rock is seen from further off than the party, so it's laid on coarser.
@@ -979,9 +985,9 @@ export function buildCave(seed = `${Date.now().toString(36)}-${Math.random().toS
   return {
     splats,
     lights: [
-      { at: warriorTorch, colour: TORCHLIGHT, reach: 6, period: 3.7, drift: still },
-      { at: rangerTorch, colour: scale(TORCHLIGHT, 0.85), reach: 5.5, period: 4.6, drift: still },
-      { at: wispAt, colour: WISPLIGHT, reach: 7, period: 2.9, drift: wispDrift(wispAt, seed) },
+      { at: warriorTorch, colour: TORCHLIGHT, reach: 6, period: 3.7, scouts: false },
+      { at: rangerTorch, colour: scale(TORCHLIGHT, 0.85), reach: 5.5, period: 4.6, scouts: false },
+      { at: wispAt, colour: WISPLIGHT, reach: 7, period: 2.9, scouts: true },
     ],
     party: ["warrior", "dwarf", "ranger", "wizard"],
   };

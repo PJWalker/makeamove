@@ -4,16 +4,26 @@ import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
 import { reducedMotion } from "../ui/transition";
-import { buildCave, VIEWER } from "./caveScene";
-import { CROSS_PROCESS } from "./crossProcess";
-import { hex, pack } from "./splat";
+import { CAVE_GRADE } from "./caveGrade";
+import { freshSeed, lightDrift, VIEWER } from "./caveScene";
+import { buildCaveOffThread } from "./caveWorker";
+import type { CaveResult } from "./caveWorker";
+import { gpuTimer } from "./gpuTimer";
+import { playback, playbackMode } from "./playback";
+import type { Playback, PlaybackEvent } from "./playback";
+import { govern, governedScale, governor, retry } from "./resolution";
+import { hex } from "./splat";
 import { splatCloud } from "./splatCloud";
 
 /*
- * Puts the cave (caveScene.ts) on a canvas and keeps it alive: the torches
- * flicker and smoke, water drips, the wisp flies off to scout and back, and the viewer's eye follows the mouse a little,
- * so the cave shifts in depth. The finished picture is lightly cross-processed
- * (crossProcess.ts). With reduced motion it's a still picture.
+ * Puts the cave (caveScene.ts, built off the main thread by cave.worker.ts)
+ * on a canvas and keeps it alive: it paints itself in stroke by stroke, the
+ * torches flicker and smoke, water drips, the wisp flies off to scout and
+ * back, and the viewer's eye follows the mouse a little, so the cave shifts in
+ * depth. The finished picture is graded (caveGrade.ts). It's drawn 30 times a
+ * second, or every frame while the eye is moving, at a resolution chosen from
+ * how long frames take (resolution.ts). Paused, or with reduced motion, it's a
+ * still picture (playback.ts).
  */
 
 const DARK = "#04050a";
@@ -23,8 +33,17 @@ const ASPECT = 1.6;
 const CROP = 0.72;
 /** How far the eye moves with the mouse, in metres. */
 const SWAY = { x: 0.4, y: 0.2 };
+/** How quickly the eye catches up with the mouse: the share of the way it closes in a second is 1 - e^-rate. */
+const SWAY_RATE = 1.54;
+/** The eye is still once it's this close to where the mouse puts it. */
+const SETTLED = 0.002;
 /** How far the eye moves before the splats are re-sorted. */
 const RESORT = 0.05;
+/** Milliseconds between frames while nothing but the cave itself moves, and how early a frame may come. */
+const FRAME = 1000 / 30;
+const SLACK = 2;
+/** Seconds the cave takes to paint itself in. */
+const PAINT_IN = 5;
 
 /**
  * Frames the view so the party stays at the bottom: the bottom edge stays put,
@@ -59,53 +78,92 @@ export interface CavePlayback {
   dispose: () => void;
 }
 
-/** Shows the cave on `canvas` until the returned function is called. */
-export function stageCave(
-  canvas: HTMLCanvasElement,
-  onPauseChange: (paused: boolean) => void = () => undefined,
-): CavePlayback {
-  let renderer: WebGLRenderer;
-  try {
-    renderer = new WebGLRenderer({ canvas });
-  } catch (error) {
-    console.warn("The lobby's cave backdrop needs WebGL, so it's left dark.", error);
-    return { pause: () => undefined, play: () => undefined, dispose: () => undefined };
-  }
-  renderer.setClearColor(DARK);
-
-  const cave = buildCave();
-  const lights = cave.lights.map((light) => ({
+/** Sets the cave up on a renderer, once its splats have been built. */
+function caveView(renderer: WebGLRenderer, seed: string, { splats, brushes, lights: built }: CaveResult) {
+  const lights = built.map((light) => ({
     ...light,
     start: new Vector3(...light.at),
     at: new Vector3(...light.at),
     moved: new Vector3(),
     colour: new Vector3(...light.colour),
+    drift: lightDrift(light, seed),
   }));
-  const cloud = splatCloud(pack(cave.splats), lights);
+  const cloud = splatCloud(splats, brushes, lights);
   const { uniforms } = cloud;
   uniforms.ambient.value.set(0.006, 0.007, 0.014);
   // The clear colour, in linear light, so the far dark meets it seamlessly.
   uniforms.haze.value.set(...hex(DARK));
   const scene = new Scene();
   scene.add(cloud.mesh);
-
   const camera = new PerspectiveCamera();
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  composer.addPass(new ShaderPass(CROSS_PROCESS));
+  const grade = new ShaderPass(CAVE_GRADE);
+  const uniform = (name: keyof typeof CAVE_GRADE.uniforms) => {
+    const found = grade.uniforms[name];
+    if (!found) throw new Error(`The cave's grade has no ${name} uniform.`);
+    return found;
+  };
+  uniform("dark").value = hex(DARK).map((channel) => channel ** (1 / 2.2));
+  composer.addPass(grade);
+  return {
+    cloud,
+    lights,
+    camera,
+    composer,
+    pixelRatio: uniform("pixelRatio"),
+    compile: () => renderer.compileAsync(scene, camera),
+    dispose() {
+      cloud.dispose();
+      composer.dispose();
+    },
+  };
+}
+
+/** Shows the cave on `canvas` until the returned playback is disposed. */
+export function stageCave(
+  canvas: HTMLCanvasElement,
+  onPauseChange: (paused: boolean) => void = () => undefined,
+): CavePlayback {
+  let renderer: WebGLRenderer;
+  try {
+    renderer = new WebGLRenderer({ canvas, powerPreference: "low-power" });
+  } catch (error) {
+    console.warn("The lobby's cave backdrop needs WebGL, so it's left dark.", error);
+    return { pause: () => undefined, play: () => undefined, dispose: () => undefined };
+  }
+  renderer.setClearColor(DARK);
+  const context = renderer.getContext();
+  const timer = context instanceof WebGL2RenderingContext ? gpuTimer(context) : undefined;
+
+  let view: ReturnType<typeof caveView> | undefined;
+  let disposed = false;
+  let state: Playback = { paused: false, hidden: document.hidden, reducedMotion: reducedMotion.matches };
+  let resolution = governor();
   const eye = new Vector3(...VIEWER.eye);
   const target = new Vector3(...VIEWER.target);
   const sortedFrom = new Vector3(Infinity, 0, 0);
   const pointer = { x: 0, y: 0 };
   const sway = { x: 0, y: 0 };
+  let paintStarted = 0;
+  let lastSeconds = 0;
 
-  let drawStarted = performance.now() / 1000;
-  const draw = (seconds: number) => {
-    uniforms.drawProgress.value = reducedMotion.matches
+  const settling = () => Math.abs(pointer.x - sway.x) + Math.abs(pointer.y - sway.y) > SETTLED;
+
+  /** Draws the cave at a moment; `moving` lets the eye move towards the mouse. */
+  const draw = (seconds: number, moving: boolean) => {
+    if (!view) return;
+    const { cloud, lights, camera, composer } = view;
+    const { uniforms } = cloud;
+    uniforms.drawProgress.value = state.reducedMotion
       ? 1
-      : Math.min(1, Math.max(0, (seconds - drawStarted) / 5));
-    sway.x += (pointer.x - sway.x) * 0.05;
-    sway.y += (pointer.y - sway.y) * 0.05;
+      : Math.min(1, Math.max(0, (seconds - paintStarted) / PAINT_IN));
+    if (moving) {
+      const closing = 1 - Math.exp(-Math.min(0.1, Math.max(0, seconds - lastSeconds)) * SWAY_RATE);
+      sway.x += (pointer.x - sway.x) * closing;
+      sway.y += (pointer.y - sway.y) * closing;
+    }
+    lastSeconds = seconds;
     camera.position.set(eye.x + sway.x * SWAY.x, eye.y + sway.y * SWAY.y, eye.z);
     camera.lookAt(target);
     camera.updateMatrixWorld();
@@ -119,98 +177,113 @@ export function stageCave(
       light.at.copy(light.start).add(light.moved);
       uniforms.flicker.value[index] = flickerAt(seconds, light.period, index);
     }
-    composer.render();
-  };
-
-  let animation = 0;
-  let paused = false;
-  let hiddenPaused = false;
-  let lastDraw = 0;
-  let lastFrameTime = 0;
-  let frameSamples: number[] = [];
-  let struggleStarted = 0;
-  let pixelRatio = 1;
-  const tick = (now: number) => {
-    if (paused || document.hidden) {
-      animation = 0;
-      return;
-    }
-    if (lastFrameTime) {
-      const frameMs = now - lastFrameTime;
-      if (frameMs > 0) frameSamples.push(frameMs);
-    }
-    lastFrameTime = now;
-    if (now - lastDraw >= 1000 / 30) {
-      draw(now / 1000);
-      lastDraw = now;
-    }
-    if (frameSamples.length >= 90) {
-      const averageMs = frameSamples.reduce((sum, frame) => sum + frame, 0) / frameSamples.length;
-      const fps = 1000 / averageMs;
-      frameSamples = [];
-      if (fps < 38) {
-        if (!struggleStarted) struggleStarted = now;
-        if (now - struggleStarted >= 4000) {
-          if (pixelRatio > 0.5) {
-            pixelRatio = 0.5;
-            applyResolution();
-            struggleStarted = 0;
-          } else {
-            pause();
-            return;
-          }
-        }
-      } else {
-        struggleStarted = 0;
-      }
-    }
-    animation = requestAnimationFrame(tick);
-  };
-  const play = () => {
-    if (document.hidden) return;
-    cancelAnimationFrame(animation);
-    animation = 0;
-    paused = false;
-    drawStarted = performance.now() / 1000;
-    lastFrameTime = 0;
-    frameSamples = [];
-    struggleStarted = 0;
-    onPauseChange(false);
-    if (reducedMotion.matches) {
-      pointer.x = sway.x = 0;
-      pointer.y = sway.y = 0;
-      draw(0);
-    } else animation = requestAnimationFrame(tick);
-  };
-  const pause = () => {
-    paused = true;
-    cancelAnimationFrame(animation);
-    animation = 0;
-    onPauseChange(true);
+    if (timer) timer.measure(() => { composer.render(); });
+    else composer.render();
   };
 
   const applyResolution = () => {
     const { clientWidth: width, clientHeight: height } = canvas;
-    if (!width || !height) return;
-    renderer.setPixelRatio(Math.min(devicePixelRatio, pixelRatio));
+    if (!width || !height || !view) return;
+    renderer.setPixelRatio(governedScale(resolution, devicePixelRatio));
     renderer.setSize(width, height, false);
-    composer.setPixelRatio(renderer.getPixelRatio());
-    composer.setSize(width, height);
-    uniforms.viewport.value.set(canvas.width, canvas.height);
+    view.composer.setPixelRatio(renderer.getPixelRatio());
+    view.composer.setSize(width, height);
+    view.cloud.uniforms.viewport.value.set(canvas.width, canvas.height);
+    view.pixelRatio.value = renderer.getPixelRatio();
+    configureFrame(view.camera, width / height);
   };
+
+  let animation = 0;
+  let lastDraw = 0;
+  const stopLoop = () => {
+    cancelAnimationFrame(animation);
+    animation = 0;
+  };
+
+  const dispatch = (event: PlaybackEvent) => {
+    const before = state;
+    state = playback(state, event);
+    if (state.paused !== before.paused) onPauseChange(state.paused);
+    show();
+  };
+
+  /** Takes in how long the last frames took, and adjusts the resolution or gives up. */
+  const judge = (now: number, sinceLast: number) => {
+    const before = resolution;
+    const samples = timer ? timer.collect() : [sinceLast];
+    for (const sample of samples) {
+      const measure = timer ? "gpu" : "interval";
+      resolution = govern(resolution, { milliseconds: sample, measure }, devicePixelRatio);
+    }
+    if (resolution.gaveUp && !before.gaveUp) {
+      console.warn("The lobby's cave backdrop can't keep up on this device, so it's paused.");
+      dispatch({ type: "pause" });
+    } else if (resolution.rung !== before.rung) {
+      applyResolution();
+      draw(now / 1000, false);
+    }
+  };
+
+  const tick = (now: number) => {
+    animation = requestAnimationFrame(tick);
+    const moving = settling();
+    if (!moving && now - lastDraw < FRAME - SLACK) return;
+    const sinceLast = lastDraw ? now - lastDraw : 0;
+    lastDraw = now;
+    draw(now / 1000, true);
+    if (sinceLast) judge(now, sinceLast);
+  };
+
+  /** Brings the canvas in line with the playback: animating, a still picture, or nothing. */
+  function show() {
+    if (!view) return;
+    const mode = playbackMode(state);
+    if (mode === "animate") {
+      if (!animation) {
+        lastDraw = 0;
+        animation = requestAnimationFrame(tick);
+      }
+      return;
+    }
+    stopLoop();
+    if (mode === "still") draw(state.reducedMotion ? 0 : lastSeconds, false);
+  }
 
   const resize = () => {
-    const { clientWidth: width, clientHeight: height } = canvas;
-    if (!width || !height) return;
     applyResolution();
-    configureFrame(camera, width / height);
-    if (!animation) play();
+    // Resizing clears the canvas, so draw straight away rather than waiting for the next frame.
+    if (playbackMode(state) === "animate") draw(performance.now() / 1000, false);
+    else show();
   };
   const resizing = new ResizeObserver(resize);
-  resizing.observe(canvas);
+
+  const alive = () => !disposed;
+  const load = async () => {
+    const seed = freshSeed();
+    let built: CaveResult;
+    try {
+      built = await buildCaveOffThread({ type: "build", seed });
+    } catch (error) {
+      console.warn("The lobby's cave backdrop couldn't be built, so it's left dark.", error);
+      return;
+    }
+    if (!alive()) return;
+    const ready = caveView(renderer, seed, built);
+    await ready.compile();
+    if (!alive()) {
+      ready.dispose();
+      return;
+    }
+    view = ready;
+    paintStarted = performance.now() / 1000;
+    lastSeconds = paintStarted;
+    resizing.observe(canvas);
+    show();
+  };
+  void load();
 
   const move = (event: PointerEvent) => {
-    if (event.pointerType !== "mouse") return;
+    if (event.pointerType !== "mouse" || state.reducedMotion) return;
     pointer.x = Math.max(-1, Math.min(1, (event.clientX / innerWidth) * 2 - 1));
     pointer.y = Math.max(-1, Math.min(1, 1 - (event.clientY / innerHeight) * 2));
   };
@@ -221,35 +294,43 @@ export function stageCave(
   const leave = (event: MouseEvent) => {
     if (!event.relatedTarget) reset();
   };
+  const motion = () => {
+    if (reducedMotion.matches) {
+      reset();
+      sway.x = 0;
+      sway.y = 0;
+    }
+    dispatch({ type: "motion", reduced: reducedMotion.matches });
+  };
+  const visibility = () => {
+    dispatch({ type: "visibility", hidden: document.hidden });
+  };
   globalThis.addEventListener("pointermove", move, { passive: true });
   document.addEventListener("mouseout", leave);
   globalThis.addEventListener("blur", reset);
-  reducedMotion.addEventListener("change", play);
-  const visibility = () => {
-    if (document.hidden) {
-      hiddenPaused = !paused;
-      pause();
-    } else if (hiddenPaused) {
-      hiddenPaused = false;
-      play();
-    }
-  };
+  reducedMotion.addEventListener("change", motion);
   document.addEventListener("visibilitychange", visibility);
 
   return {
-    pause,
-    play,
+    pause: () => {
+      dispatch({ type: "pause" });
+    },
+    play: () => {
+      resolution = retry(resolution);
+      dispatch({ type: "play" });
+    },
     dispose() {
-    cancelAnimationFrame(animation);
-    resizing.disconnect();
-    globalThis.removeEventListener("pointermove", move);
-    document.removeEventListener("mouseout", leave);
-    globalThis.removeEventListener("blur", reset);
-    reducedMotion.removeEventListener("change", play);
-    document.removeEventListener("visibilitychange", visibility);
-    cloud.dispose();
-    composer.dispose();
-    renderer.dispose();
+      disposed = true;
+      stopLoop();
+      resizing.disconnect();
+      globalThis.removeEventListener("pointermove", move);
+      document.removeEventListener("mouseout", leave);
+      globalThis.removeEventListener("blur", reset);
+      reducedMotion.removeEventListener("change", motion);
+      document.removeEventListener("visibilitychange", visibility);
+      view?.dispose();
+      timer?.dispose();
+      renderer.dispose();
     },
   };
 }

@@ -49,30 +49,32 @@ export interface Splat {
  */
 export const STRIDE = 20;
 
+/** A splat's covariance from its axes: xx, xy, xz, yy, yz, zz. */
+function covariance([[ax, ay, az], [bx, by, bz], [cx, cy, cz]]: Splat["axes"]) {
+  return [
+    ax * ax + bx * bx + cx * cx,
+    ax * ay + bx * by + cx * cy,
+    ax * az + bx * bz + cx * cz,
+    ay * ay + by * by + cy * cy,
+    ay * az + by * bz + cy * cz,
+    az * az + bz * bz + cz * cz,
+  ];
+}
+
 export function pack(splats: readonly Splat[]): Float32Array {
   const data = new Float32Array(splats.length * STRIDE);
-  for (const [index, splat] of splats.entries()) {
-    const sum = (term: (axis: Vec3) => number) =>
-      splat.axes.reduce((total, axis) => total + term(axis), 0);
-    data.set(
-      [
-        ...splat.at,
-        sum((axis) => axis[0] * axis[0]),
-        sum((axis) => axis[0] * axis[1]),
-        sum((axis) => axis[0] * axis[2]),
-        sum((axis) => axis[1] * axis[1]),
-        sum((axis) => axis[1] * axis[2]),
-        sum((axis) => axis[2] * axis[2]),
-        ...splat.colour,
-        splat.opacity,
-        ...splat.facing,
-        splat.motion,
-        (splat.light ?? -1) + 1,
-        splat.phase,
-        splat.glow ? 1 : 0,
-      ],
-      index * STRIDE,
-    );
+  let row = 0;
+  for (const { at, axes, colour, opacity, facing, motion, light, phase, glow } of splats) {
+    data.set(at, row);
+    data.set(covariance(axes), row + 3);
+    data.set(colour, row + 9);
+    data[row + 12] = opacity;
+    data.set(facing, row + 13);
+    data[row + 16] = motion;
+    data[row + 17] = (light ?? -1) + 1;
+    data[row + 18] = phase;
+    data[row + 19] = glow ? 1 : 0;
+    row += STRIDE;
   }
   return data;
 }

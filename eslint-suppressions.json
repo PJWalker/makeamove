@@ -1798,6 +1798,11 @@
       "count": 1
     }
   },
+  "src/lobby/caveGrade.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
   "src/lobby/caveScene.ts": {
     "@typescript-eslint/max-params": {
       "count": 8
@@ -1815,12 +1820,7 @@
       "count": 1
     }
   },
-  "src/lobby/caveStage.ts": {
-    "no-multi-assign": {
-      "count": 2
-    }
-  },
-  "src/lobby/crossProcess.ts": {
+  "src/lobby/splatSort.ts": {
     "import/prefer-default-export": {
       "count": 1
     }
