@@ -18,6 +18,7 @@
     mask-image: linear-gradient(to bottom, transparent, #000 22%);
   }
   .cave-playback {
+    pointer-events: auto;
     z-index: 2;
     position: absolute;
     right: max(var(--space-3), env(safe-area-inset-right));
