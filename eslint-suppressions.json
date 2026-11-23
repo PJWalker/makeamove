@@ -538,9 +538,6 @@
     }
   },
   "src/campaign/__tests__/backup.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 10
-    },
     "import/avoid-namespace-import": {
       "count": 1
     },
@@ -575,9 +572,6 @@
     "@typescript-eslint/consistent-type-imports": {
       "count": 1
     },
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 2
-    },
     "@typescript-eslint/parameter-properties": {
       "count": 1
     },
@@ -600,9 +594,6 @@
   "src/campaign/__tests__/peerHarness.ts": {
     "@typescript-eslint/max-params": {
       "count": 1
-    },
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 8
     },
     "@typescript-eslint/parameter-properties": {
       "count": 2
@@ -651,9 +642,6 @@
     }
   },
   "src/campaign/__tests__/peers.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 9
-    },
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 2
     },
@@ -665,9 +653,6 @@
     }
   },
   "src/campaign/__tests__/revoke.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 1
-    },
     "import/no-unassigned-import": {
       "count": 1
     }
@@ -678,9 +663,6 @@
     }
   },
   "src/campaign/__tests__/sceneNotice.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 7
-    },
     "import/no-unassigned-import": {
       "count": 1
     },
@@ -695,9 +677,6 @@
     }
   },
   "src/campaign/__tests__/systemStore.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 2
-    },
     "import/avoid-namespace-import": {
       "count": 1
     }
@@ -848,9 +827,6 @@
     "@typescript-eslint/no-empty-function": {
       "count": 2
     },
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 12
-    },
     "import/avoid-namespace-import": {
       "count": 1
     },
@@ -929,9 +905,6 @@
     }
   },
   "src/features/characters/__tests__/campaign.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 2
-    },
     "import/no-unassigned-import": {
       "count": 1
     }
@@ -939,9 +912,6 @@
   "src/features/characters/__tests__/scoreRule.test.ts": {
     "@typescript-eslint/max-params": {
       "count": 1
-    },
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 21
     }
   },
   "src/features/characters/__tests__/sessionMoves.test.ts": {
@@ -1149,9 +1119,6 @@
     }
   },
   "src/features/chat/__tests__/chatLog.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 5
-    },
     "@typescript-eslint/restrict-template-expressions": {
       "count": 4
     },
@@ -1191,9 +1158,6 @@
     }
   },
   "src/features/chat/__tests__/rollState.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 12
-    },
     "@typescript-eslint/prefer-destructuring": {
       "count": 2
     },
@@ -1211,9 +1175,6 @@
     }
   },
   "src/features/chat/__tests__/sessions.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 4
-    },
     "@typescript-eslint/no-shadow": {
       "count": 1
     },
@@ -1231,9 +1192,6 @@
     "@typescript-eslint/max-params": {
       "count": 1
     },
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 4
-    },
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 2
     },
@@ -1241,11 +1199,6 @@
       "count": 1
     },
     "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "src/features/chat/__tests__/visibility.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
       "count": 1
     }
   },
@@ -1361,9 +1314,6 @@
     }
   },
   "src/features/combat/__tests__/combat.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 1
-    },
     "@typescript-eslint/restrict-template-expressions": {
       "count": 1
     },
@@ -1400,19 +1350,11 @@
     }
   },
   "src/features/dice/__tests__/notation.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 26
-    },
     "makeamove/test-structure": {
       "count": 1
     },
     "unicorn/explicit-length-check": {
       "count": 1
-    }
-  },
-  "src/features/dice/__tests__/pool.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 21
     }
   },
   "src/features/dice/notation.ts": {
@@ -1467,9 +1409,6 @@
     }
   },
   "src/features/notes/__tests__/notes.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 3
-    },
     "import/avoid-namespace-import": {
       "count": 1
     },
@@ -1484,9 +1423,6 @@
     }
   },
   "src/features/notes/__tests__/search.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 1
-    },
     "import/avoid-namespace-import": {
       "count": 1
     },
@@ -1507,9 +1443,6 @@
     }
   },
   "src/features/notes/__tests__/targets.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 3
-    },
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
     },
@@ -1616,9 +1549,6 @@
     "@typescript-eslint/no-empty-function": {
       "count": 2
     },
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 6
-    },
     "import/avoid-namespace-import": {
       "count": 1
     },
@@ -1640,19 +1570,11 @@
     }
   },
   "src/lib/__tests__/colour.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 51
-    },
     "max-depth": {
       "count": 1
     },
     "max-lines-per-function": {
       "count": 1
-    }
-  },
-  "src/lib/__tests__/hlc.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 7
     }
   },
   "src/lib/colour.ts": {
@@ -1791,9 +1713,6 @@
     }
   },
   "src/lobby/__tests__/CaveBackdrop.test.tsx": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 7
-    },
     "@typescript-eslint/prefer-destructuring": {
       "count": 1
     }
@@ -1938,45 +1857,16 @@
     }
   },
   "src/scene/__tests__/barBreak.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 2
-    },
     "unicorn/no-unreadable-array-destructuring": {
       "count": 1
     }
   },
-  "src/scene/__tests__/barChange.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 9
-    }
-  },
-  "src/scene/__tests__/camera.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 12
-    }
-  },
   "src/scene/__tests__/conditionLayout.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 14
-    },
     "max-lines-per-function": {
       "count": 1
     }
   },
-  "src/scene/__tests__/downed.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 4
-    }
-  },
-  "src/scene/__tests__/edgePin.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 9
-    }
-  },
   "src/scene/__tests__/geometry.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 33
-    },
     "max-lines-per-function": {
       "count": 2
     },
@@ -1984,22 +1874,9 @@
       "count": 1
     }
   },
-  "src/scene/__tests__/grid.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 21
-    }
-  },
-  "src/scene/__tests__/measure.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 43
-    }
-  },
   "src/scene/__tests__/sceneDoc.test.ts": {
     "@typescript-eslint/no-empty-function": {
       "count": 1
-    },
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 2
     },
     "import/avoid-namespace-import": {
       "count": 1
@@ -2011,9 +1888,6 @@
     },
     "@typescript-eslint/no-empty-function": {
       "count": 10
-    },
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 128
     },
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 5
@@ -2031,23 +1905,12 @@
       "count": 3
     }
   },
-  "src/scene/__tests__/stroke.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 35
-    }
-  },
   "src/scene/__tests__/tokenLabelLayout.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 25
-    },
     "max-lines-per-function": {
       "count": 1
     }
   },
   "src/scene/__tests__/toolCursors.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 7
-    },
     "max-lines-per-function": {
       "count": 1
     },
@@ -2058,9 +1921,6 @@
   "src/scene/__tests__/vision.test.ts": {
     "@typescript-eslint/max-params": {
       "count": 1
-    },
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 92
     },
     "@typescript-eslint/restrict-template-expressions": {
       "count": 2
@@ -2868,9 +2728,6 @@
     }
   },
   "src/sync/__tests__/blobs.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 9
-    },
     "import/avoid-namespace-import": {
       "count": 1
     },
@@ -2911,9 +2768,6 @@
     }
   },
   "src/sync/__tests__/presence.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 3
-    },
     "import/avoid-namespace-import": {
       "count": 1
     },
@@ -2928,9 +2782,6 @@
     }
   },
   "src/sync/__tests__/session.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 3
-    },
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 3
     },
@@ -3025,9 +2876,6 @@
     }
   },
   "src/systems/__tests__/dnd55e-creation.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 13
-    },
     "@typescript-eslint/no-shadow": {
       "count": 1
     },
@@ -3045,9 +2893,6 @@
     }
   },
   "src/systems/__tests__/dnd55e.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 82
-    },
     "@typescript-eslint/restrict-template-expressions": {
       "count": 2
     },
@@ -3071,9 +2916,6 @@
     }
   },
   "src/systems/__tests__/dungeon-world-2-relationships.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 24
-    },
     "@typescript-eslint/no-unnecessary-condition": {
       "count": 1
     },
@@ -3085,9 +2927,6 @@
     }
   },
   "src/systems/__tests__/dungeon-world-2-trackers.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 1
-    },
     "import/no-unassigned-import": {
       "count": 1
     }
@@ -3095,9 +2934,6 @@
   "src/systems/__tests__/dungeon-world-2.test.ts": {
     "@typescript-eslint/no-empty-function": {
       "count": 1
-    },
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 40
     },
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 2
@@ -3113,9 +2949,6 @@
     }
   },
   "src/systems/__tests__/dungeon-world-homebrew.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 2
-    },
     "import/avoid-namespace-import": {
       "count": 1
     },
@@ -3141,9 +2974,6 @@
     "@typescript-eslint/max-params": {
       "count": 2
     },
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 28
-    },
     "@typescript-eslint/restrict-template-expressions": {
       "count": 1
     },
@@ -3158,9 +2988,6 @@
     }
   },
   "src/systems/__tests__/dungeon-world.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 10
-    },
     "import/no-unassigned-import": {
       "count": 1
     },
@@ -3169,9 +2996,6 @@
     }
   },
   "src/systems/__tests__/systems.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 117
-    },
     "@typescript-eslint/no-shadow": {
       "count": 1
     },
@@ -3201,9 +3025,6 @@
     }
   },
   "src/systems/__tests__/tokenStats.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 6
-    },
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 2
     },
@@ -4486,9 +4307,6 @@
     }
   },
   "src/table/dice/__tests__/physics.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 106
-    },
     "@typescript-eslint/no-shadow": {
       "count": 2
     },
@@ -4503,9 +4321,6 @@
     }
   },
   "src/table/dice/__tests__/tray.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 54
-    },
     "@typescript-eslint/no-shadow": {
       "count": 1
     },
@@ -5040,16 +4855,8 @@
     }
   },
   "src/ui/__tests__/icons.test.tsx": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 3
-    },
     "@typescript-eslint/restrict-template-expressions": {
       "count": 2
-    }
-  },
-  "src/ui/__tests__/resizeRect.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 9
     }
   },
   "src/ui/anchor.ts": {
@@ -5613,9 +5420,6 @@
     }
   },
   "src/workspace/__tests__/layoutModel.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 16
-    },
     "max-lines-per-function": {
       "count": 1
     },

@@ -912,6 +912,10 @@ export default defineConfig([
     },
   },
   {
+    files: ["src/**/__tests__/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
+    rules: { "@typescript-eslint/no-magic-numbers": "off" },
+  },
+  {
     files: ["vite.config.ts"],
     languageOptions: { globals: globals.node },
   },

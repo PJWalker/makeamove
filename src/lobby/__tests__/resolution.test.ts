@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-magic-numbers */
 import { describe, expect, it } from "vite-plus/test";
 import { govern, governedScale, governor } from "../resolution";
 import type { FrameMeasure, Governor } from "../resolution";
