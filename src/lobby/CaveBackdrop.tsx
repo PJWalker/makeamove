@@ -14,13 +14,8 @@ export function CaveBackdrop() {
   const [paused, setPaused] = useState(false);
   useEffect(() => {
     if (!canvasRef.current) return undefined;
-    let disposed = false;
-    void stageCave(canvasRef.current, setPaused).then((controls) => {
-      if (disposed) controls.dispose();
-      else playbackRef.current = controls;
-    });
+    playbackRef.current = stageCave(canvasRef.current, setPaused);
     return () => {
-      disposed = true;
       playbackRef.current?.dispose();
       playbackRef.current = null;
     };
