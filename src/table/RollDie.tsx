@@ -107,7 +107,8 @@ function usePiece(
     const { looks, entrance, mine, index, seed, eager } = initial.current;
     let gone = false;
     let pieces: Die[] = [];
-    const delay = index * STAGGER_MS;
+    // A glided-in die is carried in by its own click, so it sets off straight away.
+    const delay = entrance === "glide" ? 0 : index * STAGGER_MS;
     const moving = entrance !== "rest" && !reducedMotion.matches;
     const drawnIn = () => {
       const drawn = looks.map((_, piece) => canvases.current[piece]);

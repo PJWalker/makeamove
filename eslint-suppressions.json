@@ -3985,9 +3985,6 @@
     }
   },
   "src/table/QuickDice.tsx": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 6
-    },
     "@typescript-eslint/restrict-template-expressions": {
       "count": 3
     },

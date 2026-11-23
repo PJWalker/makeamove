@@ -14,7 +14,8 @@ const VISIBILITIES: { id: RollVisibility; label: string; title: string }[] = [
     title: "Only you and the GM see the result",
   },
 ];
-const DICE: TrayPick[] = [4, 6, 8, 10, 12, 20].map((sides) => ({ kind: "die", sides }));
+// eslint-disable-next-line @typescript-eslint/no-magic-numbers -- The sizes of die on offer.
+const DICE: TrayPick[] = [4, 6, 8, 10, 12, 20, 100].map((sides) => ({ kind: "die", sides }));
 const TOKENS: TrayPick[] = [
   { kind: "modifier", value: 1 },
   { kind: "modifier", value: -1 },
