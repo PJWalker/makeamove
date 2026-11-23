@@ -37,6 +37,7 @@ const VERTEX = /* glsl */ `
   uniform highp sampler2D splats;
   uniform vec2 viewport;
   uniform float time;
+  uniform float drawProgress;
   uniform vec3 lightAt[LIGHTS];
   uniform vec3 lightMoved[LIGHTS];
   uniform vec3 lightColour[LIGHTS];
@@ -49,12 +50,27 @@ const VERTEX = /* glsl */ `
   out vec2 vOffset;
   out float vGlow;
   out float vPhase;
+  out float vMajor;
+  out float vStagger;
 
   const float TAU = 6.2831853;
   /** How many standard deviations out each quad reaches. */
   const float EXTENT = 2.5;
 
   void hide() { gl_Position = vec4(0.0, 0.0, 2.0, 1.0); }
+
+  float exponentialEaseOut(float value) {
+    float clamped = clamp(value, 0.0, 1.0);
+    return 1.0 - pow(2.0, -10.0 * clamped);
+  }
+
+  float flowField(vec3 point) {
+    float drift = time * 0.035;
+    return
+      sin(point.z * 0.11 + point.x * 0.14 + drift) * 0.48 +
+      sin(point.x * 0.22 - point.z * 0.07 - drift * 0.7) * 0.24 +
+      sin(point.y * 0.19 + point.x * 0.08 + drift * 0.45) * 0.18;
+  }
 
   void main() {
     int index = int(splat);
@@ -72,12 +88,17 @@ const VERTEX = /* glsl */ `
     vec3 motion = t4.xyz;
     float glow = t4.w;
 
+    int light = int(motion.y + 0.5) - 1;
+    float phase = motion.z;
+    float staggerPosition = fract(phase * 1.618 + length(centre) * 0.031);
+    float stagger = exponentialEaseOut(staggerPosition) * 0.62;
+    float rawStroke = smoothstep(stagger, stagger + 0.38, exponentialEaseOut(drawProgress));
+    float stroke = rawStroke;
+
     vec3 at = centre;
     float opacity = colour.a;
     float size = 1.0;
     vec3 tint = colour.rgb;
-    int light = int(motion.y + 0.5) - 1;
-    float phase = motion.z;
     float brightness = 1.0;
     if (light >= 0) {
       at += lightMoved[light];
@@ -85,10 +106,11 @@ const VERTEX = /* glsl */ `
     }
     if (motion.x == ${String(MOTION.flame)}.0) {
       float life = fract(time * 1.7 + phase);
+      float angle = flowField(at) + fract(phase * 19.0) * 0.12;
       at += vec3(
-        sin(time * 3.1 + phase * TAU) * 0.035 * life,
+        cos(angle) * 0.09 * life + sin(time * 3.1 + phase * TAU) * 0.018 * life,
         life * 0.34,
-        cos(time * 2.3 + phase * TAU) * 0.02 * life
+        sin(angle) * 0.09 * life + cos(time * 2.3 + phase * TAU) * 0.012 * life
       );
       size = 1.0 - life * 0.65;
       opacity *= smoothstep(0.0, 0.12, life) * (1.0 - life);
@@ -102,10 +124,11 @@ const VERTEX = /* glsl */ `
       at = middle + vec3(c * from.x - s * from.z, from.y + sin(time * 2.0 + phase * TAU) * 0.03, s * from.x + c * from.z);
     } else if (motion.x == ${String(MOTION.smoke)}.0) {
       float rise = fract(time * 0.22 + phase);
+      float angle = flowField(at) + fract(phase * 19.0) * 0.12;
       at += vec3(
-        sin(time * 0.5 + phase * TAU) * 0.5 * rise + rise * 0.4,
+        cos(angle) * rise * 0.55 + sin(time * 0.5 + phase * TAU) * 0.12 * rise,
         rise * 1.8,
-        cos(time * 0.4 + phase * 9.0) * 0.4 * rise
+        sin(angle) * rise * 0.55 + cos(time * 0.4 + phase * 9.0) * 0.12 * rise
       );
       size = 1.0 + rise * 4.0;
       opacity *= smoothstep(0.0, 0.15, rise) * (1.0 - rise);
@@ -125,7 +148,12 @@ const VERTEX = /* glsl */ `
       if (at.y < 0.0) opacity = 0.0;
     } else if (motion.x == ${String(MOTION.drift)}.0) {
       float cycle = fract(time * 0.045 + phase);
-      at += vec3(sin(time * 0.31 + phase * 17.0) * 0.35, cycle * 1.4 - 0.5, cos(time * 0.27 + phase * 11.0) * 0.3);
+      float angle = flowField(at) + fract(phase * 19.0) * 0.12;
+      at += vec3(
+        cos(angle) * cycle * 0.55 + sin(time * 0.31 + phase * 17.0) * 0.08,
+        cycle * 1.4 - 0.5,
+        sin(angle) * cycle * 0.55 + cos(time * 0.27 + phase * 11.0) * 0.08
+      );
       opacity *= sin(3.14159 * cycle);
     }
 
@@ -145,12 +173,15 @@ const VERTEX = /* glsl */ `
       shade = tint * lit;
     }
 
+    opacity *= stroke;
+
     vec4 view = modelViewMatrix * vec4(at, 1.0);
     if (view.z > -0.15 || opacity < 0.004) { hide(); return; }
     shade = mix(haze, shade, exp(-max(0.0, -view.z - 8.0) * (glow > 0.5 ? 0.03 : 0.05)));
     vColour = vec4(pow(max(shade, 0.0), vec3(1.0 / 2.2)), opacity);
     vGlow = glow;
     vPhase = phase;
+    vStagger = stagger;
 
     // The ellipsoid's outline on screen: its covariance, carried through the
     // camera and the perspective divide (linearised at its centre).
@@ -176,27 +207,32 @@ const VERTEX = /* glsl */ `
     float radius = length(vec2(0.5 * (a - d), b));
     float major = (middle + radius) * 2.2;
     float minor = max((middle - radius) * 0.9, 0.14);
-    float drift = time * 0.035;
-    float flow =
-      sin(at.z * 0.11 + at.x * 0.14 + drift) * 0.48 +
-      sin(at.x * 0.22 - at.z * 0.07 - drift * 0.7) * 0.24 +
-      sin(at.y * 0.19 + at.x * 0.08 + drift * 0.45) * 0.18;
-    float angle = flow + fract(phase * 19.0) * 0.12;
+    float angle = flowField(at) + fract(phase * 19.0) * 0.12;
     vec2 axis = vec2(cos(angle), sin(angle));
     vec2 offset =
       position.x * min(sqrt(major), 1024.0) * axis +
       position.y * min(sqrt(minor), 1024.0) * vec2(-axis.y, axis.x);
     vOffset = position.xy * EXTENT;
+    vMajor = position.x;
     vec4 clip = projectionMatrix * view;
     gl_Position = vec4(clip.xy / clip.w + offset * EXTENT * 2.0 / viewport, 0.0, 1.0);
   }
 `;
 
 const FRAGMENT = /* glsl */ `
+  uniform float drawProgress;
+
   in vec4 vColour;
   in vec2 vOffset;
   in float vGlow;
   in float vPhase;
+  in float vMajor;
+  in float vStagger;
+
+  float exponentialEaseOut(float value) {
+    float clamped = clamp(value, 0.0, 1.0);
+    return 1.0 - pow(2.0, -10.0 * clamped);
+  }
 
   float brushNoise(vec2 point) {
     vec3 p3 = fract(vec3(point.xyx) * vec3(0.1031, 0.1030, 0.0973));
@@ -207,9 +243,20 @@ const FRAGMENT = /* glsl */ `
   void main() {
     vec2 point = vOffset;
     float radial = dot(point, point);
+    float strokeDuration = 0.38;
+    float easedProgress = exponentialEaseOut(drawProgress);
+    float strokeProgress = clamp((easedProgress - vStagger) / strokeDuration, 0.0, 1.0);
+    strokeProgress = exponentialEaseOut(strokeProgress);
+    float drawnTip = strokeProgress * 2.0 - 1.0;
+    float drawnEdge = 1.0 - smoothstep(drawnTip - 0.12, drawnTip + 0.12, vMajor);
+    float tailDistance = max(-0.18 - vMajor, 0.0);
+    float tail = tailDistance / 0.62;
+    float tailFade = exp(-tail * tail);
+    drawnEdge *= mix(0.18, 1.0, tailFade);
+    if (drawnEdge < 0.004) discard;
 
     if (vGlow > 0.5) {
-      float alpha = vColour.a * exp(-0.5 * radial);
+      float alpha = vColour.a * exp(-0.5 * radial) * drawnEdge;
       if (alpha < 1.0 / 255.0) discard;
       gl_FragColor = vec4(vColour.rgb * alpha, 0.0);
       return;
@@ -228,7 +275,7 @@ const FRAGMENT = /* glsl */ `
     fibre += sin((point.x * 43.0 - point.y * 13.0) - vPhase * 29.0) * 0.45;
     float bristle = 0.74 + 0.18 * grain + 0.08 * smoothstep(-0.8, 0.8, fibre);
     float stipple = 0.82 + 0.18 * brushNoise(pigmentCell * 0.73 + vec2(vPhase * 91.0, 1.0));
-    float alpha = vColour.a * edge * bristle * mix(stipple, 1.0, smoothstep(0.2, 0.9, 1.0 - radial));
+    float alpha = vColour.a * edge * bristle * drawnEdge * mix(stipple, 1.0, smoothstep(0.2, 0.9, 1.0 - radial));
 
     if (alpha < 1.0 / 255.0) discard;
     gl_FragColor = vec4(vColour.rgb * alpha, alpha);
@@ -287,14 +334,7 @@ export interface SplatLight {
   reach: number;
 }
 
-export function splatCloud(data: Float32Array, lights: readonly SplatLight[]) {
-  const count = data.length / STRIDE;
-  const sort = sorter(data);
-  const rows = Math.ceil(count / PER_ROW);
-  const texels = new Float32Array(PER_ROW * rows * STRIDE);
-  texels.set(data);
-  const texture = new DataTexture(texels, PER_ROW * TEXELS, rows, RGBAFormat, FloatType);
-  texture.needsUpdate = true;
+function splatGeometry(count: number) {
   const order = new InstancedBufferAttribute(new Float32Array(count), 1);
   const geometry = new InstancedBufferGeometry();
   geometry.setAttribute(
@@ -304,11 +344,15 @@ export function splatCloud(data: Float32Array, lights: readonly SplatLight[]) {
   geometry.setIndex([0, 1, 2, 0, 2, 3]);
   geometry.setAttribute("splat", order);
   geometry.instanceCount = count;
+  return { geometry, order };
+}
 
-  const uniforms = {
+function splatUniforms(texture: DataTexture, lights: readonly SplatLight[]) {
+  return {
     splats: { value: texture },
     viewport: { value: new Vector2(1, 1) },
     time: { value: 0 },
+    drawProgress: { value: 1 },
     lightAt: { value: lights.map((light) => light.at) },
     lightMoved: { value: lights.map((light) => light.moved) },
     lightColour: { value: lights.map((light) => light.colour) },
@@ -317,6 +361,19 @@ export function splatCloud(data: Float32Array, lights: readonly SplatLight[]) {
     ambient: { value: new Vector3() },
     haze: { value: new Vector3() },
   };
+}
+
+export function splatCloud(data: Float32Array, lights: readonly SplatLight[]) {
+  const count = data.length / STRIDE;
+  const sort = sorter(data);
+  const rows = Math.ceil(count / PER_ROW);
+  const texels = new Float32Array(PER_ROW * rows * STRIDE);
+  texels.set(data);
+  const texture = new DataTexture(texels, PER_ROW * TEXELS, rows, RGBAFormat, FloatType);
+  texture.needsUpdate = true;
+  const { geometry, order } = splatGeometry(count);
+
+  const uniforms = splatUniforms(texture, lights);
   const material = new ShaderMaterial({
     vertexShader: VERTEX,
     fragmentShader: FRAGMENT,

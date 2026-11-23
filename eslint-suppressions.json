@@ -1825,11 +1825,6 @@
       "count": 1
     }
   },
-  "src/lobby/splatCloud.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "src/lobby/wispFlight.ts": {
     "@typescript-eslint/max-params": {
       "count": 1
@@ -4998,14 +4993,8 @@
     "@eslint-react/naming-convention-ref-name": {
       "count": 1
     },
-    "@typescript-eslint/no-confusing-void-expression": {
-      "count": 2
-    },
     "@typescript-eslint/no-magic-numbers": {
       "count": 7
-    },
-    "@typescript-eslint/no-unnecessary-condition": {
-      "count": 2
     },
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 5

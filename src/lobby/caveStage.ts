@@ -99,7 +99,11 @@ export function stageCave(
   const pointer = { x: 0, y: 0 };
   const sway = { x: 0, y: 0 };
 
+  let drawStarted = performance.now() / 1000;
   const draw = (seconds: number) => {
+    uniforms.drawProgress.value = reducedMotion.matches
+      ? 1
+      : Math.min(1, Math.max(0, (seconds - drawStarted) / 5));
     sway.x += (pointer.x - sway.x) * 0.05;
     sway.y += (pointer.y - sway.y) * 0.05;
     camera.position.set(eye.x + sway.x * SWAY.x, eye.y + sway.y * SWAY.y, eye.z);
@@ -125,6 +129,7 @@ export function stageCave(
   let lastFrameTime = 0;
   let frameSamples: number[] = [];
   let struggleStarted = 0;
+  let pixelRatio = 1;
   const tick = (now: number) => {
     if (paused || document.hidden) {
       animation = 0;
@@ -146,8 +151,14 @@ export function stageCave(
       if (fps < 38) {
         if (!struggleStarted) struggleStarted = now;
         if (now - struggleStarted >= 4000) {
-          pause();
-          return;
+          if (pixelRatio > 0.5) {
+            pixelRatio = 0.5;
+            applyResolution();
+            struggleStarted = 0;
+          } else {
+            pause();
+            return;
+          }
         }
       } else {
         struggleStarted = 0;
@@ -160,6 +171,7 @@ export function stageCave(
     cancelAnimationFrame(animation);
     animation = 0;
     paused = false;
+    drawStarted = performance.now() / 1000;
     lastFrameTime = 0;
     frameSamples = [];
     struggleStarted = 0;
@@ -177,14 +189,20 @@ export function stageCave(
     onPauseChange(true);
   };
 
-  const resize = () => {
+  const applyResolution = () => {
     const { clientWidth: width, clientHeight: height } = canvas;
     if (!width || !height) return;
-    renderer.setPixelRatio(Math.min(devicePixelRatio, 1));
+    renderer.setPixelRatio(Math.min(devicePixelRatio, pixelRatio));
     renderer.setSize(width, height, false);
     composer.setPixelRatio(renderer.getPixelRatio());
     composer.setSize(width, height);
     uniforms.viewport.value.set(canvas.width, canvas.height);
+  };
+
+  const resize = () => {
+    const { clientWidth: width, clientHeight: height } = canvas;
+    if (!width || !height) return;
+    applyResolution();
     configureFrame(camera, width / height);
     if (!animation) play();
   };
