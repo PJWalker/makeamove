@@ -138,6 +138,19 @@ export interface DiePose {
   home: number;
 }
 
+/** How near to ±1 the dot product of two unit normals is for them to be parallel. */
+const PARALLEL = 1e-6;
+/**
+ * The face normals two dice are tested apart along, each once: a die's opposite
+ * faces share an axis, and testing it twice finds the same overlap twice.
+ */
+function separatingAxes(normals: Vec3[]) {
+  const axes: Vec3[] = [];
+  for (const normal of normals)
+    if (!axes.some((axis) => Math.abs(Math.abs(axis.dot(normal)) - 1) < PARALLEL)) axes.push(normal);
+  return axes;
+}
+
 /** Groups: dice are 1, the tray floor and walls are 2. */
 const DICE = 1;
 const TRAY = 2;
@@ -207,13 +220,15 @@ class TrayWorld {
   }
 
   dieBody(hull: DieHull, vertices: Vec3[], heavy: boolean) {
+    const shape = new ConvexPolyhedron({ vertices, faces: hull.faces });
+    shape.uniqueAxes = separatingAxes(shape.faceNormals);
     return new Body({
       mass: heavy ? HEAVY_MASS : 1,
       // Nothing turns it: not knocks, nor the bump that tips cocked dice over.
       fixedRotation: heavy,
       angularFactor: heavy ? new Vec3(0, 0, 0) : new Vec3(1, 1, 1),
       material: this.dieMaterial,
-      shape: new ConvexPolyhedron({ vertices, faces: hull.faces }),
+      shape,
       linearDamping: 0.3,
       angularDamping: 0.35,
       allowSleep: true,
