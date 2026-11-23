@@ -12,17 +12,9 @@ import { chipText, signed } from "../features/dice/pool";
 import { useQuery } from "../ui/useQuery";
 import { threeDimensionalDice } from "../workspace/diceRendering";
 import { reducedMotion } from "../ui/transition";
+import { chipLook, looksOf } from "./dice/looks";
 import type {PhysicalDie as Die} from "./rollDieHelpers";
-import {
-  chipSign,
-  dieColours,
-  dieShape,
-  dieTitle,
-  CHIP_COLOUR,
-  loadDice,
-  rollCarriedDice
-  
-} from "./rollDieHelpers";
+import { chipSign, dieColours, dieTitle, CHIP_COLOUR, loadDice, rollCarriedDice } from "./rollDieHelpers";
 import type { DieLook, Point } from "./dice/types";
 import { pieceMachine } from "./pieceMachine";
 
@@ -44,9 +36,17 @@ function throwFrom(slot: HTMLElement, mine: boolean): Point {
 /** How a piece comes to be in its slot: thrown or carried in as it arrives, else there already. */
 type Entrance = "glide" | "rest" | "throw";
 
-/** A roll of a piece already in its slot, rolled where it lies to show `value`. */
+/** A roll of a die already in its slot, rolled where it lies to show `value`. */
 interface Release {
   value: number;
+  seed: string;
+  /** How fast (px/s) its tray is moving as it's rolled. */
+  trayVelocity: Point;
+}
+
+/** A release as each piece of a die rolls it: showing face `shown[index]`. */
+interface PieceRelease {
+  shown: readonly number[];
   seed: string;
   /** How fast (px/s) its tray is moving as it's rolled. */
   trayVelocity: Point;
@@ -56,12 +56,13 @@ interface Release {
 const STAGGER_MS = 90;
 
 /**
- * Draws a die or chip into its slot's canvas: thrown or carried in if it has
- * just arrived, else drawn at rest once it's scrolled near; then, once
- * `release` is given, rolled where it lies.
+ * Draws the pieces of a die or chip (one, or a d100's two d10s) into their
+ * canvases in its slot: thrown or carried in if it has just arrived, else
+ * drawn at rest once it's scrolled near; then, once `release` is given,
+ * rolled where they lie.
  */
 function usePiece(
-  look: DieLook,
+  looks: readonly DieLook[],
   {
     entrance,
     mine,
@@ -77,18 +78,18 @@ function usePiece(
     index: number;
     seed: string;
     eager?: boolean;
-    release?: Release | undefined;
+    release?: PieceRelease | undefined;
     onEntered?: (() => void) | undefined;
     onLanded?: (() => void) | undefined;
   },
 ) {
   const slot = useRef<HTMLSpanElement>(null);
-  const canvas = useRef<HTMLCanvasElement>(null);
+  const canvases = useRef<(HTMLCanvasElement | null)[]>([]);
   const use3dDice = useQuery(threeDimensionalDice);
   const [pieceSnapshot, sendPiece] = useMachine(pieceMachine);
-  /** The die once it's in its slot; null if it's drawn flat. */
-  const entered = useRef<Promise<Die | null> | null>(null);
-  const initial = useRef({ look, entrance, mine, index, seed, eager });
+  /** Its pieces once they're in their slots; null if they're drawn flat. */
+  const entered = useRef<Promise<Die[] | null> | null>(null);
+  const initial = useRef({ looks, entrance, mine, index, seed, eager });
   const enter = useEffectEvent(() => onEntered?.());
   const land = useEffectEvent(() => onLanded?.());
 
@@ -98,27 +99,37 @@ function usePiece(
       enter();
       return;
     }
-    const { look, entrance, mine, index, seed, eager } = initial.current;
+    const { looks, entrance, mine, index, seed, eager } = initial.current;
     let gone = false;
-    let die: Die | undefined;
+    let pieces: Die[] = [];
     const delay = index * STAGGER_MS;
     const moving = entrance !== "rest" && !reducedMotion.matches;
+    const drawnIn = () => {
+      const drawn = looks.map((_, piece) => canvases.current[piece]);
+      return drawn.every((canvas): canvas is HTMLCanvasElement => Boolean(canvas)) ? drawn : null;
+    };
     const show = async () => {
-      if (gone) return null;
-      if (!canvas.current) return null;
+      if (gone || !drawnIn()) return null;
       const dice = await loadDice();
-      if (gone || !dice || !canvas.current) {
-        if (!gone && (!dice || !canvas.current)) sendPiece({ type: "FLAT" });
+      const canvasesNow = drawnIn();
+      if (gone || !dice || !canvasesNow) {
+        if (!gone) sendPiece({ type: "FLAT" });
         return null;
       }
-      die = new dice.Die(canvas.current, look);
+      pieces = canvasesNow.map((canvas, piece) => new dice.Die(canvas, looks[piece]!));
       if (moving) {
         sendPiece({ type: "ENTER", moving: true });
         const from = throwFrom(slot.current!, mine);
-        await (entrance === "glide" ? die.glideIn(from, delay) : die.throwIn(from, delay, seed));
-      } else die.rest();
+        await Promise.all(
+          pieces.map((die, piece) =>
+            entrance === "glide"
+              ? die.glideIn(from, delay)
+              : die.throwIn(from, delay, pieceSeed(seed, piece)),
+          ),
+        );
+      } else for (const die of pieces) die.rest();
       if (!gone) sendPiece({ type: "LANDED" });
-      return die;
+      return pieces;
     };
     // A piece that has just arrived is drawn now; older ones wait until they're scrolled near.
     let stopWaiting: (() => void) | undefined;
@@ -134,7 +145,7 @@ function usePiece(
     return () => {
       gone = true;
       stopWaiting?.();
-      die?.dispose();
+      for (const die of pieces) die.dispose();
     };
   }, [sendPiece, use3dDice]);
 
@@ -145,12 +156,21 @@ function usePiece(
     if (!release) return;
     let gone = false;
     const enteredDie = entered.current ?? Promise.resolve(null);
-    void enteredDie.then(async (die) => {
+    void enteredDie.then(async (pieces) => {
       if (gone) return;
-      if (die) {
+      if (pieces) {
         sendPiece({ type: "MOVING" });
         const delay = initial.current.index * STAGGER_MS;
-        await die.rollInPlace(release.value, release.seed, delay, release.trayVelocity);
+        await Promise.all(
+          pieces.map((die, piece) =>
+            die.rollInPlace(
+              release.shown[piece]!,
+              pieceSeed(release.seed, piece),
+              delay,
+              release.trayVelocity,
+            ),
+          ),
+        );
         if (gone) return;
         sendPiece({ type: "LANDED" });
       }
@@ -170,25 +190,45 @@ function usePiece(
           ? "landed"
           : "pending"
     : "flat";
-  return { slot, canvas, phase };
+  return { slot, canvases, phase };
 }
 
-/** A piece's face: its canvas, or drawn flat as `flat`. */
-function PieceFace({
+/** The seed a piece of a die rolls by: the die's own for its first, so the pieces don't roll alike. */
+const pieceSeed = (seed: string, piece: number) => (piece === 0 ? seed : `${seed}:${piece}`);
+
+/** A die's pieces, each in its own slot: its canvas, or drawn flat showing its face, or `flat` if given. */
+function PieceFaces({
+  looks,
   phase,
-  canvas,
+  canvases,
   flat,
 }: {
+  looks: readonly DieLook[];
   phase: Phase;
-  canvas: RefObject<HTMLCanvasElement | null>;
-  flat: ReactNode;
+  canvases: RefObject<(HTMLCanvasElement | null)[]>;
+  flat?: readonly ReactNode[] | undefined;
 }) {
-  if (phase !== "flat") return <canvas ref={canvas} className="die-canvas" aria-hidden="true" />;
-  return (
-    <span className="die-value">
-      {flat}
+  return looks.map((look, piece) => (
+    <span
+      // eslint-disable-next-line react-doctor/no-array-index-key, @eslint-react/no-array-index-key -- A die's pieces never change in number or order.
+      key={piece}
+      className="die-piece"
+      data-form={look.form}
+      data-sides={look.form === "die" ? look.sides : undefined}
+    >
+      {phase === "flat" ? (
+        <span className="die-value">{flat ? flat[piece] : look.label(look.shown)}</span>
+      ) : (
+        <canvas
+          ref={(canvas) => {
+            canvases.current[piece] = canvas;
+          }}
+          className="die-canvas"
+          aria-hidden="true"
+        />
+      )}
     </span>
-  );
+  ));
 }
 
 /** Whether a piece is thrown in as its roll arrives, and whether by this device. */
@@ -213,11 +253,14 @@ export function RollChip({
   seed: string;
   pendingIndex?: number | undefined;
 }) {
-  const text = chipText(value, label);
-  const { slot, canvas, phase } = usePiece(
-    { chip: text, colour: CHIP_COLOUR },
-    { entrance: arriving ? "throw" : "rest", mine, index, seed, eager: pendingIndex !== undefined },
-  );
+  const looks = [chipLook(chipText(value, label), CHIP_COLOUR)];
+  const { slot, canvases, phase } = usePiece(looks, {
+    entrance: arriving ? "throw" : "rest",
+    mine,
+    index,
+    seed,
+    eager: pendingIndex !== undefined,
+  });
   return (
     <span
       ref={slot}
@@ -228,7 +271,7 @@ export function RollChip({
       role="img"
       aria-label={label ? `${label} ${signed(value)}` : signed(value)}
     >
-      <PieceFace phase={phase} canvas={canvas} flat={text} />
+      <PieceFaces looks={looks} phase={phase} canvases={canvases} />
     </span>
   );
 }
@@ -248,22 +291,30 @@ export function PendingDie({
   onLanded: () => void;
 }) {
   const colour = colourOf(device.value);
-  const { slot, canvas, phase } = usePiece(
-    { sides, value: Math.ceil(sides / 2), colour },
-    { entrance: "glide", mine: true, index, seed: "", release, onEntered, onLanded },
-  );
+  const looks = looksOf(sides, Math.ceil(sides / 2), colour);
+  const { slot, canvases, phase } = usePiece(looks, {
+    entrance: "glide",
+    mine: true,
+    index,
+    seed: "",
+    release: release && {
+      ...release,
+      shown: looksOf(sides, release.value, colour).map((look) => look.shown),
+    },
+    onEntered,
+    onLanded,
+  });
   return (
     <span
       ref={slot}
       className="die pending-die"
       data-phase={phase}
-      data-sides={dieShape(sides)}
       data-pending-index={index}
       style={{ "--i": index, ...dieColours(colour) }}
       role="img"
       aria-label={release ? `d${sides}: ${release.value}` : `d${sides}, waiting to roll`}
     >
-      <PieceFace phase={phase} canvas={canvas} flat={`d${sides}`} />
+      <PieceFaces looks={looks} phase={phase} canvases={canvases} flat={[`d${sides}`]} />
     </span>
   );
 }
@@ -295,11 +346,14 @@ export function RollDie({
   onReroll?: (() => void) | undefined;
   onToggle?: (() => void) | undefined;
 }) {
-  const { slot, canvas, phase } = usePiece(
-    { sides: die.sides, value: die.value, colour },
-    { entrance: arriving ? "throw" : "rest", mine, index, seed },
-  );
-  const interactive = !!onReroll && (phase === "landed" || phase === "flat");
+  const looks = looksOf(die.sides, die.value, colour);
+  const { slot, canvases, phase } = usePiece(looks, {
+    entrance: arriving ? "throw" : "rest",
+    mine,
+    index,
+    seed,
+  });
+  const interactive = Boolean(onReroll) && (phase === "landed" || phase === "flat");
   const gesture = useThrow({
     onThrow: () => onReroll?.(),
     onAway: rollCarriedDice,
@@ -314,7 +368,6 @@ export function RollDie({
       className="die"
       data-phase={phase}
       data-roll-seed={seed}
-      data-sides={dieShape(die.sides)}
       data-kept={die.kept}
       data-exploded={die.exploded}
       data-disabled={die.disabled || undefined}
@@ -337,7 +390,7 @@ export function RollDie({
         } else gesture.onKeyDown(event);
       }}
     >
-      <PieceFace phase={phase} canvas={canvas} flat={die.value} />
+      <PieceFaces looks={looks} phase={phase} canvases={canvases} />
     </span>
   );
 }

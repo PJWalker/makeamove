@@ -130,10 +130,6 @@ function hullOf(planes: Plane[]): DieHull {
   return { vertices: vertices.map((v) => v.toArray()), faces };
 }
 
-const SIDES = new Set([4, 6, 8, 10, 12, 20]);
-/** The solid a die is drawn as: its own for the standard dice, else a d20. */
-const solidFor = (sides: number) => (SIDES.has(sides) ? sides : 20);
-
 function geometryFor(solid: number): BufferGeometry {
   if (solid === 4) return new TetrahedronGeometry(1.15);
   if (solid === 6) return new BoxGeometry(1.3, 1.3, 1.3).toNonIndexed();
@@ -144,8 +140,8 @@ function geometryFor(solid: number): BufferGeometry {
 }
 
 const shapes = new Map<number, Shape>();
-export function shapeFor(sides: number): Shape {
-  const solid = solidFor(sides);
+/** The solid of a d4, d6, d8, d10, d12 or d20 (looks.ts draws any other as a chip). */
+export function shapeFor(solid: number): Shape {
   const known = shapes.get(solid);
   if (known) return known;
   const geometry = geometryFor(solid);
@@ -195,17 +191,16 @@ export function shapeFor(sides: number): Shape {
   return shape;
 }
 
-/** The number on each face of a die whose first face shows `first`, counting on from it. */
-export const faceValue = (first: number, index: number, sides: number) =>
-  ((first - 1 + index) % sides) + 1;
+/** Which of a die's labels a face of it shows, when its first face shows label `first`: they count on round the die. */
+export const labelOnFace = (first: number, face: number, sides: number) => (first + face) % sides;
 
-/** The number the first face shows, so the face `rotation` turns most towards the viewer shows `value`. */
-export function firstFaceFor(sides: number, value: number, rotation: Quaternion) {
+/** The label the first face shows, so the face `rotation` turns most towards the viewer shows label `shown`. */
+export function firstLabelFor(sides: number, shown: number, rotation: Quaternion) {
   const towards = shapeFor(sides).faces.map(
     (face) => face.normal.clone().applyQuaternion(rotation).z,
   );
   const top = towards.indexOf(Math.max(...towards));
-  return ((((value - 1 - top) % sides) + sides) % sides) + 1;
+  return (((shown - top) % sides) + sides) % sides;
 }
 
 let chipGeometry: BufferGeometry | undefined;

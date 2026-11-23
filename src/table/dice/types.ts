@@ -8,11 +8,19 @@ export interface Point {
 }
 
 /**
- * What a die looks like: a die of `sides` showing `value`, or a flat round chip
- * with `chip` on both faces (lines split by \n). `colour` is any CSS colour,
- * read where the die's slot sits in the page.
+ * What a die looks like: a solid of `sides` faces ("die"), or a flat round chip
+ * ("chip") that shows the same face on both sides and flicks through its faces
+ * while it rolls. Face `index` reads `label(index)` (lines split by \n put a
+ * caption over the main line); it shows face `shown`. `colour` is any CSS
+ * colour, read where the die's slot sits in the page.
  */
-export type DieLook = { chip: string; colour: string } | { sides: number; value: number; colour: string };
+export interface DieLook {
+  form: "chip" | "die";
+  sides: number;
+  label: (index: number) => string;
+  shown: number;
+  colour: string;
+}
 
 /** Where a moving die is, in viewport px, how high it's lifted off the table, and how it's turned. */
 export interface Pose {

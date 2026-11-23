@@ -15,11 +15,12 @@ import {
 import type { Quaternion } from "three/webgpu";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { contrastingTextColour } from "../../lib/colour";
+import type { DieLook } from "./types";
 import {
   CHIP_FACE_OFFSET,
   CHIP_LABEL_SIZE,
   chipShape,
-  faceValue,
+  labelOnFace,
   SCALE,
   shapeFor,
   SLOT,
@@ -36,6 +37,11 @@ import {
 export interface Model {
   mesh: Mesh;
   dispose: () => void;
+}
+
+/** A chip ready to draw, that can be shown with other text on it. */
+export interface ChipModel extends Model {
+  show: (text: string) => void;
 }
 
 async function startStage() {
@@ -97,7 +103,7 @@ const labels = new Map<string, { geometry: PlaneGeometry; material: MeshBasicMat
  * A face's number or text, drawn on a square `size` units across, facing +Z.
  * Text of two lines puts a smaller caption over the main line.
  */
-function label(text: string, colour: string, size: number) {
+function labelParts(text: string, colour: string, size: number) {
   const key = `${text}|${colour}|${size}`;
   let made = labels.get(key);
   if (!made) {
@@ -126,18 +132,23 @@ function label(text: string, colour: string, size: number) {
     };
     labels.set(key, made);
   }
-  return new Mesh(made.geometry, made.material);
+  return made;
 }
 
-/** A die of `sides`, in `colour` (hex), numbered so its first face shows `first`. */
-export function dieModel(sides: number, first: number, colour: string): Model {
+function label(text: string, colour: string, size: number) {
+  const { geometry, material } = labelParts(text, colour, size);
+  return new Mesh(geometry, material);
+}
+
+/** A die as `look` draws it, in `colour` (hex), labelled so its first face shows label `first`. */
+export function dieModel({ sides, label: labelOf }: DieLook, first: number, colour: string): Model {
   const shape = shapeFor(sides);
   const material = new MeshPhysicalMaterial({ ...dieFinish, color: colour });
   const mesh = new Mesh(shape.geometry, material);
   mesh.scale.setScalar(SCALE);
   const labelColour = contrastingTextColour(colour);
   for (const [index, face] of shape.faces.entries()) {
-    const number = label(String(faceValue(first, index, sides)), labelColour, face.size);
+    const number = label(labelOf(labelOnFace(first, index, sides)), labelColour, face.size);
     number.position.copy(face.centre).addScaledVector(face.normal, 0.003);
     number.quaternion.copy(face.labelRotation);
     mesh.add(number);
@@ -151,20 +162,26 @@ export function dieModel(sides: number, first: number, colour: string): Model {
 }
 
 /** A chip in `colour` (hex) with `text` on both faces. */
-export function chipModel(text: string, colour: string): Model {
+export function chipModel(text: string, colour: string): ChipModel {
   const face = new MeshPhysicalMaterial({ ...chipFinish, color: colour });
   const rim = new MeshPhysicalMaterial({ ...chipFinish, color: colour });
   rim.color.multiplyScalar(0.5);
   const mesh = new Mesh(chipShape(), [rim, face, face]);
   mesh.scale.setScalar(SCALE);
-  for (const side of [1, -1]) {
-    const words = label(text, contrastingTextColour(colour), CHIP_LABEL_SIZE);
+  const labelColour = contrastingTextColour(colour);
+  const sides = [1, -1].map((side) => {
+    const words = label(text, labelColour, CHIP_LABEL_SIZE);
     words.position.z = side * CHIP_FACE_OFFSET;
     if (side < 0) words.rotation.y = Math.PI;
     mesh.add(words);
-  }
+    return words;
+  });
   return {
     mesh,
+    show: (shown) => {
+      const { material } = labelParts(shown, labelColour, CHIP_LABEL_SIZE);
+      for (const words of sides) words.material = material;
+    },
     dispose: () => {
       face.dispose();
       rim.dispose();

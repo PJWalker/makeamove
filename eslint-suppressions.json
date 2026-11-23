@@ -4250,13 +4250,13 @@
       "count": 7
     },
     "@typescript-eslint/no-unnecessary-condition": {
-      "count": 8
+      "count": 5
     },
     "@typescript-eslint/prefer-nullish-coalescing": {
       "count": 1
     },
     "@typescript-eslint/restrict-template-expressions": {
-      "count": 6
+      "count": 7
     },
     "consistent-return": {
       "count": 2
@@ -4272,9 +4272,6 @@
     },
     "jsx-a11y/prefer-tag-over-role": {
       "count": 3
-    },
-    "no-implicit-coercion": {
-      "count": 1
     },
     "no-nested-ternary": {
       "count": 3
@@ -4494,6 +4491,14 @@
       "count": 1
     }
   },
+  "src/table/dice/__tests__/looks.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 15
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "count": 1
+    }
+  },
   "src/table/dice/__tests__/physics.test.ts": {
     "@typescript-eslint/no-magic-numbers": {
       "count": 106
@@ -4527,16 +4532,13 @@
       "count": 1
     },
     "@typescript-eslint/no-magic-numbers": {
-      "count": 6
+      "count": 7
     },
     "@typescript-eslint/parameter-properties": {
       "count": 2
     },
     "@typescript-eslint/restrict-template-expressions": {
       "count": 3
-    },
-    "no-implicit-coercion": {
-      "count": 1
     },
     "no-param-reassign": {
       "count": 2
@@ -4546,6 +4548,11 @@
     },
     "promise/param-names": {
       "count": 1
+    }
+  },
+  "src/table/dice/looks.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 7
     }
   },
   "src/table/dice/painter.ts": {
@@ -4593,7 +4600,7 @@
   },
   "src/table/dice/shapes.ts": {
     "@typescript-eslint/no-magic-numbers": {
-      "count": 43
+      "count": 36
     },
     "@typescript-eslint/no-shadow": {
       "count": 1
@@ -4667,9 +4674,6 @@
   "src/table/rollDieHelpers.ts": {
     "@typescript-eslint/consistent-type-imports": {
       "count": 1
-    },
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 6
     },
     "@typescript-eslint/restrict-template-expressions": {
       "count": 3

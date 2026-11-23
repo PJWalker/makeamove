@@ -3,11 +3,7 @@
   .die {
     /* The roller's colour, set inline. */
     --die-colour: var(--gem-smoky);
-    position: relative;
-    display: inline-grid;
-    place-items: center;
-    width: 64px;
-    height: 64px;
+    display: inline-flex;
     color: oklch(from var(--scene-oklch) 97% min(c, 0.01) h);
     font-size: var(--text-md);
     font-weight: 700;
@@ -26,6 +22,14 @@
         text-decoration: line-through;
       }
     }
+  }
+  /* The slot of one piece of a die: the die itself, or one of a d100's two d10s. */
+  .die-piece {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
   }
   /*
    * A die's canvas: in its slot at rest; while it moves, the same canvas is lifted
@@ -92,27 +96,27 @@
   .chip {
     /* Read by the 3D renderer for the disc's colour: dark enough to carry a light label, as dice are. */
     --chip-face: color-mix(in oklch, var(--success) 45%, black);
+    --die-colour: var(--chip-face);
     &[data-sign="minus"] {
       --chip-face: color-mix(in oklch, var(--danger) 45%, black);
     }
-    /* Where the browser can't draw 3D: a flat disc. */
-    &[data-phase="flat"] .die-value {
-      display: grid;
-      place-items: center;
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      background: var(--chip-face);
-      font-size: var(--text-sm);
-      line-height: 1.1;
-      text-align: center;
-      white-space: pre-line;
-    }
+  }
+  /* A chip, or a die with no solid of its own, where the browser can't draw 3D: a flat disc. */
+  .die[data-phase="flat"] .die-piece[data-form="chip"] .die-value {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--die-colour);
+    color: var(--die-label-colour, inherit);
+    font-size: var(--text-sm);
+    line-height: 1.1;
+    text-align: center;
+    white-space: pre-line;
   }
   /* Without WebGL: the rendered die, tinted to match the roller, with its number overlaid. */
-  .die[data-phase="flat"] {
-    width: 64px;
-    height: 64px;
+  .die[data-phase="flat"] .die-piece {
     isolation: isolate;
     &[data-sides]::before,
     &[data-sides]::after {
@@ -150,7 +154,7 @@
     &[data-sides="12"] {
       --die-image: url("./dice-fallbacks/d12.webp");
     }
-    &:is([data-sides="20"], [data-sides="n"]) {
+    &[data-sides="20"] {
       --die-image: url("./dice-fallbacks/d20.webp");
     }
     .die-value {

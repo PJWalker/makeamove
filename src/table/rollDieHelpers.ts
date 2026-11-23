@@ -5,7 +5,7 @@ import { device } from "../platform/device";
 import { chipText  } from "../features/dice/pool";
 import type {TrayPick} from "../features/dice/pool";
 import { threeDimensionalDice } from "../workspace/diceRendering";
-import type { DieLook } from "./dice/types";
+import { chipLook, looksOf } from "./dice/looks";
 
 /** The 3D dice, once they've loaded. */
 type Dice = Pick<typeof import("./dice"), "Die" | "dieOf">;
@@ -53,9 +53,6 @@ export function rollCarriedDice(element: HTMLElement, carrier: HTMLElement) {
   };
 }
 
-/** The shape a die is drawn as: its own for the standard dice, else a generic one ("n"). */
-export const dieShape = (sides: number) => ([4, 6, 8, 10, 12, 20].includes(sides) ? sides : "n");
-
 /** The custom properties that colour a die: its body, and a label that reads on it. */
 export const dieColours = (colour: string) => ({
   "--die-colour": colour,
@@ -71,42 +68,49 @@ export const chipSign = (value: number) => (value < 0 ? "minus" : "plus");
 /** A new die or chip held under the pointer, tumbling, until it's let go of. */
 export function holdNewPick(pick: TrayPick) {
   const colour = colourOf(device.value);
-  const piece: DieLook =
+  const looks =
     pick.kind === "die"
-      ? { sides: pick.sides, value: pick.sides, colour }
-      : {
-          chip: chipText(pick.value, pick.kind === "stat" ? pick.stat : undefined),
-          colour: CHIP_COLOUR,
-        };
+      ? looksOf(pick.sides, pick.sides, colour)
+      : [chipLook(chipText(pick.value, pick.kind === "stat" ? pick.stat : undefined), CHIP_COLOUR)];
   const ghost = document.createElement("span");
   ghost.className = "die die-ghost";
   ghost.dataset["phase"] = "flat";
   ghost.setAttribute("aria-hidden", "true");
-  if ("chip" in piece) {
-    ghost.classList.add("chip");
-    ghost.dataset["sign"] = chipSign(pick.kind === "die" ? 0 : pick.value);
-  } else {
-    ghost.dataset["sides"] = String(dieShape(piece.sides));
+  if (pick.kind === "die")
     for (const [property, value] of Object.entries(dieColours(colour)))
       ghost.style.setProperty(property, value);
+  else {
+    ghost.classList.add("chip");
+    ghost.dataset["sign"] = chipSign(pick.value);
   }
-  const value = document.createElement("span");
-  value.className = "die-value";
-  value.textContent = "chip" in piece ? piece.chip : String(piece.value);
-  ghost.append(value);
+  const pieces = looks.map((look) => {
+    const piece = document.createElement("span");
+    piece.className = "die-piece";
+    piece.dataset["form"] = look.form;
+    if (look.form === "die") piece.dataset["sides"] = String(look.sides);
+    const value = document.createElement("span");
+    value.className = "die-value";
+    value.textContent = look.label(look.shown);
+    piece.append(value);
+    return piece;
+  });
+  ghost.append(...pieces);
   document.body.append(ghost);
-  let die: PhysicalDie | undefined;
+  let dice: PhysicalDie[] = [];
   let gone = false;
   if (threeDimensionalDice.value)
-    void loadDice().then((dice) => {
-      if (!threeDimensionalDice.value || !dice || gone) return;
-      const canvas = document.createElement("canvas");
-      canvas.className = "die-canvas";
-      ghost.replaceChildren(canvas);
+    void loadDice().then((physical) => {
+      if (!threeDimensionalDice.value || !physical || gone) return;
       ghost.dataset["phase"] = "landed";
-      die = new dice.Die(canvas, piece);
-      die.rest();
-      die.tumble();
+      dice = pieces.map((piece, index) => {
+        const canvas = document.createElement("canvas");
+        canvas.className = "die-canvas";
+        piece.replaceChildren(canvas);
+        const die = new physical.Die(canvas, looks[index]!);
+        die.rest();
+        die.tumble();
+        return die;
+      });
     });
   return {
     move(x: number, y: number) {
@@ -115,7 +119,7 @@ export function holdNewPick(pick: TrayPick) {
     },
     remove() {
       gone = true;
-      die?.dispose();
+      for (const die of dice) die.dispose();
       ghost.remove();
     },
   };
