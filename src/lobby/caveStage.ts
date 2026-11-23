@@ -1,23 +1,28 @@
 /* eslint-disable @typescript-eslint/no-magic-numbers, max-lines-per-function, no-console */
-import { PerspectiveCamera, Scene, Vector3, WebGLRenderer } from "three";
-import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
-import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
-import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
+import { pass } from "three/tsl";
+import {
+  PerspectiveCamera,
+  RenderPipeline,
+  Scene,
+  Vector2,
+  Vector3,
+  WebGPURenderer,
+} from "three/webgpu";
 import { reducedMotion } from "../ui/transition";
-import { CAVE_GRADE } from "./caveGrade";
+import { caveGrade } from "./caveGrade";
 import { freshSeed, lightDrift, VIEWER } from "./caveScene";
 import { buildCaveOffThread } from "./caveWorker";
 import type { CaveResult } from "./caveWorker";
-import { gpuTimer } from "./gpuTimer";
 import { playback, playbackMode } from "./playback";
 import type { Playback, PlaybackEvent } from "./playback";
 import { govern, governedScale, governor, retry } from "./resolution";
+import type { FrameSample } from "./resolution";
 import { hex } from "./splat";
 import { splatCloud } from "./splatCloud";
 
 /*
  * Puts the cave (caveScene.ts, built off the main thread by cave.worker.ts)
- * on a canvas and keeps it alive: it paints itself in stroke by stroke, the
+ * on a canvas with three's WebGPU renderer (WebGL where WebGPU is missing), and keeps it alive: it paints itself in stroke by stroke, the
  * torches flicker and smoke, water drips, the wisp flies off to scout and
  * back, and the viewer's eye follows the mouse a little, so the cave shifts in
  * depth. The finished picture is graded (caveGrade.ts). It's drawn 30 times a
@@ -79,7 +84,7 @@ export interface CavePlayback {
 }
 
 /** Sets the cave up on a renderer, once its splats have been built. */
-function caveView(renderer: WebGLRenderer, seed: string, { splats, brushes, lights: built }: CaveResult) {
+function caveView(renderer: WebGPURenderer, seed: string, { splats, brushes, lights: built }: CaveResult) {
   const lights = built.map((light) => ({
     ...light,
     start: new Vector3(...light.at),
@@ -96,26 +101,22 @@ function caveView(renderer: WebGLRenderer, seed: string, { splats, brushes, ligh
   const scene = new Scene();
   scene.add(cloud.mesh);
   const camera = new PerspectiveCamera();
-  const composer = new EffectComposer(renderer);
-  composer.addPass(new RenderPass(scene, camera));
-  const grade = new ShaderPass(CAVE_GRADE);
-  const uniform = (name: keyof typeof CAVE_GRADE.uniforms) => {
-    const found = grade.uniforms[name];
-    if (!found) throw new Error(`The cave's grade has no ${name} uniform.`);
-    return found;
-  };
-  uniform("dark").value = hex(DARK).map((channel) => channel ** (1 / 2.2));
-  composer.addPass(grade);
+  const grade = caveGrade(pass(scene, camera));
+  const [red, green, blue] = hex(DARK);
+  grade.settings.dark.value.set(red ** (1 / 2.2), green ** (1 / 2.2), blue ** (1 / 2.2));
+  const pipeline = new RenderPipeline(renderer, grade.output);
+  // The splats are drawn in sRGB already, and the grade works on them as they are.
+  pipeline.outputColorTransform = false;
   return {
     cloud,
     lights,
     camera,
-    composer,
-    pixelRatio: uniform("pixelRatio"),
+    pipeline,
+    pixelRatio: grade.settings.pixelRatio,
     compile: () => renderer.compileAsync(scene, camera),
     dispose() {
       cloud.dispose();
-      composer.dispose();
+      pipeline.dispose();
     },
   };
 }
@@ -125,16 +126,12 @@ export function stageCave(
   canvas: HTMLCanvasElement,
   onPauseChange: (paused: boolean) => void = () => undefined,
 ): CavePlayback {
-  let renderer: WebGLRenderer;
-  try {
-    renderer = new WebGLRenderer({ canvas, powerPreference: "low-power" });
-  } catch (error) {
-    console.warn("The lobby's cave backdrop needs WebGL, so it's left dark.", error);
-    return { pause: () => undefined, play: () => undefined, dispose: () => undefined };
-  }
+  const renderer = new WebGPURenderer({ canvas, powerPreference: "low-power", trackTimestamp: true });
   renderer.setClearColor(DARK);
-  const context = renderer.getContext();
-  const timer = context instanceof WebGL2RenderingContext ? gpuTimer(context) : undefined;
+  /** Whether the GPU can time its own work; until then, the gaps between frames are measured. */
+  let timed = false;
+  let measuring = false;
+  const drawingBuffer = new Vector2();
 
   let view: ReturnType<typeof caveView> | undefined;
   let disposed = false;
@@ -153,7 +150,7 @@ export function stageCave(
   /** Draws the cave at a moment; `moving` lets the eye move towards the mouse. */
   const draw = (seconds: number, moving: boolean) => {
     if (!view) return;
-    const { cloud, lights, camera, composer } = view;
+    const { cloud, lights, camera, pipeline } = view;
     const { uniforms } = cloud;
     uniforms.drawProgress.value = state.reducedMotion
       ? 1
@@ -167,6 +164,7 @@ export function stageCave(
     camera.position.set(eye.x + sway.x * SWAY.x, eye.y + sway.y * SWAY.y, eye.z);
     camera.lookAt(target);
     camera.updateMatrixWorld();
+    cloud.frame(camera);
     if (camera.position.distanceTo(sortedFrom) > RESORT) {
       cloud.sortFor(camera.matrixWorldInverse);
       sortedFrom.copy(camera.position);
@@ -175,10 +173,10 @@ export function stageCave(
     for (const [index, light] of lights.entries()) {
       light.moved.set(...light.drift(seconds));
       light.at.copy(light.start).add(light.moved);
-      uniforms.flicker.value[index] = flickerAt(seconds, light.period, index);
+      uniforms.flicker.array[index] = flickerAt(seconds, light.period, index);
     }
-    if (timer) timer.measure(() => { composer.render(); });
-    else composer.render();
+    pipeline.render();
+    if (timed && !measuring) void measureGpu(seconds);
   };
 
   const applyResolution = () => {
@@ -186,9 +184,7 @@ export function stageCave(
     if (!width || !height || !view) return;
     renderer.setPixelRatio(governedScale(resolution, devicePixelRatio));
     renderer.setSize(width, height, false);
-    view.composer.setPixelRatio(renderer.getPixelRatio());
-    view.composer.setSize(width, height);
-    view.cloud.uniforms.viewport.value.set(canvas.width, canvas.height);
+    view.cloud.uniforms.viewport.value.copy(renderer.getDrawingBufferSize(drawingBuffer));
     view.pixelRatio.value = renderer.getPixelRatio();
     configureFrame(view.camera, width / height);
   };
@@ -207,22 +203,28 @@ export function stageCave(
     show();
   };
 
-  /** Takes in how long the last frames took, and adjusts the resolution or gives up. */
-  const judge = (now: number, sinceLast: number) => {
+  /** Takes in how long a frame took, and adjusts the resolution or gives up. */
+  function judge(seconds: number, sample: FrameSample) {
     const before = resolution;
-    const samples = timer ? timer.collect() : [sinceLast];
-    for (const sample of samples) {
-      const measure = timer ? "gpu" : "interval";
-      resolution = govern(resolution, { milliseconds: sample, measure }, devicePixelRatio);
-    }
+    resolution = govern(resolution, sample, devicePixelRatio);
     if (resolution.gaveUp && !before.gaveUp) {
       console.warn("The lobby's cave backdrop can't keep up on this device, so it's paused.");
       dispatch({ type: "pause" });
     } else if (resolution.rung !== before.rung) {
       applyResolution();
-      draw(now / 1000, false);
+      if (playbackMode(state) !== "off") draw(seconds, false);
     }
-  };
+  }
+
+  /** Times the frame just drawn on the GPU, once it's finished. */
+  async function measureGpu(seconds: number) {
+    measuring = true;
+    const milliseconds = await renderer.resolveTimestampsAsync("render");
+    measuring = false;
+    if (!disposed && typeof milliseconds === "number" && milliseconds > 0) {
+      judge(seconds, { milliseconds, measure: "gpu" });
+    }
+  }
 
   const tick = (now: number) => {
     animation = requestAnimationFrame(tick);
@@ -231,7 +233,7 @@ export function stageCave(
     const sinceLast = lastDraw ? now - lastDraw : 0;
     lastDraw = now;
     draw(now / 1000, true);
-    if (sinceLast) judge(now, sinceLast);
+    if (sinceLast && !timed) judge(now / 1000, { milliseconds: sinceLast, measure: "interval" });
   };
 
   /** Brings the canvas in line with the playback: animating, a still picture, or nothing. */
@@ -267,7 +269,15 @@ export function stageCave(
       console.warn("The lobby's cave backdrop couldn't be built, so it's left dark.", error);
       return;
     }
+    try {
+      await renderer.init();
+    } catch (error) {
+      console.warn("The lobby's cave backdrop needs WebGPU or WebGL, so it's left dark.", error);
+      return;
+    }
     if (!alive()) return;
+    // Only WebGPU's timestamps are reliable; the WebGL fallback's may never resolve.
+    timed = "isWebGPUBackend" in renderer.backend && renderer.hasFeature("timestamp-query");
     const ready = caveView(renderer, seed, built);
     await ready.compile();
     if (!alive()) {
@@ -329,8 +339,7 @@ export function stageCave(
       reducedMotion.removeEventListener("change", motion);
       document.removeEventListener("visibilitychange", visibility);
       view?.dispose();
-      timer?.dispose();
-      renderer.dispose();
+      void renderer.dispose();
     },
   };
 }

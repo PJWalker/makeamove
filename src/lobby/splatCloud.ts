@@ -4,25 +4,23 @@ import {
   CustomBlending,
   DataTexture,
   FloatType,
-  GLSL3,
   InstancedBufferAttribute,
   InstancedBufferGeometry,
   LinearFilter,
   LinearMipmapLinearFilter,
   Mesh,
+  NodeMaterial,
   OneFactor,
   OneMinusSrcAlphaFactor,
   RedFormat,
   RGBAFormat,
-  ShaderMaterial,
   UnsignedByteType,
-  Vector2,
-  Vector3,
-} from "three";
-import type { Matrix4 } from "three";
+} from "three/webgpu";
+import type { Matrix4, PerspectiveCamera } from "three/webgpu";
 import { BRUSH, BRUSHES } from "./brushAtlas";
 import { STRIDE } from "./splat";
-import { PER_ROW, SPLAT, STROKE, TEXELS } from "./splatShaders";
+import { PER_ROW, splatFragment, splatUniforms, splatVertex, TEXELS } from "./splatShaders";
+import type { SplatLight } from "./splatShaders";
 import { splatSorter } from "./splatSort";
 
 /*
@@ -32,15 +30,6 @@ import { splatSorter } from "./splatSort";
  * texture; only their order, one index per quad, changes when the camera has
  * moved far enough for them to be re-sorted (splatSort.ts).
  */
-
-/** A light as the cloud sees it; its vectors are shared, so moving them moves the light. */
-export interface SplatLight {
-  at: Vector3;
-  /** How far it has wandered from where it started, which the splats that belong to it follow. */
-  moved: Vector3;
-  colour: Vector3;
-  reach: number;
-}
 
 function quadGeometry(count: number) {
   const order = new InstancedBufferAttribute(new Float32Array(count), 1);
@@ -78,23 +67,6 @@ function brushTexture(brushes: Uint8Array) {
   return texture;
 }
 
-function splatUniforms(splats: DataTexture, brushes: DataTexture, lights: readonly SplatLight[]) {
-  return {
-    splats: { value: splats },
-    brushes: { value: brushes },
-    viewport: { value: new Vector2(1, 1) },
-    time: { value: 0 },
-    drawProgress: { value: 1 },
-    lightAt: { value: lights.map((light) => light.at) },
-    lightMoved: { value: lights.map((light) => light.moved) },
-    lightColour: { value: lights.map((light) => light.colour) },
-    lightReach: { value: lights.map((light) => light.reach) },
-    flicker: { value: lights.map(() => 1) },
-    ambient: { value: new Vector3() },
-    haze: { value: new Vector3() },
-  };
-}
-
 export function splatCloud(
   data: Float32Array,
   brushes: Uint8Array,
@@ -105,23 +77,19 @@ export function splatCloud(
   const sort = splatSorter(data);
   const splats = splatTexture(data, rows);
   const brushStrip = brushTexture(brushes);
-  const uniforms = splatUniforms(splats, brushStrip, lights);
+  const uniforms = splatUniforms(lights);
   const { geometry, order } = quadGeometry(count);
-  const material = new ShaderMaterial({
-    glslVersion: GLSL3,
-    vertexShader: SPLAT,
-    fragmentShader: STROKE,
-    defines: { LIGHTS: lights.length },
-    uniforms,
-    transparent: true,
-    depthTest: false,
-    depthWrite: false,
-    blending: CustomBlending,
-    blendSrc: OneFactor,
-    blendDst: OneMinusSrcAlphaFactor,
-    blendSrcAlpha: OneFactor,
-    blendDstAlpha: OneMinusSrcAlphaFactor,
-  });
+  const material = new NodeMaterial();
+  material.vertexNode = splatVertex(splats, lights.length, uniforms);
+  material.fragmentNode = splatFragment(brushStrip);
+  material.transparent = true;
+  material.depthTest = false;
+  material.depthWrite = false;
+  material.blending = CustomBlending;
+  material.blendSrc = OneFactor;
+  material.blendDst = OneMinusSrcAlphaFactor;
+  material.blendSrcAlpha = OneFactor;
+  material.blendDstAlpha = OneMinusSrcAlphaFactor;
   const mesh = new Mesh(geometry, material);
   mesh.frustumCulled = false;
 
@@ -132,6 +100,12 @@ export function splatCloud(
     sortFor(view: Matrix4) {
       order.array.set(sort(view));
       order.needsUpdate = true;
+    },
+    /** Takes in where the camera is, and how it projects, for this frame. */
+    frame(camera: PerspectiveCamera) {
+      uniforms.cameraTurn.value.setFromMatrix4(camera.matrixWorld);
+      const { elements } = camera.projectionMatrix;
+      uniforms.focal.value.set(elements[0], elements[5]);
     },
     dispose() {
       geometry.dispose();

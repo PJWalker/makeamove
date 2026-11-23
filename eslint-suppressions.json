@@ -1820,6 +1820,11 @@
       "count": 1
     }
   },
+  "src/lobby/splatCloud.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
   "src/lobby/splatSort.ts": {
     "import/prefer-default-export": {
       "count": 1

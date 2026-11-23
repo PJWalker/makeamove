@@ -1,15 +1,56 @@
-/* eslint-disable @typescript-eslint/no-magic-numbers */
+/* eslint-disable @typescript-eslint/no-magic-numbers, max-lines-per-function, new-cap */
+import {
+  attribute,
+  cameraProjectionMatrix,
+  clamp,
+  cos,
+  Discard,
+  dot,
+  exp,
+  float,
+  floor,
+  fract,
+  Fn,
+  If,
+  int,
+  ivec2,
+  length,
+  Loop,
+  mat3,
+  max,
+  min,
+  mix,
+  modelViewMatrix,
+  normalize,
+  positionGeometry,
+  pow,
+  select,
+  sin,
+  smoothstep,
+  sqrt,
+  texture,
+  textureLoad,
+  uniform,
+  uniformArray,
+  varyingProperty,
+  vec2,
+  vec3,
+  vec4,
+} from "three/tsl";
+import { Matrix3, Vector2, Vector3 } from "three/webgpu";
+import type { DataTexture, Node } from "three/webgpu";
 import { BRUSHES } from "./brushAtlas";
 import { MOTION, STRIDE } from "./splat";
 
 /*
- * The shaders that draw a cloud of splats (splatCloud.ts). SPLAT works each
- * splat out at each corner of its quad: where its motion has taken it, how
- * the lights fall on it, and the outline of its ellipsoid on screen, which
- * the quad is stretched over. STROKE then paints the quad: a soft Gaussian
- * for a glowing splat, a brush stroke from the atlas (brushAtlas.ts) for the
- * rest. The quad hugs the stroke, so no pixels are shaded only to be thrown
- * away.
+ * The shaders that draw a cloud of splats (splatCloud.ts), in TSL, so three
+ * builds them for WebGPU or, where that's missing, WebGL. The vertex stage
+ * works each splat out at each corner of its quad: where its motion has taken
+ * it, how the lights fall on it, and the outline of its ellipsoid on screen,
+ * which the quad is stretched over. The fragment stage paints the quad: a soft
+ * Gaussian for a glowing splat, a brush stroke from the atlas (brushAtlas.ts)
+ * for the rest. The quad hugs the stroke, so no pixels are shaded only to be
+ * thrown away.
  */
 
 /** Splats in each row of the splat texture. */
@@ -17,235 +58,269 @@ export const PER_ROW = 800;
 /** Texels each splat takes in the splat texture. */
 export const TEXELS = STRIDE / 4;
 
-const glslInt = (value: number) => String(value);
-const glslFloat = (value: number) => `${String(value)}.0`;
+const TAU = 6.283_185_3;
+/** How long each stroke takes to paint in, as a share of the whole picture's. */
+const STROKE = 0.38;
+/** How many standard deviations out a glowing splat's quad reaches; a stroke fills its quad. */
+const GLOW_EXTENT = 2.5;
 
-const EASE = /* glsl */ `
-  float exponentialEaseOut(float value) {
-    return 1.0 - pow(2.0, -10.0 * clamp(value, 0.0, 1.0));
-  }
-`;
+/** A light as the cloud sees it; its vectors are shared, so moving them moves the light. */
+export interface SplatLight {
+  at: Vector3;
+  /** How far it has wandered from where it started, which the splats that belong to it follow. */
+  moved: Vector3;
+  colour: Vector3;
+  reach: number;
+}
 
+/** The values the shaders take from the stage, updated each frame. */
+export function splatUniforms(lights: readonly SplatLight[]) {
+  return {
+    viewport: uniform(new Vector2(1, 1)),
+    /** The projection's scale along each screen axis. */
+    focal: uniform(new Vector2(1, 1)),
+    /** The camera's rotation, from its own axes into the world's. */
+    cameraTurn: uniform(new Matrix3()),
+    time: uniform(0),
+    drawProgress: uniform(1),
+    lightAt: uniformArray<"vec3">(lights.map((light) => light.at), "vec3"),
+    lightMoved: uniformArray<"vec3">(lights.map((light) => light.moved), "vec3"),
+    lightColour: uniformArray<"vec3">(lights.map((light) => light.colour), "vec3"),
+    lightReach: uniformArray<"float">(lights.map((light) => light.reach), "float"),
+    flicker: uniformArray<"float">(lights.map(() => 1), "float"),
+    ambient: uniform(new Vector3()),
+    haze: uniform(new Vector3()),
+  };
+}
+export type SplatUniforms = ReturnType<typeof splatUniforms>;
 
-export const SPLAT = /* glsl */ `
-  in float splat;
+type FloatNode = Node<"float">;
+type Vec3Node = Node<"vec3">;
 
-  uniform highp sampler2D splats;
-  uniform vec2 viewport;
-  uniform float time;
-  uniform float drawProgress;
-  uniform vec3 lightAt[LIGHTS];
-  uniform vec3 lightMoved[LIGHTS];
-  uniform vec3 lightColour[LIGHTS];
-  uniform float lightReach[LIGHTS];
-  uniform float flicker[LIGHTS];
-  uniform vec3 ambient;
-  uniform vec3 haze;
+const exponentialEaseOut = (value: FloatNode) =>
+  float(1).sub(pow(2, clamp(value, 0, 1).mul(-10)));
 
-  out vec4 vColour;
-  out vec2 vOffset;
-  out float vMajor;
-  out float vGlow;
-  out float vBrush;
-  out float vStroke;
+/** The way strokes lie: a slow field of directions through the cave. */
+const flowField = (point: Vec3Node, time: FloatNode) => {
+  const drift = time.mul(0.035);
+  return sin(point.z.mul(0.11).add(point.x.mul(0.14)).add(drift))
+    .mul(0.48)
+    .add(sin(point.x.mul(0.22).sub(point.z.mul(0.07)).sub(drift.mul(0.7))).mul(0.24))
+    .add(sin(point.y.mul(0.19).add(point.x.mul(0.08)).add(drift.mul(0.45))).mul(0.18));
+};
 
-  const float TAU = 6.2831853;
-  /** How long each stroke takes to paint in, as a share of the whole picture's. */
-  const float STROKE = 0.38;
-  /** How many standard deviations out a glowing splat's quad reaches; a stroke fills its quad. */
-  const float GLOW_EXTENT = 2.5;
+/** What the vertex stage hands the fragment stage. */
+const passed = {
+  colour: varyingProperty("vec4", "vColour"),
+  offset: varyingProperty("vec2", "vOffset"),
+  major: varyingProperty("float", "vMajor"),
+  glow: varyingProperty("float", "vGlow"),
+  brush: varyingProperty("float", "vBrush"),
+  stroke: varyingProperty("float", "vStroke"),
+};
 
-  ${EASE}
-
-  float flowField(vec3 point) {
-    float drift = time * 0.035;
-    return
-      sin(point.z * 0.11 + point.x * 0.14 + drift) * 0.48 +
-      sin(point.x * 0.22 - point.z * 0.07 - drift * 0.7) * 0.24 +
-      sin(point.y * 0.19 + point.x * 0.08 + drift * 0.45) * 0.18;
-  }
-
-  void hide() { gl_Position = vec4(0.0, 0.0, 2.0, 1.0); }
-
-  void main() {
-    int index = int(splat);
-    ivec2 base = ivec2((index % ${glslInt(PER_ROW)}) * ${glslInt(TEXELS)}, index / ${glslInt(PER_ROW)});
-    vec4 t0 = texelFetch(splats, base, 0);
-    vec4 t1 = texelFetch(splats, base + ivec2(1, 0), 0);
-    vec4 t2 = texelFetch(splats, base + ivec2(2, 0), 0);
-    vec4 t3 = texelFetch(splats, base + ivec2(3, 0), 0);
-    vec4 t4 = texelFetch(splats, base + ivec2(4, 0), 0);
-    vec3 centre = t0.xyz;
-    vec3 spreadX = vec3(t0.w, t1.xy);
-    vec3 spreadYZ = vec3(t1.zw, t2.x);
-    vec3 tint = t2.yzw;
-    float opacity = t3.x;
-    vec3 facing = t3.yzw;
-    vec3 motion = t4.xyz;
-    float glow = t4.w;
-
-    int light = int(motion.y + 0.5) - 1;
-    float phase = motion.z;
+/** Where a splat's quad corner lands on screen, in clip space; it also fills `passed`. */
+export function splatVertex(splats: DataTexture, lights: number, u: SplatUniforms) {
+  return Fn(() => {
+    const index = int(attribute("splat", "float"));
+    const base = ivec2(index.mod(PER_ROW).mul(TEXELS), index.div(PER_ROW));
+    const fetch = (texel: number) => textureLoad(splats, base.add(ivec2(texel, 0))).toVar();
+    const t0 = fetch(0);
+    const t1 = fetch(1);
+    const t2 = fetch(2);
+    const t3 = fetch(3);
+    const t4 = fetch(4);
+    const centre = t0.xyz;
+    const tint = t2.yzw.toVar();
+    const opacity = t3.x.toVar();
+    const facing = t3.yzw;
+    const motion = t4.xyz;
+    const glow = t4.w;
+    const light = int(motion.y.add(0.5)).sub(1);
+    const phase = motion.z;
+    const time: FloatNode = u.time;
 
     // Painting the picture in: each stroke starts at its own moment.
-    float stagger = exponentialEaseOut(fract(phase * 1.618 + length(centre) * 0.031)) * 0.62;
-    float painted = exponentialEaseOut(drawProgress);
-    opacity *= smoothstep(stagger, stagger + STROKE, painted);
-    float stroke = exponentialEaseOut((painted - stagger) / STROKE);
+    const stagger = exponentialEaseOut(fract(phase.mul(1.618).add(length(centre).mul(0.031)))).mul(0.62);
+    const painted = exponentialEaseOut(u.drawProgress);
+    opacity.mulAssign(smoothstep(stagger, stagger.add(STROKE), painted));
+    const stroke = exponentialEaseOut(painted.sub(stagger).div(STROKE));
 
-    vec3 at = centre;
-    float size = 1.0;
-    float brightness = 1.0;
-    if (light >= 0) {
-      at += lightMoved[light];
-      brightness = flicker[light];
-    }
-    if (motion.x == ${glslFloat(MOTION.flame)}) {
-      float life = fract(time * 1.7 + phase);
-      float angle = flowField(at) + fract(phase * 19.0) * 0.12;
-      at += vec3(
-        cos(angle) * 0.09 * life + sin(time * 3.1 + phase * TAU) * 0.018 * life,
-        life * 0.34,
-        sin(angle) * 0.09 * life + cos(time * 2.3 + phase * TAU) * 0.012 * life
+    const at = centre.toVar();
+    const size = float(1).toVar();
+    const brightness = float(1).toVar();
+    If(light.greaterThanEqual(0), () => {
+      at.addAssign(u.lightMoved.element(light));
+      brightness.assign(u.flicker.element(light));
+    });
+    const wander = flowField(at, time).add(fract(phase.mul(19)).mul(0.12)).toVar();
+    If(motion.x.equal(MOTION.flame), () => {
+      const life = fract(time.mul(1.7).add(phase));
+      at.addAssign(
+        vec3(
+          cos(wander).mul(0.09).mul(life).add(sin(time.mul(3.1).add(phase.mul(TAU))).mul(0.018).mul(life)),
+          life.mul(0.34),
+          sin(wander).mul(0.09).mul(life).add(cos(time.mul(2.3).add(phase.mul(TAU))).mul(0.012).mul(life)),
+        ),
       );
-      size = 1.0 - life * 0.65;
-      opacity *= smoothstep(0.0, 0.12, life) * (1.0 - life);
-      tint *= mix(vec3(1.0, 0.82, 0.45), vec3(0.95, 0.22, 0.04), smoothstep(0.05, 0.75, life));
-    } else if (motion.x == ${glslFloat(MOTION.orbit)}) {
-      vec3 middle = lightAt[light];
-      vec3 from = centre - (middle - lightMoved[light]);
-      float turn = time * 1.4;
-      float c = cos(turn);
-      float s = sin(turn);
-      at = middle + vec3(c * from.x - s * from.z, from.y + sin(time * 2.0 + phase * TAU) * 0.03, s * from.x + c * from.z);
-    } else if (motion.x == ${glslFloat(MOTION.smoke)}) {
-      float rise = fract(time * 0.22 + phase);
-      float angle = flowField(at) + fract(phase * 19.0) * 0.12;
-      at += vec3(
-        cos(angle) * rise * 0.55 + sin(time * 0.5 + phase * TAU) * 0.12 * rise,
-        rise * 1.8,
-        sin(angle) * rise * 0.55 + cos(time * 0.4 + phase * 9.0) * 0.12 * rise
-      );
-      size = 1.0 + rise * 4.0;
-      opacity *= smoothstep(0.0, 0.15, rise) * (1.0 - rise);
-    } else if (motion.x == ${glslFloat(MOTION.idle)}) {
-      at += vec3(
-        sin(time * 0.55 + phase * TAU) * 0.018,
-        0.0,
-        cos(time * 0.45 + phase * TAU) * 0.008
-      );
-    } else if (motion.x == ${glslFloat(MOTION.drip)}) {
-      // Hangs and swells for most of its cycle, then falls under gravity.
-      float period = 4.0 + phase * 5.0;
-      float cycle = fract(time / period + phase);
-      float fall = max(0.0, cycle - 0.8) * period;
-      size = 0.4 + 0.6 * smoothstep(0.0, 0.8, cycle);
-      at.y -= 4.9 * fall * fall;
-      if (at.y < 0.0) opacity = 0.0;
-    } else if (motion.x == ${glslFloat(MOTION.drift)}) {
-      float cycle = fract(time * 0.045 + phase);
-      float angle = flowField(at) + fract(phase * 19.0) * 0.12;
-      at += vec3(
-        cos(angle) * cycle * 0.55 + sin(time * 0.31 + phase * 17.0) * 0.08,
-        cycle * 1.4 - 0.5,
-        sin(angle) * cycle * 0.55 + cos(time * 0.27 + phase * 11.0) * 0.08
-      );
-      opacity *= sin(3.14159 * cycle);
-    }
+      size.assign(float(1).sub(life.mul(0.65)));
+      opacity.mulAssign(smoothstep(0, 0.12, life).mul(float(1).sub(life)));
+      tint.mulAssign(mix(vec3(1, 0.82, 0.45), vec3(0.95, 0.22, 0.04), smoothstep(0.05, 0.75, life)));
+    })
+      .ElseIf(motion.x.equal(MOTION.orbit), () => {
+        const middle = u.lightAt.element(light);
+        const from = centre.sub(middle.sub(u.lightMoved.element(light)));
+        const turn = time.mul(1.4);
+        const c = cos(turn);
+        const s = sin(turn);
+        at.assign(
+          middle.add(
+            vec3(
+              c.mul(from.x).sub(s.mul(from.z)),
+              from.y.add(sin(time.mul(2).add(phase.mul(TAU))).mul(0.03)),
+              s.mul(from.x).add(c.mul(from.z)),
+            ),
+          ),
+        );
+      })
+      .ElseIf(motion.x.equal(MOTION.smoke), () => {
+        const rise = fract(time.mul(0.22).add(phase));
+        at.addAssign(
+          vec3(
+            cos(wander).mul(rise).mul(0.55).add(sin(time.mul(0.5).add(phase.mul(TAU))).mul(0.12).mul(rise)),
+            rise.mul(1.8),
+            sin(wander).mul(rise).mul(0.55).add(cos(time.mul(0.4).add(phase.mul(9))).mul(0.12).mul(rise)),
+          ),
+        );
+        size.assign(float(1).add(rise.mul(4)));
+        opacity.mulAssign(smoothstep(0, 0.15, rise).mul(float(1).sub(rise)));
+      })
+      .ElseIf(motion.x.equal(MOTION.idle), () => {
+        at.addAssign(
+          vec3(
+            sin(time.mul(0.55).add(phase.mul(TAU))).mul(0.018),
+            0,
+            cos(time.mul(0.45).add(phase.mul(TAU))).mul(0.008),
+          ),
+        );
+      })
+      .ElseIf(motion.x.equal(MOTION.drip), () => {
+        // Hangs and swells for most of its cycle, then falls under gravity.
+        const period = phase.mul(5).add(4);
+        const cycle = fract(time.div(period).add(phase));
+        const fall = max(0, cycle.sub(0.8)).mul(period);
+        size.assign(smoothstep(0, 0.8, cycle).mul(0.6).add(0.4));
+        at.y.subAssign(fall.mul(fall).mul(4.9));
+        If(at.y.lessThan(0), () => {
+          opacity.assign(0);
+        });
+      })
+      .ElseIf(motion.x.equal(MOTION.drift), () => {
+        const cycle = fract(time.mul(0.045).add(phase));
+        at.addAssign(
+          vec3(
+            cos(wander).mul(cycle).mul(0.55).add(sin(time.mul(0.31).add(phase.mul(17))).mul(0.08)),
+            cycle.mul(1.4).sub(0.5),
+            sin(wander).mul(cycle).mul(0.55).add(cos(time.mul(0.27).add(phase.mul(11))).mul(0.08)),
+          ),
+        );
+        opacity.mulAssign(sin(cycle.mul(Math.PI)));
+      });
 
-    vec4 seen = modelViewMatrix * vec4(at, 1.0);
-    if (seen.z > -0.15 || opacity < 0.004) { hide(); return; }
+    const seen = modelViewMatrix.mul(vec4(at, 1)).toVar();
 
-    vec3 shade;
-    if (glow > 0.5) {
-      shade = tint * brightness;
-    } else {
-      vec3 normal = normalize(facing);
-      vec3 lit = ambient;
-      for (int index = 0; index < LIGHTS; index++) {
-        vec3 toLight = lightAt[index] - at;
-        float distance = length(toLight);
-        float wrap = max(0.0, (dot(normal, toLight / distance) + 0.45) / 1.45);
-        float falloff = max(0.0, 1.0 - distance / lightReach[index]);
-        lit += lightColour[index] * flicker[index] * wrap * pow(falloff, 2.2);
-      }
-      shade = tint * lit;
-    }
-    shade = mix(haze, shade, exp(-max(0.0, -seen.z - 8.0) * (glow > 0.5 ? 0.03 : 0.05)));
+    const shade = vec3(0).toVar();
+    If(glow.greaterThan(0.5), () => {
+      shade.assign(tint.mul(brightness));
+    }).Else(() => {
+      const normal = normalize(facing);
+      const lit = vec3(u.ambient).toVar();
+      Loop(lights, ({ i }) => {
+        const toLight = u.lightAt.element(i).sub(at);
+        const distance = length(toLight);
+        const wrap = max(0, dot(normal, toLight.div(distance)).add(0.45).div(1.45));
+        const falloff = max(0, float(1).sub(distance.div(u.lightReach.element(i))));
+        lit.addAssign(u.lightColour.element(i).mul(u.flicker.element(i)).mul(wrap).mul(pow(falloff, 2.2)));
+      });
+      shade.assign(tint.mul(lit));
+    });
+    const fog = exp(max(0, seen.z.negate().sub(8)).negate().mul(select(glow.greaterThan(0.5), 0.03, 0.05)));
+    shade.assign(mix(u.haze, shade, fog));
 
     // The ellipsoid's outline on screen: its covariance, carried through the
     // camera and the perspective divide (linearised at its centre).
-    mat3 spread = mat3(
-      spreadX.x, spreadX.y, spreadX.z,
-      spreadX.y, spreadYZ.x, spreadYZ.y,
-      spreadX.z, spreadYZ.y, spreadYZ.z
-    ) * (size * size);
-    vec2 focal = vec2(projectionMatrix[0][0], projectionMatrix[1][1]) * viewport * 0.5;
-    float inverse = 1.0 / -seen.z;
-    mat3 project = mat3(
-      focal.x * inverse, 0.0, 0.0,
-      0.0, focal.y * inverse, 0.0,
-      focal.x * seen.x * inverse * inverse, focal.y * seen.y * inverse * inverse, 0.0
-    );
-    mat3 toScreen = project * mat3(modelViewMatrix);
-    mat3 screen = toScreen * spread * transpose(toScreen);
+    const spread = mat3(
+      t0.w, t1.x, t1.y,
+      t1.x, t1.z, t1.w,
+      t1.y, t1.w, t2.x,
+    ).mul(size.mul(size)).toVar();
+    // Each screen axis is a row of the Jacobian of the projection, turned
+    // back into the world: the outline's covariance is then their products
+    // through the ellipsoid's.
+    const focal = u.focal.mul(u.viewport).mul(0.5);
+    const inverse = float(1).div(seen.z.negate());
+    const across = u.cameraTurn.mul(
+      vec3(focal.x.mul(inverse), 0, focal.x.mul(seen.x).mul(inverse).mul(inverse)),
+    ).toVar();
+    const up = u.cameraTurn.mul(
+      vec3(0, focal.y.mul(inverse), focal.y.mul(seen.y).mul(inverse).mul(inverse)),
+    ).toVar();
     // A little blur, so splats smaller than a pixel don't shimmer.
-    float a = screen[0][0] + 0.3;
-    float b = screen[0][1];
-    float d = screen[1][1] + 0.3;
-    float middle = 0.5 * (a + d);
-    float radius = length(vec2(0.5 * (a - d), b));
-    float major = min(sqrt((middle + radius) * 2.2), 1024.0);
-    float minor = min(sqrt(max((middle - radius) * 0.9, 0.14)), 1024.0);
+    const a = dot(across, spread.mul(across)).add(0.3);
+    const b = dot(across, spread.mul(up));
+    const d = dot(up, spread.mul(up)).add(0.3);
+    const middle = a.add(d).mul(0.5);
+    const radius = length(vec2(a.sub(d).mul(0.5), b));
+    const major = min(sqrt(middle.add(radius).mul(2.2)), 1024);
+    const minor = min(sqrt(max(middle.sub(radius).mul(0.9), 0.14)), 1024);
     // Strokes follow the flow of the rock rather than the ellipsoid's own axes.
-    float angle = flowField(at) + fract(phase * 19.0) * 0.12;
+    const angle = flowField(at, time).add(fract(phase.mul(19)).mul(0.12));
+    const axis = vec2(cos(angle), sin(angle));
+    const extent = select(glow.greaterThan(0.5), GLOW_EXTENT, 1);
+    const corner = positionGeometry.xy;
+    const offset = axis
+      .mul(corner.x.mul(major))
+      .add(vec2(axis.y.negate(), axis.x).mul(corner.y.mul(minor)))
+      .mul(extent);
 
-    vec2 axis = vec2(cos(angle), sin(angle));
-    float extent = glow > 0.5 ? GLOW_EXTENT : 1.0;
-    vec2 offset = (position.x * major * axis + position.y * minor * vec2(-axis.y, axis.x)) * extent;
-    vColour = vec4(pow(max(shade, 0.0), vec3(1.0 / 2.2)), opacity);
-    vOffset = position.xy * extent;
-    vMajor = position.x;
-    vGlow = glow;
-    vBrush = floor(fract(phase * 7.31) * ${glslFloat(BRUSHES)});
-    vStroke = stroke;
-    vec4 clip = projectionMatrix * seen;
-    gl_Position = vec4(clip.xy / clip.w + offset * 2.0 / viewport, 0.0, 1.0);
-  }
-`;
+    passed.colour.assign(vec4(pow(max(shade, 0), vec3(1 / 2.2)), opacity));
+    passed.offset.assign(corner.mul(extent));
+    passed.major.assign(corner.x);
+    passed.glow.assign(glow);
+    passed.brush.assign(floor(fract(phase.mul(7.31)).mul(BRUSHES)));
+    passed.stroke.assign(stroke);
 
-export const STROKE = /* glsl */ `
-  uniform sampler2D brushes;
+    const clip = cameraProjectionMatrix.mul(seen);
+    const hidden = seen.z.greaterThan(-0.15).or(opacity.lessThan(0.004));
+    return select(
+      hidden,
+      vec4(0, 0, 2, 1),
+      vec4(clip.xy.div(clip.w).add(offset.mul(2).div(u.viewport)), 0, 1),
+    );
+  })();
+}
 
-  in vec4 vColour;
-  in vec2 vOffset;
-  in float vMajor;
-  in float vGlow;
-  in float vBrush;
-  in float vStroke;
-
-  layout(location = 0) out highp vec4 fragment;
-
-  void main() {
+/** The colour of a point on a splat's quad, premultiplied: a glow adds light, a stroke covers. */
+export function splatFragment(brushes: DataTexture) {
+  return Fn(() => {
     // While it's being painted in, the stroke's tip sweeps along it.
-    float painted = 1.0;
-    if (vStroke < 1.0) {
-      float tip = vStroke * 2.3 - 1.15;
-      painted = 1.0 - smoothstep(tip - 0.12, tip + 0.12, vMajor);
-      if (painted < 0.004) discard;
-    }
-
-    if (vGlow > 0.5) {
-      float alpha = vColour.a * exp(-0.5 * dot(vOffset, vOffset)) * painted;
-      if (alpha < 1.0 / 255.0) discard;
-      fragment = vec4(vColour.rgb * alpha, 0.0);
-      return;
-    }
-
-    vec2 cell = vOffset * 0.5 + 0.5;
-    float brush = texture(brushes, vec2((vBrush + cell.x) / ${glslFloat(BRUSHES)}, cell.y)).r;
-    float alpha = vColour.a * brush * painted;
-    if (alpha < 1.0 / 255.0) discard;
-    fragment = vec4(vColour.rgb * alpha, alpha);
-  }
-`;
+    const painted = float(1).toVar();
+    If(passed.stroke.lessThan(1), () => {
+      const tip = passed.stroke.mul(2.3).sub(1.15);
+      painted.assign(float(1).sub(smoothstep(tip.sub(0.12), tip.add(0.12), passed.major)));
+    });
+    const result = vec4(0).toVar();
+    If(passed.glow.greaterThan(0.5), () => {
+      const alpha = passed.colour.a.mul(exp(dot(passed.offset, passed.offset).mul(-0.5))).mul(painted);
+      Discard(alpha.lessThan(1 / 255));
+      result.assign(vec4(passed.colour.rgb.mul(alpha), 0));
+    }).Else(() => {
+      const cell = passed.offset.mul(0.5).add(0.5);
+      const uv = vec2(passed.brush.add(clamp(cell.x, 0, 1)).div(BRUSHES), cell.y);
+      const alpha = passed.colour.a.mul(texture(brushes, uv).r).mul(painted);
+      Discard(alpha.lessThan(1 / 255));
+      result.assign(vec4(passed.colour.rgb.mul(alpha), alpha));
+    });
+    return result;
+  })();
+}
