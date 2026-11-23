@@ -24,7 +24,7 @@
     --surface-sunken: oklch(from var(--scene-oklch) calc(12% + l * 3%) min(c, 0.02) h);
     --surface-sunken-hover: oklch(from var(--scene-oklch) calc(10% + l * 3%) min(c, 0.02) h);
     --text: oklch(from var(--scene-oklch) 100% min(c, 0.01) h / 0.95);
-    --text-muted: oklch(from var(--scene-oklch) 100% min(c, 0.02) h / 0.7);
+    --text-muted: oklch(100% 0 0 / 0.7);
     --text-faint: oklch(from var(--scene-oklch) 100% min(c, 0.02) h / 0.65);
     --canvas-bg: oklch(from var(--scene-oklch) calc(12% + l * 3%) min(c, 0.025) h);
     --hairline: #ffffff14;
@@ -149,6 +149,10 @@
     --engraved: 0 1px 0 oklch(100% 0 0 / 0.35);
     --title-ink: oklch(88% 0.05 85);
     --title-shadow: 0 1px 2px oklch(0% 0 0 / 0.8);
+    /* A dark halo that keeps light ink legible over any map, light or dark. */
+    --ink-halo: 0 0 2px oklch(0% 0 0 / 0.9), 0 0 6px oklch(0% 0 0 / 0.7);
+    --ink-halo-filter: drop-shadow(0 0 1px oklch(0% 0 0 / 0.9))
+      drop-shadow(0 0 4px oklch(0% 0 0 / 0.65));
 
     --gem-smoky: oklch(from var(--scene-oklch) 36% min(c, 0.075) h);
     --gem-smoke: oklch(from var(--scene-oklch) 30% min(c, 0.04) h);

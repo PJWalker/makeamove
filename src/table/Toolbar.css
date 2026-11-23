@@ -14,20 +14,34 @@
    * against the window edge or sidebar it hangs from, fades out toward the
    * map (--fade-toward), and fades at both ends along its length
    * (--fade-along). It is a layer of its own so the fade never reaches the
-   * controls.
+   * controls. Where the band thins over a light map, a dark halo around the
+   * unframed text and icons keeps them legible.
    */
   .toolbar,
   .hotbar,
   .sidebar-rail-edge {
     isolation: isolate;
+    text-shadow: var(--ink-halo);
+    & :is(.btn-ghost, .btn-icon):not([aria-pressed="true"], [aria-selected="true"]) svg {
+      filter: var(--ink-halo-filter);
+    }
+    & :is([aria-pressed="true"], [aria-selected="true"]) {
+      text-shadow: none;
+    }
     &::before {
       content: "";
       position: absolute;
       inset: 0;
       z-index: -1;
-      background: var(--grain), var(--toolbar);
+      background: var(--grain), oklch(from var(--toolbar) calc(l - 0.06) c h / 0.85);
       mask:
-        linear-gradient(to var(--fade-toward), #000 50%, transparent),
+        linear-gradient(
+          to var(--fade-toward),
+          #000 45%,
+          oklch(0% 0 0 / 0.55) 72%,
+          oklch(0% 0 0 / 0.18) 88%,
+          transparent
+        ),
         linear-gradient(
           to var(--fade-along),
           transparent,
