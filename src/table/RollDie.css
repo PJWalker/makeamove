@@ -3,6 +3,7 @@
   .die {
     /* The roller's colour, set inline. */
     --die-colour: var(--gem-smoky);
+    position: relative;
     display: inline-flex;
     color: oklch(from var(--scene-oklch) 97% min(c, 0.01) h);
     font-size: var(--text-md);
@@ -21,6 +22,29 @@
       .die-value {
         text-decoration: line-through;
       }
+    }
+  }
+  /* A d100's two d10s, boxed together once they've landed, so they read as one value. */
+  .die:has(> .die-piece + .die-piece)::after {
+    content: "";
+    position: absolute;
+    inset: 2px;
+    border: 2px solid var(--die-colour);
+    border-radius: 12px;
+    opacity: 0;
+    scale: 0.94;
+    pointer-events: none;
+    transition:
+      opacity 180ms var(--ease),
+      scale 180ms var(--ease);
+  }
+  .die:is([data-phase="landed"], [data-phase="flat"]):has(> .die-piece + .die-piece)::after {
+    opacity: 1;
+    scale: 1;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .die:has(> .die-piece + .die-piece)::after {
+      transition: none;
     }
   }
   /* The slot of one piece of a die: the die itself, or one of a d100's two d10s. */

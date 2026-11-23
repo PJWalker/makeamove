@@ -12,6 +12,7 @@ import {
 import { discHull } from "./physics";
 import { roundedDisc, roundedSolid } from "./rounding";
 import type { DieHull } from "./physics";
+import type { DieLook } from "./types";
 
 /*
  * The solids the dice are made of: their geometry, the hull the physics rolls,
@@ -194,11 +195,16 @@ export function shapeFor(solid: number): Shape {
 /** Which of a die's labels a face of it shows, when its first face shows label `first`: they count on round the die. */
 export const labelOnFace = (first: number, face: number, sides: number) => (first + face) % sides;
 
-/** The label the first face shows, so the face `rotation` turns most towards the viewer shows label `shown`. */
-export function firstLabelFor(sides: number, shown: number, rotation: Quaternion) {
-  const towards = shapeFor(sides).faces.map(
-    (face) => face.normal.clone().applyQuaternion(rotation).z,
-  );
+/**
+ * The label the first of `faces` (their outward normals) shows, so the face
+ * `rotation` turns most towards the viewer shows label `shown` of `sides`.
+ */
+export function firstLabelFor(
+  faces: readonly Vector3[],
+  { sides, shown }: Pick<DieLook, "shown" | "sides">,
+  rotation: Quaternion,
+) {
+  const towards = faces.map((normal) => normal.clone().applyQuaternion(rotation).z);
   const top = towards.indexOf(Math.max(...towards));
   return (((shown - top) % sides) + sides) % sides;
 }
@@ -210,6 +216,8 @@ export function chipShape() {
   chipGeometry = roundedDisc(CHIP_RADIUS, CHIP_THICKNESS, CHIP_ROUNDING);
   return chipGeometry;
 }
+/** A chip's faces: towards the viewer, then away. A chip of more sides than these flicks through them as it rolls. */
+export const CHIP_FACES = [Z, Z.clone().negate()];
 export const CHIP_LABEL_SIZE = CHIP_RADIUS * 1.3;
 export const CHIP_FACE_OFFSET = CHIP_THICKNESS / 2 + 0.003;
 

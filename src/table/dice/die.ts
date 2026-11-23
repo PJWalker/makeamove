@@ -1,8 +1,8 @@
-import { Quaternion, Vector3 } from "three/webgpu";
+import { MathUtils, Quaternion, Vector3 } from "three/webgpu";
 import { chipModel, dieModel, paint, resolveColour } from "./painter";
 import type { ChipModel, Model } from "./painter";
 import type { DieHull, DiePose, DieThrow, DieTray } from "./physics";
-import { chipHull, firstLabelFor, SCALE, shapeFor, SLOT } from "./shapes";
+import { CHIP_FACES, chipHull, firstLabelFor, labelOnFace, SCALE, shapeFor, SLOT } from "./shapes";
 import { simulateDiceInWorker, warmDice } from "./simulation";
 import { centreOf, glideTrack, lyingAt, rollTrack, struck } from "./tracks";
 import type { DieLook, Point, Pose, Track } from "./types";
@@ -19,6 +19,10 @@ const SPIN_SPEED = 12;
 const SETTLE_MS = 220;
 /** How often a moving chip of many faces flicks to another. */
 const FLICK_MS = 70;
+/** How much bigger a die is drawn for each unit it's lifted off the table. */
+const LIFT_GROWTH = 0.05;
+const HALF = 2;
+const MS_PER_SECOND = 1000;
 
 const dice = new WeakMap<HTMLCanvasElement, Die>();
 /** The die drawn in `canvas`, if any. */
@@ -26,7 +30,7 @@ export const dieOf = (canvas: HTMLCanvasElement) => dice.get(canvas);
 
 export class Die {
   private readonly colour: string;
-  /** The label on its first face, which sets how all its faces are labelled. */
+  /** The label on its first face (a chip's front), which sets how all its faces are labelled. */
   private first: number;
   private model: ChipModel | Model;
   /** The face a chip shows, while it flicks through them. */
@@ -71,16 +75,24 @@ export class Die {
     return Boolean(this.motion);
   }
 
+  /** A chip of more sides than it has faces, which flicks through them as it rolls and shows the same on both. */
+  private get flicks() {
+    return this.look.form === "chip" && this.look.sides > CHIP_FACES.length;
+  }
+
   private build() {
-    return this.look.form === "chip"
-      ? chipModel(this.look.label(this.look.shown), this.colour)
-      : dieModel(this.look, this.first, this.colour);
+    const { look, first, colour } = this;
+    if (look.form === "die") return dieModel(look, first, colour);
+    if (this.flicks) return chipModel(look.label(look.shown), look.label(look.shown), colour);
+    return chipModel(look.label(first), look.label(labelOnFace(first, 1, look.sides)), colour);
   }
 
   /** Labels the die so that, lying as `rotation` turns it, it shows the face it rolled. */
   private numberFor(rotation: Quaternion) {
-    if (this.look.form === "chip") return;
-    const first = firstLabelFor(this.look.sides, this.look.shown, rotation);
+    if (this.flicks) return;
+    const faces =
+      this.look.form === "chip" ? CHIP_FACES : shapeFor(this.look.sides).faces.map((face) => face.normal);
+    const first = firstLabelFor(faces, this.look, rotation);
     if (first === this.first) return;
     this.model.dispose();
     this.first = first;
@@ -97,7 +109,7 @@ export class Die {
    */
   private flick(ms?: number) {
     const { model, look } = this;
-    if (!("show" in model) || look.sides < 2) return;
+    if (!this.flicks || !("show" in model)) return;
     let face = look.shown;
     if (ms !== undefined) {
       const step = Math.floor(ms / FLICK_MS);
@@ -124,7 +136,8 @@ export class Die {
       x += there.x - here.x;
       y += there.y - here.y;
     }
-    this.canvas.style.transform = `translate(${x - SLOT / 2}px, ${y - SLOT / 2}px) scale(${1 + lift * 0.05})`;
+    const [left, top, scale] = [x - SLOT / HALF, y - SLOT / HALF, 1 + lift * LIFT_GROWTH].map(String);
+    this.canvas.style.transform = `translate(${left}px, ${top}px) scale(${scale})`;
     this.canvas.style.setProperty("--lift", String(lift));
   }
 
@@ -244,10 +257,10 @@ export class Die {
     const start = performance.now();
     let last = start;
     const tick = (now: number) => {
-      const turn = (SPIN_SPEED * (now - last)) / 1000;
+      const turn = (SPIN_SPEED * (now - last)) / MS_PER_SECOND;
       last = now;
       const t = settling ? Math.min(1, (now - settling.start) / SETTLE_MS) : 0;
-      if (settling) rotation.slerpQuaternions(settling.from, rest, t * t * (3 - 2 * t));
+      if (settling) rotation.slerpQuaternions(settling.from, rest, MathUtils.smoothstep(t, 0, 1));
       else rotation.premultiply(spin.setFromAxisAngle(axis, turn));
       this.flick(settling ? undefined : now - start);
       if (!this.disposed) this.draw(rotation, into);

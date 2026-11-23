@@ -4243,9 +4243,6 @@
     "@eslint-react/naming-convention-ref-name": {
       "count": 4
     },
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 5
-    },
     "@typescript-eslint/no-shadow": {
       "count": 7
     },
@@ -4254,9 +4251,6 @@
     },
     "@typescript-eslint/prefer-nullish-coalescing": {
       "count": 1
-    },
-    "@typescript-eslint/restrict-template-expressions": {
-      "count": 7
     },
     "consistent-return": {
       "count": 2
@@ -4491,14 +4485,6 @@
       "count": 1
     }
   },
-  "src/table/dice/__tests__/looks.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 15
-    },
-    "@typescript-eslint/restrict-template-expressions": {
-      "count": 1
-    }
-  },
   "src/table/dice/__tests__/physics.test.ts": {
     "@typescript-eslint/no-magic-numbers": {
       "count": 106
@@ -4531,9 +4517,6 @@
     "@typescript-eslint/max-params": {
       "count": 1
     },
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 7
-    },
     "@typescript-eslint/parameter-properties": {
       "count": 2
     },
@@ -4548,11 +4531,6 @@
     },
     "promise/param-names": {
       "count": 1
-    }
-  },
-  "src/table/dice/looks.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 7
     }
   },
   "src/table/dice/painter.ts": {
@@ -4679,9 +4657,6 @@
       "count": 3
     },
     "import/dynamic-import-chunkname": {
-      "count": 1
-    },
-    "max-lines-per-function": {
       "count": 1
     },
     "promise/prefer-await-to-callbacks": {

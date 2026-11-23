@@ -6,6 +6,7 @@ import { chipText  } from "../features/dice/pool";
 import type {TrayPick} from "../features/dice/pool";
 import { threeDimensionalDice } from "../workspace/diceRendering";
 import { chipLook, looksOf } from "./dice/looks";
+import type { DieLook } from "./dice/types";
 
 /** The 3D dice, once they've loaded. */
 type Dice = Pick<typeof import("./dice"), "Die" | "dieOf">;
@@ -65,6 +66,19 @@ export const CHIP_COLOUR = "var(--chip-face)";
 /** Which way a chip's number goes, for its colour. */
 export const chipSign = (value: number) => (value < 0 ? "minus" : "plus");
 
+/** A piece of a die in its own slot, drawn flat, as table/RollDie.tsx draws it. */
+function flatPiece(look: DieLook) {
+  const piece = document.createElement("span");
+  piece.className = "die-piece";
+  piece.dataset["form"] = look.form;
+  if (look.form === "die") piece.dataset["sides"] = String(look.sides);
+  const value = document.createElement("span");
+  value.className = "die-value";
+  value.textContent = look.label(look.shown);
+  piece.append(value);
+  return piece;
+}
+
 /** A new die or chip held under the pointer, tumbling, until it's let go of. */
 export function holdNewPick(pick: TrayPick) {
   const colour = colourOf(device.value);
@@ -83,17 +97,7 @@ export function holdNewPick(pick: TrayPick) {
     ghost.classList.add("chip");
     ghost.dataset["sign"] = chipSign(pick.value);
   }
-  const pieces = looks.map((look) => {
-    const piece = document.createElement("span");
-    piece.className = "die-piece";
-    piece.dataset["form"] = look.form;
-    if (look.form === "die") piece.dataset["sides"] = String(look.sides);
-    const value = document.createElement("span");
-    value.className = "die-value";
-    value.textContent = look.label(look.shown);
-    piece.append(value);
-    return piece;
-  });
+  const pieces = looks.map((look) => flatPiece(look));
   ghost.append(...pieces);
   document.body.append(ghost);
   let dice: PhysicalDie[] = [];

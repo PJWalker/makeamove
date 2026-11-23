@@ -21,6 +21,11 @@ import { pieceMachine } from "./pieceMachine";
 /** Waiting for the 3D dice, moving, at rest, or drawn flat. */
 type Phase = "flat" | "landed" | "moving" | "pending";
 
+const HALF = 2;
+/** How wide a spread (px) other people's dice are thrown in from, and how far above the log. */
+const THROW_SPREAD = 160;
+const THROW_ABOVE = 40;
+
 /** Where a die thrown into this slot starts: the roller's pointer, or else above the log. */
 function throwFrom(slot: HTMLElement, mine: boolean): Point {
   const pointer = mine ? lastPointer() : null;
@@ -28,8 +33,8 @@ function throwFrom(slot: HTMLElement, mine: boolean): Point {
   const box = slot.getBoundingClientRect();
   const log = (slot.closest(".chat-log, .chat-popup") ?? slot).getBoundingClientRect();
   return {
-    x: box.left + box.width / 2 + (Math.random() - 0.5) * 160,
-    y: log.top - 40,
+    x: box.left + box.width / HALF + (Math.random() - 1 / HALF) * THROW_SPREAD,
+    y: log.top - THROW_ABOVE,
   };
 }
 
@@ -194,7 +199,7 @@ function usePiece(
 }
 
 /** The seed a piece of a die rolls by: the die's own for its first, so the pieces don't roll alike. */
-const pieceSeed = (seed: string, piece: number) => (piece === 0 ? seed : `${seed}:${piece}`);
+const pieceSeed = (seed: string, piece: number) => (piece === 0 ? seed : `${seed}:${String(piece)}`);
 
 /** A die's pieces, each in its own slot: its canvas, or drawn flat showing its face, or `flat` if given. */
 function PieceFaces({
@@ -291,7 +296,7 @@ export function PendingDie({
   onLanded: () => void;
 }) {
   const colour = colourOf(device.value);
-  const looks = looksOf(sides, Math.ceil(sides / 2), colour);
+  const looks = looksOf(sides, sides, colour);
   const { slot, canvases, phase } = usePiece(looks, {
     entrance: "glide",
     mine: true,
@@ -312,9 +317,9 @@ export function PendingDie({
       data-pending-index={index}
       style={{ "--i": index, ...dieColours(colour) }}
       role="img"
-      aria-label={release ? `d${sides}: ${release.value}` : `d${sides}, waiting to roll`}
+      aria-label={release ? `d${String(sides)}: ${String(release.value)}` : `d${String(sides)}, waiting to roll`}
     >
-      <PieceFaces looks={looks} phase={phase} canvases={canvases} flat={[`d${sides}`]} />
+      <PieceFaces looks={looks} phase={phase} canvases={canvases} flat={[`d${String(sides)}`]} />
     </span>
   );
 }
@@ -375,7 +380,7 @@ export function RollDie({
       tabIndex={onReroll ? 0 : undefined}
       aria-pressed={onToggle ? !die.disabled : undefined}
       style={{ "--i": index, ...dieColours(colour) }}
-      aria-label={`d${die.sides}: ${die.value}${dieState(die)}`}
+      aria-label={`d${String(die.sides)}: ${String(die.value)}${dieState(die)}`}
       title={dieTitle(die)}
       {...gesture}
       onKeyDown={(event) => {

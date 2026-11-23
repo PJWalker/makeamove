@@ -161,8 +161,8 @@ export function dieModel({ sides, label: labelOf }: DieLook, first: number, colo
   };
 }
 
-/** A chip in `colour` (hex) with `text` on both faces. */
-export function chipModel(text: string, colour: string): ChipModel {
+/** A chip in `colour` (hex) with `front` on the face towards the viewer and `back` on the other. */
+export function chipModel(front: string, back: string, colour: string): ChipModel {
   const face = new MeshPhysicalMaterial({ ...chipFinish, color: colour });
   const rim = new MeshPhysicalMaterial({ ...chipFinish, color: colour });
   rim.color.multiplyScalar(0.5);
@@ -170,7 +170,7 @@ export function chipModel(text: string, colour: string): ChipModel {
   mesh.scale.setScalar(SCALE);
   const labelColour = contrastingTextColour(colour);
   const sides = [1, -1].map((side) => {
-    const words = label(text, labelColour, CHIP_LABEL_SIZE);
+    const words = label(side > 0 ? front : back, labelColour, CHIP_LABEL_SIZE);
     words.position.z = side * CHIP_FACE_OFFSET;
     if (side < 0) words.rotation.y = Math.PI;
     mesh.add(words);
@@ -178,6 +178,7 @@ export function chipModel(text: string, colour: string): ChipModel {
   });
   return {
     mesh,
+    /** Shows `shown` on both faces. */
     show: (shown) => {
       const { material } = labelParts(shown, labelColour, CHIP_LABEL_SIZE);
       for (const words of sides) words.material = material;

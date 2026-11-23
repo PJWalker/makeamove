@@ -3,14 +3,15 @@ import type { DieLook } from "./types";
 /* How the dice of a roll are drawn, without loading the 3D dice. */
 
 /** The dice drawn as solids of their own; any other is drawn as a chip. */
-const SOLIDS = new Set([4, 6, 8, 10, 12, 20]);
+const SOLIDS = new Set(Object.values({ d4: 4, d6: 6, d8: 8, d10: 10, d12: 12, d20: 20 }));
 
-/** A d100's dice: tens and units. */
+/** A d100's dice: tens and units, its tens written with two digits. */
 const PERCENTILE = 100;
 const DECIMAL = 10;
+const TENS_DIGITS = 2;
 
 const counting = (index: number) => String(index + 1);
-const tens = (index: number) => String(index * DECIMAL).padStart(2, "0");
+const tens = (index: number) => String(index * DECIMAL).padStart(TENS_DIGITS, "0");
 const units = (index: number) => String(index);
 
 /**
