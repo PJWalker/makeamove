@@ -27,6 +27,20 @@ const tray = { left: 0, top: 0, right: 8, bottom: 6 };
 const target = { x: 4, y: 3 };
 const roll = (seed: string) => simulateDice(tray, [{ hull: cube, seed, target }])[0]!;
 
+/** A cube lying in the tray at `x`, struck along the tray at `vx` once `delay` ms are up. */
+const cubeAt = (x: number, vx: number, delay = 0) => ({
+  hull: cube,
+  seed: `waiting-${String(x)}`,
+  target,
+  delay,
+  state: {
+    position: [x, -3, 0.65] as [number, number, number],
+    quaternion: { x: 0, y: 0, z: 0, w: 1 },
+    velocity: [vx, 0, 0] as [number, number, number],
+    angularVelocity: [0, 0, 0] as [number, number, number],
+  },
+});
+
 describe("natural dice flight", () => {
   it("replays exactly from the same shared seed", () => {
     expect(roll("message:0:0")).toEqual(roll("message:0:0"));
@@ -150,6 +164,14 @@ describe("natural dice flight", () => {
       impact = Math.max(impact, flight.poses()[1]!.impact ?? 0);
     }
     expect(impact).toBeGreaterThan(0.5);
+  });
+
+  it("knocks into a die in the tray that hasn't been struck yet", () => {
+    const flight = new DiceFlight(tray, [cubeAt(2, 20), cubeAt(4, 0, 1000)]);
+    for (let step = 0; step < 60; step++) flight.step();
+    const [struck, waiting] = flight.poses();
+    expect(waiting!.x).toBeGreaterThan(4.5);
+    expect(struck!.x).toBeLessThan(waiting!.x);
   });
 
   it("waits for delayed dice and settles the whole roll together", () => {

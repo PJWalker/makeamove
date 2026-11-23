@@ -111,6 +111,11 @@ interface FlightBody {
   labelUps?: Vec3[] | undefined;
   faceUp: boolean;
   delay: number;
+  /**
+   * How a die already in the tray is struck once its delay is up; until then it
+   * lies there, and the dice rolled before it knock into it.
+   */
+  strike?: { velocity: Vec3; angularVelocity: Vec3 } | undefined;
   active: boolean;
   captured: boolean;
   impact: number;
@@ -338,8 +343,8 @@ export class DiceFlight {
         body.position.set(...state.position);
         const q = state.quaternion;
         body.quaternion.set(q.x, q.y, q.z, q.w);
-        body.velocity.set(...state.velocity);
-        body.angularVelocity.set(...state.angularVelocity);
+        body.collisionFilterMask = DICE | TRAY;
+        trayWorld.world.addBody(body);
         return {
           body,
           vertices,
@@ -348,6 +353,10 @@ export class DiceFlight {
           labelUps,
           faceUp,
           delay: delay / 1000,
+          strike: {
+            velocity: new Vec3(...state.velocity),
+            angularVelocity: new Vec3(...state.angularVelocity),
+          },
           active: false,
           captured: true,
           impact: 0,
@@ -447,11 +456,7 @@ export class DiceFlight {
   /** Starts every die's finishing move, however they lie. */
   finish() {
     if (this.finishing) return;
-    for (const die of this.dice) {
-      if (die.active) continue;
-      die.active = true;
-      this.trayWorld.world.addBody(die.body);
-    }
+    for (const die of this.dice) if (!die.active) this.launch(die);
     for (const die of this.dice) if (!die.captured) this.dropIn(die);
     const eases = this.dice.map((die) => this.ease(die));
     const farthest = Math.max(
@@ -526,17 +531,25 @@ export class DiceFlight {
     die.body.position.z = Math.max(1.5, die.body.position.z);
   }
 
+  /** Sets a die off: strikes it where it lies in the tray, or throws it in over the tray's edge. */
+  private launch(die: FlightBody) {
+    die.active = true;
+    const { body, strike } = die;
+    if (strike) {
+      body.velocity.copy(strike.velocity);
+      body.angularVelocity.copy(strike.angularVelocity);
+      body.wakeUp();
+      return;
+    }
+    // Dice hit each other in the air, but only meet the walls once over the tray.
+    body.collisionFilterMask = DICE;
+    this.trayWorld.world.addBody(body);
+  }
+
   /** Moves the roll on a step; true once every die is at rest in its target. */
   step() {
     if (this.finishing) return this.stepFinish();
-    for (const die of this.dice) {
-      if (!die.active && this.elapsed >= die.delay) {
-        die.active = true;
-        // Dice hit each other in the air, but only meet the walls once over the tray.
-        die.body.collisionFilterMask = die.captured ? DICE | TRAY : DICE;
-        this.trayWorld.world.addBody(die.body);
-      }
-    }
+    for (const die of this.dice) if (!die.active && this.elapsed >= die.delay) this.launch(die);
     this.elapsed += PHYSICS_STEP;
     if (
       !this.calmed &&

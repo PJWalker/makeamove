@@ -161,9 +161,14 @@ export class Die {
 
   /**
    * Plays `track`, from `delay` ms after now, to rest lying as `final` turns it;
-   * until then it stays as it was. Settles when it's at rest, or stopped.
+   * until then it stays as it was. A chip flicks through its faces from `tumbling`
+   * ms after now. Settles when it's at rest, or stopped.
    */
-  play(track: Track, delay: number, final: Quaternion): Promise<void> {
+  play(
+    track: Track,
+    final: Quaternion,
+    { delay = 0, tumbling = delay }: { delay?: number; tumbling?: number } = {},
+  ): Promise<void> {
     this.stop();
     if (!this.alive) return Promise.resolve();
     this.numberFor(final);
@@ -194,7 +199,7 @@ export class Die {
           this.lift();
           if (this.carriedIn) this.carriedIn.style.visibility = "hidden";
           this.place(pose);
-          this.flick(ms - delay);
+          if (ms >= tumbling) this.flick(ms - tumbling);
           this.draw(pose.rotation);
           // However long its first frame took to draw (the renderer may have just started), the motion plays out from there.
           if (!shown) start += performance.now() - now;
@@ -241,7 +246,7 @@ export class Die {
 
   /** Carried, at rest, from `from` into its slot. */
   glideIn(from: Point, delay: number) {
-    return this.play(glideTrack(this.slot, from, delay, this.rotation.clone()), delay, this.rotation);
+    return this.play(glideTrack(this.slot, from, delay, this.rotation.clone()), this.rotation, { delay });
   }
 
   /**
@@ -390,10 +395,13 @@ async function roll(tray: HTMLElement, throws: Throw[]) {
     }
     const { x, y, z, w } = poses.at(-1)!.quaternion;
     const track = rollTrack(poses, tray, die.slot, delay, from);
-    settle(die.play(track, delay, new Quaternion(x, y, z, w)));
+    // A die thrown in appears as it's thrown; one in the tray is shown from the start, as it may be knocked before it's struck.
+    settle(
+      die.play(track, new Quaternion(x, y, z, w), { delay: from ? delay : 0, tumbling: delay }),
+    );
   }
   for (const [index, die] of lying.entries()) {
     const poses = frames?.[throws.length + index];
-    if (poses && die.alive) void die.play(rollTrack(poses, tray, die.slot, 0), 0, die.restingRotation);
+    if (poses && die.alive) void die.play(rollTrack(poses, tray, die.slot, 0), die.restingRotation);
   }
 }
