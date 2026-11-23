@@ -4593,7 +4593,7 @@
   },
   "src/table/dice/shapes.ts": {
     "@typescript-eslint/no-magic-numbers": {
-      "count": 45
+      "count": 43
     },
     "@typescript-eslint/no-shadow": {
       "count": 1

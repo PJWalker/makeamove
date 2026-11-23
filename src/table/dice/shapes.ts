@@ -1,9 +1,7 @@
 import {
   BoxGeometry,
   BufferGeometry,
-  CylinderGeometry,
   DodecahedronGeometry,
-  EdgesGeometry,
   Float32BufferAttribute,
   IcosahedronGeometry,
   OctahedronGeometry,
@@ -11,8 +9,9 @@ import {
   TetrahedronGeometry,
   Vector3,
 } from "three/webgpu";
-import { discHull  } from "./physics";
-import type {DieHull} from "./physics";
+import { discHull } from "./physics";
+import { roundedDisc, roundedSolid } from "./rounding";
+import type { DieHull } from "./physics";
 
 /*
  * The solids the dice are made of: their geometry, the hull the physics rolls,
@@ -25,6 +24,9 @@ export const SCALE = 24;
 /** A chip's radius and thickness, in units. */
 const CHIP_RADIUS = 0.95;
 const CHIP_THICKNESS = 0.22;
+/** How far the edges of dice and chips are rounded off, in units. */
+const DIE_ROUNDING = 0.09;
+const CHIP_ROUNDING = 0.06;
 
 const Z = new Vector3(0, 0, 1);
 const Y = new Vector3(0, 1, 0);
@@ -38,8 +40,8 @@ export interface Face {
 }
 
 export interface Shape {
+  /** The solid as drawn, its edges rounded; the faces, labels and hull are the sharp solid's. */
   geometry: BufferGeometry;
-  edges: EdgesGeometry;
   faces: Face[];
   hull: DieHull;
   /** The pose that turns the first face to the viewer, its label upright. */
@@ -92,7 +94,9 @@ function planesOf(geometry: BufferGeometry): Plane[] {
   const planes: Plane[] = [];
   geometry.clearGroups();
   for (let offset = 0; offset < position.count; offset += 3) {
-    const [a, b, c] = [0, 1, 2].map((index_) => new Vector3().fromBufferAttribute(position, offset + index_));
+    const [a, b, c] = [0, 1, 2].map((index_) =>
+      new Vector3().fromBufferAttribute(position, offset + index_),
+    );
     const normal = b!.clone().sub(a!).cross(c!.clone().sub(a!)).normalize();
     let index = planes.findIndex((plane) => plane.normal.distanceTo(normal) < 1e-4);
     if (index < 0) index = planes.push({ normal, points: [] }) - 1;
@@ -174,8 +178,11 @@ export function shapeFor(sides: number): Shape {
     };
   });
   const shape: Shape = {
-    geometry,
-    edges: new EdgesGeometry(geometry),
+    geometry: roundedSolid(
+      geometry,
+      planes.map((plane) => plane.normal),
+      DIE_ROUNDING,
+    ),
     faces,
     hull: {
       ...hullOf(planes),
@@ -194,17 +201,18 @@ export const faceValue = (first: number, index: number, sides: number) =>
 
 /** The number the first face shows, so the face `rotation` turns most towards the viewer shows `value`. */
 export function firstFaceFor(sides: number, value: number, rotation: Quaternion) {
-  const towards = shapeFor(sides).faces.map((face) => face.normal.clone().applyQuaternion(rotation).z);
+  const towards = shapeFor(sides).faces.map(
+    (face) => face.normal.clone().applyQuaternion(rotation).z,
+  );
   const top = towards.indexOf(Math.max(...towards));
   return ((((value - 1 - top) % sides) + sides) % sides) + 1;
 }
 
-let chipGeometry: CylinderGeometry | undefined;
+let chipGeometry: BufferGeometry | undefined;
 /** A chip: a flat disc, its faces towards and away from the viewer. Groups: rim, front, back. */
 export function chipShape() {
   if (chipGeometry) return chipGeometry;
-  chipGeometry = new CylinderGeometry(CHIP_RADIUS, CHIP_RADIUS, CHIP_THICKNESS, 48);
-  chipGeometry.rotateX(Math.PI / 2);
+  chipGeometry = roundedDisc(CHIP_RADIUS, CHIP_THICKNESS, CHIP_ROUNDING);
   return chipGeometry;
 }
 export const CHIP_LABEL_SIZE = CHIP_RADIUS * 1.3;

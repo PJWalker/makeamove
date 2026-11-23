@@ -2,8 +2,6 @@ import {
   CanvasTexture,
   DirectionalLight,
   HemisphereLight,
-  LineBasicMaterial,
-  LineSegments,
   Mesh,
   MeshBasicMaterial,
   MeshPhysicalMaterial,
@@ -70,11 +68,9 @@ const dieFinish = {
   clearcoatRoughness: 0.06,
   specularIntensity: 1,
   iridescence: 0.12,
-  flatShading: true,
 };
 // Satin rather than glossy: a flat face turned to the light would shine its label away.
-const chipFinish = { ...dieFinish, flatShading: false, roughness: 0.55, clearcoat: 0.3, iridescence: 0 };
-const edgeMaterial = new LineBasicMaterial({ color: 0xFF_FF_FF, transparent: true, opacity: 0.3 });
+const chipFinish = { ...dieFinish, roughness: 0.55, clearcoat: 0.3, iridescence: 0 };
 
 const probe = document.createElement("canvas").getContext("2d", { willReadFrequently: true })!;
 /**
@@ -139,7 +135,6 @@ export function dieModel(sides: number, first: number, colour: string): Model {
   const material = new MeshPhysicalMaterial({ ...dieFinish, color: colour });
   const mesh = new Mesh(shape.geometry, material);
   mesh.scale.setScalar(SCALE);
-  mesh.add(new LineSegments(shape.edges, edgeMaterial));
   const labelColour = contrastingTextColour(colour);
   for (const [index, face] of shape.faces.entries()) {
     const number = label(String(faceValue(first, index, sides)), labelColour, face.size);
@@ -147,7 +142,12 @@ export function dieModel(sides: number, first: number, colour: string): Model {
     number.quaternion.copy(face.labelRotation);
     mesh.add(number);
   }
-  return { mesh, dispose: () => { material.dispose(); } };
+  return {
+    mesh,
+    dispose: () => {
+      material.dispose();
+    },
+  };
 }
 
 /** A chip in `colour` (hex) with `text` on both faces. */
@@ -199,9 +199,17 @@ export function renderBlank(sides: number) {
   const material = new MeshPhysicalMaterial({ ...dieFinish, color: 0x80_80_80 });
   const mesh = new Mesh(shape.geometry, material);
   mesh.scale.setScalar(SCALE);
-  mesh.add(new LineSegments(shape.edges, edgeMaterial));
   const canvas = document.createElement("canvas");
-  paint({ mesh, dispose: () => { material.dispose(); } }, shape.rest, canvas);
+  paint(
+    {
+      mesh,
+      dispose: () => {
+        material.dispose();
+      },
+    },
+    shape.rest,
+    canvas,
+  );
   material.dispose();
   return canvas.toDataURL("image/webp", 0.9);
 }
