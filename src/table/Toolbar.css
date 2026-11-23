@@ -10,38 +10,31 @@
 
   /*
    * Chrome over the map (the toolbar, the hotbar, the sidebars' tab strips)
-   * sits on a band of shade that keeps it legible. The band is solid
-   * against the window edge or sidebar it hangs from, fades out toward the
-   * map (--fade-toward), and fades at both ends along its length
+   * sits on a faint band of shade. The band is strongest against the window
+   * edge or sidebar it hangs from, fades out toward the map
+   * (--fade-toward), and fades at both ends along its length
    * (--fade-along). It is a layer of its own so the fade never reaches the
-   * controls. Where the band thins over a light map, a dark halo around the
-   * unframed text and icons keeps them legible.
+   * controls. Ink, halo and shade flip with the map's lightness (--bar-ink).
    */
   .toolbar,
   .hotbar,
   .sidebar-rail-edge {
     isolation: isolate;
-    text-shadow: var(--ink-halo);
-    & :is(.btn-ghost, .btn-icon):not([aria-pressed="true"], [aria-selected="true"]) svg {
-      filter: var(--ink-halo-filter);
-    }
-    & :is([aria-pressed="true"], [aria-selected="true"]) {
-      text-shadow: none;
+    --text-muted: var(--bar-ink);
+    & :is(.btn-ghost, .btn-icon):not(:hover, :active, [aria-pressed="true"], [aria-selected="true"]) {
+      text-shadow: 0 0 4px var(--bar-halo);
+      & svg {
+        filter: drop-shadow(0 0 3px var(--bar-halo));
+      }
     }
     &::before {
       content: "";
       position: absolute;
       inset: 0;
       z-index: -1;
-      background: var(--grain), oklch(from var(--toolbar) calc(l - 0.06) c h / 0.85);
+      background: var(--bar-shade);
       mask:
-        linear-gradient(
-          to var(--fade-toward),
-          #000 45%,
-          oklch(0% 0 0 / 0.55) 72%,
-          oklch(0% 0 0 / 0.18) 88%,
-          transparent
-        ),
+        linear-gradient(to var(--fade-toward), #000 30%, transparent),
         linear-gradient(
           to var(--fade-along),
           transparent,
