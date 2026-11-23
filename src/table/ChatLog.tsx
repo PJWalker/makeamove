@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { useConstant } from "../ui/useConstant";
-import { canDelete, canEditMessage, visibilityOf } from "../features/chat/types";
+import { canDelete, canEditMessage, postedSince, visibilityOf } from "../features/chat/types";
 import { logRows  } from "../features/chat/sessions";
 import type {LogRow} from "../features/chat/sessions";
 import { markRead } from "../features/chat/unread";
@@ -46,8 +46,8 @@ export function ChatLog({
   // One subscription for every move card's follow-up buttons, rather than one per card.
   const editable = useQuery(campaign.characters, () => editableIds(campaign));
   const me = useQuery(device).id;
-  // Messages already here when the panel opened don't animate in.
-  const initial = useConstant(() => new Set(messages.map((m) => m.id)));
+  // Only messages posted after the panel opened animate in; not ones already here, or older ones loaded later.
+  const openedAt = useConstant(() => messages.at(-1)?.hlc ?? "");
   useMarkRead(campaign, messages);
 
   const opened = useQuery(context.table.openSessions);
@@ -96,7 +96,7 @@ export function ChatLog({
             campaign={campaign}
             row={row}
             viewer={viewer}
-            fresh={row.kind === "message" && !initial.has(row.m.id)}
+            fresh={row.kind === "message" && postedSince(row.m, openedAt)}
             quickRollMessage={quickRollMessage}
             onMenu={onMenu}
           />

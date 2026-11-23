@@ -179,3 +179,10 @@ export function visibilityOf(m: ChatMessage, me: string, isGm: boolean): Visibil
   }
   return "full";
 }
+
+/**
+ * Whether a message was posted after `since` (the newest stamp when the log was
+ * opened): it's new, so it plays its arrival. Older messages loaded as the log is
+ * scrolled back through are history, and don't.
+ */
+export const postedSince = (message: { hlc: string }, since: string) => message.hlc > since;
