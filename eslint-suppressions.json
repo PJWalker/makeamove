@@ -2501,9 +2501,6 @@
     }
   },
   "src/scene/tools.ts": {
-    "@typescript-eslint/no-unnecessary-condition": {
-      "count": 1
-    },
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
     },

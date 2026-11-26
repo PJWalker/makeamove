@@ -6,10 +6,9 @@ import { createPortal } from "react-dom";
 import type { Store } from "../lib/store";
 import { startReorder } from "../ui/reorder";
 import scrollSideways from "../ui/wheel";
-import {  PEN_WIDTH_RANGE   } from "../scene/tools";
+import { PEN_WIDTH_RANGE, SMART_SHAPES } from "../scene/tools";
 import type {LightToolMode, SelectKind, ToolId} from "../scene/tools";
 import { AREA_COLOURS, SHAPES  } from "../scene/types";
-import type {ShapeKind} from "../scene/types";
 import Button from "../ui/Button";
 import ColourPicker from "../ui/ColourPicker";
 import { Segmented, ToggleGroup } from "../ui/Segmented";
@@ -37,6 +36,7 @@ import { selectTool } from "../workspace/commands/core";
 import { menuFor } from "../workspace/commands/views";
 import EffectSightToggles from "./effectOptions";
 import EFFECT_OPTIONS from "./effectOptionsData";
+import ShapeGlyph from "./ShapeGlyph";
 import TextStyleFields from "./TextStyleFields";
 import { useDockStripLayout } from "./dockStrip";
 
@@ -221,7 +221,7 @@ function CampaignMenu() {
  */
 function PenOptions({ tool }: { tool: ToolId }) {
   const context = useCampaign();
-  const { colour, width, layer } = useQuery(context.tools.pen);
+  const { colour, width, layer, smartShapes } = useQuery(context.tools.pen);
   const shape = useQuery(context.tools.shapeTool);
   const paint = useQuery(context.tools.shapePaint);
   const textStyle = useQuery(context.tools.textStyle);
@@ -276,6 +276,14 @@ function PenOptions({ tool }: { tool: ToolId }) {
             onChange={(e) => { context.tools.setPen({ width: Number(e.currentTarget.value) }); }}
           />
         </label>
+      )}
+      {tool === "draw" && (
+        <Segmented
+          label="Smart Shapes"
+          value={smartShapes}
+          options={SMART_SHAPES}
+          onChange={(s) => { context.tools.setPen({ smartShapes: s }); }}
+        />
       )}
       <Segmented
         label="Layer"
@@ -421,29 +429,5 @@ const SHAPE_OPTIONS = SHAPES.map((s) => ({
   label: s.label,
   icon: <ShapeGlyph shape={s.id} />,
 }));
-
-const SHAPE_PAINT = {
-  fill: "currentColor",
-  fillOpacity: 0.3,
-  stroke: "currentColor",
-  strokeWidth: 2,
-  strokeLinejoin: "round",
-} as const;
-
-/**
- * A small picture of a shape for its button, in the segment's own ink so it
- * stands out whether chosen or not, whatever the shape's paint.
- */
-function ShapeGlyph({ shape }: { shape: ShapeKind }) {
-  return (
-    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
-      {shape === "rect" && <rect x="3" y="3" width="12" height="12" {...SHAPE_PAINT} />}
-      {shape === "circle" && <circle cx="9" cy="9" r="6.5" {...SHAPE_PAINT} />}
-      {shape === "line" && <rect x="1" y="7" width="16" height="4" {...SHAPE_PAINT} />}
-      {shape === "cone" && <polygon points="2,9 16,2 16,16" {...SHAPE_PAINT} />}
-      {shape === "polygon" && <polygon points="2,6 9,2 16,6 14,15 5,16" {...SHAPE_PAINT} />}
-    </svg>
-  );
-}
 
 export default Toolbar;

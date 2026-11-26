@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { Point } from "../grid";
-import { recogniseShape } from "../recognise";
+import { LENIENCY, recogniseShape } from "../recognise";
 
 /** A wobbly hand along a path: points every few px, jittered, as flat [x, y, pressure, …]. */
 function hand(path: Point[], wobble = 2, seed = 1): number[] {
@@ -144,14 +144,15 @@ describe("neatening other corners", () => {
 
 describe("leaving strokes freehand", () => {
   it("leaves loosely drawn polygons alone", () => {
-    const pentagon = [
+    const arrow = [
       { x: 0, y: 0 },
-      { x: 120, y: -20 },
+      { x: 200, y: 0 },
       { x: 200, y: 60 },
-      { x: 110, y: 160 },
-      { x: -10, y: 110 },
+      { x: 120, y: 60 },
+      { x: 60, y: 160 },
+      { x: 0, y: 60 },
     ];
-    expect(recogniseShape(hand(bowed(pentagon, 12)), 10)).toBeNull();
+    expect(recogniseShape(hand(bowed(arrow, 10)), 10)).toBeNull();
   });
 
   it("leaves polygons of many corners alone", () => {
@@ -170,5 +171,41 @@ describe("leaving strokes freehand", () => {
 
   it("leaves strokes smaller than the least size alone", () => {
     expect(recogniseShape(hand([{ x: 0, y: 0 }, { x: 8, y: 0 }], 0), 10)).toBeNull();
+  });
+});
+
+/** A lumpy loop about the origin: a circle whose radius swells and shrinks `lumps` times round. */
+const lumpy = (r: number, lumps: number, depth: number): Point[] =>
+  Array.from({ length: 97 }, (_, index) => {
+    const a = (index / 96) * Math.PI * 2;
+    const swell = 1 + depth * Math.sin(lumps * a);
+    return { x: r * swell * Math.cos(a), y: r * swell * Math.sin(a) };
+  });
+
+const always = (path: Point[]) => recogniseShape(hand(path), 10, LENIENCY.always);
+
+describe("always finding a shape", () => {
+  it("rounds a lumpy loop into a circle", () => {
+    expect(always(lumpy(80, 3, 0.15))).toMatchObject({ shape: "circle" });
+  });
+
+  it("takes any triangle for a cone and any four corners for a rectangle", () => {
+    expect(always([{ x: 0, y: 0 }, { x: 200, y: 0 }, { x: 60, y: 90 }, { x: 0, y: 0 }])).toMatchObject({ shape: "cone" });
+    const skewed = [{ x: 0, y: 0 }, { x: 200, y: 0 }, { x: 240, y: 100 }, { x: 40, y: 100 }, { x: 0, y: 0 }];
+    expect(always(skewed)).toMatchObject({ shape: "rect" });
+  });
+
+  it("closes an arc into a circle, and straightens a wandering stroke into a line", () => {
+    expect(always(ellipse(80, 80, 0.75))).toMatchObject({ shape: "circle" });
+    const wander = Array.from({ length: 20 }, (_, index) => ({ x: index * 15, y: (index % 2) * 18 }));
+    expect(always(wander)).toMatchObject({ shape: "line" });
+  });
+});
+
+describe("finding the shape a stroke is near", () => {
+  it("finds a circle in a loop too lumpy to neaten by itself", () => {
+    const loop = hand(lumpy(80, 3, 0.22));
+    expect(recogniseShape(loop, 10)).toBeNull();
+    expect(recogniseShape(loop, 10, LENIENCY.near)).toMatchObject({ shape: "circle" });
   });
 });

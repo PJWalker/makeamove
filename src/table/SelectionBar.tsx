@@ -6,6 +6,9 @@ import { bounds } from "../scene/geometry";
 import { toScreen } from "../scene/camera";
 import { HANDLE_SIZE, ROTATE_HANDLE_GAP } from "../scene/render/handles";
 import { PEN_WIDTH_RANGE } from "../scene/tools";
+import type { SmartShapes } from "../scene/tools";
+import alignToGrid from "../scene/gridAlign";
+import { drawingInk, nearShape, shapeElement, shapeName } from "../scene/smartShapes";
 import {
   isPlainToken,
   sharedTextStyle
@@ -13,12 +16,13 @@ import {
   
   
 } from "../scene/types";
-import type {EffectKind, SceneElement, TextStyle} from "../scene/types";
+import type {EffectKind, SceneElement, ShapeKind, TextStyle} from "../scene/types";
 import ColourPicker from "../ui/ColourPicker";
 import CommitInput from "../ui/CommitInput";
 import Button from "../ui/Button";
 import { Segmented } from "../ui/Segmented";
 import { IconLight, IconLock, IconReveal, IconSettings, IconUnlock } from "../ui/icons";
+import type { Icon } from "../ui/icons";
 import { useQuery } from "../ui/useQuery";
 import { useCampaign } from "../workspace/campaignContext";
 import { Counter } from "../workspace/sheetParts";
@@ -26,10 +30,20 @@ import { bumpData, bumpResource } from "../workspace/commands/characters";
 import { canEdit, getCharacter, systemOf } from "../features/characters/api";
 import { derive } from "../features/characters/store";
 import type { TokenStat } from "../systems/types";
+import ShapeGlyph from "./ShapeGlyph";
 import TextStyleFields from "./TextStyleFields";
 import EFFECT_OPTIONS from "./effectOptionsData";
 import EffectSightToggles from "./effectOptions";
 import "./SelectionBar.css";
+
+/** Each shape's picture, as an icon for a button. */
+const SHAPE_ICONS: Record<ShapeKind, Icon> = {
+  rect: (properties) => <ShapeGlyph shape="rect" {...properties} />,
+  circle: (properties) => <ShapeGlyph shape="circle" {...properties} />,
+  line: (properties) => <ShapeGlyph shape="line" {...properties} />,
+  cone: (properties) => <ShapeGlyph shape="cone" {...properties} />,
+  polygon: (properties) => <ShapeGlyph shape="polygon" {...properties} />,
+};
 
 /** Screen px between the selection (and its rotate handle) and the bar. */
 const GAP = ROTATE_HANDLE_GAP + HANDLE_SIZE;
@@ -129,13 +143,15 @@ function useSelectionFields(
   onTokenOptions: (id: string, from: Element) => void,
 ) {
   const context = useCampaign();
-  return buildSelectionFields(controller, sel, onTokenOptions, (patch) => { context.tools.setTextStyle(patch); });
+  const { smartShapes } = useQuery(context.tools.pen);
+  return buildSelectionFields(controller, sel, onTokenOptions, smartShapes, (patch) => { context.tools.setTextStyle(patch); });
 }
 
 function buildSelectionFields(
   controller: SceneController,
   sel: readonly SceneElement[],
   onTokenOptions: (id: string, from: Element) => void,
+  smartShapes: SmartShapes,
   setTextStyle: (patch: Partial<TextStyle>) => void,
 ) {
   const ids = sel.map((element) => element.id);
@@ -211,6 +227,24 @@ function buildSelectionFields(
       />,
       <WidthField key="width" controller={controller} ids={ids} value={sel[0]!.width} />,
     );
+  if (one?.type === "drawing" && smartShapes !== "always") {
+    // A drawing near a shape can be made that shape, lined up with the grid as the pen would.
+    const near = nearShape(one);
+    const shape = near && alignToGrid(near, grid);
+    if (shape)
+      fields.push(
+        <Button
+          key="smart-shape"
+          variant="icon"
+          icon={SHAPE_ICONS[shape.shape]}
+          label={`Convert to ${shapeName(shape)}`}
+          onClick={() => {
+            const id = controller.scene.replace(one.id, shapeElement(drawingInk(one), shape));
+            if (id) controller.select([id]);
+          }}
+        />,
+      );
+  }
   if (every(sel, "drawing", "shape"))
     fields.push(
       <Segmented

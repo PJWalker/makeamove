@@ -7,17 +7,29 @@ import type { ShapeGeometry, Transform } from "./types";
  * Recognising a basic shape in a pen stroke: a straight line, a circle or
  * ellipse, a rectangle or square, a cone (an isosceles triangle), or a
  * polygon of up to six corners. Tolerances are fractions of the stroke's size, so a
- * shape is recognised the same at any zoom.
+ * shape is recognised the same at any zoom, and are all scaled by how
+ * lenient the recognising is.
  */
 
 export type RecognisedShape = ShapeGeometry & Transform;
+
+/**
+ * How readily a stroke is taken for a shape, as a scale on every tolerance:
+ * as the pen recognises shapes by itself, to find the shape a stroke is
+ * near, or to always find one.
+ */
+export const LENIENCY = { auto: 1, near: 2, always: Infinity } as const;
 
 /** How far off its chord a stroke may wander and still be a line. */
 const LINE_TOLERANCE = 0.05;
 /** How near its start a stroke must end to be closed. */
 const CLOSED_GAP = 0.3;
-/** How far a closed stroke may stray on average from a circle, rectangle or cone and still be it. */
+/** How far a closed stroke may stray on average from a circle or ellipse and still be it. */
+const ELLIPSE_FIT = 0.07;
+/** How far a closed stroke may stray on average from a rectangle or cone and still be it. */
 const BASIC_FIT = 0.05;
+/** How much nearer than an ellipse, on average, a stroke must keep to any other polygon to be that: circles are more often meant. */
+const POLYGON_MARGIN = 1.5;
 /** How far a closed stroke may stray on average from any other polygon and still be it: closer, as it's less likely meant. */
 const POLYGON_FIT = 0.02;
 /** How far a corner may be off a straight edge before it counts as one. */
@@ -33,7 +45,7 @@ const LINE_PATH_SLACK = 1.3;
 /** How far back from its end to look for where a closed stroke passed its start, as a fraction of the stroke. */
 const OVERSHOOT_REACH = 0.3;
 /** How alike an ellipse's axes are for it to be a circle. */
-const ROUND = 0.25;
+const ROUND = 0.3;
 /** How alike a rectangle's sides are for it to be a square. */
 const SQUARE = 0.2;
 /** How alike an isosceles triangle's two sides are. */
@@ -53,8 +65,13 @@ const EIGHTH_TURN = QUARTER_TURN / 2;
 /**
  * The basic shape a stroke (flat world [x, y, pressure, …]) looks like, in
  * the world, or null if it's freehand or smaller than `minSize` world px.
+ * Always lenient, it's whichever shape the stroke keeps closest to.
  */
-export function recogniseShape(stroke: number[], minSize: number): RecognisedShape | null {
+export function recogniseShape(
+  stroke: number[],
+  minSize: number,
+  leniency: number = LENIENCY.auto,
+): RecognisedShape | null {
   const pts: Point[] = [];
   for (let index = 0; index + 1 < stroke.length; index += STRIDE)
     pts.push({ x: stroke[index]!, y: stroke[index + 1]! });
@@ -63,45 +80,61 @@ export function recogniseShape(stroke: number[], minSize: number): RecognisedSha
   if (size < minSize) return null;
   const first = pts[0]!;
   const last = pts.at(-1)!;
-  if (distance(first, last) > CLOSED_GAP * size) return lineThrough(pts);
-  return closedShape(trimOvershoot(pts), size);
+  if (distance(first, last) <= CLOSED_GAP * size)
+    return closedShape(trimOvershoot(pts), size, leniency)?.shape ?? null;
+  const line = lineThrough(pts, leniency);
+  if (leniency !== LENIENCY.always) return line?.shape ?? null;
+  // Never left freehand: an open stroke may be a shape left unclosed.
+  const loop = closedShape(pts, size, leniency);
+  return (loop && (!line || loop.miss.mean < line.miss.mean) ? loop : line)?.shape ?? null;
+}
+
+/** A shape, and how far the stroke strays from it. */
+interface Fit {
+  shape: RecognisedShape;
+  miss: Miss;
 }
 
 /** A straight line from the stroke's start to its end, if it keeps to that. */
-function lineThrough(pts: Point[]): RecognisedShape | null {
+function lineThrough(pts: Point[], leniency: number): Fit | null {
   const a = pts[0]!;
   const b = pts.at(-1)!;
   const length = distance(a, b);
-  const straight = pts.every(
-    (p) => distanceToSegment(p.x, p.y, a.x, a.y, b.x, b.y) <= LINE_TOLERANCE * length,
-  );
-  if (!straight || pathLength(pts) > length * LINE_PATH_SLACK) return null;
+  const miss = missOf(pts.map((p) => distanceToSegment(p.x, p.y, a.x, a.y, b.x, b.y)));
+  const wanders = pathLength(pts) / length - 1;
+  if (miss.worst > LINE_TOLERANCE * leniency * length || wanders > (LINE_PATH_SLACK - 1) * leniency) return null;
   const rot = snapAngle(Math.atan2(b.y - a.y, b.x - a.x), EIGHTH_TURN);
   const c = midpoint(a, b);
-  return { shape: "line", x: c.x, y: c.y, w: length, h: 1, rot };
+  return { shape: { shape: "line", x: c.x, y: c.y, w: length, h: 1, rot }, miss };
 }
 
 /**
  * A closed stroke's ellipse or polygon, whichever it keeps closer to, if
  * it fits. Circles, rectangles and cones fit loosely; other polygons must
- * be drawn closely, as they're less often meant.
+ * be drawn closely, and keep much closer than an ellipse, as they're less
+ * often meant.
  */
-function closedShape(pts: Point[], size: number): RecognisedShape | null {
-  const fits = (miss: Miss, tolerance: number) => miss.mean / size <= tolerance;
+function closedShape(pts: Point[], size: number, leniency: number): Fit | null {
+  const fits = (miss: Miss, tolerance: number) => miss.mean / size <= tolerance * leniency;
   const ellipse = fitEllipse(pts);
   const polygon = fitPolygon(pts, size);
+  if (!polygon) return fits(ellipse.miss, ELLIPSE_FIT) ? ellipse : null;
+  const { corners, miss } = polygon;
+  const basic = basicPolygon(corners, leniency);
+  const basicFits = basic !== null && fits(miss, BASIC_FIT);
   // Which it is goes by the worst miss: an ellipse misses a rectangle's corners by far more than a polygon cuts a circle's curves.
-  if (fits(ellipse.miss, BASIC_FIT) && (!polygon || ellipse.miss.worst <= polygon.miss.worst)) return ellipse.shape;
-  if (!polygon) return null;
-  const basic = basicPolygon(polygon.corners);
-  if (basic && fits(polygon.miss, BASIC_FIT)) return basic;
-  return fits(polygon.miss, POLYGON_FIT) ? polygonShape(polygon.corners) : null;
+  if (basic && basicFits && miss.worst < ellipse.miss.worst) return { shape: basic, miss };
+  const other = fits(miss, POLYGON_FIT) ? { shape: polygonShape(corners), miss } : null;
+  if (other && miss.mean * POLYGON_MARGIN < ellipse.miss.mean) return other;
+  if (fits(ellipse.miss, ELLIPSE_FIT)) return ellipse;
+  if (basic && basicFits) return { shape: basic, miss };
+  return other;
 }
 
 /** Corners as a cone or a rectangle, if they make one. */
-function basicPolygon(corners: Point[]): RecognisedShape | null {
-  if (corners.length === TRIANGLE) return cone(corners);
-  if (corners.length === QUADRILATERAL) return rectangle(corners);
+function basicPolygon(corners: Point[], leniency: number): RecognisedShape | null {
+  if (corners.length === TRIANGLE) return cone(corners, leniency);
+  if (corners.length === QUADRILATERAL) return rectangle(corners, leniency);
   return null;
 }
 
@@ -123,7 +156,7 @@ function missOf(distances: number[]): Miss {
 }
 
 /** The ellipse through a closed stroke's extents along its main axes, and how far the stroke strays from it. */
-function fitEllipse(pts: Point[]): { shape: RecognisedShape; miss: Miss } {
+function fitEllipse(pts: Point[]): Fit {
   const mean = centroid(pts);
   let sxx = 0;
   let syy = 0;
@@ -136,8 +169,9 @@ function fitEllipse(pts: Point[]): { shape: RecognisedShape; miss: Miss } {
   const angle = Math.atan2(2 * sxy, sxx - syy) / 2;
   const u = extent(pts, angle);
   const v = extent(pts, angle + QUARTER_TURN);
-  const a = u.length / 2;
-  const b = v.length / 2;
+  // At least a px across, so a stroke along a line still has an ellipse to miss.
+  const a = Math.max(1, u.length / 2);
+  const b = Math.max(1, v.length / 2);
   const centre = fromAxes(angle, (u.min + u.max) / 2, (v.min + v.max) / 2);
   const miss = missOf(
     pts.map((p) => {
@@ -177,25 +211,31 @@ function fitPolygon(pts: Point[], size: number): { corners: Point[]; miss: Miss 
   return { corners, miss };
 }
 
-/** A triangle as a cone, if it's isosceles: from its apex to the middle of its base. */
-function cone(corners: Point[]): RecognisedShape | null {
+/**
+ * A triangle as a cone, if it's isosceles: from the corner between its most
+ * alike sides to the middle of the side across.
+ */
+function cone(corners: Point[], leniency: number): RecognisedShape | null {
+  let best: { apex: Point; b: Point; c: Point; unlike: number } | null = null;
   for (const [index, apex] of corners.entries()) {
     const b = corners[(index + 1) % TRIANGLE]!;
     const c = corners.at(index - 1)!;
     const ab = distance(apex, b);
     const ac = distance(apex, c);
-    if (Math.abs(ab - ac) > ISOSCELES * Math.max(ab, ac)) continue;
-    const base = midpoint(b, c);
-    const centre = midpoint(apex, base);
-    const rot = snapAngle(Math.atan2(base.y - apex.y, base.x - apex.x), EIGHTH_TURN);
-    return { shape: "cone", x: centre.x, y: centre.y, w: distance(apex, base), h: distance(b, c), rot };
+    const unlike = Math.abs(ab - ac) / Math.max(ab, ac);
+    if (!best || unlike < best.unlike) best = { apex, b, c, unlike };
   }
-  return null;
+  if (!best || best.unlike > ISOSCELES * leniency) return null;
+  const { apex, b, c } = best;
+  const base = midpoint(b, c);
+  const centre = midpoint(apex, base);
+  const rot = snapAngle(Math.atan2(base.y - apex.y, base.x - apex.x), EIGHTH_TURN);
+  return { shape: "cone", x: centre.x, y: centre.y, w: distance(apex, base), h: distance(b, c), rot };
 }
 
 /** Four corners as a rectangle, if they're all near square: a square, if its sides are near alike. */
-function rectangle(corners: Point[]): RecognisedShape | null {
-  if (corners.some((_, index) => Math.abs(cornerAngle(corners, index) - QUARTER_TURN) > SQUARE_SLACK))
+function rectangle(corners: Point[], leniency: number): RecognisedShape | null {
+  if (corners.some((_, index) => Math.abs(cornerAngle(corners, index) - QUARTER_TURN) > SQUARE_SLACK * leniency))
     return null;
   // The edges' mean direction, folded onto a quarter turn.
   let sx = 0;

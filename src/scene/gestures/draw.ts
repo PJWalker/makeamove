@@ -1,5 +1,6 @@
 import alignToGrid from "../gridAlign";
-import { recogniseShape } from "../recognise";
+import { LENIENCY, recogniseShape } from "../recognise";
+import { shapeElement } from "../smartShapes";
 import { finishStroke, STRIDE } from "../stroke";
 import { coalesced  } from "./types";
 import type {ToolPress} from "./types";
@@ -10,18 +11,17 @@ const LEAST_SHAPE = 24;
 const POINT_SPACING = 0.5;
 /** The pressure a stroke has without a stylus. */
 const NO_PRESSURE = 0.5;
-/** "#rrggbb", a colour without its opacity. */
-const OPAQUE_HEX = 7;
 
 /**
  * The Pen: a freehand stroke, pressure-sensitive with a stylus, in the pen's
- * colour, width and layer. A stroke that looks like a basic shape (a line,
- * circle, rectangle, cone or polygon) is neatened into that shape, lined
+ * colour, width and layer. With Smart Shapes, a stroke that looks like a
+ * basic shape (a line, circle, rectangle, cone or polygon), or any stroke
+ * when they're always on, is neatened into that shape, lined
  * up with the grid if it's nearly lined up (Alt draws it where it is);
  * undo turns it back into the stroke as drawn.
  */
 const draw: ToolPress = (c, e, world) => {
-  const { colour, layer } = c.tools.pen.value;
+  const { colour, layer, smartShapes } = c.tools.pen.value;
   // The pen's width is in screen px; the stroke keeps the world width it had when drawn.
   const width = c.tools.pen.value.width / c.renderer.camera.zoom;
   const points: number[] = [];
@@ -49,13 +49,12 @@ const draw: ToolPress = (c, e, world) => {
       c.renderer.draft = null;
       if (points.length === 0) return;
       const [id] = c.scene.add({ type: "drawing", layer, colour, width, ...finishStroke(points, width) });
-      const recognised = recogniseShape(points, LEAST_SHAPE / c.renderer.camera.zoom);
-      if (id && recognised) {
-        const shape = up.altKey ? recognised : alignToGrid(recognised, c.renderer.grid);
-        const stroke = colour.length === OPAQUE_HEX ? `${colour}ff` : colour;
-        const fill = `${colour.slice(0, OPAQUE_HEX)}00`;
-        c.scene.replace(id, { type: "shape", layer, stroke, fill, width, ...shape });
-      }
+      if (!id || smartShapes === "off") return;
+      const leniency = smartShapes === "always" ? LENIENCY.always : LENIENCY.auto;
+      const recognised = recogniseShape(points, LEAST_SHAPE / c.renderer.camera.zoom, leniency);
+      if (!recognised) return;
+      const shape = up.altKey ? recognised : alignToGrid(recognised, c.renderer.grid);
+      c.scene.replace(id, shapeElement({ colour, width, layer }, shape));
     },
   };
 };

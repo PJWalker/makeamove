@@ -35,11 +35,21 @@ export type ToolId = (typeof TOOL_IDS)[number];
 /** The range of pen widths, in screen px. */
 export const PEN_WIDTH_RANGE = { min: 1, max: 24 } as const;
 
+/** Whether the pen turns strokes into the shapes they look like: always, when they're near enough to one, or never. */
+export type SmartShapes = "always" | "auto" | "off";
+
+export const SMART_SHAPES: { id: SmartShapes; label: string }[] = [
+  { id: "always", label: "Always" },
+  { id: "auto", label: "Auto" },
+  { id: "off", label: "Off" },
+];
+
 interface PenSettings {
   colour: string;
   /** Stroke width in screen px, so the brush is the same size on screen at any zoom. */
   width: number;
   layer: Extract<Layer, "over" | "under">;
+  smartShapes: SmartShapes;
 }
 
 /** Eraser radius in screen px. */
@@ -103,12 +113,16 @@ export class SceneTools {
     this.toolOrder = local.value("toolOrder", listOf(oneOf(...TOOL_IDS), "tool order"));
     // Gold, like the UI accent.
     const penRead = settingsOver<PenSettings>(
-      { colour: "#f0bb3b", width: 6, layer: "over" },
+      { colour: "#f0bb3b", width: 6, layer: "over", smartShapes: "auto" },
       "pen",
     );
     this.pen = local.value("pen", (v) => {
       const pen = penRead(v);
-      return pen.layer === "under" || pen.layer === "over" ? pen : { ...pen, layer: "over" };
+      return {
+        ...pen,
+        layer: pen.layer === "under" ? "under" : "over",
+        smartShapes: SMART_SHAPES.some((s) => s.id === pen.smartShapes) ? pen.smartShapes : "auto",
+      };
     });
     this.shapeTool = local.value(
       "shapeTool",
