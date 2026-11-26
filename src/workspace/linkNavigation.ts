@@ -7,7 +7,7 @@ import type { LibraryView } from "./libraryView";
 import type { PanelLayout } from "./panelLayout";
 
 /** Where links lead: the page open in the Notes panel, and how each kind of link is followed. */
-export class LinkNavigation {
+export default class LinkNavigation {
   /** The page open in the Notes panel, if any. */
   readonly openNoteId = store<string | null>(null);
 

@@ -7,25 +7,25 @@ import {
   
 } from "react";
 import type {DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent} from "react";
-import { menuTrigger } from "../ui/menuTrigger";
+import menuTrigger from "../ui/menuTrigger";
 import { bounds } from "../scene/geometry";
 import { setMorphOrigin } from "../ui/morph";
 import { openPopup } from "../ui/popup";
 import { watch } from "../lib/store";
-import type { SceneController } from "../scene/controller";
+import type SceneController from "../scene/controller";
 import type { SceneDoc as SceneDocument } from "../scene/sceneDoc";
 import type { Point } from "../scene/grid";
 import type { Campaign } from "../campaign/campaign";
 import { useQuery } from "../ui/useQuery";
-import { Dialog } from "../workspace/Dialog";
+import Dialog from "../workspace/Dialog";
 import { ContextMenu  } from "../ui/ContextMenu";
 import type {MenuItem} from "../ui/ContextMenu";
 import { useCampaign } from "../workspace/campaignContext";
 import { menuFor } from "../workspace/commands/views";
-import { SceneSettingsFields } from "./SceneSettingsFields";
-import { SelectionBar } from "./SelectionBar";
-import { TextEditor } from "./TextEditor";
-import { TokenOptionsDialog } from "./TokenOptionsDialog";
+import SceneSettingsFields from "./SceneSettingsFields";
+import SelectionBar from "./SelectionBar";
+import TextEditor from "./TextEditor";
+import TokenOptionsDialog from "./TokenOptionsDialog";
 import {
   useLighting,
   useSceneController,
@@ -80,7 +80,7 @@ function useCanvasCommands(
  * The scene canvas: hosts the PixiJS renderer and wires it to the active
  * scene.
  */
-export function SceneCanvas({ campaign, sceneId }: { campaign: Campaign; sceneId: string | null }) {
+function SceneCanvas({ campaign, sceneId }: { campaign: Campaign; sceneId: string | null }) {
   const hostReference = useRef<HTMLDivElement>(null);
   const { renderer, ready } = useSceneRenderer(campaign, hostReference);
   const controller = useSceneController(campaign, renderer, ready, sceneId, hostReference);
@@ -302,3 +302,5 @@ function SceneSettingsDialog({
     </Dialog>
   );
 }
+
+export default SceneCanvas;

@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo } from "react";
 import { renderToReactElement } from "@tiptap/static-renderer/pm/react";
-import { useConstant } from "../ui/useConstant";
+import useConstant from "../ui/useConstant";
 import type { ChatContent } from "../features/chat/content";
 import type { ChatMessage, TextMessage } from "../features/chat/types";
 import { canEdit, getCharacter, actingCharacterId } from "../features/characters/api";
@@ -11,19 +11,19 @@ import { stampTime } from "../lib/hlc";
 import type { Campaign } from "../campaign/campaign";
 import { device } from "../platform/device";
 import { useQuery } from "../ui/useQuery";
-import { Avatar } from "../ui/Avatar";
-import { Button } from "../ui/Button";
-import { menuTrigger } from "../ui/menuTrigger";
+import Avatar from "../ui/Avatar";
+import Button from "../ui/Button";
+import menuTrigger from "../ui/menuTrigger";
 import { LINK_NODE } from "../features/notes/links";
 import type { LinkKind } from "../features/notes/links";
-import { LinkChip } from "../workspace/LinkChip";
+import LinkChip from "../workspace/LinkChip";
 import { editedText, useTextState } from "../features/chat/messageState";
 import { isPinned } from "../features/chat/messages";
 import { playUiSound } from "../ui/sounds";
 import { useCampaign } from "../workspace/campaignContext";
 import { MoveCard, RollCard } from "./RollCards";
 import { CounterCard, EditBox, TimerCard } from "./ChatExtras";
-import { chatContentExtensions } from "./chatContentExtensions";
+import chatContentExtensions from "./chatContentExtensions";
 
 /* One message in the chat, as the log and the pinned strip show it. */
 

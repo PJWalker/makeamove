@@ -1,6 +1,6 @@
 import { setup } from "xstate";
 
-export const pieceMachine = setup({
+const pieceMachine = setup({
   types: {
     events: {} as
       { type: "ENTER"; moving: boolean } | { type: "FLAT" } | { type: "LANDED" } | { type: "MOVING" } | { type: "RESET" },
@@ -46,3 +46,5 @@ export const pieceMachine = setup({
     },
   },
 });
+
+export default pieceMachine;

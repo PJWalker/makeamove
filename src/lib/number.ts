@@ -1,5 +1,7 @@
-export function parseInputNumber(value: string): number | undefined {
+function parseInputNumber(value: string): number | undefined {
   if (!value.trim()) return undefined;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
 }
+
+export default parseInputNumber;

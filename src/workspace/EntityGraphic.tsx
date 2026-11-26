@@ -1,10 +1,10 @@
 import { useCallback } from "react";
 import type { Campaign } from "../campaign/campaign";
 import { useQuery } from "../ui/useQuery";
-import { EntityGraphicView } from "../ui/EntityGraphic";
+import EntityGraphicView from "../ui/EntityGraphic";
 import { getEntityGraphic } from "./entityGraphics";
 
-export function CampaignEntityGraphic({
+function CampaignEntityGraphic({
   campaign,
   kind,
   id,
@@ -32,3 +32,5 @@ export function CampaignEntityGraphic({
   const graphic = useQuery(kind === "character" ? campaign.characters : null, readCharacterGraphic);
   return <EntityGraphicView graphic={graphic} size={size} className={className} />;
 }
+
+export default CampaignEntityGraphic;

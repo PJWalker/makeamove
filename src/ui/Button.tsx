@@ -22,7 +22,7 @@ type Properties = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "size"> & 
   children?: ReactNode;
 };
 
-export const Button = forwardRef<HTMLButtonElement, Properties>(function Button(
+const Button = forwardRef<HTMLButtonElement, Properties>(function Button(
   {
     variant = "secondary",
     label,
@@ -69,3 +69,5 @@ export const Button = forwardRef<HTMLButtonElement, Properties>(function Button(
     </button>
   );
 });
+
+export default Button;

@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
 import type { Icon } from "../ui/icons";
 import { IconClose } from "../ui/icons";
-import { Button } from "../ui/Button";
+import Button from "../ui/Button";
 import { withTransition } from "../ui/transition";
-import { isPhone } from "../ui/viewport";
+import isPhone from "../ui/viewport";
 
-export function WindowControls({
+function WindowControls({
   title,
   Icon: WindowIcon,
   iconContent,
@@ -60,3 +60,5 @@ export function WindowControls({
     </header>
   );
 }
+
+export default WindowControls;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 
 import { instanceOf } from "../../features/characters/store";
-import { dungeonWorld } from "../dungeon-world";
+import dungeonWorld from "../dungeon-world";
 import { librariesFor, registerLibrary, systemLibrary, viewEntries } from "../../features/library";
 
 describe("libraries", () => {

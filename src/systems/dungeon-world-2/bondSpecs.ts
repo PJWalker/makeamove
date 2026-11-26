@@ -1,5 +1,5 @@
 /** The Bonds, each with its four moves (the first is the starting one); their rules come from the rulebook. */
-export const BOND_SPECS = [
+const BOND_SPECS = [
   {
     id: "champions",
     name: "Champions",
@@ -51,3 +51,5 @@ export const BOND_SPECS = [
     ],
   },
 ] as const;
+
+export default BOND_SPECS;

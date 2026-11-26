@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-magic-numbers */
-import { seededRandom } from "../lib/seededRandom";
-import { flightPlan } from "./wispFlight";
+import seededRandom from "../lib/seededRandom";
+import flightPlan from "./wispFlight";
 import {
   add,
   hex,

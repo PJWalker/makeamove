@@ -1,7 +1,7 @@
 import { defineRule } from "vite-plus/lint/plugins";
 
 /** Number parsing stays under the Number namespace in new code. */
-export const preferNumberParsing = defineRule({
+const preferNumberParsing = defineRule({
   meta: {
     type: "suggestion",
     fixable: "code",
@@ -32,3 +32,5 @@ export const preferNumberParsing = defineRule({
     };
   },
 });
+
+export default preferNumberParsing;

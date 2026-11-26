@@ -7,7 +7,7 @@ import type { ToolPress } from "./types";
  * the chosen shape, or click a polygon zone's corners one at a time. The
  * Select tool picks them, with Effects on.
  */
-export const effect: ToolPress = (c, e, world) => {
+const effect: ToolPress = (c, e, world) => {
   if (!c.gm) return null;
   const { effect, colour, glow, obscures, shape } = c.tools.effectTool.value;
   const tint = new Color(colour);
@@ -32,3 +32,5 @@ export const effect: ToolPress = (c, e, world) => {
       }),
   });
 };
+
+export default effect;

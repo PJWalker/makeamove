@@ -2,8 +2,8 @@ import { canClaim, canEdit, playerOf } from "../features/characters/api";
 import type { CharacterView } from "../features/characters/types";
 import type { Campaign } from "../campaign/campaign";
 import { useQuery } from "../ui/useQuery";
-import { Button } from "../ui/Button";
-import { extensionOf } from "../systems/extensions";
+import Button from "../ui/Button";
+import extensionOf from "../systems/extensions";
 import type { SheetProps as SheetProperties } from "../systems/extensionTypes";
 import { DeclarativeSheet } from "../workspace/DeclarativeSheet";
 import { CharacterText, GMCharacterText } from "../workspace/CharacterText";
@@ -20,7 +20,7 @@ const declarative = (kind: "npc" | "pc") =>
 const DECLARATIVE = { pc: declarative("pc"), npc: declarative("npc") };
 
 /** A character's sheet, as their campaign's system draws it. */
-export function CharacterSheet({ campaign, system, c }: SheetProperties) {
+function CharacterSheet({ campaign, system, c }: SheetProperties) {
   const sheets = extensionOf(system).sheets ?? DECLARATIVE;
   const Sheet = c.kind === "npc" ? sheets.npc : sheets.pc;
   const editable = canEdit(campaign, c);
@@ -69,3 +69,5 @@ function ClaimBanner({ campaign, c }: { campaign: Campaign; c: CharacterView }) 
     </div>
   );
 }
+
+export default CharacterSheet;

@@ -1,5 +1,5 @@
 /** Core moves whose text and outcomes come from the rulebook, by move id: their headings there. */
-export const MOVE_SOURCE_NAMES: Record<string, string> = {
+const MOVE_SOURCE_NAMES: Record<string, string> = {
   "aid-a-pc": "Aid a PC",
   "cast-a-spell": "Cast a Spell",
   "comfort-or-support": "Comfort or Support",
@@ -30,3 +30,5 @@ export const MOVE_SOURCE_NAMES: Record<string, string> = {
   "rogue-tricks-trade": "Tricks of the Trade",
   "wizard-weave-arcane": "Weave the Arcane",
 };
+
+export default MOVE_SOURCE_NAMES;

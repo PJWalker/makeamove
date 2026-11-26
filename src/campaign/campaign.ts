@@ -7,7 +7,7 @@ import { commaListOf, formatCommaList } from "../lib/list";
 import { device  } from "../platform/device";
 import type {Device} from "../platform/device";
 import type { JoinRoom } from "../sync/transport";
-import { joinPublicRoom } from "../sync/publicRoom";
+import joinPublicRoom from "../sync/publicRoom";
 import type { ReadonlyStore } from "../lib/store";
 import { NO_SYSTEM_ID, getSystem } from "../systems";
 import type { Invite } from "../sync/invite";
@@ -34,7 +34,7 @@ import {
 import { SystemData } from "./systemStore";
 import type {CampaignRoot} from "./schema";
 import { campaignShape  } from "./schema";
-import { CampaignConnection } from "./connection";
+import CampaignConnection from "./connection";
 import {
   forgetCampaign,
   renameCampaignEntry,

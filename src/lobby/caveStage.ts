@@ -9,7 +9,7 @@ import {
   WebGPURenderer,
 } from "three/webgpu";
 import { reducedMotion } from "../ui/transition";
-import { caveGrade } from "./caveGrade";
+import caveGrade from "./caveGrade";
 import { freshSeed, lightDrift, VIEWER } from "./caveScene";
 import { buildCaveOffThread } from "./caveWorker";
 import type { CaveResult } from "./caveWorker";
@@ -18,7 +18,7 @@ import type { Playback, PlaybackEvent } from "./playback";
 import { govern, governedScale, governor, retry } from "./resolution";
 import type { FrameSample } from "./resolution";
 import { hex } from "./splat";
-import { splatCloud } from "./splatCloud";
+import splatCloud from "./splatCloud";
 
 /*
  * Puts the cave (caveScene.ts, built off the main thread by cave.worker.ts)

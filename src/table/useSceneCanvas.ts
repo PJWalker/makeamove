@@ -2,19 +2,19 @@ import { useEffect, useEffectEvent, useRef, useState  } from "react";
 import type {RefObject} from "react";
 import { watch } from "../lib/store";
 import { device } from "../platform/device";
-import { SceneController } from "../scene/controller";
+import SceneController from "../scene/controller";
 import type { TextRequest } from "../scene/gestures/types";
-import { SceneRenderer } from "../scene/renderer";
+import SceneRenderer from "../scene/renderer";
 import { SceneDoc as SceneDocument } from "../scene/sceneDoc";
 import { formatDistance } from "../scene/measure";
 import type { Campaign } from "../campaign/campaign";
 import { tokenMarksSource } from "../features/combat/api";
 import { listCharacters, systemOf, tokenStatsSource } from "../features/characters/api";
-import { useConstant } from "../ui/useConstant";
-import { isTyping } from "../ui/keys";
+import useConstant from "../ui/useConstant";
+import isTyping from "../ui/keys";
 import { useCampaign  } from "../workspace/campaignContext";
 import type {CampaignContext} from "../workspace/campaignContext";
-import { bindSceneDrops } from "./sceneDrops";
+import bindSceneDrops from "./sceneDrops";
 
 /* The scene canvas's subscriptions: what the renderer and the scene controller are fed from the table, and what they feed back. */
 

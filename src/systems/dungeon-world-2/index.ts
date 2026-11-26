@@ -13,9 +13,9 @@ import { revealedStruggleData, STRUGGLES } from "./struggles";
 import { INITIAL_TREASURE_BOXES, MAX_TREASURE_BOXES, purchaseAtWealth } from "./wealth";
 import { DW2_RELATIONSHIP_DEPTH } from "./bondStore";
 import { DW2_CLASS_GEAR, DW2_GEAR, DW2_MAGIC_ITEMS } from "./gear";
-import { DW2_CLASS_SCORE_RULES } from "./stats";
+import DW2_CLASS_SCORE_RULES from "./stats";
 import { CLASS_STARTING_CHOICES } from "./startingOptions";
-import { dw2Library } from "./library";
+import dw2Library from "./library";
 
 type Band = "miss" | "strong" | "weak";
 interface MoveSpec {
@@ -639,7 +639,7 @@ const CONDITIONS = [
 /** Red is Bloodied's, so Angry takes purple. */
 const CONDITION_COLOURS: Partial<Record<string, string>> = { angry: PIP_COLOURS.purple };
 
-export const dungeonWorld2: GameSystem = {
+const dungeonWorld2: GameSystem = {
   id: "dungeon-world-2",
   name: "Dungeon World 2",
   version: "0.1.0",
@@ -1030,3 +1030,5 @@ export const dungeonWorld2: GameSystem = {
     "Dungeon World 2 Beta v3 (October 2026). System moves and class options are concise original summaries; consult the supplied beta for full rules and advancement details.",
   gmReference: GM_REFERENCE,
 };
+
+export default dungeonWorld2;

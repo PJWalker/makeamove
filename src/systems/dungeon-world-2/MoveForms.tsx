@@ -3,7 +3,7 @@ import { getCharacter, listCharacters } from "../../features/characters/api";
 import { sessionMoveUsed } from "../../features/characters/sessionMoves";
 import { relationshipsOf } from "../../features/characters/relationships";
 import type { CharacterView } from "../../features/characters/types";
-import { Button } from "../../ui/Button";
+import Button from "../../ui/Button";
 import { useQuery } from "../../ui/useQuery";
 import { derive } from "../../features/characters/store";
 import type { MoveFormProps as MoveFormProperties } from "../extensionTypes";

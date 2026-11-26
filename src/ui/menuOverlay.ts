@@ -1,12 +1,12 @@
 import { useEffectEvent, useLayoutEffect } from "react";
 import type { RefObject } from "react";
-import { tether } from "./anchor";
+import tether from "./anchor";
 
 /**
  * Keep an open menu (`ref`, styled `.drops-down`) tethered to the element it
  * drops from (`anchor`), and dismiss it on a press outside both.
  */
-export function useMenuOverlay<T extends HTMLElement>({
+function useMenuOverlay<T extends HTMLElement>({
   open,
   ref,
   anchor,
@@ -43,3 +43,5 @@ export function useMenuOverlay<T extends HTMLElement>({
     };
   }, [open, ref]);
 }
+
+export default useMenuOverlay;

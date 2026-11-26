@@ -1,4 +1,4 @@
-import { MoveBody } from "../workspace/MoveBody";
+import MoveBody from "../workspace/MoveBody";
 import { baseSystemOf, systemOf } from "../features/characters/api";
 import type { CharacterView } from "../features/characters/types";
 import {
@@ -14,25 +14,25 @@ import {
   
 } from "../features/library";
 import type {EntryKind, EntryView, LibraryEntry, LibrarySource} from "../features/library";
-import { toggleSetValue } from "../lib/set";
+import toggleSetValue from "../lib/set";
 import type { Campaign } from "../campaign/campaign";
 import { useQuery } from "../ui/useQuery";
 import { Segmented } from "../ui/Segmented";
 import { IconImage } from "../ui/icons";
 import { List, ListExpand, ListGroup, Tag } from "../ui/List";
 import { EntryRow, EntryWindow } from "../workspace/EntryWindow";
-import { useEntryWindows } from "../workspace/entryWindowState";
+import useEntryWindows from "../workspace/entryWindowState";
 import { dragEntity } from "../workspace/entityDrag";
 import { entity } from "../workspace/dragEntities";
-import { linkProxy } from "../workspace/linkProxy";
+import linkProxy from "../workspace/linkProxy";
 import { rollTag } from "../workspace/actionPresentation";
 import { actionMenuItems } from "../workspace/actionMenu";
 import { getEntityGraphic } from "../workspace/entityGraphics";
-import { CampaignEntityGraphic } from "../workspace/EntityGraphic";
+import CampaignEntityGraphic from "../workspace/EntityGraphic";
 import { useCampaign  } from "../workspace/campaignContext";
 import type {CampaignContext} from "../workspace/campaignContext";
 import { joinSections } from "../workspace/commands/views";
-import { EntryActionButtons } from "../workspace/EntryActionButtons";
+import EntryActionButtons from "../workspace/EntryActionButtons";
 import { entryActionMenu, useLibraryActions  } from "../workspace/libraryActions";
 import type {EntryAction} from "../workspace/libraryActions";
 
@@ -315,7 +315,7 @@ function targetNote(me: CharacterView | undefined, canAct: boolean) {
  * moves, options, tags), grouped by where it comes from. Gear can be added
  * to the selected character, and moves made by them.
  */
-export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
+function LibrariesPanel({ campaign }: { campaign: Campaign }) {
   const context = useCampaign();
   // The Libraries are the system's own; homebrew is in the Items panel.
   const sources = useLibrariesFor(baseSystemOf(campaign));
@@ -375,3 +375,5 @@ export function LibrariesPanel({ campaign }: { campaign: Campaign }) {
     </div>
   );
 }
+
+export default LibrariesPanel;

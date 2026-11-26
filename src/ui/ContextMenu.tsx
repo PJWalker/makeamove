@@ -9,7 +9,7 @@ import {
 } from "react-aria-components";
 import { withTransition } from "./transition";
 import { leave, morphOpen, setMorphOrigin } from "./morph";
-import { ColourPicker } from "./ColourPicker";
+import ColourPicker from "./ColourPicker";
 import { IconCheck } from "./icons";
 import type { IconProps as IconProperties } from "./icons";
 

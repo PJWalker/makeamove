@@ -4,7 +4,7 @@ import { exportBackupFile } from "../campaign/backup";
 import type { Campaign } from "../campaign/campaign";
 import type { FolderBackupState } from "../campaign/folderBackup";
 import { canUseFolders } from "../platform/files";
-import { Button } from "../ui/Button";
+import Button from "../ui/Button";
 import { IconBackupFolder, IconExport } from "../ui/icons";
 import { useCampaign } from "./campaignContext";
 
@@ -31,7 +31,7 @@ function folderStatus(s: FolderBackupState): string {
 }
 
 /** Saving the campaign off this device: a one-off file, or a folder kept up to date. */
-export function BackupSettings({ campaign }: { campaign: Campaign }) {
+function BackupSettings({ campaign }: { campaign: Campaign }) {
   const { backup } = useCampaign();
   const status = useSelector(backup.actor, (snapshot) => snapshot.context.state);
   const [busy, setBusy] = useState(false);
@@ -111,3 +111,5 @@ export function BackupSettings({ campaign }: { campaign: Campaign }) {
     </section>
   );
 }
+
+export default BackupSettings;

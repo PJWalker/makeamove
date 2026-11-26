@@ -1,10 +1,10 @@
 import { useEffect, useMemo } from "react";
-import { useConstant } from "../ui/useConstant";
+import useConstant from "../ui/useConstant";
 import { canDelete, canEditMessage, postedSince, visibilityOf } from "../features/chat/types";
 import { logRows  } from "../features/chat/sessions";
 import type {LogRow} from "../features/chat/sessions";
 import { markRead } from "../features/chat/unread";
-import { toggleSetValue } from "../lib/set";
+import toggleSetValue from "../lib/set";
 import { canEdit, getCharacter } from "../features/characters/api";
 import type { Campaign } from "../campaign/campaign";
 import { device } from "../platform/device";
@@ -14,7 +14,7 @@ import { usePanelVisible } from "../workspace/panelLayout";
 import { useCampaign } from "../workspace/campaignContext";
 import { Message } from "./ChatMessage";
 import { wasTrayRolled } from "./quickRolls";
-import { useLogWindow } from "./useLogWindow";
+import useLogWindow from "./useLogWindow";
 
 /* The chat log: every message and roll, rendered a window at a time. */
 
@@ -27,7 +27,7 @@ const editableIds = (campaign: Campaign) =>
     })
     .join(" ");
 
-export function ChatLog({
+function ChatLog({
   campaign,
   notes,
   onMenu,
@@ -195,3 +195,5 @@ function ChatRow({
     />
   );
 }
+
+export default ChatLog;

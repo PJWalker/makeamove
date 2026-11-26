@@ -1,6 +1,6 @@
 import * as decoding from "lib0/decoding";
 import * as encoding from "lib0/encoding";
-import { sha256 } from "../lib/hash";
+import sha256 from "../lib/hash";
 
 /*
  * Peer-to-peer image transfer. A device that lacks an image asks its peers for

@@ -17,7 +17,7 @@ const LIGHT_DEFAULT = (cell: number) => ({
  * The Lights tool (the GM's): a click puts down a lamp, or the next corner of
  * an area of solid light or dark. The Select tool picks them, with Lights on.
  */
-export const light: ToolPress = (c, e, world) => {
+const light: ToolPress = (c, e, world) => {
   if (!c.gm) return null;
   const mode = c.tools.lightTool.value;
   if (mode !== "lamp") {
@@ -51,3 +51,5 @@ function areaPlan(c: ToolContext, tone: AreaTone): PolygonPlan {
     place: (frame) => c.scene.add({ type: "area", layer: "over", tone, ...frame }),
   };
 }
+
+export default light;

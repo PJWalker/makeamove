@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-magic-numbers */
-import { seededRandom } from "../lib/seededRandom";
+import seededRandom from "../lib/seededRandom";
 
 /*
  * The shapes the cave's painted splats are drawn with: a strip of brush

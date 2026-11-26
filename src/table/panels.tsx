@@ -5,51 +5,43 @@ import type { Campaign, MemberView } from "../campaign/campaign";
 import type { Role } from "../campaign/types";
 import { device } from "../platform/device";
 import { useQuery } from "../ui/useQuery";
-import { Avatar } from "../ui/Avatar";
-import { Button } from "../ui/Button";
+import Avatar from "../ui/Avatar";
+import Button from "../ui/Button";
 import { PANELS  } from "../workspace/panelLayout";
 import type {PanelId} from "../workspace/panelLayout";
 import { playedCharacterId } from "../features/characters/api";
-import { CampaignEntityGraphic } from "../workspace/EntityGraphic";
+import CampaignEntityGraphic from "../workspace/EntityGraphic";
 import { allowBack, removeMember } from "../workspace/commands/campaign";
 import { can } from "../workspace/commands/views";
 import { useCampaign } from "../workspace/campaignContext";
 import { charactersLayout, notesLayout, scenesLayout } from "./panelLayouts";
 
 const ScenePanel = lazy(() =>
-  import("./ScenePanel").then((module) => ({ default: module.ScenePanel })),
+  import("./ScenePanel"),
 );
 const ChatPanel = lazy(() =>
-  import("./ChatPanel").then((module) => ({ default: module.ChatPanel })),
+  import("./ChatPanel"),
 );
 const PlayerCharacterPanel = lazy(() =>
-  import("./PlayerCharacterPanel").then((module) => ({
-    default: module.PlayerCharacterPanel,
-  })),
+  import("./PlayerCharacterPanel"),
 );
 const CharactersPanel = lazy(() =>
-  import("./CharactersPanel").then((module) => ({
-    default: module.CharactersPanel,
-  })),
+  import("./CharactersPanel"),
 );
 const LibrariesPanel = lazy(() =>
-  import("./LibrariesPanel").then((module) => ({
-    default: module.LibrariesPanel,
-  })),
+  import("./LibrariesPanel"),
 );
 const ReferencePanel = lazy(() =>
-  import("./ReferencePanel").then((module) => ({
-    default: module.ReferencePanel,
-  })),
+  import("./ReferencePanel"),
 );
 const NotesPanel = lazy(() =>
-  import("./NotesPanel").then((module) => ({ default: module.NotesPanel })),
+  import("./NotesPanel"),
 );
 const CombatPanel = lazy(() =>
-  import("./CombatPanel").then((module) => ({ default: module.CombatPanel })),
+  import("./CombatPanel"),
 );
 const ItemsPanel = lazy(() =>
-  import("./ItemsPanel").then((module) => ({ default: module.ItemsPanel })),
+  import("./ItemsPanel"),
 );
 
 const PANEL_COMPONENTS: Record<PanelId, ComponentType<{ campaign: Campaign }>> = {

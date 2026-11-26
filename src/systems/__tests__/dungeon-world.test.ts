@@ -24,7 +24,7 @@ import {
 } from "../../features/characters/api";
 import { actionsFor, derive } from "../../features/characters/store";
 import { device } from "../../platform/device";
-import { dungeonWorld } from "../dungeon-world";
+import dungeonWorld from "../dungeon-world";
 
 async function setUp() {
   device.value = { id: "gm", name: "Gwen" };

@@ -55,7 +55,7 @@ function nameAndScoreHints(classId: string) {
 }
 
 /** Each class's creation hints from its rulebook pages, by class id. */
-export const classCreationHints = (): Record<string, CreationHints> =>
+const classCreationHints = (): Record<string, CreationHints> =>
   Object.fromEntries(
     CLASS_IDS.map((classId) => {
       const relationship = relationshipHint(classId);
@@ -69,3 +69,5 @@ export const classCreationHints = (): Record<string, CreationHints> =>
       ];
     }),
   );
+
+export default classCreationHints;

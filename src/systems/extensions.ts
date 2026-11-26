@@ -1,10 +1,10 @@
 import { isString } from "../lib/guards";
 import type { GameSystem } from "./types";
 import type { SystemExtension } from "./extensionTypes";
-import { dnd55eExtension } from "./dnd55e/extension";
-import { dungeonWorldExtension } from "./dungeon-world/extension";
-import { dungeonWorld2Extension } from "./dungeon-world-2/extension";
-import { bladesExtension } from "./blades-in-the-dark/extension";
+import dnd55eExtension from "./dnd55e/extension";
+import dungeonWorldExtension from "./dungeon-world/extension";
+import dungeonWorld2Extension from "./dungeon-world-2/extension";
+import bladesExtension from "./blades-in-the-dark/extension";
 
 /*
  * What a system adds to the table besides its rules: sheet components,
@@ -23,5 +23,7 @@ const EXTENSIONS: Record<string, SystemExtension> = {
 const NONE: SystemExtension = {};
 
 /** What a system adds to the table; nothing for systems that add nothing. */
-export const extensionOf = (system: Pick<GameSystem, "id"> | string | undefined): SystemExtension =>
+const extensionOf = (system: Pick<GameSystem, "id"> | string | undefined): SystemExtension =>
   EXTENSIONS[isString(system) ? system : (system?.id ?? "")] ?? NONE;
+
+export default extensionOf;

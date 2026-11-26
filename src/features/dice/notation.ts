@@ -1,4 +1,4 @@
-import { seededRandom } from "../../lib/seededRandom";
+import seededRandom from "../../lib/seededRandom";
 
 /*
  * Dice notation: a small parser and roller for the usual tabletop syntax.

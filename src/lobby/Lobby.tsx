@@ -22,12 +22,12 @@ import { device, setDeviceName } from "../platform/device";
 import { campaigns, registryReady  } from "../campaign/registry";
 import type {CampaignSummary} from "../campaign/registry";
 import { getSystem, listSystems, NO_SYSTEM_ID } from "../systems";
-import { Button } from "../ui/Button";
+import Button from "../ui/Button";
 import { ContextMenu } from "../ui/ContextMenu";
-import { menuTrigger } from "../ui/menuTrigger";
+import menuTrigger from "../ui/menuTrigger";
 import { leave, showFromOrigin } from "../ui/morph";
 import { useQuery } from "../ui/useQuery";
-import { CaveBackdrop } from "./CaveBackdrop";
+import CaveBackdrop from "./CaveBackdrop";
 
 const relative = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
 
@@ -68,7 +68,7 @@ async function runBackup(act: () => Promise<unknown>) {
   }
 }
 
-export function Lobby({ error }: { error: string | null }) {
+function Lobby({ error }: { error: string | null }) {
   const list = stableOrder(useQuery(campaigns));
   const ready = useQuery(registryReady);
   const invite = useQuery(pendingInvite);
@@ -447,3 +447,5 @@ function YourNameField({
     </label>
   );
 }
+
+export default Lobby;

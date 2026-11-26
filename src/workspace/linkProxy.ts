@@ -4,7 +4,7 @@ import { entity } from "./dragEntities";
 import type { CampaignContext } from "./campaignContext";
 
 /** A window's title-bar icon for a link target, dragging like a link to it. */
-export function linkProxy(
+function linkProxy(
   context: CampaignContext,
   kind: LinkKind,
   id: string,
@@ -19,3 +19,5 @@ export function linkProxy(
     entity: entity(context, kind, id, label),
   };
 }
+
+export default linkProxy;

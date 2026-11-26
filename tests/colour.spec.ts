@@ -3,7 +3,7 @@ import { createElement, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test } from "vite-plus/test";
 import { cdp, page, userEvent } from "vite-plus/test/browser/context";
-import { ColourPicker } from "../src/ui/ColourPicker";
+import ColourPicker from "../src/ui/ColourPicker";
 import {
   gamutMappedOklch,
   hexToOklch,

@@ -43,7 +43,7 @@ const DELTA_ROOM = 68;
  * What sits under each token, in screen space so it stays readable at any
  * zoom: its system's stat bars (HP), then its name.
  */
-export class TokenLabelLayer {
+export default class TokenLabelLayer {
   /** Tokens' stat bars, with their values. */
   readonly bars = new Graphics();
   readonly barText = new Container();

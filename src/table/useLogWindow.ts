@@ -38,7 +38,7 @@ interface Span { start: string | null; end: string | null }
  * newest message, keeping what's on screen in place as rows come and go, and sliding the window or
  * loading earlier chunks as the user scrolls. `settleOn` is whatever else can change a row's size.
  */
-export function useLogWindow({
+function useLogWindow({
   campaign,
   rows,
   newest,
@@ -237,3 +237,5 @@ export function useLogWindow({
   };
   return { ref: reference, list, shown, above, below, atNewest, onScroll };
 }
+
+export default useLogWindow;

@@ -12,7 +12,7 @@ const NODE_RADIUS = 20;
 
 interface RelationshipPerson { id: string; name: string; kind: string }
 
-export function RelationshipWeb({
+function RelationshipWeb({
   people,
   edges,
   onOpenCharacter,
@@ -143,3 +143,5 @@ export function RelationshipWeb({
     </svg>
   );
 }
+
+export default RelationshipWeb;

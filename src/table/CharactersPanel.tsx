@@ -16,8 +16,8 @@ import { device } from "../platform/device";
 import { useQuery } from "../ui/useQuery";
 import type { ChoiceDef, GameSystem } from "../systems/types";
 import { HintedField } from "../ui/HintedField";
-import { Button } from "../ui/Button";
-import { menuTrigger } from "../ui/menuTrigger";
+import Button from "../ui/Button";
+import menuTrigger from "../ui/menuTrigger";
 import { CLASS_FIELD, choicesAt } from "../features/characters/creation";
 import { ChoiceField, ScoreFields  } from "../workspace/CreationParts";
 import type {Picked} from "../workspace/CreationParts";
@@ -33,13 +33,13 @@ import type {ScoreMethod} from "../workspace/creationModel";
 import { IconAdd, IconNewFolder } from "../ui/icons";
 import { Segmented } from "../ui/Segmented";
 import { TwoPane } from "../ui/TwoPane";
-import { usePaneLevel } from "../ui/paneLevel";
+import usePaneLevel from "../ui/paneLevel";
 import { ListRow } from "../ui/List";
 import { ContextMenu  } from "../ui/ContextMenu";
 import type {MenuItem} from "../ui/ContextMenu";
 import { dragEntity } from "../workspace/entityDrag";
 import { entity } from "../workspace/dragEntities";
-import { CampaignEntityGraphic } from "../workspace/EntityGraphic";
+import CampaignEntityGraphic from "../workspace/EntityGraphic";
 import { useCampaign } from "../workspace/campaignContext";
 import {
   characterFolders,
@@ -51,10 +51,10 @@ import {
 import { menuFor } from "../workspace/commands/views";
 import { isString } from "../lib/guards";
 import { charactersLayout } from "./panelLayouts";
-import { FolderTree } from "./FolderTree";
-import { CharacterSheet } from "./sheets";
+import FolderTree from "./FolderTree";
+import CharacterSheet from "./sheets";
 
-export function CharactersPanel({ campaign }: { campaign: Campaign }) {
+function CharactersPanel({ campaign }: { campaign: Campaign }) {
   const context = useCampaign();
   const system = systemOf(campaign);
   const characters = useQuery(campaign.characters, () => listCharacters(campaign));
@@ -672,3 +672,5 @@ function useNewCharacter(
     submit,
   };
 }
+
+export default CharactersPanel;

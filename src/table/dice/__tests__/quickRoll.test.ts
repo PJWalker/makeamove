@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vite-plus/test";
-import { seededRandom } from "../../../lib/seededRandom";
+import seededRandom from "../../../lib/seededRandom";
 import { simulateDice } from "../physics";
 import { shapeFor } from "../shapes";
 import { struck } from "../tracks";

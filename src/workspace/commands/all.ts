@@ -9,7 +9,7 @@ import { selectionCommands } from "./selection";
 import type { AnyTableCommand } from "./types";
 
 /** Every command the table offers, in the order the palette lists them. */
-export const tableCommands: readonly AnyTableCommand[] = [
+const tableCommands: readonly AnyTableCommand[] = [
   ...coreCommands,
   ...characterCommands,
   ...sceneCommands,
@@ -19,3 +19,5 @@ export const tableCommands: readonly AnyTableCommand[] = [
   ...chatCommands,
   ...campaignCommands,
 ];
+
+export default tableCommands;

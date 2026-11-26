@@ -2,7 +2,7 @@ import type { Store } from "../../lib/store";
 import type { Rect } from "../camera";
 import type { Point } from "../grid";
 import type { Presence } from "../presence";
-import type { SceneRenderer } from "../renderer";
+import type SceneRenderer from "../renderer";
 import type { SceneDoc as SceneDocument } from "../sceneDoc";
 import type { SceneTools } from "../tools";
 import type {

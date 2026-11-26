@@ -64,7 +64,7 @@ const ADVANCEMENTS: { name: string; text: string; note: string }[] = [
 
 const ARMOR = new Set(["light-armor", "medium-armor", "heavy-armor", "shield"]);
 
-export function dw2Library({
+function dw2Library({
   classes,
   classMoves,
   actions,
@@ -233,3 +233,5 @@ export function dw2Library({
     },
   ];
 }
+
+export default dw2Library;

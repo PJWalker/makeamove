@@ -1,7 +1,7 @@
 import type { LinkKind } from "../features/notes/links";
 import { dropLine, indexAmong } from "../ui/reorder";
 import { followPress } from "../ui/pointer";
-import { suppressNextClick } from "../ui/suppressClick";
+import suppressNextClick from "../ui/suppressClick";
 import { hideTooltip } from "../ui/tooltipController";
 import { reducedMotion } from "../ui/transition";
 import type { CanvasState, TokenSpec } from "./canvasState";

@@ -2,7 +2,7 @@
 import { useEffect, useEffectEvent, useRef } from "react";
 import { useMachine } from "@xstate/react";
 import type { ReactNode, RefObject } from "react";
-import { whenNear } from "../ui/whenNear";
+import whenNear from "../ui/whenNear";
 import { useThrow } from "../ui/useThrow";
 import { lastPointer } from "../ui/pointer";
 import type { Die as RolledDie } from "../features/dice/notation";
@@ -16,7 +16,7 @@ import { chipLook, looksOf } from "./dice/looks";
 import type {PhysicalDie as Die} from "./rollDieHelpers";
 import { chipSign, dieColours, dieTitle, CHIP_COLOUR, loadDice, rollCarriedDice } from "./rollDieHelpers";
 import type { DieLook, Point } from "./dice/types";
-import { pieceMachine } from "./pieceMachine";
+import pieceMachine from "./pieceMachine";
 
 /** Waiting for the 3D dice, moving, at rest, or drawn flat. */
 type Phase = "flat" | "landed" | "moving" | "pending";

@@ -12,7 +12,7 @@ import type {View} from "./elementViews";
 import type { RenderState } from "./state";
 
 /** The scene's elements: a view per element, kept in its layer and in order. */
-export class ElementLayer {
+export default class ElementLayer {
   private readonly views = new Map<string, View>();
   /** Elements given a preview transform at the last sync, to put back once it's gone. */
   private previewed = new Set<string>();

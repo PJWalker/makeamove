@@ -37,7 +37,7 @@ function cursorAt(m: CursorMove, now: number): Point {
  * device's own, with their labels; and the size of a shape being dragged
  * out, or of the shape selected.
  */
-export class PresenceLayer {
+export default class PresenceLayer {
   readonly view = new Graphics();
   readonly labels = new Container();
   private readonly labelPool = new Map<string, SdfText>();

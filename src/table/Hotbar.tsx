@@ -8,17 +8,17 @@ import { findAction } from "../workspace/commands/views";
 import type { Campaign } from "../campaign/campaign";
 import { notePressed } from "../ui/pressed";
 import { useQuery } from "../ui/useQuery";
-import { Button } from "../ui/Button";
+import Button from "../ui/Button";
 import { ENTRY_ICONS } from "../ui/entryIcons";
 import { IconDelete, IconImage, IconRename, IconSearch, IconShortcut } from "../ui/icons";
-import { menuTrigger } from "../ui/menuTrigger";
+import menuTrigger from "../ui/menuTrigger";
 import { ContextMenu  } from "../ui/ContextMenu";
 import type {MenuItem} from "../ui/ContextMenu";
 import { dropMarker, dropOn, dropTargetAt, setDropCursor } from "../workspace/entityDrag";
 import { actionEntity } from "../workspace/dragEntities";
-import { isTyping } from "../ui/keys";
+import isTyping from "../ui/keys";
 import { startReorder } from "../ui/reorder";
-import { scrollSideways } from "../ui/wheel";
+import scrollSideways from "../ui/wheel";
 import { useCampaign } from "../workspace/campaignContext";
 import { useDockStripLayout } from "./dockStrip";
 
@@ -28,7 +28,7 @@ import { useDockStripLayout } from "./dockStrip";
  * slot focused, Alt+Left/Right reorder and Delete removes, for the keyboard.
  * Right-click a slot to rename it, give it an icon or a shortcut.
  */
-export function Hotbar({ campaign }: { campaign: Campaign }) {
+function Hotbar({ campaign }: { campaign: Campaign }) {
   const { ctx, dragging, barRef, slots, find, run, edit, menu, setMenu, slotMenu, dragSlot } =
     useHotbar(campaign);
   return (
@@ -237,3 +237,5 @@ function useHotbar(campaign: Campaign) {
 
   return { ctx: context, dragging, barRef: barReference, slots, find, run, edit, menu, setMenu, slotMenu, dragSlot };
 }
+
+export default Hotbar;

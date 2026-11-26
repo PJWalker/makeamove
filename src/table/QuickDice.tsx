@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { RollVisibility } from "../features/chat/types";
 import { pickName, samePick, signed  } from "../features/dice/pool";
 import type {TrayPick} from "../features/dice/pool";
-import { Button } from "../ui/Button";
+import Button from "../ui/Button";
 import { POOL_MS  } from "./useDicePool";
 import type {useDicePool} from "./useDicePool";
 
@@ -29,7 +29,7 @@ function pickLabel(pick: TrayPick, name: string, count: number) {
 }
 
 /** The quick dice bar: a button for each die, modifier and stat, and who sees the roll. */
-export function QuickDice({
+function QuickDice({
   dice,
   stats,
   visibility,
@@ -105,3 +105,5 @@ export function QuickDice({
     </>
   );
 }
+
+export default QuickDice;

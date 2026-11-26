@@ -1,9 +1,9 @@
 import { BOND_TEXTS } from "./rulebook";
-import { BOND_SPECS } from "./bondSpecs";
+import BOND_SPECS from "./bondSpecs";
 
 const TEXTS = BOND_TEXTS;
 
-export const BONDS = BOND_SPECS.map((bond) => ({
+const BONDS = BOND_SPECS.map((bond) => ({
   ...bond,
   moves: bond.moves.map((name, index) => ({
     id: name
@@ -15,3 +15,5 @@ export const BONDS = BOND_SPECS.map((bond) => ({
   })),
   text: TEXTS[bond.id] ?? "",
 }));
+
+export default BONDS;

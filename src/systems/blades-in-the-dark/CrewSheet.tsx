@@ -5,7 +5,7 @@ import { getState } from "../../features/chat/messageState";
 import { systemCampaignData  } from "../../campaign/campaign";
 import type {Campaign} from "../../campaign/campaign";
 import { useQuery } from "../../ui/useQuery";
-import { Button } from "../../ui/Button";
+import Button from "../../ui/Button";
 import { Counter } from "../../workspace/sheetParts";
 import { useCampaign } from "../../workspace/campaignContext";
 import { bumpSystemCounter } from "../../workspace/commands/chat";
@@ -37,7 +37,7 @@ function canAdvanceTier(state: Record<string, unknown>, cost: { rep: number; coi
   return Number(state["crewCoin"] ?? 0) >= cost.coin && Number(state["crewTier"] ?? 0) < 4;
 }
 
-export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
+function BladesCrewControls({ campaign }: { campaign: Campaign }) {
   const context = useCampaign();
   const [reward, setReward] = useState("upgrades");
   const [upgrade, setUpgrade] = useState("");
@@ -113,3 +113,5 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
     </section>
   );
 }
+
+export default BladesCrewControls;

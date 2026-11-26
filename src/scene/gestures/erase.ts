@@ -5,7 +5,7 @@ import { coalesced  } from "./types";
 import type {ToolPress} from "./types";
 
 /** The Eraser: strokes it passes over hide at once, and go when it lifts. */
-export const erase: ToolPress = (c, _e, world) => {
+const erase: ToolPress = (c, _e, world) => {
   /** Each stroke passed over, and how to show it again. */
   const erased = new Map<string, () => void>();
   const at = (p: Point) => {
@@ -32,3 +32,5 @@ export const erase: ToolPress = (c, _e, world) => {
     cancel: showAll,
   };
 };
+
+export default erase;

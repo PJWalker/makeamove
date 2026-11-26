@@ -6,7 +6,7 @@
  * by hash.
  */
 
-import { sha256 } from "../lib/hash";
+import sha256 from "../lib/hash";
 import { dataName } from "./dataEpoch";
 
 const DIR = dataName("blobs");

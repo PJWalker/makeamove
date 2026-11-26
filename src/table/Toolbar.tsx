@@ -5,13 +5,13 @@ import { flushSync } from "react-dom";
 import { createPortal } from "react-dom";
 import type { Store } from "../lib/store";
 import { startReorder } from "../ui/reorder";
-import { scrollSideways } from "../ui/wheel";
+import scrollSideways from "../ui/wheel";
 import {  PEN_WIDTH_RANGE   } from "../scene/tools";
 import type {LightToolMode, SelectKind, ToolId} from "../scene/tools";
 import { AREA_COLOURS, SHAPES  } from "../scene/types";
 import type {ShapeKind} from "../scene/types";
-import { Button } from "../ui/Button";
-import { ColourPicker } from "../ui/ColourPicker";
+import Button from "../ui/Button";
+import ColourPicker from "../ui/ColourPicker";
 import { Segmented, ToggleGroup } from "../ui/Segmented";
 import {
   IconDraw,
@@ -27,7 +27,7 @@ import {
   PROMINENT_ICON_SIZE
 } from "../ui/icons";
 import type {Icon} from "../ui/icons";
-import { TOOLS } from "../workspace/tools";
+import TOOLS from "../workspace/tools";
 import { ContextMenu  } from "../ui/ContextMenu";
 import type {MenuItem} from "../ui/ContextMenu";
 import { useQuery } from "../ui/useQuery";
@@ -35,9 +35,9 @@ import { withTransition } from "../ui/transition";
 import { useCampaign } from "../workspace/campaignContext";
 import { selectTool } from "../workspace/commands/core";
 import { menuFor } from "../workspace/commands/views";
-import { EffectSightToggles } from "./effectOptions";
-import { EFFECT_OPTIONS } from "./effectOptionsData";
-import { TextStyleFields } from "./TextStyleFields";
+import EffectSightToggles from "./effectOptions";
+import EFFECT_OPTIONS from "./effectOptionsData";
+import TextStyleFields from "./TextStyleFields";
 import { useDockStripLayout } from "./dockStrip";
 
 function measureToolbar(toolbar: HTMLElement) {
@@ -90,7 +90,7 @@ function useShownTool(activeTool: Store<ToolId>): ToolId {
   return tool;
 }
 
-export function Toolbar({ isGm }: { isGm: boolean }) {
+function Toolbar({ isGm }: { isGm: boolean }) {
   const context = useCampaign();
   const order = useQuery(context.tools.toolOrder);
   const tool = useShownTool(context.tools.activeTool);
@@ -445,3 +445,5 @@ function ShapeGlyph({ shape }: { shape: ShapeKind }) {
     </svg>
   );
 }
+
+export default Toolbar;

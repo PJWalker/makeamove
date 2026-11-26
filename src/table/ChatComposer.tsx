@@ -10,11 +10,11 @@ import type { TrayPick } from "../features/dice/pool";
 import { actingCharacterId, actingStatBonuses } from "../features/characters/api";
 import type { Campaign } from "../campaign/campaign";
 import { useQuery } from "../ui/useQuery";
-import { Button } from "../ui/Button";
+import Button from "../ui/Button";
 import { ChatInput  } from "./ChatInput";
 import type {ChatInputHandle} from "./ChatInput";
 import { PendingRollCard } from "./RollCards";
-import { QuickDice } from "./QuickDice";
+import QuickDice from "./QuickDice";
 import { useDicePool } from "./useDicePool";
 
 /** The selected character's stats, as chips; read again as the character or the choice changes. */
@@ -121,7 +121,7 @@ function MessageBox({
 }
 
 /** The message box, its command hints, and the quick dice bar above it. */
-export function ChatComposer({
+function ChatComposer({
   campaign,
   onQuickRollMessage,
   rollOverlay,
@@ -160,3 +160,5 @@ export function ChatComposer({
     </>
   );
 }
+
+export default ChatComposer;

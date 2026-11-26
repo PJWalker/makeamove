@@ -3,7 +3,7 @@ import * as Y from "yjs";
 import { store } from "../../lib/store";
 import type { Device } from "../../platform/device";
 import { MemoryNetwork } from "../../sync/__tests__/memoryRoom";
-import { CampaignConnection } from "../connection";
+import CampaignConnection from "../connection";
 
 describe("CampaignConnection", () => {
   let network: MemoryNetwork;

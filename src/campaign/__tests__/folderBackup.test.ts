@@ -26,7 +26,7 @@ vi.mock("../../platform/blobs", () => ({
 // The worker's tasks, run in-process.
 vi.mock("../backupWorker", async () => {
   const { runBackupTask } = await import("../backupTasks");
-  return { runInBackupWorker: runBackupTask };
+  return { default: runBackupTask };
 });
 // Folder handles are stored by structured clone, which a fake can't survive.
 vi.mock("../../platform/keyval", () => ({

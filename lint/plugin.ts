@@ -1,17 +1,17 @@
-import { cssCoLocated } from "./rules/cssCoLocated.ts";
-import { dialogTitleEllipsis } from "./rules/dialogTitleEllipsis.ts";
-import { noNativeConfirmation } from "./rules/noNativeConfirmation.ts";
-import { noProps } from "./rules/noProps.ts";
-import { noRedundantTypeSynonyms } from "./rules/noRedundantTypeSynonyms.ts";
-import { preferGuardHelpers } from "./rules/prefer-guard-helpers.ts";
-import { preferMotionHelpers } from "./rules/preferMotionHelpers.ts";
-import { preferNumberParsing } from "./rules/preferNumberParsing.ts";
-import { preferReducedMotion } from "./rules/preferReducedMotion.ts";
-import { referenceReadOnly } from "./rules/referenceReadOnly.ts";
-import { titleCaseRule } from "./rules/titleCase.ts";
-import { testStructure } from "./rules/testStructure.ts";
-import { useDialog } from "./rules/useDialog.ts";
-import { validImportMembers } from "./rules/validImportMembers.ts";
+import cssCoLocated from "./rules/cssCoLocated.ts";
+import dialogTitleEllipsis from "./rules/dialogTitleEllipsis.ts";
+import noNativeConfirmation from "./rules/noNativeConfirmation.ts";
+import noProps from "./rules/noProps.ts";
+import noRedundantTypeSynonyms from "./rules/noRedundantTypeSynonyms.ts";
+import preferGuardHelpers from "./rules/prefer-guard-helpers.ts";
+import preferMotionHelpers from "./rules/preferMotionHelpers.ts";
+import preferNumberParsing from "./rules/preferNumberParsing.ts";
+import preferReducedMotion from "./rules/preferReducedMotion.ts";
+import referenceReadOnly from "./rules/referenceReadOnly.ts";
+import titleCaseRule from "./rules/titleCase.ts";
+import testStructure from "./rules/testStructure.ts";
+import useDialog from "./rules/useDialog.ts";
+import validImportMembers from "./rules/validImportMembers.ts";
 
 /*
  * Make a Move's own lint rules for patterns that standard ESLint rules can't express.

@@ -9,7 +9,7 @@ import type {Gesture, ToolContext} from "./types";
  * the grid. A lone token can be dropped on the table outside the scene, and a
  * press without a drag clicks it.
  */
-export function moveSelection(c: ToolContext, start: Point): Gesture {
+function moveSelection(c: ToolContext, start: Point): Gesture {
   const originals = new Map<string, SceneElement>(
     c.selected().flatMap((s) => (s.locked ? [] : [[s.id, s] as const])),
   );
@@ -61,3 +61,5 @@ export function moveSelection(c: ToolContext, start: Point): Gesture {
     },
   };
 }
+
+export default moveSelection;

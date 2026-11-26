@@ -6,11 +6,11 @@ import { HelpDialog, SettingsDialog } from "../workspace/CampaignDialogs";
 import { useCampaign } from "../workspace/campaignContext";
 import { useQuery } from "../ui/useQuery";
 import type { Confirmation } from "../workspace/tableState";
-import { ConfirmDialog } from "./ConfirmDialog";
+import ConfirmDialog from "./ConfirmDialog";
 import { RelationshipsDialog } from "./Relationships";
 
 /** Always mounted so campaign actions can open dialogs from any panel. */
-export function CampaignDialogHost({ campaign }: { campaign: Campaign }) {
+function CampaignDialogHost({ campaign }: { campaign: Campaign }) {
   const context = useCampaign();
   const settingsReference = useRef<HTMLDialogElement>(null);
   const helpReference = useRef<HTMLDialogElement>(null);
@@ -75,3 +75,5 @@ function Emphasised({ body, subject }: Confirmation) {
     </>
   );
 }
+
+export default CampaignDialogHost;

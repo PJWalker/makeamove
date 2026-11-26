@@ -2,10 +2,10 @@ import type * as React from "react";
 import { use, useEffect, useState } from "react";
 import { loadBlob } from "../media/images";
 import type { BlobReference } from "../media/images";
-import { PeerBlobsContext } from "./blobImageContext";
+import PeerBlobsContext from "./blobImageContext";
 
 /** An image from the blob store, or `fallback` while it's missing from this device. */
-export function BlobImage({
+function BlobImage({
   image,
   alt = "",
   className: cls,
@@ -41,3 +41,5 @@ export function BlobImage({
   const url = loaded && loaded.hash === hash && loaded.tries === tries ? loaded.url : null;
   return url ? <img className={cls} src={url} alt={alt} draggable={false} /> : fallback;
 }
+
+export default BlobImage;

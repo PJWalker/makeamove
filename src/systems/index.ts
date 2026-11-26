@@ -1,6 +1,6 @@
 import type { GameSystem } from "./types";
-import { dungeonWorld } from "./dungeon-world";
-import { dungeonWorld2 } from "./dungeon-world-2";
+import dungeonWorld from "./dungeon-world";
+import dungeonWorld2 from "./dungeon-world-2";
 import { bladesInTheDark } from "./blades-in-the-dark";
 import { dnd55e } from "./dnd55e";
 

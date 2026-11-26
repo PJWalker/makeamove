@@ -15,7 +15,7 @@ import { registerLinkDrop } from "../workspace/entityDrag";
 
 import { useCampaign } from "../workspace/campaignContext";
 import { isString } from "../lib/guards";
-import { chatContentExtensions } from "./chatContentExtensions";
+import chatContentExtensions from "./chatContentExtensions";
 
 export interface ChatInputHandle {
   /** Replace the current document with text or Tiptap JSON. */

@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vite-plus/test";
-import { CaveBackdrop } from "../CaveBackdrop";
+import CaveBackdrop from "../CaveBackdrop";
 import { buildCave, lightDrift } from "../caveScene";
 import { MOTION, pack } from "../splat";
 

@@ -1,16 +1,16 @@
 import type { Campaign } from "../campaign/campaign";
 import { useQuery } from "../ui/useQuery";
-import { GraphicPicker } from "../ui/GraphicPicker";
-import { Dialog } from "./Dialog";
+import GraphicPicker from "../ui/GraphicPicker";
+import Dialog from "./Dialog";
 import { getEntityGraphic } from "./entityGraphics";
-import { usePopupDialog } from "./usePopupDialog";
+import usePopupDialog from "./usePopupDialog";
 import { useCampaign } from "./campaignContext";
 import type { TableState } from "./tableState";
 import { chooseGraphic } from "./commands/campaign";
 
 type Request = NonNullable<TableState["graphicEdit"]["value"]>;
 
-export function GraphicDialogs({ campaign }: { campaign: Campaign }) {
+function GraphicDialogs({ campaign }: { campaign: Campaign }) {
   const context = useCampaign();
   const current = useQuery(context.table.graphicEdit);
   if (!current) return null;
@@ -38,3 +38,5 @@ function GraphicDialog({ campaign, request: edit }: { campaign: Campaign; reques
     </Dialog>
   );
 }
+
+export default GraphicDialogs;

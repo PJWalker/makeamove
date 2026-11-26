@@ -305,7 +305,7 @@ class DriftView {
 }
 
 /** An effect zone's drawing: its drifts of particles, and the outline the GM sees. */
-export class EffectView {
+export default class EffectView {
   readonly root = new Container({ cullable: true });
   /** The zone's outline, which only the GM sees, and only while effects can be picked. */
   readonly outline = new Graphics();

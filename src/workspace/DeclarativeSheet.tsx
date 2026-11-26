@@ -9,10 +9,10 @@ import { device } from "../platform/device";
 import type { Derived, GameSystem, SheetCounter, SheetSection } from "../systems/types";
 import type { SheetProps as SheetProperties } from "../systems/extensionTypes";
 import { commaListOf } from "../lib/list";
-import { parseInputNumber } from "../lib/number";
-import { Button } from "../ui/Button";
+import parseInputNumber from "../lib/number";
+import Button from "../ui/Button";
 import { IconLock } from "../ui/icons";
-import { menuTrigger } from "../ui/menuTrigger";
+import menuTrigger from "../ui/menuTrigger";
 import { ContextMenu  } from "../ui/ContextMenu";
 import type {MenuItem} from "../ui/ContextMenu";
 import { useQuery } from "../ui/useQuery";
@@ -20,7 +20,7 @@ import { AdvancementDialog } from "./CreationParts";
 import { useExtension } from "./systemExtensions";
 import { registerEntityDrop  } from "./entityDrag";
 import type {DragEntity} from "./entityDrag";
-import { Inventory } from "./Inventory";
+import Inventory from "./Inventory";
 import { Counter } from "./sheetParts";
 import { signedStr as signedString } from "./actionPresentation";
 import {
@@ -46,7 +46,7 @@ import {
 } from "./commands/characters";
 import { useCampaign } from "./campaignContext";
 import { roll } from "./commands/chat";
-import { useSheet } from "./sheetModel";
+import useSheet from "./sheetModel";
 
 /*
  * Shared sections for system-owned sheet components, and a declarative

@@ -8,7 +8,7 @@ const APP_ID = "makeamove";
  * Trystero password, so session descriptions are encrypted and only holders
  * of the invite can connect; the data channels are encrypted by WebRTC.
  */
-export function trysteroTransport(campaignId: string, roomKey: string): Transport {
+function trysteroTransport(campaignId: string, roomKey: string): Transport {
   const room = joinRoom({ appId: APP_ID, password: roomKey }, campaignId);
   const peers = new Set<string>();
   const actions = {
@@ -42,3 +42,5 @@ export function trysteroTransport(campaignId: string, roomKey: string): Transpor
   };
   return t;
 }
+
+export default trysteroTransport;

@@ -1,5 +1,5 @@
 import type * as React from "react";
-import { suppressNextClick } from "./suppressClick";
+import suppressNextClick from "./suppressClick";
 
 /*
  * Press-and-drag reordering for a row or column of items (sidebar tabs, tools,

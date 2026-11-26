@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { isTyping } from "../../ui/keys";
+import isTyping from "../../ui/keys";
 import type { CampaignContext } from "../campaignContext";
 import { actionForCombo, comboOf, firesWhileTyping, platformCombo, shortcuts } from "./custom";
 import { findAction, invoke, listActions } from "./views";

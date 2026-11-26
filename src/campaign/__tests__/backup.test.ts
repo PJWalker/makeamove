@@ -31,7 +31,7 @@ vi.mock("../../platform/blobs", () => ({
 // The worker's tasks, run in-process.
 vi.mock("../backupWorker", async () => {
   const { runBackupTask } = await import("../backupTasks");
-  return { runInBackupWorker: runBackupTask };
+  return { default: runBackupTask };
 });
 
 const image = async (text: string) => {

@@ -2,15 +2,15 @@ import { useState } from "react";
 import type { Campaign, SceneView } from "../campaign/campaign";
 import { listSceneFolders } from "../campaign/sceneFolders";
 import { useQuery } from "../ui/useQuery";
-import { Button } from "../ui/Button";
+import Button from "../ui/Button";
 import { IconAdd, IconMembers, IconNewFolder } from "../ui/icons";
 import { TwoPane } from "../ui/TwoPane";
-import { usePaneLevel } from "../ui/paneLevel";
-import { GraphicPicker } from "../ui/GraphicPicker";
+import usePaneLevel from "../ui/paneLevel";
+import GraphicPicker from "../ui/GraphicPicker";
 import { getEntityGraphic } from "../workspace/entityGraphics";
 import { ContextMenu  } from "../ui/ContextMenu";
 import type {MenuItem} from "../ui/ContextMenu";
-import { menuTrigger } from "../ui/menuTrigger";
+import menuTrigger from "../ui/menuTrigger";
 import { useCampaign } from "../workspace/campaignContext";
 import { chooseGraphic } from "../workspace/commands/campaign";
 import {
@@ -22,8 +22,8 @@ import {
 } from "../workspace/commands/scenes";
 import { can, menuFor } from "../workspace/commands/views";
 import { scenesLayout } from "./panelLayouts";
-import { FolderTree } from "./FolderTree";
-import { SceneSettingsFields } from "./SceneSettingsFields";
+import FolderTree from "./FolderTree";
+import SceneSettingsFields from "./SceneSettingsFields";
 
 /** How many players are in each scene; those not in a known scene count towards the first. */
 function usePlayerCounts(campaign: Campaign, scenes: SceneView[]) {
@@ -124,7 +124,7 @@ function SceneDetail({ campaign, active }: { campaign: Campaign; active: SceneVi
 }
 
 /** The scene list, and the active scene's settings. (Campaign actions are in the tool strip's menu.) */
-export function ScenePanel({ campaign }: { campaign: Campaign }) {
+function ScenePanel({ campaign }: { campaign: Campaign }) {
   const context = useCampaign();
   const scenes = useQuery(campaign.scenes, () => campaign.sceneViews());
   const folders = useQuery(campaign.sceneFolders, () => listSceneFolders(campaign.sceneFolders));
@@ -191,3 +191,5 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
     />
   );
 }
+
+export default ScenePanel;

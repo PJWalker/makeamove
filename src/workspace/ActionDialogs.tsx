@@ -1,18 +1,18 @@
 
 import { useState } from "react";
 import type { Campaign } from "../campaign/campaign";
-import { Button } from "../ui/Button";
+import Button from "../ui/Button";
 import { ENTRY_ICONS  } from "../ui/entryIcons";
 import type {EntryIconName} from "../ui/entryIcons";
 import { closePopup } from "../ui/popup";
 import { useQuery } from "../ui/useQuery";
-import { CommitInput } from "../ui/CommitInput";
+import CommitInput from "../ui/CommitInput";
 import { actionForCombo, comboOf, shortcuts, showCombo, slotLook } from "./commands/custom";
 import { bindKey, lookOfSlot } from "./commands/campaign";
 import { RECORDER } from "./commands/keys";
 import { findAction } from "./commands/views";
-import { Dialog } from "./Dialog";
-import { usePopupDialog } from "./usePopupDialog";
+import Dialog from "./Dialog";
+import usePopupDialog from "./usePopupDialog";
 import { useCampaign } from "./campaignContext";
 
 /*
@@ -21,7 +21,7 @@ import { useCampaign } from "./campaignContext";
  * hotbar's and the palette's menus open them.
  */
 
-export function ActionDialogs({ campaign }: { campaign: Campaign }) {
+function ActionDialogs({ campaign }: { campaign: Campaign }) {
   const context = useCampaign();
   const request = useQuery(context.table.actionEdit);
   if (!request) return null;
@@ -222,3 +222,5 @@ function ShortcutDialog({ campaign, id, title }: Properties) {
     </Dialog>
   );
 }
+
+export default ActionDialogs;

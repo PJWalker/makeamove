@@ -1,6 +1,6 @@
 import type { Guard } from "../lib/guards";
 import type { UndoStack } from "../data/undo";
-import type { UndoHistory } from "./undo";
+import type UndoHistory from "./undo";
 
 /*
  * Commands: every change to campaign state, and every action a player can

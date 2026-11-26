@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { SheetFrame, SheetSectionView  } from "../../workspace/DeclarativeSheet";
 import type {SheetProps as SheetProperties} from "../../workspace/DeclarativeSheet";
-import { useSheet } from "../../workspace/sheetModel";
+import useSheet from "../../workspace/sheetModel";
 import { Counter } from "../../workspace/sheetParts";
-import { Button } from "../../ui/Button";
+import Button from "../../ui/Button";
 import { IconRoll } from "../../ui/icons";
 import { commaListOf } from "../../lib/list";
-import { parseInputNumber } from "../../lib/number";
+import parseInputNumber from "../../lib/number";
 import { systemCampaignData } from "../../campaign/campaign";
 import {
   bumpData,

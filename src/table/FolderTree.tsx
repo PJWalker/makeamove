@@ -1,9 +1,9 @@
 import { useLayoutEffect, useRef, useState   } from "react";
 import type {MouseEvent, ReactNode} from "react";
 import { IconFolder, IconRename } from "../ui/icons";
-import { FolderName } from "../ui/FolderName";
+import FolderName from "../ui/FolderName";
 import { List, ListGroup } from "../ui/List";
-import { menuTrigger } from "../ui/menuTrigger";
+import menuTrigger from "../ui/menuTrigger";
 import { ContextMenu  } from "../ui/ContextMenu";
 import type {MenuItem} from "../ui/ContextMenu";
 import { growFrom } from "../ui/morph";
@@ -15,7 +15,7 @@ import { PanelActions } from "./PanelActions";
 
 interface FolderRecord { id: string; name: string }
 
-export function FolderTree<Item, Folder extends FolderRecord>({
+function FolderTree<Item, Folder extends FolderRecord>({
   ariaLabel,
   className,
   folders,
@@ -194,3 +194,5 @@ function useFolderTree<Item, Folder extends FolderRecord>({
     closeMenu: () => { setMenu(null); },
   };
 }
+
+export default FolderTree;

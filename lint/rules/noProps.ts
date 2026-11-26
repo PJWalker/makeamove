@@ -76,7 +76,7 @@ const isImportName = (node: Node) => {
 };
 
 /** Component and data APIs spell out properties instead of abbreviating it. */
-export const noProps = defineRule({
+const noProps = defineRule({
   meta: {
     type: "suggestion",
     fixable: "code",
@@ -142,3 +142,5 @@ export const noProps = defineRule({
     };
   },
 });
+
+export default noProps;

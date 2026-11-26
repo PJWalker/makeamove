@@ -3,9 +3,9 @@ import type { SceneDoc as SceneDocument , SceneLighting } from "../scene/sceneDo
 import { DEFAULT_CANVAS_COLOUR  } from "../campaign/campaign";
 import type {Campaign} from "../campaign/campaign";
 import { useQuery } from "../ui/useQuery";
-import { ColourPicker } from "../ui/ColourPicker";
+import ColourPicker from "../ui/ColourPicker";
 import { Segmented } from "../ui/Segmented";
-import { CommitInput } from "../ui/CommitInput";
+import CommitInput from "../ui/CommitInput";
 import { canvasColour } from "../workspace/canvasState";
 import { useCampaign } from "../workspace/campaignContext";
 import { setGrid, setLighting, updateScene } from "../workspace/commands/scenes";
@@ -15,7 +15,7 @@ import type { Grid } from "../scene/grid";
 const number_ = (v: string, fallback: number) =>
   Number.isFinite(Number.parseFloat(v)) ? Number.parseFloat(v) : fallback;
 
-export function SceneSettingsFields({
+function SceneSettingsFields({
   campaign,
   sceneId,
   scene,
@@ -214,3 +214,5 @@ export function SceneSettingsFields({
     </section>
   );
 }
+
+export default SceneSettingsFields;

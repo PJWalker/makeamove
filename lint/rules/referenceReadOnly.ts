@@ -7,7 +7,7 @@ const REFERENCE = /(^|[/\\])reference[/\\]/;
  * reference/ holds the source rulebooks, which aren't committed. Only the
  * files in `allow` (the rules generator's reader) may name a path in it.
  */
-export const referenceReadOnly = defineRule({
+const referenceReadOnly = defineRule({
   meta: {
     type: "problem",
     docs: { description: "Read reference/ only through the rules generator." },
@@ -36,3 +36,5 @@ export const referenceReadOnly = defineRule({
     };
   },
 });
+
+export default referenceReadOnly;

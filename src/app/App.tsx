@@ -1,21 +1,21 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { store } from "../lib/store";
-import { Lobby } from "../lobby/Lobby";
+import Lobby from "../lobby/Lobby";
 import { goToCampaign, routeCampaignId } from "../navigation/router";
 import {  deleteLocalCampaign, openCampaign } from "../campaign/campaign";
 import type {Campaign} from "../campaign/campaign";
-import { tableCommands } from "../workspace/commands/all";
-import { extensionOf } from "../systems/extensions";
+import tableCommands from "../workspace/commands/all";
+import extensionOf from "../systems/extensions";
 import { CampaignContext, CampaignReactContext } from "../workspace/campaignContext";
-import { Button } from "../ui/Button";
-import { PeerBlobsContext } from "../ui/blobImageContext";
-import { Tooltip } from "../ui/Tooltip";
+import Button from "../ui/Button";
+import PeerBlobsContext from "../ui/blobImageContext";
+import Tooltip from "../ui/Tooltip";
 import { withTransition } from "../ui/transition";
 import { useQuery } from "../ui/useQuery";
 
 // The table loads when a campaign opens, so the lobby comes up quickly.
 const Tabletop = lazy(() =>
-  import(/* webpackChunkName: "tabletop" */ "../table/Tabletop").then((m) => ({ default: m.Tabletop }))
+  import(/* webpackChunkName: "tabletop" */ "../table/Tabletop")
 );
 
 const openError = store<string | null>(null);

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { Campaign } from "../../campaign/campaign";
 import type { PanelLayout } from "../panelLayout";
 
-import { LinkNavigation } from "../linkNavigation";
+import LinkNavigation from "../linkNavigation";
 import { LibraryView } from "../libraryView";
 
 const dependencies = vi.hoisted(() => ({

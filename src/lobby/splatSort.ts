@@ -30,7 +30,7 @@ function sortCentres(data: Float32Array) {
 }
 
 /** A sorter for a packed cloud: given a camera's view matrix, the splats' indices, furthest first. */
-export function splatSorter(data: Float32Array) {
+function splatSorter(data: Float32Array) {
   const centres = sortCentres(data);
   const count = centres.length / 3;
   const order = new Float32Array(count);
@@ -72,3 +72,5 @@ export function splatSorter(data: Float32Array) {
     return order;
   };
 }
+
+export default splatSorter;

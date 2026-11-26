@@ -1,6 +1,6 @@
 import type { MonsterDef } from "../../src/systems/types";
-import { readReference } from "./readReference";
-import { slug } from "./slug";
+import readReference from "./readReference";
+import slug from "./slug";
 
 function valueAfter(section: string, label: string) {
   return new RegExp(`\\*\\*${label}\\*\\*\\s*([^<*\\n]+)`, "i").exec(section)?.[1]?.trim() ?? "";

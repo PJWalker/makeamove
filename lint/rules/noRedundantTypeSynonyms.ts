@@ -2,7 +2,7 @@ import { defineRule } from "vite-plus/lint/plugins";
 import type { ESTree } from "vite-plus/lint/plugins";
 
 /** A plain type alias adds no shape and should be replaced by its target. */
-export const noRedundantTypeSynonyms = defineRule({
+const noRedundantTypeSynonyms = defineRule({
   meta: {
     type: "suggestion",
     fixable: "code",
@@ -59,3 +59,5 @@ export const noRedundantTypeSynonyms = defineRule({
     };
   },
 });
+
+export default noRedundantTypeSynonyms;

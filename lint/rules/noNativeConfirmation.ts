@@ -1,7 +1,7 @@
 import { defineRule } from "vite-plus/lint/plugins";
 
 /** Browser confirmation and prompt dialogs bypass Make a Move's confirmation UI. */
-export const noNativeConfirmation = defineRule({
+const noNativeConfirmation = defineRule({
   meta: {
     type: "suggestion",
     docs: { description: "Use the app confirmation dialog instead of browser dialogs." },
@@ -31,3 +31,5 @@ export const noNativeConfirmation = defineRule({
     };
   },
 });
+
+export default noNativeConfirmation;

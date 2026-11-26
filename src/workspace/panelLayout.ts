@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { batch, derived, store  } from "../lib/store";
 import type {ReadonlyStore} from "../lib/store";
-import { isPhone } from "../ui/viewport";
+import isPhone from "../ui/viewport";
 import type { LocalDoc as LocalDocument, LocalValue } from "../data/localDoc";
 import { dropLine, indexAmong } from "../ui/reorder";
 import { withTransition } from "../ui/transition";

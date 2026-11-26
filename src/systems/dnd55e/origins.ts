@@ -2,7 +2,7 @@ import { md } from "../../macros/markdown.macro" with { type: "macro" };
 import type { RichText } from "../../data/richText";
 import type { Effect, OptionDef, TargetSpec } from "../types";
 import type { Ability } from "./data";
-import { SRD_FEATS } from "./srdFeats";
+import SRD_FEATS from "./srdFeats";
 
 /*
  * D&D 5.5e character origins and growth from the SRD 5.2: species,

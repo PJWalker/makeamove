@@ -9,7 +9,7 @@ import type { RenderState } from "./state";
  * over twice the visible area and only redrawn once the view moves outside
  * that. Lines are pixelLine (always 1 px), so zooming in needs no redraw either.
  */
-export class GridLayer {
+export default class GridLayer {
   readonly view = new Graphics();
   /** World area the grid lines currently cover. */
   private covers: Rect | null = null;

@@ -1,7 +1,7 @@
 import type { ScoreRule } from "../types";
 
 /** Each class's stat line from its Name & Stats prompt. */
-export const DW2_CLASS_SCORE_RULES: Record<string, ScoreRule> = {
+const DW2_CLASS_SCORE_RULES: Record<string, ScoreRule> = {
   barbarian: { fixed: { str: 2 }, oneOf: [{ wis: 2 }, { cha: 2 }], remaining: [0, 0, -1] },
   bard: { fixed: { cha: 2 }, oneOf: [{ dex: 1 }, { int: 1 }], remaining: [1, 0, -1] },
   cleric: { fixed: { wis: 2 }, oneOf: [{ str: 1 }, { cha: 1 }], remaining: [1, 0, -1] },
@@ -19,3 +19,5 @@ export const DW2_CLASS_SCORE_RULES: Record<string, ScoreRule> = {
   rogue: { fixed: { dex: 2 }, oneOf: [{ wis: 1 }, { cha: 1 }], remaining: [1, 0, -1] },
   wizard: { fixed: { int: 2 }, oneOf: [{ dex: 1 }, { cha: 1 }], remaining: [1, 0, -1] },
 };
+
+export default DW2_CLASS_SCORE_RULES;

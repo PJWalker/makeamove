@@ -6,7 +6,7 @@ import type {InputHTMLAttributes} from "react";
  * one change rather than one per keystroke. Escape puts it back. It follows
  * `value` whenever it isn't being edited.
  */
-export const CommitInput = forwardRef<
+const CommitInput = forwardRef<
   HTMLInputElement,
   Omit<InputHTMLAttributes<HTMLInputElement>, "defaultValue" | "onChange" | "value"> & {
     value: string;
@@ -47,3 +47,5 @@ export const CommitInput = forwardRef<
     />
   );
 });
+
+export default CommitInput;

@@ -38,7 +38,7 @@ const paper = (point: Node<"vec2">) => {
   return fract(mixed.x.add(mixed.y).mul(mixed.z));
 };
 
-export function caveGrade(picture: Node<"vec4">) {
+function caveGrade(picture: Node<"vec4">) {
   const settings = {
     /** How strong the cross-processing is, from 0 (none) to 1. */
     strength: uniform(1),
@@ -64,3 +64,5 @@ export function caveGrade(picture: Node<"vec4">) {
   const output = vec4(mix(settings.dark, vignetted, clamp(screenUV.y.div(FADE), 0, 1)), 1);
   return { output, settings };
 }
+
+export default caveGrade;

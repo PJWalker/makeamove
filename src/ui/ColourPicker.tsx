@@ -134,7 +134,7 @@ function OklchGamutArea({
 }
 
 /** A colour swatch that opens an OKLCH area, hue slider and hex field. */
-export function ColourPicker({
+function ColourPicker({
   label,
   value,
   onChange,
@@ -271,3 +271,5 @@ function useColourPicker(
   };
   return { userColour, opacity, visibleHex, shownColour, emitColour, changeHex };
 }
+
+export default ColourPicker;

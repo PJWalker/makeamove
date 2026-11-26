@@ -5,7 +5,7 @@ import type { Campaign } from "../campaign/campaign";
 import { actingCharacterId, systemOf } from "../features/characters/api";
 import { List, ListRow } from "../ui/List";
 import { TwoPane } from "../ui/TwoPane";
-import { usePaneLevel } from "../ui/paneLevel";
+import usePaneLevel from "../ui/paneLevel";
 import { useQuery } from "../ui/useQuery";
 import { RichTextView, SearchHighlight } from "../workspace/RichTextView";
 import { referenceLayout } from "./panelLayouts";
@@ -14,7 +14,7 @@ import { referenceLayout } from "./panelLayouts";
  * The game system's reference text for the GM: agenda, principles, moves and
  * the like, searchable, each section folded until opened.
  */
-export function ReferencePanel({ campaign }: { campaign: Campaign }) {
+function ReferencePanel({ campaign }: { campaign: Campaign }) {
   const { gm, stacked, level, go, query, sections, selected, needle, search, select } =
     useReferencePanel(campaign);
   if (!gm || sections.length === 0) return <p className="empty">No reference for this game.</p>;
@@ -139,3 +139,5 @@ function ReferenceEntry({
     </article>
   );
 }
+
+export default ReferencePanel;

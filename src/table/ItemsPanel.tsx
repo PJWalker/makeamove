@@ -2,10 +2,10 @@ import { useCallback, useState  } from "react";
 import type {ReactNode} from "react";
 import { emptyRichText, plainText  } from "../data/richText";
 import type {RichText} from "../data/richText";
-import { RichTextField } from "../workspace/RichTextField";
+import RichTextField from "../workspace/RichTextField";
 import { systemOf } from "../features/characters/api";
 import { parseCommaList } from "../lib/list";
-import { toggleSetValue } from "../lib/set";
+import toggleSetValue from "../lib/set";
 import { listHomebrew  } from "../features/homebrew/homebrew";
 import type {HomebrewEntry} from "../features/homebrew/homebrew";
 import {
@@ -17,8 +17,8 @@ import type { Campaign } from "../campaign/campaign";
 import type { EntityGraphic } from "../media/images";
 import { useQuery } from "../ui/useQuery";
 import { closePopup } from "../ui/popup";
-import { Dialog } from "../workspace/Dialog";
-import { usePopupDialog } from "../workspace/usePopupDialog";
+import Dialog from "../workspace/Dialog";
+import usePopupDialog from "../workspace/usePopupDialog";
 import type {
   ActionDef,
   CheckStep,
@@ -27,7 +27,7 @@ import type {
   ItemDef,
   TargetSpec,
 } from "../systems/types";
-import { Button } from "../ui/Button";
+import Button from "../ui/Button";
 import { IconAdd, IconDelete, IconNewGear, IconNewMove } from "../ui/icons";
 import type { MenuItem } from "../ui/ContextMenu";
 import { List, ListGroup } from "../ui/List";
@@ -37,14 +37,14 @@ import { entity } from "../workspace/dragEntities";
 import { EntryRow } from "../workspace/EntryWindow";
 import { rollTag } from "../workspace/actionPresentation";
 import { actionMenuItems } from "../workspace/actionMenu";
-import { CampaignEntityGraphic } from "../workspace/EntityGraphic";
-import { GraphicPicker } from "../ui/GraphicPicker";
+import CampaignEntityGraphic from "../workspace/EntityGraphic";
+import GraphicPicker from "../ui/GraphicPicker";
 import { getDefaultEntityGraphic, getEntityGraphic } from "../workspace/entityGraphics";
 import { useCampaign } from "../workspace/campaignContext";
 import { giveItem, startMove } from "../workspace/commands/characters";
 import { PanelActions } from "./PanelActions";
-import { useActingCharacter } from "./useActingCharacter";
-import { useDraft } from "./useDraft";
+import useActingCharacter from "./useActingCharacter";
+import useDraft from "./useDraft";
 
 /*
  * Items: the table's own gear and moves (homebrew/homebrew.ts), with
@@ -57,7 +57,7 @@ type Entry = HomebrewEntry & { id: string };
 type GearEntry = Extract<Entry, { kind: "gear" }>;
 type MoveEntry = Extract<Entry, { kind: "move" }>;
 
-export function ItemsPanel({ campaign }: { campaign: Campaign }) {
+function ItemsPanel({ campaign }: { campaign: Campaign }) {
   const { ctx, entries, system, editing, setEditing, fold, canAct, actOn, menuItemsFor } =
     useItemsPanel(campaign);
   const gear = entries.filter((entry): entry is GearEntry => entry.kind === "gear");
@@ -848,3 +848,5 @@ function HomebrewForm({
     </form>
   );
 }
+
+export default ItemsPanel;

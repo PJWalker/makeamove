@@ -1,11 +1,11 @@
 import type { EntityGraphic } from "../media/images";
-import { BlobImage } from "./BlobImage";
+import BlobImage from "./BlobImage";
 import { ENTRY_ICONS  } from "./entryIcons";
 import type {EntryIconName} from "./entryIcons";
 
 const Fallback = ENTRY_ICONS.bag;
 
-export function EntityGraphicView({
+function EntityGraphicView({
   graphic,
   size = 22,
   className,
@@ -34,3 +34,5 @@ export function EntityGraphicView({
     </span>
   );
 }
+
+export default EntityGraphicView;

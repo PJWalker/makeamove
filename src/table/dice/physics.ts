@@ -9,7 +9,7 @@ import {
   Vec3,
   World,
 } from "cannon-es";
-import { seededRandom } from "../../lib/seededRandom";
+import seededRandom from "../../lib/seededRandom";
 
 export interface DieHull {
   vertices: number[][];

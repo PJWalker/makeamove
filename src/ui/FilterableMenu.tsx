@@ -9,7 +9,7 @@ import {
   Popover,
   SearchField,
 } from "react-aria-components";
-import { Button } from "./Button";
+import Button from "./Button";
 
 export interface FilterableMenuOption {
   id: string;

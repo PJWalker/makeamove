@@ -1,6 +1,6 @@
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { followPress } from "../ui/pointer";
-import { suppressNextClick } from "../ui/suppressClick";
+import suppressNextClick from "../ui/suppressClick";
 import type { CanvasState, TokenSpec } from "./canvasState";
 
 const THRESHOLD = 5;
@@ -10,7 +10,7 @@ const THRESHOLD = 5;
  * the pointer; releasing over the scene places a token for the character.
  * A press that never travels stays an ordinary click.
  */
-export function dragToken(
+function dragToken(
   canvas: CanvasState,
   e: PointerEvent | ReactPointerEvent,
   spec: TokenSpec,
@@ -48,3 +48,5 @@ export function dragToken(
     },
   });
 }
+
+export default dragToken;

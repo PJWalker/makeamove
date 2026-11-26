@@ -28,13 +28,13 @@ import {
   
 } from "./newElements";
 import type {TokenSpec} from "./newElements";
-import type { SceneRenderer } from "./renderer";
+import type SceneRenderer from "./renderer";
 import type { ElementPatch, SceneDoc as SceneDocument } from "./sceneDoc";
 import { toolCursor } from "./toolCursors";
 import { ERASER_RADIUS, GM_KINDS, kindOf  } from "./tools";
 import type {SceneTools} from "./tools";
 import type { Layer, NewElement, SceneElement, TokenElement, TokenStyle, Transform } from "./types";
-import { TOOL_PRESS } from "./gestures";
+import TOOL_PRESS from "./gestures";
 import PolygonDraft from "./gestures/polygon";
 import { pinch } from "./gestures/pan";
 import { hoverCursor } from "./gestures/select";
@@ -65,7 +65,7 @@ function transformOf(t: Transform): Transform {
  * the selection, camera and cursor, routes input to the tool in use, and
  * offers the edits menus and shortcuts make.
  */
-export class SceneController implements ToolContext {
+export default class SceneController implements ToolContext {
   readonly selection = store<string[]>([]);
   /** The selected elements as they are now, kept current as they change. */
   readonly selectedElements = store<readonly SceneElement[]>([]);

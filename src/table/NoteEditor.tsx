@@ -14,7 +14,7 @@ import { useCampaign } from "../workspace/campaignContext";
 const TOUCH_MS = 800;
 
 /** A note's text, edited together: anyone at the table can write in it. */
-export function NoteEditor({
+function NoteEditor({
   campaign,
   noteId,
   active,
@@ -103,3 +103,5 @@ export function NoteEditor({
     </div>
   );
 }
+
+export default NoteEditor;

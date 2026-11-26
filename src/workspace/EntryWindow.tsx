@@ -2,7 +2,7 @@ import type { PointerEvent as ReactPointerEvent , ReactNode } from "react";
 import { useLayoutEffect, useRef, useState } from "react";
 import type { Icon } from "../ui/icons";
 import { ListRow } from "../ui/List";
-import { menuTrigger } from "../ui/menuTrigger";
+import menuTrigger from "../ui/menuTrigger";
 import { ContextMenu  } from "../ui/ContextMenu";
 import type {MenuItem} from "../ui/ContextMenu";
 import type { WindowProxy } from "./entityWindowState";

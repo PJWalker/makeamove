@@ -2,7 +2,7 @@ import { useState  } from "react";
 import type {ReactNode} from "react";
 import { systemOf } from "../../features/characters/api";
 import { derive } from "../../features/characters/store";
-import { Button } from "../../ui/Button";
+import Button from "../../ui/Button";
 import type { ItemUseProps as ItemUseProperties } from "../extensionTypes";
 import { useCampaign } from "../../workspace/campaignContext";
 import { useGear } from "./commands";
@@ -173,7 +173,7 @@ function PotionUse({ campaign, character, item, editable }: ItemUseProperties) {
 }
 
 /** Controls for Dungeon World 2's charged items: a potion's or a wand's choice of effect. */
-export function Dw2ItemUse(properties: ItemUseProperties) {
+function Dw2ItemUse(properties: ItemUseProperties) {
   const context = useCampaign();
   const { campaign, character, item, editable } = properties;
   if (item.uses === undefined) return null;
@@ -189,3 +189,5 @@ export function Dw2ItemUse(properties: ItemUseProperties) {
     </Button>
   );
 }
+
+export default Dw2ItemUse;

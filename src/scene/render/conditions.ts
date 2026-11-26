@@ -36,7 +36,7 @@ interface ConditionView {
  * What marks each token: a pip per condition, which opens into its name on
  * hover or where there's room, and a ring on the one whose turn it is.
  */
-export class ConditionLayer {
+export default class ConditionLayer {
   readonly view = new Graphics();
   readonly texts = new Container();
   private hover: { id: string; anchor: number; bounds: Rect } | null = null;

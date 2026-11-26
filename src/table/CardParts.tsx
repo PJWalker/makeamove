@@ -6,7 +6,7 @@ import { useMessageState } from "../features/chat/messageState";
 import type { MoveMessage, MoveTarget, RollMessage } from "../features/chat/types";
 import type { Campaign } from "../campaign/campaign";
 import { useQuery } from "../ui/useQuery";
-import { Button } from "../ui/Button";
+import Button from "../ui/Button";
 import { answerRollRequest, applyCardDamage } from "../workspace/commands/characters";
 import { can } from "../workspace/commands/views";
 import { useCampaign } from "../workspace/campaignContext";

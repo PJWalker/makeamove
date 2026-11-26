@@ -48,7 +48,7 @@ function addImport(fixer: Fixer, program: ESTree.Program, name: string, from: st
 }
 
 /** Runtime primitive checks use the finite, type-safe guards in src/lib/guards.ts. */
-export const preferGuardHelpers = defineRule({
+const preferGuardHelpers = defineRule({
   meta: {
     type: "suggestion",
     fixable: "code",
@@ -109,3 +109,5 @@ export const preferGuardHelpers = defineRule({
     };
   },
 });
+
+export default preferGuardHelpers;

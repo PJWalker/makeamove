@@ -5,7 +5,7 @@
  * starts it over; the mark comes off once the icon is still again.
  */
 
-import { replay } from "./replay";
+import replay from "./replay";
 import { reducedMotion } from "./transition";
 
 const CONTROLS =

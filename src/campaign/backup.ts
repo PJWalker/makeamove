@@ -4,7 +4,7 @@ import { device } from "../platform/device";
 import { openFile, saveFile } from "../platform/files";
 import { BACKUP_FILE, backupFileName, claimGm } from "./backupFormat";
 import type { BackupDevice } from "./backupFormat";
-import { runInBackupWorker } from "./backupWorker";
+import runInBackupWorker from "./backupWorker";
 import type { ImportSummary } from "./backupWorkerProtocol";
 import { openCampaigns  } from "./campaign";
 import type {Campaign} from "./campaign";

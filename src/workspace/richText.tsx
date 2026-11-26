@@ -16,7 +16,7 @@ import type { LinkKind } from "../features/notes/links";
 import { LINK_NODE } from "../features/notes/links";
 import { linkLabel, linkTargets, linkTip  } from "../features/notes/targets";
 import type {LinkTarget} from "../features/notes/targets";
-import { menuTrigger } from "../ui/menuTrigger";
+import menuTrigger from "../ui/menuTrigger";
 import type { MenuItem } from "../ui/ContextMenu";
 import type { Campaign } from "../campaign/campaign";
 import { joinSections } from "./commands/views";
@@ -35,7 +35,7 @@ import {
 import type { CampaignContext } from "./campaignContext";
 import { dragEntity, registerLinkDrop } from "./entityDrag";
 import { entity } from "./dragEntities";
-import { CampaignEntityGraphic } from "./EntityGraphic";
+import CampaignEntityGraphic from "./EntityGraphic";
 import { trackerButtonExtension } from "./trackerButtons";
 
 /*

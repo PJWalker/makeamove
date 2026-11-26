@@ -3,7 +3,7 @@ import { defineRule } from "vite-plus/lint/plugins";
 import { projectPath } from "../strings.ts";
 
 /** Component CSS imports stay beside the component or under src/styles/. */
-export const cssCoLocated = defineRule({
+const cssCoLocated = defineRule({
   meta: {
     type: "suggestion",
     docs: { description: "Keep component CSS beside the component." },
@@ -29,3 +29,5 @@ export const cssCoLocated = defineRule({
     };
   },
 });
+
+export default cssCoLocated;

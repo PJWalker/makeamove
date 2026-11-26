@@ -7,27 +7,27 @@ import { hasCombat } from "../features/combat/api";
 import { playedCharacterId, systemOf } from "../features/characters/api";
 import { canvasColour } from "../workspace/canvasState";
 import { autohide } from "../workspace/autohide";
-import { ActionDialogs } from "../workspace/ActionDialogs";
+import ActionDialogs from "../workspace/ActionDialogs";
 import { EntityWindowHost } from "../workspace/entityWindows";
-import { GraphicDialogs } from "../workspace/GraphicDialogs";
-import { extensionOf } from "../systems/extensions";
+import GraphicDialogs from "../workspace/GraphicDialogs";
+import extensionOf from "../systems/extensions";
 import { SystemExtensions } from "../workspace/systemExtensions";
 import { useCommandKeys } from "../workspace/commands/keys";
 import { useCampaign } from "../workspace/campaignContext";
-import { Toolbar } from "./Toolbar";
-import { Palette } from "./Palette";
-import { MovePrompt } from "./MovePrompt";
-import { LinkPopups } from "./LinkPopups";
-import { Hotbar } from "./Hotbar";
-import { ChatPopups } from "./ChatPopups";
-import { Sidebar } from "./Sidebar";
-import { CampaignDialogHost } from "./CampaignDialogHost";
-import { FloatingWindows } from "./FloatingWindows";
+import Toolbar from "./Toolbar";
+import Palette from "./Palette";
+import MovePrompt from "./MovePrompt";
+import LinkPopups from "./LinkPopups";
+import Hotbar from "./Hotbar";
+import ChatPopups from "./ChatPopups";
+import Sidebar from "./Sidebar";
+import CampaignDialogHost from "./CampaignDialogHost";
+import FloatingWindows from "./FloatingWindows";
 
 // PixiJS is big; load it only once someone opens a table.
-const SceneCanvas = lazy(() => import("./SceneCanvas").then((m) => ({ default: m.SceneCanvas })));
+const SceneCanvas = lazy(() => import("./SceneCanvas"));
 
-export function Tabletop({ campaign }: { campaign: Campaign }) {
+function Tabletop({ campaign }: { campaign: Campaign }) {
   const context = useCampaign();
   const scenes = useQuery(campaign.scenes, () => campaign.sceneViews());
   // A system without initiative has no turn tracker.
@@ -183,3 +183,5 @@ function useNearEdges(on: boolean) {
   }, [on]);
   return edges;
 }
+
+export default Tabletop;

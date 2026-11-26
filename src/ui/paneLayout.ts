@@ -56,7 +56,7 @@ function toggleLabel(split: boolean, narrow: boolean, names: { list: string; det
  * One panel's layout, kept in localStorage under `key`. `names` words the
  * switch's label: what the list and detail are ("list", "sheet").
  */
-export function createPaneLayout(key: string, names: { list: string; detail: string }): PaneLayout {
+function createPaneLayout(key: string, names: { list: string; detail: string }): PaneLayout {
   const storeKey = `makeamove.${key}`;
   const saved = getStorageJson(storeKey, isSavedPaneLayout, {});
   const listWidth = store(saved.w ?? DEFAULT_LIST_W);
@@ -100,3 +100,5 @@ export function createPaneLayout(key: string, names: { list: string; detail: str
   };
   return layout;
 }
+
+export default createPaneLayout;

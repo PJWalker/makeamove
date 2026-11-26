@@ -23,7 +23,7 @@ function names(element: HTMLElement) {
  * the top layer) to `anchor`. Returns a function that lets go. An anchor
  * can hold several things at once.
  */
-export function tether(element: HTMLElement, anchor: Element): () => void {
+function tether(element: HTMLElement, anchor: Element): () => void {
   const name = `--anchor-${++count}`;
   const target = anchor as HTMLElement;
   target.style.setProperty("anchor-name", [...names(target), name].join(", "));
@@ -36,3 +36,5 @@ export function tether(element: HTMLElement, anchor: Element): () => void {
       element.style.removeProperty("position-anchor");
   };
 }
+
+export default tether;

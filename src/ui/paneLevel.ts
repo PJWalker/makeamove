@@ -7,7 +7,7 @@ import { withTransition } from "./transition";
  * one at a time, the move slides; side by side, both already show. `show`
  * is `go` for callers that need to wait until the level is showing.
  */
-export function usePaneLevel(layout: PaneLayout, initial: PaneLevel) {
+function usePaneLevel(layout: PaneLayout, initial: PaneLevel) {
   const [level, setLevel] = useState<PaneLevel>(initial);
   const show = useCallback(
     async (to: PaneLevel): Promise<void> => {
@@ -35,3 +35,5 @@ function markSliding(element: HTMLElement | null): () => void {
   element.dataset["sliding"] = "true";
   return () => delete element.dataset["sliding"];
 }
+
+export default usePaneLevel;

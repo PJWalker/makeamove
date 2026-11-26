@@ -15,7 +15,7 @@ interface Options {
  * in the options are checked: field labels, hints, tooltips and body text
  * keep their own case.
  */
-export const titleCaseRule = defineRule({
+const titleCaseRule = defineRule({
   meta: {
     type: "suggestion",
     fixable: "code",
@@ -100,3 +100,5 @@ export const titleCaseRule = defineRule({
     };
   },
 });
+
+export default titleCaseRule;

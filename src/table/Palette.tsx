@@ -12,7 +12,7 @@ import { findAction, listActions } from "../workspace/commands/views";
 import { actionMenuItems } from "../workspace/actionMenu";
 import { dragEntity } from "../workspace/entityDrag";
 import { actionEntity } from "../workspace/dragEntities";
-import { menuTrigger } from "../ui/menuTrigger";
+import menuTrigger from "../ui/menuTrigger";
 import { showFromOrigin } from "../ui/morph";
 import { ContextMenu  } from "../ui/ContextMenu";
 import type {MenuItem} from "../ui/ContextMenu";
@@ -21,7 +21,7 @@ import { useQuery } from "../ui/useQuery";
 import { useCampaign } from "../workspace/campaignContext";
 
 /** The command palette: searches every call the registry offers (commands/views.ts). */
-export function Palette({ campaign }: { campaign: Campaign }) {
+function Palette({ campaign }: { campaign: Campaign }) {
   const context = useCampaign();
   const open = useQuery(context.table.paletteOpen);
   return open ? <PaletteBody campaign={campaign} /> : null;
@@ -246,3 +246,5 @@ function usePalette(campaign: Campaign) {
     onKeyDown,
   };
 }
+
+export default Palette;

@@ -36,7 +36,7 @@ function observerFor(root: Element | null) {
 }
 
 /** Calls `then` once, when `element` scrolls into or near view; the returned function stops waiting. */
-export function whenNear(element: Element, then: () => void) {
+function whenNear(element: Element, then: () => void) {
   const observer = observerFor(scrollerOf(element));
   waiting.set(element, then);
   observer.observe(element);
@@ -45,3 +45,5 @@ export function whenNear(element: Element, then: () => void) {
     observer.unobserve(element);
   };
 }
+
+export default whenNear;

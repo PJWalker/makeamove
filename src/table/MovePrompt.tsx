@@ -3,7 +3,7 @@ import { arrow, autoUpdate, computePosition, flip, offset, shift } from "@floati
 import { useSelector } from "@xstate/react";
 import { lastPressed } from "../ui/pressed";
 import { IconClose } from "../ui/icons";
-import { Button } from "../ui/Button";
+import Button from "../ui/Button";
 import { reducedMotion } from "../ui/transition";
 import { growFrom, leave } from "../ui/morph";
 import type { Campaign } from "../campaign/campaign";
@@ -20,8 +20,8 @@ import { useCampaign } from "../workspace/campaignContext";
 import type { CanvasState } from "../workspace/canvasState";
 import type { CampaignContext } from "../workspace/campaignContext";
 import { startMove } from "../workspace/commands/characters";
-import { onScreenRect } from "./onScreenRect";
-import { AskStep } from "./MoveAskForm";
+import onScreenRect from "./onScreenRect";
+import AskStep from "./MoveAskForm";
 
 /*
  * What a move asks before it rolls, in a speech bubble beside the button that
@@ -66,7 +66,7 @@ function sideName(placement: string | undefined) {
   return placement;
 }
 
-export function MovePrompt({ campaign }: { campaign: Campaign }) {
+function MovePrompt({ campaign }: { campaign: Campaign }) {
   const { ctx, hasLive, ref, req, move, character } = useMovePrompt(campaign);
   if (!req || !move || !character) return null;
   return (
@@ -372,3 +372,5 @@ function withoutAskedQuestions(move: ActionDef): RichText {
   };
   return prune(move.text) ?? emptyRichText();
 }
+
+export default MovePrompt;

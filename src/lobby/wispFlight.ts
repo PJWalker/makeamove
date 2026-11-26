@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-magic-numbers */
-import { seededRandom } from "../lib/seededRandom";
+import seededRandom from "../lib/seededRandom";
 import { add, scale  } from "./splat";
 import type {Vec3} from "./splat";
 
@@ -39,7 +39,7 @@ const out = (to: Vec3, t: number) =>
   bezier([0, 0, 0], [-0.6, 1.1, -1.2], add(to, [0, 1, 5]), to, ease(t));
 
 /** Where the wisp goes, as an offset from its home, for any moment: `pick` chooses each place it scouts. */
-export function flightPlan(seed: string, pick: (random: () => number) => Vec3) {
+function flightPlan(seed: string, pick: (random: () => number) => Vec3) {
   const random = seededRandom(seed);
   const trips: Trip[] = [];
   const plan = (index: number): Trip => {
@@ -71,3 +71,5 @@ export function flightPlan(seed: string, pick: (random: () => number) => Vec3) {
     return out(trip.to, 1 - (seconds - trip.turn) / FLIGHT);
   };
 }
+
+export default flightPlan;

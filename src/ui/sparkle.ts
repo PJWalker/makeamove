@@ -4,7 +4,7 @@
  * second click restarts the glint rather than waiting for the first to end.
  */
 
-import { replay } from "./replay";
+import replay from "./replay";
 import { reducedMotion } from "./transition";
 
 const SPARKLING = ".btn, .popup-tab, .campaign-open, .segment";

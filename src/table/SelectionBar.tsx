@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState  } from "react";
 import type {ReactNode} from "react";
-import type { SceneController } from "../scene/controller";
+import type SceneController from "../scene/controller";
 import type { ElementPatch } from "../scene/sceneDoc";
 import { bounds } from "../scene/geometry";
 import { toScreen } from "../scene/camera";
@@ -14,9 +14,9 @@ import {
   
 } from "../scene/types";
 import type {EffectKind, SceneElement, TextStyle} from "../scene/types";
-import { ColourPicker } from "../ui/ColourPicker";
-import { CommitInput } from "../ui/CommitInput";
-import { Button } from "../ui/Button";
+import ColourPicker from "../ui/ColourPicker";
+import CommitInput from "../ui/CommitInput";
+import Button from "../ui/Button";
 import { Segmented } from "../ui/Segmented";
 import { IconLight, IconLock, IconReveal, IconSettings, IconUnlock } from "../ui/icons";
 import { useQuery } from "../ui/useQuery";
@@ -26,9 +26,9 @@ import { bumpData, bumpResource } from "../workspace/commands/characters";
 import { canEdit, getCharacter, systemOf } from "../features/characters/api";
 import { derive } from "../features/characters/store";
 import type { TokenStat } from "../systems/types";
-import { TextStyleFields } from "./TextStyleFields";
-import { EFFECT_OPTIONS } from "./effectOptionsData";
-import { EffectSightToggles } from "./effectOptions";
+import TextStyleFields from "./TextStyleFields";
+import EFFECT_OPTIONS from "./effectOptionsData";
+import EffectSightToggles from "./effectOptions";
 import "./SelectionBar.css";
 
 /** Screen px between the selection (and its rotate handle) and the bar. */
@@ -50,7 +50,7 @@ const every = <T extends SceneElement["type"]>(
  * everything selected, each change applying as it's made. It keeps out of the
  * way while a press is under way, and follows the selection as the camera moves.
  */
-export function SelectionBar({
+function SelectionBar({
   controller,
   onTokenOptions,
 }: {
@@ -455,3 +455,5 @@ function WidthField({
     />
   );
 }
+
+export default SelectionBar;

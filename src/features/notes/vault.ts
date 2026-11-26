@@ -5,9 +5,9 @@ import { collection, lww, record, rootOf, text  } from "../../data/schema";
 import type {Root} from "../../data/schema";
 import { newSecret } from "../../lib/ids";
 import { dataName } from "../../platform/dataEpoch";
-import { SyncSession } from "../../sync/session";
+import SyncSession from "../../sync/session";
 import type { JoinRoom } from "../../sync/transport";
-import { joinPublicRoom } from "../../sync/publicRoom";
+import joinPublicRoom from "../../sync/publicRoom";
 import { noteEntry } from "./schema";
 
 /*

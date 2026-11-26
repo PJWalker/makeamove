@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { commaListOf } from "../../lib/list";
-import { Button } from "../../ui/Button";
+import Button from "../../ui/Button";
 import { AdvancementDialog } from "../../workspace/CreationParts";
 import { ConditionToggles, Counter } from "../../workspace/sheetParts";
 import { signedStr as signedString } from "../../workspace/actionPresentation";

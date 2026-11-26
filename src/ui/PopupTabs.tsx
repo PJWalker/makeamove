@@ -4,7 +4,7 @@ import { Tab, TabList, TabPanel, Tabs } from "react-aria-components";
 /**
  * Square folder tabs across the top of a pop-up.
  */
-export function PopupTabs<T extends string>({
+function PopupTabs<T extends string>({
   tabs,
   value,
   onChange,
@@ -40,3 +40,5 @@ export function PopupTabs<T extends string>({
     </Tabs>
   );
 }
+
+export default PopupTabs;

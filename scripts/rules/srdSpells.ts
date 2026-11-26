@@ -1,8 +1,8 @@
 import { markdownToRichText } from "../../src/macros/markdown.macro";
 import type { Ability, Spell } from "../../src/systems/dnd55e/data";
 import { parseCommaList } from "../../src/lib/list";
-import { readReference } from "./readReference";
-import { slug } from "./slug";
+import readReference from "./readReference";
+import slug from "./slug";
 
 const ABILITIES: Record<string, Ability> = {
   strength: "str",

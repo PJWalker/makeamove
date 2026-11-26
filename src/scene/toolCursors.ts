@@ -1,4 +1,4 @@
-import { IS_MAC } from "../platform/os";
+import IS_MAC from "../platform/os";
 import type { ToolId } from "./tools";
 import type { EffectKind, ShapeKind } from "./types";
 

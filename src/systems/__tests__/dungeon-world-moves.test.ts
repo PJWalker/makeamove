@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { md } from "../../macros/markdown.macro" with { type: "macro" };
-import { dungeonWorld as dw } from "../dungeon-world";
+import dw from "../dungeon-world";
 import { derive } from "../../features/characters/store";
 import type { CharacterView } from "../../features/characters/types";
 import {

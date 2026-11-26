@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
-import { bladesAbilities } from "./rules/bladesAbilities";
+import bladesAbilities from "./rules/bladesAbilities";
 import {
   bondTexts,
   PATHS,
@@ -9,7 +9,7 @@ import {
   sourceMoves,
   struggleTexts,
 } from "./rules/dungeonWorld2";
-import { classCreationHints } from "./rules/dungeonWorld2Hints";
+import classCreationHints from "./rules/dungeonWorld2Hints";
 import { srdFeats } from "./rules/srdFeats";
 import { srdMagicItems } from "./rules/srdMagicItems";
 import { srdMonsters } from "./rules/srdMonsters";

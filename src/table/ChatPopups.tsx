@@ -6,12 +6,12 @@ import { markRead } from "../features/chat/unread";
 import type { Campaign } from "../campaign/campaign";
 import { growFrom, leave } from "../ui/morph";
 import { reducedMotion } from "../ui/transition";
-import { Button } from "../ui/Button";
+import Button from "../ui/Button";
 import { IconClose } from "../ui/icons";
 import { useQuery } from "../ui/useQuery";
 import { watch } from "../lib/store";
 import { useCampaign } from "../workspace/campaignContext";
-import { onScreenRect } from "./onScreenRect";
+import onScreenRect from "./onScreenRect";
 
 const LoneMessage = lazy(() =>
   import("./ChatMessage").then((module) => ({ default: module.LoneMessage })),
@@ -47,7 +47,7 @@ const tabRect = () => onScreenRect(chatTab());
 
 /** A popup squeezed into the Chat tab, or a little below itself when the tab isn't showing. */
 
-export function ChatPopups({ campaign }: { campaign: Campaign }) {
+function ChatPopups({ campaign }: { campaign: Campaign }) {
   const { shown, held, hidden, leavingAll, setHeld, setLeavingAll, ref, stack, place } =
     useChatPopupStack(campaign);
   if (shown.length === 0) return null;
@@ -290,3 +290,5 @@ function Popup({
     </div>
   );
 }
+
+export default ChatPopups;

@@ -1,12 +1,12 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { toScreen } from "../scene/camera";
-import type { SceneController } from "../scene/controller";
+import type SceneController from "../scene/controller";
 import type { TextRequest } from "../scene/gestures/types";
 import { mapTextOutline } from "../scene/render/elementViews";
 import { cssColour, INK, textWeight } from "../scene/render/style";
 import { fontFamily  } from "../scene/types";
 import type {TextStyle} from "../scene/types";
-import { useConstant } from "../ui/useConstant";
+import useConstant from "../ui/useConstant";
 import { useQuery } from "../ui/useQuery";
 import { useCampaign } from "../workspace/campaignContext";
 
@@ -18,7 +18,7 @@ const OUTLINE = cssColour(INK).hex;
  * starts a new line; clicking away, Escape or ⌘Enter puts it down. Styling it, from the text style fields or with ⌘B and ⌘I,
  * keeps it in edit.
  */
-export function TextEditor({
+function TextEditor({
   controller,
   request,
   onDone,
@@ -149,3 +149,5 @@ function useTextEditor(controller: SceneController, request: TextRequest, onDone
 
   return { ref: reference, el: element, look, scale, at, host, colour, finish, restyle };
 }
+
+export default TextEditor;

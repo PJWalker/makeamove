@@ -1,6 +1,6 @@
 import { TEXT_FONTS   } from "../scene/types";
 import type {TextFont, TextStyle} from "../scene/types";
-import { Button } from "../ui/Button";
+import Button from "../ui/Button";
 import { IconBold, IconItalic } from "../ui/icons";
 import { Segmented } from "../ui/Segmented";
 import "./TextStyleFields.css";
@@ -17,7 +17,7 @@ const FONT_OPTIONS = TEXT_FONTS.map((f) => ({
  * edit as these change (see TextEditor), so they style it as it's typed.
  * Where texts differ, no font is chosen and bold or italic shows off.
  */
-export function TextStyleFields({
+function TextStyleFields({
   value,
   onChange,
 }: {
@@ -49,3 +49,5 @@ export function TextStyleFields({
     </div>
   );
 }
+
+export default TextStyleFields;

@@ -12,14 +12,14 @@ import {
   
 } from "../kernel/commands";
 import type {AnyCommand, Command, CommandHost} from "../kernel/commands";
-import { UndoHistory } from "../kernel/undo";
+import UndoHistory from "../kernel/undo";
 import { undoStack  } from "../data/undo";
 import type {UndoStack} from "../data/undo";
 import { CanvasState } from "./canvasState";
-import { RecentActions } from "./commands/recent";
+import RecentActions from "./commands/recent";
 import { EntityWindows } from "./entityWindowState";
 import { LibraryView } from "./libraryView";
-import { LinkNavigation } from "./linkNavigation";
+import LinkNavigation from "./linkNavigation";
 import { LinkPopups } from "./linkState";
 import { PanelLayout } from "./panelLayout";
 import { TableState } from "./tableState";

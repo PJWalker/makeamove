@@ -20,7 +20,7 @@ const OPAQUE_HEX = 7;
  * up with the grid if it's nearly lined up (Alt draws it where it is);
  * undo turns it back into the stroke as drawn.
  */
-export const draw: ToolPress = (c, e, world) => {
+const draw: ToolPress = (c, e, world) => {
   const { colour, layer } = c.tools.pen.value;
   // The pen's width is in screen px; the stroke keeps the world width it had when drawn.
   const width = c.tools.pen.value.width / c.renderer.camera.zoom;
@@ -59,3 +59,5 @@ export const draw: ToolPress = (c, e, world) => {
     },
   };
 };
+
+export default draw;

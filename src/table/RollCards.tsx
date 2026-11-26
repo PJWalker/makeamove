@@ -1,14 +1,14 @@
 import type { Ref } from "react";
 import { RichTextView } from "../workspace/RichTextView";
 import { asRichText, sameRichText } from "../data/richText";
-import { useConstant } from "../ui/useConstant";
+import useConstant from "../ui/useConstant";
 import type { MoveMessage, RollMessage, RollVisibility } from "../features/chat/types";
 import type { Roll } from "../features/dice/notation";
 import { getCharacter, systemOf } from "../features/characters/api";
 import type { Campaign } from "../campaign/campaign";
 import { device } from "../platform/device";
 import { useQuery } from "../ui/useQuery";
-import { Button } from "../ui/Button";
+import Button from "../ui/Button";
 import { poolFormula  } from "../features/dice/pool";
 import type {TrayPick} from "../features/dice/pool";
 import { colourOf } from "../scene/presence";

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { importImage } from "../media/images";
 import type { EntityGraphic } from "../media/images";
-import { Button } from "./Button";
-import { EntityGraphicView } from "./EntityGraphic";
+import Button from "./Button";
+import EntityGraphicView from "./EntityGraphic";
 import { ENTRY_ICONS } from "./entryIcons";
 import { FilterableMenu  } from "./FilterableMenu";
 import type {FilterableMenuOption} from "./FilterableMenu";
@@ -28,7 +28,7 @@ const iconOptions: FilterableMenuOption[] = iconNames.map((name) => {
   };
 });
 
-export function GraphicPicker({
+function GraphicPicker({
   graphic,
   onChange,
   onReset,
@@ -119,3 +119,5 @@ export function GraphicPicker({
     </div>
   );
 }
+
+export default GraphicPicker;

@@ -2,7 +2,7 @@ import { defineRule } from "vite-plus/lint/plugins";
 import { matchesAny, projectPath } from "../strings.ts";
 
 /** Imperative UI animation goes through the shared motion helpers. */
-export const preferMotionHelpers = defineRule({
+const preferMotionHelpers = defineRule({
   meta: {
     type: "suggestion",
     docs: { description: "Use shared UI motion helpers for surface animation." },
@@ -37,3 +37,5 @@ export const preferMotionHelpers = defineRule({
     };
   },
 });
+
+export default preferMotionHelpers;

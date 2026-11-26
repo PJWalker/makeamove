@@ -1,8 +1,8 @@
-import { Button } from "../ui/Button";
+import Button from "../ui/Button";
 import type { EntryAction } from "./libraryActions";
 
 /** An entry's actions as buttons, in its window. */
-export function EntryActionButtons({ actions }: { actions: EntryAction[] }) {
+function EntryActionButtons({ actions }: { actions: EntryAction[] }) {
   return actions.map((a) => (
     <Button
       key={a.label}
@@ -16,3 +16,5 @@ export function EntryActionButtons({ actions }: { actions: EntryAction[] }) {
     </Button>
   ));
 }
+
+export default EntryActionButtons;

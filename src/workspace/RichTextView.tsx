@@ -11,7 +11,7 @@ import { useQuery } from "../ui/useQuery";
 import { shake, trackerTip } from "./trackerButtons";
 import { pressTrackerButton } from "./commands/characters";
 import { useCampaign } from "./campaignContext";
-import { ruleTextExtensions } from "./richTextExtensions";
+import ruleTextExtensions from "./richTextExtensions";
 
 const RichTextContext = createContext<{
   campaign: Campaign;

@@ -17,24 +17,24 @@ import type {Relationship} from "../features/characters/relationships";
 import type { CharacterView } from "../features/characters/types";
 import type { Campaign } from "../campaign/campaign";
 import { useQuery } from "../ui/useQuery";
-import { CommitInput } from "../ui/CommitInput";
-import { Button } from "../ui/Button";
+import CommitInput from "../ui/CommitInput";
+import Button from "../ui/Button";
 import { IconDelete, IconExpand } from "../ui/icons";
-import { Dialog } from "../workspace/Dialog";
+import Dialog from "../workspace/Dialog";
 import { CharacterText } from "../workspace/CharacterText";
 import { characterLinkTargets, matchingLinkTargets } from "../features/notes/targets";
-import { useMenuOverlay } from "../ui/menuOverlay";
-import { CampaignEntityGraphic } from "../workspace/EntityGraphic";
+import useMenuOverlay from "../ui/menuOverlay";
+import CampaignEntityGraphic from "../workspace/EntityGraphic";
 import { registerEntityDrop } from "../workspace/entityDrag";
-import { extensionOf } from "../systems/extensions";
+import extensionOf from "../systems/extensions";
 import { useCampaign } from "../workspace/campaignContext";
-import { parseInputNumber } from "../lib/number";
+import parseInputNumber from "../lib/number";
 import {
   removeRelationship,
   setRelationship,
   setRelationshipDepth,
 } from "../workspace/commands/characters";
-import { RelationshipWeb } from "./RelationshipWeb";
+import RelationshipWeb from "./RelationshipWeb";
 
 /*
  * Relationships (M9): a section on every character sheet listing how this

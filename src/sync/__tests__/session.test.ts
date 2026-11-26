@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import * as Y from "yjs";
-import { SyncSession } from "../session";
+import SyncSession from "../session";
 import { MemoryRoom } from "./memoryRoom";
 
 const userName = (state: Record<string, unknown>) =>

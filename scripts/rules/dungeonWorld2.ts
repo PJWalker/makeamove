@@ -2,11 +2,11 @@ import type { RichText } from "../../src/data/richText";
 import type { Band, Dw2Path, Dw2PathMove } from "../../src/systems/dungeon-world-2/rulebook";
 import { markdownToRichText } from "../../src/macros/markdown.macro";
 import type { ArtifactDef, ItemDef, ReferenceSectionDef } from "../../src/systems/types";
-import { BOND_SPECS } from "../../src/systems/dungeon-world-2/bondSpecs";
-import { MOVE_SOURCE_NAMES } from "../../src/systems/dungeon-world-2/sourceMoveNames";
+import BOND_SPECS from "../../src/systems/dungeon-world-2/bondSpecs";
+import MOVE_SOURCE_NAMES from "../../src/systems/dungeon-world-2/sourceMoveNames";
 import { STRUGGLE_SPECS } from "../../src/systems/dungeon-world-2/struggleSpecs";
-import { slug } from "./slug";
-import { readReference } from "./readReference";
+import slug from "./slug";
+import readReference from "./readReference";
 
 /*
  * The Dungeon World 2 rulebook, parsed by scripts/generateRules.ts into

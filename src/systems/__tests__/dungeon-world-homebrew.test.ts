@@ -2,7 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 import * as Y from "yjs";
 import { md } from "../../macros/markdown.macro" with { type: "macro" };
 import { plainText } from "../../data/richText";
-import { dungeonWorld } from "../dungeon-world";
+import dungeonWorld from "../dungeon-world";
 import { rootOf } from "../../data/schema";
 import { campaignShape } from "../../campaign/schema";
 import { performMove } from "../../features/characters/moves";

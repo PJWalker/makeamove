@@ -14,11 +14,11 @@ import type { CharacterView } from "../features/characters/types";
 import type { MoveTarget } from "../features/chat/types";
 import type { Campaign } from "../campaign/campaign";
 import type { ActionDef, GameSystem } from "../systems/types";
-import { Button } from "../ui/Button";
+import Button from "../ui/Button";
 import { Segmented } from "../ui/Segmented";
 import { useCampaign } from "../workspace/campaignContext";
 import { makeMove } from "../workspace/commands/characters";
-import { useDraft } from "./useDraft";
+import useDraft from "./useDraft";
 
 type Ask = NonNullable<ReturnType<typeof needsChoice>>;
 type Check = NonNullable<ReturnType<typeof checkOf>>;
@@ -103,7 +103,7 @@ function toggled(list: string[], id: string, on: boolean) {
 }
 
 /** The stat or number the check needs and an extra bonus, then a Roll for each roll mode (disadvantage, roll, advantage). */
-export function AskStep({
+function AskStep({
   campaign,
   characterId,
   moveId,
@@ -508,3 +508,5 @@ function RollActions({
     </div>
   );
 }
+
+export default AskStep;

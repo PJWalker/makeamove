@@ -13,7 +13,7 @@ import {
 } from "../types";
 import type {SceneElement, ShapeGeometry, ShapePaint, TextStyle, Transform} from "../types";
 import type { PeerBlobs } from "../../media/images";
-import { EffectView } from "./effects";
+import EffectView from "./effects";
 import { SdfText } from "./sdfText";
 import type { SdfTextOptions } from "./sdfText";
 import { ACCENT, cabin, fraunces, INK, textFont } from "./style";

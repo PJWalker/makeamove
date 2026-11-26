@@ -8,7 +8,7 @@ import type { Campaign } from "../campaign/campaign";
 import type { GameSystem } from "../systems/types";
 import type { CharacterView } from "../features/characters/types";
 import { useQuery } from "../ui/useQuery";
-import { Button } from "../ui/Button";
+import Button from "../ui/Button";
 import {
   IconClose,
   IconDice,
@@ -45,7 +45,7 @@ import { PanelActions } from "./PanelActions";
  * conditions, with rounds left for timed ones, and any concentration.
  */
 
-export function CombatPanel({ campaign }: { campaign: Campaign }) {
+function CombatPanel({ campaign }: { campaign: Campaign }) {
   const context = useCampaign();
   // Running the fight is the GM's: what the controls show follows who may run them.
   const gm = useQuery(campaign.members, () => can(context, startCombat, undefined));
@@ -460,3 +460,5 @@ function useConditionForm(
     remove,
   };
 }
+
+export default CombatPanel;

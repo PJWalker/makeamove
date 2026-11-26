@@ -10,7 +10,7 @@ const loadStage = () => import(/* webpackChunkName: "caveStage" */ "./caveStage"
  * way down a cave by torchlight and a wizard's wisp, drawn as Gaussian splats
  * (caveScene.ts, caveStage.ts).
  */
-export function CaveBackdrop() {
+function CaveBackdrop() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const playbackRef = useRef<CavePlayback | null>(null);
   const [paused, setPaused] = useState(false);
@@ -48,3 +48,5 @@ export function CaveBackdrop() {
     </div>
   );
 }
+
+export default CaveBackdrop;

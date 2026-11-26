@@ -12,11 +12,11 @@ import type { DataValue } from "../../data/types";
 import { commaListOf } from "../../lib/list";
 import type { Campaign } from "../../campaign/campaign";
 import type { ChoiceDef } from "../types";
-import { Button } from "../../ui/Button";
+import Button from "../../ui/Button";
 import { OptionPicker } from "../../ui/OptionPicker";
 import { closePopup } from "../../ui/popup";
-import { usePopupDialog } from "../../workspace/usePopupDialog";
-import { Dialog } from "../../workspace/Dialog";
+import usePopupDialog from "../../workspace/usePopupDialog";
+import Dialog from "../../workspace/Dialog";
 import { ChoiceField, RuleScoreFields  } from "../../workspace/CreationParts";
 import type {Picked} from "../../workspace/CreationParts";
 import { emptyPick, scoreCapsOf } from "../../workspace/creationModel";
@@ -216,7 +216,7 @@ function useClassChange(campaign: Campaign, characterId: string) {
 }
 
 /** The Change Class button beside the sheet's advancement banner. */
-export function ChangeClassAction({
+function ChangeClassAction({
   campaign,
   characterId,
 }: {
@@ -239,3 +239,5 @@ export function ChangeClassAction({
     </>
   );
 }
+
+export default ChangeClassAction;

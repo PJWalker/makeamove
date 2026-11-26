@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState  } from "react";
 import type {RefObject} from "react";
-import { tether } from "./anchor";
+import tether from "./anchor";
 import { inTransition } from "./transition";
 import { setTooltipHider } from "./tooltipController";
 
@@ -20,7 +20,7 @@ type Tip = { text: string; long?: boolean; el: HTMLElement; dir: Dir; instant?: 
  * An element marked `data-tip-opens` keeps its tooltip through a press, for
  * a click that turns the tooltip into a window (hideTooltip ends it).
  */
-export function Tooltip() {
+function Tooltip() {
   const { tip, ref } = useTooltip();
   return (
     <div
@@ -202,3 +202,5 @@ function useTooltipPosition(reference: RefObject<HTMLDivElement | null>, tip: Ti
     };
   }, [reference, tip]);
 }
+
+export default Tooltip;

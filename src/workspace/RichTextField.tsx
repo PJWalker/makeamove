@@ -3,7 +3,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { useEffect, useLayoutEffect, useRef } from "react";
 import type { Campaign } from "../campaign/campaign";
 import type { RichText } from "../data/richText";
-import { ruleTextExtensions } from "./richTextExtensions";
+import ruleTextExtensions from "./richTextExtensions";
 import { useCampaign } from "./campaignContext";
 
 /**
@@ -11,7 +11,7 @@ import { useCampaign } from "./campaignContext";
  * text with formatting and [[+1 XP]] buttons, kept by the form as
  * Tiptap JSON until it saves. `value` seeds the editor when it mounts.
  */
-export function RichTextField({
+function RichTextField({
   campaign,
   label,
   value,
@@ -53,3 +53,5 @@ export function RichTextField({
     </div>
   );
 }
+
+export default RichTextField;

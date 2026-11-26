@@ -6,14 +6,14 @@ import {
   
 } from "../../workspace/DeclarativeSheet";
 import type {SheetDrop, SheetProps as SheetProperties} from "../../workspace/DeclarativeSheet";
-import { useSheet } from "../../workspace/sheetModel";
+import useSheet from "../../workspace/sheetModel";
 import { CharacterText } from "../../workspace/CharacterText";
 import type { DragEntity } from "../../workspace/entityDrag";
-import { Button } from "../../ui/Button";
+import Button from "../../ui/Button";
 import { Counter } from "../../workspace/sheetParts";
 import { giveItem, setData } from "../../workspace/commands/characters";
 import { useCampaign } from "../../workspace/campaignContext";
-import { parseInputNumber } from "../../lib/number";
+import parseInputNumber from "../../lib/number";
 import { STRUGGLES, struggleOfEntry  } from "./struggles";
 import type {Struggle} from "./struggles";
 import { addTreasureBoxes, wealthTierForBoxes, MAX_TREASURE_BOXES } from "./wealth";

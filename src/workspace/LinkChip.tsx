@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { LinkKind } from "../features/notes/links";
 import { linkLabel, linkTip } from "../features/notes/targets";
 import type { Campaign } from "../campaign/campaign";
-import { menuTrigger } from "../ui/menuTrigger";
+import menuTrigger from "../ui/menuTrigger";
 import { ContextMenu  } from "../ui/ContextMenu";
 import type {MenuItem} from "../ui/ContextMenu";
 import { dragEntity } from "./entityDrag";
@@ -16,7 +16,7 @@ import { useCampaign } from "./campaignContext";
  * one in a note. Its tooltip says what it is; a click opens its pop-up; it
  * can be dragged onto a character, the hotbar or into text.
  */
-export function LinkChip({
+function LinkChip({
   campaign,
   kind,
   id,
@@ -87,3 +87,5 @@ function LiveLinkChip({
     </>
   );
 }
+
+export default LinkChip;

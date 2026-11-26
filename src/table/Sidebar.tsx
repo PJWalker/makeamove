@@ -6,8 +6,8 @@ import { IconClose, IconOpenWindow, PROMINENT_ICON_SIZE } from "../ui/icons";
 import type { Campaign } from "../campaign/campaign";
 import { device } from "../platform/device";
 import { useQuery } from "../ui/useQuery";
-import { Button } from "../ui/Button";
-import { menuTrigger } from "../ui/menuTrigger";
+import Button from "../ui/Button";
+import menuTrigger from "../ui/menuTrigger";
 import { trackPointer } from "../ui/pointer";
 import { startReorder } from "../ui/reorder";
 import { withTransition } from "../ui/transition";
@@ -25,7 +25,7 @@ import type {DockItemId, Side, PanelId} from "../workspace/panelLayout";
 import { EntityWindowContent } from "../workspace/entityWindows";
 import { isEntityTab } from "../workspace/entityWindowState";
 import type { EntityWindowRecord } from "../workspace/entityWindowState";
-import { CampaignEntityGraphic } from "../workspace/EntityGraphic";
+import CampaignEntityGraphic from "../workspace/EntityGraphic";
 import { keyedSideWidth, SIDEBAR_DEFAULT_W } from "../workspace/layoutModel";
 import {  useCampaign } from "../workspace/campaignContext";
 import type {CampaignContext} from "../workspace/campaignContext";
@@ -41,7 +41,7 @@ const DRAG_THRESHOLD = 10;
  * right one mirrored. A side with no panels disappears, unless a window is
  * being dragged, when it shows as a place to drop it.
  */
-export function Sidebar({ side, campaign }: { side: Side; campaign: Campaign }) {
+function Sidebar({ side, campaign }: { side: Side; campaign: Campaign }) {
   const context = useCampaign();
   const s = useQuery(context.panels.shownLayout)[side];
   const dragging = useQuery(context.panels.windowDragging);
@@ -465,3 +465,5 @@ function closeDockedEntity(context: CampaignContext, id: DockItemId) {
   record?.close?.();
   context.windows.close(id);
 }
+
+export default Sidebar;

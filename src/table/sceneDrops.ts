@@ -1,5 +1,5 @@
 import { toScreen } from "../scene/camera";
-import type { SceneController } from "../scene/controller";
+import type SceneController from "../scene/controller";
 import type { SceneElement } from "../scene/types";
 import type { Campaign } from "../campaign/campaign";
 import { canEdit, getCharacter } from "../features/characters/api";
@@ -21,7 +21,7 @@ function clearDropHint(context: CampaignContext) {
  * dropped on the canvas, the character under a point, item tokens dragged onto sheets, and copies of
  * template characters. Returns the function that takes it all down again.
  */
-export function bindSceneDrops(
+function bindSceneDrops(
   context: CampaignContext,
   campaign: Campaign,
   ctl: SceneController,
@@ -108,3 +108,5 @@ export function bindSceneDrops(
     ctl.onItemTokenDrop = null;
   };
 }
+
+export default bindSceneDrops;

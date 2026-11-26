@@ -15,7 +15,7 @@ import { autohide, setAutohide } from "../autohide";
 import { PANEL_ORDER, PANELS } from "../panelLayout";
 import type { PanelId } from "../layoutModel";
 import type { CampaignContext } from "../campaignContext";
-import { TOOLS } from "../tools";
+import TOOLS from "../tools";
 import { command  } from "./types";
 import type {TableCommand} from "./types";
 

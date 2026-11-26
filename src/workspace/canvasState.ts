@@ -1,6 +1,6 @@
 import { store } from "../lib/store";
 import type { SceneDoc as SceneDocument } from "../scene/sceneDoc";
-import type { SceneController } from "../scene/controller";
+import type SceneController from "../scene/controller";
 import type { Point } from "../scene/grid";
 import type { BlobReference, EntityGraphic, EntityGraphicRef as EntityGraphicReference } from "../media/images";
 import type { TokenStyle } from "../scene/types";

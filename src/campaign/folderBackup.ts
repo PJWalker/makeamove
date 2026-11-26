@@ -3,7 +3,7 @@ import { assign, createActor, setup } from "xstate";
 import { canWrite, pickFolder } from "../platform/files";
 import { deleteValue, readValue, writeValue } from "../platform/keyval";
 import { finishImport, openGuids, roleIn, thisDevice } from "./backup";
-import { runInBackupWorker } from "./backupWorker";
+import runInBackupWorker from "./backupWorker";
 import { BackupFileError } from "./backupFormat";
 import type { Campaign } from "./campaign";
 

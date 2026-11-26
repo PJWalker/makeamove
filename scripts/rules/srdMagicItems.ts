@@ -1,6 +1,6 @@
 import type { ItemDef } from "../../src/systems/types";
-import { readReference } from "./readReference";
-import { slug } from "./slug";
+import readReference from "./readReference";
+import slug from "./slug";
 
 /** Parse the SRD's Magic Items A-Z section into searchable system gear. */
 export function parseSrdMagicItems(markdown: string): ItemDef[] {

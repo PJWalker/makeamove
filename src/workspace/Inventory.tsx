@@ -4,19 +4,19 @@ import { systemOf } from "../features/characters/api";
 import type { CharacterView, ItemInstance } from "../features/characters/types";
 import type { Derived } from "../systems/types";
 import type { Campaign } from "../campaign/campaign";
-import { Button } from "../ui/Button";
+import Button from "../ui/Button";
 import { List } from "../ui/List";
 import type { ItemUseProps as ItemUseProperties } from "../systems/extensionTypes";
 import { callKey } from "../kernel/commands";
 import { RichTextView } from "./RichTextView";
 import { EntryRow, EntryWindow } from "./EntryWindow";
-import { useEntryWindows } from "./entryWindowState";
+import useEntryWindows from "./entryWindowState";
 import { inventoryKey } from "./entryKeys";
-import { linkProxy } from "./linkProxy";
+import linkProxy from "./linkProxy";
 import { actionMenuItems } from "./actionMenu";
 import { dragEntity } from "./entityDrag";
 import { entity } from "./dragEntities";
-import { CampaignEntityGraphic } from "./EntityGraphic";
+import CampaignEntityGraphic from "./EntityGraphic";
 import { getEntityGraphic } from "./entityGraphics";
 import { useExtension } from "./systemExtensions";
 import { useCampaign } from "./campaignContext";
@@ -159,7 +159,7 @@ function UseButton({ character, item, editable }: ItemUseProperties) {
  * A character's inventory, as a section of their sheet: what they carry and
  * the load it comes to. New things come from the Libraries.
  */
-export function Inventory({
+function Inventory({
   campaign,
   c,
   d,
@@ -308,3 +308,5 @@ export function Inventory({
     </section>
   );
 }
+
+export default Inventory;

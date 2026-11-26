@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import type { SceneController } from "../scene/controller";
+import type SceneController from "../scene/controller";
 import { TOKEN_STYLES  } from "../scene/types";
 import type {TokenElement} from "../scene/types";
 import { importImage  } from "../media/images";
@@ -9,19 +9,19 @@ import { getCharacter, listCharacters, systemOf } from "../features/characters/a
 import { tokenName } from "../features/characters/templates";
 import { openPopup } from "../ui/popup";
 import { useQuery } from "../ui/useQuery";
-import { EntityGraphicView } from "../ui/EntityGraphic";
-import { ColourPicker } from "../ui/ColourPicker";
-import { Button } from "../ui/Button";
-import { CommitInput } from "../ui/CommitInput";
-import { PopupTabs } from "../ui/PopupTabs";
+import EntityGraphicView from "../ui/EntityGraphic";
+import ColourPicker from "../ui/ColourPicker";
+import Button from "../ui/Button";
+import CommitInput from "../ui/CommitInput";
+import PopupTabs from "../ui/PopupTabs";
 import { Segmented } from "../ui/Segmented";
-import { Dialog } from "../workspace/Dialog";
+import Dialog from "../workspace/Dialog";
 import { getEntityGraphic } from "../workspace/entityGraphics";
 import { itemDefinitionForToken } from "../workspace/dragEntities";
-import { linkProxy } from "../workspace/linkProxy";
+import linkProxy from "../workspace/linkProxy";
 import { useCampaign } from "../workspace/campaignContext";
 import { copyCharacter } from "../workspace/commands/characters";
-import { CharacterSheet } from "./sheets";
+import CharacterSheet from "./sheets";
 
 type Update = (patch: Parameters<SceneController["updateToken"]>[1], cells?: number) => void;
 type TokenTab = "character" | "token";
@@ -253,7 +253,7 @@ function useTokenOptions(campaign: Campaign, controller: SceneController, id: st
 }
 
 /** Name, style and colour of a token. Each change applies as soon as it's made. */
-export function TokenOptionsDialog({
+function TokenOptionsDialog({
   campaign,
   controller,
   id,
@@ -332,3 +332,5 @@ export function TokenOptionsDialog({
     </Dialog>
   );
 }
+
+export default TokenOptionsDialog;

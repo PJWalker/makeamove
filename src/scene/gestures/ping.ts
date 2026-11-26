@@ -2,7 +2,7 @@ import { coalesced, dragged  } from "./types";
 import type {ToolPress} from "./types";
 
 /** The Ping: a click pings the map for everyone; a drag leaves a fading trail. */
-export const ping: ToolPress = (c, _e, start) => {
+const ping: ToolPress = (c, _e, start) => {
   c.presence?.ping(start);
   let active = false;
   return {
@@ -19,3 +19,5 @@ export const ping: ToolPress = (c, _e, start) => {
     cancel: () => c.presence?.endTrail(),
   };
 };
+
+export default ping;

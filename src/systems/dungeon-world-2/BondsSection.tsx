@@ -4,17 +4,17 @@ import { getCharacter, listCharacters } from "../../features/characters/api";
 import { relationshipWeb } from "../../features/characters/relationships";
 import type { CharacterView } from "../../features/characters/types";
 import { characterLinkTargets } from "../../features/notes/targets";
-import { Button } from "../../ui/Button";
+import Button from "../../ui/Button";
 import { useQuery } from "../../ui/useQuery";
 import { bumpData } from "../../workspace/commands/characters";
 import { useCampaign } from "../../workspace/campaignContext";
-import { BONDS } from "./bonds";
+import BONDS from "./bonds";
 import { advanceBond, bondsFor, DW2_RELATIONSHIP_DEPTH, forgeBond } from "./bondStore";
 
 const FULL = DW2_RELATIONSHIP_DEPTH.max;
 
 /** A character's Bonds, and for PCs at full Depth with another, forging or reinforcing one. */
-export function Dw2Bonds({
+function Dw2Bonds({
   campaign,
   c,
   editable,
@@ -211,3 +211,5 @@ function BondForgeForm({
     </div>
   );
 }
+
+export default Dw2Bonds;

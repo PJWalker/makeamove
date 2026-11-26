@@ -1,6 +1,6 @@
 import type * as React from "react";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
-import { useConstant } from "../ui/useConstant";
+import useConstant from "../ui/useConstant";
 import { withField, useMessageState } from "../features/chat/messageState";
 import { commandText, contentForCommand  } from "../features/chat/content";
 import type {ChatContent} from "../features/chat/content";
@@ -15,8 +15,8 @@ import type {ChatMessage, CounterMessage, TimerMessage} from "../features/chat/t
 import type { Campaign } from "../campaign/campaign";
 import { device } from "../platform/device";
 import { useQuery } from "../ui/useQuery";
-import { Button } from "../ui/Button";
-import { menuTrigger } from "../ui/menuTrigger";
+import Button from "../ui/Button";
+import menuTrigger from "../ui/menuTrigger";
 import { IconRemove, IconAdd } from "../ui/icons";
 import { useCampaign } from "../workspace/campaignContext";
 import { saveMessageEdit, setCounterValue, timerControl } from "../workspace/commands/chat";

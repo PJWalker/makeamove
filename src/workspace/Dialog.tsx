@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import type { Campaign } from "../campaign/campaign";
 import { IconOpenWindow  } from "../ui/icons";
 import type {Icon} from "../ui/icons";
-import type { menuTrigger } from "../ui/menuTrigger";
+import type menuTrigger from "../ui/menuTrigger";
 import { closePopup, dragPopup, raisePopup, resizePopup } from "../ui/popup";
 import { RESIZE_DIRS  } from "../ui/resizeRect";
 import type {ResizeDir} from "../ui/resizeRect";
@@ -12,14 +12,14 @@ import { useQuery } from "../ui/useQuery";
 import { windowLayer } from "../ui/windows";
 import { dragEntity } from "./entityDrag";
 import type { WindowProxy } from "./entityWindowState";
-import { CampaignEntityGraphic } from "./EntityGraphic";
+import CampaignEntityGraphic from "./EntityGraphic";
 import { useWindowRect  } from "./panelLayout";
 import type {DockItemId} from "./panelLayout";
-import { WindowControls } from "./WindowControls";
+import WindowControls from "./WindowControls";
 import { useCampaign } from "./campaignContext";
 
 /** The icon in a window's title bar that stands for what it shows. */
-export function Dialog({
+function Dialog({
   dialogRef,
   title,
   onClose,
@@ -179,3 +179,5 @@ export function Dialog({
     windowLayer,
   );
 }
+
+export default Dialog;

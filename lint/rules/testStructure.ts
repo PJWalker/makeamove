@@ -5,7 +5,7 @@ import { projectPath } from "../strings.ts";
 const TEST_MODULE = "vite-plus/test";
 
 /** Tests stay top-level or inside describe scopes, and fixtures do not fake types through unknown. */
-export const testStructure = defineRule({
+const testStructure = defineRule({
   meta: {
     type: "problem",
     docs: { description: "Keep test suites structurally valid and fixtures type-safe." },
@@ -62,3 +62,5 @@ export const testStructure = defineRule({
     };
   },
 });
+
+export default testStructure;

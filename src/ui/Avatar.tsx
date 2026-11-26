@@ -1,6 +1,6 @@
 import { hueFromString } from "../lib/colour";
 
-export function Avatar({ id, name, online }: { id: string; name: string; online?: boolean }) {
+function Avatar({ id, name, online }: { id: string; name: string; online?: boolean }) {
   const initials =
     name
       .split(/\s+/)
@@ -20,3 +20,5 @@ export function Avatar({ id, name, online }: { id: string; name: string; online?
     </span>
   );
 }
+
+export default Avatar;

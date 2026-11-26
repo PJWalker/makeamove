@@ -1,7 +1,7 @@
 import type * as React from "react";
 import { useEffect, useRef } from "react";
 import { createActor } from "xstate";
-import { throwMachine } from "./throwMachine";
+import throwMachine from "./throwMachine";
 
 export interface ThrowOptions {
   /** Called when the element is let go at least THROW_DISTANCE from where it was picked up. */

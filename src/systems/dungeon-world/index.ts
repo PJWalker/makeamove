@@ -709,7 +709,7 @@ const NPC_HP = 6;
 
 const ACTIONS = [...BASIC, ...SPECIAL, ...CLASS_MOVES].map(toAction);
 
-export const dungeonWorld: GameSystem = {
+const dungeonWorld: GameSystem = {
   id: "dungeon-world",
   name: "Dungeon World",
   version: "0.1.0",
@@ -851,3 +851,5 @@ export const dungeonWorld: GameSystem = {
   attribution:
     "Condensed from the Dungeon World SRD by Sage LaCroix and Adam Koebel, used under CC BY 3.0. Check the SRD for exact wording.",
 };
+
+export default dungeonWorld;

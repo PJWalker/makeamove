@@ -6,7 +6,7 @@ import { matchesAny, projectPath } from "../strings.ts";
  * shared title bar, dragging, resizing, rolling up and animation. The few
  * other kinds of surface that are their own `<dialog>` are listed in `allow`.
  */
-export const useDialog = defineRule({
+const useDialog = defineRule({
   meta: {
     type: "suggestion",
     docs: { description: "Open windows with <Dialog> rather than a <dialog> of their own." },
@@ -42,3 +42,5 @@ export const useDialog = defineRule({
     };
   },
 });
+
+export default useDialog;

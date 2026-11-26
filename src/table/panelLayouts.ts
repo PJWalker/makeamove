@@ -1,4 +1,4 @@
-import { createPaneLayout } from "../ui/paneLayout";
+import createPaneLayout from "../ui/paneLayout";
 
 export const charactersLayout = createPaneLayout("charsList", {
   list: "list",

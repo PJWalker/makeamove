@@ -1,5 +1,5 @@
 /** A field for naming a folder in place: Enter keeps the name, Escape or leaving it empty cancels. */
-export function FolderName({
+function FolderName({
   initial = "",
   onDone,
 }: {
@@ -27,3 +27,5 @@ export function FolderName({
     />
   );
 }
+
+export default FolderName;

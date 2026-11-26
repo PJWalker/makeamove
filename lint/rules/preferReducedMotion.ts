@@ -49,7 +49,7 @@ function shadowed(context: Context, node: ESTree.Node, name: string) {
  * `reducedMotion` in src/ui/transition.ts, a live MediaQueryList, rather
  * than each asking the browser again.
  */
-export const preferReducedMotion = defineRule({
+const preferReducedMotion = defineRule({
   meta: {
     type: "suggestion",
     fixable: "code",
@@ -96,3 +96,5 @@ export const preferReducedMotion = defineRule({
     };
   },
 });
+
+export default preferReducedMotion;

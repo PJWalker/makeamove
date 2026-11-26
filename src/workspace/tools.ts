@@ -17,7 +17,7 @@ import {
 import type {IconProps as IconProperties} from "../ui/icons";
 
 /** The canvas tools, as the toolbar and the command palette list them. */
-export const TOOLS: {
+const TOOLS: {
   id: ToolId;
   label: string;
   key: string;
@@ -36,3 +36,5 @@ export const TOOLS: {
   { id: "light", label: "Lights", key: "L", Icon: IconLight, gmOnly: true },
   { id: "effect", label: "Effects", key: "F", Icon: IconEffects, gmOnly: true },
 ];
+
+export default TOOLS;

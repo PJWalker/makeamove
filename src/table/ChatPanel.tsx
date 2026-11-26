@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useConstant } from "../ui/useConstant";
+import useConstant from "../ui/useConstant";
 import { entityContent } from "../features/chat/content";
 import type { Campaign } from "../campaign/campaign";
 import { ContextMenu  } from "../ui/ContextMenu";
@@ -10,8 +10,8 @@ import { useQuery } from "../ui/useQuery";
 import { say } from "../workspace/commands/chat";
 import { menuFor } from "../workspace/commands/views";
 import { PinnedStrip } from "./ChatExtras";
-import { ChatComposer } from "./ChatComposer";
-import { ChatLog } from "./ChatLog";
+import ChatComposer from "./ChatComposer";
+import ChatLog from "./ChatLog";
 import { PinnedMessage } from "./ChatMessage";
 
 /*
@@ -19,7 +19,7 @@ import { PinnedMessage } from "./ChatMessage";
  * (with slash commands), and the quick dice bar.
  */
 
-export function ChatPanel({ campaign }: { campaign: Campaign }) {
+function ChatPanel({ campaign }: { campaign: Campaign }) {
   const context = useCampaign();
   /** Replies only this device sees: /help, and errors. */
   const notes = useQuery(context.table.chatNotes);
@@ -74,3 +74,5 @@ export function ChatPanel({ campaign }: { campaign: Campaign }) {
     </div>
   );
 }
+
+export default ChatPanel;

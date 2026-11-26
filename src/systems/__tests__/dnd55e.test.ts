@@ -1,9 +1,9 @@
 import { plainText } from "../../data/richText";
-import { SRD_SPELLS } from "../dnd55e/srdSpells";
-import { SRD_FEATS } from "../dnd55e/srdFeats";
-import { SRD_MONSTERS } from "../dnd55e/srdMonsters";
-import { SRD_MAGIC_ITEMS } from "../dnd55e/srdMagicItems";
-import { SRD_CLASS_FEATURES } from "../dnd55e/srdClasses";
+import SRD_SPELLS from "../dnd55e/srdSpells";
+import SRD_FEATS from "../dnd55e/srdFeats";
+import SRD_MONSTERS from "../dnd55e/srdMonsters";
+import SRD_MAGIC_ITEMS from "../dnd55e/srdMagicItems";
+import SRD_CLASS_FEATURES from "../dnd55e/srdClasses";
 import "fake-indexeddb/auto";
 import { describe, expect, it } from "vite-plus/test";
 import * as Y from "yjs";

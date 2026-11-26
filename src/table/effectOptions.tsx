@@ -7,7 +7,7 @@ type SightFlag = keyof EffectSight;
 const SIGHT_FLAGS = ["glow", "obscures"] as const;
 
 /** Whether an effect gives off light and whether it blocks sight, as two toggles; a change gives just the flag toggled. */
-export function EffectSightToggles({
+function EffectSightToggles({
   value,
   onChange,
 }: {
@@ -31,3 +31,5 @@ export function EffectSightToggles({
     />
   );
 }
+
+export default EffectSightToggles;

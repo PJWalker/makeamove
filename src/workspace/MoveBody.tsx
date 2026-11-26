@@ -11,7 +11,7 @@ import { RichTextView } from "./RichTextView";
  * then any form the system's extension has for it.
  */
 
-export function MoveBody({
+function MoveBody({
   campaign,
   move,
   characterId,
@@ -42,3 +42,5 @@ export function MoveBody({
     </>
   );
 }
+
+export default MoveBody;

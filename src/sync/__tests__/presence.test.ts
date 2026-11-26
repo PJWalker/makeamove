@@ -2,7 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 
 import * as Y from "yjs";
 import { Presence } from "../../scene/presence";
-import { SyncSession } from "../session";
+import SyncSession from "../session";
 import { MemoryRoom } from "./memoryRoom";
 
 function peer(room: MemoryRoom, id: string) {

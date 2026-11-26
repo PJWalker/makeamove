@@ -10,7 +10,7 @@ import {
 } from "../workspace/panelLayout";
 import type {FloatingWindow, PanelId} from "../workspace/panelLayout";
 import { RESIZE_DIRS } from "../ui/resizeRect";
-import { WindowControls } from "../workspace/WindowControls";
+import WindowControls from "../workspace/WindowControls";
 import { useQuery } from "../ui/useQuery";
 import { useCampaign } from "../workspace/campaignContext";
 import { PanelActionsProvider, PanelActionsSlot } from "./PanelActions";
@@ -20,7 +20,7 @@ import { PanelContent, PanelIcon, PaneToggle } from "./panels";
 /** Size of the tab a window morphs into. */
 const TAB = 44;
 
-export function FloatingWindows({ campaign }: { campaign: Campaign }) {
+function FloatingWindows({ campaign }: { campaign: Campaign }) {
   const context = useCampaign();
   const windows = useQuery(context.panels.floatingWindows);
   return createPortal(
@@ -161,3 +161,5 @@ function useWindowPresentation(stored: FloatingWindow & { id: PanelId }, campaig
   const toTab = `translate(${to.x - TAB / 2 - win.x}px, ${to.y - TAB / 2 - win.y}px) scale(${TAB / win.w}, ${TAB / win.h})`;
   return { ctx: context, win, label, rolled, setRolled, pointer, asTab, morph, toTab, onHeaderPointerDown };
 }
+
+export default FloatingWindows;

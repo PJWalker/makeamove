@@ -8,7 +8,7 @@ import { store } from "../lib/store";
  * stack's redo, as one history would.
  */
 
-export class UndoHistory {
+export default class UndoHistory {
   /** Which stack holds each undoable step, oldest first. */
   #undo: UndoStack[] = [];
   #redo: UndoStack[] = [];

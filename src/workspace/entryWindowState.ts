@@ -7,7 +7,7 @@ import { locate } from "./layoutModel";
 import { useCampaign } from "./campaignContext";
 
 /** Which entries have windows open, and how to open one from its row. */
-export function useEntryWindows() {
+function useEntryWindows() {
   const context = useCampaign();
   return {
     keys: useQuery(context.windows.openEntries),
@@ -33,3 +33,5 @@ export function useEntryWindows() {
     },
   };
 }
+
+export default useEntryWindows;

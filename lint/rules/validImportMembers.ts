@@ -8,7 +8,7 @@ interface TypeScriptServices {
 }
 
 /** Static and explicitly resolved import members must exist in the imported module. */
-export const validImportMembers = defineRule({
+const validImportMembers = defineRule({
   meta: {
     type: "problem",
     docs: { description: "Reject named import members that do not exist in the module." },
@@ -58,3 +58,5 @@ export const validImportMembers = defineRule({
     };
   },
 });
+
+export default validImportMembers;

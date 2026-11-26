@@ -32,7 +32,7 @@ interface AwarenessChange {
   removed: number[];
 }
 
-export class SyncSession {
+export default class SyncSession {
   readonly awareness: awarenessProtocol.Awareness;
   private readonly docs = new Map<string, Y.Doc>();
   private readonly cleanups = new Map<string, () => void>();

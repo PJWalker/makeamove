@@ -1,7 +1,7 @@
 import type { Campaign } from "../../campaign/campaign";
 import type { SlotLook } from "../../campaign/schema";
 import { device } from "../../platform/device";
-import { IS_MAC } from "../../platform/os";
+import IS_MAC from "../../platform/os";
 
 export type { SlotLook } from "../../campaign/schema";
 

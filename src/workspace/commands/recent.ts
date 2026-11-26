@@ -8,7 +8,7 @@ const readList = listOf(isString, "recent actions");
 const read = (stored: unknown) => readList(stored).slice(0, MAX);
 
 /** Recently run actions, newest first, remembered in the campaign's local document. */
-export class RecentActions {
+export default class RecentActions {
   readonly ids: LocalValue<string[]>;
 
   constructor(local: LocalDocument) {

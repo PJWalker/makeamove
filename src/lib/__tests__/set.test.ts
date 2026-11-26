@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { toggleSetValue } from "../set";
+import toggleSetValue from "../set";
 
 describe("toggleSetValue", () => {
   it("returns a new set with the value toggled", () => {

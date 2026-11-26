@@ -1,5 +1,5 @@
 import { canEdit, getCharacter } from "../features/characters/api";
-import { Button } from "../ui/Button";
+import Button from "../ui/Button";
 import type { CharacterView } from "../features/characters/types";
 import { DEFAULT_TEMPLATE, NAMINGS } from "../features/characters/templates";
 import type { Campaign } from "../campaign/campaign";

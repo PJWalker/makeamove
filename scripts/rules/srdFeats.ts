@@ -1,6 +1,6 @@
 import type { OptionDef } from "../../src/systems/types";
-import { readReference } from "./readReference";
-import { slug } from "./slug";
+import readReference from "./readReference";
+import slug from "./slug";
 
 export type SrdFeat = OptionDef & {
   category: "epic" | "fighting-style" | "general" | "origin";

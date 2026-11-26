@@ -9,7 +9,7 @@ vi.mock("../render/handles", () => ({
 vi.mock("../../platform/device", () => ({ device: { value: { id: "x" } } }));
 vi.mock("../../media/images", () => ({ importImage: vi.fn(), imageColour: vi.fn() }));
 
-const { SceneController } = await import("../controller");
+const { default: SceneController } = await import("../controller");
 const { SceneTools } = await import("../tools");
 const { LocalDoc } = await import("../../data/localDoc");
 type Controller = InstanceType<typeof SceneController>;

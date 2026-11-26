@@ -21,7 +21,7 @@ import { BRUSH, BRUSHES } from "./brushAtlas";
 import { STRIDE } from "./splat";
 import { PER_ROW, splatFragment, splatUniforms, splatVertex, TEXELS } from "./splatShaders";
 import type { SplatLight } from "./splatShaders";
-import { splatSorter } from "./splatSort";
+import splatSorter from "./splatSort";
 
 /*
  * Draws a cloud of Gaussian splats (splat.ts) lit by a few point lights, as
@@ -67,7 +67,7 @@ function brushTexture(brushes: Uint8Array) {
   return texture;
 }
 
-export function splatCloud(
+function splatCloud(
   data: Float32Array,
   brushes: Uint8Array,
   lights: readonly SplatLight[],
@@ -115,3 +115,5 @@ export function splatCloud(
     },
   };
 }
+
+export default splatCloud;

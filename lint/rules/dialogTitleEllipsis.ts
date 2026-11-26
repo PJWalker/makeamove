@@ -5,7 +5,7 @@ import { propertiesOf, writtenIn } from "../strings.ts";
  * A command that asks for confirmation opens a dialog before it acts, so its
  * title ends in "…", as macOS writes such buttons and menu items.
  */
-export const dialogTitleEllipsis = defineRule({
+const dialogTitleEllipsis = defineRule({
   meta: {
     type: "suggestion",
     fixable: "code",
@@ -32,3 +32,5 @@ export const dialogTitleEllipsis = defineRule({
     };
   },
 });
+
+export default dialogTitleEllipsis;

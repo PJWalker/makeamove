@@ -4,12 +4,12 @@ import type {ReadonlyStore} from "../lib/store";
 import { colourOf, Presence } from "../scene/presence";
 import { PeerBlobs } from "../media/images";
 import { BlobExchange } from "../sync/blobs";
-import { SyncSession } from "../sync/session";
+import SyncSession from "../sync/session";
 import type { Device } from "../platform/device";
 import type { JoinRoom } from "../sync/transport";
 import { getBlob, putBlob } from "../platform/blobs";
 
-export class CampaignConnection {
+export default class CampaignConnection {
   readonly presence = new Presence();
   readonly peerCount = store(0);
   readonly online = store<ReadonlySet<string>>(new Set());

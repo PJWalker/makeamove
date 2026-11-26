@@ -47,10 +47,10 @@ import {
   SUBCLASSES,
   SUBCLASS_LEVEL,
 } from "./origins";
-import { SRD_SPELLS } from "./srdSpells";
-import { SRD_MONSTERS } from "./srdMonsters";
-import { SRD_MAGIC_ITEMS } from "./srdMagicItems";
-import { SRD_CLASS_FEATURES } from "./srdClasses";
+import SRD_SPELLS from "./srdSpells";
+import SRD_MONSTERS from "./srdMonsters";
+import SRD_MAGIC_ITEMS from "./srdMagicItems";
+import SRD_CLASS_FEATURES from "./srdClasses";
 
 /*
  * D&D 5th edition, 2024 rules ("5.5e"), from the SRD 5.2: the formulas, and

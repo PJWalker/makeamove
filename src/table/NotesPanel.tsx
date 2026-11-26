@@ -12,19 +12,19 @@ import {
 import type {NoteFolderView, NoteMatch, NoteView} from "../features/notes/api";
 import type { Campaign } from "../campaign/campaign";
 import { useQuery } from "../ui/useQuery";
-import { Button } from "../ui/Button";
+import Button from "../ui/Button";
 import { IconAdd, IconNewFolder, IconNotes, IconSecret } from "../ui/icons";
 import { morphOpen } from "../ui/morph";
 import { TwoPane } from "../ui/TwoPane";
-import { usePaneLevel } from "../ui/paneLevel";
+import usePaneLevel from "../ui/paneLevel";
 import { List, ListRow } from "../ui/List";
-import { menuTrigger } from "../ui/menuTrigger";
+import menuTrigger from "../ui/menuTrigger";
 import { ContextMenu  } from "../ui/ContextMenu";
 import type {MenuItem} from "../ui/ContextMenu";
 import { dragEntity } from "../workspace/entityDrag";
 import { entity } from "../workspace/dragEntities";
 import { useCampaign } from "../workspace/campaignContext";
-import { CommitInput } from "../ui/CommitInput";
+import CommitInput from "../ui/CommitInput";
 import {
   ensureDefaultNoteFolders,
   filePage,
@@ -36,8 +36,8 @@ import {
 } from "../workspace/commands/notes";
 import { invoke, menuFor } from "../workspace/commands/views";
 import { notesLayout } from "./panelLayouts";
-import { FolderTree } from "./FolderTree";
-import { NoteEditor } from "./NoteEditor";
+import FolderTree from "./FolderTree";
+import NoteEditor from "./NoteEditor";
 
 /** How long ago, roughly, for a page's last edit. */
 function ago(at: number) {
@@ -53,7 +53,7 @@ function ago(at: number) {
  * Notes: pages filed in folders (Sessions and World to start with), written
  * together. The list and the open page sit side by side, or take turns.
  */
-export function NotesPanel({ campaign }: { campaign: Campaign }) {
+function NotesPanel({ campaign }: { campaign: Campaign }) {
   const context = useCampaign();
   // GM-only pages, on a GM device; watched too, so the list keeps up with them.
   const vault = useQuery(campaign.vault);
@@ -336,3 +336,5 @@ function NotePage({
     </article>
   );
 }
+
+export default NotesPanel;

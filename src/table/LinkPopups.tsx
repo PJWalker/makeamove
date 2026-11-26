@@ -1,17 +1,17 @@
 import type { ReactNode } from "react";
 import { useEffect, useLayoutEffect, useMemo } from "react";
-import { MoveBody } from "../workspace/MoveBody";
+import MoveBody from "../workspace/MoveBody";
 import { plainText } from "../data/richText";
 import { getCharacter, systemOf } from "../features/characters/api";
 import { getNote } from "../features/notes/api";
 import { linkLabel } from "../features/notes/targets";
 import type { Campaign } from "../campaign/campaign";
 import { useQuery } from "../ui/useQuery";
-import { Button } from "../ui/Button";
+import Button from "../ui/Button";
 import { closePopup } from "../ui/popup";
-import { CommitInput } from "../ui/CommitInput";
-import { usePopupDialog } from "../workspace/usePopupDialog";
-import { Dialog } from "../workspace/Dialog";
+import CommitInput from "../ui/CommitInput";
+import usePopupDialog from "../workspace/usePopupDialog";
+import Dialog from "../workspace/Dialog";
 import { ContextMenu  } from "../ui/ContextMenu";
 import type {MenuItem} from "../ui/ContextMenu";
 import { EntryWindow } from "../workspace/EntryWindow";
@@ -20,15 +20,15 @@ import { linkKey   } from "../workspace/linkState";
 import type {LinkRef as LinkReference} from "../workspace/linkState";
 import { joinSections } from "../workspace/commands/views";
 import { linkActionItems } from "../workspace/linkActions";
-import { linkProxy } from "../workspace/linkProxy";
+import linkProxy from "../workspace/linkProxy";
 import { makeVerb, rollTag } from "../workspace/actionPresentation";
 import { actionMenuItems } from "../workspace/actionMenu";
 import { entityTabId } from "../workspace/entityWindowState";
 import { useCampaign } from "../workspace/campaignContext";
 import { giveItem, startMove } from "../workspace/commands/characters";
-import { CharacterSheet } from "./sheets";
-import { NoteEditor } from "./NoteEditor";
-import { useActingCharacter } from "./useActingCharacter";
+import CharacterSheet from "./sheets";
+import NoteEditor from "./NoteEditor";
+import useActingCharacter from "./useActingCharacter";
 
 /*
  * What links in rich text open: a pop-up for each link clicked (gear and
@@ -36,7 +36,7 @@ import { useActingCharacter } from "./useActingCharacter";
  * the links' right-click menu, and renaming a link.
  */
 
-export function LinkPopups({ campaign }: { campaign: Campaign }) {
+function LinkPopups({ campaign }: { campaign: Campaign }) {
   const context = useCampaign();
   useRestoreLinkPopups(campaign);
   const links = useQuery(context.linkPopups.openLinks);
@@ -329,3 +329,5 @@ function RenameLinkDialog({ req }: { req: NonNullable<LinkPopupState["linkRename
     </Dialog>
   );
 }
+
+export default LinkPopups;

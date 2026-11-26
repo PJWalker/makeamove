@@ -13,8 +13,10 @@ const EFFECT_ICONS: Record<EffectKind, Icon> = {
 };
 
 /** The effects a zone can have, as Segmented options with their icons. */
-export const EFFECT_OPTIONS = EFFECTS.map(({ id, label }) => ({
+const EFFECT_OPTIONS = EFFECTS.map(({ id, label }) => ({
   id,
   label,
   icon: createElement(EFFECT_ICONS[id], { size: 20 }),
 }));
+
+export default EFFECT_OPTIONS;

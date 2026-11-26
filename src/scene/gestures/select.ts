@@ -1,7 +1,7 @@
 import type { Rect } from "../camera";
 import { bounds, contains } from "../geometry";
 import type { Point } from "../grid";
-import { moveSelection } from "./move";
+import moveSelection from "./move";
 import { editRequest } from "./text";
 import { handleAt, handleCursor, startHandleDrag } from "./transform";
 import { dragged    } from "./types";
