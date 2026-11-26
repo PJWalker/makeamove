@@ -1,3 +1,4 @@
+import alignToGrid from "../gridAlign";
 import { recogniseShape } from "../recognise";
 import { finishStroke, STRIDE } from "../stroke";
 import { coalesced  } from "./types";
@@ -15,8 +16,9 @@ const OPAQUE_HEX = 7;
 /**
  * The Pen: a freehand stroke, pressure-sensitive with a stylus, in the pen's
  * colour, width and layer. A stroke that looks like a basic shape (a line,
- * circle, rectangle, cone or polygon) is neatened into that shape; undo
- * turns it back into the stroke as drawn.
+ * circle, rectangle, cone or polygon) is neatened into that shape, lined
+ * up with the grid if it's nearly lined up (Alt draws it where it is);
+ * undo turns it back into the stroke as drawn.
  */
 export const draw: ToolPress = (c, e, world) => {
   const { colour, layer } = c.tools.pen.value;
@@ -43,12 +45,13 @@ export const draw: ToolPress = (c, e, world) => {
       for (const [event, p] of coalesced(c, e)) add(event, p);
       c.updateOverlay();
     },
-    end() {
+    end(up) {
       c.renderer.draft = null;
       if (points.length === 0) return;
       const [id] = c.scene.add({ type: "drawing", layer, colour, width, ...finishStroke(points, width) });
-      const shape = recogniseShape(points, LEAST_SHAPE / c.renderer.camera.zoom);
-      if (id && shape) {
+      const recognised = recogniseShape(points, LEAST_SHAPE / c.renderer.camera.zoom);
+      if (id && recognised) {
+        const shape = up.altKey ? recognised : alignToGrid(recognised, c.renderer.grid);
         const stroke = colour.length === OPAQUE_HEX ? `${colour}ff` : colour;
         const fill = `${colour.slice(0, OPAQUE_HEX)}00`;
         c.scene.replace(id, { type: "shape", layer, stroke, fill, width, ...shape });
