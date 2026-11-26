@@ -545,7 +545,7 @@ export default defineConfig([
       "no-useless-constructor": "off",
       "prefer-promise-reject-errors": "off",
       "require-await": "off",
-      "@typescript-eslint/no-magic-numbers": ["error", { ignore: [-1, 0, 1] }],
+      "@typescript-eslint/no-magic-numbers": ["error", { ignore: [-1, 0, 1, 2] }],
       "@typescript-eslint/no-unused-vars": [
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },

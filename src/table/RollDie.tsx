@@ -21,7 +21,6 @@ import { pieceMachine } from "./pieceMachine";
 /** Waiting for the 3D dice, moving, at rest, or drawn flat. */
 type Phase = "flat" | "landed" | "moving" | "pending";
 
-const HALF = 2;
 /** How wide a spread (px) other people's dice are thrown in from, and how far above the log. */
 const THROW_SPREAD = 160;
 const THROW_ABOVE = 40;
@@ -33,7 +32,7 @@ function throwFrom(slot: HTMLElement, mine: boolean): Point {
   const box = slot.getBoundingClientRect();
   const log = (slot.closest(".chat-log, .chat-popup") ?? slot).getBoundingClientRect();
   return {
-    x: box.left + box.width / HALF + (Math.random() - 1 / HALF) * THROW_SPREAD,
+    x: box.left + box.width / 2 + (Math.random() - 1 / 2) * THROW_SPREAD,
     y: log.top - THROW_ABOVE,
   };
 }

@@ -21,7 +21,6 @@ const SETTLE_MS = 220;
 const FLICK_MS = 70;
 /** How much bigger a die is drawn for each unit it's lifted off the table. */
 const LIFT_GROWTH = 0.05;
-const HALF = 2;
 const MS_PER_SECOND = 1000;
 
 const dice = new WeakMap<HTMLCanvasElement, Die>();
@@ -136,7 +135,7 @@ export class Die {
       x += there.x - here.x;
       y += there.y - here.y;
     }
-    const [left, top, scale] = [x - SLOT / HALF, y - SLOT / HALF, 1 + lift * LIFT_GROWTH].map(String);
+    const [left, top, scale] = [x - SLOT / 2, y - SLOT / 2, 1 + lift * LIFT_GROWTH].map(String);
     this.canvas.style.transform = `translate(${left}px, ${top}px) scale(${scale})`;
     this.canvas.style.setProperty("--lift", String(lift));
   }
