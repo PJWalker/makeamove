@@ -1,7 +1,7 @@
 import { tokensCovered } from "../geometry";
 import { snapToLattice  } from "../grid";
 import type {Point} from "../grid";
-import { formatDistance, toUnits } from "../measure";
+import { shapeMeasures } from "../measure";
 import { SHAPE_WIDTH, TEMPLATE_STYLE  } from "../tools";
 import type {SceneTools} from "../tools";
 import type {
@@ -44,7 +44,7 @@ export interface ShapePlan {
   /** Which sort of thing this is: a polygon's click for another sort starts afresh. */
   key: string;
   style: ShapeStyle;
-  place(geo: ShapeGeometry & Transform): void;
+  place: (geo: ShapeGeometry & Transform) => void;
 }
 
 /**
@@ -81,7 +81,7 @@ export function placeShape(
 export interface DragPlan {
   style: ShapeStyle;
   fixed?: Placement;
-  place(t: Transform): void;
+  place: (t: Transform) => void;
 }
 
 /** An action's area being placed: once it's down, the placement hears which tokens it covers. */
@@ -115,7 +115,8 @@ export function dragShape(
   const start = snapShapePoint(c, world, kind, e);
   const fixed = plan.fixed ?? null;
   const show = (p: Point, e: Keys) => {
-    const { label, ...t } = shapeFrom(c, start, kind, fixed, p, e);
+    const t = shapeFrom(c, start, kind, fixed, p, e);
+    const label = shapeMeasures(c.renderer.grid, { ...t, shape: kind })[0]!.text;
     const { width, layer, ...paint } = plan.style;
     c.renderer.draft = { kind: "shape", shape: kind, t, paint, width, layer, label };
     c.renderer.invalidate("overlay", "presence");
@@ -128,7 +129,7 @@ export function dragShape(
       c.renderer.draft = null;
       c.renderer.invalidate("overlay", "presence");
       const world = c.toWorld(e.clientX, e.clientY);
-      const { label: _label, ...t } = shapeFrom(c, start, kind, fixed, world, e);
+      const t = shapeFrom(c, start, kind, fixed, world, e);
       if (!fixed && (t.w < 4 || t.h < 4)) return;
       plan.place(t);
     },
@@ -154,11 +155,10 @@ function shapeFrom(
   fixed: Placement | null,
   p: Point,
   e: Keys,
-): Transform & { label: string } {
+): Transform {
   const {grid} = c.renderer;
   const step = grid.type === "none" || e.altKey ? 0 : grid.size;
   const round = (n: number) => (step ? Math.max(step, Math.round(n / step) * step) : n);
-  const units = (n: number) => formatDistance(grid, toUnits(grid, n));
   const dx = p.x - s.x;
   const dy = p.y - s.y;
   if (shape === "circle") {
@@ -168,8 +168,7 @@ function shapeFrom(
       y: s.y,
       w: 2 * r,
       h: 2 * r,
-      rot: 0,
-      label: `${units(r)} radius`,
+      rot: 0
     };
   }
   if (shape === "rect") {
@@ -179,8 +178,7 @@ function shapeFrom(
         y: s.y,
         w: fixed.length,
         h: fixed.length,
-        rot: 0,
-        label: units(fixed.length),
+        rot: 0
       };
     let w = round(Math.abs(dx));
     let h = round(Math.abs(dy));
@@ -190,8 +188,7 @@ function shapeFrom(
       y: s.y + (Math.sign(dy) * h) / 2,
       w,
       h,
-      rot: 0,
-      label: `${units(w)} × ${units(h)}`,
+      rot: 0
     };
   }
   // Lines and cones run from the start towards the pointer.
@@ -204,7 +201,6 @@ function shapeFrom(
     y: s.y + (Math.sin(rot) * length) / 2,
     w: length,
     h: thick,
-    rot,
-    label: units(length),
+    rot
   };
 }

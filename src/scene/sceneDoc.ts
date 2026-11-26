@@ -177,6 +177,18 @@ export class SceneDoc {
     });
   }
 
+  /** Swap an element for a new one in its place in the stacking order, as one undo step. */
+  replace(id: string, element: NewElement): string | undefined {
+    const old = this.get(id);
+    if (!old) return undefined;
+    const next = newId();
+    this.transact(() => {
+      this.elements.delete(id);
+      this.elements.set(next, { locked: old.locked, ...element, z: old.z, createdBy: old.createdBy });
+    });
+    return next;
+  }
+
   remove(ids: Iterable<string>) {
     this.transact(() => {
       for (const id of ids) this.elements.delete(id);

@@ -58,6 +58,28 @@ export const contains = (outer: Rect, inner: Rect) =>
   inner.x + inner.w <= outer.x + outer.w &&
   inner.y + inner.h <= outer.y + outer.h;
 
+/** The frame around a polygon's corners in the world. */
+export function polygonFrame(vertices: Point[]): Transform & { points: number[]; bw: number; bh: number } {
+  const xs = vertices.map((p) => p.x);
+  const ys = vertices.map((p) => p.y);
+  const [x0, x1] = [Math.min(...xs), Math.max(...xs)];
+  const [y0, y1] = [Math.min(...ys), Math.max(...ys)];
+  const x = (x0 + x1) / 2;
+  const y = (y0 + y1) / 2;
+  const w = Math.max(1, x1 - x0);
+  const h = Math.max(1, y1 - y0);
+  return {
+    x,
+    y,
+    w,
+    h,
+    rot: 0,
+    points: vertices.flatMap((p) => [p.x - x, p.y - y]),
+    bw: w,
+    bh: h,
+  };
+}
+
 /** A shape's outline in its own frame (see ShapeKind) at the size w × h, as points around it. */
 export function shapeOutline(geo: ShapeGeometry, w: number, h: number): Point[] {
   const hw = w / 2;

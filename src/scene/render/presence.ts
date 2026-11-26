@@ -2,13 +2,17 @@ import { Container, Graphics } from "pixi.js";
 import { toScreen } from "../camera";
 import { fromLocal as fromLocalPoint } from "../geometry";
 import type { Point } from "../grid";
-import { formatDistance, measure, tokenDistance } from "../measure";
+import { formatDistance, measure, shapeMeasures, tokenDistance } from "../measure";
 import { PING_MS, TRAIL_MS  } from "../presence";
 import type {PresenceMark} from "../presence";
+import type { SceneElement } from "../types";
 import type { Draft } from "./draft";
 import { SdfText } from "./sdfText";
 import type { RenderState } from "./state";
 import { cabin, INK } from "./style";
+
+/** How far, in screen px, a shape's measures sit out from where they belong. */
+const MEASURE_GAP = 14;
 
 /** A remote cursor travelling from one reported position to the next. */
 interface CursorMove {
@@ -30,7 +34,8 @@ function cursorAt(m: CursorMove, now: number): Point {
 
 /**
  * Other members' cursors, pings, trails, rulers and targets, plus this
- * device's own, with their labels; and the size of a shape being dragged out.
+ * device's own, with their labels; and the size of a shape being dragged
+ * out, or of the shape selected.
  */
 export class PresenceLayer {
   readonly view = new Graphics();
@@ -71,11 +76,13 @@ export class PresenceLayer {
     colour: string,
     used: Set<string>,
     alpha = 1,
+    anchor = 0,
   ) {
     let t = this.labelPool.get(key);
     if (!t) {
       t = new SdfText({
         text,
+        anchor,
         font: cabin(600),
         size: 13,
         fill: colour,
@@ -139,8 +146,29 @@ export class PresenceLayer {
     }
   }
 
+  /**
+   * What a lone selected shape measures, each measure centred where it
+   * belongs, nudged out from the middle so it clears the outline.
+   */
+  private drawMeasures(selected: readonly SceneElement[], used: Set<string>) {
+    const element = selected.length === 1 ? selected[0]! : undefined;
+    if (element?.type !== "shape" && element?.type !== "effect") return;
+    const s = this.state;
+    const cam = s.camera;
+    const shape = { ...element, ...s.previews.get(element.id) };
+    const centre = toScreen(cam, shape);
+    for (const [index, m] of shapeMeasures(s.grid, shape).entries()) {
+      const p = toScreen(cam, m.at);
+      const out = Math.hypot(p.x - centre.x, p.y - centre.y);
+      const nudge = out > 1 ? MEASURE_GAP / out : 0;
+      const x = p.x + (p.x - centre.x) * nudge;
+      const y = p.y + (p.y - centre.y) * nudge;
+      this.label(`measure:${String(index)}`, m.text, x, y, "#ffffff", used, 1, 0.5);
+    }
+  }
+
   /** Returns true while a ping is still rippling and needs more frames. */
-  draw(draft: Draft | null, rangeFrom: string | null): boolean {
+  draw(draft: Draft | null, rangeFrom: string | null, selected: readonly SceneElement[]): boolean {
     const s = this.state;
     const g = this.view.clear();
     const cam = s.camera;
@@ -150,6 +178,7 @@ export class PresenceLayer {
     let insets: ReturnType<RenderState["insets"]> | undefined;
 
     this.drawTargets(g, used, rangeFrom);
+    this.drawMeasures(selected, used);
 
     // A shape being dragged out shows its size by the pointer's end.
     const d = draft;

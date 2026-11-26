@@ -267,7 +267,7 @@ export class SceneRenderer implements RenderState {
     }
     // Targets ride on tokens, so presence redraws with anything else.
     const flickering = this.lightingLayer.flicker();
-    const animating = this.presence.draw(this.draft, this.overlayState.rangeFrom) || flickering;
+    const animating = this.presence.draw(this.draft, this.overlayState.rangeFrom, this.overlayState.selected) || flickering;
     this.dirty = { ...CLEAN };
     this.app.render();
     if (animating) this.invalidate("presence");

@@ -1,32 +1,11 @@
 import type { Point } from "../grid";
 import { HANDLE_SIZE } from "../render/handles";
-import type { PolygonFrame, PolygonPlan, ToolContext } from "./types";
+import { polygonFrame } from "../geometry";
+import type { PolygonPlan, ToolContext } from "./types";
 import { snapWallPoint } from "./wall";
 
-/** The frame around a polygon's corners in the world. */
-export function polygonFrame(corners: Point[]): PolygonFrame {
-  const xs = corners.map((p) => p.x);
-  const ys = corners.map((p) => p.y);
-  const [x0, x1] = [Math.min(...xs), Math.max(...xs)];
-  const [y0, y1] = [Math.min(...ys), Math.max(...ys)];
-  const x = (x0 + x1) / 2;
-  const y = (y0 + y1) / 2;
-  const w = Math.max(1, x1 - x0);
-  const h = Math.max(1, y1 - y0);
-  return {
-    x,
-    y,
-    w,
-    h,
-    rot: 0,
-    points: corners.flatMap((p) => [p.x - x, p.y - y]),
-    bw: w,
-    bh: h,
-  };
-}
-
 /** The corners of a polygon being placed, a click at a time. */
-export class PolygonDraft {
+export default class PolygonDraft {
   private draft: { plan: PolygonPlan; points: Point[] } | null = null;
 
   constructor(private readonly c: ToolContext) {}

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import { DEFAULT_GRID, hexCentre  } from "../grid";
 import type {Grid} from "../grid";
-import { formatDistance, inRange, measure, steps, tokenCells, tokenDistance } from "../measure";
+import { formatDistance, inRange, measure, shapeMeasures, steps, tokenCells, tokenDistance } from "../measure";
 
 const square: Grid = { ...DEFAULT_GRID, type: "square", size: 50 };
 const hex: Grid = { ...DEFAULT_GRID, type: "hex", size: 60 };
@@ -85,5 +85,24 @@ describe("range checks", () => {
     expect(inRange(85, { normal: 80, long: 320 })).toBe("long");
     expect(inRange(325, { normal: 80, long: 320 })).toBe("out");
     expect(inRange(10, { normal: 5 })).toBe("out");
+  });
+});
+
+const at = { x: 0, y: 0, rot: 0 };
+const texts = (shape: Parameters<typeof shapeMeasures>[1]) => shapeMeasures(square, shape).map((m) => m.text);
+
+describe("shape measures", () => {
+  it("gives a rectangle's sides, a circle's radius and a line's length", () => {
+    expect(texts({ ...at, shape: "rect", w: 150, h: 100 })).toEqual(["15 ft × 10 ft"]);
+    expect(texts({ ...at, shape: "circle", w: 200, h: 200 })).toEqual(["10 ft radius"]);
+    expect(texts({ ...at, shape: "circle", w: 200, h: 100 })).toEqual(["20 ft × 10 ft"]);
+    expect(texts({ ...at, shape: "line", w: 300, h: 1 })).toEqual(["30 ft"]);
+    expect(texts({ ...at, shape: "cone", w: 150, h: 150 })).toEqual(["15 ft"]);
+  });
+  it("gives each side of a polygon by that side", () => {
+    const triangle = { ...at, shape: "polygon" as const, w: 150, h: 200, points: [-75, -100, 75, 100, -75, 100], bw: 150, bh: 200 };
+    const measures = shapeMeasures(square, triangle);
+    expect(measures.map((m) => m.text)).toEqual(["25 ft", "15 ft", "20 ft"]);
+    expect(measures[1]!.at).toEqual({ x: 0, y: 100 });
   });
 });

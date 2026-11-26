@@ -1,8 +1,23 @@
+import { recogniseShape } from "../recognise";
 import { finishStroke, STRIDE } from "../stroke";
 import { coalesced  } from "./types";
 import type {ToolPress} from "./types";
 
-/** The Pen: a freehand stroke, pressure-sensitive with a stylus, in the pen's colour, width and layer. */
+/** The least size, in screen px, a stroke needs to be recognised as a shape. */
+const LEAST_SHAPE = 24;
+/** The closest, in screen px, a stroke's points come to each other. */
+const POINT_SPACING = 0.5;
+/** The pressure a stroke has without a stylus. */
+const NO_PRESSURE = 0.5;
+/** "#rrggbb", a colour without its opacity. */
+const OPAQUE_HEX = 7;
+
+/**
+ * The Pen: a freehand stroke, pressure-sensitive with a stylus, in the pen's
+ * colour, width and layer. A stroke that looks like a basic shape (a line,
+ * circle, rectangle, cone or polygon) is neatened into that shape; undo
+ * turns it back into the stroke as drawn.
+ */
 export const draw: ToolPress = (c, e, world) => {
   const { colour, layer } = c.tools.pen.value;
   // The pen's width is in screen px; the stroke keeps the world width it had when drawn.
@@ -10,15 +25,15 @@ export const draw: ToolPress = (c, e, world) => {
   const points: number[] = [];
   const add = (e: PointerEvent, p: { x: number; y: number }) => {
     const n = points.length;
-    // Skip points closer than half a screen px to the last one.
+    // Skip points too close to the last one.
     if (
       n >= STRIDE &&
       Math.hypot(p.x - points[n - STRIDE]!, p.y - points[n - STRIDE + 1]!) *
         c.renderer.camera.zoom <
-        0.5
+        POINT_SPACING
     )
       return;
-    points.push(p.x, p.y, e.pointerType === "pen" ? e.pressure : 0.5);
+    points.push(p.x, p.y, e.pointerType === "pen" ? e.pressure : NO_PRESSURE);
     c.renderer.draft = { points, colour, width, layer };
   };
   add(e, world);
@@ -29,11 +44,15 @@ export const draw: ToolPress = (c, e, world) => {
       c.updateOverlay();
     },
     end() {
-      if (points.length > 0) {
-        const geo = finishStroke(points, width);
-        c.scene.add({ type: "drawing", layer, colour, width, ...geo });
-      }
       c.renderer.draft = null;
+      if (points.length === 0) return;
+      const [id] = c.scene.add({ type: "drawing", layer, colour, width, ...finishStroke(points, width) });
+      const shape = recogniseShape(points, LEAST_SHAPE / c.renderer.camera.zoom);
+      if (id && shape) {
+        const stroke = colour.length === OPAQUE_HEX ? `${colour}ff` : colour;
+        const fill = `${colour.slice(0, OPAQUE_HEX)}00`;
+        c.scene.replace(id, { type: "shape", layer, stroke, fill, width, ...shape });
+      }
     },
   };
 };

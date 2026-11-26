@@ -35,7 +35,7 @@ import { ERASER_RADIUS, GM_KINDS, kindOf  } from "./tools";
 import type {SceneTools} from "./tools";
 import type { Layer, NewElement, SceneElement, TokenElement, TokenStyle, Transform } from "./types";
 import { TOOL_PRESS } from "./gestures";
-import { PolygonDraft } from "./gestures/polygon";
+import PolygonDraft from "./gestures/polygon";
 import { pinch } from "./gestures/pan";
 import { hoverCursor } from "./gestures/select";
 import { dragShape, placementPlan } from "./gestures/shape";

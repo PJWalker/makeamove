@@ -1,6 +1,7 @@
 import {    hexAt, hexCentre } from "./grid";
 import type {DiagonalRule, Grid, Point} from "./grid";
-import type { Transform } from "./types";
+import { fromLocal, shapeOutline } from "./geometry";
+import type { ShapeGeometry, Transform } from "./types";
 
 /*
  * Distances on a scene, in the scene's units (see design, "D&D 5.5e plugin
@@ -132,4 +133,27 @@ export function inRange(distance: number, range: Range): "long" | "normal" | "ou
   if (distance <= range.normal) return "normal";
   if (range.long !== undefined && distance <= range.long) return "long";
   return "out";
+}
+
+/**
+ * What a shape measures, in the scene's units, and where in the world each
+ * measure belongs: a rectangle's sides under it, a circle's radius (or an
+ * ellipse's width and height), a line's or cone's length, and each side of
+ * a polygon by that side.
+ */
+export function shapeMeasures(grid: Grid, shape: ShapeGeometry & Transform): { text: string; at: Point }[] {
+  const units = (px: number) => formatDistance(grid, toUnits(grid, px));
+  const across = `${units(shape.w)} × ${units(shape.h)}`;
+  const at = (x: number, y: number) => fromLocal(shape, { x, y });
+  const even = units(shape.w) === units(shape.h);
+  if (shape.shape === "rect") return [{ text: across, at: at(0, shape.h / 2) }];
+  if (shape.shape === "circle") return [{ text: even ? `${units(shape.w / 2)} radius` : across, at: at(0, 0) }];
+  if (shape.shape === "line") return [{ text: units(shape.w), at: at(0, 0) }];
+  if (shape.shape === "cone")
+    return [{ text: even ? units(shape.w) : `${units(shape.w)} long, ${units(shape.h)} wide`, at: at(0, 0) }];
+  const corners = shapeOutline(shape, shape.w, shape.h);
+  return corners.map((a, index) => {
+    const b = corners[(index + 1) % corners.length]!;
+    return { text: units(Math.hypot(b.x - a.x, b.y - a.y)), at: at((a.x + b.x) / 2, (a.y + b.y) / 2) };
+  });
 }
