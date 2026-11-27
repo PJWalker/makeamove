@@ -103,6 +103,10 @@ export interface ToolContext {
   /** Which press in a quick run of them the latest is: 2 for a double click. */
   readonly pressCount: number;
   readonly selection: Store<string[]>;
+  /** The group open for picking its members one at a time, if any. */
+  readonly openGroup: Store<string | null>;
+  /** `ids` with the rest of their groups, but for the group that's open. */
+  readonly withGroups: (ids: readonly string[]) => string[];
   readonly targetMode: Store<{ max?: number; actor?: string } | null>;
   readonly placing: Store<Placement | null>;
   /** A polygon (a shape, or an area of solid light or dark) being placed, a click at a time. */

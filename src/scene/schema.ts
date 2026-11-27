@@ -106,6 +106,7 @@ export const sceneElement = variant(
     z: lww(isString).or("a0"),
     locked: lww(isBoolean).or(false),
     createdBy: lww(isString).or(""),
+    group: lww(isString),
   },
   elementCases,
 );

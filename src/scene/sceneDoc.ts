@@ -9,6 +9,7 @@ import type { Patch, Root } from "../data/schema";
 import type { Grid } from "./grid";
 import { LAYERS } from "./types";
 import type { Layer, NewElement, SceneElement } from "./types";
+import { regroup } from "./groups";
 import { sceneShape } from "./schema";
 import { arrange } from "./stacking";
 import type { Arrangement } from "./stacking";
@@ -214,7 +215,7 @@ export class SceneDoc {
       const { id: _id, z: _z, createdBy: _by, ...rest } = element;
       copies.push({ ...rest, x: element.x + offset, y: element.y + offset, locked: false });
     }
-    return this.add(...copies);
+    return this.add(...regroup(copies));
   }
 
   /** Restack elements, or move them to another layer, as one undo step. */

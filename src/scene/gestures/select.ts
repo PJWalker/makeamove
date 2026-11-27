@@ -9,17 +9,15 @@ import type { Gesture, ToolContext, ToolPress } from "./types";
 
 /**
  * The Select tool (and the Lights tool's own): a press on a handle drags it,
- * on an element selects and moves it, and on empty map draws a marquee.
- * Double-clicking text changes it; while an action asks for targets, a click
- * on a token targets it instead.
+ * on an element selects and moves it (with the rest of its group), and on
+ * empty map draws a marquee. Double-clicking a group opens it, to pick its
+ * members one at a time; double-clicking text changes it. While an action
+ * asks for targets, a click on a token targets it instead.
  */
 export const select: ToolPress = (c, e, world, screen) => {
   if (c.pressCount === 2) {
-    const under = c.hitTest(world);
-    if (under?.type === "text") {
-      c.onTextRequest?.(editRequest(under));
-      return null;
-    }
+    const opened = doubleClick(c, world);
+    if (opened !== undefined) return opened;
   }
   const handle = handleAt(c, screen);
   if (handle) return startHandleDrag(c, handle, world);
@@ -39,17 +37,36 @@ export const select: ToolPress = (c, e, world, screen) => {
     return marquee(c, world, base, pick);
   }
   const sel = c.selection.value;
+  const unit = new Set(c.withGroups([hit.id]));
   if (e.shiftKey) {
     if (sel.includes(hit.id)) {
-      c.selection.value = sel.filter((id) => id !== hit.id);
+      c.selection.value = sel.filter((id) => !unit.has(id));
       return null;
     }
-    c.selection.value = [...sel, hit.id];
+    c.selection.value = [...new Set([...sel, ...unit])];
   } else if (!sel.includes(hit.id)) {
-    c.selection.value = [hit.id];
+    c.selection.value = [...unit];
   }
   return moveSelection(c, world);
 };
+
+/**
+ * A double click: on a closed group, open it and pick the member under the
+ * pointer; on text, change it. Undefined if it's just another press.
+ */
+function doubleClick(c: ToolContext, world: Point): Gesture | null | undefined {
+  const under = c.hitTest(world);
+  if (under?.group && under.group !== c.openGroup.value) {
+    c.openGroup.value = under.group;
+    c.selection.value = [under.id];
+    return moveSelection(c, world);
+  }
+  if (under?.type === "text") {
+    c.onTextRequest?.(editRequest(under));
+    return null;
+  }
+  return undefined;
+}
 
 /** The cursor over the canvas while selecting, before any press: over a handle, or an element. */
 export function hoverCursor(c: ToolContext, world: Point, screen: Point): string | undefined {
@@ -90,15 +107,16 @@ function marquee(c: ToolContext, start: Point, base: string[], pick: string | nu
             ? [element.id]
             : [],
         );
-      c.selection.value = [...new Set([...base, ...inside])];
+      c.selection.value = [...new Set([...base, ...c.withGroups(inside)])];
       c.updateOverlay();
     },
     end() {
       // A click on a map, not a drag across it.
       if (!moved && pick) {
+        const unit = new Set(c.withGroups([pick]));
         c.selection.value = base.includes(pick)
-          ? base.filter((id) => id !== pick)
-          : [...base, pick];
+          ? base.filter((id) => !unit.has(id))
+          : [...new Set([...base, ...unit])];
       }
     },
   };

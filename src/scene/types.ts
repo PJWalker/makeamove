@@ -30,6 +30,8 @@ interface Base extends Transform {
   layer: Layer;
   z: string;
   locked: boolean;
+  /** The group it's in, if any: elements sharing one are picked, moved and restacked together. */
+  group?: string;
   createdBy: string;
 }
 

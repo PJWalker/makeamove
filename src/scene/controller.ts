@@ -1,3 +1,4 @@
+import { newId } from "../lib/ids";
 import { store, watch } from "../lib/store";
 import type { CampaignDefaults } from "../campaign/campaign";
 import { device } from "../platform/device";
@@ -16,6 +17,7 @@ import type { Camera } from "./camera";
 import { readSceneCamera, saveSceneCamera } from "./cameraMemory";
 import { clipboardHtml } from "./clipboard";
 import { bounds, hits, intersects } from "./geometry";
+import { membersOf, regroup, withGroups } from "./groups";
 import { cellOr, snapPoint } from "./grid";
 import type { Point } from "./grid";
 import { tokenDistance } from "./measure";
@@ -68,6 +70,8 @@ function transformOf(t: Transform): Transform {
  */
 export default class SceneController implements ToolContext {
   readonly selection = store<string[]>([]);
+  /** The group open for picking its members one at a time, if any. */
+  readonly openGroup = store<string | null>(null);
   /** The selected elements as they are now, kept current as they change. */
   readonly selectedElements = store<readonly SceneElement[]>([]);
   /** Dominant colour of the scene's largest map, for the UI tint. */
@@ -187,6 +191,9 @@ export default class SceneController implements ToolContext {
       this.scene.elements.observe(refresh),
       this.scene.settings.observe(regrid),
       watch([this.selection], () => {
+        const open = this.openGroup.value;
+        if (open && !this.selected().some((element) => element.group === open))
+          this.openGroup.value = null;
         this.selectedElements.value = this.selected();
         this.updateOverlay();
       }),
@@ -341,6 +348,31 @@ export default class SceneController implements ToolContext {
 
   select(ids: string[]) {
     this.selection.value = ids;
+  }
+
+  /** `ids` with the rest of their groups, but for the group that's open. */
+  withGroups(ids: readonly string[]): string[] {
+    return withGroups(this.elements, ids, this.openGroup.value);
+  }
+
+  /** Make the selected elements a group of their own, together in the layer of the topmost. */
+  group(ids: string[]) {
+    if (ids.length < 2) return;
+    const group = newId();
+    this.scene.transact(() => {
+      this.scene.update(ids.map((id) => [id, { group }]));
+      this.scene.arrange(ids, { to: "together" });
+    });
+    this.openGroup.value = null;
+  }
+
+  /** Take apart the groups of the elements named, keeping them selected. */
+  ungroup(ids: string[]) {
+    const groups = new Set(ids.flatMap((id) => this.byId.get(id)?.group ?? []));
+    const members = this.elements.filter((element) => element.group && groups.has(element.group));
+    this.scene.update(members.map((element) => [element.id, { group: undefined }]));
+    this.openGroup.value = null;
+    this.selection.value = members.map((element) => element.id);
   }
 
   selected(): SceneElement[] {
@@ -756,7 +788,12 @@ export default class SceneController implements ToolContext {
       }
       case "Escape": {
         if (this.gesture || this.polygon.active) this.cancelGesture();
-        else this.selection.value = [];
+        else if (this.openGroup.value) {
+          // Out of an open group, to the whole group.
+          const group = this.openGroup.value;
+          this.openGroup.value = null;
+          this.selection.value = membersOf(this.elements, group);
+        } else this.selection.value = [];
         return true;
       }
       case "ArrowUp":
@@ -869,7 +906,7 @@ export default class SceneController implements ToolContext {
         shift = { x: shift.x + step, y: shift.y + step };
     }
     const ids = this.scene.add(
-      ...usable.map((copy) => ({
+      ...regroup(usable).map((copy) => ({
         ...copy,
         x: copy.x + shift.x,
         y: copy.y + shift.y,

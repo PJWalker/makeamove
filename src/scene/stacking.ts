@@ -12,12 +12,18 @@ import type { Layer, SceneElement } from "./types";
 
 /**
  * Where to move elements: to the top or bottom of their layers, a step up
- * or down past the next thing they overlap, or into a layer at a place
- * among what's already there (on top, if no place is given).
+ * or down past the next thing they overlap, into a layer at a place among
+ * what's already there (on top, if no place is given), or together, just
+ * under the topmost of them, in its layer.
  */
 export type Arrangement =
-  | { to: "back" | "backward" | "forward" | "front" }
-  | { to: "layer"; layer: Layer; index?: number };
+  | Restack
+  | { to: "layer"; layer: Layer; index?: number }
+  | { to: "together" };
+/** Moves within the layers elements are already in. */
+interface Restack {
+  to: "back" | "backward" | "forward" | "front";
+}
 
 export type StackPatch = [string, { z: string; layer: Layer }];
 
@@ -35,21 +41,22 @@ export function arrange(
   for (const element of elements) layers.get(element.layer)!.push(element);
 
   const orders = new Map<Layer, SceneElement[]>();
-  if (how.to === "layer") {
+  const into = how.to === "together" ? together(layers, moved) : how;
+  if (into?.to === "layer") {
     const moving = elements.filter((element) => moved.has(element.id));
     for (const [layer, list] of layers) {
       const kept = list.filter((element) => !moved.has(element.id));
-      if (layer !== how.layer) {
+      if (layer !== into.layer) {
         if (kept.length !== list.length) orders.set(layer, kept);
         continue;
       }
-      const at = Math.max(0, Math.min(how.index ?? kept.length, kept.length));
+      const at = Math.max(0, Math.min(into.index ?? kept.length, kept.length));
       orders.set(layer, [...kept.slice(0, at), ...moving, ...kept.slice(at)]);
     }
-  } else {
+  } else if (into) {
     for (const [layer, list] of layers)
       if (list.some((element) => moved.has(element.id)))
-        orders.set(layer, reorder(list, moved, how.to));
+        orders.set(layer, reorder(list, moved, into.to));
   }
 
   const byId = new Map(elements.map((element) => [element.id, element]));
@@ -63,40 +70,69 @@ export function arrange(
   return patches;
 }
 
+/** Where gathering elements together puts them: in the layer of the topmost, just under it. */
+function together(
+  layers: ReadonlyMap<Layer, readonly SceneElement[]>,
+  moved: ReadonlySet<string>,
+): { to: "layer"; layer: Layer; index: number } | null {
+  for (const layer of [...LAYERS].reverse()) {
+    const list = layers.get(layer)!;
+    const top = list.findLastIndex((element) => moved.has(element.id));
+    if (top === -1) continue;
+    const below = list.slice(0, top).filter((element) => !moved.has(element.id)).length;
+    return { to: "layer", layer, index: below };
+  }
+  return null;
+}
+
 /** One layer's elements, bottom to top, with the moved ones taken to the front or back, or a step either way. */
 function reorder(
   list: readonly SceneElement[],
   moved: ReadonlySet<string>,
-  to: "back" | "backward" | "forward" | "front",
+  to: Restack["to"],
 ): SceneElement[] {
-  const isMoved = (element: SceneElement) => moved.has(element.id);
-  const moving = list.filter((element) => isMoved(element));
-  const kept = list.filter((element) => !isMoved(element));
+  const moving = list.filter((element) => moved.has(element.id));
+  const kept = list.filter((element) => !moved.has(element.id));
   if (to === "front") return [...kept, ...moving];
   if (to === "back") return [...moving, ...kept];
-  // A step: each moved element passes the nearest unmoved one it overlaps,
-  // the topmost first going up and the bottommost first going down, so
-  // the moved ones keep their order among themselves.
-  const order = [...list];
-  const up = to === "forward";
-  const sequence = up ? [...moving].reverse() : moving;
-  for (const element of sequence) {
-    const from = order.indexOf(element);
-    const box = bounds([element]);
-    const step = up ? 1 : -1;
-    let past = -1;
-    for (let index = from + step; index >= 0 && index < order.length; index += step) {
+  return step(list, moved, to === "forward");
+}
+
+/**
+ * A step: each group moved (or element, if it's in none) passes the
+ * nearest unmoved element it overlaps, and its members end up together.
+ * The topmost goes first going up, and the bottommost going down, so what
+ * moved keeps its order.
+ */
+function step(
+  list: readonly SceneElement[],
+  moved: ReadonlySet<string>,
+  up: boolean,
+): SceneElement[] {
+  const units = new Map<string, SceneElement[]>();
+  for (const element of list) {
+    if (!moved.has(element.id)) continue;
+    const key = element.group ?? element.id;
+    units.set(key, [...(units.get(key) ?? []), element]);
+  }
+  let order = [...list];
+  const sequence = up ? [...units.values()].reverse() : [...units.values()];
+  for (const unit of sequence) {
+    const box = bounds(unit);
+    const edge = order.indexOf((up ? unit.at(-1) : unit[0])!);
+    const direction = up ? 1 : -1;
+    let target: SceneElement | null = null;
+    for (let index = edge + direction; index >= 0 && index < order.length; index += direction) {
       const other = order[index]!;
       const otherBox = bounds([other]);
-      if (!isMoved(other) && box && otherBox && intersects(box, otherBox)) {
-        past = index;
+      if (!moved.has(other.id) && box && otherBox && intersects(box, otherBox)) {
+        target = other;
         break;
       }
     }
-    if (past === -1) continue;
-    // Going up, taking it out shifts its target down one, so `past` is now just above it.
-    order.splice(from, 1);
-    order.splice(past, 0, element);
+    if (!target) continue;
+    order = order.filter((element) => !unit.includes(element));
+    order.splice(order.indexOf(target) + (up ? 1 : 0), 0, ...unit);
   }
   return order;
 }

@@ -11,6 +11,7 @@ import {
   IconDuplicate,
   IconForward,
   IconGrid,
+  IconGroup,
   IconImage,
   IconLock,
   IconMap,
@@ -19,6 +20,7 @@ import {
   IconToBack,
   IconToFront,
   IconToken,
+  IconUngroup,
   IconUnlock,
 } from "../../ui/icons";
 import type { Icon } from "../../ui/icons";
@@ -143,6 +145,35 @@ export const cut = selectionCommand(
   { title: "Cut", icon: IconCut, nativeKey: "Mod+X" },
   "edit",
   (context, ids) => void writeClipboard(open(context)?.controller.copy(ids, { cut: true }) ?? null),
+);
+
+/** Whether the elements are already one group, all of it. */
+const oneGroup = (els: SceneElement[]) => {
+  const group = els[0]?.group;
+  return group !== undefined && els.every((element) => element.group === group);
+};
+
+export const group = selectionCommand(
+  "selection.group",
+  { title: "Group", icon: IconGroup, keys: ["Mod+G"] },
+  "arrange",
+  (context, ids) => open(context)?.controller.group(ids),
+  {
+    available: (els) =>
+      els.length < 2 ? "Select two or more" : !oneGroup(els) || "Already a group",
+    offered: (els) => els.length > 1 && !oneGroup(els),
+  },
+);
+
+export const ungroup = selectionCommand(
+  "selection.ungroup",
+  { title: "Ungroup", icon: IconUngroup, keys: ["Mod+Shift+G"] },
+  "arrange",
+  (context, ids) => open(context)?.controller.ungroup(ids),
+  {
+    available: (els) => els.some((element) => element.group) || "Not grouped",
+    offered: (els) => els.some((element) => element.group),
+  },
 );
 
 export const duplicate = selectionCommand(
@@ -337,6 +368,8 @@ export const selectionCommands = [
   bringForward,
   sendBackward,
   sendToBack,
+  group,
+  ungroup,
   copy,
   cut,
   duplicate,
