@@ -2,8 +2,8 @@
  * A device's place in a campaign, and the three things that change it: the
  * GM removing it, the GM letting it back, and the device checking its own
  * membership when the campaign changes. Proved with LemmaScript: once removed,
- * a device is never a member again until the GM lets it back, and a GM is
- * never removed.
+ * a device is never a member again until the GM lets it back, a GM is never
+ * removed, and only the GM can remove or let back.
  */
 
 export interface Standing {
@@ -22,21 +22,24 @@ export function settled(s: Standing): boolean {
   return (!s.removed || !s.member) && (!s.gm || s.member);
 }
 
-/** The GM removes a device; never their own, and never a GM's. */
-export function removedBy(s: Standing, own: boolean): Standing {
+/** The GM (`byGm`) removes a device; never their own, and never a GM's. */
+export function removedBy(s: Standing, own: boolean, byGm: boolean): Standing {
   //@ verify
   //@ ensures settled(s) ==> settled(\result)
-  //@ ensures own || s.gm || !s.member ? \result === s : \result.removed && !\result.member
+  //@ ensures !byGm || own || s.gm || !s.member ? \result === s : \result.removed && !\result.member
   //@ ensures s.gm ==> \result === s
-  if (own || s.gm || !s.member) return s;
+  //@ ensures !byGm ==> \result === s
+  if (!byGm || own || s.gm || !s.member) return s;
   return { member: false, gm: false, removed: true };
 }
 
-/** The GM lets a removed device back; it rejoins when it next checks. */
-export function letBack(s: Standing): Standing {
+/** The GM (`byGm`) lets a removed device back; it rejoins when it next checks. */
+export function letBack(s: Standing, byGm: boolean): Standing {
   //@ verify
   //@ ensures settled(s) ==> settled(\result)
-  //@ ensures !\result.removed && \result.member === s.member && \result.gm === s.gm
+  //@ ensures \result.removed === (s.removed && !byGm) && \result.member === s.member && \result.gm === s.gm
+  //@ ensures !byGm ==> \result === s
+  if (!byGm) return s;
   return { member: s.member, gm: s.gm, removed: false };
 }
 

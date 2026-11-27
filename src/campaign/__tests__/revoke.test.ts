@@ -23,6 +23,15 @@ describe("revoking a player", () => {
     c.destroy();
   });
 
+  it("ignores a player trying to remove someone", async () => {
+    const c = await setUp();
+    c.members.set("sam", { name: "Sam", role: "player" });
+    as("sam", "Sam");
+    c.revokeMember("pat");
+    expect(c.revokedViews()).toEqual([]);
+    c.destroy();
+  });
+
   // Who can be removed, and that a removed device stays out, is proved in standing.ts.
   it("keeps the removed player's device from adding itself back", async () => {
     const gm = await setUp();

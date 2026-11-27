@@ -339,7 +339,8 @@ export class Campaign {
   revokeMember(id: string) {
     const m = this.members.get(id);
     const before = this.standingOf(id);
-    if (!m || removedBy(before, id === this.device.value.id) === before) return;
+    const own = id === this.device.value.id;
+    if (!m || removedBy(before, own, this.isGm()) === before) return;
     this.doc.transact(() => {
       this.revoked.set(id, {
         name: m.get("name") ?? "Unnamed",
@@ -358,7 +359,8 @@ export class Campaign {
 
   /** Let a removed player back in; they rejoin with the invite link. */
   allowBack(id: string) {
-    if (!letBack(this.standingOf(id)).removed) this.revoked.delete(id);
+    const after = letBack(this.standingOf(id), this.isGm());
+    if (!after.removed) this.revoked.delete(id);
   }
 
   ensureMember(name: string, role: Role = "player") {
