@@ -66,7 +66,7 @@ export function Counter({
       className="counter"
       data-label={label}
       data-fill={max !== undefined}
-      data-status={!!status}
+      data-status={Boolean(status)}
       style={{
         ...(max !== undefined && {
           "--fill": `${Math.max(0, Math.min(1, max > 0 ? value / max : 0)) * 100}%`,

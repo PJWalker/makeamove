@@ -17,12 +17,14 @@ import { useCampaign } from "../workspace/campaignContext";
 import { menuFor } from "../workspace/commands/views";
 import { SceneSettingsFields } from "./SceneSettingsFields";
 import { SelectionBar } from "./SelectionBar";
+import { PinPicker } from "./PinPicker";
 import { TextEditor } from "./TextEditor";
 import { TokenOptionsDialog } from "./TokenOptionsDialog";
 import {
   useExploring,
   useFog,
   useLighting,
+  usePins,
   useSceneController,
   useSceneRenderer,
   useSceneShortcuts,
@@ -88,6 +90,7 @@ export function SceneCanvas({ campaign, sceneId }: { campaign: Campaign; sceneId
   useLighting(campaign, controller);
   useFog(campaign, controller);
   useExploring(campaign, controller);
+  const [pinRequest, setPinRequest] = usePins(controller);
   const {
     ctx,
     fileRef,
@@ -147,6 +150,15 @@ export function SceneCanvas({ campaign, sceneId }: { campaign: Campaign; sceneId
           request={textEdit}
           onDone={() => {
             setTextEdit(null);
+          }}
+        />
+      )}
+      {pinRequest && controller && (
+        <PinPicker
+          controller={controller}
+          request={pinRequest}
+          onDone={() => {
+            setPinRequest(null);
           }}
         />
       )}

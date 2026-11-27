@@ -1,4 +1,5 @@
 import { Application, Container, CullerPlugin, extensions } from "pixi.js";
+import type { LinkRef as LinkReference } from "../features/notes/links";
 import type { PeerBlobs } from "../media/images";
 import type { TokenStat } from "../systems/types";
 import type { Camera } from "./camera";
@@ -8,7 +9,9 @@ import type { PresenceMark } from "./presence";
 import type { TokenMarks } from "./tokenMarks";
 import type { SelectKind } from "./tools";
 import { LAYERS } from "./types";
-import type { Layer, SceneElement, TextLook, Transform } from "./types";
+import type { Layer, PinElement, SceneElement, TextLook, Transform } from "./types";
+import { pinLook } from "./pins";
+import type { PinLook, PinSight } from "./pins";
 import { ConditionLayer } from "./render/conditions";
 import { DraftLayer } from "./render/draft";
 import type { Draft } from "./render/draft";
@@ -31,6 +34,12 @@ import type { RenderPart, RenderState } from "./render/state";
 import { releaseTextures } from "./render/textures";
 import { TokenLabelLayer } from "./render/tokenLabels";
 import { isDowned } from "./downed";
+
+/** What a pin leads to, as this device has it. */
+export interface PinTarget {
+  label: string;
+  gmOnly: boolean;
+}
 
 // Skip drawing elements that are off screen.
 extensions.add(CullerPlugin);
@@ -129,6 +138,10 @@ export class SceneRenderer implements RenderState {
     top: 0,
   });
   onCameraChange: ((cam: Camera) => void) | null = null;
+  /** Told, each frame, of the pins hidden from this viewer (out of sight, or leading somewhere they can't see). */
+  onPinsHidden: ((ids: ReadonlySet<string>) => void) | null = null;
+  /** What a pin leads to, on this device: its title and whether it's a GM page, or null if it isn't here. */
+  private pinTarget: ((link: LinkReference) => PinTarget | null) | null = null;
 
   async init(host: HTMLElement) {
     await loadSdfFonts(CANVAS_FONTS);
@@ -273,6 +286,7 @@ export class SceneRenderer implements RenderState {
       (token) =>
         !this.viewers?.includes(token.id) && this.unseen(this.previews.get(token.id) ?? token),
     );
+    this.syncPins();
     if (d.overlay) {
       const unseen = (t: Transform) => this.unseen(t);
       this.draftLayer.draw(this.draft, this.layers, this.camera.zoom);
@@ -342,6 +356,41 @@ export class SceneRenderer implements RenderState {
   private unseen(t: Point): boolean {
     const { sight } = this.lightingLayer;
     return !this.fogLayer.clear(t, this.lightingLayer.inSight(t), sight !== null);
+  }
+
+  /** Where pins find what they lead to, as it changes. */
+  setPinTargets(target: (link: LinkReference) => PinTarget | null) {
+    this.pinTarget = target;
+    this.invalidate("elements");
+  }
+
+  /** What decides how a pin looks to this device (pins.ts): the GM (who sees the helpers), or a player and their tokens' sight. */
+  pinSight(pin: PinElement): PinSight {
+    const target = this.targetOf(pin);
+    return {
+      gm: this.showHelpers,
+      found: target !== null,
+      gmOnly: target?.gmOnly === true,
+      inSight: !this.unseen(this.previews.get(pin.id) ?? pin),
+    };
+  }
+
+  /** How a pin looks to this device. */
+  pinLookOf(pin: PinElement): PinLook {
+    return pinLook(this.pinSight(pin));
+  }
+
+  /** Show each pin as it looks to this device, and say which are hidden from it. */
+  private syncPins() {
+    const hidden = this.elementLayer.syncPins(
+      (pin) => this.pinLookOf(pin),
+      (pin) => this.targetOf(pin)?.label ?? "Missing",
+    );
+    if (hidden.size > 0) this.onPinsHidden?.(hidden);
+  }
+
+  private targetOf(pin: PinElement): PinTarget | null {
+    return this.pinTarget?.(pin.link) ?? null;
   }
 
   setHoverToken(id: string | null, pointer: Point | null = null) {

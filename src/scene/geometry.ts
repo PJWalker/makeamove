@@ -178,6 +178,9 @@ export function hits(element: SceneElement, p: Point, tolerance = 0): boolean {
     case "fog": {
       return shapeCovers(element, p, tolerance);
     }
+    case "pin": {
+      return inBox(l, hw + tolerance, hh + tolerance);
+    }
     case "wall": {
       // Along its length, within a few px of the line.
       return inBox(l, hw + tolerance, Math.max(hh, 4) + tolerance);

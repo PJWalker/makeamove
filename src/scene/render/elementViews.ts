@@ -23,9 +23,23 @@ export interface View {
   pose?: Container;
   /** What only the GM sees: a wall, a lamp or area, an effect's outline. */
   helper?: Container;
+  /** A pin's name, under it: its target's title, set as it changes (ElementLayer.syncPins). */
+  pinLabel?: SdfText;
   /** Play out a moving effect as it is at `time`, in seconds. */
   animate?: (time: number) => void;
 }
+
+/**
+ * A map pin, drawn PIN.size px across about its centre and scaled: a teardrop
+ * in the accent, its point (near the bottom, newElements.ts puts it on the
+ * spot) over a soft shadow, and its name under it.
+ */
+const PIN = { size: 100, labelTop: 56, labelSize: 26, labelOutline: 6, labelWeight: 800 };
+const PIN_SVG = `<svg xmlns="http://www.w3.org/2000/svg">
+  <ellipse cx="0" cy="46" rx="22" ry="8" fill="#14161c" fill-opacity="0.35"/>
+  <path d="M0 46C-18 22-34 6-34-14a34 34 0 0 1 68 0c0 20-16 36-34 60z" fill="#f0bb3b" stroke="#14161c" stroke-width="5" stroke-linejoin="round"/>
+  <circle cx="0" cy="-14" r="12" fill="#14161c"/>
+</svg>`;
 
 /** Graphics only free their own geometry when told to destroy their context. */
 export const DESTROY_VIEW = { children: true, context: true } as const;
@@ -59,6 +73,9 @@ export function contentKey(element: SceneElement): string {
     }
     case "fog": {
       return `fog:${element.force}:${element.shape}:${element.shape === "polygon" ? `${element.points.join(",")}:${element.bw}:${element.bh}` : ""}`;
+    }
+    case "pin": {
+      return "pin";
     }
     case "effect": {
       return `effect:${element.effect}:${element.colour}:${element.shape}:${element.shape === "polygon" ? `${element.points.join(",")}:${element.bw}:${element.bh}` : ""}`;
@@ -375,6 +392,30 @@ export function buildView(
             .poly(flat(shapeOutline(element, t.w, t.h)))
             .fill({ color: colour, alpha: 0.08 })
             .stroke({ color: colour, width: 2, alpha: 0.8 });
+          },
+        };
+      }
+    case "pin": {
+      const marker = new Graphics().svg(PIN_SVG);
+      const label = new SdfText({
+        font: cabin(PIN.labelWeight),
+        size: PIN.labelSize,
+        fill: 0xff_ff_ff,
+        outline: { color: INK, width: PIN.labelOutline },
+        anchor: { x: 0.5, y: 0 },
+      });
+      label.y = PIN.labelTop;
+      const body = new Container();
+      body.addChild(marker, label);
+      root.addChild(body);
+      return {
+        root,
+        key,
+        pinLabel: label,
+        apply: (t) => {
+          root.position.set(t.x, t.y);
+          marker.rotation = t.rot;
+          body.scale.set(t.w / PIN.size, t.h / PIN.size);
         },
       };
     }

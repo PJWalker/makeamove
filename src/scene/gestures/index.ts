@@ -5,6 +5,7 @@ import { erase } from "./erase";
 import { fog } from "./fog";
 import { light } from "./light";
 import { pan } from "./pan";
+import pin from "./pin";
 import { ping } from "./ping";
 import { ruler } from "./ruler";
 import { select } from "./select";
@@ -27,4 +28,5 @@ export const TOOL_PRESS: Record<ToolId, ToolPress> = {
   light,
   effect,
   fog,
+  pin,
 };

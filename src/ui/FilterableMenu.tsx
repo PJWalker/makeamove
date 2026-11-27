@@ -1,4 +1,4 @@
-import type { ReactNode, ComponentProps } from "react";
+import type { ComponentProps, ReactNode, RefObject } from "react";
 import { useRef, useState } from "react";
 import {
   Autocomplete,
@@ -19,43 +19,20 @@ export interface FilterableMenuOption {
 }
 
 export function FilterableMenu({
-  label,
   trigger,
   triggerProps,
-  layout = "grid",
-  searchLabel,
-  placeholder,
-  emptyMessage = "No matches",
-  options,
-  selected,
-  onSelect,
-}: {
-  label: string;
+  ...panel
+}: FilterableMenuContent & {
   trigger: ReactNode;
   triggerProps?: Omit<ComponentProps<typeof Button>, "children" | "onClick">;
-  /** A grid of compact tiles, or a list of full-width rows. */
-  layout?: "grid" | "list";
-  searchLabel: string;
-  placeholder: string;
-  emptyMessage?: string;
-  options: FilterableMenuOption[];
-  selected?: string | undefined;
-  onSelect: (id: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
   const triggerReference = useRef<HTMLButtonElement>(null);
   /** Whether the press now ending started with a mouse, which already opened the menu on mousedown. */
   const mousePress = useRef(false);
   const toggle = () => {
-    if (!open) setQuery("");
     setOpen(!open);
   };
-  const matches = options.filter((option) =>
-    `${option.label} ${option.keywords ?? ""}`
-      .toLocaleLowerCase()
-      .includes(query.trim().toLocaleLowerCase()),
-  );
 
   return (
     <div className="filterable-menu">
@@ -84,51 +61,112 @@ export function FilterableMenu({
       >
         {trigger}
       </Button>
-      <Popover
+      <FilterableMenuPanel
         triggerRef={triggerReference}
         isOpen={open}
         onOpenChange={setOpen}
-        placement="bottom start"
-        offset={6}
-        maxHeight={layout === "grid" ? 340 : 480}
-        className="filterable-menu-panel context-menu panel"
-        data-layout={layout}
-      >
-        <Dialog aria-label={label}>
-          <Autocomplete inputValue={query} onInputChange={setQuery}>
-            <SearchField className="filterable-menu-search" aria-label={searchLabel}>
-              <Input autoFocus placeholder={placeholder} />
-            </SearchField>
-            <ListBox
-              className="filterable-menu-options"
-              aria-label={label}
-              items={matches}
-              layout={layout === "grid" ? "grid" : "stack"}
-              selectionMode="single"
-              disallowEmptySelection
-              selectedKeys={selected ? [selected] : []}
-              onSelectionChange={(keys) => {
-                const id = keys === "all" ? undefined : keys.values().next().value;
-                if (id !== undefined) {
-                  setOpen(false);
-                  onSelect(String(id));
-                }
-              }}
-              renderEmptyState={() => <p className="filterable-menu-empty">{emptyMessage}</p>}
-            >
-              {(option) => (
-                <ListBoxItem
-                  id={option.id}
-                  textValue={option.label}
-                  className="filterable-menu-option"
-                >
-                  {option.content}
-                </ListBoxItem>
-              )}
-            </ListBox>
-          </Autocomplete>
-        </Dialog>
-      </Popover>
+        {...panel}
+      />
     </div>
+  );
+}
+
+/** What a filterable menu offers, and what picking one does. */
+interface FilterableMenuContent {
+  label: string;
+  /** A grid of compact tiles, or a list of full-width rows. */
+  layout?: "grid" | "list";
+  searchLabel: string;
+  placeholder: string;
+  emptyMessage?: string;
+  options: FilterableMenuOption[];
+  selected?: string | undefined;
+  onSelect: (id: string) => void;
+}
+
+/**
+ * A filterable menu's pop-up on its own, opening from `triggerRef`: a search
+ * field over its options. FilterableMenu opens it from a button; open it from
+ * anything else, such as a spot on the map.
+ */
+export function FilterableMenuPanel({
+  triggerRef,
+  isOpen,
+  onOpenChange,
+  layout = "grid",
+  ...content
+}: FilterableMenuContent & {
+  triggerRef: RefObject<Element | null>;
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <Popover
+      triggerRef={triggerRef}
+      isOpen={isOpen}
+      onOpenChange={onOpenChange}
+      placement="bottom start"
+      offset={6}
+      maxHeight={layout === "grid" ? 340 : 480}
+      className="filterable-menu-panel context-menu panel"
+      data-layout={layout}
+    >
+      <FilterableMenuBody
+        {...content}
+        layout={layout}
+        onSelect={(id) => {
+          onOpenChange(false);
+          content.onSelect(id);
+        }}
+      />
+    </Popover>
+  );
+}
+
+/** The search and options, starting with an empty search each time the pop-up opens. */
+function FilterableMenuBody({
+  label,
+  layout,
+  searchLabel,
+  placeholder,
+  emptyMessage = "No matches",
+  options,
+  selected,
+  onSelect,
+}: FilterableMenuContent) {
+  const [query, setQuery] = useState("");
+  const matches = options.filter((option) =>
+    `${option.label} ${option.keywords ?? ""}`
+      .toLocaleLowerCase()
+      .includes(query.trim().toLocaleLowerCase()),
+  );
+  return (
+    <Dialog aria-label={label}>
+      <Autocomplete inputValue={query} onInputChange={setQuery}>
+        <SearchField className="filterable-menu-search" aria-label={searchLabel}>
+          <Input autoFocus placeholder={placeholder} />
+        </SearchField>
+        <ListBox
+          className="filterable-menu-options"
+          aria-label={label}
+          items={matches}
+          layout={layout === "grid" ? "grid" : "stack"}
+          selectionMode="single"
+          disallowEmptySelection
+          selectedKeys={selected ? [selected] : []}
+          onSelectionChange={(keys) => {
+            const id = keys === "all" ? undefined : keys.values().next().value;
+            if (id !== undefined) onSelect(String(id));
+          }}
+          renderEmptyState={() => <p className="filterable-menu-empty">{emptyMessage}</p>}
+        >
+          {(option) => (
+            <ListBoxItem id={option.id} textValue={option.label} className="filterable-menu-option">
+              {option.content}
+            </ListBoxItem>
+          )}
+        </ListBox>
+      </Autocomplete>
+    </Dialog>
   );
 }

@@ -1,3 +1,4 @@
+import type { LinkRef as LinkReference } from "../features/notes/links";
 import type {
   BlobReference,
   EntityGraphic,
@@ -271,6 +272,15 @@ export type FogElement = Base &
     type: "fog";
     force: FogForce;
   };
+/**
+ * A map pin: a marker that opens what it links to (a note, most often) when
+ * clicked. Players see it only if they can see what it leads to, and only in
+ * their tokens' sight (pins.ts).
+ */
+export interface PinElement extends Base {
+  type: "pin";
+  link: LinkReference;
+}
 
 export type SceneElement =
   | AreaElement
@@ -279,6 +289,7 @@ export type SceneElement =
   | FogElement
   | LightElement
   | MapElement
+  | PinElement
   | ShapeElement
   | TextElement
   | TokenElement

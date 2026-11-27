@@ -21,9 +21,11 @@ import { bumpData, bumpResource } from "../workspace/commands/characters";
 import { canEdit, getCharacter, systemOf } from "../features/characters/api";
 import { derive } from "../features/characters/store";
 import type { TokenStat } from "../systems/types";
+import { PinTargetField } from "./PinPicker";
 import { TextStyleFields } from "./TextStyleFields";
 import { EFFECT_OPTIONS, FOG_FORCE_OPTIONS } from "./effectOptionsData";
 import { EffectSightToggles } from "./effectOptions";
+import AlignMapFields from "./AlignMapFields";
 import "./SelectionBar.css";
 
 /** Screen px between the selection (and its rotate handle) and the bar. */
@@ -94,12 +96,17 @@ function useSelectionBar(controller: SceneController) {
     const { offsetWidth: w, offsetHeight: h } = bar;
     const minY = host.top + inset.top + MARGIN;
     const above = host.top + top.y - GAP - h;
-    const y = above >= minY ? above : Math.max(minY, host.top + bottom.y + GAP);
+    const below = Math.max(minY, host.top + bottom.y + GAP);
+    // At the top of the view when the selection is too tall for either, as a map often is.
+    const fitsBelow = below + h <= host.bottom - MARGIN;
+    let y = minY;
+    if (above >= minY) y = above;
+    else if (fitsBelow) y = below;
     const minX = host.left + inset.left + MARGIN;
     const maxX = host.right - inset.right - MARGIN - w;
     const x = Math.max(minX, Math.min(maxX, host.left + top.x - w / 2));
     bar.style.translate = `${Math.round(x)}px ${Math.round(y)}px`;
-    bar.dataset["below"] = String(above < minY);
+    bar.dataset["below"] = String(above < minY && fitsBelow);
   });
 
   return { ref: reference, els, shown };
@@ -115,7 +122,11 @@ function Fields({
   sel: readonly SceneElement[];
   onTokenOptions: (id: string, from: Element) => void;
 }) {
-  return <>{useSelectionFields(controller, sel, onTokenOptions)}</>;
+  const aligning = useQuery(controller.aligning);
+  const fields = useSelectionFields(controller, sel, onTokenOptions);
+  if (aligning && sel.length === 1 && sel[0]!.id === aligning.mapId)
+    return <AlignMapFields controller={controller} alignment={aligning} />;
+  return fields;
 }
 
 function useSelectionFields(
@@ -233,6 +244,8 @@ function buildSelectionFields(
       />,
       <WidthField key="width" controller={controller} ids={ids} value={sel[0]!.width} />,
     );
+  if (every(sel, "pin"))
+    fields.push(<PinTargetField key="pin-target" controller={controller} pins={sel} />);
   if (every(sel, "drawing", "shape", "text"))
     fields.push(
       <Segmented

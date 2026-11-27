@@ -1966,6 +1966,26 @@
       "count": 1
     }
   },
+  "src/scene/__tests__/controllerHarness.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 2
+    },
+    "@typescript-eslint/no-empty-function": {
+      "count": 10
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 5
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 5
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
   "src/scene/__tests__/downed.test.ts": {
     "@typescript-eslint/no-magic-numbers": {
       "count": 1
@@ -2015,28 +2035,16 @@
   },
   "src/scene/__tests__/selection.test.ts": {
     "@typescript-eslint/max-params": {
-      "count": 3
-    },
-    "@typescript-eslint/no-empty-function": {
-      "count": 10
+      "count": 1
     },
     "@typescript-eslint/no-magic-numbers": {
-      "count": 128
-    },
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 5
-    },
-    "import/dynamic-import-chunkname": {
-      "count": 3
-    },
-    "makeamove/test-structure": {
-      "count": 4
+      "count": 123
     },
     "max-lines-per-function": {
-      "count": 3
+      "count": 2
     },
     "unicorn/consistent-function-scoping": {
-      "count": 3
+      "count": 1
     }
   },
   "src/scene/__tests__/stroke.test.ts": {
@@ -2129,9 +2137,6 @@
       "count": 1
     },
     "default-case": {
-      "count": 1
-    },
-    "import/prefer-default-export": {
       "count": 1
     },
     "max-lines": {
@@ -2371,7 +2376,7 @@
   },
   "src/scene/grid.ts": {
     "@typescript-eslint/no-magic-numbers": {
-      "count": 15
+      "count": 12
     }
   },
   "src/scene/lampShader.ts": {
@@ -2796,9 +2801,6 @@
       "count": 1
     },
     "import/avoid-importing-barrel-files": {
-      "count": 1
-    },
-    "import/prefer-default-export": {
       "count": 1
     },
     "max-lines-per-function": {
@@ -5939,7 +5941,7 @@
       "count": 4
     },
     "complexity": {
-      "count": 2
+      "count": 1
     },
     "max-lines-per-function": {
       "count": 1
@@ -6156,9 +6158,6 @@
       "count": 1
     },
     "max-lines": {
-      "count": 1
-    },
-    "no-implicit-coercion": {
       "count": 1
     },
     "react-hooks/todo": {
