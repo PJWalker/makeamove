@@ -6153,9 +6153,6 @@
     "max-lines": {
       "count": 1
     },
-    "no-implicit-coercion": {
-      "count": 1
-    },
     "react-hooks/todo": {
       "count": 1
     }
