@@ -6,22 +6,20 @@ import {
   HemisphereLight,
   MeshBasicMaterial,
   PlaneGeometry,
-  
   MeshStandardMaterial,
   Mesh,
-  
   OrthographicCamera,
   PCFShadowMap,
   PMREMGenerator,
   Scene,
   SRGBColorSpace,
   Vector3,
-  WebGLRenderer
+  WebGLRenderer,
 } from "three";
-import type {Material, Object3D} from "three";
+import type { Material, Object3D } from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { MODELS  } from "./models";
-import type {IconName} from "./models";
+import { MODELS } from "./models";
+import type { IconName } from "./models";
 
 /*
  * The photo studio every icon is shot in: one camera angle, one warm key
@@ -37,7 +35,11 @@ export const ICON_SIZES = [32, 64, 128] as const;
 const MARGIN = 0.06;
 const OUTLINE = { colour: [28, 16, 8] as const, opacity: 0.9 };
 
-export interface IconRender { name: IconName; size: number; dataUrl: string }
+export interface IconRender {
+  name: IconName;
+  size: number;
+  dataUrl: string;
+}
 
 export function renderIcons(names = Object.keys(MODELS) as IconName[]): IconRender[] {
   const canvas = document.createElement("canvas");
@@ -100,8 +102,8 @@ function studioEnvironment() {
     panel.lookAt(0, 2, 0);
     room.add(panel);
   };
-  softbox(2.4, 0xFF_F1_DC, 30, 16, [0, 4, 13]);
-  softbox(5, 0xFF_F4_E4, 8, 8, [-9, 13, 8]);
+  softbox(2.4, 0xff_f1_dc, 30, 16, [0, 4, 13]);
+  softbox(5, 0xff_f4_e4, 8, 8, [-9, 13, 8]);
   return room;
 }
 
@@ -157,7 +159,10 @@ function frame(model: Object3D): OrthographicCamera {
       mesh.isMesh && !mesh.userData["glow"] && mesh.geometry.getAttribute("position");
     if (!position) return;
     for (let index = 0; index < position.count; index++) {
-      point.fromBufferAttribute(position, index).applyMatrix4(mesh.matrixWorld).applyMatrix4(inverse);
+      point
+        .fromBufferAttribute(position, index)
+        .applyMatrix4(mesh.matrixWorld)
+        .applyMatrix4(inverse);
       min.min(point);
       max.max(point);
     }
@@ -176,12 +181,12 @@ function frame(model: Object3D): OrthographicCamera {
 }
 
 function light(scene: Scene, model: Object3D) {
-  scene.add(new HemisphereLight(0xFF_F0_D8, 0x2A_1C_12, 0.35));
+  scene.add(new HemisphereLight(0xff_f0_d8, 0x2a_1c_12, 0.35));
   const bounds = new Box3().setFromObject(model);
   const centre = bounds.getCenter(new Vector3());
   const radius = bounds.getSize(new Vector3()).length() / 2;
 
-  const key = new DirectionalLight(0xFF_E2_B8, 3.6);
+  const key = new DirectionalLight(0xff_e2_b8, 3.6);
   key.position.copy(centre).add(new Vector3(-1, 1, 0.9).normalize().multiplyScalar(radius * 4));
   key.target.position.copy(centre);
   key.castShadow = true;
@@ -196,9 +201,9 @@ function light(scene: Scene, model: Object3D) {
   s.far = radius * 8;
   scene.add(key, key.target);
 
-  const fill = new DirectionalLight(0xB8_C6_FF, 0.45);
+  const fill = new DirectionalLight(0xb8_c6_ff, 0.45);
   fill.position.copy(centre).add(new Vector3(4, 1, 3));
-  const rim = new DirectionalLight(0xFF_F6_E8, 2.2);
+  const rim = new DirectionalLight(0xff_f6_e8, 2.2);
   rim.position.copy(centre).add(new Vector3(2.5, 3, -4));
   scene.add(fill, rim);
 }
@@ -250,7 +255,8 @@ function sharpen(data: Uint8ClampedArray, size: number, amount: number) {
 
 function outline(data: Uint8ClampedArray, size: number, radius: number) {
   const alpha = new Float32Array(size * size);
-  for (let index = 0; index < alpha.length; index++) alpha[index] = (data[index * 4 + 3] ?? 0) / 255;
+  for (let index = 0; index < alpha.length; index++)
+    alpha[index] = (data[index * 4 + 3] ?? 0) / 255;
   const reach = Math.ceil(radius);
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {

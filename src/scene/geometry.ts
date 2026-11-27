@@ -2,8 +2,8 @@ import type { Rect } from "./camera";
 
 import type { Point } from "./grid";
 import { distanceToSegment, distanceToStroke } from "./stroke";
-import { isPlainToken    } from "./types";
-import type {SceneElement, ShapeGeometry, Transform} from "./types";
+import { isPlainToken } from "./types";
+import type { SceneElement, ShapeGeometry, Transform } from "./types";
 
 /** A rectangle's corners, clockwise from the top left, as which way each lies from its centre. */
 export type Corner = 0 | 1 | 2 | 3;
@@ -212,7 +212,9 @@ export function shapePolygon(element: ShapeGeometry & Transform): Point[] {
 }
 
 /** An area's corners in the world, at its size and rotation. */
-export function areaPolygon(element: Transform & { points: number[]; bw: number; bh: number }): Point[] {
+export function areaPolygon(
+  element: Transform & { points: number[]; bw: number; bh: number },
+): Point[] {
   return shapePolygon({ ...element, shape: "polygon" });
 }
 

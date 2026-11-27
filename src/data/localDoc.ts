@@ -1,9 +1,9 @@
 import * as Y from "yjs";
 import { IndexeddbPersistence } from "y-indexeddb";
-import { isObject  } from "../lib/guards";
-import type {Guard} from "../lib/guards";
-import { store   } from "../lib/store";
-import type {ReadonlyStore, Store} from "../lib/store";
+import { isObject } from "../lib/guards";
+import type { Guard } from "../lib/guards";
+import { store } from "../lib/store";
+import type { ReadonlyStore, Store } from "../lib/store";
 import { collection, lww, rootOf } from "./schema";
 
 /*
@@ -28,7 +28,8 @@ export class LocalDoc {
   readonly #stops: (() => void)[] = [];
 
   private constructor(databaseName: string | null) {
-    this.#persistence = databaseName === null ? null : new IndexeddbPersistence(databaseName, this.doc);
+    this.#persistence =
+      databaseName === null ? null : new IndexeddbPersistence(databaseName, this.doc);
   }
 
   static async open(databaseName: string): Promise<LocalDoc> {
@@ -54,7 +55,9 @@ export class LocalDoc {
       if (!e.transaction.local && e.keysChanged.has(key)) mirror.value = read(this.ui.get(key));
     };
     this.ui.y.observe(onChange);
-    this.#stops.push(() => { this.ui.y.unobserve(onChange); });
+    this.#stops.push(() => {
+      this.ui.y.unobserve(onChange);
+    });
     const write = (next: T) => {
       if (Object.is(next, mirror.value)) return;
       mirror.value = next;

@@ -1,4 +1,3 @@
-
 import { Editor, mergeAttributes } from "@tiptap/core";
 import Collaboration from "@tiptap/extension-collaboration";
 import Mention from "@tiptap/extension-mention";
@@ -6,16 +5,16 @@ import Placeholder from "@tiptap/extension-placeholder";
 import StarterKit from "@tiptap/starter-kit";
 import type { SuggestionKeyDownProps, SuggestionProps } from "@tiptap/suggestion";
 import { ySyncPluginKey } from "@tiptap/y-tiptap";
-import { createRoot  } from "react-dom/client";
-import type {Root} from "react-dom/client";
+import { createRoot } from "react-dom/client";
+import type { Root } from "react-dom/client";
 import type * as Y from "yjs";
 import type { Awareness } from "y-protocols/awareness";
-import { IconDelete, IconImage, IconReveal, IconSecret , IconRename } from "../ui/icons";
+import { IconDelete, IconImage, IconReveal, IconSecret, IconRename } from "../ui/icons";
 import { getNote } from "../features/notes/api";
 import type { LinkKind } from "../features/notes/links";
 import { LINK_NODE } from "../features/notes/links";
-import { linkLabel, linkTargets, linkTip  } from "../features/notes/targets";
-import type {LinkTarget} from "../features/notes/targets";
+import { linkLabel, linkTargets, linkTip } from "../features/notes/targets";
+import type { LinkTarget } from "../features/notes/targets";
 import { menuTrigger } from "../ui/menuTrigger";
 import type { MenuItem } from "../ui/ContextMenu";
 import type { Campaign } from "../campaign/campaign";
@@ -165,26 +164,28 @@ function suggestionList(campaign: Campaign) {
 
   const draw = () => {
     if (!properties) return;
-    const {items} = properties;
+    const { items } = properties;
     root?.render(
       items.length > 0 ? (
         <>
           {items.map((t, index_) => (
-              <button
-                key={`${t.kind}:${t.id}`}
-                type="button"
-                role="option"
-                className="menu-item"
-                aria-selected={index_ === index}
-                data-active={index_ === index || undefined}
-                onPointerDown={(e) => { e.preventDefault(); }}
-                onClick={() => properties?.command(t)}
-              >
-                <CampaignEntityGraphic campaign={campaign} kind={t.kind} id={t.id} size={22} />
-                <span className="menu-label">{t.label}</span>
-                <span className="menu-shortcut">{t.detail}</span>
-              </button>
-            ))}
+            <button
+              key={`${t.kind}:${t.id}`}
+              type="button"
+              role="option"
+              className="menu-item"
+              aria-selected={index_ === index}
+              data-active={index_ === index || undefined}
+              onPointerDown={(e) => {
+                e.preventDefault();
+              }}
+              onClick={() => properties?.command(t)}
+            >
+              <CampaignEntityGraphic campaign={campaign} kind={t.kind} id={t.id} size={22} />
+              <span className="menu-label">{t.label}</span>
+              <span className="menu-shortcut">{t.detail}</span>
+            </button>
+          ))}
         </>
       ) : (
         <p className="empty-inline note-suggest-empty">Nothing by that name.</p>
@@ -214,21 +215,22 @@ function suggestionList(campaign: Campaign) {
       }
       if (!n) return false;
       switch (event.key) {
-      case "ArrowDown": {
-      index = (index + 1) % n;
-      break;
-      }
-      case "ArrowUp": {
-      index = (index - 1 + n) % n;
-      break;
-      }
-      case "Enter":
-      case "Tab": {
-        properties?.command(properties.items[index]);
-        return true;
-      }
-      default: { return false;
-      }
+        case "ArrowDown": {
+          index = (index + 1) % n;
+          break;
+        }
+        case "ArrowUp": {
+          index = (index - 1 + n) % n;
+          break;
+        }
+        case "Enter":
+        case "Tab": {
+          properties?.command(properties.items[index]);
+          return true;
+        }
+        default: {
+          return false;
+        }
       }
       draw();
       return true;
@@ -248,7 +250,7 @@ function pickImages(editor: Editor) {
   input.type = "file";
   input.accept = "image/*";
   input.multiple = true;
-  input.addEventListener('change', () => void insertImages(editor, [...(input.files ?? [])]));
+  input.addEventListener("change", () => void insertImages(editor, [...(input.files ?? [])]));
   input.click();
 }
 
@@ -352,22 +354,36 @@ export function mountRichText(
   const textMenu = menuTrigger((x, y) => {
     if (!editor.isEditable) return;
     const items: MenuItem[] = [
-      { label: "Insert Image…", Icon: IconImage, onSelect: () => { pickImages(editor); } },
+      {
+        label: "Insert Image…",
+        Icon: IconImage,
+        onSelect: () => {
+          pickImages(editor);
+        },
+      },
     ];
     if (vault) {
       const secret = menuSecret;
       if (secret) {
         const pos = editor.view.posAtDOM(secret, 0);
-        items.push("divider", {
-          label: "Reveal to Players",
-          Icon: IconReveal,
-          onSelect: () => { revealSecret(editor, vault, pos); },
-        }, {
-          label: "Delete Secret",
-          Icon: IconDelete,
-          danger: true,
-          onSelect: () => { deleteSecret(editor, vault, pos); },
-        });
+        items.push(
+          "divider",
+          {
+            label: "Reveal to Players",
+            Icon: IconReveal,
+            onSelect: () => {
+              revealSecret(editor, vault, pos);
+            },
+          },
+          {
+            label: "Delete Secret",
+            Icon: IconDelete,
+            danger: true,
+            onSelect: () => {
+              deleteSecret(editor, vault, pos);
+            },
+          },
+        );
       } else {
         items.push("divider", {
           label: "Make Secret",
@@ -391,7 +407,11 @@ export function mountRichText(
       : linkMenuSections(ctx, link, {
           title: chip.textContent ?? undefined,
           ...(followsInPlace(link.kind)
-            ? { openInWindow: () => { ctx.linkPopups.show(link, chip); } }
+            ? {
+                openInWindow: () => {
+                  ctx.linkPopups.show(link, chip);
+                },
+              }
             : {}),
         });
     if (found && editor.isEditable) {
@@ -400,7 +420,8 @@ export function mountRichText(
         {
           label: "Edit Link Text…",
           Icon: IconRename,
-          onSelect: () => { ctx.linkPopups.rename({
+          onSelect: () => {
+            ctx.linkPopups.rename({
               text: chip.textContent ?? "",
               custom,
               save: (text) => {
@@ -412,7 +433,8 @@ export function mountRichText(
                   }),
                 );
               },
-            }); },
+            });
+          },
         },
       ]);
     }

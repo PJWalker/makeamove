@@ -1,7 +1,11 @@
 import type { LinkRef as LinkReference } from "../features/notes/links";
-import type { BlobReference, EntityGraphic, EntityGraphicRef as EntityGraphicReference } from "../media/images";
-import { cellOr,   snapPoint, snapSize } from "./grid";
-import type {Grid, Point} from "./grid";
+import type {
+  BlobReference,
+  EntityGraphic,
+  EntityGraphicRef as EntityGraphicReference,
+} from "../media/images";
+import { cellOr, snapPoint, snapSize } from "./grid";
+import type { Grid, Point } from "./grid";
 import type { NewElement, SceneElement, TokenStyle } from "./types";
 
 /*
@@ -54,7 +58,16 @@ const PIN_POINT = 0.46;
 /** A new pin leading to `link`, its point at `at`, most of a cell across. */
 export function newPin(grid: Grid, at: Point, link: LinkReference): NewElement {
   const size = tokenSize(grid) * PIN_SIZE;
-  return { type: "pin", layer: "over", link, x: at.x, y: at.y - size * PIN_POINT, w: size, h: size, rot: 0 };
+  return {
+    type: "pin",
+    layer: "over",
+    link,
+    x: at.x,
+    y: at.y - size * PIN_POINT,
+    w: size,
+    h: size,
+    rot: 0,
+  };
 }
 
 /** A new token a cell across, snapped to the grid at `at`. */
@@ -116,7 +129,7 @@ export function conversion(
   token: { colour: string; style: TokenStyle },
 ): Partial<SceneElement> | null {
   if (element.type === to || !("image" in element) || !element.image) return null;
-  const {image} = element;
+  const { image } = element;
   if (to === "token") {
     const size = snapSize(grid, Math.min(element.w, element.h, grid.size));
     const p = snapPoint(grid, element, Math.round(size / grid.size));

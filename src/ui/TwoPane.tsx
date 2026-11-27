@@ -1,4 +1,3 @@
-
 import type * as React from "react";
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
@@ -53,7 +52,7 @@ function dragSplit(layout: PaneLayout, e: React.PointerEvent) {
   const split = e.currentTarget as HTMLElement;
   const grid = split.parentElement!;
   split.setPointerCapture(e.pointerId);
-  const {left} = grid.getBoundingClientRect();
+  const { left } = grid.getBoundingClientRect();
   const move = (event: PointerEvent) =>
     (layout.listWidth.value = Math.round(clampListWidth(event.clientX - left, grid.clientWidth)));
   const up = () => {
@@ -104,16 +103,22 @@ export function TwoPane({
   useEffect(() => {
     const element = rootReference.current;
     if (!element) return;
-    const ro = new ResizeObserver(() => (layout.tooNarrow.value = element.clientWidth < SPLIT_MIN_W));
+    const ro = new ResizeObserver(
+      () => (layout.tooNarrow.value = element.clientWidth < SPLIT_MIN_W),
+    );
     ro.observe(element);
-    return () => { ro.disconnect(); };
+    return () => {
+      ro.disconnect();
+    };
   }, [layout]);
 
   return (
     <div className="panes-root" ref={rootReference}>
       <div
         className="panes"
-        ref={(element) => { layout.attach(element); }}
+        ref={(element) => {
+          layout.attach(element);
+        }}
         data-layout={mode}
         data-level={level}
         // Its own transition name, so two panels can slide at once.
@@ -132,13 +137,17 @@ export function TwoPane({
           aria-valuemax={maxListWidth(panelWidth(layout))}
           aria-valuenow={layout.listWidth.value}
           tabIndex={0}
-          onPointerDown={(e) => { dragSplit(layout, e); }}
+          onPointerDown={(e) => {
+            dragSplit(layout, e);
+          }}
           onKeyDown={(e) => {
             if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
             e.preventDefault();
             resizeSplit(layout, e.key === "ArrowLeft" ? -1 : 1);
           }}
-          onDoubleClick={() => { layout.resetWidth(); }}
+          onDoubleClick={() => {
+            layout.resetWidth();
+          }}
         />
         <div className="panes-detail">
           <div className="panes-back panel-bar">

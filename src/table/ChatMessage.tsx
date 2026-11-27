@@ -4,8 +4,8 @@ import { useConstant } from "../ui/useConstant";
 import type { ChatContent } from "../features/chat/content";
 import type { ChatMessage, TextMessage } from "../features/chat/types";
 import { canEdit, getCharacter, actingCharacterId } from "../features/characters/api";
-import { TRACKER_NODE  } from "../data/richText";
-import type {TrackerButton} from "../data/richText";
+import { TRACKER_NODE } from "../data/richText";
+import type { TrackerButton } from "../data/richText";
 import { TrackerButtonView } from "../workspace/RichTextView";
 import { stampTime } from "../lib/hlc";
 import type { Campaign } from "../campaign/campaign";
@@ -116,7 +116,13 @@ function MessageBody({
     }
     case "move": {
       return (
-        <MoveCard campaign={campaign} m={m} canAct={properties.canAct} arriving={arriving} mine={mine} />
+        <MoveCard
+          campaign={campaign}
+          m={m}
+          canAct={properties.canAct}
+          arriving={arriving}
+          mine={mine}
+        />
       );
     }
     case "timer": {
@@ -158,7 +164,9 @@ function SystemNotice({
         <Button
           variant="ghost"
           className="chat-go"
-          onClick={() => { campaign.setActiveScene(m.sceneId!); }}
+          onClick={() => {
+            campaign.setActiveScene(m.sceneId!);
+          }}
         >
           Go There
         </Button>
@@ -178,7 +186,14 @@ export const Message = memo(function Message({
   ...properties
 }: MessageProperties) {
   const { campaign, mine } = properties;
-  const menu = useMemo(() => onMenu && menuTrigger((x, y) => { onMenu(x, y, m.id); }), [onMenu, m.id]);
+  const menu = useMemo(
+    () =>
+      onMenu &&
+      menuTrigger((x, y) => {
+        onMenu(x, y, m.id);
+      }),
+    [onMenu, m.id],
+  );
   const arriving = useArrival(m.id, fresh, mine, quickRoll);
   const pinned = useQuery(campaign.messageState, () => isPinned(campaign, m.id));
   if (m.kind === "system")

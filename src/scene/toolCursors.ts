@@ -82,7 +82,9 @@ const BADGES: Partial<Record<ToolId, string>> = {
   // A lantern, its flame showing through the glass in the outline's colour.
   light: `<circle cx="22.5" cy="16.2" r="1.2" fill="none" stroke="currentColor"/><path d="M19 19.5 20.8 17.6h3.4l1.8 1.9z"/><path fill-rule="evenodd" d="M19.5 20h6v6.5h-6zM22.5 21.4c1.2 1.2 1.6 2 1.6 2.9a1.6 1.6 0 0 1-3.2 0c0-.9.4-1.7 1.6-2.9z"/><path d="M18.5 26.5h8v2h-8z"/>`,
   // A map pin, as on the toolbar.
-  pin: fromIcon(`<path fill-rule="evenodd" d="M12 21C8 16.4 5 13 5 9a7 7 0 0 1 14 0c0 4-3 7.4-7 12zm0-9.25a2.75 2.75 0 1 0 0-5.5 2.75 2.75 0 0 0 0 5.5z"/>`),
+  pin: fromIcon(
+    `<path fill-rule="evenodd" d="M12 21C8 16.4 5 13 5 9a7 7 0 0 1 14 0c0 4-3 7.4-7 12zm0-9.25a2.75 2.75 0 1 0 0-5.5 2.75 2.75 0 0 0 0 5.5z"/>`,
+  ),
   // A pair of dividers.
   ruler: `<circle cx="22.5" cy="17.5" r="1.8"/>${lines("M21.6 19 18 29M23.4 19 27 29")}`,
 };
@@ -126,8 +128,8 @@ export function toolCursor(tool: ToolId, settings: CursorSettings, mac = IS_MAC)
   const badge =
     tool === "shape"
       ? SHAPE_BADGES[settings.shape]
-      : (tool === "effect"
+      : tool === "effect"
         ? EFFECT_BADGES[settings.effect]
-        : (BADGES[tool] ?? ""));
+        : (BADGES[tool] ?? "");
   return imageCursor(CROSSHAIR + badge, [10, 10], mac);
 }

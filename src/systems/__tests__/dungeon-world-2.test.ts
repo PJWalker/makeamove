@@ -493,7 +493,7 @@ describe("Dungeon World 2 campaign behavior", () => {
   it("tracks Artifact marks and applies the source unlock policies per item instance", async () => {
     const campaign = await setUp();
     const ayla = newCharacter(campaign, "Ayla", "barbarian");
-    const {items} = systemOf(campaign);
+    const { items } = systemOf(campaign);
     const soulstealer = items.find((item) => item.name === "Alveric’s Soulstealer Blade")!;
     const branch = items.find((item) => item.name === "Gwendolen’s Branch of the Green")!;
     addItem(campaign, ayla, soulstealer, true);

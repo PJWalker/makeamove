@@ -4,8 +4,8 @@ import { commaListOf } from "../../lib/list";
 
 import { resolveEffects } from "../effects";
 import type { ActionDef, ChoiceDef, GameSystem, OptionDef } from "../types";
-import { plainText, richTextFromPlain  } from "../../data/richText";
-import type {RichText} from "../../data/richText";
+import { plainText, richTextFromPlain } from "../../data/richText";
+import type { RichText } from "../../data/richText";
 import { hpTokenStat } from "../tokenStats";
 import { PIP_COLOURS } from "../../features/combat/pipColours";
 import { CLASS_CREATION_HINTS, GM_REFERENCE, PATHS, SOURCE_MOVES } from "./rulebook";
@@ -671,9 +671,9 @@ export const dungeonWorld2: GameSystem = {
       const notation =
         first.keep?.which === "high"
           ? "d8+2d6kh1"
-          : (disadvantaged || first.keep?.which === "low"
+          : disadvantaged || first.keep?.which === "low"
             ? "d8+2d6kl1"
-            : "d8+d6");
+            : "d8+d6";
       return formula.replace(prefix, notation);
     }
     if (!disadvantaged) return formula;
@@ -686,7 +686,7 @@ export const dungeonWorld2: GameSystem = {
     { id: "weak", label: "7-9", tone: "mixed" },
     { id: "miss", label: "6 or less", tone: "bad" },
   ],
-  result: (total) => (total >= 10 ? "strong" : (total >= 7 ? "weak" : "miss")),
+  result: (total) => (total >= 10 ? "strong" : total >= 7 ? "weak" : "miss"),
   actions: [...ACTIONS, ...PATH_ACTIONS, ...ARTIFACT_ACTIONS],
   actionCategories: [
     { id: "class", label: "Class" },

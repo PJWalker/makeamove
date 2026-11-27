@@ -13,7 +13,9 @@ function mount(html: string) {
 const icon = renderToStaticMarkup(<IconLock />);
 
 describe("icon motion", () => {
-  afterEach(() => { document.body.replaceChildren(); });
+  afterEach(() => {
+    document.body.replaceChildren();
+  });
 
   it("names each icon, so its animation can find it", () => {
     expect(icon).toContain('data-icon="lock"');

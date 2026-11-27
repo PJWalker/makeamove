@@ -48,7 +48,10 @@ const ruleMarkdown = (raw: string) =>
     // Each result band its own paragraph.
     .replaceAll(/\s*[✶✷]\s*On a (10\+|12\+|7-9|6-)([,:]?)\s*/g, "\n\n**On a $1$2** ")
     .replaceAll(/\b(?:mark|marks) (?:1 )?xp\b/gi, (m) => `[[+1 XP|${m}]]`)
-    .replaceAll(/\b(?:spend|spends) (\d+) treasure\b/gi, (m, n: string) => `[[-${n} Treasure|${m}]]`)
+    .replaceAll(
+      /\b(?:spend|spends) (\d+) treasure\b/gi,
+      (m, n: string) => `[[-${n} Treasure|${m}]]`,
+    )
     .replaceAll(/ *\n */g, "\n")
     .trim();
 
@@ -173,7 +176,10 @@ export const sourceMagicItems = (): ItemDef[] => {
               return candidateStart > start ? candidateStart : description.length;
             }),
         );
-        return { ...unlock, ...(start === -1 ? {} : { text: description.slice(start, end).trim() }) };
+        return {
+          ...unlock,
+          ...(start === -1 ? {} : { text: description.slice(start, end).trim() }),
+        };
       });
       return [
         {
@@ -315,7 +321,7 @@ const ruleFor = (name: string): Dw2PathMove => {
       ];
     }),
   );
-  const statName = (/roll\s*\+\s*(str|dex|int|wis|cha)/i.exec(text))?.[1];
+  const statName = /roll\s*\+\s*(str|dex|int|wis|cha)/i.exec(text)?.[1];
   const stat = statName?.toLowerCase();
   const strong = outcomes["strong"];
   const weak = outcomes["weak"];

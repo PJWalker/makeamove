@@ -157,10 +157,14 @@ export function itemActive(item: ItemInstance): boolean {
 export function effectSources(c: CharacterView, system: GameSystem): EffectSource[] {
   const activeConditions = new Set(c.conditions);
   const conditions = system.conditions.flatMap((k) =>
-    activeConditions.has(k.id) && k.effects.length > 0 ? [{ name: k.name, effects: k.effects }] : [],
+    activeConditions.has(k.id) && k.effects.length > 0
+      ? [{ name: k.name, effects: k.effects }]
+      : [],
   );
   const items = c.inventory.flatMap((index) =>
-    index.effects.length > 0 && itemActive(index) ? [{ name: index.name, effects: index.effects }] : [],
+    index.effects.length > 0 && itemActive(index)
+      ? [{ name: index.name, effects: index.effects }]
+      : [],
   );
   return [...conditions, ...items];
 }

@@ -1,14 +1,14 @@
 import { useSyncExternalStore } from "react";
-import { batch, derived, store  } from "../lib/store";
-import type {ReadonlyStore} from "../lib/store";
+import { batch, derived, store } from "../lib/store";
+import type { ReadonlyStore } from "../lib/store";
 import { isPhone } from "../ui/viewport";
 import type { LocalDoc as LocalDocument, LocalValue } from "../data/localDoc";
 import { dropLine, indexAmong } from "../ui/reorder";
 import { withTransition } from "../ui/transition";
 import { nextZ, noteZ } from "../ui/windows";
 import { trackPointer } from "../ui/pointer";
-import { RESIZE_CURSORS, resizeRect   } from "../ui/resizeRect";
-import type {Rect, ResizeDir} from "../ui/resizeRect";
+import { RESIZE_CURSORS, resizeRect } from "../ui/resizeRect";
+import type { Rect, ResizeDir } from "../ui/resizeRect";
 import { useQuery } from "../ui/useQuery";
 import {
   IconCharacters,
@@ -20,12 +20,10 @@ import {
   IconMembers,
   IconNotes,
   IconPlayerCharacter,
-  IconReference
-  
+  IconReference,
 } from "../ui/icons";
-import type {Icon} from "../ui/icons";
+import type { Icon } from "../ui/icons";
 import {
-
   SIDEBAR_MIN_W,
   SIDES,
   close,
@@ -36,21 +34,12 @@ import {
   normalise,
   oneSideIfCramped,
   reorder,
-
   setOpen,
   showTab,
-  
-  
-  
-  
-  
   withoutPanels,
-  isPanelId
+  isPanelId,
 } from "./layoutModel";
-import type {FloatingWindow, DockItemId, Layout, PanelId, Side} from "./layoutModel";
-
-
-
+import type { FloatingWindow, DockItemId, Layout, PanelId, Side } from "./layoutModel";
 
 export const PANELS: Record<PanelId, { label: string; Icon: Icon }> = {
   scene: { label: "Scenes", Icon: IconMap },
@@ -257,11 +246,15 @@ export class PanelLayout {
     if (!start) return;
     trackPointer(
       RESIZE_CURSORS[dir],
-      (event) => { this.#setLiveRect(
+      (event) => {
+        this.#setLiveRect(
           id,
           resizeRect(start, dir, event.clientX - e.clientX, event.clientY - e.clientY),
-        ); },
-      () => { this.#commitLiveRect(); },
+        );
+      },
+      () => {
+        this.#commitLiveRect();
+      },
     );
   }
 
@@ -290,7 +283,9 @@ export class PanelLayout {
       if (side) {
         const index = indexAmong(tabsOf(side), "y", event);
         // Dropped on a closed sidebar, it joins the tabs without opening it.
-        void withTransition(() => { this.dockPanel(id, side, index, false); });
+        void withTransition(() => {
+          this.dockPanel(id, side, index, false);
+        });
       }
       this.dockTarget.value = null;
       this.windowDragging.value = false;
@@ -329,4 +324,12 @@ export function useWindowPointer(panels: PanelLayout, id: DockItemId) {
   return useFor(panels.windowPointer, id);
 }
 
-export {PANEL_ORDER, otherSide, isPanelId, type DockItemId, type FloatingWindow, type PanelId, type Side} from "./layoutModel";
+export {
+  PANEL_ORDER,
+  otherSide,
+  isPanelId,
+  type DockItemId,
+  type FloatingWindow,
+  type PanelId,
+  type Side,
+} from "./layoutModel";

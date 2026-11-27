@@ -16,7 +16,16 @@ import { generateKeyBetween, generateNKeysBetween } from "fractional-indexing";
 import { isString } from "../lib/guards";
 
 export type PanelId =
-  "characters" | "chat" | "combat" | "items" | "libraries" | "members" | "notes" | "pc" | "reference" | "scene";
+  | "characters"
+  | "chat"
+  | "combat"
+  | "items"
+  | "libraries"
+  | "members"
+  | "notes"
+  | "pc"
+  | "reference"
+  | "scene";
 export type DockItemId = PanelId | `entity:${string}`;
 export type Side = "left" | "right";
 
@@ -86,9 +95,7 @@ const DEFAULT_SIDE: Record<PanelId, Side> = {
 const PANEL_IDS = new Set<string>(PANEL_ORDER);
 
 function isDockItemId(id: unknown): id is DockItemId {
-  return (
-    isString(id) && (PANEL_IDS.has(id) || (id.startsWith("entity:") && id.length > 7))
-  );
+  return isString(id) && (PANEL_IDS.has(id) || (id.startsWith("entity:") && id.length > 7));
 }
 
 export function isPanelId(id: DockItemId): id is PanelId {
@@ -338,9 +345,9 @@ function place(
   const remembered = l.order[id];
   const at =
     index === "remembered"
-      ? (remembered === undefined
+      ? remembered === undefined
         ? panels.length
-        : keys.filter((k) => k !== null && k <= remembered).length)
+        : keys.filter((k) => k !== null && k <= remembered).length
       : Math.min(Math.max(index, 0), panels.length);
   const before = keys[at - 1] ?? null;
   const after = keys[at] ?? null;

@@ -2,19 +2,19 @@ import type { ReactNode, RefObject } from "react";
 import { useId, useLayoutEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Campaign } from "../campaign/campaign";
-import { IconOpenWindow  } from "../ui/icons";
-import type {Icon} from "../ui/icons";
+import { IconOpenWindow } from "../ui/icons";
+import type { Icon } from "../ui/icons";
 import type { menuTrigger } from "../ui/menuTrigger";
 import { closePopup, dragPopup, raisePopup, resizePopup } from "../ui/popup";
-import { RESIZE_DIRS  } from "../ui/resizeRect";
-import type {ResizeDir} from "../ui/resizeRect";
+import { RESIZE_DIRS } from "../ui/resizeRect";
+import type { ResizeDir } from "../ui/resizeRect";
 import { useQuery } from "../ui/useQuery";
 import { windowLayer } from "../ui/windows";
 import { dragEntity } from "./entityDrag";
 import type { WindowProxy } from "./entityWindowState";
 import { CampaignEntityGraphic } from "./EntityGraphic";
-import { useWindowRect  } from "./panelLayout";
-import type {DockItemId} from "./panelLayout";
+import { useWindowRect } from "./panelLayout";
+import type { DockItemId } from "./panelLayout";
 import { WindowControls } from "./WindowControls";
 import { useCampaign } from "./campaignContext";
 
@@ -55,11 +55,15 @@ export function Dialog({
   useLayoutEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
-    const preventNativeCancel = (event: Event) => { event.preventDefault(); };
+    const preventNativeCancel = (event: Event) => {
+      event.preventDefault();
+    };
     dialog.addEventListener("cancel", preventNativeCancel);
-    return () => { dialog.removeEventListener("cancel", preventNativeCancel); };
+    return () => {
+      dialog.removeEventListener("cancel", preventNativeCancel);
+    };
   }, [dialogRef]);
-  const {floating} = useQuery(context.panels.layout);
+  const { floating } = useQuery(context.panels.layout);
   const win = useWindowRect(
     context.panels,
     dockId ? floating.find((item) => item.id === dockId) : undefined,
@@ -68,7 +72,9 @@ export function Dialog({
     ...(win ? { left: win.x, top: win.y, width: win.w, height: win.h, zIndex: win.z } : {}),
     viewTransitionName: transitionName,
   };
-  const close = () => { closePopup(dialogRef.current, onClose); };
+  const close = () => {
+    closePopup(dialogRef.current, onClose);
+  };
 
   function onResizePointerDown(e: PointerEvent, dir: ResizeDir) {
     if (dockId && win) context.panels.startWindowResize(dockId, e, dir);
@@ -78,7 +84,6 @@ export function Dialog({
   // would otherwise be clipped by the panel that opened it (the scene bar
   // clips its contents).
   return createPortal(
-
     <dialog
       ref={dialogRef}
       className="dialog window panel"
@@ -136,7 +141,7 @@ export function Dialog({
                 size={22}
               />
             </span>
-          ) : (graphicCampaign && graphicRef ? (
+          ) : graphicCampaign && graphicRef ? (
             <CampaignEntityGraphic
               campaign={graphicCampaign}
               kind={graphicRef.kind}
@@ -144,10 +149,12 @@ export function Dialog({
               defaultIcon={graphicDefaultIcon}
               size={22}
             />
-          ) : undefined)
+          ) : undefined
         }
         rolled={rolled}
-        onToggleRoll={() => { setRolled(!rolled); }}
+        onToggleRoll={() => {
+          setRolled(!rolled);
+        }}
         onDragStart={(e) => {
           if (dockId && win) {
             const dialog = dialogRef.current!;
@@ -172,7 +179,9 @@ export function Dialog({
             className="win-resize"
             data-dir={dir}
             aria-hidden="true"
-            onPointerDown={(e) => { onResizePointerDown(e.nativeEvent, dir); }}
+            onPointerDown={(e) => {
+              onResizePointerDown(e.nativeEvent, dir);
+            }}
           />
         ))}
     </dialog>,

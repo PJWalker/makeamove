@@ -29,12 +29,9 @@ import {
   sellDungeonWorld2Item,
   shopDungeonWorld2Service,
   trainDungeonWorld2,
-  WEAPON_TAGS
-  
-  
-  
+  WEAPON_TAGS,
 } from "./campaign";
-import type {ComfortBenefit, DungeonWorld2ItemUse, JourneyPace} from "./campaign";
+import type { ComfortBenefit, DungeonWorld2ItemUse, JourneyPace } from "./campaign";
 import type { ServiceRank } from "./wealth";
 
 /*

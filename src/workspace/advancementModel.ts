@@ -9,8 +9,8 @@ import {
 import type { CharacterView } from "../features/characters/types";
 import type { DataValue } from "../data/types";
 import type { GameSystem } from "../systems/types";
-import { listFieldsOf, scoreCapsOf  } from "./creationModel";
-import type {Picked} from "./creationModel";
+import { listFieldsOf, scoreCapsOf } from "./creationModel";
+import type { Picked } from "./creationModel";
 
 /** How an advancement raises ability scores: +2 to one, +1 to two, or a feat instead. */
 export interface Improvement {
@@ -27,7 +27,7 @@ export function planAdvancement(
   picks: Record<string, Picked>,
   improvement: Improvement,
 ) {
-  const {creation} = system;
+  const { creation } = system;
   const field = creation?.advancementField;
   const rank = Number(field ? c.data[field] : 1) + 1;
   const picked = Object.fromEntries(Object.entries(picks).map(([id, pick]) => [id, pick.option]));
@@ -58,16 +58,17 @@ export function planAdvancement(
   // What to write: the rank, each pick's data, then the improvement, the raised scores and the marked stats.
   const data: [string, DataValue][] = [];
   if (field) data.push([field, rank]);
-  let {scores} = c;
+  let { scores } = c;
   const marked = new Set(resetsMarks ? [] : blockedStats);
   for (const { pick, option } of chosen) {
     if (!option.boost) continue;
     scores = raise(scores, boostFrom(option, pick.pattern, pick.order), caps);
     const amounts = option.boost.amounts[pick.pattern];
-    if (amounts) for (const [index, amount] of amounts.entries()) {
-      const stat = pick.order[index];
-      if (amount && stat) marked.add(stat);
-    }
+    if (amounts)
+      for (const [index, amount] of amounts.entries()) {
+        const stat = pick.order[index];
+        if (amount && stat) marked.add(stat);
+      }
   }
   const listFields = new Set(listFieldsOf(system));
   for (const [key, value] of Object.entries(dataFrom(choices, picked, [...listFields], c.data)))

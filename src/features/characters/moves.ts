@@ -1,7 +1,7 @@
-import { emptyRichText  } from "../../data/richText";
-import type {RichText} from "../../data/richText";
-import { roll  } from "../dice/notation";
-import type {Roll} from "../dice/notation";
+import { emptyRichText } from "../../data/richText";
+import type { RichText } from "../../data/richText";
+import { roll } from "../dice/notation";
+import type { Roll } from "../dice/notation";
 
 import type { MoveSuggestion, MoveTarget, SaveRequest } from "../chat/types";
 import type {
@@ -290,7 +290,8 @@ export function performMove(
 ): MoveResult {
   const { targets, valueAt } = aim;
   const check = checkOf(action);
-  if (action.variants && action.variants(c, d).length === 0) throw new Error("Not enough resources");
+  if (action.variants && action.variants(c, d).length === 0)
+    throw new Error("Not enough resources");
   const basePlan = planMove(system, action, c, d, choice);
   if (!canPayMove(c, basePlan)) throw new Error("Not enough resources");
   const difficulty =
@@ -327,7 +328,7 @@ export function performMove(
   // Against targets: one roll each, read against that target's value.
   const targetDifficulty = check.difficulty?.kind === "target" ? check.difficulty : undefined;
   if (targetDifficulty && targets?.length) {
-    const {spends} = basePlan;
+    const { spends } = basePlan;
     const rolled = targets.map((t): MoveTarget => {
       const plan = planMove(system, action, c, d, {
         ...choice,

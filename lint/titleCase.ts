@@ -29,7 +29,7 @@ const capitalise = (word: string) => word.charAt(0).toUpperCase() + word.slice(1
 
 /** `text` in Title Case, with "..." as "…". */
 export function titleCase(text: string): string {
-  const tokens = text.replaceAll('...', "…").split(/(\s+)/);
+  const tokens = text.replaceAll("...", "…").split(/(\s+)/);
   const words = tokens.flatMap((t, index) => (t.trim() ? [index] : []));
   return tokens
     .map((token, index) => {

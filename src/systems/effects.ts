@@ -37,25 +37,26 @@ export function resolveEffects(base: Record<string, number>, sources: EffectSour
   for (const s of sources) {
     for (const e of s.effects) {
       switch (e.type) {
-      case "modify": {
-      mods.push({ ...e, from: s.name, order: mods.length });
-      break;
-      }
-      case "grantMove": {
-      moves.add(e.move);
-      break;
-      }
-      case "grantTag": {
-      tags.add(e.tag);
-      break;
-      }
-      default: { bonuses.push({
-          source: s.name,
-          ...(e.stat ? { stat: e.stat } : {}),
-          ...(e.moves ? { moves: e.moves } : {}),
-          value: e.value,
-        });
-      }
+        case "modify": {
+          mods.push({ ...e, from: s.name, order: mods.length });
+          break;
+        }
+        case "grantMove": {
+          moves.add(e.move);
+          break;
+        }
+        case "grantTag": {
+          tags.add(e.tag);
+          break;
+        }
+        default: {
+          bonuses.push({
+            source: s.name,
+            ...(e.stat ? { stat: e.stat } : {}),
+            ...(e.moves ? { moves: e.moves } : {}),
+            value: e.value,
+          });
+        }
       }
     }
   }

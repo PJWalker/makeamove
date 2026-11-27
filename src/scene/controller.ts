@@ -2,40 +2,39 @@ import { store, watch } from "../lib/store";
 import type { CampaignDefaults } from "../campaign/campaign";
 import { device } from "../platform/device";
 
-import {
-  
-  
-  
-  importImage,
-  imageColour
+import { importImage, imageColour } from "../media/images";
+import type {
+  BlobReference,
+  EntityGraphic,
+  EntityGraphicRef as EntityGraphicReference,
 } from "../media/images";
-import type {BlobReference, EntityGraphic, EntityGraphicRef as EntityGraphicReference} from "../media/images";
 import type { LinkRef as LinkReference } from "../features/notes/links";
 import { reducedMotion } from "../ui/transition";
-import { colourOf  } from "./presence";
-import type {Presence} from "./presence";
-import {  clampZoom, fitCamera, toWorld, zoomAt } from "./camera";
-import type {Camera} from "./camera";
+import { colourOf } from "./presence";
+import type { Presence } from "./presence";
+import { clampZoom, fitCamera, toWorld, zoomAt } from "./camera";
+import type { Camera } from "./camera";
 import { readSceneCamera, saveSceneCamera } from "./cameraMemory";
 import { bounds, hits } from "./geometry";
-import { cellOr,  snapPoint } from "./grid";
-import type {Point} from "./grid";
+import { cellOr, snapPoint } from "./grid";
+import type { Point } from "./grid";
 import { tokenDistance } from "./measure";
-import {
-  conversion,
-  imageElement,
-  newPin,
-  newToken,
-  randomTokenColour
-  
-} from "./newElements";
-import type {TokenSpec} from "./newElements";
+import { conversion, imageElement, newPin, newToken, randomTokenColour } from "./newElements";
+import type { TokenSpec } from "./newElements";
 import type { SceneRenderer } from "./renderer";
 import type { ElementPatch, SceneDoc as SceneDocument } from "./sceneDoc";
 import { toolCursor } from "./toolCursors";
-import { ERASER_RADIUS, GM_KINDS, kindOf  } from "./tools";
-import type {SceneTools} from "./tools";
-import type { Layer, NewElement, PinElement, SceneElement, TokenElement, TokenStyle, Transform } from "./types";
+import { ERASER_RADIUS, GM_KINDS, kindOf } from "./tools";
+import type { SceneTools } from "./tools";
+import type {
+  Layer,
+  NewElement,
+  PinElement,
+  SceneElement,
+  TokenElement,
+  TokenStyle,
+  Transform,
+} from "./types";
 import { TOOL_PRESS } from "./gestures";
 import { PolygonDraft } from "./gestures/polygon";
 import { pinch } from "./gestures/pan";
@@ -181,7 +180,9 @@ export class SceneController implements ToolContext {
   }
 
   start() {
-    const refresh = () => { this.refresh(); };
+    const refresh = () => {
+      this.refresh();
+    };
     const regrid = () => {
       this.renderer.setGrid(this.scene.grid());
       this.renderer.invalidate("overlay");
@@ -233,15 +234,21 @@ export class SceneController implements ToolContext {
       };
     };
     if (this.presence) {
-      const {presence} = this;
-      const show = () => { this.renderer.setPresence(
+      const { presence } = this;
+      const show = () => {
+        this.renderer.setPresence(
           presence.marks(this.sceneId, device.value.id, device.value.name, colourOf(device.value)),
-        ); };
+        );
+      };
       presence.setScene(this.sceneId);
       this.disposers.push(
         presence.subscribe(show),
-        () => { presence.setScene(null); },
-        () => { this.renderer.setPresence([]); },
+        () => {
+          presence.setScene(null);
+        },
+        () => {
+          this.renderer.setPresence([]);
+        },
       );
       this.disposers.push(watch([device], show));
       show();
@@ -262,19 +269,35 @@ export class SceneController implements ToolContext {
       options?: AddEventListenerOptions,
     ) => {
       element.addEventListener(type, function_ as EventListener, options);
-      this.disposers.push(() => { element.removeEventListener(type, function_ as EventListener, options); });
+      this.disposers.push(() => {
+        element.removeEventListener(type, function_ as EventListener, options);
+      });
     };
-    listen("pointerdown", (e) => { this.onPointerDown(e); });
-    listen("pointermove", (e) => { this.onPointerMove(e); });
-    listen("pointerup", (e) => { this.onPointerUp(e); });
-    listen("pointercancel", (e) => { this.onPointerUp(e, true); });
+    listen("pointerdown", (e) => {
+      this.onPointerDown(e);
+    });
+    listen("pointermove", (e) => {
+      this.onPointerMove(e);
+    });
+    listen("pointerup", (e) => {
+      this.onPointerUp(e);
+    });
+    listen("pointercancel", (e) => {
+      this.onPointerUp(e, true);
+    });
     listen("pointerleave", () => {
       this.presence?.setCursor(null);
       this.hover = null;
       this.renderer.setHoverToken(null);
       this.updateOverlay();
     });
-    listen("wheel", (e) => { this.onWheel(e); }, { passive: false });
+    listen(
+      "wheel",
+      (e) => {
+        this.onWheel(e);
+      },
+      { passive: false },
+    );
   }
 
   stop() {
@@ -302,15 +325,17 @@ export class SceneController implements ToolContext {
     if (sel.length === this.selection.value.length) {
       this.selectedElements.value = this.selected();
       this.updateOverlay();
+    } else {
+      this.selection.value = sel;
     }
-    else {this.selection.value = sel;}
     this.updateMapColour();
   }
 
   private updateMapColour() {
     let main: SceneElement | null = null;
     for (const element of this.elements)
-      if (element.type === "map" && (!main || element.w * element.h > main.w * main.h)) main = element;
+      if (element.type === "map" && (!main || element.w * element.h > main.w * main.h))
+        main = element;
     if (main?.type !== "map") {
       this.mapColour.value = null;
       return;
@@ -367,7 +392,10 @@ export class SceneController implements ToolContext {
   rangeFrom(): string | null {
     const actor = this.targetMode.value?.actor;
     if (!actor) return null;
-    return this.elements.find((element) => element.type === "token" && element.characterId === actor)?.id ?? null;
+    return (
+      this.elements.find((element) => element.type === "token" && element.characterId === actor)
+        ?.id ?? null
+    );
   }
 
   /** Target a token, or stop targeting it. */
@@ -443,7 +471,9 @@ export class SceneController implements ToolContext {
 
   private scheduleSaveCamera() {
     clearTimeout(this.saveTimer);
-    this.saveTimer = globalThis.setTimeout(() => { this.saveCamera(); }, 300);
+    this.saveTimer = globalThis.setTimeout(() => {
+      this.saveCamera();
+    }, 300);
   }
 
   private saveCamera() {
@@ -615,7 +645,7 @@ export class SceneController implements ToolContext {
   }
 
   commitPreviews() {
-    const {previews} = this.renderer;
+    const { previews } = this.renderer;
     if (previews.size === 0) return;
     this.scene.update([...previews].map(([id, t]) => [id, transformOf(t)]));
     previews.clear();
@@ -625,7 +655,10 @@ export class SceneController implements ToolContext {
   /** Shrink a scene item token into its drop point before transferring it. */
   animateItemTokenDrop(id: string, clientX: number, clientY: number, complete: () => void) {
     const original = this.byId.get(id);
-    if (original?.type !== "token") { complete(); return; }
+    if (original?.type !== "token") {
+      complete();
+      return;
+    }
     const current = this.renderer.previews.get(id) ?? original;
     cancelAnimationFrame(this.itemTokenDropFrame);
     const from = transformOf(current);
@@ -643,7 +676,10 @@ export class SceneController implements ToolContext {
       this.renderer.invalidate("previews", "overlay");
       complete();
     };
-    if (reducedMotion.matches) { finish(); return; }
+    if (reducedMotion.matches) {
+      finish();
+      return;
+    }
     const start = performance.now();
     const tick = (now: number) => {
       const progress = Math.min(1, (now - start) / 180);
@@ -744,7 +780,10 @@ export class SceneController implements ToolContext {
         const sel = this.selected().filter((element) => !element.locked);
         if (sel.length === 0) return false;
         this.scene.update(
-          sel.map((element) => [element.id, { x: element.x + nudge.x * step, y: element.y + nudge.y * step }]),
+          sel.map((element) => [
+            element.id,
+            { x: element.x + nudge.x * step, y: element.y + nudge.y * step },
+          ]),
         );
         return true;
       }
@@ -877,15 +916,23 @@ export class SceneController implements ToolContext {
     patch: {
       [
         K in
-          "characterId" | "colour" | "hideBars" | "hideName" | "image" | "itemDefId" | "name" | "style"
+          | "characterId"
+          | "colour"
+          | "hideBars"
+          | "hideName"
+          | "image"
+          | "itemDefId"
+          | "name"
+          | "style"
       ]?: TokenElement[K] | undefined;
     },
     cells?: number,
   ) {
     const element = this.byId.get(id);
-    const {grid} = this.renderer;
+    const { grid } = this.renderer;
     const size = cells && element ? cells * grid.size : 0;
-    const resize = size && element && (Math.abs(element.w - size) > 0.5 || Math.abs(element.h - size) > 0.5);
+    const resize =
+      size && element && (Math.abs(element.w - size) > 0.5 || Math.abs(element.h - size) > 0.5);
     this.scene.update([
       [id, resize ? { ...patch, ...snapPoint(grid, element, cells), w: size, h: size } : patch],
     ]);
@@ -971,7 +1018,7 @@ export class SceneController implements ToolContext {
     const images = [...files].filter((f) => f.type.startsWith("image/"));
     if (images.length === 0) return;
     this.host.style.cursor = "progress";
-    const {grid} = this.renderer;
+    const { grid } = this.renderer;
     const added: NewElement[] = [];
     try {
       const imported = await Promise.all(

@@ -1,20 +1,17 @@
 import { store } from "../lib/store";
-import { choiceOf, listOf, settingsOver   } from "../data/localDoc";
-import type {LocalDoc as LocalDocument, LocalValue} from "../data/localDoc";
+import { choiceOf, listOf, settingsOver } from "../data/localDoc";
+import type { LocalDoc as LocalDocument, LocalValue } from "../data/localDoc";
 import { oneOf, isString } from "../lib/guards";
-import {
-  EFFECTS,
-  SHAPES,
-  
-  
-  
-  
-  
-  
-  
-  TEXT_FONTS
+import { EFFECTS, SHAPES, TEXT_FONTS } from "./types";
+import type {
+  AreaTone,
+  EffectKind,
+  Layer,
+  SceneElement,
+  ShapeKind,
+  ShapePaint,
+  TextStyle,
 } from "./types";
-import type {AreaTone, EffectKind, Layer, SceneElement, ShapeKind, ShapePaint, TextStyle} from "./types";
 
 export const TOOL_IDS = [
   "select",
@@ -66,8 +63,17 @@ function effectDefaults(effect: EffectKind) {
 
 /** The sorts of things on a scene, as the Select tool picks them: lamps and areas are both lights. */
 export type SelectKind =
-  "drawing" | "effect" | "light" | "map" | "pin" | "shape" | "text" | "token" | "wall";
-export const kindOf = (element: SceneElement): SelectKind => (element.type === "area" ? "light" : element.type);
+  | "drawing"
+  | "effect"
+  | "light"
+  | "map"
+  | "pin"
+  | "shape"
+  | "text"
+  | "token"
+  | "wall";
+export const kindOf = (element: SceneElement): SelectKind =>
+  element.type === "area" ? "light" : element.type;
 const SELECT_KINDS = new Set([
   "token",
   "map",
@@ -79,7 +85,15 @@ const SELECT_KINDS = new Set([
   "effect",
   "pin",
 ]);
-const SELECTABLE_DEFAULT: SelectKind[] = ["token", "map", "drawing", "shape", "text", "wall", "pin"];
+const SELECTABLE_DEFAULT: SelectKind[] = [
+  "token",
+  "map",
+  "drawing",
+  "shape",
+  "text",
+  "wall",
+  "pin",
+];
 
 /**
  * The scene tools on this device: which is in use (for this session only),
@@ -188,7 +202,11 @@ export class SceneTools {
 export const GM_KINDS: readonly SelectKind[] = ["wall", "light", "effect"];
 
 /** The tools that make a sort of thing, and pick only that while in use. */
-export const TOOL_KINDS: Partial<Record<ToolId, SelectKind>> = { light: "light", effect: "effect", pin: "pin" };
+export const TOOL_KINDS: Partial<Record<ToolId, SelectKind>> = {
+  light: "light",
+  effect: "effect",
+  pin: "pin",
+};
 
 /** Outline width of drawn shapes, in world px. */
 export const SHAPE_WIDTH = 3;

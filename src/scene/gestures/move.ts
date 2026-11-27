@@ -1,9 +1,9 @@
-import { snapPoint  } from "../grid";
-import type {Point} from "../grid";
+import { snapPoint } from "../grid";
+import type { Point } from "../grid";
 import { canOpenPin } from "../pins";
 import type { SceneElement, TokenElement } from "../types";
-import { dragged   } from "./types";
-import type {Gesture, ToolContext} from "./types";
+import { dragged } from "./types";
+import type { Gesture, ToolContext } from "./types";
 
 /**
  * Dragging the selection, its unlocked elements, from `start`. Tokens snap to
@@ -31,11 +31,12 @@ export function moveSelection(c: ToolContext, start: Point): Gesture {
       const dy = world.y - start.y;
       if (!moved && !dragged(c, start, world)) return;
       moved = true;
-      const {grid} = c.renderer;
+      const { grid } = c.renderer;
       for (const [id, element] of originals) {
         let p = { x: element.x + dx, y: element.y + dy };
         // Tokens snap to the grid; hold Alt to place them freely.
-        if (element.type === "token" && !e.altKey) p = snapPoint(grid, p, Math.round(element.w / grid.size));
+        if (element.type === "token" && !e.altKey)
+          p = snapPoint(grid, p, Math.round(element.w / grid.size));
         c.renderer.previews.set(id, { ...element, ...p });
       }
       c.renderer.invalidate("previews", "overlay");

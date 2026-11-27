@@ -23,12 +23,9 @@ import {
   tickDurations,
   turnOf,
   turnOrder,
-  updateCombatant
-  
-  
-  
+  updateCombatant,
 } from "./combat";
-import type {CombatMaps, Combatant, TurnChange} from "./combat";
+import type { CombatMaps, Combatant, TurnChange } from "./combat";
 
 /*
  * The turn tracker as the table uses it: combatants from tokens, initiative

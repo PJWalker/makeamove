@@ -4,8 +4,8 @@ import { store, watch } from "../lib/store";
 import { newId, newSecret } from "../lib/ids";
 
 import { commaListOf, formatCommaList } from "../lib/list";
-import { device  } from "../platform/device";
-import type {Device} from "../platform/device";
+import { device } from "../platform/device";
+import type { Device } from "../platform/device";
 import type { JoinRoom } from "../sync/transport";
 import { joinPublicRoom } from "../sync/publicRoom";
 import type { ReadonlyStore } from "../lib/store";
@@ -13,7 +13,12 @@ import { NO_SYSTEM_ID, getSystem } from "../systems";
 import type { Invite } from "../sync/invite";
 import { noteDbName as noteDatabaseName, noteGuid } from "../features/notes/noteDoc";
 import { deleteNoteTextIndex } from "../features/notes/textIndex";
-import { Vault, vaultDbName as vaultDatabaseName, vaultNoteGuid, vaultShape } from "../features/notes/vault";
+import {
+  Vault,
+  vaultDbName as vaultDatabaseName,
+  vaultNoteGuid,
+  vaultShape,
+} from "../features/notes/vault";
 import { ChatLog, deleteChatData } from "../features/chat/chatLog";
 import { MoveRequests } from "../features/characters/moveRequests";
 import { sceneDbName as sceneDatabaseName } from "../scene/sceneDoc";
@@ -32,8 +37,8 @@ import {
   updateScene,
 } from "./sceneIndex";
 import { SystemData } from "./systemStore";
-import type {CampaignRoot} from "./schema";
-import { campaignShape  } from "./schema";
+import type { CampaignRoot } from "./schema";
+import { campaignShape } from "./schema";
 import { CampaignConnection } from "./connection";
 import {
   forgetCampaign,
@@ -43,7 +48,10 @@ import {
   updateCampaignEntry,
   upsertCampaign,
 } from "./registry";
-import { campaignDbName as campaignDatabaseName, campaignUiDbName as campaignUiDatabaseName } from "./storage";
+import {
+  campaignDbName as campaignDatabaseName,
+  campaignUiDbName as campaignUiDatabaseName,
+} from "./storage";
 
 export type { CampaignDefaults, MemberView, RevokedView, Role, SceneView } from "./types";
 
@@ -230,7 +238,9 @@ export class Campaign {
           this.checkMembership();
         }, REJOIN_CHECK_MS);
       });
-      this.rejoinCleanups.push(stop, () => { if (timer !== undefined) clearTimeout(timer); });
+      this.rejoinCleanups.push(stop, () => {
+        if (timer !== undefined) clearTimeout(timer);
+      });
     }
     if (await this.connection.connect(roomKey, () => this.destroyed))
       void this.vault.value?.connect();
@@ -341,7 +351,7 @@ export class Campaign {
   }
 
   ensureMember(name: string, role: Role = "player") {
-    const {id} = this.device.value;
+    const { id } = this.device.value;
     this.doc.transact(() => {
       if (!this.members.has(id)) this.members.set(id, { role, joinedAt: Date.now() });
       if (name) this.members.get(id)?.patch({ name });
@@ -380,7 +390,9 @@ export class Campaign {
     // Where the GM goes, the table goes: tell everyone once they've settled.
     if (this.isGm()) {
       clearTimeout(this.sceneNoticeTimer);
-      this.sceneNoticeTimer = setTimeout(() => { this.announceScene(); }, Campaign.sceneNoticeDelay);
+      this.sceneNoticeTimer = setTimeout(() => {
+        this.announceScene();
+      }, Campaign.sceneNoticeDelay);
     }
   }
 
@@ -553,7 +565,10 @@ export function joinCampaign({ campaignId, roomKey }: Invite): string {
 }
 
 /** Load a stored document, let `clear` delete what it points to, then delete the document. */
-async function clearStoredDocument(databaseName: string, clear: (document: Y.Doc) => Promise<void> | void) {
+async function clearStoredDocument(
+  databaseName: string,
+  clear: (document: Y.Doc) => Promise<void> | void,
+) {
   const document = new Y.Doc();
   const p = new IndexeddbPersistence(databaseName, document);
   await p.whenSynced;

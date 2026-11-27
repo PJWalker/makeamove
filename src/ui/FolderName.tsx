@@ -15,8 +15,12 @@ export function FolderName({
       // Inline editor the user just asked for.
       // react-doctor-disable-next-line react-doctor/no-autofocus
       autoFocus
-      onFocus={(e) => { e.currentTarget.select(); }}
-      onBlur={(e) => { onDone(e.currentTarget.value.trim() || null); }}
+      onFocus={(e) => {
+        e.currentTarget.select();
+      }}
+      onBlur={(e) => {
+        onDone(e.currentTarget.value.trim() || null);
+      }}
       onKeyDown={(e) => {
         if (e.key === "Enter") e.currentTarget.blur();
         if (e.key === "Escape") {

@@ -1,5 +1,9 @@
 import type { LinkRef as LinkReference } from "../features/notes/links";
-import type { BlobReference, EntityGraphic, EntityGraphicRef as EntityGraphicReference } from "../media/images";
+import type {
+  BlobReference,
+  EntityGraphic,
+  EntityGraphicRef as EntityGraphicReference,
+} from "../media/images";
 
 /*
  * Scene elements as plain values. Each is stored as a Y.Map of these fields
@@ -70,7 +74,9 @@ export interface TokenElement extends Base {
 
 /** A token is only drawn plain if it has an image to show. */
 export const isPlainToken = (element: SceneElement) =>
-  element.type === "token" && element.style === "plain" && (!!element.image || element.graphic?.kind === "image");
+  element.type === "token" &&
+  element.style === "plain" &&
+  (!!element.image || element.graphic?.kind === "image");
 
 export interface DrawingElement extends Base {
   type: "drawing";
@@ -99,7 +105,8 @@ export type DraggedShapeKind = Exclude<ShapeKind, "polygon">;
  * [x, y, …] relative to the centre at the size bw × bh.
  */
 export type ShapeGeometry =
-  { shape: "polygon"; points: number[]; bw: number; bh: number } | { shape: DraggedShapeKind };
+  | { shape: "polygon"; points: number[]; bw: number; bh: number }
+  | { shape: DraggedShapeKind };
 
 /** How a shape is painted: its outline and its inside, each a colour with its opacity, #rrggbbaa. */
 export interface ShapePaint {
@@ -107,7 +114,9 @@ export interface ShapePaint {
   fill: string;
 }
 
-export type ShapeElement = Base & ShapeGeometry & ShapePaint & {
+export type ShapeElement = Base &
+  ShapeGeometry &
+  ShapePaint & {
     type: "shape";
     /** Outline width. */
     width: number;
@@ -226,7 +235,9 @@ export const EFFECTS: (EffectSight & { id: EffectKind; label: string; colour: st
  * shape the Shapes tool draws. Everyone sees the effect; only the GM sees
  * its outline. It may glow, and it may block sight, as fog does.
  */
-export type EffectElement = Base & EffectSight & ShapeGeometry & {
+export type EffectElement = Base &
+  EffectSight &
+  ShapeGeometry & {
     type: "effect";
     effect: EffectKind;
     colour: string;
@@ -243,7 +254,16 @@ export interface PinElement extends Base {
 }
 
 export type SceneElement =
-  AreaElement | DrawingElement | EffectElement | LightElement | MapElement | PinElement | ShapeElement | TextElement | TokenElement | WallElement;
+  | AreaElement
+  | DrawingElement
+  | EffectElement
+  | LightElement
+  | MapElement
+  | PinElement
+  | ShapeElement
+  | TextElement
+  | TokenElement
+  | WallElement;
 
 /** What callers supply when adding an element; the store fills in the rest. */
 export type NewElement = DistributiveOmit<SceneElement, "createdBy" | "id" | "locked" | "z"> & {

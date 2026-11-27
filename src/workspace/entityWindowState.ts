@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { store } from "../lib/store";
-import { listOf   } from "../data/localDoc";
-import type {LocalDoc as LocalDocument, LocalValue} from "../data/localDoc";
+import { listOf } from "../data/localDoc";
+import type { LocalDoc as LocalDocument, LocalValue } from "../data/localDoc";
 import { arrayOf, isString, objectOf, optional } from "../lib/guards";
 import type { Icon } from "../ui/icons";
 import type { MenuItem } from "../ui/ContextMenu";

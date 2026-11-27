@@ -1,9 +1,8 @@
-
 import { useState } from "react";
 import type { Campaign } from "../campaign/campaign";
 import { Button } from "../ui/Button";
-import { ENTRY_ICONS  } from "../ui/entryIcons";
-import type {EntryIconName} from "../ui/entryIcons";
+import { ENTRY_ICONS } from "../ui/entryIcons";
+import type { EntryIconName } from "../ui/entryIcons";
 import { closePopup } from "../ui/popup";
 import { useQuery } from "../ui/useQuery";
 import { CommitInput } from "../ui/CommitInput";
@@ -41,10 +40,14 @@ interface Properties {
 function usePopup() {
   const context = useCampaign();
   const reference = usePopupDialog();
-  const onClose = () => { context.table.actionEdit.set(null); };
+  const onClose = () => {
+    context.table.actionEdit.set(null);
+  };
   return {
     ref: reference,
-    close: () => { closePopup(reference.current, onClose); },
+    close: () => {
+      closePopup(reference.current, onClose);
+    },
     onClose,
   };
 }
@@ -67,8 +70,12 @@ function RenameDialog({ campaign, id, title }: Properties) {
             // The field is the dialog's one input.
             // react-doctor-disable-next-line react-doctor/no-autofocus
             autoFocus
-            onFocus={(e) => { e.currentTarget.select(); }}
-            onCommit={(label) => { done(label); }}
+            onFocus={(e) => {
+              e.currentTarget.select();
+            }}
+            onCommit={(label) => {
+              done(label);
+            }}
             onBlur={close}
             onKeyDown={(e) => {
               if (e.key === "Escape") close();
@@ -126,7 +133,9 @@ function IconDialog({ campaign, id, title }: Properties) {
                 aria-selected={name === current}
                 aria-label={name.replace("-", " ")}
                 data-tip={name.replace("-", " ")}
-                onClick={() => { choose(name); }}
+                onClick={() => {
+                  choose(name);
+                }}
               >
                 <Icon size={24} />
               </button>
@@ -134,7 +143,13 @@ function IconDialog({ campaign, id, title }: Properties) {
           })}
         </div>
         <div className="form-actions">
-          <Button variant="ghost" disabled={!current} onClick={() => { choose(); }}>
+          <Button
+            variant="ghost"
+            disabled={!current}
+            onClick={() => {
+              choose();
+            }}
+          >
             Use Its Own Icon
           </Button>
         </div>
@@ -207,7 +222,13 @@ function ShortcutDialog({ campaign, id, title }: Properties) {
         </output>
         <div className="form-actions">
           {existing && (
-            <Button variant="ghost" className="form-actions-start" onClick={() => { save(null); }}>
+            <Button
+              variant="ghost"
+              className="form-actions-start"
+              onClick={() => {
+                save(null);
+              }}
+            >
               Remove Shortcut
             </Button>
           )}

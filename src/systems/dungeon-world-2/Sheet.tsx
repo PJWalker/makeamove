@@ -1,11 +1,6 @@
 import { useMemo, useState } from "react";
-import {
-  SheetFrame,
-  SheetSectionView
-  
-  
-} from "../../workspace/DeclarativeSheet";
-import type {SheetDrop, SheetProps as SheetProperties} from "../../workspace/DeclarativeSheet";
+import { SheetFrame, SheetSectionView } from "../../workspace/DeclarativeSheet";
+import type { SheetDrop, SheetProps as SheetProperties } from "../../workspace/DeclarativeSheet";
 import { useSheet } from "../../workspace/sheetModel";
 import { CharacterText } from "../../workspace/CharacterText";
 import type { DragEntity } from "../../workspace/entityDrag";
@@ -14,8 +9,8 @@ import { Counter } from "../../workspace/sheetParts";
 import { giveItem, setData } from "../../workspace/commands/characters";
 import { useCampaign } from "../../workspace/campaignContext";
 import { parseInputNumber } from "../../lib/number";
-import { STRUGGLES, struggleOfEntry  } from "./struggles";
-import type {Struggle} from "./struggles";
+import { STRUGGLES, struggleOfEntry } from "./struggles";
+import type { Struggle } from "./struggles";
 import { addTreasureBoxes, wealthTierForBoxes, MAX_TREASURE_BOXES } from "./wealth";
 import { DW2_GEAR, DW2_MAGIC_ITEMS } from "./gear";
 import { resolveCharacterStruggle, revealCharacterStruggle } from "./commands";
@@ -54,7 +49,7 @@ function StruggleSection({
   struggle: Struggle;
 }) {
   const context = useCampaign();
-  const {track} = struggle;
+  const { track } = struggle;
   return (
     <section className="form-section sheet-section" aria-label="Current Struggle">
       <h3 className="sheet-heading">{struggle.name}</h3>
@@ -122,7 +117,8 @@ export function DungeonWorld2Sheet(properties: SheetProperties) {
       drop: (entity) => {
         const struggle = dropped(entity);
         return (
-          !!struggle && context.execute(revealCharacterStruggle, { characterId, struggle: struggle.id })
+          !!struggle &&
+          context.execute(revealCharacterStruggle, { characterId, struggle: struggle.id })
         );
       },
     };
@@ -238,7 +234,12 @@ function ItemAward({
       <h3 className="sheet-heading">{title}</h3>
       <label className="field">
         Choose an item
-        <select value={selected} onChange={(event) => { setSelected(event.currentTarget.value); }}>
+        <select
+          value={selected}
+          onChange={(event) => {
+            setSelected(event.currentTarget.value);
+          }}
+        >
           {options.map((item) => (
             <option key={item.id} value={item.id}>
               {item.name}

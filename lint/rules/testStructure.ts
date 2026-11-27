@@ -1,5 +1,5 @@
-import { defineRule  } from "vite-plus/lint/plugins";
-import type {ESTree} from "vite-plus/lint/plugins";
+import { defineRule } from "vite-plus/lint/plugins";
+import type { ESTree } from "vite-plus/lint/plugins";
 import { projectPath } from "../strings.ts";
 
 const TEST_MODULE = "vite-plus/test";
@@ -37,17 +37,23 @@ export const testStructure = defineRule({
       },
       CallExpression(node) {
         if (node.callee.type !== "Identifier") return;
-        const {name} = node.callee;
+        const { name } = node.callee;
         const isSuite = suites.has(name) || name === "describe";
         const isTest = tests.has(name) || name === "it" || name === "test";
         if (!isSuite && !isTest) return;
 
         let parent: ESTree.Node | null = node.parent;
         while (parent) {
-          if (parent.type === "CallExpression" && parent.callee.type === "Identifier" && (tests.has(parent.callee.name) || parent.callee.name === "it" || parent.callee.name === "test")) {
-              context.report({ node, messageId: "placement", data: { name } });
-              break;
-            }
+          if (
+            parent.type === "CallExpression" &&
+            parent.callee.type === "Identifier" &&
+            (tests.has(parent.callee.name) ||
+              parent.callee.name === "it" ||
+              parent.callee.name === "test")
+          ) {
+            context.report({ node, messageId: "placement", data: { name } });
+            break;
+          }
           parent = parent.parent;
         }
       },

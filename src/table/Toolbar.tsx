@@ -6,10 +6,10 @@ import { createPortal } from "react-dom";
 import type { Store } from "../lib/store";
 import { startReorder } from "../ui/reorder";
 import { scrollSideways } from "../ui/wheel";
-import {  PEN_WIDTH_RANGE   } from "../scene/tools";
-import type {LightToolMode, SelectKind, ToolId} from "../scene/tools";
-import { AREA_COLOURS, SHAPES  } from "../scene/types";
-import type {ShapeKind} from "../scene/types";
+import { PEN_WIDTH_RANGE } from "../scene/tools";
+import type { LightToolMode, SelectKind, ToolId } from "../scene/tools";
+import { AREA_COLOURS, SHAPES } from "../scene/types";
+import type { ShapeKind } from "../scene/types";
 import { Button } from "../ui/Button";
 import { ColourPicker } from "../ui/ColourPicker";
 import { Segmented, ToggleGroup } from "../ui/Segmented";
@@ -24,13 +24,12 @@ import {
   IconText,
   IconToken,
   IconWall,
-  
-  PROMINENT_ICON_SIZE
+  PROMINENT_ICON_SIZE,
 } from "../ui/icons";
-import type {Icon} from "../ui/icons";
+import type { Icon } from "../ui/icons";
 import { TOOLS } from "../workspace/tools";
-import { ContextMenu  } from "../ui/ContextMenu";
-import type {MenuItem} from "../ui/ContextMenu";
+import { ContextMenu } from "../ui/ContextMenu";
+import type { MenuItem } from "../ui/ContextMenu";
 import { useQuery } from "../ui/useQuery";
 import { withTransition } from "../ui/transition";
 import { useCampaign } from "../workspace/campaignContext";
@@ -82,8 +81,15 @@ function useShownTool(activeTool: Store<ToolId>): ToolId {
         const next = activeTool.value;
         if (previous === next) return;
         shown.current = next;
-        const show = () => { flushSync(() => { setTool(next); }); };
-        if (!TOOL_OPTIONS[previous] && !TOOL_OPTIONS[next]) { show(); return; }
+        const show = () => {
+          flushSync(() => {
+            setTool(next);
+          });
+        };
+        if (!TOOL_OPTIONS[previous] && !TOOL_OPTIONS[next]) {
+          show();
+          return;
+        }
         void withTransition(show, { rootClass: "vt-tool" });
       }),
     [activeTool],
@@ -135,7 +141,9 @@ export function Toolbar({ isGm }: { isGm: boolean }) {
             label={`${label} (${key})`}
             pressed={tool === id}
             data-tool={id}
-            onPointerDown={(e) => { dragTool(id, e); }}
+            onPointerDown={(e) => {
+              dragTool(id, e);
+            }}
             onClick={() => context.execute(selectTool, { tool: id })}
           >
             <Icon size={PROMINENT_ICON_SIZE} />
@@ -208,7 +216,9 @@ function CampaignMenu() {
           <ContextMenu
             {...menu}
             label="Campaign menu"
-            onClose={() => { setMenu(null); }}
+            onClose={() => {
+              setMenu(null);
+            }}
           />,
           document.body,
         )}
@@ -234,19 +244,25 @@ function PenOptions({ tool }: { tool: ToolId }) {
             label="Shape"
             value={shape}
             options={SHAPE_OPTIONS}
-            onChange={(shape) => { context.tools.shapeTool.set(shape); }}
+            onChange={(shape) => {
+              context.tools.shapeTool.set(shape);
+            }}
           />
           <ColourPicker
             label="Outline Colour"
             alpha
             value={paint.stroke}
-            onChange={(stroke) => { context.tools.setShapePaint({ stroke }); }}
+            onChange={(stroke) => {
+              context.tools.setShapePaint({ stroke });
+            }}
           />
           <ColourPicker
             label="Fill Colour"
             alpha
             value={paint.fill}
-            onChange={(fill) => { context.tools.setShapePaint({ fill }); }}
+            onChange={(fill) => {
+              context.tools.setShapePaint({ fill });
+            }}
           />
         </>
       ) : (
@@ -254,11 +270,18 @@ function PenOptions({ tool }: { tool: ToolId }) {
           label="Pen Colour"
           alpha
           value={colour}
-          onChange={(c) => { context.tools.setPen({ colour: c }); }}
+          onChange={(c) => {
+            context.tools.setPen({ colour: c });
+          }}
         />
       )}
       {tool === "text" && (
-        <TextStyleFields value={textStyle} onChange={(patch) => { context.tools.setTextStyle(patch); }} />
+        <TextStyleFields
+          value={textStyle}
+          onChange={(patch) => {
+            context.tools.setTextStyle(patch);
+          }}
+        />
       )}
       {tool === "draw" && (
         <label className="pen-width" data-tip="Pen width">
@@ -274,7 +297,9 @@ function PenOptions({ tool }: { tool: ToolId }) {
             max={PEN_WIDTH_RANGE.max}
             value={width}
             aria-label="Pen width"
-            onChange={(e) => { context.tools.setPen({ width: Number(e.currentTarget.value) }); }}
+            onChange={(e) => {
+              context.tools.setPen({ width: Number(e.currentTarget.value) });
+            }}
           />
         </label>
       )}
@@ -285,7 +310,9 @@ function PenOptions({ tool }: { tool: ToolId }) {
           { id: "over", label: "Over Tokens" },
           { id: "under", label: "Under Tokens" },
         ]}
-        onChange={(l) => { context.tools.setPen({ layer: l }); }}
+        onChange={(l) => {
+          context.tools.setPen({ layer: l });
+        }}
       />
     </fieldset>
   );
@@ -321,8 +348,9 @@ function SelectOptions({ isGm }: { isGm: boolean }) {
           icon: <Icon size={22} />,
         }))}
         // Sorts not offered here (the GM's, for a player) stay as they were.
-        onChange={(next) => { context.tools.selectable.set([...next, ...kinds.filter((k) => !shown.has(k))]); }
-        }
+        onChange={(next) => {
+          context.tools.selectable.set([...next, ...kinds.filter((k) => !shown.has(k))]);
+        }}
       />
     </fieldset>
   );
@@ -344,7 +372,9 @@ function LightOptions() {
         label="Place"
         value={mode}
         options={LIGHT_MODES.map((m) => ({ ...m, icon: <LightGlyph mode={m.id} /> }))}
-        onChange={(mode) => { context.tools.lightTool.set(mode); }}
+        onChange={(mode) => {
+          context.tools.lightTool.set(mode);
+        }}
       />
     </fieldset>
   );
@@ -360,23 +390,31 @@ function EffectOptions() {
         label="Effect"
         value={effect}
         options={EFFECT_OPTIONS}
-        onChange={(effect) => { context.tools.setEffectTool({ effect }); }}
+        onChange={(effect) => {
+          context.tools.setEffectTool({ effect });
+        }}
       />
       <ColourPicker
         label="Effect Colour"
         alpha
         value={colour}
-        onChange={(colour) => { context.tools.setEffectTool({ colour }); }}
+        onChange={(colour) => {
+          context.tools.setEffectTool({ colour });
+        }}
       />
       <EffectSightToggles
         value={{ glow, obscures }}
-        onChange={(sight) => { context.tools.setEffectTool(sight); }}
+        onChange={(sight) => {
+          context.tools.setEffectTool(sight);
+        }}
       />
       <Segmented
         label="Shape"
         value={shape}
         options={SHAPE_OPTIONS}
-        onChange={(shape) => { context.tools.setEffectTool({ shape }); }}
+        onChange={(shape) => {
+          context.tools.setEffectTool({ shape });
+        }}
       />
     </fieldset>
   );

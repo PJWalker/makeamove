@@ -1,4 +1,5 @@
 import { actingCharacterId, canEdit, getCharacter, systemOf } from "../features/characters/api";
+import { librarySlot, moveSlot } from "../features/characters/hotbar";
 import { getNote } from "../features/notes/api";
 import type { MenuItem } from "../ui/ContextMenu";
 import { IconImage, IconOpenWindow, IconSidebar } from "../ui/icons";
@@ -49,7 +50,7 @@ export function linkMenuSections(
   { title, openInWindow }: { title: string | undefined; openInWindow?: () => void },
 ): MenuItem[][] {
   const { kind, id } = link;
-  const actionId = kind === "move" ? `move:${id}` : (kind === "item" ? `library:${id}` : null);
+  const actionId = kind === "move" ? moveSlot(id) : kind === "item" ? librarySlot(id) : null;
   const canChangeGraphic = kind !== "note" || !getNote(context.campaign, id)?.gmOnly;
   return [
     linkActionItems(context, link),
@@ -59,7 +60,9 @@ export function linkMenuSections(
           {
             label: "Change Graphic…",
             Icon: IconImage,
-            onSelect: () => { context.table.editGraphic(kind, id, title ?? "Entity"); },
+            onSelect: () => {
+              context.table.editGraphic(kind, id, title ?? "Entity");
+            },
           },
         ]
       : [],
@@ -67,7 +70,9 @@ export function linkMenuSections(
       {
         label: "Open in Sidebar",
         Icon: IconSidebar,
-        onSelect: () => { context.links.openInSidebar(kind, id); },
+        onSelect: () => {
+          context.links.openInSidebar(kind, id);
+        },
       },
       ...(openInWindow
         ? [{ label: "Open in a Window", Icon: IconOpenWindow, onSelect: openInWindow }]

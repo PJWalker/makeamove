@@ -1,6 +1,6 @@
 import { Container, Graphics } from "pixi.js";
-import {   toScreen } from "../camera";
-import type {Camera, Rect} from "../camera";
+import { toScreen } from "../camera";
+import type { Camera, Rect } from "../camera";
 import { conditionContains, conditionLayout, hoverSpring } from "../conditionLayout";
 import { pointerToward, unionRect } from "../edgePin";
 import type { Point } from "../grid";
@@ -14,7 +14,7 @@ import { drawPointer, INK, POINTER_ROOM, screenViewport, TOKEN_NAME, cabin } fro
 const NO_MARKS: TokenMarks = { pips: [], turn: false };
 const PIP_MIN_R = 3;
 const PIP_MAX_R = 6;
-const TURN_COLOUR = 0xF0_C2_3B;
+const TURN_COLOUR = 0xf0_c2_3b;
 /** How long a newly applied condition shows its name, in ms, before it closes to a pip. */
 const ANNOUNCE_MS = 1800;
 /** How long the ring that rings out from a newly applied condition takes, in ms. */
@@ -76,7 +76,10 @@ export class ConditionLayer {
     this.camera = { ...cam };
     const viewport = screenViewport(s);
     const tokens = s.elements.filter(
-      (element) => element.type === "token" && !s.hidden.has(element.id) && !unseen(s.previews.get(element.id) ?? element),
+      (element) =>
+        element.type === "token" &&
+        !s.hidden.has(element.id) &&
+        !unseen(s.previews.get(element.id) ?? element),
     );
     const boxes = new Map(
       tokens.map((element) => {
@@ -96,7 +99,10 @@ export class ConditionLayer {
     const used = new Set<string>();
     const turnTokens: { id: string; x: number; y: number; r: number }[] = [];
     const plans = tokens.map((element) => {
-      const marks = this.marksFor(element.id, element.type === "token" ? element.characterId : undefined);
+      const marks = this.marksFor(
+        element.id,
+        element.type === "token" ? element.characterId : undefined,
+      );
       const t = s.previews.get(element.id) ?? element;
       const c = toScreen(cam, t);
       const half = (Math.max(t.w, t.h) * cam.zoom) / 2;
@@ -167,7 +173,8 @@ export class ConditionLayer {
             Math.hypot(pointer.x - box.x - box.w / 2, pointer.y - box.y - box.h / 2) <=
             plan.radius + 2,
         );
-        if (anchor !== -1) hovered = { id: plan.id, anchor, bounds: plan.layout.collapsed[anchor]! };
+        if (anchor !== -1)
+          hovered = { id: plan.id, anchor, bounds: plan.layout.collapsed[anchor]! };
       }
     }
     this.hover = hovered;
@@ -301,7 +308,7 @@ export class ConditionLayer {
             current.h,
             Math.min(open ? 4 : plan.radius, current.h / 2),
           );
-        const {colour} = (plan.marks.pips[index]!);
+        const { colour } = plan.marks.pips[index]!;
         this.view.fill({ color: colour }).stroke({ color: INK, width: 1.5 });
         // A ring rings out from a condition as it's applied.
         const pulse = view.appliedAt === null ? 1 : (now - view.appliedAt) / PULSE_MS;

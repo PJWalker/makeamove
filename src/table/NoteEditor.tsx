@@ -42,7 +42,10 @@ export function NoteEditor({
     let local: Awareness | null = null;
     void openNotePage(campaign, noteId).then((n) => {
       if (!n) return;
-      if (cancelled) { n.destroy(); return; }
+      if (cancelled) {
+        n.destroy();
+        return;
+      }
       note = n;
       const gmOnly = !!getNote(campaign, noteId)?.gmOnly;
       // Carets travel with the page's own sync: the campaign's, or for a GM page the vault's.
@@ -62,10 +65,9 @@ export function NoteEditor({
         shared: !getNote(campaign, noteId)?.gmOnly,
         onLocalEdit: (ed) => {
           if (timer !== undefined) clearTimeout(timer);
-          timer = globalThis.setTimeout(
-            () => { touchNote(campaign, noteId, linksIn(ed.getJSON())); },
-            TOUCH_MS,
-          );
+          timer = globalThis.setTimeout(() => {
+            touchNote(campaign, noteId, linksIn(ed.getJSON()));
+          }, TOUCH_MS);
         },
       });
       editor = rich.editor;

@@ -59,7 +59,7 @@ function lift(element: HTMLElement) {
     height: `${box.height}px`,
   });
   document.body.append(carrier);
-  const {opacity} = element.style;
+  const { opacity } = element.style;
   element.style.opacity = "0";
   return {
     carrier,
@@ -98,7 +98,7 @@ export function useThrow({
     back?: (() => void) | undefined;
   } | null>(null);
   const release = () => {
-    const {current} = gesture;
+    const { current } = gesture;
     if (!current) return;
     gesture.current = null;
     current.element.style.cursor = current.cursor;
@@ -161,7 +161,7 @@ export function useThrow({
       element.style.cursor = "grabbing";
     },
     onPointerMove(event: React.PointerEvent<HTMLElement>) {
-      const {current} = gesture;
+      const { current } = gesture;
       if (!current || current.pointer !== event.pointerId) return;
       const offsetX = event.clientX - current.originX;
       const offsetY = event.clientY - current.originY;
@@ -178,7 +178,7 @@ export function useThrow({
       }
     },
     onPointerUp(event: React.PointerEvent<HTMLElement>) {
-      const {current} = gesture;
+      const { current } = gesture;
       if (!current || current.pointer !== event.pointerId) return;
       const distance = Math.hypot(event.clientX - current.originX, event.clientY - current.originY);
       actorInstance.current?.send({ type: "UP" });

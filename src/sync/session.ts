@@ -114,7 +114,9 @@ export class SyncSession {
       this.transport.send("sync", encoding.toUint8Array(enc));
     };
     document.on("update", onUpdate);
-    this.cleanups.set(document.guid, () => { document.off("update", onUpdate); });
+    this.cleanups.set(document.guid, () => {
+      document.off("update", onUpdate);
+    });
     for (const peer of this.transport.peers()) this.sendStep1(document, peer);
   }
 
@@ -140,7 +142,9 @@ export class SyncSession {
     this.docAwareness.set(document.guid, {
       awareness,
       heard: new Set(),
-      stop: () => { awareness.off("update", onUpdate); },
+      stop: () => {
+        awareness.off("update", onUpdate);
+      },
     });
     return awareness;
   }
@@ -214,8 +218,9 @@ export class SyncSession {
       this.clients.set(awareness, byPeer);
       const ids = byPeer.get(from) ?? new Set<number>();
       byPeer.set(from, ids);
-      const track = ({ added, updated }: AwarenessChange) =>
-        { for (const id of [...added, ...updated]) ids.add(id) };
+      const track = ({ added, updated }: AwarenessChange) => {
+        for (const id of [...added, ...updated]) ids.add(id);
+      };
       awareness.on("update", track);
       awarenessProtocol.applyAwarenessUpdate(awareness, decoding.readVarUint8Array(dec), REMOTE);
       awareness.off("update", track);
