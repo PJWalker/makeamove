@@ -2,8 +2,8 @@ import type { Rect } from "./camera";
 
 import type { Point } from "./grid";
 import { distanceToSegment, distanceToStroke } from "./stroke";
-import { isPlainToken    } from "./types";
-import type {SceneElement, ShapeGeometry, Transform} from "./types";
+import { isPlainToken } from "./types";
+import type { SceneElement, ShapeGeometry, Transform } from "./types";
 
 /** A rectangle's corners, clockwise from the top left, as which way each lies from its centre. */
 export type Corner = 0 | 1 | 2 | 3;
@@ -52,6 +52,10 @@ export function bounds(ts: readonly Transform[]): Rect | null {
   return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
 }
 
+/** Whether two rectangles overlap (touching edges don't count). */
+export const intersects = (a: Rect, b: Rect) =>
+  a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+
 export const contains = (outer: Rect, inner: Rect) =>
   outer.x <= inner.x &&
   outer.y <= inner.y &&
@@ -59,7 +63,9 @@ export const contains = (outer: Rect, inner: Rect) =>
   inner.y + inner.h <= outer.y + outer.h;
 
 /** The frame around a polygon's corners in the world. */
-export function polygonFrame(vertices: Point[]): Transform & { points: number[]; bw: number; bh: number } {
+export function polygonFrame(
+  vertices: Point[],
+): Transform & { points: number[]; bw: number; bh: number } {
   const xs = vertices.map((p) => p.x);
   const ys = vertices.map((p) => p.y);
   const [x0, x1] = [Math.min(...xs), Math.max(...xs)];
@@ -231,7 +237,9 @@ export function shapePolygon(element: ShapeGeometry & Transform): Point[] {
 }
 
 /** An area's corners in the world, at its size and rotation. */
-export function areaPolygon(element: Transform & { points: number[]; bw: number; bh: number }): Point[] {
+export function areaPolygon(
+  element: Transform & { points: number[]; bw: number; bh: number },
+): Point[] {
   return shapePolygon({ ...element, shape: "polygon" });
 }
 

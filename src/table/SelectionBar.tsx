@@ -18,10 +18,9 @@ import {
 } from "../scene/types";
 import type {EffectKind, SceneElement, ShapeKind, TextStyle} from "../scene/types";
 import ColourPicker from "../ui/ColourPicker";
-import CommitInput from "../ui/CommitInput";
 import Button from "../ui/Button";
 import { Segmented } from "../ui/Segmented";
-import { IconLight, IconLock, IconReveal, IconSettings, IconUnlock } from "../ui/icons";
+import { IconLock, IconReveal, IconSettings, IconUnlock } from "../ui/icons";
 import type { Icon } from "../ui/icons";
 import { useQuery } from "../ui/useQuery";
 import { useCampaign } from "../workspace/campaignContext";
@@ -34,6 +33,7 @@ import ShapeGlyph from "./ShapeGlyph";
 import TextStyleFields from "./TextStyleFields";
 import EFFECT_OPTIONS from "./effectOptionsData";
 import EffectSightToggles from "./effectOptions";
+import { lightFields, wallFields } from "./visionFields";
 import "./SelectionBar.css";
 
 /** Each shape's picture, as an icon for a button. */
@@ -269,75 +269,8 @@ function buildSelectionFields(
         onClick={() => { set({ hideName: sel.every((t) => !t.hideName) ? true : undefined }); }}
       />,
     );
-  if (every(sel, "wall")) {
-    const doors = sel.every((w) => w.door);
-    fields.push(
-      <Segmented
-        key="door"
-        label="Wall or Door"
-        value={doors ? "door" : "wall"}
-        options={[
-          { id: "wall", label: "Wall" },
-          { id: "door", label: "Door" },
-        ]}
-        onChange={(kind) => { set(kind === "door" ? { door: true, open: false } : { door: false }); }}
-      />,
-    );
-    if (doors)
-      fields.push(
-        <Segmented
-          key="open"
-          label="Door"
-          value={sel.every((w) => w.open) ? "open" : "closed"}
-          options={[
-            { id: "closed", label: "Closed" },
-            { id: "open", label: "Open" },
-          ]}
-          onChange={(state) => { set({ open: state === "open" }); }}
-        />,
-      );
-  }
-  if (every(sel, "light")) {
-    const l = sel[0]!;
-    // Radii in the grid's units: bright out to one, dim out to the other.
-    const toUnits = (px: number) => String(Math.round((px / grid.size) * grid.unit * 10) / 10);
-    const toPx = (units: string) => (Number(units) / (grid.unit || 1)) * grid.size;
-    const radius = (key: "bright" | "dim", label: string) => (
-      <label key={key} className="selection-bar-number">
-        {label}
-        <CommitInput
-          type="number"
-          min={0}
-          step={grid.unit || 1}
-          aria-label={`${label} (${grid.unitName})`}
-          value={toUnits(l[key])}
-          onCommit={(v) => {
-            const px = toPx(v);
-            if (!Number.isFinite(px) || px < 0) return;
-            // Dim light reaches at least as far as bright.
-            set(
-              key === "bright"
-                ? { bright: px, dim: Math.max(px, l.dim) }
-                : { dim: px, bright: Math.min(px, l.bright) },
-            );
-          }}
-        />
-        <span className="muted">{grid.unitName}</span>
-      </label>
-    );
-    fields.push(
-      radius("bright", "Bright"),
-      radius("dim", "Dim"),
-      <Button
-        key="flicker"
-        variant="icon"
-        icon={IconLight}
-        label="Flicker"
-        pressed={sel.every((x) => x.flicker)}
-        onClick={() => { set({ flicker: sel.every((x) => x.flicker) ? undefined : true }); }}
-      />,
-    );
-  }
+  if (every(sel, "wall")) fields.push(...wallFields(sel, set));
+  if (every(sel, "light")) fields.push(...lightFields(sel, grid, set));
   if (every(sel, "area"))
     fields.push(
       <Segmented

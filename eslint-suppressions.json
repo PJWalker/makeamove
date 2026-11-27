@@ -41,11 +41,6 @@
       "count": 2
     }
   },
-  "lint/rules/noProps.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "lint/rules/noRedundantTypeSynonyms.ts": {
     "@typescript-eslint/prefer-destructuring": {
       "count": 1
@@ -114,9 +109,6 @@
     },
     "import/extensions": {
       "count": 2
-    },
-    "max-lines-per-function": {
-      "count": 1
     }
   },
   "lint/rules/useDialog.ts": {
@@ -140,9 +132,6 @@
       "count": 1
     },
     "import/extensions": {
-      "count": 1
-    },
-    "max-lines-per-function": {
       "count": 1
     }
   },
@@ -287,9 +276,6 @@
     "max-lines": {
       "count": 1
     },
-    "max-lines-per-function": {
-      "count": 1
-    },
     "unicorn/consistent-function-scoping": {
       "count": 1
     }
@@ -336,9 +322,6 @@
     },
     "import/no-nodejs-modules": {
       "count": 5
-    },
-    "max-lines-per-function": {
-      "count": 1
     },
     "no-console": {
       "count": 4
@@ -393,9 +376,6 @@
     },
     "max-lines": {
       "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 4
     },
     "no-useless-return": {
       "count": 1
@@ -460,9 +440,6 @@
     "complexity": {
       "count": 1
     },
-    "max-lines-per-function": {
-      "count": 2
-    },
     "no-nested-ternary": {
       "count": 1
     }
@@ -482,9 +459,6 @@
     "import/no-unassigned-import": {
       "count": 1
     },
-    "max-lines-per-function": {
-      "count": 1
-    },
     "unicorn/no-await-expression-member": {
       "count": 1
     }
@@ -494,9 +468,6 @@
       "count": 1
     },
     "import/avoid-namespace-import": {
-      "count": 1
-    },
-    "max-lines-per-function": {
       "count": 1
     }
   },
@@ -514,9 +485,6 @@
       "count": 1
     },
     "import/no-unassigned-import": {
-      "count": 1
-    },
-    "max-lines-per-function": {
       "count": 1
     },
     "promise/avoid-new": {
@@ -579,9 +547,6 @@
   "src/campaign/__tests__/peers.test.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 2
-    },
-    "max-lines-per-function": {
-      "count": 1
     },
     "no-await-in-loop": {
       "count": 1
@@ -755,9 +720,6 @@
       "count": 2
     },
     "import/avoid-namespace-import": {
-      "count": 1
-    },
-    "max-lines-per-function": {
       "count": 1
     }
   },
@@ -938,9 +900,6 @@
     "complexity": {
       "count": 2
     },
-    "max-lines-per-function": {
-      "count": 2
-    },
     "no-implicit-coercion": {
       "count": 2
     }
@@ -954,9 +913,6 @@
     },
     "@typescript-eslint/no-unnecessary-condition": {
       "count": 3
-    },
-    "max-lines-per-function": {
-      "count": 1
     },
     "unicorn/consistent-function-scoping": {
       "count": 1
@@ -976,9 +932,6 @@
       "count": 1
     },
     "complexity": {
-      "count": 1
-    },
-    "max-lines-per-function": {
       "count": 1
     },
     "no-implicit-coercion": {
@@ -1055,9 +1008,6 @@
     "import/no-unassigned-import": {
       "count": 1
     },
-    "max-lines-per-function": {
-      "count": 1
-    },
     "no-await-in-loop": {
       "count": 2
     },
@@ -1074,11 +1024,6 @@
       "count": 1
     }
   },
-  "src/features/chat/__tests__/content.test.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "src/features/chat/__tests__/notify.test.ts": {
     "makeamove/test-structure": {
       "count": 5
@@ -1089,9 +1034,6 @@
       "count": 2
     },
     "import/avoid-namespace-import": {
-      "count": 1
-    },
-    "max-lines-per-function": {
       "count": 1
     },
     "unicorn/consistent-function-scoping": {
@@ -1123,9 +1065,6 @@
       "count": 2
     },
     "makeamove/test-structure": {
-      "count": 1
-    },
-    "max-lines-per-function": {
       "count": 1
     }
   },
@@ -1300,9 +1239,6 @@
     "max-depth": {
       "count": 3
     },
-    "max-lines-per-function": {
-      "count": 2
-    },
     "no-nested-ternary": {
       "count": 1
     },
@@ -1342,9 +1278,6 @@
     "import/no-unassigned-import": {
       "count": 1
     },
-    "max-lines-per-function": {
-      "count": 2
-    },
     "unicorn/consistent-function-scoping": {
       "count": 1
     }
@@ -1354,9 +1287,6 @@
       "count": 1
     },
     "import/no-unassigned-import": {
-      "count": 1
-    },
-    "max-lines-per-function": {
       "count": 1
     },
     "no-promise-executor-return": {
@@ -1374,9 +1304,6 @@
       "count": 1
     },
     "makeamove/test-structure": {
-      "count": 1
-    },
-    "max-lines-per-function": {
       "count": 1
     }
   },
@@ -1475,9 +1402,6 @@
     },
     "import/avoid-namespace-import": {
       "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 1
     }
   },
   "src/kernel/commands.ts": {
@@ -1490,9 +1414,6 @@
   },
   "src/lib/__tests__/colour.test.ts": {
     "max-depth": {
-      "count": 1
-    },
-    "max-lines-per-function": {
       "count": 1
     }
   },
@@ -1571,9 +1492,6 @@
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 2
     },
-    "max-lines-per-function": {
-      "count": 1
-    },
     "promise/avoid-new": {
       "count": 1
     },
@@ -1621,9 +1539,6 @@
     },
     "max-lines": {
       "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 5
     },
     "no-implicit-coercion": {
       "count": 1
@@ -1730,15 +1645,7 @@
       "count": 1
     }
   },
-  "src/scene/__tests__/conditionLayout.test.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "src/scene/__tests__/geometry.test.ts": {
-    "max-lines-per-function": {
-      "count": 2
-    },
     "unicorn/consistent-function-scoping": {
       "count": 1
     }
@@ -1768,21 +1675,13 @@
       "count": 4
     },
     "max-lines-per-function": {
-      "count": 3
+      "count": 1
     },
     "unicorn/consistent-function-scoping": {
       "count": 3
     }
   },
-  "src/scene/__tests__/tokenLabelLayout.test.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "src/scene/__tests__/toolCursors.test.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    },
     "no-implicit-coercion": {
       "count": 2
     }
@@ -1793,9 +1692,6 @@
     },
     "@typescript-eslint/restrict-template-expressions": {
       "count": 2
-    },
-    "max-lines-per-function": {
-      "count": 1
     },
     "unicorn/consistent-function-scoping": {
       "count": 1
@@ -1841,7 +1737,7 @@
       "count": 1
     },
     "@typescript-eslint/no-magic-numbers": {
-      "count": 18
+      "count": 17
     },
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 3
@@ -1854,9 +1750,6 @@
     },
     "max-lines": {
       "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 2
     },
     "unicorn/consistent-function-scoping": {
       "count": 3
@@ -1922,11 +1815,6 @@
       "count": 1
     }
   },
-  "src/scene/gestures/move.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "src/scene/gestures/pan.ts": {
     "@typescript-eslint/max-params": {
       "count": 1
@@ -1974,9 +1862,6 @@
     },
     "@typescript-eslint/no-shadow": {
       "count": 7
-    },
-    "max-lines-per-function": {
-      "count": 1
     },
     "no-multi-assign": {
       "count": 1
@@ -2122,7 +2007,7 @@
       "count": 1
     },
     "max-lines-per-function": {
-      "count": 2
+      "count": 1
     },
     "no-multi-assign": {
       "count": 2
@@ -2229,9 +2114,6 @@
     },
     "import/avoid-importing-barrel-files": {
       "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 1
     }
   },
   "src/scene/render/handles.ts": {
@@ -2258,9 +2140,6 @@
     "import/avoid-importing-barrel-files": {
       "count": 1
     },
-    "max-lines-per-function": {
-      "count": 1
-    },
     "unicorn/prefer-code-point": {
       "count": 1
     },
@@ -2283,9 +2162,6 @@
     },
     "import/avoid-importing-barrel-files": {
       "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 1
     }
   },
   "src/scene/render/presence.ts": {
@@ -2306,9 +2182,6 @@
     },
     "max-depth": {
       "count": 3
-    },
-    "max-lines-per-function": {
-      "count": 1
     },
     "no-multi-assign": {
       "count": 1
@@ -2429,9 +2302,6 @@
     "import/avoid-importing-barrel-files": {
       "count": 1
     },
-    "max-lines-per-function": {
-      "count": 1
-    },
     "no-implicit-coercion": {
       "count": 1
     },
@@ -2498,9 +2368,6 @@
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
     },
-    "max-lines-per-function": {
-      "count": 1
-    },
     "no-implicit-coercion": {
       "count": 2
     }
@@ -2520,9 +2387,6 @@
   },
   "src/sync/__tests__/blobs.test.ts": {
     "import/avoid-namespace-import": {
-      "count": 1
-    },
-    "max-lines-per-function": {
       "count": 1
     },
     "no-await-in-loop": {
@@ -2579,9 +2443,6 @@
     "import/avoid-namespace-import": {
       "count": 1
     },
-    "max-lines-per-function": {
-      "count": 1
-    },
     "unicorn/no-array-callback-reference": {
       "count": 5
     }
@@ -2632,9 +2493,6 @@
     "import/avoid-namespace-import": {
       "count": 4
     },
-    "max-lines-per-function": {
-      "count": 1
-    },
     "unicorn/consistent-function-scoping": {
       "count": 1
     }
@@ -2664,9 +2522,6 @@
     "import/avoid-namespace-import": {
       "count": 1
     },
-    "max-lines-per-function": {
-      "count": 1
-    },
     "unicorn/consistent-function-scoping": {
       "count": 1
     }
@@ -2685,7 +2540,7 @@
       "count": 2
     },
     "max-lines-per-function": {
-      "count": 2
+      "count": 1
     },
     "unicorn/explicit-length-check": {
       "count": 1
@@ -2699,9 +2554,6 @@
       "count": 1
     },
     "import/avoid-namespace-import": {
-      "count": 1
-    },
-    "max-lines-per-function": {
       "count": 1
     }
   },
@@ -2724,7 +2576,7 @@
       "count": 1
     },
     "max-lines-per-function": {
-      "count": 2
+      "count": 1
     }
   },
   "src/systems/__tests__/dungeon-world-homebrew.test.ts": {
@@ -2737,9 +2589,6 @@
   },
   "src/systems/__tests__/dungeon-world-library.test.ts": {
     "@typescript-eslint/max-params": {
-      "count": 1
-    },
-    "max-lines-per-function": {
       "count": 1
     },
     "unicorn/consistent-function-scoping": {
@@ -2756,9 +2605,6 @@
     "@typescript-eslint/restrict-template-expressions": {
       "count": 1
     },
-    "max-lines-per-function": {
-      "count": 2
-    },
     "no-negated-condition": {
       "count": 1
     },
@@ -2768,9 +2614,6 @@
   },
   "src/systems/__tests__/dungeon-world.test.ts": {
     "import/no-unassigned-import": {
-      "count": 1
-    },
-    "max-lines-per-function": {
       "count": 1
     }
   },
@@ -2791,7 +2634,7 @@
       "count": 1
     },
     "max-lines-per-function": {
-      "count": 5
+      "count": 1
     },
     "unicorn/consistent-function-scoping": {
       "count": 1
@@ -2905,9 +2748,6 @@
     },
     "max-lines": {
       "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 2
     },
     "no-implicit-coercion": {
       "count": 1
@@ -3044,9 +2884,6 @@
     "max-lines": {
       "count": 1
     },
-    "max-lines-per-function": {
-      "count": 1
-    },
     "no-nested-ternary": {
       "count": 3
     }
@@ -3100,9 +2937,6 @@
     "@typescript-eslint/restrict-template-expressions": {
       "count": 3
     },
-    "max-lines-per-function": {
-      "count": 2
-    },
     "unicorn/no-array-callback-reference": {
       "count": 1
     }
@@ -3118,9 +2952,6 @@
   "src/systems/dungeon-world-2/startingOptions.ts": {
     "@typescript-eslint/restrict-template-expressions": {
       "count": 4
-    },
-    "max-lines-per-function": {
-      "count": 1
     }
   },
   "src/systems/dungeon-world-2/wealth.ts": {
@@ -3154,9 +2985,6 @@
     },
     "default-case": {
       "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 1
     }
   },
   "src/systems/extensionTypes.ts": {
@@ -3175,9 +3003,6 @@
       "count": 1
     },
     "max-depth": {
-      "count": 1
-    },
-    "max-lines-per-function": {
       "count": 1
     }
   },
@@ -3748,9 +3573,6 @@
     "@typescript-eslint/max-params": {
       "count": 1
     },
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 2
-    },
     "@typescript-eslint/no-shadow": {
       "count": 1
     },
@@ -3893,9 +3715,6 @@
     "@typescript-eslint/restrict-template-expressions": {
       "count": 2
     },
-    "max-lines-per-function": {
-      "count": 3
-    },
     "unicorn/no-array-reduce": {
       "count": 1
     }
@@ -3964,9 +3783,6 @@
     "max-lines": {
       "count": 1
     },
-    "max-lines-per-function": {
-      "count": 3
-    },
     "unicorn/no-array-callback-reference": {
       "count": 1
     }
@@ -3991,9 +3807,6 @@
     },
     "@typescript-eslint/no-magic-numbers": {
       "count": 7
-    },
-    "max-lines-per-function": {
-      "count": 1
     }
   },
   "src/table/dockStrip.ts": {
@@ -4047,9 +3860,6 @@
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
     },
-    "max-lines-per-function": {
-      "count": 1
-    },
     "no-implicit-coercion": {
       "count": 2
     },
@@ -4076,7 +3886,7 @@
       "count": 12
     },
     "max-lines-per-function": {
-      "count": 2
+      "count": 1
     },
     "no-promise-executor-return": {
       "count": 3
@@ -4110,9 +3920,6 @@
     "consistent-return": {
       "count": 1
     },
-    "max-lines-per-function": {
-      "count": 1
-    },
     "react-hooks/todo": {
       "count": 1
     }
@@ -4132,9 +3939,6 @@
     },
     "consistent-return": {
       "count": 8
-    },
-    "max-lines-per-function": {
-      "count": 1
     },
     "no-implicit-coercion": {
       "count": 1
@@ -4500,9 +4304,6 @@
     },
     "@typescript-eslint/restrict-template-expressions": {
       "count": 9
-    },
-    "max-lines-per-function": {
-      "count": 1
     }
   },
   "src/ui/replay.ts": {
@@ -4558,9 +4359,6 @@
     "@typescript-eslint/restrict-template-expressions": {
       "count": 4
     },
-    "max-lines-per-function": {
-      "count": 1
-    },
     "no-promise-executor-return": {
       "count": 1
     },
@@ -4602,9 +4400,6 @@
       "count": 6
     },
     "consistent-return": {
-      "count": 1
-    },
-    "max-lines-per-function": {
       "count": 1
     },
     "react-hooks/todo": {
@@ -4817,9 +4612,6 @@
     "makeamove/test-structure": {
       "count": 2
     },
-    "max-lines-per-function": {
-      "count": 1
-    },
     "no-implicit-coercion": {
       "count": 1
     },
@@ -4828,9 +4620,6 @@
     }
   },
   "src/workspace/__tests__/layoutModel.test.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    },
     "unicorn/consistent-function-scoping": {
       "count": 1
     }
@@ -4867,9 +4656,6 @@
       "count": 2
     },
     "complexity": {
-      "count": 1
-    },
-    "max-lines-per-function": {
       "count": 1
     },
     "no-implicit-coercion": {
@@ -5085,9 +4871,6 @@
     "complexity": {
       "count": 2
     },
-    "max-lines-per-function": {
-      "count": 1
-    },
     "no-implicit-coercion": {
       "count": 3
     }
@@ -5143,9 +4926,6 @@
     }
   },
   "src/workspace/libraryActions.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    },
     "no-implicit-coercion": {
       "count": 1
     }
@@ -5240,6 +5020,9 @@
     "jsx-a11y/prefer-tag-over-role": {
       "count": 1
     },
+    "max-lines-per-function": {
+      "count": 1
+    },
     "no-implicit-coercion": {
       "count": 2
     },
@@ -5331,9 +5114,6 @@
     "@typescript-eslint/restrict-template-expressions": {
       "count": 2
     },
-    "max-lines-per-function": {
-      "count": 1
-    },
     "unicorn/consistent-function-scoping": {
       "count": 3
     }
@@ -5358,9 +5138,6 @@
     },
     "import/no-rename-default": {
       "count": 2
-    },
-    "max-lines-per-function": {
-      "count": 1
     },
     "new-cap": {
       "count": 2

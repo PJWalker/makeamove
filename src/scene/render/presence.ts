@@ -193,7 +193,7 @@ export default class PresenceLayer {
         const move = m.self ? undefined : this.cursors.get(m.id);
         if (move && now - move.start < CURSOR_GLIDE_MS) animating = true;
         const c = toScreen(cam, move ? cursorAt(move, now) : m.cursor);
-        g.circle(c.x, c.y, 6).fill(m.colour).stroke({ color: 0xff_ff_ff, width: 2 });
+        g.circle(c.x, c.y, 6).fill(m.colour).stroke({ color: 0xFF_FF_FF, width: 2 });
       }
 
       if (m.ruler) {
@@ -236,7 +236,7 @@ export default class PresenceLayer {
           g.moveTo(previous.x, previous.y)
             .lineTo(current.x, current.y)
             .stroke({
-              color: 0xff_ff_ff,
+              color: 0xFF_FF_FF,
               width: 1 + 2 * f,
               alpha: f,
               cap: "round",

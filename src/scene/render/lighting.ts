@@ -166,7 +166,7 @@ export class LightingLayer {
       for (const element of this.lightLayer.visible ? areas : []) {
         if (element.type !== "area") continue;
         const poly = flat(areaPolygon({ ...element, ...at(element) }));
-        if (element.tone === "light") erase.poly(poly).fill({ color: 0xff_ff_ff, alpha: 1 });
+        if (element.tone === "light") erase.poly(poly).fill({ color: 0xFF_FF_FF, alpha: 1 });
         else dark.poly(poly).fill({ color: 0x00_00_00, alpha: strength });
       }
       for (const element of placed) {
@@ -182,7 +182,7 @@ export class LightingLayer {
     this.sight = null;
     const seeing = new Set<string>();
     if (viewers?.length) {
-      fg.rect(box.x, box.y, box.w, box.h).fill({ color: 0x05_07_0c, alpha: 1 });
+      fg.rect(box.x, box.y, box.w, box.h).fill({ color: 0x05_07_0C, alpha: 1 });
       const sightWalls = sightSegments(placed.filter((element) => !s.hidden.has(element.id)));
       const from = viewers.map((element) => {
         const t = at(element);
@@ -217,7 +217,7 @@ export class LightingLayer {
       const poly = flat(
         shapeOutline(element, element.w * k, element.h * k).map((p) => fromLocal(element, p)),
       );
-      erase?.poly(poly).fill({ color: 0xff_ff_ff, alpha: lift });
+      erase?.poly(poly).fill({ color: 0xFF_FF_FF, alpha: lift });
       tint.poly(poly).fill({ color: colour.toNumber(), alpha: (0.14 * colour.alpha) / rings });
     }
   }

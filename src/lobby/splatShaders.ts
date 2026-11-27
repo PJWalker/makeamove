@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-magic-numbers, max-lines-per-function, new-cap */
+/* eslint-disable @typescript-eslint/no-magic-numbers, new-cap */
 import {
   attribute,
   cameraProjectionMatrix,

@@ -377,7 +377,6 @@ const SKIN = hex("#c8a080");
 const BONE = hex("#d8c8a0");
 
 /** One of the larger points of interest that can appear in a cave. */
-// eslint-disable-next-line max-lines-per-function
 function caveDiscovery(sculpt: Sculptor) {
   const { random, spread, pick, ellipsoid, tube, speck } = sculpt;
   const z = 1 - random() * 29;
@@ -466,7 +465,6 @@ function caveDiscovery(sculpt: Sculptor) {
 }
 
 /** Small environmental features that vary in placement and appearance with every cave. */
-// eslint-disable-next-line max-lines-per-function
 function caveDetails(sculpt: Sculptor) {
   const { random, spread, pick, ellipsoid, tube, speck } = sculpt;
   const crystalColours = [hex("#6688aa"), hex("#8870a0"), hex("#75a8a0"), hex("#a49a78")];

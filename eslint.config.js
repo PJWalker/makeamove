@@ -104,6 +104,7 @@ export default defineConfig([
       "one-var": "off",
       "sort-imports": "off",
       "max-lines": ["error", { max: 500, skipBlankLines: false, skipComments: false }],
+      "max-lines-per-function": ["error", { max: 200, skipBlankLines: false, skipComments: false }],
       "capitalized-comments": "off",
       curly: "off",
       "func-style": "off",
@@ -828,7 +829,6 @@ export default defineConfig([
       complexity: ["error", 57],
       "max-depth": ["error", 3],
       "max-nested-callbacks": ["error", 4],
-      "max-lines-per-function": ["error", { max: 531, skipBlankLines: false, skipComments: false }],
     },
   },
   {

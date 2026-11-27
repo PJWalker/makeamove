@@ -314,7 +314,7 @@ export class Lamp {
     lamp.set([s.at.x, s.at.y, s.radius, this.tint ? 2 : s.falloff ? 0 : 1]);
     const colour = u["uColour"] as Float32Array;
     // A see-through colour tints less: towards white, which doesn't tint at all.
-    const c = new Color(s.colour ?? 0xff_ff_ff);
+    const c = new Color(s.colour ?? 0xFF_FF_FF);
     const toWhite = (v: number) => 1 - c.alpha * (1 - v);
     colour.set([toWhite(c.red), toWhite(c.green), toWhite(c.blue)], 0);
     // The nearest walls, if there are more than fit.
