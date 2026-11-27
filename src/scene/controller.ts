@@ -187,7 +187,15 @@ export class SceneController implements ToolContext {
       this.renderer.setGrid(this.scene.grid());
       this.renderer.invalidate("overlay");
     };
+    // A selected pin that goes out of sight, or whose target goes, drops out of the selection.
+    this.renderer.onPinsHidden = (ids) => {
+      const sel = this.selection.value.filter((id) => !ids.has(id));
+      if (sel.length !== this.selection.value.length) this.selection.value = sel;
+    };
     this.disposers.push(
+      () => {
+        this.renderer.onPinsHidden = null;
+      },
       this.scene.elements.observe(refresh),
       this.scene.settings.observe(regrid),
       watch([this.selection], () => {
@@ -538,9 +546,15 @@ export class SceneController implements ToolContext {
     const kinds = this.tools.pickingKinds();
     return (element) => {
       const kind = kindOf(element);
-      if (element.type === "pin" && this.renderer.pinLookOf(element) === "hidden") return false;
-      return (this.gm || !GM_KINDS.includes(kind)) && kinds.includes(kind);
+      return (
+        !this.hiddenPin(element) && (this.gm || !GM_KINDS.includes(kind)) && kinds.includes(kind)
+      );
     };
+  }
+
+  /** Whether an element is a pin hidden from this device: never picked, hit or kept selected. */
+  private hiddenPin(element: SceneElement): boolean {
+    return element.type === "pin" && this.renderer.pinLookOf(element) === "hidden";
   }
 
   /** Topmost element under p. Locked elements only count when asked. */
@@ -551,7 +565,7 @@ export class SceneController implements ToolContext {
       const element = this.elements[index];
       if (!element) continue;
       if (element.locked && !includeLocked) continue;
-      if (!pickable(element)) continue;
+      if (!pickable(element) || this.hiddenPin(element)) continue;
       if (hits(element, p, tolerance)) return element;
     }
     return null;

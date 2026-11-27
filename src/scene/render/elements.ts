@@ -68,17 +68,21 @@ export class ElementLayer {
    * Show each pin as it looks to this viewer (pins.ts): hidden, faded for the
    * GM's own (leading to a GM page) and fainter still when its target is gone,
    * named for what it leads to. Runs after syncHidden, once sight is known.
+   * Returns the pins hidden from this viewer.
    */
   syncPins(lookOf: (pin: PinElement) => PinLook, labelOf: (pin: PinElement) => string) {
+    const hidden = new Set<string>();
     for (const [id, view] of this.views) {
       const element = this.state.byId.get(id);
       if (element?.type !== "pin" || !view.pinLabel) continue;
       const look = lookOf(element);
+      if (look === "hidden") hidden.add(id);
       view.root.visible &&= look !== "hidden";
       view.root.alpha = PIN_ALPHA[look];
       const label = labelOf(element);
       if (view.pinLabel.text !== label) view.pinLabel.text = label;
     }
+    return hidden;
   }
 
   /** Play out the moving effects; whether they need more frames (not under reduced motion). */

@@ -18,14 +18,14 @@ test("a pin on the map links to a page and opens it when clicked", async ({ page
   await page.getByRole("button", { name: "Back to the notes" }).click();
   await expect(page.getByRole("textbox", { name: "Title" })).toHaveCount(0);
 
-  // The selection bar names it, and clicking the pin opens its page.
+  // With the Select tool, the selection bar names it, and clicking the pin opens its page.
+  await settled(page);
+  await page.getByRole("button", { name: "Select (V)" }).click();
   await expect(
     page
       .getByRole("toolbar", { name: "Selection" })
       .getByRole("button", { name: "Pin To: The Drowned Shrine" }),
   ).toBeVisible();
-  await settled(page);
-  await page.getByRole("button", { name: "Select (V)" }).click();
   await page.mouse.click(at.x, at.y - 10);
   await expect(page.getByRole("textbox", { name: "Title" })).toHaveValue("The Drowned Shrine");
 });

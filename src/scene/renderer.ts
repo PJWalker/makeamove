@@ -133,6 +133,8 @@ export class SceneRenderer implements RenderState {
     top: 0,
   });
   onCameraChange: ((cam: Camera) => void) | null = null;
+  /** Told, each frame, of the pins hidden from this viewer (out of sight, or leading somewhere they can't see). */
+  onPinsHidden: ((ids: ReadonlySet<string>) => void) | null = null;
   /** What a pin leads to, on this device: its title and whether it's a GM page, or null if it isn't here. */
   private pinTarget: ((link: LinkReference) => PinTarget | null) | null = null;
 
@@ -272,10 +274,7 @@ export class SceneRenderer implements RenderState {
     if (d.grid) this.gridLayer.draw(this);
     if (d.elements || d.previews || d.camera || d.lighting)
       this.lightingLayer.draw(this.lighting, this.viewers);
-    this.elementLayer.syncPins(
-      (pin) => this.pinLookOf(pin),
-      (pin) => this.targetOf(pin)?.label ?? "Missing",
-    );
+    this.syncPins();
     if (d.overlay) {
       const unseen = (t: Transform) => this.lightingLayer.unseen(t);
       this.draftLayer.draw(this.draft, this.layers, this.camera.zoom);
@@ -354,6 +353,15 @@ export class SceneRenderer implements RenderState {
   /** How a pin looks to this device. */
   pinLookOf(pin: PinElement): PinLook {
     return pinLook(this.pinSight(pin));
+  }
+
+  /** Show each pin as it looks to this device, and say which are hidden from it. */
+  private syncPins() {
+    const hidden = this.elementLayer.syncPins(
+      (pin) => this.pinLookOf(pin),
+      (pin) => this.targetOf(pin)?.label ?? "Missing",
+    );
+    if (hidden.size > 0) this.onPinsHidden?.(hidden);
   }
 
   private targetOf(pin: PinElement): PinTarget | null {

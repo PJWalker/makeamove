@@ -110,11 +110,13 @@ export function PinTargetField({
   const { options, choose } = usePinTargets();
   const { link } = pins[0]!;
   const same = pins.every((p) => p.link === link);
-  // Renamed as its page, shared or the GM's, changes.
+  // Renamed as what it leads to (a page, shared or the GM's, a character or a scene) changes.
   const labelOf = () =>
     same ? (linkTarget(context.campaign, link)?.label ?? "Missing") : "Several";
   const vault = useQuery(context.campaign.vault);
   useQuery(context.campaign.notes, labelOf);
+  useQuery(context.campaign.characters, labelOf);
+  useQuery(context.campaign.scenes, labelOf);
   const label = useQuery(vault?.notes, labelOf);
   return (
     <FilterableMenu
