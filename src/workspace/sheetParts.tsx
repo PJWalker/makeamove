@@ -21,6 +21,7 @@ import { Segmented, SegmentedOrSelect } from "../ui/Segmented";
 import { ContextMenu } from "../ui/ContextMenu";
 import type { MenuItem } from "../ui/ContextMenu";
 import { sessionUseIds } from "../features/characters/sessionMoves";
+import { moveSlot } from "../features/characters/hotbar";
 import { entity } from "./dragEntities";
 import { dragEntity } from "./entityDrag";
 import { actionMenuItems } from "./actionMenu";
@@ -37,7 +38,6 @@ import { MoveBody } from "./MoveBody";
 import { useCampaign } from "./campaignContext";
 import { chooseGraphic } from "./commands/campaign";
 import { setField, toggleCondition } from "./commands/characters";
-import { moveSlot } from "../features/characters/hotbar";
 
 /*
  * Pieces every system's sheet can use: counters, the action list, and the
@@ -66,7 +66,7 @@ export function Counter({
       className="counter"
       data-label={label}
       data-fill={max !== undefined}
-      data-status={!!status}
+      data-status={Boolean(status)}
       style={{
         ...(max !== undefined && {
           "--fill": `${Math.max(0, Math.min(1, max > 0 ? value / max : 0)) * 100}%`,
