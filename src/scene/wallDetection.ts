@@ -7,6 +7,7 @@ import {
   outlinePaths,
   shadesOf,
   wallsAlong,
+  wallsNotIn,
 } from "./detectWalls";
 import type { DetectSettings, Shades } from "./detectWalls";
 import type { ToolContext } from "./gestures/types";
@@ -27,12 +28,11 @@ const PREVIEW = { colour: "#ffd27a", width: 3 };
 interface Sampled {
   hash: string;
   shades: Shades;
-  samplesPerCell: number;
 }
 
 /**
  * Finding the walls on a map (see detectWalls.ts), for the GM to tune and
- * then add as one undo step. Until then they're only shown, as a draft.
+ * then add as one undo step. Until then they're only shown, as a proposal.
  */
 export class WallDetector {
   readonly state = store<WallDetection | null>(null);
@@ -40,6 +40,8 @@ export class WallDetector {
   private sampled: Sampled | null = null;
   /** The map's place when its walls were last found. */
   private placed: Transform | null = null;
+  /** Counts refreshes, so one overtaken by a later one (or by stopping) drops its result. */
+  private run = 0;
 
   constructor(c: ToolContext) {
     this.c = c;
@@ -71,8 +73,9 @@ export class WallDetector {
     await this.refresh();
   }
 
-  /** Find the walls again, as the map or settings are now. */
+  /** Find the walls again, as the map, grid and settings are now. */
   async refresh() {
+    const run = ++this.run;
     const state = this.state.value;
     const map = state && this.c.element(state.mapId);
     if (map?.type !== "map") {
@@ -80,30 +83,40 @@ export class WallDetector {
       return;
     }
     this.placed = { x: map.x, y: map.y, w: map.w, h: map.h, rot: map.rot };
-    const sampled = await this.sample(map);
-    // Stopped, or moved on to another map, while the image loaded.
-    if (this.state.value?.mapId !== map.id) return;
+    const { grid } = this.c.renderer;
+    const cell = cellOr(grid, DEFAULT_GRID.size);
+    const perSample = Math.max(
+      cell / SAMPLES_PER_CELL,
+      Math.max(map.w, map.h) / MAX_SAMPLES,
+      map.w / map.image.width,
+    );
+    const shades = await this.sample(map, perSample);
+    // Overtaken while the image loaded.
     const now = this.state.value;
-    if (!sampled) {
+    if (run !== this.run || !now) return;
+    if (!shades) {
       this.state.value = { ...now, walls: [] };
       this.show();
       return;
     }
-    const { shades, samplesPerCell } = sampled;
-    const paths = outlinePaths(shades, now.settings, samplesPerCell);
-    const existing = this.c.allElements().filter((element) => element.type === "wall");
+    const paths = outlinePaths(shades, now.settings, cell / perSample);
     const frame = { frame: map, width: shades.width, height: shades.height };
     this.state.value = {
       ...now,
-      walls: wallsAlong(paths, frame, { grid: this.c.renderer.grid, existing }),
+      walls: wallsAlong(paths, frame, { grid, existing: this.existing() }),
     };
     this.show();
   }
 
+  private existing() {
+    return this.c.allElements().filter((element) => element.type === "wall");
+  }
+
   /** Add the walls found to the scene, as one undo step, and finish. */
   commit() {
-    const walls = this.state.value?.walls;
-    if (walls?.length)
+    // Walls someone has added since they were found go in only once.
+    const walls = wallsNotIn(this.state.value?.walls ?? [], this.existing());
+    if (walls.length > 0)
       this.c.scene.add(
         ...walls.map((t) => ({ type: "wall" as const, layer: "over" as const, ...t })),
       );
@@ -112,6 +125,7 @@ export class WallDetector {
 
   stop() {
     if (!this.state.value) return;
+    this.run++;
     this.state.value = null;
     this.placed = null;
     this.show();
@@ -121,24 +135,19 @@ export class WallDetector {
   private show() {
     const walls = this.state.value?.walls;
     const { renderer } = this.c;
-    renderer.draft = walls
+    renderer.proposal = walls
       ? { kind: "walls", walls: walls.map((t) => wallEnds(t)), layer: "over", ...PREVIEW }
       : null;
     renderer.invalidate("overlay", "presence");
   }
 
   /**
-   * The map's image cut into a few samples to a grid cell, at most
-   * MAX_SAMPLES along its longer side and no finer than the image itself.
+   * The map's image cut into samples `perSample` world px apart: a few to a
+   * grid cell, at most MAX_SAMPLES along its longer side and no finer than
+   * the image itself.
    */
-  private async sample(map: MapElement): Promise<Sampled | null> {
-    const cell = cellOr(this.c.renderer.grid, DEFAULT_GRID.size);
+  private async sample(map: MapElement, perSample: number): Promise<Shades | null> {
     const { image } = map;
-    const perSample = Math.max(
-      cell / SAMPLES_PER_CELL,
-      Math.max(map.w, map.h) / MAX_SAMPLES,
-      map.w / image.width,
-    );
     const width = Math.max(1, Math.round(map.w / perSample));
     const height = Math.max(1, Math.round(map.h / perSample));
     const known = this.sampled;
@@ -147,7 +156,7 @@ export class WallDetector {
       known.shades.width === width &&
       known.shades.height === height
     )
-      return known;
+      return known.shades;
     const bitmap = await loadBitmap(image.hash, this.c.renderer.peers);
     if (!bitmap) return null;
     const canvas = new OffscreenCanvas(width, height);
@@ -156,7 +165,7 @@ export class WallDetector {
     g.imageSmoothingQuality = "high";
     g.drawImage(bitmap, 0, 0, width, height);
     const shades = shadesOf(g.getImageData(0, 0, width, height).data, width, height);
-    this.sampled = { hash: image.hash, shades, samplesPerCell: cell / perSample };
-    return this.sampled;
+    this.sampled = { hash: image.hash, shades };
+    return shades;
   }
 }

@@ -278,6 +278,28 @@ function segmentKey(a: Point, b: Point): string {
   return p! < q! ? `${p!} ${q!}` : `${q!} ${p!}`;
 }
 
+/** The keys of walls' ends, to tell when a wall is already there. */
+function wallKeys(walls: readonly Transform[]): Set<string> {
+  return new Set(
+    walls.map((t) => {
+      const { a, b } = wallEnds(t);
+      return segmentKey(a, b);
+    }),
+  );
+}
+
+/** The walls not already among `existing`. */
+export function wallsNotIn(
+  walls: readonly Transform[],
+  existing: readonly Transform[],
+): Transform[] {
+  const seen = wallKeys(existing);
+  return walls.filter((t) => {
+    const { a, b } = wallEnds(t);
+    return !seen.has(segmentKey(a, b));
+  });
+}
+
 const COLLINEAR = 1e-6;
 
 /** Whether going from `a` through `b` to `c` carries straight on. */
@@ -325,12 +347,7 @@ export function wallsAlong(
     const q = snapToLattice(grid, p, grid.size);
     return reach && Math.hypot(q.x - p.x, q.y - p.y) <= reach ? q : p;
   };
-  const seen = new Set(
-    existing.map((t) => {
-      const { a, b } = wallEnds(t);
-      return segmentKey(a, b);
-    }),
-  );
+  const seen = wallKeys(existing);
   const walls: Transform[] = [];
   for (const path of paths) {
     const points = joinRuns(path.map((c) => place(c)));

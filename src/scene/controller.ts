@@ -177,6 +177,8 @@ export class SceneController implements ToolContext {
     const regrid = () => {
       this.renderer.setGrid(this.scene.grid());
       this.renderer.invalidate("overlay");
+      // Walls being found snap to the grid.
+      if (this.wallDetection.state.value) void this.wallDetection.refresh();
     };
     this.disposers.push(
       this.scene.elements.observe(refresh),
@@ -763,6 +765,7 @@ export class SceneController implements ToolContext {
         return true;
       }
       case "Escape": {
+        this.wallDetection.stop();
         if (this.gesture || this.polygon.active) this.cancelGesture();
         else this.selection.value = [];
         return true;
