@@ -115,7 +115,10 @@ lemma added_ensures(s: Steps, kind: StepKind, stack: string)
   ensures forall k: StepKind, x :: (((k != kind) || (x != stack)) ==> (occurrences(stepsOf(added(s, kind, stack), k), x) == occurrences(stepsOf(s, k), x)))
   ensures (stepsOf(added(s, kind, stack), kind)[(|stepsOf(added(s, kind, stack), kind)| - 1)] == stack)
 {
-  forall x {
+  forall x
+    ensures occurrences(s.undo + [stack], x) == occurrences(s.undo, x) + (if x == stack then 1 else 0)
+    ensures occurrences(s.redo + [stack], x) == occurrences(s.redo, x) + (if x == stack then 1 else 0)
+  {
     OccurrencesSnoc(s.undo, stack, x);
     OccurrencesSnoc(s.redo, stack, x);
   }
