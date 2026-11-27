@@ -26,6 +26,10 @@
     letter-spacing: -0.01em;
     font-weight: 700;
     color: var(--accent);
+    /* Lifted off the night sky behind it (CaveBackdrop.tsx). */
+    text-shadow:
+      0 2px 14px #000,
+      0 0 32px oklch(20% 0.08 265 / 0.9);
   }
   .lobby-header p {
     color: var(--text-muted);
@@ -110,10 +114,18 @@
     font-size: var(--text-xs);
     line-height: 1.45;
   }
-  .welcome-features li:nth-child(2) { animation-delay: 90ms; }
-  .welcome-features li:nth-child(3) { animation-delay: 180ms; }
-  .welcome-features li:nth-child(4) { animation-delay: 270ms; }
-  .welcome-features li:nth-child(5) { animation-delay: 360ms; }
+  .welcome-features li:nth-child(2) {
+    animation-delay: 90ms;
+  }
+  .welcome-features li:nth-child(3) {
+    animation-delay: 180ms;
+  }
+  .welcome-features li:nth-child(4) {
+    animation-delay: 270ms;
+  }
+  .welcome-features li:nth-child(5) {
+    animation-delay: 360ms;
+  }
   .welcome-features li svg {
     color: var(--accent);
     transition: rotate 300ms var(--ease);

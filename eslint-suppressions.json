@@ -1835,11 +1835,6 @@
       "count": 2
     }
   },
-  "src/lobby/crossProcess.ts": {
-    "import/prefer-default-export": {
-      "count": 1
-    }
-  },
   "src/lobby/splatCloud.ts": {
     "max-lines-per-function": {
       "count": 1

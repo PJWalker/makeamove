@@ -1,7 +1,7 @@
 @layer components {
   /*
    * The lobby's backdrop (CaveBackdrop.tsx): a canvas covering the lobby,
-   * fading into the dark at the top.
+   * drawn in chunky pixels and scaled up without smoothing.
    */
   .cave-backdrop {
     position: fixed;
@@ -14,6 +14,6 @@
     display: block;
     width: 100%;
     height: 100%;
-    mask-image: linear-gradient(to bottom, transparent, #000 22%);
+    image-rendering: pixelated;
   }
 }

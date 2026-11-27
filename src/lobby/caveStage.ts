@@ -5,15 +5,16 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
 import { reducedMotion } from "../ui/transition";
 import { buildCave, VIEWER } from "./caveScene";
-import { CROSS_PROCESS } from "./crossProcess";
+import painterly from "./painterly";
 import { hex, pack } from "./splat";
 import { splatCloud } from "./splatCloud";
 
 /*
  * Puts the cave (caveScene.ts) on a canvas and keeps it alive: the torches
  * flicker and smoke, water drips, the wisp flies off to scout and back, and the viewer's eye follows the mouse a little,
- * so the cave shifts in depth. The finished picture is lightly cross-processed
- * (crossProcess.ts). With reduced motion it's a still picture.
+ * so the cave shifts in depth. It's drawn in chunky pixels, a fraction of the
+ * screen's resolution, then painted over in brushstrokes under a swirling night
+ * sky (painterly.ts). With reduced motion it's a still picture.
  */
 
 const DARK = "#04050a";
@@ -25,6 +26,8 @@ const CROP = 0.72;
 const SWAY = { x: 0.4, y: 0.2 };
 /** How far the eye moves before the splats are re-sorted. */
 const RESORT = 0.05;
+/** How many CSS pixels wide each of the picture's pixels is. */
+const PIXEL = 3;
 
 /**
  * Frames the view so the party stays at the bottom: the bottom edge stays put,
@@ -83,7 +86,8 @@ export function stageCave(canvas: HTMLCanvasElement): () => void {
   const camera = new PerspectiveCamera();
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  composer.addPass(new ShaderPass(CROSS_PROCESS));
+  const paint = painterly();
+  composer.addPass(new ShaderPass(paint.material));
   const eye = new Vector3(...VIEWER.eye);
   const target = new Vector3(...VIEWER.target);
   const sortedFrom = new Vector3(Infinity, 0, 0);
@@ -101,6 +105,8 @@ export function stageCave(canvas: HTMLCanvasElement): () => void {
       sortedFrom.copy(camera.position);
     }
     uniforms.time.value = seconds;
+    paint.uniforms.time.value = seconds;
+    paint.uniforms.sway.value.set(sway.x, sway.y);
     for (const [index, light] of lights.entries()) {
       light.moved.set(...light.drift(seconds));
       light.at.copy(light.start).add(light.moved);
@@ -127,11 +133,12 @@ export function stageCave(canvas: HTMLCanvasElement): () => void {
   const resize = () => {
     const { clientWidth: width, clientHeight: height } = canvas;
     if (!width || !height) return;
-    renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+    renderer.setPixelRatio(1 / PIXEL);
     renderer.setSize(width, height, false);
     composer.setPixelRatio(renderer.getPixelRatio());
     composer.setSize(width, height);
     uniforms.viewport.value.set(canvas.width, canvas.height);
+    paint.uniforms.resolution.value.set(canvas.width, canvas.height);
     frame(camera, width / height);
     if (!animation) play();
   };
