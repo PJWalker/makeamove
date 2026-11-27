@@ -18,6 +18,7 @@ const NO_ELEMENTS: Record<SceneElement["type"], number> = {
   light: 0,
   area: 0,
   effect: 0,
+  pin: 0,
 };
 
 /** The tutorial's scene, if it's the one open on the canvas. */

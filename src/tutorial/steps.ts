@@ -128,6 +128,14 @@ export const STEPS: readonly Step[] = [
     anchors: [{ ui: "new-note" }, { panel: "notes" }],
   },
   {
+    id: "pin",
+    section: "At the Table",
+    title: "Pin a Page to the Map",
+    text: "Pick Pins and click the map, then choose your new page. With Select, click the pin to open it. Dragging a note or scene onto the map pins it too.",
+    goal: { kind: "more", of: "pin" },
+    anchors: [{ tool: "pin" }],
+  },
+  {
     id: "door",
     section: "Running the Game",
     title: "Open the Door",
