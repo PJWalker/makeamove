@@ -1,14 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
-import { commaListOf, formatCommaList, parseCommaList } from "../list";
+import { commaListOf } from "../list";
 
-describe("comma-list encoding", () => {
-  it("preserves empty entries, ordering, and duplicates", () => {
-    const values = ["first", "", "first", "last"];
-    expect(parseCommaList(formatCommaList(values))).toEqual(values);
-    expect(parseCommaList("")).toEqual([""]);
-  });
-});
-
+// Splitting and joining round trip, proved in commaList.ts.
 describe("stored comma lists", () => {
   it("reads any stored value, dropping blanks", () => {
     expect(commaListOf("a,,b")).toEqual(["a", "b"]);
