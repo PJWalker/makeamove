@@ -2,7 +2,7 @@ import { store, watch } from "../lib/store";
 import type { CampaignDefaults } from "../campaign/campaign";
 import { device } from "../platform/device";
 
-import { importImage, imageColour } from "../media/images";
+import { importImage, imageColour, squareGridOf } from "../media/images";
 import type {
   BlobReference,
   EntityGraphic,
@@ -17,8 +17,9 @@ import { readSceneCamera, saveSceneCamera } from "./cameraMemory";
 import { bounds, hits } from "./geometry";
 import { alignFrame, alignScale, guessCells } from "./alignMap";
 import type { Box, Cells, Frame } from "./alignMap";
+import fitImageGrid from "./autoAlign";
 import { cellOr, gridPitch, nearestGridPoint, snapPoint } from "./grid";
-import type { Point } from "./grid";
+import type { Grid, Point } from "./grid";
 import { tokenDistance } from "./measure";
 import { conversion, imageElement, newToken, randomTokenColour } from "./newElements";
 import type { TokenSpec } from "./newElements";
@@ -52,6 +53,23 @@ const ARROW_NUDGES: Record<string, Point> = {
 /** Just the place, size and rotation of `t`, without the rest of what it holds. */
 function transformOf(t: Transform): Transform {
   return { x: t.x, y: t.y, w: t.w, h: t.h, rot: t.rot };
+}
+
+/** A map whose image has a square grid drawn on it, scaled and placed so that grid lines up with the scene's. */
+async function alignedToImageGrid<M extends Frame & NewElement>(
+  map: M,
+  image: Blob,
+  grid: Grid,
+): Promise<M> {
+  if (grid.type !== "square") return map;
+  try {
+    const found = await squareGridOf(image);
+    const frame = found && fitImageGrid(map, found, grid);
+    return frame ? { ...map, ...frame } : map;
+  } catch (error) {
+    console.error("Couldn't look for a grid on a map image", error);
+    return map;
+  }
 }
 
 /**
@@ -1088,13 +1106,17 @@ export class SceneController implements ToolContext {
           }
         }),
       );
-      for (const [index, image] of imported.entries()) {
-        if (!image) continue;
-        const file = images[index]!;
-        const shift = index * cellOr(grid, 40);
-        const p = { x: at.x + shift, y: at.y + shift };
-        added.push(imageElement(grid, image, file.name, p, this.newTokenLook(true)));
-      }
+      const placed = await Promise.all(
+        imported.map(async (image, index) => {
+          if (!image) return null;
+          const file = images[index]!;
+          const shift = index * cellOr(grid, 40);
+          const p = { x: at.x + shift, y: at.y + shift };
+          const element = imageElement(grid, image, file.name, p, this.newTokenLook(true));
+          return element.type === "map" ? alignedToImageGrid(element, file, grid) : element;
+        }),
+      );
+      added.push(...placed.filter((element) => element !== null));
     } finally {
       this.updateCursor();
     }
