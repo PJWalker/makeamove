@@ -1,15 +1,12 @@
 import {
   CanvasTexture,
-  
-  
   Mesh,
   MeshPhysicalMaterial,
   MeshStandardMaterial,
   RepeatWrapping,
-  SRGBColorSpace
-  
+  SRGBColorSpace,
 } from "three";
-import type {BufferGeometry, Material, Object3D} from "three";
+import type { BufferGeometry, Material, Object3D } from "three";
 
 /*
  * The adventurer's kit: the materials every icon is made from, so the set
@@ -20,7 +17,7 @@ import type {BufferGeometry, Material, Object3D} from "three";
 export function seeded(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
-    a = (a + 0x6D_2B_79_F5) >>> 0;
+    a = (a + 0x6d_2b_79_f5) >>> 0;
     let t = a;
     t = Math.imul(t ^ (t >>> 15), t | 1);
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
@@ -64,7 +61,12 @@ export function mottle(
 }
 
 /** Darkened edges, like paper handled for years. */
-export function vignette(context: CanvasRenderingContext2D, w: number, h: number, strength: number) {
+export function vignette(
+  context: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  strength: number,
+) {
   const g = context.createRadialGradient(
     w / 2,
     h / 2,
@@ -124,7 +126,7 @@ function grainTexture(base: string, line: string, seed: number) {
 export const kit = {
   brass: () =>
     new MeshPhysicalMaterial({
-      color: 0xE0_A8_3C,
+      color: 0xe0_a8_3c,
       metalness: 1,
       roughness: 0.26,
       clearcoat: 0.2,
@@ -132,7 +134,7 @@ export const kit = {
     }),
   gold: () =>
     new MeshPhysicalMaterial({
-      color: 0xF0_C2_4A,
+      color: 0xf0_c2_4a,
       metalness: 1,
       roughness: 0.34,
       envMapIntensity: 2.4,
@@ -142,19 +144,19 @@ export const kit = {
     new MeshPhysicalMaterial({ color, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.12 }),
   agedBrass: () =>
     new MeshStandardMaterial({
-      color: 0xA8_7A_32,
+      color: 0xa8_7a_32,
       metalness: 1,
       roughness: 0.38,
       envMapIntensity: 2,
     }),
   iron: () =>
     new MeshStandardMaterial({
-      color: 0x8A_85_80,
+      color: 0x8a_85_80,
       metalness: 1,
       roughness: 0.32,
       envMapIntensity: 2,
     }),
-  blackIron: () => new MeshStandardMaterial({ color: 0x2C_28_26, metalness: 0.8, roughness: 0.5 }),
+  blackIron: () => new MeshStandardMaterial({ color: 0x2c_28_26, metalness: 0.8, roughness: 0.5 }),
   leather: (base = "#7a4320", seed = 3) => {
     const map = leatherTexture(base, seed);
     return new MeshStandardMaterial({ map, roughness: 0.68, bumpMap: map, bumpScale: 1.5 });
@@ -174,11 +176,11 @@ export const kit = {
     }),
   ivory: () =>
     new MeshPhysicalMaterial({
-      color: 0xF1_E6_C8,
+      color: 0xf1_e6_c8,
       roughness: 0.35,
       clearcoat: 0.4,
       sheen: 0.4,
-      sheenColor: 0xFF_E8_C0,
+      sheenColor: 0xff_e8_c0,
     }),
   stone: (seed = 15) =>
     new MeshStandardMaterial({
@@ -195,14 +197,14 @@ export const kit = {
   /** Bronze gone green with age. */
   verdigris: () =>
     new MeshStandardMaterial({
-      color: 0x4F_9A_86,
+      color: 0x4f_9a_86,
       metalness: 0.65,
       roughness: 0.42,
       envMapIntensity: 1.6,
     }),
   steel: () =>
     new MeshPhysicalMaterial({
-      color: 0xB8_C4_D0,
+      color: 0xb8_c4_d0,
       metalness: 1,
       roughness: 0.34,
       envMapIntensity: 2.2,
@@ -218,7 +220,7 @@ export const kit = {
     }),
   lacquer: (color: number) =>
     new MeshPhysicalMaterial({ color, roughness: 0.38, clearcoat: 0.8, clearcoatRoughness: 0.2 }),
-  ink: () => new MeshPhysicalMaterial({ color: 0x1B_22_30, roughness: 0.15, clearcoat: 1 }),
+  ink: () => new MeshPhysicalMaterial({ color: 0x1b_22_30, roughness: 0.15, clearcoat: 1 }),
 };
 
 /** A mesh that casts and catches shadows like every solid part of the kit. */

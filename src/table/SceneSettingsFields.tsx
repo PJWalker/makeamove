@@ -1,7 +1,7 @@
 import { DEFAULT_GRID, DIAGONAL_RULES, GRID_TYPES, MIN_GRID_SIZE } from "../scene/grid";
-import type { SceneDoc as SceneDocument , SceneLighting } from "../scene/sceneDoc";
-import { DEFAULT_CANVAS_COLOUR  } from "../campaign/campaign";
-import type {Campaign} from "../campaign/campaign";
+import type { SceneDoc as SceneDocument, SceneLighting } from "../scene/sceneDoc";
+import { DEFAULT_CANVAS_COLOUR } from "../campaign/campaign";
+import type { Campaign } from "../campaign/campaign";
 import { useQuery } from "../ui/useQuery";
 import { ColourPicker } from "../ui/ColourPicker";
 import { Segmented } from "../ui/Segmented";

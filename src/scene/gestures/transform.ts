@@ -1,17 +1,10 @@
 import { toScreen } from "../camera";
-import { snapSize  } from "../grid";
-import type {Point} from "../grid";
-import {
-  CORNER_SIGNS,
-  
-  corners,
-  fromLocal,
-  resizeFromCorner,
-  rotationTowards
-} from "../geometry";
-import type {Corner} from "../geometry";
-import { HANDLE_SIZE,  lightHandles, rotateHandlePosition } from "../render/handles";
-import type {LightPart} from "../render/handles";
+import { snapSize } from "../grid";
+import type { Point } from "../grid";
+import { CORNER_SIGNS, corners, fromLocal, resizeFromCorner, rotationTowards } from "../geometry";
+import type { Corner } from "../geometry";
+import { HANDLE_SIZE, lightHandles, rotateHandlePosition } from "../render/handles";
+import type { LightPart } from "../render/handles";
 import type { LightElement, SceneElement, Transform } from "../types";
 import type { Gesture, ToolContext } from "./types";
 
@@ -21,7 +14,9 @@ import type { Gesture, ToolContext } from "./types";
  */
 
 export type Handle =
-  { kind: "corner"; corner: Corner } | { kind: "light"; part: LightPart } | { kind: "rotate" };
+  | { kind: "corner"; corner: Corner }
+  | { kind: "light"; part: LightPart }
+  | { kind: "rotate" };
 
 const RESIZE_CURSORS = ["nwse-resize", "nesw-resize", "nwse-resize", "nesw-resize"];
 
@@ -63,11 +58,12 @@ export function handleCursor(element: Transform, handle: Handle): string {
 
 /** Start dragging the handle pressed: of the group frame if there is one, else of the one selected element. */
 export function startHandleDrag(c: ToolContext, handle: Handle, world: Point): Gesture | null {
-  const {group} = c.renderer.overlayState;
+  const { group } = c.renderer.overlayState;
   if (group) return rotateGroup(c, group, world);
   const element = c.selected()[0]!;
   if (handle.kind === "rotate") return rotate(c, element);
-  if (handle.kind === "light") return element.type === "light" ? light(c, element, handle.part) : null;
+  if (handle.kind === "light")
+    return element.type === "light" ? light(c, element, handle.part) : null;
   return resize(c, element, handle.corner);
 }
 
@@ -89,7 +85,9 @@ function resize(c: ToolContext, element: SceneElement, corner: Corner): Gesture 
       c.renderer.previews.set(element.id, { ...element, ...t });
       c.renderer.invalidate("previews", "overlay");
     },
-    end: () => { c.commitPreviews(); },
+    end: () => {
+      c.commitPreviews();
+    },
   };
 }
 
@@ -103,7 +101,9 @@ function rotate(c: ToolContext, element: SceneElement): Gesture {
       c.renderer.previews.set(element.id, { ...element, rot });
       c.renderer.invalidate("previews", "overlay");
     },
-    end: () => { c.commitPreviews(); },
+    end: () => {
+      c.commitPreviews();
+    },
   };
 }
 
@@ -134,7 +134,9 @@ function rotateGroup(c: ToolContext, frame: Transform, world: Point): Gesture {
       c.renderer.invalidate("previews");
       c.updateOverlay();
     },
-    end: () => { c.commitPreviews(); },
+    end: () => {
+      c.commitPreviews();
+    },
   };
 }
 
@@ -143,7 +145,10 @@ function light(c: ToolContext, element: LightElement, part: LightPart): Gesture 
     kind: "light",
     keepsHandles: true,
     move(e, world) {
-      c.renderer.previews.set(element.id, dragLight(element, part, world, e.altKey, c.renderer.grid.size));
+      c.renderer.previews.set(
+        element.id,
+        dragLight(element, part, world, e.altKey, c.renderer.grid.size),
+      );
       c.renderer.invalidate("previews", "overlay");
     },
     end() {

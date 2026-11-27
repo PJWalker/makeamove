@@ -1,5 +1,5 @@
-import {    hexAt, hexCentre } from "./grid";
-import type {DiagonalRule, Grid, Point} from "./grid";
+import { hexAt, hexCentre } from "./grid";
+import type { DiagonalRule, Grid, Point } from "./grid";
 import type { Transform } from "./types";
 
 /*

@@ -2,8 +2,8 @@ import { actingCharacterId, canEdit, getCharacter, systemOf } from "../features/
 import type { LibraryEntry } from "../features/library";
 import type { Campaign } from "../campaign/campaign";
 import type { MenuItem } from "../ui/ContextMenu";
-import { IconAdd, IconGive  } from "../ui/icons";
-import type {Icon} from "../ui/icons";
+import { IconAdd, IconGive } from "../ui/icons";
+import type { Icon } from "../ui/icons";
 import { useQuery } from "../ui/useQuery";
 import { makeVerb } from "./actionPresentation";
 import { useCampaign } from "./campaignContext";

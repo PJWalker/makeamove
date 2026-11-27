@@ -1,13 +1,6 @@
 import { newId } from "../lib/ids";
-import {
-  folderName,
-  foldersByName,
-  renameFolderIn,
-  UNTITLED_FOLDER,
-  unfile
-  
-} from "./folders";
-import type {FolderView} from "./folders";
+import { folderName, foldersByName, renameFolderIn, UNTITLED_FOLDER, unfile } from "./folders";
+import type { FolderView } from "./folders";
 import type { CampaignRoot, Scenes } from "./schema";
 
 export type SceneFolderView = FolderView;

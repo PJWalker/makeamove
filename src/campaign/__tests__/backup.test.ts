@@ -82,7 +82,7 @@ const pageText = async (c: Campaign, title: string) => {
 describe("campaign backups", () => {
   it("restores everything a GM had, on a device that has lost it", async () => {
     const { c, tokenImage } = await setUp();
-    const {id} = c;
+    const { id } = c;
     const file = await backUpCampaign(id);
     c.destroy();
     await deleteLocalCampaign(id);

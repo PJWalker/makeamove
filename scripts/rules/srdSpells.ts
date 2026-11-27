@@ -111,7 +111,7 @@ export function parseSrdSpells(markdown: string): Spell[] {
               }
             : {}),
           ...(saveName && ABILITIES[saveName] ? { save: ABILITIES[saveName] } : {}),
-          ...(target ? { target: { ...target, ...(area ? { area } : {}) } } : (area ? { area } : {})),
+          ...(target ? { target: { ...target, ...(area ? { area } : {}) } } : area ? { area } : {}),
         },
       ];
     });

@@ -1,13 +1,13 @@
 import type * as Y from "yjs";
 import { arrayOf, isBoolean, isNumber, isObject, isString, oneOf } from "../lib/guards";
-import { collection, list, lww, record, subdoc  } from "../data/schema";
-import type {Root} from "../data/schema";
+import { collection, list, lww, record, subdoc } from "../data/schema";
+import type { Root } from "../data/schema";
 import { systemCampaignData } from "../systems/schema";
 import { characterEntry } from "../features/characters/schema";
 import { combatShape } from "../features/combat/schema";
 import { homebrewField } from "../features/homebrew/schema";
-import { noteEntry  } from "../features/notes/schema";
-import type {NoteFolder} from "../features/notes/schema";
+import { noteEntry } from "../features/notes/schema";
+import type { NoteFolder } from "../features/notes/schema";
 import type { EntityGraphic } from "../media/images";
 import type { EntryIconName } from "../ui/entryIcons";
 import { GRID_TYPES } from "../scene/grid";

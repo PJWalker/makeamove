@@ -1,5 +1,5 @@
-import { ExtrudeGeometry,   Path, Shape, Vector2 } from "three";
-import type {Material, Object3D} from "three";
+import { ExtrudeGeometry, Path, Shape, Vector2 } from "three";
+import type { Material, Object3D } from "three";
 import { SVGLoader } from "three/addons/loaders/SVGLoader.js";
 import gameIcons from "@iconify-json/game-icons/icons.json";
 import materialSymbols from "@iconify-json/material-symbols/icons.json";

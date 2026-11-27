@@ -1,6 +1,10 @@
-import type { BlobReference, EntityGraphic, EntityGraphicRef as EntityGraphicReference } from "../media/images";
-import { cellOr,   snapPoint, snapSize } from "./grid";
-import type {Grid, Point} from "./grid";
+import type {
+  BlobReference,
+  EntityGraphic,
+  EntityGraphicRef as EntityGraphicReference,
+} from "../media/images";
+import { cellOr, snapPoint, snapSize } from "./grid";
+import type { Grid, Point } from "./grid";
 import type { NewElement, SceneElement, TokenStyle } from "./types";
 
 /*
@@ -104,7 +108,7 @@ export function conversion(
   token: { colour: string; style: TokenStyle },
 ): Partial<SceneElement> | null {
   if (element.type === to || !("image" in element) || !element.image) return null;
-  const {image} = element;
+  const { image } = element;
   if (to === "token") {
     const size = snapSize(grid, Math.min(element.w, element.h, grid.size));
     const p = snapPoint(grid, element, Math.round(size / grid.size));

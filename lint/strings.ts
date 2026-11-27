@@ -30,7 +30,7 @@ export function writtenIn(node: ESTree.Node | null | undefined, source: SourceCo
       ];
     }
     case "TemplateLiteral": {
-      const holes = node.expressions.map((e) => `\${${  source.getText(e)  }}`);
+      const holes = node.expressions.map((e) => `\${${source.getText(e)}}`);
       return [
         {
           node,
@@ -38,9 +38,9 @@ export function writtenIn(node: ESTree.Node | null | undefined, source: SourceCo
           rewrite: (fixer, text) =>
             fixer.replaceText(
               node,
-              `\`${ 
-                text.split(HOLE).reduce((out, part, index) => out + (holes[index - 1] ?? "") + part) 
-                }\``,
+              `\`${text
+                .split(HOLE)
+                .reduce((out, part, index) => out + (holes[index - 1] ?? "") + part)}\``,
             ),
         },
       ];
@@ -97,7 +97,9 @@ export function childrenText(element: ESTree.JSXElement, source: SourceCode): Wr
       rewrite: (fixer, fixed) => {
         const pieces = fixed.split(HOLE);
         return runs.flatMap((run, index) =>
-          run && pieces[index] !== source.getText(run) ? [fixer.replaceText(run, pieces[index] ?? "")] : [],
+          run && pieces[index] !== source.getText(run)
+            ? [fixer.replaceText(run, pieces[index] ?? "")]
+            : [],
         );
       },
     },

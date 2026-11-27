@@ -65,7 +65,9 @@ export const openPage = command<{ id: string }>({
   transact: false,
   available: exists,
   menu: { note: (_, { id }) => [{ params: { id } }] },
-  run: (context, { id }) => { context.links.openNote(id); },
+  run: (context, { id }) => {
+    context.links.openNote(id);
+  },
 });
 
 export const renamePage = command<{ id: string; title: string }>({
@@ -74,16 +76,23 @@ export const renamePage = command<{ id: string; title: string }>({
   title: "Rename Page",
   available: exists,
   undoGroup: ({ id }) => `note.rename ${id}`,
-  run: ({ campaign }, { id, title }) => { renameNote(campaign, id, title); },
+  run: ({ campaign }, { id, title }) => {
+    renameNote(campaign, id, title);
+  },
 });
 
 /** That a page was just edited, and what it links to now: bookkeeping alongside its text, not an edit of its own. */
 export const notePageEdited = command<{ id: string; links: LinkReference[] }>({
   id: "note.touch",
-  params: objectOf({ id: isString, links: arrayOf(isString) as (v: unknown) => v is LinkReference[] }),
+  params: objectOf({
+    id: isString,
+    links: arrayOf(isString) as (v: unknown) => v is LinkReference[],
+  }),
   title: "Page Edited",
   undoGroup: false,
-  run: ({ campaign }, { id, links }) => { touchNote(campaign, id, links); },
+  run: ({ campaign }, { id, links }) => {
+    touchNote(campaign, id, links);
+  },
 });
 
 export const filePage = command<{ id: string; folder?: string | undefined }>({
@@ -99,7 +108,9 @@ export const filePage = command<{ id: string; folder?: string | undefined }>({
       return moveFolderOffers(id, n?.folder, listNoteFolders(context.campaign));
     },
   },
-  run: ({ campaign }, { id, folder }) => { moveNote(campaign, id, folder); },
+  run: ({ campaign }, { id, folder }) => {
+    moveNote(campaign, id, folder);
+  },
 });
 
 export const revealPage = command<{ id: string }>({
@@ -135,7 +146,9 @@ export const changePageGraphic = command<{ id: string }>({
   // GM-only pages have none.
   available: (context, { id }) => !note(context, id)?.gmOnly || "GM pages have no graphic",
   menu: { note: (context, { id }) => (note(context, id)?.gmOnly ? [] : [{ params: { id } }]) },
-  run: (context, { id }) => { context.table.editGraphic("note", id, note(context, id)?.title ?? ""); },
+  run: (context, { id }) => {
+    context.table.editGraphic("note", id, note(context, id)?.title ?? "");
+  },
 });
 
 export const deletePage = command<{ id: string }>({
@@ -159,7 +172,9 @@ export const deletePage = command<{ id: string }>({
     };
   },
   menu: { note: (_, { id }) => [{ params: { id } }] },
-  run: ({ campaign }, { id }) => { deleteNote(campaign, id); },
+  run: ({ campaign }, { id }) => {
+    deleteNote(campaign, id);
+  },
 });
 
 /** The folders a campaign starts with, made once. */
@@ -168,13 +183,19 @@ export const ensureDefaultNoteFolders = command({
   params: isNothing,
   title: "Add Default Folders",
   undoGroup: false,
-  run: ({ campaign }) => { ensureNoteFolders(campaign); },
+  run: ({ campaign }) => {
+    ensureNoteFolders(campaign);
+  },
 });
 
 export const noteFolders = folderCommands("note", {
   create: ({ campaign }, name) => createNoteFolder(campaign, name),
-  rename: ({ campaign }, id, name) => { renameNoteFolder(campaign, id, name); },
-  remove: ({ campaign }, id) => { deleteNoteFolder(campaign, id); },
+  rename: ({ campaign }, id, name) => {
+    renameNoteFolder(campaign, id, name);
+  },
+  remove: ({ campaign }, id) => {
+    deleteNoteFolder(campaign, id);
+  },
   newHere: [newPage, newGmPage],
 });
 

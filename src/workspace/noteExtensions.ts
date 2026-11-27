@@ -1,13 +1,13 @@
-import { Node, mergeAttributes   } from "@tiptap/core";
-import type {Editor, JSONContent} from "@tiptap/core";
+import { Node, mergeAttributes } from "@tiptap/core";
+import type { Editor, JSONContent } from "@tiptap/core";
 import CollaborationCaret from "@tiptap/extension-collaboration-caret";
 import { prosemirrorJSONToYXmlFragment, yXmlFragmentToProsemirrorJSON } from "@tiptap/y-tiptap";
 import type { Awareness } from "y-protocols/awareness";
 import type * as Y from "yjs";
 import { newId } from "../lib/ids";
 import { colourOf } from "../scene/presence";
-import { importImage, loadBlob   } from "../media/images";
-import type {PeerBlobs, BlobReference} from "../media/images";
+import { importImage, loadBlob } from "../media/images";
+import type { PeerBlobs, BlobReference } from "../media/images";
 import { device } from "../platform/device";
 
 /*
@@ -223,7 +223,9 @@ export function revealSecret(editor: Editor, vault: Y.Doc, pos: number) {
   const json = yXmlFragmentToProsemirrorJSON(fragment) as JSONContent;
   const content = json.content?.length ? json.content : [{ type: "paragraph" }];
   editor.chain().focus().insertContentAt(range, content).run();
-  vault.transact(() => { fragment.delete(0, fragment.length); });
+  vault.transact(() => {
+    fragment.delete(0, fragment.length);
+  });
 }
 
 /** Delete a secret from the note and the vault. */
@@ -232,5 +234,7 @@ export function deleteSecret(editor: Editor, vault: Y.Doc, pos: number) {
   if (!secret) return;
   const { range, fragment } = secret;
   editor.chain().focus().deleteRange(range).run();
-  vault.transact(() => { fragment.delete(0, fragment.length); });
+  vault.transact(() => {
+    fragment.delete(0, fragment.length);
+  });
 }

@@ -3,10 +3,10 @@ import { newId } from "../lib/ids";
 import { useCampaign } from "../workspace/campaignContext";
 import { addToChatRoll, roll } from "../workspace/commands/chat";
 import type { RollVisibility } from "../features/chat/types";
-import { NotationError, roll as rollDice, seededDie  } from "../features/dice/notation";
-import type {Roll} from "../features/dice/notation";
-import { poolFormula, samePick  } from "../features/dice/pool";
-import type {TrayPick} from "../features/dice/pool";
+import { NotationError, roll as rollDice, seededDie } from "../features/dice/notation";
+import type { Roll } from "../features/dice/notation";
+import { poolFormula, samePick } from "../features/dice/pool";
+import type { TrayPick } from "../features/dice/pool";
 import { trackPointer } from "../ui/pointer";
 import { holdNewPick } from "./rollDieHelpers";
 import { markTrayRolled, unmarkTrayRolled } from "./quickRolls";
@@ -97,7 +97,7 @@ export function useDicePool({
     const trayBounds = tray.getBoundingClientRect();
     const width = Math.max(0, trayBounds.width - 2 * 12);
     card.style.width = `${width}px`;
-    const {height} = card.getBoundingClientRect();
+    const { height } = card.getBoundingClientRect();
     card.style.left = `${trayBounds.left + 12}px`;
     card.style.top = `${trayBounds.top - height + 6}px`;
   }, [pool, releasedRoll]);
@@ -127,15 +127,27 @@ export function useDicePool({
       }
       markTrayRolled(messageId);
       onQuickRollMessage(messageId);
-      await new Promise<void>((resolve) => requestAnimationFrame(() => { resolve(); }));
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => {
+          resolve();
+        }),
+      );
       const message = await context.execute(roll, { formula, visibility, seed, messageId });
       if (!message) {
         unmarkTrayRolled(messageId);
         return;
       }
       messagePosted = true;
-      await new Promise<void>((resolve) => requestAnimationFrame(() => { resolve(); }));
-      await new Promise<void>((resolve) => requestAnimationFrame(() => { resolve(); }));
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => {
+          resolve();
+        }),
+      );
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => {
+          resolve();
+        }),
+      );
       const card = pendingRollCard.current;
       const destination = document.querySelector<HTMLElement>(
         ".chat-log .roll-card[data-quick-roll-active]",

@@ -20,7 +20,7 @@ describe("an interface icon", () => {
   });
 
   it("paints that colour once through its shapes, so where they overlap a translucent colour doesn't double up", () => {
-    const id = (/<mask id="([^"]+)"/.exec(markup))?.[1];
+    const id = /<mask id="([^"]+)"/.exec(markup)?.[1];
     expect(id).toBeTruthy();
     expect(markup.match(/fill="currentColor"[^>]*mask="url\(#[^"]+\)"/g)).toHaveLength(1);
     expect(markup).toContain(`mask="url(#${id})"`);

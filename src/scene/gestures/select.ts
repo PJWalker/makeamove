@@ -4,8 +4,8 @@ import type { Point } from "../grid";
 import { moveSelection } from "./move";
 import { editRequest } from "./text";
 import { handleAt, handleCursor, startHandleDrag } from "./transform";
-import { dragged    } from "./types";
-import type {Gesture, ToolContext, ToolPress} from "./types";
+import { dragged } from "./types";
+import type { Gesture, ToolContext, ToolPress } from "./types";
 
 /**
  * The Select tool (and the Lights tool's own): a press on a handle drags it,
@@ -86,7 +86,9 @@ function marquee(c: ToolContext, start: Point, base: string[], pick: string | nu
       const inside = c
         .allElements()
         .flatMap((element) =>
-          !element.locked && c.pickable(element) && contains(rect, bounds([element])!) ? [element.id] : [],
+          !element.locked && c.pickable(element) && contains(rect, bounds([element])!)
+            ? [element.id]
+            : [],
         );
       c.selection.value = [...new Set([...base, ...inside])];
       c.updateOverlay();

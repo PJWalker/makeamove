@@ -1,5 +1,5 @@
-import {  Graphics } from "pixi.js";
-import type {Container} from "pixi.js";
+import { Graphics } from "pixi.js";
+import type { Container } from "pixi.js";
 import type { Point } from "../grid";
 import { strokeOutline, hasRealPressure } from "../stroke";
 import type { DraggedShapeKind, Layer, ShapePaint, Transform } from "../types";
@@ -11,14 +11,15 @@ import { flat } from "./style";
  * corner at a time, or a shape being dragged out (with its size to show).
  */
 export type Draft =
-  {
+  | {
       kind: "polygon";
       points: Point[];
       paint: ShapePaint;
       /** Outline width, in world px. */
       width: number;
       layer: Layer;
-    } | {
+    }
+  | {
       kind: "shape";
       shape: DraggedShapeKind;
       t: Transform;
@@ -27,7 +28,8 @@ export type Draft =
       width: number;
       layer: Layer;
       label?: string;
-    } | {
+    }
+  | {
       kind?: "stroke";
       points: number[];
       colour: string;

@@ -6,6 +6,4 @@ export const formatCommaList = (values: readonly string[]): string => values.joi
 
 /** The entries of a stored comma list (a character or campaign field), without blanks. */
 export const commaListOf = (value: unknown): string[] =>
-  isString(value) || typeof value === "number"
-    ? parseCommaList(String(value)).filter(Boolean)
-    : [];
+  isString(value) || typeof value === "number" ? parseCommaList(String(value)).filter(Boolean) : [];

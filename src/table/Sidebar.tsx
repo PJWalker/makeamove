@@ -1,4 +1,3 @@
-
 import type { PointerEvent as ReactPointerEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useState } from "react";
 import { useUnreadCount } from "../features/chat/unread";
@@ -11,24 +10,17 @@ import { menuTrigger } from "../ui/menuTrigger";
 import { trackPointer } from "../ui/pointer";
 import { startReorder } from "../ui/reorder";
 import { withTransition } from "../ui/transition";
-import { ContextMenu  } from "../ui/ContextMenu";
-import type {MenuItem} from "../ui/ContextMenu";
-import {
-  isPanelId,
-  otherSide,
-  sidebarMaxWidth
-  
-  
-  
-} from "../workspace/panelLayout";
-import type {DockItemId, Side, PanelId} from "../workspace/panelLayout";
+import { ContextMenu } from "../ui/ContextMenu";
+import type { MenuItem } from "../ui/ContextMenu";
+import { isPanelId, otherSide, sidebarMaxWidth } from "../workspace/panelLayout";
+import type { DockItemId, Side, PanelId } from "../workspace/panelLayout";
 import { EntityWindowContent } from "../workspace/entityWindows";
 import { isEntityTab } from "../workspace/entityWindowState";
 import type { EntityWindowRecord } from "../workspace/entityWindowState";
 import { CampaignEntityGraphic } from "../workspace/EntityGraphic";
 import { keyedSideWidth, SIDEBAR_DEFAULT_W } from "../workspace/layoutModel";
-import {  useCampaign } from "../workspace/campaignContext";
-import type {CampaignContext} from "../workspace/campaignContext";
+import { useCampaign } from "../workspace/campaignContext";
+import type { CampaignContext } from "../workspace/campaignContext";
 import { PanelActionsProvider, PanelActionsSlot } from "./PanelActions";
 import { usePanelLabel } from "./panelLabels";
 import { PanelContent, PanelIcon, PaneToggle } from "./panels";
@@ -74,7 +66,9 @@ export function Sidebar({ side, campaign }: { side: Side; campaign: Campaign }) 
               id={id}
               side={side}
               selected={open && active === id}
-              onMenu={(x, y) => { setMenu({ x, y, items: tabMenu(context, id, side) }); }}
+              onMenu={(x, y) => {
+                setMenu({ x, y, items: tabMenu(context, id, side) });
+              }}
             />
           ))}
         </div>
@@ -90,17 +84,28 @@ export function Sidebar({ side, campaign }: { side: Side; campaign: Campaign }) 
         <div
           className="sidebar-body-resize"
           aria-hidden="true"
-          onPointerDown={(e) => { dragSideWidth(context, side, e); }}
+          onPointerDown={(e) => {
+            dragSideWidth(context, side, e);
+          }}
         />
         {active && (
           <ActiveTab
             campaign={campaign}
             id={active}
-            onMenu={(x, y) => { setMenu({ x, y, items: tabMenu(context, active, side) }); }}
+            onMenu={(x, y) => {
+              setMenu({ x, y, items: tabMenu(context, active, side) });
+            }}
           />
         )}
       </section>
-      {menu && <ContextMenu {...menu} onClose={() => { setMenu(null); }} />}
+      {menu && (
+        <ContextMenu
+          {...menu}
+          onClose={() => {
+            setMenu(null);
+          }}
+        />
+      )}
     </aside>
   );
 }
@@ -121,28 +126,51 @@ function withPull(onPress: (e: ReactPointerEvent) => void, open: (x: number, y: 
 function tabMenu(context: CampaignContext, id: DockItemId, side: Side): MenuItem[] {
   const other = otherSide(side);
   return [
-    { label: "Open", onSelect: () => { context.panels.showPanel(id); } },
+    {
+      label: "Open",
+      onSelect: () => {
+        context.panels.showPanel(id);
+      },
+    },
     "divider",
     {
       label: other === "left" ? "Move to Left Sidebar" : "Move to Right Sidebar",
-      onSelect: () => void withTransition(() => { context.panels.dockPanel(id, other); }),
+      onSelect: () =>
+        void withTransition(() => {
+          context.panels.dockPanel(id, other);
+        }),
     },
-    { label: "Float in a Window", onSelect: () => { floatTab(context, id); } },
+    {
+      label: "Float in a Window",
+      onSelect: () => {
+        floatTab(context, id);
+      },
+    },
     "divider",
-    { label: "Close", Icon: IconClose, onSelect: () => { closeTab(context, id); } },
+    {
+      label: "Close",
+      Icon: IconClose,
+      onSelect: () => {
+        closeTab(context, id);
+      },
+    },
   ];
 }
 
 /** Floats a tab in a window near the top middle; an entity's window has its own size. */
 function floatTab(context: CampaignContext, id: DockItemId) {
-  if (isEntityTab(id)) context.panels.detachPanel(id, Math.max(innerWidth / 2 - 190, 0), 96, 380, 440);
+  if (isEntityTab(id))
+    context.panels.detachPanel(id, Math.max(innerWidth / 2 - 190, 0), 96, 380, 440);
   else context.panels.detachPanel(id, Math.max(innerWidth / 2 - 170, 0), 120);
 }
 
 /** Closes a tab. A closed panel comes back from the campaign menu, where each panel can be ticked again. */
 function closeTab(context: CampaignContext, id: DockItemId) {
   if (isEntityTab(id)) closeDockedEntity(context, id);
-  else void withTransition(() => { context.panels.setPanelClosed(id, true); });
+  else
+    void withTransition(() => {
+      context.panels.setPanelClosed(id, true);
+    });
 }
 
 /**
@@ -186,7 +214,9 @@ function dragTab(context: CampaignContext, id: DockItemId, e: ReactPointerEvent)
     axis: "y",
     container: rail,
     items: () => [...rail.querySelectorAll<HTMLElement>(".rail-tab")],
-    onDrop: (index) => { context.panels.reorderPanel(id, index); },
+    onDrop: (index) => {
+      context.panels.reorderPanel(id, index);
+    },
     outside: {
       when: "move",
       run: (event) => {
@@ -217,7 +247,9 @@ function dragSideWidth(context: CampaignContext, side: Side, e: ReactPointerEven
   handle.dataset["dragging"] = "true";
   trackPointer(
     "ew-resize",
-    (event) => { context.panels.setSideWidth(side, start + grow * (event.clientX - e.clientX)); },
+    (event) => {
+      context.panels.setSideWidth(side, start + grow * (event.clientX - e.clientX));
+    },
     () => delete handle.dataset["dragging"],
   );
 }
@@ -259,8 +291,12 @@ function SidebarResizeHandle({ side }: { side: Side }) {
       aria-valuetext={s.open ? `${s.width} pixels wide` : "Collapsed"}
       // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
       tabIndex={0}
-      onPointerDown={(e) => { dragSideWidth(context, side, e); }}
-      onDoubleClick={() => { context.panels.setSideWidth(side, SIDEBAR_DEFAULT_W); }}
+      onPointerDown={(e) => {
+        dragSideWidth(context, side, e);
+      }}
+      onDoubleClick={() => {
+        context.panels.setSideWidth(side, SIDEBAR_DEFAULT_W);
+      }}
       onKeyDown={onKeyDown}
     />
   );
@@ -286,7 +322,12 @@ function switchTo(context: CampaignContext, id: DockItemId, side: Side) {
     return;
   }
   const direction = s.panels.indexOf(id) > s.panels.indexOf(from) ? "vt-tab-next" : "vt-tab-prev";
-  void withTransition(() => { context.panels.showPanel(id); }, { rootClass: direction });
+  void withTransition(
+    () => {
+      context.panels.showPanel(id);
+    },
+    { rootClass: direction },
+  );
 }
 
 /** How many members are online, counting this device. */
@@ -372,8 +413,12 @@ function RailTab({
       pressed={selected}
       data-unread={badge.unread}
       data-online={badge.online}
-      onClick={() => { switchTo(context, id, side); }}
-      {...withPull((e) => { dragTab(context, id, e); }, onMenu)}
+      onClick={() => {
+        switchTo(context, id, side);
+      }}
+      {...withPull((e) => {
+        dragTab(context, id, e);
+      }, onMenu)}
     >
       {panel ? (
         <PanelIcon id={panel} campaign={campaign} size={PROMINENT_ICON_SIZE} />
@@ -401,7 +446,9 @@ function ActiveTab({
         <div className="sidebar-panel" style={{ viewTransitionName: `panel-${id}` }}>
           <header
             className="panel-header docked-header"
-            {...withPull((e) => { pullOut(context, id, e); }, onMenu)}
+            {...withPull((e) => {
+              pullOut(context, id, e);
+            }, onMenu)}
           >
             <PaneToggle id={id} />
             <PanelTitle id={id} campaign={campaign} />
@@ -423,13 +470,21 @@ function ActiveTab({
     >
       <header
         className="panel-header docked-header"
-        {...withPull((e) => { pullOut(context, id, e); }, onMenu)}
+        {...withPull((e) => {
+          pullOut(context, id, e);
+        }, onMenu)}
       >
         <EntityTabIcon campaign={campaign} record={record} className="window-icon" />
         <h2 className="panel-title" tabIndex={-1}>
           {entityTitle(id, record)}
         </h2>
-        <Button variant="icon" label="Close Window" onClick={() => { closeDockedEntity(context, id); }}>
+        <Button
+          variant="icon"
+          label="Close Window"
+          onClick={() => {
+            closeDockedEntity(context, id);
+          }}
+        >
           <IconClose size={22} />
         </Button>
       </header>

@@ -11,12 +11,9 @@ import {
   mergeStoredDoc as mergeStoredDocument,
   metaOf,
   readBlobs,
-  snapshotCampaign
-  
-  
-  
+  snapshotCampaign,
 } from "./backupFormat";
-import type {CampaignBackup, BackupDevice, DocSnapshot as DocumentSnapshot} from "./backupFormat";
+import type { CampaignBackup, BackupDevice, DocSnapshot as DocumentSnapshot } from "./backupFormat";
 import type { BackupResult, BackupTask, ImportSummary } from "./backupWorkerProtocol";
 
 /*
@@ -45,7 +42,11 @@ async function importBackup(
     ),
   );
   const open = new Set(live);
-  const claim = gm ? (root: Y.Doc) => { claimGm(root, device, backup.exportedBy); } : undefined;
+  const claim = gm
+    ? (root: Y.Doc) => {
+        claimGm(root, device, backup.exportedBy);
+      }
+    : undefined;
   const merges: Promise<void>[] = [];
   for (const document of backup.docs)
     if (!open.has(document.guid))

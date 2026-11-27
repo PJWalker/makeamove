@@ -12,8 +12,8 @@ import { Button } from "../ui/Button";
 import { ENTRY_ICONS } from "../ui/entryIcons";
 import { IconDelete, IconImage, IconRename, IconSearch, IconShortcut } from "../ui/icons";
 import { menuTrigger } from "../ui/menuTrigger";
-import { ContextMenu  } from "../ui/ContextMenu";
-import type {MenuItem} from "../ui/ContextMenu";
+import { ContextMenu } from "../ui/ContextMenu";
+import type { MenuItem } from "../ui/ContextMenu";
 import { dropMarker, dropOn, dropTargetAt, setDropCursor } from "../workspace/entityDrag";
 import { actionEntity } from "../workspace/dragEntities";
 import { isTyping } from "../ui/keys";
@@ -68,7 +68,9 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
                 className="btn btn-ghost"
                 aria-disabled={off}
                 title={combo ? `${tip} (${showCombo(combo)})` : tip}
-                onClick={() => { run(id); }}
+                onClick={() => {
+                  run(id);
+                }}
                 onKeyDown={(event) => {
                   if (event.altKey && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
                     event.preventDefault();
@@ -89,12 +91,21 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
           variant="icon"
           className="hotbar-palette"
           label="Command Palette (Ctrl/Cmd+K)"
-          onClick={() => { ctx.table.togglePalette(); }}
+          onClick={() => {
+            ctx.table.togglePalette();
+          }}
         >
           <IconSearch size={22} />
         </Button>
       </div>
-      {menu && <ContextMenu {...menu} onClose={() => { setMenu(null); }} />}
+      {menu && (
+        <ContextMenu
+          {...menu}
+          onClose={() => {
+            setMenu(null);
+          }}
+        />
+      )}
     </>
   );
 }
@@ -110,9 +121,13 @@ function useHotbar(campaign: Campaign) {
   useDockStripLayout(barReference, "bottom");
   // Rebuilt on any change to characters or members so labels and availability stay current.
   const [, setTick] = useState(0);
-  const bumpTick = useEffectEvent(() => { setTick((n) => n + 1); });
+  const bumpTick = useEffectEvent(() => {
+    setTick((n) => n + 1);
+  });
   useEffect(() => {
-    const bump = () => { bumpTick(); };
+    const bump = () => {
+      bumpTick();
+    };
     const stopCharacters = campaign.characters.observe(bump);
     const stopMembers = campaign.members.observe(bump);
     return () => {
@@ -141,15 +156,20 @@ function useHotbar(campaign: Campaign) {
       if (id) {
         e.preventDefault();
         // Whatever the slot starts appears beside it, as if it were clicked.
-        notePressed(barReference.current?.querySelectorAll(".hotbar-slot > .btn")[Number(e.key) - 1]);
+        notePressed(
+          barReference.current?.querySelectorAll(".hotbar-slot > .btn")[Number(e.key) - 1],
+        );
         run(id);
       }
     };
     globalThis.addEventListener("keydown", onKey);
-    return () => { globalThis.removeEventListener("keydown", onKey); };
+    return () => {
+      globalThis.removeEventListener("keydown", onKey);
+    };
   });
 
-  const edit = (function_: (s: string[]) => string[]) => context.execute(setSlots, { slots: function_(slots) });
+  const edit = (function_: (s: string[]) => string[]) =>
+    context.execute(setSlots, { slots: function_(slots) });
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const slotMenu = (id: string, title: string) =>
     menuTrigger((x, y) => {
@@ -160,7 +180,9 @@ function useHotbar(campaign: Campaign) {
           {
             label: `Run ${title}`,
             disabled: find(id)?.available !== true,
-            onSelect: () => { run(id); },
+            onSelect: () => {
+              run(id);
+            },
           },
           ...(slots.length > 1
             ? [
@@ -181,17 +203,23 @@ function useHotbar(campaign: Campaign) {
           {
             label: "Rename…",
             Icon: IconRename,
-            onSelect: () => { context.table.editAction("rename", id, title); },
+            onSelect: () => {
+              context.table.editAction("rename", id, title);
+            },
           },
           {
             label: "Change Icon…",
             Icon: IconImage,
-            onSelect: () => { context.table.editAction("icon", id, title); },
+            onSelect: () => {
+              context.table.editAction("icon", id, title);
+            },
           },
           {
             label: shortcutFor(campaign, id) ? "Change Shortcut…" : "Add Shortcut…",
             Icon: IconShortcut,
-            onSelect: () => { context.table.editAction("shortcut", id, title); },
+            onSelect: () => {
+              context.table.editAction("shortcut", id, title);
+            },
           },
           "divider",
           {
@@ -212,9 +240,13 @@ function useHotbar(campaign: Campaign) {
       axis: "x",
       container: barReference.current,
       items: () => [...barReference.current!.querySelectorAll<HTMLElement>(".hotbar-slot")],
-      onLift: () => { setDragging(id); },
+      onLift: () => {
+        setDragging(id);
+      },
       onMove: (event, inside) => {
-        const target = inside ? null : dropTargetAt(context.canvas, event.clientX, event.clientY, what);
+        const target = inside
+          ? null
+          : dropTargetAt(context.canvas, event.clientX, event.clientY, what);
         mark(target);
         setDropCursor(inside ? null : !!target);
       },
@@ -235,5 +267,17 @@ function useHotbar(campaign: Campaign) {
     });
   };
 
-  return { ctx: context, dragging, barRef: barReference, slots, find, run, edit, menu, setMenu, slotMenu, dragSlot };
+  return {
+    ctx: context,
+    dragging,
+    barRef: barReference,
+    slots,
+    find,
+    run,
+    edit,
+    menu,
+    setMenu,
+    slotMenu,
+    dragSlot,
+  };
 }

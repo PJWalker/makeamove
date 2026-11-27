@@ -3,8 +3,8 @@ import { parse } from "../../features/dice/notation";
 import { commaListOf } from "../../lib/list";
 import { resolveEffects } from "../effects";
 import type { ActionDef, CheckStep, GameSystem } from "../types";
-import { plainText, richTextFromPlain  } from "../../data/richText";
-import type {RichText} from "../../data/richText";
+import { plainText, richTextFromPlain } from "../../data/richText";
+import type { RichText } from "../../data/richText";
 import { abilityRules, CREW_ABILITIES as CREW_RULES } from "./content";
 
 const ACTIONS = [

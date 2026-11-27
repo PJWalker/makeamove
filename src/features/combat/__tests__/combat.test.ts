@@ -11,10 +11,9 @@ import {
   startCombat,
   tickDurations,
   turnOf,
-  turnOrder
-  
+  turnOrder,
 } from "../combat";
-import type {Combatant} from "../combat";
+import type { Combatant } from "../combat";
 import { rootOf } from "../../../data/schema";
 import { campaignShape } from "../../../campaign/schema";
 

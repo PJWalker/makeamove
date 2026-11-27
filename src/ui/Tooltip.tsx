@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState  } from "react";
-import type {RefObject} from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { RefObject } from "react";
 import { tether } from "./anchor";
 import { inTransition } from "./transition";
 import { setTooltipHider } from "./tooltipController";
@@ -65,7 +65,10 @@ function useTooltip() {
   return { tip, ref: reference };
 }
 
-function useTooltipTracking(setTip: (tip: Tip) => void, reference: RefObject<HTMLDivElement | null>) {
+function useTooltipTracking(
+  setTip: (tip: Tip) => void,
+  reference: RefObject<HTMLDivElement | null>,
+) {
   useEffect(() => {
     let timer: ReturnType<typeof globalThis.setTimeout> | undefined;
     let current: Element | null = null;
@@ -117,16 +120,18 @@ function useTooltipTracking(setTip: (tip: Tip) => void, reference: RefObject<HTM
     }
 
     function consider(target: EventTarget | null, delay: number) {
-      const element = target instanceof HTMLElement
-        ? target.closest<HTMLElement>("[title], [data-tip]")
-        : null;
+      const element =
+        target instanceof HTMLElement ? target.closest<HTMLElement>("[title], [data-tip]") : null;
       if (element === current || (element && element === suppressed)) return;
       hide();
       if (!element || !textOf(element)) return;
       current = element;
       const browsing = performance.now() - lastShown < 200;
       if (browsing) show(element, true);
-      else timer = globalThis.setTimeout(() => { show(element); }, delay);
+      else
+        timer = globalThis.setTimeout(() => {
+          show(element);
+        }, delay);
     }
 
     const onOver = (e: PointerEvent) =>

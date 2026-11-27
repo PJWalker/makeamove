@@ -97,7 +97,8 @@ class Derived<T> implements ReadonlyStore<T> {
   #refresh() {
     const versions = this.sources.map((s) => s.version);
     const seen = this.#seen;
-    if (seen && seen.length === versions.length && versions.every((v, index) => v === seen[index])) return;
+    if (seen && seen.length === versions.length && versions.every((v, index) => v === seen[index]))
+      return;
     this.#seen = versions;
     const next = this.compute();
     if (this.#version > 0 && Object.is(next, this.#value)) return;
@@ -130,12 +131,17 @@ export function derived<T>(
 }
 
 /** Run `fn` now and after each change to any of `sources`. Returns the stop function. */
-export function watch(sources: readonly ReadonlyStore<unknown>[], function_: () => void): () => void {
+export function watch(
+  sources: readonly ReadonlyStore<unknown>[],
+  function_: () => void,
+): () => void {
   function_();
   return subscribeAll(sources, function_);
 }
 
 function subscribeAll(sources: readonly ReadonlyStore<unknown>[], listener: Listener) {
   const stops = sources.map((s) => s.subscribe(listener));
-  return () => { for (const stop of stops) stop() };
+  return () => {
+    for (const stop of stops) stop();
+  };
 }

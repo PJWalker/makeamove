@@ -3,8 +3,8 @@ import type { LinkKind } from "../features/notes/links";
 import { linkLabel, linkTip } from "../features/notes/targets";
 import type { Campaign } from "../campaign/campaign";
 import { menuTrigger } from "../ui/menuTrigger";
-import { ContextMenu  } from "../ui/ContextMenu";
-import type {MenuItem} from "../ui/ContextMenu";
+import { ContextMenu } from "../ui/ContextMenu";
+import type { MenuItem } from "../ui/ContextMenu";
 import { dragEntity } from "./entityDrag";
 import { entity } from "./dragEntities";
 import { linkMenuSections } from "./linkActions";
@@ -52,18 +52,22 @@ function LiveLinkChip({
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const [button, setButton] = useState<HTMLButtonElement | null>(null);
   // The menu is built as it opens, from where the chip is then.
-  const trigger = menuTrigger((x, y) => { setMenu({
+  const trigger = menuTrigger((x, y) => {
+    setMenu({
       x,
       y,
       items: joinSections(
         linkMenuSections(
           context,
           { kind, id },
-          { title: shown, openInWindow: () => button && context.linkPopups.show({ kind, id }, button) },
+          {
+            title: shown,
+            openInWindow: () => button && context.linkPopups.show({ kind, id }, button),
+          },
         ),
       ),
-    }); },
-  );
+    });
+  });
   return (
     <>
       <button
@@ -74,16 +78,27 @@ function LiveLinkChip({
         data-tip={linkTip(campaign, kind, id) ?? undefined}
         data-tip-long="true"
         data-tip-opens="true"
-        onClick={(e) => { context.linkPopups.show({ kind, id }, e.currentTarget); }}
+        onClick={(e) => {
+          context.linkPopups.show({ kind, id }, e.currentTarget);
+        }}
         onPointerDown={(e) => {
           trigger.onPointerDown(e);
           dragEntity(context.canvas, e, entity(context, kind, id, shown));
         }}
-        onContextMenu={(e) => { trigger.onContextMenu(e); }}
+        onContextMenu={(e) => {
+          trigger.onContextMenu(e);
+        }}
       >
         {shown}
       </button>
-      {menu && <ContextMenu {...menu} onClose={() => { setMenu(null); }} />}
+      {menu && (
+        <ContextMenu
+          {...menu}
+          onClose={() => {
+            setMenu(null);
+          }}
+        />
+      )}
     </>
   );
 }

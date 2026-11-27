@@ -1,7 +1,7 @@
 import type { Campaign } from "../campaign/campaign";
 import { getCharacter, playedCharacterId } from "../features/characters/api";
-import { isPanelId, PANELS   } from "../workspace/panelLayout";
-import type {DockItemId, PanelId} from "../workspace/panelLayout";
+import { isPanelId, PANELS } from "../workspace/panelLayout";
+import type { DockItemId, PanelId } from "../workspace/panelLayout";
 import { useQuery } from "../ui/useQuery";
 
 export function usePanelLabel(id: PanelId, campaign: Campaign): string;

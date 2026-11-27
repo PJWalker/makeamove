@@ -11,10 +11,9 @@ import {
   IconSelect,
   IconShapes,
   IconText,
-  IconWall
-  
+  IconWall,
 } from "../ui/icons";
-import type {IconProps as IconProperties} from "../ui/icons";
+import type { IconProps as IconProperties } from "../ui/icons";
 
 /** The canvas tools, as the toolbar and the command palette list them. */
 export const TOOLS: {
