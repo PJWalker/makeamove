@@ -136,24 +136,40 @@ export function inRange(distance: number, range: Range): "long" | "normal" | "ou
 }
 
 /**
+ * How long a straight stretch of dx × dy world px is, in the scene's units:
+ * on a square grid, with the scene's rule for diagonals.
+ */
+export function lengthUnits(grid: Grid, dx: number, dy: number): number {
+  if (grid.type !== "square") return toUnits(grid, Math.hypot(dx, dy));
+  return steps(dx / grid.size, dy / grid.size, grid.diagonal) * grid.unit;
+}
+
+/**
  * What a shape measures, in the scene's units, and where in the world each
  * measure belongs: a rectangle's sides under it, a circle's radius (or an
  * ellipse's width and height), a line's or cone's length, and each side of
- * a polygon by that side.
+ * a polygon by that side. Lengths follow the scene's rule for diagonals.
  */
 export function shapeMeasures(grid: Grid, shape: ShapeGeometry & Transform): { text: string; at: Point }[] {
-  const units = (px: number) => formatDistance(grid, toUnits(grid, px));
-  const across = `${units(shape.w)} × ${units(shape.h)}`;
+  const cos = Math.cos(shape.rot);
+  const sin = Math.sin(shape.rot);
+  /** A length along the shape's width, and one along its height. */
+  const along = (px: number) => formatDistance(grid, lengthUnits(grid, px * cos, px * sin));
+  const athwart = (px: number) => formatDistance(grid, lengthUnits(grid, -px * sin, px * cos));
+  const across = `${along(shape.w)} × ${athwart(shape.h)}`;
   const at = (x: number, y: number) => fromLocal(shape, { x, y });
-  const even = units(shape.w) === units(shape.h);
+  const even = along(shape.w) === athwart(shape.h);
   if (shape.shape === "rect") return [{ text: across, at: at(0, shape.h / 2) }];
-  if (shape.shape === "circle") return [{ text: even ? `${units(shape.w / 2)} radius` : across, at: at(0, 0) }];
-  if (shape.shape === "line") return [{ text: units(shape.w), at: at(0, 0) }];
+  if (shape.shape === "circle") return [{ text: even ? `${along(shape.w / 2)} radius` : across, at: at(0, 0) }];
+  if (shape.shape === "line") return [{ text: along(shape.w), at: at(0, 0) }];
   if (shape.shape === "cone")
-    return [{ text: even ? units(shape.w) : `${units(shape.w)} long, ${units(shape.h)} wide`, at: at(0, 0) }];
-  const corners = shapeOutline(shape, shape.w, shape.h);
+    return [{ text: even ? along(shape.w) : `${along(shape.w)} long, ${athwart(shape.h)} wide`, at: at(0, 0) }];
+  const corners = shapeOutline(shape, shape.w, shape.h).map((p) => at(p.x, p.y));
   return corners.map((a, index) => {
     const b = corners[(index + 1) % corners.length]!;
-    return { text: units(Math.hypot(b.x - a.x, b.y - a.y)), at: at((a.x + b.x) / 2, (a.y + b.y) / 2) };
+    return {
+      text: formatDistance(grid, lengthUnits(grid, b.x - a.x, b.y - a.y)),
+      at: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
+    };
   });
 }

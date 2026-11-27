@@ -102,7 +102,14 @@ describe("shape measures", () => {
   it("gives each side of a polygon by that side", () => {
     const triangle = { ...at, shape: "polygon" as const, w: 150, h: 200, points: [-75, -100, 75, 100, -75, 100], bw: 150, bh: 200 };
     const measures = shapeMeasures(square, triangle);
-    expect(measures.map((m) => m.text)).toEqual(["25 ft", "15 ft", "20 ft"]);
+    expect(measures.map((m) => m.text)).toEqual(["20 ft", "15 ft", "20 ft"]);
     expect(measures[1]!.at).toEqual({ x: 0, y: 100 });
+    expect(shapeMeasures({ ...square, diagonal: "euclid" }, triangle)[0]!.text).toBe("25 ft");
+  });
+  it("measures diagonal lengths by the scene's rule for diagonals", () => {
+    const diagonal = { ...at, rot: Math.PI / 4, shape: "line" as const, w: Math.hypot(150, 150), h: 1 };
+    expect(texts(diagonal)).toEqual(["15 ft"]);
+    expect(shapeMeasures({ ...square, diagonal: "alternate" }, diagonal)[0]!.text).toBe("20 ft");
+    expect(shapeMeasures({ ...square, diagonal: "euclid" }, diagonal)[0]!.text).toBe("21.2 ft");
   });
 });
