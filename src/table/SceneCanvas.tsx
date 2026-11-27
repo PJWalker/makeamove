@@ -17,6 +17,7 @@ import { useCampaign } from "../workspace/campaignContext";
 import { menuFor } from "../workspace/commands/views";
 import { SceneSettingsFields } from "./SceneSettingsFields";
 import { SelectionBar } from "./SelectionBar";
+import SpeechBubbles from "./SpeechBubbles";
 import { TextEditor } from "./TextEditor";
 import { TokenOptionsDialog } from "./TokenOptionsDialog";
 import {
@@ -153,6 +154,7 @@ export function SceneCanvas({ campaign, sceneId }: { campaign: Campaign; sceneId
       {controller && (
         <>
           <SelectionBar controller={controller} onTokenOptions={onSelectionTokenOptions} />
+          <SpeechBubbles campaign={campaign} controller={controller} />
           <TokenOptionsDialog
             campaign={campaign}
             controller={controller}
