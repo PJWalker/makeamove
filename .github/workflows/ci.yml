@@ -10,8 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      # "npm run ci" ends by proving the LemmaScript files, which needs Dafny.
-      # First, as it sets up a Node of its own, which ours then replaces.
+      # `npm run verify` (part of `ci`) proves the LemmaScript files with Dafny.
+      # Before setup-node: this action sets up its own older Node.
       - uses: dafny-lang/setup-dafny-action@v1
         with:
           dafny-version: "4.11.0"

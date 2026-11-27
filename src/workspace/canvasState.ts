@@ -8,6 +8,7 @@ import type {
   EntityGraphicRef as EntityGraphicReference,
 } from "../media/images";
 import type { TokenStyle } from "../scene/types";
+import type { LinkRef as LinkReference } from "../features/notes/links";
 import type { AreaSpec } from "../systems/types";
 import { backdropColour } from "../lib/colour";
 import { DEFAULT_CANVAS_COLOUR } from "../campaign/campaign";
@@ -96,6 +97,9 @@ export class CanvasState {
    * whether the point was over the map.
    */
   readonly tokenDrop = store<((x: number, y: number, spec: TokenSpec) => boolean) | null>(null);
+
+  /** Set by the open scene canvas: puts a pin leading to `link` at a screen point. */
+  readonly pinDrop = store<((x: number, y: number, link: LinkReference) => boolean) | null>(null);
 
   /** Resolve a character token under a screen point; set by the open scene canvas. */
   readonly sceneCharacterAt = store<((x: number, y: number) => SceneCharacterHit | null) | null>(

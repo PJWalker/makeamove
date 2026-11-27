@@ -10,6 +10,7 @@ import type {
   Layer,
   SceneElement,
   ShapePaint,
+  PinElement,
   TokenElement,
   Transform,
 } from "../types";
@@ -91,6 +92,11 @@ export interface TextRequest {
   id?: string;
 }
 
+/** A request for what a new pin at `at` should lead to. */
+export interface PinRequest {
+  at: Point;
+}
+
 /** What the tools' gestures see of the controller. */
 export interface ToolContext {
   readonly renderer: SceneRenderer;
@@ -115,6 +121,8 @@ export interface ToolContext {
   readonly onItemTokenDragMove: ((token: TokenElement | null, event: PointerEvent) => void) | null;
   readonly onItemTokenDrop: ((token: TokenElement, event: PointerEvent) => boolean) | null;
   readonly onTokenClick: ((token: TokenElement) => void) | null;
+  readonly onPinClick: ((pin: PinElement) => void) | null;
+  readonly onPinRequest: ((request: PinRequest) => void) | null;
   readonly onTokenDragMove: ((token: TokenElement | null, event?: PointerEvent) => void) | null;
   readonly onTokenDrop: ((token: TokenElement, event: PointerEvent) => boolean) | null;
   allElements(): readonly SceneElement[];
