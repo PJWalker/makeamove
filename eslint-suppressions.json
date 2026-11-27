@@ -5097,7 +5097,7 @@
   },
   "src/ui/__tests__/resizeRect.test.ts": {
     "@typescript-eslint/no-magic-numbers": {
-      "count": 9
+      "count": 2
     }
   },
   "src/ui/anchor.ts": {

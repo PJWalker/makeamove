@@ -44,6 +44,10 @@ export function resizeRect(start: Rect, dir: ResizeDir, dx: number, dy: number):
   //@ ensures (dir === "s" || dir === "se" || dir === "sw" || dir === "e" || dir === "w") ==> \result.y === start.y
   //@ ensures (dir === "w" || dir === "nw" || dir === "sw") ==> \result.x + \result.w === start.x + start.w
   //@ ensures (dir === "n" || dir === "ne" || dir === "nw") ==> \result.y + \result.h === start.y + start.h
+  //@ ensures (dir === "e" || dir === "ne" || dir === "se") ==> \result.w === Math.max(MIN_W, start.w + dx)
+  //@ ensures (dir === "w" || dir === "nw" || dir === "sw") ==> \result.w === Math.max(MIN_W, start.w - dx)
+  //@ ensures (dir === "s" || dir === "se" || dir === "sw") ==> \result.h === Math.max(MIN_H, start.h + dy)
+  //@ ensures (dir === "n" || dir === "ne" || dir === "nw") ==> \result.h === Math.max(MIN_H, start.h - dy)
   const rdx = Math.round(dx);
   const rdy = Math.round(dy);
   let { x, y, w, h } = start;

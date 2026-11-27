@@ -19,6 +19,10 @@ method resizeRect(start: Rect, dir: ResizeDir, dx: int, dy: int) returns (res: R
   ensures (((((dir.s? || dir.se?) || dir.sw?) || dir.e?) || dir.w?) ==> (res.y == start.y))
   ensures (((dir.w? || dir.nw?) || dir.sw?) ==> ((res.x + res.w) == (start.x + start.w)))
   ensures (((dir.n? || dir.ne?) || dir.nw?) ==> ((res.y + res.h) == (start.y + start.h)))
+  ensures (((dir.e? || dir.ne?) || dir.se?) ==> (res.w == MathMax(MIN_W, (start.w + dx))))
+  ensures (((dir.w? || dir.nw?) || dir.sw?) ==> (res.w == MathMax(MIN_W, (start.w - dx))))
+  ensures (((dir.s? || dir.se?) || dir.sw?) ==> (res.h == MathMax(MIN_H, (start.h + dy))))
+  ensures (((dir.n? || dir.ne?) || dir.nw?) ==> (res.h == MathMax(MIN_H, (start.h - dy))))
 {
   var rdx := dx;
   var rdy := dy;
