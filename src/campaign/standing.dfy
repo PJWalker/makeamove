@@ -7,31 +7,36 @@ function settled(s: Standing): bool
   ((!(s.removed) || !(s.member)) && (!(s.gm) || s.member))
 }
 
-function removedBy(s: Standing, own: bool): Standing
+function removedBy(s: Standing, own: bool, byGm: bool): Standing
 {
-  if ((own || s.gm) || !(s.member)) then
+  if (((!(byGm) || own) || s.gm) || !(s.member)) then
     s
   else
     Standing(false, false, true)
 }
 
-lemma removedBy_ensures(s: Standing, own: bool)
-  ensures (settled(s) ==> settled(removedBy(s, own)))
-  ensures (if ((own || s.gm) || !(s.member)) then (removedBy(s, own) == s) else (removedBy(s, own).removed && !(removedBy(s, own).member)))
-  ensures (s.gm ==> (removedBy(s, own) == s))
+lemma removedBy_ensures(s: Standing, own: bool, byGm: bool)
+  ensures (settled(s) ==> settled(removedBy(s, own, byGm)))
+  ensures (if (((!(byGm) || own) || s.gm) || !(s.member)) then (removedBy(s, own, byGm) == s) else (removedBy(s, own, byGm).removed && !(removedBy(s, own, byGm).member)))
+  ensures (s.gm ==> (removedBy(s, own, byGm) == s))
+  ensures (!(byGm) ==> (removedBy(s, own, byGm) == s))
 {
 }
 
-function letBack(s: Standing): Standing
+function letBack(s: Standing, byGm: bool): Standing
 {
-  Standing(s.member, s.gm, false)
+  if !(byGm) then
+    s
+  else
+    Standing(s.member, s.gm, false)
 }
 
-lemma letBack_ensures(s: Standing)
-  ensures (settled(s) ==> settled(letBack(s)))
-  ensures !(letBack(s).removed)
-  ensures (letBack(s).member == s.member)
-  ensures (letBack(s).gm == s.gm)
+lemma letBack_ensures(s: Standing, byGm: bool)
+  ensures (settled(s) ==> settled(letBack(s, byGm)))
+  ensures (letBack(s, byGm).removed == (s.removed && !(byGm)))
+  ensures (letBack(s, byGm).member == s.member)
+  ensures (letBack(s, byGm).gm == s.gm)
+  ensures (!(byGm) ==> (letBack(s, byGm) == s))
 {
 }
 
