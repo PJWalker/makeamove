@@ -10,16 +10,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      # `npm run verify` (part of `ci`) proves the LemmaScript files with Dafny.
+      # Before setup-node: this action sets up its own older Node.
+      - uses: dafny-lang/setup-dafny-action@v1
+        with:
+          dafny-version: "4.11.0"
       - uses: actions/setup-node@v5
         with:
           node-version: lts/*
           cache: npm
       - name: Install dependencies
         run: npm ci
-      # `npm run verify` (part of `ci`) proves the LemmaScript files with Dafny.
-      - uses: dafny-lang/setup-dafny-action@v1
-        with:
-          dafny-version: "4.11.0"
       # The same checks as the pre-push hook: see the "ci" script in package.json.
       - name: Checks
         run: npm run ci
