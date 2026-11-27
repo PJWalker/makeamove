@@ -4,6 +4,7 @@ import { effect } from "./effect";
 import { erase } from "./erase";
 import { light } from "./light";
 import { pan } from "./pan";
+import pin from "./pin";
 import { ping } from "./ping";
 import { ruler } from "./ruler";
 import { select } from "./select";
@@ -25,4 +26,5 @@ export const TOOL_PRESS: Record<ToolId, ToolPress> = {
   wall,
   light,
   effect,
+  pin,
 };

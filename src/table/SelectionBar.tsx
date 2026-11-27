@@ -20,6 +20,7 @@ import { bumpData, bumpResource } from "../workspace/commands/characters";
 import { canEdit, getCharacter, systemOf } from "../features/characters/api";
 import { derive } from "../features/characters/store";
 import type { TokenStat } from "../systems/types";
+import { PinTargetField } from "./PinPicker";
 import { TextStyleFields } from "./TextStyleFields";
 import { EFFECT_OPTIONS } from "./effectOptionsData";
 import { EffectSightToggles } from "./effectOptions";
@@ -227,6 +228,8 @@ function buildSelectionFields(
       />,
       <WidthField key="width" controller={controller} ids={ids} value={sel[0]!.width} />,
     );
+  if (every(sel, "pin"))
+    fields.push(<PinTargetField key="pin-target" controller={controller} pins={sel} />);
   if (every(sel, "drawing", "shape"))
     fields.push(
       <Segmented
