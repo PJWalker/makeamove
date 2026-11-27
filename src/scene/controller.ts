@@ -128,6 +128,8 @@ export default class SceneController implements ToolContext {
     return this.elements;
   }
   private byId = new Map<string, SceneElement>();
+  /** What's on the scene but hidden from this player. */
+  private hiddenFromMe = new Set<string>();
   private current: Gesture | null = null;
   /** What a press is doing: a drag, a marquee, a pinch. */
   private get gesture() {
@@ -323,9 +325,20 @@ export default class SceneController implements ToolContext {
   private refresh() {
     this.revision.value++;
     // Players never get what's hidden from them; the GM sees it faded.
-    this.elements = this.scene.views().filter((element) => this.gm || !element.hidden);
+    const all = this.scene.views();
+    const hidden = new Set(
+      this.gm ? [] : all.flatMap((element) => (element.hidden ? [element.id] : [])),
+    );
+    const before = this.byId;
+    this.elements = all.filter((element) => !hidden.has(element.id));
+    // What a player has just been shown fades in, and what's just been hidden fades out.
+    const fade = {
+      revealed: new Set(this.elements.flatMap((e) => (this.hiddenFromMe.has(e.id) ? [e.id] : []))),
+      concealed: new Set([...hidden].filter((id) => before.has(id))),
+    };
+    this.hiddenFromMe = hidden;
     this.byId = new Map(this.elements.map((e) => [e.id, e]));
-    this.renderer.setElements(this.elements);
+    this.renderer.setElements(this.elements, fade);
     const targets = this.targets.value.filter((id) => this.byId.get(id)?.type === "token");
     if (targets.length !== this.targets.value.length) this.setTargets(targets);
     const sel = this.selection.value.filter((id) => this.byId.has(id));

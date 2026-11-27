@@ -47,7 +47,8 @@ export interface BarChangeFrame {
 
 const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
 const span = (t: number, from: number, to: number) => clamp01((t - from) / (to - from));
-const easeOut = (p: number) => 1 - (1 - p) ** 3;
+/** Fast at first, settling gently: how changes on the scene play out. */
+export const easeOut = (p: number) => 1 - (1 - p) ** 3;
 const easeInOut = (p: number) => (p < 0.5 ? 4 * p ** 3 : 1 - (-2 * p + 2) ** 3 / 2);
 /** Springs to 1 with a bounce past it. */
 const spring = (p: number) =>

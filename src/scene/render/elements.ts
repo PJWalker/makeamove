@@ -7,12 +7,22 @@ import type { SelectKind } from "../tools";
 import { LAYERS } from "../types";
 import type { Layer, TokenElement } from "../types";
 import { reducedMotion } from "../../ui/transition";
+import { easeOut } from "../barChange";
 import { buildView, contentKey, DESTROY_VIEW } from "./elementViews";
 import type { View } from "./elementViews";
 import type { RenderState } from "./state";
 
 /** How opaque the GM sees what's hidden from players. */
 const HIDDEN_ALPHA = 0.45;
+/** How long, in ms, an element takes to fade as it's hidden or shown. */
+const FADE_MS = 200;
+
+/** A view's opacity on its way from one value to another. */
+interface Fade {
+  from: number;
+  to: number;
+  start: number;
+}
 
 /** The scene's elements: a view per element, kept in its layer and in order. */
 export default class ElementLayer {
@@ -26,6 +36,13 @@ export default class ElementLayer {
   /** Each token falling over, getting up, or lying down. */
   private readonly turns = new Map<string, DownTurn>();
   private readonly greys = new Map<string, ColorMatrixFilter>();
+  /** Each view's opacity as it fades, and the opacity it's settled at. */
+  private readonly fades = new Map<string, Fade>();
+  /** Views of elements just hidden from this player, fading out before they go. */
+  private readonly leaving = new Map<string, { view: View; layer: Layer }>();
+  /** Elements to fade in or out at the next sync: just shown to this player, or just hidden. */
+  private revealed: ReadonlySet<string> = new Set();
+  private concealed: ReadonlySet<string> = new Set();
   /** Whether a token's character is down. */
   downed: (token: TokenElement) => boolean = () => false;
 
@@ -40,6 +57,12 @@ export default class ElementLayer {
     this.dropFlashFrames.clear();
     for (const grey of this.greys.values()) grey.destroy();
     this.greys.clear();
+  }
+
+  /** Fade in what's just been shown to this player, and out what's just been hidden, at the next sync. */
+  fadeNext(revealed: ReadonlySet<string>, concealed: ReadonlySet<string>) {
+    this.revealed = revealed;
+    this.concealed = concealed;
   }
 
   /** Rebuild every view on the next sync, such as once missing images can be fetched. */
@@ -64,7 +87,7 @@ export default class ElementLayer {
   }
 
   /** Play out the moving effects; whether they need more frames (not under reduced motion). */
-  animate(): boolean {
+  private animate(): boolean {
     const still = reducedMotion.matches;
     const time = still ? 0 : performance.now() / 1000;
     let animating = false;
@@ -87,6 +110,10 @@ export default class ElementLayer {
         view.root.destroy(DESTROY_VIEW);
         view = undefined;
       }
+      const fresh = !view;
+      // Shown again while still fading out: the new view takes over.
+      this.leaving.get(element.id)?.view.root.destroy(DESTROY_VIEW);
+      this.leaving.delete(element.id);
       if (!view) {
         view = buildView(
           element,
@@ -102,15 +129,23 @@ export default class ElementLayer {
         this.order = "";
       }
       view.apply(s.previews.get(element.id) ?? element);
-      view.root.alpha = element.hidden ? HIDDEN_ALPHA : 1;
+      this.settle(element.id, element.hidden ? HIDDEN_ALPHA : 1, fresh);
     }
     this.previewed = new Set(s.previews.keys());
     for (const [id, view] of this.views) {
-      if (!seen.has(id)) {
+      if (seen.has(id)) continue;
+      this.views.delete(id);
+      const layer = this.concealed.has(id) && this.layerOf(view);
+      if (layer) {
+        this.leaving.set(id, { view, layer });
+        this.fadeTo(id, 0);
+      } else {
         view.root.destroy(DESTROY_VIEW);
-        this.views.delete(id);
+        this.fades.delete(id);
       }
     }
+    this.revealed = new Set();
+    this.concealed = new Set();
     // Restack only when the order (or a layer) actually changed.
     const order = s.elements.map((e) => `${e.layer}:${e.id}`).join(",");
     if (order !== this.order) {
@@ -118,7 +153,63 @@ export default class ElementLayer {
       for (const layer of LAYERS) this.layers[layer].removeChildren();
       for (const element of s.elements)
         this.layers[element.layer].addChild(this.views.get(element.id)!.root);
+      // What's fading out stays in its layer until it's gone.
+      for (const { view, layer } of this.leaving.values()) this.layers[layer].addChild(view.root);
     }
+  }
+
+  /**
+   * Fade a view to the opacity it should have: in from nothing if it's new
+   * because it's just been shown, at once if it's new for any other reason.
+   */
+  private settle(id: string, opacity: number, fresh: boolean) {
+    if (fresh && this.revealed.has(id)) this.fadeTo(id, opacity, 0);
+    else if (fresh) this.fades.set(id, { from: opacity, to: opacity, start: -Infinity });
+    else if (this.fades.get(id)?.to !== opacity) this.fadeTo(id, opacity);
+  }
+
+  /** Play out falls, fades and moving effects; whether they need more frames. */
+  play(): boolean {
+    const falling = this.syncDowned();
+    const fading = this.syncFades();
+    const effects = this.animate();
+    return falling || fading || effects;
+  }
+
+  /** The layer a view is drawn in, if it's in one. */
+  private layerOf(view: View): Layer | undefined {
+    return LAYERS.find((layer) => view.root.parent === this.layers[layer]);
+  }
+
+  /** Start a view fading from where it is (or `from`) to `to`; at once, under reduced motion. */
+  private fadeTo(id: string, to: number, from?: number) {
+    const view = this.views.get(id) ?? this.leaving.get(id)?.view;
+    const start = reducedMotion.matches ? -Infinity : performance.now();
+    this.fades.set(id, { from: from ?? view?.root.alpha ?? to, to, start });
+  }
+
+  /** Play out fades, removing what's faded out; whether they need more frames. */
+  private syncFades(): boolean {
+    const now = performance.now();
+    let animating = false;
+    for (const [id, fade] of this.fades) {
+      const view = this.views.get(id) ?? this.leaving.get(id)?.view;
+      if (!view) {
+        this.fades.delete(id);
+        continue;
+      }
+      const progress = Math.min(1, (now - fade.start) / FADE_MS);
+      view.root.alpha = fade.from + (fade.to - fade.from) * easeOut(progress);
+      if (progress < 1) {
+        animating = true;
+        continue;
+      }
+      if (this.leaving.delete(id)) {
+        view.root.destroy(DESTROY_VIEW);
+        this.fades.delete(id);
+      }
+    }
+    return animating;
   }
 
   /** Moves just the elements being dragged, and any just let go. */
@@ -137,7 +228,7 @@ export default class ElementLayer {
    * Turn down tokens upside down and grey them, playing out the fall (or
    * getting back up) as it happens. Returns whether it needs more frames.
    */
-  syncDowned(): boolean {
+  private syncDowned(): boolean {
     const s = this.state;
     const now = performance.now();
     const still = reducedMotion.matches;

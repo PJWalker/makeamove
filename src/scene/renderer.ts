@@ -218,7 +218,15 @@ export default class SceneRenderer implements RenderState {
       });
   }
 
-  setElements(elements: SceneElement[]) {
+  /**
+   * The elements to draw, bottom to top. `fade` names those just shown to
+   * this player, to fade in, and those just hidden, to fade out.
+   */
+  setElements(
+    elements: SceneElement[],
+    fade?: { revealed: ReadonlySet<string>; concealed: ReadonlySet<string> },
+  ) {
+    this.elementLayer.fadeNext(fade?.revealed ?? new Set(), fade?.concealed ?? new Set());
     this.elementList = elements;
     this.elementsById = new Map(elements.map((e) => [e.id, e]));
     this.invalidate("elements", "overlay");
@@ -249,8 +257,7 @@ export default class SceneRenderer implements RenderState {
     if (d.elements) this.elementLayer.sync();
     else if (d.previews) this.elementLayer.syncPreviews();
     this.elementLayer.syncHidden(this.showHelpers, this.helpersShown);
-    const falling = this.elementLayer.syncDowned();
-    const effects = this.elementLayer.animate();
+    const moving = this.elementLayer.play();
     if (d.camera) {
       this.world.position.set(this.camera.x, this.camera.y);
       this.world.scale.set(this.camera.zoom);
@@ -277,7 +284,7 @@ export default class SceneRenderer implements RenderState {
     if (animating) this.invalidate("presence");
     if (this.conditions.animating) this.invalidate("overlay");
     if (this.tokenLabels.animating) this.invalidate("overlay");
-    if (falling || effects) this.invalidate();
+    if (moving) this.invalidate();
   }
 
   /** The size text takes when drawn on the map, in world px. */
