@@ -12,3 +12,4 @@ src/features/chat/partStarts.ts
 src/campaign/standing.ts
 src/lib/commaList.ts
 src/sync/inviteText.ts
+src/features/dice/scan.ts

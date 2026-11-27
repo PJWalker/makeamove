@@ -1414,22 +1414,13 @@
   },
   "src/features/dice/notation.ts": {
     "@typescript-eslint/no-magic-numbers": {
-      "count": 3
-    },
-    "@typescript-eslint/prefer-destructuring": {
       "count": 1
     },
     "@typescript-eslint/restrict-template-expressions": {
-      "count": 10
-    },
-    "complexity": {
-      "count": 1
-    },
-    "max-depth": {
-      "count": 3
+      "count": 8
     },
     "max-lines-per-function": {
-      "count": 2
+      "count": 1
     },
     "no-nested-ternary": {
       "count": 1
