@@ -4010,9 +4010,6 @@
     "@eslint-react/naming-convention-ref-name": {
       "count": 5
     },
-    "@eslint-react/no-array-index-key": {
-      "count": 1
-    },
     "@typescript-eslint/max-params": {
       "count": 1
     },
@@ -4020,7 +4017,7 @@
       "count": 1
     },
     "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 3
+      "count": 2
     },
     "@typescript-eslint/restrict-template-expressions": {
       "count": 1

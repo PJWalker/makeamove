@@ -109,6 +109,7 @@ export function findAction(context: CampaignContext, key: string): Action | unde
  */
 export function menuFor(context: CampaignContext, target: Target): MenuItem[] {
   const sections = new Map<MenuSection, MenuItem[]>();
+  const submenus = new Map<string, MenuItem[]>();
   for (const command of commands(context)) {
     const offers = command.menu?.[target.kind] as
       | ((context_: CampaignContext, target: Target) => Offer<unknown>[])
@@ -119,7 +120,7 @@ export function menuFor(context: CampaignContext, target: Target): MenuItem[] {
       const section = command.section ?? "act";
       const list = sections.get(section) ?? [];
       sections.set(section, list);
-      list.push({
+      const item: MenuItem = {
         label: a.title,
         onSelect: a.run,
         ...(a.icon ? { Icon: a.icon } : {}),
@@ -127,7 +128,20 @@ export function menuFor(context: CampaignContext, target: Target): MenuItem[] {
         ...(a.danger ? { danger: true } : {}),
         ...(a.available === true ? {} : { disabled: true }),
         ...(a.checked === undefined ? {} : { checked: a.checked }),
-      });
+      };
+      const { submenu } = command;
+      if (!submenu) {
+        list.push(item);
+        continue;
+      }
+      // The submenu takes the place of the first command in it.
+      let items = submenus.get(submenu.title);
+      if (!items) {
+        items = [];
+        submenus.set(submenu.title, items);
+        list.push({ label: submenu.title, Icon: submenu.icon, items });
+      }
+      items.push(item);
     }
   }
   return joinSections(MENU_SECTIONS.map((s) => sections.get(s) ?? []));

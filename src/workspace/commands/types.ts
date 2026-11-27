@@ -88,6 +88,8 @@ export interface TableCommand<P = void, R = unknown> extends Command<CampaignCon
     [K in TargetKind]?: (context: CampaignContext, target: CommandTargets[K]) => Offer<P>[];
   };
   section?: MenuSection;
+  /** A submenu its section shows it in, with others that name the same one. */
+  submenu?: { title: string; icon: Icon };
   /** Ways to type it in the chat box, like `/r 2d6`. */
   slash?: SlashForm<P>[];
 }

@@ -67,6 +67,20 @@
   .menu-icon-space {
     width: 16px;
   }
+  /* A submenu's item points at where its items open. */
+  .menu-submenu-caret {
+    width: 6px;
+    height: 6px;
+    margin-left: auto;
+    margin-right: var(--space-1);
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    rotate: -45deg;
+    color: var(--text-muted);
+  }
+  .context-menu .menu-item[data-open] {
+    background: var(--raised-sheen), color-mix(in oklch, var(--accent) 25%, transparent);
+  }
   /* A colour picker in a right-click menu. */
   .menu-colour {
     display: grid;

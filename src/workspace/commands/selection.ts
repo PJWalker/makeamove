@@ -12,6 +12,7 @@ import {
   IconForward,
   IconGrid,
   IconGroup,
+  IconLayers,
   IconHidden,
   IconImage,
   IconLock,
@@ -62,7 +63,14 @@ function chosen(context: CampaignContext, p: Selection | undefined): SceneElemen
  */
 const selectionCommand = (
   id: string,
-  look: { title: string; icon: Icon; keys?: string[]; nativeKey?: string; danger?: boolean },
+  look: {
+    title: string;
+    icon: Icon;
+    keys?: string[];
+    nativeKey?: string;
+    danger?: boolean;
+    submenu?: { title: string; icon: Icon };
+  },
   section: "arrange" | "delete" | "edit",
   edit: (context: CampaignContext, ids: string[]) => void,
   {
@@ -99,30 +107,33 @@ const selectionCommand = (
 
 // The scene keeps its own undo steps (scene/sceneDoc.ts), in the player's history all the same.
 
+/** Where the stacking commands sit in the selection's menu. */
+const ARRANGE = { title: "Arrange", icon: IconLayers };
+
 export const bringToFront = selectionCommand(
   "selection.toFront",
-  { title: "Bring to Front", icon: IconToFront, keys: ["Mod+Shift+]"] },
+  { title: "Bring to Front", icon: IconToFront, keys: ["Mod+Shift+]"], submenu: ARRANGE },
   "arrange",
   (context, ids) => open(context)?.controller.arrange(ids, { to: "front" }),
 );
 
 export const bringForward = selectionCommand(
   "selection.forward",
-  { title: "Bring Forward", icon: IconForward, keys: ["Mod+]"] },
+  { title: "Bring Forward", icon: IconForward, keys: ["Mod+]"], submenu: ARRANGE },
   "arrange",
   (context, ids) => open(context)?.controller.arrange(ids, { to: "forward" }),
 );
 
 export const sendBackward = selectionCommand(
   "selection.backward",
-  { title: "Send Backward", icon: IconBackward, keys: ["Mod+["] },
+  { title: "Send Backward", icon: IconBackward, keys: ["Mod+["], submenu: ARRANGE },
   "arrange",
   (context, ids) => open(context)?.controller.arrange(ids, { to: "backward" }),
 );
 
 export const sendToBack = selectionCommand(
   "selection.toBack",
-  { title: "Send to Back", icon: IconToBack, keys: ["Mod+Shift+["] },
+  { title: "Send to Back", icon: IconToBack, keys: ["Mod+Shift+["], submenu: ARRANGE },
   "arrange",
   (context, ids) => open(context)?.controller.arrange(ids, { to: "back" }),
 );
@@ -359,7 +370,11 @@ async function pasteAt(context: CampaignContext, { sceneId, at }: Place) {
     const controller = open(context, sceneId)?.controller;
     const copies = read.find((r) => Array.isArray(r));
     if (copies) controller?.paste(copies, at);
-    else await controller?.importFiles(read.filter((r) => r instanceof File), at);
+    else
+      await controller?.importFiles(
+        read.filter((r) => r instanceof File),
+        at,
+      );
   } catch (error) {
     console.error("Couldn't paste from the clipboard", error);
   }
