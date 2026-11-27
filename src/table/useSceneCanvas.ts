@@ -6,6 +6,9 @@ import { SceneController } from "../scene/controller";
 import type { PinRequest, TextRequest } from "../scene/gestures/types";
 import { SceneRenderer } from "../scene/renderer";
 import { SceneDoc as SceneDocument } from "../scene/sceneDoc";
+import { newSights } from "../scene/explore";
+import { pairs } from "../scene/geometry";
+import type { Point } from "../scene/grid";
 import { formatDistance } from "../scene/measure";
 import type { Campaign } from "../campaign/campaign";
 import { tokenMarksSource } from "../features/combat/api";
@@ -143,6 +146,65 @@ export function useLighting(campaign: Campaign, controller: SceneController | nu
       stopObservingSettings();
       stopObservingCharacters();
       stopObservingMembers();
+    };
+  }, [controller, campaign]);
+}
+
+/** Fog of war: how the scene's is revealed, and what's been explored. The GM sees under it. */
+export function useFog(campaign: Campaign, controller: SceneController | null) {
+  useEffect(() => {
+    const ctl = controller;
+    if (!ctl) return;
+    const push = () => {
+      const explored = ctl.scene.exploredSights().map((points) => pairs(points));
+      ctl.renderer.setFog({ mode: ctl.scene.lighting().fog, explored }, campaign.isGm());
+    };
+    push();
+    const stopObservingSettings = ctl.scene.settings.observe(push);
+    const stopObservingExplored = ctl.scene.explored.observe(push);
+    const stopObservingMembers = campaign.members.observe(push);
+    return () => {
+      stopObservingSettings();
+      stopObservingExplored();
+      stopObservingMembers();
+    };
+  }, [controller, campaign]);
+}
+
+/**
+ * Exploring, in a scene whose fog is revealed by it: what player characters
+ * see from where they go is remembered for everyone (see scene/explore.ts).
+ */
+export function useExploring(campaign: Campaign, controller: SceneController | null) {
+  useEffect(() => {
+    const ctl = controller;
+    if (!ctl) return;
+    const last = new Map<string, Point>();
+    const explore = () => {
+      if (ctl.scene.lighting().fog !== "auto") {
+        last.clear();
+        return;
+      }
+      const pcs = new Set(listCharacters(campaign).flatMap((c) => (c.kind === "pc" ? [c.id] : [])));
+      const elements = ctl.allElements();
+      const explorers = elements.filter(
+        (element) => element.type === "token" && pcs.has(element.characterId ?? ""),
+      );
+      const sights = newSights(elements, explorers, {
+        grid: ctl.scene.grid(),
+        known: (key) => ctl.scene.explored.has(key),
+        last,
+      });
+      if (sights.size > 0) ctl.scene.explore(sights);
+    };
+    explore();
+    const stopWatchingRevision = watch([ctl.revision], explore);
+    const stopObservingSettings = ctl.scene.settings.observe(explore);
+    const stopObservingExplored = ctl.scene.explored.observe(explore);
+    return () => {
+      stopWatchingRevision();
+      stopObservingSettings();
+      stopObservingExplored();
     };
   }, [controller, campaign]);
 }
