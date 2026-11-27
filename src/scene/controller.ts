@@ -16,7 +16,7 @@ import type { Camera } from "./camera";
 import { readSceneCamera, saveSceneCamera } from "./cameraMemory";
 import { bounds, hits } from "./geometry";
 import { guessCells } from "./alignMap";
-import type { Box, Cells } from "./alignMap";
+import type { Box, Cells, Frame } from "./alignMap";
 import { fitBox, fitImageGrid } from "./gridFit";
 import { cellOr, gridPitch, snapPoint } from "./grid";
 import type { Grid, Point } from "./grid";
@@ -74,12 +74,15 @@ async function alignedToImageGrid<M extends NewElement & Transform>(
 
 /**
  * A map being lined up with the grid. Once a box is drawn over some of its
- * cells: the map as it was then, the box, and how many cells it covers.
+ * cells: the map as it was then, the box, how many cells it covers, and
+ * where that last put the map.
  */
 export interface Alignment {
   mapId: string;
-  drawn?: { base: Transform; box: Box; cells: Cells };
+  drawn?: { base: Transform; box: Box; cells: Cells; placed?: Frame };
 }
+
+const sameFrame = (a: Frame, b: Frame) => a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h;
 
 /**
  * Turns pointer, wheel and keyboard input into camera moves and scene edits.
@@ -353,6 +356,21 @@ export class SceneController implements ToolContext {
       this.selection.value = sel;
     }
     this.updateMapColour();
+    this.checkAligning();
+  }
+
+  /**
+   * Stop lining a map up once it can't be, or once something else has
+   * moved it (undo, a peer), so stale counts are never applied over that:
+   * it's gone, no longer a map, or locked.
+   */
+  private checkAligning() {
+    const aligning = this.aligning.value;
+    if (!aligning) return;
+    const map = this.byId.get(aligning.mapId);
+    const placed = aligning.drawn?.placed;
+    if (map?.type !== "map" || map.locked || (placed && !sameFrame(map, placed)))
+      this.stopAligning();
   }
 
   private updateMapColour() {
@@ -798,8 +816,10 @@ export class SceneController implements ToolContext {
         return true;
       }
       case "Escape": {
-        if (this.gesture || this.polygon.active) this.cancelGesture();
-        else if (this.aligning.value) this.stopAligning();
+        if (this.aligning.value) {
+          this.cancelGesture();
+          this.stopAligning();
+        } else if (this.gesture || this.polygon.active) this.cancelGesture();
         else this.selection.value = [];
         return true;
       }
@@ -952,7 +972,10 @@ export class SceneController implements ToolContext {
     const aligning = this.aligning.value;
     if (!aligning?.drawn) return;
     const frame = fitBox(aligning.drawn.base, aligning.drawn, this.renderer.grid);
-    if (frame) this.scene.update([[aligning.mapId, frame]]);
+    if (!frame) return;
+    // Noted first: the update comes straight back through refresh, which checks it.
+    this.aligning.value = { ...aligning, drawn: { ...aligning.drawn, placed: frame } };
+    this.scene.update([[aligning.mapId, frame]]);
   }
 
   /**

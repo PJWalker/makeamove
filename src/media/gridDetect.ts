@@ -41,6 +41,10 @@ const LINE_REACH = 2;
 const SEARCH_SHARE = 0.25;
 const HALF = 0.5;
 const FIT_ROUNDS = 3;
+/** Most parts a repeat is checked for being made of. */
+const MAX_PARTS = 4;
+/** How strongly lines at a finer spacing must show, against the coarser one's, to be the grid. */
+const FINER_SHARE = 0.5;
 /** Px a line may be from where the fit so far puts it, after the first fit. */
 const OFF_LINE = 1;
 
@@ -50,7 +54,7 @@ const OFF_LINE = 1;
  * summed along it. A line, light or dark, scores highly; a smooth area or
  * an edge between two areas scores little.
  */
-export function lineProfile(g: Greyscale, across: boolean): Float64Array {
+function lineProfile(g: Greyscale, across: boolean): Float64Array {
   const { width, height, data } = g;
   const n = across ? width : height;
   const along = across ? height : width;
@@ -116,6 +120,20 @@ function peakNear(profile: Float64Array, around: number, reach: number): number 
   return best + HALF + (curve < 0 ? ((left - right) * HALF) / curve : 0);
 }
 
+/** How strongly lines show where `lines` puts them: the profile's average peak there, over its average. */
+function lineStrength(profile: Float64Array, lines: Lines): number {
+  const mean = profile.reduce((sum, v) => sum + v, 0) / profile.length;
+  let sum = 0;
+  let count = 0;
+  const first = Math.ceil(-lines.offset / lines.spacing);
+  for (let k = first; lines.offset + k * lines.spacing < profile.length; k++) {
+    const at = Math.floor(lines.offset + k * lines.spacing);
+    sum += Math.max(...profile.subarray(Math.max(0, at - 1), at + 1 + 1));
+    count++;
+  }
+  return count === 0 || mean <= 0 ? 0 : sum / count / mean;
+}
+
 /** The straight line through points (k, at), by least squares: where it starts, and its slope. */
 function fit(points: [number, number][]): Lines {
   const n = points.length;
@@ -131,14 +149,9 @@ function fit(points: [number, number][]): Lines {
   return { spacing, offset: meanAt - spacing * meanK };
 }
 
-/** Lines repeating across `profile`, to a fraction of a px, or null if there aren't any. */
-function findLines(profile: Float64Array): Lines | null {
-  const step = repeatStep(profile);
-  if (step === null) return null;
-  // Where the lines fall within a step: where the profile, folded at the step, peaks.
-  const folded = new Float64Array(step);
-  for (const [index, v] of profile.entries()) folded[index % step]! += v;
-  let lines: Lines = { spacing: step, offset: folded.indexOf(Math.max(...folded)) + HALF };
+/** The lines near where `guess` puts them, fitted to a fraction of a px, or null if too few are found. */
+function fitLines(profile: Float64Array, guess: Lines): Lines | null {
+  let lines = guess;
   for (let round = 0; round < FIT_ROUNDS; round++) {
     const points: [number, number][] = [];
     const reach = lines.spacing * SEARCH_SHARE;
@@ -146,13 +159,91 @@ function findLines(profile: Float64Array): Lines | null {
     for (let k = first; lines.offset + k * lines.spacing < profile.length; k++) {
       const expected = lines.offset + k * lines.spacing;
       const at = peakNear(profile, expected, reach);
-      // After the first fit, a peak well off the line is something else on the map.
+      // After the first fit, a line well off where it should be is something else on the map.
       if (at !== null && (round === 0 || Math.abs(at - expected) <= OFF_LINE)) points.push([k, at]);
     }
     if (points.length < MIN_LINES) return null;
     lines = fit(points);
   }
   return lines;
+}
+
+/** `profile` folded at `step`: summed over each place within a step. */
+function folded(profile: Float64Array, step: number): Float64Array {
+  const fold = new Float64Array(step);
+  for (const [index, v] of profile.entries()) fold[index % step]! += v;
+  return fold;
+}
+
+/**
+ * A line's shape in `fold`: the span around its peak that stays above
+ * halfway between its least and most, less its average, centred. A thick
+ * line scores highly at its two edges and little in its middle, so its
+ * shape has two peaks, with its middle between them.
+ */
+function lineShape(fold: Float64Array): number[] {
+  const n = fold.length;
+  const most = Math.max(...fold);
+  const peak = fold.indexOf(most);
+  const cut = (most + Math.min(...fold)) * HALF;
+  const reach = Math.floor(n * SEARCH_SHARE);
+  const at = (offset: number) => fold[(((peak + offset) % n) + n) % n]!;
+  let first = 0;
+  let last = 0;
+  for (let offset = -reach; offset <= reach; offset++) {
+    if (at(offset) <= cut) continue;
+    first = Math.min(first, offset);
+    last = Math.max(last, offset);
+  }
+  const middle = Math.round((first + last) * HALF);
+  const half = Math.ceil((last - first) * HALF);
+  const mean = fold.reduce((sum, v) => sum + v, 0) / n;
+  return Array.from({ length: half + half + 1 }, (_, index) => at(middle - half + index) - mean);
+}
+
+/** How like `shape` `profile` is around each px: highest at the middles of lines of that shape. */
+function matched(profile: Float64Array, shape: number[]): Float64Array {
+  const half = (shape.length - 1) * HALF;
+  return profile.map((_, index) => {
+    let sum = 0;
+    for (const [j, weight] of shape.entries()) sum += weight * (profile[index - half + j] ?? 0);
+    return sum;
+  });
+}
+
+/** Lines repeating across `lineScores`, to a fraction of a px, or null if there aren't any. */
+function findLines(lineScores: Float64Array): Lines | null {
+  const step = repeatStep(lineScores);
+  if (step === null) return null;
+  const profile = matched(lineScores, lineShape(folded(lineScores, step)));
+  // Where the lines fall within a step: where the profile, folded at the step, peaks.
+  const fold = folded(profile, step);
+  const lines = fitLines(profile, {
+    spacing: step,
+    offset: fold.indexOf(Math.max(...fold)) + HALF,
+  });
+  if (!lines) return null;
+  // Lines a fraction of a px off whole steps repeat best at a multiple of their spacing,
+  // which lines up whole: try the spacings that divide it, finest first, keeping one
+  // only if lines show at every place between the coarser ones at least half as well.
+  const strength = lineStrength(profile, lines) - 1;
+  for (let parts = MAX_PARTS; parts > 1; parts--) {
+    if (lines.spacing / parts < MIN_CELL) continue;
+    if (weakestBetween(profile, lines, parts) < strength * FINER_SHARE) continue;
+    const finer = fitLines(profile, { spacing: lines.spacing / parts, offset: lines.offset });
+    if (finer) return finer;
+  }
+  return lines;
+}
+
+/** How strongly lines show, above the average, at the weakest place that splits `lines` into `parts`. */
+function weakestBetween(profile: Float64Array, lines: Lines, parts: number): number {
+  let weakest = Infinity;
+  for (let part = 1; part < parts; part++) {
+    const offset = lines.offset + (lines.spacing * part) / parts;
+    weakest = Math.min(weakest, lineStrength(profile, { spacing: lines.spacing, offset }) - 1);
+  }
+  return weakest;
 }
 
 /** The square grid drawn on an image, if it has one. */

@@ -17,16 +17,21 @@ interface Painting {
   noise?: number;
   patches?: number;
   scale?: number;
+  /** How wide the lines are, in px. */
+  stroke?: number;
 }
 
-/** How much of the px from `index` to `index + 1` a 3 px line centred at `centre` covers. */
-const coverage = (index: number, centre: number) =>
-  Math.max(0, Math.min(index + 1, centre + 1.5) - Math.max(index, centre - 1.5));
+/** How much of the px from `index` to `index + 1` a line `stroke` px wide centred at `centre` covers. */
+const coverage = (index: number, centre: number, stroke: number) =>
+  Math.max(0, Math.min(index + 1, centre + stroke / 2) - Math.max(index, centre - stroke / 2));
 
-/** How much of px `index` lines `spacing` apart, the first at `first`, cover. */
-function onLine(index: number, spacing: number, first: number) {
+/** How much of px `index` lines `spacing` apart and `stroke` wide, the first at `first`, cover. */
+function onLine(
+  index: number,
+  { spacing, first, stroke }: { spacing: number; first: number; stroke: number },
+) {
   const k = Math.round((index + 0.5 - first) / spacing);
-  return Math.min(1, coverage(index, first + k * spacing));
+  return Math.min(1, coverage(index, first + k * spacing, stroke));
 }
 
 interface Patch {
@@ -47,8 +52,8 @@ function shadeAt(
     if ((x - patch.x) ** 2 + (y - patch.y) ** 2 < patch.r ** 2) v += patch.shade;
   if (!p.cell) return v;
   const line = Math.max(
-    onLine(x, p.cell.w, p.offset?.x ?? 0),
-    onLine(y, p.cell.h, p.offset?.y ?? 0),
+    onLine(x, { spacing: p.cell.w, first: p.offset?.x ?? 0, stroke: p.stroke ?? 3 }),
+    onLine(y, { spacing: p.cell.h, first: p.offset?.y ?? 0, stroke: p.stroke ?? 3 }),
   );
   return v - line * (p.contrast ?? 0.5);
 }
@@ -85,7 +90,9 @@ describe("finding a square grid on a map image", () => {
     );
     expect(grid?.cell).toBeCloseTo(37.3, 2);
   });
+});
 
+describe("finding a square grid on a harder map image", () => {
   it("finds faint lines on a busy map", () => {
     const grid = detectSquareGrid(
       paint({
@@ -100,6 +107,37 @@ describe("finding a square grid on a map image", () => {
     expect(grid?.cell).toBeCloseTo(64, 1);
   });
 
+  it("finds the middle of thick lines", () => {
+    const grid = detectSquareGrid(
+      paint({
+        width: 600,
+        height: 500,
+        cell: { w: 50, h: 50 },
+        offset: { x: 20.5, y: 7.5 },
+        stroke: 6,
+      }),
+    );
+    expect(grid?.cell).toBeCloseTo(50, 1);
+    expect(grid?.x).toBeCloseTo(20.5, 0);
+    expect(grid?.y).toBeCloseTo(7.5, 0);
+  });
+
+  it("finds a spacing half a px off whole, not twice it", () => {
+    const grid = detectSquareGrid(
+      paint({
+        width: 2048,
+        height: 2048,
+        cell: { w: 12.5, h: 12.5 },
+        offset: { x: 3, y: 3 },
+        noise: 0,
+        patches: 0,
+      }),
+    );
+    expect(grid?.cell).toBeCloseTo(12.5, 2);
+  });
+});
+
+describe("measuring a square grid found on a shrunk image", () => {
   it("reports it in the image's own px when it was analysed shrunk", () => {
     const grid = detectSquareGrid(
       paint({
