@@ -13,7 +13,7 @@
     "ci:local": "npm run ci && npm run test:browser",
     "ci:node": "node -e \"if (Number(process.versions.node.split('.')[0]) < 24) { console.error('Node 24 or later is needed, as package.json engines says; this is ' + process.version); process.exit(1); }\"",
     "ci:install": "npm ci --dry-run --ignore-scripts --no-audit --no-fund",
-    "lint": "npm run lint:eslint -- . && npm run typecheck && npm run doctor",
+    "lint": "npm run lint:eslint -- . && vp fmt eslint-suppressions.json && npm run typecheck && npm run doctor",
     "lint:eslint": "eslint --prune-suppressions --no-warn-ignored",
     "check:changed": "jiti scripts/lint.ts",
     "typecheck": "tsc -b",
