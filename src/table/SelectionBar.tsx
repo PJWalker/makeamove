@@ -7,7 +7,7 @@ import { toScreen } from "../scene/camera";
 import { HANDLE_SIZE, ROTATE_HANDLE_GAP } from "../scene/render/handles";
 import { PEN_WIDTH_RANGE } from "../scene/tools";
 import { isPlainToken, sharedTextStyle } from "../scene/types";
-import type { EffectKind, SceneElement, TextStyle } from "../scene/types";
+import type { EffectKind, FogForce, SceneElement, TextStyle } from "../scene/types";
 import { ColourPicker } from "../ui/ColourPicker";
 import { CommitInput } from "../ui/CommitInput";
 import { Button } from "../ui/Button";
@@ -21,7 +21,7 @@ import { canEdit, getCharacter, systemOf } from "../features/characters/api";
 import { derive } from "../features/characters/store";
 import type { TokenStat } from "../systems/types";
 import { TextStyleFields } from "./TextStyleFields";
-import { EFFECT_OPTIONS } from "./effectOptionsData";
+import { EFFECT_OPTIONS, FOG_FORCE_OPTIONS } from "./effectOptionsData";
 import { EffectSightToggles } from "./effectOptions";
 import "./SelectionBar.css";
 
@@ -167,6 +167,21 @@ function buildSelectionFields(
         }}
         onChange={(patch) => {
           set(Object.fromEntries(Object.entries(patch).map(([k, on]) => [k, on || undefined])));
+        }}
+      />,
+    );
+  }
+  if (every(sel, "fog")) {
+    const { force } = sel[0]!;
+    fields.push(
+      <Segmented
+        key="fog"
+        label="Fog of War"
+        // None chosen when the shapes differ.
+        value={sel.every((element) => element.force === force) ? force : ("" as FogForce)}
+        options={FOG_FORCE_OPTIONS}
+        onChange={(next) => {
+          set({ force: next });
         }}
       />,
     );

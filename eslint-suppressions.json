@@ -2181,7 +2181,7 @@
       "count": 1
     },
     "@typescript-eslint/no-magic-numbers": {
-      "count": 33
+      "count": 34
     },
     "consistent-return": {
       "count": 2
@@ -2216,6 +2216,17 @@
     }
   },
   "src/scene/gestures/erase.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/scene/gestures/fog.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "import/avoid-importing-barrel-files": {
+      "count": 1
+    },
     "import/prefer-default-export": {
       "count": 1
     }
@@ -2519,7 +2530,7 @@
       "count": 37
     },
     "@typescript-eslint/restrict-template-expressions": {
-      "count": 25
+      "count": 27
     },
     "consistent-return": {
       "count": 2
@@ -2560,6 +2571,17 @@
       "count": 1
     },
     "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/scene/render/fogOfWar.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "@typescript-eslint/parameter-properties": {
+      "count": 1
+    },
+    "import/avoid-importing-barrel-files": {
       "count": 1
     }
   },
@@ -2813,7 +2835,7 @@
   },
   "src/scene/schema.ts": {
     "@typescript-eslint/no-magic-numbers": {
-      "count": 8
+      "count": 10
     },
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
@@ -2882,7 +2904,7 @@
       "count": 1
     },
     "@typescript-eslint/no-magic-numbers": {
-      "count": 16
+      "count": 25
     }
   },
   "src/sync/__tests__/blobs.test.ts": {
@@ -4357,7 +4379,7 @@
       "count": 1
     },
     "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 2
+      "count": 3
     },
     "@typescript-eslint/restrict-template-expressions": {
       "count": 2
@@ -4372,6 +4394,11 @@
       "count": 1
     },
     "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "src/table/ShapeGlyph.tsx": {
+    "import/prefer-default-export": {
       "count": 1
     }
   },
@@ -4653,11 +4680,6 @@
       "count": 1
     }
   },
-  "src/table/effectOptionsData.ts": {
-    "import/prefer-default-export": {
-      "count": 1
-    }
-  },
   "src/table/onScreenRect.ts": {
     "import/prefer-default-export": {
       "count": 1
@@ -4815,7 +4837,7 @@
       "count": 1
     },
     "consistent-return": {
-      "count": 8
+      "count": 10
     },
     "max-lines-per-function": {
       "count": 4

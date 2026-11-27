@@ -2,13 +2,13 @@ import { Color, Container, Graphics, Matrix, Sprite } from "pixi.js";
 import type { ColorSource } from "pixi.js";
 import { shapeOutline } from "../geometry";
 import { strokeOutline, hasRealPressure } from "../stroke";
-import { AREA_COLOURS, isPlainToken } from "../types";
+import { AREA_COLOURS, FOG_COLOURS, isPlainToken } from "../types";
 import type { SceneElement, ShapeGeometry, ShapePaint, TextStyle, Transform } from "../types";
 import type { PeerBlobs } from "../../media/images";
 import { EffectView } from "./effects";
 import { SdfText } from "./sdfText";
 import type { SdfTextOptions } from "./sdfText";
-import { ACCENT, cabin, fraunces, INK, textFont } from "./style";
+import { ACCENT, cabin, flat, fraunces, INK, textFont } from "./style";
 import { iconTextureFor, textureFor } from "./textures";
 
 /** An element's drawing: its root in a layer, and how to move it to a transform. */
@@ -56,6 +56,9 @@ export function contentKey(element: SceneElement): string {
     }
     case "area": {
       return `area:${element.tone}:${element.points.join(",")}:${element.bw}:${element.bh}`;
+    }
+    case "fog": {
+      return `fog:${element.force}:${element.shape}:${element.shape === "polygon" ? `${element.points.join(",")}:${element.bw}:${element.bh}` : ""}`;
     }
     case "effect": {
       return `effect:${element.effect}:${element.colour}:${element.shape}:${element.shape === "polygon" ? `${element.points.join(",")}:${element.bw}:${element.bh}` : ""}`;
@@ -351,6 +354,26 @@ export function buildView(
           g.clear()
             .poly(pts.map((v, index) => v * (index % 2 ? sy : sx)))
             .fill({ color: colour, alpha: 0.12 })
+            .stroke({ color: colour, width: 2, alpha: 0.8 });
+        },
+      };
+    }
+
+    case "fog": {
+      // Only its outline, which only the GM sees; the fog itself is drawn with sight (render/lighting.ts).
+      const g = new Graphics();
+      const colour = FOG_COLOURS[element.force];
+      root.addChild(g);
+      return {
+        root,
+        key,
+        helper: g,
+        apply: (t) => {
+          root.position.set(t.x, t.y);
+          root.rotation = t.rot;
+          g.clear()
+            .poly(flat(shapeOutline(element, t.w, t.h)))
+            .fill({ color: colour, alpha: 0.08 })
             .stroke({ color: colour, width: 2, alpha: 0.8 });
         },
       };

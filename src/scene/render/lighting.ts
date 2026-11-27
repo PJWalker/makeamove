@@ -4,7 +4,7 @@ import { areaPolygon, fromLocal, shapeOutline } from "../geometry";
 import type { Point } from "../grid";
 import { Lamp } from "../lampShader";
 import type { Blocker } from "../lampShader";
-import type { EffectElement, SceneElement, Transform } from "../types";
+import type { EffectElement, SceneElement } from "../types";
 import {
   blocked,
   blockingSegments,
@@ -24,6 +24,18 @@ export interface Lighting {
   enabled: boolean;
   darkness: number;
 }
+
+/** Where the viewers see from, and the walls in the way. */
+export interface Sight {
+  from: Point[];
+  walls: Segment[];
+}
+
+/** The colour of what players can't see. */
+export const UNSEEN = 0x05_07_0c;
+
+/** How dark what players remember but can't see now is, with fog of war (0 to 1). */
+const REMEMBERED_SHADE = 0.6;
 
 /** The sizes of a glowing effect's nested rings, which soften its edge. */
 const GLOW_RINGS = Array.from({ length: 10 }, (_, index) => 1 - index * 0.05);
@@ -45,7 +57,7 @@ export class LightingLayer {
   /** Darkness where lights don't reach, with lights erased out of it. */
   readonly lightLayer = new Container();
   /** Everything outside the viewers' sight, with what they see erased out of it. */
-  readonly fogLayer = new Container();
+  readonly sightLayer = new Container();
   private readonly lightG = new Graphics();
   /** Each light's reach, erased from the darkness by the lamp shader. */
   private readonly lampLayer = new Container();
@@ -59,10 +71,12 @@ export class LightingLayer {
   private readonly lightErase = new Graphics({ blendMode: "erase" });
   /** Areas of solid dark, over everything else. */
   private readonly lightDark = new Graphics();
-  private readonly fogG = new Graphics();
+  private readonly sightG = new Graphics();
   private readonly sights = new Map<string, Lamp>();
-  /** Where the viewers see from and the walls in the way, for hiding the names of tokens they can't see. */
-  private sight: { from: Point[]; walls: Segment[] } | null = null;
+  /** Where the viewers see from and the walls in the way, for hiding tokens they can't see; null when they see everything. */
+  sight: Sight | null = null;
+  /** The part of the world drawn over: what's in view, and a margin round it. */
+  box = { x: 0, y: 0, w: 0, h: 0 };
 
   constructor(private readonly state: RenderState) {
     // Each draws dark over the view and erases what's lit or seen; a filter
@@ -70,17 +84,18 @@ export class LightingLayer {
     this.lightLayer.addChild(this.lightG, this.lampLayer, this.lightErase, this.lightDark);
     this.lightLayer.filters = [new AlphaFilter()];
     this.tintLayer.addChild(this.glowTint);
-    this.fogLayer.addChild(this.fogG);
-    this.fogLayer.filters = [new AlphaFilter()];
+    this.sightLayer.addChild(this.sightG);
+    this.sightLayer.filters = [new AlphaFilter()];
   }
 
   /**
    * Darkness, with each light's reach erased out of it by the lamp shader
    * (scene/lampShader.ts), its walls and tokens casting soft shadows; then,
    * for a player, black over everything their tokens can't see, by the same
-   * shader with a lamp a pixel across. The GM sees the darkness at half strength.
+   * shader with a lamp a pixel across; with fog of war, only dimmed, as what's
+   * remembered. The GM sees the darkness at half strength.
    */
-  draw(lighting: Lighting, viewerIds: string[] | null) {
+  draw(lighting: Lighting, viewerIds: string[] | null, remembered: boolean) {
     const s = this.state;
     const view = visibleWorld(s.camera, s.size.width, s.size.height);
     const margin = Math.max(view.w, view.h);
@@ -90,6 +105,7 @@ export class LightingLayer {
       w: view.w + 2 * margin,
       h: view.h + 2 * margin,
     };
+    this.box = box;
     const at = (element: SceneElement) => s.previews.get(element.id) ?? element;
     const { enabled, darkness } = lighting;
     const viewers =
@@ -177,12 +193,15 @@ export class LightingLayer {
     this.dropLamps(this.lamps, lit);
     this.dropLamps(this.tints, tinted);
 
-    const fg = this.fogG.clear();
-    this.fogLayer.visible = Boolean(viewers?.length);
+    const sg = this.sightG.clear();
+    this.sightLayer.visible = Boolean(viewers?.length);
     this.sight = null;
     const seeing = new Set<string>();
     if (viewers?.length) {
-      fg.rect(box.x, box.y, box.w, box.h).fill({ color: 0x05_07_0c, alpha: 1 });
+      sg.rect(box.x, box.y, box.w, box.h).fill({
+        color: UNSEEN,
+        alpha: remembered ? REMEMBERED_SHADE : 1,
+      });
       const sightWalls = sightSegments(placed.filter((element) => !s.hidden.has(element.id)));
       const from = viewers.map((element) => {
         const t = at(element);
@@ -192,7 +211,7 @@ export class LightingLayer {
       for (const v of from) {
         seeing.add(v.id);
         // An eye a pixel across, so the edge of sight is smooth but sharp.
-        this.lampFor(this.sights, v.id, this.fogLayer).update({
+        this.lampFor(this.sights, v.id, this.sightLayer).update({
           at: v.at,
           radius: 0.75 / s.camera.zoom,
           falloff: null,
@@ -261,9 +280,9 @@ export class LightingLayer {
     }
   }
 
-  /** Whether a token is out of the viewers' sight (always false when they see everything). */
-  unseen(t: Transform): boolean {
+  /** Whether a place is in the viewers' sight (always true when they see everything). */
+  inSight(t: Point): boolean {
     const { sight } = this;
-    return sight?.from.every((p) => blocked(p, t, sight.walls)) ?? false;
+    return !sight || sight.from.some((p) => !blocked(p, t, sight.walls));
   }
 }

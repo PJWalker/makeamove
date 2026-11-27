@@ -20,6 +20,8 @@ import { SelectionBar } from "./SelectionBar";
 import { TextEditor } from "./TextEditor";
 import { TokenOptionsDialog } from "./TokenOptionsDialog";
 import {
+  useExploring,
+  useFog,
   useLighting,
   useSceneController,
   useSceneRenderer,
@@ -84,6 +86,8 @@ export function SceneCanvas({ campaign, sceneId }: { campaign: Campaign; sceneId
   const controller = useSceneController(campaign, renderer, ready, sceneId, hostReference);
   useSheetOnTokenSelect(campaign, controller);
   useLighting(campaign, controller);
+  useFog(campaign, controller);
+  useExploring(campaign, controller);
   const {
     ctx,
     fileRef,

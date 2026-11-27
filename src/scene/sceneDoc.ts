@@ -6,6 +6,7 @@ import { dataName } from "../platform/dataEpoch";
 import { device } from "../platform/device";
 import { rootOf } from "../data/schema";
 import type { Patch, Root } from "../data/schema";
+import type { FogMode } from "./fog";
 import type { Grid } from "./grid";
 import { LAYERS } from "./types";
 import type { Layer, NewElement, SceneElement } from "./types";
@@ -15,11 +16,15 @@ import { sceneShape } from "./schema";
 
 export const sceneDbName = (guid: string) => dataName("scene", guid);
 
-/** Lighting on or off, how dark unlit places are (0 to 1), and whether players see only what their tokens see. */
+/**
+ * Lighting on or off, how dark unlit places are (0 to 1), whether players
+ * see only what their tokens see, and the scene's fog of war.
+ */
 export interface SceneLighting {
   enabled: boolean;
   darkness: number;
   vision: boolean;
+  fog: FogMode;
 }
 
 /** Where each grid setting is kept in a scene's settings. */
@@ -44,6 +49,8 @@ export class SceneDoc {
   readonly doc: Y.Doc;
   readonly elements: Root<typeof sceneShape>["elements"];
   readonly settings: Root<typeof sceneShape>["settings"];
+  /** What characters have seen, place by place, for fog of war. */
+  readonly explored: Root<typeof sceneShape>["explored"];
   readonly undo: Y.UndoManager;
   /** Marks this user's own edits, so undo never reverts anyone else's. */
   readonly origin = { local: true };
@@ -54,6 +61,7 @@ export class SceneDoc {
     const root = rootOf(document, sceneShape);
     this.elements = root.elements;
     this.settings = root.settings;
+    this.explored = root.explored;
     this.persistence = new IndexeddbPersistence(sceneDbName(document.guid), document);
     this.undo = new Y.UndoManager([this.elements.y, this.settings.y], {
       trackedOrigins: new Set([this.origin]),
@@ -102,7 +110,12 @@ export class SceneDoc {
   /** The scene's lighting, and whether players see only what their tokens do (M12). */
   lighting(): SceneLighting {
     const s = this.settings;
-    return { enabled: s.get("lighting"), darkness: s.get("darkness"), vision: s.get("vision") };
+    return {
+      enabled: s.get("lighting"),
+      darkness: s.get("darkness"),
+      vision: s.get("vision"),
+      fog: s.get("fog"),
+    };
   }
 
   setLighting(patch: Partial<SceneLighting>) {
@@ -111,7 +124,33 @@ export class SceneDoc {
         lighting: patch.enabled,
         darkness: patch.darkness,
         vision: patch.vision,
+        fog: patch.fog,
       });
+    });
+  }
+
+  // Fog of war
+
+  /** What characters have seen, each a polygon in the world, flat [x, y, …]. */
+  exploredSights(): number[][] {
+    return this.explored.views().map(([, points]) => points);
+  }
+
+  /**
+   * Remember what a character saw from the place `key` names. Untracked, so
+   * undo never forgets it, and whichever device records a place first, the
+   * same key keeps it to one entry.
+   */
+  explore(sights: Map<string, number[]>) {
+    this.doc.transact(() => {
+      for (const [key, points] of sights) this.explored.set(key, points);
+    });
+  }
+
+  /** Forget everything characters have seen, covering the scene in fog again. */
+  forgetExplored() {
+    this.doc.transact(() => {
+      this.explored.clear();
     });
   }
 

@@ -45,15 +45,20 @@ export class ElementLayer {
   }
 
   /**
-   * Hide what's hidden for now (erased strokes), and the GM's helpers from
-   * everyone else: walls always show to the GM, lamps, areas and effect
+   * Hide what's hidden for now (erased strokes), tokens this device can't
+   * see (`unseen`: out of sight or under fog), and the GM's helpers from
+   * everyone else: walls always show to the GM, lamps, areas, effect and fog
    * outlines only while they can be picked (`shown`).
    */
-  syncHidden(showHelpers: boolean, shown: ReadonlySet<SelectKind>) {
+  syncHidden(
+    showHelpers: boolean,
+    shown: ReadonlySet<SelectKind>,
+    unseen: (token: TokenElement) => boolean,
+  ) {
     const s = this.state;
     for (const [id, view] of this.views) {
-      view.root.visible = !s.hidden.has(id);
       const element = s.byId.get(id);
+      view.root.visible = !s.hidden.has(id) && !(element?.type === "token" && unseen(element));
       if (!view.helper || !element) continue;
       const kind = kindOf(element);
       view.helper.visible = showHelpers && (kind === "wall" || shown.has(kind));

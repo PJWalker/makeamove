@@ -6,6 +6,7 @@ import {
   IconEraser,
   IconLight,
   IconMeasure,
+  IconObscure,
   IconPan,
   IconPing,
   IconSelect,
@@ -34,4 +35,5 @@ export const TOOLS: {
   { id: "wall", label: "Walls", key: "W", Icon: IconWall, gmOnly: true },
   { id: "light", label: "Lights", key: "L", Icon: IconLight, gmOnly: true },
   { id: "effect", label: "Effects", key: "F", Icon: IconEffects, gmOnly: true },
+  { id: "fog", label: "Fog of War", key: "O", Icon: IconObscure, gmOnly: true },
 ];

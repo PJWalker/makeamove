@@ -189,6 +189,7 @@ export class SceneController implements ToolContext {
           this.tools.lightTool,
           this.tools.shapeTool,
           this.tools.effectTool,
+          this.tools.fogTool,
           this.tools.selectable,
         ],
         () => {
@@ -440,7 +441,7 @@ export class SceneController implements ToolContext {
     if (this.spaceHeld) return "grab";
     if (this.placing.value || (tool === "select" && this.targetMode.value)) return "crosshair";
     return toolCursor(tool, {
-      shape: this.tools.shapeTool.value,
+      shape: tool === "fog" ? this.tools.fogTool.value.shape : this.tools.shapeTool.value,
       effect: this.tools.effectTool.value.effect,
     });
   }

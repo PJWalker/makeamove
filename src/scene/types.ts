@@ -242,10 +242,31 @@ export type EffectElement = Base &
     colour: string;
   };
 
+/** Whether a fog shape forces what's in it revealed to players, or hidden from them. */
+export type FogForce = "hide" | "reveal";
+
+/** How the GM sees each kind of fog shape. */
+export const FOG_COLOURS: Record<FogForce, string> = {
+  reveal: "#7be0a1",
+  hide: "#ff7a8a",
+};
+
+/**
+ * A fog of war shape (the GM's): what's in it is revealed to players, or
+ * hidden from them whatever their characters have seen (see fog.ts). Only
+ * the GM sees it, and only while the scene has fog.
+ */
+export type FogElement = Base &
+  ShapeGeometry & {
+    type: "fog";
+    force: FogForce;
+  };
+
 export type SceneElement =
   | AreaElement
   | DrawingElement
   | EffectElement
+  | FogElement
   | LightElement
   | MapElement
   | ShapeElement

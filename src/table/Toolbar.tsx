@@ -8,8 +8,7 @@ import { startReorder } from "../ui/reorder";
 import { scrollSideways } from "../ui/wheel";
 import { PEN_WIDTH_RANGE } from "../scene/tools";
 import type { LightToolMode, SelectKind, ToolId } from "../scene/tools";
-import { AREA_COLOURS, SHAPES } from "../scene/types";
-import type { ShapeKind } from "../scene/types";
+import { AREA_COLOURS } from "../scene/types";
 import { Button } from "../ui/Button";
 import { ColourPicker } from "../ui/ColourPicker";
 import { Segmented, ToggleGroup } from "../ui/Segmented";
@@ -19,6 +18,7 @@ import {
   IconLight,
   IconMap,
   IconMenu,
+  IconObscure,
   IconShapes,
   IconText,
   IconToken,
@@ -35,7 +35,7 @@ import { useCampaign } from "../workspace/campaignContext";
 import { selectTool } from "../workspace/commands/core";
 import { menuFor } from "../workspace/commands/views";
 import { EffectSightToggles } from "./effectOptions";
-import { EFFECT_OPTIONS } from "./effectOptionsData";
+import { EFFECT_OPTIONS, FOG_FORCE_OPTIONS, SHAPE_OPTIONS } from "./effectOptionsData";
 import { TextStyleFields } from "./TextStyleFields";
 import { useDockStripLayout } from "./dockStrip";
 
@@ -61,13 +61,14 @@ function inOrder(tools: typeof TOOLS, order: ToolId[]) {
   return [...tools].sort((a, b) => rank(a.id) - rank(b.id));
 }
 
-const TOOL_OPTIONS: Partial<Record<ToolId, "effect" | "light" | "pen" | "select">> = {
+const TOOL_OPTIONS: Partial<Record<ToolId, "effect" | "fog" | "light" | "pen" | "select">> = {
   select: "select",
   draw: "pen",
   shape: "pen",
   text: "pen",
   light: "light",
   effect: "effect",
+  fog: "fog",
 };
 
 function useShownTool(activeTool: Store<ToolId>): ToolId {
@@ -154,6 +155,7 @@ export function Toolbar({ isGm }: { isGm: boolean }) {
         {TOOL_OPTIONS[tool] === "pen" && <PenOptions tool={tool} />}
         {TOOL_OPTIONS[tool] === "light" && <LightOptions />}
         {TOOL_OPTIONS[tool] === "effect" && <EffectOptions />}
+        {TOOL_OPTIONS[tool] === "fog" && <FogOptions />}
       </div>
     </div>
   );
@@ -327,6 +329,7 @@ const SELECT_KINDS: { id: SelectKind; label: string; Icon: Icon; gmOnly?: boolea
   { id: "wall", label: "Walls", Icon: IconWall, gmOnly: true },
   { id: "light", label: "Lights", Icon: IconLight, gmOnly: true },
   { id: "effect", label: "Effects", Icon: IconEffects, gmOnly: true },
+  { id: "fog", label: "Fog of War", Icon: IconObscure, gmOnly: true },
 ];
 
 /** Which sorts of things the Select tool picks. */
@@ -418,6 +421,32 @@ function EffectOptions() {
   );
 }
 
+/** What the Fog of War tool draws: a shape always revealed to players, or always hidden, and its shape. */
+function FogOptions() {
+  const context = useCampaign();
+  const { force, shape } = useQuery(context.tools.fogTool);
+  return (
+    <fieldset className="tool-settings" aria-label="Fog of War">
+      <Segmented
+        label="Draw"
+        value={force}
+        options={FOG_FORCE_OPTIONS}
+        onChange={(next) => {
+          context.tools.setFogTool({ force: next });
+        }}
+      />
+      <Segmented
+        label="Shape"
+        value={shape}
+        options={SHAPE_OPTIONS}
+        onChange={(next) => {
+          context.tools.setFogTool({ shape: next });
+        }}
+      />
+    </fieldset>
+  );
+}
+
 const ink = (colour: string) => `var(--glyph-ink, ${colour})`;
 
 /**
@@ -449,37 +478,6 @@ function LightGlyph({ mode }: { mode: LightToolMode }) {
         fillOpacity={mode === "dark" ? 0.6 : 0.35}
         strokeWidth="1.5"
       />
-    </svg>
-  );
-}
-
-/** The shapes, as Segmented options with their pictures. */
-const SHAPE_OPTIONS = SHAPES.map((s) => ({
-  id: s.id,
-  label: s.label,
-  icon: <ShapeGlyph shape={s.id} />,
-}));
-
-const SHAPE_PAINT = {
-  fill: "currentColor",
-  fillOpacity: 0.3,
-  stroke: "currentColor",
-  strokeWidth: 2,
-  strokeLinejoin: "round",
-} as const;
-
-/**
- * A small picture of a shape for its button, in the segment's own ink so it
- * stands out whether chosen or not, whatever the shape's paint.
- */
-function ShapeGlyph({ shape }: { shape: ShapeKind }) {
-  return (
-    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
-      {shape === "rect" && <rect x="3" y="3" width="12" height="12" {...SHAPE_PAINT} />}
-      {shape === "circle" && <circle cx="9" cy="9" r="6.5" {...SHAPE_PAINT} />}
-      {shape === "line" && <rect x="1" y="7" width="16" height="4" {...SHAPE_PAINT} />}
-      {shape === "cone" && <polygon points="2,9 16,2 16,16" {...SHAPE_PAINT} />}
-      {shape === "polygon" && <polygon points="2,6 9,2 16,6 14,15 5,16" {...SHAPE_PAINT} />}
     </svg>
   );
 }

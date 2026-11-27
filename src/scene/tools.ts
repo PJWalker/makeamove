@@ -2,10 +2,11 @@ import { store } from "../lib/store";
 import { choiceOf, listOf, settingsOver } from "../data/localDoc";
 import type { LocalDoc as LocalDocument, LocalValue } from "../data/localDoc";
 import { oneOf, isString } from "../lib/guards";
-import { EFFECTS, SHAPES, TEXT_FONTS } from "./types";
+import { EFFECTS, FOG_COLOURS, SHAPES, TEXT_FONTS } from "./types";
 import type {
   AreaTone,
   EffectKind,
+  FogForce,
   Layer,
   SceneElement,
   ShapeKind,
@@ -25,6 +26,7 @@ export const TOOL_IDS = [
   "wall",
   "light",
   "effect",
+  "fog",
 ] as const;
 
 export type ToolId = (typeof TOOL_IDS)[number];
@@ -54,6 +56,12 @@ interface EffectSettings {
   shape: ShapeKind;
 }
 
+/** What the Fog tool draws: a shape revealed to players, or hidden from them, and its shape. */
+interface FogToolSettings {
+  force: FogForce;
+  shape: ShapeKind;
+}
+
 /** An effect as it starts: in its own colour, with its own light and sight. */
 function effectDefaults(effect: EffectKind) {
   const e = EFFECTS.find((x) => x.id === effect)!;
@@ -64,6 +72,7 @@ function effectDefaults(effect: EffectKind) {
 export type SelectKind =
   | "drawing"
   | "effect"
+  | "fog"
   | "light"
   | "map"
   | "shape"
@@ -81,6 +90,7 @@ const SELECT_KINDS = new Set([
   "wall",
   "light",
   "effect",
+  "fog",
 ]);
 const SELECTABLE_DEFAULT: SelectKind[] = ["token", "map", "drawing", "shape", "text", "wall"];
 
@@ -101,6 +111,7 @@ export class SceneTools {
   readonly textStyle: LocalValue<TextStyle>;
   readonly lightTool: LocalValue<LightToolMode>;
   readonly effectTool: LocalValue<EffectSettings>;
+  readonly fogTool: LocalValue<FogToolSettings>;
   /** The sorts of things the Select tool picks. Lights and effects are off until asked for. */
   readonly selectable: LocalValue<SelectKind[]>;
 
@@ -149,6 +160,12 @@ export class SceneTools {
       const known = EFFECTS.some((x) => x.id === e.effect) && SHAPES.some((s) => s.id === e.shape);
       return known ? e : effectRead(undefined);
     });
+    const fogRead = settingsOver<FogToolSettings>({ force: "reveal", shape: "rect" }, "fog tool");
+    this.fogTool = local.value("fogTool", (v) => {
+      const f = fogRead(v);
+      const known = Object.hasOwn(FOG_COLOURS, f.force) && SHAPES.some((s) => s.id === f.shape);
+      return known ? f : fogRead(undefined);
+    });
     this.selectable = local.value(
       "selectable",
       listOf(
@@ -161,6 +178,10 @@ export class SceneTools {
 
   setPen(patch: Partial<PenSettings>) {
     this.pen.value = { ...this.pen.value, ...patch };
+  }
+
+  setFogTool(patch: Partial<FogToolSettings>) {
+    this.fogTool.value = { ...this.fogTool.value, ...patch };
   }
 
   setTextStyle(patch: Partial<TextStyle>) {
@@ -188,10 +209,14 @@ export class SceneTools {
 }
 
 /** The GM's sorts of things, which only the GM sees, picks and edits. */
-export const GM_KINDS: readonly SelectKind[] = ["wall", "light", "effect"];
+export const GM_KINDS: readonly SelectKind[] = ["wall", "light", "effect", "fog"];
 
 /** The tools that make a sort of thing, and pick only that while in use. */
-export const TOOL_KINDS: Partial<Record<ToolId, SelectKind>> = { light: "light", effect: "effect" };
+export const TOOL_KINDS: Partial<Record<ToolId, SelectKind>> = {
+  light: "light",
+  effect: "effect",
+  fog: "fog",
+};
 
 /** Outline width of drawn shapes, in world px. */
 export const SHAPE_WIDTH = 3;

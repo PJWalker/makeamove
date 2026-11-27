@@ -18,6 +18,8 @@ import { measureSdfText } from "./render/sdfText";
 import { CANVAS_FONTS } from "./render/style";
 import { ElementLayer } from "./render/elements";
 import { GridLayer } from "./render/grid";
+import { FogOfWarLayer } from "./render/fogOfWar";
+import type { FogOfWar } from "./render/fogOfWar";
 import { LightingLayer } from "./render/lighting";
 import type { Lighting } from "./render/lighting";
 import { OverlayLayer } from "./render/overlay";
@@ -63,6 +65,7 @@ export class SceneRenderer implements RenderState {
   private readonly gridLayer = new GridLayer();
   private readonly elementLayer = new ElementLayer(this, this.layers);
   private readonly lightingLayer = new LightingLayer(this);
+  private readonly fogLayer = new FogOfWarLayer(this);
   private readonly draftLayer = new DraftLayer();
   private readonly tokenLabels = new TokenLabelLayer(this);
   private readonly conditions = new ConditionLayer(this);
@@ -159,7 +162,8 @@ export class SceneRenderer implements RenderState {
       this.layers.over,
       lighting.tintLayer,
       lighting.lightLayer,
-      lighting.fogLayer,
+      lighting.sightLayer,
+      this.fogLayer.view,
     );
     this.app.stage.addChild(
       this.world,
@@ -249,7 +253,6 @@ export class SceneRenderer implements RenderState {
     const d = this.dirty;
     if (d.elements) this.elementLayer.sync();
     else if (d.previews) this.elementLayer.syncPreviews();
-    this.elementLayer.syncHidden(this.showHelpers, this.helpersShown);
     const falling = this.elementLayer.syncDowned();
     const effects = this.elementLayer.animate();
     if (d.camera) {
@@ -259,10 +262,17 @@ export class SceneRenderer implements RenderState {
     }
     if (d.elements || d.previews) d.overlay = true;
     if (d.grid) this.gridLayer.draw(this);
-    if (d.elements || d.previews || d.camera || d.lighting)
-      this.lightingLayer.draw(this.lighting, this.viewers);
+    if (d.elements || d.previews || d.camera || d.lighting) {
+      this.lightingLayer.draw(this.lighting, this.viewers, this.fogLayer.fog.mode !== "none");
+      this.fogLayer.draw(this.lightingLayer.sight, this.lightingLayer.box);
+    }
+    this.elementLayer.syncHidden(
+      this.showHelpers,
+      this.helpersShown,
+      (token) => !this.viewers?.includes(token.id) && this.unseen(this.previews.get(token.id) ?? token),
+    );
     if (d.overlay) {
-      const unseen = (t: Transform) => this.lightingLayer.unseen(t);
+      const unseen = (t: Transform) => this.unseen(t);
       this.draftLayer.draw(this.draft, this.layers, this.camera.zoom);
       this.overlay.draw(this.overlayState);
       this.tokenLabels.draw(this.hoverToken, this.hoverPointer, unseen);
@@ -317,6 +327,19 @@ export class SceneRenderer implements RenderState {
     this.viewers = viewers;
     this.showHelpers = showHelpers;
     this.invalidate("lighting", "overlay");
+  }
+
+  /** Set the scene's fog of war, and whether this device sees under it (the GM's). */
+  setFog(fog: FogOfWar, seeAll: boolean) {
+    this.fogLayer.fog = fog;
+    this.fogLayer.seeAll = seeAll;
+    this.invalidate("lighting", "overlay");
+  }
+
+  /** Whether a token there is hidden from this device: out of its viewers' sight, or under fog. */
+  private unseen(t: Point): boolean {
+    const { sight } = this.lightingLayer;
+    return !this.fogLayer.clear(t, this.lightingLayer.inSight(t), sight !== null);
   }
 
   setHoverToken(id: string | null, pointer: Point | null = null) {
