@@ -85,19 +85,29 @@ function inserted(ids: seq<string>, index: int, id: string): seq<string>
   ((ids[0..i] + [id]) + ids[i..])
 }
 
+lemma InsertedAt(ids: seq<string>, i: int, id: string, x: string)
+  requires 0 <= i <= |ids|
+  ensures occurrences((ids[0..i] + [id]) + ids[i..], x) == occurrences(ids, x) + (if id == x then 1 else 0)
+{
+  assert ids == ids[0..i] + ids[i..];
+  assert [id][1..] == [];
+  assert occurrences([id], x) == (if id == x then 1 else 0) + occurrences([id][1..], x);
+  OccurrencesConcat(ids[0..i] + [id], ids[i..], x);
+  OccurrencesConcat(ids[0..i], [id], x);
+  OccurrencesConcat(ids[0..i], ids[i..], x);
+}
+
 lemma inserted_ensures(ids: seq<string>, index: int, id: string)
   ensures (occurrences(inserted(ids, index, id), id) == (occurrences(ids, id) + 1))
   ensures forall x :: ((x != id) ==> (occurrences(inserted(ids, index, id), x) == occurrences(ids, x)))
 {
   var i := MathMin(MathMax(index, 0), |ids|);
-  assert ids == ids[0..i] + ids[i..];
   assert inserted(ids, index, id) == (ids[0..i] + [id]) + ids[i..];
-  assert [id][1..] == [];
-  forall x {
-    assert occurrences([id], x) == (if id == x then 1 else 0) + occurrences([id][1..], x);
-    OccurrencesConcat(ids[0..i] + [id], ids[i..], x);
-    OccurrencesConcat(ids[0..i], [id], x);
-    OccurrencesConcat(ids[0..i], ids[i..], x);
+  InsertedAt(ids, i, id, id);
+  forall x | x != id
+    ensures occurrences(inserted(ids, index, id), x) == occurrences(ids, x)
+  {
+    InsertedAt(ids, i, id, x);
   }
 }
 
