@@ -481,6 +481,9 @@ export class DiceFlight {
     for (const { die, from, to, fromPosition, toPosition } of finishing.eases) {
       from.slerp(to, eased, die.body.quaternion);
       fromPosition.lerp(toPosition, eased, die.body.position);
+      // Turning as it slides, it rocks up over its corners rather than through the floor.
+      const { position, quaternion } = die.body;
+      position.z = Math.max(position.z, -lowestPoint(quaternion, die.vertices));
       die.body.velocity.setZero();
       die.body.angularVelocity.setZero();
       die.impact = 0;

@@ -28,6 +28,45 @@ export function decode(stamp: string): Hlc {
 /** Wall-clock milliseconds of a stamp, for showing when a message was sent. */
 export const stampTime = (stamp: string) => decode(stamp).wall;
 
+/**
+ * Whether `a` is strictly later than `b`: by wall time, then by counter.
+ * @public Used by the proofs' specs.
+ */
+export function isLater(a: Hlc, b: Hlc): boolean {
+  //@ verify
+  return a.wall > b.wall || (a.wall === b.wall && a.counter > b.counter);
+}
+
+/** The clock after a local event at wall time `now`: later than `last`, and never behind `now`. */
+export function ticked(last: Hlc, now: number): Hlc {
+  //@ verify
+  //@ requires last.counter >= 0
+  //@ ensures isLater(\result, last)
+  //@ ensures \result.wall >= now && \result.counter >= 0
+  //@ ensures \result.node === last.node
+  if (now > last.wall) return { wall: now, counter: 0, node: last.node };
+  return { wall: last.wall, counter: last.counter + 1, node: last.node };
+}
+
+/**
+ * The clock after receiving `remote` at wall time `now`: later than both
+ * `last` and `remote`, so the next local stamp sorts after the peer's.
+ */
+export function received(last: Hlc, remote: Hlc, now: number): Hlc {
+  //@ verify
+  //@ requires last.counter >= 0 && remote.counter >= 0
+  //@ ensures isLater(\result, last) && isLater(\result, remote)
+  //@ ensures \result.wall >= now && \result.counter >= 0
+  //@ ensures \result.node === last.node
+  const wall = Math.max(now, last.wall, remote.wall);
+  let counter = 0;
+  if (wall === last.wall && wall === remote.wall)
+    counter = Math.max(last.counter, remote.counter) + 1;
+  else if (wall === last.wall) counter = last.counter + 1;
+  else if (wall === remote.wall) counter = remote.counter + 1;
+  return { wall, counter, node: last.node };
+}
+
 export class HybridClock {
   private last: Hlc;
   private readonly now: () => number;
@@ -39,24 +78,12 @@ export class HybridClock {
 
   /** A new stamp for a local event, later than every stamp seen so far. */
   tick(): string {
-    const now = this.now();
-    this.last =
-      now > this.last.wall
-        ? { ...this.last, wall: now, counter: 0 }
-        : { ...this.last, counter: this.last.counter + 1 };
+    this.last = ticked(this.last, this.now());
     return encode(this.last);
   }
 
   /** Account for a stamp from a peer, so later local stamps sort after it. */
   receive(stamp: string) {
-    const remote = decode(stamp);
-    const now = this.now();
-    const wall = Math.max(now, this.last.wall, remote.wall);
-    let counter = 0;
-    if (wall === this.last.wall && wall === remote.wall)
-      counter = Math.max(this.last.counter, remote.counter) + 1;
-    else if (wall === this.last.wall) counter = this.last.counter + 1;
-    else if (wall === remote.wall) counter = remote.counter + 1;
-    this.last = { ...this.last, wall, counter };
+    this.last = received(this.last, decode(stamp), this.now());
   }
 }

@@ -19,21 +19,12 @@ const whisper: ChatMessage = {
   toNames: ["Kim"],
 };
 
+// Who sees what is proved in audience.ts; this checks messages map onto it.
 describe("who sees what", () => {
-  it("shows public rolls to everyone", () => {
-    expect(visibilityOf(rollBy("public"), "lee", false)).toBe("full");
-  });
-  it("shows secret rolls to the roller and the GM, masked for others (so a GM secret roll is the GM's alone)", () => {
-    expect(visibilityOf(rollBy("private"), "pat", false)).toBe("full");
-    expect(visibilityOf(rollBy("private"), "gm", true)).toBe("full");
-    expect(visibilityOf(rollBy("private"), "lee", false)).toBe("masked");
-    const gmRoll = { ...rollBy("private"), author: "gm" };
-    expect(visibilityOf(gmRoll, "pat", false)).toBe("masked");
-  });
-  it("hides whispers from everyone but the sender and recipients", () => {
-    expect(visibilityOf(whisper, "pat", false)).toBe("full");
+  it("treats addressed text as a whisper and private rolls as secret", () => {
     expect(visibilityOf(whisper, "kim", false)).toBe("full");
-    expect(visibilityOf(whisper, "lee", false)).toBe("hidden");
     expect(visibilityOf(whisper, "gm", true)).toBe("hidden");
+    expect(visibilityOf(rollBy("private"), "lee", false)).toBe("masked");
+    expect(visibilityOf(rollBy("public"), "lee", false)).toBe("full");
   });
 });
