@@ -10,6 +10,7 @@ import {
   imageColour
 } from "../media/images";
 import type {BlobReference, EntityGraphic, EntityGraphicRef as EntityGraphicReference} from "../media/images";
+import type { LinkRef as LinkReference } from "../features/notes/links";
 import { reducedMotion } from "../ui/transition";
 import { colourOf  } from "./presence";
 import type {Presence} from "./presence";
@@ -23,6 +24,7 @@ import { tokenDistance } from "./measure";
 import {
   conversion,
   imageElement,
+  newPin,
   newToken,
   randomTokenColour
   
@@ -33,14 +35,14 @@ import type { ElementPatch, SceneDoc as SceneDocument } from "./sceneDoc";
 import { toolCursor } from "./toolCursors";
 import { ERASER_RADIUS, GM_KINDS, kindOf  } from "./tools";
 import type {SceneTools} from "./tools";
-import type { Layer, NewElement, SceneElement, TokenElement, TokenStyle, Transform } from "./types";
+import type { Layer, NewElement, PinElement, SceneElement, TokenElement, TokenStyle, Transform } from "./types";
 import { TOOL_PRESS } from "./gestures";
 import { PolygonDraft } from "./gestures/polygon";
 import { pinch } from "./gestures/pan";
 import { hoverCursor } from "./gestures/select";
 import { dragShape, placementPlan } from "./gestures/shape";
 import { fitPatch, newTextLook, putText } from "./gestures/text";
-import type { Gesture, Placement, TextRequest, ToolContext } from "./gestures/types";
+import type { Gesture, PinRequest, Placement, TextRequest, ToolContext } from "./gestures/types";
 
 /** How soon, and how near in screen px, a press must follow the last to count as a double click. */
 const MULTI_CLICK_MS = 500;
@@ -111,6 +113,10 @@ export class SceneController implements ToolContext {
   /** Handles transferring an item token out of the scene on pointer release. */
   onItemTokenDrop: ((token: TokenElement, event: PointerEvent) => boolean) | null = null;
   onTokenClick: ((token: TokenElement) => void) | null = null;
+  /** Opens what a clicked pin leads to. */
+  onPinClick: ((pin: PinElement) => void) | null = null;
+  /** Asks what a new pin at `at` (in screen px) should lead to: set by SceneCanvas. */
+  onPinRequest: ((request: PinRequest) => void) | null = null;
   onTokenDragMove: ((token: TokenElement | null, event?: PointerEvent) => void) | null = null;
   onTokenDrop: ((token: TokenElement, event: PointerEvent) => boolean) | null = null;
 
@@ -490,7 +496,8 @@ export class SceneController implements ToolContext {
   /**
    * Whether an element can be picked with the tool in use: the sorts the
    * Select tool's options turn on, or in the Lights or Effects tool what it
-   * makes. Only the GM picks walls, lights and effects.
+   * makes. Only the GM picks walls, lights and effects, and no one picks a
+   * pin hidden from them.
    */
   pickable(element: SceneElement): boolean {
     return this.picker()(element);
@@ -501,6 +508,7 @@ export class SceneController implements ToolContext {
     const kinds = this.tools.pickingKinds();
     return (element) => {
       const kind = kindOf(element);
+      if (element.type === "pin" && this.renderer.pinLookOf(element) === "hidden") return false;
       return (this.gm || !GM_KINDS.includes(kind)) && kinds.includes(kind);
     };
   }
@@ -935,6 +943,13 @@ export class SceneController implements ToolContext {
     },
   ) {
     return this.placeToken(at, spec);
+  }
+
+  /** Put down a pin leading to `link`, its point at `at`, and select it. */
+  addPin(at: Point, link: LinkReference) {
+    const id = this.scene.add(newPin(this.renderer.grid, at, link))[0]!;
+    this.selection.value = [id];
+    return id;
   }
 
   private placeToken(

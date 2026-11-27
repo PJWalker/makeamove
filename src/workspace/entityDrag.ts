@@ -25,7 +25,7 @@ export interface DragEntity {
     to: (characterId: string) => void;
     canGive?: (characterId: string) => boolean;
   };
-  /** Place it on the map as a token. */
+  /** Place it on the map as a token; without one, a link goes down as a pin. */
   token?: TokenSpec;
   /** The Library entry it comes from, for drops that take rules entities (a struggle, a class). */
   libraryEntry?: { kind: string; id: string };
@@ -141,6 +141,13 @@ export function dropTargetAt(
   };
 }
 
+/** Put an entity down on the scene: as its token, or as a pin leading to it if it has no token of its own (pages, scenes). */
+function dropOnScene(canvas: CanvasState, entity: DragEntity, { x, y }: { x: number; y: number }) {
+  if (!entity.token && entity.link)
+    return canvas.pinDrop.value?.(x, y, `${entity.link.kind}:${entity.link.id}`) ?? false;
+  return canvas.tokenDrop.value?.(x, y, entity.token ?? { name: entity.label }) ?? false;
+}
+
 /** Drop an entity on a target from dropTargetAt; it flashes to say it landed. */
 export function dropOn(
   canvas: CanvasState,
@@ -166,7 +173,7 @@ export function dropOn(
       entity.give.to(target.characterId);
       if (target.tokenId) canvas.flashSceneDrop(target.tokenId);
     } else if (target.element.matches(".scene-canvas")) {
-      if (!canvas.tokenDrop.value?.(x, y, entity.token ?? { name: entity.label })) return false;
+      if (!dropOnScene(canvas, entity, { x, y })) return false;
     } else return false;
   }
   target.element.dataset["dropped"] = "true";

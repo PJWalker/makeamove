@@ -28,6 +28,7 @@ export const TOOL_IDS = [
   "wall",
   "light",
   "effect",
+  "pin",
 ] as const;
 
 export type ToolId = (typeof TOOL_IDS)[number];
@@ -65,7 +66,7 @@ function effectDefaults(effect: EffectKind) {
 
 /** The sorts of things on a scene, as the Select tool picks them: lamps and areas are both lights. */
 export type SelectKind =
-  "drawing" | "effect" | "light" | "map" | "shape" | "text" | "token" | "wall";
+  "drawing" | "effect" | "light" | "map" | "pin" | "shape" | "text" | "token" | "wall";
 export const kindOf = (element: SceneElement): SelectKind => (element.type === "area" ? "light" : element.type);
 const SELECT_KINDS = new Set([
   "token",
@@ -76,8 +77,9 @@ const SELECT_KINDS = new Set([
   "wall",
   "light",
   "effect",
+  "pin",
 ]);
-const SELECTABLE_DEFAULT: SelectKind[] = ["token", "map", "drawing", "shape", "text", "wall"];
+const SELECTABLE_DEFAULT: SelectKind[] = ["token", "map", "drawing", "shape", "text", "wall", "pin"];
 
 /**
  * The scene tools on this device: which is in use (for this session only),
@@ -186,7 +188,7 @@ export class SceneTools {
 export const GM_KINDS: readonly SelectKind[] = ["wall", "light", "effect"];
 
 /** The tools that make a sort of thing, and pick only that while in use. */
-export const TOOL_KINDS: Partial<Record<ToolId, SelectKind>> = { light: "light", effect: "effect" };
+export const TOOL_KINDS: Partial<Record<ToolId, SelectKind>> = { light: "light", effect: "effect", pin: "pin" };
 
 /** Outline width of drawn shapes, in world px. */
 export const SHAPE_WIDTH = 3;

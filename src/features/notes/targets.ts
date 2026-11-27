@@ -1,7 +1,8 @@
 import { getCharacter, listCharacters, systemOf } from "../characters/api";
 import type { Campaign } from "../../campaign/campaign";
-import { listNotes } from "./api";
-import type { LinkKind } from "./links";
+import { getNote, listNotes } from "./api";
+import { parseLink } from "./links";
+import type { LinkKind, LinkRef } from "./links";
 
 /** Something a note can link to, as offered after typing `@`. */
 export interface LinkTarget {
@@ -140,4 +141,18 @@ export function linkTip(campaign: Campaign, kind: LinkKind, id: string): string 
       return m ? `${m.name}\n${m.trigger}` : null;
     }
   }
+}
+
+/** What a link leads to on this device: its name, and whether it's a GM page; null if it's gone or not here. */
+export function linkTarget(
+  campaign: Campaign,
+  reference: LinkRef,
+): { label: string; gmOnly: boolean } | null {
+  const { kind, id } = parseLink(reference);
+  if (kind === "note") {
+    const note = getNote(campaign, id);
+    return note ? { label: note.title, gmOnly: note.gmOnly } : null;
+  }
+  const label = linkLabel(campaign, kind, id);
+  return label === null ? null : { label, gmOnly: false };
 }

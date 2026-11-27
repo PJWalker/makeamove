@@ -1,3 +1,4 @@
+import type { LinkRef as LinkReference } from "../features/notes/links";
 import type { BlobReference, EntityGraphic, EntityGraphicRef as EntityGraphicReference } from "../media/images";
 
 /*
@@ -231,8 +232,18 @@ export type EffectElement = Base & EffectSight & ShapeGeometry & {
     colour: string;
   };
 
+/**
+ * A map pin: a marker that opens what it links to (a note, most often) when
+ * clicked. Players see it only if they can see what it leads to, and only in
+ * their tokens' sight (pins.ts).
+ */
+export interface PinElement extends Base {
+  type: "pin";
+  link: LinkReference;
+}
+
 export type SceneElement =
-  AreaElement | DrawingElement | EffectElement | LightElement | MapElement | ShapeElement | TextElement | TokenElement | WallElement;
+  AreaElement | DrawingElement | EffectElement | LightElement | MapElement | PinElement | ShapeElement | TextElement | TokenElement | WallElement;
 
 /** What callers supply when adding an element; the store fills in the rest. */
 export type NewElement = DistributiveOmit<SceneElement, "createdBy" | "id" | "locked" | "z"> & {

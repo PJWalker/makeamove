@@ -2,6 +2,7 @@ import { arrayOf, isBoolean, isNumber, isObject, isString, oneOf } from "../lib/
 import { Invalid, collection, lww, record, variant   } from "../data/schema";
 import type {Item, Shape} from "../data/schema";
 import type { BlobReference, EntityGraphic, EntityGraphicRef as EntityGraphicReference } from "../media/images";
+import { isLink } from "../features/notes/links";
 import { DEFAULT_GRID } from "./grid";
 import { EFFECTS, LAYERS, SHAPES, TEXT_FONTS, TOKEN_STYLES  } from "./types";
 import type {SceneElement} from "./types";
@@ -79,6 +80,7 @@ const elementCases = {
   wall: { door: lww(isBoolean), open: lww(isBoolean) },
   light: { bright: number_(0), dim: number_(0), colour, flicker: lww(isBoolean) },
   area: { ...outline, tone: lww(oneOf("light", "dark")).or("light") },
+  pin: { link: lww(isLink) },
   effect: {
     ...outline,
     shape: shapeKind,
@@ -128,6 +130,7 @@ function parseElement(m: Item<typeof sceneElement>, id: string): Invalid | Scene
     if (!ok) return new Invalid("its points are missing");
   }
   if (element.type === "map" && !element.image) return new Invalid("its image is missing");
+  if (element.type === "pin" && !element.link) return new Invalid("its link is missing");
   return { id, ...element } as SceneElement;
 }
 

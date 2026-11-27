@@ -1,10 +1,11 @@
+import type { LinkRef as LinkReference } from "../features/notes/links";
 import type { BlobReference, EntityGraphic, EntityGraphicRef as EntityGraphicReference } from "../media/images";
 import { cellOr,   snapPoint, snapSize } from "./grid";
 import type {Grid, Point} from "./grid";
 import type { NewElement, SceneElement, TokenStyle } from "./types";
 
 /*
- * The elements new things become: tokens, and imported images.
+ * The elements new things become: tokens, pins, and imported images.
  */
 
 /** What a new token shows and who it stands for. */
@@ -44,6 +45,17 @@ export const randomTokenColour = () =>
 
 /** A token's side for a grid: a cell, or 70 px without one. */
 const tokenSize = (grid: Grid) => cellOr(grid, 70);
+
+/** A new pin's size, in cells. */
+const PIN_SIZE = 0.6;
+/** How far a pin's point is below its centre, in its heights (elementViews.ts draws it there). */
+const PIN_POINT = 0.46;
+
+/** A new pin leading to `link`, its point at `at`, most of a cell across. */
+export function newPin(grid: Grid, at: Point, link: LinkReference): NewElement {
+  const size = tokenSize(grid) * PIN_SIZE;
+  return { type: "pin", layer: "over", link, x: at.x, y: at.y - size * PIN_POINT, w: size, h: size, rot: 0 };
+}
 
 /** A new token a cell across, snapped to the grid at `at`. */
 export function newToken(grid: Grid, at: Point, spec: TokenSpec): NewElement {

@@ -18,7 +18,7 @@ function clearDropHint(context: CampaignContext) {
 
 /**
  * How things dropped on a scene, and dragged out of it, reach the table: character and item tokens
- * dropped on the canvas, the character under a point, item tokens dragged onto sheets, and copies of
+ * and pins dropped on the canvas, the character under a point, item tokens dragged onto sheets, and copies of
  * template characters. Returns the function that takes it all down again.
  */
 export function bindSceneDrops(
@@ -43,6 +43,10 @@ export function bindSceneDrops(
     } else {
       ctl.addToken(ctl.toWorld(x, y), spec.name, spec);
     }
+    return true;
+  });
+  context.canvas.pinDrop.set((x, y, link) => {
+    ctl.addPin(ctl.toWorld(x, y), link);
     return true;
   });
   context.canvas.sceneCharacterAt.set((x, y) => {
@@ -102,6 +106,7 @@ export function bindSceneDrops(
   };
   return () => {
     context.canvas.tokenDrop.set(null);
+    context.canvas.pinDrop.set(null);
     context.canvas.sceneCharacterAt.set(null);
     context.canvas.sceneDropHighlight.set(null);
     ctl.onItemTokenDragMove = null;

@@ -3,7 +3,7 @@ import type {RefObject} from "react";
 import { watch } from "../lib/store";
 import { device } from "../platform/device";
 import { SceneController } from "../scene/controller";
-import type { TextRequest } from "../scene/gestures/types";
+import type { PinRequest, TextRequest } from "../scene/gestures/types";
 import { SceneRenderer } from "../scene/renderer";
 import { SceneDoc as SceneDocument } from "../scene/sceneDoc";
 import { formatDistance } from "../scene/measure";
@@ -14,6 +14,7 @@ import { useConstant } from "../ui/useConstant";
 import { isTyping } from "../ui/keys";
 import { useCampaign  } from "../workspace/campaignContext";
 import type {CampaignContext} from "../workspace/campaignContext";
+import bindPins from "./scenePins";
 import { bindSceneDrops } from "./sceneDrops";
 
 /* The scene canvas's subscriptions: what the renderer and the scene controller are fed from the table, and what they feed back. */
@@ -247,6 +248,21 @@ export function useSceneTargeting(context: CampaignContext, controller: SceneCon
       });
     });
   }, [context, controller]);
+}
+
+/** Map pins: wired to the table, and the request for a new one's target, until it's answered. */
+export function usePins(controller: SceneController | null) {
+  const context = useCampaign();
+  const [request, setRequest] = useState<PinRequest | null>(null);
+  useEffect(() => {
+    if (!controller) return undefined;
+    const unbind = bindPins(context, controller, setRequest);
+    return () => {
+      unbind();
+      setRequest(null);
+    };
+  }, [context, controller]);
+  return [request, setRequest] as const;
 }
 
 /** Typed text on the map: the request to edit some, until it's done. */
