@@ -3,10 +3,10 @@ import { toScreen } from "../camera";
 import type { Rect } from "../camera";
 import type { Point } from "../grid";
 import type { TokenStat } from "../../systems/types";
-import { barShards, shardFrame  } from "../barBreak";
-import type {BarShard} from "../barBreak";
-import { BAR_BREAK_AT, BAR_CHANGE_MS, barChangeFrame  } from "../barChange";
-import type {BarChange} from "../barChange";
+import { barShards, shardFrame } from "../barBreak";
+import type { BarShard } from "../barBreak";
+import { BAR_BREAK_AT, BAR_CHANGE_MS, barChangeFrame } from "../barChange";
+import type { BarChange } from "../barChange";
 import { downs } from "../downed";
 import { pinInside, pointerToward, unionRect } from "../edgePin";
 import { hoverSpring } from "../conditionLayout";
@@ -87,7 +87,13 @@ export class TokenLabelLayer {
     const seen = new Set<string>();
     const usedNames = new Set<string>();
     const usedValues = new Set<string>();
-    interface Box { id: string; x: number; y: number; w: number; h: number }
+    interface Box {
+      id: string;
+      x: number;
+      y: number;
+      w: number;
+      h: number;
+    }
     const plans: {
       id: string;
       t: Transform;
@@ -106,7 +112,8 @@ export class TokenLabelLayer {
       // Out of sight: no name or bars to give it away.
       if (unseen(t)) continue;
       const screenW = t.w * cam.zoom;
-      const allStats = !element.hideBars && element.characterId ? this.statsFor(element.characterId) : [];
+      const allStats =
+        !element.hideBars && element.characterId ? this.statsFor(element.characterId) : [];
       for (const stat of allStats) {
         const key = `${element.id}:${stat.id}`;
         seen.add(key);
@@ -300,14 +307,14 @@ export class TokenLabelLayer {
           const hurt = delta < 0;
           inner(frac, frame.ghost).fill(
             hurt
-              ? { color: frame.ghostHot ? 0xFF_FF_FF : 0xFF_5C_4D }
-              : { color: 0xB8_F5_C2, alpha: 0.75 },
+              ? { color: frame.ghostHot ? 0xff_ff_ff : 0xff_5c_4d }
+              : { color: 0xb8_f5_c2, alpha: 0.75 },
           );
         }
         if (frac > 0) inner(0, frac).fill({ color: s.colour });
         if (frame && changed) {
           if (frame.flash > 0)
-            g.roundRect(x, y, w, barH, 3).fill({ color: 0xFF_FF_FF, alpha: frame.flash * 0.7 });
+            g.roundRect(x, y, w, barH, 3).fill({ color: 0xff_ff_ff, alpha: frame.flash * 0.7 });
           // Cracks spread across a bar about to break.
           if (frame.crack > 0) {
             for (const shard of this.breakFor(key, changed.change, {
@@ -326,7 +333,7 @@ export class TokenLabelLayer {
                 .lineTo(m.x, m.y)
                 .lineTo(m.x + (b.x - m.x) * reach, m.y + (b.y - m.y) * reach)
                 .stroke({
-                  color: 0xFF_FF_FF,
+                  color: 0xff_ff_ff,
                   width: 1.5,
                   alpha: 0.5 + 0.5 * frame.crack,
                   join: "miter",
@@ -336,7 +343,7 @@ export class TokenLabelLayer {
           // A rim that burns in the colour of the change, then fades.
           const hurt = delta < 0;
           g.roundRect(x - 1, y - 1, w + 2, barH + 2, 4).stroke({
-            color: hurt ? 0xFF_5C_4D : 0x6E_E0_7A,
+            color: hurt ? 0xff_5c_4d : 0x6e_e0_7a,
             width: 2,
             alpha: Math.min(1, frame.alpha * 1.5) * (1 - frame.rise * 0.5),
           });
@@ -350,7 +357,7 @@ export class TokenLabelLayer {
           text = new SdfText({
             font: cabin(700),
             size: BAR_MAX_H - 2,
-            fill: 0xFF_FF_FF,
+            fill: 0xff_ff_ff,
             anchor: 0.5,
           });
           this.barTextPool.set(key, text);
@@ -412,9 +419,9 @@ export class TokenLabelLayer {
     const same = live && Math.sign(running.delta) === Math.sign(delta);
     this.barChanges.set(key, {
       from: live
-        ? (same && delta < 0
+        ? same && delta < 0
           ? frame.ghost
-          : frame.fill)
+          : frame.fill
         : fillOf({ ...stat, value: last }),
       to: fillOf(stat),
       delta: same ? running.delta + delta : delta,
@@ -500,8 +507,8 @@ export class TokenLabelLayer {
         });
       g.poly(place(1, 1)).fill({ color: INK, alpha: 0.95 * f.alpha });
       if (shard.centre.x < lost)
-        g.poly(place(0.8, Math.max(0, 1 - 3 / at.h))).fill({ color: 0xFF_5C_4D, alpha: f.alpha });
-      g.poly(place(1, 1)).stroke({ color: 0xFF_5C_4D, width: 1.5, alpha: 0.8 * f.alpha });
+        g.poly(place(0.8, Math.max(0, 1 - 3 / at.h))).fill({ color: 0xff_5c_4d, alpha: f.alpha });
+      g.poly(place(1, 1)).stroke({ color: 0xff_5c_4d, width: 1.5, alpha: 0.8 * f.alpha });
     }
   }
 
@@ -519,7 +526,7 @@ export class TokenLabelLayer {
       text = new SdfText({
         font: cabin(800),
         size: 36,
-        fill: 0xFF_FF_FF,
+        fill: 0xff_ff_ff,
         outline: { color: INK, width: 5 },
         anchor: { x: 0.5, y: 1 },
       });
@@ -528,7 +535,7 @@ export class TokenLabelLayer {
     }
     const label = delta > 0 ? `+${delta}` : `${delta}`.replace("-", "\u2212");
     if (text.text !== label) text.text = label;
-    text.fill = delta < 0 ? 0xFF_7A_6B : 0x8C_F0_9A;
+    text.fill = delta < 0 ? 0xff_7a_6b : 0x8c_f0_9a;
     const size = Math.max(26, Math.min(36, barH * 1.6));
     text.scale.set((size / 36) * frame.pop);
     text.alpha = frame.alpha;

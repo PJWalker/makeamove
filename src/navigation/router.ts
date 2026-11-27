@@ -1,6 +1,6 @@
 import { store } from "../lib/store";
-import { parseInvite  } from "../sync/invite";
-import type {Invite} from "../sync/invite";
+import { parseInvite } from "../sync/invite";
+import type { Invite } from "../sync/invite";
 import { until, withTransition } from "../ui/transition";
 
 /** Hash routes: `#/` is the lobby, `#/c/<campaignId>` is a campaign. */
@@ -32,10 +32,12 @@ const rowOf = (id: string) =>
   document.querySelector<HTMLElement>(`[data-campaign-id="${CSS.escape(id)}"]`);
 
 /** Centre of a rect, for the lobby's zoom to scale around. */
-const setZoomOrigin = (r: DOMRect) => { document.documentElement.style.setProperty(
+const setZoomOrigin = (r: DOMRect) => {
+  document.documentElement.style.setProperty(
     "--zoom-origin",
     `${r.left + r.width / 2}px ${r.top + r.height / 2}px`,
-  ); };
+  );
+};
 
 /**
  * Switch between the lobby and a campaign. Opening a campaign zooms the table

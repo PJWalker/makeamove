@@ -18,8 +18,8 @@ import { Segmented } from "../ui/Segmented";
 import type { CharacterView } from "../features/characters/types";
 import { usePopupDialog } from "./usePopupDialog";
 import { Dialog } from "./Dialog";
-import { planAdvancement  } from "./advancementModel";
-import type {Improvement} from "./advancementModel";
+import { planAdvancement } from "./advancementModel";
+import type { Improvement } from "./advancementModel";
 import { bumpResource, setData, setScore } from "./commands/characters";
 import { useCampaign } from "./campaignContext";
 import {
@@ -87,7 +87,9 @@ export function ChoiceField({
                 .map((n) => `+${n}`)
                 .join(" "),
             }))}
-            onChange={(v) => { onChange({ ...value, pattern: Number(v) }); }}
+            onChange={(v) => {
+              onChange({ ...value, pattern: Number(v) });
+            }}
           />
           {amounts.map((n, index) =>
             n ? (
@@ -178,8 +180,9 @@ export function ScoreFields({
             {method === "array" || method === "roll" ? (
               <select
                 value={scores[stat.id]}
-                onChange={(event) => { onScores(swapScore(scores, stat.id, Number(event.currentTarget.value))); }
-                }
+                onChange={(event) => {
+                  onScores(swapScore(scores, stat.id, Number(event.currentTarget.value)));
+                }}
               >
                 {pool.map((score) => (
                   <option key={score} value={score}>
@@ -193,8 +196,9 @@ export function ScoreFields({
                 min={method === "buy" ? Math.min(...buyable) : (stat.min ?? 1)}
                 max={method === "buy" ? Math.max(...buyable) : (stat.max ?? SCORE_CAP)}
                 value={scores[stat.id]}
-                onInput={(event) => { onScores({ ...scores, [stat.id]: Number(event.currentTarget.value) || 0 }); }
-                }
+                onInput={(event) => {
+                  onScores({ ...scores, [stat.id]: Number(event.currentTarget.value) || 0 });
+                }}
               />
             )}
           </label>
@@ -223,24 +227,27 @@ function useScoreFields(
     // Only a new rule resets the scores.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rule]);
-  const rollPool = () => { takePool(system.stats.map(() => roll(methods.roll!).total).sort((a, b) => b - a)); };
+  const rollPool = () => {
+    takePool(system.stats.map(() => roll(methods.roll!).total).sort((a, b) => b - a));
+  };
   const choose = (m: ScoreMethod) => {
     onMethod(m);
     switch (m) {
-    case "array": {
-    takePool(methods.standardArray!);
-    break;
-    }
-    case "buy": {
-    onScores(startingScores(system, methods, m));
-    break;
-    }
-    case "roll": { {
-    rollPool();
-    // No default
-    }
-    break;
-    }
+      case "array": {
+        takePool(methods.standardArray!);
+        break;
+      }
+      case "buy": {
+        onScores(startingScores(system, methods, m));
+        break;
+      }
+      case "roll": {
+        {
+          rollPool();
+          // No default
+        }
+        break;
+      }
     }
   };
   const spent = methods.pointBuy ? pointsSpent(scores, methods.pointBuy) : null;
@@ -270,8 +277,9 @@ export function RuleScoreFields({
             <span className="stat-abbr">{stat.abbr}</span>
             <select
               value={scores[stat.id] ?? ""}
-              onChange={(event) => { onScores({ ...scores, [stat.id]: Number(event.currentTarget.value) }); }
-              }
+              onChange={(event) => {
+                onScores({ ...scores, [stat.id]: Number(event.currentTarget.value) });
+              }}
             >
               {values.map((value) => (
                 <option key={value} value={value}>
@@ -337,7 +345,12 @@ export function AdvancementDialog({
     const d = derive(getCharacter(campaign, c.id)!, system);
     const gained = (d.values["maxHp"] ?? 0) - before;
     if (gained > 0)
-      context.execute(bumpResource, { id: c.id, resource: "hp", by: gained, max: d.values["maxHp"] });
+      context.execute(bumpResource, {
+        id: c.id,
+        resource: "hp",
+        by: gained,
+        max: d.values["maxHp"],
+      });
     if (system.resources.some((r) => r.id === "hitDice"))
       context.execute(bumpResource, {
         id: c.id,
@@ -364,7 +377,9 @@ export function AdvancementDialog({
             choice={ch.at === "advance" ? { ...ch, label: `${ch.label} ${plan.rank}` } : ch}
             value={picks[ch.id] ?? emptyPick()}
             blockedStats={plan.blockedStats}
-            onChange={(p) => { setPicks({ ...picks, [ch.id]: p }); }}
+            onChange={(p) => {
+              setPicks({ ...picks, [ch.id]: p });
+            }}
           />
         ))}
         {plan.improves && (
@@ -379,7 +394,12 @@ export function AdvancementDialog({
           <p className="muted">Hit points and Hit Dice go up.</p>
         )}
         <div className="form-actions">
-          <Button variant="ghost" onClick={() => { closePopup(reference.current, onClose); }}>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              closePopup(reference.current, onClose);
+            }}
+          >
             Cancel
           </Button>
           <Button variant="primary" type="submit" disabled={!plan.ready}>
@@ -405,7 +425,13 @@ function ImprovementFields({
 }) {
   const feats = system.creation?.feats;
   const statSelect = (stat: string, set: (id: string) => void, label: string) => (
-    <select aria-label={label} value={stat} onChange={(e) => { set(e.currentTarget.value); }}>
+    <select
+      aria-label={label}
+      value={stat}
+      onChange={(e) => {
+        set(e.currentTarget.value);
+      }}
+    >
       {system.stats.map((s) => (
         <option key={s.id} value={s.id} disabled={(c.scores[s.id] ?? 10) >= (s.max ?? SCORE_CAP)}>
           {s.name} ({c.scores[s.id]})
@@ -425,14 +451,18 @@ function ImprovementFields({
           { id: "split", label: "+1 to two" },
           ...(feats ? [{ id: "feat" as const, label: "A feat" }] : []),
         ]}
-        onChange={(kind) => { onChange({ ...value, kind }); }}
+        onChange={(kind) => {
+          onChange({ ...value, kind });
+        }}
       />
       {feat ? (
         <>
           <select
             aria-label="Feat"
             value={value.feat}
-            onChange={(e) => { onChange({ ...value, feat: e.currentTarget.value }); }}
+            onChange={(e) => {
+              onChange({ ...value, feat: e.currentTarget.value });
+            }}
           >
             <option value="">Choose…</option>
             {feat.options.map((o) => (
@@ -447,9 +477,21 @@ function ImprovementFields({
         </>
       ) : (
         <div className="sheet-row">
-          {statSelect(value.first, (first) => { onChange({ ...value, first }); }, "First ability")}
+          {statSelect(
+            value.first,
+            (first) => {
+              onChange({ ...value, first });
+            },
+            "First ability",
+          )}
           {value.kind === "split" &&
-            statSelect(value.second, (second) => { onChange({ ...value, second }); }, "Second ability")}
+            statSelect(
+              value.second,
+              (second) => {
+                onChange({ ...value, second });
+              },
+              "Second ability",
+            )}
         </div>
       )}
     </div>

@@ -18,9 +18,9 @@ export const preferNumberParsing = defineRule({
         const method =
           node.callee.name === "parseInt"
             ? "Int"
-            : (node.callee.name === "parseFloat"
+            : node.callee.name === "parseFloat"
               ? "Float"
-              : undefined);
+              : undefined;
         if (!method) return;
         context.report({
           node: node.callee,

@@ -4,8 +4,8 @@ import { Button } from "../../ui/Button";
 import { AdvancementDialog } from "../../workspace/CreationParts";
 import { ConditionToggles, Counter } from "../../workspace/sheetParts";
 import { signedStr as signedString } from "../../workspace/actionPresentation";
-import { DerivedEntry  } from "../../workspace/sheetSections";
-import type {SectionContext} from "../../workspace/sheetSections";
+import { DerivedEntry } from "../../workspace/sheetSections";
+import type { SectionContext } from "../../workspace/sheetSections";
 import { useCampaign } from "../../workspace/campaignContext";
 import { roll } from "../../workspace/commands/chat";
 import { bumpData, bumpResource, rest, setData } from "../../workspace/commands/characters";
@@ -56,7 +56,11 @@ export function CharacterDetails({ system, c, editable }: SectionContext) {
                 value={value}
                 disabled={!editable}
                 onChange={(e) =>
-                  context.execute(setData, { id: c.id, key: ch.field, value: e.currentTarget.value })
+                  context.execute(setData, {
+                    id: c.id,
+                    key: ch.field,
+                    value: e.currentTarget.value,
+                  })
                 }
               >
                 <option value="">None</option>
@@ -124,7 +128,12 @@ export function VitalsSection({ c, d, editable }: SectionContext) {
           max={v["hitDiceMax"]}
           disabled={!editable}
           onChange={(by) =>
-            context.execute(bumpResource, { id: c.id, resource: "hitDice", by, max: v["hitDiceMax"] })
+            context.execute(bumpResource, {
+              id: c.id,
+              resource: "hitDice",
+              by,
+              max: v["hitDiceMax"],
+            })
           }
         />
         <Counter
@@ -171,7 +180,11 @@ export function VitalsSection({ c, d, editable }: SectionContext) {
             checked={!!c.data["inspiration"]}
             disabled={!editable}
             onChange={() =>
-              context.execute(setData, { id: c.id, key: "inspiration", value: !c.data["inspiration"] })
+              context.execute(setData, {
+                id: c.id,
+                key: "inspiration",
+                value: !c.data["inspiration"],
+              })
             }
           />
           Heroic Inspiration
@@ -190,14 +203,22 @@ export function LevelUp({ campaign, c, d, editable }: SectionContext) {
     <>
       {ready && (
         <div className="sheet-advancement">
-          <Button onClick={() => { setLevelling(true); }}>Level Up</Button>
+          <Button
+            onClick={() => {
+              setLevelling(true);
+            }}
+          >
+            Level Up
+          </Button>
         </div>
       )}
       {levelling && (
         <AdvancementDialog
           campaign={campaign}
           characterId={c.id}
-          onClose={() => { setLevelling(false); }}
+          onClose={() => {
+            setLevelling(false);
+          }}
         />
       )}
     </>
@@ -224,7 +245,12 @@ export function DeathSaves({ c, editable, use }: Sections) {
         {counter("Failures", "deathFailures")}
       </div>
       <div className="sheet-row">
-        <Button disabled={!editable} onClick={() => { use("death-save"); }}>
+        <Button
+          disabled={!editable}
+          onClick={() => {
+            use("death-save");
+          }}
+        >
           Death Save
         </Button>
       </div>
@@ -235,7 +261,7 @@ export function DeathSaves({ c, editable, use }: Sections) {
 /** Armor class, initiative, speed and the numbers that follow from them. */
 export function CombatStats({ d, editable, use }: Pick<Sections, "d" | "editable" | "use">) {
   const v = d.values;
-  const {why} = d.resolved;
+  const { why } = d.resolved;
   return (
     <section className="form-section sheet-derived-group" aria-label="Combat">
       <h3 className="sheet-heading">Combat</h3>
@@ -251,7 +277,9 @@ export function CombatStats({ d, editable, use }: Pick<Sections, "d" | "editable
             type="button"
             className="dnd-roll"
             disabled={!editable}
-            onClick={() => { use("initiative"); }}
+            onClick={() => {
+              use("initiative");
+            }}
           >
             {signedString(valueOf(v, "initiative"))}
           </button>
@@ -264,7 +292,9 @@ export function CombatStats({ d, editable, use }: Pick<Sections, "d" | "editable
         {valueOf(v, "spellDc") > 0 && (
           <>
             <DerivedEntry label="Spell save DC">{valueOf(v, "spellDc")}</DerivedEntry>
-            <DerivedEntry label="Spell attack">{signedString(valueOf(v, "spellAttack"))}</DerivedEntry>
+            <DerivedEntry label="Spell attack">
+              {signedString(valueOf(v, "spellAttack"))}
+            </DerivedEntry>
           </>
         )}
       </dl>
@@ -290,10 +320,20 @@ export function SkillsSection({ system, c, d, editable, use }: Sections) {
                 title={RANK[rank]}
                 disabled={!editable}
                 onClick={() =>
-                  context.execute(setData, { id: c.id, key: `skill:${s.id}`, value: (rank + 1) % 3 })
+                  context.execute(setData, {
+                    id: c.id,
+                    key: `skill:${s.id}`,
+                    value: (rank + 1) % 3,
+                  })
                 }
               />
-              <button type="button" className="dnd-skill" onClick={() => { use(`skill-${s.id}`); }}>
+              <button
+                type="button"
+                className="dnd-skill"
+                onClick={() => {
+                  use(`skill-${s.id}`);
+                }}
+              >
                 <span>{s.name}</span>
                 <span className="muted">{abbr}</span>
                 <span className="dnd-bonus">
@@ -402,7 +442,9 @@ export function ConditionsSection({
             value={valueOf(d.values, "exhaustion")}
             max={6}
             disabled={!editable}
-            onChange={(by) => context.execute(bumpData, { id: c.id, key: "exhaustion", by, max: 6 })}
+            onChange={(by) =>
+              context.execute(bumpData, { id: c.id, key: "exhaustion", by, max: 6 })
+            }
           />
         </div>
       )}

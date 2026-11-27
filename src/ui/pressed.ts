@@ -15,7 +15,9 @@ export function notePressed(element: Element | null | undefined) {
 
 addEventListener(
   "pointerdown",
-  (e) => { notePressed((e.target as Element | null)?.closest?.('button, [role="button"], a')); },
+  (e) => {
+    notePressed((e.target as Element | null)?.closest?.('button, [role="button"], a'));
+  },
   true,
 );
 

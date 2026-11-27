@@ -1,6 +1,6 @@
 import { isNumber, isString, isBoolean } from "../lib/guards";
-import { collection, counter, lww, record  } from "../data/schema";
-import type {Item} from "../data/schema";
+import { collection, counter, lww, record } from "../data/schema";
+import type { Item } from "../data/schema";
 import type { DataValue } from "../data/types";
 
 /*

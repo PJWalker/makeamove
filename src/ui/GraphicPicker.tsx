@@ -4,8 +4,8 @@ import type { EntityGraphic } from "../media/images";
 import { Button } from "./Button";
 import { EntityGraphicView } from "./EntityGraphic";
 import { ENTRY_ICONS } from "./entryIcons";
-import { FilterableMenu  } from "./FilterableMenu";
-import type {FilterableMenuOption} from "./FilterableMenu";
+import { FilterableMenu } from "./FilterableMenu";
+import type { FilterableMenuOption } from "./FilterableMenu";
 import { IconImage, IconSearch } from "./icons";
 
 const iconNames = (Object.keys(ENTRY_ICONS) as (keyof typeof ENTRY_ICONS)[]).filter(

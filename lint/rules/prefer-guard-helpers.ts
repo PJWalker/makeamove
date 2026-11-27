@@ -1,13 +1,6 @@
 import path from "node:path";
-import {
-  defineRule
-  
-  
-  
-  
-  
-} from "vite-plus/lint/plugins";
-import type {Context, ESTree, Fix, Fixer, Scope} from "vite-plus/lint/plugins";
+import { defineRule } from "vite-plus/lint/plugins";
+import type { Context, ESTree, Fix, Fixer, Scope } from "vite-plus/lint/plugins";
 import { isString } from "../../src/lib/guards.ts";
 import { projectPath } from "../strings.ts";
 
@@ -29,12 +22,19 @@ function shadowed(context: Context, node: ESTree.Node, name: string) {
   return false;
 }
 
-function addImport(fixer: Fixer, program: ESTree.Program, name: string, from: string): Fix | undefined {
+function addImport(
+  fixer: Fixer,
+  program: ESTree.Program,
+  name: string,
+  from: string,
+): Fix | undefined {
   const imports = program.body.filter(
     (s): s is ESTree.ImportDeclaration => s.type === "ImportDeclaration",
   );
   const existing = imports.find((s) => s.source.value === from && s.importKind !== "type");
-  if (existing?.specifiers.some((s) => s.type === "ImportSpecifier" && s.local.name === name) === true) {
+  if (
+    existing?.specifiers.some((s) => s.type === "ImportSpecifier" && s.local.name === name) === true
+  ) {
     return undefined;
   }
   const named = existing?.specifiers.filter((s) => s.type === "ImportSpecifier") ?? [];
@@ -70,20 +70,20 @@ export const preferGuardHelpers = defineRule({
           node.right.type === "Literal" &&
           isString(node.right.value)
             ? node.right.value
-            : (node.right.type === "UnaryExpression" &&
+            : node.right.type === "UnaryExpression" &&
                 node.right.operator === "typeof" &&
                 node.left.type === "Literal" &&
                 isString(node.left.value)
               ? node.left.value
-              : undefined);
+              : undefined;
         if (kind !== "string" && kind !== "boolean") return;
 
         const operand =
           node.left.type === "UnaryExpression" && node.left.operator === "typeof"
             ? node.left.argument
-            : (node.right.type === "UnaryExpression" && node.right.operator === "typeof"
+            : node.right.type === "UnaryExpression" && node.right.operator === "typeof"
               ? node.right.argument
-              : undefined);
+              : undefined;
         if (!operand) return;
 
         const name = kind === "string" ? "isString" : "isBoolean";

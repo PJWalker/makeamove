@@ -21,7 +21,21 @@ import type {
  */
 export interface Gesture {
   readonly kind:
-    "draw" | "erase" | "light" | "marquee" | "move" | "pan" | "pinch" | "resize" | "rotate" | "rotateGroup" | "ruler" | "shape" | "trail" | "wall";
+    | "align"
+    | "draw"
+    | "erase"
+    | "light"
+    | "marquee"
+    | "move"
+    | "pan"
+    | "pinch"
+    | "resize"
+    | "rotate"
+    | "rotateGroup"
+    | "ruler"
+    | "shape"
+    | "trail"
+    | "wall";
   move?(e: PointerEvent, world: Point, screen: Point): void;
   /** Released: make the change. */
   end?(e: PointerEvent): void;
@@ -135,5 +149,8 @@ export function dragged(c: ToolContext, start: Point, world: Point): boolean {
 
 /** A pointer event and the ones the browser coalesced into it, at their world points. */
 export function coalesced(c: ToolContext, e: PointerEvent): [PointerEvent, Point][] {
-  return (e.getCoalescedEvents?.() ?? [e]).map((event) => [event, c.toWorld(event.clientX, event.clientY)]);
+  return (e.getCoalescedEvents?.() ?? [e]).map((event) => [
+    event,
+    c.toWorld(event.clientX, event.clientY),
+  ]);
 }

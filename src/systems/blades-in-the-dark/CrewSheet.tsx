@@ -2,8 +2,8 @@ import { useState } from "react";
 import { commaListOf } from "../../lib/list";
 import { systemOf } from "../../features/characters/api";
 import { getState } from "../../features/chat/messageState";
-import { systemCampaignData  } from "../../campaign/campaign";
-import type {Campaign} from "../../campaign/campaign";
+import { systemCampaignData } from "../../campaign/campaign";
+import type { Campaign } from "../../campaign/campaign";
 import { useQuery } from "../../ui/useQuery";
 import { Button } from "../../ui/Button";
 import { Counter } from "../../workspace/sheetParts";
@@ -13,7 +13,10 @@ import { can } from "../../workspace/commands/views";
 import { advanceCrew, advanceTier, buyUpgrade } from "./commands";
 import { crewTierCost } from "./progression";
 
-interface Choice { id: string; label: string }
+interface Choice {
+  id: string;
+  label: string;
+}
 
 /** The `<option>`s the crew doesn't own yet. */
 function UnownedOptions({ options, owned }: { options: readonly Choice[]; owned: Set<string> }) {
@@ -73,7 +76,9 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
         <select
           disabled={!gm}
           value={reward}
-          onChange={(event) => { setReward(event.currentTarget.value); }}
+          onChange={(event) => {
+            setReward(event.currentTarget.value);
+          }}
         >
           <option value="upgrades">Two crew upgrades</option>
           <UnownedOptions options={abilities} owned={ownedAbilityIds} />
@@ -90,7 +95,9 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
         <select
           disabled={!gm}
           value={upgrade}
-          onChange={(event) => { setUpgrade(event.currentTarget.value); }}
+          onChange={(event) => {
+            setUpgrade(event.currentTarget.value);
+          }}
         >
           <option value="">Choose an upgrade</option>
           <UnownedOptions options={upgrades} owned={ownedUpgradeIds} />

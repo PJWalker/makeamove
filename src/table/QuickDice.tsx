@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 import type { RollVisibility } from "../features/chat/types";
-import { pickName, samePick, signed  } from "../features/dice/pool";
-import type {TrayPick} from "../features/dice/pool";
+import { pickName, samePick, signed } from "../features/dice/pool";
+import type { TrayPick } from "../features/dice/pool";
 import { Button } from "../ui/Button";
-import { POOL_MS  } from "./useDicePool";
-import type {useDicePool} from "./useDicePool";
+import { POOL_MS } from "./useDicePool";
+import type { useDicePool } from "./useDicePool";
 
 const VISIBILITIES: { id: RollVisibility; label: string; title: string }[] = [
   { id: "public", label: "Public", title: "Everyone sees the roll" },
@@ -56,7 +56,9 @@ export function QuickDice({
         className="dice-pick"
         data-count={count || undefined}
         label={pickLabel(pick, name, count)}
-        onPointerDown={(event) => { dice.dragOut(event, pick); }}
+        onPointerDown={(event) => {
+          dice.dragOut(event, pick);
+        }}
         onClick={() => {
           // The click that ends a drag out of the button isn't a pick.
           if (dragged.current) dragged.current = false;

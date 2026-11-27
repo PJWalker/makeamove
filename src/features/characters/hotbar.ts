@@ -66,7 +66,9 @@ export function defaultHotbar(campaign: Campaign, characterId: string): string[]
   const moves = actionsFor(c, system, d).flatMap((m) =>
     skip.has(m.category) ? [] : [moveSlot(m.id)],
   );
-  const gear = c.inventory.flatMap((index) => (index.uses && itemActive(index) ? [useSlot(index.id)] : []));
+  const gear = c.inventory.flatMap((index) =>
+    index.uses && itemActive(index) ? [useSlot(index.id)] : [],
+  );
   return [...moves, ...gear, ...BASIC_SLOTS].slice(0, MAX_SLOTS);
 }
 

@@ -1,0 +1,13 @@
+name: LemmaScript
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+jobs:
+  verify:
+    # Regenerates the Dafny for every file in LemmaScript-files.txt, proves it,
+    # and fails if a committed .dfy / .dfy.gen is out of date.
+    uses: midspiral/LemmaScript/.github/workflows/verify.yml@main
+    with:
+      backend: dafny

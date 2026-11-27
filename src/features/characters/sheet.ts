@@ -3,14 +3,8 @@ import type { Init } from "../../data/schema";
 import type { ResetEvent } from "../../systems/types";
 import type { DataValue } from "../../data/types";
 import { baseOf, getCharacter } from "./queries";
-import {
-  derive,
-  ensureSystemPart,
-  systemPartOf
-  
-  
-} from "./store";
-import type {CharacterRec, SystemPart} from "./store";
+import { derive, ensureSystemPart, systemPartOf } from "./store";
+import type { CharacterRec, SystemPart } from "./store";
 import type { characterEntry } from "./schema";
 import { systemOf } from "./system";
 

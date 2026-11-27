@@ -1,5 +1,14 @@
 import type * as React from "react";
-import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useRef, useState , lazy, Suspense } from "react";
+import {
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useLayoutEffect,
+  useRef,
+  useState,
+  lazy,
+  Suspense,
+} from "react";
 import { arrow, autoUpdate, computePosition, flip, offset, shift } from "@floating-ui/dom";
 import type { ChatMessage } from "../features/chat/types";
 import { markRead } from "../features/chat/unread";
@@ -56,9 +65,15 @@ export function ChatPopups({ campaign }: { campaign: Campaign }) {
       ref={ref}
       className="chat-popups"
       aria-live="polite"
-      onPointerEnter={() => { setHeld(true); }}
-      onPointerLeave={() => { setHeld(false); }}
-      onPointerDown={() => { markRead(campaign); }}
+      onPointerEnter={() => {
+        setHeld(true);
+      }}
+      onPointerLeave={() => {
+        setHeld(false);
+      }}
+      onPointerDown={() => {
+        markRead(campaign);
+      }}
     >
       <div ref={stack} className="chat-popup-stack">
         {shown.map((message, index) => (
@@ -71,7 +86,9 @@ export function ChatPopups({ campaign }: { campaign: Campaign }) {
             leaving={leavingAll}
             stack={stack}
             place={place}
-            onDismissAll={() => { setLeavingAll(true); }}
+            onDismissAll={() => {
+              setLeavingAll(true);
+            }}
           />
         ))}
       </div>
@@ -99,9 +116,13 @@ function useChatPopupStack(campaign: Campaign) {
   const [held, setHeld] = useState(false);
   const [hidden, setHidden] = useState(document.visibilityState === "hidden");
   useEffect(() => {
-    const onVisibility = () => { setHidden(document.visibilityState === "hidden"); };
+    const onVisibility = () => {
+      setHidden(document.visibilityState === "hidden");
+    };
     document.addEventListener("visibilitychange", onVisibility);
-    return () => { document.removeEventListener("visibilitychange", onVisibility); };
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, []);
   const [leavingAll, setLeavingAll] = useState(false);
   const reference = useRef<HTMLOutputElement>(null);
@@ -166,7 +187,8 @@ function useChatPopupStack(campaign: Campaign) {
           element.style.removeProperty("right");
           element.style.removeProperty("bottom");
           const arrowOffset = result.middlewareData.arrow?.y;
-          if (arrowOffset !== undefined) element.style.setProperty("--tail-y", `${arrowOffset + 12}px`);
+          if (arrowOffset !== undefined)
+            element.style.setProperty("--tail-y", `${arrowOffset + 12}px`);
         } else corner();
       }
     });
@@ -235,8 +257,17 @@ function Popup({
     const box = stack.current?.getBoundingClientRect();
     if (gone.current) return;
     gone.current = true;
-    if (!element || !box || reducedMotion.matches) { context.chat.dismissPopup(m.id); return; }
-    void leave(element, () => { context.chat.dismissPopup(m.id); }, null);
+    if (!element || !box || reducedMotion.matches) {
+      context.chat.dismissPopup(m.id);
+      return;
+    }
+    void leave(
+      element,
+      () => {
+        context.chat.dismissPopup(m.id);
+      },
+      null,
+    );
   });
 
   useLayoutEffect(() => {
@@ -256,7 +287,9 @@ function Popup({
   useEffect(() => {
     if (held || leaving) return;
     const timer = setTimeout(leavePopup, STAY_MS);
-    return () => { clearTimeout(timer); };
+    return () => {
+      clearTimeout(timer);
+    };
   }, [held, leaving]);
 
   useEffect(() => {

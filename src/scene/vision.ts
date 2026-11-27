@@ -17,8 +17,17 @@ export interface Segment {
 }
 
 /** A wall's two ends in the world: it lies along its length (w), through its centre, at its rotation. */
-export function wallEnds(element: { x: number; y: number; w: number; h: number; rot: number }): Segment {
-  return { a: fromLocal(element, { x: -element.w / 2, y: 0 }), b: fromLocal(element, { x: element.w / 2, y: 0 }) };
+export function wallEnds(element: {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  rot: number;
+}): Segment {
+  return {
+    a: fromLocal(element, { x: -element.w / 2, y: 0 }),
+    b: fromLocal(element, { x: element.w / 2, y: 0 }),
+  };
 }
 
 /** The segments that block sight: every wall but open doors. */

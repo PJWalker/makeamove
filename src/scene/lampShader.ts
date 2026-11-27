@@ -10,8 +10,8 @@ import {
   UniformGroup,
 } from "pixi.js";
 import type { Point } from "./grid";
-import { segmentDistance  } from "./vision";
-import type {Segment} from "./vision";
+import { segmentDistance } from "./vision";
+import type { Segment } from "./vision";
 
 /*
  * A lamp's light, or a viewer's sight, worked out per pixel (M12). One quad
@@ -311,10 +311,10 @@ export class Lamp {
 
     const u = this.uniforms.uniforms;
     const lamp = u["uLamp"] as Float32Array;
-    lamp.set([s.at.x, s.at.y, s.radius, this.tint ? 2 : (s.falloff ? 0 : 1)]);
+    lamp.set([s.at.x, s.at.y, s.radius, this.tint ? 2 : s.falloff ? 0 : 1]);
     const colour = u["uColour"] as Float32Array;
     // A see-through colour tints less: towards white, which doesn't tint at all.
-    const c = new Color(s.colour ?? 0xFF_FF_FF);
+    const c = new Color(s.colour ?? 0xff_ff_ff);
     const toWhite = (v: number) => 1 - c.alpha * (1 - v);
     colour.set([toWhite(c.red), toWhite(c.green), toWhite(c.blue)], 0);
     // The nearest walls, if there are more than fit.
@@ -325,14 +325,15 @@ export class Lamp {
             .slice(0, MAX_WALLS)
         : s.walls;
     const wallData = u["uWalls"] as Float32Array;
-    for (const [index, seg] of walls.entries()) wallData.set([seg.a.x, seg.a.y, seg.b.x, seg.b.y], index * 4);
+    for (const [index, seg] of walls.entries())
+      wallData.set([seg.a.x, seg.a.y, seg.b.x, seg.b.y], index * 4);
     const blockers = (s.blockers ?? []).slice(0, MAX_BLOCKERS);
     const blockerData = u["uBlockers"] as Float32Array;
-    for (const [index, b] of blockers.entries()) blockerData.set(
+    for (const [index, b] of blockers.entries())
+      blockerData.set(
         [b.seg.a.x, b.seg.a.y, b.seg.b.x, b.seg.b.y, b.strength, b.fade[0], b.fade[1], 0],
         index * 8,
-      )
-    ;
+      );
     (u["uFalloff"] as Float32Array).set([
       s.falloff?.bright ?? 0,
       s.falloff?.dim ?? 0,

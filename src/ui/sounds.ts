@@ -152,7 +152,8 @@ function openSurfaces() {
   return new Set<Element>([
     ...document.querySelectorAll("dialog[open], details[open]"),
     ...[...document.querySelectorAll<HTMLElement>("[popover]")].filter(
-      (element) => !element.matches('.tooltip, [role="tooltip"]') && element.matches(":popover-open"),
+      (element) =>
+        !element.matches('.tooltip, [role="tooltip"]') && element.matches(":popover-open"),
     ),
   ]);
 }
@@ -184,7 +185,7 @@ document.addEventListener(
 document.addEventListener(
   "toggle",
   (event) => {
-    const {target} = event;
+    const { target } = event;
     if (
       target instanceof HTMLElement &&
       target.hasAttribute("popover") &&
@@ -198,7 +199,7 @@ document.addEventListener(
 
 new MutationObserver((changes) => {
   for (const change of changes) {
-    const {target} = change;
+    const { target } = change;
     if (!(target instanceof HTMLElement)) continue;
     if (change.attributeName === "aria-expanded") {
       const previous = change.oldValue;

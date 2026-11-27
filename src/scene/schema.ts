@@ -1,10 +1,14 @@
 import { arrayOf, isBoolean, isNumber, isObject, isString, oneOf } from "../lib/guards";
-import { Invalid, collection, lww, record, variant   } from "../data/schema";
-import type {Item, Shape} from "../data/schema";
-import type { BlobReference, EntityGraphic, EntityGraphicRef as EntityGraphicReference } from "../media/images";
+import { Invalid, collection, lww, record, variant } from "../data/schema";
+import type { Item, Shape } from "../data/schema";
+import type {
+  BlobReference,
+  EntityGraphic,
+  EntityGraphicRef as EntityGraphicReference,
+} from "../media/images";
 import { DEFAULT_GRID } from "./grid";
-import { EFFECTS, LAYERS, SHAPES, TEXT_FONTS, TOKEN_STYLES  } from "./types";
-import type {SceneElement} from "./types";
+import { EFFECTS, LAYERS, SHAPES, TEXT_FONTS, TOKEN_STYLES } from "./types";
+import type { SceneElement } from "./types";
 
 /*
  * A scene subdocument (see design doc, "Data model"):

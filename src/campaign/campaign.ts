@@ -4,8 +4,8 @@ import { store, watch } from "../lib/store";
 import { newId, newSecret } from "../lib/ids";
 
 import { commaListOf, formatCommaList } from "../lib/list";
-import { device  } from "../platform/device";
-import type {Device} from "../platform/device";
+import { device } from "../platform/device";
+import type { Device } from "../platform/device";
 import type { JoinRoom } from "../sync/transport";
 import { joinPublicRoom } from "../sync/publicRoom";
 import type { ReadonlyStore } from "../lib/store";
@@ -13,7 +13,12 @@ import { NO_SYSTEM_ID, getSystem } from "../systems";
 import type { Invite } from "../sync/invite";
 import { noteDbName as noteDatabaseName, noteGuid } from "../features/notes/noteDoc";
 import { deleteNoteTextIndex } from "../features/notes/textIndex";
-import { Vault, vaultDbName as vaultDatabaseName, vaultNoteGuid, vaultShape } from "../features/notes/vault";
+import {
+  Vault,
+  vaultDbName as vaultDatabaseName,
+  vaultNoteGuid,
+  vaultShape,
+} from "../features/notes/vault";
 import { ChatLog, deleteChatData } from "../features/chat/chatLog";
 import { MoveRequests } from "../features/characters/moveRequests";
 import { sceneDbName as sceneDatabaseName } from "../scene/sceneDoc";
@@ -32,8 +37,8 @@ import {
   updateScene,
 } from "./sceneIndex";
 import { SystemData } from "./systemStore";
-import type {CampaignRoot} from "./schema";
-import { campaignShape  } from "./schema";
+import type { CampaignRoot } from "./schema";
+import { campaignShape } from "./schema";
 import { CampaignConnection } from "./connection";
 import {
   forgetCampaign,
@@ -43,7 +48,12 @@ import {
   updateCampaignEntry,
   upsertCampaign,
 } from "./registry";
-import { campaignDbName as campaignDatabaseName, campaignUiDbName as campaignUiDatabaseName } from "./storage";
+import {
+  campaignDbName as campaignDatabaseName,
+  campaignUiDbName as campaignUiDatabaseName,
+} from "./storage";
+import { checkedIn, letBack, removedBy } from "./standing";
+import type { Standing } from "./standing";
 
 export type { CampaignDefaults, MemberView, RevokedView, Role, SceneView } from "./types";
 
@@ -187,9 +197,11 @@ export class Campaign {
   private watchMeta() {
     this.checkMembership = () => {
       const named = this.meta.has("name");
-      const removed = this.revoked.has(this.device.value.id);
-      // A removed player's device must not add itself back.
-      if (named && !removed && !this.members.has(this.device.value.id)) {
+      const me = this.device.value.id;
+      const removed = this.revoked.has(me);
+      // A removed player's device must not add itself back (proved in standing.ts).
+      const before = this.standingOf(me);
+      if (checkedIn(before, named).member && !before.member) {
         const name = this.device.value.name || "Player";
         this.ensureMember(name);
         void this.chat.post(
@@ -230,7 +242,9 @@ export class Campaign {
           this.checkMembership();
         }, REJOIN_CHECK_MS);
       });
-      this.rejoinCleanups.push(stop, () => { if (timer !== undefined) clearTimeout(timer); });
+      this.rejoinCleanups.push(stop, () => {
+        if (timer !== undefined) clearTimeout(timer);
+      });
     }
     if (await this.connection.connect(roomKey, () => this.destroyed))
       void this.vault.value?.connect();
@@ -324,7 +338,9 @@ export class Campaign {
    */
   revokeMember(id: string) {
     const m = this.members.get(id);
-    if (id === this.device.value.id || !m || m.get("role") === "gm") return;
+    const before = this.standingOf(id);
+    const own = id === this.device.value.id;
+    if (!m || removedBy(before, own, this.isGm()) === before) return;
     this.doc.transact(() => {
       this.revoked.set(id, {
         name: m.get("name") ?? "Unnamed",
@@ -335,13 +351,20 @@ export class Campaign {
     });
   }
 
+  /** Where a device stands: member, GM, removed. */
+  private standingOf(id: string): Standing {
+    const role = this.members.get(id)?.get("role");
+    return { member: this.members.has(id), gm: role === "gm", removed: this.revoked.has(id) };
+  }
+
   /** Let a removed player back in; they rejoin with the invite link. */
   allowBack(id: string) {
-    this.revoked.delete(id);
+    const after = letBack(this.standingOf(id), this.isGm());
+    if (!after.removed) this.revoked.delete(id);
   }
 
   ensureMember(name: string, role: Role = "player") {
-    const {id} = this.device.value;
+    const { id } = this.device.value;
     this.doc.transact(() => {
       if (!this.members.has(id)) this.members.set(id, { role, joinedAt: Date.now() });
       if (name) this.members.get(id)?.patch({ name });
@@ -380,7 +403,9 @@ export class Campaign {
     // Where the GM goes, the table goes: tell everyone once they've settled.
     if (this.isGm()) {
       clearTimeout(this.sceneNoticeTimer);
-      this.sceneNoticeTimer = setTimeout(() => { this.announceScene(); }, Campaign.sceneNoticeDelay);
+      this.sceneNoticeTimer = setTimeout(() => {
+        this.announceScene();
+      }, Campaign.sceneNoticeDelay);
     }
   }
 
@@ -553,7 +578,10 @@ export function joinCampaign({ campaignId, roomKey }: Invite): string {
 }
 
 /** Load a stored document, let `clear` delete what it points to, then delete the document. */
-async function clearStoredDocument(databaseName: string, clear: (document: Y.Doc) => Promise<void> | void) {
+async function clearStoredDocument(
+  databaseName: string,
+  clear: (document: Y.Doc) => Promise<void> | void,
+) {
   const document = new Y.Doc();
   const p = new IndexeddbPersistence(databaseName, document);
   await p.whenSynced;

@@ -5,12 +5,9 @@ import {
   foldersByName,
   renameFolderIn,
   UNTITLED_FOLDER,
-  unfile
-  
+  unfile,
 } from "../../campaign/folders";
-import type {FolderView} from "../../campaign/folders";
-
-
+import type { FolderView } from "../../campaign/folders";
 
 export function listFolders(campaign: Campaign): FolderView[] {
   return foldersByName(campaign.characterFolders);
@@ -42,4 +39,4 @@ export function moveToFolder(
   campaign.characters.get(characterId)?.patch({ folder: folderId });
 }
 
-export {type FolderView} from "../../campaign/folders";
+export { type FolderView } from "../../campaign/folders";

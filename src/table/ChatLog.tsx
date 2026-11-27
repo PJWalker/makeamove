@@ -1,8 +1,8 @@
 import { useEffect, useMemo } from "react";
 import { useConstant } from "../ui/useConstant";
 import { canDelete, canEditMessage, visibilityOf } from "../features/chat/types";
-import { logRows  } from "../features/chat/sessions";
-import type {LogRow} from "../features/chat/sessions";
+import { logRows } from "../features/chat/sessions";
+import type { LogRow } from "../features/chat/sessions";
 import { markRead } from "../features/chat/unread";
 import { toggleSetValue } from "../lib/set";
 import { canEdit, getCharacter } from "../features/characters/api";
@@ -42,7 +42,7 @@ export function ChatLog({
   const messages = useQuery(campaign.chat.messages);
   const isGm = useQuery(campaign.members, () => campaign.isGm());
   const here = useQuery(campaign.members, () => campaign.activeSceneId());
-  const sceneIds = useQuery(campaign.scenes, () => [...campaign.scenes.keys()].join(','));
+  const sceneIds = useQuery(campaign.scenes, () => [...campaign.scenes.keys()].join(","));
   // One subscription for every move card's follow-up buttons, rather than one per card.
   const editable = useQuery(campaign.characters, () => editableIds(campaign));
   const me = useQuery(device).id;
@@ -121,9 +121,13 @@ function useMarkRead(campaign: Campaign, messages: readonly unknown[]) {
     if (visible && document.hasFocus()) markRead(campaign);
   }, [campaign, messages, visible]);
   useEffect(() => {
-    const read = () => { markRead(campaign); };
+    const read = () => {
+      markRead(campaign);
+    };
     window.addEventListener("focus", read);
-    return () => { window.removeEventListener("focus", read); };
+    return () => {
+      window.removeEventListener("focus", read);
+    };
   }, [campaign]);
 }
 
@@ -161,8 +165,11 @@ function ChatRow({
         type="button"
         className="chat-session-fold"
         aria-expanded={row.open}
-        onClick={() => { context.table.openSessions.set(toggleSetValue(context.table.openSessions.value, row.part)); }
-        }
+        onClick={() => {
+          context.table.openSessions.set(
+            toggleSetValue(context.table.openSessions.value, row.part),
+          );
+        }}
       >
         <IconExpand size={22} className="chat-session-chevron" />
         <span className="chat-session-title">{row.title}</span>

@@ -31,7 +31,9 @@ const paragraph = (...content: (Y.XmlElement | string)[]) => {
 
 /** Write paragraphs into a page, as the editor would, through `open`. */
 function write(page: NoteDoc | null, ...paragraphs: Y.XmlElement[]) {
-  page!.doc.transact(() => { page!.body.push(paragraphs); });
+  page!.doc.transact(() => {
+    page!.body.push(paragraphs);
+  });
   page!.destroy();
 }
 
@@ -113,8 +115,8 @@ describe("note search", () => {
     write(await openNotePage(c, inn), paragraph("The duke drinks here."));
     (await noteTextIndex(c)).flush();
     await settle();
-    const {id} = c;
-    const {guid} = (noteSubdoc(c, inn)!);
+    const { id } = c;
+    const { guid } = noteSubdoc(c, inn)!;
     c.destroy();
     // With the page's text gone, only the stored index can find it.
     indexedDB.deleteDatabase(noteDbName(guid));

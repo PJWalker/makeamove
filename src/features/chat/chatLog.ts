@@ -7,8 +7,8 @@ import { compareCodeUnits } from "../../lib/order";
 import { dataName, deleteData } from "../../platform/dataEpoch";
 import { device } from "../../platform/device";
 import { colourOf } from "../../scene/presence";
-import { list, rootOf  } from "../../data/schema";
-import type {List} from "../../data/schema";
+import { list, rootOf } from "../../data/schema";
+import type { List } from "../../data/schema";
 import type { ChatMessage } from "./types";
 
 /*
@@ -94,7 +94,8 @@ export class ChatLog {
     this.earlierCount.value = this.from * CHUNK_SIZE;
     const waits: Promise<unknown>[] = [];
     for (const [index_, document] of this.chunks.toArray().entries()) {
-      if (index_ >= this.from && !this.loaded.has(document.guid)) waits.push(this.loadChunk(document));
+      if (index_ >= this.from && !this.loaded.has(document.guid))
+        waits.push(this.loadChunk(document));
     }
     await Promise.all(waits);
   }
@@ -108,7 +109,9 @@ export class ChatLog {
       doc: document,
       messages,
       persistence,
-      stop: messages.observe(() => { this.refresh(); }),
+      stop: messages.observe(() => {
+        this.refresh();
+      }),
     });
     await persistence.whenSynced;
     this.refresh();
@@ -126,7 +129,7 @@ export class ChatLog {
 
   /** The chunk new messages go into, starting one if needed. */
   private async currentChunk(): Promise<LoadedChunk> {
-    const last = this.chunks.at(- 1) ?? null;
+    const last = this.chunks.at(-1) ?? null;
     if (last) {
       if (!this.loaded.has(last.guid)) await this.loadChunk(last);
       const chunk = this.loaded.get(last.guid)!;

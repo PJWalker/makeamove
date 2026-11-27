@@ -80,7 +80,9 @@ function ArtifactTracker({
                 value={move.id}
                 checked={selected === move.id}
                 disabled={!editable}
-                onChange={() => { setChoice(move.id); }}
+                onChange={() => {
+                  setChoice(move.id);
+                }}
               />
               {move.name}
             </label>
@@ -247,7 +249,9 @@ export function Inventory({
               meta={metaOf(index)}
               tip={tipOf(index)}
               dim={(index.equippable && !index.equipped) || index.broken}
-              onOpen={(row) => { windows.show(inventoryKey(c.id, index.id), row); }}
+              onOpen={(row) => {
+                windows.show(inventoryKey(c.id, index.id), row);
+              }}
               onPointerDown={(event) => {
                 const source = index.defId
                   ? entity(context, "item", index.defId, index.name)
@@ -277,7 +281,9 @@ export function Inventory({
         <Button
           variant="ghost"
           className="inventory-find"
-          onClick={() => { context.library.browse("item"); }}
+          onClick={() => {
+            context.library.browse("item");
+          }}
         >
           Find Items in the Libraries…
         </Button>
@@ -292,15 +298,26 @@ export function Inventory({
             title={index.name}
             text={index.description}
             tags={index.tags}
-            onClose={() => { windows.close(key); }}
+            onClose={() => {
+              windows.close(key);
+            }}
             menuItems={itemMenu(index)}
             graphicRef={{ kind: "item", id: index.defId ?? index.id }}
             graphicDefaultIcon={index.icon}
             // Gear from the Libraries stands for its entry there.
-            proxy={index.defId ? linkProxy(context, "item", index.defId, index.name, index.icon) : undefined}
+            proxy={
+              index.defId
+                ? linkProxy(context, "item", index.defId, index.name, index.icon)
+                : undefined
+            }
           >
             {metaOf(index) && <span className="muted">{metaOf(index)}</span>}
-            <ArtifactTracker campaign={campaign} characterId={c.id} item={index} editable={editable} />
+            <ArtifactTracker
+              campaign={campaign}
+              characterId={c.id}
+              item={index}
+              editable={editable}
+            />
             {actions(index)}
           </EntryWindow>
         );

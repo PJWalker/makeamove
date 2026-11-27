@@ -5,7 +5,7 @@ import type { ItemInstance } from "../features/characters/types";
 import { checkOf } from "../features/characters/moves";
 import { useQuery } from "../ui/useQuery";
 import { entryByKey, librariesFor, useLibrariesFor } from "../features/library";
-import { IconOpenWindow , IconPost, IconRoll, IconTarget } from "../ui/icons";
+import { IconOpenWindow, IconPost, IconRoll, IconTarget } from "../ui/icons";
 import { Button } from "../ui/Button";
 import type { MenuItem } from "../ui/ContextMenu";
 import { menuTrigger } from "../ui/menuTrigger";
@@ -13,10 +13,10 @@ import { ContextMenu } from "../ui/ContextMenu";
 import { withTransition } from "../ui/transition";
 import { usePopupDialog } from "./usePopupDialog";
 import { Dialog } from "./Dialog";
-import { entryKeyOf  } from "./entityWindowState";
-import type {EntityWindowRecord} from "./entityWindowState";
-import { parseEntryKey  } from "./entryKeys";
-import type {EntryRef as EntryReference} from "./entryKeys";
+import { entryKeyOf } from "./entityWindowState";
+import type { EntityWindowRecord } from "./entityWindowState";
+import { parseEntryKey } from "./entryKeys";
+import type { EntryRef as EntryReference } from "./entryKeys";
 import { EntryActionButtons } from "./EntryActionButtons";
 import { useLibraryActions } from "./libraryActions";
 import { useCampaign } from "./campaignContext";
@@ -52,7 +52,9 @@ function EntityPopup({ campaign, record }: { campaign: Campaign; record: EntityW
   const context = useCampaign();
   const reference = usePopupDialog();
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
-  const trigger = menuTrigger((x, y) => { setMenu({ x, y }); });
+  const trigger = menuTrigger((x, y) => {
+    setMenu({ x, y });
+  });
   const close = () => {
     record.close?.();
     context.windows.close(record.id);
@@ -60,11 +62,17 @@ function EntityPopup({ campaign, record }: { campaign: Campaign; record: EntityW
   const items: MenuItem[] = [
     {
       label: "Dock to Left Sidebar",
-      onSelect: () => void withTransition(() => { context.panels.dockPanel(record.id, "left"); }),
+      onSelect: () =>
+        void withTransition(() => {
+          context.panels.dockPanel(record.id, "left");
+        }),
     },
     {
       label: "Dock to Right Sidebar",
-      onSelect: () => void withTransition(() => { context.panels.dockPanel(record.id, "right"); }),
+      onSelect: () =>
+        void withTransition(() => {
+          context.panels.dockPanel(record.id, "right");
+        }),
     },
     "divider",
     { label: "Close", onSelect: close },
@@ -89,7 +97,15 @@ function EntityPopup({ campaign, record }: { campaign: Campaign; record: EntityW
           <p className="muted item-tags">{record.tags.join(", ")}</p>
         )}
       </Dialog>
-      {menu && <ContextMenu {...menu} items={items} onClose={() => { setMenu(null); }} />}
+      {menu && (
+        <ContextMenu
+          {...menu}
+          items={items}
+          onClose={() => {
+            setMenu(null);
+          }}
+        />
+      )}
     </>
   );
 }
@@ -110,7 +126,9 @@ export function EntityWindowContent({
   return (
     <>
       {text}
-      {reference?.kind === "inventory" && <InventoryActions campaign={campaign} entry={reference} />}
+      {reference?.kind === "inventory" && (
+        <InventoryActions campaign={campaign} entry={reference} />
+      )}
       {reference?.kind === "lib" && <LibraryActions campaign={campaign} entry={reference} />}
       {reference?.kind === "move" && <MoveActions campaign={campaign} entry={reference} />}
     </>
@@ -120,8 +138,11 @@ export function EntityWindowContent({
 /** Whether what an entry window shows still exists. */
 function entryExists(campaign: Campaign, reference: EntryReference) {
   if (reference.kind === "inventory")
-    return !!getCharacter(campaign, reference.characterId)?.inventory.some((index) => index.id === reference.itemId);
-  if (reference.kind === "move") return systemOf(campaign).actions.some((m) => m.id === reference.moveId);
+    return !!getCharacter(campaign, reference.characterId)?.inventory.some(
+      (index) => index.id === reference.itemId,
+    );
+  if (reference.kind === "move")
+    return systemOf(campaign).actions.some((m) => m.id === reference.moveId);
   const found = entryByKey(librariesFor(systemOf(campaign)), reference.key);
   return !found || !!found.entry;
 }
@@ -219,9 +240,9 @@ function MoveAction({
   const context = useCampaign();
   const { label, Icon } = move.target
     ? { label: "Target", Icon: IconTarget }
-    : (checkOf(move)
+    : checkOf(move)
       ? { label: "Roll", Icon: IconRoll }
-      : { label: "Post", Icon: IconPost });
+      : { label: "Post", Icon: IconPost };
   return (
     <Button
       variant="primary"

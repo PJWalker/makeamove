@@ -1,6 +1,8 @@
 import type { RichText } from "../../data/richText";
 import type { Roll } from "../dice/notation";
 import type { ChatContent } from "./content";
+import { seenBy } from "./audience";
+import type { Seen } from "./audience";
 
 /*
  * Chat messages are immutable plain objects, appended to a chunk of the log
@@ -157,10 +159,15 @@ export interface CounterMessage extends Base {
 }
 
 export type ChatMessage =
-  CounterMessage | MoveMessage | RollMessage | SystemMessage | TextMessage | TimerMessage;
+  | CounterMessage
+  | MoveMessage
+  | RollMessage
+  | SystemMessage
+  | TextMessage
+  | TimerMessage;
 
 /** What someone sees of a message: all of it, a placeholder, or nothing. */
-export type Visibility = "full" | "hidden" | "masked";
+export type Visibility = Seen;
 
 /** Players may delete their own messages; the GM may delete anyone's. */
 export const canDelete = (m: ChatMessage, me: string, isGm: boolean) => isGm || m.author === me;
@@ -172,10 +179,15 @@ export const canEditMessage = (m: ChatMessage, me: string) => m.kind === "text" 
 export const canWork = (m: ChatMessage, me: string, isGm: boolean) => isGm || m.author === me;
 
 export function visibilityOf(m: ChatMessage, me: string, isGm: boolean): Visibility {
-  if (m.kind === "text" && m.to) return m.author === me || m.to.includes(me) ? "full" : "hidden";
-  if (m.kind === "roll") {
-    if (m.visibility === "public" || isGm || m.author === me) return "full";
-    return "masked";
-  }
-  return "full";
+  const to = m.kind === "text" ? m.to : undefined;
+  return seenBy(
+    {
+      author: m.author,
+      whisper: to !== undefined,
+      to: to ?? [],
+      secretRoll: m.kind === "roll" && m.visibility === "private",
+    },
+    me,
+    isGm,
+  );
 }

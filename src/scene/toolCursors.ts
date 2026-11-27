@@ -124,8 +124,8 @@ export function toolCursor(tool: ToolId, settings: CursorSettings, mac = IS_MAC)
   const badge =
     tool === "shape"
       ? SHAPE_BADGES[settings.shape]
-      : (tool === "effect"
+      : tool === "effect"
         ? EFFECT_BADGES[settings.effect]
-        : (BADGES[tool] ?? ""));
+        : (BADGES[tool] ?? "");
   return imageCursor(CROSSHAIR + badge, [10, 10], mac);
 }

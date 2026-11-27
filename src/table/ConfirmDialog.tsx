@@ -20,7 +20,9 @@ export function ConfirmDialog({
   children: ReactNode;
 }) {
   const reference = usePopupDialog();
-  const close = () => { closePopup(reference.current, onClose); };
+  const close = () => {
+    closePopup(reference.current, onClose);
+  };
 
   return (
     <Dialog dialogRef={reference} title={title} onClose={onClose}>

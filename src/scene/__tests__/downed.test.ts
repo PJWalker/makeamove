@@ -1,27 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { BAR_BREAK_AT } from "../barChange";
-import { DOWN_MS, downFrame, downs, isDowned } from "../downed";
-
-const hp = (value: number, max = 10) => ({
-  id: "hp",
-  label: "HP",
-  value,
-  max,
-  colour: "#000",
-  source: { resource: "hp" },
-});
-
-describe("downs", () => {
-  it("puts a token down at zero hit points, and only for hit points", () => {
-    expect(downs(hp(0))).toBe(true);
-    expect(downs(hp(-2))).toBe(true);
-    expect(downs(hp(1))).toBe(false);
-    expect(downs(hp(0, 0))).toBe(false);
-    expect(downs({ ...hp(0), id: "stress" })).toBe(false);
-    expect(isDowned([{ ...hp(0), id: "stress" }, hp(3)])).toBe(false);
-    expect(isDowned([hp(0)])).toBe(true);
-  });
-});
+import { DOWN_MS, downFrame } from "../downed";
 
 describe("downFrame", () => {
   const fall = { from: 0, down: true, start: 0 };

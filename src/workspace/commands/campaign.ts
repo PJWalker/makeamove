@@ -1,5 +1,5 @@
-import { setSystemCampaignData  } from "../../campaign/campaign";
-import type {Campaign} from "../../campaign/campaign";
+import { setSystemCampaignData } from "../../campaign/campaign";
+import type { Campaign } from "../../campaign/campaign";
 import type { CampaignDefaults } from "../../campaign/types";
 import { isNumber, isObject, isString, objectOf, optional } from "../../lib/guards";
 import { actingCharacterId } from "../../features/characters/api";
@@ -9,8 +9,8 @@ import type { EntityGraphic } from "../../media/images";
 import { device } from "../../platform/device";
 import type { ActionDef, ItemDef } from "../../systems/types";
 import { setEntityGraphic } from "../entityGraphics";
-import { setShortcut as bindShortcut, setSlotLook  } from "./custom";
-import type {SlotLook} from "./custom";
+import { setShortcut as bindShortcut, setSlotLook } from "./custom";
+import type { SlotLook } from "./custom";
 import { command } from "./types";
 
 /* The campaign itself: its name and defaults, who's in it, homebrew, and each player's own hotbar and shortcuts. */
@@ -31,7 +31,9 @@ export const setDefaults = command<{ patch: Partial<CampaignDefaults> }>({
   params: objectOf({ patch: (v): v is Partial<CampaignDefaults> => isObject(v) }),
   title: "Change Defaults",
   permission: "gm",
-  run: ({ campaign }, { patch }) => { campaign.setDefaults(patch); },
+  run: ({ campaign }, { patch }) => {
+    campaign.setDefaults(patch);
+  },
 });
 
 export const setCampaignField = command<{ field: string; value: boolean | number | string }>({
@@ -44,7 +46,9 @@ export const setCampaignField = command<{ field: string; value: boolean | number
   title: "Change Campaign",
   permission: "gm",
   undoGroup: ({ field }) => `campaign.field ${field}`,
-  run: ({ campaign }, { field, value }) => { setSystemCampaignData(campaign, field, value); },
+  run: ({ campaign }, { field, value }) => {
+    setSystemCampaignData(campaign, field, value);
+  },
 });
 
 /** This player's name in the campaign, as others see it. */
@@ -70,7 +74,9 @@ export const removeMember = command<{ id: string }>({
   },
   // Their device has been told to leave.
   undoGroup: false,
-  run: ({ campaign }, { id }) => { campaign.revokeMember(id); },
+  run: ({ campaign }, { id }) => {
+    campaign.revokeMember(id);
+  },
 });
 
 export const allowBack = command<{ id: string }>({
@@ -78,7 +84,9 @@ export const allowBack = command<{ id: string }>({
   params: objectOf({ id: isString }),
   title: "Allow Back",
   permission: "gm",
-  run: ({ campaign }, { id }) => { campaign.allowBack(id); },
+  run: ({ campaign }, { id }) => {
+    campaign.allowBack(id);
+  },
 });
 
 export const chooseGraphic = command<{
@@ -94,7 +102,9 @@ export const chooseGraphic = command<{
   }),
   title: "Change Graphic",
   undoGroup: ({ kind, id }) => `graphic ${kind} ${id}`,
-  run: ({ campaign }, { kind, id, graphic }) => { setEntityGraphic(campaign, kind, id, graphic); },
+  run: ({ campaign }, { kind, id, graphic }) => {
+    setEntityGraphic(campaign, kind, id, graphic);
+  },
 });
 
 const isGraphicChoice = (v: unknown): v is EntityGraphic | null => v === null || isObject(v);
@@ -133,7 +143,9 @@ export const deleteHomebrewEntry = command<{ id: string }>({
   params: objectOf({ id: isString }),
   title: "Delete Homebrew",
   danger: true,
-  run: ({ campaign }, { id }) => { deleteHomebrew(campaign.homebrew, id); },
+  run: ({ campaign }, { id }) => {
+    deleteHomebrew(campaign.homebrew, id);
+  },
 });
 
 // This player's hotbar (for the acting character) and shortcuts
@@ -144,7 +156,9 @@ export const setSlots = command<{ slots: string[] }>({
   id: "hotbar.set",
   params: objectOf({ slots: (v): v is string[] => Array.isArray(v) && v.every(isString) }),
   title: "Arrange Hotbar",
-  run: ({ campaign }, { slots }) => { setHotbar(campaign, actingCharacterId(campaign), slots.slice(0, MAX_SLOTS)); },
+  run: ({ campaign }, { slots }) => {
+    setHotbar(campaign, actingCharacterId(campaign), slots.slice(0, MAX_SLOTS));
+  },
 });
 
 export const pinToHotbar = command<{ key: string; at?: number | undefined }>({
@@ -181,14 +195,18 @@ export const lookOfSlot = command<{ key: string; look: SlotLook }>({
   id: "hotbar.setLook",
   params: objectOf({ key: isString, look: isObject<SlotLook> }),
   title: "Change Slot",
-  run: ({ campaign }, { key, look }) => { setSlotLook(campaign, key, look); },
+  run: ({ campaign }, { key, look }) => {
+    setSlotLook(campaign, key, look);
+  },
 });
 
 export const bindKey = command<{ key: string; combo: string | null }>({
   id: "shortcut.set",
   params: objectOf({ key: isString, combo: (v): v is string | null => v === null || isString(v) }),
   title: "Set Shortcut",
-  run: ({ campaign }, { key, combo }) => { bindShortcut(campaign, key, combo); },
+  run: ({ campaign }, { key, combo }) => {
+    bindShortcut(campaign, key, combo);
+  },
 });
 
 export const campaignCommands = [

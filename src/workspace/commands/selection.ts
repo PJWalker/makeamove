@@ -13,13 +13,12 @@ import {
   IconToBack,
   IconToFront,
   IconToken,
-  IconUnlock
-  
+  IconUnlock,
 } from "../../ui/icons";
-import type {Icon} from "../../ui/icons";
+import type { Icon } from "../../ui/icons";
 import type { CampaignContext } from "../campaignContext";
-import { command   } from "./types";
-import type {CommandTargets, Offer} from "./types";
+import { command } from "./types";
+import type { CommandTargets, Offer } from "./types";
 
 /*
  * What can be done with what's selected on the open scene, and with an
@@ -180,6 +179,29 @@ export const tokenOptions = oneElementCommand(
   (context, id) => open(context)?.tokenOptions(id, "token"),
 );
 
+export const alignMapToGrid = command<Selection | undefined>({
+  id: "map.alignToGrid",
+  params: isSelectionOrNow,
+  title: "Align to Grid…",
+  icon: IconGrid,
+  section: "act",
+  transact: false,
+  available: (context, p) => {
+    const map = one(context, p, (element) => element.type === "map");
+    if (!map) return "Select one map";
+    if (map.locked) return "Locked";
+    return open(context)?.controller.renderer.grid.type !== "none" || "The scene has no grid";
+  },
+  menu: {
+    selection: (context, t) =>
+      one(context, t, (element) => element.type === "map") ? [{ params: t }] : [],
+  },
+  run: (context, p) => {
+    const map = one(context, p, (element) => element.type === "map");
+    if (map) open(context)?.controller.alignMap(map.id);
+  },
+});
+
 export const useAsToken = oneElementCommand(
   "map.useAsToken",
   { title: "Use as Token", icon: IconToken },
@@ -241,11 +263,14 @@ export const sceneSettings = command<Place>({
   section: "edit",
   transact: false,
   menu: { canvas: (_, t) => [{ params: t }] },
-  run: (context) => { context.canvas.sceneSettingsOpen.set(true); },
+  run: (context) => {
+    context.canvas.sceneSettingsOpen.set(true);
+  },
 });
 
 export const selectionCommands = [
   tokenOptions,
+  alignMapToGrid,
   useAsToken,
   useAsMap,
   bringToFront,

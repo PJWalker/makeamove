@@ -1,11 +1,11 @@
-import { useLayoutEffect, useRef, useState   } from "react";
-import type {MouseEvent, ReactNode} from "react";
+import { useLayoutEffect, useRef, useState } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { IconFolder, IconRename } from "../ui/icons";
 import { FolderName } from "../ui/FolderName";
 import { List, ListGroup } from "../ui/List";
 import { menuTrigger } from "../ui/menuTrigger";
-import { ContextMenu  } from "../ui/ContextMenu";
-import type {MenuItem} from "../ui/ContextMenu";
+import { ContextMenu } from "../ui/ContextMenu";
+import type { MenuItem } from "../ui/ContextMenu";
 import { growFrom } from "../ui/morph";
 import { useCampaign } from "../workspace/campaignContext";
 import type { FolderCommands } from "../workspace/commands/folders";
@@ -13,7 +13,10 @@ import type { FolderTreeKind } from "../workspace/commands/types";
 import { joinSections, menuFor } from "../workspace/commands/views";
 import { PanelActions } from "./PanelActions";
 
-interface FolderRecord { id: string; name: string }
+interface FolderRecord {
+  id: string;
+  name: string;
+}
 
 export function FolderTree<Item, Folder extends FolderRecord>({
   ariaLabel,
@@ -77,7 +80,9 @@ export function FolderTree<Item, Folder extends FolderRecord>({
               lead={<IconFolder size={22} />}
               count={children.length}
               open={open}
-              onToggle={() => { toggle(folder.id); }}
+              onToggle={() => {
+                toggle(folder.id);
+              }}
               head={{
                 onPointerDown: trigger.onPointerDown,
                 onContextMenu: trigger.onContextMenu,
@@ -85,7 +90,12 @@ export function FolderTree<Item, Folder extends FolderRecord>({
               group={{ "data-folder-drop": folder.id }}
               replaceHead={
                 naming?.id === folder.id ? (
-                  <FolderName initial={folder.name} onDone={(name) => { finishRename(folder, name); }} />
+                  <FolderName
+                    initial={folder.name}
+                    onDone={(name) => {
+                      finishRename(folder, name);
+                    }}
+                  />
                 ) : undefined
               }
             >
@@ -128,11 +138,13 @@ function useFolderTree<Item, Folder extends FolderRecord>({
     const folderId = folderOf(item);
     return !folderId || !known.has(folderId);
   });
-  const toggle = (id: string) => { setFolded((current) => {
+  const toggle = (id: string) => {
+    setFolded((current) => {
       const next = new Set(current);
       if (!next.delete(id)) next.add(id);
       return next;
-    }); };
+    });
+  };
   const newFolder = (event: MouseEvent<HTMLElement>) => {
     const from = event.currentTarget.getBoundingClientRect();
     void showList().then(() => {
@@ -150,14 +162,19 @@ function useFolderTree<Item, Folder extends FolderRecord>({
           [
             {
               label: open ? "Collapse Folder" : "Expand Folder",
-              onSelect: () => { toggle(folder.id); },
+              onSelect: () => {
+                toggle(folder.id);
+              },
             },
-            ...(context.commands.permits(folderCommands.rename, { id: folder.id, name: "" }) === true
+            ...(context.commands.permits(folderCommands.rename, { id: folder.id, name: "" }) ===
+            true
               ? [
                   {
                     label: "Rename Folder",
                     Icon: IconRename,
-                    onSelect: () => { setNaming({ id: folder.id }); },
+                    onSelect: () => {
+                      setNaming({ id: folder.id });
+                    },
                   },
                 ]
               : []),
@@ -191,6 +208,8 @@ function useFolderTree<Item, Folder extends FolderRecord>({
     folderChildren,
     folderTrigger,
     finishRename,
-    closeMenu: () => { setMenu(null); },
+    closeMenu: () => {
+      setMenu(null);
+    },
   };
 }

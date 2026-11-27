@@ -1,14 +1,7 @@
-import {
-  cryptoDie,
-  roll
-  
-  
-  
-  
-} from "../dice/notation";
-import type {Die, Roll, RolledDice, RolledFlat} from "../dice/notation";
-import { getState, setState  } from "./messageState";
-import type {MessageState} from "./messageState";
+import { cryptoDie, roll } from "../dice/notation";
+import type { Die, Roll, RolledDice, RolledFlat } from "../dice/notation";
+import { getState, setState } from "./messageState";
+import type { MessageState } from "./messageState";
 
 export interface SharedRoll {
   roll: Roll;
@@ -141,7 +134,7 @@ function formulaOf(terms: Roll["terms"]) {
   return terms
     .map(
       (term, index) =>
-        (term.sign < 0 ? "-" : (index ? "+" : "")) +
+        (term.sign < 0 ? "-" : index ? "+" : "") +
         (term.kind === "dice" ? term.notation.replace(/^1d/, "d") : term.value) +
         (term.label ? `[${term.label}]` : ""),
     )
