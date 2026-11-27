@@ -174,8 +174,12 @@ export function hits(element: SceneElement, p: Point, tolerance = 0): boolean {
     case "shape": {
       return shapeCovers(element, p, tolerance + element.width / 2);
     }
-    case "effect": {
+    case "effect":
+    case "fog": {
       return shapeCovers(element, p, tolerance);
+    }
+    case "pin": {
+      return inBox(l, hw + tolerance, hh + tolerance);
     }
     case "wall": {
       // Along its length, within a few px of the line.
@@ -201,6 +205,14 @@ export function insidePolygon(poly: Point[], p: Point): boolean {
       inside = !inside;
   }
   return inside;
+}
+
+/** Points from flat [x, y, …]. */
+export function pairs(flat: readonly number[]): Point[] {
+  const points: Point[] = [];
+  for (let index = 0; index + 1 < flat.length; index += 2)
+    points.push({ x: flat[index]!, y: flat[index + 1]! });
+  return points;
 }
 
 /** A shape's outline in the world, at its size and rotation. */

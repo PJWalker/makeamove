@@ -141,6 +141,27 @@ export const setLighting = command<{ id: string; patch: Partial<SceneLighting> }
   run: (context, { id, patch }) => sceneDocumentOf(context, id)?.setLighting(patch),
 });
 
+export const forgetExplored = command<{ id: string }>({
+  id: "scene.forgetExplored",
+  params: isId,
+  title: "Cover Explored Areas in Fog…",
+  permission: "gm",
+  available: (context, p) =>
+    sceneOpen(context, p) === true && !sceneDocumentOf(context, p.id)?.exploredSights().length
+      ? "Nothing explored yet"
+      : sceneOpen(context, p),
+  // What characters have seen isn't undoable, so neither is forgetting it.
+  undoGroup: false,
+  transact: false,
+  confirm: () => ({
+    title: "Cover Explored Areas",
+    body: "Forget what characters have seen here, covering it in fog again for every player? Shapes you’ve revealed stay revealed. This can’t be undone.",
+    confirmLabel: "Cover in Fog",
+    danger: true,
+  }),
+  run: (context, { id }) => sceneDocumentOf(context, id)?.forgetExplored(),
+});
+
 export const deleteScene = command<{ id: string }>({
   id: "scene.delete",
   params: isId,
@@ -189,6 +210,7 @@ export const sceneCommands = [
   updateScene,
   setGrid,
   setLighting,
+  forgetExplored,
   deleteScene,
   ...sceneFolders.all,
 ];

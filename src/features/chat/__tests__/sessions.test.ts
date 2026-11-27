@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import { contentFromText, messageText } from "../content";
 import { logRows, splitSessions } from "../sessions";
+import { canDelete } from "../types";
 import type { ChatMessage } from "../types";
 
 let n = 0;
@@ -83,5 +84,14 @@ describe("the rows the log shows", () => {
   it("gives every row its own key", () => {
     const keys = logRows(log(), () => false).map((r) => r.key);
     expect(new Set(keys).size).toBe(keys.length);
+  });
+});
+
+describe("deleting", () => {
+  it("lets players delete their own messages, and the GM anyone’s", () => {
+    const m = text("oops", "pat");
+    expect(canDelete(m, "pat", false)).toBe(true);
+    expect(canDelete(m, "lee", false)).toBe(false);
+    expect(canDelete(m, "gm", true)).toBe(true);
   });
 });

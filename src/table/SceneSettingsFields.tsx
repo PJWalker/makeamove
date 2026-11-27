@@ -5,10 +5,12 @@ import type { Campaign } from "../campaign/campaign";
 import { useQuery } from "../ui/useQuery";
 import { ColourPicker } from "../ui/ColourPicker";
 import { Segmented } from "../ui/Segmented";
+import { Button } from "../ui/Button";
+import { FOG_MODES } from "../scene/fog";
 import { CommitInput } from "../ui/CommitInput";
 import { canvasColour } from "../workspace/canvasState";
 import { useCampaign } from "../workspace/campaignContext";
-import { setGrid, setLighting, updateScene } from "../workspace/commands/scenes";
+import { forgetExplored, setGrid, setLighting, updateScene } from "../workspace/commands/scenes";
 import { can } from "../workspace/commands/views";
 import type { Grid } from "../scene/grid";
 
@@ -29,6 +31,7 @@ export function SceneSettingsFields({
   const context = useCampaign();
   const grid = useQuery(scene.settings, () => scene.grid());
   const lighting = useQuery(scene.settings, () => scene.lighting());
+  const explored = useQuery(scene.explored, () => scene.explored.keys().length > 0);
   const view = useQuery(campaign.scenes, () => campaign.sceneViews().find((s) => s.id === sceneId));
   const editable = can(context, setGrid, { id: sceneId, patch: {} });
   const setGridOf = (patch: Partial<Grid>) => context.execute(setGrid, { id: sceneId, patch });
@@ -209,6 +212,33 @@ export function SceneSettingsFields({
             onChange={(v) => setLightingOf({ vision: v === "sight" })}
           />
         </div>
+      </section>
+      <section className="form-section" aria-label="Fog of War">
+        <h4 className="form-heading">Fog of war</h4>
+        <div className="field">
+          Reveal
+          <Segmented
+            label="Fog of war"
+            value={lighting.fog}
+            options={FOG_MODES}
+            disabled={!editable}
+            onChange={(fog) => setLightingOf({ fog })}
+          />
+        </div>
+        {lighting.fog !== "none" && (
+          <p className="muted">
+            Draw shapes that are always revealed or always hidden with the Fog of War tool.
+          </p>
+        )}
+        {lighting.fog === "auto" && (
+          <Button
+            variant="secondary"
+            disabled={!explored || !can(context, forgetExplored, { id: sceneId })}
+            onClick={() => context.execute(forgetExplored, { id: sceneId })}
+          >
+            Cover Explored Areas
+          </Button>
+        )}
       </section>
       {!editable && <p className="muted">Only the GM can change scene settings.</p>}
     </section>

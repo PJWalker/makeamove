@@ -45,10 +45,13 @@ function ago(at: number) {
  * together. The list and the open page sit side by side, or take turns.
  */
 export function NotesPanel({ campaign }: { campaign: Campaign }) {
+  // The list is read from two documents, so React Compiler's memoizing would keep it stale when the other one changes.
+  "use no memo";
   const context = useCampaign();
-  // GM-only pages, on a GM device; watched too, so the list keeps up with them.
+  // GM-only pages, on a GM device; watched too, so the list keeps up with them
+  // (and a new GM page opens, rather than seeming deleted).
   const vault = useQuery(campaign.vault);
-  useQuery(vault?.notes, () => null);
+  useQuery(vault?.notes, () => listNotes(campaign));
   const notes = useQuery(campaign.notes, () => listNotes(campaign));
   const folders = useQuery(campaign.noteFolders, () => listNoteFolders(campaign));
   // After useQuery, so it is already watching when the folders appear.

@@ -26,6 +26,7 @@ import { actionMenuItems } from "../workspace/actionMenu";
 import { entityTabId } from "../workspace/entityWindowState";
 import { useCampaign } from "../workspace/campaignContext";
 import { giveItem, startMove } from "../workspace/commands/characters";
+import { librarySlot, moveSlot } from "../features/characters/hotbar";
 import { CharacterSheet } from "./sheets";
 import { NoteEditor } from "./NoteEditor";
 import { useActingCharacter } from "./useActingCharacter";
@@ -141,7 +142,7 @@ function ItemPopup({ campaign, link }: PopupProperties) {
   const context = useCampaign();
   const { me, canAct } = useActingCharacter(campaign);
   const item = systemOf(campaign).items.find((index) => index.id === link.id);
-  const menuItems = useEntryMenu(link, `library:${link.id}`, item?.name ?? "");
+  const menuItems = useEntryMenu(link, librarySlot(link.id), item?.name ?? "");
   if (!item) return null;
   return (
     <EntryWindow
@@ -172,7 +173,7 @@ function MovePopup({ campaign, link }: PopupProperties) {
   const system = systemOf(campaign);
   const { me, canAct } = useActingCharacter(campaign);
   const move = system.actions.find((m) => m.id === link.id);
-  const menuItems = useEntryMenu(link, `move:${link.id}`, move?.name ?? "");
+  const menuItems = useEntryMenu(link, moveSlot(link.id), move?.name ?? "");
   if (!move) return null;
   const { label, Icon } = makeVerb(move);
   const tag = rollTag(system, move);

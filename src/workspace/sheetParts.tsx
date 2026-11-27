@@ -21,6 +21,7 @@ import { Segmented, SegmentedOrSelect } from "../ui/Segmented";
 import { ContextMenu } from "../ui/ContextMenu";
 import type { MenuItem } from "../ui/ContextMenu";
 import { sessionUseIds } from "../features/characters/sessionMoves";
+import { moveSlot } from "../features/characters/hotbar";
 import { entity } from "./dragEntities";
 import { dragEntity } from "./entityDrag";
 import { actionMenuItems } from "./actionMenu";
@@ -65,7 +66,7 @@ export function Counter({
       className="counter"
       data-label={label}
       data-fill={max !== undefined}
-      data-status={!!status}
+      data-status={Boolean(status)}
       style={{
         ...(max !== undefined && {
           "--fill": `${Math.max(0, Math.min(1, max > 0 ? value / max : 0)) * 100}%`,
@@ -257,7 +258,7 @@ export function MoveList({
                     onMake(m);
                   },
                 },
-                ...actionMenuItems(ctx, [{ id: `move:${m.id}`, title: m.name }]),
+                ...actionMenuItems(ctx, [{ id: moveSlot(m.id), title: m.name }]),
               ]}
             >
               <MakeButton m={m} onMake={onMake} disabled={used} />
@@ -310,7 +311,7 @@ export function MoveList({
                     },
                   ]
                 : []),
-              ...actionMenuItems(ctx, [{ id: `move:${m.id}`, title: m.name }]),
+              ...actionMenuItems(ctx, [{ id: moveSlot(m.id), title: m.name }]),
             ]}
           >
             {tag && <Tag>{tag}</Tag>}

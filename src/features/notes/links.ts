@@ -39,3 +39,11 @@ export function parseLink(reference: LinkRef): { kind: LinkKind; id: string } {
   const index = reference.indexOf(":");
   return { kind: reference.slice(0, index) as LinkKind, id: reference.slice(index + 1) };
 }
+
+/** Whether a stored value is a link: `kind:id`, of a kind this version knows. */
+export function isLink(value: unknown): value is LinkRef {
+  if (!isString(value)) return false;
+  const index = value.indexOf(":");
+  const kind = value.slice(0, index);
+  return index > 0 && index < value.length - 1 && LINK_KINDS.some((k) => k === kind);
+}
