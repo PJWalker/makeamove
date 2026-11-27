@@ -3,3 +3,4 @@ src/lib/hlc.ts
 src/features/characters/costs.ts
 src/features/dice/pick.ts
 src/workspace/placement.ts
+src/kernel/steps.ts
