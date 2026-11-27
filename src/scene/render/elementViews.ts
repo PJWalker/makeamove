@@ -392,9 +392,9 @@ export function buildView(
             .poly(flat(shapeOutline(element, t.w, t.h)))
             .fill({ color: colour, alpha: 0.08 })
             .stroke({ color: colour, width: 2, alpha: 0.8 });
-          },
-        };
-      }
+        },
+      };
+    }
     case "pin": {
       const marker = new Graphics().svg(PIN_SVG);
       const label = new SdfText({
