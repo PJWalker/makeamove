@@ -668,9 +668,6 @@
     }
   },
   "src/campaign/__tests__/revoke.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 1
-    },
     "import/no-unassigned-import": {
       "count": 1
     }
@@ -1364,9 +1361,6 @@
     }
   },
   "src/features/combat/__tests__/combat.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 1
-    },
     "@typescript-eslint/restrict-template-expressions": {
       "count": 1
     },
@@ -1420,22 +1414,13 @@
   },
   "src/features/dice/notation.ts": {
     "@typescript-eslint/no-magic-numbers": {
-      "count": 3
-    },
-    "@typescript-eslint/prefer-destructuring": {
       "count": 1
     },
     "@typescript-eslint/restrict-template-expressions": {
-      "count": 10
-    },
-    "complexity": {
-      "count": 1
-    },
-    "max-depth": {
-      "count": 3
+      "count": 8
     },
     "max-lines-per-function": {
-      "count": 2
+      "count": 1
     },
     "no-nested-ternary": {
       "count": 1
@@ -1983,7 +1968,7 @@
   },
   "src/scene/__tests__/downed.test.ts": {
     "@typescript-eslint/no-magic-numbers": {
-      "count": 4
+      "count": 1
     }
   },
   "src/scene/__tests__/edgePin.test.ts": {
@@ -2171,9 +2156,6 @@
     },
     "@typescript-eslint/no-magic-numbers": {
       "count": 9
-    },
-    "unicorn/consistent-function-scoping": {
-      "count": 1
     }
   },
   "src/scene/geometry.ts": {
@@ -2980,9 +2962,6 @@
     }
   },
   "src/sync/invite.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 1
-    },
     "@typescript-eslint/restrict-plus-operands": {
       "count": 1
     }
@@ -3216,9 +3195,6 @@
     }
   },
   "src/systems/__tests__/tokenStats.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 6
-    },
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 2
     },
@@ -5094,7 +5070,7 @@
   },
   "src/ui/__tests__/resizeRect.test.ts": {
     "@typescript-eslint/no-magic-numbers": {
-      "count": 9
+      "count": 2
     }
   },
   "src/ui/anchor.ts": {
@@ -5278,9 +5254,6 @@
   "src/ui/resizeRect.ts": {
     "@typescript-eslint/max-params": {
       "count": 1
-    },
-    "no-param-reassign": {
-      "count": 2
     }
   },
   "src/ui/sounds.ts": {

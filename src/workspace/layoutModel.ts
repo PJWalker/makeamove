@@ -14,6 +14,8 @@
 
 import { generateKeyBetween, generateNKeysBetween } from "fractional-indexing";
 import { isString } from "../lib/guards";
+import { moved, shownTab } from "./placement";
+import type { Place, Placement } from "./placement";
 
 export type PanelId =
   | "characters"
@@ -157,8 +159,46 @@ export const SIDES: Side[] = ["left", "right"];
 
 /** Keep a side consistent: the active tab is one of its panels, and an empty side is closed. */
 function tidy(s: SideState): SideState {
-  const active = s.active && s.panels.includes(s.active) ? s.active : (s.panels[0] ?? null);
-  return { ...s, active, open: active ? s.open : false };
+  const active = shownTab(s.active, s.panels);
+  return { ...s, active: active === null ? null : asId(active), open: active ? s.open : false };
+}
+
+/** Narrow ids that came back from the placement model, which only knows them as strings. */
+const asId = (id: string): DockItemId => (isDockItemId(id) ? id : "scene");
+const asIds = (ids: string[]): DockItemId[] => ids.filter((id) => isDockItemId(id));
+
+function placementOf(l: Layout): Placement {
+  return {
+    left: l.left.panels,
+    right: l.right.panels,
+    floating: l.floating.map((w) => w.id),
+    closed: l.closed,
+  };
+}
+
+/**
+ * Move `id` to `to`, at `index` there, using the proved placement model so
+ * it ends up in exactly one place. `win` is the window it gets if it starts
+ * floating. Both sides are tidied, since either may have lost its tab.
+ */
+function relocate(
+  l: Layout,
+  id: DockItemId,
+  to: { place: Place; index: number; win?: Omit<FloatingWindow, "id"> },
+): Layout {
+  const p = moved(placementOf(l), id, to);
+  const windowOf = (w: DockItemId): FloatingWindow[] => {
+    const existing = l.floating.find((f) => f.id === w);
+    if (existing) return [existing];
+    return w === id && to.win ? [{ id, ...to.win }] : [];
+  };
+  return {
+    ...l,
+    left: tidy({ ...l.left, panels: asIds(p.left) }),
+    right: tidy({ ...l.right, panels: asIds(p.right) }),
+    floating: asIds(p.floating).flatMap((w) => windowOf(w)),
+    closed: asIds(p.closed),
+  };
 }
 
 /**
@@ -297,24 +337,13 @@ export function keyedSideWidth(
   return null;
 }
 
-function without(l: Layout, id: DockItemId): Layout {
-  return {
-    ...l,
-    left: tidy({ ...l.left, panels: l.left.panels.filter((p) => p !== id) }),
-    right: tidy({ ...l.right, panels: l.right.panels.filter((p) => p !== id) }),
-    floating: l.floating.filter((w) => w.id !== id),
-    closed: l.closed.filter((p) => p !== id),
-  };
-}
-
 /** Close a panel: it leaves its sidebar or window until it's opened again (on the side it was on). */
 export function close(l: Layout, id: DockItemId): Layout {
   const where = locate(l, id);
   if (where === "closed") return l;
-  const next = without(l, id);
+  const next = relocate(l, id, { place: "closed", index: l.closed.length });
   return {
     ...next,
-    closed: [...next.closed, id],
     home: where === "floating" ? l.home : { ...l.home, [id]: where },
   };
 }
@@ -323,24 +352,23 @@ export function close(l: Layout, id: DockItemId): Layout {
 export function detach(l: Layout, id: DockItemId, win: Omit<FloatingWindow, "id">): Layout {
   const where = locate(l, id);
   if (where === "floating") return l;
-  const next = without(l, id);
+  const next = relocate(l, id, { place: "floating", index: l.floating.length, win });
   return {
     ...next,
-    floating: [...next.floating, { id, ...win }],
     home: where === "closed" ? l.home : { ...l.home, [id]: where },
   };
 }
 
 /**
- * Place `id` among a side's tabs (which don't include it): at `index`, or
- * where its order key sorts. Returns the tabs and the key it now has.
+ * Where `id` goes among a side's tabs (which don't include it): at `index`,
+ * or where its order key sorts. Returns that position and the key it now has.
  */
 function place(
   l: Layout,
   panels: DockItemId[],
   id: DockItemId,
   index: number | "remembered",
-): { panels: DockItemId[]; key: string } {
+): { at: number; key: string } {
   const keys = panels.map((p) => l.order[p] ?? null);
   const remembered = l.order[id];
   const at =
@@ -358,7 +386,7 @@ function place(
     (before === null || before < remembered) &&
     (after === null || remembered < after);
   const key = fits ? remembered : generateKeyBetween(before, after);
-  return { panels: panels.toSpliced(at, 0, id), key };
+  return { at, key };
 }
 
 /**
@@ -377,18 +405,13 @@ export function dock(
 ): Layout {
   const where = locate(l, id);
   const from = where === "floating" || where === "closed" ? l.home[id] : where;
-  const next = without(l, id);
-  const target = next[side].panels;
-  const { panels, key } = place(
-    l,
-    target,
-    id,
-    index ?? (from === side ? "remembered" : target.length),
-  );
+  const target = l[side].panels.filter((p) => p !== id);
+  const { at, key } = place(l, target, id, index ?? (from === side ? "remembered" : target.length));
+  const next = relocate(l, id, { place: side, index: at });
   const open = reveal || next[side].open;
   return {
     ...next,
-    [side]: { ...next[side], panels, active: id, open },
+    [side]: { ...next[side], active: id, open },
     home: { ...l.home, [id]: side },
     order: { ...l.order, [id]: key },
   };
@@ -401,11 +424,16 @@ export const otherSide = (side: Side): Side => (side === "left" ? "right" : "lef
 export function reorder(l: Layout, id: DockItemId, index: number): Layout {
   const side = locate(l, id);
   if (side === "floating" || side === "closed") return l;
-  const { panels, key } = place(
+  const { at, key } = place(
     l,
     l[side].panels.filter((p) => p !== id),
     id,
     index,
   );
-  return { ...l, [side]: { ...l[side], panels }, order: { ...l.order, [id]: key } };
+  const next = relocate(l, id, { place: side, index: at });
+  return {
+    ...next,
+    [side]: { ...next[side], active: l[side].active },
+    order: { ...l.order, [id]: key },
+  };
 }

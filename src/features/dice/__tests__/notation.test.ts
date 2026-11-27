@@ -31,19 +31,9 @@ group("parsing", () => {
   it("keeps label case and spaces", () => {
     expect(parse("1d4 + 1[Ring of Strength]")[1]!.label).toBe("Ring of Strength");
   });
+  // That nothing unrollable gets through (too many dice or sides, none, an exploding d1) is proved in scan.ts.
   it("explains bad formulas", () => {
-    for (const bad of [
-      "",
-      "d",
-      "2x6",
-      "2d6 3",
-      "10001d6",
-      "d1001",
-      "0d6",
-      "d1!",
-      "4d6k1d1",
-      "2d6+[x",
-    ]) {
+    for (const bad of ["", "d", "2x6", "2d6 3", "4d6k1d1", "2d6+[x"]) {
       expect(() => parse(bad), bad).toThrow(NotationError);
     }
   });
