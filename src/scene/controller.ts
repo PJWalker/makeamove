@@ -444,13 +444,15 @@ export class SceneController implements ToolContext {
     saveSceneCamera(this.sceneId, this.renderer.camera);
   }
 
-  /** Show everything in the scene, or the origin at 100% if it's empty. */
+  /** Show everything in the scene, or the origin at 100% if it's empty, in the space the chrome leaves clear. */
   fit() {
     const { width, height } = this.renderer.size;
+    const inset = this.renderer.insets();
+    const w = Math.max(1, width - inset.left - inset.right);
+    const h = Math.max(1, height - inset.top);
     const b = bounds(this.elements);
-    this.renderer.setCamera(
-      b ? fitCamera(b, width, height) : { x: width / 2, y: height / 2, zoom: 1 },
-    );
+    const camera = b ? fitCamera(b, w, h) : { x: w / 2, y: h / 2, zoom: 1 };
+    this.renderer.setCamera({ ...camera, x: camera.x + inset.left, y: camera.y + inset.top });
   }
 
   zoomBy(factor: number, at?: Point) {

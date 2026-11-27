@@ -83,7 +83,7 @@ export function QuickDice({
           aria-hidden="true"
         />
       )}
-      <div className="dice-quick">
+      <div className="dice-quick" data-tutorial="quick-dice">
         <div className="tray-row">
           {DICE.map(pickButton)}
           <Button

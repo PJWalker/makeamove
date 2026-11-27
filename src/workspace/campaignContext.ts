@@ -5,6 +5,9 @@ import { FolderBackup } from "../campaign/folderBackup";
 import { campaignUiDbName as campaignUiDatabaseName } from "../campaign/storage";
 import { ChatNotifications } from "../features/chat/notify";
 import { SceneTools } from "../scene/tools";
+import { tutorialProgress } from "../tutorial/progress";
+import type { TutorialProgress } from "../tutorial/progress";
+import type { LocalValue } from "../data/localDoc";
 import {
   CommandRegistry
   
@@ -44,6 +47,8 @@ export class CampaignContext implements CommandHost {
   readonly tools: SceneTools;
   readonly recent: RecentActions;
   readonly table: TableState;
+  /** How far this device has got through the tutorial, in a tutorial campaign (tutorial/). */
+  readonly tutorial: LocalValue<TutorialProgress | null>;
   /** Backing the campaign up to a folder on this device, once one is linked. */
   readonly backup: FolderBackup;
   /** Every command this campaign offers; `execute` is the one way to change campaign state. */
@@ -68,6 +73,7 @@ export class CampaignContext implements CommandHost {
     this.tools = new SceneTools(local);
     this.recent = new RecentActions(local);
     this.table = new TableState(campaign);
+    this.tutorial = tutorialProgress(local);
     this.backup = new FolderBackup(campaign);
     // Typing into one field over a second or so is one step; `undoGroup` decides what else joins.
     this.undoStack = undoStack(campaign.doc, this.#origin, 1000);
