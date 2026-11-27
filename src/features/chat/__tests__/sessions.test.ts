@@ -25,11 +25,7 @@ const marker = (session: number, end = false): ChatMessage => ({
 });
 
 describe("splitting the log into sessions", () => {
-  it("is one current part when there are no markers", () => {
-    const parts = splitSessions([text("a"), text("b")]);
-    expect(parts).toHaveLength(1);
-    expect(parts[0]).toMatchObject({ key: "before", marker: null, current: true });
-  });
+  // Where parts begin is proved in partStarts.ts; this checks the parts built from it.
   it("starts a part at each session, with ends and stragglers in the session they follow", () => {
     const parts = splitSessions([
       text("pre"),
@@ -45,9 +41,6 @@ describe("splitting the log into sessions", () => {
       ["s1", 3, false],
       ["s2", 1, true],
     ]);
-  });
-  it('has no empty "before" part when the log opens with a marker', () => {
-    expect(splitSessions([marker(1), text("x")]).map((p) => p.key)).toEqual(["s1"]);
   });
 });
 

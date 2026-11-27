@@ -8,3 +8,4 @@ src/table/dice/dieView.ts
 src/features/combat/turns.ts
 src/features/chat/audience.ts
 src/scene/edgePin.ts
+src/features/chat/partStarts.ts
