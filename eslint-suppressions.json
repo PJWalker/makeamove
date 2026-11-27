@@ -5275,9 +5275,6 @@
   "src/ui/resizeRect.ts": {
     "@typescript-eslint/max-params": {
       "count": 1
-    },
-    "no-param-reassign": {
-      "count": 2
     }
   },
   "src/ui/sounds.ts": {
