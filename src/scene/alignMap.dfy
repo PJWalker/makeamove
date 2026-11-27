@@ -21,7 +21,9 @@ datatype Cells = Cells(across: int, down: int)
 
 datatype Frame = Frame(x: real, y: real, w: real, h: real)
 
-datatype Move = Move(from: Spot, to: Spot, s: real)
+datatype Scales = Scales(sx: real, sy: real)
+
+datatype Move = Move(from: Spot, to: Spot, sx: real, sy: real)
 
 function boxFrom(a: Spot, b: Spot): Box
 {
@@ -64,29 +66,68 @@ lemma alignScale_ensures(box: Box, cells: Cells, pitch: Pitch)
 {
 }
 
+function alignScales(box: Box, cells: Cells, pitch: Pitch): Scales
+  requires (box.w > (0 as real))
+  requires (box.h > (0 as real))
+  requires (pitch.w > (0 as real))
+  requires (pitch.h > (0 as real))
+  requires (cells.across >= 1)
+  requires (cells.down >= 1)
+{
+  var s := alignScale(box, cells, pitch);
+  if ((cells.across < STRETCH_CELLS) || (cells.down < STRETCH_CELLS)) then
+    Scales(s, s)
+  else
+    var sx := (((cells.across as real) * pitch.w) / box.w);
+    var sy := (((cells.down as real) * pitch.h) / box.h);
+    if (((sx * (PERCENT as real)) > (sy * ((PERCENT + MAX_STRETCH) as real))) || ((sy * (PERCENT as real)) > (sx * ((PERCENT + MAX_STRETCH) as real)))) then
+      Scales(s, s)
+    else
+      Scales(sx, sy)
+}
+
+lemma alignScales_ensures(box: Box, cells: Cells, pitch: Pitch)
+  requires (box.w > (0 as real))
+  requires (box.h > (0 as real))
+  requires (pitch.w > (0 as real))
+  requires (pitch.h > (0 as real))
+  requires (cells.across >= 1)
+  requires (cells.down >= 1)
+  ensures (alignScales(box, cells, pitch).sx > (0 as real))
+  ensures (alignScales(box, cells, pitch).sy > (0 as real))
+  ensures ((alignScales(box, cells, pitch).sx * (PERCENT as real)) <= (alignScales(box, cells, pitch).sy * ((PERCENT + MAX_STRETCH) as real)))
+  ensures ((alignScales(box, cells, pitch).sy * (PERCENT as real)) <= (alignScales(box, cells, pitch).sx * ((PERCENT + MAX_STRETCH) as real)))
+  ensures (((cells.across < STRETCH_CELLS) || (cells.down < STRETCH_CELLS)) ==> (alignScales(box, cells, pitch).sx == alignScales(box, cells, pitch).sy))
+  ensures ((alignScales(box, cells, pitch).sx == alignScales(box, cells, pitch).sy) || (((box.w * alignScales(box, cells, pitch).sx) == ((cells.across as real) * pitch.w)) && ((box.h * alignScales(box, cells, pitch).sy) == ((cells.down as real) * pitch.h))))
+{
+}
+
 function alignFrame(map_: Frame, move: Move): Frame
-  requires (move.s > (0 as real))
+  requires (move.sx > (0 as real))
+  requires (move.sy > (0 as real))
   requires (map_.w > (0 as real))
   requires (map_.h > (0 as real))
 {
   var from := move.from;
   var to := move.to;
-  var s := move.s;
-  Frame((to.x + ((map_.x - from.x) * s)), (to.y + ((map_.y - from.y) * s)), (map_.w * s), (map_.h * s))
+  var sx := move.sx;
+  var sy := move.sy;
+  Frame((to.x + ((map_.x - from.x) * sx)), (to.y + ((map_.y - from.y) * sy)), (map_.w * sx), (map_.h * sy))
 }
 
 lemma alignFrame_ensures(map_: Frame, move: Move)
-  requires (move.s > (0 as real))
+  requires (move.sx > (0 as real))
+  requires (move.sy > (0 as real))
   requires (map_.w > (0 as real))
   requires (map_.h > (0 as real))
   ensures (alignFrame(map_, move).w > (0 as real))
   ensures (alignFrame(map_, move).h > (0 as real))
-  ensures (alignFrame(map_, move).w == (map_.w * move.s))
-  ensures (alignFrame(map_, move).h == (map_.h * move.s))
-  ensures ((alignFrame(map_, move).x - (alignFrame(map_, move).w / (2 as real))) == (move.to.x + (((map_.x - (map_.w / (2 as real))) - move.from.x) * move.s)))
-  ensures ((alignFrame(map_, move).x + (alignFrame(map_, move).w / (2 as real))) == (move.to.x + (((map_.x + (map_.w / (2 as real))) - move.from.x) * move.s)))
-  ensures ((alignFrame(map_, move).y - (alignFrame(map_, move).h / (2 as real))) == (move.to.y + (((map_.y - (map_.h / (2 as real))) - move.from.y) * move.s)))
-  ensures ((alignFrame(map_, move).y + (alignFrame(map_, move).h / (2 as real))) == (move.to.y + (((map_.y + (map_.h / (2 as real))) - move.from.y) * move.s)))
+  ensures (alignFrame(map_, move).w == (map_.w * move.sx))
+  ensures (alignFrame(map_, move).h == (map_.h * move.sy))
+  ensures ((alignFrame(map_, move).x - (alignFrame(map_, move).w / (2 as real))) == (move.to.x + (((map_.x - (map_.w / (2 as real))) - move.from.x) * move.sx)))
+  ensures ((alignFrame(map_, move).x + (alignFrame(map_, move).w / (2 as real))) == (move.to.x + (((map_.x + (map_.w / (2 as real))) - move.from.x) * move.sx)))
+  ensures ((alignFrame(map_, move).y - (alignFrame(map_, move).h / (2 as real))) == (move.to.y + (((map_.y - (map_.h / (2 as real))) - move.from.y) * move.sy)))
+  ensures ((alignFrame(map_, move).y + (alignFrame(map_, move).h / (2 as real))) == (move.to.y + (((map_.y + (map_.h / (2 as real))) - move.from.y) * move.sy)))
 {
 }
 
@@ -113,3 +154,9 @@ lemma guessCells_ensures(box: Box, pitch: Pitch)
   ensures ((guessCells(box, pitch).across == 1) || (guessCells(box, pitch).down == 1))
 {
 }
+
+const STRETCH_CELLS: int := 3
+
+const MAX_STRETCH: int := 3
+
+const PERCENT: int := 100

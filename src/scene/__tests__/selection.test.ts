@@ -423,4 +423,39 @@ describe("aligning a map to the grid", () => {
     expect(c.aligning.value).toBeNull();
   });
 });
+
+describe("stretching a map to fit the grid", () => {
+  it("stretches a map slightly to fit a box over several squares each way", () => {
+    const { c, renderer, scene, fire } = setup([alignedMap]);
+    renderer.grid = { type: "square", size: 70, offsetX: 0, offsetY: 0 };
+    c.alignMap("map");
+    drag(fire, [10, 10], [160, 163]);
+    c.setAlignCells({ across: 3, down: 3 });
+    expect(scene.update).toHaveBeenLastCalledWith([
+      ["map", { x: near(126), y: near(123.53), w: near(280), h: near(274.51) }],
+    ]);
+  });
+
+  it("stretches a map turned on its side along its own sides", () => {
+    const { c, renderer, scene, fire } = setup([{ ...alignedMap, rot: Math.PI / 2 }]);
+    renderer.grid = { type: "square", size: 70, offsetX: 0, offsetY: 0 };
+    c.alignMap("map");
+    drag(fire, [10, 10], [160, 163]);
+    c.setAlignCells({ across: 3, down: 3 });
+    expect(scene.update).toHaveBeenLastCalledWith([
+      ["map", { x: near(126), y: near(123.53), w: near(274.51), h: near(280) }],
+    ]);
+  });
+
+  it("keeps a map's shape when fitting the box would stretch it much", () => {
+    const { c, renderer, scene, fire } = setup([alignedMap]);
+    renderer.grid = { type: "square", size: 70, offsetX: 0, offsetY: 0 };
+    c.alignMap("map");
+    drag(fire, [10, 10], [160, 170]);
+    c.setAlignCells({ across: 3, down: 3 });
+    expect(scene.update).toHaveBeenLastCalledWith([
+      ["map", { x: near(121.94), y: near(121.94), w: near(270.97), h: near(270.97) }],
+    ]);
+  });
+});
 /* eslint-enable @typescript-eslint/no-magic-numbers */

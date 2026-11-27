@@ -15,10 +15,10 @@ import { clampZoom, fitCamera, toWorld, zoomAt } from "./camera";
 import type { Camera } from "./camera";
 import { readSceneCamera, saveSceneCamera } from "./cameraMemory";
 import { bounds, hits } from "./geometry";
-import { alignFrame, alignScale, guessCells } from "./alignMap";
-import type { Box, Cells, Frame } from "./alignMap";
-import fitImageGrid from "./autoAlign";
-import { cellOr, gridPitch, nearestGridPoint, snapPoint } from "./grid";
+import { guessCells } from "./alignMap";
+import type { Box, Cells } from "./alignMap";
+import { fitBox, fitImageGrid } from "./gridFit";
+import { cellOr, gridPitch, snapPoint } from "./grid";
 import type { Grid, Point } from "./grid";
 import { tokenDistance } from "./measure";
 import { conversion, imageElement, newToken, randomTokenColour } from "./newElements";
@@ -56,7 +56,7 @@ function transformOf(t: Transform): Transform {
 }
 
 /** A map whose image has a square grid drawn on it, scaled and placed so that grid lines up with the scene's. */
-async function alignedToImageGrid<M extends Frame & NewElement>(
+async function alignedToImageGrid<M extends NewElement & Transform>(
   map: M,
   image: Blob,
   grid: Grid,
@@ -78,7 +78,7 @@ async function alignedToImageGrid<M extends Frame & NewElement>(
  */
 export interface Alignment {
   mapId: string;
-  drawn?: { base: Frame; box: Box; cells: Cells };
+  drawn?: { base: Transform; box: Box; cells: Cells };
 }
 
 /**
@@ -939,7 +939,7 @@ export class SceneController implements ToolContext {
     this.aligning.value = {
       mapId: map.id,
       drawn: {
-        base: { x: map.x, y: map.y, w: map.w, h: map.h },
+        base: transformOf(map),
         box,
         cells: guessCells(box, pitch),
       },
@@ -947,15 +947,12 @@ export class SceneController implements ToolContext {
     this.applyAlignment();
   }
 
-  /** Scale the map, keeping its shape, so the box covers its cells of the grid, with its corner on a grid point. */
+  /** Scale the map so the box covers its cells of the grid, with its corner on a grid point. */
   private applyAlignment() {
     const aligning = this.aligning.value;
-    const { grid } = this.renderer;
-    const pitch = gridPitch(grid);
-    if (!aligning?.drawn || !pitch) return;
-    const { base, box, cells } = aligning.drawn;
-    const move = { from: box, to: nearestGridPoint(grid, box), s: alignScale(box, cells, pitch) };
-    this.scene.update([[aligning.mapId, alignFrame(base, move)]]);
+    if (!aligning?.drawn) return;
+    const frame = fitBox(aligning.drawn.base, aligning.drawn, this.renderer.grid);
+    if (frame) this.scene.update([[aligning.mapId, frame]]);
   }
 
   /**

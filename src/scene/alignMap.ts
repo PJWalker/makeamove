@@ -42,12 +42,25 @@ export interface Frame {
   h: number; //@ type real
 }
 
-/** Scaling by `s` about `from`, and moving `from` to `to`. */
+/** How much to scale across and down. */
+export interface Scales {
+  sx: number; //@ type real
+  sy: number; //@ type real
+}
+
+/** Scaling by `sx` across and `sy` down about `from`, and moving `from` to `to`. */
 export interface Move {
   from: Spot;
   to: Spot;
-  s: number; //@ type real
+  sx: number; //@ type real
+  sy: number; //@ type real
 }
+
+/** Fewest cells a box must cover each way before the map may stretch to fit it: a smaller box is too rough a guide. */
+export const STRETCH_CELLS = 3;
+/** Most the map may stretch one way more than the other, in percent. */
+export const MAX_STRETCH = 3;
+const PERCENT = 100;
 
 /** The box a drag from `a` to `b` makes, whichever way it went. */
 export function boxFrom(a: Spot, b: Spot): Box {
@@ -77,24 +90,48 @@ export function alignScale(box: Box, cells: Cells, pitch: Pitch): number {
 }
 
 /**
- * The map's frame after `move`. Every point of the map moves the same way,
- * so the map's own cells keep lining up with the box drawn over them.
+ * How much to scale the map by, across and down, so `box` covers `cells`
+ * of a grid whose points are `pitch` apart. Conservatively: it keeps its
+ * shape (as alignScale says) unless the box covers several cells each way
+ * and fitting them exactly needs only a slight stretch, as for a map whose
+ * squares were drawn a touch off square.
+ */
+export function alignScales(box: Box, cells: Cells, pitch: Pitch): Scales {
+  //@ verify
+  //@ requires box.w > 0 && box.h > 0 && pitch.w > 0 && pitch.h > 0 && cells.across >= 1 && cells.down >= 1
+  //@ ensures \result.sx > 0 && \result.sy > 0
+  //@ ensures \result.sx * PERCENT <= \result.sy * (PERCENT + MAX_STRETCH) && \result.sy * PERCENT <= \result.sx * (PERCENT + MAX_STRETCH)
+  //@ ensures (cells.across < STRETCH_CELLS || cells.down < STRETCH_CELLS) ==> \result.sx === \result.sy
+  //@ ensures \result.sx === \result.sy || (box.w * \result.sx === cells.across * pitch.w && box.h * \result.sy === cells.down * pitch.h)
+  const s = alignScale(box, cells, pitch);
+  if (cells.across < STRETCH_CELLS || cells.down < STRETCH_CELLS) return { sx: s, sy: s };
+  const sx = (cells.across * pitch.w) / box.w;
+  const sy = (cells.down * pitch.h) / box.h;
+  if (sx * PERCENT > sy * (PERCENT + MAX_STRETCH) || sy * PERCENT > sx * (PERCENT + MAX_STRETCH))
+    return { sx: s, sy: s };
+  return { sx, sy };
+}
+
+/**
+ * The map's frame after `move`, its sides along the axes. Every point of
+ * the map moves the same way, so the map's own cells keep lining up with
+ * the box drawn over them.
  */
 export function alignFrame(map: Frame, move: Move): Frame {
   //@ verify
-  //@ requires move.s > 0 && map.w > 0 && map.h > 0
+  //@ requires move.sx > 0 && move.sy > 0 && map.w > 0 && map.h > 0
   //@ ensures \result.w > 0 && \result.h > 0
-  //@ ensures \result.w === map.w * move.s && \result.h === map.h * move.s
-  //@ ensures \result.x - \result.w / 2 === move.to.x + (map.x - map.w / 2 - move.from.x) * move.s
-  //@ ensures \result.x + \result.w / 2 === move.to.x + (map.x + map.w / 2 - move.from.x) * move.s
-  //@ ensures \result.y - \result.h / 2 === move.to.y + (map.y - map.h / 2 - move.from.y) * move.s
-  //@ ensures \result.y + \result.h / 2 === move.to.y + (map.y + map.h / 2 - move.from.y) * move.s
-  const { from, to, s } = move;
+  //@ ensures \result.w === map.w * move.sx && \result.h === map.h * move.sy
+  //@ ensures \result.x - \result.w / 2 === move.to.x + (map.x - map.w / 2 - move.from.x) * move.sx
+  //@ ensures \result.x + \result.w / 2 === move.to.x + (map.x + map.w / 2 - move.from.x) * move.sx
+  //@ ensures \result.y - \result.h / 2 === move.to.y + (map.y - map.h / 2 - move.from.y) * move.sy
+  //@ ensures \result.y + \result.h / 2 === move.to.y + (map.y + map.h / 2 - move.from.y) * move.sy
+  const { from, to, sx, sy } = move;
   return {
-    x: to.x + (map.x - from.x) * s,
-    y: to.y + (map.y - from.y) * s,
-    w: map.w * s,
-    h: map.h * s,
+    x: to.x + (map.x - from.x) * sx,
+    y: to.y + (map.y - from.y) * sy,
+    w: map.w * sx,
+    h: map.h * sy,
   };
 }
 
