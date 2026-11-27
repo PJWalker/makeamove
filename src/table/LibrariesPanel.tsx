@@ -23,6 +23,7 @@ import { entity } from "../workspace/dragEntities";
 import { linkProxy } from "../workspace/linkProxy";
 import { rollTag } from "../workspace/actionPresentation";
 import { actionMenuItems } from "../workspace/actionMenu";
+import { librarySlot, moveSlot } from "../features/characters/hotbar";
 import { getEntityGraphic } from "../workspace/entityGraphics";
 import { CampaignEntityGraphic } from "../workspace/EntityGraphic";
 import { useCampaign } from "../workspace/campaignContext";
@@ -86,8 +87,8 @@ function useEntryMenu({ actionsFor }: Pick<Browsing, "actionsFor">) {
 /** Pinning an item or move to the hotbar, or giving it a shortcut. */
 function hotbarMenu(context: CampaignContext, e: LibraryEntry) {
   if (e.kind === "item")
-    return actionMenuItems(context, [{ id: `library:${e.id}`, title: e.name }]);
-  if (e.kind === "move") return actionMenuItems(context, [{ id: `move:${e.id}`, title: e.name }]);
+    return actionMenuItems(context, [{ id: librarySlot(e.id), title: e.name }]);
+  if (e.kind === "move") return actionMenuItems(context, [{ id: moveSlot(e.id), title: e.name }]);
   return [];
 }
 
