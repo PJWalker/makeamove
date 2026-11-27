@@ -16,12 +16,23 @@ import { generateKeyBetween, generateNKeysBetween } from "fractional-indexing";
 import { isString } from "../lib/guards";
 
 export type PanelId =
-  "characters" | "chat" | "combat" | "items" | "libraries" | "members" | "notes" | "pc" | "reference" | "scene";
+  | "characters"
+  | "chat"
+  | "combat"
+  | "items"
+  | "layers"
+  | "libraries"
+  | "members"
+  | "notes"
+  | "pc"
+  | "reference"
+  | "scene";
 export type DockItemId = PanelId | `entity:${string}`;
 export type Side = "left" | "right";
 
 export const PANEL_ORDER: PanelId[] = [
   "scene",
+  "layers",
   "chat",
   "pc",
   "characters",
@@ -72,6 +83,7 @@ const SIDEBAR_KEY_STEP_LARGE = 64;
 
 const DEFAULT_SIDE: Record<PanelId, Side> = {
   scene: "left",
+  layers: "left",
   chat: "right",
   notes: "right",
   members: "right",
@@ -100,7 +112,7 @@ function defaultSide(id: DockItemId): Side {
 }
 
 export function defaultLayout(narrow: boolean): Layout {
-  const left: DockItemId[] = ["scene", "pc", "characters", "combat"];
+  const left: DockItemId[] = ["scene", "layers", "pc", "characters", "combat"];
   const right: DockItemId[] = ["chat", "libraries", "reference", "items", "notes", "members"];
   return {
     left: { active: "characters", open: !narrow, width: SIDEBAR_DEFAULT_W, panels: left },

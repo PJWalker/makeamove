@@ -7,25 +7,12 @@ import type { Store } from "../lib/store";
 import { startReorder } from "../ui/reorder";
 import scrollSideways from "../ui/wheel";
 import { PEN_WIDTH_RANGE, SMART_SHAPES } from "../scene/tools";
-import type {LightToolMode, SelectKind, ToolId} from "../scene/tools";
+import type {LightToolMode, ToolId} from "../scene/tools";
 import { AREA_COLOURS, SHAPES  } from "../scene/types";
 import Button from "../ui/Button";
 import ColourPicker from "../ui/ColourPicker";
 import { Segmented, ToggleGroup } from "../ui/Segmented";
-import {
-  IconDraw,
-  IconEffects,
-  IconLight,
-  IconMap,
-  IconMenu,
-  IconShapes,
-  IconText,
-  IconToken,
-  IconWall,
-  
-  PROMINENT_ICON_SIZE
-} from "../ui/icons";
-import type {Icon} from "../ui/icons";
+import { IconMenu, PROMINENT_ICON_SIZE } from "../ui/icons";
 import TOOLS from "../workspace/tools";
 import { ContextMenu  } from "../ui/ContextMenu";
 import type {MenuItem} from "../ui/ContextMenu";
@@ -39,6 +26,7 @@ import EFFECT_OPTIONS from "./effectOptionsData";
 import ShapeGlyph from "./ShapeGlyph";
 import TextStyleFields from "./TextStyleFields";
 import { useDockStripLayout } from "./dockStrip";
+import SELECT_KINDS from "./selectKinds";
 
 function measureToolbar(toolbar: HTMLElement) {
   const strip = toolbar.querySelector<HTMLElement>(".toolbar-tools")!;
@@ -297,18 +285,6 @@ function PenOptions({ tool }: { tool: ToolId }) {
     </fieldset>
   );
 }
-
-/** The sorts of things the Select tool can pick, each with the icon of the tool that makes it. */
-const SELECT_KINDS: { id: SelectKind; label: string; Icon: Icon; gmOnly?: boolean }[] = [
-  { id: "token", label: "Tokens", Icon: IconToken },
-  { id: "map", label: "Maps", Icon: IconMap },
-  { id: "drawing", label: "Drawings", Icon: IconDraw },
-  { id: "shape", label: "Shapes", Icon: IconShapes },
-  { id: "text", label: "Text", Icon: IconText },
-  { id: "wall", label: "Walls", Icon: IconWall, gmOnly: true },
-  { id: "light", label: "Lights", Icon: IconLight, gmOnly: true },
-  { id: "effect", label: "Effects", Icon: IconEffects, gmOnly: true },
-];
 
 /** Which sorts of things the Select tool picks. */
 function SelectOptions({ isGm }: { isGm: boolean }) {

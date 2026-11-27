@@ -15,6 +15,7 @@ import {
   IconChat,
   IconCombat,
   IconItems,
+  IconLayers,
   IconLibraries,
   IconMap,
   IconMembers,
@@ -54,6 +55,7 @@ import type {FloatingWindow, DockItemId, Layout, PanelId, Side} from "./layoutMo
 
 export const PANELS: Record<PanelId, { label: string; Icon: Icon }> = {
   scene: { label: "Scenes", Icon: IconMap },
+  layers: { label: "Layers", Icon: IconLayers },
   chat: { label: "Chat", Icon: IconChat },
   pc: { label: "My Character", Icon: IconPlayerCharacter },
   characters: { label: "Characters", Icon: IconCharacters },

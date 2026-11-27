@@ -19,6 +19,7 @@ import { charactersLayout, notesLayout, scenesLayout } from "./panelLayouts";
 const ScenePanel = lazy(() =>
   import("./ScenePanel"),
 );
+const LayersPanel = lazy(() => import(/* webpackChunkName: "layers-panel" */ "./LayersPanel"));
 const ChatPanel = lazy(() =>
   import("./ChatPanel"),
 );
@@ -46,6 +47,7 @@ const ItemsPanel = lazy(() =>
 
 const PANEL_COMPONENTS: Record<PanelId, ComponentType<{ campaign: Campaign }>> = {
   scene: ScenePanel,
+  layers: LayersPanel,
   chat: ChatPanel,
   pc: PlayerCharacterPanel,
   characters: CharactersPanel,

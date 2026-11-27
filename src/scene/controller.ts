@@ -350,7 +350,9 @@ export default class SceneController implements ToolContext {
     void imageColour(main.image.hash, this.renderer.peers).then((c) => (this.mapColour.value = c));
   }
 
-  select(ids: string[]) {
+  /** Select elements; with `open`, open that group (or close any, with null) to pick its members alone. */
+  select(ids: string[], { open }: { open?: string | null } = {}) {
+    if (open !== undefined) this.openGroup.value = open;
     this.selection.value = ids;
   }
 

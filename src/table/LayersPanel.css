@@ -1,0 +1,22 @@
+@layer components {
+  .layers-panel {
+    padding: var(--space-1) var(--space-2) var(--space-2);
+    padding-top: calc(var(--header-inset, 0px) + var(--space-1));
+  }
+  /* Rows drag to restack, so touch doesn't scroll them. */
+  .layers-row {
+    touch-action: none;
+  }
+  .layers-row .btn-icon {
+    flex: none;
+  }
+  /* A group's members, indented under it. */
+  .layers-members {
+    list-style: none;
+    padding-left: var(--space-4);
+  }
+  .layers-panel .list-row .input {
+    flex: 1;
+    min-width: 0;
+  }
+}

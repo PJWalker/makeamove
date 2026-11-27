@@ -37,6 +37,7 @@
 @import "../ui/reorder.css";
 @import "../ui/TwoPane.css";
 @import "../table/FolderTree.css";
+@import "../table/LayersPanel.css";
 @import "../table/NotesPanel.css";
 @import "../table/NoteEditor.css";
 @import "../table/LinkPopups.css";
