@@ -61,7 +61,12 @@ export default defineConfig({
   // The typecheck covers the whole project, so takes no files.
   // React Doctor's rules run inside ESLint; its full scan (`npm run doctor`) is left to `npm run lint`.
   staged: {
-    "*": ["npm run lint:eslint", () => "npm run typecheck"],
+    "*": [
+      "npm run lint:eslint",
+      // Pruning rewrites the suppressions file unformatted.
+      () => "vp fmt eslint-suppressions.json",
+      () => "npm run typecheck",
+    ],
   },
   fmt: {
     printWidth: 100,
