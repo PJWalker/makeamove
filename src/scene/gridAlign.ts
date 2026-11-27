@@ -41,7 +41,13 @@ function aligned(shape: RecognisedShape, grid: Grid): RecognisedShape | null {
     const b = nearPoint(offset(shape, along, shape.w / 2), grid, HALF_CELLS);
     if (!a || !b || (a.x === b.x && a.y === b.y)) return null;
     const w = Math.hypot(b.x - a.x, b.y - a.y);
-    return { ...shape, x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, w, rot: Math.atan2(b.y - a.y, b.x - a.x) };
+    return {
+      ...shape,
+      x: (a.x + b.x) / 2,
+      y: (a.y + b.y) / 2,
+      w,
+      rot: Math.atan2(b.y - a.y, b.x - a.x),
+    };
   }
   const tip = nearPoint(offset(shape, along, -shape.w / 2), grid, HALF_CELLS);
   const w = nearCells(shape.w, grid);
@@ -87,4 +93,7 @@ function nearPoint(p: Point, grid: Grid, lattice: { step: number; reach: number 
   return Math.hypot(p.x - q.x, p.y - q.y) <= lattice.reach * grid.size ? q : null;
 }
 
-const offset = (p: Point, along: Point, by: number): Point => ({ x: p.x + along.x * by, y: p.y + along.y * by });
+const offset = (p: Point, along: Point, by: number): Point => ({
+  x: p.x + along.x * by,
+  y: p.y + along.y * by,
+});

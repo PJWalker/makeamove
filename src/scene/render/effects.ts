@@ -160,7 +160,8 @@ interface Seed {
 /** A repeatable random sequence, so an effect looks the same each time it's drawn. */
 function random(seed: string): () => number {
   let h = 2_166_136_261;
-  for (let index = 0; index < seed.length; index++) h = Math.imul(h ^ seed.charCodeAt(index), 16_777_619);
+  for (let index = 0; index < seed.length; index++)
+    h = Math.imul(h ^ seed.charCodeAt(index), 16_777_619);
   return () => {
     h = Math.imul(h ^ (h >>> 15), 2_246_822_507);
     h = Math.imul(h ^ (h >>> 13), 3_266_489_909);
@@ -276,7 +277,7 @@ class DriftView {
   draw(time: number, tint: number, strength: number) {
     const d = this.drift;
     const { w, h } = this.box;
-    const {fade} = this;
+    const { fade } = this;
     if (!fade) return;
     const angle = Math.atan2(d.velocity.y, d.velocity.x) - Math.PI / 2;
     for (let index = 0; index < this.particles.length; index++) {

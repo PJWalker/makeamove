@@ -1,5 +1,5 @@
-import {    hexAt, hexCentre } from "./grid";
-import type {DiagonalRule, Grid, Point} from "./grid";
+import { hexAt, hexCentre } from "./grid";
+import type { DiagonalRule, Grid, Point } from "./grid";
 import { fromLocal, shapeOutline } from "./geometry";
 import type { ShapeGeometry, Transform } from "./types";
 
@@ -150,7 +150,10 @@ export function lengthUnits(grid: Grid, dx: number, dy: number): number {
  * ellipse's width and height), a line's or cone's length, and each side of
  * a polygon by that side. Lengths follow the scene's rule for diagonals.
  */
-export function shapeMeasures(grid: Grid, shape: ShapeGeometry & Transform): { text: string; at: Point }[] {
+export function shapeMeasures(
+  grid: Grid,
+  shape: ShapeGeometry & Transform,
+): { text: string; at: Point }[] {
   const cos = Math.cos(shape.rot);
   const sin = Math.sin(shape.rot);
   /** A length along the shape's width, and one along its height. */
@@ -160,10 +163,16 @@ export function shapeMeasures(grid: Grid, shape: ShapeGeometry & Transform): { t
   const at = (x: number, y: number) => fromLocal(shape, { x, y });
   const even = along(shape.w) === athwart(shape.h);
   if (shape.shape === "rect") return [{ text: across, at: at(0, shape.h / 2) }];
-  if (shape.shape === "circle") return [{ text: even ? `${along(shape.w / 2)} radius` : across, at: at(0, 0) }];
+  if (shape.shape === "circle")
+    return [{ text: even ? `${along(shape.w / 2)} radius` : across, at: at(0, 0) }];
   if (shape.shape === "line") return [{ text: along(shape.w), at: at(0, 0) }];
   if (shape.shape === "cone")
-    return [{ text: even ? along(shape.w) : `${along(shape.w)} long, ${athwart(shape.h)} wide`, at: at(0, 0) }];
+    return [
+      {
+        text: even ? along(shape.w) : `${along(shape.w)} long, ${athwart(shape.h)} wide`,
+        at: at(0, 0),
+      },
+    ];
   const corners = shapeOutline(shape, shape.w, shape.h).map((p) => at(p.x, p.y));
   return corners.map((a, index) => {
     const b = corners[(index + 1) % corners.length]!;

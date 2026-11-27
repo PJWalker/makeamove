@@ -10,12 +10,26 @@ const grid: Grid = { ...DEFAULT_GRID, type: "square", size: 50 };
 describe("lining boxes up with the grid", () => {
   it("moves a rectangle's sides onto the grid lines they're near", () => {
     const rect: RecognisedShape = { shape: "rect", x: 52, y: 77, w: 98, h: 152, rot: 0 };
-    expect(alignToGrid(rect, grid)).toEqual({ shape: "rect", x: 50, y: 75, w: 100, h: 150, rot: 0 });
+    expect(alignToGrid(rect, grid)).toEqual({
+      shape: "rect",
+      x: 50,
+      y: 75,
+      w: 100,
+      h: 150,
+      rot: 0,
+    });
   });
 
   it("rounds a circle drawn about cells onto their edges", () => {
     const circle: RecognisedShape = { shape: "circle", x: 51, y: 49, w: 104, h: 104, rot: 0 };
-    expect(alignToGrid(circle, grid)).toEqual({ shape: "circle", x: 50, y: 50, w: 100, h: 100, rot: 0 });
+    expect(alignToGrid(circle, grid)).toEqual({
+      shape: "circle",
+      x: 50,
+      y: 50,
+      w: 100,
+      h: 100,
+      rot: 0,
+    });
   });
 
   it("leaves a box with a side between grid lines as drawn", () => {
@@ -36,15 +50,33 @@ describe("lining ends and corners up with the grid", () => {
   });
 
   it("moves a polygon's corners onto grid corners", () => {
-    const polygon: RecognisedShape = { shape: "polygon", ...polygonFrame([{ x: 2, y: -3 }, { x: 148, y: 4 }, { x: 52, y: 97 }]) };
+    const polygon: RecognisedShape = {
+      shape: "polygon",
+      ...polygonFrame([
+        { x: 2, y: -3 },
+        { x: 148, y: 4 },
+        { x: 52, y: 97 },
+      ]),
+    };
     expect(alignToGrid(polygon, grid)).toEqual({
       shape: "polygon",
-      ...polygonFrame([{ x: 0, y: 0 }, { x: 150, y: 0 }, { x: 50, y: 100 }]),
+      ...polygonFrame([
+        { x: 0, y: 0 },
+        { x: 150, y: 0 },
+        { x: 50, y: 100 },
+      ]),
     });
   });
 
   it("leaves a polygon with a corner off the grid as drawn", () => {
-    const polygon: RecognisedShape = { shape: "polygon", ...polygonFrame([{ x: 0, y: 0 }, { x: 150, y: 0 }, { x: 75, y: 120 }]) };
+    const polygon: RecognisedShape = {
+      shape: "polygon",
+      ...polygonFrame([
+        { x: 0, y: 0 },
+        { x: 150, y: 0 },
+        { x: 75, y: 120 },
+      ]),
+    };
     expect(alignToGrid(polygon, grid)).toBe(polygon);
   });
 });

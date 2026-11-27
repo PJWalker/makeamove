@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vite-plus/test";
-import { DEFAULT_GRID, hexCentre  } from "../grid";
-import type {Grid} from "../grid";
-import { formatDistance, inRange, measure, shapeMeasures, steps, tokenCells, tokenDistance } from "../measure";
+import { DEFAULT_GRID, hexCentre } from "../grid";
+import type { Grid } from "../grid";
+import {
+  formatDistance,
+  inRange,
+  measure,
+  shapeMeasures,
+  steps,
+  tokenCells,
+  tokenDistance,
+} from "../measure";
 
 const square: Grid = { ...DEFAULT_GRID, type: "square", size: 50 };
 const hex: Grid = { ...DEFAULT_GRID, type: "hex", size: 60 };
@@ -89,7 +97,8 @@ describe("range checks", () => {
 });
 
 const at = { x: 0, y: 0, rot: 0 };
-const texts = (shape: Parameters<typeof shapeMeasures>[1]) => shapeMeasures(square, shape).map((m) => m.text);
+const texts = (shape: Parameters<typeof shapeMeasures>[1]) =>
+  shapeMeasures(square, shape).map((m) => m.text);
 
 describe("shape measures", () => {
   it("gives a rectangle's sides, a circle's radius and a line's length", () => {
@@ -100,14 +109,28 @@ describe("shape measures", () => {
     expect(texts({ ...at, shape: "cone", w: 150, h: 150 })).toEqual(["15 ft"]);
   });
   it("gives each side of a polygon by that side", () => {
-    const triangle = { ...at, shape: "polygon" as const, w: 150, h: 200, points: [-75, -100, 75, 100, -75, 100], bw: 150, bh: 200 };
+    const triangle = {
+      ...at,
+      shape: "polygon" as const,
+      w: 150,
+      h: 200,
+      points: [-75, -100, 75, 100, -75, 100],
+      bw: 150,
+      bh: 200,
+    };
     const measures = shapeMeasures(square, triangle);
     expect(measures.map((m) => m.text)).toEqual(["20 ft", "15 ft", "20 ft"]);
     expect(measures[1]!.at).toEqual({ x: 0, y: 100 });
     expect(shapeMeasures({ ...square, diagonal: "euclid" }, triangle)[0]!.text).toBe("25 ft");
   });
   it("measures diagonal lengths by the scene's rule for diagonals", () => {
-    const diagonal = { ...at, rot: Math.PI / 4, shape: "line" as const, w: Math.hypot(150, 150), h: 1 };
+    const diagonal = {
+      ...at,
+      rot: Math.PI / 4,
+      shape: "line" as const,
+      w: Math.hypot(150, 150),
+      h: 1,
+    };
     expect(texts(diagonal)).toEqual(["15 ft"]);
     expect(shapeMeasures({ ...square, diagonal: "alternate" }, diagonal)[0]!.text).toBe("20 ft");
     expect(shapeMeasures({ ...square, diagonal: "euclid" }, diagonal)[0]!.text).toBe("21.2 ft");

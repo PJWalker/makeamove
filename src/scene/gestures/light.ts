@@ -1,6 +1,6 @@
 import { snapPoint } from "../grid";
-import { AREA_COLOURS  } from "../types";
-import type {AreaTone} from "../types";
+import { AREA_COLOURS } from "../types";
+import type { AreaTone } from "../types";
 import type { PolygonPlan, ToolContext, ToolPress } from "./types";
 
 /** A new lamp's size, in cells: its shadows' softness. Resizing the lamp makes them softer or sharper. */
@@ -24,7 +24,7 @@ const light: ToolPress = (c, e, world) => {
     c.polygon.add(areaPlan(c, mode), world, e);
     return null;
   }
-  const {grid} = c.renderer;
+  const { grid } = c.renderer;
   const at = grid.type === "square" && !e.altKey ? snapPoint(grid, world, 1) : world;
   c.scene.add({
     type: "light",

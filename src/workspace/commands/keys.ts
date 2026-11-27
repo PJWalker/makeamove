@@ -44,6 +44,8 @@ export function useCommandKeys(context: CampaignContext) {
       invoke(context, a.command, a.params);
     };
     globalThis.addEventListener("keydown", onKey, true);
-    return () => { globalThis.removeEventListener("keydown", onKey, true); };
+    return () => {
+      globalThis.removeEventListener("keydown", onKey, true);
+    };
   }, [context]);
 }

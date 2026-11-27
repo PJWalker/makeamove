@@ -16,7 +16,11 @@ function hand(path: Point[], wobble = 2, seed = 1): number[] {
     const n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 3));
     for (let k = 0; k < n; k++) {
       const t = k / n;
-      out.push(a.x + (b.x - a.x) * t + random() * wobble, a.y + (b.y - a.y) * t + random() * wobble, 0.5);
+      out.push(
+        a.x + (b.x - a.x) * t + random() * wobble,
+        a.y + (b.y - a.y) * t + random() * wobble,
+        0.5,
+      );
     }
   }
   const end = path.at(-1)!;
@@ -36,7 +40,10 @@ function bowed(corners: Point[], bow: number): Point[] {
     if (!b) return [a];
     const m = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
     const out = Math.hypot(m.x - middle.x, m.y - middle.y);
-    return [a, { x: m.x + ((m.x - middle.x) / out) * bow, y: m.y + ((m.y - middle.y) / out) * bow }];
+    return [
+      a,
+      { x: m.x + ((m.x - middle.x) / out) * bow, y: m.y + ((m.y - middle.y) / out) * bow },
+    ];
   });
 }
 
@@ -48,7 +55,13 @@ const ellipse = (rx: number, ry: number, turns = 1): Point[] =>
 
 describe("neatening curves", () => {
   it("straightens a line", () => {
-    const shape = recogniseShape(hand([{ x: 0, y: 0 }, { x: 200, y: 3 }]), 10);
+    const shape = recogniseShape(
+      hand([
+        { x: 0, y: 0 },
+        { x: 200, y: 3 },
+      ]),
+      10,
+    );
     expect(shape).toMatchObject({ shape: "line", rot: 0 });
     expect(shape!.w).toBeCloseTo(200, -1);
   });
@@ -164,13 +177,27 @@ describe("leaving strokes freehand", () => {
   });
 
   it("leaves squiggles and arcs alone", () => {
-    const squiggle = Array.from({ length: 40 }, (_, index) => ({ x: index * 8, y: (index % 2) * 40 }));
+    const squiggle = Array.from({ length: 40 }, (_, index) => ({
+      x: index * 8,
+      y: (index % 2) * 40,
+    }));
     expect(recogniseShape(hand(squiggle), 10)).toBeNull();
     expect(recogniseShape(hand(ellipse(80, 80, 0.6)), 10)).toBeNull();
   });
 
   it("leaves strokes smaller than the least size alone", () => {
-    expect(recogniseShape(hand([{ x: 0, y: 0 }, { x: 8, y: 0 }], 0), 10)).toBeNull();
+    expect(
+      recogniseShape(
+        hand(
+          [
+            { x: 0, y: 0 },
+            { x: 8, y: 0 },
+          ],
+          0,
+        ),
+        10,
+      ),
+    ).toBeNull();
   });
 });
 
@@ -190,14 +217,30 @@ describe("always finding a shape", () => {
   });
 
   it("takes any triangle for a cone and any four corners for a rectangle", () => {
-    expect(always([{ x: 0, y: 0 }, { x: 200, y: 0 }, { x: 60, y: 90 }, { x: 0, y: 0 }])).toMatchObject({ shape: "cone" });
-    const skewed = [{ x: 0, y: 0 }, { x: 200, y: 0 }, { x: 240, y: 100 }, { x: 40, y: 100 }, { x: 0, y: 0 }];
+    expect(
+      always([
+        { x: 0, y: 0 },
+        { x: 200, y: 0 },
+        { x: 60, y: 90 },
+        { x: 0, y: 0 },
+      ]),
+    ).toMatchObject({ shape: "cone" });
+    const skewed = [
+      { x: 0, y: 0 },
+      { x: 200, y: 0 },
+      { x: 240, y: 100 },
+      { x: 40, y: 100 },
+      { x: 0, y: 0 },
+    ];
     expect(always(skewed)).toMatchObject({ shape: "rect" });
   });
 
   it("closes an arc into a circle, and straightens a wandering stroke into a line", () => {
     expect(always(ellipse(80, 80, 0.75))).toMatchObject({ shape: "circle" });
-    const wander = Array.from({ length: 20 }, (_, index) => ({ x: index * 15, y: (index % 2) * 18 }));
+    const wander = Array.from({ length: 20 }, (_, index) => ({
+      x: index * 15,
+      y: (index % 2) * 18,
+    }));
     expect(always(wander)).toMatchObject({ shape: "line" });
   });
 });

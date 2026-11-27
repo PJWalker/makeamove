@@ -1,17 +1,9 @@
-import { Color,  Container, Graphics, Matrix, Sprite } from "pixi.js";
-import type {ColorSource} from "pixi.js";
+import { Color, Container, Graphics, Matrix, Sprite } from "pixi.js";
+import type { ColorSource } from "pixi.js";
 import { shapeOutline } from "../geometry";
 import { strokeOutline, hasRealPressure } from "../stroke";
-import {
-  AREA_COLOURS,
-  isPlainToken
-  
-  
-  
-  
-  
-} from "../types";
-import type {SceneElement, ShapeGeometry, ShapePaint, TextStyle, Transform} from "../types";
+import { AREA_COLOURS, isPlainToken } from "../types";
+import type { SceneElement, ShapeGeometry, ShapePaint, TextStyle, Transform } from "../types";
 import type { PeerBlobs } from "../../media/images";
 import EffectView from "./effects";
 import { SdfText } from "./sdfText";
@@ -119,7 +111,7 @@ export function buildView(
     case "map": {
       const placeholder = new Graphics()
         .rect(-0.5, -0.5, 1, 1)
-        .fill({ color: 0xFF_FF_FF, alpha: 0.06 });
+        .fill({ color: 0xff_ff_ff, alpha: 0.06 });
       root.addChild(placeholder);
       let sprite: Sprite | null = null;
       let missing: SdfText | null = null;
@@ -128,12 +120,12 @@ export function buildView(
         if (root.destroyed) return;
         if (!tex) {
           // Not on this device; from M2 a peer will send it.
-          placeholder.clear().rect(-0.5, -0.5, 1, 1).fill({ color: 0xFF_FF_FF, alpha: 0.12 });
+          placeholder.clear().rect(-0.5, -0.5, 1, 1).fill({ color: 0xff_ff_ff, alpha: 0.12 });
           missing = new SdfText({
             text: "Image not on this device",
             font: cabin(400),
             size: 28,
-            fill: 0xFF_FF_FF,
+            fill: 0xff_ff_ff,
             anchor: 0.5,
           });
           missing.alpha = 0.7;
@@ -173,7 +165,9 @@ export function buildView(
           if (root.destroyed) return;
           if (!tex) {
             // Missing image: fall back to a plain disc so the token can be found.
-            body.addChild(new Graphics().circle(0, 0, 50).fill({ color: element.colour, alpha: 0.6 }));
+            body.addChild(
+              new Graphics().circle(0, 0, 50).fill({ color: element.colour, alpha: 0.6 }),
+            );
             invalidate();
             return;
           }
@@ -191,7 +185,7 @@ export function buildView(
           text: (element.name.trim()[0] ?? "").toUpperCase(),
           font: fraunces(600),
           size: 52,
-          fill: 0xFF_FF_FF,
+          fill: 0xff_ff_ff,
           anchor: 0.5,
         });
         body.addChildAt(initial, 1);
@@ -223,11 +217,11 @@ export function buildView(
       }
       const dropHighlight = new Graphics()
         .circle(0, 0, 49)
-        .stroke({ color: 0xFF_FF_FF, width: 3 })
+        .stroke({ color: 0xff_ff_ff, width: 3 })
         .circle(0, 0, 45)
         .stroke({ color: ACCENT, width: 4 });
       dropHighlight.visible = element.id === highlighted;
-      const dropFlash = new Graphics().circle(0, 0, 50).stroke({ color: 0xFF_FF_FF, width: 10 });
+      const dropFlash = new Graphics().circle(0, 0, 50).stroke({ color: 0xff_ff_ff, width: 10 });
       dropFlash.visible = false;
       body.addChild(dropHighlight, dropFlash);
       const pose = new Container();
@@ -299,7 +293,7 @@ export function buildView(
           const next = `${t.w}`;
           if (next === size) return;
           size = next;
-          const colour = element.door ? 0xE0_A3_3B : 0xD8_E0_FF;
+          const colour = element.door ? 0xe0_a3_3b : 0xd8_e0_ff;
           g.clear()
             .moveTo(-t.w / 2, 0)
             .lineTo(t.w / 2, 0)
@@ -368,8 +362,12 @@ export function buildView(
         root: view.root,
         key,
         helper: view.outline,
-        apply: (t) => { view.apply(t); },
-        animate: (time) => { view.animate(time); },
+        apply: (t) => {
+          view.apply(t);
+        },
+        animate: (time) => {
+          view.animate(time);
+        },
       };
     }
 

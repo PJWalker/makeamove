@@ -4,11 +4,11 @@ import { IndexeddbPersistence } from "y-indexeddb";
 import { newId } from "../lib/ids";
 import { dataName } from "../platform/dataEpoch";
 import { device } from "../platform/device";
-import { rootOf   } from "../data/schema";
-import type {Patch, Root} from "../data/schema";
+import { rootOf } from "../data/schema";
+import type { Patch, Root } from "../data/schema";
 import type { Grid } from "./grid";
-import { LAYERS    } from "./types";
-import type {Layer, NewElement, SceneElement} from "./types";
+import { LAYERS } from "./types";
+import type { Layer, NewElement, SceneElement } from "./types";
 import { sceneShape } from "./schema";
 import { arrange } from "./stacking";
 import type { Arrangement } from "./stacking";
@@ -35,7 +35,7 @@ const GRID_KEYS = {
   diagonal: "gridDiagonal",
 } as const satisfies Record<keyof Grid, string>;
 
-const byOrder = (a: string, b: string) => (a < b ? -1 : (a > b ? 1 : 0));
+const byOrder = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 
 /** Fields to set on an element; `undefined` removes one. */
 export type ElementPatch = Unset<SceneElement>;
@@ -108,16 +108,19 @@ export class SceneDoc {
   }
 
   setLighting(patch: Partial<SceneLighting>) {
-    this.transact(() => { this.settings.patch({
+    this.transact(() => {
+      this.settings.patch({
         lighting: patch.enabled,
         darkness: patch.darkness,
         vision: patch.vision,
-      }); },
-    );
+      });
+    });
   }
 
   setGrid(patch: Partial<Grid>) {
-    this.transact(() => { this.settings.patch(gridSettings(patch)); });
+    this.transact(() => {
+      this.settings.patch(gridSettings(patch));
+    });
   }
 
   // Elements
@@ -186,7 +189,12 @@ export class SceneDoc {
     const next = newId();
     this.transact(() => {
       this.elements.delete(id);
-      this.elements.set(next, { locked: old.locked, ...element, z: old.z, createdBy: old.createdBy });
+      this.elements.set(next, {
+        locked: old.locked,
+        ...element,
+        z: old.z,
+        createdBy: old.createdBy,
+      });
     });
     return next;
   }

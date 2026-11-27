@@ -1,14 +1,14 @@
-import { ColorMatrixFilter  } from "pixi.js";
-import type {Container} from "pixi.js";
-import { downFrame  } from "../downed";
-import type {DownTurn} from "../downed";
-import { kindOf  } from "../tools";
-import type {SelectKind} from "../tools";
-import { LAYERS   } from "../types";
-import type {Layer, TokenElement} from "../types";
+import { ColorMatrixFilter } from "pixi.js";
+import type { Container } from "pixi.js";
+import { downFrame } from "../downed";
+import type { DownTurn } from "../downed";
+import { kindOf } from "../tools";
+import type { SelectKind } from "../tools";
+import { LAYERS } from "../types";
+import type { Layer, TokenElement } from "../types";
 import { reducedMotion } from "../../ui/transition";
-import { buildView, contentKey, DESTROY_VIEW  } from "./elementViews";
-import type {View} from "./elementViews";
+import { buildView, contentKey, DESTROY_VIEW } from "./elementViews";
+import type { View } from "./elementViews";
 import type { RenderState } from "./state";
 
 /** The scene's elements: a view per element, kept in its layer and in order. */
@@ -85,7 +85,15 @@ export default class ElementLayer {
         view = undefined;
       }
       if (!view) {
-        view = buildView(element, key, () => { s.invalidate(); }, this.dropHighlightToken, s.peers);
+        view = buildView(
+          element,
+          key,
+          () => {
+            s.invalidate();
+          },
+          this.dropHighlightToken,
+          s.peers,
+        );
         this.views.set(element.id, view);
         // A new view isn't in a layer yet, so force a restack.
         this.order = "";
@@ -100,11 +108,12 @@ export default class ElementLayer {
       }
     }
     // Restack only when the order (or a layer) actually changed.
-    const order = s.elements.map((e) => `${e.layer}:${e.id}`).join(',');
+    const order = s.elements.map((e) => `${e.layer}:${e.id}`).join(",");
     if (order !== this.order) {
       this.order = order;
       for (const layer of LAYERS) this.layers[layer].removeChildren();
-      for (const element of s.elements) this.layers[element.layer].addChild(this.views.get(element.id)!.root);
+      for (const element of s.elements)
+        this.layers[element.layer].addChild(this.views.get(element.id)!.root);
     }
   }
 

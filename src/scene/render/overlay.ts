@@ -1,10 +1,10 @@
 import { Graphics } from "pixi.js";
-import {   toScreen } from "../camera";
-import type {Camera, Rect} from "../camera";
+import { toScreen } from "../camera";
+import type { Camera, Rect } from "../camera";
 import { corners } from "../geometry";
 import type { Point } from "../grid";
-import { isPlainToken   } from "../types";
-import type {SceneElement, Transform} from "../types";
+import { isPlainToken } from "../types";
+import type { SceneElement, Transform } from "../types";
 import { HANDLE_SIZE, lightHandles, rotateHandlePosition } from "./handles";
 import type { RenderState } from "./state";
 import { ACCENT, INK } from "./style";
@@ -56,7 +56,7 @@ export class OverlayLayer {
         g.poly(screenCorners(t, cam));
       }
       g.stroke({
-        color: element.locked ? 0xFF_FF_FF : ACCENT,
+        color: element.locked ? 0xff_ff_ff : ACCENT,
         alpha: element.locked ? 0.5 : 1,
         width: 2,
       });

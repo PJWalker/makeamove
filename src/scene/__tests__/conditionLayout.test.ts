@@ -1,12 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import {
-  conditionContains,
-  conditionLayout,
-  hoverSpring
-  
-} from "../conditionLayout";
-import type {ConditionLayoutInput} from "../conditionLayout";
+import { conditionContains, conditionLayout, hoverSpring } from "../conditionLayout";
+import type { ConditionLayoutInput } from "../conditionLayout";
 
 const input: ConditionLayoutInput = {
   x: 200,

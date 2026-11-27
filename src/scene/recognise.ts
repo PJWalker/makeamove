@@ -102,7 +102,8 @@ function lineThrough(pts: Point[], leniency: number): Fit | null {
   const length = distance(a, b);
   const miss = missOf(pts.map((p) => distanceToSegment(p.x, p.y, a.x, a.y, b.x, b.y)));
   const wanders = pathLength(pts) / length - 1;
-  if (miss.worst > LINE_TOLERANCE * leniency * length || wanders > (LINE_PATH_SLACK - 1) * leniency) return null;
+  if (miss.worst > LINE_TOLERANCE * leniency * length || wanders > (LINE_PATH_SLACK - 1) * leniency)
+    return null;
   const rot = snapAngle(Math.atan2(b.y - a.y, b.x - a.x), EIGHTH_TURN);
   const c = midpoint(a, b);
   return { shape: { shape: "line", x: c.x, y: c.y, w: length, h: 1, rot }, miss };
@@ -182,7 +183,14 @@ function fitEllipse(pts: Point[]): Fit {
   const round = Math.abs(a - b) <= ROUND * Math.max(a, b);
   const shape: RecognisedShape = round
     ? { shape: "circle", x: centre.x, y: centre.y, w: a + b, h: a + b, rot: 0 }
-    : { shape: "circle", x: centre.x, y: centre.y, w: u.length, h: v.length, rot: snapAngle(angle, QUARTER_TURN) };
+    : {
+        shape: "circle",
+        x: centre.x,
+        y: centre.y,
+        w: u.length,
+        h: v.length,
+        rot: snapAngle(angle, QUARTER_TURN),
+      };
   return { shape, miss };
 }
 
@@ -190,7 +198,8 @@ function fitEllipse(pts: Point[]): Fit {
 function fitPolygon(pts: Point[], size: number): { corners: Point[]; miss: Miss } | null {
   const first = pts[0]!;
   let far = 0;
-  for (const [index, p] of pts.entries()) if (distance(p, first) > distance(pts[far]!, first)) far = index;
+  for (const [index, p] of pts.entries())
+    if (distance(p, first) > distance(pts[far]!, first)) far = index;
   const tolerance = CORNER_TOLERANCE * size;
   const loop = [
     ...simplify(pts.slice(0, far + 1), tolerance).slice(0, -1),
@@ -230,12 +239,23 @@ function cone(corners: Point[], leniency: number): RecognisedShape | null {
   const base = midpoint(b, c);
   const centre = midpoint(apex, base);
   const rot = snapAngle(Math.atan2(base.y - apex.y, base.x - apex.x), EIGHTH_TURN);
-  return { shape: "cone", x: centre.x, y: centre.y, w: distance(apex, base), h: distance(b, c), rot };
+  return {
+    shape: "cone",
+    x: centre.x,
+    y: centre.y,
+    w: distance(apex, base),
+    h: distance(b, c),
+    rot,
+  };
 }
 
 /** Four corners as a rectangle, if they're all near square: a square, if its sides are near alike. */
 function rectangle(corners: Point[], leniency: number): RecognisedShape | null {
-  if (corners.some((_, index) => Math.abs(cornerAngle(corners, index) - QUARTER_TURN) > SQUARE_SLACK * leniency))
+  if (
+    corners.some(
+      (_, index) => Math.abs(cornerAngle(corners, index) - QUARTER_TURN) > SQUARE_SLACK * leniency,
+    )
+  )
     return null;
   // The edges' mean direction, folded onto a quarter turn.
   let sx = 0;
@@ -257,11 +277,15 @@ function rectangle(corners: Point[], leniency: number): RecognisedShape | null {
   const centre = fromAxes(rot, (u.min + u.max) / 2, (v.min + v.max) / 2);
   const w = u.max - u.min;
   const h = v.max - v.min;
-  if (Math.abs(w - h) > SQUARE * Math.max(w, h)) return { shape: "rect", x: centre.x, y: centre.y, w, h, rot };
+  if (Math.abs(w - h) > SQUARE * Math.max(w, h))
+    return { shape: "rect", x: centre.x, y: centre.y, w, h, rot };
   return { shape: "rect", x: centre.x, y: centre.y, w: (w + h) / 2, h: (w + h) / 2, rot };
 }
 
-const polygonShape = (corners: Point[]): RecognisedShape => ({ shape: "polygon", ...polygonFrame(corners) });
+const polygonShape = (corners: Point[]): RecognisedShape => ({
+  shape: "polygon",
+  ...polygonFrame(corners),
+});
 
 /** Where a closed stroke overshoots its start, cut it back to where it comes closest. */
 function trimOvershoot(pts: Point[]): Point[] {
@@ -286,7 +310,10 @@ function simplify(pts: Point[], tolerance: number): Point[] {
     }
   }
   if (worst <= tolerance) return [a, b];
-  return [...simplify(pts.slice(0, at + 1), tolerance).slice(0, -1), ...simplify(pts.slice(at), tolerance)];
+  return [
+    ...simplify(pts.slice(0, at + 1), tolerance).slice(0, -1),
+    ...simplify(pts.slice(at), tolerance),
+  ];
 }
 
 /** A closed loop without the corners it barely bends at, the flattest first. */

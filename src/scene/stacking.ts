@@ -1,6 +1,5 @@
 import { generateNKeysBetween } from "fractional-indexing";
-import { bounds } from "./geometry";
-import type { Rect } from "./camera";
+import { bounds, intersects } from "./geometry";
 import { LAYERS } from "./types";
 import type { Layer, SceneElement } from "./types";
 
@@ -88,7 +87,8 @@ function reorder(
     let past = -1;
     for (let index = from + step; index >= 0 && index < order.length; index += step) {
       const other = order[index]!;
-      if (!isMoved(other) && box && overlaps(box, bounds([other]))) {
+      const otherBox = bounds([other]);
+      if (!isMoved(other) && box && otherBox && intersects(box, otherBox)) {
         past = index;
         break;
       }
@@ -100,9 +100,6 @@ function reorder(
   }
   return order;
 }
-
-const overlaps = (a: Rect, b: Rect | null) =>
-  b !== null && a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 
 /** New indexes for the moved elements in `order`, between the unmoved ones either side of them. */
 function indexesFor(

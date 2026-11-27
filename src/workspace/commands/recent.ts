@@ -1,5 +1,5 @@
-import { listOf   } from "../../data/localDoc";
-import type {LocalDoc as LocalDocument, LocalValue} from "../../data/localDoc";
+import { listOf } from "../../data/localDoc";
+import type { LocalDoc as LocalDocument, LocalValue } from "../../data/localDoc";
 import { isString } from "../../lib/guards";
 
 const MAX = 12;

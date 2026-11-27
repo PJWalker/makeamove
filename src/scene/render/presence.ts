@@ -3,8 +3,8 @@ import { toScreen } from "../camera";
 import { fromLocal as fromLocalPoint } from "../geometry";
 import type { Point } from "../grid";
 import { formatDistance, measure, shapeMeasures, tokenDistance } from "../measure";
-import { PING_MS, TRAIL_MS  } from "../presence";
-import type {PresenceMark} from "../presence";
+import { PING_MS, TRAIL_MS } from "../presence";
+import type { PresenceMark } from "../presence";
 import type { SceneElement } from "../types";
 import type { Draft } from "./draft";
 import { SdfText } from "./sdfText";
@@ -106,7 +106,7 @@ export default class PresenceLayer {
   private drawTargets(g: Graphics, used: Set<string>, rangeFrom: string | null) {
     const s = this.state;
     const cam = s.camera;
-    const {byId} = s;
+    const { byId } = s;
     const rings = new Map<string, number>();
     const fromElement = rangeFrom ? byId.get(rangeFrom) : undefined;
     const from = fromElement && (s.previews.get(fromElement.id) ?? fromElement);
@@ -193,7 +193,7 @@ export default class PresenceLayer {
         const move = m.self ? undefined : this.cursors.get(m.id);
         if (move && now - move.start < CURSOR_GLIDE_MS) animating = true;
         const c = toScreen(cam, move ? cursorAt(move, now) : m.cursor);
-        g.circle(c.x, c.y, 6).fill(m.colour).stroke({ color: 0xFF_FF_FF, width: 2 });
+        g.circle(c.x, c.y, 6).fill(m.colour).stroke({ color: 0xff_ff_ff, width: 2 });
       }
 
       if (m.ruler) {
@@ -236,7 +236,7 @@ export default class PresenceLayer {
           g.moveTo(previous.x, previous.y)
             .lineTo(current.x, current.y)
             .stroke({
-              color: 0xFF_FF_FF,
+              color: 0xff_ff_ff,
               width: 1 + 2 * f,
               alpha: f,
               cap: "round",

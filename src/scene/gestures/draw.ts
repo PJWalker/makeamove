@@ -2,8 +2,8 @@ import alignToGrid from "../gridAlign";
 import { LENIENCY, recogniseShape } from "../recognise";
 import { shapeElement } from "../smartShapes";
 import { finishStroke, STRIDE } from "../stroke";
-import { coalesced  } from "./types";
-import type {ToolPress} from "./types";
+import { coalesced } from "./types";
+import type { ToolPress } from "./types";
 
 /** The least size, in screen px, a stroke needs to be recognised as a shape. */
 const LEAST_SHAPE = 24;
@@ -48,7 +48,13 @@ const draw: ToolPress = (c, e, world) => {
     end(up) {
       c.renderer.draft = null;
       if (points.length === 0) return;
-      const [id] = c.scene.add({ type: "drawing", layer, colour, width, ...finishStroke(points, width) });
+      const [id] = c.scene.add({
+        type: "drawing",
+        layer,
+        colour,
+        width,
+        ...finishStroke(points, width),
+      });
       if (!id || smartShapes === "off") return;
       const leniency = smartShapes === "always" ? LENIENCY.always : LENIENCY.auto;
       const recognised = recogniseShape(points, LEAST_SHAPE / c.renderer.camera.zoom, leniency);

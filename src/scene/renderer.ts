@@ -2,26 +2,26 @@ import { Application, Container, CullerPlugin, extensions } from "pixi.js";
 import type { PeerBlobs } from "../media/images";
 import type { TokenStat } from "../systems/types";
 import type { Camera } from "./camera";
-import {  DEFAULT_GRID  } from "./grid";
-import type {Grid, Point} from "./grid";
+import { DEFAULT_GRID } from "./grid";
+import type { Grid, Point } from "./grid";
 import type { PresenceMark } from "./presence";
 import type { TokenMarks } from "./tokenMarks";
 import type { SelectKind } from "./tools";
-import { LAYERS     } from "./types";
-import type {Layer, SceneElement, TextLook, Transform} from "./types";
+import { LAYERS } from "./types";
+import type { Layer, SceneElement, TextLook, Transform } from "./types";
 import ConditionLayer from "./render/conditions";
-import {  DraftLayer } from "./render/draft";
-import type {Draft} from "./render/draft";
+import { DraftLayer } from "./render/draft";
+import type { Draft } from "./render/draft";
 import { mapText } from "./render/elementViews";
 import { loadSdfFonts } from "./render/sdfFont";
 import { measureSdfText } from "./render/sdfText";
 import { CANVAS_FONTS } from "./render/style";
 import ElementLayer from "./render/elements";
 import GridLayer from "./render/grid";
-import {  LightingLayer } from "./render/lighting";
-import type {Lighting} from "./render/lighting";
-import {  OverlayLayer } from "./render/overlay";
-import type {OverlayState} from "./render/overlay";
+import { LightingLayer } from "./render/lighting";
+import type { Lighting } from "./render/lighting";
+import { OverlayLayer } from "./render/overlay";
+import type { OverlayState } from "./render/overlay";
 import PresenceLayer from "./render/presence";
 import type { RenderPart, RenderState } from "./render/state";
 import { releaseTextures } from "./render/textures";
@@ -212,7 +212,10 @@ export default class SceneRenderer implements RenderState {
 
   invalidate(...what: RenderPart[]) {
     for (const w of what) this.dirty[w] = true;
-    if (!this.frame && !this.destroyed) this.frame = requestAnimationFrame(() => { this.render(); });
+    if (!this.frame && !this.destroyed)
+      this.frame = requestAnimationFrame(() => {
+        this.render();
+      });
   }
 
   setElements(elements: SceneElement[]) {
@@ -266,7 +269,9 @@ export default class SceneRenderer implements RenderState {
     }
     // Targets ride on tokens, so presence redraws with anything else.
     const flickering = this.lightingLayer.flicker();
-    const animating = this.presence.draw(this.draft, this.overlayState.rangeFrom, this.overlayState.selected) || flickering;
+    const animating =
+      this.presence.draw(this.draft, this.overlayState.rangeFrom, this.overlayState.selected) ||
+      flickering;
     this.dirty = { ...CLEAN };
     this.app.render();
     if (animating) this.invalidate("presence");
