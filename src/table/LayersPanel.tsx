@@ -29,6 +29,13 @@ function LayersPanel({ campaign }: { campaign: Campaign }) {
   return <LayersList key={open.sceneId} controller={open.controller} gm={gm} />;
 }
 
+/** `set` with `item` taken out, or put in if it wasn't there. */
+function toggle<T>(set: ReadonlySet<T>, item: T): ReadonlySet<T> {
+  const next = new Set(set);
+  if (!next.delete(item)) next.add(item);
+  return next;
+}
+
 /** Where a drop below each draggable row or layer heading lands, by its `data-drop` key. */
 type Spots = Map<string, DropSpot>;
 
@@ -46,12 +53,6 @@ function LayersList({ controller, gm }: { controller: SceneController; gm: boole
     .filter((element) => gm || !GM_KINDS.includes(kindOf(element)));
   const sections = layerList(elements);
   const spots: Spots = new Map();
-
-  const toggle = <T,>(set: ReadonlySet<T>, item: T) => {
-    const next = new Set(set);
-    if (!next.delete(item)) next.add(item);
-    return next;
-  };
 
   const pick = (row: LayerRow, e: React.MouseEvent, member: boolean) => {
     const ids = rowIds(row);
