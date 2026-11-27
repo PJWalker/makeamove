@@ -4,6 +4,7 @@ import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
 import { reducedMotion } from "../ui/transition";
+import { isString } from "../lib/guards";
 import { buildCave, VIEWER } from "./caveScene";
 import { CROSS_PROCESS } from "./crossProcess";
 import { hex, pack } from "./splat";
@@ -53,13 +54,36 @@ const flickerAt = (seconds: number, period: number, index: number) =>
   0.06 * Math.sin(seconds * 11.3 + index * 1.7) +
   0.04 * Math.sin(seconds * 23.1 + index * 4.1);
 
-/** Shows the cave on `canvas` until the returned function is called. */
-export function stageCave(canvas: HTMLCanvasElement): () => void {
+const softwareRendered = (renderer: WebGLRenderer) => {
+  const gl = renderer.getContext();
+  const info = gl.getExtension("WEBGL_debug_renderer_info");
+  return /swiftshader|llvmpipe|softpipe/i.test(
+    String(gl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER)),
+  );
+};
+
+/**
+ * A renderer for the cave, or the reason there isn't one. Software WebGL (no GPU, as in
+ * headless test browsers) draws the cave at about a frame a second and starves the page,
+ * so it gets none.
+ */
+function caveRenderer(canvas: HTMLCanvasElement): WebGLRenderer | string {
   let renderer: WebGLRenderer;
   try {
     renderer = new WebGLRenderer({ canvas, powerPreference: "low-power" });
   } catch (error) {
-    console.warn("The lobby's cave backdrop needs WebGL, so it's left dark.", error);
+    return `it needs WebGL (${String(error)})`;
+  }
+  if (!softwareRendered(renderer)) return renderer;
+  renderer.dispose();
+  return "it needs a GPU";
+}
+
+/** Shows the cave on `canvas` until the returned function is called. */
+export function stageCave(canvas: HTMLCanvasElement): () => void {
+  const renderer = caveRenderer(canvas);
+  if (isString(renderer)) {
+    console.warn(`The lobby's cave backdrop is left dark: ${renderer}.`);
     return () => {};
   }
   renderer.setClearColor(DARK);

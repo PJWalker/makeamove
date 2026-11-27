@@ -52,6 +52,8 @@ import {
   campaignDbName as campaignDatabaseName,
   campaignUiDbName as campaignUiDatabaseName,
 } from "./storage";
+import { checkedIn, letBack, removedBy } from "./standing";
+import type { Standing } from "./standing";
 
 export type { CampaignDefaults, MemberView, RevokedView, Role, SceneView } from "./types";
 
@@ -195,9 +197,11 @@ export class Campaign {
   private watchMeta() {
     this.checkMembership = () => {
       const named = this.meta.has("name");
-      const removed = this.revoked.has(this.device.value.id);
-      // A removed player's device must not add itself back.
-      if (named && !removed && !this.members.has(this.device.value.id)) {
+      const me = this.device.value.id;
+      const removed = this.revoked.has(me);
+      // A removed player's device must not add itself back (proved in standing.ts).
+      const before = this.standingOf(me);
+      if (checkedIn(before, named).member && !before.member) {
         const name = this.device.value.name || "Player";
         this.ensureMember(name);
         void this.chat.post(
@@ -334,7 +338,9 @@ export class Campaign {
    */
   revokeMember(id: string) {
     const m = this.members.get(id);
-    if (id === this.device.value.id || !m || m.get("role") === "gm") return;
+    const before = this.standingOf(id);
+    const own = id === this.device.value.id;
+    if (!m || removedBy(before, own, this.isGm()) === before) return;
     this.doc.transact(() => {
       this.revoked.set(id, {
         name: m.get("name") ?? "Unnamed",
@@ -345,9 +351,16 @@ export class Campaign {
     });
   }
 
+  /** Where a device stands: member, GM, removed. */
+  private standingOf(id: string): Standing {
+    const role = this.members.get(id)?.get("role");
+    return { member: this.members.has(id), gm: role === "gm", removed: this.revoked.has(id) };
+  }
+
   /** Let a removed player back in; they rejoin with the invite link. */
   allowBack(id: string) {
-    this.revoked.delete(id);
+    const after = letBack(this.standingOf(id), this.isGm());
+    if (!after.removed) this.revoked.delete(id);
   }
 
   ensureMember(name: string, role: Role = "player") {

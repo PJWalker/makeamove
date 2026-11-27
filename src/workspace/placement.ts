@@ -22,7 +22,10 @@ export function occurrences(ids: string[], id: string): number {
   return (ids[0] === id ? 1 : 0) + occurrences(ids.slice(1), id);
 }
 
-/** How many places hold `id`, counting repeats. */
+/**
+ * How many places hold `id`, counting repeats.
+ * @public Used by the proofs' specs.
+ */
 export function count(p: Placement, id: string): number {
   //@ verify
   return (
@@ -33,7 +36,10 @@ export function count(p: Placement, id: string): number {
   );
 }
 
-/** The ids at `place`. */
+/**
+ * The ids at `place`.
+ * @public Used by the proofs' specs.
+ */
 export function at(p: Placement, place: Place): string[] {
   //@ verify
   if (place === "left") return p.left;
