@@ -1,0 +1,2 @@
+# Run everything GitHub CI runs, so failures show up here rather than there.
+npm run ci
