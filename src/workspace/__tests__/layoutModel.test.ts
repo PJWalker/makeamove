@@ -19,7 +19,6 @@ import {
   SIDEBAR_MIN_W,
 } from "../layoutModel";
 
-
 const win = { x: 10, y: 10, w: 300, h: 300, z: 1 };
 const everywhere = (l: ReturnType<typeof defaultLayout>) =>
   [...l.left.panels, ...l.right.panels, ...l.floating.map((w) => w.id)].sort();

@@ -5,16 +5,11 @@ import { FolderBackup } from "../campaign/folderBackup";
 import { campaignUiDbName as campaignUiDatabaseName } from "../campaign/storage";
 import { ChatNotifications } from "../features/chat/notify";
 import { SceneTools } from "../scene/tools";
-import {
-  CommandRegistry
-  
-  
-  
-} from "../kernel/commands";
-import type {AnyCommand, Command, CommandHost} from "../kernel/commands";
+import { CommandRegistry } from "../kernel/commands";
+import type { AnyCommand, Command, CommandHost } from "../kernel/commands";
 import { UndoHistory } from "../kernel/undo";
-import { undoStack  } from "../data/undo";
-import type {UndoStack} from "../data/undo";
+import { undoStack } from "../data/undo";
+import type { UndoStack } from "../data/undo";
 import { CanvasState } from "./canvasState";
 import { RecentActions } from "./commands/recent";
 import { EntityWindows } from "./entityWindowState";
@@ -97,7 +92,10 @@ export class CampaignContext implements CommandHost {
     commands: (context: CampaignContext) => readonly AnyCommand<CampaignContext>[] = () => [],
   ): Promise<CampaignContext> {
     try {
-      const context = new CampaignContext(campaign, await LocalDocument.open(campaignUiDatabaseName(campaign.id)));
+      const context = new CampaignContext(
+        campaign,
+        await LocalDocument.open(campaignUiDatabaseName(campaign.id)),
+      );
       context.commands.register(commands(context));
       return context;
     } catch (error) {

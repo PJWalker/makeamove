@@ -1,5 +1,5 @@
-import { lazy, Suspense, useState  } from "react";
-import type {ComponentType} from "react";
+import { lazy, Suspense, useState } from "react";
+import type { ComponentType } from "react";
 import { IconAllowBack, IconRemoveMember } from "../ui/icons";
 import type { Campaign, MemberView } from "../campaign/campaign";
 import type { Role } from "../campaign/types";
@@ -7,8 +7,8 @@ import { device } from "../platform/device";
 import { useQuery } from "../ui/useQuery";
 import { Avatar } from "../ui/Avatar";
 import { Button } from "../ui/Button";
-import { PANELS  } from "../workspace/panelLayout";
-import type {PanelId} from "../workspace/panelLayout";
+import { PANELS } from "../workspace/panelLayout";
+import type { PanelId } from "../workspace/panelLayout";
 import { playedCharacterId } from "../features/characters/api";
 import { CampaignEntityGraphic } from "../workspace/EntityGraphic";
 import { allowBack, removeMember } from "../workspace/commands/campaign";
@@ -204,7 +204,12 @@ function MemberRow({
     return (
       <li className="member member-confirm">
         <span className="member-name">Remove {m.name} from the campaign?</span>
-        <Button variant="ghost" onClick={() => { setConfirming(false); }}>
+        <Button
+          variant="ghost"
+          onClick={() => {
+            setConfirming(false);
+          }}
+        >
           Cancel
         </Button>
         <Button variant="danger" onClick={() => context.execute(removeMember, { id: m.id })}>
@@ -224,7 +229,13 @@ function MemberRow({
         {ROLE_LABELS[m.role]}
       </span>
       {canRemove && (
-        <Button variant="icon" label={`Remove ${m.name}`} onClick={() => { setConfirming(true); }}>
+        <Button
+          variant="icon"
+          label={`Remove ${m.name}`}
+          onClick={() => {
+            setConfirming(true);
+          }}
+        >
           <IconRemoveMember size={22} />
         </Button>
       )}

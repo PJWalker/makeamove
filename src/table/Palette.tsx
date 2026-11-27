@@ -1,4 +1,3 @@
-
 import type { PointerEvent as ReactPointerEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { callKey } from "../kernel/commands";
@@ -14,8 +13,8 @@ import { dragEntity } from "../workspace/entityDrag";
 import { actionEntity } from "../workspace/dragEntities";
 import { menuTrigger } from "../ui/menuTrigger";
 import { showFromOrigin } from "../ui/morph";
-import { ContextMenu  } from "../ui/ContextMenu";
-import type {MenuItem} from "../ui/ContextMenu";
+import { ContextMenu } from "../ui/ContextMenu";
+import type { MenuItem } from "../ui/ContextMenu";
 import type { Campaign } from "../campaign/campaign";
 import { useQuery } from "../ui/useQuery";
 import { useCampaign } from "../workspace/campaignContext";
@@ -77,7 +76,7 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
       <ul id="palette-list" className="palette-list" role="listbox" ref={listRef}>
         {results.map((a, index) => {
           const off = a.available !== true;
-          const {hint} = a;
+          const { hint } = a;
           return (
             // Options are chosen by keyboard through the dialog's onKeyDown.
             // eslint-disable-next-line jsx-a11y/click-events-have-key-events
@@ -90,7 +89,9 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
               data-active={index === active}
               data-unavailable={off}
               onPointerMove={() => cursor !== index && setCursor(index)}
-              onClick={() => { choose(a); }}
+              onClick={() => {
+                choose(a);
+              }}
               {...rowTriggers(a, index)}
             >
               <span className="palette-icon">{a.icon && <a.icon size={22} />}</span>
@@ -108,7 +109,14 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
           </li>
         )}
       </ul>
-      {menu && <ContextMenu {...menu} onClose={() => { setMenu(null); }} />}
+      {menu && (
+        <ContextMenu
+          {...menu}
+          onClose={() => {
+            setMenu(null);
+          }}
+        />
+      )}
       <output className="palette-note">{note}</output>
     </dialog>
   );
@@ -156,9 +164,19 @@ function usePalette(campaign: Campaign) {
         x,
         y,
         items: [
-          ...actionMenuItems(context, [{ id: action.id, title: action.title }], () => { context.table.closePalette(); },
-          ),
-          ...(action.available === true ? [{ label: "Run", onSelect: () => { choose(action); } }] : []),
+          ...actionMenuItems(context, [{ id: action.id, title: action.title }], () => {
+            context.table.closePalette();
+          }),
+          ...(action.available === true
+            ? [
+                {
+                  label: "Run",
+                  onSelect: () => {
+                    choose(action);
+                  },
+                },
+              ]
+            : []),
         ],
       });
     });
@@ -191,11 +209,16 @@ function usePalette(campaign: Campaign) {
   useEffect(() => {
     const onDown = (event: PointerEvent) => {
       const target = event.target as Element;
-      if (!rootReference.current?.contains(target) && !target.closest?.(".context-menu, .hotbar-palette"))
+      if (
+        !rootReference.current?.contains(target) &&
+        !target.closest?.(".context-menu, .hotbar-palette")
+      )
         context.table.closePalette();
     };
     document.addEventListener("pointerdown", onDown, true);
-    return () => { document.removeEventListener("pointerdown", onDown, true); };
+    return () => {
+      document.removeEventListener("pointerdown", onDown, true);
+    };
   }, [context]);
 
   function choose(action: Action | undefined, secondary = false) {

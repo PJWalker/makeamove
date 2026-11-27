@@ -9,15 +9,10 @@ import { derive } from "../../features/characters/store";
 import type { MoveFormProps as MoveFormProperties } from "../extensionTypes";
 import { useCampaign } from "../../workspace/campaignContext";
 import { can } from "../../workspace/commands/views";
-import {
-  dungeonWorld2DowntimeEpoch,
-  trainedDuringDungeonWorld2Downtime
-  
-  
-} from "./campaign";
-import type {ComfortBenefit, JourneyPace} from "./campaign";
-import { DW2_SERVICES  } from "./wealth";
-import type {ServiceRank} from "./wealth";
+import { dungeonWorld2DowntimeEpoch, trainedDuringDungeonWorld2Downtime } from "./campaign";
+import type { ComfortBenefit, JourneyPace } from "./campaign";
+import { DW2_SERVICES } from "./wealth";
+import type { ServiceRank } from "./wealth";
 import {
   beginDowntime,
   carouse,
@@ -126,8 +121,12 @@ export function ComfortOrSupport({ sheet }: MoveFormProperties) {
         <select
           value={comfortedId}
           disabled={!sheet.editable || used}
-          onChange={(event) => { setComfortedId(event.currentTarget.value); }}
-          onInput={(event) => { setComfortedId(event.currentTarget.value); }}
+          onChange={(event) => {
+            setComfortedId(event.currentTarget.value);
+          }}
+          onInput={(event) => {
+            setComfortedId(event.currentTarget.value);
+          }}
         >
           <option value="">Choose a PC</option>
           {party.flatMap((character) =>
@@ -163,11 +162,12 @@ export function ComfortOrSupport({ sheet }: MoveFormProperties) {
                 <select
                   value={benefitKinds[index] ?? "clear-comforted"}
                   disabled={!sheet.editable || used}
-                  onChange={(event) => { setBenefitKinds({
+                  onChange={(event) => {
+                    setBenefitKinds({
                       ...benefitKinds,
                       [index]: event.currentTarget.value,
-                    }); }
-                  }
+                    });
+                  }}
                 >
                   {receiverConditions.length > 0 && (
                     <option value="clear-comforted">Comforted clears a Condition</option>
@@ -190,11 +190,12 @@ export function ComfortOrSupport({ sheet }: MoveFormProperties) {
                       ""
                     }
                     disabled={!sheet.editable || used}
-                    onChange={(event) => { setConditionPicks({
+                    onChange={(event) => {
+                      setConditionPicks({
                         ...conditionPicks,
                         [index]: event.currentTarget.value,
-                      }); }
-                    }
+                      });
+                    }}
                   >
                     {((benefitKinds[index] ?? "clear-comforted") === "clear-comforted"
                       ? receiverConditions
@@ -216,7 +217,11 @@ export function ComfortOrSupport({ sheet }: MoveFormProperties) {
         disabled={!sheet.editable || used || !ready}
         onClick={() =>
           comforted &&
-          void context.execute(comfort, { characterId: sheet.c.id, comforted: comforted.id, benefits })
+          void context.execute(comfort, {
+            characterId: sheet.c.id,
+            comforted: comforted.id,
+            benefits,
+          })
         }
       >
         {used ? "Used This Session" : "Resolve Comfort or Support"}
@@ -328,7 +333,12 @@ export function PerilousJourney({ sheet }: MoveFormProperties) {
     <section className="move-form-section" aria-label="Undertake a Perilous Journey">
       <label className="field">
         Leader
-        <select value={leaderId} onChange={(event) => { setChosenLeaderId(event.currentTarget.value); }}>
+        <select
+          value={leaderId}
+          onChange={(event) => {
+            setChosenLeaderId(event.currentTarget.value);
+          }}
+        >
           {party.map((character) => (
             <option key={character.id} value={character.id}>
               {character.name}
@@ -340,7 +350,9 @@ export function PerilousJourney({ sheet }: MoveFormProperties) {
         Pace
         <select
           value={pace}
-          onChange={(event) => { setPace(event.currentTarget.value as JourneyPace); }}
+          onChange={(event) => {
+            setPace(event.currentTarget.value as JourneyPace);
+          }}
         >
           <option value="quick">Quickly, risking it all (-1; everyone marks a Condition)</option>
           <option value="regular">Regular pace (+1; leader marks a Condition)</option>
@@ -357,11 +369,12 @@ export function PerilousJourney({ sheet }: MoveFormProperties) {
             <select
               value={conditionPicks[character.id]}
               disabled={!sheet.editable}
-              onChange={(event) => { setConditions((current) => ({
+              onChange={(event) => {
+                setConditions((current) => ({
                   ...current,
                   [character.id]: event.currentTarget.value,
-                })); }
-              }
+                }));
+              }}
             >
               {available.map((condition) => (
                 <option key={condition.id} value={condition.id}>
@@ -377,7 +390,11 @@ export function PerilousJourney({ sheet }: MoveFormProperties) {
         disabled={!sheet.editable || !ready || !leader}
         onClick={() =>
           leader &&
-          context.execute(prepareJourney, { characterId: leader.id, pace, conditions: conditionPicks })
+          context.execute(prepareJourney, {
+            characterId: leader.id,
+            pace,
+            conditions: conditionPicks,
+          })
         }
       >
         Prepare Journey
@@ -393,7 +410,7 @@ function usePerilousJourney(sheet: MoveFormProperties["sheet"]) {
   const party = usePlayerCharacters(sheet.campaign);
   const leaderId = chosenLeaderId ?? sheet.c.id;
   const leader = party.find((character) => character.id === leaderId);
-  const affected = pace === "quick" ? party : (pace === "regular" && leader ? [leader] : []);
+  const affected = pace === "quick" ? party : pace === "regular" && leader ? [leader] : [];
   const conditionPicks = Object.fromEntries(
     affected.map((character) => {
       const available = sheet.system.conditions.filter(
@@ -462,8 +479,9 @@ function Carouse({ sheet }: MoveFormProperties) {
         Carouse
         <select
           value={benefit}
-          onChange={(event) => { setBenefit(event.currentTarget.value as "clear-locked" | "gain-depth"); }
-          }
+          onChange={(event) => {
+            setBenefit(event.currentTarget.value as "clear-locked" | "gain-depth");
+          }}
         >
           <option value="clear-locked" disabled={!canClearLocked}>
             Spend 1 Treasure to clear a locked Condition
@@ -476,7 +494,12 @@ function Carouse({ sheet }: MoveFormProperties) {
       {benefit === "clear-locked" && canClearLocked && (
         <label className="field">
           Locked Condition
-          <select value={condition} onChange={(event) => { setCondition(event.currentTarget.value); }}>
+          <select
+            value={condition}
+            onChange={(event) => {
+              setCondition(event.currentTarget.value);
+            }}
+          >
             {sheet.c.lockedConditions?.map((entry) => (
               <option key={entry} value={entry}>
                 {entry}
@@ -490,7 +513,9 @@ function Carouse({ sheet }: MoveFormProperties) {
           PC
           <select
             value={selectedPartyId ?? ""}
-            onChange={(event) => { setPartyId(event.currentTarget.value); }}
+            onChange={(event) => {
+              setPartyId(event.currentTarget.value);
+            }}
           >
             {others.map((character) => (
               <option key={character.id} value={character.id}>
@@ -562,7 +587,12 @@ function ShopService({ sheet }: MoveFormProperties) {
     <>
       <label className="field">
         Shop service
-        <select value={serviceId} onChange={(event) => { setServiceId(event.currentTarget.value); }}>
+        <select
+          value={serviceId}
+          onChange={(event) => {
+            setServiceId(event.currentTarget.value);
+          }}
+        >
           {DW2_SERVICES.map((service) => (
             <option key={service.id} value={service.id}>
               {service.name}
@@ -574,7 +604,9 @@ function ShopService({ sheet }: MoveFormProperties) {
         Service tier
         <select
           value={serviceRank}
-          onChange={(event) => { setServiceRank(Number(event.currentTarget.value) as ServiceRank); }}
+          onChange={(event) => {
+            setServiceRank(Number(event.currentTarget.value) as ServiceRank);
+          }}
         >
           <option value={2}>Modest (2)</option>
           <option value={3}>Comfortable (3)</option>
@@ -585,7 +617,11 @@ function ShopService({ sheet }: MoveFormProperties) {
         variant="secondary"
         disabled={!canSpend}
         onClick={() =>
-          void context.execute(shop, { characterId: sheet.c.id, service: serviceId, rank: serviceRank })
+          void context.execute(shop, {
+            characterId: sheet.c.id,
+            service: serviceId,
+            rank: serviceRank,
+          })
         }
       >
         Shop (1 Treasure)
@@ -652,11 +688,12 @@ export function MakeCamp({ sheet }: MoveFormProperties) {
             <select
               value={choices[character.id]}
               disabled={!sheet.editable || used}
-              onChange={(event) => { setSelections({
+              onChange={(event) => {
+                setSelections({
                   ...selections,
                   [character.id]: event.currentTarget.value,
-                }); }
-              }
+                });
+              }}
             >
               {options.map((condition) => (
                 <option key={condition} value={condition}>
@@ -674,8 +711,9 @@ export function MakeCamp({ sheet }: MoveFormProperties) {
             <select
               value={repairChoices[character.id]}
               disabled={!sheet.editable || used}
-              onChange={(event) => { setRepairs({ ...repairs, [character.id]: event.currentTarget.value }); }
-              }
+              onChange={(event) => {
+                setRepairs({ ...repairs, [character.id]: event.currentTarget.value });
+              }}
             >
               {options.map((item) => (
                 <option key={item.id} value={item.id}>

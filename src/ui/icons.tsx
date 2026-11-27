@@ -1,5 +1,5 @@
-import {   useId } from "react";
-import type {ComponentType, ReactNode} from "react";
+import { useId } from "react";
+import type { ComponentType, ReactNode } from "react";
 
 /*
  * Every interface icon in the app, named for what it means rather than what
@@ -12,7 +12,10 @@ import type {ComponentType, ReactNode} from "react";
  * instead: see entryIcons.tsx.
  */
 
-export interface IconProps { size?: number; className?: string }
+export interface IconProps {
+  size?: number;
+  className?: string;
+}
 export type Icon = ComponentType<IconProps>;
 
 /** Icons on the main toolbar and the sidebar tabs. */

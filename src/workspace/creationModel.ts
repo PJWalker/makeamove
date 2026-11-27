@@ -9,8 +9,6 @@ import {
 } from "../features/characters/creation";
 import type { GameSystem, ScoreMethods, ScoreRule } from "../systems/types";
 
-
-
 /** What's been picked for one choice, and how its boost is placed. */
 export interface Picked {
   option: string;
@@ -104,4 +102,4 @@ export const listFieldsOf = (system: GameSystem) => [
 export const scoreCapsOf = (system: GameSystem) =>
   Object.fromEntries(system.stats.map((stat) => [stat.id, stat.max ?? SCORE_CAP]));
 
-export {pointsSpent} from "../features/characters/creation";
+export { pointsSpent } from "../features/characters/creation";

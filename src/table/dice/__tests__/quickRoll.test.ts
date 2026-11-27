@@ -46,7 +46,9 @@ function quickRoll(seed: string) {
 }
 
 describe("a quick roll", () => {
-  const dice = Array.from({ length: ROLLS }, (_, index) => quickRoll(`quick:${String(index)}`)).flat();
+  const dice = Array.from({ length: ROLLS }, (_, index) =>
+    quickRoll(`quick:${String(index)}`),
+  ).flat();
 
   it("throws every die off the bottom of its tray", () => {
     expect(dice.every(({ bounced }) => bounced)).toBe(true);

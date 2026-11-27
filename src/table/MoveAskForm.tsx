@@ -1,5 +1,5 @@
-import { useEffect, useRef  } from "react";
-import type {ReactNode} from "react";
+import { useEffect, useRef } from "react";
+import type { ReactNode } from "react";
 import { getCharacter, systemOf } from "../features/characters/api";
 import {
   canPayMove,
@@ -36,7 +36,12 @@ interface Draft {
   variant: string;
 }
 
-interface DifficultySpec { prompt: string; initial?: number | undefined; min?: number; max?: number }
+interface DifficultySpec {
+  prompt: string;
+  initial?: number | undefined;
+  min?: number;
+  max?: number;
+}
 
 /** A formula without its labels, as the Roll button reads: 1d20+2[Prof] → 1d20+2. */
 const bare = (formula: string) => formula.replaceAll(/\[[^\]]*]/g, "");
@@ -139,19 +144,25 @@ export function AskStep({
       <VariantField
         variants={move.variants?.(c, derive(c, system))}
         value={draft.variant}
-        onChange={(variant) => { patch({ variant }); }}
+        onChange={(variant) => {
+          patch({ variant });
+        }}
       />
       <AskedField ask={ask} system={system} draft={draft} patch={patch} />
       <DifficultyField
         spec={difficultySpec}
         value={draft.difficulty}
-        onChange={(value) => { patch({ difficulty: value }); }}
+        onChange={(value) => {
+          patch({ difficulty: value });
+        }}
       />
       <CounterField
         spec={check?.counter}
         counters={counters}
         value={draft.counterMessageId}
-        onChange={(counterMessageId) => { patch({ counterMessageId }); }}
+        onChange={(counterMessageId) => {
+          patch({ counterMessageId });
+        }}
       />
       {(check?.rollBonuses ?? []).map((bonus) => (
         <RollBonusField
@@ -159,10 +170,18 @@ export function AskStep({
           bonus={bonus}
           character={c}
           selected={rollBonuses.has(bonus.id)}
-          onChange={(on) => { patch({ rollBonuses: toggled(draft.rollBonuses, bonus.id, on) }); }}
+          onChange={(on) => {
+            patch({ rollBonuses: toggled(draft.rollBonuses, bonus.id, on) });
+          }}
         />
       ))}
-      <ExtraBonusField shown={!!check} value={draft.extra} onChange={(extra) => { patch({ extra }); }} />
+      <ExtraBonusField
+        shown={!!check}
+        value={draft.extra}
+        onChange={(extra) => {
+          patch({ extra });
+        }}
+      />
       <RollActions
         modes={check ? rollModesFor(system, move) : undefined}
         defaultLabel={system.defaultRollLabel ?? "Roll"}
@@ -256,7 +275,9 @@ function VariantField({
       <select
         value={value || variants[0]?.id || ""}
         disabled={variants.length === 0}
-        onChange={(event) => { onChange(event.currentTarget.value); }}
+        onChange={(event) => {
+          onChange(event.currentTarget.value);
+        }}
       >
         {variants.length === 0 && <option value="">No available uses</option>}
         {variants.map((entry) => (
@@ -296,7 +317,9 @@ function NumberField({
         min={min}
         max={max}
         value={value}
-        onInput={(e) => { onChange(e.currentTarget.value); }}
+        onInput={(e) => {
+          onChange(e.currentTarget.value);
+        }}
       />
     </label>
   );
@@ -322,7 +345,9 @@ function AskedField({
         label="Stat to roll"
         value={draft.stat}
         options={system.stats.map((s) => ({ id: s.id, label: s.abbr, title: s.name }))}
-        onChange={(stat) => { patch({ stat }); }}
+        onChange={(stat) => {
+          patch({ stat });
+        }}
       />
     );
   if (ask.kind === "number")
@@ -332,7 +357,9 @@ function AskedField({
         min={ask.min}
         max={ask.max}
         value={draft.askedNumber}
-        onChange={(value) => { patch({ askedNumber: Number(value) || 0 }); }}
+        onChange={(value) => {
+          patch({ askedNumber: Number(value) || 0 });
+        }}
       />
     );
   return (
@@ -343,8 +370,9 @@ function AskedField({
           <input
             type="checkbox"
             checked={yeses.has(question)}
-            onChange={(e) => { patch({ yeses: toggled(draft.yeses, question, e.currentTarget.checked) }); }
-            }
+            onChange={(e) => {
+              patch({ yeses: toggled(draft.yeses, question, e.currentTarget.checked) });
+            }}
           />
           {question}
         </label>
@@ -394,7 +422,9 @@ function ExtraBonusField({
       max={10}
       value={value}
       required={false}
-      onChange={(typed) => { onChange(Number(typed) || 0); }}
+      onChange={(typed) => {
+        onChange(Number(typed) || 0);
+      }}
     />
   );
 }
@@ -418,7 +448,9 @@ function CounterField({
       <select
         value={value}
         disabled={counters.length === 0}
-        onChange={(e) => { onChange(e.currentTarget.value); }}
+        onChange={(e) => {
+          onChange(e.currentTarget.value);
+        }}
       >
         <option value="">Choose a counter</option>
         {counters.map((counter) => (
@@ -448,7 +480,7 @@ function RollBonusField({
   onChange: (on: boolean) => void;
 }) {
   if (bonus.nameField && !String(character.data[bonus.nameField] ?? "").trim()) return null;
-  const {cost} = bonus;
+  const { cost } = bonus;
   const unaffordable = !selected && !!cost && (character.resources[cost.resource] ?? 0) < cost.by;
   return (
     <label className="check-option">
@@ -456,7 +488,9 @@ function RollBonusField({
         type="checkbox"
         checked={selected}
         disabled={unaffordable}
-        onChange={(e) => { onChange(e.currentTarget.checked); }}
+        onChange={(e) => {
+          onChange(e.currentTarget.checked);
+        }}
       />
       {bonus.nameField ? character.data[bonus.nameField] : bonus.label} (+
       {Number(character.data[bonus.valueField] ?? 0)};{" "}
@@ -488,7 +522,13 @@ function RollActions({
         type={mode ? "button" : "submit"}
         disabled={!ready}
         title={ready ? bare(formula) : undefined}
-        onClick={mode ? () => { onRoll(mode); } : undefined}
+        onClick={
+          mode
+            ? () => {
+                onRoll(mode);
+              }
+            : undefined
+        }
       >
         {label}
       </Button>

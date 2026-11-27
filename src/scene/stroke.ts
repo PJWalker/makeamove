@@ -28,7 +28,8 @@ export function strokeOutline(points: number[], width: number, realPressure: boo
 
 /** Whether a stroke's pressure values came from a pen rather than a default. */
 export function hasRealPressure(points: number[]): boolean {
-  for (let index = 2; index < points.length; index += STRIDE) if (points[index] !== 0.5) return true;
+  for (let index = 2; index < points.length; index += STRIDE)
+    if (points[index] !== 0.5) return true;
   return false;
 }
 

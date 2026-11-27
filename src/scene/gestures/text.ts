@@ -10,7 +10,10 @@ export const text: ToolPress = (c, _e, at) => {
 };
 
 /** A request to edit text that's on the map. */
-export const editRequest = (element: TextElement) => ({ at: { x: element.x, y: element.y }, id: element.id });
+export const editRequest = (element: TextElement) => ({
+  at: { x: element.x, y: element.y },
+  id: element.id,
+});
 
 /** Text's size laid out as it looks, scaled as it is now. */
 export function fitText(c: ToolContext, element: Partial<TextLook> & TextElement) {

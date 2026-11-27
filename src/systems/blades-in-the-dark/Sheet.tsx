@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { SheetFrame, SheetSectionView  } from "../../workspace/DeclarativeSheet";
-import type {SheetProps as SheetProperties} from "../../workspace/DeclarativeSheet";
+import { SheetFrame, SheetSectionView } from "../../workspace/DeclarativeSheet";
+import type { SheetProps as SheetProperties } from "../../workspace/DeclarativeSheet";
 import { useSheet } from "../../workspace/sheetModel";
 import { Counter } from "../../workspace/sheetParts";
 import { Button } from "../../ui/Button";
@@ -51,7 +51,9 @@ function AttributeAdvanceControl({
       <select
         aria-label={`${attribute.name} advancement action`}
         value={chosen}
-        onChange={(event) => { setSelected(event.currentTarget.value); }}
+        onChange={(event) => {
+          setSelected(event.currentTarget.value);
+        }}
       >
         {eligible.map((id) => (
           <option key={id} value={id}>
@@ -62,7 +64,11 @@ function AttributeAdvanceControl({
       <Button
         disabled={!chosen}
         onClick={() =>
-          context.execute(advanceAction, { characterId: c.id, attribute: attribute.id, action: chosen })
+          context.execute(advanceAction, {
+            characterId: c.id,
+            attribute: attribute.id,
+            action: chosen,
+          })
         }
       >
         Advance {attribute.name}
@@ -176,7 +182,9 @@ function AttributeSection({
           variant="secondary"
           label={`Resist with ${attribute.name}`}
           aria-label={`Resist with ${attribute.name}`}
-          onClick={() => { use(`resist-${attribute.id}`); }}
+          onClick={() => {
+            use(`resist-${attribute.id}`);
+          }}
         >
           <IconRoll size={18} /> {d.values[attribute.id]}d
         </Button>
@@ -191,7 +199,9 @@ function AttributeSection({
                 variant="secondary"
                 label={`Roll ${stat.name}`}
                 aria-label={`Roll ${stat.name}`}
-                onClick={() => { use(actionId); }}
+                onClick={() => {
+                  use(actionId);
+                }}
               >
                 <IconRoll size={18} /> {stat.name}
               </Button>

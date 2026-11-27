@@ -1,9 +1,9 @@
 import { Editor, Extension } from "@tiptap/core";
 import Placeholder from "@tiptap/extension-placeholder";
-import { useEffect, useLayoutEffect, useRef  } from "react";
-import type {RefObject} from "react";
-import { contentFromText, emptyChatContent  } from "../features/chat/content";
-import type {ChatContent} from "../features/chat/content";
+import { useEffect, useLayoutEffect, useRef } from "react";
+import type { RefObject } from "react";
+import { contentFromText, emptyChatContent } from "../features/chat/content";
+import type { ChatContent } from "../features/chat/content";
 import { LINK_NODE } from "../features/notes/links";
 import type { Campaign } from "../campaign/campaign";
 import { registerLinkDrop } from "../workspace/entityDrag";
@@ -98,19 +98,18 @@ export function ChatInput({
           "aria-multiline": "true",
         },
       },
-      onUpdate: ({ editor: ed }) => { callback.current.onChange(ed.getJSON()); },
+      onUpdate: ({ editor: ed }) => {
+        callback.current.onChange(ed.getJSON());
+      },
     });
-    const initial =
-      isString(firstContent.current)
-        ? contentFromText(firstContent.current)
-        : (firstContent.current ?? emptyChatContent());
+    const initial = isString(firstContent.current)
+      ? contentFromText(firstContent.current)
+      : (firstContent.current ?? emptyChatContent());
     editor.commands.setContent(initial);
     callback.current.onChange(editor.getJSON());
     handleRef.current = {
       set: (content) => {
-        editor.commands.setContent(
-          isString(content) ? contentFromText(content) : content,
-        );
+        editor.commands.setContent(isString(content) ? contentFromText(content) : content);
         editor.commands.focus("end");
         callback.current.onChange(editor.getJSON());
       },

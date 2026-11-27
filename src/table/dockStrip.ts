@@ -1,9 +1,12 @@
-import { useLayoutEffect  } from "react";
-import type {RefObject} from "react";
+import { useLayoutEffect } from "react";
+import type { RefObject } from "react";
 import { useCampaign } from "../workspace/campaignContext";
 import { useQuery } from "../ui/useQuery";
 
-interface Measurement { width: number; elements: HTMLElement[] }
+interface Measurement {
+  width: number;
+  elements: HTMLElement[];
+}
 
 export function measureRow(row: HTMLElement): Measurement {
   const elements = [...row.children] as HTMLElement[];

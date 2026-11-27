@@ -102,7 +102,8 @@ export function plainText(
   };
   const block = (node: JSONContent, bullet = "") => {
     if (node.type === "listItem") {
-      if (node.content) for (const [index, child] of node.content.entries()) block(child, index ? "" : "• ");
+      if (node.content)
+        for (const [index, child] of node.content.entries()) block(child, index ? "" : "• ");
       return;
     }
     if (BLOCKS.has(node.type ?? "")) {

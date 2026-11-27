@@ -28,7 +28,8 @@ const GRAVITY = 1100;
 /** A random number generator seeded from a string, so a bar breaks the same way on every frame. */
 function seeded(seed: string) {
   let h = 2_166_136_261;
-  for (let index = 0; index < seed.length; index++) h = Math.imul(h ^ seed.charCodeAt(index), 16_777_619);
+  for (let index = 0; index < seed.length; index++)
+    h = Math.imul(h ^ seed.charCodeAt(index), 16_777_619);
   return () => {
     h = Math.imul(h ^ (h >>> 15), 2_246_822_507);
     h = Math.imul(h ^ (h >>> 13), 3_266_489_909);

@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 import { chatCall, chatCommands, suggestSlash } from "../../../workspace/commands/chat";
 import type { CampaignContext } from "../../../workspace/campaignContext";
-import { commandText, contentFromText  } from "../content";
-import type {ChatContent} from "../content";
+import { commandText, contentFromText } from "../content";
+import type { ChatContent } from "../content";
 import { diceFormula, parseDuration, splitFormula } from "../slash";
 
 vi.mock("../../../ui/icons", () => ({

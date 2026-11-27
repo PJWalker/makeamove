@@ -21,7 +21,10 @@ export function useEntryWindows() {
       const already = document.querySelector<HTMLElement>(
         `dialog[data-window-id="${CSS.escape(id)}"]`,
       );
-      if (already) { raisePopup(already); return; }
+      if (already) {
+        raisePopup(already);
+        return;
+      }
       const tip = document.querySelector(".tooltip:popover-open");
       morphOpen(tip ?? row, () => {
         hideTooltip();

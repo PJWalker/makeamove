@@ -42,7 +42,11 @@ export function setMorphOrigin(from: DOMRect | Element | null | undefined) {
     return;
   }
   const element = from instanceof DOMRect ? null : from;
-  origin = { rect: element?.getBoundingClientRect() ?? (from as DOMRect), el: element, at: performance.now() };
+  origin = {
+    rect: element?.getBoundingClientRect() ?? (from as DOMRect),
+    el: element,
+    at: performance.now(),
+  };
 }
 
 /** Where the next pop-up should open: over the thing that spawned it, if that was just now. */
@@ -186,7 +190,10 @@ export function growFrom(element: HTMLElement, from: DOMRect | Element) {
 
 /** Whether `el` is on screen to morph into. */
 function onScreen(element: Element | undefined): element is Element {
-  if (!element?.isConnected || !element.checkVisibility({ opacityProperty: true, visibilityProperty: true }))
+  if (
+    !element?.isConnected ||
+    !element.checkVisibility({ opacityProperty: true, visibilityProperty: true })
+  )
     return false;
   const r = element.getBoundingClientRect();
   return r.width >= 1 && r.bottom > 0 && r.right > 0 && r.top < innerHeight && r.left < innerWidth;

@@ -1,11 +1,13 @@
-import { snapToLattice  } from "../grid";
-import type {Point} from "../grid";
+import { snapToLattice } from "../grid";
+import type { Point } from "../grid";
 import { formatDistance, toUnits } from "../measure";
 import type { Transform } from "../types";
 import { wallEnds } from "../vision";
 import type { ToolContext, ToolPress } from "./types";
 
-interface Keys { altKey: boolean }
+interface Keys {
+  altKey: boolean;
+}
 
 /** The Walls tool (the GM's): drag a wall from end to end. Ends snap to other walls' ends, then to grid corners. */
 export const wall: ToolPress = (c, e, world) => {
@@ -13,7 +15,7 @@ export const wall: ToolPress = (c, e, world) => {
   const start = snapWallPoint(c, world, e);
   const show = (p: Point, e: Keys) => {
     const t = wallFrom(c, start, p, e);
-    const {grid} = c.renderer;
+    const { grid } = c.renderer;
     c.renderer.draft = {
       kind: "shape",
       shape: "line",
@@ -28,7 +30,9 @@ export const wall: ToolPress = (c, e, world) => {
   show(world, e);
   return {
     kind: "wall",
-    move: (e, world) => { show(world, e); },
+    move: (e, world) => {
+      show(world, e);
+    },
     end(e) {
       c.renderer.draft = null;
       c.renderer.invalidate("overlay", "presence");
@@ -56,7 +60,7 @@ export function snapWallPoint(c: ToolContext, p: Point, e: Keys): Point {
     }
   }
   if (best) return best;
-  const {grid} = c.renderer;
+  const { grid } = c.renderer;
   return grid.type === "square" ? snapToLattice(grid, p, grid.size) : p;
 }
 

@@ -56,7 +56,7 @@ describe("colour", () => {
   it("keeps blue lightness when rotating its hue to yellow", () => {
     const blue = clampUserOklch(hexToOklch("#0000ff"));
     const yellow = userColourToHex({ ...blue, h: 109.77 });
-    const target = 0x5B_5A_00;
+    const target = 0x5b_5a_00;
     const actual = Number.parseInt(yellow.slice(1), 16);
     for (const shift of [16, 8, 0])
       expect(Math.abs(((actual >> shift) & 255) - ((target >> shift) & 255))).toBeLessThanOrEqual(

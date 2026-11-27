@@ -1,11 +1,13 @@
 import { afterEach, describe, expect, it } from "vite-plus/test";
 import { newToken } from "../../scene/newElements";
 import { SceneDoc } from "../../scene/sceneDoc";
-import { PeerHarness  } from "./peerHarness";
-import type {Peer} from "./peerHarness";
+import { PeerHarness } from "./peerHarness";
+import type { Peer } from "./peerHarness";
 
 let h: PeerHarness;
-afterEach(() => { h.destroy(); });
+afterEach(() => {
+  h.destroy();
+});
 
 /** A GM's campaign with players joined. */
 async function table(players: [string, string][] = [["pat", "Pat"]], seed?: number) {
@@ -60,9 +62,15 @@ describe("peers sharing a campaign", () => {
     ]);
     const [pat, sam] = players as [Peer, Peer];
     const bog = gm.do((c) => c.addScene("The Bog"));
-    gm.do((c) => { c.rename("The Barrows Below"); });
-    pat.do((c) => { c.setActiveScene(bog); });
-    sam.do((c) => { c.ensureMember("Samwise"); });
+    gm.do((c) => {
+      c.rename("The Barrows Below");
+    });
+    pat.do((c) => {
+      c.setActiveScene(bog);
+    });
+    sam.do((c) => {
+      c.ensureMember("Samwise");
+    });
     await h.settle();
 
     const state = h.expectConverged();
@@ -81,7 +89,9 @@ describe("peers sharing a campaign", () => {
     const pat = players[0]!;
     pat.disconnect();
     gm.do((c) => c.addScene("The Keep"));
-    pat.do((c) => { c.ensureMember("Patricia"); });
+    pat.do((c) => {
+      c.ensureMember("Patricia");
+    });
     await h.settle();
     expect(pat.do((c) => c.sceneViews()).map((s) => s.name)).not.toContain("The Keep");
 
@@ -153,7 +163,10 @@ describe("peers sharing a campaign", () => {
         h.step();
       }
       const [first] = scenes[0]![1].views();
-      for (const [peer, scene] of scenes) peer.do(() => { scene.update([[first!.id, { x: 700 }]]); });
+      for (const [peer, scene] of scenes)
+        peer.do(() => {
+          scene.update([[first!.id, { x: 700 }]]);
+        });
       await h.settle();
 
       h.expectConverged();
