@@ -112,6 +112,14 @@
     cursor: default;
   }
 
+  /* Names the last word typed could complete to. */
+  .palette-completions {
+    margin: 0;
+    padding: var(--space-1) var(--space-4);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+  }
+
   .palette-note {
     margin: 0;
     padding: var(--space-1) var(--space-4);

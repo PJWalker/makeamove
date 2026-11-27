@@ -6,6 +6,7 @@ import { isPinned } from "../features/characters/hotbar";
 import { pinToHotbar, unpinFromHotbar } from "../workspace/commands/campaign";
 import { roll } from "../workspace/commands/chat";
 import { rank } from "../workspace/commands/search";
+import { complete, entities, readSentence, sentenceActions } from "../workspace/commands/sentence";
 import type { Action } from "../workspace/commands/types";
 import { findAction, listActions } from "../workspace/commands/views";
 import { actionMenuItems } from "../workspace/actionMenu";
@@ -41,6 +42,7 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
     setMenu,
     note,
     empty,
+    completions,
     rowTriggers,
     choose,
     onKeyDown,
@@ -64,7 +66,7 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
         aria-controls="palette-list"
         aria-activedescendant={results[active] ? `palette-${active}` : undefined}
         aria-label="Search actions"
-        placeholder="Search moves, tools, scenes and commands, or roll 2d6+1…"
+        placeholder="Search, roll 2d6+1, or say who does what: Mira hack and slash goblin…"
         autoComplete="off"
         spellCheck={false}
         value={query}
@@ -73,6 +75,11 @@ function PaletteBody({ campaign }: { campaign: Campaign }) {
           setCursor(0);
         }}
       />
+      {completions.length > 0 && (
+        <p className="palette-completions">
+          <kbd>Tab</kbd> {completions.map((e) => e.name).join(", ")}
+        </p>
+      )}
       <ul id="palette-list" className="palette-list" role="listbox" ref={listRef}>
         {results.map((a, index) => {
           const off = a.available !== true;
@@ -130,8 +137,14 @@ function usePalette(campaign: Campaign) {
   const listReference = useRef<HTMLUListElement>(null);
   const rootReference = useRef<HTMLDialogElement>(null);
   const index = useMemo(() => listActions(context), [context]);
+  const known = useMemo(() => entities(context), [context]);
   const recent = useQuery(context.recent.ids);
-  const ranked = rank(index, query, { recent });
+  const reading = readSentence(query, known);
+  const said = sentenceActions(context, reading, known);
+  const ranked =
+    reading.names.length > 0
+      ? rank(said, reading.verb, { recent, everything: true })
+      : [...rank(said, query, { recent }), ...rank(index, query, { recent })];
   const formula = diceFormula(query);
   const typedRoll = formula ? findAction(context, callKey(roll.id, { formula })) : undefined;
   const results = typedRoll
@@ -226,7 +239,7 @@ function usePalette(campaign: Campaign) {
     const callback = secondary ? action.open : action.run;
     if (!callback) return;
     context.table.closePalette();
-    context.recent.note(action.id);
+    context.recent.note(action.verb ?? action.id);
     queueMicrotask(callback);
   }
 
@@ -239,6 +252,10 @@ function usePalette(campaign: Campaign) {
       event.preventDefault();
       const count = results.length;
       if (count) setCursor((active + (event.key === "ArrowDown" ? 1 : -1) + count) % count);
+    } else if (event.key === "Tab" && reading.completions[0]) {
+      event.preventDefault();
+      setQuery(complete(query, reading.completions[0]));
+      setCursor(0);
     } else if (event.key === "Enter" && event.altKey) {
       event.preventDefault();
       const action = results[active];
@@ -264,6 +281,7 @@ function usePalette(campaign: Campaign) {
     setMenu,
     note,
     empty: !query,
+    completions: reading.completions,
     rowTriggers,
     choose,
     onKeyDown,
