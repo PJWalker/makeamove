@@ -668,9 +668,6 @@
     }
   },
   "src/campaign/__tests__/revoke.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 1
-    },
     "import/no-unassigned-import": {
       "count": 1
     }

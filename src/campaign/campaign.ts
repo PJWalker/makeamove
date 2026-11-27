@@ -52,6 +52,8 @@ import {
   campaignDbName as campaignDatabaseName,
   campaignUiDbName as campaignUiDatabaseName,
 } from "./storage";
+import { checkedIn, removedBy } from "./standing";
+import type { Standing } from "./standing";
 
 export type { CampaignDefaults, MemberView, RevokedView, Role, SceneView } from "./types";
 
@@ -195,9 +197,11 @@ export class Campaign {
   private watchMeta() {
     this.checkMembership = () => {
       const named = this.meta.has("name");
-      const removed = this.revoked.has(this.device.value.id);
-      // A removed player's device must not add itself back.
-      if (named && !removed && !this.members.has(this.device.value.id)) {
+      const me = this.device.value.id;
+      const removed = this.revoked.has(me);
+      // A removed player's device must not add itself back (proved in standing.ts).
+      const before = this.standingOf(me);
+      if (checkedIn(before, named).member && !before.member) {
         const name = this.device.value.name || "Player";
         this.ensureMember(name);
         void this.chat.post(
@@ -334,7 +338,8 @@ export class Campaign {
    */
   revokeMember(id: string) {
     const m = this.members.get(id);
-    if (id === this.device.value.id || !m || m.get("role") === "gm") return;
+    const before = this.standingOf(id);
+    if (!m || removedBy(before, id === this.device.value.id) === before) return;
     this.doc.transact(() => {
       this.revoked.set(id, {
         name: m.get("name") ?? "Unnamed",
@@ -343,6 +348,12 @@ export class Campaign {
       });
       this.members.delete(id);
     });
+  }
+
+  /** Where a device stands: member, GM, removed. */
+  private standingOf(id: string): Standing {
+    const role = this.members.get(id)?.get("role");
+    return { member: this.members.has(id), gm: role === "gm", removed: this.revoked.has(id) };
   }
 
   /** Let a removed player back in; they rejoin with the invite link. */

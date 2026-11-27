@@ -23,16 +23,7 @@ describe("revoking a player", () => {
     c.destroy();
   });
 
-  it("is GM-only, and the GM cannot remove themselves", async () => {
-    const c = await setUp();
-    c.revokeMember("gm");
-    as("pat", "Pat");
-    c.revokeMember("gm");
-    expect(c.memberViews()).toHaveLength(2);
-    expect(c.revokedViews()).toEqual([]);
-    c.destroy();
-  });
-
+  // Who can be removed, and that a removed device stays out, is proved in standing.ts.
   it("keeps the removed player's device from adding itself back", async () => {
     const gm = await setUp();
     gm.revokeMember("pat");
