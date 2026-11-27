@@ -89,7 +89,22 @@ method mergeCosts(costs: seq<Cost>) returns (res: seq<Spend>)
       TotalStep(costs, i, r);
     }
     var at := SeqFindIndex(totals, (t: Spend) => (t.id == cost.resource));
+    ghost var before := totals;
     totals := (if (at == -1) then (totals + [Spend(cost.resource, cost.by_)]) else totals[at := Spend(cost.resource, (totals[at].by_ + cost.by_))]);
+    forall r | totalFor(costs[0..i+1], r) != 0
+      ensures exists j: int :: 0 <= j < |totals| && totals[j].id == r
+    {
+      if r == cost.resource {
+        if at == -1 {
+          assert totals[|totals| - 1].id == r;
+        } else {
+          assert totals[at].id == r;
+        }
+      } else {
+        var j :| 0 <= j < |before| && before[j].id == r;
+        assert totals[j].id == r;
+      }
+    }
     i := (i + 1);
   }
   assert costs[0..i] == costs;
@@ -106,8 +121,19 @@ method mergeCosts(costs: seq<Cost>) returns (res: seq<Spend>)
     decreases (|totals| - k)
   {
     var total := totals[k];
+    ghost var before := merged;
     if (total.by_ != 0) {
       merged := (merged + [total]);
+    }
+    forall j | 0 <= j < k + 1 && totals[j].by_ != 0
+      ensures exists m: int :: 0 <= m < |merged| && merged[m].id == totals[j].id
+    {
+      if j == k {
+        assert merged[|merged| - 1] == total;
+      } else {
+        var m :| 0 <= m < |before| && before[m].id == totals[j].id;
+        assert merged[m] == before[m];
+      }
     }
     k := (k + 1);
   }
