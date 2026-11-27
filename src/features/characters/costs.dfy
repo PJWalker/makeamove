@@ -92,7 +92,8 @@ method mergeCosts(costs: seq<Cost>) returns (res: seq<Spend>)
     ghost var before := totals;
     assert forall r :: totalFor(costs[0..i], r) != 0 ==> exists j: int :: 0 <= j < |before| && before[j].id == r;
     totals := (if (at == -1) then (totals + [Spend(cost.resource, cost.by_)]) else totals[at := Spend(cost.resource, (totals[at].by_ + cost.by_))]);
-    forall r | totalFor(costs[0..i+1], r) != 0
+    ghost var upTo := costs[0..i+1];
+    forall r {:trigger totalFor(upTo, r)} | totalFor(upTo, r) != 0
       ensures exists j: int :: 0 <= j < |totals| && totals[j].id == r
     {
       if r == cost.resource {
@@ -102,7 +103,7 @@ method mergeCosts(costs: seq<Cost>) returns (res: seq<Spend>)
           assert totals[at].id == r;
         }
       } else {
-        assert totalFor(costs[0..i+1], r) == totalFor(costs[0..i], r);
+        assert totalFor(upTo, r) == totalFor(costs[0..i], r);
         assert totalFor(costs[0..i], r) != 0;
         assert exists j: int :: 0 <= j < |before| && before[j].id == r;
         var j :| 0 <= j < |before| && before[j].id == r;
