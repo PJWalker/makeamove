@@ -91,7 +91,10 @@ lemma inserted_ensures(ids: seq<string>, index: int, id: string)
 {
   var i := MathMin(MathMax(index, 0), |ids|);
   assert ids == ids[0..i] + ids[i..];
+  assert inserted(ids, index, id) == (ids[0..i] + [id]) + ids[i..];
+  assert [id][1..] == [];
   forall x {
+    assert occurrences([id], x) == (if id == x then 1 else 0) + occurrences([id][1..], x);
     OccurrencesConcat(ids[0..i] + [id], ids[i..], x);
     OccurrencesConcat(ids[0..i], [id], x);
     OccurrencesConcat(ids[0..i], ids[i..], x);
