@@ -1991,6 +1991,11 @@
       "count": 9
     }
   },
+  "src/scene/__tests__/explore.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 3
+    }
+  },
   "src/scene/__tests__/geometry.test.ts": {
     "@typescript-eslint/no-magic-numbers": {
       "count": 33
