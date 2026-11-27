@@ -38,8 +38,25 @@ interface PenSettings {
   colour: string;
   /** Stroke width in screen px, so the brush is the same size on screen at any zoom. */
   width: number;
-  layer: Extract<Layer, "over" | "under">;
+  /** The layer it draws in, or "auto": over the fog for a player, over tokens for the GM. */
+  layer: PenLayer | "auto";
 }
+
+/** The layers the pen, Shapes and Text tools put things in. */
+export type PenLayer = Extract<Layer, "aboveFog" | "over" | "under">;
+
+/** The layer a pen set to `layer` draws in: "auto" is over the fog for a player, over tokens for the GM. */
+export function penLayerFor(layer: PenLayer | "auto", gm: boolean): PenLayer {
+  if (layer !== "auto") return layer;
+  return gm ? "over" : "aboveFog";
+}
+
+/** The layers things can be drawn in, as the pen and selection bar offer them. */
+export const PEN_LAYERS: { id: PenLayer; label: string; title: string }[] = [
+  { id: "under", label: "Under Tokens", title: "Under tokens, and under the fog of war" },
+  { id: "over", label: "Over Tokens", title: "Over tokens, and under the fog of war" },
+  { id: "aboveFog", label: "Over Fog", title: "Over the fog of war, so players see it everywhere" },
+];
 
 /** Eraser radius in screen px. */
 export const ERASER_RADIUS = 14;
@@ -119,12 +136,13 @@ export class SceneTools {
     this.toolOrder = local.value("toolOrder", listOf(oneOf(...TOOL_IDS), "tool order"));
     // Gold, like the UI accent.
     const penRead = settingsOver<PenSettings>(
-      { colour: "#f0bb3b", width: 6, layer: "over" },
+      { colour: "#f0bb3b", width: 6, layer: "auto" },
       "pen",
     );
     this.pen = local.value("pen", (v) => {
       const pen = penRead(v);
-      return pen.layer === "under" || pen.layer === "over" ? pen : { ...pen, layer: "over" };
+      const known = pen.layer === "auto" || PEN_LAYERS.some((l) => l.id === pen.layer);
+      return known ? pen : { ...pen, layer: "auto" };
     });
     this.shapeTool = local.value(
       "shapeTool",
@@ -182,6 +200,15 @@ export class SceneTools {
 
   setFogTool(patch: Partial<FogToolSettings>) {
     this.fogTool.value = { ...this.fogTool.value, ...patch };
+  }
+
+  /**
+   * The layer the pen, Shapes and Text tools put things in: the one chosen,
+   * or by default over the fog for a player, so they can sketch what they've
+   * heard of places they haven't seen; the GM's go over tokens.
+   */
+  penLayer(gm: boolean): PenLayer {
+    return penLayerFor(this.pen.value.layer, gm);
   }
 
   setTextStyle(patch: Partial<TextStyle>) {

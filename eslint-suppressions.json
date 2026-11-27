@@ -2163,6 +2163,11 @@
       "count": 9
     }
   },
+  "src/scene/fog.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 8
+    }
+  },
   "src/scene/geometry.ts": {
     "@typescript-eslint/max-params": {
       "count": 1
@@ -2868,9 +2873,6 @@
     }
   },
   "src/scene/tools.ts": {
-    "@typescript-eslint/no-unnecessary-condition": {
-      "count": 1
-    },
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
     },
@@ -4360,7 +4362,7 @@
       "count": 1
     },
     "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 3
+      "count": 4
     },
     "@typescript-eslint/restrict-template-expressions": {
       "count": 2

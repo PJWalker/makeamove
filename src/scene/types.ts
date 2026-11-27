@@ -3,6 +3,7 @@ import type {
   EntityGraphic,
   EntityGraphicRef as EntityGraphicReference,
 } from "../media/images";
+import type { ElementLayer } from "./fog";
 
 /*
  * Scene elements as plain values. Each is stored as a Y.Map of these fields
@@ -13,8 +14,17 @@ import type {
  * layer.
  */
 
-/** Bottom to top. Fog and presence layers arrive with M5 and M2. */
-export const LAYERS = ["map", "under", "token", "over"] as const;
+/**
+ * Bottom to top. Everything but "aboveFog" is under the fog of war; that's
+ * for notes players (and the GM, if they choose) draw over it. See fog.ts.
+ */
+export const LAYERS = [
+  "map",
+  "under",
+  "token",
+  "over",
+  "aboveFog",
+] as const satisfies readonly ElementLayer[];
 export type Layer = (typeof LAYERS)[number];
 
 export interface Transform {

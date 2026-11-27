@@ -59,11 +59,12 @@ describe("what a character sees from one place", () => {
 
   it("stops at walls, so the far side stays unseen", () => {
     const sight = pairs(
-      sightPolygon(
-        { x: 200, y: 500 },
-        [{ a: { x: 400, y: 0 }, b: { x: 400, y: 1000 } }],
-        { x: 0, y: 0, w: 1000, h: 1000 },
-      ),
+      sightPolygon({ x: 200, y: 500 }, [{ a: { x: 400, y: 0 }, b: { x: 400, y: 1000 } }], {
+        x: 0,
+        y: 0,
+        w: 1000,
+        h: 1000,
+      }),
     );
     expect(insidePolygon(sight, { x: 390, y: 500 })).toBe(true);
     expect(insidePolygon(sight, { x: 390, y: 50 })).toBe(true);
@@ -74,11 +75,12 @@ describe("what a character sees from one place", () => {
   it("sees past the end of a wall, but not behind it", () => {
     // A short wall from (300, 450) to (300, 550), seen from (100, 500).
     const sight = pairs(
-      sightPolygon(
-        { x: 100, y: 500 },
-        [{ a: { x: 300, y: 450 }, b: { x: 300, y: 550 } }],
-        { x: 0, y: 0, w: 1000, h: 1000 },
-      ),
+      sightPolygon({ x: 100, y: 500 }, [{ a: { x: 300, y: 450 }, b: { x: 300, y: 550 } }], {
+        x: 0,
+        y: 0,
+        w: 1000,
+        h: 1000,
+      }),
     );
     expect(insidePolygon(sight, { x: 600, y: 500 })).toBe(false);
     expect(insidePolygon(sight, { x: 600, y: 200 })).toBe(true);
@@ -102,7 +104,9 @@ describe("exploring", () => {
     expect(insidePolygon(sight, { x: 600, y: 150 })).toBe(false);
     for (const k of first.keys()) known.add(k);
     // Standing still, nothing new.
-    expect(newSights([map, eastWall, pc], [pc], { grid, known: (k) => known.has(k), last }).size).toBe(0);
+    expect(
+      newSights([map, eastWall, pc], [pc], { grid, known: (k) => known.has(k), last }).size,
+    ).toBe(0);
   });
 
   it("remembers the places a character passes through on the way", () => {

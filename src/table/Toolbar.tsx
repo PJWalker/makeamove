@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 import type { Store } from "../lib/store";
 import { startReorder } from "../ui/reorder";
 import { scrollSideways } from "../ui/wheel";
-import { PEN_WIDTH_RANGE } from "../scene/tools";
+import { PEN_LAYERS, PEN_WIDTH_RANGE, penLayerFor } from "../scene/tools";
 import type { LightToolMode, SelectKind, ToolId } from "../scene/tools";
 import { AREA_COLOURS } from "../scene/types";
 import { Button } from "../ui/Button";
@@ -152,7 +152,7 @@ export function Toolbar({ isGm }: { isGm: boolean }) {
       </nav>
       <div className="toolbar-options">
         {TOOL_OPTIONS[tool] === "select" && <SelectOptions isGm={isGm} />}
-        {TOOL_OPTIONS[tool] === "pen" && <PenOptions tool={tool} />}
+        {TOOL_OPTIONS[tool] === "pen" && <PenOptions tool={tool} isGm={isGm} />}
         {TOOL_OPTIONS[tool] === "light" && <LightOptions />}
         {TOOL_OPTIONS[tool] === "effect" && <EffectOptions />}
         {TOOL_OPTIONS[tool] === "fog" && <FogOptions />}
@@ -231,7 +231,7 @@ function CampaignMenu() {
  * The pen's colour, width and layer, within the toolbar. The Shapes tool
  * has the shape to draw and its outline and fill instead of the pen's colour.
  */
-function PenOptions({ tool }: { tool: ToolId }) {
+function PenOptions({ tool, isGm }: { tool: ToolId; isGm: boolean }) {
   const context = useCampaign();
   const { colour, width, layer } = useQuery(context.tools.pen);
   const shape = useQuery(context.tools.shapeTool);
@@ -306,11 +306,8 @@ function PenOptions({ tool }: { tool: ToolId }) {
       )}
       <Segmented
         label="Layer"
-        value={layer}
-        options={[
-          { id: "over", label: "Over Tokens" },
-          { id: "under", label: "Under Tokens" },
-        ]}
+        value={penLayerFor(layer, isGm)}
+        options={PEN_LAYERS}
         onChange={(l) => {
           context.tools.setPen({ layer: l });
         }}

@@ -18,6 +18,8 @@ import { measureSdfText } from "./render/sdfText";
 import { CANVAS_FONTS } from "./render/style";
 import { ElementLayer } from "./render/elements";
 import { GridLayer } from "./render/grid";
+import { stack } from "./fog";
+import type { Stratum } from "./fog";
 import { FogOfWarLayer } from "./render/fogOfWar";
 import type { FogOfWar } from "./render/fogOfWar";
 import { LightingLayer } from "./render/lighting";
@@ -154,17 +156,16 @@ export class SceneRenderer implements RenderState {
     this.app.stage.eventMode = "none";
     host.append(this.app.canvas);
     const lighting = this.lightingLayer;
-    this.world.addChild(
-      this.layers.map,
-      this.gridLayer.view,
-      this.layers.under,
-      this.layers.token,
-      this.layers.over,
-      lighting.tintLayer,
-      lighting.lightLayer,
-      lighting.sightLayer,
-      this.fogLayer.view,
-    );
+    const strata: Record<Stratum, Container> = {
+      ...this.layers,
+      grid: this.gridLayer.view,
+      tint: lighting.tintLayer,
+      light: lighting.lightLayer,
+      sight: lighting.sightLayer,
+      fog: this.fogLayer.view,
+    };
+    // In the order fog.ts proves leaves only the layer above the fog showing over it.
+    this.world.addChild(...stack().map((s) => strata[s]));
     this.app.stage.addChild(
       this.world,
       this.tokenLabels.bars,

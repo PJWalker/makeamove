@@ -214,7 +214,10 @@ export function sightPolygon(from: Point, segments: readonly Segment[], box: Box
     { a: { x: box.x, y: y1 }, b: { x: box.x, y: box.y } },
   ];
   const inside = (p: Point) => p.x >= box.x && p.x <= x1 && p.y >= box.y && p.y <= y1;
-  const all = [...segments.filter((s) => inside(s.a) || inside(s.b) || crossesBox(s, box)), ...edges];
+  const all = [
+    ...segments.filter((s) => inside(s.a) || inside(s.b) || crossesBox(s, box)),
+    ...edges,
+  ];
   const angles: number[] = [];
   for (const s of all)
     for (const p of [s.a, s.b]) {

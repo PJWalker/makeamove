@@ -5,7 +5,8 @@ import type { ElementPatch } from "../scene/sceneDoc";
 import { bounds } from "../scene/geometry";
 import { toScreen } from "../scene/camera";
 import { HANDLE_SIZE, ROTATE_HANDLE_GAP } from "../scene/render/handles";
-import { PEN_WIDTH_RANGE } from "../scene/tools";
+import { PEN_LAYERS, PEN_WIDTH_RANGE } from "../scene/tools";
+import type { PenLayer } from "../scene/tools";
 import { isPlainToken, sharedTextStyle } from "../scene/types";
 import type { EffectKind, FogForce, SceneElement, TextStyle } from "../scene/types";
 import { ColourPicker } from "../ui/ColourPicker";
@@ -232,16 +233,16 @@ function buildSelectionFields(
       />,
       <WidthField key="width" controller={controller} ids={ids} value={sel[0]!.width} />,
     );
-  if (every(sel, "drawing", "shape"))
+  if (every(sel, "drawing", "shape", "text"))
     fields.push(
       <Segmented
         key="layer"
         label="Layer"
-        value={first.layer === "under" ? "under" : "over"}
-        options={[
-          { id: "over", label: "Over Tokens" },
-          { id: "under", label: "Under Tokens" },
-        ]}
+        // None chosen when they differ.
+        value={
+          sel.every((element) => element.layer === first.layer) ? first.layer : ("" as PenLayer)
+        }
+        options={PEN_LAYERS}
         onChange={(layer) => {
           controller.setLayer(ids, layer);
         }}
