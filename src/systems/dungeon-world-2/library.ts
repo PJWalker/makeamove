@@ -211,13 +211,17 @@ export function dw2Library({
       id: "gear-weapons",
       name: "Weapons",
       kind: "item",
-      entries: gear.flatMap((index) => (!ARMOR.has(index.id) && index.equippable ? [{ item: index.id }] : [])),
+      entries: gear.flatMap((index) =>
+        !ARMOR.has(index.id) && index.equippable ? [{ item: index.id }] : [],
+      ),
     },
     {
       id: "gear-supplies",
       name: "Supplies",
       kind: "item",
-      entries: gear.flatMap((index) => (!ARMOR.has(index.id) && !index.equippable ? [{ item: index.id }] : [])),
+      entries: gear.flatMap((index) =>
+        !ARMOR.has(index.id) && !index.equippable ? [{ item: index.id }] : [],
+      ),
     },
     {
       id: "gear-magic",

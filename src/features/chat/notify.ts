@@ -4,8 +4,8 @@ import type { Campaign } from "../../campaign/campaign";
 import type { LinkKind } from "../notes/links";
 import { linkLabel } from "../notes/targets";
 import { messageText } from "./content";
-import { visibilityOf  } from "./types";
-import type {ChatMessage} from "./types";
+import { visibilityOf } from "./types";
+import type { ChatMessage } from "./types";
 
 /*
  * Chat that arrives while the Chat panel isn't showing pops up over the
@@ -88,7 +88,7 @@ async function show(title: string, body: string, tag: string) {
     return;
   }
   const n = new Notification(title, options);
-  n.addEventListener('click', () => {
+  n.addEventListener("click", () => {
     window.focus();
     n.close();
   });

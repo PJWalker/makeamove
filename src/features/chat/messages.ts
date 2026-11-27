@@ -18,7 +18,9 @@ export function saveEdit(campaign: Campaign, id: string, text: ChatContent) {
 export const isPinned = (campaign: Campaign, id: string) =>
   !!getState<boolean>(campaign.messageState, id, "pinned");
 
-export const setPinned = (campaign: Campaign, id: string, on: boolean) => { setState(campaign.messageState, id, "pinned", on || undefined); };
+export const setPinned = (campaign: Campaign, id: string, on: boolean) => {
+  setState(campaign.messageState, id, "pinned", on || undefined);
+};
 
 /** Delete a message and whatever was recorded about it. */
 export function removeMessage(campaign: Campaign, id: string) {
@@ -34,7 +36,10 @@ export function workTimer(campaign: Campaign, m: TimerMessage, action: TimerActi
   const state = campaign.messageState;
   const now = Date.now();
   campaign.transact(() => {
-    if (action === "stop") { setState(state, m.id, "stoppedAt", now); return; }
+    if (action === "stop") {
+      setState(state, m.id, "stoppedAt", now);
+      return;
+    }
     const endsAt = getState<number>(state, m.id, "endsAt") ?? m.endsAt;
     const stoppedAt = getState<number>(state, m.id, "stoppedAt");
     // Resuming carries on from where it was stopped.

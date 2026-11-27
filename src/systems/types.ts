@@ -180,7 +180,10 @@ export interface CheckStep {
 }
 
 export type CheckDifficulty =
-  { kind: "derived"; value: string } | { kind: "fixed"; value: number } | { kind: "prompt"; prompt: string; initial?: number; min?: number; max?: number } | { kind: "target"; value: string };
+  | { kind: "derived"; value: string }
+  | { kind: "fixed"; value: number }
+  | { kind: "prompt"; prompt: string; initial?: number; min?: number; max?: number }
+  | { kind: "target"; value: string };
 
 /**
  * Ask each target to roll one of their own actions (a saving throw) against
@@ -602,12 +605,13 @@ export type SheetSection =
 
 /** A number on a sheet: a resource or data field, with an optional maximum (a derived value). */
 export type SheetCounter =
-  {
+  | {
       label: string;
       data: string;
       max?: string;
       /** A plain number field instead of − and + buttons. */ input?: boolean;
-    } | { label: string; resource: string; max?: string };
+    }
+  | { label: string; resource: string; max?: string };
 
 /** A character's effective numbers, worked out by the system. */
 export interface Derived {
@@ -628,7 +632,11 @@ export type LibraryNode = {
   note?: string;
   /** What it holds, under headings: a class's paths, a path's moves. */
   groups?: LibraryNodeGroup[];
-} & ({ entity: { id: string; name: string; text: string; icon?: string } } | { item: string } | { move: string });
+} & (
+  | { entity: { id: string; name: string; text: string; icon?: string } }
+  | { item: string }
+  | { move: string }
+);
 
 export interface LibraryNodeGroup {
   id: string;

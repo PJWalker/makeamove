@@ -42,7 +42,8 @@ export const GROUP_MS = 5 * 60 * 1000;
 
 /** One row of the chat log as shown: a message, or an earlier session's fold. */
 export type LogRow =
-  { kind: "fold"; key: string; part: string; title: string; count: number; open: boolean } | { kind: "message"; key: string; m: ChatMessage; header: boolean };
+  | { kind: "fold"; key: string; part: string; title: string; count: number; open: boolean }
+  | { kind: "message"; key: string; m: ChatMessage; header: boolean };
 
 /**
  * The log flattened into the rows it shows, so the panel can render just a
@@ -51,8 +52,8 @@ export type LogRow =
  */
 export function logRows(messages: ChatMessage[], isOpen: (part: string) => boolean): LogRow[] {
   const rows: LogRow[] = [];
-  const add = (list: ChatMessage[]) =>
-    { for (const [index, m] of list.entries()) {
+  const add = (list: ChatMessage[]) => {
+    for (const [index, m] of list.entries()) {
       const previous = list[index - 1];
       const header =
         m.kind !== "system" &&
@@ -61,7 +62,8 @@ export function logRows(messages: ChatMessage[], isOpen: (part: string) => boole
           previous.author !== m.author ||
           stampTime(m.hlc) - stampTime(previous.hlc) > GROUP_MS);
       rows.push({ kind: "message", key: m.id, m, header });
-    } };
+    }
+  };
   for (const part of splitSessions(messages)) {
     if (part.current) {
       if (part.marker) add([part.marker]);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { resolveTokenLabelLayout, zoomTokenBars  } from "../tokenLabelLayout";
-import type {TokenLabelPlan} from "../tokenLabelLayout";
+import { resolveTokenLabelLayout, zoomTokenBars } from "../tokenLabelLayout";
+import type { TokenLabelPlan } from "../tokenLabelLayout";
 
 const box = (id: string, x: number, w: number) => ({ id, x, y: 0, w, h: 10 });
 

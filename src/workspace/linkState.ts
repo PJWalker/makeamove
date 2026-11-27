@@ -54,7 +54,10 @@ export class LinkPopups {
     const already = document.querySelector<HTMLElement>(
       `dialog[data-entry="${CSS.escape(`link:${linkKey(link)}`)}"]`,
     );
-    if (already) { raisePopup(already); return; }
+    if (already) {
+      raisePopup(already);
+      return;
+    }
     const tip = document.querySelector(".tooltip:popover-open");
     morphOpen(tip ?? from, () => {
       hideTooltip();

@@ -1,10 +1,10 @@
 import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
-import { createJiti  } from "jiti";
-import type {Jiti} from "jiti";
+import { createJiti } from "jiti";
+import type { Jiti } from "jiti";
 import Macros from "unplugin-macros/vite";
-import { defineConfig,  lazyPlugins } from "vite-plus";
-import type {Plugin} from "vite-plus";
+import { defineConfig, lazyPlugins } from "vite-plus";
+import type { Plugin } from "vite-plus";
 import { VitePWA } from "vite-plugin-pwa";
 
 /**
@@ -57,11 +57,17 @@ export function macroPlugins(): Plugin[] {
 }
 
 export default defineConfig({
-  // The same checks as `npm run lint`, through its own scripts so the two can't drift apart.
+  // Formats what's staged, then the same checks as `npm run lint`, through its own scripts so the two can't drift apart.
   // The typecheck covers the whole project, so takes no files.
   // React Doctor's rules run inside ESLint; its full scan (`npm run doctor`) is left to `npm run lint`.
   staged: {
-    "*": ["npm run lint:eslint", () => "npm run typecheck"],
+    "*": [
+      "vp fmt --no-error-on-unmatched-pattern",
+      "npm run lint:eslint",
+      // Pruning rewrites the suppressions file unformatted.
+      () => "vp fmt eslint-suppressions.json",
+      () => "npm run typecheck",
+    ],
   },
   fmt: {
     printWidth: 100,

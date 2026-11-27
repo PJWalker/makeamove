@@ -1,5 +1,5 @@
 import Fuse from "fuse.js";
-import type {IFuseOptions} from "fuse.js";
+import type { IFuseOptions } from "fuse.js";
 import { plainText } from "../../data/richText";
 import { store } from "../../lib/store";
 import type { EntryKind } from "../../ui/entryIcons";
@@ -48,7 +48,11 @@ export interface LibraryGroup {
 }
 
 export type LibraryEntry =
-  EntryBase & { kind: "item"; item: ItemDef } | EntryBase & { kind: "monster"; monster: MonsterDef } | EntryBase & { kind: "move"; move: ActionDef } | EntryBase & { kind: "option"; option: OptionDef } | EntryBase & { kind: "tag"; tag: TagDef };
+  | (EntryBase & { kind: "item"; item: ItemDef })
+  | (EntryBase & { kind: "monster"; monster: MonsterDef })
+  | (EntryBase & { kind: "move"; move: ActionDef })
+  | (EntryBase & { kind: "option"; option: OptionDef })
+  | (EntryBase & { kind: "tag"; tag: TagDef });
 
 export interface LibraryCollection {
   id: string;
@@ -188,7 +192,11 @@ function laidOut(system: GameSystem): LibraryCollection[] {
         : [];
     });
     return [
-      { ...base, ...(node.note ? { note: node.note } : {}), ...(groups.length > 0 ? { groups } : {}) },
+      {
+        ...base,
+        ...(node.note ? { note: node.note } : {}),
+        ...(groups.length > 0 ? { groups } : {}),
+      },
     ];
   };
   return system.library!.map((c) => ({
@@ -366,4 +374,4 @@ export function entryByKey(
   return { source, entry: sourceEntries(source).find((e) => libraryKey(source.id, e) === key) };
 }
 
-export {type EntryKind} from "../../ui/entryIcons";
+export { type EntryKind } from "../../ui/entryIcons";

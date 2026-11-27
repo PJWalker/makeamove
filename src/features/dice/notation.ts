@@ -236,7 +236,8 @@ export function rollTerms(
       const low = order.slice(0, n);
       const high = order.slice(dice.length - n);
       const chosen = new Set(rule.which === "low" ? low : high);
-      for (const [index, d] of dice.entries()) (d.kept = t.keep ? chosen.has(index) : !chosen.has(index));
+      for (const [index, d] of dice.entries())
+        d.kept = t.keep ? chosen.has(index) : !chosen.has(index);
     }
 
     const subtotal = dice.reduce((sum, d) => sum + (d.kept ? d.value : 0), 0);
@@ -265,7 +266,7 @@ export function roll(formula: string, die?: (sides: number) => number): Roll {
 /** "2d6 (4+5) + STR 2 = 11", for plain-text logs and screen readers. */
 export function describe(r: Roll): string {
   const parts = r.terms.map((t, index) => {
-    const sign = t.sign < 0 ? "- " : (index ? "+ " : "");
+    const sign = t.sign < 0 ? "- " : index ? "+ " : "";
     if (t.kind === "flat") return `${sign}${t.label ? `${t.label} ` : ""}${t.value}`;
     const faces = t.dice.map((d) => (d.kept ? `${d.value}` : `~~${d.value}~~`)).join("+");
     return `${sign}${t.notation}${t.label ? ` ${t.label}` : ""} (${faces})`;

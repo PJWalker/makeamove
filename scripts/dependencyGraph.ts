@@ -40,7 +40,18 @@ async function generate(): Promise<void> {
   await mkdir(outputDirectory, { recursive: true });
   const { stdout } = await execFileAsync(
     "npx",
-    ["depcruise", "src", "scripts", "lint", "--config", "--output-type", "json", "--progress", "none", "--metrics"],
+    [
+      "depcruise",
+      "src",
+      "scripts",
+      "lint",
+      "--config",
+      "--output-type",
+      "json",
+      "--progress",
+      "none",
+      "--metrics",
+    ],
     { cwd: root, maxBuffer: 20 * 1024 * 1024 },
   );
   const result = JSON.parse(stdout) as CruiseResult;
@@ -68,7 +79,9 @@ async function generate(): Promise<void> {
   };
   await writeFile(join(outputDirectory, "graph.json"), `${JSON.stringify(graph, null, 2)}\n`);
   await writeFile(join(outputDirectory, "index.html"), html);
-  console.log(`Wrote ${nodes.length} modules and ${links.length} dependencies to .dependencygraph/`);
+  console.log(
+    `Wrote ${nodes.length} modules and ${links.length} dependencies to .dependencygraph/`,
+  );
 }
 
 const html = String.raw`<!doctype html>

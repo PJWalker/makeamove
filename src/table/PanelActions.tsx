@@ -1,13 +1,5 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState
-  
-} from "react";
-import type {ReactNode} from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 const PanelActionsContext = createContext<{
@@ -44,7 +36,9 @@ export function PanelActionsSlot() {
     const observer = new ResizeObserver(fit);
     observer.observe(header);
     observer.observe(row);
-    return () => { observer.disconnect(); };
+    return () => {
+      observer.disconnect();
+    };
   }, [row]);
   return (
     <div className="panel-actions" ref={slotReference}>

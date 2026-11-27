@@ -26,7 +26,9 @@ const require = createRequire(import.meta.url);
 const doctorRules = {
   ...Object.fromEntries(
     Object.entries(doctorDefaults).flatMap(([rule, severity]) =>
-      FRAMEWORK_SPECIFIC_RULE_KEYS.has(rule) ? [] : [[rule, severity === "warn" ? "error" : severity]],
+      FRAMEWORK_SPECIFIC_RULE_KEYS.has(rule)
+        ? []
+        : [[rule, severity === "warn" ? "error" : severity]],
     ),
   ),
   ...require("./doctor.config.json").rules,
@@ -475,7 +477,7 @@ export default defineConfig([
       "unicorn/no-useless-spread": "error",
       "unicorn/no-useless-switch-case": "error",
       "unicorn/no-zero-fractions": "error",
-      "unicorn/number-literal-case": "error",
+      "unicorn/number-literal-case": ["error", { hexadecimalValue: "lowercase" }],
       "unicorn/numeric-separators-style": "error",
       "unicorn/prefer-add-event-listener": "error",
       "unicorn/prefer-array-flat-map": "error",

@@ -1,8 +1,8 @@
 import { createElement } from "react";
-import { EFFECTS  } from "../scene/types";
-import type {EffectKind} from "../scene/types";
-import { IconEmbers, IconFog, IconMagic, IconRain, IconSnow  } from "../ui/icons";
-import type {Icon} from "../ui/icons";
+import { EFFECTS } from "../scene/types";
+import type { EffectKind } from "../scene/types";
+import { IconEmbers, IconFog, IconMagic, IconRain, IconSnow } from "../ui/icons";
+import type { Icon } from "../ui/icons";
 
 const EFFECT_ICONS: Record<EffectKind, Icon> = {
   rain: IconRain,

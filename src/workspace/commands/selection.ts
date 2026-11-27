@@ -13,13 +13,12 @@ import {
   IconToBack,
   IconToFront,
   IconToken,
-  IconUnlock
-  
+  IconUnlock,
 } from "../../ui/icons";
-import type {Icon} from "../../ui/icons";
+import type { Icon } from "../../ui/icons";
 import type { CampaignContext } from "../campaignContext";
-import { command   } from "./types";
-import type {CommandTargets, Offer} from "./types";
+import { command } from "./types";
+import type { CommandTargets, Offer } from "./types";
 
 /*
  * What can be done with what's selected on the open scene, and with an
@@ -241,7 +240,9 @@ export const sceneSettings = command<Place>({
   section: "edit",
   transact: false,
   menu: { canvas: (_, t) => [{ params: t }] },
-  run: (context) => { context.canvas.sceneSettingsOpen.set(true); },
+  run: (context) => {
+    context.canvas.sceneSettingsOpen.set(true);
+  },
 });
 
 export const selectionCommands = [

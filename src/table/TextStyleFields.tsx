@@ -1,5 +1,5 @@
-import { TEXT_FONTS   } from "../scene/types";
-import type {TextFont, TextStyle} from "../scene/types";
+import { TEXT_FONTS } from "../scene/types";
+import type { TextFont, TextStyle } from "../scene/types";
 import { Button } from "../ui/Button";
 import { IconBold, IconItalic } from "../ui/icons";
 import { Segmented } from "../ui/Segmented";
@@ -30,21 +30,27 @@ export function TextStyleFields({
         label="Font"
         value={value.font ?? ("" as TextFont)}
         options={FONT_OPTIONS}
-        onChange={(font) => { onChange({ font }); }}
+        onChange={(font) => {
+          onChange({ font });
+        }}
       />
       <Button
         variant="icon"
         icon={IconBold}
         label="Bold"
         pressed={!!value.bold}
-        onClick={() => { onChange({ bold: !value.bold }); }}
+        onClick={() => {
+          onChange({ bold: !value.bold });
+        }}
       />
       <Button
         variant="icon"
         icon={IconItalic}
         label="Italic"
         pressed={!!value.italic}
-        onClick={() => { onChange({ italic: !value.italic }); }}
+        onClick={() => {
+          onChange({ italic: !value.italic });
+        }}
       />
     </div>
   );

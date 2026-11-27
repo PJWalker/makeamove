@@ -28,14 +28,8 @@ import type { DataValue } from "../../data/types";
 import { commaListOf, formatCommaList } from "../../lib/list";
 import { DW2_RELATIONSHIP_DEPTH } from "./bondStore";
 import { revealedStruggleData, STRUGGLES } from "./struggles";
-import {
-  addTreasureBoxes,
-  DW2_SERVICES,
-  wealthTierForBoxes,
-  WEALTH_TIERS
-  
-} from "./wealth";
-import type {ServiceRank} from "./wealth";
+import { addTreasureBoxes, DW2_SERVICES, wealthTierForBoxes, WEALTH_TIERS } from "./wealth";
+import type { ServiceRank } from "./wealth";
 
 /*
  * Dungeon World 2's campaign actions: the moves and Downtime activities
@@ -207,7 +201,9 @@ export async function makeDungeonWorld2Camp(
 }
 
 export type ComfortBenefit =
-  { kind: "clear-comforted"; condition: string } | { kind: "clear-supporter"; condition: string } | { kind: "gain-depth" };
+  | { kind: "clear-comforted"; condition: string }
+  | { kind: "clear-supporter"; condition: string }
+  | { kind: "gain-depth" };
 
 /** Apply one chosen benefit for each affirmative Comfort or Support answer. */
 export async function resolveComfortOrSupport(
@@ -265,7 +261,7 @@ export function prepareDungeonWorld2Journey(
   const leader = getCharacter(campaign, leaderId);
   if (!move || leader?.kind !== "pc") return false;
   const party = listCharacters(campaign).filter((character) => character.kind === "pc");
-  const affected = pace === "quick" ? party : (pace === "regular" ? [leader] : []);
+  const affected = pace === "quick" ? party : pace === "regular" ? [leader] : [];
   for (const character of affected) {
     const condition = conditionByCharacter[character.id];
     if (
@@ -277,7 +273,7 @@ export function prepareDungeonWorld2Journey(
   }
   for (const character of affected)
     setConditionState(campaign, character.id, conditionByCharacter[character.id]!, "marked");
-  const extra = pace === "quick" ? -1 : (pace === "regular" ? 1 : 2);
+  const extra = pace === "quick" ? -1 : pace === "regular" ? 1 : 2;
   startMove(campaign, leaderId, move, undefined, { extra });
   return true;
 }
@@ -484,7 +480,10 @@ export function breakDungeonWorld2Weapon(
 }
 
 export type DungeonWorld2ItemUse =
-  { kind: "clear-locked"; condition: string } | { kind: "drain" } | { kind: "heal-half-lost" } | { kind: "mark-condition"; condition: string };
+  | { kind: "clear-locked"; condition: string }
+  | { kind: "drain" }
+  | { kind: "heal-half-lost" }
+  | { kind: "mark-condition"; condition: string };
 
 /** Use a charged item and apply the deterministic DW2 effects supported by the sheet. */
 export function consumeDungeonWorld2Item(
@@ -501,9 +500,9 @@ export function consumeDungeonWorld2Item(
   const resolvedChoice =
     definition?.itemUse === "healing-potion"
       ? (choice ?? { kind: "heal-half-lost" as const })
-      : (definition?.itemUse === "magic-wand"
+      : definition?.itemUse === "magic-wand"
         ? (choice ?? { kind: "drain" as const })
-        : choice);
+        : choice;
   if (definition?.itemUse === "healing-potion") {
     if (!resolvedChoice) return false;
     if (

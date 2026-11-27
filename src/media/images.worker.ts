@@ -1,11 +1,7 @@
 import { dominantColour } from "../lib/colour";
 import { serveWorker } from "../lib/workerRpc";
-import {
-  MAX_IMAGE_SIZE
-  
-  
-} from "./imageWorkerProtocol";
-import type {ImageWorkerResult, ImageWorkerTask} from "./imageWorkerProtocol";
+import { MAX_IMAGE_SIZE } from "./imageWorkerProtocol";
+import type { ImageWorkerResult, ImageWorkerTask } from "./imageWorkerProtocol";
 
 function sampleColour(bitmap: ImageBitmap): string {
   const canvas = new OffscreenCanvas(64, 64);

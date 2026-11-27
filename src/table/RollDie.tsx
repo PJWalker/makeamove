@@ -1,4 +1,3 @@
-
 import { useEffect, useEffectEvent, useRef } from "react";
 import { useMachine } from "@xstate/react";
 import type { ReactNode, RefObject } from "react";
@@ -12,7 +11,7 @@ import { chipText, signed } from "../features/dice/pool";
 import { useQuery } from "../ui/useQuery";
 import { threeDimensionalDice } from "../workspace/diceRendering";
 import { reducedMotion } from "../ui/transition";
-import type {PhysicalDie as Die} from "./rollDieHelpers";
+import type { PhysicalDie as Die } from "./rollDieHelpers";
 import {
   chipSign,
   dieColours,
@@ -20,8 +19,7 @@ import {
   dieTitle,
   CHIP_COLOUR,
   loadDice,
-  rollCarriedDice
-  
+  rollCarriedDice,
 } from "./rollDieHelpers";
 import type { DieLook, Point } from "./dice/types";
 import { pieceMachine } from "./pieceMachine";
@@ -126,7 +124,9 @@ function usePiece(
     else {
       void loadDice();
       entered.current = new Promise((resolve) => {
-        stopWaiting = whenNear(slot.current!, () => { resolve(show()); });
+        stopWaiting = whenNear(slot.current!, () => {
+          resolve(show());
+        });
       });
     }
     const enteredDie = entered.current ?? Promise.resolve(null);
@@ -184,11 +184,7 @@ function PieceFace({
   flat: ReactNode;
 }) {
   if (phase !== "flat") return <canvas ref={canvas} className="die-canvas" aria-hidden="true" />;
-  return (
-    <span className="die-value">
-      {flat}
-    </span>
-  );
+  return <span className="die-value">{flat}</span>;
 }
 
 /** Whether a piece is thrown in as its roll arrives, and whether by this device. */
@@ -308,7 +304,6 @@ export function RollDie({
   });
 
   return (
-
     <span
       ref={slot}
       className="die"

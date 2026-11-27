@@ -1,15 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import {
-  backlinks,
-  getNote,
-  listNoteFolders,
-  listNotes,
-  searchNotes
-  
-  
-  
-} from "../features/notes/api";
-import type {NoteFolderView, NoteMatch, NoteView} from "../features/notes/api";
+import { backlinks, getNote, listNoteFolders, listNotes, searchNotes } from "../features/notes/api";
+import type { NoteFolderView, NoteMatch, NoteView } from "../features/notes/api";
 import type { Campaign } from "../campaign/campaign";
 import { useQuery } from "../ui/useQuery";
 import { Button } from "../ui/Button";
@@ -19,8 +10,8 @@ import { TwoPane } from "../ui/TwoPane";
 import { usePaneLevel } from "../ui/paneLevel";
 import { List, ListRow } from "../ui/List";
 import { menuTrigger } from "../ui/menuTrigger";
-import { ContextMenu  } from "../ui/ContextMenu";
-import type {MenuItem} from "../ui/ContextMenu";
+import { ContextMenu } from "../ui/ContextMenu";
+import type { MenuItem } from "../ui/ContextMenu";
 import { dragEntity } from "../workspace/entityDrag";
 import { entity } from "../workspace/dragEntities";
 import { useCampaign } from "../workspace/campaignContext";
@@ -89,7 +80,9 @@ export function NotesPanel({ campaign }: { campaign: Campaign }) {
       level={level}
       title={folder?.name ?? "Notes"}
       backLabel="Back to the notes"
-      onBack={() => { go("list"); }}
+      onBack={() => {
+        go("list");
+      }}
       resizeLabel="Resize the notes list"
       list={
         <NoteList
@@ -161,8 +154,9 @@ function NoteList({
   const row = (n: NoteView) => {
     const dragged = entity(context, "note", n.id, n.title);
     dragged.folder = (folder) => void context.execute(filePage, { id: n.id, folder });
-    const trigger = menuTrigger((x, y) => { setMenu({ x, y, items: menuFor(context, { kind: "note", id: n.id }) }); },
-    );
+    const trigger = menuTrigger((x, y) => {
+      setMenu({ x, y, items: menuFor(context, { kind: "note", id: n.id }) });
+    });
     return (
       <ListRow
         key={n.id}
@@ -171,7 +165,9 @@ function NoteList({
         tag={n.gmOnly ? "GM" : null}
         meta={ago(n.updatedAt)}
         selected={n.id === openId}
-        onPick={() => { context.links.openNote(n.id); }}
+        onPick={() => {
+          context.links.openNote(n.id);
+        }}
         pick={{
           onPointerDown: (e) => {
             trigger.onPointerDown(e);
@@ -192,14 +188,16 @@ function NoteList({
             aria-label="Search Notes"
             placeholder="Search Notes…"
             value={query}
-            onChange={(event) => { setQuery(event.currentTarget.value); }}
+            onChange={(event) => {
+              setQuery(event.currentTarget.value);
+            }}
           />
         </div>
         {query.trim() ? (
           <div className="panel-scroll notes-search-results">
             {searching ? (
               <p className="empty">Searching notes…</p>
-            ) : (matches.length > 0 ? (
+            ) : matches.length > 0 ? (
               <List>
                 {matches.map((match) => (
                   <ListRow
@@ -222,7 +220,7 @@ function NoteList({
               </List>
             ) : (
               <p className="empty">Nothing matches “{needle}”.</p>
-            ))}
+            )}
           </div>
         ) : (
           <FolderTree
@@ -259,7 +257,14 @@ function NoteList({
           />
         )}
       </div>
-      {menu && <ContextMenu {...menu} onClose={() => { setMenu(null); }} />}
+      {menu && (
+        <ContextMenu
+          {...menu}
+          onClose={() => {
+            setMenu(null);
+          }}
+        />
+      )}
     </>
   );
 }
@@ -280,7 +285,8 @@ function NotePage({
   const titleReference = useRef<HTMLInputElement>(null);
   // A brand-new page starts with its title ready to type.
   useLayoutEffect(() => {
-    if (!getNote(campaign, note.id)?.title || note.title === "Untitled") titleReference.current?.focus();
+    if (!getNote(campaign, note.id)?.title || note.title === "Untitled")
+      titleReference.current?.focus();
   }, [campaign, note.id, note.title]);
 
   return (
@@ -292,8 +298,11 @@ function NotePage({
             <span>Only you can see this page.</span>
             <Button
               variant="ghost"
-              onClick={(e) => { morphOpen(e.currentTarget, () => { invoke(context, revealPage, { id: note.id }); }); }
-              }
+              onClick={(e) => {
+                morphOpen(e.currentTarget, () => {
+                  invoke(context, revealPage, { id: note.id });
+                });
+              }}
             >
               Reveal to Players…
             </Button>
@@ -326,7 +335,9 @@ function NotePage({
                   key={n.id}
                   lead={<IconNotes size={22} />}
                   name={notes.find((k) => k.id === n.id)?.title ?? n.title}
-                  onPick={() => { context.links.openNote(n.id); }}
+                  onPick={() => {
+                    context.links.openNote(n.id);
+                  }}
                 />
               ))}
             </List>

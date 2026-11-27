@@ -1,5 +1,5 @@
-import {   useId } from "react";
-import type {ComponentType, ReactNode} from "react";
+import { useId } from "react";
+import type { ComponentType, ReactNode } from "react";
 
 /*
  * Every interface icon in the app, named for what it means rather than what
@@ -12,7 +12,10 @@ import type {ComponentType, ReactNode} from "react";
  * instead: see entryIcons.tsx.
  */
 
-export interface IconProps { size?: number; className?: string }
+export interface IconProps {
+  size?: number;
+  className?: string;
+}
 export type Icon = ComponentType<IconProps>;
 
 /** Icons on the main toolbar and the sidebar tabs. */
@@ -724,13 +727,6 @@ export const IconAllowBack = glyph(
 );
 
 // Interface
-export const IconPhone = glyph(
-  "phone",
-  <>
-    <rect {...line} x="7" y="2" width="10" height="20" rx="1.5" />
-    <circle cx="12" cy="18.5" r="1" />
-  </>,
-);
 export const IconSettings = glyph(
   "settings",
   <path fillRule="evenodd" d={cogPath(8, 10, 7.4, 3)} />,

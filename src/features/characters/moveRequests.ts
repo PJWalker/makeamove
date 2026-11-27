@@ -12,7 +12,10 @@ export interface AskRequest {
   targets?: MoveTarget[];
   choice?: MoveChoiceExtra;
 }
-export interface TargetRequest { moveId: string; characterId: string }
+export interface TargetRequest {
+  moveId: string;
+  characterId: string;
+}
 
 export const moveRequestMachine = setup({
   types: {

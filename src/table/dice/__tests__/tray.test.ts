@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import { Quaternion, Vec3 } from "cannon-es";
-import { simulateDice  } from "../physics";
-import type {DieHull} from "../physics";
+import { simulateDice } from "../physics";
+import type { DieHull } from "../physics";
 
 const cube: DieHull = {
   vertices: [
@@ -59,7 +59,7 @@ describe("a roll of several dice in one tray", () => {
   });
 
   it("never lets two dice pass through each other as they roll", () => {
-    const {length} = (frames[0]!);
+    const { length } = frames[0]!;
     for (let frame = 0; frame < length; frame += 4) {
       const poses = frames
         .map((poses) => poses[frame]!)

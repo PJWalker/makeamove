@@ -1,5 +1,4 @@
-import type {
-  Quaternion} from "three";
+import type { Quaternion } from "three";
 import {
   CanvasTexture,
   DirectionalLight,
@@ -53,11 +52,11 @@ function stageFor() {
   scene.environmentIntensity = 0.3;
   room.dispose();
   reflections.dispose();
-  const key = new DirectionalLight(0xFF_FF_FF, 1.1);
+  const key = new DirectionalLight(0xff_ff_ff, 1.1);
   key.position.set(-2, 3, 4);
-  const rim = new DirectionalLight(0xFF_FF_FF, 0.6);
+  const rim = new DirectionalLight(0xff_ff_ff, 0.6);
   rim.position.set(3, -1, 2);
-  scene.add(new HemisphereLight(0xFF_FF_FF, 0x33_40_55, 0.85), key, rim);
+  scene.add(new HemisphereLight(0xff_ff_ff, 0x33_40_55, 0.85), key, rim);
   const camera = new OrthographicCamera(-SLOT / 2, SLOT / 2, SLOT / 2, -SLOT / 2, -100, 100);
   stage = { renderer, scene, camera };
   return stage;
@@ -73,8 +72,14 @@ const dieFinish = {
   flatShading: true,
 };
 // Satin rather than glossy: a flat face turned to the light would shine its label away.
-const chipFinish = { ...dieFinish, flatShading: false, roughness: 0.55, clearcoat: 0.3, iridescence: 0 };
-const edgeMaterial = new LineBasicMaterial({ color: 0xFF_FF_FF, transparent: true, opacity: 0.3 });
+const chipFinish = {
+  ...dieFinish,
+  flatShading: false,
+  roughness: 0.55,
+  clearcoat: 0.3,
+  iridescence: 0,
+};
+const edgeMaterial = new LineBasicMaterial({ color: 0xff_ff_ff, transparent: true, opacity: 0.3 });
 
 const probe = document.createElement("canvas").getContext("2d", { willReadFrequently: true })!;
 /**
@@ -147,7 +152,12 @@ export function dieModel(sides: number, first: number, colour: string): Model {
     number.quaternion.copy(face.labelRotation);
     mesh.add(number);
   }
-  return { mesh, dispose: () => { material.dispose(); } };
+  return {
+    mesh,
+    dispose: () => {
+      material.dispose();
+    },
+  };
 }
 
 /** A chip in `colour` (hex) with `text` on both faces. */
@@ -200,7 +210,16 @@ export function renderBlank(sides: number) {
   mesh.scale.setScalar(SCALE);
   mesh.add(new LineSegments(shape.edges, edgeMaterial));
   const canvas = document.createElement("canvas");
-  paint({ mesh, dispose: () => { material.dispose(); } }, shape.rest, canvas);
+  paint(
+    {
+      mesh,
+      dispose: () => {
+        material.dispose();
+      },
+    },
+    shape.rest,
+    canvas,
+  );
   material.dispose();
   return canvas.toDataURL("image/webp", 0.9);
 }

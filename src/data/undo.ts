@@ -12,5 +12,8 @@ export type UndoStack = Y.UndoManager;
  * `mergeWithin` milliseconds join one step unless `stopCapturing()` comes first.
  */
 export function undoStack(document: Y.Doc, origin: object, mergeWithin = 0): UndoStack {
-  return new Y.UndoManager(document, { trackedOrigins: new Set([origin]), captureTimeout: mergeWithin });
+  return new Y.UndoManager(document, {
+    trackedOrigins: new Set([origin]),
+    captureTimeout: mergeWithin,
+  });
 }
