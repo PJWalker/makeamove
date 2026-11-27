@@ -9,7 +9,8 @@ import { device } from "../../../platform/device";
 import type { TokenElement } from "../../../scene/types";
 import { CampaignContext } from "../../campaignContext";
 import type { CanvasCommands } from "../../canvasState";
-import { tableCommands } from "../all";
+import { characterCommands } from "../characters";
+import { selectionCommands } from "../selection";
 import { complete, entities, readSentence, sentenceActions } from "../sentence";
 
 /*
@@ -39,7 +40,10 @@ const token = (id: string, name: string, characterId?: string): TokenElement => 
 async function setUp() {
   device.value = { id: "gm", name: "Gwen" };
   const campaign = await Campaign.open(await createCampaign("Sentences", "Gwen", "dungeon-world"));
-  const context = await CampaignContext.open(campaign, () => tableCommands);
+  const context = await CampaignContext.open(campaign, () => [
+    ...characterCommands,
+    ...selectionCommands,
+  ]);
   const ogre = newNpc(campaign, "Ogre");
   // Made last, so she's the one acting.
   const mira = newCharacter(campaign, "Mira", "fighter");
