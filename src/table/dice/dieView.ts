@@ -15,7 +15,10 @@ export interface DieView {
   copyShown: boolean;
 }
 
-/** How many places the die is seen in. */
+/**
+ * How many places the die is seen in.
+ * @public Used by the proofs' specs.
+ */
 export function placesSeen(v: DieView): number {
   //@ verify
   const flying = v.lifted ? 1 : 0;
