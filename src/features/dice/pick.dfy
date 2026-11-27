@@ -29,7 +29,7 @@ function outranks(r: Ranking, a: int, b: int): bool
 const MAX_EXPLOSIONS: int := 50
 
 lemma RangeSize(n: nat)
-  ensures |set j: int | 0 <= j < n| == n
+  ensures |(set j: int | 0 <= j < n)| == n
 {
   if n > 0 {
     RangeSize(n - 1);
@@ -89,7 +89,7 @@ method pick(r: Ranking, n: int) returns (res: set<int>)
     }
     if best == -1 {
       RangeSize(|r.values|);
-      SubsetSize(set j: int | 0 <= j < |r.values|, chosen);
+      SubsetSize((set j: int | 0 <= j < |r.values|), chosen);
       assert false;
     }
     chosen := (chosen + {best});
