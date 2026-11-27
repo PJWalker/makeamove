@@ -151,12 +151,18 @@ module.exports = {
       to: { path: "node_modules/pixi\\.js/" },
     },
     {
-      name: "three-only-in-the-dice",
-      comment:
-        "three.js and cannon-es draw and roll the 3D dice, in table/dice/ alone (a lazily loaded chunk).",
+      name: "three-only-in-the-dice-and-lobby",
+      comment: "three.js draws the 3D dice and the lobby cave; only table/dice/ and lobby/ use it.",
+      severity: "error",
+      from: { pathNot: ["^src/(table/dice|lobby)/", TESTS] },
+      to: { path: "node_modules/three/" },
+    },
+    {
+      name: "cannon-only-in-the-dice",
+      comment: "cannon-es rolls the 3D dice, in table/dice/ alone (a lazily loaded chunk).",
       severity: "error",
       from: { pathNot: ["^src/table/dice/", TESTS] },
-      to: { path: "node_modules/(three|cannon-es)/" },
+      to: { path: "node_modules/cannon-es/" },
     },
     {
       name: "the-dice-load-on-demand",
