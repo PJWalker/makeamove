@@ -19,15 +19,17 @@ import {
   SIDEBAR_MIN_W,
 } from "../layoutModel";
 
-
 const win = { x: 10, y: 10, w: 300, h: 300, z: 1 };
 const everywhere = (l: ReturnType<typeof defaultLayout>) =>
   [...l.left.panels, ...l.right.panels, ...l.floating.map((w) => w.id)].sort();
 
+/** The panels docked on the left to begin with. */
+const DEFAULT_LEFT = ["scene", "layers", "pc", "characters", "combat"];
+
 describe("panel layout", () => {
   it("starts with characters on the left and chat on the right", () => {
     const l = defaultLayout(false);
-    expect(l.left.panels).toEqual(["scene", "pc", "characters", "combat"]);
+    expect(l.left.panels).toEqual(DEFAULT_LEFT);
     expect(l.right.panels).toEqual(["chat", "libraries", "reference", "items", "notes", "members"]);
     expect(l.right.active).toBe("chat");
   });
@@ -36,8 +38,8 @@ describe("panel layout", () => {
     let l = defaultLayout(false);
     l = detach(l, "characters", win);
     expect(locate(l, "characters")).toBe("floating");
-    expect(l.left).toMatchObject({ active: "scene", panels: ["scene", "pc", "combat"] });
-    l = detach(detach(detach(l, "scene", win), "pc", win), "combat", win);
+    expect(l.left).toMatchObject({ active: "scene", panels: ["scene", "layers", "pc", "combat"] });
+    for (const id of ["scene", "layers", "pc", "combat"] as const) l = detach(l, id, win);
     expect(l.left).toMatchObject({ active: null, open: false, panels: [] });
     expect(everywhere(l)).toEqual([...PANEL_ORDER].sort());
   });
@@ -47,7 +49,7 @@ describe("panel layout", () => {
     expect(dock(l, "chat").right.panels).toContain("chat");
     l = dock(l, "chat", "left");
     expect(l.left).toMatchObject({ active: "chat", open: true });
-    expect(l.left.panels).toEqual(["scene", "pc", "characters", "combat", "chat"]);
+    expect(l.left.panels).toEqual(["scene", "layers", "pc", "characters", "combat", "chat"]);
     expect(l.floating).toEqual([]);
     expect(l.home.chat).toBe("left");
     expect(everywhere(l)).toEqual([...PANEL_ORDER].sort());
@@ -65,7 +67,7 @@ describe("panel layout", () => {
   it("moves a docked tab between sides and repairs the side it left", () => {
     let l = dock(defaultLayout(false), "characters", "right", 0);
     expect(l.right.panels[0]).toBe("characters");
-    expect(l.left).toMatchObject({ active: "scene", panels: ["scene", "pc", "combat"] });
+    expect(l.left).toMatchObject({ active: "scene", panels: ["scene", "layers", "pc", "combat"] });
     l = setOpen(l, "left", false);
     expect(l.left.open).toBe(false);
   });
@@ -103,13 +105,16 @@ describe("panel layout", () => {
       { left: { panels: ["characters"] }, right: { panels: ["chat", "notes", "members"] } },
       false,
     );
-    expect(l.left.panels).toEqual(["characters", "scene", "pc", "combat"]);
+    expect(l.left.panels).toEqual(["characters", "scene", "layers", "pc", "combat"]);
     expect(l.right.panels).toEqual(["chat", "notes", "members", "libraries", "reference", "items"]);
   });
 
   it("leaves out panels the campaign doesn’t have, as shown", () => {
     const l = withoutPanels(showTab(defaultLayout(false), "combat"), ["combat"]);
-    expect(l.left).toMatchObject({ active: "scene", panels: ["scene", "pc", "characters"] });
+    expect(l.left).toMatchObject({
+      active: "scene",
+      panels: ["scene", "layers", "pc", "characters"],
+    });
   });
 
   it("closes a panel, keeps it closed on reload, and reopens it where it was", () => {
@@ -155,7 +160,7 @@ describe("panel layout", () => {
   it("docks a floating panel back in its place, through a reload", () => {
     let l = detach(defaultLayout(false), "characters", win);
     l = normalise(structuredClone(l), false);
-    expect(dock(l, "characters").left.panels).toEqual(["scene", "pc", "characters", "combat"]);
+    expect(dock(l, "characters").left.panels).toEqual(DEFAULT_LEFT);
   });
 
   it("puts a panel at the end of a side it didn't come from", () => {
@@ -197,7 +202,7 @@ describe("panel layout", () => {
   it("docks entity windows alongside panels and preserves their home side", () => {
     const id = "entity:link:character:hero";
     let l = dock(defaultLayout(false), id, "left", 1);
-    expect(l.left.panels).toEqual(["scene", id, "pc", "characters", "combat"]);
+    expect(l.left.panels).toEqual(["scene", id, "layers", "pc", "characters", "combat"]);
     expect(locate(l, id)).toBe("left");
     l = detach(l, id, win);
     expect(locate(l, id)).toBe("floating");
@@ -215,7 +220,7 @@ describe("panel layout", () => {
       },
       false,
     );
-    expect(l.left.panels).toEqual([id, "characters", "scene", "pc", "combat"]);
+    expect(l.left.panels).toEqual([id, "characters", "scene", "layers", "pc", "combat"]);
     expect(l.left.active).toBe(id);
     expect(locate(l, "entity:link:note:page")).toBe("floating");
     expect(l.right.panels).toEqual(["chat", "libraries", "reference", "items", "notes", "members"]);
