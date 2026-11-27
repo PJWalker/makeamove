@@ -12,6 +12,7 @@ import {
   IconForward,
   IconGrid,
   IconGroup,
+  IconHidden,
   IconImage,
   IconLock,
   IconMap,
@@ -22,6 +23,7 @@ import {
   IconToken,
   IconUngroup,
   IconUnlock,
+  IconVisible,
 } from "../../ui/icons";
 import type { Icon } from "../../ui/icons";
 import type { CampaignContext } from "../campaignContext";
@@ -66,9 +68,12 @@ const selectionCommand = (
   {
     available,
     offered,
+    gm,
   }: {
     available?: (els: SceneElement[]) => string | true;
     offered?: (els: SceneElement[]) => boolean;
+    /** Only the GM may. */
+    gm?: boolean;
   } = {},
 ) =>
   command<Selection | undefined>({
@@ -77,6 +82,7 @@ const selectionCommand = (
     ...look,
     section,
     transact: false,
+    ...(gm ? { permission: "gm" as const } : {}),
     available: (context, p) => {
       const els = chosen(context, p);
       return els.length === 0 ? "Nothing selected" : (available?.(els) ?? true);
@@ -203,6 +209,31 @@ export const unlock = selectionCommand(
   {
     available: (els) => els.some((element) => element.locked) || "Not locked",
     offered: (els) => els.every((element) => element.locked),
+  },
+);
+
+export const hide = selectionCommand(
+  "selection.hide",
+  { title: "Hide from Players", icon: IconHidden },
+  "edit",
+  (context, ids) => open(context)?.controller.setHidden(ids, true),
+  {
+    gm: true,
+    available: (els) => !els.every((element) => element.hidden) || "Already hidden",
+    // Hide and Show share a place in the menu: only the one that applies.
+    offered: (els) => !els.every((element) => element.hidden),
+  },
+);
+
+export const show = selectionCommand(
+  "selection.show",
+  { title: "Show to Players", icon: IconVisible },
+  "edit",
+  (context, ids) => open(context)?.controller.setHidden(ids, false),
+  {
+    gm: true,
+    available: (els) => els.some((element) => element.hidden) || "Not hidden",
+    offered: (els) => els.every((element) => element.hidden),
   },
 );
 
@@ -375,6 +406,8 @@ export const selectionCommands = [
   duplicate,
   lock,
   unlock,
+  hide,
+  show,
   deleteSelection,
   addTokenHere,
   addImageHere,

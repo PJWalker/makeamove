@@ -98,7 +98,10 @@ export default class SceneController implements ToolContext {
   gm = false;
 
   setGm(gm: boolean) {
+    if (this.gm === gm) return;
     this.gm = gm;
+    // What's hidden from players comes and goes with it.
+    this.refresh();
   }
 
   /** Asks the canvas for text to put on the map, or to change: set by SceneCanvas. */
@@ -319,7 +322,8 @@ export default class SceneController implements ToolContext {
 
   private refresh() {
     this.revision.value++;
-    this.elements = this.scene.views();
+    // Players never get what's hidden from them; the GM sees it faded.
+    this.elements = this.scene.views().filter((element) => this.gm || !element.hidden);
     this.byId = new Map(this.elements.map((e) => [e.id, e]));
     this.renderer.setElements(this.elements);
     const targets = this.targets.value.filter((id) => this.byId.get(id)?.type === "token");
@@ -920,6 +924,11 @@ export default class SceneController implements ToolContext {
 
   setLocked(ids: string[], locked: boolean) {
     this.scene.update(ids.map((id) => [id, { locked }]));
+  }
+
+  /** Hide elements from players, or show them again. */
+  setHidden(ids: string[], hidden: boolean) {
+    this.scene.update(ids.map((id) => [id, { hidden: hidden || undefined }]));
   }
 
   /** Restack elements, or move them to another layer. */

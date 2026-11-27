@@ -11,6 +11,9 @@ import { buildView, contentKey, DESTROY_VIEW } from "./elementViews";
 import type { View } from "./elementViews";
 import type { RenderState } from "./state";
 
+/** How opaque the GM sees what's hidden from players. */
+const HIDDEN_ALPHA = 0.45;
+
 /** The scene's elements: a view per element, kept in its layer and in order. */
 export default class ElementLayer {
   private readonly views = new Map<string, View>();
@@ -99,6 +102,7 @@ export default class ElementLayer {
         this.order = "";
       }
       view.apply(s.previews.get(element.id) ?? element);
+      view.root.alpha = element.hidden ? HIDDEN_ALPHA : 1;
     }
     this.previewed = new Set(s.previews.keys());
     for (const [id, view] of this.views) {

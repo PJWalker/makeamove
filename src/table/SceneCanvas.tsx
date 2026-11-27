@@ -192,7 +192,8 @@ function useSceneCanvasInteractions(
     controller.cancelGesture();
     const at = controller.toWorld(x, y);
     const hit = controller.hitTest(at, true);
-    if (hit && !controller.selection.value.includes(hit.id)) controller.select([hit.id]);
+    if (hit && !controller.selection.value.includes(hit.id))
+      controller.select(controller.withGroups([hit.id]));
     if (!hit) controller.select([]);
     setMenu({
       x,

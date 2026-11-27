@@ -107,6 +107,8 @@ export const sceneElement = variant(
     locked: lww(isBoolean).or(false),
     createdBy: lww(isString).or(""),
     group: lww(isString),
+    name: lww(isString),
+    hidden: lww(isBoolean),
   },
   elementCases,
 );

@@ -32,6 +32,10 @@ interface Base extends Transform {
   locked: boolean;
   /** The group it's in, if any: elements sharing one are picked, moved and restacked together. */
   group?: string;
+  /** What it's called in the list of what's on the scene; a token's name shows under it too. */
+  name?: string;
+  /** Hidden from players: only the GM sees it, faded. */
+  hidden?: boolean;
   createdBy: string;
 }
 

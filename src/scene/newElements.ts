@@ -114,7 +114,7 @@ export function conversion(
     const p = snapPoint(grid, element, Math.round(size / grid.size));
     return {
       type: "token",
-      name: "",
+      name: element.name ?? "",
       ...token,
       ...p,
       w: size,
@@ -125,7 +125,6 @@ export function conversion(
   const k = element.w / Math.max(image.width, image.height);
   return {
     type: "map",
-    name: undefined,
     colour: undefined,
     style: undefined,
     w: image.width * k,
