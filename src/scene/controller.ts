@@ -28,6 +28,7 @@ import type { SceneTools } from "./tools";
 import type { Layer, NewElement, SceneElement, TokenElement, TokenStyle, Transform } from "./types";
 import { TOOL_PRESS } from "./gestures";
 import { PolygonDraft } from "./gestures/polygon";
+import { WallDetector } from "./wallDetection";
 import { pinch } from "./gestures/pan";
 import { hoverCursor } from "./gestures/select";
 import { dragShape, placementPlan } from "./gestures/shape";
@@ -80,6 +81,9 @@ export class SceneController implements ToolContext {
 
   /** The corners of a polygon (a shape, or an area of solid light or dark) being placed, a click at a time. */
   readonly polygon: PolygonDraft = new PolygonDraft(this);
+
+  /** Walls being found on a map, for the GM to tune before adding them. */
+  readonly wallDetection: WallDetector = new WallDetector(this);
 
   /** Whether this device is the GM's: only the GM sees and edits walls and lights. */
   gm = false;
@@ -178,6 +182,10 @@ export class SceneController implements ToolContext {
       this.scene.elements.observe(refresh),
       this.scene.settings.observe(regrid),
       watch([this.selection], () => {
+        const detecting = this.wallDetection.state.value;
+        const sel = this.selection.value;
+        if (detecting && (sel.length !== 1 || sel[0] !== detecting.mapId))
+          this.wallDetection.stop();
         this.selectedElements.value = this.selected();
         this.updateOverlay();
       }),
@@ -199,6 +207,7 @@ export class SceneController implements ToolContext {
             return element && this.pickable(element);
           });
           if (keep.length !== this.selection.value.length) this.selection.value = keep;
+          if (this.tools.activeTool.value !== "select") this.wallDetection.stop();
           this.cancelGesture();
           this.updateCursor();
           this.updateOverlay();
@@ -289,6 +298,7 @@ export class SceneController implements ToolContext {
 
   stop() {
     this.cancelGesture();
+    this.wallDetection.stop();
     cancelAnimationFrame(this.itemTokenDropFrame);
     this.itemTokenDropFrame = 0;
     this.renderer.previews.clear();
@@ -306,6 +316,7 @@ export class SceneController implements ToolContext {
     this.elements = this.scene.views();
     this.byId = new Map(this.elements.map((e) => [e.id, e]));
     this.renderer.setElements(this.elements);
+    void this.wallDetection.follow();
     const targets = this.targets.value.filter((id) => this.byId.get(id)?.type === "token");
     if (targets.length !== this.targets.value.length) this.setTargets(targets);
     const sel = this.selection.value.filter((id) => this.byId.has(id));
@@ -859,6 +870,14 @@ export class SceneController implements ToolContext {
       else this.renderer.previews.delete(id);
     }
     this.renderer.invalidate("previews");
+  }
+
+  /** Start finding the walls on map `id`, to tune and then add. */
+  detectWalls(id: string) {
+    this.cancelGesture();
+    this.tools.activeTool.value = "select";
+    this.selection.value = [id];
+    void this.wallDetection.start(id);
   }
 
   /**

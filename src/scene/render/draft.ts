@@ -3,12 +3,14 @@ import type { Container } from "pixi.js";
 import type { Point } from "../grid";
 import { strokeOutline, hasRealPressure } from "../stroke";
 import type { DraggedShapeKind, Layer, ShapePaint, Transform } from "../types";
+import type { Segment } from "../vision";
 import { drawShape } from "./elementViews";
 import { flat } from "./style";
 
 /**
  * What's being drawn, before it's added: a pen stroke, a polygon placed a
- * corner at a time, or a shape being dragged out (with its size to show).
+ * corner at a time, a shape being dragged out (with its size to show), or
+ * walls found on a map.
  */
 export type Draft =
   | {
@@ -28,6 +30,14 @@ export type Draft =
       width: number;
       layer: Layer;
       label?: string;
+    }
+  | {
+      kind: "walls";
+      walls: Segment[];
+      colour: string;
+      /** Line width, in screen px. */
+      width: number;
+      layer: Layer;
     }
   | {
       kind?: "stroke";
@@ -61,6 +71,17 @@ export class DraftLayer {
       // The corners so far, solid so they show whatever the paint.
       for (const p of d.points.slice(0, -1)) g.circle(p.x, p.y, 4 / zoom);
       g.fill({ color: paint.stroke });
+      return;
+    }
+    if (d.kind === "walls") {
+      g.position.set(0, 0);
+      g.rotation = 0;
+      for (const { a, b } of d.walls) g.moveTo(a.x, a.y).lineTo(b.x, b.y);
+      g.stroke({ color: d.colour, width: d.width / zoom, cap: "round" });
+      // Their ends, so where one wall meets the next shows.
+      for (const { a, b } of d.walls)
+        g.circle(a.x, a.y, d.width / zoom).circle(b.x, b.y, d.width / zoom);
+      g.fill({ color: d.colour });
       return;
     }
     if (d.kind === "shape") {

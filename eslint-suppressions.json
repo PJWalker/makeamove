@@ -1975,6 +1975,14 @@
       "count": 1
     }
   },
+  "src/scene/__tests__/detectWalls.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 27
+    },
+    "import/avoid-importing-barrel-files": {
+      "count": 1
+    }
+  },
   "src/scene/__tests__/downed.test.ts": {
     "@typescript-eslint/no-magic-numbers": {
       "count": 1
@@ -2149,6 +2157,11 @@
     },
     "unicorn/prefer-single-call": {
       "count": 1
+    }
+  },
+  "src/scene/detectWalls.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 22
     }
   },
   "src/scene/downed.ts": {
@@ -2351,7 +2364,7 @@
       "count": 1
     },
     "@typescript-eslint/no-magic-numbers": {
-      "count": 5
+      "count": 3
     },
     "@typescript-eslint/no-shadow": {
       "count": 4
@@ -2873,7 +2886,15 @@
       "count": 1
     },
     "@typescript-eslint/no-magic-numbers": {
-      "count": 16
+      "count": 18
+    }
+  },
+  "src/scene/wallTrace.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 3
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
     }
   },
   "src/sync/__tests__/blobs.test.ts": {

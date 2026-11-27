@@ -2,7 +2,7 @@ import { snapToLattice } from "../grid";
 import type { Point } from "../grid";
 import { formatDistance, toUnits } from "../measure";
 import type { Transform } from "../types";
-import { wallEnds } from "../vision";
+import { wallBetween, wallEnds } from "../vision";
 import type { ToolContext, ToolPress } from "./types";
 
 interface Keys {
@@ -66,13 +66,5 @@ export function snapWallPoint(c: ToolContext, p: Point, e: Keys): Point {
 
 /** A wall from where the drag started to (snapped) p. */
 function wallFrom(c: ToolContext, start: Point, p: Point, e: Keys): Transform {
-  const end = snapWallPoint(c, p, e);
-  const length = Math.hypot(end.x - start.x, end.y - start.y);
-  return {
-    x: (start.x + end.x) / 2,
-    y: (start.y + end.y) / 2,
-    w: length,
-    h: 6,
-    rot: Math.atan2(end.y - start.y, end.x - start.x),
-  };
+  return wallBetween(start, snapWallPoint(c, p, e));
 }

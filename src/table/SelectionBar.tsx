@@ -23,6 +23,7 @@ import type { TokenStat } from "../systems/types";
 import { TextStyleFields } from "./TextStyleFields";
 import { EFFECT_OPTIONS } from "./effectOptionsData";
 import { EffectSightToggles } from "./effectOptions";
+import DetectWallsFields from "./DetectWallsFields";
 import "./SelectionBar.css";
 
 /** Screen px between the selection (and its rotate handle) and the bar. */
@@ -114,7 +115,11 @@ function Fields({
   sel: readonly SceneElement[];
   onTokenOptions: (id: string, from: Element) => void;
 }) {
-  return <>{useSelectionFields(controller, sel, onTokenOptions)}</>;
+  const detecting = useQuery(controller.wallDetection.state);
+  const fields = useSelectionFields(controller, sel, onTokenOptions);
+  if (detecting && sel.length === 1 && sel[0]!.id === detecting.mapId)
+    return <DetectWallsFields detector={controller.wallDetection} detection={detecting} />;
+  return fields;
 }
 
 function useSelectionFields(
