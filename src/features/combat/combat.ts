@@ -1,6 +1,7 @@
 import { newId } from "../../lib/ids";
 import type { Duration } from "../characters/types";
 import type { Combatant, CombatMaps } from "./schema";
+import { passedOn, stepBack, stepForward } from "./turns";
 
 export type { Combatant, CombatMaps } from "./schema";
 
@@ -52,9 +53,11 @@ export function removeCombatant(m: CombatMaps, id: string) {
   m.combatants.transact(() => {
     if (turnOf(m) === id) {
       const order = turnOrder(m.combatants);
-      const index = order.findIndex((c) => c.id === id);
-      const next = order[(index + 1) % order.length];
-      m.combat.patch({ turn: next && next.id !== id ? next.id : undefined });
+      const next = passedOn(
+        order.length,
+        order.findIndex((c) => c.id === id),
+      );
+      m.combat.patch({ turn: order[next]?.id });
     }
     m.combatants.delete(id);
   });
@@ -82,24 +85,26 @@ export function nextTurn(m: CombatMaps): TurnChange {
   if (order.length === 0) return { ended: null, started: null, newRound: false };
   const now = turnOf(m);
   const index = order.findIndex((c) => c.id === now);
-  const wraps = index === order.length - 1;
-  const next = order[wraps || index < 0 ? 0 : index + 1]!;
+  const step = stepForward(order.length, { index, round: roundOf(m) });
+  const next = order[step.index]!;
+  const newRound = step.round !== roundOf(m);
   m.combatants.transact(() => {
-    if (wraps) m.combat.set("round", roundOf(m) + 1);
+    m.combat.set("round", step.round);
     m.combat.set("turn", next.id);
   });
-  return { ended: now, started: next.id, newRound: wraps };
+  return { ended: now, started: next.id, newRound };
 }
 
 /** Step back a turn, for mistakes. Durations aren't wound back. */
 export function previousTurn(m: CombatMaps) {
   const order = turnOrder(m.combatants);
   if (order.length === 0) return;
-  const index = order.findIndex((c) => c.id === turnOf(m));
-  if (index <= 0 && roundOf(m) <= 1) return;
+  const at = { index: order.findIndex((c) => c.id === turnOf(m)), round: roundOf(m) };
+  const step = stepBack(order.length, at);
+  if (step === at) return;
   m.combatants.transact(() => {
-    if (index <= 0) m.combat.set("round", roundOf(m) - 1);
-    m.combat.set("turn", order[index <= 0 ? order.length - 1 : index - 1]!.id);
+    m.combat.set("round", step.round);
+    m.combat.set("turn", order[step.index]!.id);
   });
 }
 

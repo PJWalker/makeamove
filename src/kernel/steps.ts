@@ -53,7 +53,10 @@ export function withoutAll(ids: string[], id: string): string[] {
   return last === id ? rest : [...rest, last];
 }
 
-/** The steps of `kind`. */
+/**
+ * The steps of `kind`.
+ * @public Used by the proofs' specs.
+ */
 export function stepsOf(s: Steps, kind: StepKind): string[] {
   //@ verify
   return kind === "undo" ? s.undo : s.redo;

@@ -16,6 +16,7 @@ import {
 import type { Campaign } from "../campaign/campaign";
 import type { EntityGraphic } from "../media/images";
 import { useQuery } from "../ui/useQuery";
+import { librarySlot, moveSlot } from "../features/characters/hotbar";
 import { closePopup } from "../ui/popup";
 import { Dialog } from "../workspace/Dialog";
 import { usePopupDialog } from "../workspace/usePopupDialog";
@@ -211,8 +212,8 @@ function useItemsPanel(campaign: Campaign) {
   const menuItemsFor = (entry: Entry): MenuItem[] => {
     const actions =
       entry.kind === "gear"
-        ? actionMenuItems(context, [{ id: `library:${entry.id}`, title: entry.item.name }])
-        : actionMenuItems(context, [{ id: `move:${entry.id}`, title: entry.move.name }]);
+        ? actionMenuItems(context, [{ id: librarySlot(entry.id), title: entry.item.name }])
+        : actionMenuItems(context, [{ id: moveSlot(entry.id), title: entry.move.name }]);
     return [
       {
         label: actionLabel(entry),

@@ -28,7 +28,10 @@ export function decode(stamp: string): Hlc {
 /** Wall-clock milliseconds of a stamp, for showing when a message was sent. */
 export const stampTime = (stamp: string) => decode(stamp).wall;
 
-/** Whether `a` is strictly later than `b`: by wall time, then by counter. */
+/**
+ * Whether `a` is strictly later than `b`: by wall time, then by counter.
+ * @public Used by the proofs' specs.
+ */
 export function isLater(a: Hlc, b: Hlc): boolean {
   //@ verify
   return a.wall > b.wall || (a.wall === b.wall && a.counter > b.counter);

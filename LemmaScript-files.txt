@@ -5,4 +5,12 @@ src/features/dice/pick.ts
 src/workspace/placement.ts
 src/kernel/steps.ts
 src/table/dice/dieView.ts
+src/features/combat/turns.ts
+src/features/chat/audience.ts
+src/scene/edgePin.ts
+src/features/chat/partStarts.ts
+src/campaign/standing.ts
+src/lib/commaList.ts
+src/sync/inviteText.ts
+src/features/dice/scan.ts
 src/scene/fog.ts
