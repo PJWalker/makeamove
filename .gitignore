@@ -47,3 +47,7 @@ dist-ssr
 
 # Generated dependency graph
 /.dependencygraph/
+
+# LemmaScript regen leftovers
+*.dfy.base
+*.dfy.merged
