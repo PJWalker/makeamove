@@ -19,8 +19,6 @@ describe("toolCursor", () => {
     expect(cursor("select")).toBe("default");
     expect(cursor("pan")).toBe("grab");
     expect(cursor("text")).toBe("text");
-    // The eraser draws its own ring on the canvas.
-    expect(cursor("erase")).toBe("none");
   });
 
   const drawn: ToolId[] = ["draw", "shape", "wall", "light", "effect", "ruler", "ping"];

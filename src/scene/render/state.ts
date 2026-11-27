@@ -19,7 +19,7 @@ export interface RenderState {
   readonly byId: ReadonlyMap<string, SceneElement>;
   /** Live transforms while dragging. */
   readonly previews: ReadonlyMap<string, Transform>;
-  /** Elements hidden for now, such as strokes the eraser has passed over. */
+  /** Elements hidden for now, such as text while it's edited. */
   readonly hidden: ReadonlySet<string>;
   /** Parts of the canvas covered by UI, in screen px. */
   insets(): { left: number; right: number; top: number };

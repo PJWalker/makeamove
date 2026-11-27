@@ -21,7 +21,7 @@ import type {
  */
 export interface Gesture {
   readonly kind:
-    "draw" | "erase" | "light" | "marquee" | "move" | "pan" | "pinch" | "resize" | "rotate" | "rotateGroup" | "ruler" | "shape" | "trail" | "wall";
+    "draw" | "light" | "marquee" | "move" | "pan" | "pinch" | "resize" | "rotate" | "rotateGroup" | "ruler" | "shape" | "trail" | "wall";
   move?(e: PointerEvent, world: Point, screen: Point): void;
   /** Released: make the change. */
   end?(e: PointerEvent): void;

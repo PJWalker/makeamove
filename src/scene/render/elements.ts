@@ -45,7 +45,7 @@ export default class ElementLayer {
   }
 
   /**
-   * Hide what's hidden for now (erased strokes), and the GM's helpers from
+   * Hide what's hidden for now (text being edited), and the GM's helpers from
    * everyone else: walls always show to the GM, lamps, areas and effect
    * outlines only while they can be picked (`shown`).
    */

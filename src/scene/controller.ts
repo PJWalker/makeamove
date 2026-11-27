@@ -31,7 +31,7 @@ import type {TokenSpec} from "./newElements";
 import type SceneRenderer from "./renderer";
 import type { ElementPatch, SceneDoc as SceneDocument } from "./sceneDoc";
 import { toolCursor } from "./toolCursors";
-import { ERASER_RADIUS, GM_KINDS, kindOf  } from "./tools";
+import { GM_KINDS, kindOf } from "./tools";
 import type {SceneTools} from "./tools";
 import type { Layer, NewElement, SceneElement, TokenElement, TokenStyle, Transform } from "./types";
 import TOOL_PRESS from "./gestures";
@@ -327,7 +327,6 @@ export default class SceneController implements ToolContext {
   }
 
   updateOverlay() {
-    const tool = this.tools.activeTool.value;
     // What's hidden, such as text being edited, has no outline or handles.
     const selected = this.selecting()
       ? this.selected().filter((element) => !this.renderer.hidden.has(element.id))
@@ -348,10 +347,6 @@ export default class SceneController implements ToolContext {
             rot: 0,
           },
       marquee: g?.marqueeRect && this.hover ? g.marqueeRect(this.hover) : null,
-      eraser:
-        tool === "erase" && this.hover
-          ? { p: this.hover, r: ERASER_RADIUS / this.renderer.camera.zoom }
-          : null,
       rangeFrom: this.rangeFrom(),
     };
     this.renderer.invalidate("overlay");
@@ -582,7 +577,6 @@ export default class SceneController implements ToolContext {
       return;
     }
     if (this.selecting() && !this.spaceHeld) this.updateCursor(hoverCursor(this, world, screen));
-    if (this.tools.activeTool.value === "erase") this.updateOverlay();
     this.polygon.preview(world, e);
   }
 

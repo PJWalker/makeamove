@@ -60,9 +60,6 @@
     animation-name: icon-ink-across;
     transform-origin: left center;
   }
-  [data-icon="eraser"][data-playing] .rubber {
-    animation-name: icon-rub;
-  }
   [data-icon="shapes"][data-playing] :is(.p1, .p2, .p3) {
     animation-name: icon-hop;
   }
@@ -402,17 +399,6 @@
   }
   70% {
     transform: translate(-1px, 1px) rotate(-4deg);
-  }
-}
-@keyframes icon-rub {
-  25% {
-    transform: translate(-2px, 2px);
-  }
-  50% {
-    transform: translate(1.5px, -1.5px);
-  }
-  75% {
-    transform: translate(-1px, 1px);
   }
 }
 @keyframes icon-spread-left {

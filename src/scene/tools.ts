@@ -20,7 +20,6 @@ export const TOOL_IDS = [
   "select",
   "pan",
   "draw",
-  "erase",
   "shape",
   "text",
   "ruler",
@@ -51,9 +50,6 @@ interface PenSettings {
   layer: Extract<Layer, "over" | "under">;
   smartShapes: SmartShapes;
 }
-
-/** Eraser radius in screen px. */
-export const ERASER_RADIUS = 14;
 
 /** What the Lights tool places: a lamp, or an area of solid light or dark. */
 export type LightToolMode = AreaTone | "lamp";

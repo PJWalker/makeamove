@@ -95,14 +95,13 @@ export default class SceneRenderer implements RenderState {
   grid: Grid = DEFAULT_GRID;
   /** Live transforms while dragging; committed to the CRDT on release. */
   readonly previews = new Map<string, Transform>();
-  /** Elements to hide for now, such as strokes the eraser has passed over. */
+  /** Elements to hide for now, such as text while it's edited. */
   readonly hidden = new Set<string>();
   overlayState: OverlayState = {
     selected: [],
     handles: false,
     group: null,
     marquee: null,
-    eraser: null,
     rangeFrom: null,
   };
   draft: Draft | null = null;

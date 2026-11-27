@@ -157,16 +157,6 @@ export const IconDraw = glyph("draw", (reference) => (
     <path {...faint} className="stroke" d="M4 20.5h12V22H4z" />
   </>
 ));
-export const IconEraser = glyph(
-  "eraser",
-  <>
-    <g className="rubber">
-      <path {...faint} d="M3.4 14.9 11.9 6.4l5.6 5.6-8.5 8.5H6.4z" />
-      <path d="m11.9 6.4 3-3 5.6 5.6-3 3z" />
-    </g>
-    <path {...line} d="M11 21h9" />
-  </>,
-);
 export const IconShapes = glyph(
   "shapes",
   <>

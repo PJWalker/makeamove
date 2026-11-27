@@ -1,7 +1,6 @@
 import type { ToolId } from "../tools";
 import draw from "./draw";
 import effect from "./effect";
-import erase from "./erase";
 import light from "./light";
 import { pan } from "./pan";
 import ping from "./ping";
@@ -17,7 +16,6 @@ const TOOL_PRESS: Record<ToolId, ToolPress> = {
   select,
   pan,
   draw,
-  erase,
   shape,
   text,
   ruler,

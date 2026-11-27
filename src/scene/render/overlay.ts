@@ -16,8 +16,6 @@ export interface OverlayState {
   /** Frame around a multi-selection, with a knob to rotate it as a group. */
   group: Transform | null;
   marquee: Rect | null;
-  /** The eraser's reach, in world coordinates. */
-  eraser: { p: Point; r: number } | null;
   /** The token this device's targets are measured from, if any. */
   rangeFrom: string | null;
 }
@@ -37,7 +35,7 @@ function drawKnobStem(g: Graphics, t: Transform, points: Point[], cam: Camera): 
   return knob;
 }
 
-/** The selection, its handles, the marquee and the eraser, in screen space. */
+/** The selection, its handles, and the marquee, in screen space. */
 export class OverlayLayer {
   readonly view = new Graphics();
 
@@ -46,7 +44,7 @@ export class OverlayLayer {
   draw(o: OverlayState) {
     const s = this.state;
     const g = this.view.clear();
-    const { selected, handles, group, marquee, eraser } = o;
+    const { selected, handles, group, marquee } = o;
     const cam = s.camera;
 
     for (const element of selected) {
@@ -107,15 +105,6 @@ export class OverlayLayer {
       g.rect(a.x, a.y, marquee.w * cam.zoom, marquee.h * cam.zoom)
         .fill({ color: ACCENT, alpha: 0.08 })
         .stroke({ color: ACCENT, alpha: 0.7, width: 1.5 });
-    }
-
-    if (eraser) {
-      const c = toScreen(cam, eraser.p);
-      g.circle(c.x, c.y, eraser.r * cam.zoom).stroke({
-        color: 0xFF_FF_FF,
-        alpha: 0.7,
-        width: 1.5,
-      });
     }
   }
 }

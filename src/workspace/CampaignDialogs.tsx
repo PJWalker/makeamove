@@ -240,7 +240,6 @@ const SHORTCUTS: [string, string][] = [
   ["T", "Text"],
   ["M", "Measure"],
   ["G", "Ping"],
-  ["E", "Erase drawings"],
   ["Space + drag", "Pan the map"],
   ["Scroll / pinch", "Zoom (trackpads: two fingers pan)"],
   ["⇧1", "Fit the scene"],

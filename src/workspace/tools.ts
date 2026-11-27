@@ -3,7 +3,6 @@ import type { ToolId } from "../scene/tools";
 import {
   IconDraw,
   IconEffects,
-  IconEraser,
   IconLight,
   IconMeasure,
   IconPan,
@@ -27,7 +26,6 @@ const TOOLS: {
   { id: "select", label: "Select", key: "V", Icon: IconSelect },
   { id: "pan", label: "Pan", key: "H", Icon: IconPan },
   { id: "draw", label: "Draw", key: "P", Icon: IconDraw },
-  { id: "erase", label: "Erase", key: "E", Icon: IconEraser },
   { id: "shape", label: "Shapes", key: "R", Icon: IconShapes },
   { id: "text", label: "Text", key: "X", Icon: IconText },
   { id: "ruler", label: "Measure", key: "M", Icon: IconMeasure },

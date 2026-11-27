@@ -23,8 +23,6 @@ const STANDARD: Partial<Record<ToolId, string>> = {
   select: "default",
   pan: "grab",
   text: "text",
-  // The eraser draws its own ring on the canvas.
-  erase: "none",
 };
 
 /** A thin crosshair aimed at (10, 10), clear of the badge to its lower right. */

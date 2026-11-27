@@ -2281,9 +2281,6 @@
     "@typescript-eslint/parameter-properties": {
       "count": 1
     },
-    "complexity": {
-      "count": 1
-    },
     "import/avoid-importing-barrel-files": {
       "count": 1
     },
