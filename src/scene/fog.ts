@@ -102,3 +102,75 @@ export function fogShade(mode: FogMode, vision: boolean, c: FogCover): FogShade 
   if (vision && !c.inSight) return mode === "none" ? "unseen" : "remembered";
   return "clear";
 }
+
+/**
+ * What the scene is painted in, bottom to top: its element layers (see
+ * types.ts LAYERS), with the grid, light, sight and fog between them.
+ * Only the layer above the fog is ever seen over it.
+ */
+export type Stratum =
+  | "aboveFog"
+  | "fog"
+  | "grid"
+  | "light"
+  | "map"
+  | "over"
+  | "sight"
+  | "tint"
+  | "token"
+  | "under";
+
+/** The element layers, the strata elements sit in. */
+export type ElementLayer = "aboveFog" | "map" | "over" | "token" | "under";
+
+/** The order the strata are painted in, bottom to top. */
+export function stack(): Stratum[] {
+  //@ verify
+  return ["map", "grid", "under", "token", "over", "tint", "light", "sight", "fog", "aboveFog"];
+}
+
+/** Where a stratum is painted: higher is on top. */
+export function height(s: Stratum): number {
+  //@ verify
+  //@ ensures 0 <= \result && \result < 10
+  //@ ensures stack()[\result] === s
+  if (s === "map") return 0;
+  if (s === "grid") return 1;
+  if (s === "under") return 2;
+  if (s === "token") return 3;
+  if (s === "over") return 4;
+  if (s === "tint") return 5;
+  if (s === "light") return 6;
+  if (s === "sight") return 7;
+  if (s === "fog") return 8;
+  return 9;
+}
+
+/** The stratum an element layer is painted in. */
+export function stratumOf(layer: ElementLayer): Stratum {
+  //@ verify
+  if (layer === "map") return "map";
+  if (layer === "under") return "under";
+  if (layer === "token") return "token";
+  if (layer === "over") return "over";
+  return "aboveFog";
+}
+
+/** Whether an element in `layer` is painted over the fog. */
+export function overFog(layer: ElementLayer): boolean {
+  //@ verify
+  //@ ensures \result === (layer === "aboveFog")
+  return height(stratumOf(layer)) > height("fog");
+}
+
+/**
+ * Whether a player sees an element in `layer` at a place with `shade`:
+ * fog hides it, unless it's painted over the fog.
+ */
+export function elementSeen(layer: ElementLayer, shade: FogShade): boolean {
+  //@ verify
+  //@ ensures layer === "aboveFog" ==> \result
+  //@ ensures layer !== "aboveFog" && shade === "unseen" ==> !\result
+  //@ ensures shade !== "unseen" ==> \result
+  return shade !== "unseen" || overFog(layer);
+}

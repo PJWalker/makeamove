@@ -4,7 +4,8 @@ import type { ToolPress } from "./types";
 
 /** The Pen: a freehand stroke, pressure-sensitive with a stylus, in the pen's colour, width and layer. */
 export const draw: ToolPress = (c, e, world) => {
-  const { colour, layer } = c.tools.pen.value;
+  const { colour } = c.tools.pen.value;
+  const layer = c.tools.penLayer(c.gm);
   // The pen's width is in screen px; the stroke keeps the world width it had when drawn.
   const width = c.tools.pen.value.width / c.renderer.camera.zoom;
   const points: number[] = [];

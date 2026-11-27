@@ -8,6 +8,10 @@ datatype FogPass = clearExplored | clearRevealed | clearSight | cover | coverHid
 
 datatype FogShade = clear | remembered | unseen
 
+datatype Stratum = aboveFog | fog | grid | light | map_ | over | sight | tint | token | under
+
+datatype ElementLayer = aboveFog | map_ | over | token | under
+
 function isRevealed(mode: FogMode, c: FogCover): bool
 {
   (mode.none? || (if c.hidden then false else (c.revealed || (mode.auto? && (c.explored || c.inSight)))))
@@ -85,5 +89,88 @@ lemma fogShade_ensures(mode: FogMode, vision: bool, c: FogCover)
   ensures (fogShade(mode, vision, c).remembered? ==> (isRevealed(mode, c) && (!mode.none?)))
   ensures ((!mode.none?) ==> c.hidden ==> fogShade(mode, vision, c).unseen?)
   ensures (!(vision) ==> isRevealed(mode, c) ==> fogShade(mode, vision, c).clear?)
+{
+}
+
+function stack(): seq<Stratum>
+{
+  [Stratum.map_, Stratum.grid, Stratum.under, Stratum.token, Stratum.over, Stratum.tint, Stratum.light, Stratum.sight, Stratum.fog, Stratum.aboveFog]
+}
+
+function height(s: Stratum): int
+{
+  if s.map_? then
+    0
+  else
+    if s.grid? then
+      1
+    else
+      if s.under? then
+        2
+      else
+        if s.token? then
+          3
+        else
+          if s.over? then
+            4
+          else
+            if s.tint? then
+              5
+            else
+              if s.light? then
+                6
+              else
+                if s.sight? then
+                  7
+                else
+                  if s.fog? then
+                    8
+                  else
+                    9
+}
+
+lemma height_ensures(s: Stratum)
+  ensures (0 <= height(s))
+  ensures (height(s) < 10)
+  ensures (stack()[height(s)] == s)
+{
+}
+
+function stratumOf(layer: ElementLayer): Stratum
+{
+  if layer.map_? then
+    Stratum.map_
+  else
+    if layer.under? then
+      Stratum.under
+    else
+      if layer.token? then
+        Stratum.token
+      else
+        if layer.over? then
+          Stratum.over
+        else
+          Stratum.aboveFog
+}
+
+function overFog(layer: ElementLayer): bool
+{
+  (height(stratumOf(layer)) > height(Stratum.fog))
+}
+
+lemma overFog_ensures(layer: ElementLayer)
+  ensures (overFog(layer) == layer.aboveFog?)
+{
+}
+
+function elementSeen(layer: ElementLayer, shade: FogShade): bool
+{
+  ((!shade.unseen?) || overFog(layer))
+}
+
+lemma elementSeen_ensures(layer: ElementLayer, shade: FogShade)
+  ensures (layer.aboveFog? ==> elementSeen(layer, shade))
+  ensures ((!layer.aboveFog?) ==> shade.unseen? ==> !(elementSeen(layer, shade)))
+  ensures ((!shade.unseen?) ==> elementSeen(layer, shade))
 {
 }

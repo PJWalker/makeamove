@@ -142,8 +142,7 @@ function parseElement(m: Item<typeof sceneElement>, id: string): Invalid | Scene
 
 /** What a character saw from one place: a polygon in the world, flat [x, y, …]. */
 function parseExplored(points: number[]): Invalid | number[] {
-  if (points.length < 6 || points.length % 2 !== 0)
-    return new Invalid("its outline is missing");
+  if (points.length < 6 || points.length % 2 !== 0) return new Invalid("its outline is missing");
   return points;
 }
 
