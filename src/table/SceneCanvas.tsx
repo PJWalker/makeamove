@@ -26,6 +26,7 @@ import SceneSettingsFields from "./SceneSettingsFields";
 import SelectionBar from "./SelectionBar";
 import TextEditor from "./TextEditor";
 import TokenOptionsDialog from "./TokenOptionsDialog";
+import useSceneClipboard from "./useSceneClipboard";
 import {
   useLighting,
   useSceneController,
@@ -108,6 +109,7 @@ function SceneCanvas({ campaign, sceneId }: { campaign: Campaign; sceneId: strin
   } = useSceneCanvasInteractions(controller, hostReference);
   useSceneTargeting(ctx, controller);
   useSceneShortcuts(controller);
+  useSceneClipboard(controller);
 
   return (
     <>

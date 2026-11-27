@@ -71,6 +71,11 @@ export interface TableCommand<P = void, R = unknown> extends Command<CampaignCon
   detail?: Shown<P, string | undefined>;
   /** Built-in shortcuts, as `comboOf` writes them; `Mod` is Cmd on a Mac and Ctrl elsewhere. The first is shown. */
   keys?: string[];
+  /**
+   * A shortcut the browser turns into its own event (Copy, Cut, Paste),
+   * handled there so text fields keep it: shown beside the command, never bound.
+   */
+  nativeKey?: string;
   danger?: boolean;
   /** For something that turns on and off: whether it's on. */
   checked?: (context: CampaignContext, parameters: P) => boolean;
@@ -79,7 +84,9 @@ export interface TableCommand<P = void, R = unknown> extends Command<CampaignCon
   /** The calls listed in the palette and pinnable to the hotbar. */
   offers?: (context: CampaignContext) => Offer<P>[];
   /** The calls listed in the context menu of each kind of object it applies to. */
-  menu?: { [K in TargetKind]?: (context: CampaignContext, target: CommandTargets[K]) => Offer<P>[] };
+  menu?: {
+    [K in TargetKind]?: (context: CampaignContext, target: CommandTargets[K]) => Offer<P>[];
+  };
   section?: MenuSection;
   /** Ways to type it in the chat box, like `/r 2d6`. */
   slash?: SlashForm<P>[];

@@ -2,16 +2,8 @@ import { callKey } from "../../kernel/commands";
 import type { MenuItem } from "../../ui/ContextMenu";
 import type { CampaignContext } from "../campaignContext";
 import { platformCombo, shortcutFor, showCombo } from "./custom";
-import {
-  MENU_SECTIONS
-  
-  
-  
-  
-  
-  
-} from "./types";
-import type {Action, AnyTableCommand, MenuSection, Offer, TableCommand, Target} from "./types";
+import { MENU_SECTIONS } from "./types";
+import type { Action, AnyTableCommand, MenuSection, Offer, TableCommand, Target } from "./types";
 
 /*
  * Views over the command registry: what the palette and hotbar list, and
@@ -27,7 +19,8 @@ export const shown = <T, P>(
   v: T | ((context: CampaignContext, parameters: P) => T),
   context: CampaignContext,
   p: P,
-): T => (typeof v === "function" ? (v as (context_: CampaignContext, parameters: P) => T)(context, p) : v);
+): T =>
+  typeof v === "function" ? (v as (context_: CampaignContext, parameters: P) => T)(context, p) : v;
 
 /** Run a call from a view, asking first if its command wants confirming. */
 export function invoke(context: CampaignContext, command: AnyTableCommand, parameters: unknown) {
@@ -48,7 +41,8 @@ export function actionFor(
   const id = callKey(command.id, params);
   const keys = (offer.keys ?? command.keys ?? []).map((k) => platformCombo(k));
   const own = shortcutFor(context.campaign, id);
-  const hint = own ? showCombo(own) : keys[0] && showCombo(keys[0]);
+  const keyShown = keys[0] ?? (command.nativeKey && platformCombo(command.nativeKey));
+  const hint = own ? showCombo(own) : keyShown && showCombo(keyShown);
   return {
     id,
     command,
@@ -57,7 +51,9 @@ export function actionFor(
     title: offer.title ?? shown(command.title, context, params),
     source: command.source ? shown(command.source, context, params) : "Core",
     available: context.commands.check(command, params),
-    run: () => { invoke(context, command, params); },
+    run: () => {
+      invoke(context, command, params);
+    },
     ...(offer.group ? { group: offer.group } : {}),
     ...(aliases.length > 0 ? { aliases } : {}),
     ...(offer.tags ? { tags: offer.tags } : {}),

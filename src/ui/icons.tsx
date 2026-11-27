@@ -1,5 +1,5 @@
-import {   useId } from "react";
-import type {ComponentType, ReactNode} from "react";
+import { useId } from "react";
+import type { ComponentType, ReactNode } from "react";
 
 /*
  * Every interface icon in the app, named for what it means rather than what
@@ -12,7 +12,10 @@ import type {ComponentType, ReactNode} from "react";
  * instead: see entryIcons.tsx.
  */
 
-export interface IconProps { size?: number; className?: string }
+export interface IconProps {
+  size?: number;
+  className?: string;
+}
 export type Icon = ComponentType<IconProps>;
 
 /** Icons on the main toolbar and the sidebar tabs. */
@@ -447,6 +450,67 @@ export const IconBackward = glyph(
     <rect {...faint} x="13" y="13" width="8" height="8" />
   </>,
 );
+export const IconCopy = glyph(
+  "copy",
+  <>
+    <rect {...faint} x="3" y="3" width="12" height="14" />
+    <rect {...line} x="9" y="7.5" width="11.5" height="13.5" />
+  </>,
+);
+export const IconCut = glyph(
+  "cut",
+  <>
+    <path {...line} d="M8.5 15 18.5 3M15.5 15 5.5 3" />
+    <circle {...line} cx="6.5" cy="18" r="3" />
+    <circle {...line} cx="17.5" cy="18" r="3" />
+  </>,
+);
+export const IconPaste = glyph(
+  "paste",
+  <>
+    <path {...faint} d="M4 4.5h16V22H4z" />
+    <rect x="8" y="2.5" width="8" height="4" />
+    <path {...line} d="M8 12h8M8 16.5h5" />
+  </>,
+);
+export const IconGroup = glyph(
+  "group",
+  <>
+    <path {...line} strokeDasharray="3 2.5" d="M2.5 2.5h19v19h-19z" />
+    <rect x="6" y="6" width="6" height="6" />
+    <circle {...faint} cx="15" cy="15" r="3.5" />
+  </>,
+);
+export const IconUngroup = glyph(
+  "ungroup",
+  <>
+    <rect x="3" y="3" width="7" height="7" />
+    <circle {...faint} cx="17" cy="17" r="4" />
+    <path {...line} strokeDasharray="2.5 2.5" d="M14 3h7v7M3 14v7h7" />
+  </>,
+);
+export const IconLayers = glyph(
+  "layers",
+  <>
+    <path {...faint} d="m12 13 10 4.5-10 4.5-10-4.5z" />
+    <path d="m12 2 10 5-10 5L2 7z" />
+    <path {...line} d="m4 12 8 4 8-4" />
+  </>,
+);
+export const IconVisible = glyph(
+  "visible",
+  <>
+    <path {...faint} d="M1.5 12C4 7 8 4.5 12 4.5S20 7 22.5 12C20 17 16 19.5 12 19.5S4 17 1.5 12z" />
+    <circle cx="12" cy="12" r="4" />
+  </>,
+);
+export const IconHidden = glyph(
+  "hidden",
+  <>
+    <path {...faint} d="M1.5 12C4 7 8 4.5 12 4.5S20 7 22.5 12C20 17 16 19.5 12 19.5S4 17 1.5 12z" />
+    <path {...line} strokeWidth="2.5" d="M4 20 20 4" />
+  </>,
+);
 export const IconDuplicate = glyph(
   "duplicate",
   <>
@@ -782,14 +846,8 @@ export const IconSearch = glyph("search", (reference) => (
     <path d="m14.6 16.7 2.1-2.1 5.3 5.3-2.1 2.1z" />
   </>
 ));
-export const IconPause = glyph(
-  "pause",
-  <path fill="currentColor" d="M7 5h3v14H7zm7 0h3v14h-3z" />,
-);
-export const IconPlay = glyph(
-  "play",
-  <path fill="currentColor" d="M7 4l11 8-11 8z" />,
-);
+export const IconPause = glyph("pause", <path fill="currentColor" d="M7 5h3v14H7zm7 0h3v14h-3z" />);
+export const IconPlay = glyph("play", <path fill="currentColor" d="M7 4l11 8-11 8z" />);
 export const IconClose = glyph(
   "close",
   <path {...line} strokeWidth="2.5" d="M6 6l12 12M18 6 6 18" />,

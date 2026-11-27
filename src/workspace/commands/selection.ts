@@ -1,8 +1,11 @@
 import { arrayOf, isObject, isString, objectOf } from "../../lib/guards";
 import type { Guard } from "../../lib/guards";
-import type { SceneElement } from "../../scene/types";
+import { elementsFromClipboard } from "../../scene/clipboard";
+import type { NewElement, SceneElement } from "../../scene/types";
 import {
   IconAdd,
+  IconCopy,
+  IconCut,
   IconBackward,
   IconDelete,
   IconDuplicate,
@@ -11,17 +14,17 @@ import {
   IconImage,
   IconLock,
   IconMap,
+  IconPaste,
   IconRename,
   IconToBack,
   IconToFront,
   IconToken,
-  IconUnlock
-  
+  IconUnlock,
 } from "../../ui/icons";
-import type {Icon} from "../../ui/icons";
+import type { Icon } from "../../ui/icons";
 import type { CampaignContext } from "../campaignContext";
-import { command   } from "./types";
-import type {CommandTargets, Offer} from "./types";
+import { command } from "./types";
+import type { CommandTargets, Offer } from "./types";
 
 /*
  * What can be done with what's selected on the open scene, and with an
@@ -55,7 +58,7 @@ function chosen(context: CampaignContext, p: Selection | undefined): SceneElemen
  */
 const selectionCommand = (
   id: string,
-  look: { title: string; icon: Icon; keys?: string[]; danger?: boolean },
+  look: { title: string; icon: Icon; keys?: string[]; nativeKey?: string; danger?: boolean },
   section: "arrange" | "delete" | "edit",
   edit: (context: CampaignContext, ids: string[]) => void,
   {
@@ -114,6 +117,32 @@ export const sendToBack = selectionCommand(
   { title: "Send to Back", icon: IconToBack, keys: ["Mod+Shift+["] },
   "arrange",
   (context, ids) => open(context)?.controller.arrange(ids, { to: "back" }),
+);
+
+/** Put clipboard HTML on the system clipboard, from a menu: the keys copy through the browser's own event. */
+async function writeClipboard(html: string | null) {
+  if (!html) return;
+  try {
+    await navigator.clipboard.write([
+      new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }) }),
+    ]);
+  } catch (error) {
+    console.error("Couldn't copy to the clipboard", error);
+  }
+}
+
+export const copy = selectionCommand(
+  "selection.copy",
+  { title: "Copy", icon: IconCopy, nativeKey: "Mod+C" },
+  "edit",
+  (context, ids) => void writeClipboard(open(context)?.controller.copy(ids) ?? null),
+);
+
+export const cut = selectionCommand(
+  "selection.cut",
+  { title: "Cut", icon: IconCut, nativeKey: "Mod+X" },
+  "edit",
+  (context, ids) => void writeClipboard(open(context)?.controller.copy(ids, { cut: true }) ?? null),
 );
 
 export const duplicate = selectionCommand(
@@ -249,6 +278,44 @@ export const addImageHere = command<Place>({
   run: (context, { sceneId, at }) => open(context, sceneId)?.importImagesAt(at),
 });
 
+/** One clipboard item's scene elements, or else its image. */
+async function readItem(item: ClipboardItem): Promise<File | NewElement[] | null> {
+  if (item.types.includes("text/html")) {
+    const html = await item.getType("text/html");
+    const copies = elementsFromClipboard(await html.text());
+    if (copies) return copies;
+  }
+  const type = item.types.find((t) => t.startsWith("image/"));
+  return type ? new File([await item.getType(type)], "Pasted image", { type }) : null;
+}
+
+/** Paste what's on the system clipboard at a place, from a menu: scene elements, or else images. */
+async function pasteAt(context: CampaignContext, { sceneId, at }: Place) {
+  try {
+    const items = await navigator.clipboard.read();
+    const read = await Promise.all(items.map(async (item) => readItem(item)));
+    const controller = open(context, sceneId)?.controller;
+    const copies = read.find((r) => Array.isArray(r));
+    if (copies) controller?.paste(copies, at);
+    else await controller?.importFiles(read.filter((r) => r instanceof File), at);
+  } catch (error) {
+    console.error("Couldn't paste from the clipboard", error);
+  }
+}
+
+export const pasteHere = command<Place>({
+  id: "canvas.paste",
+  params: isPlace,
+  title: "Paste Here",
+  icon: IconPaste,
+  nativeKey: "Mod+V",
+  section: "edit",
+  transact: false,
+  available: sceneOpen,
+  menu: { canvas: (_, t) => [{ params: t }] },
+  run: (context, place) => void pasteAt(context, place),
+});
+
 export const sceneSettings = command<Place>({
   id: "canvas.settings",
   params: isPlace,
@@ -257,7 +324,9 @@ export const sceneSettings = command<Place>({
   section: "edit",
   transact: false,
   menu: { canvas: (_, t) => [{ params: t }] },
-  run: (context) => { context.canvas.sceneSettingsOpen.set(true); },
+  run: (context) => {
+    context.canvas.sceneSettingsOpen.set(true);
+  },
 });
 
 export const selectionCommands = [
@@ -268,11 +337,14 @@ export const selectionCommands = [
   bringForward,
   sendBackward,
   sendToBack,
+  copy,
+  cut,
   duplicate,
   lock,
   unlock,
   deleteSelection,
   addTokenHere,
   addImageHere,
+  pasteHere,
   sceneSettings,
 ];

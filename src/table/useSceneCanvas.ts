@@ -1,5 +1,5 @@
-import { useEffect, useEffectEvent, useRef, useState  } from "react";
-import type {RefObject} from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
+import type { RefObject } from "react";
 import { watch } from "../lib/store";
 import { device } from "../platform/device";
 import SceneController from "../scene/controller";
@@ -12,14 +12,17 @@ import { tokenMarksSource } from "../features/combat/api";
 import { listCharacters, systemOf, tokenStatsSource } from "../features/characters/api";
 import useConstant from "../ui/useConstant";
 import isTyping from "../ui/keys";
-import { useCampaign  } from "../workspace/campaignContext";
-import type {CampaignContext} from "../workspace/campaignContext";
+import { useCampaign } from "../workspace/campaignContext";
+import type { CampaignContext } from "../workspace/campaignContext";
 import bindSceneDrops from "./sceneDrops";
 
 /* The scene canvas's subscriptions: what the renderer and the scene controller are fed from the table, and what they feed back. */
 
 /** The PixiJS renderer in `host`, kept current with the table's drops, token stats and condition marks. */
-export function useSceneRenderer(campaign: Campaign, hostReference: RefObject<HTMLDivElement | null>) {
+export function useSceneRenderer(
+  campaign: Campaign,
+  hostReference: RefObject<HTMLDivElement | null>,
+) {
   const context = useCampaign();
   const renderer = useConstant(() => new SceneRenderer(context.blobs));
   const [ready, setReady] = useState(false);
@@ -38,23 +41,33 @@ export function useSceneRenderer(campaign: Campaign, hostReference: RefObject<HT
   }, [context, ready, renderer]);
 
   useEffect(() => {
-    void renderer.init(hostReference.current!).then(() => { setReady(true); });
-    return () => { renderer.destroy(); };
+    void renderer.init(hostReference.current!).then(() => {
+      setReady(true);
+    });
+    return () => {
+      renderer.destroy();
+    };
   }, [renderer, hostReference]);
 
   // Keep linked tokens' stats current as characters change.
   useEffect(() => {
     if (!ready) return;
-    const push = () => { renderer.setTokenStats(tokenStatsSource(campaign)); };
+    const push = () => {
+      renderer.setTokenStats(tokenStatsSource(campaign));
+    };
     push();
     const stopObserving = campaign.characters.observe(push);
-    return () => { stopObserving(); };
+    return () => {
+      stopObserving();
+    };
   }, [ready, campaign, renderer]);
 
   // Condition pips on linked tokens, and the ring on whoever's turn it is.
   useEffect(() => {
     if (!ready) return;
-    const push = () => { renderer.setTokenMarks(tokenMarksSource(campaign)); };
+    const push = () => {
+      renderer.setTokenMarks(tokenMarksSource(campaign));
+    };
     push();
     const stopObservingCharacters = campaign.characters.observe(push);
     const stopObservingCombat = campaign.combat.observe(push);
@@ -109,9 +122,15 @@ export function useLighting(campaign: Campaign, controller: SceneController | nu
       );
       const eyes = ctl
         .allElements()
-        .flatMap((element) => (element.type === "token" && mine.has(element.characterId ?? "") ? [element.id] : []));
+        .flatMap((element) =>
+          element.type === "token" && mine.has(element.characterId ?? "") ? [element.id] : [],
+        );
       // A player with no tokens here sees the whole scene, rather than nothing.
-      ctl.renderer.setLighting(lighting, !gm && lighting.vision && eyes.length > 0 ? eyes : null, gm);
+      ctl.renderer.setLighting(
+        lighting,
+        !gm && lighting.vision && eyes.length > 0 ? eyes : null,
+        gm,
+      );
     };
     push();
     const stopWatchingRevision = watch([ctl.revision], push);
@@ -150,7 +169,10 @@ export function useSceneController(
       ...systemOf(campaign).scene,
     }).then((s) => {
       scene = s;
-      if (cancelled) { s.destroy(); return; }
+      if (cancelled) {
+        s.destroy();
+        return;
+      }
       ctl = new SceneController(
         s,
         renderer,
@@ -194,7 +216,7 @@ export function useSceneTargeting(context: CampaignContext, controller: SceneCon
       return;
     }
     return watch([controller.targets, controller.revision], () => {
-      const {grid} = controller.renderer;
+      const { grid } = controller.renderer;
       context.canvas.chosenTargets.set(controller.targetDetails());
       context.canvas.sceneDistance.set((d) => formatDistance(grid, d));
     });
@@ -205,8 +227,11 @@ export function useSceneTargeting(context: CampaignContext, controller: SceneCon
     if (!controller) return;
     return watch([context.canvas.areaRequest], () => {
       const request = context.canvas.areaRequest.value;
-      if (!request) { controller.placeArea(null); return; }
-      const {grid} = controller.renderer;
+      if (!request) {
+        controller.placeArea(null);
+        return;
+      }
+      const { grid } = controller.renderer;
       const px = (units: number) => (units / (grid.unit || 1)) * grid.size;
       const { area } = request;
       const shape =
@@ -234,7 +259,9 @@ export function useSceneTargeting(context: CampaignContext, controller: SceneCon
             controller
               .allElements()
               .flatMap((element) =>
-                element.type === "token" && request.actor && element.characterId === request.actor ? [element.id] : [],
+                element.type === "token" && request.actor && element.characterId === request.actor
+                  ? [element.id]
+                  : [],
               ),
           );
           const covered = placed.covered.filter((id) => !(fromActor && actorTokens.has(id)));
@@ -256,7 +283,7 @@ export function useTextRequests(controller: SceneController | null) {
   return [request, setRequest] as const;
 }
 
-/** Keyboard shortcuts and paste for the scene, unless a field or dialog has the keyboard. */
+/** Keyboard shortcuts for the scene, unless a field or dialog has the keyboard. */
 export function useSceneShortcuts(controller: SceneController | null) {
   const onDown = useEffectEvent((e: KeyboardEvent) => {
     // Pop-ups are non-modal: only keys aimed inside one stay with it.
@@ -269,29 +296,19 @@ export function useSceneShortcuts(controller: SceneController | null) {
   });
   const onUp = useEffectEvent((e: KeyboardEvent) => controller?.onKeyUp(e));
   const onBlur = useEffectEvent(() => controller?.onBlur());
-  const onPaste = useEffectEvent((e: ClipboardEvent) => {
-    const ctl = controller;
-    const files = [...(e.clipboardData?.files ?? [])].filter((f) => f.type.startsWith("image/"));
-    if (!ctl || files.length === 0 || isTyping(e.target)) return;
-    e.preventDefault();
-    void ctl.importFiles(files, ctl.centre());
-  });
   useEffect(() => {
     const onDownListener = (e: KeyboardEvent) => {
       onDown(e);
     };
     const onUpListener = (e: KeyboardEvent) => onUp(e);
     const onBlurListener = () => onBlur();
-    const onPasteListener = (e: ClipboardEvent) => { onPaste(e); };
     globalThis.addEventListener("keydown", onDownListener);
     globalThis.addEventListener("keyup", onUpListener);
     window.addEventListener("blur", onBlurListener);
-    document.addEventListener("paste", onPasteListener);
     return () => {
       globalThis.removeEventListener("keydown", onDownListener);
       globalThis.removeEventListener("keyup", onUpListener);
       window.removeEventListener("blur", onBlurListener);
-      document.removeEventListener("paste", onPasteListener);
     };
   }, []);
 }
