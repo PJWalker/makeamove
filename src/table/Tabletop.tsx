@@ -37,6 +37,8 @@ export function Tabletop({ campaign }: { campaign: Campaign }) {
     campaign.members,
     () => campaign.isGm() && !!systemOf(campaign).gmReference?.length,
   );
+  // The GM shadow is the GM's alone.
+  const gm = useQuery(campaign.members, () => campaign.isGm());
   // My Character is there once this device has claimed one.
   const playing = useQuery(campaign.members, () => !!playedCharacterId(campaign));
   useLayoutEffect(() => {
@@ -44,11 +46,12 @@ export function Tabletop({ campaign }: { campaign: Campaign }) {
       ...(playing ? [] : (["pc"] as const)),
       ...(combat ? [] : (["combat"] as const)),
       ...(reference ? [] : (["reference"] as const)),
+      ...(gm ? [] : (["shadow"] as const)),
     ]);
     return () => {
       context.panels.unavailablePanels.set([]);
     };
-  }, [context, playing, combat, reference]);
+  }, [context, playing, combat, reference, gm]);
   const activeId = useQuery(campaign.members, () => campaign.activeSceneId());
   const scene = scenes.find((s) => s.id === activeId) ?? scenes[0];
 

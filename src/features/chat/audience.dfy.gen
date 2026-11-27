@@ -25,3 +25,14 @@ lemma seenBy_ensures(a: Audience, me: string, isGm: bool)
   ensures (!(a.whisper) ==> (seenBy(a, me, isGm).masked? == ((a.secretRoll && !(isGm)) && (a.author != me))))
 {
 }
+
+function shadowReads(a: Audience, gm: string): bool
+{
+  ((!(a.whisper) || (a.author == gm)) || (gm in a.to))
+}
+
+lemma shadowReads_ensures(a: Audience, gm: string)
+  ensures (shadowReads(a, gm) == seenBy(a, gm, true).full?)
+  ensures (a.whisper ==> (a.author != gm) ==> !((gm in a.to)) ==> !(shadowReads(a, gm)))
+{
+}

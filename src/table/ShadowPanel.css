@@ -1,0 +1,113 @@
+@layer layout {
+  /* The GM shadow */
+  .shadow-panel {
+    display: grid;
+    align-content: start;
+    gap: var(--space-3);
+    padding-bottom: var(--space-3);
+    & section,
+    & details {
+      padding-inline: var(--space-3);
+    }
+    & h3 {
+      margin: 0 0 var(--space-1);
+      font-family: var(--font-display);
+      font-size: 1em;
+    }
+  }
+  .shadow-bar {
+    display: grid;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    background: var(--surface-sunken);
+  }
+  .shadow-status {
+    display: grid;
+    gap: var(--space-1);
+    margin: 0;
+    color: var(--text-muted);
+    & progress {
+      width: 100%;
+    }
+  }
+  .shadow-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+  }
+  .shadow-listening {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0;
+    color: var(--danger);
+    font-weight: 600;
+  }
+  .shadow-listening-dot {
+    width: 0.6em;
+    height: 0.6em;
+    border-radius: 50%;
+    background: var(--danger);
+    animation: shadow-pulse 1.6s ease-in-out infinite;
+  }
+  .shadow-error {
+    margin: 0;
+    padding-inline: var(--space-3);
+    color: var(--danger);
+  }
+  .shadow-list,
+  .shadow-facts {
+    display: grid;
+    gap: var(--space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .shadow-item {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: var(--space-2);
+    & > :first-child {
+      flex: 1;
+    }
+    & dt {
+      font-weight: 600;
+    }
+    & dd {
+      margin: 0;
+      color: var(--text-muted);
+    }
+    &[data-resolved] > span {
+      text-decoration: line-through;
+      color: var(--text-muted);
+    }
+  }
+  .shadow-forgotten h3 {
+    color: var(--danger);
+  }
+  .shadow-summary {
+    margin: 0;
+    white-space: pre-wrap;
+  }
+  .shadow-heard ol {
+    margin: var(--space-1) 0 0;
+    padding-inline-start: 1.2em;
+    color: var(--text-muted);
+  }
+  .shadow-forget {
+    justify-self: start;
+    margin-inline: var(--space-3);
+  }
+}
+
+@keyframes shadow-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shadow-listening-dot {
+    animation: none;
+  }
+}

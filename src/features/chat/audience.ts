@@ -27,3 +27,15 @@ export function seenBy(a: Audience, me: string, isGm: boolean): Seen {
   if (a.secretRoll && !isGm && a.author !== me) return "masked";
   return "full";
 }
+
+/**
+ * Whether the GM shadow (features/shadow) may read a message. Proved: it
+ * reads exactly what the GM sees in full, so a whisper between players never
+ * reaches it.
+ */
+export function shadowReads(a: Audience, gm: string): boolean {
+  //@ verify
+  //@ ensures \result === (seenBy(a, gm, true) === "full")
+  //@ ensures a.whisper && a.author !== gm && !a.to.includes(gm) ==> !\result
+  return !a.whisper || a.author === gm || a.to.includes(gm);
+}

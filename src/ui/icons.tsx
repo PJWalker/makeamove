@@ -826,3 +826,21 @@ export const IconCheck = glyph(
   "check",
   <path {...line} strokeWidth="2.5" pathLength={1} d="M4.5 12.5l5 5 10-11" />,
 );
+/** The GM shadow: a hooded figure whose eyes blink. */
+export const IconShadow = glyph(
+  "shadow",
+  <>
+    <path d="M12 2c-4.4 0-7 3.6-7 8.5V22h14V10.5C19 5.6 16.4 2 12 2z" />
+    <g className="eye" fill="black">
+      <path d="M8.5 11.2h2.6v1.6H8.5zM12.9 11.2h2.6v1.6h-2.6z" />
+    </g>
+  </>,
+);
+/** Listening to the GM: a microphone. */
+export const IconMicrophone = glyph(
+  "microphone",
+  <>
+    <rect x="9" y="2" width="6" height="12" rx="3" />
+    <path {...line} d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7" />
+  </>,
+);

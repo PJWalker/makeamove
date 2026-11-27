@@ -48,6 +48,11 @@ const NotesPanel = lazy(() =>
 const CombatPanel = lazy(() =>
   import("./CombatPanel").then((module) => ({ default: module.CombatPanel })),
 );
+const ShadowPanel = lazy(() =>
+  import(/* webpackChunkName: "shadow-panel" */ "./ShadowPanel").then((module) => ({
+    default: module.ShadowPanel,
+  })),
+);
 const ItemsPanel = lazy(() =>
   import("./ItemsPanel").then((module) => ({ default: module.ItemsPanel })),
 );
@@ -59,6 +64,7 @@ const PANEL_COMPONENTS: Record<PanelId, ComponentType<{ campaign: Campaign }>> =
   characters: CharactersPanel,
   libraries: LibrariesPanel,
   reference: ReferencePanel,
+  shadow: ShadowPanel,
   notes: NotesPanel,
   combat: CombatPanel,
   items: ItemsPanel,

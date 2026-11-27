@@ -101,7 +101,15 @@ describe("panel layout", () => {
       false,
     );
     expect(l.left.panels).toEqual(["characters", "scene", "pc", "combat"]);
-    expect(l.right.panels).toEqual(["chat", "notes", "members", "libraries", "reference", "items"]);
+    expect(l.right.panels).toEqual([
+      "chat",
+      "notes",
+      "members",
+      "libraries",
+      "reference",
+      "shadow",
+      "items",
+    ]);
   });
 
   it("leaves out panels the campaign doesn’t have, as shown", () => {
@@ -215,7 +223,15 @@ describe("panel layout", () => {
     expect(l.left.panels).toEqual([id, "characters", "scene", "pc", "combat"]);
     expect(l.left.active).toBe(id);
     expect(locate(l, "entity:link:note:page")).toBe("floating");
-    expect(l.right.panels).toEqual(["chat", "libraries", "reference", "items", "notes", "members"]);
+    expect(l.right.panels).toEqual([
+      "chat",
+      "libraries",
+      "reference",
+      "shadow",
+      "items",
+      "notes",
+      "members",
+    ]);
   });
 });
 
