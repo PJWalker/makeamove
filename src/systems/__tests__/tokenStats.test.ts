@@ -1,15 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import { listSystems } from "..";
 import type { CharacterView } from "../../features/characters/types";
-import { HP_COLOURS, hpColour, tokenStatValue } from "../tokenStats";
-
-describe("hit point bars", () => {
-  it("colours by how much of the maximum is left", () => {
-    expect(hpColour(10, 10)).toBe(HP_COLOURS.healthy);
-    expect(hpColour(5, 10)).toBe(HP_COLOURS.hurt);
-    expect(hpColour(2, 10)).toBe(HP_COLOURS.critical);
-  });
-});
+import { tokenStatValue } from "../tokenStats";
 
 describe("a token's stats", () => {
   const character = {

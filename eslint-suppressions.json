@@ -1980,7 +1980,7 @@
   },
   "src/scene/__tests__/downed.test.ts": {
     "@typescript-eslint/no-magic-numbers": {
-      "count": 4
+      "count": 1
     }
   },
   "src/scene/__tests__/edgePin.test.ts": {
@@ -3213,9 +3213,6 @@
     }
   },
   "src/systems/__tests__/tokenStats.test.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 6
-    },
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 2
     },

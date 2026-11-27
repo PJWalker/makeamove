@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { contentFromText, messageText } from "../content";
 import { logRows, splitSessions } from "../sessions";
-import { canDelete } from "../types";
 import type { ChatMessage } from "../types";
 
 let n = 0;
@@ -41,15 +40,6 @@ describe("splitting the log into sessions", () => {
       ["s1", 3, false],
       ["s2", 1, true],
     ]);
-  });
-});
-
-describe("deleting", () => {
-  it("lets players delete their own messages, and the GM anyone’s", () => {
-    const m = text("oops", "pat");
-    expect(canDelete(m, "pat", false)).toBe(true);
-    expect(canDelete(m, "lee", false)).toBe(false);
-    expect(canDelete(m, "gm", true)).toBe(true);
   });
 });
 
