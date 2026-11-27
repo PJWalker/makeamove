@@ -52,7 +52,7 @@ import {
   campaignDbName as campaignDatabaseName,
   campaignUiDbName as campaignUiDatabaseName,
 } from "./storage";
-import { checkedIn, removedBy } from "./standing";
+import { checkedIn, letBack, removedBy } from "./standing";
 import type { Standing } from "./standing";
 
 export type { CampaignDefaults, MemberView, RevokedView, Role, SceneView } from "./types";
@@ -358,7 +358,7 @@ export class Campaign {
 
   /** Let a removed player back in; they rejoin with the invite link. */
   allowBack(id: string) {
-    this.revoked.delete(id);
+    if (!letBack(this.standingOf(id)).removed) this.revoked.delete(id);
   }
 
   ensureMember(name: string, role: Role = "player") {
