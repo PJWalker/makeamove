@@ -2974,9 +2974,6 @@
     }
   },
   "src/sync/invite.ts": {
-    "@typescript-eslint/no-magic-numbers": {
-      "count": 1
-    },
     "@typescript-eslint/restrict-plus-operands": {
       "count": 1
     }

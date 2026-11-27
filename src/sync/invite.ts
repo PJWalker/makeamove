@@ -3,13 +3,15 @@
  * parts sit in the URL fragment, so the room key never reaches a server.
  */
 
+import { inviteText, readInvite } from "./inviteText";
+
 export interface Invite {
   campaignId: string;
   roomKey: string;
 }
 
 export function inviteHash({ campaignId, roomKey }: Invite): string {
-  return `#join=${campaignId}.${roomKey}`;
+  return inviteText("", campaignId, roomKey);
 }
 
 export function inviteUrl(invite: Invite, base = location.href.split("#")[0]): string {
@@ -18,8 +20,6 @@ export function inviteUrl(invite: Invite, base = location.href.split("#")[0]): s
 
 /** Read an invite from a link or a bare hash; null if it isn't one. */
 export function parseInvite(text: string): Invite | null {
-  const m = /#?join=([\da-z]+)\.([\w-]{16,})\s*$/.exec(text);
-  const campaignId = m?.[1];
-  const roomKey = m?.[2];
-  return campaignId && roomKey ? { campaignId, roomKey } : null;
+  const { found, campaignId, roomKey } = readInvite(text);
+  return found ? { campaignId, roomKey } : null;
 }
