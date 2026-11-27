@@ -1,7 +1,7 @@
-import { emptyRichText  } from "../../data/richText";
-import type {RichText} from "../../data/richText";
-import { roll  } from "../dice/notation";
-import type {Roll} from "../dice/notation";
+import { emptyRichText } from "../../data/richText";
+import type { RichText } from "../../data/richText";
+import { roll } from "../dice/notation";
+import type { Roll } from "../dice/notation";
 
 import type { MoveSuggestion, MoveTarget, SaveRequest } from "../chat/types";
 import type {
@@ -13,6 +13,8 @@ import type {
   GameSystem,
   SaveStep,
 } from "../../systems/types";
+import { canAfford, mergeCosts } from "./costs";
+import type { Cost, Spend } from "./costs";
 import type { CharacterView } from "./types";
 
 /*
@@ -41,7 +43,7 @@ export interface MovePlan {
   formula: string;
   /** Modifiers the roll uses up, by id. */
   spends: string[];
-  resources: { id: string; by: number }[];
+  resources: Spend[];
   rollValues: Record<string, number>;
 }
 
@@ -107,18 +109,11 @@ function difficultyValue(
 }
 
 export function canPayMove(c: CharacterView, plan: MovePlan): boolean {
-  return plan.resources.every(({ id, by }) => (c.resources[id] ?? 0) + by >= 0);
+  return canAfford(c.resources, plan.resources);
 }
 
-function resourcesFor(
-  action: ActionDef,
-  variantCosts: { resource: string; by: number }[],
-  bonusCosts: { resource: string; by: number }[],
-) {
-  const totals = new Map<string, number>();
-  for (const { resource, by } of [...(action.costs ?? []), ...variantCosts, ...bonusCosts])
-    totals.set(resource, (totals.get(resource) ?? 0) + by);
-  return [...totals].flatMap(([id, by]) => (by === 0 ? [] : [{ id, by }]));
+function resourcesFor(action: ActionDef, variantCosts: Cost[], bonusCosts: Cost[]) {
+  return mergeCosts([...(action.costs ?? []), ...variantCosts, ...bonusCosts]);
 }
 
 /**
@@ -159,7 +154,7 @@ export function planMove(
   const selectedBonuses = (check?.rollBonuses ?? []).filter((bonus) =>
     selectedBonusIds.has(bonus.id),
   );
-  const bonusCosts: { resource: string; by: number }[] = [];
+  const bonusCosts: Cost[] = [];
   for (const bonus of selectedBonuses) {
     const value = Number(c.data[bonus.valueField] ?? 0);
     const label = bonus.nameField ? String(c.data[bonus.nameField] ?? "").trim() : "";
@@ -290,7 +285,8 @@ export function performMove(
 ): MoveResult {
   const { targets, valueAt } = aim;
   const check = checkOf(action);
-  if (action.variants && action.variants(c, d).length === 0) throw new Error("Not enough resources");
+  if (action.variants && action.variants(c, d).length === 0)
+    throw new Error("Not enough resources");
   const basePlan = planMove(system, action, c, d, choice);
   if (!canPayMove(c, basePlan)) throw new Error("Not enough resources");
   const difficulty =
@@ -327,7 +323,7 @@ export function performMove(
   // Against targets: one roll each, read against that target's value.
   const targetDifficulty = check.difficulty?.kind === "target" ? check.difficulty : undefined;
   if (targetDifficulty && targets?.length) {
-    const {spends} = basePlan;
+    const { spends } = basePlan;
     const rolled = targets.map((t): MoveTarget => {
       const plan = planMove(system, action, c, d, {
         ...choice,
