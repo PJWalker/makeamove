@@ -5,3 +5,4 @@ src/features/dice/pick.ts
 src/workspace/placement.ts
 src/kernel/steps.ts
 src/table/dice/dieView.ts
+src/scene/alignMap.ts

@@ -15,7 +15,9 @@ import { clampZoom, fitCamera, toWorld, zoomAt } from "./camera";
 import type { Camera } from "./camera";
 import { readSceneCamera, saveSceneCamera } from "./cameraMemory";
 import { bounds, hits } from "./geometry";
-import { cellOr, snapPoint } from "./grid";
+import { alignFrame, alignScale, guessCells } from "./alignMap";
+import type { Box, Cells, Frame } from "./alignMap";
+import { cellOr, gridPitch, nearestGridPoint, snapPoint } from "./grid";
 import type { Point } from "./grid";
 import { tokenDistance } from "./measure";
 import { conversion, imageElement, newToken, randomTokenColour } from "./newElements";
@@ -27,6 +29,7 @@ import { ERASER_RADIUS, GM_KINDS, kindOf } from "./tools";
 import type { SceneTools } from "./tools";
 import type { Layer, NewElement, SceneElement, TokenElement, TokenStyle, Transform } from "./types";
 import { TOOL_PRESS } from "./gestures";
+import alignBox from "./gestures/align";
 import { PolygonDraft } from "./gestures/polygon";
 import { pinch } from "./gestures/pan";
 import { hoverCursor } from "./gestures/select";
@@ -49,6 +52,15 @@ const ARROW_NUDGES: Record<string, Point> = {
 /** Just the place, size and rotation of `t`, without the rest of what it holds. */
 function transformOf(t: Transform): Transform {
   return { x: t.x, y: t.y, w: t.w, h: t.h, rot: t.rot };
+}
+
+/**
+ * A map being lined up with the grid. Once a box is drawn over some of its
+ * cells: the map as it was then, the box, and how many cells it covers.
+ */
+export interface Alignment {
+  mapId: string;
+  drawn?: { base: Frame; box: Box; cells: Cells };
 }
 
 /**
@@ -77,6 +89,8 @@ export class SceneController implements ToolContext {
 
   /** An area to place for an action: the next drag on the map puts it down (see placeArea). */
   readonly placing = store<Placement | null>(null);
+  /** A map being lined up with the grid: presses draw a box over its cells. */
+  readonly aligning = store<Alignment | null>(null);
 
   /** The corners of a polygon (a shape, or an area of solid light or dark) being placed, a click at a time. */
   readonly polygon: PolygonDraft = new PolygonDraft(this);
@@ -178,6 +192,9 @@ export class SceneController implements ToolContext {
       this.scene.elements.observe(refresh),
       this.scene.settings.observe(regrid),
       watch([this.selection], () => {
+        const aligning = this.aligning.value;
+        const sel = this.selection.value;
+        if (aligning && (sel.length !== 1 || sel[0] !== aligning.mapId)) this.stopAligning();
         this.selectedElements.value = this.selected();
         this.updateOverlay();
       }),
@@ -199,6 +216,7 @@ export class SceneController implements ToolContext {
             return element && this.pickable(element);
           });
           if (keep.length !== this.selection.value.length) this.selection.value = keep;
+          if (this.tools.activeTool.value !== "select") this.stopAligning();
           this.cancelGesture();
           this.updateCursor();
           this.updateOverlay();
@@ -289,6 +307,7 @@ export class SceneController implements ToolContext {
 
   stop() {
     this.cancelGesture();
+    this.stopAligning();
     cancelAnimationFrame(this.itemTokenDropFrame);
     this.itemTokenDropFrame = 0;
     this.renderer.previews.clear();
@@ -438,7 +457,8 @@ export class SceneController implements ToolContext {
   private idleCursor(): string {
     const tool = this.tools.activeTool.value;
     if (this.spaceHeld) return "grab";
-    if (this.placing.value || (tool === "select" && this.targetMode.value)) return "crosshair";
+    if (this.placing.value || this.aligning.value || (tool === "select" && this.targetMode.value))
+      return "crosshair";
     return toolCursor(tool, {
       shape: this.tools.shapeTool.value,
       effect: this.tools.effectTool.value.effect,
@@ -565,6 +585,14 @@ export class SceneController implements ToolContext {
     const placing = this.placing.value;
     if (placing && e.button === 0 && !this.spaceHeld) {
       this.gesture = dragShape(this, e, world, placing.shape, placementPlan(this, placing));
+      this.updateCursor();
+      return;
+    }
+
+    if (this.aligning.value && e.button === 0 && !this.spaceHeld) {
+      this.gesture = alignBox(this, world, (box) => {
+        this.alignDrawn(box);
+      });
       this.updateCursor();
       return;
     }
@@ -753,6 +781,7 @@ export class SceneController implements ToolContext {
       }
       case "Escape": {
         if (this.gesture || this.polygon.active) this.cancelGesture();
+        else if (this.aligning.value) this.stopAligning();
         else this.selection.value = [];
         return true;
       }
@@ -859,6 +888,56 @@ export class SceneController implements ToolContext {
       else this.renderer.previews.delete(id);
     }
     this.renderer.invalidate("previews");
+  }
+
+  /** Start lining map `id` up with the grid: a drag over some of its cells then sizes and places it. */
+  alignMap(id: string) {
+    this.cancelGesture();
+    this.tools.activeTool.value = "select";
+    this.selection.value = [id];
+    this.aligning.value = { mapId: id };
+    this.updateCursor();
+  }
+
+  stopAligning() {
+    if (!this.aligning.value) return;
+    this.aligning.value = null;
+    this.updateCursor();
+  }
+
+  /** Say how many cells the drawn box covers, and line the map up again from how it was when the box was drawn. */
+  setAlignCells(cells: Cells) {
+    const aligning = this.aligning.value;
+    if (!aligning?.drawn) return;
+    this.aligning.value = { ...aligning, drawn: { ...aligning.drawn, cells } };
+    this.applyAlignment();
+  }
+
+  /** A box has been drawn over the map's cells: guess how many it covers, and line the map up. */
+  private alignDrawn(box: Box) {
+    const map = this.aligning.value && this.byId.get(this.aligning.value.mapId);
+    const pitch = gridPitch(this.renderer.grid);
+    if (!map || !pitch) return;
+    this.aligning.value = {
+      mapId: map.id,
+      drawn: {
+        base: { x: map.x, y: map.y, w: map.w, h: map.h },
+        box,
+        cells: guessCells(box, pitch),
+      },
+    };
+    this.applyAlignment();
+  }
+
+  /** Scale the map, keeping its shape, so the box covers its cells of the grid, with its corner on a grid point. */
+  private applyAlignment() {
+    const aligning = this.aligning.value;
+    const { grid } = this.renderer;
+    const pitch = gridPitch(grid);
+    if (!aligning?.drawn || !pitch) return;
+    const { base, box, cells } = aligning.drawn;
+    const move = { from: box, to: nearestGridPoint(grid, box), s: alignScale(box, cells, pitch) };
+    this.scene.update([[aligning.mapId, alignFrame(base, move)]]);
   }
 
   /**

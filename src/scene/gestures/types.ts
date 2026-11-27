@@ -21,6 +21,7 @@ import type {
  */
 export interface Gesture {
   readonly kind:
+    | "align"
     | "draw"
     | "erase"
     | "light"

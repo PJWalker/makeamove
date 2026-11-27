@@ -2141,9 +2141,6 @@
     "default-case": {
       "count": 1
     },
-    "import/prefer-default-export": {
-      "count": 1
-    },
     "max-lines": {
       "count": 1
     },
@@ -2368,7 +2365,7 @@
   },
   "src/scene/grid.ts": {
     "@typescript-eslint/no-magic-numbers": {
-      "count": 15
+      "count": 12
     }
   },
   "src/scene/lampShader.ts": {
