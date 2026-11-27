@@ -431,6 +431,22 @@ export const IconToBack = glyph(
     <rect {...line} x="10.5" y="10.5" width="10" height="10" />
   </>,
 );
+export const IconForward = glyph(
+  "forward",
+  <>
+    <rect {...faint} x="3" y="3" width="9" height="9" />
+    <rect x="7.5" y="7.5" width="9" height="9" />
+    <rect {...line} x="14" y="14" width="7" height="7" />
+  </>,
+);
+export const IconBackward = glyph(
+  "backward",
+  <>
+    <rect x="3" y="3" width="9" height="9" />
+    <rect {...line} x="8.5" y="8.5" width="7" height="7" />
+    <rect {...faint} x="13" y="13" width="8" height="8" />
+  </>,
+);
 export const IconDuplicate = glyph(
   "duplicate",
   <>

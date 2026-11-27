@@ -2446,9 +2446,6 @@
     "import/avoid-namespace-import": {
       "count": 1
     },
-    "no-implicit-coercion": {
-      "count": 1
-    },
     "no-nested-ternary": {
       "count": 1
     }

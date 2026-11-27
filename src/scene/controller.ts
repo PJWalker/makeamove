@@ -30,10 +30,11 @@ import {
 import type {TokenSpec} from "./newElements";
 import type SceneRenderer from "./renderer";
 import type { ElementPatch, SceneDoc as SceneDocument } from "./sceneDoc";
+import type { Arrangement } from "./stacking";
 import { toolCursor } from "./toolCursors";
 import { GM_KINDS, kindOf } from "./tools";
 import type {SceneTools} from "./tools";
-import type { Layer, NewElement, SceneElement, TokenElement, TokenStyle, Transform } from "./types";
+import type { NewElement, SceneElement, TokenElement, TokenStyle, Transform } from "./types";
 import TOOL_PRESS from "./gestures";
 import PolygonDraft from "./gestures/polygon";
 import { pinch } from "./gestures/pan";
@@ -790,12 +791,9 @@ export default class SceneController implements ToolContext {
     this.scene.update(ids.map((id) => [id, { locked }]));
   }
 
-  restack(ids: string[], to: "back" | "front") {
-    this.scene.restack(ids, to);
-  }
-
-  setLayer(ids: string[], layer: Layer) {
-    this.scene.setLayer(ids, layer);
+  /** Restack elements, or move them to another layer. */
+  arrange(ids: string[], how: Arrangement) {
+    this.scene.arrange(ids, how);
   }
 
   /**
@@ -888,7 +886,7 @@ export default class SceneController implements ToolContext {
     const patch = element && conversion(element, to, this.renderer.grid, this.newTokenLook(true));
     if (!patch) return;
     this.scene.update([[id, patch]]);
-    this.scene.setLayer([id], to);
+    this.scene.arrange([id], { to: "layer", layer: to });
   }
 
   /** A new token's colour and style, unless told otherwise: an image token takes the campaign's style. */

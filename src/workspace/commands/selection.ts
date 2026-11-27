@@ -3,8 +3,10 @@ import type { Guard } from "../../lib/guards";
 import type { SceneElement } from "../../scene/types";
 import {
   IconAdd,
+  IconBackward,
   IconDelete,
   IconDuplicate,
+  IconForward,
   IconGrid,
   IconImage,
   IconLock,
@@ -88,16 +90,30 @@ const selectionCommand = (
 
 export const bringToFront = selectionCommand(
   "selection.toFront",
-  { title: "Bring to Front", icon: IconToFront },
+  { title: "Bring to Front", icon: IconToFront, keys: ["Mod+Shift+]"] },
   "arrange",
-  (context, ids) => open(context)?.controller.restack(ids, "front"),
+  (context, ids) => open(context)?.controller.arrange(ids, { to: "front" }),
+);
+
+export const bringForward = selectionCommand(
+  "selection.forward",
+  { title: "Bring Forward", icon: IconForward, keys: ["Mod+]"] },
+  "arrange",
+  (context, ids) => open(context)?.controller.arrange(ids, { to: "forward" }),
+);
+
+export const sendBackward = selectionCommand(
+  "selection.backward",
+  { title: "Send Backward", icon: IconBackward, keys: ["Mod+["] },
+  "arrange",
+  (context, ids) => open(context)?.controller.arrange(ids, { to: "backward" }),
 );
 
 export const sendToBack = selectionCommand(
   "selection.toBack",
-  { title: "Send to Back", icon: IconToBack },
+  { title: "Send to Back", icon: IconToBack, keys: ["Mod+Shift+["] },
   "arrange",
-  (context, ids) => open(context)?.controller.restack(ids, "back"),
+  (context, ids) => open(context)?.controller.arrange(ids, { to: "back" }),
 );
 
 export const duplicate = selectionCommand(
@@ -249,6 +265,8 @@ export const selectionCommands = [
   useAsToken,
   useAsMap,
   bringToFront,
+  bringForward,
+  sendBackward,
   sendToBack,
   duplicate,
   lock,

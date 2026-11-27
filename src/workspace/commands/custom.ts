@@ -90,9 +90,12 @@ export function comboOf(
   return [...parts, key].join("+");
 }
 
-/** The key of a press, without modifiers: letters and digits by physical key. */
+const BRACKETS: Record<string, string> = { BracketLeft: "[", BracketRight: "]" };
+
+/** The key of a press, without modifiers: letters, digits and brackets by physical key, so Shift doesn't change them. */
 function keyName(e: Pick<KeyboardEvent, "code" | "key">): string {
-  const physical = /^Key([A-Z])$/.exec(e.code)?.[1] ?? /^(?:Digit|Numpad)(\d)$/.exec(e.code)?.[1];
+  const physical =
+    /^Key([A-Z])$/.exec(e.code)?.[1] ?? /^(?:Digit|Numpad)(\d)$/.exec(e.code)?.[1] ?? BRACKETS[e.code];
   if (physical) return physical;
   if (e.key === " ") return "Space";
   return e.key.length === 1 ? e.key.toUpperCase() : e.key;

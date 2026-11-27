@@ -10,6 +10,8 @@ import type { Grid } from "./grid";
 import { LAYERS    } from "./types";
 import type {Layer, NewElement, SceneElement} from "./types";
 import { sceneShape } from "./schema";
+import { arrange } from "./stacking";
+import type { Arrangement } from "./stacking";
 
 /* A scene subdocument and how it's edited; its layout is declared in schema.ts. */
 
@@ -207,31 +209,10 @@ export class SceneDoc {
     return this.add(...copies);
   }
 
-  /** Move elements to the top (or bottom) of their layers, keeping their order. */
-  restack(ids: Iterable<string>, to: "back" | "front") {
-    const els = [...ids].map((id) => this.get(id)).filter((e): e is SceneElement => !!e);
-    els.sort((a, b) => byOrder(a.z, b.z));
-    this.transact(() => {
-      if (to === "front") {
-        for (const element of els) this.elements.get(element.id)!.patch({ z: this.zOnTop(element.layer) });
-      } else {
-        for (const element of els.reverse())
-          this.elements
-            .get(element.id)!
-            .patch({ z: generateKeyBetween(null, this.edgeZ(element.layer, "bottom")) });
-      }
-    });
-  }
-
-  /** Move elements to another layer, on top of what's already there. */
-  setLayer(ids: Iterable<string>, layer: Layer) {
-    this.transact(() => {
-      for (const id of ids) {
-        const m = this.elements.get(id);
-        if (!m || m.get("layer") === layer) continue;
-        m.patch({ z: this.zOnTop(layer), layer });
-      }
-    });
+  /** Restack elements, or move them to another layer, as one undo step. */
+  arrange(ids: Iterable<string>, how: Arrangement) {
+    const patches = arrange(this.views(), ids, how);
+    if (patches.length > 0) this.update(patches);
   }
 }
 

@@ -255,7 +255,7 @@ function buildSelectionFields(
           { id: "over", label: "Over Tokens" },
           { id: "under", label: "Under Tokens" },
         ]}
-        onChange={(layer) => { controller.setLayer(ids, layer); }}
+        onChange={(layer) => { controller.arrange(ids, { to: "layer", layer }); }}
       />,
     );
   if (every(sel, "token"))
